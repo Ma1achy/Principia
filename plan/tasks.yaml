@@ -2298,8 +2298,8 @@
   title: Categorical palettes and the categorical filter
   depends_on: [TASK-M7-02, TASK-M7-05, TASK-M1-10]
   needs: [REQ-COL-002, REQ-COL-004, REQ-TOOL-009, REQ-COL-053]
-  requirements: [REQ-COL-018, REQ-COL-040, REQ-COL-051, REQ-COL-019, REQ-COL-058]
-  reviewers: [code, qa]
+  requirements: [REQ-COL-018, REQ-COL-040, REQ-COL-051, REQ-COL-019, REQ-COL-058, REQ-COL-162]  # REQ-COL-162: applied per R-369 (PR #322)
+  reviewers: [code, qa, physics]  # physics: REQ-COL-058 is an R-72 definition (applied per R-369, PR #322)
   pitfalls: [PIT-3]
 - id: TASK-M7-09
   milestone: M7

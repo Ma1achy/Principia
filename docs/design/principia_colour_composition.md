@@ -253,6 +253,24 @@ escape colours. A standalone escaper view is therefore this map **filtered to th
 **categorical filter** (`show class ∈ {…}, mute the rest`), which is a general operation any categorical
 mode admits (“just collisions”, “just body 3's escape”, R-449), not a distinct render mode.
 
+**The categorical filter's mute (R-72; REQ-COL-058; TASK-M7-08).** The filter is a parameter of every categorical mode,
+a class mask: class `i` is shown where its bit, `min(i, 31)`, is set (bit 31 standing for class 31 and every class past
+it), and every bit set, the default, shows every class; the outcome palette's classes are numbered in the table's order,
+bounded / nothing yet 0 to triple ejection 8. **A class not shown is drawn as the mute of its class colour `c`:** take
+`c`'s OKLab `(L, a, b)` (dd_colouring §3.1) and draw `(L_mute, k_mute·a, k_mute·b)`, back to linear RGB, each channel
+clamped to `[0, 1]`. Every muted class sits at the one lightness `L_mute`, and keeps the fraction `k_mute` of its chroma
+at its own hue, so the muted classes recede into one dim, near-neutral band while a faint hue still tells them apart;
+the shown classes keep their colours exactly. A pixel with no class, the canvas background of a pixel that is not a
+system or of a `decode_failed` sample, is not filtered. The transform is the same for every categorical mode and
+palette: the outcome palette and its OKLab-uniform variant, a generated palette (dd_colouring §3.7) and the Chazy
+palettes (`principia_dd_chazy_final_motion.md` §10.7). **Values: `L_mute = 0.31`, `k_mute = 0.25`, proposed (R-71;
+REQ-COL-162)** for the human to confirm at the M7 gate: `L_mute` is the midpoint, to two places, of the presentation
+views' invalid colour `#141418` (L 0.193) and the "not yet" grey `#4E4E4E` (L 0.424), and `k_mute` keeps every muted
+colour of the palettes below in the sRGB gamut. **Separation, measured as REQ-COL-055 measures** (Euclidean distance in
+OKLab): every muted class of the outcome palette, its OKLab-uniform variant, Okabe–Ito and the golden-angle palette of
+96 classes is at least 0.114 from the "not yet" grey, 0.117 from the invalid colour `#141418` and 0.119 from every other
+class of its palette, any of which may be shown, all above τ = 0.101 (R-429).
+
 **The "not yet" style (R-399).** The neutral grey of "not yet" is not a flat swatch: "not yet", for running samples of a
 field that holds no value for them and for an unset `d_min` alike, is the neutral grey (REQ-COL-053) with a fine dot
 stipple from the pixel position, drawn by

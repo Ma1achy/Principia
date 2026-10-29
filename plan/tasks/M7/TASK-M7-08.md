@@ -1,10 +1,10 @@
 # TASK-M7-08 — Categorical palettes and the categorical filter
 
 - **Milestone:** M7
-- **Closes:** REQ-COL-018, REQ-COL-040, REQ-COL-051, REQ-COL-019, REQ-COL-058
+- **Closes:** REQ-COL-018, REQ-COL-040, REQ-COL-051, REQ-COL-019, REQ-COL-058, REQ-COL-162
 - **Depends on:** TASK-M7-02, TASK-M7-05, TASK-M1-10
 - **Needs (earlier milestones):** REQ-COL-002, REQ-COL-004, REQ-TOOL-009, REQ-COL-053
-- **Reviewers:** code, qa
+- **Reviewers:** code, qa, physics
 - **Pitfalls:** PIT-3
 - **Size:** ~300 lines
 
@@ -30,8 +30,9 @@ Categorical fields other than the outcome state map through a generated palette 
 - Review (code, qa): the proposal lists the achieved consecutive-index OKLab hue separations for n up to 96 and the minimum chosen below them; confirmed by the human at the M7 gate (REQ-COL-051).
 - `cargo test -p render categorical_filter` — filter the state map to the escape classes; non-escape pixels are muted; no `escaper` field or render mode exists in the ledger or the registry (REQ-COL-019).
 - Definition: the mute transform of the categorical filter written into colour_composition §1.4 and approved by the physics reviewer (REQ-COL-058).
+- Review (code, qa, physics): the proposal gives the mute's L_mute and k_mute with their measured separations, each at least τ = 0.101 from every other class of its palette, the invalid colour #141418 and the not-yet grey #4E4E4E; confirmed by the human at the M7 gate (REQ-COL-162).
 
 ## Notes
-- Calibration (R-71): REQ-COL-051.
+- Calibration (R-71): REQ-COL-051; REQ-COL-162, the mute's two values (added applied per R-369 on PR #322: R-71 makes a missing value a calibration requirement, separate from REQ-COL-058's definition; physics added to the reviewers for that R-72 definition).
 - Gap: how a muted class is drawn (grey, dimmed, desaturated) is not given (see the milestone report).
 - Closes, for gaps the corpus leaves open: REQ-COL-058 (R-72 definition) (classification accepted by R-132).

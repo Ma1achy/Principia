@@ -173,14 +173,17 @@ pub fn figure_coords(figure: Rect, pos: egui::Pos2) -> (f64, f64) {
     (s, t)
 }
 
-/// The figure's gestures in `figure`: drag to pan, the wheel to zoom, K over a point or right-click › lock here to
-/// lock there, and, with the Figure scope focused, + / − to zoom. Takes no key while a text field holds the keyboard.
+/// The figure's gestures on its canvas `figure`: drag to pan, the wheel to zoom, K over a point or right-click › lock
+/// here to lock there, and, with the Figure scope focused, + / − to zoom. Each point is read in `field`, where the
+/// field's `[0, 1]²` is (`crate::layout::Layout::field`), so a pan follows the pointer at the field's scale whatever
+/// the canvas's size (R-462 J4). Takes no key while a text field holds the keyboard.
 /// Returns the figure point `(s, t)` to pin in the Trajectory panel, if any: a primary click's with no drag past egui's
 /// click threshold, or the pointer's when P is pressed over the figure, as K locks, in either keyboard mode (R-453 D1,
 /// D6).
 pub fn figure(
     ui: &mut Ui,
     figure: Rect,
+    field: Rect,
     focused: bool,
     snapshot: &engine::contract::snapshot::Snapshot,
     scratch: &mut Scratch,
@@ -195,7 +198,7 @@ pub fn figure(
     if response.dragged_by(egui::PointerButton::Primary) {
         let delta = response.drag_delta();
         if delta != egui::Vec2::ZERO {
-            out.edit(pan(plane, delta, figure.size()), None, scratch);
+            out.edit(pan(plane, delta, field.size()), None, scratch);
         }
     }
     let typing = ui.ctx().text_edit_focused();
@@ -210,7 +213,7 @@ pub fn figure(
         }
         if !typing && ui.input(|i| i.key_pressed(Key::K)) {
             if let Some(pos) = response.hover_pos() {
-                super::lock::lock_at(plane, figure_coords(figure, pos), scratch, out);
+                super::lock::lock_at(plane, figure_coords(field, pos), scratch, out);
             }
         }
         if !typing && ui.input(|i| i.key_pressed(Key::P)) {
@@ -220,7 +223,7 @@ pub fn figure(
     if response.secondary_clicked() {
         scratch.menu_at = response
             .interact_pointer_pos()
-            .map(|p| figure_coords(figure, p));
+            .map(|p| figure_coords(field, p));
     }
     response.context_menu(|ui| {
         if ui.button(super::lock::LOCK_HERE).clicked() {
@@ -265,7 +268,7 @@ pub fn figure(
         }
     }
     pin.map(|pos| {
-        let (s, t) = figure_coords(figure, pos);
+        let (s, t) = figure_coords(field, pos);
         [s, t]
     })
 }

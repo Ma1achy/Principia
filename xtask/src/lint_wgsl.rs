@@ -99,7 +99,8 @@ pub const FRAG_DIR: &str = "crates/render/frag";
 pub const LIB_DIR: &str = "crates/render/shaders";
 
 /// The generated prelude, relative to the workspace root: linted alone, and every other file under [`LIB_DIR`] as its
-/// continuation, since each follows it at assembly.
+/// continuation, since each follows it at assembly; a file of [`LIB_FILES`] after the library's other files too, whose
+/// helpers it may call.
 pub const PRELUDE: &str = "crates/render/shaders/wgsl/lib/prelude.wgsl";
 
 /// The built-in occupants (gui_state_contract §3's `shaders/wgsl/frag/<slot>/`): every `.wgsl` file under this
@@ -514,12 +515,14 @@ fn lint_lib(root: &Path, accessors: &BTreeSet<String>) -> Result<Vec<FileReport>
     // The library's files after the prelude, in the order a sorted listing gives them, as the assembler places
     // `colour_space.wgsl` then `present.wgsl`.
     let mut library = Vec::new();
+    let mut members = Vec::new();
     for path in &files {
         let rel = relative(root, path);
         if rel != PRELUDE && path.parent() == Some(root.join(LIB_FILES).as_path()) {
             library.push(
                 std::fs::read_to_string(path).map_err(|e| format!("{}: {e}", path.display()))?,
             );
+            members.push(path.clone());
         }
     }
     let mut reports = Vec::new();
@@ -545,6 +548,19 @@ fn lint_lib(root: &Path, accessors: &BTreeSet<String>) -> Result<Vec<FileReport>
         } else if let Some(occupancy) = occupancy {
             occupant_context(&prelude, &library, &source)
                 .and_then(|context| check_occupant_after(&context, &source, occupancy, accessors))
+        } else if let Some(k) = members.iter().position(|m| *m == path) {
+            // A library file follows the prelude and the library's other files at assembly, so it may call theirs
+            // (TASK-M7-08: `palette.wgsl` reads `present.wgsl`'s Okabe–Ito table and `colour_space.wgsl`'s OKLab).
+            let mut context = prelude.clone();
+            for (j, file) in library.iter().enumerate() {
+                if j != k {
+                    if !context.ends_with('\n') {
+                        context.push('\n');
+                    }
+                    context.push_str(file);
+                }
+            }
+            check_fragment_after(&context, &source)
         } else {
             check_fragment_after(&prelude, &source)
         }

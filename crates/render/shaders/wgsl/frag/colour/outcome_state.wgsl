@@ -21,6 +21,12 @@
 // other unchanged, and `swatch_set` selects the set shown, 0 the sRGB palette, 1 the variant. The labels are R-449's
 // names as shown, 1-based. The CPU twin is `crates/render/src/colour/outcome.rs`.
 //
+// The categorical filter (colour_composition §1.4; REQ-COL-019): `class_mask` shows class k, its index in the sRGB
+// table's order, bounded / nothing yet 0 to triple ejection 8, where bit k is set, and mutes every other class by
+// `cat_mute` (`shaders/wgsl/lib/palette.wgsl`; REQ-COL-058); every bit set, the default, shows every class. A sample
+// with no class, one the chart classifies as not a system or a `decode_failed` sample, draws the canvas background
+// whatever the mask.
+//
 // The set shown: 0 the sRGB palette (the default), 1 the OKLab-uniform variant.
 // @uniform swatch_set: u32 = 0 [0, 1]
 // The sRGB palette (R-444, R-445).
@@ -61,8 +67,11 @@
 // @uniform oklab_escape_body_2: vec3<f32> = (0.0027317428, 0.48514995, 0.61049557)
 // triple ejection, 305°: #B790E2.
 // @uniform oklab_triple_ejection: vec3<f32> = (0.47353148, 0.27889428, 0.7605245)
+// The categorical filter's class mask: bit k shows class k; every bit set shows every class.
+// @uniform class_mask: u32 = 4294967295 [0, 4294967295]
 
-fn colour(ctx: Ctx) -> vec3<f32> {
+// The swatch of the sample's class in the set shown, or the canvas background for a sample with no class.
+fn outcome_swatch(ctx: Ctx) -> vec3<f32> {
     if (ctx.validity.forbidden || ctx.sample.state == STATE_DECODE_FAILED) {
         return canvas_background();
     }
@@ -94,4 +103,30 @@ fn colour(ctx: Ctx) -> vec3<f32> {
         return select(uniforms.triple_ejection, uniforms.oklab_triple_ejection, v);
     }
     return select(uniforms.bounded, uniforms.oklab_bounded, v);
+}
+
+// The sample's class, its index in the sRGB table's order (R-448's rank), or -1 for a sample with no class: one the
+// chart classifies as not a system, or a `decode_failed` sample (R-467, R-511).
+fn outcome_class(ctx: Ctx) -> i32 {
+    let classed = !ctx.validity.forbidden && ctx.sample.state != STATE_DECODE_FAILED;
+    if (!classed) {
+        return -1;
+    }
+    let detail = i32(ctx.sample.detail);
+    if (ctx.sample.state == STATE_COLLISION) {
+        return select(3 - detail, 4, detail == 3);
+    }
+    if (ctx.sample.state == STATE_ESCAPE) {
+        return select(5 + detail, 8, detail == 3);
+    }
+    return 0;
+}
+
+fn colour(ctx: Ctx) -> vec3<f32> {
+    let rgb = outcome_swatch(ctx);
+    let k = outcome_class(ctx);
+    if (k < 0) {
+        return rgb;
+    }
+    return cat_filter(rgb, u32(k), uniforms.class_mask);
 }

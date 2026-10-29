@@ -23,16 +23,24 @@ pub struct Axis {
     pub high: f64,
 }
 
-/// The horizontal and the vertical axis of `plane`.
-pub fn axes(plane: &Plane) -> [Axis; 2] {
-    [(&plane.q1), (&plane.q2)].map(|q| {
+/// The horizontal and the vertical axis of `plane` over `span`, `[s₀, t₀, s₁, t₁]` of the field: each axis's value
+/// at the figure's ends as it stands, past `[0, 1]²` where the canvas is larger than the default layout's figure, short
+/// of it where smaller (R-462 J4).
+pub fn axes_over(plane: &Plane, span: [f64; 4]) -> [Axis; 2] {
+    let [s0, t0, s1, t1] = span;
+    [(&plane.q1, s0, s1), (&plane.q2, t0, t1)].map(|(q, low, high)| {
         let i = dominant(q);
         Axis {
             name: AXES[i],
-            low: plane.z0[i] - q[i],
-            high: plane.z0[i] + q[i],
+            low: plane.z0[i] + q[i] * (2.0 * low - 1.0),
+            high: plane.z0[i] + q[i] * (2.0 * high - 1.0),
         }
     })
+}
+
+/// The horizontal and the vertical axis of `plane`, at `s = 0` and `s = 1` (`t = 0` and `t = 1`).
+pub fn axes(plane: &Plane) -> [Axis; 2] {
+    axes_over(plane, [0.0, 0.0, 1.0, 1.0])
 }
 
 /// An end's value with its sign, a true minus, and enough decimals to tell the two ends apart: two at least, more as
@@ -55,10 +63,18 @@ pub fn texts(axis: &Axis, arrow: &str) -> [String; 3] {
     ]
 }
 
-/// Draws the labels of `plane`: the horizontal axis in `strip_x`, under the figure, the low end at its left, the name
-/// centred, the high end at its right; the vertical axis in `strip_y`, left of the figure, turned to read upwards.
-pub fn show(ui: &mut Ui, strip_x: Rect, strip_y: Rect, figure: Rect, plane: &Plane) {
-    let [horizontal, vertical] = axes(plane);
+/// Draws the labels of `plane` for the figure showing `span` of the field ([`axes_over`]): the horizontal axis in
+/// `strip_x`, under the figure, the low end at its left, the name centred, the high end at its right; the vertical axis
+/// in `strip_y`, left of the figure, turned to read upwards.
+pub fn show(
+    ui: &mut Ui,
+    strip_x: Rect,
+    strip_y: Rect,
+    figure: Rect,
+    plane: &Plane,
+    span: [f64; 4],
+) {
+    let [horizontal, vertical] = axes_over(plane, span);
     let [low, name, high] = texts(&horizontal, "→");
     let strip = Rect::from_min_max(egui::pos2(figure.min.x, strip_x.min.y), strip_x.max)
         .shrink2(egui::vec2(4.0, 0.0));
