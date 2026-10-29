@@ -656,3 +656,79 @@ negative_control!(
     expected = "the step `tab`",
     check_keyboard_steps(&[("tab", screenshot::GuiStep::ShiftTab)])
 );
+
+/// The value of `name` the command sets: `Some(Some(v))` set to `v`, `Some(None)` removed, `None` left as inherited.
+fn env_of(command: &std::process::Command, name: &str) -> Option<Option<String>> {
+    command
+        .get_envs()
+        .find(|(k, _)| *k == name)
+        .map(|(_, v)| v.map(|v| v.to_string_lossy().into_owned()))
+}
+
+/// A `gui` case naming `mock_invalid` hands the capture mode its region as `PRIN_MOCK_INVALID` (R-467 D8); one naming
+/// none removes the variable, so the runner's own environment never flags a case.
+fn check_flagging(flagged: Option<&str>, want: Option<Option<String>>) {
+    let gui = screenshot::GuiSurface {
+        kind: screenshot::GuiKind::Gui,
+        screen: "01_main".into(),
+        steps: Vec::new(),
+    };
+    let command = screenshot::capture_command_flagging(&gui, flagged, Path::new("/out"));
+    assert_eq!(
+        env_of(&command, screenshot::MOCK_INVALID_VAR),
+        want,
+        "the hook's variable"
+    );
+    let plain = screenshot::capture_command(&gui, Path::new("/out"));
+    let args = |c: &std::process::Command| c.get_args().map(|a| a.to_owned()).collect::<Vec<_>>();
+    assert_eq!(args(&command), args(&plain), "the arguments changed");
+}
+
+#[test]
+fn screenshot_gui_case_flags_the_mock() {
+    assert_eq!(screenshot::MOCK_INVALID_VAR, "PRIN_MOCK_INVALID");
+    check_flagging(
+        Some("-0.5,-0.5,0,1.5"),
+        Some(Some("-0.5,-0.5,0,1.5".into())),
+    );
+    check_flagging(None, Some(None));
+}
+
+negative_control!(
+    screenshot_gui_case_flags_the_mock,
+    "a case naming no region that leaves the runner's variable inherited must be rejected",
+    expected = "the hook's variable",
+    check_flagging(None, None)
+);
+
+/// A `data` case naming `mock_invalid` is refused: the region belongs to a `gui` case, run on the mock.
+fn check_data_case_refuses_a_region(region: Option<&str>) {
+    let root = root(&format!("shot_mock_invalid_{}", region.is_some()), |_| true);
+    let path = root.join(screenshot::SUITES).join(SUITE).join("cases.json");
+    let mut cases: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(&path).expect("cases read"))
+            .expect("cases parsed");
+    for c in cases["cases"].as_array_mut().expect("cases") {
+        if c["name"] == "layout" {
+            if let Some(region) = region {
+                c["mock_invalid"] = region.into();
+            }
+        }
+    }
+    fs::write(&path, cases.to_string()).expect("cases written");
+    let result = case(&root, "layout");
+    let err = result.result.expect_err("a data case with a region ran");
+    assert!(err.contains("`mock_invalid`"), "{err}");
+}
+
+#[test]
+fn screenshot_data_case_refuses_a_region() {
+    check_data_case_refuses_a_region(Some("0,0,1,1"));
+}
+
+negative_control!(
+    screenshot_data_case_refuses_a_region,
+    "a data case naming no region runs, which the refusal check must reject",
+    expected = "a data case with a region ran",
+    check_data_case_refuses_a_region(None)
+);

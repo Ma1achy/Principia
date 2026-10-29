@@ -3,15 +3,20 @@
 //! received, and holds no key of its own: an empty list draws an empty frame. A categorical key is its swatches, each
 //! with its label and share; a bar key is the channel's samples over its domain, with its ends and middle marked. The
 //! `running` class is drawn as the "not yet" style, the neutral grey with a fine dot stipple from the pixel position,
-//! through the CPU mirror of `debug_not_yet`, never as one flat colour (R-399); the outcome legend's "forbidden region"
-//! key is drawn as the hatch, through the CPU mirror of `debug_invalid`, as the style, never one colour (R-136, R-446;
-//! render_gui_spec §G6). It is called "Legend", never "Fate".
+//! through the CPU mirror of `debug_not_yet`, never as one flat colour (R-399); the debug view's "Debug" key's entries
+//! are drawn as the hatch, through the CPU mirror of `debug_invalid`, and as the NaN / Inf style, through
+//! `debug_nan_inf`'s, each as the style, never one colour (R-136, R-467 D5; render_gui_spec §G6), and each with its
+//! pixel count beside its share. The rows are compact enough that every key, the debug view's included, fits the
+//! band's default height (§G2: 196 px; 01_main.png's), so turning the debug view on adds its key under the others and
+//! moves nothing above it (R-467 D5; applied per R-369: §G6 gives no row heights). Only keys taller than a smaller panel
+//! scroll, from the top, the first key's title in view, with the scroll bar always shown (applied per R-369). It is
+//! called "Legend", never "Fate".
 //! It is read-only: the keyboard reaches it, and Enter on it does nothing (§G3; R-409 G3).
 
 use eframe::egui::{self, pos2, vec2, Color32, Mesh, Rect, RichText, Shape, Ui, UiBuilder};
 use engine::contract::legend::{
-    debug_invalid, linear_to_srgb, not_yet_dot_at, Legend, LegendEntry, LegendKey, SwatchStyle,
-    NOT_YET_DOT_SRGB8, NOT_YET_SRGB8,
+    debug_invalid, linear_to_srgb, nan_inf_square, not_yet_dot_at, Legend, LegendEntry, LegendKey,
+    SwatchStyle, NAN_INF_SRGB8, NOT_YET_DOT_SRGB8, NOT_YET_SRGB8,
 };
 
 use crate::keyboard::scopes::{Scope, ScopeId, ScopeTree};
@@ -24,17 +29,25 @@ pub const TITLE: &str = "Legend";
 /// The note at the title's right, as 01_main.png's.
 pub const NOTE: &str = "generated from the stain";
 /// The panel's margin, in points (a look choice, R-390).
-pub const MARGIN: f32 = 12.0;
+pub const MARGIN: f32 = 10.0;
+/// The title row's height, "Legend" and its note, in points (a look choice, R-390).
+pub const TITLE_H: f32 = 22.0;
 /// A swatch's side, in points (a look choice, R-390).
-pub const SWATCH: f32 = 12.0;
-/// A categorical row's height, in points (a look choice, R-390).
-pub const ROW_H: f32 = 15.0;
+pub const SWATCH: f32 = 10.0;
+/// A categorical row's height, and a key title's, in points (a look choice, R-390).
+pub const ROW_H: f32 = 12.0;
+/// A key title's font size, in points, monospace (a look choice, R-390).
+pub const KEY_TITLE_SIZE: f32 = 10.0;
 /// The columns a categorical key's entries are laid out in, filled row by row (a look choice, R-390).
 pub const COLUMNS: usize = 2;
 /// The bar's height, in points (a look choice, R-390).
-pub const BAR_H: f32 = 12.0;
+pub const BAR_H: f32 = 10.0;
 /// The gap between keys, in points.
-pub const KEY_GAP: f32 = 6.0;
+pub const KEY_GAP: f32 = 4.0;
+/// The gutter between an entry's value and its cell's right edge, so between a column's values and the next column's
+/// swatches, in points: wider than four label heights, so a swatch's neighbourhood holds no other column's text (a
+/// look choice, R-390; applied per R-369).
+pub const GUTTER: f32 = 20.0;
 
 /// Joins the Legend to `tree`: one big scope, read-only, nothing inside (§G3).
 pub fn register(tree: &mut ScopeTree) {
@@ -88,6 +101,24 @@ pub fn hatch_at(frag_xy: [f64; 2]) -> [u8; 3] {
 /// `[x + 0.5, y + 0.5]` (R-136; [`hatch_at`]), as [`not_yet_mesh`] draws the stipple. A mesh, so no edge is feathered
 /// and every stripe stays pixel sharp.
 pub fn hatch_mesh(rect: Rect, pixels_per_point: f32) -> Mesh {
+    pattern_mesh(rect, pixels_per_point, hatch_at)
+}
+
+/// The NaN / Inf style's 8-bit sRGB colour at the physical pixel whose centre is `frag_xy`: `debug_nan_inf`'s square
+/// there (REQ-COL-110 as proposed; R-467 D6).
+pub fn nan_inf_at(frag_xy: [f64; 2]) -> [u8; 3] {
+    NAN_INF_SRGB8[nan_inf_square(frag_xy)]
+}
+
+/// The NaN / Inf style over `rect`, in points at `pixels_per_point`, as a mesh of whole physical pixels, as
+/// [`hatch_mesh`] draws the hatch ([`nan_inf_at`]).
+pub fn nan_inf_mesh(rect: Rect, pixels_per_point: f32) -> Mesh {
+    pattern_mesh(rect, pixels_per_point, nan_inf_at)
+}
+
+/// A pattern over `rect`, in points at `pixels_per_point`, as a mesh of whole physical pixels: the colour `at` gives its
+/// first pixel over the whole, then each pixel whose colour `at` gives otherwise, by its centre.
+fn pattern_mesh(rect: Rect, pixels_per_point: f32, at_pixel: fn([f64; 2]) -> [u8; 3]) -> Mesh {
     let px = |v: f32| (v * pixels_per_point).round() as i64;
     let (x0, y0, x1, y1) = (
         px(rect.min.x),
@@ -97,12 +128,12 @@ pub fn hatch_mesh(rect: Rect, pixels_per_point: f32) -> Mesh {
     );
     let at = |x: i64, y: i64| pos2(x as f32 / pixels_per_point, y as f32 / pixels_per_point);
     let centre = |x: i64, y: i64| [x as f64 + 0.5, y as f64 + 0.5];
-    let ground = hatch_at(centre(x0, y0));
+    let ground = at_pixel(centre(x0, y0));
     let mut mesh = Mesh::default();
     mesh.add_colored_rect(Rect::from_min_max(at(x0, y0), at(x1, y1)), colour(ground));
     for y in y0..y1 {
         for x in x0..x1 {
-            let c = hatch_at(centre(x, y));
+            let c = at_pixel(centre(x, y));
             if c != ground {
                 mesh.add_colored_rect(Rect::from_min_max(at(x, y), at(x + 1, y + 1)), colour(c));
             }
@@ -111,7 +142,7 @@ pub fn hatch_mesh(rect: Rect, pixels_per_point: f32) -> Mesh {
     mesh
 }
 
-/// Draws one swatch in `rect`: a flat colour, the "not yet" style or the hatch.
+/// Draws one swatch in `rect`: a flat colour, the "not yet" style, the hatch or the NaN / Inf style.
 fn swatch(ui: &Ui, rect: Rect, style: SwatchStyle) {
     let painter = ui.painter();
     let ppp = ui.ctx().pixels_per_point();
@@ -119,6 +150,7 @@ fn swatch(ui: &Ui, rect: Rect, style: SwatchStyle) {
         SwatchStyle::Flat(rgb) => painter.rect_filled(rect, 0.0, colour(rgb)),
         SwatchStyle::NotYet => painter.add(Shape::mesh(not_yet_mesh(rect, ppp))),
         SwatchStyle::Hatch => painter.add(Shape::mesh(hatch_mesh(rect, ppp))),
+        SwatchStyle::NanInf => painter.add(Shape::mesh(nan_inf_mesh(rect, ppp))),
     };
     painter.rect_stroke(
         rect,
@@ -133,6 +165,29 @@ pub fn share(share: f64) -> String {
     format!("{share:.1}")
 }
 
+/// What an entry's value reads: its share, "31.2", and, where the key counts pixels, its count before it, grouped as
+/// the status line's counts are, "48 600 · 1.7".
+pub fn value_text(entry: &LegendEntry) -> String {
+    match entry.count {
+        Some(count) => format!(
+            "{} · {}",
+            super::top_bar::grouped(count),
+            share(entry.share)
+        ),
+        None => share(entry.share),
+    }
+}
+
+/// The room an entry's value takes at the right of its cell, in points, the [`GUTTER`] included: a share's, or a
+/// count's and a share's (a look choice, R-390).
+pub fn value_width(entry: &LegendEntry) -> f32 {
+    if entry.count.is_some() {
+        104.0
+    } else {
+        56.0
+    }
+}
+
 /// How tall `key` is drawn, in points: its title row and its rows or its bar and tick row.
 pub fn key_height(key: &LegendKey) -> f32 {
     match key {
@@ -145,7 +200,7 @@ pub fn key_height(key: &LegendKey) -> f32 {
 
 /// The rects the keys of `legend` are drawn in, inside `body`, top to bottom, under the title row.
 pub fn key_rects(legend: &Legend, body: Rect) -> Vec<Rect> {
-    let mut y = body.min.y + ROW_H * 1.6;
+    let mut y = body.min.y + TITLE_H;
     legend
         .keys
         .iter()
@@ -186,26 +241,61 @@ pub fn show(ui: &mut Ui, rect: Rect, legend: &Legend, keyboard: &mut Keyboard) {
             r.label(RichText::new(NOTE).weak());
         });
     });
-    for (key, area) in legend.keys.iter().zip(key_rects(legend, body)) {
-        let mut ui = ui.new_child(UiBuilder::new().max_rect(area));
-        match key {
-            LegendKey::Categorical { title, entries } => categorical(&mut ui, area, title, entries),
-            LegendKey::Ramp {
-                title,
-                lo,
-                hi,
-                lo_note,
-                hi_note,
-                samples,
-            } => ramp(
-                &mut ui,
-                area,
-                title,
-                (*lo, *hi),
-                (lo_note, hi_note),
-                samples,
-            ),
+    let rects = key_rects(legend, body);
+    let bottom = rects.last().map_or(body.max.y, |r| r.max.y);
+    if !overflows(legend, body) {
+        for (key, area) in legend.keys.iter().zip(rects) {
+            draw_key(ui, area, key);
         }
+        return;
+    }
+    // Taller than the panel, so there is a key: the keys scroll under the title, from the top, the scroll bar always
+    // drawn (thin, not egui's floating bar, which is hidden until hovered) so the person sees there is more.
+    let top = rects[0].min.y;
+    let view = Rect::from_min_max(pos2(body.min.x, top), body.max);
+    let mut keys = ui.new_child(UiBuilder::new().max_rect(view));
+    keys.style_mut().spacing.scroll = egui::style::ScrollStyle::thin();
+    egui::ScrollArea::vertical()
+        .id_salt("legend keys")
+        .scroll_bar_visibility(egui::scroll_area::ScrollBarVisibility::AlwaysVisible)
+        .show(&mut keys, |ui| {
+            let width = ui.available_width();
+            let (rect, _) = ui.allocate_exact_size(vec2(width, bottom - top), egui::Sense::hover());
+            let shift = rect.min - view.min;
+            for (key, area) in legend.keys.iter().zip(rects) {
+                let area = Rect::from_min_size(area.min + shift, vec2(width, area.height()));
+                draw_key(ui, area, key);
+            }
+        });
+}
+
+/// Whether the keys of `legend` run past the bottom of `body`, so they scroll.
+pub fn overflows(legend: &Legend, body: Rect) -> bool {
+    key_rects(legend, body)
+        .last()
+        .is_some_and(|r| r.max.y > body.max.y)
+}
+
+/// Draws `key` in `area`.
+fn draw_key(ui: &mut Ui, area: Rect, key: &LegendKey) {
+    let mut ui = ui.new_child(UiBuilder::new().max_rect(area));
+    match key {
+        LegendKey::Categorical { title, entries } => categorical(&mut ui, area, title, entries),
+        LegendKey::Ramp {
+            title,
+            lo,
+            hi,
+            lo_note,
+            hi_note,
+            samples,
+        } => ramp(
+            &mut ui,
+            area,
+            title,
+            (*lo, *hi),
+            (lo_note, hi_note),
+            samples,
+        ),
     }
 }
 
@@ -224,7 +314,7 @@ fn key_title(ui: &mut Ui, at: Rect, text: &str) {
     put(
         ui,
         Rect::from_min_size(at.min, vec2(at.width(), ROW_H)),
-        egui::Label::new(RichText::new(text).weak().monospace()),
+        egui::Label::new(RichText::new(text).weak().monospace().size(KEY_TITLE_SIZE)),
         egui::Align::Min,
     );
 }
@@ -241,7 +331,7 @@ fn categorical(ui: &mut Ui, area: Rect, title: &str, entries: &[LegendEntry]) {
         swatch(ui, square, entry.swatch);
         let text = Rect::from_min_max(
             pos2(square.max.x + 6.0, cell.min.y),
-            pos2(cell.max.x - 44.0, cell.max.y),
+            pos2(cell.max.x - value_width(entry), cell.max.y),
         );
         put(
             ui,
@@ -249,15 +339,15 @@ fn categorical(ui: &mut Ui, area: Rect, title: &str, entries: &[LegendEntry]) {
             egui::Label::new(RichText::new(&entry.label).small()),
             egui::Align::Min,
         );
-        // The share takes the room right of the label's, ending 8 points short of the cell.
+        // The share takes the room right of the label's, ending the gutter short of the cell.
         let value = Rect::from_min_max(
             pos2(text.max.x, cell.min.y),
-            pos2(cell.max.x - 8.0, cell.max.y),
+            pos2(cell.max.x - GUTTER, cell.max.y),
         );
         put(
             ui,
             value,
-            egui::Label::new(RichText::new(share(entry.share)).monospace().small()),
+            egui::Label::new(RichText::new(value_text(entry)).monospace().small()),
             egui::Align::Max,
         );
     }

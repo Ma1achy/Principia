@@ -1,13 +1,15 @@
 //! QA's tests for TASK-M2-32 on the GUI side, written from R-444, R-446, R-449, render_gui_spec §G6 and R-136, not
 //! from the implementation:
 //!
-//! - REQ-COL-101 / R-444 / R-446 (the mock's outcome legend, `qa_m2_32_legend_outcome_key`): the default stain's
-//!   outcome key is the nine classes, in colour_composition §1.4's order and named as shown (R-449), then the
-//!   "forbidden region" key; it has no "degenerate", "collision @ t=0", "running", `sim_failed` or "not yet" key.
+//! - REQ-COL-101 / R-444 / R-446 / R-467 (the mock's outcome legend, `qa_m2_32_legend_outcome_key`): the default
+//!   stain's outcome key is the nine classes, in colour_composition §1.4's order and named as shown (R-449); it has no
+//!   "degenerate", "collision @ t=0", "running", `sim_failed` or "not yet" key, and, since R-467 (TASK-M6-46), no
+//!   "forbidden region" key, which left the presentation legends.
 //! - The same key drawn (`qa_m2_32_legend_swatches_drawn`): each of the nine swatches, rendered through the mock's
-//!   canvas, is one flat colour, its 8-bit sRGB R-444's, typed in here; the "forbidden region" swatch is the hatch,
-//!   drawn as the style (render_gui_spec §G6, "compared as the style"; R-136): every interior pixel `debug_invalid`'s
-//!   colour at its physical position, both of the hatch's colours present.
+//!   canvas, is one flat colour, its 8-bit sRGB R-444's, typed in here; the hatch swatch, since R-467 the debug view's
+//!   "forbidden (chart)" entry (View › Debug view on, D5), is the hatch, drawn as the style (render_gui_spec §G6,
+//!   "compared as the style"; R-136): every interior pixel `debug_invalid`'s colour at its physical position, both of
+//!   the hatch's colours present.
 //!
 //! gui takes no dependency on validation (R-187), so each check runs its own control (R-176) through [`rejects`].
 
@@ -17,7 +19,9 @@
 use std::sync::Arc;
 
 use eframe::egui::{self, Event, Rect};
+use engine::contract::interface::EngineInterface;
 use engine::contract::legend::debug_invalid;
+use engine::contract::set_field::{Edit, RenderField, SetField};
 use gui::app::App;
 use gui::capture::{render_frame, Shot, FORMAT, PIXELS_PER_POINT, SIZE};
 use gui::headless::Headless;
@@ -39,8 +43,12 @@ const CLASSES: [(&str, u32); 9] = [
     ("triple ejection", 0x611597),
 ];
 
-/// The forbidden-region key's label (render_gui_spec §G6).
+/// The forbidden-region key's label, which R-467 removes from the presentation legend (render_gui_spec §G6).
 const FORBIDDEN: &str = "forbidden region";
+
+/// The debug view's "Debug" key's entry for the pixels the chart classifies as not a system, in the hatch style
+/// (R-467 D5; render_gui_spec §G6).
+const DEBUG_FORBIDDEN: &str = "forbidden (chart)";
 
 /// The keys R-444 and R-446 remove from the outcome legend.
 const REMOVED: [&str; 6] = [
@@ -74,9 +82,17 @@ struct Rig {
 }
 
 impl Rig {
-    fn new(canvas: Option<Arc<MockCanvas>>) -> Self {
+    /// The app on the frozen mock, View › Debug view `debug` (R-467 D5).
+    fn new(canvas: Option<Arc<MockCanvas>>, debug: bool) -> Self {
+        let mut engine = MockEngine::frozen();
+        if debug {
+            engine.set_field(SetField {
+                edit: Edit::Render(RenderField::DebugView(true)),
+                no_history: false,
+            });
+        }
         let mut rig = Rig {
-            app: App::new(MockSide::new(MockEngine::frozen(), canvas), FORMAT),
+            app: App::new(MockSide::new(engine, canvas), FORMAT),
             h: Headless::new(SIZE, PIXELS_PER_POINT),
         };
         for _ in 0..2 {
@@ -129,10 +145,11 @@ fn layout() -> Layout {
     )
 }
 
-/// The legend's texts hold the nine classes in order, then "forbidden region", and none of the removed keys.
+/// The legend's texts hold the nine classes in order, and none of the removed keys, "forbidden region" among them
+/// (R-467).
 fn check_outcome_key(texts: &[String]) {
     let mut at = 0;
-    for name in CLASSES.iter().map(|c| c.0).chain([FORBIDDEN]) {
+    for name in CLASSES.iter().map(|c| c.0) {
         at += texts[at..]
             .iter()
             .position(|t| t == name)
@@ -145,11 +162,15 @@ fn check_outcome_key(texts: &[String]) {
             "the legend draws `{gone}`, which R-444 / R-446 removed: {texts:?}"
         );
     }
+    assert!(
+        !texts.iter().any(|t| t.to_lowercase().contains(FORBIDDEN)),
+        "the legend draws `{FORBIDDEN}`, which R-467 removed: {texts:?}"
+    );
 }
 
 #[test]
 fn qa_m2_32_legend_outcome_key() {
-    let mut rig = Rig::new(None);
+    let mut rig = Rig::new(None, false);
     let texts: Vec<String> = rig.legend_texts().into_iter().map(|(t, _)| t).collect();
     check_outcome_key(&texts);
     rejects("a legend with the degenerate key", || {
@@ -157,8 +178,17 @@ fn qa_m2_32_legend_outcome_key() {
         t.push("degenerate".to_owned());
         check_outcome_key(&t)
     });
-    rejects("a legend without the forbidden region", || {
-        let t: Vec<String> = texts.iter().filter(|t| *t != FORBIDDEN).cloned().collect();
+    rejects("a legend that keeps the forbidden region (R-467)", || {
+        let mut t = texts.clone();
+        t.push(FORBIDDEN.to_owned());
+        check_outcome_key(&t)
+    });
+    rejects("a legend without a class", || {
+        let t: Vec<String> = texts
+            .iter()
+            .filter(|t| *t != "triple ejection")
+            .cloned()
+            .collect();
         check_outcome_key(&t)
     });
     rejects("a legend with two classes swapped", || {
@@ -242,7 +272,8 @@ fn check_box(
 #[test]
 fn qa_m2_32_legend_swatches_drawn() {
     let canvas = Arc::new(MockCanvas::new().expect("a GPU adapter for the mock's canvas"));
-    let mut rig = Rig::new(Some(canvas.clone()));
+    // The presentation legend, the debug view off: the nine classes.
+    let mut rig = Rig::new(Some(canvas.clone()), false);
     let texts = rig.legend_texts();
     let shot = render_frame(&canvas, &mut rig.app, &mut rig.h);
     let label = |name: &str| {
@@ -258,10 +289,29 @@ fn qa_m2_32_legend_swatches_drawn() {
         let b = swatch_box(&shot, label(name), |p| near(p, c));
         check_box(&shot, b, name, |_, _| c);
     }
-    // The forbidden region: the hatch at each physical pixel, both colours present.
+    let (classes, class_texts) = (shot, texts);
+    let label_of = |name: &str| {
+        class_texts
+            .iter()
+            .find(|(t, _)| t == name)
+            .unwrap_or_else(|| panic!("no `{name}` in the legend"))
+            .1
+    };
+    // The debug view on, so the legend draws the "Debug" key, whose "forbidden (chart)" entry is the hatch (R-467 D5).
+    let mut rig = Rig::new(Some(canvas.clone()), true);
+    let texts = rig.legend_texts();
+    let shot = render_frame(&canvas, &mut rig.app, &mut rig.h);
+    let label = |name: &str| {
+        texts
+            .iter()
+            .find(|(t, _)| t == name)
+            .unwrap_or_else(|| panic!("no `{name}` in the legend"))
+            .1
+    };
+    // The debug view's forbidden (chart) entry: the hatch at each physical pixel, both colours present.
     let is_hatch = |p: [u8; 3]| HATCH.iter().any(|h| near(p, *h));
-    let b = swatch_box(&shot, label(FORBIDDEN), is_hatch);
-    check_box(&shot, b, FORBIDDEN, hatch);
+    let b = swatch_box(&shot, label(DEBUG_FORBIDDEN), is_hatch);
+    check_box(&shot, b, DEBUG_FORBIDDEN, hatch);
     let [x0, y0, x1, y1] = b;
     let seen: Vec<[u8; 3]> = (y0..y1)
         .flat_map(|y| (x0..x1).map(move |x| (x, y)))
@@ -269,12 +319,12 @@ fn qa_m2_32_legend_swatches_drawn() {
         .collect();
     assert!(
         HATCH.iter().all(|h| seen.iter().any(|p| near(*p, *h))),
-        "the forbidden region's swatch is not both of the hatch's colours"
+        "the forbidden (chart) swatch is not both of the hatch's colours"
     );
     // Controls: the hatch read one pixel off its position; a hatch key painted as one flat colour; a class's swatch
     // read as its neighbour's.
     rejects("the hatch one pixel off its position", || {
-        check_box(&shot, b, FORBIDDEN, |x, y| hatch(x + 1, y))
+        check_box(&shot, b, DEBUG_FORBIDDEN, |x, y| hatch(x + 1, y))
     });
     let flat = Shot {
         size: shot.size,
@@ -286,11 +336,11 @@ fn qa_m2_32_legend_swatches_drawn() {
         names: Vec::new(),
     };
     rejects("a flat violet hatch key", || {
-        check_box(&flat, b, FORBIDDEN, hatch)
+        check_box(&flat, b, DEBUG_FORBIDDEN, hatch)
     });
     rejects("escape body 1's swatch read as escape body 2's", || {
         let c = rgb8(CLASSES[5].1);
-        let b5 = swatch_box(&shot, label(CLASSES[5].0), |p| near(p, c));
-        check_box(&shot, b5, "escape body 1", |_, _| rgb8(CLASSES[6].1))
+        let b5 = swatch_box(&classes, label_of(CLASSES[5].0), |p| near(p, c));
+        check_box(&classes, b5, "escape body 1", |_, _| rgb8(CLASSES[6].1))
     });
 }

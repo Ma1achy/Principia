@@ -50,6 +50,7 @@ fn store(t: f64) -> StateStore {
             palette: Palette {},
             playhead: Playhead { t },
             hover: Hover::default(),
+            debug_view: false,
         },
     )
 }
@@ -1147,4 +1148,53 @@ validation::negative_control!(
     "a store that ignores the key makes an entry per edit",
     expected = "one key is not one entry",
     check_keys(|st, edit, _| st.set_field(edit))
+);
+
+/// View › Debug view's edit (R-467 D5; gui_state_contract §2): the store writes `debug_view`, logs it as
+/// "SetField DebugView before → after", one undo entry per toggle, and undo restores it, the sim key untouched.
+fn check_debug_view_edit(mut store: StateStore) {
+    let sim = store.snapshot().sim;
+    store.set_field(SetField {
+        edit: Edit::Render(RenderField::DebugView(true)),
+        no_history: false,
+    });
+    let snap = store.snapshot();
+    assert!(snap.render.debug_view, "not written");
+    assert_eq!(snap.log[0].message, "SetField DebugView false → true");
+    assert_eq!(snap.history.undo_depth, 1, "one undo entry");
+    assert_eq!(snap.sim, sim, "the sim key changed");
+    store.undo();
+    assert!(
+        !store.snapshot().render.debug_view,
+        "undo did not restore it"
+    );
+}
+
+#[test]
+fn store_writes_logs_and_undoes_the_debug_view() {
+    check_debug_view_edit(store(0.0));
+    let before = Edit::Render(RenderField::DebugView(true));
+    let edit = SetField {
+        edit: Edit::Render(RenderField::DebugView(false)),
+        no_history: true,
+    };
+    assert_eq!(
+        set_field_message(&before, &edit),
+        "SetField DebugView true → false (no history)"
+    );
+}
+
+validation::negative_control!(
+    store_writes_logs_and_undoes_the_debug_view,
+    "a store already in the debug view must fail: its toggle logs true → true",
+    expected = "assertion `left == right` failed",
+    check_debug_view_edit({
+        let mut s = store(0.0);
+        s.set_field(SetField {
+            edit: Edit::Render(RenderField::DebugView(true)),
+            no_history: true,
+        });
+        let _ = s.snapshot();
+        s
+    })
 );

@@ -1,6 +1,6 @@
-//! `mock_legend_keys` (REQ-GUI-157's Legend frame; render_gui_spec §G2, §G6; R-399; R-444, R-446): the mock evaluates its
-//! fake stain into the legend's keys, walking back from OUT, one key per dimension in order; the outcome key is the nine
-//! classes, each a flat swatch, the black one `#141418`, then the "forbidden region" key in the hatch style, with no
+//! `mock_legend_keys` (REQ-GUI-157's Legend frame; render_gui_spec §G2, §G6; R-399; R-444, R-446, R-467): the mock
+//! evaluates its fake stain into the legend's keys, walking back from OUT, one key per dimension in order; the outcome
+//! key is the nine classes, each a flat swatch, the black one `#141418`, with no "forbidden region" key (R-467) and no
 //! "degenerate", "collision @ t=0", "running" or `sim_failed` key and no "not yet" swatch; the mock's fake samples take
 //! only classes of the nine; the GUI draws exactly the keys it receives, in order, and an empty list as an empty frame;
 //! adding a dimension or removing brightness changes the keys drawn; a `running` class, which another field's key may
@@ -27,12 +27,14 @@ use crate::headless::Headless;
 use crate::layout::Layout;
 use crate::mock::canvas::MockCanvas;
 use crate::mock::legend::{
-    brightness, default_stain, evaluate, Class, Dimension, FakeStain, DARKEST, FORBIDDEN,
-    RAMP_SAMPLES,
+    brightness, default_stain, evaluate, Class, Dimension, FakeStain, DARKEST, RAMP_SAMPLES,
 };
 use crate::mock::sample::FATES;
 use crate::mock::MockEngine;
 use crate::side::{EngineSide, MockSide};
+
+/// The key R-467 took out of the outcome legend.
+const FORBIDDEN: &str = "forbidden region";
 
 /// The label of the outcome swatch `param`.
 fn label(param: &str) -> String {
@@ -78,8 +80,7 @@ fn mock_legend_keys_exact_keys_in_order() {
         SWATCHES.map(|s| s.param),
         "the nine, in §1.4's order"
     );
-    let mut labels: Vec<String> = classes.iter().map(|c| label(c)).collect();
-    labels.push(FORBIDDEN.to_owned());
+    let labels: Vec<String> = classes.iter().map(|c| label(c)).collect();
     let want = vec![
         ("colour · outcome class".to_owned(), labels),
         ("brightness · t_end (late fade)".to_owned(), Vec::new()),
@@ -90,14 +91,19 @@ fn mock_legend_keys_exact_keys_in_order() {
         other.reverse();
         assert_eq!(outline(&legend), other)
     });
+    rejects("a legend that keeps the forbidden key", || {
+        let mut kept = want.clone();
+        kept[0].1.push(FORBIDDEN.to_owned());
+        assert_eq!(outline(&legend), kept)
+    });
     let LegendKey::Categorical { entries, .. } = &legend.keys[0] else {
         panic!("the first key is the outcome class")
     };
-    // The shares are the weights over their sum, in percent; every swatch is its palette colour, flat; the forbidden
-    // region is the hatch.
+    // The shares are the weights over their sum, in percent, the nine's, a pixel that is not part of the chart having
+    // none; every swatch is its palette colour, flat, and none is the hatch.
     let total: f64 = entries.iter().map(|e| e.share).sum();
     assert!((total - 100.0).abs() < 1e-9, "{total}");
-    let weights: f64 = [31.2, 6.4, 5.9, 6.3, 0.9, 11.0, 24.8, 12.1, 1.4, 0.6]
+    let weights: f64 = [31.2, 6.4, 5.9, 6.3, 0.9, 11.0, 24.8, 12.1, 1.4]
         .iter()
         .sum();
     assert!(
@@ -117,7 +123,9 @@ fn mock_legend_keys_exact_keys_in_order() {
         ),
         "the black one"
     );
-    assert_eq!(entries.last().unwrap().swatch, SwatchStyle::Hatch);
+    assert_eq!(entries.len(), 9, "the nine and nothing else");
+    assert!(!entries.iter().any(|e| e.swatch == SwatchStyle::Hatch));
+    assert!(entries.iter().all(|e| e.count.is_none()), "shares only");
     for gone in ["degenerate", "collision @ t=0", "running", "sim_failed"] {
         assert!(!entries.iter().any(|e| e.label == gone), "a \"{gone}\" key");
     }
@@ -238,9 +246,9 @@ fn mock_legend_keys_the_gui_draws_what_it_receives() {
         texts.iter().any(|t| t == "colour · outcome class"),
         "{texts:?}"
     );
-    assert!(texts.iter().any(|t| t == FORBIDDEN));
+    assert!(!texts.iter().any(|t| t == FORBIDDEN));
     assert!(
-        texts.iter().any(|t| t == "31.0"),
+        texts.iter().any(|t| t == "31.2"),
         "bounded's share: {texts:?}"
     );
     assert!(
@@ -291,7 +299,7 @@ fn mock_legend_keys_layout() {
     assert_eq!(rects.len(), 2);
     assert!(rects[0].max.y < rects[1].min.y, "top to bottom");
     assert_eq!(rects[0].height(), key_height(&legend.keys[0]));
-    // Ten entries in two columns: five rows and the title's.
+    // Nine entries in two columns: five rows and the title's.
     assert_eq!(key_height(&legend.keys[0]), ROW_H * 6.0);
     let odd = LegendKey::Categorical {
         title: String::new(),
@@ -300,6 +308,7 @@ fn mock_legend_keys_layout() {
                 label: String::new(),
                 swatch: SwatchStyle::NotYet,
                 share: 0.0,
+                count: None,
             };
             3
         ],
@@ -350,8 +359,10 @@ fn mock_legend_keys_running_is_the_not_yet_stipple() {
         MockSide::new(MockEngine::frozen(), Some(canvas.clone())),
         FORMAT,
     );
-    // The outcome key has no running class since R-446; a key of another field, set first, shows it.
+    // The outcome key has no running class since R-446; a key of another field, set first, shows it. The bar is left
+    // out, so the keys fit the panel and are drawn where `key_rects` puts them, not scrolled.
     let mut stain = default_stain();
+    stain.out.pop();
     stain.out.insert(
         0,
         Dimension::Categorical {
@@ -459,7 +470,6 @@ fn mock_legend_keys_read_the_display_names() {
             "escape body 2",
             "escape body 3",
             "triple ejection",
-            "forbidden region",
         ]
     );
     // A running key, which another field's legend may show, reads the function's name too.

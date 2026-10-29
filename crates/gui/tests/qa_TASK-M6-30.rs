@@ -598,74 +598,114 @@ fn check_hatched_outside(rgba: &[u8], rect: [usize; 4]) {
     }
 }
 
-/// With the mock's test hook flagging the whole plane invalid, F3 off draws every pixel past the shown rect with the
-/// hatch, never the stand-in or the clear colour, and the shown rect as the shown layout draws it, so the two states
-/// stay pixel-identical over it (REQ-GUI-179; R-407's fallback is past `[0, 1]²`); the shown layout is unchanged by
-/// the flag. A flag on one side hatches that side only.
+/// View › Debug view on (R-467 D5): one `SetField` of `RenderState`'s `debug_view`.
+fn debug_view_on(h: &mut Headless, app: &mut App<MockSide>) {
+    app.set_field(SetField {
+        edit: Edit::Render(RenderField::DebugView(true)),
+        no_history: false,
+    });
+    settle(h, app);
+}
+
+/// With the mock's test hook flagging a region, F3 off draws its pixels, which are not part of the chart, as the
+/// canvas background, the clear colour, with no hatch, in the presentation view, and with the hatch in the debug view
+/// (REQ-GUI-179 as R-467 amends its display: D2, D5, D8). Flagging the whole plane, the debug view hatches every pixel
+/// of the window, the shown rect included (D8: "a region reaching inside `[0,1]²` is drawn there too"), and the
+/// presentation view draws none but the clear colour. A flag on one side, past the shown rect, changes that side
+/// only, and leaves the shown rect as the shown layout draws it, so the two states stay pixel-identical over it.
+///
+/// Changed by TASK-M6-46's qa commit (R-290, R-467 D14): before R-467 the flagged pixels past the rect were hatched in
+/// the one view there was, never the clear colour, and the shown rect was never flagged.
 #[test]
 fn qa_f3_off_flagged_pixels_are_hatched_past_the_rect_only() {
     let canvas = canvas();
     let f = shown_px();
-    let take = |hide: bool| {
+    let take = |hide: bool, debug: bool| {
         let (mut app, mut h) = app_on(Some(canvas.clone()));
+        if debug {
+            debug_view_on(&mut h, &mut app);
+        }
         if hide {
             press(&mut h, &mut app, Key::F3);
         }
         render_frame(&canvas, &mut app, &mut h)
     };
-    let (plain_on, plain_off) = (take(false), take(true));
-    canvas.flag_invalid([-100.0, -100.0, 100.0, 100.0]);
-    let (on, off) = (take(false), take(true));
+    let (plain_on, plain_off) = (take(false, false), take(true, false));
+    let plain_debug_off = take(true, true);
     assert_eq!(
-        on.rgba, plain_on.rgba,
-        "the shown layout changed under the flag"
+        plain_debug_off.rgba, plain_off.rgba,
+        "with nothing flagged the debug view changed the figure"
     );
-    check_hatched_outside(&off.rgba, f);
-    let clear = clear();
-    assert!(
-        off.rgba.chunks(4).all(|p| p != clear),
-        "the clear colour with the plane flagged"
-    );
-    for y in f[1]..f[3] {
-        for x in f[0]..f[2] {
-            assert_eq!(
-                px(&off.rgba, x, y),
-                px(&plain_on.rgba, x, y),
-                "the shown rect at ({x}, {y})"
-            );
-        }
-    }
-    // Both stripes drawn, so it is the hatch and not a flat colour.
+    canvas.flag_invalid([-100.0, -100.0, 100.0, 100.0]);
+    let (off, debug_off) = (take(true, false), take(true, true));
+    // The debug view: the hatch at every pixel of the window, both stripes drawn, so not a flat colour.
+    check_hatched_outside(&debug_off.rgba, [0, 0, 0, 0]);
     let colours = hatch().colours;
     for c in colours {
-        assert!(off.rgba.chunks(4).any(|p| p[..3] == c), "no {c:?} stripe");
+        assert!(
+            debug_off.rgba.chunks(4).any(|p| p[..3] == c),
+            "no {c:?} stripe"
+        );
     }
+    // The presentation view: the clear colour everywhere, no hatch.
+    let clear = clear();
+    assert!(
+        off.rgba.chunks(4).all(|p| p == clear),
+        "a pixel other than the clear colour with the plane flagged in the presentation view"
+    );
     rejects("the stand-in past the rect", || {
         check_hatched_outside(&plain_off.rgba, f)
     });
-    // A flag right of the shown rect only, past the window's right edge: the left strip stays the stand-in.
+    rejects("the presentation view hatched", || {
+        check_hatched_outside(&off.rgba, f)
+    });
+    // A flag right of the shown rect only, past the window's right edge: the left strip and the shown rect stay the
+    // stand-in; the right strip is the clear colour in the presentation view and the hatch in the debug view.
     canvas.flag_invalid([1.0, -100.0, 100.0, 100.0]);
-    let right = take(true);
+    let (right, right_debug) = (take(true, false), take(true, true));
     for y in 0..H {
-        for x in 0..f[0] {
-            assert_eq!(
-                px(&right.rgba, x, y),
-                px(&plain_off.rgba, x, y),
-                "the left strip at ({x}, {y})"
-            );
+        for x in 0..f[2] {
+            for (shot, what) in [(&right, "presentation"), (&right_debug, "debug")] {
+                assert_eq!(
+                    px(&shot.rgba, x, y),
+                    px(&plain_off.rgba, x, y),
+                    "the {what} view's left of the right strip at ({x}, {y})"
+                );
+            }
         }
         for x in f[2] + 1..W {
             assert_eq!(
                 px(&right.rgba, x, y),
+                clear,
+                "the presentation view's right strip at ({x}, {y})"
+            );
+            assert_eq!(
+                px(&right_debug.rgba, x, y),
                 hatch_at(x, y),
-                "the right strip at ({x}, {y})"
+                "the debug view's right strip at ({x}, {y})"
+            );
+        }
+    }
+    for y in f[1]..f[3] {
+        for x in f[0]..f[2] {
+            assert_eq!(
+                px(&right.rgba, x, y),
+                px(&plain_on.rgba, x, y),
+                "the shown rect at ({x}, {y})"
             );
         }
     }
     rejects("the left strip hatched", || {
         for y in 0..H {
             for x in 0..f[0] {
-                assert_eq!(px(&off.rgba, x, y), px(&plain_off.rgba, x, y));
+                assert_eq!(px(&debug_off.rgba, x, y), px(&plain_off.rgba, x, y));
+            }
+        }
+    });
+    rejects("the right strip hatched in the presentation view", || {
+        for y in 0..H {
+            for x in f[2] + 1..W {
+                assert_eq!(px(&right_debug.rgba, x, y), clear);
             }
         }
     });

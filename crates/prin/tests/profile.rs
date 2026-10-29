@@ -155,6 +155,7 @@ fn skeleton() -> (SimConfig, RenderState) {
             palette: Palette {},
             playhead: Playhead { t: 0.0 },
             hover: Hover::default(),
+            debug_view: false,
         },
     )
 }
@@ -315,8 +316,8 @@ validation::negative_control!(
     expected = "the config is not the canonical text",
     check_provenance(
         &lines_of(&synthetic(4).1)[0].replace(
-            r#""config":{"frames":4,"render":{"hover":{"at":null},"overlays":{"burrau_lattice":false,"class_edges":false,"depth_colouring":false,"energy_drift":false,"forbidden_region":false,"grid":false,"nan_invalid_pixels":false,"priority_heatmap":false,"refine_flagged":false,"split_merge_activity":false,"substep_cap_hits":false,"substep_density":false,"t_end_contours":false,"tile_bounds":false},"palette":{},"playhead":{"t":0},"stain_graph":{"nodes":[{"id":0,"kind":"combiner","occupant":{"builtin":"pass_through"},"params":{}},{"id":1,"kind":"out","occupant":"none","params":{}}],"wires":[{"from":0,"port":0,"to":1}]}},"scenario":"synthetic_frames","#,
-            r#""config":{"scenario":"synthetic_frames","frames":4,"render":{"hover":{"at":null},"overlays":{"burrau_lattice":false,"class_edges":false,"depth_colouring":false,"energy_drift":false,"forbidden_region":false,"grid":false,"nan_invalid_pixels":false,"priority_heatmap":false,"refine_flagged":false,"split_merge_activity":false,"substep_cap_hits":false,"substep_density":false,"t_end_contours":false,"tile_bounds":false},"palette":{},"playhead":{"t":0},"stain_graph":{"nodes":[{"id":0,"kind":"combiner","occupant":{"builtin":"pass_through"},"params":{}},{"id":1,"kind":"out","occupant":"none","params":{}}],"wires":[{"from":0,"port":0,"to":1}]}},"#
+            r#""config":{"frames":4,"render":{"debug_view":false,"hover":{"at":null},"overlays":{"burrau_lattice":false,"class_edges":false,"depth_colouring":false,"energy_drift":false,"forbidden_region":false,"grid":false,"nan_invalid_pixels":false,"priority_heatmap":false,"refine_flagged":false,"split_merge_activity":false,"substep_cap_hits":false,"substep_density":false,"t_end_contours":false,"tile_bounds":false},"palette":{},"playhead":{"t":0},"stain_graph":{"nodes":[{"id":0,"kind":"combiner","occupant":{"builtin":"pass_through"},"params":{}},{"id":1,"kind":"out","occupant":"none","params":{}}],"wires":[{"from":0,"port":0,"to":1}]}},"scenario":"synthetic_frames","#,
+            r#""config":{"scenario":"synthetic_frames","frames":4,"render":{"debug_view":false,"hover":{"at":null},"overlays":{"burrau_lattice":false,"class_edges":false,"depth_colouring":false,"energy_drift":false,"forbidden_region":false,"grid":false,"nan_invalid_pixels":false,"priority_heatmap":false,"refine_flagged":false,"split_merge_activity":false,"substep_cap_hits":false,"substep_density":false,"t_end_contours":false,"tile_bounds":false},"palette":{},"playhead":{"t":0},"stain_graph":{"nodes":[{"id":0,"kind":"combiner","occupant":{"builtin":"pass_through"},"params":{}},{"id":1,"kind":"out","occupant":"none","params":{}}],"wires":[{"from":0,"port":0,"to":1}]}},"#
         ),
         4,
         &expected_commit()
@@ -413,7 +414,7 @@ fn profile_file_canonical_same_bytes_twice() {
     check_same_text(
         &canonical::to_string(&render).unwrap(),
         &canonical::to_string(&render2).unwrap(),
-        r#"{"hover":{"at":null},"overlays":{"burrau_lattice":false,"class_edges":false,"depth_colouring":false,"energy_drift":false,"forbidden_region":false,"grid":false,"nan_invalid_pixels":false,"priority_heatmap":false,"refine_flagged":false,"split_merge_activity":false,"substep_cap_hits":false,"substep_density":false,"t_end_contours":false,"tile_bounds":false},"palette":{},"playhead":{"t":0},"stain_graph":{"nodes":[{"id":0,"kind":"combiner","occupant":{"builtin":"pass_through"},"params":{}},{"id":1,"kind":"out","occupant":"none","params":{}}],"wires":[{"from":0,"port":0,"to":1}]}}"#,
+        r#"{"debug_view":false,"hover":{"at":null},"overlays":{"burrau_lattice":false,"class_edges":false,"depth_colouring":false,"energy_drift":false,"forbidden_region":false,"grid":false,"nan_invalid_pixels":false,"priority_heatmap":false,"refine_flagged":false,"split_merge_activity":false,"substep_cap_hits":false,"substep_density":false,"t_end_contours":false,"tile_bounds":false},"palette":{},"playhead":{"t":0},"stain_graph":{"nodes":[{"id":0,"kind":"combiner","occupant":{"builtin":"pass_through"},"params":{}},{"id":1,"kind":"out","occupant":"none","params":{}}],"wires":[{"from":0,"port":0,"to":1}]}}"#,
     );
     // Keys sort by their UTF-16 code units at every depth, whatever order the struct declares or the map iterates.
     check_same_text(

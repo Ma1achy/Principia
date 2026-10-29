@@ -112,6 +112,12 @@
       "artboard": "docs/gui/design/01_main.png"
     },
     {
+      "name": "mock_debug_view",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["tab", "enter", "arrow_right", "enter", "arrow_down", "enter"] },
+      "artboard": "docs/gui/design/01_main.png",
+      "mock_invalid": "-0.5,-0.5,0.25,1.5"
+    },
+    {
       "name": "mock_compass_plucker",
       "surface": { "kind": "gui", "screen": "01_main", "steps": ["tab", "tab", "enter", "arrow_down", "arrow_down", "arrow_down", "enter", "enter", "shift_arrow_up", "shift_arrow_up", "enter", "arrow_down", "arrow_down", "arrow_down", "arrow_down", "enter", "shift_arrow_up", "shift_arrow_up", "shift_arrow_up", "tab", "tab", "tab", "enter", "arrow_right", "arrow_right", "arrow_right", "arrow_right", "enter", "arrow_left", "arrow_left", "arrow_left", "arrow_left", "enter", "arrow_right"] },
       "artboard": "docs/gui/design/01_main.png"
