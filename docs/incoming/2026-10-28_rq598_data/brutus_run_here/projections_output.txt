@@ -1,0 +1,20 @@
+eps=1e-3: median ms/step 0.240 over 9 runs (MEASURED)
+eps=1e-4: median ms/step 0.341 over 9 runs (MEASURED)
+eps=1e-5: median ms/step 0.445 over 9 runs (MEASURED)
+eps=1e-6: median ms/step 0.567 over 9 runs (MEASURED)
+fit ms/step = -0.090 + 0.1086 x (-log10 eps)   [fit range 3..6 decades]
+eps=1e-6 L_w=128 wall to t=10 (MEASURED): median of 9 full runs 1.45 s; all 12 runs to t=10 (9 full + 3 authors-truncated, run out to 10): median 1.57, mean 2.00, max 6.67; mean/median = 1.28
+
+ESTIMATE at eps=1e-11, L_w=128: ms/step 1.10 (linear extrapolation); steps 2653-3051; wall per run 2.9-3.4 s (median-like run)
+   N=  1000, one pair                                          :    1.0-   1.2 core-hours (with the mean/median tail factor 1.28 from our 12 runs)
+   N=  1000, both pairs, as the authors' convergence test needs:    2.1-   2.4 core-hours (with the mean/median tail factor 1.28 from our 12 runs)
+   N= 10000, one pair                                          :   10.4-  11.9 core-hours (with the mean/median tail factor 1.28 from our 12 runs)
+   N= 10000, both pairs, as the authors' convergence test needs:   20.8-  23.9 core-hours (with the mean/median tail factor 1.28 from our 12 runs)
+
+ESTIMATE at eps=1e-10, L_w=88: ms/step 1.00 (linear extrapolation); steps 2653-3051; wall per run 2.6-3.0 s (median-like run)
+   N=  1000, one pair                                          :    0.9-   1.1 core-hours (with the mean/median tail factor 1.28 from our 12 runs)
+   N=  1000, both pairs, as the authors' convergence test needs:    1.9-   2.2 core-hours (with the mean/median tail factor 1.28 from our 12 runs)
+   N= 10000, one pair                                          :    9.4-  10.8 core-hours (with the mean/median tail factor 1.28 from our 12 runs)
+   N= 10000, both pairs, as the authors' convergence test needs:   18.7-  21.5 core-hours (with the mean/median tail factor 1.28 from our 12 runs)
+
+NOT captured: runs that need many more steps than the 2561-output floor (the authors' 44 of 180 files stop early, at their own failure points); a 12-run sample cannot show that tail. Treat the figures as the cost of the typical run.
