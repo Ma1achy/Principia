@@ -123,6 +123,9 @@ pub fn write(sim: &mut SimConfig, render: &mut RenderState, edit: Edit) -> Edit 
         Edit::Render(RenderField::StainGraph(graph)) => Edit::Render(RenderField::StainGraph(
             replace(&mut render.stain_graph, graph),
         )),
+        Edit::Render(RenderField::DebugView(on)) => {
+            Edit::Render(RenderField::DebugView(replace(&mut render.debug_view, on)))
+        }
     }
 }
 
@@ -249,6 +252,7 @@ pub fn set_field_message(before: &Edit, edit: &SetField) -> String {
             None => "none".to_owned(),
         },
         Edit::Render(RenderField::StainGraph(g)) => stain_graph(g),
+        Edit::Render(RenderField::DebugView(on)) => on.to_string(),
     };
     let path = match &edit.edit {
         Edit::Sim(SimField::Z0(_)) => "Plane.z0",
@@ -262,6 +266,7 @@ pub fn set_field_message(before: &Edit, edit: &SetField) -> String {
         Edit::Render(RenderField::Overlays(_)) => "Overlays",
         Edit::Render(RenderField::Hover(_)) => "Hover.at",
         Edit::Render(RenderField::StainGraph(_)) => "StainGraph",
+        Edit::Render(RenderField::DebugView(_)) => "DebugView",
     };
     let marker = if edit.no_history { " (no history)" } else { "" };
     format!(

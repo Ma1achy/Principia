@@ -3,16 +3,17 @@
 //! per dimension, in the order received. The real engine's evaluation is TASK-M8-22's (REQ-GUI-105, REQ-GUI-106);
 //! until then its snapshot carries no key.
 //!
-//! The "not yet" style, the hatch and the outcome palette, with its built-in colour occupant's id, are re-exported
-//! here, so the GUI draws a "not yet" key as the style (R-399) and the outcome legend's "forbidden region" key as the
-//! hatch (R-136, R-446; render_gui_spec §G6), from the one source of their calibrations (REQ-COL-053, REQ-COL-055,
-//! REQ-COL-064; colour_composition §1.4), through the contract it is allowed to reach. `linear_to_srgb` is the sRGB
+//! The "not yet" style, the hatch, the NaN / Inf style and the outcome palette, with its built-in colour occupant's id,
+//! are re-exported here, so the GUI draws a "not yet" key as the style (R-399) and the debug view's "Debug" key's
+//! entries as the hatch and the NaN / Inf style (R-136, R-467 D5, D6; render_gui_spec §G6), from the one source of
+//! their calibrations (REQ-COL-053, REQ-COL-055, REQ-COL-064, REQ-COL-110 as proposed; colour_composition §1.4),
+//! through the contract it is allowed to reach. `linear_to_srgb` is the sRGB
 //! transfer (dd_colouring §3.1) the GUI encodes the hatch's linear colour with.
 
 pub use render::colour::outcome::{Swatch, ID as OUTCOME_OCCUPANT, SWATCHES};
 pub use render::present::{
-    debug_invalid, debug_not_yet, hatch_stripe, linear_to_srgb, not_yet_dot_at, NOT_YET_CELL,
-    NOT_YET_DOT, NOT_YET_DOT_SRGB8, NOT_YET_SRGB8,
+    debug_invalid, debug_nan_inf, debug_not_yet, hatch_stripe, linear_to_srgb, nan_inf_square,
+    not_yet_dot_at, NAN_INF_SRGB8, NOT_YET_CELL, NOT_YET_DOT, NOT_YET_DOT_SRGB8, NOT_YET_SRGB8,
 };
 
 /// The keys of the stain on show, one per dimension, in the order the evaluation walks back from OUT (render_gui_spec
@@ -60,16 +61,24 @@ pub struct LegendEntry {
     pub swatch: SwatchStyle,
     /// Its share of the view, in percent.
     pub share: f64,
+    /// The number of the figure's pixels drawn in it, where the key counts pixels, as the debug view's "Debug" key does
+    /// (R-467 D5); `None` for a key that gives shares only.
+    pub count: Option<u64>,
 }
 
-/// How a class is drawn: a flat colour, the "not yet" style (R-399), or the hatch (R-136), neither ever flat.
+/// How a class is drawn: a flat colour, the "not yet" style (R-399), the hatch (R-136) or the NaN / Inf style (R-467
+/// D6), none of the three ever flat.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SwatchStyle {
     /// One flat colour, 8-bit sRGB.
     Flat([u8; 3]),
     /// The "not yet" style: [`debug_not_yet`], the grey with a fine dot stipple from the pixel position.
     NotYet,
-    /// The hatch: [`debug_invalid`], the diagonal stripes from the pixel position, the outcome legend's "forbidden
-    /// region" key (R-446; render_gui_spec §G6), compared as the style, not as one colour.
+    /// The hatch: [`debug_invalid`], the diagonal stripes from the pixel position, the debug view's "forbidden
+    /// (chart)" and "decode or sim failure" entries (R-467 D5, F1; render_gui_spec §G6), compared as the style, not as
+    /// one colour.
     Hatch,
+    /// The NaN / Inf style: [`debug_nan_inf`], a checkerboard from the pixel position, the debug view's "NaN / Inf"
+    /// entry (R-467 D5, D6; REQ-COL-110 as proposed, a placeholder until it is confirmed), compared as the style.
+    NanInf,
 }

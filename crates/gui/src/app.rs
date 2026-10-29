@@ -167,6 +167,8 @@ pub struct Actions {
     pub overlays: Option<engine::contract::render_state::Overlays>,
     /// Keep the overlay set as the default (Overlays ▾'s save as default).
     pub save_overlays: bool,
+    /// Toggle the debug view, one `SetField` (View › Debug view, R-467 D5).
+    pub debug_view: bool,
     /// Return every splitter to its default (View › reset layout, R-462 J3).
     pub reset_layout: bool,
 }
@@ -626,6 +628,11 @@ impl<S: EngineSide> App<S> {
                 edit: Edit::Render(RenderField::Overlays(overlays)),
                 no_history: false,
             });
+        }
+        if std::mem::take(&mut actions.debug_view) {
+            edits.push(explore::top_bar::debug_view_edit(
+                !self.snapshot.render.debug_view,
+            ));
         }
         if std::mem::take(&mut actions.save_overlays) {
             self.overlay_default = self.snapshot.render.overlays.clone();
@@ -1171,9 +1178,13 @@ impl<S: EngineSide> App<S> {
     /// to the figure's rect as it stands: the canvas with the egui layer `shown`, else the window (R-406). So over the
     /// canvas the two states draw the same pixels, and a splitter that resizes the canvas re-frames the figure, never
     /// moving or scaling the field (R-462 J4). The engine side is told the span shown first, to compute only what it
-    /// does not hold.
+    /// does not hold, then the figure's view with its background (R-467 D2).
     fn paint_figure(&mut self, ctx: &egui::Context, layout: &Layout, shown: bool) {
         self.side.show_span(layout.span(shown));
+        let background = clear_colour(&ctx.global_style().visuals).to_array();
+        let [r, g, b, _] = background;
+        let view = crate::side::FigureView::of(layout, shown, ctx.pixels_per_point(), [r, g, b]);
+        self.side.figure_view(view);
         let Some(canvas) = self.side.figure(layout.placement()) else {
             return;
         };

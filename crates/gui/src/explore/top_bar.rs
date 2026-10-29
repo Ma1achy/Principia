@@ -5,13 +5,16 @@
 //! order, filled from the snapshot, in egui's `Monospace` (Ubuntu Mono, RQ-251). The top bar is the keyboard's big
 //! scope 1, its controls the sub-scopes Enter reaches, in the order they are drawn; Enter on one acts as its click.
 //! Each menu's entries are the menu's own sub-scopes: Enter opens it on its first entry, the arrows move between
-//! them, Enter on one acts as its click, and Esc closes the menu, back to its control.
+//! them, Enter on one acts as its click, and Esc closes the menu, back to its control. View holds F3 hide and, after
+//! it, Debug view, a check entry: one undoable `SetField` on `RenderState`'s `debug_view` per toggle, as an Overlays ▾
+//! toggle is (R-467 D5, R-69).
 
 use eframe::egui::containers::menu::MenuButton;
 use eframe::egui::{
     self, Align, Button, Layout as EguiLayout, Rect, Response, RichText, Ui, UiBuilder,
 };
 use engine::contract::render_state::Overlays;
+use engine::contract::set_field::{Edit, RenderField, SetField};
 use engine::contract::snapshot::Snapshot;
 use engine::contract::view_ui::{KeyMode, Mode};
 
@@ -41,6 +44,8 @@ const MENUS: [ScopeId; 5] = ["file", "view", "windows", "overlays", "help"];
 pub const QUIT: (ScopeId, &str) = ("file_quit", "Quit");
 /// View's entry that hides the layer, as F3 does.
 pub const HIDE: (ScopeId, &str) = ("view_hide", "F3 hide");
+/// View's check entry that switches the figure to the debug view (R-467 D5), after F3 hide.
+pub const DEBUG_VIEW: (ScopeId, &str) = ("view_debug", "Debug view");
 /// View's entry that returns every splitter to 01_main.png's layout, after F3 hide (R-462 J3; §G2's View menu).
 pub const RESET_LAYOUT: (ScopeId, &str) = ("view_reset_layout", "reset layout");
 /// Help's entry that opens the `?` shortcuts (RQ-250).
@@ -70,6 +75,7 @@ pub fn register(tree: &mut ScopeTree) {
     }
     tree.register(Some("file"), Scope::control(QUIT.0, QUIT.1));
     tree.register(Some("view"), Scope::control(HIDE.0, HIDE.1));
+    tree.register(Some("view"), Scope::control(DEBUG_VIEW.0, DEBUG_VIEW.1));
     tree.register(Some("view"), Scope::control(RESET_LAYOUT.0, RESET_LAYOUT.1));
     for (id, name) in WINDOW_ENTRIES.into_iter().zip(WINDOWS) {
         tree.register(Some("windows"), Scope::control(id, name));
@@ -86,6 +92,7 @@ pub fn activate(id: &str, actions: &mut Actions) {
         "stain" => actions.mode = Some(Mode::Stain),
         id if id == QUIT.0 => actions.quit = true,
         id if id == HIDE.0 => actions.toggle_layer = true,
+        id if id == DEBUG_VIEW.0 => actions.debug_view = true,
         id if id == RESET_LAYOUT.0 => actions.reset_layout = true,
         id if id == KEYS.0 => actions.shortcuts = true,
         _ => {}
@@ -102,6 +109,15 @@ pub const WINDOWS: [&str; 7] = {
     }
     names
 };
+
+/// The edit View › Debug view sends to turn the debug view `on` or off: one undoable `SetField` on `RenderState`'s
+/// `debug_view` (R-467 D5; R-69), as an Overlays ▾ toggle is one on the overlay set.
+pub fn debug_view_edit(on: bool) -> SetField {
+    SetField {
+        edit: Edit::Render(RenderField::DebugView(on)),
+        no_history: false,
+    }
+}
 
 /// What an absent value reads (RQ-243).
 pub const ABSENT: &str = "—";
@@ -188,6 +204,13 @@ pub fn show(
             actions.toggle_layer = true;
         }
         keyboard.place_widget(HIDE.0, &hide);
+        // A check entry: it shows the contract's state, and a click asks for the toggle (R-467 D5).
+        let mut on = snapshot.render.debug_view;
+        let debug = ui.checkbox(&mut on, DEBUG_VIEW.1);
+        if debug.clicked() {
+            actions.debug_view = true;
+        }
+        keyboard.place_widget(DEBUG_VIEW.0, &debug);
         let reset = ui.button(RESET_LAYOUT.1);
         if reset.clicked() {
             actions.reset_layout = true;

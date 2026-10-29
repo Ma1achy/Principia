@@ -9,10 +9,12 @@
 // `look.y`, multiplied, its lightness replaced, or passed through, and shifted by the source field's phase.
 // `fs_main` draws the figure at `chart.place`, the shown figure's rect in the viewport (`crate::layout::Placement`):
 // with the egui layer hidden the viewport is the window and the field continues past the shown rect at the same
-// scale, an affine chart, each point where the shown layout puts it (R-406). Past the shown rect, a pixel whose field
-// point lies in `chart.invalid`, the region the mock flags invalid (a test hook), is drawn with the shared prelude's
-// hatch, `debug_invalid`, as forbidden (R-407's fallback). The canvas puts the prelude ahead of this file, so its
-// uniform block's binding, 0, is left to it.
+// scale, an affine chart, each point where the shown layout puts it (R-406). A pixel whose field point lies in
+// `chart.invalid`, the region the mock flags invalid (a test hook), past the shown rect or inside it, is not part of the
+// chart: `fs_main`, the presentation view, draws it as the canvas background, `chart.background`, the colour the window
+// is cleared to, with no hatch; `fs_debug`, the debug view (View › Debug view), with the shared prelude's hatch,
+// `debug_invalid` (R-467 D2, D5, D8; R-407's fallback). They are two variants, so the presentation one holds no debug
+// style (R-470 G4). The canvas puts the prelude ahead of this file, so its uniform block's binding, 0, is left to it.
 
 struct ChartUniform {
     origin: vec4<f32>,
@@ -22,6 +24,8 @@ struct ChartUniform {
     place: vec4<f32>,
     // The region flagged invalid, `[s₀, t₀, s₁, t₁)` of the field.
     invalid: vec4<f32>,
+    // The canvas background (rgb), gamma-space as the stand-in's output is.
+    background: vec4<f32>,
 };
 
 @group(0) @binding(1) var<uniform> chart: ChartUniform;
@@ -104,18 +108,32 @@ fn palette(f: StandIn) -> vec3<f32> {
     return colour;
 }
 
-// Whether the field point `xy` is drawn as forbidden: past the shown rect, `[0, 1]²`, and flagged invalid.
+// Whether the field point `xy` is not part of the chart: flagged invalid, past the shown rect or inside it.
 fn forbidden(xy: vec2<f32>) -> bool {
-    let past = abs(xy.x) > 1.0 || abs(xy.y) > 1.0;
     let st = (xy + vec2<f32>(1.0, 1.0)) * 0.5;
-    let flagged = all(st >= chart.invalid.xy) && all(st < chart.invalid.zw);
-    return past && flagged;
+    return all(st >= chart.invalid.xy) && all(st < chart.invalid.zw);
 }
 
+// The field point of the fragment `in`: `(2s − 1, 2t − 1)` at the placement.
+fn field_xy(in: VsOut) -> vec2<f32> {
+    let viewport = vec2<f32>(in.uv.x * 2.0 - 1.0, 1.0 - in.uv.y * 2.0);
+    return (viewport - chart.place.xy) / chart.place.zw;
+}
+
+// The presentation view: a pixel that is not part of the chart is the canvas background.
 @fragment
 fn fs_main(in: VsOut) -> @location(0) vec4<f32> {
-    let viewport = vec2<f32>(in.uv.x * 2.0 - 1.0, 1.0 - in.uv.y * 2.0);
-    let xy = (viewport - chart.place.xy) / chart.place.zw;
+    let xy = field_xy(in);
+    if (forbidden(xy)) {
+        return vec4<f32>(chart.background.rgb, 1.0);
+    }
+    return vec4<f32>(palette(stand_in_at(xy, vec2<f32>(0.0, 0.0))), 1.0);
+}
+
+// The debug view: a pixel that is not part of the chart is the hatch.
+@fragment
+fn fs_debug(in: VsOut) -> @location(0) vec4<f32> {
+    let xy = field_xy(in);
     if (forbidden(xy)) {
         // The hatch from the pixel's position, as the render contract draws it; linear, so encoded as the stand-in is.
         return vec4<f32>(linear_to_srgb(debug_invalid(in.position.xy)), 1.0);

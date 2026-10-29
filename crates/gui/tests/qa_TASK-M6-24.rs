@@ -108,6 +108,7 @@ fn state() -> (SimConfig, RenderState) {
             hover: Hover::default(),
             palette: Palette {},
             playhead: Playhead { t: 0.0 },
+            debug_view: false,
         },
     )
 }

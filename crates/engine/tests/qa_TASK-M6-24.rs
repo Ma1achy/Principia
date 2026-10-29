@@ -74,6 +74,7 @@ fn render(t: f64) -> RenderState {
         hover: Hover::default(),
         palette: Palette {},
         playhead: Playhead { t },
+        debug_view: false,
     }
 }
 
@@ -184,6 +185,7 @@ struct Broken {
     hover: Hover,
     horizon: Horizon,
     stain_graph: StainGraph,
+    debug_view: bool,
     window: engine::contract::sim_config::Window,
     frame: engine::contract::sim_config::SliceFrame,
     undo: Vec<(Edit, Edit)>,
@@ -204,6 +206,7 @@ impl Broken {
             hover: Hover::default(),
             horizon: sim().horizon,
             stain_graph: StainGraph::new(),
+            debug_view: false,
             window: sim().chart.window,
             frame: sim().slice.frame,
             undo: Vec::new(),
@@ -246,6 +249,9 @@ impl Broken {
             ))),
             Edit::Render(RenderField::StainGraph(g)) => Edit::Render(RenderField::StainGraph(
                 std::mem::replace(&mut self.stain_graph, g.clone()),
+            )),
+            Edit::Render(RenderField::DebugView(on)) => Edit::Render(RenderField::DebugView(
+                std::mem::replace(&mut self.debug_view, *on),
             )),
             // gui_state_contract §2: the slice frame, with the basis where the same pick changes it, one edit (R-457 E3).
             Edit::Sim(SimField::SliceFrame { frame, basis }) => Edit::Sim(SimField::SliceFrame {
@@ -367,6 +373,7 @@ impl EngineInterface for Broken {
                 overlays: self.overlays.clone(),
                 hover: self.hover.clone(),
                 stain_graph: self.stain_graph.clone(),
+                debug_view: self.debug_view,
                 ..render(self.t)
             },
             tier: Tier {},

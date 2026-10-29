@@ -2,8 +2,8 @@
 //! requirement, not from the implementation. The names are typed in from R-449's table:
 //!
 //! - The mock legend's outcome key reads the nine classes as a person reads them, in colour_composition §1.4's order,
-//!   the black key "bounded / nothing yet", then "forbidden region"; a running class's key reads "running"
-//!   (`qa_m2_33_legend_keys_*`).
+//!   the black key "bounded / nothing yet", and, since R-467 (TASK-M6-46), no "forbidden region" key, which left the
+//!   presentation legends; a running class's key reads "running" (`qa_m2_33_legend_keys_*`).
 //! - Every fate the mock decides, over a grid of the chart at the horizon, is one of the nine outcomes' names (a sample
 //!   is "bounded", not the black class's legend name), all nine are reached, and the hover label, the Trajectory
 //!   panel's summary and a kept orbit's row each carry it and show no internal id (`qa_m2_33_fates_*`).
@@ -31,8 +31,9 @@ use gui::mock::sample::sample;
 use gui::mock::{MockEngine, MOCK_T_MAX};
 use gui::side::MockSide;
 
-/// The outcome key's labels, R-449's names in colour_composition §1.4's order, then the forbidden region (§G6).
-const KEYS: [&str; 10] = [
+/// The outcome key's labels, R-449's names in colour_composition §1.4's order, and no forbidden-region key (§G6;
+/// R-467: "The legend's 'forbidden region' key and its share leave the presentation legends").
+const KEYS: [&str; 9] = [
     "bounded / nothing yet",
     "collision 1–2",
     "collision 1–3",
@@ -42,7 +43,6 @@ const KEYS: [&str; 10] = [
     "escape body 2",
     "escape body 3",
     "triple ejection",
-    "forbidden region",
 ];
 
 /// A decided sample's fate, R-449's name of its `state` and `detail` (payload §2 "What a person reads").
@@ -109,6 +109,14 @@ fn qa_m2_33_legend_keys_read_the_shown_names() {
         outcome_labels(&running),
         ["escape body 1", "running"],
         "a running class's key"
+    );
+    rejects(
+        "a legend that keeps the forbidden region key (R-467)",
+        || {
+            let mut labels = labels.clone();
+            labels.push("forbidden region".to_owned());
+            check_keys(&labels)
+        },
     );
     rejects("a key written 0-based", || {
         let mut labels = labels.clone();

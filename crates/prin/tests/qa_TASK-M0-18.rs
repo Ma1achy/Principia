@@ -158,12 +158,13 @@ fn raw_member<'a>(object_text: &'a str, key: &str) -> &'a str {
 /// `synthetic_frames`: every object's members sorted (for these ASCII keys UTF-16 order is byte order: `frames`,
 /// `render`, `scenario`, `sim`, as telemetry §5 lists them), no whitespace, the frame count a number. The groups are
 /// gui_state_contract §2's, each named and empty at M0 (TASK-M0-16), but for the plane and the lock, whose
-/// fields (R-390) a scenario leaves all zero and unlocked, and the stain graph, the backbone alone (§2).
+/// fields (R-390) a scenario leaves all zero and unlocked, the stain graph, the backbone alone (§2), and, since
+/// TASK-M6-46, the debug view, off at launch (R-467 D5; gui_state_contract §2).
 fn expected_config_text(frames: u64) -> String {
     format!(
         concat!(
             "{{\"frames\":{},",
-            "\"render\":{{\"hover\":{{\"at\":null}},",
+            "\"render\":{{\"debug_view\":false,\"hover\":{{\"at\":null}},",
             "\"overlays\":{{\"burrau_lattice\":false,\"class_edges\":false,\"depth_colouring\":false,",
             "\"energy_drift\":false,\"forbidden_region\":false,\"grid\":false,\"nan_invalid_pixels\":false,",
             "\"priority_heatmap\":false,\"refine_flagged\":false,\"split_merge_activity\":false,",

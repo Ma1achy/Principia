@@ -7,9 +7,12 @@
 //! through [`PreviewCanvas`]. The figure is drawn through [`FigureCanvas`] at the placement the app gives it, the
 //! shown figure's rect in the viewport, so with the egui layer hidden it draws the field over the whole window at the
 //! shown scale, each point where the shown layout puts it (R-406): past the shown rect the stand-in continues as an
-//! affine chart, and a pixel there the mock flags invalid ([`MockCanvas::flag_invalid`], a test hook: the stand-in is
-//! defined everywhere) is drawn with the render contract's hatch, `debug_invalid`, as forbidden (R-407's fallback). The
-//! Chart builder's quick render and the Stain editor's preview draw the field over their whole viewport, never at
+//! affine chart. A pixel the mock flags invalid ([`MockCanvas::flag_invalid`], a test hook: the stand-in is defined
+//! everywhere), past the shown rect or inside it, is not part of the chart: the presentation view draws it as the
+//! canvas background, the colour the window is cleared to, with no hatch, and the debug view (View › Debug view) with
+//! the render contract's hatch, `debug_invalid` (R-467 D2, D5, D8; R-407's fallback). The two views are two variants
+//! of the figure's pipeline, `noise.wgsl`'s `fs_main` and `fs_debug`, the debug one compiled with the hatch and the
+//! presentation one without it, as the render bakes its debug arm (R-470 G4; R-41). The Chart builder's quick render and the Stain editor's preview draw the field over their whole viewport, never at
 //! the figure's placement. The backend is `PRIN_GPU_BACKEND`'s, or the platform's when it is unset, and the one
 //! chosen is logged (R-206).
 
@@ -56,7 +59,8 @@ pub fn uniform(plane: &Plane) -> [[f32; 4]; 3] {
     [project(&plane.z0), project(&plane.q1), project(&plane.q2)]
 }
 
-/// The binding of the stand-in's uniform, in group 0: the chart, the placement and the region flagged invalid. The
+/// The binding of the stand-in's uniform, in group 0: the chart, the placement, the region flagged invalid and the
+/// canvas background. The
 /// shared prelude, which the stand-in's module includes for its hatch, binds its own block at
 /// [`hatch::uniforms_binding`], so this is another.
 pub const CHART_BINDING: u32 = 1;
@@ -66,21 +70,35 @@ pub const LOOK_BINDING: u32 = 2;
 /// No region flagged invalid: `[s₀, t₀, s₁, t₁]` with nothing in it.
 pub const NO_INVALID: [f32; 4] = [0.0; 4];
 
-/// The stand-in's uniform, as bytes: the chart `chart`, the field's placement `placement` and the region `invalid`
-/// flagged invalid, `[s₀, t₀, s₁, t₁]` of the field, as `noise.wgsl`'s `ChartUniform` lays them out.
-pub fn uniform_bytes(chart: [[f32; 4]; 3], placement: Placement, invalid: [f32; 4]) -> Vec<u8> {
+/// The stand-in's uniform, as bytes: the chart `chart`, the field's placement `placement`, the region `invalid`
+/// flagged invalid, `[s₀, t₀, s₁, t₁]` of the field, and the canvas background `background`, 8-bit sRGB, as
+/// `noise.wgsl`'s `ChartUniform` lays them out, the background as the gamma-space values the stand-in writes.
+pub fn uniform_bytes(
+    chart: [[f32; 4]; 3],
+    placement: Placement,
+    invalid: [f32; 4],
+    background: [u8; 3],
+) -> Vec<u8> {
     let [cx, cy] = placement.centre;
     let [hx, hy] = placement.half;
+    let [r, g, b] = background.map(|c| f32::from(c) / 255.0);
     chart
         .into_iter()
-        .chain([[cx, cy, hx, hy], invalid])
+        .chain([[cx, cy, hx, hy], invalid, [r, g, b, 1.0]])
         .flatten()
         .flat_map(f32::to_ne_bytes)
         .collect()
 }
 
-/// The size of the stand-in's uniform, in bytes: five `vec4<f32>`.
-const UNIFORM_SIZE: u64 = 5 * 16;
+/// The size of the stand-in's uniform, in bytes: six `vec4<f32>`.
+const UNIFORM_SIZE: u64 = 6 * 16;
+
+/// The canvas background until the app sets it ([`MockCanvas::set_background`]): the colour the window is cleared to,
+/// egui's dark theme's darkest background (`crate::app::clear_colour`).
+pub fn default_background() -> [u8; 3] {
+    let [r, g, b, _] = crate::app::clear_colour(&eframe::egui::Visuals::dark()).to_array();
+    [r, g, b]
+}
 
 /// The stand-in's WGSL: the shared prelude, for `debug_invalid` and the sRGB transfer (R-407's hatch), then
 /// `noise.wgsl`.
@@ -118,12 +136,13 @@ pub fn vertices(lines: &[Line]) -> Vec<[f32; 7]> {
         .collect()
 }
 
-/// The figure's pipeline and the marks' pipeline, built for one target format, and the bind groups of their uniform:
-/// the plain draw's and the placed figure's.
+/// The figure's two pipelines, the presentation view's and the debug view's, and the marks' pipeline, built for one
+/// target format, and the bind groups of their uniform: the plain draw's and the placed figure's.
 #[derive(Clone)]
 struct Built {
     format: wgpu::TextureFormat,
     pipeline: wgpu::RenderPipeline,
+    debug: wgpu::RenderPipeline,
     marks: wgpu::RenderPipeline,
     plain: wgpu::BindGroup,
     placed: wgpu::BindGroup,
@@ -159,6 +178,10 @@ pub struct MockCanvas {
     placed: Mutex<Placed>,
     /// The region the mock flags invalid, `[s₀, t₀, s₁, t₁]` of the field (a test hook).
     invalid: Mutex<[f32; 4]>,
+    /// Whether the placed figure draws the debug view (View › Debug view).
+    debug_view: Mutex<bool>,
+    /// The canvas background, 8-bit sRGB: the colour the window is cleared to (R-467 D2).
+    background: Mutex<[u8; 3]>,
     /// The preview's pipeline, built for the first target format it is drawn on.
     preview: Mutex<Option<BuiltPreview>>,
     /// The preview's look's uniform buffer.
@@ -216,6 +239,8 @@ impl MockCanvas {
                 marks: Vec::new(),
             }),
             invalid: Mutex::new(NO_INVALID),
+            debug_view: Mutex::new(false),
+            background: Mutex::new(default_background()),
             preview: Mutex::new(None),
             look_buffer,
             look: Mutex::new([0.0; 4]),
@@ -292,7 +317,7 @@ impl MockCanvas {
     /// Draws the preview into `pass`, whose viewport is the preview's rect: the stand-in for the chart in the look.
     pub fn draw_preview(&self, pass: &mut wgpu::RenderPass<'_>, format: wgpu::TextureFormat) {
         let chart = *self.chart.lock().expect("the chart lock");
-        let plain = uniform_bytes(chart, Placement::IDENTITY, NO_INVALID);
+        let plain = uniform_bytes(chart, Placement::IDENTITY, NO_INVALID, self.background());
         self.context.queue.write_buffer(&self.buffer, 0, &plain);
         let look: Vec<u8> = self.look().iter().flat_map(|v| v.to_ne_bytes()).collect();
         self.context.queue.write_buffer(&self.look_buffer, 0, &look);
@@ -323,15 +348,36 @@ impl MockCanvas {
         self.placed.lock().expect("the placed lock").placement
     }
 
-    /// The test hook (R-407's fallback on the mock): the placed figure draws each pixel past the shown rect whose
-    /// field point `(s, t)` lies in `region`, `[s₀, t₀, s₁, t₁)`, as forbidden, with the hatch; [`NO_INVALID`] flags
-    /// none. Inside the shown rect, `[0, 1]²`, the fallback does not apply.
+    /// The test hook (R-407's fallback on the mock; R-467 D8): the placed figure draws each pixel whose field point
+    /// `(s, t)` lies in `region`, `[s₀, t₀, s₁, t₁)`, past the shown rect or inside it, as not part of the chart: the
+    /// canvas background in the presentation view, the hatch in the debug view; [`NO_INVALID`] flags none. At launch
+    /// it is `PRIN_MOCK_INVALID`'s region (`crate::cli::mock::INVALID_VAR`).
     pub fn flag_invalid(&self, region: [f32; 4]) {
         *self.invalid.lock().expect("the invalid lock") = region;
     }
 
-    /// The figure's two pipelines, built for `format` on first use, and the bind groups of the plain and the placed
-    /// draw.
+    /// The region the test hook flags, `[s₀, t₀, s₁, t₁)` of the field.
+    pub fn invalid(&self) -> [f32; 4] {
+        *self.invalid.lock().expect("the invalid lock")
+    }
+
+    /// The placed figure's next draws are the debug view's when `on`, the presentation view's otherwise.
+    pub fn set_debug_view(&self, on: bool) {
+        *self.debug_view.lock().expect("the debug view lock") = on;
+    }
+
+    /// The canvas background the next draws use, 8-bit sRGB: the colour the window is cleared to (R-467 D2).
+    pub fn set_background(&self, background: [u8; 3]) {
+        *self.background.lock().expect("the background lock") = background;
+    }
+
+    /// The canvas background, 8-bit sRGB.
+    pub fn background(&self) -> [u8; 3] {
+        *self.background.lock().expect("the background lock")
+    }
+
+    /// The figure's pipelines and the marks', built for `format` on first use, and the bind groups of the plain and
+    /// the placed draw.
     fn pipeline(&self, format: wgpu::TextureFormat) -> Built {
         let mut cached = self.pipeline.lock().expect("the pipeline lock");
         if let Some(built) = cached.as_ref().filter(|b| b.format == format) {
@@ -360,27 +406,31 @@ impl MockCanvas {
             bind_group_layouts: &[Some(&group)],
             immediate_size: 0,
         });
-        let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-            label: Some("mock figure"),
-            layout: Some(&layout),
-            vertex: wgpu::VertexState {
-                module: &module,
-                entry_point: Some("vs_main"),
-                compilation_options: Default::default(),
-                buffers: &[],
-            },
-            fragment: Some(wgpu::FragmentState {
-                module: &module,
-                entry_point: Some("fs_main"),
-                compilation_options: Default::default(),
-                targets: &[Some(format.into())],
-            }),
-            primitive: Default::default(),
-            depth_stencil: None,
-            multisample: Default::default(),
-            multiview_mask: None,
-            cache: None,
-        });
+        let variant = |label, entry_point| {
+            device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+                label: Some(label),
+                layout: Some(&layout),
+                vertex: wgpu::VertexState {
+                    module: &module,
+                    entry_point: Some("vs_main"),
+                    compilation_options: Default::default(),
+                    buffers: &[],
+                },
+                fragment: Some(wgpu::FragmentState {
+                    module: &module,
+                    entry_point: Some(entry_point),
+                    compilation_options: Default::default(),
+                    targets: &[Some(format.into())],
+                }),
+                primitive: Default::default(),
+                depth_stencil: None,
+                multisample: Default::default(),
+                multiview_mask: None,
+                cache: None,
+            })
+        };
+        let pipeline = variant("mock figure", "fs_main");
+        let debug = variant("mock figure, debug view", "fs_debug");
         let bind = |label, buffer: &wgpu::Buffer| {
             device.create_bind_group(&wgpu::BindGroupDescriptor {
                 label: Some(label),
@@ -394,6 +444,7 @@ impl MockCanvas {
         let built = Built {
             format,
             pipeline,
+            debug,
             marks: marks_pipeline(device, format, &layout),
             plain: bind("mock chart", &self.buffer),
             placed: bind("mock figure placed", &self.placed_buffer),
@@ -403,29 +454,38 @@ impl MockCanvas {
     }
 
     /// Draws the stand-in and the marks into `pass` on a target of `format`: placed, the figure at the placement and
-    /// with the marks [`MockCanvas::set_placement`] gave, and the region flagged invalid hatched; plain, the field over
-    /// the whole viewport with the marks [`MockCanvas::set_marks`] gave, nothing flagged.
+    /// with the marks [`MockCanvas::set_placement`] gave, in the debug view's variant when it is on, the region flagged
+    /// invalid drawn as the canvas background or the hatch; plain, the field over the whole viewport with the marks
+    /// [`MockCanvas::set_marks`] gave, nothing flagged.
     fn draw(&self, pass: &mut wgpu::RenderPass<'_>, format: wgpu::TextureFormat, placed: bool) {
         let chart = *self.chart.lock().expect("the chart lock");
+        let background = self.background();
         let built = self.pipeline(format);
-        let (buffer, bind_group, bytes, vertices) = if placed {
+        let (buffer, bind_group, bytes, vertices, pipeline) = if placed {
             let p = self.placed.lock().expect("the placed lock");
-            let invalid = *self.invalid.lock().expect("the invalid lock");
-            let bytes = uniform_bytes(chart, p.placement, invalid);
+            let bytes = uniform_bytes(chart, p.placement, self.invalid(), background);
+            let debug = *self.debug_view.lock().expect("the debug view lock");
             (
                 &self.placed_buffer,
                 &built.placed,
                 bytes,
                 vertices(&p.marks),
+                if debug { &built.debug } else { &built.pipeline },
             )
         } else {
-            let bytes = uniform_bytes(chart, Placement::IDENTITY, NO_INVALID);
+            let bytes = uniform_bytes(chart, Placement::IDENTITY, NO_INVALID, background);
             let marks = self.marks.lock().expect("the marks lock");
-            (&self.buffer, &built.plain, bytes, vertices(&marks))
+            (
+                &self.buffer,
+                &built.plain,
+                bytes,
+                vertices(&marks),
+                &built.pipeline,
+            )
         };
         // Staged now, the write lands before the command buffer this pass is recorded into is submitted.
         self.context.queue.write_buffer(buffer, 0, &bytes);
-        pass.set_pipeline(&built.pipeline);
+        pass.set_pipeline(pipeline);
         pass.set_bind_group(0, bind_group, &[]);
         pass.draw(0..3, 0..1);
         if vertices.is_empty() {
