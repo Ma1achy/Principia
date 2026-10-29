@@ -1,0 +1,24 @@
+Table IV: circle residual and angle PAB = atan2(y, x + 0.5) against the printed alpha
+
+n_min  1: x=0 y=0.8660254 residual   -6.55e-9  PAB 1.0471975  alpha 1.5707963  PAB - alpha -0.524
+n_min  2: x=0.4035896 y=0.4284000 residual    7.25e-7  PAB 0.44272114  alpha 0.4427212  PAB - alpha -5.6e-8
+n_min  3: x=0.4529373 y=0.3031644 residual   -1.85e-6  PAB 0.30801188  alpha 0.3080119  PAB - alpha -2.12e-8
+n_min  4: x=0.4704101 y=0.2414607 residual   -9.68e-7  PAB 0.24387093  alpha 0.2438709  PAB - alpha 2.94e-8
+n_min  5: x=0.4790156 y=0.2037885 residual     1.3e-6  PAB 0.20522594  alpha 0.2052260  PAB - alpha -5.59e-8
+n_min  6: x=0.4840270 y=0.1780150 residual   -1.52e-6  PAB 0.178969  alpha 0.1789690  PAB - alpha -4.56e-11
+n_min  7: x=0.4872651 y=0.1590877 residual    1.27e-6  PAB 0.15976641  alpha 0.1597664  PAB - alpha 1.29e-8
+n_min  8: x=0.4895060 y=0.1444976 residual    1.68e-6  PAB 0.1450051  alpha 0.1450051  PAB - alpha 2.43e-9
+n_min  9: x=0.49111357 y=0.1328464 residual   -4.57e-5  PAB 0.13324335  alpha 0.1332404  PAB - alpha 2.95e-6
+n_min 10: x=0.4923716 y=0.1232902 residual    1.87e-6  PAB 0.12360459  alpha 0.1236046  PAB - alpha -1.5e-8
+n_min 11: x=0.4933331 y=0.1152844 residual    1.14e-6  PAB 0.11554124  alpha 0.1155413  PAB - alpha -6.23e-8
+n_min 12: x=0.4940998 y=0.1084624 residual    -1.5e-6  PAB 0.10867628  alpha 0.1086762  PAB - alpha 7.56e-8
+n_min 13: x=0.4947253 y=0.1025672 residual   -1.55e-6  PAB 0.10274797  alpha 0.1027480  PAB - alpha -2.85e-8
+n_min 14: x=0.4952450 y=0.0974127 residual    1.84e-6  PAB 0.097567333  alpha 0.0975673  PAB - alpha 3.33e-8
+n_min 15: x=0.4956785 y=0.0928599 residual   -1.36e-6  PAB 0.092993939  alpha 0.0929939  PAB - alpha 3.87e-8
+n_min 16: x=0.4960499 y=0.0888044 residual    1.62e-6  PAB 0.088921466  alpha 0.0889215  PAB - alpha -3.44e-8
+n_min 17: x=0.4963679 y=0.0851642 residual    1.93e-6  PAB 0.085267403  alpha 0.0852675  PAB - alpha -9.67e-8
+n_min 18: x=0.4966420 y=0.0818753 residual   -1.16e-6  PAB 0.081967101  alpha 0.0819671  PAB - alpha 7.26e-10
+n_min 19: x=0.4968829 y=0.0788866 residual   -1.39e-6  PAB 0.078968705  alpha 0.0789687  PAB - alpha 4.71e-9
+n_min 20: x=0.4970952 y=0.0761564 residual   -1.36e-6  PAB 0.07623026  alpha 0.0762303  PAB - alpha -3.98e-8
+
+row 9 read with 7 decimals, x = 0.4911357: residual -1.86e-6, PAB 0.13324041

@@ -1,0 +1,9 @@
+KS2017_archive_eight: h = -1.292970857122, M = 0.0, H(reduced state) - h = 2.45e-91
+KS2017_archive_eight_488: h = -1.292970857122, M = 0.0048828125, H(reduced state) - h = -2.45e-91
+KS2017_archive_eight_148: h = -1.292970857122, M = 0.1484375, H(reduced state) - h = -2.45e-91
+KS2007_paper_Table1: max |ours - ChatGPT| = 1.23e-91 (x2); our E = -1.292970857122094137880659, L = 9.3875e-28, |centre of mass| = 0.0, |momentum| = 0.0
+KS2007_archive_stability: max |ours - ChatGPT| = 1.23e-91 (x2); our E = -1.292970857122094137880659, L = 9.3875e-28, |centre of mass| = 0.0, |momentum| = 0.0
+KS2017_archive_eight: max |ours - ChatGPT| = 3.8e-90 (vy3); our E = -1.292970857122, L = 0.0, |centre of mass| = 0.0, |momentum| = 0.0; E - h = 4.91e-91, L - M = 0.0
+KS2017_archive_eight_488: max |ours - ChatGPT| = 2.7e-90 (vy2); our E = -1.292970857122, L = 0.0048828, |centre of mass| = 1.23e-91, |momentum| = 0.0; E - h = -2.45e-91, L - M = -1.23e-91
+KS2017_archive_eight_148: max |ours - ChatGPT| = 5.4e-90 (vy1); our E = -1.292970857122, L = 0.14844, |centre of mass| = 0.0, |momentum| = 0.0; E - h = -2.45e-91, L - M = 6.14e-92
+largest disagreement over all 5 records x 12 components: 5.4e-90 (KS2017_archive_eight_148 vy1)

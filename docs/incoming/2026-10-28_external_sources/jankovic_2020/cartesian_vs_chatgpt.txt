@@ -1,0 +1,2 @@
+largest |ChatGPT - ours| over 99 rows x 6 components: 4.98e-25 (row 89, vy2); ours printed to 25 significant digits
+every y and vx in ChatGPT's states is zero: True
