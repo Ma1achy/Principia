@@ -1404,3 +1404,31 @@
   section: "R-635 — Codex, Gemini CLI and GitHub Copilot review PRs as advisory reviewers for a one-week trial, never merge gates; every bot finding is handled before merge with a reply on its thread; after the week, a report per reviewer *(an R-369 note; no CI gate or review step changes)*"
   reason: informative only
   note: "the owner's R-369 note of 28 Oct 2026: Codex, Gemini CLI and GitHub Copilot advisory for a one-week trial, never merge gates, every bot finding handled before merge with a reply on its thread, a report per reviewer after the week; process, carried by AGENTS.md, GEMINI.md, .github/copilot-instructions.md, the gemini-dispatch workflow (its review job inlined from the example's gemini-review workflow), CLAUDE.md § Working with review and xtask/tests/ai_review_rules.rs, with the weekly audit queued as RQ-605"
+- file: decisions.md
+  section: "R-639 — The Šuvakov-plane targets split into a closure part, which stays in M4 or M8 and runs now, and a chart part, which moves to gate the task that builds the Šuvakov chart and is not dropped, a target whose split isn't clean being queued; a read-only licence audit of every committed PDF; none of the five targets splits cleanly, so all five are queued *(answers RQ-608)*"
+  reason: gap (RQ-618)
+  note: "the owner's ruling of 28 Oct 2026 on the Šuvakov-plane targets (closure part and chart part) and the licence audit; no split is clean, so the five targets are queued as RQ-618 and unchanged; changes no requirement"
+- file: decisions.md
+  section: "R-643 — The licence audit: the four subscription-stamped and six all-rights-reserved PDFs leave the tree for `docs/incoming/_local/` in one ordinary commit, with no history rewrite; the five \"unclear\" PDFs stay and are queued; the 22 arXiv licences are checked, the 19 arXiv-default PDFs kept and the 3 CC-licensed fine; from now on no publisher PDF is committed unless its licence allows redistribution, checked before commit *(no RQ; a standing rule)*"
+  reason: informative only
+  note: "the owner's licence-audit ruling of 28 Oct 2026: ten PDFs held locally (PR #329), five queued (RQ-610), the 22 arXiv licences checked and kept, and the standing rule that no publisher PDF is committed unless its licence allows redistribution; process, carried by CLAUDE.md § Papers and licences; changes no requirement"
+- file: decisions.md
+  section: "R-644 — The history scrub (R-643's option 2) is shelved, not scheduled: no condition is checked before the release; it is revisited after the release, or earlier if a rights-holder asks for removal, and then the scrub and a GitHub Support purge are done together; #329 stands *(amends R-643)*"
+  reason: informative only
+  note: "the owner's ruling of 28 Oct 2026: the history scrub shelved until after the release, or a rights-holder's request; process; changes no requirement"
+- file: decisions.md
+  section: "R-645 — No more cloud sessions: the six already started are the last; briefs 4 and 5 run on the Mac as local agents, brief 5 a small pilot, the data sweep after them *(amends R-357; supersedes R-636's cloud half)*"
+  reason: informative only
+  note: "the owner's ruling of 28 Oct 2026: no more cloud sessions; process, carried by CLAUDE.md and plan/OPERATIONS.md; changes no requirement"
+- file: decisions.md
+  section: "R-646 — The converged Burrau reference: arXiv v1 is SP-2's source, the owner also trying for the journal version and its supplementary snapshots through his own access; no separate author email; SP-2 notes that t = 200 is the time-reversed return and tests it as a reversibility check and a trajectory check *(closes RQ-611)*"
+  reason: informative only
+  note: "the owner's ruling of 28 Oct 2026 closing RQ-611: arXiv v1 is the proposed SP-2's source; SP-2 is a proposed row of PLAN.md, not a requirement; changes no requirement"
+- file: decisions.md
+  section: "R-647 — A standing rule, no exceptions: no cloud sessions and no briefs addressed to the owner; the orchestrator never asks him to start, paste into, restart or check a session; every agent is the orchestrator's own, dispatched locally by it; an agent's written instructions are internal task files *(amends R-645)*"
+  reason: informative only
+  note: "the owner's standing rule of 28 Oct 2026: no cloud sessions and no briefs addressed to the owner; process, carried by CLAUDE.md and plan/OPERATIONS.md § Dispatching; changes no requirement"
+- file: decisions.md
+  section: "R-648 — The workflow returns to main's, R-357, R-391 and R-277, with one addition, never a cloud session: R-634 is withdrawn, and so are R-636's agent-count and cloud clauses; three agents at normal memory pressure, two if the Mac is swapping; the RQ-605 audit on demand only *(supersedes R-634; withdraws R-636's agent-count and cloud clauses; amends R-645 and R-647)*"
+  reason: informative only
+  note: "the owner's ruling of 28 Oct 2026: the workflow returns to R-357, R-391 and R-277, with no cloud sessions; R-634 and R-636's agent-count and cloud clauses withdrawn; process; changes no requirement"

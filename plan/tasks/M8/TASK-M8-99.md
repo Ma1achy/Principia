@@ -22,6 +22,7 @@ The replication suite's targets OC-4 on the Šuvakov plane, AT-D1, AT-D3 run as 
 - `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
 - `docs/notes/principia_validation_ground_truth_note.md` § "Four tiers of ground truth (increasing in what they prove)"
 - `docs/notes/principia_validation_ground_truth_note.md` § "Chaos forbids pointwise comparison (exact vs structural)"
+- `decisions.md` § "R-639 — The Šuvakov-plane targets split into a closure part, which stays in M4 or M8 and runs now, and a chart part, which moves to gate the task that builds the Šuvakov chart and is not dropped, a target whose split isn't clean being queued; a read-only licence audit of every committed PDF; none of the five targets splits cleanly, so all five are queued *(answers RQ-608)*"
 
 ## Deliverables
 - Result runs on the chart RQ-583 rules, in RQ-582's labelling; no chart is built here ahead of those rulings.
@@ -37,3 +38,4 @@ The replication suite's targets OC-4 on the Šuvakov plane, AT-D1, AT-D3 run as 
 - The atlas data are used under CC BY 4.0, credited to https://www.threebodyorbits.com with `docs/incoming/2026-10-26_orbit_catalogues/CITATIONS.md`'s per-family credits, on every fixture, export and figure. `atlas-params.json` never enters the repo (`scripts/check_no_atlas_params.sh`); no task may commit it.
 - Reference data are read from the records named in each requirement's verify; the records stay records (R-159), and the contract is `principia_dd_replication.md`.
 - *28 Oct 2026 (R-636, closing RQ-583):* the owner: "Šuvakov-plane chart: keep its targets as closures for now; no chart build yet." No chart is built, and this task's targets need one; it waits on RQ-608, which asks what they do meanwhile.
+- *28 Oct 2026 (R-639):* the owner ruled that each Šuvakov-plane target splits into a closure part, kept here and run now, and a chart part, which gates the task that builds the chart, and that a target whose split isn't clean is queued. None of this task's targets splits cleanly (R-639), so they are queued as RQ-618 and stay as they are; the task still waits on RQ-608, now with RQ-618.
