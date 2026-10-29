@@ -47,7 +47,7 @@ It is built to be used as both an instrument and a picture. The same view that m
 
 **Slices and charts.** The screen shows a 2D slice through that space. The slice can be translated, rotated and tilted along any direction, using an axis-angle parametrisation so it never locks up at the poles. Chart axes can be set to latent dimensions, physical quantities such as energy or angular momentum, or the Burrau dimensions.
 
-**Integration.** Each pixel is integrated with Heggie's global regularisation, stepped with fourth-order Runge–Kutta, so close encounters don't wreck the step size. Heggie regularisation outperformed Aarseth–Zare on the benchmark cases.
+**Integration.** By default, each pixel is integrated with Heggie's global regularisation, stepped with fourth-order Runge–Kutta, so close encounters don't wreck the step size. Heggie regularisation outperformed Aarseth–Zare on 31 of the 32 benchmark cases.
 
 Two clocks are involved. The first is regularised time: when bodies are close, each step of regularised time covers less physical time. Here the same integrator takes the same number of steps twice: with a fixed time step it overshoots every close pass, while with a regularised step it spends its steps where the action is. The animation shows the idea for a single pair, in a plain leapfrog; the global regularisation does the same for all three pairs at once.
 
