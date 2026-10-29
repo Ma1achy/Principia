@@ -1,0 +1,7 @@
+# only the eps = 1e-6, L_w = 128 trajectories are kept; the rest are regenerable with run_br1.py
+traj/*_eps1e-2_*
+traj/*_eps1e-3_*
+traj/*_eps1e-4_*
+traj/*_eps1e-5_*
+traj/*_Lw88.dat
+traj_t10/*_eps1e-4_*
