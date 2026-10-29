@@ -195,7 +195,11 @@ apart:
 - **Geometric:** ×1.386 per two decades (p_max 8; ×1.414 at 16), so 1.8×10⁴ to 3.3×10⁴ times the 10⁻¹⁰ per-step cost, 186–333 s per step.
 - Bulirsch–Stoer with its extrapolation order capped at p_max should eventually cost a power of ε: once ε is far below what p_max points can
   reach at a given step, the step must shrink as a power of ε. That is the p_max = 4 behaviour of § 2b, and it applies at 8 and 16 too once 60
-  decades are crossed. Neither model above includes it, so neither is a bound.
+  decades are crossed. This mechanism is itself unverified (the Brutus source is not committed).
+- **Both per-step models are curves through two points, not models of that mechanism.** Under it, the work per accepted step is bounded by
+  one p_max-stage attempt times the rejected attempts, so the per-step cost levels off once the cap binds, and the growth moves into the
+  number of steps. The geometric model puts 60 decades of growth into the per-step cost (186–333 s per step) instead, so it contradicts the
+  mechanism; the linear one does not model it either. **Neither 14,000 nor 3×10⁷ core-hours below bounds the cost**, from above or below.
 - **Steps.** #334 took steps × 11.5 from 10⁻¹⁰ to 10⁻⁷⁰ from Brutus's `get_eta`. That cannot be checked here: `Brutus.cpp` is not committed,
   and the step law `projections.py` records (log₁₀ η = −0.012 |log₁₀ ε| − 0.40) is stated only for ε > 10⁻⁵⁰, so the factor below 10⁻⁵⁰ is
   unverified. `hm_units_output.txt` gives the results with × 11.5 and with × 1.
@@ -215,7 +219,9 @@ per decade" slope that has no source; it is dropped.
 - **The paper's "about 7 hours".** The paper's § 2 gives "the average wall-clock time of our simulations was about 7 hours". That averages over
   every ε of the iterative convergence runs, on hardware the paper does not give. It is not a per-10⁻⁷⁰ cost and does not check any figure
   here.
-- To pin the model down, the next probe would be p_max 8 and 16 at, say, 10⁻²⁰ and 10⁻³⁰ on the same point. It needs the owner's go-ahead.
+- To pin the model down, the next probe would be p_max 8 and 16 at, say, 10⁻²⁰ and 10⁻³⁰ on the same point, recording the number of steps
+  and the number of Bulirsch–Stoer stages per step separately, so that per-step saturation and step-count growth can be told apart. It
+  needs the owner's go-ahead.
 - Further weak points: one easy point (T = 0.63); the T-dependence of cost at 10⁻⁷⁰ is assumed to follow the 10⁻⁶ rate.
 
 ## 3. BR-1: the authors' own initial conditions, ε = 10⁻⁶, L_w = 128 (M)
