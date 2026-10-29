@@ -127,8 +127,8 @@ numbers, for whole-table OCR sequences) compared.
 | Iasko 2014 table, authors' columns k, φ, T, notes | 23 | eye, OCR | 0 of 115 | — |
 | Orlov 2002 Table 1 | 8 | eye, OCR | 0 of 8 | — |
 | Orlov 2003 table (35 × 5) | 35 | eye, OCR per cell | 2 | two lone "0" cells empty in OCR; page prints 0 |
-| Mikkola & Hietarinta 1989 Tables 1–4 | 5/4/2/7 | eye, OCR (Table 3 per cell) | 0/0/1/0 | Table 3's "9.×10⁷": OCR lost the superscript |
-| Mikkola & Hietarinta 1991 Table I | 15 | eye, OCR | 2 kinds | a speck read as a minus on (80, 0) k_t; the 10³ superscripts |
+| Mikkola & Hietarinta 1989 Tables 1–4 | 5/4/2/7 | eye, OCR (Table 3 per cell) | 0/0/2/0 | Table 3's "9.×10⁷" (t8, both rows): OCR lost the superscript |
+| Mikkola & Hietarinta 1991 Table I | 15 | eye, OCR | 3 of 165 (2 kinds) | a speck read as a minus on (80, 0) k_t; the 10³ superscripts |
 | Hernandez 2015 Table 1 | 2 | eye, OCR | 0 of 18 | — |
 | Rantala 2020 § 5.2 values (p. 14) | 10 | eye, OCR | 0; three superscripts lost by OCR | 10⁸, 10⁸, 10⁻⁴ from the page |
 | Broucke 2006 Tables 1–3 | 2/2/13 | eye, OCR | 0/2/1 | OCR dropped two decimal points and one r = 0.5 |
