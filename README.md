@@ -58,7 +58,7 @@ Two clocks are involved. The first is regularised time: when bodies are close, e
 </picture>
 </p>
 
-The second is the time unit. Because scale is a gauge, time is measured in natural units, τ = √(L³ / GM) for a unit of length L and of mass M, and integration time maps back to real time for a system of any size and mass. Burrau's classic problem (masses 3, 4 and 5 at the corners of a 3-4-5 triangle, released from rest) shows it. Drawn as a Sun, Earth and Moon, or as a football, tennis ball and ping-pong ball, it is the same orbit: only the ratios of the masses and distances matter (the artwork is just artwork, and the real masses are nothing like 3 : 4 : 5). What differs is the clock, with one unit of time lasting 58 days at the scale of solar masses and AU, and 3.4 hours for 100 g balls 10 cm apart.
+The second is the time unit. Because scale is a gauge, time is measured in natural units, τ = √(L³ / GM) for a unit of length L and of mass M, and integration time maps back to real time for a system of any size and mass. Burrau's classic problem (masses 3, 4 and 5 at the corners of a 3-4-5 triangle, released from rest) shows it. Drawn as a Sun, Earth and Moon, or as a football, tennis ball and ping-pong ball, it is the same orbit: only the ratios of the masses and distances matter (the artwork is just artwork, and the real masses are nothing like 3 : 4 : 5). What differs is the clock, with one unit of time lasting 58 days at the scale of solar masses and AU, and 3.4 hours for a unit of 100 g and 10 cm.
 
 <p>
 <picture>
