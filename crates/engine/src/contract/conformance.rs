@@ -7,7 +7,7 @@
 use crate::contract::interface::EngineInterface;
 use crate::contract::log::{Severity, Source};
 use crate::contract::render_state::{Hover, NodeKind, Occupant, Overlays, Playhead};
-use crate::contract::set_field::{Edit, RenderField, SetField, SimField};
+use crate::contract::set_field::{Edit, HistoryKey, RenderField, SetField, SimField};
 use crate::contract::sim_config::{Horizon, Latent, Lock, SliceFrame};
 use crate::contract::snapshot::{History, Snapshot};
 
@@ -56,6 +56,14 @@ pub const CASES: &[Case] = &[
     Case {
         name: "slice_frame_edit_shows_and_undoes",
         check: slice_frame_edit_shows_and_undoes,
+    },
+    Case {
+        name: "edits_under_one_key_are_one_entry",
+        check: edits_under_one_key_are_one_entry,
+    },
+    Case {
+        name: "edits_under_one_key_log_one_line_when_it_ends",
+        check: edits_under_one_key_log_one_line_when_it_ends,
     },
 ];
 
@@ -522,5 +530,141 @@ fn slice_frame_edit_shows_and_undoes(engine: &mut dyn EngineInterface) -> Result
         "the slice frame after undo",
         engine.snapshot().sim.slice.frame,
         sim.slice.frame,
+    )
+}
+
+/// The history keys the key cases send under: any values do, as long as they differ.
+const KEYS: [HistoryKey; 3] = [HistoryKey(101), HistoryKey(102), HistoryKey(103)];
+
+/// A history key (gui_state_contract §2, "A drag coalesces into one history entry"; R-96, R-458 F1, R-466): the edits
+/// of a drag, each sent under its key, are one history entry, its before the value at the drag's start and its after
+/// the last value sent, a no-history edit between them leaving it open; a command of several edits under one key is one
+/// entry too, one undo restoring each field it set; an edit under another key closes the entry; undo and redo step
+/// over each entry whole.
+fn edits_under_one_key_are_one_entry(engine: &mut dyn EngineInterface) -> Result<(), String> {
+    let first = engine.snapshot();
+    let (t0, h0, z0) = (t_of(&first), first.history, first.sim.plane.z0);
+    let [drag, command, next] = KEYS;
+    for step in 1..=3 {
+        engine.set_field_under(playhead(t0 + f64::from(step), false), drag);
+        if step == 2 {
+            // The clock's advance, between two frames of the drag, keeps the drag's entry open.
+            engine.set_field(playhead(t0 + 2.5, true));
+        }
+    }
+    engine.end_key(drag);
+    let after = engine.snapshot();
+    expect("the playhead after a drag", t_of(&after), t0 + 3.0)?;
+    expect(
+        "the history after a drag of three edits",
+        after.history,
+        History {
+            undo_depth: h0.undo_depth + 1,
+            redo_depth: 0,
+        },
+    )?;
+    // A command of two edits, z₀ and the playhead, under one fresh key: one entry.
+    let moved = shifted(z0, 0.25);
+    engine.set_field_under(
+        SetField {
+            edit: Edit::Sim(SimField::Z0(moved)),
+            no_history: false,
+        },
+        command,
+    );
+    engine.set_field_under(playhead(t0 + 4.0, false), command);
+    // The next key closes the command's entry, with no end of its own.
+    engine.set_field_under(playhead(t0 + 5.0, false), next);
+    engine.end_key(next);
+    let after = engine.snapshot();
+    expect(
+        "the undo depth after a command and an edit under another key",
+        after.history.undo_depth,
+        h0.undo_depth + 3,
+    )?;
+    engine.undo();
+    expect(
+        "the playhead after one undo of the edit under another key",
+        t_of(&engine.snapshot()),
+        t0 + 4.0,
+    )?;
+    engine.undo();
+    let undone = engine.snapshot();
+    expect(
+        "the playhead after one undo of the command",
+        t_of(&undone),
+        t0 + 3.0,
+    )?;
+    expect("z₀ after one undo of the command", undone.sim.plane.z0, z0)?;
+    engine.undo();
+    expect(
+        "the playhead after one undo of the drag, the value at its start",
+        t_of(&engine.snapshot()),
+        t0,
+    )?;
+    engine.redo();
+    let redone = engine.snapshot();
+    expect(
+        "the playhead after one redo of the drag, its last value",
+        t_of(&redone),
+        t0 + 3.0,
+    )?;
+    expect(
+        "the history after one redo of the drag",
+        redone.history,
+        History {
+            undo_depth: h0.undo_depth + 1,
+            redo_depth: 2,
+        },
+    )
+}
+
+/// The contract's lines in `snapshot`'s log.
+fn contract_lines(snapshot: &Snapshot) -> Vec<String> {
+    snapshot
+        .log
+        .iter()
+        .filter(|e| e.source == Source::Contract)
+        .map(|e| e.message.clone())
+        .collect()
+}
+
+/// A drag's log (gui_state_contract §2: "the console logs it once, when the drag ends"; R-458 F1): the edits under a
+/// key log nothing while it is open, a no-history edit between them logging its own line at once; its end logs one
+/// "SetField <path> <before> → <after>" line, the value at the drag's start and the last sent, and a second end
+/// nothing; an edit under no key closes an open entry, its line logged before the edit's own.
+fn edits_under_one_key_log_one_line_when_it_ends(
+    engine: &mut dyn EngineInterface,
+) -> Result<(), String> {
+    let t0 = t_of(&engine.snapshot());
+    let [drag, other, _] = KEYS;
+    for step in 1..=3 {
+        engine.set_field_under(playhead(t0 + f64::from(step), false), drag);
+    }
+    engine.set_field(playhead(t0 + 3.5, true));
+    let line = |from: f64, to: f64| format!("SetField Playhead.t {from} → {to}");
+    expect(
+        "the contract's lines during a drag",
+        contract_lines(&engine.snapshot()),
+        vec![format!("{} (no history)", line(t0 + 3.0, t0 + 3.5))],
+    )?;
+    engine.end_key(drag);
+    expect(
+        "the contract's lines when the drag ends",
+        contract_lines(&engine.snapshot()),
+        vec![line(t0, t0 + 3.0)],
+    )?;
+    engine.end_key(drag);
+    expect(
+        "the contract's lines at a second end of the same drag",
+        contract_lines(&engine.snapshot()),
+        Vec::<String>::new(),
+    )?;
+    engine.set_field_under(playhead(t0 + 4.0, false), other);
+    engine.set_field(playhead(t0 + 5.0, false));
+    expect(
+        "the contract's lines when an edit under no key closes a drag",
+        contract_lines(&engine.snapshot()),
+        vec![line(t0 + 3.5, t0 + 4.0), line(t0 + 4.0, t0 + 5.0)],
     )
 }

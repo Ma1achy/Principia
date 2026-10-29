@@ -1,37 +1,25 @@
 //! The real engine's implementation of the GUI-facing interface, as far as the conformance suite reaches (R-390;
-//! RQ-254): the state store holds a `SimConfig` and a `RenderState`, the contract's one undo/redo history (R-52) and
-//! the log entries since the last snapshot (RQ-245). The frame summary is `None` until TASK-M8-05 wires the frame loop
-//! (RQ-243). The surfaces carry no default, so the constructor takes the initial state explicitly.
+//! RQ-254): the state store holds a `SimConfig` and a `RenderState`, the contract's one undo/redo history (R-52,
+//! [`History`]) and the log entries since the last snapshot (RQ-245). The frame summary is `None` until TASK-M8-05 wires
+//! the frame loop (RQ-243). The surfaces carry no default, so the constructor takes the initial state explicitly.
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use crate::contract::history::History;
 use crate::contract::interface::EngineInterface;
 use crate::contract::legend::Legend;
 use crate::contract::log::{LogEntry, Severity, Source};
 use crate::contract::render_state::{NodeKind, Occupant, Overlays, RenderState, StainGraph};
 use crate::contract::set_field::{Edit, HistoryKey, RenderField, SetField, SimField};
 use crate::contract::sim_config::{Latent, SimConfig, SliceFrame};
-use crate::contract::snapshot::{FrameSummary, History, Precision, Snapshot, Tier};
-
-/// One history entry (R-52): its edits in the order applied, each with the value its field held before it. Undo
-/// restores the befores last first, so each field ends at its value before the entry's first edit of it; redo
-/// reapplies the edits in order, so each ends at the last value sent. An entry made by one edit holds one; one made
-/// under a [`HistoryKey`] may hold several.
-#[derive(Clone, Debug)]
-struct Change {
-    edits: Vec<(Edit, Edit)>,
-}
+use crate::contract::snapshot::{self, FrameSummary, Precision, Snapshot, Tier};
 
 /// The real engine's state store (RQ-254).
 #[derive(Debug)]
 pub struct StateStore {
     sim: SimConfig,
     render: RenderState,
-    undo: Vec<Change>,
-    redo: Vec<Change>,
-    /// The key of the entry still open to edits under it: the latest undoable edit's key, `None` after an edit under
-    /// none, an undo or a redo.
-    open: Option<HistoryKey>,
+    history: History,
     log: Vec<LogEntry>,
 }
 
@@ -41,9 +29,7 @@ impl StateStore {
         Self {
             sim,
             render,
-            undo: Vec::new(),
-            redo: Vec::new(),
-            open: None,
+            history: History::new(),
             log: Vec::new(),
         }
     }
@@ -53,34 +39,22 @@ impl StateStore {
         write(&mut self.sim, &mut self.render, edit)
     }
 
-    /// Applies `edit` under the history key `key` (gui_state_contract §2): as [`EngineInterface::set_field`], but while
-    /// the latest history entry is open under `key` the edit joins it, so one undo restores every field the edits
-    /// under one key set, each to its value before the first of them. An edit marked "no history" enters no entry and
-    /// leaves the open one open.
-    pub fn set_field_under(&mut self, edit: SetField, key: HistoryKey) {
-        self.apply(edit, Some(key));
-    }
-
-    /// Applies `edit`, logs it and, unless it is marked "no history", records it in the history under `key`.
+    /// Applies `edit` and records it in the history under `key` ([`History::record`]), logging what that returns.
     fn apply(&mut self, edit: SetField, key: Option<HistoryKey>) {
         let before = self.write(edit.edit.clone());
-        self.log.push(LogEntry {
-            severity: Severity::Info,
-            at: now_ms(),
-            source: Source::Contract,
-            message: set_field_message(&before, &edit),
-        });
-        if edit.no_history {
-            return;
-        }
-        self.redo.clear();
-        let joins = key.is_some() && key == self.open;
-        self.open = key;
-        match self.undo.last_mut() {
-            Some(entry) if joins => entry.edits.push((before, edit.edit)),
-            _ => self.undo.push(Change {
-                edits: vec![(before, edit.edit)],
-            }),
+        let lines = self.history.record(before, &edit, key);
+        self.log_lines(lines);
+    }
+
+    /// Logs each of `lines` as one `info` entry from `contract`.
+    fn log_lines(&mut self, lines: Vec<String>) {
+        for message in lines {
+            self.log.push(LogEntry {
+                severity: Severity::Info,
+                at: now_ms(),
+                source: Source::Contract,
+                message,
+            });
         }
     }
 }
@@ -222,10 +196,11 @@ fn now_ms() -> u64 {
         .map_or(0, |d| u64::try_from(d.as_millis()).unwrap_or(u64::MAX))
 }
 
-/// The `contract` log line of an applied edit: its path, the value before and after, and "(no history)" when so
-/// marked (render_gui_spec §G12; 12_console.png's `SetField <path> <before> → <after>`).
-pub fn set_field_message(before: &Edit, edit: &SetField) -> String {
-    let value = |e: &Edit| match e {
+/// An edit's value as the log writes it (render_gui_spec §G12): a latent vector as `(z_α, …, z_μ2)`, the lock as "locked
+/// at …" or "unlocked", the hover at four decimals, the overlay set and the stain graph as [`overlays`] and
+/// [`stain_graph`] write them.
+pub fn edit_value(edit: &Edit) -> String {
+    match edit {
         Edit::Sim(SimField::Z0(z0)) => latent(z0),
         Edit::Sim(SimField::Basis { q1, q2 }) => format!("{} {}", latent(q1), latent(q2)),
         Edit::Sim(SimField::Lock(lock)) if lock.locked => {
@@ -253,8 +228,12 @@ pub fn set_field_message(before: &Edit, edit: &SetField) -> String {
         },
         Edit::Render(RenderField::StainGraph(g)) => stain_graph(g),
         Edit::Render(RenderField::DebugView(on)) => on.to_string(),
-    };
-    let path = match &edit.edit {
+    }
+}
+
+/// An edit's field path as the log names it: "Plane.z0", "Plane.q1 Plane.q2", "Playhead.t", ….
+pub fn edit_path(edit: &Edit) -> &'static str {
+    match edit {
         Edit::Sim(SimField::Z0(_)) => "Plane.z0",
         Edit::Sim(SimField::Basis { .. }) => "Plane.q1 Plane.q2",
         Edit::Sim(SimField::Lock(_)) => "Lock",
@@ -267,12 +246,18 @@ pub fn set_field_message(before: &Edit, edit: &SetField) -> String {
         Edit::Render(RenderField::Hover(_)) => "Hover.at",
         Edit::Render(RenderField::StainGraph(_)) => "StainGraph",
         Edit::Render(RenderField::DebugView(_)) => "DebugView",
-    };
+    }
+}
+
+/// The `contract` log line of an applied edit: its path, the value before and after, and "(no history)" when so
+/// marked (render_gui_spec §G12; 12_console.png's `SetField <path> <before> → <after>`).
+pub fn set_field_message(before: &Edit, edit: &SetField) -> String {
     let marker = if edit.no_history { " (no history)" } else { "" };
     format!(
-        "SetField {path} {} → {}{marker}",
-        value(before),
-        value(&edit.edit)
+        "SetField {} {} → {}{marker}",
+        edit_path(&edit.edit),
+        edit_value(before),
+        edit_value(&edit.edit)
     )
 }
 
@@ -281,14 +266,23 @@ impl EngineInterface for StateStore {
         self.apply(edit, None);
     }
 
+    fn set_field_under(&mut self, edit: SetField, key: HistoryKey) {
+        self.apply(edit, Some(key));
+    }
+
+    fn end_key(&mut self, key: HistoryKey) {
+        let lines = self.history.end_key(key);
+        self.log_lines(lines);
+    }
+
     fn snapshot(&mut self) -> Snapshot {
         Snapshot {
             sim: self.sim.clone(),
             render: self.render.clone(),
             tier: Tier {},
-            history: History {
-                undo_depth: depth(&self.undo),
-                redo_depth: depth(&self.redo),
+            history: snapshot::History {
+                undo_depth: self.history.undo_depth(),
+                redo_depth: self.history.redo_depth(),
             },
             precision: Precision {
                 decode_switchover: false,
@@ -307,27 +301,18 @@ impl EngineInterface for StateStore {
     }
 
     fn undo(&mut self) {
-        self.open = None;
-        if let Some(change) = self.undo.pop() {
-            for (before, _) in change.edits.iter().rev() {
-                self.write(before.clone());
-            }
-            self.redo.push(change);
-        }
+        let (sim, render) = (&mut self.sim, &mut self.render);
+        let lines = self.history.undo(|before| {
+            write(sim, render, before);
+        });
+        self.log_lines(lines);
     }
 
     fn redo(&mut self) {
-        self.open = None;
-        if let Some(change) = self.redo.pop() {
-            for (_, after) in &change.edits {
-                self.write(after.clone());
-            }
-            self.undo.push(change);
-        }
+        let (sim, render) = (&mut self.sim, &mut self.render);
+        let lines = self.history.redo(|after| {
+            write(sim, render, after);
+        });
+        self.log_lines(lines);
     }
-}
-
-/// A history's depth as the snapshot's u32 (R-329), saturating.
-fn depth(changes: &[Change]) -> u32 {
-    u32::try_from(changes.len()).unwrap_or(u32::MAX)
 }
