@@ -496,9 +496,10 @@ hold and whether a chart task is added.*
     Queue it if the split isn't clean for any target."
   - `plan/requirements.yaml`, each target's verify, verbatim:
     - OC-4 on the Šuvakov plane, REQ-VAL-311 (M8, TASK-M8-99): "as OC-4, on the Šuvakov-plane chart once RQ-583 (and
-      its labelling, RQ-582) is ruled; agreement at OC-4's calibrated level; control as OC-4's". OC-4, REQ-VAL-309:
-      "On a chart through each atlas orbit not on the Šuvakov plane, the payload's leaf decisions, spread and
-      `error_ratio` must place linearly stable orbits inside resolved regular islands and unstable ones on boundaries".
+      its labelling, RQ-582) is ruled; agreement at OC-4's calibrated level; control as OC-4's". OC-4, REQ-VAL-309,
+      its statement (not its verify): "On a chart through each atlas orbit not on the Šuvakov plane, the payload's
+      leaf decisions, spread and `error_ratio` must place linearly stable orbits inside resolved regular islands and
+      unstable ones on boundaries".
     - AT-D1, REQ-VAL-312 (M8, TASK-M8-99): "a Result (R-572) at f64; reviewed by the physics reviewer; the atlas's
       credit line on the figure; control: each marker's IC re-encoded must land on its marker".
     - AT-D3, REQ-VAL-313 (M8, TASK-M8-99): "as AT-D1, per value of m₃".
