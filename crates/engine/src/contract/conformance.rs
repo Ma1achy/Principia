@@ -550,6 +550,11 @@ fn edits_under_one_key_are_one_entry(engine: &mut dyn EngineInterface) -> Result
         if step == 2 {
             // The clock's advance, between two frames of the drag, keeps the drag's entry open.
             engine.set_field(playhead(t0 + 2.5, true));
+            expect(
+                "the playhead after the clock's advance during a drag",
+                t_of(&engine.snapshot()),
+                t0 + 2.5,
+            )?;
         }
     }
     engine.end_key(drag);
@@ -577,6 +582,11 @@ fn edits_under_one_key_are_one_entry(engine: &mut dyn EngineInterface) -> Result
     engine.set_field_under(playhead(t0 + 5.0, false), next);
     engine.end_key(next);
     let after = engine.snapshot();
+    expect(
+        "the playhead after an edit under another key",
+        t_of(&after),
+        t0 + 5.0,
+    )?;
     expect(
         "the undo depth after a command and an edit under another key",
         after.history.undo_depth,

@@ -31,9 +31,7 @@ pub trait EngineInterface {
     /// The drag or command sent under `key` has ended (gui_state_contract §2: the console logs a drag once, when it
     /// ends): its entry, if still open, closes and is logged. The default does nothing, as the default
     /// [`EngineInterface::set_field_under`] opens no entry.
-    fn end_key(&mut self, key: HistoryKey) {
-        let _ = key;
-    }
+    fn end_key(&mut self, _key: HistoryKey) {}
 
     /// The latest snapshot. It carries the log entries accumulated since the previous call, which this call hands
     /// over, so each entry is in exactly one snapshot (RQ-245).

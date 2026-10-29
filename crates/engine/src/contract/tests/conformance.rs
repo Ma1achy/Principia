@@ -1340,3 +1340,56 @@ validation::negative_control!(
     expected = "a drag logged before it ended",
     check_drag_lines(|st, e, _| st.set_field(e))
 );
+
+/// A double that keeps no history keys: it implements the interface's four required methods alone, so the keyed ones
+/// are the trait's defaults.
+struct Keyless(StateStore);
+
+impl EngineInterface for Keyless {
+    fn set_field(&mut self, edit: SetField) {
+        self.0.set_field(edit);
+    }
+    fn snapshot(&mut self) -> Snapshot {
+        self.0.snapshot()
+    }
+    fn undo(&mut self) {
+        self.0.undo();
+    }
+    fn redo(&mut self) {
+        self.0.redo();
+    }
+}
+
+/// The trait's default `set_field_under`, sent by `send`, applies each edit as `set_field` does, an entry of its own;
+/// the default `end_key` changes nothing.
+fn check_default_keys(send: impl Fn(&mut Keyless, SetField, HistoryKey)) {
+    let mut double = Keyless(store(0.0));
+    let key = HistoryKey(7);
+    for t in [1.0, 2.0, 3.0] {
+        send(&mut double, playhead(t, false), key);
+    }
+    let sent = double.snapshot();
+    assert_eq!(
+        sent.render.playhead.t, 3.0,
+        "the playhead after three edits under a default key"
+    );
+    assert_eq!(sent.history.undo_depth, 3, "an entry per edit");
+    double.end_key(key);
+    assert_eq!(
+        double.snapshot().history.undo_depth,
+        3,
+        "the default end_key changed the history"
+    );
+}
+
+#[test]
+fn interface_default_keyed_methods_apply_each_edit_alone() {
+    check_default_keys(|d, e, k| d.set_field_under(e, k));
+}
+
+validation::negative_control!(
+    interface_default_keyed_methods_apply_each_edit_alone,
+    "a default set_field_under that drops the edit",
+    expected = "the playhead after three edits under a default key",
+    check_default_keys(|_, _, _| {})
+);
