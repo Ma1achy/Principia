@@ -6,7 +6,8 @@ in-plane orthonormal basis is e1 = (1, 0, 1)/sqrt2, e2 = (0, 1, 0), with normal 
 (X, Y, X) has components x = r.e1 = 2X/sqrt2 = sqrt2 X, y = r.e2 = Y, and r.n = 0. The bodies start at rest, so every
 force (along the separations, which lie in the plane) stays in the plane, the velocities stay in it, and the motion is
 planar for all time: the planar problem with (x, y) = (sqrt2 X, Y), (vx, vy) = (0, 0) is the same problem. The map is
-a rotation (orthonormal, det +1 with n as the third axis), so every distance, the energy and |L| are unchanged; L = 0.
+orthonormal: completed by e1 x e2 = (-1, 0, 1)/sqrt2 = -n as the third axis it is a rotation (det +1; with n itself
+as the third axis the determinant is -1), so every distance, the energy and |L| are unchanged; L = 0.
 Checks printed: r.n = 0 for each body, the pairwise distances before and after, the energy before and after (G = 1).
 Optionally compares with ChatGPT's planar_xy.
 """
