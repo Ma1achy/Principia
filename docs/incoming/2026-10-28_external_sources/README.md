@@ -98,7 +98,7 @@ differs in bytes; the expanded package's zip (131 files) equals its folder exact
 | Source | Licence (how verified) | Committed or local-only | What we did | Result |
 |---|---|---|---|---|
 | Tanikawa, Saito & Mikkola 2019, CeMDA 131, 24 (accepted manuscript) | none (accepted manuscript; the owner's copy) | local-only: `_local/tanikawa_saito_mikkola_2019/` (sha256 aea7fde7… checked) | Table 1, two readings | 0 disagreements in 77 cells; proposed TSM-1 |
-| Janković, Dmitrašinović & Šuvakov 2020, CPC 250, 107052 | © 2019 Elsevier B.V., "All rights reserved" (in the PDF) | local-only | Tables 3–6, two readings; Cartesian conversion; overlap audit | 0 disagreements in 693 cells; 42 not in threebodyorbits.com, confirmed |
+| Janković, Dmitrašinović & Šuvakov 2020, CPC 250, 107052 | © 2019 Elsevier B.V., "All rights reserved" (in the PDF) | local-only | Tables 3–6, two readings; Cartesian conversion; overlap audit | 0 disagreements in 693 cells; the claim "42 not in threebodyorbits.com" is not confirmed as worded: 42 are absent from the Belgrade gallery (three-body.ipb.ac.rs), and all 99 are absent from the threebodyorbits.com snapshot (OC26) |
 | Kapela & Simó 2007, Nonlinearity 20, 1241 (author preprint, `kamstab.pdf`) | none stated (none in the PDF) | local-only | conversion check | see below |
 | Kapela & Simó 2017, Nonlinearity 30, 965 (author preprint, `nosym.pdf`; arXiv:1105.3235) | arXiv nonexclusive-distrib 1.0 (abstract page) | local-only | conversion check | see below |
 | `choreo.zip` (Kapela & Simó 2017 code) | GPL v2 (root `license.txt`; 480 of 846 files carry the CAPD GPL notice; Kapela's `private/` files say only "Copyright (C) Tomasz Kapela 2006") | local-only: `_local/external_sources_2026-10-28/kapela_simo/choreo.zip` (1,231,363 bytes, sha256 2291f82141a993e5840835d0525d91b36071558ffde155b205ab9bb4eec127d7; from https://ww2.ii.uj.edu.pl/~kapela/papers/nosym/choreo.zip, which `fetch.sh` re-fetches). GPL v2 is not a licence the owner allows for commits; see the note below the table | read only; not built | — |
@@ -191,10 +191,13 @@ not committed: they are untrusted output, and every transcription in them is at 
   4.98×10⁻²⁵; eq. (5)'s E against the Cartesian E, 1.3×10⁻⁴⁹.
 - **Overlap**, against `docs/incoming/2026-10-26_orbit_catalogues/` (on main) and `../2026-10-26_belgrade_gallery/`.
   Rule 1: a row matches a Belgrade gallery satellite when a and c are equal as decimals and L agrees to the gallery's
-  digits: **57 of 99 match, 42 do not** (rows 3, 7, 9, 12, 51–80, 82, 83, 85, 87, 88, 89, 91, 93), the claimed 42.
+  digits: **57 of 99 match, 42 do not** (rows 3, 7, 9, 12, 51–80, 82, 83, 85, 87, 88, 89, 91, 93). The claim's
+  count, 42, is the count absent from the Belgrade gallery (three-body.ipb.ac.rs), not from threebodyorbits.com.
   Rule 2: every equal-mass, E < 0 row of the threebodyorbits.com snapshot (2,215 of 3,943) compared by the
   scale-invariant pair (|L||E|^½, T|E|^{3/2}): no candidate at relative tolerance 10⁻⁶, 10⁻⁴ or 10⁻³, for any of the 99;
-  |L||E|^½ alone at 10⁻⁴ finds 7 coincidences, none matching in T.
+  |L||E|^½ alone at 10⁻⁴ finds 7 coincidences, none matching in T. So **none of the 99 is in the threebodyorbits.com
+  snapshot**, and the claim "42 not in threebodyorbits.com" is not confirmed as worded: all 99 are absent from OC26,
+  and 42 are absent from the Belgrade gallery.
 - **Row 99** prints L = 0.93555 (5 digits; its neighbours 0.935548917), c positive, k = 58, T = 2.57: transcribed as
   printed. Table 3's caption gives d_min < 10⁻⁷.
 
