@@ -1,7 +1,8 @@
 """Cell-by-cell string diff of two transcriptions (reading A, reading B) of one table.
 
 Usage: python3 -I diff_readings.py <reading_a.csv> <reading_b.csv> [key_column] [--numeric]
-Both CSVs must have the same header. Rows are matched on the key column (default: the first column).
+Both CSVs must have the same header. Rows are matched on the key column (default: the first column). A composite key
+names several columns joined by '+' (for example table+m1+m2+m3+Fi); the row's key is then those cells joined by '+'.
 Prints every disagreement (key, column, A, B), every row present in only one reading, and a count line.
 Cells are compared as strings after stripping surrounding whitespace; nothing is rounded or re-formatted. With
 --numeric, two cells that both parse as decimals are compared as numbers (so 4.24e11 = 424000000000.0); cells equal
@@ -21,12 +22,13 @@ def numeq(x, y):
 
 
 def load(path, key):
+    cols = key.split("+")
     with open(path, newline="", encoding="utf-8") as f:
         r = csv.DictReader(f)
         rows = {}
         order = []
         for row in r:
-            k = row[key].strip()
+            k = "+".join(row[c].strip() for c in cols)
             if k in rows:
                 raise SystemExit(f"{path}: duplicate key {k!r}")
             rows[k] = {c: (v or "").strip() for c, v in row.items()}

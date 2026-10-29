@@ -118,7 +118,7 @@ differs in bytes; the expanded package's zip (131 files) equals its folder exact
 | Dandekar et al. 2022, CeMDA 134, 55 (arXiv:2205.04294v1) | arXiv nonexclusive-distrib 1.0 | local-only | record | no target |
 | Orlov, Titov & Shombina 2016, Astron. Rep. 60, 1083, doi:10.1134/S1063772916110056 | © Pleiades | local-only: `_local/orlov_titov_shombina_2016/` (sha256 1a872913… checked) | context | **resolved: obtained 29 Oct 2026, local-only, context only** |
 | Titov 2024, DSc dissertation, SPbU | none stated | local-only: `_local/titov_2024/` (sha256 7d281adf… checked) | Appendix B, Tables 2–4, 10, 11, two readings; E and J recomputed; chapter 5 decoded | 0 disagreements in 842 cells; proposed TI-1 (25 orbits) |
-| Li & Liao 2018, arXiv:1805.07980v1; New Astronomy 70, 22–26 (2019), doi:10.1016/j.newast.2019.01.003 | arXiv nonexclusive-distrib 1.0; journal: Elsevier (Crossref lists only Elsevier's TDM licence) | local-only: `_local/li_liao_2018/` (sha256 cce9e000… checked) | Tables A1–A5, two readings; overlap with OC26 and with LL-5's table | 0 disagreements in 2,106 cells; 0 new orbits; no new row |
+| Li & Liao 2018, arXiv:1805.07980v1; New Astronomy 70, 22–26 (2019), doi:10.1016/j.newast.2019.01.003 | arXiv nonexclusive-distrib 1.0; journal: Elsevier (Crossref lists only Elsevier's TDM licence) | local-only: `_local/li_liao_2018/` (sha256 cce9e000… checked) | Tables A1–A5, two readings; overlap with OC26 and with LL-5's table | 0 disagreements in 1,872 cells; 0 new orbits; no new row |
 | Tanikawa, Umehara & Abe 1995, CeMDA 62, 335, doi:10.1007/BF00692285 | © 1995 Kluwer (in the PDF) | local-only | Tables IIa, IIb, IIIa–c, IV, two readings; units and frame decoded | proposed TUA-1, TUA-2 |
 | Anosova 1986, Ap&SS 124, 217, doi:10.1007/BF00656037 | © 1986 D. Reidel (in the PDF) | local-only | Tables V and X, two readings | 0 disagreements; proposed AN-2, contingent on RQ-651 |
 | Umehara & Tanikawa 2000, CeMDA 76, 187, doi:10.1023/A:1008305928852 | © 2000 Kluwer | local-only | checked for tables | no tables; context |
@@ -408,7 +408,10 @@ coordinate is zero (the bodies start on the x-axis, moving along y).
   journal-ref and Crossref: New Astronomy 70 (2019) 22–26, doi:10.1016/j.newast.2019.01.003, issued July 2019; the
   journal's own page (ScienceDirect) answered 403, so it was not read directly.
 - **Readings.** A: the text layer (234 rows). B: a two-of-three OCR consensus (full page at 300 dpi, the column at 600
-  dpi, two strips at 300 dpi upscaled 2×) plus 15 cells (5 rows) by eye. **0 disagreements in 2,106 cells.**
+  dpi, two strips at 300 dpi upscaled 2×) plus 15 cells (5 rows) by eye. **0 disagreements in 1,872 cells**
+  (234 rows × 8 columns), from `python3 -I scripts/diff_readings.py li_liao_2018/tablesA1toA5_reading_a_textlayer.csv
+  li_liao_2018/tablesA1toA5_reading_b.csv table+m1+m2+m3+Fi > li_liao_2018/tablesA1toA5_diff.txt` (a composite key:
+  Table A1 holds two mass sets, so `table+Fi` repeats).
   `li_liao_2018/tablesA1toA5_reconciled.csv`. Tables: A1 (1, 1, 1) and (1, 0.8, 0.8); A2 (1, 0.8, 0.6); A3
   (1, 0.8, 0.4); A4 (1, 0.8, 0.2); A5 (0.6, 0.8, 1). Tables A6–A10 (free-group words) are recorded, not transcribed;
   nothing is built on them.
@@ -563,7 +566,7 @@ fields onto them. Ids are new (none is in PLAN.md on main at d3983980); the pref
 ### 4. PLAN.md, § 3.1: in the row `LL-1`, at the end of its Status cell, append
 
 ```
- · note, 29 Oct 2026 (proposed): Tables A1–A5 are now transcribed twice, 0 disagreements in 2,106 cells (`../2026-10-28_external_sources/li_liao_2018/tablesA1toA5_reconciled.csv`); all 234 equal the authors' 316-orbit table that LL-5 reads, in x, y and T; 230 are in the atlas (§ 2.1); no new orbit
+ · note, 29 Oct 2026 (proposed): Tables A1–A5 are now transcribed twice, 0 disagreements in 1,872 cells (`../2026-10-28_external_sources/li_liao_2018/tablesA1toA5_reconciled.csv`); all 234 equal the authors' 316-orbit table that LL-5 reads, in x, y and T; 230 are in the atlas (§ 2.1); no new orbit
 ```
 
 ### 5. PLAN.md, § 3.2: after the row `MT-1`, add
