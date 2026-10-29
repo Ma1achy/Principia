@@ -5,11 +5,11 @@ from matplotlib.patches import Circle, Polygon
 from figkit import *
 
 M0 = np.array([1.8, 1.2, 0.9])
-_P = np.array([[0.7, 1.55], [2.75, 0.1], [1.3, -0.45]])
+_P = np.array([[0.7, -1.55], [2.75, -0.1], [1.3, 0.45]])
 _w = np.array([1.8, 1.2, 0.9]) / 3.9
 _c = (_w[:, None] * _P).sum(0)
 P0 = np.array([1.05, 0.5]) + 1.55 * (_P - _c)
-V0 = 1.7 * np.array([[0.55, -0.1], [-0.2, 0.75], [0.05, 0.35]]) + np.array([0.5, 0.32])
+V0 = 1.7 * np.array([[0.55, 0.1], [-0.2, -0.75], [0.05, -0.35]]) + np.array([0.5, -0.32])
 
 W0 = M0 / M0.sum()
 com0 = (W0[:, None] * P0).sum(0)
