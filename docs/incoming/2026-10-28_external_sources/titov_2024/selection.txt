@@ -1,0 +1,41 @@
+B2-01: rounding bound E 0.135e-6, |J| 0.0381e-5; kept
+B2-02: rounding bound E 0.135e-6, |J| 0.0303e-5; kept
+B2-03: rounding bound E 0.135e-6, |J| 0.0283e-5; kept
+B2-04: rounding bound E 0.176e-6, |J| 0.0389e-5; kept
+B2-05: rounding bound E 0.153e-6, |J| 0.0264e-5; kept
+B2-06: rounding bound E 0.212e-6, |J| 0.0315e-5; kept
+B2-07: rounding bound E 0.236e-6, |J| 0.0297e-5; kept
+B2-08: rounding bound E 0.202e-6, |J| 0.0254e-5; kept
+B2-09: rounding bound E 0.285e-6, |J| 0.0282e-5; kept
+B2-10: rounding bound E 0.346e-6, |J| 0.0327e-5; EXCLUDED: appendix E or |J| does not check
+B2-11: rounding bound E 0.431e-6, |J| 0.0334e-5; EXCLUDED: appendix E or |J| does not check
+B2-12: rounding bound E 0.604e-6, |J| 0.0343e-5; EXCLUDED: table E -1.366082 (6 decimals, appendix 5) is 6.424 units off
+B2-13: rounding bound E 0.699e-6, |J| 0.0347e-5; EXCLUDED: table E -1.460752 (6 decimals, appendix 5) is 2.741 units off
+B2-14: rounding bound E 0.142e-6, |J| 0.0287e-5; kept
+B2-15: rounding bound E 0.228e-6, |J| 0.0301e-5; kept
+B2-16: rounding bound E 0.239e-6, |J| 0.0272e-5; EXCLUDED: appendix E or |J| does not check
+B3-01: rounding bound E 0.14e-6, |J| 0.0334e-5; kept
+B3-02: rounding bound E 0.139e-6, |J| 0.0297e-5; kept
+B3-03: rounding bound E 0.139e-6, |J| 0.0297e-5; kept
+B3-04: rounding bound E 0.139e-6, |J| 0.0296e-5; kept
+B3-05: rounding bound E 0.152e-6, |J| 0.0269e-5; kept
+B3-06: rounding bound E 0.153e-6, |J| 0.0268e-5; EXCLUDED: appendix E or |J| does not check
+B3-07: rounding bound E 0.153e-6, |J| 0.0268e-5; kept
+B3-08: rounding bound E 0.215e-6, |J| 0.028e-5; EXCLUDED: appendix E or |J| does not check
+B3-09: rounding bound E 0.273e-6, |J| 0.0291e-5; EXCLUDED: appendix E or |J| does not check
+B3-10: rounding bound E 0.224e-6, |J| 0.0266e-5; kept
+B3-11: rounding bound E 0.244e-6, |J| 0.0311e-5; kept
+B3-12: rounding bound E 0.334e-6, |J| 0.0276e-5; EXCLUDED: appendix E or |J| does not check
+B3-13: rounding bound E 0.364e-6, |J| 0.0323e-5; kept
+T4-02: rounding bound E 0.152e-6, |J| 0.0267e-5; kept
+T4-03: rounding bound E 0.153e-6, |J| 0.0264e-5; EXCLUDED: appendix E or |J| does not check
+T4-04: rounding bound E 0.153e-6, |J| 0.0269e-5; kept
+T4-05: rounding bound E 0.152e-6, |J| 0.0271e-5; kept
+kept 23: B2-01 B2-02 B2-03 B2-04 B2-05 B2-06 B2-07 B2-08 B2-09 B2-14 B2-15 B3-01 B3-02 B3-03 B3-04 B3-05 B3-07 B3-10 B3-11 B3-13 T4-02 T4-04 T4-05
+excluded 10: B2-10 B2-11 B2-12 B2-13 B2-16 B3-06 B3-08 B3-09 B3-12 T4-03
+largest rounding bound among the kept: E 0.364e-6, |J| 0.0389e-5
+main-text table errors at the appendix's own precision (the orbit kept):
+  B2-03 (B2:3): table |J| 1.22094 against appendix 1.22042, -51.8 units; the appendix checks
+  B2-04 (B2:4): table E -0.850687 against appendix -0.659868, 1.908e+5 units; the appendix checks
+  B2-08 (B2:8): table |J| 2.44831 against appendix 2.46683, 1852.0 units; the appendix checks
+  B3-10 (B3:11): table |J| 1.19288 against appendix 2.39407, 1.201e+5 units; the appendix checks

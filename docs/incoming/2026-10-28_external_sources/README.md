@@ -117,7 +117,7 @@ differs in bytes; the expanded package's zip (131 files) equals its folder exact
 | Rein & Spiegel 2015, MNRAS 446, 1424 (arXiv:1409.4779v2) | arXiv nonexclusive-distrib 1.0 | local-only | record | no target |
 | Dandekar et al. 2022, CeMDA 134, 55 (arXiv:2205.04294v1) | arXiv nonexclusive-distrib 1.0 | local-only | record | no target |
 | Orlov, Titov & Shombina 2016, Astron. Rep. 60, 1083, doi:10.1134/S1063772916110056 | © Pleiades | local-only: `_local/orlov_titov_shombina_2016/` (sha256 1a872913… checked) | context | **resolved: obtained 29 Oct 2026, local-only, context only** |
-| Titov 2024, DSc dissertation, SPbU | none stated | local-only: `_local/titov_2024/` (sha256 7d281adf… checked) | Appendix B, Tables 2–4, 10, 11, two readings; E and J recomputed; chapter 5 decoded | 0 disagreements in 842 cells; proposed TI-1 (25 orbits) |
+| Titov 2024, DSc dissertation, SPbU | none stated | local-only: `_local/titov_2024/` (sha256 7d281adf… checked) | Appendix B, Tables 2–4, 10, 11, two readings; E and J recomputed; chapter 5 decoded | 0 disagreements in 842 cells; proposed TI-1 (23 orbits) |
 | Li & Liao 2018, arXiv:1805.07980v1; New Astronomy 70, 22–26 (2019), doi:10.1016/j.newast.2019.01.003 | arXiv nonexclusive-distrib 1.0; journal: Elsevier (Crossref lists only Elsevier's TDM licence) | local-only: `_local/li_liao_2018/` (sha256 cce9e000… checked) | Tables A1–A5, two readings; overlap with OC26 and with LL-5's table | 0 disagreements in 1,872 cells; 0 new orbits; no new row |
 | Tanikawa, Umehara & Abe 1995, CeMDA 62, 335, doi:10.1007/BF00692285 | © 1995 Kluwer (in the PDF) | local-only | Tables IIa, IIb, IIIa–c, IV, two readings; units and frame decoded | proposed TUA-1, TUA-2 |
 | Anosova 1986, Ap&SS 124, 217, doi:10.1007/BF00656037 | © 1986 D. Reidel (in the PDF) | local-only | Tables V and X, two readings | 0 disagreements; proposed AN-2, contingent on RQ-651 |
@@ -339,8 +339,8 @@ coordinate is zero (the bodies start on the x-axis, moving along y).
 - **Masses** from the prose: B2-01…13 0.95/0.95/1.1; B2-14…16 1.05/1.05/0.9; B3 0.99/1.01/1.0; T4 m₂ = 2 − m₁, m₃ = 1,
   ω = 1/2 (Table 4's header, "m1+m2=2, m3=1.0, ω=1/2").
 - **E and J recomputed** (`scripts/titov_recompute_EJ.py`, 50 digits, G = 1; `titov_2024/appB_EJ_recomputed.csv`).
-  The appendix prints |J|; the recomputed J is negative for 12 rows. **25 of 33 check within one last-place unit.**
-  The eight that fail:
+  The appendix prints |J|; the recomputed J is negative for 12 rows. **25 of 33 check within one last-place unit
+  against the appendix's own E and |J|.** The eight that fail:
 
   | Row | E | J | Note |
   |---|---|---|---|
@@ -354,20 +354,38 @@ coordinate is zero (the bodies start on the x-axis, moving along y).
   | T4-03 | printed E, J are T4-02's | as E | recomputed −0.696347, 1.096486; Table 4's −0.696348 (1.3 units), 1.09648 agree |
 
   Worst disagreement in a row whose E and J are not copies: B3-06's J, 100 last-place units.
+- **Which orbits TI-1 keeps: one rule** (`scripts/titov_selection.py`, `titov_2024/selection.txt`). The appendix
+  carries the ICs, so an orbit is kept only if (1) the appendix's own E and |J| check, and (2) where a main-text table
+  prints E or |J| to more decimals than the appendix, that more precise value checks too. A main-text value at the
+  appendix's own precision that disagrees while the appendix checks is the table's error, not the orbit's. The same
+  script bounds what the ICs' 7-decimal rounding (±0.5×10⁻⁷ in each of the six) can move E and |J|, to first order:
+  at most 0.70×10⁻⁶ in E (B2-13) and 0.04×10⁻⁵ in |J| over all 33, so a disagreement of a whole last place in Table
+  2's 6-decimal E is not the ICs' rounding. Clause (2) excludes two orbits the appendix alone passes:
+  - **B2-12**: the appendix prints E = −1.36608 (5 decimals), which checks; Table 2 prints −1.366082, and the
+    recomputation gives −1.3660756, 6.4×10⁻⁶ away, against a rounding bound of 0.60×10⁻⁶;
+  - **B2-13**: the appendix prints −1.46075, which checks; Table 2 prints −1.460752, the recomputation −1.4607493,
+    2.7×10⁻⁶ away, against a bound of 0.70×10⁻⁶.
+
+  These are the same kind of disagreement that excludes B2-10 (6.6×10⁻⁶ against the appendix's 6-decimal E, bound
+  0.35×10⁻⁶), seen only because Table 2 prints one more decimal. Whether Table 2 or the ICs are wrong is not
+  settled by the source; either way the ICs are not shown to carry the printed orbit, so both are left out. **TI-1
+  keeps 23 orbits; 10 are excluded** (B2-10, B2-11, B2-12, B2-13, B2-16, B3-06, B3-08, B3-09, B3-12, T4-03).
 - **Main-text Tables 2, 3, 4** (pp. 51, 59): A text layer, B OCR (+ 9 stability marks '−' read by eye): 0
   disagreements (128, 112 and 35 cells). Table 2 is "Орбиты с симметрией 2-1" ("orbits with 2-1 symmetry"). Columns,
   translated: A (action), E (energy), |C| (angular momentum, the appendix's |J|), ω, [I_min, I_max] (range of the moment
   of inertia), "Рис" (figure; л/п left/right panel), "Уст" (stable: + yes, − no). Their own errors against the appendix
   and the recomputation: Table 2 row 3 |C| 1.22094 (appendix and recomputation 1.22042); row 4 E −0.850687 (row 7's
-  value; appendix and recomputation −0.659868); row 8 |C| 2.44831 (appendix and recomputation 2.46683); row 4 prints "[3.27315,3.308455". Table 3 lists an orbit (A = 14.09948) not in Appendix B; its row 11 |C|
-  1.19288 against 2.39407; A 16.76479 against the appendix's 16.76478.
+  value; appendix and recomputation −0.659868); row 8 |C| 2.44831 (appendix and recomputation 2.46683); row 4 prints "[3.27315,3.308455"; rows 12 and 13 E −1.366082 and −1.460752, 6.4 and 2.7 units of 10⁻⁶ from the
+  recomputation, beyond the ICs' rounding (the table's error or the ICs', see the rule above); row 10 E −1.049610,
+  4.6 units off (B2-10, excluded on the appendix already). Table 3 lists an orbit (A = 14.09948) not in Appendix B;
+  its row 11 |C| 1.19288 against 2.39407; A 16.76479 against the appendix's 16.76478.
 - **Frame and period.** The ICs are inertial; the rotation is counterclockwise, checked on B2-01: the rotating-frame
   velocity plus ω × r gives ẏ₁ = −0.2750279 against the printed −0.2750278. The period is 2π in t (pp. 52–53:
   "проинтегрировав уравнения движения на один период (2π)", "integrating the equations of motion over one period
   (2π)"); the integrals fluctuate by at most 2×10⁻⁷ relative over it, and solutions whose error exceeds 10⁻⁵ are not
   given (pp. 52–53).
-- **Proposed:** TI-1, tier (b), on the 25 orbits that check. B2-16's E and J check only against Table 2, so it is
-  left out.
+- **Proposed:** TI-1, tier (b), on the 23 orbits the rule keeps. B2-16's E and J check only against Table 2, so it
+  is left out (clause (1): its appendix E and J are B2-14's).
 
 **Chapter 5, Tables 10 (collinear) and 11 (isosceles)**
 
@@ -560,7 +578,7 @@ fields onto them. Ids are new (none is in PLAN.md on main at d3983980); the pref
 ### 3. PLAN.md, § 3.1 Verification: after the row `LL-1`, add
 
 ```
-| TI-1 (proposed, 29 Oct 2026) | V | A | Titov 2024, DSc dissertation (SPbU), Appendix B, pp. 51–60: `../2026-10-28_external_sources/README.md` § "Titov 2024" | Each of the 25 Appendix B orbits whose printed E and \|J\| match a recomputation from the printed ICs (B2-01…09, B2-12…15, B3-01…05, B3-07, B3-10, B3-11, B3-13, T4-02, T4-04, T4-05; G = 1; masses as the README gives per row) closes over one period t = 2π in the frame rotating counterclockwise at ω: state(2π) against R(2πω)·state(0). About 10⁻⁷ is the source's level (ICs to 7 decimals; integrals fluctuating ≤ 2×10⁻⁷ relative), a tolerance, not a bound. Rows Tables 2–3 mark unstable ('−') may diverge for that reason, a named mechanism. B2-10, B2-11, B2-16, B3-06, B3-08, B3-09, B3-12 and T4-03 are excluded (their E or J does not check) | `../2026-10-28_external_sources/titov_2024/appB_reconciled.csv` (33 rows, transcribed twice, 0 disagreements in 462 cells); `appB_EJ_recomputed.csv`; the dissertation is local-only | BodyPlane at unequal masses and L ≠ 0; MassSimplex point | M3 integrator (TASK-M3-36) | exact (closure to the stated tolerance) | data transcribed · proposed (29 Oct 2026) · tier (b), CPU IC inspector · scores in M9, or earlier as an information-only peek · outcome PASS / EXPLAINED DIVERGENCE / UNEXPLAINED |
+| TI-1 (proposed, 29 Oct 2026) | V | A | Titov 2024, DSc dissertation (SPbU), Appendix B, pp. 51–60: `../2026-10-28_external_sources/README.md` § "Titov 2024" | Each of the 23 Appendix B orbits kept by the README's one rule (`titov_2024/selection.txt`: the appendix's E and \|J\| match a recomputation from the printed ICs, and so does any main-text value printed to more decimals) (B2-01…09, B2-14, B2-15, B3-01…05, B3-07, B3-10, B3-11, B3-13, T4-02, T4-04, T4-05; G = 1; masses as the README gives per row) closes over one period t = 2π in the frame rotating counterclockwise at ω: state(2π) against R(2πω)·state(0). About 10⁻⁷ is the source's level (ICs to 7 decimals; integrals fluctuating ≤ 2×10⁻⁷ relative), a tolerance, not a bound. Rows Tables 2–3 mark unstable ('−') may diverge for that reason, a named mechanism. B2-10, B2-11, B2-16, B3-06, B3-08, B3-09, B3-12 and T4-03 are excluded (their appendix E or J does not check), and B2-12 and B2-13 (Table 2's 6-decimal E disagrees with the recomputation by 6.4 and 2.7×10⁻⁶, beyond the ≤ 0.70×10⁻⁶ the ICs' rounding allows) | `../2026-10-28_external_sources/titov_2024/appB_reconciled.csv` (33 rows, transcribed twice, 0 disagreements in 462 cells); `appB_EJ_recomputed.csv`; `selection.txt`; the dissertation is local-only | BodyPlane at unequal masses and L ≠ 0; MassSimplex point | M3 integrator (TASK-M3-36) | exact (closure to the stated tolerance) | data transcribed · proposed (29 Oct 2026) · tier (b), CPU IC inspector · scores in M9, or earlier as an information-only peek · outcome PASS / EXPLAINED DIVERGENCE / UNEXPLAINED |
 ```
 
 ### 4. PLAN.md, § 3.1: in the row `LL-1`, at the end of its Status cell, append
