@@ -156,7 +156,7 @@ negative_control!(
 );
 
 /// A state of fifteen distinct values, the `k`-th of a few; the fifth has its inner pair coincident, so the encode's
-/// notices word is not 0 (bit 0, R-13).
+/// notices word sets bit 0 (R-13). Other states may set other bits, such as bit 2, `lookup_rescaled` (R-547).
 fn state(k: usize) -> Ic<f32> {
     let s = 1.0 + 0.1 * k as f32;
     if k == 4 {
@@ -198,9 +198,9 @@ fn check_states(shift: bool) {
         want.extend([e.blocks.alpha, e.blocks.beta, e.report.lambda].map(f32::to_bits));
         want.push(kernel::stage::encode::notices(&e.report));
         assert_eq!(
-            want[11] != 0,
+            (want[11] & 1) != 0,
             k == 4,
-            "state {k}: the notices word is not set exactly at the coincident pair"
+            "state {k}: the notices word's bit 0 is not set exactly at the coincident pair"
         );
         assert_eq!(
             words[ENCODE_OUT..].to_vec(),
