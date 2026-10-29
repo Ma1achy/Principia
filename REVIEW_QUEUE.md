@@ -547,3 +547,38 @@ builds.*
   stated by the owner.
 - **Applied meanwhile:** none. Nothing of the census is built.
 - **Waits:** the census harness (with RQ-617).
+
+## RQ-620: GG-1's per-point reference panel: Fig. 1 has two panels, ε = 10⁻⁶ and ε = 10⁻⁷⁰, that differ point by point *(a definition requirement, R-72; physics; R-642 item 1; `docs/design/principia_dd_replication.md` § 5.10, § 8.1 rule 8; `docs/incoming/2026-10-28_rq598_data/README.md` § 2, § 4, § 6; the physics review of PR #336, F1; REQ-VAL-295; context: TASK-M3-62)*
+
+*Queued 29 Oct 2026 by R-642's port, on the physics review of PR #336. For the owner: yes, it is physics where the
+choice changes the result and the corpus does not settle it (R-369).*
+
+- **File, section:**
+  - `decisions.md` § "R-642 — …", the owner's words, item 1: "GG-1 against the Fig. 1 vector extraction at its stated
+    precision (~0.012 dex, black = censored >1000)."
+  - `docs/design/principia_dd_replication.md` § "5.10 Converged-code references", GG-1's row: "1,212 points at spacing
+    1/64, converged with Brutus to t = 10⁴; lifetime to the last close approach", compared "per point where reliable
+    (rule 8: a converged code); KS otherwise".
+  - The same doc, § "8.1 Carried over from the 25 Oct instruction", rule 8: "A chaotic result is compared as a
+    distribution, never pixel for pixel. The exception is a result computed with a converged code (Brutus, clean
+    numerical simulation). Those are trajectories, and can be compared per point."
+  - `docs/incoming/2026-10-28_rq598_data/README.md` § 2: "The per-point lifetimes appear only in Fig. 1 (two panels:
+    ε = 10⁻⁶ left, ε = 10⁻⁷⁰ right; colour log₁₀ T on 0–3; black for T > 1000). The paper's K–S test gives p = 0.72
+    between the two panels."
+  - The same README, § 4, task 3: "The two panels themselves differ point by point (the paper says so), so compare
+    like ε with like."
+  - `docs/incoming/2026-10-28_rq598_data/transcriptions/gg1_fig1/README.md` § "Files": `gg1_fig1_left_eps1e-6.csv`,
+    "Left panel, ε = 10⁻⁶: 1212 rows", and `gg1_fig1_right_eps1e-70.csv`, "Right panel, ε = 10⁻⁷⁰: 1212 rows".
+- **The gap:** R-642's port wrote GG-1's scoring as "all 1212 points per panel". Neither the owner's words nor the
+  corpus say which panel is the per-point reference for our lifetimes, or for a reproduction ("vs Brutus, run here"),
+  nor what the other panel is for. Read literally, our lifetimes would be scored per point against both panels, which
+  differ point by point.
+- **The question:** which panel GG-1 scores per point against, for our runs and for a reproduction, and what role the
+  other panel takes.
+- **Options seen:** (a) the ε = 10⁻⁷⁰ panel per point, the ε = 10⁻⁶ panel by KS only; (b) each panel per point only
+  against a run at like ε (a reproduction at ε = 10⁻⁶ against the left, at 10⁻⁷⁰ against the right), our lifetimes
+  against both by KS; (c) per point only where the two panels agree within one LUT step (a reliability mask), KS
+  elsewhere; (d) another, stated by the owner.
+- **Applied meanwhile:** none. No panel is chosen. REQ-VAL-295's note, R-642's entry (a forward line under its item 1),
+  `principia_dd_replication.md` § 5.10, the RQ-598 README § 6 and TASK-M3-62's note point here.
+- **Waits:** GG-1's per-point scoring against the Fig. 1 extraction (TASK-M3-62). BR-1 does not wait on it.

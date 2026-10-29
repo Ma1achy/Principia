@@ -28071,6 +28071,9 @@ The owner's words, verbatim:
   Fig. 1 extraction at ≈ 0.012 dex (one LUT step, 3/256), black meaning censored above 1000. Those parts may close on
   that scoring. Which part each covers: for BR-1, 180 of the paper's ~10⁴ trajectories; for GG-1, all 1212 points per
   panel, at figure precision. The rest of BR-1 waits for the authors' full set.
+  - *Forward line, 29 Oct 2026:* "all 1212 points per panel" says what the extraction covers, not what GG-1 scores
+    against. Fig. 1's two panels (ε = 10⁻⁶ and ε = 10⁻⁷⁰) differ point by point, and which is GG-1's per-point
+    reference is undefined: RQ-620 (R-72). No panel is chosen.
 - **Item 2: reproductions unblock provisionally.** Each is labelled "vs <source>", never "replicates the paper"; each is
   re-scored when the authors' full data arrives (theirs governs; disagreements queued); and each qualifies only if it
   matches the paper's set-up (the same initial-condition distribution, at rest, the same frame) and uses a converged

@@ -370,7 +370,8 @@ scored, R-642 governing where they differ (`docs/incoming/2026-10-28_rq598_data/
   which cover 180 of the paper's ~10⁴; why 44 of them end early is checked before they are scored. GG-1 against the
   Fig. 1 extraction (`transcriptions/gg1_fig1/`), all 1212 points per panel, at one LUT step (3/256 ≈ 0.0117 dex), the
   three-entry bin (LUT 29–31) at its wider precision, black meaning censored above 1000. Those parts may close on that
-  scoring.
+  scoring. The two panels (ε = 10⁻⁶ and ε = 10⁻⁷⁰) differ point by point; GG-1's per-point reference panel is
+  undefined: RQ-620 (R-72). No panel is chosen.
 - **A reproduction unblocks provisionally.** It is labelled "vs <source>" ("vs Brutus, run here" for ours), never
   "replicates the paper", and qualifies only if it matches the paper's set-up (the same initial-condition distribution,
   at rest, the same frame) and uses a converged arbitrary-precision integrator: our Brutus built from

@@ -191,7 +191,9 @@ NvMgeneration, not AMUSE, and pilot BR-1 from the NVM starting points"); the blo
     (R-641); that is a step of the scoring task, TASK-M3-62, not a result here.
   - **GG-1** against the Fig. 1 extraction, `transcriptions/gg1_fig1/` (route 2, from branch `data/rq598-gg1-fig1-v2`):
     all 1212 points per panel, at figure precision, one LUT step (3/256 ≈ 0.0117 dex; "~0.012 dex" in the ruling), the
-    three-entry bin (LUT 29–31) at its wider precision, black meaning censored above 1000.
+    three-entry bin (LUT 29–31) at its wider precision, black meaning censored above 1000. The two panels
+    (ε = 10⁻⁶ and ε = 10⁻⁷⁰) differ point by point; GG-1's per-point reference panel is undefined: RQ-620 (R-72).
+    No panel is chosen.
 - **Reproductions unblock provisionally.** Each is labelled "vs <source>" ("vs Brutus, run here" for ours), never
   "replicates the paper", and is re-scored when the authors' full data arrives: theirs governs, and each disagreement
   is queued. A reproduction qualifies only if it matches the paper's set-up (the same initial-condition distribution,
