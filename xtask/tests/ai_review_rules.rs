@@ -63,6 +63,7 @@ fn check_same(agents: &str, copy: &str, file: &str) {
     }
 }
 
+#[cfg(feature = "controls")]
 /// `file`'s text with `from` replaced by `to` once, failing if `from` is gone, so a control cannot pass vacuously.
 fn edited(file: &str, from: &str, to: &str) -> String {
     let text = read(file);
@@ -76,13 +77,16 @@ fn edited(file: &str, from: &str, to: &str) -> String {
 const GEMINI: &str = "GEMINI.md";
 const COPILOT: &str = ".github/copilot-instructions.md";
 
+#[cfg(feature = "controls")]
 /// The controls' edits: one byte of a severity; a `### ` heading raised to `## `, which cuts the copy short; and a
 /// line appended past the section's end.
 const SEVERITY: (&str, &str) = (
     "| A correctness bug | P1 / HIGH |",
     "| A correctness bug | P2 / HIGH |",
 );
+#[cfg(feature = "controls")]
 const HEADING_RAISED: (&str, &str) = ("\n### Severity\n", "\n## Severity\n");
+#[cfg(feature = "controls")]
 const APPENDED: &str = "- Also flag long functions.\n";
 
 #[test]
