@@ -593,15 +593,38 @@ pub fn run_partition(manifest: &Path, mode: Mode, partition: Partition) -> Resul
     ))
 }
 
-/// `cargo test --features controls <targets> --no-fail-fast` on `package`, with `harness` passed to libtest.
+/// The cargo arguments that resolve the build of whichever package is selected with the features of the whole
+/// workspace: cargo's `workspace` feature unification, an unstable option of the pinned nightly
+/// (`rust-toolchain.toml`, R-169). Without them each package's `cargo test -p <package>` resolved its dependencies'
+/// features over its own graph alone, so a dependency shared by several packages (wgpu, naga, `render`, `engine`,
+/// `validation`) was built once per package; on a cold target, as in a CI shard run from an archive, that build made
+/// `xtask ci --list` outlast the 600 s timer on its child (R-214, REQ-VAL-156). Applied per R-369.
+pub const WORKSPACE_FEATURES: [&str; 3] = [
+    "-Zfeature-unification",
+    "--config",
+    "resolver.feature-unification=\"workspace\"",
+];
+
+/// `cargo test --features controls <targets> --no-fail-fast` on `package`, with `harness` passed to libtest, and the
+/// dependencies' features resolved over the whole workspace ([`WORKSPACE_FEATURES`]), so every package's build shares
+/// one build of them.
 fn cargo_test(
     manifest: &Path,
     package: &str,
     targets: &str,
     harness: &[&str],
 ) -> Result<Output, String> {
-    Command::new(cargo())
+    cargo_test_command(manifest, package, targets, harness)
+        .output()
+        .map_err(|e| format!("cannot run cargo test: {e}"))
+}
+
+/// The command [`cargo_test`] runs.
+fn cargo_test_command(manifest: &Path, package: &str, targets: &str, harness: &[&str]) -> Command {
+    let mut command = Command::new(cargo());
+    command
         .arg("test")
+        .args(WORKSPACE_FEATURES)
         .arg("--manifest-path")
         .arg(manifest)
         .args([
@@ -613,9 +636,8 @@ fn cargo_test(
             "--no-fail-fast",
             "--",
         ])
-        .args(harness)
-        .output()
-        .map_err(|e| format!("cannot run cargo test: {e}"))
+        .args(harness);
+    command
 }
 
 /// The stdout of a command that must succeed, or `Err` with its stderr.
@@ -728,6 +750,52 @@ mod tests {
             }
             Ok(Partition { k, n })
         })
+    );
+
+    /// The arguments of `command`, as text.
+    fn args_of(command: &Command) -> Vec<String> {
+        command
+            .get_args()
+            .map(|a| a.to_string_lossy().into_owned())
+            .collect()
+    }
+
+    /// Every `cargo test` the command runs resolves its features over the whole workspace, so the packages' builds share
+    /// one build of their dependencies: the arguments carry [`WORKSPACE_FEATURES`] as cargo's own, before the `--` that
+    /// starts libtest's.
+    fn check_workspace_features(args: &[String]) {
+        let cargo_args = &args[..args.iter().position(|a| a == "--").unwrap_or(args.len())];
+        assert!(
+            cargo_args
+                .windows(WORKSPACE_FEATURES.len())
+                .any(|w| w == WORKSPACE_FEATURES),
+            "cargo test resolves each package's features over its own graph: {args:?}"
+        );
+    }
+
+    #[test]
+    fn controls_cargo_test_unifies_features_over_the_workspace() {
+        let command = cargo_test_command(Path::new("Cargo.toml"), "p", "--tests", &["--list"]);
+        check_workspace_features(&args_of(&command));
+    }
+
+    validation::negative_control!(
+        controls_cargo_test_unifies_features_over_the_workspace,
+        "the same command with the workspace arguments passed to libtest, after `--`, where cargo never reads them",
+        expected = "cargo test resolves each package's features over its own graph",
+        {
+            let mut args: Vec<String> = args_of(&cargo_test_command(
+                Path::new("Cargo.toml"),
+                "p",
+                "--tests",
+                &["--list"],
+            ))
+            .into_iter()
+            .filter(|a| !WORKSPACE_FEATURES.contains(&a.as_str()))
+            .collect();
+            args.extend(WORKSPACE_FEATURES.map(str::to_owned));
+            check_workspace_features(&args)
+        }
     );
 
     #[test]
