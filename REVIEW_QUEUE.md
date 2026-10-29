@@ -430,3 +430,139 @@ paywalled publisher, outside the repo.*
   reversibility check as well as a trajectory check." (b) stays applied; the reversibility note is added to SP-2's row
   and its dated note (PLAN.md § 3.2), and the README gains "When the journal files arrive". Ruled, but stays open until
   the ruling is recorded in `decisions.md` (a later rulings PR); it then moves to the archive.
+
+## RQ-612: GG-1's lifetime T: which definition and which units reproduce the paper's Fig. 1, and whether (3, 43) is a grid offset *(queued by the Brutus pilot; `docs/incoming/2026-10-28_rq598_data/brutus_run_here/REPORT.md` § 2; the data-and-papers entry on PR #309; context: TASK-M3-62)*
+
+*Queued 29 Oct 2026 by the Brutus pilot, as corrected by the physics review of #334. For the owner: yes, it is physics where the choice
+changes the result and the corpus does not settle it (R-369). Not yet ready to rule: the neighbour runs in option (a) come first.*
+
+- **File, section:**
+  - Boekholt, Portegies Zwart & Valtonen 2020 (arXiv:2002.04029,
+    `docs/incoming/2026-10-25_replication/papers/boekholt_pz_valtonen_2020_MNRAS_493_3932_arXiv2002.04029.pdf`), Appendix A: "We evolve
+    each initial realization to the point of a permanent binary-single configuration, or a maximum time of 10,000 time units (Heggie &
+    Mathieu 1986). The single body is defined to be permanently escaped if 1) it is separated from the binary center of mass by more than
+    10 distance units", and "The lifetime is measured by considering the final snapshot of the forward integration, consisting of the
+    permanent binary+single, and then retracing their steps to the moment when the binary+single were closest to the moment of the final
+    ejection."
+  - `docs/incoming/2026-10-27_validation_plan/PLAN.md` § 3.2, GG-1: "lifetime to the last close approach".
+  - `fixtures/anosova/region_d.json`: m = (1, 1, 1), bodies 1 and 2 at (∓0.5, 0), the repo's convention (G = 1, at rest).
+- **What was found** (ours, run here; `brutus_run_here/hm_units_output.txt`): the pilot ran in m = 1, G = 1, r₁₂ = 1; the paper's times are
+  Heggie–Mathieu units (G = 1, M = 1, E = −1/4). The conversion depends on the point, T_HM = T_ours · √(3λ³), λ = (4/9) Σ 1/r_ij, a factor
+  of 2.72 to 167 over the grid. Converted, at the three sample points where the paper's two panels agree, ours against Fig. 1 (route 2,
+  `transcriptions/gg1_fig1/`) is (1, 54) −0.29 dex, (14, 20) +0.15 dex and (3, 43) −2.45 dex, each unchanged over ε = 10⁻⁴ … 10⁻⁶. In
+  Fig. 1, (3, 43) is log₁₀ T = 2.713, an isolated single-cell maximum: all eight neighbours are below it, (3, 42) 1.881, (3, 44) 1.107,
+  (2, 43) 0.896, (4, 43) 1.775, (2, 42) 0.920, (2, 44) 0.873, (4, 42) 1.518 and (4, 44) 1.307 (`hm_units_output.txt`). Ours there is 0.262
+  in HM units, so even against the nearest short neighbours ((2, 42), (2, 43), (2, 44), (3, 44)) it is 0.61 to 0.85 dex low, the same sign
+  as (1, 54)'s −0.29 dex. At (1, 54) ours equals the equilateral free-fall collapse time (1.71 HM), and Fig. 1's 3.3 HM is
+  1.9 times that. The pilot's escape radius (10 of its own length units, 13.5 to 210 HM) and cap (1000 of its units) were not the paper's.
+- **The question:** which definition of T (the retrace rule, the escape radius in HM units) makes our Brutus runs and the paper's figure
+  agree where the paper's two panels agree; and whether (3, 43) is also a one-cell offset in the initial condition or the grid snap. An
+  offset would leave the 0.61 to 0.85 dex remainder above, so an offset and a definition difference may both be present; one does not rule
+  out the other.
+- **Options seen:** (a) first run all eight neighbours of (3, 43) at ε = 10⁻⁶ with the escape radius and cap in HM units, and seek no
+  definition ruling before that: the four short ones ((2, 42), (2, 43), (2, 44), (3, 44)) test whether ours at (3, 43) matches a shifted
+  short cell, and the other four ((3, 42) 1.88, (4, 43) 1.78, (4, 42), (4, 44), none of them short) whether ours puts a long-lived cell one
+  step over; (b) keep ours, labelled ours, and treat the remaining disagreement as a finding; (c) ask Boekholt for the retrace rule and the
+  grid convention, in the email already planned, and also whether Fig. 1's times are in Heggie–Mathieu units: read instead as G = M = 1
+  with no energy scaling (r₁₂ = 1 kept), the factor is a constant √3 and the three points are −0.48, −0.32 and −2.72 dex, each further
+  from Fig. 1 than the HM reading's −0.29, +0.15 and −2.45, so the HM reading, which is the paper's citation, is applied; (d) test
+  candidate conventions on a spread of grid points against route 2, which needs more than the 16-point sample (scaling: the owner's
+  go-ahead).
+- **Applied meanwhile:** (b). A definition, once ruled, becomes a definition requirement (R-72).
+- **Waits:** the point-by-point comparison of route 3 (recomputed) against route 2 (read from the figure) for GG-1.
+
+## RQ-613: Brutus settings the GG-1 paper does not give (`p_max`; a pinned `main.cpp` that may never apply the word length), and the ε = 10⁻⁷⁰ cost, undetermined to orders of magnitude *(queued by the Brutus pilot; `docs/incoming/2026-10-28_rq598_data/brutus_run_here/REPORT.md` § 2b, § 2c; the data-and-papers entry on PR #309; context: TASK-M3-62, TASK-M3-65)*
+
+*Queued 29 Oct 2026 by the Brutus pilot, as corrected by the physics review of #334. For the owner: yes, a missing value (R-71), a question
+for the authors, and a decision on whether to spend more probe time before any 10⁻⁷⁰ cost is quoted.*
+
+- **File, section:**
+  - Boekholt et al. 2020, Appendix A: "we fix L_w = 1024 bits"; ε is "the Bulirsch-Stoer tolerance"; no `p_max` is given. § 2: "The average
+    wall-clock time of our simulations was about 7 hours, with the longest run taking 1 month to complete."
+  - `pgbreen/NvMgeneration` @ `98906f4` (not committed), as the pilot recorded it: README "input file: N time_end time_step tolerance
+    word_lenght p_max"; `indat` `3 10.0 0.00390625 1e-11 128 4`; `main.cpp` reads the word length and, as recorded, never applies it
+    (`brutus_run_here/stock_lw_test.txt`). Unverified until the source is read again.
+- **What was measured** (ours, run here; point (1, 54), L_w = 1024): at ε = 10⁻⁶, `p_max` = 2 costs about 10× the cost of 4; 8 and 16 cost
+  0.5 to 0.6× of 4. At p_max = 4 the wall grows ×3.4–4.4 from 10⁻⁶ to 10⁻⁸ and ×5.4 to 10⁻¹⁰: the local slope steepens (three ε values at
+  one point; nothing more is shown). At 8 and 16: 6.8 → 10.1 s from 10⁻⁸ to 10⁻¹⁰, and the reversibility test passes at 10⁻⁸ (at 4 only at
+  10⁻¹⁰), so `p_max` is an accuracy setting too.
+- **What was estimated, and why it is undetermined:** from the same two points (10⁻⁸, 10⁻¹⁰ at p_max 8), a model linear in −log₁₀ε gives
+  about 14,000 forward core-hours for the ε = 10⁻⁷⁰ panel, and a geometric one about 3×10⁷, on #334's weights. Both are curves through two
+  points. Capped-order Bulirsch–Stoer (the stated p_max mechanism, itself unverified) should eventually cost a power of ε: with the order
+  capped, the per-step cost levels off and the growth moves into the number of steps. The geometric model (186–333 s per step) puts it in
+  the per-step cost instead, contradicting that mechanism, and the linear model does not include it either; neither 14,000 nor 3×10⁷
+  bounds the cost. The ×11.5 step factor used (attributed to `get_eta`) is unverified, and
+  the step law is documented only for ε > 10⁻⁵⁰. The weights (Fig. 1's lifetimes) are in HM units and the rates in ours: converted, they
+  are 4.5× smaller with black points at 1000, and the paper's black points run to 10⁴ HM units, not 1000. The paper's "about 7 hours" is an
+  average over every ε of its convergence runs, not a per-10⁻⁷⁰ cost. #334's figure of 6,000 to 14,000 core-hours is withdrawn.
+- **The question:** which `p_max` the paper's runs used, and whether the authors' runs used a `main.cpp` that applied L_w; and whether to run
+  one more probe (p_max 8 and 16 at, say, 10⁻²⁰ and 10⁻³⁰ on the same point, recording the number of steps and the number of
+  Bulirsch–Stoer stages per step separately) before any 10⁻⁷⁰ cost is quoted.
+- **Options seen:** (a) `p_max` = 4, the repo's sample inputs; (b) 8, cheaper and as accurate in our probe; (c) ask Boekholt and Breen in the
+  planned emails, and use (a) until they answer; separately, (d) approve the 10⁻²⁰ / 10⁻³⁰ probe, or (e) quote no 10⁻⁷⁰ cost until the
+  authors answer.
+- **Applied meanwhile:** (a), with our own driver setting L_w explicitly; no 10⁻⁷⁰ cost is quoted as an estimate. A value, once ruled,
+  becomes a calibration requirement (R-71).
+- **Waits:** any plan to compute the ε = 10⁻⁷⁰ panel.
+
+## RQ-614: May a self-computed Brutus ensemble score a target, or is it a cross-check only *(the owner's open question, `docs/incoming/2026-10-28_rq598_data/README.md` § 3; the data-and-papers entry on PR #309; context: TASK-M3-62, TASK-M3-65)*
+
+*Queued 29 Oct 2026. For the owner: yes, it decides what BR-1 and GG-1 can pass.*
+
+- **File, section:** `docs/incoming/2026-10-28_rq598_data/README.md` § 3: "Earlier, unanswered, and not ruled here: whether a self-computed
+  ensemble may stand in for the authors' data **when scoring the target**, or is a cross-check only. Until it is ruled, label every
+  self-computed number as ours, "Brutus, run here", never as the paper's." `docs/incoming/2026-10-27_validation_plan/PLAN.md` § 3.2's rows
+  for BR-1 and GG-1 list the targets as blocked on data.
+- **What was found** (ours, run here; `brutus_run_here/REPORT.md` § 3): from the authors' own initial conditions at ε = 10⁻⁶, our
+  trajectories track theirs to below 3×10⁻⁵ over t ≤ 1 in 11 of 12 runs, then separate after close encounters, as chaos requires. For
+  GG-1, ours and Fig. 1 disagree point by point (RQ-612).
+- **The question:** whether an ensemble computed here, or the authors' own public BR-1 trajectories (RQ-615), may stand in for the authors'
+  full data when a target is scored.
+- **Options seen:** (a) cross-check only: a target scores only against the authors' own numbers; (b) a self-computed ensemble may score where
+  the target's tolerance is wider than the ε-limited agreement measured; (c) as (b), but only for ensembles whose build reproduces the
+  authors' trajectories.
+- **Applied meanwhile:** (a). Every self-computed number is labelled "Brutus, run here".
+- **Waits:** the scoring requirements for BR-1 and GG-1.
+
+## RQ-615: Some of the authors' BR-1 trajectories are public, with no licence: how may they be used *(queued by the Brutus pilot; `docs/incoming/2026-10-28_rq598_data/README.md` § 5; the data-and-papers entry on PR #309; context: TASK-M3-62)*
+
+*Queued 29 Oct 2026. For the owner: yes, a licence and process question outside the repo (R-369).*
+
+- **File, section:**
+  - `docs/incoming/2026-10-28_rq598_data/README.md` § 2 on BR-1: "No data statement and no code or data release." § 5 corrects it:
+    `github.com/pgbreen/NVM` @ `a35c378`, `trainex/data/run10–99.dat` and `validex/data/run9910–9999.dat`, each row `x1 y1 x2 y2` at
+    t = k/256, the first row the initial condition, with no licence file. The pilot counted 180 files (136 full, 44 truncated); the count is
+    not verified from committed material. The paper's ensemble is about 10,000, so this is under 2% of it.
+  - § 4 task 4: "Draw the initial positions from a **fixed, recorded seed**." The pilot instead ran 12 of the authors' own initial
+    conditions, on instructions recorded in § 5 as quoted, not as a ruling.
+- **What was done:** a copy was kept, gitignored, in `docs/incoming/_local/nvm_a35c378/` on the machine that ran the pilot; the scripts
+  read it there. Nothing from it is committed: no coordinate, no row, no value computed from the files alone, and none of our trajectories
+  (row 1 of each is the authors' initial condition). What is committed is run names, row counts, and our differences against their rows.
+- **The question:** whether that use is enough; whether BR-1 may be graded against these trajectories; and whether runs from the authors'
+  initial conditions replace § 4 task 4's seeded draw.
+- **Options seen:** (a) as now: local only, the repo says where to fetch them, nothing derived is committed; (b) the repo's test fetches
+  them at test time and checks a hash; (c) ask Breen for a licence or written permission first; (d) do not use them, and go back to § 4
+  task 4's seeded draw.
+- **Applied meanwhile:** (a), and the seeded draw of § 4 task 4 is not run.
+- **Waits:** a BR-1 ensemble beyond the 12-run pilot.
+
+## RQ-616: BR-1's convergence criterion: is the "phase distance < 0.1" on δ or on δ² *(a definition requirement, R-72; `docs/incoming/2026-10-28_rq598_data/brutus_run_here/REPORT.md` § 3; the data-and-papers entry on PR #309; context: TASK-M3-62)*
+
+*Queued 29 Oct 2026 from the physics review of #334. For the owner: yes, a definition the corpus does not settle, and it changes the
+converged fraction BR-1 is scored on.*
+
+- **File, section:** Breen et al. 2020 (arXiv:1910.07291,
+  `docs/incoming/2026-10-25_replication/papers/breen_etal_2020_MNRAS_494_2465_arXiv1910.07291.pdf`), Appendix A, eq. (A1):
+  δ²_{a,b} = (1/12) Σ_{i=1}^{3} Σ_{j=1}^{4} (q_{a,i,j} − q_{b,i,j})², then: "Note δ is equivalent to the mean squared error of the phase space
+  coordinate. Converged solutions were identified when the average phase distance was < 0.1 over the duration of a simulation."
+  `docs/incoming/2026-10-28_rq598_data/README.md` § 2: "converged when the phase distance δ (their eq. A1) stays below 0.1".
+- **The ambiguity:** by (A1), δ is a root mean square, but the next sentence calls δ the mean squared error, which is δ². So the threshold
+  0.1 may apply to the time-average of δ, of δ², or to √(time-average of δ²). On our 12 runs against the authors' (positions only, their
+  files hold no velocities), √(time-mean MSE) < 0.1 holds for 10 of 12, and time-mean MSE < 0.1 for all 12 (`brutus_run_here/br1/br1_table.md`).
+  That comparison is not the authors' test, which compares two of their own (ε, L_w) runs; but the same ambiguity sets the converged fraction
+  BR-1 is compared against ("over 90%").
+- **The question:** which quantity the < 0.1 threshold applies to.
+- **Options seen:** (a) √ of the time-mean of δ² (δ as written in A1, RMS); (b) the time-mean of δ² (the "mean squared error" sentence);
+  (c) the time-mean of δ; (d) ask Breen.
+- **Applied meanwhile:** none chosen; both (a) and (b) are reported side by side. Once ruled, it becomes a definition requirement (R-72).
+- **Waits:** BR-1's converged-fraction comparison.
