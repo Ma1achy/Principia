@@ -496,13 +496,13 @@ pub fn run_partition(manifest: &Path, mode: Mode, partition: Partition) -> Resul
         }
         let listed = parse_list(&succeeded(
             "cargo test -- --list",
-            cargo_test(manifest, name, "--tests", &["--list"])?,
+            cargo_test(manifest, mode, name, "--tests", &["--list"])?,
         )?);
         // Doctests are tests of the crate that no `negative_control!` can name (applied per R-204).
         let doctests = if package.targets.iter().any(|target| target.doctest) {
             parse_list(&succeeded(
                 "cargo test --doc -- --list",
-                cargo_test(manifest, name, "--doc", &["--list"])?,
+                cargo_test(manifest, mode, name, "--doc", &["--list"])?,
             )?)
         } else {
             Vec::new()
@@ -532,7 +532,7 @@ pub fn run_partition(manifest: &Path, mode: Mode, partition: Partition) -> Resul
                 let stdout = if partition == Partition::ALL {
                     // Runs the tests whose names contain `negative_control`: every control, and none when there are
                     // none.
-                    let output = cargo_test(manifest, name, "--tests", &[CONTROL_FN])?;
+                    let output = cargo_test(manifest, mode, name, "--tests", &[CONTROL_FN])?;
                     String::from_utf8_lossy(&output.stdout).into_owned()
                 } else if mine.is_empty() {
                     String::new()
@@ -540,7 +540,7 @@ pub fn run_partition(manifest: &Path, mode: Mode, partition: Partition) -> Resul
                     // This shard's controls by exact name; with no name libtest would run every test.
                     let mut harness = vec!["--exact"];
                     harness.extend(mine.iter().map(|c| c.as_str()));
-                    let output = cargo_test(manifest, name, "--tests", &harness)?;
+                    let output = cargo_test(manifest, mode, name, "--tests", &harness)?;
                     String::from_utf8_lossy(&output.stdout).into_owned()
                 };
                 results.extend(parse_results(&stdout));
@@ -595,36 +595,49 @@ pub fn run_partition(manifest: &Path, mode: Mode, partition: Partition) -> Resul
 
 /// The cargo arguments that resolve the build of whichever package is selected with the features of the whole
 /// workspace: cargo's `workspace` feature unification, an unstable option of the pinned nightly
-/// (`rust-toolchain.toml`, R-169). Without them each package's `cargo test -p <package>` resolved its dependencies'
+/// (`rust-toolchain.toml`, R-169). Without them each package's `cargo test -p <package>` resolves its dependencies'
 /// features over its own graph alone, so a dependency shared by several packages (wgpu, naga, `render`, `engine`,
-/// `validation`) was built once per package; on a cold target, as in a CI shard run from an archive, that build made
+/// `validation`) is built once per package; on a cold target, as in a CI shard run from an archive, that build made
 /// `xtask ci --list` outlast the 600 s timer on its child (R-214, REQ-VAL-156). Applied per R-369.
+///
+/// Only [`Mode::List`] carries them: it builds and runs nothing else. [`Mode::Run`] resolves each package as before,
+/// so its builds share the target with the rest of the `xtask-ci` shard's; with them too, the shard held a second,
+/// differently featured build of the workspace and ran the runner out of disk.
 pub const WORKSPACE_FEATURES: [&str; 3] = [
     "-Zfeature-unification",
     "--config",
     "resolver.feature-unification=\"workspace\"",
 ];
 
-/// `cargo test --features controls <targets> --no-fail-fast` on `package`, with `harness` passed to libtest, and the
-/// dependencies' features resolved over the whole workspace ([`WORKSPACE_FEATURES`]), so every package's build shares
-/// one build of them.
+/// `cargo test --features controls <targets> --no-fail-fast` on `package`, with `harness` passed to libtest; in
+/// [`Mode::List`], with the dependencies' features resolved over the whole workspace ([`WORKSPACE_FEATURES`]), so every
+/// package's build shares one build of them.
 fn cargo_test(
     manifest: &Path,
+    mode: Mode,
     package: &str,
     targets: &str,
     harness: &[&str],
 ) -> Result<Output, String> {
-    cargo_test_command(manifest, package, targets, harness)
+    cargo_test_command(manifest, mode, package, targets, harness)
         .output()
         .map_err(|e| format!("cannot run cargo test: {e}"))
 }
 
 /// The command [`cargo_test`] runs.
-fn cargo_test_command(manifest: &Path, package: &str, targets: &str, harness: &[&str]) -> Command {
+fn cargo_test_command(
+    manifest: &Path,
+    mode: Mode,
+    package: &str,
+    targets: &str,
+    harness: &[&str],
+) -> Command {
     let mut command = Command::new(cargo());
+    command.arg("test");
+    if mode == Mode::List {
+        command.args(WORKSPACE_FEATURES);
+    }
     command
-        .arg("test")
-        .args(WORKSPACE_FEATURES)
         .arg("--manifest-path")
         .arg(manifest)
         .args([
@@ -760,7 +773,7 @@ mod tests {
             .collect()
     }
 
-    /// Every `cargo test` the command runs resolves its features over the whole workspace, so the packages' builds share
+    /// The `cargo test` of [`Mode::List`] resolves its features over the whole workspace, so the packages' builds share
     /// one build of their dependencies: the arguments carry [`WORKSPACE_FEATURES`] as cargo's own, before the `--` that
     /// starts libtest's.
     fn check_workspace_features(args: &[String]) {
@@ -773,28 +786,59 @@ mod tests {
         );
     }
 
+    /// The `cargo test` of [`Mode::Run`] resolves each package's features as the rest of the shard's builds do: none of
+    /// [`WORKSPACE_FEATURES`] is among its arguments, so it builds no second, differently featured workspace.
+    fn check_own_features(args: &[String]) {
+        assert!(
+            !args.iter().any(|a| WORKSPACE_FEATURES.contains(&a.as_str())),
+            "the run's cargo test resolves features over the workspace, a second build beside the shard's: {args:?}"
+        );
+    }
+
+    /// The command of `mode` on a package `p`'s tests, with `harness`.
+    fn command_args(mode: Mode, harness: &[&str]) -> Vec<String> {
+        args_of(&cargo_test_command(
+            Path::new("Cargo.toml"),
+            mode,
+            "p",
+            "--tests",
+            harness,
+        ))
+    }
+
     #[test]
-    fn controls_cargo_test_unifies_features_over_the_workspace() {
-        let command = cargo_test_command(Path::new("Cargo.toml"), "p", "--tests", &["--list"]);
-        check_workspace_features(&args_of(&command));
+    fn controls_list_unifies_features_over_the_workspace() {
+        check_workspace_features(&command_args(Mode::List, &["--list"]));
     }
 
     validation::negative_control!(
-        controls_cargo_test_unifies_features_over_the_workspace,
+        controls_list_unifies_features_over_the_workspace,
         "the same command with the workspace arguments passed to libtest, after `--`, where cargo never reads them",
         expected = "cargo test resolves each package's features over its own graph",
         {
-            let mut args: Vec<String> = args_of(&cargo_test_command(
-                Path::new("Cargo.toml"),
-                "p",
-                "--tests",
-                &["--list"],
-            ))
-            .into_iter()
-            .filter(|a| !WORKSPACE_FEATURES.contains(&a.as_str()))
-            .collect();
+            let mut args: Vec<String> = command_args(Mode::List, &["--list"])
+                .into_iter()
+                .filter(|a| !WORKSPACE_FEATURES.contains(&a.as_str()))
+                .collect();
             args.extend(WORKSPACE_FEATURES.map(str::to_owned));
             check_workspace_features(&args)
+        }
+    );
+
+    #[test]
+    fn controls_run_resolves_each_package_s_own_features() {
+        check_own_features(&command_args(Mode::Run, &["--list"]));
+        check_own_features(&command_args(Mode::Run, &[CONTROL_FN]));
+    }
+
+    validation::negative_control!(
+        controls_run_resolves_each_package_s_own_features,
+        "the run's command with the list's workspace arguments, as at 29111816",
+        expected = "the run's cargo test resolves features over the workspace",
+        {
+            let mut args = command_args(Mode::Run, &[CONTROL_FN]);
+            args.splice(1..1, WORKSPACE_FEATURES.map(str::to_owned));
+            check_own_features(&args)
         }
     );
 
