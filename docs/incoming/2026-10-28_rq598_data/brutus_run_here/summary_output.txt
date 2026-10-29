@@ -1,0 +1,44 @@
+== GG-1, eps = 1e-6, L_w = 1024 bits, T capped at 1000: 16 points (MEASURED)
+escaped: 16   other: []
+forward wall s  : median 19.4  mean 43.6  min 3.4  max 204.8  p10 7.9  p90 109.6
+reverse wall s  : median 17.4  mean 100.0  min 3.1  max 1200.4
+fwd+rev wall s  : median 37.2  mean 143.6  (escaped points)
+forward steps   : median 1914.0  min 567  max 19837
+ms per step     : median 9.89  min 6.00  max 15.55
+wall s per unit of simulated time (forward): median 1.70  mean 2.66  p10 0.63  p90 3.38  max 18.76
+reversibility test (log10 delta < -3): {'fail': 15, 'wall_cap': 1}  (MEASURED; at eps = 1e-6 the paper's Fig. 2 puts f_irr near 1)
+energy relative error at escape: median 3.90e-03
+
+== GG-1 full eps = 1e-6 panel, projected (ESTIMATE)
+lifetime weights: the paper's own Fig. 1 left panel (statistically the same as ours, K-S p = 0.72): sum of T over 1212 points = 85690 (the 26 black points counted at the cap of 1000, 26000 of it)
+integrated time / lifetime T at escape in our sample (MEASURED): median 1.31  range 1.04-16.03
+reverse leg / forward leg wall (MEASURED, median): 0.82
+  low (median rate)  integrated time = 1.0 x T           : forward only    40.4 core-hours; with reversal    73.6 core-hours
+  low (median rate)  integrated time = median ratio x T  : forward only    52.9 core-hours; with reversal    96.3 core-hours
+  mid (mean rate)    integrated time = 1.0 x T           : forward only    63.4 core-hours; with reversal   115.5 core-hours
+  mid (mean rate)    integrated time = median ratio x T  : forward only    82.9 core-hours; with reversal   150.9 core-hours
+  high (p90 rate)    integrated time = 1.0 x T           : forward only    80.4 core-hours; with reversal   146.4 core-hours
+  high (p90 rate)    integrated time = median ratio x T  : forward only   105.0 core-hours; with reversal   191.3 core-hours
+
+== GG-1 scaling probes (MEASURED; eps >= 1e-6 only)
+eps= 1e-3 Lw=1024 (27,24) wall_cap  t_reached     0.25 steps  59040 wall   600.2s  ms/step  10.17  s per unit t 2407.60
+eps= 1e-3 Lw=1024 (1,54) escaped   t_reached     2.39 steps    790 wall     1.6s  ms/step   1.96  s per unit t   0.65
+eps= 1e-3 Lw=1024 (14,20) escaped   t_reached     8.27 steps    701 wall     1.3s  ms/step   1.82  s per unit t   0.15
+eps= 1e-4 Lw=1024 (27,24) escaped   t_reached    12.21 steps   3038 wall    24.4s  ms/step   8.04  s per unit t   2.00
+eps= 1e-4 Lw=1024 (1,54) escaped   t_reached     2.39 steps    815 wall     2.8s  ms/step   3.43  s per unit t   1.17
+eps= 1e-4 Lw=1024 (14,20) escaped   t_reached     3.52 steps    986 wall     6.5s  ms/step   6.56  s per unit t   1.84
+eps= 1e-5 Lw=1024 (27,24) escaped   t_reached     5.77 steps    785 wall     9.9s  ms/step  12.63  s per unit t   1.72
+eps= 1e-5 Lw=1024 (1,54) escaped   t_reached     2.38 steps    840 wall     6.1s  ms/step   7.21  s per unit t   2.54
+eps= 1e-5 Lw=1024 (14,20) escaped   t_reached     3.60 steps   1264 wall    14.8s  ms/step  11.72  s per unit t   4.11
+eps= 1e-6 Lw= 128 (1,54) escaped   t_reached     2.38 steps    877 wall     5.8s  ms/step   6.64  s per unit t   2.44
+eps= 1e-6 Lw= 256 (1,54) escaped   t_reached     2.38 steps    877 wall     6.1s  ms/step   6.96  s per unit t   2.56
+eps= 1e-6 Lw= 512 (1,54) escaped   t_reached     2.38 steps    877 wall     6.5s  ms/step   7.44  s per unit t   2.74
+eps= 1e-6 Lw=1024 (1,54) escaped   t_reached     2.38 steps    877 wall     8.1s  ms/step   9.21  s per unit t   3.39
+
+== BR-1 (MEASURED): wall s per run to t = 10 (the 9 full-length runs), by (eps, L_w)
+eps=0.01 Lw=128: 1/1 ok  wall median 0.51 min 0.51 max 0.51  steps median 2586  ms/step median 0.199
+eps=0.001 Lw=128: 9/9 ok  wall median 0.61 min 0.54 max 1.14  steps median 2615  ms/step median 0.240
+eps=0.0001 Lw=128: 9/9 ok  wall median 0.89 min 0.49 max 4.17  steps median 2657  ms/step median 0.341
+eps=1e-05 Lw=128: 9/9 ok  wall median 1.19 min 0.69 max 3.37  steps median 2648  ms/step median 0.445
+eps=1e-06 Lw=128: 9/9 ok  wall median 1.45 min 1.08 max 2.06  steps median 2653  ms/step median 0.567
+eps=1e-06 Lw= 88: 9/9 ok  wall median 1.42 min 0.91 max 1.66  steps median 2653  ms/step median 0.531

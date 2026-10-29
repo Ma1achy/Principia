@@ -6,7 +6,7 @@
 // Here mpfr's default precision is set to L_w before any mpreal is made, and the step loop below is a line-for-line
 // copy of Brutus::evolve (Brutus.cpp), with a per-step hook.
 //
-//   pilot gg1 <i> <j> <eps> <Lw> <tmax> <wall_cap_s> [pmax]
+//   pilot gg1 <i> <j> <eps> <Lw> <tmax> <wall_cap_s> [pmax] [norev]
 //   pilot br1 <x2x> <x2y> <eps> <Lw> <tend> <traj_out|-> [pmax] [wall_cap_s]
 //   pilot --header
 #include <iostream>
@@ -148,6 +148,7 @@ static int run_gg1(int argc, char **argv) {
   int Lw = atoi(argv[5]);
   double tmax = atof(argv[6]), cap = atof(argv[7]);
   int pmax = argc > 8 ? atoi(argv[8]) : 4;
+  bool norev = argc > 9 && string(argv[9]) == "norev";
   mpreal::set_default_prec(Lw);
   mpreal tol = eps_s.c_str();
   mpreal x = mpreal(gi) / 64, y = mpreal(gj) / 64, half = "0.5";
@@ -162,18 +163,35 @@ static int run_gg1(int argc, char **argv) {
   mpreal E0 = energy(r);
   double w0 = wall_now(), c0 = cpu_now();
   string status = "censored";
-  double tf = 0, Tl = -1, eerr = 0;
+  double tf = 0, Tl = -1, eerr = 0, T_hist = -1, R_hist = -1;
   mpreal tmaxm = tmax;
   Snap sn;
   int single = -1;
   double R[2], V[2], mug = 0;
+  // history of each body's distance to the centre of mass of the other two, one sample per step (double precision)
+  vector<double> th, Rh[3];
   while (r.t < tmaxm) {
     if (!one_step(r, tmaxm)) { status = "bs_not_converged"; break; }
     snap(r.cl, sn);
+    th.push_back(r.t.toDouble());
+    for (int k = 0; k < 3; ++k) {
+      int a = (k + 1) % 3, b = (k + 2) % 3;
+      double mb = sn.m[a] + sn.m[b];
+      double cx = (sn.m[a] * sn.r[a][0] + sn.m[b] * sn.r[b][0]) / mb, cy = (sn.m[a] * sn.r[a][1] + sn.m[b] * sn.r[b][1]) / mb;
+      Rh[k].push_back(std::hypot(sn.r[k][0] - cx, sn.r[k][1] - cy));
+    }
     if (escaped(sn, single, R, V, mug)) {
       status = "escaped";
       tf = r.t.toDouble();
       Tl = tf - (double)time_since_pericentre(R, V, mug);
+      // T_hist: time of the last local minimum, before T_f, of the escaper's distance to the other two's centre of mass
+      const vector<double> &rr = Rh[single];
+      int n = (int)rr.size();
+      int ib = n - 1;
+      for (int i = n - 2; i >= 1; --i)
+        if (rr[i] < rr[i - 1] && rr[i] <= rr[i + 1]) { ib = i; break; }
+      T_hist = ib == n - 1 ? 0.0 : th[ib];
+      R_hist = rr[ib];
       break;
     }
     if ((r.steps & 15) == 0 && wall_now() - w0 > cap) { status = "wall_cap"; break; }
@@ -186,7 +204,7 @@ static int run_gg1(int argc, char **argv) {
   string rev = "n/a";
   double log_delta = 0, wr = 0, cr = 0;
   long stepsr = 0;
-  if (status == "escaped") {
+  if (status == "escaped" && !norev) {
     for (int k = 0; k < 3; ++k)
       for (int c = 0; c < 3; ++c) r.cl.s[k].v[c] = -r.cl.s[k].v[c];
     mpreal t2 = r.t * 2;
@@ -210,9 +228,9 @@ static int run_gg1(int argc, char **argv) {
       rev = log_delta < -3 ? "pass" : "fail";
     }
   }
-  printf("gg1,%d,%d,%.10g,%.10g,%s,%d,%s,%.9g,%.9g,%.6g,%ld,%.3f,%.3f,%s,%.4f,%ld,%.3f,%.3f,%.3e,%d,%.5g\n", gi, gj,
+  printf("gg1,%d,%d,%.10g,%.10g,%s,%d,%s,%.9g,%.9g,%.6g,%ld,%.3f,%.3f,%s,%.4f,%ld,%.3f,%.3f,%.3e,%d,%.5g,%.9g,%.6g\n", gi, gj,
          gi / 64.0, gj / 64.0, eps_s.c_str(), Lw, status.c_str(), t_reached, Tl, tf, stepsf, wf, cf, rev.c_str(),
-         log_delta, stepsr, wr, cr, eerr, single, mug);
+         log_delta, stepsr, wr, cr, eerr, single, mug, T_hist, R_hist);
   return 0;
 }
 
@@ -271,7 +289,7 @@ static int run_br1(int argc, char **argv) {
 int main(int argc, char **argv) {
   if (argc >= 2 && string(argv[1]) == "--header") {
     printf("kind,i,j,x,y,eps,Lw,status,t_reached,T,t_escape,steps_fwd,wall_fwd_s,cpu_fwd_s,reversal,log10_delta,steps_rev,"
-           "wall_rev_s,cpu_rev_s,energy_relerr,single,mu_g\n");
+           "wall_rev_s,cpu_rev_s,energy_relerr,single,mu_g,T_hist,R_hist_min\n");
     printf("kind,x2x,x2y,eps,Lw,status,t_reached,steps,wall_s,cpu_s,energy_relerr,min_pair_sep\n");
     return 0;
   }

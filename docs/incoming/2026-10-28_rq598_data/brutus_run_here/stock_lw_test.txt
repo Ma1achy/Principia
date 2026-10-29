@@ -1,0 +1,9 @@
+# Stock main.exe (unmodified source, pgbreen/NvMgeneration @ 98906f4): does the word length L_w do anything?
+# Same input (indat2 geometry, eps 1e-11, t_end 0.05), L_w = 20 and 128. Output rows after the '#' header line, md5:
+L_w=20  11131e3cd47973636e3a7343299d6719  -
+L_w=53  11131e3cd47973636e3a7343299d6719  -
+L_w=128  11131e3cd47973636e3a7343299d6719  -
+L_w=1024  11131e3cd47973636e3a7343299d6719  -
+# identical md5 => L_w is read and echoed in the header but never applied (no mpreal::set_default_prec anywhere in the source: grep -n default_prec *.cpp *.h returns nothing outside mpreal.h)
+# last output row, L_w=128 (16 significant digits only => 53-bit mantissa):
+0.0507812 -2.60458e-13 1 0.9986723762980809 1.141077115255715e-05 0 -0.05229382019446936 0.000448217917821392 0 1 -0.1711509900939918 0.01899770473496439 0 -0.0
