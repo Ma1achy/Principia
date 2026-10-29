@@ -258,8 +258,9 @@ negative_control!(
 
 /// Checks that the occupant's declared params are the set selector, `swatch_set`, a `u32` in `[0, 1]` defaulting to
 /// 0, the sRGB palette (REQ-COL-103), then `swatches` and `variant`, the two sets, each default the f32 nearest its sRGB
-/// decode; that `swatches` are §1.4's table and `variant` its OKLab-uniform table, labels as shown (R-449), none still
-/// a proposal; and that `outcome::SETS` holds them in that order.
+/// decode, then the categorical filter's class mask, a `u32` defaulting to every class shown (REQ-COL-019;
+/// TASK-M7-08); that `swatches` are §1.4's table and `variant` its OKLab-uniform table, labels as shown (R-449), none still a
+/// proposal; and that `outcome::SETS` holds them in that order.
 fn check_declared(swatches: &[outcome::Swatch], variant: &[outcome::Swatch]) {
     let d = Declaration::parse(outcome::WGSL).unwrap_or_else(|e| panic!("{e:?}"));
     let (set, rest) = d
@@ -275,6 +276,16 @@ fn check_declared(swatches: &[outcome::Swatch], variant: &[outcome::Swatch]) {
             Some((0.0, 1.0))
         ),
         "the set selector"
+    );
+    let (mask, rest) = rest.split_last().expect("the occupant declares params");
+    assert_eq!(
+        (mask.name.as_str(), mask.ty, mask.default.as_slice()),
+        (
+            render::colour::palette::MASK_PARAM,
+            render::assemble::UniformType::U32,
+            &[f64::from(render::colour::palette::ALL)][..]
+        ),
+        "the class mask"
     );
     let all: Vec<&outcome::Swatch> = swatches.iter().chain(variant).collect();
     let names: Vec<&str> = rest.iter().map(|u| u.name.as_str()).collect();

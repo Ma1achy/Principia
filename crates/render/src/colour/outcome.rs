@@ -35,6 +35,11 @@
 //! **The order** of the swatches is colour_composition §1.4's table, bounded / nothing yet first, and it is the rank
 //! greyscale and hue mode give the outcome class (R-448; §4.1): [`class`] is that rank, `K = 9` ([`K`]).
 //!
+//! **The categorical filter** (REQ-COL-019; TASK-M7-08): the occupant's last param, `class_mask`
+//! ([`super::palette::MASK_PARAM`]), shows class [`class`] where its bit is set and draws every other class's swatch
+//! through [`super::palette::filter`]'s mute; a sample with no class, [`Shown::Forbidden`] or [`Shown::DecodeFailed`],
+//! keeps the canvas background whatever the mask.
+//!
 //! **The legends.** Each is keyed by `state` (dd_colouring §3.7; render_gui_spec G6): [`segment`] gives the outcome
 //! palette's classes a state's samples may take, and [`detail_view`] the `detail` view's colour, from the ledger's
 //! segments, the data the view is generated from.
