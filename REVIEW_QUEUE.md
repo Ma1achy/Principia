@@ -564,3 +564,101 @@ for now.*
 - **The question (§ 9, question 12, verbatim):** as RQ-588. This entry is the lit review's § 13 sentence.
 - **Recommended (the plan's):** "yes, as REVIEW_QUEUE entries; this plan does not edit them."
 - **Applied meanwhile:** nothing; the lit review is not edited.
+
+
+## RQ-599: GG-1's lifetime T: which definition and which time unit reproduce the paper's Fig. 1 *(queued by the Brutus pilot; `docs/incoming/2026-10-28_rq598_data/brutus_run_here/REPORT.md`; the data-and-papers entry on PR #309; context: TASK-M3-62)*
+
+*Queued 29 Oct 2026 by the Brutus pilot. For the human: yes, it is physics where the choice changes the result
+and the corpus does not settle it (R-369).*
+
+- **File, section:**
+  - Boekholt, Portegies Zwart & Valtonen 2020 (arXiv:2002.04029), Appendix A: "The lifetime is measured by considering
+    the final snapshot of the forward integration, consisting of the permanent binary+single, and then retracing their
+    steps to the moment when the binary+single were closest to the moment of the final ejection." and "10,000 time units
+    (Heggie & Mathieu 1986)". The units of the Agekyan–Anosova grid are not stated.
+  - `docs/incoming/2026-10-27_validation_plan/PLAN.md` § 3.2, GG-1: "lifetime to the last close approach".
+  - `fixtures/anosova/region_d.json`: m = (1, 1, 1), bodies 1 and 2 at (∓0.5, 0), the repo's convention (G = 1 at exact rest).
+- **What was found** (ours, run here; ε = 10⁻⁶ to 10⁻⁴, L_w = 128; `brutus_run_here/gg1/robustness_three_points_Lw128_norev.csv`):
+  at the three grid points where the paper's ε = 10⁻⁶ and ε = 10⁻⁷⁰ panels agree, (i, j) = (1, 54), (3, 43), (14, 20), the
+  paper's lifetimes are 3.3, 515 and 4.85 (read from Fig. 1, `data/rq598-gg1-fig1-v2`), and ours are 0.633, 0.571 and 1.339,
+  unchanged to 4 to 6 digits over three decades of ε. The ratios (5.2, 900, 3.6) are not one time-unit factor. Our T uses the
+  Kepler retrace of the binary-plus-single orbit; the last local minimum of the integrated separation agrees to 0.1 to 1%.
+- **The question:** which definition of T, in which units (the repo's m = 1, G = 1, r₁₂ = 1; Heggie–Mathieu M = 1, E = −1/4;
+  or another), makes our Brutus runs and the paper's figure agree where the paper says they should.
+- **Options seen:** (a) keep ours, labelled ours, and treat the disagreement as a finding; (b) ask Boekholt for the unit and
+  the retrace rule, in the email already planned; (c) also test candidate conventions on a spread of grid points against the
+  extracted Fig. 1, which needs more than the 16-point pilot sample (scaling, R-369 / the human's gate).
+- **Applied meanwhile:** (a). A definition, once ruled, becomes a definition requirement (R-72).
+- **Waits:** the point-by-point comparison of route 3 (recomputed) against route 2 (extracted) for GG-1.
+
+## RQ-600: Brutus settings the GG-1 paper does not give: `p_max`, and a pinned `main.cpp` that never applies the word length *(queued by the Brutus pilot; `docs/incoming/2026-10-28_rq598_data/brutus_run_here/INSTALL_RECORD.md`; the data-and-papers entry on PR #309; context: TASK-M3-62, TASK-M3-65)*
+
+*Queued 29 Oct 2026 by the Brutus pilot. For the human: yes, a missing value, and a question for the authors (R-71, R-369).*
+
+- **File, section:**
+  - Boekholt et al. 2020, Appendix A: "we fix L_w = 1024 bits"; the Bulirsch–Stoer tolerance ε is varied; no `p_max` is given.
+  - `pgbreen/NvMgeneration` @ `98906f4`, README: "input file: N time_end time_step tolerance word_lenght p_max", and `indat`:
+    `3 10.0 0.00390625 1e-11 128 4`; `main.cpp` reads `numBits`, echoes it, and no source file calls
+    `mpreal::set_default_prec`, so the stock executable runs at MPFR's default 53 bits whatever L_w is
+    (`brutus_run_here/stock_lw_test.txt`: identical output for L_w = 20, 53, 128, 1024).
+- **What was measured** (ours, run here; L_w = 1024; `brutus_run_here/REPORT.md` § 2b): at ε = 10⁻⁶, `p_max` = 2 costs about 10× the cost of 4 or
+  more (one point hit the 300 s cap), and 8 and 16 cost 0.5 to 0.6× of 4. At ε = 10⁻¹⁰ on one point, `p_max` = 4 takes 147 s and passes the
+  reversibility test; 8 and 16 take 10 s and pass already at 10⁻⁸ (at 4 it fails there). At 4 the cost grows faster than any power of ε, so the ε = 10⁻⁷⁰ panel is
+  not feasible; at 8 or 16 it is an estimated 6,000 to 14,000 core-hours (forward leg). `p_max` is an accuracy setting as well as a cost one.
+- **The question:** which `p_max` the paper's runs used, and whether the authors' NvM runs used a `main.cpp` that applied
+  L_w (the repo's does not).
+- **Options seen:** (a) `p_max` = 4, the repo's sample inputs; (b) 8, cheaper and as accurate in our probe; (c) ask Boekholt
+  and Breen in the planned emails, and use (a) until they answer.
+- **Applied meanwhile:** (a), and our own driver sets L_w explicitly. A value, once ruled, becomes a calibration requirement (R-71).
+- **Waits:** nothing; the projection of the ε = 10⁻⁷⁰ cost is marked as an estimate until it is answered.
+
+## RQ-601: May a self-computed Brutus ensemble score a target, or is it a cross-check only *(the human's own open question, `docs/incoming/2026-10-28_rq598_data/README.md` § 3; the data-and-papers entry on PR #309; context: TASK-M3-62, TASK-M3-65)*
+
+*Queued 29 Oct 2026 by the Brutus pilot, from the human's words (R-630): "Open question for me: may a self-computed
+ensemble score a target, or is it cross-check only?" For the human: yes, it decides what BR-1 and GG-1 can pass.*
+
+- **File, section:** `docs/incoming/2026-10-28_rq598_data/README.md` § 3: "Until it is ruled, label every self-computed
+  number as ours, 'Brutus, run here', never as the paper's." `PLAN.md` § 3.2's rows for BR-1 and GG-1 list the targets as blocked
+  on data.
+- **The question:** whether the ensemble we compute here, or the authors' own 180 BR-1 trajectories (RQ-603), may stand in for
+  the authors' full data when a target is scored.
+- **Options seen:** (a) cross-check only: a target scores only against the authors' own numbers; (b) a self-computed ensemble may
+  score where the target's tolerance is wider than the ε-limited agreement we measured (ours track the authors' to below 3 × 10⁻⁵ over t ≤ 1
+  in 11 of 12 runs at ε = 10⁻⁶); (c) as (b), but only for ensembles whose build reproduces the authors' trajectories.
+- **Applied meanwhile:** (a). Every self-computed number is labelled "Brutus, run here".
+- **Waits:** the scoring requirements for BR-1 and GG-1.
+
+## RQ-602: V-11's primary, Mylläri et al. 2018 (Part I), is not readable from the cloud: allow its host, or supply it *(queued by the Brutus pilot; `docs/incoming/2026-10-28_rq598_data/transcriptions/v11_partII/README.md`; the data-and-papers entry on PR #309; context: TASK-M3-65)*
+
+*Queued 29 Oct 2026 by the Brutus pilot. For the human: yes, it is a network setting outside the repo (R-369).*
+
+- **File, section:** `docs/incoming/2026-10-27_papers/TARGETS.md`, "V-11. Hierarchical stability limits": "the number to compare comes
+  from the primary (Valtonen & Karttunen 2006 …; Mylläri et al. 2018, MNRAS 476, 830 …; neither in the repo), not the book." The
+  human's copy is gitignored on his machine (`../README.md` § 1), so a cloud session does not have it.
+- **What was tried:** the University of Turku's open copy, `https://www.utupub.fi/bitstreams/61431b55-247e-4d90-bf26-32ff1dea099a/download`,
+  fails with `getaddrinfo ENOTFOUND www.utupub.fi` (WebFetch) and `CONNECT tunnel failed, response 403` (curl): the host is outside
+  the session's allowed domains. No arXiv version was found.
+- **The question:** allow `www.utupub.fi` in the cloud environment's network settings (Allowed domains) so the submitted version
+  can be fetched, read and hash-recorded (its terms checked before anything is committed, as `../README.md` § 1 says); or
+  supply the Part I numbers another way.
+- **Options seen:** (a) allow the host; (b) the human pastes or places Part I's criterion and equation numbers; (c) V-11 waits.
+- **Applied meanwhile:** (c), plus what Part II (CC BY 4.0, in the repo) gives: V-11's definitions, scan protocol and parameter set
+  (`transcriptions/v11_partII/`). The general Q_max(e_in, e_out, ι, m₃) is not available.
+- **Waits:** V-11's number to compare.
+
+## RQ-603: The authors' own BR-1 trajectories are public after all, with no licence: how may they be used *(queued by the Brutus pilot; the data-and-papers entry on PR #309; context: TASK-M3-62)*
+
+*Queued 29 Oct 2026 by the Brutus pilot. For the human: yes, a legal and process question outside the repo (R-369).*
+
+- **File, section:** `docs/incoming/2026-10-28_rq598_data/README.md` § 2 on BR-1: "No data statement and no code or data release."
+  What exists: `https://github.com/pgbreen/NVM` @ `a35c378`, "Include training and validation examples": `trainex/data/run10–99.dat` and
+  `validex/data/run9910–9999.dat`, 180 trajectories (136 with the full 2561 rows, 44 truncated), each row `x1 y1 x2 y2` at t = k/256, the
+  first row being the initial condition; also a trained network (`NN.h5`). The repository has no licence file. The paper's ensemble is 9,900 + 100 trajectories, so
+  this is under 2% of it. The human named these files in his update of 29 Oct 2026 and said to keep any copy in `docs/incoming/_local/`.
+- **What was done:** a copy is kept, gitignored, in `docs/incoming/_local/nvm_a35c378/`; `brutus_run_here/br1/compare.py` reads it; nothing from it
+  is committed except run names, each run's printed first-row coordinates, their row counts and three values derived from the files.
+- **The question:** whether that use is enough, and whether BR-1 may be graded against these 180 trajectories.
+- **Options seen:** (a) as now: local only, the repo says where to fetch them; (b) the repo's test fetches them at test time and
+  checks a hash (R-579's pattern); (c) ask Breen for a licence or written permission first; (d) do not use them.
+- **Applied meanwhile:** (a). The correction to § 2 is recorded in § 5 of the same README.
+- **Waits:** nothing.

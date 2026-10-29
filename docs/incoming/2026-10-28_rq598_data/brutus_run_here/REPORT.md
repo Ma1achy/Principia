@@ -2,20 +2,20 @@
 
 **Brutus, run here.** Every number below was computed by us, in one cloud session, with Brutus as pinned (`pgbreen/NvMgeneration` @ `98906f4`, GPL-3.0).
 None is the papers' result. Machine: Intel Xeon @ 2.80 GHz, 4 vCPU, g++ 13.3 `-O1`, three jobs side by side. Wall times will differ on the Mac.
-**M** = measured here, **E** = estimated (a model applied to measured numbers). Nothing was run below ε = 10⁻⁶. Nothing was scaled: 16 GG-1 points and 12 BR-1 trajectories.
+**M** = measured here, **E** = estimated (a model applied to measured numbers). Nothing was run below ε = 10⁻⁶ before the 29 Oct go-ahead; since then one point at ε = 10⁻⁸ and 10⁻¹⁰ (§ 2b). Nothing was scaled: 16 GG-1 points and 12 BR-1 trajectories.
 Files: `docs/incoming/2026-10-28_rq598_data/brutus_run_here/` on branch `data/rq598-brutus-pilot` (no PR).
 
 ## Decisions needed
 
 1. **Lifetime definition or unit convention (GG-1).** Our T and the paper's Fig. 1 disagree at the only points where the paper's own two panels agree, and ours does not move with ε there (below). Neither the analytic nor the history-based reading of Appendix A closes it, and the ratios are not one time-unit factor. This needs a ruling (a definition requirement, R-72) before any point-by-point comparison with route 2 means anything.
-2. **Scaling.** The numbers below are what the pilot supports. Going below ε = 10⁻⁶ to calibrate the 10⁻⁷⁰ estimate (one point each at 10⁻⁸ and 10⁻¹⁰ would do) needs your go-ahead.
+2. **Scaling.** The 29 Oct go-ahead for ε = 10⁻⁸ and 10⁻¹⁰ (one point) is done and reported in § 2b. Anything further (the other 1196 GG-1 points, a BR-1 ensemble, more ε) needs a new word.
 3. Still open from the README: may a self-computed ensemble score a target, or is it a cross-check only?
 
 ## Findings that change how to read everything else
 
 - **The pinned Brutus never applies the word length.** `main.cpp` reads L_w, echoes it, and nothing sets MPFR's precision. The stock executable runs at 53 bits for any L_w (identical output for L_w = 20, 53, 128, 1024: `stock_lw_test.txt`). All our "L_w = 1024 / 128 / 88" runs use our own driver (`src/pilot.cpp`), which sets it, linked to the unmodified Brutus objects. If the authors' NvM data came from this `main.cpp` unchanged, their "L_w = 128" did not take effect. The repo cannot show which they used. Worth asking in the emails.
 - The stock source needs two build-flag deviations on current Ubuntu, no source edits (`INSTALL_RECORD.md`).
-- **p_max is not stated in the GG-1 paper and moves the cost a lot** (M, ε = 10⁻⁶, L_w = 1024, two points): p_max = 2 is about 10× slower than 4 or worse (one point hit the 300 s cap); p_max = 8 and 16 cost about 0.5–0.6× of 4. We used 4, the value in the repo's sample inputs.
+- **p_max is not stated in the GG-1 paper and decides the cost at tight ε** (M, L_w = 1024). At ε = 10⁻⁶ on two points: p_max = 2 is about 10× slower than 4 or worse (one point hit the 300 s cap); 8 and 16 cost about 0.5–0.6× of 4. At ε = 10⁻¹⁰ on point (1, 54) it is 147 s at p_max = 4 and 10 s at 8 or 16 (§ 2b). We used 4 for the 16-point sample, the value in the repo's sample inputs.
 - A wall cap is checked between Bulirsch–Stoer steps, not inside one. One BR-1 run at ε = 10⁻² ran over 10 minutes inside a single step and was killed by hand (abandoned; its row is in `results_br1.csv`). ε = 10⁻³ on GG-1 point (27, 24) took 59,040 steps by t = 0.25 and hit the 600 s cap. Cost is not monotonic in ε: very loose tolerances break the step control.
 
 ## 1. Grid (gate passed)
@@ -63,16 +63,34 @@ Weights are the lifetimes in the paper's own Fig. 1 left panel (statistically th
 
 - **Forward leg only: about 40–105 core-hours (central 65–85).**
 - **With the reversal leg (+0.82× the forward cost, median): about 75–190 core-hours (central 115–150).** About 1–2 days of wall time on four cores like these.
-- Weak points: our longest T is 96, so the T = 100–1000 tail is extrapolated from the rate; and the reverse leg's heavy tail (1 of 16 capped) could add to it.
+- Weak points: our longest T is 96, so the T = 100–1000 tail is extrapolated from the rate; and the reverse leg's heavy tail (1 of 16 capped) could add to it. These are p_max = 4 numbers; at p_max = 8 the 10⁻⁶ cost is about 0.5–0.6× of them (two points).
 
-### Projection: ε = 10⁻⁷⁰ at L_w = 1024 (E; order of magnitude only)
+### 2b. Below ε = 10⁻⁶: one point at ε = 10⁻⁸ and 10⁻¹⁰ (M; approved 29 Oct 2026)
 
-Not extrapolable from ε ≥ 10⁻⁶, and I do not trust a single number. Brackets:
+Point (1, 54), L_w = 1024, T capped at 1000, the paper's reversibility test, run side by side with one other job. Files: `gg1/below_1e6_*.csv`, `gg1/pilot_*` (ε = 10⁻⁶ row from the sample), `gg1/below_1e6_pmax_probe.csv`.
 
-- The code's own step law (`Brutus::get_eta`) shrinks steps by η(10⁻⁶)/η(10⁻⁷⁰) = 0.337/0.0263 = **12.8×**. That alone gives 12.8 × (40–105) = 500–1,300 core-hours forward.
-- Cost per step rises with tightness and may flatten (we see it flatten near 10 ms from 10⁻⁵ to 10⁻⁶). A further 1–10× on top gives 500–13,000 core-hours.
-- The paper (Gargantuan, §2) says the average simulation took about 7 hours and the longest one month, on unstated hardware. If that is per 10⁻⁷⁰ run, 1212 × 7 h ≈ 8,500 core-hours.
-- So **order 10³–10⁴ core-hours forward (a similar amount again for the reversal leg), uncertain by an order of magnitude either way, and p_max could move it by more.** Two measurements, one point each at ε = 10⁻⁸ and 10⁻¹⁰, would turn this into a fit. They need your go-ahead.
+| p_max | ε | steps (forward) | forward wall | reverse wall | log₁₀Δ (pass if < −3) | T |
+|---|---|---|---|---|---|---|
+| 4 | 10⁻⁶ | 877 | 6.2–8.1 s | 6 s | −0.84 (fail) | 0.63294 |
+| 4 | 10⁻⁸ | 1290 | 27 s | 27 s | −2.40 (fail) | 0.632936 |
+| 4 | 10⁻¹⁰ | 3448 | 147 s | 146 s | −4.57 (**pass**) | 0.632936 |
+| 8 | 10⁻⁸ | 917 | 6.8 s | 7.2 s | −4.18 (**pass**) | |
+| 8 | 10⁻¹⁰ | 973 | 10.1 s | 9.3 s | −5.60 (**pass**) | |
+| 16 | 10⁻⁸ | 916 | 6.6 s | 6.9 s | −4.63 (**pass**) | |
+| 16 | 10⁻¹⁰ | 972 | 9.9 s | 9.9 s | −5.60 (**pass**) | |
+
+- **At p_max = 4 the cost grows faster than any power of ε**: wall ×3.9 from 10⁻⁶ to 10⁻⁸, then ×5.4 to 10⁻¹⁰ (steps ×1.5 then ×2.7; ms per step 7–9, 21, 43). Extrapolated at the recent rate (≈ ×4.6 per two decades) it is not feasible at 10⁻⁷⁰ (of order 10²² s). The pinned code's `p_max` = 4 caps the extrapolation at four points and cannot reach a tight tolerance without shrinking the step.
+- **At p_max = 8 or 16 it is nearly flat**: 917 → 973 steps, 6.8 → 10.1 s from 10⁻⁸ to 10⁻¹⁰, and the reversibility test already passes at 10⁻⁸ (−4.2, −4.6; at p_max = 4 it needs 10⁻¹⁰). So **p_max is also an accuracy setting**: the same ε converges at a different level.
+- T (the lifetime) is 0.63294 at every ε and p_max here: this point is not chaotic enough to move it.
+
+### Projection: ε = 10⁻⁷⁰ at L_w = 1024 (E)
+
+Only meaningful for p_max ≥ 8 (at 4 the measured growth makes it infeasible, above). On point (1, 54) at p_max = 8: wall per unit of simulated time about 1.7 s at 10⁻⁶ (inferred from the p_max 8 / 4 cost ratio measured under load), 4.2 s at 10⁻¹⁰ (measured). Extrapolating to 10⁻⁷⁰ with the code's own step law (`get_eta`: steps × 11.5 from 10⁻¹⁰ to 10⁻⁷⁰) and ms per step linear in −log₁₀ε (7.5 → 10.3 ms from 10⁻⁸ to 10⁻¹⁰, so +1.4 ms per decade, which gives about 94 ms at 10⁻⁷⁰; +0.5 per decade gives about 40 ms):
+
+- 40–94 ms per step × 11,200 steps gives **190–440 s per unit of simulated time** (point (1, 54)); the panel's total integrated time is about 112,000 units (Σ T of Fig. 1 left = 85,690, × 1.31).
+- **Panel, forward leg: about 6,000–14,000 core-hours** (6,000 at +0.5 ms per decade, 14,000 at +1.4); with the reversal leg about 11,000–25,000 core-hours (roughly 20–45 days on 24 cores).
+- Cross-check: the paper's "about 7 hours" average per simulation (§ 2), if per 10⁻⁷⁰ run, is 1212 × 7 h ≈ 8,500 core-hours: inside the range, on unstated hardware.
+- Weak points: it is one easy point (T = 0.63); the T-dependence of cost at 10⁻⁷⁰ is assumed to follow the 10⁻⁶ rate; ms per step at 10⁻⁷⁰ is a 60-decade extrapolation. Treat it as a factor-of-3 estimate at best, and only for p_max ≥ 8.
 
 ## 3. BR-1: the authors' own initial conditions, ε = 10⁻⁶, L_w = 128 (M)
 
@@ -111,4 +129,4 @@ The authors' paper says generating its data "required over 10 days of computer t
 
 ## Not done, by design
 
-No run below ε = 10⁻⁶; no scale-up of GG-1 (1196 points remain) or BR-1; no AMUSE copy of Brutus; V-11 and the REVIEW_QUEUE/ruling bookkeeping of §4 task 1 (not part of this brief). Nothing from `pgbreen/NVM` is committed. The commit trailers name Claude Sonnet 5.5 and this session, not the Opus line in the brief, because that is the model that wrote them.
+No run below ε = 10⁻⁶ except the approved probes of § 2b (the same point, p_max 4, 8 and 16); no scale-up of GG-1 (1196 points remain) or BR-1; no AMUSE copy of Brutus; V-11 and the REVIEW_QUEUE/ruling bookkeeping of §4 task 1 (not part of this brief). Nothing from `pgbreen/NVM` is committed. The commit trailers name Claude Sonnet 5.5 and this session, not the Opus line in the brief, because that is the model that wrote them.

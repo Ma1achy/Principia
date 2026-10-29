@@ -16,15 +16,15 @@
 | SCHED | 103 |
 | REF | 52 |
 | RENDER | 120 |
-| COL | 160 |
+| COL | 161 |
 | GUI | 384 |
 | TOOL | 218 |
 | VAL | 199 |
 | PERF | 115 |
 | SYS | 93 |
-| **total** | **1912** |
+| **total** | **1913** |
 
-Of these: 166 calibration, 171 definition, 1575 obligation. Retired (kept for their ids, not counted): 12.
+Of these: 167 calibration, 171 definition, 1575 obligation. Retired (kept for their ids, not counted): 12.
 
 ## Requirements per milestone
 
@@ -37,12 +37,12 @@ Of these: 166 calibration, 171 definition, 1575 obligation. Retired (kept for th
 | M4 | 106 |
 | M5 | 179 |
 | M6 | 223 |
-| M7 | 260 |
+| M7 | 261 |
 | M8 | 470 |
 
 ## Sections
 
-1596 sections in 60 files: 1286 yield at least one requirement; 310 yield none and are listed below with the reason.
+1597 sections in 60 files: 1286 yield at least one requirement; 311 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | gap (RQ-378) | 1 |
@@ -52,7 +52,7 @@ Of these: 166 calibration, 171 definition, 1575 obligation. Retired (kept for th
 | out of v1 (R-420) | 1 |
 | parent heading (obligations are in its subsections) | 52 |
 | planned (the plan PR) | 22 |
-| rationale | 18 |
+| rationale | 19 |
 | superseded (kept for the record) | 4 |
 
 
@@ -184,6 +184,7 @@ Of these: 166 calibration, 171 definition, 1575 obligation. Retired (kept for th
 | R-559 — The thirteen decisions made under R-369 since 20 Oct 2026, as the orchestrator's state page listed them, are reviewed by the human and stand; each is marked accepted where the repo records it | informative only | the human's line of 21 Oct 2026 (the batch R-545 quotes): the thirteen decisions applied per R-369 since 20 Oct stand; each is marked "accepted by R-559" where the repo records it, the rest listed in the ruling; an act, recorded only; changes no requirement but the marks in eight requirement notes |
 | R-573 — "Payload summary" is deleted from TASK-M8-02: it is defined nowhere, used nowhere, and no test asks for it | informative only | the human's decision of 21 Oct 2026 (the gap sweep, PR 2a): "payload summary" struck from TASK-M8-02's deliverable; an act, recorded only; no requirement named it, so it changes none |
 | R-607 — Kustaanheimo–Stiefel regularisation is not built: Part 2b's four are the regularisations, and a later method is added by its own ruling *(closes RQ-530)* | informative only | RQ-530 (a): Kustaanheimo–Stiefel regularisation is not built; Part 2b's four are the regularisations, a later method added by its own ruling; applied in integrator contract Part 6, dd_integrator §6 and dd_decoder §6, and no requirement changes |
+| R-630 — The data hunt for BR-1 and GG-1: GG-1 routes 2 and 3 and a Brutus ensemble for BR-1 now, on the authors' own initial conditions; two gates; the probes below ε = 10⁻⁶ approved at one point each *(amends nothing; opens RQ-599 to RQ-603)* | rationale | the human's rulings on the BR-1 and GG-1 data hunt, quoted verbatim; what they build is in docs/incoming/2026-10-28_rq598_data/brutus_run_here/, and the questions they leave are RQ-599 to RQ-603 |
 
 ### `docs/contracts/principia_canonical_spec.md`
 

@@ -1332,3 +1332,7 @@
   section: "G9a. Sequence · Spotlights (no artboard; R-576 to R-578)"
   reason: parent heading (obligations are in its subsections)
   note: its two subsections, Sequence and Spotlights
+- file: decisions.md
+  section: "R-630 — The data hunt for BR-1 and GG-1: GG-1 routes 2 and 3 and a Brutus ensemble for BR-1 now, on the authors' own initial conditions; two gates; the probes below ε = 10⁻⁶ approved at one point each *(amends nothing; opens RQ-599 to RQ-603)*"
+  reason: rationale
+  note: "the human's rulings on the BR-1 and GG-1 data hunt, quoted verbatim; what they build is in docs/incoming/2026-10-28_rq598_data/brutus_run_here/, and the questions they leave are RQ-599 to RQ-603"

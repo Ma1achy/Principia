@@ -5,7 +5,7 @@ it is the papers' data, and none of it is a result of the papers. Under the huma
 here". Whether a self-computed ensemble may score a target or is a cross-check only is still open
 (`../README.md` §3); nothing here is offered for scoring.
 
-A pilot, not a scale-up: ε ≥ 10⁻⁶ throughout, 16 GG-1 grid points, 12 BR-1 trajectories (plus tolerance and word-length
+A pilot, not a scale-up: ε ≥ 10⁻⁶ except one approved point at 10⁻⁸ and 10⁻¹⁰ (29 Oct 2026), 16 GG-1 grid points, 12 BR-1 trajectories (plus tolerance and word-length
 probes). `REPORT.md` has the findings and the projections, with measured and estimated numbers marked.
 
 | Path | What |
@@ -17,6 +17,7 @@ probes). `REPORT.md` has the findings and the projections, with measured and est
 | `gg1/select_sample.py`, `sample_16.csv` | the 16-point sample (stratified on the paper's own Fig. 1 lifetimes; used only to choose points) |
 | `gg1/run_gg1.sh`, `pilot_eps1e-6_Lw1024.csv`, `gg1_table.md` | the sample run and its raw output |
 | `gg1/pilot_fwdonly_final_driver_*.csv` | forward-only re-run with the final driver (identical steps and T) |
+| `gg1/run_below_1e6.sh`, `run_below_1e6_pmax.sh`, `below_1e6_*.csv` | the two probes below ε = 10⁻⁶ the human approved on 29 Oct (point (1, 54)); `REPORT.md` § 2b |
 | `gg1/run_scaling.sh`, `scaling_gg1*.csv`; `run_pmax_probe.sh`, `pmax_probe_gg1.csv` | ε, L_w and p_max cost probes |
 | `gg1/robustness_three_points_Lw128_norev.csv`, `ours_vs_fig1.csv` | the lifetime-definition finding in `REPORT.md` |
 | `br1/select_sample.py`, `sample_12.csv`, `run_br1.py`, `results_br1*.csv`, `traj/` (ε = 10⁻⁶, L_w = 128 only), `compare.py`, `compare_to_authors.csv`, `br1_table.md` | BR-1 sample, runs and the point-by-point comparison |

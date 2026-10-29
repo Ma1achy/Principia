@@ -124,3 +124,28 @@ Sources for §2: [arXiv:1910.07291](https://arxiv.org/abs/1910.07291),
 [Turku repository, Part I](https://www.utupub.fi/items/e9258b49-d38c-4b0b-99ec-dbb4316997da/full),
 [Turku repository, Part II](https://www.utupub.fi/items/c3516cb3-aa7c-4600-9bf6-712ee29c16d1/full),
 [TIB LDM (404)](https://service.tib.eu/ldmservice/dataset/three-body-problem-dataset).
+
+## 5. Outcome of § 4's tasks, 29 Oct 2026 (appended; nothing above is changed)
+
+The human's message of 28 Oct 2026, whole (R-630 in `decisions.md` quotes it without its first sentences, which only name this
+PR and this README):
+
+> PR #327 (incoming/2026-10-28-rq598-data) carries the RQ-598 papers and my rulings; read docs/incoming/2026-10-28_rq598_data/README.md in full, then do §4 tasks 1–5. Merge #327 through the normal review. Rulings: GG-1 routes 2 (extract Fig. 1 from the vector paths) and 3 (recompute with Brutus) now; BR-1 Brutus ensemble on Breen's stated set-up now, fixed recorded seed; I'm emailing Breen and Boekholt in parallel. Gates: stop and queue if Fig. 1 doesn't reconcile to exactly 1212 points per panel; report measured cost per point before scaling any Brutus run or going below eps=1e-6. Label all self-computed results as ours, not the papers'. Open question for me: may a self-computed ensemble score a target, or is it cross-check only?
+
+1. **Rulings recorded; the search done.**
+   - The rulings are R-630 (`decisions.md`), with the questions they leave in RQ-599 to RQ-603 (`REVIEW_QUEUE.md`). The data-and-papers
+     entry itself, numbered 598 in the replication port's queue, is on PR #309 and not on `main`, so it was not edited here; R-630
+     and the new entries refer to it as "the data-and-papers entry on PR #309".
+   - The repo-scoped search: the human's update of 29 Oct named two public repositories, `github.com/pgbreen/NvMgeneration` (Brutus as
+     used in the BR-1 paper, GPL-3.0) and `github.com/pgbreen/NVM` (180 of BR-1's trajectories and a trained network, no licence).
+     No Boekholt et al. GG-1 data was found. The search was not exhaustive: GitHub's search API is closed to the cloud session
+     (`HTTP 403: sessions are bound to their configured repositories`), and a web search for the lifetime maps found nothing.
+   - **Correction to § 2 above** ("BR-1 … No data statement and no code or data release"): 180 of BR-1's trajectories are public in
+     `pgbreen/NVM` @ `a35c378` (136 with the full 2561 rows), under 2% of the paper's 10,000. RQ-603 asks how they may be used.
+2. **GG-1 route 2** is `data/rq598-gg1-fig1-v2` (`transcriptions/gg1_fig1/`): 1212 points per panel, reconciled.
+3. **GG-1 route 3** (cost pilot, ε = 10⁻⁶ at L_w = 1024, plus one point at 10⁻⁸ and 10⁻¹⁰): `brutus_run_here/REPORT.md`. Findings that need a ruling: the
+   lifetime does not match Fig. 1 where the paper's two panels agree (RQ-599), `p_max` and L_w (RQ-600).
+4. **BR-1** on the authors' own initial conditions, 12 runs, ε = 10⁻⁶: `brutus_run_here/REPORT.md` § 3.
+5. **V-11**: only partly done. Part I could not be read (RQ-602); what Part II gives is in `transcriptions/v11_partII/`.
+
+Removed lines: none.

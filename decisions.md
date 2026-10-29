@@ -26854,3 +26854,39 @@ phase, against the CPU's f32 decode and `Φ`'s f64 angle.
 - An `η_E` rescale moves only the momenta, so the rescaled descriptor reads the same configuration block.
 
 R-628 is in the "physics" group of `plan/rule_groups.yaml`.
+
+
+## R-630 — The data hunt for BR-1 and GG-1: GG-1 routes 2 and 3 and a Brutus ensemble for BR-1 now, on the authors' own initial conditions; two gates; the probes below ε = 10⁻⁶ approved at one point each *(amends nothing; opens RQ-599 to RQ-603)*
+*28 and 29 Oct 2026 · applied in `docs/incoming/2026-10-28_rq598_data/README.md` § 5, `REVIEW_QUEUE.md` (RQ-599 to RQ-603) and `plan/rule_groups.yaml`; built by the Brutus pilot (`docs/incoming/2026-10-28_rq598_data/brutus_run_here/`)*
+
+The human's words, verbatim. First, his message of 28 Oct 2026 (PR #327), with its opening sentences, which only name the PR and its README, left out; the whole text is in `docs/incoming/2026-10-28_rq598_data/README.md` § 5:
+
+> […] Rulings: GG-1 routes 2 (extract Fig. 1 from the vector paths) and 3 (recompute with Brutus) now; BR-1 Brutus ensemble on Breen's stated set-up now, fixed recorded seed; I'm emailing Breen and Boekholt in parallel. Gates: stop and queue if Fig. 1 doesn't reconcile to exactly 1212 points per panel; report measured cost per point before scaling any Brutus run or going below eps=1e-6. Label all self-computed results as ours, not the papers'. Open question for me: may a self-computed ensemble score a target, or is it cross-check only?
+
+Then his update of 29 Oct 2026:
+
+> 1. Build Brutus from github.com/pgbreen/NvMgeneration @ 98906f4 (Breen's own README: "Brutus: version used in Newton vs the Machine"; GPL-3.0, license.txt), not AMUSE's copy. Record the build exactly.
+> 2. For BR-1, do not draw random starting points. Use the authors' own: github.com/pgbreen/NVM @ a35c378, trainex/data/run10–99.dat and validex/data/run9910–9999.dat (row 1 = x1, y1, x2, y2; body 3 from the centre of mass; 2^-8 cadence). Run a small stated sample of them at eps = 1e-6 and compare your trajectory to theirs point by point. That both measures cost and checks your build reproduces theirs. Keep any copy of the NVM files in docs/incoming/_local/ (no licence; never commit). Their eps 1e-11/1e-10 pairs stay estimate-only, as before.
+
+And, on seeing the pilot's report:
+
+> Go ahead with ε = 1e-8 and 1e-10 on one point each, do v-11 and review queue book keeping. also open a pr
+
+*What it decides:*
+- GG-1: route 2 (the Fig. 1 extraction) and route 3 (a recomputation with Brutus) go ahead now. Route 1, the email, runs in parallel.
+- BR-1: a Brutus ensemble on Breen et al.'s stated set-up goes ahead now. The 29 Oct update replaces "fixed recorded seed" with the
+  authors' own initial conditions, taken from the first row of their files, so no seed is drawn.
+- The build is `pgbreen/NvMgeneration` @ `98906f4`, GPL-3.0, not AMUSE's copy. The authors' NVM files have no licence: any copy stays in
+  `docs/incoming/_local/` (gitignored) and is never committed.
+- The gates: stop and queue if Fig. 1 does not reconcile to exactly 1212 points per panel (it did, and the 1/64 grid also has exactly 1212 points); report the
+  measured cost per point before scaling any Brutus run or going below ε = 10⁻⁶ (reported on PR #327, 29 Oct 2026).
+- The runs below ε = 10⁻⁶ are approved for ε = 10⁻⁸ and ε = 10⁻¹⁰, one point each. Anything further below, or any scaling of GG-1 or BR-1, needs a new word from him.
+- Every self-computed number is labelled "Brutus, run here", never the paper's. His question, whether a self-computed ensemble may score a target, stays open as RQ-601.
+- The data-and-papers question queued on PR #309 stays open: the authors' replies are awaited, and V-11's primary is still not in hand (RQ-602).
+
+*Applied per R-369:*
+- The two probes use the same point, (i, j) = (1, 54), at L_w = 1024 and `p_max` = 4, so the cost of tightening ε is read on one point.
+- The V-11 work takes what it can from Part II, which is in the repo (`transcriptions/v11_partII/`), and queues Part I's host as a network question (RQ-602).
+- The ruling is recorded here and the open questions it leaves are RQ-599 to RQ-603; `decisions.md` makes no other change. PR #309 carries the data-and-papers entry itself and a ruling of its own; this entry is numbered after that ruling.
+
+R-630 is in the "one_off" group of `plan/rule_groups.yaml`.
