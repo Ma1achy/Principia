@@ -128,10 +128,16 @@ sample: over the whole grid, 242 of 1212 points share a LUT index in both panels
 - At (1, 54), next to the equilateral corner, our T is a close triple approach (minimum separation 0.01) and equals the equilateral free-fall
   collapse time (0.633 against 0.641 ours; 1.72 against 1.71 HM). Fig. 1's 3.3 HM is 1.9 times that collapse time, which points at the
   paper's definition of T rather than at our integration.
-- **(3, 43) sits at the edge of a short-lifetime band.** In Fig. 1 left its neighbours (2, 42), (2, 43) and (2, 44) are log₁₀ T = 0.92, 0.90
-  and 0.87, and (3, 44) is 1.11, while (3, 43) is 2.71 (route 2; `hm_units_output.txt` lists all eight neighbours). Ours puts (3, 43) in the
-  short band, robustly over ε. A one-cell offset in the initial condition or in the grid snap would explain it. **The four neighbours of
-  (3, 43), that is (2, 43), (4, 43), (3, 42) and (3, 44), must be run before any definition ruling is sought**; RQ-612 lists it as an option.
+- **(3, 43) is an isolated single-cell maximum in Fig. 1.** Its eight neighbours in Fig. 1 left are log₁₀ T = 1.881 (3, 42), 1.107 (3, 44),
+  0.896 (2, 43), 1.775 (4, 43), 0.920 (2, 42), 0.873 (2, 44), 1.518 (4, 42) and 1.307 (4, 44), every one below (3, 43)'s 2.713 (route 2;
+  `hm_units_output.txt`). Four of them, (2, 42), (2, 43), (2, 44) and (3, 44), are short (0.87 to 1.11); (3, 42) and (4, 43) are not
+  (1.88, 1.78). Ours at (3, 43) is short, 0.262 in HM units, robustly over ε.
+- **A one-cell offset would not close the gap.** Against the nearest short neighbours ours is still 0.61 to 0.85 dex low (0.262 against
+  0.873 … 1.107), the same sign as (1, 54)'s −0.29 dex, where the gap points at the paper's definition of T. An offset in the initial
+  condition or in the grid snap would move (3, 43) from −2.45 dex to that remainder, not explain it: an offset and a different definition of
+  T may both be present. **All eight neighbours of (3, 43) must be run before any definition ruling is sought**: the four short ones
+  ((2, 42), (2, 43), (2, 44), (3, 44)) test whether ours at (3, 43) matches a shifted short cell, and the other four ((3, 42), (4, 43),
+  (4, 42), (4, 44), none of them short) whether ours puts a long-lived cell one step over. RQ-612 lists it as option (a).
 - Over all 16 points, ours in HM units minus Fig. 1 left runs from −2.45 to +1.33 dex (13 uncensored points). At the other points the two
   panels differ from each other, as the paper expects, so no point-by-point agreement is expected at ε = 10⁻⁶.
 - Our escape radius and cap were in our units. Rerunning with R_esc = 10 HM units (0.48 to 7.4 of ours, by point) and the cap at 10⁴ HM units

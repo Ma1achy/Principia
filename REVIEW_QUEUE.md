@@ -618,16 +618,24 @@ changes the result and the corpus does not settle it (R-369). Not yet ready to r
   Heggie–Mathieu units (G = 1, M = 1, E = −1/4). The conversion depends on the point, T_HM = T_ours · √(3λ³), λ = (4/9) Σ 1/r_ij, a factor
   of 2.72 to 167 over the grid. Converted, at the three sample points where the paper's two panels agree, ours against Fig. 1 (route 2,
   `transcriptions/gg1_fig1/`) is (1, 54) −0.29 dex, (14, 20) +0.15 dex and (3, 43) −2.45 dex, each unchanged over ε = 10⁻⁴ … 10⁻⁶. In
-  Fig. 1, (3, 43) is log₁₀ T = 2.71 while its neighbours (2, 42), (2, 43), (2, 44) and (3, 44) are 0.87 to 1.11: it sits at the edge of a
-  short-lifetime band, where ours puts it. At (1, 54) ours equals the equilateral free-fall collapse time (1.71 HM), and Fig. 1's 3.3 HM is
+  Fig. 1, (3, 43) is log₁₀ T = 2.713, an isolated single-cell maximum: all eight neighbours are below it, (3, 42) 1.881, (3, 44) 1.107,
+  (2, 43) 0.896, (4, 43) 1.775, (2, 42) 0.920, (2, 44) 0.873, (4, 42) 1.518 and (4, 44) 1.307 (`hm_units_output.txt`). Ours there is 0.262
+  in HM units, so even against the nearest short neighbours ((2, 42), (2, 43), (2, 44), (3, 44)) it is 0.61 to 0.85 dex low, the same sign
+  as (1, 54)'s −0.29 dex. At (1, 54) ours equals the equilateral free-fall collapse time (1.71 HM), and Fig. 1's 3.3 HM is
   1.9 times that. The pilot's escape radius (10 of its own length units, 13.5 to 210 HM) and cap (1000 of its units) were not the paper's.
 - **The question:** which definition of T (the retrace rule, the escape radius in HM units) makes our Brutus runs and the paper's figure
-  agree where the paper's two panels agree; and whether (3, 43) is a one-cell offset in the initial condition or the grid snap rather than a
-  definition difference.
-- **Options seen:** (a) first run the four neighbours of (3, 43), (2, 43), (4, 43), (3, 42) and (3, 44), at ε = 10⁻⁶ with the escape radius
-  and cap in HM units, and seek no definition ruling before that; (b) keep ours, labelled ours, and treat the remaining disagreement as a
-  finding; (c) ask Boekholt for the retrace rule and the grid convention, in the email already planned; (d) test candidate conventions on a
-  spread of grid points against route 2, which needs more than the 16-point sample (scaling: the owner's go-ahead).
+  agree where the paper's two panels agree; and whether (3, 43) is also a one-cell offset in the initial condition or the grid snap. An
+  offset would leave the 0.61 to 0.85 dex remainder above, so an offset and a definition difference may both be present; one does not rule
+  out the other.
+- **Options seen:** (a) first run all eight neighbours of (3, 43) at ε = 10⁻⁶ with the escape radius and cap in HM units, and seek no
+  definition ruling before that: the four short ones ((2, 42), (2, 43), (2, 44), (3, 44)) test whether ours at (3, 43) matches a shifted
+  short cell, and the other four ((3, 42) 1.88, (4, 43) 1.78, (4, 42), (4, 44), none of them short) whether ours puts a long-lived cell one
+  step over; (b) keep ours, labelled ours, and treat the remaining disagreement as a finding; (c) ask Boekholt for the retrace rule and the
+  grid convention, in the email already planned, and also whether Fig. 1's times are in Heggie–Mathieu units: read instead as G = M = 1
+  with no energy scaling (r₁₂ = 1 kept), the factor is a constant √3 and the three points are −0.48, −0.32 and −2.72 dex, each further
+  from Fig. 1 than the HM reading's −0.29, +0.15 and −2.45, so the HM reading, which is the paper's citation, is applied; (d) test
+  candidate conventions on a spread of grid points against route 2, which needs more than the 16-point sample (scaling: the owner's
+  go-ahead).
 - **Applied meanwhile:** (b). A definition, once ruled, becomes a definition requirement (R-72).
 - **Waits:** the point-by-point comparison of route 3 (recomputed) against route 2 (read from the figure) for GG-1.
 
