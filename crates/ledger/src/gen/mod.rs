@@ -10,10 +10,12 @@
 //! the link registry ([`links`]; dd_generation_root §3.9); `QuadReduction`'s Rust and WGSL struct, from its own
 //! ledger ([`crate::reduction::emit`]); the steppers' coefficients, from the constants register ([`steppers`];
 //! dd_integrator §3.2); and the `N_sub` bucket's comparison tree and default threshold table, from the constants
-//! register ([`nsub`]; dd_integrator §3.3, R-502). One source generates all four payload artefacts (seam 13).
+//! register ([`nsub`]; dd_integrator §3.3, R-502); and the fragment entry points' word layouts, from their table
+//! ([`fragment`]; TASK-M2-25). One source generates all four payload artefacts (seam 13).
 
 pub mod catalogue;
 pub mod export;
+pub mod fragment;
 pub mod links;
 pub mod nsub;
 pub mod numeric;
@@ -49,6 +51,7 @@ pub const EMITTERS: &[Emitter] = &[
     crate::reduction::emit,
     steppers::emit,
     nsub::emit,
+    fragment::emit,
 ];
 
 /// Why generation was refused.

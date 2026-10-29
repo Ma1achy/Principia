@@ -7,7 +7,8 @@
 //! - [`mass`]: `D_mass`, the simplex point and the one tag the block may raise, `DEGENERATE(M01_TINY)`.
 //! - [`config`]: `D_cfg`, the canonical-frame hyperspherical decode, unweighted and reconstructed.
 //! - [`momentum`]: `D_mom`, the free Jacobi momenta and the Jacobi-to-particle map.
-//! - [`descriptor`]: the derived invariants, the `ICDescriptor` filled from the decoded `(m, r, p)`.
+//! - [`descriptor`]: the derived invariants, the `ICDescriptor` filled from the decoded `(m, r, p)`, its `rho_angle` from
+//!   the configuration block's `(ρ̃, λ̃)` (R-628).
 //! - [`invariant`]: the invariant-momentum construction of the `(L_z, E)` and `(L_z, K)` charts, its seed rule and
 //!   its exact feasibility branch.
 //! - [`energy_norm`]: the optional `η_E` rescale toward a target energy, between the momentum block and the derived
@@ -20,7 +21,8 @@
 //! block reading its own `z` slice and the blocks before it, never a later one ([`Blocks`]' signatures). The free
 //! momentum block reads no configuration; the configuration is passed to it so that an invariant-momentum block
 //! (dd_decoder §3.4) reads the already-decoded masses and configuration through the same entry. The derived
-//! invariants read only the joined `(m, r, p)`. The output is the canonical `(m, r, p)` ([`Ic`], seam 3), the block
+//! invariants read the joined `(m, r, p)`, and `rho_angle` the configuration block's own `(ρ̃, λ̃)` (R-628;
+//! [`descriptor::config_angle`]). The output is the canonical `(m, r, p)` ([`Ic`], seam 3), the block
 //! outputs, the descriptor and the `DEGENERATE` tag: a tagged decode is kept, never dropped. The tag is the mass
 //! block's, else the momentum stage's ([`Blocks::tag`]): an earlier block's tag is kept (dd_decoder §3.7).
 //!
@@ -72,7 +74,8 @@ pub trait Blocks<R: PayloadReal> {
     fn config(&mut self, z_cfg: [R; 2], masses: &Masses<R>) -> Config<R>;
     /// `D_mom`, from `z[2:6]`, the masses and the configuration.
     fn momentum(&mut self, z_mom: [R; 4], masses: &Masses<R>, config: &Config<R>) -> Momentum<R>;
-    /// The derived invariants, the `ICDescriptor`, from the joined `(m, r, p)`.
+    /// The derived invariants, the `ICDescriptor`, from the joined `(m, r, p)`; [`decode_with`] then takes its
+    /// `rho_angle` from the configuration block's own `(ρ̃, λ̃)` ([`descriptor::config_angle`], R-628).
     fn invariants(&mut self, ic: &Ic<R>) -> ICDescriptorOf<R>;
     /// The `DEGENERATE` reason the momentum stage raised, read once it has run: none for the free momentum block; the
     /// invariant-momentum construction's `INVARIANT_INFEASIBLE` or `NO_QUALIFYING_SEED` ([`invariant::Outcome::tag`]).
@@ -83,7 +86,7 @@ pub trait Blocks<R: PayloadReal> {
 }
 
 /// The free-momentum decoder under the selection `S`: the blocks of [`mass`], [`config`] and [`momentum`], and
-/// [`descriptor::describe`].
+/// [`descriptor::describe`], its `rho_angle` then the configuration block's ([`decode_with`], R-628).
 pub struct Free<S>(PhantomData<S>);
 
 impl<S> Free<S> {
@@ -192,7 +195,10 @@ pub fn decode_with<R: PayloadReal, B: Blocks<R>>(blocks: &mut B, z: &Latent<R>) 
         r: config.r,
         p: momentum.p,
     };
-    let descriptor = blocks.invariants(&ic);
+    let descriptor = ICDescriptorOf {
+        rho_angle: descriptor::config_angle(&config),
+        ..blocks.invariants(&ic)
+    };
     Decoded {
         ic,
         masses,
