@@ -164,8 +164,8 @@ The orchestrator asks each bot for a fresh review (`@codex review`, `@gemini-cli
 reviewer):
 - **before the merge, on the final head:** step 6 waits for a review from each bot on the exact SHA being merged, and
   re-requests a bot whose last review is on an older head;
-- **after every substantive push:** new logic, physics or algebra, a fix responding to findings, or a rebase or merge
-  that changes code; a docs-only typo push needs none;
+- **after every substantive push:** new logic, physics or algebra, a fix responding to review findings (whatever it
+  changes), or a rebase or merge that changes code; only a docs-only typo push that answers no finding needs none;
 - **periodically on a long-running PR:** at least once a working day while it is open, and every few pushes on a
   large one, so problems surface partway through rather than at the end.
 

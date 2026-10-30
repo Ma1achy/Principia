@@ -283,9 +283,10 @@ checks, for Codex, Gemini CLI and Copilot each:
   finding is answered with why it is wrong, never "fixed" to silence it.
 
 Between the PR's opening and the merge, the orchestrator also asks for a fresh review from each bot after every
-substantive push (new logic, physics or algebra; a fix responding to findings; a rebase or merge that changes code; not
-a docs-only typo push) and periodically on a long-running PR (at least once a working day while it is open, and at
-least every third push once the diff passes ~500 lines). Under limits: pre-merge first, then post-push, then periodic.
+substantive push (new logic, physics or algebra; a fix responding to review findings, whatever it changes; a rebase or
+merge that changes code; only a docs-only typo push that answers no finding is exempt) and periodically on a
+long-running PR (at least once a working day while it is open, and at least every third push once the diff passes ~500
+lines). Under limits: pre-merge first, then post-push, then periodic.
 Each merge that went ahead without a bot's pre-merge review is listed, with the reason, in the next batched summary to
 the owner. The bots stay advisory: the named reviewers' approvals and green CI decide the merge (§ "Autonomy
 (R-369)"). This replaces R-635's single review waited for up to 15 minutes after the PR opened; R-635's other rules
