@@ -217,7 +217,8 @@ fn declared(src: &str, trait_: &str) -> Vec<String> {
 }
 
 /// Every chart type: `Authored` in `engine::chart_authoring::charts`, the registered charts' descriptors, and `Chart`
-/// in `kernel::chart`'s sources.
+/// in `kernel::chart`'s sources, but `Tilted`, a registered chart under its tilt params (R-473 J5;
+/// `kernel::chart::tilt`), not a chart of its own.
 fn chart_types() -> Vec<String> {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
     let read = |p: &Path| {
@@ -235,7 +236,11 @@ fn chart_types() -> Vec<String> {
         .collect();
     files.sort();
     for f in files {
-        types.extend(declared(&read(&f), "Chart"));
+        types.extend(
+            declared(&read(&f), "Chart")
+                .into_iter()
+                .filter(|t| t != "Tilted"),
+        );
     }
     types.sort();
     types.dedup();
