@@ -637,3 +637,37 @@ peek log's first row (`docs/verification/peek_log.md`), UNEXPLAINED, with this q
 - **Applied meanwhile:** none. No panel is chosen. REQ-VAL-295's note, R-642's entry (a forward line under its item 1),
   `principia_dd_replication.md` § 5.10, the RQ-598 README § 6 and TASK-M3-62's note point here.
 - **Waits:** GG-1's per-point scoring against the Fig. 1 extraction (TASK-M3-62). BR-1 does not wait on it.
+
+## RQ-621: Five statistical or qualitative map targets whose verify names a Result at f64: are they scored on tier (a), the f32 GPU explorer, as R-649's confirmed reading says, or on the f64 Result their verify names *(physics; R-649 item 2 and the owner's confirmation of 30 Oct 2026; `docs/design/principia_dd_replication.md` § 12.2; REQ-VAL-308, REQ-VAL-309, REQ-VAL-311, REQ-VAL-312, REQ-VAL-313; context: TASK-M9-33, TASK-M9-34, TASK-M9-35)*
+
+*Queued 30 Oct 2026 by the fix round of R-649's port (PR #342), applying the owner's confirmation of the tier reading.
+For the owner: yes, it is physics where the choice changes which instrument a target is scored on, and the corpus
+does not settle it (R-369).*
+
+- **File, section:**
+  - `decisions.md` § "R-649 — …", the owner's words, item 2: "(a) GPU explorer: fast, f32, interactive; expected to
+    agree statistically or qualitatively only, with error_ratio flagging what it can't resolve; (b) CPU IC inspector:
+    f64/high precision; exact targets (collision points, periods, converged states) bind here."
+  - The same entry, his confirmation of 30 Oct 2026: "Tier reading confirmed: statistical targets are scored on tier
+    (a), exact targets on tier (b)."
+  - `decisions.md` § "R-572 — Result: a view's region run at full precision, f32 or f64 only, on a uniform grid, as a
+    batch job in the app or by `prin batch` …".
+  - `plan/requirements.yaml`, REQ-VAL-308 (AT-D2), verify: "one Result per mass set (R-572), f64, uniform; each orbit's
+    pixel against REQ-VAL-137's threshold"; REQ-VAL-309 (OC-4 off the Šuvakov plane), verify: "Result runs (R-572) at
+    f64; the island criterion read from the payload; agreement at REQ-VAL-310's level"; REQ-VAL-311 (OC-4 on the
+    plane), verify: "as OC-4"; REQ-VAL-312 (AT-D1), verify: "a Result (R-572) at f64; reviewed by the physics
+    reviewer"; REQ-VAL-313 (AT-D3), verify: "as AT-D1, per value of m₃".
+- **The gap:** the five are statistical (OC-4 on and off the plane) or qualitative over a map (AT-D1, AT-D2, AT-D3), so
+  the confirmed reading scores them on tier (a), the f32 interactive GPU explorer. Their verify, written before R-649,
+  scores them on a Result at f64, a batch run that is neither the interactive f32 explorer nor the CPU IC inspector.
+  Changing the verify to f32 changes what is scored; keeping it scores a statistical target off tier (a).
+- **The question:** on what are these five scored.
+- **Options seen:** (a) on tier (a): the verify's run becomes the GPU explorer's f32 output, and the f64 Result is
+  dropped from the scoring; (b) the verify as written: the f64 Result is the scoring run, recorded as a stated
+  exception to the tier rule; (c) both: scored on tier (a), with the f64 Result run beside it and recorded as
+  information (an explained divergence between the two would be a precision-tier finding); (d) another, stated by the
+  owner.
+- **Applied meanwhile:** the five are listed as tier (a) by the rule, "its f64 Result: RQ-621", in § 12.2 and in their
+  notes; their verify is unchanged. Nothing in M0 to M8 depends on it.
+- **Waits:** the scoring of REQ-VAL-308, REQ-VAL-309, REQ-VAL-311, REQ-VAL-312 and REQ-VAL-313 in M9 (TASK-M9-33,
+  TASK-M9-34, TASK-M9-35), and any peek of them.

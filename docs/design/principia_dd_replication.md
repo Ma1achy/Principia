@@ -415,8 +415,9 @@ scored, R-642 governing where they differ (`docs/incoming/2026-10-28_rq598_data/
   ε = 10⁻⁶.
 
 *30 Oct 2026 (R-649, R-650):* GG-1 and BR-1 are measurements, scored in M9 (TASK-M9-22) or, early, as peeks;
-"those parts may close on that scoring" means in M9. Their tiers: BR-1 (b); GG-1 (b) per point, its KS part (b) with
-(a) expected to agree statistically (§ 12.2). The first peek, GG-1 at three points from PR #335 ("Brutus, run here"
+"those parts may close on that scoring" means in M9. Their tiers: BR-1 (b); GG-1 (b) per point and (a) for its KS
+part (§ 12.2; *was:* "GG-1 (b) per point, its KS part (b) with (a) expected to agree statistically", corrected by the
+owner's confirmation of 30 Oct 2026, R-649). The first peek, GG-1 at three points from PR #335 ("Brutus, run here"
 against Fig. 1), is UNEXPLAINED (`docs/verification/peek_log.md`; RQ-612 holds its like-for-like questions).
 
 | Target | Requirement | L / T | Reproduces | Chart | Milestone | Compare | Tolerance | Task |
@@ -843,11 +844,19 @@ an earlier milestone, this section governs.*
 
 Each external target binds a tier (R-649 item 2): (a) the GPU explorer, f32 and interactive, expected to agree
 statistically or qualitatively only, with `error_ratio` flagging what it can't resolve; (b) the CPU IC inspector, f64
-or higher, where exact targets bind. An exact target, a measurement, a count, a report or a definition binds (b) only;
-a statistical or qualitative one binds (b), with (a) expected to agree statistically or qualitatively; one with an
-exact part and a statistical part binds (b) for the first, and (a) is expected to agree with the second statistically
-(the owner's clarification 2; *applied per R-369*, R-649). A single chaotic trajectory set beside a figure (AA-4, V-6)
-is (b). A GPU miss on a (b)-only target is expected, not a defect. A calibration takes its target's tier.
+or higher, where exact targets bind. The owner confirmed the reading on 30 Oct 2026: "statistical targets are scored
+on tier (a), exact targets on tier (b)" (R-649). So an exact target, a measurement, a count, a report or a definition
+is scored on (b); a statistical target is scored on (a), statistically only; a qualitative target over a map or an
+ensemble is scored on (a) too, (a) being the tier that agrees "statistically or qualitatively"; a mixed target is
+scored on (b) for its exact part and on (a) for its statistical or qualitative part (*applied per R-369*, R-649). A
+single chaotic trajectory set beside a figure (AA-4, V-6, SP-1's structural comparison) is (b). Five map targets
+whose verify names a Result at f64 (AT-D2, OC-4 off and on the Šuvakov plane, AT-D1, AT-D3) are (a) by the rule;
+how their f64 Result runs square with it is RQ-621, and their scoring waits on it. A GPU miss on a (b) target, or on
+a mixed target's (b) part, is expected, not a defect. A calibration takes its target's tier. *Was (the port's first
+reading, corrected 30 Oct 2026 by the owner's confirmation):* "a statistical or qualitative one binds (b), with (a)
+expected to agree statistically or qualitatively; one with an exact part and a statistical part binds (b) for the
+first, and (a) is expected to agree with the second statistically"; every (a) and mixed row of the table below read
+"(b); (a) statistically or qualitatively" or "(b); its statistical part also (a)".
 
 | Target | Requirement | Compare (§ 5) | Tier |
 |---|---|---|---|
@@ -858,74 +867,74 @@ is (b). A GPU miss on a (b)-only target is expected, not a defect. A calibration
 | OC-5 | REQ-VAL-220 | exact (a count) | (b) |
 | OC-5's counting convention | REQ-VAL-221 | a definition | (b) |
 | OC-6 | REQ-VAL-222 | a report | (b) |
-| AT-D2 | REQ-VAL-308 | qualitative + a calibrated threshold | (b); (a) statistically or qualitatively |
-| OC-4 (off the Šuvakov plane) | REQ-VAL-309 | statistical | (b); (a) statistically or qualitatively |
+| AT-D2 | REQ-VAL-308 | qualitative + a calibrated threshold | (a); its f64 Result: RQ-621 |
+| OC-4 (off the Šuvakov plane) | REQ-VAL-309 | statistical | (a); its f64 Result: RQ-621 |
 | LL-1, LL-2 | REQ-VAL-203 | exact | (b) |
 | LL-3 | REQ-VAL-223 | exact | (b) |
-| LL-4 | REQ-VAL-225 | exact per orbit; the fit statistical | (b); its statistical part also (a) |
+| LL-4 | REQ-VAL-225 | exact per orbit; the fit statistical | (b) per orbit; (a) for the fit |
 | LL-5 | REQ-VAL-227 | exact (closure only) | (b) |
 | BG-4 | REQ-VAL-213 | exact | (b) |
 | SD-1 | REQ-VAL-228 | exact | (b) |
 | BG-1 | REQ-VAL-230 | exact | (b) |
 | BG-2 | REQ-VAL-232 | exact | (b) |
 | HU-3 | REQ-VAL-234 | exact | (b) |
-| HU-4 | REQ-VAL-236 | exact per orbit; the fits statistical | (b); its statistical part also (a) |
+| HU-4 | REQ-VAL-236 | exact per orbit; the fits statistical | (b) per orbit; (a) for the fits |
 | HU-5 | REQ-VAL-238 | exact | (b) |
 | H-3 | REQ-VAL-205 | exact (scaling) | (b) |
 | H-1, H-2 | REQ-VAL-207 | ratio, recorded both ways | (b) |
 | TM-1 | REQ-VAL-240 | exact (scaling) | (b) |
-| CH-1 | REQ-VAL-242 | statistical | (b); (a) statistically or qualitatively |
+| CH-1 | REQ-VAL-242 | statistical | (a) |
 | B-1 | REQ-VAL-244 | exact to the figure's resolution | (b) |
-| B-2 | REQ-VAL-246 | statistical (loose) | (b); (a) statistically or qualitatively |
+| B-2 | REQ-VAL-246 | statistical (loose) | (a) |
 | V-6 | REQ-VAL-248 | exact once shot; qualitative against the figure (one trajectory) | (b) |
-| Q-2's Theory row, Q-4 | REQ-VAL-211 | (i) exact; (ii) statistical; no integration | (b) |
-| P-1 | REQ-VAL-252 | qualitative + statistical | (b); (a) statistically or qualitatively |
-| P-2 | REQ-VAL-254 | statistical | (b); (a) statistically or qualitatively |
-| P-3 | REQ-VAL-256 | qualitative | (b); (a) statistically or qualitatively |
-| P-4 | REQ-VAL-257 | statistical | (b); (a) statistically or qualitatively |
-| P-5 | REQ-VAL-259 | statistical | (b); (a) statistically or qualitatively |
-| P-6 | REQ-VAL-261 | qualitative | (b); (a) statistically or qualitatively |
-| Q-1 | REQ-VAL-262 | statistical | (b); (a) statistically or qualitatively |
-| Q-2 | REQ-VAL-264 | statistical | (b); (a) statistically or qualitatively |
-| Q-3 | REQ-VAL-266 | statistical | (b); (a) statistically or qualitatively |
-| AA-6 | REQ-VAL-209 | exact on the 13 short-lived rows; statistical otherwise | (b); its statistical part also (a) |
-| AA-2 | REQ-VAL-268 | exact on the short-lived rows; statistical otherwise | (b); its statistical part also (a) |
-| AA-3 | REQ-VAL-270 | statistical | (b); (a) statistically or qualitatively |
+| Q-2's Theory row, Q-4 | REQ-VAL-211 | (i) exact; (ii) statistical; no integration | (b) for (i); (a) for (ii) |
+| P-1 | REQ-VAL-252 | qualitative + statistical | (a) |
+| P-2 | REQ-VAL-254 | statistical | (a) |
+| P-3 | REQ-VAL-256 | qualitative | (a) |
+| P-4 | REQ-VAL-257 | statistical | (a) |
+| P-5 | REQ-VAL-259 | statistical | (a) |
+| P-6 | REQ-VAL-261 | qualitative | (a) |
+| Q-1 | REQ-VAL-262 | statistical | (a) |
+| Q-2 | REQ-VAL-264 | statistical | (a) |
+| Q-3 | REQ-VAL-266 | statistical | (a) |
+| AA-6 | REQ-VAL-209 | exact on the 13 short-lived rows; statistical otherwise | (b) on the 13 short-lived rows; (a) otherwise |
+| AA-2 | REQ-VAL-268 | exact on the short-lived rows; statistical otherwise | (b) on the short-lived rows; (a) otherwise |
+| AA-3 | REQ-VAL-270 | statistical | (a) |
 | AA-4 | REQ-VAL-272 | qualitative (one trajectory) | (b) |
-| AA-5 | REQ-VAL-273 | statistical | (b); (a) statistically or qualitatively |
-| AA-7 | REQ-VAL-275 | statistical | (b); (a) statistically or qualitatively |
-| AA-8 | REQ-VAL-277 | statistical | (b); (a) statistically or qualitatively |
-| AN-1 | REQ-VAL-279 | statistical | (b); (a) statistically or qualitatively |
-| L-3 | REQ-VAL-281 | statistical | (b); (a) statistically or qualitatively |
-| L-4 | REQ-VAL-283 | statistical / qualitative | (b); (a) statistically or qualitatively |
-| L-5 | REQ-VAL-285 | qualitative | (b); (a) statistically or qualitatively |
-| V-9 | REQ-VAL-286 | statistical | (b); (a) statistically or qualitatively |
-| MT-1 | REQ-VAL-288 | statistical | (b); (a) statistically or qualitatively |
-| L-1 | REQ-VAL-290 | qualitative | (b); (a) statistically or qualitatively |
+| AA-5 | REQ-VAL-273 | statistical | (a) |
+| AA-7 | REQ-VAL-275 | statistical | (a) |
+| AA-8 | REQ-VAL-277 | statistical | (a) |
+| AN-1 | REQ-VAL-279 | statistical | (a) |
+| L-3 | REQ-VAL-281 | statistical | (a) |
+| L-4 | REQ-VAL-283 | statistical / qualitative | (a) |
+| L-5 | REQ-VAL-285 | qualitative | (a) |
+| V-9 | REQ-VAL-286 | statistical | (a) |
+| MT-1 | REQ-VAL-288 | statistical | (a) |
+| L-1 | REQ-VAL-290 | qualitative | (a) |
 | V-2 / V-8 (a) | REQ-VAL-291 | exact (mirror symmetry to rounding) | (b) |
-| L-2 | REQ-VAL-293 | qualitative | (b); (a) statistically or qualitatively |
-| V-8 (b) | REQ-VAL-294 | qualitative | (b); (a) statistically or qualitatively |
-| GG-1 | REQ-VAL-295 | per point where reliable; KS otherwise | (b); its statistical part also (a) |
+| L-2 | REQ-VAL-293 | qualitative | (a) |
+| V-8 (b) | REQ-VAL-294 | qualitative | (a) |
+| GG-1 | REQ-VAL-295 | per point where reliable; KS otherwise | (b) per point; (a) for the KS part |
 | BR-1 | REQ-VAL-297 | exact (a converged code) | (b) |
 | D-1 | REQ-VAL-299 | measurement: reproduce or explain | (b) |
 | D-2 | REQ-VAL-301 | measurement: reproduce or explain | (b) |
 | D-4 | REQ-VAL-303 | measurement: reproduce or explain (on the CPU) | (b) |
 | D-5 | REQ-VAL-305 | exact (a count of 0) | (b) |
-| D-3 | REQ-VAL-306 | exact on the fixtures; statistical for the medians | (b); its statistical part also (a) |
-| OC-4 on the Šuvakov plane | REQ-VAL-311 | statistical | (b); (a) statistically or qualitatively |
-| AT-D1 | REQ-VAL-312 | qualitative | (b); (a) statistically or qualitatively |
-| AT-D3 | REQ-VAL-313 | qualitative | (b); (a) statistically or qualitatively |
-| HU-1 | REQ-VAL-314 | qualitative; exact at Table 23's minima | (b); its statistical part also (a) |
-| HU-2 | REQ-VAL-316 | qualitative + one exact point | (b); its statistical part also (a) |
-| TR-1 | REQ-VAL-318 | qualitative | (b); (a) statistically or qualitatively |
-| MK-1 | REQ-VAL-319 | statistical | (b); (a) statistically or qualitatively |
-| SL-1 | REQ-VAL-321 | statistical | (b); (a) statistically or qualitatively |
-| PA-1 | REQ-VAL-323 | qualitative; the split statistical | (b); (a) statistically or qualitatively |
-| TS-1 | REQ-VAL-325 | qualitative | (b); (a) statistically or qualitatively |
-| TS-2 | REQ-VAL-326 | qualitative | (b); (a) statistically or qualitatively |
-| V-1 / V-3 / V-7 | REQ-VAL-327 | qualitative; the share statistical | (b); (a) statistically or qualitatively |
-| LLL-1 | REQ-VAL-329 | qualitative | (b); (a) statistically or qualitatively |
-| V-11 | REQ-VAL-330 | statistical | (b); (a) statistically or qualitatively |
+| D-3 | REQ-VAL-306 | exact on the fixtures; statistical for the medians | (b) on the fixtures; (a) for the medians |
+| OC-4 on the Šuvakov plane | REQ-VAL-311 | statistical | (a); its f64 Result: RQ-621 |
+| AT-D1 | REQ-VAL-312 | qualitative | (a); its f64 Result: RQ-621 |
+| AT-D3 | REQ-VAL-313 | qualitative | (a); its f64 Result: RQ-621 |
+| HU-1 | REQ-VAL-314 | qualitative; exact at Table 23's minima | (b) at Table 23's minima; (a) for the map |
+| HU-2 | REQ-VAL-316 | qualitative + one exact point | (b) at the exact point; (a) for the map |
+| TR-1 | REQ-VAL-318 | qualitative | (a) |
+| MK-1 | REQ-VAL-319 | statistical | (a) |
+| SL-1 | REQ-VAL-321 | statistical | (a) |
+| PA-1 | REQ-VAL-323 | qualitative; the split statistical | (a) |
+| TS-1 | REQ-VAL-325 | qualitative | (a) |
+| TS-2 | REQ-VAL-326 | qualitative | (a) |
+| V-1 / V-3 / V-7 | REQ-VAL-327 | qualitative; the share statistical | (a) |
+| LLL-1 | REQ-VAL-329 | qualitative | (a) |
+| V-11 | REQ-VAL-330 | statistical | (a) |
 | FF-H | REQ-VAL-042 | exact (closure) | (b) |
 | SP-1's feature set | REQ-VAL-127 | a definition | (b) |
 | the figure-eight's published shape-sphere curve | REQ-VAL-333 | exact | (b) |

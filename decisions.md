@@ -28354,8 +28354,13 @@ R-648 is in the "process" group of `plan/rule_groups.yaml`. Changes no requireme
 ## R-649 — Replication and verification targets are measurements, not gates: failing one never blocks building; each declares the tier it binds, (a) the GPU explorer, agreeing statistically or qualitatively only, or (b) the CPU IC inspector, where exact targets bind; three outcomes, PASS, EXPLAINED DIVERGENCE (shown by a measurement) and UNEXPLAINED (open, labelled, non-blocking); no default, physics, criterion, architecture or tolerance is changed and nothing is tuned per target in pursuit of a pass; a comparison is checked like-for-like before anything is called a failure; verification deepening comes after the core build *(amends R-594, R-636, R-637 and R-639 for external targets; applies to RQ-598's targets and every target in force)*
 *Refined by R-650 (external replication becomes the final milestone, M9; the internal correctness tests and the
 anchor smoke tests stay continuous and blocking; early peeks, information only, go in a peek log).*
-*Still in force: all of it, with the owner's two clarifications of 29 Oct 2026 recorded below; R-650 says where and
-when each external target is scored.*
+*Confirmed 30 Oct 2026 by the owner, on its tier reading (his answers of that day, item 1, in the orchestrator's
+notes, `orch/r630/human-answers-30oct.txt`), verbatim: "Tier reading confirmed: statistical targets are scored on tier
+(a), exact targets on tier (b). Proceed with #342 as corrected." Item 2's applied line below is corrected to it: the
+port's first reading had a statistical target bind (b), with (a) expected to agree (the physics review of PR #342,
+finding F1).*
+*Still in force: all of it, with the owner's two clarifications of 29 Oct 2026 recorded below and his confirmation of
+30 Oct 2026 above; R-650 says where and when each external target is scored.*
 *29 Oct 2026 · the owner's ruling of that day, and his two clarifications for its port the same day; ported 30 Oct 2026
 with R-650; applied in `docs/design/principia_dd_replication.md` (§ 12, new; dated lines in its header, § 2, § 5.1,
 § 5.6, § 5.10, § 5.15, § 6, § 7, § 8.1, § 8.3 and § 10; the § 5 tables' milestone and task columns),
@@ -28396,13 +28401,20 @@ this port.
   agreeing statistically or qualitatively only, `error_ratio` flagging what it can't resolve) or (b) the CPU IC
   inspector (f64 or higher; exact targets: collision points, periods, converged states). With the owner's
   clarification 2, an external target binds (b) unless it is statistical, where (a) is expected to agree
-  statistically. *Applied per R-369:* exact targets, measurements, counts, reports and definitions bind (b) only;
-  statistical targets, and qualitative ones (item 2's "statistically or qualitatively"), bind (b) with (a) expected to
-  agree statistically or qualitatively; a target with an exact part and a statistical part binds (b) for the first,
-  and (a) is expected to agree with the second statistically. One chaotic trajectory compared qualitatively with a
-  figure (AA-4, V-6) is the inspector's, (b). Every target requirement's note names its tier, and
-  `docs/design/principia_dd_replication.md` § "12.2 Tiers" lists them. A GPU miss on a (b)-only target is expected, not
-  a defect.
+  statistically; the owner confirmed on 30 Oct 2026 that statistical targets are scored on tier (a) and exact targets
+  on tier (b). *Applied per R-369:* exact targets, measurements, counts, reports and definitions bind (b) and are
+  scored there; statistical targets bind (a) and are scored there, statistically only; qualitative targets over a map
+  or an ensemble bind (a) too, item 2 naming (a) as the tier that agrees "statistically or qualitatively"; a target
+  with an exact part and a statistical or qualitative part is scored on (b) for the first and on (a) for the second.
+  One chaotic trajectory compared qualitatively with a figure (AA-4, V-6, SP-1's structural comparison) is the
+  inspector's, (b). Five map targets whose verify names a Result at f64 (REQ-VAL-308, REQ-VAL-309, REQ-VAL-311,
+  REQ-VAL-312, REQ-VAL-313) bind (a) by the rule; how their f64 Result runs square with it is RQ-621, and their
+  scoring waits on it. Every target requirement's note names its tier, and `docs/design/principia_dd_replication.md`
+  § "12.2 Tiers" lists them. A GPU miss on a (b) target, or on a mixed target's (b) part, is expected, not a defect.
+  *Was (the port's first reading, corrected by the owner's confirmation of 30 Oct 2026):* "statistical targets, and
+  qualitative ones (item 2's "statistically or qualitatively"), bind (b) with (a) expected to agree statistically or
+  qualitatively; a target with an exact part and a statistical part binds (b) for the first, and (a) is expected to
+  agree with the second statistically".
 - **Clarification 2: GPU-vs-CPU agreement is an internal check.** Agreement within a stated f32 tolerance stays
   continuous and blocking, measured, not assumed; what goes is the claim that GPU correctness follows from the CPU's.
   The ground-truth note's § "The correctness factoring: validate on CPU, inherit on GPU" is corrected, not deleted:
@@ -28458,7 +28470,8 @@ this port.
   repo and its own.
 
 *Applied per R-369:*
-- The tier rule's reading for qualitative and mixed targets, and AA-4 and V-6 as (b), as above.
+- The tier rule's reading for qualitative and mixed targets, and AA-4, V-6 and SP-1's structural comparison as (b),
+  as above (corrected 30 Oct 2026 to the owner's confirmation; RQ-621 for the five f64-Result map targets).
 - The GPU-vs-CPU requirements read for their f32 tolerance as above; REQ-VAL-172 and REQ-VAL-173 get calibration
   requirements, and nothing else changes in them.
 - Item 4's ADR for a design change is a `decisions.md` ruling with a REVIEW_QUEUE entry before it, as every design

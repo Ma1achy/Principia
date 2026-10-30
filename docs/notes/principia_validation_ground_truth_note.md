@@ -102,8 +102,10 @@ measured not assumed. What goes is the claim that GPU correctness follows from t
 parity suite below stand. What changes is the composition: the GPU's agreement with the CPU is **measured**, within
 each check's stated f32 tolerance, and blocks a merge like any internal correctness test (R-650); it is not a proof
 that the GPU is correct. An external target binds the tier it declares (R-649 item 2): the CPU IC inspector (b) for an
-exact target, where a GPU miss is expected and not a defect; the GPU explorer (a) is expected to agree statistically or
-qualitatively only, on the statistical targets. The heading's "inherit on GPU" is kept as the section's citation key;
+exact target, where a GPU miss is expected and not a defect; the GPU explorer (a) for a statistical target, scored
+there, statistically or qualitatively only (the owner's confirmation of 30 Oct 2026, R-649: "statistical targets are
+scored on tier (a), exact targets on tier (b)"). *Was:* "the GPU explorer (a) is expected to agree statistically or
+qualitatively only, on the statistical targets." The heading's "inherit on GPU" is kept as the section's citation key;
 read it as this paragraph says.
 
 Don't validate Burrau/figure-eight on *both* precisions independently. **Validate the *physics* on the trustworthy f64 CPU reference** (against analytic/periodic/literature), and **separately the parity suite measures GPU against CPU**, within stated f32 tolerances. *Was:* "and **separately the parity suite proves GPU==CPU**. Compose:"
