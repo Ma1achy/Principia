@@ -677,11 +677,18 @@ does not settle it (R-369). Numbered RQ-622: the number before it is already hel
     relativistic runs included, and not a Newtonian-only number (B-2)." Its compare is "statistical (loose)", so the
     confirmed reading puts it on (a), and § 12.2's table row reads "(a)".
   - `docs/design/principia_dd_replication.md` § "12.2 Tiers": "A single chaotic trajectory set beside a figure (AA-4,
-    V-6, SP-1's structural comparison) is (b)." B-2 is one start, the Burrau pixel, which points to (b).
-  - The gap: by its compare B-2 is (a), the f32 GPU explorer; by its statement and by the single-trajectory clause it
-    is the CPU's, (b). Which instrument measures the exponent changes the number scored.
-  - The question: is B-2 scored on (a), on the CPU FTLE its statement names, or on both. The options are those above,
-    read for the CPU FTLE in place of the f64 Result.
+    V-6, SP-1's structural comparison) is (b)." B-2's published λ₁₀ is "fitted over all ζ, relativistic runs
+    included" (REQ-VAL-246's note): an FTLE fit over many runs from one start, the Burrau pixel, with a statistical
+    compare. Whether the clause reaches B-2 is part of the question, not a given.
+  - The gap: by its compare B-2 is (a), the f32 GPU explorer, by the owner's confirmed reading; its statement names the
+    CPU FTLE. Which instrument measures the exponent changes the number scored.
+  - The question: does § 12.2's single-trajectory clause reach B-2, a fit over many runs from one start; and is B-2
+    scored on (a), on the CPU FTLE its statement names, or on both.
+  - Options seen: (a) on tier (a), the GPU explorer's FTLE, with the statement's "measured with the CPU FTLE" changed
+    to match; (b) on the CPU FTLE, as the statement says, recorded as a stated exception to the tier rule or as the
+    single-trajectory clause's reach; (c) both: scored on tier (a), with the CPU FTLE run beside it and recorded as
+    information (an explained divergence between the two would be a precision-tier finding); (d) another, stated by
+    the owner.
   - Applied meanwhile: § 12.2's row reads "(a); its CPU FTLE: RQ-622"; REQ-VAL-246's statement is unchanged and it is
     held on this entry; TASK-M9-16's note and TASK-M9-37's "not scored" list name the hold. TASK-M9-16 still scores
     CH-1, B-1 and V-6.
