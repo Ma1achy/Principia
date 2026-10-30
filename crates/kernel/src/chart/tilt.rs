@@ -60,12 +60,12 @@ use crate::decode::{self, Decoded};
 use crate::generated::links::{LinkParams, LinkReal, Selection};
 use crate::payload::PayloadReal;
 
-/// `|τ|` at the dead zone of Lean each axis, in degrees.
-const RIGHT_ANGLE: f64 = 90.0;
-/// The total tip past which Tip as sheet wraps, in degrees (R-474 R3).
-const HALF_TURN: f64 = 180.0;
-/// A whole turn, in degrees.
-const TURN: f64 = 360.0;
+/// `|τ|` at the dead zone of Lean each axis, in degrees: the register's `tilt_right_angle` (R-474 R8).
+const RIGHT_ANGLE: f64 = crate::generated::constants::TILT_RIGHT_ANGLE;
+/// The total tip past which Tip as sheet wraps, in degrees: the register's `tilt_half_turn` (R-474 R3).
+const HALF_TURN: f64 = crate::generated::constants::TILT_HALF_TURN;
+/// A whole turn, in degrees: the register's `tilt_turn` (R-474 R3).
+const TURN: f64 = crate::generated::constants::TILT_TURN;
 
 /// The tilt map with one target and both angles set (R-474 R1, R5): recorded as `tilt_map=sheet|lean`.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
