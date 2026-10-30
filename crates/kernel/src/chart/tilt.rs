@@ -45,8 +45,9 @@
 //! **Past the square** (R-472 X3, X3a; R-512). The chart's own map and `validate` run on the tilted `(a, b)`, so its
 //! axes' types act there exactly as on an untilted chart, and nothing is written per chart; `d` needs no type. A repeat
 //! (past a period, over a pole) is the same system only where the type group's map leaves `d` unchanged, decided
-//! exactly on the stored angles ([`TiltSpec::normal_zero`]; R-554 L3); elsewhere the view is affine along that axis,
-//! and the shape sphere's pixel there is a system of its own ([`Tilted::pixel`]).
+//! exactly on the stored angles ([`TiltSpec::normal_zero`]; R-554 L3): past θ's period iff `N_a = 0`, at every `b`,
+//! the spherical map repeating in `s` for every `t`; over a pole iff `N_a = 0` and `N_b = 0`. Elsewhere the view is
+//! affine along that axis, and the shape sphere's pixel there is a system of its own ([`Tilted::pixel`]).
 //!
 //! **The rank-losing corner** (R-554, ruling RQ-471 (a); R-474 R7). Under Lean each axis with one target at
 //! `|τ₁| = |τ₂| = 90°`, decided exactly on the stored angles, the window maps onto one line of systems: the chart
@@ -622,9 +623,11 @@ where
     /// - Past the square the exponential map's bounded axes end the domain (R-512).
     /// - Past the square on the spherical map, the pixel is a repeat, not counted (`None`), only where the type group's
     ///   map leaves the hidden offset `d` unchanged (chart_decoder_contract § "Repeats and the canonical point"; R-554
-    ///   L3): past θ's period with `b` in `[0, 1]`, iff `N_a = 0`; over a pole, iff `N_a = 0` and `N_b = 0`, decided
-    ///   exactly on the stored angles ([`TiltSpec::normal_zero`]). Elsewhere the view is affine along that axis, its
-    ///   primary range unbounded, and the pixel is a system of its own, counted (R-512 F1, F3).
+    ///   L3): past θ's period, iff `N_a = 0`, at every `b`, the map being periodic in `s` for every `t`; over a pole,
+    ///   iff `N_a = 0` and `N_b = 0`, decided exactly on the stored angles ([`TiltSpec::normal_zero`]). Elsewhere the
+    ///   view is affine along that axis, its primary range unbounded, and the pixel is a system of its own, counted
+    ///   (R-512 F1, F3). A repeat `(s + k, t + 2j)` that keeps `d` while `N_a` and `N_b` are not both 0 is counted, as
+    ///   the ruled rule says (RQ-631).
     pub fn pixel(&self, u: f64, v: f64) -> Option<PixelCount> {
         let ([a, b], _) = self.at(u, v);
         let a_in = (0.0..=1.0).contains(&a);
@@ -632,7 +635,7 @@ where
         let [na, nb] = self.tilt.normal_zero;
         match self.chart.map {
             ShapeMap::Spherical => {
-                let repeat = if b_in { !a_in && na } else { na && nb };
+                let repeat = (!a_in && na) || (!b_in && na && nb);
                 (!repeat).then_some(PixelCount::System)
             }
             ShapeMap::Exponential if a_in && b_in => Some(self.chart.exp_pixel(a, b)),

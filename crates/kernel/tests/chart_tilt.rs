@@ -1019,6 +1019,82 @@ negative_control!(
     }
 );
 
+/// `τ₂ = 30°` alone (`N_a = 0`, `N_b ≠ 0`) about `[0.9, 0.85]`, a window past θ's period and the pole at once: the
+/// spherical map repeats in `s` for every `t`, so a pixel past θ's period is a repeat, uncounted, wherever its `b` lies,
+/// and one past the pole alone is affine, counted (R-554 L3; chart_decoder_contract § "Repeats and the canonical
+/// point"; R-408). The count is the window less its pixels with `a` outside `[0, 1]`.
+///
+/// `old` counts with the rule that applied θ's period only with `b` in `[0, 1]` (the control).
+fn check_period_and_pole(old: bool) {
+    let view = Tilted::new(
+        sphere(ShapeMap::Spherical),
+        Tilt::new(&spec(0.0, 30.0, TiltMap::Sheet, 3, 3), [0.9, 0.85], SPAN),
+    )
+    .unwrap();
+    // u over [0.6, 1.4], v over [0.55, 1.15]: past θ's period and the pole, each alone and both at once.
+    let window: Vec<[f64; 2]> = grid(21, 0.0, 1.0)
+        .iter()
+        .map(|&[u, v]| [0.6 + 0.8 * u, 0.55 + 0.6 * v])
+        .collect();
+    let inside = |x: f64| (0.0..=1.0).contains(&x);
+    let ab: Vec<[f64; 2]> = window.iter().map(|&[u, v]| view.at(u, v).0).collect();
+    let tally = |f: &dyn Fn(bool, bool) -> bool| {
+        ab.iter().filter(|&&[a, b]| f(inside(a), inside(b))).count()
+    };
+    assert!(
+        tally(&|a_in, b_in| !a_in && !b_in) > 20,
+        "too few pixels past both"
+    );
+    assert!(
+        tally(&|a_in, b_in| a_in && !b_in) > 20,
+        "too few pixels past the pole alone"
+    );
+    assert!(
+        tally(&|a_in, b_in| !a_in && b_in) > 20,
+        "too few pixels past θ's period alone"
+    );
+    let count = if old {
+        tally(&|a_in, b_in| a_in || !b_in) as u64
+    } else {
+        view.counted_total(window.iter().copied())
+    };
+    let past_period = tally(&|a_in, _| !a_in) as u64;
+    assert_eq!(
+        count,
+        window.len() as u64 - past_period,
+        "a repeat past θ's period and the pole at once is counted"
+    );
+    // Each pixel past both, and its partner one period back, keep n̂ and d: the partner counts, the pixel does not.
+    for (&[u, v], &[a, b]) in window.iter().zip(&ab) {
+        if !inside(a) && !inside(b) {
+            let counted = if old {
+                Some(PixelCount::System)
+            } else {
+                view.pixel(u, v)
+            };
+            assert_eq!(
+                counted, None,
+                "a repeat past θ's period and the pole at once is counted"
+            );
+        }
+    }
+}
+
+#[test]
+fn tilt_every_chart_shape_sphere_period_and_pole() {
+    check_period_and_pole(false);
+}
+
+negative_control!(
+    tilt_every_chart_shape_sphere_period_and_pole,
+    "a rule that applies θ's period only with b in [0, 1] counts a repeat past the period and the pole twice, so it \
+     must fail",
+    expected = "a repeat past θ's period and the pole at once is counted",
+    {
+        check_period_and_pole(true);
+    }
+);
+
 /// `[N_a = 0, N_b = 0]` on the stored angles (R-554 L3), at each arm's boundary.
 fn check_normal_zero(cases: &[(TiltSpec, [bool; 2])]) {
     for (s, want) in cases {
