@@ -998,7 +998,7 @@ negative_control!(
 );
 
 /// The Inspector's Randomise: masses in ratio within `[0.4, 1.8]`'s and summing to 1, positions within `±0.9`,
-/// velocities `pᵢ/mᵢ` within `±0.6`, each reaching across its range.
+/// velocities `pᵢ/mᵢ` within `±0.6`, each body's each component reaching across its range.
 fn check_randomise_ic(draw: fn(&mut SplitMix) -> Ic<f64>) {
     let mut rng = SplitMix::new(23);
     let xs: Vec<Ic<f64>> = (0..2000).map(|_| draw(&mut rng)).collect();
@@ -1026,20 +1026,13 @@ fn check_randomise_ic(draw: fn(&mut SplitMix) -> Ic<f64>) {
             "a velocity past 0.6: {v:?}"
         );
     }
-    let reach = |v: &mut dyn Iterator<Item = f64>, k: f64| {
-        let v: Vec<f64> = v.collect();
-        v.iter().any(|&x| x > k) && v.iter().any(|&x| x < -k)
+    let reach = |pick: &dyn Fn(&Ic<f64>) -> f64, k: f64| {
+        xs.iter().any(|x| pick(x) > k) && xs.iter().any(|x| pick(x) < -k)
     };
+    let each = (0..3)
+        .all(|i| (0..2).all(|k| reach(&|x| x.r[i][k], 0.8) && reach(&|x| x.p[i][k] / x.m[i], 0.5)));
     assert!(
-        reach(&mut xs.iter().flat_map(|x| x.r).flatten(), 0.8)
-            && reach(
-                &mut xs.iter().flat_map(|x| (0..3)
-                    .flat_map(|i| x.p[i].map(|p| p / x.m[i]))
-                    .collect::<Vec<_>>()),
-                0.5
-            )
-            && ratios.iter().any(|&q| q > 3.5)
-            && ratios.iter().any(|&q| q < 1.0 / 3.5),
+        each && ratios.iter().any(|&q| q > 3.5) && ratios.iter().any(|&q| q < 1.0 / 3.5),
         "the draws do not reach across their ranges"
     );
 }
