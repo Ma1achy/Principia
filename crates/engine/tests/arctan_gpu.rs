@@ -9,9 +9,9 @@
 //! accuracy against f64 `atan2` (`validation::arctan`).
 //! - `arctan_gpu_is_cpu`: the special values' pairs, every 1021st `t ∈ [0, 1]` of the reduced sweep, 2¹⁸ plane pairs
 //!   and the round trip's `(sin α, cos α)` for every 1021st `α ∈ [0, π/2]`, the decode's f32 `sin` and `cos` the CPU's.
-//! - `arctan_gpu_exhaustive`, ignored: every f32 `t ∈ [0, 1]` and every round trip, in dispatches of 2²² pairs, minutes
-//!   on Metal (applied per R-369: too slow for CI; run locally with `cargo test -p engine --test arctan_gpu --
-//!   --ignored`).
+//! - `arctan_gpu_exhaustive`, ignored: every f32 `t ∈ [0, 1]` and every round trip, in dispatches of 65535 × 64
+//!   pairs, minutes on Metal (applied per R-369: too slow for CI; run locally with `cargo test -p engine --test
+//!   arctan_gpu -- --ignored`).
 
 use std::path::{Path, PathBuf};
 
@@ -32,8 +32,8 @@ fn wgsl() -> String {
         .expect("target/spirv/kernel.wgsl: run `cargo xtask build-kernel` first")
 }
 
-/// The pairs one dispatch takes: within a dispatch's 65535 workgroups of 64.
-const BATCH: usize = 1 << 22;
+/// The pairs one dispatch takes: a dispatch's most workgroups, 65535, of 64.
+const BATCH: usize = 65535 * 64;
 
 /// The special values' pairs: every pair of signed zeros, subnormals, normals, the largest finite values, infinities
 /// and NaN.
