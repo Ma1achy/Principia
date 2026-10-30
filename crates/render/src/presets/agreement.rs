@@ -41,8 +41,9 @@ pub const NAME: &str = "Agreement |E(fragment-decode) − E₀|";
 
 /// REQ-COL-060's factor, in f32 `eps` of the conditioning-aware scale: `fixtures/gates/decode-agreement/gate.json`'s
 /// threshold, proposed by TASK-M2-29 from its measurement and provisional until the human confirms it at the M2 gate
-/// (R-71, R-182).
-pub const FACTOR: f32 = 256.0;
+/// (R-71, R-182): the smallest power of two at least three times the worst factor measured on the gate's lattices,
+/// up to 512² per chart, and its collision windows, on Metal and lavapipe (19.5 on Metal, `latent` at 512²).
+pub const FACTOR: f32 = 64.0;
 
 /// The factor's WGSL declaration, [`FACTOR`] written as a WGSL literal, so the shader compiles the one value.
 fn factor_wgsl() -> String {

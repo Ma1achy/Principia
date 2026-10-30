@@ -1,6 +1,6 @@
 {
   "gate": "decode-agreement",
   "inputs": ["healthy.json", "poles.json", "scrambled.json", "survey.json", "collision.json", "collision_per_operand.json"],
-  "threshold": { "value": 256, "requirement": "REQ-COL-060", "status": "provisional", "ruling": "R-71" },
+  "threshold": { "value": 64, "requirement": "REQ-COL-060", "status": "provisional", "ruling": "R-71" },
   "min_regions": { "value": null, "requirement": "REQ-DEC-043" }
 }
