@@ -826,28 +826,39 @@ and the decode/encode translated to WGSL from the one Rust source (R-116):
   `κᵢⱼ` at `1/eps`. It is relative at every size of `wᵢⱼ`: at `wᵢⱼ < 1` the f32 separation keeps digits down to
   `eps·wᵢⱼ`, not `eps`, and a floor held at `eps` there would stop the term growing while the f32 difference grows as
   `1/rᵢⱼ²`, short of it by about `1/wᵢⱼ²` (TASK-M2-29, applied per R-369). `δ` only keeps `ŝᵢⱼ` positive where both
-  positions are 0, and acts on no decoded system: with the centre of mass at 0 and `I = 1`, the third body `k` has
-  `m_k‖r_k‖ ≤ max(‖rᵢ‖, ‖rⱼ‖)`, so `wᵢⱼ ≥ √m_k/2`, at least `2⁻²²` over the mass floors below. The max-norm is within
+  positions are 0, and acts on no decoded system whose masses are all at least `2⁻⁶²`: with the centre of mass at 0
+  and `I = 1`, the third body `k` has `m_k‖r_k‖ ≤ max(‖rᵢ‖, ‖rⱼ‖)`, so `wᵢⱼ ≥ √m_k/2`, at least `δ` there, and at least
+  `2⁻²²` over the mass floors below (the links', and the Burrau charts' at their default and proposed ranges). The max-norm is within
   `√2` of the Euclidean either way, so where `ŝᵢⱼ` is the separation the sum is within a factor 2 of
-  `Σ mᵢmⱼ(‖rᵢ‖ + ‖rⱼ‖)/rᵢⱼ²`, which the factor absorbs. **The sum is finite at every pixel, wherever `V` is and at
-  the pole too (R-436).** Each term is at most `2⁷⁶`: since `ŝᵢⱼ ≥ eps·max(wᵢⱼ, δ)`, `wᵢⱼ/ŝᵢⱼ ≤ 1/eps`, and since the
+  `Σ mᵢmⱼ(‖rᵢ‖ + ‖rⱼ‖)/rᵢⱼ²`, which the factor absorbs. **The sum is finite at every pixel whose masses all exceed
+  `2⁻¹²⁴`, wherever `V` is and at the pole too (R-436).** Each term is at most `2⁷⁶`: since `ŝᵢⱼ ≥ eps·max(wᵢⱼ, δ)`, `wᵢⱼ/ŝᵢⱼ ≤ 1/eps`, and since the
   masses lie on `[0, 1]` with `M = 1`, `mᵢmⱼ ≤ 1/4` and `mᵢmⱼ/ŝᵢⱼ ≤ 1/(4·eps·δ) = 2⁵³`. There is no division by zero,
   since `ŝᵢⱼ ≥ eps·δ = 2⁻⁵⁵` even where a separation is 0, so no separation need be nonzero. Nor does any intermediate
   overflow, whatever association a fast-math compiler picks (it may form `mᵢmⱼ·wᵢⱼ/ŝᵢⱼ²`): with positions below `2⁶²` in
   magnitude, `wᵢⱼ < 2⁶³`, `2⁻¹¹⁰ ≤ ŝᵢⱼ² < 2¹²⁶`, `mᵢmⱼ·wᵢⱼ < 2⁶¹` and `wᵢⱼ/ŝᵢⱼ² ≤ 2⁷⁸`; one that flushes to 0 is below
-  `2⁻¹²⁶`, nothing beside the scale's `max(·, 1)` terms. **The positions are below `2⁶²`** for every mass a decode
-  reaches. Under `I = 1`, `mᵢ‖rᵢ‖² ≤ 1`, so `‖rᵢ‖ ≤ 1/√mᵢ`, below `2⁶²` wherever `mᵢ > 2⁻¹²⁴`. The masses are floored
-  far above that (`principia_dd_decoder.md` §3.1; the link registry, `principia_dd_generation_root.md` §3.9):
+  `2⁻¹²⁶`, nothing beside the scale's `max(·, 1)` terms. **The positions are below `2⁶²`** wherever the masses
+  exceed `2⁻¹²⁴`. Under `I = 1`, `mᵢ‖rᵢ‖² ≤ 1`, so `‖rᵢ‖ ≤ 1/√mᵢ`, below `2⁶²` wherever `mᵢ > 2⁻¹²⁴`. The mass links
+  floor every mass far above that (`principia_dd_decoder.md` §3.1; the link registry,
+  `principia_dd_generation_root.md` §3.9), and a Burrau chart's masses are floored by its own range:
   - `stick_breaking`'s `s` and `u` lie on `[ε_μ/2, 1 − ε_μ/2]`, `ε_μ = 10⁻⁶`, so each mass is at least
     `ε_μ²/4 = 2.5×10⁻¹³`;
   - `softmax_tanh`'s `|μₖ| ≤ μ_max`, at most 10 (R-597, REQ-GEN-038), gives each mass at least
     `e^−μ_max/(1 + e^−μ_max + e^μ_max)`, about `2×10⁻⁹` at 10 and `4.5×10⁻⁵` at the default 5;
   - the ternary plot's buffer gives each mass at least `ε_m = 10⁻⁴` on the simplex (`principia_chart_reference.md`
     §4.5);
-  - the Burrau family sets `γ(ν)`'s masses, positive on its range `[ν_min, ν_max]` inside `(0, 1)`, the least of order
-    `ν_min` or `1 − ν_max` (`principia_chart_reference.md` §4.3).
+  - the Burrau family's masses at `ν` are `(1 + ν²)/(2 + 2ν)`, `ν/(1 + ν)` and `(1 − ν)/2` (`principia_chart_reference.md`
+    §4.2, `m = side/(a + b + c)` with `a + b + c = 2 + 2ν`, §4.3), the first at least `√2 − 1`, so on a `ν` range
+    `[ν_min, ν_max]` the least is `min(ν_min/(1 + ν_min), (1 − ν_max)/2)`: `1/64` at the Euclid plane's default
+    `[1/32, 31/32]` (§4.5). The acute-angle charts' `ν(θ) = cos θ/(1 + sin θ)` lies on `[√2 − 1, 1)` and falls as `θ`
+    grows, so their least is `(1 − ν(θ_min))/2`, about `1/64` at the `θ_min` REQ-CHART-045 proposes, the acute angle of
+    `ν = 31/32`; the `δm` strip blends those masses toward its target, its least at least the smaller of the two's,
+    the same at the default equal-mass target. These floors are the ranges', not the links': §4.5 gives the ranges as
+    defaults inside `(0, 1)`, with no lower bound on `ν_min`, `1 − ν_max` or `θ_min`.
 
-  So at the links' least floor `‖rᵢ‖ ≤ 1/√(2.5×10⁻¹³) = 2×10⁶`, below `2²¹`. The positions are finite where the masses
+  So over the links' floors and the Burrau charts' default and proposed ranges, the least mass is `2.5×10⁻¹³` and
+  `‖rᵢ‖ ≤ 1/√(2.5×10⁻¹³) = 2×10⁶`, below `2²¹`. On a Burrau range set nearer the ends of `(0, 1)`, the bound
+  `‖rᵢ‖ < 2⁶²`, and with it the sum's finiteness above, holds while the range's least mass exceeds `2⁻¹²⁴`, and `δ` stays
+  inert while it is at least `2⁻⁶²`; a range past those is outside this argument. The positions are finite where the masses
   are finite and nonzero; a mass rounded to 0, or a non-finite one, would give a non-finite `r`. The preset tests `m`
   and `r` on their bits as it does `K` and `V`, so such a pixel draws the invalid colour. `F` is calibrated in this
   scale (REQ-COL-060).
