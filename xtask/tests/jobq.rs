@@ -788,7 +788,8 @@ fn unrecorded_start_case(tag: &str, ago: u64) {
     let (code, out) = q.wait(1);
     let left = alive(pid);
     if left {
-        kill("-9", pid);
+        // The group, so the stand-in's `sleep` goes with it.
+        kill("-9", -pid);
     }
     let _ = reaper.join();
     q.finish();
