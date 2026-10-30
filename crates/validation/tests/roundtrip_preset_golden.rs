@@ -20,8 +20,8 @@
 //!   finite one keeps its tag and its small ratio; an invalid sample's colour is the hatch at its pixel's centre.
 //!   Control: a finite momentum.
 //! - `roundtrip_preset_clamp_band`: on the clamp-framed latent chart, `clamp_ambiguous` finds exactly the samples with
-//!   a control within `CLAMP_BAND` (a quarter `ε`) of its clamp, some and fewer than a quarter of them. Control: a band
-//!   twice as wide.
+//!   a control within `CLAMP_BAND` (a quarter `ε`) of its clamp, some and fewer than a quarter of them; `at_clamp`'s
+//!   band is open, its edges outside. Control: a band twice as wide.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -33,8 +33,8 @@ use validation::decode_preset::{quantise, GOLDEN_MARGIN};
 use validation::golden_scene::tie_margin;
 use validation::negative_control;
 use validation::roundtrip_preset::{
-    clamp_ambiguous, clamp_frame, colours, expected, golden, golden_name, phys_of, twin_of, twins,
-    CHARTS, CLAMP_BAND, GOLDEN_DEPTH, GOLDEN_SIDE, GOLDEN_SUITE,
+    at_clamp, clamp_ambiguous, clamp_frame, colours, expected, golden, golden_name, phys_of,
+    twin_of, twins, CHARTS, CLAMP_BAND, GOLDEN_DEPTH, GOLDEN_SIDE, GOLDEN_SUITE,
 };
 
 fn suite() -> PathBuf {
@@ -372,6 +372,26 @@ fn check_band(band: f64) {
 fn roundtrip_preset_clamp_band() {
     assert_eq!(CLAMP_BAND, 0.25);
     check_band(CLAMP_BAND);
+    // The band's edges, exact in f64, are outside it; just inside them, and the clamp itself, inside.
+    let at = |k: usize, v: f64| {
+        let mut m = [1.0e6; 8];
+        m[k] = v;
+        at_clamp(&m)
+    };
+    for k in 0..8 {
+        assert!(
+            !at(k, 1.25) && !at(k, 0.75),
+            "control {k}: a band edge is inside the band"
+        );
+        assert!(
+            at(k, 1.2499) && at(k, 0.7501) && at(k, 1.0),
+            "control {k}: inside the band is outside it"
+        );
+        assert!(
+            !at(k, 2.0) && !at(k, 0.0),
+            "control {k}: far from the clamp is inside the band"
+        );
+    }
 }
 
 negative_control!(

@@ -261,6 +261,12 @@ pub fn colours(scene: &Scene, twins: &[Twin]) -> Vec<[f64; 3]> {
 /// is at most `2⁻²⁴`, 0.06 `ε` at `ε = 10⁻⁶`, and the encode recomputes it within a few of those.
 pub const CLAMP_BAND: f64 = 0.25;
 
+/// Whether a control whose margins are `m` (`crate::roundtrip::margins`, 1 at the clamp) lies within [`CLAMP_BAND`] of
+/// its clamp, the band's edges outside it.
+pub fn at_clamp(m: &[f64; 8]) -> bool {
+    m.iter().any(|m| (m - 1.0).abs() < CLAMP_BAND)
+}
+
 /// The samples of `scene` whose class could fall on either side of a clamp, each with its controls' margins: a control
 /// of the decoded state within [`CLAMP_BAND`] of its clamp (`crate::roundtrip::margins`, 1 at the clamp), so a golden
 /// holds none.
@@ -283,7 +289,7 @@ pub fn clamp_ambiguous(scene: &Scene) -> Result<Vec<(u32, [f64; 8])>, String> {
             other => return Err(format!("no ROUNDTRIP scene draws {other:?}")),
         };
         let m = margins(&widen(&x));
-        if m.iter().any(|m| (m - 1.0).abs() < CLAMP_BAND) {
+        if at_clamp(&m) {
             out.push((q, m));
         }
     }

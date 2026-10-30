@@ -9,7 +9,8 @@
 //!   be untagged or clamped. The framed chart shows clamps and the `(L_z, E)` chart feasibility tags. Control: a trip
 //!   whose free decode reads the encode's `z` with one momentum control moved by 0.05 is past `ε_phys`.
 //! - `roundtrip_preset_golden_renders_its_reference`: each golden scene's render, through the harness and through the
-//!   `golden_harness` binary, quantised as the golden runner quantises, is its CPU trip's image, pixel for pixel; and
+//!   `golden_harness` binary, quantised as the golden runner quantises, is its CPU trip's image, pixel for pixel, and its
+//!   words view's classes are the CPU trip's, sample for sample; and
 //!   each scene's name finds its chart and no other's. Control: one chart's render held to the other's CPU trip.
 //! - `roundtrip_preset_wgsl_is_the_twin`: the view's `roundtrip_class` on every case of the class table and its
 //!   `roundtrip_colour` at the brightness's breakpoints, each class, are the CPU twins' (`Class::of`, `colour`).
@@ -23,8 +24,8 @@ use validation::decode_preset::Scene;
 use validation::gpu::GpuHarness;
 use validation::negative_control;
 use validation::roundtrip_preset::{
-    clamp_ambiguous, clamp_frame, expected, golden, golden_chart, golden_name, render, trips_view,
-    twins, CHARTS,
+    clamp_ambiguous, clamp_frame, expected, golden, golden_chart, golden_name, render, trips,
+    trips_view, twins, CHARTS,
 };
 
 /// A scene of `side` × `side` one-pixel samples over `chart` at `uniforms`, its `u` extent `extent`.
@@ -149,6 +150,20 @@ fn check_golden(against: fn(DecodeChart) -> DecodeChart) {
             "{chart:?}'s scene name"
         );
         let scene = golden(chart).unwrap();
+        let classes: Vec<Class> = trips(&scene, gpu.device(), gpu.queue())
+            .unwrap()
+            .iter()
+            .map(|t| t.class)
+            .collect();
+        let cpu: Vec<Class> = twins(&golden(against(chart)).unwrap())
+            .unwrap()
+            .iter()
+            .map(|t| t.class)
+            .collect();
+        assert_eq!(
+            classes, cpu,
+            "{chart:?}: the rendered golden is not the CPU trip's, its classes differ"
+        );
         let pixels = render(&scene, gpu.device(), gpu.queue()).unwrap();
         let got = quantise(
             &pixels

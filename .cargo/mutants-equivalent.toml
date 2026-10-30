@@ -310,3 +310,7 @@ justification = "at t_target == t_now both arms give a span of 0 (t_target - t_n
 [[equivalent]]
 mutant = "crates/kernel/src/driver/cadence.rs:45:9: replace <impl Cadence<R> for WrapperCadence>::done -> bool with false"
 justification = "done is only ever set from detect, which returns the constant false until TASK-M3-09 fills it (collision), so WrapperCadence::done is always false; TASK-M3-09 removes this entry with the hook"
+
+[[equivalent]]
+mutant = "crates/render/src/presets/roundtrip.rs:127:9: replace | with ^ in tags"
+justification = "a decode's tag word is kernel::stage::decode::tag's 0 to 5, below 256, so tag and tag_free << 8 share no bit and their ^ is their |"
