@@ -26,7 +26,7 @@
 //! or `wait` starts a runner, which takes the lock over. A new runner ends the process group of every job still marked
 //! running (a dead runner's), then queues it again, or marks it lost after [`MAX_ATTEMPTS`] starts. A job runs in a
 //! process group of its own; past its timeout, or when cancelled, the runner sends the group SIGTERM, then SIGKILL
-//! after `grace` seconds. A runner with nothing queued or running for `idle` seconds exits, so none is left behind.
+//! after `grace` seconds; and whenever the job's own process ends, the runner kills what is left of its group. A runner with nothing queued or running for `idle` seconds exits, so none is left behind.
 //!
 //! While it runs, the runner reads `ps` every `sample` seconds and logs to `violations.log` each heavy process
 //! ([`heavy`]) that no queue job started, with its pid, cwd and command. It never kills one.
@@ -1009,15 +1009,19 @@ impl Runner {
                 continue;
             };
             let pgid = job.pgid.unwrap_or(0);
-            if let Some(status) = running
-                .child
-                .try_wait()
-                .map_err(|e| format!("job {}: cannot wait: {e}", job.id))?
-            {
-                if running.ending.is_some() {
-                    // What it left of its group goes with it.
-                    signal_group(pgid, rustix::process::Signal::KILL);
-                }
+            // The leader is seen to have exited before it is reaped: while it is a zombie its pid, and so its group's id,
+            // can't be reused, so the kill below reaches only what the job left of its group.
+            let exited = if leader_exited(running.child.id()) {
+                // What the job left of its group goes with it, however it ended, so nothing it started outlives it.
+                signal_group(pgid, rustix::process::Signal::KILL);
+                running
+                    .child
+                    .try_wait()
+                    .map_err(|e| format!("job {}: cannot wait: {e}", job.id))?
+            } else {
+                None
+            };
+            if let Some(status) = exited {
                 job.exit = Some(
                     status
                         .code()
@@ -1186,6 +1190,17 @@ fn signal_group(pgid: i32, signal: rustix::process::Signal) {
     if let Some(group) = rustix::process::Pid::from_raw(pgid) {
         let _ = rustix::process::kill_process_group(group, signal);
     }
+}
+
+/// Whether child `pid` has exited, without reaping it (`waitid` with `WNOWAIT`). An error (no such child) counts as
+/// exited, so the caller's `try_wait` reports it.
+fn leader_exited(pid: u32) -> bool {
+    use rustix::process::{waitid, Pid, WaitId, WaitIdOptions};
+    let Some(pid) = i32::try_from(pid).ok().and_then(Pid::from_raw) else {
+        return true;
+    };
+    let options = WaitIdOptions::EXITED | WaitIdOptions::NOHANG | WaitIdOptions::NOWAIT;
+    !matches!(waitid(WaitId::Pid(pid), options), Ok(None))
 }
 
 /// When process `pid` started, as `ps -o lstart=` gives it.

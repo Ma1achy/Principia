@@ -403,9 +403,45 @@ fn jobq_timeout_kills_the_whole_group() {
 
 negative_control!(
     jobq_timeout_kills_the_whole_group,
-    "a job that exits by itself is not ended by its timeout, and its background child lives on",
+    "a job that exits by itself ends with its own status, 0, not by its timeout",
     expected = "job not ended by its timeout",
     timeout_case("jobq_timeout_control", true)
+);
+
+/// A job that starts a background `sleep 60` (with `escape`, in a process group of its own) and exits 0 at once: it
+/// must end with status 0, and its background child, left in its group, must be killed when the runner reaps it.
+fn finished_group_case(tag: &str, escape: bool) {
+    let q = Q::new(tag, "");
+    let child = if escape {
+        "perl -e 'setpgrp(0,0); exec @ARGV' sleep 60"
+    } else {
+        "sleep 60"
+    };
+    let script = format!("{child} & echo $! > child.pid; exit 0");
+    let id = q.submit("build", "finished", &[], &["sh", "-c", &script]);
+    let (code, out) = q.wait(id);
+    let child = read_pid(&q.work().join("child.pid"));
+    let child_alive = !until(5, || !alive(child));
+    if child_alive {
+        kill("-9", child);
+    }
+    q.finish();
+    assert!(
+        code == 0 && !child_alive,
+        "a finished job's group outlived it: status {code}, {out:?}, child alive {child_alive}"
+    );
+}
+
+#[test]
+fn jobq_a_finished_jobs_group_is_killed() {
+    finished_group_case("jobq_finished", false);
+}
+
+negative_control!(
+    jobq_a_finished_jobs_group_is_killed,
+    "a child that left the job's process group survives the group's kill, and the check sees it",
+    expected = "a finished job's group outlived it",
+    finished_group_case("jobq_finished_control", true)
 );
 
 // --- Stale runner locks expire ------------------------------------------------------------------------------------
