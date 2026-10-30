@@ -1257,33 +1257,21 @@ pub fn current(rect: Rect, sim: &SimConfig, compass: &Compass) -> Drawing {
     drawn
 }
 
-/// Draws the compass in `rect`, taking its drags and its buttons' clicks: the Cube view's cube and its drags, or the
-/// Plücker view's grid, its position readout and its cells' clicks, or the Jacobi and Shape views' note; beside it the
-/// title, the Tilt and Slice buttons, the view buttons, the view's readout and its hint.
-pub fn show(
-    ui: &mut Ui,
+/// Takes the compass's drag in `rect` this frame and returns its edit, the command it sends to `out`, empty where it
+/// sends none. It runs before anything showing the plane is drawn, so the Manifold view's sliders, the readout and the
+/// snapshot all read the drag's target in the frame the pointer moves (REQ-GUI-206); [`show`] then draws the compass.
+pub fn take(
+    ui: &Ui,
     rect: Rect,
     sim: &SimConfig,
-    keyboard: &mut Keyboard,
     scratch: &mut Scratch,
     out: &mut Out,
-) {
-    let visuals = ui.visuals().clone();
-    ui.painter().rect_filled(rect, 0.0, visuals.panel_fill);
-    ui.painter().rect_stroke(
-        rect,
-        0.0,
-        visuals.widgets.noninteractive.bg_stroke,
-        egui::StrokeKind::Inside,
-    );
-    keyboard.place(COMPASS, rect);
+) -> Vec<SetField> {
     let square = square(rect);
-    keyboard.place(COMPASS_VIEW, square);
     let (plane, frame) = (&sim.plane, &sim.slice.frame);
-    let view = scratch.compass.view;
     // In a grid view a drag does nothing (R-452 C1): the cube takes none.
     let mut pending: Vec<SetField> = Vec::new();
-    if view == CompassView::Cube {
+    if scratch.compass.view == CompassView::Cube {
         let response = ui.interact(square, egui::Id::new("compass cube"), Sense::drag());
         if response.drag_started() {
             scratch.compass.drag = Some(Drag::start(scratch.compass.mode, plane, frame));
@@ -1311,7 +1299,35 @@ pub fn show(
     } else {
         scratch.compass.drag = None;
     }
-    let target = Shown::of(&after(plane, &pending), frame);
+    pending
+}
+
+/// Draws the compass in `rect` and takes its buttons' clicks, `pending` the edit [`take`] sent this frame: the Cube
+/// view's cube, or the Plücker view's grid, its position readout and its cells' clicks, or the Jacobi and Shape views'
+/// note; beside it the title, the Tilt and Slice buttons, the view buttons, the view's readout and its hint.
+pub fn show(
+    ui: &mut Ui,
+    rect: Rect,
+    sim: &SimConfig,
+    pending: &[SetField],
+    keyboard: &mut Keyboard,
+    scratch: &mut Scratch,
+    out: &mut Out,
+) {
+    let visuals = ui.visuals().clone();
+    ui.painter().rect_filled(rect, 0.0, visuals.panel_fill);
+    ui.painter().rect_stroke(
+        rect,
+        0.0,
+        visuals.widgets.noninteractive.bg_stroke,
+        egui::StrokeKind::Inside,
+    );
+    keyboard.place(COMPASS, rect);
+    let square = square(rect);
+    keyboard.place(COMPASS_VIEW, square);
+    let (plane, frame) = (&sim.plane, &sim.slice.frame);
+    let view = scratch.compass.view;
+    let target = Shown::of(&after(plane, pending), frame);
     let dt = ui.input(|i| f64::from(i.unstable_dt));
     let shown = Shown::eased(scratch.compass.shown, target, dt);
     scratch.compass.shown = Some(shown);
@@ -1324,7 +1340,7 @@ pub fn show(
         CompassView::Cube => {
             // The readout reads the frame's target: the plane as this frame's edit leaves it.
             let mut targeted = sim.clone();
-            targeted.plane = after(plane, &pending);
+            targeted.plane = after(plane, pending);
             let drawing = current(rect, &targeted, &scratch.compass);
             paint(&painter, &visuals, &drawing);
             let hint = match scratch.compass.mode {

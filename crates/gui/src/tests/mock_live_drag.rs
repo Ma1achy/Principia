@@ -14,11 +14,13 @@
 //! Each check also runs, in its test, on an input it must reject (R-176, through `rejects`; gui has no route to
 //! `negative_control!`, `support`'s note): the trace a GUI with the fault would leave.
 
-use eframe::egui::{self, accesskit::Role, Event, Modifiers, PointerButton, Pos2, Rect, Vec2};
+use eframe::egui::{
+    self, accesskit::Role, Event, FullOutput, Modifiers, PointerButton, Pos2, Rect, Vec2,
+};
 use engine::contract::sim_config::{Latent, Plane};
 
 use super::compass_support::{app_at, drawing, plane, square, view};
-use super::support::{nodes, press, rejects, Node, SLICE_FRAME};
+use super::support::{nodes, nodes_of, press, rejects, Node, SLICE_FRAME};
 use crate::app::App;
 use crate::explore::compass::{self, after, angle_text, drag_edit, signed, Drag};
 use crate::explore::manifold_view::tilt::Angles;
@@ -96,7 +98,7 @@ fn same_plane(a: &Plane, b: &Plane, tol: f64) -> bool {
 // --- mock_live_compass_drag (REQ-GUI-206) ----------------------------------------------------------------------------
 
 /// What one frame of a compass drag left: the plane the snapshot holds and the drag's target at that frame, the
-/// Manifold view's slider as the next frame drew it and the value it should read, the compass's readout and the line it
+/// Manifold view's slider as the frame the pointer moved drew it and the value it should read, the compass's readout and the line it
 /// should hold, the undo depth, and the edits the frame applied.
 #[derive(Clone, Debug)]
 struct Seen {
@@ -160,21 +162,28 @@ fn compass_drag(mode: Touch, step: Vec2) -> Trace {
             ),
         }
     };
-    let seen = |app: &mut App<MockSide>, h: &mut Headless, delta: Vec2, before: u64| {
+    // `drawn` is the frame the pointer moved: its slider is read as that frame drew it, not a later frame's.
+    let seen = |app: &mut App<MockSide>,
+                h: &mut Headless,
+                drawn: &FullOutput,
+                delta: Vec2,
+                before: u64| {
         let edits = applied(app) - before;
         let (target, want_slider, want_line) = target(delta);
         let plane = held(app);
         let depth = app.snapshot().history.undo_depth;
-        // A still frame, the pointer held: the controls drawn from the snapshot, and no edit.
+        let slider = slider_value(app, &nodes_of(drawn), slider_id);
+        let readout = drawing(h, app).readout;
+        // A still frame, the pointer held: no edit.
         let still = applied(app);
-        let drawn = nodes(h, app);
+        let _ = h.frame(app, Vec::new());
         assert_eq!(applied(app), still, "a frame with no move sent an edit");
         Seen {
             plane,
             target,
-            slider: slider_value(app, &drawn, slider_id),
+            slider,
             want_slider,
-            readout: drawing(h, app).readout,
+            readout,
             want_line,
             depth,
             edits,
@@ -184,20 +193,20 @@ fn compass_drag(mode: Touch, step: Vec2) -> Trace {
     for k in 1..=FRAMES {
         let before = applied(&mut app);
         let delta = step * k as f32;
-        let _ = h.frame(&mut app, vec![Event::PointerMoved(from + delta)]);
-        frames.push(seen(&mut app, &mut h, delta, before));
+        let drawn = h.frame(&mut app, vec![Event::PointerMoved(from + delta)]);
+        frames.push(seen(&mut app, &mut h, &drawn, delta, before));
     }
     // Two pointer events in one frame: one edit, at the second.
     let before = applied(&mut app);
     let (mid, last) = (step * (FRAMES as f32 + 0.5), step * (FRAMES as f32 + 1.0));
-    let _ = h.frame(
+    let drawn = h.frame(
         &mut app,
         vec![
             Event::PointerMoved(from + mid),
             Event::PointerMoved(from + last),
         ],
     );
-    let two_events = seen(&mut app, &mut h, last, before);
+    let two_events = seen(&mut app, &mut h, &drawn, last, before);
     let _ = h.frame(&mut app, vec![button(from + last, false)]);
     let _ = h.frame(&mut app, Vec::new());
     let end_depth = app.snapshot().history.undo_depth;
@@ -279,6 +288,17 @@ fn on_release(t: &Trace) -> Trace {
     c
 }
 
+/// The trace a GUI that draws the Manifold view before the compass takes its drag would leave: each frame's slider at
+/// the previous frame's target, 0 at the first.
+fn slider_behind(t: &Trace) -> Trace {
+    let mut c = t.clone();
+    let mut prev = 0.0;
+    for s in c.frames.iter_mut().chain([&mut c.two_events]) {
+        (s.slider, prev) = (prev, s.want_slider);
+    }
+    c
+}
+
 /// The trace a GUI whose drag pushes an undo entry a frame would leave.
 fn entry_per_frame(t: &Trace) -> Trace {
     let mut c = t.clone();
@@ -305,6 +325,9 @@ fn mock_live_compass_drag_slice_mode() {
     rejects("a drag that pushes an undo entry per frame", || {
         check_live(&entry_per_frame(&t))
     });
+    rejects("a slider drawn a frame behind the drag", || {
+        check_live(&slider_behind(&t))
+    });
 }
 
 #[test]
@@ -317,6 +340,9 @@ fn mock_live_compass_drag_tilt_mode() {
     });
     rejects("a drag that pushes an undo entry per frame", || {
         check_live(&entry_per_frame(&t))
+    });
+    rejects("a slider drawn a frame behind the drag", || {
+        check_live(&slider_behind(&t))
     });
 }
 

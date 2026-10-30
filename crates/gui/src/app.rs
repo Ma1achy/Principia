@@ -806,8 +806,27 @@ impl<S: EngineSide> App<S> {
         if let Some(at) = pin {
             self.pin_at(at);
         }
+        // The compass takes its drag before the Manifold view is drawn, and the view reads the plane as the drag's
+        // edit leaves it, so its sliders show the drag's target in the frame the pointer moves, with the snapshot and
+        // the compass's readout (REQ-GUI-206).
+        let pending = explore::compass::take(
+            ui,
+            layout.compass,
+            &self.snapshot.sim,
+            &mut self.manifold,
+            out,
+        );
+        let targeted;
+        let shown = if pending.is_empty() {
+            &self.snapshot
+        } else {
+            let mut snapshot = self.snapshot.clone();
+            snapshot.sim.plane = explore::compass::after(&snapshot.sim.plane, &pending);
+            targeted = snapshot;
+            &targeted
+        };
         let mut panel = explore::manifold_view::Panel {
-            snapshot: &self.snapshot,
+            snapshot: shown,
             scratch: &mut self.manifold,
             keyboard: &mut self.keyboard,
             focus: &self.view.focus.path,
@@ -819,6 +838,7 @@ impl<S: EngineSide> App<S> {
             ui,
             layout.compass,
             sim,
+            &pending,
             &mut self.keyboard,
             &mut self.manifold,
             out,
