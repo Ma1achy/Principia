@@ -57,7 +57,8 @@
 //! reports `ray-degenerate`, applies no fold, weights every pixel's area 0, and every share is undefined ([`share`]).
 //! Elsewhere the per-pixel area weight is Lean's Gram factor `√(|û₁|²|û₂|² − (û₁·û₂)²)` with one target, and 1 under
 //! Tip as sheet or with two targets, whose bases are orthonormal. The shape sphere has no fold at any tilt (R-544,
-//! R-613): its tilted view is bijective, each of its pixels counted once ([`Tilted::counted_total`]).
+//! R-613): its tilted view is bijective, each of its system pixels counted once and its pixels on `r = π` once per
+//! distinct hidden offset (REQ-CHART-090; [`Tilted::counted_total`]).
 
 use spirv_std::num_traits::{Float, FloatConst};
 

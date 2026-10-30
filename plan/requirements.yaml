@@ -3321,7 +3321,7 @@
 - id: REQ-CHART-078
   area: CHART
   kind: definition
-  statement: "How pixels of the shape sphere's exponential map exactly on r = π count must be defined: every such pixel maps to the one point −n0, so the map is not injective there; counted once, or as the domain's end. It is written into chart_reference §3.3 by the task that needs it and checked by the physics reviewer (R-72, R-503)."
+  statement: "How pixels of the shape sphere's exponential map exactly on r = π count must be defined: every such pixel maps to the one point −n0, so the map is not injective there; counted once, or as the domain's end. It is written into chart_reference §3.3 by the task that needs it and checked by the physics reviewer (R-72, R-503). That one point is one system, and one count, on the untilted view; a tilted view's pixels on r = π share that shape but keep their own hidden offsets, and count as REQ-CHART-090 defines."
   source:
   - file: decisions.md
     section: "R-503 — The shape sphere's exponential map takes its `system_image` from its cap: bijective within one closed hemisphere, a per-pixel fold when the cap straddles the equator; its radius is bounded at π, past it the domain's end *(closes RQ-371; amends R-141 for the exponential map)*"
@@ -3339,7 +3339,7 @@
   - R-503
   - R-544
   milestone: M2
-  note: "R-503, review round 1 of PR #258 (physics P6, applied per R-369). Written by TASK-M2-28. R-544 (21 Oct 2026): the equator is no longer a fold line, so \"like the equator\" goes; the choice stays REQ-CHART-078's definition."
+  note: "R-503, review round 1 of PR #258 (physics P6, applied per R-369). Written by TASK-M2-28. R-544 (21 Oct 2026): the equator is no longer a fold line, so \"like the equator\" goes; the choice stays REQ-CHART-078's definition. REQ-CHART-090 (PR #349, code review 5719919631, F3) adds the forward sentence at the statement's end; the statement before it is otherwise unchanged."
 - id: REQ-CHART-079
   area: CHART
   statement: "Past the chart's [0,1]², reached by navigation or by F3, the area statistics must be unchanged (R-537 EX7(g), R-408): each system counted once, at its canonical address, through the primary ranges, so that panning the view by one period changes neither \"forbidden in view\" nor W7's counts."
