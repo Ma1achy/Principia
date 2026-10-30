@@ -48,7 +48,7 @@ use validation::prop;
 // ── Precisions ──────────────────────────────────────────────────────────────────────────────────────────────────
 
 /// An instantiation under test.
-trait Q: ExactSign + LinkReal + Copy + Debug {
+trait Q: ExactSign + LinkReal + Copy + Debug + kernel::real::IeeeBits {
     /// Machine epsilon.
     const EPS: f64;
     /// The name in messages.

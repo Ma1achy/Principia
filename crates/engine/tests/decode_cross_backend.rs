@@ -19,6 +19,12 @@
 //!   §3.7's from that backend's own `V₀`, `E*`, `s` and `r_min_pair_0`; a disagreement between backends only where those
 //!   differ (precision, as §3.1 reads `M₀₁`); and a chart that forbids `η_E` ignoring the target on the GPU as on the
 //!   CPU.
+//! - `decode_parity_m01_crossings`: test 12 at `M01_TINY`'s onset crossings (TASK-M2-02's 40 000 points, one
+//!   dispatch; TASK-M2-48, REQ-DEC-011, REQ-VAL-017): the GPU's tag is the CPU form's (R-547) on the GPU's own emitted
+//!   masses at every point, and the native f32 decode's wherever the two emitted the same masses bit for bit.
+//! - `decode_parity_superseded`: REQ-VAL-017's control on those inputs: the superseded `fma(m₁, 1, m₀)`, its `×1`
+//!   folded and its add contracted, as a backend may evaluate it, gives a different tag from the block's on the CPU at
+//!   f32 at some crossing; unfused, it is the one rounded sum and flips none (RQ-621).
 //!
 //! The controls contaminate one branch input (PIT-9): the GPU's emitted `V₀` one float up, or its `M₀₁` read from a
 //! perturbed mass, so the bitwise comparison of a tag against its recomputation fails.
@@ -33,14 +39,15 @@ use engine::decode_dispatch::{decode_only_with, DecodeStage, DESCRIBE_ENTRY};
 use kernel::chart::invariant::{Invariant, InvariantChart};
 use kernel::chart::mixed::{Alpha, ZMu1};
 use kernel::chart::{
-    Burrau, BurrauThetaDeltaM, BurrauThetaK, BurrauThetaLz, Chart, EuclidPlane, Float, InvariantLE,
+    Burrau, BurrauThetaDeltaM, BurrauThetaK, BurrauThetaLz, Chart, EuclidPlane, InvariantLE,
     InvariantLK, Latent, MassSimplex, Mixed, ShapeMap, ShapeSphere, REGISTRY,
 };
 use kernel::decode::degenerate::Degenerate;
 use kernel::decode::energy_norm::largest;
 use kernel::decode::invariant::infeasible;
+use kernel::decode::mass::{self, from_masses};
 use kernel::generated::constants::ChartConstants;
-use kernel::generated::links::LinkReal;
+use kernel::generated::links::{Link, LinkReal, Literals, StickBreaking};
 use kernel::payload::PayloadReal;
 use kernel::stage::decode::{
     BurrauDefaults, BurrauThetaDeltaMDefaults, BurrauThetaKDefaults, BurrauThetaLzDefaults,
@@ -82,10 +89,11 @@ trait Q: LinkReal + PayloadReal + Into<f64> {}
 impl Q for f32 {}
 impl Q for f64 {}
 
-/// `M01_TINY` as dd_decoder §3.1 forms it from the emitted masses: `fma(m₁, 1, m₀) < ε_M01`.
+/// `M01_TINY` as the mass block forms it from the emitted masses, the CPU form at `R` (`kernel::decode::mass`; R-547):
+/// `ε_M01 > M₀₁`, `M₀₁` the one rounded sum `m₀ + m₁` in `Wide` arithmetic. Applied to a backend's own emitted masses,
+/// so a tag is compared on identical inputs (REQ-VAL-079; dd_decoder §3.1, "Its premise").
 fn m01_tag<R: Q>(m: [R; 3]) -> Option<Degenerate> {
-    let m01 = Float::mul_add(m[1], R::one(), m[0]);
-    (m01 < <R as ChartConstants>::EPS_M01).then_some(Degenerate::M01Tiny)
+    from_masses(m).degenerate
 }
 
 /// `η_E`'s tag (dd_decoder §3.7) from the emitted `V₀` and `r_min_pair_0`, the momenta's `s` before the rescale and the
@@ -1029,4 +1037,243 @@ negative_control!(
         gpu: |g| g.descriptor.V_0 = f32::from_bits(g.descriptor.V_0.to_bits() + 1),
         ..CLEAN
     })
+);
+
+// ── decode_parity: M₀₁ at the onset crossings ───────────────────────────────────────────────────────────────────
+
+/// The lines `z₁ ∈ [6.3, 20.3]` the onset crossings are bisected on (TASK-M2-02; `kernel`'s `decode_blocks`).
+const LINES: u32 = 20_000;
+
+/// `stick_breaking`'s forward at f32 in the generated op order (`kernel::generated::links`), stopped before its last
+/// multiply: `(m₀, t₇, t₁₃)`, with `m₁ = t₇·t₁₃`. Checked against the generated forward bit for bit where it is used.
+fn stick_parts(z: [f32; 2]) -> (f32, f32, f32) {
+    let sigmoid = |x: f32| 1.0 / (1.0 + (-x).exp());
+    let t0 = f32::LIT_3 * z[0];
+    let t4 = f32::LIT_1 * f32::EPS_MU * z[0].tanh();
+    let t8 = f32::LIT_3 * z[1];
+    let t12 = f32::LIT_1 * f32::EPS_MU * z[1].tanh();
+    (sigmoid(-t0) + t4, sigmoid(t0) - t4, sigmoid(-t8) + t12)
+}
+
+/// `M01_TINY`'s onset crossings at f32 (TASK-M2-02): on each of [`LINES`] lines `z₁ ∈ [6.3, 20.3]`, `z₀ ∈ [0, 30]`
+/// bisected to the adjacent pair where the CPU's emitted masses' one rounded sum crosses `ε_M01`, where one rounding
+/// decides the tag. Both points of every pair.
+fn crossings() -> Vec<[f32; 2]> {
+    let eps = mass::m01_epsilon::<f32>();
+    let mut out = Vec::with_capacity(2 * LINES as usize);
+    for k in 0..LINES {
+        let z1 = (6.3 + 14.0 * f64::from(k) / f64::from(LINES)) as f32;
+        let sum_tag = |z0: f32| {
+            let m = <StickBreaking as Link<2, 3>>::forward([z0, z1]);
+            m[0] + m[1] < eps
+        };
+        let (mut lo, mut hi) = (0.0f32, 30.0f32);
+        assert!(
+            !sum_tag(lo) && sum_tag(hi),
+            "no onset crossing on z₁ = {z1}"
+        );
+        loop {
+            let mid = (lo + hi) * 0.5;
+            if mid == lo || mid == hi {
+                break;
+            }
+            if sum_tag(mid) {
+                hi = mid;
+            } else {
+                lo = mid;
+            }
+        }
+        out.push([lo, z1]);
+        out.push([hi, z1]);
+    }
+    out
+}
+
+/// The latent chart that places `z_μ = (2u, 2v)` exactly, at f32 and f64 and fused or not: `z₀ = e₆ + e₇`, `q₁ = e₆`,
+/// `q₂ = e₇`, so `z₆ = 1 + (2u − 1)·1 + (2v − 1)·0`, and for `2u ≥ 2`, `2u − 1` and `1 + (2u − 1)` are exact (the
+/// products by 1 and 0 are exact, so a fused one rounds the same); likewise `z₇ = 2v`. The other controls are ±0.
+fn crossing_chart() -> Latent<f32> {
+    let e = |k: usize| core::array::from_fn(|i| if i == k { 1.0 } else { 0.0 });
+    let mut z0 = [0.0; 8];
+    (z0[6], z0[7]) = (1.0, 1.0);
+    Latent {
+        z0,
+        q1: e(6),
+        q2: e(7),
+    }
+}
+
+/// Test 12's batch at the onset crossings: [`crossing_chart`] at `(u, v) = z_μ/2` for every point of [`crossings`],
+/// each checked to place its `z_μ` exactly (every crossing lies at `z ≥ 2`).
+fn crossing_batch() -> Batch<Latent<f32>> {
+    let chart = crossing_chart();
+    let uv = crossings()
+        .into_iter()
+        .map(|z| {
+            assert!(
+                z[0] >= 2.0 && z[1] >= 2.0,
+                "a crossing at {z:?} lies below 2, where the chart does not place it exactly"
+            );
+            let uv = [z[0] * 0.5, z[1] * 0.5];
+            let placed = chart.map::<f32>(uv[0], uv[1]).z.z;
+            assert_eq!(
+                [placed[6], placed[7]],
+                z,
+                "the chart does not place the crossing {z:?} exactly"
+            );
+            uv
+        })
+        .collect();
+    (chart, uv)
+}
+
+/// What the crossings dispatch found.
+struct Crossings {
+    /// Points whose GPU masses are bit for bit the native f32 decode's, and how many of them each tag.
+    identical: usize,
+    tiny: usize,
+    clear: usize,
+}
+
+/// Decoder test 4's cross-backend half and test 12 at the onset crossings (REQ-DEC-011, REQ-VAL-017): the 40 000
+/// points of [`crossing_batch`] in one dispatch through `stick_breaking`'s latent entry point. At every point the GPU's
+/// tag is the CPU form's applied to the GPU's own emitted masses ([`m01_tag`], after `taint`): the two compared on
+/// identical inputs, so a one-ulp difference in the GPU's `tanh` or `exp` reads as precision, not as a fork
+/// (REQ-VAL-079; dd_decoder §3.1, "Its premise"). Where the GPU's masses are the native f32 decode's bit for bit, its
+/// tag is the native decode's. Both tags are reached.
+fn check_crossings(taint: fn(&mut DecodeOut<f32>)) -> Crossings {
+    let h = GpuHarness::new().expect("a GPU device");
+    let stage = DecodeStage::<LatentStickBreaking>::new(h.device(), &wgsl(), FastMath::default())
+        .expect("the decode stage's pipeline");
+    let (chart, uv) = crossing_batch();
+    let gpu = stage
+        .run_with(h.device(), h.queue(), &chart, DecodeMode::Full, None, &uv)
+        .expect("the decode dispatch");
+    let mut c = Crossings {
+        identical: 0,
+        tiny: 0,
+        clear: 0,
+    };
+    for (i, (out, p)) in gpu.iter().zip(&uv).enumerate() {
+        let mut g = *out;
+        taint(&mut g);
+        assert_eq!(
+            out.degenerate,
+            m01_tag(g.ic.m),
+            "the GPU's tag at crossing {i}, z_μ = ({}, {}): not the CPU form's on its emitted masses {:?}",
+            p[0] * 2.0,
+            p[1] * 2.0,
+            g.ic.m
+        );
+        let native = kernel::stage::decode::sample_with::<
+            Latent<f32>,
+            <LatentStickBreaking as DecodeVariant>::Links,
+            f32,
+        >(&chart, p[0], p[1], None);
+        if out.ic.m.map(f32::to_bits) == native.ic.m.map(f32::to_bits) {
+            c.identical += 1;
+            assert_eq!(
+                out.degenerate, native.degenerate,
+                "a fork at crossing {i}: identical masses, the GPU's tag differs from the native f32 decode's"
+            );
+        }
+        match out.degenerate {
+            Some(Degenerate::M01Tiny) => c.tiny += 1,
+            _ => c.clear += 1,
+        }
+    }
+    assert!(
+        c.tiny > 0 && c.clear > 0,
+        "the crossings reached one tag only on the GPU: {} M01_TINY, {} untagged",
+        c.tiny,
+        c.clear
+    );
+    eprintln!(
+        "decode_parity_m01_crossings: {} points on {}; {} tagged M01_TINY, {} untagged; {} with masses bit for bit the \
+         native f32 decode's",
+        gpu.len(),
+        h.adapter_info().name,
+        c.tiny,
+        c.clear,
+        c.identical
+    );
+    c
+}
+
+#[test]
+fn decode_parity_m01_crossings() {
+    check_crossings(clean);
+}
+
+negative_control!(
+    decode_parity_m01_crossings,
+    "an M₀₁ recomputed from the GPU's m₀ moved down by one ulp of ε must disagree with the GPU's tag at a crossing",
+    expected = "the GPU's tag at crossing",
+    {
+        check_crossings(|g| {
+            let eps = <f32 as ChartConstants>::EPS_M01;
+            g.ic.m[0] -= f32::from_bits(eps.to_bits() + 1) - eps;
+        });
+    }
+);
+
+/// A superseded form of `M₀₁` under an emulation of a backend: from the masses' last step `(m₀, t₇, t₁₃)`.
+type Emulated = fn(f32, f32, f32) -> f32;
+
+/// The explicit `fma(m₁, 1, m₀)` as a backend that folds the `×1` and contracts the add evaluates it:
+/// `fma(t₇, t₁₃, m₀)`, fused (dd_decoder §3.1, "Its premise").
+fn folded_fused(m0: f32, t7: f32, t13: f32) -> f32 {
+    t7.mul_add(t13, m0)
+}
+
+/// The explicit `fma(m₁, 1, m₀)` as a backend that does not fuse it evaluates it, a rounded product and an add (CI's
+/// lavapipe, RQ-298): `round(round(m₁·1) + m₀)`, the one rounded sum, so it never flips the tag (RQ-621).
+#[cfg(feature = "controls")]
+fn unfused(m0: f32, t7: f32, t13: f32) -> f32 {
+    let m1 = t7 * t13;
+    std::hint::black_box(m1 * 1.0) + m0
+}
+
+/// REQ-VAL-017's control on test 12's inputs: at the onset crossings ([`crossings`], the batch
+/// `decode_parity_m01_crossings` dispatches),
+/// the superseded form under `emulation`, evaluated on the CPU at f32, gives a different tag from the block's, the one
+/// rounded sum's, on at least one input. Returns how many.
+fn check_superseded(emulation: Emulated) -> usize {
+    let eps = mass::m01_epsilon::<f32>();
+    let mut flips = 0;
+    for z in crossings() {
+        let (m0, t7, t13) = stick_parts(z);
+        let m = <StickBreaking as Link<2, 3>>::forward(z);
+        assert_eq!(
+            [m[0], m[1]],
+            [m0, t7 * t13],
+            "the replica is not the generated forward at {z:?}"
+        );
+        flips += usize::from((emulation(m0, t7, t13) < eps) != m01_tag(m).is_some());
+    }
+    assert!(
+        flips > 0,
+        "the superseded form flips no tag at the {} crossings",
+        2 * LINES
+    );
+    flips
+}
+
+#[test]
+fn decode_parity_superseded() {
+    let flips = check_superseded(folded_fused);
+    eprintln!(
+        "decode_parity_superseded: fma(m₁, 1, m₀), the ×1 folded and the add contracted, flips {flips} of {} crossing \
+         tags at f32",
+        2 * LINES
+    );
+}
+
+negative_control!(
+    decode_parity_superseded,
+    "the superseded fma(m₁, 1, m₀) unfused is the one rounded sum and must flip no tag",
+    expected = "the superseded form flips no tag",
+    {
+        check_superseded(unfused);
+    }
 );
