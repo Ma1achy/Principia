@@ -28418,7 +28418,7 @@ this port.
   with an exact part and a statistical or qualitative part is scored on (b) for the first and on (a) for the second.
   One chaotic trajectory compared qualitatively with a figure (AA-4, V-6, SP-1's structural comparison) is the
   inspector's, (b). Five map targets whose verify names a Result at f64 (REQ-VAL-308, REQ-VAL-309, REQ-VAL-311,
-  REQ-VAL-312, REQ-VAL-313) bind (a) by the rule; how their f64 Result runs square with it is RQ-621, and their
+  REQ-VAL-312, REQ-VAL-313) bind (a) by the rule; how their f64 Result runs square with it is RQ-622, and their
   scoring waits on it. Every target requirement's note names its tier, and `docs/design/principia_dd_replication.md`
   § "12.2 Tiers" lists them. A GPU miss on a (b) target, or on a mixed target's (b) part, is expected, not a defect.
   *Was (the port's first reading, corrected by the owner's confirmation of 30 Oct 2026):* "statistical targets, and
@@ -28484,7 +28484,7 @@ this port.
 
 *Applied per R-369:*
 - The tier rule's reading for qualitative and mixed targets, and AA-4, V-6 and SP-1's structural comparison as (b),
-  as above (corrected 30 Oct 2026 to the owner's confirmation; RQ-621 for the five f64-Result map targets).
+  as above (corrected 30 Oct 2026 to the owner's confirmation; RQ-622 for the five f64-Result map targets).
 - The GPU-vs-CPU requirements read for their f32 tolerance as above; REQ-VAL-172 and REQ-VAL-173 get calibration
   requirements, and nothing else changes in them.
 - Item 4's ADR for a design change is a `decisions.md` ruling with a REVIEW_QUEUE entry before it, as every design

@@ -638,11 +638,12 @@ peek log's first row (`docs/verification/peek_log.md`), UNEXPLAINED, with this q
   `principia_dd_replication.md` § 5.10, the RQ-598 README § 6 and TASK-M3-62's note point here.
 - **Waits:** GG-1's per-point scoring against the Fig. 1 extraction (TASK-M3-62). BR-1 does not wait on it.
 
-## RQ-621: Five statistical or qualitative map targets whose verify names a Result at f64: are they scored on tier (a), the f32 GPU explorer, as R-649's confirmed reading says, or on the f64 Result their verify names *(physics; R-649 item 2 and the owner's confirmation of 30 Oct 2026; `docs/design/principia_dd_replication.md` § 12.2; REQ-VAL-308, REQ-VAL-309, REQ-VAL-311, REQ-VAL-312, REQ-VAL-313; context: TASK-M9-33, TASK-M9-34, TASK-M9-35)*
+## RQ-622: Five statistical or qualitative map targets whose verify names a Result at f64: are they scored on tier (a), the f32 GPU explorer, as R-649's confirmed reading says, or on the f64 Result their verify names *(physics; R-649 item 2 and the owner's confirmation of 30 Oct 2026; `docs/design/principia_dd_replication.md` § 12.2; REQ-VAL-308, REQ-VAL-309, REQ-VAL-311, REQ-VAL-312, REQ-VAL-313; context: TASK-M9-33, TASK-M9-34, TASK-M9-35)*
 
 *Queued 30 Oct 2026 by the fix round of R-649's port (PR #342), applying the owner's confirmation of the tier reading.
 For the owner: yes, it is physics where the choice changes which instrument a target is scored on, and the corpus
-does not settle it (R-369).*
+does not settle it (R-369). Numbered RQ-622: the number before it is already held by the branch
+`task/TASK-M2-48` (`plan/OPERATIONS.md` § "Merging", **Numbers**).*
 
 - **File, section:**
   - `decisions.md` § "R-649 — …", the owner's words, item 2: "(a) GPU explorer: fast, f32, interactive; expected to
@@ -667,7 +668,7 @@ does not settle it (R-369).*
   exception to the tier rule; (c) both: scored on tier (a), with the f64 Result run beside it and recorded as
   information (an explained divergence between the two would be a precision-tier finding); (d) another, stated by the
   owner.
-- **Applied meanwhile:** the five are listed as tier (a) by the rule, "its f64 Result: RQ-621", in § 12.2 and in their
+- **Applied meanwhile:** the five are listed as tier (a) by the rule, "its f64 Result: RQ-622", in § 12.2 and in their
   notes; their verify is unchanged. Nothing in M0 to M8 depends on it.
 - **Waits:** the scoring of REQ-VAL-308, REQ-VAL-309, REQ-VAL-311, REQ-VAL-312 and REQ-VAL-313 in M9 (TASK-M9-33,
   TASK-M9-34, TASK-M9-35), and any peek of them.
