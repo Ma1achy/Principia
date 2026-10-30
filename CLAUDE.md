@@ -45,9 +45,15 @@ Read this first; each rule points at its source.
   (`git worktree add --detach <dir> <head>`) and its own `CARGO_TARGET_DIR`, name both in the dispatch, and remove
   both when the reviewer is done (`git worktree remove`, then delete the target directory). The checks below run in
   that worktree, and qa's commit is pushed from it (`git push origin HEAD:task/<TASK-id>`).
-- Each agent builds with `CARGO_BUILD_JOBS=4` and `RUST_TEST_THREADS=4` (R-228). Reviewers run the tests their diff
-  touches plus dependents; CI runs the full suite; a full local run is only for a cross-cutting change. If the only new
-  commit since an approval is qa's test-only commit, the code reviewer re-checks that commit alone (R-229).
+- Never run heavy commands directly; submit to the queue (R-658; `plan/OPERATIONS.md` § "Resources"). Heavy is
+  anything that compiles: cargo build, check, test, clippy, doc and run, `cargo xtask` runners, cargo mutants, nextest,
+  benches and GPU tests. Light runs directly: docs, git, gh, grep, `python3` checks, `cargo fmt`, reading logs. Submit
+  with `"/Volumes/X10 Pro/Principia/orch/jobq/bin/xtask" job submit <worktree> --priority <merge|fix|build|peek>
+  --label <TASK-id> --env CARGO_TARGET_DIR=<target> -- <command>`, which prints a job id; `… job wait <id>` blocks,
+  prints the log path and exits with the job's status. Each job runs with cargo's jobs and test threads at the core
+  count, in place of R-228's four per agent. Reviewers run the tests their diff touches plus dependents; CI runs the
+  full suite; a full local run is only for a cross-cutting change. If the only new commit since an approval is qa's
+  test-only commit, the code reviewer re-checks that commit alone (R-229).
 - Before starting a build or reviewer, check free disk and memory pressure (`sysctl kern.memorystatus_vm_pressure_level`
   or `memory_pressure`), not swap, which macOS keeps allocated. At normal pressure (1), three agents may run; at
   warning (2), three as well unless the Mac is swapping, `vm_stat`'s page-outs having risen by more than 1000 in the

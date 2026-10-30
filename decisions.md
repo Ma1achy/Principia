@@ -2130,6 +2130,7 @@ Asked about three latent races of R-224's kind, none yet seen failing, the human
 *Applied:* the first race (`qa_TASK-M0-26.rs`'s r206 test spawning `qa_child` while sibling cargo runs rewrite it) is inside R-224's exception for that file, and qa's review of PR #35 found it blocking, so TASK-M0-31 fixes it. The other two go to TASK-M0-32 (new, REQ-VAL-164): `cargo build -p xtask` in `crates/validation/tests/support/qa_m0_21_fixture.rs:35` rewriting the `xtask` binary while sibling tests spawn it; and parallel copies of one fixture building into the shared outer target (`xtask/tests/controls.rs:63`, `qa_m0_21_fixture.rs:143`, `support/qa_m0_21.rs:16`, `crates/validation/tests/expected_message.rs:42`). The proof is R-224's: 20 whole-workspace runs in a row under load. Edits to qa's merged files are limited to the fix, under a one-round exception, with qa reviewing. TASK-M0-32 depends on TASK-M0-31, and TASK-M0-22 depends on TASK-M0-32 (both edit `xtask/tests/controls.rs`).
 
 ## R-228 — Each agent builds and tests with four jobs and four test threads
+*Superseded by R-658.*
 *28 Sep 2026 · applied in CLAUDE.md and the local build environment*
 
 "Each agent: CARGO_BUILD_JOBS=4 and RUST_TEST_THREADS=4."
@@ -28315,3 +28316,91 @@ The owner's ruling on R-636's RQ-605 clause, the same night, verbatim (recorded 
 withdrawn and don't name a ruling still to be ported, so none of their words changes here.
 
 R-648 is in the "process" group of `plan/rule_groups.yaml`. Changes no requirement.
+
+## R-658 — Heavy commands run only through a local job queue the orchestrator owns, `cargo xtask job`: agents submit them and wait, never run them directly; classes merge, fix, build and peek, first in, first out within each; one runner at a fixed concurrency, each job with cargo's jobs and test threads at the core count; jobs time out, stale locks expire and a new runner recovers a dead one's jobs; heavy processes outside the queue are logged; sccache measured again; mutants scoped to the diff and run through the queue *(supersedes R-228)*
+*30 Oct 2026 · the owner's message of that day; applied in `xtask/src/jobq.rs` and `xtask/tests/jobq.rs` (new),
+`xtask/src/lib.rs`, `xtask/src/main.rs`, `xtask/Cargo.toml`, `.cargo/mutants.toml`, `CLAUDE.md`, `plan/OPERATIONS.md`
+(§ "Dispatching", § "Reviewers", § "Resources", § "Paths and warm builds" and § "Logs"), the agent files in
+`.claude/agents/` and `plan/rule_groups.yaml`*
+
+The owner's words, verbatim:
+
+> Local build/test orchestration. Agents keep writing, reviewing and acting on results in parallel, but no agent runs heavy commands directly any more.
+> 1. Heavy = cargo build/check/test/clippy, cargo mutants, benches, GPU tests, xtask ci, and anything else that compiles. Light (docs, grep, python checks, reading logs) stays direct.
+> 2. Build one local job queue that you (the orchestrator) own, e.g. `xtask job submit <worktree> <command> --priority <p> --label <task>`. It returns a job id; `xtask job wait <id>` blocks, then returns exit status plus a log path. A small runner executes jobs with a fixed concurrency: start at 1 heavy job (2 if measurement shows it's faster), and cap cargo's -j to the core count, not per-agent. Use flock or a small daemon; keep it simple and robust to agent restarts (no orphaned locks: jobs time out, stale locks expire).
+> 3. Priority order: merge-ready verification of a final head > fix-round tests > new-task builds > exploratory/peek runs.
+> 4. Cut duplicated work: shared sccache across worktrees so dependency crates compile once (don't share one target dir: that brings cargo's file lock back). Mutants scoped to the diff (cargo mutants --in-diff or per changed crate), and only on the merge-ready head, as per the CI rule.
+> 5. Enforce it: put the rule in the agent briefs and CLAUDE.md ("never run heavy commands directly; submit to the queue"), and have the runner log any heavy process it sees running outside the queue so violations are visible.
+> 6. Measure: total wall-clock to verify N PRs before vs after, plus swap/memory pressure. Report the numbers; if serial-1 is slower than 2 concurrent, pick the faster.
+> Do this as a tooling PR now, ahead of new code tasks, since everything else is waiting on it. Record it as a ruling under the next R-number.
+
+(R-658 was the next free number: the numbers before it went to that day's other rulings, on their own branches.)
+
+*What it decides:*
+- **Heavy and light (item 1).** Heavy is cargo build, check, test, clippy, doc and run, cargo mutants, nextest, benches,
+  GPU tests, `cargo xtask` runners, and anything else that compiles. Light runs directly: docs, git, gh, grep, `python3`
+  checks, `cargo fmt`, `cargo metadata`, reading logs.
+- **One queue, the orchestrator's (item 2),** `cargo xtask job`: `submit <worktree> --priority <p> --label <task>
+  [--timeout <s>] [--env K=V]... -- <command>` prints a job id; `wait <id>` blocks, then prints the exit status and the
+  log path and exits with the job's status; `status` and `cancel <id>` besides. Its state lives in
+  `/Volumes/X10 Pro/Principia/orch/jobq/`, outside the repository: one file per job, its log, and the runner's lock.
+- **Concurrency and job counts (items 2 and 6).** One runner runs the jobs at a fixed concurrency, which started at 1
+  and is set by the measurement to 2 (below). Each job runs with `CARGO_BUILD_JOBS` and `RUST_TEST_THREADS` at
+  the core count (`hw.ncpu`, 11 on the Mac), which supersedes R-228's four per agent; a job may set lower ones, as
+  R-439's gui mutants run does. Each job names its own `CARGO_TARGET_DIR`; none shares one.
+- **Priorities (item 3),** highest first: `merge` (merge-ready verification of a final head), `fix` (fix-round tests),
+  `build` (new-task builds), `peek` (exploratory runs); first in, first out within a class.
+- **Robust to restarts (item 2).** Jobs time out (3600 s unless the job says otherwise), and the runner kills the job's
+  whole process group. A runner lock whose pid is dead or whose heartbeat is stale (120 s) expires. A new runner ends
+  the process groups of the jobs a dead one left running and queues them again, or marks one lost after its third
+  start. A job outlives the agent that submitted it, and `wait` can be re-attached. `submit` starts the runner when none
+  is alive; it needs no launchd, and exits when idle.
+- **Duplicated work (item 4).** sccache was measured again: with the target directory in the environment, as every job
+  has it, 0 hits; with it given as `--target-dir`, 66.9% of a cold build's compile requests hit, the dependency crates,
+  saving about 10 s of 100. It is not enabled: jobs start from APFS-cloned warm targets, whose dependencies are built
+  once already (`plan/OPERATIONS.md` § "Paths and warm builds"). Mutants run scoped to the diff (`--in-diff`, or per
+  changed crate), through the queue, on the head about to be pushed and never on work in progress; CI's gate stays the
+  authority (R-388).
+- **Enforcement (item 5).** `CLAUDE.md` and every agent file say "never run heavy commands directly; submit to the
+  queue", with the heavy and light definition and an example. The runner logs each heavy process outside the queue to
+  `orch/jobq/violations.log`, with its pid, command and cwd; it never kills one.
+- **Measurement (item 6),** 30 Oct 2026, three task heads' targeted tests from warm APFS-cloned targets (`main` at
+  a83b9a53 with TASK-M2-48's kernel tests; TASK-M2-29 at 2f628854 with its validation and render tests; TASK-M2-36 at
+  6aff2c7a with its kernel and ledger tests):
+
+| Run (background load1 at start) | Wall-clock | Peak load1 | Memory pressure, worst | Page-outs/min, mean / worst | Swap-outs |
+|---|---|---|---|---|---|
+| (a) before: three at once, `CARGO_BUILD_JOBS=4` (12.8; 10.8) | 112 s; 89 s | 25.7; 22.9 | 2; 1 | 262 / 484; 18 / 25 | 16,536; 0 |
+| (b) the queue, one job at a time (13.1; 13.0) | 135 s; 135 s | 15.6; 16.8 | 2; 1 | 4 / 7; 1 / 2 | 0; 0 |
+| (c) the queue, two at a time (9.9; 12.6) | 101 s; 97 s | 15.4; 19.5 | 1; 2 | 2 / 4; 63 / 93 | 0; 0 |
+
+  Each cell gives round 1, then round 2, which ran the modes in reverse order. Two at a time was the faster of 1 and 2,
+  so the runner runs two.
+
+*Applied per R-369:*
+- **The queue's design.** The client agents call is an installed copy of xtask,
+  `/Volumes/X10 Pro/Principia/orch/jobq/bin/xtask`, so calling the queue compiles nothing; the orchestrator reinstalls
+  it from `main` after a merge that changes it. State changes hold a `flock` on `orch/jobq/state.lock` (std's file
+  lock; macOS has no flock(1)), released by the kernel if its holder dies; the runner lock is a file with the runner's
+  pid and a heartbeat it rewrites every pass. `submit` requires `--env CARGO_TARGET_DIR`, and a queued job whose target
+  directory a running job uses waits. A job keeps the submitter's paths, locale and cargo, rustup and rustc settings,
+  but not what `cargo run` sets for the submitter, its target directory or its job counts. A job left running by dead
+  runners three times is marked lost, so a job that kills its runner cannot loop. The runner exits after 60 s idle.
+- **Runner starts are bounded.** `submit` and `wait` start at most one runner per queue every 5 s, whatever the lock
+  says, and reap it, so no fault of the lock can fill the machine with runners or zombies: a local mutants run of the
+  first draft did, on 30 Oct 2026, past the Mac's per-user process limit. That start path is excluded from mutation in
+  `.cargo/mutants.toml`, since a mutant of it escapes any sandbox; every other mutant leaves it whole. The queue's tests
+  run each call under `ulimit -u` (the user's processes at the start, plus 300) and end, by pid, every process left
+  naming their state directory.
+- **`wait`'s statuses:** the job's exit code (128 plus the signal for one a signal ended); 124 timed out, 125 lost, 126
+  not started, 130 cancelled, as `timeout(1)` and shells use them.
+- **The violation log** names only the topmost heavy process of a chain outside the queue, each once per runner; a
+  process descended from a queue job's group, the runner or sccache's server is inside.
+- **Priorities by role:** a reviewer's check of the PR head is `merge`; the implementer's builds are `build`, `fix` in
+  a fix round; measurements and exploratory runs are `peek`.
+- **Agent counts** stay R-391's and R-262's: they bound the agents dispatched, each now writing, reviewing and waiting;
+  the queue alone bounds the heavy load.
+- **rustix** joins xtask's dependencies (Unix only) for the process-group signals and the pid test; it is already in
+  the build as validation's, for the same (R-217).
+
+R-658 is in the "process" group of `plan/rule_groups.yaml`. Changes no requirement.

@@ -29,6 +29,19 @@ the behaviour it tests. Name that ruling for each such exception. A weakened ass
 in your dispatch. Work only there: `cd` into the worktree and export that `CARGO_TARGET_DIR` for every cargo command.
 Don't use the main checkout, `gh pr checkout`, or another target directory; another reviewer may be running beside you.
 
+**Heavy commands go through the job queue (R-658).** Never run a heavy command directly: anything that compiles (cargo
+build, check, test, clippy, doc and run, `cargo xtask` runners, cargo mutants, nextest, benches, GPU tests). Submit it
+to the queue at priority `merge` (a reviewer's check of a head that merges once it is approved), and wait for it; light
+commands (git, gh, grep, reading files and logs, `python3` checks, `cargo fmt`) run directly. `job submit` prints the
+job id; `job wait` blocks until the job ends, prints its log path and exits with the job's status. The job runs on
+whatever happens to your call, so if `wait` would outlast it, run it in the background or run it again. For example:
+
+```
+"/Volumes/X10 Pro/Principia/orch/jobq/bin/xtask" job submit <worktree> --priority merge --label <TASK-id> \
+  --env CARGO_TARGET_DIR=<target> -- cargo test -p kernel --test roundtrip
+"/Volumes/X10 Pro/Principia/orch/jobq/bin/xtask" job wait <id>
+```
+
 **Enforced by the orchestrator.** After you return, the orchestrator runs `git status --porcelain` in your worktree and checks that HEAD
 hasn't moved. Any change or commit you made is discarded, you are re-run, and the violation is noted on the PR.
 

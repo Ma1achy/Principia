@@ -493,7 +493,6 @@ as history only.
 - **R-218** — Inputs a control shares with its test live in the shared module too *(extends R-215)*
 - **R-219** — Reviewers never share a checkout
 - **R-225** — Lines moved verbatim don't count toward the size budget; TASK-M0-30's size accepted *(amends R-223)*
-- **R-228** — Each agent builds and tests with four jobs and four test threads
 - **R-229** — Reviewers run the tests their diff touches; CI runs the full suite
 - **R-230** — A flaky-test fix is proved by 5 full runs under normal load and green CI *(amends R-224, R-227)*
 - **R-237** — qa's commit may add files under `xtask/tests/`. Still in force: qa's commit touches only `crates/*/tests/`, `xtask/tests/` and `fixtures/`; besides adding files there, it may modify or delete a file only qa has committed to (R-290). Amended by R-290.
@@ -547,6 +546,7 @@ as history only.
 - **R-645** — No more cloud sessions: the six already started are the last; briefs 4 and 5 run on the Mac as local agents, brief 5 a small pilot, the data sweep after them *(amends R-357; supersedes R-636's cloud half)*. Still in force: no cloud sessions; the order of the work (briefs 4 and 5 after #327, brief 5 a small pilot at ε = 1e-6 with its cost reported before scaling, the data sweep after them); everything run locally, under R-391's agent counts (R-648), not a two-agent limit. Amended in part by R-647 (a standing rule, no exceptions: no cloud sessions and no briefs addressed to the owner); amended in part by R-648.
 - **R-647** — A standing rule, no exceptions: no cloud sessions and no briefs addressed to the owner; the orchestrator never asks him to start, paste into, restart or check a session; every agent is the orchestrator's own, dispatched locally by it; an agent's written instructions are internal task files *(amends R-645)*. Still in force: all of it but "under the two-agent limit", which gives way to R-391's counts, three at normal pressure and two if the Mac is swapping (R-648). Amended in part by R-648 (its "under the two-agent limit": R-391's agent counts stand).
 - **R-648** — The workflow returns to main's, R-357, R-391 and R-277, with one addition, never a cloud session: R-634 is withdrawn, and so are R-636's agent-count and cloud clauses; three agents at normal memory pressure, two if the Mac is swapping; the RQ-605 audit on demand only *(supersedes R-634; withdraws R-636's agent-count and cloud clauses; amends R-645 and R-647)*
+- **R-658** — Heavy commands run only through a local job queue the orchestrator owns, `cargo xtask job`: agents submit them and wait, never run them directly; classes merge, fix, build and peek, first in, first out within each; one runner at a fixed concurrency, each job with cargo's jobs and test threads at the core count; jobs time out, stale locks expire and a new runner recovers a dead one's jobs; heavy processes outside the queue are logged; sccache measured again; mutants scoped to the diff and run through the queue *(supersedes R-228)*
 
 ## CI
 
