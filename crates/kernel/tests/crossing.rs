@@ -289,7 +289,10 @@ fn operand() -> impl Strategy<Value = f32> {
         1 => Just(0.0f32),
         1 => Just(-0.0f32),
         1 => (1u32..0x0080_0000).prop_map(f32::from_bits),
-        8 => (0x0080_0000u32..0x7F80_0000, any::<bool>())
+        4 => (0x0080_0000u32..0x7F80_0000, any::<bool>())
+            .prop_map(|(bits, neg)| f32::from_bits(bits | if neg { 0x8000_0000 } else { 0 })),
+        // Exponents −1 to 2 only, so the products' exponents often meet and the significands' product decides.
+        4 => (0x3F00_0000u32..0x4100_0000, any::<bool>())
             .prop_map(|(bits, neg)| f32::from_bits(bits | if neg { 0x8000_0000 } else { 0 })),
     ]
 }
@@ -339,6 +342,15 @@ fn check_product_less(
     assert!(less32(1.5, 1.0, one_up, 1.0), "one ulp apart");
     assert!(!less32(1.5, 1.0, 1.5, 1.0), "equal is not less");
     assert!(less32(1.75, 1.0, 1.0, 2.0), "one exponent apart");
+    assert!(
+        less32(1.0, 1.75, 1.5, 1.5),
+        "1.75 < 2.25: a significands' product past 2 carries into the exponent"
+    );
+    assert!(!less32(1.5, 1.5, 1.0, 1.75), "2.25 > 1.75");
+    assert!(
+        less64(1.0, 1.75, 1.5, 1.5) && !less64(1.5, 1.5, 1.0, 1.75),
+        "2.25 against 1.75 at f64"
+    );
     assert!(!less32(1.0, 2.0, 1.75, 1.0), "one exponent apart, reversed");
     assert!(
         less32(0.0, 1.0, 1.0, 1.0),
