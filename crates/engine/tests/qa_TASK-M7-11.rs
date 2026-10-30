@@ -1650,3 +1650,74 @@ negative_control!(
     expected = "did not round-trip",
     check_ramp_round_trip(true)
 );
+
+// ── REQ-COL-140: the cyclic wrap with its stops a hair from the ends ────────────────────────────────────────────────
+
+/// One wrap case: (first, last, t, a, b, u).
+type WrapCase = (f64, f64, f64, [f64; 3], [f64; 3], f64);
+
+/// A cyclic ramp, `first` (red) and `last` (blue), its colour at each `t` against §9.4's wrap worked by hand: from the
+/// last stop to the first, one period on, `u` its fraction of the way. The positions are powers of two, so each `u`
+/// below is exact in f64: (first, last, t, a, b, u).
+fn check_wrap_hair(cases: &[WrapCase]) {
+    for &(first, last, t, a, b, u) in cases {
+        let r = Ramp::new(vec![stop(first, RED), stop(last, BLUE)], true).expect("a ramp");
+        let got = r
+            .oklab_at(t)
+            .unwrap_or_else(|| panic!("no colour at t = {t}"));
+        let want = mix(a, b, u);
+        assert!(
+            near(got, want),
+            "stops at {first} and {last}: at t = {t} the cyclic ramp is {got:?}, not the wrap's {want:?}"
+        );
+    }
+}
+
+/// 2^-60, 2^-61, 2^-53, 2^-52: hairs from the ends, exact in f64.
+const H60: f64 = 1.0 / 1_152_921_504_606_846_976.0;
+const H61: f64 = H60 / 2.0;
+const H53: f64 = f64::EPSILON / 2.0;
+const H52: f64 = f64::EPSILON;
+
+fn wrap_hair_cases() -> Vec<WrapCase> {
+    vec![
+        // First stop a hair past 0, last at 1: the wrap spans the hair; at 0 its start, blue; half-way, the mix.
+        (H60, 1.0, 0.0, BLUE, RED, 0.0),
+        (H60, 1.0, H61, BLUE, RED, 0.5),
+        (H60, 1.0, H60, RED, BLUE, 0.0),
+        (H60, 1.0, 1.0, BLUE, RED, 0.0),
+        (H60, 1.0, -2.0, BLUE, RED, 0.0),
+        (H60, 1.0, 0.5, RED, BLUE, (0.5 - H60) / (1.0 - H60)),
+        // A t a hair below 0 is the integer's, so 0: blue.
+        (H60, 1.0, -H60, BLUE, RED, 0.0),
+        // First at 0, last a hair below 1: the wrap spans the hair below 1.
+        (0.0, 1.0 - H52, 1.0 - H52, BLUE, RED, 0.0),
+        (0.0, 1.0 - H52, 1.0 - H53, BLUE, RED, 0.5),
+        (0.0, 1.0 - H52, 0.0, RED, BLUE, 0.0),
+        // Both a hair from their ends: the wrap spans the two hairs, 0 in its middle.
+        (H53, 1.0 - H53, 0.0, BLUE, RED, 0.5),
+        (H53, 1.0 - H53, 1.0 - H53, BLUE, RED, 0.0),
+        (H53, 1.0 - H53, H53, RED, BLUE, 0.0),
+        // A subnormal first stop, last at 1: at 0 the wrap's start.
+        (5e-324, 1.0, 0.0, BLUE, RED, 0.0),
+    ]
+}
+
+#[test]
+fn qa_ramp_cyclic_wrap_at_hair_stops() {
+    check_wrap_hair(&wrap_hair_cases());
+}
+
+negative_control!(
+    qa_ramp_cyclic_wrap_at_hair_stops,
+    "the wrap's u at 0 shifted by one period, (0 + 1 - 1) / (2^-60 + 1 - 1), is not the wrap's",
+    expected = "not the wrap's",
+    check_wrap_hair(&[(
+        H60,
+        1.0,
+        0.0,
+        BLUE,
+        RED,
+        (0.0 + 1.0 - 1.0) / (H60 + 1.0 - 1.0)
+    )])
+);
