@@ -630,3 +630,8 @@ choice changes the result and the corpus does not settle it (R-369).*
   (c): `M₀₁` as the one rounded sum, formed from mantissas in `[1, 2)` with integer exponents (`kernel::canon`'s `Wide`
   addition, R-547's pattern). Only the controls wait.
 - **Waits:** TASK-M2-48's two acceptance controls (REQ-DEC-011, REQ-VAL-017).
+- **30 Oct 2026:** Decided by the orchestrator per R-369 (a test decision), option (a); see PR (TASK-M2-48). The
+  control is the folded-and-fused evaluation, `fma(t₇, t₁₃, m₀)` fused at f32 and f64 on the CPU, at TASK-M2-02's
+  onset crossings, which decoder test 12's inputs gain; REQ-VAL-017's emulation list gains "contracted (fused)";
+  REQ-DEC-011's and REQ-VAL-017's verify text and TASK-M2-48's two acceptance lines drop "unfused" and "on lavapipe".
+  The tag rule, `ε_M01` (REQ-DEC-039) and R-547's form are unchanged. Nothing waits.
