@@ -922,6 +922,167 @@ negative_control!(
     }
 );
 
+/// The tilted spherical map's pixels past the square: a repeat is uncounted only where the map keeps `d` (R-554 L3;
+/// chart_decoder_contract § "Repeats and the canonical point"), else the view is affine there and each pixel is a
+/// system of its own, counted (R-512 F1, F3). Arms:
+/// - `check_pole`'s view, `τ₂ = 30°` into a momentum control about `[0.4, 0.85]`: `N_b ≠ 0`, so each pixel past the
+///   pole is counted, and the count over the window is every pixel;
+/// - `τ₁ = 30°` past θ's period: `N_a ≠ 0`, counted;
+/// - `τ₂ = 30°` past θ's period: `N_a = 0`, a repeat, uncounted;
+/// - Tip as sheet at `m = 180°` over a pole: `N_a = N_b = 0`, uncounted.
+///
+/// `old` counts with the rule that took no pixel past the square (the control).
+fn check_affine_counted(old: bool) {
+    let count = |view: &Tilted<ShapeSphere<f64>, f64>, points: &[[f64; 2]]| {
+        if old {
+            points
+                .iter()
+                .filter(|&&[u, v]| {
+                    let [a, b] = view.at(u, v).0;
+                    (0.0..=1.0).contains(&a) && (0.0..=1.0).contains(&b)
+                })
+                .count() as u64
+        } else {
+            view.counted_total(points.iter().copied())
+        }
+    };
+    let past = |view: &Tilted<ShapeSphere<f64>, f64>, points: &[[f64; 2]]| {
+        points
+            .iter()
+            .filter(|&&[u, v]| {
+                let [a, b] = view.at(u, v).0;
+                !((0.0..=1.0).contains(&a) && (0.0..=1.0).contains(&b))
+            })
+            .count() as u64
+    };
+    let view = |s: &TiltSpec, centre: [f64; 2]| {
+        Tilted::new(sphere(ShapeMap::Spherical), Tilt::new(s, centre, SPAN)).unwrap()
+    };
+    // Over the pole, affine: every pixel counted.
+    let pole = view(&spec(0.0, 30.0, TiltMap::Sheet, 3, 3), [0.4, 0.85]);
+    let window: Vec<[f64; 2]> = grid(21, 0.1, 0.7)
+        .iter()
+        .map(|&[u, v]| [u, v + 0.45])
+        .collect();
+    let over = past(&pole, &window);
+    assert!(over > 20, "too few pixels past the pole: {over}");
+    assert_eq!(
+        count(&pole, &window),
+        window.len() as u64,
+        "a pixel past the pole of an affine view is not counted"
+    );
+    // Past θ's period under τ₁, affine: counted.
+    let theta = view(&spec(30.0, 0.0, TiltMap::Sheet, 3, 3), [0.9, 0.5]);
+    // u over [0.6, 1.4], v over [0.3, 0.7]: past θ's period, never past a pole.
+    let window: Vec<[f64; 2]> = grid(21, 0.0, 1.0)
+        .iter()
+        .map(|&[u, v]| [0.6 + 0.8 * u, 0.3 + 0.4 * v])
+        .collect();
+    assert!(past(&theta, &window) > 20);
+    assert_eq!(
+        count(&theta, &window),
+        window.len() as u64,
+        "a pixel past θ's period of an affine view is not counted"
+    );
+    // Past θ's period under τ₂ alone, N_a = 0: a repeat, not counted.
+    let period = view(&spec(0.0, 30.0, TiltMap::Sheet, 3, 3), [0.9, 0.5]);
+    let repeats = past(&period, &window);
+    assert!(repeats > 20);
+    assert!(window
+        .iter()
+        .all(|&[u, v]| (0.0..=1.0).contains(&period.at(u, v).0[1])));
+    assert_eq!(
+        period.pixel(1.3, 0.5),
+        None,
+        "a repeat past θ's period counted"
+    );
+    assert_eq!(count(&period, &window), window.len() as u64 - repeats);
+    // Over a pole at m = 180°, N_a = N_b = 0: a repeat, not counted.
+    let half = view(&spec(108.0, 144.0, TiltMap::Sheet, 3, 3), [0.5, 0.5]);
+    let window = grid(21, 0.0, 1.0);
+    let repeats = past(&half, &window);
+    assert!(repeats > 20);
+    assert_eq!(count(&half, &window), window.len() as u64 - repeats);
+}
+
+#[test]
+fn tilt_every_chart_shape_sphere_affine_counted() {
+    check_affine_counted(false);
+}
+
+negative_control!(
+    tilt_every_chart_shape_sphere_affine_counted,
+    "a count that takes no pixel past the square undercounts an affine view, so it must fail",
+    expected = "a pixel past the pole of an affine view is not counted",
+    {
+        check_affine_counted(true);
+    }
+);
+
+/// `[N_a = 0, N_b = 0]` on the stored angles (R-554 L3), at each arm's boundary.
+fn check_normal_zero(cases: &[(TiltSpec, [bool; 2])]) {
+    for (s, want) in cases {
+        assert_eq!(s.normal_zero(), *want, "N = 0 under {s:?}");
+        let t = Tilt::new(s, CENTRE, SPAN);
+        assert_eq!(t.normal_zero, *want, "the params' N = 0 under {s:?}");
+    }
+}
+
+/// The arms: untilted; a single angle under either map (Lean's closed form), at 0, ±180 and between; Lean with both set,
+/// at the dead zone `|τ| = 90`; RQ-471's corner, no normal; Tip as sheet at `m == 180` and beside it; two targets per
+/// offset.
+fn normal_zero_cases() -> Vec<(TiltSpec, [bool; 2])> {
+    let one = |t1, t2, map| spec(t1, t2, map, 2, 2);
+    let two = |t1, t2, map| spec(t1, t2, map, 2, 3);
+    let mut cases = vec![(one(0.0, 0.0, TiltMap::Sheet), [true, true])];
+    for map in [TiltMap::Sheet, TiltMap::Lean] {
+        cases.extend([
+            (one(30.0, 0.0, map), [false, true]),
+            (one(0.0, 30.0, map), [true, false]),
+            (one(180.0, 0.0, map), [true, true]),
+            (one(-180.0, 0.0, map), [true, true]),
+            (one(0.0, -180.0, map), [true, true]),
+            (one(90.0, 0.0, map), [false, true]),
+            (one(0.0, 90.0, map), [true, false]),
+            (two(30.0, 0.0, map), [false, true]),
+            (two(0.0, 30.0, map), [true, false]),
+            (two(180.0, -180.0, map), [true, true]),
+            (two(-180.0, 30.0, map), [true, false]),
+            (two(90.0, 90.0, map), [false, false]),
+        ]);
+    }
+    cases.extend([
+        (one(30.0, 90.0, TiltMap::Lean), [true, false]),
+        (one(30.0, -90.0, TiltMap::Lean), [true, false]),
+        (one(90.0, 30.0, TiltMap::Lean), [false, true]),
+        (one(-90.0, 30.0, TiltMap::Lean), [false, true]),
+        (one(30.0, 45.0, TiltMap::Lean), [false, false]),
+        (one(90.0, 90.0, TiltMap::Lean), [false, false]),
+        (one(-90.0, 90.0, TiltMap::Lean), [false, false]),
+        (one(108.0, 144.0, TiltMap::Sheet), [true, true]),
+        (one(-108.0, 144.0, TiltMap::Sheet), [true, true]),
+        (one(108.0, 144.000001, TiltMap::Sheet), [false, false]),
+        (one(90.0, 90.0, TiltMap::Sheet), [false, false]),
+        (one(180.0, 30.0, TiltMap::Sheet), [false, false]),
+        (one(30.0, 90.0, TiltMap::Sheet), [false, false]),
+    ]);
+    cases
+}
+
+#[test]
+fn tilt_every_chart_normal_zero_exact() {
+    check_normal_zero(&normal_zero_cases());
+}
+
+negative_control!(
+    tilt_every_chart_normal_zero_exact,
+    "Tip as sheet beside m = 180 claimed to keep d must fail",
+    expected = "N = 0 under",
+    {
+        check_normal_zero(&[(spec(108.0, 144.000001, TiltMap::Sheet, 2, 2), [true, true])]);
+    }
+);
+
 // ── RQ-471's corner over the registry's five (R-554) ──────────────────────────────────────────────────────────────────
 
 /// What a chart reports for a stored tilt: its `system_image`, each pixel's area weight and a share.
@@ -1247,6 +1408,7 @@ fn check_f32(scale: f32) {
         y: t.y,
         span: t.span.map(|x| x as f32),
         weight: t.weight as f32,
+        normal_zero: t.normal_zero,
     };
     let c = sphere(ShapeMap::Spherical);
     let chart: ShapeSphere<f32> = ShapeSphere {

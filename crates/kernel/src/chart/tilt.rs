@@ -43,7 +43,10 @@
 //! does (R-474 K1).
 //!
 //! **Past the square** (R-472 X3, X3a; R-512). The chart's own map and `validate` run on the tilted `(a, b)`, so its
-//! axes' types act there exactly as on an untilted chart, and nothing is written per chart; `d` needs no type.
+//! axes' types act there exactly as on an untilted chart, and nothing is written per chart; `d` needs no type. A repeat
+//! (past a period, over a pole) is the same system only where the type group's map leaves `d` unchanged, decided
+//! exactly on the stored angles ([`TiltSpec::normal_zero`]; R-554 L3); elsewhere the view is affine along that axis,
+//! and the shape sphere's pixel there is a system of its own ([`Tilted::pixel`]).
 //!
 //! **The rank-losing corner** (R-554, ruling RQ-471 (a); R-474 R7). Under Lean each axis with one target at
 //! `|τ₁| = |τ₂| = 90°`, decided exactly on the stored angles, the window maps onto one line of systems: the chart
@@ -125,6 +128,33 @@ impl TiltSpec {
             tip_as_sheet(self.tau1, self.tau2)
         } else {
             lean(self.tau1, self.tau2, self.two_targets())
+        }
+    }
+
+    /// `[N_a = 0, N_b = 0]` for chart_reference §3.3's normal `N ∝ (R·e_a) × (R·e_b)`, decided exactly on the stored
+    /// angles from each map's closed form (R-554 L3): whether the view's hidden offsets keep their value as `a`, or `b`,
+    /// moves, so that a repeat along that axis is the same system.
+    /// - Untilted, `[true, true]`.
+    /// - At RQ-471's corner, `[false, false]`: there is no normal, and no fold is applied (R-554, ruling RQ-471 (a)).
+    /// - With two targets, per hidden offset, `d_X = sin τ₁·u` and `d_Y = sin τ₂·v`: `[sin τ₁ = 0, sin τ₂ = 0]`, each
+    ///   angle in `{0, ±180}`.
+    /// - Tip as sheet with one target and both angles set, `N_a = −τ₁ sin m/m` and `N_b = −τ₂ sin m/m`: both at
+    ///   `m == 180` exactly, neither elsewhere.
+    /// - Otherwise Lean's closed form, which a single angle takes under either map (R-474 R2):
+    ///   `N ∝ (−sin τ₁ cos τ₂, −cos τ₁ sin τ₂, cos τ₁ cos τ₂)`.
+    pub fn normal_zero(&self) -> [bool; 2] {
+        let sin_zero = |t: f64| t == 0.0 || Float::abs(t) == HALF_TURN;
+        let cos_zero = |t: f64| Float::abs(t) == RIGHT_ANGLE;
+        let (t1, t2) = (self.tau1, self.tau2);
+        if self.rank_loss() {
+            [false, false]
+        } else if self.two_targets() {
+            [sin_zero(t1), sin_zero(t2)]
+        } else if self.map == TiltMap::Sheet && t1 != 0.0 && t2 != 0.0 {
+            let half = Float::sqrt(t1 * t1 + t2 * t2) == HALF_TURN;
+            [half, half]
+        } else {
+            [sin_zero(t1) || cos_zero(t2), cos_zero(t1) || sin_zero(t2)]
         }
     }
 
@@ -303,6 +333,8 @@ pub struct Tilt<P> {
     pub span: [P; 2],
     /// Each pixel's area weight ([`TiltSpec::area_weight`]).
     pub weight: P,
+    /// `[N_a = 0, N_b = 0]` ([`TiltSpec::normal_zero`]): where a repeat along each axis is the same system.
+    pub normal_zero: [bool; 2],
 }
 
 impl Tilt<f64> {
@@ -318,6 +350,7 @@ impl Tilt<f64> {
             y: spec.y,
             span,
             weight: spec.area_weight(),
+            normal_zero: spec.normal_zero(),
         }
     }
 }
@@ -583,23 +616,33 @@ where
         self.tilt.system_image(self.chart.system_image())
     }
 
-    /// How the tilted view's pixel at `(u, v)` counts, from its tilted `(a, b)`: inside the chart's square the spherical
-    /// map's point is its own system and the exponential map's counts as its cap says; past the square the exponential
-    /// map's bounded axes end the domain, and the spherical map's pixel is the axes' types' (R-512), outside the primary
-    /// ranges this count reads, `None`.
+    /// How the tilted view's pixel at `(u, v)` counts, from its tilted `(a, b)`.
+    /// - Inside the chart's square the spherical map's point is its own system, and the exponential map's counts as its
+    ///   cap says.
+    /// - Past the square the exponential map's bounded axes end the domain (R-512).
+    /// - Past the square on the spherical map, the pixel is a repeat, not counted (`None`), only where the type group's
+    ///   map leaves the hidden offset `d` unchanged (chart_decoder_contract § "Repeats and the canonical point"; R-554
+    ///   L3): past θ's period with `b` in `[0, 1]`, iff `N_a = 0`; over a pole, iff `N_a = 0` and `N_b = 0`, decided
+    ///   exactly on the stored angles ([`TiltSpec::normal_zero`]). Elsewhere the view is affine along that axis, its
+    ///   primary range unbounded, and the pixel is a system of its own, counted (R-512 F1, F3).
     pub fn pixel(&self, u: f64, v: f64) -> Option<PixelCount> {
         let ([a, b], _) = self.at(u, v);
-        let inside = (0.0..=1.0).contains(&a) && (0.0..=1.0).contains(&b);
-        match (self.chart.map, inside) {
-            (ShapeMap::Spherical, true) => Some(PixelCount::System),
-            (ShapeMap::Spherical, false) => None,
-            (ShapeMap::Exponential, true) => Some(self.chart.exp_pixel(a, b)),
-            (ShapeMap::Exponential, false) => Some(PixelCount::DomainEnd),
+        let a_in = (0.0..=1.0).contains(&a);
+        let b_in = (0.0..=1.0).contains(&b);
+        let [na, nb] = self.tilt.normal_zero;
+        match self.chart.map {
+            ShapeMap::Spherical => {
+                let repeat = if b_in { !a_in && na } else { na && nb };
+                (!repeat).then_some(PixelCount::System)
+            }
+            ShapeMap::Exponential if a_in && b_in => Some(self.chart.exp_pixel(a, b)),
+            ShapeMap::Exponential => Some(PixelCount::DomainEnd),
         }
     }
 
-    /// The counted total over the pixels at `points`: each system pixel once, no pixel folded onto another, and the
-    /// pixels on `r = π`, the one system `−n₀`, once together (REQ-CHART-078).
+    /// The counted total over the pixels at `points`: each system pixel once, no pixel folded onto another, a repeat
+    /// that keeps `d` not at all ([`Tilted::pixel`]), and the pixels on `r = π`, the one system `−n₀`, once together
+    /// (REQ-CHART-078).
     pub fn counted_total<I: IntoIterator<Item = [f64; 2]>>(&self, points: I) -> u64 {
         let mut total = 0u64;
         let mut antipode = false;
