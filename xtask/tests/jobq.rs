@@ -18,9 +18,9 @@ use scratch::Scratch;
 use validation::negative_control;
 use validation::spawn::Spawn;
 use xtask::jobq::{
-    archivable, heavy, lock_holder, next_job, parse_ps, parse_submit, run_order, snapshot_env,
-    target_key, timed_out, utc, violations, Config, Job, Priority, Proc, Queue, RunnerLock, State,
-    ARCHIVE_AFTER, MAX_ATTEMPTS,
+    archivable, heavy, lock_holder, next_job, parse_ps, parse_submit, run_order, runner_settings,
+    snapshot_env, target_key, timed_out, utc, violations, Config, Job, Priority, Proc, Queue,
+    RunnerLock, State, ARCHIVE_AFTER, MAX_ATTEMPTS,
 };
 
 /// A queue of the test's own, in a scratch folder, with short timings.
@@ -1691,6 +1691,49 @@ negative_control!(
     "with the lock free, the job runs at once and nothing is logged",
     expected = "runner did not wait out a held state lock",
     runner_waits_case("jobq_runner_waits_control", false)
+);
+
+// --- Status shows the runner's own settings ----------------------------------------------------------------------------
+
+/// With a live runner lock (this test's pid, a fresh heartbeat) that gives `concurrency 7` and `cores 9` (with
+/// `settings`), and a config that says otherwise, `status` must show the lock's settings, not the config's.
+fn status_settings_case(tag: &str, settings: bool) {
+    let q = Q::new(tag, "concurrency = 1\ncores = 2\n");
+    std::fs::create_dir_all(q.dir.join("jobs")).expect("jobs dir");
+    let extra = if settings {
+        "concurrency 7\ncores 9\n"
+    } else {
+        ""
+    };
+    let lock = format!(
+        "pid {}\nheartbeat {}\n{extra}",
+        std::process::id(),
+        xtask::jobq::now()
+    );
+    std::fs::write(q.dir.join("runner.lock"), lock).expect("lock planted");
+    let status = String::from_utf8_lossy(&q.run(&["status"]).stdout).into_owned();
+    std::fs::remove_file(q.dir.join("runner.lock")).expect("lock removed");
+    assert!(
+        status.contains("concurrency 7, 9 cores per job"),
+        "status shows the client's settings: {status}"
+    );
+}
+
+#[test]
+fn jobq_status_shows_the_runners_own_settings() {
+    status_settings_case("jobq_status_settings", true);
+    assert_eq!(
+        runner_settings("pid 1\nheartbeat 2\n"),
+        "concurrency ?, ? cores per job",
+        "status shows the client's settings: an older runner's lock"
+    );
+}
+
+negative_control!(
+    jobq_status_shows_the_runners_own_settings,
+    "a lock that gives no settings shows none",
+    expected = "status shows the client's settings",
+    status_settings_case("jobq_status_settings_control", false)
 );
 
 // --- Ended jobs move to the archive a day later ----------------------------------------------------------------------

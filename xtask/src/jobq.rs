@@ -18,9 +18,10 @@
 //! (new-task builds), `peek` (exploratory runs); first in, first out within a class.
 //!
 //! The state lives under `<root>`, `$PRINCIPIA_JOBQ` or [`DEFAULT_ROOT`], outside the repository: `jobs/<id>.json`, one
-//! file per job, moved to `archive/` a day after it ends; `logs/<id>.log`, each job's output; `runner.lock`, the runner's pid and heartbeat; `state.lock`, an
-//! advisory file lock (`flock`) every change to the state holds briefly, released by the kernel if its holder dies;
-//! `config`, optional settings ([`Config`]); `runner.log`, the runner's own log; `violations.log`.
+//! file per job, moved to `archive/` a day after it ends; `logs/<id>.log`, each job's output; `runner.lock`, the
+//! runner's pid, heartbeat, concurrency and cores per job; `state.lock`, an advisory file lock (`flock`) every change to
+//! the state holds briefly, naming its holder, released by the kernel if its holder dies; `config`, optional settings
+//! ([`Config`]); `runner.log`, the runner's own log; `violations.log`.
 //!
 //! A runner lock whose pid is dead, or whose heartbeat is older than `stale` seconds, has expired: the next `submit`
 //! or `wait` starts a runner, which takes the lock over. A new runner ends the process group of every job still marked
@@ -407,6 +408,21 @@ impl RunnerLock {
     pub fn is_live(self, now: u64, stale: u64, alive: impl Fn(i32) -> bool) -> bool {
         alive(self.pid) && now.saturating_sub(self.heartbeat) < stale
     }
+}
+
+/// The runner's own settings, from its lock's text: `concurrency <n>, <m> cores per job`, a `?` for each it doesn't
+/// give (a runner from before they were written).
+pub fn runner_settings(text: &str) -> String {
+    let field = |key: &str| {
+        text.lines()
+            .find_map(|line| line.strip_prefix(key)?.trim().parse::<usize>().ok())
+            .map_or_else(|| "?".to_owned(), |n| n.to_string())
+    };
+    format!(
+        "concurrency {}, {} cores per job",
+        field("concurrency "),
+        field("cores ")
+    )
 }
 
 /// Whether a process with this pid exists (ours or not).
@@ -804,11 +820,10 @@ impl Queue {
         let mut out = String::new();
         match self.runner_lock() {
             Some(lock) if lock.is_live(now, config.stale, pid_alive) => out.push_str(&format!(
-                "runner: pid {}, heartbeat {} s ago, concurrency {}, {} cores per job\n",
+                "runner: pid {}, heartbeat {} s ago, {}\n",
                 lock.pid,
                 now.saturating_sub(lock.heartbeat),
-                config.concurrency,
-                config.cores
+                runner_settings(&fs::read_to_string(self.lock_path()).unwrap_or_default())
             )),
             Some(lock) => out.push_str(&format!(
                 "runner: none alive (lock of pid {} expired)\n",
@@ -881,7 +896,7 @@ impl Queue {
                 return Ok(());
             }
             self.ensure()?;
-            self.write_lock(me)?;
+            self.write_lock(me, &config)?;
             log(&format!("runner {me}: started"));
             self.jobs()?
                 .into_iter()
@@ -923,7 +938,7 @@ impl Queue {
                         return Ok(());
                     }
                 }
-                self.write_lock(me)?;
+                self.write_lock(me, &config)?;
                 // A pass that fails (the state directory unreadable) is logged and tried again, and counts as idle, so a
                 // runner that can do nothing exits.
                 let busy = runner.pass(&config).unwrap_or_else(|message| {
@@ -950,12 +965,20 @@ impl Queue {
         }
     }
 
-    fn write_lock(&self, pid: i32) -> Result<(), String> {
+    /// Writes the runner lock: `pid`, the heartbeat, and the runner's own concurrency and cores per job, which
+    /// `status` shows (a client built with other defaults would otherwise show its own).
+    fn write_lock(&self, pid: i32, config: &Config) -> Result<(), String> {
         let lock = RunnerLock {
             pid,
             heartbeat: now(),
         };
-        Self::write_atomic(&self.lock_path(), &lock.text())
+        let text = format!(
+            "{}concurrency {}\ncores {}\n",
+            lock.text(),
+            config.concurrency,
+            config.cores
+        );
+        Self::write_atomic(&self.lock_path(), &text)
     }
 }
 
@@ -1090,7 +1113,7 @@ impl Runner {
             ));
             return Ok(false);
         }
-        self.queue.write_lock(self.me)?;
+        self.queue.write_lock(self.me, config)?;
         let mut job = self.queue.load(left.id)?;
         if job.state != State::Running || job.runner_pid != left.runner_pid {
             return Ok(true);
