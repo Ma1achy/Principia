@@ -19,6 +19,14 @@ The word is over the free group `F₂ = ⟨a, b⟩` on the shape sphere with the
 Šuvakov–Dmitrašinović), with citations, by the task that writes the word (M3); verified against the published braid
 classes, physics-reviewed, and confirmed at the gate.
 
+**Open (RQ-630, queued 30 Oct 2026 by TASK-M3-16):** the literature's generators are loops about two of the three
+collision points, the third projected to infinity (Šuvakov & Dmitrašinović, PRL 110, 114301 (2013), p. 1;
+Dmitrašinović et al., J. Phys. A 51, 315101 (2018), Appendices B and C). Two cuts that end at a Lagrange pole, as the
+first bullet above reads, do not cut the punctured sphere into a disc, so no assignment of `a` and `b` to them
+reproduces the published classes; which cuts, the body labels and the side that is positive wait on the ruling. The
+crossing rule's sort, tie tolerance and sign convention, which do not depend on the cuts' shape, are the integrator
+contract's (Part 5, the τ tie rule).
+
 ### 2. The punctured-sphere relation (third pair)
 **v2 (R-125):** per-pair views are out of v1 (PL-3, R-38).
 
