@@ -6,7 +6,8 @@
 //! - `qa_ramp_ab_bound_admits_srgb_gamut`: §9.4 says the bound "refuses no colour of the sRGB gamut": every corner and
 //!   edge sample of the linear sRGB cube, in OKLab, is a stop `Ramp::new` accepts.
 //! - `qa_ramp_ab_bound_keeps_rgb_finite`: §9.4 says within the bound the ramp's linear sRGB is finite, each component
-//!   at most 103 in magnitude: a property over stops anywhere in the bound and any `t`.
+//!   at most 103 in magnitude: a property over stops anywhere in the bound and any `t`, with its control over the same
+//!   inputs.
 //! - `qa_ramp_ab_bound_corners_within_figure`: the same figure at each of the bound's corners, with its control.
 //!
 //! The colours and `t` values are test inputs, not register constants (REQ-SYS-082).
@@ -150,26 +151,65 @@ fn in_bound_stop() -> impl Strategy<Value = Stop> {
     })
 }
 
+/// The property's domain: two to five stops anywhere in the bound, some pushed to its corners, where the cubes are
+/// largest; either kind of ramp; any `t`, in and out of `[0, 1]`.
+fn in_bound_ramp() -> impl Strategy<Value = (Vec<Stop>, bool, f64)> {
+    let stops = (
+        prop::collection::vec(in_bound_stop(), 2..6),
+        prop::collection::vec((any::<bool>(), any::<bool>(), any::<bool>()), 6),
+    )
+        .prop_map(|(mut stops, corners)| {
+            for (s, &(push, sa, sb)) in stops.iter_mut().zip(&corners) {
+                if push {
+                    s.oklab = [
+                        s.oklab[0],
+                        if sa { 1.0 } else { -1.0 },
+                        if sb { 1.0 } else { -1.0 },
+                    ];
+                }
+            }
+            stops.sort_by(|x, y| x.position.total_cmp(&y.position));
+            stops
+        });
+    (stops, any::<bool>(), -2.0..=3.0f64)
+}
+
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(512))]
 
     #[test]
-    fn qa_ramp_ab_bound_keeps_rgb_finite(
-        mut stops in prop::collection::vec(in_bound_stop(), 2..6),
-        cyclic in any::<bool>(),
-        t in -2.0..=3.0f64,
-        corners in prop::collection::vec((any::<bool>(), any::<bool>(), any::<bool>()), 6),
-    ) {
-        // Some stops pushed to the bound's corners, where the cubes are largest.
-        for (s, &(push, sa, sb)) in stops.iter_mut().zip(&corners) {
-            if push {
-                s.oklab = [s.oklab[0], if sa { 1.0 } else { -1.0 }, if sb { 1.0 } else { -1.0 }];
-            }
-        }
-        stops.sort_by(|x, y| x.position.total_cmp(&y.position));
+    fn qa_ramp_ab_bound_keeps_rgb_finite((stops, cyclic, t) in in_bound_ramp()) {
         check_finite(stops, cyclic, t, RGB_MAX);
     }
 }
+
+negative_control!(
+    qa_ramp_ab_bound_keeps_rgb_finite,
+    "the property's own inputs reach large components (L = 1, a = b = -1 gives blue near 22), so with its limit at 9 \
+     the property must fail on them; 9 and not 10, whose message would also match the real limit's, past 103",
+    expected = "past 9",
+    {
+        // A runner of its own, seeded, so the control cannot pass or fail by luck, and persisting nothing: a failure
+        // here is the point, and no regression file may be written for it.
+        let config = ProptestConfig {
+            cases: 512,
+            max_shrink_iters: 0,
+            failure_persistence: None,
+            ..ProptestConfig::default()
+        };
+        let rng = proptest::test_runner::TestRng::deterministic_rng(proptest::test_runner::RngAlgorithm::ChaCha);
+        let outcome = proptest::test_runner::TestRunner::new_with_rng(config, rng).run(
+            &in_bound_ramp(),
+            |(stops, cyclic, t)| {
+                check_finite(stops, cyclic, t, 9.0);
+                Ok(())
+            },
+        );
+        if let Err(e) = outcome {
+            panic!("{e}");
+        }
+    }
+);
 
 #[test]
 fn qa_ramp_ab_bound_corners_within_figure() {
