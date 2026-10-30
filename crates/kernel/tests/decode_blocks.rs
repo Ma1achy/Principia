@@ -53,13 +53,14 @@ use kernel::decode::mass::{self, Masses};
 use kernel::decode::units;
 use kernel::generated::constants::ChartConstants;
 use kernel::generated::links::*;
+use kernel::real::IeeeBits;
 use proptest::prelude::*;
 use validation::{negative_control, prop};
 
 // ── Precisions ──────────────────────────────────────────────────────────────────────────────────────────────────
 
 /// A precision the decoder is instantiated at, with conversions to and from f64 for the checks.
-trait P: LinkReal + Neighbours {
+trait P: LinkReal + IeeeBits + Neighbours {
     fn of(x: f64) -> Self;
     fn f(self) -> f64;
     /// The machine epsilon, as f64.
@@ -852,15 +853,12 @@ fn block_m01<R: P>(z: [R; 2]) -> R {
 /// The lines `z₁ ∈ [6.3, 20.3]` the onset crossings are bisected on.
 const LINES: u32 = 20_000;
 
-/// The contraction exposure (R-34; qa F1): written `m₀ + m₁`, `M₀₁` under `stick_breaking` reaches a shader compiler
-/// inlined as `m₀ + t₇·t₁₃`, which a contracting backend may fuse to `fma(t₇, t₁₃, m₀)`. On each of [`LINES`] lines
-/// `z₁ ∈ [6.3, 20.3]`, `z₀ ∈ [0, 30]` is bisected at `R` to the adjacent pair where the emitted masses' one rounded
-/// sum crosses ε, where one rounding decides the tag. At both points of every pair, `form`'s tag must be that sum's.
-/// The replica `stick_parts` is checked against the generated forward bit for bit. Returns how many of the points
-/// the fused form flips: the hazard the sample reaches.
-fn check_contraction<R: P>(form: fn([R; 2]) -> R) -> usize {
+/// The onset crossings at `R` (TASK-M2-02): on each of [`LINES`] lines `z₁ ∈ [6.3, 20.3]`, `z₀ ∈ [0, 30]` bisected at
+/// `R` to the adjacent pair where `stick_breaking`'s emitted masses' one rounded sum crosses ε, where one rounding
+/// decides the tag. Both points of every pair, `2·LINES` in all.
+fn crossings<R: P>() -> Vec<[R; 2]> {
     let eps = mass::m01_epsilon::<R>();
-    let mut flips = 0;
+    let mut out = Vec::with_capacity(2 * LINES as usize);
     for k in 0..LINES {
         let z1 = R::of(6.3 + 14.0 * f64::from(k) / f64::from(LINES));
         let sum_tag = |z0: R| {
@@ -884,26 +882,39 @@ fn check_contraction<R: P>(form: fn([R; 2]) -> R) -> usize {
                 lo = mid;
             }
         }
-        for z in [[lo, z1], [hi, z1]] {
-            let (m0, t7, t13) = stick_parts(z);
-            let m = <StickBreaking as Link<2, 3>>::forward(z);
-            assert_eq!(
-                [m[0], m[1]],
-                [m0, t7 * t13],
-                "the replica is not the generated forward at {z:?}"
-            );
-            let (sum, got) = (m[0] + m[1], form(z));
-            flips += usize::from((t7.mul_add(t13, m0) < eps) != (sum < eps));
-            assert_eq!(
-                got < eps,
-                sum < eps,
-                "z_μ = {z:?} at {}: the tag reads M₀₁ = {:e}, the emitted masses' sum is {:e}: a contracting backend \
-                 flips the tag",
-                R::NAME,
-                got.f(),
-                sum.f()
-            );
-        }
+        out.push([lo, z1]);
+        out.push([hi, z1]);
+    }
+    out
+}
+
+/// The contraction exposure (R-34; qa F1): written `m₀ + m₁`, `M₀₁` under `stick_breaking` reaches a shader compiler
+/// inlined as `m₀ + t₇·t₁₃`, which a contracting backend may fuse to `fma(t₇, t₁₃, m₀)`. At every onset crossing
+/// ([`crossings`]), `form`'s tag must be the emitted masses' one rounded sum's. The replica `stick_parts` is checked
+/// against the generated forward bit for bit. Returns how many of the points the fused form flips: the hazard the
+/// sample reaches.
+fn check_contraction<R: P>(form: fn([R; 2]) -> R) -> usize {
+    let eps = mass::m01_epsilon::<R>();
+    let mut flips = 0;
+    for z in crossings::<R>() {
+        let (m0, t7, t13) = stick_parts(z);
+        let m = <StickBreaking as Link<2, 3>>::forward(z);
+        assert_eq!(
+            [m[0], m[1]],
+            [m0, t7 * t13],
+            "the replica is not the generated forward at {z:?}"
+        );
+        let (sum, got) = (m[0] + m[1], form(z));
+        flips += usize::from((t7.mul_add(t13, m0) < eps) != (sum < eps));
+        assert_eq!(
+            got < eps,
+            sum < eps,
+            "z_μ = {z:?} at {}: the tag reads M₀₁ = {:e}, the emitted masses' sum is {:e}: a contracting backend \
+             flips the tag",
+            R::NAME,
+            got.f(),
+            sum.f()
+        );
     }
     flips
 }
@@ -936,6 +947,180 @@ negative_control!(
     {
         check_contraction::<f32>(contracted_m01);
     }
+);
+
+/// The mass block's `M₀₁` and tag at the latent mass controls `z`, `stick_breaking` selected: the block under test.
+fn block_masses<R: P>(z: [R; 2]) -> Masses<R> {
+    (dec::<Stick, R>().mass)(z)
+}
+
+/// Decoder test 4 at the onset crossings (REQ-DEC-011; R-547): at every point of [`crossings`] at `R`, the block's
+/// (`masses`) `M₀₁` is the emitted masses' one rounded sum `m₀ + m₁`, bit for bit, and its tag is that sum's
+/// `M₀₁ < ε`. Returns how many points the superseded form flips, evaluated as a backend that folds the `×1` of
+/// `fma(m₁, 1, m₀)` and contracts the add evaluates it: `fma(t₇, t₁₃, m₀)`, fused (dd_decoder §3.1, "Its premise").
+fn check_one_sum<R: P>(masses: fn([R; 2]) -> Masses<R>) -> usize {
+    let eps = mass::m01_epsilon::<R>();
+    let mut flips = 0;
+    for z in crossings::<R>() {
+        let m = <StickBreaking as Link<2, 3>>::forward(z);
+        let sum = m[0] + m[1];
+        let out = masses(z);
+        assert_eq!(
+            out.m01.f().to_bits(),
+            sum.f().to_bits(),
+            "z_μ = {z:?} at {}: M₀₁ = {:e} is not the emitted masses' one rounded sum {:e}",
+            R::NAME,
+            out.m01.f(),
+            sum.f()
+        );
+        assert_eq!(
+            out.degenerate,
+            (sum < eps).then_some(Degenerate::M01Tiny),
+            "z_μ = {z:?} at {}: the tag is not M₀₁ < ε",
+            R::NAME
+        );
+        let (m0, t7, t13) = stick_parts(z);
+        flips += usize::from((t7.mul_add(t13, m0) < eps) != (sum < eps));
+    }
+    flips
+}
+
+#[test]
+fn decode_mass_m01_crossings() {
+    let f64_flips = check_one_sum::<f64>(block_masses);
+    let f32_flips = check_one_sum::<f32>(block_masses);
+    assert!(
+        f64_flips > 0 && f32_flips > 0,
+        "the folded-and-fused fma(t₇, t₁₃, m₀) flips no crossing ({f64_flips} at f64, {f32_flips} at f32): the control \
+         misses the hazard"
+    );
+    eprintln!(
+        "decode_mass_m01_crossings: of {} crossing points, the folded-and-fused form flips {f64_flips} at f64, \
+         {f32_flips} at f32; the block's M₀₁ is the one rounded sum at every one",
+        2 * LINES
+    );
+}
+
+/// The block with `M₀₁` formed as a folding, contracting backend forms the superseded `fma(m₁, 1, m₀)`:
+/// `fma(t₇, t₁₃, m₀)`, its tag read from it.
+#[cfg(feature = "controls")]
+fn fused_masses(z: [f32; 2]) -> Masses<f32> {
+    let (m0, t7, t13) = stick_parts(z);
+    let m01 = t7.mul_add(t13, m0);
+    Masses {
+        m01,
+        degenerate: (m01 < mass::m01_epsilon::<f32>()).then_some(Degenerate::M01Tiny),
+        ..block_masses(z)
+    }
+}
+
+negative_control!(
+    decode_mass_m01_crossings,
+    "a block whose M₀₁ is the folded-and-fused fma(t₇, t₁₃, m₀) must fail at a crossing",
+    expected = "is not the emitted masses' one rounded sum",
+    {
+        check_one_sum::<f32>(fused_masses);
+    }
+);
+
+/// A mass of exponent `e` (`2^e` up to `2^(e+1)`), `frac` of the way along its binade, at `R`; for `e` below `R`'s
+/// least normal exponent, a subnormal or 0.
+fn mass_at<R: P>(e: i32, frac: f64) -> R {
+    R::of((1.0 + frac) * 2f64.powi(e))
+}
+
+/// `M₀₁`'s form on mass pairs set directly (REQ-DEC-011; R-547; the module note of `kernel::decode::mass`): the
+/// block's `M₀₁` is `m₀ + m₁`, one rounding, bit for bit, and its tag `m₀ + m₁ < ε`, over pairs whose exponents span
+/// `R`'s range down to its subnormals; pairs whose exponents differ by 59, 60, 61 and more (the alignment's cap); the
+/// sum at a tie of round-half-even; and the sum at `ε` and one float either side of it.
+fn check_form<R: P>(from_masses: fn([R; 3]) -> Masses<R>) {
+    let eps = mass::m01_epsilon::<R>();
+    let check = |m0: R, m1: R, what: &str| {
+        let out = from_masses([m0, m1, R::one() - (m0 + m1)]);
+        let sum = m0 + m1;
+        assert_eq!(
+            out.m01.f().to_bits(),
+            sum.f().to_bits(),
+            "{what} at {}: M₀₁ = {:e} for m = ({:e}, {:e}) is not m₀ + m₁ = {:e}",
+            R::NAME,
+            out.m01.f(),
+            m0.f(),
+            m1.f(),
+            sum.f()
+        );
+        assert_eq!(
+            out.degenerate,
+            (sum < eps).then_some(Degenerate::M01Tiny),
+            "{what} at {}: the tag for M₀₁ = {:e} is not M₀₁ < ε",
+            R::NAME,
+            sum.f()
+        );
+    };
+    let ulp = R::eps();
+    for gap in [0, 1, 23, 24, 52, 53, 54, 59, 60, 61, 62, 80, 120] {
+        for (a, b) in [(0.0, 0.0), (0.5, 0.75), (0.999, 0.001)] {
+            let big = mass_at::<R>(-1, a);
+            let small = mass_at::<R>(-1 - gap, b);
+            check(big, small, &format!("a gap of {gap}"));
+            check(small, big, &format!("a gap of {gap}, swapped"));
+        }
+    }
+    let half_ulp_tie = mass_at::<R>(-1, 0.0) * R::of(ulp / 2.0);
+    check(R::of(0.5), half_ulp_tie, "a tie of round-half-even");
+    check(
+        R::of(0.5 + ulp / 2.0),
+        half_ulp_tie,
+        "a tie of round-half-even, odd",
+    );
+    let half = eps * R::of(0.5);
+    check(half, half, "M₀₁ = ε");
+    check(
+        half,
+        R::from_bits_below(eps) - half,
+        "M₀₁ one float below ε",
+    );
+    check(
+        half,
+        R::from_bits_above(eps) - half,
+        "M₀₁ one float above ε",
+    );
+    let least = R::min_positive_value();
+    check(
+        least * R::of(0.25),
+        least * R::of(0.5),
+        "two subnormal masses",
+    );
+    check(
+        least * R::of(0.25),
+        R::of(0.5),
+        "a subnormal and a normal mass",
+    );
+    check(R::zero(), R::of(0.5), "a zero and a normal mass");
+    let draw = ((-160i32..=0, 0.0f64..1.0), (-160i32..=0, 0.0f64..1.0));
+    prop::run(&draw, |((e0, f0), (e1, f1))| {
+        check(mass_at::<R>(e0, f0), mass_at::<R>(e1, f1), "a fuzzed pair");
+        Ok(())
+    });
+}
+
+#[test]
+fn decode_mass_m01_form() {
+    check_form(dec::<Defaults, f64>().from_masses);
+    check_form(dec::<Defaults, f32>().from_masses);
+}
+
+/// The block on masses a flushing backend reads: each subnormal mass taken as 0.
+#[cfg(feature = "controls")]
+fn flushed_masses(m: [f32; 3]) -> Masses<f32> {
+    let flush = |x: f32| if x.abs() < f32::MIN_POSITIVE { 0.0 } else { x };
+    mass::from_masses(m.map(flush))
+}
+
+negative_control!(
+    decode_mass_m01_form,
+    "an M₀₁ formed from flushed subnormal masses must fail the one rounded sum",
+    expected = "is not m₀ + m₁",
+    check_form::<f32>(flushed_masses)
 );
 
 // ── D_cfg ───────────────────────────────────────────────────────────────────────────────────────────────────────
