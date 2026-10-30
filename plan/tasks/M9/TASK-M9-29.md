@@ -26,7 +26,7 @@ The replication suite's targets LLL-1 run as engine tests (`principia_dd_replica
 - The contours on the mass simplex, by the continuation RQ-597 rules.
 
 ## Acceptance tests
-- `cargo xtask gate replication --target LLL-1 --render` — the figure beside the paper's; periodic-orbit continuation once RQ-597 is ruled; reviewed by the physics reviewer; the atlas's 7 `li2021` rows are OC-1's; control: a family continued from a wrong seed must not match; the physics reviewer compares them (REQ-VAL-329).
+- `cargo xtask gate replication --target LLL-1 --render` — the figure beside the paper's; periodic-orbit continuation once RQ-597 is ruled; reviewed by the physics reviewer; the atlas's 7 `li2021` rows are OC-1's; control: a family continued from a wrong seed must not match; the physics reviewer compares them; the outcome recorded with its tier: PASS where the comparison above holds, otherwise EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED, never a merge condition (R-649); the control still has to fire (REQ-VAL-329).
 
 ## Notes
 - Waits on RQ-597: the task starts only once it is ruled, and builds no chart or diagnostic ahead of the ruling (R-594 item 5).

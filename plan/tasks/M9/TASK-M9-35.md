@@ -28,9 +28,9 @@ The replication suite's targets OC-4 on the Šuvakov plane, AT-D1, AT-D3 run as 
 - Result runs on the chart RQ-583 rules, in RQ-582's labelling; no chart is built here ahead of those rulings.
 
 ## Acceptance tests
-- `cargo xtask gate replication --target OC-4s` — as OC-4, on the Šuvakov-plane chart once RQ-583 (and its labelling, RQ-582) is ruled; agreement at OC-4's calibrated level; control as OC-4's (REQ-VAL-311).
-- `cargo xtask gate replication --target AT-D1 --render` — the figure beside the paper's; a Result (R-572) at f64; reviewed by the physics reviewer; the atlas's credit line on the figure; control: each marker's IC re-encoded must land on its marker; the physics reviewer compares them (REQ-VAL-312).
-- `cargo xtask gate replication --target AT-D3 --render` — the figure beside the paper's; as AT-D1, per value of m₃; the physics reviewer compares them (REQ-VAL-313).
+- `cargo xtask gate replication --target OC-4s` — as OC-4, on the Šuvakov-plane chart once RQ-583 (and its labelling, RQ-582) is ruled; agreement at OC-4's calibrated level; control as OC-4's; the outcome recorded with its tier: PASS where the comparison above holds, otherwise EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED, never a merge condition (R-649); the control still has to fire (REQ-VAL-311).
+- `cargo xtask gate replication --target AT-D1 --render` — the figure beside the paper's; a Result (R-572) at f64; reviewed by the physics reviewer; the atlas's credit line on the figure; control: each marker's IC re-encoded must land on its marker; the physics reviewer compares them; the outcome recorded with its tier: PASS where the comparison above holds, otherwise EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED, never a merge condition (R-649); the control still has to fire (REQ-VAL-312).
+- `cargo xtask gate replication --target AT-D3 --render` — the figure beside the paper's; as AT-D1, per value of m₃; the physics reviewer compares them; the outcome recorded with its tier: PASS where the comparison above holds, otherwise EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED, never a merge condition (R-649) (REQ-VAL-313).
 - `scripts/check_no_atlas_params.sh` — prints `ok`: `atlas-params.json` is not committed, and nothing in this task reads it.
 
 ## Notes

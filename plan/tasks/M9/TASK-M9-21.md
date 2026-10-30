@@ -26,9 +26,9 @@ The replication suite's targets V-9, MT-1 run as engine tests (`principia_dd_rep
 - `crates/validation/src/gates/region_d_stats.rs`; the calibration proposals.
 
 ## Acceptance tests
-- `cargo xtask gate replication --target V-9` — the fit and its criterion at REQ-VAL-287's level; systems still bound at 200 counted as censored, not dropped (rule 18); control: an exponential sample must not be classed as a power law (REQ-VAL-286).
+- `cargo xtask gate replication --target V-9` — the fit and its criterion at REQ-VAL-287's level; systems still bound at 200 counted as censored, not dropped (rule 18); control: an exponential sample must not be classed as a power law; the outcome recorded with its tier: PASS where the comparison above holds, otherwise EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED, never a merge condition (R-649); the control still has to fire (REQ-VAL-286).
 - `cargo xtask gate replication --target V-9 --propose` — the proposal measures what sets the tolerance and states it, with its evidence; reviewer-checked, confirmed by the human with the M9 report and recorded in `decisions.md` (REQ-VAL-287).
-- `cargo xtask gate replication --target MT-1` — our lifetime and FTLE on the same starts; the two-segment fit at REQ-VAL-289's level; control: lifetimes paired with shuffled FTLEs must lose the relation (REQ-VAL-288).
+- `cargo xtask gate replication --target MT-1` — our lifetime and FTLE on the same starts; the two-segment fit at REQ-VAL-289's level; control: lifetimes paired with shuffled FTLEs must lose the relation; the outcome recorded with its tier: PASS where the comparison above holds, otherwise EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED, never a merge condition (R-649); the control still has to fire (REQ-VAL-288).
 - `cargo xtask gate replication --target MT-1 --propose` — the proposal measures what sets the tolerance and states it, with its evidence; reviewer-checked, confirmed by the human with the M9 report and recorded in `decisions.md` (REQ-VAL-289).
 
 ## Notes

@@ -27,7 +27,7 @@ The replication suite's targets PA-1 run as engine tests (`principia_dd_replicat
 - `crates/validation/src/gates/side_ratio.rs`; the calibration proposal.
 
 ## Acceptance tests
-- `cargo xtask gate replication --target PA-1` — the chart RQ-594 rules, the split once RQ-596 is; the maps reviewed by the physics reviewer; the split at REQ-VAL-324's level; control: a map at the wrong side ratio range must misplace the regular region (REQ-VAL-323).
+- `cargo xtask gate replication --target PA-1` — the chart RQ-594 rules, the split once RQ-596 is; the maps reviewed by the physics reviewer; the split at REQ-VAL-324's level; control: a map at the wrong side ratio range must misplace the regular region; the outcome recorded with its tier: PASS where the comparison above holds, otherwise EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED, never a merge condition (R-649); the control still has to fire (REQ-VAL-323).
 - `cargo xtask gate replication --target PA-1 --propose` — the proposal measures what sets the tolerance and states it, with its evidence; reviewer-checked, confirmed by the human with the M9 report and recorded in `decisions.md` (REQ-VAL-324).
 
 ## Notes

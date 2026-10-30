@@ -33,10 +33,10 @@ The three external targets that came from the ruled ground-truth suite are score
 - `crates/validation/src/gates/{free_fall,figure_eight_curve,burrau_structure}.rs`; the calibration proposal for REQ-VAL-334.
 
 ## Acceptance tests
-- `cargo xtask gate replication --target FF-H` — each orbit returns to rest in the same configuration after one period (tolerance: REQ-VAL-130, calibrated); order reported; the outcome recorded (REQ-VAL-042).
-- `cargo xtask gate replication --target figure-eight-curve` — the figure-eight shape-sphere curve against the published one, within REQ-VAL-334; the outcome recorded; control: a Lagrange-triangle run's curve must not match (REQ-VAL-333).
+- `cargo xtask gate replication --target FF-H` — each orbit returns to rest in the same configuration after one period (tolerance: REQ-VAL-130, calibrated); order reported; the outcome recorded with its tier: PASS where the comparison above holds, otherwise EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED, never a merge condition (R-649) (REQ-VAL-042).
+- `cargo xtask gate replication --target figure-eight-curve` — the figure-eight shape-sphere curve against the published one, within REQ-VAL-334; the outcome recorded with its tier: PASS where the comparison above holds, otherwise EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED, never a merge condition (R-649); control: a Lagrange-triangle run's curve must not match; the control still has to fire (REQ-VAL-333).
 - `cargo xtask gate replication --target figure-eight-curve --propose` — the proposal measures the curve's deviation at f64 across the eta ladder and states the tolerance, with its evidence; reviewer-checked, confirmed by the human with the M9 report and recorded in `decisions.md` (REQ-VAL-334).
-- `cargo xtask gate replication --target SP-1-structure` — each feature of REQ-VAL-127 beside Szebehely & Peters's; the outcome recorded; control: a run from a start perturbed until its escaper changes must disagree (REQ-VAL-335).
+- `cargo xtask gate replication --target SP-1-structure` — each feature of REQ-VAL-127 beside Szebehely & Peters's; the outcome recorded with its tier: PASS where the comparison above holds, otherwise EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED, never a merge condition (R-649); control: a run from a start perturbed until its escaper changes must disagree; the control still has to fire (REQ-VAL-335).
 - The note lists each feature and how it is compared structurally; physics reviewer approved (REQ-VAL-127).
 
 ## Notes

@@ -26,7 +26,7 @@ The replication suite's targets OC-4 run as engine tests (`principia_dd_replicat
 - Result runs through each orbit; the agreement table with every disagreement listed; the per-orbit neighbourhood images with the atlas's credit line; the calibration proposal.
 
 ## Acceptance tests
-- `cargo xtask gate replication --target OC-4` — Result runs (R-572) at f64; the island criterion read from the payload; agreement at REQ-VAL-310's level; every disagreement listed with both labels and its source; control: labels shuffled between orbits must lower the agreement to chance (REQ-VAL-309).
+- `cargo xtask gate replication --target OC-4` — Result runs (R-572) at f64; the island criterion read from the payload; agreement at REQ-VAL-310's level; every disagreement listed with both labels and its source; control: labels shuffled between orbits must lower the agreement to chance; the outcome recorded with its tier: PASS where the comparison above holds, otherwise EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED, never a merge condition (R-649); the control still has to fire (REQ-VAL-309).
 - `cargo xtask gate replication --target OC-4 --propose` — the proposal measures what sets the tolerance and states it, with its evidence; reviewer-checked, confirmed by the human with the M9 report and recorded in `decisions.md` (REQ-VAL-310).
 - `scripts/check_no_atlas_params.sh` — prints `ok`: `atlas-params.json` is not committed, and nothing in this task reads it.
 

@@ -29,7 +29,7 @@ The replication suite's targets V-11 run as engine tests (`principia_dd_replicat
 - `crates/validation/src/gates/hierarchical.rs`; the calibration proposal.
 
 ## Acceptance tests
-- `cargo xtask gate replication --target V-11` — the primaries once in the repo (rule 1; RQ-598); their tables transcribed twice; the limits at REQ-VAL-331's level; control: the prograde limit applied to retrograde runs must fail (REQ-VAL-330).
+- `cargo xtask gate replication --target V-11` — the primaries once in the repo (rule 1; RQ-598); their tables transcribed twice; the limits at REQ-VAL-331's level; control: the prograde limit applied to retrograde runs must fail; the outcome recorded with its tier: PASS where the comparison above holds, otherwise EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED, never a merge condition (R-649); the control still has to fire (REQ-VAL-330).
 - `cargo xtask gate replication --target V-11 --propose` — the proposal measures what sets the tolerance and states it, with its evidence; reviewer-checked, confirmed by the human with the M9 report and recorded in `decisions.md` (REQ-VAL-331).
 - `git diff --no-index` of each fixture table's two transcriptions — empty, or each difference settled against the page and recorded beside the fixture, before the fixture is committed (R-594 item 4).
 

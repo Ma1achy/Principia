@@ -27,7 +27,7 @@ The replication suite's targets OC-3 run as engine tests (`principia_dd_replicat
 - The calibration proposal for the agreement band.
 
 ## Acceptance tests
-- `cargo xtask gate replication --target OC-3` — per row our closure from pub_* under the default occupant at f64 beside closure_published; rows within REQ-VAL-219's band counted, every row outside it listed with both numbers, never failed (the orbit-catalogue instruction's item 3); rows with T > 200 recorded as "not evaluated within cap", never failed (R-636); control: on a row whose catalogued published closure exceeds 1e-6, the run from ref_* must close better than the run from pub_* (REQ-VAL-218).
+- `cargo xtask gate replication --target OC-3` — per row our closure from pub_* under the default occupant at f64 beside closure_published; rows within REQ-VAL-219's band counted, every row outside it listed with both numbers, never failed (the orbit-catalogue instruction's item 3); rows with T > 200 recorded as "not evaluated within cap", never failed (R-636); control: on a row whose catalogued published closure exceeds 1e-6, the run from ref_* must close better than the run from pub_*; the outcome recorded with its tier: PASS where the comparison above holds, otherwise EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED, never a merge condition (R-649); the control still has to fire (REQ-VAL-218).
 - `cargo xtask gate replication --target OC-3 --propose` — the proposal measures what sets the tolerance and states it, with its evidence; reviewer-checked, confirmed by the human with the M9 report and recorded in `decisions.md` (REQ-VAL-219).
 - `scripts/check_no_atlas_params.sh` — prints `ok`: `atlas-params.json` is not committed, and nothing in this task reads it.
 

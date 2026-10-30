@@ -29,7 +29,7 @@ The replication suite's targets OC-5, OC-5's counting convention run as engine t
 - `crates/validation/src/gates/atlas_syzygy.rs`: the count per row from the crossing counter against `syz`.
 
 ## Acceptance tests
-- `cargo xtask gate replication --target OC-5` — per row the crossing counter's count of syzygies over one period, by the convention REQ-VAL-221 defines, against `syz`; the comparison is of integers, exact; a row whose count differs is listed with both numbers and queued unless the cause is a located bug (rule 4); control: a run to 0.5·T must fail on every row with syz > 1 (REQ-VAL-220).
+- `cargo xtask gate replication --target OC-5` — per row the crossing counter's count of syzygies over one period, by the convention REQ-VAL-221 defines, against `syz`; the comparison is of integers, exact; a row whose count differs is listed with both numbers and queued unless the cause is a located bug (rule 4); control: a run to 0.5·T must fail on every row with syz > 1; the outcome recorded with its tier: PASS where the comparison above holds, otherwise EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED, never a merge condition (R-649); the control still has to fire (REQ-VAL-220).
 - Doc review (physics): `principia_dd_replication.md` § 5.2 states which crossings count as a syzygy, how one at t = 0 and at t = T counts, and how the count is read from the crossing counter, checked against a sample of rows' `syz` before the comparison; the physics reviewer approved (REQ-VAL-221).
 - `scripts/check_no_atlas_params.sh` — prints `ok`: `atlas-params.json` is not committed, and nothing in this task reads it.
 

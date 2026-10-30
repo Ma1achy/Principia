@@ -26,8 +26,8 @@ The replication suite's targets L-2, V-8 (b) run as engine tests (`principia_dd_
 - The zooms rendered and reviewed against the figures.
 
 ## Acceptance tests
-- `cargo xtask gate replication --target L-2 --render` — the figure beside the paper's; the zoom rendered and reviewed by the physics reviewer against the figures; control: the zoom at a point off the area must not show it; the physics reviewer compares them (REQ-VAL-293).
-- `cargo xtask gate replication --target V-8b --render` — the figure beside the paper's; the windows rendered and reviewed by the physics reviewer; control: a window placed in the sea of tranquillity must show no bands; the physics reviewer compares them (REQ-VAL-294).
+- `cargo xtask gate replication --target L-2 --render` — the figure beside the paper's; the zoom rendered and reviewed by the physics reviewer against the figures; control: the zoom at a point off the area must not show it; the physics reviewer compares them; the outcome recorded with its tier: PASS where the comparison above holds, otherwise EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED, never a merge condition (R-649); the control still has to fire (REQ-VAL-293).
+- `cargo xtask gate replication --target V-8b --render` — the figure beside the paper's; the windows rendered and reviewed by the physics reviewer; control: a window placed in the sea of tranquillity must show no bands; the physics reviewer compares them; the outcome recorded with its tier: PASS where the comparison above holds, otherwise EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED, never a merge condition (R-649); the control still has to fire (REQ-VAL-294).
 
 ## Notes
 - Reference data are read from the records named in each requirement's verify; the records stay records (R-159), and the contract is `principia_dd_replication.md`.

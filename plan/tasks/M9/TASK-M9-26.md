@@ -26,8 +26,8 @@ The replication suite's targets L-1, V-2/V-8 (a) run as engine tests (`principia
 - The full-resolution lifetime map from the uniform-grid survey, through the lens remap; the mirror-symmetry check; the calibration proposal.
 
 ## Acceptance tests
-- `cargo xtask gate replication --target L-1 --render` — the figure beside the paper's; the full-resolution map from the uniform-grid survey, reviewed against Fig. 1 by the physics reviewer; L-3's statistic at its calibrated level; control: the map without the lens remap must misplace the band; the physics reviewer compares them (REQ-VAL-290).
-- `cargo xtask gate replication --target V-8a` — the render against its two mirror images, pixel by pixel, within REQ-VAL-292; control: a render with one body's mass changed must break the symmetry (REQ-VAL-291).
+- `cargo xtask gate replication --target L-1 --render` — the figure beside the paper's; the full-resolution map from the uniform-grid survey, reviewed against Fig. 1 by the physics reviewer; L-3's statistic at its calibrated level; control: the map without the lens remap must misplace the band; the physics reviewer compares them; the outcome recorded with its tier: PASS where the comparison above holds, otherwise EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED, never a merge condition (R-649); the control still has to fire (REQ-VAL-290).
+- `cargo xtask gate replication --target V-8a` — the render against its two mirror images, pixel by pixel, within REQ-VAL-292; control: a render with one body's mass changed must break the symmetry; the outcome recorded with its tier: PASS where the comparison above holds, otherwise EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED, never a merge condition (R-649); the control still has to fire (REQ-VAL-291).
 - `cargo xtask gate replication --target V-8a --propose` — the proposal measures what sets the tolerance and states it, with its evidence; reviewer-checked, confirmed by the human with the M9 report and recorded in `decisions.md` (REQ-VAL-292).
 
 ## Notes

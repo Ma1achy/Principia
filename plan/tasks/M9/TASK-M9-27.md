@@ -28,9 +28,9 @@ The replication suite's targets HU-1, HU-2 run as engine tests (`principia_dd_re
 - The calibration proposals.
 
 ## Acceptance tests
-- `cargo xtask gate replication --target HU-1` — the closure field on the Šuvakov-plane chart once RQ-583 is ruled; each Table 23 minimum within REQ-VAL-315; the map reviewed by the physics reviewer; control: a map at m₃ = 2 must not show the equal-mass minima (REQ-VAL-314).
+- `cargo xtask gate replication --target HU-1` — the closure field on the Šuvakov-plane chart once RQ-583 is ruled; each Table 23 minimum within REQ-VAL-315; the map reviewed by the physics reviewer; control: a map at m₃ = 2 must not show the equal-mass minima; the outcome recorded with its tier: PASS where the comparison above holds, otherwise EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED, never a merge condition (R-649); the control still has to fire (REQ-VAL-314).
 - `cargo xtask gate replication --target HU-1 --propose` — the proposal measures what sets the tolerance and states it, with its evidence; reviewer-checked, confirmed by the human with the M9 report and recorded in `decisions.md` (REQ-VAL-315).
-- `cargo xtask gate replication --target HU-2` — as HU-1, zoomed; the middle candidate's position and period within REQ-VAL-317 (REQ-VAL-316).
+- `cargo xtask gate replication --target HU-2` — as HU-1, zoomed; the middle candidate's position and period within REQ-VAL-317; the outcome recorded with its tier: PASS where the comparison above holds, otherwise EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED, never a merge condition (R-649) (REQ-VAL-316).
 - `cargo xtask gate replication --target HU-2 --propose` — the proposal measures what sets the tolerance and states it, with its evidence; reviewer-checked, confirmed by the human with the M9 report and recorded in `decisions.md` (REQ-VAL-317).
 
 ## Notes

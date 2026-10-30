@@ -29,7 +29,7 @@ The replication suite's targets Q-2's Theory row, Q-4 run as engine tests (`prin
 - The calibration proposal for (ii)'s level.
 
 ## Acceptance tests
-- `cargo xtask gate replication --target Q-4` — (i) exact; its negative control, the 3D thermal form f(E) = 2E, must fail; (ii) a χ² or KS statistic against the printed bins at REQ-VAL-212's level, with both readings of 'the maximum distance represents the binary' run and recorded; the eccentricity and Z functions are the ones the outcome code uses, not copies (REQ-VAL-211).
+- `cargo xtask gate replication --target Q-4` — (i) exact; its negative control, the 3D thermal form f(E) = 2E, must fail; (ii) a χ² or KS statistic against the printed bins at REQ-VAL-212's level, with both readings of 'the maximum distance represents the binary' run and recorded; the eccentricity and Z functions are the ones the outcome code uses, not copies; the outcome recorded with its tier: PASS where the comparison above holds, otherwise EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED, never a merge condition (R-649); the control still has to fire (REQ-VAL-211).
 - `cargo xtask gate replication --target Q-4 --propose` — the proposal measures what sets the tolerance and states it, with its evidence; reviewer-checked, confirmed by the human with the M9 report and recorded in `decisions.md` (REQ-VAL-212).
 - `git diff --no-index` of each fixture table's two transcriptions — empty, or each difference settled against the page and recorded beside the fixture, before the fixture is committed (R-594 item 4).
 

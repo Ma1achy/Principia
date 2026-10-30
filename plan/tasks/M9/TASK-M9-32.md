@@ -27,7 +27,7 @@ The replication suite's targets D-3 run as engine tests (`principia_dd_replicati
 - `crates/validation/src/gates/chazy_prototype.rs`: the wrong-commit count and the medians beside the prototype's; the calibration proposal.
 
 ## Acceptance tests
-- `cargo xtask gate replication --target D-3` — the § 4.1 table's fixtures; the wrong-commit count is 0; the medians within REQ-VAL-307 or explained; control: a classifier variant that commits at the first B-so-far must make a wrong commit (REQ-VAL-306).
+- `cargo xtask gate replication --target D-3` — the § 4.1 table's fixtures; the wrong-commit count is 0; the medians within REQ-VAL-307 or explained; control: a classifier variant that commits at the first B-so-far must make a wrong commit; the outcome recorded with its tier: PASS where the comparison above holds, otherwise EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED, never a merge condition (R-649); the control still has to fire (REQ-VAL-306).
 - `cargo xtask gate replication --target D-3 --propose` — the proposal measures what sets the tolerance and states it, with its evidence; reviewer-checked, confirmed by the human with the M9 report and recorded in `decisions.md` (REQ-VAL-307).
 
 ## Notes

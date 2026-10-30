@@ -26,7 +26,7 @@ The replication suite's targets OC-6 run as engine tests (`principia_dd_replicat
 - `cargo xtask gate atlas-coverage`: the report per family from OC-1's, OC-3's and OC-5's runs, the skipped rows named.
 
 ## Acceptance tests
-- `cargo xtask gate replication --target OC-6` — cargo xtask gate atlas-coverage writes the report; every one of the 41 families appears, with the rows past R-610's cap (T > 200) counted and named as "not evaluated within cap", never as failures (R-636); control: a family run with a deliberately permuted mass order must read as failing every row (REQ-VAL-222).
+- `cargo xtask gate replication --target OC-6` — cargo xtask gate atlas-coverage writes the report; every one of the 41 families appears, with the rows past R-610's cap (T > 200) counted and named as "not evaluated within cap", never as failures (R-636); control: a family run with a deliberately permuted mass order must read as failing every row; the outcome recorded with its tier: PASS where the comparison above holds, otherwise EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED, never a merge condition (R-649); the control still has to fire (REQ-VAL-222).
 - `scripts/check_no_atlas_params.sh` — prints `ok`: `atlas-params.json` is not committed, and nothing in this task reads it.
 
 ## Notes

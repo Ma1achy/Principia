@@ -28,7 +28,7 @@ The replication suite's targets BG-4 run as engine tests (`principia_dd_replicat
 - The result added to RQ-576's record in `REVIEW_QUEUE.md`; the gallery CSV not edited.
 
 ## Acceptance tests
-- `cargo xtask gate replication --target BG-4` — the minimum's time with its uncertainty propagated from the six-decimal (p₁, p₂) and the eta ladder; the test asserts the uncertainty is smaller than the published periods' difference (about 1e-3 for I, 2e-4 for II) before it reads which period is nearer; the result goes to RQ-576's record (REQ-VAL-213).
+- `cargo xtask gate replication --target BG-4` — the minimum's time with its uncertainty propagated from the six-decimal (p₁, p₂) and the eta ladder; the test asserts the uncertainty is smaller than the published periods' difference (about 1e-3 for I, 2e-4 for II) before it reads which period is nearer; the result goes to RQ-576's record; the outcome recorded with its tier: PASS where the comparison above holds, otherwise EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED, never a merge condition (R-649) (REQ-VAL-213).
 - `scripts/check_no_atlas_params.sh` — prints `ok`: `atlas-params.json` is not committed, and nothing in this task reads it.
 
 ## Notes

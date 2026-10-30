@@ -28,7 +28,7 @@ The replication suite's targets LL-3 run as engine tests (`principia_dd_replicat
 - `crates/validation/src/gates/free_fall_known.rs` and the calibration proposal.
 
 ## Acceptance tests
-- `cargo xtask gate replication --target LL-3` — both sources' ICs, remapped by a tested function, integrated one period under the default occupant; agreement of the shape and of T·|E|^{3/2} within REQ-VAL-224's tolerance; control: F1 at (0.6, 0.8, 1) against Yasko & Orlov's Orbit 16 must differ (REQ-VAL-223).
+- `cargo xtask gate replication --target LL-3` — both sources' ICs, remapped by a tested function, integrated one period under the default occupant; agreement of the shape and of T·|E|^{3/2} within REQ-VAL-224's tolerance; control: F1 at (0.6, 0.8, 1) against Yasko & Orlov's Orbit 16 must differ; the outcome recorded with its tier: PASS where the comparison above holds, otherwise EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED, never a merge condition (R-649); the control still has to fire (REQ-VAL-223).
 - `cargo xtask gate replication --target LL-3 --propose` — the proposal measures what sets the tolerance and states it, with its evidence; reviewer-checked, confirmed by the human with the M9 report and recorded in `decisions.md` (REQ-VAL-224).
 - `git diff --no-index` of each fixture table's two transcriptions — empty, or each difference settled against the page and recorded beside the fixture, before the fixture is committed (R-594 item 4).
 
