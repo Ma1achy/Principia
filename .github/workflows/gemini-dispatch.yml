@@ -88,7 +88,8 @@ jobs:
     concurrency:
       group: ${{ github.workflow }}-review-${{ github.event_name }}-${{ github.event.pull_request.number || github.event.issue.number }}
       cancel-in-progress: true
-    timeout-minutes: 12
+    # The step's 25 minutes plus three for the checkout and the skip note.
+    timeout-minutes: 28
     continue-on-error: true
     # contents: read to check out the repository (GEMINI.md, the code under review); pull-requests: write to read the
     # PR and post the review. No id-token (no Google Cloud auth) and no issues: write (no issue comments).
@@ -115,7 +116,9 @@ jobs:
         id: gemini_pr_review
         if: env.GEMINI_KEY_PRESENT == 'true'
         continue-on-error: true
-        timeout-minutes: 10
+        # 25, not 10: under Google overload about half the API calls return 503 and the CLI retries them; the 29 Oct
+        # run on #331 timed out at 10 before posting anything (applied per R-369).
+        timeout-minutes: 25
         uses: google-github-actions/run-gemini-cli@f77273f4c914e4bf38440cf36a0369cb64a37489 # v0.1.22
         env:
           GITHUB_TOKEN: ${{ github.token }}
