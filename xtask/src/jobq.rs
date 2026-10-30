@@ -1343,6 +1343,8 @@ impl Runner {
         )
         .map_err(cannot)?;
         let err = out.try_clone().map_err(cannot)?;
+        // The command is looked up on the job's PATH, the submitter's unless its `--env PATH=…` gave one, not the
+        // runner's: the environment is cleared and replaced before the lookup.
         Command::new(&job.command[0])
             .args(&job.command[1..])
             .current_dir(&job.worktree)

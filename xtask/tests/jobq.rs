@@ -53,14 +53,52 @@ impl Q {
     /// Runs `xtask job <args>` on this queue, bounded by `within`, under the process cap ([`process_cap`]), which
     /// the runner it may start and the runner's jobs inherit.
     fn run_within(&self, args: &[&str], within: Duration) -> std::io::Result<Output> {
-        Command::new("bash")
+        self.command(args).output_within(within)
+    }
+
+    /// `xtask job <args>` on this queue, under the process cap.
+    fn command(&self, args: &[&str]) -> Command {
+        let mut command = Command::new("/bin/bash");
+        command
             .args(["-c", "ulimit -u \"$0\" && exec \"$@\""])
             .arg(process_cap().to_string())
             .arg(env!("CARGO_BIN_EXE_xtask"))
             .arg("job")
             .args(args)
-            .env("PRINCIPIA_JOBQ", &*self.dir)
-            .output_within(within)
+            .env("PRINCIPIA_JOBQ", &*self.dir);
+        command
+    }
+
+    /// Submits `command` as [`Q::submit`] does, from a submitter whose `PATH` is `path`.
+    fn submit_with_path(&self, path: &str, label: &str, extra: &[&str], command: &[&str]) -> u64 {
+        let work = self.work();
+        let mut args = vec![
+            "submit",
+            work.to_str().expect("utf-8 path"),
+            "--priority",
+            "peek",
+            "--label",
+            label,
+            "--env",
+            "CARGO_TARGET_DIR=/nonexistent/jobq-test-target",
+        ];
+        args.extend_from_slice(extra);
+        args.push("--");
+        args.extend_from_slice(command);
+        let out = self
+            .command(&args)
+            .env("PATH", path)
+            .output_within(Duration::from_secs(45))
+            .expect("xtask job ran");
+        assert!(
+            out.status.success(),
+            "submit failed: {}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+        String::from_utf8_lossy(&out.stdout)
+            .trim()
+            .parse()
+            .expect("submit printed an id")
     }
 
     fn run(&self, args: &[&str]) -> Output {
@@ -2186,6 +2224,67 @@ negative_control!(
     "2100 is no leap year",
     expected = "utc wrong",
     check_utc(&[(4_107_542_400, "2100-02-29T00:00:00Z")])
+);
+
+// --- A job runs with its submitter's PATH ----------------------------------------------------------------------------
+
+/// A runner started from a submitter whose PATH is `/usr/bin:/bin` holds a gate job, while a job running the bare
+/// command `jobq-path-probe` (in a folder of its own, exiting 7) is submitted from a PATH with that folder first (with
+/// `on_path`; else without it), and another from that PATH with `--env PATH=/usr/bin:/bin`. The first must find it
+/// (7), and the second must not, so it doesn't start (126).
+fn path_case(tag: &str, on_path: bool) {
+    let q = Q::new(tag, "");
+    let probe = q.dir.join("probe");
+    std::fs::create_dir_all(&probe).expect("probe dir");
+    let script = probe.join("jobq-path-probe");
+    std::fs::write(&script, "#!/bin/sh\nexit 7\n").expect("probe written");
+    std::process::Command::new("chmod")
+        .args(["755", script.to_str().expect("utf-8 path")])
+        .output_within(Duration::from_secs(30))
+        .expect("chmod ran");
+    let base = "/usr/bin:/bin";
+    let with = format!("{}:{base}", probe.display());
+    let gate = q.submit_with_path(
+        base,
+        "gate",
+        &[],
+        &["/bin/sh", "-c", "while [ ! -e go ]; do sleep 0.05; done"],
+    );
+    let submitter = if on_path { with.as_str() } else { base };
+    let found = q.submit_with_path(submitter, "found", &[], &["jobq-path-probe"]);
+    let env_path = format!("PATH={base}");
+    let overridden = q.submit_with_path(
+        &with,
+        "overridden",
+        &["--env", &env_path],
+        &["jobq-path-probe"],
+    );
+    std::fs::write(q.work().join("go"), "").expect("gate opened");
+    let codes = (q.wait(gate).0, q.wait(found).0, q.wait(overridden).0);
+    let recorded = q
+        .queue()
+        .load(found)
+        .expect("job file")
+        .env
+        .get("PATH")
+        .cloned();
+    q.finish();
+    assert!(
+        codes == (0, 7, 126) && recorded.as_deref() == Some(with.as_str()),
+        "job did not run with its submitter's PATH: statuses {codes:?}, recorded {recorded:?}"
+    );
+}
+
+#[test]
+fn jobq_a_job_runs_with_its_submitters_path() {
+    path_case("jobq_path", true);
+}
+
+negative_control!(
+    jobq_a_job_runs_with_its_submitters_path,
+    "a submitter whose PATH lacks the command's folder can't run it, whatever the runner's",
+    expected = "job did not run with its submitter's PATH",
+    path_case("jobq_path_control", false)
 );
 
 // --- Concurrency -----------------------------------------------------------------------------------------------------
