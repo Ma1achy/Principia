@@ -74,17 +74,23 @@ Read this first; each rule points at its source.
   lists each `M` or `D` with its reason, and the code reviewer confirms that no assertion was weakened, except where a
   ruling changed the behaviour it tests. The implementer never edits qa's files (R-290).
 
-## Working with review (`decisions.md` § R-635)
+## Working with review (`decisions.md` § R-635, § R-651)
 - Codex, Gemini CLI and GitHub Copilot review PRs as advisory bots, never merge gates. Their findings are not optional
   reading. Their brief is `AGENTS.md` § "Code Review Rules"; `GEMINI.md` and `.github/copilot-instructions.md` are
   copies, checked by `xtask/tests/ai_review_rules.rs`.
-- Before a merge, check for the bots' reviews. Wait up to 15 minutes after the PR opens, or after a re-review you asked
-  for (`@codex review`, `@gemini-cli /review`, Copilot re-requested as a reviewer). If none arrives in that window, or
-  the bot errored or is out of quota, merge without it and note "no bot review" in the PR. Never wait longer.
+- Ask each bot for a fresh review (`@codex review`, `@gemini-cli /review`, Copilot re-requested as a reviewer)
+  (R-651): before the merge, on the final head, waiting for a review from each bot on the exact SHA being merged; after
+  every substantive push (new logic, physics or algebra, a fix responding to review findings, or a rebase or merge that
+  changes code; only a docs-only typo push that answers no finding needs none); and periodically on a long-running PR
+  (at least once a working day while it is open). Under limits: pre-merge, then post-push, then periodic.
+- A bot that is unavailable or rate-limited (no review on the requested head within 15 minutes of the request, an
+  error, or out of quota) is noted on the PR ("no <bot> review on <sha>: <reason>"), and the merge proceeds on the
+  others; a bot never blocks a merge.
 - Handle every finding that arrived before the merge, with a reply on its thread, then resolve the thread
   (`gh api graphql`, `resolveReviewThread`): fixed (name the commit); not a defect (the traced reason: the real caller
   or input checked, or the doc or ruling that makes it correct); or not this PR's (name the queue entry or follow-up
-  task). None is left silent; none is resolved without a reply.
+  task). None is left silent; none is resolved without a reply. A PR with an unresolved bot thread does not merge
+  (R-651).
 - Trace a finding to a real caller or input before fixing it. Two bots agreeing is not verification. A finding that
   contradicts a ruling, the corpus or the physics is answered with the source, not "fixed" into a regression.
 - A P0 / CRITICAL claim (a physics or invariant break) goes to the physics reviewer for the call before merge, even if

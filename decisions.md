@@ -28609,8 +28609,9 @@ adds REQ-VAL-333 to REQ-VAL-337, REQ-VAL-340 and REQ-VAL-341.
 
 ## R-651 — Advisory review cadence: a fresh review from each of Codex, Gemini CLI and Copilot before merge on the final head, after every substantive push and at least once a working day on a long-running PR, in that priority under limits; a bot unavailable or rate-limited is noted on the PR and the merge goes ahead with the others; every bot finding is verified and closed out before merge (fixed, answered or moved to a task or RQ, then its thread resolved), and a PR with an unresolved bot thread does not merge; the bots stay advisory and never replace the required approvals *(amends R-635: its cadence; a standing rule)*
 *30 Oct 2026 · the owner's rule and his two addenda of that day; ported 30 Oct 2026 with R-649 and R-650 (PR #342);
-applied in `plan/WORKFLOW.md` (§ "The review loop"), `plan/OPERATIONS.md` (§ "Merging"), the forward line on R-635 and
-`plan/rule_groups.yaml`; the merge script that checks it is the orchestrator's own, outside the repository*
+applied in `plan/WORKFLOW.md` (§ "The review loop"), `plan/OPERATIONS.md` (§ "Merging"), `CLAUDE.md` (§ "Working with
+review"), the forward line on R-635 and `plan/rule_groups.yaml`; the merge script that checks it is the orchestrator's
+own, outside the repository*
 
 The owner's rule, verbatim:
 
@@ -28669,8 +28670,9 @@ His second addendum, the same day, verbatim:
   the task's.
 - **"Tell me if pre-merge reviews start getting skipped":** each merge that went ahead without a bot's pre-merge
   review is listed, with the reason, in the orchestrator's next batched summary to the owner (R-369).
-- **`CLAUDE.md` § "Working with review"** still states R-635's 15-minute window after the PR opens. It is not edited
-  in this port: the owner edits `CLAUDE.md`, flagged to the orchestrator. Where the two differ, this ruling governs
-  (`decisions.md` over the corpus, R-1).
+- **`CLAUDE.md` § "Working with review"** is updated to this cadence in this port (PR #342), as R-635's port wrote
+  that section: its heading cites R-651 beside R-635, and R-635's single review waited for up to 15 minutes after the
+  PR opens is replaced by the fresh reviews above, their priority under limits, the unavailable-bot note and the
+  unresolved-thread merge check. Its other bullets, R-635's "Still in force", stand.
 
 R-651 is in the "process" group of `plan/rule_groups.yaml`. It changes no requirement and no code.
