@@ -605,6 +605,24 @@ const WINDOW: [&str; 2] = ["window_square_centre", "window_square_half"];
 /// hashed.
 const SLICE: [&str; 1] = ["slice_axis_z_q3"];
 
+/// The wrapper's loop parameters (TASK-M3-06; integrator_contract Part 3): `SimUniforms`' defaults, the horizon's cap
+/// and the macro-step's floor, sim-key values that decide which run is computed, never what a stored bit means (the
+/// step indices' limit, `horizon_steps_max`, is hashed), so they are not hashed.
+const WRAPPER: [&str; 12] = [
+    "t_horizon_default",
+    "t_horizon_max",
+    "dt_macro_floor",
+    "escape_window",
+    "tau",
+    "r_coll",
+    "epsilon",
+    "r_close",
+    "eps_e",
+    "eps_l",
+    "g",
+    "m_total",
+];
+
 #[test]
 fn schema_version_hashes_the_registers_stored_bits_entries() {
     for name in STORED_BITS {
@@ -620,7 +638,7 @@ fn schema_version_hashes_the_registers_stored_bits_entries() {
     // invariant charts' warp defaults (TASK-M2-12), or the Burrau family's (TASK-M2-10), or the march's crossing
     // capacity (TASK-M3-15), or the steppers' coefficients (TASK-M3-02), or the curve projection's search
     // (TASK-M2-18), or the substep law's (TASK-M3-03), or the view window's square (TASK-M2-21), or the slice
-    // frame's default axis (TASK-M6-38).
+    // frame's default axis (TASK-M6-38), or the wrapper's loop parameters (TASK-M3-06).
     for k in REGISTER.iter().filter(|k| !STORED_BITS.contains(&k.name)) {
         assert!(
             ledger::links::CHART_CONSTANTS
@@ -635,7 +653,8 @@ fn schema_version_hashes_the_registers_stored_bits_entries() {
                 || CURVE_SEARCH.contains(&k.name)
                 || SUBSTEP.contains(&k.name)
                 || WINDOW.contains(&k.name)
-                || SLICE.contains(&k.name),
+                || SLICE.contains(&k.name)
+                || WRAPPER.contains(&k.name),
             "`{}` is neither a stored-bits entry nor a chart constant, so it is not hashed",
             k.name
         );
@@ -698,6 +717,12 @@ fn schema_version_hashes_the_registers_stored_bits_entries() {
         assert!(
             REGISTER.iter().any(|k| k.name == name) && !STORED_BITS.contains(&name),
             "the slice frame's entry `{name}` is not an unhashed register entry"
+        );
+    }
+    for name in WRAPPER {
+        assert!(
+            REGISTER.iter().any(|k| k.name == name) && !STORED_BITS.contains(&name),
+            "the wrapper's entry `{name}` is not an unhashed register entry"
         );
     }
 }

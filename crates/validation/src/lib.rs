@@ -37,6 +37,12 @@ pub use engine::synthetic;
 /// this dev-dependency.
 pub use kernel::payload::{pack_times, set_t_dmin_step, tm_t_dmin_step, tm_t_end_step};
 
+/// The wrapper's loop parameters and dispatch's refusals (TASK-M3-06), for ledger's `times` round-trip test, which
+/// reaches the engine only through this dev-dependency: a configuration whose `⌈T/dt_macro⌉` the u16 indices cannot hold
+/// is refused at dispatch (R-86).
+pub use engine::contract::sim_uniforms::SimUniforms;
+pub use engine::dispatch::validate::{validate as validate_dispatch, DispatchError};
+
 /// The coordinate presets and the stain graph they are (TASK-M1-07), re-exported for the render crate's tests, as the
 /// harness is.
 pub use engine::{presets, stain};
