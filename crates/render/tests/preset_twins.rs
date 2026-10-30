@@ -12,6 +12,9 @@
 //! - `preset_twins_agreement_factor_wgsl`: the agreement preset's WGSL declares `AGREEMENT_FACTOR` once, at
 //!   `agreement::FACTOR` (REQ-COL-060, TASK-M2-29), and `AGREEMENT_FLOOR` once, at `agreement::FLOOR`, in each of its
 //!   views and its operand views. Control: another factor differs.
+//! - `preset_twins_agreement_operand_groups`: each operand view (`agreement::operands`) returns its group's four of the
+//!   twelve words, and writes the fragment decode's `K`, `V`, `m` and `r` at the words the gate reads. Control: a group
+//!   read as the next one.
 //! - `preset_twins_non_finite_bits`: the bit test at the exponent's edges.
 //! - `preset_twins_sections`: `presets::section` cuts exactly between its markers, and names a missing or unclosed
 //!   section.
@@ -276,6 +279,56 @@ negative_control!(
     "a WGSL factor other than the compiled one must be found",
     expected = "is not the compiled factor",
     check_factor_wgsl(agreement::FACTOR * 2.0)
+);
+
+/// The operand views' groups (`agreement::operands`): group `g` returns words `4g` to `4g + 3` of the twelve, and the
+/// view writes `K`, `V`, `m` and `r` as bits at the words the gate reads; `skew` shifts the group read (the control).
+fn check_operand_groups(skew: u32) {
+    assert_eq!(
+        (agreement::OPERAND_WORDS, agreement::OPERAND_GROUPS),
+        (12, 3)
+    );
+    for g in 0..agreement::OPERAND_GROUPS {
+        let preset = agreement::operands(g + skew);
+        let view = preset.view();
+        let a = 4 * g;
+        assert!(
+            view.contains(&format!(
+                "return vec4<u32>(w[{a}], w[{}], w[{}], w[{}]);",
+                a + 1,
+                a + 2,
+                a + 3
+            )),
+            "group {g} does not return words {a} to {}",
+            a + 3
+        );
+        for line in [
+            "let d = frag_decode(agreement_point(l));",
+            "w[0] = d.d.K_0;",
+            "w[1] = d.d.V_0;",
+            "w[2] = mb.x;",
+            "w[3] = mb.y;",
+            "w[4] = mb.z;",
+            "w[5u + 2u * b] = rb.x;",
+            "w[6u + 2u * b] = rb.y;",
+            "w[11] = 0u;",
+        ] {
+            assert!(view.contains(line), "group {g} lacks `{line}`");
+        }
+        assert_eq!(preset.output(), render::bind::ViewOutput::Words);
+    }
+}
+
+#[test]
+fn preset_twins_agreement_operand_groups() {
+    check_operand_groups(0);
+}
+
+negative_control!(
+    preset_twins_agreement_operand_groups,
+    "a group returning another group's words must be found",
+    expected = "does not return words",
+    check_operand_groups(1)
 );
 
 /// The bit test at the exponent's edges; `max_finite` is the largest value expected finite.

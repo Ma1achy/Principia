@@ -552,6 +552,11 @@ fn check_measure_store(swap: bool) {
     let (want_stage, want_f64) = (scales(&mut staged), scales(&mut exact));
     for (name, want) in [(stage_name, &want_stage), (f64_name, &want_f64)] {
         let samples = measure(&gpu, &wgsl, &run, &parse(name)).unwrap();
+        assert_eq!(
+            samples.len(),
+            16,
+            "the {name} input's run is not 16 samples"
+        );
         for (q, s) in samples.iter().enumerate() {
             assert_eq!(
                 s.scale, want[q],
