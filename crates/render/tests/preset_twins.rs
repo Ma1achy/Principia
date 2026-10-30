@@ -3,6 +3,8 @@
 //! - `preset_twins_agreement_ratio_and_colour`: `agreement::ratio` is `None` for a non-finite operand in each place (by
 //!   its bits: `±∞`, NaN), else `|E − E₀|` over `FACTOR·eps·(max(|K₀|, 1) + max(|V₀|, 1))`, each `max` at its edge; and
 //!   `agreement::colour` is the hatch for `None`, green to a ratio of exactly 1, red past it, saturating at `2¹⁶`.
+//! - `preset_twins_agreement_factor_wgsl`: the agreement preset's WGSL declares `AGREEMENT_FACTOR` once, at
+//!   `agreement::FACTOR` (REQ-COL-060, TASK-M2-29), in both its views. Control: another factor differs.
 //! - `preset_twins_non_finite_bits`: the bit test at the exponent's edges.
 //! - `preset_twins_sections`: `presets::section` cuts exactly between its markers, and names a missing or unclosed
 //!   section.
@@ -74,6 +76,49 @@ negative_control!(
     "a ratio formed with another factor must differ",
     expected = "not the ratio",
     check_agreement(128.0)
+);
+
+/// The agreement preset's WGSL compiles [`agreement::FACTOR`] (REQ-COL-060's factor, TASK-M2-29): the colour view and
+/// the words view each declare `AGREEMENT_FACTOR` once, as a literal whose value is `factor`, and use it in the bound.
+fn check_factor_wgsl(factor: f32) {
+    for preset in [agreement::preset(), agreement::words()] {
+        let view = preset.view();
+        let decls: Vec<&str> = view
+            .lines()
+            .filter_map(|l| l.strip_prefix("const AGREEMENT_FACTOR: f32 = "))
+            .collect();
+        assert_eq!(
+            decls.len(),
+            1,
+            "AGREEMENT_FACTOR declared {} times",
+            decls.len()
+        );
+        let literal = decls[0]
+            .strip_suffix(';')
+            .expect("the declaration ends in ';'");
+        assert_eq!(
+            literal.parse::<f32>().ok(),
+            Some(factor),
+            "the WGSL factor {literal} is not the compiled factor"
+        );
+        assert!(
+            literal.contains('.'),
+            "{literal} is not an f32 literal in WGSL"
+        );
+        assert!(view.contains("let bound = AGREEMENT_FACTOR * AGREEMENT_EPS"));
+    }
+}
+
+#[test]
+fn preset_twins_agreement_factor_wgsl() {
+    check_factor_wgsl(agreement::FACTOR);
+}
+
+negative_control!(
+    preset_twins_agreement_factor_wgsl,
+    "a WGSL factor other than the compiled one must be found",
+    expected = "is not the compiled factor",
+    check_factor_wgsl(agreement::FACTOR * 2.0)
 );
 
 /// The bit test at the exponent's edges; `max_finite` is the largest value expected finite.
