@@ -1,0 +1,124 @@
+{
+  "about": "Synthetic branch-cut crossings for the τ tie rule (integrator contract Part 5; TASK-M3-16; REQ-INT-031, REQ-INT-046, REQ-INT-047, REQ-INT-048). Not transcribed from prin-rs, and not from a trajectory: which cuts carry a and b is RQ-630, so each case gives each cut's signed distance at a march's accepted endpoints directly, as [a, b], and the crossings each accepted substep must append, in order, in payload §3's symbols. Every value is exact at f32 and at f64.",
+  "cases": [
+    {
+      "name": "double_crossing_a_first",
+      "fixture": "double crossing in one substep",
+      "about": "Both cuts crossed in the positive sense in one substep: τ_a = 1/2, τ_b = 3/4.",
+      "endpoints": [[-1.0, -3.0], [1.0, 1.0]],
+      "crossings": [["a", "b"]]
+    },
+    {
+      "name": "double_crossing_b_first",
+      "fixture": "double crossing in one substep",
+      "about": "τ_a = 3/4, τ_b = 1/4: b's crossing first, against the cut-ID priority.",
+      "endpoints": [[-3.0, -1.0], [1.0, 1.0]],
+      "crossings": [["b", "a"]]
+    },
+    {
+      "name": "double_crossing_mixed_senses",
+      "fixture": "double crossing in one substep",
+      "about": "a crossed in the negative sense at τ_a = 3/4, b in the positive at τ_b = 1/4.",
+      "endpoints": [[3.0, -1.0], [-1.0, 3.0]],
+      "crossings": [["b", "A"]]
+    },
+    {
+      "name": "double_crossing_equal_tau",
+      "fixture": "double crossing in one substep",
+      "about": "τ_a = τ_b = 1/2 exactly: the tie-break, a first.",
+      "endpoints": [[-1.0, -2.0], [1.0, 2.0]],
+      "crossings": [["a", "b"]]
+    },
+    {
+      "name": "double_crossing_equal_tau_negative",
+      "fixture": "double crossing in one substep",
+      "about": "τ_a = τ_b = 1/4, both in the negative sense: a's inverse first.",
+      "endpoints": [[1.0, 0.5], [-3.0, -1.5]],
+      "crossings": [["A", "B"]]
+    },
+    {
+      "name": "shared_endpoint_b_first",
+      "fixture": "crossing both cuts near their shared endpoint",
+      "about": "A short segment past the cuts' shared endpoint, both distances of order 2⁻²⁰: τ_b = 1/4 before τ_a = 3/4, so b then a, which the fixed priority alone would reverse.",
+      "endpoints": [[-2.86102294921875e-6, -9.5367431640625e-7], [9.5367431640625e-7, 2.86102294921875e-6]],
+      "crossings": [["b", "a"]]
+    },
+    {
+      "name": "shared_endpoint_a_first",
+      "fixture": "crossing both cuts near their shared endpoint",
+      "about": "The same segment reversed: from b's positive side and a's, τ_a = 1/4 before τ_b = 3/4, a's and b's inverses.",
+      "endpoints": [[9.5367431640625e-7, 2.86102294921875e-6], [-2.86102294921875e-6, -9.5367431640625e-7]],
+      "crossings": [["A", "B"]]
+    },
+    {
+      "name": "shared_endpoint_tiny",
+      "fixture": "crossing both cuts near their shared endpoint",
+      "about": "Distances of order 2⁻¹⁰⁰, whose cross products (order 2⁻²⁰⁰) are below f32's normal range: τ_b = 1/4 before τ_a = 3/4 at both precisions.",
+      "endpoints": [[-2.3665827156630354e-30, -7.888609052210118e-31], [7.888609052210118e-31, 2.3665827156630354e-30]],
+      "crossings": [["b", "a"]]
+    },
+    {
+      "name": "on_cut_negative_to_positive",
+      "fixture": "endpoint exactly on a cut",
+      "about": "a: −1, 0, 1. The endpoint on the cut is non-negative: one crossing, in the first substep.",
+      "endpoints": [[-1.0, 1.0], [0.0, 1.0], [1.0, 1.0]],
+      "crossings": [["a"], []]
+    },
+    {
+      "name": "on_cut_positive_to_negative",
+      "fixture": "endpoint exactly on a cut",
+      "about": "a: 1, 0, −1. One crossing, in the second substep.",
+      "endpoints": [[1.0, 1.0], [0.0, 1.0], [-1.0, 1.0]],
+      "crossings": [[], ["A"]]
+    },
+    {
+      "name": "on_cut_touch_from_negative",
+      "fixture": "endpoint exactly on a cut",
+      "about": "b: −1, 0, −1. A crossing and its recrossing, which free reduction cancels.",
+      "endpoints": [[1.0, -1.0], [1.0, 0.0], [1.0, -1.0]],
+      "crossings": [["b"], ["B"]]
+    },
+    {
+      "name": "on_cut_touch_from_positive",
+      "fixture": "endpoint exactly on a cut",
+      "about": "b: 1, 0, 1. No crossing.",
+      "endpoints": [[1.0, 1.0], [1.0, 0.0], [1.0, 1.0]],
+      "crossings": [[], []]
+    },
+    {
+      "name": "on_cut_along",
+      "fixture": "endpoint exactly on a cut",
+      "about": "a: −1, 0, 0, 1. Along the cut for a substep: one crossing, in the first.",
+      "endpoints": [[-1.0, 1.0], [0.0, 1.0], [0.0, 1.0], [1.0, 1.0]],
+      "crossings": [["a"], [], []]
+    },
+    {
+      "name": "on_cut_negative_zero",
+      "fixture": "endpoint exactly on a cut",
+      "about": "a: −1, −0, 1. Negative zero is on the cut: one crossing, in the first substep.",
+      "endpoints": [[-1.0, 1.0], [-0.0, 1.0], [1.0, 1.0]],
+      "crossings": [["a"], []]
+    },
+    {
+      "name": "on_cut_both",
+      "fixture": "endpoint exactly on a cut",
+      "about": "Both cuts: −1, 0, 1, on both cuts at once at the middle endpoint: both crossings in the first substep, τ = 1 a tie, a first.",
+      "endpoints": [[-1.0, -2.0], [0.0, 0.0], [1.0, 2.0]],
+      "crossings": [["a", "b"], []]
+    },
+    {
+      "name": "cross_and_recross",
+      "fixture": "cross-and-recross inside one macro-step",
+      "about": "One macro-step of five accepted substeps; a crosses at the second and recrosses at the fourth, and both macro-step endpoints are on its negative side.",
+      "endpoints": [[-1.0, 1.0], [-0.5, 1.0], [0.5, 1.0], [0.25, 1.0], [-0.5, 1.0], [-1.0, 1.0]],
+      "crossings": [[], ["a"], [], ["A"], []]
+    },
+    {
+      "name": "cross_and_recross_both",
+      "fixture": "cross-and-recross inside one macro-step",
+      "about": "One macro-step of four accepted substeps: b crosses and recrosses, and a crosses once, after b's first crossing.",
+      "endpoints": [[-1.0, -1.0], [-0.5, 0.5], [0.5, 0.25], [1.0, -0.5], [1.0, -1.0]],
+      "crossings": [["b"], ["a"], ["B"], []]
+    }
+  ]
+}
