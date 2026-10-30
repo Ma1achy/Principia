@@ -16,7 +16,8 @@
 //! - `roundtrip_preset_phys_of_is_phys`: `phys_of`, which render's tests hold the preset's residual twin to, is
 //!   `validation::roundtrip::phys` on the same states, bit for bit, on states that differ in one value at a time.
 //!   Control: its states swapped.
-//! - `roundtrip_preset_twin_invalid`: a trip from a state with an infinite or NaN momentum is invalid, its ratio 0; a
+//! - `roundtrip_preset_twin_invalid`: a trip from a state with an infinite or NaN momentum is invalid, its ratio 0, on
+//!   `C`'s section and off it; a finite state whose trip is non-finite (massless, off the section) is invalid; a
 //!   finite one keeps its tag and its small ratio; an invalid sample's colour is the hatch at its pixel's centre.
 //!   Control: a finite momentum.
 //! - `roundtrip_preset_on_section_is_the_t2_reference`: each fragment chart's `FragmentChart::ON_SECTION`, which picks
@@ -297,6 +298,20 @@ fn roundtrip_preset_twin_invalid() {
     for bad in [f32::INFINITY, f32::NEG_INFINITY, f32::NAN] {
         check_invalid(bad);
     }
+    // A finite state whose trip is not: every mass zero, off the section, where `C(x)` is NaN, so the residual alone
+    // makes the trip invalid.
+    let massless = Ic {
+        m: [0.0f32; 3],
+        r: [[-0.4, 0.1], [0.9, -0.2], [-0.3, 0.05]],
+        p: [[0.1, -0.6], [-0.35, 0.2], [0.2, 0.4]],
+    };
+    let t = twin_of(&massless, 0, false);
+    assert!(
+        t.residual.is_nan() && t.class == Class::Invalid,
+        "a massless state's trip off the section: residual {}, {:?}",
+        t.residual,
+        t.class
+    );
     // A decoded state, on C's section, so its trip is within ε_phys; tagged as an infeasible first decode would be.
     let z = [0.3f32, -0.2, 0.1, -0.4, 0.25, 0.05, 0.2, -0.35];
     let decoded =
