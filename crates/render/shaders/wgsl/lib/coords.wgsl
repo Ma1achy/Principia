@@ -18,3 +18,4 @@ fn frag_uv(frag: vec2<f32>, dims: vec2<f32>) -> vec2<f32> {
     return vec2<f32>(frag.x, flip_y(frag.y, dims.y)) / dims;
 }
 // R-656 CI proof: a shader change on a throwaway PR, never merged.
+// R-656 CI proof: a second push, superseding the first.
