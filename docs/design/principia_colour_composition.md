@@ -825,14 +825,14 @@ and the decode/encode translated to WGSL from the one Rust source (R-116):
   `κᵢⱼ` at `1/eps`, below which the f32 separation keeps no relative digit, with the same `max(·, 1)` as the
   operands' terms. The max-norm is within `√2` of the Euclidean either way, so where `ŝᵢⱼ` is the separation the sum
   is within a factor 2 of `Σ mᵢmⱼ(‖rᵢ‖ + ‖rⱼ‖)/rᵢⱼ²`, which the factor absorbs. **The sum is finite at every pixel,
-  wherever `V` is and at the pole too (R-436).** Each term is formed as `(mᵢmⱼ/ŝᵢⱼ)·(wᵢⱼ/ŝᵢⱼ)`. Since
-  `ŝᵢⱼ ≥ eps·max(wᵢⱼ, 1)`, `wᵢⱼ/ŝᵢⱼ ≤ 1/eps`; since the masses lie on `[0, 1]` with `M = 1`, `mᵢmⱼ ≤ 1/4`, and
-  `mᵢmⱼ/ŝᵢⱼ ≤ 1/(4·eps)`. So each term is at most `2⁴⁴`, with no division by zero, since `ŝᵢⱼ ≥ eps` even where a
-  separation is 0, and no overflow. It needs no separation to be nonzero and squares no position, only finite positions
-  below `2¹²⁶` in magnitude, so that `wᵢⱼ` and the differences are finite: the decode's are finite (the decode of a
-  finite input is finite), and each `‖rᵢ‖` is at most `1/√mᵢ` under `I = 1`. The preset tests `m` and `r` on their
-  bits as it does `K` and `V`, and a non-finite one draws the invalid colour. `F` is calibrated in this scale
-  (REQ-COL-060).
+  wherever `V` is and at the pole too (R-436).** Each term is at most `2⁴⁴`: since `ŝᵢⱼ ≥ eps·max(wᵢⱼ, 1)`,
+  `wᵢⱼ/ŝᵢⱼ ≤ 1/eps`, and since the masses lie on `[0, 1]` with `M = 1`, `mᵢmⱼ ≤ 1/4` and `mᵢmⱼ/ŝᵢⱼ ≤ 1/(4·eps)`.
+  There is no division by zero, since `ŝᵢⱼ ≥ eps` even where a separation is 0, so no separation need be nonzero.
+  Nor does any intermediate overflow or vanish, whatever association a fast-math compiler picks (it may form
+  `mᵢmⱼ·wᵢⱼ/ŝᵢⱼ²`): with positions below `2⁶²` in magnitude, `wᵢⱼ < 2⁶³`, `eps² ≤ ŝᵢⱼ² < 2¹²⁶` and
+  `mᵢmⱼ·wᵢⱼ < 2⁶¹`. The decode's positions are finite (the decode of a finite input is finite) and of order 1 under
+  `I = 1`, each `‖rᵢ‖` at most `1/√mᵢ`. The preset tests `m` and `r` on their bits as it does `K` and `V`, and a
+  non-finite one draws the invalid colour. `F` is calibrated in this scale (REQ-COL-060).
   **A non-finite operand is invalid (R-436).** `E₀ = K₀ + V₀` reads `−∞` at the f64 collision pole, as computed
   and stored (`principia_dd_decoder.md` §3.6), where the difference would be `(−∞) − (−∞)`, NaN on the CPU and
   unpinned on the GPU. An agreement preset tests each stored operand (`K_0`, `V_0`, and any other it reads) on its
