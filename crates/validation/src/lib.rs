@@ -37,6 +37,11 @@ pub use engine::synthetic;
 /// this dev-dependency.
 pub use kernel::payload::{pack_times, set_t_dmin_step, tm_t_dmin_step, tm_t_end_step};
 
+/// The kernel's Welford diffusion update (payload §4; TASK-M3-13), for the render crate's tests, which stream a series
+/// through it to build the co-moments a fixture's diffusion view reads, and reach the kernel only through this
+/// dev-dependency.
+pub use kernel::driver::welford;
+
 /// The coordinate presets and the stain graph they are (TASK-M1-07), re-exported for the render crate's tests, as the
 /// harness is.
 pub use engine::{presets, stain};
