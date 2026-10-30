@@ -31,10 +31,15 @@
 //! 10⁻⁶` gives at least `ε_μ²/4`, `softmax_tanh` at `μ_max` up to 10 about `2×10⁻⁹`, the ternary plot `ε_m = 10⁻⁴`). A
 //! Burrau chart's floor is its range's, `min(ν_min/(1 + ν_min), (1 − ν_max)/2)`, or `(1 − ν(θ_min))/2` on the
 //! acute-angle charts, `1/64` at the default and proposed ranges; chart_reference §4.5 gives those ranges as defaults
-//! with no lower bound, so the bound holds there and, on any other range, while its least mass exceeds `2⁻¹²⁴`. Over
-//! the links and those ranges `‖rᵢ‖ < 2²¹`. The positions are finite where the masses are finite and nonzero; a mass
-//! rounded to 0 would give a non-finite `r`, and `m` and `r` are tested on their bits with the other operands, so a
-//! non-finite one draws the hatch (colour_composition §6). [`ratio`] is `|E − E₀|`
+//! with no lower bound, so the bound holds there and, on any other range, while its least mass exceeds `2⁻¹²⁴`. The
+//! `δm` strip, for `v ∈ [0, 1]`, is a convex blend, its least at least the smaller of the column's and `m_target`'s,
+//! the same `1/64` at the default equal-mass target. Past `v`'s edges the blend continues until a mass reaches 0, with
+//! validation only `mᵢ > 0` (§4.5), so no range floors those masses: there the per-pixel conditions are the
+//! precondition, a least mass above `2⁻¹²⁴` for finiteness and at least `2⁻⁶²` for `δ` to be inert. Over the links and
+//! those ranges, with the strip inside `v ∈ [0, 1]` at its default target, `‖rᵢ‖ < 2²¹`. The positions are finite where
+//! the masses are finite and nonzero; a mass rounded to 0 would give a non-finite `r`, and `m` and `r` are tested on
+//! their bits with the other operands, so a non-finite one draws the hatch (colour_composition §6). [`ratio`] is
+//! `|E − E₀|`
 //! over that bound: at most 1 is agreement. TASK-M2-29 measured the fragment-against-compute differences on Metal and
 //! lavapipe (the `decode-agreement` gate's `survey` and `collision` inputs) and proposed the factor; it is provisional
 //! until the human confirms it at the M2 gate (R-71, R-182). REQ-DEC-043's factor stays the tolerance of the fragment decode
