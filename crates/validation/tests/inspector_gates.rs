@@ -10,14 +10,15 @@ use kernel::encode::encode;
 use kernel::generated::links::Defaults;
 use validation::decode_f32_eps::SplitMix;
 use validation::eps_phys::EncodeKind;
-use validation::gate::{self, Gate, GateConfig, Verdict};
+use validation::gate::{self, ArmBound, Gate, GateConfig, Population, Verdict};
 use validation::gauge::Gauge;
 use validation::inspector::{
-    ball, below, com, encode_leaky, handle_gaps, handle_samples, inside, latents, radius_refusal,
-    randomise_ic, randomise_moves, randomise_seed, randomise_worst, round_trip, shape_families,
-    verdict, worst, z_gap, Handle, HandlesInput, InspectorHandlesGate, InspectorRoundtripGate,
-    Leak, RandomiseArm, RandomiseSeed, RoundtripInput, ShapeBounds, Shapes, COM_BOUND,
-    EQUATOR_BOUND, HANDLES, MOVES, POLE_BOUND, ROUNDTRIP,
+    arm_verdict, ball, below, com, encode_leaky, handle_gaps, handle_samples, inside, latents,
+    population_worst, radius_refusal, randomise_ic, randomise_moves, randomise_seed,
+    randomise_worst, round_trip, shape_families, verdict, worst, z_gap, Handle, HandlesInput,
+    InspectorHandlesGate, InspectorRoundtripGate, Leak, RandomiseArm, RandomiseSeed,
+    RoundtripInput, ShapeBounds, Shapes, COM_BOUND, EQUATOR_BOUND, HANDLES, MOVES, POLE_BOUND,
+    ROUNDTRIP,
 };
 use validation::negative_control;
 
@@ -1359,6 +1360,287 @@ negative_control!(
     "an arm with draws must not be refused",
     expected = "an empty arm is not refused",
     check_arm_refused(1)
+);
+
+/// The handles gate's `gate.json` with the Randomise arm's bound's `value` set to `value` (JSON null for none), or the
+/// entry dropped when `value` is `None`: the set-bound fixture, built from the committed file so that nothing else
+/// differs.
+fn bound_config(value: Option<serde_json::Value>) -> GateConfig {
+    let dir = root().join("fixtures/gates").join(HANDLES);
+    let mut file: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(dir.join("gate.json")).unwrap()).unwrap();
+    match value {
+        Some(v) => file["randomise_bound"]["value"] = v,
+        None => {
+            file.as_object_mut().unwrap().remove("randomise_bound");
+        }
+    }
+    let requirements = std::fs::read_to_string(root().join("plan/requirements.yaml")).unwrap();
+    GateConfig::parse(&file.to_string(), &requirements).unwrap()
+}
+
+/// The arm's worst over every move and seed in the in-ball subset, this file's own reading of the draws.
+fn in_ball_worst(seeds: &[RandomiseSeed]) -> (f64, usize) {
+    let mut w = 0.0f64;
+    let mut n = 0;
+    for s in seeds {
+        for (g, &b) in s.gaps.iter().zip(&s.in_ball) {
+            if b {
+                n += 1;
+                w = g.iter().fold(w, |a, &x| a.max(x));
+            }
+        }
+    }
+    (w, n)
+}
+
+/// The committed `gate.json` carries the Randomise arm's bound unrecorded: null, REQ-VAL-121's, over the in-ball
+/// subset (REQ-VAL-193; the value is the owner's at the M2 gate).
+fn check_committed_bound(c: &GateConfig) {
+    assert_eq!(
+        c.randomise_bound,
+        Some(ArmBound {
+            value: None,
+            requirement: "REQ-VAL-121".to_owned(),
+            population: Population::InBall,
+        }),
+        "the committed Randomise bound is not null under REQ-VAL-121 over the in-ball subset"
+    );
+}
+
+#[test]
+fn inspector_randomise_bound_committed() {
+    check_committed_bound(&config(HANDLES));
+}
+
+negative_control!(
+    inspector_randomise_bound_committed,
+    "a recorded value must not read as the committed null",
+    expected = "the committed Randomise bound is not null",
+    check_committed_bound(&bound_config(Some(serde_json::json!(1e-13))))
+);
+
+/// REQ-VAL-193's gate at its bound: `population_worst` is the worst over every move and seed in the in-ball subset;
+/// with the bound null the arm is reported and the gate passes; with it recorded at the arm's own worst, the arm passes,
+/// its line naming the bound, the population and the worst. `at` is the recorded bound; the control sets it one step
+/// below the worst, which must fail the arm and the gate.
+fn check_bound(at: fn(f64) -> f64) {
+    let arm = RandomiseArm {
+        seeds: vec![1, 2],
+        ics: 300,
+        fed: false,
+    };
+    let seeds: Vec<RandomiseSeed> = arm
+        .seeds
+        .iter()
+        .map(|&s| randomise_seed(s, arm.ics, 4.0, 4.0, Leak::None))
+        .collect();
+    let (w, n) = in_ball_worst(&seeds);
+    assert!(n > 0 && n < 600, "the in-ball subset of 600 is {n}");
+    assert_eq!(
+        population_worst(&seeds, Population::InBall),
+        (w, n),
+        "the worst over the in-ball subset"
+    );
+    let all = seeds
+        .iter()
+        .flat_map(|s| s.gaps.iter().flatten())
+        .fold(0.0f64, |a, &x| a.max(x));
+    assert!(
+        all > w,
+        "the subset's worst, {w:e}, is the full distribution's, {all:e}, so the test cannot tell them apart"
+    );
+    let mut i = handles_input(50, Leak::None);
+    i.randomise = Some(arm);
+    let null =
+        InspectorHandlesGate::judge(&bound_config(Some(serde_json::Value::Null)), "t", &i).unwrap();
+    assert_eq!(null.verdict, Verdict::Pass, "a null bound fails the arm");
+    assert!(
+        null.negative_results.last().unwrap().contains(&format!(
+            "reported until REQ-VAL-121 records its bound; its worst, {all:.3e}, is not read by REQ-VAL-021's verdict \
+             (R-551); over the in-ball subset, {n} draws, {w:.3e}"
+        )),
+        "the null bound's line: {:?}",
+        null.negative_results
+    );
+    let b = at(w);
+    let set =
+        InspectorHandlesGate::judge(&bound_config(Some(serde_json::json!(b))), "t", &i).unwrap();
+    let line = set.negative_results.last().unwrap();
+    assert!(
+        set.verdict == Verdict::Pass,
+        "the arm fails at bound {b:e}, its worst {w:e}: {line}"
+    );
+    assert!(
+        line.contains(&format!(
+            "gated at its recorded bound {b:.3e} (REQ-VAL-121) over the in-ball subset, {n} draws: its worst, \
+             {w:.3e}, passes"
+        )),
+        "the set bound's line: {line}"
+    );
+}
+
+#[test]
+fn inspector_randomise_bound() {
+    check_bound(|w| w);
+}
+
+negative_control!(
+    inspector_randomise_bound,
+    "a bound set below the arm's measured worst must fail the arm",
+    expected = "the arm fails at bound",
+    check_bound(below)
+);
+
+/// A recorded bound fails the arm above it, the line saying so, and the arm's verdict joins the gate's; it never
+/// moves REQ-VAL-021's: the threshold stays 1.6×10⁻¹⁴, its four judged lines are those without the arm, and a bound
+/// far above the arm does not rescue a rotation leak. `fed` is the control's: the arm read by REQ-VAL-021's verdict.
+fn check_bound_separate(fed: bool) {
+    let arm = RandomiseArm {
+        seeds: vec![1],
+        ics: 300,
+        fed,
+    };
+    let seeds = [randomise_seed(1, 300, 4.0, 4.0, Leak::None)];
+    let (w, _) = in_ball_worst(&seeds);
+    let low = bound_config(Some(serde_json::json!(below(w))));
+    let mut i = handles_input(50, Leak::None);
+    i.randomise = Some(arm);
+    let r = InspectorHandlesGate::judge(&low, "t", &i).unwrap();
+    assert_eq!(r.verdict, Verdict::Fail, "the arm passes above its bound");
+    assert!(
+        r.negative_results[4].contains(&format!("its worst, {w:.3e}, fails")),
+        "the failing arm's line: {:?}",
+        r.negative_results
+    );
+    let high = bound_config(Some(serde_json::json!(1.0)));
+    assert_eq!(
+        high.threshold.value, 1.6e-14,
+        "REQ-VAL-021's threshold moved"
+    );
+    let with = InspectorHandlesGate::judge(&high, "t", &i).unwrap();
+    let without = InspectorHandlesGate::judge(&high, "t", &handles_input(50, Leak::None)).unwrap();
+    assert_eq!(
+        with.verdict,
+        Verdict::Pass,
+        "REQ-VAL-021's verdict reads the Randomise arm"
+    );
+    assert_eq!(
+        with.negative_results[..4],
+        without.negative_results[..4],
+        "the arm's bound moves REQ-VAL-021's judged lines"
+    );
+    let mut leak = i.clone();
+    leak.leak = Leak::Rotate;
+    assert_eq!(
+        InspectorHandlesGate::judge(&high, "t", &leak)
+            .unwrap()
+            .verdict,
+        Verdict::Fail,
+        "the arm's bound rescues a failing REQ-VAL-021 arm"
+    );
+}
+
+#[test]
+fn inspector_randomise_bound_separate() {
+    check_bound_separate(false);
+}
+
+negative_control!(
+    inspector_randomise_bound_separate,
+    "the arm fed into REQ-VAL-021's verdict must fail it",
+    expected = "REQ-VAL-021's verdict reads the Randomise arm",
+    check_bound_separate(true)
+);
+
+/// With a bound recorded and no draw in the in-ball subset, the arm is not measured, and fails; `radius` is the
+/// ball's, the control's large enough for draws to fall in it.
+fn check_empty_population(radius: f64) {
+    let seeds = [randomise_seed(1, 100, radius, 4.0, Leak::None)];
+    let bound = ArmBound {
+        value: Some(1.0),
+        requirement: "REQ-VAL-121".to_owned(),
+        population: Population::InBall,
+    };
+    let (v, line) = arm_verdict(&seeds, 0.0, &bound);
+    assert!(
+        v == Verdict::Fail && line.contains("no draw in the in-ball subset"),
+        "an empty population passes: {line}"
+    );
+}
+
+#[test]
+fn inspector_randomise_empty_population() {
+    check_empty_population(1e-3);
+}
+
+negative_control!(
+    inspector_randomise_empty_population,
+    "a population with draws must pass a bound far above it",
+    expected = "an empty population passes",
+    check_empty_population(4.0)
+);
+
+/// A `gate.json` without the arm's bound refuses an input that runs the arm, before drawing; and a bound naming a
+/// requirement that is not a calibration requirement is refused (R-71). `drop` is the control's: the entry kept.
+fn check_bound_refused(drop: bool) {
+    let c = if drop {
+        bound_config(None)
+    } else {
+        config(HANDLES)
+    };
+    assert!(
+        c.randomise_bound.is_none() == drop,
+        "the entry is not dropped"
+    );
+    let mut i = handles_input(4, Leak::None);
+    assert!(
+        InspectorHandlesGate::judge(&c, "t", &i).is_ok(),
+        "an input without the arm is refused"
+    );
+    i.randomise = Some(RandomiseArm {
+        seeds: vec![1],
+        ics: 10,
+        fed: false,
+    });
+    let r = InspectorHandlesGate::judge(&c, "t", &i);
+    assert!(
+        r.is_err_and(
+            |e| e.contains("gate.json names no bound for the Randomise arm, not even null")
+        ),
+        "an arm with no bound is not refused"
+    );
+    let text = std::fs::read_to_string(
+        root()
+            .join("fixtures/gates")
+            .join(HANDLES)
+            .join("gate.json"),
+    )
+    .unwrap()
+    .replace(
+        r#""randomise_bound": { "value": null, "requirement": "REQ-VAL-121""#,
+        r#""randomise_bound": { "value": null, "requirement": "REQ-VAL-193""#,
+    );
+    let requirements = std::fs::read_to_string(root().join("plan/requirements.yaml")).unwrap();
+    let e = GateConfig::parse(&text, &requirements).unwrap_err();
+    assert!(
+        e.contains(
+            "the Randomise arm's bound names REQ-VAL-193, which is not a calibration requirement"
+        ),
+        "a plain requirement's bound is not refused: {e}"
+    );
+}
+
+#[test]
+fn inspector_randomise_bound_refused() {
+    check_bound_refused(true);
+}
+
+negative_control!(
+    inspector_randomise_bound_refused,
+    "an arm with its bound named must not be refused",
+    expected = "an arm with no bound is not refused",
+    check_bound_refused(false)
 );
 
 /// The runner on `root`'s fixtures gives every input of both gates its expected outcome.

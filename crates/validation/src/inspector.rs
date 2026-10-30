@@ -42,8 +42,10 @@
 //! (render GUI spec §G8's Randomise: masses on `[0.4, 1.8]` normalised, positions on `±0.9`, velocities on `±0.6`,
 //! [`randomise_ic`]) runs beside REQ-VAL-021's arm, each handle at a random size and at the tool's button sizes
 //! (Rotate 15°, Scale ×1.25), its max `‖Δz‖` reported over the draws as stated and over its in-ball subset
-//! `‖E(x)‖ < radius` beside them, per seed. Its verdict is separate: it is reported until REQ-VAL-121 records its
-//! bound, and never read by REQ-VAL-021's verdict, except in its control ([`RandomiseArm::fed`]).
+//! `‖E(x)‖ < radius` beside them, per seed. Its verdict is separate: it is reported while its bound in `gate.json`
+//! (`randomise_bound`, [`crate::gate::ArmBound`]) is null, until REQ-VAL-121 records it; once recorded, the arm fails
+//! when its worst over every move and seed, over the in-ball subset, is above it, and that verdict joins the gate's
+//! ([`arm_verdict`]). It is never read by REQ-VAL-021's verdict, except in its control ([`RandomiseArm::fed`]).
 
 use serde::Deserialize;
 
@@ -58,7 +60,7 @@ use kernel::shape::shape;
 use crate::decode_f32_eps::SplitMix;
 use crate::eps_phys::{EncodeKind, Mismatched};
 use crate::gate::report::{GateReport, RegionCount, Regions, Verdict};
-use crate::gate::{Gate, GateConfig};
+use crate::gate::{ArmBound, Gate, GateConfig, Population};
 use crate::gauge::{uniform, Gauge};
 use crate::oklab::quantile;
 
@@ -402,6 +404,62 @@ fn randomise_lines(seeds: &[RandomiseSeed], radius: f64) -> (Vec<String>, f64) {
     (lines, worst(&all_worst).0)
 }
 
+/// The worst of every move over every seed's draws in `population`, and how many draws that is.
+pub fn population_worst(seeds: &[RandomiseSeed], population: Population) -> (f64, usize) {
+    let ball_only = match population {
+        Population::InBall => true,
+    };
+    let per: Vec<(f64, usize)> = seeds
+        .iter()
+        .flat_map(|s| (0..MOVES.len()).map(move |k| randomise_worst(s, k, ball_only)))
+        .collect();
+    let w = worst(&per.iter().map(|e| e.0).collect::<Vec<_>>()).0;
+    let n = seeds
+        .iter()
+        .map(|s| randomise_worst(s, 0, ball_only).1)
+        .sum();
+    (w, n)
+}
+
+/// The Randomise arm's own verdict and its line (REQ-VAL-193): with `bound`'s value null, reported only, a pass, its
+/// worst `arm_worst` over all the draws beside its worst over `bound`'s population; with it recorded, a fail when the
+/// worst over the population is above it, or when the population is empty.
+pub fn arm_verdict(seeds: &[RandomiseSeed], arm_worst: f64, bound: &ArmBound) -> (Verdict, String) {
+    let (w, n) = population_worst(seeds, bound.population);
+    let req = &bound.requirement;
+    match bound.value {
+        None => (
+            Verdict::Pass,
+            format!(
+                "the Randomise arm: its verdict separate, reported until {req} records its bound; its worst, \
+                 {arm_worst:.3e}, is not read by REQ-VAL-021's verdict (R-551); over the in-ball subset, {n} draws, \
+                 {w:.3e}"
+            ),
+        ),
+        Some(b) if n == 0 => (
+            Verdict::Fail,
+            format!(
+                "the Randomise arm, gated at its recorded bound {b:.3e} ({req}): no draw in the in-ball subset, so \
+                 it is not measured, and fails"
+            ),
+        ),
+        Some(b) => {
+            let v = verdict(w, b);
+            let word = match v {
+                Verdict::Pass => "passes",
+                Verdict::Fail => "fails",
+            };
+            (
+                v,
+                format!(
+                    "the Randomise arm, gated at its recorded bound {b:.3e} ({req}) over the in-ball subset, {n} \
+                     draws: its worst, {w:.3e}, {word}; its own verdict, not read by REQ-VAL-021's (R-551)"
+                ),
+            )
+        }
+    }
+}
+
 /// One random IC and its four handles.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct HandleSample {
@@ -525,6 +583,15 @@ impl InspectorHandlesGate {
         {
             return Err("refused: a Randomise arm with no seeds or no draws".to_owned());
         }
+        let arm_bound = match (&input.randomise, &config.randomise_bound) {
+            (Some(_), None) => {
+                return Err(
+                    "refused: gate.json names no bound for the Randomise arm, not even null (REQ-VAL-193)"
+                        .to_owned(),
+                )
+            }
+            (_, bound) => bound,
+        };
         if let Some(refusal) = radius_refusal(input.radius) {
             return Err(refusal);
         }
@@ -559,6 +626,13 @@ impl InspectorHandlesGate {
                 .collect();
             let (lines, arm_worst) = randomise_lines(&seeds, input.radius);
             scatter.extend(lines);
+            if let Some(arm_bound) = arm_bound {
+                let (v, line) = arm_verdict(&seeds, arm_worst, arm_bound);
+                if v == Verdict::Fail {
+                    all = Verdict::Fail;
+                }
+                negative.push(line);
+            }
             if arm.fed {
                 let line = format!(
                     "the Randomise arm's maximum, {arm_worst:.3e}, fed into REQ-VAL-021's verdict at {bound:.3e} \
@@ -568,11 +642,6 @@ impl InspectorHandlesGate {
                     all = Verdict::Fail;
                 }
                 negative.push(line);
-            } else {
-                negative.push(format!(
-                    "the Randomise arm: its verdict separate, reported until REQ-VAL-121 records its bound; its worst, \
-                     {arm_worst:.3e}, is not read by REQ-VAL-021's verdict (R-551)"
-                ));
             }
         }
         Ok(GateReport {
