@@ -11,8 +11,9 @@
 //!   `reads_code` list is touched through real files it names, each classifying as code: not docs-only, GPU suites run.
 //! - `ci_changes_no_file_code_reads_is_docs_only`: a static scan, best effort, of the string literals in every crate's
 //!   `src/`, `tests/` and `build.rs`, in `xtask/` and in `plan/`'s Python, for a repository file they name; none may
-//!   classify as docs-only, so a new reader cannot silently leave its file docs-only. Its limit: a reader walking a
-//!   directory, or building a path in pieces, is not seen; the script lists those by hand.
+//!   classify as docs-only, so a new reader cannot silently leave its file docs-only. A `/`-led literal, the tail of
+//!   `concat!(env!("CARGO_MANIFEST_DIR"), "/../../…")`, is read from its package directory. Its limit: a reader
+//!   walking a directory, or building a path from more than one literal, is not seen; the script lists those by hand.
 //! - `ci_changes_gates_pass_only_on_the_verdict`: the gates `ci`, `xtask-ci`, `gpu-kernel`, `gpu-metal` and
 //!   `gpu-lavapipe` run whatever their jobs ended in, read every one's result and a flag set from the classification,
 //!   and (their one-line scripts, run under bash) pass a job skipped on that verdict, and fail when the
@@ -393,10 +394,13 @@ fn sources(dir: &Path, ext: &str, out: &mut Vec<PathBuf>) {
 /// The repository files the tests, build scripts, xtask and the plan checks name, best effort: every string literal
 /// in a crate's `src/`, `tests/` or `build.rs`, in `xtask/`, and in `plan/`'s Python, outside a whole-line comment,
 /// that names an existing file, read from the repository's root, the source's package directory (as a path built on
-/// `CARGO_MANIFEST_DIR` is) or the source's own directory (as `include_str!` reads). Each as (reader, file), both
-/// relative to the root. The limit: a reader that walks a directory (`cargo xtask lint vocab`, plan-check's globs, the
-/// tests that copy `docs/`), builds a path with `format!` or `join` in pieces, or reads a path from a data file, is not
-/// seen here; those are listed by hand in the script, and `ci_changes_files_code_reads_run_everything` checks them.
+/// `CARGO_MANIFEST_DIR` is) or the source's own directory (as `include_str!` reads). A literal starting with `/` (the
+/// tail of `concat!(env!("CARGO_MANIFEST_DIR"), "/../../docs/…")`) is read from the package directory alone, its `/`
+/// stripped. Each as (reader, file), both relative to the root. The limit: a reader that walks a directory (`cargo
+/// xtask lint vocab`, plan-check's globs, the tests that copy `docs/`), builds a path with `format!`, `join` or
+/// `concat!` in more than one literal (`concat!(env!("CARGO_MANIFEST_DIR"), "/../..")` then `.join(rel)`), or reads a
+/// path from a data file, is not seen here; those are listed by hand in the script, and
+/// `ci_changes_files_code_reads_run_everything` checks them.
 fn named_files() -> Vec<(String, String)> {
     let mut files = Vec::new();
     let crates = std::fs::read_dir(root().join("crates")).expect("ci_changes: crates/");
@@ -433,8 +437,14 @@ fn named_files() -> Vec<(String, String)> {
                 if lit.is_empty() || lit.contains(['{', '*', '\n', '<', '$']) {
                     continue;
                 }
-                for base in [Path::new(""), &package, &dir] {
-                    let Some(path) = normalised(&base.join(&lit)) else {
+                // A literal starting with `/` is the tail of `concat!(env!("CARGO_MANIFEST_DIR"), "/…")`: joined
+                // as written it would be absolute, so its `/` is stripped and the rest read from the package.
+                let (rest, bases) = match lit.strip_prefix('/') {
+                    Some(rest) => (rest, vec![package.as_path()]),
+                    None => (lit.as_str(), vec![Path::new(""), &package, &dir]),
+                };
+                for base in bases {
+                    let Some(path) = normalised(&base.join(rest)) else {
                         continue;
                     };
                     if !path.as_os_str().is_empty() && root().join(&path).is_file() {
@@ -455,11 +465,15 @@ fn named_files() -> Vec<(String, String)> {
 /// The files code names that `script` classifies as docs-only: none may be.
 fn check_readers(script: &str, named: &[(String, String)]) {
     // The scan is not vacuous: it finds an `include_str!` from a test's own folder, a `CARGO_MANIFEST_DIR` path, a
-    // root-relative path and a Python constant.
+    // `concat!(env!("CARGO_MANIFEST_DIR"), "/../../…")` path, a root-relative path and a Python constant.
     for want in [
         (
             "crates/kernel/tests/qa_TASK-M3-02.rs",
             "docs/contracts/principia_integrator_contract.md",
+        ),
+        (
+            "crates/ledger/tests/renderquad.rs",
+            "docs/design/principia_dd_generation_root.md",
         ),
         ("crates/ledger/tests/qa_TASK-M1-18.rs", "decisions.md"),
         ("xtask/tests/ai_review_rules.rs", "AGENTS.md"),
