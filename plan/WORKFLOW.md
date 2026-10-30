@@ -169,12 +169,14 @@ reviewer):
 - **periodically on a long-running PR:** at least once a working day while it is open, and every few pushes on a
   large one, so problems surface partway through rather than at the end.
 
-Under limits the order is pre-merge, then post-push, then periodic. A bot that is unavailable or rate-limited is noted
-on the PR and the merge goes ahead with the others; the owner is told if pre-merge reviews start being skipped. Every
-bot finding is closed out before the merge: verified against the code, the spec or the physics, then fixed (the reply
-names the commit), answered with why it doesn't apply (wrong, out of scope, already covered), or moved to a tracked task
-or RQ; then its thread is resolved. No thread is resolved without a reply, a wrong finding is answered, never "fixed"
-to silence it, and a PR with an unresolved bot thread does not merge (`plan/OPERATIONS.md` § "Merging").
+Under limits the order is pre-merge, then post-push, then periodic. A bot is unavailable when it hasn't reviewed the
+exact SHA within its limit, counted from the request (Codex 25 minutes, Gemini CLI 30, Copilot 15), errors, or refuses
+on quota or rate limit; it is noted on the PR and the merge goes ahead with the others; the owner is told if pre-merge
+reviews start being skipped. Every bot finding is closed out before the merge: verified against the code, the spec or
+the physics, then fixed (the reply names the commit), answered with why it doesn't apply (wrong, out of scope, already
+covered), or moved to a tracked task or RQ; then its thread is resolved. No thread is resolved without a reply, a wrong
+finding is answered, never "fixed" to silence it, and a PR with an unresolved bot thread does not merge
+(`plan/OPERATIONS.md` § "Merging").
 
 ## Human checkpoints: the milestone gates
 

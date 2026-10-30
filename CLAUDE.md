@@ -83,9 +83,9 @@ Read this first; each rule points at its source.
   every substantive push (new logic, physics or algebra, a fix responding to review findings, or a rebase or merge that
   changes code; only a docs-only typo push that answers no finding needs none); and periodically on a long-running PR
   (at least once a working day while it is open). Under limits: pre-merge, then post-push, then periodic.
-- A bot that is unavailable or rate-limited (no review on the requested head within 15 minutes of the request, an
-  error, or out of quota) is noted on the PR ("no <bot> review on <sha>: <reason>"), and the merge proceeds on the
-  others; a bot never blocks a merge.
+- A bot is unavailable when it hasn't reviewed the exact SHA within its limit, counted from the request (Codex 25
+  minutes, Gemini CLI 30, Copilot 15), errors, or refuses on quota or rate limit. It is noted on the PR ("no <bot>
+  review on <sha>: <reason>"), and the merge proceeds on the others; a bot never blocks a merge.
 - Handle every finding that arrived before the merge, with a reply on its thread, then resolve the thread
   (`gh api graphql`, `resolveReviewThread`): fixed (name the commit); not a defect (the traced reason: the real caller
   or input checked, or the doc or ruling that makes it correct); or not this PR's (name the queue entry or follow-up

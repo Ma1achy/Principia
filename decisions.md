@@ -27598,8 +27598,8 @@ up to 15 minutes after the PR opens; every bot finding is closed out before merg
 thread does not merge; the cadence is a standing rule).*
 *Still in force: all of it but its cadence: the three bots stay advisory, never merge gates and never counted by
 `reviews-complete`; every finding is verified, answered on its thread and resolved, a P0 / CRITICAL claim goes to the
-physics reviewer, a late review is handled as a follow-up, and the trial's tally and report stand; the 15-minute bound
-now applies to each review the orchestrator requests (R-651).*
+physics reviewer, a late review is handled as a follow-up, and the trial's tally and report stand; its 15-minute bound
+is replaced by a limit per bot, counted from each review the orchestrator requests (R-651).*
 
 *28 Oct 2026 · applied in `AGENTS.md` (new: its authority line and § "Code Review Rules"), `GEMINI.md` and
 `.github/copilot-instructions.md` (new), `.github/workflows/gemini-dispatch.yml` and
@@ -28656,9 +28656,11 @@ His second addendum, the same day, verbatim:
   its P0 / CRITICAL route to the physics reviewer, its late-review handling and its trial tally and report.
 
 *Applied per R-369:*
-- **When a bot counts as unavailable:** no review on the requested head within 15 minutes of the request (R-635's
-  bound, now per request, not per PR), an error, or a quota or rate-limit refusal. The PR then notes "no <bot> review
-  on <sha>: <reason>", and the merge proceeds.
+- **When a bot counts as unavailable:** no review of the exact requested SHA within its limit, counted from the
+  request: Codex 25 minutes, Gemini CLI 30 minutes (its job's 25-minute timeout, PR #339, plus start-up), Copilot 15
+  minutes; or an error; or a quota or rate-limit refusal. These limits replace R-635's flat 15 minutes after the PR
+  opens and match the orchestrator's merge tooling. The PR then notes "no <bot> review on <sha>: <reason>", and the
+  merge proceeds.
 - **"Substantive":** read as the owner's item 2 lists it, and no narrower: new logic, physics or algebra, in the code,
   the docs or the plan (a decision, a requirement or a rulings port included); any fix responding to review findings,
   whatever it changes, a wording fix included; and a rebase or merge that changes code. Only a docs-only typo push that
