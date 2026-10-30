@@ -584,6 +584,58 @@ choice changes the result and the corpus does not settle it (R-369).*
   `principia_dd_replication.md` § 5.10, the RQ-598 README § 6 and TASK-M3-62's note point here.
 - **Waits:** GG-1's per-point scoring against the Fig. 1 extraction (TASK-M3-62). BR-1 does not wait on it.
 
+## RQ-621: The control REQ-DEC-011 and REQ-VAL-017 ask of `M₀₁` cannot fail: an unfused or flushed `fma(m₁, 1, m₀)` rounds exactly as the fused one *(conflict: a requirement's control against arithmetic; R-547, RQ-298; REQ-DEC-011, REQ-VAL-017; context: TASK-M2-48)*
+
+*Found by TASK-M2-48's implementer, before building, 30 Oct 2026. For the orchestrator (R-369: tests), except option
+(b), which changes the branch input's definition and is the human's (physics).*
+
+- **File, section:**
+  - `plan/requirements.yaml`, REQ-DEC-011's verify: "control: the explicit fma(m₁, 1, m₀) form, unfused, flips the tag
+    on lavapipe's evaluation of it".
+  - `plan/tasks/M2/TASK-M2-48.md` § "Acceptance tests", `cargo test -p kernel decode_mass`: "control: the unfused
+    `fma(m₁, 1, m₀)` evaluation flips the tag (REQ-DEC-011)".
+  - `plan/requirements.yaml`, REQ-VAL-017's verify, and the same task's `cargo test -p engine decode_parity`: "control:
+    on the same fuzzed inputs the superseded forms (the explicit fma(m₁, 1, m₀), a plain float subtract or compare),
+    evaluated on the CPU under an unfused or flush-to-zero emulation, give a different tag from the unflushed CPU on at
+    least one input".
+  - `docs/design/principia_dd_decoder.md` § "3.1 Mass", "The branch input": "`m₁·1` is exact, so it is the same single
+    rounding of `m₀ + m₁`"; and "Its premise": "Folding `fma(x, 1, y)` to `x + y` is exact and standard … after it, a
+    contracting backend can rebuild `fma(t₇, t₁₃, m₀)` and flip the tag as above."
+- **The conflict:** unfused, `fma(m₁, 1, m₀)` is `round(round(m₁·1) + m₀)`, and `m₁·1` is exact, so it is
+  `round(m₀ + m₁)`: bit for bit the fused value, on every input. Flushed, it differs only where `m₁` or `m₀` is
+  subnormal, and then `M₀₁` is below `2^−125`, far under `ε_M01 = 10⁻⁵`, so the tag is the same. So the control the two
+  requirements name cannot flip `M01_TINY` on any masses, and a test written to it can never fail. Lavapipe's unfused
+  `fma` (RQ-298's measurement) gives the right tag for `M₀₁`. The hazard §3.1 describes is the other one: a backend
+  that folds the `×1` and then contracts `m₀ + t₇·t₁₃` into a fused `fma(t₇, t₁₃, m₀)`, which flips 45 of 40 000 f32
+  onset crossing points and 77 at f64 (`decode_m01_tiny_contraction`'s control already shows it). The other superseded
+  forms REQ-VAL-017 names seem unlikely to flip a tag on test 12's fuzzed inputs either: a plain compare is unchanged
+  by an unfused emulation, and the decoded states have no subnormal pair differences or products for a flush to
+  change. That last point is my reading, not measured.
+- **The question:** what the control for `M₀₁`, and test 12's collective control, should be.
+- **Options seen:**
+  - (a) The control emulates the superseded form as a folding, contracting backend evaluates it: `fma(t₇, t₁₃, m₀)`
+    fused, at TASK-M2-02's onset crossings. It must flip the tag there, and the rewritten form must not. In both
+    requirements' verify and the task's two acceptance lines, "unfused" becomes "with the `×1` folded and the add
+    contracted (fused)". Test 12's inputs gain the onset crossings, so that "the same fuzzed inputs" include points
+    where one rounding decides the tag.
+  - (b) Decide the tag on the exact `m₀ + m₁ < ε` rather than on its one rounded sum. Then the explicit form, fused or
+    not, flips the tag where `round(m₀ + m₁) = ε` but the exact sum is below `ε`, and the control as written holds.
+    This changes §3.1's "one rounded sum" and REQ-DEC-011's "M₀₁ formed …", and it breaks the oracle of
+    `crates/kernel/tests/qa_TASK-M2-02_m01_sum.rs` (`qa_m01_one_rounded_sum`, `qa_m01_crossings`: "its tag is that
+    sum's"), a qa file that only a ruling may change (R-290).
+  - (c) Drop the control for `M₀₁`, and keep the form's proof (physics review) and the cross-backend comparison at the
+    onset crossings. REQ-VAL-017's control is then met by whichever superseded form does flip on test 12's inputs, or
+    reworded to say which.
+- **Applied meanwhile:** none. TASK-M2-48 is not built. The form planned is unaffected by the choice between (a) and
+  (c): `M₀₁` as the one rounded sum, formed from mantissas in `[1, 2)` with integer exponents (`kernel::canon`'s `Wide`
+  addition, R-547's pattern). Only the controls wait.
+- **Waits:** TASK-M2-48's two acceptance controls (REQ-DEC-011, REQ-VAL-017).
+- **30 Oct 2026:** Decided by the orchestrator per R-369 (a test decision), option (a); see PR (TASK-M2-48). The
+  control is the folded-and-fused evaluation, `fma(t₇, t₁₃, m₀)` fused at f32 and f64 on the CPU, at TASK-M2-02's
+  onset crossings, which decoder test 12's inputs gain; REQ-VAL-017's emulation list gains "contracted (fused)";
+  REQ-DEC-011's and REQ-VAL-017's verify text and TASK-M2-48's two acceptance lines drop "unfused" and "on lavapipe".
+  The tag rule, `ε_M01` (REQ-DEC-039) and R-547's form are unchanged. Nothing waits.
+
 ## RQ-630: R-554 L3's and the chart contract's summary sentences on Lean each axis say `N_a` and `N_b` vanish together on a tilted view only at the corner, where L3's own closed form also gives both zero at Lean `(±180, 0)`, `(0, ±180)` and `(±180, ±180)` *(conflict: a ruling's summary against its own formula; R-554 L3, R-474 R2; `docs/contracts/principia_chart_decoder_contract.md` § "Repeats and the canonical point"; the physics review of PR #349 (5710611197), P2; REQ-SCHED-101; context: TASK-M2-36, TASK-M8-56)*
 
 *Queued 30 Oct 2026 by TASK-M2-36's fix round 2, on the physics review of PR #349. A wording conflict, not a physics

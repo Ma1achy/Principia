@@ -30,7 +30,7 @@ pub use crate::payload::{
 #[repr(u32)]
 pub enum Degenerate {
     /// `M01_TINY`: the inner pair's mass `M₀₁ = m₀ + m₁` is below the mass block's ε (dd_decoder §3.1;
-    /// REQ-DEC-011), [`crate::decode::mass::m01_tiny`].
+    /// REQ-DEC-011), [`crate::decode::mass::from_masses`].
     M01Tiny,
     /// `ENERGY_INFEASIBLE`: under an energy target, `E* < U`, so `η_E` is not real (dd_decoder §3.7; REQ-DEC-041),
     /// [`crate::decode::energy_norm`].
