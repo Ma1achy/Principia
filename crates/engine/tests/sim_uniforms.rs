@@ -577,6 +577,12 @@ fn sim_uniforms_nsub_table() {
         "the changed table is the default's"
     );
     assert_eq!(real(&u), Ok(50000), "the changed config is refused");
+    let v = validate(&u).expect("the changed config is accepted");
+    assert_eq!(
+        v.uniforms(),
+        &u,
+        "the validated sim key is not the one given"
+    );
     check_table_is_generators(&SimUniforms::default());
 
     // N_max = L_max is accepted; L_max + 1 is the generator's refusal, from the builder and from dispatch.
