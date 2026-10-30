@@ -136,11 +136,17 @@ impl Ramp {
             if !self.cyclic {
                 return Some(if t < first.position { first } else { last }.oklab);
             }
-            // The wrap: from the last stop to the first, one period on. Its length is positive, since `t` lies in
-            // `[0, 1)` outside `[first, last)`, so not both first = 0 and last = 1.
-            let s = if t < first.position { t + 1.0 } else { t };
-            let u = (s - last.position) / (first.position + 1.0 - last.position);
-            return Some(lerp(last.oklab, first.oklab, u));
+            // The wrap: from the last stop to the first, one period on. Its span and `t`'s offset into it are summed
+            // from their parts, never shifted by 1, which would round a first stop a hair past 0 away. The span is
+            // positive, since `t` lies in `[0, 1)` outside `[first, last)`, so not both first = 0 and last = 1; and
+            // the offset is at most the span, rounding being monotone, so `u` is in `[0, 1]`.
+            let span = (1.0 - last.position) + first.position;
+            let offset = if t < first.position {
+                (1.0 - last.position) + t
+            } else {
+                t - last.position
+            };
+            return Some(lerp(last.oklab, first.oklab, offset / span));
         }
         // The last stop at or before `t`, and the next, past `t`.
         let k = self.stops.iter().rposition(|s| s.position <= t)?;

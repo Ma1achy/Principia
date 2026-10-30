@@ -14,6 +14,8 @@
 //!   `SetField`, one undo entry.
 //! - `stain_custom_stop_ramp` (REQ-COL-140): a ramp round-trips through `RenderState` and evaluates as §9.4 defines it,
 //!   interpolated in OKLab, clamped, or wrapped where cyclic.
+//! - `stain_ramp_wrap_is_finite` (REQ-COL-140, a property): a cyclic ramp's wrap holds at stops on or a hair from the
+//!   ends, and every finite `t` on a valid cyclic ramp gives a finite colour within its stops' colours.
 //!
 //! The graphs, fields, ramps and `t` values are test inputs, not register constants (REQ-SYS-082).
 
@@ -1327,6 +1329,126 @@ validation::negative_control!(
         for (t, at) in cases(true) {
             check_at(&r, t, at, Space::LinearSrgb);
         }
+    }
+);
+
+// ----- stain_ramp_wrap_is_finite (REQ-COL-140) -----
+
+/// Checks that `got`, the ramp of `stops` at `t`, is a colour, each component finite and within the stops' own range.
+fn check_within(stops: &[Stop], t: f64, got: Option<[f64; 3]>) {
+    let got = got.expect("a finite t");
+    for i in 0..3 {
+        let (lo, hi) = stops
+            .iter()
+            .fold((f64::INFINITY, f64::NEG_INFINITY), |(lo, hi), s| {
+                (lo.min(s.oklab[i]), hi.max(s.oklab[i]))
+            });
+        assert!(
+            got[i].is_finite() && got[i] >= lo - 1e-12 && got[i] <= hi + 1e-12,
+            "at t = {t} the ramp {stops:?} is {got:?}, not a colour within its stops'"
+        );
+    }
+}
+
+/// A position in `[0, 1]`, drawn often at or a hair from the ends.
+fn position() -> impl Strategy<Value = f64> {
+    prop_oneof![
+        0.0..=1.0f64,
+        Just(0.0),
+        Just(1.0),
+        0.0..1e-15f64,
+        (0.0..1e-15f64).prop_map(|e| 1.0 - e),
+        Just(f64::MIN_POSITIVE),
+        Just(5e-324),
+    ]
+}
+
+#[test]
+fn stain_ramp_wrap_is_finite() {
+    let (a, b) = ([0.2, 0.1, -0.1], [0.8, -0.1, 0.1]);
+    let pair = |p: f64, q: f64| {
+        Ramp::new(
+            vec![
+                Stop {
+                    position: p,
+                    oklab: a,
+                },
+                Stop {
+                    position: q,
+                    oklab: b,
+                },
+            ],
+            true,
+        )
+        .expect("a ramp")
+    };
+    // First stop a hair past 0, the last at 1: the wrap's span is the hair, and at 0, the wrap's start, the last
+    // stop's colour, as at 1; at the first stop, its own.
+    let r = pair(1e-17, 1.0);
+    assert_eq!(r.oklab_at(0.0), Some(b));
+    assert_eq!(r.oklab_at(1.0), Some(b));
+    assert_eq!(r.oklab_at(-1e-20), Some(b));
+    assert_eq!(r.oklab_at(1e-17), Some(a));
+    // At 0 and 1: the two ends are one point, so there is no wrap; 0 takes the first stop's colour.
+    let r = pair(0.0, 1.0);
+    assert_eq!(r.oklab_at(0.0), Some(a));
+    assert_eq!(r.oklab_at(1.0), Some(a));
+    assert!(close(r.oklab_at(0.5).expect("a colour"), mix(a, b, 0.5)));
+    // The last stop a hair below 1: at it, its colour; past 1, back to the first.
+    let last = 1.0 - 1e-16;
+    let r = pair(0.0, last);
+    assert_eq!(r.oklab_at(last), Some(b));
+    assert_eq!(r.oklab_at(0.0), Some(a));
+    let r = pair(0.0, 1.0 - 2e-16);
+    assert!(close(
+        r.oklab_at(1.0 - 1e-16).expect("a colour"),
+        mix(b, a, 0.5)
+    ));
+    // Every finite t on a valid cyclic ramp, its stops often at or a hair from the ends, is a colour within its stops'.
+    let colour = (0.0..=1.0f64, -0.4..0.4f64, -0.4..0.4f64).prop_map(|(l, a, b)| [l, a, b]);
+    let t = prop_oneof![
+        -3.0..3.0f64,
+        position(),
+        position().prop_map(|p| p - 1.0),
+        prop::num::f64::POSITIVE
+            | prop::num::f64::NEGATIVE
+            | prop::num::f64::NORMAL
+            | prop::num::f64::SUBNORMAL
+            | prop::num::f64::ZERO,
+    ];
+    validation::prop::run(
+        &(prop::collection::vec((position(), colour), 2..6), t),
+        |(mut stops, t)| {
+            stops.sort_by(|p, q| p.0.total_cmp(&q.0));
+            let stops: Vec<Stop> = stops
+                .into_iter()
+                .map(|(position, oklab)| Stop { position, oklab })
+                .collect();
+            let r = Ramp::new(stops.clone(), true).expect("a valid ramp");
+            check_within(&stops, t, r.oklab_at(t));
+            Ok(())
+        },
+    );
+}
+
+validation::negative_control!(
+    stain_ramp_wrap_is_finite,
+    "the wrap at 0 of stops at 1e-17 and 1 shifted by one, (0 + 1 - 1) / (1e-17 + 1 - 1), must fail the check",
+    expected = "not a colour within its stops'",
+    {
+        let stops = [
+            Stop {
+                position: 1e-17,
+                oklab: [0.2, 0.1, -0.1],
+            },
+            Stop {
+                position: 1.0,
+                oklab: [0.8, -0.1, 0.1],
+            },
+        ];
+        let (first, last) = (stops[0], stops[1]);
+        let u = (0.0 + 1.0 - last.position) / (first.position + 1.0 - last.position);
+        check_within(&stops, 0.0, Some(mix(last.oklab, first.oklab, u)))
     }
 );
 
