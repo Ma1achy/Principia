@@ -18,7 +18,7 @@ use engine::contract::conformance;
 use engine::contract::interface::EngineInterface;
 use engine::contract::log::{Severity, Source};
 use engine::contract::render_state::{Hover, Overlays, Palette, Playhead, RenderState, StainGraph};
-use engine::contract::set_field::{Edit, SetField, SimField};
+use engine::contract::set_field::{Edit, HistoryKey, SetField, SimField};
 use engine::contract::sim_config::{
     Chart, Collision, Horizon, Integrator, KernelVariant, Links, Lock, Plane, Quality, SimConfig,
     Slice,
@@ -88,6 +88,15 @@ impl EngineInterface for DropsHorizon {
         if !matches!(edit.edit, Edit::Sim(SimField::Horizon(_))) {
             self.0.set_field(edit);
         }
+    }
+    // The history key's methods (R-458 F1), forwarded as `set_field` is, so the suite's key cases run on the store.
+    fn set_field_under(&mut self, edit: SetField, key: HistoryKey) {
+        if !matches!(edit.edit, Edit::Sim(SimField::Horizon(_))) {
+            self.0.set_field_under(edit, key);
+        }
+    }
+    fn end_key(&mut self, key: HistoryKey) {
+        self.0.end_key(key);
     }
     fn snapshot(&mut self) -> Snapshot {
         self.0.snapshot()

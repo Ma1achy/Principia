@@ -29,7 +29,7 @@ use engine::contract::log::{LogEntry, Severity, Source};
 use engine::contract::render_state::{
     Hover, NodeKind, Occupant, Overlays, Palette, Playhead, RenderState, StainGraph,
 };
-use engine::contract::set_field::{Edit, RenderField, SetField, SimField};
+use engine::contract::set_field::{Edit, HistoryKey, RenderField, SetField, SimField};
 use engine::contract::sim_config::{
     Chart, Collision, Horizon, Integrator, KernelVariant, Links, Lock, Plane, Quality, SimConfig,
     Slice,
@@ -175,7 +175,10 @@ enum Rule {
 /// hover, those two, and, since its Run window's horizon (TASK-M6-28), the horizon, and, since its Stain editor
 /// (TASK-M6-29), the stain graph, and, since `SimConfig`'s chart group holds a nonlinear chart's window (TASK-M2-21), the
 /// window, and, since the Tilt section's targets (TASK-M6-38, R-457 E3), the slice frame; each history entry is the edit
-/// restoring the value before and the edit itself.
+/// restoring the value before and the edit itself, and, since a drag coalesces into one entry (gui_state_contract §2,
+/// R-96, R-458 F1, TASK-M6-39), the edits sent under one history key one after another, its before each field's value
+/// at the first and its after the last, logged once, one line per field, when the entry closes (the key's end, an edit
+/// under another key or none, an undo or a redo).
 struct Broken {
     rule: Rule,
     t: f64,
@@ -188,8 +191,10 @@ struct Broken {
     debug_view: bool,
     window: engine::contract::sim_config::Window,
     frame: engine::contract::sim_config::SliceFrame,
-    undo: Vec<(Edit, Edit)>,
-    redo: Vec<(Edit, Edit)>,
+    undo: Vec<Vec<(Edit, Edit)>>,
+    redo: Vec<Vec<(Edit, Edit)>>,
+    /// The key of the latest entry while it is still open to edits under it.
+    open: Option<HistoryKey>,
     log: Vec<LogEntry>,
     /// Every entry ever logged, for [`Rule::LogRepeated`].
     all: Vec<LogEntry>,
@@ -211,6 +216,7 @@ impl Broken {
             frame: sim().slice.frame,
             undo: Vec::new(),
             redo: Vec::new(),
+            open: None,
             log: Vec::new(),
             all: Vec::new(),
         }
@@ -326,28 +332,96 @@ impl Broken {
     }
 }
 
-impl EngineInterface for Broken {
-    fn set_field(&mut self, e: SetField) {
+impl Broken {
+    /// Logs the line of one field's change, `before` → `after`, as many times as the rule logs an applied edit.
+    fn log_line(&mut self, before: &Edit, after: &Edit, no_history: bool) {
+        let logged = match self.rule {
+            Rule::NoLog => 0,
+            Rule::LogsOnlyHistoryEdits if no_history => 0,
+            Rule::LogsTwice => 2,
+            _ => 1,
+        };
+        for _ in 0..logged {
+            let entry = self.entry(before, after, no_history);
+            self.log.push(entry);
+        }
+    }
+
+    /// Closes the open entry, if any, logging one line per field it set, the field's value before its first edit and
+    /// after its last, in the order first set (gui_state_contract §2: the console logs a drag once, when it ends).
+    fn close_open(&mut self) {
+        if self.open.take().is_none() {
+            return;
+        }
+        let Some(entry) = self.undo.last().cloned() else {
+            return;
+        };
+        let mut fields: Vec<(Edit, Edit)> = Vec::new();
+        for (before, after) in entry {
+            match fields.iter_mut().find(|(_, a)| same_field(a, &after)) {
+                Some(field) => field.1 = after,
+                None => fields.push((before, after)),
+            }
+        }
+        for (before, after) in fields {
+            self.log_line(&before, &after, false);
+        }
+    }
+
+    /// Applies `e` under `key`: no history, logged at once; under no key, an entry of its own, logged at once, after
+    /// closing the open entry; under the open entry's key, joining it; under another, closing it and opening its own.
+    fn record(&mut self, e: SetField, key: Option<HistoryKey>) {
         if self.rule == Rule::DropsSetField {
             return;
         }
         let after = e.edit.clone();
         let before = self.apply(&after);
-        let logged = match self.rule {
-            Rule::NoLog => 0,
-            Rule::LogsOnlyHistoryEdits if e.no_history => 0,
-            Rule::LogsTwice => 2,
-            _ => 1,
-        };
-        for _ in 0..logged {
-            let entry = self.entry(&before, &after, e.no_history);
-            self.log.push(entry);
+        if e.no_history && self.rule != Rule::NoHistoryEntersHistory {
+            self.log_line(&before, &after, true);
+            if self.rule == Rule::NoHistoryClearsRedo {
+                self.redo.clear();
+            }
+            return;
         }
-        if !e.no_history || self.rule == Rule::NoHistoryEntersHistory {
-            self.undo.push((before, after));
-            self.redo.clear();
-        } else if self.rule == Rule::NoHistoryClearsRedo {
-            self.redo.clear();
+        self.redo.clear();
+        let joins = key.is_some() && key == self.open;
+        if !joins {
+            self.close_open();
+        }
+        if key.is_none() {
+            self.log_line(&before, &after, e.no_history);
+        }
+        match self.undo.last_mut() {
+            Some(entry) if joins => entry.push((before, after)),
+            _ => self.undo.push(vec![(before, after)]),
+        }
+        self.open = key;
+    }
+}
+
+/// Whether two edits set the same field.
+fn same_field(a: &Edit, b: &Edit) -> bool {
+    match (a, b) {
+        (Edit::Sim(a), Edit::Sim(b)) => std::mem::discriminant(a) == std::mem::discriminant(b),
+        (Edit::Render(a), Edit::Render(b)) => {
+            std::mem::discriminant(a) == std::mem::discriminant(b)
+        }
+        _ => false,
+    }
+}
+
+impl EngineInterface for Broken {
+    fn set_field(&mut self, e: SetField) {
+        self.record(e, None);
+    }
+
+    fn set_field_under(&mut self, e: SetField, key: HistoryKey) {
+        self.record(e, Some(key));
+    }
+
+    fn end_key(&mut self, key: HistoryKey) {
+        if self.open == Some(key) {
+            self.close_open();
         }
     }
 
@@ -401,9 +475,12 @@ impl EngineInterface for Broken {
         if self.rule == Rule::UndoIgnored {
             return;
         }
-        if let Some((before, after)) = self.undo.pop() {
-            self.apply(&before);
-            self.redo.push((before, after));
+        self.close_open();
+        if let Some(entry) = self.undo.pop() {
+            for (before, _) in entry.iter().rev() {
+                self.apply(before);
+            }
+            self.redo.push(entry);
         }
     }
 
@@ -411,9 +488,12 @@ impl EngineInterface for Broken {
         if self.rule == Rule::RedoIgnored {
             return;
         }
-        if let Some((before, after)) = self.redo.pop() {
-            self.apply(&after);
-            self.undo.push((before, after));
+        self.close_open();
+        if let Some(entry) = self.redo.pop() {
+            for (_, after) in &entry {
+                self.apply(after);
+            }
+            self.undo.push(entry);
         }
     }
 }
