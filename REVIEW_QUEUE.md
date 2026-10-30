@@ -628,7 +628,7 @@ choice changes the result and the corpus does not settle it (R-369).*
 - **Applied meanwhile:** nothing. The Randomise arm (REQ-VAL-193), the `z_β` bit-for-bit check and the pole's
   `|w − 1|` do not depend on the answer.
 - **Waits:** REQ-VAL-022's equator `|w|` check and its one-ulp control, and REQ-VAL-121's equator bound (TASK-M2-50).
-- **30 Oct 2026:** Decided by the orchestrator per R-369; see PR (TASK-M2-50). Test and verify-text matters, no
+- **30 Oct 2026:** Decided by the orchestrator per R-369; see PR #346 (TASK-M2-50). Test and verify-text matters, no
   physics change: (1a) both shape checks are read on `C(x)`, `D(E(x))`'s `|w|` reported unjudged as the clamp image,
   sin2α·sin(π·ε_z); (2a) with an in-clamp-band control (a collinear state about 10³ ulps off the line, caught by
   `|w|` on `C(x)` while `z_β` still clamps) and the bound-tightened control; the one-ulp control dropped. REQ-VAL-022's
