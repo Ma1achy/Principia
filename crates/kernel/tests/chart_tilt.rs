@@ -924,6 +924,15 @@ fn tilt_every_chart_ray_degenerate_corner() {
         "Lean's Gram factor {gram}"
     );
     assert_eq!(spec(30.0, 30.0, TiltMap::Sheet, 2, 2).area_weight(), 1.0);
+    for (t1, t2) in [(40.0, 70.0), (45.0, 45.0), (10.0, 20.0), (13.0, 77.0)] {
+        let sheet = spec(t1, t2, TiltMap::Sheet, 2, 2).area_weight();
+        assert_eq!(
+            sheet, 1.0,
+            "Tip as sheet needs no Gram factor at ({t1}, {t2})"
+        );
+        let two = spec(t1, t2, TiltMap::Lean, 2, 3).area_weight();
+        assert_eq!(two, 1.0, "two targets need no Gram factor at ({t1}, {t2})");
+    }
     assert_eq!(spec(30.0, 30.0, TiltMap::Lean, 2, 3).area_weight(), 1.0);
     assert_eq!(spec(90.0, 90.0, TiltMap::Lean, 2, 3).area_weight(), 1.0);
     assert!(!spec(90.0, 90.0, TiltMap::Sheet, 2, 2).rank_loss());
@@ -1014,6 +1023,67 @@ fn tilt_every_chart_maps_agree() {
     assert!(!spec(0.0, 1.0, TiltMap::Sheet, 2, 2).untilted());
     assert!(!spec(1.0, 0.0, TiltMap::Sheet, 2, 2).untilted());
 }
+
+/// Rodrigues' rotation by `m` about `k = (τ₂ e_a − τ₁ e_b)/m`, written out here as R-474 K1 gives it, at the angles
+/// as passed (no wrap).
+fn rodrigues(t1: f64, t2: f64) -> [[f64; 4]; 2] {
+    let m = Float::sqrt(t1 * t1 + t2 * t2);
+    let (sm, cm) = sc(m);
+    let (ka, kb) = (t2 / m, -t1 / m);
+    let w = 1.0 - cm;
+    [
+        [cm + ka * ka * w, ka * kb * w, -kb * sm, 0.0],
+        [ka * kb * w, cm + kb * kb * w, ka * sm, 0.0],
+    ]
+}
+
+/// Tip as sheet's columns with one target and both angles set: the rotation at the stored angles up to a total tip of
+/// 180°, `m = 180°` itself unwrapped and never folded (its tilted-axis component keeps the sign of `τ₁`), and past it
+/// the rotation at the wrapped angles `τ·(m − 360)/m` (R-474 R3, K1). `wrap_at` is the tip past which the check
+/// expects the wrap (the control's is 0, every tilt wrapped).
+fn check_rotation(wrap_at: f64) {
+    for (t1, t2) in [
+        (30.0, 40.0),
+        (45.0, 45.0),
+        (100.0, 50.0),
+        (-120.0, 60.0),
+        (108.0, 144.0),
+        (150.0, -170.0),
+        (-180.0, 180.0),
+    ] {
+        let m = Float::sqrt(t1 * t1 + t2 * t2);
+        let k = (m - 360.0) / m;
+        let want = if m > wrap_at {
+            rodrigues(t1 * k, t2 * k)
+        } else {
+            rodrigues(t1, t2)
+        };
+        let got = spec(t1, t2, TiltMap::Sheet, 2, 2).columns();
+        assert!(
+            format!("{got:?}") == format!("{want:?}"),
+            "Tip as sheet at ({t1}, {t2}) is not the rotation"
+        );
+    }
+    let half = spec(108.0, 144.0, TiltMap::Sheet, 2, 2).columns();
+    assert!(
+        half[0][2] > 0.0 && half[1][2] > 0.0,
+        "m = 180° folded: {half:?}"
+    );
+}
+
+#[test]
+fn tilt_every_chart_tip_as_sheet_rotation() {
+    check_rotation(180.0);
+}
+
+negative_control!(
+    tilt_every_chart_tip_as_sheet_rotation,
+    "a wrap of every total tip is not Tip as sheet's rotation below 180°, so it must fail",
+    expected = "is not the rotation",
+    {
+        check_rotation(0.0);
+    }
+);
 
 negative_control!(
     tilt_every_chart_maps_agree,

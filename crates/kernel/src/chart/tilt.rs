@@ -187,9 +187,10 @@ fn tip_as_sheet(tau1: f64, tau2: f64) -> [[f64; 4]; 2] {
     ]
 }
 
-/// The Gram factor of the columns, `√(|û₁|²|û₂|² − (û₁·û₂)²)`, a negative radicand from rounding read as 0.
+/// The Gram factor of one-target Lean's columns, `√(|û₁|²|û₂|² − (û₁·û₂)²)`, a negative radicand from rounding read
+/// as 0. Both columns lie in `(a, b, d_X)`: one target leaves `d_Y` at 0, so the products run over three components.
 fn gram([u1, u2]: [[f64; 4]; 2]) -> f64 {
-    let dot = |p: [f64; 4], q: [f64; 4]| p[0] * q[0] + p[1] * q[1] + p[2] * q[2] + p[3] * q[3];
+    let dot = |p: [f64; 4], q: [f64; 4]| p[0] * q[0] + p[1] * q[1] + p[2] * q[2];
     let g12 = dot(u1, u2);
     Float::sqrt(Float::max(dot(u1, u1) * dot(u2, u2) - g12 * g12, 0.0))
 }
