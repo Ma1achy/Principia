@@ -21,6 +21,14 @@ exclude_globs = [
     "xtask/src/codegen.rs",
 ]
 
+# The job queue's runner start (R-658): `Queue::ensure_runner_held` in `xtask/src/jobq.rs` starts a detached runner
+# process, in a process group of its own, outside the test's. A mutant of it (its live-runner check or its spawn gap
+# deleted) starts runners without bound and outside any sandbox a test can give; one such run on 30 Oct 2026 pushed
+# the Mac past its per-user process limit. Every other mutant leaves this path whole, so its gap bounds the runners
+# that mutant can start. Excluded from mutation as process-spawning plumbing; its behaviour is tested by
+# `xtask/tests/jobq.rs` (applied per R-369, at the orchestrator's direction).
+exclude_re = ['xtask/src/jobq\.rs:.*Queue::ensure_runner_held']
+
 # GPU-only (spirv-gated) paths (R-196; RQ-162, applied per R-204 — veto?): cargo-mutants cannot match an attribute
 # from configuration, so every item gated on `target_arch = "spirv"` also carries `#[cfg_attr(test, mutants::skip)]`,
 # which it recognises. A missing marker fails closed: the item's mutants survive and the job names them.
