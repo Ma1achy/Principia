@@ -66,6 +66,7 @@ use crate::decode::Ic;
 use crate::generated::links::{
     Alpha, Beta, Link, LinkParams, LinkReal, Momentum, Selection, SoftmaxTanh, StickBreaking,
 };
+use crate::real::IeeeBits;
 
 /// `t` where `c` holds, else `f`: both operands are computed before the choice, so it is a select, not a branch.
 #[inline]
@@ -102,7 +103,7 @@ pub struct Jacobi<R> {
 /// no mass unweighting of the momenta (R-28). `Σpᵢ = 0` is consumed, not assumed: `p₀` is not read. `λ̃` is
 /// [`lambda_t_axis`] on each axis, the arithmetic `C`'s mirror decision reads.
 #[inline]
-pub fn jacobi<R: LinkReal>(ic: &Ic<R>) -> Jacobi<R> {
+pub fn jacobi<R: LinkReal + IeeeBits>(ic: &Ic<R>) -> Jacobi<R> {
     let [m0, m1, _] = ic.m;
     let m01 = from_masses(ic.m).m01;
     let [r0, r1, r2] = ic.r;
@@ -300,7 +301,7 @@ pub fn invert<S, R>(ic: &Ic<R>) -> Inverted<R>
 where
     S: Selection,
     S::MassLink: SimplexClamp,
-    R: LinkReal,
+    R: LinkReal + IeeeBits,
 {
     invert_at::<S, R>(ic, &LinkParams::DEFAULT)
 }
@@ -312,7 +313,7 @@ pub fn invert_at<S, R>(ic: &Ic<R>, p: &LinkParams<R>) -> Inverted<R>
 where
     S: Selection,
     S::MassLink: SimplexClamp,
-    R: LinkReal,
+    R: LinkReal + IeeeBits,
 {
     let j = jacobi(ic);
     let a = alpha(j.rho_t, j.lambda_t);
