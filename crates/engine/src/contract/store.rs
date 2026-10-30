@@ -197,7 +197,7 @@ fn now_ms() -> u64 {
 }
 
 /// An edit's value as the log writes it (render_gui_spec §G12): a latent vector as `(z_α, …, z_μ2)`, the lock as "locked
-/// at …" or "unlocked", the hover at four decimals, the overlay set and the stain graph as [`overlays`] and
+/// at …" or "unlocked", the hover at four decimals, the overlay set and the stain graph as `overlays` and
 /// [`stain_graph`] write them.
 pub fn edit_value(edit: &Edit) -> String {
     match edit {
