@@ -2,7 +2,7 @@
 
 - **Milestone:** M9
 - **Closes:** REQ-VAL-340
-- **Depends on:** TASK-M9-01, TASK-M9-02, TASK-M9-03, TASK-M9-04, TASK-M9-05, TASK-M9-06, TASK-M9-07, TASK-M9-08, TASK-M9-09, TASK-M9-10, TASK-M9-11, TASK-M9-12, TASK-M9-13, TASK-M9-14, TASK-M9-15, TASK-M9-16, TASK-M9-17, TASK-M9-18, TASK-M9-19, TASK-M9-20, TASK-M9-21, TASK-M9-26, TASK-M9-30, TASK-M9-31, TASK-M9-32, TASK-M9-33, TASK-M9-34, TASK-M9-36
+- **Depends on:** TASK-M9-01, TASK-M9-02, TASK-M9-03, TASK-M9-04, TASK-M9-05, TASK-M9-06, TASK-M9-08, TASK-M9-10, TASK-M9-11, TASK-M9-12, TASK-M9-13, TASK-M9-14, TASK-M9-15, TASK-M9-16, TASK-M9-17, TASK-M9-18, TASK-M9-19, TASK-M9-20, TASK-M9-21, TASK-M9-26, TASK-M9-30, TASK-M9-31, TASK-M9-32, TASK-M9-36
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** none
@@ -29,5 +29,5 @@ M9 exits on this report, not a gate (R-650). It lists every M9 target with its t
 - Review (physics): the report covers every live M9 requirement; each row has its tier, its outcome, its like-for-like checks and, for an explained divergence, the measurement; the peek log's rows are cited, never counted as scores (REQ-VAL-340).
 
 ## Notes
-- Added by R-650 (30 Oct 2026). It depends on every M9 scoring task that waits on no ruling or data. Those that wait (TASK-M9-22 to TASK-M9-25, TASK-M9-27 to TASK-M9-29 and TASK-M9-35, on RQ-593 to RQ-597, RQ-608, RQ-612, RQ-613, RQ-615, RQ-616, RQ-618 and RQ-620) are listed "not scored" until they run, and the report is updated when they do. Applied per R-369.
+- Added by R-650 (30 Oct 2026). It depends on every M9 scoring task that waits on no ruling or data. Those that wait are listed "not scored" until they run, and the report is updated when they do: TASK-M9-22 to TASK-M9-25, TASK-M9-27 to TASK-M9-29 and TASK-M9-35, on RQ-593 to RQ-597, RQ-608, RQ-612, RQ-613, RQ-615, RQ-616, RQ-618, RQ-620 and RQ-622; TASK-M9-07, on Standish 1970 and Yasko & Orlov 2015 being in the repo (R-630 item 9); TASK-M9-09, on TM-1's data being accepted (Tanikawa & Mikkola 2021's tables landed on main in #338, under `docs/incoming/2026-10-29_research_batches/tanikawa_mikkola_2021/`, but their unblocking of the task is not yet accepted); TASK-M9-33 and TASK-M9-34, on RQ-622, which holds their only targets (REQ-VAL-309, REQ-VAL-308). Each rejoins this task's dependencies once it is unblocked. Applied per R-369. *Was:* "It depends on every M9 scoring task that waits on no ruling or data. Those that wait (TASK-M9-22 to TASK-M9-25, TASK-M9-27 to TASK-M9-29 and TASK-M9-35, on RQ-593 to RQ-597, RQ-608, RQ-612, RQ-613, RQ-615, RQ-616, RQ-618 and RQ-620) are listed "not scored" until they run…", and its Depends on listed TASK-M9-07, TASK-M9-09, TASK-M9-33 and TASK-M9-34, which wait (Codex review of PR #342).
 - The file name `docs/verification/m9_report.md` is this port's, beside the peek log, applied per R-369.
