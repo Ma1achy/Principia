@@ -24,6 +24,7 @@ R-633 (ruling RQ-603) adds one principle to R-473 J1: where a chart holds a bloc
 - `docs/design/principia_chart_reference.md` § "4.5 The Burrau-family chart maps"
 - `docs/design/principia_chart_reference.md` § "2.2 Deterministic momentum construction"
 - `docs/design/principia_chart_reference.md` § "5.4 Past the unit square — each axis's extension type (R-407)"
+- `decisions.md` § "R-637 — The 28 Oct rulings on the replication batch and the census: RQ-598 takes option (a), the authors asked for their data; the occupant matrix census is adopted with stage 0 as its precondition, its thresholds R-71 calibrations and never gates, `census/` outside `results/`, its stage-1 results evidence only for RQ-577, and the integrator contract winning on its code questions, its CI cadence queued; RQ-591 takes option (b); RQ-577 stays after M3, with the owner's leanings recorded; the five-chart hold covers only the replication charts *(closes RQ-591, RQ-598 and RQ-599; amends R-636)*"
 
 ## Deliverables
 - The six charts' hidden coordinates (`crates/kernel/src/chart/`): the mass simplex's `ν₀` and four momentum controls; the Euclid plane's and the δm strip's four momentum controls; the held `L_z` of `(ν, K)` and `Φ_θ,K`; the held `K` of `Φ_θ,L_z`. Each is offered as a tilt target and a Slice centre slider, a physical value shown as itself, a momentum control through its link.
@@ -42,3 +43,4 @@ R-633 (ruling RQ-603) adds one principle to R-473 J1: where a chart holds a bloc
 - **The refused cell (applied per R-369, flagged in R-633 for the owner's veto).** The corpus's `ray-degenerate` is a chart's `system_image` (chart_decoder_contract Part 5); R-633's "through the tilt's existing ray-degenerate path" is read per cell, the cell taking that path's area weight 0 and being no system, and the chart's `system_image` stays its own.
 - **Split from TASK-M2-36 by R-633** (28 Oct 2026), which builds the tilt path and the five latent-control charts; this task depends on it and is numbered next after TASK-M2-51.
 - **Held with TASK-M2-36 (R-636, 28 Oct 2026):** this task depends on TASK-M2-36, whose five-chart build the owner holds until he rules on the replication batch (RQ-591 to RQ-598).
+- *28 Oct 2026 (R-637):* the hold is lifted. The owner: "Five-chart build: yes, I meant only the replication charts. This morning's five-chart split may go ahead." This task follows TASK-M2-36 as before.

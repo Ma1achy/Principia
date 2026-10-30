@@ -21,6 +21,7 @@ The replication suite's targets HU-1, HU-2 run as engine tests (`principia_dd_re
 - `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
 - `docs/notes/principia_validation_ground_truth_note.md` § "Four tiers of ground truth (increasing in what they prove)"
 - `docs/notes/principia_validation_ground_truth_note.md` § "Chaos forbids pointwise comparison (exact vs structural)"
+- `decisions.md` § "R-639 — The Šuvakov-plane targets split into a closure part, which stays in M4 or M8 and runs now, and a chart part, which moves to gate the task that builds the Šuvakov chart and is not dropped, a target whose split isn't clean being queued; a read-only licence audit of every committed PDF; none of the five targets splits cleanly, so all five are queued *(answers RQ-608)*"
 
 ## Deliverables
 - The maps on the chart RQ-583 rules, in RQ-582's labelling; no chart is built here ahead of those rulings.
@@ -37,3 +38,4 @@ The replication suite's targets HU-1, HU-2 run as engine tests (`principia_dd_re
 - Waits on RQ-583: the task starts only once it is ruled, and builds no chart or diagnostic ahead of the ruling (R-594 item 5). RQ-582 is closed by R-630 item 3: the middle body is body 1, at β = 0, Hudomal eq. (18)'s labelling.
 - Reference data are read from the records named in each requirement's verify; the records stay records (R-159), and the contract is `principia_dd_replication.md`.
 - *28 Oct 2026 (R-636, closing RQ-583):* the owner: "Šuvakov-plane chart: keep its targets as closures for now; no chart build yet." No chart is built, and this task's targets need one; it waits on RQ-608, which asks what they do meanwhile.
+- *28 Oct 2026 (R-639):* the owner ruled that each Šuvakov-plane target splits into a closure part, kept here and run now, and a chart part, which gates the task that builds the chart, and that a target whose split isn't clean is queued. None of this task's targets splits cleanly (R-639), so they are queued as RQ-618 and stay as they are; the task still waits on RQ-608, now with RQ-618.

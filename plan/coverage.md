@@ -16,15 +16,15 @@
 | SCHED | 103 |
 | REF | 52 |
 | RENDER | 120 |
-| COL | 160 |
+| COL | 161 |
 | GUI | 385 |
 | TOOL | 218 |
 | VAL | 331 |
 | PERF | 115 |
 | SYS | 93 |
-| **total** | **2048** |
+| **total** | **2049** |
 
-Of these: 224 calibration, 172 definition, 1652 obligation. Retired (kept for their ids, not counted): 12.
+Of these: 225 calibration, 172 definition, 1652 obligation. Retired (kept for their ids, not counted): 12.
 
 ## Requirements per milestone
 
@@ -37,18 +37,19 @@ Of these: 224 calibration, 172 definition, 1652 obligation. Retired (kept for th
 | M4 | 119 |
 | M5 | 181 |
 | M6 | 226 |
-| M7 | 262 |
+| M7 | 263 |
 | M8 | 476 |
 
 ## Sections
 
-1638 sections in 61 files: 1310 yield at least one requirement; 328 yield none and are listed below with the reason.
+1650 sections in 61 files: 1315 yield at least one requirement; 335 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | gap (RQ-378) | 1 |
 | gap (RQ-391) | 2 |
 | gap (RQ-577) | 2 |
-| informative only | 221 |
+| gap (RQ-618) | 1 |
+| informative only | 227 |
 | out of v1 (R-125) | 1 |
 | out of v1 (R-420) | 1 |
 | parent heading (obligations are in its subsections) | 55 |
@@ -187,6 +188,13 @@ Of these: 224 calibration, 172 definition, 1652 obligation. Retired (kept for th
 | R-607 — Kustaanheimo–Stiefel regularisation is not built: Part 2b's four are the regularisations, and a later method is added by its own ruling *(closes RQ-530)* | informative only | RQ-530 (a): Kustaanheimo–Stiefel regularisation is not built; Part 2b's four are the regularisations, a later method added by its own ruling; applied in integrator contract Part 6, dd_integrator §6 and dd_decoder §6, and no requirement changes |
 | R-634 — Mock-engine GUI tasks may be built in a cloud session on lavapipe, as a trial on TASK-M8-07 and TASK-M8-13: the implementer and the code and qa reviewers in the cloud; the gui review, the app launch, the owner's look and every merge on the Mac; stopped if a Metal-only finding costs more than one extra round per task or disk forces the agents to run one at a time *(amends R-357)* | informative only | the owner's ruling of 28 Oct 2026, a trial: TASK-M8-07 and TASK-M8-13 built and code- and qa-reviewed in a cloud session on lavapipe, the gui review (Metal and lavapipe screenshots side by side), the launch, the owner's look and every merge on the Mac; reported in tokens, wall-clock and rounds against a comparable Mac-built GUI task; stopped by its two stop rules; a process ruling applied in plan/OPERATIONS.md and CLAUDE.md; the Mac CI job's gui tests and screenshots are a separate R-369 code task, to follow; changes no requirement |
 | R-635 — Codex, Gemini CLI and GitHub Copilot review PRs as advisory reviewers for a one-week trial, never merge gates; every bot finding is handled before merge with a reply on its thread; after the week, a report per reviewer *(an R-369 note; no CI gate or review step changes)* | informative only | the owner's R-369 note of 28 Oct 2026: Codex, Gemini CLI and GitHub Copilot advisory for a one-week trial, never merge gates, every bot finding handled before merge with a reply on its thread, a report per reviewer after the week; process, carried by AGENTS.md, GEMINI.md, .github/copilot-instructions.md, the gemini-dispatch workflow (its review job inlined from the example's gemini-review workflow), CLAUDE.md § Working with review and xtask/tests/ai_review_rules.rs, with the weekly audit queued as RQ-605 |
+| R-639 — The Šuvakov-plane targets split into a closure part, which stays in M4 or M8 and runs now, and a chart part, which moves to gate the task that builds the Šuvakov chart and is not dropped, a target whose split isn't clean being queued; a read-only licence audit of every committed PDF; none of the five targets splits cleanly, so all five are queued *(answers RQ-608)* | gap (RQ-618) | the owner's ruling of 28 Oct 2026 on the Šuvakov-plane targets (closure part and chart part) and the licence audit; no split is clean, so the five targets are queued as RQ-618 and unchanged; changes no requirement |
+| R-643 — The licence audit: the four subscription-stamped and six all-rights-reserved PDFs leave the tree for `docs/incoming/_local/` in one ordinary commit, with no history rewrite; the five "unclear" PDFs stay and are queued; the 22 arXiv licences are checked, the 19 arXiv-default PDFs kept and the 3 CC-licensed fine; from now on no publisher PDF is committed unless its licence allows redistribution, checked before commit *(no RQ; a standing rule)* | informative only | the owner's licence-audit ruling of 28 Oct 2026: ten PDFs held locally (PR #329), five queued (RQ-610), the 22 arXiv licences checked and kept, and the standing rule that no publisher PDF is committed unless its licence allows redistribution; process, carried by CLAUDE.md § Papers and licences; changes no requirement |
+| R-644 — The history scrub (R-643's option 2) is shelved, not scheduled: no condition is checked before the release; it is revisited after the release, or earlier if a rights-holder asks for removal, and then the scrub and a GitHub Support purge are done together; #329 stands *(amends R-643)* | informative only | the owner's ruling of 28 Oct 2026: the history scrub shelved until after the release, or a rights-holder's request; process; changes no requirement |
+| R-645 — No more cloud sessions: the six already started are the last; briefs 4 and 5 run on the Mac as local agents, brief 5 a small pilot, the data sweep after them *(amends R-357; supersedes R-636's cloud half)* | informative only | the owner's ruling of 28 Oct 2026: no more cloud sessions; process, carried by CLAUDE.md and plan/OPERATIONS.md; changes no requirement |
+| R-646 — The converged Burrau reference: arXiv v1 is SP-2's source, the owner also trying for the journal version and its supplementary snapshots through his own access; no separate author email; SP-2 notes that t = 200 is the time-reversed return and tests it as a reversibility check and a trajectory check *(closes RQ-611)* | informative only | the owner's ruling of 28 Oct 2026 closing RQ-611: arXiv v1 is the proposed SP-2's source; SP-2 is a proposed row of PLAN.md, not a requirement; changes no requirement |
+| R-647 — A standing rule, no exceptions: no cloud sessions and no briefs addressed to the owner; the orchestrator never asks him to start, paste into, restart or check a session; every agent is the orchestrator's own, dispatched locally by it; an agent's written instructions are internal task files *(amends R-645)* | informative only | the owner's standing rule of 28 Oct 2026: no cloud sessions and no briefs addressed to the owner; process, carried by CLAUDE.md and plan/OPERATIONS.md § Dispatching; changes no requirement |
+| R-648 — The workflow returns to main's, R-357, R-391 and R-277, with one addition, never a cloud session: R-634 is withdrawn, and so are R-636's agent-count and cloud clauses; three agents at normal memory pressure, two if the Mac is swapping; the RQ-605 audit on demand only *(supersedes R-634; withdraws R-636's agent-count and cloud clauses; amends R-645 and R-647)* | informative only | the owner's ruling of 28 Oct 2026: the workflow returns to R-357, R-391 and R-277, with no cloud sessions; R-634 and R-636's agent-count and cloud clauses withdrawn; process; changes no requirement |
 
 ### `docs/contracts/principia_canonical_spec.md`
 

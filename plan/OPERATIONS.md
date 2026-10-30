@@ -43,6 +43,7 @@ its environment checks on 2 Oct 2026 on three blockers. What each would need is 
    branch's (R-272), still needs it.
 
 The **Linux cloud** notes below, `scripts/cloud-setup.sh` among them, stand for a cloud session's read-and-think work.
+*29 Oct 2026:* Not used: no cloud sessions (R-645, R-647, R-648).
 
 ### The weekly consistency audit (R-636)
 
@@ -151,6 +152,10 @@ or reviews" and `plan/WORKFLOW.md` § "The review loop". In addition:
   - any ruling since the task file was written, verbatim (R-289);
   - for a reviewer, the request to judge the PR's size and to name each decision it made (§ "Reviewers", R-369);
   - for a renamed or reused target, what to clean first (§ "Pitfalls").
+- **No cloud sessions, and no briefs or instructions addressed to the owner (R-647, a standing rule; R-645, R-648).**
+  The orchestrator dispatches every agent locally itself, and never asks the owner to start, paste into, restart or
+  check a session. Written instructions for an agent are internal task files in the orchestrator's notes
+  (`orch/tasks/`), not briefs to the owner.
 - **Fresh or resumed.** A reviewer is always a fresh subagent, never a fork (CLAUDE.md). A fix round with a ruling in
   it is a fresh dispatch (R-289). A fix round without one may go to the implementer that is still running, by message.
 - **Sizing.** Have the implementer measure a few sample controls before sizing a task: per-control estimates ran ~30%
