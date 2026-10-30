@@ -851,14 +851,21 @@ and the decode/encode translated to WGSL from the one Rust source (R-116):
     `[ν_min, ν_max]` the least is `min(ν_min/(1 + ν_min), (1 − ν_max)/2)`: `1/64` at the Euclid plane's default
     `[1/32, 31/32]` (§4.5). The acute-angle charts' `ν(θ) = cos θ/(1 + sin θ)` lies on `[√2 − 1, 1)` and falls as `θ`
     grows, so their least is `(1 − ν(θ_min))/2`, about `1/64` at the `θ_min` REQ-CHART-045 proposes, the acute angle of
-    `ν = 31/32`; the `δm` strip blends those masses toward its target, its least at least the smaller of the two's,
-    the same at the default equal-mass target. These floors are the ranges', not the links': §4.5 gives the ranges as
-    defaults inside `(0, 1)`, with no lower bound on `ν_min`, `1 − ν_max` or `θ_min`.
+    `ν = 31/32`;
+  - the `δm` strip, for `v ∈ [0, 1]`, blends those masses toward its target `m_target`, a convex blend, so its least
+    is at least the smaller of the column's least and `m_target`'s, the same `1/64` at the default equal-mass target.
+    Past `v`'s edges the blend continues until a mass reaches 0, with validation only `mᵢ > 0`
+    (`principia_chart_reference.md` §4.5, "δm, affine"), so no range floors those masses: there the per-pixel
+    conditions are the precondition, a least mass above `2⁻¹²⁴` for finiteness and at least `2⁻⁶²` for `δ` to be inert.
 
-  So over the links' floors and the Burrau charts' default and proposed ranges, the least mass is `2.5×10⁻¹³` and
-  `‖rᵢ‖ ≤ 1/√(2.5×10⁻¹³) = 2×10⁶`, below `2²¹`. On a Burrau range set nearer the ends of `(0, 1)`, the bound
-  `‖rᵢ‖ < 2⁶²`, and with it the sum's finiteness above, holds while the range's least mass exceeds `2⁻¹²⁴`, and `δ` stays
-  inert while it is at least `2⁻⁶²`; a range past those is outside this argument. The positions are finite where the masses
+  The Burrau floors are the ranges', not the links': §4.5 gives the ranges as defaults inside `(0, 1)`, with no lower
+  bound on `ν_min`, `1 − ν_max` or `θ_min`.
+
+  So over the links' floors and the Burrau charts' default and proposed ranges, with the `δm` strip inside `v ∈ [0, 1]`
+  at its default target, the least mass is `2.5×10⁻¹³` and `‖rᵢ‖ ≤ 1/√(2.5×10⁻¹³) = 2×10⁶`, below `2²¹`. On a Burrau
+  range set nearer the ends of `(0, 1)`, or a `δm` target with a smaller least mass, the bound `‖rᵢ‖ < 2⁶²`, and with it
+  the sum's finiteness above, holds while that least mass exceeds `2⁻¹²⁴`, and `δ` stays inert while it is at least
+  `2⁻⁶²`; a range, target or pixel past those is outside this argument. The positions are finite where the masses
   are finite and nonzero; a mass rounded to 0, or a non-finite one, would give a non-finite `r`. The preset tests `m`
   and `r` on their bits as it does `K` and `V`, so such a pixel draws the invalid colour. `F` is calibrated in this
   scale (REQ-COL-060).
