@@ -7507,7 +7507,7 @@
   - R-156
   milestone: M3
   rq:
-  - RQ-630
+  - RQ-632
   note: "R-125: moved to M3 (TASK-M3-16), transcribed rather than defined under R-72. The punctured-sphere relation and the attribution algorithm (REQ-PAY-071/072) are v2."
 - id: REQ-PAY-071
   area: PAY

@@ -584,7 +584,7 @@ choice changes the result and the corpus does not settle it (R-369).*
   `principia_dd_replication.md` § 5.10, the RQ-598 README § 6 and TASK-M3-62's note point here.
 - **Waits:** GG-1's per-point scoring against the Fig. 1 extraction (TASK-M3-62). BR-1 does not wait on it.
 
-## RQ-630: Which cuts carry `a` and `b`: two arcs ending at a Lagrange pole cannot reproduce the published classes *(physics; R-125; `docs/contracts/principia_symbolic_dynamics_contract.md` § 1; REQ-PAY-070; context: TASK-M3-16)*
+## RQ-632: Which cuts carry `a` and `b`: two arcs ending at a Lagrange pole cannot reproduce the published classes *(physics; R-125; `docs/contracts/principia_symbolic_dynamics_contract.md` § 1; REQ-PAY-070; context: TASK-M3-16)*
 
 *Queued 30 Oct 2026 by TASK-M3-16, transcribing the convention under R-125. For the owner: yes, it is physics where
 the choice changes the result (the word every sample stores) and the corpus does not settle it (R-369).*

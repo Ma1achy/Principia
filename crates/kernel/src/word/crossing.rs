@@ -12,7 +12,7 @@
 //! - [`CrossingDetector`] carries the last accepted endpoint's distances between substeps, so each endpoint is shared
 //!   by the two substeps that meet there and an endpoint on a cut is counted once.
 //!
-//! The distances are the input: which cuts carry `a` and `b`, and so how a state's distances are formed, is RQ-630
+//! The distances are the input: which cuts carry `a` and `b`, and so how a state's distances are formed, is RQ-632
 //! (symbolic_dynamics_contract §1). Nothing here depends on the cuts' shape.
 
 use super::binding::{on_substep, CrossingHook, SubstepCrossings, WordBuffer};
