@@ -645,8 +645,8 @@ Consequence, worth stating so an agent doesn't add a per-IC time rescale: becaus
     so no division feeds the branch (Part 4). With both cuts crossed, `τ_b < τ_a` is decided as
     `|d₀,b|·|d₁,a| < |d₀,a|·|d₁,b|` (the term `|d₀,a|·|d₀,b|` common to both sides cancels), and the two crossings
     append in ascending `τ`.
-  - **Comparison-only, identical on CPU and GPU.** Each product is formed with no addition, so no backend can contract
-    it, and with no intermediate that can be subnormal: a factor that reads as zero (above) makes the product zero;
+  - **Comparison-only, identical on CPU and GPU.** Each product is formed with no float addition, so no backend can
+    contract it, and with no intermediate that can be subnormal: a factor that reads as zero (above) makes the product zero;
     otherwise each factor is split at its bits into its exponent and its significand in `[1, 2)`, the two significands
     are multiplied once (a correctly rounded multiply, in `[1, 4)`), and the product is the pair (the exponents' sum
     plus that multiply's own exponent; the multiply's significand), compared exponent first. Bit and integer operations,
