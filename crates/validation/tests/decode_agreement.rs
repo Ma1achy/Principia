@@ -1,10 +1,13 @@
 //! The `decode-agreement` gate's judgement off the GPU (TASK-M2-25, TASK-M2-29; REQ-COL-006, REQ-COL-060): a sample's
-//! tally at the tolerance's boundary, the hatch's placement, the measurement and its report lines, and the refusals.
-//! `cargo xtask gate decode-agreement` runs it on the GPU.
+//! tally at the tolerance's boundary in either form, the hatch's placement, the measurement and its report lines, the
+//! collision windows' runs, and the refusals. `cargo xtask gate decode-agreement` runs it on the GPU.
 
 use render::presets::agreement::FACTOR;
 use render::presets::DecodeChart;
-use validation::decode_agreement::{check, quantile, DecodeAgreementGate, Input, Sample, Tally};
+use validation::decode_agreement::{
+    chart_named, check, quantile, runs, DecodeAgreementGate, Form, Input, Run, Sample, Tally,
+    Window,
+};
 use validation::gate::GateConfig;
 use validation::negative_control;
 
@@ -112,9 +115,28 @@ fn input(side: [u32; 2], depth: u32, shift: u32, poison: Vec<u32>) -> Input {
     Input {
         description: String::new(),
         side,
-        depth,
+        depth: Some(depth),
+        windows: vec![],
+        form: Form::Conditioned,
         shift,
         poison,
+    }
+}
+
+/// An input of `windows`, `side` samples each.
+fn windowed(side: [u32; 2], windows: Vec<Window>) -> Input {
+    Input {
+        depth: None,
+        windows,
+        ..input(side, 0, 0, vec![])
+    }
+}
+
+fn window(chart: &str, centre: [f64; 2], depths: Vec<u32>) -> Window {
+    Window {
+        chart: chart.to_owned(),
+        centre,
+        depths,
     }
 }
 
@@ -183,10 +205,16 @@ fn check_gate_json(threshold: f64) {
         config.threshold.value, threshold,
         "the gate's threshold is not the preset's compiled factor"
     );
-    assert!(
-        config.inputs.iter().any(|i| i == "survey.json"),
-        "the measurement's survey is not an input"
-    );
+    for name in [
+        "survey.json",
+        "collision.json",
+        "collision_per_operand.json",
+    ] {
+        assert!(
+            config.inputs.iter().any(|i| i == name),
+            "the measurement's {name} is not an input"
+        );
+    }
 }
 
 #[test]
@@ -206,20 +234,26 @@ fn words(e: f32, e_0: f32) -> [u32; 4] {
     [0.5f32.to_bits(), 1, e.to_bits(), e_0.to_bits()]
 }
 
-/// A sample's measurement: `|E − E₀|` at f64 from the words, and the scale from the stored `K₀`, `V₀`, each `max` at its
-/// edge; `k_0` is the stored `K₀`, 1 in the honest run, where `max(|K₀|, 1)` is 1 from either side.
+/// A sample's measurement: `|E − E₀|` at f64 from the words, the per-operand scale from the stored `K₀`, `V₀`, each
+/// `max` at its edge, and the conditioned factor the preset's ratio times `FACTOR`; `k_0` is the stored `K₀`, 1 in the
+/// honest run, where `max(|K₀|, 1)` is 1 from either side.
 fn check_measure(k_0: f32) {
     let one = Sample::from_words(words(1.5, 1.0), [k_0, -1.0], true);
     assert_eq!(one.diff, 0.5);
     assert_eq!(one.scale, 2.0 * EPS, "the scale at |K₀| = |V₀| = 1");
-    assert_eq!(one.factor(), 0.25 / EPS);
+    assert_eq!(one.per_operand_factor(), 0.25 / EPS);
+    assert_eq!(
+        one.factor(),
+        0.5 * f64::from(FACTOR),
+        "the conditioned factor is not the preset's ratio times FACTOR"
+    );
     let below = Sample::from_words(
         words(1.0, 1.0),
         [1.0f32.next_down(), (-1.0f32).next_up()],
         true,
     );
     assert_eq!(below.scale, 2.0 * EPS, "max(|x|, 1) under 1 is not 1");
-    assert_eq!((below.diff, below.factor()), (0.0, 0.0));
+    assert_eq!((below.diff, below.per_operand_factor()), (0.0, 0.0));
     let above = Sample::from_words(words(-3.0, -2.0), [1.0f32.next_up(), -4.0], true);
     assert_eq!(
         above.scale,
@@ -228,8 +262,14 @@ fn check_measure(k_0: f32) {
     );
     assert_eq!(above.diff, 1.0, "|E − E₀| is not the absolute difference");
     let nan = Sample::from_words(words(f32::NAN, 1.0), [0.0, 0.0], true);
-    assert_eq!(nan.factor(), f64::INFINITY, "a NaN difference is not +∞");
+    assert_eq!(
+        nan.per_operand_factor(),
+        f64::INFINITY,
+        "a NaN difference is not +∞"
+    );
     assert!(nan.diff.is_nan());
+    let nan_ratio = Sample::from_words([f32::NAN.to_bits(), 1, 0, 0], [0.0, 0.0], true);
+    assert_eq!(nan_ratio.factor(), f64::INFINITY, "a NaN ratio is not +∞");
     let s = Sample::from_words([7, 0, 0, 0], [0.0, 0.0], false);
     assert_eq!((s.ratio.to_bits(), s.valid, s.finite), (7, false, false));
 }
@@ -246,18 +286,23 @@ negative_control!(
     check_measure(2.0)
 );
 
-/// The tally's measurement: the worst factor and difference over the compared samples only, NaN read as `+∞`;
-/// `count_hatched` also feeds a hatched sample's difference in, the control.
+/// The tally's measurement: the worst factor of each scale and the worst difference over the compared samples only,
+/// NaN read as `+∞`; `count_hatched` also feeds a hatched sample's in, the control.
 fn check_tally_measure(count_hatched: bool) {
-    let m = |diff: f64, scale: f64, valid: bool| Sample {
-        ratio: 0.5,
+    let f = f64::from(FACTOR);
+    let m = |ratio: f32, diff: f64, scale: f64, valid: bool| Sample {
+        ratio,
         valid,
         finite: valid,
         diff,
         scale,
     };
-    let mut samples = vec![m(3.0, 1.0, true), m(1.0, 0.125, true), m(0.5, 2.0, true)];
-    let hatched = m(100.0, 1.0, false);
+    let mut samples = vec![
+        m(0.25, 3.0, 1.0, true),
+        m(0.5, 1.0, 0.125, true),
+        m(0.125, 0.5, 2.0, true),
+    ];
+    let hatched = m(0.75, 100.0, 1.0, false);
     samples.push(if count_hatched {
         Sample {
             valid: true,
@@ -268,23 +313,29 @@ fn check_tally_measure(count_hatched: bool) {
     });
     let t = tally(&samples);
     assert_eq!(
-        (t.worst_factor, t.worst_diff),
-        (8.0, 3.0),
+        (t.worst_factor, t.worst_per_operand, t.worst_diff),
+        (0.5 * f, 8.0, 3.0),
         "the measurement is not the compared samples' worst"
     );
     assert_eq!(
         (t.median_factor, t.p99_factor),
-        (3.0, 8.0),
+        (0.25 * f, 0.5 * f),
         "the distribution is not the compared samples'"
     );
-    let nan = tally(&[m(f64::NAN, 1.0, true), m(1.0, 1.0, true)]);
+    let nan = tally(&[m(f32::NAN, f64::NAN, 1.0, true), m(0.125, 1.0, 1.0, true)]);
     assert_eq!(
-        (nan.worst_factor, nan.worst_diff),
-        (f64::INFINITY, f64::INFINITY)
+        (nan.worst_factor, nan.worst_per_operand, nan.worst_diff),
+        (f64::INFINITY, f64::INFINITY, f64::INFINITY)
     );
-    assert_eq!((nan.median_factor, nan.p99_factor), (1.0, f64::INFINITY));
-    let none = tally(&[m(5.0, 1.0, false)]);
-    assert_eq!((none.worst_factor, none.worst_diff), (0.0, 0.0));
+    assert_eq!(
+        (nan.median_factor, nan.p99_factor),
+        (0.125 * f, f64::INFINITY)
+    );
+    let none = tally(&[m(0.5, 5.0, 1.0, false)]);
+    assert_eq!(
+        (none.worst_factor, none.worst_per_operand, none.worst_diff),
+        (0.0, 0.0, 0.0)
+    );
     assert_eq!((none.median_factor, none.p99_factor), (0.0, 0.0));
 }
 
@@ -304,12 +355,12 @@ negative_control!(
 /// over every chart beside the threshold; `charts` is how many of the two tallies the report is given.
 fn check_report(charts: usize) {
     let c = config(&format!("{:?}", f64::from(FACTOR)));
-    let m = |diff: f64, valid: bool| Sample {
-        ratio: 0.5,
+    let m = |factor: f64, valid: bool| Sample {
+        ratio: (factor / f64::from(FACTOR)) as f32,
         valid,
         finite: valid,
-        diff,
-        scale: 1.0,
+        diff: factor,
+        scale: 0.5,
     };
     let tallies = [
         Tally::of(
@@ -332,13 +383,14 @@ fn check_report(charts: usize) {
         .expect("no latent line");
     assert!(
         latent.contains("3 samples, 2 compared, 1 excluded")
-            && latent.contains("measured worst |E − E₀| 3.000 eps")
-            && latent.contains("3.000e0 absolute"),
+            && latent.contains("measured worst |E − E₀| 3.000 eps of the conditioned scale")
+            && latent.contains("3.000e0 absolute")
+            && latent.contains("the per-operand scale's worst 6.000 eps"),
         "{latent}"
     );
     let last = r.scatter.last().unwrap();
     assert!(
-        last.starts_with("every chart: measured worst |E − E₀| 7.250 eps"),
+        last.starts_with("every run: measured worst |E − E₀| 7.250 eps"),
         "the summary is not the worst over every chart: {last}"
     );
     assert!(
@@ -347,6 +399,10 @@ fn check_report(charts: usize) {
             f64::from(FACTOR)
         )),
         "{last}"
+    );
+    assert!(
+        !r.negative_results.iter().any(|l| l.contains("per-operand")),
+        "a conditioned input is reported as judged by the per-operand scale"
     );
 }
 
@@ -397,4 +453,303 @@ negative_control!(
     "a quantile one rank off must be caught",
     expected = "the 99th percentile of 100 is not the 99th value",
     check_quantile(1)
+);
+
+/// The two forms at the boundary: the conditioned form judges by the preset's ratio, the per-operand form by
+/// `per_operand_factor / FACTOR`, a factor of exactly `FACTOR` agreeing and the next one up not; `form` is the form the
+/// per-operand samples are judged by (the control judges them by the preset's ratio, which agrees).
+fn check_forms(form: Form) {
+    let f = f64::from(FACTOR);
+    // diff / scale = FACTOR exactly, and the next f64 above it; each with a preset ratio well within 1.
+    let at = Sample {
+        ratio: 0.25,
+        valid: true,
+        finite: true,
+        diff: f,
+        scale: 1.0,
+    };
+    let past = Sample {
+        diff: f.next_up(),
+        ..at
+    };
+    assert_eq!(at.ratio_in(Form::PerOperand), 1.0);
+    assert_eq!(at.ratio_in(Form::Conditioned), 0.25);
+    let t = Tally::judged(DecodeChart::ShapeSphere, &[at, past], form);
+    assert_eq!(
+        t.disagree, 1,
+        "the per-operand form does not fail a factor past FACTOR, or fails one of exactly FACTOR"
+    );
+    assert_eq!(t.worst, f.next_up() / f);
+    assert!(!t.pass());
+    assert!(Tally::judged(DecodeChart::ShapeSphere, &[at], Form::PerOperand).pass());
+    let conditioned = Tally::judged(DecodeChart::ShapeSphere, &[at, past], Form::Conditioned);
+    assert_eq!((conditioned.disagree, conditioned.worst), (0, 0.25));
+    let nan = Sample {
+        diff: f64::NAN,
+        ..at
+    };
+    assert_eq!(nan.ratio_in(Form::PerOperand), f64::INFINITY);
+    let nan_ratio = Sample {
+        ratio: f32::NAN,
+        ..at
+    };
+    assert_eq!(nan_ratio.ratio_in(Form::Conditioned), f64::INFINITY);
+    assert_eq!(Form::default(), Form::Conditioned);
+}
+
+#[test]
+fn decode_agreement_forms() {
+    check_forms(Form::PerOperand);
+}
+
+negative_control!(
+    decode_agreement_forms,
+    "per-operand samples judged by the preset's ratio must not fail",
+    expected = "the per-operand form does not fail a factor past FACTOR",
+    check_forms(Form::Conditioned)
+);
+
+/// The windows' runs: each window at each depth, its block's first cell `⌊c·2^d⌋ − side/2` on each axis, refused where
+/// the block runs off the chart, at each edge; `half` is the half-side the expected first cell is formed with (the
+/// control gives another).
+fn check_windows(half: u64) {
+    let c = config(&format!("{:?}", f64::from(FACTOR)));
+    let w = windowed(
+        [4, 2],
+        vec![
+            window("shape_sphere", [0.5, 0.25], vec![3, 5]),
+            window("latent", [0.75, 0.5], vec![4]),
+        ],
+    );
+    check(&c, &w).expect("the windows are refused");
+    let r = runs(&w).unwrap();
+    assert_eq!(r.len(), 3);
+    assert_eq!(
+        r[0],
+        Run {
+            chart: DecodeChart::ShapeSphere,
+            depth: 3,
+            window: Some((0, [0.5, 0.25], [4 - half, 2 - 1])),
+        },
+        "the block's first cell is not ⌊c·2^d⌋ − side/2"
+    );
+    assert_eq!(r[1].window, Some((0, [0.5, 0.25], [16 - half, 8 - 1])));
+    assert_eq!(r[1].depth, 5);
+    assert_eq!(
+        (r[2].chart, r[2].depth, r[2].window),
+        (
+            DecodeChart::Latent,
+            4,
+            Some((1, [0.75, 0.5], [12 - half, 7]))
+        )
+    );
+    assert_eq!(r[0].label(), "shape_sphere at (0.5, 0.25) depth 3");
+    // The edges: the block from cell 0, and to the last cell, are drawn; one cell further either way is refused.
+    let ok = |centre: [f64; 2], depth: u32| {
+        runs(&windowed(
+            [4, 4],
+            vec![window("latent", centre, vec![depth])],
+        ))
+    };
+    let first = ok([2.0 / 16.0, 0.5], 4).expect("a block from cell 0 is refused");
+    assert_eq!(first[0].window.unwrap().2, [0, 6]);
+    let last = ok([14.0 / 16.0, 0.5], 4).expect("a block to the last cell is refused");
+    assert_eq!(last[0].window.unwrap().2, [12, 6]);
+    for (centre, why) in [
+        ([1.9 / 16.0, 0.5], "a block from cell −1"),
+        ([15.0 / 16.0, 0.5], "a block past the last cell"),
+        ([0.5, 1.9 / 16.0], "a block from cell −1 on y"),
+        ([0.5, 15.0 / 16.0], "a block past the last cell on y"),
+    ] {
+        let e = ok(centre, 4).expect_err(why);
+        assert!(e.contains("runs off the chart"), "{why}: {e}");
+    }
+    ok([0.5, 0.5], 30).expect("depth 30 is refused");
+    let refused = |i: Input, why: &str| {
+        let e = check(&c, &i).expect_err(why);
+        assert!(e.starts_with("refused: "), "{e}");
+    };
+    refused(
+        windowed([4, 4], vec![window("latent", [0.5, 0.5], vec![31])]),
+        "depth 31",
+    );
+    refused(
+        windowed([4, 4], vec![window("latent", [0.5, 0.5], vec![])]),
+        "no depth",
+    );
+    refused(
+        windowed([4, 4], vec![window("torus", [0.5, 0.5], vec![4])]),
+        "no such chart",
+    );
+    refused(
+        windowed([4, 4], vec![window("latent", [-1e-9, 0.5], vec![4])]),
+        "a centre under 0",
+    );
+    refused(
+        windowed([4, 4], vec![window("latent", [0.5, 1.0 + 1e-9], vec![4])]),
+        "a centre past 1",
+    );
+    ok([0.0, 1.0], 4).expect_err("a centre at 0 runs off");
+    refused(
+        Input {
+            depth: Some(4),
+            ..windowed([4, 4], vec![window("latent", [0.5, 0.5], vec![4])])
+        },
+        "both a depth and windows",
+    );
+    refused(windowed([4, 4], vec![]), "neither a depth nor windows");
+    refused(
+        Input {
+            shift: 16,
+            ..windowed([4, 4], vec![window("latent", [0.5, 0.5], vec![4])])
+        },
+        "a shift of every window sample",
+    );
+    for chart in DecodeChart::ALL {
+        assert_eq!(chart_named(chart.section()), Some(chart));
+    }
+    assert_eq!(chart_named("Latent"), None);
+}
+
+#[test]
+fn decode_agreement_windows() {
+    check_windows(2);
+}
+
+negative_control!(
+    decode_agreement_windows,
+    "a block whose first cell is off by one must be found",
+    expected = "the block's first cell is not",
+    check_windows(1)
+);
+
+/// A window run's scene: `side` adjacent cells from the block's first, row by row, at the run's depth; `step` is the
+/// cell spacing expected (the control gives 2).
+fn check_window_scene(step: f32) {
+    let run = Run {
+        chart: DecodeChart::Latent,
+        depth: 6,
+        window: Some((0, [0.5, 0.5], [30, 31])),
+    };
+    let scene = run.scene([3, 2]).unwrap();
+    let cell = 1.0 / 64.0;
+    for (q, (i, j)) in [
+        (0u32, (0, 0)),
+        (1, (1, 0)),
+        (2, (2, 0)),
+        (3, (0, 1)),
+        (5, (2, 1)),
+    ] {
+        let want = [
+            (30.0 + step * i as f32 + 0.5) * cell,
+            (31.0 + step * j as f32 + 0.5) * cell,
+        ];
+        assert_eq!(
+            scene.point(q),
+            want,
+            "sample {q} is not at its block's cell"
+        );
+    }
+    let lattice = Run {
+        chart: DecodeChart::Latent,
+        depth: 2,
+        window: None,
+    };
+    assert_eq!(lattice.label(), "latent");
+    assert_eq!(lattice.scene([2, 2]).unwrap().point(0), [0.375, 0.375]);
+}
+
+#[test]
+fn decode_agreement_window_scene() {
+    check_window_scene(1.0);
+}
+
+negative_control!(
+    decode_agreement_window_scene,
+    "cells spaced two apart must be found",
+    expected = "is not at its block's cell",
+    check_window_scene(2.0)
+);
+
+/// The report of a windows input: a run line per window and depth, a line per window giving its worst factors by depth
+/// in order, and the per-operand form's negative line; `windows` is how many windows the line count expects.
+fn check_window_report(windows: usize) {
+    let c = config(&format!("{:?}", f64::from(FACTOR)));
+    let mut input = windowed(
+        [2, 2],
+        vec![
+            window("shape_sphere", [0.5, 0.5], vec![3, 5]),
+            window("latent", [0.25, 0.5], vec![4]),
+        ],
+    );
+    input.form = Form::PerOperand;
+    let f = f64::from(FACTOR);
+    let s = |factor: f64, per_operand: f64| Sample {
+        ratio: (factor / f) as f32,
+        valid: true,
+        finite: true,
+        diff: per_operand,
+        scale: 1.0,
+    };
+    let rs = runs(&input).unwrap();
+    let tallies: Vec<Tally> = rs
+        .iter()
+        .zip([(2.0, 40.0), (3.0, 900.0), (1.0, 2.0)])
+        .map(|(run, (a, b))| Tally::of_run(run, &[s(a, b)], Form::PerOperand))
+        .collect();
+    assert_eq!(tallies[1].window, Some((0, 5)));
+    assert_eq!(tallies[1].label, "shape_sphere at (0.5, 0.5) depth 5");
+    let r = DecodeAgreementGate::report(
+        &c,
+        "collision_per_operand.json",
+        &input,
+        "adapter",
+        &tallies,
+    );
+    let lines: Vec<&String> = r
+        .scatter
+        .iter()
+        .filter(|l| l.starts_with("window "))
+        .collect();
+    assert_eq!(
+        lines.len(),
+        windows,
+        "not one refinement line per window: {lines:?}"
+    );
+    assert!(
+        lines[0].starts_with("window 0, shape_sphere at (0.5, 0.5)")
+            && lines[0].ends_with("by depth: 3: 2.000 (40.000), 5: 3.000 (900.000)"),
+        "{}",
+        lines[0]
+    );
+    assert!(
+        lines[1].ends_with("by depth: 4: 1.000 (2.000)"),
+        "{}",
+        lines[1]
+    );
+    assert!(r
+        .scatter
+        .iter()
+        .any(|l| l.starts_with("shape_sphere at (0.5, 0.5) depth 3: 1 samples")));
+    assert!(r
+        .negative_results
+        .iter()
+        .any(|l| l.contains("judged by the per-operand scale alone")));
+    assert_eq!(
+        r.verdict,
+        validation::gate::report::Verdict::Fail,
+        "900 eps of the per-operand scale passed"
+    );
+}
+
+#[test]
+fn decode_agreement_window_report() {
+    check_window_report(2);
+}
+
+negative_control!(
+    decode_agreement_window_report,
+    "a refinement line missing for a window must be found",
+    expected = "not one refinement line per window",
+    check_window_report(1)
 );

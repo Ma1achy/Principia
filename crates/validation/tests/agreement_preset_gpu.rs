@@ -74,7 +74,7 @@ negative_control!(
 fn check_twin(honest: bool) {
     let gpu = GpuHarness::new().unwrap_or_else(|e| panic!("{e}"));
     let mut scene = Scene::lattice(DecodeChart::Latent, [8, 8], 3).unwrap();
-    scene
+    let outs = scene
         .stage_into(gpu.device(), gpu.queue(), &wgsl(), 0)
         .unwrap();
     let poisoned = [3u32, 20, 41];
@@ -96,8 +96,17 @@ fn check_twin(honest: bool) {
             let w = words[q as usize];
             let stored = *scene.set.ic(q);
             let gpu_ratio = (w[1] != 0).then(|| f64::from(f32::from_bits(w[0])));
-            // The twin's ratio from the same operands: the fragment's E (`K + V`, written whole) and the stored K₀, V₀.
-            let twin = agreement::ratio(0.0, f32::from_bits(w[2]), stored.K_0, stored.V_0);
+            // The twin's ratio from the same operands: the fragment's E (`K + V`, written whole) and the stored K₀, V₀,
+            // with the decode stage's (m, r) at the sample's point for the fragment's own, which the words don't carry.
+            let own = outs[q as usize].ic;
+            let twin = agreement::ratio(
+                0.0,
+                f32::from_bits(w[2]),
+                stored.K_0,
+                stored.V_0,
+                own.m,
+                own.r,
+            );
             assert_eq!(
                 twin.is_some(),
                 gpu_ratio.is_some(),
@@ -105,9 +114,10 @@ fn check_twin(honest: bool) {
             );
             if let (Some(t), Some(g)) = (twin, gpu_ratio) {
                 // E₀ summed at f32 on the GPU and at f64 by the twin: at most half an ulp of E₀ apart, under one eps
-                // of the scale, 1/FACTOR of the tolerance.
+                // of the scale, 1/FACTOR of the tolerance; the scale's conditioning term from the stage's (m, r), a few
+                // ulps from the fragment's, within 10⁻⁵ of the ratio.
                 assert!(
-                    (t - g).abs() <= 1.0 / f64::from(agreement::FACTOR) + 1e-6 * t,
+                    (t - g).abs() <= 1.0 / f64::from(agreement::FACTOR) + 1e-5 * t,
                     "sample {q}: the twin's ratio {t} is not the GPU's {g}"
                 );
             }
@@ -243,4 +253,239 @@ negative_control!(
     "a scramble taken for a pass must be found",
     expected = "the scramble's verdict",
     check_gate(Verdict::Pass)
+);
+
+/// One conditioning case: the masses and positions, as f32.
+type Case = ([f32; 3], [[f32; 2]; 3]);
+
+/// The conditioning cases: ordinary configurations, a zero separation (the pole), a pair under the floor, positions all
+/// at the origin, at `2⁻⁸` and at `2⁶⁰` (under colour_composition §6's `2⁶²`), a zero mass, and a non-finite mass or position in each place.
+fn conditioning_cases() -> Vec<(Case, bool)> {
+    let third = 1.0f32 / 3.0;
+    let tri = [[0.9f32, 0.1], [-0.4, 0.7], [-0.5, -0.8]];
+    let mut out = vec![
+        (([third; 3], tri), true),
+        (
+            ([0.5, 0.3, 0.2], [[1.0, 0.0], [-1.0, 0.25], [0.0, -0.75]]),
+            true,
+        ),
+        (([third; 3], [[0.5, 0.5], [0.5, 0.5], [-1.0, -1.0]]), true),
+        (
+            ([third; 3], [[0.5, 0.5], [0.5 + 1e-9, 0.5], [-1.0, -1.0]]),
+            true,
+        ),
+        (([third; 3], [[0.0, 0.0]; 3]), true),
+        (
+            (
+                [third; 3],
+                [
+                    [0.003_906_25, 0.0],
+                    [0.003_906_25, 1e-12],
+                    [-0.007_812_5, 0.0],
+                ],
+            ),
+            true,
+        ),
+        (
+            (
+                [0.5, 0.5, 0.0],
+                [
+                    [1.1529215e18, 0.0],
+                    [1.1529215e18, 1.0],
+                    [-1.1529215e18, 0.0],
+                ],
+            ),
+            true,
+        ),
+        (
+            ([0.5, 0.5, 0.0], [[0.7, 0.0], [-0.7, 0.0], [0.7, 0.0]]),
+            true,
+        ),
+    ];
+    for bad in [f32::INFINITY, f32::NEG_INFINITY, f32::NAN] {
+        for k in 0..3 {
+            let mut m = [third; 3];
+            m[k] = bad;
+            out.push(((m, tri), false));
+        }
+        for k in 0..6 {
+            let mut r = tri;
+            r[k / 2][k % 2] = bad;
+            out.push((([third; 3], r), false));
+        }
+    }
+    out
+}
+
+/// A view returning, per pixel (its column the case), `agreement_conditioning`'s bits, `agreement_finite_mr`, and
+/// `agreement_of`'s valid word and ratio over a FragDecode of the case's `(m, r)` with `K = 0.25`, `V = −0.5` against
+/// `K₀ = 0.25`, `V₀ = −0.5 + 2⁻²⁰`.
+fn conditioning_view(cases: &[(Case, bool)]) -> String {
+    let lit = |x: f32| format!("bitcast<f32>({}u)", x.to_bits());
+    let mut arms = String::new();
+    for (i, ((m, r), _)) in cases.iter().enumerate() {
+        arms.push_str(&format!(
+            "        case {i}u: {{ d.m = vec3<f32>({}, {}, {}); d.r[0] = vec2<f32>({}, {}); \
+             d.r[1] = vec2<f32>({}, {}); d.r[2] = vec2<f32>({}, {}); }}\n",
+            lit(m[0]),
+            lit(m[1]),
+            lit(m[2]),
+            lit(r[0][0]),
+            lit(r[0][1]),
+            lit(r[1][0]),
+            lit(r[1][1]),
+            lit(r[2][0]),
+            lit(r[2][1])
+        ));
+    }
+    format!(
+        "fn view(rc: RenderContext, l: Lanes) -> vec4<u32> {{\n    var d: FragDecode;\n    \
+         switch (u32(l.screen.pixel.x)) {{\n{arms}        default: {{}}\n    }}\n    \
+         d.d.K_0 = {k}u;\n    d.d.V_0 = {v}u;\n    \
+         let a = agreement_of(d, {k}u, {v0}u);\n    \
+         let ok = agreement_finite_mr(d.m, d.r);\n    \
+         let c = select(0.0, agreement_conditioning(d.m, d.r), ok);\n    \
+         return vec4<u32>(bitcast<u32>(c), select(0u, 1u, ok), select(0u, 1u, a.valid), bitcast<u32>(a.ratio));\n}}\n",
+        k = 0.25f32.to_bits(),
+        v = (-0.5f32).to_bits(),
+        v0 = (-0.5f32 + 2f32.powi(-20)).to_bits(),
+    )
+}
+
+/// The WGSL conditioning term and `agreement_of` against their CPU twins, case by case: the term within 10⁻⁵ of the
+/// twin's and finite wherever `(m, r)` is, the validity `(m, r)`'s finiteness by its bits, and the ratio the twin's;
+/// `twin` is the CPU twin the GPU is held to (the control gives one that drops the floor).
+fn check_conditioning(twin: fn([f32; 3], [[f32; 2]; 3]) -> f64) {
+    let gpu = GpuHarness::new().unwrap_or_else(|e| panic!("{e}"));
+    let cases = conditioning_cases();
+    let n = cases.len() as u32;
+    let scene = Scene::lattice(DecodeChart::Latent, [n, 1], 8).unwrap();
+    let words = agreement::words();
+    let text = words.view();
+    let prelude = &text[..text.rfind("fn view(").expect("the words preset has a view")];
+    let image = scene
+        .draw_view(
+            gpu.device(),
+            gpu.queue(),
+            &format!("{prelude}{}", conditioning_view(&cases)),
+            render::bind::ViewOutput::Words,
+        )
+        .unwrap();
+    for (i, ((m, r), finite)) in cases.iter().enumerate() {
+        let w = image.words(i as u32, 0);
+        assert_eq!(
+            w[1] != 0,
+            *finite,
+            "case {i}: (m, r)'s finiteness read wrong"
+        );
+        assert_eq!(
+            w[2] != 0,
+            *finite,
+            "case {i}: agreement_of's validity is not (m, r)'s"
+        );
+        if !finite {
+            continue;
+        }
+        let got = f32::from_bits(w[0]);
+        assert!(
+            got.is_finite() && got >= 0.0,
+            "case {i}: the term {got} is not finite"
+        );
+        let want = twin(*m, *r);
+        // Relative to the twin's, or exactly 0 with it; a non-finite twin never matches (its quotient is NaN).
+        let close = if want == 0.0 {
+            got == 0.0
+        } else {
+            ((f64::from(got) - want) / want).abs() <= 1e-5
+        };
+        assert!(
+            close,
+            "case {i}: the WGSL term {got} is not the twin's {want}"
+        );
+        let ratio = agreement::ratio(0.25, -0.5, 0.25, -0.5 + 2f32.powi(-20), *m, *r).unwrap();
+        let g = f64::from(f32::from_bits(w[3]));
+        assert!(
+            (g - ratio).abs() <= 1e-5 * ratio,
+            "case {i}: agreement_of's ratio {g} is not the twin's {ratio}"
+        );
+    }
+}
+
+#[test]
+fn agreement_preset_conditioning() {
+    check_conditioning(agreement::conditioning);
+}
+
+/// The conditioning term without its floor, `Σ mᵢmⱼ·wᵢⱼ/‖rᵢ − rⱼ‖∞²`: infinite at the pole.
+#[cfg(feature = "controls")]
+fn unfloored(m: [f32; 3], r: [[f32; 2]; 3]) -> f64 {
+    let n = |v: [f64; 2]| v[0].abs().max(v[1].abs());
+    let r = r.map(|p| p.map(f64::from));
+    let pair = |i: usize, j: usize| {
+        let w = n(r[i]) + n(r[j]);
+        let s = n([r[i][0] - r[j][0], r[i][1] - r[j][1]]);
+        f64::from(m[i]) * f64::from(m[j]) * w / (s * s)
+    };
+    pair(0, 1) + pair(0, 2) + pair(1, 2)
+}
+
+negative_control!(
+    agreement_preset_conditioning,
+    "a twin without the separation's floor must differ at the pole",
+    expected = "is not the twin's",
+    check_conditioning(unfloored)
+);
+
+/// The gate through its trait on a collision window: `shape_sphere`'s binary collision at `u = 0.844518` on its
+/// equator, 4 × 4 cells at depths 13 and 19, passes by the conditioned scale and fails by the per-operand one; `form`
+/// is the form expected to fail (the control expects the conditioned one to).
+fn check_window_gate(form: &str) {
+    use validation::gate::Gate;
+    let root: PathBuf = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let config = validation::gate::config(&root, "decode-agreement").unwrap();
+    let window = serde_json::json!([{"chart": "shape_sphere", "centre": [0.844518, 0.5], "depths": [13, 19]}]);
+    let verdict = |f: &str| {
+        let input =
+            serde_json::json!({"description": "w", "side": [4, 4], "windows": window, "form": f});
+        DecodeAgreementGate.run(&config, "w.json", &input).unwrap()
+    };
+    let failing = verdict(form);
+    assert_eq!(
+        failing.verdict,
+        Verdict::Fail,
+        "the {form} form passes beside the collision: {:?}",
+        failing.scatter
+    );
+    let other = if form == "per_operand" {
+        "conditioned"
+    } else {
+        "per_operand"
+    };
+    let passing = verdict(other);
+    assert_eq!(
+        passing.verdict,
+        Verdict::Pass,
+        "{:?}",
+        passing.negative_results
+    );
+    assert!(
+        passing.scatter.iter().any(
+            |l| l.starts_with("window 0, shape_sphere at (0.844518, 0.5)")
+                && l.contains("by depth: 13: ")
+        ),
+        "{:?}",
+        passing.scatter
+    );
+}
+
+#[test]
+fn agreement_preset_window_gate() {
+    check_window_gate("per_operand");
+}
+
+negative_control!(
+    agreement_preset_window_gate,
+    "the conditioned form failing beside the collision must be found",
+    expected = "form passes beside the collision",
+    check_window_gate("conditioned")
 );
