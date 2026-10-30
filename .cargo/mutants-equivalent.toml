@@ -312,7 +312,7 @@ mutant = "crates/kernel/src/driver/cadence.rs:45:9: replace <impl Cadence<R> for
 justification = "done is only ever set from detect, which returns the constant false until TASK-M3-09 fills it (collision), so WrapperCadence::done is always false; TASK-M3-09 removes this entry with the hook"
 
 [[equivalent]]
-mutant = "crates/render/src/presets/roundtrip.rs:127:9: replace | with ^ in tags"
+mutant = "crates/render/src/presets/roundtrip.rs:151:9: replace | with ^ in tags"
 justification = "a decode's tag word is kernel::stage::decode::tag's 0 to 5, below 256, so tag and tag_free << 8 share no bit and their ^ is their |"
 
 [[equivalent]]
@@ -345,7 +345,7 @@ justification = "q.lo << 1 has bit 0 clear and bit(set) is bit 0 only, so their 
 
 [[equivalent]]
 mutant = "crates/kernel/src/arctan.rs:260:32: replace | with ^ in atan2_f32"
-justification = "both operands hold only at nb == 0 with db = +inf (y = ±0, x = ±inf); there nm = 0 and E = -254, so near is false, k = 0 and the quotient and a are 0 whether or not angle_zero is set, and the result follows from a alone"
+justification = "both operands hold only at nb == 0 with db = +inf, in either order (y = ±0, x = ±inf, or y = ±inf, x = ±0 by the swap); there nm = 0 and E = -254, so near is false, k = 0 and the quotient and a are 0 whether or not angle_zero is set, and the result follows from a, the swap and the signs alone"
 
 [[equivalent]]
 mutant = "crates/kernel/src/arctan.rs:321:50: replace | with ^ in atan2_f32"
