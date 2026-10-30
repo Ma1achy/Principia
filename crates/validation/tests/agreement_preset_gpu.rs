@@ -446,8 +446,7 @@ fn check_window_gate(form: &str) {
     let config = validation::gate::config(&root, "decode-agreement").unwrap();
     let window = serde_json::json!([{"chart": "shape_sphere", "centre": [0.844518, 0.5], "depths": [13, 19]}]);
     let verdict = |f: &str| {
-        let input =
-            serde_json::json!({"description": "w", "side": [4, 4], "windows": window, "form": f});
+        let input = serde_json::json!({"description": "w", "side": [4, 4], "stored": "f64", "windows": window, "form": f});
         DecodeAgreementGate.run(&config, "w.json", &input).unwrap()
     };
     let failing = verdict(form);
