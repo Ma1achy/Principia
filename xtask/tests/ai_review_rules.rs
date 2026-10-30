@@ -1,6 +1,6 @@
 //! The advisory AI reviewers' brief cannot drift (decisions.md R-635): `GEMINI.md` and
 //! `.github/copilot-instructions.md` each carry a copy of `AGENTS.md` § "Code Review Rules", and each copy must be
-//! byte-identical to it. Codex reads `AGENTS.md`; the Gemini CLI action loads `GEMINI.md` as its context file; GitHub
+//! byte-identical to it. Codex reads `AGENTS.md`; the Gemini review's script reads the section from `AGENTS.md`; GitHub
 //! Copilot's code review reads `.github/copilot-instructions.md`. One brief, three readers.
 //!
 //! One delimiting rule on every side: the section starts at the line that is exactly `## Code Review Rules` and runs
