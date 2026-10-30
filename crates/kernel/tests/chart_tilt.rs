@@ -736,6 +736,73 @@ negative_control!(
     }
 );
 
+/// The offsets `(Δa, Δb, d_X, d_Y) = ũ·R·e_a + ṽ·R·e_b`, each hidden offset times its target's slider span (R-473 T2,
+/// R-507 U1), against the maps' closed forms: two targets `(cos τ₁ ũ, cos τ₂ ṽ, σ_X sin τ₁ ũ, σ_Y sin τ₂ ṽ)`, Lean each
+/// axis with one target `(cos τ₁ ũ, cos τ₂ ṽ, σ_X (sin τ₁ ũ + sin τ₂ ṽ), 0)`, Tip as sheet with one target its
+/// rotation's columns. `span` is the spans the check expects (the control's are swapped).
+fn check_offsets(span: [f64; 2]) {
+    let spans = [2.0, 0.5];
+    let (t1, t2) = (30.0, -45.0);
+    let ((s1, c1), (s2, c2)) = (sc(t1), sc(t2));
+    let [r1, r2] = spec(40.0, 70.0, TiltMap::Sheet, 2, 2).columns();
+    for (du, dv) in [(0.3, -0.2), (-0.45, 0.6), (0.1, 0.0), (0.0, -0.35)] {
+        let two = Tilt::new(&spec(t1, t2, TiltMap::Lean, 2, 3), CENTRE, spans);
+        let lean = Tilt::new(&spec(t1, t2, TiltMap::Lean, 2, 2), CENTRE, spans);
+        let sheet = Tilt::new(&spec(40.0, 70.0, TiltMap::Sheet, 2, 2), CENTRE, spans);
+        let cases = [
+            (
+                two,
+                [c1 * du, c2 * dv, span[0] * s1 * du, span[1] * s2 * dv],
+            ),
+            (lean, [c1 * du, c2 * dv, span[0] * (s1 * du + s2 * dv), 0.0]),
+            (
+                sheet,
+                [
+                    r1[0] * du + r2[0] * dv,
+                    r1[1] * du + r2[1] * dv,
+                    span[0] * (r1[2] * du + r2[2] * dv),
+                    0.0,
+                ],
+            ),
+        ];
+        for (tilt, want) in cases {
+            let got = tilt.offsets(du, dv);
+            assert!(
+                (0..4).all(|i| (got[i] - want[i]).abs() < 1e-15),
+                "the offsets at ({du}, {dv}): {got:?}, not {want:?}"
+            );
+            // The pixel at the centre plus the offset: `place` is the centre plus that pixel's offsets.
+            let (u, v) = (CENTRE[0] + du, CENTRE[1] + dv);
+            let [da, db, dx, dy] = tilt.offsets(u - CENTRE[0], v - CENTRE[1]);
+            let ([a, b], shift) = tilt.place(u, v);
+            assert_eq!(
+                [a, b],
+                [CENTRE[0] + da, CENTRE[1] + db],
+                "place at ({u}, {v})"
+            );
+            assert_eq!(
+                (shift.dx, shift.dy),
+                (dx, dy),
+                "place's shift at ({u}, {v})"
+            );
+        }
+    }
+}
+
+#[test]
+fn tilt_every_chart_offsets() {
+    check_offsets([2.0, 0.5]);
+}
+
+negative_control!(
+    tilt_every_chart_offsets,
+    "each hidden offset scaled by the other target's span is wrong, so it must fail",
+    expected = "the offsets at",
+    {
+        check_offsets([0.5, 2.0]);
+    }
+);
+
 // ── The tilted shape sphere: bijective, every pixel counted once (R-544, R-613) ───────────────────────────────────────
 
 /// The shape sphere's tilted arms: into a momentum control at `τ₂ = 30°`, at `τ₁ = 30°`, Tip as sheet at 108°/144°
