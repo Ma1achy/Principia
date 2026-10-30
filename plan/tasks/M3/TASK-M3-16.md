@@ -1,7 +1,7 @@
 # TASK-M3-16 — Branch-cut crossing detection and the τ tie rule
 
 - **Milestone:** M3
-- **Closes:** REQ-INT-031, REQ-INT-046, REQ-INT-047, REQ-INT-048, REQ-INT-079, REQ-PAY-070
+- **Closes:** REQ-INT-031, REQ-INT-046, REQ-INT-047, REQ-INT-048, REQ-INT-079, REQ-PAY-070, REQ-PAY-113
 - **Depends on:** TASK-M3-04, TASK-M3-15
 - **Needs (earlier milestones):** REQ-PAY-016, REQ-RENDER-002
 - **Reviewers:** code, qa, physics
@@ -34,11 +34,13 @@ Branch-cut crossings are detected at every accepted substep on the shape sphere,
 - `cargo test -p kernel crossing_tau_sort` — a segment crossing both cuts near their shared endpoint appends symbols in τ order (REQ-INT-047).
 - `cargo test -p kernel crossing_half_open` — endpoints exactly on a cut: no duplicate or missed crossing; the GPU arm is REQ-VAL-072's at M4 (R-150) (REQ-INT-048).
 - The integrator contract states the sort, the tie tolerance (a comparison-only branch, identical on CPU and GPU) and the sign convention; physics reviewer approved (REQ-INT-079).
+- Review (physics): symbolic_dynamics_contract §1 defines the segment classifier (the body between, its tie rule and the endpoint it is read at) and integrator contract Part 5 the segment gate; physics reviewer approved (REQ-PAY-113; RQ-632, R-72).
 - Review (physics): symbolic_dynamics_contract §1 gives the a/b assignment and the crossing sign with their citations, matching the half-open rule; REQ-VAL-043 (TASK-M3-30) reproduces the published braid classes with it; confirmed by the human at the M3 gate (REQ-PAY-070).
 
 ## Notes
 - R-125 settles the gap: symbolic_dynamics_contract §1's convention is REQ-PAY-070, closed here and transcribed from the literature (not defined under R-72). The punctured-sphere relation and pair attribution (REQ-PAY-071/072) are retired to v2 (PL-3, R-38).
-- Definitions written here (R-72; physics reviewer approves before merge): REQ-INT-079.
+- Definitions written here (R-72; physics reviewer approves before merge): REQ-INT-079, REQ-PAY-113.
+- RQ-632 decided 30 Oct 2026 by the orchestrator per R-369 (consequence of R-125), option (a): §1's cuts are the collision equator's syzygy segments; the segment classifier is REQ-PAY-113.
 - RQ-96 ruled: R-125 (above).
 - RQ-97 ruled: R-113 — REQ-INT-031's "word identical CPU/GPU" is dropped from M3; M4 covers it by REQ-VAL-072 (the word's integer arithmetic).
 - RQ-120 ruled: R-150 — REQ-INT-048's GPU arm leaves M3, like the other four; REQ-VAL-072 covers it at M4.
