@@ -17,8 +17,12 @@
 //!   ([`check_total_substeps`]). With `horizon_steps ≤ 65535` and `N_max` at most the table's maximum length it holds
 //!   for every accepted sim key; it is asserted all the same, as Part 5 asks.
 //! - **The carried lengths and thresholds**, each refused with its own reason where the branch it feeds would
-//!   silently read as "never": `r_coll`, `tau` and `r_close` finite and not negative (`r_coll = 0` is accepted, Part
-//!   7's "refuses to regularise"), `eps_E` and `eps_L` finite.
+//!   silently read as "never" or not a number: `r_coll` and `r_close` finite and not negative (`r_coll = 0` is
+//!   accepted, Part 7's "refuses to regularise"); `tau` finite and positive, since Part 7's escape test `|Δn̂| < tau`
+//!   is strict and `|Δn̂|` is never below 0, so at `tau = 0` escape never fires; `eps_E` and `eps_L` finite and
+//!   positive, since each is only the floor under a relative drift's denominator, `δE = ΔE / max(ε_E, |E₀|)`
+//!   (dd_integrator §3.5), and with a floor not positive and `E₀ = 0`, on the `E` axis of an `(L_z, E)` chart, the
+//!   drift is `0/0`.
 //! - **The softening length**, `epsilon = 0`: no force law takes `epsilon`, and the corpus does not define softened
 //!   gravity (dd_generation_root §3.7, "Open"; RQ-627), so a run with any other `epsilon`, NaN and ±∞ included, would
 //!   come back Newtonian under the `softened` tag. It is refused until the force law is built.
@@ -80,7 +84,7 @@ pub enum DispatchError {
         /// The `r_coll` carried.
         r_coll: f64,
     },
-    /// `tau` is not finite or is negative: `|Δn̂| < tau` would never be true, so escape would be silently off.
+    /// `tau` is not finite and positive: `|Δn̂| < tau` would never be true, so escape would be silently off.
     EscapeThreshold {
         /// The `tau` carried.
         tau: f64,
@@ -90,12 +94,12 @@ pub enum DispatchError {
         /// The `r_close` carried.
         r_close: f64,
     },
-    /// `eps_E` is not finite, so the relative energy drift's floor is not a number.
+    /// `eps_E` is not finite and positive: at `E₀ = 0` the relative energy drift would be `0/0` or `x/0`.
     EnergyDriftFloor {
         /// The `eps_E` carried.
         eps_e: f64,
     },
-    /// `eps_L` is not finite, so the relative angular momentum drift's floor is not a number.
+    /// `eps_L` is not finite and positive: at `L₀ = 0` the relative angular momentum drift would be `0/0` or `x/0`.
     AngularMomentumDriftFloor {
         /// The `eps_L` carried.
         eps_l: f64,
@@ -160,7 +164,7 @@ impl fmt::Display for DispatchError {
             ),
             Self::EscapeThreshold { tau } => write!(
                 f,
-                "tau {tau} is refused: not finite or negative, the escape arm would never fire"
+                "tau {tau} is refused: not finite and positive, the escape arm would never fire"
             ),
             Self::CloseDistance { r_close } => write!(
                 f,
@@ -168,11 +172,11 @@ impl fmt::Display for DispatchError {
             ),
             Self::EnergyDriftFloor { eps_e } => write!(
                 f,
-                "eps_E {eps_e} is refused: the relative energy drift's floor is not finite"
+                "eps_E {eps_e} is refused: the relative energy drift's floor is not finite and positive"
             ),
             Self::AngularMomentumDriftFloor { eps_l } => write!(
                 f,
-                "eps_L {eps_l} is refused: the relative angular momentum drift's floor is not finite"
+                "eps_L {eps_l} is refused: the relative angular momentum drift's floor is not finite and positive"
             ),
             Self::Softening { epsilon } => write!(
                 f,
@@ -272,9 +276,14 @@ fn check_horizon(t: f64, escape_window: f64) -> Result<(), DispatchError> {
     Ok(())
 }
 
-/// A length or threshold that must be finite and not negative.
+/// A length that must be finite and not negative.
 fn finite_not_negative(x: f64) -> bool {
     x.is_finite() && x >= 0.0
+}
+
+/// A threshold or floor that must be finite and positive; `-0.0 > 0.0` is false, so ±0 are both refused.
+fn finite_positive(x: f64) -> bool {
+    x.is_finite() && x > 0.0
 }
 
 /// The carried lengths and thresholds, and the softening length (the module's note).
@@ -282,16 +291,16 @@ fn check_carried(u: &SimUniforms) -> Result<(), DispatchError> {
     if !finite_not_negative(u.r_coll) {
         return Err(DispatchError::CollisionRadius { r_coll: u.r_coll });
     }
-    if !finite_not_negative(u.tau) {
+    if !finite_positive(u.tau) {
         return Err(DispatchError::EscapeThreshold { tau: u.tau });
     }
     if !finite_not_negative(u.r_close) {
         return Err(DispatchError::CloseDistance { r_close: u.r_close });
     }
-    if !u.eps_e.is_finite() {
+    if !finite_positive(u.eps_e) {
         return Err(DispatchError::EnergyDriftFloor { eps_e: u.eps_e });
     }
-    if !u.eps_l.is_finite() {
+    if !finite_positive(u.eps_l) {
         return Err(DispatchError::AngularMomentumDriftFloor { eps_l: u.eps_l });
     }
     // NaN != 0, so NaN is refused here too.

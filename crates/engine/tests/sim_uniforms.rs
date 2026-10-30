@@ -5,8 +5,8 @@
 //!   `10⁻³` at and below it (REQ-INT-026).
 //! - `horizon_refusal`: a `(T, dt_macro)` giving 65536 macro-steps is refused at dispatch and launches nothing, 65535
 //!   is accepted; the other refusals' edges; the joint `total_substeps` bound; and a terminal sample's `t_end_step` is
-//!   the latched step count (REQ-PAY-037). A non-finite or negative `r_coll`, `tau` or `r_close`, and a non-finite
-//!   `eps_E` or `eps_L`, each refused with its reason; `r_coll = 0` accepted (Part 7).
+//!   the latched step count (REQ-PAY-037). A non-finite or negative `r_coll` or `r_close`, and a `tau`, `eps_E` or
+//!   `eps_L` not finite and positive (±0 included), each refused with its reason; `r_coll = 0` accepted (Part 7).
 //! - `collision_softening_defaults`: `r_coll` nonzero and `epsilon` 0 by default, no co-moving field, and `epsilon > 0`
 //!   tagged in the provenance and on the sim key (REQ-SYS-018); dispatch refuses every `epsilon` other than 0 until
 //!   softened gravity is built (RQ-627).
@@ -409,11 +409,18 @@ impl Carried {
         }
     }
 
-    /// The values refused: a length or settling threshold not finite or negative, a drift floor not finite.
+    /// The values refused: a length not finite or negative; the settling threshold and the drift floors not finite
+    /// and positive, so ±0 as well (physics review of PR #348, F3 and F4).
     fn refused(self) -> Vec<f64> {
-        let mut out = vec![f64::NAN, f64::INFINITY, f64::NEG_INFINITY];
-        if !matches!(self, Carried::EpsE | Carried::EpsL) {
-            out.extend([-1e-3, -f64::from_bits(1)]);
+        let mut out = vec![
+            f64::NAN,
+            f64::INFINITY,
+            f64::NEG_INFINITY,
+            -1e-3,
+            -f64::from_bits(1),
+        ];
+        if matches!(self, Carried::Tau | Carried::EpsE | Carried::EpsL) {
+            out.extend([0.0, -0.0]);
         }
         out
     }
@@ -558,6 +565,129 @@ negative_control!(
         &|u: &SimUniforms| real(&Carried::EpsL.blind(u)),
         Carried::EpsL
     )
+);
+
+/// `check` refuses `value` set to `x` with its own refusal, whose reason names it, and accepts the least positive
+/// value: one edge of a threshold or floor that must be positive (physics review of PR #348, F3 and F4).
+fn check_carried_refused_at(check: &Check, value: Carried, x: f64) {
+    let name = value.name();
+    let got = check(&value.set(x));
+    assert!(
+        matches!(&got, Err(e) if value.is_refusal(e)),
+        "{name} {x} is not refused as such: {got:?}"
+    );
+    let message = got.unwrap_err().to_string();
+    assert!(
+        message.starts_with(&format!("{name} {x} is refused")),
+        "{name} {x}'s refusal gives no reason: {message}"
+    );
+    let least = f64::from_bits(1);
+    assert_eq!(
+        check(&value.set(least)),
+        Ok(50000),
+        "{name} {least} is refused"
+    );
+}
+
+/// A dispatch blind to `value` exactly where it carries `x`'s bits: the rule that accepts that one edge, for the
+/// controls.
+#[cfg(feature = "controls")]
+fn blind_at(value: Carried, x: f64) -> impl Fn(&SimUniforms) -> Result<u32, DispatchError> {
+    move |u: &SimUniforms| {
+        let carried = match value {
+            Carried::RColl => u.r_coll,
+            Carried::Tau => u.tau,
+            Carried::RClose => u.r_close,
+            Carried::EpsE => u.eps_e,
+            Carried::EpsL => u.eps_l,
+        };
+        if carried.to_bits() == x.to_bits() {
+            real(&value.blind(u))
+        } else {
+            real(u)
+        }
+    }
+}
+
+/// One edge test and its control: `value` at `x` refused, a dispatch blind to it there failing.
+macro_rules! carried_edge {
+    ($test:ident, $value:expr, $x:expr, $why:literal, expected = $expected:literal) => {
+        #[test]
+        fn $test() {
+            check_carried_refused_at(&real, $value, $x);
+        }
+
+        negative_control!(
+            $test,
+            $why,
+            expected = $expected,
+            check_carried_refused_at(&blind_at($value, $x), $value, $x)
+        );
+    };
+}
+
+carried_edge!(
+    horizon_refusal_tau_zero_refused,
+    Carried::Tau,
+    0.0,
+    "a dispatch that accepts tau = 0 never fires the strict escape test |Δn̂| < tau",
+    expected = "tau 0 is not refused as such"
+);
+
+carried_edge!(
+    horizon_refusal_tau_negative_zero_refused,
+    Carried::Tau,
+    -0.0,
+    "a dispatch that accepts tau = -0 never fires the strict escape test |Δn̂| < tau",
+    expected = "tau -0 is not refused as such"
+);
+
+carried_edge!(
+    horizon_refusal_eps_e_zero_refused,
+    Carried::EpsE,
+    0.0,
+    "a dispatch that accepts eps_E = 0 gives a 0/0 energy drift at E₀ = 0",
+    expected = "eps_E 0 is not refused as such"
+);
+
+carried_edge!(
+    horizon_refusal_eps_e_negative_zero_refused,
+    Carried::EpsE,
+    -0.0,
+    "a dispatch that accepts eps_E = -0 gives a 0/0 energy drift at E₀ = 0",
+    expected = "eps_E -0 is not refused as such"
+);
+
+carried_edge!(
+    horizon_refusal_eps_e_negative_refused,
+    Carried::EpsE,
+    -1e-6,
+    "a dispatch that accepts a negative eps_E gives a 0/0 energy drift at E₀ = 0",
+    expected = "eps_E -0.000001 is not refused as such"
+);
+
+carried_edge!(
+    horizon_refusal_eps_l_zero_refused,
+    Carried::EpsL,
+    0.0,
+    "a dispatch that accepts eps_L = 0 gives a 0/0 angular momentum drift at L₀ = 0",
+    expected = "eps_L 0 is not refused as such"
+);
+
+carried_edge!(
+    horizon_refusal_eps_l_negative_zero_refused,
+    Carried::EpsL,
+    -0.0,
+    "a dispatch that accepts eps_L = -0 gives a 0/0 angular momentum drift at L₀ = 0",
+    expected = "eps_L -0 is not refused as such"
+);
+
+carried_edge!(
+    horizon_refusal_eps_l_negative_refused,
+    Carried::EpsL,
+    -1e-6,
+    "a dispatch that accepts a negative eps_L gives a 0/0 angular momentum drift at L₀ = 0",
+    expected = "eps_L -0.000001 is not refused as such"
 );
 
 // ── collision_softening_defaults (REQ-SYS-018) ───────────────────────────────────────────────────────────────────
