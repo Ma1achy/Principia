@@ -1,0 +1,2 @@
+Mikkola & Hietarinta 1989 Table 2: reading B (eye) vs OCR of the page image (row labels assigned in order; Table 3 OCR'd cell by cell: whole-table OCR returned rotated glyphs; Table 4 row k=6's lone '6' missed by OCR, assigned by order).
+rows B_eye=4 OCR=4; cells compared 44; disagreements 0
