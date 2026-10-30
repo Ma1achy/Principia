@@ -6,6 +6,9 @@
 //! - `roundtrip_preset_class_order`: `Class::of` takes the first that holds of invalid, either decode `DEGENERATE`,
 //!   `lookup_clamped` (notices bits 0 and 8 to 15), `lookup_mirrored` (bit 1), at each bit and its neighbours; and each
 //!   class's code round-trips. Control: the clamp and mirror tests swapped.
+//! - `roundtrip_preset_tie_is_on_the_section`: `tie_notices` passes the encode's notices whole on a chart on `C`'s
+//!   section and clears the mirror bit alone off it (the shape sphere, R-544), so a mirror there classes untagged and
+//!   on the section the tie. Control: the notices passed whole off the section.
 //! - `roundtrip_preset_brightness_and_colour`: the brightness is 0 at or below `ε_phys`, `log₂ρ/24` above it, full
 //!   from `2²⁴`; an untagged pixel is `(b, 0, 0)`, a tagged one its hue with no red at `¼ + ¾b`, an invalid one the
 //!   hatch; `ε_phys` is the register's `k` times f32's epsilon. Control: a natural-log brightness.
@@ -20,8 +23,8 @@
 //!   chart's decode. Control: a view without the generated encode.
 
 use render::presets::roundtrip::{
-    self, brightness, colour, eps_phys, ratio, residual, Class, State, CLAMPED, FLOOR, MIRRORED,
-    SPAN,
+    self, brightness, colour, eps_phys, ratio, residual, tie_notices, Class, State, CLAMPED, FLOOR,
+    MIRRORED, SPAN,
 };
 use render::presets::{self, section, DecodeChart, DECODE_WGSL, ENCODE_WGSL};
 use validation::negative_control;
@@ -86,6 +89,46 @@ negative_control!(
             c => c,
         }
     })
+);
+
+// ── The mirror tie ──────────────────────────────────────────────────────────────────────────────────────────────────
+
+/// `tie_notices` on every notices bit alone and on all of them: whole on `C`'s section, its mirror bit cleared off it
+/// and every other bit kept; so a mirror off the section classes untagged, on it the tie.
+fn check_tie(tie: fn(u32, bool) -> u32) {
+    let words = (0..32)
+        .map(|b| 1u32 << b)
+        .chain([0, u32::MAX, CLAMPED | MIRRORED]);
+    for n in words {
+        assert_eq!(tie(n, true), n, "the notices {n:#x} on the section");
+        assert_eq!(
+            tie(n, false),
+            n & !MIRRORED,
+            "the notices {n:#x} off the section"
+        );
+    }
+    assert_eq!(
+        Class::of(true, 0, 0, tie(MIRRORED, false)),
+        Class::Untagged,
+        "a mirror off the section"
+    );
+    assert_eq!(
+        Class::of(true, 0, 0, tie(MIRRORED, true)),
+        Class::MirrorTie,
+        "a mirror on the section"
+    );
+}
+
+#[test]
+fn roundtrip_preset_tie_is_on_the_section() {
+    check_tie(tie_notices);
+}
+
+negative_control!(
+    roundtrip_preset_tie_is_on_the_section,
+    "notices passed whole off the section must be found",
+    expected = "off the section",
+    check_tie(|n, _| n)
 );
 
 // ── The brightness and colour ───────────────────────────────────────────────────────────────────────────────────────

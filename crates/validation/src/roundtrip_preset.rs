@@ -5,10 +5,13 @@
 //! **The twin** is the same trip on the CPU at f32 from the one Rust source the fragment's snippets are translated
 //! from (R-116): the chart's decode stage (`kernel::stage::decode::sample_with`, the energy target off, as the scenes'
 //! uniforms hold it), the encode (`kernel::encode::encode`) and the free decode (`kernel::decode::decode`), each under
-//! the default links; its residual is `validation::roundtrip::phys` on the two states widened, its class
-//! `render::presets::roundtrip::Class::of` on the two tag words and the encode's notices.
+//! the default links; its residual is `validation::roundtrip::phys` on the reference and the second decode, widened,
+//! the reference the decoded state where the chart's decode lands on `C`'s section and the encode's `C(x)` where it does
+//! not (the shape sphere, R-544; inverse-encode Part 4, `crate::roundtrip::Against`); its class
+//! `render::presets::roundtrip::Class::of` on the two tag words and the encode's notices as
+//! `render::presets::roundtrip::tie_notices` passes them.
 
-use kernel::chart::{InvariantLE, Latent};
+use kernel::chart::{InvariantLE, Latent, ShapeSphere};
 use kernel::decode::Ic;
 use kernel::generated::links::Defaults;
 use kernel::stage::decode::{sample_with, tag, DecodeUniforms, UniformChart};
@@ -86,7 +89,7 @@ pub fn trips_view(
 /// The CPU twin's trip: the residual in physical units, the class, and the states and words it read.
 #[derive(Clone, Copy, Debug)]
 pub struct Twin {
-    /// `‖D(z) − D(E(D(z)))‖_phys`, NaN where a state is non-finite.
+    /// `‖D(z) − D(E(D(z)))‖_phys`, or `‖C(D(z)) − D(E(D(z)))‖_phys` off `C`'s section, NaN where a state is non-finite.
     pub residual: f64,
     /// The class.
     pub class: Class,
@@ -117,18 +120,32 @@ pub fn phys_of(x: &roundtrip::State, y: &roundtrip::State) -> f64 {
     phys(&ic(x), &ic(y))
 }
 
-/// The trip from the decoded state `x` and its tag word: `x` encoded, its `z` decoded free, `‖x − D(E(x))‖_phys`.
-pub fn twin_of(x: &Ic<f32>, first_tag: u32) -> Twin {
+/// The trip from the decoded state `x` and its tag word: `x` encoded, its `z` decoded free, and `‖x − D(E(x))‖_phys`
+/// where the chart's decode lands on `C`'s section (`on_section`), `‖C(x) − D(E(x))‖_phys` where it does not.
+pub fn twin_of(x: &Ic<f32>, first_tag: u32, on_section: bool) -> Twin {
     let e = kernel::encode::encode::<Defaults, f32>(x);
     let back = kernel::decode::decode::<Defaults, f32>(&e.z);
     let notices = kernel::stage::encode::notices(&e.report);
     let back_tag = tag(back.degenerate);
+    let against = if on_section { *x } else { e.canonical.ic };
     // A non-finite value in either state makes `phys` non-finite: a NaN difference is NaN, and an infinite one is
-    // infinite, or NaN over its infinite extent, so the residual's finiteness is both states'.
-    let residual = phys(&widen(x), &widen(&back.ic));
+    // infinite, or NaN over its infinite extent, so the residual's finiteness is both states'. Off the section the
+    // reference is `C(x)`, so `x`'s own values are read beside it, as the view reads the first decode's.
+    let residual = phys(&widen(&against), &widen(&back.ic));
+    let finite = residual.is_finite()
+        && x.m
+            .iter()
+            .chain(x.r.as_flattened())
+            .chain(x.p.as_flattened())
+            .all(|v| v.is_finite());
     Twin {
         residual,
-        class: Class::of(residual.is_finite(), first_tag, back_tag, notices),
+        class: Class::of(
+            finite,
+            first_tag,
+            back_tag,
+            roundtrip::tie_notices(notices, on_section),
+        ),
         notices,
         tags: roundtrip::tags(first_tag, back_tag),
     }
@@ -138,16 +155,17 @@ pub fn twin_of(x: &Ic<f32>, first_tag: u32) -> Twin {
 fn twin_on<C: FragmentChart>(u: &DecodeUniforms, uv: [f32; 2]) -> Twin {
     let chart = C::from_uniform(&u.chart);
     let out = sample_with::<C, Defaults, f32>(&chart, uv[0], uv[1], None);
-    twin_of(&out.ic, tag(out.degenerate))
+    twin_of(&out.ic, tag(out.degenerate), C::ON_SECTION)
 }
 
-/// `chart`'s CPU trip at the f32 chart point `uv`: [`CHARTS`]' charts only.
+/// `chart`'s CPU trip at the f32 chart point `uv`: [`CHARTS`]' charts and the shape sphere's.
 pub fn twin(chart: DecodeChart, u: &DecodeUniforms, uv: [f32; 2]) -> Result<Twin, String> {
     match chart {
         DecodeChart::Latent => Ok(twin_on::<Latent<f32>>(u, uv)),
         DecodeChart::InvariantLE => Ok(twin_on::<InvariantLE<f32>>(u, uv)),
+        DecodeChart::ShapeSphere => Ok(twin_on::<ShapeSphere<f32>>(u, uv)),
         other => Err(format!(
-            "the ROUNDTRIP suite draws the latent and (L_z, E) charts, not {other:?}"
+            "the ROUNDTRIP twin reads the latent, (L_z, E) and shape sphere charts, not {other:?}"
         )),
     }
 }
@@ -285,6 +303,10 @@ pub fn clamp_ambiguous(scene: &Scene) -> Result<Vec<(u32, [f64; 8])>, String> {
             DecodeChart::InvariantLE => {
                 let c = InvariantLE::<f32>::from_uniform(&u.chart);
                 sample_with::<InvariantLE<f32>, Defaults, f32>(&c, p[0], p[1], None).ic
+            }
+            DecodeChart::ShapeSphere => {
+                let c = ShapeSphere::<f32>::from_uniform(&u.chart);
+                sample_with::<ShapeSphere<f32>, Defaults, f32>(&c, p[0], p[1], None).ic
             }
             other => return Err(format!("no ROUNDTRIP scene draws {other:?}")),
         };

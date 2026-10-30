@@ -8,12 +8,17 @@
 //!   trip's, read off the trip's own reports; a sample at a clamp boundary, where rounding decides the clamp bit, may
 //!   be untagged or clamped. The framed chart shows clamps and the `(L_z, E)` chart feasibility tags. Control: a trip
 //!   whose free decode reads the encode's `z` with one momentum control moved by 0.05 is past `ε_phys`.
+//! - `roundtrip_preset_shape_sphere_both_hemispheres`: over the shape sphere chart's two hemispheres (R-544), each
+//!   sample's class is the CPU trip's, none is a mirror tie, and every lower-hemisphere sample the encode mirrors, its
+//!   decode off `C`'s section, is untagged and within `ε_phys` against `C(D(z))` (inverse-encode Part 4, Part 8's T2).
+//!   Control: the trip measured against `D(z)` with every mirror tagged, as before; the lower hemisphere is tagged.
 //! - `roundtrip_preset_golden_renders_its_reference`: each golden scene's render, through the harness and through the
 //!   `golden_harness` binary, quantised as the golden runner quantises, is its CPU trip's image, pixel for pixel, and its
 //!   words view's classes are the CPU trip's, sample for sample; and
 //!   each scene's name finds its chart and no other's. Control: one chart's render held to the other's CPU trip.
-//! - `roundtrip_preset_wgsl_is_the_twin`: the view's `roundtrip_class` on every case of the class table and its
-//!   `roundtrip_colour` at the brightness's breakpoints, each class, are the CPU twins' (`Class::of`, `colour`).
+//! - `roundtrip_preset_wgsl_is_the_twin`: the view's `roundtrip_class` on every case of the class table, its notices
+//!   read through `roundtrip_tie_notices` on a chart on `C`'s section and off it, and its `roundtrip_colour` at the
+//!   brightness's breakpoints, each class, are the CPU twins' (`Class::of`, `tie_notices`, `colour`).
 //!   Control: a class function with the clamp test cut.
 
 use render::bind::ViewOutput;
@@ -138,6 +143,96 @@ negative_control!(
     })
 );
 
+// ── The shape sphere's two hemispheres (R-544) ──────────────────────────────────────────────────────────────────────
+
+/// The shape sphere chart over both hemispheres, 64 × 64 samples of the spherical map, `v < ½` the lower: every trip is
+/// the CPU twin's, no sample is tagged mirror tie, every untagged residual is within `ε_phys`, and every lower-hemisphere
+/// sample the encode mirrors, its decode off `C`'s section, is untagged and within `ε_phys`, measured against `C(D(z))`.
+fn check_shape_sphere(view: &str) {
+    use roundtrip::MIRRORED;
+    let gpu = GpuHarness::new().unwrap_or_else(|e| panic!("{e}"));
+    let s = scene(DecodeChart::ShapeSphere, None, 1.0);
+    let gpu_trips = trips_view(&s, gpu.device(), gpu.queue(), view).unwrap();
+    let cpu = twins(&s).unwrap();
+    let ambiguous: Vec<u32> = clamp_ambiguous(&s)
+        .unwrap()
+        .into_iter()
+        .map(|a| a.0)
+        .collect();
+    let (mut lower_mirrored, mut upper, mut worst) = (0usize, 0usize, 0.0f64);
+    let mut counts = [0usize; 5];
+    for (q, (g, c)) in gpu_trips.iter().zip(&cpu).enumerate() {
+        let p = s.point(q as u32);
+        counts[g.class as usize] += 1;
+        if p[1] < 0.5 && g.notices & MIRRORED != 0 && g.class != Class::Clamp {
+            lower_mirrored += 1;
+            assert_eq!(
+                g.class,
+                Class::Untagged,
+                "lower hemisphere sample {q} at {p:?}: mirrored by C and tagged, not held to ε_phys"
+            );
+            assert!(
+                g.ratio <= 1.0,
+                "lower hemisphere sample {q} at {p:?}: {} ε_phys against C(D(z)), past ε_phys",
+                g.ratio
+            );
+        }
+        if p[1] > 0.5 {
+            upper += 1;
+        }
+        assert_ne!(
+            g.class,
+            Class::MirrorTie,
+            "sample {q} at {p:?}: a mirror tie on the shape sphere, off R-82's band"
+        );
+        if g.class == Class::Untagged {
+            worst = worst.max(g.ratio);
+            assert!(
+                g.ratio <= 1.0,
+                "sample {q} at {p:?} is {} ε_phys, past ε_phys, untagged",
+                g.ratio
+            );
+        }
+        if !ambiguous.contains(&(q as u32)) {
+            assert_eq!(
+                (g.class, g.notices, g.tags),
+                (c.class, c.notices, c.tags),
+                "sample {q} at {p:?}: the fragment's trip is not the CPU's"
+            );
+        }
+    }
+    assert!(
+        lower_mirrored * 4 > gpu_trips.len() && upper * 4 > gpu_trips.len(),
+        "the scene covers too little of either hemisphere: {lower_mirrored} lower mirrored, {upper} upper"
+    );
+    println!(
+        "roundtrip_preset_shape_sphere_both_hemispheres: classes {counts:?}, {lower_mirrored} lower-hemisphere samples \
+         mirrored by C, worst untagged {worst:.4} ε_phys"
+    );
+}
+
+#[test]
+fn roundtrip_preset_shape_sphere_both_hemispheres() {
+    check_shape_sphere(roundtrip::words().view());
+}
+
+negative_control!(
+    roundtrip_preset_shape_sphere_both_hemispheres,
+    "measured against D(z) with every mirror tagged, as before R-544's reference, the lower hemisphere is tagged",
+    expected = "lower hemisphere",
+    check_shape_sphere(&{
+        let view = roundtrip::words().view().to_owned();
+        let undone = view
+            .replace("if (!d.on_section) {", "if (false) {")
+            .replace(
+                "roundtrip_tie_notices(e.notices, d.on_section)",
+                "e.notices",
+            );
+        assert_ne!(view, undone, "the control's edit did not apply");
+        undone
+    })
+);
+
 // ── The golden scenes on the GPU ───────────────────────────────────────────────────────────────────────────────────
 
 /// Each golden scene's render against `against`'s chart's CPU trip (its own but in the control).
@@ -220,8 +315,9 @@ negative_control!(
 
 // ── The class and colour in WGSL ───────────────────────────────────────────────────────────────────────────────────
 
-/// `(invalid, tag, tag_free, notices)` the class table covers, each class's tests at their bits and neighbours.
-const CLASS_CASES: [(bool, u32, u32, u32); 14] = [
+/// `(invalid, tag, tag_free, notices)` the class table covers, each class's tests at their bits and neighbours; each
+/// read on a chart on `C`'s section (pixels 0 to 14) and off it (15 to 29), through `roundtrip_tie_notices`.
+const CLASS_CASES: [(bool, u32, u32, u32); 15] = [
     (true, 4, 4, 0xffff),
     (true, 0, 0, 0),
     (false, 4, 0, 0xff03),
@@ -235,6 +331,7 @@ const CLASS_CASES: [(bool, u32, u32, u32); 14] = [
     (false, 0, 0, 0x0004),
     (false, 0, 0, 0x00fc),
     (false, 0, 0, 0x0001_0000),
+    (false, 0, 0, 0x0302),
     (false, 0, 0, 0),
 ];
 
@@ -254,8 +351,8 @@ const CLASS_CASES = array<vec4<u32>, {n}>({cases});
 const RATIOS = array<f32, {m}>({ratios});
 fn view(rc: RenderContext, l: Lanes) -> vec4<u32> {{
     let x = u32(l.screen.pixel.x);
-    let c = CLASS_CASES[min(x, {last}u)];
-    let cls = roundtrip_class(c.x != 0u, c.y, c.z, c.w);
+    let c = CLASS_CASES[x % {n}u];
+    let cls = roundtrip_class(c.x != 0u, c.y, c.z, roundtrip_tie_notices(c.w, x < {n}u));
     var t: RoundTrip;
     t.kind = x % 5u;
     t.ratio = RATIOS[(x / 5u) % {m}u];
@@ -268,7 +365,6 @@ fn view(rc: RenderContext, l: Lanes) -> vec4<u32> {{
         cases = cases.join(", "),
         m = RATIOS.len(),
         ratios = ratios.join(", "),
-        last = CLASS_CASES.len() - 1,
     )
 }
 
@@ -286,13 +382,19 @@ fn check_wgsl(snippet: &str) {
         .unwrap();
     for x in 0..width {
         let w = image.words(x, 0);
-        let (invalid, tag, tag_free, notices) =
-            CLASS_CASES[(x as usize).min(CLASS_CASES.len() - 1)];
-        let want = Class::of(!invalid, tag, tag_free, notices);
+        let (invalid, tag, tag_free, notices) = CLASS_CASES[x as usize % CLASS_CASES.len()];
+        let on_section = (x as usize) < CLASS_CASES.len();
+        let want = Class::of(
+            !invalid,
+            tag,
+            tag_free,
+            roundtrip::tie_notices(notices, on_section),
+        );
         assert_eq!(
             Class::from_code(w[0]),
             Some(want),
-            "the WGSL class of (invalid {invalid}, tags {tag}, {tag_free}, notices {notices:#x})"
+            "the WGSL class of (invalid {invalid}, tags {tag}, {tag_free}, notices {notices:#x}, on the section \
+             {on_section})"
         );
         let class = Class::from_code(x % 5).unwrap();
         let ratio = f64::from(RATIOS[(x as usize / 5) % RATIOS.len()]);

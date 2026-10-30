@@ -19,6 +19,10 @@
 //! - `roundtrip_preset_twin_invalid`: a trip from a state with an infinite or NaN momentum is invalid, its ratio 0; a
 //!   finite one keeps its tag and its small ratio; an invalid sample's colour is the hatch at its pixel's centre.
 //!   Control: a finite momentum.
+//! - `roundtrip_preset_on_section_is_the_t2_reference`: each fragment chart's `FragmentChart::ON_SECTION`, which picks
+//!   the preset's reference (`D(z)` on `C`'s section, `C(D(z))` off it), is its T2 reference
+//!   (`validation::roundtrip::Reference`): `D(z)` on every chart but the shape sphere (R-544). Control: the flag held to
+//!   the other reference.
 //! - `roundtrip_preset_clamp_band`: on the clamp-framed latent chart, `clamp_ambiguous` finds exactly the samples with
 //!   a control within `CLAMP_BAND` (a quarter `ε`) of its clamp, some and fewer than a quarter of them; `at_clamp`'s
 //!   band is open, its edges outside. Control: a band twice as wide.
@@ -277,13 +281,15 @@ fn check_invalid(bad: f32) {
         r: [[-0.4, 0.1], [0.9, -0.2], [-0.3, 0.05]],
         p: [[bad, -0.6], [-0.35, 0.2], [0.2, 0.4]],
     };
-    let t = twin_of(&x, 0);
-    assert_eq!(
-        t.class,
-        Class::Invalid,
-        "a trip from momentum {bad} is not invalid"
-    );
-    assert_eq!(t.ratio(), 0.0, "an invalid trip's ratio");
+    for on_section in [true, false] {
+        let t = twin_of(&x, 0, on_section);
+        assert_eq!(
+            t.class,
+            Class::Invalid,
+            "a trip from momentum {bad} (on the section {on_section}) is not invalid"
+        );
+        assert_eq!(t.ratio(), 0.0, "an invalid trip's ratio");
+    }
 }
 
 #[test]
@@ -295,7 +301,7 @@ fn roundtrip_preset_twin_invalid() {
     let z = [0.3f32, -0.2, 0.1, -0.4, 0.25, 0.05, 0.2, -0.35];
     let decoded =
         kernel::decode::decode::<validation::Defaults, f32>(&kernel::decode::Latent { z }).ic;
-    let fine = twin_of(&decoded, 4);
+    let fine = twin_of(&decoded, 4, true);
     assert_eq!((fine.class, fine.tags & 0xff), (Class::Feasibility, 4));
     assert!(
         fine.ratio() > 0.0 && fine.ratio() <= 1.0,
@@ -399,4 +405,42 @@ negative_control!(
     "a band twice as wide must find other samples",
     expected = "clamp_ambiguous is not the samples",
     check_band(2.0 * CLAMP_BAND)
+);
+
+// ── The section flag ────────────────────────────────────────────────────────────────────────────────────────────────
+
+/// Each fragment chart's `FragmentChart::ON_SECTION`, which picks the preset's reference, against its T2 reference
+/// (`validation::roundtrip::Reference`), `decoded` standing for `Against::Decoded`.
+fn check_on_section(decoded: validation::roundtrip::Against) {
+    use kernel::chart::{
+        BurrauThetaK, EuclidPlane, InvariantLE, InvariantLK, Latent, MassSimplex, ShapeSphere,
+    };
+    use kernel::stage::fragment::FragmentChart;
+    use validation::roundtrip::Reference;
+    fn one<C: FragmentChart + Reference>(name: &str, decoded: validation::roundtrip::Against) {
+        assert_eq!(
+            C::ON_SECTION,
+            C::AGAINST == decoded,
+            "{name}: the fragment's section flag is not its T2 reference's"
+        );
+    }
+    one::<Latent<f32>>("latent", decoded);
+    one::<ShapeSphere<f32>>("shape sphere", decoded);
+    one::<InvariantLE<f32>>("(L_z, E)", decoded);
+    one::<InvariantLK<f32>>("(L_z, K)", decoded);
+    one::<MassSimplex<f32>>("mass simplex", decoded);
+    one::<EuclidPlane<f32>>("Euclid plane", decoded);
+    one::<BurrauThetaK<f32>>("θ × K", decoded);
+}
+
+#[test]
+fn roundtrip_preset_on_section_is_the_t2_reference() {
+    check_on_section(validation::roundtrip::Against::Decoded);
+}
+
+negative_control!(
+    roundtrip_preset_on_section_is_the_t2_reference,
+    "the flag held to the other reference must be found",
+    expected = "the fragment's section flag is not its T2 reference's",
+    check_on_section(validation::roundtrip::Against::Canonical)
 );

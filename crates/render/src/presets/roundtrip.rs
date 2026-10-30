@@ -1,8 +1,9 @@
 //! The ROUNDTRIP preset (inverse-encode contract Part 8, "New debug view: `ROUNDTRIP`"; colour_composition §6;
 //! debug_tooling_plan §A; render_contract Part 6, "Cross-check views"; R-75, R-116, R-297, R-437; REQ-RENDER-025,
-//! REQ-ENC-002): per pixel, `z → D → E → D` and the physical residual `‖D(z) − D(E(D(z)))‖_phys`, recomputed wholly in
-//! the fragment and log-scaled, the encode-side sibling of the invariant-chart gradient. It is a fragment preset, never
-//! a kernel mode (R-75): the kernel's variants stay the bring-up mode alone.
+//! REQ-ENC-002): per pixel, `z → D → E → D` and the physical residual `‖D(z) − D(E(D(z)))‖_phys` (on the shape sphere
+//! chart `‖C(D(z)) − D(E(D(z)))‖_phys`), recomputed wholly in the fragment and log-scaled, the encode-side sibling of
+//! the invariant-chart gradient. It is a fragment preset, never a kernel mode (R-75): the kernel's variants stay the
+//! bring-up mode alone.
 //!
 //! **The trip** (R-116). The first `D` is the chart's generated decode at the pixel's `ctx.chart.slice_uv`
 //! ([`super::DECODE_WGSL`]'s chart section, `frag_decode`), which places `ctx.chart.z`; `E` is the generated encode
@@ -11,10 +12,18 @@
 //! translation of the one Rust source (`kernel::stage::fragment`), none written by hand.
 //!
 //! **The residual** is inverse-encode Part 4's `‖·‖_phys` (REQ-ENC-029), as `validation::roundtrip::phys` measures it:
-//! over the three bodies, the largest of `|Δmᵢ|`, `‖Δrᵢ‖/R_x` and `‖Δpᵢ‖/P_x`, `R_x` and `P_x` the first decode's extents
-//! in positions and momenta, floored at 1. Its tolerance is `ε_phys = k·ε_R` (REQ-ENC-024), `k` the register's
+//! over the three bodies, the largest of `|Δmᵢ|`, `‖Δrᵢ‖/R_x` and `‖Δpᵢ‖/P_x`, `R_x` and `P_x` the reference state's
+//! extents in positions and momenta, floored at 1. Its tolerance is `ε_phys = k·ε_R` (REQ-ENC-024), `k` the register's
 //! `eps_phys` and `ε_R` f32's epsilon: R-297's stated tolerance for ROUNDTRIP, with the fragment compiled as the backend
 //! compiles it. [`ratio`] is the residual over `ε_phys`: at most 1 is the round trip within tolerance.
+//!
+//! **The reference** (Part 4, "One norm for every round trip"; Part 1's T2; Part 8's T2; R-544). `D(E(x))` is `C(x)`
+//! (Part 1's T3), so the second decode is measured against the first where the chart's decode lands on `C`'s section,
+//! and against `C` of it where it does not: the shape sphere chart, which decodes with `C`'s step 3 not taken, so a
+//! lower-hemisphere pixel is its own system, off the section, and `C` mirrors it (`validation::roundtrip`'s
+//! `Against::Canonical`). The chart's decode says which (`FragDecode.on_section`, the kernel's
+//! `FragmentChart::ON_SECTION`); `C(x)` is the generated encode's own (`FragEncoded.canonical`), so no preset names a
+//! chart and nothing of `C` is written by hand.
 //!
 //! **Tagged expected** (Part 8: "Legitimate bright regions: clamp boundaries, feasibility edges, the mirror tie —
 //! tagged expected, not bugs"), each read off what the trip itself reports, by [`Class`], in this order:
@@ -22,8 +31,11 @@
 //!   energy target out of reach), so the state is not the pixel's;
 //! - **clamp**: the encode reports `lookup_clamped`, a control past its clamp (notices bits 8 to 15) or the coincident
 //!   inner pair (bit 0; R-13);
-//! - **mirror tie**: the encode reports `lookup_mirrored` (bit 1). A decoded state is on `C`'s section, `λ̃_y ≥ 0`, so
-//!   on it the mirror fires only where rounding puts `λ̃_y` past `−δ_λ`, at the tie (R-82).
+//! - **mirror tie**: the encode reports `lookup_mirrored` (bit 1) on a chart whose decode lands on `C`'s section
+//!   ([`tie_notices`]). There the decoded state has `λ̃_y ≥ 0`, so the mirror fires only where rounding puts `λ̃_y` past
+//!   `−δ_λ`, at the tie (R-82), and `D(E(x))` is the mirror image, measured against `x`. Off the section (the shape
+//!   sphere's lower hemisphere, R-544) the mirror is `C`'s own, not the tie: the residual is measured against `C(x)`,
+//!   which carries it, so the trip is held to `ε_phys` there untagged, and a fault in the block inverses shows red.
 //!
 //! **Its colour** (Discipline 1: ROUNDTRIP-red means the same thing every time). The brightness is the residual
 //! log-scaled from `ε_phys`: `b = min(log₂ ρ / SPAN, 1)` for `ρ > 1`, 0 at or below it, [`SPAN`] octaves to full scale.
@@ -61,15 +73,15 @@ pub enum Class {
     Feasibility = 1,
     /// The encode's `lookup_clamped`.
     Clamp = 2,
-    /// The encode's `lookup_mirrored`.
+    /// The encode's `lookup_mirrored` where the decode lands on `C`'s section: R-82's tie ([`tie_notices`]).
     MirrorTie = 3,
     /// A non-finite value among the trip's states or its residual.
     Invalid = 4,
 }
 
 impl Class {
-    /// The class of a trip whose decodes' tag words are `tag` and `tag_free` and whose encode's notices word is
-    /// `notices`, `finite` where every value is finite.
+    /// The class of a trip whose decodes' tag words are `tag` and `tag_free` and whose notices word is `notices`, the
+    /// encode's as [`tie_notices`] passes it, `finite` where every value is finite.
     pub fn of(finite: bool, tag: u32, tag_free: u32, notices: u32) -> Class {
         if !finite {
             Class::Invalid
@@ -103,6 +115,18 @@ pub const CLAMPED: u32 = 0xff01;
 
 /// The notices bit that is `lookup_mirrored`.
 pub const MIRRORED: u32 = 2;
+
+/// The encode's notices word as the class reads it: whole where the chart's decode lands on `C`'s section
+/// (`on_section`), so its mirror bit is R-82's tie; with the mirror bit cleared off it (the shape sphere, R-544), where
+/// the mirror is `C`'s own and the residual is measured against `C(x)`. The CPU twin of the view's
+/// `roundtrip_tie_notices`.
+pub fn tie_notices(notices: u32, on_section: bool) -> u32 {
+    if on_section {
+        notices
+    } else {
+        notices & !MIRRORED
+    }
+}
 
 /// `‖y − x‖_phys` (REQ-ENC-029), `x` the reference: the largest of `|Δmᵢ|`, `‖Δrᵢ‖/R_x` and `‖Δpᵢ‖/P_x`, `R_x` and
 /// `P_x` `x`'s extents floored at 1. The CPU twin of the view's `roundtrip_phys`, each state `(m, r, p)`.
@@ -202,7 +226,7 @@ fn roundtrip_bad(m: vec3<f32>, r: array<vec2<f32>, 3>, p: array<vec2<f32>, 3>) -
 
 // ‖y − x‖_phys (REQ-ENC-029), x the reference: the largest of |Δm|, ‖Δr‖/R_x and ‖Δp‖/P_x, the extents floored at 1.
 // Where `bad`, every value is replaced by 0 by a select before the arithmetic, never measured (R-436).
-fn roundtrip_phys(x: FragDecode, y: FragFree, bad: bool) -> f32 {{
+fn roundtrip_phys(x: FragCanonical, y: FragFree, bad: bool) -> f32 {{
     let z2 = vec2<f32>(0.0);
     let k2 = vec2<bool>(bad);
     let dm = select(y.m - x.m, vec3<f32>(0.0), vec3<bool>(bad));
@@ -218,6 +242,12 @@ fn roundtrip_phys(x: FragDecode, y: FragFree, bad: bool) -> f32 {{
         worst = max(worst, length(select(y.p[i], z2, k2) - select(x.p[i], z2, k2)) / p_x);
     }}
     return worst;
+}}
+
+// The notices word as the class reads it (render::presets::roundtrip::tie_notices): whole on a chart whose decode lands
+// on C's section, where the mirror bit is R-82's tie; its mirror bit cleared off it (the shape sphere, R-544).
+fn roundtrip_tie_notices(notices: u32, on_section: bool) -> u32 {{
+    return select(notices & ~{MIRRORED}u, notices, on_section);
 }}
 
 // The class (render::presets::roundtrip::Class) of a trip, the first that holds: 4 invalid, 1 either decode DEGENERATE,
@@ -239,18 +269,27 @@ fn roundtrip_class(invalid: bool, tag: u32, tag_free: u32, notices: u32) -> u32 
 }}
 
 // The trip from the chart's decode d at the pixel: the encode of its state, the free decode of that z, the residual
-// and the class.
+// against the reference (the decoded state on C's section, C of it off it: inverse-encode Part 4, R-544) and the
+// class.
 fn roundtrip_of(d: FragDecode) -> RoundTrip {{
     let e = frag_encode(d.m, d.r, d.p);
     let back = frag_decode_free(e.z);
+    var against: FragCanonical;
+    against.m = d.m;
+    against.r = d.r;
+    against.p = d.p;
+    if (!d.on_section) {{
+        against = e.canonical;
+    }}
     var o: RoundTrip;
     o.notices = e.notices;
     o.tags = d.tag | (back.tag << 8u);
-    let bad = roundtrip_bad(d.m, d.r, d.p) || roundtrip_bad(back.m, back.r, back.p);
-    let residual = roundtrip_phys(d, back, bad);
+    let bad = roundtrip_bad(d.m, d.r, d.p) || roundtrip_bad(against.m, against.r, against.p)
+        || roundtrip_bad(back.m, back.r, back.p);
+    let residual = roundtrip_phys(against, back, bad);
     let invalid = bad || preset_non_finite(bitcast<u32>(residual));
     o.ratio = select(residual / ROUNDTRIP_EPS_PHYS, 0.0, invalid);
-    o.kind = roundtrip_class(invalid, d.tag, back.tag, e.notices);
+    o.kind = roundtrip_class(invalid, d.tag, back.tag, roundtrip_tie_notices(e.notices, d.on_section));
     return o;
 }}
 
