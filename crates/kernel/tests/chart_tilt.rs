@@ -923,6 +923,22 @@ fn tilt_every_chart_ray_degenerate_corner() {
         (gram - (1.0f64 - 0.0625).sqrt()).abs() < 1e-15,
         "Lean's Gram factor {gram}"
     );
+    for (t1, t2) in [
+        (40.0, 70.0),
+        (-25.0, 80.0),
+        (60.0, -15.0),
+        (89.0, 89.0),
+        (0.0, 50.0),
+    ] {
+        // √(1 − sin²τ₁ sin²τ₂), written as √(cos²τ₁ + sin²τ₁ cos²τ₂) to keep its precision near the corner.
+        let ((s1, c1), c2) = (sc(t1), sc(t2).1);
+        let want = Float::sqrt(c1 * c1 + s1 * s1 * c2 * c2);
+        let got = spec(t1, t2, TiltMap::Lean, 2, 2).area_weight();
+        assert!(
+            (got - want).abs() < 1e-15,
+            "Lean's Gram factor at ({t1}, {t2}): {got}, not {want}"
+        );
+    }
     assert_eq!(spec(30.0, 30.0, TiltMap::Sheet, 2, 2).area_weight(), 1.0);
     for (t1, t2) in [(40.0, 70.0), (45.0, 45.0), (10.0, 20.0), (13.0, 77.0)] {
         let sheet = spec(t1, t2, TiltMap::Sheet, 2, 2).area_weight();
