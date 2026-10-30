@@ -43,14 +43,14 @@ Of these: 229 calibration, 173 definition, 1656 obligation. Retired (kept for th
 
 ## Sections
 
-1659 sections in 61 files: 1325 yield at least one requirement; 334 yield none and are listed below with the reason.
+1660 sections in 61 files: 1325 yield at least one requirement; 335 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | gap (RQ-378) | 1 |
 | gap (RQ-391) | 2 |
 | gap (RQ-577) | 2 |
 | gap (RQ-618) | 1 |
-| informative only | 226 |
+| informative only | 227 |
 | out of v1 (R-125) | 1 |
 | out of v1 (R-420) | 1 |
 | parent heading (obligations are in its subsections) | 55 |
@@ -195,6 +195,7 @@ Of these: 229 calibration, 173 definition, 1656 obligation. Retired (kept for th
 | R-645 — No more cloud sessions: the six already started are the last; briefs 4 and 5 run on the Mac as local agents, brief 5 a small pilot, the data sweep after them *(amends R-357; supersedes R-636's cloud half)* | informative only | the owner's ruling of 28 Oct 2026: no more cloud sessions; process, carried by CLAUDE.md and plan/OPERATIONS.md; changes no requirement |
 | R-647 — A standing rule, no exceptions: no cloud sessions and no briefs addressed to the owner; the orchestrator never asks him to start, paste into, restart or check a session; every agent is the orchestrator's own, dispatched locally by it; an agent's written instructions are internal task files *(amends R-645)* | informative only | the owner's standing rule of 28 Oct 2026: no cloud sessions and no briefs addressed to the owner; process, carried by CLAUDE.md and plan/OPERATIONS.md § Dispatching; changes no requirement |
 | R-648 — The workflow returns to main's, R-357, R-391 and R-277, with one addition, never a cloud session: R-634 is withdrawn, and so are R-636's agent-count and cloud clauses; three agents at normal memory pressure, two if the Mac is swapping; the RQ-605 audit on demand only *(supersedes R-634; withdraws R-636's agent-count and cloud clauses; amends R-645 and R-647)* | informative only | the owner's ruling of 28 Oct 2026: the workflow returns to R-357, R-391 and R-277, with no cloud sessions; R-634 and R-636's agent-count and cloud clauses withdrawn; process; changes no requirement |
+| R-651 — Advisory review cadence: a fresh review from each of Codex, Gemini CLI and Copilot before merge on the final head, after every substantive push and at least once a working day on a long-running PR, in that priority under limits; a bot unavailable or rate-limited is noted on the PR and the merge goes ahead with the others; every bot finding is verified and closed out before merge (fixed, answered or moved to a task or RQ, then its thread resolved), and a PR with an unresolved bot thread does not merge; the bots stay advisory and never replace the required approvals *(amends R-635: its cadence; a standing rule)* | informative only | the owner's standing rule of 30 Oct 2026 with its two addenda: a fresh advisory review from Codex, Gemini CLI and Copilot before merge on the final head, after substantive pushes and periodically, every bot finding closed out before merge; process, carried by plan/WORKFLOW.md § The review loop, plan/OPERATIONS.md § Merging and the orchestrator's merge script; amends R-635's cadence; changes no requirement |
 
 ### `docs/contracts/principia_canonical_spec.md`
 

@@ -271,6 +271,26 @@ merge:
 6. To re-run CI, prefer re-running the failed jobs (`gh run rerun <id> --failed`) over closing and reopening the PR
    (the owner's note, R-633).
 
+**Advisory bot reviews before the merge (R-651, a standing rule).** Before step 3, the orchestrator's merge script
+checks, for Codex, Gemini CLI and Copilot each:
+- **A review on the exact head SHA being merged.** Where a bot's last review is on an older head, it re-requests that
+  bot (`@codex review`, `@gemini-cli /review`, Copilot re-requested as a reviewer) and waits for it. A bot that sends no
+  review within 15 minutes of the request, errors, or is out of quota or rate-limited counts as unavailable: the PR
+  notes "no <bot> review on <sha>: <reason>", and the merge goes ahead on the others, never blocked by a bot.
+- **No unresolved bot thread.** Every finding has been verified against the code, the spec or the physics and closed
+  out with a reply: fixed (the commit named), not applicable (wrong, out of scope or already covered, with the reason),
+  or moved to a tracked task or RQ; then resolved. A thread resolved without a reply is reopened and answered. A wrong
+  finding is answered with why it is wrong, never "fixed" to silence it.
+
+Between the PR's opening and the merge, the orchestrator also asks for a fresh review from each bot after every
+substantive push (new logic, physics or algebra; a fix responding to findings; a rebase or merge that changes code; not
+a docs-only typo push) and periodically on a long-running PR (at least once a working day while it is open, and at
+least every third push once the diff passes ~500 lines). Under limits: pre-merge first, then post-push, then periodic.
+Each merge that went ahead without a bot's pre-merge review is listed, with the reason, in the next batched summary to
+the owner. The bots stay advisory: the named reviewers' approvals and green CI decide the merge (§ "Autonomy
+(R-369)"). This replaces R-635's single review waited for up to 15 minutes after the PR opened; R-635's other rules
+(P0 claims to the physics reviewer, late reviews as follow-ups, the trial tally) stand.
+
 **Merge order for stacked PRs.** Don't stack (R-362, § "Roles and the loop"). Deleting a base branch closes the PR
 stacked on it rather than retargeting it (PR #2, 25 Sep 2026), and with auto-delete on (R-357), merging a PR deletes
 its branch at once. So if a stack is ever needed, per PR n: `gh pr edit n+1 --base main` first, then merge n

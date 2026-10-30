@@ -158,6 +158,24 @@ pinned version.)
    stacked; if a stack is ever needed, the child PR is retargeted to `main` before the PR below it merges, because
    merging deletes the lower branch at once and deleting a base branch closes its child PRs (CLAUDE.md § Git, R-362).
 
+**Advisory bot reviews (R-651, a standing rule).** Codex, Gemini CLI and GitHub Copilot review alongside the named
+reviewers, advisory only: they never replace the named reviewers' approvals, and `reviews-complete` doesn't count them.
+The orchestrator asks each bot for a fresh review (`@codex review`, `@gemini-cli /review`, Copilot re-requested as a
+reviewer):
+- **before the merge, on the final head:** step 6 waits for a review from each bot on the exact SHA being merged, and
+  re-requests a bot whose last review is on an older head;
+- **after every substantive push:** new logic, physics or algebra, a fix responding to findings, or a rebase or merge
+  that changes code; a docs-only typo push needs none;
+- **periodically on a long-running PR:** at least once a working day while it is open, and every few pushes on a
+  large one, so problems surface partway through rather than at the end.
+
+Under limits the order is pre-merge, then post-push, then periodic. A bot that is unavailable or rate-limited is noted
+on the PR and the merge goes ahead with the others; the owner is told if pre-merge reviews start being skipped. Every
+bot finding is closed out before the merge: verified against the code, the spec or the physics, then fixed (the reply
+names the commit), answered with why it doesn't apply (wrong, out of scope, already covered), or moved to a tracked task
+or RQ; then its thread is resolved. No thread is resolved without a reply, a wrong finding is answered, never "fixed"
+to silence it, and a PR with an unresolved bot thread does not merge (`plan/OPERATIONS.md` § "Merging").
+
 ## Human checkpoints: the milestone gates
 
 A milestone exits only at a human checkpoint. Before it:
