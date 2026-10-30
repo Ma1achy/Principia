@@ -28362,10 +28362,13 @@ The CI sentence of the owner's rulings message of the same day, verbatim:
   each, so no push to a pull request's branch runs it twice. Every run on `main` runs every job. The other workflows
   had no double trigger: `no-atlas-params.yml` already ran its push trigger on `main` only, and the rest run on
   `pull_request`, a schedule or a dispatch.
-- **Superseded runs.** Each workflow that runs on pull requests keeps one `concurrency` group per pull request, its
-  merge ref's (`refs/pull/<n>/merge`), with `cancel-in-progress`, so a push cancels the run on the head it supersedes; a
-  run on `main` has a group of its own, its run id, and is never cancelled. The groups name the event, which after the
-  push change is `pull_request` for every run a pull request starts, so each pull request has one group per workflow.
+- **Superseded runs.** The workflows that build or test on pull requests (`ci.yml`, `mutants.yml`, `pr-check.yml`,
+  `screenshot.yml`, `stand-in-soak.yml`) each keep one `concurrency` group per pull request, its merge ref's
+  (`refs/pull/<n>/merge`), with `cancel-in-progress`, so a push cancels the run on the head it supersedes; a run on
+  `main` has a group of its own, its run id, and is never cancelled. The groups name the event, which after the push
+  change is `pull_request` for every run a pull request starts, so each pull request has one group per workflow. Three
+  keep none (below): `reviews.yml`, `no-atlas-params.yml`, a single grep of a few seconds, and `gemini-dispatch.yml`,
+  the advisory bot's (R-635), which reviews each head.
 - **What a change touches.** `scripts/ci_changes.sh` classifies a pull request's change, its merge commit against the
   base it merges onto, conservatively: a path is docs-only only if its allowlist names it (`docs/`, the plan's prose
   and data, the root's markdown; not `plan/`'s Python, not `.github/`), and every path but the docs-only ones and the
@@ -28416,7 +28419,8 @@ The CI sentence of the owner's rulings message of the same day, verbatim:
   built kernel (`gpu-kernel`'s profile) or run cargo on the workspace's own target (`ci-workspace`'s) run on `main`'s
   push, not on a docs-only pull request.
 - `reviews.yml` keeps no `concurrency` group: a `pull_request_review` run re-runs the `pull_request` run (R-276), and
-  a shared group would cancel the run it means to re-run.
+  a shared group would cancel the run it means to re-run. `no-atlas-params.yml` and `gemini-dispatch.yml` keep none
+  either: the first costs seconds, and the second is the advisory bots' trial (R-635), outside this ruling.
 - `mutants-fixture` skips its steps on a docs-only pull request; it shows the gate can fire, and no docs-only path
   reaches the gate.
 - REQ-PAY-011, REQ-GEN-004, REQ-TOOL-003, REQ-TOOL-189, REQ-VAL-057, REQ-VAL-166, REQ-SYS-065 and REQ-SYS-067, whose

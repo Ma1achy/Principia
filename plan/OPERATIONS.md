@@ -283,8 +283,9 @@ checks until #96 (TASK-M0-14) merges, since PRs off `main` never report it. Tell
 they can add it back.
 
 **What CI runs on a pull request (R-656).** `ci.yml` runs on a push to `main` (and to a `measure/` branch, R-272)
-and, for a pull request, through `pull_request` only, once per push. Each workflow keeps one `concurrency` group per
-pull request, so a push cancels the run on the head it supersedes; a run on `main` is never cancelled. `ci.yml`'s
+and, for a pull request, through `pull_request` only, once per push. Each workflow that builds or tests keeps one
+`concurrency` group per pull request, so a push cancels the run on the head it supersedes; a run on `main` is never
+cancelled (`reviews.yml`, `no-atlas-params.yml` and `gemini-dispatch.yml` keep none, decisions.md R-656). `ci.yml`'s
 `changes` job, and `mutants-fixture` in a step of its own, classify the change with `scripts/ci_changes.sh` (the pull
 request's merge commit against the base it merges onto; any other run runs everything):
 - **docs-only** (every path on the script's allowlist: `docs/`, the plan's prose and data, the root's markdown; never
