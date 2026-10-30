@@ -16,6 +16,11 @@
 //! - `agreement_preset_gate_runs`: the `decode-agreement` gate through its trait on 4 × 4 lattices: healthy passes,
 //!   a poisoned `V₀` is hatched and the input passes, a scramble fails, an input without its fields is refused.
 //!   Control: the scramble expected to pass.
+//! - `agreement_preset_operands`: the operand view (`agreement::operands`, `Scene::agreement_operands`) reads the
+//!   decode the preset draws, on every M2 chart's 8 × 8 lattice with a stored `V₀ = −∞` and `K₀ = NaN`: the preset's
+//!   validity is `operands_finite` of the stored `K₀`, `V₀` and the view's `K`, `V`, `m`, `r`; its `E` is the view's
+//!   `K + V`; its ratio is the view's `(m, r)`'s. A scene of tiles wider than a pixel is refused. Control: the operand
+//!   words read one sample on.
 
 use std::path::{Path, PathBuf};
 
@@ -303,11 +308,6 @@ fn conditioning_cases() -> Vec<(Case, bool)> {
             ([0.5, 0.5, 0.0], [[0.7, 0.0], [-0.7, 0.0], [0.7, 0.0]]),
             true,
         ),
-    ];
-    for bad in [f32::INFINITY, f32::NEG_INFINITY, f32::NAN] {
-        for k in 0..3 {
-            let mut m = [third; 3];
-            m[k] = bad;
         (
             (
                 [third; 3],
@@ -323,6 +323,11 @@ fn conditioning_cases() -> Vec<(Case, bool)> {
             ([third; 3], [[1e-12, 0.0], [1e-12, 1e-13], [-2e-12, 0.0]]),
             true,
         ),
+    ];
+    for bad in [f32::INFINITY, f32::NEG_INFINITY, f32::NAN] {
+        for k in 0..3 {
+            let mut m = [third; 3];
+            m[k] = bad;
             out.push(((m, tri), false));
         }
         for k in 0..6 {
@@ -575,4 +580,87 @@ negative_control!(
     "the stores read the other way round must be found",
     expected = "is not formed from its store",
     check_measure_store(true)
+);
+
+/// The operand view against the preset's own draw: on every chart's lattice, with sample 5's stored `V₀` `−∞` and
+/// sample 9's `K₀` NaN, sample `q`'s validity is the finiteness of its stored operands and the operand words of sample
+/// `(q + shift) mod n`, its `E` their `K + V`, and its ratio the one their `(m, r)` give; `shift` is 0 but in the control.
+fn check_operands(shift: usize) {
+    use validation::decode_agreement::operands_finite;
+    let gpu = GpuHarness::new().unwrap_or_else(|e| panic!("{e}"));
+    let wgsl = wgsl();
+    let eps = f64::from(f32::EPSILON);
+    for chart in DecodeChart::ALL {
+        let mut scene = Scene::lattice(chart, [8, 8], 3).unwrap();
+        scene
+            .stage_into(gpu.device(), gpu.queue(), &wgsl, 0)
+            .unwrap();
+        scene.set.ic(5).V_0 = f32::NEG_INFINITY;
+        scene.set.ic(9).K_0 = f32::NAN;
+        let words = scene.agreement(gpu.device(), gpu.queue()).unwrap();
+        let ops = scene.agreement_operands(gpu.device(), gpu.queue()).unwrap();
+        let n = words.len();
+        assert_eq!(ops.len(), n);
+        let mut compared = 0;
+        for (q, w) in words.iter().enumerate() {
+            let own = &ops[(q + shift) % n];
+            let d = *scene.set.ic(q as u32);
+            let stored = [d.K_0, d.V_0];
+            assert_eq!(
+                w[1] != 0,
+                operands_finite(stored, own),
+                "{chart:?} sample {q}: the preset's validity is not its operands' finiteness"
+            );
+            if w[1] == 0 {
+                continue;
+            }
+            compared += 1;
+            let f = |k: usize| f32::from_bits(own[k]);
+            let (k, v) = (f64::from(f(0)), f64::from(f(1)));
+            let e = f64::from(f32::from_bits(w[2]));
+            assert!(
+                (e - (k + v)).abs() <= 4.0 * eps * (k.abs() + v.abs()),
+                "{chart:?} sample {q}: E {e} is not the operand view's K + V, {}",
+                k + v
+            );
+            let m = [f(2), f(3), f(4)];
+            let r = [[f(5), f(6)], [f(7), f(8)], [f(9), f(10)]];
+            let scale = f64::from(d.K_0).abs().max(1.0)
+                + f64::from(d.V_0).abs().max(1.0)
+                + agreement::conditioning(m, r);
+            let e_0 = f64::from(f32::from_bits(w[3]));
+            let want = (e - e_0).abs() / (f64::from(agreement::FACTOR) * eps * scale);
+            let got = f64::from(f32::from_bits(w[0]));
+            assert!(
+                (got - want).abs() <= 1e-5 * want,
+                "{chart:?} sample {q}: the ratio {got} is not the operand view's (m, r)'s, {want}"
+            );
+        }
+        assert!(
+            compared >= n - 2,
+            "{chart:?}: only {compared} of {n} samples compared"
+        );
+        assert_eq!(
+            (words[5][1], words[9][1]),
+            (0, 0),
+            "{chart:?}: a non-finite stored operand is compared"
+        );
+    }
+    let wide = Scene::new(DecodeChart::Latent, [1, 1], 2, 3, &[[0, 0]]).unwrap();
+    assert!(
+        wide.agreement_operands(gpu.device(), gpu.queue()).is_err(),
+        "a scene of two-pixel tiles is read as one pixel per sample"
+    );
+}
+
+#[test]
+fn agreement_preset_operands() {
+    check_operands(0);
+}
+
+negative_control!(
+    agreement_preset_operands,
+    "operand words read one sample on must be found",
+    expected = "is not the operand view's",
+    check_operands(1)
 );

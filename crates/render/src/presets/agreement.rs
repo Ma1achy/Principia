@@ -209,6 +209,50 @@ pub fn words() -> Preset {
     }
 }
 
+/// The words of [`operands`]: the fragment decode's `K`, `V`, `m` and `r`, and a zero word.
+pub const OPERAND_WORDS: usize = 12;
+
+/// The operand view's word groups, four words a group: one render each.
+pub const OPERAND_GROUPS: u32 = (OPERAND_WORDS / 4) as u32;
+
+/// The operands the preset tests at each pixel, as raw words, group `group` of [`OPERAND_WORDS`] (words `4·group` to
+/// `4·group + 3`), one pixel per sample: the fragment decode's `K`, `V`, `m` (three) and `r` (six, body by body, `x`
+/// then `y`), then 0, as their bits, of the decode the preset draws, `frag_decode(agreement_point(l))`, compiled after
+/// the preset's own WGSL. The `decode-agreement` gate tests them on their bits for the hatch's placement (R-436).
+pub fn operands(group: u32) -> Preset {
+    let view = format!(
+        "
+// The agreement preset's fragment decode as words (render::presets::agreement::OPERAND_WORDS), group {group}.
+fn view(rc: RenderContext, l: Lanes) -> vec4<u32> {{
+    let d = frag_decode(agreement_point(l));
+    let mb = bitcast<vec3<u32>>(d.m);
+    var w: array<u32, {OPERAND_WORDS}>;
+    w[0] = d.d.K_0;
+    w[1] = d.d.V_0;
+    w[2] = mb.x;
+    w[3] = mb.y;
+    w[4] = mb.z;
+    for (var b = 0u; b < 3u; b++) {{
+        let rb = bitcast<vec2<u32>>(d.r[b]);
+        w[5u + 2u * b] = rb.x;
+        w[6u + 2u * b] = rb.y;
+    }}
+    w[11] = 0u;
+    return vec4<u32>(w[{a}], w[{b}], w[{c}], w[{e}]);
+}}
+",
+        a = 4 * group,
+        b = 4 * group + 1,
+        c = 4 * group + 2,
+        e = 4 * group + 3,
+    );
+    Preset {
+        name: NAME,
+        view: format!("{SHARED_WGSL}{}{COMPARE}{view}", factor_wgsl()),
+        output: ViewOutput::Words,
+    }
+}
+
 /// The max-norm of `v`, at f64.
 fn norm(v: [f64; 2]) -> f64 {
     v[0].abs().max(v[1].abs())

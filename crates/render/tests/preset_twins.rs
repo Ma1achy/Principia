@@ -10,7 +10,8 @@
 //!   `w = 2`, `2⁴⁴` at 1, peaking at `2⁷⁶` at `w = δ`), and its pairs and max-norms. Control: a twin that drops the
 //!   floor.
 //! - `preset_twins_agreement_factor_wgsl`: the agreement preset's WGSL declares `AGREEMENT_FACTOR` once, at
-//!   `agreement::FACTOR` (REQ-COL-060, TASK-M2-29), in both its views. Control: another factor differs.
+//!   `agreement::FACTOR` (REQ-COL-060, TASK-M2-29), and `AGREEMENT_FLOOR` once, at `agreement::FLOOR`, in each of its
+//!   views and its operand views. Control: another factor differs.
 //! - `preset_twins_non_finite_bits`: the bit test at the exponent's edges.
 //! - `preset_twins_sections`: `presets::section` cuts exactly between its markers, and names a missing or unclosed
 //!   section.
@@ -171,7 +172,6 @@ fn check_conditioning(pair: fn(f64, f64, f64) -> f64) {
         2f64.powi(44),
         "a zero separation at w = 1 is not 2⁴⁴"
     );
-    assert_eq!(coincident(0.0), 0.0, "w = 0 is not 0");
     let coincident = |x: f32| agreement::conditioning(m, [[x, 0.0], [x, 0.0], [-1.0, 0.0]]);
     for (x, want, why) in [
         (1.0f32, 43, "w = 2"),
@@ -186,6 +186,7 @@ fn check_conditioning(pair: fn(f64, f64, f64) -> f64) {
             "a zero separation at {why} is not 2^{want}"
         );
     }
+    assert_eq!(coincident(0.0), 0.0, "w = 0 is not 0");
     // Each pair counts, by its own masses and max-norms.
     let tri_m = [0.5f32, 0.3, 0.2];
     let n = |v: [f64; 2]| v[0].abs().max(v[1].abs());
@@ -229,34 +230,39 @@ negative_control!(
     check_conditioning(unfloored)
 );
 
-/// The agreement preset's WGSL compiles [`agreement::FACTOR`] (REQ-COL-060's factor, TASK-M2-29): the colour view and
-/// the words view each declare `AGREEMENT_FACTOR` once, as a literal whose value is `factor`, and use it in the bound.
+/// The agreement preset's WGSL compiles [`agreement::FACTOR`] (REQ-COL-060's factor, TASK-M2-29) and
+/// [`agreement::FLOOR`] (the separation floor's `δ`): the colour view, the words view and each operand view declare
+/// `AGREEMENT_FACTOR` and `AGREEMENT_FLOOR` once each, as literals whose values are `factor` and the floor, and use
+/// them in the bound and the floor.
 fn check_factor_wgsl(factor: f32) {
-    for preset in [agreement::preset(), agreement::words()] {
+    let mut presets = vec![agreement::preset(), agreement::words()];
+    presets.extend((0..agreement::OPERAND_GROUPS).map(agreement::operands));
+    for preset in presets {
         let view = preset.view();
-        let decls: Vec<&str> = view
-            .lines()
-            .filter_map(|l| l.strip_prefix("const AGREEMENT_FACTOR: f32 = "))
-            .collect();
-        assert_eq!(
-            decls.len(),
-            1,
-            "AGREEMENT_FACTOR declared {} times",
-            decls.len()
-        );
-        let literal = decls[0]
-            .strip_suffix(';')
-            .expect("the declaration ends in ';'");
-        assert_eq!(
-            literal.parse::<f32>().ok(),
-            Some(factor),
-            "the WGSL factor {literal} is not the compiled factor"
-        );
-        assert!(
-            literal.contains('.'),
-            "{literal} is not an f32 literal in WGSL"
-        );
+        for (name, want, what) in [
+            ("AGREEMENT_FACTOR", factor, "factor"),
+            ("AGREEMENT_FLOOR", agreement::FLOOR, "floor"),
+        ] {
+            let decls: Vec<&str> = view
+                .lines()
+                .filter_map(|l| l.strip_prefix(&format!("const {name}: f32 = ")))
+                .collect();
+            assert_eq!(decls.len(), 1, "{name} declared {} times", decls.len());
+            let literal = decls[0]
+                .strip_suffix(';')
+                .expect("the declaration ends in ';'");
+            assert_eq!(
+                literal.parse::<f32>().ok(),
+                Some(want),
+                "the WGSL {what} {literal} is not the compiled {what}"
+            );
+            assert!(
+                literal.contains('.'),
+                "{literal} is not an f32 literal in WGSL"
+            );
+        }
         assert!(view.contains("let bound = AGREEMENT_FACTOR * AGREEMENT_EPS"));
+        assert!(view.contains("AGREEMENT_EPS * max(w, AGREEMENT_FLOOR)"));
     }
 }
 

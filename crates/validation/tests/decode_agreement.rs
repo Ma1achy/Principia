@@ -1,12 +1,14 @@
 //! The `decode-agreement` gate's judgement off the GPU (TASK-M2-25, TASK-M2-29; REQ-COL-006, REQ-COL-060): a sample's
 //! tally at the tolerance's boundary in either form, the hatch's placement, the measurement and its report lines, the
-//! collision windows' runs, and the refusals. `cargo xtask gate decode-agreement` runs it on the GPU.
+//! collision windows' runs, the refusals, and the operands the hatch is judged on (the payload's `K₀` and `V₀` and the
+//! fragment decode's own `K`, `V`, `m` and `r`, never the decode stage's). `cargo xtask gate decode-agreement` runs it
+//! on the GPU.
 
 use render::presets::agreement::FACTOR;
 use render::presets::DecodeChart;
 use validation::decode_agreement::{
-    chart_named, check, quantile, runs, store_exact, DecodeAgreementGate, Form, Input, Run, Sample,
-    Stored, Tally, Window,
+    chart_named, check, operands_finite, quantile, runs, store_exact, DecodeAgreementGate, Form,
+    Input, Run, Sample, Stored, Tally, Window,
 };
 use validation::gate::GateConfig;
 use validation::negative_control;
@@ -849,4 +851,74 @@ negative_control!(
     "a store read under another name must be refused",
     expected = "the f64 store is not read by its name",
     check_fields("F64")
+);
+
+/// The hatch's operands ([`operands_finite`]): the payload's `K₀` and `V₀` and every word of the fragment decode's `K`,
+/// `V`, `m` and `r`. Each made `+∞`, `−∞` or NaN in turn reads non-finite; each at a finite edge (the largest finite
+/// value either sign, the least normal, the least subnormal, `−0`) reads finite. `poison` is the value written as the
+/// non-finite one (the control writes a finite one).
+fn check_operands(poison: [f32; 3]) {
+    let stored = [0.25f32, -0.5];
+    let fragment: [u32; 12] = [
+        0.25f32, -0.5, 0.5, 0.3, 0.2, 0.9, 0.1, -0.4, 0.7, -0.5, -0.8, 0.0,
+    ]
+    .map(f32::to_bits);
+    assert!(
+        operands_finite(stored, &fragment),
+        "finite operands read non-finite"
+    );
+    for bad in poison {
+        for k in 0..2 {
+            let mut s = stored;
+            s[k] = bad;
+            assert!(
+                !operands_finite(s, &fragment),
+                "a stored operand {k} of {bad} counted finite"
+            );
+        }
+        for k in 0..12 {
+            let mut f = fragment;
+            f[k] = bad.to_bits();
+            assert!(
+                !operands_finite(stored, &f),
+                "the fragment's word {k} of {bad} counted finite"
+            );
+        }
+    }
+    for edge in [
+        f32::MAX,
+        -f32::MAX,
+        f32::MIN_POSITIVE,
+        f32::from_bits(1),
+        -0.0,
+    ] {
+        for k in 0..2 {
+            let mut s = stored;
+            s[k] = edge;
+            assert!(
+                operands_finite(s, &fragment),
+                "a stored {edge} read non-finite"
+            );
+        }
+        for k in 0..12 {
+            let mut f = fragment;
+            f[k] = edge.to_bits();
+            assert!(
+                operands_finite(stored, &f),
+                "the fragment's word {k} of {edge} read non-finite"
+            );
+        }
+    }
+}
+
+#[test]
+fn decode_agreement_operands_finite() {
+    check_operands([f32::INFINITY, f32::NEG_INFINITY, f32::NAN]);
+}
+
+negative_control!(
+    decode_agreement_operands_finite,
+    "a non-finite operand counted finite must be caught",
+    expected = "counted finite",
+    check_operands([f32::MAX, f32::INFINITY, f32::NAN])
 );

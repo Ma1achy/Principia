@@ -15,8 +15,10 @@
 //! **The verdict.** A sample *agrees* when its ratio is at most 1: `|E − E₀| ≤ FACTOR·eps·S`, `S` colour_composition
 //! §6's conditioning-aware scale, `max(|K₀|, 1) + max(|V₀|, 1)` plus the conditioning of the fragment decode's own
 //! `(m, r)` (R-72; RQ-623), as the preset computes it. The input passes when every valid sample agrees and the preset's
-//! hatch falls exactly where an operand is non-finite: the payload's `K₀` or `V₀`, or the fragment's own `K`, `V`, `m`
-//! or `r`, which are the decode stage's at the sample's own point (R-436). A hatch over finite operands, or a ratio
+//! hatch falls exactly where an operand is non-finite: the payload's `K₀` or `V₀`, or the fragment decode's own `K`,
+//! `V`, `m` or `r`, the operands the preset tested, read back from the same decode by the operand view
+//! (`render::presets::agreement::operands`; [`operands_finite`]), never the decode stage's in their place, which on a
+//! fast-math backend need not round alike beside a pole (R-436). A hatch over finite operands, or a ratio
 //! over finite ones where an operand is non-finite, fails it; so does a run with no valid sample. An input with
 //! `"form": "per_operand"` is judged instead by the per-operand scale alone, `max(|K₀|, 1) + max(|V₀|, 1)`, formed from
 //! the same draw's `E` and `E₀` words and the stored `K₀` and `V₀`: the form before the conditioning term, which the
@@ -46,7 +48,7 @@
 
 use serde::Deserialize;
 
-use render::presets::agreement::FACTOR;
+use render::presets::agreement::{FACTOR, OPERAND_WORDS};
 use render::presets::{non_finite_bits, DecodeChart};
 
 use crate::decode_f32_eps::{kernel_wgsl, DecodeF32EpsGate};
@@ -256,7 +258,7 @@ pub struct Sample {
     /// Whether the preset found every operand finite.
     pub valid: bool,
     /// Whether every operand is finite by its bits: the payload's `K₀` and `V₀`, and the fragment decode's `K`, `V`, `m`
-    /// and `r`.
+    /// and `r` ([`operands_finite`]).
     pub finite: bool,
     /// The measured difference `|E − E₀|`, at f64 from the preset's own `E` and `E₀` words: the fragment's f32 sums.
     pub diff: f64,
@@ -473,6 +475,13 @@ pub fn store_exact(scene: &mut Scene) -> Result<(), String> {
     Ok(())
 }
 
+/// Whether every operand the preset tests is finite by its bits: the payload's stored `K₀` and `V₀`, and the fragment
+/// decode's own `K`, `V`, `m` and `r`, as the operand view writes them (`render::presets::agreement::operands`).
+pub fn operands_finite(stored: [f32; 2], fragment: &[u32; OPERAND_WORDS]) -> bool {
+    !stored.into_iter().any(non_finite_bits)
+        && !fragment.iter().any(|w| non_finite_bits(f32::from_bits(*w)))
+}
+
 /// Draws `run`'s scene for `input` on `h`, the kernel's WGSL `wgsl`: each sample as the preset drew it.
 pub fn measure(
     h: &GpuHarness,
@@ -481,7 +490,7 @@ pub fn measure(
     input: &Input,
 ) -> Result<Vec<Sample>, String> {
     let mut scene = run.scene(input.side)?;
-    let outs = scene.stage_into(h.device(), h.queue(), wgsl, input.shift)?;
+    scene.stage_into(h.device(), h.queue(), wgsl, input.shift)?;
     let grid = scene.context.grid;
     if input.stored == Stored::F64 {
         store_exact(&mut scene)?;
@@ -490,21 +499,14 @@ pub fn measure(
         scene.set.ic(grid.sample_index(p, 0, 0)).V_0 = f32::NEG_INFINITY;
     }
     let words = scene.agreement(h.device(), h.queue())?;
-    let finite = |xs: &[f32]| !xs.iter().any(|x| non_finite_bits(*x));
+    let operands = scene.agreement_operands(h.device(), h.queue())?;
     Ok((0u32..)
-        .zip(&outs)
         .zip(&words)
-        .map(|((q, own), w)| {
+        .zip(&operands)
+        .map(|((q, w), own)| {
             let stored = scene.set.ic(grid.sample_index(q, 0, 0));
-            let ic = own.ic;
-            let ok = finite(&[
-                stored.K_0,
-                stored.V_0,
-                own.descriptor.K_0,
-                own.descriptor.V_0,
-            ]) && finite(&ic.m)
-                && finite(ic.r.as_flattened());
-            Sample::from_words(*w, [stored.K_0, stored.V_0], ok)
+            let stored = [stored.K_0, stored.V_0];
+            Sample::from_words(*w, stored, operands_finite(stored, own))
         })
         .collect())
 }
