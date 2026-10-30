@@ -922,6 +922,92 @@ negative_control!(
     }
 );
 
+/// The exponential map at scale π about `[0.5, 0.5]`, whose circle `r = π` meets the square's edges, under `tilt`.
+fn wide_cap(tilt: &TiltSpec) -> Tilted<ShapeSphere<f64>, f64> {
+    let mut wide = sphere(ShapeMap::Exponential);
+    wide.scale = std::f64::consts::PI;
+    Tilted::new(wide, Tilt::new(tilt, [0.5, 0.5], SPAN)).unwrap()
+}
+
+/// A tilted view's pixels on `r = π` count once per distinct hidden offset, and once together where `N_a = N_b = 0`
+/// (chart_reference §3.3, REQ-CHART-090). `shared` counts them with one boolean across the view (the control).
+fn check_antipode_by_offset(shared: bool) {
+    let count = |view: &Tilted<ShapeSphere<f64>, f64>, points: &[[f64; 2]]| {
+        if shared {
+            let cell = |p: &[f64; 2]| view.pixel(p[0], p[1]);
+            let systems = points
+                .iter()
+                .filter(|p| cell(p) == Some(PixelCount::System));
+            let circle = points.iter().any(|p| cell(p) == Some(PixelCount::Antipode));
+            systems.count() as u64 + u64::from(circle)
+        } else {
+            view.counted_total(points.iter().copied())
+        }
+    };
+    // N_a ≠ 0: the same shape at d = −0.5 and +0.5, two systems whose masses differ.
+    let view = wide_cap(&spec(90.0, 0.0, TiltMap::Sheet, 6, 6));
+    let (near, far) = ([0.25, 1.0], [0.75, 1.0]);
+    for [u, v] in [near, far] {
+        assert_eq!(view.pixel(u, v), Some(PixelCount::Antipode));
+    }
+    let shifts = (view.at(0.25, 1.0).1.unwrap(), view.at(0.75, 1.0).1.unwrap());
+    assert_eq!((shifts.0.dx, shifts.1.dx), (-0.5, 0.5));
+    assert_eq!(count(&view, &[near, far]), 2, "two systems on the circle");
+    // A pixel counted again, later in the walk and with another between, is still the one system.
+    assert_eq!(count(&view, &[near, far, near, far, near]), 2);
+    // A chord along the level line of d, its two ends one system.
+    assert_eq!(count(&view, &[near, [0.25, 0.0]]), 1, "a chord at one d");
+    assert_eq!(count(&view, &[near, [0.25, 0.0], far]), 2);
+    // A system pixel at the same d is its own, and hides no pixel on the circle.
+    assert_eq!(view.pixel(0.25, 0.5), Some(PixelCount::System));
+    assert_eq!(count(&view, &[[0.25, 0.5], near]), 2);
+    // The domain's end at the same d is no system and hides none either.
+    assert_eq!(view.pixel(0.25, 1.5), Some(PixelCount::DomainEnd));
+    assert_eq!(count(&view, &[[0.25, 1.5], near]), 1);
+    // A chord at d = 0, its ends computed as −0 and +0: one value, one system.
+    let view = wide_cap(&spec(-90.0, 0.0, TiltMap::Sheet, 6, 6));
+    let zeros = [[0.5, 1.0], [0.5, 0.0]];
+    let lo: Shift<f64> = view.at(0.5, 1.0).1.unwrap();
+    let hi: Shift<f64> = view.at(0.5, 0.0).1.unwrap();
+    assert_ne!(lo.dx.to_bits(), hi.dx.to_bits(), "the signs of 0");
+    assert_eq!(count(&view, &zeros), 1, "−0 and +0 are one d");
+    // Two targets: the second offset alone tells these apart.
+    let view = wide_cap(&spec(0.0, 90.0, TiltMap::Sheet, 2, 3));
+    let pair = [[1.0, 0.25], [1.0, 0.75]];
+    let (lo, hi) = (view.at(1.0, 0.25).1.unwrap(), view.at(1.0, 0.75).1.unwrap());
+    assert_eq!(lo.dx, hi.dx);
+    assert_ne!(lo.dy, hi.dy);
+    assert_eq!(count(&view, &pair), 2, "d_Y differs");
+    // N_a = N_b = 0, decided on the stored angles: sin 180° leaves different computed d at the circle's two sides,
+    // and they are one system.
+    let view = wide_cap(&spec(180.0, 0.0, TiltMap::Sheet, 6, 6));
+    assert_eq!(view.tilt().normal_zero, [true, true]);
+    let sides = [[0.0, 0.5], [1.0, 0.5], [0.5, 1.0]];
+    for [u, v] in sides {
+        assert_eq!(view.pixel(u, v), Some(PixelCount::Antipode));
+    }
+    let (lo, hi) = (view.at(0.0, 0.5).1.unwrap(), view.at(1.0, 0.5).1.unwrap());
+    assert_ne!(lo.dx, hi.dx, "rounding leaves a computed offset");
+    assert_eq!(count(&view, &sides), 1, "d unchanged");
+    // Untilted, the one system −n₀.
+    let view = wide_cap(&spec(0.0, 0.0, TiltMap::Sheet, 6, 6));
+    assert_eq!(count(&view, &sides), 1, "untilted, one system");
+}
+
+#[test]
+fn tilt_every_chart_antipode_counts_per_hidden_offset() {
+    check_antipode_by_offset(false);
+}
+
+negative_control!(
+    tilt_every_chart_antipode_shared_boolean,
+    "one boolean shared across the view counts two systems on r = π as one, so it must fail",
+    expected = "two systems on the circle",
+    {
+        check_antipode_by_offset(true);
+    }
+);
+
 /// The tilted spherical map's pixels past the square: a repeat is uncounted only where the map keeps `d` (R-554 L3;
 /// chart_decoder_contract § "Repeats and the canonical point"), else the view is affine there and each pixel is a
 /// system of its own, counted (R-512 F1, F3). Arms:

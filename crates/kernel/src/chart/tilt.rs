@@ -804,18 +804,40 @@ where
     }
 
     /// The counted total over the pixels at `points`: each system pixel once, no pixel folded onto another, a repeat
-    /// that keeps `d` not at all ([`Tilted::pixel`]), and the pixels on `r = π`, the one system `−n₀`, once together
-    /// (REQ-CHART-078).
-    pub fn counted_total<I: IntoIterator<Item = [f64; 2]>>(&self, points: I) -> u64 {
+    /// that keeps `d` not at all ([`Tilted::pixel`]), and the pixels on `r = π`, which share the shape `−n₀`, once per
+    /// distinct hidden offset (chart_reference §3.3; REQ-CHART-078, REQ-CHART-090). The kernel has no allocator, so each
+    /// such pixel is compared with the ones before it, which only those few pixels pay for.
+    pub fn counted_total<I>(&self, points: I) -> u64
+    where
+        I: IntoIterator<Item = [f64; 2]>,
+        I::IntoIter: Clone,
+    {
+        let points = points.into_iter();
         let mut total = 0u64;
-        let mut antipode = false;
-        for [u, v] in points {
+        for (seen, [u, v]) in points.clone().enumerate() {
             match self.pixel(u, v) {
                 Some(PixelCount::System) => total += 1,
-                Some(PixelCount::Antipode) => antipode = true,
+                Some(PixelCount::Antipode) => {
+                    let counted = points.clone().take(seen).any(|[p, q]| {
+                        self.pixel(p, q) == Some(PixelCount::Antipode)
+                            && self.same_offsets([u, v], [p, q])
+                    });
+                    total += u64::from(!counted);
+                }
                 Some(PixelCount::DomainEnd) | None => {}
             }
         }
-        total + u64::from(antipode)
+        total
+    }
+
+    /// Whether two pixels have the same hidden offsets: always where `N_a = N_b = 0`, decided exactly on the stored
+    /// angles, the view adding no `d` that varies, whatever rounding leaves in the computed offsets; elsewhere the
+    /// offsets as computed, compared exactly (chart_reference §3.3; REQ-CHART-090).
+    fn same_offsets(&self, [u, v]: [f64; 2], [p, q]: [f64; 2]) -> bool {
+        if self.tilt.normal_zero == [true, true] {
+            return true;
+        }
+        let (one, other) = (self.tilt.place(u, v).1, self.tilt.place(p, q).1);
+        one.dx == other.dx && one.dy == other.dy
     }
 }
