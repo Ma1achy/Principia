@@ -1,8 +1,9 @@
 //! The custom-stop ramp (colour_composition §9.4, "The custom-stop ramp"; R-72, R-546; REQ-COL-140): the gradient
 //! editor's "custom stops, cyclic" (render_gui_spec Part II §9), a `colour` node's ramp of `t ∈ [0, 1]` to a colour.
 //!
-//! - **Stops.** Two or more, each a position in `[0, 1]` and an OKLab colour `(L, a, b)`, `L` in `[0, 1]`, every
-//!   number finite; in order of position, never decreasing. Two stops may share a position, which draws a hard edge.
+//! - **Stops.** Two or more, each a position in `[0, 1]` and an OKLab colour `(L, a, b)`, `L` in `[0, 1]`, `a` and `b`
+//!   each in `[−1, 1]` (the register's `ramp_oklab_ab_max`, which keeps the linear sRGB finite), every number finite;
+//!   in order of position, never decreasing. Two stops may share a position, which draws a hard edge.
 //! - **Interpolation space.** OKLab: between two neighbouring stops each of `L`, `a` and `b` is interpolated linearly
 //!   in `t`; the result is converted to linear sRGB, the `vec3` a `colour` node outputs.
 //! - **Ends.** Not cyclic, `t` is clamped to `[0, 1]`: below the first stop's position the first stop's colour, at or
@@ -12,6 +13,7 @@
 //!
 //! It is a `colour` node's param, the node's `ramp` (`Node::ramp`), and serialises with the node in `RenderState`.
 
+use ledger::constants::RAMP_OKLAB_AB_MAX;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
@@ -70,7 +72,8 @@ impl std::error::Error for RampError {}
 
 impl Ramp {
     /// The ramp of `stops`, cyclic or not; refused unless there are two or more stops, each position finite and in
-    /// `[0, 1]`, never below the one before it, and each colour finite with `L` in `[0, 1]`.
+    /// `[0, 1]`, never below the one before it, and each colour finite with `L` in `[0, 1]` and `a` and `b` each in
+    /// `[−1, 1]` (`ramp_oklab_ab_max`).
     pub fn new(stops: Vec<Stop>, cyclic: bool) -> Result<Ramp, RampError> {
         if stops.len() < 2 {
             return Err(RampError(format!(
@@ -94,10 +97,13 @@ impl Ramp {
             }
             before = s.position;
             let [l, a, b] = s.oklab;
-            if !(0.0..=1.0).contains(&l) || !a.is_finite() || !b.is_finite() {
+            let ab = -RAMP_OKLAB_AB_MAX.number()..=RAMP_OKLAB_AB_MAX.number();
+            if !(0.0..=1.0).contains(&l) || !ab.contains(&a) || !ab.contains(&b) {
                 return Err(RampError(format!(
-                    "stop {k}'s colour {:?} is not an OKLab colour with L in [0, 1]",
-                    s.oklab
+                    "stop {k}'s colour {:?} is not an OKLab colour with L in [0, 1] and a, b in [{}, {}]",
+                    s.oklab,
+                    ab.start(),
+                    ab.end()
                 )));
             }
         }
@@ -161,9 +167,10 @@ impl Ramp {
     }
 }
 
-/// `a + u (b − a)`, per component.
+/// `a (1 − u) + b u`, per component: exact at both ends, `a` at `u = 0` and `b` at `u = 1`, and never a difference of
+/// the two colours, which could overflow where `a` and `b` were far apart.
 fn lerp(a: [f64; 3], b: [f64; 3], u: f64) -> [f64; 3] {
-    [0, 1, 2].map(|i| a[i] + u * (b[i] - a[i]))
+    [0, 1, 2].map(|i| a[i] * (1.0 - u) + b[i] * u)
 }
 
 /// OKLab to linear sRGB (dd_colouring §3.1; R-51): delegates to the render crate's one source of the conversion,

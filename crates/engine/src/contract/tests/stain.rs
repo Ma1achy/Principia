@@ -16,6 +16,10 @@
 //!   interpolated in OKLab, clamped, or wrapped where cyclic.
 //! - `stain_ramp_wrap_is_finite` (REQ-COL-140, a property): a cyclic ramp's wrap holds at stops on or a hair from the
 //!   ends, and every finite `t` on a valid cyclic ramp gives a finite colour within its stops' colours.
+//! - `stain_custom_stop_ramp_ab_bound` (REQ-COL-140): a stop's OKLab `a` and `b` at `±1` are accepted and give a
+//!   finite colour at every `t`; one ulp past, or the opposite-sign `f64::MAX` extremes, are refused.
+//! - `stain_custom_stop_ramp_endpoints_exact` (REQ-COL-140): the interpolation is exact at its ends, where the cyclic
+//!   wrap's `u` rounds to 1.
 //!
 //! The graphs, fields, ramps and `t` values are test inputs, not register constants (REQ-SYS-082).
 
@@ -1449,6 +1453,122 @@ validation::negative_control!(
         let (first, last) = (stops[0], stops[1]);
         let u = (0.0 + 1.0 - last.position) / (first.position + 1.0 - last.position);
         check_within(&stops, 0.0, Some(mix(last.oklab, first.oklab, u)))
+    }
+);
+
+// ----- stain_custom_stop_ramp_ab_bound (REQ-COL-140) -----
+
+/// Two stops at 0 and 1, the second's OKLab `a` and `b` as given.
+fn ab_stops(a: f64, b: f64) -> Vec<Stop> {
+    vec![
+        Stop {
+            position: 0.0,
+            oklab: [0.5, 0.0, 0.0],
+        },
+        Stop {
+            position: 1.0,
+            oklab: [0.5, a, b],
+        },
+    ]
+}
+
+/// Checks that a stop with OKLab `a` and `b` is refused, the reason naming the bound.
+fn check_ab_refused(a: f64, b: f64) {
+    let why = Ramp::new(ab_stops(a, b), false)
+        .err()
+        .unwrap_or_else(|| panic!("a stop with a = {a}, b = {b} was accepted"))
+        .to_string();
+    assert!(
+        why.contains("a, b in [-1, 1]"),
+        "the refusal of a = {a}, b = {b} reads {why:?}"
+    );
+}
+
+#[test]
+fn stain_custom_stop_ramp_ab_bound() {
+    let past = 1.0f64.next_up();
+    // At the bound, each sign of a and b, and opposite extremes on the two stops: accepted, and every t a finite
+    // linear sRGB colour, at the stops too, which an unbounded a or b overflowed to NaN.
+    for (a, b) in [(1.0, 1.0), (-1.0, -1.0), (1.0, -1.0), (-1.0, 1.0)] {
+        for cyclic in [false, true] {
+            let stops = vec![
+                Stop {
+                    position: 0.0,
+                    oklab: [0.0, -a, -b],
+                },
+                Stop {
+                    position: 0.5,
+                    oklab: [1.0, a, b],
+                },
+            ];
+            let r = Ramp::new(stops, cyclic).expect("a ramp at the bound");
+            for k in 0..=64 {
+                let t = f64::from(k) / 64.0;
+                let rgb = r.linear_at(t).expect("a finite t");
+                assert!(
+                    rgb.iter().all(|c| c.is_finite()),
+                    "at t = {t} the ramp at a = ±{a}, b = ±{b} is {rgb:?}"
+                );
+            }
+        }
+    }
+    // One ulp past the bound, on a or on b, either sign: refused.
+    for (a, b) in [(past, 0.0), (-past, 0.0), (0.0, past), (0.0, -past)] {
+        check_ab_refused(a, b);
+    }
+    // The finding's extremes, opposite-sign f64::MAX: refused.
+    check_ab_refused(-f64::MAX, f64::MAX);
+}
+
+validation::negative_control!(
+    stain_custom_stop_ramp_ab_bound,
+    "a stop at the bound, a = 1, is accepted, so the refusal check must fail on it",
+    expected = "was accepted",
+    check_ab_refused(1.0, 0.0)
+);
+
+// ----- stain_custom_stop_ramp_endpoints_exact (REQ-COL-140) -----
+
+/// Checks that `got`, a ramp's colour at `t`, is `want` exactly.
+fn check_exact(got: Option<[f64; 3]>, t: f64, want: [f64; 3]) {
+    let got = got.expect("a finite t");
+    assert!(
+        got == want,
+        "at t = {t} the ramp is {got:?}, not exactly {want:?}"
+    );
+}
+
+#[test]
+fn stain_custom_stop_ramp_endpoints_exact() {
+    // Stops at 0.5 and 0.75, cyclic: a hair below 0.5 the wrap's offset rounds to its whole span, u = 1, and the
+    // ramp is the first stop's colour exactly, which `last + 1·(first − last)` misses by an ulp (0.3 + (0.05 − 0.3)).
+    let (first, last) = ([0.2, 0.05, 0.15], [0.9, 0.3, -0.1]);
+    let r = Ramp::new(
+        vec![
+            Stop {
+                position: 0.5,
+                oklab: first,
+            },
+            Stop {
+                position: 0.75,
+                oklab: last,
+            },
+        ],
+        true,
+    )
+    .expect("a ramp");
+    let t = 0.5f64.next_down();
+    check_exact(r.oklab_at(t), t, first);
+    check_exact(r.oklab_at(0.75), 0.75, last);
+}
+
+validation::negative_control!(
+    stain_custom_stop_ramp_endpoints_exact,
+    "the difference form `last + u (first − last)` at u = 1 must fail the exactness check",
+    expected = "not exactly",
+    {
+        let (first, last) = ([0.2, 0.05, 0.15], [0.9, 0.3, -0.1]);
+        check_exact(Some(mix(last, first, 1.0)), 1.0, first)
     }
 );
 
