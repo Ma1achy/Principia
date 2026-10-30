@@ -28634,8 +28634,8 @@ His second addendum, the same day, verbatim:
   1. **Before merge, on the final head.** The orchestrator's merge script waits for a review from each bot on the exact
      SHA it merges; where a bot's last review is on an older head, it re-requests that bot first (`@codex review`,
      `@gemini-cli /review`, Copilot re-requested as a reviewer).
-  2. **After every substantive push:** new logic, physics or algebra; a fix responding to review findings; a rebase or
-     merge that changes code. A docs-only typo push needs none.
+  2. **After every substantive push:** new logic, physics or algebra; a fix responding to review findings, whatever it
+     changes; a rebase or merge that changes code. Only a docs-only typo push that answers no finding needs none.
   3. **Periodically on a long-running PR:** at least once per working day while it is open, and every few commits on
      a large one, so problems surface partway through rather than at the end.
 - **Under limits, pre-merge comes first, then post-push, then periodic.** Each bot has its own: Gemini's timeouts
@@ -28658,8 +28658,10 @@ His second addendum, the same day, verbatim:
 - **When a bot counts as unavailable:** no review on the requested head within 15 minutes of the request (R-635's
   bound, now per request, not per PR), an error, or a quota or rate-limit refusal. The PR then notes "no <bot> review
   on <sha>: <reason>", and the merge proceeds.
-- **"Substantive":** a push that changes code, or changes physics, algebra, a decision or a requirement in the docs
-  or the plan (a rulings port included). A push that only fixes typos, wording or formatting is not.
+- **"Substantive":** read as the owner's item 2 lists it, and no narrower: new logic, physics or algebra, in the code,
+  the docs or the plan (a decision, a requirement or a rulings port included); any fix responding to review findings,
+  whatever it changes, a wording fix included; and a rebase or merge that changes code. Only a docs-only typo push that
+  answers no review finding is exempt; every other push counts, a code-formatting push included.
 - **"Large" and "every few commits":** a PR whose diff exceeds `plan/WORKFLOW.md`'s ~500-line planning guide; on one,
   a fresh review is requested at least every third push, whatever the pushes are.
 - **"Working day":** each day on which the orchestrator works the build loop while the PR is open.
