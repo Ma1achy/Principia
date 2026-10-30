@@ -6,10 +6,6 @@
 <img src="docs/readme/hero.jpg" alt="A slice of the planar three-body problem, drawn in pencil: dark rippled bands on the left break into pale curling filaments that sweep across the page." width="100%">
 </p>
 
-*Where the future frays at the edges, outcomes braid and unbraid at the threshold where almost becomes inevitable.*
-
----
-
 You are looking through a slice of every possible beginning of the three-body problem. Each point is a complete starting configuration (three masses, their positions and velocities), followed forward until its fate is known. The colour records that fate.
 
 The slice is a flat plane through an eight-dimensional space of starting conditions. It can be moved, rotated and tilted to look along any direction. Where two fates meet, the boundary is not a line: zoom in and it opens into finer structure without end.
