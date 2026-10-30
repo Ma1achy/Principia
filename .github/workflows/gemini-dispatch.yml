@@ -270,11 +270,25 @@ jobs:
           HEAD_SHA: ${{ steps.prep.outputs.head_sha }}
         # The model's reply is untrusted data: parsed as JSON, never run. The workflow fixes the event (COMMENT, never
         # APPROVE or REQUEST_CHANGES) and the body's first line, so no review starts with `VERDICT:`. If GitHub
-        # rejects an inline comment's line (422), the review is posted again with every finding in its body.
+        # rejects an inline comment's line (422), the review is posted again with every finding in its body; any other
+        # failure is logged and nothing more is posted, so there is never a second review. Every `@` in the model's
+        # text gets a zero-width joiner after it, so no text from the model (or planted in the PR) mentions anyone.
         run: |-
           set -euo pipefail
           cat > "${RUNNER_TEMP}/build_review.py" <<'PY'
-          import json, sys
+          import json, re, sys
+
+
+          def defuse(text):
+              """No @mention: a zero-width joiner after every `@` the model wrote."""
+              return text.replace("@", "@\u200d")
+
+
+          def fenced(text):
+              """A tilde fence longer than any run of backticks or tildes in the text, so the text can't close it."""
+              longest = max((len(m) for m in re.findall(r"`+|~+", text)), default=0)
+              fence = "~" * max(4, longest + 1)
+              return f"{fence}text\n{text}\n{fence}"
 
           out_path, sha, inline_path, flat_path = sys.argv[1:5]
           with open(out_path, encoding="utf-8") as fh:
@@ -292,13 +306,13 @@ jobs:
                   reply = None
           comments, loose, counts = [], [], {"P0": 0, "P1": 0}
           if isinstance(reply, dict):
-              summary = str(reply.get("summary") or "").strip()
+              summary = defuse(str(reply.get("summary") or "").strip())
               findings = reply.get("findings")
               for f in findings if isinstance(findings, list) else []:
                   if not isinstance(f, dict):
                       continue
                   sev = str(f.get("severity") or "").strip().upper()[:2]
-                  text = str(f.get("body") or "").strip()
+                  text = defuse(str(f.get("body") or "").strip())
                   if sev not in sev_name or not text:
                       continue
                   counts[sev] += 1
@@ -314,12 +328,12 @@ jobs:
                        else f"Findings: {counts['P0']} P0 / CRITICAL, {counts['P1']} P1 / HIGH.")
               parts = [head, summary, tally] + (["Findings without a diff line:", "\n".join(loose)] if loose else [])
           else:
-              # Fenced, so a mention or markup in it does nothing.
+              # Fenced, so markup in it does nothing; defused as well.
               parts = [head, "The model's reply was not the JSON asked for; it is quoted below as given.",
-                       "~~~~text\n" + raw[:50000].replace("~~~~", "~~~") + "\n~~~~"]
+                       fenced(defuse(raw[:50000]))]
           comments = comments[:50]
           body = "\n\n".join(p for p in parts if p)[:60000]
-          flat_lines = [f"- `{c['path']}:{c['line']}`: {c['body']}" for c in comments]
+          flat_lines = [f"- `{defuse(c['path'])}:{c['line']}`: {c['body']}" for c in comments]
           flat_body = (body + ("\n\n" + "\n".join(flat_lines) if flat_lines else ""))[:65000]
           base = {"commit_id": sha, "event": "COMMENT"}
           with open(inline_path, "w", encoding="utf-8") as fh:
@@ -332,11 +346,17 @@ jobs:
           python3 -I "${RUNNER_TEMP}/build_review.py" gemini-artifacts/stdout.log "${HEAD_SHA}" \
             "${RUNNER_TEMP}/review-inline.json" "${RUNNER_TEMP}/review-flat.json"
           url='repos/'"${REPO}"'/pulls/'"${PR_NUMBER}"'/reviews'
+          err="${RUNNER_TEMP}/post-error.txt"
           if gh api --method POST "${url}" --input "${RUNNER_TEMP}/review-inline.json" \
-               --jq '"Posted review \(.id) by \(.user.login): \(.html_url)"'; then
+               --jq '"Posted review \(.id) by \(.user.login): \(.html_url)"' 2> "${err}"; then
             exit 0
           fi
-          echo "::warning title=Gemini review::GitHub refused the review with inline comments; posting every finding in the review body instead."
+          cat "${err}" >&2
+          if ! grep -q 'HTTP 422' "${err}"; then
+            echo "::error title=Gemini review::Posting the review failed, not with a 422; no second review is posted."
+            exit 1
+          fi
+          echo "::warning title=Gemini review::GitHub refused the review with inline comments (422); posting every finding in the review body instead."
           gh api --method POST "${url}" --input "${RUNNER_TEMP}/review-flat.json" \
             --jq '"Posted review \(.id) by \(.user.login): \(.html_url)"'
 
