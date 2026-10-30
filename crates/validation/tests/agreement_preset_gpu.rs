@@ -259,7 +259,9 @@ negative_control!(
 type Case = ([f32; 3], [[f32; 2]; 3]);
 
 /// The conditioning cases: ordinary configurations, a zero separation (the pole), a pair under the floor, positions all
-/// at the origin, at `2⁻⁸` and at `2⁶⁰` (under colour_composition §6's `2⁶²`), a zero mass, and a non-finite mass or position in each place.
+/// at the origin, at `2⁻⁸` and at `2⁶⁰` (under colour_composition §6's `2⁶²`), a pair at `w < 1` between `eps·w` and
+/// `eps` apart (where the floor is `eps·w`, not `eps`), positions under the floor's `δ`, a zero mass, and a non-finite
+/// mass or position in each place.
 fn conditioning_cases() -> Vec<(Case, bool)> {
     let third = 1.0f32 / 3.0;
     let tri = [[0.9f32, 0.1], [-0.4, 0.7], [-0.5, -0.8]];
@@ -306,6 +308,21 @@ fn conditioning_cases() -> Vec<(Case, bool)> {
         for k in 0..3 {
             let mut m = [third; 3];
             m[k] = bad;
+        (
+            (
+                [third; 3],
+                [
+                    [0.003_906_25, 0.0],
+                    [0.003_906_25, 4e-9],
+                    [-0.007_812_5, 0.0],
+                ],
+            ),
+            true,
+        ),
+        (
+            ([third; 3], [[1e-12, 0.0], [1e-12, 1e-13], [-2e-12, 0.0]]),
+            true,
+        ),
             out.push(((m, tri), false));
         }
         for k in 0..6 {

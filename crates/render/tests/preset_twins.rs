@@ -5,8 +5,10 @@
 //!   each `max` at its edge, `C` the conditioning term; and `agreement::colour` is the hatch for `None`, green to a
 //!   ratio of exactly 1, red past it, saturating at `2¹⁶`.
 //! - `preset_twins_agreement_conditioning`: `agreement::conditioning` (colour_composition §6), each pair's
-//!   `(mᵢmⱼ/ŝ)·(w/ŝ)` at the separation's floor `eps·max(w, 1)` from either side and at `w = 1`, where a zero
-//!   separation peaks at `2⁴⁴`, and its pairs and max-norms. Control: a twin that drops the floor.
+//!   `(mᵢmⱼ/ŝ)·(w/ŝ)` at the separation's floor `eps·max(w, δ)`, `δ = 2⁻³²`, from either side at `w = 1` and at
+//!   `w = 2⁻⁶` (where the floor is `eps·w`, under `eps`), a zero separation at `w` from 2 down past `δ` (`2⁴³` at
+//!   `w = 2`, `2⁴⁴` at 1, peaking at `2⁷⁶` at `w = δ`), and its pairs and max-norms. Control: a twin that drops the
+//!   floor.
 //! - `preset_twins_agreement_factor_wgsl`: the agreement preset's WGSL declares `AGREEMENT_FACTOR` once, at
 //!   `agreement::FACTOR` (REQ-COL-060, TASK-M2-29), in both its views. Control: another factor differs.
 //! - `preset_twins_non_finite_bits`: the bit test at the exponent's edges.
@@ -135,24 +137,55 @@ fn check_conditioning(pair: fn(f64, f64, f64) -> f64) {
             "{why}: the term {got} is not {want}"
         );
     }
-    // A zero separation peaks at w = 1, 2⁴⁴, and falls either side of it: max(w, 1) at its edge.
+    // w = 2⁻⁶, the floor eps·w = 2⁻²⁹, under eps: the separation under it, at it, over it and still under eps.
+    let small = |dy: f32| {
+        agreement::conditioning(m, [[2f32.powi(-7), 0.0], [2f32.powi(-7), dy], [-1.0, 0.0]])
+    };
+    for (dy, why) in [
+        (2f32.powi(-30), "a separation under eps·w"),
+        (2f32.powi(-29), "a separation at eps·w"),
+        (2f32.powi(-28), "a separation over eps·w and under eps"),
+        (2f32.powi(-12), "an ordinary separation"),
+    ] {
+        let got = small(dy);
+        let want = pair(0.25, 2f64.powi(-6), f64::from(dy));
+        assert!(
+            (got - want).abs() <= 1e-12 * want,
+            "{why} at w = 2⁻⁶: the term {got} is not {want}"
+        );
+    }
+    assert_eq!(
+        small(2f32.powi(-28)),
+        2f64.powi(48),
+        "a separation of 2⁻²⁸ at w = 2⁻⁶ is floored above eps·w"
+    );
+    // A zero separation is mm/(eps²·max(w, δ)): 2⁴⁴ at w = 1, rising as w falls to its peak 2⁷⁶ at w = δ = 2⁻³², and
+    // falling under it: max(w, δ) at its edge.
+    assert_eq!(
+        f64::from(agreement::FLOOR),
+        2f64.powi(-32),
+        "the floor's δ is not 2⁻³²"
+    );
     assert_eq!(
         at([0.5, 0.0]),
         2f64.powi(44),
         "a zero separation at w = 1 is not 2⁴⁴"
     );
-    let coincident = |x: f32| agreement::conditioning(m, [[x, 0.0], [x, 0.0], [-1.0, 0.0]]);
-    assert_eq!(
-        coincident(1.0),
-        2f64.powi(43),
-        "w = 2 does not floor at 2·eps"
-    );
-    assert_eq!(
-        coincident(0.25),
-        2f64.powi(43),
-        "w = 1/2 does not floor at eps"
-    );
     assert_eq!(coincident(0.0), 0.0, "w = 0 is not 0");
+    let coincident = |x: f32| agreement::conditioning(m, [[x, 0.0], [x, 0.0], [-1.0, 0.0]]);
+    for (x, want, why) in [
+        (1.0f32, 43, "w = 2"),
+        (0.25, 45, "w = 1/2, under eps's floor,"),
+        (2f32.powi(-32), 75, "w = 2⁻³¹"),
+        (2f32.powi(-33), 76, "w = δ"),
+        (2f32.powi(-34), 75, "w = 2⁻³³, under δ,"),
+    ] {
+        assert_eq!(
+            coincident(x),
+            2f64.powi(want),
+            "a zero separation at {why} is not 2^{want}"
+        );
+    }
     // Each pair counts, by its own masses and max-norms.
     let tri_m = [0.5f32, 0.3, 0.2];
     let n = |v: [f64; 2]| v[0].abs().max(v[1].abs());
@@ -172,9 +205,9 @@ fn check_conditioning(pair: fn(f64, f64, f64) -> f64) {
     );
 }
 
-/// The expected pair term: `(mm/ŝ)·(w/ŝ)`, `ŝ = max(d, eps·max(w, 1))`.
+/// The expected pair term: `(mm/ŝ)·(w/ŝ)`, `ŝ = max(d, eps·max(w, 2⁻³²))`.
 fn floored(mm: f64, w: f64, d: f64) -> f64 {
-    let s = d.max(EPS * w.max(1.0));
+    let s = d.max(EPS * w.max(2f64.powi(-32)));
     (mm / s) * (w / s)
 }
 

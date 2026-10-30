@@ -18,15 +18,22 @@
 //! R-72). The fragment may compile with fast-math and the kernel's decode stage doesn't (R-297), so the agreement
 //! compares within REQ-COL-060's calibrated tolerance, [`FACTOR`] f32 `eps` of the conditioning-aware scale:
 //! `|E − E₀| ≤ FACTOR·eps·(max(|K₀|, 1) + max(|V₀|, 1) + C)`, `C` = [`conditioning`] of the fragment decode's own
-//! `(m, r)`, `Σ_{i<j} mᵢmⱼ·wᵢⱼ/ŝᵢⱼ²` with `wᵢⱼ = ‖rᵢ‖∞ + ‖rⱼ‖∞` and `ŝᵢⱼ = max(‖rᵢ − rⱼ‖∞, eps·max(wᵢⱼ, 1))`: the
-//! conditioning of `V` at f32, which beside a binary collision grows as `wᵢⱼ/rᵢⱼ` up to `1/eps` (RQ-623, option (b),
-//! decided by the orchestrator per R-369). Each pair's term is at most `(1/(4·eps))·(1/eps) = 2⁴⁴` for masses on
-//! `[0, 1]` with `M = 1`, so `C` is finite at every pixel, the collision pole included, with no division by zero
-//! (`ŝᵢⱼ ≥ eps`) and, for positions below `2⁶²`, no intermediate overflowing or vanishing under any association a
-//! fast-math compiler picks (it may form `mᵢmⱼ·wᵢⱼ/ŝᵢⱼ²`; R-436). `m` and `r` are tested on their bits with the other
-//! operands, and a non-finite one draws the hatch. [`ratio`] is `|E − E₀|` over that bound: at most 1 is agreement. TASK-M2-29 measured the fragment-against-compute differences on Metal and lavapipe
-//! (the `decode-agreement` gate's `survey` and `collision` inputs) and proposed the factor; it is provisional until the
-//! human confirms it at the M2 gate (R-71, R-182). REQ-DEC-043's factor stays the tolerance of the fragment decode
+//! `(m, r)`, `Σ_{i<j} mᵢmⱼ·wᵢⱼ/ŝᵢⱼ²` with `wᵢⱼ = ‖rᵢ‖∞ + ‖rⱼ‖∞` and `ŝᵢⱼ = max(‖rᵢ − rⱼ‖∞, eps·max(wᵢⱼ, δ))`,
+//! `δ` = [`FLOOR`] `= 2⁻³²`: the conditioning of `V` at f32, which beside a binary collision grows as `wᵢⱼ/rᵢⱼ` up to
+//! `1/eps` (RQ-623, option (b), decided by the orchestrator per R-369). The floor is the separation's own rounding,
+//! `eps·wᵢⱼ`, at every size of `wᵢⱼ`; `δ` only keeps it positive where both positions are 0, and no decoded system
+//! reaches it (`wᵢⱼ ≥ √m_k/2 ≥ 2⁻²²` under `I = 1` at the masses' floors). Each pair's term is at most
+//! `(1/(4·eps·δ))·(1/eps) = 2⁷⁶` for masses on `[0, 1]` with `M = 1`, so `C` is finite at every pixel, the collision
+//! pole included, with no division by zero (`ŝᵢⱼ ≥ eps·δ = 2⁻⁵⁵`) and, for positions below `2⁶²`, no intermediate
+//! overflowing under any association a fast-math compiler picks (it may form `mᵢmⱼ·wᵢⱼ/ŝᵢⱼ²`; R-436). The positions
+//! are below `2⁶²` for every mass a decode reaches: `‖rᵢ‖ ≤ 1/√mᵢ` under `I = 1`, and the mass links floor every mass
+//! far above `2⁻¹²⁴` (dd_decoder §3.1; `stick_breaking`'s `ε_μ = 10⁻⁶` gives at least `ε_μ²/4`, `softmax_tanh` at
+//! `μ_max` up to 10 about `2×10⁻⁹`, the ternary plot `ε_m = 10⁻⁴`), so `‖rᵢ‖ < 2²¹`. The positions are finite where the
+//! masses are finite and nonzero; a mass rounded to 0 would give a non-finite `r`, and `m` and `r` are tested on their
+//! bits with the other operands, so a non-finite one draws the hatch (colour_composition §6). [`ratio`] is `|E − E₀|`
+//! over that bound: at most 1 is agreement. TASK-M2-29 measured the fragment-against-compute differences on Metal and
+//! lavapipe (the `decode-agreement` gate's `survey` and `collision` inputs) and proposed the factor; it is provisional
+//! until the human confirms it at the M2 gate (R-71, R-182). REQ-DEC-043's factor stays the tolerance of the fragment decode
 //! against the f64 `decodeOnly()`, not this one.
 //!
 //! **Its colour.** Agreement, ratio `ρ ≤ 1`, is green, `(0, 0.15 + 0.35ρ, 0)`, brighter as it nears the bound;
@@ -45,14 +52,22 @@ pub const NAME: &str = "Agreement |E(fragment-decode) − E₀|";
 /// up to 512² per chart, and its collision windows, on Metal and lavapipe (19.5 on Metal, `latent` at 512²).
 pub const FACTOR: f32 = 64.0;
 
-/// The factor's WGSL declaration, [`FACTOR`] written as a WGSL literal, so the shader compiles the one value.
+/// The factor's and the floor's WGSL declarations, [`FACTOR`] and [`FLOOR`] written as WGSL literals, so the shader
+/// compiles the one value of each.
 fn factor_wgsl() -> String {
     format!(
         "
 // REQ-COL-060's factor in f32 eps (render::presets::agreement::FACTOR; provisional, R-71).
-const AGREEMENT_FACTOR: f32 = {FACTOR:?};"
+const AGREEMENT_FACTOR: f32 = {FACTOR:?};
+
+// The separation floor's delta, 2^-32 (render::presets::agreement::FLOOR).
+const AGREEMENT_FLOOR: f32 = {FLOOR:?};"
     )
 }
+
+/// The separation floor's `δ`, `2⁻³²` (colour_composition §6): `ŝᵢⱼ ≥ eps·max(wᵢⱼ, δ)`, positive where both positions
+/// are 0 and below every `wᵢⱼ` a decoded system reaches.
+pub const FLOOR: f32 = 1.0 / 4_294_967_296.0;
 
 /// The comparison's WGSL after the factor: `agreement_of(d, k_0, v_0)`, the fragment decode `d` against the payload's
 /// `K₀` and `V₀` within colour_composition §6's conditioning-aware scale of `d`'s own `(m, r)`, which the view draws.
@@ -73,11 +88,12 @@ fn agreement_norm(v: vec2<f32>) -> f32 {
     return max(abs(v.x), abs(v.y));
 }
 
-// One pair's conditioning term, (mi·mj/s)·(w/s), w = |ri|∞ + |rj|∞, s = max(|ri − rj|∞, eps·max(w, 1)): each factor
-// bounded, by 1/(4·eps) and 1/eps, s at least eps, so the term is finite in any association (colour_composition §6).
+// One pair's conditioning term, (mi·mj/s)·(w/s), w = |ri|∞ + |rj|∞, s = max(|ri − rj|∞, eps·max(w, delta)): each
+// factor bounded, by 1/(4·eps·delta) and 1/eps, s at least eps·delta, so the term is finite in any association
+// (colour_composition §6).
 fn agreement_pair(mi: f32, mj: f32, ri: vec2<f32>, rj: vec2<f32>) -> f32 {
     let w = agreement_norm(ri) + agreement_norm(rj);
-    let s = max(agreement_norm(ri - rj), AGREEMENT_EPS * max(w, 1.0));
+    let s = max(agreement_norm(ri - rj), AGREEMENT_EPS * max(w, AGREEMENT_FLOOR));
     return (mi * mj / s) * (w / s);
 }
 
@@ -199,14 +215,14 @@ fn norm(v: [f64; 2]) -> f64 {
 }
 
 /// The CPU twin of `agreement_conditioning`, at f64 from the f32 `m` and `r`: `Σ_{i<j} (mᵢmⱼ/ŝᵢⱼ)·(wᵢⱼ/ŝᵢⱼ)`, with
-/// `wᵢⱼ = ‖rᵢ‖∞ + ‖rⱼ‖∞` and `ŝᵢⱼ = max(‖rᵢ − rⱼ‖∞, eps·max(wᵢⱼ, 1))` (colour_composition §6).
+/// `wᵢⱼ = ‖rᵢ‖∞ + ‖rⱼ‖∞` and `ŝᵢⱼ = max(‖rᵢ − rⱼ‖∞, eps·max(wᵢⱼ, δ))`, `δ` = [`FLOOR`] (colour_composition §6).
 pub fn conditioning(m: [f32; 3], r: [[f32; 2]; 3]) -> f64 {
     let m = m.map(f64::from);
     let r = r.map(|p| p.map(f64::from));
     let eps = f64::from(f32::EPSILON);
     let pair = |i: usize, j: usize| {
         let w = norm(r[i]) + norm(r[j]);
-        let s = norm([r[i][0] - r[j][0], r[i][1] - r[j][1]]).max(eps * w.max(1.0));
+        let s = norm([r[i][0] - r[j][0], r[i][1] - r[j][1]]).max(eps * w.max(f64::from(FLOOR)));
         (m[i] * m[j] / s) * (w / s)
     };
     pair(0, 1) + pair(0, 2) + pair(1, 2)
