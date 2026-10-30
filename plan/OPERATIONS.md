@@ -560,6 +560,21 @@ the local job queue, `cargo xtask job` (`xtask/src/jobq.rs`), and waits for it.
   lock whose pid is dead or whose heartbeat is more than 120 s old has expired, and the next `submit` or `wait` starts a
   runner in its place. A new runner ends the group of every job a dead one left running, and queues it again, or marks
   it lost after its third start.
+- **The limits of that recovery** (applied per R-369). A runner killed between a job's spawn and its save leaves that
+  start untracked: its file still says queued, so the job runs again while that one copy has no timeout or cancel and
+  may overlap the second start on one target directory. Cargo's own lock serialises the builds, but test binaries can
+  overlap, so a verdict from that run may be flaky. `runner.log` shows the start, and `violations.log` a heavy copy,
+  its group being in no running job. No lock is orphaned: `state.lock` goes with the dead runner, `runner.lock` expires
+  at 120 s and cargo's lock goes with its process. Closing the window would take a gate wrapper around every job, out of
+  proportion to one spawn return and one small write. A second limit: when a job's file holds no leader start time, the
+  new runner ends a live group only if its leader started within 5 s of the job's recorded start; a leader further off
+  is left alone, as possibly another process's, and the job is queued again.
+- **A failed save in a live runner** starts nothing and runs nothing the file doesn't record. If the save after a spawn
+  fails, the runner kills and reaps that start's group and the job stays queued, so at most one copy is alive and none
+  after the failure; each later pass tries again. If the save at a job's end fails, the runner keeps the job, with its
+  exit status and end time, and saves it again on the next pass. A pass with a failed save starts no job and counts as
+  idle, so a runner that can't write exits after `idle` seconds, and the next runner ends and queues again each job
+  still marked running.
 - **Violations.** While it runs, the runner reads `ps` every 30 s and appends each heavy process that no queue job
   started to `violations.log`, with its pid, parent, cwd and command: only the topmost of a chain, each once. It never
   kills one. The orchestrator reads the log at its summaries.
