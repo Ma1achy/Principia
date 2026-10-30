@@ -26844,7 +26844,14 @@ built as R-620 rules. Nothing built changes, so it is not asked. #293's R-615 re
 
 ## R-594 — The replication suite is adopted: published three-body results reproduced as engine tests in tiers A–D, ported as a design doc that extends the validation-orbits doc; each target a VAL requirement with its tolerance a calibration; every published table transcribed twice and never tuned to; sequenced by need; the questions it lists queued *(changes no ruling or requirement in force; recorded with R-629's port)*
 *Refined by R-629 (the port follows PLAN.md, which replaces the 25 Oct instruction's tier tables, sequencing and fetch list as the working plan).*
-*Still in force: all of it; its port follows PLAN.md (R-629), which keeps the tiers, rules 1–8 and item 5's order by need.*
+*Amended in part by R-649 (for external targets: item 3's tolerance "confirmed by the human at the gate", now with
+M9's report, and item 6's question "which targets gate a milestone": none does; each target is a measurement with its
+tier).*
+*Amended in part by R-650 (item 5's milestones: the targets are scored in M9, after the core build; the order by need
+orders M9's scoring and the ingest).*
+*Still in force: all of it but, for external targets, item 3's confirmation "at the gate" (with M9's report), item 6's
+gating question (no target gates a milestone, R-649) and item 5's milestones (M9, R-650); its port follows PLAN.md
+(R-629), which keeps the tiers, rules 1–8 and item 5's order by need.*
 *25 Oct 2026 · given before R-595 and recorded here, after R-627, by R-629's port of 27 Oct 2026, the number having been
 held for it; applied in `docs/design/principia_dd_replication.md` (new), `docs/design/principia_dd_validation_orbits.md`
 (a pointer under its title), `docs/read_first/principia_INDEX.md`, `REVIEW_QUEUE.md` (RQ-591 to RQ-598, new),
@@ -26965,6 +26972,10 @@ phase, against the CPU's f32 decode and `Φ`'s f64 angle.
 R-628 is in the "physics" group of `plan/rule_groups.yaml`.
 
 ## R-629 — PLAN.md is adopted as the single plan for verification and replication, superseding as the working plan the 25 Oct instruction's tier tables, sequencing and fetch list; its seven draft requirements are ported as M3 requirements with their tolerances as calibrations; R-594's port follows it, with the orbit catalogue's six tests as tasks; the plan's other questions stay queued *(refines R-594; answers PLAN.md § 9 questions 1 and 2)*
+*Amended in part by R-650 (its drafts, REQ-VAL-201 to REQ-VAL-213, are M9 requirements, scored after the core build,
+not M3 ones).*
+*Still in force: all of it but "ported as M3 requirements": the drafts stand as requirements, their tolerances as
+calibrations, in M9 (R-650).*
 *27 Oct 2026 · the human's answer to whether R-594's port should follow the 27 Oct plan; applied with R-594, in the files
 R-594's line lists; built by TASK-M2-51, TASK-M3-42 to TASK-M3-65, TASK-M4-22 to TASK-M4-25, TASK-M6-52, TASK-M7-71
 and TASK-M8-97 to TASK-M8-99*
@@ -27033,9 +27044,11 @@ R-629 is in the "process" group of `plan/rule_groups.yaml`, with R-594.
 no permission is asked first; RQ-579 is closed with option (a)).*
 *Amended in part by R-632 (item 12: the three corrections RQ-588 to RQ-590 queue are applied, and the documents are
 edited; RQ-577 and RQ-583 unchanged).*
+*Amended in part by R-650 (its "drafts are M3 requirements": they are M9's, scored after the core build).*
 *Still in force: all of it but item 6, whose "ask the authors, keeping (c) meanwhile" R-631 replaces by committing the
 data (R-631), and item 12's "Don't edit those documents", which R-632 replaces by applying the three
-corrections (R-632); items 7 and 9's fetches stand, and item 7's database is committed under R-631.*
+corrections (R-632); items 7 and 9's fetches stand, and item 7's database is committed under R-631; its drafts are
+M9 requirements, not M3 ones (R-650).*
 *27 Oct 2026 · the human's message of that evening; applied in `REVIEW_QUEUE.md` (RQ-577 and RQ-583 noted, RQ-588 to
 RQ-590 stay open), `docs/archive/review_queue/M0.md` (the seven closed entries, moved with their ruling), REQ-VAL-042
 and REQ-VAL-043 (reqio) and `plan/rule_groups.yaml`*
@@ -27698,10 +27711,13 @@ reviews handled as follow-ups. To re-review after fixes, re-request Copilot as a
 *Superseded in part by R-645 (28 Oct 2026: its cloud half, already withdrawn; no cloud session is used at all).*
 *Amended in part by R-637 (28 Oct 2026: the five-chart hold meant only the replication charts; TASK-M2-36's five-chart
 split goes ahead, and TASK-M2-52 after it).*
+*Amended in part by R-649 (its note on RQ-583's targets, "they cannot pass their gates as written": no external
+target has a gate to pass; RQ-608 and RQ-618 stay open on what is built).*
 *Still in force: all of it but its agent-count and cloud clauses and its five-chart hold; R-262, R-277, R-357 and R-391
 stand as they were before it, and the weekly consistency audit stays adopted, report-only and never blocking, run on
 demand when the owner asks (the owner's ruling of 28 Oct 2026 on its RQ-605 clause, quoted in its entry in
-decisions.md); the hold covers only the replication charts (R-637).*
+decisions.md); the hold covers only the replication charts (R-637); its note on RQ-583's targets reads without gates
+(R-649).*
 *Its agent-count and cloud clauses are withdrawn, 28 Oct 2026 (the owner): "like how it was before this cloud
 session stuff started"; the workflow returns to R-357, R-391 and R-277, with no cloud sessions
 (withdrawn in part by R-648).*
@@ -27832,8 +27848,12 @@ REQ-VAL-314 and REQ-VAL-316 (rq, rulings); adds REQ-VAL-332.
 seed, two gates and the labels).*
 *Amended in part by R-640 and R-642 (its RQ-598 line's wait: the authors' own data scores directly, and qualifying
 reproductions unblock TASK-M3-62 and TASK-M3-65 provisionally).*
+*Amended in part by R-649 (its RQ-591 line: "Layer V targets gate their milestone" gives way, for every external
+target, to R-649 item 1, a measurement and never a gate; its layer-R half stands).*
 *Still in force: all of it but its RQ-598 line's "TASK-M3-62/65 keep waiting until data arrives; if none comes, they
-stay waiting, no substitute data", which gives way to R-640 and R-642 (R-642 governs where they differ).*
+stay waiting, no substitute data", which gives way to R-640 and R-642 (R-642 governs where they differ), and its
+RQ-591 line's "Layer V targets gate their milestone (statistical ones on their stated tolerance)", which gives way to
+R-649: no external target gates; each is a measurement, scored in M9 (R-650).*
 *28 Oct 2026 · the owner's message of that afternoon; ported 29 Oct 2026; applied in `REVIEW_QUEUE.md` (RQ-591,
 RQ-598 and RQ-599 closed; RQ-617 and RQ-619 new; RQ-577 and RQ-593 to RQ-597 noted), `docs/archive/review_queue/M0.md`
 (the three closed entries, moved with their ruling), R-636's forward line, TASK-M2-36 and TASK-M2-52 (the hold
@@ -27943,6 +27963,10 @@ R-638 is in the "design" group of `plan/rule_groups.yaml`. Changes REQ-VAL-295 a
 REQ-VAL-330 (rulings, source, note).
 
 ## R-639 — The Šuvakov-plane targets split into a closure part, which stays in M4 or M8 and runs now, and a chart part, which moves to gate the task that builds the Šuvakov chart and is not dropped, a target whose split isn't clean being queued; a read-only licence audit of every committed PDF; none of the five targets splits cleanly, so all five are queued *(answers RQ-608)*
+*Amended in part by R-649 (its chart part "moves to gate the task that builds the Šuvakov chart": no target gates a
+task or a milestone; RQ-618 stays open on what is built).*
+*Still in force: all of it but the chart part's gate (R-649); the five targets stay queued as it found them (RQ-618),
+and score in M9 (R-650).*
 *28 Oct 2026 · the owner's message of that day; ported 29 Oct 2026; applied in `REVIEW_QUEUE.md` (RQ-608 noted, RQ-618
 new), TASK-M4-23 and TASK-M8-99 (notes) and `plan/rule_groups.yaml`; the audit run by the orchestrator (R-643)*
 
@@ -27985,9 +28009,11 @@ reference Brutus).*
 *Amended in part by R-642 (its "provisional" block, where R-642 differs: the authors' own data, BR-1's 180 NVM
 trajectories and GG-1's Fig. 1 extraction, scores directly; a reproduction qualifies only on the paper's set-up with a
 converged arbitrary-precision integrator).*
+*Amended in part by R-650 ("unblock TASK-M3-62 and TASK-M3-65 now": the wait for data stays lifted; the scoring itself
+is M9's, or a peek's, and the two tasks are TASK-M9-22 and TASK-M9-25).*
 *Still in force: the lifted wait, the labels ("vs <source>", never "replicates the paper"), the re-score when the
 authors' data arrives (theirs governs, disagreements queued) and the Fig. 1 extraction scoring at its stated
-precision; where it differs from R-642, R-642 governs.*
+precision; where it differs from R-642, R-642 governs; the scoring itself is M9's, or a peek's (R-650).*
 *28 Oct 2026 · the owner's message of that day; ported 29 Oct 2026; applied in R-637's forward line, `REVIEW_QUEUE.md`
 (RQ-614 closed), `docs/archive/review_queue/M0.md`, `docs/design/principia_dd_replication.md` (dated notes in § 5.10,
 § 5.12 and § 7), REQ-VAL-295, REQ-VAL-297 and REQ-VAL-330 (reqio), TASK-M3-62 and TASK-M3-65 (notes) and
@@ -28050,6 +28076,9 @@ The owner's words, verbatim:
 R-641 is in the "design" group of `plan/rule_groups.yaml`. Changes REQ-VAL-297 (rulings, source, note).
 
 ## R-642 — RQ-598's data: the authors' own data unblocks and scores directly, BR-1 against the 180 NVM trajectories and GG-1 against the Fig. 1 extraction at its stated precision; reproductions unblock provisionally, labelled "vs <source>", re-scored when the authors' full data arrives, and qualify only on the paper's set-up with a converged arbitrary-precision integrator; our Brutus from NvMgeneration at 98906f4 qualifies, two third-party sets are rejected; the owner emails both authors *(amends R-637 and R-640; answers RQ-614 and in part RQ-615)*
+*Amended in part by R-650 (its "unblocks" and "scores directly": the data's standing is as ruled; the scoring itself
+is M9's, or a peek's, information only).*
+*Still in force: all of it; its scoring happens in M9, or early as a peek (R-650).*
 *28 Oct 2026 · the owner's message of that day, which governs wherever it differs from R-640 and R-641; ported
 29 Oct 2026 with R-638; applied in `docs/incoming/2026-10-28_rq598_data/README.md` § 6, `REVIEW_QUEUE.md` (RQ-614
 closed, RQ-615 narrowed), `docs/archive/review_queue/M0.md`, `docs/design/principia_dd_replication.md` (dated notes in
@@ -28091,8 +28120,14 @@ note).
 
 ## R-643 — The licence audit: the four subscription-stamped and six all-rights-reserved PDFs leave the tree for `docs/incoming/_local/` in one ordinary commit, with no history rewrite; the five "unclear" PDFs stay and are queued; the 22 arXiv licences are checked, the 19 arXiv-default PDFs kept and the 3 CC-licensed fine; from now on no publisher PDF is committed unless its licence allows redistribution, checked before commit *(no RQ; a standing rule)*
 *Amended in part by R-644 (option 2, the history scrub, is shelved, not scheduled).*
+*Refined in part, 28 Oct 2026, by the owner, for newly fetched papers: his follow-up message of that late evening
+(after the one R-645 quotes), verbatim, "Your rule for newly fetched papers (commit only CC BY/BY-SA/CC0/public domain;
+arXiv-default to _local/) is approved."; ported 30 Oct 2026, with R-649 and R-650, in `CLAUDE.md` § "Papers and
+licences".*
 *Still in force: all of it but the scheduling of option 2, the scrub, which R-644 shelves; its conditions and method
-are kept as ruled, for when it is revisited.*
+are kept as ruled, for when it is revisited. For a newly fetched paper, the owner's refinement of 28 Oct 2026 (above):
+only a CC BY, CC BY-SA, CC0 or public-domain file is committed, and an arXiv-default one is held in
+`docs/incoming/_local/`; the 19 arXiv-default PDFs already committed stay, as he ruled.*
 *28 Oct 2026 · the owner's licence-audit ruling (a #327 comment), his option-2 ruling the same day, and his answers of
 that late evening; ported 29 Oct 2026; applied by PR #329 (the move), in `REVIEW_QUEUE.md` (RQ-610 new), `CLAUDE.md`
 § "Papers and licences" (new) and `plan/rule_groups.yaml`*
@@ -28315,3 +28350,227 @@ The owner's ruling on R-636's RQ-605 clause, the same night, verbatim (recorded 
 withdrawn and don't name a ruling still to be ported, so none of their words changes here.
 
 R-648 is in the "process" group of `plan/rule_groups.yaml`. Changes no requirement.
+
+## R-649 — Replication and verification targets are measurements, not gates: failing one never blocks building; each declares the tier it binds, (a) the GPU explorer, agreeing statistically or qualitatively only, or (b) the CPU IC inspector, where exact targets bind; three outcomes, PASS, EXPLAINED DIVERGENCE (shown by a measurement) and UNEXPLAINED (open, labelled, non-blocking); no default, physics, criterion, architecture or tolerance is changed and nothing is tuned per target in pursuit of a pass; a comparison is checked like-for-like before anything is called a failure; verification deepening comes after the core build *(amends R-594, R-636, R-637 and R-639 for external targets; applies to RQ-598's targets and every target in force)*
+*Refined by R-650 (external replication becomes the final milestone, M9; the internal correctness tests and the
+anchor smoke tests stay continuous and blocking; early peeks, information only, go in a peek log).*
+*Still in force: all of it, with the owner's two clarifications of 29 Oct 2026 recorded below; R-650 says where and
+when each external target is scored.*
+*29 Oct 2026 · the owner's ruling of that day, and his two clarifications for its port the same day; ported 30 Oct 2026
+with R-650; applied in `docs/design/principia_dd_replication.md` (§ 12, new; dated lines in its header, § 2, § 5.1,
+§ 5.6, § 5.10, § 5.15, § 6, § 7, § 8.1, § 8.3 and § 10; the § 5 tables' milestone and task columns),
+`docs/notes/principia_validation_ground_truth_note.md` (§ "The correctness factoring", corrected),
+`docs/design/principia_dd_validation_orbits.md` (dated lines under § 1.5 and § 2's gates), the forward lines on R-594,
+R-636, R-637 and R-639, `REVIEW_QUEUE.md` (dated lines), `CLAUDE.md` (one line), `plan/WORKFLOW.md`,
+`plan/MILESTONES.md`, `plan/reviewers/physics.md` and `plan/reviewers/code.md`, the requirements (reqio), TASK-M3-27,
+TASK-M3-28, TASK-M3-29, TASK-M4-15 and TASK-M5-18, and `plan/rule_groups.yaml`*
+
+The owner's ruling, verbatim:
+
+> Add a standing decision (ADR + plan note) governing all replication/verification targets, before ingesting any:
+> 1. A target is a MEASUREMENT, not a gate. Failing one never blocks building; the build plan proceeds and the result is reported.
+> 2. Each target declares the tier it binds: (a) GPU explorer: fast, f32, interactive; expected to agree statistically or qualitatively only, with error_ratio flagging what it can't resolve; (b) CPU IC inspector: f64/high precision; exact targets (collision points, periods, converged states) bind here. Most precise targets bind (b) only. A GPU miss on an inspector-tier target is expected, not a defect.
+> 3. Three valid outcomes: PASS; EXPLAINED DIVERGENCE (differs for a named mechanism: regularisation, escape criterion, horizon, stopping rule, units/normalisation, precision tier, sampling, the source's own accuracy), which requires a measurement showing the mechanism, not a story; UNEXPLAINED (stays open, labelled, non-blocking).
+> 4. Forbidden in pursuit of a pass: changing defaults, physics, criteria or architecture; per-target parameter tuning; loosening tolerances; special-casing inputs. A design change suggested by a target needs its own ADR justified on Principia's goals (interactive exploration first; accuracy/speed is a deliberate trade). It cannot be justified by the target alone.
+> 5. Before calling anything a failure, check the comparison is like-for-like (frame, units, masses, definition of the event, the source's stated accuracy). Many divergences will be ours being a different instrument, and that is a finding.
+> 6. Verification deepening (making the GPU path agree better while staying interactive) is post-build work, scheduled after the core is complete.
+> Apply this to RQ-598, the task-15 ingest and every existing target. Flag any open PR or task that currently treats a replication as blocking.
+
+The owner's two clarifications for its port, the same day, verbatim:
+
+> Two clarifications for task 4b, no veto on Ruling A (supersession confirmed):
+> 1. SP-1 horizon: R-649 forbids changing DEFAULTS to get a pass; it does not forbid running a target at its own natural horizon. Run SP-1 to its break-up (~59.4 → t_max ~60–65 as a per-test parameter), default horizon 50 unchanged. Rewrite the task as "run to the target's horizon", not "calibrate the horizon".
+> 2. GPU tier: don't delete the ground-truth note, correct it. GPU-vs-CPU agreement within a stated f32 tolerance is an INTERNAL check and stays continuous and blocking, measured not assumed. What goes is the claim that GPU correctness follows from the CPU's. External targets bind tier (b) unless they are statistical, where tier (a) is expected to agree statistically.
+
+"Ruling A" is the orchestrator's supersession list for this port (the "What it amends" bullet below); "task 4b" is
+this port.
+
+*What it decides:*
+
+- **Item 1: a target is a measurement, not a gate.** Failing one never blocks building: the plan proceeds and the
+  result is reported. R-650 draws the line: the internal correctness tests and the anchor smoke tests are not targets in
+  this sense and block a merge as before; every external target (a published, prototype or other outside number) is a
+  measurement, scored in M9 or, early, as a peek. A target's control (rule 16, REQ-VAL-007) is a check that the test
+  can fail, not a target: a control that does not fire is still a defect of the test.
+- **Item 2: the tier each target binds.** Each external target declares it: (a) the GPU explorer (f32, interactive,
+  agreeing statistically or qualitatively only, `error_ratio` flagging what it can't resolve) or (b) the CPU IC
+  inspector (f64 or higher; exact targets: collision points, periods, converged states). With the owner's
+  clarification 2, an external target binds (b) unless it is statistical, where (a) is expected to agree
+  statistically. *Applied per R-369:* exact targets, measurements, counts, reports and definitions bind (b) only;
+  statistical targets, and qualitative ones (item 2's "statistically or qualitatively"), bind (b) with (a) expected to
+  agree statistically or qualitatively; a target with an exact part and a statistical part binds (b) for the first,
+  and (a) is expected to agree with the second statistically. One chaotic trajectory compared qualitatively with a
+  figure (AA-4, V-6) is the inspector's, (b). Every target requirement's note names its tier, and
+  `docs/design/principia_dd_replication.md` § "12.2 Tiers" lists them. A GPU miss on a (b)-only target is expected, not
+  a defect.
+- **Clarification 2: GPU-vs-CPU agreement is an internal check.** Agreement within a stated f32 tolerance stays
+  continuous and blocking, measured, not assumed; what goes is the claim that GPU correctness follows from the CPU's.
+  The ground-truth note's § "The correctness factoring: validate on CPU, inherit on GPU" is corrected, not deleted:
+  its CPU reference and its parity suite stay, and the line "CPU correct (ground-truth suite) × GPU==CPU (parity) ⇒
+  GPU correct" is replaced, its text kept as *Was*; REQ-VAL-046's verify, "GPU correctness is claimed only via
+  parity", likewise. Every GPU-vs-CPU agreement requirement states its f32 tolerance, read requirement by requirement
+  (`plan/requirements.yaml`): REQ-VAL-017 and REQ-TOOL-029, f32-eps-scaled by REQ-DEC-043's calibration; REQ-VAL-057
+  and REQ-VAL-073, the Tier N/S envelope REQ-VAL-064 sets by measurement; REQ-VAL-059, REQ-VAL-060, REQ-VAL-072 and
+  REQ-VAL-144, exact; REQ-VAL-075, exact outside REQ-VAL-141's calibrated band; REQ-VAL-107, labels equal in a regular
+  region; REQ-VAL-199, its own calibration; REQ-DEC-052, a measurement, bitwise; REQ-VAL-183, measured, never
+  asserted. Two state none for f32: REQ-VAL-172's "identical to ~10 decimals" is finer than f32 resolves (about seven
+  significant decimal digits), and REQ-VAL-173's "`error_ratio` reads 1.0000" names no precision path. Each gets a
+  calibration requirement (R-71), not a guessed value: REQ-VAL-338 and REQ-VAL-339 (M5, TASK-M5-18, which closes the
+  two). None of these is an external target, and no tier applies to them.
+- **Item 3: three outcomes.** PASS; EXPLAINED DIVERGENCE, for a named mechanism (regularisation, escape criterion,
+  horizon, stopping rule, units or normalisation, precision tier, sampling, the source's own accuracy), with a
+  measurement showing the mechanism, not a story; UNEXPLAINED, open, labelled and non-blocking. "Fail" is not an
+  outcome of an external target; the internal correctness tests keep pass and fail.
+- **Item 4: what is forbidden in pursuit of a pass:** changing defaults, physics, criteria or architecture; per-target
+  parameter tuning; loosening tolerances; special-casing inputs. A design change a target suggests needs its own ADR,
+  justified on Principia's goals (interactive exploration first; accuracy against speed a deliberate trade), never on
+  the target alone. It is a checklist line for the physics and code reviewers. Clarification 1 reads it for SP-1:
+  running a target at its own natural horizon is not a default change. SP-1 (REQ-VAL-034) runs to its break-up,
+  `t_max` between 60 and 65 as a per-test parameter, and the default horizon stays 50 (R-610); the coarse `t_end`
+  window stays a calibration (REQ-VAL-132, R-71); TASK-M3-27's "calibration proposal for the t_end window and horizon"
+  becomes "run to the target's horizon", its old words kept in the task's notes.
+- **Item 5: like-for-like first** (frame, units, masses, the definition of the event, the source's stated accuracy).
+  A divergence that comes from our being a different instrument is a finding. A checklist in
+  `docs/design/principia_dd_replication.md` § "12.3 Outcomes, the like-for-like check and the forbidden moves" and in
+  the physics reviewer's checklist.
+- **Item 6: verification deepening** (the GPU path agreeing better while staying interactive) is post-build work: M9's
+  GPU-path tightening (R-650), defined by REQ-VAL-341 (a definition, R-72) before any of it is built.
+- **What it amends, for external targets** (the forward lines name each): R-594 item 3's "confirmed by the human at the
+  gate" for a target's tolerance (now with M9's report, R-650) and item 6's question "which targets gate a milestone"
+  (none does); R-637's RQ-591 line, "Layer V targets gate their milestone (statistical ones on their stated
+  tolerance)" (no external target gates its milestone; its layer-R half, "run, recorded beside the published number,
+  disagreements queued", stands, the disagreement recorded with its outcome); R-636's note on RQ-583's targets, "they
+  cannot pass their gates as written" (no gate to pass); R-639's "a chart part, which moves to gate the task that builds
+  the Šuvakov chart" (no target gates a task; RQ-618 stays open on what is built). Also superseded for external
+  targets, by R-650's move: RQ-591's option (a) "as ported", applied meanwhile until R-637, and RQ-598's and RQ-614's
+  waits on scoring (both closed, in the archive, unchanged).
+- **"Apply this to RQ-598, the task-15 ingest and every existing target."** RQ-598 is closed (R-637); its targets,
+  GG-1, BR-1 and V-11, are measurements with tiers, scored in M9 (REQ-VAL-295, REQ-VAL-297, REQ-VAL-330). The task-15
+  ingest is PR #337, approved and not yet merged; nothing of it is edited here, and when its rows are applied each takes
+  a tier and no gate (flagged to the orchestrator). Every existing target: REQ-VAL-201 to REQ-VAL-332 but PL-8's first
+  half, REQ-VAL-042 (FF-H) and REQ-VAL-127, and the two parts R-650 splits out (REQ-VAL-333, REQ-VAL-335).
+- **"Flag any open PR or task that currently treats a replication as blocking."** Flagged on 30 Oct 2026, every one
+  now changed by this port and R-650: the 35 replication tasks and their requirements, each in its milestone's exit
+  gate; `plan/MILESTONES.md` § "Assumptions" on requirements waiting on an RQ; RQ-608's and RQ-618's "what the M4 and
+  M8 gates hold"; R-639's chart-part gate; REQ-VAL-034's and TASK-M3-27's horizon calibration; the ground-truth note's
+  GPU inheritance. Open PRs: none of the open task PRs treats a replication as blocking; #337 and #338 (data, approved)
+  carry proposed rows only, applied later with tiers and no gate. The orchestrator's own task files are outside the
+  repo and its own.
+
+*Applied per R-369:*
+- The tier rule's reading for qualitative and mixed targets, and AA-4 and V-6 as (b), as above.
+- The GPU-vs-CPU requirements read for their f32 tolerance as above; REQ-VAL-172 and REQ-VAL-173 get calibration
+  requirements, and nothing else changes in them.
+- Item 4's ADR for a design change is a `decisions.md` ruling with a REVIEW_QUEUE entry before it, as every design
+  change is (the porting rule).
+
+R-649 is in the "design" group of `plan/rule_groups.yaml`. Changes REQ-VAL-034, REQ-VAL-046, REQ-VAL-132 and every
+target R-650 moves (their notes: the tier and the outcome); adds REQ-VAL-338 and REQ-VAL-339.
+
+## R-650 — External replication becomes its own final milestone, M9, after the core build: it scores every external target, writes up the explained divergences and tightens the GPU path, and exits on its report; the internal correctness tests and the cheap anchor smoke tests (figure-eight closure, SP-1 run to its horizon, SP-2) stay continuous and block a merge as now; source ingest and transcription go on whenever idle; early peeks score a target as information only, in a peek log *(refines R-649; amends R-594, R-629, R-630, R-640 and R-642: where and when the targets are scored)*
+*29 Oct 2026 · the owner's follow-up to R-649 that day and his addendum on early peeks the same day; ported 30 Oct
+2026 with R-649; applied in `plan/MILESTONES.md` (§ "M9 — External replication", new; § "Assumptions"),
+`plan/WORKFLOW.md` (§ "Human checkpoints: the milestone gates"), `plan/tools/` (M9 accepted; its block a report, not a
+gate), `docs/design/principia_dd_replication.md` (§ 12, new; § 5.6's SP-2 row, new), `docs/verification/peek_log.md`
+(new, seeded with GG-1), `docs/read_first/principia_INDEX.md`, the forward lines on R-594, R-629, R-630, R-640, R-642
+and R-649, `REVIEW_QUEUE.md` (dated lines), the requirements (reqio), `plan/tasks.yaml` and the task files (35 tasks
+moved and renumbered, three added; TASK-M3-27, TASK-M3-28, TASK-M3-29 and TASK-M4-15 changed), `plan/reviewers/` and
+`plan/rule_groups.yaml`*
+
+The owner's words, verbatim:
+
+> Follow-up to the verification guard: make external replication its own final milestone (after the core build), covering scoring every external target, the explained-divergence write-ups and GPU-path tightening. Two things stay continuous throughout the build and DO block a merge as now: the internal correctness tests (Hamiltonian FD vs analytic derivatives, drift-falls-with-step, xcheck vs reference, gauge invariance, Burrau constants), and cheap anchor smoke tests (figure-eight closure, SP-2), which catch gross breakage only and never steer design. Source ingest and transcription may continue whenever idle; scoring waits for the milestone. Update the plan's milestone list accordingly.
+
+The owner's addendum, the same day, verbatim:
+
+> Non-gating early peeks (R-650 addendum): when a target's data is already transcribed and cheap to run, score it early as INFORMATION ONLY. Results go in a peek log, never a gate. A peek may trigger a fix only if it exposes a genuine bug that is justified independently of the target (a wrong equation, a misencoded outcome, a broken invariant), with its own test and ADR as usual. Never tune to a peek. Prioritise peeks where the vertical slice never looked: long horizons (GG-1, t=1e4), free-fall triple collisions (Li 2021, Tanikawa 1995/2021), unequal-mass and nonzero-L targets (Li 2025, Titov, Dandekar 2026). Peeks run only when idle, after the backlog.
+
+*What it decides:*
+
+- **M9 — External replication, the final milestone, after M8.** It covers scoring every external target, the
+  explained-divergence write-ups and the GPU-path tightening (R-649 item 6). It has no exit gate: a target's outcome
+  never holds it (R-649 items 1 and 3). It exits on its report, REQ-VAL-340 (TASK-M9-37), which lists every M9 target
+  with its tier, its outcome, its like-for-like checks and, for an explained divergence, the measurement showing the
+  mechanism; a target not yet scored is listed "not scored" with what it waits on, never as a failure (as R-636 records
+  a target past the cap). The owner reviews the report; an M9 calibration is confirmed with it, not at a gate. The
+  GPU-path tightening is defined first, by REQ-VAL-341 (a definition, R-72; TASK-M9-38), each change with its own
+  ruling (R-649 item 4). `plan/MILESTONES.md` § "M9 — External replication" holds a report block, not a gate block, so
+  no gate tool reads it.
+- **What moves to M9:** REQ-VAL-201 to REQ-VAL-249 and REQ-VAL-252 to REQ-VAL-332 (130 requirements), REQ-VAL-042
+  (FF-H, the free-fall closure against Hristov et al.'s orbits) and REQ-VAL-127 (SP-1's feature set), with the new
+  REQ-VAL-333 to REQ-VAL-335, REQ-VAL-340 and REQ-VAL-341. The 35 replication tasks move, renumbered by
+  `plan/WORKFLOW.md` § "Task files"'s rule that a task's id names its milestone, in their old order:
+
+  | Was | Now | Was | Now | Was | Now |
+  |---|---|---|---|---|---|
+  | TASK-M2-51 | TASK-M9-01 | TASK-M3-54 | TASK-M9-14 | TASK-M4-22 | TASK-M9-26 |
+  | TASK-M3-42 | TASK-M9-02 | TASK-M3-55 | TASK-M9-15 | TASK-M4-23 | TASK-M9-27 |
+  | TASK-M3-43 | TASK-M9-03 | TASK-M3-56 | TASK-M9-16 | TASK-M4-24 | TASK-M9-28 |
+  | TASK-M3-44 | TASK-M9-04 | TASK-M3-57 | TASK-M9-17 | TASK-M4-25 | TASK-M9-29 |
+  | TASK-M3-45 | TASK-M9-05 | TASK-M3-58 | TASK-M9-18 | TASK-M4-26 | TASK-M9-30 |
+  | TASK-M3-46 | TASK-M9-06 | TASK-M3-59 | TASK-M9-19 | TASK-M6-52 | TASK-M9-31 |
+  | TASK-M3-47 | TASK-M9-07 | TASK-M3-60 | TASK-M9-20 | TASK-M7-71 | TASK-M9-32 |
+  | TASK-M3-48 | TASK-M9-08 | TASK-M3-61 | TASK-M9-21 | TASK-M8-97 | TASK-M9-33 |
+  | TASK-M3-49 | TASK-M9-09 | TASK-M3-62 | TASK-M9-22 | TASK-M8-98 | TASK-M9-34 |
+  | TASK-M3-50 | TASK-M9-10 | TASK-M3-63 | TASK-M9-23 | TASK-M8-99 | TASK-M9-35 |
+  | TASK-M3-51 | TASK-M9-11 | TASK-M3-64 | TASK-M9-24 | | |
+  | TASK-M3-52 | TASK-M9-12 | TASK-M3-65 | TASK-M9-25 | | |
+  | TASK-M3-53 | TASK-M9-13 | | | | |
+
+  Three tasks are added: TASK-M9-36, the ruled targets scored (FF-H, the figure-eight's published curve and SP-1's
+  structural comparison); TASK-M9-37, the M9 report; TASK-M9-38, the GPU-path tightening defined. A ruling or record
+  before this one that names an old id means the new one. Each moved task keeps its depends-on edges, renamed; each
+  keeps its waits on a ruling or data, which now hold its scoring, never a milestone.
+- **What stays continuous and blocks a merge as now**, the owner's two kinds, read requirement by requirement:
+  - *The internal correctness tests:* Hamiltonian FD against analytic derivatives (REQ-VAL-170, REQ-VAL-171);
+    drift-falls-with-step (REQ-VAL-030, REQ-VAL-031 and REQ-VAL-139 on order scaling, the convergence reference
+    REQ-VAL-025 and REQ-VAL-131, reversibility REQ-VAL-032, REQ-VAL-044, REQ-VAL-134, REQ-VAL-190 and REQ-VAL-191);
+    xcheck against reference (REQ-VAL-028 with REQ-VAL-036, REQ-VAL-119 and REQ-VAL-146, and PL-8's first half,
+    REQ-VAL-250 and REQ-VAL-251, our f64 against our own R-33 reference); gauge invariance (REQ-VAL-172, with its f32
+    tolerance REQ-VAL-338); the Burrau constants (REQ-VAL-174, with the import arithmetic REQ-VAL-016, REQ-VAL-019,
+    REQ-VAL-118 and REQ-VAL-120); and the GPU-vs-CPU agreement checks (R-649's clarification 2).
+  - *The anchor smoke tests,* which catch gross breakage only and never steer design: the figure-eight closure
+    (REQ-VAL-041, REQ-VAL-133, TASK-M3-28); SP-1 run to its horizon, outcome class, escaper and the coarse `t_end`
+    window (REQ-VAL-034, REQ-VAL-132, TASK-M3-27); and SP-2, the converged Burrau reference (Portegies Zwart &
+    Boekholt 2018, Table 2; R-646), which was a proposed row of PLAN.md and becomes REQ-VAL-336 with its tolerance
+    REQ-VAL-337 (M3, TASK-M3-27).
+- **Source ingest and transcription go on whenever idle:** a data PR under `docs/incoming/` (as #337 and #338) merges
+  whenever its review passes. Scoring waits for M9, and R-415's early-merge test does not bring an M9 task forward.
+- **Early peeks (the addendum).** One file, `docs/verification/peek_log.md`, headed "Information only — never a gate
+  (R-650 addendum)", one row per peek: date, target, tier, data source, outcome (R-649 item 3), the like-for-like checks,
+  the mechanism measurement where explained, and the commit. Peeks run only when idle, after the backlog, in the
+  owner's priority (long horizons, GG-1 to t = 10⁴; free-fall triple collisions, Li 2021, Tanikawa 1995/2021;
+  unequal-mass and non-zero-L targets, Li 2025, Titov, Dandekar 2026). A peek triggers a fix only for a genuine bug
+  justified independently of the target, with its own test and ruling; nothing is tuned to a peek. The log's first row
+  is GG-1 from PR #335's comparison (HM units, three points, all three UNEXPLAINED; RQ-612).
+- **What it amends:** R-629's and R-630's "M3 requirements" for the drafts, REQ-VAL-201 to REQ-VAL-213 (now M9);
+  R-594 item 5's sequencing by need (it now orders M9's scoring and the ingest, not the core milestones); R-640's
+  "unblock TASK-M3-62 and TASK-M3-65 now" and R-642's "unblocks" (the wait for data is lifted as ruled; the scoring
+  itself is M9's, or a peek's).
+
+*Applied per R-369:*
+- **The line between internal and external,** where the owner's lists name no requirement: an external target scores
+  against a published, prototype or other outside number; a check of our arithmetic or our own reference is internal.
+  So: PL-8's first half stays in M3 and moves from TASK-M3-56 (now TASK-M9-16) to TASK-M3-27; W-1 (REQ-VAL-043) stays
+  in M3, because R-125 makes it the verification of the branch-cut convention we transcribe ("verified by REQ-VAL-043
+  against the published braid classes … confirmed at the gate"), a check of our encoding; the Chazy classifier's
+  Fewbody reference (REQ-VAL-184 to REQ-VAL-187, TASK-M7-35 and TASK-M7-36) stays in M7, a ported reference algorithm
+  on synthetic fixtures and invariants, D-3's comparison with the prototype's numbers being REQ-VAL-306, which moves;
+  the closure field at the free-fall orbits (REQ-VAL-076, M4) stays, the self-validating render of the core.
+- **Splits:** REQ-VAL-047 keeps the Lagrange rigidity and the figure-eight's closure, and its "traces its known
+  shape-sphere curve" becomes REQ-VAL-333 (M9), its tolerance REQ-VAL-334, with REQ-VAL-130's "and shape curve"
+  removed (each *Was* kept); REQ-VAL-034 keeps the anchor smoke, and its structural comparison with Szebehely & Peters
+  becomes REQ-VAL-335 (M9), REQ-VAL-127 its feature set.
+- **Edges:** no core task depended on a moved one, so no depends-on edge is dropped. TASK-M4-15's need of REQ-VAL-042
+  is dropped (FF-H scores in M9; the fixture set it reads, REQ-VAL-126, stays needed through TASK-M3-29). TASK-M9-36
+  depends on TASK-M3-25, TASK-M3-27, TASK-M3-28 and TASK-M3-29; TASK-M9-37 on every M9 scoring task that waits on no
+  ruling or data; TASK-M9-38 on TASK-M9-37.
+- **The calibrations of M9's targets** are confirmed by the human with the M9 report, their statements reworded from
+  "at the M<n> gate", each *Was* in its note.
+- **No code changes here** (docs, then plan, then code): `cargo xtask gate-report` and `gate-provisional` refuse M9, as
+  M9 has no gate; their message names "M0 … M8" as the milestones, which is flagged to the orchestrator for a code
+  task, with `.github/workflows/gate.yml`'s input description.
+
+R-650 is in the "design" group of `plan/rule_groups.yaml`. Moves REQ-VAL-042, REQ-VAL-127, REQ-VAL-201 to REQ-VAL-249
+and REQ-VAL-252 to REQ-VAL-332 to M9; changes REQ-VAL-047, REQ-VAL-130, REQ-VAL-250 and REQ-VAL-251 (their task);
+adds REQ-VAL-333 to REQ-VAL-337, REQ-VAL-340 and REQ-VAL-341.

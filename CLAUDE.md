@@ -13,6 +13,14 @@ Read this first; each rule points at its source.
 ## Papers and licences (`decisions.md` § R-643)
 - No publisher PDF is committed unless its licence allows redistribution, checked before commit (R-643). A file that
   may not be committed is held in `docs/incoming/_local/`, which is gitignored; nothing under it is ever committed.
+- A newly fetched paper is committed only if it is CC BY, CC BY-SA, CC0 or public domain; an arXiv paper under arXiv's
+  default licence goes to `docs/incoming/_local/` (the owner's refinement of R-643, 28 Oct 2026).
+
+## Replication targets (`decisions.md` § R-649, R-650)
+- A replication or verification target is a measurement, never a gate: it declares its tier, its outcome is PASS,
+  EXPLAINED DIVERGENCE or UNEXPLAINED, and nothing is tuned, loosened or special-cased to pass it. External targets
+  score in M9 or as a peek (`docs/verification/peek_log.md`); internal correctness tests and anchor smoke tests stay
+  continuous and blocking (`docs/design/principia_dd_replication.md` § 12).
 
 ## How work runs (`plan/WORKFLOW.md`)
 - One task, one branch (`task/<TASK-id>`), one PR titled `<TASK-id>: <title>`. A task starts only when everything in
