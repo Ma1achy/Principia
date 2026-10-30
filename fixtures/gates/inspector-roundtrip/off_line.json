@@ -1,0 +1,11 @@
+{
+  "description": "R-176, the equator's |w| can fire inside the clamp's band (RQ-624): the same draws, fewer of them, with every collinear state's body 2 moved 1000 ulps of 1 off the line before its gauge element, so z_β still clamps bit for bit while |w| on C(x) must fail.",
+  "seed": 1,
+  "samples": 2000,
+  "radius": 4.0,
+  "encode": "defaults",
+  "shift": 0.0,
+  "shapes": 2000,
+  "off_line": 1000,
+  "expected": "fail"
+}
