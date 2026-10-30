@@ -28373,7 +28373,8 @@ The CI sentence of the owner's rulings message of the same day, verbatim:
   base it merges onto, conservatively: a path is docs-only only if its allowlist names it (`docs/`, the plan's prose
   and data, the root's markdown; not `plan/`'s Python, not `.github/`), and every path but the docs-only ones and the
   crates no GPU job builds (`gui`, `prin`) is a GPU path. An empty diff, or one that can't be computed, runs everything.
-  Any run that is not a pull request runs everything.
+  Any run that is not a pull request runs everything. A file code reads is never docs-only, and is a GPU path (below,
+  "The files code reads").
 - **A docs-only pull request** skips the build, test, release and controls jobs (`ci-archive` and the `ci` shards,
   `ci-checks`, `ci-release-archive` and its shards, `xtask-ci`'s shards), and `ci-workspace` runs the docs checks in
   place of its tests: the plan checks, the vocabulary lint, and every test that reads a docs-only path. The GPU jobs
@@ -28433,5 +28434,36 @@ The CI sentence of the owner's rulings message of the same day, verbatim:
   `xtask/tests/qa_TASK-M0-14_r335.rs`, whose controls-job checks accept that same one job-level `if:` and, in r235's,
   a `needs:` on the classification alone. Every other `if:`, `needs:` and `continue-on-error:` still fails them, and
   their controls are unchanged.
+
+*The files code reads, and the cancelled runs: the owner's words of 30 Oct 2026 on #351, verbatim:*
+
+> #351: leave cancelled-run summary checks as they are (M0-45 and R-266 stand; no ruling). Resume #351's reviews. Reviewers specifically confirm the docs-only classifier: any doc/spec/data file read by a test, build script, codegen or xtask check must count as code, not docs. List those paths explicitly in the classifier and add a test that touching one triggers the heavy jobs. Then merge through the normal route and carry on with the job-queue PR.
+
+*Applied:*
+- **The files code reads count as code.** `scripts/ci_changes.sh` keeps, beside its allowlist, an explicit list of
+  the files code reads, each pattern commented with its readers; a path is docs-only only if it is on the allowlist
+  and not on that list, and a file on the list is a GPU path too, so touching one runs the build, test and GPU jobs.
+  The list, from a search of the tests, the build scripts, codegen and the xtask checks: every `.md` and `.html`
+  under `docs/` (the vocabulary lint; plan-check, its tests copying `docs/`'s markdown, archive included; the tests
+  that read a contract or design doc), `docs/gui/design/` and `docs/gui/reference/` (the screenshot and compass
+  goldens' artboards and references, the print-graph catalogue), all of `plan/` (plan-check, the gate report,
+  reviews-check, the validation gates and their tests), `decisions.md`, `REVIEW_QUEUE.md`, `open-questions.md`,
+  `README.md` and `CLAUDE.md` (plan-check; the golden harness reads `decisions.md`), `AGENTS.md` and `GEMINI.md`
+  (`ai_review_rules`), and, listed though already off the allowlist, `.github/copilot-instructions.md` and
+  `fixtures/`. The build scripts and codegen read nothing outside `crates/`. What stays docs-only is the rest of
+  `docs/`: files that are neither markdown nor HTML outside those two folders (the incoming papers and data, the
+  reference sources, the experiments' results).
+- **The tests.** `xtask/tests/ci_changes.rs` touches each pattern of the list through real files it names, each
+  classifying as not docs-only with the GPU suites run, and checks that the list it touches is the script's; and it
+  scans, best effort, the string literals of every crate's `src/`, `tests/` and `build.rs`, of `xtask/` and of
+  `plan/`'s Python for a repository file they name, failing if any classifies as docs-only. Its stated limit: a
+  reader that walks a directory or builds a path in pieces is not seen, and is listed by hand. Each test has its
+  negative control (R-176).
+- `ci-workspace`'s docs checks on a docs-only pull request (the plan checks, the vocabulary lint, the tests
+  `doc-tests` selects) stay, a backstop: with the files code reads counted as code, a docs-only change touches none
+  of their inputs.
+- **The cancelled runs.** A superseded head's cancelled run leaves its required checks' gates as they are, failed or
+  cancelled, as before this ruling; the owner kept them, with TASK-M0-45's checks and R-266 standing, and made no
+  ruling of it.
 
 R-656 is in the "ci" group of `plan/rule_groups.yaml`.
