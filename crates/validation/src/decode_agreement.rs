@@ -126,6 +126,21 @@ pub struct Tally {
     pub worst_factor: f64,
     /// The largest valid `|E − E₀|`, NaN read as `+∞`; 0 with no valid sample.
     pub worst_diff: f64,
+    /// The compared samples' median factor, by [`quantile`]: the distribution the tolerance is set from (pitfalls §3,
+    /// "Set thresholds from the observed distribution").
+    pub median_factor: f64,
+    /// The compared samples' 99th-percentile factor, by [`quantile`].
+    pub p99_factor: f64,
+}
+
+/// The nearest-rank `q`-quantile of `sorted` (ascending), `0 < q ≤ 1`: its `⌈q·n⌉`-th value; 0 when it is empty.
+pub fn quantile(sorted: &[f64], q: f64) -> f64 {
+    let n = sorted.len();
+    if n == 0 {
+        return 0.0;
+    }
+    let rank = (q * n as f64).ceil() as usize;
+    sorted[rank.clamp(1, n) - 1]
 }
 
 impl Tally {
@@ -140,7 +155,10 @@ impl Tally {
             worst: 0.0,
             worst_factor: 0.0,
             worst_diff: 0.0,
+            median_factor: 0.0,
+            p99_factor: 0.0,
         };
+        let mut factors = Vec::new();
         for s in samples {
             if s.valid != s.finite {
                 t.misplaced += 1;
@@ -159,12 +177,16 @@ impl Tally {
             }
             t.worst = t.worst.max(r);
             t.worst_factor = t.worst_factor.max(s.factor());
+            factors.push(s.factor());
             t.worst_diff = t.worst_diff.max(if s.diff.is_nan() {
                 f64::INFINITY
             } else {
                 s.diff
             });
         }
+        factors.sort_by(f64::total_cmp);
+        t.median_factor = quantile(&factors, 0.5);
+        t.p99_factor = quantile(&factors, 0.99);
         t
     }
 
@@ -258,14 +280,16 @@ impl DecodeAgreementGate {
         for t in tallies {
             scatter.push(format!(
                 "{}: {} samples, {} compared, {} excluded (a non-finite operand, R-436); measured worst |E − E₀| \
-                 {:.3} eps of the scale (max(|K₀|, 1) + max(|V₀|, 1)), {:.3e} absolute; worst ratio {:.3e} of the \
-                 tolerance",
+                 {:.3} eps of the scale (max(|K₀|, 1) + max(|V₀|, 1)), {:.3e} absolute, median {:.3} eps, 99th \
+                 percentile {:.3} eps; worst ratio {:.3e} of the tolerance",
                 t.chart.section(),
                 t.samples,
                 t.valid,
                 t.samples - t.valid,
                 t.worst_factor,
                 t.worst_diff,
+                t.median_factor,
+                t.p99_factor,
                 t.worst
             ));
             negative.push(format!(

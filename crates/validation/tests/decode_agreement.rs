@@ -4,7 +4,7 @@
 
 use render::presets::agreement::FACTOR;
 use render::presets::DecodeChart;
-use validation::decode_agreement::{check, DecodeAgreementGate, Input, Sample, Tally};
+use validation::decode_agreement::{check, quantile, DecodeAgreementGate, Input, Sample, Tally};
 use validation::gate::GateConfig;
 use validation::negative_control;
 
@@ -272,13 +272,20 @@ fn check_tally_measure(count_hatched: bool) {
         (8.0, 3.0),
         "the measurement is not the compared samples' worst"
     );
+    assert_eq!(
+        (t.median_factor, t.p99_factor),
+        (3.0, 8.0),
+        "the distribution is not the compared samples'"
+    );
     let nan = tally(&[m(f64::NAN, 1.0, true), m(1.0, 1.0, true)]);
     assert_eq!(
         (nan.worst_factor, nan.worst_diff),
         (f64::INFINITY, f64::INFINITY)
     );
+    assert_eq!((nan.median_factor, nan.p99_factor), (1.0, f64::INFINITY));
     let none = tally(&[m(5.0, 1.0, false)]);
     assert_eq!((none.worst_factor, none.worst_diff), (0.0, 0.0));
+    assert_eq!((none.median_factor, none.p99_factor), (0.0, 0.0));
 }
 
 #[test]
@@ -353,4 +360,41 @@ negative_control!(
     "a summary that misses a chart's worst must be caught",
     expected = "the summary is not the worst over every chart",
     check_report(1)
+);
+
+/// The nearest-rank quantile at its edges: the `⌈q·n⌉`-th value, where `q·n` is whole and where it is just past a
+/// whole number; `shift` moves the expected rank, 0 in the honest run.
+fn check_quantile(shift: usize) {
+    let v: Vec<f64> = (1..=200).map(f64::from).collect();
+    let at = |n: usize, q: f64| quantile(&v[..n], q);
+    let want = |rank: usize| v[rank - 1 + shift];
+    assert_eq!(
+        at(100, 0.99),
+        want(99),
+        "the 99th percentile of 100 is not the 99th value"
+    );
+    assert_eq!(
+        at(101, 0.99),
+        want(100),
+        "q·n just under a whole number does not round up"
+    );
+    assert_eq!(at(4, 0.5), want(2));
+    assert_eq!(at(3, 0.5), want(2));
+    assert_eq!(at(1, 0.99), 1.0);
+    assert_eq!(at(1, 0.5), 1.0);
+    assert_eq!(at(5, 1.0), 5.0);
+    assert_eq!(at(5, 1e-9), 1.0, "a tiny q is not the first value");
+    assert_eq!(quantile(&[], 0.5), 0.0);
+}
+
+#[test]
+fn decode_agreement_quantile() {
+    check_quantile(0);
+}
+
+negative_control!(
+    decode_agreement_quantile,
+    "a quantile one rank off must be caught",
+    expected = "the 99th percentile of 100 is not the 99th value",
+    check_quantile(1)
 );
