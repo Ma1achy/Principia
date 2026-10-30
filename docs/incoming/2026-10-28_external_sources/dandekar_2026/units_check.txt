@@ -1,0 +1,18 @@
+     15,15,15: E ours   -1065.92 printed   -1065.92 | L ours   577.15 printed   577.15 | L0 ours (pair without body 1, 2, 3)  526.86  526.86  526.86 printed  526.86  526.86  526.86
+               G = 1: E -27.000069, L 91.856275, L0 83.852373 83.852373 83.852373
+ 12.5,15,17.5: E ours   -1196.69 printed   -1196.69 | L ours   646.92 printed   646.92 | L0 ours (pair without body 1, 2, 3)  602.01  476.67  395.08 printed  602.01  476.67  395.08
+               G = 1: E -30.312512, L 102.960516, L0 95.812867 75.864387 62.878935
+     12,15,18: E ours   -1222.25 printed   -1222.25 | L ours   660.35 printed   660.35 | L0 ours (pair without body 1, 2, 3)  616.67  462.79  371.10 printed  616.67  462.79  371.10
+               G = 1: E -30.959954, L 105.097967, L0 98.146079 73.655316 59.062399
+     10,10,20: E ours    -908.00 printed    -908.00 | L ours   513.02 printed   513.02 | L0 ours (pair without body 1, 2, 3)  478.39  478.39  207.15 printed  478.39  478.39  207.15
+               G = 1: E -22.999909, L 81.649669, L0 76.138133 76.138133 32.968946
+     10,15,20: E ours   -1322.53 printed   -1322.53 | L ours   712.45 printed   712.45 | L0 ours (pair without body 1, 2, 3)  674.20  396.39  282.04 printed  674.20  396.39  282.04
+               G = 1: E -33.500076, L 113.389939, L0 107.302263 63.087428 44.888060
+     10,20,20: E ours   -1737.05 printed   -1737.05 | L ours   888.58 printed   888.58 | L0 ours (pair without body 1, 2, 3)  847.22  345.88  345.88 printed  847.22  345.88  345.88
+               G = 1: E -43.999991, L 141.421899, L0 134.839251 55.048512 55.048512
+      8,21,21: E ours   -1873.65 printed   -1873.64 | L ours   956.05 printed   956.05 | L0 ours (pair without body 1, 2, 3)  921.58  260.77  260.77 printed  921.58  260.77  260.77
+               G = 1: E -47.459856, L 152.160083, L0 146.674012 41.502835 41.502835
+      5,15,25: E ours   -1559.40 printed   -1559.40 | L ours   833.04 printed   833.04 | L0 ours (pair without body 1, 2, 3)  811.68  180.37  102.67 printed  811.68  180.37  102.67
+               G = 1: E -39.500063, L 132.582434, L0 129.182884 28.706777 16.340438
+largest relative difference, our G = 1 values against ChatGPT's converted Table 1: 0.00e+00
+time: 1 yr = 2π = 6.283185307180 G=1 units; Table 2's fit range 3000 yr to 1e6 yr = 18849.555922 to 6283185.307; B.2's window width 30 = 4.774648

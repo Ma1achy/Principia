@@ -1,0 +1,9 @@
+Dandekar et al. 2026, the eight mass sets; t0 = one integrator time unit
+     15,15,15: I = 100187.5000 M_sun AU^2; t0 = 48.3164 G=1 units = 7.6898 yr; cap 200 = 1538.0 yr | 30 yr = 3.90, 80 yr = 10.40, 10 yr = 1.30, 3000 yr = 390.1, 1e6 yr = 1.3e+05 integrator units
+ 12.5,15,17.5: I = 90479.7009 M_sun AU^2; t0 = 44.7608 G=1 units = 7.1239 yr; cap 200 = 1424.8 yr | 30 yr = 4.21, 80 yr = 11.23, 10 yr = 1.40, 3000 yr = 421.1, 1e6 yr = 1.404e+05 integrator units
+     12,15,18: I = 88204.5455 M_sun AU^2; t0 = 43.9140 G=1 units = 6.9891 yr; cap 200 = 1397.8 yr | 30 yr = 4.29, 80 yr = 11.45, 10 yr = 1.43, 3000 yr = 429.2, 1e6 yr = 1.431e+05 integrator units
+     10,10,20: I = 75166.6667 M_sun AU^2; t0 = 45.1278 G=1 units = 7.1823 yr; cap 200 = 1436.5 yr | 30 yr = 4.18, 80 yr = 11.14, 10 yr = 1.39, 3000 yr = 417.7, 1e6 yr = 1.392e+05 integrator units
+     10,15,20: I = 77992.0635 M_sun AU^2; t0 = 40.0426 G=1 units = 6.3730 yr; cap 200 = 1274.6 yr | 30 yr = 4.71, 80 yr = 12.55, 10 yr = 1.57, 3000 yr = 470.7, 1e6 yr = 1.569e+05 integrator units
+     10,20,20: I = 80250.0000 M_sun AU^2; t0 = 35.8609 G=1 units = 5.7074 yr; cap 200 = 1141.5 yr | 30 yr = 5.26, 80 yr = 14.02, 10 yr = 1.75, 3000 yr = 525.6, 1e6 yr = 1.752e+05 integrator units
+      8,21,21: I = 67462.5000 M_sun AU^2; t0 = 31.4836 G=1 units = 5.0108 yr; cap 200 = 1002.2 yr | 30 yr = 5.99, 80 yr = 15.97, 10 yr = 2.00, 3000 yr = 598.7, 1e6 yr = 1.996e+05 integrator units
+      5,15,25: I = 44678.8194 M_sun AU^2; t0 = 26.3670 G=1 units = 4.1964 yr; cap 200 = 839.3 yr | 30 yr = 7.15, 80 yr = 19.06, 10 yr = 2.38, 3000 yr = 714.9, 1e6 yr = 2.383e+05 integrator units

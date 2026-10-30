@@ -1,0 +1,43 @@
+DYNAMICAL EVOLUTION OF TRIPLE SYSTEMS 229
+interaction steps and sometimes tr = 1000t. Anosova et al. (1984) assumed instead a
+distance of conditional escape p* = 20d and in other experiments discussed here,
+p* = 30d.
+Table IV shows that the lower value of the average escape time for equal-mass
+components is <T> ~ 100t for p* = 20d. However, from Table V it can be seen that
+TABLE V
+The distribution of the escape time of the triple systems
+ДГ(г) la Ma
+0-10 0.168 0.134 0.077 0.137
+10-20 0.081 0.087 0.061 0.115
+20-30 0.078 0.077 0.053 0.085
+30-40 0.066 0.066 0.049 0.074
+40-50 0.057 0.056 0.045 0.065
+50-100 0.212 0.217 0.194 0.202
+100-200 0.216 0.198 0.215 0.197
+200-300 0.085 0.068 0.086 0.076
+300-400 0.028 0.026 0.050 0.032
+> 400 0.009 0.071 0.170 0.017
+Notes:
+Ia: plane problem; equal masses; ko = 0, L = 0.
+IIa: plane problem; equal masses; ko # 0, L ‡ 0.
+Illa: three-dimensional problem; equal masses; ko ‡ 0, L ‡ 0.
+IIIb: three-dimensional problem; chance choice of masses and ko.
+TABLE VI
+The distribution of the eccentricities of the final binaries
+Де Computer simulations Theory
+Ia Ha Ila ІIІb І+ІI III
+Monaghan Ambartsumian
+0 - 0.1 0.015 0.002 0.008 0.006 0.005 0.010
+0.1 - 0.2 0.042 0.008 0.012 0.017 0.015 0.030
+0.2 -- 0.3 0.061 0.017 0.037 0.048 0.026 0.050
+0.3 - 0.4 0.064 0.025 0.054 0.045 0.037 0.070
+0.4 - 0.5 0.072 0.034 0.075 0.074 0.051 0.090
+0.5 - 0.6 0.098 0.052 0.098 0.090 0.066 0.110
+0.6 - 0.7 0.133 0.066 0.124 0.140 0.086 0.130
+0.8 - 0.9 0.337 0.156 0.202 0.199 0.160 0.170
+0.9 - 1.0 0.539 0.229 0.246 0.440 0.190
+Notes:
+la: plane problem; equal masses; ko = 0, L = 0.
+Ia: plane problem; equal masses; ko · 0, L · 0.
+IIIa: three-dimensional problem; equal masses; ko ‡ 0, L # 0.
+IIIb: three-dimensional problem; chance choice of masses and ko.

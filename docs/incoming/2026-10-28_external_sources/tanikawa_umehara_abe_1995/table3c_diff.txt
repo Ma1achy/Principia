@@ -1,0 +1,15 @@
+DIFF	2	nmin	A=	B=3
+DIFF	4	nmin	A=	B=3
+DIFF	5	nmin	A=	B=3
+DIFF	5	phi	A=	B=+-
+DIFF	6	phi	A=	B=+-
+DIFF	8	nmin	A=	B=4
+DIFF	9	phi	A=	B=+-
+DIFF	10	phi	A=	B=+-
+DIFF	11	phi	A=	B=+-
+DIFF	12	vh	A=	B=v
+DIFF	13	vh	A=	B=v
+DIFF	16	phi	A=	B=+-
+DIFF	18	nmin	A=	B=6
+DIFF	20	phi	A=	B=+-
+rows A=22 B=22; cells compared=176; disagreements=14

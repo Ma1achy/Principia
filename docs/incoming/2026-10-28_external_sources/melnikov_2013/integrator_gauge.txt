@@ -1,0 +1,6 @@
+Mel'nikov, Orlov & Shevchenko 2013, phi = pi/2; t0 = one integrator time unit, in the paper's units
+dx = 0.00: I = 10.8051; t0 = 1.5095; cap 200 = 301.9 paper units | T_d = 2e3 is 1325, T_d = 1e5 is 66249 integrator units
+dx = 0.17: I = 10.0006; t0 = 1.4244; cap 200 = 284.9 paper units | T_d = 2e3 is 1404, T_d = 1e5 is 70207 integrator units
+dx = 0.20: I = 9.8627; t0 = 1.4096; cap 200 = 281.9 paper units | T_d = 2e3 is 1419, T_d = 1e5 is 70942 integrator units
+dx = 0.50: I = 8.5490; t0 = 1.2663; cap 200 = 253.3 paper units | T_d = 2e3 is 1579, T_d = 1e5 is 78971 integrator units
+dx = 1.00: I = 6.6262; t0 = 1.0460; cap 200 = 209.2 paper units | T_d = 2e3 is 1912, T_d = 1e5 is 95599 integrator units

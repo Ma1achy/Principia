@@ -1,0 +1,39 @@
+360 KIYOTAKA TANIKAWA ET AL.
+TABLE IV
+Positions of the first twenty triple collision points
+on I3. Nmin is the number of minima of the small-
+est distance, (x, y) the position of triple collision
+points, and a is the vertex angle of initial isosceles
+triangle
+Nmin У a
+1 0.8660254 1.5707963
+2 0.4035896 0.4284000 0.4427212
+3 0.4529373 0.3031644 0.3080119
+4 0.4704101 0.2414607 0.2438709
+5 0.4790156 0.2037885 0.2052260
+6 0.4840270 0.1780150 0.1789690
+7 0.4872651 0.1590877 0.1597664
+0.4895060 0.1444976 0.1450051
+9 0.49111357 0.1328464 0.1332404
+10 0.4923716 0.1232902 0.1236046
+11 0.4933331 0.1152844 0.1155413
+12 0.4940998 0.1084624 0.1086762
+13 0.4947253 0.1025672 0.1027480
+14 0.4952450 0.0974127 0.0975673
+15 0.4956785 0.0928599 0.0929939
+16 0.4960499 0.0888044 0.0889215
+17 0.4963679 0.0851642 0.0852675
+18 0.4966420 0.0818753 0.0819671
+19 0.4968829 0.0788866 0.0789687
+20 0.4970952 0.0761564 0.0762303
+triangle, m2 arrives just in time at the center of gravity of the binary when it makes
+the first binary collision. This is the so-called Lagrangian triple collision. If we
+increase the distance of m2 a little, then m2 arrives at the center of gravity after the
+first binary collision of m1 and m3. But, if further increase the distance, then there
+will be an initial condition such that m2 arrives just in time at the center of gravity
+of the binary when it makes the second binary collision. Similarly, if we further
+increase the distance continuously, we will have a triple collision for any positive
+integer n ≥ 3 such that m2 arrives just in time at the center of gravity of m1 and
+m2 when it makes the nth binary collision.
+OBSERVATION 5.4. Suppose that y is negative (resp. positive) on the left of a
+binary collision curve and positive (resp. negative) at the other side. This order
