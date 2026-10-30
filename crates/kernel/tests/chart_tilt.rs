@@ -1095,6 +1095,305 @@ negative_control!(
     }
 );
 
+// ── The lattice of repeats past t's period 2 (R-655, ruling RQ-631 (a)) ───────────────────────────────────────────────
+
+/// The spherical map tilted by `s` about the square's centre into a momentum control.
+fn spherical(s: &TiltSpec) -> Tilted<ShapeSphere<f64>, f64> {
+    Tilted::new(sphere(ShapeMap::Spherical), Tilt::new(s, [0.5, 0.5], SPAN)).unwrap()
+}
+
+/// Whether the pixel at `(u, v)` is counted: by [`Tilted::pixel`], or under `old` by the round-2 rule, R-554 L3's
+/// alone, which takes a repeat past θ's period iff `N_a = 0` and over a pole iff `N_a = N_b = 0`, and no lattice.
+fn counted(view: &Tilted<ShapeSphere<f64>, f64>, u: f64, v: f64, old: bool) -> bool {
+    if old {
+        let [a, b] = view.at(u, v).0;
+        let inside = |x: f64| (0.0..=1.0).contains(&x);
+        let [na, nb] = view.tilt().normal_zero;
+        !((!inside(a) && na) || (!inside(b) && na && nb))
+    } else {
+        view.pixel(u, v) == Some(PixelCount::System)
+    }
+}
+
+/// The largest difference between two decodes' masses, positions and momenta.
+fn ic_gap(x: &Decoded<f64>, y: &Decoded<f64>) -> f64 {
+    let flat = |d: &Decoded<f64>| {
+        let mut v = d.ic.m.to_vec();
+        v.extend(d.ic.r.iter().flatten());
+        v.extend(d.ic.p.iter().flatten());
+        v
+    };
+    flat(x)
+        .iter()
+        .zip(flat(y))
+        .map(|(a, b)| (a - b).abs())
+        .fold(0.0, f64::max)
+}
+
+/// Over `window`, each pixel and its partner `shift` away in the window's `(u, v)`, whose `(a, b)` lies `w` away: the
+/// two decode the same system, to rounding, and exactly one of them is counted (R-408, R-655). `old` counts with the
+/// round-2 rule (the control).
+fn check_pairs(
+    view: &Tilted<ShapeSphere<f64>, f64>,
+    window: &[[f64; 2]],
+    shift: [f64; 2],
+    w: [f64; 2],
+    old: bool,
+) {
+    for &[u, v] in window {
+        let (p, q) = ([u, v], [u + shift[0], v + shift[1]]);
+        let ([a, b], [a2, b2]) = (view.at(p[0], p[1]).0, view.at(q[0], q[1]).0);
+        assert!(
+            (a2 - a - w[0]).abs() < 1e-12 && (b2 - b - w[1]).abs() < 1e-12,
+            "the partner of ({u}, {v}) is not w away"
+        );
+        let gap = ic_gap(
+            &view.decode::<Defaults, f64>(p[0], p[1]),
+            &view.decode::<Defaults, f64>(q[0], q[1]),
+        );
+        assert!(gap < 1e-9, "({u}, {v}) and its partner differ by {gap}");
+        let once = counted(view, p[0], p[1], old) != counted(view, q[0], q[1], old);
+        assert!(once, "a repeat counted with its partner at ({u}, {v})");
+    }
+}
+
+/// `τ₁ = 30°` alone (`N_b = 0`, `N_a ≠ 0`): `t` and `t + 2` are one system, the pixel counted once, at `t` in
+/// `[−½, 3/2)`; one unit up is another system. `old` counts with the round-2 rule (the control).
+fn check_t_period(old: bool) {
+    let view = spherical(&spec(30.0, 0.0, TiltMap::Sheet, 3, 3));
+    // u over [0.1, 0.9], v over [−0.5, 1.5]: one period in t, each partner two units up, past the pole.
+    let window: Vec<[f64; 2]> = grid(12, 0.0, 1.0)
+        .iter()
+        .map(|&[u, v]| [0.1 + 0.8 * u, -0.5 + 2.0 * v])
+        .collect();
+    check_pairs(&view, &window, [0.0, 2.0], [0.0, 2.0], old);
+    let one = ic_gap(
+        &view.decode::<Defaults, f64>(0.3, 0.2),
+        &view.decode::<Defaults, f64>(0.3, 1.2),
+    );
+    assert!(one > 1e-3, "t and t + 1 decode one system");
+}
+
+#[test]
+fn tilt_every_chart_shape_sphere_lattice_t_period() {
+    check_t_period(false);
+}
+
+negative_control!(
+    tilt_every_chart_shape_sphere_lattice_t_period,
+    "the round-2 rule counts t and t + 2 at τ₁ = 30° alone twice, so it must fail",
+    expected = "a repeat counted with its partner",
+    {
+        check_t_period(true);
+    }
+);
+
+/// Lean each axis at `τ₁ = τ₂ = 45°` (`N_a = N_b`): `(s − 2, t + 2)` repeats `(s, t)`, the pair counted once. The
+/// window's pixel moves `(Δa, Δb) = cos 45°·(Δu, Δv)`, so the partner is `2/cos 45°` along each. `old` counts with the
+/// round-2 rule (the control).
+fn check_lean_diagonal(old: bool) {
+    let view = spherical(&spec(45.0, 45.0, TiltMap::Lean, 3, 3));
+    let step = 2.0 / view.tilt().columns[0][0];
+    let window = grid(12, 0.0, 1.0);
+    check_pairs(&view, &window, [-step, step], [-2.0, 2.0], old);
+}
+
+#[test]
+fn tilt_every_chart_shape_sphere_lattice_lean_diagonal() {
+    check_lean_diagonal(false);
+}
+
+negative_control!(
+    tilt_every_chart_shape_sphere_lattice_lean_diagonal,
+    "the round-2 rule counts (s − 2, t + 2) and (s, t) under Lean 45°/45° twice, so it must fail",
+    expected = "a repeat counted with its partner",
+    {
+        check_lean_diagonal(true);
+    }
+);
+
+/// The strip `[dir, half]` of the generator `w` along `along`, as the kernel forms it.
+fn strip_of(along: [f64; 2], w: [f64; 2]) -> ([f64; 2], f64) {
+    let len = along[0].hypot(along[1]);
+    ([along[0] / len, along[1] / len], w[0].hypot(w[1]) / 2.0)
+}
+
+/// A lattice arm: the stored tilt and its strip's `(along, w)`, or none.
+type LatticeCase = (TiltSpec, Option<([f64; 2], [f64; 2])>);
+
+/// The lattice's arms on the stored angles.
+fn lattice_cases() -> Vec<LatticeCase> {
+    let one = |t1, t2, map| spec(t1, t2, map, 2, 2);
+    let two = |t1, t2, map| spec(t1, t2, map, 2, 3);
+    let lean = |t1, t2| one(t1, t2, TiltMap::Lean);
+    let sheet = |t1, t2| one(t1, t2, TiltMap::Sheet);
+    let t_period = Some(([0.0, 1.0], [0.0, 2.0]));
+    let mut cases = vec![
+        (sheet(0.0, 0.0), None),
+        (sheet(108.0, 144.0), None),
+        (lean(90.0, 90.0), None),
+        (lean(-90.0, 90.0), None),
+        (lean(180.0, 0.0), None),
+    ];
+    for map in [TiltMap::Sheet, TiltMap::Lean] {
+        cases.extend([
+            (one(30.0, 0.0, map), t_period),
+            (one(0.0, 30.0, map), None),
+            (two(30.0, 0.0, map), t_period),
+            (two(30.0, 180.0, map), t_period),
+            (two(0.0, 30.0, map), None),
+            (two(30.0, 45.0, map), None),
+            (two(45.0, 45.0, map), None),
+        ]);
+    }
+    cases.extend([
+        (lean(90.0, 30.0), t_period),
+        (lean(30.0, 90.0), None),
+        // tan τ₁ = ±tan τ₂: the ratio ±1.
+        (lean(45.0, 45.0), Some(([1.0, -1.0], [2.0, -2.0]))),
+        (lean(45.0, -135.0), Some(([1.0, -1.0], [2.0, -2.0]))),
+        (lean(-135.0, 45.0), Some(([1.0, -1.0], [2.0, -2.0]))),
+        (lean(30.0, 210.0), Some(([1.0, -1.0], [2.0, -2.0]))),
+        (lean(30.0, -150.0), Some(([1.0, -1.0], [2.0, -2.0]))),
+        (lean(45.0, -45.0), Some(([1.0, 1.0], [2.0, 2.0]))),
+        (lean(45.0, 135.0), Some(([1.0, 1.0], [2.0, 2.0]))),
+        (lean(-30.0, 30.0), Some(([1.0, 1.0], [2.0, 2.0]))),
+        // One angle ±30°, the other ±60°: the ratio ±1/3 or ±3.
+        (lean(30.0, 60.0), Some(([3.0, -1.0], [6.0, -2.0]))),
+        (lean(390.0, 60.0), Some(([3.0, -1.0], [6.0, -2.0]))),
+        (lean(-150.0, -120.0), Some(([3.0, -1.0], [6.0, -2.0]))),
+        (lean(30.0, 120.0), Some(([3.0, 1.0], [6.0, 2.0]))),
+        (lean(150.0, 60.0), Some(([3.0, 1.0], [6.0, 2.0]))),
+        (lean(60.0, 30.0), Some(([1.0, -3.0], [2.0, -6.0]))),
+        (lean(-60.0, 30.0), Some(([1.0, 3.0], [2.0, 6.0]))),
+        (lean(60.0, -30.0), Some(([1.0, 3.0], [2.0, 6.0]))),
+        // Irrational ratios, and an exact miss that rounds onto a half turn.
+        (lean(30.0, 45.0), None),
+        (lean(60.0, 45.0), None),
+        (lean(30.0, 100.0), None),
+        (lean(30.0, 30.000000000000004), None),
+        (lean(2e-14, -179.99999999999997), None),
+        // Tip as sheet, both angles set: N_a/N_b = τ₁/τ₂, read exactly from the doubles.
+        (sheet(30.0, 20.0), Some(([20.0, -30.0], [4.0, -6.0]))),
+        (sheet(-30.0, 20.0), Some(([20.0, 30.0], [4.0, 6.0]))),
+        (sheet(30.0, -20.0), Some(([-20.0, -30.0], [-4.0, -6.0]))),
+        (sheet(40.0, 70.0), Some(([70.0, -40.0], [7.0, -4.0]))),
+        (sheet(0.1, 0.2), Some(([0.2, -0.1], [4.0, -2.0]))),
+        (sheet(200.0, 30.0), Some(([30.0, -200.0], [3.0, -20.0]))),
+        // Subnormal angles, 2^−1074 with 2^−1070 and with 2^−1022, read through their bits.
+        (
+            sheet(f64::from_bits(1), f64::from_bits(16)),
+            Some(([f64::from_bits(16), -(f64::from_bits(1))], [32.0, -2.0])),
+        ),
+        (
+            sheet(f64::from_bits(1), f64::MIN_POSITIVE),
+            Some((
+                [f64::MIN_POSITIVE, -(f64::from_bits(1))],
+                [2.0f64.powi(53), -2.0],
+            )),
+        ),
+        (
+            sheet(1e-300, 1e300),
+            Some(([1e300, -1e-300], [f64::INFINITY, -2.0])),
+        ),
+    ]);
+    cases
+}
+
+/// Each arm's strip, from the spec and from the params ([`TiltSpec::strip`], [`Tilt::new`]).
+fn check_lattice(cases: &[LatticeCase]) {
+    for (s, want) in cases {
+        let want = want.map(|(along, w)| strip_of(along, w));
+        let got = s.strip().map(|st| (st.dir, st.half));
+        assert_eq!(got, want, "the lattice under {s:?}");
+        assert_eq!(Tilt::new(s, CENTRE, SPAN).strip, s.strip(), "{s:?}");
+    }
+}
+
+#[test]
+fn tilt_every_chart_lattice_exact() {
+    check_lattice(&lattice_cases());
+    // 0.3 is not 3 × 0.1 in binary: a generator far past any view, and finite.
+    let far = spec(0.1, 0.3, TiltMap::Sheet, 2, 2).strip().unwrap();
+    assert!(far.half > 1e15 && far.half.is_finite(), "{far:?}");
+}
+
+negative_control!(
+    tilt_every_chart_lattice_exact,
+    "a lattice claimed at an irrational ratio, Lean 30°/45°, must fail",
+    expected = "the lattice under",
+    {
+        check_lattice(&[(
+            spec(30.0, 45.0, TiltMap::Lean, 2, 2),
+            Some(([1.0, -1.0], [2.0, -2.0])),
+        )]);
+    }
+);
+
+/// The canonical strip's edges, half-open: `t` in `[−½, 3/2)` for `t`'s period, exactly at the edges and one ulp of the
+/// offset past;
+/// and along a diagonal, each term of the offset from `(½, ½)` read.
+fn check_strip_edges(closed: bool) {
+    let t = spec(30.0, 0.0, TiltMap::Sheet, 3, 3).strip().unwrap();
+    let canonical = |a: f64, b: f64| {
+        let p = (a - 0.5) * t.dir[0] + (b - 0.5) * t.dir[1];
+        if closed {
+            -t.half <= p && p <= t.half
+        } else {
+            t.canonical(a, b)
+        }
+    };
+    let below = -0.5f64;
+    let above = 1.5f64;
+    assert!(canonical(0.5, below), "t = −½ is not canonical");
+    assert!(
+        !canonical(0.5, below - f64::EPSILON),
+        "t just below −½ canonical"
+    );
+    assert!(
+        canonical(0.5, above.next_down()),
+        "t just below 3/2 not canonical"
+    );
+    assert!(!canonical(0.5, above), "t = 3/2 is canonical");
+    assert!(!canonical(0.5, 2.0) && !canonical(0.5, -1.0));
+    // Through the view: the pixel at t = −½ counts, the one at t = 3/2 does not.
+    let view = spherical(&spec(30.0, 0.0, TiltMap::Sheet, 3, 3));
+    assert_eq!(view.pixel(0.5, -0.5), Some(PixelCount::System));
+    assert_eq!(view.pixel(0.5, 1.5), None);
+    assert_eq!(view.pixel(0.5, 3.5), None);
+    // Lean 45°/45°: w = (2, −2), |w|/2 = √2 along (1, −1)/√2.
+    let d = spec(45.0, 45.0, TiltMap::Lean, 3, 3).strip().unwrap();
+    for (a, b, inside) in [
+        (1.9, 0.5, true),
+        (0.5, 1.9, true),
+        (1.9, 1.9, true),
+        (2.9, 0.5, false),
+        (0.5, 2.9, false),
+        (-0.9, -0.9, true),
+        (3.0, -1.0, false),
+    ] {
+        assert_eq!(
+            d.canonical(a, b),
+            inside,
+            "({a}, {b}) on the diagonal strip"
+        );
+    }
+}
+
+#[test]
+fn tilt_every_chart_lattice_strip_edges() {
+    check_strip_edges(false);
+}
+
+negative_control!(
+    tilt_every_chart_lattice_strip_edges,
+    "a closed strip counts t = 3/2 with t = −½, so it must fail",
+    expected = "t = 3/2 is canonical",
+    {
+        check_strip_edges(true);
+    }
+);
+
 /// `[N_a = 0, N_b = 0]` on the stored angles (R-554 L3), at each arm's boundary.
 fn check_normal_zero(cases: &[(TiltSpec, [bool; 2])]) {
     for (s, want) in cases {
@@ -1485,6 +1784,7 @@ fn check_f32(scale: f32) {
         span: t.span.map(|x| x as f32),
         weight: t.weight as f32,
         normal_zero: t.normal_zero,
+        strip: t.strip,
     };
     let c = sphere(ShapeMap::Spherical);
     let chart: ShapeSphere<f32> = ShapeSphere {
