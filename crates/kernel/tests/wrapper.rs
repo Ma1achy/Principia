@@ -21,8 +21,12 @@
 //! - `wrapper_horizon_counter`: the loop runs `horizon_steps` macro-steps, writes `bounded` and `t_end_step` at the
 //!   horizon, `running` when `done` stopped it, and `saturated` where `N_sub` reached `N_max`.
 //!
-//! **Domain** (pitfalls §10): the wrapper's loop with its cadence hooks empty (TASK-M3-05, -09, -12 fill them), over
-//! short horizons; what it shows is the loop's and the seam's, not a trajectory's physics.
+//! - `wrapper_cadence_hooks`: the wrapper's own cadence counts one call per substep, is never done while detection finds
+//!   nothing, and its hooks project the state (TASK-M3-05), so its march differs from an empty cadence's.
+//!
+//! **Domain** (pitfalls §10): the wrapper's loop with its detection hook empty (TASK-M3-09, -12 fill it), over short
+//! horizons; what it shows is the loop's and the seam's, not a trajectory's physics. The projection and the monitor the
+//! cadence runs (TASK-M3-05) are `monitor.rs`'s.
 
 use std::any::Any;
 use std::cell::{Cell, RefCell};
@@ -42,7 +46,9 @@ use kernel::driver::advance::{Advance, AdvanceParams, AdvanceReal, Advanced, Cad
 use kernel::driver::cadence::{self, WrapperCadence};
 use kernel::driver::nsub_table::{thresholds, NsubConfig};
 use kernel::driver::substep::{d2_quantised, n_sub, NsubThresholds};
-use kernel::driver::wrapper::{integrate, integrate_with, WrapperReal, WrapperUniforms};
+use kernel::driver::wrapper::{
+    integrate, integrate_with, monitored, WrapperReal, WrapperUniforms,
+};
 use kernel::generated::links::{Defaults, LinkReal};
 use kernel::generated::nsub_thresholds::NSUB_TABLE_ROWS;
 use kernel::occupant::euler::Euler;
@@ -654,8 +660,8 @@ fn calls_run<A: Advance, R: P>(name: &str, ic: &Ic<R>, u: &WrapperUniforms<R>, s
     integrate_with::<A, R, Probe>(ic, u, &mut probe);
     check_calls(name, probe.calls, STEPS.get());
     STEPS.set(0);
-    let mut own = WrapperCadence::default();
-    integrate_with::<A, R, WrapperCadence>(ic, u, &mut own);
+    let mut own = WrapperCadence::new(&ic.m, &ic.r, &ic.p);
+    integrate_with::<A, R, WrapperCadence<R>>(ic, u, &mut own);
     check_calls(name, own.invocations(), STEPS.get());
 }
 
@@ -807,12 +813,12 @@ fn reported_run<A: Advance, R: P>(
     let mut probe = Probe::stopping_at(stop);
     let out = integrate_with::<A, R, Probe>(ic, u, &mut probe);
     check_reported(name, out.total_substeps, probe.calls);
-    let mut own = WrapperCadence::default();
-    let out = integrate_with::<A, R, WrapperCadence>(ic, u, &mut own);
+    let mut own = WrapperCadence::new(&ic.m, &ic.r, &ic.p);
+    let out = integrate_with::<A, R, WrapperCadence<R>>(ic, u, &mut own);
     check_reported(name, out.total_substeps, own.invocations());
     assert_eq!(
         integrate::<A, R>(ic, u),
-        out,
+        monitored(out, &own),
         "{name}: integrate is not integrate_with under the wrapper's cadence"
     );
 }
@@ -1192,9 +1198,8 @@ negative_control!(
     }
 );
 
-/// The wrapper's own cadence counts one call per substep and is never done while its hooks detect nothing; its hooks
-/// leave the state as the step left it.
-fn check_own_cadence(c: &WrapperCadence, substeps: u32) {
+/// The wrapper's own cadence counts one call per substep and is never done while its hooks detect nothing.
+fn check_own_cadence(c: &WrapperCadence<f64>, substeps: u32) {
     assert!(
         !Cadence::<f64>::done(c),
         "the wrapper's cadence is done with nothing detected"
@@ -1211,32 +1216,36 @@ fn check_own_cadence(c: &WrapperCadence, substeps: u32) {
 fn wrapper_cadence_hooks() {
     let ic = ic::<f64>([0.3; 8]);
     let u = uniforms::<f64>(1e-3, 5, Table::Cap(2));
-    let mut own = WrapperCadence::default();
-    let a = integrate_with::<Kdk, f64, WrapperCadence>(&ic, &u, &mut own);
+    let mut own = WrapperCadence::new(&ic.m, &ic.r, &ic.p);
+    let a = integrate_with::<Kdk, f64, WrapperCadence<f64>>(&ic, &u, &mut own);
     check_own_cadence(&own, 10);
     let b = integrate_with::<Kdk, f64, Probe>(&ic, &u, &mut Probe::default());
-    assert_eq!(
+    assert_ne!(
         bits(&a),
         bits(&b),
-        "the wrapper's empty hooks changed the march"
+        "the wrapper's hooks left the march as an empty cadence's"
     );
     let mut s = State {
         m: ic.m,
-        r: ic.r,
-        p: ic.p,
+        r: [[0.25, -0.5], [0.125, 0.75], [-0.375, 0.0625]],
+        p: [[0.5, 0.25], [-0.125, 0.375], [0.0625, -0.25]],
     };
     let mut g = Geom::new(&s.m, &s.r);
     let before = state_bits(&s, &g);
-    cadence::project(&mut s, &mut g);
-    cadence::monitor(&s, &g);
+    own.project(&mut s, &mut g);
     assert!(
         !cadence::detect(&s, &g),
         "detect fired with nothing to detect"
     );
-    assert_eq!(
+    assert_ne!(
         state_bits(&s, &g),
         before,
-        "the empty hooks moved the state"
+        "the projection left a state off the CoM frame unmoved"
+    );
+    assert_eq!(
+        state_bits(&s, &g)[15..],
+        state_bits(&s, &Geom::new(&s.m, &s.r))[15..],
+        "the projection did not re-form the force evaluation at the projected positions"
     );
 }
 
@@ -1247,8 +1256,8 @@ negative_control!(
     {
         let ic = ic::<f64>([0.3; 8]);
         let u = uniforms::<f64>(1e-3, 5, Table::Cap(2));
-        let mut own = WrapperCadence::default();
-        integrate_with::<Kdk, f64, WrapperCadence>(&ic, &u, &mut own);
+        let mut own = WrapperCadence::new(&ic.m, &ic.r, &ic.p);
+        integrate_with::<Kdk, f64, WrapperCadence<f64>>(&ic, &u, &mut own);
         check_own_cadence(&own, 11);
     }
 );

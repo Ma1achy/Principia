@@ -605,6 +605,19 @@ const WINDOW: [&str; 2] = ["window_square_centre", "window_square_half"];
 /// hashed.
 const SLICE: [&str; 1] = ["slice_axis_z_q3"];
 
+/// The invariant monitor's and the drift views' entries (TASK-M3-05; dd_integrator §3.5, render contract Part 5): the
+/// relative-drift floors' defaults, the drift suspect predicates' thresholds (REQ-INT-085) and the drift views' `lin`
+/// ranges (REQ-TOOL-150). The predicates are read at read time and the views draw, so they decide what a read shows,
+/// never what a stored bit means (no suspect bit is stored, payload §5), and they are not hashed.
+const MONITOR: [&str; 6] = [
+    "eps_E_default",
+    "eps_L_default",
+    "suspect_energy_threshold",
+    "suspect_lz_threshold",
+    "drift_lin_r_E",
+    "drift_lin_r_Lz",
+];
+
 #[test]
 fn schema_version_hashes_the_registers_stored_bits_entries() {
     for name in STORED_BITS {
@@ -620,7 +633,7 @@ fn schema_version_hashes_the_registers_stored_bits_entries() {
     // invariant charts' warp defaults (TASK-M2-12), or the Burrau family's (TASK-M2-10), or the march's crossing
     // capacity (TASK-M3-15), or the steppers' coefficients (TASK-M3-02), or the curve projection's search
     // (TASK-M2-18), or the substep law's (TASK-M3-03), or the view window's square (TASK-M2-21), or the slice
-    // frame's default axis (TASK-M6-38).
+    // frame's default axis (TASK-M6-38), or the invariant monitor's and the drift views' (TASK-M3-05).
     for k in REGISTER.iter().filter(|k| !STORED_BITS.contains(&k.name)) {
         assert!(
             ledger::links::CHART_CONSTANTS
@@ -635,7 +648,8 @@ fn schema_version_hashes_the_registers_stored_bits_entries() {
                 || CURVE_SEARCH.contains(&k.name)
                 || SUBSTEP.contains(&k.name)
                 || WINDOW.contains(&k.name)
-                || SLICE.contains(&k.name),
+                || SLICE.contains(&k.name)
+                || MONITOR.contains(&k.name),
             "`{}` is neither a stored-bits entry nor a chart constant, so it is not hashed",
             k.name
         );
@@ -698,6 +712,12 @@ fn schema_version_hashes_the_registers_stored_bits_entries() {
         assert!(
             REGISTER.iter().any(|k| k.name == name) && !STORED_BITS.contains(&name),
             "the slice frame's entry `{name}` is not an unhashed register entry"
+        );
+    }
+    for name in MONITOR {
+        assert!(
+            REGISTER.iter().any(|k| k.name == name) && !STORED_BITS.contains(&name),
+            "the monitor's entry `{name}` is not an unhashed register entry"
         );
     }
 }

@@ -612,6 +612,9 @@ fn view_context() -> String {
         format!("{lib}/prelude.wgsl"),
         format!("{lib}/colour_space.wgsl"),
         format!("{lib}/present.wgsl"),
+        format!("{lib}/compaction.wgsl"),
+        format!("{lib}/ramp.wgsl"),
+        format!("{lib}/drift.wgsl"),
         wgsl::PATH.to_owned(),
         read::WGSL_PATH.to_owned(),
         "crates/render/shaders/wgsl/stain/context.wgsl".to_owned(),
@@ -637,11 +640,12 @@ fn named_struct(
     }
 }
 
-/// The functions the shared library defines, the prelude, the colour-space maps and the presentation layer
-/// (render_gui_spec §10.1; render contract Part 5): what a view calls to colour, not to read its field.
+/// The functions the shared library defines, the prelude, the colour-space maps, the presentation layer, the field
+/// ramp's compactions and ramps and the drift views' presentation (render_gui_spec §10.1; render contract Part 5): what
+/// a view calls to colour, not to read its field.
 fn library_functions() -> BTreeSet<String> {
     let lib = "crates/render/shaders/wgsl/lib";
-    let source = ["prelude", "colour_space", "present"]
+    let source = ["prelude", "colour_space", "present", "compaction", "ramp", "drift"]
         .iter()
         .map(|f| checked_in(&format!("{lib}/{f}.wgsl")))
         .collect::<Vec<_>>()

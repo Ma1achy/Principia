@@ -26,9 +26,12 @@
 //! `bounded`; there is no timeout state) and `running` where the cadence's `done` ended it, for the terminal's label to
 //! replace; and `t_end_step`, the completed macro-steps (Part 5, "Exact step-index timing invariant"; payload §2): a
 //! macro-step counts once its `N_sub` substeps were all taken, so one that `done` cut short does not, while the loop's
-//! counter `macro`, which still advances past it, bounds the loop only. A terminal's label and step, `d_min` and the
-//! monitored fields are the cadence's hooks' (TASK-M3-05, TASK-M3-09, TASK-M3-12); `d_min` is written unset and
-//! `dmin_pair` its sentinel until then.
+//! counter `macro`, which still advances past it, bounds the loop only. [`integrate`] writes the monitored fields from
+//! its cadence's monitor ([`monitored`]; Part 1, "COM projection and invariant monitoring"): `E_0` and `Lz_0`, stored
+//! before the loop, and `packed_b`'s `dE_max` and `dLz_max`, the maxima latched at `Real` during the march and packed
+//! to f16 once, here (payload §1, the precision rule's option (a)); `ΔE_final` and `ΔL_z` final are not stored, the read
+//! side derives them from the final state (payload §5). A terminal's label and step and `d_min` are the cadence's hooks'
+//! (TASK-M3-09, TASK-M3-12); `d_min` is written unset and `dmin_pair` its sentinel until then.
 
 use super::advance::{Advance, AdvanceParams, AdvanceReal, Cadence};
 use super::cadence::WrapperCadence;
@@ -36,8 +39,8 @@ use super::substep::{d2_quantised, NsubThresholds, Quantise, SubstepState};
 use crate::decode::Ic;
 use crate::occupant::{Geom, State};
 use crate::payload::{
-    pack_times, set_d_min_unset, set_dmin_pair, set_state, PayloadReal, SimStateBaseOf,
-    SD_DMIN_PAIR_SENTINEL, STATE_BOUNDED, STATE_RUNNING,
+    pack_packed_b, pack_times, set_d_min_unset, set_dmin_pair, set_state, PayloadReal,
+    SimStateBaseOf, SD_DMIN_PAIR_SENTINEL, STATE_BOUNDED, STATE_RUNNING,
 };
 
 /// The float type the wrapper runs at: an occupant's ([`AdvanceReal`]), a payload's ([`PayloadReal`]), and quantised
@@ -61,13 +64,33 @@ pub struct WrapperUniforms<R> {
 }
 
 /// The integration of `ic` under the sim key's `uniforms` by the occupant `A`, with the wrapper's own cadence
-/// ([`WrapperCadence`]): [`integrate_with`].
+/// ([`WrapperCadence`]), built from `ic` before the loop: [`integrate_with`], then the monitored fields
+/// ([`monitored`]).
 #[inline]
 pub fn integrate<A: Advance, R: WrapperReal>(
     ic: &Ic<R>,
     uniforms: &WrapperUniforms<R>,
 ) -> SimStateBaseOf<R> {
-    integrate_with::<A, R, WrapperCadence>(ic, uniforms, &mut WrapperCadence::default())
+    let mut cadence = WrapperCadence::new(&ic.m, &ic.r, &ic.p);
+    let out = integrate_with::<A, R, WrapperCadence<R>>(ic, uniforms, &mut cadence);
+    monitored(out, &cadence)
+}
+
+/// `out` with the monitored fields of the run `cadence` followed (Part 1, "COM projection and invariant monitoring";
+/// payload §1, §2): `E_0` and `Lz_0` as stored before the loop, and `packed_b` holding `dE_max = max|ΔE|` and
+/// `dLz_max = max|ΔL_z|`, rounded to f32 and then packed to f16 (clamped to binary16's finite range first).
+#[inline]
+pub fn monitored<R: WrapperReal>(
+    out: SimStateBaseOf<R>,
+    cadence: &WrapperCadence<R>,
+) -> SimStateBaseOf<R> {
+    let m = cadence.monitor_state();
+    SimStateBaseOf {
+        E_0: m.e_0(),
+        Lz_0: m.lz_0(),
+        packed_b: pack_packed_b(m.de_max().quantise(), m.dlz_max().quantise()),
+        ..out
+    }
 }
 
 /// The integration of `ic` under `uniforms` by the occupant `A`, `cadence` the per-substep callback it passes in

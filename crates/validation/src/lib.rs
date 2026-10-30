@@ -10,6 +10,7 @@ pub mod decode_agreement;
 pub mod decode_f32_eps;
 pub mod decode_preset;
 pub mod decode_sanity;
+pub mod drift;
 pub mod eps_phys;
 pub mod gate;
 pub mod gauge;
