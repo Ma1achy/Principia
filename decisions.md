@@ -28394,8 +28394,10 @@ this port.
 
 - **Item 1: a target is a measurement, not a gate.** Failing one never blocks building: the plan proceeds and the
   result is reported. R-650 draws the line: the internal correctness tests and the anchor smoke tests are not targets in
-  this sense and block a merge as before; every external target (a published, prototype or other outside number) is a
-  measurement, scored in M9 or, early, as a peek. A target's control (rule 16, REQ-VAL-007) is a check that the test
+  this sense and block a merge as before; every external target (a published or other outside number, or a prototype
+  number held as a tier-D "reproduce or explain" target) is a measurement, scored in M9 or, early, as a peek. A value a
+  contract or design doc adopts as its gate is internal and blocking, even where it came from the prototype (R-650's
+  applied line). A target's control (rule 16, REQ-VAL-007) is a check that the test
   can fail, not a target: a control that does not fire is still a defect of the test.
 - **Item 2: the tier each target binds.** Each external target declares it: (a) the GPU explorer (f32, interactive,
   agreeing statistically or qualitatively only, `error_ratio` flagging what it can't resolve) or (b) the CPU IC
@@ -28563,8 +28565,14 @@ The owner's addendum, the same day, verbatim:
 
 *Applied per R-369:*
 - **The line between internal and external,** where the owner's lists name no requirement: an external target scores
-  against a published, prototype or other outside number; a check of our arithmetic or our own reference is internal.
-  So: PL-8's first half stays in M3 and moves from TASK-M3-56 (now TASK-M9-16) to TASK-M3-27; W-1 (REQ-VAL-043) stays
+  against a published or other outside number, or against a prototype number held as a tier-D "reproduce or explain"
+  target (`docs/design/principia_dd_replication.md` § 5.11: D-1 to D-5, REQ-VAL-299 to REQ-VAL-306); a check of our
+  arithmetic or our own reference is internal, and so is a value a contract or design doc adopts as its gate, pitfall
+  regressions included, even where the value came from the prototype. So REQ-INT-049, REQ-INT-051, REQ-INT-052,
+  REQ-VAL-045, REQ-VAL-051, REQ-VAL-052 and REQ-EVT-013 stay in M3 and keep blocking. *Was (corrected 30 Oct 2026, the
+  physics review of PR #342, finding F3):* "an external target scores against a published, prototype or other outside
+  number; a check of our arithmetic or our own reference is internal."
+  Likewise: PL-8's first half stays in M3 and moves from TASK-M3-56 (now TASK-M9-16) to TASK-M3-27; W-1 (REQ-VAL-043) stays
   in M3, because R-125 makes it the verification of the branch-cut convention we transcribe ("verified by REQ-VAL-043
   against the published braid classes … confirmed at the gate"), a check of our encoding; the Chazy classifier's
   Fewbody reference (REQ-VAL-184 to REQ-VAL-187, TASK-M7-35 and TASK-M7-36) stays in M7, a ported reference algorithm

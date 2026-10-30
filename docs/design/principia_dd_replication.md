@@ -828,11 +828,16 @@ an earlier milestone, this section governs.*
   REQ-VAL-118, REQ-VAL-120); W-1 (REQ-VAL-043, R-125's verification of the convention we transcribe); the Chazy
   classifier's Fewbody reference (REQ-VAL-184 to REQ-VAL-187); the closure field (REQ-VAL-076); and every GPU-vs-CPU
   agreement check, within its stated f32 tolerance, measured, never assumed (R-649's clarification 2; REQ-VAL-173's
-  tolerance is REQ-VAL-339).
+  tolerance is REQ-VAL-339). A value a contract or design doc adopts as its gate is internal and blocking, pitfall
+  regressions included, even where it came from the prototype: REQ-INT-049, REQ-INT-051, REQ-INT-052, REQ-VAL-045,
+  REQ-VAL-051, REQ-VAL-052 and REQ-EVT-013 stay in M3 and keep blocking.
 - **The anchor smoke tests, continuous and blocking,** which catch gross breakage only and never steer design: the
   figure-eight closure (REQ-VAL-041, REQ-VAL-133); SP-1 run to its own horizon, `t_max` between 60 and 65 as a per-test
   parameter, the default horizon 50 unchanged (REQ-VAL-034, REQ-VAL-132); SP-2 (REQ-VAL-336, REQ-VAL-337; § 5.6).
-- **External, measured in M9:** every target that scores against a published, prototype or other outside number:
+- **External, measured in M9:** every target that scores against a published or other outside number, or against a
+  prototype number held as a tier-D "reproduce or explain" target (§ 5.11, REQ-VAL-299 to REQ-VAL-306). *Was:* "every
+  target that scores against a published, prototype or other outside number" (corrected 30 Oct 2026, the physics
+  review of PR #342, finding F3). They are:
   REQ-VAL-201 to REQ-VAL-249 and REQ-VAL-252 to REQ-VAL-332, FF-H (REQ-VAL-042), SP-1's feature set (REQ-VAL-127), the
   figure-eight's published shape-sphere curve (REQ-VAL-333, its tolerance REQ-VAL-334) and SP-1's structural comparison
   with Szebehely & Peters (REQ-VAL-335). M9 also holds its report (REQ-VAL-340) and the GPU-path tightening's
