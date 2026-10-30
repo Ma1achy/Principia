@@ -10,6 +10,8 @@
 //!   the largest error in ULP is at most libm's and the count of results not that nearest f32 at most libm's; on the
 //!   round trip, the count of `α' ≠ α`, the most steps from `α`, and the largest relative error of the decode's `cos α'`
 //!   and `sin α'` are each at most libm's.
+//! - `arctan_entry_point`: the compute entry point `kernel::stage::encode::arctangent`, run natively, writes each pair's
+//!   `atan2_f32` at its word and nothing for an invocation past the last pair.
 //! - `arctan_reduced_exhaustive`, `arctan_plane_dense`, `arctan_round_trip_exhaustive`, ignored: the same checks on every
 //!   f32 `t ∈ [0, 1]`, on 2²⁸ plane pairs and on every f32 `α ∈ [0, π/2]`, minutes in a release build (applied per R-369:
 //!   too slow for CI; run with `cargo test --release -p kernel --test arctan -- --ignored`).
@@ -25,7 +27,9 @@ use std::ops::Range;
 use std::thread;
 
 use kernel::arctan::atan2_f32;
+use kernel::stage::encode::arctangent;
 use kernel::Real;
+use spirv_std::glam::UVec3;
 use spirv_std::num_traits::Float;
 use validation::arctan::{plane, Accuracy, RoundTrip, HALF_PI_BELOW_BITS, ONE_BITS};
 use validation::negative_control;
@@ -319,6 +323,48 @@ negative_control!(
     "Mesa's lowering, which ignores the sign of a zero x",
     expected = "atan2(",
     check_special(mesa_like)
+);
+
+/// The entry point's invocations `0 … n` over `n` pairs of [`specials`], run natively: each of the first `n` words is
+/// `want`'s bits for its pair, and the word past them, which invocation `n` would write, keeps its fill.
+fn check_entry(want: Atan2) {
+    let s = specials();
+    let pairs: Vec<[f32; 2]> = s
+        .iter()
+        .flat_map(|&y| s.iter().map(move |&x| [y, x]))
+        .collect();
+    let words: Vec<u32> = pairs.as_flattened().iter().map(|v| v.to_bits()).collect();
+    let fill = 0xDEAD_BEEF;
+    let mut out = vec![fill; pairs.len() + 1];
+    for i in 0..=pairs.len() as u32 {
+        arctangent(UVec3::new(i, 0, 0), &words, &mut out);
+    }
+    for (i, &[y, x]) in pairs.iter().enumerate() {
+        let w = want(y, x);
+        assert!(
+            out[i] == w.to_bits() || (w.is_nan() && f32::from_bits(out[i]).is_nan()),
+            "the entry point's word {i}, atan2({y:e}, {x:e}), is {:#010x}, not {:#010x}",
+            out[i],
+            w.to_bits()
+        );
+    }
+    assert_eq!(
+        out[pairs.len()],
+        fill,
+        "an invocation past the last pair wrote"
+    );
+}
+
+#[test]
+fn arctan_entry_point() {
+    check_entry(atan2_f32);
+}
+
+negative_control!(
+    arctan_entry_point,
+    "the entry point's words held to Mesa's lowering",
+    expected = "the entry point's word",
+    check_entry(mesa_like)
 );
 
 #[test]
