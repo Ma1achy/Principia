@@ -1,6 +1,7 @@
-//! The `decode-agreement` gate (TASK-M2-25; REQ-COL-006, R-133, R-297): the agreement preset
-//! `|E(fragment-decode) − E₀|` (`render::presets::agreement`) over every M2 chart, the fragment's generated decode
-//! against the kernel decode stage's own, read from the payload, within REQ-DEC-043's factor.
+//! The `decode-agreement` gate (TASK-M2-25, TASK-M2-29; REQ-COL-006, REQ-COL-060, R-133, R-297): the agreement preset
+//! `|E(fragment-decode) − E₀|` (`render::presets::agreement`) over every M2 chart, the fragment's generated decode,
+//! compiled as the backend compiles it, against the kernel decode stage's own, compiled with compute fast-math off and
+//! read from the payload, within REQ-COL-060's factor.
 //!
 //! **The scene.** Per chart, a `side[0]` × `side[1]` lattice of one-pixel samples at depth `depth`'s cells
 //! (`crate::decode_preset::Scene::lattice`), at the chart's fixed parameters (`crate::decode_preset::uniforms`). The
@@ -20,9 +21,15 @@
 //! how many samples of each chart disagree. `poison` stores `V₀ = −∞`'s bits at the samples it names, the collision
 //! pole as the decode stage writes it: they must draw the hatch and drop out of the comparison, so that input passes.
 //!
-//! **The threshold** is REQ-DEC-043's factor, provisional until the human confirms it at the M2 gate (R-71), the
-//! preset's own [`render::presets::agreement::FACTOR`]; a `gate.json` giving any other value is refused, since the
-//! preset compiles its factor in.
+//! **The measurement** (REQ-COL-060, TASK-M2-29). Each chart's line in the report gives, over its compared samples, the
+//! worst `|E − E₀|` in f32 `eps` of the tolerance's scale `max(|K₀|, 1) + max(|V₀|, 1)` ([`Sample::factor`]: the factor
+//! that sample alone would need) and absolute, from the preset's own `E` and `E₀` words, and how many samples a
+//! non-finite operand excluded (R-436); a last line gives the worst over every chart beside the tolerance. The `survey`
+//! input is the measurement's denser lattice.
+//!
+//! **The threshold** is REQ-COL-060's factor, proposed by TASK-M2-29 and provisional until the human confirms it at the
+//! M2 gate (R-71, R-182), the preset's own [`render::presets::agreement::FACTOR`]; a `gate.json` giving any other value
+//! is refused, since the preset compiles its factor in.
 
 use serde::Deserialize;
 
@@ -65,16 +72,35 @@ pub struct Sample {
     pub valid: bool,
     /// Whether every operand is finite by its bits: the payload's `K₀` and `V₀`, and the fragment decode's `K` and `V`.
     pub finite: bool,
+    /// The measured difference `|E − E₀|`, at f64 from the preset's own `E` and `E₀` words: the fragment's f32 sums.
+    pub diff: f64,
+    /// The tolerance's scale at the sample, `eps·(max(|K₀|, 1) + max(|V₀|, 1))` at f64 from the stored `K₀` and `V₀`:
+    /// the tolerance is the factor times it.
+    pub scale: f64,
 }
 
 impl Sample {
-    /// The sample from the preset's words `(ratio's bits, valid, E's bits, E₀'s bits)` and whether its operands are
-    /// finite.
-    pub fn from_words(w: [u32; 4], finite: bool) -> Sample {
+    /// The sample from the preset's words `(ratio's bits, valid, E's bits, E₀'s bits)`, the payload's stored `K₀` and
+    /// `V₀`, and whether its operands are finite.
+    pub fn from_words(w: [u32; 4], stored: [f32; 2], finite: bool) -> Sample {
+        let [k_0, v_0] = stored.map(|x| f64::from(x).abs().max(1.0));
         Sample {
             ratio: f32::from_bits(w[0]),
             valid: w[1] != 0,
             finite,
+            diff: (f64::from(f32::from_bits(w[2])) - f64::from(f32::from_bits(w[3]))).abs(),
+            scale: f64::from(f32::EPSILON) * (k_0 + v_0),
+        }
+    }
+
+    /// The measured difference in units of the tolerance's scale: the factor this sample alone would need, NaN read as
+    /// `+∞`.
+    pub fn factor(&self) -> f64 {
+        let f = self.diff / self.scale;
+        if f.is_nan() {
+            f64::INFINITY
+        } else {
+            f
         }
     }
 }
@@ -95,6 +121,11 @@ pub struct Tally {
     pub misplaced: usize,
     /// The worst valid ratio, NaN read as `+∞`; 0 with no valid sample.
     pub worst: f64,
+    /// The measurement (REQ-COL-060): the largest factor a valid sample needs, its `|E − E₀|` over the tolerance's
+    /// scale ([`Sample::factor`]); 0 with no valid sample.
+    pub worst_factor: f64,
+    /// The largest valid `|E − E₀|`, NaN read as `+∞`; 0 with no valid sample.
+    pub worst_diff: f64,
 }
 
 impl Tally {
@@ -107,6 +138,8 @@ impl Tally {
             disagree: 0,
             misplaced: 0,
             worst: 0.0,
+            worst_factor: 0.0,
+            worst_diff: 0.0,
         };
         for s in samples {
             if s.valid != s.finite {
@@ -125,6 +158,12 @@ impl Tally {
                 t.disagree += 1;
             }
             t.worst = t.worst.max(r);
+            t.worst_factor = t.worst_factor.max(s.factor());
+            t.worst_diff = t.worst_diff.max(if s.diff.is_nan() {
+                f64::INFINITY
+            } else {
+                s.diff
+            });
         }
         t
     }
@@ -140,7 +179,7 @@ pub fn check(config: &GateConfig, input: &Input) -> Result<(), String> {
     if config.threshold.value != f64::from(FACTOR) {
         return Err(format!(
             "refused: the threshold {} is not the agreement preset's compiled factor {FACTOR} \
-             (render::presets::agreement::FACTOR, REQ-DEC-043)",
+             (render::presets::agreement::FACTOR, REQ-COL-060)",
             config.threshold.value
         ));
     }
@@ -193,7 +232,7 @@ pub fn measure(
             let stored = scene.set.ic(grid.sample_index(q, 0, 0));
             let ok =
                 finite(stored.K_0, stored.V_0) && finite(own.descriptor.K_0, own.descriptor.V_0);
-            Sample::from_words(*w, ok)
+            Sample::from_words(*w, [stored.K_0, stored.V_0], ok)
         })
         .collect())
 }
@@ -218,10 +257,15 @@ impl DecodeAgreementGate {
         let mut negative = Vec::new();
         for t in tallies {
             scatter.push(format!(
-                "{}: {} samples, {} compared; worst ratio {:.3e} of the tolerance",
+                "{}: {} samples, {} compared, {} excluded (a non-finite operand, R-436); measured worst |E − E₀| \
+                 {:.3} eps of the scale (max(|K₀|, 1) + max(|V₀|, 1)), {:.3e} absolute; worst ratio {:.3e} of the \
+                 tolerance",
                 t.chart.section(),
                 t.samples,
                 t.valid,
+                t.samples - t.valid,
+                t.worst_factor,
+                t.worst_diff,
                 t.worst
             ));
             negative.push(format!(
@@ -233,6 +277,12 @@ impl DecodeAgreementGate {
                 t.samples - t.valid
             ));
         }
+        let measured = tallies.iter().map(|t| t.worst_factor).fold(0.0, f64::max);
+        scatter.push(format!(
+            "every chart: measured worst |E − E₀| {measured:.3} eps of the scale, against the tolerance's {} eps \
+             (REQ-COL-060)",
+            config.threshold.value
+        ));
         if input.shift != 0 {
             negative.push(format!(
                 "dispatch scramble: each descriptor written {} samples on, so each sample compares its own decode with \

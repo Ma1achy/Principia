@@ -14,11 +14,14 @@
 //! the comparison. The others enter the arithmetic as they are; a non-finite one is replaced by 0 by a select, never
 //! summed.
 //!
-//! **The tolerance** (R-133, as R-297 amends it). Until TASK-M2-29 calibrates REQ-COL-060, the agreement compares within
-//! REQ-DEC-043's calibrated f32 decode factor, [`FACTOR`] f32 `eps` by its measure (`validation::decode_f32_eps`), applied
-//! to each operand: `|E − E₀| ≤ FACTOR·eps·(max(|K₀|, 1) + max(|V₀|, 1))`, since `E − E₀ = (K − K₀) + (V − V₀)` and the
-//! factor bounds each difference by `FACTOR·eps·max(|x|, 1)`. [`ratio`] is `|E − E₀|` over that bound: at most 1 is
-//! agreement. Applied per R-369 (TASK-M2-25): the factor's measure is per value, and `E` is a sum of two.
+//! **The tolerance** (REQ-COL-060; R-297, R-133 as R-297 amends it). The fragment may compile with fast-math and the
+//! kernel's decode stage doesn't (R-297), so the agreement compares within REQ-COL-060's calibrated tolerance, [`FACTOR`]
+//! f32 `eps` applied to each operand: `|E − E₀| ≤ FACTOR·eps·(max(|K₀|, 1) + max(|V₀|, 1))`, the form TASK-M2-25 gave
+//! it (applied per R-369 there: `E − E₀ = (K − K₀) + (V − V₀)`, each difference bounded by `FACTOR·eps·max(|x|, 1)`).
+//! [`ratio`] is `|E − E₀|` over that bound: at most 1 is agreement. TASK-M2-29 measured the fragment-against-compute
+//! differences on Metal and lavapipe (the `decode-agreement` gate's `survey` input) and proposed the factor; it is
+//! provisional until the human confirms it at the M2 gate (R-71, R-182). REQ-DEC-043's factor stays the tolerance of
+//! the fragment decode against the f64 `decodeOnly()`, not this one.
 //!
 //! **Its colour.** Agreement, ratio `ρ ≤ 1`, is green, `(0, 0.15 + 0.35ρ, 0)`, brighter as it nears the bound;
 //! disagreement, `ρ > 1`, red, `(0.5 + 0.5·min(log₂ρ / 16, 1), 0, 0)`; a non-finite operand the hatch. [`colour`] is the
@@ -30,14 +33,22 @@ use crate::bind::ViewOutput;
 /// The preset's name in the library.
 pub const NAME: &str = "Agreement |E(fragment-decode) − E₀|";
 
-/// REQ-DEC-043's factor, in f32 `eps`: `fixtures/gates/decode-f32-eps/gate.json`'s threshold, provisional until the
-/// human confirms it at the M2 gate (R-71); R-133 makes it this preset's tolerance until REQ-COL-060 is calibrated.
+/// REQ-COL-060's factor, in f32 `eps`: `fixtures/gates/decode-agreement/gate.json`'s threshold, proposed by TASK-M2-29
+/// from its measurement and provisional until the human confirms it at the M2 gate (R-71, R-182).
 pub const FACTOR: f32 = 256.0;
 
-/// The comparison's WGSL: `agreement(k, v, k_0, v_0)` over the four operands' bits.
+/// The factor's WGSL declaration, [`FACTOR`] written as a WGSL literal, so the shader compiles the one value.
+fn factor_wgsl() -> String {
+    format!(
+        "
+// REQ-COL-060's factor in f32 eps (render::presets::agreement::FACTOR; provisional, R-71).
+const AGREEMENT_FACTOR: f32 = {FACTOR:?};"
+    )
+}
+
+/// The comparison's WGSL after the factor: `agreement(k, v, k_0, v_0)` over the four operands' bits.
 const COMPARE: &str = "
-// REQ-DEC-043's factor in f32 eps (render::presets::agreement::FACTOR; provisional, R-71), and f32's eps, 2^-23.
-const AGREEMENT_FACTOR: f32 = 256.0;
+// f32's eps, 2^-23.
 const AGREEMENT_EPS: f32 = 1.1920929e-7;
 
 // One comparison: `ratio`, |E − E₀| over the tolerance; `valid`, every operand finite; `e` and `e_0` the two energies.
@@ -109,7 +120,7 @@ fn view(rc: RenderContext, l: Lanes) -> vec4<u32> {
 pub fn preset() -> Preset {
     Preset {
         name: NAME,
-        view: format!("{SHARED_WGSL}{COMPARE}{VIEW}"),
+        view: format!("{SHARED_WGSL}{}{COMPARE}{VIEW}", factor_wgsl()),
         output: ViewOutput::Colour,
     }
 }
@@ -118,7 +129,7 @@ pub fn preset() -> Preset {
 pub fn words() -> Preset {
     Preset {
         name: NAME,
-        view: format!("{SHARED_WGSL}{COMPARE}{WORDS}"),
+        view: format!("{SHARED_WGSL}{}{COMPARE}{WORDS}", factor_wgsl()),
         output: ViewOutput::Words,
     }
 }

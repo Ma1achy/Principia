@@ -104,10 +104,10 @@ fn check_twin(honest: bool) {
                 "pixel ({x}, {y}): the twin and the GPU differ on whether the operands are finite"
             );
             if let (Some(t), Some(g)) = (twin, gpu_ratio) {
-                // E₀ summed at f32 on the GPU and at f64 by the twin: at most half an ulp of E₀ apart, under 1/256 of
-                // the tolerance's 256 eps.
+                // E₀ summed at f32 on the GPU and at f64 by the twin: at most half an ulp of E₀ apart, under one eps
+                // of the scale, 1/FACTOR of the tolerance.
                 assert!(
-                    (t - g).abs() <= 1.0 / 256.0 + 1e-6 * t,
+                    (t - g).abs() <= 1.0 / f64::from(agreement::FACTOR) + 1e-6 * t,
                     "sample {q}: the twin's ratio {t} is not the GPU's {g}"
                 );
             }
