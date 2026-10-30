@@ -41,6 +41,23 @@ filter = """
 """
 test-group = "xtask-cargo"
 
+# The tests that exercise TASK-M2-26's own source run first in any run that selects them, ahead of their packages'
+# slower tests. A run's result is unchanged: priority only orders the schedule. It is for the mutants gate (R-302;
+# REQ-VAL-149, R-376): a mutant runs its package's tests in the name order until one fails (`.cargo/mutants.toml`), so a
+# mutant only `roundtrip_preset` catches sat behind about 500 s of render's tests and 1300 s of validation's, for each
+# of 142 mutants, and 8 shards of 300 min could not hold them (run 41098815668: 103 of 714 never ran). These tests
+# themselves take under a minute. Applied per R-369.
+[[profile.default.overrides]]
+filter = """
+    binary_id(=render::roundtrip_preset)
+    | binary_id(=validation::roundtrip_preset)
+    | binary_id(=validation::roundtrip_preset_golden)
+    | binary_id(=validation::qa_TASK-M2-26)
+    | binary_id(=validation::qa_TASK-M2-26_fragment)
+    | binary_id(=xtask::fragment_wgsl)
+"""
+priority = 50
+
 [test-groups]
 xtask-cargo = { max-threads = 1 }
 
