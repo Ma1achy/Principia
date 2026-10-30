@@ -36,6 +36,11 @@ pub fn sum_bits() -> u32 {
     100
 }
 
+/// The most terms [`atan_eighth`] sums. It never reaches this: the first term is at most `2^99` (`8k/d ≤ 1/2`) and each
+/// next at most half the last, so the 101st has truncated to 0. A bound rather than a `while`, so a broken stopping
+/// test ends the sum instead of spinning.
+const MAX_TERMS: u128 = 110;
+
 /// `atan(k/8)` in units of `2^-sum_bits()`, by Euler's series (the module's note), for `k = 0 … 8`: with
 /// `d = 64 + k²`, the first term is `x/(1 + x²) = 8k/d` and each next is the last times `(2n+2)·k²/((2n+3)·d)`.
 /// Every product stays below 2¹²⁸: a term is below 2¹⁰⁰, and its factor's numerator, `(2n+2)·k²`, below 2¹⁴ for the
@@ -45,11 +50,12 @@ pub fn atan_eighth(k: u32) -> u128 {
     let d = 64 + k * k;
     let mut term = ((8 * k) << sum_bits()) / d;
     let mut sum = 0;
-    let mut n = 0;
-    while term != 0 {
+    for n in 0..MAX_TERMS {
+        if term == 0 {
+            break;
+        }
         sum += term;
         term = term * (2 * n + 2) * k * k / ((2 * n + 3) * d);
-        n += 1;
     }
     sum
 }
