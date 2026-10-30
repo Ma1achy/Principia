@@ -584,7 +584,7 @@ choice changes the result and the corpus does not settle it (R-369).*
   `principia_dd_replication.md` § 5.10, the RQ-598 README § 6 and TASK-M3-62's note point here.
 - **Waits:** GG-1's per-point scoring against the Fig. 1 extraction (TASK-M3-62). BR-1 does not wait on it.
 
-## RQ-623: The agreement presets' tolerance near a binary collision: no factor of the per-operand form covers the fragment-against-compute differences, which grow without bound as a pair separation falls *(a calibration requirement, R-71, and the form it is a factor of, a definition requirement, R-72; physics; REQ-COL-060, REQ-COL-006; context: TASK-M2-29)*
+## RQ-623: The agreement presets' tolerance near a binary collision: no factor of the per-operand form covers the fragment-against-compute differences, which grow as (|rᵢ|+|rⱼ|)/rᵢⱼ, up to about 1/eps, as a pair separation falls *(a calibration requirement, R-71, and the form it is a factor of, a definition requirement, R-72; physics; REQ-COL-060, REQ-COL-006; context: TASK-M2-29)*
 
 *Queued 30 Oct 2026 by TASK-M2-29's implementer, from its measurement. For the owner: yes, it is physics where the
 choice changes what the agreement preset shows and what its gate certifies, and the corpus does not settle it
@@ -599,6 +599,10 @@ choice changes what the agreement preset shows and what its gate certifies, and 
     preset compares within a stated tolerance, a calibration requirement (R-71), not bit-exactly."
   - `crates/render/src/presets/agreement.rs`, the tolerance's form TASK-M2-25 chose (applied per R-369 there):
     `|E − E₀| ≤ FACTOR·eps·(max(|K₀|, 1) + max(|V₀|, 1))`, each operand's difference bounded by `FACTOR·eps·max(|x|, 1)`.
+  - `docs/contracts/principia_inverse_encode_contract.md` Part 4: "every round-trip tolerance is asserted in *physical*
+    space, where the composed map is well-conditioned".
+  - `decisions.md` § R-544: its conditioning-derived δ exclusion near the shape sphere's collision landmarks, recorded
+    as a test detail.
   - `docs/read_first/principia_01_pitfalls.md` § "3. Standing rules earned in this sequence": "A QUANTITY THAT DOES NOT
     CONVERGE UNDER REFINEMENT IS MEASURING THE SAMPLING, NOT THE SYSTEM." and "Set thresholds from the observed
     distribution, or from a measured gap."
@@ -611,7 +615,7 @@ choice changes what the agreement preset shows and what its gate certifies, and 
   `u ≈ 0.040`, beside a binary collision. Zooming on `u = 0.84473, v = 0.5` with 128² cells at depths 9 to 21, the
   worst is 60, 185, 2129, 8606, 19520 (smallest pair separation 9.7·10⁻⁵, `V₀ = −119.7`), 2269, 996 eps; on
   `u = 0.04004`, up to 1735. At the collision itself `V₀` is `−∞`, hatched and excluded (R-436); next to it, the
-  difference has no bound.
+  difference grows as (|rᵢ|+|rⱼ|)/rᵢⱼ, up to about 1/eps.
 - **The mechanism, measured:** the conditioning of `V = −Σ mᵢmⱼ/rᵢⱼ` in f32. A pair separation formed from positions
   of order 1 carries an absolute rounding of order `eps·(|rᵢ| + |rⱼ|)`, so `V` carries `Σ mᵢmⱼ·eps·(|rᵢ| + |rⱼ|)/rᵢⱼ²`,
   which the per-operand scale `eps·|V₀|` underestimates by `~(|rᵢ| + |rⱼ|)/rᵢⱼ`. Any two f32 compilations that round
@@ -629,11 +633,11 @@ choice changes what the agreement preset shows and what its gate certifies, and 
 - **Options seen:**
   (a) the per-operand form as it is, with a factor that covers the gate's lattices (256 proposed), and the red near a
   collision stated in colour_composition § 6 as expected, as ROUNDTRIP's "bright at clamps/feasibility edges/mirror
-  tie = expected" is, untagged;
+  tie = expected" is (expected, tagged: render_contract § "Cross-check views (the seams)");
   (b) a conditioning-aware form, the factor times `eps·(max(|K₀|, 1) + max(|V₀|, 1) + Σ mᵢmⱼ(|rᵢ| + |rⱼ|)/rᵢⱼ²)` from the
   fragment decode's own `(m, r)`, written into colour_composition § 6 as an R-72 definition, physics-reviewed, and the
-  factor calibrated in it (measured above at 1.1 to 5.7 near the collisions; its value on the lattices still to be
-  measured);
+  factor calibrated in it (measured above at 1.1 to 5.7 near the collisions, with the decode stage's `(m, r)`; its
+  value on the lattices still to be measured);
   (c) the per-operand form, and a pixel whose smallest pair separation falls under a threshold drawn in a tagged
   "ill-conditioned" style and left out of the gate, the threshold a calibration;
   (d) another, stated by the owner.
@@ -644,3 +648,9 @@ choice changes what the agreement preset shows and what its gate certifies, and 
   the excluded count, in the gate's report; the `survey` input; the gate run in `gpu-metal` and `gpu-lavapipe`), the
   threshold still the compiled 256 under REQ-COL-060, provisional. No PR is open.
 - **Waits:** TASK-M2-29's proposal and PR (REQ-COL-060).
+- **30 Oct 2026:** Decided by the orchestrator per R-369, option (b); listed for the owner's veto at the M2 gate with
+  (a) and (c); see PR. Text corrections: ROUNDTRIP's expected brightness is "expected, tagged" (render_contract §
+  "Cross-check views (the seams)"); (b)'s 1.1 to 5.7 was measured with the decode stage's `(m, r)`; "grows without
+  bound" reads "grows as (|rᵢ|+|rⱼ|)/rᵢⱼ, up to about 1/eps"; inverse_encode_contract Part 4 and R-544's δ are cited.
+  Applied: colour_composition § 6's conditioning-aware scale (R-72), the factor proposed in it (R-71), the
+  `collision` windows and the per-operand control in the `decode-agreement` gate (TASK-M2-29).
