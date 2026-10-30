@@ -18,8 +18,8 @@ use scratch::Scratch;
 use validation::negative_control;
 use validation::spawn::Spawn;
 use xtask::jobq::{
-    archivable, heavy, next_job, parse_ps, parse_submit, run_order, snapshot_env, target_key,
-    timed_out, utc, violations, Config, Job, Priority, Proc, Queue, RunnerLock, State,
+    archivable, heavy, lock_holder, next_job, parse_ps, parse_submit, run_order, snapshot_env,
+    target_key, timed_out, utc, violations, Config, Job, Priority, Proc, Queue, RunnerLock, State,
     ARCHIVE_AFTER, MAX_ATTEMPTS,
 };
 
@@ -1052,7 +1052,7 @@ fn jobq_config_reads_each_key() {
     check_config("concurrency", Err("not key = value"));
     check_config("env RUSTC_WRAPPER", Err("env takes KEY=VALUE"));
     let config = Config::parse(
-        "stale = 5\nsample = 6\nidle = 7\ngrace = 8\ncores = 9\nenv RUSTC_WRAPPER = sccache\n",
+        "stale = 5\nsample = 6\nidle = 7\ngrace = 8\ncores = 9\nlock_wait = 4\nenv RUSTC_WRAPPER = sccache\n",
     )
     .expect("config");
     assert_eq!(
@@ -1061,9 +1061,10 @@ fn jobq_config_reads_each_key() {
             config.sample,
             config.idle,
             config.grace,
-            config.cores
+            config.cores,
+            config.lock_wait
         ),
-        (5, 6, 7, 8, 9),
+        (5, 6, 7, 8, 9, 4),
         "config misread"
     );
     let defaults = config.job_defaults();
@@ -1076,6 +1077,7 @@ fn jobq_config_reads_each_key() {
         (Some("9"), Some("9"), Some("sccache")),
         "config misread: job defaults"
     );
+    assert_eq!(Config::default().lock_wait, 30, "config misread: lock_wait");
     let cores = std::thread::available_parallelism().map_or(1, |n| n.get());
     assert_eq!(
         Config::default().cores,
@@ -1557,6 +1559,138 @@ negative_control!(
             std::panic::resume_unwind(panic);
         }
     }
+);
+
+// --- The state lock is waited for within a bound, naming its holder ------------------------------------------------
+
+/// Takes the state lock in this test process, as a hung holder would keep it, with `pid 4242` and a time 100 s back
+/// written in it (with `hold`; else leaves it free).
+fn take_state_lock(q: &Q, hold: bool) -> Option<std::fs::File> {
+    hold.then(|| {
+        let path = q.dir.join("state.lock");
+        let file = std::fs::OpenOptions::new()
+            .create(true)
+            .truncate(false)
+            .write(true)
+            .open(&path)
+            .expect("state lock opened");
+        file.lock().expect("state lock taken");
+        let text = format!("pid 4242\nsince {}\n", xtask::jobq::now() - 100);
+        std::fs::write(&path, text).expect("holder written");
+        file
+    })
+}
+
+/// With the state lock held (with `hold`) and `lock_wait = 1`, `cancel` of a queued job must give up within a few
+/// seconds, naming the holder's pid and how long it has held the lock, and leave the job queued.
+fn held_lock_case(tag: &str, hold: bool) {
+    let q = Q::new(tag, "lock_wait = 1\n");
+    std::fs::create_dir_all(q.dir.join("jobs")).expect("jobs dir");
+    let mut queued = job(1, Priority::Peek, State::Queued, Some("/t"));
+    queued.worktree = q.work();
+    q.queue().save(&queued).expect("job planted");
+    let held = take_state_lock(&q, hold);
+    let started = Instant::now();
+    let out = q.run_within(&["cancel", "1"], Duration::from_secs(20));
+    let took = started.elapsed();
+    drop(held);
+    let stderr = out
+        .as_ref()
+        .map(|out| String::from_utf8_lossy(&out.stderr).into_owned())
+        .unwrap_or_default();
+    let state = q.queue().load(1).expect("job file").state;
+    assert!(
+        out.as_ref().is_ok_and(|out| !out.status.success())
+            && stderr.contains("held by pid 4242, for 10")
+            && took < Duration::from_secs(10)
+            && state == State::Queued,
+        "state lock wait unbounded or its holder unnamed: {out:?}, after {took:?}, job {state:?}"
+    );
+}
+
+#[test]
+fn jobq_a_held_state_lock_is_waited_for_within_a_bound() {
+    held_lock_case("jobq_held_lock", true);
+    let now = 1_000;
+    let cases = [
+        ("pid 7\nsince 900\n", "pid 7, for 100 s"),
+        ("pid 7\nsince 1000\n", "pid 7, for 0 s"),
+        ("pid 7\nsince 1001\n", "pid 7, for 0 s"),
+        ("pid 7\n", "pid 7"),
+        ("since 900\n", "a process that does not say which"),
+        ("", "a process that does not say which"),
+    ];
+    for (text, expected) in cases {
+        assert_eq!(
+            lock_holder(text, now),
+            expected,
+            "state lock wait unbounded or its holder unnamed: {text:?}"
+        );
+    }
+}
+
+negative_control!(
+    jobq_a_held_state_lock_is_waited_for_within_a_bound,
+    "with the lock free, the cancel succeeds",
+    expected = "state lock wait unbounded or its holder unnamed",
+    held_lock_case("jobq_held_lock_control", false)
+);
+
+/// A runner whose state lock is held (with `hold`) for 3 s by a hung holder, with `lock_wait = 1`, must log that it
+/// is waiting, naming the holder, and run the queued job once the lock is free.
+fn runner_waits_case(tag: &str, hold: bool) {
+    let q = Q::new(tag, "lock_wait = 1\nidle = 3\n");
+    std::fs::create_dir_all(q.dir.join("jobs")).expect("jobs dir");
+    let log = std::fs::File::create(q.dir.join("runner.log")).expect("runner log");
+    let mut runner = Command::new(env!("CARGO_BIN_EXE_xtask"))
+        .args(["job", "runner"])
+        .arg(&*q.dir)
+        .env("PRINCIPIA_JOBQ", &*q.dir)
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::null())
+        .stderr(log)
+        .spawn()
+        .expect("runner started");
+    let queue = q.queue();
+    assert!(
+        until(30, || queue.runner_lock().is_some()),
+        "the runner never took its lock"
+    );
+    let held = take_state_lock(&q, hold);
+    let mut planted = job(1, Priority::Peek, State::Queued, Some("/t"));
+    planted.worktree = q.work();
+    queue.save(&planted).expect("job planted");
+    std::thread::sleep(Duration::from_secs(3));
+    let waiting = queue.load(1).expect("job file").state == State::Queued;
+    drop(held);
+    let ran = until(20, || {
+        queue
+            .load(1)
+            .is_ok_and(|j| j.state == State::Exited && j.exit == Some(0))
+    });
+    let exited = until(20, || runner.try_wait().is_ok_and(|s| s.is_some()));
+    if !exited {
+        let _ = runner.kill();
+        let _ = runner.wait();
+    }
+    let text = std::fs::read_to_string(q.dir.join("runner.log")).unwrap_or_default();
+    assert!(
+        waiting && ran && exited && text.contains("held by pid 4242, for 10"),
+        "runner did not wait out a held state lock: queued while held {waiting}, ran {ran}, exited {exited}, \
+         log {text:?}"
+    );
+}
+
+#[test]
+fn jobq_a_runner_waits_out_a_held_state_lock() {
+    runner_waits_case("jobq_runner_waits", true);
+}
+
+negative_control!(
+    jobq_a_runner_waits_out_a_held_state_lock,
+    "with the lock free, the job runs at once and nothing is logged",
+    expected = "runner did not wait out a held state lock",
+    runner_waits_case("jobq_runner_waits_control", false)
 );
 
 // --- Ended jobs move to the archive a day later ----------------------------------------------------------------------

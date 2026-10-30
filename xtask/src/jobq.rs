@@ -260,6 +260,8 @@ pub struct Config {
     pub grace: u64,
     /// Milliseconds between two passes of the runner's loop.
     pub tick_ms: u64,
+    /// Seconds a call waits for the state lock before it gives up, naming the lock's holder.
+    pub lock_wait: u64,
     /// `CARGO_BUILD_JOBS` and `RUST_TEST_THREADS` for each job: the core count unless set.
     pub cores: usize,
     /// The `env` lines.
@@ -278,6 +280,7 @@ impl Default for Config {
             idle: 60,
             grace: 10,
             tick_ms: 500,
+            lock_wait: 30,
             cores: std::thread::available_parallelism().map_or(1, std::num::NonZeroUsize::get),
             env: BTreeMap::new(),
         }
@@ -320,6 +323,7 @@ impl Config {
                 "idle" => config.idle = number,
                 "grace" => config.grace = number,
                 "tick_ms" => config.tick_ms = number,
+                "lock_wait" => config.lock_wait = number,
                 "cores" => config.cores = number as usize,
                 _ => return Err(bad("unknown key")),
             }
@@ -427,9 +431,30 @@ pub struct Queue {
     root: PathBuf,
 }
 
-/// The state lock, held while it lives.
+/// The state lock, held while it lives. Its holder's pid and the time it took it are in the file meanwhile, and
+/// cleared as it is let go.
 struct Held {
-    _file: File,
+    file: File,
+}
+
+impl Drop for Held {
+    fn drop(&mut self) {
+        let _ = self.file.set_len(0);
+    }
+}
+
+/// Who holds the state lock, from the lock file's text (`pid <n> since <secs>`) at `now`: `pid <n>, for <age> s`, or,
+/// when the text names none, that the holder is unknown.
+pub fn lock_holder(text: &str, now: u64) -> String {
+    let field = |key: &str| {
+        text.lines()
+            .find_map(|line| line.strip_prefix(key)?.trim().parse::<u64>().ok())
+    };
+    match (field("pid "), field("since ")) {
+        (Some(pid), Some(since)) => format!("pid {pid}, for {} s", now.saturating_sub(since)),
+        (Some(pid), None) => format!("pid {pid}"),
+        _ => "a process that does not say which".to_owned(),
+    }
 }
 
 impl Queue {
@@ -490,18 +515,51 @@ impl Queue {
         Ok(())
     }
 
-    /// Takes the state lock, waiting for it. It makes no folder: a runner whose state directory has gone exits.
-    fn hold(&self) -> Result<Held, String> {
+    /// Takes the state lock, waiting up to the config's `lock_wait` for it; past that, an error naming its holder. It
+    /// makes no folder: a runner whose state directory has gone exits.
+    fn hold(&self, config: &Config) -> Result<Held, String> {
+        self.try_hold(Duration::from_secs(config.lock_wait))?
+    }
+
+    /// Takes the state lock, waiting up to `wait` for it: the outer error is a lock that can't be opened or taken at
+    /// all, the inner one a lock another process held all the while, naming it. Once taken, the lock file names this
+    /// process and the time.
+    fn try_hold(&self, wait: Duration) -> Result<Result<Held, String>, String> {
+        use std::os::unix::fs::FileExt as _;
         let path = self.root.join("state.lock");
         let file = OpenOptions::new()
             .create(true)
             .truncate(false)
+            .read(true)
             .write(true)
             .open(&path)
             .map_err(|e| format!("job: cannot open {}: {e}", path.display()))?;
-        file.lock()
-            .map_err(|e| format!("job: cannot lock {}: {e}", path.display()))?;
-        Ok(Held { _file: file })
+        let from = Instant::now();
+        loop {
+            match file.try_lock() {
+                Ok(()) => {
+                    let me = format!("pid {}\nsince {}\n", std::process::id(), now());
+                    let _ = file
+                        .set_len(0)
+                        .and_then(|()| file.write_all_at(me.as_bytes(), 0));
+                    return Ok(Ok(Held { file }));
+                }
+                Err(std::fs::TryLockError::WouldBlock) => {}
+                Err(std::fs::TryLockError::Error(e)) => {
+                    return Err(format!("job: cannot lock {}: {e}", path.display()));
+                }
+            }
+            if from.elapsed() >= wait {
+                let text = fs::read_to_string(&path).unwrap_or_default();
+                return Ok(Err(format!(
+                    "job: the state lock {} is held by {}; gave up after {} s",
+                    path.display(),
+                    lock_holder(&text, now()),
+                    wait.as_secs()
+                )));
+            }
+            std::thread::sleep(Duration::from_millis(20));
+        }
     }
 
     /// The settings: `<root>/config` over the defaults.
@@ -607,7 +665,7 @@ impl Queue {
         let mut env = snapshot_env(std::env::vars());
         env.extend(request.env);
         self.ensure()?;
-        let _held = self.hold()?;
+        let _held = self.hold(&config)?;
         let id = self.next_id()?;
         let job = Job {
             id,
@@ -651,7 +709,7 @@ impl Queue {
     /// Starts a runner unless a live one holds the lock.
     pub fn ensure_runner(&self) -> Result<(), String> {
         let config = self.config()?;
-        let _held = self.hold()?;
+        let _held = self.hold(&config)?;
         self.ensure_runner_held(&config)
     }
 
@@ -717,7 +775,7 @@ impl Queue {
 
     /// Cancels job `id`: a queued job at once; a running one is ended, with its group, by the runner.
     pub fn cancel(&self, id: u64) -> Result<String, String> {
-        let _held = self.hold()?;
+        let _held = self.hold(&self.config()?)?;
         let mut job = self.load(id)?;
         match job.state {
             State::Queued => {
@@ -814,17 +872,27 @@ impl Queue {
             me,
             children: HashMap::new(),
             logged: HashSet::new(),
+            unrecorded: Vec::new(),
         };
-        {
-            let config = self.config()?;
-            let _held = self.hold()?;
+        let config = self.config()?;
+        let left = {
+            let _held = self.hold(&config)?;
             if self.runner_live(&config) {
                 return Ok(());
             }
             self.ensure()?;
             self.write_lock(me)?;
             log(&format!("runner {me}: started"));
-            runner.recover(&config)?;
+            self.jobs()?
+                .into_iter()
+                .filter(|job| job.state == State::Running)
+                .collect::<Vec<_>>()
+        };
+        // Each job a dead runner left running is ended outside the state lock, then recorded under it.
+        for job in left {
+            if !runner.recover(&job, &config)? {
+                return Ok(());
+            }
         }
         let mut idle_since = Instant::now();
         let mut sampled: Option<Instant> = None;
@@ -837,7 +905,15 @@ impl Queue {
                 }
             };
             {
-                let _held = self.hold()?;
+                // A lock held past `lock_wait` by a hung process is logged, and taken again on the next pass.
+                let _held = match self.try_hold(Duration::from_secs(config.lock_wait))? {
+                    Ok(held) => held,
+                    Err(message) => {
+                        log(&format!("runner {me}: {message}; trying again"));
+                        std::thread::sleep(Duration::from_millis(config.tick_ms));
+                        continue;
+                    }
+                };
                 match self.runner_lock() {
                     Some(lock) if lock.pid == me => {}
                     _ => {
@@ -863,6 +939,7 @@ impl Queue {
                     return Ok(());
                 }
             }
+            runner.record_starts(&config);
             if sampled.is_none_or(|at| at.elapsed() >= Duration::from_secs(config.sample)) {
                 sampled = Some(Instant::now());
                 if let Err(message) = runner.sample_violations() {
@@ -990,49 +1067,104 @@ struct Runner {
     children: HashMap<u64, Running>,
     /// The violations logged, by pid and command, so each is logged once.
     logged: HashSet<(i32, String)>,
+    /// The jobs started (id, pid) whose leader's start time is not yet in their file: read with `ps` after the pass
+    /// that started them, outside the state lock ([`Runner::record_starts`]).
+    unrecorded: Vec<(u64, i32)>,
 }
 
 impl Runner {
-    /// Ends the group of each job a dead runner left running, and queues it again, or marks it lost.
-    fn recover(&mut self, config: &Config) -> Result<(), String> {
-        for mut job in self.queue.jobs()? {
-            if job.state != State::Running {
-                continue;
-            }
-            let ended = end_stale_group(&job, Duration::from_secs(config.grace));
-            let from = job
-                .runner_pid
-                .map_or_else(|| "?".to_owned(), |pid| pid.to_string());
-            job.pgid = None;
-            job.leader_start = None;
-            if job.cancel_requested {
-                job.state = State::Cancelled;
-                job.finished = Some(now());
-                job.note = Some(format!(
-                    "cancelled; runner {from} ended while it ran; {ended}"
-                ));
-            } else if job.attempts >= MAX_ATTEMPTS {
-                job.state = State::Lost;
-                job.finished = Some(now());
-                job.note = Some(format!(
-                    "lost: runner {from} ended while it ran, {} times; {ended}",
-                    job.attempts
-                ));
-            } else {
-                job.state = State::Queued;
-                job.note = Some(format!(
-                    "queued again: runner {from} ended while it ran; {ended}"
-                ));
-            }
+    /// Ends the group of `left`, a job a dead runner left running, outside the state lock (it reads `ps` and waits up
+    /// to `grace`); then, the lock held, queues it again, or marks it lost or cancelled, unless it has changed hands
+    /// meanwhile. Returns false if another runner has taken the lock over, so this one exits.
+    fn recover(&mut self, left: &Job, config: &Config) -> Result<bool, String> {
+        let ended = end_stale_group(left, Duration::from_secs(config.grace));
+        let _held = self.queue.hold(config)?;
+        if self
+            .queue
+            .runner_lock()
+            .is_none_or(|lock| lock.pid != self.me)
+        {
             log(&format!(
-                "runner {}: job {}: {}",
-                self.me,
-                job.id,
-                job.note.as_deref().unwrap_or("")
+                "runner {}: another runner holds the lock; exiting",
+                self.me
             ));
-            self.queue.save(&job)?;
+            return Ok(false);
         }
-        Ok(())
+        self.queue.write_lock(self.me)?;
+        let mut job = self.queue.load(left.id)?;
+        if job.state != State::Running || job.runner_pid != left.runner_pid {
+            return Ok(true);
+        }
+        let from = job
+            .runner_pid
+            .map_or_else(|| "?".to_owned(), |pid| pid.to_string());
+        job.pgid = None;
+        job.leader_start = None;
+        if job.cancel_requested {
+            job.state = State::Cancelled;
+            job.finished = Some(now());
+            job.note = Some(format!(
+                "cancelled; runner {from} ended while it ran; {ended}"
+            ));
+        } else if job.attempts >= MAX_ATTEMPTS {
+            job.state = State::Lost;
+            job.finished = Some(now());
+            job.note = Some(format!(
+                "lost: runner {from} ended while it ran, {} times; {ended}",
+                job.attempts
+            ));
+        } else {
+            job.state = State::Queued;
+            job.note = Some(format!(
+                "queued again: runner {from} ended while it ran; {ended}"
+            ));
+        }
+        log(&format!(
+            "runner {}: job {}: {}",
+            self.me,
+            job.id,
+            job.note.as_deref().unwrap_or("")
+        ));
+        self.queue.save(&job)?;
+        Ok(true)
+    }
+
+    /// Records the start time of each job started since the last call, read with `ps` outside the state lock, then
+    /// written, the lock held, into each job still running under that leader. A lock it can't take is tried again on
+    /// the next call.
+    fn record_starts(&mut self, config: &Config) {
+        if self.unrecorded.is_empty() {
+            return;
+        }
+        let read: Vec<(u64, i32, Option<String>)> = self
+            .unrecorded
+            .iter()
+            .map(|&(id, pid)| (id, pid, start_time(pid)))
+            .collect();
+        let _held = match self.queue.try_hold(Duration::from_secs(config.lock_wait)) {
+            Ok(Ok(held)) => held,
+            Ok(Err(message)) | Err(message) => {
+                log(&format!("runner {}: {message}; trying again", self.me));
+                return;
+            }
+        };
+        self.unrecorded.clear();
+        for (id, pid, start) in read {
+            match self.queue.load(id) {
+                Ok(mut job)
+                    if job.state == State::Running
+                        && job.pgid == Some(pid)
+                        && job.leader_start.is_none() =>
+                {
+                    job.leader_start = start;
+                    if let Err(message) = self.queue.save(&job) {
+                        log(&format!("runner {}: {message}", self.me));
+                    }
+                }
+                Ok(_) => {}
+                Err(message) => log(&format!("runner {}: {message}", self.me)),
+            }
+        }
     }
 
     /// One pass, the state lock held: reaps ended jobs, ends timed-out and cancelled ones, starts queued ones up to the
@@ -1130,7 +1262,9 @@ impl Runner {
                 let pid = child.id() as i32;
                 job.state = State::Running;
                 job.pgid = Some(pid);
-                job.leader_start = start_time(pid);
+                // Read after the pass, outside the state lock ([`Runner::record_starts`]).
+                job.leader_start = None;
+                self.unrecorded.push((job.id, pid));
                 job.note = None;
                 self.children.insert(
                     job.id,
