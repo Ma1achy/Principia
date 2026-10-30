@@ -350,3 +350,7 @@ justification = "both operands hold only at nb == 0 with db = +inf (y = ±0, x =
 [[equivalent]]
 mutant = "crates/kernel/src/arctan.rs:321:50: replace | with ^ in atan2_f32"
 justification = "bits is a magnitude at most π's, 0x4049_0FDB, so its bit 31 is clear and yb & 0x8000_0000 is bit 31 only, so their ^ is their |"
+
+[[equivalent]]
+mutant = "crates/validation/src/arctan.rs:43:34: replace | with ^ in magnitude"
+justification = "field < 255 shifted by 23 has bits 23..31 only and fraction = (r >> 32) & 0x007F_FFFF bits 0..23 only, so their ^ is their |"
