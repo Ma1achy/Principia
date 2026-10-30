@@ -13,23 +13,28 @@
 //! - `roundtrip_preset_golden_scenes_show_the_view`: the latent scene is untagged and within `ε_phys` throughout, the
 //!   view dark everywhere; the `(L_z, E)` scene holds untagged samples within `ε_phys` and tagged feasibility samples,
 //!   the edge between them at `s = 1`. Control: the `(L_z, E)` chart over the unit square alone shows no tag.
-//! - `roundtrip_preset_residual_is_phys`: the preset's residual twin (`render::presets::roundtrip::residual`) is
-//!   `validation::roundtrip::phys`, bit for bit, on states that differ in one value at a time, each body's mass,
-//!   position and momentum, at extents above and below 1; `State::finite` finds a non-finite mass, position or
-//!   momentum. Control: the residual measured against the other state's extents.
+//! - `roundtrip_preset_phys_of_is_phys`: `phys_of`, which render's tests hold the preset's residual twin to, is
+//!   `validation::roundtrip::phys` on the same states, bit for bit, on states that differ in one value at a time.
+//!   Control: its states swapped.
+//! - `roundtrip_preset_twin_invalid`: a trip from a state with an infinite or NaN momentum is invalid, its ratio 0; a
+//!   finite one keeps its tag and its small ratio; an invalid sample's colour is the hatch at its pixel's centre.
+//!   Control: a finite momentum.
+//! - `roundtrip_preset_clamp_band`: on the clamp-framed latent chart, `clamp_ambiguous` finds exactly the samples with
+//!   a control within `CLAMP_BAND` (a quarter `ε`) of its clamp, some and fewer than a quarter of them. Control: a band
+//!   twice as wide.
 
 use std::fs;
 use std::path::{Path, PathBuf};
 
 use kernel::decode::Ic;
-use render::presets::roundtrip::{residual, Class, State};
+use render::presets::roundtrip::{Class, State};
 use render::presets::DecodeChart;
 use validation::decode_preset::{quantise, GOLDEN_MARGIN};
 use validation::golden_scene::tie_margin;
 use validation::negative_control;
 use validation::roundtrip_preset::{
-    clamp_ambiguous, expected, golden, golden_name, twins, CHARTS, GOLDEN_DEPTH, GOLDEN_SIDE,
-    GOLDEN_SUITE,
+    clamp_ambiguous, clamp_frame, colours, expected, golden, golden_name, phys_of, twin_of, twins,
+    CHARTS, CLAMP_BAND, GOLDEN_DEPTH, GOLDEN_SIDE, GOLDEN_SUITE,
 };
 
 fn suite() -> PathBuf {
@@ -236,48 +241,142 @@ fn moved(x: &State, d: f64) -> Vec<State> {
     out
 }
 
-fn check_residual(res: fn(&State, &State) -> f64) {
+fn check_phys_of(of: fn(&State, &State) -> f64) {
     for scale in [0.5, 3.0] {
         let x = state(scale);
-        assert_eq!(res(&x, &x), 0.0, "a state's residual to itself");
         for y in moved(&x, 0.25) {
             let want = validation::roundtrip::phys(&ic(&x), &ic(&y));
-            let got = res(&x, &y);
             assert!(want > 0.0);
             assert_eq!(
-                got.to_bits(),
+                of(&x, &y).to_bits(),
                 want.to_bits(),
-                "residual {got} is not phys's {want} at scale {scale}"
+                "phys_of is not phys at scale {scale}"
             );
-            assert_eq!(residual(&x, &y), want);
         }
     }
 }
 
 #[test]
-fn roundtrip_preset_residual_is_phys() {
-    check_residual(residual);
-    let x = state(1.0);
-    assert!(x.finite());
-    for (k, bad) in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY]
-        .into_iter()
-        .enumerate()
-    {
-        let mut y = x;
-        y.m[k] = bad;
-        assert!(!y.finite(), "a non-finite mass");
-        let mut y = x;
-        y.r[k][1] = bad;
-        assert!(!y.finite(), "a non-finite position");
-        let mut y = x;
-        y.p[2 - k][0] = bad;
-        assert!(!y.finite(), "a non-finite momentum");
+fn roundtrip_preset_phys_of_is_phys() {
+    check_phys_of(phys_of);
+}
+
+negative_control!(
+    roundtrip_preset_phys_of_is_phys,
+    "phys_of with its states swapped must be found",
+    expected = "phys_of is not phys",
+    check_phys_of(|x, y| phys_of(y, x))
+);
+
+// ── The twin's invalid trip and its colour ──────────────────────────────────────────────────────────────────────────
+
+/// A decoded state with one momentum `bad`, whose trip `twin_of` must class invalid.
+fn check_invalid(bad: f32) {
+    let x = Ic {
+        m: [0.2f32, 0.3, 0.5],
+        r: [[-0.4, 0.1], [0.9, -0.2], [-0.3, 0.05]],
+        p: [[bad, -0.6], [-0.35, 0.2], [0.2, 0.4]],
+    };
+    let t = twin_of(&x, 0);
+    assert_eq!(
+        t.class,
+        Class::Invalid,
+        "a trip from momentum {bad} is not invalid"
+    );
+    assert_eq!(t.ratio(), 0.0, "an invalid trip's ratio");
+}
+
+#[test]
+fn roundtrip_preset_twin_invalid() {
+    for bad in [f32::INFINITY, f32::NEG_INFINITY, f32::NAN] {
+        check_invalid(bad);
+    }
+    // A decoded state, on C's section, so its trip is within ε_phys; tagged as an infeasible first decode would be.
+    let z = [0.3f32, -0.2, 0.1, -0.4, 0.25, 0.05, 0.2, -0.35];
+    let decoded =
+        kernel::decode::decode::<validation::Defaults, f32>(&kernel::decode::Latent { z }).ic;
+    let fine = twin_of(&decoded, 4);
+    assert_eq!((fine.class, fine.tags & 0xff), (Class::Feasibility, 4));
+    assert!(
+        fine.ratio() > 0.0 && fine.ratio() <= 1.0,
+        "ratio {}",
+        fine.ratio()
+    );
+    // An invalid sample draws the hatch at its pixel's centre, every other its class's colour.
+    let scene = golden(DecodeChart::Latent).unwrap();
+    let mut t = twins(&scene).unwrap();
+    t[5].class = Class::Invalid;
+    let c = colours(&scene, &t);
+    let (w, h) = scene.size();
+    for y in 0..h {
+        for x in 0..w {
+            let q = scene.context.grid.cell(x, y).quad as usize;
+            let want = if q == 5 {
+                render::present::debug_invalid([f64::from(x) + 0.5, f64::from(y) + 0.5])
+            } else {
+                [0.0; 3]
+            };
+            assert_eq!(c[(y * w + x) as usize], want, "pixel ({x}, {y})");
+        }
     }
 }
 
 negative_control!(
-    roundtrip_preset_residual_is_phys,
-    "the residual against the other state's extents must be found",
-    expected = "is not phys's",
-    check_residual(|x, y| residual(y, x))
+    roundtrip_preset_twin_invalid,
+    "a finite momentum must not be invalid",
+    expected = "is not invalid",
+    check_invalid(1.0)
+);
+
+// ── The clamp band ──────────────────────────────────────────────────────────────────────────────────────────────────
+
+/// The clamp-framed latent chart's samples within `band` of a clamp, by their margins, against `clamp_ambiguous`'s.
+fn check_band(band: f64) {
+    let scene = {
+        let mut s =
+            validation::decode_preset::Scene::lattice(DecodeChart::Latent, [64, 64], 20).unwrap();
+        s.uniforms = clamp_frame();
+        s
+    };
+    let found = clamp_ambiguous(&scene).unwrap();
+    assert!(
+        !found.is_empty(),
+        "the clamp frame has no sample at a clamp boundary"
+    );
+    let chart = <kernel::chart::Latent<f32> as kernel::stage::decode::UniformChart>::from_uniform(
+        &scene.uniforms.chart,
+    );
+    let mut want = Vec::new();
+    for q in 0..scene.context.grid.quad_count() {
+        let p = scene.point(q);
+        let x = kernel::stage::decode::sample_with::<_, validation::Defaults, f32>(
+            &chart, p[0], p[1], None,
+        )
+        .ic;
+        let m = validation::roundtrip::margins(&validation::roundtrip::widen(&x));
+        if m.iter().any(|m| (m - 1.0).abs() < band) {
+            want.push((q, m));
+        }
+    }
+    assert_eq!(
+        found, want,
+        "clamp_ambiguous is not the samples within {band} of a clamp"
+    );
+    assert!(
+        want.len() < (64 * 64) / 4,
+        "half the frame is at a clamp boundary"
+    );
+}
+
+#[test]
+fn roundtrip_preset_clamp_band() {
+    assert_eq!(CLAMP_BAND, 0.25);
+    check_band(CLAMP_BAND);
+}
+
+negative_control!(
+    roundtrip_preset_clamp_band,
+    "a band twice as wide must find other samples",
+    expected = "clamp_ambiguous is not the samples",
+    check_band(2.0 * CLAMP_BAND)
 );

@@ -106,26 +106,31 @@ impl Twin {
     }
 }
 
-/// The trip from the decoded state `x` and its tag word.
+/// `validation::roundtrip::phys` on the preset's twin states, `y` measured from `x`: what the preset's residual twin
+/// (`render::presets::roundtrip::residual`) is held to, from render's tests, which reach the kernel's `Ic` only here.
+pub fn phys_of(x: &roundtrip::State, y: &roundtrip::State) -> f64 {
+    let ic = |s: &roundtrip::State| Ic {
+        m: s.m,
+        r: s.r,
+        p: s.p,
+    };
+    phys(&ic(x), &ic(y))
+}
+
+/// The trip from the decoded state `x` and its tag word: `x` encoded, its `z` decoded free, `‖x − D(E(x))‖_phys`.
 pub fn twin_of(x: &Ic<f32>, first_tag: u32) -> Twin {
     let e = kernel::encode::encode::<Defaults, f32>(x);
     let back = kernel::decode::decode::<Defaults, f32>(&e.z);
     let notices = kernel::stage::encode::notices(&e.report);
     let back_tag = tag(back.degenerate);
-    let (xw, bw) = (widen(x), widen(&back.ic));
-    let finite = |s: &Ic<f64>| {
-        s.m.iter()
-            .chain(s.r.as_flattened())
-            .chain(s.p.as_flattened())
-            .all(|v| v.is_finite())
-    };
-    let residual = phys(&xw, &bw);
-    let ok = finite(&xw) && finite(&bw) && residual.is_finite();
+    // A non-finite value in either state makes `phys` non-finite: a NaN difference is NaN, and an infinite one is
+    // infinite, or NaN over its infinite extent, so the residual's finiteness is both states'.
+    let residual = phys(&widen(x), &widen(&back.ic));
     Twin {
         residual,
-        class: Class::of(ok, first_tag, back_tag, notices),
+        class: Class::of(residual.is_finite(), first_tag, back_tag, notices),
         notices,
-        tags: first_tag | (back_tag << 8),
+        tags: roundtrip::tags(first_tag, back_tag),
     }
 }
 
@@ -198,7 +203,7 @@ pub fn clamp_frame() -> DecodeUniforms {
     };
     let mut u = crate::decode_preset::uniforms(DecodeChart::Latent);
     u.chart = Latent {
-        z0: [0.3, -0.2, 0.1, -0.4, 0.25, 0.05, 0.2, -0.35],
+        z0: Latent::<f32>::from_uniform(&u.chart).z0,
         q1: axis(0),
         q2: axis(1),
     }
@@ -234,16 +239,21 @@ pub fn twins(scene: &Scene) -> Result<Vec<Twin>, String> {
 
 /// The ROUNDTRIP preset's CPU twin over `scene`: each pixel's linear RGB, rows from the top.
 pub fn expected(scene: &Scene) -> Result<Vec<[f64; 3]>, String> {
+    Ok(colours(scene, &twins(scene)?))
+}
+
+/// The colours of the trips `twins`, in sample order, over `scene`'s pixels: each pixel's linear RGB, rows from the
+/// top, the hatch's phase at the pixel's centre.
+pub fn colours(scene: &Scene, twins: &[Twin]) -> Vec<[f64; 3]> {
     let grid = scene.context.grid;
-    let twins = twins(scene)?;
     let (width, height) = scene.size();
-    Ok((0..height)
+    (0..height)
         .flat_map(|y| (0..width).map(move |x| (x, y)))
         .map(|(x, y)| {
             let t = &twins[grid.cell(x, y).quad as usize];
             roundtrip::colour(t.class, t.ratio(), [f64::from(x) + 0.5, f64::from(y) + 0.5])
         })
-        .collect())
+        .collect()
 }
 
 /// The half-width of the band about a clamp, in its `ε` (`crate::roundtrip::margins`' unit), where an f32 trip's rounding

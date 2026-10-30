@@ -269,7 +269,11 @@ fn check_free(shift: bool) {
             want,
             "z {z:?}: decode_free's words are not decode::decode's"
         );
-        assert_eq!(words[FREE_Z..FREE_Z + 8], input, "decode_free moved its input");
+        assert_eq!(
+            words[FREE_Z..FREE_Z + 8],
+            input,
+            "decode_free moved its input"
+        );
     }
 }
 

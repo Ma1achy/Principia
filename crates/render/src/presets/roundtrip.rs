@@ -121,6 +121,11 @@ pub fn residual(x: &State, y: &State) -> f64 {
         .fold(0.0f64, f64::max)
 }
 
+/// The words view's tag word: the first decode's tag word `tag`, and the free decode's `tag_free` shifted by 8.
+pub fn tags(tag: u32, tag_free: u32) -> u32 {
+    tag | (tag_free << 8)
+}
+
 /// A state `(m, r, p)` as the twin reads it.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct State {

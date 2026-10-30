@@ -8,6 +8,9 @@
 //!   trip's, read off the trip's own reports; a sample at a clamp boundary, where rounding decides the clamp bit, may
 //!   be untagged or clamped. The framed chart shows clamps and the `(L_z, E)` chart feasibility tags. Control: a trip
 //!   whose free decode reads the encode's `z` with one momentum control moved by 0.05 is past `ε_phys`.
+//! - `roundtrip_preset_golden_renders_its_reference`: each golden scene's render, through the harness and through the
+//!   `golden_harness` binary, quantised as the golden runner quantises, is its CPU trip's image, pixel for pixel; and
+//!   each scene's name finds its chart and no other's. Control: one chart's render held to the other's CPU trip.
 //! - `roundtrip_preset_wgsl_is_the_twin`: the view's `roundtrip_class` on every case of the class table and its
 //!   `roundtrip_colour` at the brightness's breakpoints, each class, are the CPU twins' (`Class::of`, `colour`).
 //!   Control: a class function with the clamp test cut.
@@ -15,10 +18,14 @@
 use render::bind::ViewOutput;
 use render::presets::roundtrip::{self, colour, Class};
 use render::presets::DecodeChart;
+use validation::decode_preset::quantise;
 use validation::decode_preset::Scene;
 use validation::gpu::GpuHarness;
 use validation::negative_control;
-use validation::roundtrip_preset::{clamp_ambiguous, clamp_frame, trips_view, twins};
+use validation::roundtrip_preset::{
+    clamp_ambiguous, clamp_frame, expected, golden, golden_chart, golden_name, render, trips_view,
+    twins, CHARTS,
+};
 
 /// A scene of `side` × `side` one-pixel samples over `chart` at `uniforms`, its `u` extent `extent`.
 fn scene(
@@ -127,6 +134,72 @@ negative_control!(
         );
         assert_ne!(moved, view, "the control's edit did not apply");
         moved
+    })
+);
+
+// ── The golden scenes on the GPU ───────────────────────────────────────────────────────────────────────────────────
+
+/// Each golden scene's render against `against`'s chart's CPU trip (its own but in the control).
+fn check_golden(against: fn(DecodeChart) -> DecodeChart) {
+    let gpu = GpuHarness::new().unwrap_or_else(|e| panic!("{e}"));
+    for chart in CHARTS {
+        assert_eq!(
+            golden_chart(&golden_name(chart)),
+            Some(chart),
+            "{chart:?}'s scene name"
+        );
+        let scene = golden(chart).unwrap();
+        let pixels = render(&scene, gpu.device(), gpu.queue()).unwrap();
+        let got = quantise(
+            &pixels
+                .iter()
+                .map(|p| [0, 1, 2].map(|k| f64::from(p[k])))
+                .collect::<Vec<_>>(),
+        );
+        let want = quantise(&expected(&golden(against(chart)).unwrap()).unwrap());
+        assert_eq!(got.len(), want.len());
+        let differ = got.iter().zip(&want).filter(|(a, b)| a != b).count();
+        assert_eq!(
+            differ, 0,
+            "{chart:?}: the rendered golden is not the CPU trip's, {differ} pixels differ"
+        );
+        let out = std::process::Command::new(env!("CARGO_BIN_EXE_golden_harness"))
+            .args(["--scene", &golden_name(chart)])
+            .output()
+            .expect("run golden_harness");
+        assert!(
+            out.status.success(),
+            "{}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+        let (w, h) = scene.size();
+        assert_eq!(
+            out.stdout,
+            validation::golden_scene::encode_image(w, h, &pixels),
+            "{chart:?}: golden_harness's image is not the harness's render"
+        );
+    }
+    for name in [
+        "roundtrip-preset-none",
+        "decode-preset-latent",
+        "roundtrip-preset-shape_sphere",
+    ] {
+        assert_eq!(golden_chart(name), None, "`{name}` names a ROUNDTRIP scene");
+    }
+}
+
+#[test]
+fn roundtrip_preset_golden_renders_its_reference() {
+    check_golden(|c| c);
+}
+
+negative_control!(
+    roundtrip_preset_golden_renders_its_reference,
+    "a render held to the other chart's CPU trip must differ",
+    expected = "the rendered golden is not the CPU trip's",
+    check_golden(|c| match c {
+        DecodeChart::Latent => DecodeChart::InvariantLE,
+        _ => DecodeChart::Latent,
     })
 );
 

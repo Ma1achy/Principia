@@ -9,17 +9,23 @@
 //! - `roundtrip_preset_brightness_and_colour`: the brightness is 0 at or below `ε_phys`, `log₂ρ/24` above it, full
 //!   from `2²⁴`; an untagged pixel is `(b, 0, 0)`, a tagged one its hue with no red at `¼ + ¾b`, an invalid one the
 //!   hatch; `ε_phys` is the register's `k` times f32's epsilon. Control: a natural-log brightness.
-//!
-//! The residual twin is held to `validation::roundtrip::phys` in `validation`'s `roundtrip_preset_golden.rs`.
+//! - `roundtrip_preset_residual_is_phys`: the residual twin is `validation::roundtrip::phys`
+//!   (`validation::roundtrip_preset::phys_of`), bit for bit, on states that differ in one value at a time, each body's
+//!   mass, position and momentum, at extents above and below 1; `State::finite` finds a non-finite mass, position or
+//!   momentum. Control: the residual measured against the other state's extents.
+//! - `roundtrip_preset_tags_word`: the words view's tag word holds the first decode's tag low and the free decode's
+//!   from bit 8. Control: the free decode's tag dropped.
 //! - `roundtrip_preset_text`: the preset is locked, named, in the library; its views place the generated free decode
 //!   and encode verbatim (R-116), state the register's `ε_phys`, the span and floor, and compile with naga over every
 //!   chart's decode. Control: a view without the generated encode.
 
 use render::presets::roundtrip::{
-    self, brightness, colour, eps_phys, ratio, Class, CLAMPED, FLOOR, MIRRORED, SPAN,
+    self, brightness, colour, eps_phys, ratio, residual, Class, State, CLAMPED, FLOOR, MIRRORED,
+    SPAN,
 };
 use render::presets::{self, section, DecodeChart, DECODE_WGSL, ENCODE_WGSL};
 use validation::negative_control;
+use validation::roundtrip_preset::phys_of;
 
 // ── The class ───────────────────────────────────────────────────────────────────────────────────────────────────────
 
@@ -161,6 +167,117 @@ negative_control!(
     "a natural-log brightness must be found",
     expected = "brightness(",
     check_colour(|r| (r.max(1.0).ln() / SPAN).min(1.0))
+);
+
+// ── The residual ────────────────────────────────────────────────────────────────────────────────────────────────────
+
+fn state(scale: f64) -> State {
+    State {
+        m: [0.2, 0.3, 0.5],
+        r: [
+            [-0.4 * scale, 0.1 * scale],
+            [0.9 * scale, -0.2 * scale],
+            [-0.3 * scale, 0.05 * scale],
+        ],
+        p: [
+            [0.15 * scale, -0.6 * scale],
+            [-0.35 * scale, 0.2 * scale],
+            [0.2 * scale, 0.4 * scale],
+        ],
+    }
+}
+
+/// Every state that differs from `x` in one value by `d`.
+fn moved(x: &State, d: f64) -> Vec<State> {
+    let mut out = Vec::new();
+    for i in 0..3 {
+        let mut y = *x;
+        y.m[i] += d;
+        out.push(y);
+        for k in 0..2 {
+            let mut y = *x;
+            y.r[i][k] += d;
+            out.push(y);
+            let mut y = *x;
+            y.p[i][k] -= d;
+            out.push(y);
+        }
+    }
+    out
+}
+
+fn check_residual(res: fn(&State, &State) -> f64) {
+    for scale in [0.5, 3.0] {
+        let x = state(scale);
+        assert_eq!(res(&x, &x), 0.0, "a state's residual to itself");
+        for y in moved(&x, 0.25) {
+            let want = phys_of(&x, &y);
+            let got = res(&x, &y);
+            assert!(want > 0.0);
+            assert_eq!(
+                got.to_bits(),
+                want.to_bits(),
+                "residual {got} is not phys's {want} at scale {scale}"
+            );
+        }
+    }
+}
+
+#[test]
+fn roundtrip_preset_residual_is_phys() {
+    check_residual(residual);
+    let x = state(1.0);
+    assert!(x.finite());
+    for (k, bad) in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY]
+        .into_iter()
+        .enumerate()
+    {
+        let mut y = x;
+        y.m[k] = bad;
+        assert!(!y.finite(), "a non-finite mass");
+        let mut y = x;
+        y.r[k][1] = bad;
+        assert!(!y.finite(), "a non-finite position");
+        let mut y = x;
+        y.p[2 - k][0] = bad;
+        assert!(!y.finite(), "a non-finite momentum");
+    }
+}
+
+negative_control!(
+    roundtrip_preset_residual_is_phys,
+    "the residual against the other state's extents must be found",
+    expected = "is not phys's",
+    check_residual(|x, y| residual(y, x))
+);
+
+fn check_tags(tags: fn(u32, u32) -> u32) {
+    for (tag, tag_free, want) in [
+        (0, 0, 0),
+        (4, 0, 4),
+        (0, 1, 0x100),
+        (4, 5, 0x504),
+        (3, 3, 0x303),
+    ] {
+        assert_eq!(
+            tags(tag, tag_free),
+            want,
+            "the tags word of ({tag}, {tag_free})"
+        );
+        assert_eq!(roundtrip::tags(tag, tag_free), want);
+    }
+}
+
+#[test]
+fn roundtrip_preset_tags_word() {
+    check_tags(roundtrip::tags);
+}
+
+negative_control!(
+    roundtrip_preset_tags_word,
+    "a tags word that does not shift the free decode's tag must be found",
+    expected = "the tags word",
+    check_tags(|tag, tag_free| tag | tag_free)
 );
 
 // ── The text ────────────────────────────────────────────────────────────────────────────────────────────────────────
