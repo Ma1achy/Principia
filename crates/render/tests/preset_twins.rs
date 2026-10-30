@@ -126,7 +126,7 @@ fn check_conditioning(pair: fn(f64, f64, f64) -> f64) {
     // Only the pair (0, 1) has mass: m₂ = 0.
     let m = [0.5f32, 0.5, 0.0];
     let at = |r1: [f32; 2]| agreement::conditioning(m, [[0.5, 0.0], r1, [-1.0, 0.0]]);
-    // w = 1, the floor eps·max(w, 1) = eps: the separation under it, at it and over it.
+    // w = 1, the floor eps·max(w, δ) = eps: the separation under it, at it and over it.
     for (dy, why) in [
         (0.0f32, "a zero separation"),
         (-2f32.powi(-24), "a separation under the floor"),
