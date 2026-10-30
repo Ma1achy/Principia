@@ -198,7 +198,7 @@ const ZERO_EXPONENT: i32 = i16::MIN as i32;
 /// `[2^−83, 4)` in magnitude but 0 (f32; `[2^−112, 4)` at f64), and none is subnormal on any backend, whatever the
 /// state's scale or its terms' spread.
 #[derive(Clone, Copy)]
-struct Wide<R> {
+pub(crate) struct Wide<R> {
     m: R,
     e: i32,
 }
@@ -218,7 +218,7 @@ fn renorm<R: LinkReal + IeeeBits>(x: R, k: i32) -> Wide<R> {
 /// into `[1, 2)` where `x` is normal and into `[2^−22, 2)` (f32; `[2^−51, 2)` at f64) where it is subnormal, then
 /// renormalised, so a subnormal `x` (on a backend that keeps it) gets its own mantissa and exponent too.
 #[inline]
-fn wide<R: LinkReal + IeeeBits>(x: R) -> Wide<R> {
+pub(crate) fn wide<R: LinkReal + IeeeBits>(x: R) -> Wide<R> {
     let k = x.exponent();
     let half = k / 2;
     renorm(x * R::pow2(-half) * R::pow2(half - k), k)
@@ -234,7 +234,7 @@ fn wide_mul<R: LinkReal + IeeeBits>(a: Wide<R>, b: Wide<R>) -> Wide<R> {
 /// 60, below which it is under half an ulp of the larger (so the cap changes no rounding), then renormalised. A
 /// nonzero sum is at least `2^−83` (f32; `2^−112` at f64), the operands being multiples of it: normal.
 #[inline]
-fn wide_add<R: LinkReal + IeeeBits>(a: Wide<R>, b: Wide<R>) -> Wide<R> {
+pub(crate) fn wide_add<R: LinkReal + IeeeBits>(a: Wide<R>, b: Wide<R>) -> Wide<R> {
     let a_big = a.e >= b.e;
     let (big, small) = (select(a_big, a, b), select(a_big, b, a));
     let gap = big.e - small.e;
@@ -265,7 +265,7 @@ fn wide_abs<R: LinkReal + IeeeBits>(a: Wide<R>) -> Wide<R> {
 
 /// `a > b` for `a, b ≥ 0`: by exponent, then by mantissa; a zero, at the [`ZERO_EXPONENT`], is below every other value.
 #[inline]
-fn wide_greater<R: LinkReal + IeeeBits>(a: Wide<R>, b: Wide<R>) -> bool {
+pub(crate) fn wide_greater<R: LinkReal + IeeeBits>(a: Wide<R>, b: Wide<R>) -> bool {
     (a.e > b.e) | ((a.e == b.e) & (a.m > b.m))
 }
 
@@ -316,7 +316,7 @@ fn ldexp<R: LinkReal + IeeeBits>(x: R, e: i32) -> R {
 
 /// `a` as a float: [`ldexp`] of its mantissa and exponent.
 #[inline]
-fn to_float<R: LinkReal + IeeeBits>(a: Wide<R>) -> R {
+pub(crate) fn to_float<R: LinkReal + IeeeBits>(a: Wide<R>) -> R {
     ldexp(a.m, a.e)
 }
 
