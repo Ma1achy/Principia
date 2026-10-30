@@ -8,7 +8,10 @@
 //! - REQ-PAY-040: `t_end_step` in bits 0–15 and `t_dmin_step` in bits 16–31, each bit in its own place, exact, and the
 //!   display fraction read through the dispatched `horizon_steps` uniform.
 //! - REQ-SYS-018: `r_coll` nonzero and `epsilon` 0 by default; one fixed number each, no co-moving option; a run with
-//!   `epsilon` other than 0 never reads as an unsoftened one, in its tag or its sim key.
+//!   `epsilon` other than 0 never reads as an unsoftened one, in its tag or its sim key; and, until softened gravity
+//!   is defined and built (RQ-627), dispatch refuses every `epsilon > 0` with its reason and launches nothing.
+//! - The physics review of PR #348 (F2): a NaN, infinite or negative `r_coll`, `tau` or `r_close`, or a non-finite
+//!   `eps_E` or `eps_L`, is refused through `dispatch` and launches nothing.
 //! - REQ-INT-081: `T_horizon ∈ [0.4, 200]` is accepted everywhere, swept densely and at its edges, with
 //!   `⌈T/dt_macro⌉ ≤ 65535`; below 0.4 is refused with R-610's reason; above 200 is refused.
 //! - The binding half of REQ-INT-028 (R-502): the table a changed-law `SimUniforms` carries realises that law's
@@ -440,6 +443,7 @@ fn check_no_comoving(debug: &str) {
 
 /// `r_coll` nonzero and `epsilon` 0 by default and unsoftened, untagged; every `epsilon > 0` (down to the least
 /// subnormal) is tagged in provenance, and its sim key differs from the unsoftened key and from another `epsilon`'s.
+/// Whether dispatch accepts such a key is `check_positive_epsilon_refused`'s: it refuses it (RQ-627).
 fn check_softening_tag(of: &dyn Fn(f64) -> SimUniforms) {
     let d = of(0.0);
     assert!(d.r_coll > 0.0, "r_coll is not nonzero by default");
@@ -473,10 +477,6 @@ fn check_softening_tag(of: &dyn Fn(f64) -> SimUniforms) {
             "epsilon = {eps:e} shares a sim key with another run"
         );
         keys.push(key);
-        assert!(
-            validate(&u).is_ok(),
-            "epsilon = {eps:e} (optional) is refused"
-        );
     }
 }
 
@@ -537,6 +537,155 @@ negative_control!(
             Softening::Unsoftened
         };
         (true, tag)
+    })
+);
+
+/// The physics review of PR #348 (F1; RQ-627): no force law takes `epsilon` and the corpus defines no softened
+/// gravity, so `dispatch` refuses every `epsilon > 0` (down to the least subnormal) as a softening refusal carrying
+/// that `epsilon`, whose reason names `epsilon` and RQ-627, and launches nothing; `epsilon = 0` launches once. A run
+/// dispatched with `epsilon > 0` would come back Newtonian under the `softened` tag.
+fn check_positive_epsilon_refused(rule_dispatch: &CountedDispatch) {
+    let r_coll = SimUniforms::default().r_coll;
+    for eps in [
+        f64::from_bits(1),
+        f64::MIN_POSITIVE,
+        1e-12,
+        1e-3,
+        0.05,
+        1.0,
+        f64::MAX,
+    ] {
+        let launched = Cell::new(0);
+        let got = rule_dispatch(&every_field(eps, r_coll), &launched);
+        assert_eq!(
+            launched.get(),
+            0,
+            "epsilon = {eps:e} is dispatched: {got:?}"
+        );
+        match got {
+            Err(DispatchError::Softening { epsilon }) => {
+                assert_eq!(
+                    epsilon.to_bits(),
+                    eps.to_bits(),
+                    "epsilon = {eps:e}'s refusal carries {epsilon:e}"
+                );
+                let reason = DispatchError::Softening { epsilon }.to_string();
+                assert!(
+                    reason.contains("epsilon") && reason.contains("RQ-627"),
+                    "epsilon = {eps:e}'s refusal gives no reason: {reason}"
+                );
+            }
+            other => panic!("epsilon = {eps:e} is not refused as a softening: {other:?}"),
+        }
+    }
+    let launched = Cell::new(0);
+    let got = rule_dispatch(&every_field(0.0, r_coll), &launched);
+    assert!(
+        got.is_ok() && launched.get() == 1,
+        "epsilon = 0 did not launch once: {got:?}"
+    );
+}
+
+/// A dispatch under test, counting its launches in the cell: `Ok` where it launched, or its refusal.
+type CountedDispatch = dyn Fn(&SimUniforms, &Cell<u32>) -> Result<(), DispatchError>;
+
+/// `dispatch`, counting its launches.
+fn counted(u: &SimUniforms, launched: &Cell<u32>) -> Result<(), DispatchError> {
+    dispatch(u, |_| launched.set(launched.get() + 1))
+}
+
+#[test]
+fn qa_collision_softening_positive_epsilon_refused() {
+    check_positive_epsilon_refused(&counted);
+}
+
+negative_control!(
+    qa_collision_softening_positive_epsilon_refused,
+    "a dispatch blind to epsilon launches a softened-tagged run with Newtonian gravity",
+    expected = "is dispatched",
+    check_positive_epsilon_refused(&|u, launched| counted(
+        &SimUniforms { epsilon: 0.0, ..*u },
+        launched
+    ))
+);
+
+/// The physics review of PR #348 (F2): a carried length or threshold whose branch would silently read as "never"
+/// (`r_coll`, `tau`, `r_close` NaN, ±∞ or negative; `eps_E`, `eps_L` NaN or ±∞) is refused through `dispatch` itself,
+/// which launches nothing, at the default horizon and at the longest accepted one alike; the same keys with the value
+/// restored launch once.
+fn check_carried_refused_launches_nothing(rule_dispatch: &CountedDispatch) {
+    type Set = fn(SimUniforms, f64) -> SimUniforms;
+    let lengths: [(&str, Set); 3] = [
+        ("r_coll", |u, x| SimUniforms { r_coll: x, ..u }),
+        ("tau", |u, x| SimUniforms { tau: x, ..u }),
+        ("r_close", |u, x| SimUniforms { r_close: x, ..u }),
+    ];
+    let floors: [(&str, Set); 2] = [
+        ("eps_E", |u, x| SimUniforms { eps_e: x, ..u }),
+        ("eps_L", |u, x| SimUniforms { eps_l: x, ..u }),
+    ];
+    let non_finite = [f64::NAN, f64::INFINITY, f64::NEG_INFINITY];
+    let negative = [-f64::from_bits(1), -1e-3, -1.0];
+    for base in [SimUniforms::default(), at(200.0)] {
+        assert!(
+            validate(&base).is_ok(),
+            "the base sim key at T = {} is refused",
+            base.t_horizon
+        );
+        let cases = lengths
+            .iter()
+            .flat_map(|&(n, s)| non_finite.iter().chain(&negative).map(move |&x| (n, s, x)))
+            .chain(
+                floors
+                    .iter()
+                    .flat_map(|&(n, s)| non_finite.iter().map(move |&x| (n, s, x))),
+            );
+        for (name, set, x) in cases {
+            let launched = Cell::new(0);
+            let got = rule_dispatch(&set(base, x), &launched);
+            assert!(
+                got.is_err() && launched.get() == 0,
+                "{name} = {x} at T = {} is dispatched {} time(s): {got:?}",
+                base.t_horizon,
+                launched.get()
+            );
+            let reason = got.unwrap_err().to_string();
+            assert!(
+                reason.contains(name),
+                "{name} = {x}'s refusal does not name it: {reason}"
+            );
+        }
+        let launched = Cell::new(0);
+        assert!(
+            rule_dispatch(&base, &launched).is_ok() && launched.get() == 1,
+            "the base sim key at T = {} did not launch once",
+            base.t_horizon
+        );
+    }
+}
+
+#[test]
+fn qa_carried_refused_launches_nothing() {
+    check_carried_refused_launches_nothing(&counted);
+}
+
+negative_control!(
+    qa_carried_refused_launches_nothing,
+    "a dispatch that checks only the horizon and the table launches a NaN r_coll, collisions silently off",
+    expected = "is dispatched 1 time(s)",
+    check_carried_refused_launches_nothing(&|u, launched| {
+        let d = SimUniforms::default();
+        counted(
+            &SimUniforms {
+                r_coll: d.r_coll,
+                tau: d.tau,
+                r_close: d.r_close,
+                eps_e: d.eps_e,
+                eps_l: d.eps_l,
+                ..*u
+            },
+            launched,
+        )
     })
 );
 
