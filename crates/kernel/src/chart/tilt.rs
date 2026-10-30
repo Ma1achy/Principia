@@ -181,13 +181,13 @@ impl TiltSpec {
         if na || self.rank_loss() {
             None
         } else if nb {
-            Some(Strip::new([0.0, 1.0], [0.0, 2.0]))
+            Some(Strip::new([0.0, 1.0], 1.0))
         } else if self.two_targets() {
             None
         } else if self.map == TiltMap::Sheet {
-            Some(Strip::new([t2, -t1], sheet_generator(t1, t2)))
+            Some(Strip::new([t2, -t1], sheet_half(t1, t2)))
         } else {
-            lean_ratio(t1, t2).map(|[p, q]| Strip::new([q, -p], [2.0 * q, -2.0 * p]))
+            lean_ratio(t1, t2).map(|[p, q]| Strip::new([q, -p], Float::hypot(q, p)))
         }
     }
 
@@ -232,12 +232,12 @@ pub struct Strip {
 }
 
 impl Strip {
-    /// The strip of the generator `w`, along `along`, a positive multiple of it that the doubles hold.
-    fn new(along: [f64; 2], w: [f64; 2]) -> Self {
+    /// The strip of a generator along `along`, a positive multiple of it that the doubles hold, and `|w|/2 = half`.
+    fn new(along: [f64; 2], half: f64) -> Self {
         let len = Float::hypot(along[0], along[1]);
         Strip {
             dir: [along[0] / len, along[1] / len],
-            half: Float::hypot(w[0], w[1]) / 2.0,
+            half,
         }
     }
 
@@ -271,33 +271,29 @@ fn gcd(mut a: u64, mut b: u64) -> u64 {
     a
 }
 
-/// Tip as sheet's generator `w = (k₀, 2j₀)` with both angles set: the least integers with `τ₁·k₀ + 2·τ₂·j₀ = 0`, read
-/// from `τ₁ = ±o₁·2^e₁` and `τ₂ = ±o₂·2^e₂` with the odd parts reduced by their divisor `g` and `E = min(e₁, e₂ + 1)`:
-/// `k₀ = sign(τ₂)·(o₂/g)·2^(e₂+1−E)` and `2j₀ = −sign(τ₁)·(o₁/g)·2^(e₁+1−E)`, each exact in a double, or infinite past
-/// its range.
-fn sheet_generator(tau1: f64, tau2: f64) -> [f64; 2] {
+/// `|w|/2` for Tip as sheet's generator `w = (k₀, 2j₀)` with both angles set, `k₀` and `j₀` the least integers with
+/// `τ₁·k₀ + 2·τ₂·j₀ = 0` (`w` points along `(τ₂, −τ₁)`), read from `|τ₁| = o₁·2^e₁` and `|τ₂| = o₂·2^e₂` with the odd
+/// parts reduced by their divisor `g` and `E = min(e₁, e₂ + 1)`: `|k₀| = (o₂/g)·2^(e₂+1−E)` and
+/// `|2j₀| = (o₁/g)·2^(e₁+1−E)`, each exact in a double, or infinite past its range.
+fn sheet_half(tau1: f64, tau2: f64) -> f64 {
     let (o1, e1) = dyadic(tau1);
     let (o2, e2) = dyadic(tau2);
     let g = gcd(o1, o2);
     let e = Ord::min(e1, e2 + 1);
-    let k = Float::signum(tau2) * (o2 / g) as f64 * Float::powi(2.0, e2 + 1 - e);
-    let j2 = -Float::signum(tau1) * (o1 / g) as f64 * Float::powi(2.0, e1 + 1 - e);
-    [k, j2]
+    let k = (o2 / g) as f64 * Float::powi(2.0, e2 + 1 - e);
+    let j2 = (o1 / g) as f64 * Float::powi(2.0, e1 + 1 - e);
+    Float::hypot(k, j2) / 2.0
 }
 
-/// `p − q` as the double nearest it and the exact remainder (Knuth's two-sum), so that `p − q` is known exactly.
-fn two_diff(p: f64, q: f64) -> (f64, f64) {
+/// Whether `x ≡ y` (mod 180°), decided exactly: the remainders `p = x % 180` and `q = y % 180` are exact, and they
+/// differ by 0 or ±180 exactly. `s`, the double nearest `p − q`, is `p − q` exactly iff Knuth's two-sum leaves no
+/// remainder, `p − p' = q − q'` for its parts `p' = s + q'` and `q' = p − s`.
+fn congruent(x: f64, y: f64) -> bool {
+    let (p, q) = (x % HALF_TURN, y % HALF_TURN);
     let s = p - q;
     let qv = p - s;
     let pv = s + qv;
-    (s, (p - pv) - (q - qv))
-}
-
-/// Whether `x ≡ y` (mod 180°), decided exactly: the remainders `x % 180` and `y % 180` are exact, and they differ by 0
-/// or ±180 exactly.
-fn congruent(x: f64, y: f64) -> bool {
-    let (s, err) = two_diff(x % HALF_TURN, y % HALF_TURN);
-    err == 0.0 && (s == 0.0 || Float::abs(s) == HALF_TURN)
+    p - pv == q - qv && (s == 0.0 || Float::abs(s) == HALF_TURN)
 }
 
 /// `(tan² τ = 3, tan τ > 0)` where `τ ≡ ±30°` or `±60°` (mod 180°), decided exactly; `None` elsewhere.
@@ -340,7 +336,7 @@ fn lean_ratio(tau1: f64, tau2: f64) -> Option<[f64; 2]> {
     } else {
         match (sixth(tau1), sixth(tau2)) {
             (Some((false, s1)), Some((true, s2))) => Some([sign(s1 == s2), 3.0]),
-            (Some((true, s1)), Some((false, s2))) => Some([3.0 * sign(s1 == s2), 1.0]),
+            (Some((true, s1)), Some((false, s2))) => Some([sign(s1 == s2) * 3.0, 1.0]),
             _ => None,
         }
     }
