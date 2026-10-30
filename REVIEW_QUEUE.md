@@ -159,7 +159,7 @@ needs".*
 
 *30 Oct 2026 (R-649, R-650):* the targets here are measurements, never gates, scored in M9
 (`docs/design/principia_dd_replication.md` § 12). The context task is now TASK-M9-23 (was TASK-M3-63). This question
-still decides what is built for them, never whether a milestone passes; it stays open.*
+still decides what is built for them, never whether a milestone passes; it stays open.
 
 - **File, section:**
   - `docs/design/principia_dd_replication.md` § "5.12 Targets that wait for a chart, a diagnostic or data": TR-1 (the
@@ -193,7 +193,7 @@ needs".*
 
 *30 Oct 2026 (R-649, R-650):* the targets here are measurements, never gates, scored in M9
 (`docs/design/principia_dd_replication.md` § 12). The context task is now TASK-M9-24 (was TASK-M3-64). This question
-still decides what is built for them, never whether a milestone passes; it stays open.*
+still decides what is built for them, never whether a milestone passes; it stays open.
 
 - **File, section:** `docs/design/principia_dd_replication.md` § "5.12 Targets that wait for a chart, a diagnostic or
   data": PA-1, "Escaper-identity maps in side-ratio space around the Lagrange point", chart "new: SideRatio, or
@@ -220,7 +220,7 @@ needs".*
 
 *30 Oct 2026 (R-649, R-650):* the targets here are measurements, never gates, scored in M9
 (`docs/design/principia_dd_replication.md` § 12). The context task is now TASK-M9-28 (was TASK-M4-24). This question
-still decides what is built for them, never whether a milestone passes; it stays open.*
+still decides what is built for them, never whether a milestone passes; it stays open.
 
 - **File, section:** `docs/design/principia_dd_replication.md` § "5.12 Targets that wait for a chart, a diagnostic or
   data":
@@ -251,7 +251,7 @@ chart does.*
 
 *30 Oct 2026 (R-649, R-650):* the targets here are measurements, never gates, scored in M9
 (`docs/design/principia_dd_replication.md` § 12). The context tasks are now TASK-M9-23 and TASK-M9-24 (were TASK-M3-63 and
-TASK-M3-64). This question still decides what is built for them, never whether a milestone passes; it stays open.*
+TASK-M3-64). This question still decides what is built for them, never whether a milestone passes; it stays open.
 
 - **File, section:** `docs/design/principia_dd_replication.md` § "5.12 Targets that wait for a chart, a diagnostic or
   data": SL-1 needs "the cut N_scramble ≥ 2"; PA-1's split "an N_scramble ≥ 4 classifier"; TR-1 "f_col (12 nearest
@@ -276,7 +276,7 @@ TASK-M3-64). This question still decides what is built for them, never whether a
 
 *30 Oct 2026 (R-649, R-650):* the targets here are measurements, never gates, scored in M9
 (`docs/design/principia_dd_replication.md` § 12). The context task is now TASK-M9-29 (was TASK-M4-25). This question
-still decides what is built for them, never whether a milestone passes; it stays open.*
+still decides what is built for them, never whether a milestone passes; it stays open.
 
 - **File, section:** `docs/design/principia_dd_replication.md` § "5.12 Targets that wait for a chart, a diagnostic or
   data": LLL-1, "Period, angular momentum and stability contours over (m₁, m₂) for one periodic family … must reproduce
@@ -302,7 +302,7 @@ still decides what is built for them, never whether a milestone passes; it stays
 (`docs/design/principia_dd_replication.md` § 12). The context tasks are now TASK-M9-27 and TASK-M9-35 (were TASK-M4-23 and
 TASK-M8-99). This question still decides what is built for them, never whether a milestone passes; it stays open. Its
 "what the M4 and M8 gates hold" is answered for the gates by R-650: no gate holds these targets; what is built for them
-is still open.*
+is still open.
 
 - **File, section:**
   - `decisions.md` § "R-636 — …", the owner's words: "Šuvakov-plane chart: keep its targets as closures for now; no
@@ -362,7 +362,7 @@ changes the result and the corpus does not settle it (R-369). Not yet ready to r
 *30 Oct 2026 (R-649, R-650):* GG-1 and BR-1 are measurements, never gates, scored in M9
 (`docs/design/principia_dd_replication.md` § 12). The context task is now TASK-M9-22 (was TASK-M3-62). This question
 decides how they are scored, never whether a milestone passes; it stays open. PR #335's three-point comparison is the
-peek log's first row (`docs/verification/peek_log.md`), UNEXPLAINED, with this question among its like-for-like checks.*
+peek log's first row (`docs/verification/peek_log.md`), UNEXPLAINED, with this question among its like-for-like checks.
 
 - **File, section:**
   - Boekholt, Portegies Zwart & Valtonen 2020 (arXiv:2002.04029,
@@ -406,7 +406,7 @@ for the authors, and a decision on whether to spend more probe time before any 1
 
 *30 Oct 2026 (R-649, R-650):* GG-1 and BR-1 are measurements, never gates, scored in M9
 (`docs/design/principia_dd_replication.md` § 12). The context tasks are now TASK-M9-22 and TASK-M9-25 (were TASK-M3-62 and
-TASK-M3-65). This question decides how they are scored, never whether a milestone passes; it stays open.*
+TASK-M3-65). This question decides how they are scored, never whether a milestone passes; it stays open.
 
 - **File, section:**
   - Boekholt et al. 2020, Appendix A: "we fix L_w = 1024 bits"; ε is "the Bulirsch-Stoer tolerance"; no `p_max` is given. § 2: "The average
@@ -443,7 +443,7 @@ TASK-M3-65). This question decides how they are scored, never whether a mileston
 
 *30 Oct 2026 (R-649, R-650):* GG-1 and BR-1 are measurements, never gates, scored in M9
 (`docs/design/principia_dd_replication.md` § 12). The context task is now TASK-M9-22 (was TASK-M3-62). This question
-decides how they are scored, never whether a milestone passes; it stays open.*
+decides how they are scored, never whether a milestone passes; it stays open.
 
 - **File, section:**
   - `docs/incoming/2026-10-28_rq598_data/README.md` § 2 on BR-1: "No data statement and no code or data release." § 5 corrects it:
@@ -478,7 +478,7 @@ converged fraction BR-1 is scored on.*
 
 *30 Oct 2026 (R-649, R-650):* GG-1 and BR-1 are measurements, never gates, scored in M9
 (`docs/design/principia_dd_replication.md` § 12). The context task is now TASK-M9-22 (was TASK-M3-62). This question
-decides how they are scored, never whether a milestone passes; it stays open.*
+decides how they are scored, never whether a milestone passes; it stays open.
 
 - **File, section:** Breen et al. 2020 (arXiv:1910.07291,
   `docs/incoming/2026-10-25_replication/papers/breen_etal_2020_MNRAS_494_2465_arXiv1910.07291.pdf`), Appendix A, eq. (A1):
@@ -537,7 +537,7 @@ hold and whether a chart task is added.*
 (`docs/design/principia_dd_replication.md` § 12). The context tasks are now TASK-M9-27 and TASK-M9-35 (were TASK-M4-23 and
 TASK-M8-99). This question still decides what is built for them, never whether a milestone passes; it stays open. Its
 "what the M4 and M8 gates hold" is answered for the gates by R-650: no gate holds these targets; what is built for them
-is still open.*
+is still open.
 
 - **File, section:**
   - `decisions.md` § "R-639 — …", the owner's words: "(1) Šuvakov plane targets: split each into its closure part
@@ -606,7 +606,7 @@ choice changes the result and the corpus does not settle it (R-369).*
 *30 Oct 2026 (R-649, R-650):* GG-1 and BR-1 are measurements, never gates, scored in M9
 (`docs/design/principia_dd_replication.md` § 12). The context task is now TASK-M9-22 (was TASK-M3-62). This question
 decides how they are scored, never whether a milestone passes; it stays open. PR #335's three-point comparison is the
-peek log's first row (`docs/verification/peek_log.md`), UNEXPLAINED, with this question among its like-for-like checks.*
+peek log's first row (`docs/verification/peek_log.md`), UNEXPLAINED, with this question among its like-for-like checks.
 
 - **File, section:**
   - `decisions.md` § "R-642 — …", the owner's words, item 1: "GG-1 against the Fig. 1 vector extraction at its stated
