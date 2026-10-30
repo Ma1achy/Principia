@@ -22,15 +22,19 @@
 //! `δ` = [`FLOOR`] `= 2⁻³²`: the conditioning of `V` at f32, which beside a binary collision grows as `wᵢⱼ/rᵢⱼ` up to
 //! `1/eps` (RQ-623, option (b), decided by the orchestrator per R-369). The floor is the separation's own rounding,
 //! `eps·wᵢⱼ`, at every size of `wᵢⱼ`; `δ` only keeps it positive where both positions are 0, and no decoded system
-//! reaches it (`wᵢⱼ ≥ √m_k/2 ≥ 2⁻²²` under `I = 1` at the masses' floors). Each pair's term is at most
-//! `(1/(4·eps·δ))·(1/eps) = 2⁷⁶` for masses on `[0, 1]` with `M = 1`, so `C` is finite at every pixel, the collision
-//! pole included, with no division by zero (`ŝᵢⱼ ≥ eps·δ = 2⁻⁵⁵`) and, for positions below `2⁶²`, no intermediate
-//! overflowing under any association a fast-math compiler picks (it may form `mᵢmⱼ·wᵢⱼ/ŝᵢⱼ²`; R-436). The positions
-//! are below `2⁶²` for every mass a decode reaches: `‖rᵢ‖ ≤ 1/√mᵢ` under `I = 1`, and the mass links floor every mass
-//! far above `2⁻¹²⁴` (dd_decoder §3.1; `stick_breaking`'s `ε_μ = 10⁻⁶` gives at least `ε_μ²/4`, `softmax_tanh` at
-//! `μ_max` up to 10 about `2×10⁻⁹`, the ternary plot `ε_m = 10⁻⁴`), so `‖rᵢ‖ < 2²¹`. The positions are finite where the
-//! masses are finite and nonzero; a mass rounded to 0 would give a non-finite `r`, and `m` and `r` are tested on their
-//! bits with the other operands, so a non-finite one draws the hatch (colour_composition §6). [`ratio`] is `|E − E₀|`
+//! whose masses are all at least `2⁻⁶²` reaches it (`wᵢⱼ ≥ √m_k/2` under `I = 1`, at least `2⁻²²` at the floors below).
+//! Each pair's term is at most `(1/(4·eps·δ))·(1/eps) = 2⁷⁶` for masses on `[0, 1]` with `M = 1`, so `C` is finite at
+//! every pixel whose masses all exceed `2⁻¹²⁴`, the collision pole included, with no division by zero (`ŝᵢⱼ ≥ eps·δ =
+//! 2⁻⁵⁵`) and, for positions below `2⁶²`, no intermediate overflowing under any association a fast-math compiler picks
+//! (it may form `mᵢmⱼ·wᵢⱼ/ŝᵢⱼ²`; R-436). The positions are below `2⁶²` wherever the masses exceed `2⁻¹²⁴`: `‖rᵢ‖ ≤
+//! 1/√mᵢ` under `I = 1`. The mass links floor every mass far above that (dd_decoder §3.1; `stick_breaking`'s `ε_μ =
+//! 10⁻⁶` gives at least `ε_μ²/4`, `softmax_tanh` at `μ_max` up to 10 about `2×10⁻⁹`, the ternary plot `ε_m = 10⁻⁴`). A
+//! Burrau chart's floor is its range's, `min(ν_min/(1 + ν_min), (1 − ν_max)/2)`, or `(1 − ν(θ_min))/2` on the
+//! acute-angle charts, `1/64` at the default and proposed ranges; chart_reference §4.5 gives those ranges as defaults
+//! with no lower bound, so the bound holds there and, on any other range, while its least mass exceeds `2⁻¹²⁴`. Over
+//! the links and those ranges `‖rᵢ‖ < 2²¹`. The positions are finite where the masses are finite and nonzero; a mass
+//! rounded to 0 would give a non-finite `r`, and `m` and `r` are tested on their bits with the other operands, so a
+//! non-finite one draws the hatch (colour_composition §6). [`ratio`] is `|E − E₀|`
 //! over that bound: at most 1 is agreement. TASK-M2-29 measured the fragment-against-compute differences on Metal and
 //! lavapipe (the `decode-agreement` gate's `survey` and `collision` inputs) and proposed the factor; it is provisional
 //! until the human confirms it at the M2 gate (R-71, R-182). REQ-DEC-043's factor stays the tolerance of the fragment decode
