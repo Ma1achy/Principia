@@ -14,10 +14,16 @@
 //! - `arctan_round`: `round` is f64's correctly rounded conversion to f32, ties to even, subnormals and the sticky bit
 //!   in the low word included.
 //! - `arctan_series`: `atan_reduced` is f64's `atan` within `2⁻³⁶` relative for `|r| ≤ 1/16`.
+//! - `arctan_breakpoints`: about each `t = j/16`, `j = 1 … 15`, where step 2 changes its breakpoint `k/8` (at odd `j`)
+//!   or `t` is one (at even `j`), every f32 `t` within 2¹⁶ steps either side gives `atan2(t, 1)` and `atan2(1, t)` as
+//!   the f32 nearest the exact value, but for three recorded results within `2⁻¹⁶` ULP of a midpoint. A breakpoint
+//!   misplaced leaves `|r|` past the series' `1/16`, and rounds others the wrong way: 191 with `|r|` up to `3/16`, 12
+//!   with `|r|` up to `1/8`.
 
 use kernel::arctan::{
-    add, atan_reduced, divide, mul, mul_hi, round, shl, shr, sub, unpack, zeros, Words,
+    add, atan2_f32, atan_reduced, divide, mul, mul_hi, round, shl, shr, sub, unpack, zeros, Words,
 };
+use validation::arctan::ulps;
 use validation::decode_f32_eps::SplitMix;
 use validation::negative_control;
 
@@ -344,12 +350,23 @@ fn check_round(to_f32: fn(Words, i32) -> u32) {
         0x8000_0000_0000_0001,
         0xFFFF_FF80_0000_0000,
         0xFFFF_FF7F_FFFF_FFFF,
+        0x8000_0081_0000_0001,
+        0x8000_0181_0000_0001,
     ];
     for _ in 0..2048 {
         let r = rng.next_u64() | 1 << 63;
         let cut = 64 - (rng.next_u64() % 40) as u32;
         let tie = r & !((1u64 << (64 - cut)) - 1);
-        mants.extend([r, tie, tie | 1, tie | (1 << 31), tie | (1 << 32)]);
+        let h = r >> 32;
+        mants.extend([
+            r,
+            tie,
+            tie | 1,
+            tie | (1 << 31),
+            tie | (1 << 32),
+            (h << 32) | (h & 0x7F),
+            (h << 32) | (h & 0xFFFF),
+        ]);
     }
     for &m in &mants {
         for ex in -200..=2 {
@@ -416,4 +433,67 @@ negative_control!(
         let z = if s >= 32 { 0 } else { third >> s };
         sub(m, shr(mul(m.hi, mul_hi(z, 0x5555_5555)), s))
     })
+);
+
+/// The f32s within 2¹⁶ steps of each `j/16`.
+fn near_breakpoints() -> impl Iterator<Item = f32> {
+    (1..16u32).flat_map(|j| {
+        let c = (j as f32 / 16.0).to_bits();
+        (c - (1 << 16)..=c + (1 << 16)).map(f32::from_bits)
+    })
+}
+
+/// The results of `atan2` (taken as `own`) about the breakpoints that are not the f32 nearest f64 `atan2`.
+fn off_near_breakpoints(own: fn(f32, f32) -> f32) -> Vec<[f32; 2]> {
+    near_breakpoints()
+        .flat_map(|t| [[t, 1.0], [1.0, t]])
+        .filter(|&[y, x]| {
+            own(y, x).to_bits() != (f64::from(y).atan2(f64::from(x)) as f32).to_bits()
+        })
+        .collect()
+}
+
+/// The results about the breakpoints that are not the nearest f32, as `(y, x)` bits: three of 3 932 190, each within
+/// `2⁻¹⁶` ULP of the midpoint between two f32s, where the function's own error (about `2⁻³⁷` relative) may round either
+/// way. Recorded from the function; the function is exact integer arithmetic, so any change to these results is a change
+/// to the function.
+const OFF_NEAR_BREAKPOINTS: [[u32; 2]; 3] = [
+    [0x3E3F_F039, 0x3F80_0000],
+    [0x3EDF_0E47, 0x3F80_0000],
+    [0x3EE0_6DB1, 0x3F80_0000],
+];
+
+/// Checks that `own` is correctly rounded about every breakpoint, but for [`OFF_NEAR_BREAKPOINTS`], each within
+/// `2⁻¹⁶` ULP of a midpoint.
+fn check_breakpoints(own: fn(f32, f32) -> f32) {
+    let off = off_near_breakpoints(own);
+    let bits: Vec<[u32; 2]> = off
+        .iter()
+        .map(|&[y, x]| [y.to_bits(), x.to_bits()])
+        .collect();
+    assert!(
+        bits == OFF_NEAR_BREAKPOINTS,
+        "{} results about the breakpoints are not the nearest f32, not the three recorded; the first at (y, x) = {:?}",
+        off.len(),
+        off.first()
+    );
+    for [y, x] in off {
+        let e = ulps(own(y, x), f64::from(y).atan2(f64::from(x)));
+        assert!(
+            e <= 0.5 + 2f64.powi(-16),
+            "atan2({y:e}, {x:e}) is {e} ULP off"
+        );
+    }
+}
+
+#[test]
+fn arctan_breakpoints() {
+    check_breakpoints(atan2_f32);
+}
+
+negative_control!(
+    arctan_breakpoints,
+    "the platform's f32 atan2, not the kernel's own",
+    expected = "not the three recorded",
+    check_breakpoints(|y, x| y.atan2(x))
 );
