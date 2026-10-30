@@ -583,3 +583,31 @@ choice changes the result and the corpus does not settle it (R-369).*
 - **Applied meanwhile:** none. No panel is chosen. REQ-VAL-295's note, R-642's entry (a forward line under its item 1),
   `principia_dd_replication.md` § 5.10, the RQ-598 README § 6 and TASK-M3-62's note point here.
 - **Waits:** GG-1's per-point scoring against the Fig. 1 extraction (TASK-M3-62). BR-1 does not wait on it.
+
+## RQ-627: The softened force law: `epsilon` is a carried, tagged sim-key value, but no document defines softened gravity and no task builds it *(a definition requirement, R-72; physics; `docs/design/principia_dd_generation_root.md` § "Open"; REQ-SYS-018; the physics review of PR #348, F1; context: TASK-M3-06)*
+
+*Queued 30 Oct 2026 by TASK-M3-06's fix round, on the physics review of PR #348 (F1), the code review (C1) and the qa
+review (F1). For the owner: yes, it is physics where the choice changes the result and the corpus does not settle it
+(R-369).*
+
+- **File, section:**
+  - `docs/design/principia_dd_generation_root.md` § "Open": "softened gravity is a different force law at any
+    `epsilon`, and ε>0 runs must be tagged and never pooled with ε=0 runs; and **`r_coll` is the better default
+    mechanism**, since softening makes the dynamics wrong everywhere … **Adopted: `r_coll` nonzero by default,
+    `epsilon` default 0 and optional.**"
+  - `plan/requirements.yaml`, REQ-SYS-018: "`r_coll` must be nonzero by default and `epsilon` 0 by default and
+    optional, both expressed in canonical units and fixed at t = 0 (never co-moving), and ε > 0 runs must be tagged
+    and never pooled with ε = 0 runs."
+- **The gap:** the corpus makes `epsilon` optional and says a run with ε > 0 is a different force law, but never says
+  which one: not its form (Plummer, `1/(r² + ε²)`, or another), nor `V`'s dependence on ε, and so nor `E₀` or the
+  drift meters under it. No force law in `crates/kernel` reads a softening length, and no task in `plan/tasks` builds
+  one. A run dispatched with ε > 0 would come back Newtonian under the `softened` tag, against canonical_spec §9 W13.
+- **The question:** the softened force law's definition (its potential and force as functions of `r` and ε, and what
+  `E₀`, the drift meters and the collision branch read under it), and the task that builds it.
+- **Options seen:** (a) Plummer softening, `V = −Σ m_i m_j / √(r_ij² + ε²)`, built by a new task; (b) another kernel,
+  named by the owner; (c) drop the option: `epsilon` stays 0 and the field is retired, by ruling.
+- **Applied meanwhile:** dispatch refuses any `epsilon` other than 0, NaN and ±∞ included, with a typed reason
+  (`engine::dispatch::validate`, TASK-M3-06). The field, its default 0, the `softened` provenance tag and its sim-key
+  byte stay, so REQ-SYS-018's "optional" stays true of `SimUniforms`. The refusal is lifted by the task that builds
+  the force law.
+- **Waits:** any run with ε ≠ 0. Nothing else waits.
