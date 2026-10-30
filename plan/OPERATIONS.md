@@ -282,6 +282,26 @@ except for adding `mutants-check`, the one change R-305 allows. The human remove
 checks until #96 (TASK-M0-14) merges, since PRs off `main` never report it. Tell the human the moment #96 merges, so
 they can add it back.
 
+**What CI runs on a pull request (R-656).** `ci.yml` runs on a push to `main` (and to a `measure/` branch, R-272)
+and, for a pull request, through `pull_request` only, once per push. Each workflow keeps one `concurrency` group per
+pull request, so a push cancels the run on the head it supersedes; a run on `main` is never cancelled. `ci.yml`'s
+`changes` job, and `mutants-fixture` in a step of its own, classify the change with `scripts/ci_changes.sh` (the pull
+request's merge commit against the base it merges onto; any other run runs everything):
+- **docs-only** (every path on the script's allowlist: `docs/`, the plan's prose and data, the root's markdown; never
+  `.github/` or `plan/`'s Python): the build, test, release and controls jobs and the GPU suites' jobs are skipped,
+  and `ci-workspace` runs the plan checks, the vocabulary lint and the tests that read those paths in place of its
+  tests; `mutants-fixture` skips its steps; `mutants`' shards find no `.rs` file and pass;
+- **no GPU-path file** (only docs-only paths, `crates/gui/` and `crates/prin/`): the GPU suites' jobs (`gpu-kernel
+  suites`, `gpu-metal suites`, `gpu-lavapipe suites`) are skipped; everything else runs.
+
+Every required check still reports under its own name and concludes success, so the merge step is unchanged:
+`merge-batch.sh`'s `gh pr checks --required` reads `pass` for each. A skipped job never bears a required name: the
+required checks `ci`, `xtask-ci`, `gpu-kernel`, `gpu-metal` and `gpu-lavapipe` are gates that run whatever their jobs
+ended in and pass a skipped one only on the classification's verdict, and matrix jobs are named `<id> (<shard>)`.
+Mutants run on every head whose diff has Rust in it, and the superseded head's run is cancelled, so the run that
+finishes is the merge-ready head's; nothing requests it at merge time. What a pull request skips runs on `main` after
+it merges, where every job runs.
+
 **Numbers.**
 - **RQ ids.** Before filing an RQ, take the next free id across every `origin/*` branch: `git fetch`, then search each
   branch's `REVIEW_QUEUE.md` and `docs/archive/review_queue/`. Two agents once both filed RQ-188.
