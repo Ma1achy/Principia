@@ -658,6 +658,18 @@ Consequence, worth stating so an agent doesn't add a per-IC time rescale: becaus
     near-simultaneous crossings in cut-ID order, the order the `τ`-sort exists to replace (payload §3); the decision is
     deterministic because the comparison is exact, not because of a tolerance.
   - **The tie-break.** On a tie the lower cut ID comes first: `a`'s crossing, then `b`'s.
+  - **Cuts that share one `d`: the segment gate (symbolic-dynamics contract §1, RQ-632).** §1's two cuts are segments
+    of one great circle, the collision equator, and share one signed function `d`. Each carries a *segment gate*, §1's
+    segment classifier: a comparison-only test, at an endpoint, of which segment of the equator a side change there
+    belongs to. A cut is crossed iff `d`'s two endpoints' sides differ and the cut's gate is open at the substep's
+    non-negative endpoint (the end of a crossing in the positive sense, the start of one in the negative). The gates
+    are exclusive, so one substep crosses at most one of §1's cuts: the sort above stays defined, and meets two
+    crossings only between cuts with distinct `d`. The gate's comparisons are branch inputs under the same rule as `d`
+    (Part 4; R-547).
+  - **Substep granularity.** Detection reads each `d`'s side at a substep's two endpoints only. An even number of
+    crossings of one `d`'s zero within one substep, a crossing and its recrossing among them, leaves the two sides
+    equal and goes unseen; an odd number reads as one. Detection is as fine as the accepted substeps (payload §3:
+    every accepted adaptive substep), and no finer.
   - The word identical CPU/GPU, and the GPU arm of the half-open test, are REQ-VAL-072's at M4 (R-113, R-150).
 - **FTLE partial-interval finalisation (payload §5)**: the Benettin sum `S` accumulates only at renormalisation boundaries. At read/terminalisation, **finalise the partial interval** — `S_final = S + log(δ_current/δ₀)`, then `ftle = S_final / (step_count · dt_macro)` (divide by full elapsed). Do NOT divide the boundary-only `S` by full elapsed time (systematically too small). `completed_renorms = step_count / renorm_interval_steps` (derived; uniform schedule).
 - **`t_end` (SimState termination time) is in the same units**, so it is directly comparable across pixels, quads, and charts. This is what makes the Lehto decay-time map a straight render of `t_end` — the unit system is what lets "decay time" be a chart at all.

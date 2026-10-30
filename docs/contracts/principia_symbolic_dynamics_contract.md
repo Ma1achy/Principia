@@ -12,20 +12,65 @@ The following are **not yet an authoritative derivation** and must be specified 
 
 ### 1. Generator ↔ branch-cut convention
 The word is over the free group `F₂ = ⟨a, b⟩` on the shape sphere with the three binary-collision points removed. Fix, normatively:
-- which two branch cuts correspond to generators `a` and `b` (arc from which collision point to the Lagrange reference pole);
+- which two branch cuts correspond to generators `a` and `b` (two segments of the collision equator, below; RQ-632). *Was:* "(arc from which collision point to the Lagrange reference pole)";
 - the crossing-direction sign convention (which crossing direction is the generator vs its inverse) — must match the half-open sign convention in payload §3 / the integrator contract.
 
 **Settled how (R-125):** the a/b assignment and the crossing sign are **transcribed from the literature** (Montgomery;
 Šuvakov–Dmitrašinović), with citations, by the task that writes the word (M3); verified against the published braid
 classes, physics-reviewed, and confirmed at the gate.
 
-**Open (RQ-632, queued 30 Oct 2026 by TASK-M3-16):** the literature's generators are loops about two of the three
-collision points, the third projected to infinity (Šuvakov & Dmitrašinović, PRL 110, 114301 (2013), p. 1;
-Dmitrašinović et al., J. Phys. A 51, 315101 (2018), Appendices B and C). Two cuts that end at a Lagrange pole, as the
-first bullet above reads, do not cut the punctured sphere into a disc, so no assignment of `a` and `b` to them
-reproduces the published classes; which cuts, the body labels and the side that is positive wait on the ruling. The
-crossing rule's sort, tie tolerance and sign convention, which do not depend on the cuts' shape, are the integrator
-contract's (Part 5, the τ tie rule).
+**The convention (RQ-632: decided 30 Oct 2026 by the orchestrator per R-369 as the consequence of R-125, option (a);
+confirmed by the owner at the M3 gate, REQ-PAY-070).** Transcribed from the literature:
+- **The generators.** Šuvakov & Dmitrašinović, PRL 110, 114301 (2013), p. 1: "A stereographic projection of this sphere
+  onto a plane, using one of the punctures as the "north pole" effectively removes that puncture to infinity … That
+  leads to the aforementioned free group on two letters (a, b), where (for definiteness) a denotes a clockwise full turn
+  around the right-hand-side puncture, and b denotes the counterclockwise full turn around the other puncture".
+  Dmitrašinović, Hudomal, Shibayama & Sugita, J. Phys. A 51, 315101 (2018), Appendix B (Montgomery's method, as its
+  authors give it; Montgomery, Nonlinearity 11, 363 (1998), is not in the corpus), Fig. 7: "Three two-body collision
+  points (solid red) lie on a meridian (dashed circle), with one of them being at the north pole"; and "a simple loop
+  around the third ("infinite") puncture on the shape sphere corresponds to aB". The north pole is a collision point,
+  not a Lagrange pole.
+- **The cuts are the syzygy segments.** The same paper, Appendix C: "make the substitution a = 12, A = 21, b = 32,
+  B = 23", with "11 = 22 = 33 = empty sequence", the digits being "crossings of the equator on the shape sphere, in one
+  of three corresponding segments on the said equator, where the index of the body passing between the other two is
+  used as a symbol". The three collision points `P₀₁`, `P₀₂`, `P₁₂` cut the equator (the collinear shapes) into three
+  segments, each named by the body that lies between the other two along it; the segment with body `k` between runs
+  from the collision of `k` with one of the others to its collision with the other.
+- **The body map.** Appendix C's bodies 1, 2, 3 are ours 0, 1, 2, its body 2 being the Šuvakov plane's middle body, our
+  body 1 (R-630, item 3). The puncture at infinity is then `P₀₂` (Appendix C's 1–3), and:
+  - cut `a` is the segment with body 0 between, from `P₀₁` to `P₀₂`;
+  - cut `b` is the segment with body 2 between, from `P₁₂` to `P₀₂`;
+  - the segment with body 1 between, from `P₀₁` to `P₁₂`, is not a cut and appends nothing (Appendix C's
+    "22 = empty sequence").
+
+  The two cuts meet at `P₀₂`, their shared endpoint, and with the puncture there leave the sphere a disc. A loop
+  around `P₀₂` crosses cut `a` and then cut `b` the other way: `aB`, Appendix B's class for the third puncture (the BHH
+  family's, Appendix C's `aB = 13`).
+- **The crossing sign.** Both cuts share one signed function, `d = −((r₁ − r₀) × (r₂ − r₀))`, minus the signed area
+  (doubled) of the triangle 0 → 1 → 2: `d < 0` on `L⁺`'s hemisphere (0 → 1 → 2 anticlockwise, `n_w > 0`;
+  dd_integrator §3.7), `d > 0` on `L⁻`'s, `d = 0` on the equator. So `d` has the sign of `−n_w`. Under the half-open
+  rule (integrator contract Part 5, the τ tie rule), a crossing of cut `a` from `L⁺`'s hemisphere into `L⁻`'s (`d < 0`,
+  then `d ≥ 0`) appends `a`, the other way `A`; cut `b` likewise appends `b` and `B`. The literature fixes the
+  hemisphere `a` starts from, and which outer body is ours 0, only through its figures. The other hemisphere turns
+  every letter into its inverse in place, the `(a, b) ↔ (A, B)` exchange, which REQ-VAL-043's comparison allows (R-630,
+  item 5); the other outer-body order reads each of the ten orbits below within those symmetries too (the physics read
+  of RQ-632). Cross-check: ten orbits of the PRL's Table I, integrated from its initial conditions, read their
+  published words under this convention, eight up to cyclic permutation and two up to the inverse
+  (`fixtures/crossings/prl_orbits.json`).
+- **The segment classifier (R-72, REQ-PAY-113; a definition, written by TASK-M3-16, physics-reviewed before merge).**
+  At an endpoint of an accepted substep, the body *between* is the body opposite the longest side: the `k` whose pair's
+  squared separation `r²ₖ` (pair `k` the side opposite body `k`, R-22) is the greatest of the three, the lowest `k` on a
+  tie. On the equator it is the body between the other two, the segment's name; it reads positions only, so it does
+  not depend on the masses. A side change of `d` over a substep is a crossing of the segment the classifier names at
+  the substep's *non-negative* endpoint, the one with `d ≥ 0`: the end of a crossing in the positive sense, the start of
+  one in the negative, and the endpoint on the equator when one is. Body 0 between: cut `a`; body 2: cut `b`; body 1:
+  no crossing. `d`, the `r²ₖ` and their comparisons are branch inputs, formed under R-547 (integrator contract Part 4):
+  each coordinate taken in as a mantissa in `[1, 2)` and an integer exponent, the differences, products and sums
+  formed on those, so no intermediate is subnormal and every IEEE backend rounds them alike; `d` is converted to the
+  float once, and its side read by Part 5's sign convention.
+
+The crossing rule's sort, tie tolerance and sign convention, and the cuts' shared `d` with its segment gate, are the
+integrator contract's (Part 5, the τ tie rule).
 
 ### 2. The punctured-sphere relation (third pair)
 **v2 (R-125):** per-pair views are out of v1 (PL-3, R-38).

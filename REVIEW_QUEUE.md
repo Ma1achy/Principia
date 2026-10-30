@@ -698,3 +698,9 @@ the choice changes the result (the word every sample stores) and the corpus does
   shape; no cut geometry is built and nothing reads a word from a trajectory.
 - **Waits:** the signed distances from the state and §1's convention (REQ-PAY-070, TASK-M3-16), and REQ-VAL-043
   (TASK-M3-30).
+- **30 Oct 2026:** Decided by the orchestrator per R-369 (consequence of R-125), option (a); confirmed at the M3 gate;
+  see PR (TASK-M3-16). The cuts are the collision equator's segments with body 0 between (`a`, `P₀₁`–`P₀₂`) and body 2
+  between (`b`, `P₁₂`–`P₀₂`), Appendix C's bodies 1, 2, 3 ours 0, 1, 2 (R-630); `d = −(r₁ − r₀) × (r₂ − r₀)`, so `−n_w`,
+  and a generator crosses from `L⁺`'s hemisphere into `L⁻`'s ("`d` is `n_w`, `L⁺` positive" in option (a) above is
+  corrected); the segment classifier is an R-72 definition (REQ-PAY-113). Applied in symbolic_dynamics_contract §1 and
+  integrator contract Part 5. Nothing waits on it; REQ-VAL-043 stays TASK-M3-30's.
