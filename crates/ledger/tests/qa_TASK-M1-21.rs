@@ -4,14 +4,15 @@
 //!   it: an existing payload field retagged, and a fresh fixture field added to the payload ledger
 //!   (`qa_m1_21_gap_*`);
 //! - an undeclared range never spans zero, so it never puts a field on `ramp_coolwarm` (`qa_m1_21_gap_not_coolwarm*`);
-//! - `mean_y` is provisional, naming REQ-PAY-098, and keeps `ramp_coolwarm`; `q_mass`, declared by TASK-M2-03
-//!   (REQ-PAY-097), no longer is (`qa_m1_21_provisional`);
+//! - R-426's two provisional fields are declared now, `q_mass` by TASK-M2-03 (REQ-PAY-097) and `mean_y` by TASK-M3-13
+//!   (REQ-PAY-098), so neither is provisional (`qa_m1_21_provisional`);
 //! - `S`, `ftle`, `diffusion`, `C_ty`, `E_0`, `Lz_0`, `energy_drift` and `Lz_drift` are declared (−∞, ∞) with the
 //!   citation the requirement names (`qa_m1_21_declared_citations`);
 //! - the gap list is exactly the payload's gaps, none a `lin` or `diverging` scalar, each with a requirement or none
 //!   (`qa_m1_21_gap_list`);
 //! - no view changes ramp: the cool-warm set is R-423's six fields less `theta` (cyclic), with `C_ty` and the
-//!   `diverging` `E_0` and `Lz_0` (`qa_m1_21_coolwarm_set_unchanged`);
+//!   `diverging` `E_0` and `Lz_0`, less `q_mass` and `mean_y`, whose declared ranges do not span zero (R-426)
+//!   (`qa_m1_21_coolwarm_set_unchanged`);
 //! - an entry's range is in one of §3.8's three states, by its own mark (`qa_m1_21_state_*`): unmarked (−∞, ∞) is a
 //!   gap; other written bounds are not; a cited (−∞, ∞) is declared with its citation and spans zero; a provisional
 //!   (−∞, ∞) is provisional with its requirement and spans zero; a provisional mark on other bounds is no gap;
@@ -189,9 +190,16 @@ fn qa_m1_21_gap_not_coolwarm_fresh() {
 
 negative_control!(
     qa_m1_21_gap_not_coolwarm_fresh,
-    "a provisional field, `mean_y`, is on ramp_coolwarm",
-    expected = "the undeclared `mean_y` is placed on ramp_coolwarm",
-    check_not_coolwarm(&payload::ledger(), "mean_y")
+    "a provisional fresh field is on ramp_coolwarm (R-426: `mean_y`, the payload's last, is declared by REQ-PAY-098)",
+    expected = "the undeclared `qa_fixture` is placed on ramp_coolwarm",
+    check_not_coolwarm(
+        &with_marked_fixture(
+            FieldType::F32,
+            Scale::Lin,
+            Some(Declaration::Provisional(QA_REQUIREMENT))
+        ),
+        "qa_fixture"
+    )
 );
 
 #[test]
@@ -208,45 +216,50 @@ fn qa_m1_21_gap_state_never_spans_zero() {
 
 negative_control!(
     qa_m1_21_gap_state_never_spans_zero,
-    "a provisional range spans zero",
-    expected = "mean_y spans zero",
+    "a provisional range spans zero (R-426: `mean_y`, the payload's last, is declared by REQ-PAY-098)",
+    expected = "the provisional range spans zero",
     assert!(
-        !payload::spans_zero(entry(&payload(), "mean_y")),
-        "mean_y spans zero"
+        !payload::spans_zero(&marked(
+            UNBOUNDED,
+            Some(Declaration::Provisional(QA_REQUIREMENT))
+        )),
+        "the provisional range spans zero"
     )
 );
 
-// ── mean_y: provisional, on cool-warm (q_mass declared by TASK-M2-03, R-426) ─────────────────────────────────────
+// ── R-426's provisional fields, declared (q_mass by TASK-M2-03, mean_y by TASK-M3-13) ────────────────────────────
 
-fn check_provisional(es: &[Entry], want: &[(&str, &str)]) {
-    for (name, requirement) in want {
-        match state(es, name) {
-            RangeState::Provisional { requirement: r } => assert_eq!(
-                r, *requirement,
-                "`{name}` is provisional until {r}, not {requirement}"
-            ),
-            other => panic!("`{name}` is not provisional: {other:?}"),
-        }
-        let v = NumericView::of(entry(es, name)).expect("a numeric view");
-        assert_eq!(v.ramp(), Ramp::Coolwarm, "`{name}` left ramp_coolwarm");
+fn check_not_provisional(es: &[Entry], names: &[&str]) {
+    for name in names {
+        assert!(
+            !matches!(state(es, name), RangeState::Provisional { .. }),
+            "`{name}` is still provisional"
+        );
     }
 }
 
 #[test]
 fn qa_m1_21_provisional() {
-    check_provisional(&payload(), &[("mean_y", "REQ-PAY-098")]);
-    // REQ-PAY-097 (R-426): `q_mass` is no longer provisional once declared.
-    assert!(
-        !matches!(state(&payload(), "q_mass"), RangeState::Provisional { .. }),
-        "`q_mass` is still provisional"
-    );
+    // REQ-PAY-097, REQ-PAY-098 (R-426): `q_mass` and `mean_y` are no longer provisional once declared.
+    check_not_provisional(&payload(), &["q_mass", "mean_y"]);
 }
 
 negative_control!(
     qa_m1_21_provisional,
-    "`S`, declared, is not provisional",
-    expected = "`S` is not provisional",
-    check_provisional(&payload(), &[("S", "REQ-PAY-097")])
+    "`mean_y` marked provisional again, as before REQ-PAY-098, is provisional",
+    expected = "`mean_y` is still provisional",
+    {
+        let mut l = payload::ledger();
+        let e = l
+            .entries
+            .iter_mut()
+            .find(|e| e.name == Some("mean_y"))
+            .expect("`mean_y`");
+        e.range = Some(UNBOUNDED);
+        e.declaration = Some(Declaration::Provisional("REQ-PAY-098"));
+        let es = ledger::gen::validate(&l).unwrap_or_else(|e| panic!("{e}"));
+        check_not_provisional(&es, &["q_mass", "mean_y"]);
+    }
 );
 
 // ── The declared fields and their citations ───────────────────────────────────────────────────────────────────────
@@ -362,8 +375,9 @@ negative_control!(
 // ── No view changes ramp ─────────────────────────────────────────────────────────────────────────────────────────
 
 /// The views on cool-warm before R-426: R-423's six less `theta` (now cyclic), `C_ty` (RQ-277), and the `diverging`
-/// `E_0` and `Lz_0`; less `q_mass`, whose range TASK-M2-03 declared [0, 1] (REQ-PAY-097, R-426).
-const COOLWARM: [&str; 7] = ["ftle", "mean_y", "S", "diffusion", "C_ty", "E_0", "Lz_0"];
+/// `E_0` and `Lz_0`; less `q_mass`, whose range TASK-M2-03 declared [0, 1] (REQ-PAY-097, R-426), and `mean_y`, whose
+/// range TASK-M3-13 declared [0, 4] (REQ-PAY-098, R-426).
+const COOLWARM: [&str; 6] = ["ftle", "S", "diffusion", "C_ty", "E_0", "Lz_0"];
 
 fn check_coolwarm(es: &[Entry], want: &[&str]) {
     let got: BTreeSet<&str> = es
@@ -382,7 +396,7 @@ fn qa_m1_21_coolwarm_set_unchanged() {
 
 negative_control!(
     qa_m1_21_coolwarm_set_unchanged,
-    "`mean_y` taken off the expected set",
+    "all but `ftle` taken off the expected set",
     expected = "the cool-warm views changed",
     check_coolwarm(&payload(), &COOLWARM[..1])
 );
