@@ -1,0 +1,10 @@
+workbook sha256 c767423ae3081f08602cbeca41bbef581ce2e1d92966f84baab2f8a70a30fe4e, 126147 bytes
+sheets: ['manuscript information', 'Initial condition', 'symbol sequences']
+Initial condition A1: 'The initial positions and the time of triple collision of triple collision orbits with general triangular (GT) initial configuration. '
+Initial condition header row 2: ['Label', 'x', 'y', 'T ']
+symbol sequences A1: 'The symbol sequences of the triple collision orbits.'
+symbol sequences header row 2: ['Label', 'symbol sequences']
+IC data rows 1653 (3..1655); sequence data rows 1653 (3..1655)
+IC cell types (column, xml type): count [(('A', 's'), 1653), (('B', 'n'), 1653), (('C', 'n'), 1653), (('D', 'n'), 1653)]
+labels unique (IC sheet): True; IC labels == sequence labels, in order: True
+significant digits stored per value (column, digits): count [(('T', 11), 1), (('T', 13), 12), (('T', 14), 156), (('T', 15), 1484), (('x', 13), 9), (('x', 14), 153), (('x', 15), 1491), (('y', 12), 5), (('y', 13), 16), (('y', 14), 158), (('y', 15), 1474)]

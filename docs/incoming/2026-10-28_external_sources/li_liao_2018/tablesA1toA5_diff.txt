@@ -1,0 +1,1 @@
+rows A=234 B=234; cells compared=1872; disagreements=0

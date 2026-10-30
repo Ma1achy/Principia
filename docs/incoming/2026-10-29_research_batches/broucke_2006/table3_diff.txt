@@ -1,0 +1,4 @@
+Broucke, Elipe & Riaguas 2006 Table 3: reading B (eye) vs OCR of the page image (rows by order; scripts/rows_by_order.py).
+row ('r',) col t21_b: B_eye='0.5' OCR=''
+rows B_eye=13 OCR=13; cells compared 65; disagreements 1
+Resolution: the page prints 0.5 in all four r cells; the OCR missed the fourth. Kept 0.5. Note: the PDF text layer drops the minus signs of a1 and theta (Tables 2-3); the page image shows them, and both readings here are from the image.

@@ -1,0 +1,2 @@
+Henon 1977 Table II, positive-mass rows: reading B (eye) vs OCR of the 300 dpi page image (minus-space joined).
+numbers A=192 B=192; disagreements 0

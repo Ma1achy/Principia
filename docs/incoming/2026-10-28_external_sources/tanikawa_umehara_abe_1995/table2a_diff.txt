@@ -1,0 +1,18 @@
+DIFF	2	vh	A=	B=v
+DIFF	4	vh	A=	B=v
+DIFF	5	vh	A=	B=v
+DIFF	7	vh	A=	B=v
+DIFF	9	vh	A=	B=h
+DIFF	13	phi	A=	B=+-
+DIFF	14	theta	A=	B=3.0537
+DIFF	14	time	A=	B=0.5293
+DIFF	14	vh	A=	B=h
+DIFF	14	phi	A=	B=+-
+DIFF	16	phi	A=	B=+-
+DIFF	20	theta	A=	B=3.1021
+DIFF	20	time	A=	B=0.4833
+DIFF	20	vh	A=	B=h
+DIFF	20	phi	A=	B=+-
+DIFF	25	dxdy	A=	B=10^-11*
+DIFF	26	phi	A=	B=-+
+rows A=27 B=27; cells compared=216; disagreements=17

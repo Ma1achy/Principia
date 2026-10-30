@@ -1,0 +1,4 @@
+Initial values for the only two figure-8 periodic orbits we found
+T
+2.3482448860	2.8082814798	19.0947186
+2.4538034560	2.9258077218	20.4002062

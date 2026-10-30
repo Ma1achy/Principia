@@ -1,0 +1,6 @@
+row ('1.0677930363467152e-01',) col m1: eye='1' ocr=''
+row ('4.7056649119130683e-01',) col m1: eye='2' ocr=''
+row ('4.7056649119130683e-01',) col m2: eye='1' ocr='2'
+row ('1.8625357016793291e+00',) col m1: eye='6' ocr=''
+row ('1.8625357016793291e+00',) col m2: eye='1' ocr=''
+rows eye=8 ocr=8; cells compared 40; disagreements 5
