@@ -583,3 +583,48 @@ choice changes the result and the corpus does not settle it (R-369).*
 - **Applied meanwhile:** none. No panel is chosen. REQ-VAL-295's note, R-642's entry (a forward line under its item 1),
   `principia_dd_replication.md` § 5.10, the RQ-598 README § 6 and TASK-M3-62's note point here.
 - **Waits:** GG-1's per-point scoring against the Fig. 1 extraction (TASK-M3-62). BR-1 does not wait on it.
+
+## RQ-624: The Inspector's equator check: `|w|` read on `D(E(x))` is the `β` clamp's image, about π·10⁻⁶, not the 6.8×10⁻¹⁴ R-551 cites, and no check can catch "a state moved off the line by one ulp" *(conflict: the requirement's wording against its ruling's evidence; R-551, R-71, R-72; REQ-VAL-022, REQ-VAL-121; context: TASK-M2-50)*
+
+*Found by TASK-M2-50 before building the shape checks. Nothing is chosen.*
+
+- **File, section:**
+  - `decisions.md` § "R-551 — …", RQ-475, the human's words: "Equilateral → `|w − 1|` and collinear `|w|` lie within
+    an R-71 calibrated bound, with the measured 2.2×10⁻¹⁶ and 6.8×10⁻¹⁴ as evidence." Those two numbers were measured
+    on `C`'s output: `docs/archive/review_queue/M0.md` § "RQ-475", "Measured on the f64 encode, `w` of `C`'s output
+    through `kernel::shape::shape`".
+  - `plan/requirements.yaml` REQ-VAL-022, verify: "max |w − 1| and max |w|, read on the canonical state D(E(x))
+    (where C's mirror puts L⁻ at w = +1), within REQ-VAL-121's bounds (measured 2.2×10⁻¹⁶ and 6.8×10⁻¹⁴)".
+  - `plan/tasks/M2/TASK-M2-50.md` § "Deliverables" and § "Acceptance tests": "max `|w − 1|` and max `|w|`, read on the
+    canonical state `D(E(x))`"; and "controls: a state moved off the line by one ulp is caught".
+  - The wording "read on the canonical state D(E(x))" came from the physics review of PR #274, P3, applied per R-369:
+    "Add "read on the canonical state" (or `D(E(x))`) to both, so the test can't be written against the input." It
+    offered the two as one state; at the equator they differ.
+- **Measured** (f64 encode and decode, the defaults links; RQ-475's families: 2000 of each per seed, through random
+  gauge elements):
+  - Pole, equal-mass equilateral, `L⁺` and `L⁻`: max `|w − 1|` = 2.2×10⁻¹⁶ on `C(x)` and on `D(E(x))` alike (seeds 1,
+    2, 3). No `w` is negative on either, so `C`'s mirror puts `L⁻` at `w = +1` on both.
+  - Equator, collinear with masses from `z_μ` on `[−4, 4)²`: max `|w|` on `C(x)` = 6.8×10⁻¹⁴, 2.4×10⁻¹⁴ and
+    1.2×10⁻¹³ (seeds 1, 2, 3); on `D(E(x))` 3.14156×10⁻⁶, 3.14159×10⁻⁶ and 3.14159×10⁻⁶. Every collinear `z_β` is at
+    its clamp image, so `D` gives `β = π·ε_z`, and `w = sin 2α · sin(π·ε_z)` ≤ π·10⁻⁶. `D(E(x)) = C(x)` holds only
+    off the clamps (REQ-ENC's left inverse, "modulo gauge"), and the equator is on one.
+  - One ulp off the line (each collinear state's body 2 moved in `y` by one ulp of its `x`, then the same gauge
+    elements): `z_β` at its clamp image with its bit set in 2000 of 2000, so the bit-for-bit check passes it; max `|w|`
+    7.2×10⁻¹⁴ on `C(x)`, the same as the states on the line, and π·10⁻⁶ on `D(E(x))`. A physical one-ulp move is below
+    both the clamp (`β < π·ε_z` is clamped) and the gauge's rounding, so neither check catches it.
+- **The question:** (1) on which state the equator's `|w|` is read, and so what its bound measures; (2) what the
+  control "a state moved off the line by one ulp is caught" means, since no check can catch a physical one-ulp move.
+- **Options seen:**
+  - (1a) On `C(x)`, "the canonical state" of P3's first wording, the state R-551's evidence was measured on: the
+    bound is proposed from about 10⁻¹³ (it tests `C`'s rounding off the line); the pole check reads the same state.
+  - (1b) On `D(E(x))`, as written: the bound is proposed from π·ε_z, and 6.8×10⁻¹⁴ is no longer its evidence; the
+    check then tests the clamp's image, which the bit-for-bit `z_β` check already pins.
+  - (1c) Both: `|w − 1|` on either (they agree), `|w|` on `C(x)` judged, on `D(E(x))` reported.
+  - (2a) The control moves `z_β` one ulp off its clamp image (the equator in `z`): the bit-for-bit check fails it,
+    which shows the comparison is exact and has no tolerance.
+  - (2b) The control moves the state off the line by enough to leave the clamp (`β` past π·ε_z), and the bit-for-bit
+    check fails it; "one ulp" is reworded.
+  - (2c) Both (2a) and (2b).
+- **Applied meanwhile:** nothing. The Randomise arm (REQ-VAL-193), the `z_β` bit-for-bit check and the pole's
+  `|w − 1|` do not depend on the answer.
+- **Waits:** REQ-VAL-022's equator `|w|` check and its one-ulp control, and REQ-VAL-121's equator bound (TASK-M2-50).
