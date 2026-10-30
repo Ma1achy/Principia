@@ -2,17 +2,19 @@
 //! "The tolerance's scale", R-72; RQ-623, decided per R-369, option (b)), not from the implementation.
 //!
 //! The scale is `S = max(|K₀|, 1) + max(|V₀|, 1) + Σ_{i<j} mᵢmⱼ·wᵢⱼ/ŝᵢⱼ²`, `wᵢⱼ = ‖rᵢ‖∞ + ‖rⱼ‖∞`,
-//! `ŝᵢⱼ = max(‖rᵢ − rⱼ‖∞, eps·max(wᵢⱼ, 1))`, and a sample agrees where `|E − E₀| ≤ F·eps·S`, `F` REQ-COL-060's factor
+//! `ŝᵢⱼ = max(‖rᵢ − rⱼ‖∞, eps·max(wᵢⱼ, δ))`, `δ = 2⁻³²`, and a sample agrees where `|E − E₀| ≤ F·eps·S`, `F` REQ-COL-060's factor
 //! (`render::presets::agreement::FACTOR`, provisional, R-71).
 //!
 //! - `qa_m229_ratio_is_the_definition`: `agreement::conditioning` and `agreement::ratio` against the scale written here
-//!   from §6's text, over fuzzed masses on the simplex and positions, coincident pairs and the floor's edges included;
+//!   from §6's text, over fuzzed masses on the simplex and positions, coincident pairs and the floor's edges included,
+//!   and `agreement::FLOOR` is §6's `δ`, `2⁻³²`;
 //!   §6's claim that, where `ŝᵢⱼ` is the separation, the sum is within a factor 2 of the Euclidean
 //!   `Σ mᵢmⱼ(‖rᵢ‖ + ‖rⱼ‖)/rᵢⱼ²`. Control: the Euclidean form taken as the definition must differ from the max-norm one.
 //! - `qa_m229_term_finite_in_every_association` (condition 1; R-436): with masses on `[0, 1]` summing to 1 and
-//!   positions below `2⁶²`, coincident pairs included, each pair's term at f32 is finite and at most `2⁴⁴` in each
+//!   positions below `2⁶²`, coincident pairs included, each pair's term at f32 is finite and at most `2⁷⁶` in each
 //!   association a fast-math compiler may pick (`(mm/s)·(w/s)`, `mm·w/(s·s)`, `(mm·w/s)/s`, `mm·(w/(s·s))`). Control:
-//!   the term without the floor must be non-finite at the pole.
+//!   the term without the floor must be non-finite at the pole. The extremes include `wᵢⱼ = δ` at coincidence, where
+//!   the term reaches `2⁷⁶`.
 //! - `qa_m229_f32_energy_flat_under_refinement` (condition 2, condition 4's second control, PIT-3): a binary
 //!   approaching collision, its separation halved from `w/2` down to the floor's `4·eps·w`: `E` evaluated at f32 from
 //!   the f32-rounded positions against `E₀` evaluated exactly (f64) from the same configuration, as any two f32
@@ -21,15 +23,22 @@
 //!   of every other's, the growth of a `1/d` quantity over a single halving (pitfalls §3: flat under refinement).
 //!   Control: the per-operand form, `max(|K₀|, 1) + max(|V₀|, 1)` alone, judged the same way, must fail it; and `qa_m229_flatness_alone`'s control,
 //!   the per-operand form with the tolerance not asserted, must fail the flatness check.
+//! - `qa_m229_small_binary_flat_under_refinement` (condition 2 at `wᵢⱼ < 1`; §6: the floor "is relative at every size
+//!   of `wᵢⱼ`"): the same sweep with every position scaled by `2⁻¹⁰` to `2⁻⁵`, so `wᵢⱼ < 1/8` and the deep separations
+//!   fall below `eps`: every sample agrees under `agreement::ratio` and the worst is flat. Control: §6's earlier floor,
+//!   `eps·max(wᵢⱼ, 1)`, which holds `ŝᵢⱼ` at `eps` there, judged the same way, must fail it.
 //!
 //! **Domain** (pitfalls §10): one configuration at a time, no trajectory; the binary's `wᵢⱼ` on `[1, 2]`, positions of
-//! order 1 as the decode's are under `I = 1`, and its separation within §6's floor's claim, `ŝᵢⱼ ≥ 4·eps·wᵢⱼ`, where the
+//! order 1 as the decode's are under `I = 1`, or on `[2⁻¹⁰, 2⁻⁴]` for the small binary, and its separation within §6's floor's claim, `ŝᵢⱼ ≥ 4·eps·wᵢⱼ`, where the
 //! f32 separation keeps at least two relative bits.
 
 use render::presets::agreement::{self, FACTOR};
 use validation::negative_control;
 
 const EPS: f64 = f32::EPSILON as f64;
+
+/// §6's `δ`, the floor's least `wᵢⱼ`, `2⁻³²`.
+const DELTA: f64 = 1.0 / 4_294_967_296.0;
 
 /// A splitmix64 stream, its seed fixed: the fuzzed configurations are the same in every run.
 struct Rng(u64);
@@ -75,6 +84,11 @@ const PAIRS: [(usize, usize); 3] = [(0, 1), (0, 2), (1, 2)];
 
 /// §6's conditioning sum, written from its text, with `norm` the norm it takes.
 fn definition(m: [f32; 3], r: [[f32; 2]; 3], norm: fn([f64; 2]) -> f64) -> f64 {
+    floored(m, r, norm, DELTA)
+}
+
+/// The conditioning sum with the floor `ŝᵢⱼ ≥ eps·max(wᵢⱼ, delta)`.
+fn floored(m: [f32; 3], r: [[f32; 2]; 3], norm: fn([f64; 2]) -> f64, delta: f64) -> f64 {
     let m = m.map(f64::from);
     let r = r.map(|p| p.map(f64::from));
     PAIRS
@@ -82,7 +96,7 @@ fn definition(m: [f32; 3], r: [[f32; 2]; 3], norm: fn([f64; 2]) -> f64) -> f64 {
         .map(|&(i, j)| {
             let w = norm(r[i]) + norm(r[j]);
             let sep = norm([r[i][0] - r[j][0], r[i][1] - r[j][1]]);
-            let s = sep.max(EPS * w.max(1.0));
+            let s = sep.max(EPS * w.max(delta));
             m[i] * m[j] * w / (s * s)
         })
         .sum()
@@ -105,12 +119,29 @@ fn configurations() -> Vec<([f32; 3], [[f32; 2]; 3])> {
             n[2] = [n[0][0], f32::from_bits(n[0][1].to_bits() + steps)];
             out.push((m, n));
         }
+        // The same, shrunk to w below 1 and below δ, where the floor is eps·w and then eps·δ.
+        for shrink in [-6, -20, -34, -40] {
+            let k = 2f32.powi(shrink);
+            let small = r.map(|p| p.map(|x| x * k));
+            out.push((m, small));
+            let mut c = small;
+            c[1] = c[0];
+            out.push((m, c));
+            let mut n = small;
+            n[2] = [n[0][0], f32::from_bits(n[0][1].to_bits() + 8)];
+            out.push((m, n));
+        }
     }
     out
 }
 
 /// `agreement::conditioning` and `agreement::ratio` against [`definition`] with `norm`.
 fn check_definition(norm: fn([f64; 2]) -> f64) {
+    assert_eq!(
+        f64::from(agreement::FLOOR),
+        DELTA,
+        "agreement::FLOOR is not §6's δ"
+    );
     for (m, r) in configurations() {
         let want = definition(m, r, norm);
         let got = agreement::conditioning(m, r);
@@ -163,7 +194,7 @@ negative_control!(
 );
 
 /// One pair's term at f32 in each association, `floor` whether `ŝ` carries §6's floor; each must be finite and at
-/// most `2⁴⁴`.
+/// most `2⁷⁶`.
 fn check_associations(floor: bool) {
     let mut rng = Rng(0x0436);
     let mut cases: Vec<([f32; 2], [f32; 2], f32)> = Vec::new();
@@ -186,12 +217,23 @@ fn check_associations(floor: bool) {
         cases.push((p, p, 0.25));
     }
     cases.push(([big, big], [-big, -big], 0.25));
+    // w = δ at coincidence, the term's largest, 2⁷⁶; and w just under and over it.
+    let delta = DELTA as f32;
+    for p in [
+        [delta / 2.0, 0.0],
+        [0.0, delta / 4.0],
+        [delta, delta],
+        [delta / 2.0, -delta / 2.0],
+    ] {
+        cases.push((p, p, 0.25));
+        cases.push((p, [p[0], -p[1]], 0.25));
+    }
     for (a, b, mm) in cases {
         let n = |v: [f32; 2]| v[0].abs().max(v[1].abs());
         let w = n(a) + n(b);
         let sep = n([a[0] - b[0], a[1] - b[1]]);
         let s = if floor {
-            sep.max(f32::EPSILON * w.max(1.0))
+            sep.max(f32::EPSILON * w.max(delta))
         } else {
             sep
         };
@@ -202,8 +244,8 @@ fn check_associations(floor: bool) {
             ("mm·(w/(s·s))", mm * (w / (s * s))),
         ] {
             assert!(
-                t.is_finite() && (0.0..=2f32.powi(44)).contains(&t),
-                "{a:?}, {b:?}, mm = {mm}: the term {form} = {t} is not finite and within 2⁴⁴"
+                t.is_finite() && (0.0..=2f32.powi(76)).contains(&t),
+                "{a:?}, {b:?}, mm = {mm}: the term {form} = {t} is not finite and within 2⁷⁶"
             );
         }
     }
@@ -246,22 +288,33 @@ const HALVINGS: std::ops::RangeInclusive<i32> = 1..=21;
 /// The first halving of the sweep's second half, where `κ = w/d ≥ 2¹¹` and the collision dominates the f32 error.
 const DEEP: usize = 11;
 
-/// Per halving, the worst factor over the fuzzed binaries, judged by `agreement::ratio`, §6's conditioning-aware scale,
-/// where `conditioned`, else by the per-operand scale alone, `max(|K₀|, 1) + max(|V₀|, 1)`; asserts each sample agrees
-/// (where `tolerance`) and the worst is flat.
-fn check_refinement(conditioned: bool, tolerance: bool) {
-    let form = if conditioned {
-        "conditioned"
-    } else {
-        "per-operand"
+/// How a sample is judged.
+#[derive(Clone, Copy)]
+enum Judge {
+    /// `agreement::ratio`, §6's conditioning-aware scale as the preset's twin computes it.
+    Preset,
+    /// The per-operand scale alone, `max(|K₀|, 1) + max(|V₀|, 1)`.
+    PerOperand,
+    /// The conditioning-aware scale written here with the floor `eps·max(wᵢⱼ, delta)`.
+    Floor(f64),
+}
+
+/// Per halving, the worst factor over the fuzzed binaries, judged by `judge`; asserts each sample agrees (where
+/// `tolerance`) and the worst is flat. `scale` draws each binary's positions scaled by a power of 2 on it (`None`:
+/// order 1).
+fn sweep(judge: Judge, tolerance: bool, scale: Option<(i32, i32)>) {
+    let form = match judge {
+        Judge::Preset => "conditioned".to_owned(),
+        Judge::PerOperand => "per-operand".to_owned(),
+        Judge::Floor(delta) => format!("floor eps·max(w, {delta:e})"),
     };
     let mut rng = Rng(0x2029_0623);
     let mut worst = vec![0f64; HALVINGS.count()];
     for _ in 0..512 {
         let m = rng.masses(0.05);
         let m32 = m.map(|x| x as f32);
-        // Body 0 with ‖r₀‖∞ on [½, 1], as the decode's positions are of order 1 under I = 1: w ≥ 1, so the floor is
-        // eps·w and the sweep stays above it.
+        // Body 0 with ‖r₀‖∞ on [½, 1] before scaling, as the decode's positions are of order 1 under I = 1: the floor
+        // is eps·w and the sweep, down to 4·eps·w, stays above it.
         let r0 = {
             let big = (0.5 + 0.5 * rng.unit()) * if rng.unit() < 0.5 { -1.0 } else { 1.0 };
             let small = rng.sym(big.abs());
@@ -272,6 +325,11 @@ fn check_refinement(conditioned: bool, tolerance: bool) {
             }
         };
         let r2 = [rng.sym(1.0), rng.sym(1.0)];
+        let sigma = match scale {
+            None => 1.0,
+            Some((lo, hi)) => 2f64.powi(lo + (rng.unit() * f64::from(hi - lo + 1)) as i32),
+        };
+        let (r0, r2) = (r0.map(|x| x * sigma), r2.map(|x| x * sigma));
         let theta = std::f64::consts::TAU * rng.unit();
         let k = 0.1 + rng.unit();
         for (slot, h) in HALVINGS.enumerate() {
@@ -283,13 +341,17 @@ fn check_refinement(conditioned: bool, tolerance: bool) {
             let v0 = potential64(m, r) as f32;
             let v = potential32(m32, r32);
             let k32 = k as f32;
-            let factor = if conditioned {
-                agreement::ratio(k32, v, k32, v0, m32, r32).expect("finite operands")
-                    * f64::from(FACTOR)
-            } else {
-                let diff =
-                    ((f64::from(k32) + f64::from(v)) - (f64::from(k32) + f64::from(v0))).abs();
-                diff / (EPS * (f64::from(k32).abs().max(1.0) + f64::from(v0).abs().max(1.0)))
+            let diff = ((f64::from(k32) + f64::from(v)) - (f64::from(k32) + f64::from(v0))).abs();
+            let operands = f64::from(k32).abs().max(1.0) + f64::from(v0).abs().max(1.0);
+            let factor = match judge {
+                Judge::Preset => {
+                    agreement::ratio(k32, v, k32, v0, m32, r32).expect("finite operands")
+                        * f64::from(FACTOR)
+                }
+                Judge::PerOperand => diff / (EPS * operands),
+                Judge::Floor(delta) => {
+                    diff / (EPS * (operands + floored(m32, r32, norm_inf, delta)))
+                }
             };
             assert!(
                 !tolerance || factor <= f64::from(FACTOR),
@@ -315,6 +377,16 @@ fn qa_m229_f32_energy_flat_under_refinement() {
     check_refinement(true, true);
 }
 
+/// The order-1 sweep, `conditioned` judged by the preset, else by the per-operand scale.
+fn check_refinement(conditioned: bool, tolerance: bool) {
+    let judge = if conditioned {
+        Judge::Preset
+    } else {
+        Judge::PerOperand
+    };
+    sweep(judge, tolerance, None);
+}
+
 negative_control!(
     qa_m229_f32_energy_flat_under_refinement,
     "the per-operand form must fail beside a collision",
@@ -333,4 +405,21 @@ negative_control!(
     "the per-operand form's growth under refinement must be caught by the flatness check",
     expected = "is not flat under refinement",
     check_refinement(false, false)
+);
+
+/// The small binary's positions, scaled by `2⁻¹⁰` to `2⁻⁵`: `wᵢⱼ < 1/8`.
+const SMALL: (i32, i32) = (-10, -5);
+
+#[test]
+fn qa_m229_small_binary_flat_under_refinement() {
+    sweep(Judge::Preset, true, Some(SMALL));
+    // §6's scale written here, with its δ, passes the same sweep.
+    sweep(Judge::Floor(DELTA), true, Some(SMALL));
+}
+
+negative_control!(
+    qa_m229_small_binary_flat_under_refinement,
+    "§6's earlier floor, eps·max(w, 1), must fail the small binary",
+    expected = "exceeds the tolerance",
+    sweep(Judge::Floor(1.0), true, Some(SMALL))
 );

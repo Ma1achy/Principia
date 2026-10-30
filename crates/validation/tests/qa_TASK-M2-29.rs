@@ -16,8 +16,8 @@
 //!   the conditioned scale: the conditioning term does not swallow a dispatch fault, even beside a collision.
 //!   Control: no scramble, so no chart disagrees.
 //! - `qa_m229_wgsl_term_finite_and_twinned` (condition 1; R-436): the preset's WGSL term and comparison, fed the same
-//!   `(m, r)` as the CPU twin: a binary halved down to and past coincidence, at position scales `2⁻⁸` to `2⁶⁰`, and
-//!   fuzzed configurations. The WGSL term is finite and at most `3·2⁴⁴` at every case, the pole included, within
+//!   `(m, r)` as the CPU twin: a binary halved down to and past coincidence, at position scales `2⁻³³` to `2⁶⁰`, and
+//!   fuzzed configurations. The WGSL term is finite and at most `3·2⁷⁶` at every case, the pole included, within
 //!   `10⁻⁵` relative of `agreement::conditioning` (parity contract §4's starting figure for a decode, R-85), and the
 //!   ratio within `10⁻⁵` of `agreement::ratio`; a non-finite mass or position makes the sample invalid. Control: the
 //!   preset's own WGSL with the separation's floor removed must draw a non-finite term at the pole.
@@ -219,12 +219,18 @@ negative_control!(
 /// One case: masses and positions, and whether they are finite.
 type Case = ([f32; 3], [[f32; 2]; 3], bool);
 
-/// The cases: a binary halved from separation 1 to `2⁻⁴⁰` and then coincident, at position scales `2⁻⁸`, 1, `2²⁰` and
-/// `2⁶⁰`; fuzzed configurations; and a non-finite mass or position.
+/// The cases: a binary halved from separation 1 to `2⁻⁴⁰` and then coincident, at position scales `2⁻³³` (`wᵢⱼ` near
+/// §6's `δ`, `2⁻³²`), `2⁻⁸`, 1, `2²⁰` and `2⁶⁰`; fuzzed configurations; and a non-finite mass or position.
 fn cases() -> Vec<Case> {
     let m = [0.45f32, 0.35, 0.2];
     let mut out = Vec::new();
-    for scale in [2f32.powi(-8), 1.0, 2f32.powi(20), 2f32.powi(60)] {
+    for scale in [
+        2f32.powi(-33),
+        2f32.powi(-8),
+        1.0,
+        2f32.powi(20),
+        2f32.powi(60),
+    ] {
         let base = [0.75 * scale, -0.3 * scale];
         let third = [-0.6 * scale, 0.9 * scale];
         for h in (0..=40).step_by(4) {
@@ -296,7 +302,8 @@ fn view(cases: &[Case]) -> String {
 }
 
 /// The floor in the preset's WGSL, and the line without it.
-const FLOORED: &str = "let s = max(agreement_norm(ri - rj), AGREEMENT_EPS * max(w, 1.0));";
+const FLOORED: &str =
+    "let s = max(agreement_norm(ri - rj), AGREEMENT_EPS * max(w, AGREEMENT_FLOOR));";
 const UNFLOORED: &str = "let s = agreement_norm(ri - rj);";
 
 fn check_wgsl(floor: bool) {
@@ -334,8 +341,8 @@ fn check_wgsl(floor: bool) {
         }
         let got = f64::from(f32::from_bits(w[0]));
         assert!(
-            got.is_finite() && (0.0..=3.0 * 2f64.powi(44)).contains(&got),
-            "case {i} ({m:?}, {r:?}): the WGSL term {got} is not finite and within 3·2⁴⁴"
+            got.is_finite() && (0.0..=3.0 * 2f64.powi(76)).contains(&got),
+            "case {i} ({m:?}, {r:?}): the WGSL term {got} is not finite and within 3·2⁷⁶"
         );
     }
     // The twin, once every term is shown finite.
