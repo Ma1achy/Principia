@@ -1,0 +1,7 @@
+row ('0.10677930',) col no: eye='3' ocr=''
+row ('0.15882908',) col no: eye='6' ocr=''
+row ('0.08212247',) col no: eye='7' ocr=''
+row ('0.27949737',) col no: eye='8' ocr=''
+row ('0.19095011',) col no: eye='9' ocr=''
+row ('',) only in ocr
+rows eye=11 ocr=12; cells compared 143; disagreements 6

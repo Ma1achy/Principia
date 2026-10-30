@@ -1,0 +1,56 @@
+1. Orlov et al. 2002: stop t_c = 100 (and R_c = 30), unit masses, h = -1
+   k = 0.01: r = rho = 2.4750, I (M = 1) = 4.0838e+00; t_c = 100 -> 60.29; R_c = 30 -> 14.85
+   k = 0.10: r = rho = 2.2500, I (M = 1) = 3.3750e+00; t_c = 100 -> 69.56; R_c = 30 -> 16.33
+   k = 0.21: r = rho = 1.9750, I (M = 1) = 2.6004e+00; t_c = 100 -> 84.58; R_c = 30 -> 18.6
+   k = 0.50: r = rho = 1.2500, I (M = 1) = 1.0417e+00; t_c = 100 -> 168; R_c = 30 -> 29.39
+   k = 0.55: r = rho = 1.1250, I (M = 1) = 8.4375e-01; t_c = 100 -> 196.7; R_c = 30 -> 32.66
+   k = 0.56: r = rho = 1.1000, I (M = 1) = 8.0667e-01; t_c = 100 -> 203.5; R_c = 30 -> 33.4
+   k = 0.90: r = rho = 0.2500, I (M = 1) = 4.1667e-02; t_c = 100 -> 1878; R_c = 30 -> 147
+   k = 0.99: r = rho = 0.0250, I (M = 1) = 4.1667e-04; t_c = 100 -> 5.939e+04; R_c = 30 -> 1470
+   t_c past the cap of 200 for 44 of the 99 k values: k = 0.56 to 0.99
+   range of t_c in integrator units over the grid: 60.29 to 5.939e+04
+2. Orlov et al. 2003: stop t > 1000 (and R > 100), m0 = 1, E = -1
+   475 (eps1, eps2, k) cells; t = 1000 -> 36.05 to 9.949e+05; past the cap of 200: 443 of 475
+   (eps1, eps2) = (0.2, 0.2): t = 1000 -> 1.201e+04 (k = 0.05) to 9.949e+05 (k = 0.95); within the cap: no k
+   (eps1, eps2) = (0.2, 0.5): t = 1000 -> 4474 (k = 0.05) to 3.705e+05 (k = 0.95); within the cap: no k
+   (eps1, eps2) = (0.2, 1): t = 1000 -> 2097 (k = 0.05) to 1.737e+05 (k = 0.95); within the cap: no k
+   (eps1, eps2) = (0.2, 2): t = 1000 -> 1093 (k = 0.05) to 9.051e+04 (k = 0.95); within the cap: no k
+   (eps1, eps2) = (0.2, 5): t = 1000 -> 577.5 (k = 0.05) to 4.783e+04 (k = 0.95); within the cap: no k
+   (eps1, eps2) = (0.5, 0.2): t = 1000 -> 4474 (k = 0.05) to 3.705e+05 (k = 0.95); within the cap: no k
+   (eps1, eps2) = (0.5, 0.5): t = 1000 -> 2153 (k = 0.05) to 1.783e+05 (k = 0.95); within the cap: no k
+   (eps1, eps2) = (0.5, 1): t = 1000 -> 1139 (k = 0.05) to 9.437e+04 (k = 0.95); within the cap: no k
+   (eps1, eps2) = (0.5, 2): t = 1000 -> 625.4 (k = 0.05) to 5.18e+04 (k = 0.95); within the cap: no k
+   (eps1, eps2) = (0.5, 5): t = 1000 -> 333.1 (k = 0.05) to 2.758e+04 (k = 0.95); within the cap: no k
+   (eps1, eps2) = (1, 0.2): t = 1000 -> 2097 (k = 0.05) to 1.737e+05 (k = 0.95); within the cap: no k
+   (eps1, eps2) = (1, 0.5): t = 1000 -> 1139 (k = 0.05) to 9.437e+04 (k = 0.95); within the cap: no k
+   (eps1, eps2) = (1, 1): t = 1000 -> 641.4 (k = 0.05) to 5.312e+04 (k = 0.95); within the cap: no k
+   (eps1, eps2) = (1, 2): t = 1000 -> 357.6 (k = 0.05) to 2.962e+04 (k = 0.95); within the cap: no k
+   (eps1, eps2) = (1, 5): t = 1000 -> 185.5 (k = 0.05) to 1.536e+04 (k = 0.95); within the cap: k <= 0.05
+   (eps1, eps2) = (2, 0.2): t = 1000 -> 1093 (k = 0.05) to 9.051e+04 (k = 0.95); within the cap: no k
+   (eps1, eps2) = (2, 0.5): t = 1000 -> 625.4 (k = 0.05) to 5.18e+04 (k = 0.95); within the cap: no k
+   (eps1, eps2) = (2, 1): t = 1000 -> 357.6 (k = 0.05) to 2.962e+04 (k = 0.95); within the cap: no k
+   (eps1, eps2) = (2, 2): t = 1000 -> 194.2 (k = 0.05) to 1.609e+04 (k = 0.95); within the cap: k <= 0.05
+   (eps1, eps2) = (2, 5): t = 1000 -> 92.63 (k = 0.05) to 7671 (k = 0.95); within the cap: k <= 0.40
+   (eps1, eps2) = (5, 0.2): t = 1000 -> 577.5 (k = 0.05) to 4.783e+04 (k = 0.95); within the cap: no k
+   (eps1, eps2) = (5, 0.5): t = 1000 -> 333.1 (k = 0.05) to 2.758e+04 (k = 0.95); within the cap: no k
+   (eps1, eps2) = (5, 1): t = 1000 -> 185.5 (k = 0.05) to 1.536e+04 (k = 0.95); within the cap: k <= 0.05
+   (eps1, eps2) = (5, 2): t = 1000 -> 92.63 (k = 0.05) to 7671 (k = 0.95); within the cap: k <= 0.40
+   (eps1, eps2) = (5, 5): t = 1000 -> 36.05 (k = 0.05) to 2985 (k = 0.95); within the cap: k <= 0.65
+3. Mikkola & Hietarinta 1989: E = -1, unit masses, start q1 = q2 = R
+   one source time unit -> 1680 integrator units at R = 0.0125, 0.5984 at R = 2.4875
+   the cap of 200 is reached at source time 0.1191 (R = 0.0125) to 334.2 (R = 2.4875)
+   Table 3 one-directional t1 = 66.6: within the cap at 66 of the 100 R values; 39.85 to 1.119e+05 integrator units
+   Table 3 one-directional t2 = 129: within the cap at 47 of the 100 R values; 77.19 to 2.167e+05 integrator units
+   Table 3 one-directional t3 = 207.3: within the cap at 28 of the 100 R values; 124 to 3.482e+05 integrator units
+   Table 3 one-directional t4 = 316.6: within the cap at 4 of the 100 R values; 189.5 to 5.318e+05 integrator units
+   Table 3 one-directional t5 = 482.7: within the cap at 0 of the 100 R values; 288.8 to 8.109e+05 integrator units
+   Table 3 one-directional t6 = 789.2: within the cap at 0 of the 100 R values; 472.2 to 1.326e+06 integrator units
+   Table 3 one-directional t7 = 1745: within the cap at 0 of the 100 R values; 1044 to 2.931e+06 integrator units
+   Table 3 one-directional t8 = 9e+07: within the cap at 0 of the 100 R values; 5.386e+07 to 1.512e+11 integrator units
+4. Martynova & Orlov 2014: T_cr per start, at rest, unit masses
+   306402 interior points; T_cr in integrator units 0.001563 (at (0.499, 0.001)) to 4.188 (at (0.001, 0.865))
+   the equilateral start at I = 1 (|E| = 1/(3 sqrt 3) = 0.19245, on the arc, excluded): T_cr = 4.1877
+   30 T_cr: 0.04689 to 125.6; within the cap at every grid point: True
+   10^5 T_cr: 156.3 to 4.188e+05; 10^6 T_cr: 1563 to 4.188e+06; 10^7 T_cr: 1.563e+04 to 4.188e+07
+   grid points with 10^5 T_cr within the cap: 1 of 306402
+   largest multiple of T_cr within the cap at every grid point: 47.76 T_cr
