@@ -631,3 +631,5 @@ don't route around it.
   message and as a comment on each PR it concerns.
 - On either machine, a log is never where a question lives: open questions go in `REVIEW_QUEUE.md`
   (§ "Asking the human").
+
+<!-- R-656 CI proof: a docs-only change on a throwaway PR, never merged. -->
