@@ -683,6 +683,59 @@ negative_control!(
     }
 );
 
+/// Under a turned, zoomed frame the basis edit is `q₁ = σ(cos γ û₁ + sin γ û₂)`, `q₂ = σ(cos γ û₂ − sin γ û₁)`, with
+/// `û₁`, `û₂` the rotation's columns placed on `e_a`, `e_b` and the targets (R-473 T2, R-507 U2). `turn` is the sign
+/// the check gives `γ` (the control's is −1, the frame turned the other way).
+fn check_turned(turn: f64) {
+    for (gamma, scale) in [(0.7, 0.5), (-2.1, 1.75), (std::f64::consts::FRAC_PI_2, 0.3)] {
+        let frame = LatentFrame {
+            gamma,
+            scale,
+            ..FRAME
+        };
+        for s in [
+            spec(30.0, -45.0, TiltMap::Sheet, 4, 5),
+            spec(40.0, 70.0, TiltMap::Sheet, 6, 6),
+            spec(40.0, 70.0, TiltMap::Lean, 6, 6),
+        ] {
+            let [c1, c2] = s.columns();
+            let place = |c: [f64; 4]| {
+                let mut u = [0.0; 8];
+                u[2] += c[0];
+                u[3] += c[1];
+                u[s.x as usize] += c[2];
+                u[s.y as usize] += c[3];
+                u
+            };
+            let (u1, u2) = (place(c1), place(c2));
+            let (sg, cg) = Float::sin_cos(turn * gamma);
+            let (q1, q2) = latent_basis(&frame, &s).unwrap();
+            for i in 0..8 {
+                let w1 = scale * (cg * u1[i] + sg * u2[i]);
+                let w2 = scale * (cg * u2[i] - sg * u1[i]);
+                assert!(
+                    (q1[i] - w1).abs() < 1e-15 && (q2[i] - w2).abs() < 1e-15,
+                    "the turned basis edit at γ = {gamma}, σ = {scale}, {s:?}: {q1:?}, {q2:?}"
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn tilt_every_chart_latent_basis_turned() {
+    check_turned(1.0);
+}
+
+negative_control!(
+    tilt_every_chart_latent_basis_turned,
+    "a frame turned the other way is not the basis edit, so it must fail",
+    expected = "the turned basis edit",
+    {
+        check_turned(-1.0);
+    }
+);
+
 // ── The tilted shape sphere: bijective, every pixel counted once (R-544, R-613) ───────────────────────────────────────
 
 /// The shape sphere's tilted arms: into a momentum control at `τ₂ = 30°`, at `τ₁ = 30°`, Tip as sheet at 108°/144°
