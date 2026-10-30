@@ -18,8 +18,8 @@ use scratch::Scratch;
 use validation::negative_control;
 use validation::spawn::Spawn;
 use xtask::jobq::{
-    archivable, heavy, next_job, parse_ps, parse_submit, run_order, snapshot_env, utc, violations,
-    Config, Job, Priority, Proc, Queue, RunnerLock, State, ARCHIVE_AFTER, MAX_ATTEMPTS,
+    archivable, heavy, next_job, parse_ps, parse_submit, run_order, snapshot_env, target_key, utc,
+    violations, Config, Job, Priority, Proc, Queue, RunnerLock, State, ARCHIVE_AFTER, MAX_ATTEMPTS,
 };
 
 /// A queue of the test's own, in a scratch folder, with short timings.
@@ -366,6 +366,54 @@ negative_control!(
         Some(2),
         &[2, 1]
     )
+);
+
+/// `target_key` gives `a` and `b` one key exactly when `same`.
+fn check_key(a: &str, b: &str, same: bool) {
+    let (ka, kb) = (target_key(a), target_key(b));
+    assert_eq!(
+        ka == kb,
+        same,
+        "target keys wrong: {a:?} gives {ka:?}, {b:?} gives {kb:?}"
+    );
+}
+
+#[test]
+fn jobq_target_directories_compare_by_a_normalised_key() {
+    let dir = Scratch::new("jobq_target_key");
+    let real = dir.join("Real");
+    std::fs::create_dir_all(real.join("sub")).expect("scratch made");
+    std::os::unix::fs::symlink(&real, dir.join("link")).expect("link made");
+    let path = |p: PathBuf| p.to_str().expect("utf-8 path").to_owned();
+    let (real, link) = (path(real), path(dir.join("link")));
+    // Paths that don't exist: compared as written, but for `/`, `.` and case.
+    check_key("/t/a", "/t/a/", true);
+    check_key("/t/a", "/T/A", true);
+    check_key("/t/a", "/t//./a", true);
+    check_key("/t/a", "/t/b", false);
+    check_key("/t/a", "/t/ab", false);
+    // Paths that exist, or whose parent does: made canonical, through the link.
+    check_key(&real, &format!("{real}/"), true);
+    check_key(&real, &link, true);
+    check_key(&format!("{real}/sub"), &format!("{link}/SUB/"), true);
+    check_key(&format!("{real}/new"), &format!("{link}/New"), true);
+    check_key(&format!("{real}/new"), &format!("{real}/other"), false);
+    // A queued job on another spelling of a running job's target directory waits.
+    use Priority::*;
+    use State::*;
+    let jobs = [
+        job(1, Peek, Running, Some("/t/A/")),
+        job(2, Merge, Queued, Some("/T/a")),
+        job(3, Build, Queued, Some("/t/b")),
+    ];
+    check_next(&jobs, Some(3), &[2, 3]);
+}
+
+negative_control!(
+    jobq_target_directories_compare_by_a_normalised_key,
+    "two directories are two keys",
+    expected = "target keys wrong",
+    check_key("/t/a", "/t/b", true)
 );
 
 // --- Timeouts kill the whole process group ------------------------------------------------------------------------

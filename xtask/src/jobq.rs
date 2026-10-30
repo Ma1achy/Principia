@@ -204,10 +204,42 @@ impl Job {
         env
     }
 
-    /// The target directory the job builds in.
+    /// The target directory the job builds in, as given.
     pub fn target_dir(&self) -> Option<&str> {
         self.env.get("CARGO_TARGET_DIR").map(String::as_str)
     }
+
+    /// The key its target directory is compared by ([`target_key`]).
+    pub fn target_key(&self) -> Option<String> {
+        self.target_dir().map(target_key)
+    }
+}
+
+/// The key two target directories are compared by (R-658): the path made canonical where it exists, or, where it
+/// doesn't, its nearest existing parent made canonical with the rest joined on, without `.` components or repeated or
+/// trailing `/`; then folded to lower case, since the Mac's volume is case-insensitive. Two spellings of one directory
+/// give one key. (On a case-sensitive volume two directories differing only in case share a key, and so run one after
+/// the other: never at once on one directory, which is the point.)
+pub fn target_key(dir: &str) -> String {
+    let lexical: PathBuf = Path::new(dir).components().collect();
+    let mut head = lexical.as_path();
+    let mut tail = Vec::new();
+    let mut key = loop {
+        if let Ok(canonical) = fs::canonicalize(head) {
+            break canonical;
+        }
+        match (head.parent(), head.file_name()) {
+            (Some(parent), Some(name)) => {
+                tail.push(name);
+                head = parent;
+            }
+            _ => break head.to_path_buf(),
+        }
+    };
+    for name in tail.iter().rev() {
+        key.push(name);
+    }
+    key.to_string_lossy().to_lowercase()
 }
 
 /// The settings in `<root>/config`, one `key = value` per line, `#` starting a comment; each key not given keeps its
@@ -306,16 +338,16 @@ impl Config {
 }
 
 /// The next job to start: the first queued one by class, then by id (first in, first out), whose target directory
-/// no running job uses, since two cargo runs on one target directory serialise on its lock.
+/// no running job uses, compared by [`target_key`], since two cargo runs on one target directory serialise on its lock.
 pub fn next_job(jobs: &[Job]) -> Option<&Job> {
-    let busy: BTreeSet<&str> = jobs
+    let busy: BTreeSet<String> = jobs
         .iter()
         .filter(|job| job.state == State::Running)
-        .filter_map(Job::target_dir)
+        .filter_map(Job::target_key)
         .collect();
     jobs.iter()
         .filter(|job| job.state == State::Queued)
-        .filter(|job| job.target_dir().is_none_or(|dir| !busy.contains(dir)))
+        .filter(|job| job.target_key().is_none_or(|key| !busy.contains(&key)))
         .min_by_key(|job| (job.priority, job.id))
 }
 
