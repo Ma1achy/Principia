@@ -1,7 +1,7 @@
-# TASK-M3-27 — The Burrau smoke test and its structural features
+# TASK-M3-27 — The Burrau anchor smoke tests: SP-1 run to its horizon, SP-2, and the f64 run against R-33's reference (PL-8's first half)
 
 - **Milestone:** M3
-- **Closes:** REQ-VAL-034, REQ-VAL-127, REQ-VAL-132
+- **Closes:** REQ-VAL-034, REQ-VAL-132, REQ-VAL-250, REQ-VAL-251, REQ-VAL-336, REQ-VAL-337
 - **Depends on:** TASK-M3-24, TASK-M3-25
 - **Needs (earlier milestones):** REQ-VAL-016, REQ-ENC-011, REQ-VAL-019
 - **Reviewers:** code, qa, physics
@@ -9,7 +9,7 @@
 - **Size:** ~300 lines
 
 ## Goal
-The classical Burrau rest start resolves to binary plus escaper within the default horizon, asserted as outcome class, escaper identity (the lightest body) and a coarse `t_end` window qualitatively matching Szebehely & Peters (1967), never pointwise. The structural feature set is defined in the validation note (R-72), and the window — given the classical result sits past the default horizon — is calibrated (R-71).
+The Burrau anchor smoke tests (R-650), continuous and blocking, catching gross breakage only and never steering design. SP-1: the classical Burrau rest start, run to the target's horizon (`t_max` between 60 and 65, a per-test parameter; the default horizon, 50, unchanged), resolves to binary plus escaper, asserted as outcome class, escaper identity (the lightest body) and a coarse `t_end` window, never pointwise; the window is calibrated (R-71). SP-2: the same start on R-33's convergence reference agrees with Portegies Zwart & Boekholt 2018's Table 2 at t = 100, unperturbed and perturbed, and, after every velocity is reversed at t = 100, at t = 200 with the initial condition (a reversibility check) and with Table 2 (a trajectory check). PL-8's first half: the nominal Burrau pixel integrated at f64 under the default occupant is compared with R-33's independent arbitrary-precision reference to t ≈ 60, and the time at which the two part recorded against f64's horizon of about 52; it needs no precision tier. Each tolerance is a calibration, proposed here with its evidence and confirmed by the human at the M3 gate (R-71).
 
 ## References
 - `docs/design/principia_dd_integrator.md` § "5. Unit tests"
@@ -19,17 +19,25 @@ The classical Burrau rest start resolves to binary plus escaper within the defau
 - `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
 - `docs/notes/principia_validation_ground_truth_note.md` § "Open sub-questions (settle at implementation)"
+- `docs/design/principia_dd_replication.md` § "5.6 Burrau and the Pythagorean family"
+- `docs/design/principia_dd_replication.md` § "12.1 What stays continuous, and what moves to M9"
+- `decisions.md` § "R-33 — The independent convergence reference is Brutus-style *(IE-5, amended)*"
+- `decisions.md` § "R-646 — The converged Burrau reference: arXiv v1 is SP-2's source, the owner also trying for the journal version and its supplementary snapshots through his own access; no separate author email; SP-2 notes that t = 200 is the time-reversed return and tests it as a reversibility check and a trajectory check *(closes RQ-611)*"
+- `decisions.md` § "R-649 — Replication and verification targets are measurements, not gates: failing one never blocks building; each declares the tier it binds, (a) the GPU explorer, agreeing statistically or qualitatively only, or (b) the CPU IC inspector, where exact targets bind; three outcomes, PASS, EXPLAINED DIVERGENCE (shown by a measurement) and UNEXPLAINED (open, labelled, non-blocking); no default, physics, criterion, architecture or tolerance is changed and nothing is tuned per target in pursuit of a pass; a comparison is checked like-for-like before anything is called a failure; verification deepening comes after the core build *(amends R-594, R-636, R-637 and R-639 for external targets; applies to RQ-598's targets and every target in force)*"
+- `decisions.md` § "R-650 — External replication becomes its own final milestone, M9, after the core build: it scores every external target, writes up the explained divergences and tightens the GPU path, and exits on its report; the internal correctness tests and the cheap anchor smoke tests (figure-eight closure, SP-1 run to its horizon, SP-2) stay continuous and block a merge as now; source ingest and transcription go on whenever idle; early peeks score a target as information only, in a peek log *(refines R-649; amends R-594, R-629, R-630, R-640 and R-642: where and when the targets are scored)*"
 
 ## Deliverables
-- Doc change: `docs/notes/principia_validation_ground_truth_note.md` — the Burrau feature set and how each is compared structurally (REQ-VAL-127).
-- `crates/validation/src/gates/burrau.rs` — Path A run of the Burrau IC, compared with the independent reference's run structurally.
-- Calibration proposal for the t_end window and horizon.
+- `crates/validation/src/gates/burrau.rs` — Path A run of the Burrau IC to the target's horizon, compared with the independent reference's run (SP-1, PL-8's first half), and SP-2's checks against `docs/incoming/2026-10-29_burrau_pzb2018/table2/table2_reconciled.csv`.
+- Calibration proposals: the t_end window (REQ-VAL-132), SP-2's agreement (REQ-VAL-337) and PL-8a's parting threshold (REQ-VAL-251).
 
 ## Acceptance tests
-- `cargo xtask gate burrau-smoke` — dd test 12: outcome class and escaper (lightest body) match; t_end within the calibrated window (REQ-VAL-132); close-encounter sequence and interaction topology compared structurally (REQ-VAL-034).
-- The note lists each feature and how it is compared structurally; physics reviewer approved (REQ-VAL-127).
-- The proposal states the window and horizon against Szebehely & Peters (1967) and validation_orbits §1.5; the human confirms it at the M3 gate and it is recorded in decisions.md (REQ-VAL-132).
+- `cargo xtask gate burrau-smoke` — dd test 12, run to `t_max` between 60 and 65 (a per-test parameter; the default horizon unchanged): outcome class and escaper (lightest body) match; t_end within the calibrated window (REQ-VAL-132) (REQ-VAL-034).
+- The proposal states the window against Szebehely & Peters (1967) and validation_orbits §1.5, and the `t_max` the test runs to; the human confirms it at the M3 gate and it is recorded in decisions.md (REQ-VAL-132).
+- `cargo xtask gate burrau-smoke --target SP-2` — the states at t = 100 (both runs) and at t = 200 against Table 1's start (reversibility) and Table 2's t = 200 values (trajectory), within REQ-VAL-337; the run is 200 time units, at R-610's cap; control: the t = 200 state without the velocity reversal must fail the reversibility check (REQ-VAL-336).
+- `cargo xtask gate burrau-smoke --target SP-2 --propose` — the digits of agreement measured where R-33's reference is converged, stated per check; reviewer-checked, confirmed by the human at the M3 gate and recorded in `decisions.md` (REQ-VAL-337).
+- `cargo xtask gate replication --target PL-8a` — the chord between the f64 run and the reference sampled through t ≈ 60; the parting time against REQ-VAL-251; control: the f32 run must part earlier than the f64 run (REQ-VAL-250).
+- `cargo xtask gate replication --target PL-8a --propose` — the proposal measures what sets the tolerance and states it, with its evidence; reviewer-checked, confirmed by the human at the M3 gate and recorded in `decisions.md` (REQ-VAL-251).
 
 ## Notes
-- Calibrations proposed here (R-71; human confirmation at the M3 gate, then recorded in decisions.md): REQ-VAL-132.
-- Definitions written here (R-72; physics reviewer approves before merge): REQ-VAL-127.
+- Calibrations proposed here (R-71; human confirmation at the M3 gate, then recorded in decisions.md): REQ-VAL-132, REQ-VAL-251, REQ-VAL-337.
+- *30 Oct 2026 (R-649's clarification 1, R-650):* rewritten as "run to the target's horizon", not "calibrate the horizon": running SP-1 at its own natural horizon is not a default change, and the default horizon stays 50. The structural comparison with Szebehely & Peters (REQ-VAL-034's old verify) is external, now REQ-VAL-335, and the feature set REQ-VAL-127 with it, both closed by TASK-M9-36 in M9. SP-2 (REQ-VAL-336, REQ-VAL-337) is new, an anchor smoke test; PL-8's first half (REQ-VAL-250, REQ-VAL-251) moved here from TASK-M3-56 (now TASK-M9-16), internal (our f64 against our own R-33 reference), with its acceptance lines unchanged. *Was:* the title "The Burrau smoke test and its structural features"; Closes "REQ-VAL-034, REQ-VAL-127, REQ-VAL-132"; the goal "The classical Burrau rest start resolves to binary plus escaper within the default horizon, asserted as outcome class, escaper identity (the lightest body) and a coarse `t_end` window qualitatively matching Szebehely & Peters (1967), never pointwise. The structural feature set is defined in the validation note (R-72), and the window — given the classical result sits past the default horizon — is calibrated (R-71)."; the deliverables "Doc change: `docs/notes/principia_validation_ground_truth_note.md` — the Burrau feature set and how each is compared structurally (REQ-VAL-127)" and "Calibration proposal for the t_end window and horizon"; the acceptance tests "- `cargo xtask gate burrau-smoke` — dd test 12: outcome class and escaper (lightest body) match; t_end within the calibrated window (REQ-VAL-132); close-encounter sequence and interaction topology compared structurally (REQ-VAL-034). / - The note lists each feature and how it is compared structurally; physics reviewer approved (REQ-VAL-127). / - The proposal states the window and horizon against Szebehely & Peters (1967) and validation_orbits §1.5; the human confirms it at the M3 gate and it is recorded in decisions.md (REQ-VAL-132)."; the note "Definitions written here (R-72; physics reviewer approves before merge): REQ-VAL-127."

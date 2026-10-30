@@ -1,0 +1,55 @@
+# TASK-M9-22 — Converged-code references: Boekholt et al. 2020's lifetime grid and Breen et al. 2020's Brutus runs (GG-1, BR-1)
+
+- **Milestone:** M9
+- **Closes:** REQ-VAL-295, REQ-VAL-296, REQ-VAL-297, REQ-VAL-298
+- **Depends on:** TASK-M3-25, TASK-M3-34
+- **Needs (earlier milestones):** none
+- **Reviewers:** code, qa, physics
+- **Pitfalls:** PIT-2, PIT-3
+- **Size:** ~300 lines
+
+## Goal
+The replication suite's targets GG-1, BR-1 run as engine tests (`principia_dd_replication.md`; R-594, R-629). Boekholt, Portegies Zwart & Valtonen 2020's converged region-D lifetimes must be compared with ours, to the last close approach, per point where our run is reliable and by a KS test otherwise, over the systems that end before 200 (rule 18) (GG-1). Our trajectories must agree per trajectory with Breen et al. 2020's converged Brutus runs to t = 10, in their frame remapped by a tested function (BR-1). Each tolerance is a calibration, proposed here with its evidence and confirmed by the human with the M9 report (R-71).
+
+## References
+- `docs/design/principia_dd_replication.md` § "5.10 Converged-code references"
+- `docs/design/principia_dd_replication.md` § "8.1 Carried over from the 25 Oct instruction"
+- `docs/design/principia_dd_replication.md` § "8.2 Learnt since"
+- `docs/design/principia_dd_replication.md` § "8.3 How the tasks apply them"
+- `decisions.md` § "R-594 — The replication suite is adopted: published three-body results reproduced as engine tests in tiers A–D, ported as a design doc that extends the validation-orbits doc; each target a VAL requirement with its tolerance a calibration; every published table transcribed twice and never tuned to; sequenced by need; the questions it lists queued *(changes no ruling or requirement in force; recorded with R-629's port)*"
+- `decisions.md` § "R-629 — PLAN.md is adopted as the single plan for verification and replication, superseding as the working plan the 25 Oct instruction's tier tables, sequencing and fetch list; its seven draft requirements are ported as M3 requirements with their tolerances as calibrations; R-594's port follows it, with the orbit catalogue's six tests as tasks; the plan's other questions stay queued *(refines R-594; answers PLAN.md § 9 questions 1 and 2)*"
+- `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+- `decisions.md` § "R-33 — The independent convergence reference is Brutus-style *(IE-5, amended)*"
+- `docs/notes/principia_validation_ground_truth_note.md` § "Four tiers of ground truth (increasing in what they prove)"
+- `docs/notes/principia_validation_ground_truth_note.md` § "Chaos forbids pointwise comparison (exact vs structural)"
+- `decisions.md` § "R-638 — RQ-598's work starts now: GG-1's routes 2 (Fig. 1 read from its vector paths) and 3 (recomputed with Brutus), and a BR-1 Brutus ensemble on Breen's stated set-up from a fixed recorded seed, while the owner emails the authors; Fig. 1 must reconcile to exactly 1212 points a panel, and the cost per point is reported before any Brutus run is scaled or goes below ε = 10⁻⁶; every self-computed result is labelled ours *(refines R-637)*"
+- `decisions.md` § "R-640 — Self-computed Brutus ensembles ("Brutus, run here") unblock TASK-M3-62 and TASK-M3-65 now, provisionally: recorded "vs Brutus, run here", never as replicating the paper, closing neither BR-1 nor GG-1, and re-scored against the authors' data when it arrives, theirs governing and each disagreement queued; the Fig. 1 extraction is the paper's own values and scores at its stated precision *(amends R-637; answers RQ-614)*"
+- `decisions.md` § "R-641 — Breen's own GitHub holds 180 of BR-1's Brutus trajectories (pgbreen/NVM at a35c378): they are the paper's own data, so BR-1 may be scored against them directly, not provisionally, for those 180; they are never committed, only their per-file sha256 table and citation; pgbreen/NvMgeneration at 98906f4 is the exact Brutus the paper used and BR-1's reference code; nothing new is public for GG-1 *(refines R-640)*"
+- `decisions.md` § "R-642 — RQ-598's data: the authors' own data unblocks and scores directly, BR-1 against the 180 NVM trajectories and GG-1 against the Fig. 1 extraction at its stated precision; reproductions unblock provisionally, labelled "vs <source>", re-scored when the authors' full data arrives, and qualify only on the paper's set-up with a converged arbitrary-precision integrator; our Brutus from NvMgeneration at 98906f4 qualifies, two third-party sets are rejected; the owner emails both authors *(amends R-637 and R-640; answers RQ-614 and in part RQ-615)*"
+
+## Deliverables
+- The two data sets, once obtained (RQ-598), committed only under stated terms (rule 17), else fetched and hash-checked.
+- `crates/validation/src/gates/converged.rs`; the calibration proposals.
+
+## Acceptance tests
+- `cargo xtask gate replication --target GG-1` — per-point lifetimes as they publish them, if obtained (RQ-598); the reliability of our run read from the convergence reference (R-33); agreement within REQ-VAL-296; control: lifetimes to the criterion firing rather than to the last close approach must disagree (REQ-VAL-295).
+- `cargo xtask gate replication --target GG-1 --propose` — the proposal measures what sets the tolerance and states it, with its evidence; reviewer-checked, confirmed by the human with the M9 report and recorded in `decisions.md` (REQ-VAL-296).
+- `cargo xtask gate replication --target BR-1` — the data, if obtained (RQ-598); per trajectory chord against theirs within REQ-VAL-298; control: a run with one coordinate perturbed by 1e-8 must part from theirs before t = 10 (REQ-VAL-297).
+- `cargo xtask gate replication --target BR-1 --propose` — the proposal measures what sets the tolerance and states it, with its evidence; reviewer-checked, confirmed by the human with the M9 report and recorded in `decisions.md` (REQ-VAL-298).
+- `git diff --no-index` of each fixture table's two transcriptions — empty, or each difference settled against the page and recorded beside the fixture, before the fixture is committed (R-594 item 4).
+
+## Notes
+- Calibrations proposed here (R-71; human confirmation with the M9 report, then recorded in decisions.md): REQ-VAL-296, REQ-VAL-298.
+- Waits on RQ-592, RQ-598: the task starts only once they are ruled, and builds no chart or diagnostic ahead of the ruling (R-594 item 5).
+- R-594 item 4: every published table this task commits as a fixture is transcribed twice, independently, and the two copies are diffed before the commit, each row recording its page; both copies and the diff stay beside the fixture. A table a record has already transcribed twice and diffed is copied with its sha256 and the record's diff cited. Never tune to match: a disagreement with the paper goes to `REVIEW_QUEUE.md` with both numbers, as RQ-570 did, and the fixture is not edited.
+- Reference data are read from the records named in each requirement's verify; the records stay records (R-159), and the contract is `principia_dd_replication.md`.
+- *28 Oct 2026 (R-636, closing RQ-592):* GG-1 compares only the systems that end before 200 (rule 18), the rest recorded as "not evaluated within cap", never as failures; the task now waits on RQ-598 alone.
+- *28 Oct 2026 (R-637, R-638, R-640 to R-642; R-642 governs where they differ):* RQ-598 is closed and the wait on it is lifted. How GG-1 and BR-1 score, as REQ-VAL-295's and REQ-VAL-297's notes record it:
+  - **The authors' own data scores directly, not provisionally:** BR-1 against the 180 trajectories of `github.com/pgbreen/NVM` at `a35c378` (180 of the paper's ~10⁴), read from a local copy and never committed (no licence), each file checked against `docs/incoming/2026-10-28_rq598_data/nvm_a35c378_sha256.txt`; GG-1 against the Fig. 1 extraction (`docs/incoming/2026-10-28_rq598_data/transcriptions/gg1_fig1/`), all 1212 points per panel at one LUT step (≈ 0.0117 dex), the three-entry bin (LUT 29–31) at its wider precision, black meaning censored above 1000.
+  - **GG-1's per-point reference panel is undefined (RQ-620, R-72):** Fig. 1's two panels (ε = 10⁻⁶ and ε = 10⁻⁷⁰) differ point by point, and neither R-642 nor the corpus says which one GG-1 scores per point against, or what the other is for. No panel is chosen; GG-1's per-point scoring against the extraction waits on RQ-620. BR-1 does not.
+  - **A step before BR-1 is scored (R-641):** check why 44 of the 180 trajectories end early (the shortest has 5 rows), and record the reason beside the result. This is a step, not a result.
+  - **Reproductions score provisionally:** labelled "vs <source>" ("vs Brutus, run here" for ours), never "replicates the paper", and only if they match the paper's set-up (the same initial-condition distribution, at rest, the same frame) and use a converged arbitrary-precision integrator. Our Brutus is built from `github.com/pgbreen/NvMgeneration` at `98906f4` (GPL-3.0, the paper's own), not AMUSE's copy. `dosier/TBP-Group-39-TrainData` and `stipefrkovic/three-body-problem` are rejected.
+  - **Re-score:** when the authors' full data arrives, every result scored against a reproduction is re-scored against it; where ours and theirs disagree, theirs governs and the disagreement is queued.
+  - **R-638's gate stands:** the measured cost per point is reported before any Brutus run is scaled or goes below ε = 10⁻⁶; the ensembles to score against don't exist yet, and scaling waits for the owner.
+  - Still open for this task: RQ-612 (GG-1's lifetime definition), RQ-613 (Brutus settings), RQ-615 (the seeded draw) and RQ-616 (BR-1's convergence criterion).
+- *30 Oct 2026 (R-649, R-650):* moved to M9, external replication, and renumbered: formerly TASK-M3-62 (milestone M3). Its targets are measurements, never gates: each is scored in M9, or early as a peek (information only, `docs/verification/peek_log.md`), and its outcome is PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED, never a failure that blocks; like-for-like is checked first, and nothing is tuned, loosened or special-cased to pass (`docs/design/principia_dd_replication.md` § "12.3 Outcomes, the like-for-like check and the forbidden moves"). The tier each binds is § "12.2 Tiers"'s: (b); (b); its statistical part also (a). Its calibrations are confirmed by the human with the M9 report (REQ-VAL-340), *was:* "at the M3 gate". Old ids in this file now read as their M9 ids: TASK-M3-62 → TASK-M9-22, TASK-M3-65 → TASK-M9-25. A wait on a ruling or data below holds this task's scoring, never a milestone.

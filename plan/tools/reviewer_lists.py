@@ -14,7 +14,8 @@ import yaml
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 REQS = "plan/requirements.yaml"
 LISTS = {"numerical-gates": "numerical gate", "benchmarks": "benchmark", "gui-screenshots": "GUI screenshot"}
-MILESTONES = [f"M{i}" for i in range(9)]
+# M9, external replication, follows M8 (R-650).
+MILESTONES = [f"M{i}" for i in range(10)]
 
 
 def block(reqs, method):

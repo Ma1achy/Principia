@@ -3,7 +3,7 @@
 - **Milestone:** M4
 - **Closes:** REQ-VAL-076, REQ-VAL-137, REQ-VAL-074, REQ-PAY-074, REQ-TOOL-044
 - **Depends on:** TASK-M4-10, TASK-M4-06, TASK-M3-29
-- **Needs (earlier milestones):** REQ-PAY-043, REQ-PAY-056, REQ-VAL-055, REQ-VAL-042, REQ-VAL-126, REQ-CHART-030, REQ-VAL-048, REQ-GUI-008
+- **Needs (earlier milestones):** REQ-PAY-043, REQ-PAY-056, REQ-VAL-055, REQ-VAL-126, REQ-CHART-030, REQ-VAL-048, REQ-GUI-008
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** PIT-3
 - **Size:** ~400 lines
@@ -36,3 +36,4 @@ The self-validating render of dd_validation_orbits §6.1: the closure field on t
 - REQ-PAY-074 is a definition (R-72): the doc change is part of this PR and needs the physics reviewer's approval before merge.
 - The threshold is relative to the observed background distribution, never an absolute cutoff by eye (pitfalls §3: closure spans decades).
 - Export paths arrive in M7/M8; the definition written here governs them.
+- *30 Oct 2026 (R-650):* the need of REQ-VAL-042 (FF-H) is dropped: it scores in M9 (TASK-M9-36). The fixture set it reads, REQ-VAL-126, stays needed. *Was:* Needs "REQ-PAY-043, REQ-PAY-056, REQ-VAL-055, REQ-VAL-042, REQ-VAL-126, REQ-CHART-030, REQ-VAL-048, REQ-GUI-008".

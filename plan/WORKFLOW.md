@@ -183,6 +183,15 @@ R-627 (27 Oct 2026) extends the exception to M8's GUI-track tasks (TASK-M8-05, T
 web skeleton and its measurements): each merges once its reviews pass and CI is green without waiting for the gates of M3 to M6; the gates of M2
 and M7, which R-627 does not name, by R-415's test above, recorded in the PR. Their wiring tasks, TASK-M8-88 to
 TASK-M8-95, run on the real engine and wait for the gates as any other task does.
+*30 Oct 2026 (R-649, R-650):* a replication or verification target is a measurement, never a gate: an external
+target's outcome (PASS, EXPLAINED DIVERGENCE or UNEXPLAINED) blocks no merge and no milestone. The internal
+correctness tests, the GPU-vs-CPU agreement checks within their stated f32 tolerances and the anchor smoke tests
+stay in their milestones' gates and block as before. M9, external replication, follows M8 and has no gate: it exits
+on its report (REQ-VAL-340), which the owner reviews, and the calibrations of its targets are confirmed by the human
+with that report, not at a gate. Scoring waits for M9, and R-415's test above does not bring an M9 task forward.
+Source ingest and transcription (data PRs under `docs/incoming/`) merge whenever their reviews pass. An early peek
+scores a target as information only, in `docs/verification/peek_log.md` (`docs/design/principia_dd_replication.md`
+§ "12.5 Peeks"), never a gate.
 
 ## Escalation
 

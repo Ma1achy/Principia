@@ -1,7 +1,7 @@
 # TASK-M5-18 — Resolve stage: ensemble spread, error_ratio and the co-computations
 
 - **Milestone:** M5
-- **Closes:** REQ-REF-002, REQ-REF-003, REQ-REF-004, REQ-REF-005, REQ-REF-010, REQ-PAY-061, REQ-RENDER-051, REQ-RENDER-053, REQ-INT-072, REQ-TOOL-133, REQ-VAL-172, REQ-VAL-173
+- **Closes:** REQ-REF-002, REQ-REF-003, REQ-REF-004, REQ-REF-005, REQ-REF-010, REQ-PAY-061, REQ-RENDER-051, REQ-RENDER-053, REQ-INT-072, REQ-TOOL-133, REQ-VAL-172, REQ-VAL-173, REQ-VAL-338, REQ-VAL-339
 - **Depends on:** TASK-M5-17
 - **Needs (earlier milestones):** REQ-PAY-019, REQ-PAY-021, REQ-INT-039, REQ-SYS-019
 - **Reviewers:** code, qa, physics
@@ -55,6 +55,8 @@ as the colour resolve.
 - Review checklist (qa) — the ensemble rows of render contract Part 6's field-view table are ticked against the generated catalogue on a real E ≥ 1 resolve (REQ-TOOL-133).
 - `cargo xtask gate gauge-invariance` — a small grid run at alpha = 0.25, 1 and 4 with t rescaled by alpha^{3/2}: `spread_shape` agrees across the three to ~10 decimals (REQ-VAL-172).
 - `cargo xtask gate energy-control` — the `near-field` slice (`fixtures/slices.toml`) run to t = 13: `error_ratio` reads 1.0000 (REQ-VAL-173).
+- `cargo xtask gate gauge-invariance --propose` — `spread_shape`'s agreement across alpha measured on the f32 path and stated; the human confirms it at the M5 gate and it is recorded in decisions.md (REQ-VAL-338).
+- `cargo xtask gate energy-control --propose` — `error_ratio` at t = 13 measured on each precision path, with the agreement each is held to; the human confirms it at the M5 gate and it is recorded in decisions.md (REQ-VAL-339).
 
 ## Notes
 - How `error_ratio` enters `ensemble_spread` is open in §3.7 ("how error_ratio enters is OPEN"); this task stores it
@@ -64,3 +66,4 @@ as the colour resolve.
 - RQ-98 ruled: R-113 — REQ-INT-072 keeps H and σ²_T at resolve here; the copy offsets moved to M4 (REQ-INT-083, TASK-M4-06).
 - RQ-94 ruled: R-113 — REQ-TOOL-011's tier-gated ensemble views are REQ-TOOL-133, closed here on a real resolve.
 - R-257 (closes RQ-157) ported kernel-build §5's gates with their values into dd_validation_orbits §2; this task closes the two that read the ensemble spread and `error_ratio`, which are first computed here: REQ-VAL-172, REQ-VAL-173.
+- *30 Oct 2026 (R-649's clarification 2):* GPU-vs-CPU agreement within a stated f32 tolerance is an internal check, continuous and blocking, measured, not assumed. REQ-VAL-172's "~10 decimals" is finer than f32 resolves and REQ-VAL-173's "1.0000" names no precision path, so each gets an f32 calibration, REQ-VAL-338 and REQ-VAL-339, closed here (R-71; human confirmation at the M5 gate, then recorded in decisions.md).

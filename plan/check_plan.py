@@ -49,7 +49,8 @@ TASKS = "plan/tasks.yaml"
 TASK_DIR = "plan/tasks"
 PITFALLS = "docs/read_first/principia_01_pitfalls.md"
 REVIEWERS = {"code", "qa", "physics", "gui", "perf"}
-MILESTONES = [f"M{i}" for i in range(9)]
+# M0 to M8 have exit gates; M9, external replication, has a report instead (R-650).
+MILESTONES = [f"M{i}" for i in range(10)]
 CITE = re.compile(r"`([^`\s]+\.md)` § \"([^\"]+)\"")
 REF = re.compile(r"^- `([^`]+)` § \"(.*)\"\s*$")
 FIELD = re.compile(r"^- \*\*([^*]+):\*\* (.*)$")
