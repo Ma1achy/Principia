@@ -36785,7 +36785,7 @@
 - id: REQ-VAL-338
   area: VAL
   kind: calibration
-  statement: "REQ-VAL-172's agreement across alpha on the f32 path, whose \"~10 decimals\" is finer than f32 resolves, must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M5 gate and recorded in decisions.md."
+  statement: "REQ-VAL-172's agreement across alpha on the f32 path, which states no f32 tolerance (\"~10 decimals\" may be finer than f32 resolves, or the f32 runs may agree bit for bit), must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M5 gate and recorded in decisions.md."
   source:
   - file: docs/design/principia_dd_validation_orbits.md
     section: 2. What the suite tests that the current gates do not
@@ -36796,13 +36796,13 @@
   - file: decisions.md
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
   verify:
+    detail: "CALIBRATION (R-71): the proposal first reports whether spread_shape on the f32 path agrees bit for bit across alpha ∈ {0.25, 1, 4} (powers of two, as are their alpha^{3/2}, so the rescaling itself is exact in binary floating point, and only constants that don't scale with alpha can part the runs); only where it doesn't does it state a looser tolerance, with the agreement measured; the f64 path keeps REQ-VAL-172's ~10 decimals"
     method: review checklist
-    detail: "CALIBRATION (R-71): spread_shape's agreement across alpha measured on the f32 path and stated; the f64 path keeps REQ-VAL-172's ~10 decimals"
   rulings:
   - R-71
   - R-649
   milestone: M5
-  note: "R-649's clarification 2 (30 Oct 2026): every GPU-vs-CPU agreement check states its f32 tolerance; REQ-VAL-172 states none for f32. Internal, continuous and blocking; closed by TASK-M5-18."
+  note: "R-649's clarification 2 (30 Oct 2026): every GPU-vs-CPU agreement check states its f32 tolerance; REQ-VAL-172 states none for f32. Internal, continuous and blocking; closed by TASK-M5-18. Statement *was:* \"REQ-VAL-172's agreement across alpha on the f32 path, whose '~10 decimals' is finer than f32 resolves, must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M5 gate and recorded in decisions.md.\"; verify *was:* \"CALIBRATION (R-71): spread_shape's agreement across alpha measured on the f32 path and stated; the f64 path keeps REQ-VAL-172's ~10 decimals\" (reworded 30 Oct 2026 on the physics review of PR #342, its note on REQ-VAL-338: check bitwise agreement before stating a looser tolerance)."
 - id: REQ-VAL-339
   area: VAL
   kind: calibration
