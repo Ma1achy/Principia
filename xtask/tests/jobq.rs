@@ -1833,38 +1833,75 @@ negative_control!(
 
 // --- Concurrency -----------------------------------------------------------------------------------------------------
 
-/// Two jobs that each wait for the other to start, with `--timeout 10`, at `concurrency`: both end 0 only when the
-/// runner runs them at once.
-fn concurrency_case(tag: &str, concurrency: usize) {
+/// Two jobs that each wait for the other to start, at `concurrency`, the first on target directory `a` with
+/// `--timeout <timeout>`, the second on `b`: run at once, both end 0; run one after the other, the first times out
+/// (124) and the second, started only then, ends 0. Their statuses must be `expected`.
+fn concurrency_case(
+    tag: &str,
+    concurrency: usize,
+    (a, b): (&str, &str),
+    timeout: u64,
+    expected: (i32, i32),
+) {
     let q = Q::new(tag, &format!("concurrency = {concurrency}\n"));
     let script =
         |me: &str, other: &str| format!("touch {me}; while [ ! -e {other} ]; do sleep 0.05; done");
-    // Each with a target directory of its own: two jobs on one never run at once.
+    let (a_env, b_env, timeout) = (
+        format!("CARGO_TARGET_DIR={a}"),
+        format!("CARGO_TARGET_DIR={b}"),
+        timeout.to_string(),
+    );
     let first = q.submit(
         "peek",
         "a",
-        &["--timeout", "10", "--env", "CARGO_TARGET_DIR=/t/a"],
+        &["--timeout", &timeout, "--env", &a_env],
         &["sh", "-c", &script("a", "b")],
     );
     let second = q.submit(
         "peek",
         "b",
-        &["--timeout", "10", "--env", "CARGO_TARGET_DIR=/t/b"],
+        &["--timeout", "10", "--env", &b_env],
         &["sh", "-c", &script("b", "a")],
     );
     let codes = (q.wait(first).0, q.wait(second).0);
     q.finish();
-    assert_eq!(codes, (0, 0), "jobs not run {concurrency} at a time");
+    assert_eq!(
+        codes, expected,
+        "jobs not run {concurrency} at a time on {a} and {b}"
+    );
 }
 
 #[test]
 fn jobq_runs_concurrency_jobs_at_once() {
-    concurrency_case("jobq_concurrency", 2);
+    concurrency_case("jobq_concurrency", 2, ("/t/a", "/t/b"), 10, (0, 0));
 }
 
 negative_control!(
     jobq_runs_concurrency_jobs_at_once,
     "one at a time, the first job waits for the second until its timeout",
     expected = "jobs not run 1 at a time",
-    concurrency_case("jobq_concurrency_control", 1)
+    concurrency_case("jobq_concurrency_control", 1, ("/t/a", "/t/b"), 10, (0, 0))
+);
+
+/// At concurrency 2, two jobs on one target directory, under each of `spellings`, never run at once: the first times
+/// out waiting for the second, which starts only after it.
+fn shared_target_case(tag: &str, spellings: &[(&str, &str)]) {
+    for (n, pair) in spellings.iter().enumerate() {
+        concurrency_case(&format!("{tag}_{n}"), 2, *pair, 3, (124, 0));
+    }
+}
+
+#[test]
+fn jobq_never_runs_two_jobs_on_one_target_directory() {
+    shared_target_case(
+        "jobq_shared_target",
+        &[("/t/a", "/t/a"), ("/t/a", "/T/A/"), ("/t/a", "/t/./a")],
+    );
+}
+
+negative_control!(
+    jobq_never_runs_two_jobs_on_one_target_directory,
+    "jobs on two target directories run at once",
+    expected = "jobs not run 2 at a time",
+    shared_target_case("jobq_shared_target_control", &[("/t/a", "/t/b")])
 );
