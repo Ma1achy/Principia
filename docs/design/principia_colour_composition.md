@@ -814,25 +814,43 @@ and the decode/encode translated to WGSL from the one Rust source (R-116):
   **The tolerance's scale (R-72; RQ-623, decided by the orchestrator per R-369, option (b); TASK-M2-29).** A sample
   agrees where `|E − E₀| ≤ F·eps·S`, with `F` the calibrated factor (REQ-COL-060, R-71), `eps` f32's `2⁻²³`, and
   `S = max(|K₀|, 1) + max(|V₀|, 1) + Σ_{i<j} mᵢmⱼ·wᵢⱼ/ŝᵢⱼ²`, where `wᵢⱼ = ‖rᵢ‖∞ + ‖rⱼ‖∞` and
-  `ŝᵢⱼ = max(‖rᵢ − rⱼ‖∞, eps·max(wᵢⱼ, 1))`. `K₀` and `V₀` are the stored operands, `(m, r)` the fragment decode's own,
-  and `‖·‖∞` the larger magnitude of a vector's two components. The sum is the conditioning of `V = −Σ mᵢmⱼ/rᵢⱼ` at
-  f32: a separation formed from positions of size `wᵢⱼ` carries a rounding of order `eps·wᵢⱼ`, so the pair's term
-  carries `mᵢmⱼ·eps·wᵢⱼ/rᵢⱼ²`, its own size times `κᵢⱼ = wᵢⱼ/rᵢⱼ`. Beside a binary collision any two f32 evaluations
-  of `E` differ by about that, whether the fragment's with fast-math against the compute's without (R-297), or two of
-  one stage. That is f32's precision there, not a fault of the translation or of the addressing, and the per-operand
-  scale alone, `max(|K₀|, 1) + max(|V₀|, 1)`, draws it red. Away from a collision `κᵢⱼ` is of order 1 and the sum of
-  order `|V₀|`, so the check keeps its sensitivity to a dispatch scramble. The floor `ŝᵢⱼ ≥ eps·max(wᵢⱼ, 1)` caps
-  `κᵢⱼ` at `1/eps`, below which the f32 separation keeps no relative digit, with the same `max(·, 1)` as the
-  operands' terms. The max-norm is within `√2` of the Euclidean either way, so where `ŝᵢⱼ` is the separation the sum
-  is within a factor 2 of `Σ mᵢmⱼ(‖rᵢ‖ + ‖rⱼ‖)/rᵢⱼ²`, which the factor absorbs. **The sum is finite at every pixel,
-  wherever `V` is and at the pole too (R-436).** Each term is at most `2⁴⁴`: since `ŝᵢⱼ ≥ eps·max(wᵢⱼ, 1)`,
-  `wᵢⱼ/ŝᵢⱼ ≤ 1/eps`, and since the masses lie on `[0, 1]` with `M = 1`, `mᵢmⱼ ≤ 1/4` and `mᵢmⱼ/ŝᵢⱼ ≤ 1/(4·eps)`.
-  There is no division by zero, since `ŝᵢⱼ ≥ eps` even where a separation is 0, so no separation need be nonzero.
-  Nor does any intermediate overflow or vanish, whatever association a fast-math compiler picks (it may form
-  `mᵢmⱼ·wᵢⱼ/ŝᵢⱼ²`): with positions below `2⁶²` in magnitude, `wᵢⱼ < 2⁶³`, `eps² ≤ ŝᵢⱼ² < 2¹²⁶` and
-  `mᵢmⱼ·wᵢⱼ < 2⁶¹`. The decode's positions are finite (the decode of a finite input is finite) and of order 1 under
-  `I = 1`, each `‖rᵢ‖` at most `1/√mᵢ`. The preset tests `m` and `r` on their bits as it does `K` and `V`, and a
-  non-finite one draws the invalid colour. `F` is calibrated in this scale (REQ-COL-060).
+  `ŝᵢⱼ = max(‖rᵢ − rⱼ‖∞, eps·max(wᵢⱼ, δ))`, `δ = 2⁻³²`. `K₀` and `V₀` are the stored operands, `(m, r)` the
+  fragment decode's own, and `‖·‖∞` the larger magnitude of a vector's two components. The sum is the conditioning of
+  `V = −Σ mᵢmⱼ/rᵢⱼ` at f32: a separation formed from positions of size `wᵢⱼ` carries a rounding of order `eps·wᵢⱼ`, so
+  the pair's term carries `mᵢmⱼ·eps·wᵢⱼ/rᵢⱼ²`, its own size times `κᵢⱼ = wᵢⱼ/rᵢⱼ`. Beside a binary collision any two
+  f32 evaluations of `E` differ by about that, whether the fragment's with fast-math against the compute's without
+  (R-297), or two of one stage. That is f32's precision there, not a fault of the translation or of the addressing, and
+  the per-operand scale alone, `max(|K₀|, 1) + max(|V₀|, 1)`, draws it red. Away from a collision `κᵢⱼ` is of order 1
+  and the sum of order `|V₀|`, so the check keeps its sensitivity to a dispatch scramble. The floor
+  `ŝᵢⱼ ≥ eps·max(wᵢⱼ, δ)` is that rounding, `eps·wᵢⱼ`, below which the f32 separation keeps no relative digit; it caps
+  `κᵢⱼ` at `1/eps`. It is relative at every size of `wᵢⱼ`: at `wᵢⱼ < 1` the f32 separation keeps digits down to
+  `eps·wᵢⱼ`, not `eps`, and a floor held at `eps` there would stop the term growing while the f32 difference grows as
+  `1/rᵢⱼ²`, short of it by about `1/wᵢⱼ²` (TASK-M2-29, applied per R-369). `δ` only keeps `ŝᵢⱼ` positive where both
+  positions are 0, and acts on no decoded system: with the centre of mass at 0 and `I = 1`, the third body `k` has
+  `m_k‖r_k‖ ≤ max(‖rᵢ‖, ‖rⱼ‖)`, so `wᵢⱼ ≥ √m_k/2`, at least `2⁻²²` over the mass floors below. The max-norm is within
+  `√2` of the Euclidean either way, so where `ŝᵢⱼ` is the separation the sum is within a factor 2 of
+  `Σ mᵢmⱼ(‖rᵢ‖ + ‖rⱼ‖)/rᵢⱼ²`, which the factor absorbs. **The sum is finite at every pixel, wherever `V` is and at
+  the pole too (R-436).** Each term is at most `2⁷⁶`: since `ŝᵢⱼ ≥ eps·max(wᵢⱼ, δ)`, `wᵢⱼ/ŝᵢⱼ ≤ 1/eps`, and since the
+  masses lie on `[0, 1]` with `M = 1`, `mᵢmⱼ ≤ 1/4` and `mᵢmⱼ/ŝᵢⱼ ≤ 1/(4·eps·δ) = 2⁵³`. There is no division by zero,
+  since `ŝᵢⱼ ≥ eps·δ = 2⁻⁵⁵` even where a separation is 0, so no separation need be nonzero. Nor does any intermediate
+  overflow, whatever association a fast-math compiler picks (it may form `mᵢmⱼ·wᵢⱼ/ŝᵢⱼ²`): with positions below `2⁶²` in
+  magnitude, `wᵢⱼ < 2⁶³`, `2⁻¹¹⁰ ≤ ŝᵢⱼ² < 2¹²⁶`, `mᵢmⱼ·wᵢⱼ < 2⁶¹` and `wᵢⱼ/ŝᵢⱼ² ≤ 2⁷⁸`; one that flushes to 0 is below
+  `2⁻¹²⁶`, nothing beside the scale's `max(·, 1)` terms. **The positions are below `2⁶²`** for every mass a decode
+  reaches. Under `I = 1`, `mᵢ‖rᵢ‖² ≤ 1`, so `‖rᵢ‖ ≤ 1/√mᵢ`, below `2⁶²` wherever `mᵢ > 2⁻¹²⁴`. The masses are floored
+  far above that (`principia_dd_decoder.md` §3.1; the link registry, `principia_dd_generation_root.md` §3.9):
+  - `stick_breaking`'s `s` and `u` lie on `[ε_μ/2, 1 − ε_μ/2]`, `ε_μ = 10⁻⁶`, so each mass is at least
+    `ε_μ²/4 = 2.5×10⁻¹³`;
+  - `softmax_tanh`'s `|μₖ| ≤ μ_max`, at most 10 (R-597, REQ-GEN-038), gives each mass at least
+    `e^−μ_max/(1 + e^−μ_max + e^μ_max)`, about `2×10⁻⁹` at 10 and `4.5×10⁻⁵` at the default 5;
+  - the ternary plot's buffer gives each mass at least `ε_m = 10⁻⁴` on the simplex (`principia_chart_reference.md`
+    §4.5);
+  - the Burrau family sets `γ(ν)`'s masses, positive on its range `[ν_min, ν_max]` inside `(0, 1)`, the least of order
+    `ν_min` or `1 − ν_max` (`principia_chart_reference.md` §4.3).
+
+  So at the links' least floor `‖rᵢ‖ ≤ 1/√(2.5×10⁻¹³) = 2×10⁶`, below `2²¹`. The positions are finite where the masses
+  are finite and nonzero; a mass rounded to 0, or a non-finite one, would give a non-finite `r`. The preset tests `m`
+  and `r` on their bits as it does `K` and `V`, so such a pixel draws the invalid colour. `F` is calibrated in this
+  scale (REQ-COL-060).
   **A non-finite operand is invalid (R-436).** `E₀ = K₀ + V₀` reads `−∞` at the f64 collision pole, as computed
   and stored (`principia_dd_decoder.md` §3.6), where the difference would be `(−∞) − (−∞)`, NaN on the CPU and
   unpinned on the GPU. An agreement preset tests each stored operand (`K_0`, `V_0`, and any other it reads) on its
