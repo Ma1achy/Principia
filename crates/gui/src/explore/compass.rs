@@ -983,9 +983,7 @@ pub fn drag_edit(plane: &Plane, frame: &SliceFrame, drag: &Drag) -> Option<SetFi
             };
             Some(basis_edit(angles.apply(view).basis()))
         }
-        Touch::Slice => {
-            latent_normal(plane, frame).map(|n| z0_edit(add(&plane.z0, drag.amount, &n)))
-        }
+        Touch::Slice => slice(plane, frame, drag.amount),
     }
 }
 

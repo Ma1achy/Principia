@@ -98,8 +98,8 @@ fn same_plane(a: &Plane, b: &Plane, tol: f64) -> bool {
 // --- mock_live_compass_drag (REQ-GUI-206) ----------------------------------------------------------------------------
 
 /// What one frame of a compass drag left: the plane the snapshot holds and the drag's target at that frame, the
-/// Manifold view's slider as the frame the pointer moved drew it and the value it should read, the compass's readout and the line it
-/// should hold, the undo depth, and the edits the frame applied.
+/// Manifold view's slider as the frame the pointer moved drew it and the value it should read, the compass's readout
+/// and the line it should hold, the undo depth, and the edits the frame applied.
 #[derive(Clone, Debug)]
 struct Seen {
     plane: Plane,

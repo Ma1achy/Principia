@@ -314,7 +314,7 @@ fn mock_time_enter_on_a_button_is_its_click() {
     });
 }
 
-// --- The scrub: live, one entry and one line --------------------------------------------------------------------------------
+// --- The scrub: live, one entry and one line -------------------------------------------------------------------------
 
 /// Drags the scrubber from fraction `from` of its rail to each of `to`, then releases: the frames' events.
 fn drag(app: &App<MockSide>, from: f32, to: &[f32]) -> Vec<Vec<Event>> {

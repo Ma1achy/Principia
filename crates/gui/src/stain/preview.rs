@@ -5,8 +5,8 @@
 //! rect, fitted into its area, never stretched or cropped. Under it the inspector shows the selected node: its title
 //! and what it maps, its choices (a source's field, the combiner's occupant) and its scalar params, each edit one
 //! `SetField` of the graph (a slider's drag applied every frame its value changes, one history entry, R-96, R-458 F2),
-//! the outcome palette's swatches, and its shader's
-//! actions; with no node selected, the graph's. The full morphing inspector is TASK-M7-23's and TASK-M8-21's.
+//! the outcome palette's swatches, and its shader's actions; with no node selected, the graph's. The full morphing
+//! inspector is TASK-M7-23's and TASK-M8-21's.
 
 use eframe::egui::{
     self, pos2, vec2, Button, Color32, Rect, RichText, Slider, Ui, UiBuilder, Vec2,

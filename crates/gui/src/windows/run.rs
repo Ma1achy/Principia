@@ -8,8 +8,9 @@
 //! `T_horizon` is `SimConfig`'s `Horizon { t }` (gui_state_contract §2): the window seeds it from the snapshot when it
 //! opens, and Recompute sends it as one `SetField`, `SimField::Horizon`, undoable (R-390, "Contract fields"; the
 //! Time scrubber then ends at the new `T`); a drag on its slider sends it every frame it moves `T`, the drag one history
-//! entry (R-458 F2). It is the one field with a range, `[50, 200]`, a slider the arrows step by `Bounded`. The other fields are a GUI-local draft seeded from the contract's defaults as §G5 lists them, with no
-//! `SimConfig` field behind them yet (applied per R-369): their contract fields and behaviour are TASK-M8-24's
+//! entry (R-458 F2). It is the one field with a range, `[50, 200]`, a slider the arrows step by `Bounded`. The other
+//! fields are a GUI-local draft seeded from the contract's defaults as §G5 lists them, with no `SimConfig` field
+//! behind them yet (applied per R-369): their contract fields and behaviour are TASK-M8-24's
 //! (REQ-GUI-102), quality is TASK-M6-22's. A default §G5 does not give shows "—" (RQ-243), and nothing is invented
 //! (R-68, R-71); every other field is a text field.
 

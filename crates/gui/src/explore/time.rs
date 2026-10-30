@@ -3,8 +3,8 @@
 //! read by the engine (R-96). The GUI's clock advances the playhead through `SetField`s marked "no history" while
 //! playing (`crate::clock`); a step is one `SetField`, and a scrub is live, the playhead edit sent every frame the
 //! dragged time changes, so the display time follows the drag, and the whole drag is one coalesced entry, the app
-//! sending each frame's edit under the pointer's hold's key (R-96, R-101, R-458 F2). Scrubbing back re-integrates on the real engine
-//! (TASK-M8-07); the mock's figure does not refine, so no progress is shown (applied per R-369).
+//! sending each frame's edit under the pointer's hold's key (R-96, R-101, R-458 F2). Scrubbing back re-integrates on
+//! the real engine (TASK-M8-07); the mock's figure does not refine, so no progress is shown (applied per R-369).
 //!
 //! Its keys (§G3, R-409 F1): Time is a scope with children, step back, play, step, speed and the scrubber, in the
 //! order drawn. In navigation mode the arrows move between them and step no time; Enter on a button acts as its click;

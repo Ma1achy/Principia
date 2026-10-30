@@ -422,7 +422,8 @@ impl<S: EngineSide> App<S> {
     /// One frame on the root `ui`. The first frame a pointer button is held takes the hold's history key, which every
     /// edit sent until the release goes under, the release frame's too; the release frame ends it after its edits, so
     /// the drag's entry closes and the engine logs it once (R-458 F1). A press released within one frame holds nothing:
-    /// its edits are commands, each under a fresh key. The snapshot is read again after the frame's edits, so it, the console and every control read the edit at once.
+    /// its edits are commands, each under a fresh key. The snapshot is read again after the frame's edits, so it, the
+    /// console and every control read the edit at once.
     pub fn ui(&mut self, ui: &mut egui::Ui) {
         let ctx = ui.ctx().clone();
         let down = ctx.input(|i| i.pointer.any_down());
@@ -654,8 +655,8 @@ impl<S: EngineSide> App<S> {
         }
         let stain_edited = !stain_out.edits.is_empty();
         edits.append(&mut stain_out.edits);
-        // During a hold, a param's drag edits the graph every frame: auto-recompile waits for the hold's end, one recompile
-        // per drag (applied per R-369).
+        // During a hold, a param's drag edits the graph every frame: auto-recompile waits for the hold's end, one
+        // recompile per drag (applied per R-369).
         if stain_edited && self.stain.auto_recompile && self.hold.is_some() && !stain_out.recompile
         {
             self.recompile_at_release = true;
