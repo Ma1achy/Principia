@@ -361,18 +361,19 @@ fn check_product_less(
         "a nonzero product is not less than zero"
     );
     assert!(!less32(0.0, 1.0, 1.0, 0.0), "two zeros tie");
-    // A zero factor beside a large one is zero, whichever factor it is: never `0 · 2¹⁰⁰` read as `2⁻¹²⁷ · 2¹⁰⁰`.
-    let big = 2f32.powi(100);
+    // A zero factor beside the largest finite one is zero, whichever factor it is: never zero's exponent field plus
+    // the largest exponent, which would read as about 1, above 0.5.
+    let big = f32::MAX;
     assert!(
-        less32(0.0, big, 1.0, 1.0) && less32(big, 0.0, 1.0, 1.0),
+        less32(0.0, big, 0.5, 1.0) && less32(big, 0.0, 0.5, 1.0),
         "a zero factor beside a large one"
     );
     assert!(
-        !less32(1.0, 1.0, 0.0, big) && !less32(1.0, 1.0, big, 0.0),
+        !less32(0.5, 1.0, 0.0, big) && !less32(0.5, 1.0, big, 0.0),
         "a zero factor beside a large one"
     );
     assert!(
-        less64(0.0, 2f64.powi(1000), 1.0, 1.0),
+        less64(0.0, f64::MAX, 0.5, 1.0) && less64(f64::MAX, 0.0, 0.5, 1.0),
         "a zero factor beside a large one at f64"
     );
 }
