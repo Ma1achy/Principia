@@ -12,10 +12,12 @@
 //!
 //! Each check takes the detector as a function, so its control runs the same check on a faulty one.
 
-use kernel::payload::{fgw_length_raw, FreeGroupWord, FGW_NO_SYMBOL};
+use kernel::payload::{fgw_length_raw, sd_last_symbol, FreeGroupWord, FGW_NO_SYMBOL};
 use kernel::real::IeeeBits;
 use kernel::word::crossing::{negative, product_less, reads_as_zero};
-use kernel::word::{fgw_decode, substep_crossings, CrossingDetector, CrossingHook, CutDistances};
+use kernel::word::{
+    fgw_decode, set_last_symbol, substep_crossings, CrossingDetector, CrossingHook, CutDistances,
+};
 use proptest::prelude::*;
 use validation::reference::free_group::reduce;
 use validation::{negative_control, prop};
@@ -185,6 +187,9 @@ negative_control!(
 /// accepted substep, or a control's faulty one.
 type March = fn(&[CutDistances<f64>]) -> Vec<Vec<u32>>;
 
+/// The sample's `packed_a` before its march: every bit set but `last_symbol`'s, so a write outside it shows.
+const PACKED_A: u32 = 0xFFFF_FCFF;
+
 /// [`CrossingDetector`], fed each accepted substep, appending into a one-sample word buffer through its hook: each
 /// substep's crossings, and the word they leave, which must be the stream freely reduced.
 fn every_substep(endpoints: &[CutDistances<f64>]) -> Vec<Vec<u32>> {
@@ -194,11 +199,12 @@ fn every_substep(endpoints: &[CutDistances<f64>]) -> Vec<Vec<u32>> {
     }];
     let mut hook = CrossingHook::new(0);
     let mut out = Vec::new();
+    let mut packed_a = PACKED_A;
     for &end in &endpoints[1..] {
         let mut probe = detector;
         let c = probe.accept(end);
         out.push(c.symbols[..c.count as usize].to_vec());
-        let _ = detector.accept_into(end, &mut hook, &mut words[..], 0);
+        packed_a = detector.accept_into(end, &mut hook, &mut words[..], packed_a);
         assert_eq!(
             detector, probe,
             "accept_into moved the detector differently"
@@ -218,6 +224,18 @@ fn every_substep(endpoints: &[CutDistances<f64>]) -> Vec<Vec<u32>> {
         reduced.symbols.last().copied().unwrap_or(FGW_NO_SYMBOL),
         "the hook's prev"
     );
+    assert_eq!(
+        set_last_symbol(packed_a, 0),
+        set_last_symbol(PACKED_A, 0),
+        "accept_into changed packed_a outside last_symbol"
+    );
+    if !reduced.symbols.is_empty() {
+        assert_eq!(
+            sd_last_symbol(packed_a),
+            hook.prev,
+            "last_symbol is not the word's last symbol"
+        );
+    }
     out
 }
 
@@ -360,6 +378,15 @@ fn check_tau_sort(d32: Detect<f32>, d64: Detect<f64>) {
 
 #[test]
 fn crossing_tau_sort() {
+    // The significand, read from the bits: in [1, 2), the sign dropped.
+    for (x, s) in [(1.5f64, 1.5f64), (-6.0, 1.5), (0.75, 1.5), (1.0, 1.0)] {
+        assert_eq!(x.significand(), s, "significand of {x} at f64");
+        assert_eq!(
+            (x as f32).significand(),
+            s as f32,
+            "significand of {x} at f32"
+        );
+    }
     check_tau_sort(detect::<f32>, detect::<f64>);
     check_product_less(product_less::<f32>, product_less::<f64>);
 }
