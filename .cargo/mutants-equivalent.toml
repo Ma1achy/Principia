@@ -314,3 +314,39 @@ justification = "done is only ever set from detect, which returns the constant f
 [[equivalent]]
 mutant = "crates/render/src/presets/roundtrip.rs:127:9: replace | with ^ in tags"
 justification = "a decode's tag word is kernel::stage::decode::tag's 0 to 5, below 256, so tag and tag_free << 8 share no bit and their ^ is their |"
+
+[[equivalent]]
+mutant = "crates/kernel/src/arctan.rs:97:28: replace | with ^ in mul"
+justification = "p00 & 0xFFFF has bits 0..16 only and mid << 16 bits 16..32 only, so their ^ is their |"
+
+[[equivalent]]
+mutant = "crates/kernel/src/arctan.rs:135:25: replace | with ^ in shr"
+justification = "for k > 0, a.lo >> k has bits 0..32-k only and spill = a.hi << (32 - k) bits 32-k..32 only, and spill is 0 at k = 0, so their ^ is their |"
+
+[[equivalent]]
+mutant = "crates/kernel/src/arctan.rs:150:25: replace | with ^ in shl"
+justification = "for k > 0, a.hi << k has bits k..32 only and spill = a.lo >> (32 - k) bits 0..k only, and spill is 0 at k = 0, so their ^ is their |"
+
+[[equivalent]]
+mutant = "crates/kernel/src/arctan.rs:179:37: replace | with ^ in unpack"
+justification = "fraction = b & 0x007F_FFFF has bits 0..23 only and 0x0080_0000 is bit 23, so their ^ is their |"
+
+[[equivalent]]
+mutant = "crates/kernel/src/arctan.rs:194:25: replace | with ^ in divide"
+justification = "carry needs rem >= 2^31, so den > rem >= 2^31 and doubled = 2·rem - 2^32 < 2·den - 2^32 < den: carry and doubled >= den are never both true, so their ^ is their |"
+
+[[equivalent]]
+mutant = "crates/kernel/src/arctan.rs:197:29: replace | with ^ in divide"
+justification = "q.hi << 1 has bit 0 clear and q.lo >> 31 is bit 0 only, so their ^ is their |"
+
+[[equivalent]]
+mutant = "crates/kernel/src/arctan.rs:198:29: replace | with ^ in divide"
+justification = "q.lo << 1 has bit 0 clear and bit(set) is bit 0 only, so their ^ is their |"
+
+[[equivalent]]
+mutant = "crates/kernel/src/arctan.rs:260:32: replace | with ^ in atan2_f32"
+justification = "both operands hold only at nb == 0 with db = +inf (y = ±0, x = ±inf); there nm = 0 and E = -254, so near is false, k = 0 and the quotient and a are 0 whether or not angle_zero is set, and the result follows from a alone"
+
+[[equivalent]]
+mutant = "crates/kernel/src/arctan.rs:321:50: replace | with ^ in atan2_f32"
+justification = "bits is a magnitude at most π's, 0x4049_0FDB, so its bit 31 is clear and yb & 0x8000_0000 is bit 31 only, so their ^ is their |"
