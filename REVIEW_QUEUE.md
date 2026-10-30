@@ -619,6 +619,9 @@ question: the code follows the formula, and the physics reviewer agrees it is th
 *Queued 30 Oct 2026 by TASK-M2-36's fix round 2, on the physics review of PR #349. For the owner: yes, it is physics
 where the choice changes the result (which pixels count) and the corpus does not settle it (R-369).*
 
+*30 Oct 2026: Ruled by the owner, R-655 (option (a): "#349 (a): extend the repeat rule to t's period 2, with
+tests.").*
+
 - **File, section:**
   - `decisions.md` § "R-554 — …", L3: "the pole maps' condition `N_a = 0` and `N_b = 0` is decided exactly on the
     stored angles from each map's closed form".

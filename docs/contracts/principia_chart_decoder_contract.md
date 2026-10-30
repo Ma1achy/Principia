@@ -294,6 +294,19 @@ fold; two targets iff `τ₁, τ₂ ∈ {0, ±180}`), and otherwise the view is 
 the human's RQ-472 ruling's equator clause, which kept one where `N_b = 0`, and its pixel fold for the statistics not
 applied (R-613, closing RQ-508, as applied meanwhile; *was:* "is RQ-508 (R-544 applied meanwhile; R-554 leaves that
 clause unapplied)").
+**The lattice of repeats on a tilted view (R-655, closing RQ-631).** The spherical map repeats every 1 in `s` and
+every 2 in `t`, so a pixel `(s + k, t + 2j)` with `N_a·k + 2·N_b·j = 0` for integers `(k, j) ≠ 0` keeps `d` and is the
+same system as `(s, t)`: it is counted once, at its canonical point (R-408). The lattice is decided exactly on the
+stored angles, never by a tolerance on a computed `N`: `N_a = N_b = 0`, the pole maps and both periods, as above;
+`N_a = 0` alone, θ's period, the canonical `s` in `[0, 1]`; otherwise the multiples of one generator `(k₀, j₀)` with
+`j₀ ≠ 0`, where one exists: `N_b = 0` alone, `t`'s period 2, `(k₀, j₀) = (0, 1)`; Tip as sheet with both angles set,
+`N_a/N_b = τ₁/τ₂`, a ratio of two stored doubles and so always rational, its generator read exactly from their binary
+expansions; Lean each axis with one target, `N_a/N_b = tan τ₁/tan τ₂`, which for angles rational in degrees is rational
+only where `τ₁ ≡ ±τ₂` (mod 180°), the ratio `±1`, or where one angle is `≡ ±30°` and the other `≡ ±60°` (mod 180°),
+the ratio `±1/3` or `±3` (Mann's theorem on vanishing sums of roots of unity); two targets, only `t`'s period, where
+`sin τ₂ = 0` and `sin τ₁ ≠ 0`. With such a generator, `w = (k₀, 2j₀)` in `(s, t)`, the canonical point is the one whose
+offset from `(½, ½)` along `w` lies in `[−|w|/2, |w|/2)`, a strip that holds the square (applied per R-369, R-655).
+Where there is none the view is affine along that axis, as above; at RQ-471's corner no fold is applied.
 *Was (R-544 removes the hemisphere's fold from the repeats):* "(past a periodic axis's period, over a pole, past the
 hemisphere's fold)"; "with both hemispheres drawn, R-14's `φ = π(1 − t)`, the pole maps at both edges, …; with one
 hemisphere drawn, R-412's `φ = (π/2)(1 − t)`, the pole map at `t = 1` and R-412's fold at the equator, `t = 0`,
