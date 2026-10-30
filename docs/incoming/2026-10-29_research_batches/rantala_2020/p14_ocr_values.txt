@@ -1,0 +1,9 @@
+7:The escape angle ß1 as well as the orbital elements of
+12:with masses of M1 = 3 x 108 Mo, M2 = 4 × 108 Mo and
+13:values of ß1, a2,3 and e2,3 settle to their final values as the
+14:M3 = 5 x 10°Mo are placed at the corners of a right-angled
+16:triangle with side lengths of r13 = 30 pc, r12 = 40 pc and
+18:r23 = 50 pc i.e. in such a manner that the least massive
+19:integrator implementations provide the results ß1 = 71.4°,
+21:a2,3 ~ 5.5 pc and e2,3 ~ 0.99 with a relative difference of only
+23:~ 10-4 in each value. Due to the extreme sensitivity of the

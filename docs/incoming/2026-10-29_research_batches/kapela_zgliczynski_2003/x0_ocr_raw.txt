@@ -1,0 +1,9 @@
+the time step h = O.01 and the order r = V.
+It turns out that the assumption of assertion 1 in theorem 2.1 holds for xo =
+(0.347 116 768 716, 0.532 724 944 657) and 8 = 10-°. Numerical data from this computation
+are listed in table 1.
+Moreover, from theorem 2.1 we know that this zero is unique in the set X.
+Proof of theorem 3.1. From lemma 3.5 it follows that there exists (v, u) € R2 such that
+•(v, u) = (0,0). Hence there exists a solution q(t) of the 3-body problem defined in the
+interval [0, T], such that for t = 0 all bodies are in the collinear configuration with the third
+body at the origin and for t = T the bodies form an isosceles triangle (because ro = r).

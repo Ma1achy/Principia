@@ -1,0 +1,2 @@
+Broucke, Elipe & Riaguas 2006 Table 1: reading B (eye) vs OCR of the page image (rows by order; scripts/rows_by_order.py).
+rows B_eye=2 OCR=2; cells compared 6; disagreements 0

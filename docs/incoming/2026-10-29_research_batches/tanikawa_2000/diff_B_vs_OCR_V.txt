@@ -1,0 +1,5 @@
+Table V, reading B (eye) against the OCR of the page image.
+Full-crop OCR pass: 79 of 80 numbers; the y cell of row n_min=12 came back as "126281:" (a 2x upscale
+gave "1426281"), which shifts every later number in the sequence diff by one place.
+Third OCR pass on a band crop of rows 10-14 (ocr/V_band_rows10-14_raw.txt) reads that cell as 0.4262813,
+equal to reading B and to reading A. With that cell supplied the sequences agree: 80 numbers, 0 disagreements.

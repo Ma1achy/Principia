@@ -1,0 +1,2 @@
+Iasko & Orlov 2014 table, authors' own columns (orbit, k, phi, T, notes) only; k', phi', T' (columns 5-7, recomputed by the authors from the Suvakov-Dmitrasinovic site) not transcribed as data. Reading B (eye) vs OCR; OCR rows taken in order (row 8's lone number missed); dash cells not recognised by OCR were written as '-'.
+rows B_eye=23 OCR=23; cells compared 115; disagreements 0

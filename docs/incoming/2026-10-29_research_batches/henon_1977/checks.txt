@@ -1,0 +1,12 @@
+Table I: 20 positive-mass rows; max |sum m - 1| = 1.1e-16; max |E - E(5)| = 2.4e-06; order (2) holds
+Table II: 24 positive-mass rows; max |sum m - 1| = 1.1e-16; max |E - E(5)| = 2.8e-06; order (2) holds
+Table III: 13 positive-mass rows; max |sum m - 1| = 0.0e+00; max |E - E(5)| = 1.8e-06; order (2) holds
+Table IV: 24 positive-mass rows; max |sum m - 1| = 0.0e+00; max |E - E(5)| = 1.5e-06; order (2) holds
+Shared rows (the same orbit printed in two tables):
+   doubly critical orbit (13): Table I m1=0.650504 and Table II m1=0.162706 mirror each other (x1<->x3): True
+Schubart (1956) vs Table IV equal-mass row (m1 = m3 = 0.333333, m2 = 0.333334):
+   length scale 2.152683, time scale 5.470548
+   x3:  Schubart r13max/2 * scale = 1.323351 ; Henon 1.323348
+   u1:  Schubart -v1 * lam/tau   = -0.207938 ; Henon -0.207939
+   T:   Schubart 4 t*   * tau     = 4.698107 ; Henon 4.698084
+   Schubart's stated values carry 5 decimals: t* +-5e-6 -> T +-1.1e-04; r13 +-5e-6 -> x3 +-5.4e-06

@@ -1,0 +1,19 @@
+GT-3     x printed 2.654000732109593e-02 workbook 0.0265400073210959 (15 sig) rounded-equal True |diff| 3.0e-17
+GT-3     y printed 3.733209918896520e-01 workbook 0.373320991889652 (15 sig) rounded-equal True |diff| 0.0e+00
+GT-3     T printed 1.343837362328867e+00 workbook 1.34383736232887 (15 sig) rounded-equal True |diff| 3.0e-15
+GT-9     x printed 2.224243572388660e-02 workbook 0.0222424357238866 (15 sig) rounded-equal True |diff| 0.0e+00
+GT-9     y printed 3.665242136553812e-01 workbook 0.366524213655381 (15 sig) rounded-equal True |diff| 2.0e-16
+GT-9     T printed 1.601140412153160e+00 workbook 1.60114041215316 (15 sig) rounded-equal True |diff| 0.0e+00
+GT-100   x printed 1.483077518663139e-01 workbook 0.148307751866314 (15 sig) rounded-equal True |diff| 1.0e-16
+GT-100   y printed 2.148955958959937e-01 workbook 0.214895595895994 (15 sig) rounded-equal True |diff| 3.0e-16
+GT-100   T printed 2.379219609664729e+00 workbook 2.37921960966473 (15 sig) rounded-equal True |diff| 1.0e-15
+GT-500   x printed 1.200022423830022e-01 workbook 0.120002242383002 (15 sig) rounded-equal True |diff| 2.0e-16
+GT-500   y printed 5.040845573669400e-01 workbook 0.50408455736694 (14 sig) rounded-equal True |diff| 0.0e+00
+GT-500   T printed 5.184836519658279e+00 workbook 5.18483651965828 (15 sig) rounded-equal True |diff| 1.0e-15
+GT-1000  x printed 6.321102983773780e-02 workbook 0.0632110298377378 (15 sig) rounded-equal True |diff| 0.0e+00
+GT-1000  y printed 2.912898007365110e-01 workbook 0.291289800736511 (15 sig) rounded-equal True |diff| 0.0e+00
+GT-1000  T printed 4.421309597099950e+00 workbook 4.42130959709995 (15 sig) rounded-equal True |diff| 0.0e+00
+GT-1653  x printed 1.610551444608971e-01 workbook 0.161055144460897 (15 sig) rounded-equal True |diff| 1.0e-16
+GT-1653  y printed 1.739984382109704e-01 workbook 0.17399843821097 (14 sig) rounded-equal True |diff| 4.0e-16
+GT-1653  T printed 1.575432687947899e+01 workbook 15.754326879479 (14 sig) rounded-equal True |diff| 1.0e-14
+rows 6, cells 18, mismatches 0
