@@ -145,7 +145,8 @@ or reviews" and `plan/WORKFLOW.md` § "The review loop". In addition:
   - for a task started early off a dependency's approved head, that head's sha, and that the PR waits for the
     dependency to merge (R-388; § "Roles and the loop");
   - the environment: `CARGO_INCREMENTAL=0`, `RUSTUP_AUTO_INSTALL=0` (R-414; § "Toolchain"), and on the Mac the PATH
-    fix (§ "Paths and warm builds"); no job counts, which the job queue sets (R-658);
+    fix (§ "Paths and warm builds"), with `/opt/homebrew/opt/rustup/bin` first on the PATH exported before `job
+    submit`, since a job runs with its submitter's PATH; no job counts, which the job queue sets (R-658);
   - that every heavy command goes through the job queue, at the agent's priority, with these two lines (R-658;
     § "Resources", "The job queue"):
     `"/Volumes/X10 Pro/Principia/orch/jobq/bin/xtask" job submit <worktree> --priority <p> --label <TASK-id> --env
@@ -513,6 +514,7 @@ the local job queue, `cargo xtask job` (`xtask/src/jobq.rs`), and waits for it.
   that calling the queue compiles nothing:
 
   ```
+  export PATH="/opt/homebrew/opt/rustup/bin:$PATH"
   "/Volumes/X10 Pro/Principia/orch/jobq/bin/xtask" job submit <worktree> --priority fix --label TASK-M2-36 \
     --env CARGO_TARGET_DIR=<target> -- cargo test -p kernel --test roundtrip
   "/Volumes/X10 Pro/Principia/orch/jobq/bin/xtask" job wait <id>
@@ -534,7 +536,11 @@ the local job queue, `cargo xtask job` (`xtask/src/jobq.rs`), and waits for it.
   required, and a queued job whose target directory a running job uses waits, so no two jobs share one; directories are
   compared made canonical, without a trailing `/` and in lower case, so two spellings of one are one. A job keeps the
   submitter's `PATH`, `HOME`, locale and its `CARGO_*`, `RUSTUP_*` and `RUST*` settings, but not what `cargo run` sets
-  for the submitter itself, the target directory or the job counts; its `--env` comes last. `submit` starts the runner
+  for the submitter itself, the target directory or the job counts; its `--env` comes last, so `--env PATH=…` replaces
+  the submitter's PATH. The job's command is looked up on that PATH, not the runner's, so an agent exports PATH with
+  `/opt/homebrew/opt/rustup/bin` first before it submits: rustup's proxies there read `rust-toolchain.toml` and have
+  clippy and fmt, and `~/.cargo/bin`'s cargo has neither (jobs failed with "cargo: command not found" or without
+  clippy and fmt on 30 Oct 2026, applied per R-369). `submit` starts the runner
   when none is alive, and so does `wait`, at most one every 5 s, so no fault of the lock can multiply runners, and reaps
   it. With nothing queued or running for 60 s the runner exits, and nothing else stays behind. No launchd.
 - **Not mutation-tested locally.** xtask's mutants are not run on the Mac: a mutant that breaks the live-runner check
@@ -615,7 +621,9 @@ anything outside the repository and its build and scratch directories without as
   `$HOME/.rustup/toolchains/stable-aarch64-apple-darwin/bin` on PATH. `cargo` on PATH is `~/.cargo/bin/cargo`, a
   standalone binary with no fmt or clippy that shadows rustup's toolchain; the second directory supplies `cargo-fmt`
   and `clippy-driver`. Before that fix, agents wrongly reported rustfmt and clippy missing (26 Sep 2026). For the
-  pinned nightly (§ "Toolchain"), put that toolchain's `bin` directory first instead.
+  pinned nightly (§ "Toolchain"), put that toolchain's `bin` directory first instead. For the job queue, export PATH
+  with `/opt/homebrew/opt/rustup/bin` first before `job submit`: a job runs with its submitter's PATH, and rustup's
+  proxies there pick the pinned nightly from `rust-toolchain.toml` (§ "Resources", "The job queue"; R-658).
 - `syspolicyd` can stall the launch of freshly built binaries: a stuck test run sits at 0% CPU. After a long agent run,
   check `ps` for leftovers.
 - The terminal and Claude Code have Full Disk Access (29 Sep 2026). If "Operation not permitted" failures come back,

@@ -36,9 +36,12 @@ build, check, test, clippy, doc and run, `cargo xtask` runners, cargo mutants, n
 to the queue at priority `merge` (a reviewer's check of a head that merges once it is approved), and wait for it; light
 commands (git, gh, grep, reading files and logs, `python3` checks, `cargo fmt`) run directly. `job submit` prints the
 job id; `job wait` blocks until the job ends, prints its log path and exits with the job's status. The job runs on
-whatever happens to your call, so if `wait` would outlast it, run it in the background or run it again. For example:
+whatever happens to your call, so if `wait` would outlast it, run it in the background or run it again. The job runs
+with your `PATH` (unless `--env PATH=…` sets one), so export it with `/opt/homebrew/opt/rustup/bin` first before you
+submit: rustup's proxies there have clippy and fmt, and `~/.cargo/bin`'s cargo has neither. For example:
 
 ```
+export PATH="/opt/homebrew/opt/rustup/bin:$PATH"
 "/Volumes/X10 Pro/Principia/orch/jobq/bin/xtask" job submit <worktree> --priority merge --label <TASK-id> \
   --env CARGO_TARGET_DIR=<target> -- cargo test -p kernel --test roundtrip
 "/Volumes/X10 Pro/Principia/orch/jobq/bin/xtask" job wait <id>

@@ -50,8 +50,10 @@ Read this first; each rule points at its source.
   benches and GPU tests. Light runs directly: docs, git, gh, grep, `python3` checks, `cargo fmt`, reading logs. Submit
   with `"/Volumes/X10 Pro/Principia/orch/jobq/bin/xtask" job submit <worktree> --priority <merge|fix|build|peek>
   --label <TASK-id> --env CARGO_TARGET_DIR=<target> -- <command>`, which prints a job id; `… job wait <id>` blocks,
-  prints the log path and exits with the job's status. Each job runs with cargo's jobs and test threads at the core
-  count, in place of R-228's four per agent. Reviewers run the tests their diff touches plus dependents; CI runs the
+  prints the log path and exits with the job's status. The job runs with the submitter's `PATH` unless `--env PATH=…`
+  sets one, so first `export PATH="/opt/homebrew/opt/rustup/bin:$PATH"`: rustup's proxies there read
+  `rust-toolchain.toml` and have clippy and fmt, which `~/.cargo/bin`'s cargo lacks. Each job runs with cargo's jobs
+  and test threads at the core count, in place of R-228's four per agent. Reviewers run the tests their diff touches plus dependents; CI runs the
   full suite; a full local run is only for a cross-cutting change. If the only new commit since an approval is qa's
   test-only commit, the code reviewer re-checks that commit alone (R-229).
 - Before starting a build or reviewer, check free disk and memory pressure (`sysctl kern.memorystatus_vm_pressure_level`
