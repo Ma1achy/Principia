@@ -160,15 +160,8 @@ fn lerp(a: [f64; 3], b: [f64; 3], u: f64) -> [f64; 3] {
     [0, 1, 2].map(|i| a[i] + u * (b[i] - a[i]))
 }
 
-/// OKLab to linear sRGB, as the shared prelude's `oklab_to_linear` converts: `lms' = M₂⁻¹ · Lab`, cubed, then `M₁⁻¹`.
-pub fn oklab_to_linear([l, a, b]: [f64; 3]) -> [f64; 3] {
-    let l_ = l + 0.396_337_777_4 * a + 0.215_803_757_3 * b;
-    let m_ = l - 0.105_561_345_8 * a - 0.063_854_172_8 * b;
-    let s_ = l - 0.089_484_177_5 * a - 1.291_485_548_0 * b;
-    let (l, m, s) = (l_ * l_ * l_, m_ * m_ * m_, s_ * s_ * s_);
-    [
-        4.076_741_662_1 * l - 3.307_711_591_3 * m + 0.230_969_929_2 * s,
-        -1.268_438_004_6 * l + 2.609_757_401_1 * m - 0.341_319_396_5 * s,
-        -0.004_196_086_3 * l - 0.703_418_614_7 * m + 1.707_614_701_0 * s,
-    ]
+/// OKLab to linear sRGB (dd_colouring §3.1; R-51): delegates to the render crate's one source of the conversion,
+/// `render::colour::space::oklab_to_linear` over its `OKLAB` coefficients, so the two cannot drift apart.
+pub fn oklab_to_linear(lab: [f64; 3]) -> [f64; 3] {
+    render::colour::space::oklab_to_linear(lab)
 }
