@@ -3561,6 +3561,25 @@
   rulings:
   - R-72
   milestone: M2
+- id: REQ-CHART-090
+  area: CHART
+  kind: definition
+  statement: "How a tilted view's pixels of the shape sphere's exponential map exactly on r = π count must be defined: they share the shape −n0 but keep their own hidden offsets d. They count once per distinct d, and once together only where N_a = 0 and N_b = 0, decided exactly on the stored angles; elsewhere d is compared exactly as computed, with no tolerance. It is written into chart_reference §3.3 by the task that needs it and checked by the physics reviewer (R-72, R-408)."
+  source:
+  - file: docs/design/principia_chart_reference.md
+    section: 3.3 The chart map
+  - file: docs/contracts/principia_chart_decoder_contract.md
+    section: Part 5 — Well-posedness and the validation contract
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "chart_reference §3.3 states the rule for a tilted view's pixels on r = π, and `cargo test -p kernel tilt_every_chart_antipode` follows it, with the shared boolean as its control; physics reviewer approves before merge"
+  rulings:
+  - R-72
+  - R-408
+  milestone: M2
+  note: "Physics review 5719740344 of PR #349, P1, on REQ-CHART-078's premise that the circle is one system, which holds untilted. Written by TASK-M2-36."
 - id: REQ-INT-001
   area: INT
   statement: "The unwrapped phase `θ̃` must be a running SimState accumulator that adds the principal-value delta of `atan2(n_v, n_u)` each step, with `orbit_count = ⌊|θ̃|/2π⌋` and `retrograde = sign(θ̃) < 0` derived at read."
