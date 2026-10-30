@@ -624,6 +624,41 @@ Consequence, worth stating so an agent doesn't add a per-IC time rescale: becaus
 - **Exact step-index timing invariant**: `t_end_step` stores `step_count` (the completed-macro-step count — running: current, terminal: latched, initial: 0; payload §2), as an exact u16. **Requires `horizon_steps = ⌈T/dt_macro⌉ ≤ 65535`, ENFORCED at dispatch** (single format, no Q0.16 fallback); over-limit `(T, dt_macro)` is rejected — use coarser `dt_macro` or march epochs. Also assert the joint `horizon_steps × N_max ≤ 2³²−1` for the exact `total_substeps` counter.
 - **t=0 terminals are real outcomes, not decode failures**: at dispatch, before the first step, evaluate the terminal detectors on the decoded IC. A valid IC already inside `r_coll` → `state=collision, t_end_step=0`; escape has no t = 0 case, because its settling test needs a window of history (R-29), so an IC that is already escaping is classified when its window completes (RQ-19). `decode_failed` is reserved for the decoder failing to produce a valid physical IC (non-finite / degenerate / invalid mass), never a dynamical t=0 terminal.
 - **Branch-cut crossing detection (free-group word, payload §3)**: run detection at **every accepted adaptive substep** (not per-macro-step) — the word mutation is event-only/cold, but detection must be substep-granular to catch multiple/recrossing events. Order simultaneous crossings **chronologically by crossing fraction** `τ = d₀/(d₀−d₁)` (sort ascending); fixed cut-ID priority is a **tie-break only** when `τ` values are equal within tolerance. **Endpoint-on-cut: half-open sign convention** — count iff `negative → non-negative`; fixed and identical CPU/GPU. These branch decisions are Tier-L/Tier-B (parity contract): word content is only as deterministic as they are.
+  **The τ tie rule (R-72, REQ-INT-079; a definition, written by TASK-M3-16, physics-reviewed before merge).** An
+  accepted substep is a segment from its start state to its end state. Each cut `c`, cut `a` = 0 and cut `b` = 1 (the
+  cut IDs; symbolic-dynamics contract §1), has a signed distance `d₀` at the segment's start and `d₁` at its end,
+  formed by §1's cut geometry under the rule for every branch input that must agree across backends (Part 4; R-547).
+  Detection runs on every accepted substep's segment, in order, each endpoint shared by the two substeps that meet
+  there; at most one crossing per cut per segment, so at most two per substep (`max_crossings_per_substep`).
+  - **The sign convention.** A `d` is on the *negative* side iff it is below zero and its exponent field is not all
+    zeros: `±0` and a subnormal read as zero, on the cut, the non-negative side, as a backend that flushes subnormals
+    reads them. The test is on the bits and a comparison with zero, so no precision-dependent constant enters it (Part
+    2c, rule 1). A cut is crossed iff its two endpoints' sides differ: `negative → non-negative` (`d₀ < 0`, then
+    `d₁ ≥ 0`) is the **positive sense** and appends the cut's generator (`a`, `b`); `non-negative → negative` is the
+    **negative sense** and appends its inverse (`A`, `B`). Which way round each cut's `d` is signed, so that its
+    positive sense is the literature's generator, is §1's. Since a side is a function of the endpoint's value alone,
+    an endpoint exactly on a cut is counted once, by whichever of its two substeps changes side: `−, 0, +` is one
+    crossing, in the first substep; `+, 0, −` one, in the second; `−, 0, −` is a crossing and its recrossing, which
+    free reduction cancels (payload §3).
+  - **The sort.** A crossed cut's crossing fraction is `τ = |d₀| / (|d₀| + |d₁|)`, which is `d₀/(d₀ − d₁)` on a
+    crossing, lies in `[0, 1]`, and has a nonzero denominator, since one endpoint is negative. `τ` is never computed,
+    so no division feeds the branch (Part 4). With both cuts crossed, `τ_b < τ_a` is decided as
+    `|d₀,b|·|d₁,a| < |d₀,a|·|d₁,b|` (the term `|d₀,a|·|d₀,b|` common to both sides cancels), and the two crossings
+    append in ascending `τ`.
+  - **Comparison-only, identical on CPU and GPU.** Each product is formed with no addition, so no backend can contract
+    it, and with no intermediate that can be subnormal: a factor that reads as zero (above) makes the product zero;
+    otherwise each factor is split at its bits into its exponent and its significand in `[1, 2)`, the two significands
+    are multiplied once (a correctly rounded multiply, in `[1, 4)`), and the product is the pair (the exponents' sum
+    plus that multiply's own exponent; the multiply's significand), compared exponent first. Bit and integer operations,
+    comparisons and one correctly rounded multiply of normal values: given identical `d`, the decision is identical on
+    every IEEE backend and at either `Real` (parity contract, Tier B). *Given identical `d`*: along a trajectory the
+    `d` differ by precision, and so may the word (pitfalls §10).
+  - **The tie tolerance.** Two `τ` are equal iff their two products compare equal: the tolerance is the working
+    precision's rounding of those products, about one ulp relative, and no tuned value. A wider tolerance would put
+    near-simultaneous crossings in cut-ID order, the order the `τ`-sort exists to replace (payload §3); the decision is
+    deterministic because the comparison is exact, not because of a tolerance.
+  - **The tie-break.** On a tie the lower cut ID comes first: `a`'s crossing, then `b`'s.
+  - The word identical CPU/GPU, and the GPU arm of the half-open test, are REQ-VAL-072's at M4 (R-113, R-150).
 - **FTLE partial-interval finalisation (payload §5)**: the Benettin sum `S` accumulates only at renormalisation boundaries. At read/terminalisation, **finalise the partial interval** — `S_final = S + log(δ_current/δ₀)`, then `ftle = S_final / (step_count · dt_macro)` (divide by full elapsed). Do NOT divide the boundary-only `S` by full elapsed time (systematically too small). `completed_renorms = step_count / renorm_interval_steps` (derived; uniform schedule).
 - **`t_end` (SimState termination time) is in the same units**, so it is directly comparable across pixels, quads, and charts. This is what makes the Lehto decay-time map a straight render of `t_end` — the unit system is what lets "decay time" be a chart at all.
 

@@ -635,3 +635,66 @@ choice changes the result and the corpus does not settle it (R-369).*
   onset crossings, which decoder test 12's inputs gain; REQ-VAL-017's emulation list gains "contracted (fused)";
   REQ-DEC-011's and REQ-VAL-017's verify text and TASK-M2-48's two acceptance lines drop "unfused" and "on lavapipe".
   The tag rule, `ε_M01` (REQ-DEC-039) and R-547's form are unchanged. Nothing waits.
+
+## RQ-630: Which cuts carry `a` and `b`: two arcs ending at a Lagrange pole cannot reproduce the published classes *(physics; R-125; `docs/contracts/principia_symbolic_dynamics_contract.md` § 1; REQ-PAY-070; context: TASK-M3-16)*
+
+*Queued 30 Oct 2026 by TASK-M3-16, transcribing the convention under R-125. For the owner: yes, it is physics where
+the choice changes the result (the word every sample stores) and the corpus does not settle it (R-369).*
+
+- **File, section:**
+  - `docs/contracts/principia_symbolic_dynamics_contract.md` § "1. Generator ↔ branch-cut convention": "Fix,
+    normatively: which two branch cuts correspond to generators `a` and `b` (arc from which collision point to the
+    Lagrange reference pole); the crossing-direction sign convention (which crossing direction is the generator vs its
+    inverse) — must match the half-open sign convention in payload §3 / the integrator contract."
+  - `decisions.md` § "R-125 — …": "Its convention (the a/b branch-cut assignment and the crossing sign) is transcribed
+    from the literature (Montgomery; Šuvakov–Dmitrašinović) and verified by REQ-VAL-043 against the published braid
+    classes."
+  - The literature, `docs/incoming/2026-10-25_replication/papers/`: Šuvakov & Dmitrašinović, PRL 110, 114301 (2013),
+    p. 1: "A stereographic projection of this sphere onto a plane, using one of the punctures as the "north pole"
+    effectively removes that puncture to infinity … That leads to the aforementioned free group on two letters (a, b),
+    where (for definiteness) a denotes a clockwise full turn around the right-hand-side puncture, and b denotes the
+    counterclockwise full turn around the other puncture". Dmitrašinović, Hudomal, Shibayama & Sugita, J. Phys. A 51,
+    315101 (2018), Appendix B ("Montgomery's topological identification method"), Fig. 7: "Three two-body collision
+    points (solid red) lie on a meridian (dashed circle), with one of them being at the north pole"; and: "a simple
+    loop around the third ("infinite") puncture on the shape sphere corresponds to aB". Its Appendix C: "make the
+    substitution a = 12, A = 21, b = 32, B = 23", the digits being "crossings of the equator on the shape sphere, in
+    one of three corresponding segments on the said equator, where the index of the body passing between the other two
+    is used as a symbol". (Montgomery's own paper, Nonlinearity 11, 363 (1998), is not in the corpus; Appendix B is
+    the authors' account of his method.)
+- **The gap:** the literature's "north pole" is a collision point, not a Lagrange pole. Two cuts from two collision
+  points to a Lagrange pole `L±` (an equilateral shape, not a puncture) leave the cut sphere a punctured disc, not a
+  disc: a loop around the third collision point crosses neither cut and reads as the empty word, though the
+  literature's class is `aB` (the BHH family's); and a small loop around the pole crosses both and reads as a
+  nonempty word, though it is contractible. So no assignment of `a` and `b` to the arcs §1 names reproduces the
+  published classes (REQ-VAL-043). The literature fixes the generators as loops, with Appendix C's reading in
+  syzygies; it names no cuts. Two smaller points ride on the choice: the literature's bodies 1, 2, 3 against ours 0, 1, 2
+  (R-630 labels the Šuvakov plane's middle body our body 1), and which hemisphere is the literature's upper half-plane,
+  the start of `a = 12`, which its figures alone fix and on which the PRL and the gallery differ for 6 of 15 orbits by
+  the `(a, b) ↔ (A, B)` exchange (`docs/incoming/2026-10-26_belgrade_gallery/README.md`, cross-check item 3).
+- **The question:** which two cuts carry `a` and `b`, the body labelling they are read in, and which side of each is
+  negative, so that the positive sense (`d < 0`, then `d ≥ 0`; integrator contract Part 5) is the generator.
+- **Options seen:**
+  - (a) **The literature's own cuts, on the equator** (Appendix C). With the literature's body 1 and body 2 meeting at
+    the puncture `a` circles and bodies 2 and 3 at `b`'s, the third collision, of bodies 1 and 3, at infinity: cut `a`
+    is the equator segment where body 1 is between the others, from the 1–2 collision to the 1–3; cut `b` the segment
+    where body 3 is between, from the 2–3 collision to the 1–3. A crossing of segment 1 out of the hemisphere where `a`
+    starts is `a`, into it `A`; segment 3 likewise for `b`, `B`; segment 2 is not a cut. The word read so is Appendix
+    C's syzygy reading letter for letter. `d` is the triangle's orientation (`n_w`, `L⁺` positive), and which segment
+    is crossed is a second, comparison-only test of which body is between at the crossing. The two cuts lie on one
+    great circle, so one substep crosses at most one of them, and the `τ`-sort never meets two.
+  - (b) **Arcs through the Lagrange poles, to the third collision.** Cut `a` from the 1–2 collision through `L⁺` to the
+    1–3 collision, cut `b` from the 2–3 collision through `L⁻` to the 1–3: each isotopic to (a)'s segment with no
+    puncture between, so a closed orbit reads the same class as under (a). It keeps §1's Lagrange poles; each cut is
+    two quarter-meridians, each with a hemisphere test; the cuts meet only at the 1–3 collision, near which one substep
+    can cross both, so the `τ`-sort is live there.
+  - (c) **Three cuts, one from each collision to `L⁺`** (§1's arcs, made a disc by the third), a crossing of the third
+    appending the punctured-sphere relation's two letters: needs §2's relation, which R-125 put in v2.
+  - (d) Another, stated by the owner.
+  For each: the body map (literal, `1, 2, 3 → 0, 1, 2`, or R-630's, the middle body ours 1), and the side `a`
+  starts on (proposed: `L⁺`'s hemisphere, bodies 0 → 1 → 2 anticlockwise, dd_integrator §3.7), which REQ-VAL-043's
+  comparison up to the `(a, b) ↔ (A, B)` exchange cannot tell apart.
+- **Applied meanwhile:** none. TASK-M3-16's detector (`crates/kernel/src/word/crossing.rs`) takes each cut's signed
+  distances as its input and applies the integrator contract's τ tie rule (Part 5), which does not depend on the cuts'
+  shape; no cut geometry is built and nothing reads a word from a trajectory.
+- **Waits:** the signed distances from the state and §1's convention (REQ-PAY-070, TASK-M3-16), and REQ-VAL-043
+  (TASK-M3-30).
