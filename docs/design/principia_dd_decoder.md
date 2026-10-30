@@ -63,7 +63,7 @@ decode makes that test 12 compares bit for bit across backends, with the value i
 
 | Decision | Branch input, and its form | Where |
 |---|---|---|
-| `M01_TINY` | `M₀₁ = fma(m₁, 1, m₀)` against the constant `ε_M01`, from the emitted masses (§3.1, "The branch input"; its premise fails, R-547: the form is rewritten to R-547's rule and re-proved by TASK-M2-48, REQ-DEC-011) | `kernel::decode::mass` |
+| `M01_TINY` | `M₀₁`, the one rounded sum `m₀ + m₁` of the emitted masses, formed in mantissa-exponent arithmetic: each mass scaled into `[1, 2)` by powers of two, the two aligned and added once, every product exact and no intermediate subnormal; against the constant `ε_M01`, compared by exponent, then mantissa (§3.1, "The branch input, rewritten"; R-547, built by TASK-M2-48, REQ-DEC-011). *Was:* "`M₀₁ = fma(m₁, 1, m₀)` against the constant `ε_M01`, from the emitted masses (§3.1, "The branch input"; its premise fails, R-547: the form is rewritten to R-547's rule and re-proved by TASK-M2-48, REQ-DEC-011)" | `kernel::decode::mass` (`kernel::canon`'s mantissa-exponent sum) |
 | `INVARIANT_INFEASIBLE` | the sign of `2·I·K* − L_z²`, exactly, from the operands' bits: binades and limb products, every product exact, no `fma`, no `√`, no division (applied meanwhile under RQ-298; the corrected rule's form, R-547, as built by TASK-M2-09) | `kernel::decode::invariant::infeasible` |
 | `L_max`'s four steps down (the warp's edge columns) | the same exact sign at each step | `kernel::chart::invariant::l_max` |
 | the seed, on a decoded configuration | `z_α ≤ 0`, read on the control's bits | `kernel::decode::invariant::decoded_seed` |
@@ -128,6 +128,27 @@ add, so the form above is not one every backend rounds alike. Under R-547 a bran
 backends is built only from operations every IEEE backend rounds alike, with no intermediate that can be subnormal
 (gpu_determinism_note rules 2 and 6). `M₀₁`'s form is rewritten to that rule and re-proved by TASK-M2-48
 (REQ-DEC-011, REQ-VAL-017); the two paragraphs above stand as the record of the form built until then.
+
+**The branch input, rewritten (R-547; TASK-M2-48, REQ-DEC-011).** `M₀₁` is still the one rounded sum of the emitted
+masses, `round(m₀ + m₁)`, and the tag still fires iff it is strictly below `ε_M01`; only its form changes. It is formed
+in the mantissa-exponent arithmetic of `C`'s branch inputs (`kernel::canon`, R-547's `IeeeBits::product` pattern):
+each mass is scaled into `[1, 2)` by two powers of two read from its bits, exactly; the smaller is aligned to the
+larger's exponent by a power of two, exactly (the gap capped at 60, below which the smaller is under half an ulp of
+the larger and the sum rounds to the larger either way); the two are added once; the sum, in `[1, 4)`, is renormalised
+by a power of two, exactly. Scaling by a power of two commutes with rounding where nothing underflows, so that one
+add is `round(m₀ + m₁)`, bit for bit. The tag compares it with `ε_M01`, taken into the same form, by exponent and then
+mantissa, comparisons only. Every product the add can meet is by a power of two and exact, so a backend that fuses or
+contracts one into the add, or folds it, rounds the same exact sum once; no intermediate is subnormal for normal masses,
+so a backend that flushes subnormals rounds as one that keeps them. A subnormal mass is read differently by a flushing
+backend before the block runs, so there the two backends' masses differ, which is precision, not a fork: the no-fork
+test still compares tags on identical emitted masses, the CPU's form applied to each backend's own masses
+(REQ-VAL-079, "Its premise" above).
+
+The control that the superseded form fails is the hazard "Its premise" names, not lavapipe's unfused `fma`: unfused,
+`fma(m₁, 1, m₀)` is `round(round(m₁·1) + m₀) = round(m₀ + m₁)`, the one rounded sum on every input, and a flush moves it
+only where `M₀₁` is far below `ε_M01`, so it never flips the tag. Folded and contracted, as a backend may evaluate
+it, it is `fma(t₇, t₁₃, m₀)` fused, which flips the tag at the onset crossings (77 of 40 000 at f64, 45 at f32); the
+rewritten form does not (RQ-621, decided by the orchestrator per R-369 as a test decision, option (a)).
 
 ### 3.2 Configuration — hyperspherical mass-weighted Jacobi
 
