@@ -33,12 +33,14 @@
 # request, R-272); a pull request's pushes run it through `pull_request`, once each, never twice. Every run on `main`
 # runs every job. On a pull request, the `changes` job classifies the change with `scripts/ci_changes.sh` (its merge
 # commit against the base it merges onto), and:
-# - a docs-only change (only paths on the script's allowlist: `docs/`, the plan's prose and data, the root's markdown)
-#   skips `ci-archive` and the `ci` shards, `ci-checks`, `ci-release-archive` and its shards, and `xtask-ci`'s shards,
-#   and `ci-workspace` runs the docs checks in place of its tests: the plan checks, the vocabulary lint and every test
-#   that reads those paths;
-# - a change to no GPU-path file (only docs-only paths, `crates/gui/` and `crates/prin/`) skips the GPU suites'
-#   jobs, `gpu-kernel`, `gpu-metal` and `gpu-lavapipe`.
+# - a docs-only change (only paths on the script's allowlist, `docs/`, the plan's prose and data and the root's
+#   markdown, and none on its list of files code reads, which count as code: every doc, spec or data file a test, build
+#   script, codegen or xtask check reads, the owner's words of 30 Oct 2026 on #351) skips `ci-archive` and the `ci`
+#   shards, `ci-checks`, `ci-release-archive` and its shards, and `xtask-ci`'s shards, and `ci-workspace` runs the docs
+#   checks in place of its tests: the plan checks, the vocabulary lint and every test whose source names the
+#   allowlist's paths, a backstop;
+# - a change to no GPU-path file (only docs-only paths, `crates/gui/` and `crates/prin/`; a file code reads is a GPU
+#   path) skips the GPU suites' jobs, `gpu-kernel`, `gpu-metal` and `gpu-lavapipe`.
 # The required checks still report, under their own names, and conclude success: each is a gate that runs whatever
 # the jobs it gathers ended in (`ci`, `xtask-ci`, and the GPU suites' gates, which carry the names `gpu-kernel`,
 # `gpu-metal` and `gpu-lavapipe`, the suites' jobs being named `<id> suites`), and passes a gathered job that was
@@ -87,7 +89,8 @@ env:
 
 jobs:
   # What a pull request's change touches (R-656): `docs_only`, true when every changed path is on the docs-only
-  # allowlist, and `gpu`, false when no changed path is a GPU path (`scripts/ci_changes.sh`, which holds both lists).
+  # allowlist and none on the list of files code reads, and `gpu`, false when no changed path is a GPU path
+  # (`scripts/ci_changes.sh`, which holds the lists).
   # Every other run, on `main` among them, is neither: everything runs. The jobs below skip on its verdict, and the
   # gates read it.
   changes:
@@ -262,9 +265,9 @@ jobs:
   # profile), beside the `ci` shards and on a build of their own (R-372, REQ-SYS-078): run from the shards' archive,
   # which carries no cargo build state, each would rebuild the workspace in its shard while holding every test thread.
   # On a docs-only pull request (R-656) it runs the docs checks in their place, the one test job such a pull request
-  # runs: the plan checks, the vocabulary lint, and every test that reads a docs-only path, which
-  # `scripts/ci_changes.sh doc-tests` lists (a test or source naming one), under the `ci` profile, as the shards run
-  # them; the tests that need the built kernel or run cargo on the workspace's own target, which that profile leaves to
+  # runs: the plan checks, the vocabulary lint, and every test whose source names the allowlist's paths, which
+  # `scripts/ci_changes.sh doc-tests` lists (a test or source naming one; a backstop, since a file code reads counts
+  # as code and never makes a pull request docs-only), under the `ci` profile, as the shards run them; the tests that need the built kernel or run cargo on the workspace's own target, which that profile leaves to
   # `gpu-kernel` and this job's own run, run on `main`'s push. It passes the classification on to the gate `ci`.
   ci-workspace:
     runs-on: ubuntu-24.04

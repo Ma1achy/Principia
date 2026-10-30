@@ -5,6 +5,14 @@
 //! - `ci_changes_classifies_conservatively`: `scripts/ci_changes.sh classify` calls a change docs-only only when every
 //!   path is on its allowlist, and skips the GPU suites only when no path is a GPU path; an empty change, a workflow,
 //!   `plan/`'s Python and a path that merely starts like an allowed one run everything.
+//! - `ci_changes_files_code_reads_run_everything`: the owner's words of 30 Oct 2026 on #351, "any doc/spec/data file
+//!   read by a test, build script, codegen or xtask check must count as code, not docs. List those paths explicitly in
+//!   the classifier and add a test that touching one triggers the heavy jobs." Each pattern of the script's
+//!   `reads_code` list is touched through real files it names, each classifying as code: not docs-only, GPU suites run.
+//! - `ci_changes_no_file_code_reads_is_docs_only`: a static scan, best effort, of the string literals in every crate's
+//!   `src/`, `tests/` and `build.rs`, in `xtask/` and in `plan/`'s Python, for a repository file they name; none may
+//!   classify as docs-only, so a new reader cannot silently leave its file docs-only. Its limit: a reader walking a
+//!   directory, or building a path in pieces, is not seen; the script lists those by hand.
 //! - `ci_changes_gates_pass_only_on_the_verdict`: the gates `ci`, `xtask-ci`, `gpu-kernel`, `gpu-metal` and
 //!   `gpu-lavapipe` run whatever their jobs ended in, read every one's result and a flag set from the classification,
 //!   and (their one-line scripts, run under bash) pass a job skipped on that verdict, and fail when the
@@ -104,17 +112,35 @@ fn classify(script: &str, paths: &[&str]) -> (bool, bool) {
 
 /// Each change, and the verdict R-656 gives it: (paths, docs-only, GPU suites run).
 const CASES: &[(&[&str], bool, bool)] = &[
-    // The allowlist, each entry on its own and together.
+    // The allowlist's files that no code reads, on their own and together (the paths are made up: no source names
+    // them, so the reader scan below never meets them).
+    (&["docs/incoming/a/b.pdf"], true, false),
+    (&["docs/reference/prin-rs/src/a.rs"], true, false),
+    (&["docs/experiments/results/a.json"], true, false),
     (
-        &["docs/contracts/principia_parity_contract.md"],
+        &["docs/archive/a.png", "docs/incoming/a/b.csv"],
         true,
         false,
     ),
-    (&["docs/incoming/a/b.pdf"], true, false),
-    (&["plan/requirements.yaml"], true, false),
-    (&["plan/OPERATIONS.md"], true, false),
-    (&["plan/tasks/M2/TASK-M2-01.md"], true, false),
-    (&["plan/reviewers/qa.md"], true, false),
+    // The allowlist's files that code reads are code: the build, test and GPU jobs run.
+    (
+        &["docs/contracts/principia_parity_contract.md"],
+        false,
+        true,
+    ),
+    (&["docs/archive/a.md"], false, true),
+    (&["docs/reference/a.md"], false, true),
+    (&["docs/archive/a.html"], false, true),
+    (&["docs/gui/design/a.png"], false, true),
+    (&["docs/gui/reference/a/b.json"], false, true),
+    (
+        &["docs/incoming/a/b.pdf", "plan/requirements.yaml"],
+        false,
+        true,
+    ),
+    (&["plan/OPERATIONS.md"], false, true),
+    (&["plan/tasks/M2/TASK-M2-01.md"], false, true),
+    (&["plan/reviewers/qa.md"], false, true),
     (
         &[
             "decisions.md",
@@ -125,8 +151,8 @@ const CASES: &[(&[&str], bool, bool)] = &[
             "AGENTS.md",
             "GEMINI.md",
         ],
-        true,
         false,
+        true,
     ),
     // The plan's Python is code; so is a workflow, and the brief's copy under `.github/`.
     (&["plan/check_plan.py"], false, true),
@@ -142,7 +168,12 @@ const CASES: &[(&[&str], bool, bool)] = &[
     (&["plan"], false, true),
     // The crates no GPU job builds skip the GPU suites, and nothing else.
     (&["crates/gui/src/app.rs"], false, false),
-    (&["crates/prin/src/main.rs", "docs/a.md"], false, false),
+    (
+        &["crates/prin/src/main.rs", "docs/incoming/a.pdf"],
+        false,
+        false,
+    ),
+    (&["crates/gui/src/app.rs", "docs/a.md"], false, true),
     (&["crates/guix/src/a.rs"], false, true),
     (
         &[
@@ -187,6 +218,294 @@ negative_control!(
         "    docs/*) return 0 ;;",
         "    docs/* | .github/*) return 0 ;;"
     ))
+);
+
+// ---- The files code reads -----------------------------------------------------------------------------------------
+
+/// Each pattern of `scripts/ci_changes.sh`'s `reads_code` list, in its order, and real files it names: touching any one
+/// of them must run the build, test and GPU jobs (the owner, 30 Oct 2026, on #351).
+const CODE_READ: &[(&str, &[&str])] = &[
+    (
+        "docs/*.md",
+        &[
+            "docs/contracts/principia_parity_contract.md",
+            "docs/read_first/principia_01_pitfalls.md",
+            "docs/archive/review_queue/M0.md",
+        ],
+    ),
+    (
+        "docs/*.html",
+        &["docs/incoming/2026-10-21_trace_playback/demo/trace_markers.html"],
+    ),
+    ("docs/gui/design/*", &["docs/gui/design/01_main.png"]),
+    (
+        "docs/gui/reference/*",
+        &["docs/gui/reference/print_graph/catalogue/presets.json"],
+    ),
+    (
+        "plan/*",
+        &[
+            "plan/requirements.yaml",
+            "plan/tasks.yaml",
+            "plan/rule_groups.yaml",
+            "plan/section_notes.yaml",
+            "plan/CURRENT_RULES.md",
+            "plan/MILESTONES.md",
+            "plan/WORKFLOW.md",
+            "plan/OPERATIONS.md",
+            "plan/tasks/M0/TASK-M0-01.md",
+            "plan/reviewers/qa.md",
+        ],
+    ),
+    ("decisions.md", &["decisions.md"]),
+    ("REVIEW_QUEUE.md", &["REVIEW_QUEUE.md"]),
+    ("open-questions.md", &["open-questions.md"]),
+    ("README.md", &["README.md"]),
+    ("CLAUDE.md", &["CLAUDE.md"]),
+    ("AGENTS.md", &["AGENTS.md"]),
+    ("GEMINI.md", &["GEMINI.md"]),
+    (
+        ".github/copilot-instructions.md",
+        &[".github/copilot-instructions.md"],
+    ),
+    ("fixtures/*", &["fixtures/README.md"]),
+];
+
+/// The patterns of the `reads_code` function in `script`, in order: each `<pattern> | …) return 0 ;;` line's.
+fn reads_code_patterns(script: &str) -> Vec<String> {
+    let start = script
+        .find("\nreads_code() {\n")
+        .expect("ci_changes: the script has no `reads_code` function");
+    let body = &script[start..];
+    let end = body
+        .find("\n}\n")
+        .expect("ci_changes: `reads_code` does not end");
+    body[..end]
+        .lines()
+        .filter_map(|l| l.trim().strip_suffix(") return 0 ;;"))
+        .flat_map(|l| l.split(" | ").map(str::to_owned).collect::<Vec<_>>())
+        .collect()
+}
+
+fn check_code_read(script: &str) {
+    let listed = reads_code_patterns(script);
+    let tested: Vec<&str> = CODE_READ.iter().map(|(p, _)| *p).collect();
+    assert_eq!(
+        listed, tested,
+        "ci_changes: the script's list of files code reads is not the one this test touches"
+    );
+    for (pattern, paths) in CODE_READ {
+        for path in *paths {
+            assert!(
+                root().join(path).is_file(),
+                "ci_changes: {path}, {pattern}'s representative, is not a file in the repository"
+            );
+            assert_eq!(
+                classify(script, &[path]),
+                (false, true),
+                "ci_changes: touching {path} ({pattern}, a file code reads) does not run the build, test and GPU \
+                 jobs (docs_only, gpu)"
+            );
+        }
+    }
+}
+
+#[test]
+fn ci_changes_files_code_reads_run_everything() {
+    check_code_read(&read("scripts/ci_changes.sh"));
+}
+
+negative_control!(
+    ci_changes_files_code_reads_run_everything,
+    "the script with its list of files code reads emptied",
+    expected = "touching docs/contracts/principia_parity_contract.md (docs/*.md, a file code reads) does not run",
+    check_code_read(&edited(
+        "scripts/ci_changes.sh",
+        "reads_code() {\n  case \"$1\" in\n",
+        "reads_code() {\n  return 1\n  case \"$1\" in\n"
+    ))
+);
+
+/// The string literals in `line`: Rust's and Python's `"…"`, and Python's `'…'` when `single`. Best effort: an
+/// escaped quote is stepped over, a raw string's hashes are not read, and a literal spanning lines is missed.
+fn literals(line: &str, single: bool) -> Vec<String> {
+    let mut out = Vec::new();
+    let mut chars = line.chars();
+    while let Some(c) = chars.next() {
+        if c != '"' && !(single && c == '\'') {
+            continue;
+        }
+        let mut lit = String::new();
+        let mut escaped = false;
+        for d in chars.by_ref() {
+            if escaped {
+                lit.push(d);
+                escaped = false;
+            } else if d == '\\' {
+                escaped = true;
+            } else if d == c {
+                break;
+            } else {
+                lit.push(d);
+            }
+        }
+        out.push(lit);
+    }
+    out
+}
+
+/// `path` with its `.` and `..` components resolved lexically, or `None` if it climbs out of its first component.
+fn normalised(path: &Path) -> Option<PathBuf> {
+    let mut out = PathBuf::new();
+    for part in path.components() {
+        match part {
+            std::path::Component::CurDir => {}
+            std::path::Component::ParentDir => {
+                if !out.pop() {
+                    return None;
+                }
+            }
+            other => out.push(other),
+        }
+    }
+    Some(out)
+}
+
+/// The files under `dir`, relative to the root, whose names end with `ext`, `target/` skipped.
+fn sources(dir: &Path, ext: &str, out: &mut Vec<PathBuf>) {
+    let Ok(entries) = std::fs::read_dir(root().join(dir)) else {
+        return;
+    };
+    for entry in entries {
+        let name = entry.expect("entry").file_name();
+        let path = dir.join(&name);
+        if name == "target" {
+            continue;
+        }
+        if root().join(&path).is_dir() {
+            sources(&path, ext, out);
+        } else if name.to_string_lossy().ends_with(ext) {
+            out.push(path);
+        }
+    }
+}
+
+/// The repository files the tests, build scripts, xtask and the plan checks name, best effort: every string literal
+/// in a crate's `src/`, `tests/` or `build.rs`, in `xtask/`, and in `plan/`'s Python, outside a whole-line comment,
+/// that names an existing file, read from the repository's root, the source's package directory (as a path built on
+/// `CARGO_MANIFEST_DIR` is) or the source's own directory (as `include_str!` reads). Each as (reader, file), both
+/// relative to the root. The limit: a reader that walks a directory (`cargo xtask lint vocab`, plan-check's globs, the
+/// tests that copy `docs/`), builds a path with `format!` or `join` in pieces, or reads a path from a data file, is not
+/// seen here; those are listed by hand in the script, and `ci_changes_files_code_reads_run_everything` checks them.
+fn named_files() -> Vec<(String, String)> {
+    let mut files = Vec::new();
+    let crates = std::fs::read_dir(root().join("crates")).expect("ci_changes: crates/");
+    let mut packages: Vec<PathBuf> = crates
+        .map(|e| Path::new("crates").join(e.expect("entry").file_name()))
+        .collect();
+    packages.push(PathBuf::from("xtask"));
+    packages.sort();
+    for package in &packages {
+        sources(&package.join("src"), ".rs", &mut files);
+        sources(&package.join("tests"), ".rs", &mut files);
+        if root().join(package).join("build.rs").is_file() {
+            files.push(package.join("build.rs"));
+        }
+    }
+    sources(Path::new("plan"), ".py", &mut files);
+    files.sort();
+    let mut out = Vec::new();
+    for file in files {
+        let text = std::fs::read_to_string(root().join(&file)).expect("ci_changes: a source");
+        let python = file.extension().is_some_and(|x| x == "py");
+        let package = packages
+            .iter()
+            .find(|p| file.starts_with(p))
+            .cloned()
+            .unwrap_or_default();
+        let dir = file.parent().expect("a source's folder").to_path_buf();
+        for line in text.lines() {
+            let t = line.trim_start();
+            if t.starts_with("//") || (python && t.starts_with('#')) {
+                continue;
+            }
+            for lit in literals(line, python) {
+                if lit.is_empty() || lit.contains(['{', '*', '\n', '<', '$']) {
+                    continue;
+                }
+                for base in [Path::new(""), &package, &dir] {
+                    let Some(path) = normalised(&base.join(&lit)) else {
+                        continue;
+                    };
+                    if !path.as_os_str().is_empty() && root().join(&path).is_file() {
+                        out.push((
+                            file.to_string_lossy().into_owned(),
+                            path.to_string_lossy().into_owned(),
+                        ));
+                    }
+                }
+            }
+        }
+    }
+    out.sort();
+    out.dedup();
+    out
+}
+
+/// The files code names that `script` classifies as docs-only: none may be.
+fn check_readers(script: &str, named: &[(String, String)]) {
+    // The scan is not vacuous: it finds an `include_str!` from a test's own folder, a `CARGO_MANIFEST_DIR` path, a
+    // root-relative path and a Python constant.
+    for want in [
+        (
+            "crates/kernel/tests/qa_TASK-M3-02.rs",
+            "docs/contracts/principia_integrator_contract.md",
+        ),
+        ("crates/ledger/tests/qa_TASK-M1-18.rs", "decisions.md"),
+        ("xtask/tests/ai_review_rules.rs", "AGENTS.md"),
+        ("plan/check_plan.py", "plan/requirements.yaml"),
+    ] {
+        assert!(
+            named.iter().any(|(r, f)| (r.as_str(), f.as_str()) == want),
+            "ci_changes: the reader scan did not find {} reading {}",
+            want.0,
+            want.1
+        );
+    }
+    let mut verdicts: std::collections::BTreeMap<&str, bool> = std::collections::BTreeMap::new();
+    let mut wrong = Vec::new();
+    for (reader, file) in named {
+        let docs_only = *verdicts
+            .entry(file.as_str())
+            .or_insert_with(|| classify(script, &[file.as_str()]).0);
+        if docs_only {
+            wrong.push(format!("{reader} reads {file}"));
+        }
+    }
+    assert!(
+        wrong.is_empty(),
+        "ci_changes: files code reads classify as docs-only; list them in the script's `reads_code`:\n  {}",
+        wrong.join("\n  ")
+    );
+}
+
+#[test]
+fn ci_changes_no_file_code_reads_is_docs_only() {
+    check_readers(&read("scripts/ci_changes.sh"), &named_files());
+}
+
+negative_control!(
+    ci_changes_no_file_code_reads_is_docs_only,
+    "the script without AGENTS.md and GEMINI.md on its list of files code reads",
+    expected = "xtask/tests/ai_review_rules.rs reads AGENTS.md",
+    check_readers(
+        &edited(
+            "scripts/ci_changes.sh",
+            "    AGENTS.md | GEMINI.md) return 0 ;;\n",
+            ""
+        ),
+        &named_files()
+    )
 );
 
 // ---- The workflows, parsed ---------------------------------------------------------------------------------------
