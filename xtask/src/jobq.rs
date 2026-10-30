@@ -628,8 +628,7 @@ impl Queue {
     /// It starts at most one runner per [`SPAWN_GAP`] seconds, whatever the lock says, by the time of the last start
     /// it records in `runner.spawned`: a runner that cannot take the lock, or a lock that never reads as live, can't
     /// make every call start another. The runner is reaped by a thread of this process, or, once this process exits, by
-    /// launchd, so none is left a zombie. This path is excluded from mutation (`.cargo/mutants.toml`): a mutant of it
-    /// would start runners without bound, outside any test's sandbox.
+    /// launchd, so none is left a zombie.
     fn ensure_runner_held(&self, config: &Config) -> Result<(), String> {
         if self.runner_live(config) {
             return Ok(());
