@@ -27592,6 +27592,14 @@ R-634 is in the "process" group of `plan/rule_groups.yaml`.
 Changes no requirement or task.
 
 ## R-635 — Codex, Gemini CLI and GitHub Copilot review PRs as advisory reviewers for a one-week trial, never merge gates; every bot finding is handled before merge with a reply on its thread; after the week, a report per reviewer *(an R-369 note; no CI gate or review step changes)*
+*Amended in part by R-651 (30 Oct 2026: the advisory review cadence, a fresh review from each bot before merge on the
+final head, after every substantive push and periodically on a long-running PR, replaces the single review waited for
+up to 15 minutes after the PR opens; every bot finding is closed out before merge and a PR with an unresolved bot
+thread does not merge; the cadence is a standing rule).*
+*Still in force: all of it but its cadence: the three bots stay advisory, never merge gates and never counted by
+`reviews-complete`; every finding is verified, answered on its thread and resolved, a P0 / CRITICAL claim goes to the
+physics reviewer, a late review is handled as a follow-up, and the trial's tally and report stand; the 15-minute bound
+now applies to each review the orchestrator requests (R-651).*
 
 *28 Oct 2026 · applied in `AGENTS.md` (new: its authority line and § "Code Review Rules"), `GEMINI.md` and
 `.github/copilot-instructions.md` (new), `.github/workflows/gemini-dispatch.yml` and
@@ -28598,3 +28606,69 @@ The owner's addendum, the same day, verbatim:
 R-650 is in the "design" group of `plan/rule_groups.yaml`. Moves REQ-VAL-042, REQ-VAL-127, REQ-VAL-201 to REQ-VAL-249
 and REQ-VAL-252 to REQ-VAL-332 to M9; changes REQ-VAL-047, REQ-VAL-130, REQ-VAL-250 and REQ-VAL-251 (their task);
 adds REQ-VAL-333 to REQ-VAL-337, REQ-VAL-340 and REQ-VAL-341.
+
+## R-651 — Advisory review cadence: a fresh review from each of Codex, Gemini CLI and Copilot before merge on the final head, after every substantive push and at least once a working day on a long-running PR, in that priority under limits; a bot unavailable or rate-limited is noted on the PR and the merge goes ahead with the others; every bot finding is verified and closed out before merge (fixed, answered or moved to a task or RQ, then its thread resolved), and a PR with an unresolved bot thread does not merge; the bots stay advisory and never replace the required approvals *(amends R-635: its cadence; a standing rule)*
+*30 Oct 2026 · the owner's rule and his two addenda of that day; ported 30 Oct 2026 with R-649 and R-650 (PR #342);
+applied in `plan/WORKFLOW.md` (§ "The review loop"), `plan/OPERATIONS.md` (§ "Merging"), the forward line on R-635 and
+`plan/rule_groups.yaml`; the merge script that checks it is the orchestrator's own, outside the repository*
+
+The owner's rule, verbatim:
+
+> Codex review cadence change: don't rely on its single review when a PR opens. Request a fresh Codex review (advisory, as now):
+> 1. Before merge, on the final head. A merge script waits for a Codex pass on the exact SHA being merged; if the last Codex review is on an older head, re-request it first.
+> 2. After any substantive push: new logic, physics or algebra, a fix responding to review findings, or a rebase that changes code. Docs-only typo pushes don't need one.
+> 3. On long-running PRs, at least once per working day while open, and after every few commits on large ones, so problems surface partway through rather than at the end.
+> Treat its findings like the other advisory reviewers: verify each against the code or spec before acting, reply on the thread with what you did or why not, and never let it replace the three required approvals. If its rate limits or quota bite, prioritise (1), then (2), then (3), and tell me if pre-merge reviews start getting skipped. Write this into WORKFLOW/OPERATIONS as a standing rule with the next R-number.
+
+His first addendum, the same day, verbatim:
+
+> Addendum: apply the same review cadence to all three advisory reviewers: Codex, Gemini CLI and Copilot. Pre-merge on the final head, after substantive pushes, and periodically on long-running PRs. They stay advisory: verify every finding before acting, and they never replace the three required approvals. Each has its own limits (Gemini's timeouts, see #339; Copilot's premium-request quota). When one is unavailable or rate-limited, note it on the PR and proceed with the others rather than blocking the merge; priority order under limits is pre-merge > post-push > periodic. Record it in the same R-number as the Codex rule.
+
+His second addendum, the same day, verbatim:
+
+> Addendum: every advisory-bot finding gets closed out before merge. For each comment or finding from Codex, Gemini or Copilot: verify it against the code, spec or physics; then either fix it (and reference the fixing commit in the reply), or reply with the reason it's not applicable (wrong, out of scope, or already covered), or move it to a tracked task or RQ if it's real but belongs elsewhere. Then resolve the thread. A PR can't merge with unresolved bot threads; the merge script checks this. Don't resolve a thread without a reply, and never "fix" a finding just to silence it if the finding is wrong: say why it's wrong. Same R-number as the cadence rule.
+
+*What it decides:*
+
+- **Three advisory reviewers, one cadence.** Codex, Gemini CLI and GitHub Copilot are each asked for a fresh review:
+  1. **Before merge, on the final head.** The orchestrator's merge script waits for a review from each bot on the exact
+     SHA it merges; where a bot's last review is on an older head, it re-requests that bot first (`@codex review`,
+     `@gemini-cli /review`, Copilot re-requested as a reviewer).
+  2. **After every substantive push:** new logic, physics or algebra; a fix responding to review findings; a rebase or
+     merge that changes code. A docs-only typo push needs none.
+  3. **Periodically on a long-running PR:** at least once per working day while it is open, and every few commits on
+     a large one, so problems surface partway through rather than at the end.
+- **Under limits, pre-merge comes first, then post-push, then periodic.** Each bot has its own: Gemini's timeouts
+  (PR #339), Copilot's premium-request quota, Codex's rate limits. A bot that is unavailable or rate-limited is noted on
+  the PR, and the merge proceeds on the others; it never blocks a merge. The orchestrator tells the owner if pre-merge
+  reviews start being skipped.
+- **Every bot finding is closed out before merge.** Each is verified against the code, the spec or the physics; then
+  either fixed, the reply naming the fixing commit; or answered with why it doesn't apply (wrong, out of scope, or
+  already covered); or moved to a tracked task or an RQ if it is real but belongs elsewhere. Then its thread is
+  resolved. No thread is resolved without a reply, and a wrong finding is never "fixed" to silence it: the reply says
+  why it is wrong. A PR with an unresolved bot thread cannot merge; the merge script checks this.
+- **The bots stay advisory.** They never replace the required approvals: a PR merges on its named reviewers'
+  `VERDICT: APPROVE` reviews on its head and green CI (R-175, R-369), and `reviews-complete` does not count the bots.
+- **What it amends:** R-635's cadence, a single review per bot waited for up to 15 minutes after the PR opens (or
+  after a re-review asked for) and then passed over, and its "one-week trial" for the cadence, which is now a standing
+  rule. The rest of R-635 stands: its finding handling (which this rule restates and tightens with the merge check),
+  its P0 / CRITICAL route to the physics reviewer, its late-review handling and its trial tally and report.
+
+*Applied per R-369:*
+- **When a bot counts as unavailable:** no review on the requested head within 15 minutes of the request (R-635's
+  bound, now per request, not per PR), an error, or a quota or rate-limit refusal. The PR then notes "no <bot> review
+  on <sha>: <reason>", and the merge proceeds.
+- **"Substantive":** a push that changes code, or changes physics, algebra, a decision or a requirement in the docs
+  or the plan (a rulings port included). A push that only fixes typos, wording or formatting is not.
+- **"Large" and "every few commits":** a PR whose diff exceeds `plan/WORKFLOW.md`'s ~500-line planning guide; on one,
+  a fresh review is requested at least every third push, whatever the pushes are.
+- **"Working day":** each day on which the orchestrator works the build loop while the PR is open.
+- **"The three required approvals"** is read as the approvals the task's named reviewers give (R-175); their number is
+  the task's.
+- **"Tell me if pre-merge reviews start getting skipped":** each merge that went ahead without a bot's pre-merge
+  review is listed, with the reason, in the orchestrator's next batched summary to the owner (R-369).
+- **`CLAUDE.md` § "Working with review"** still states R-635's 15-minute window after the PR opens. It is not edited
+  in this port: the owner edits `CLAUDE.md`, flagged to the orchestrator. Where the two differ, this ruling governs
+  (`decisions.md` over the corpus, R-1).
+
+R-651 is in the "process" group of `plan/rule_groups.yaml`. It changes no requirement and no code.
