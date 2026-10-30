@@ -10,6 +10,7 @@
 mod scratch;
 
 use std::collections::{BTreeMap, BTreeSet};
+use std::os::unix::process::CommandExt as _;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 use std::time::{Duration, Instant};
@@ -18,9 +19,9 @@ use scratch::Scratch;
 use validation::negative_control;
 use validation::spawn::Spawn;
 use xtask::jobq::{
-    archivable, heavy, lock_holder, next_job, parse_ps, parse_submit, run_order, runner_settings,
-    snapshot_env, target_key, timed_out, utc, violations, Config, Job, Priority, Proc, Queue,
-    RunnerLock, State, ARCHIVE_AFTER, MAX_ATTEMPTS,
+    archivable, heavy, leader_is_jobs, lock_holder, next_job, parse_etime, parse_ps, parse_submit,
+    run_order, runner_settings, snapshot_env, target_key, timed_out, utc, violations, Config, Job,
+    Priority, Proc, Queue, RunnerLock, State, ARCHIVE_AFTER, MAX_ATTEMPTS, START_SLACK,
 };
 
 /// A queue of the test's own, in a scratch folder, with short timings.
@@ -715,6 +716,145 @@ negative_control!(
     "one start short of the last, the job runs again",
     expected = "recovered job ended wrongly",
     lost_case("jobq_lost_control", MAX_ATTEMPTS - 1, 125)
+);
+
+/// Plants a job left `Running` by a runner that died before recording its leader's start time (`leader_start` none),
+/// whose group leader is a live stand-in that started now, while the job's file says it started `ago` seconds ago;
+/// a runner must end that group before it starts the job again, which the second start checks.
+fn unrecorded_start_case(tag: &str, ago: u64) {
+    let q = Q::new(tag, "");
+    std::fs::create_dir_all(q.dir.join("jobs")).expect("jobs dir");
+    // The stand-in names the queue in its arguments, so the queue's drop ends it should the test fail.
+    let mut leader = Command::new("/bin/sh")
+        .args(["-c", "sleep 60; :"])
+        .arg(&*q.dir)
+        .process_group(0)
+        .spawn()
+        .expect("stand-in started");
+    let pid = leader.id() as i32;
+    let reaper = std::thread::spawn(move || leader.wait());
+    let mut planted = job(1, Priority::Peek, State::Running, Some("/t"));
+    planted.worktree = q.work();
+    planted.attempts = 1;
+    planted.started = Some(xtask::jobq::now() - ago);
+    planted.pgid = Some(pid);
+    planted.runner_pid = Some(dead_pid());
+    planted.command = [
+        "/bin/sh",
+        "-c",
+        &format!("if kill -0 {pid} 2>/dev/null; then exit 3; fi"),
+    ]
+    .map(str::to_owned)
+    .to_vec();
+    q.queue().save(&planted).expect("job planted");
+    let (code, out) = q.wait(1);
+    let left = alive(pid);
+    if left {
+        kill("-9", pid);
+    }
+    let _ = reaper.join();
+    q.finish();
+    assert!(
+        code == 0 && !left,
+        "a dead runner's group left running beside the job's second start: status {code}, {out:?}, leader alive {left}"
+    );
+}
+
+#[test]
+fn jobq_restart_ends_a_group_whose_start_was_not_recorded() {
+    unrecorded_start_case("jobq_unrecorded", 0);
+}
+
+negative_control!(
+    jobq_restart_ends_a_group_whose_start_was_not_recorded,
+    "a leader started an hour from the job's start is another process's, left alone",
+    expected = "a dead runner's group left running",
+    unrecorded_start_case("jobq_unrecorded_control", 3600)
+);
+
+/// `leader_is_jobs` for a job started at 1000 with `recorded` as its leader's start time, against a live leader whose
+/// `ps` start is `start` and whose start in Unix seconds is `at`.
+fn check_leader(
+    recorded: Option<&str>,
+    start: Option<&str>,
+    at: Option<u64>,
+    started: Option<u64>,
+    is: bool,
+) {
+    let mut j = job(1, Priority::Peek, State::Running, Some("/t"));
+    j.started = started;
+    j.leader_start = recorded.map(str::to_owned);
+    assert_eq!(
+        leader_is_jobs(&j, start, at),
+        is,
+        "leader misjudged: recorded {recorded:?}, start {start:?}, at {at:?}, started {started:?}"
+    );
+}
+
+#[test]
+fn jobq_a_leader_is_the_jobs_by_its_start() {
+    let s = Some(1000);
+    // A recorded start time decides alone.
+    check_leader(
+        Some("Fri 30 Oct 18:00:00 2026"),
+        Some("Fri 30 Oct 18:00:00 2026"),
+        None,
+        s,
+        true,
+    );
+    check_leader(
+        Some("Fri 30 Oct 18:00:00 2026"),
+        Some("Fri 30 Oct 18:00:01 2026"),
+        Some(1000),
+        s,
+        false,
+    );
+    check_leader(Some("Fri 30 Oct 18:00:00 2026"), None, Some(1000), s, false);
+    // None recorded: within START_SLACK of the job's start, either side, and no further.
+    check_leader(None, None, Some(1000), s, true);
+    check_leader(None, None, Some(1000 + START_SLACK), s, true);
+    check_leader(None, None, Some(1000 + START_SLACK + 1), s, false);
+    check_leader(None, None, Some(1000 - START_SLACK), s, true);
+    check_leader(None, None, Some(1000 - START_SLACK - 1), s, false);
+    check_leader(None, None, None, s, false);
+    check_leader(None, None, Some(1000), None, false);
+}
+
+negative_control!(
+    jobq_a_leader_is_the_jobs_by_its_start,
+    "a leader started one second past the slack is not the job's",
+    expected = "leader misjudged",
+    check_leader(None, None, Some(1000 + START_SLACK + 1), Some(1000), true)
+);
+
+fn check_etime(cases: &[(&str, Option<u64>)]) {
+    for (text, secs) in cases {
+        assert_eq!(parse_etime(text), *secs, "etime misread: {text:?}");
+    }
+}
+
+#[test]
+fn jobq_parses_ps_elapsed_times() {
+    check_etime(&[
+        ("00:05", Some(5)),
+        ("   01:02\n", Some(62)),
+        ("1:00:00", Some(3600)),
+        ("2-03:04:05", Some(2 * 86_400 + 3 * 3600 + 4 * 60 + 5)),
+        ("10-00:00", Some(864_000)),
+        ("5", None),
+        ("1:2:3:4", None),
+        ("1::05", None),
+        ("+1:00", None),
+        ("x-01:00", None),
+        ("", None),
+    ]);
+}
+
+negative_control!(
+    jobq_parses_ps_elapsed_times,
+    "hours, minutes and seconds are not minutes and seconds",
+    expected = "etime misread",
+    check_etime(&[("1:00:00", Some(60))])
 );
 
 // --- Heavy processes outside the queue are logged -----------------------------------------------------------------

@@ -25,7 +25,8 @@
 //!
 //! A runner lock whose pid is dead, or whose heartbeat is older than `stale` seconds, has expired: the next `submit`
 //! or `wait` starts a runner, which takes the lock over. A new runner ends the process group of every job still marked
-//! running (a dead runner's), then queues it again, or marks it lost after [`MAX_ATTEMPTS`] starts. A job runs in a
+//! running (a dead runner's), unless its leader is alive and not the job's ([`leader_is_jobs`]), then queues it again,
+//! or marks it lost after [`MAX_ATTEMPTS`] starts. A job runs in a
 //! process group of its own; past its timeout, or when cancelled, the runner sends the group SIGTERM, then SIGKILL
 //! after `grace` seconds; and whenever the job's own process ends, the runner kills what is left of its group. A runner with nothing queued or running for `idle` seconds exits, so none is left behind.
 //!
@@ -58,6 +59,12 @@ pub const ARCHIVE_AFTER: u64 = 86_400;
 
 /// The fewest seconds between two runner starts by `submit` or `wait`.
 pub const SPAWN_GAP: u64 = 5;
+
+/// How many seconds a live group leader's start may be from a job's recorded start, [`Job::started`], for a new runner
+/// to take that leader as the job's when the job's file holds no [`Job::leader_start`] yet: a runner that died between
+/// starting the job and recording its leader's start time ([`leader_is_jobs`]). The leader starts within moments of
+/// `started`; a reused pid would need the system's pids to wrap round within these seconds.
+pub const START_SLACK: u64 = 5;
 
 /// The usage text `cargo xtask --help` shows for `job`.
 pub const USAGE: &str = "\
@@ -1285,7 +1292,8 @@ impl Runner {
                 let pid = child.id() as i32;
                 job.state = State::Running;
                 job.pgid = Some(pid);
-                // Read after the pass, outside the state lock ([`Runner::record_starts`]).
+                // Read after the pass, outside the state lock ([`Runner::record_starts`]). Should this runner die
+                // first, the next one tells the leader by its start against `started` ([`leader_is_jobs`]).
                 job.leader_start = None;
                 self.unrecorded.push((job.id, pid));
                 job.note = None;
@@ -1422,8 +1430,51 @@ fn group_members(pgid: i32) -> Vec<i32> {
         .collect()
 }
 
+/// How long process `pid` has run, in seconds, from `ps -o etime=`, whose form doesn't depend on the locale or zone.
+fn running_for(pid: i32) -> Option<u64> {
+    let out = Command::new("ps")
+        .args(["-o", "etime=", "-p", &pid.to_string()])
+        .env("LC_ALL", "C")
+        .output()
+        .ok()?;
+    parse_etime(&String::from_utf8_lossy(&out.stdout))
+}
+
+/// `ps -o etime=`, `[[dd-]hh:]mm:ss`, in seconds; anything else is `None`.
+pub fn parse_etime(text: &str) -> Option<u64> {
+    let text = text.trim();
+    let (days, clock) = match text.split_once('-') {
+        Some((days, clock)) => (days.parse::<u64>().ok()?, clock),
+        None => (0, text),
+    };
+    let parts: Vec<&str> = clock.split(':').collect();
+    if !(2..=3).contains(&parts.len()) {
+        return None;
+    }
+    let mut secs = 0u64;
+    for part in parts {
+        if part.is_empty() || !part.bytes().all(|b| b.is_ascii_digit()) {
+            return None;
+        }
+        secs = secs * 60 + part.parse::<u64>().ok()?;
+    }
+    Some(days * 86_400 + secs)
+}
+
+/// Whether the live leader of `job`'s group is still the job's: when the job's file holds its start time, if `start`
+/// (`ps -o lstart=` now) is that time; when it doesn't, a runner having died before recording it, if `started_at` (the
+/// leader's start in Unix seconds now) is within [`START_SLACK`] of [`Job::started`]. A missing start time is unknown,
+/// not different: read as different, it left a job running untracked beside its second start.
+pub fn leader_is_jobs(job: &Job, start: Option<&str>, started_at: Option<u64>) -> bool {
+    match (&job.leader_start, job.started, started_at) {
+        (Some(recorded), _, _) => start == Some(recorded.as_str()),
+        (None, Some(started), Some(at)) => started.abs_diff(at) <= START_SLACK,
+        (None, _, _) => false,
+    }
+}
+
 /// Ends what is left of a job's process group after its runner died: SIGTERM, then SIGKILL after `grace`. A group
-/// whose leader is alive but started at another time than the job's is another process's, and is left alone.
+/// whose leader is alive but is not the job's ([`leader_is_jobs`]) is another process's, and is left alone.
 fn end_stale_group(job: &Job, grace: Duration) -> String {
     let Some(pgid) = job.pgid else {
         return "it had no process group".to_owned();
@@ -1432,8 +1483,17 @@ fn end_stale_group(job: &Job, grace: Duration) -> String {
     if members.is_empty() {
         return format!("its group {pgid} was already gone");
     }
-    if members.contains(&pgid) && start_time(pgid) != job.leader_start {
-        return format!("group {pgid} is another process's now, left alone");
+    if members.contains(&pgid) {
+        let (start, started_at) = match job.leader_start {
+            Some(_) => (start_time(pgid), None),
+            None => (
+                None,
+                running_for(pgid).and_then(|ran| now().checked_sub(ran)),
+            ),
+        };
+        if !leader_is_jobs(job, start.as_deref(), started_at) {
+            return format!("group {pgid} is another process's now, left alone");
+        }
     }
     signal_group(pgid, rustix::process::Signal::TERM);
     let ends = Instant::now() + grace;
