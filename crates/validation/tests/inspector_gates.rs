@@ -621,6 +621,28 @@ negative_control!(
     }
 );
 
+/// The pole's bound is 2× the worst measured `|w − 1|`, `2⁻⁵²`, exactly: `2⁻⁵¹`, two ulps of 1. Just above 1,
+/// `|w − 1|` takes only multiples of `2⁻⁵²`, so a `w` two ulps above 1 sits on the bound and passes, three ulps fail.
+fn check_pole_bound(bound: f64) {
+    let gap = |ulps: u64| f64::from_bits(1.0f64.to_bits() + ulps) - 1.0;
+    assert!(
+        bound == 2.0 * gap(1) && gap(2) <= bound && gap(3) > bound,
+        "the pole's bound {bound:e} is not two ulps of 1, 2⁻⁵¹"
+    );
+}
+
+#[test]
+fn inspector_pole_bound() {
+    check_pole_bound(POLE_BOUND);
+}
+
+negative_control!(
+    inspector_pole_bound,
+    "the 4.4e-16 rounding, 1.98× the worst, must fail",
+    expected = "is not two ulps of 1",
+    check_pole_bound(4.4e-16)
+);
+
 /// The equator's `|w|` is read on `C(x)`, within its bound (RQ-624).
 fn check_equator_state(read: fn(&Shapes) -> &Vec<f64>) {
     let s = shape_families(5, 200, 0, false);
@@ -909,7 +931,7 @@ fn check_shape_judge(bounds: ShapeBounds) {
             && neg[2]
                 .contains("clamp bit set in 101 of 101 collinear and 0 of 101 equilateral states")
             && neg[2].ends_with("at its clamp image in 101 of 101 collinear states; passes")
-            && neg[3].starts_with("the pole's |w − 1| on C(x): 0 of 101 beyond 4.400e-16")
+            && neg[3].starts_with("the pole's |w − 1| on C(x): 0 of 101 beyond 4.441e-16")
             && neg[4].starts_with("the equator's |w| on C(x): 0 of 101 beyond 2.500e-13")
             && neg[5].ends_with("proposed, provisional (REQ-VAL-121, R-71)"),
         "the shape checks' lines: {neg:?}"

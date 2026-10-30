@@ -72,8 +72,9 @@ pub const ROUNDTRIP: &str = "inspector-roundtrip";
 pub const COM_BOUND: f64 = 1.7e-16;
 
 /// The pole's bound, `max |w − 1|` on `C(x)` over the equal-mass equilateral family: proposed under REQ-VAL-121 (R-71)
-/// by TASK-M2-50 from the Rust measurement, provisional until the human confirms it at the M2 gate.
-pub const POLE_BOUND: f64 = 4.4e-16;
+/// by TASK-M2-50 from the Rust measurement, provisional until the human confirms it at the M2 gate. It is `2⁻⁵¹`, two
+/// ulps of 1, exactly twice the worst measured `2⁻⁵²`: just above 1, `|w − 1|` takes only multiples of `2⁻⁵²`.
+pub const POLE_BOUND: f64 = 2.0 * f64::EPSILON;
 
 /// The equator's bound, `max |w|` on `C(x)` over the collinear family: proposed under REQ-VAL-121 (R-71) by TASK-M2-50
 /// from the Rust measurement, provisional until the human confirms it at the M2 gate.
