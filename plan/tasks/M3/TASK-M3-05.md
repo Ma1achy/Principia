@@ -1,7 +1,7 @@
 # TASK-M3-05 — COM projection and invariant monitoring
 
 - **Milestone:** M3
-- **Closes:** REQ-INT-010, REQ-INT-011, REQ-INT-012, REQ-INT-030, REQ-INT-040, REQ-VAL-033, REQ-TOOL-149, REQ-INT-085, REQ-TOOL-150
+- **Closes:** REQ-INT-010, REQ-INT-011, REQ-INT-012, REQ-INT-030, REQ-INT-040, REQ-VAL-033, REQ-TOOL-149, REQ-INT-085, REQ-TOOL-150, REQ-INT-110
 - **Depends on:** TASK-M3-04, TASK-M2-24
 - **Needs (earlier milestones):** REQ-PAY-010, REQ-PAY-031, REQ-GEN-007, REQ-DEC-025, REQ-TOOL-009
 - **Reviewers:** code, qa, physics
@@ -51,6 +51,7 @@ After every `STEP` the wrapper's callback projects out the CoM position and tota
 - Review (physics): no code path modifies state to restore E or L_z (REQ-INT-011).
 - `cargo test -p kernel invariant_monitor` — rest start (E_0 ≠ 0, L_z0 = 0): δ_L finite; a synthetic spike-then-recover trace yields max|ΔE| ≫ |ΔE_final| (dd test 7) (REQ-INT-012).
 - `cargo xtask gate projection-parity` — property test: stepOnce on shared states, the projected state is bit-identical across repeated CPU-f32 runs and follows the one written operation order; no Jacobi conversion inside the step (REQ-INT-030).
+- Proposal: the `projection-parity` gate's region minimum, the classes of shared states its property test feeds, with the classes and their count printed by `cargo xtask gate projection-parity` as its evidence; the human confirms it at the M3 gate (R-71; REQ-INT-110).
 - `cargo test -p kernel drift_suspect_read_time` — the payload has no suspect bits; the predicate is evaluated at read; Euler + the energy-drift view lights SUSPECT_ENERGY everywhere (REQ-INT-040).
 - `cargo test -p kernel close_encounter_drift_shape` — dd test 7: a close-encounter IC shows max|ΔE| ≫ |ΔE_final| in the stored max vs final (REQ-VAL-033).
 - `cargo test -p render drift_suspect_styling` — the energy-drift and L_z-drift views render a synthetic payload with three samples: energy-only suspect (Euler lighting SUSPECT_ENERGY, its `dLz_max` set below the L_z-suspect threshold), L_z-only suspect (set through the synthetic payload's `dLz_max`, its energy drift below the energy-suspect threshold) and non-suspect (a symplectic occupant below both thresholds, REQ-INT-085). It fails if, in either view, the energy-only sample's pixel shows the L_z styling or the L_z-only sample's pixel the energy styling; if a suspect sample's pixel lacks the style its predicate drives, in a view the definition applies that style to; or if the non-suspect sample's pixel, in either view, differs from the preset's ramp output on the compacted value, the default `symlog` on the `diverging` ramp, with the absence NaN hatched as `dbg_sentinel` draws it (R-381; RQ-208, decided per R-369, option 3; REQ-TOOL-149).

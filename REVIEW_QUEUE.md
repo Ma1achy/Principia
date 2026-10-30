@@ -583,3 +583,78 @@ choice changes the result and the corpus does not settle it (R-369).*
 - **Applied meanwhile:** none. No panel is chosen. REQ-VAL-295's note, R-642's entry (a forward line under its item 1),
   `principia_dd_replication.md` § 5.10, the RQ-598 README § 6 and TASK-M3-62's note point here.
 - **Waits:** GG-1's per-point scoring against the Fig. 1 extraction (TASK-M3-62). BR-1 does not wait on it.
+
+## RQ-625: The four drift goldens the drift views re-render: `debug-views/derived-energy_drift`, `generated-energy_drift`, `generated-Lz_drift` and `m1-synthetic/energy_drift_ramp` need re-baselining, and R-110 allows none without a gate decision *(R-110; R-379, R-381; `fixtures/golden/BASELINES.md`; context: TASK-M3-05)*
+
+*Queued 30 Oct 2026 by TASK-M3-05's implementer. For the owner: yes, a re-baseline needs a gate decision (R-110), as
+R-454 and R-504 were.*
+
+- **File, section:**
+  - `decisions.md` § "R-110 — What CI runs, where, and against which goldens": "goldens rendered with native wgpu
+    offscreen from M1, checked at M8 by the Playwright suite against the same baselines within tolerance, with no
+    re-baselining without a gate decision".
+  - `fixtures/golden/BASELINES.md`, the preamble: "A baseline image changes only with a recorded gate decision (R-110:
+    "no re-baselining without a gate decision")."
+  - `decisions.md` § "R-381 — The drift views offer `symlog`, `lin` and `log`, with `symlog` the default; the value fed
+    to `dbg_sentinel` is the compacted value": "built by TASK-M3-05". TASK-M3-05 builds it: the `energy_drift` and
+    `Lz_drift` views draw the drift on `diverging` at `symlog`'s place of `sign(x)·ln(1 + |x|/ε)`, with the suspect
+    styling over it (render contract Part 5).
+  - `fixtures/golden/BASELINES.md`, the four rows, each ending "proposed, confirmed at the M1 gate; confirmed, R-435",
+    and recording the views as they drew before: `derived-energy_drift` and `generated-energy_drift` "nudged 3",
+    `energy_drift_ramp` "each value literal (`dbg_sentinel`)".
+- **The gap:** the four references are renders of the drift views before R-381 was built. Built, every pixel of each
+  changes (largest step 251 to 252 on Metal). No ruling re-baselines them; R-454 and R-504 were the gate decisions for
+  the outcome goldens and R-467's, and neither covers these.
+- **What TASK-M3-05 measured on Metal (M3 Pro), the new renders kept in its scratch, not committed:**
+  - `debug-views/generated-energy_drift`: nudge 3 sits 0.0011 of an 8-bit step from a tie; nudge 6, the least clearing
+    0.01, sits 0.0249. New SHA-256 `c872377521e7b771d2c47695a6b46f11c8043d222c370b92d766cddfc394a116`.
+  - `debug-views/generated-Lz_drift`: nudge 0 sits 0.0091; nudge 3, the least clearing 0.01, sits 0.0113. New SHA-256
+    `c7298a93ca0019e11f72a0b276b445a957fee76358293f903269e882394d9947`.
+  - `debug-views/derived-energy_drift`: the view computes `H(r, p) − E_0` in the fragment, so the fresh sample 0's
+    drift is the backend's f32 rounding of `H`, a few `1e-7`; `symlog` at the default `ε_E = 1e-6` spreads that over
+    several 8-bit steps, so one reference across backends can't hold at the default. At `COMPACTION` 1 (`lin`, `±1/16`)
+    it moves some `1e-3` of a step, and nudge 0 sits 0.0707 from a tie. New SHA-256 (at `lin`)
+    `7c95f9d8bde5d90609ae209bcf46b0b94510e90e781ba20fcec5cc0d886e4405`.
+  - `m1-synthetic/energy_drift_ramp`: the fixture's eight drifts, `−1.387 + 0.4k`, now sit 0.0091 from a tie, under
+    0.01 (`numeric_views::golden_scenes_are_tie_free` fails); a re-baseline also needs the fixture's start moved
+    (`engine::fixtures`), which TASK-M3-05 would decide per R-369. New SHA-256 (the fixture unchanged)
+    `6090721a151a4ac463140ffe5a0e5ae8a7e01f6005c0df225eeed1be82b7818f`.
+- **The question:** whether the four are re-baselined as TASK-M3-05 renders them, and which gate confirms them.
+- **Options seen:** (a) re-baseline all four as TASK-M3-05 renders them, each row leading with the ruling, the derived
+  case at `lin` and the nudges above, confirmed at the M3 gate; (b) as (a), but the derived case kept at the default
+  `symlog` with one reference per backend (`@metal`, `@vulkan`, R-269), its lavapipe bytes taken from CI;
+  (c) another, stated by the owner.
+- **Applied meanwhile:** none. The references and their rows are unchanged; the new renders are not committed.
+- **Waits:** TASK-M3-05's PR (the golden suite fails on the four until they are re-baselined).
+
+## RQ-626: Euler doesn't light `SUSPECT_ENERGY` "everywhere": over the latent cube at the default horizon, half its samples stay under the threshold *(physics; integrator contract Part 1; REQ-INT-040; REQ-INT-085; R-382; context: TASK-M3-05)*
+
+*Queued 30 Oct 2026 by TASK-M3-05's implementer. For the owner: yes, it is physics, and it changes what TASK-M3-05's
+test asserts and what the threshold means.*
+
+- **File, section:**
+  - `docs/contracts/principia_integrator_contract.md` § Part 1, the `energy_drift` bullet: "On Euler/RK4 it measures
+    the *integrator* — Euler drifts secularly and will light up `SUSPECT_ENERGY` everywhere."
+  - `plan/requirements.yaml`, REQ-INT-040's detail: "payload has no suspect bits; predicate evaluated at read; Euler +
+    energy-drift view lights SUSPECT_ENERGY everywhere".
+  - `plan/tasks/M3/TASK-M3-05.md`, Acceptance: "`cargo test -p kernel drift_suspect_read_time` — … Euler + the
+    energy-drift view lights SUSPECT_ENERGY everywhere (REQ-INT-040)."
+  - The same task, the threshold proposal: "on test 2's orbit Euler lights SUSPECT_ENERGY and no symplectic occupant
+    does" (REQ-INT-085; R-382).
+- **The conflict:** at the proposed `SUSPECT_ENERGY_THRESHOLD = 2⁻⁸` (REQ-INT-085, set by the gap between the
+  symplectic occupants' largest stored relative δE on dd test 2, 4.03e-5, and Euler's, 0.2776), Euler lights the
+  predicate on dd tests 2 and 7 and on every rest start TASK-M3-05 tried (an 8 × 8 grid). Over 256 uniform draws from
+  the latent cube `[−1.5, 1.5]⁸` (the default links, Euler at f32, `T = 50`, `dt = 1e-3`), the stored relative
+  `dE_max/max(ε_E, |E_0|)` ran from 8.6e-8 up, with a median of 3.0e-5: about half the samples stay under any
+  threshold that also clears the symplectic occupants on test 2. Euler's drift is secular, but on states that
+  separate fast (an early escape) or move slowly, it doesn't grow to `2⁻⁸` within the horizon. "Everywhere" holds over
+  bound, interacting states, not over the whole cube.
+- **The question:** what "everywhere" means for REQ-INT-040's test.
+- **Options seen:** (a) "everywhere" over the states where Euler's secular drift has time to act: bound, interacting
+  states (rest starts, dd tests 2 and 7), the test's domain named in REQ-INT-040's detail; (b) every sample of the
+  latent cube, which needs a lower threshold than the symplectic occupants' gap allows on test 2 (it conflicts with
+  R-382's criterion); (c) the predicate read with the occupant's `symplectic` flag, Euler always suspect (it changes
+  the predicate REQ-INT-040 defines); (d) another, stated by the owner.
+- **Applied meanwhile:** (a). `drift_suspect_read_time_euler_everywhere` asserts it over an 8 × 8 grid of rest starts
+  and dd tests 2 and 7, and says so in its doc.
+- **Waits:** nothing else; TASK-M3-05's PR carries (a) and names this entry.

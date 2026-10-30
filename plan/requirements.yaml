@@ -5622,6 +5622,22 @@
   - R-605
   milestone: M3
   note: "R-605 (25 Oct 2026, RQ-528 (d)): REQ-INT-085 is closed by TASK-M3-05 before Heggie is built, so the recalibration is its own calibration, applied per R-369. Closed by TASK-M3-41. Physics review 5644374613 of PR #293, F2 (applied per R-369): the value replaces REQ-INT-085's one threshold, so the proposal reports every occupant's verdict at it."
+- id: REQ-INT-110
+  area: INT
+  kind: calibration
+  statement: "The projection-parity gate's minimum number of regions, the classes of shared states its stepOnce property test must cover before its verdict on REQ-INT-030 stands (parity contract §3: synthetic states a trajectory reaches rarely, fed as shared states), must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M3 gate and recorded in decisions.md."
+  source:
+  - file: docs/contracts/principia_parity_contract.md
+    section: "3. The load-bearing discipline: never accumulate before comparing"
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: numerical gate
+    detail: "cargo xtask gate projection-parity prints the classes of shared states it fed and their count against the minimum, and flags a verdict drawn from fewer; the proposal states the minimum with its evidence; recorded in decisions.md at the M3 gate"
+  rulings:
+  - R-71
+  milestone: M3
+  note: "Proposed by TASK-M3-05 (applied per R-369): the gate framework names a calibration requirement for every gate's region minimum, and REQ-INT-030's own threshold, 0, is not one. Proposed at 4: a generic state, a close pair, a high-momentum state and a state far off its centre of mass with a bulk momentum."
 - id: REQ-EVT-001
   area: EVT
   statement: "Every pixel must get a labelled output — escape, collision or bounded (reaching the horizon is bounded), sim_failed or decode_failed, or RUNNING while in flight — with no timeout state, and substep-cap saturation a confidence flag, never a terminal."
