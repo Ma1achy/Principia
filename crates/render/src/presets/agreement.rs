@@ -54,7 +54,8 @@ const AGREEMENT_FACTOR: f32 = {FACTOR:?};"
     )
 }
 
-/// The comparison's WGSL after the factor: `agreement(k, v, k_0, v_0)` over the four operands' bits.
+/// The comparison's WGSL after the factor: `agreement_of(d, k_0, v_0)`, the fragment decode `d` against the payload's
+/// `K₀` and `V₀` within colour_composition §6's conditioning-aware scale of `d`'s own `(m, r)`, which the view draws.
 const COMPARE: &str = "
 // f32's eps, 2^-23.
 const AGREEMENT_EPS: f32 = 1.1920929e-7;
@@ -115,7 +116,8 @@ fn agreement_scaled(k: u32, v: u32, k_0: u32, v_0: u32, c: f32) -> Agreement {
     return a;
 }
 
-// The comparison of the four operands with no conditioning term: the scale's per-operand terms alone.
+// The comparison of the four operands with no conditioning term, the scale's per-operand terms alone: the per-operand
+// entry, kept for TASK-M2-25's tests of the validity and colour path; the view does not call it (it calls agreement_of).
 fn agreement(k: u32, v: u32, k_0: u32, v_0: u32) -> Agreement {
     return agreement_scaled(k, v, k_0, v_0, 0.0);
 }
