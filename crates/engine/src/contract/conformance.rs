@@ -533,9 +533,6 @@ fn slice_frame_edit_shows_and_undoes(engine: &mut dyn EngineInterface) -> Result
     )
 }
 
-/// The history keys the key cases send under: any values do, as long as they differ.
-const KEYS: [HistoryKey; 3] = [HistoryKey(101), HistoryKey(102), HistoryKey(103)];
-
 /// A history key (gui_state_contract §2, "A drag coalesces into one history entry"; R-96, R-458 F1, R-466): the edits
 /// of a drag, each sent under its key, are one history entry, its before the value at the drag's start and its after
 /// the last value sent, a no-history edit between them leaving it open; a command of several edits under one key is one
@@ -544,7 +541,8 @@ const KEYS: [HistoryKey; 3] = [HistoryKey(101), HistoryKey(102), HistoryKey(103)
 fn edits_under_one_key_are_one_entry(engine: &mut dyn EngineInterface) -> Result<(), String> {
     let first = engine.snapshot();
     let (t0, h0, z0) = (t_of(&first), first.history, first.sim.plane.z0);
-    let [drag, command, next] = KEYS;
+    // The keys the case sends under: test inputs, any values that differ.
+    let [drag, command, next] = [HistoryKey(101), HistoryKey(102), HistoryKey(103)];
     for step in 1..=3 {
         engine.set_field_under(playhead(t0 + f64::from(step), false), drag);
         if step == 2 {
@@ -647,7 +645,8 @@ fn edits_under_one_key_log_one_line_when_it_ends(
     engine: &mut dyn EngineInterface,
 ) -> Result<(), String> {
     let t0 = t_of(&engine.snapshot());
-    let [drag, other, _] = KEYS;
+    // The keys the case sends under: test inputs, any values that differ.
+    let (drag, other) = (HistoryKey(101), HistoryKey(102));
     for step in 1..=3 {
         engine.set_field_under(playhead(t0 + f64::from(step), false), drag);
     }
