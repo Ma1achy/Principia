@@ -28319,7 +28319,7 @@ R-648 is in the "process" group of `plan/rule_groups.yaml`. Changes no requireme
 
 ## R-658 — Heavy commands run only through a local job queue the orchestrator owns, `cargo xtask job`: agents submit them and wait, never run them directly; classes merge, fix, build and peek, first in, first out within each; one runner at a fixed concurrency, each job with cargo's jobs and test threads at the core count; jobs time out, stale locks expire and a new runner recovers a dead one's jobs; heavy processes outside the queue are logged; sccache measured again; mutants scoped to the diff and run through the queue *(supersedes R-228)*
 *30 Oct 2026 · the owner's message of that day; applied in `xtask/src/jobq.rs` and `xtask/tests/jobq.rs` (new),
-`xtask/src/lib.rs`, `xtask/src/main.rs`, `xtask/Cargo.toml`, `.cargo/mutants.toml`, `CLAUDE.md`, `plan/OPERATIONS.md`
+`xtask/src/lib.rs`, `xtask/src/main.rs`, `xtask/Cargo.toml`, `CLAUDE.md`, `plan/OPERATIONS.md`
 (§ "Dispatching", § "Reviewers", § "Resources", § "Paths and warm builds" and § "Logs"), the agent files in
 `.claude/agents/` and `plan/rule_groups.yaml`*
 
@@ -28351,16 +28351,17 @@ The owner's words, verbatim:
 - **Priorities (item 3),** highest first: `merge` (merge-ready verification of a final head), `fix` (fix-round tests),
   `build` (new-task builds), `peek` (exploratory runs); first in, first out within a class.
 - **Robust to restarts (item 2).** Jobs time out (3600 s unless the job says otherwise), and the runner kills the job's
-  whole process group. A runner lock whose pid is dead or whose heartbeat is stale (120 s) expires. A new runner ends
-  the process groups of the jobs a dead one left running and queues them again, or marks one lost after its third
-  start. A job outlives the agent that submitted it, and `wait` can be re-attached. `submit` starts the runner when none
-  is alive; it needs no launchd, and exits when idle.
+  whole process group; it kills what is left of the group, too, whenever the job's own process ends, so nothing a
+  finished job started outlives it. A runner lock whose pid is dead or whose heartbeat is stale (120 s) expires. A new
+  runner ends the process groups of the jobs a dead one left running and queues them again, or marks one lost after its
+  third start. A job outlives the agent that submitted it, and `wait` can be re-attached. `submit` starts the runner
+  when none is alive; it needs no launchd, and exits when idle.
 - **Duplicated work (item 4).** sccache was measured again: with the target directory in the environment, as every job
   has it, 0 hits; with it given as `--target-dir`, 66.9% of a cold build's compile requests hit, the dependency crates,
-  saving about 10 s of 100. It is not enabled: jobs start from APFS-cloned warm targets, whose dependencies are built
-  once already (`plan/OPERATIONS.md` § "Paths and warm builds"). Mutants run scoped to the diff (`--in-diff`, or per
-  changed crate), through the queue, on the head about to be pushed and never on work in progress; CI's gate stays the
-  authority (R-388).
+  saving about 10 s of 100. It is not enabled, pending the owner's decision: jobs start from APFS-cloned warm targets,
+  whose dependencies are built once already (`plan/OPERATIONS.md` § "Paths and warm builds"). Mutants run scoped to the
+  diff (`--in-diff`, or per changed crate), through the queue, on the head about to be pushed and never on work in
+  progress; CI's gate stays the authority (R-388).
 - **Enforcement (item 5).** `CLAUDE.md` and every agent file say "never run heavy commands directly; submit to the
   queue", with the heavy and light definition and an example. The runner logs each heavy process outside the queue to
   `orch/jobq/violations.log`, with its pid, command and cwd; it never kills one.
@@ -28388,10 +28389,25 @@ The owner's words, verbatim:
   runners three times is marked lost, so a job that kills its runner cannot loop. The runner exits after 60 s idle.
 - **Runner starts are bounded.** `submit` and `wait` start at most one runner per queue every 5 s, whatever the lock
   says, and reap it, so no fault of the lock can fill the machine with runners or zombies: a local mutants run of the
-  first draft did, on 30 Oct 2026, past the Mac's per-user process limit. That start path is excluded from mutation in
-  `.cargo/mutants.toml`, since a mutant of it escapes any sandbox; every other mutant leaves it whole. The queue's tests
-  run each call under `ulimit -u` (the user's processes at the start, plus 300) and end, by pid, every process left
-  naming their state directory.
+  first draft did, on 30 Oct 2026, past the Mac's per-user process limit. Nothing of the queue is excluded from
+  mutation: R-196's exclusions for xtask stay `xtask/src/main.rs` and `xtask/src/codegen.rs` (applied per R-204,
+  accepted by R-267). xtask's mutants are not run on the Mac; CI's mutants gate runs them, and a survivor that is
+  truly equivalent goes into `.cargo/mutants-equivalent.toml` (R-202). The queue's tests run each call under
+  `ulimit -u` (the user's processes at the start, plus 300) and end, by pid, every process left naming their state
+  directory.
+- **The state lock is held briefly, and waited for within a bound.** No `ps` call and no grace wait runs while
+  `state.lock` is held: a new runner ends a dead one's groups outside it, and the runner reads a started job's start
+  time after its pass. Its holder writes its pid and the time it took it into the file, and a call that can't take it
+  within `lock_wait` seconds (30) fails, naming that pid and how long it has held the lock, rather than hanging; the
+  runner logs it and tries again.
+- **Target directories are compared by a normalised key:** the path made canonical where it exists (the nearest
+  existing parent otherwise), without a trailing `/`, and folded to lower case, since the Mac's volume is
+  case-insensitive. Two spellings of one directory never run at once; the job keeps the path as given.
+- **Timeouts are measured on a monotonic clock,** from an `Instant` the runner takes when it starts the job, so a clock
+  step or a sleep and wake cannot time a job out. A job a dead runner left running is run again, with a fresh timeout,
+  or marked lost, as above.
+- **`job status` shows the runner's own settings,** its concurrency and cores per job, which the runner writes into
+  its lock, not the defaults of the binary asking.
 - **`wait`'s statuses:** the job's exit code (128 plus the signal for one a signal ended); 124 timed out, 125 lost, 126
   not started, 130 cancelled, as `timeout(1)` and shells use them.
 - **The violation log** names only the topmost heavy process of a chain outside the queue, each once per runner; a
