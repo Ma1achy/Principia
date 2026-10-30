@@ -21,8 +21,11 @@ pub const DECODE_DESCRIPTOR: usize = 26;
 /// The decode words: `tag`, 1 word(s), from here.
 pub const DECODE_TAG: usize = 38;
 
+/// The decode words: `on_section`, 1 word(s), from here.
+pub const DECODE_ON_SECTION: usize = 39;
+
 /// The decode words: their number.
-pub const DECODE_WORDS: usize = 39;
+pub const DECODE_WORDS: usize = 40;
 
 /// The describe words: `ic`, 15 word(s), from here.
 pub const DESCRIBE_IC: usize = 0;
@@ -39,8 +42,11 @@ pub const ENCODE_IC: usize = 0;
 /// The encode words: `out`, 12 word(s), from here.
 pub const ENCODE_OUT: usize = 15;
 
+/// The encode words: `canon`, 15 word(s), from here.
+pub const ENCODE_CANON: usize = 27;
+
 /// The encode words: their number.
-pub const ENCODE_WORDS: usize = 27;
+pub const ENCODE_WORDS: usize = 42;
 
 /// The shape words: `r`, 6 word(s), from here.
 pub const SHAPE_R: usize = 0;

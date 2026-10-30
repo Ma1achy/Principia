@@ -7,7 +7,8 @@
 //!   `Chart::map` and `stage::decode::sample_with` at f32, toward an energy target and with none; a linearised flags
 //!   word writes nothing past `(u, v)`.
 //! - `fragment_entries_state_entries_write_their_source`: `describe`, `encode` and `shape` on states of distinct
-//!   values against `descriptor::describe`, `encode::encode` with `stage::encode::notices`, and `shape::shape`.
+//!   values against `descriptor::describe`, `encode::encode` with `stage::encode::notices` and `C`'s canonical state,
+//!   and `shape::shape`.
 //!   Controls: a word read one place off is found in each.
 //! - `fragment_entries_free_decode_writes_its_source` (TASK-M2-26): `decode_free` on latent `z`, the origin, an interior
 //!   point and points past every control's saturation, against `decode::decode` at f32 under the default links: the
@@ -98,7 +99,8 @@ fn fields(d: &kernel::payload::ICDescriptor) -> Vec<u32> {
     .to_vec()
 }
 
-/// The decode's words from its sources: `(u, v)`, `Φ`'s `z`, the latent flag, `(m, r, p)`, the descriptor, the tag.
+/// The decode's words from its sources: `(u, v)`, `Φ`'s `z`, the latent flag, `(m, r, p)`, the descriptor, the tag,
+/// the section flag.
 fn expected<C: FragmentChart>(u: &DecodeUniforms, x: f32, y: f32) -> Vec<u32> {
     let chart = C::from_uniform(&u.chart);
     let mut out = vec![x.to_bits(), y.to_bits()];
@@ -108,12 +110,13 @@ fn expected<C: FragmentChart>(u: &DecodeUniforms, x: f32, y: f32) -> Vec<u32> {
     out.extend(ic_words_of(&d.ic));
     out.extend(fields(&d.descriptor));
     out.push(tag(d.degenerate));
+    out.push(u32::from(C::ON_SECTION));
     out
 }
 
 /// Every chart's entry against its source; `shift` moves the expected words one place (the control).
 fn check_decode(shift: bool) {
-    assert_eq!(DECODE_WORDS, 39);
+    assert_eq!(DECODE_WORDS, 40);
     for (chart, entry, want) in charts() {
         for e_star in [None, Some(-0.3f32)] {
             let mut u = validation::decode_preset::uniforms(chart);
@@ -200,6 +203,7 @@ fn check_states(shift: bool) {
         let mut want: Vec<u32> = e.z.z.map(f32::to_bits).to_vec();
         want.extend([e.blocks.alpha, e.blocks.beta, e.report.lambda].map(f32::to_bits));
         want.push(kernel::stage::encode::notices(&e.report));
+        want.extend(ic_words_of(&e.canonical.ic));
         assert_eq!(
             (want[11] & 1) != 0,
             k == 4,

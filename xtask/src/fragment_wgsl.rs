@@ -392,7 +392,8 @@ struct FragDescriptor {
 
 // One sample's fragment decode (colour_composition §3, \"Fragment-side recompute\"; REQ-COL-057): `z`, the chart's Φ
 // output, the 8-D latent where `z_latent` (the latent chart) and the latent blocks the chart carries otherwise; the
-// canonical (m, r, p); the descriptor; and the DEGENERATE tag word (0 none).
+// canonical (m, r, p); the descriptor; the DEGENERATE tag word (0 none); and whether the chart's decode lands on C's
+// section (every chart's but the shape sphere's, R-544).
 struct FragDecode {
     z: array<f32, 8>,
     z_latent: bool,
@@ -401,6 +402,7 @@ struct FragDecode {
     p: array<vec2<f32>, 3>,
     d: FragDescriptor,
     tag: u32,
+    on_section: bool,
 }
 ";
 
@@ -427,8 +429,9 @@ fn decode_glue(prefix: &str) -> String {
     read_descriptor(&mut out, "o.d", "wo", l.at("DESCRIPTOR"));
     let _ = write!(
         out,
-        "    o.tag = wo.w[{}];\n    return o;\n}}\n",
-        l.at("TAG")
+        "    o.tag = wo.w[{}];\n    o.on_section = wo.w[{}] != 0u;\n    return o;\n}}\n",
+        l.at("TAG"),
+        l.at("ON_SECTION")
     );
     out
 }
@@ -454,12 +457,15 @@ fn describe_glue(prefix: &str) -> String {
     out
 }
 
-/// The encode's glue: `FragEncoded` and `frag_encode(m, r, p)`.
+/// The encode's glue: `FragCanonical`, `FragEncoded` and `frag_encode(m, r, p)`.
 fn encode_glue(prefix: &str) -> String {
     let mut out = String::from(
-        "\n// One state's encode under the default links (kernel stage::encode's words): z, α, β, λ and the notices word\n\
-         // (bit 0 the coincident inner pair, bit 1 lookup_mirrored, bits 8 to 15 the clamped controls).\n\
-         struct FragEncoded {\n    z: array<f32, 8>,\n    alpha: f32,\n    beta: f32,\n    lambda: f32,\n    notices: u32,\n}\n\n\
+        "\n// C's canonical (m, r, p), the state the encode's z decodes to (inverse-encode Part 1, T3).\n\
+         struct FragCanonical {\n    m: vec3<f32>,\n    r: array<vec2<f32>, 3>,\n    p: array<vec2<f32>, 3>,\n}\n\n\
+         // One state's encode under the default links (kernel stage::encode's words): z, α, β, λ and the notices word\n\
+         // (bit 0 the coincident inner pair, bit 1 lookup_mirrored, bits 8 to 15 the clamped controls); and C's\n\
+         // canonical state.\n\
+         struct FragEncoded {\n    z: array<f32, 8>,\n    alpha: f32,\n    beta: f32,\n    lambda: f32,\n    notices: u32,\n    canonical: FragCanonical,\n}\n\n\
          // The fragment encode of the state (m, r, p).\n\
          fn frag_encode(m: vec3<f32>, r: array<vec2<f32>, 3>, p: array<vec2<f32>, 3>) -> FragEncoded {\n",
     );
@@ -472,12 +478,14 @@ fn encode_glue(prefix: &str) -> String {
     }
     let _ = writeln!(
         out,
-        "    o.alpha = {};\n    o.beta = {};\n    o.lambda = {};\n    o.notices = wo.w[{}];\n    return o;\n}}",
+        "    o.alpha = {};\n    o.beta = {};\n    o.lambda = {};\n    o.notices = wo.w[{}];",
         f("wo", at + 8),
         f("wo", at + 9),
         f("wo", at + 10),
         at + 11
     );
+    read_ic(&mut out, "o.canonical", "wo", l.at("CANON"));
+    out.push_str("    return o;\n}\n");
     out
 }
 

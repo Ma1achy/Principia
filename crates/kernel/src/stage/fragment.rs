@@ -15,12 +15,14 @@
 //!   [`DECODE_UV`]; out, the chart's `Φ` output `z` ([`DECODE_Z`]; `Chart::map`'s `ChartOut.z`), whether it is a latent
 //!   ([`DECODE_Z_LATENT`]: 1 on the latent chart, whose `Φ` produces the 8-D latent, 0 on every other chart, whose `Φ`
 //!   does not; colour_composition §3, REQ-COL-057), the canonical `(m, r, p)` ([`DECODE_IC`], the decode stage's word
-//!   order), the twelve `ICDescriptor` fields ([`DECODE_DESCRIPTOR`]) and the tag word ([`DECODE_TAG`],
-//!   `crate::stage::decode::tag`). The chart's parameters, the flags word and the energy target are the decode stage's
+//!   order), the twelve `ICDescriptor` fields ([`DECODE_DESCRIPTOR`]), the tag word ([`DECODE_TAG`],
+//!   `crate::stage::decode::tag`) and whether the decode lands on `C`'s section ([`DECODE_ON_SECTION`],
+//!   [`FragmentChart::ON_SECTION`]). The chart's parameters, the flags word and the energy target are the decode stage's
 //!   uniform ([`DecodeUniforms`]), read as the stage reads them, so the fragment decodes the pixel as the stage did.
 //! - The descriptor alone ([`describe`]): `(m, r, p)` in, the twelve fields out, so a test reaches the producers' pole
 //!   selects (R-436) on states no decode reaches at f32.
-//! - The encode ([`encode()`]): `(m, r, p)` in, the default links' encode out in `crate::stage::encode`'s word order.
+//! - The encode ([`encode()`]): `(m, r, p)` in, the default links' encode out in `crate::stage::encode`'s word order,
+//!   then `C`'s canonical `(m, r, p)` ([`ENCODE_CANON`]), the state `D(E(x))` returns (Part 1's T3).
 //! - The shape map ([`shape`]): `r` and `m` in, `n` out (`crate::shape::shape`, the read side's `shape()`).
 //! - The free decode ([`decode_free`]): a latent `z` in ([`FREE_Z`]); the shared decoder's canonical `(m, r, p)`
 //!   ([`FREE_IC`]) and tag word ([`FREE_TAG`]) out, under the default links: the ROUNDTRIP preset's second `D`, of the
@@ -45,31 +47,45 @@ pub use crate::generated::fragment_words::*;
 /// Whether a chart's `Φ` produces the 8-D latent `z` (colour_composition §3; REQ-COL-057): the latent chart's does,
 /// `z₀ + (2u − 1)·q₁ + (2v − 1)·q₂`; every other chart's hands the decoder its own output, and its `ChartOut.z` holds
 /// only the latent blocks it carries (zeros elsewhere), no latent.
+///
+/// And whether its decode lands on `C`'s section (inverse-encode contract Part 1): every chart's does but the shape
+/// sphere's, which decodes with `C`'s step 3 not taken, so a lower-hemisphere pixel is its own system, off the section
+/// (R-544). The ROUNDTRIP preset measures its round trip against the decoded state on the section and against `C` of it
+/// off it (Part 4, "One norm for every round trip"; TASK-M2-26).
 pub trait FragmentChart: UniformChart {
     /// `true` where `Φ`'s `z` is the 8-D latent.
     const Z_IS_LATENT: bool;
+    /// `true` where the chart's decode lands on `C`'s section.
+    const ON_SECTION: bool;
 }
 
 impl FragmentChart for Latent<f32> {
     const Z_IS_LATENT: bool = true;
+    const ON_SECTION: bool = true;
 }
 impl FragmentChart for ShapeSphere<f32> {
     const Z_IS_LATENT: bool = false;
+    const ON_SECTION: bool = false;
 }
 impl FragmentChart for InvariantLE<f32> {
     const Z_IS_LATENT: bool = false;
+    const ON_SECTION: bool = true;
 }
 impl FragmentChart for InvariantLK<f32> {
     const Z_IS_LATENT: bool = false;
+    const ON_SECTION: bool = true;
 }
 impl FragmentChart for MassSimplex<f32> {
     const Z_IS_LATENT: bool = false;
+    const ON_SECTION: bool = true;
 }
 impl FragmentChart for EuclidPlane<f32> {
     const Z_IS_LATENT: bool = false;
+    const ON_SECTION: bool = true;
 }
 impl FragmentChart for BurrauThetaK<f32> {
     const Z_IS_LATENT: bool = false;
+    const ON_SECTION: bool = true;
 }
 
 /// The f32 value at word `at` of `words`.
@@ -163,6 +179,7 @@ pub fn decode_at<C: FragmentChart, S: Selection>(
         put(words, DECODE_Z + 6, z[6]);
         put(words, DECODE_Z + 7, z[7]);
         words[DECODE_Z_LATENT] = if C::Z_IS_LATENT { 1 } else { 0 };
+        words[DECODE_ON_SECTION] = if C::ON_SECTION { 1 } else { 0 };
         let out = sample_with::<C, S, f32>(&chart, u, v, target(uniforms.energy));
         write_ic(words, DECODE_IC, &out.ic);
         write_fields(words, DECODE_DESCRIPTOR, &out.descriptor);
@@ -244,7 +261,8 @@ pub fn describe(
     write_fields(words, DESCRIBE_DESCRIPTOR, &d);
 }
 
-/// The encode under the default links on the `(m, r, p)` its words hold, written in `crate::stage::encode`'s order.
+/// The encode under the default links on the `(m, r, p)` its words hold, written in `crate::stage::encode`'s order, and
+/// `C`'s canonical state after it.
 #[spirv(compute(threads(1)))]
 pub fn encode(
     #[spirv(storage_buffer, descriptor_set = 0, binding = 0)] words: &mut [u32; ENCODE_WORDS],
@@ -263,6 +281,7 @@ pub fn encode(
     put(words, ENCODE_OUT + 9, e.blocks.beta);
     put(words, ENCODE_OUT + 10, e.report.lambda);
     words[ENCODE_OUT + 11] = crate::stage::encode::notices(&e.report);
+    write_ic(words, ENCODE_CANON, &e.canonical.ic);
 }
 
 /// The free decode under the default links, [`crate::decode::decode`] at f32 on the latent `z` its words hold: the

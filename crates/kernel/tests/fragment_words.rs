@@ -18,7 +18,8 @@ fn check_lengths(ic: usize) {
         "the decode's (m, r, p) part is not Ic's length"
     );
     assert_eq!(DECODE_TAG - DECODE_DESCRIPTOR, descriptor);
-    assert_eq!(DECODE_WORDS, DECODE_TAG + 1);
+    assert_eq!(DECODE_ON_SECTION, DECODE_TAG + 1);
+    assert_eq!(DECODE_WORDS, DECODE_ON_SECTION + 1);
     assert_eq!(
         DESCRIBE_DESCRIPTOR - DESCRIBE_IC,
         ic,
@@ -30,7 +31,12 @@ fn check_lengths(ic: usize) {
         ic,
         "the encode's (m, r, p) part is not Ic's length"
     );
-    assert_eq!(ENCODE_WORDS - ENCODE_OUT, encode_words());
+    assert_eq!(ENCODE_CANON - ENCODE_OUT, encode_words());
+    assert_eq!(
+        ENCODE_WORDS - ENCODE_CANON,
+        ic,
+        "the encode's canonical (m, r, p) part is not Ic's length"
+    );
     assert_eq!((DECODE_Z_LATENT - DECODE_Z, DECODE_Z - DECODE_UV), (8, 2));
     assert_eq!(
         (SHAPE_M - SHAPE_R, SHAPE_N - SHAPE_M, SHAPE_WORDS - SHAPE_N),

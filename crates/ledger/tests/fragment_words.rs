@@ -19,15 +19,19 @@ fn check_offsets(extra: Option<Layout>) {
             d.at("Z_LATENT"),
             d.at("IC"),
             d.at("DESCRIPTOR"),
-            d.at("TAG")
+            d.at("TAG"),
+            d.at("ON_SECTION")
         ],
-        [0, 2, 10, 11, 26, 38]
+        [0, 2, 10, 11, 26, 38, 39]
     );
-    assert_eq!(d.words(), 39);
+    assert_eq!(d.words(), 40);
     let s = fragment::describe();
     assert_eq!((s.at("IC"), s.at("DESCRIPTOR"), s.words()), (0, 15, 27));
     let e = fragment::encode();
-    assert_eq!((e.at("IC"), e.at("OUT"), e.words()), (0, 15, 27));
+    assert_eq!(
+        (e.at("IC"), e.at("OUT"), e.at("CANON"), e.words()),
+        (0, 15, 27, 42)
+    );
     let h = fragment::shape();
     assert_eq!((h.at("R"), h.at("M"), h.at("N"), h.words()), (0, 6, 9, 12));
     let f = fragment::free();
