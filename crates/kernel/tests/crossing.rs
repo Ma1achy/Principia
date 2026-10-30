@@ -1,6 +1,8 @@
 //! Branch-cut crossing detection (`kernel::word::crossing`; integrator contract Part 5, the τ tie rule; dd_simstate_payload
-//! §3), on the synthetic fixtures of `fixtures/crossings/segments.json`, at f32 and f64. Which cuts carry `a` and `b` is
-//! RQ-632, so every case gives the cuts' signed distances directly.
+//! §3), on the synthetic fixtures of `fixtures/crossings/segments.json`, at f32 and f64: each case gives two cuts'
+//! signed distances directly, with no segment gate (both open), so the sort is exercised on cuts with distinct
+//! distances. The cuts of symbolic_dynamics_contract §1, which share one distance and choose by segment gate, are
+//! checked from positions by `crossing_segment_gate`, `crossing_state_cuts` and `crossing_published_words`.
 //! - REQ-INT-031: a double crossing in one substep orders by `τ`; equal `τ` uses the cut ID; an endpoint exactly on the
 //!   cut follows the half-open rule (`crossing_order`).
 //! - REQ-INT-046: a cross-and-recross inside one macro-step yields both crossings, and the word they leave
@@ -9,6 +11,12 @@
 //!   product range included; the product comparison against the exact one (`crossing_tau_sort`).
 //! - REQ-INT-048: endpoints exactly on a cut, `−0` and subnormals among them, give no duplicate or missed crossing
 //!   (`crossing_half_open`). The GPU arm is REQ-VAL-072's at M4 (R-150).
+//! - The segment gate (integrator contract Part 5): read at the substep's non-negative endpoint, exclusive gates
+//!   crossing one cut at most (`crossing_segment_gate`).
+//! - §1's cuts from positions: `d`'s sign against the shape sphere's `n_w`, the classifier against the exact longest
+//!   side, and loops about each collision point reading `A`, `b` and Appendix B's `aB` (`crossing_state_cuts`).
+//! - REQ-PAY-070's cross-check: ten orbits of the PRL's Table I read their published words up to R-630 item 5's
+//!   symmetries, from `fixtures/crossings/prl_orbits.json` (`crossing_published_words`). REQ-VAL-043 is TASK-M3-30's.
 //!
 //! Each check takes the detector as a function, so its control runs the same check on a faulty one.
 
@@ -16,7 +24,8 @@ use kernel::payload::{fgw_length_raw, sd_last_symbol, FreeGroupWord, FGW_NO_SYMB
 use kernel::real::IeeeBits;
 use kernel::word::crossing::{negative, product_less, reads_as_zero};
 use kernel::word::{
-    fgw_decode, set_last_symbol, substep_crossings, CrossingDetector, CrossingHook, CutDistances,
+    fgw_decode, set_last_symbol, state_cuts, substep_crossings, CrossingDetector, CrossingHook,
+    CutDistances,
 };
 use proptest::prelude::*;
 use validation::reference::free_group::reduce;
@@ -25,6 +34,8 @@ use validation::{negative_control, prop};
 /// A float the fixtures are read at: f32 or f64, each fixture value exact at both.
 trait Fixture: IeeeBits {
     fn of(v: f64) -> Self;
+    /// `v` rounded to the precision, not required exact.
+    fn of_rounded(v: f64) -> Self;
     /// The negative subnormal of least magnitude, and the negative normal of least magnitude.
     fn negative_subnormal() -> Self;
     fn negative_least_normal() -> Self;
@@ -36,6 +47,9 @@ impl Fixture for f32 {
         assert_eq!(f64::from(x), v, "the fixture value {v} is not exact at f32");
         x
     }
+    fn of_rounded(v: f64) -> f32 {
+        v as f32
+    }
     fn negative_subnormal() -> f32 {
         f32::from_bits(0x8000_0001)
     }
@@ -46,6 +60,9 @@ impl Fixture for f32 {
 
 impl Fixture for f64 {
     fn of(v: f64) -> f64 {
+        v
+    }
+    fn of_rounded(v: f64) -> f64 {
         v
     }
     fn negative_subnormal() -> f64 {
@@ -130,10 +147,7 @@ fn fixture(fixture: &str) -> Vec<Case> {
 }
 
 fn at<T: Fixture>(e: (f64, f64)) -> CutDistances<T> {
-    CutDistances {
-        a: T::of(e.0),
-        b: T::of(e.1),
-    }
+    CutDistances::ungated(T::of(e.0), T::of(e.1))
 }
 
 /// Each case's substeps through `detect`, at `T`: each substep's crossings are the fixture's.
@@ -386,17 +400,14 @@ fn check_tau_sort(d32: Detect<f32>, d64: Detect<f64>) {
     // `b` first; with the two swapped, `a` first. No tolerance merges them.
     for x in [0.75f32, 1.0, 3.0] {
         let up = f32::from_bits(x.to_bits() + 1);
-        let start = CutDistances {
-            a: -1.0f32,
-            b: -1.0,
-        };
+        let start = CutDistances::ungated(-1.0f32, -1.0);
         assert_eq!(
-            d32(start, CutDistances { a: x, b: up }),
+            d32(start, CutDistances::ungated(x, up)),
             vec![2, 0],
             "crossings out of order or miscounted: an ulp-apart near-tie"
         );
         assert_eq!(
-            d32(start, CutDistances { a: up, b: x }),
+            d32(start, CutDistances::ungated(up, x)),
             vec![0, 2],
             "crossings out of order or miscounted: an ulp-apart near-tie"
         );
@@ -444,14 +455,8 @@ fn a_stream<T: IeeeBits>(detect: Detect<T>, ds: &[T]) -> Vec<Vec<u32>> {
     ds.windows(2)
         .map(|w| {
             detect(
-                CutDistances {
-                    a: w[0],
-                    b: T::default(),
-                },
-                CutDistances {
-                    a: w[1],
-                    b: T::default(),
-                },
+                CutDistances::ungated(w[0], T::default()),
+                CutDistances::ungated(w[1], T::default()),
             )
         })
         .collect()
@@ -560,4 +565,366 @@ negative_control!(
     "counting strict sign changes misses a crossing through an endpoint on the cut",
     expected = "crossings out of order or miscounted",
     check_half_open(strict_sign::<f64>)
+);
+
+// ── crossing_segment_gate (integrator contract Part 5, the segment gate) ───────────────────────────────────────────────
+
+/// One endpoint of §1's cuts: the shared distance `d`, and the body between, which opens cut `a`'s gate (body 0) or cut
+/// `b`'s (body 2), or neither (body 1).
+fn shared(d: f64, between: u32) -> CutDistances<f64> {
+    CutDistances {
+        a: d,
+        b: d,
+        gate_a: between == 0,
+        gate_b: between == 2,
+    }
+}
+
+/// The gate read at the substep's non-negative endpoint: in the positive sense the end's, in the negative the start's;
+/// the on-cut endpoint (`d = 0`, `−0`) is the non-negative one; one crossing at most, the gates being exclusive.
+fn check_segment_gate(detect: Detect<f64>) {
+    let (neg, pos, zero) = (-1.0, 1.0, 0.0);
+    // (start d, start body, end d, end body, crossings)
+    let cases: [(f64, u32, f64, u32, &[u32]); 14] = [
+        // Positive sense: the end's gate.
+        (neg, 1, pos, 0, &[0]),
+        (neg, 1, pos, 2, &[2]),
+        (neg, 0, pos, 1, &[]),
+        (neg, 2, pos, 1, &[]),
+        (neg, 0, zero, 2, &[2]),
+        (neg, 2, -zero, 0, &[0]),
+        // Negative sense: the start's gate.
+        (pos, 0, neg, 1, &[1]),
+        (pos, 2, neg, 1, &[3]),
+        (pos, 1, neg, 0, &[]),
+        (zero, 2, neg, 0, &[3]),
+        (-zero, 0, neg, 2, &[1]),
+        // No side change: no crossing, whatever the gates.
+        (neg, 0, neg, 2, &[]),
+        (pos, 0, zero, 2, &[]),
+        // Both gates of one endpoint can't open together; across the two endpoints only the non-negative one counts.
+        (neg, 2, pos, 0, &[0]),
+    ];
+    for (d0, k0, d1, k1, want) in cases {
+        assert_eq!(
+            detect(shared(d0, k0), shared(d1, k1)),
+            want.to_vec(),
+            "the segment gate: d {d0} (body {k0} between) to {d1} (body {k1})"
+        );
+    }
+}
+
+#[test]
+fn crossing_segment_gate() {
+    check_segment_gate(detect::<f64>);
+}
+
+/// A detector that reads each gate at the substep's start, whatever the sense.
+#[cfg(feature = "controls")]
+fn gate_at_start(start: CutDistances<f64>, end: CutDistances<f64>) -> Vec<u32> {
+    detect(
+        start,
+        CutDistances {
+            gate_a: start.gate_a,
+            gate_b: start.gate_b,
+            ..end
+        },
+    )
+}
+
+negative_control!(
+    crossing_segment_gate,
+    "a gate read at the start endpoint names the wrong segment in the positive sense",
+    expected = "the segment gate",
+    check_segment_gate(gate_at_start)
+);
+
+// ── crossing_state_cuts (symbolic_dynamics_contract §1: d, the classifier, the loops) ────────────────────────────────
+
+/// The cuts from positions: [`state_cuts`], or a control's faulty one.
+type Cuts<T> = fn(&[[T; 2]; 3]) -> CutDistances<T>;
+
+/// The exact longest-side body of integer positions: the greatest squared separation, the lowest body on a tie.
+fn exact_between(r: [[i64; 2]; 3]) -> u32 {
+    let sq = |i: usize, j: usize| (r[j][0] - r[i][0]).pow(2) + (r[j][1] - r[i][1]).pow(2);
+    let n = [sq(1, 2), sq(2, 0), sq(0, 1)];
+    let mut k = 0;
+    for j in 1..3 {
+        if n[j] > n[k] {
+            k = j;
+        }
+    }
+    k as u32
+}
+
+/// The exact `d = −((r₁ − r₀) × (r₂ − r₀))` of integer positions.
+fn exact_d(r: [[i64; 2]; 3]) -> i64 {
+    let u = [r[1][0] - r[0][0], r[1][1] - r[0][1]];
+    let w = [r[2][0] - r[0][0], r[2][1] - r[0][1]];
+    -(u[0] * w[1] - u[1] * w[0])
+}
+
+/// The bodies between at a loop's samples, and the crossings the loop appends, freely reduced: `n` positions
+/// `place(θ)` for `θ` stepping once round from `θ₀`, closed by its first sample again.
+fn loop_word<T: Fixture>(cuts: Cuts<T>, place: impl Fn(f64) -> [[f64; 2]; 3]) -> Vec<u32> {
+    let n = 64;
+    let at = |k: usize| {
+        let theta = 0.01 + std::f64::consts::TAU * k as f64 / n as f64;
+        let r = place(theta);
+        r.map(|p| p.map(|x| T::of_rounded(x)))
+    };
+    let mut detector = CrossingDetector::new(cuts(&at(0)));
+    let mut stream = Vec::new();
+    for k in 1..=n {
+        let c = detector.accept(cuts(&at(k % n)));
+        stream.extend_from_slice(&c.symbols[..c.count as usize]);
+    }
+    reduce(&stream).symbols
+}
+
+fn check_state_cuts<T: Fixture>(cuts: Cuts<T>) {
+    // Integer positions, exact at both precisions, at three scales: d against the exact cross product, the
+    // classifier against the exact longest side. At f32 the smallest scale puts the squared separations near 2⁻¹⁴⁰,
+    // below the normal range, where only the mantissa-and-exponent form keeps them apart.
+    let coordinate = -6i64..=6;
+    let point = (coordinate.clone(), coordinate);
+    prop::run(&[point.clone(), point.clone(), point], |p| {
+        let r = [[p[0].0, p[0].1], [p[1].0, p[1].1], [p[2].0, p[2].1]];
+        for scale in [-70, 0, 40] {
+            let s = 2f64.powi(scale);
+            let x = r.map(|q| q.map(|v| T::of(v as f64 * s)));
+            let c = cuts(&x);
+            let d = exact_d(r);
+            // d's float, and its side, as the half-open rule reads it: below the normal range it reads as zero.
+            let want_side = d < 0 && !reads_as_zero(T::of_rounded(d as f64 * s * s));
+            prop_assert_eq!(
+                negative(c.a),
+                want_side,
+                "d's side at {:?}·2^{}: d = {}",
+                r,
+                scale,
+                d
+            );
+            prop_assert!(c.a == c.b, "the cuts share d");
+            let k = exact_between(r);
+            prop_assert_eq!(
+                (c.gate_a, c.gate_b),
+                (k == 0, k == 2),
+                "the classifier at {:?}·2^{}: body {} between",
+                r,
+                scale,
+                k
+            );
+        }
+        Ok(())
+    });
+    // d's value at scale 1, where it is exact: the cross product itself, negated.
+    let r = [[0.0, 0.0], [3.0, 1.0], [-2.0, 5.0]];
+    let c = cuts(&r.map(|p| p.map(T::of)));
+    assert_eq!(c.a, T::of(-17.0), "d at {r:?}");
+    // The classifier's ties and near-ties: two longest sides equal, in each pairing, and one longer by the least step
+    // of the squares, in each position.
+    for (r, k) in [
+        ([[0, 0], [2, 0], [1, 5]], 0), // n₀ = n₁ = 26 > n₂ = 4
+        ([[1, 5], [0, 0], [2, 0]], 1), // n₁ = n₂ = 26 > n₀ = 4
+        ([[0, 0], [1, 5], [2, 0]], 0), // n₀ = n₂ = 26 > n₁ = 4
+        ([[0, 0], [2, 0], [1, 1]], 2), // n₂ = 4 > n₀ = n₁ = 2
+        ([[0, 0], [0, 0], [0, 0]], 0), // all zero
+        ([[0, 0], [1, 0], [0, 5]], 0), // n₀ = 26 > n₁ = 25 > n₂ = 1
+        ([[0, 0], [1, 0], [1, 5]], 1), // n₁ = 26 > n₀ = 25 > n₂ = 1
+        ([[0, 0], [1, 5], [1, 0]], 2), // n₂ = 26 > n₀ = 25 > n₁ = 1
+    ] {
+        assert_eq!(exact_between(r), k, "the reference at {r:?}");
+        let x = r.map(|q| q.map(|v| T::of(v as f64)));
+        let c = cuts(&x);
+        assert_eq!(
+            (c.gate_a, c.gate_b),
+            (k == 0, k == 2),
+            "the classifier at {r:?}: body {k} between"
+        );
+    }
+    // d against the shape sphere's n_w: d has the sign of −n_w, so it is negative on L⁺'s hemisphere.
+    prop::run(
+        &(
+            proptest::array::uniform3(proptest::array::uniform2(-4.0f64..4.0)),
+            proptest::array::uniform3(0.1f64..1.0),
+        ),
+        |(r, m)| {
+            let total = m[0] + m[1] + m[2];
+            let m = m.map(|x| x / total);
+            let w = kernel::shape::shape(r, m)[2];
+            prop_assume!(w.abs() > 1e-3);
+            let x = r.map(|p| p.map(|v| T::of_rounded(v)));
+            prop_assert_eq!(
+                negative(cuts(&x).a),
+                w > 0.0,
+                "d's side against n_w = {} at {:?}",
+                w,
+                r
+            );
+            Ok(())
+        },
+    );
+    // Loops about each collision point, ε = 1/8 from it, the third body at distance 1: about P₀₁ (bodies 0 and 1)
+    // the loop reads A; about P₁₂, b; about P₀₂, the puncture at infinity, aB, Appendix B's class for it.
+    let e = 0.125;
+    let ring = move |t: f64| [e * t.cos(), e * t.sin()];
+    assert_eq!(
+        loop_word(cuts, |t| [[0.0, 0.0], ring(t), [1.0, 0.0]]),
+        vec![1],
+        "the loop about P01 reads A"
+    );
+    assert_eq!(
+        loop_word(cuts, |t| [[1.0, 0.0], [0.0, 0.0], ring(t)]),
+        vec![2],
+        "the loop about P12 reads b"
+    );
+    assert_eq!(
+        loop_word(cuts, |t| [[0.0, 0.0], [1.0, 0.0], ring(t)]),
+        vec![0, 3],
+        "the loop about P02 reads aB"
+    );
+}
+
+#[test]
+fn crossing_state_cuts() {
+    check_state_cuts::<f32>(state_cuts::<f32>);
+    check_state_cuts::<f64>(state_cuts::<f64>);
+}
+
+/// The cuts with `d`'s sign flipped, `+(r₁ − r₀) × (r₂ − r₀)`: positive on `L⁺`'s hemisphere.
+#[cfg(feature = "controls")]
+fn flipped<T: IeeeBits>(r: &[[T; 2]; 3]) -> CutDistances<T> {
+    let c = state_cuts(r);
+    CutDistances {
+        a: -c.a,
+        b: -c.b,
+        ..c
+    }
+}
+
+negative_control!(
+    crossing_state_cuts,
+    "d signed as +n_w puts L⁺'s hemisphere on the non-negative side",
+    expected = "d's side",
+    check_state_cuts::<f64>(flipped::<f64>)
+);
+
+// ── crossing_published_words (REQ-PAY-070's cross-check) ─────────────────────────────────────────────────────────────
+
+/// A word of letters `a`, `A`, `b`, `B` as symbol codes.
+fn codes(word: &str) -> Vec<u32> {
+    word.chars().map(|c| symbol(&c.to_string())).collect()
+}
+
+/// `w` freely and cyclically reduced: a symbol beside its inverse cancels, then the ends while they are inverses.
+fn cyclic(w: &[u32]) -> Vec<u32> {
+    let mut out: Vec<u32> = Vec::new();
+    for &s in w {
+        if out.last() == Some(&(s ^ 1)) {
+            out.pop();
+        } else {
+            out.push(s);
+        }
+    }
+    while out.len() > 1 && out[0] == out[out.len() - 1] ^ 1 {
+        out.remove(0);
+        out.pop();
+    }
+    out
+}
+
+/// R-630 item 5's comparison of `got` against `published`, both cyclically reduced: the first of conjugacy, the
+/// inverse, the `(a, b) ↔ (A, B)` exchange and both that makes `got` a cyclic rotation of `published`.
+fn symmetry(got: &[u32], published: &[u32]) -> Option<&'static str> {
+    let rotation = |w: &[u32]| {
+        w.len() == published.len()
+            && (0..published.len().max(1))
+                .any(|i| published[i..].iter().chain(&published[..i]).eq(w.iter()))
+    };
+    let inverse: Vec<u32> = got.iter().rev().map(|s| s ^ 1).collect();
+    let exchange: Vec<u32> = got.iter().map(|s| s ^ 1).collect();
+    let both: Vec<u32> = inverse.iter().map(|s| s ^ 1).collect();
+    [
+        ("conjugacy", got.to_vec()),
+        ("inverse", inverse),
+        ("exchange", exchange),
+        ("inverse and exchange", both),
+    ]
+    .into_iter()
+    .find(|(_, w)| rotation(w))
+    .map(|(name, _)| name)
+}
+
+/// The cuts from each orbit's kept states, through the detector, at f64: the cyclically reduced word is the fixture's,
+/// and it matches the published word up to the symmetry the fixture records.
+fn check_published_words(cuts: Cuts<f64>) {
+    let path = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../fixtures/crossings/prl_orbits.json"
+    );
+    let text = std::fs::read_to_string(path).expect("read the PRL orbits fixture");
+    let doc: serde_json::Value = serde_json::from_str(&text).expect("the fixture is JSON");
+    let orbits = doc["orbits"].as_array().expect("orbits");
+    assert_eq!(orbits.len(), 10, "the fixture's ten orbits");
+    for orbit in orbits {
+        let name = orbit["name"].as_str().expect("name");
+        let states: Vec<[[f64; 2]; 3]> = orbit["states"]
+            .as_array()
+            .expect("states")
+            .iter()
+            .map(|s| {
+                let body = |k: usize| [s[k][0].as_f64().expect("x"), s[k][1].as_f64().expect("y")];
+                [body(0), body(1), body(2)]
+            })
+            .collect();
+        let mut detector = CrossingDetector::new(cuts(&states[0]));
+        let mut stream = Vec::new();
+        for r in &states[1..] {
+            let c = detector.accept(cuts(r));
+            stream.extend_from_slice(&c.symbols[..c.count as usize]);
+        }
+        let got = cyclic(&stream);
+        let want = codes(orbit["word"].as_str().expect("word"));
+        assert_eq!(got, want, "{name}: the word read is not the fixture's");
+        let published = cyclic(&codes(orbit["published"].as_str().expect("published")));
+        assert_eq!(
+            symmetry(&got, &published),
+            Some(orbit["symmetry"].as_str().expect("symmetry")),
+            "{name}: the word read is not the published one up to its symmetry"
+        );
+    }
+}
+
+#[test]
+fn crossing_published_words() {
+    check_published_words(state_cuts::<f64>);
+    // The comparison itself, on a word none of whose symmetries is a rotation of it: each symmetry once, and a word
+    // that none reaches.
+    let w = codes("aabAB");
+    assert_eq!(symmetry(&codes("abABa"), &w), Some("conjugacy"));
+    assert_eq!(symmetry(&codes("baBAA"), &w), Some("inverse"));
+    assert_eq!(symmetry(&codes("AABab"), &w), Some("exchange"));
+    assert_eq!(symmetry(&codes("BAbaa"), &w), Some("inverse and exchange"));
+    assert_eq!(symmetry(&codes("aabab"), &w), None);
+    assert_eq!(symmetry(&codes("aab"), &w), None);
+    assert_eq!(cyclic(&codes("BaAab")), codes("a"), "cyclic reduction");
+}
+
+/// The cuts with the outer bodies' segments swapped: cut `a` on body 2's segment, `b` on body 0's.
+#[cfg(feature = "controls")]
+fn swapped_segments(r: &[[f64; 2]; 3]) -> CutDistances<f64> {
+    let c = state_cuts(r);
+    CutDistances {
+        gate_a: c.gate_b,
+        gate_b: c.gate_a,
+        ..c
+    }
+}
+
+negative_control!(
+    crossing_published_words,
+    "cut a on body 2's segment and b on body 0's reads another word",
+    expected = "the word read is not the fixture's",
+    check_published_words(swapped_segments)
 );

@@ -19,8 +19,9 @@
 //!   the table functions, which are comparison chains).
 //! - [`binding`] is the word buffer as the march and resolve reach it: a binding of its own, parallel to the
 //!   `SimState` buffer at the same index; the march's per-step path reaches it only through the crossing hook.
-//! - [`crossing`] is the detection that feeds the hook, at every accepted substep: the half-open count, the order by
-//!   crossing fraction `τ` and the cut-ID tie-break (integrator contract Part 5, the τ tie rule).
+//! - [`crossing`] is the detection that feeds the hook, at every accepted substep: the cuts' shared distance and
+//!   segment gates from the positions (symbolic_dynamics_contract §1), the half-open count, the order by crossing
+//!   fraction `τ` and the cut-ID tie-break (integrator contract Part 5, the τ tie rule).
 
 pub mod append;
 pub mod binding;
@@ -33,7 +34,7 @@ use crate::payload::{
 };
 pub use append::{fgw_append, fgw_mul3_add, FgwAppended};
 pub use binding::{on_substep, sample_word, CrossingHook, SubstepCrossings, WordBuffer};
-pub use crossing::{substep_crossings, CrossingDetector, CutDistances};
+pub use crossing::{state_cuts, substep_crossings, CrossingDetector, CutDistances};
 
 /// The symbols of a word in order, first to last, from [`fgw_decode`]: `d₀`, then `zeros` zero digits, then each digit
 /// popped from `digits`, replayed through `continuation_symbol` from the symbol before it.

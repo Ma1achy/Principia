@@ -9,24 +9,59 @@
 //! - With both cuts crossed, `τ_b < τ_a` is decided as `|d₀,b|·|d₁,a| < |d₀,a|·|d₁,b|` ([`product_less`]), never by
 //!   computing `τ`: no division, no addition, no subnormal intermediate, one correctly rounded multiply. On a tie, `a`
 //!   first.
+//! - Each cut carries a segment gate as well as its distance: a side change is a crossing of the cut only where its
+//!   gate is open at the substep's non-negative endpoint (integrator contract Part 5, the segment gate).
 //! - [`CrossingDetector`] carries the last accepted endpoint's distances between substeps, so each endpoint is shared
 //!   by the two substeps that meet there and an endpoint on a cut is counted once.
 //!
-//! The distances are the input: which cuts carry `a` and `b`, and so how a state's distances are formed, is RQ-632
-//! (symbolic_dynamics_contract §1). Nothing here depends on the cuts' shape.
+//! **The cuts** (symbolic_dynamics_contract §1; RQ-632, option (a)): the collision equator's segments with body 0
+//! between (`a`, from `P₀₁` to `P₀₂`) and with body 2 between (`b`, from `P₁₂` to `P₀₂`). Both share one signed
+//! function, `d = −((r₁ − r₀) × (r₂ − r₀))`, negative on `L⁺`'s hemisphere, so a generator crosses from `L⁺`'s
+//! hemisphere into `L⁻`'s; the gates are §1's segment classifier, [`between`]: cut `a`'s is open where body 0 is
+//! between, cut `b`'s where body 2 is, neither where body 1 is. [`state_cuts`] forms the two from the positions.
+//! The gates being exclusive, one substep crosses at most one of these cuts, so the `τ`-sort never meets two of them;
+//! it stays defined for cuts with distinct distances.
+//!
+//! **The branch inputs** (R-547; integrator contract Part 4). `d` and the three squared separations the classifier
+//! compares are formed as `crate::canon` forms its branch inputs: each coordinate taken in as a mantissa in `[1, 2)`
+//! and an integer exponent, the differences, the products ([`IeeeBits::product`]'s pattern) and the sums formed on
+//! those, so no intermediate is subnormal and every IEEE backend rounds them alike. The comparisons are on those
+//! pairs; `d` is converted to the float once, and its side read by [`negative`], which reads a subnormal as zero, so a
+//! backend that flushes the conversion's subnormal result reads the same side.
 
 use super::binding::{on_substep, CrossingHook, SubstepCrossings, WordBuffer};
+use crate::canon::{difference, to_float, vector, wide_greater, wide_mul, wide_norm2, wide_sub};
+use crate::generated::links::LinkReal;
 use crate::payload::inverse;
 use crate::real::IeeeBits;
 
-/// Each cut's signed distance at one endpoint of an accepted substep: cut `a`, ID 0, and cut `b`, ID 1
-/// (symbolic_dynamics_contract §1). Signed so that the positive sense, negative → non-negative, is the generator.
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+/// Each cut's signed distance and segment gate at one endpoint of an accepted substep: cut `a`, ID 0, and cut `b`,
+/// ID 1 (symbolic_dynamics_contract §1). Signed so that the positive sense, negative → non-negative, is the generator.
+/// A side change of a cut's distance is a crossing of it only where its gate is open at the substep's non-negative
+/// endpoint (integrator contract Part 5).
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct CutDistances<T> {
     /// The signed distance to cut `a`.
     pub a: T,
     /// The signed distance to cut `b`.
     pub b: T,
+    /// Cut `a`'s segment gate at this endpoint.
+    pub gate_a: bool,
+    /// Cut `b`'s segment gate at this endpoint.
+    pub gate_b: bool,
+}
+
+impl<T> CutDistances<T> {
+    /// Two cuts with distances of their own and no segment between them to choose: both gates open.
+    #[inline]
+    pub const fn ungated(a: T, b: T) -> Self {
+        Self {
+            a,
+            b,
+            gate_a: true,
+            gate_b: true,
+        }
+    }
 }
 
 /// Whether `d` reads as zero: its exponent field is all zeros, so it is `±0` or a subnormal, read as a backend that
@@ -76,11 +111,20 @@ struct CutCrossing {
     symbol: u32,
 }
 
+/// The cut with distances `d0`, `d1` and gates `gate0`, `gate1` at the segment's start and end: crossed iff its sides
+/// differ and its gate is open at the non-negative endpoint, the end in the positive sense, the start in the negative.
 #[inline]
-fn cut_crossing<T: IeeeBits>(d0: T, d1: T, generator: u32) -> CutCrossing {
+fn cut_crossing<T: IeeeBits>(
+    d0: T,
+    d1: T,
+    gate0: bool,
+    gate1: bool,
+    generator: u32,
+) -> CutCrossing {
     let from_negative = negative(d0);
+    let gate = if from_negative { gate1 } else { gate0 };
     CutCrossing {
-        crossed: from_negative != negative(d1),
+        crossed: (from_negative != negative(d1)) & gate,
         symbol: if from_negative {
             generator
         } else {
@@ -89,17 +133,17 @@ fn cut_crossing<T: IeeeBits>(d0: T, d1: T, generator: u32) -> CutCrossing {
     }
 }
 
-/// The crossings of one accepted substep, from the cuts' distances at its start to those at its end, in the order they
-/// are appended: by ascending `τ`, `a` first on a tie (integrator contract Part 5). `a`'s generator is symbol 0 and
-/// `b`'s symbol 2 (payload §3's codes, `a = 0, A = 1, b = 2, B = 3`). `τ` is never formed: `b` precedes `a` iff
-/// `|d₀,b|·|d₁,a| < |d₀,a|·|d₁,b|`, [`product_less`].
+/// The crossings of one accepted substep, from the cuts' distances and gates at its start to those at its end, in the
+/// order they are appended: by ascending `τ`, `a` first on a tie (integrator contract Part 5). `a`'s generator is
+/// symbol 0 and `b`'s symbol 2 (payload §3's codes, `a = 0, A = 1, b = 2, B = 3`). `τ` is never formed: `b` precedes
+/// `a` iff `|d₀,b|·|d₁,a| < |d₀,a|·|d₁,b|`, [`product_less`].
 #[inline]
 pub fn substep_crossings<T: IeeeBits>(
     start: CutDistances<T>,
     end: CutDistances<T>,
 ) -> SubstepCrossings {
-    let a = cut_crossing(start.a, end.a, 0);
-    let b = cut_crossing(start.b, end.b, 2);
+    let a = cut_crossing(start.a, end.a, start.gate_a, end.gate_a, 0);
+    let b = cut_crossing(start.b, end.b, start.gate_b, end.gate_b, 2);
     let b_first = a.crossed && b.crossed && product_less(start.b, end.a, start.a, end.b);
     let (first, second) = if b_first { (b, a) } else { (a, b) };
     let mut out = SubstepCrossings::default();
@@ -116,6 +160,57 @@ pub fn substep_crossings<T: IeeeBits>(
         out.count += 1;
     }
     out
+}
+
+/// Which body lies between the other two at positions `r`, §1's segment classifier (REQ-PAY-113): the body opposite the
+/// longest side, the `k` whose pair's squared separation `r²ₖ` is the greatest (pair `k` the side opposite body `k`,
+/// R-22), the lowest `k` on a tie. On the collision equator it is the body between the other two. The `r²ₖ` are formed
+/// and compared as the module's note says, so the choice is the same on every IEEE backend given the same `r`.
+#[inline]
+pub fn between<R: LinkReal + IeeeBits>(r: &[[R; 2]; 3]) -> u32 {
+    let [p0, p1, p2] = [vector(r[0]), vector(r[1]), vector(r[2])];
+    let n = [
+        wide_norm2(difference(p1, p2)),
+        wide_norm2(difference(p2, p0)),
+        wide_norm2(difference(p0, p1)),
+    ];
+    if wide_greater(n[1], n[0]) {
+        if wide_greater(n[2], n[1]) {
+            2
+        } else {
+            1
+        }
+    } else if wide_greater(n[2], n[0]) {
+        2
+    } else {
+        0
+    }
+}
+
+/// The cuts' shared signed function at positions `r` (symbolic_dynamics_contract §1): `d = −((r₁ − r₀) × (r₂ − r₀))`,
+/// minus the triangle 0 → 1 → 2's doubled signed area, formed as the module's note says, `(r₁ − r₀)_y·(r₂ − r₀)_x −
+/// (r₁ − r₀)_x·(r₂ − r₀)_y` in one rounding of each product and one of the difference, then converted to the float.
+/// Negative on `L⁺`'s hemisphere (0 → 1 → 2 anticlockwise), positive on `L⁻`'s, zero on the equator.
+#[inline]
+pub fn signed_distance<R: LinkReal + IeeeBits>(r: &[[R; 2]; 3]) -> R {
+    let p0 = vector(r[0]);
+    let u = difference(p0, vector(r[1]));
+    let w = difference(p0, vector(r[2]));
+    to_float(wide_sub(wide_mul(u[1], w[0]), wide_mul(u[0], w[1])))
+}
+
+/// The cuts at positions `r` (symbolic_dynamics_contract §1): both distances [`signed_distance`], cut `a`'s gate open
+/// where body 0 is [`between`], cut `b`'s where body 2 is.
+#[inline]
+pub fn state_cuts<R: LinkReal + IeeeBits>(r: &[[R; 2]; 3]) -> CutDistances<R> {
+    let d = signed_distance(r);
+    let k = between(r);
+    CutDistances {
+        a: d,
+        b: d,
+        gate_a: k == 0,
+        gate_b: k == 2,
+    }
 }
 
 /// What the march carries for detection between accepted substeps: the cuts' distances at the last accepted endpoint.

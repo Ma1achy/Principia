@@ -226,7 +226,7 @@ pub(crate) fn wide<R: LinkReal + IeeeBits>(x: R) -> Wide<R> {
 
 /// `a·b`: the mantissas' [`IeeeBits::product`], in `[1, 4)`, whose partial products are at least `2^−46`, renormalised.
 #[inline]
-fn wide_mul<R: LinkReal + IeeeBits>(a: Wide<R>, b: Wide<R>) -> Wide<R> {
+pub(crate) fn wide_mul<R: LinkReal + IeeeBits>(a: Wide<R>, b: Wide<R>) -> Wide<R> {
     renorm(a.m.product(b.m), a.e + b.e)
 }
 
@@ -250,7 +250,7 @@ fn wide_neg<R: LinkReal + IeeeBits>(a: Wide<R>) -> Wide<R> {
 
 /// `a − b`, one rounding: [`wide_add`] of `−b`.
 #[inline]
-fn wide_sub<R: LinkReal + IeeeBits>(a: Wide<R>, b: Wide<R>) -> Wide<R> {
+pub(crate) fn wide_sub<R: LinkReal + IeeeBits>(a: Wide<R>, b: Wide<R>) -> Wide<R> {
     wide_add(a, wide_neg(b))
 }
 
@@ -277,19 +277,19 @@ fn is_zero<R: LinkReal + IeeeBits>(a: Wide<R>) -> bool {
 
 /// `‖v‖² = v_x² + v_y²`.
 #[inline]
-fn wide_norm2<R: LinkReal + IeeeBits>(v: [Wide<R>; 2]) -> Wide<R> {
+pub(crate) fn wide_norm2<R: LinkReal + IeeeBits>(v: [Wide<R>; 2]) -> Wide<R> {
     wide_add(wide_mul(v[0], v[0]), wide_mul(v[1], v[1]))
 }
 
 /// `v`'s components as [`Wide`]s.
 #[inline]
-fn vector<R: LinkReal + IeeeBits>(v: [R; 2]) -> [Wide<R>; 2] {
+pub(crate) fn vector<R: LinkReal + IeeeBits>(v: [R; 2]) -> [Wide<R>; 2] {
     [wide(v[0]), wide(v[1])]
 }
 
 /// `b − a`, per component.
 #[inline]
-fn difference<R: LinkReal + IeeeBits>(a: [Wide<R>; 2], b: [Wide<R>; 2]) -> [Wide<R>; 2] {
+pub(crate) fn difference<R: LinkReal + IeeeBits>(a: [Wide<R>; 2], b: [Wide<R>; 2]) -> [Wide<R>; 2] {
     [wide_sub(b[0], a[0]), wide_sub(b[1], a[1])]
 }
 
