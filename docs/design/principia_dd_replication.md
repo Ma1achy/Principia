@@ -856,7 +856,9 @@ ensemble is scored on (a) too, (a) being the tier that agrees "statistically or 
 scored on (b) for its exact part and on (a) for its statistical or qualitative part (*applied per R-369*, R-649). A
 single chaotic trajectory set beside a figure (AA-4, V-6, SP-1's structural comparison) is (b). Five map targets
 whose verify names a Result at f64 (AT-D2, OC-4 off and on the Šuvakov plane, AT-D1, AT-D3) are (a) by the rule;
-how their f64 Result runs square with it is RQ-622, and their scoring waits on it. A GPU miss on a (b) target, or on
+how their f64 Result runs square with it is RQ-622, and their scoring waits on it. B-2 (REQ-VAL-246) is
+statistical, so (a) by the rule, but its statement names the CPU FTLE and it is one start, the Burrau pixel; which
+instrument scores it is RQ-622 too, and its scoring waits on it. A GPU miss on a (b) target, or on
 a mixed target's (b) part, is expected, not a defect. A calibration takes its target's tier. *Was (the port's first
 reading, corrected 30 Oct 2026 by the owner's confirmation):* "a statistical or qualitative one binds (b), with (a)
 expected to agree statistically or qualitatively; one with an exact part and a statistical part binds (b) for the
@@ -890,7 +892,7 @@ first, and (a) is expected to agree with the second statistically"; every (a) an
 | TM-1 | REQ-VAL-240 | exact (scaling) | (b) |
 | CH-1 | REQ-VAL-242 | statistical | (a) |
 | B-1 | REQ-VAL-244 | exact to the figure's resolution | (b) |
-| B-2 | REQ-VAL-246 | statistical (loose) | (a) |
+| B-2 | REQ-VAL-246 | statistical (loose) | (a); its CPU FTLE: RQ-622 |
 | V-6 | REQ-VAL-248 | exact once shot; qualitative against the figure (one trajectory) | (b) |
 | Q-2's Theory row, Q-4 | REQ-VAL-211 | (i) exact; (ii) statistical; no integration | (b) for (i); (a) for (ii) |
 | P-1 | REQ-VAL-252 | qualitative + statistical | (a) |

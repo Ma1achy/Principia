@@ -638,7 +638,7 @@ peek log's first row (`docs/verification/peek_log.md`), UNEXPLAINED, with this q
   `principia_dd_replication.md` § 5.10, the RQ-598 README § 6 and TASK-M3-62's note point here.
 - **Waits:** GG-1's per-point scoring against the Fig. 1 extraction (TASK-M3-62). BR-1 does not wait on it.
 
-## RQ-622: Five statistical or qualitative map targets whose verify names a Result at f64: are they scored on tier (a), the f32 GPU explorer, as R-649's confirmed reading says, or on the f64 Result their verify names *(physics; R-649 item 2 and the owner's confirmation of 30 Oct 2026; `docs/design/principia_dd_replication.md` § 12.2; REQ-VAL-308, REQ-VAL-309, REQ-VAL-311, REQ-VAL-312, REQ-VAL-313; context: TASK-M9-33, TASK-M9-34, TASK-M9-35)*
+## RQ-622: Five statistical or qualitative map targets whose verify names a Result at f64: are they scored on tier (a), the f32 GPU explorer, as R-649's confirmed reading says, or on the f64 Result their verify names *(physics; R-649 item 2 and the owner's confirmation of 30 Oct 2026; `docs/design/principia_dd_replication.md` § 12.2; REQ-VAL-308, REQ-VAL-309, REQ-VAL-311, REQ-VAL-312, REQ-VAL-313; and B-2, REQ-VAL-246, added below; context: TASK-M9-33, TASK-M9-34, TASK-M9-35, TASK-M9-16)*
 
 *Queued 30 Oct 2026 by the fix round of R-649's port (PR #342), applying the owner's confirmation of the tier reading.
 For the owner: yes, it is physics where the choice changes which instrument a target is scored on, and the corpus
@@ -670,5 +670,20 @@ does not settle it (R-369). Numbered RQ-622: the number before it is already hel
   owner.
 - **Applied meanwhile:** the five are listed as tier (a) by the rule, "its f64 Result: RQ-622", in § 12.2 and in their
   notes; their verify is unchanged. Nothing in M0 to M8 depends on it.
+- **Added (30 Oct 2026, fix round of PR #342, Codex thread on § 12.2's B-2 row): B-2, REQ-VAL-246.** The same
+  question for one statistical target whose statement names the CPU:
+  - `plan/requirements.yaml`, REQ-VAL-246 (B-2), statement: "The Lyapunov exponent of Burrau's problem, measured with
+    the CPU FTLE, must be compared loosely with λ₁₀ = 0.101 ± 0.005 (τ_L = 4.3 ± 0.2), recorded as a fit over every ζ,
+    relativistic runs included, and not a Newtonian-only number (B-2)." Its compare is "statistical (loose)", so the
+    confirmed reading puts it on (a), and § 12.2's table row reads "(a)".
+  - `docs/design/principia_dd_replication.md` § "12.2 Tiers": "A single chaotic trajectory set beside a figure (AA-4,
+    V-6, SP-1's structural comparison) is (b)." B-2 is one start, the Burrau pixel, which points to (b).
+  - The gap: by its compare B-2 is (a), the f32 GPU explorer; by its statement and by the single-trajectory clause it
+    is the CPU's, (b). Which instrument measures the exponent changes the number scored.
+  - The question: is B-2 scored on (a), on the CPU FTLE its statement names, or on both. The options are those above,
+    read for the CPU FTLE in place of the f64 Result.
+  - Applied meanwhile: § 12.2's row reads "(a); its CPU FTLE: RQ-622"; REQ-VAL-246's statement is unchanged and it is
+    held on this entry; TASK-M9-16's note and TASK-M9-37's "not scored" list name the hold. TASK-M9-16 still scores
+    CH-1, B-1 and V-6.
 - **Waits:** the scoring of REQ-VAL-308, REQ-VAL-309, REQ-VAL-311, REQ-VAL-312 and REQ-VAL-313 in M9 (TASK-M9-33,
-  TASK-M9-34, TASK-M9-35), and any peek of them.
+  TASK-M9-34, TASK-M9-35), and any peek of them; and B-2's (REQ-VAL-246, TASK-M9-16), and any peek of it.
