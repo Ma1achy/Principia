@@ -21,7 +21,8 @@
 //! at `t = 0`: each is one number, constant across the dispatch, and there is no co-moving option, since a co-moving
 //! length makes the Hamiltonian time-dependent. Softened gravity is a different force law at any `epsilon`, so a run
 //! with `epsilon > 0` is tagged ([`Softening`]) in its provenance and on its sim key, and never pooled with an
-//! unsoftened run.
+//! unsoftened run. No force law takes `epsilon` yet and the corpus does not define one (RQ-627), so dispatch refuses
+//! any `epsilon` other than 0 ([`crate::dispatch::validate`]); the field, its tag and its sim-key byte stay.
 //!
 //! **Benettin's `n_renorm` and `δ₀`** (dd_integrator §3.8) have no value yet: they are REQ-INT-076's calibration, which
 //! the task that needs them proposes. Until then each is `None`, and `Default` gives no number for them.
@@ -132,7 +133,7 @@ pub fn horizon_steps(t: f64, dt_macro: f64) -> f64 {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[repr(u8)]
 pub enum Softening {
-    /// `epsilon` is 0 (or not positive): Newtonian gravity, unsoftened.
+    /// `epsilon` is 0: Newtonian gravity, unsoftened.
     Unsoftened = 0,
     /// `epsilon > 0`: softened gravity.
     Softened = 1,
@@ -190,7 +191,8 @@ impl SimUniforms {
         }
     }
 
-    /// Whether the run is softened: [`Softening::Softened`] where `epsilon > 0`.
+    /// Whether the run is softened: [`Softening::Softened`] where `epsilon > 0`. Dispatch refuses every `epsilon`
+    /// other than 0 until softened gravity is built (RQ-627).
     pub fn softening(&self) -> Softening {
         if self.epsilon > 0.0 {
             Softening::Softened

@@ -5,9 +5,11 @@
 //!   `10⁻³` at and below it (REQ-INT-026).
 //! - `horizon_refusal`: a `(T, dt_macro)` giving 65536 macro-steps is refused at dispatch and launches nothing, 65535
 //!   is accepted; the other refusals' edges; the joint `total_substeps` bound; and a terminal sample's `t_end_step` is
-//!   the latched step count (REQ-PAY-037).
+//!   the latched step count (REQ-PAY-037). A non-finite or negative `r_coll`, `tau` or `r_close`, and a non-finite
+//!   `eps_E` or `eps_L`, each refused with its reason; `r_coll = 0` accepted (Part 7).
 //! - `collision_softening_defaults`: `r_coll` nonzero and `epsilon` 0 by default, no co-moving field, and `epsilon > 0`
-//!   tagged in the provenance and on the sim key (REQ-SYS-018).
+//!   tagged in the provenance and on the sim key (REQ-SYS-018); dispatch refuses every `epsilon` other than 0 until
+//!   softened gravity is built (RQ-627).
 //! - `sim_uniforms_nsub_table`: the table `SimUniforms` carries is the host generator's for a changed config, and
 //!   dispatch returns the generator's refusal at `N_max = L_max + 1` and launches nothing (REQ-INT-028, in part; R-502).
 //! - `horizon_default`: the default horizon, `T = 200`, and `T = 10`, 0.5 and 0.4 accepted; nothing in `[0.4, 200]`
@@ -359,6 +361,205 @@ negative_control!(
     })
 );
 
+/// A carried length or threshold dispatch refuses with its own reason (physics review of PR #348, F2).
+#[derive(Clone, Copy, Debug)]
+enum Carried {
+    RColl,
+    Tau,
+    RClose,
+    EpsE,
+    EpsL,
+}
+
+impl Carried {
+    /// The default sim key with this value set to `x`.
+    fn set(self, x: f64) -> SimUniforms {
+        let d = SimUniforms::default();
+        match self {
+            Carried::RColl => SimUniforms { r_coll: x, ..d },
+            Carried::Tau => SimUniforms { tau: x, ..d },
+            Carried::RClose => SimUniforms { r_close: x, ..d },
+            Carried::EpsE => SimUniforms { eps_e: x, ..d },
+            Carried::EpsL => SimUniforms { eps_l: x, ..d },
+        }
+    }
+
+    /// `u` with this value put back to its default: a dispatch blind to it, for the controls.
+    #[cfg(feature = "controls")]
+    fn blind(self, u: &SimUniforms) -> SimUniforms {
+        let d = SimUniforms::default();
+        match self {
+            Carried::RColl => SimUniforms {
+                r_coll: d.r_coll,
+                ..*u
+            },
+            Carried::Tau => SimUniforms { tau: d.tau, ..*u },
+            Carried::RClose => SimUniforms {
+                r_close: d.r_close,
+                ..*u
+            },
+            Carried::EpsE => SimUniforms {
+                eps_e: d.eps_e,
+                ..*u
+            },
+            Carried::EpsL => SimUniforms {
+                eps_l: d.eps_l,
+                ..*u
+            },
+        }
+    }
+
+    /// The values refused: a length or settling threshold not finite or negative, a drift floor not finite.
+    fn refused(self) -> Vec<f64> {
+        let mut out = vec![f64::NAN, f64::INFINITY, f64::NEG_INFINITY];
+        if !matches!(self, Carried::EpsE | Carried::EpsL) {
+            out.extend([-1e-3, -f64::from_bits(1)]);
+        }
+        out
+    }
+
+    /// Whether `e` is this value's refusal.
+    fn is_refusal(self, e: &DispatchError) -> bool {
+        match self {
+            Carried::RColl => matches!(e, DispatchError::CollisionRadius { .. }),
+            Carried::Tau => matches!(e, DispatchError::EscapeThreshold { .. }),
+            Carried::RClose => matches!(e, DispatchError::CloseDistance { .. }),
+            Carried::EpsE => matches!(e, DispatchError::EnergyDriftFloor { .. }),
+            Carried::EpsL => matches!(e, DispatchError::AngularMomentumDriftFloor { .. }),
+        }
+    }
+
+    /// The name its refusal's reason gives.
+    fn name(self) -> &'static str {
+        match self {
+            Carried::RColl => "r_coll",
+            Carried::Tau => "tau",
+            Carried::RClose => "r_close",
+            Carried::EpsE => "eps_E",
+            Carried::EpsL => "eps_L",
+        }
+    }
+}
+
+/// `check` refuses each of `value`'s refused values with its own refusal, whose reason names it, and accepts the
+/// least positive value.
+fn check_carried_refused(check: &Check, value: Carried) {
+    let name = value.name();
+    for x in value.refused() {
+        let got = check(&value.set(x));
+        assert!(
+            matches!(&got, Err(e) if value.is_refusal(e)),
+            "{name} {x} is not refused as such: {got:?}"
+        );
+        let message = got.unwrap_err().to_string();
+        assert!(
+            message.starts_with(&format!("{name} {x} is refused")),
+            "{name} {x}'s refusal gives no reason: {message}"
+        );
+    }
+    let x = f64::from_bits(1);
+    assert_eq!(check(&value.set(x)), Ok(50000), "{name} {x} is refused");
+}
+
+#[test]
+fn horizon_refusal_r_coll_refused() {
+    check_carried_refused(&real, Carried::RColl);
+}
+
+negative_control!(
+    horizon_refusal_r_coll_refused,
+    "a dispatch blind to r_coll accepts NaN, which silently turns collisions off",
+    expected = "is not refused as such",
+    check_carried_refused(
+        &|u: &SimUniforms| real(&Carried::RColl.blind(u)),
+        Carried::RColl
+    )
+);
+
+/// `check` accepts `r_coll = 0`: Part 7's "refuses to regularise" is a valid setting.
+fn check_r_coll_zero_accepted(check: &Check) {
+    let u = Carried::RColl.set(0.0);
+    assert_eq!(check(&u), Ok(50000), "r_coll 0 is refused");
+}
+
+#[test]
+fn horizon_refusal_r_coll_zero_accepted() {
+    check_r_coll_zero_accepted(&real);
+}
+
+negative_control!(
+    horizon_refusal_r_coll_zero_accepted,
+    "a dispatch that refuses r_coll = 0 refuses Part 7's \"refuses to regularise\"",
+    expected = "r_coll 0 is refused",
+    check_r_coll_zero_accepted(&|u: &SimUniforms| {
+        if u.r_coll == 0.0 {
+            Err(DispatchError::CollisionRadius { r_coll: u.r_coll })
+        } else {
+            real(u)
+        }
+    })
+);
+
+#[test]
+fn horizon_refusal_tau_refused() {
+    check_carried_refused(&real, Carried::Tau);
+}
+
+negative_control!(
+    horizon_refusal_tau_refused,
+    "a dispatch blind to tau accepts NaN, which silently turns escape off",
+    expected = "is not refused as such",
+    check_carried_refused(
+        &|u: &SimUniforms| real(&Carried::Tau.blind(u)),
+        Carried::Tau
+    )
+);
+
+#[test]
+fn horizon_refusal_r_close_refused() {
+    check_carried_refused(&real, Carried::RClose);
+}
+
+negative_control!(
+    horizon_refusal_r_close_refused,
+    "a dispatch blind to r_close accepts NaN, which counts no close encounter",
+    expected = "is not refused as such",
+    check_carried_refused(
+        &|u: &SimUniforms| real(&Carried::RClose.blind(u)),
+        Carried::RClose
+    )
+);
+
+#[test]
+fn horizon_refusal_eps_e_refused() {
+    check_carried_refused(&real, Carried::EpsE);
+}
+
+negative_control!(
+    horizon_refusal_eps_e_refused,
+    "a dispatch blind to eps_E accepts a NaN energy drift floor",
+    expected = "is not refused as such",
+    check_carried_refused(
+        &|u: &SimUniforms| real(&Carried::EpsE.blind(u)),
+        Carried::EpsE
+    )
+);
+
+#[test]
+fn horizon_refusal_eps_l_refused() {
+    check_carried_refused(&real, Carried::EpsL);
+}
+
+negative_control!(
+    horizon_refusal_eps_l_refused,
+    "a dispatch blind to eps_L accepts a NaN angular momentum drift floor",
+    expected = "is not refused as such",
+    check_carried_refused(
+        &|u: &SimUniforms| real(&Carried::EpsL.blind(u)),
+        Carried::EpsL
+    )
+);
+
 // ── collision_softening_defaults (REQ-SYS-018) ───────────────────────────────────────────────────────────────────
 
 /// The default `u` has `r_coll` nonzero and `epsilon` 0, untagged; each field is one number, constant across the
@@ -423,11 +624,6 @@ fn check_collision_softening(u: &SimUniforms) {
         let key = soft.sim_key_bytes();
         assert_eq!(key.last(), Some(&1), "epsilon {eps}'s sim-key tag");
         assert_ne!(key, plain, "epsilon {eps} pools with the unsoftened run");
-        assert_eq!(
-            validate(&soft).map(|v| v.horizon_steps()),
-            Ok(50000),
-            "epsilon {eps} is refused"
-        );
     }
     // The table is derived, so it adds nothing to the sim key (R-502); every carried value does.
     let other_table = SimUniforms {
@@ -462,6 +658,55 @@ negative_control!(
         epsilon: 1e-3,
         ..SimUniforms::default()
     })
+);
+
+/// `check` refuses every `epsilon` other than 0, positive, negative, NaN and ±∞, each as [`DispatchError::Softening`]
+/// with its reason: no force law takes `epsilon` (RQ-627), so a run with one would come back Newtonian under the
+/// `softened` tag. `epsilon = 0` is accepted.
+fn check_epsilon_refused(check: &Check) {
+    let neg_least = -f64::from_bits(1);
+    for eps in [
+        1e-3,
+        f64::MIN_POSITIVE,
+        f64::from_bits(1),
+        -1e-3,
+        neg_least,
+        f64::NAN,
+        f64::INFINITY,
+        f64::NEG_INFINITY,
+    ] {
+        let u = SimUniforms {
+            epsilon: eps,
+            ..SimUniforms::default()
+        };
+        let got = check(&u);
+        assert!(
+            matches!(got, Err(DispatchError::Softening { .. })),
+            "epsilon {eps} is not refused as such: {got:?}"
+        );
+        let message = got.unwrap_err().to_string();
+        assert!(
+            message.contains("softened gravity is not built"),
+            "epsilon {eps}'s refusal gives no reason: {message}"
+        );
+    }
+    assert_eq!(
+        check(&SimUniforms::default()),
+        Ok(50000),
+        "epsilon 0 is refused"
+    );
+}
+
+#[test]
+fn collision_softening_defaults_nonzero_epsilon_refused() {
+    check_epsilon_refused(&real);
+}
+
+negative_control!(
+    collision_softening_defaults_nonzero_epsilon_refused,
+    "a dispatch blind to epsilon accepts epsilon > 0, a softened tag on Newtonian results",
+    expected = "is not refused as such",
+    check_epsilon_refused(&|u: &SimUniforms| real(&SimUniforms { epsilon: 0.0, ..*u }))
 );
 
 /// Each sim-key value moves the sim key's bytes: a change to any field but the table changes them.

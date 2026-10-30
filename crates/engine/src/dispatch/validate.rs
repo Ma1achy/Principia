@@ -16,6 +16,12 @@
 //! - **The joint bound** `horizon_steps × N_max ≤ 2³² − 1`, so the exact `total_substeps` u32 cannot overflow
 //!   ([`check_total_substeps`]). With `horizon_steps ≤ 65535` and `N_max` at most the table's maximum length it holds
 //!   for every accepted sim key; it is asserted all the same, as Part 5 asks.
+//! - **The carried lengths and thresholds**, each refused with its own reason where the branch it feeds would
+//!   silently read as "never": `r_coll`, `tau` and `r_close` finite and not negative (`r_coll = 0` is accepted, Part
+//!   7's "refuses to regularise"), `eps_E` and `eps_L` finite.
+//! - **The softening length**, `epsilon = 0`: no force law takes `epsilon`, and the corpus does not define softened
+//!   gravity (dd_generation_root §3.7, "Open"; RQ-627), so a run with any other `epsilon`, NaN and ±∞ included, would
+//!   come back Newtonian under the `softened` tag. It is refused until the force law is built.
 //!
 //! A sim key that passes is a [`Validated`], the one way to the kernel's `WrapperUniforms`; [`dispatch`] launches only
 //! a validated one, so a refused sim key dispatches nothing.
@@ -69,6 +75,36 @@ pub enum DispatchError {
     },
     /// The host generator refused the substep law (R-502).
     Nsub(NsubTableError),
+    /// `r_coll` is not finite or is negative: at NaN `d² < r_coll²` is never true, so collisions would be silently off.
+    CollisionRadius {
+        /// The `r_coll` carried.
+        r_coll: f64,
+    },
+    /// `tau` is not finite or is negative: `|Δn̂| < tau` would never be true, so escape would be silently off.
+    EscapeThreshold {
+        /// The `tau` carried.
+        tau: f64,
+    },
+    /// `r_close` is not finite or is negative, so the close-encounter count would never count.
+    CloseDistance {
+        /// The `r_close` carried.
+        r_close: f64,
+    },
+    /// `eps_E` is not finite, so the relative energy drift's floor is not a number.
+    EnergyDriftFloor {
+        /// The `eps_E` carried.
+        eps_e: f64,
+    },
+    /// `eps_L` is not finite, so the relative angular momentum drift's floor is not a number.
+    AngularMomentumDriftFloor {
+        /// The `eps_L` carried.
+        eps_l: f64,
+    },
+    /// `epsilon` is not 0: softened gravity is not built (RQ-627).
+    Softening {
+        /// The `epsilon` carried.
+        epsilon: f64,
+    },
     /// The carried threshold table is not the host generator's for the carried `r_sub`, `gamma_sub` and `N_max`.
     StaleThresholds,
     /// `horizon_steps × N_max` is above `2³² − 1`, which the exact `total_substeps` u32 cannot hold.
@@ -118,6 +154,31 @@ impl fmt::Display for DispatchError {
                 HORIZON_STEPS_MAX.number()
             ),
             Self::Nsub(e) => write!(f, "{e}"),
+            Self::CollisionRadius { r_coll } => write!(
+                f,
+                "r_coll {r_coll} is refused: not finite or negative, the collision branch would never fire"
+            ),
+            Self::EscapeThreshold { tau } => write!(
+                f,
+                "tau {tau} is refused: not finite or negative, the escape arm would never fire"
+            ),
+            Self::CloseDistance { r_close } => write!(
+                f,
+                "r_close {r_close} is refused: not finite or negative, no close encounter would be counted"
+            ),
+            Self::EnergyDriftFloor { eps_e } => write!(
+                f,
+                "eps_E {eps_e} is refused: the relative energy drift's floor is not finite"
+            ),
+            Self::AngularMomentumDriftFloor { eps_l } => write!(
+                f,
+                "eps_L {eps_l} is refused: the relative angular momentum drift's floor is not finite"
+            ),
+            Self::Softening { epsilon } => write!(
+                f,
+                "epsilon {epsilon} is refused: softened gravity is not built, no force law takes epsilon \
+                 (RQ-627); only epsilon = 0 is dispatched"
+            ),
             Self::StaleThresholds => write!(
                 f,
                 "the N_sub threshold table is not the host generator's for this r_sub, gamma_sub and N_max (R-502)"
@@ -211,6 +272,35 @@ fn check_horizon(t: f64, escape_window: f64) -> Result<(), DispatchError> {
     Ok(())
 }
 
+/// A length or threshold that must be finite and not negative.
+fn finite_not_negative(x: f64) -> bool {
+    x.is_finite() && x >= 0.0
+}
+
+/// The carried lengths and thresholds, and the softening length (the module's note).
+fn check_carried(u: &SimUniforms) -> Result<(), DispatchError> {
+    if !finite_not_negative(u.r_coll) {
+        return Err(DispatchError::CollisionRadius { r_coll: u.r_coll });
+    }
+    if !finite_not_negative(u.tau) {
+        return Err(DispatchError::EscapeThreshold { tau: u.tau });
+    }
+    if !finite_not_negative(u.r_close) {
+        return Err(DispatchError::CloseDistance { r_close: u.r_close });
+    }
+    if !u.eps_e.is_finite() {
+        return Err(DispatchError::EnergyDriftFloor { eps_e: u.eps_e });
+    }
+    if !u.eps_l.is_finite() {
+        return Err(DispatchError::AngularMomentumDriftFloor { eps_l: u.eps_l });
+    }
+    // NaN != 0, so NaN is refused here too.
+    if u.epsilon != 0.0 {
+        return Err(DispatchError::Softening { epsilon: u.epsilon });
+    }
+    Ok(())
+}
+
 /// `uniforms` checked against every refusal of the module's note, in its order: the accepted sim key with its
 /// `horizon_steps`, or the first refusal.
 pub fn validate(uniforms: &SimUniforms) -> Result<Validated, DispatchError> {
@@ -234,6 +324,7 @@ pub fn validate(uniforms: &SimUniforms) -> Result<Validated, DispatchError> {
     // ceiling is at most 65535.
     let horizon_steps = steps as u32;
     check_total_substeps(horizon_steps, uniforms.n_max)?;
+    check_carried(uniforms)?;
     Ok(Validated {
         uniforms: *uniforms,
         horizon_steps,
