@@ -18,8 +18,9 @@ use scratch::Scratch;
 use validation::negative_control;
 use validation::spawn::Spawn;
 use xtask::jobq::{
-    archivable, heavy, next_job, parse_ps, parse_submit, run_order, snapshot_env, target_key, utc,
-    violations, Config, Job, Priority, Proc, Queue, RunnerLock, State, ARCHIVE_AFTER, MAX_ATTEMPTS,
+    archivable, heavy, next_job, parse_ps, parse_submit, run_order, snapshot_env, target_key,
+    timed_out, utc, violations, Config, Job, Priority, Proc, Queue, RunnerLock, State,
+    ARCHIVE_AFTER, MAX_ATTEMPTS,
 };
 
 /// A queue of the test's own, in a scratch folder, with short timings.
@@ -490,6 +491,45 @@ negative_control!(
     "a child that left the job's process group survives the group's kill, and the check sees it",
     expected = "a finished job's group outlived it",
     finished_group_case("jobq_finished_control", true)
+);
+
+/// A job `sleep 3` with `--timeout <timeout>` whose recorded start is set an hour back once it runs, as a clock
+/// stepped forward would make it look: it must end with status `expected`, 0 unless its own timeout passes.
+fn clock_step_case(tag: &str, timeout: &str, expected: i32) {
+    let q = Q::new(tag, "");
+    let id = q.submit("peek", "clock", &["--timeout", timeout], &["sleep", "3"]);
+    let queue = q.queue();
+    assert!(
+        until(30, || queue
+            .load(id)
+            .is_ok_and(|j| j.state == State::Running)),
+        "never ran"
+    );
+    let mut job = queue.load(id).expect("job file");
+    job.started = job.started.map(|t| t - 3600);
+    queue.save(&job).expect("job saved");
+    let (code, out) = q.wait(id);
+    q.finish();
+    assert_eq!(code, expected, "timeout read from the wall clock: {out:?}");
+}
+
+#[test]
+fn jobq_timeout_is_measured_on_a_monotonic_clock() {
+    clock_step_case("jobq_clock", "60", 0);
+    for (ran, timeout, past) in [(9_999, 10, false), (10_000, 10, true), (10_001, 10, true)] {
+        assert_eq!(
+            timed_out(Duration::from_millis(ran), timeout),
+            past,
+            "timeout read from the wall clock: {ran} ms of {timeout} s"
+        );
+    }
+}
+
+negative_control!(
+    jobq_timeout_is_measured_on_a_monotonic_clock,
+    "a job past its own timeout is timed out",
+    expected = "timeout read from the wall clock",
+    clock_step_case("jobq_clock_control", "1", 0)
 );
 
 // --- Stale runner locks expire ------------------------------------------------------------------------------------

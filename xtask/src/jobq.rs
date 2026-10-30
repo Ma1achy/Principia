@@ -966,9 +966,19 @@ pub fn snapshot_env(vars: impl Iterator<Item = (String, String)>) -> BTreeMap<St
     .collect()
 }
 
-/// A job the runner started: its child, and how it is being ended, if it is.
+/// Whether a job that has run for `ran`, on the runner's monotonic clock, is past its timeout of `timeout_secs`.
+pub fn timed_out(ran: Duration, timeout_secs: u64) -> bool {
+    ran >= Duration::from_secs(timeout_secs)
+}
+
+/// A job the runner started: its child, when it started on the runner's monotonic clock, and how it is being ended, if
+/// it is.
 struct Running {
     child: Child,
+    /// When the runner started it. Its timeout is measured from here, not from the wall clock's [`Job::started`], so a
+    /// clock step or a sleep and wake can't time it out; a job a dead runner left running is started again, with a
+    /// fresh timeout, or marked lost ([`Runner::recover`]).
+    started: Instant,
     ending: Option<(State, Instant)>,
     killed: bool,
 }
@@ -1071,11 +1081,10 @@ impl Runner {
                 ));
                 continue;
             }
-            let ran = now().saturating_sub(job.started.unwrap_or(0));
             if running.ending.is_none() {
                 let ending = if job.cancel_requested {
                     Some((State::Cancelled, "cancelled".to_owned()))
-                } else if ran >= job.timeout_secs {
+                } else if timed_out(running.started.elapsed(), job.timeout_secs) {
                     Some((
                         State::TimedOut,
                         format!("timed out after {} s", job.timeout_secs),
@@ -1127,6 +1136,7 @@ impl Runner {
                     job.id,
                     Running {
                         child,
+                        started: Instant::now(),
                         ending: None,
                         killed: false,
                     },
