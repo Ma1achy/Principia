@@ -188,11 +188,13 @@ fn tip_as_sheet(tau1: f64, tau2: f64) -> [[f64; 4]; 2] {
 }
 
 /// The Gram factor of one-target Lean's columns, `√(|û₁|²|û₂|² − (û₁·û₂)²)`, taken as `|û₁ × û₂|` (Lagrange's
-/// identity), which no rounding makes negative. Both columns lie in `(a, b, d_X)`: one target leaves `d_Y` at 0.
+/// identity), which no rounding makes negative. The columns are `û₁ = (cos τ₁, 0, sin τ₁)` and
+/// `û₂ = (0, cos τ₂, sin τ₂)` in `(a, b, d_X)`, so the cross product's components are `−û₁[d]û₂[b]`, `−û₁[a]û₂[d]` and
+/// `û₁[a]û₂[b]`.
 fn gram([u1, u2]: [[f64; 4]; 2]) -> f64 {
-    let x = u1[1] * u2[2] - u1[2] * u2[1];
-    let y = u1[2] * u2[0] - u1[0] * u2[2];
-    let z = u1[0] * u2[1] - u1[1] * u2[0];
+    let x = u1[2] * u2[1];
+    let y = u1[0] * u2[2];
+    let z = u1[0] * u2[1];
     Float::sqrt(x * x + y * y + z * z)
 }
 
