@@ -31,12 +31,14 @@ same way; the title's *was:* "M0 to M8".
   (R-649, R-650):* not for an external replication or verification target: it is a measurement, never a gate, scored
   in M9 (or early, as a peek, information only), and an RQ it waits on holds its scoring, never a milestone; in M9's
   report it is listed "not scored", with what it waits on.
-- **Targets are measurements, not gates (R-649, R-650).** An external target (one scored against a published,
-  prototype or other outside number) declares the tier it binds, (a) the GPU explorer or (b) the CPU IC inspector, and
+- **Targets are measurements, not gates (R-649, R-650).** An external target (one scored against a published or
+  other outside number, or against a prototype number held as a tier-D "reproduce or explain" target; *was:* "a
+  published, prototype or other outside number", corrected 30 Oct 2026, the physics review of PR #342, F3) declares the tier it binds, (a) the GPU explorer or (b) the CPU IC inspector, and
   its outcome is PASS, EXPLAINED DIVERGENCE or UNEXPLAINED; failing one never blocks building. The internal
   correctness tests, the GPU-vs-CPU agreement checks within their stated f32 tolerances and the anchor smoke tests
   (the figure-eight closure, SP-1 run to its horizon, SP-2) stay in their milestones' gates and block a merge as
-  before (`docs/design/principia_dd_replication.md` § "12.1 What stays continuous, and what moves to M9").
+  before, and so does every value a contract or design doc adopts as its gate, even where it came from the prototype
+  (`docs/design/principia_dd_replication.md` § "12.1 What stays continuous, and what moves to M9").
 
 ## Where the order comes from
 
