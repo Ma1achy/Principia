@@ -19,7 +19,7 @@ fn named(name: &str) -> Scene {
 }
 
 /// A look's kind: `I`nvalid, `L`iteral, `N`ot yet, `R`amp, `O`verride, `F`lat, `B`ackground, `P`resentation's invalid
-/// colour.
+/// colour, `D`rift view.
 fn kind(l: Look) -> char {
     match l {
         Look::Background => 'B',
@@ -30,6 +30,7 @@ fn kind(l: Look) -> char {
         Look::Ramp { .. } => 'R',
         Look::Override => 'O',
         Look::Flat(_) => 'F',
+        Look::Drift { .. } => 'D',
     }
 }
 
@@ -64,7 +65,7 @@ const SCENES: [(&str, &str, &str); 29] = [
     ("virial_ratio", "virial_ratio", "RRRRRRRR"),
     ("set_state", "state", "FFFFFFFF"),
     ("known_escaper", "state", "FFFFFFFF"),
-    ("energy_drift_ramp", "energy_drift", "LLLLLLLL"),
+    ("energy_drift_ramp", "energy_drift", "DDDDDDDD"),
     ("adversarial_state", "state", "FFFFFFFF"),
     ("adversarial_detail", "detail", "FFFFFFFF"),
     ("adversarial_saturated", "saturated", "FFFFFFFF"),

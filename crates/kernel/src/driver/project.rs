@@ -95,10 +95,7 @@ impl<R: Real> ComProjection<R> {
     /// `(p₀ + p₁) + p₂` per component: `P_com`, the total momentum.
     #[inline]
     pub fn total_momentum(p: &[[R; 2]; 3]) -> [R; 2] {
-        [
-            (p[0][0] + p[1][0]) + p[2][0],
-            (p[0][1] + p[1][1]) + p[2][1],
-        ]
+        [(p[0][0] + p[1][0]) + p[2][0], (p[0][1] + p[1][1]) + p[2][1]]
     }
 
     /// `(r, p)` projected (the module's order): `rᵢ − R_com` and `pᵢ − (mᵢ/M)·P_com`, both sums formed from the

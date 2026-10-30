@@ -734,9 +734,36 @@ fn ftle_reference(s: &Scene, i: u32) -> Option<(f64, f64)> {
 
 type Reference = fn(&Scene, u32) -> Option<(f64, f64)>;
 
+/// How a derived view draws sample `i` at a fragment, given the read's value and the probe's, the view's own.
+type Draw = fn(&Scene, u32, f32, f32, [f64; 2]) -> Rgb;
+
+/// A view that draws the read's value at its literal place, `dbg_sentinel`.
+fn literal(_: &Scene, _: u32, read: f32, _: f32, frag: [f64; 2]) -> Rgb {
+    present::dbg_sentinel(read, frag)
+}
+
+/// The energy-drift view at its header's defaults (render contract Part 5; R-381; TASK-M3-05): its own value `v`, the
+/// probe's, at `symlog`'s place on the diverging ramp at the register's `eps_E` and `lin` range, under the suspect
+/// styling of the sample's stored latches. The drift is a cancellation the fragment computes, and `symlog` at
+/// `ε_E = 1e-6` resolves its f32 rounding, so the colour is checked at the view's own value, which the probe has
+/// checked against the reference.
+fn drift_drawn(s: &Scene, i: u32, _: f32, v: f32, frag: [f64; 2]) -> Rgb {
+    let (energy, lz) = golden_scene::drift_suspects(&s.read(i));
+    let eps = ledger::constants::EPS_E_DEFAULT.number();
+    let lin_r = ledger::constants::DRIFT_LIN_R_E.number();
+    let rgb = present::dbg_drift(v, present::DRIFT_SYMLOG, false, lin_r, eps, frag);
+    present::dbg_suspect(rgb, v, energy, lz, frag)
+}
+
 /// Checks the derived view `id` on `s`: where `reference` gives a value, the probe is within its bound of it and the
-/// view draws the read's value at its literal place; elsewhere the probe is NaN and the view draws the hatch.
-fn check_continuous(s: &Scene, id: &str, reference: Reference, read: fn(&Scene, u32) -> f32) {
+/// view draws the read's value as `draw` does; elsewhere the probe is NaN and the view draws the hatch.
+fn check_continuous(
+    s: &Scene,
+    id: &str,
+    reference: Reference,
+    read: fn(&Scene, u32) -> f32,
+    draw: Draw,
+) {
     let h = gpu();
     let probe = render(&h, &showcase_scene(probe_of(id, &[])));
     let view = render(&h, &showcase_scene(debug(id)));
@@ -752,7 +779,7 @@ fn check_continuous(s: &Scene, id: &str, reference: Reference, read: fn(&Scene, 
                     (f64::from(got) - want).abs()
                 );
                 let v = read(s, i);
-                check_tile(s, &view, i, &|f| present::dbg_sentinel(v, f), "the value");
+                check_tile(s, &view, i, &|f| draw(s, i, v, got, f), "the value");
             }
             None => {
                 seen[1] = true;
@@ -770,9 +797,13 @@ fn check_continuous(s: &Scene, id: &str, reference: Reference, read: fn(&Scene, 
 #[test]
 fn derived_views_match_cpu_finalised_ftle() {
     let s = showcase_scene(debug("debug/derived/ftle"));
-    check_continuous(&s, "debug/derived/ftle", ftle_reference, |s, i| {
-        s.read(i).ftle
-    });
+    check_continuous(
+        &s,
+        "debug/derived/ftle",
+        ftle_reference,
+        |s, i| s.read(i).ftle,
+        literal,
+    );
     let invalid = (0..8).filter(|&i| ftle_reference(&s, i).is_none()).count();
     assert_eq!(
         invalid, 3,
@@ -793,7 +824,8 @@ negative_control!(
             let n_dt = f64::from(s.read(i).t_end_step) * f64::from(s.context.dt_macro);
             Some((f64::from(st.S) / n_dt, bound))
         },
-        |s, i| s.read(i).ftle
+        |s, i| s.read(i).ftle,
+        literal
     )
 );
 
@@ -826,9 +858,13 @@ fn derived_views_match_cpu_current_drift() {
         masses.windows(2).all(|w| w[0] != w[1]),
         "each sample has its own masses"
     );
-    check_continuous(&s, "debug/derived/energy_drift", drift_reference, |s, i| {
-        s.read(i).energy_drift
-    });
+    check_continuous(
+        &s,
+        "debug/derived/energy_drift",
+        drift_reference,
+        |s, i| s.read(i).energy_drift,
+        drift_drawn,
+    );
 }
 
 negative_control!(
@@ -845,7 +881,8 @@ negative_control!(
                 bound,
             ))
         },
-        |s, i| s.read(i).energy_drift
+        |s, i| s.read(i).energy_drift,
+        drift_drawn
     )
 );
 

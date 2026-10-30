@@ -393,7 +393,8 @@ pub const DRIFT_LOG: u32 = 2;
 
 /// The drift views' `diverging(c−, c0, c+)` colours, 8-bit sRGB (render contract Part 5; R-72): Moreland's cool-warm
 /// ends and neutral, `#3B4CC0`, `#DDDDDD` and `#B40426`, the colours `drift.wgsl`'s `dbg_drift_ramp` decodes.
-pub const DRIFT_DIVERGING_SRGB8: [[u8; 3]; 3] = [[0x3b, 0x4c, 0xc0], [0xdd, 0xdd, 0xdd], [0xb4, 0x04, 0x26]];
+pub const DRIFT_DIVERGING_SRGB8: [[u8; 3]; 3] =
+    [[0x3b, 0x4c, 0xc0], [0xdd, 0xdd, 0xdd], [0xb4, 0x04, 0x26]];
 
 /// The drift views' `diverging` ramp, its colours [`DRIFT_DIVERGING_SRGB8`] decoded to linear.
 pub fn drift_diverging() -> crate::colour::field_ramp::Ramp {
@@ -425,7 +426,14 @@ pub fn dbg_drift_place(x: f64, compaction: u32, lin_r: f64, eps: f64) -> f64 {
 
 /// `dbg_drift(x, compaction, viridis, lin_r, eps, frag_xy)`: the hatch for the absence NaN's exact bits; else the
 /// drift's place on `diverging`, on viridis under the palette swap, and on viridis always under `log`.
-pub fn dbg_drift(x: f32, compaction: u32, viridis: bool, lin_r: f64, eps: f64, frag_xy: [f64; 2]) -> Rgb {
+pub fn dbg_drift(
+    x: f32,
+    compaction: u32,
+    viridis: bool,
+    lin_r: f64,
+    eps: f64,
+    frag_xy: [f64; 2],
+) -> Rgb {
     if x.to_bits() == ABSENT_NAN_BITS {
         return debug_invalid(frag_xy);
     }

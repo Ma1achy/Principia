@@ -1156,7 +1156,11 @@ fn drift_check(n: &str) -> String {
         "suspect_lz(pb_dLz_max(s.packed_b))".to_owned(),
         format!("\"`{n}`'s L_z-suspect predicate {NOT_DERIVED}\""),
     ];
-    format!("{}\n{}", call(4, "", "expect", &energy), call(4, "", "expect", &lz))
+    format!(
+        "{}\n{}",
+        call(4, "", "expect", &energy),
+        call(4, "", "expect", &lz)
+    )
 }
 
 /// The field whose alteration the negative control of `e`'s test stores: the field itself, or, for a derived field,

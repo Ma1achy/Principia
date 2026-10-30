@@ -46,9 +46,7 @@ use kernel::driver::advance::{Advance, AdvanceParams, AdvanceReal, Advanced, Cad
 use kernel::driver::cadence::{self, WrapperCadence};
 use kernel::driver::nsub_table::{thresholds, NsubConfig};
 use kernel::driver::substep::{d2_quantised, n_sub, NsubThresholds};
-use kernel::driver::wrapper::{
-    integrate, integrate_with, monitored, WrapperReal, WrapperUniforms,
-};
+use kernel::driver::wrapper::{integrate, integrate_with, monitored, WrapperReal, WrapperUniforms};
 use kernel::generated::links::{Defaults, LinkReal};
 use kernel::generated::nsub_thresholds::NSUB_TABLE_ROWS;
 use kernel::occupant::euler::Euler;

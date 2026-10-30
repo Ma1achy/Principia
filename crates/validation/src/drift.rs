@@ -35,7 +35,9 @@ use kernel::occupant::rk4::Rk4;
 use kernel::occupant::yoshida4::Yoshida4;
 use kernel::occupant::yoshida6::Yoshida6;
 use kernel::occupant::{CapabilityProfile, Stepper};
-use kernel::payload::{pb_dE_max, pb_dLz_max, sd_saturated, sd_state, tm_t_end_step};
+use kernel::payload::{
+    pb_dE_max, pb_dLz_max, sd_saturated, sd_state, tm_t_end_step, SimStateBaseOf,
+};
 
 /// The figure-eight's published initial conditions in `G = 1`, `mᵢ = 1` (Chenciner & Montgomery 2000; Simó's
 /// digits): `x₁`, and `v₃`; `x₂ = −x₁`, `x₃ = 0`, `v₁ = v₂ = −v₃/2`.
@@ -114,7 +116,11 @@ pub fn hierarchy(m: [f64; 3], a: f64, e: f64, d: f64) -> (Ic<f64>, f64) {
     let (x2, v2) = (mb / mt * d, mb / mt * vout);
     let ic = Ic {
         m,
-        r: [[-m1 / mb * ra + xb, 0.0], [m0 / mb * ra + xb, 0.0], [x2, 0.0]],
+        r: [
+            [-m1 / mb * ra + xb, 0.0],
+            [m0 / mb * ra + xb, 0.0],
+            [x2, 0.0],
+        ],
         p: [
             [0.0, m0 * (-m1 / mb * va + vb)],
             [0.0, m1 * (m0 / mb * va + vb)],
@@ -143,7 +149,7 @@ where
     let dt = (t / 65535.0).max(1e-3);
     let config = NsubConfig::DEFAULT;
     WrapperUniforms {
-        dt_macro: dt.as_r(),
+        dt_macro: dt.to_r(),
         horizon_steps: (t / dt).ceil() as u32,
         n_max: config.n_max,
         thresholds: thresholds(&config).expect("the default sim key generates"),
@@ -192,22 +198,40 @@ impl Drifts {
     }
 }
 
+/// `ic` at `R`: each value itself at f64, rounded to the nearest f32 at f32.
+pub fn ic_at<R>(ic: &Ic<f64>) -> Ic<R>
+where
+    f64: AsR<R>,
+{
+    Ic {
+        m: ic.m.map(AsR::to_r),
+        r: ic.r.map(|v| v.map(AsR::to_r)),
+        p: ic.p.map(|v| v.map(AsR::to_r)),
+    }
+}
+
+/// The integration of the occupant `A` at `R` from `fixture` at its sim key ([`sim_key`]), through the wrapper and
+/// its own cadence, as `kernel::driver::wrapper::integrate` runs it: the stored state, its monitored fields written,
+/// and the cadence it ran with.
+pub fn integrate_fixture<A: Advance, R: WrapperReal>(
+    fixture: &Fixture,
+) -> (SimStateBaseOf<R>, WrapperCadence<R>)
+where
+    f64: AsR<R>,
+{
+    let ic = ic_at::<R>(&fixture.ic);
+    let key = sim_key::<R>(fixture.horizon);
+    let mut cadence = WrapperCadence::new(&ic.m, &ic.r, &ic.p);
+    let out = monitored(integrate_with::<A, R, _>(&ic, &key, &mut cadence), &cadence);
+    (out, cadence)
+}
+
 /// A run of the occupant `A` at `R` from `fixture`, through the wrapper and its cadence.
 pub fn run<A: Advance, R: WrapperReal + Into<f64>>(fixture: &Fixture) -> Drifts
 where
     f64: AsR<R>,
 {
-    let ic = Ic {
-        m: fixture.ic.m.map(AsR::as_r),
-        r: fixture.ic.r.map(|v| v.map(AsR::as_r)),
-        p: fixture.ic.p.map(|v| v.map(AsR::as_r)),
-    };
-    let key = sim_key::<R>(fixture.horizon);
-    let mut cadence = WrapperCadence::new(&ic.m, &ic.r, &ic.p);
-    let out = monitored(
-        integrate_with::<A, R, _>(&ic, &key, &mut cadence),
-        &cadence,
-    );
+    let (out, cadence) = integrate_fixture::<A, R>(fixture);
     let m = cadence.monitor_state();
     Drifts {
         e_0: m.e_0().into(),
@@ -230,17 +254,17 @@ where
 
 /// An f64 IC value at the run's precision: itself at f64, rounded to the nearest f32 at f32.
 pub trait AsR<R> {
-    fn as_r(self) -> R;
+    fn to_r(self) -> R;
 }
 
 impl AsR<f64> for f64 {
-    fn as_r(self) -> f64 {
+    fn to_r(self) -> f64 {
         self
     }
 }
 
 impl AsR<f32> for f64 {
-    fn as_r(self) -> f32 {
+    fn to_r(self) -> f32 {
         self as f32
     }
 }

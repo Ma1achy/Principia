@@ -645,11 +645,18 @@ fn named_struct(
 /// a view calls to colour, not to read its field.
 fn library_functions() -> BTreeSet<String> {
     let lib = "crates/render/shaders/wgsl/lib";
-    let source = ["prelude", "colour_space", "present", "compaction", "ramp", "drift"]
-        .iter()
-        .map(|f| checked_in(&format!("{lib}/{f}.wgsl")))
-        .collect::<Vec<_>>()
-        .join("\n");
+    let source = [
+        "prelude",
+        "colour_space",
+        "present",
+        "compaction",
+        "ramp",
+        "drift",
+    ]
+    .iter()
+    .map(|f| checked_in(&format!("{lib}/{f}.wgsl")))
+    .collect::<Vec<_>>()
+    .join("\n");
     let module =
         naga::front::wgsl::parse_str(&source).unwrap_or_else(|e| panic!("the library: {e}"));
     module

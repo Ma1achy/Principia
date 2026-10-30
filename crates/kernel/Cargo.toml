@@ -28,6 +28,7 @@ ledger = { path = "../ledger" }
 # R-187).
 [dev-dependencies]
 validation = { path = "../validation" }
+ledger = { path = "../ledger" }
 # The read side's property tests (`tests/derived.rs`) draw their cases through the shared config, `validation::prop`.
 proptest = "1.11"
 # The golden IC's hand-computed values, `fixtures/golden_ic/z0.json` (TASK-M2-03), are read as JSON.

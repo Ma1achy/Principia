@@ -22,6 +22,7 @@ pub mod invariant_gradient;
 pub mod link_variation;
 pub mod nsub_bucket;
 pub mod oklab;
+pub mod projection_parity;
 pub mod prop;
 pub mod reference;
 pub mod roundtrip;
