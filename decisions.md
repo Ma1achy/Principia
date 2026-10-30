@@ -28427,10 +28427,13 @@ this port.
   and REQ-VAL-073, the Tier N/S envelope REQ-VAL-064 sets by measurement; REQ-VAL-059, REQ-VAL-060, REQ-VAL-072 and
   REQ-VAL-144, exact; REQ-VAL-075, exact outside REQ-VAL-141's calibrated band; REQ-VAL-107, labels equal in a regular
   region; REQ-VAL-199, its own calibration; REQ-DEC-052, a measurement, bitwise; REQ-VAL-183, measured, never
-  asserted. Two state none for f32: REQ-VAL-172's "identical to ~10 decimals" is finer than f32 resolves (about seven
-  significant decimal digits), and REQ-VAL-173's "`error_ratio` reads 1.0000" names no precision path. Each gets a
-  calibration requirement (R-71), not a guessed value: REQ-VAL-338 and REQ-VAL-339 (M5, TASK-M5-18, which closes the
-  two). None of these is an external target, and no tier applies to them.
+  asserted. Two state none for f32: REQ-VAL-172's "identical to ~10 decimals" names no f32 tolerance, and REQ-VAL-173's
+  "`error_ratio` reads 1.0000" names no precision path. Each gets a calibration requirement (R-71), not a guessed
+  value: REQ-VAL-338 and REQ-VAL-339 (M5, TASK-M5-18, which closes the two). REQ-VAL-338's proposal first checks
+  whether the f32 runs agree bit for bit: α ∈ {0.25, 1, 4} and α^{3/2} are powers of two, so the rescaling itself is
+  exact in binary floating point, and only constants that don't scale with α can part the runs; a looser tolerance is
+  stated only where they don't. *Was:* "REQ-VAL-172's "identical to ~10 decimals" is finer than f32 resolves (about
+  seven significant decimal digits)" (reworded 30 Oct 2026 on the physics review of PR #342, its note on REQ-VAL-338). None of these is an external target, and no tier applies to them.
 - **Item 3: three outcomes.** PASS; EXPLAINED DIVERGENCE, for a named mechanism (regularisation, escape criterion,
   horizon, stopping rule, units or normalisation, precision tier, sampling, the source's own accuracy), with a
   measurement showing the mechanism, not a story; UNEXPLAINED, open, labelled and non-blocking. "Fail" is not an
