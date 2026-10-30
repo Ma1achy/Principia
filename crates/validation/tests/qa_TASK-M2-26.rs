@@ -6,11 +6,20 @@
 //!   (`qa_m226_tags_follow_what_the_trip_reports`): the ROUNDTRIP class of a trip is read off what the trip itself
 //!   reports. Over foreign physical states (random scale, offset, orientation and parity, including extreme mass ratios
 //!   and momenta that push a control past its clamp), each encoded by the one encode (`kernel::encode::encode`, f32,
-//!   default links): where the encode's report says `lookup_clamped` and not `lookup_mirrored` the class is the clamp
-//!   tag; `lookup_mirrored` and not clamped, the mirror-tie tag; both, one of those two; neither, untagged. Where either
-//!   decode's tag word is any `DEGENERATE` reason, the class is the feasibility tag whatever the encode reports; a
-//!   non-finite trip is invalid. Each of the clamped-only, mirrored-only and plain cases is reached. Control: a class
-//!   function blind to the mirror bit.
+//!   default links): `Class::of` on the encode's notices word as read on a chart whose decode lands on `C`'s section
+//!   (`tie_notices(notices, true)`, the whole word, where `lookup_mirrored` is R-82's tie): where the report says
+//!   `lookup_clamped` and not `lookup_mirrored` the class is the clamp tag; `lookup_mirrored` and not clamped, the
+//!   mirror-tie tag; both, one of those two; neither, untagged. Where either decode's tag word is any `DEGENERATE`
+//!   reason, the class is the feasibility tag whatever the encode reports; a non-finite trip is invalid. Each of the
+//!   clamped-only, mirrored-only and plain cases is reached. Control: a class function blind to the mirror bit.
+//! - Inverse-encode contract Part 4 ("One norm for every round trip"), Part 1's T3 (`D(E(x)) = C(x)`), R-544 and R-82
+//!   (`qa_m226_shape_sphere_lower_hemisphere_untagged_within_eps_phys`): the shape sphere chart decodes each pixel as
+//!   its own system, off `C`'s section in the lower hemisphere, so there the encode's mirror is `C`'s own, not R-82's
+//!   tie. Over a grid of the chart's lower hemisphere (CPU twin, f32, default links), every sample the encode mirrors
+//!   and does not clamp, with no `DEGENERATE` tag, is untagged and its residual, measured against `C(D(z))`, within
+//!   `ε_phys`; and the mirror is real there (the residual against `D(z)` itself is past `ε_phys`), so the check bites.
+//!   No sample anywhere on the sphere is tagged mirror tie. Control: the twin read as if on the section, which tags the
+//!   lower hemisphere mirror tie.
 //! - REQ-RENDER-025 ("log-scaled", "dark everywhere except … tagged expected"; colour_composition §6, Discipline 1:
 //!   "ROUNDTRIP-red means the same thing every time") (`qa_m226_colour_is_log_scaled_and_red_only_untagged`): an
 //!   untagged trip within `ε_phys` is black; past it, its red rises by the same step for every doubling of the residual
@@ -112,7 +121,7 @@ fn check_tags(class_of: fn(bool, u32, u32, u32) -> Class) {
         let e = kernel::encode::encode::<Defaults, f32>(&x);
         let notices = kernel::stage::encode::notices(&e.report);
         let (cl, mi) = (e.report.lookup_clamped(), e.report.lookup_mirrored());
-        let got = class_of(true, 0, 0, notices);
+        let got = class_of(true, 0, 0, roundtrip::tie_notices(notices, true));
         match (cl, mi) {
             (true, false) => {
                 clamped_only += 1;
@@ -296,4 +305,77 @@ negative_control!(
     "a ROUNDTRIP kernel mode beside the bring-up mode is refused",
     expected = "not exactly the bring-up mode",
     check_variants(&[("bring_up", true), ("roundtrip", true)])
+);
+
+// ── The shape sphere's lower hemisphere: C's own mirror, not the tie ────────────────────────────────────────────────
+
+fn check_shape_sphere(on_section: bool) {
+    use kernel::chart::ShapeSphere;
+    use kernel::stage::decode::{sample_with, tag, UniformChart};
+    let side = 48u32;
+    let scene =
+        validation::decode_preset::Scene::new(DecodeChart::ShapeSphere, [1, 1], 1, 20, &[[0, 0]])
+            .unwrap();
+    let u = scene.uniforms;
+    let chart = ShapeSphere::<f32>::from_uniform(&u.chart);
+    let (mut lower_mirrored, mut real_mirror) = (0usize, 0usize);
+    for j in 0..side {
+        for i in 0..side {
+            let uv = [
+                (i as f32 + 0.5) / side as f32,
+                (j as f32 + 0.5) / side as f32,
+            ];
+            let out = sample_with::<ShapeSphere<f32>, Defaults, f32>(&chart, uv[0], uv[1], None);
+            let first = tag(out.degenerate);
+            // The shape sphere is off C's section: the twin as the preset reads it.
+            let t = validation::roundtrip_preset::twin_of(&out.ic, first, on_section);
+            assert_ne!(
+                t.class,
+                Class::MirrorTie,
+                "shape sphere sample {uv:?}: tagged mirror tie, off R-82's band"
+            );
+            let clamped = t.notices & roundtrip::CLAMPED != 0;
+            if uv[1] < 0.5 && t.notices & roundtrip::MIRRORED != 0 && !clamped && t.tags == 0 {
+                lower_mirrored += 1;
+                assert_eq!(
+                    t.class,
+                    Class::Untagged,
+                    "lower hemisphere sample {uv:?}: mirrored by C and tagged"
+                );
+                assert!(
+                    t.ratio() <= 1.0,
+                    "lower hemisphere sample {uv:?}: {} ε_phys against C(D(z)), past ε_phys",
+                    t.ratio()
+                );
+                // The mirror is real: against D(z) itself the trip is far off.
+                let raw = validation::roundtrip_preset::twin_of(&out.ic, first, true);
+                if raw.ratio() > 1.0 {
+                    real_mirror += 1;
+                }
+            }
+        }
+    }
+    println!(
+        "qa_m226_shape_sphere: {lower_mirrored} lower-hemisphere samples mirrored by C, {real_mirror} past ε_phys against D(z)"
+    );
+    assert!(
+        lower_mirrored * 4 > (side * side) as usize,
+        "too few lower-hemisphere samples mirrored by C: {lower_mirrored}"
+    );
+    assert!(
+        real_mirror * 2 > lower_mirrored,
+        "the mirror is not visible against D(z): {real_mirror} of {lower_mirrored}"
+    );
+}
+
+#[test]
+fn qa_m226_shape_sphere_lower_hemisphere_untagged_within_eps_phys() {
+    check_shape_sphere(false);
+}
+
+negative_control!(
+    qa_m226_shape_sphere_lower_hemisphere_untagged_within_eps_phys,
+    "the shape sphere read as if on C's section tags its lower hemisphere mirror tie",
+    expected = "tagged mirror tie",
+    check_shape_sphere(true)
 );
