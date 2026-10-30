@@ -4,7 +4,7 @@ Review by AGENTS.md § Code Review Rules (canonical). The section below is a cop
 
 ## Code Review Rules
 
-The brief for the three advisory AI reviewers, Codex, Gemini (the Gemini CLI action) and GitHub Copilot, for the trial
+The brief for the three advisory AI reviewers, Codex, Gemini (the review workflow) and GitHub Copilot, for the trial
 `decisions.md` R-635 records. `GEMINI.md` and `.github/copilot-instructions.md` hold byte-identical copies, checked by
 `xtask/tests/ai_review_rules.rs`. No finding here gates a merge.
 
