@@ -57,6 +57,8 @@
 
 use spirv_std::num_traits::Float;
 
+use crate::Real;
+
 use crate::canon::lambda_t_axis;
 use crate::decode::descriptor::pi_image;
 use crate::decode::mass::from_masses;
@@ -119,22 +121,23 @@ pub fn jacobi<R: LinkReal>(ic: &Ic<R>) -> Jacobi<R> {
     }
 }
 
-/// `α = atan2(‖λ̃‖, ‖ρ̃‖)`, on `[0, π/2]` (no pole on the section, the module's note).
+/// `α = atan2(‖λ̃‖, ‖ρ̃‖)`, on `[0, π/2]` (no pole on the section, the module's note). `atan2` is
+/// [`crate::arctan`]'s (RQ-628): at f32 the kernel's own, so the fragment's `α` is the CPU's, bit for bit.
 #[inline]
 pub fn alpha<R: LinkReal>(rho_t: [R; 2], lambda_t: [R; 2]) -> R {
-    Float::atan2(norm(lambda_t), norm(rho_t))
+    Real::arctan2(norm(lambda_t), norm(rho_t))
 }
 
 /// `β = atan2(|λ̃_y|, λ̃_x)` (R-438), with `π̂` on the `−x` half-axis and 0 at the `α = 0` pole, each selected by a
 /// comparison with 0 that `±0` pass alike (R-437), and `π̂` wherever `atan2` returns more, so `β ∈ [0, π̂]` (the
-/// module's note).
+/// module's note). `atan2` is [`crate::arctan`]'s (RQ-628), as [`alpha`]'s.
 #[inline]
 pub fn beta<R: LinkReal>(lambda_t: [R; 2]) -> R {
     let zero = R::zero();
     let pi = pi_image::<R>();
     let [x, y] = lambda_t;
     let x0 = select(x == zero, zero, x);
-    let raw = Float::atan2(Float::abs(y), x0);
+    let raw = Real::arctan2(Float::abs(y), x0);
     let off_axis = select(raw > pi, pi, raw);
     let half_axis = (y == zero) & (x < zero);
     let pole = (x == zero) & (y == zero);

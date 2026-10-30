@@ -109,6 +109,7 @@ use crate::decode::{descriptor, Ic};
 use crate::generated::links::{Link, LinkParams, LinkReal, Selection};
 use crate::payload::PayloadReal;
 use crate::shape::shape_vec;
+use crate::Real;
 
 /// `t` where `c` holds, else `f`: both operands are computed before the choice, so it is a select, not a branch.
 #[inline]
@@ -513,23 +514,24 @@ fn dot3<R: LinkReal>(a: [R; 3], b: [R; 3]) -> R {
 /// The spherical map inverted at the unit point `n`, `pi` the float type's π: `θ = atan2(n₁, n₀)` taken into
 /// `[0, 2π)`, `φ = atan2(√(n₀² + n₁²), n₂)`, `(s, t) = (θ/2π, 1 − φ/π)` (chart_reference §3.3). At the poles, `n₀ = n₁
 /// = 0`, `θ` is 0, selected, never `atan2(0, 0)` (R-437). `θ` is taken into `[0, 2π)` on `n₁`'s sign, a `−0` as `+0`,
-/// so the select reads no transcendental (the module's list).
+/// so the select reads no transcendental (the module's list). `atan2` is [`crate::arctan`]'s (RQ-628).
 #[inline]
 pub fn spherical_inverse<R: LinkReal>(n: [R; 3], pi: R) -> (R, R) {
     let zero = R::zero();
     let turn = pi + pi;
     let y = select(n[1] == zero, zero, n[1]);
     let pole = (n[0] == zero) & (y == zero);
-    let theta = select(pole, zero, Float::atan2(y, n[0]));
+    let theta = select(pole, zero, Real::arctan2(y, n[0]));
     let theta = select(y < zero, theta + turn, theta);
-    let phi = Float::atan2(Float::sqrt(Float::mul_add(n[1], n[1], n[0] * n[0])), n[2]);
+    let phi = Real::arctan2(Float::sqrt(Float::mul_add(n[1], n[1], n[0] * n[0])), n[2]);
     (theta / turn, R::one() - phi / pi)
 }
 
 /// The exponential map inverted at the unit point `n` about the frame `(n0, e1, e2)` with extent `scale`: the log map,
 /// `r = atan2(‖n⊥‖, n·n₀)`, `n⊥ = n − (n·n₀)·n₀`, `d = (r/‖n⊥‖)·n⊥`, then `u = (d·e₁/s + 1)/2`, `v = (d·e₂/s + 1)/2`
 /// (chart_reference §3.3). At `n⊥ = 0`, `d = 0`, selected: `n₀` itself, and at the antipode, which the map reaches only
-/// past its extent, the centre too, which [`encode_into`]'s comparison then refuses.
+/// past its extent, the centre too, which [`encode_into`]'s comparison then refuses. `atan2` is [`crate::arctan`]'s
+/// (RQ-628).
 #[inline]
 pub fn exponential_inverse<R: LinkReal>(
     n: [R; 3],
@@ -545,7 +547,7 @@ pub fn exponential_inverse<R: LinkReal>(
     let sin2 = dot3(perp, perp);
     let centre = sin2 == R::zero();
     let sin_r = select(centre, R::one(), Float::sqrt(sin2));
-    let k = select(centre, R::zero(), Float::atan2(sin_r, c) / sin_r);
+    let k = select(centre, R::zero(), Real::arctan2(sin_r, c) / sin_r);
     let d = [k * perp[0], k * perp[1], k * perp[2]];
     let half = R::one() / (R::one() + R::one());
     (
