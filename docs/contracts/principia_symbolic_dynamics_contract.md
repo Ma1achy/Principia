@@ -19,7 +19,7 @@ The word is over the free group `F₂ = ⟨a, b⟩` on the shape sphere with the
 Šuvakov–Dmitrašinović), with citations, by the task that writes the word (M3); verified against the published braid
 classes, physics-reviewed, and confirmed at the gate.
 
-**Open (RQ-630, queued 30 Oct 2026 by TASK-M3-16):** the literature's generators are loops about two of the three
+**Open (RQ-632, queued 30 Oct 2026 by TASK-M3-16):** the literature's generators are loops about two of the three
 collision points, the third projected to infinity (Šuvakov & Dmitrašinović, PRL 110, 114301 (2013), p. 1;
 Dmitrašinović et al., J. Phys. A 51, 315101 (2018), Appendices B and C). Two cuts that end at a Lagrange pole, as the
 first bullet above reads, do not cut the punctured sphere into a disc, so no assignment of `a` and `b` to them

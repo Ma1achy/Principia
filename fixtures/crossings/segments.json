@@ -1,5 +1,5 @@
 {
-  "about": "Synthetic branch-cut crossings for the τ tie rule (integrator contract Part 5; TASK-M3-16; REQ-INT-031, REQ-INT-046, REQ-INT-047, REQ-INT-048). Not transcribed from prin-rs, and not from a trajectory: which cuts carry a and b is RQ-630, so each case gives each cut's signed distance at a march's accepted endpoints directly, as [a, b], and the crossings each accepted substep must append, in order, in payload §3's symbols. Every value is exact at f32 and at f64.",
+  "about": "Synthetic branch-cut crossings for the τ tie rule (integrator contract Part 5; TASK-M3-16; REQ-INT-031, REQ-INT-046, REQ-INT-047, REQ-INT-048). Not transcribed from prin-rs, and not from a trajectory: which cuts carry a and b is RQ-632, so each case gives each cut's signed distance at a march's accepted endpoints directly, as [a, b], and the crossings each accepted substep must append, in order, in payload §3's symbols. Every value is exact at f32 and at f64.",
   "cases": [
     {
       "name": "double_crossing_a_first",

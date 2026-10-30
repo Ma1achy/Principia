@@ -1,6 +1,6 @@
 //! Branch-cut crossing detection (`kernel::word::crossing`; integrator contract Part 5, the τ tie rule; dd_simstate_payload
 //! §3), on the synthetic fixtures of `fixtures/crossings/segments.json`, at f32 and f64. Which cuts carry `a` and `b` is
-//! RQ-630, so every case gives the cuts' signed distances directly.
+//! RQ-632, so every case gives the cuts' signed distances directly.
 //! - REQ-INT-031: a double crossing in one substep orders by `τ`; equal `τ` uses the cut ID; an endpoint exactly on the
 //!   cut follows the half-open rule (`crossing_order`).
 //! - REQ-INT-046: a cross-and-recross inside one macro-step yields both crossings, and the word they leave
