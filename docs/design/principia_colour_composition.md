@@ -811,6 +811,28 @@ and the decode/encode translated to WGSL from the one Rust source (R-116):
   compute shaders don't, by default (R-297), so an agreement preset compares within a stated tolerance, a calibration
   requirement (R-71), not bit-exactly. ROUNDTRIP's residual is computed wholly in the fragment, and its stated
   tolerance is ε_phys (`principia_inverse_encode_contract.md` Part 4; `principia_debug_tooling_plan.md` §A).
+  **The tolerance's scale (R-72; RQ-623, decided by the orchestrator per R-369, option (b); TASK-M2-29).** A sample
+  agrees where `|E − E₀| ≤ F·eps·S`, with `F` the calibrated factor (REQ-COL-060, R-71), `eps` f32's `2⁻²³`, and
+  `S = max(|K₀|, 1) + max(|V₀|, 1) + Σ_{i<j} mᵢmⱼ·wᵢⱼ/ŝᵢⱼ²`, where `wᵢⱼ = ‖rᵢ‖∞ + ‖rⱼ‖∞` and
+  `ŝᵢⱼ = max(‖rᵢ − rⱼ‖∞, eps·max(wᵢⱼ, 1))`. `K₀` and `V₀` are the stored operands, `(m, r)` the fragment decode's own,
+  and `‖·‖∞` the larger magnitude of a vector's two components. The sum is the conditioning of `V = −Σ mᵢmⱼ/rᵢⱼ` at
+  f32: a separation formed from positions of size `wᵢⱼ` carries a rounding of order `eps·wᵢⱼ`, so the pair's term
+  carries `mᵢmⱼ·eps·wᵢⱼ/rᵢⱼ²`, its own size times `κᵢⱼ = wᵢⱼ/rᵢⱼ`. Beside a binary collision any two f32 evaluations
+  of `E` differ by about that, whether the fragment's with fast-math against the compute's without (R-297), or two of
+  one stage. That is f32's precision there, not a fault of the translation or of the addressing, and the per-operand
+  scale alone, `max(|K₀|, 1) + max(|V₀|, 1)`, draws it red. Away from a collision `κᵢⱼ` is of order 1 and the sum of
+  order `|V₀|`, so the check keeps its sensitivity to a dispatch scramble. The floor `ŝᵢⱼ ≥ eps·max(wᵢⱼ, 1)` caps
+  `κᵢⱼ` at `1/eps`, below which the f32 separation keeps no relative digit, with the same `max(·, 1)` as the
+  operands' terms. The max-norm is within `√2` of the Euclidean either way, so where `ŝᵢⱼ` is the separation the sum
+  is within a factor 2 of `Σ mᵢmⱼ(‖rᵢ‖ + ‖rⱼ‖)/rᵢⱼ²`, which the factor absorbs. **The sum is finite at every pixel,
+  wherever `V` is and at the pole too (R-436).** Each term is formed as `(mᵢmⱼ/ŝᵢⱼ)·(wᵢⱼ/ŝᵢⱼ)`. Since
+  `ŝᵢⱼ ≥ eps·max(wᵢⱼ, 1)`, `wᵢⱼ/ŝᵢⱼ ≤ 1/eps`; since the masses lie on `[0, 1]` with `M = 1`, `mᵢmⱼ ≤ 1/4`, and
+  `mᵢmⱼ/ŝᵢⱼ ≤ 1/(4·eps)`. So each term is at most `2⁴⁴`, with no division by zero, since `ŝᵢⱼ ≥ eps` even where a
+  separation is 0, and no overflow. It needs no separation to be nonzero and squares no position, only finite positions
+  below `2¹²⁶` in magnitude, so that `wᵢⱼ` and the differences are finite: the decode's are finite (the decode of a
+  finite input is finite), and each `‖rᵢ‖` is at most `1/√mᵢ` under `I = 1`. The preset tests `m` and `r` on their
+  bits as it does `K` and `V`, and a non-finite one draws the invalid colour. `F` is calibrated in this scale
+  (REQ-COL-060).
   **A non-finite operand is invalid (R-436).** `E₀ = K₀ + V₀` reads `−∞` at the f64 collision pole, as computed
   and stored (`principia_dd_decoder.md` §3.6), where the difference would be `(−∞) − (−∞)`, NaN on the CPU and
   unpinned on the GPU. An agreement preset tests each stored operand (`K_0`, `V_0`, and any other it reads) on its
