@@ -436,9 +436,10 @@ negative_control!(
     check_conditioning(unfloored)
 );
 
-/// The gate through its trait on a collision window: `shape_sphere`'s binary collision at `u = 0.844518` on its
-/// equator, 4 × 4 cells at depths 13 and 19, passes by the conditioned scale and fails by the per-operand one; `form`
-/// is the form expected to fail (the control expects the conditioned one to).
+/// The gate through its trait on a collision window against the exact value (`"stored": "f64"`): `shape_sphere`'s
+/// binary collision at `u = 0.844518` on its equator, 4 × 4 cells at depths 13 and 19, passes by the conditioned scale
+/// and fails by the per-operand one, on every backend; `form` is the form expected to fail (the control expects the
+/// conditioned one to).
 fn check_window_gate(form: &str) {
     use validation::gate::Gate;
     let root: PathBuf = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
@@ -488,4 +489,74 @@ negative_control!(
     "the conditioned form failing beside the collision must be found",
     expected = "form passes beside the collision",
     check_window_gate("conditioned")
+);
+
+/// `measure` reads the store the input names: each sample's per-operand scale is formed from the decode stage's `K₀`
+/// and `V₀` under `"stored": "stage"` and from the f64 decode's under `"f64"`, and the two differ beside the collision;
+/// `swap` names the stores the other way round (the control).
+fn check_measure_store(swap: bool) {
+    use validation::decode_agreement::{measure, runs, store_exact, Input};
+    let gpu = GpuHarness::new().unwrap_or_else(|e| panic!("{e}"));
+    let wgsl = wgsl();
+    let parse = |stored: &str| -> Input {
+        serde_json::from_value(serde_json::json!({
+            "description": "m", "side": [4, 4], "stored": stored,
+            "windows": [{"chart": "shape_sphere", "centre": [0.844518, 0.5], "depths": [19]}]
+        }))
+        .unwrap()
+    };
+    let run = runs(&parse("stage")).unwrap().remove(0);
+    let scale = |k: f32, v: f32| {
+        f64::from(f32::EPSILON) * (f64::from(k).abs().max(1.0) + f64::from(v).abs().max(1.0))
+    };
+    let mut staged = run.scene([4, 4]).unwrap();
+    staged
+        .stage_into(gpu.device(), gpu.queue(), &wgsl, 0)
+        .unwrap();
+    let mut exact = run.scene([4, 4]).unwrap();
+    store_exact(&mut exact).unwrap();
+    let (stage_name, f64_name) = if swap {
+        ("f64", "stage")
+    } else {
+        ("stage", "f64")
+    };
+    let scales = |scene: &mut Scene| -> Vec<f64> {
+        (0..16u32)
+            .map(|q| {
+                let d = *scene.set.ic(q);
+                scale(d.K_0, d.V_0)
+            })
+            .collect()
+    };
+    let (want_stage, want_f64) = (scales(&mut staged), scales(&mut exact));
+    for (name, want) in [(stage_name, &want_stage), (f64_name, &want_f64)] {
+        let samples = measure(&gpu, &wgsl, &run, &parse(name)).unwrap();
+        for (q, s) in samples.iter().enumerate() {
+            assert_eq!(
+                s.scale, want[q],
+                "sample {q}: the {name} input's scale is not formed from its store"
+            );
+        }
+    }
+    let differ = want_stage
+        .iter()
+        .zip(&want_f64)
+        .filter(|(a, b)| a != b)
+        .count();
+    assert!(
+        differ > 0,
+        "the two stores agree everywhere: the test cannot tell them apart"
+    );
+}
+
+#[test]
+fn agreement_preset_measure_store() {
+    check_measure_store(false);
+}
+
+negative_control!(
+    agreement_preset_measure_store,
+    "the stores read the other way round must be found",
+    expected = "is not formed from its store",
+    check_measure_store(true)
 );

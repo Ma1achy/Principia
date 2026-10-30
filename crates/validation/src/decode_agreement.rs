@@ -20,7 +20,11 @@
 //! over finite ones where an operand is non-finite, fails it; so does a run with no valid sample. An input with
 //! `"form": "per_operand"` is judged instead by the per-operand scale alone, `max(|K₀|, 1) + max(|V₀|, 1)`, formed from
 //! the same draw's `E` and `E₀` words and the stored `K₀` and `V₀`: the form before the conditioning term, which the
-//! `collision_per_operand` input expects to fail (the control that the term is needed).
+//! `collision_per_operand` input expects to fail (the control that the term is needed). An input with
+//! `"stored": "f64"` stores the f64 `decodeOnly()`'s `K₀` and `V₀` at each sample's point, rounded, in place of the
+//! decode stage's ([`Stored::F64`]): the fragment's f32 `E` against the exact value, which every f32 evaluation misses
+//! by about `κᵢⱼ·eps` beside a collision. On lavapipe the fragment and the decode stage compile alike and agree bit for
+//! bit, so only the exact value shows the conditioning there; the `collision_f64` input and the control use it.
 //!
 //! **The negative inputs.** `shift` writes each sample's descriptor `shift` samples on (a dispatch scramble): every
 //! sample compares its own decode with another's, so the disagreement is spatial, and the gate must fail it, reporting
@@ -32,9 +36,9 @@
 //! [`FACTOR`], the factor that sample alone would need), its median and 99th percentile, the worst `|E − E₀|`
 //! absolute, from the preset's own `E` and `E₀` words, the worst factor of the per-operand scale beside it, and how
 //! many samples a non-finite operand excluded (R-436); a last line gives the worst over every run beside the
-//! tolerance. The `survey` input is the measurement's denser lattice; the `collision` input's windows zoom on
-//! `shape_sphere`'s three binary collisions on its equator, and a line per window gives its worst factor at each depth,
-//! which stays flat under refinement where the per-operand form's grows (pitfalls §3).
+//! tolerance. The `survey` input is the measurement's denser lattice; the `collision` and `collision_f64` inputs'
+//! windows zoom on `shape_sphere`'s three binary collisions on its equator, and a line per window gives its worst
+//! factor at each depth, which stays flat under refinement where the per-operand form's grows (pitfalls §3).
 //!
 //! **The threshold** is REQ-COL-060's factor, proposed by TASK-M2-29 and provisional until the human confirms it at the
 //! M2 gate (R-71, R-182), the preset's own [`render::presets::agreement::FACTOR`]; a `gate.json` giving any other value
@@ -46,7 +50,7 @@ use render::presets::agreement::FACTOR;
 use render::presets::{non_finite_bits, DecodeChart};
 
 use crate::decode_f32_eps::{kernel_wgsl, DecodeF32EpsGate};
-use crate::decode_preset::Scene;
+use crate::decode_preset::{reference, Scene};
 use crate::gate::report::{GateReport, RegionCount, Regions, Verdict};
 use crate::gate::{Gate, GateConfig};
 use crate::gpu::GpuHarness;
@@ -71,6 +75,9 @@ pub struct Input {
     /// The form the input is judged by.
     #[serde(default)]
     pub form: Form,
+    /// What the payload's `K₀` and `V₀` hold.
+    #[serde(default)]
+    pub stored: Stored,
     /// The dispatch scramble: sample `q`'s descriptor written at sample `(q + shift) mod count`; 0 is none.
     #[serde(default)]
     pub shift: u32,
@@ -101,6 +108,19 @@ pub enum Form {
     /// The per-operand scale alone, `max(|K₀|, 1) + max(|V₀|, 1)`, from the same draw: the form before the conditioning
     /// term, kept as the control that the term is needed.
     PerOperand,
+}
+
+/// What the payload's `K₀` and `V₀` hold.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Stored {
+    /// The kernel decode stage's own, as it writes them (R-86, R-133): the agreement presets' comparison.
+    #[default]
+    Stage,
+    /// The f64 `decodeOnly()`'s at the sample's own point, rounded to f32 (`crate::decode_preset::reference`): the
+    /// exact values, which any f32 evaluation misses by about `κᵢⱼ·eps` beside a collision, on every backend, where the
+    /// fragment and the decode stage may compile alike and agree bit for bit (lavapipe does).
+    F64,
 }
 
 /// One drawing of the gate: a chart's lattice, or a window at one depth.
@@ -437,6 +457,21 @@ pub fn check(config: &GateConfig, input: &Input) -> Result<(), String> {
     Ok(())
 }
 
+/// Writes every sample's payload `K₀` and `V₀` as the f64 `decodeOnly()`'s at its own point, rounded to f32
+/// ([`Stored::F64`]).
+pub fn store_exact(scene: &mut Scene) -> Result<(), String> {
+    let grid = scene.context.grid;
+    for q in 0..grid.quad_count() {
+        let exact = reference(scene.chart, &scene.uniforms, scene.point(q))?
+            .out
+            .descriptor;
+        let d = scene.set.ic(grid.sample_index(q, 0, 0));
+        d.K_0 = exact.K_0 as f32;
+        d.V_0 = exact.V_0 as f32;
+    }
+    Ok(())
+}
+
 /// Draws `run`'s scene for `input` on `h`, the kernel's WGSL `wgsl`: each sample as the preset drew it.
 pub fn measure(
     h: &GpuHarness,
@@ -447,6 +482,9 @@ pub fn measure(
     let mut scene = run.scene(input.side)?;
     let outs = scene.stage_into(h.device(), h.queue(), wgsl, input.shift)?;
     let grid = scene.context.grid;
+    if input.stored == Stored::F64 {
+        store_exact(&mut scene)?;
+    }
     for &p in &input.poison {
         scene.set.ic(grid.sample_index(p, 0, 0)).V_0 = f32::NEG_INFINITY;
     }
@@ -539,6 +577,13 @@ impl DecodeAgreementGate {
              eps (REQ-COL-060)",
             config.threshold.value
         ));
+        if input.stored == Stored::F64 {
+            negative.push(
+                "the payload's K₀ and V₀ are the f64 decodeOnly()'s at each sample's point, rounded to f32: the \
+                 fragment's f32 E against the exact value"
+                    .to_owned(),
+            );
+        }
         if input.form == Form::PerOperand {
             negative.push(
                 "judged by the per-operand scale alone, max(|K₀|, 1) + max(|V₀|, 1), the form before the conditioning \

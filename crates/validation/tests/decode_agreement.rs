@@ -5,8 +5,8 @@
 use render::presets::agreement::FACTOR;
 use render::presets::DecodeChart;
 use validation::decode_agreement::{
-    chart_named, check, quantile, runs, DecodeAgreementGate, Form, Input, Run, Sample, Tally,
-    Window,
+    chart_named, check, quantile, runs, store_exact, DecodeAgreementGate, Form, Input, Run, Sample,
+    Stored, Tally, Window,
 };
 use validation::gate::GateConfig;
 use validation::negative_control;
@@ -118,6 +118,7 @@ fn input(side: [u32; 2], depth: u32, shift: u32, poison: Vec<u32>) -> Input {
         depth: Some(depth),
         windows: vec![],
         form: Form::Conditioned,
+        stored: Stored::Stage,
         shift,
         poison,
     }
@@ -752,4 +753,100 @@ negative_control!(
     "a refinement line missing for a window must be found",
     expected = "not one refinement line per window",
     check_window_report(1)
+);
+
+/// The f64 store: every sample's payload `K₀` and `V₀` the f64 `decodeOnly()`'s at its own point, rounded to f32, and
+/// nothing else of the descriptor touched; `skip` leaves that many samples as they were (the control).
+fn check_store_exact(skip: u32) {
+    let run = Run {
+        chart: DecodeChart::ShapeSphere,
+        depth: 17,
+        window: Some((0, [0.844518, 0.5], [110_689, 65_534])),
+    };
+    let mut scene = run.scene([3, 4]).unwrap();
+    let before: Vec<_> = (0..12u32).map(|q| *scene.set.ic(q)).collect();
+    let mut exact_scene = run.scene([3, 4]).unwrap();
+    store_exact(&mut exact_scene).unwrap();
+    for q in skip..12 {
+        *scene.set.ic(q) = *exact_scene.set.ic(q);
+    }
+    for q in 0..12u32 {
+        let want = validation::decode_preset::reference(
+            DecodeChart::ShapeSphere,
+            &scene.uniforms,
+            scene.point(q),
+        )
+        .unwrap()
+        .out
+        .descriptor;
+        let got = *scene.set.ic(q);
+        assert_eq!(
+            (got.K_0.to_bits(), got.V_0.to_bits()),
+            ((want.K_0 as f32).to_bits(), (want.V_0 as f32).to_bits()),
+            "sample {q}'s stored K₀, V₀ are not the f64 decode's, rounded"
+        );
+        assert_eq!(
+            (got.m0, got.rho_mag, got.r_min_pair_0),
+            (
+                before[q as usize].m0,
+                before[q as usize].rho_mag,
+                before[q as usize].r_min_pair_0
+            ),
+            "sample {q}: a field other than K₀ and V₀ changed"
+        );
+    }
+}
+
+#[test]
+fn decode_agreement_store_exact() {
+    check_store_exact(0);
+}
+
+negative_control!(
+    decode_agreement_store_exact,
+    "a sample left with its old K₀ and V₀ must be found",
+    expected = "are not the f64 decode's, rounded",
+    check_store_exact(1)
+);
+
+/// The inputs' fields as the JSON gives them: `form` and `stored` by name, each defaulting, an unknown one refused; and
+/// the report's line for an f64 store; `f64_name` is the name `stored`'s f64 is read under (the control gives another).
+fn check_fields(f64_name: &str) {
+    let parse = |extra: &str| {
+        serde_json::from_str::<Input>(&format!(
+            r#"{{"description": "d", "side": [2, 2], "depth": 1{extra}}}"#
+        ))
+    };
+    let plain = parse("").unwrap();
+    assert_eq!(
+        (plain.form, plain.stored),
+        (Form::Conditioned, Stored::Stage)
+    );
+    let both = parse(&format!(
+        r#", "form": "per_operand", "stored": "{f64_name}""#
+    ))
+    .expect("the f64 store is not read by its name");
+    assert_eq!((both.form, both.stored), (Form::PerOperand, Stored::F64));
+    assert!(parse(r#", "stored": "f32""#).is_err());
+    assert!(parse(r#", "form": "loose""#).is_err());
+    let c = config(&format!("{:?}", f64::from(FACTOR)));
+    let r = DecodeAgreementGate::report(&c, "f.json", &both, "adapter", &[]);
+    assert!(r
+        .negative_results
+        .iter()
+        .any(|l| l.contains("the f64 decodeOnly()'s at each sample's point")));
+    let r = DecodeAgreementGate::report(&c, "p.json", &plain, "adapter", &[]);
+    assert!(!r.negative_results.iter().any(|l| l.contains("f64")));
+}
+
+#[test]
+fn decode_agreement_fields() {
+    check_fields("f64");
+}
+
+negative_control!(
+    decode_agreement_fields,
+    "a store read under another name must be refused",
+    expected = "the f64 store is not read by its name",
+    check_fields("F64")
 );

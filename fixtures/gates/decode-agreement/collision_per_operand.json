@@ -1,5 +1,5 @@
 {
-  "description": "The control on the collision windows: the same draws judged by the per-operand scale alone, max(|K₀|, 1) + max(|V₀|, 1), the form before colour_composition §6's conditioning term (RQ-623); beside a collision it disagrees, so the gate fails it.",
+  "description": "The control on the collision windows: the fragment's f32 E against the f64 decodeOnly()'s K₀ and V₀ at each sample's point, rounded to f32, judged by the per-operand scale alone, max(|K₀|, 1) + max(|V₀|, 1), the form before colour_composition §6's conditioning term (RQ-623). Any f32 evaluation misses the exact value by about κ·eps beside a collision, on every backend (lavapipe compiles the fragment and the decode stage alike, so they agree bit for bit), so the per-operand form disagrees and the gate fails it.",
   "side": [64, 64],
   "windows": [
     { "chart": "shape_sphere", "centre": [0.0392193, 0.5], "depths": [11, 13, 15, 17, 19, 21, 23] },
@@ -7,5 +7,6 @@
     { "chart": "shape_sphere", "centre": [0.844518, 0.5], "depths": [11, 13, 15, 17, 19, 21, 23] }
   ],
   "form": "per_operand",
+  "stored": "f64",
   "expected": "fail"
 }
