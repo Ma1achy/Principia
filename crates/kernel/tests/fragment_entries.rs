@@ -9,6 +9,9 @@
 //! - `fragment_entries_state_entries_write_their_source`: `describe`, `encode` and `shape` on states of distinct
 //!   values against `descriptor::describe`, `encode::encode` with `stage::encode::notices`, and `shape::shape`.
 //!   Controls: a word read one place off is found in each.
+//! - `fragment_entries_free_decode_writes_its_source` (TASK-M2-26): `decode_free` on latent `z`, the origin, an interior
+//!   point and points past every control's saturation, against `decode::decode` at f32 under the default links: the
+//!   `(m, r, p)` and the tag word. Control: a `z` read one place off is found.
 
 use kernel::chart::{
     BurrauThetaK, EuclidPlane, InvariantLE, InvariantLK, Latent, MassSimplex, ShapeSphere,
@@ -236,4 +239,48 @@ negative_control!(
     "a state read one word off must be found",
     expected = "words are not",
     check_states(true)
+);
+
+/// The latent `z` the free decode is checked on: the origin, an interior point of distinct values, and two past every
+/// control's saturation, one each way.
+const FREE_ZS: [[f32; 8]; 4] = [
+    [0.0; 8],
+    [0.3, -0.2, 0.1, -0.4, 0.25, 0.05, 0.2, -0.35],
+    [18.0, 17.0, 16.0, 15.0, 14.0, 13.0, 12.0, 11.0],
+    [-18.0, -17.0, -16.0, -15.0, -14.0, -13.0, -12.0, -11.0],
+];
+
+/// `decode_free` against `decode::decode` at f32; `shift` reads each `z` one place off (the control).
+fn check_free(shift: bool) {
+    assert_eq!((FREE_Z, FREE_IC, FREE_TAG, FREE_WORDS), (0, 8, 23, 24));
+    for z in FREE_ZS {
+        let mut input = z.map(f32::to_bits);
+        if shift {
+            input.rotate_left(1);
+        }
+        let mut words = [0u32; FREE_WORDS];
+        words[FREE_Z..FREE_Z + 8].copy_from_slice(&input);
+        decode_free(&mut words);
+        let d = kernel::decode::decode::<Defaults, f32>(&kernel::decode::Latent { z });
+        let mut want = ic_words_of(&d.ic);
+        want.push(tag(d.degenerate));
+        assert_eq!(
+            words[FREE_IC..].to_vec(),
+            want,
+            "z {z:?}: decode_free's words are not decode::decode's"
+        );
+        assert_eq!(words[FREE_Z..FREE_Z + 8], input, "decode_free moved its input");
+    }
+}
+
+#[test]
+fn fragment_entries_free_decode_writes_its_source() {
+    check_free(false);
+}
+
+negative_control!(
+    fragment_entries_free_decode_writes_its_source,
+    "a z read one word off must be found",
+    expected = "decode_free's words are not",
+    check_free(true)
 );

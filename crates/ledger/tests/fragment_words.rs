@@ -9,7 +9,7 @@ fn root() -> std::path::PathBuf {
     std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
 }
 
-/// The table's offsets and sizes, `layout` added to the four.
+/// The table's offsets and sizes, `layout` added to the five.
 fn check_offsets(extra: Option<Layout>) {
     let d = fragment::decode();
     assert_eq!(
@@ -30,6 +30,11 @@ fn check_offsets(extra: Option<Layout>) {
     assert_eq!((e.at("IC"), e.at("OUT"), e.words()), (0, 15, 27));
     let h = fragment::shape();
     assert_eq!((h.at("R"), h.at("M"), h.at("N"), h.words()), (0, 6, 9, 12));
+    let f = fragment::free();
+    assert_eq!(
+        (f.at("Z"), f.at("IC"), f.at("TAG"), f.words()),
+        (0, 8, 23, 24)
+    );
     assert_eq!(d.offset("NONE"), None, "an unknown part has an offset");
     let all: Vec<Layout> = layouts().into_iter().chain(extra).collect();
     for l in &all {

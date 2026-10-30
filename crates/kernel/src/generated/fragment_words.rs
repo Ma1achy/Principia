@@ -53,3 +53,15 @@ pub const SHAPE_N: usize = 9;
 
 /// The shape words: their number.
 pub const SHAPE_WORDS: usize = 12;
+
+/// The free words: `z`, 8 word(s), from here.
+pub const FREE_Z: usize = 0;
+
+/// The free words: `ic`, 15 word(s), from here.
+pub const FREE_IC: usize = 8;
+
+/// The free words: `tag`, 1 word(s), from here.
+pub const FREE_TAG: usize = 23;
+
+/// The free words: their number.
+pub const FREE_WORDS: usize = 24;

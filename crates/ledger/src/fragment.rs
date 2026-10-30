@@ -9,7 +9,8 @@
 //! before it, and the layout's size their sum. The lengths are the parts' own: `(u, v)` two f32; `Φ`'s `z` the eight
 //! latent controls; the canonical `(m, r, p)` fifteen f32 (three masses, three positions and three momenta of two
 //! components), in the decode stage's word order; the `ICDescriptor`'s twelve fields; `kernel::stage::encode`'s twelve
-//! words (`z`, `α`, `β`, `λ` and the notices word); the shape map's `r` (six), `m` (three) and `n` (three).
+//! words (`z`, `α`, `β`, `λ` and the notices word); the shape map's `r` (six), `m` (three) and `n` (three); and the free
+//! decode's latent `z` (eight), its `(m, r, p)` and its tag word (TASK-M2-26).
 
 /// One part of a layout: its name, as the generated constant's suffix, and its length in words.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -88,7 +89,16 @@ pub fn shape() -> Layout {
     }
 }
 
+/// The free decode's words: a latent `z` in; the canonical `(m, r, p)` and the tag word out (TASK-M2-26: the
+/// ROUNDTRIP preset's second `D`, of the encode's `z`).
+pub fn free() -> Layout {
+    Layout {
+        name: "FREE",
+        parts: vec![part("Z", 8), part("IC", 15), part("TAG", 1)],
+    }
+}
+
 /// Every layout, in the order the generated file lists them.
-pub fn layouts() -> [Layout; 4] {
-    [decode(), describe(), encode(), shape()]
+pub fn layouts() -> [Layout; 5] {
+    [decode(), describe(), encode(), shape(), free()]
 }

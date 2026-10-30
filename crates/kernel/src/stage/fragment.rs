@@ -22,13 +22,17 @@
 //!   selects (R-436) on states no decode reaches at f32.
 //! - The encode ([`encode()`]): `(m, r, p)` in, the default links' encode out in `crate::stage::encode`'s word order.
 //! - The shape map ([`shape`]): `r` and `m` in, `n` out (`crate::shape::shape`, the read side's `shape()`).
+//! - The free decode ([`decode_free`]): a latent `z` in ([`FREE_Z`]); the shared decoder's canonical `(m, r, p)`
+//!   ([`FREE_IC`]) and tag word ([`FREE_TAG`]) out, under the default links: the ROUNDTRIP preset's second `D`, of the
+//!   encode's `z` (inverse-encode contract Part 8; TASK-M2-26), as `crate::encode::ingest` and the T2 round trip decode
+//!   it.
 
 use spirv_std::spirv;
 
 use crate::chart::{
     BurrauThetaK, EuclidPlane, InvariantLE, InvariantLK, Latent, MassSimplex, ShapeSphere,
 };
-use crate::decode::{descriptor, Ic};
+use crate::decode::{descriptor, Ic, Latent as LatentZ};
 use crate::encode;
 use crate::generated::links::{Defaults, Selection};
 use crate::payload::ICDescriptorOf;
@@ -259,6 +263,27 @@ pub fn encode(
     put(words, ENCODE_OUT + 9, e.blocks.beta);
     put(words, ENCODE_OUT + 10, e.report.lambda);
     words[ENCODE_OUT + 11] = crate::stage::encode::notices(&e.report);
+}
+
+/// The free decode under the default links, [`crate::decode::decode`] at f32 on the latent `z` its words hold: the
+/// canonical `(m, r, p)` and the tag word, as the decode stage writes them.
+#[spirv(compute(threads(1)))]
+pub fn decode_free(
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 0)] words: &mut [u32; FREE_WORDS],
+) {
+    let z = [
+        get(words, FREE_Z),
+        get(words, FREE_Z + 1),
+        get(words, FREE_Z + 2),
+        get(words, FREE_Z + 3),
+        get(words, FREE_Z + 4),
+        get(words, FREE_Z + 5),
+        get(words, FREE_Z + 6),
+        get(words, FREE_Z + 7),
+    ];
+    let d = crate::decode::decode::<Defaults, f32>(&LatentZ { z });
+    write_ic(words, FREE_IC, &d.ic);
+    words[FREE_TAG] = tag(d.degenerate);
 }
 
 /// The shape map, `crate::shape::shape` at f32, on the `r` and `m` its words hold.

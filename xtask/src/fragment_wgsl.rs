@@ -14,7 +14,8 @@
 //! the shader around them, share no name.
 //!
 //! **The files** ([`snippets`]): `crates/render/wgsl/decode.wgsl` (one section per chart the DECODE preset draws, each
-//! defining `frag_decode(uv)`, and the descriptor's section, `frag_describe`), `crates/render/wgsl/encode.wgsl`
+//! defining `frag_decode(uv)`, the descriptor's section, `frag_describe`, and the free decode's, `frag_decode_free(z)`,
+//! the ROUNDTRIP preset's second `D`), `crates/render/wgsl/encode.wgsl`
 //! (`frag_encode`) and `crates/ledger/wgsl/shape.wgsl` (`shape(r, m)`, the read side's shape map). They are checked in,
 //! so the render and ledger crates build without rust-gpu, and [`check`] fails the build when one differs from its
 //! translation: a hand edit, or a kernel change not re-emitted (`cargo xtask build-kernel --bless` writes them).
@@ -509,6 +510,29 @@ fn shape_glue(prefix: &str) -> String {
     out
 }
 
+/// The free decode's glue: `FragFree` and `frag_decode_free(z)`, the shared decoder on a latent `z`.
+fn free_glue(prefix: &str) -> String {
+    let mut out = format!(
+        "\n// One free decode (kernel stage::fragment::decode_free): the canonical (m, r, p) of a latent z and the\n\
+         // DEGENERATE tag word (0 none).\n\
+         struct FragFree {{\n    m: vec3<f32>,\n    r: array<vec2<f32>, 3>,\n    p: array<vec2<f32>, 3>,\n    tag: u32,\n}}\n\n\
+         // The free decode of the latent z under the default links: the ROUNDTRIP preset's second D, of the encode's z.\n\
+         fn frag_decode_free(z: array<f32, 8>) -> FragFree {{\n    var wi: {prefix}_words;\n"
+    );
+    let l = fragment::free();
+    for k in 0..8 {
+        let _ = writeln!(out, "    wi.w[{}] = bitcast<u32>(z[{k}]);", l.at("Z") + k);
+    }
+    let _ = writeln!(out, "    let wo = {prefix}_body(wi);\n    var o: FragFree;");
+    read_ic(&mut out, "o", "wo", l.at("IC"));
+    let _ = write!(
+        out,
+        "    o.tag = wo.w[{}];\n    return o;\n}}\n",
+        l.at("TAG")
+    );
+    out
+}
+
 /// The opening line of section `name` in `decode.wgsl`.
 pub fn section_start(name: &str) -> String {
     format!("// ── section {name} ──")
@@ -547,6 +571,14 @@ pub fn snippets(spv: &[u8]) -> Result<Vec<(&'static str, String)>, String> {
         lift(&module, "stage_fragment_describe", "fd_describe")?,
         describe_glue("fd_describe"),
         section_end("describe")
+    );
+    let _ = write!(
+        decode,
+        "\n{}\n{}{}{}\n",
+        section_start("free"),
+        lift(&module, "stage_fragment_decode_free", "fd_free")?,
+        free_glue("fd_free"),
+        section_end("free")
     );
     let encode = format!(
         "{}\n{}{}",
