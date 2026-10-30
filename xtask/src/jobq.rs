@@ -30,6 +30,16 @@
 //! process group of its own; past its timeout, or when cancelled, the runner sends the group SIGTERM, then SIGKILL
 //! after `grace` seconds; and whenever the job's own process ends, the runner kills what is left of its group. A runner with nothing queued or running for `idle` seconds exits, so none is left behind.
 //!
+//! Two limits of that recovery. A runner killed between a job's spawn and its save leaves that start untracked: the
+//! job's file still says queued, so the job runs again while that one copy has no timeout or cancel and may overlap the
+//! second start; `runner.log` shows the start, `violations.log` a heavy copy, and no lock is orphaned. And when a job's
+//! file holds no leader start time, a live leader that started more than [`START_SLACK`] seconds from the job's recorded
+//! start is left alone, and the job queued again.
+//!
+//! A live runner whose save fails runs nothing its files don't record. After a spawn it kills and reaps that start's
+//! group, and the job stays queued; at a job's end it keeps the job and saves it again on the next pass. A pass with a
+//! failed save starts no job and counts as idle, so a runner that can't write exits.
+//!
 //! While it runs, the runner reads `ps` every `sample` seconds and logs to `violations.log` each heavy process
 //! ([`heavy`]) that no queue job started, with its pid, cwd and command. It never kills one.
 
@@ -38,7 +48,7 @@ use std::fs::{self, File, OpenOptions};
 use std::io::Write as _;
 use std::os::unix::process::{CommandExt as _, ExitStatusExt as _};
 use std::path::{Path, PathBuf};
-use std::process::{Child, Command, ExitCode, Stdio};
+use std::process::{Child, Command, ExitCode, ExitStatus, Stdio};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use serde::{Deserialize, Serialize};
@@ -1088,6 +1098,9 @@ struct Running {
     started: Instant,
     ending: Option<(State, Instant)>,
     killed: bool,
+    /// How and when its process ended, once reaped: kept until the job's file says so, so a failed save is tried again
+    /// with the true end, and its group, whose id may now be reused, is never signalled again.
+    reaped: Option<(ExitStatus, u64)>,
 }
 
 /// The runner's state between passes.
@@ -1198,7 +1211,8 @@ impl Runner {
     }
 
     /// One pass, the state lock held: reaps ended jobs, ends timed-out and cancelled ones, starts queued ones up to the
-    /// concurrency. Returns whether anything is queued or running.
+    /// concurrency. Returns whether anything is queued or running. A failed save of one running job doesn't keep the
+    /// others from being tended, but the pass then starts nothing and fails.
     fn pass(&mut self, config: &Config) -> Result<bool, String> {
         let mut jobs = self.queue.jobs()?;
         let at = now();
@@ -1208,6 +1222,7 @@ impl Runner {
         }
         jobs.retain(|job| !archivable(job, at));
         let grace = Duration::from_secs(config.grace);
+        let mut failed = false;
         for job in jobs.iter_mut().filter(|job| job.state == State::Running) {
             let Some(running) = self.children.get_mut(&job.id) else {
                 continue;
@@ -1215,26 +1230,31 @@ impl Runner {
             let pgid = job.pgid.unwrap_or(0);
             // The leader is seen to have exited before it is reaped: while it is a zombie its pid, and so its group's id,
             // can't be reused, so the kill below reaches only what the job left of its group.
-            let exited = if leader_exited(running.child.id()) {
+            if running.reaped.is_none() && leader_exited(running.child.id()) {
                 // What the job left of its group goes with it, however it ended, so nothing it started outlives it.
                 signal_group(pgid, rustix::process::Signal::KILL);
-                running
+                running.reaped = running
                     .child
                     .try_wait()
                     .map_err(|e| format!("job {}: cannot wait: {e}", job.id))?
-            } else {
-                None
-            };
-            if let Some(status) = exited {
+                    .map(|status| (status, now()));
+            }
+            if let Some((status, finished)) = running.reaped {
                 job.exit = Some(
                     status
                         .code()
                         .unwrap_or_else(|| 128 + status.signal().unwrap_or(0)),
                 );
                 job.state = running.ending.map_or(State::Exited, |(state, _)| state);
-                job.finished = Some(now());
+                job.finished = Some(finished);
+                // The child stays until the file records the end, so a failed save is tried again on the next pass
+                // and no job is left marked running with nothing to finish it.
+                if let Err(message) = self.queue.save(job) {
+                    log(&format!("runner {}: {message}", self.me));
+                    failed = true;
+                    continue;
+                }
                 self.children.remove(&job.id);
-                self.queue.save(job)?;
                 log(&format!(
                     "runner {}: job {}: {}",
                     self.me,
@@ -1258,7 +1278,10 @@ impl Runner {
                     signal_group(pgid, rustix::process::Signal::TERM);
                     running.ending = Some((state, Instant::now()));
                     job.note = Some(note);
-                    self.queue.save(job)?;
+                    if let Err(message) = self.queue.save(job) {
+                        log(&format!("runner {}: {message}", self.me));
+                        failed = true;
+                    }
                 }
             } else if let Some((_, since)) = running.ending {
                 if !running.killed && since.elapsed() >= grace {
@@ -1266,6 +1289,12 @@ impl Runner {
                     running.killed = true;
                 }
             }
+        }
+        if failed {
+            return Err(format!(
+                "runner {}: a save failed; starting nothing this pass",
+                self.me
+            ));
         }
         while self.children.len() < config.concurrency {
             let Some(next) = next_job(&jobs).map(|job| job.id) else {
@@ -1282,43 +1311,58 @@ impl Runner {
     }
 
     /// Starts `job` in a process group of its own, its output to its log. A job whose log can't be opened, or whose
-    /// command can't be started, ends as not started.
+    /// command can't be started, ends as not started. If the file can't record a start, the start is undone: its group
+    /// is killed and reaped and the error returned, so nothing runs that the file doesn't record; otherwise the job,
+    /// still queued, would start again on every pass, each copy with no timeout or cancel.
     fn start(&mut self, job: &mut Job, config: &Config) -> Result<(), String> {
         job.attempts += 1;
         job.started = Some(now());
         job.runner_pid = Some(self.me);
-        match self.spawn(job, config) {
-            Ok(child) => {
-                let pid = child.id() as i32;
-                job.state = State::Running;
-                job.pgid = Some(pid);
-                // Read after the pass, outside the state lock ([`Runner::record_starts`]). Should this runner die
-                // first, the next one tells the leader by its start against `started` ([`leader_is_jobs`]).
-                job.leader_start = None;
-                self.unrecorded.push((job.id, pid));
-                job.note = None;
-                self.children.insert(
-                    job.id,
-                    Running {
-                        child,
-                        started: Instant::now(),
-                        ending: None,
-                        killed: false,
-                    },
-                );
-                log(&format!(
-                    "runner {}: job {}: started, pid {pid}",
-                    self.me, job.id
-                ));
-            }
+        let mut child = match self.spawn(job, config) {
+            Ok(child) => child,
             Err(note) => {
                 job.state = State::NotStarted;
                 job.finished = Some(now());
                 log(&format!("runner {}: job {}: {note}", self.me, job.id));
                 job.note = Some(note);
+                return self.queue.save(job);
             }
+        };
+        let started = Instant::now();
+        let pid = child.id() as i32;
+        log(&format!(
+            "runner {}: job {}: started, pid {pid}",
+            self.me, job.id
+        ));
+        job.state = State::Running;
+        job.pgid = Some(pid);
+        // Read after the pass, outside the state lock ([`Runner::record_starts`]). Should this runner die first, the
+        // next one tells the leader by its start against `started` ([`leader_is_jobs`]).
+        job.leader_start = None;
+        job.note = None;
+        if let Err(message) = self.queue.save(job) {
+            // The leader is not yet reaped, so its pid, and so its group's id, can't have been reused. SIGKILL can't be
+            // ignored, so the wait is brief.
+            signal_group(pid, rustix::process::Signal::KILL);
+            let reaped = child.wait();
+            log(&format!(
+                "runner {}: job {}: start undone, group {pid} killed ({reaped:?}): its file can't be saved",
+                self.me, job.id
+            ));
+            return Err(message);
         }
-        self.queue.save(job)
+        self.unrecorded.push((job.id, pid));
+        self.children.insert(
+            job.id,
+            Running {
+                child,
+                started,
+                ending: None,
+                killed: false,
+                reaped: None,
+            },
+        );
+        Ok(())
     }
 
     /// Opens `job`'s log, writes its header, and spawns its command.

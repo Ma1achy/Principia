@@ -2288,6 +2288,212 @@ negative_control!(
     path_case("jobq_path_control", false)
 );
 
+// --- A save that fails in a live runner -------------------------------------------------------------------------------
+
+/// Plants a folder where the runner writes `id`'s file before renaming it, so that file's every save fails.
+fn plant_failing_save(q: &Q, id: u64) -> PathBuf {
+    let runner = q.queue().runner_lock().expect("a live runner").pid;
+    let planted = q
+        .queue()
+        .job_path(id)
+        .with_extension(format!("tmp{runner}"));
+    std::fs::create_dir_all(&planted).expect("planted");
+    planted
+}
+
+/// How many times the runner has logged that it couldn't write a file.
+fn failed_saves(q: &Q) -> usize {
+    std::fs::read_to_string(q.dir.join("runner.log"))
+        .unwrap_or_default()
+        .matches("cannot write")
+        .count()
+}
+
+/// How many of the pids in `path`, one a line, are alive.
+fn live_copies(path: &Path) -> Vec<i32> {
+    std::fs::read_to_string(path)
+        .unwrap_or_default()
+        .lines()
+        .filter_map(|line| line.trim().parse().ok())
+        .filter(|&pid| alive(pid))
+        .collect()
+}
+
+/// A gate job holds the target directory while a long job waits for it, at a concurrency that leaves it a slot; with
+/// `fail`, the long job's every save fails when the gate opens. While it fails, at most one copy may be alive and the
+/// file must not move. Once saves work again, the job must run as its first recorded start, one copy, and be
+/// cancellable.
+fn failed_start_save_case(tag: &str, fail: bool) {
+    let q = Q::new(tag, "concurrency = 2\nidle = 5\ntick_ms = 100\n");
+    let gate = q.submit(
+        "peek",
+        "gate",
+        &["--timeout", "30"],
+        &["sh", "-c", "while [ ! -e go ]; do sleep 0.05; done"],
+    );
+    let copies = q.work().join("copies");
+    let id = q.submit(
+        "peek",
+        "long",
+        &["--timeout", "30"],
+        &["sh", "-c", "echo $$ >> copies; exec sleep 20"],
+    );
+    let planted = fail.then(|| plant_failing_save(&q, id));
+    std::fs::write(q.work().join("go"), "").expect("gate opened");
+    assert_eq!(q.wait(gate).0, 0, "the gate job failed");
+    // Long enough for the unfixed runner to reach several copies, a copy every tick, and shorter than `idle`.
+    let (mut most, ends) = (0, Instant::now() + Duration::from_millis(1500));
+    while Instant::now() < ends {
+        most = most.max(live_copies(&copies).len());
+        std::thread::sleep(Duration::from_millis(50));
+    }
+    let during = q.queue().load(id).expect("job file");
+    let undone = std::fs::read_to_string(q.dir.join("runner.log"))
+        .unwrap_or_default()
+        .contains("start undone");
+    if let Some(planted) = &planted {
+        std::fs::remove_dir(planted).expect("plant removed");
+    }
+    let runs = until(5, || {
+        q.queue()
+            .load(id)
+            .is_ok_and(|job| job.state == State::Running)
+            && live_copies(&copies).len() == 1
+    });
+    let after = q.queue().load(id).expect("job file");
+    let live = live_copies(&copies);
+    let cancelled = q.run(&["cancel", &id.to_string()]).status.success();
+    let code = q.wait(id).0;
+    let left = live_copies(&copies);
+    for &pid in &left {
+        kill("-9", pid);
+    }
+    q.finish();
+    assert!(
+        undone
+            && most <= 1
+            && during.state == State::Queued
+            && during.attempts == 0
+            && runs
+            && after.attempts == 1
+            && live.len() == 1
+            && cancelled
+            && code == 130
+            && left.is_empty(),
+        "a failed save after a start left what its file doesn't record: undone {undone}, most copies {most}, \
+         during {:?} attempts {}, runs {runs}, after attempts {}, live {live:?}, cancel {cancelled}, status {code}, \
+         left {left:?}",
+        during.state,
+        during.attempts,
+        after.attempts
+    );
+}
+
+#[test]
+fn jobq_a_failed_save_after_a_start_undoes_it() {
+    failed_start_save_case("jobq_start_save", true);
+}
+
+negative_control!(
+    jobq_a_failed_save_after_a_start_undoes_it,
+    "with no failing save the job simply starts: nothing is undone, and the check sees that",
+    expected = "a failed save after a start left what its file",
+    failed_start_save_case("jobq_start_save_control", false)
+);
+
+/// A job waits for a gate, then exits 7, while a second job, on its own target directory, has a timeout of 2 s. With
+/// `fail`, the first job's every save fails when the gate opens. While it fails, the file must still say running, and
+/// the second job must still be timed out. Once saves work again, the first must end with its true status and end time,
+/// from its one start, and the runner go idle.
+fn failed_end_save_case(tag: &str, fail: bool) {
+    let q = Q::new(tag, "concurrency = 2\nidle = 8\n");
+    let id = q.submit(
+        "peek",
+        "ends",
+        &["--timeout", "30"],
+        &["sh", "-c", "while [ ! -e go ]; do sleep 0.05; done; exit 7"],
+    );
+    assert!(
+        until(10, || q
+            .queue()
+            .load(id)
+            .is_ok_and(|job| job.leader_start.is_some())),
+        "the job's start was never recorded"
+    );
+    let planted = fail.then(|| plant_failing_save(&q, id));
+    let other = q.submit(
+        "peek",
+        "other",
+        &[
+            "--timeout",
+            "2",
+            "--env",
+            "CARGO_TARGET_DIR=/nonexistent/jobq-test-other",
+        ],
+        &["sleep", "20"],
+    );
+    // A pass with a failed save starts nothing, so the second job must be running before the first one's end.
+    assert!(
+        until(10, || q
+            .queue()
+            .load(other)
+            .is_ok_and(|job| job.state == State::Running)),
+        "the second job never started"
+    );
+    std::fs::write(q.work().join("go"), "").expect("gate opened");
+    let tried_again = until(3, || failed_saves(&q) >= 3);
+    let other_ended = until(5, || {
+        q.queue()
+            .load(other)
+            .is_ok_and(|job| job.state == State::TimedOut)
+    });
+    let during = q.queue().load(id).expect("job file");
+    // The clock moves on, so a save that recomputed the end would record a later one.
+    std::thread::sleep(Duration::from_millis(2100));
+    let removed_at = xtask::jobq::now();
+    if let Some(planted) = &planted {
+        std::fs::remove_dir(planted).expect("plant removed");
+    }
+    let ended = until(5, || {
+        q.queue()
+            .load(id)
+            .is_ok_and(|job| job.state == State::Exited)
+    });
+    let after = q.queue().load(id).expect("job file");
+    let code = if ended { q.wait(id).0 } else { -1 };
+    let idled = until(10, || !q.dir.join("runner.lock").exists());
+    q.finish();
+    assert!(
+        tried_again
+            && other_ended
+            && during.state == State::Running
+            && ended
+            && code == 7
+            && after.exit == Some(7)
+            && after.attempts == 1
+            && after.finished.is_some_and(|at| at < removed_at)
+            && idled,
+        "a failed save at a job's end lost the job: tried again {tried_again}, other ended {other_ended}, during \
+         {:?}, ended {ended}, status {code}, exit {:?}, attempts {}, finished {:?} against {removed_at}, idled {idled}",
+        during.state,
+        after.exit,
+        after.attempts,
+        after.finished
+    );
+}
+
+#[test]
+fn jobq_a_failed_save_at_a_jobs_end_is_tried_again() {
+    failed_end_save_case("jobq_end_save", true);
+}
+
+negative_control!(
+    jobq_a_failed_save_at_a_jobs_end_is_tried_again,
+    "with no failing save nothing is tried again, and the check sees that",
+    expected = "a failed save at a job's end lost the job",
+    failed_end_save_case("jobq_end_save_control", false)
+);
+
 // --- Concurrency -----------------------------------------------------------------------------------------------------
 
 /// Two jobs that each wait for the other to start, at `concurrency`, the first on target directory `a` with
