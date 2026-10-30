@@ -634,3 +634,42 @@ For the owner: yes, it is REQ-ENC-024's calibration, and the options change what
     changing an acceptance clause).
 - **Applied meanwhile:** none. No tolerance is changed, and qa's test is unchanged.
 - **Waits:** TASK-M2-26 (PR #343): its required test fails on the lavapipe runners.
+- **30 Oct 2026:** Decided by the orchestrator per R-369, option (a); see PR #343; the owner's veto listed. Built in
+  PR #343's fix round: at f32 the encode's `α` and `β`, the spherical and exponential inverses and the shape sphere
+  decode's `β` take the kernel's own `atan2` (`crates/kernel/src/arctan.rs`), in integer arithmetic, so every backend
+  gives the CPU's bits; the f64 path keeps libm's, bit for bit. No tolerance is changed, and qa's test is unchanged.
+
+## RQ-629: WGSL and Vulkan bound `sin` and `cos` only by an absolute error, where the decode's `cos α` near `π/2` needs a relative one *(a note for future backends; REQ-ENC-024, REQ-RENDER-025; R-297; inverse-encode contract Part 4; dd_decoder §3.2; context: RQ-628, TASK-M2-26, PR #343)*
+
+*Queued 30 Oct 2026 from TASK-M2-26's fix round, as RQ-628's decision directs. No failure today; nothing waits.*
+
+- **File, section:**
+  - The orchestrator's decision on RQ-628 (30 Oct 2026, applied per R-369), its last bullet: "Related, filed
+    separately: WGSL/Vulkan bound sin/cos only by an absolute error of 2^-11 on [-pi, pi], yet cos(alpha) near pi/2
+    needs relative accuracy. There is no failure today; this gets a REVIEW_QUEUE note so a future backend doesn't
+    surprise us. It is out of (a)'s scope."
+  - `docs/design/principia_dd_decoder.md` § "3.2 Configuration — hyperspherical mass-weighted Jacobi":
+    "`ρ̃ = R̃ cos α · (1, 0)`", and "`‖ρ̃‖ = cos α`, so **small α = LARGE inner-pair separation**; `α → π/2` = tight
+    inner binary + distant third body (hierarchical)."
+  - `docs/contracts/principia_inverse_encode_contract.md` § "Part 4 — Conditioning: assert in physical units, never in
+    z": "`ε_phys = k·ε_R` … one `k` for both precisions: the interior residual is rounding, the same count of `ε_R` at
+    f64 and f32", and "the `ROUNDTRIP` preset (Part 8) use[s] it unchanged".
+- **What is seen:** the fragment decode forms `‖ρ̃‖` from the backend's `cos α`. WGSL, and Vulkan for GLSL.std.450,
+  bound `sin` and `cos` only by an absolute error of `2⁻¹¹` on `[−π, π]`. Near `α = π/2`, `cos α` is small (0.034 for
+  RQ-628's light body), so an absolute bound allows a relative error in `‖ρ̃‖` of `2⁻¹¹/cos α`, far past `ε_phys`, as
+  `atan2`'s did in RQ-628. The backends in use do much better than the bound: RQ-628's check that moved each
+  other builtin, `sin` and `cos` among them, by 8 `ε_R` left the worst sample below 0.27 `ε_phys`, and with the
+  kernel's own `atan2` qa's `qa_m226_latent_slices_dark_and_within_eps_phys` passes on Metal (lavapipe's run is PR
+  #343's CI).
+- **The gap:** nothing in the corpus bounds a backend's `sin` and `cos` relative to their value, which `ε_phys`
+  assumes at the fragment's decode. RQ-628's option (a) replaced only `atan2` (the kernel's own, in integer
+  arithmetic); `sin` and `cos` stay the backend's.
+- **The question:** whether a future backend (another driver, WebGPU in a browser) is held to a relative accuracy for
+  `sin` and `cos` near `π/2`, or the decode's `cos α` is formed so that it needs none (for instance as `sin(π/2 − α)`
+  from an exact `π/2 − α`, or by the kernel's own function, as `atan2` now is).
+- **Options seen:** (a) nothing now: a note, acted on when a backend fails ROUNDTRIP's `ε_phys` this way; (b) a
+  per-backend check of `cos` near `π/2` against f64 in the GPU suite, so a new backend that does worse is caught
+  before ROUNDTRIP's acceptance; (c) the kernel's own `sin` and `cos` at f32, as `atan2` (a larger change, beyond
+  RQ-628's scope).
+- **Applied meanwhile:** none; nothing is built for it.
+- **Waits:** nothing.
