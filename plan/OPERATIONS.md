@@ -633,3 +633,4 @@ don't route around it.
   (§ "Asking the human").
 
 <!-- R-656 CI proof: a docs-only change on a throwaway PR, never merged. -->
+<!-- R-656 CI proof: a second push, superseding the first. -->
