@@ -308,3 +308,55 @@ fn mock_compass_slice_follows_pointer_tilt_mode_unchanged() {
         "still tilt mode"
     );
 }
+
+/// R-465 N3's bounds, on the drawn normal itself: a screen image exactly `0.25·S` long is read along it, not
+/// vertically; a shorter one vertically, up toward the side of `n` facing the viewer, `+1` where `n·(1, 1, 1) > 0` and
+/// `−1` otherwise, so `−1` where it is 0.
+#[test]
+fn mock_compass_slice_follows_pointer_reading_bounds() {
+    // P(n) − P(0) = (0, 0.25)·S, exactly: straight down the screen.
+    let at_bound = compass::reading_of([0.5, 0.25, 0.5]);
+    let u = 1.0 / 3f64.sqrt();
+    let cases = [
+        (
+            at_bound,
+            Reading::Along([0.0, 1.0]),
+            "an image of exactly 0.25·S",
+        ),
+        (
+            compass::reading_of([u; 3]),
+            Reading::Vertical(1.0),
+            "facing the viewer",
+        ),
+        (
+            compass::reading_of([-u; 3]),
+            Reading::Vertical(-1.0),
+            "facing away",
+        ),
+        (
+            compass::reading_of([0.0; 3]),
+            Reading::Vertical(-1.0),
+            "n·(1, 1, 1) = 0",
+        ),
+    ];
+    let check = |got: Reading, want: Reading, what: &str| {
+        assert_eq!(got, want, "{what}");
+    };
+    for (got, want, what) in cases {
+        check(got, want, what);
+    }
+    rejects("the bound read vertically", || {
+        check(
+            Reading::Vertical(1.0),
+            Reading::Along([0.0, 1.0]),
+            "the bound",
+        )
+    });
+    rejects("facing away read toward", || {
+        check(
+            Reading::Vertical(1.0),
+            Reading::Vertical(-1.0),
+            "facing away",
+        )
+    });
+}

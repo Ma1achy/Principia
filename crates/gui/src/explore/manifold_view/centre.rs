@@ -33,14 +33,11 @@ pub fn offset_text(value: f64, anchor: f64) -> String {
     format!("{sign} {:.3}", delta.abs())
 }
 
-/// Whether a slider row with `slider` and its number box `field` is touched this frame (R-458 F4): either pressed, the
-/// box clicked into to type, or the value changed, so a press at a slider's end, or a click into the box, counts.
+/// Whether a slider row with `slider` and its number box `field` is touched this frame (R-458 F4): either pressed, or
+/// the box clicked into to type, so a press at a slider's end, or a click into the box, counts. A changed value counts
+/// too: its edit carries the row's touch ([`Out::edit`](super::Out::edit)), which sets the mode.
 pub fn touched(slider: &egui::Response, field: &egui::Response) -> bool {
-    slider.is_pointer_button_down_on()
-        || field.is_pointer_button_down_on()
-        || field.gained_focus()
-        || slider.changed()
-        || field.changed()
+    slider.is_pointer_button_down_on() || field.is_pointer_button_down_on() || field.gained_focus()
 }
 
 /// One slider row: the label, the slider over `span`, the value field, and while locked the anchor's mark and the

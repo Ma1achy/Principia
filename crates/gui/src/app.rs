@@ -293,7 +293,7 @@ impl<S: EngineSide> App<S> {
     }
 
     /// A history key not taken before.
-    fn fresh_key(&mut self) -> HistoryKey {
+    pub(crate) fn fresh_key(&mut self) -> HistoryKey {
         self.last_key += 1;
         HistoryKey(self.last_key)
     }
@@ -419,13 +419,14 @@ impl<S: EngineSide> App<S> {
         }
     }
 
-    /// One frame on the root `ui`. A press of a pointer button takes the hold's history key, which every edit sent until
-    /// the release goes under; the release ends it, so the drag's entry closes and the engine logs it once (R-458 F1).
-    /// The snapshot is read again after the frame's edits, so it, the console and every control read the edit at once.
+    /// One frame on the root `ui`. The first frame a pointer button is held takes the hold's history key, which every
+    /// edit sent until the release goes under, the release frame's too; the release frame ends it after its edits, so
+    /// the drag's entry closes and the engine logs it once (R-458 F1). A press released within one frame holds nothing:
+    /// its edits are commands, each under a fresh key. The snapshot is read again after the frame's edits, so it, the console and every control read the edit at once.
     pub fn ui(&mut self, ui: &mut egui::Ui) {
         let ctx = ui.ctx().clone();
-        let (down, pressed) = ctx.input(|i| (i.pointer.any_down(), i.pointer.any_pressed()));
-        if self.hold.is_none() && (down || pressed) {
+        let down = ctx.input(|i| i.pointer.any_down());
+        if self.hold.is_none() && down {
             self.hold = Some(self.fresh_key());
         }
         self.frame(ui);

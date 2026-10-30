@@ -881,9 +881,12 @@ pub fn normal_on_screen(n: P3) -> [f64; 2] {
 /// at least [`MIN_NORMAL_ON_SCREEN`]`·S` long, else vertically toward the viewer, and nothing where the compass draws no
 /// plane.
 pub fn reading(view: &View) -> Reading {
-    let Some(n) = drawn_normal(view) else {
-        return Reading::Nothing;
-    };
+    drawn_normal(view).map_or(Reading::Nothing, reading_of)
+}
+
+/// How a slice-mode drag reads the pointer on a plane whose drawn normal is `n`: along `ŝ` where `n`'s screen image is
+/// at least [`MIN_NORMAL_ON_SCREEN`]`·S` long, else vertically, `+1` where `n·(1, 1, 1) > 0`, else `−1`.
+pub fn reading_of(n: P3) -> Reading {
     let [x, y] = normal_on_screen(n);
     let len = x.hypot(y);
     if len < MIN_NORMAL_ON_SCREEN {

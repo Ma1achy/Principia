@@ -633,3 +633,97 @@ fn mock_live_slider_drag_scrubber_and_pan_are_one_entry() {
         check_one_entry(id, t.depth0, t.end_depth, &t.lines);
     }
 }
+
+/// The mode after each frame of `frames` on γ's number box, the compass put back in Slice before each.
+fn gamma_box_modes(frames: Vec<Vec<Event>>) -> Vec<Touch> {
+    let start = plane(&view(0.0, 0.0, 0.0, 1.0), [0.0; 3]);
+    let (mut app, mut h) = app_at(&start);
+    let all = nodes(&mut h, &mut app);
+    let place = app.keyboard.place_of(GAMMA).expect("γ placed").rect;
+    let field = all
+        .iter()
+        .find(|n| n.role != Role::Slider && n.value.is_some() && place.contains(n.rect.center()))
+        .map(|n| n.rect)
+        .expect("γ's number box");
+    let mut modes = Vec::new();
+    for events in crate::capture::click(field.center())
+        .into_iter()
+        .chain(frames)
+    {
+        app.manifold.compass.mode = Touch::Slice;
+        let _ = h.frame(&mut app, events);
+        modes.push(app.manifold.compass.mode);
+    }
+    modes
+}
+
+/// R-458 F4 on γ's number box, each frame on its own: the press on it, the box's focus gained, and a number typed into
+/// it each switch the compass to Tilt, the mode put back in Slice before every frame, so no earlier frame's switch
+/// counts.
+#[test]
+fn mock_live_slider_drag_each_touch_of_gammas_box_switches() {
+    let modes = gamma_box_modes(vec![vec![Event::Text("5".into())]]);
+    let check = |modes: &[Touch]| {
+        assert_eq!(
+            &modes[1..],
+            [Touch::Tilt; 3],
+            "the press, the focus gained, the number typed: {modes:?}"
+        );
+    };
+    check(&modes);
+    rejects("a switch on the press alone", || {
+        check(&[Touch::Slice, Touch::Tilt, Touch::Slice, Touch::Slice])
+    });
+    rejects("no switch on a number typed", || {
+        check(&[Touch::Slice, Touch::Tilt, Touch::Tilt, Touch::Slice])
+    });
+}
+
+/// R-458 F4 on the target dropdowns: a press on "tilt τ₁ into" switches the compass to Tilt on the press's own frame,
+/// before any entry is picked.
+#[test]
+fn mock_live_slider_drag_a_press_on_a_target_switches() {
+    let start = plane(&view(0.0, 0.0, 0.0, 1.0), [0.0; 3]);
+    let (mut app, mut h) = app_at(&start);
+    app.manifold.compass.mode = Touch::Slice;
+    let _ = nodes(&mut h, &mut app);
+    let at = app
+        .keyboard
+        .place_of(crate::explore::manifold_view::TILT_X)
+        .expect("the τ₁ target placed")
+        .rect
+        .center();
+    let mut modes = Vec::new();
+    for events in crate::capture::click(at) {
+        let _ = h.frame(&mut app, events);
+        modes.push(app.manifold.compass.mode);
+    }
+    let check = |modes: &[Touch]| {
+        assert_eq!(
+            modes,
+            [Touch::Slice, Touch::Tilt, Touch::Tilt],
+            "the press on the dropdown: {modes:?}"
+        );
+    };
+    check(&modes);
+    assert_eq!(held(&app), start, "a press on the dropdown changed nothing");
+    rejects("a switch only on a pick", || check(&[Touch::Slice; 3]));
+    rejects("a switch only on the release", || {
+        check(&[Touch::Slice, Touch::Slice, Touch::Tilt])
+    });
+}
+
+/// Every history key the app takes is new, so a drag's key never joins an earlier entry.
+#[test]
+fn mock_live_drag_keys_are_fresh() {
+    let mut app = super::support::mock_app();
+    let keys: Vec<_> = (0..3).map(|_| app.fresh_key()).collect();
+    let check = |keys: &[engine::contract::set_field::HistoryKey]| {
+        assert!(
+            keys.windows(2).all(|w| w[0] != w[1]),
+            "a key taken twice: {keys:?}"
+        );
+    };
+    check(&keys);
+    rejects("one key for every drag", || check(&[keys[0]; 3]));
+}
