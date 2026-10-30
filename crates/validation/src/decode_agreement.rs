@@ -255,7 +255,8 @@ pub struct Sample {
     pub ratio: f32,
     /// Whether the preset found every operand finite.
     pub valid: bool,
-    /// Whether every operand is finite by its bits: the payload's `K₀` and `V₀`, and the fragment decode's `K` and `V`.
+    /// Whether every operand is finite by its bits: the payload's `K₀` and `V₀`, and the fragment decode's `K`, `V`, `m`
+    /// and `r`.
     pub finite: bool,
     /// The measured difference `|E − E₀|`, at f64 from the preset's own `E` and `E₀` words: the fragment's f32 sums.
     pub diff: f64,
