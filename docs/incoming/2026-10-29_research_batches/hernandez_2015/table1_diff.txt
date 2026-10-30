@@ -1,0 +1,2 @@
+Hernandez & Bertschinger 2015 Table 1: reading B (eye) vs OCR ('a x 10-n' mapped to 'ae-n'; the phi_h^2 row label is a formula the OCR did not read, assigned by order).
+rows B_eye=2 OCR=2; cells compared 18; disagreements 0

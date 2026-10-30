@@ -1,0 +1,13 @@
+Name max(1;(1))	таx(1;(AП))
+Lagrange3	81.630	81.630
+OrthQuasiEllipse4	18.343	18.343
+Rosette4	1.873	4.449
+Braid4	727.508	711.811
+Trefoil4	41228.515	41213.852
+FigureEight4	221.642	194.095
+FoldedTriLoop4	74758.355	74675.092
+PlateSaucer4	3653.210	3653.210
+BorderCollie4	188.235	188.052
+Trefoil5	1.913e+8	1.917e+8
+FigureEight5	2223.137	2223.457
+Table 2. Apparently unstable orbits.
