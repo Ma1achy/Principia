@@ -26,8 +26,11 @@ use kernel::occupant::yoshida6::Yoshida6;
 use kernel::occupant::Geom;
 use kernel::payload::{pb_dE_max, pb_dLz_max, sd_detail, sd_state, STATE_SIM_FAILED};
 use render::present::{self, Rgb};
+#[cfg(feature = "controls")]
 use render::registry;
-use validation::drift::{figure_eight, ic_at, integrate_fixture, AsR, Fixture};
+#[cfg(feature = "controls")]
+use validation::drift::figure_eight;
+use validation::drift::{ic_at, integrate_fixture, AsR, Fixture};
 use validation::golden_scene::{row_scene, Colouring, DebugCase, Scene};
 use validation::gpu::GpuHarness;
 use validation::negative_control;
