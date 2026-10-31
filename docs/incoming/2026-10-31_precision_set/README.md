@@ -46,9 +46,15 @@ version of record's where given.
 word "single-precision" appears in passing in the introduction.
 - Abstract **[paper]**: "the error due to divergence is unbiased, as long as the time-step parameter, η ≤ 2⁻⁵ and when
   simulations which violate energy conservation by more than 10% are excluded."
-- Fig. 6's caption **[paper]**, the KS result, which is a different and stricter condition: "For η < 2⁻⁵, the
-  distributions are not significantly different."; § 5.2 **[paper]**: "the distributions of the cold systems become
-  significantly different for η > 2⁻⁶".
+- Fig. 6's caption **[paper]**, the KS result, on η alone and strict: "For η < 2⁻⁵, the distributions are not significantly
+  different."; § 5.2 **[paper]**: "the distributions of the cold systems become significantly different for η > 2⁻⁶".
+- § 7 **[paper]** ties the KS result to both criteria: "No significant differences were detected when using the criteria
+  mentioned above for the time-step parameter η and relative energy conservation." **The paper does not say whether Fig. 6's
+  ensembles were cut**, and § 5.2 attributes the large-step differences to energy violation, so whether the KS result is
+  cut-free is unclear.
+- The cold sets are where the uncut ensemble differs. Fig. 14's caption **[paper]**: "Note that this only happens for the cold
+  collapse simulations." § 5.4.2 **[paper]**: the cold semi-major axis seems "systematically biased for small time-steps, in the
+  sense that Hermite makes fewer tight binaries".
 - § 6.1 **[paper]**: "If we filter out simulations with a relative energy conservation |∆E/E| > 1, or |∆E/E| > 0.1, we
   observe that the bias in the average error of the semimajor axis of the binaries vanishes." The count removed is not
   given. Fig. 14 shows the whole ensemble beside the two cuts.
