@@ -26,6 +26,7 @@ Branch-cut crossings are detected at every accepted substep on the shape sphere,
 - Doc change: `docs/contracts/principia_symbolic_dynamics_contract.md` §1 — the a/b branch-cut assignment and the crossing-direction sign, transcribed with citations (Montgomery; Šuvakov–Dmitrašinović) and cross-checked with the half-open crossing rule (R-125, REQ-PAY-070).
 - Doc change: `docs/contracts/principia_integrator_contract.md` Part 5 — the τ-sort, tie tolerance and sign convention (definition, REQ-INT-079).
 - `crates/kernel/src/word/crossing.rs` — signed distance to each cut per substep, the half-open count, τ ordering with the tie-break, feeding `append`.
+- `crates/kernel/src/driver/cadence.rs`, `crates/kernel/src/driver/wrapper.rs` — the detector wired into the march: `WordCadence` adds detection to any cadence at every accepted substep, `integrate_word` runs the wrapper with it.
 - Fixtures: double crossing in one substep, crossing both cuts near their shared endpoint, endpoint exactly on a cut, cross-and-recross inside one macro-step.
 
 ## Acceptance tests
@@ -43,6 +44,7 @@ Branch-cut crossings are detected at every accepted substep on the shape sphere,
 - R-125 settles the gap: symbolic_dynamics_contract §1's convention is REQ-PAY-070, closed here and transcribed from the literature (not defined under R-72). The punctured-sphere relation and pair attribution (REQ-PAY-071/072) are retired to v2 (PL-3, R-38).
 - Definitions written here (R-72; physics reviewer approves before merge): REQ-INT-079, REQ-PAY-113.
 - RQ-632 decided 30 Oct 2026 by the orchestrator per R-369 (consequence of R-125), option (a): §1's cuts are the collision equator's syzygy segments; the segment classifier is REQ-PAY-113.
+- Wired here, applied per R-369 (code review 5720370363, F3): no other task names the wiring, and a task whose Goal is detection at every accepted substep owns it. TASK-M3-05, -09 and -12 fill `WrapperCadence`'s hooks without touching it; TASK-M3-30 reads its word through `integrate_word`, and TASK-M4-05's survey entry calls it where the word buffer is bound.
 - RQ-96 ruled: R-125 (above).
 - RQ-97 ruled: R-113 — REQ-INT-031's "word identical CPU/GPU" is dropped from M3; M4 covers it by REQ-VAL-072 (the word's integer arithmetic).
 - RQ-120 ruled: R-150 — REQ-INT-048's GPU arm leaves M3, like the other four; REQ-VAL-072 covers it at M4.
