@@ -91,6 +91,7 @@
 
 use spirv_std::num_traits::{Float, FloatConst};
 
+use super::tilt::{shift_controls, Hidden, Shift, Tiltable};
 use super::{Chart, ChartLabel, ChartOut, SystemImage, ValidationResult};
 use crate::canon;
 use crate::decode::config::{self, Config};
@@ -342,11 +343,45 @@ impl<P: Copy + FloatConst> Chart for ShapeSphere<P> {
         S: Selection,
         R: LinkReal + PayloadReal + From<P>,
     {
+        self.decode_held::<S, R>(u, v, widen2(self.z_mass), widen4(self.z_mom), p)
+    }
+
+    fn name(&self) -> &str {
+        NAME
+    }
+
+    /// `false`: the masses are held, `D_mass` at the chart's `z_mass`.
+    fn requires_per_pixel_mass(&self) -> bool {
+        false
+    }
+
+    /// [`ValidationResult::Valid`] at every `(u, v)` (the module's notes).
+    fn validate(&self, _u: f64, _v: f64) -> ValidationResult {
+        ValidationResult::Valid
+    }
+}
+
+impl<P: Copy + FloatConst> ShapeSphere<P> {
+    /// [`Chart::decode_params`]'s `D ∘ Φ` with the held blocks `z_mass` and `z_mom` given: the chart's own, widened,
+    /// or a tilt's, its hidden offsets added (`crate::chart::tilt`).
+    #[inline]
+    fn decode_held<S, R>(
+        &self,
+        u: R,
+        v: R,
+        z_mass: [R; 2],
+        z_mom: [R; 4],
+        p: &LinkParams<R>,
+    ) -> Decoded<R>
+    where
+        S: Selection,
+        R: LinkReal + PayloadReal + From<P>,
+    {
         let wide = <R as From<P>>::from;
         let inertia = wide(self.inertia);
-        let masses = mass::decode_at::<S, R>(widen2(self.z_mass), p);
+        let masses = mass::decode_at::<S, R>(z_mass, p);
         let config = place(self.point(u, v), inertia, wide(self.phase), &masses);
-        let momentum = held_momentum_at::<S, R>(widen4(self.z_mom), &masses, &config, inertia, p);
+        let momentum = held_momentum_at::<S, R>(z_mom, &masses, &config, inertia, p);
         let ic = canon::canonicalise_signed(&Ic {
             m: masses.m,
             r: config.r,
@@ -362,19 +397,36 @@ impl<P: Copy + FloatConst> Chart for ShapeSphere<P> {
             degenerate: masses.degenerate,
         }
     }
+}
 
-    fn name(&self) -> &str {
-        NAME
+impl<P: Copy + FloatConst> Hidden for ShapeSphere<P> {
+    /// The four momentum controls and the two mass logits, `2..8`: the axes write the configuration (R-473 J1).
+    fn hidden(&self, k: u32) -> bool {
+        (2..8).contains(&k)
     }
 
-    /// `false`: the masses are held, `D_mass` at the chart's `z_mass`.
-    fn requires_per_pixel_mass(&self) -> bool {
-        false
+    /// `z_mom` or `z_mass` with the control `k` set.
+    fn sliced(&self, k: u32, value: P) -> Option<Self> {
+        let mut chart = *self;
+        match k {
+            2..=5 => chart.z_mom[(k - 2) as usize] = value,
+            6 | 7 => chart.z_mass[(k - 6) as usize] = value,
+            _ => return None,
+        }
+        Some(chart)
     }
+}
 
-    /// [`ValidationResult::Valid`] at every `(u, v)` (the module's notes).
-    fn validate(&self, _u: f64, _v: f64) -> ValidationResult {
-        ValidationResult::Valid
+impl<P: Copy + FloatConst> Tiltable for ShapeSphere<P> {
+    /// The decode with the held controls shifted: `D_mass` and `D_mom` on the shifted logits and momentum controls.
+    #[inline]
+    fn decode_shifted<S, R>(&self, u: R, v: R, shift: &Shift<R>, p: &LinkParams<R>) -> Decoded<R>
+    where
+        S: Selection,
+        R: LinkReal + PayloadReal + From<P>,
+    {
+        let z = shift_controls(self.map::<R>(u, v).z.z, shift);
+        self.decode_held::<S, R>(u, v, [z[6], z[7]], [z[2], z[3], z[4], z[5]], p)
     }
 }
 
