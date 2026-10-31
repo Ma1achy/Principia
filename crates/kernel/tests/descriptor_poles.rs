@@ -123,6 +123,39 @@ negative_control!(
     check_bits::<f32>(f32::or_pos_inf, f32::or_neg_inf, |x| x.abs() > f32::MAX)
 );
 
+/// `nan` holds on an all-ones exponent with a non-zero fraction: not on `±∞`, the pattern just under NaN's least, nor on
+/// the largest finite value; on the least NaN, of either sign, and on the greatest.
+fn check_nan_bits<R: Bits>(nan: fn(R) -> bool) {
+    let sign = R::NEG & !R::POS;
+    for (b, want) in [
+        (0, false),
+        (R::of(1.0).bits(), false),
+        (R::MAX, false),
+        (R::MAX | sign, false),
+        (R::POS, false),
+        (R::NEG, false),
+        (R::POS | 1, true),
+        (R::NEG | 1, true),
+        (R::POS | R::MAX, true),
+        (R::NEG | R::MAX, true),
+    ] {
+        assert_eq!(nan(R::of_bits(b)), want, "nan_bits({b:#x}) at {}", R::NAME);
+    }
+}
+
+#[test]
+fn ieee_nan_bits() {
+    check_nan_bits::<f32>(f32::nan_bits);
+    check_nan_bits::<f64>(f64::nan_bits);
+}
+
+negative_control!(
+    ieee_nan_bits,
+    "the exponent's test alone, which reads `+∞` as NaN, must fail",
+    expected = "nan_bits(0x7f800000) at f32",
+    check_nan_bits::<f32>(f32::non_finite_bits)
+);
+
 /// Equal masses, `r₀ = (−a, 0)`, `r₁ = (a, 0)`, `r₂ = (0, b)`, at rest: `λ = r₂`, so `b = 0` is the `α = 0` pole.
 fn ic<R: Bits>(a: f64, b: f64) -> Ic<R> {
     let t = R::of(1.0 / 3.0);

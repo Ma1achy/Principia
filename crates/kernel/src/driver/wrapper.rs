@@ -121,7 +121,8 @@ pub fn monitored<R: WrapperReal>(
 }
 
 /// `sim_failed`'s detail for a run ending at `(r, p)` (payload §2): 0 for a NaN in the state, else 1 for a `±∞` in it,
-/// else 2, a non-finite derived quantity on a finite state.
+/// else 2, a non-finite derived quantity on a finite state. The two are told apart on the bits
+/// ([`IeeeBits::nan_bits`], [`IeeeBits::non_finite_bits`]; gpu_determinism_note § "The discipline", rule 4).
 #[inline]
 fn failed_detail<R: WrapperReal>(r: &[[R; 2]; 3], p: &[[R; 2]; 3]) -> u32 {
     let (mut nan, mut inf) = (false, false);
@@ -130,8 +131,8 @@ fn failed_detail<R: WrapperReal>(r: &[[R; 2]; 3], p: &[[R; 2]; 3]) -> u32 {
         let mut j = 0;
         while j < 2 {
             let (a, b) = (r[i][j], p[i][j]);
-            nan = nan || Float::is_nan(a) || Float::is_nan(b);
-            inf = inf || Float::is_infinite(a) || Float::is_infinite(b);
+            nan = nan || a.nan_bits() || b.nan_bits();
+            inf = inf || a.non_finite_bits() || b.non_finite_bits();
             j += 1;
         }
         i += 1;

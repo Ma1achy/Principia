@@ -29,10 +29,9 @@
 //! **A non-finite measurement is kept** ([`latched`]): a NaN or `±∞` energy or `L_z` stays in the maximum from its step
 //! on, so the run's end sees it ([`Monitor::non_finite`]), and storage never holds it (`super::wrapper::monitored`).
 
-use spirv_std::num_traits::Float;
-
 use crate::occupant::Geom;
 use crate::physics::energy::{angular_momentum, energy};
+use crate::real::IeeeBits;
 use crate::Real;
 
 /// `|x|`, by a comparison with zero.
@@ -58,12 +57,15 @@ pub fn larger<R: Real>(a: R, b: R) -> R {
 
 /// The running maximum `a` raised by the magnitude `b`: a non-finite value stays. A comparison with NaN is false, so a
 /// plain larger would keep its old value past a NaN and a failed sample would read as healthy (R-47; philosophy §4.3);
-/// here a non-finite `b` replaces a finite `a` (tested explicitly, R-538) and nothing replaces a NaN `a`, `b > a` being
-/// false. It chooses a display latch and the failure mark, which no trajectory reads (parity contract: `dE_max`,
+/// here a non-finite `a` stays and a non-finite `b` replaces a finite `a`, each tested on its bits before any comparison
+/// (R-538; gpu_determinism_note § "The discipline", rule 4; [`IeeeBits::non_finite_bits`]), since WGSL may assume no NaN
+/// or infinity. It chooses a display latch and the failure mark, which no trajectory reads (parity contract: `dE_max`,
 /// `dLz_max` are Tier N/S).
 #[inline]
-pub fn latched<R: Real + Float>(a: R, b: R) -> R {
-    if (Float::is_finite(a) && !Float::is_finite(b)) || b > a {
+pub fn latched<R: IeeeBits>(a: R, b: R) -> R {
+    if a.non_finite_bits() {
+        a
+    } else if b.non_finite_bits() || b > a {
         b
     } else {
         a
@@ -94,7 +96,7 @@ pub struct Monitor<R> {
     dlz_max: R,
 }
 
-impl<R: Real + Float> Monitor<R> {
+impl<R: IeeeBits> Monitor<R> {
     /// The monitor of a run starting from masses `m`, positions `r`, momenta `p`, whose force evaluation is `geom`: `E₀`
     /// and `L_{z,0}` evaluated and stored, before the loop, and every drift 0.
     #[inline]
@@ -141,10 +143,10 @@ impl<R: Real + Float> Monitor<R> {
     }
 
     /// Whether either maximum is non-finite: an energy or `L_z` of the run was a non-finite derived quantity, which
-    /// stays latched from the step it appeared on (payload §2, `sim_failed`'s detail 2).
+    /// stays latched from the step it appeared on (payload §2, `sim_failed`'s detail 2). Tested on the bits.
     #[inline]
     pub fn non_finite(&self) -> bool {
-        !Float::is_finite(self.de_max) || !Float::is_finite(self.dlz_max)
+        self.de_max.non_finite_bits() || self.dlz_max.non_finite_bits()
     }
 
     /// `max|ΔE|`.

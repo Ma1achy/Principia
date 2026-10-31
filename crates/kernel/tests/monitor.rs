@@ -1018,6 +1018,50 @@ fn invariant_monitor_marks_a_non_finite_run_failed() {
     );
 }
 
+/// `monitored`'s detail for a run whose latch failed, at each of `r`'s and `p`'s components taken non-finite in turn:
+/// 0 for a NaN, either sign, even beside a `±∞`; 1 for a `±∞`; 2 for a finite state (payload §2).
+fn check_detail(mark: fn(SimStateBase, &WrapperCadence<f32>) -> SimStateBase) {
+    let (out, cadence) = integrate_fixture::<Kdk, f32>(&overflowing());
+    let detail = |o: SimStateBase| kernel::payload::sd_detail(mark(o, &cadence).packed_a);
+    assert_eq!(detail(out), 2, "a finite state");
+    let neg_nan = f32::from_bits(0xFFC0_0000);
+    for (i, j) in [(0, 0), (2, 1)] {
+        for (name, v, want) in [
+            ("+inf", f32::INFINITY, 1),
+            ("-inf", f32::NEG_INFINITY, 1),
+            ("NaN", f32::NAN, 0),
+            ("signed NaN", neg_nan, 0),
+        ] {
+            let mut in_r = out;
+            in_r.r[i][j] = v;
+            assert_eq!(detail(in_r), want, "{name} in r[{i}][{j}]");
+            let mut in_p = out;
+            in_p.p[i][j] = v;
+            assert_eq!(detail(in_p), want, "{name} in p[{i}][{j}]");
+        }
+    }
+    let mut both = out;
+    both.r[0][0] = f32::INFINITY;
+    both.p[2][1] = f32::NAN;
+    assert_eq!(detail(both), 0, "a NaN beside an `∞`");
+}
+
+#[test]
+fn invariant_monitor_failed_detail_reads_nan_and_inf() {
+    check_detail(kernel::driver::wrapper::monitored);
+}
+
+negative_control!(
+    invariant_monitor_failed_detail_reads_nan_and_inf,
+    "a run marked with no detail of its own",
+    expected = "+inf in r[0][0]",
+    check_detail(|mut o, c| {
+        o.r = [[0.0; 2]; 3];
+        o.p = [[0.0; 2]; 3];
+        kernel::driver::wrapper::monitored(o, c)
+    })
+);
+
 negative_control!(
     invariant_monitor_marks_a_non_finite_run_failed,
     "a healthy run read as failed",
