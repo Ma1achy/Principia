@@ -156,15 +156,20 @@ fn check_controls_job_beside_the_tests(workflow: &str) {
         "CI runs the listing-only `cargo xtask ci --list`, which runs no control"
     );
     // The tests' job may wait on the job building its archive (R-372), never on the controls job; the controls job
-    // waits on nothing.
+    // waits on nothing but R-656's classification of the change, `changes`.
     assert!(
-        !has_key(controls_lines, "needs:")
+        needs(controls_lines).iter().all(|n| n == "changes")
             && !waits_on(&jobs, test_job).contains(controls_job)
             && !waits_on(&jobs, controls_job).contains(test_job),
         "the controls job and the tests' job wait on one another, not beside each other"
     );
     // The job's own `if:` (indent 4) can skip it; a step's `if:` (R-326's conditional cache save) cannot (R-335).
-    let job_if = controls_lines.iter().any(|l| l.starts_with("    if:"));
+    // R-656's skip of a docs-only pull request is the one job-level `if:` allowed; the gate `xtask-ci` passes it only
+    // on that verdict.
+    let job_if = controls_lines.iter().any(|l| {
+        l.starts_with("    if:")
+            && l.as_str() != "    if: needs.changes.outputs.docs_only != 'true'"
+    });
     assert!(
         !job_if && !has_key(controls_lines, "continue-on-error:"),
         "the controls job can be skipped or pass with a finding"

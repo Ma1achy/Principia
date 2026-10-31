@@ -76,6 +76,7 @@ use crate::decode::momentum::Momentum;
 use crate::decode::{self, descriptor, Blocks, Decoded, Degenerate, Ic, Latent};
 use crate::generated::links::{LinkReal, Selection};
 use crate::payload::{ICDescriptorOf, PayloadReal};
+use crate::real::IeeeBits;
 
 /// `t` where `c` holds, else `f`: both operands are computed before the choice, so it is a select, not a branch.
 #[inline]
@@ -124,7 +125,7 @@ pub(super) fn lerp<F: Float>(lo: F, hi: F, t: F) -> F {
 
 /// The system's masses, through the shared entry for a chart that sets masses ([`mass::from_masses`]).
 #[inline]
-pub(super) fn system_masses<R: LinkReal>(system: &System<R>) -> Masses<R> {
+pub(super) fn system_masses<R: LinkReal + IeeeBits>(system: &System<R>) -> Masses<R> {
     mass::from_masses(system.m)
 }
 

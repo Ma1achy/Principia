@@ -5,8 +5,10 @@
 //! Part 4, "Tilt"), the rotation `[−180°, 180°]`. A dropdown offers the six dimensions not in the plane, by their
 //! names; picking one is one `SetField` on the slice frame, carrying the basis re-tilted into it where its angle is not
 //! 0 ([`super::target_edit`]; R-457 E3, E5). There is no step slider: the move along the slice normal is the Slice
-//! centre slider of that dimension (R-457). Touching an angle switches the compass to Tilt, its buttons following
-//! (R-409).
+//! centre slider of that dimension (R-457). Touching an angle or a target dropdown switches the compass to Tilt, its
+//! buttons following (R-409), on the drag's first frame: the slider or its box pressed, the box clicked into to type,
+//! the dropdown pressed, whether or not the value changes, so a press on a thumb at ±90° counts (R-458 F4). A drag
+//! applies its value every frame it changes, the whole drag one history entry (R-458 F1).
 
 use eframe::egui::{self, ComboBox, DragValue, Rect, Slider, Ui};
 
@@ -103,6 +105,9 @@ pub fn show(ui: &mut Ui, section: Rect, h: f32, clip: Rect, panel: &mut Panel<'_
                 .max_decimals(1),
         );
         let changed = slider.changed() || field.changed();
+        if super::centre::touched(&slider, &field) {
+            panel.scratch.compass.mode = Touch::Tilt;
+        }
         panel.place(id, &slider.union(field), clip);
         if changed {
             let mut next = angles;
@@ -136,8 +141,11 @@ pub fn show(ui: &mut Ui, section: Rect, h: f32, clip: Rect, panel: &mut Panel<'_
                 }
             });
         panel.place(id, &combo.response, clip);
+        if combo.response.is_pointer_button_down_on() || combo.response.clicked() {
+            panel.scratch.compass.mode = Touch::Tilt;
+        }
         if let Some(edit) = target_edit(&view, which, picked) {
-            panel.out.edit(edit, None, panel.scratch);
+            panel.out.edit(edit, Some(Touch::Tilt), panel.scratch);
         }
     }
 }

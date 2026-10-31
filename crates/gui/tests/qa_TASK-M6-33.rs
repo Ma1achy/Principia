@@ -12,7 +12,8 @@
 //!   polygon of 3 to 6 vertices, 4 to 6 through the central axis, wherever `s = 2|q₁ × q₂| / (|q₁|² + |q₂|²) ≥ 10⁻³`;
 //!   and where `s < 10⁻³` no slice, the pin kept, the readout's "no plane drawn" line (R-451 B2, B11).
 //! - REQ-GUI-193: the readout per mode, the drags at the reference's rates (slice mode along the drawn normal, the
-//!   cube's full width the whole range, the vertical doing nothing; tilt mode the full width or height 180°, each
+//!   cube's full width the whole range, read along the drawn normal's screen direction `ŝ`, the travel across it doing
+//!   nothing, as R-465 amends B3 and its N5 conforms this file; tilt mode the full width or height 180°, each
 //!   clamped to ±90°), one SetField per drag, and the easing `v ← v + (target − v)·(1 − 0.0016^dt)`, `dt` capped at
 //!   0.05 s, in the drawing only (R-451 B3 to B5).
 //!
@@ -1523,53 +1524,73 @@ fn taus(plane: &Plane) -> (f64, f64) {
     )
 }
 
+/// The drawn normal's screen direction `ŝ` (R-465): the unit vector along `P(n̂) − P(0)`, `P` R-451's isometric
+/// projection, `y` down, for the decoder's unit normal `n` in the cube's frame.
+fn s_hat(n: P3) -> [f64; 2] {
+    let v = [
+        3.0_f64.sqrt() / 2.0 * (n[0] - n[2]),
+        0.5 * (n[0] + n[2]) - n[1],
+    ];
+    let len = v[0].hypot(v[1]);
+    [v[0] / len, v[1] / len]
+}
+
 #[test]
 fn qa_mock_compass_cube_slice_mode_drags() {
-    // A horizontal drag of half the cube's width in slice mode: one SetField on z₀ of half the range (the half-range,
-    // the range being ±1 of it) along the drawn plane's normal, the decoder's; tilted and untilted.
+    // R-465 (amending R-451 B3's slice-mode sentence; its N5 conforms this test): a slice-mode drag of half the cube's
+    // width, √3·S (the cube's full width 2√3·S the whole range), along the drawn normal's screen direction ŝ moves z₀ by
+    // half the range (the half-range, the range being ±1 of it) along the drawn plane's normal, the decoder's, toward
+    // +n̂; one SetField line for the drag; tilted and untilted.
     for (t1, t2) in [(0.0, 0.0), (30.0, -20.0)] {
         let mut rig = mock();
         let plane = rig_plane(&rig, t1, t2, 0.0, [0.0, 0.0, 0.1]);
         rig.set_plane(&plane, Touch::Slice);
         let sq = rig.square();
+        let half_width = (3.0_f64.sqrt() * Iso::fit(sq).s) as f32;
         let (n, _) = decoder_cut(t1, t2, 0.0, [0.0; 3]);
+        let sh = s_hat(n);
+        let along = egui::vec2(sh[0] as f32, sh[1] as f32) * half_width;
+        let across = egui::vec2(-sh[1] as f32, sh[0] as f32) * half_width;
         let from = sq.center();
-        let (count, before, after) = edits(&mut rig, |r| {
-            r.drag(from, from + egui::vec2(sq.width() / 2.0, 0.0), 6)
-        });
+        let (count, before, after) = edits(&mut rig, |r| r.drag(from, from + along, 6));
         assert_eq!(count, 1, "τ ({t1}°, {t2}°): {count} SetFields for one drag");
         let (a, b) = (&before.sim.plane, &after.sim.plane);
         assert_eq!((a.q1, a.q2), (b.q1, b.q2), "the drag changed the basis");
         let d: Z = std::array::from_fn(|i| b.z0[i] - a.z0[i]);
         let len = d.iter().map(|x| x * x).sum::<f64>().sqrt();
-        // f32 pointer positions over the square's width: 1e-5 of the move.
+        // f32 pointer positions over the cube's width: 1e-5 of the move.
         assert!(
             (len - Z0_HALF_RANGE).abs() <= 1e-5 * Z0_HALF_RANGE,
             "τ ({t1}°, {t2}°): z₀ moved {len}, not half the range {Z0_HALF_RANGE}"
         );
         let normal = lift(n, &[0.0; 8]);
-        let along = d.iter().zip(&normal).map(|(x, y)| x * y).sum::<f64>().abs() / len;
+        let along_n = d.iter().zip(&normal).map(|(x, y)| x * y).sum::<f64>() / len;
         assert!(
-            (along - 1.0).abs() < 1e-9,
-            "τ ({t1}°, {t2}°): the move {d:?} is not along the normal {n:?}"
+            (along_n - 1.0).abs() < 1e-9,
+            "τ ({t1}°, {t2}°): the move {d:?} is not along +n̂ {n:?}, with the pointer"
         );
-        // A vertical drag: nothing.
-        let (count, _, _) = edits(&mut rig, |r| {
-            r.drag(from, from + egui::vec2(0.0, -sq.height() / 3.0), 6)
-        });
-        assert_eq!(count, 0, "a vertical slice-mode drag edited");
-        // Control: a vertical drag that moves the slice, as the half-width one did.
-        rejects("a slice-mode vertical drag that moves the slice", || {
+        // A drag of the same length across ŝ: nothing moves (f32 pointer positions: 1e-5 of the half-range).
+        let (_, before, after) = edits(&mut rig, |r| r.drag(from, from + across, 6));
+        let check_still = |a: &Snapshot, b: &Snapshot| {
+            assert_eq!(
+                (a.sim.plane.q1, a.sim.plane.q2),
+                (b.sim.plane.q1, b.sim.plane.q2)
+            );
+            let moved = (0..8)
+                .map(|i| (b.sim.plane.z0[i] - a.sim.plane.z0[i]).abs())
+                .fold(0.0, f64::max);
+            assert!(
+                moved <= 1e-5 * Z0_HALF_RANGE,
+                "τ ({t1}°, {t2}°): a drag across ŝ moved z₀ by {moved}"
+            );
+        };
+        check_still(&before, &after);
+        // Control: a drag across ŝ that moves the slice, as R-451 B3's horizontal reading would for this one.
+        rejects("a slice-mode drag across ŝ that moves the slice", || {
             let mut rig = mock();
             rig.set_plane(&plane, Touch::Slice);
-            let (count, _, _) = edits(&mut rig, |r| {
-                r.drag(
-                    from,
-                    from + egui::vec2(sq.width() / 3.0, -sq.height() / 3.0),
-                    6,
-                )
-            });
-            assert_eq!(count, 0);
+            let (_, before, after) = edits(&mut rig, |r| r.drag(from, from + along, 6));
+            check_still(&before, &after);
         });
     }
     // At τ₁ = τ₂ = 90°, γ = 0 (s < 10⁻³), a horizontal drag: nothing.

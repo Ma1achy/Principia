@@ -1,0 +1,61 @@
+Yasko 2015: 27 catalogue free-fall rows with equal unit masses
+   Y1  (0.0154, 0.0000) T=5.05 tau | nearest freefall_part1_f23111      dist 1.21e-01  T=16.673 tau 
+   Y2  (0.0256, 0.0000) T=4.35 tau | nearest freefall_part1_f23111      dist 1.22e-01  T=16.673 tau 
+   Y3  (0.0257, 0.0000) T=8.32 tau | nearest freefall_part1_f23111      dist 1.22e-01  T=16.673 tau 
+   Y4  (0.0406, 0.0000) T=3.98 tau | nearest freefall_part1_f23111      dist 1.24e-01  T=16.673 tau 
+   Y5  (0.0649, 0.0000) T=5.80 tau | nearest freefall_part1_f23111      dist 1.31e-01  T=16.673 tau 
+   Y6  (0.0886, 0.0000) T=3.59 tau | nearest freefall_part1_f23111      dist 1.42e-01  T=16.673 tau 
+   Y7  (0.1477, 0.0000) T=5.84 tau | nearest freefall_part1_f18111      dist 1.25e-01  T=13.066 tau 
+   Y8  (0.1528, 0.0000) T=4.03 tau | nearest freefall_part1_f18111      dist 1.22e-01  T=13.066 tau 
+   Y9  (0.1662, 0.0000) T=2.21 tau | nearest freefall_part1_f18111      dist 1.17e-01  T=13.066 tau 
+   Y10 (0.1984, 0.0000) T=6.20 tau | nearest freefall_part1_f22111      dist 1.02e-01  T=15.869 tau 
+   Y11 (0.2020, 0.0000) T=5.85 tau | nearest freefall_part1_f22111      dist 9.98e-02  T=15.869 tau 
+   Y12 (0.2073, 0.0000) T=5.49 tau | nearest freefall_part1_f22111      dist 9.65e-02  T=15.869 tau 
+   Y13 (0.2152, 0.0000) T=5.13 tau | nearest freefall_part1_f22111      dist 9.19e-02  T=15.869 tau 
+   Y14 (0.2226, 0.0000) T=4.75 tau | nearest freefall_part1_f22111      dist 8.80e-02  T=15.869 tau 
+   Y15 (0.3497, 0.0000) T=9.62 tau | nearest freefall_part1_f22111      dist 1.13e-01  T=15.869 tau 
+   Y16 (0.2062, 0.1988) T=3.64 tau | nearest freefall_part1_f27111      dist 6.57e-02  T=21.583 tau 
+   Y17 (0.0274, 0.3411) T=3.63 tau | nearest freefall_part1_f1111       dist 2.85e-02  T=3.631 tau 
+   Y18 (0.0670, 0.4680) T=3.23 tau | nearest freefall_part1_f3111       dist 1.08e-02  T=6.403 tau 
+   Y19 (0.3420, 0.6858) T=9.29 tau | nearest freefall_part1_f6111       dist 1.50e-01  T=6.490 tau 
+   Y20 (0.1938, 0.7188) T=2.77 tau | nearest freefall_part1_f14111      dist 1.12e-01  T=9.311 tau 
+   Y21 (0.1675, 0.7443) T=3.19 tau | nearest freefall_part1_f14111      dist 1.40e-01  T=9.311 tau 
+   Y22 (0.1339, 0.7751) T=5.02 tau | nearest freefall_part1_f14111      dist 1.79e-01  T=9.311 tau 
+   matches: 0 of 22
+Iasko 2014: 1762 catalogue rows in the syzygy form (k', phi' computable)
+   I1  k=0.484 phi=1.000 T=1.68 tau | nearest v_figure_8_v_1_b             k'=0.4832 phi'=1.0065 T=1.676 tau MATCH Moore orbit
+   I2  k=0.133 phi=0.393 T=3.62 tau | nearest i_butterfly_i_2_a            k'=0.1319 phi'=0.3882 T=3.617 tau MATCH 
+   I3  k=0.196 phi=0.245 T=3.62 tau | nearest i_butterfly_i_2_b            k'=0.1967 phi'=0.2434 T=3.616 tau MATCH 
+   I4  k=0.424 phi=1.435 T=6.67 tau | nearest ii_dragonfly_ii_4_a          k'=0.4239 phi'=1.4348 T=6.672 tau MATCH 
+   I6  k=0.447 phi=0.706 T=4.39 tau | nearest iva_moth_iva_2_a             k'=0.4471 phi'=0.7061 T=4.392 tau MATCH 
+   I8  k=0.347 phi=0.780 T=9.77 tau | nearest ivc_moth_ivc_5_a             k'=0.3473 phi'=0.7774 T=9.772 tau MATCH 
+   I9  k=0.261 phi=0.516 T=6.31 tau | nearest ivb_butterfly_ivb_3_a        k'=0.2613 phi'=0.5158 T=6.315 tau MATCH 
+   I10 k=0.418 phi=0.545 T=5.37 tau | nearest iii_yin_yang_iii_3_a_        k'=0.4284 phi'=0.5352 T=5.371 tau  
+   I11 k=0.224 phi=0.857 T=5.37 tau | nearest iii_yin_yang_iii_3_a__1      k'=0.2244 phi'=0.8582 T=5.371 tau MATCH 
+   I12 k=0.020 phi=0.000 T=5.39 tau | nearest i_butterfly_i_2_b            k'=0.1967 phi'=0.2434 T=3.616 tau  
+   I13 k=0.102 phi=0.000 T=1.81 tau | nearest i_butterfly_i_2_b            k'=0.1967 phi'=0.2434 T=3.616 tau  
+   I14 k=0.203 phi=0.000 T=0.90 tau | nearest i_butterfly_i_2_b            k'=0.1967 phi'=0.2434 T=3.616 tau  Schubart orbit
+   I15 k=0.312 phi=0.000 T=1.81 tau | nearest i_butterfly_i_2_b            k'=0.1967 phi'=0.2434 T=3.616 tau  
+   I16 k=0.462 phi=0.000 T=3.60 tau | nearest i_butterfly_i_2_b            k'=0.1967 phi'=0.2434 T=3.616 tau  
+   I17 k=0.526 phi=0.000 T=4.38 tau | nearest iii_yin_yang_iii_3_a_        k'=0.4284 phi'=0.5352 T=5.371 tau  
+   I18 k=0.238 phi=0.454 T=9.93 tau | nearest i_butterfly_i_5_a            k'=0.2846 phi'=0.5650 T=9.005 tau  
+   I19 k=0.284 phi=0.565 T=9.00 tau | nearest i_butterfly_i_5_a            k'=0.2846 phi'=0.5650 T=9.005 tau MATCH 
+   I20 k=0.333 phi=0.656 T=2.68 tau | nearest iva_moth_iva_2_a             k'=0.4471 phi'=0.7061 T=4.392 tau  S-orbit
+   I21 k=0.162 phi=0.845 T=9.01 tau | nearest ic_ic_equalmass_part1_ii_c_62_i_c_ k'=0.0733 phi'=0.9349 T=9.972 tau  
+   I22 k=0.532 phi=1.053 T=6.70 tau | nearest v_figure_8_v_7_d             k'=0.5677 phi'=0.9315 T=7.144 tau  
+   I23 k=0.418 phi=1.571 T=1.67 tau | nearest v_figure_8_v_1_b             k'=0.4832 phi'=1.0065 T=1.676 tau  Broucke orbit
+   matches: 9 of 21
+
+Notes (written by hand from the lines above and the decoded Schubart state):
+- Yasko 2015: no row matches the catalogue's 27 equal-mass free-fall rows under the stated rule. Y17 lies 2.85e-2
+  from f1111 (catalogue F1) but its period agrees (3.63 tau vs 3.631 tau): plausibly the same orbit, located
+  coarsely by Yasko's Phi < 0.03 search; recorded, not counted as a match. 15 of the 22 are collinear (eta = 0).
+- Iasko 2014: 9 of the 21 rows with authors' values match catalogue rows (Suvakov-Dmitrasinovic families, which
+  are Iasko's ref. [9]); orbit 19 also matches (i_butterfly_i_5_a), though the table presents it as found in this
+  study. Orbit 10: the authors' k = 0.418 against their own recomputed k' = 0.428396 (and the catalogue's
+  0.4284) while phi and T agree with k': an inconsistency inside Iasko's table (0.418 is plausibly a slip for
+  0.428); recorded, not resolved.
+- Iasko orbit 14 (Schubart, k = 0.203, phi = 0, T = 0.90 tau) against Schubart 1956 decoded
+  (schubart_1956/decode_check.txt): at x2 = 0 the kinetic/|potential| ratio is (U + E)/U =
+  (4.066727 - 3.229025)/4.066727 = 0.20599, and T = 4.98309 at E = -1 with tau = 3^2.5/2^1.5 = 5.51135 gives
+  T = 0.90415 tau. Agreement to 3e-3 in k and to the two printed decimals in T.

@@ -738,7 +738,7 @@
   title: "Tilt and slice on the five charts that hold their blocks by latent controls: the rotation R(τ₁, τ₂) on the chart's own parameters, mass tilts in logits, the extension after the tilt (R-473, R-472 X3, R-633) ⚑"
   depends_on: [TASK-M2-14, TASK-M2-22, TASK-M2-08, TASK-M2-11, TASK-M2-12, TASK-M2-13, TASK-M2-28]  # R-473 J10: the charts (M2-08, M2-11 to M2-13), their descriptors (M2-14) and navigation (M2-22); M2-28 for the exponential map's fold, which the tilted fold arm tests (physics review 5593301205 of PR #255, P1, applied per R-369)
   needs: []
-  requirements: [REQ-CHART-063, REQ-CHART-064, REQ-CHART-066]  # REQ-CHART-064: R-507 (RQ-375 ruled), T2's scale; R-633 (RQ-603): REQ-CHART-062 and REQ-CHART-065 to TASK-M2-52
+  requirements: [REQ-CHART-063, REQ-CHART-064, REQ-CHART-066, REQ-CHART-090]  # REQ-CHART-090: R-72, physics review 5719740344 of PR #349, P1; REQ-CHART-064: R-507 (RQ-375 ruled), T2's scale; R-633 (RQ-603): REQ-CHART-062 and REQ-CHART-065 to TASK-M2-52
   reviewers: [code, qa, physics]  # ⚑ physics review required; not merged on the code reviewer's word alone
   pitfalls: []
 - id: TASK-M2-37
@@ -962,7 +962,7 @@
   title: Branch-cut crossing detection and the τ tie rule
   depends_on: [TASK-M3-04, TASK-M3-15]
   needs: [REQ-PAY-016, REQ-RENDER-002]
-  requirements: [REQ-INT-031, REQ-INT-046, REQ-INT-047, REQ-INT-048, REQ-INT-079, REQ-PAY-070]
+  requirements: [REQ-INT-031, REQ-INT-046, REQ-INT-047, REQ-INT-048, REQ-INT-079, REQ-PAY-070, REQ-PAY-113]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-10]
 - id: TASK-M3-17

@@ -1,0 +1,2 @@
+# Merges keep both sides of the queue, so appended entries never conflict (applied per R-369; plan/OPERATIONS.md § "Merging").
+REVIEW_QUEUE.md merge=union

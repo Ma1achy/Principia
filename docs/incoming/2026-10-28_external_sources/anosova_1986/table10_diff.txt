@@ -1,0 +1,1 @@
+rows A=3 B=3; cells compared=9; disagreements=0

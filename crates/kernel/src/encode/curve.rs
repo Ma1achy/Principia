@@ -116,7 +116,7 @@ pub struct Point<R> {
 /// The metric's point of the state `ic` (the module's note): its shape point by the encode's Jacobi weighting
 /// (`super::blocks::jacobi`) and `crate::shape::shape_vec`, `w` as `|w|`, and its masses.
 #[inline]
-pub fn state_point<R: LinkReal>(ic: &Ic<R>) -> Point<R> {
+pub fn state_point<R: LinkReal + IeeeBits>(ic: &Ic<R>) -> Point<R> {
     let j = blocks::jacobi(ic);
     let n = shape_vec(j.rho_t, j.lambda_t);
     Point {
@@ -127,7 +127,7 @@ pub fn state_point<R: LinkReal>(ic: &Ic<R>) -> Point<R> {
 
 /// The metric's point of `γ(ν)`: [`state_point`] of the embed's system at rest.
 #[inline]
-pub fn curve_point<R: LinkReal>(nu: R) -> Point<R> {
+pub fn curve_point<R: LinkReal + IeeeBits>(nu: R) -> Point<R> {
     let s = embed(nu);
     state_point(&Ic {
         m: s.m,

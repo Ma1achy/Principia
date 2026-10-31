@@ -1,0 +1,5 @@
+Orlov, Petrova & Martynova 2003 table: reading B (eye) vs a cell-by-cell OCR of the 300 dpi page image (whole-table OCR returned rotated glyphs, so each cell was OCR'd on its own: scripts/ocr_cells.sh).
+row ('0.2', 'stable') col e2_5: B_eye='0' OCR=''
+row ('5', 'stable') col e2_0.2: B_eye='0' OCR=''
+rows B_eye=35 OCR=35; cells compared 245; disagreements 2
+Resolution: both cells are a lone '0' on the page (eps1 = 0.2, stable, eps2 = 5; eps1 = 5, stable, eps2 = 0.2), which the per-cell OCR returned empty; kept '0'. Reconciled = reading B.

@@ -1,0 +1,11 @@
+table,row,field,ocr,eye,why
+10,3,row,(missing),3,OCR dropped the row number (p116)
+10,3,C,"3(a)-d-c-3(b)-a-d- / -3(c)-b-a-3(d)-c-b (two OCR lines)",3(a)-d-c-3(b)-a-d--3(c)-b-a-3(d)-c-b,continuation line joined; printed as one sequence broken at the hyphen
+10,5,C,b-a-d-c:r,b-a-d-c :r,spacing only
+10,6,C,2(6)-a-d-2(c) :r,2(b)-a-d-2(c) :r,OCR read italic b as 6; page shows b
+10,7,row,(missing),7,OCR dropped the row number (p116)
+11,3,row,(missing),3,OCR dropped the row number (p127)
+11,6,C,3(a)-b-a-5(6)-a-b-3(a),3(a)-b-a-5(b)-a-b-3(a),OCR read italic b as 6; page shows b
+11,8,row,(missing),8,OCR dropped the row number (p127)
+11,8,C,a-3(b)-a:ґ,a-3(b)-a :r,OCR read r as Cyrillic ґ; page shows :r
+11,9,C,a-2(b):r,a-2(b) :r,spacing only

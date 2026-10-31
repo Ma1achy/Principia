@@ -920,12 +920,14 @@ windowed spectrum) become R-71 / R-72 calibration and definition requirements. T
 fixtures) wait for the human. ✱ marks a design ruling the human may veto.*
 
 ## R-110 — What CI runs, where, and against which goldens *(closes RQ-79)*
-*Amended by R-186.*
+*Amended by R-186 and R-656.*
 *Still in force: the unit, property, numerical-gate and native golden suites on every commit; GUI screenshots on GUI PRs
 and at the gates; lavapipe as the second backend on every commit, meeting M4's two-backend check, and a real non-Metal
-GPU gating Paper 2 (R-58); Chrome stable and Safari for REQ-VAL-116; goldens rendered with native wgpu offscreen from
-M1, checked at M8 by the Playwright suite against the same baselines within tolerance, with no re-baselining without a
-gate decision; the runners and the benchmarks' schedule are R-186's.*
+GPU gating Paper 2 (R-58); "every commit" is every push to `main` and every pull-request head, but for R-656's skips
+(a docs-only head runs only the checks that read the docs; one that changes no GPU-path file skips the GPU suites);
+Chrome stable and Safari for REQ-VAL-116; goldens rendered with native wgpu offscreen from M1, checked at M8 by the
+Playwright suite against the same baselines within tolerance, with no re-baselining without a gate decision; the
+runners and the benchmarks' schedule are R-186's.*
 *25 Sep 2026 · applied in step 7*
 
 - Unit, property, numerical-gate and native golden suites run on every commit. Benchmarks run nightly and at each
@@ -1477,6 +1479,10 @@ through a dev-dependency on `crates/validation`. Tests are matched to their cont
 Crates without the `controls` feature are skipped, not failed.
 
 ## R-177 — Cadence *(closes G4, C6)*
+*Amended by R-656.*
+*Still in force: all of it, `ci.yml`'s "every push" read as R-656 reads it: every push to `main` and every pull-request
+head, a docs-only head running plan-check and the checks that read the docs (in `ci-workspace`) in place of `cargo
+xtask ci`.*
 *25 Sep 2026 · applied in step 8*
 
 - `ci.yml` runs `cargo xtask ci` on every push, and that includes plan-check.
@@ -1544,10 +1550,12 @@ build-dependency only (the ledger generates code into the kernel at build time).
 can compile it.
 
 ## R-186 — GitHub-hosted runners first; no self-hosted runner *(amends R-110, R-169, R-174)*
-*Amended by R-375.*
+*Amended by R-375 and R-656.*
 *Still in force: all of it but the Linux runner's label: CI's Linux jobs run on `ubuntu-24.04`, pinned, not
 `ubuntu-latest`, and moving to Ubuntu 26 is a deliberate later step (R-375); the Metal correctness suites on
-`macos-15`; benchmarks and performance gates on the human's Mac, never on hosted runners; no self-hosted runner.*
+`macos-15`; benchmarks and performance gates on the human's Mac, never on hosted runners; no self-hosted runner, and
+no paid larger runner (R-656); per-commit CI as R-656 reads it, the GPU suites skipped on a head that changes no
+GPU-path file.*
 *26 Sep 2026 · applied in step 8*
 
 Start with GitHub-hosted runners, and no self-hosted runner.
@@ -1683,6 +1691,9 @@ Asked in review of PR #16, the human chose:
    compile doctests.
 
 ## R-195 — CI checks formatting and lints
+*Amended by R-656.*
+*Still in force: `cargo fmt --check` and `cargo clippy --workspace --all-targets -- -D warnings` on every push to
+`main` and every pull-request head but a docs-only one, which compiles nothing (R-656).*
 *26 Sep 2026*
 
 "CI runs cargo fmt --check and cargo clippy --workspace --all-targets -- -D warnings on every push."
@@ -2219,6 +2230,9 @@ veto afterwards."
 `check_plan.py` passes, within budget, no REVIEW_QUEUE entry needing the human). Process only.
 
 ## R-235 — `qa_cargo_xtask_alias_runs_deps` uses the listing-only form of `cargo xtask ci`; the controls get their own CI job *(closes RQ-150)*
+*Amended by R-656.*
+*Still in force: all of it; CI's own job runs every control on every push to `main` and every pull-request head but a
+docs-only one, whose `xtask-ci` shards are skipped, the gate `xtask-ci` passing them only on that verdict (R-656).*
 *29 Sep 2026 · applied in TASK-M0-22*
 
 "R-235 (RQ-150): option (c). qa_cargo_xtask_alias_runs_deps uses the listing-only form of cargo xtask ci; CI's own step
@@ -2900,10 +2914,12 @@ exception: it files R-237's add-only rule in REVIEW_QUEUE. PR #80 merged as 7e55
 it only when the content differs, so an unchanged file keeps its mtime and forces no rebuild. Medium priority.
 
 ## R-285 — CI caches only the cargo registry and the fixture pool, with per-job keys
-*Amended by R-320 and R-326.*
+*Amended by R-320, R-326 and R-656.*
 *Still in force: no whole target directories cached; per-job keys; the cargo registry and the fixture pool cached;
 R-320 adds the rust-gpu build (`~/.cache/rust-gpu`), keyed on the pinned toolchain version; R-326 saves caches only on
-pushes to `main`, and pull-request runs restore only.*
+pushes to `main`, and pull-request runs restore only; R-656 approves in principle a bounded build-target cache, saved
+from `main` only, keyed on `Cargo.lock` and the toolchain, for the 2–3 slowest jobs, with eviction keeping the total
+well under 10 GB, built in a later PR, and until then no target directory is cached.*
 *30 Sep 2026 · applied in REQ-SYS-073 and TASK-M0-42 (new)*
 
 "CI cache: cache only the cargo registry and the fixture pool, not whole target dirs, with per-job keys, to stay well
@@ -3855,6 +3871,9 @@ camera not wired into priority, the Burrau quotient, and the Yoshida-6 and OKLab
 PR of its own, after this one.
 
 ## R-335 — qa may narrow `qa_TASK-M0-22_r235.rs`'s `if:` check to the job's own `if:` *(closes RQ-186; amends R-290)*
+*Amended by R-656.*
+*Still in force: all of it; the controls job's own `if:` may be R-656's one skip of a docs-only pull request, and no
+other.*
 *1 Oct 2026 · applied in TASK-M0-14 (PR #96)*
 
 "1 yes." (RQ-186's recommended option 1.)
@@ -17804,11 +17823,13 @@ is the figure, as U7 applied; RQ-417 closed).*
 *Amended in part by R-554 (21 Oct 2026; EX7(b) on a tilted view: the pole maps only where `N_a = 0` and `N_b = 0`,
 decided on the stored angles; the tilted equator fold not applied, the human's shape sphere ruling governing it;
 RQ-472 closed).*
+*Amended in part by R-655 (30 Oct 2026; EX7(b) on a tilted view: the spherical map's lattice of repeats
+`(s + k, t + 2j)` with `N_a·k + 2·N_b·j = 0` maps to its canonical point; RQ-631 closed).*
 *Still in force: all of it but the hemisphere's fold at the equator, EX2's fold type, EX5's fold among the repeats and
 EX7(b)'s equator map, which go with the hemisphere toggle (R-544); θ's period and the pole maps stand; R-552 confirms
 each option (a) applied meanwhile, builds the outline U14 left unbuilt, and leaves EX5's comments and the console's
 pick for the human to define; R-553 keeps EX5's label and detail to a debug view; R-554 narrows EX7(b)'s pole maps on
-a tilted view.*
+a tilted view; R-655 folds the spherical map's lattice of repeats on a tilted view.*
 *20 Oct 2026 · applied in `docs/incoming/2026-10-20_extension_trace/` (added: the bundle as delivered),
 `docs/gui/reference/trace/` (added: the demo and its screenshots), `docs/read_first/principia_INDEX.md` § "GUI" and §
 "Archived — record only, do not implement" (a line each), `docs/contracts/principia_chart_decoder_contract.md` § "Past
@@ -22051,6 +22072,10 @@ REQ-GUI-281 (notes).
 
 ## R-554 — The shape sphere's exponential map past `r = π` is the domain's end by design, blank and unwarned; the Lean-each-axis corner with one target is `ray-degenerate`, unfolded, its area weights 0 and its shares undefined; on a tilted view the pole maps apply only where `N_a = 0` and `N_b = 0`, the equator fold and the mirror's pixel fold left to the human's shape sphere ruling; T16 and T16b against a calibrated threshold; the physical `p_λ` components as the shape sphere's tilt targets *(closes RQ-470 to RQ-474; amends R-467, R-473, R-506, R-537 and R-538)*
 *Settled by R-613 (the equator clause it left unapplied stays unapplied: no fold anywhere).*
+*Amended in part by R-655 (30 Oct 2026; L3: on a tilted view the spherical map's lattice of repeats `(s + k, t + 2j)` with
+`N_a·k + 2·N_b·j = 0` is folded, each system counted once; closes RQ-631).*
+*Still in force: all of it; R-655 adds to L3 the tilted view's lattice of repeats, folded, so that "otherwise the
+view is affine along that axis" holds only where no lattice repeat keeps `d`.*
 *21 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G12. Console (`12_console.png`)" (the exponential
 map's exception) and § "G6. Legend — generated by evaluating the stain (`06_legend.png`)" (undefined shares),
 `docs/design/principia_chart_reference.md` § "3.3 The chart map" (the radius paragraph, a sentence; the rank-losing
@@ -28678,3 +28703,192 @@ His second addendum, the same day, verbatim:
   unresolved-thread merge check. Its other bullets, R-635's "Still in force", stand.
 
 R-651 is in the "process" group of `plan/rule_groups.yaml`. It changes no requirement and no code.
+
+## R-655 — On a tilted shape sphere the spherical map's lattice of repeats is folded: a pixel `(s + k, t + 2j)` with `N_a·k + 2·N_b·j = 0` for integers `(k, j) ≠ 0` is the same system as `(s, t)` and is counted once, at its canonical point, the lattice decided exactly on the stored angles *(closes RQ-631; amends R-554 L3 and R-537 EX7(b))*
+*30 Oct 2026 · the owner's batch of that day; applied in `docs/contracts/principia_chart_decoder_contract.md` § "Repeats
+and the canonical point" (a paragraph), R-554's forward line, `REVIEW_QUEUE.md` (RQ-631, a dated closing line),
+REQ-SCHED-101 and REQ-CHART-062 (reqio), TASK-M2-36 and TASK-M8-56 (notes) and `plan/rule_groups.yaml`; built by
+TASK-M2-36 (`Tilted::pixel`) and TASK-M8-56 (the quadtree's canonical address)*
+
+The owner's words (30 Oct 2026), verbatim, from that day's batch of rulings:
+
+> #349 (a): extend the repeat rule to t's period 2, with tests.
+
+*Context.* "#349 (a)" answers RQ-631, which TASK-M2-36's fix round 2 queued on the physics review of PR #349 (P3).
+R-554 L3 applies RQ-472 (a)'s pole maps on a tilted view iff `N_a = 0` and `N_b = 0`, decided exactly on the stored
+angles, and otherwise makes the view affine along that axis; R-408 counts each system once. The spherical map repeats
+every 1 in `s` (θ's period) and every 2 in `t` (the two pole maps and θ's period composed), and on a tilted view the
+hidden offset `d` depends on `(s, t)` through `N_a·s + N_b·t`, so `(s + k, t + 2j)` keeps `d`, and is the same system
+as `(s, t)`, wherever `N_a·k + 2·N_b·j = 0` for integers `(k, j) ≠ 0`. R-554 L3's rule counted those pairs twice: with
+`N_b = 0` and `N_a ≠ 0` (`τ₁` alone), `t` and `t + 2`; under Lean each axis at `τ₁ = τ₂ = 45°` (`N_a = N_b`),
+`(s, t)` and `(s − 2, t + 2)`. RQ-631's option (a) read: "fold the lattice of repeats: a pixel counts only at its
+canonical point under every `(k, j)` with `N_a·k + 2·N_b·j = 0`, decided exactly on the stored angles".
+
+*What it decides:*
+- **Option (a) of RQ-631.** On a tilted view of the shape sphere's spherical map, a pixel `(s + k, t + 2j)` with
+  `N_a·k + 2·N_b·j = 0` for integers `(k, j) ≠ 0` is the same system as `(s, t)` and is counted once, at its canonical
+  point. The exponential map, bounded past its square, has no repeats and is unchanged.
+- **The lattice, exactly on the stored angles,** never by a tolerance on a computed `N`:
+  - `N_a = N_b = 0`: the pole maps and both periods, as R-554 L3 has it.
+  - `N_a = 0` alone: θ's period, the canonical `s` in `[0, 1]`, as before.
+  - Otherwise the multiples of one generator `(k₀, j₀)` with `j₀ ≠ 0`, where one exists. `N_b = 0` alone (`τ₁` alone
+    under either map; two targets with `sin τ₂ = 0`): `t`'s period 2, `(k₀, j₀) = (0, 1)`. Tip as sheet with one target
+    and both angles set: `N_a/N_b = τ₁/τ₂`, a ratio of two stored doubles and so always rational, the generator read
+    exactly from their binary expansions (most such generators lie far beyond any view). Lean each axis with one
+    target and both angles set: `N_a/N_b = tan τ₁/tan τ₂`, which for angles rational in degrees is rational only where
+    `τ₁ ≡ ±τ₂` (mod 180°), the ratio `±1`, or where one angle is `≡ ±30°` and the other `≡ ±60°` (mod 180°), the ratio
+    `±1/3` or `±3`: with `u = e^{2iτ₁}`, `v = e^{2iτ₂}` and the ratio `p/q`, the condition is the vanishing sum
+    `(q − p)uv + (q + p)u − (q + p)v − (q − p) = 0` of roots of unity, and Mann's theorem (1965) bounds a minimal one
+    of four terms to sixth roots of unity. Two targets with `sin τ₂ ≠ 0`: no generator with `j₀ ≠ 0`, `d_Y` moving with
+    `t` alone.
+  - At RQ-471's corner no fold is applied (R-554), as before.
+- **The canonical point** *(applied per R-369, a routine choice that counts each system once)*: where the orbit meets
+  the square, the point in it; with a generator `w = (k₀, 2j₀)` in `(s, t)`, the point whose offset from `(½, ½)` along
+  `w` lies in `[−|w|/2, |w|/2)`, a strip that holds the square (`|k₀| + 2|j₀| < k₀² + 4j₀²` for `j₀ ≠ 0`); for `t`'s
+  period alone, `t` in `[−½, 3/2)`.
+- **Tests,** as the owner asks: `N_b = 0` with `N_a ≠ 0` (`τ₁ = 30°` alone, `t` and `t + 2`) and Lean `45°/45°`
+  (`(s − 2, t + 2)` and `(s, t)`), each pair decoding the same system, one of it counted, with the control that the
+  round-2 rule counts both (REQ-CHART-062, TASK-M2-36); the quadtree's canonical address follows the same fold
+  (REQ-SCHED-101, TASK-M8-56).
+- **RQ-630 stays open:** the wording of R-554 L3's Lean summary is the owner's to rule, apart from this.
+
+*What it amends:* **R-554 L3** (on a tilted view "otherwise the view is affine along that axis" holds only where no
+lattice repeat keeps `d`) and **R-537 EX7(b)** (on a tilted view the canonical address also folds the lattice). Read
+with it: R-408, which it applies. It closes **RQ-631**.
+
+R-655 is in the "physics" group of `plan/rule_groups.yaml`, with R-554 and R-613.
+
+Changes REQ-SCHED-101 (statement, verify, rulings, note) and REQ-CHART-062 (verify, rulings, note).
+
+## R-656 — CI throughput: a push runs `ci.yml` only on `main` (and on R-272's `measure/` branches, which have no pull request), a pull request running it through `pull_request`; a pull request's superseded runs are cancelled, never a run on `main`; a docs-only pull request skips the build, test, GPU and mutants work, and one that changes no GPU-path file skips the GPU suites, inside the jobs, every required check still reporting success under its own name; mutants run on the merge-ready head; a bounded target cache is approved in principle, built in a later PR; no paid or self-hosted runner *(amends R-110, R-177, R-186, R-195, R-235, R-285 and R-335)*
+*30 Oct 2026 · the owner's two messages of that day; applied in `.github/workflows/ci.yml`,
+`.github/workflows/mutants.yml`, `scripts/ci_changes.sh` (new), `xtask/tests/ci_changes.rs` (new), three qa files
+(below), `plan/OPERATIONS.md`, `plan/WORKFLOW.md`, `docs/contracts/principia_parity_contract.md` §6, eight
+requirements' notes and `plan/rule_groups.yaml`*
+
+The owner's words on CI throughput, verbatim:
+
+> Go ahead with 1–3 as one tooling PR, plus: (1b) a per-PR `concurrency` group with cancel-in-progress: true, so superseded runs on the same PR are cancelled; never cancel runs on main. Constraint for 2 and 3: required checks must still report. Do the GPU and mutants skips inside the job (changed-files detection, then skip as success under the same check name), not with workflow-level `paths:`, or required checks will hang pending on docs-only PRs. Mutants must still run on the merge-ready head. Prove it on the PR: one docs-only change and one shader change, showing which jobs ran or were skipped and that branch protection is satisfied in both. Item 4: approved in principle, as a ruling amending R-285. Cache saved from main only, keyed on Cargo.lock + toolchain, limited to the 2–3 slowest jobs, with eviction so total stays well under 10 GB; report actual cache size after a week. Items 5 and 6: no.
+
+The proposal the items refer to, the orchestrator's, filed with the owner's message:
+
+> 1. ci.yml's `push` trigger limited to main (PRs run through `pull_request`), ending the double run per push.
+> 2. mutants less often: only on the merge-ready head, or only for the crates the PR touches.
+> 3. gpu-metal, gpu-lavapipe, gpu-kernel skipped when no shader/kernel code changed.
+> 4. A bounded build-target cache, which R-285 forbids (needs a ruling).
+> 5. Paid larger runners. 6. A self-hosted runner on the Mac.
+
+The CI sentence of the owner's rulings message of the same day, verbatim:
+
+> CI: go ahead as already agreed (per-job skips for docs-only PRs, push trigger limited to main, cancel superseded PR runs, mutants on the merge-ready head, cheap doc-reading checks kept), and no self-hosted runner.
+
+*What it decides:*
+- **The push trigger.** `ci.yml` runs on a push to `main`; a pull request's pushes run it through `pull_request`, once
+  each, so no push to a pull request's branch runs it twice. Every run on `main` runs every job. The other workflows
+  had no double trigger: `no-atlas-params.yml` already ran its push trigger on `main` only, and the rest run on
+  `pull_request`, a schedule or a dispatch.
+- **Superseded runs.** The workflows that build or test on pull requests (`ci.yml`, `mutants.yml`, `pr-check.yml`,
+  `screenshot.yml`, `stand-in-soak.yml`) each keep one `concurrency` group per pull request, its merge ref's
+  (`refs/pull/<n>/merge`), with `cancel-in-progress`, so a push cancels the run on the head it supersedes; a run on
+  `main` has a group of its own, its run id, and is never cancelled. The groups name the event, which after the push
+  change is `pull_request` for every run a pull request starts, so each pull request has one group per workflow. Three
+  keep none (below): `reviews.yml`, `no-atlas-params.yml`, a single grep of a few seconds, and `gemini-dispatch.yml`,
+  the advisory bot's (R-635), which reviews each head.
+- **What a change touches.** `scripts/ci_changes.sh` classifies a pull request's change, its merge commit against the
+  base it merges onto, conservatively: a path is docs-only only if its allowlist names it (`docs/`, the plan's prose
+  and data, the root's markdown; not `plan/`'s Python, not `.github/`), and every path but the docs-only ones and the
+  crates no GPU job builds (`gui`, `prin`) is a GPU path. An empty diff, or one that can't be computed, runs everything.
+  Any run that is not a pull request runs everything. A file code reads is never docs-only, and is a GPU path (below,
+  "The files code reads").
+- **A docs-only pull request** skips the build, test, release and controls jobs (`ci-archive` and the `ci` shards,
+  `ci-checks`, `ci-release-archive` and its shards, `xtask-ci`'s shards), and `ci-workspace` runs the docs checks in
+  place of its tests: the plan checks, the vocabulary lint, and every test that reads a docs-only path. The GPU jobs
+  are skipped too (no docs-only path is a GPU path); `mutants-fixture` skips its steps, and `mutants`' shards already
+  skip a diff with no `.rs` file. `pr-check` and `reviews-complete` run as before.
+- **A pull request that changes no GPU-path file** skips the jobs running the GPU suites (`gpu-kernel suites`,
+  `gpu-metal suites`, `gpu-lavapipe suites`); every other job runs.
+- **The required checks still report, under their own names, and conclude success** (`ci`, `xtask-ci`, `gpu-metal`,
+  `gpu-lavapipe`, `gpu-kernel`, `mutants-check`, `pr-check`, `reviews-complete`; R-266, R-305). No workflow-level
+  `paths:` filter is used. Each of the five that gathers skippable jobs is a gate that runs whatever they ended in
+  (`always()`), and passes a gathered job that was skipped only when the classification ran and its verdict skipped
+  that job; a failed, cancelled or wrongly skipped job, or a failed classification, turns it red. A matrix job is
+  named `<id> (<shard>)`, so a skipped matrix job never reports a bare required name, and a skipped job never bears a
+  required name.
+- **Mutants on the merge-ready head.** The gate runs on every head of a pull request whose diff has Rust in it, and a
+  push cancels the run on the superseded head, so the run that finishes is the merge-ready head's, the last; the merge
+  already waits for that head's `mutants-check`. The orchestrator's merge step is unchanged.
+- **Item 4, approved in principle, not built here.** A bounded build-target cache, amending R-285: saved from `main`
+  only, keyed on `Cargo.lock` and the toolchain, limited to the 2–3 slowest jobs, with eviction so the total stays
+  well under 10 GB, and its actual size reported a week after it lands. A later PR builds it; until then R-285's "no
+  whole target directories cached" holds.
+- **Items 5 and 6: no.** No paid larger runners and no self-hosted runner; R-186 stands.
+- **"Every commit" and "every push".** Where R-110, R-177, R-186, R-195, R-235, the corpus and the plan say a suite
+  runs on every commit or every push, it runs on every push to `main` and on every pull-request head, but for this
+  ruling's skips: a docs-only head runs the checks that read the docs and not the build, test or GPU suites, and a
+  head that changes no GPU-path file does not run the GPU suites. A head's skipped suite runs again on `main` once it
+  merges.
+
+*Applied per R-369:*
+- A push to a `measure/` branch still runs `ci.yml`: R-272's measurements are taken by pushing one, and it never has
+  a pull request, so it never runs twice.
+- "Inside the job" is read as the owner's contrast with a workflow-level `paths:` filter: the check bearing each
+  required name runs on every pull request, reads the classification, and concludes success under that name. The work
+  it gathers is skipped as a job, not step by step: a skipped job takes no runner, where a job skipping its steps
+  still queues for one (a macOS one for `gpu-metal`), which is the load this ruling cuts. A job skipped by its own
+  `if:` reports "skipping", which `merge-batch.sh`'s `gh pr checks --required` doesn't read as a pass, so a skipped job
+  never bears a required name: the GPU suites' jobs are named `gpu-kernel suites`, `gpu-metal suites` and
+  `gpu-lavapipe suites`, and new gate jobs carry the required names.
+- `ci-workspace` runs the docs checks on a docs-only pull request rather than a new job, so the gate `ci` keeps its
+  three gathered jobs. It selects the tests with `scripts/ci_changes.sh doc-tests`: each integration test target whose
+  source, or a support file it names, names a docs-only path outside a comment, and the unit tests of a package whose
+  `src/` does; it runs them under the `ci` nextest profile, as the shards do. So the docs-reading tests that need the
+  built kernel (`gpu-kernel`'s profile) or run cargo on the workspace's own target (`ci-workspace`'s) run on `main`'s
+  push, not on a docs-only pull request.
+- `reviews.yml` keeps no `concurrency` group: a `pull_request_review` run re-runs the `pull_request` run (R-276), and
+  a shared group would cancel the run it means to re-run. `no-atlas-params.yml` and `gemini-dispatch.yml` keep none
+  either: the first costs seconds, and the second is the advisory bots' trial (R-635), outside this ruling.
+- `mutants-fixture` skips its steps on a docs-only pull request; it shows the gate can fire, and no docs-only path
+  reaches the gate.
+- REQ-PAY-011, REQ-GEN-004, REQ-TOOL-003, REQ-TOOL-189, REQ-VAL-057, REQ-VAL-166, REQ-SYS-065 and REQ-SYS-067, whose
+  text says "every commit", "every push" or runs every control, cite this ruling and note how it reads; no statement
+  changes.
+- Three qa files change where this ruling changes the behaviour they test, as R-335 allowed for R-326 (exceptions to
+  R-290, for the orchestrator and the reviewers to confirm): `xtask/tests/qa_TASK-M2-49.rs`, whose push-trigger check
+  accepts a push trigger limited to branches that include `main`, and whose release-job check accepts the one
+  job-level `if:` this ruling adds, the docs-only skip; and `xtask/tests/qa_TASK-M0-22_r235.rs` and
+  `xtask/tests/qa_TASK-M0-14_r335.rs`, whose controls-job checks accept that same one job-level `if:` and, in r235's,
+  a `needs:` on the classification alone. Every other `if:`, `needs:` and `continue-on-error:` still fails them, and
+  their controls are unchanged.
+
+*The files code reads, and the cancelled runs: the owner's words of 30 Oct 2026 on #351, verbatim:*
+
+> #351: leave cancelled-run summary checks as they are (M0-45 and R-266 stand; no ruling). Resume #351's reviews. Reviewers specifically confirm the docs-only classifier: any doc/spec/data file read by a test, build script, codegen or xtask check must count as code, not docs. List those paths explicitly in the classifier and add a test that touching one triggers the heavy jobs. Then merge through the normal route and carry on with the job-queue PR.
+
+*Applied:*
+- **The files code reads count as code.** `scripts/ci_changes.sh` keeps, beside its allowlist, an explicit list of
+  the files code reads, each pattern commented with its readers; a path is docs-only only if it is on the allowlist
+  and not on that list, and a file on the list is a GPU path too, so touching one runs the build, test and GPU jobs.
+  The list, from a search of the tests, the build scripts, codegen and the xtask checks: every `.md` and `.html`
+  under `docs/` (the vocabulary lint; plan-check, its tests copying `docs/`'s markdown, archive included; the tests
+  that read a contract or design doc), `docs/gui/design/` and `docs/gui/reference/` (the screenshot and compass
+  goldens' artboards and references, the print-graph catalogue), all of `plan/` (plan-check, the gate report,
+  reviews-check, the validation gates and their tests), `decisions.md`, `REVIEW_QUEUE.md`, `open-questions.md`,
+  `README.md` and `CLAUDE.md` (plan-check; the golden harness reads `decisions.md`), `AGENTS.md` and `GEMINI.md`
+  (`ai_review_rules`), and, listed though already off the allowlist, `.github/copilot-instructions.md` and
+  `fixtures/`. The build scripts and codegen read nothing outside `crates/`. What stays docs-only is the rest of
+  `docs/`: files that are neither markdown nor HTML outside those two folders (the incoming papers and data, the
+  reference sources, the experiments' results).
+- **The tests.** `xtask/tests/ci_changes.rs` touches each pattern of the list through real files it names, each
+  classifying as not docs-only with the GPU suites run, and checks that the list it touches is the script's; and it
+  scans, best effort, the string literals of every crate's `src/`, `tests/` and `build.rs`, of `xtask/` and of
+  `plan/`'s Python for a repository file they name, failing if any classifies as docs-only. Its stated limit: a
+  reader that walks a directory or builds a path in pieces is not seen, and is listed by hand. Each test has its
+  negative control (R-176).
+- `ci-workspace`'s docs checks on a docs-only pull request (the plan checks, the vocabulary lint, the tests
+  `doc-tests` selects) stay, a backstop: with the files code reads counted as code, a docs-only change touches none
+  of their inputs.
+- **The cancelled runs.** A superseded head's cancelled run leaves its required checks' gates as they are, failed or
+  cancelled, as before this ruling; the owner kept them, with TASK-M0-45's checks and R-266 standing, and made no
+  ruling of it.
+
+R-656 is in the "ci" group of `plan/rule_groups.yaml`.

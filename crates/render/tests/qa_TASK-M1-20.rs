@@ -19,8 +19,9 @@
 //!   clamped. Since twilight's two ends differ by under one 8-bit step, 1.0 and 0 are never told apart by pixel
 //!   equality here: the band around the wrap admits both ends.
 //! - `qa_theta_generated_header_is_cyclic_fixed`: the checked-in view's header says `scale cyclic` and defaults to
-//!   `RANGE_AUTO = 0`, and its ramp is `ramp_twilight`; `q_mass`, `ftle`, `mean_y`, `S` and `diffusion` keep
-//!   `ramp_coolwarm` (R-423 leaves them). Control: R-400's `theta` view (coolwarm) fails.
+//!   `RANGE_AUTO = 0`, and its ramp is `ramp_twilight`; `ftle`, `S` and `diffusion` keep `ramp_coolwarm` (R-423
+//!   leaves them), and `q_mass` and `mean_y`, their ranges declared by REQ-PAY-097 and REQ-PAY-098 (R-426), are on
+//!   `ramp_viridis`. Control: R-400's `theta` view (coolwarm) fails.
 //!
 //! Tolerance: 1e-5 per linear-RGB channel, parity_contract §4's ~1e-5 starting figure for one GPU evaluation against
 //! its f64 reference (R-85), plus the colour span of the twilight table over the raw's f32 error band: WGSL's f32
@@ -419,7 +420,7 @@ fn check_theta_header(theta: &str) {
         "`theta`'s view does not default to RANGE_AUTO = 0"
     );
     assert_eq!(ramp_of(theta), "ramp_twilight", "`theta`'s ramp");
-    for f in ["ftle", "mean_y", "S", "diffusion"] {
+    for f in ["ftle", "S", "diffusion"] {
         assert_eq!(
             ramp_of(&generated(f)),
             "ramp_coolwarm",
@@ -432,6 +433,13 @@ fn check_theta_header(theta: &str) {
         ramp_of(&generated("q_mass")),
         "ramp_viridis",
         "`q_mass` is not on ramp_viridis"
+    );
+    // R-426, REQ-PAY-098: `mean_y`'s range, declared [0, 4] by TASK-M3-13 from `y`'s definition, does not span zero,
+    // so its view is on ramp_viridis (R-400).
+    assert_eq!(
+        ramp_of(&generated("mean_y")),
+        "ramp_viridis",
+        "`mean_y` is not on ramp_viridis"
     );
 }
 
