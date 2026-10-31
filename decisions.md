@@ -28587,7 +28587,7 @@ The owner's words, 31 Oct 2026, verbatim:
 
 *What it amends:* **R-629**, as to BZ-1's cold sets. It closes **RQ-644** and **RQ-646**, and queues **RQ-647** (the re-size),
 **RQ-648** (the trust line's citations, left as the owner's words) and **RQ-649** (tier (a) scores, physics). Its port also
-queues **RQ-652** (BZ-1C's event), **RQ-653** (BZ-1C's energy) and **RQ-654** (BZ-1C's path to the GPU).
+queues **RQ-652** (BZ-1C's event), **RQ-653** (BZ-1C's energy), **RQ-654** (BZ-1C's path to the GPU) and **RQ-655** (R-632's "a bound", physics).
 
 R-661 is in the "design" group of `plan/rule_groups.yaml`, with R-630 and R-639.
 
