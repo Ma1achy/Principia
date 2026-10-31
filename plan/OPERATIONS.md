@@ -273,8 +273,9 @@ merge:
    (`<scratch>` being the worktree above, or for any other file, `--queue <path> --archive <archive dir>`.) It fails on
    an RQ id twice in the queue, in both the queue and `docs/archive/review_queue/`, or twice across the archive; two
    entries with one question; two of an entry's one-per-entry fields, or no `File, section` or `Applied meanwhile`; a
-   heading with no body or not in the form `## RQ-n: <question>`; a run of up to eight lines next to one that reads
-   the same; or a paragraph starting in lower case at the margin.
+   heading with no body or not in the form `## RQ-n: <question>`; a run of up to eight lines next to one that reads the
+   same, of that length or a line more or less, an edit in an id (`R-n`, `RQ-n`, `TASK-…`, `REQ-…`, `PR #n`) or a
+   `line N` counting as a difference; or a paragraph starting in lower case at the margin.
 
    **On a failure:** the PR to merge later fixes it on its own branch, by merging `main`, and CI runs on the new head.
    An id collision: **the later PR takes the next free id** (§ "Numbers"), in its entry and in every reference it added
@@ -284,11 +285,13 @@ merge:
 
    `ci` on `main` catches what slips through: every job runs on a push to `main` (§ "What CI runs on a pull request"),
    `plan_check_passes_on_the_tree` among them; a pull request's own CI runs on its merge ref, so it sees only what was on
-   `main` at its last push. The check can't see everything a merge leaves: a deletion undone, or an entry restored
-   whole, reads as a good entry, and so do two versions of a line reworded further apart than the check's likeness
-   allows. So after each merge the
-   orchestrator still reads `git diff <before> <after> -- REVIEW_QUEUE.md`, which the batch merge prints, for a line
-   doubled, restored or under the wrong RQ, and fixes anything wrong by a follow-up PR.
+   `main` at its last push. The check can't see everything a merge leaves. These still pass:
+   two lines differing only in a plain number, a date or value among them, which read as a list's siblings; lines
+   under 30 characters; runs over eight lines; an interleaving that moves no required field and repeats no
+   one-per-entry field; conflicting notes in different words, or two versions reworded further apart than its likeness
+   allows; two questions in different words; a deletion undone, or an entry restored whole. So after each merge the
+   orchestrator still reads `git diff <before> <after> -- REVIEW_QUEUE.md`, which the batch merge prints, for these: a
+   line doubled, restored or under the wrong RQ, or two notes that disagree. It fixes anything wrong by a follow-up PR.
 3. `gh pr merge N --merge --match-head-commit <full sha>`. Never `--admin` (R-266), never squash or rebase.
 4. Then, as a separate command, never chained after the merge with `;`: confirm the remote branch is gone, since
    GitHub's "Automatically delete head branches" deletes it on merge (R-357): `git ls-remote --exit-code origin
@@ -342,6 +345,8 @@ test, build script, codegen step or xtask check that reads a doc, spec or data f
 `scripts/ci_changes.sh`'s list of files code reads; `xtask/tests/ci_changes.rs` scans for a literal path missing from it.
 
 **Numbers.**
+- **An RQ's form.** A heading `## RQ-n: <question>`, a `- **File, section:**` field and a `- **Applied meanwhile:**`
+  field (§ "Escalation" of `plan/WORKFLOW.md`); the plan check fails an entry without them.
 - **RQ ids.** Before filing an RQ, take the next free id across every `origin/*` branch: `git fetch`, then search each
   branch's `REVIEW_QUEUE.md` and `docs/archive/review_queue/`. Two agents once both filed RQ-188. A branch filed since
   can still take the same one: the merged-tree check catches that, and the later PR takes the next free id (§ "Merging"
