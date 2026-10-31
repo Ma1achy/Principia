@@ -233,11 +233,19 @@ pub struct Strip {
 }
 
 impl Strip {
-    /// The strip of a generator along `along`, a positive multiple of it that the doubles hold, and `|w|/2 = half`.
+    /// The strip of a generator along `along`, a positive multiple of it that the doubles hold, and `|w|/2 = half`. A
+    /// length below the normal doubles would round on the subnormal grid and leave `dir` off unit length, so `along` is
+    /// first scaled by `2⁵²`, exactly, onto normal doubles; any other `along` is divided as it stands, bit for bit.
     fn new(along: [f64; 2], half: f64) -> Self {
-        let len = Float::hypot(along[0], along[1]);
+        let scale = if Float::hypot(along[0], along[1]) < f64::MIN_POSITIVE {
+            1.0 / f64::EPSILON
+        } else {
+            1.0
+        };
+        let (x, y) = (along[0] * scale, along[1] * scale);
+        let len = Float::hypot(x, y);
         Strip {
-            dir: [along[0] / len, along[1] / len],
+            dir: [x / len, y / len],
             half,
         }
     }

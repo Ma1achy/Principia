@@ -1451,10 +1451,11 @@ fn lattice_cases() -> Vec<LatticeCase> {
         (sheet(40.0, 70.0), Some(([70.0, -40.0], [7.0, -4.0]))),
         (sheet(0.1, 0.2), Some(([0.2, -0.1], [4.0, -2.0]))),
         (sheet(200.0, 30.0), Some(([30.0, -200.0], [3.0, -20.0]))),
-        // Subnormal angles, 2^−1074 with 2^−1070 and with 2^−1022, read through their bits.
+        // Subnormal angles, 2^−1074 with 2^−1070 and with 2^−1022, read through their bits. Where the length is itself
+        // subnormal, `along` is written on whole numbers, which no subnormal grid rounds.
         (
             sheet(f64::from_bits(1), f64::from_bits(16)),
-            Some(([f64::from_bits(16), -(f64::from_bits(1))], [32.0, -2.0])),
+            Some(([16.0, -1.0], [32.0, -2.0])),
         ),
         (
             sheet(f64::from_bits(1), f64::MIN_POSITIVE),
@@ -1562,6 +1563,101 @@ negative_control!(
     expected = "t = 3/2 is canonical",
     {
         check_strip_edges(true);
+    }
+);
+
+/// The direction of `(τ₂, −τ₁)` under the length the subnormal grid rounds to (the controls' form).
+fn rounded_dir(t1: f64, t2: f64) -> [f64; 2] {
+    let len = t2.hypot(t1);
+    [t2 / len, -t1 / len]
+}
+
+/// The strip's `dir` at Tip as sheet's subnormal angles, given in ulps of `2⁻¹⁰⁷⁴`, is a unit vector along `(τ₂, −τ₁)`
+/// (R-655). A length that rounds to exactly `2⁻¹⁰²²` is a normal length, so `dir` divides by it as it stands, at a pair
+/// whose true length is below that by 3/8 of the grid. `rounded` keeps the rounded length throughout (the control).
+fn check_subnormal_dir(rounded: bool) {
+    let ulp = f64::from_bits;
+    for (t1, t2) in [(1, 1), (2, 1), (3, 3), (1, 16), (1000, 1000), (1 << 51, 3)] {
+        let (u1, u2) = (ulp(t1), ulp(t2));
+        let dir = if rounded {
+            rounded_dir(u1, u2)
+        } else {
+            spec(u1, u2, TiltMap::Sheet, 3, 3).strip().unwrap().dir
+        };
+        let length = (dir[0] * dir[0] + dir[1] * dir[1]).sqrt();
+        assert!(
+            (length - 1.0).abs() <= 4.0 * f64::EPSILON,
+            "dir is not a unit vector at ({t1}, {t2}) ulps: {dir:?}, length {length}"
+        );
+        // Along (τ₂, −τ₁), read on the whole numbers.
+        let cross = dir[0] * t1 as f64 + dir[1] * t2 as f64;
+        assert!(
+            cross.abs() <= 4.0 * f64::EPSILON * t1.max(t2) as f64,
+            "dir is not along the generator at ({t1}, {t2}) ulps: {dir:?}"
+        );
+    }
+    let (t1, t2) = (ulp(0xc_cccc_cccc_ccbd), ulp(0x9_9999_9999_99ae));
+    assert_eq!(
+        spec(t1, t2, TiltMap::Sheet, 3, 3).strip().unwrap().dir,
+        [t2 / f64::MIN_POSITIVE, -t1 / f64::MIN_POSITIVE],
+        "a length of exactly 2^-1022 is not divided as it stands"
+    );
+}
+
+#[test]
+fn tilt_every_chart_lattice_subnormal_dir_unit() {
+    check_subnormal_dir(false);
+}
+
+negative_control!(
+    tilt_every_chart_lattice_subnormal_dir_unit,
+    "a dir taken from the length the subnormal grid rounds is off unit length, so it must fail",
+    expected = "dir is not a unit vector at (1, 1) ulps",
+    {
+        check_subnormal_dir(true);
+    }
+);
+
+/// At `τ₁ = τ₂ = 2⁻¹⁰⁷⁴` under Tip as sheet, `w = (2, −2)`, `|w|/2 = √2`: of the orbit `(1.4, −0.4) + j·w` the point with
+/// its offset along `w` in `[−√2, √2)` is `(1.4, −0.4)`, and the orbit is counted once there (R-655). `rounded` judges
+/// the orbit with the rounded length's `dir` (the control).
+fn check_subnormal_orbit(rounded: bool) {
+    let t = f64::from_bits(1);
+    let s = spec(t, t, TiltMap::Sheet, 3, 3);
+    let view = spherical(&s);
+    let orbit = [[1.4, -0.4], [-0.6, 1.6], [3.4, -2.4]];
+    let canonical: Vec<bool> = orbit
+        .iter()
+        .map(|&[a, b]| {
+            if rounded {
+                let dir = rounded_dir(t, t);
+                let half = 2f64.sqrt();
+                let p = (a - 0.5) * dir[0] + (b - 0.5) * dir[1];
+                -half <= p && p < half
+            } else {
+                view.pixel(a, b) == Some(PixelCount::System)
+            }
+        })
+        .collect();
+    assert_eq!(
+        canonical,
+        [true, false, false],
+        "the orbit is not counted once, at its canonical point"
+    );
+    assert_eq!(view.counted_total(orbit.iter().copied()), 1);
+}
+
+#[test]
+fn tilt_every_chart_lattice_subnormal_orbit_once() {
+    check_subnormal_orbit(false);
+}
+
+negative_control!(
+    tilt_every_chart_lattice_subnormal_orbit_once,
+    "a dir off unit length pushes the orbit's canonical point past the strip, uncounted, so it must fail",
+    expected = "the orbit is not counted once",
+    {
+        check_subnormal_orbit(true);
     }
 );
 
