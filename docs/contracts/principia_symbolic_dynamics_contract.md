@@ -60,8 +60,10 @@ confirmed by the owner at the M3 gate, REQ-PAY-070).** Transcribed from the lite
   then `d ≥ 0`) appends `a`, the other way `A`; cut `b` likewise appends `b` and `B`. The literature fixes the
   hemisphere `a` starts from, and which outer body is ours 0, only through its figures. The other hemisphere turns
   every letter into its inverse in place, the `(a, b) ↔ (A, B)` exchange, which REQ-VAL-043's comparison allows (R-630,
-  item 5); the other outer-body order reads each of the ten orbits below within those symmetries too (the physics read
-  of RQ-632). Cross-check: ten orbits of the PRL's Table I, integrated from its initial conditions, read their
+  item 5); the other outer-body order reads each of the ten orbits below within those symmetries too, conjugacy where the
+  fixture records the inverse and the inverse where it records conjugacy (`qa_m316_prl_fixture_against_appendix_c`,
+  `crossing_body_relabelling`; physics review 5720379930 of PR #358 holds RQ-632's option (a), with the owner's
+  confirmation at the M3 gate, R-125, REQ-PAY-070). Cross-check: ten orbits of the PRL's Table I, integrated from its initial conditions, read their
   published words under this convention, eight up to cyclic permutation and two up to the inverse
   (`fixtures/crossings/prl_orbits.json`).
 - **The segment classifier (R-72, REQ-PAY-113; a definition, written by TASK-M3-16, physics-reviewed before merge).**
