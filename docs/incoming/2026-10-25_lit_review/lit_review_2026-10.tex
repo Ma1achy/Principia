@@ -564,9 +564,9 @@ energy error alone, is why it is the default.
 
 Li \& Liao~\cite{li2017} demonstrated that reliable long-time trajectories in the chaotic
 three-body problem need extended-precision arithmetic (``clean numerical simulation'').  Boekholt
-\& Portegies Zwart~\cite{boekholt2015} showed that, for ensembles of chaotic systems, conventional
-double-precision integrations can be statistically reliable even when individual trajectories
-are not, and Boekholt, Portegies Zwart \& Valtonen~\cite{boekholt2020} showed that a fraction of
+\& Portegies Zwart~\cite{boekholt2015} found, for three-body ensembles, double-precision Hermite distributions not significantly different from Brutus's at small steps,
+with the error unbiased only once runs violating energy conservation by more than 10\% are removed, even when individual trajectories
+are not reliable; no paper tests this in single precision, which remains a hypothesis Principia will measure (R-661). Boekholt, Portegies Zwart \& Valtonen~\cite{boekholt2020} showed that a fraction of
 three-body systems are irreversible even to perturbations at the Planck length.  Hernandez,
 Hadden \& Makino~\cite{hernandez2020} asked the same reliability question of long-term N-body
 simulations.  Principia takes these results as its honesty requirement.  Its GPU kernel runs in

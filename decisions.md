@@ -26990,6 +26990,8 @@ phase, against the CPU's f32 decode and `Φ`'s f64 angle.
 R-628 is in the "physics" group of `plan/rule_groups.yaml`.
 
 ## R-629 — PLAN.md is adopted as the single plan for verification and replication, superseding as the working plan the 25 Oct instruction's tier tables, sequencing and fetch list; its seven draft requirements are ported as M3 requirements with their tolerances as calibrations; R-594's port follows it, with the orbit catalogue's six tests as tasks; the plan's other questions stay queued *(refines R-594; answers PLAN.md § 9 questions 1 and 2)*
+*Amended in part by R-661 (BZ-1's "out of scope": the cold sets are reopened as a proposal; its warm sets stay out).*
+*Still in force: all of it but BZ-1's cold sets, which R-661 reopens; no requirement is added for BZ-1.*
 *27 Oct 2026 · the human's answer to whether R-594's port should follow the 27 Oct plan; applied with R-594, in the files
 R-594's line lists; built by TASK-M2-51, TASK-M3-42 to TASK-M3-65, TASK-M4-22 to TASK-M4-25, TASK-M6-52, TASK-M7-71
 and TASK-M8-97 to TASK-M8-99*
@@ -28529,3 +28531,59 @@ The CI sentence of the owner's rulings message of the same day, verbatim:
   ruling of it.
 
 R-656 is in the "ci" group of `plan/rule_groups.yaml`.
+
+## R-661 — That tier (a)'s f32 statistics agree, with f64's or with a converged reference's, is a hypothesis Principia will measure, established by no paper; BZ-1 is reopened on the cold sets, which start from rest and so are planar, with a paired f32, f64 and converged experiment proposed for M9 at peek priority; REQ-VAL-199 states the effect size its 256 starts can detect; the CC BY papers and records are committed *(closes RQ-644 and RQ-646; amends R-629; queues RQ-647, RQ-648 and RQ-649)*
+*31 Oct 2026 · the owner, on the precision set's triage; applied in `docs/incoming/2026-10-31_precision_set/` (new),
+`docs/incoming/2026-10-27_validation_plan/PLAN.md` (§ 0, BZ-1, BZ-1C, its note, § 7's item 10),
+`docs/incoming/2026-10-25_replication/catalogue.md` § 6.1, the 25 Oct instruction's § C (a bracketed correction),
+`docs/incoming/2026-10-25_lit_review/lit_review_2026-10.tex`, `docs/incoming/2026-10-29_research_batches/README.md`
+§ 10 (a bracketed correction), `docs/incoming/2026-10-31_fetch_list/README.md`, `docs/design/principia_dd_replication.md`
+§ 5.14 and § 5.15, `docs/design/principia_honesty_precision.md` § 4 and § 6, `docs/contracts/principia_parity_contract.md`
+§ 5 (a dated line), R-629's forward line, `REVIEW_QUEUE.md`, REQ-VAL-199 (reqio), `plan/section_notes.yaml` and
+`plan/rule_groups.yaml`*
+
+The owner's words, 31 Oct 2026, verbatim:
+
+> Precision set: excellent, thank you. Actions: (1) Reword everywhere that tier (a) "agrees statistically" or cites Boekholt & PZ 2015 as evidence for f32: it is a HYPOTHESIS that Principia will measure, and no paper establishes it. Fix the three overstatements you found (PLAN's BZ-1 row, catalogue.md §6.1, the replication instruction) via the queue, with Removed-lines notes. (2) Reopen BZ-1 on the cold sets: from rest means planar. Propose the paired f32 / f64 / converged experiment on the BPZ cold initial conditions as an M9 target with peek priority: keep every run with a status, show any energy cut beside the uncut ensemble with the removed count, treat lifetimes as censored, and size n by a power calculation (target sensitivity of a few percent; KS distance ≈0.02 needs n ~ 10⁴). Thresholds stay calibration requirements, not adopted from the paper. (3) REQ-VAL-199: re-size its 256 starts by the same power argument, or state the effect size it can detect. (4) BPZ zero-placeholder rows: treat as undetermined/censored, never dropped; note it in the target. (5) Commit the CC BY ones (Boekholt & PZ 2015 with cold records, Portegies Zwart 2026, PZ & Boekholt 2023); the rest to _local. Fetch the BPZ warm files from figshare for completeness, but check whether they're 3D before proposing anything from them.
+
+*What it decides:*
+
+- **(1) The hypothesis.** No paper is evidence that f32 ensemble statistics agree with anything. Boekholt & Portegies Zwart
+  2015 is f64 against a converged code, and Portegies Zwart 2026's 32-bit numbers are single runs. RQ-646's three
+  overstatements are reworded, and RQ-644 closes with them: Fig. 14's side-by-side is compatible with never discarding;
+  the "unbiased" claim, which holds only after the cut, is not.
+- **(2) BZ-1 reopened.** The cold sets: from rest means planar, the cause the owner's. Measured in the records: largest final
+  out-of-plane distance 4.3×10⁻⁹ and 3.4×10⁻⁹. The proposal is PLAN.md's BZ-1C, with no requirement, as PLAN.md's other
+  proposed rows have none. The Hermite results are not published, so its f64 is ours.
+- **The power calculation.** α = 0.05. KS: `D_c = 1.358 √(2/n)`, so 0.02 needs n = 9,222 and 256 reaches 0.12. Fractions at 80%
+  power: `n = 7.85 · 2p(1−p)/Δ²`. Lifetimes by log-rank: `events = 4 · 7.85 / ln²HR`. n = 10⁴ per set is proposed: about 2%
+  in a fraction, a hazard ratio of 1.05. Its working is `docs/incoming/2026-10-31_precision_set/README.md`.
+- **(3) REQ-VAL-199** states what it can detect and keeps its 256 starts. The re-size is the owner's other option: RQ-647.
+- **(4) The placeholder rows** (98 and 16) are undetermined, censored with no known time, and never dropped.
+- **(5) The papers.** Boekholt & Portegies Zwart 2015's version of record and files, Portegies Zwart 2026 and Portegies
+  Zwart & Boekholt 2023's arXiv copy are committed, each CC BY 4.0, read at source. The other three are in `_local`.
+- **The warm files** are 3D (largest final out-of-plane distance 84.9 and 132, non-zero L₀). Each is CC BY 4.0 and they are
+  committed for completeness. Nothing is proposed from them, and BZ-1's objection stands for them.
+
+*Applied per R-369:*
+
+- **(3)'s choice:** state the effect size, and queue the re-size with its cost for the owner, because re-sizing costs CPU.
+  R-610 sets a cap and no CPU budget, so RQ-647 gives the cost in runs and time units, with no seconds invented.
+- **The name:** the reopened experiment is BZ-1C, beside BZ-1, whose row stays for the paper and the warm sets.
+- **Reach of the search:** `docs/` but `docs/archive` and `docs/reference`, `plan/`, `README.md`, `scripts/` and the
+  requirements. Beyond the owner's three: the lit review, the research batches' quotation of the tier ruling, `dd_replication` § 5.14,
+  the fetch list, and dated lines in the honesty design and the parity contract. REQ-VAL-065 keeps its statement: it is a
+  test, and the note says what it measures. `principia_00_philosophy.md`'s "ensemble statistics stay correct to within a
+  percent" reports Trani et al. on their own integrator, not f32, and stands. No code comment makes the claim.
+- **M9:** the proposal's status rests on the two rulings in open PR #342, not merged (targets as measurements with tiers, and
+  M9 with its peek log), which are cited and not copied. The tier ruling's own words, "expected to agree statistically", are
+  the owner's and stay as quoted there. When #342 merges, those two rulings take a forward line to this one and its port's
+  "agreeing statistically" in `dd_replication` § 12 takes a dated line (whichever of the two PRs merges second does this), and
+  RQ-649 asks what a score on tier (a) then says.
+
+*What it amends:* **R-629**, as to BZ-1's cold sets. It closes **RQ-644** and **RQ-646**, and queues **RQ-647** (the re-size),
+**RQ-648** (the trust line's citations, left as the owner's words) and **RQ-649** (tier (a) scores, physics).
+
+R-661 is in the "design" group of `plan/rule_groups.yaml`, with R-630 and R-639.
+
+Changes REQ-VAL-199 (statement, rulings, source, note).

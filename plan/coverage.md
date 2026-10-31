@@ -8,10 +8,10 @@
 |---|---|
 | DEC | 52 |
 | ENC | 38 |
-| CHART | 88 |
+| CHART | 89 |
 | INT | 108 |
 | EVT | 32 |
-| PAY | 110 |
+| PAY | 111 |
 | GEN | 43 |
 | SCHED | 103 |
 | REF | 52 |
@@ -22,9 +22,9 @@
 | VAL | 331 |
 | PERF | 115 |
 | SYS | 93 |
-| **total** | **2049** |
+| **total** | **2051** |
 
-Of these: 225 calibration, 172 definition, 1652 obligation. Retired (kept for their ids, not counted): 12.
+Of these: 225 calibration, 174 definition, 1652 obligation. Retired (kept for their ids, not counted): 12.
 
 ## Requirements per milestone
 
@@ -32,8 +32,8 @@ Of these: 225 calibration, 172 definition, 1652 obligation. Retired (kept for th
 |---|---|
 | M0 | 122 |
 | M1 | 108 |
-| M2 | 221 |
-| M3 | 333 |
+| M2 | 222 |
+| M3 | 334 |
 | M4 | 119 |
 | M5 | 181 |
 | M6 | 226 |
@@ -42,7 +42,7 @@ Of these: 225 calibration, 172 definition, 1652 obligation. Retired (kept for th
 
 ## Sections
 
-1650 sections in 61 files: 1315 yield at least one requirement; 335 yield none and are listed below with the reason.
+1653 sections in 61 files: 1318 yield at least one requirement; 335 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | gap (RQ-378) | 1 |
@@ -398,7 +398,7 @@ Of these: 225 calibration, 172 definition, 1652 obligation. Retired (kept for th
 | 5. The targets | parent heading (obligations are in its subsections) | its subsections hold the targets, one requirement each |
 | 5.1 Targets already ruled | informative only | lists the requirements already in force by id; this port changes none of them (R-594) |
 | 5.13 The precision ladder: waiting for RQ-577 | gap (RQ-577) | PL-1 to PL-12, B-3 and GG-2 wait on RQ-577, which records that no requirement is added from the proposal meanwhile; PL-8's first half is REQ-VAL-250 |
-| 5.14 Out of scope | informative only | V-5, V-10 and BZ-1 are out of scope as PLAN.md says, and D-6 waits on RQ-587; no requirement (R-629) |
+| 5.14 Out of scope | informative only | V-5, V-10 and BZ-1 are out of scope as PLAN.md says, BZ-1's cold sets reopened as a proposal with no requirement (R-661), and D-6 waits on RQ-587; no requirement (R-629) |
 | 5.15 Counts | informative only | counts of what the port added |
 | 7. Sequencing by need | informative only | the task order; the obligations are the tasks' (plan/tasks.yaml) |
 | 8. Rules | parent heading (obligations are in its subsections) | its three subsections, cited by every target |

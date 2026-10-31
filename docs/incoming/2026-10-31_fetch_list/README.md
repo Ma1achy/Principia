@@ -48,16 +48,17 @@ The paper's cut, from the arXiv version already in the repo:
 Our rule, `docs/design/principia_honesty_precision.md` line 278: "**Never discard:** a failed or budget-exhausted run is
 shown as such, with its end time (R-563)."
 
-**It conflicts as a method, and it costs us no target.** The paper's unbiased result is stated with those runs removed,
-so it is the opposite of never discarding. The paper does show the whole ensemble beside the cuts (Fig. 14, left
-column), so the bias is reported, not hidden. Nothing in Principia depends on the cut: BZ-1 is out of scope as a
-replication (3D Plummer draws, PLAN.md § 3.2).
+**The claim conflicts; the side-by-side does not.** The paper's unbiased result is stated with those runs removed, so as
+a claim it is the opposite of never discarding. The paper also shows the whole ensemble beside the cuts (Fig. 14, left
+column), so the bias is reported, not hidden, and that method is compatible, once the count removed is given. Nothing in
+Principia depends on the cut. BZ-1 is reopened on the cold sets, which are planar (R-661; `../2026-10-27_validation_plan/PLAN.md`
+§ 3.2).
 
 What the conflict touches is two lines of our record, which read the paper as agreeing with the rule:
 `../2026-10-25_replication/catalogue.md` § 6.1 ("A direct analogue of the project's "never discard a copy" and
 `error_ratio` rules", beside its own "runs with |dE/E| > 0.1 are rejected") and PLAN.md's BZ-1 ("Its method is what
 REQ-VAL-199 and "never discard a copy" already apply"). The paper's analogue is its ensemble comparison, not its energy
-cut. RQ-644 asks how to word this; those lines are left as they are.
+cut. RQ-644 asked how to word this, and R-661 closes it: those lines are reworded.
 
 ## Gaps added
 

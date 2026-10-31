@@ -461,8 +461,13 @@ no requirement while RQ-577 is open.
 
 - **V-5**, the book's statistical statements: no set-up stated; each is a pointer to a primary paper.
 - **V-10**, the post-Newtonian Pythagorean problem: Principia is Newtonian.
-- **BZ-1**, Boekholt & Portegies Zwart 2015, ensemble statistics surviving trajectory error: 3D Plummer initial
-  conditions. Its method is what REQ-VAL-199 and "never discard a copy" already apply.
+- **BZ-1**, Boekholt & Portegies Zwart 2015, f64 against a converged code: the two warm sets stay out of scope, being 3D.
+  The cold sets start from rest, so planar (the owner), and are **reopened** as a proposal, with no requirement: the
+  paired f32, f64 and converged experiment, `../incoming/2026-10-27_validation_plan/PLAN.md` § 3.2, BZ-1C (R-661). The
+  paper has no f32 run: that f32 statistics agree is a hypothesis Principia will measure, and no paper establishes it. Its
+  "unbiased" result holds only after an energy cut, so it is not what "never discard a copy" applies; its Fig. 14, cut
+  beside uncut, is compatible. REQ-VAL-199 measures parting time, a different quantity. *Was (R-661):* "3D Plummer initial
+  conditions. Its method is what REQ-VAL-199 and "never discard a copy" already apply."
 - **D-6**, the prototype's other numbers, as a list: RQ-587 (§ 5.11).
 
 Most of the scattering literature is 3D; only planar subsets apply. Results with no published data and no figure
@@ -474,7 +479,7 @@ detail stay qualitative until the paper is in hand.
 - **By milestone (targets + definition, then calibrations):** M2 2 + 2; M3 58 + 47; M4 8 + 4; M6 2 + 0; M7 1 + 1; M8 5 + 1.
 - **Tasks added:** 34 (M2 1, M3 24, M4 4, M6 1, M7 1, M8 3), § 7.
 - **Waiting on an RQ:** 18 targets (§ 5.12, § 5.5, § 5.3, § 5.10).
-- **No requirement:** PL-1 to PL-7, PL-8's second half, PL-9 to PL-12, B-3 and GG-2 (RQ-577, § 5.13); V-5, V-10 and BZ-1 (out of scope); D-6 (RQ-587). FF-H and W-1 are ruled requirements (REQ-VAL-042, -043).
+- **No requirement:** PL-1 to PL-7, PL-8's second half, PL-9 to PL-12, B-3 and GG-2 (RQ-577, § 5.13); V-5, V-10 and BZ-1 (out of scope, BZ-1's cold sets reopened as a proposal, R-661); D-6 (RQ-587). FF-H and W-1 are ruled requirements (REQ-VAL-042, -043).
 - **PLAN.md's 112 rows** are all here: 25 ruled (§ 5.1), the rest a target above, a waiting row (§ 5.13), or out of scope (§ 5.14). OC-5's count and the tier-D numbers PLAN.md folded into ruled rows are separate targets here, so that the ruled requirements stay unchanged.
 
 ---
