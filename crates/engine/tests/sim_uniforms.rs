@@ -297,6 +297,70 @@ fn check_other_refusals(check: &Check) {
     assert_eq!(check(&u), Ok(1000), "a positive window is refused");
 }
 
+/// `check` holds `dt_macro` finite and positive at f32 as well as at f64, on both sides of each edge: above `f32::MAX`
+/// it rounds to infinity at `2¹²⁸`, and below the least f32 subnormal it rounds to 0 at `2⁻¹⁵⁰`, a tie to even (the
+/// horizon and window there are carried at the macro-step's own size, so the step count is 1).
+fn check_dt_macro_at_f32(check: &Check) {
+    let large = |dt: f64| SimUniforms {
+        dt_macro: dt,
+        ..SimUniforms::default()
+    };
+    let small = |dt: f64| SimUniforms {
+        dt_macro: dt,
+        t_horizon: dt,
+        escape_window: dt,
+        ..SimUniforms::default()
+    };
+    for (edge, u) in [
+        ("f64::MAX", large(f64::MAX)),
+        ("2¹²⁸", large(2f64.powi(128))),
+        ("2⁻¹⁵⁰", small(2f64.powi(-150))),
+    ] {
+        assert!(
+            matches!(check(&u), Err(DispatchError::DtMacro { .. })),
+            "dt_macro {edge} is not refused at f32: {:?}",
+            check(&u)
+        );
+    }
+    assert_eq!(check(&large(f64::from(f32::MAX))), Ok(1), "f32::MAX");
+    assert_eq!(check(&small(2f64.powi(-149))), Ok(1), "2⁻¹⁴⁹");
+}
+
+#[test]
+fn horizon_refusal_dt_macro_at_f32() {
+    check_dt_macro_at_f32(&real);
+    // What the kernel is handed at the accepted edges is the macro-step itself, finite and not 0.
+    let at_edge = |dt: f64, t: f64, w: f64| {
+        let u = SimUniforms {
+            dt_macro: dt,
+            t_horizon: t,
+            escape_window: w,
+            ..SimUniforms::default()
+        };
+        validate(&u)
+            .expect("the edge is accepted")
+            .wrapper_uniforms_f32()
+            .dt_macro
+    };
+    assert_eq!(at_edge(f64::from(f32::MAX), 50.0, 0.4), f32::MAX);
+    let least = 2f64.powi(-149);
+    assert_eq!(at_edge(least, least, least), f32::from_bits(1));
+}
+
+negative_control!(
+    horizon_refusal_dt_macro_at_f32,
+    "a dispatch that checks dt_macro only at f64 hands the f32 kernel an infinite macro-step",
+    expected = "is not refused at f32",
+    check_dt_macro_at_f32(&|u: &SimUniforms| {
+        if !(u.dt_macro.is_finite() && u.dt_macro > 0.0) {
+            return Err(DispatchError::DtMacro {
+                dt_macro: u.dt_macro,
+            });
+        }
+        Ok(horizon_steps(u.t_horizon, u.dt_macro) as u32)
+    })
+);
+
 #[test]
 fn horizon_refusal_other_refusals() {
     check_other_refusals(&real);

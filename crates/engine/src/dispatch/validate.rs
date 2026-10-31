@@ -9,7 +9,9 @@
 //!   positive is refused first, since the floor is read from it.
 //! - **The horizon's steps**, `horizon_steps = ⌈T/dt_macro⌉ ≤ 65535`, evaluated in f64 ([`horizon_steps`]), with
 //!   `dt_macro` finite and positive: the exact u16 `t_end_step` and `t_dmin_step` hold every step index only then, and
-//!   there is no fallback format; a longer integration takes a coarser `dt_macro` or march epochs (R-86).
+//!   there is no fallback format; a longer integration takes a coarser `dt_macro` or march epochs (R-86). `dt_macro`
+//!   must stay finite and positive rounded to f32 as well, since [`Validated::wrapper_uniforms_f32`] hands that value
+//!   to the kernel, where infinity or 0 would make every substep's `dt` not a time step.
 //! - **The `N_sub` table** (R-502): the host generator's refusal of the carried `r_sub`, `gamma_sub` and `N_max`
 //!   (`kernel::driver::nsub_table`), an `N_max` above the table's maximum length among them, is returned as it is;
 //!   and the carried table must be the generator's for them, bit for bit, never another config's.
@@ -63,7 +65,7 @@ pub enum DispatchError {
         /// The `T` carried.
         t_horizon: f64,
     },
-    /// `dt_macro` is not finite and positive.
+    /// `dt_macro` is not finite and positive, at f64 or rounded to f32.
     DtMacro {
         /// The `dt_macro` carried.
         dt_macro: f64,
@@ -145,7 +147,10 @@ impl fmt::Display for DispatchError {
                 T_HORIZON_MAX.number()
             ),
             Self::DtMacro { dt_macro } => {
-                write!(f, "dt_macro {dt_macro} is not finite and positive")
+                write!(
+                    f,
+                    "dt_macro {dt_macro} is not finite and positive, at f64 or rounded to f32"
+                )
             }
             Self::HorizonSteps {
                 t_horizon,
@@ -325,6 +330,9 @@ pub fn validate(uniforms: &SimUniforms) -> Result<Validated, DispatchError> {
             dt_macro: dt,
             steps,
         });
+    }
+    if !finite_positive(f64::from(dt as f32)) {
+        return Err(DispatchError::DtMacro { dt_macro: dt });
     }
     if thresholds(&uniforms.substep_law())? != uniforms.thresholds {
         return Err(DispatchError::StaleThresholds);
