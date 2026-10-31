@@ -4,8 +4,8 @@
 //! - REQ-PAY-036: the word buffer is a binding of its own, at the sample's own index; a substep with no crossing
 //!   touches it not at all (`word_buffer_binding`).
 //! - REQ-PAY-042: over a march's substeps, the word buffer's writes equal the crossings, and the per-step path reads
-//!   no word outside a crossing (`word_write_count`). The crossings are a synthetic stream until TASK-M3-16's detector
-//!   exists; TASK-M3-16 re-runs the check on real trajectories.
+//!   no word outside a crossing: on a synthetic stream (`word_write_count`), on the kept states of the PRL's real
+//!   trajectories through TASK-M3-16's detector (`word_write_count_real_trajectories`).
 //! - REQ-PAY-048: `last_symbol` is the final symbol of the decoded word whenever 1 ≤ length ≤ 76, and every set keeps
 //!   `packed_a`'s other bits (`last_symbol_mirror`, `last_symbol_mirror_set_keeps_other_bits`).
 //! - REQ-PAY-052: the packing is payload §3's closed form, fitting 121 bits, with `length` in `.w` bits 25–31
@@ -27,8 +27,9 @@ use kernel::payload::{
     SIMSTATE_GROUP, WORD_BINDING, WORD_GROUP,
 };
 use kernel::word::{
-    fgw_append, fgw_decode, on_substep, sample_word, set_last_symbol, CrossingHook, FgwAppended,
-    SubstepCrossings, WordBuffer,
+    fgw_append, fgw_decode, on_substep, sample_word, set_last_symbol, state_cuts,
+    substep_crossings, CrossingDetector, CrossingHook, CutDistances, FgwAppended, SubstepCrossings,
+    WordBuffer,
 };
 use proptest::prelude::*;
 use validation::reference::free_group::{
@@ -437,6 +438,112 @@ negative_control!(
     expected = "a word read in the per-step path",
     check_write_count(substep_reading, &[(0, vec![vec![], vec![1]])])
 );
+
+// ── word_write_count on real trajectories (REQ-PAY-042; TASK-M3-15's note) ───────────────────────────────────────────
+
+/// `fixtures/crossings/prl_orbits.json`'s ten orbits.
+fn prl_orbits() -> Vec<serde_json::Value> {
+    let path = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../fixtures/crossings/prl_orbits.json"
+    );
+    let text = std::fs::read_to_string(path).expect("read the PRL orbits fixture");
+    let doc: serde_json::Value = serde_json::from_str(&text).expect("the fixture is JSON");
+    doc["orbits"].as_array().expect("orbits").clone()
+}
+
+/// One accepted substep through the detector into the word: [`CrossingDetector::accept_into`], or a control's faulty
+/// one.
+type Accept =
+    fn(&mut CrossingDetector<f64>, CutDistances<f64>, &mut CrossingHook, &mut Counted, u32) -> u32;
+
+fn accept_into(
+    detector: &mut CrossingDetector<f64>,
+    end: CutDistances<f64>,
+    hook: &mut CrossingHook,
+    words: &mut Counted,
+    packed_a: u32,
+) -> u32 {
+    detector.accept_into(end, hook, words, packed_a)
+}
+
+/// Each orbit's kept states as a march through `accept`: at every substep the word-buffer writes equal the crossings
+/// an independent replay of the detector counts, and over the march too, which are not none; the word holds them.
+fn check_real_trajectories(accept: Accept) {
+    for orbit in prl_orbits() {
+        let name = orbit["name"].as_str().expect("name");
+        let states: Vec<[[f64; 2]; 3]> = orbit["states"]
+            .as_array()
+            .expect("states")
+            .iter()
+            .map(|s| {
+                let body = |k: usize| [s[k][0].as_f64().expect("x"), s[k][1].as_f64().expect("y")];
+                [body(0), body(1), body(2)]
+            })
+            .collect();
+        let mut words = Counted::new(vec![FreeGroupWord::default()]);
+        let mut hook = CrossingHook::new(0);
+        let mut detector = CrossingDetector::new(state_cuts(&states[0]));
+        let mut packed_a = 0;
+        let mut all = Vec::new();
+        for (k, pair) in states.windows(2).enumerate() {
+            let c = substep_crossings(state_cuts(&pair[0]), state_cuts(&pair[1]));
+            let want = &c.symbols[..c.count as usize];
+            let from = words.log.borrow().len();
+            packed_a = accept(
+                &mut detector,
+                state_cuts(&pair[1]),
+                &mut hook,
+                &mut words,
+                packed_a,
+            );
+            let accesses = words.since(from);
+            assert_eq!(
+                count(&accesses, Access::Store),
+                want.len(),
+                "{name}, substep {k}: word-buffer writes differ from the detected crossings"
+            );
+            assert_eq!(
+                count(&accesses, Access::Load),
+                want.len(),
+                "{name}, substep {k}: a word read in the per-step path"
+            );
+            all.extend_from_slice(want);
+        }
+        assert!(!all.is_empty(), "{name}: no crossing detected");
+        assert_eq!(
+            words.words[0].free_group_word,
+            packed(&reduce(&all)),
+            "{name}: the word is not the reference's packing of its crossings"
+        );
+    }
+}
+
+#[test]
+fn word_write_count_real_trajectories() {
+    check_real_trajectories(accept_into);
+}
+
+/// A detector whose crossings never reach the word: it detects, and leaves the buffer alone.
+#[cfg(feature = "controls")]
+fn accept_dropping(
+    detector: &mut CrossingDetector<f64>,
+    end: CutDistances<f64>,
+    _hook: &mut CrossingHook,
+    _words: &mut Counted,
+    packed_a: u32,
+) -> u32 {
+    detector.accept(end);
+    packed_a
+}
+
+negative_control!(
+    word_write_count_real_trajectories,
+    "a detector that never reaches the word writes fewer times than it detects",
+    expected = "word-buffer writes differ from the detected crossings",
+    check_real_trajectories(accept_dropping)
+);
+
 
 /// Marches whose every substep holds [`MAX_CROSSINGS_PER_SUBSTEP`] crossings, the capacity: two, one per cut.
 fn full_marches() -> impl Strategy<Value = Vec<(usize, Vec<Vec<u32>>)>> {
