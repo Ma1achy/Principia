@@ -4305,11 +4305,15 @@
     section: Part 2 — Occupants and the capability profile
   - file: docs/design/principia_dd_integrator.md
     section: 2. Consolidated contract
+  - file: decisions.md
+    section: R-660 — RQ-626 (a) confirmed *(closes RQ-626)*
   verify:
     method: unit test
-    detail: "payload has no suspect bits; predicate evaluated at read; Euler + energy-drift view lights SUSPECT_ENERGY everywhere"
-  rulings: []
+    detail: "payload has no suspect bits; predicate evaluated at read; Euler + energy-drift view lights SUSPECT_ENERGY everywhere, read by R-660 over bound, interacting states: an 8 x 8 grid of rest starts and dd tests 2 and 7"
+  rulings:
+  - R-660
   milestone: M3
+  note: "R-660 (31 Oct 2026, RQ-626 (a)). What the predicates read beside REQ-INT-045 and REQ-PAY-112 is RQ-636, which this requirement does not wait on (the owner's ruling of 31 Oct 2026)."
 - id: REQ-INT-041
   area: INT
   statement: "The diffusion slope must be a Welford streaming slope per macro-step: the time-only part derived in closed form (n = step_count, mean_t = (n+1)h/2, C_tt = h²n(n²−1)/12), the per-sample part updating mean_y and C_ty in two f32 accumulators with the old-mean time deviation δ_t = 0.5·n·h, never as stored (t, y) points or naive raw sums, and the slope C_ty/C_tt(n) read as NaN for n < 2 (R-245)."
@@ -4417,6 +4421,8 @@
     detail: "every control-flow comparison on drift/d_min reads the live f32 value; grep the kernel for unpack2x16float feeding a branch"
   rulings: []
   milestone: M3
+  rq:
+  - RQ-636
 - id: REQ-INT-046
   area: INT
   statement: "Branch-cut crossing detection must run at every accepted adaptive substep, unless the topology contract proves that each tested segment holds at most one crossing."
@@ -8380,6 +8386,8 @@
   - R-605
   - R-632
   milestone: M3
+  rq:
+  - RQ-636
   note: "R-632 (27 Oct 2026, RQ-581 (d), else (b)). Closed by TASK-M3-41 with REQ-PAY-111 (applied per R-369). Where the encoding differs from linear binary16, TASK-M3-41 rewrites the f16 wording for the two latches in payload §1, §2 and §6, the render contract's unpack layer, the debug tooling plan's rows and the parity contract, each with a *Was*; d_min stays f16."
 - id: REQ-PAY-113
   area: PAY

@@ -28371,6 +28371,34 @@ asks; at `−1.364`, the widest margin within 0.025 of the old start, 0.0302. So
 RQ-625 lists for the fixture unchanged.
 
 R-652 is in the "design" group of `plan/rule_groups.yaml`, with R-454 and R-504.
+
+*Added 31 Oct 2026, the owner's words, for this entry (the messages' other rulings are not recorded here):*
+
+> (4) #360: the ramp fixture move is accepted; record the new hash and the reason (the old start sat near a tie) under RQ-625.
+
+> #360 goldens: ruling (d), not (a), (b) or (c). (a) would make the test unable to see a real defect: every t = 0 pixel is a fresh sample, so Metal's ulp noise rendering as colour would appear on real data too. Fix the view. First check the spec/dd for whether generated-energy_drift and generated-Lz_drift were meant to read the STORED drift (as the code comment says); if so, make the code match, which removes display-stage fast-math from the computation. If the spec says fragment-computed, instead give symlog a neutral band of k·f32-ulp relative to |E₀| (and |L| for L_z), with k justified in writing (rounding-level differences aren't physics), keeping nudges 6 and 3. Either way: one reference across backends, regenerated to the neutral fresh tile; add a test that a fresh sample renders exactly neutral on every backend. Record under R-652 that tie margins don't bound cross-backend differences, and correct the comment if it stays wrong.
+
+*Applied:*
+- **The ramp fixture.** `m1-synthetic/energy_drift_ramp`'s new SHA-256 is
+  `e6a4e1a8be049ac1b13ed2ab28044388a1cf25d468a8cdc9f8669b24dffc67e3`; the fixture's start moved because the old start,
+  `−1.387`, sat near a rounding tie (0.0091 of an 8-bit step, under the 0.01 asked).
+- **Tie margins do not bound cross-backend differences.** A case's tie margin (`golden_scene::tie_margin`) measures how
+  far the CPU twin's pixels sit from a rounding tie. It says nothing of how far another backend's f32 arithmetic moves a
+  value, which on a resolved near-zero drift was 5 to 6 steps at margins of 0.0249 and 0.0113. A case needs a reason of
+  its own to hold across backends.
+- **Fragment-computed, by the corpus.** `docs/design/principia_dd_generation_root.md` §3.8: `energy_drift` is
+  "`derived(from: [r, p, m0, m1, m2, E_0])` (R-246) | `H(r,p) − E_0`", `Lz_drift` "`derived(from: [r, p, Lz_0])` (R-246)".
+  `docs/design/principia_dd_simstate_payload.md` §5: "current drift `ΔE` | `H(r,p) − E_0`", and storage removes
+  "`energy_drift`/`Lz_drift` current (derived)". The render contract's unpack layer: "current drift (H(r,p)-E_0)", among
+  the derived. So the neutral band's branch holds: render contract Part 5, "The neutral band", `k = 128` with its bound;
+  the comment at `golden_scene::CASE_PARAMS` that read "over the stored drift" is corrected. (R-605's stored drift is the
+  regularised latches, read under a regularised occupant by TASK-M3-41; it is not these views' value.)
+- **The references.** `debug-views/generated-energy_drift`
+  `31c33abdfd32f142274f46d409ec8eadd198f630e9de7436a76795db328245b9` and `debug-views/generated-Lz_drift`
+  `9ddadbb387b8ab5e3e1ab55aab376204cfbd76759e428313377bbdfd64be5b92`, nudges 6 and 3 kept; only tile 0, the fresh sample,
+  changed, on each. `drift_view_neutral_fresh_sample_renders_exactly_neutral` (`crates/render/tests/drift_views.rs`) runs
+  on each backend CI has.
+
 ## R-655 — On a tilted shape sphere the spherical map's lattice of repeats is folded: a pixel `(s + k, t + 2j)` with `N_a·k + 2·N_b·j = 0` for integers `(k, j) ≠ 0` is the same system as `(s, t)` and is counted once, at its canonical point, the lattice decided exactly on the stored angles *(closes RQ-631; amends R-554 L3 and R-537 EX7(b))*
 *30 Oct 2026 · the owner's batch of that day; applied in `docs/contracts/principia_chart_decoder_contract.md` § "Repeats
 and the canonical point" (a paragraph), R-554's forward line, `REVIEW_QUEUE.md` (RQ-631, a dated closing line),
@@ -28559,3 +28587,17 @@ The CI sentence of the owner's rulings message of the same day, verbatim:
   ruling of it.
 
 R-656 is in the "ci" group of `plan/rule_groups.yaml`.
+
+## R-660 — RQ-626 (a) confirmed *(closes RQ-626)*
+*31 Oct 2026 · the owner's message of that day; applied in `docs/contracts/principia_integrator_contract.md` Part 2 (a
+clause), REQ-INT-040 (reqio), TASK-M3-05 (a note), `plan/rule_groups.yaml`, `REVIEW_QUEUE.md` (RQ-626 moved out) and
+`docs/archive/review_queue/M0.md` (RQ-626, with its ruling); built by TASK-M3-05*
+
+The owner's words, for this entry (the message's other rulings are not recorded here):
+
+> RQ-626 (a) confirmed.
+
+RQ-626's option (a): "everywhere" over the states where Euler's secular drift has time to act: bound, interacting states
+(rest starts, dd tests 2 and 7), the test's domain named in REQ-INT-040's detail.
+
+R-660 is in the "design" group of `plan/rule_groups.yaml`, with R-652.

@@ -584,38 +584,6 @@ choice changes the result and the corpus does not settle it (R-369).*
   `principia_dd_replication.md` § 5.10, the RQ-598 README § 6 and TASK-M3-62's note point here.
 - **Waits:** GG-1's per-point scoring against the Fig. 1 extraction (TASK-M3-62). BR-1 does not wait on it.
 
-## RQ-626: Euler doesn't light `SUSPECT_ENERGY` "everywhere": over the latent cube at the default horizon, half its samples stay under the threshold *(physics; integrator contract Part 1; REQ-INT-040; REQ-INT-085; R-382; context: TASK-M3-05)*
-
-*Queued 30 Oct 2026 by TASK-M3-05's implementer. For the owner: yes, it is physics, and it changes what TASK-M3-05's
-test asserts and what the threshold means.*
-
-- **File, section:**
-  - `docs/contracts/principia_integrator_contract.md` § Part 1, the `energy_drift` bullet: "On Euler/RK4 it measures
-    the *integrator* — Euler drifts secularly and will light up `SUSPECT_ENERGY` everywhere."
-  - `plan/requirements.yaml`, REQ-INT-040's detail: "payload has no suspect bits; predicate evaluated at read; Euler +
-    energy-drift view lights SUSPECT_ENERGY everywhere".
-  - `plan/tasks/M3/TASK-M3-05.md`, Acceptance: "`cargo test -p kernel drift_suspect_read_time` — … Euler + the
-    energy-drift view lights SUSPECT_ENERGY everywhere (REQ-INT-040)."
-  - The same task, the threshold proposal: "on test 2's orbit Euler lights SUSPECT_ENERGY and no symplectic occupant
-    does" (REQ-INT-085; R-382).
-- **The conflict:** at the proposed `SUSPECT_ENERGY_THRESHOLD = 2⁻⁸` (REQ-INT-085, set by the gap between the
-  symplectic occupants' largest stored relative δE on dd test 2, 4.03e-5, and Euler's, 0.2776), Euler lights the
-  predicate on dd tests 2 and 7 and on every rest start TASK-M3-05 tried (an 8 × 8 grid). Over 256 uniform draws from
-  the latent cube `[−1.5, 1.5]⁸` (the default links, Euler at f32, `T = 50`, `dt = 1e-3`), the stored relative
-  `dE_max/max(ε_E, |E_0|)` ran from 8.6e-8 up, with a median of 3.0e-5: about half the samples stay under any
-  threshold that also clears the symplectic occupants on test 2. Euler's drift is secular, but on states that
-  separate fast (an early escape) or move slowly, it doesn't grow to `2⁻⁸` within the horizon. "Everywhere" holds over
-  bound, interacting states, not over the whole cube.
-- **The question:** what "everywhere" means for REQ-INT-040's test.
-- **Options seen:** (a) "everywhere" over the states where Euler's secular drift has time to act: bound, interacting
-  states (rest starts, dd tests 2 and 7), the test's domain named in REQ-INT-040's detail; (b) every sample of the
-  latent cube, which needs a lower threshold than the symplectic occupants' gap allows on test 2 (it conflicts with
-  R-382's criterion); (c) the predicate read with the occupant's `symplectic` flag, Euler always suspect (it changes
-  the predicate REQ-INT-040 defines); (d) another, stated by the owner.
-- **Applied meanwhile:** (a). `drift_suspect_read_time_euler_everywhere` asserts it over an 8 × 8 grid of rest starts
-  and dd tests 2 and 7, and says so in its doc.
-- **Waits:** nothing else; TASK-M3-05's PR carries (a) and names this entry.
-
 ## RQ-621: The control REQ-DEC-011 and REQ-VAL-017 ask of `M₀₁` cannot fail: an unfused or flushed `fma(m₁, 1, m₀)` rounds exactly as the fused one *(conflict: a requirement's control against arithmetic; R-547, RQ-298; REQ-DEC-011, REQ-VAL-017; context: TASK-M2-48)*
 
 *Found by TASK-M2-48's implementer, before building, 30 Oct 2026. For the orchestrator (R-369: tests), except option
@@ -833,3 +801,43 @@ where the choice changes the result (which pixels count) and the corpus does not
 - **Applied meanwhile:** the ruled text, R-554 L3: `Tilted::pixel` (`crates/kernel/src/chart/tilt.rs`) applies no pole
   map unless `N_a = N_b = 0`, so such pixels count as distinct (TASK-M2-36, PR #349). No code changes for this entry.
 - **Waits:** nothing built waits; a fold, if ruled, is a follow-up to TASK-M2-36's `Tilted::pixel` and TASK-M8-56.
+
+## RQ-636: The drift suspect predicates read the unpacked f16 latch: REQ-INT-040 and dd_integrator §3.5 say they must, REQ-INT-045, payload §1 and REQ-PAY-112 say never *(physics; REQ-INT-040; REQ-INT-045; REQ-PAY-112; R-632; context: TASK-M3-05, TASK-M3-41)*
+
+*Queued 31 Oct 2026 by TASK-M3-05's fix round, on physics review 5722380920 of PR #360 (F1). For the owner: yes, it is
+physics, the corpus contradicts itself on what the predicates read. Code unchanged; TASK-M3-05's PR doesn't wait on it,
+by the owner's ruling of 31 Oct 2026 ("(5) Suspect predicates: file the RQ with options, code unchanged.").*
+
+- **File, section, for reading the latch:**
+  - `plan/requirements.yaml`, REQ-INT-040: "The drift suspect predicates must be read-time predicates over the stored
+    drift latches (no stored suspect bits)".
+  - `docs/design/principia_dd_integrator.md` § 3.5: "suspect predicates (READ-TIME, over the stored drift latches — no
+    stored suspect bits, payload §5)".
+  - `plan/tasks/M3/TASK-M3-05.md`, Goal: "The drift suspect predicates are read-time predicates over the stored latches".
+- **File, section, against it:**
+  - `plan/requirements.yaml`, REQ-INT-045: "Threshold and suspect decisions must use the live f32 measurement, never an
+    unpacked f16 latch."
+  - `docs/design/principia_dd_simstate_payload.md` § 1: "threshold/suspect decisions must use the live f32 measurement,
+    never the unpacked f16 latch (the f16 latch is for display, not for control flow)".
+  - `plan/requirements.yaml`, REQ-PAY-112: "threshold and suspect decisions read the live f32 value, never the stored
+    latch"; its verify: "the suspect predicates read the live f32 value; controls: … a predicate fed the unpacked latch
+    fails".
+  - `plan/reviewers/physics.md` § 8: "a threshold or suspect decision uses the live f32 value, not an unpacked f16 latch".
+- **The conflict in the code:** `check_lit` in `crates/kernel/tests/monitor.rs` asserts that the predicates read the latch,
+  so REQ-PAY-112's control, on TASK-M3-41, can't pass as written against this read side.
+- **The physics reviewer's evidence (review 5722380920):** after the march no live `max|ΔE|` exists, the latch being the
+  only stored form, so a read-time predicate with no stored bit can read a live value only if the latch's width or
+  encoding changes (REQ-PAY-112's encoding is TASK-M3-41's to choose). No march branch reads the predicates (`crates/kernel/src`,
+  `crates/engine/src`). On dd tests 2 and 7 stored and live give the same verdict for every occupant (PR #360's table).
+  They can differ for small `|E_0|`: below about 1.5e-5 (2⁻²⁴/τ_E) one f16 subnormal step crosses τ_E; the floor `ε_E`
+  limits this, but a near-zero-energy sample can still flip. The reviewer's reading: stored latches for read-time
+  display, live values for any march control flow; REQ-PAY-112's control doesn't allow that reading.
+- **The question:** what the read-time predicates read, and what REQ-INT-045 and REQ-PAY-112 then forbid.
+- **Options seen:** (a) stored latches for read-time predicates and display, live values only for march control flow:
+  REQ-INT-045, payload §1 and REQ-PAY-112 reworded to say so, REQ-PAY-112's control moved to a march branch; (b) the
+  predicates read a live value at the march's end stored at full f32, a schema change, which also keeps "no stored
+  suspect bit" but gives up the f16 latch for it; (c) TASK-M3-41's encoding makes the latch fine enough that stored and live
+  agree over a stated domain, REQ-PAY-112's control replaced by that domain's check; (d) another, stated by the owner.
+- **Applied meanwhile:** the task's Goal, REQ-INT-040: `drift_suspect`, `suspect_energy`, `suspect_lz` read the stored
+  latches. REQ-INT-040 stays closed by TASK-M3-05, carrying no `rq:` as the owner's ruling says this PR doesn't wait.
+- **Waits:** TASK-M3-41's verify of REQ-PAY-112 (REQ-PAY-112 and REQ-INT-045 carry `rq: RQ-636`).

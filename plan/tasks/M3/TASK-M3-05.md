@@ -72,3 +72,6 @@ After every `STEP` the wrapper's callback projects out the CoM position and tota
 - RQ-207 ruled by R-382: the L_z-suspect threshold sits above the symplectic occupants' round-off on dd tests 2 and 7, and below Euler's drift on test 2; RK4 is recorded only.
 - Closes, for gaps the corpus leaves open: REQ-INT-085 (R-71 calibration; PR #137's physics review, 5406355539); REQ-TOOL-150 (R-71 calibration, the `lin` range; R-381).
 - RQ-625 ruled by R-652, option (a), the gate decision R-110 asks for: the four drift goldens are re-baselined as this task renders them, and the `energy_drift_ramp` fixture's start moves to `−1.364` (applied per R-369, recorded in R-652).
+- RQ-626 ruled by R-660, option (a): "everywhere" is read over bound, interacting states.
+- The owner's ruling (d) of 31 Oct 2026, recorded in R-652: `symlog`'s neutral band (render contract Part 5), and a fresh sample renders exactly neutral on every backend.
+- A non-finite energy or `L_z` stays latched in the monitor and marks the run `sim_failed` at the write (R-47, R-79, R-271; PR #360's Codex thread); the terminal and the other fields' failed-state values stay TASK-M3-17's and TASK-M3-18's.
