@@ -10,7 +10,8 @@
 //!   and each window's worst factor is flat under refinement, varying over the depths by less than a `1/d` quantity
 //!   grows in one refinement step (depths two apart: cells 4× smaller). Control: the per-operand form,
 //!   `max(|K₀|, 1) + max(|V₀|, 1)` alone, formed here from the preset's own `E` and `E₀` words and the stored `K₀`,
-//!   `V₀`, must fail the same input.
+//!   `V₀`, must fail the same input. Every compared factor is asserted finite before the reduction
+//!   (`qa_m229_worst_factor_of_finite_samples`; control: a NaN factor is refused).
 //! - `qa_m229_scramble_still_fails` (condition 4; REQ-COL-006's spatial disagreement): with the payload's descriptors
 //!   written 37 samples on, every M2 chart's lattice, and every collision window at depth 11, shows disagreement under
 //!   the conditioned scale: the conditioning term does not swallow a dispatch fault, even beside a collision.
@@ -92,6 +93,31 @@ fn draw(gpu: &GpuHarness, scene: &mut Scene, shift: u32) -> Vec<Drawn> {
 
 // ── Conditions 2 and 4: the collision windows, flat under refinement ───────────────────────────────────────────────
 
+/// The worst of a run's compared factors, each first shown finite: `f64::max` drops a NaN, so a window of NaN ratios
+/// would otherwise reduce to 0, within the tolerance and flat. The `valid` word says only that the operands are finite;
+/// the ratio is computed after that test, so a valid sample's finiteness is asserted here, not assumed.
+fn worst_factor(label: &str, compared: &[f64]) -> f64 {
+    for (i, f) in compared.iter().enumerate() {
+        assert!(
+            f.is_finite(),
+            "{label}: compared sample {i}'s factor {f} is not finite"
+        );
+    }
+    compared.iter().copied().fold(0.0, f64::max)
+}
+
+#[test]
+fn qa_m229_worst_factor_of_finite_samples() {
+    assert_eq!(worst_factor("finite", &[0.5, 3.0, 2.0]), 3.0);
+}
+
+negative_control!(
+    qa_m229_worst_factor_of_finite_samples,
+    "a NaN factor among the compared samples must be refused, not dropped by the reduction",
+    expected = "is not finite",
+    assert_eq!(worst_factor("one NaN", &[0.5, f64::NAN, 3.0]), 3.0)
+);
+
 /// The windows, each sample judged by the preset's own ratio, over §6's conditioning-aware scale, where `conditioned`,
 /// else by the per-operand scale alone.
 fn check_windows(conditioned: bool) {
@@ -137,7 +163,7 @@ fn check_windows(conditioned: bool) {
                 compared.len(),
                 drawn.len()
             );
-            let w = compared.iter().copied().fold(0.0, f64::max);
+            let w = worst_factor(&run.label(), &compared);
             assert!(
                 w <= factor,
                 "{form}: {} needs {w} eps, which exceeds the tolerance's {factor}",
