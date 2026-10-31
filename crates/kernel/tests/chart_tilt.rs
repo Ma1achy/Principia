@@ -1000,7 +1000,7 @@ fn tilt_every_chart_antipode_counts_per_hidden_offset() {
 }
 
 negative_control!(
-    tilt_every_chart_antipode_shared_boolean,
+    tilt_every_chart_antipode_counts_per_hidden_offset,
     "one boolean shared across the view counts two systems on r = π as one, so it must fail",
     expected = "two systems on the circle",
     {
