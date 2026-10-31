@@ -15,7 +15,7 @@
 //! **Domain** (pitfalls §10): "`≫`" is read as at least ten times (applied per R-369). "Everywhere" is the rest starts
 //! of the grid below and dd tests 2 and 7: Euler's relative drift there is at least 2.9 at the default horizon, while
 //! over latent cubes with momentum it can fall to 10⁻⁷ on a fast, unbound start that barely interacts, below any
-//! threshold that leaves the symplectic occupants unlit on test 2 (REVIEW_QUEUE RQ-625).
+//! threshold that leaves the symplectic occupants unlit on test 2 (REVIEW_QUEUE RQ-626).
 
 use kernel::decode::{self, Ic, Latent};
 #[cfg(feature = "controls")]

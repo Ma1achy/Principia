@@ -172,7 +172,7 @@ pub fn known(name: &str) -> Result<Vec<Known>, String> {
         ],
         "energy_drift_ramp" => (0..8)
             .map(|k| Known {
-                drift: -1.387 + 0.4 * k as f32,
+                drift: -1.364 + 0.4 * k as f32,
                 ..plain(STATE_BOUNDED, 0, 1000, 1, d4)
             })
             .collect(),
