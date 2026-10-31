@@ -9,7 +9,7 @@
 - **Size:** ~350 lines
 
 ## Goal
-The exact-case ground truth runs: the figure-eight (T = 6.32591398, E = −1.2871419918, L_z = 0, Σp = 0) integrated one period reports `|dr|` across an eta/step ladder with the fitted convergence order, which must match the occupant's; the figure-eight traces its published shape-sphere curve; the Lagrange circular triangle stays equilateral at every sampled t. The closure gate's threshold and order tolerance (including whether AZ+RK4's ~third order is an expected failure) and the exact-case tolerances and structural windows are calibrated.
+The exact-case ground truth runs: the figure-eight (T = 6.32591398, E = −1.2871419918, L_z = 0, Σp = 0) integrated one period reports `|dr|` across an eta/step ladder with the fitted convergence order, which must match the occupant's; the Lagrange circular triangle stays equilateral at every sampled t. The closure gate's threshold and order tolerance (including whether AZ+RK4's ~third order is an expected failure) and the exact-case tolerances and structural windows are calibrated.
 
 ## References
 - `docs/design/principia_dd_validation_orbits.md` § "3. Proposed suite"
@@ -23,14 +23,15 @@ The exact-case ground truth runs: the figure-eight (T = 6.32591398, E = −1.287
 - `docs/design/principia_dd_validation_orbits.md` § "0.1 The mechanism, and the fix — measured, not proposed"
 
 ## Deliverables
-- `crates/validation/src/gates/{figure_eight,lagrange}.rs`, `fixtures/ground_truth/figure_eight/` (published shape-sphere curve).
+- `crates/validation/src/gates/{figure_eight,lagrange}.rs`.
 - Calibration proposals: closure |dr| threshold and order tolerance per occupant; the exact-case and structural tolerances.
 
 ## Acceptance tests
 - `cargo xtask gate figure-eight-closure` — closure |dr| per eta and fitted order; fails if the order is below the occupant's (threshold and tolerance: REQ-VAL-133, calibrated) (REQ-VAL-041).
-- `cargo xtask gate exact-cases` — Lagrange circular: equilateral residual at every sampled t within the calibrated f64 tolerance (REQ-VAL-130); the figure-eight shape-sphere curve matches the published one (REQ-VAL-047).
+- `cargo xtask gate exact-cases` — Lagrange circular: equilateral residual at every sampled t within the calibrated f64 tolerance (REQ-VAL-130) (REQ-VAL-047).
 - `cargo xtask gate exact-cases --propose` — the proposal measures each exact case at f64 and states its tolerance, and states each structural window; the human confirms them at the M3 gate and they are recorded in decisions.md (REQ-VAL-130).
 - `cargo xtask gate figure-eight-closure --propose` — |dr| and fitted order per occupant across the eta/step ladder, with the threshold and tolerance; the human confirms them at the M3 gate and they are recorded in decisions.md (REQ-VAL-133).
 
 ## Notes
 - Calibrations proposed here (R-71; human confirmation at the M3 gate, then recorded in decisions.md): REQ-VAL-130, REQ-VAL-133.
+- *30 Oct 2026 (R-650):* the figure-eight's published shape-sphere curve is external, split out as REQ-VAL-333 with its tolerance REQ-VAL-334, both closed by TASK-M9-36 in M9; the closure and the Lagrange rigidity stay here, the closure an anchor smoke test, continuous and blocking. *Was:* the goal's "the figure-eight traces its published shape-sphere curve;"; the deliverable "`fixtures/ground_truth/figure_eight/` (published shape-sphere curve)"; the acceptance clause "the figure-eight shape-sphere curve matches the published one (REQ-VAL-047)".

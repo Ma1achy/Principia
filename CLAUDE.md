@@ -13,6 +13,14 @@ Read this first; each rule points at its source.
 ## Papers and licences (`decisions.md` § R-643)
 - No publisher PDF is committed unless its licence allows redistribution, checked before commit (R-643). A file that
   may not be committed is held in `docs/incoming/_local/`, which is gitignored; nothing under it is ever committed.
+- A newly fetched paper is committed only if it is CC BY, CC BY-SA, CC0 or public domain; an arXiv paper under arXiv's
+  default licence goes to `docs/incoming/_local/` (the owner's refinement of R-643, 28 Oct 2026).
+
+## Replication targets (`decisions.md` § R-649, R-650)
+- A replication or verification target is a measurement, never a gate: it declares its tier, its outcome is PASS,
+  EXPLAINED DIVERGENCE or UNEXPLAINED, and nothing is tuned, loosened or special-cased to pass it. External targets
+  score in M9 or as a peek (`docs/verification/peek_log.md`); internal correctness tests and anchor smoke tests stay
+  continuous and blocking (`docs/design/principia_dd_replication.md` § 12).
 
 ## How work runs (`plan/WORKFLOW.md`)
 - One task, one branch (`task/<TASK-id>`), one PR titled `<TASK-id>: <title>`. A task starts only when everything in
@@ -66,17 +74,23 @@ Read this first; each rule points at its source.
   lists each `M` or `D` with its reason, and the code reviewer confirms that no assertion was weakened, except where a
   ruling changed the behaviour it tests. The implementer never edits qa's files (R-290).
 
-## Working with review (`decisions.md` § R-635)
+## Working with review (`decisions.md` § R-635, § R-651)
 - Codex, Gemini CLI and GitHub Copilot review PRs as advisory bots, never merge gates. Their findings are not optional
   reading. Their brief is `AGENTS.md` § "Code Review Rules"; `GEMINI.md` and `.github/copilot-instructions.md` are
   copies, checked by `xtask/tests/ai_review_rules.rs`.
-- Before a merge, check for the bots' reviews. Wait up to 15 minutes after the PR opens, or after a re-review you asked
-  for (`@codex review`, `@gemini-cli /review`, Copilot re-requested as a reviewer). If none arrives in that window, or
-  the bot errored or is out of quota, merge without it and note "no bot review" in the PR. Never wait longer.
+- Ask each bot for a fresh review (`@codex review`, `@gemini-cli /review`, Copilot re-requested as a reviewer)
+  (R-651): before the merge, on the final head, waiting for a review from each bot on the exact SHA being merged; after
+  every substantive push (new logic, physics or algebra, a fix responding to review findings, or a rebase or merge that
+  changes code; only a docs-only typo push that answers no finding needs none); and periodically on a long-running PR
+  (at least once a working day while it is open). Under limits: pre-merge, then post-push, then periodic.
+- A bot is unavailable when it hasn't reviewed the exact SHA within its limit, counted from the request (Codex 25
+  minutes, Gemini CLI 30, Copilot 15), errors, or refuses on quota or rate limit. It is noted on the PR ("no <bot>
+  review on <sha>: <reason>"), and the merge proceeds on the others; a bot never blocks a merge.
 - Handle every finding that arrived before the merge, with a reply on its thread, then resolve the thread
   (`gh api graphql`, `resolveReviewThread`): fixed (name the commit); not a defect (the traced reason: the real caller
   or input checked, or the doc or ruling that makes it correct); or not this PR's (name the queue entry or follow-up
-  task). None is left silent; none is resolved without a reply.
+  task). None is left silent; none is resolved without a reply. A PR with an unresolved bot thread does not merge
+  (R-651).
 - Trace a finding to a real caller or input before fixing it. Two bots agreeing is not verification. A finding that
   contradicts a ruling, the corpus or the physics is answered with the source, not "fixed" into a regression.
 - A P0 / CRITICAL claim (a physics or invariant break) goes to the physics reviewer for the call before merge, even if
