@@ -11,8 +11,10 @@
 //! **Exact, and the same on every host.** Each arctangent is summed here in integer arithmetic, never by a float `atan`:
 //! Euler's series `atan x = Σₙ (2²ⁿ(n!)²/(2n+1)!)·x^{2n+1}/(1+x²)^{n+1}`, at `x = k/8`, whose terms are positive and
 //! fall by `(2n+2)/(2n+3)·x²/(1+x²) ≤ 1/2` each, summed in 2⁻¹⁰⁰ units ([`atan_eighth`]) until a term truncates to 0.
-//! Each term is truncated once, so the sum is low by less than one unit per term, fewer than 100 units, far below
-//! the 2⁻⁶⁴ the table keeps, and no host's libm reaches the file.
+//! Each term is computed from its already truncated predecessor, so its error carries on, `eₙ₊₁ < eₙ/2 + 1`, under 2
+//! units. At most 100 terms and a dropped tail under 4 units leave the sum low by under about 204 units; the measured
+//! worst is 90.05 units (`k = 8`, 95 terms). Either is far below the 2⁻⁶⁴ the table keeps, and no host's libm reaches
+//! the file.
 
 use std::fmt::Write as _;
 use std::path::PathBuf;
