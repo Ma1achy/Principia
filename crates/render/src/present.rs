@@ -379,3 +379,116 @@ pub fn dbg_sentinel(x: f32, frag_xy: [f64; 2]) -> Rgb {
         ramp_viridis(dbg_literal(f64::from(x)))
     }
 }
+
+// ── The drift views (render contract Part 5, "Presentation layer"; R-379, R-381; REQ-TOOL-149; TASK-M3-05) ──────────
+
+/// The drift views' `symlog` compaction, the `COMPACTION` uniform's default (R-381): `drift.wgsl`'s `DBG_DRIFT_SYMLOG`.
+pub const DRIFT_SYMLOG: u32 = 0;
+
+/// The drift views' `lin` compaction override: `drift.wgsl`'s `DBG_DRIFT_LIN`.
+pub const DRIFT_LIN: u32 = 1;
+
+/// The drift views' `log` compaction override: `drift.wgsl`'s `DBG_DRIFT_LOG`.
+pub const DRIFT_LOG: u32 = 2;
+
+/// The drift views' `diverging(c−, c0, c+)` colours, 8-bit sRGB (render contract Part 5; R-72): Moreland's cool-warm
+/// ends and neutral, `#3B4CC0`, `#DDDDDD` and `#B40426`, the colours `drift.wgsl`'s `dbg_drift_ramp` decodes.
+pub const DRIFT_DIVERGING_SRGB8: [[u8; 3]; 3] =
+    [[0x3b, 0x4c, 0xc0], [0xdd, 0xdd, 0xdd], [0xb4, 0x04, 0x26]];
+
+/// The drift views' `diverging` ramp, its colours [`DRIFT_DIVERGING_SRGB8`] decoded to linear.
+pub fn drift_diverging() -> crate::colour::field_ramp::Ramp {
+    let [lo, mid, hi] = DRIFT_DIVERGING_SRGB8.map(srgb8);
+    crate::colour::field_ramp::Ramp::Diverging { lo, mid, hi }
+}
+
+/// `dbg_drift_ramp(t, viridis)`: the drift views' `diverging` ramp at `t`, or viridis under the palette swap.
+pub fn drift_ramp(t: f64, viridis: bool) -> Rgb {
+    if viridis {
+        ramp_viridis(t)
+    } else {
+        drift_diverging().colour(t)
+    }
+}
+
+/// `dbg_drift_place(x, compaction, lin_r, eps)`: the drift's place on its ramp, `x` clamped to ±1e30. `symlog`, the
+/// default and any value but [`DRIFT_LIN`] and [`DRIFT_LOG`]: `dbg_literal(sign(x)·ln(1 + |x|/eps))`; `lin`:
+/// `range_norm(x, −lin_r, lin_r, false, ·)`; `log`: `dbg_log`'s place of `|x|`.
+pub fn dbg_drift_place(x: f64, compaction: u32, lin_r: f64, eps: f64) -> f64 {
+    let c = x.clamp(-1e30, 1e30);
+    let s = (1.0 + c.abs() / eps).ln();
+    match compaction {
+        DRIFT_LIN => range_norm(c, -lin_r, lin_r, false, [0.0, 0.0]),
+        DRIFT_LOG => 1.0 - 1.0 / (1.0 + s),
+        _ => dbg_literal(if c >= 0.0 { s } else { -s }),
+    }
+}
+
+/// `dbg_drift(x, compaction, viridis, lin_r, eps, frag_xy)`: the hatch for the absence NaN's exact bits; else the
+/// drift's place on `diverging`, on viridis under the palette swap, and on viridis always under `log`.
+pub fn dbg_drift(
+    x: f32,
+    compaction: u32,
+    viridis: bool,
+    lin_r: f64,
+    eps: f64,
+    frag_xy: [f64; 2],
+) -> Rgb {
+    if x.to_bits() == ABSENT_NAN_BITS {
+        return debug_invalid(frag_xy);
+    }
+    let t = dbg_drift_place(f64::from(x), compaction, lin_r, eps);
+    drift_ramp(t, viridis || compaction == DRIFT_LOG)
+}
+
+/// The neutral band's half-width as a fraction of the drift's reference: `k·2⁻²³`, `k = 128`, so 2⁻¹⁶ (render contract
+/// Part 5, "The neutral band"; R-652): `drift.wgsl`'s `DBG_DRIFT_NEUTRAL_BAND`.
+pub const DRIFT_NEUTRAL_BAND: f64 = 1.0 / 65_536.0;
+
+/// `dbg_drift_shown(x, compaction, reference)`: under `symlog`, 0 where `|x| ≤ DRIFT_NEUTRAL_BAND·|reference|`, else `x`;
+/// `lin`, `log` and the absence NaN pass `x` through.
+pub fn dbg_drift_shown(x: f32, compaction: u32, reference: f32) -> f32 {
+    if x.to_bits() == ABSENT_NAN_BITS || compaction == DRIFT_LIN || compaction == DRIFT_LOG {
+        return x;
+    }
+    if x.abs() <= (DRIFT_NEUTRAL_BAND as f32) * reference.abs() {
+        0.0
+    } else {
+        x
+    }
+}
+
+/// The suspect styling's period, in pixels: a line where the pixel's coordinate is a multiple of it.
+pub const SUSPECT_PERIOD: i64 = 4;
+
+/// The ramp output's relative luminance (Rec. 709's weights, linear RGB) at and above which the suspect styling's ink
+/// is black, and below which it is white.
+pub const SUSPECT_INK_SPLIT: f64 = 0.18;
+
+/// Whether the suspect styling draws a line at the pixel `frag_xy`: a row where `SUSPECT_ENERGY` (`energy`) holds and
+/// `⌊y⌋` is a multiple of [`SUSPECT_PERIOD`], a column where `SUSPECT_LZ` (`lz`) holds and `⌊x⌋` is one.
+pub fn suspect_line(energy: bool, lz: bool, frag_xy: [f64; 2]) -> bool {
+    let [x, y] = frag_xy.map(|c| (c.floor() as i64).rem_euclid(SUSPECT_PERIOD));
+    (energy && y == 0) || (lz && x == 0)
+}
+
+/// The suspect styling's ink over the ramp output `rgb`: black where its relative luminance is at least
+/// [`SUSPECT_INK_SPLIT`], white below.
+pub fn suspect_ink(rgb: Rgb) -> Rgb {
+    let y = 0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2];
+    if y >= SUSPECT_INK_SPLIT {
+        [0.0; 3]
+    } else {
+        [1.0; 3]
+    }
+}
+
+/// `dbg_suspect(rgb, x, energy, lz, frag_xy)`: the suspect styling on a drift view's ramp output `rgb`, never on the
+/// hatch (`x` the absence NaN): [`suspect_ink`] where [`suspect_line`] holds, `rgb` elsewhere.
+pub fn dbg_suspect(rgb: Rgb, x: f32, energy: bool, lz: bool, frag_xy: [f64; 2]) -> Rgb {
+    if x.to_bits() != ABSENT_NAN_BITS && suspect_line(energy, lz, frag_xy) {
+        suspect_ink(rgb)
+    } else {
+        rgb
+    }
+}

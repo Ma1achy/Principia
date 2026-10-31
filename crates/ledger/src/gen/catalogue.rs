@@ -20,10 +20,12 @@
 //! **The colouring.** A numeric field takes the two-line template ([`numeric`](super::numeric); render_gui_spec §10.1,
 //! RQ-231, TASK-M1-09), its `RANGE_AUTO` and `u_range` uniforms declared in the view's header. `state` takes the
 //! six-colour `dbg_cat` palette (R-115), and `detail`, a union, is coloured per state, its palette segment and legend
-//! keyed by `state` ([`detail_segments`]; TASK-M1-10). The rest is a
-//! placeholder (TASK-M1-12 owns it): a categorical field `dbg_cat` with its `n`, a flag `dbg_flag`, and
-//! the drift fields, which keep R-381's `symlog` default until TASK-M3-05, the literal placement of `dbg_sentinel`,
-//! which needs no range (render contract Part 5). A vector field's view shows its norm, `‖·‖`, the reduction §3.8 names
+//! keyed by `state` ([`detail_segments`]; TASK-M1-10). The drift fields, those with a ledger `floor` (R-263),
+//! take the drift view ([`drift_wgsl`]; render contract Part 5; R-379, R-381; TASK-M3-05): `dbg_drift` by the
+//! compaction its uniform picks, `symlog` by default, and `dbg_suspect`, the drift suspect predicates' styling, so
+//! each also reads the stored latches and the predicates ([`DRIFT_LATCHES`], [`DRIFT_PREDICATES`]), and its test
+//! reads them back. The rest is a placeholder (TASK-M1-12 owns it): a categorical field `dbg_cat` with its `n`, and a
+//! flag `dbg_flag`. A vector field's view shows its norm, `‖·‖`, the reduction §3.8 names
 //! (applied per R-369). A categorical field's stored sentinel, `dmin_pair`'s 3, shows as its literal value on the ramp
 //! through `dbg_sentinel`, never as a class (R-136). `last_symbol`, which has no in-band "none" code, is gated on
 //! the word's sidecar length ([`WORD_GATED`]; payload §2): the empty word and a truncated word draw the hatch. The
@@ -200,6 +202,8 @@ pub fn read(words: &[Word], entries: &[Entry], e: &Entry) -> Option<Read> {
 pub struct View {
     pub field: &'static str,
     pub read: Read,
+    /// The field's ledger `floor` (R-263): a drift field's, whose view is a drift view ([`drift_wgsl`]).
+    pub floor: Option<&'static str>,
     pub path: PathBuf,
     pub wgsl: String,
 }
@@ -222,6 +226,14 @@ impl View {
             out.push(Accessor::Member("word".to_owned()));
             out.extend(WORD_GATE.map(|f| Accessor::Function(f.to_owned())));
         }
+        if self.floor.is_some() {
+            out.extend(DRIFT_LATCHES.map(|m| Accessor::Member(m.to_owned())));
+            out.extend(DRIFT_PREDICATES.map(|f| Accessor::Function(f.to_owned())));
+            let reference = drift_reference(self.field);
+            if !DRIFT_LATCHES.contains(&reference) {
+                out.push(Accessor::Member(reference.to_owned()));
+            }
+        }
         out
     }
 }
@@ -243,6 +255,7 @@ pub fn views(words: &[Word], entries: &[Entry]) -> Vec<View> {
             let read = read(words, entries, e)?;
             Some(View {
                 field: e.name,
+                floor: e.floor,
                 path: PathBuf::from(format!("{DIR}/{}.wgsl", e.name)),
                 wgsl: view_wgsl(words, entries, e, &read),
                 read,
@@ -269,6 +282,11 @@ pub fn refused(words: &[Word], entries: &[Entry]) -> Vec<String> {
             Some(r) if is_vector(e) && dircos(&r).is_none() => Some(format!(
                 "vector field `{}` has no direction-cosines view: the presentation layer renders the direction \
                  cosines of a `vec3<f32>` or a `{VEC2X3}` only (gui_state_contract §4; render contract Part 5)",
+                e.name
+            )),
+            Some(_) if e.floor.is_some() && drift_range(e.name).is_none() => Some(format!(
+                "drift field `{}` has no `lin` range: its drift view's `LIN_R` default is a constants-register \
+                 entry (render contract Part 5; R-381, REQ-TOOL-150)",
                 e.name
             )),
             Some(_) => None,
@@ -449,6 +467,9 @@ fn view_wgsl(words: &[Word], entries: &[Entry], e: &Entry, r: &Read) -> String {
     if let Some(wgsl) = union_wgsl(words, entries, e, r) {
         return wgsl;
     }
+    if let (Some(floor), Some(range)) = (e.floor, drift_range(e.name)) {
+        return drift_wgsl(e, r, floor, range);
+    }
     let numeric = match r {
         Read::Member {
             wgsl: "f32" | "u32",
@@ -501,6 +522,83 @@ pub fn numeric_view(
         n = n.with_range_auto(on);
     }
     Some(numeric_wgsl(e, &r, &n))
+}
+
+// ── The drift views (render contract Part 5, "Presentation layer"; R-379, R-381; REQ-TOOL-149; TASK-M3-05) ──────────
+
+/// The read-side members a drift view reads beside its field: the stored latches the drift suspect predicates read
+/// (payload §5; dd_integrator §3.5).
+pub const DRIFT_LATCHES: [&str; 3] = ["dE_max", "E_0", "dLz_max"];
+
+/// The drift suspect predicates a drift view reads, the generated read side's (`read::suspect_wgsl`).
+pub const DRIFT_PREDICATES: [&str; 2] = ["suspect_energy", "suspect_lz"];
+
+/// The default `R` of the drift view of `field`'s `lin` override, from the constants register (REQ-TOOL-150), or
+/// `None` for a field with no drift view.
+pub fn drift_range(field: &str) -> Option<f64> {
+    use crate::constants::{DRIFT_LIN_R_E, DRIFT_LIN_R_LZ};
+    match field {
+        "energy_drift" => Some(DRIFT_LIN_R_E.number()),
+        "Lz_drift" => Some(DRIFT_LIN_R_LZ.number()),
+        _ => None,
+    }
+}
+
+/// The reference of the drift `field`, the stored member its neutral band is relative to (render contract Part 5):
+/// `E_0` for `energy_drift`, `Lz_0` for `Lz_drift`.
+pub fn drift_reference(field: &str) -> &'static str {
+    match field {
+        "Lz_drift" => "Lz_0",
+        _ => "E_0",
+    }
+}
+
+/// The uniform a drift view reads the sim-key floor `floor` from, `eps_E` as `EPS_E`, `eps_L` as `EPS_L`.
+fn floor_uniform(floor: &str) -> String {
+    floor.to_uppercase()
+}
+
+/// The drift view of `e`, read as `r`, whose floor is the sim-key parameter `floor` and whose `lin` range is `range`
+/// (render contract Part 5; R-381): its uniforms, the compaction (`symlog` 0, the default; `lin` 1; `log` 2), the
+/// palette swap (0 the `diverging` ramp, 1 viridis), the `lin` range and the floors, `ε_E` always, for the energy-suspect
+/// predicate; then `dbg_drift` of the drift and `dbg_suspect` of the predicates over the stored latches.
+pub fn drift_wgsl(e: &Entry, r: &Read, floor: &str, range: f64) -> String {
+    use crate::constants::{EPS_E_DEFAULT, EPS_L_DEFAULT};
+    let value = r.wgsl(e.name);
+    let eps = floor_uniform(floor);
+    let mut uniforms = format!(
+        "// @uniform COMPACTION: u32 = 0 [0, 2]\n// @uniform PALETTE: u32 = 0 [0, 1]\n// @uniform LIN_R: f32 = {}\n\
+         // @uniform EPS_E: f32 = {}\n",
+        float(range),
+        float(EPS_E_DEFAULT.number())
+    );
+    if eps != "EPS_E" {
+        let default = match floor {
+            "eps_L" => EPS_L_DEFAULT.number(),
+            _ => EPS_E_DEFAULT.number(),
+        };
+        let _ = writeln!(uniforms, "// @uniform {eps}: f32 = {}", float(default));
+    }
+    let reference = drift_reference(e.name);
+    let colouring = format!(
+        "Its colouring is the drift view (render contract Part 5; R-379, R-381): the drift on its ramp by its \
+         compaction, `COMPACTION` 0 `symlog`, the default, at `dbg_sentinel`'s place of `sign(x)·ln(1 + |x|/{floor})`, \
+         1 `lin`, `range_norm` over the fixed, clamped `[−LIN_R, LIN_R]`, and 2 `log`, which shows `|drift|`, the \
+         magnitude, at `dbg_log`'s place, unsigned; `symlog` and `lin` on the `diverging(c−, c0, c+)` ramp, or viridis \
+         under the palette swap, `PALETTE` 1, and `log` on viridis always; the absence NaN hatched; under `symlog` a \
+         drift within the neutral band of `{reference}` is drawn as 0 (`dbg_drift_shown`, R-652). Over it the suspect \
+         styling of the drift suspect predicates read from the stored latches: rows for `SUSPECT_ENERGY`, columns for \
+         `SUSPECT_LZ`. `LIN_R`'s default is the constants register's (REQ-TOOL-150)."
+    );
+    format!(
+        "{}{uniforms}fn colour(ctx: Ctx) -> vec3<f32> {{\n    let x = {value};\n    \
+         let shown = dbg_drift_shown(x, uniforms.COMPACTION, ctx.sample.{reference});\n    \
+         let rgb = dbg_drift(shown, uniforms.COMPACTION, uniforms.PALETTE == 1u, uniforms.LIN_R, uniforms.{eps}, ctx.frag_xy);\n    \
+         let energy = suspect_energy(ctx.sample.dE_max, ctx.sample.E_0, uniforms.EPS_E);\n    \
+         let lz = suspect_lz(ctx.sample.dLz_max);\n    \
+         return dbg_suspect(rgb, x, energy, lz, ctx.frag_xy);\n}}\n",
+        header(e, r, &colouring)
+    )
 }
 
 // ── The `detail` union's view, keyed by `state` (REQ-COL-004, REQ-TOOL-022) ───────────────────────────────────────
@@ -991,12 +1089,17 @@ fn check(
                 "expected.to_bits()".to_owned(),
                 message(NOT_DERIVED),
             ];
+            let mut body = format!(
+                "    let read = read(p);\n{locals}    let expected: f32 = {expr};\n{}",
+                call(4, "", "expect", &args)
+            );
+            if v.floor.is_some() {
+                body.push('\n');
+                body.push_str(&drift_check(n));
+            }
             (
                 "is the value its derived accessor gives from the unaltered probe",
-                format!(
-                    "    let read = read(p);\n{locals}    let expected: f32 = {expr};\n{}",
-                    call(4, "", "expect", &args)
-                ),
+                body,
             )
         }
         (Read::Ic, Some(p)) => {
@@ -1051,6 +1154,35 @@ fn check(
     };
     format!(
         "\n/// `{n}`, read through the Rust twin of its view's accessor, {doc}.\nfn check_{lower}(p: &Probe) {{\n{body}\n}}\n"
+    )
+}
+
+/// The drift view's predicates, read through their Rust twins over the read-side latches, are the predicates over the
+/// stored latches (`pb_dE_max`, `pb_dLz_max` of `packed_b`, and `E_0`), at the default `ε_E` (REQ-TOOL-017: the view
+/// and its test reference the same members and functions).
+fn drift_check(n: &str) -> String {
+    let eps = float(crate::constants::EPS_E_DEFAULT.number());
+    let energy = [
+        format!("suspect_energy(read.dE_max, read.E_0, {eps}_f32)"),
+        format!("suspect_energy(pb_dE_max(s.packed_b), s.E_0, {eps}_f32)"),
+        format!("\"`{n}`'s energy-suspect predicate {NOT_DERIVED}\""),
+    ];
+    let lz = [
+        "suspect_lz(read.dLz_max)".to_owned(),
+        "suspect_lz(pb_dLz_max(s.packed_b))".to_owned(),
+        format!("\"`{n}`'s L_z-suspect predicate {NOT_DERIVED}\""),
+    ];
+    let reference = drift_reference(n);
+    let band = [
+        format!("read.{reference}.to_bits()"),
+        format!("s.{reference}.to_bits()"),
+        format!("\"`{n}`'s neutral band's reference {NOT_DERIVED}\""),
+    ];
+    format!(
+        "{}\n{}\n{}",
+        call(4, "", "expect", &energy),
+        call(4, "", "expect", &lz),
+        call(4, "", "expect", &band)
     )
 }
 

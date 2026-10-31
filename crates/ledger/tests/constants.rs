@@ -639,7 +639,11 @@ fn check_list_by_gate(register: &[ConstantBuilder]) {
             "step_reversal_edge_f64",
             "step_reversal_edge_f32",
             "step_reversal_edge_max",
-            "nsub_table_max"
+            "nsub_table_max",
+            "suspect_energy_threshold",
+            "suspect_lz_threshold",
+            "drift_lin_r_E",
+            "drift_lin_r_Lz"
         ],
         "the entries provisional until M3"
     );

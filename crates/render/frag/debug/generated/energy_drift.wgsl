@@ -2,8 +2,23 @@
 // The debug view of `energy_drift` (render contract Part 6; debug_tooling_plan §B–E): derived from `r`, `p`, `m0`,
 // `m1`, `m2`, `E_0`, f32, scale diverging, range (−∞, ∞). A colour occupant, `present(unpack(ctx))` (gui_state_contract
 // §3), it reads the field through `SimState.energy_drift`; its test, `catalogue_view_energy_drift` in
-// `crates/kernel/tests/catalogue_views/generated.rs`, reads it through their Rust twins. The colouring is a placeholder
-// (`ledger::gen::catalogue`).
+// `crates/kernel/tests/catalogue_views/generated.rs`, reads it through their Rust twins. Its colouring is the drift
+// view (render contract Part 5; R-379, R-381): the drift on its ramp by its compaction, `COMPACTION` 0 `symlog`, the
+// default, at `dbg_sentinel`'s place of `sign(x)·ln(1 + |x|/eps_E)`, 1 `lin`, `range_norm` over the fixed, clamped
+// `[−LIN_R, LIN_R]`, and 2 `log`, which shows `|drift|`, the magnitude, at `dbg_log`'s place, unsigned; `symlog` and
+// `lin` on the `diverging(c−, c0, c+)` ramp, or viridis under the palette swap, `PALETTE` 1, and `log` on viridis
+// always; the absence NaN hatched; under `symlog` a drift within the neutral band of `E_0` is drawn as 0
+// (`dbg_drift_shown`, R-652). Over it the suspect styling of the drift suspect predicates read from the stored latches:
+// rows for `SUSPECT_ENERGY`, columns for `SUSPECT_LZ`. `LIN_R`'s default is the constants register's (REQ-TOOL-150).
+// @uniform COMPACTION: u32 = 0 [0, 2]
+// @uniform PALETTE: u32 = 0 [0, 1]
+// @uniform LIN_R: f32 = 0.0625
+// @uniform EPS_E: f32 = 1e-6
 fn colour(ctx: Ctx) -> vec3<f32> {
-    return dbg_sentinel(ctx.sample.energy_drift, ctx.frag_xy);
+    let x = ctx.sample.energy_drift;
+    let shown = dbg_drift_shown(x, uniforms.COMPACTION, ctx.sample.E_0);
+    let rgb = dbg_drift(shown, uniforms.COMPACTION, uniforms.PALETTE == 1u, uniforms.LIN_R, uniforms.EPS_E, ctx.frag_xy);
+    let energy = suspect_energy(ctx.sample.dE_max, ctx.sample.E_0, uniforms.EPS_E);
+    let lz = suspect_lz(ctx.sample.dLz_max);
+    return dbg_suspect(rgb, x, energy, lz, ctx.frag_xy);
 }

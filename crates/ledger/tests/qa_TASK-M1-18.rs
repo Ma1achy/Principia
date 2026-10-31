@@ -283,7 +283,7 @@ enum Stand {
 /// `literature_import_tol`, proposed by TASK-M2-20 and provisional until the M2 gate, citing REQ-VAL-120 (R-592); and
 /// step 0's skip tolerance `tau_i` (`τ_I`), proposed by TASK-M2-47 and provisional until the M2 gate, citing
 /// REQ-ENC-035 (R-547, R-71).
-const TABLE: [(&str, Stand); 33] = [
+const TABLE: [(&str, Stand); 37] = [
     ("log_floor_d_min", Stand::Confirmed),
     ("log_floor_dE_max", Stand::Confirmed),
     ("log_floor_dLz_max", Stand::Confirmed),
@@ -319,6 +319,14 @@ const TABLE: [(&str, Stand); 33] = [
     ("step_reversal_edge_f32", Stand::Until("M3", "REQ-VAL-191")),
     ("step_reversal_edge_max", Stand::Until("M3", "REQ-VAL-191")),
     ("nsub_table_max", Stand::Until("M3", "REQ-INT-094")),
+    // The invariant monitor's and the drift views' proposals (TASK-M3-05; R-71, R-381, R-382).
+    (
+        "suspect_energy_threshold",
+        Stand::Until("M3", "REQ-INT-085"),
+    ),
+    ("suspect_lz_threshold", Stand::Until("M3", "REQ-INT-085")),
+    ("drift_lin_r_E", Stand::Until("M3", "REQ-TOOL-150")),
+    ("drift_lin_r_Lz", Stand::Until("M3", "REQ-TOOL-150")),
     ("tau_i", Stand::Until("M2", "REQ-ENC-035")),
 ];
 

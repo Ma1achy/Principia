@@ -213,6 +213,8 @@ canonical_spec §1 item 6 and §11: "validate physics numerically", natively, be
 - The full `SimState` accumulator fill on the CPU.
 - The validation orbits and ground truth. The independent convergence reference. The Inspector's RK45
   reference (R-33).
+- R-652 (closing RQ-625): the four drift goldens are re-baselined by TASK-M3-05; the M3 gate confirms them, with
+  REQ-TOOL-150's `lin` range.
 - The physics measurements the corpus leaves to the build:
   - re-validating escape precision and recall against check 2's independent ground truth, with the legacy
     t = 30 set as a comparison (R-95);
@@ -226,11 +228,11 @@ canonical_spec §1 item 6 and §11: "validate physics numerically", natively, be
 - The CPU-side parity suite (`computeIC`).
 
 <!-- gate:M3 -->
-**Exit gate — 334 requirements** (and every earlier gate still green):
+**Exit gate — 335 requirements** (and every earlier gate still green):
 
 - ENC (1): REQ-ENC-033
 - CHART (4): REQ-CHART-059, REQ-CHART-072, REQ-CHART-085…086
-- INT (83): REQ-INT-004…032, REQ-INT-034…056, REQ-INT-073…074, REQ-INT-076…082, REQ-INT-084…085, REQ-INT-087…092, REQ-INT-094…095, REQ-INT-097…106, REQ-INT-108…109
+- INT (84): REQ-INT-004…032, REQ-INT-034…056, REQ-INT-073…074, REQ-INT-076…082, REQ-INT-084…085, REQ-INT-087…092, REQ-INT-094…095, REQ-INT-097…106, REQ-INT-108…110
 - EVT (25): REQ-EVT-001…020, REQ-EVT-023…026, REQ-EVT-032
 - PAY (33): REQ-PAY-036…059, REQ-PAY-070, REQ-PAY-073, REQ-PAY-083, REQ-PAY-086, REQ-PAY-098, REQ-PAY-110…113
 - GEN (1): REQ-GEN-016

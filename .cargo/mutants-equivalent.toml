@@ -330,3 +330,15 @@ justification = "sign is Reading::Vertical's, which reading_of only ever sets to
 [[equivalent]]
 mutant = "crates/gui/src/explore/compass.rs:966:53: replace * with / in Drag::moved"
 justification = "Z0_HALF_RANGE is the constant 1.0, and dividing by 1.0 equals multiplying by it exactly; a change to the constant makes the rate tests in mock_compass_cube and mock_compass_slice_follows_pointer tell them apart"
+
+[[equivalent]]
+mutant = "crates/validation/src/projection_parity.rs:247:26: replace += with -= in judge"
+justification = "repeat is two runs of one pure function on one input, so u32::from(repeat) is 0 on every reachable call, and x - 0 equals x + 0"
+
+[[equivalent]]
+mutant = "crates/validation/src/projection_parity.rs:247:26: replace += with *= in judge"
+justification = "repeat is two runs of one pure function on one input, so u32::from(repeat) is 0 and repeat_differences stays 0 either way"
+
+[[equivalent]]
+mutant = "crates/ledger/src/gen/catalogue.rs:577:13: delete match arm \"eps_L\" in drift_wgsl"
+justification = "EPS_L_DEFAULT and EPS_E_DEFAULT are both 1e-6 in the register, so the wildcard arm gives the same default"

@@ -612,6 +612,9 @@ fn view_context() -> String {
         format!("{lib}/prelude.wgsl"),
         format!("{lib}/colour_space.wgsl"),
         format!("{lib}/present.wgsl"),
+        format!("{lib}/compaction.wgsl"),
+        format!("{lib}/ramp.wgsl"),
+        format!("{lib}/drift.wgsl"),
         wgsl::PATH.to_owned(),
         read::WGSL_PATH.to_owned(),
         "crates/render/shaders/wgsl/stain/context.wgsl".to_owned(),
@@ -637,15 +640,23 @@ fn named_struct(
     }
 }
 
-/// The functions the shared library defines, the prelude, the colour-space maps and the presentation layer
-/// (render_gui_spec §10.1; render contract Part 5): what a view calls to colour, not to read its field.
+/// The functions the shared library defines, the prelude, the colour-space maps, the presentation layer, the field
+/// ramp's compactions and ramps and the drift views' presentation (render_gui_spec §10.1; render contract Part 5): what
+/// a view calls to colour, not to read its field.
 fn library_functions() -> BTreeSet<String> {
     let lib = "crates/render/shaders/wgsl/lib";
-    let source = ["prelude", "colour_space", "present"]
-        .iter()
-        .map(|f| checked_in(&format!("{lib}/{f}.wgsl")))
-        .collect::<Vec<_>>()
-        .join("\n");
+    let source = [
+        "prelude",
+        "colour_space",
+        "present",
+        "compaction",
+        "ramp",
+        "drift",
+    ]
+    .iter()
+    .map(|f| checked_in(&format!("{lib}/{f}.wgsl")))
+    .collect::<Vec<_>>()
+    .join("\n");
     let module =
         naga::front::wgsl::parse_str(&source).unwrap_or_else(|e| panic!("the library: {e}"));
     module
@@ -859,4 +870,50 @@ negative_control!(
             .collect::<Vec<_>>(),
         &listing()
     )
+);
+
+#[test]
+fn drift_field_without_a_lin_range_is_refused() {
+    check_refused(
+        &with_probe_bit(|e| e.floor("eps_E")),
+        "probe_bit",
+        "has no `lin` range",
+    );
+}
+
+negative_control!(
+    drift_field_without_a_lin_range_is_refused,
+    "a field with no floor generates",
+    expected = "generation was not refused",
+    check_refused(&with_probe_bit(|e| e), "probe_bit", "has no `lin` range")
+);
+
+/// Checks the generated read side, Rust and WGSL, against `read`'s reading of each checked-in file.
+fn check_read_side_checked_in(read: fn(&std::path::Path) -> String) {
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let generated = gen::generate(&ledger::layout(), gen::EMITTERS).expect("the layout generates");
+    let mut seen = 0;
+    for file in generated {
+        let name = file.path.to_string_lossy().into_owned();
+        if name.ends_with("read_side.rs") || name.ends_with("read_side.wgsl") {
+            seen += 1;
+            assert!(
+                read(&root.join(&file.path)) == file.contents,
+                "`{name}` isn't what the generator writes"
+            );
+        }
+    }
+    assert_eq!(seen, 2, "the read side's two files");
+}
+
+#[test]
+fn generated_read_side_is_the_checked_in_read_side() {
+    check_read_side_checked_in(|p| std::fs::read_to_string(p).expect("the checked-in file"));
+}
+
+negative_control!(
+    generated_read_side_is_the_checked_in_read_side,
+    "a checked-in file that differs",
+    expected = "isn't what the generator writes",
+    check_read_side_checked_in(|_| String::new())
 );

@@ -294,6 +294,8 @@ fn dbg_ternary(m: vec3f, frag_xy: vec2f) -> vec3f        // the three masses →
 fn dbg_dircos3(v: vec3f, frag_xy: vec2f) -> vec3f        // a k = 3 vector's direction cosines, ½(v̂ + 1)
 fn dbg_dircos6(v: array<vec2f, 3>, frag_xy: vec2f) -> vec3f // a k = 6 vector's direction cosines (R-72; REQ-TOOL-157)
 fn dbg_sentinel(x: f32, frag_xy: vec2f) -> vec3f // absence-NaN (exact bitcast test) → debug_invalid(frag_xy), the hatch (R-136); a stored sentinel such as the word length's 127 shows as its literal value on the ramp (R-79); suspect styling: an extension point, applied on this output by the drift views from the drift suspect predicates (TASK-M3-05, R-379)
+fn dbg_drift(x: f32, compaction: u32, viridis: bool, lin_r: f32, eps: f32, frag_xy: vec2f) -> vec3f // a drift view's compacted drift on its ramp (TASK-M3-05; R-381)
+fn dbg_suspect(rgb: vec3f, x: f32, energy: bool, lz: bool, frag_xy: vec2f) -> vec3f // the suspect styling on a drift view's ramp output (TASK-M3-05; R-379)
 ```
 
 **The renderings (R-72; REQ-TOOL-122; TASK-M1-03).** The helpers live in `crates/render/shaders/wgsl/lib/present.wgsl`
@@ -367,6 +369,65 @@ with dd_colouring §3.1's sRGB transfer.
   `dbg_sentinel`'s, never the diverging one, since colour_composition §1.2 sends positive fields to sequential; the view
   states that it shows `|drift|`. The `diverging` ramp carries only the signed compactions, `symlog` and `lin`. The
   styling applies on that ramp's output, and TASK-M3-05's definition gives the three colours (R-72; REQ-TOOL-149).
+- **The drift views and the suspect styling (TASK-M3-05's definition, R-72; R-379, R-381; REQ-TOOL-149; the physics
+  reviewer approves):** the energy-drift and L_z-drift views (the generated `energy_drift` and `Lz_drift` views and
+  the derived `energy_drift` view) colour the current drift `x`, `energy_drift` or `Lz_drift`, in two steps, both in
+  `crates/render/shaders/wgsl/lib/drift.wgsl`, which follows the compactions and ramps at assembly.
+  - **The value and its place, `dbg_drift(x, compaction, viridis, R, ε, frag_xy)`.** The value each view passes on
+    is the preset's compacted value, chosen by the view's `COMPACTION` uniform: 0 `symlog`, the default, 1 `lin`, 2
+    `log` (R-381). The absence NaN, by its exact bits, draws `debug_invalid(frag_xy)` under every compaction; any other
+    value is clamped to ±1e30, as `dbg_literal` clamps it, and placed: `symlog` at `t = dbg_literal(s)`, `s =
+    sign(x)·ln(1 + |x|/ε)` the compacted value, so `t = 0.5 + 0.5·s/(1 + |s|)`, 0 at the middle; `lin` at `t =
+    range_norm(x, −R, R, false, ·)`, clamped; `log` at `t = 1 − 1/(1 + ln(1 + |x|/ε))`, `dbg_log`'s place of `|x|`.
+    `ε` is the field's floor, the sim key's `ε_E` for `energy_drift` and `ε_L` for `Lz_drift` (10⁻⁶ by default,
+    integrator contract Part 3), each a view uniform, `EPS_E` and `EPS_L`. `R` is the view's `LIN_R` uniform, its
+    default the constants register's `drift_lin_r_E` or `drift_lin_r_Lz` (REQ-TOOL-150). `ln(1 + a/ε)` is
+    `log1p_ratio`'s, which forms no overflowing quotient.
+  - **The neutral band (R-652; the owner's ruling (d) of 31 Oct 2026; REQ-TOOL-149), `dbg_drift_shown(x, compaction,
+    reference)`, in `drift.wgsl`.** The current drifts are computed in the fragment, `H(r, p) − E_0` and `L_z(r, p) −
+    Lz_0` (dd_generation_root §3.8; payload §5), so a fresh sample's drift is rounding, not physics, and differs by
+    backend. Under `symlog` a drift with `|x| ≤ k·2⁻²³·|reference|`, `reference` `E_0` or `Lz_0`, `k = 128`, is drawn
+    as 0, at `c0` exactly (or viridis' middle under the palette swap); any other `x` keeps its own place, so a drift
+    past the band is unchanged. `lin` and `log` have no band, and the absence NaN passes through first. The value
+    passed to `dbg_suspect` stays `x`, and the predicates read the latches, so a band never hides a lit predicate.
+    **Why `k = 128`:** in units of `2⁻²³`, the relative size of one ULP at most, the difference of a fragment's value
+    from the stored reference on a fresh sample is bounded by summing, to first order, each operation's error in
+    `H = Σ dot(pᵢ, pᵢ)/(2mᵢ) − Σ mᵢmⱼ/√dot(rᵢⱼ, rᵢⱼ)`. In the fragment, under WGSL's accuracy (`+ − ×` ½ ULP, `/` 2.5
+    ULP, `sqrt` 4.5 ULP), with any reassociation of the six-term sum (five additions, each ½ ULP of a partial sum at most
+    `K + |V|`): a kinetic term 3.5, so `K` carries 6; a potential term 0.5 + (2 of the dot, halved by the root, + 4.5) +
+    2.5 = 8.5, so `|V|` carries 11. In a correctly rounded CPU reference, `K` 3 and `|V|` 4. So
+    `|x| ≤ 2⁻²³·(9K + 15|V|)`, `k_E = (9K + 15|V|)/|E_0|`, and for a bound state `|V| = K + |E_0|`, `k_E = 24·K/|E_0| + 15`.
+    For `L_z`, six products and five additions in the fragment, 3 of `S = Σ(|xᵢp_{y,i}| + |yᵢp_{x,i}|)`, and 2 in the
+    reference: `k_L = 5·S/|Lz_0|`. `k = 128` holds the bound for `K/|E_0|` up to 4.7 on a bound state and `S/|Lz_0|` up
+    to 25.6. The golden showcase's fresh sample has `k_E` 63.3 to 64.5 and `k_L` 5.08; Metal's observed differences, +5
+    ULP of `E_0` and −1 ULP of `Lz_0`, are 2.6 and 0.7 in these units, inside the bound and not what sets it. Over 20,000
+    draws of the default decoder's latent cube the bound is met on all of them for `k_E` at full range and on 97% near
+    rest (momentum controls within ±0.4), and for `k_L` on about 97%; the band reads 2⁻¹⁶ of the reference, far under
+    the energy-suspect threshold's 2⁻⁸.
+    **At or near a zero reference** the band narrows to nothing, and is empty at `reference = 0`, where only an exact 0
+    is neutral. The rounding there is still relative to `K + |V|` or `S`, so a fresh sample with `E_0` or `Lz_0` near a
+    cancellation (a near-parabolic start, or a start with `L_z ≈ 0` and moving bodies, the figure-eight among them) can
+    show a rounding-level drift off `c0`. It errs toward showing: the band never hides more than `k·2⁻²³·|reference|`.
+  - **The ramp.** `symlog` and `lin` draw on `diverging(c−, c0, c+)`, `c−` `#3B4CC0`, `c0` `#DDDDDD` and `c+`
+    `#B40426` in 8-bit sRGB, Moreland's cool-warm ends and neutral, mixed in linear RGB by `ramp_diverging`, `c0` at
+    `t = 0.5`; under the palette swap, the view's `PALETTE` uniform 1, they draw on viridis, so `symlog`'s pixel is
+    `dbg_sentinel(s, frag_xy)`. `log` draws on viridis whatever `PALETTE` holds, never on `diverging`, and the view's
+    header states that it shows `|drift|`.
+  - **The suspect styling, `dbg_suspect(rgb, x, energy, lz, frag_xy)`,** on the ramp's output `rgb`: lines one pixel
+    wide every fourth pixel from `p = ⌊frag_xy⌋`, in framebuffer pixels as the hatch's stripes are, drawn in ink,
+    black where `rgb`'s relative luminance (Rec. 709's weights, `0.2126 R + 0.7152 G + 0.0722 B`, linear) is at least
+    0.18 and white below, so the lines stay visible on every part of either ramp. **Which predicate drives which
+    style:** the energy-suspect predicate (`suspect_energy`, relative `δE`) draws rows, where `p.y & 3 = 0`; the
+    L_z-suspect predicate (`suspect_lz`, absolute `ΔL_z`) draws columns, where `p.x & 3 = 0`; both, a grid. Both
+    views apply both styles, each from its own predicate, so either view shows which predicate a sample lights. A
+    pixel off the lines, and every pixel of a sample neither predicate lights, is `rgb` unchanged; the hatch is never
+    styled. The predicates are the generated read side's, read at read time over the stored latches, `dE_max`, `E_0`
+    and `dLz_max` (dd_integrator §3.5; payload §5), the energy one at the view's `EPS_E`; no suspect bit is stored and
+    none reaches `dbg_sentinel`, whose signature is unchanged (R-379). Lines, not a tint, so the ramp colour between
+    them still reads as the drift's place, and rows and columns, not two colours, so the two predicates are told apart
+    without colour vision. What a lit predicate means depends on the occupant: on a symplectic one the energy drift
+    measures the dynamics (close-encounter stress), on any other the integrator's error (integrator contract Part 2),
+    which the read side's `drift_suspect` carries beside the predicates as the occupant's `symplectic` flag.
 - **The hatch, `debug_invalid(frag_xy)` (proposed, R-71; REQ-COL-055; R-132, R-136):** diagonal stripes 4 px wide
   across `x + y`, at pixel `p = ⌊frag_xy⌋`: `((p.x + p.y) >> 2) & 1` selects violet `#9B00FF` (0) or cyan
   `#48FFFF` (1), 8-bit sRGB. Neither colour collides with a palette entry. In OKLab, violet is 0.142 from its nearest
