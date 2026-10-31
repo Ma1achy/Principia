@@ -10,8 +10,10 @@
 //! - **The horizon's steps**, `horizon_steps = ⌈T/dt_macro⌉ ≤ 65535`, evaluated in f64 ([`horizon_steps`]), with
 //!   `dt_macro` finite and positive: the exact u16 `t_end_step` and `t_dmin_step` hold every step index only then, and
 //!   there is no fallback format; a longer integration takes a coarser `dt_macro` or march epochs (R-86). `dt_macro`
-//!   must stay finite and positive rounded to f32 as well, since [`Validated::wrapper_uniforms_f32`] hands that value
-//!   to the kernel, where infinity or 0 would make every substep's `dt` not a time step.
+//!   must stay finite rounded to f32 as well, since [`Validated::wrapper_uniforms_f32`] hands that value to the
+//!   kernel, and its smallest substep, `dt_macro / N_max` at f32, must be a normal f32: infinity or 0 would make every
+//!   substep's `dt` not a time step, and a backend that flushes subnormal results (Metal; determinism note rule 6,
+//!   R-547; integrator contract Part 2c) reads a subnormal substep as 0 where the CPU keeps it.
 //! - **The `N_sub` table** (R-502): the host generator's refusal of the carried `r_sub`, `gamma_sub` and `N_max`
 //!   (`kernel::driver::nsub_table`), an `N_max` above the table's maximum length among them, is returned as it is;
 //!   and the carried table must be the generator's for them, bit for bit, never another config's.
@@ -65,7 +67,8 @@ pub enum DispatchError {
         /// The `T` carried.
         t_horizon: f64,
     },
-    /// `dt_macro` is not finite and positive, at f64 or rounded to f32.
+    /// `dt_macro` is not finite and positive at f64, or not finite at f32, or its smallest substep, `dt_macro / N_max`
+    /// at f32, is not a normal f32.
     DtMacro {
         /// The `dt_macro` carried.
         dt_macro: f64,
@@ -149,7 +152,8 @@ impl fmt::Display for DispatchError {
             Self::DtMacro { dt_macro } => {
                 write!(
                     f,
-                    "dt_macro {dt_macro} is not finite and positive, at f64 or rounded to f32"
+                    "dt_macro {dt_macro} is not finite and positive at f64, or not finite at f32, or its smallest \
+                     substep, dt_macro / N_max at f32, is not a normal f32"
                 )
             }
             Self::HorizonSteps {
@@ -331,7 +335,8 @@ pub fn validate(uniforms: &SimUniforms) -> Result<Validated, DispatchError> {
             steps,
         });
     }
-    if !finite_positive(f64::from(dt as f32)) {
+    let dt_f32 = dt as f32;
+    if !(dt_f32.is_finite() && dt_f32 / uniforms.n_max as f32 >= f32::MIN_POSITIVE) {
         return Err(DispatchError::DtMacro { dt_macro: dt });
     }
     if thresholds(&uniforms.substep_law())? != uniforms.thresholds {

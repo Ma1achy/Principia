@@ -297,9 +297,11 @@ fn check_other_refusals(check: &Check) {
     assert_eq!(check(&u), Ok(1000), "a positive window is refused");
 }
 
-/// `check` holds `dt_macro` finite and positive at f32 as well as at f64, on both sides of each edge: above `f32::MAX`
-/// it rounds to infinity at `2¹²⁸`, and below the least f32 subnormal it rounds to 0 at `2⁻¹⁵⁰`, a tie to even (the
-/// horizon and window there are carried at the macro-step's own size, so the step count is 1).
+/// `check` holds `dt_macro` finite at f32 and its smallest substep, `dt_macro / N_max` at f32, a normal f32, on both
+/// sides of each edge. Above `f32::MAX` it rounds to infinity at `2¹²⁸`. At the default `N_max = 64` the substep edge is
+/// `2⁻¹²⁰`: one f32 below it the quotient, `2⁻¹²⁶ − 2⁻¹⁵⁰`, is a tie that rounds up to `f32::MIN_POSITIVE`, and two
+/// below it is the largest subnormal, which Metal flushes to 0 (the horizon and window there are carried at the
+/// macro-step's own size, so the step count is 1).
 fn check_dt_macro_at_f32(check: &Check) {
     let large = |dt: f64| SimUniforms {
         dt_macro: dt,
@@ -311,25 +313,60 @@ fn check_dt_macro_at_f32(check: &Check) {
         escape_window: dt,
         ..SimUniforms::default()
     };
-    for (edge, u) in [
+    let edge = 2f32.powi(-120);
+    let one_below = edge.next_down();
+    let two_below = one_below.next_down();
+    let single_substep = |dt: f64| SimUniforms {
+        n_max: 1,
+        ..small(dt)
+    };
+    for (name, u) in [
         ("f64::MAX", large(f64::MAX)),
         ("2¹²⁸", large(2f64.powi(128))),
         ("2⁻¹⁵⁰", small(2f64.powi(-150))),
+        ("2⁻¹⁴⁹", small(2f64.powi(-149))),
+        (
+            "the largest f32 subnormal at N_max = 1",
+            single_substep(f64::from(f32::MIN_POSITIVE.next_down())),
+        ),
+        (
+            "f32::MIN_POSITIVE at N_max = 64",
+            small(f64::from(f32::MIN_POSITIVE)),
+        ),
+        ("two f32 below 2⁻¹²⁰", small(f64::from(two_below))),
     ] {
         assert!(
             matches!(check(&u), Err(DispatchError::DtMacro { .. })),
-            "dt_macro {edge} is not refused at f32: {:?}",
+            "dt_macro {name} is not refused at f32: {:?}",
             check(&u)
         );
     }
     assert_eq!(check(&large(f64::from(f32::MAX))), Ok(1), "f32::MAX");
-    assert_eq!(check(&small(2f64.powi(-149))), Ok(1), "2⁻¹⁴⁹");
+    assert_eq!(check(&small(f64::from(edge))), Ok(1), "2⁻¹²⁰");
+    assert_eq!(check(&small(f64::from(one_below))), Ok(1), "one below");
+    assert_eq!(
+        check(&single_substep(f64::from(f32::MIN_POSITIVE))),
+        Ok(1),
+        "f32::MIN_POSITIVE at N_max = 1"
+    );
+}
+
+/// The dispatch before the substep edge: `dt_macro` finite and positive at f32, and no more.
+#[cfg(feature = "controls")]
+fn positive_at_f32_only(u: &SimUniforms) -> Result<u32, DispatchError> {
+    let rounded = u.dt_macro as f32;
+    if !(rounded.is_finite() && rounded > 0.0) {
+        return Err(DispatchError::DtMacro {
+            dt_macro: u.dt_macro,
+        });
+    }
+    Ok(horizon_steps(u.t_horizon, u.dt_macro) as u32)
 }
 
 #[test]
 fn horizon_refusal_dt_macro_at_f32() {
     check_dt_macro_at_f32(&real);
-    // What the kernel is handed at the accepted edges is the macro-step itself, finite and not 0.
+    // What the kernel is handed at the accepted edges is the macro-step itself, finite, and normal once divided.
     let at_edge = |dt: f64, t: f64, w: f64| {
         let u = SimUniforms {
             dt_macro: dt,
@@ -343,14 +380,16 @@ fn horizon_refusal_dt_macro_at_f32() {
             .dt_macro
     };
     assert_eq!(at_edge(f64::from(f32::MAX), 50.0, 0.4), f32::MAX);
-    let least = 2f64.powi(-149);
-    assert_eq!(at_edge(least, least, least), f32::from_bits(1));
+    let least = 2f64.powi(-120);
+    let handed = at_edge(least, least, least);
+    assert_eq!(handed, 2f32.powi(-120));
+    assert_eq!(handed / 64.0, f32::MIN_POSITIVE);
 }
 
 negative_control!(
     horizon_refusal_dt_macro_at_f32,
     "a dispatch that checks dt_macro only at f64 hands the f32 kernel an infinite macro-step",
-    expected = "is not refused at f32",
+    expected = "dt_macro f64::MAX is not refused at f32",
     check_dt_macro_at_f32(&|u: &SimUniforms| {
         if !(u.dt_macro.is_finite() && u.dt_macro > 0.0) {
             return Err(DispatchError::DtMacro {
@@ -360,6 +399,33 @@ negative_control!(
         Ok(horizon_steps(u.t_horizon, u.dt_macro) as u32)
     })
 );
+
+mod only_positive_at_f32 {
+    use super::*;
+    negative_control!(
+        horizon_refusal_dt_macro_at_f32,
+        "a dispatch that only keeps dt_macro above 0 at f32 hands Metal a subnormal, which it flushes to a step of 0",
+        expected = "dt_macro 2⁻¹⁴⁹ is not refused at f32",
+        check_dt_macro_at_f32(&positive_at_f32_only)
+    );
+}
+
+mod macro_step_normal_only {
+    use super::*;
+    negative_control!(
+        horizon_refusal_dt_macro_at_f32,
+        "a dispatch that checks dt_macro and not its smallest substep hands Metal a substep it flushes to 0",
+        expected = "dt_macro f32::MIN_POSITIVE at N_max = 64 is not refused at f32",
+        check_dt_macro_at_f32(&|u: &SimUniforms| {
+            if (u.dt_macro as f32) < f32::MIN_POSITIVE {
+                return Err(DispatchError::DtMacro {
+                    dt_macro: u.dt_macro,
+                });
+            }
+            positive_at_f32_only(u)
+        })
+    );
+}
 
 #[test]
 fn horizon_refusal_other_refusals() {
