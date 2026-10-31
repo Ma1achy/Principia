@@ -36,8 +36,8 @@
 //! **An undeclared range is a ledger gap, not one that spans zero (R-426; dd_generation_root §3.8).** "Declared" is
 //! the range's state ([`Entry::range_state`]): a gap never spans zero, so it never puts a `lin` field on
 //! `ramp_coolwarm`, and a `lin` or `diverging` scalar field whose range is a gap fails generation, naming it
-//! ([`undeclared`]). A provisional range, `mean_y`'s (and `q_mass`'s until REQ-PAY-097 declared it [0, 1]), is drawn
-//! as (−∞, ∞), so on `ramp_coolwarm`, as R-426 keeps it.
+//! ([`undeclared`]). A provisional range is drawn as (−∞, ∞), so on `ramp_coolwarm`, as R-426 kept `q_mass`'s until
+//! REQ-PAY-097 declared it [0, 1] and `mean_y`'s until REQ-PAY-098 declared it [0, 4]; none is provisional now.
 //!
 //! **`RANGE_AUTO` and `u_range`** are the view's uniforms, declared in its header (gui_state_contract §3):
 //! `// @uniform RANGE_AUTO: u32 = <0|1> [0, 1]`, the node's param, whose default the generator writes from the param

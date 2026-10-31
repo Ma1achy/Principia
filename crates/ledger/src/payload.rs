@@ -17,9 +17,10 @@
 //!
 //! **Range states (R-426; dd_generation_root §3.8).** Each field's range is one of §3.8's three states
 //! ([`Entry::range_state`], each entry marked by `declared`): `declared(lo, hi, citation)`, with its citation in
-//! [`SIGNED`], [`NON_NEGATIVE`] or [`DECLARED`]; `provisional(requirement)`, `mean_y` ([`PROVISIONAL`]), drawn as
-//! (−∞, ∞) on `ramp_coolwarm` until its requirement declares it (`q_mass`'s, declared [0, 1] by REQ-PAY-097, no longer
-//! is); or `gap`, a (−∞, ∞) written and never cited, which never spans zero. The gaps, each with the requirement that
+//! [`SIGNED`], [`NON_NEGATIVE`] or [`DECLARED`]; `provisional(requirement)`, drawn as (−∞, ∞) on `ramp_coolwarm`
+//! until its requirement declares it, which no field is now ([`PROVISIONAL`]: `q_mass`'s range was declared [0, 1] by
+//! REQ-PAY-097, `mean_y`'s [0, 4] by REQ-PAY-098); or `gap`, a (−∞, ∞) written and never cited, which never spans
+//! zero. The gaps, each with the requirement that
 //! fills it, are [`GAPS`]; a `lin` or `diverging` scalar field whose range is a gap fails generation
 //! ([`crate::gen::numeric::undeclared`]).
 
@@ -114,7 +115,7 @@ fn shape_point() -> EntryBuilder {
 /// The fields the corpus or their own definition make non-negative, other than the unsigned bit fields, each with the
 /// line that does (R-400; TASK-M1-17): each declares a lower bound of 0, closed or open, and nothing else declares
 /// one. The physics reviewer checks each citation.
-pub const NON_NEGATIVE: [(&str, &str); 14] = [
+pub const NON_NEGATIVE: [(&str, &str); 15] = [
     (
         "closure_min",
         "dd_generation_root §3.4: `closure_min` | log | ≥ 0",
@@ -142,6 +143,12 @@ pub const NON_NEGATIVE: [(&str, &str); 14] = [
     (
         "m2",
         "render_gui_spec §10.1: mass fraction `mᵢ ∈ [0,1]`; dd_decoder §3.1: `(m₀, m₁, m₂) = softmax(0, μ₁, μ₂)`",
+    ),
+    (
+        "mean_y",
+        "dd_simstate_payload §4: `y_k = ‖n̂(r_k, m) − n̂(r_0, m)‖²`, the squared chord between two shape-sphere unit \
+         vectors, in [0, 4], and `mean_y` its running mean, so in [0, 4] (REQ-PAY-073); declared from `y`'s \
+         definition by REQ-PAY-098 (R-426)",
     ),
     (
         "q_mass",
@@ -223,10 +230,10 @@ pub const SIGNED: [(&str, &str); 8] = [
 
 /// The fields whose range is provisional, each with the requirement that declares it (R-426): each stays on
 /// `ramp_coolwarm`, drawn as (−∞, ∞), until its requirement declares it, and the physics reviewer re-checks the ramp
-/// then. `mean_y` waits for TASK-M3-13 to declare its range from `y`'s definition (REQ-PAY-073). `q_mass`'s was
-/// declared [0, 1] by TASK-M2-03 from its formula (REQ-PAY-088, REQ-PAY-097), in [`NON_NEGATIVE`], so it is on
-/// `ramp_viridis`.
-pub const PROVISIONAL: [(&str, &str); 1] = [("mean_y", "REQ-PAY-098")];
+/// then. None is now. `q_mass`'s was declared [0, 1] by TASK-M2-03 from its formula (REQ-PAY-088, REQ-PAY-097), and
+/// `mean_y`'s [0, 4] by TASK-M3-13 from `y`'s definition (REQ-PAY-073, REQ-PAY-098), each in [`NON_NEGATIVE`], so
+/// each is on `ramp_viridis`.
+pub const PROVISIONAL: [(&str, &str); 0] = [];
 
 /// The other declared ranges, each with where it is given: the payload's packed and integer fields, `V_0`,
 /// `rho_angle` and `n`.
@@ -415,8 +422,12 @@ fn entries() -> Vec<EntryBuilder> {
         f32_at("S", 24, Scale::Lin),
         // R-423: `θ̃`, the unwrapped longitude in radians (dd_integrator §3.7), is an angle, so cyclic.
         f32_at("theta", 25, Scale::Cyclic),
-        // Provisional until REQ-PAY-098 declares its range ([`PROVISIONAL`]; R-426).
-        f32_at("mean_y", 26, Scale::Lin),
+        // dd_simstate_payload §4: the mean of `y`, a squared shape-sphere chord, declared [0, 4] from `y`'s
+        // definition (REQ-PAY-073, REQ-PAY-098; R-426).
+        f32_at("mean_y", 26, Scale::Lin).range(Range {
+            lo: Bound::Closed(0.0),
+            hi: Bound::Closed(4.0),
+        }),
         f32_at("C_ty", 27, Scale::Lin),
         f32_at("E_0", 28, Scale::Diverging),
         f32_at("Lz_0", 29, Scale::Diverging),
