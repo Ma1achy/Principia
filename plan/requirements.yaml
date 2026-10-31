@@ -6467,7 +6467,9 @@
   rulings:
   - R-110
   - R-186
+  - R-656
   milestone: M0
+  note: "R-656: \"every commit\" is every push to main and every pull-request head; a head that changes no GPU-path file skips the GPU suites, which run again on main once it merges."
 - id: REQ-PAY-012
   area: PAY
   statement: "`packed_a`, `packed_b` and `times` must follow payload §2's bit diagrams: descriptor in `packed_a` bits 0–15 and `d_min` f16 in 16–31; `dE_max` low and `dLz_max` high in `packed_b`, 16 bits each in the encoding REQ-PAY-112 gives (R-632); `t_end_step` u16 low and `t_dmin_step` u16 high in `times`."
@@ -8408,7 +8410,9 @@
   rulings:
   - R-110
   - R-186
+  - R-656
   milestone: M0
+  note: "R-656: \"every commit\" is every push to main and every pull-request head; a head that changes no GPU-path file skips the GPU suites, which run again on main once it merges."
 - id: REQ-GEN-005
   area: GEN
   statement: "f16 pairs must round-trip through `pack2x16float`/`unpack2x16float` within f16 epsilon."
@@ -24636,7 +24640,9 @@
   rulings:
   - R-110
   - R-186
+  - R-656
   milestone: M0
+  note: "R-656: \"every commit\" is every push to main and every pull-request head; a head that changes no GPU-path file skips the GPU suites, which run again on main once it merges."
 - id: REQ-TOOL-004
   area: TOOL
   statement: "The debug tooling must be built first in Phase 0 in the order 0a generation root + codegen self-test, 0b synthetic payload harness with field views, 0c the kernel bring-up mode followed by the fragment-side UV, DECODE and ROUNDTRIP presets as their dependencies land, then structural views as soon as RenderQuad is defined (the UV-passthrough coordinate view earliest of all) and cross-checks as their seams arrive."
@@ -27749,13 +27755,16 @@
     section: 1. The substrate (the defining decision)
   - file: decisions.md
     section: "R-547 — Decode and encode numerics: the swap test is the conjugacy; step 0 is skipped within a calibrated `τ_I` and rescales in two steps; a branch input that must agree across backends is built only from operations every IEEE backend rounds alike, with no subnormal intermediate; the native build runs without MIR GVN and CI runs it at the release profile; T1 holds off the mirror band; REQ-SYS-015 is split *(closes RQ-283, RQ-295, RQ-296, RQ-298, RQ-299, RQ-360 and RQ-365; corrects R-34)*"
+  - file: decisions.md
+    section: "R-656 — CI throughput: a push runs `ci.yml` only on `main` (and on R-272's `measure/` branches, which have no pull request), a pull request running it through `pull_request`; a pull request's superseded runs are cancelled, never a run on `main`; a docs-only pull request skips the build, test, GPU and mutants work, and one that changes no GPU-path file skips the GPU suites, inside the jobs, every required check still reporting success under its own name; mutants run on the merge-ready head; a bounded target cache is approved in principle, built in a later PR; no paid or self-hosted runner *(amends R-110, R-177, R-186, R-195, R-235, R-285 and R-335)*"
   verify:
     method: review checklist
     detail: "the workflow has a job running the workspace's native tests with --release on the host target and the workspace's flags; its run on the PR is green, its log linked; a measure/ run (R-272) shows it failing stage_canon_native with the GVN flag removed"
   rulings:
   - R-547
+  - R-656
   milestone: M2
-  note: R-547 (RQ-299). Closed by TASK-M2-49.
+  note: "R-547 (RQ-299). Closed by TASK-M2-49. R-656: \"every push\" is every push to main and every pull-request head; a docs-only head skips the release job, which runs again on main once it merges."
 - id: REQ-TOOL-190
   area: TOOL
   statement: "The frame record must carry the print stage: `stage_ms` and `stages` gain `post` between `colour` and `upload` (the Print graph's own scopes nested under it), and each frame records `post_level` (`\"full\"`, `\"reduced\"` or `\"plain\"`), both `null` in a frame that runs no print stage, under every tier; and, while the playhead plays, `playback_short_ms` (ms, ≥ 0: the frame's time beyond the playback frame period, 0 when the rate holds; `null` when the playhead is not playing or no print stage runs), which TASK-M8-72 writes into telemetry §5's v2 list; the profiler's file is schema v2 (`principia-profile-v2`) for these keys, and every reader still accepts v1, reporting the three keys (`post`, `post_level`, `playback_short_ms`) as not recorded."
@@ -29461,7 +29470,9 @@
     detail: "cargo test runs the CPU-vs-GPU SimState diff; branch decisions exact on shared per-step inputs; continuous within the windowed tolerance; chaotic-trajectory label flips are reported, not asserted equal"
   rulings:
   - R-84
+  - R-656
   milestone: M4
+  note: "R-656: \"every commit\" is every push to main and every pull-request head; a head that changes no GPU-path file skips the GPU suites, which run again on main once it merges."
 - id: REQ-VAL-058
   area: VAL
   statement: "The spread-extrapolation default (on vs opt-in) must be decided and recorded."
@@ -31315,7 +31326,9 @@
     detail: "code and qa: the test's `cargo xtask ci` child runs no control and still fails under its control; CI's workflow runs `cargo xtask ci` (every control) in its own job beside the tests, and that job is green on the head; qa's merged file changes only as far as this needs"
   rulings:
   - R-235
+  - R-656
   milestone: M0
+  note: "R-656: CI runs every control on every push to main and every pull-request head but a docs-only one, whose xtask-ci shards are skipped, the gate xtask-ci passing them only on that verdict; they run again on main once it merges."
 - id: REQ-VAL-167
   area: VAL
   statement: "When a registered control fails to make its test fail, `xtask/src/controls.rs`'s finding (`ControlPasses` / `WrongPanic`) must include that control's own output, and must not say it \"leaves it passing\"; and the control of `deps_a_unit_test_behind_the_release_profile_using_validation_fails` (`xtask/tests/deps.rs`) must first assert the expected compile error before its test's check (R-236, R-244)."
@@ -38320,6 +38333,8 @@
     section: R-206 — An unset `PRIN_GPU_BACKEND` defaults by platform
   - file: decisions.md
     section: "R-375 — CI's Linux runners are pinned to `ubuntu-24.04`, not `ubuntu-latest`; moving to Ubuntu 26 is a deliberate later step *(amends R-186)*"
+  - file: decisions.md
+    section: "R-656 — CI throughput: a push runs `ci.yml` only on `main` (and on R-272's `measure/` branches, which have no pull request), a pull request running it through `pull_request`; a pull request's superseded runs are cancelled, never a run on `main`; a docs-only pull request skips the build, test, GPU and mutants work, and one that changes no GPU-path file skips the GPU suites, inside the jobs, every required check still reporting success under its own name; mutants run on the merge-ready head; a bounded target cache is approved in principle, built in a later PR; no paid or self-hosted runner *(amends R-110, R-177, R-186, R-195, R-235, R-285 and R-335)*"
   verify:
     method: review checklist
     detail: "the CI log shows gpu_harness and metal_hosted_probe green on macos-15 and gpu_harness green on lavapipe, with the named backends; no job uses a self-hosted runner; an unknown PRIN_GPU_BACKEND fails naming the variable"
@@ -38330,7 +38345,9 @@
   - R-186
   - R-206
   - R-375
+  - R-656
   milestone: M0
+  note: "R-656: \"every commit\" is every push to main and every pull-request head; a head that changes no GPU-path file skips the GPU suites' jobs, gate jobs still reporting success under the checks' names, and the suites run again on main once it merges. No paid larger runner either."
 - id: REQ-SYS-066
   area: SYS
   statement: "Every reviewer role a task file names must record its verdict as a PR review headed `VERDICT: APPROVE <role>` or `VERDICT: CHANGES <role>`, and the `reviews-complete` CI check must pass only when every named role has approved on the PR's latest commit with no later CHANGES verdict; an approval followed only by qa's own `qa: tests for <TASK-id>` commits, adding files only under qa's paths, counts on the head (R-260), and a PR whose title names no task passes with \"no task, no named reviewers\" (R-261)."
@@ -38361,6 +38378,8 @@
     section: "R-186 — GitHub-hosted runners first; no self-hosted runner *(amends R-110, R-169, R-174)*"
   - file: decisions.md
     section: R-195 — CI checks formatting and lints
+  - file: decisions.md
+    section: "R-656 — CI throughput: a push runs `ci.yml` only on `main` (and on R-272's `measure/` branches, which have no pull request), a pull request running it through `pull_request`; a pull request's superseded runs are cancelled, never a run on `main`; a docs-only pull request skips the build, test, GPU and mutants work, and one that changes no GPU-path file skips the GPU suites, inside the jobs, every required check still reporting success under its own name; mutants run on the merge-ready head; a bounded target cache is approved in principle, built in a later PR; no paid or self-hosted runner *(amends R-110, R-177, R-186, R-195, R-235, R-285 and R-335)*"
   verify:
     method: unit test
     detail: "the gate-report fixture lists every requirement of the milestone's and earlier gate blocks, fails on a missing one, and marks benchmark requirements awaiting the human's run until their prin profile files are supplied; review: no workflow runs bench, nightly.yml is scheduled, gate.yml takes a milestone input"
@@ -38370,7 +38389,9 @@
   - R-177
   - R-186
   - R-195
+  - R-656
   milestone: M0
+  note: "R-656: ci.yml runs on a push to main (and to a measure/ branch, R-272) and on every pull-request head; a docs-only head runs plan-check, the vocabulary lint and the tests that read the docs (in ci-workspace) in place of the build, fmt, clippy, the tests and cargo xtask ci, which run again on main once it merges."
 - id: REQ-SYS-068
   area: SYS
   statement: "`reviews-check` must count a role's APPROVE on an earlier commit when every later commit is qa's own `qa: tests for <TASK-id>` commit adding files only under `crates/*/tests/`, `xtask/tests/` or `fixtures/` (R-260), and must pass a PR whose title names no task, printing \"no task, no named reviewers\" (R-261)."

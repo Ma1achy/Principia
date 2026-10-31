@@ -6,8 +6,6 @@
 <img src="docs/readme/hero.jpg" alt="A slice of the planar three-body problem, drawn in pencil: dark rippled bands on the left break into pale curling filaments that sweep across the page." width="100%">
 </p>
 
-*Where the future frays at the edges, outcomes braid and unbraid at the threshold where almost becomes inevitable.*
-
 ---
 
 You are looking through a slice of every possible beginning of the three-body problem. Each point is a complete starting configuration (three masses, their positions and velocities), followed forward until its fate is known. The colour records that fate.
