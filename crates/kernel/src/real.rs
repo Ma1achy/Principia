@@ -122,6 +122,11 @@ pub trait IeeeBits: Real + crate::chart::invariant::WarpReal {
     /// `2^e`, formed from its bits, for `e` a normal exponent (`−126..=127` at f32, `−1022..=1023` at f64).
     fn pow2(e: i32) -> Self;
 
+    /// `|self|`'s significand, read from the bits: its fraction field under the exponent field of `1`, so in `[1, 2)`,
+    /// with `|self| = significand · 2^exponent` for a normal `self` (exact, no arithmetic). The sign is dropped. Used
+    /// where a product must be formed with no subnormal intermediate (R-547; `crate::word::crossing`).
+    fn significand(self) -> Self;
+
     /// `self·b`, rounded the same on every backend, whether it contracts or fuses or not. At f32, the GPU's precision,
     /// each operand is split at its bits into a high part, its fraction's low 12 bits cleared, and the exact remainder,
     /// each of at most 12 significant bits, so the four partial products are exact (where normal) and a backend that
@@ -175,6 +180,11 @@ impl IeeeBits for f32 {
     }
 
     #[inline]
+    fn significand(self) -> f32 {
+        f32::from_bits((self.to_bits() & 0x007F_FFFF) | 0x3F80_0000)
+    }
+
+    #[inline]
     fn product(self, b: f32) -> f32 {
         let ah = f32::from_bits(self.to_bits() & 0xFFFF_F000);
         let bh = f32::from_bits(b.to_bits() & 0xFFFF_F000);
@@ -212,6 +222,11 @@ impl IeeeBits for f64 {
     #[inline]
     fn pow2(e: i32) -> f64 {
         f64::from_bits(((e + 1023) as u64) << 52)
+    }
+
+    #[inline]
+    fn significand(self) -> f64 {
+        f64::from_bits((self.to_bits() & 0x000F_FFFF_FFFF_FFFF) | 0x3FF0_0000_0000_0000)
     }
 
     #[inline]

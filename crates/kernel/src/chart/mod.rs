@@ -19,6 +19,10 @@
 //! [`MassSimplex`] (`mass_simplex`), each a `Φ` beside it; and the mixed-axis charts, [`Mixed`] (`mixed`), whose two
 //! axes are any two quantities, the other six frozen.
 //!
+//! **Tilt and slice** ([`mod@tilt`]; R-473, R-474, R-507): the rotation `R(τ₁, τ₂)` from the stored angles and the map,
+//! the latent chart's basis edit, and [`Tilted`], a curved chart under its tilt, on the charts that hold their blocks by
+//! latent controls (R-633's split).
+//!
 //! **Masses come from the decode** (lowering Part 3, "Mass source"; REQ-DEC-006): every chart's masses are its own
 //! decode's, per pixel, and each declares [`Chart::requires_per_pixel_mass`], CPU-side metadata saying whether a
 //! uniform mass, `SimUniforms.m[3]`, describes its pixels for CPU consumers. The kernel reads no such uniform.
@@ -60,6 +64,7 @@ pub mod latent;
 pub mod mass_simplex;
 pub mod mixed;
 pub mod shape_sphere;
+pub mod tilt;
 
 use core::fmt;
 
@@ -74,6 +79,7 @@ pub use latent::Latent;
 pub use mass_simplex::MassSimplex;
 pub use mixed::Mixed;
 pub use shape_sphere::{ShapeMap, ShapeSphere};
+pub use tilt::{Tilt, TiltMap, TiltSpec, Tilted};
 
 use crate::decode::{self, Decoded};
 use crate::generated::links::{LinkParams, LinkReal, Selection};

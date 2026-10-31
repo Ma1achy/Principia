@@ -608,6 +608,10 @@ const WINDOW: [&str; 2] = ["window_square_centre", "window_square_half"];
 /// hashed.
 const SLICE: [&str; 1] = ["slice_axis_z_q3"];
 
+/// The tilt's angles in degrees (TASK-M2-36; R-474 R3, R8): Lean each axis's dead zone, Tip as sheet's wrap point and a
+/// whole turn, which decide the view's basis, never what a stored bit means, so they are not hashed.
+const TILT: [&str; 3] = ["tilt_right_angle", "tilt_half_turn", "tilt_turn"];
+
 #[test]
 fn schema_version_hashes_the_registers_stored_bits_entries() {
     for name in STORED_BITS {
@@ -623,7 +627,7 @@ fn schema_version_hashes_the_registers_stored_bits_entries() {
     // invariant charts' warp defaults (TASK-M2-12), or the Burrau family's (TASK-M2-10), or the march's crossing
     // capacity (TASK-M3-15), or the steppers' coefficients (TASK-M3-02), or the curve projection's search
     // (TASK-M2-18), or the substep law's (TASK-M3-03), or the view window's square (TASK-M2-21), or the slice
-    // frame's default axis (TASK-M6-38).
+    // frame's default axis (TASK-M6-38), or the tilt's angles (TASK-M2-36).
     for k in REGISTER.iter().filter(|k| !STORED_BITS.contains(&k.name)) {
         assert!(
             ledger::links::CHART_CONSTANTS
@@ -638,7 +642,8 @@ fn schema_version_hashes_the_registers_stored_bits_entries() {
                 || CURVE_SEARCH.contains(&k.name)
                 || SUBSTEP.contains(&k.name)
                 || WINDOW.contains(&k.name)
-                || SLICE.contains(&k.name),
+                || SLICE.contains(&k.name)
+                || TILT.contains(&k.name),
             "`{}` is neither a stored-bits entry nor a chart constant, so it is not hashed",
             k.name
         );
@@ -701,6 +706,12 @@ fn schema_version_hashes_the_registers_stored_bits_entries() {
         assert!(
             REGISTER.iter().any(|k| k.name == name) && !STORED_BITS.contains(&name),
             "the slice frame's entry `{name}` is not an unhashed register entry"
+        );
+    }
+    for name in TILT {
+        assert!(
+            REGISTER.iter().any(|k| k.name == name) && !STORED_BITS.contains(&name),
+            "the tilt's entry `{name}` is not an unhashed register entry"
         );
     }
 }

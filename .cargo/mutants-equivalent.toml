@@ -356,6 +356,18 @@ mutant = "crates/validation/src/arctan.rs:43:34: replace | with ^ in magnitude"
 justification = "field < 255 shifted by 23 has bits 23..31 only and fraction = (r >> 32) & 0x007F_FFFF bits 0..23 only, so their ^ is their |"
 
 [[equivalent]]
+mutant = "crates/kernel/src/real.rs:184:55: replace | with ^ in <impl IeeeBits for f32>::significand"
+justification = "the fraction is masked to bits 0..23 and 0x3F80_0000 has only bits 23..30 set, so the two are disjoint and their ^ is their |"
+
+[[equivalent]]
+mutant = "crates/kernel/src/real.rs:229:65: replace | with ^ in <impl IeeeBits for f64>::significand"
+justification = "the fraction is masked to bits 0..52 and 0x3FF0_0000_0000_0000 has only bits 52..62 set, so the two are disjoint and their ^ is their |"
+
+[[equivalent]]
+mutant = "crates/kernel/src/word/crossing.rs:82:28: replace < with <= in negative"
+justification = "the comparison is reached only when !reads_as_zero(d), so d is not ±0, and d <= 0 and d < 0 agree on every other value, NaN included"
+
+[[equivalent]]
 mutant = "crates/gui/src/explore/compass.rs:962:51: replace * with / in Drag::moved"
 justification = "sign is Reading::Vertical's, which reading_of only ever sets to 1.0 or -1.0, and y / ±1 equals y * ±1 exactly"
 
