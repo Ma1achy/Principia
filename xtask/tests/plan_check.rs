@@ -324,26 +324,12 @@ fn append_to_queue(root: &Path, heading: &str) {
     fs::write(&path, format!("{text}{heading}\n")).expect("queue written");
 }
 
-/// The id of the first open entry in `root`'s `REVIEW_QUEUE.md`, so the test outlives any one entry's ruling.
-fn first_open_rq(root: &Path) -> String {
-    let text = fs::read_to_string(root.join("REVIEW_QUEUE.md")).expect("queue read");
-    let line = text
-        .lines()
-        .find(|l| l.starts_with("## RQ-"))
-        .expect("an open entry");
-    let id = line.trim_start_matches("## ");
-    id[..id.find(':').expect("a colon after the id")].to_owned()
-}
-
 #[test]
 fn plan_check_fails_on_an_rq_heading_a_union_merge_left_twice() {
     let root = copy("plan_check_rq_twice");
-    let rq = first_open_rq(&root);
-    append_to_queue(
-        &root,
-        &format!("## {rq}: the other side's edit of its heading"),
-    );
-    fails_naming(&root, &format!("{rq} is two entries in REVIEW_QUEUE.md"));
+    append_to_queue(&root, "## RQ-999999: one side's heading");
+    append_to_queue(&root, "## RQ-999999: the other side's heading");
+    fails_naming(&root, "RQ-999999 is two entries in REVIEW_QUEUE.md");
 }
 
 #[test]
