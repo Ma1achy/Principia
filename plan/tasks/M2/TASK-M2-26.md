@@ -41,6 +41,7 @@ The ROUNDTRIP fragment preset renders per pixel the z → D → E → D physical
 ## Acceptance tests
 - `cargo xtask golden roundtrip-preset` in `gpu-metal` and `gpu-lavapipe` — ROUNDTRIP render of the latent and (L_z, E) charts, with the fragment compiled as the backend compiles it (fast-math on Metal, R-297): residual below ε_phys (REQ-ENC-024) except at tagged-expected regions; the kernel variant set is unchanged (exactly the bring-up variant) (REQ-RENDER-025).
 - Review (physics + code): every listed host-side consumer calls the one encode entry point; the ROUNDTRIP view is a fragment preset, not a kernel mode (R-75); clicked-pixel locks do not call encode (REQ-ENC-002).
+- `cargo test -p ledger --test arctan` — holds the emitted `generated/arctan.rs` and that `sum_bits()` reads the register's `arctan_sum_bits`. Calibration: the proposal (RQ-635) gives the value, 100, its admissibility class, `canonical-units`, the measured range of bits that write the same file, 72 to 121, the sum's error bound, under 204 units, and its measured worst error, 90.05 units; reviewer-checked (physics), confirmed by the human at the M2 gate, recorded in `decisions.md` (REQ-GEN-044).
 
 ## Notes
 - Gaps G2 and G15 apply (nonlinear charts, ‖·‖_phys).
