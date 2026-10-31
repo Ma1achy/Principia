@@ -15,13 +15,14 @@ transcribed later, twice, for approved items only.
   brief called this EXCLUDE; the word is changed so it can't be read as a ruling.
 - **NOW:** a cheap, non-gating peek at data already usable. **M9:** at or after M9, with new measurement or machinery.
 - **`[value]`** in `triage.csv`: a number taken from a `_local` source, rounded ones included: results, coefficients,
-  thresholds, run settings and mass or start parameters, unless it is on the kept list below. The page and table reference
-  stays, so the number is one lookup away. Each `_local` row was read for this, and each number left in was judged to fit
-  the list. Kept in those rows: references (page, table, equation, section); counts of what a source holds (rows, tables,
-  runs, digits); units and normalisation labels such as G=1; exact zeros that define a problem's set-up, such as `e1=0`,
-  `omega2=0`, `e2=0` or `m3=0`; the Burrau start, which is already a target; and our own measurements that carry no source
-  value. Atlas rows are `_local` because of `atlas-params.json`; their figures come from the committed CSV and catalogue
-  and from our own sample. `[digits in source]`: a long digit string, left out everywhere.
+  thresholds, run settings and start coordinates, unless it is on the kept list below. The page and table reference stays,
+  so the number is one lookup away. This masking is a judged reading of each `_local` row, not a proof: a number left in was
+  judged to fit the list. Kept in those rows: references (page, table, equation, section); counts of what a source holds
+  (rows, tables, runs, digits); units and normalisation labels such as G=1; exact values that define a set-up or name a
+  family (zeros, pi, 180 degrees, mass ratios such as 1:2:3, resonance names); the Burrau start, which is already a target;
+  and our own measurements that carry no source value. Atlas rows are `_local` because of `atlas-params.json`; their figures
+  come from the committed CSV and catalogue and from our own sample. `[digits in source]`: a long digit string, left out
+  everywhere.
 
 ## Counts
 
