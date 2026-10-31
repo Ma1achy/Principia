@@ -75,6 +75,8 @@ QUEUE_FIELD = re.compile(r"^- \*\*([^*]+?):?\*\*")  # "- **Waits:**", "- **File,
 # dated notes may repeat, and aren't listed.
 QUEUE_REQUIRED = ("File, section", "Applied meanwhile")
 QUEUE_ONE_EACH = QUEUE_REQUIRED + ("The question", "The gap", "Options seen", "Waits")
+# A number that names something: two lines differing here disagree, where two differing in another number are siblings.
+TWIN_NAME = re.compile(r"\b(?:RQ?-\d+|TASK-M\d+-\d+|REQ-[A-Z]+-\d+|PR #\d+|[Ll]ines? \d+)")
 TWIN_RATIO = 0.9  # two versions of a text are at least this alike; RQ-610's two near-identical paths reach 0.81
 TWIN_MIN = 30  # characters: shorter lines are alike by chance
 TWIN_MAX_LINES = 8  # the longest run of lines compared with the run after it
@@ -182,10 +184,17 @@ def truncated_scalars(path):
     return out
 
 
+def siblings(a, b):
+    """True if two different texts differ only in the digits of plain numbers: "N = 6: …" and "N = 12: …"."""
+    same_but_digits = a != b and re.sub(r"\d+", "", a) == re.sub(r"\d+", "", b)
+    return same_but_digits and TWIN_NAME.findall(a) == TWIN_NAME.findall(b)
+
+
 def twins(body):
     """(line, line) for each run of lines in `body`, a list of (line number, text), directly followed by a run that
     reads nearly the same, of the same length or one line more or less, since an edit can rewrap: what a union merge
-    leaves of text edited on two sides. Lines that differ only in their digits are a list's siblings, not versions."""
+    leaves of text edited on two sides. Lines that differ only in the digits of plain numbers are a list's siblings,
+    not versions; a difference in an id or a `line N` is a disagreement (TWIN_NAME)."""
     out = []
     plain = [(n, t) for n, t in body if t.strip()]
     join = lambda lines: " ".join(" ".join(t.split()) for _, t in lines)
@@ -197,7 +206,7 @@ def twins(body):
                 if m < 1 or i + k + m > len(plain):
                     continue
                 a, b = join(plain[i:i + k]), join(plain[i + k:i + k + m])
-                if len(a) < TWIN_MIN or len(b) < TWIN_MIN or (a != b and re.sub(r"\d+", "", a) == re.sub(r"\d+", "", b)):
+                if len(a) < TWIN_MIN or len(b) < TWIN_MIN or siblings(a, b):
                     continue
                 d = difflib.SequenceMatcher(None, a, b, autojunk=False)
                 if d.quick_ratio() >= TWIN_RATIO and d.ratio() >= TWIN_RATIO:
@@ -273,7 +282,8 @@ def queue_self_test():
     good = (f"## RQ-1: One question\n\n*Queued by a task.*\n\n{file_a}{line}\n{applied}\n\n"
             "## RQ-2: Another question *(context: none)*\n\n- **File, section:** `b.md` § \"2. Another\".\n"
             "- **Applied meanwhile:** the second answer, as the contract has it.\n")
-    siblings = "  - line 529: `run: cargo nextest run --workspace`\n  - line 547: `run: cargo nextest run --workspace`"
+    sibling = "  - N = {}: the same long words of a list, one item each"
+    versions = "  - Closed as {0}, by the same words of a ruling.\n  - Closed as {1}, by the same words of a ruling."
 
     def version(lines, mark):  # `lines` lines, none like another, each marked in its last letter
         return "".join("  " + "".join(chr(97 + i * j % 26) for j in range(40)) + mark + "\n"
@@ -281,7 +291,20 @@ def queue_self_test():
 
     cases = [  # (name, the queue, the fault, or None)
         ("well formed", good, None),
-        ("sibling lines differing in digits", good.replace(line, siblings), None),
+        ("sibling lines differing in a plain number", good.replace(
+            line, sibling.format(6) + "\n" + sibling.format(12)), None),
+        ("versions differing in a ruling", good.replace(line, versions.format("R-100", "R-101")),
+         "two versions of one text"),
+        ("versions differing in an RQ", good.replace(line, versions.format("RQ-100", "RQ-101")),
+         "two versions of one text"),
+        ("versions differing in a task", good.replace(line, versions.format("TASK-M2-36", "TASK-M2-37")),
+         "two versions of one text"),
+        ("versions differing in a requirement", good.replace(line, versions.format("REQ-VAL-1", "REQ-VAL-2")),
+         "two versions of one text"),
+        ("versions differing in a PR", good.replace(line, versions.format("PR #359", "PR #360")),
+         "two versions of one text"),
+        ("versions differing in a location", good.replace(line, versions.format("line 529", "line 547")),
+         "two versions of one text"),
         ("a repeatable field twice", good.replace(line, "- **Parked:** R-1.\n- **Parked:** R-2."), None),
         ("a line of 29 characters doubled", good.replace(line, "- abcdefghijklmnopqrstuvwxy12\n" * 2), None),
         ("a line of 30 characters doubled", good.replace(line, "- abcdefghijklmnopqrstuvwxy123\n" * 2),

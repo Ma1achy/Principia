@@ -685,3 +685,27 @@ negative_control!(
         queue_fails_naming(&queue, &archive, "no \"- **Applied meanwhile:**\" field");
     }
 );
+
+#[test]
+fn union_merge_of_a_ruling_number_edited_on_two_sides_is_caught() {
+    let (queue, archive) = union_merge(
+        "union_ruling",
+        &base_with_note("closed by R-100, in the words of that ruling"),
+        &base_with_note("closed by R-101, in the words of that ruling"),
+    );
+    queue_fails_naming(&queue, &archive, "are two versions of one text");
+}
+
+negative_control!(
+    union_merge_of_a_ruling_number_edited_on_two_sides_is_caught,
+    "two lines differing in a plain number are a list's siblings, and pass, so the failure check must fail on them",
+    expected = "queue check passed",
+    {
+        let (queue, archive) = union_merge(
+            "union_ctl_ruling",
+            &base_with_note("N = 6: the same long words of a list, one item each"),
+            &base_with_note("N = 12: the same long words of a list, one item each"),
+        );
+        queue_fails_naming(&queue, &archive, "are two versions of one text");
+    }
+);
