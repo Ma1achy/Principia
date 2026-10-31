@@ -231,10 +231,10 @@ negative_control!(
 );
 
 #[test]
-fn one_note_rewrapped_shorter_on_the_later_side_is_caught() {
-    // OPERATIONS § "Merging" step 2: "of that length or a line more or less". The test above has three lines then four;
-    // this is the other order, four then three, which a merge gives by its direction alone.
-    let dir = repo("rewrap_shorter");
+fn one_note_rewrapped_longer_on_the_later_side_is_caught() {
+    // OPERATIONS § "Merging" step 2: "of that length or a line more or less". The test above has four lines then three;
+    // this is the other order, three then four, which a merge gives by its direction alone.
+    let dir = repo("rewrap_longer");
     side(&dir, "a", |d| {
         add_note(d, "- **31 Oct 2026:** the wrapped text of one note that one branch has written over\n  three separate lines of the queue so that it runs on and on\n  until it stops here, for R-1.");
     });
@@ -247,11 +247,11 @@ fn one_note_rewrapped_shorter_on_the_later_side_is_caught() {
 }
 
 negative_control!(
-    one_note_rewrapped_shorter_on_the_later_side_is_caught,
-    "two notes in different words, the longer one first, pass, so the failure check must fail on them",
+    one_note_rewrapped_longer_on_the_later_side_is_caught,
+    "two notes in different words, the shorter one first, pass, so the failure check must fail on them",
     expected = "queue check passed",
     {
-        let dir = repo("ctl_rewrap_shorter");
+        let dir = repo("ctl_rewrap_longer");
         side(&dir, "a", |d| {
             add_note(d, "- **31 Oct 2026 (later):** the owner moved this to\n  another milestone, whose gate\n  reads the census first and\n  rules on it there.");
         });
