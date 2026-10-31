@@ -28,7 +28,7 @@
 //! those, so no intermediate is subnormal and every IEEE backend rounds them alike. The comparisons are on those
 //! pairs. `d` is decided on the pair's exponent before it is converted: below the normal range it is zero, and in the
 //! range the conversion is exact, so no subnormal is formed and no conversion rounds up across the boundary
-//! ([`crate::canon::to_normal_float`]). Its side is then read by [`negative`], which reads a subnormal handed to it as
+//! (`crate::canon::to_normal_float`). Its side is then read by [`negative`], which reads a subnormal handed to it as
 //! zero, so a distance from elsewhere is read as a backend that flushes it reads it.
 
 use super::binding::{on_substep, CrossingHook, SubstepCrossings, WordBuffer};
@@ -194,7 +194,7 @@ pub fn between<R: LinkReal + IeeeBits>(r: &[[R; 2]; 3]) -> u32 {
 /// The cuts' shared signed function at positions `r` (symbolic_dynamics_contract §1): `d = −((r₁ − r₀) × (r₂ − r₀))`,
 /// minus the triangle 0 → 1 → 2's doubled signed area, formed as the module's note says, `(r₁ − r₀)_y·(r₂ − r₀)_x −
 /// (r₁ − r₀)_x·(r₂ − r₀)_y` in one rounding of each product and one of the difference, then taken to the float only
-/// where that exponent is in the normal range, zero below it ([`to_normal_float`]).
+/// where that exponent is in the normal range, zero below it (`to_normal_float`).
 /// Negative on `L⁺`'s hemisphere (0 → 1 → 2 anticlockwise), positive on `L⁻`'s, zero on the equator.
 #[inline]
 pub fn signed_distance<R: LinkReal + IeeeBits>(r: &[[R; 2]; 3]) -> R {
