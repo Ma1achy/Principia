@@ -679,6 +679,11 @@ claim should be treated as a research hypothesis rather than an established fact
    phase scans (`R25/catalogue.md` §4.1); no planar 2D map.
 8. **Per-pixel reliability, simultaneous diagnostics and the per-pixel encounter word** (`LR` §15): no prior map
    reports, pixel by pixel, whether its diagnostic can be trusted.
+9. **No per-point FTLE data** *(added 31 Oct 2026, the owner)*: no published data file or table gives a finite-time
+   Lyapunov exponent point by point over an initial-condition grid, so FTLE comparisons here are against fits, figures
+   and summary statistics. Principia could itself publish this.
+10. **No f32 N = 3 statistical benchmark** *(added 31 Oct 2026, the owner)*: no published study gives the statistics of an
+    N = 3 ensemble integrated in single precision against a converged reference. Principia could itself publish this.
 
 Region D at rest, by contrast, is well mapped: Agekyan & Anosova, Lehto, Boekholt et al., Tanikawa & Mikkola,
 Parischewsky et al., Li & Liao and Hristov et al. all work there. That is why most replication is possible there, and
