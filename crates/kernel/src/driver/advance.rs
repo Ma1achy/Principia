@@ -25,7 +25,7 @@
 //! wrapper's `N_sub` and the sim key's `dt_macro` only; nothing reads a clock.
 
 use crate::occupant::{Geom, State, StepReal, Stepper};
-use crate::payload::SimStateBaseOf;
+use crate::payload::{PayloadReal, SimStateBaseOf};
 
 /// A step count as the float type it divides: `n` converted, exact for `n ≤ 2²⁴` at f32, and `N_sub ≤ L_max` is far
 /// below it.
@@ -66,7 +66,10 @@ pub trait Cadence<R> {
     /// The stored state `out` of the finished run, with what this cadence kept written into it. A cadence that keeps
     /// nothing leaves it; the wrapper's writes its monitored fields ([`super::wrapper::monitored`]).
     #[inline]
-    fn finish(&self, out: SimStateBaseOf<R>) -> SimStateBaseOf<R> {
+    fn finish(&self, out: SimStateBaseOf<R>) -> SimStateBaseOf<R>
+    where
+        R: PayloadReal,
+    {
         out
     }
 }

@@ -27,7 +27,7 @@ use super::project::ComProjection;
 use super::wrapper::{monitored, WrapperReal};
 use crate::generated::links::LinkReal;
 use crate::occupant::{Geom, State};
-use crate::payload::{sd_last_symbol, set_last_symbol, SimStateBaseOf};
+use crate::payload::{sd_last_symbol, set_last_symbol, PayloadReal, SimStateBaseOf};
 use crate::real::IeeeBits;
 use crate::word::{state_cuts, CrossingDetector, CrossingHook, WordBuffer};
 use crate::Real;
@@ -112,7 +112,10 @@ impl<R: WrapperReal> Cadence<R> for WrapperCadence<R> {
     }
 
     #[inline]
-    fn finish(&self, out: SimStateBaseOf<R>) -> SimStateBaseOf<R> {
+    fn finish(&self, out: SimStateBaseOf<R>) -> SimStateBaseOf<R>
+    where
+        R: PayloadReal,
+    {
         monitored(out, self)
     }
 }
