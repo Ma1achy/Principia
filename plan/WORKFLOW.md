@@ -198,6 +198,8 @@ Nothing is chosen by the implementer or a reviewer where the corpus doesn't deci
   requirement (R-72) once ruled so; otherwise the task waits.
 - **A design change** goes into the docs first, with an RQ and a ruling (the porting rule); then the plan follows;
   then the code.
+An entry's form, which the plan check holds it to: a heading `## RQ-n: <question>`, and in its body a
+`- **File, section:**` field and a `- **Applied meanwhile:**` field (`none`, if nothing is).
 The task stays open, blocked, until the human rules. Work continues on other tasks.
 
 ## No deferral
