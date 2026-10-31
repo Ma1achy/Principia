@@ -47,9 +47,15 @@ test-group = "xtask-cargo"
 # The job queue's live tests (R-658) start runners and jobs in process groups of their own. A hung one is ended by this
 # timer rather than holding a test thread: `slow-timeout` 120 s, ended at the third period, past their 45 s per xtask
 # call. The `ci` profile inherits this override. Applied per R-369.
+#
+# `priority`: they run before the rest of xtask's tests. They take about 1 min of a 25-60 min package; a mutant of the
+# queue fails one of them and stops the run there (`--max-fail=1:immediate`, `.cargo/mutants.toml`), and in nextest's
+# default order 264 tests, cargo builds among them, ran first: 7.5 min per caught mutant, 368 mutants, every shard cut
+# off at 300 min (run 41195456800). The tests run are the same, and a survivor still runs every one. Applied per R-369.
 [[profile.default.overrides]]
 filter = "binary_id(=xtask::jobq) | binary_id(/^xtask::qa_R-658/)"
 slow-timeout = { period = "120s", terminate-after = 3 }
+priority = 100
 
 # Each of the job queue's test processes in a PID namespace of its own during a mutants run (`scripts/contain.sh test`;
 # a pass-through unless the run sets PRIN_TEST_PIDNS): nothing a mutant of the queue starts outlives its test, and nothing
