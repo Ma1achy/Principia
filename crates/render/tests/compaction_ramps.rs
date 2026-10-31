@@ -774,11 +774,6 @@ fn wants() -> Vec<(Entry, Want)> {
             entry("C_ty"),
             (Role::Signed, Lut::Coolwarm, Polarity::High, sym),
         ),
-        // provisional (R-426): drawn as (−∞, ∞), so signed.
-        (
-            entry("mean_y"),
-            (Role::Signed, Lut::Coolwarm, Polarity::High, sym),
-        ),
         // angles: cyclic, whatever the range (R-423).
         (
             entry("theta"),
@@ -824,6 +819,16 @@ fn wants() -> Vec<(Entry, Want)> {
                 Lut::Viridis,
                 Polarity::High,
                 Compaction::Lin { lo: 0.0, hi: 1.0 },
+            ),
+        ),
+        // declared [0, 4] from `y`'s definition (REQ-PAY-098; R-426), no longer provisional: one-signed.
+        (
+            entry("mean_y"),
+            (
+                Role::Sequential,
+                Lut::Viridis,
+                Polarity::High,
+                Compaction::Lin { lo: 0.0, hi: 4.0 },
             ),
         ),
         (
@@ -914,11 +919,10 @@ fn default_ramps_follow_field_role() {
 
 /// The fields whose `lin` range the registry leaves open, each with the fixed range it is placed on at [`READS`]: a
 /// measured end `u_range`'s, a step index's top the horizon, a signed field's `[−M, M]`.
-const PLACED: [(&str, [f64; 2]); 7] = [
+const PLACED: [(&str, [f64; 2]); 6] = [
     ("ftle", [-3.0, 5.0]),
     ("diffusion", [-3.0, 5.0]),
     ("S", [-5.0, 5.0]),
-    ("mean_y", [-5.0, 5.0]),
     ("K_0", [0.0, 5.0]),
     ("V_0", [-3.0, 0.0]),
     ("t_end_step", [0.0, 1000.0]),

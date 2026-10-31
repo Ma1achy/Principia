@@ -503,9 +503,9 @@ negative_control!(
 );
 
 /// The register's presentation constants (TASK-M1-18; R-427): the six log floors, the hatch's numbers, the hue
-/// wheel's and the diverging fields' `x₀` (TASK-M7-05). None decides a stored bit, so none is hashed
-/// (dd_generation_root §3.8, "The hash").
-const PRESENTATION: [&str; 13] = [
+/// wheel's, the diverging fields' `x₀` (TASK-M7-05) and the custom-stop ramp's OKLab bound (TASK-M7-11). None decides
+/// a stored bit, so none is hashed (dd_generation_root §3.8, "The hash").
+const PRESENTATION: [&str; 14] = [
     "log_floor_d_min",
     "log_floor_dE_max",
     "log_floor_dLz_max",
@@ -519,6 +519,7 @@ const PRESENTATION: [&str; 13] = [
     "hue_wheel_c",
     "diverging_x0_E_0",
     "diverging_x0_Lz_0",
+    "ramp_oklab_ab_max",
 ];
 
 /// The calibrations the register holds: the M1 gate's (R-433), `r_pole`, the pole hold's radius, a march parameter that

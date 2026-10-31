@@ -690,6 +690,10 @@ with the requirement that fills it.
 `q_mass`'s range is declared by TASK-M2-03 (REQ-PAY-097): `[0, 1]`, from its formula, `min(m₀, m₁)/max(m₀, m₁)`
 (dd_decoder §3.6; REQ-PAY-088). It does not span zero, so the field leaves `ramp_coolwarm` for `ramp_viridis`, and
 `mean_y` is the one provisional range left.
+`mean_y`'s range is declared by TASK-M3-13 (REQ-PAY-098): `[0, 4]`, from `y`'s definition, the squared shape-sphere
+chord `‖n̂(r_k, m) − n̂(r_0, m)‖²` between two unit vectors (dd_simstate_payload §4; REQ-PAY-073). `mean_y` averages
+it, so it is in `[0, 4]` too. That range does not span zero, so the field leaves `ramp_coolwarm` for `ramp_viridis`,
+and no range is provisional any longer.
 Also declared (R-426's fix round, applied per R-369): `energy_drift` and `Lz_drift` (−∞, ∞), signed, citing the
 worked entries below and §3.4, which already give them that range, so the ledger must write it; and `C_ty`
 (−∞, ∞), signed, citing R-423's check of `diffusion` and `C_ty = diffusion · C_tt(n)`, `C_tt(n) = h²·n(n²−1)/12 > 0`
