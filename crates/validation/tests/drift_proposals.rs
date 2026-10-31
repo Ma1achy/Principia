@@ -571,3 +571,39 @@ negative_control!(
         (ic, 2.0 * p)
     })
 );
+
+/// Checks the hierarchy's scale-free ratios at `M ≠ 1`, where the canonical scales are the same on every length and
+/// every speed: the outer distance to the binary's separation, and the outer speed to the binary's relative speed.
+fn check_hierarchy_ratios(hierarchy: Hierarchy) {
+    let (m, a, e, d) = ([1.0, 0.6, 0.4], 1.25, 0.8, 5.0);
+    let mt: f64 = m.iter().sum();
+    let mb = m[0] + m[1];
+    let (ic, _) = hierarchy(m, a, e, d);
+    let dist = |x: [f64; 2], y: [f64; 2]| (x[0] - y[0]).hypot(x[1] - y[1]);
+    let w = [m[0] / mb, m[1] / mb];
+    let bary = |x: [f64; 2], y: [f64; 2]| [0, 1].map(|k| w[0] * x[k] + w[1] * y[k]);
+    let v = |i: usize| [ic.p[i][0] / ic.m[i], ic.p[i][1] / ic.m[i]];
+    let lengths = dist(ic.r[2], bary(ic.r[0], ic.r[1])) / dist(ic.r[0], ic.r[1]);
+    assert!(
+        (lengths - d / (a * (1.0 + e))).abs() < 1e-9,
+        "the length ratio is {lengths}"
+    );
+    let va = (mb * (1.0 - e) / (a * (1.0 + e))).sqrt();
+    let speeds = dist(v(2), bary(v(0), v(1))) / dist(v(0), v(1));
+    assert!(
+        (speeds - (mt / d).sqrt() / va).abs() < 1e-9,
+        "the speed ratio is {speeds}"
+    );
+}
+
+#[test]
+fn drift_hierarchy_ratios_at_any_total_mass() {
+    check_hierarchy_ratios(drift::hierarchy);
+}
+
+negative_control!(
+    drift_hierarchy_ratios_at_any_total_mass,
+    "a hierarchy with its outer body moved",
+    expected = "the length ratio",
+    check_hierarchy_ratios(|m, a, e, d| drift::hierarchy(m, a, e, 2.0 * d))
+);

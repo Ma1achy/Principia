@@ -887,3 +887,33 @@ negative_control!(
     expected = "generation was not refused",
     check_refused(&with_probe_bit(|e| e), "probe_bit", "has no `lin` range")
 );
+
+/// Checks the generated read side, Rust and WGSL, against `read`'s reading of each checked-in file.
+fn check_read_side_checked_in(read: fn(&std::path::Path) -> String) {
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let generated = gen::generate(&ledger::layout(), gen::EMITTERS).expect("the layout generates");
+    let mut seen = 0;
+    for file in generated {
+        let name = file.path.to_string_lossy().into_owned();
+        if name.ends_with("read_side.rs") || name.ends_with("read_side.wgsl") {
+            seen += 1;
+            assert!(
+                read(&root.join(&file.path)) == file.contents,
+                "`{name}` isn't what the generator writes"
+            );
+        }
+    }
+    assert_eq!(seen, 2, "the read side's two files");
+}
+
+#[test]
+fn generated_read_side_is_the_checked_in_read_side() {
+    check_read_side_checked_in(|p| std::fs::read_to_string(p).expect("the checked-in file"));
+}
+
+negative_control!(
+    generated_read_side_is_the_checked_in_read_side,
+    "a checked-in file that differs",
+    expected = "isn't what the generator writes",
+    check_read_side_checked_in(|_| String::new())
+);
