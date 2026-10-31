@@ -281,12 +281,17 @@ fn alive(pid: i32) -> bool {
 }
 
 /// Signals `pid`, or the group `-pid`. Never 0, 1, -1 or their like: `kill -9 -1` is every process of this user.
+///
+/// The `--` is load-bearing. Without it, the `kill` of Linux's procps-ng reads `-273` as an option and signals `-2`, the
+/// first digit alone (src/kill.c in 4.0.4, "Special case for signal digit negative PIDs"), so a group whose id starts
+/// with 1 comes to `kill(-1, SIGKILL)`, and in a PID namespace, where the test process leads group 2, one that starts
+/// with 2 kills the test (run 41225328782).
 fn kill(signal: &str, pid: i32) {
     if pid.abs() <= 1 {
         return;
     }
     let _ = Command::new("kill")
-        .args([signal, &pid.to_string()])
+        .args([signal, "--", &pid.to_string()])
         .output_within(Duration::from_secs(30));
 }
 
@@ -2354,6 +2359,11 @@ negative_control!(
 
 /// Plants a folder where the runner writes `id`'s file before renaming it, so that file's every save fails.
 fn plant_failing_save(q: &Q, id: u64) -> PathBuf {
+    // `submit` starts the runner and returns: its lock comes a moment later.
+    assert!(
+        until(30, || q.queue().runner_lock().is_some()),
+        "no runner took the lock"
+    );
     let runner = q.queue().runner_lock().expect("a live runner").pid;
     let planted = q
         .queue()
@@ -3375,4 +3385,50 @@ negative_control!(
     "a process just started has not run for an hour",
     expected = "ps misread",
     process_reads_case("jobq_process_reads_control", 3_600)
+);
+
+/// A stand-in with one child, in a process group of its own; bounded, should the test die.
+fn group_of_its_own() -> std::process::Child {
+    Command::new("/bin/sh")
+        .args(["-c", "sleep 30 & wait; :"])
+        .process_group(0)
+        .spawn()
+        .expect("stand-in started")
+}
+
+/// These tests' `kill` of a group, through the system's `kill`, with ids of whatever digits they get: the group `aimed`
+/// at ends, the first or the second, and the other stays. [`kill`]'s `--` is why: see it.
+fn group_kill_case(aim_at_first: bool) {
+    let (mut first, mut second) = (group_of_its_own(), group_of_its_own());
+    let (one, two) = (first.id() as i32, second.id() as i32);
+    assert!(
+        until(10, || group_members(one).len() == 2
+            && group_members(two).len() == 2),
+        "the stand-ins never set up"
+    );
+    kill("-9", -(if aim_at_first { one } else { two }));
+    let ended = until(5, || {
+        let _ = first.try_wait();
+        group_members(one).is_empty()
+    });
+    let stayed = group_members(two).len() == 2;
+    kill("-9", -one);
+    kill("-9", -two);
+    let _ = (first.wait(), second.wait());
+    assert!(
+        ended && stayed,
+        "kill missed its group: group {one} ended {ended}, group {two} stayed {stayed}"
+    );
+}
+
+#[test]
+fn jobq_the_tests_kill_reaches_the_group_it_names_and_no_other() {
+    group_kill_case(true);
+}
+
+negative_control!(
+    jobq_the_tests_kill_reaches_the_group_it_names_and_no_other,
+    "a kill of the other group does not end this one",
+    expected = "kill missed its group",
+    group_kill_case(false)
 );
