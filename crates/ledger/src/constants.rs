@@ -1136,6 +1136,22 @@ pub const HUE_WHEEL_C: ConstantBuilder = ConstantBuilder {
     provisional: None,
 };
 
+/// The bound on a custom-stop ramp's OKLab `a` and `b`, each in `[−1, 1]` (colour_composition §9.4, "The custom-stop
+/// ramp"; R-72, REQ-COL-140): within it the OKLab→linear conversion's cubes stay at most 13.5 in magnitude, so the
+/// ramp's linear sRGB is finite, and every sRGB colour lies inside it. Admissible as expressed in canonical units: an
+/// OKLab coordinate, a pure number.
+pub const RAMP_OKLAB_AB_MAX: ConstantBuilder = ConstantBuilder {
+    name: "ramp_oklab_ab_max",
+    value: Some(Value::Exact(1.0)),
+    class: Some(Admissibility::CanonicalUnits),
+    citation: Some(Citation::Corpus {
+        file: "docs/design/principia_colour_composition.md",
+        section: "9. The stain editor's composition resolutions (R-72; REQ-COL-054)",
+    }),
+    relative_basis: None,
+    provisional: None,
+};
+
 // ── The substep law (dd_integrator §3.3; integrator_contract Part 3, Part 4; R-502) ───────────────────────────────
 //
 // `N_sub = min(bucket(d²), N_max)`, the bucket a comparison of the position-quantised `d²` against the sim key's
@@ -1256,7 +1272,8 @@ pub const SLICE_AXIS_Z_Q3: ConstantBuilder = chart(
 /// diverging fields' `x₀` (TASK-M7-05; REQ-COL-066). No `diffusion` sentinel: an invalid fit reads NaN by the predicate
 /// `n ≥ 2` (R-245). Then the steppers' coefficients and test 3's rounding-level criterion (TASK-M3-02; REQ-INT-037,
 /// REQ-VAL-191), and the substep law's defaults and its threshold table's maximum length (TASK-M3-03; R-502,
-/// REQ-INT-094), and the view window's square (TASK-M2-21), and the slice frame's default axis (TASK-M6-38).
+/// REQ-INT-094), and the view window's square (TASK-M2-21), and the slice frame's default axis (TASK-M6-38), and the
+/// custom-stop ramp's OKLab bound (TASK-M7-11).
 pub const REGISTER: &[ConstantBuilder] = &[
     HORIZON_STEPS_MAX,
     FGW_CAPACITY,
@@ -1298,6 +1315,7 @@ pub const REGISTER: &[ConstantBuilder] = &[
     HATCH_HALF_PERIOD,
     HUE_WHEEL_L,
     HUE_WHEEL_C,
+    RAMP_OKLAB_AB_MAX,
     R_POLE,
     N_NORM_TOL,
     SHAPE_VEC_JS_TOL,
