@@ -401,7 +401,7 @@ struct StopAfter<R> {
     limit: u32,
 }
 
-impl<R: kernel::Real> Cadence<R> for StopAfter<R> {
+impl<R: WrapperReal> Cadence<R> for StopAfter<R> {
     fn after_step(&mut self, state: &mut State<R>, geom: &mut Geom<R>) {
         self.inner.after_step(state, geom);
     }

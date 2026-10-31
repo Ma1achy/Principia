@@ -810,3 +810,39 @@ negative_control!(
     expected = "the stored L_z0",
     check_monitored(|_, _| 99.0)
 );
+
+/// Checks that a run with its word stores what `integrate` stores of the monitored fields.
+fn check_word_run_monitored(
+    march: fn(&Ic<f64>, &WrapperUniforms<f64>) -> kernel::payload::SimStateBaseOf<f64>,
+) {
+    let fixture = figure_eight();
+    let u = validation::drift::sim_key::<f64>(0.25);
+    let plain = kernel::driver::wrapper::integrate::<Euler, f64>(&fixture.ic, &u);
+    let got = march(&fixture.ic, &u);
+    assert_ne!(plain.packed_b, 0, "the plain run latched a drift");
+    assert_eq!(got.packed_b, plain.packed_b, "the word run's latches");
+    assert_eq!(got.E_0, plain.E_0, "the word run's E_0");
+    assert_eq!(got.Lz_0, plain.Lz_0, "the word run's L_z0");
+}
+
+fn word_run(ic: &Ic<f64>, u: &WrapperUniforms<f64>) -> kernel::payload::SimStateBaseOf<f64> {
+    let mut cadence = WrapperCadence::new(&ic.m, &ic.r, &ic.p);
+    let mut words = [kernel::word::FreeGroupWord::default()];
+    kernel::driver::wrapper::integrate_word::<Euler, f64, _, _>(ic, u, &mut cadence, 0, &mut words)
+}
+
+#[test]
+fn invariant_monitor_word_run_stores_its_latches() {
+    check_word_run_monitored(word_run);
+}
+
+negative_control!(
+    invariant_monitor_word_run_stores_its_latches,
+    "a run whose latches were not written",
+    expected = "the word run's latches",
+    check_word_run_monitored(|ic, u| {
+        let mut out = word_run(ic, u);
+        out.packed_b = 0;
+        out
+    })
+);

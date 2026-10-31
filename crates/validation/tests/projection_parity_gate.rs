@@ -279,10 +279,10 @@ fn check_projected(project: fn(&State<f32>) -> State<f32>) {
     for k in 0..2 {
         let com: f64 = (0..3).map(|i| m[i] * f64::from(s.r[i][k])).sum::<f64>() / total;
         let mom: f64 = (0..3).map(|i| f64::from(s.p[i][k])).sum();
-        for i in 0..3 {
+        for (i, mi) in m.iter().enumerate() {
             let (r, p) = (
                 f64::from(s.r[i][k]) - com,
-                f64::from(s.p[i][k]) - m[i] / total * mom,
+                f64::from(s.p[i][k]) - mi / total * mom,
             );
             assert!((f64::from(got.r[i][k]) - r).abs() < 1e-5, "r[{i}][{k}]");
             assert!((f64::from(got.p[i][k]) - p).abs() < 1e-5, "p[{i}][{k}]");

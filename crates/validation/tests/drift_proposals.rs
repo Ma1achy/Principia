@@ -516,10 +516,13 @@ fn short_horizon_table() -> Vec<Measured> {
     drift::measure(&f)
 }
 
+/// A builder of the hierarchy, as `drift::hierarchy`.
+type Hierarchy = fn([f64; 3], f64, f64, f64) -> (kernel::decode::Ic<f64>, f64);
+
 /// Checks the hierarchy's geometry in canonical units, the length scale `λ` from its pericentre: the binary's
 /// separation and relative speed at apocentre, and the outer body's distance and relative speed about the binary's
 /// centre of mass. `M = 1`, so lengths scale by `λ` and speeds by `λ^(−1/2)`. Unequal masses, so no weight is masked.
-fn check_hierarchy(hierarchy: fn([f64; 3], f64, f64, f64) -> (kernel::decode::Ic<f64>, f64)) {
+fn check_hierarchy(hierarchy: Hierarchy) {
     let (m, a, e, d) = ([0.5, 0.3, 0.2], 1.25, 0.8, 5.0);
     let (ic, pericentre) = hierarchy(m, a, e, d);
     let lambda = pericentre / (a * (1.0 - e));

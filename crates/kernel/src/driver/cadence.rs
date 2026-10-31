@@ -24,9 +24,10 @@
 use super::advance::Cadence;
 use super::monitor::Monitor;
 use super::project::ComProjection;
+use super::wrapper::{monitored, WrapperReal};
 use crate::generated::links::LinkReal;
 use crate::occupant::{Geom, State};
-use crate::payload::{sd_last_symbol, set_last_symbol};
+use crate::payload::{sd_last_symbol, set_last_symbol, SimStateBaseOf};
 use crate::real::IeeeBits;
 use crate::word::{state_cuts, CrossingDetector, CrossingHook, WordBuffer};
 use crate::Real;
@@ -96,7 +97,7 @@ impl<R: Real> WrapperCadence<R> {
     }
 }
 
-impl<R: Real> Cadence<R> for WrapperCadence<R> {
+impl<R: WrapperReal> Cadence<R> for WrapperCadence<R> {
     #[inline]
     fn after_step(&mut self, state: &mut State<R>, geom: &mut Geom<R>) {
         self.invocations += 1;
@@ -108,6 +109,11 @@ impl<R: Real> Cadence<R> for WrapperCadence<R> {
     #[inline]
     fn done(&self) -> bool {
         self.done
+    }
+
+    #[inline]
+    fn finish(&self, out: SimStateBaseOf<R>) -> SimStateBaseOf<R> {
+        monitored(out, self)
     }
 }
 

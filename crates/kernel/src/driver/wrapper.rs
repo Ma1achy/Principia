@@ -127,7 +127,7 @@ where
     let mut word_cadence = WordCadence::new(cadence, &ic.r, index, words);
     let out = integrate_with::<A, R, _>(ic, uniforms, &mut word_cadence);
     let packed_a = word_cadence.mirror_last_symbol(out.packed_a);
-    SimStateBaseOf { packed_a, ..out }
+    cadence.finish(SimStateBaseOf { packed_a, ..out })
 }
 
 /// The integration of `ic` under `uniforms` by the occupant `A`, `cadence` the per-substep callback it passes in
