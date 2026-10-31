@@ -16,8 +16,9 @@
 //!   `ramp_twilight`; the ledger gains no member (`numeric_view_template_zero_spanning_*`,
 //!   `numeric_view_template_ledger_*`); `K_0` and `V_0` on `ramp_viridis`, increasing in the value in both modes,
 //!   defaulting to `RANGE_AUTO = 1`, `V_0`'s most negative value at `t = 0` (`numeric_view_template_k0_v0_*`);
-//! - REQ-GEN-035 (R-426; TASK-M1-21): the views on `ramp_coolwarm` are the eight that were before, `mean_y`
-//!   provisionally, but `q_mass`, whose range REQ-PAY-097 declared [0, 1] (TASK-M2-03), now on `ramp_viridis`; a gap
+//! - REQ-GEN-035 (R-426; TASK-M1-21): the views on `ramp_coolwarm` are the eight that were before, but `q_mass`, whose
+//!   range REQ-PAY-097 declared [0, 1] (TASK-M2-03), and `mean_y`, whose range REQ-PAY-098 declared [0, 4] from `y`'s
+//!   definition (REQ-PAY-073; TASK-M3-13), now on `ramp_viridis`; a gap
 //!   never spans zero (`numeric_view_template_coolwarm_views_kept_r426`);
 //! - REQ-RENDER-085 (R-423; TASK-M1-20): `theta`, an angle, is cyclic: raw = fract(θ̃ / 2π), `fract(x) = x − ⌊x⌋`, on
 //!   the fixed `[0, 1]` with `ramp_twilight`, defaulting to `RANGE_AUTO = 0`, one turn apart giving the same raw for
@@ -1080,11 +1081,13 @@ fn numeric_view_template_zero_spanning_is_coolwarm_centred_at_zero() {
         .filter(|(_, n, _)| n.ramp() == Ramp::Coolwarm)
         .map(|(e, ..)| e.name)
         .collect();
-    for field in ["E_0", "Lz_0", "C_ty", "S", "mean_y", "ftle", "diffusion"] {
+    for field in ["E_0", "Lz_0", "C_ty", "S", "ftle", "diffusion"] {
         assert!(coolwarm.contains(&field), "`{field}` is not on cool-warm");
     }
-    // REQ-PAY-097: `q_mass`'s declared [0, 1] does not span zero (R-400, R-426).
+    // REQ-PAY-097: `q_mass`'s declared [0, 1] does not span zero (R-400, R-426); nor does `mean_y`'s declared
+    // [0, 4] (REQ-PAY-098).
     assert!(!coolwarm.contains(&"q_mass"), "`q_mass` is on cool-warm");
+    assert!(!coolwarm.contains(&"mean_y"), "`mean_y` is on cool-warm");
 }
 
 negative_control!(
@@ -1099,9 +1102,10 @@ negative_control!(
     )
 );
 
-/// The fields on `ramp_coolwarm` before R-426 (TASK-M1-17, TASK-M1-20): R-426 moves none (REQ-GEN-035), and
-/// REQ-PAY-097 moves `q_mass` to viridis once its range is declared [0, 1] (TASK-M2-03).
-const COOLWARM: [&str; 7] = ["S", "mean_y", "C_ty", "E_0", "Lz_0", "ftle", "diffusion"];
+/// The fields on `ramp_coolwarm` before R-426 (TASK-M1-17, TASK-M1-20): R-426 moves none (REQ-GEN-035);
+/// REQ-PAY-097 moves `q_mass` to viridis once its range is declared [0, 1] (TASK-M2-03), and REQ-PAY-098 `mean_y`
+/// once its range is declared [0, 4] (TASK-M3-13).
+const COOLWARM: [&str; 6] = ["S", "C_ty", "E_0", "Lz_0", "ftle", "diffusion"];
 
 /// Checks that the views on `ramp_coolwarm`, in `views`, are exactly [`COOLWARM`].
 fn check_coolwarm_kept(views: &[(Entry, NumericView, String)]) {
@@ -1125,12 +1129,19 @@ fn numeric_view_template_coolwarm_views_kept_r426() {
 
 negative_control!(
     numeric_view_template_coolwarm_views_kept_r426,
-    "`mean_y` read as a gap leaves cool-warm, which R-426 keeps it on provisionally",
+    "`mean_y` drawn on cool-warm, as R-426 kept it provisionally until REQ-PAY-098 declared [0, 4]",
     expected = "the views on cool-warm changed",
     check_coolwarm_kept(
         &numeric_views()
             .into_iter()
-            .filter(|(e, ..)| e.name != "mean_y")
+            .map(|(e, n, wgsl)| {
+                let wgsl = if e.name == "mean_y" {
+                    wgsl.replace("ramp_viridis(", "ramp_coolwarm(")
+                } else {
+                    wgsl
+                };
+                (e, n, wgsl)
+            })
             .collect::<Vec<_>>()
     )
 );

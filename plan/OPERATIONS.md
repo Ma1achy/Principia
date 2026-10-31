@@ -267,6 +267,39 @@ merge:
    own new checks if `main` has moved since its CI ran. "Require branches to be up to date" is off (R-266), so nothing
    else catches a clash: #70's CI was green, but `main` had since gained #75's `spawn::TIMEOUT` uses, which #70 renamed,
    and the merged tree failed to compile (30 Sep 2026).
+   `REVIEW_QUEUE.md` merges by union (`.gitattributes`, applied per R-369), which keeps appended entries from
+   conflicting, and the merge itself says nothing of what it leaves: both versions of a line edited on two sides; both
+   bodies under one heading, where two sides file the same new id with an identical heading; new entries interleaved,
+   one's lines under another's RQ, where they share a run of identical lines; a line or whole entry one side deleted,
+   restored because the other side edited it. And two branches that each pass can collide only in their merge: each
+   takes the next free RQ id on its own (§ "Numbers"), and that stays. So the queue has its own check, which
+   `python3 plan/check_plan.py` runs and which runs alone on the would-be merge, before each merge:
+   ```
+   git -C <scratch> merge --no-edit origin/<branch>
+   python3 <scratch>/plan/check_plan.py --queue <scratch>/REVIEW_QUEUE.md
+   ```
+   (`<scratch>` being the worktree above, or for any other file, `--queue <path> --archive <archive dir>`.) It fails on
+   an RQ id twice in the queue, in both the queue and `docs/archive/review_queue/`, or twice across the archive; two
+   entries with one question; two of an entry's one-per-entry fields, or no `File, section` or `Applied meanwhile`; a
+   heading with no body or not in the form `## RQ-n: <question>`; a run of up to eight lines next to one that reads the
+   same, of that length or a line more or less, an edit in an id (`R-n`, `RQ-n`, `TASK-…`, `REQ-…`, `PR #n`) or a
+   `line N` counting as a difference; or a paragraph starting in lower case at the margin.
+
+   **On a failure:** the PR to merge later fixes it on its own branch, by merging `main`, and CI runs on the new head.
+   An id collision: **the later PR takes the next free id** (§ "Numbers"), in its entry and in every reference it added
+   to that id (`rq:` in `plan/requirements.yaml`, its task files, its PR); ids that are already on `main` never change.
+   Two versions of one entry: keep the one the entry's owner meant, or both as dated lines if both hold. A false alarm
+   on two lines meant alike: reword one.
+
+   `ci` on `main` catches what slips through: every job runs on a push to `main` (§ "What CI runs on a pull request"),
+   `plan_check_passes_on_the_tree` among them; a pull request's own CI runs on its merge ref, so it sees only what was on
+   `main` at its last push. The check can't see everything a merge leaves. These still pass:
+   two lines differing only in a plain number, a date or value among them, which read as a list's siblings; lines
+   under 30 characters; runs over eight lines; an interleaving that moves no required field and repeats no
+   one-per-entry field; conflicting notes in different words, or two versions reworded further apart than its likeness
+   allows; two questions in different words; a deletion undone, or an entry restored whole. So after each merge the
+   orchestrator still reads `git diff <before> <after> -- REVIEW_QUEUE.md`, which the batch merge prints, for these: a
+   line doubled, restored or under the wrong RQ, or two notes that disagree. It fixes anything wrong by a follow-up PR.
 3. `gh pr merge N --merge --match-head-commit <full sha>`. Never `--admin` (R-266), never squash or rebase.
 4. Then, as a separate command, never chained after the merge with `;`: confirm the remote branch is gone, since
    GitHub's "Automatically delete head branches" deletes it on merge (R-357): `git ls-remote --exit-code origin
@@ -278,6 +311,29 @@ merge:
    separate check suite, re-run it: `gh run rerun <id>` (R-266, R-276).
 6. To re-run CI, prefer re-running the failed jobs (`gh run rerun <id> --failed`) over closing and reopening the PR
    (the owner's note, R-633).
+
+**Advisory bot reviews before the merge (R-651, a standing rule).** Before step 3, the orchestrator's merge script
+checks, for Codex, Gemini CLI and Copilot each:
+- **A review on the exact head SHA being merged.** Where a bot's last review is on an older head, it re-requests that
+  bot (`@codex review`, `@gemini-cli /review`, Copilot re-requested as a reviewer) and waits for it. A bot that hasn't
+  reviewed the exact SHA within its limit, counted from the request (Codex 25 minutes; Gemini CLI 30 minutes, its job's
+  25-minute timeout, PR #339, plus start-up; Copilot 15 minutes), errors, or refuses on quota or rate limit counts as
+  unavailable: the PR notes "no <bot> review on <sha>: <reason>", and the merge goes ahead on the others, never blocked
+  by a bot.
+- **No unresolved bot thread.** Every finding has been verified against the code, the spec or the physics and closed
+  out with a reply: fixed (the commit named), not applicable (wrong, out of scope or already covered, with the reason),
+  or moved to a tracked task or RQ; then resolved. A thread resolved without a reply is reopened and answered. A wrong
+  finding is answered with why it is wrong, never "fixed" to silence it.
+
+Between the PR's opening and the merge, the orchestrator also asks for a fresh review from each bot after every
+substantive push (new logic, physics or algebra; a fix responding to review findings, whatever it changes; a rebase or
+merge that changes code; only a docs-only typo push that answers no finding is exempt) and periodically on a
+long-running PR (at least once a working day while it is open, and at least every third push once the diff passes ~500
+lines). Under limits: pre-merge first, then post-push, then periodic.
+Each merge that went ahead without a bot's pre-merge review is listed, with the reason, in the next batched summary to
+the owner. The bots stay advisory: the named reviewers' approvals and green CI decide the merge (§ "Autonomy
+(R-369)"). This replaces R-635's single review waited for up to 15 minutes after the PR opened; R-635's other rules
+(P0 claims to the physics reviewer, late reviews as follow-ups, the trial tally) stand.
 
 **Merge order for stacked PRs.** Don't stack (R-362, § "Roles and the loop"). Deleting a base branch closes the PR
 stacked on it rather than retargeting it (PR #2, 25 Sep 2026), and with auto-delete on (R-357), merging a PR deletes
@@ -320,8 +376,12 @@ test, build script, codegen step or xtask check that reads a doc, spec or data f
 `scripts/ci_changes.sh`'s list of files code reads; `xtask/tests/ci_changes.rs` scans for a literal path missing from it.
 
 **Numbers.**
+- **An RQ's form.** A heading `## RQ-n: <question>`, a `- **File, section:**` field and a `- **Applied meanwhile:**`
+  field (§ "Escalation" of `plan/WORKFLOW.md`); the plan check fails an entry without them.
 - **RQ ids.** Before filing an RQ, take the next free id across every `origin/*` branch: `git fetch`, then search each
-  branch's `REVIEW_QUEUE.md` and `docs/archive/review_queue/`. Two agents once both filed RQ-188.
+  branch's `REVIEW_QUEUE.md` and `docs/archive/review_queue/`. Two agents once both filed RQ-188. A branch filed since
+  can still take the same one: the merged-tree check catches that, and the later PR takes the next free id (§ "Merging"
+  step 2).
 - **An RQ open only on a PR branch.** When a rulings PR rules on it, the rulings PR archives it in
   `docs/archive/review_queue/`, since `plan/tools/rulings.py` rejects a cited RQ that is neither open nor archived. The
   task PR's next fix pass deletes its open copy.

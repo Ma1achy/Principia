@@ -1136,6 +1136,22 @@ pub const HUE_WHEEL_C: ConstantBuilder = ConstantBuilder {
     provisional: None,
 };
 
+/// The bound on a custom-stop ramp's OKLab `a` and `b`, each in `[−1, 1]` (colour_composition §9.4, "The custom-stop
+/// ramp"; R-72, REQ-COL-140): within it the OKLab→linear conversion's cubes stay at most 13.5 in magnitude, so the
+/// ramp's linear sRGB is finite, and every sRGB colour lies inside it. Admissible as expressed in canonical units: an
+/// OKLab coordinate, a pure number.
+pub const RAMP_OKLAB_AB_MAX: ConstantBuilder = ConstantBuilder {
+    name: "ramp_oklab_ab_max",
+    value: Some(Value::Exact(1.0)),
+    class: Some(Admissibility::CanonicalUnits),
+    citation: Some(Citation::Corpus {
+        file: "docs/design/principia_colour_composition.md",
+        section: "9. The stain editor's composition resolutions (R-72; REQ-COL-054)",
+    }),
+    relative_basis: None,
+    provisional: None,
+};
+
 // ── The substep law (dd_integrator §3.3; integrator_contract Part 3, Part 4; R-502) ───────────────────────────────
 //
 // `N_sub = min(bucket(d²), N_max)`, the bucket a comparison of the position-quantised `d²` against the sim key's
@@ -1246,6 +1262,26 @@ pub const SLICE_AXIS_Z_Q3: ConstantBuilder = chart(
     },
 );
 
+/// The ruling that settles the tilt's two maps, Tip as sheet's wrap in total tip and Lean each axis's dead zone
+/// (R-474).
+const R474: Citation = Citation::Corpus {
+    file: "decisions.md",
+    section: "R-474 — RQ-340 is ruled: two tilt maps, \"Tip as sheet\", the nav cube's axis-angle map and the default, and \"Lean each axis\", today's, an option, differing only with one target and both angles set; Tip as sheet carries on over the pole, wrapped only in total tip at 360° and never folded onto its 180° partner; planes are compared up to sign and never written back; the map is recorded everywhere as `tilt_map`; the compass draws the active map, B11 revisited; Lean's Gram factor and warnings; every readout shows each axis's components *(closes RQ-340; amends R-451, R-457 and R-459)*",
+};
+
+/// `|τ|` at Lean each axis's dead zone, 90, in degrees: there the other angle stops moving the plane, and with one
+/// target `|τ₁| = |τ₂| = 90°` is the rank-losing corner (R-474 R8). Admissible as expressed in canonical units: the
+/// stored angles' own unit, degrees, exact.
+pub const TILT_RIGHT_ANGLE: ConstantBuilder = chart("tilt_right_angle", 90.0, R474);
+
+/// The total tip past which Tip as sheet wraps, 180, in degrees: for `m > 180°` the angles become `τ·(m − 360)/m`
+/// (R-474 R3, K3). Admissible as expressed in canonical units: degrees, exact.
+pub const TILT_HALF_TURN: ConstantBuilder = chart("tilt_half_turn", 180.0, R474);
+
+/// A whole turn, 360, in degrees: Tip as sheet's angles are wrapped in total tip at 360°, `τ·(m − 360)/m` (R-474 R3,
+/// K3). Admissible as expressed in canonical units: degrees, exact.
+pub const TILT_TURN: ConstantBuilder = chart("tilt_turn", 360.0, R474);
+
 /// The register: the constants the payload ledger uses (TASK-M0-08), the word's per-substep crossing capacity
 /// (TASK-M3-15), the chart constants the link registry reads
 /// (TASK-M2-01; dd_generation_root §3.9), the invariant charts' warp defaults (TASK-M2-12), the Burrau `ν = 1/2`
@@ -1256,7 +1292,8 @@ pub const SLICE_AXIS_Z_Q3: ConstantBuilder = chart(
 /// diverging fields' `x₀` (TASK-M7-05; REQ-COL-066). No `diffusion` sentinel: an invalid fit reads NaN by the predicate
 /// `n ≥ 2` (R-245). Then the steppers' coefficients and test 3's rounding-level criterion (TASK-M3-02; REQ-INT-037,
 /// REQ-VAL-191), and the substep law's defaults and its threshold table's maximum length (TASK-M3-03; R-502,
-/// REQ-INT-094), and the view window's square (TASK-M2-21), and the slice frame's default axis (TASK-M6-38).
+/// REQ-INT-094), and the view window's square (TASK-M2-21), and the slice frame's default axis (TASK-M6-38), and the
+/// tilt's angles in degrees (TASK-M2-36; R-474), and the custom-stop ramp's OKLab bound (TASK-M7-11).
 pub const REGISTER: &[ConstantBuilder] = &[
     HORIZON_STEPS_MAX,
     FGW_CAPACITY,
@@ -1298,6 +1335,7 @@ pub const REGISTER: &[ConstantBuilder] = &[
     HATCH_HALF_PERIOD,
     HUE_WHEEL_L,
     HUE_WHEEL_C,
+    RAMP_OKLAB_AB_MAX,
     R_POLE,
     N_NORM_TOL,
     SHAPE_VEC_JS_TOL,
@@ -1327,4 +1365,7 @@ pub const REGISTER: &[ConstantBuilder] = &[
     WINDOW_SQUARE_CENTRE,
     WINDOW_SQUARE_HALF,
     SLICE_AXIS_Z_Q3,
+    TILT_RIGHT_ANGLE,
+    TILT_HALF_TURN,
+    TILT_TURN,
 ];

@@ -8,10 +8,10 @@
 |---|---|
 | DEC | 52 |
 | ENC | 38 |
-| CHART | 88 |
+| CHART | 89 |
 | INT | 108 |
 | EVT | 32 |
-| PAY | 110 |
+| PAY | 111 |
 | GEN | 43 |
 | SCHED | 103 |
 | REF | 52 |
@@ -19,12 +19,12 @@
 | COL | 161 |
 | GUI | 385 |
 | TOOL | 218 |
-| VAL | 331 |
+| VAL | 340 |
 | PERF | 115 |
 | SYS | 93 |
-| **total** | **2049** |
+| **total** | **2060** |
 
-Of these: 225 calibration, 172 definition, 1652 obligation. Retired (kept for their ids, not counted): 12.
+Of these: 229 calibration, 175 definition, 1656 obligation. Retired (kept for their ids, not counted): 12.
 
 ## Requirements per milestone
 
@@ -32,17 +32,18 @@ Of these: 225 calibration, 172 definition, 1652 obligation. Retired (kept for th
 |---|---|
 | M0 | 122 |
 | M1 | 108 |
-| M2 | 221 |
-| M3 | 333 |
-| M4 | 119 |
-| M5 | 181 |
-| M6 | 226 |
-| M7 | 263 |
-| M8 | 476 |
+| M2 | 218 |
+| M3 | 231 |
+| M4 | 106 |
+| M5 | 183 |
+| M6 | 224 |
+| M7 | 261 |
+| M8 | 470 |
+| M9 | 137 |
 
 ## Sections
 
-1651 sections in 61 files: 1315 yield at least one requirement; 336 yield none and are listed below with the reason.
+1663 sections in 61 files: 1327 yield at least one requirement; 336 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | gap (RQ-378) | 1 |
@@ -192,9 +193,9 @@ Of these: 225 calibration, 172 definition, 1652 obligation. Retired (kept for th
 | R-643 — The licence audit: the four subscription-stamped and six all-rights-reserved PDFs leave the tree for `docs/incoming/_local/` in one ordinary commit, with no history rewrite; the five "unclear" PDFs stay and are queued; the 22 arXiv licences are checked, the 19 arXiv-default PDFs kept and the 3 CC-licensed fine; from now on no publisher PDF is committed unless its licence allows redistribution, checked before commit *(no RQ; a standing rule)* | informative only | the owner's licence-audit ruling of 28 Oct 2026: ten PDFs held locally (PR #329), five queued (RQ-610), the 22 arXiv licences checked and kept, and the standing rule that no publisher PDF is committed unless its licence allows redistribution; process, carried by CLAUDE.md § Papers and licences; changes no requirement |
 | R-644 — The history scrub (R-643's option 2) is shelved, not scheduled: no condition is checked before the release; it is revisited after the release, or earlier if a rights-holder asks for removal, and then the scrub and a GitHub Support purge are done together; #329 stands *(amends R-643)* | informative only | the owner's ruling of 28 Oct 2026: the history scrub shelved until after the release, or a rights-holder's request; process; changes no requirement |
 | R-645 — No more cloud sessions: the six already started are the last; briefs 4 and 5 run on the Mac as local agents, brief 5 a small pilot, the data sweep after them *(amends R-357; supersedes R-636's cloud half)* | informative only | the owner's ruling of 28 Oct 2026: no more cloud sessions; process, carried by CLAUDE.md and plan/OPERATIONS.md; changes no requirement |
-| R-646 — The converged Burrau reference: arXiv v1 is SP-2's source, the owner also trying for the journal version and its supplementary snapshots through his own access; no separate author email; SP-2 notes that t = 200 is the time-reversed return and tests it as a reversibility check and a trajectory check *(closes RQ-611)* | informative only | the owner's ruling of 28 Oct 2026 closing RQ-611: arXiv v1 is the proposed SP-2's source; SP-2 is a proposed row of PLAN.md, not a requirement; changes no requirement |
 | R-647 — A standing rule, no exceptions: no cloud sessions and no briefs addressed to the owner; the orchestrator never asks him to start, paste into, restart or check a session; every agent is the orchestrator's own, dispatched locally by it; an agent's written instructions are internal task files *(amends R-645)* | informative only | the owner's standing rule of 28 Oct 2026: no cloud sessions and no briefs addressed to the owner; process, carried by CLAUDE.md and plan/OPERATIONS.md § Dispatching; changes no requirement |
 | R-648 — The workflow returns to main's, R-357, R-391 and R-277, with one addition, never a cloud session: R-634 is withdrawn, and so are R-636's agent-count and cloud clauses; three agents at normal memory pressure, two if the Mac is swapping; the RQ-605 audit on demand only *(supersedes R-634; withdraws R-636's agent-count and cloud clauses; amends R-645 and R-647)* | informative only | the owner's ruling of 28 Oct 2026: the workflow returns to R-357, R-391 and R-277, with no cloud sessions; R-634 and R-636's agent-count and cloud clauses withdrawn; process; changes no requirement |
+| R-651 — Advisory review cadence: a fresh review from each of Codex, Gemini CLI and Copilot before merge on the final head, after every substantive push and at least once a working day on a long-running PR, in that priority under limits; a bot unavailable or rate-limited is noted on the PR and the merge goes ahead with the others; every bot finding is verified and closed out before merge (fixed, answered or moved to a task or RQ, then its thread resolved), and a PR with an unresolved bot thread does not merge; the bots stay advisory and never replace the required approvals *(amends R-635: its cadence; a standing rule)* | informative only | the owner's standing rule of 30 Oct 2026 with its two addenda: a fresh advisory review from Codex, Gemini CLI and Copilot before merge on the final head, after substantive pushes and periodically, every bot finding closed out before merge; process, carried by plan/WORKFLOW.md § The review loop, plan/OPERATIONS.md § Merging and the orchestrator's merge script; amends R-635's cadence; changes no requirement |
 | R-658 — Heavy commands run only through a local job queue the orchestrator owns, `cargo xtask job`: agents submit them and wait, never run them directly; classes merge, fix, build and peek, first in, first out within each; one runner at a fixed concurrency, each job with cargo's jobs and test threads at the core count; jobs time out, stale locks expire and a new runner recovers a dead one's jobs; heavy processes outside the queue are logged; sccache measured again; mutants scoped to the diff and run through the queue *(supersedes R-228)* | informative only | the owner's ruling of 30 Oct 2026: heavy commands only through the local job queue (cargo xtask job); process, carried by CLAUDE.md, plan/OPERATIONS.md § Resources and the agent files, and built in xtask/src/jobq.rs; changes no requirement |
 
 ### `docs/contracts/principia_canonical_spec.md`
