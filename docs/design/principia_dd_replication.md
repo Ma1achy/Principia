@@ -466,8 +466,8 @@ no requirement while RQ-577 is open.
   paired f32, f64 and converged experiment, `../incoming/2026-10-27_validation_plan/PLAN.md` § 3.2, BZ-1C (R-661). The
   paper has no f32 run: that f32 statistics agree is a hypothesis Principia will measure, and no paper establishes it. Its
   "unbiased" result holds only after an energy cut, so it is not what "never discard a copy" applies; its Fig. 14, cut
-  beside uncut, is compatible. REQ-VAL-199 measures parting time, a different quantity. *Was (R-661):* "3D Plummer initial
-  conditions. Its method is what REQ-VAL-199 and "never discard a copy" already apply."
+  beside uncut, is compatible. REQ-VAL-199 measures parting time, a different quantity. *Was (R-661):* "Boekholt & Portegies Zwart 2015, ensemble
+  statistics surviving trajectory error: 3D Plummer initial conditions. Its method is what REQ-VAL-199 and "never discard a copy" already apply."
 - **D-6**, the prototype's other numbers, as a list: RQ-587 (§ 5.11).
 
 Most of the scattering literature is 3D; only planar subsets apply. Results with no published data and no figure

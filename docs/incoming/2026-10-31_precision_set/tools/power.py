@@ -8,7 +8,7 @@ approximation for two independent proportions, n = (z_a/2 + z_b)^2 2p(1-p) / del
 n = (z_a/2 + z_b)^2 d / delta^2, d the discordant fraction. Lifetimes (log-rank): total events = 4 (z_a/2 + z_b)^2 /
 ln(HR)^2. Alpha 0.05 throughout, power 0.8 where a power is named.
 """
-from math import erf, exp, log, sqrt
+from math import comb, erf, exp, log, sqrt
 
 import numpy as np
 
@@ -39,9 +39,12 @@ def power(n, d, alt, reps):
     for _ in range(reps):
         if alt == "normal shift":
             a, b = rng.standard_normal(n), rng.standard_normal(n) + mu
-        else:  # a fraction d of the mass moved beyond the other sample's range
+        elif alt == "tail mass":  # a fraction d of the mass moved beyond the other sample's range
             a, b = rng.random(n), rng.random(n)
             b = np.where(rng.random(n) < d, b + 1.0, b)
+        else:  # "at the median": mass d moved across the median over a width d, so the distance is d only there
+            a, b = rng.random(n), rng.random(n)
+            b = np.where((b > 0.5 - d) & (b < 0.5), b + d, b)
         hit += ks(a, b) > crit
     return hit / reps
 
@@ -54,10 +57,12 @@ for d in (0.02, 0.03, 0.05):
     print(f"n with D_c = {d}: {2 * (c(0.05) / d) ** 2:.0f}; with Bonferroni over 12: {2 * (c(0.05 / 12) / d) ** 2:.0f}")
 print("Monte Carlo power of the 5% test when the true distance is D_c")
 for n, reps in ((256, 800), (10000, 300)):
-    for alt in ("normal shift", "tail mass"):
+    for alt in ("normal shift", "tail mass", "at the median"):
         print(f"  n = {n}, {alt}: {power(n, c(0.05) * sqrt(2 / n), alt, reps):.2f} ({reps} replicates)")
+for d in (0.022, 0.025, 0.028):
+    print(f"  n = 10000, at the median, true distance {d}: {power(10000, d, 'at the median', 300):.2f} (300 replicates)")
 print("n: smallest difference in a fraction p detected at 80% power, independent samples; p = 0.5, 1/3, 0.1")
-for n in (256, 1000, 4096, 6257, 10000):
+for n in (256, 1000, 4096, 6257, 7366, 10000):
     print(f"  {n}: " + ", ".join(f"{Z * sqrt(2 * p * (1 - p) / n):.3f}" for p in (0.5, 1 / 3, 0.1)))
 print("delta: n at 80% power; p = 0.5, 1/3, 0.1; paired with d = 0.33")
 for dl in (0.01, 0.02, 0.03, 0.05):
@@ -68,5 +73,17 @@ for ev, name in ((2 * 6257, "cold equal, 10^4 a side, T = 200"), (2 * 7366, "col
                  (2 * 128, "256 a side, half censored")):
     print(f"  {name}: {ev} events, HR {exp(2 * Z / sqrt(ev)):.3f}")
 print("The median of n values: 95% half-width in units of the spread s (normal), 1.96 * 1.2533 / sqrt(n)")
-for n in (256, 10000):
+for n in (256, 4096, 10000):
     print(f"  {n}: {1.96 * 1.2533 / sqrt(n):.3f} s")
+print("The median, distribution-free: the narrowest rank interval symmetric about the middle with exact coverage >= 95%")
+for n in (256, 4096, 10000):
+    lo = n // 2
+    while True:
+        cover = sum(comb(n, k) for k in range(lo, n - lo + 1)) / 2**n
+        if cover >= 0.95:
+            break
+        lo -= 1
+    print(f"  {n}: ranks {lo} to {n - lo + 1}, quantiles {lo / n:.3f} to {(n - lo + 1) / n:.3f}, coverage {cover:.4f}")
+print("n = 256, c starts censored and all on one side of the median: the rank at which the bounds begin")
+for c_ in (112, 113, 127):
+    print(f"  c = {c_}: rank {256 - c_ + 1}")

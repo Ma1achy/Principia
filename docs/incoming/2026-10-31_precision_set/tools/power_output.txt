@@ -12,13 +12,19 @@ n with D_c = 0.05: 1476; with Bonferroni over 12: 2470
 Monte Carlo power of the 5% test when the true distance is D_c
   n = 256, normal shift: 0.84 (800 replicates)
   n = 256, tail mass: 0.83 (800 replicates)
-  n = 10000, normal shift: 0.86 (300 replicates)
-  n = 10000, tail mass: 0.90 (300 replicates)
+  n = 256, at the median: 0.53 (800 replicates)
+  n = 10000, normal shift: 0.84 (300 replicates)
+  n = 10000, tail mass: 0.92 (300 replicates)
+  n = 10000, at the median: 0.50 (300 replicates)
+  n = 10000, at the median, true distance 0.022: 0.63 (300 replicates)
+  n = 10000, at the median, true distance 0.025: 0.82 (300 replicates)
+  n = 10000, at the median, true distance 0.028: 0.91 (300 replicates)
 n: smallest difference in a fraction p detected at 80% power, independent samples; p = 0.5, 1/3, 0.1
   256: 0.124, 0.117, 0.074
   1000: 0.063, 0.059, 0.038
   4096: 0.031, 0.029, 0.019
   6257: 0.025, 0.024, 0.015
+  7366: 0.023, 0.022, 0.014
   10000: 0.020, 0.019, 0.012
 delta: n at 80% power; p = 0.5, 1/3, 0.1; paired with d = 0.33
   0.01: 39244, 34884, 14128; 25901
@@ -31,4 +37,13 @@ Log-rank at 80% power: events in both arms, the hazard ratio detected
   256 a side, half censored: 256 events, HR 1.419
 The median of n values: 95% half-width in units of the spread s (normal), 1.96 * 1.2533 / sqrt(n)
   256: 0.154 s
+  4096: 0.038 s
   10000: 0.025 s
+The median, distribution-free: the narrowest rank interval symmetric about the middle with exact coverage >= 95%
+  256: ranks 112 to 145, quantiles 0.438 to 0.566, coverage 0.9610
+  4096: ranks 1985 to 2112, quantiles 0.485 to 0.516, coverage 0.9528
+  10000: ranks 4902 to 5099, quantiles 0.490 to 0.510, coverage 0.9512
+n = 256, c starts censored and all on one side of the median: the rank at which the bounds begin
+  c = 112: rank 145
+  c = 113: rank 144
+  c = 127: rank 130
