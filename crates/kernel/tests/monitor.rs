@@ -827,8 +827,14 @@ fn check_word_run_monitored(
 
 fn word_run(ic: &Ic<f64>, u: &WrapperUniforms<f64>) -> kernel::payload::SimStateBaseOf<f64> {
     let mut cadence = WrapperCadence::new(&ic.m, &ic.r, &ic.p);
-    let mut words = [kernel::word::FreeGroupWord::default()];
-    kernel::driver::wrapper::integrate_word::<Euler, f64, _, _>(ic, u, &mut cadence, 0, &mut words)
+    let mut words = [kernel::payload::FreeGroupWord::default()];
+    kernel::driver::wrapper::integrate_word::<Euler, f64, _, _>(
+        ic,
+        u,
+        &mut cadence,
+        0,
+        &mut words[..],
+    )
 }
 
 #[test]
