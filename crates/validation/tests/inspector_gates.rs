@@ -1,6 +1,7 @@
-//! The Inspector's gates, `inspector-handles` and `inspector-roundtrip` (TASK-M2-27; REQ-VAL-021, REQ-VAL-022,
-//! REQ-VAL-121, PIT-3): the draws, the handles, the leaks and what they localise, the exact CoM, the verdict at and past
-//! its bound, the refusals, and the runner on both gates' fixtures, where every control fails.
+//! The Inspector's gates, `inspector-handles` and `inspector-roundtrip` (TASK-M2-27, TASK-M2-50; REQ-VAL-021,
+//! REQ-VAL-022, REQ-VAL-121, REQ-VAL-193, PIT-3): the draws, the handles, the leaks and what they localise, the exact
+//! CoM, the verdict at and past its bound, the shape checks and their controls, the Randomise arm, the refusals, and
+//! the runner on both gates' fixtures, where every control fails.
 
 use std::path::{Path, PathBuf};
 
@@ -9,12 +10,15 @@ use kernel::encode::encode;
 use kernel::generated::links::Defaults;
 use validation::decode_f32_eps::SplitMix;
 use validation::eps_phys::EncodeKind;
-use validation::gate::{self, Gate, GateConfig, Verdict};
+use validation::gate::{self, ArmBound, Gate, GateConfig, Population, Verdict};
 use validation::gauge::Gauge;
 use validation::inspector::{
-    ball, com, encode_leaky, handle_gaps, handle_samples, held_shapes, latents, radius_refusal,
-    round_trip, verdict, worst, z_gap, Handle, HandlesInput, Held, InspectorHandlesGate,
-    InspectorRoundtripGate, Leak, RoundtripInput, COM_BOUND, HANDLES, ROUNDTRIP,
+    arm_verdict, ball, below, com, encode_leaky, handle_gaps, handle_samples, inside, latents,
+    population_worst, radius_refusal, randomise_ic, randomise_moves, randomise_seed,
+    randomise_worst, round_trip, shape_families, verdict, worst, z_gap, Handle, HandlesInput,
+    InspectorHandlesGate, InspectorRoundtripGate, Leak, RandomiseArm, RandomiseSeed,
+    RoundtripInput, ShapeBounds, Shapes, COM_BOUND, EQUATOR_BOUND, HANDLES, MOVES, POLE_BOUND,
+    ROUNDTRIP,
 };
 use validation::negative_control;
 
@@ -32,6 +36,7 @@ fn handles_input(ics: u32, leak: Leak) -> HandlesInput {
         span: 1.0,
         octaves: 4.0,
         leak,
+        randomise: None,
     }
 }
 
@@ -44,6 +49,9 @@ fn roundtrip_input(samples: u32, encode: EncodeKind, shift: f64) -> RoundtripInp
         encode,
         shift,
         shapes: 0,
+        off_line: 0,
+        beta_nudge: false,
+        bounds: ShapeBounds::Proposed,
     }
 }
 
@@ -562,29 +570,34 @@ negative_control!(
     check_trips(EncodeKind::Mismatched, 1.2e-13)
 );
 
-/// The held families: `n` of each; every collinear state's `z_β` at its clamp image with its bit set, and no
-/// equilateral one's; every equilateral `|w − 1|` and collinear `|w|` at rounding (below 10⁻¹²), reported, not judged
-/// (RQ-475).
-fn check_held(n: u32, held: &Held) {
+/// RQ-475's families: `n` of each; every collinear state's `z_β` at its clamp image, bit for bit, with its bit set,
+/// and no equilateral one's set or at the image; `|w − 1|` and `|w|` on `C(x)` within the proposed bounds; `|w|` on
+/// `D(E(x))` the clamp image, at most `sin(π·ε_z)`, `ε_z = 10⁻⁶`, and reaching it; the masses across the mass block.
+fn check_shapes(n: u32, s: &Shapes) {
     let n = n as usize;
     assert!(
-        held.pole.len() == n && held.equator.len() == n,
-        "the held families' counts"
+        s.pole.len() == n && s.equator.len() == n && s.clamp_image.len() == n,
+        "the families' counts"
     );
-    assert_eq!(held.beta_bit, [0, n], "z_β's clamp bits by family");
-    assert_eq!(held.beta_edge, [0, n], "z_β at its clamp image by family");
+    assert_eq!(s.beta_bit, [0, n], "z_β's clamp bits by family");
+    assert_eq!(s.beta_image, [0, n], "z_β at its clamp image by family");
     assert!(
-        held.pole.iter().chain(&held.equator).all(|&w| w < 1e-12),
-        "a held w past rounding"
+        worst(&s.pole).0 <= POLE_BOUND && worst(&s.equator).0 <= EQUATOR_BOUND,
+        "a w on C(x) past its bound"
+    );
+    let cap = (std::f64::consts::PI * 1e-6).sin();
+    let top = worst(&s.clamp_image).0;
+    assert!(
+        top <= cap * (1.0 + 1e-9) && top > 0.99 * cap,
+        "D(E(x))'s |w| is not the clamp image: max {top:e} against sin(π·ε_z) = {cap:e}"
     );
     let spread = |k: usize| {
-        let r: Vec<f64> = held.masses.iter().map(|m| (m[k] / m[0]).ln()).collect();
+        let r: Vec<f64> = s.masses.iter().map(|m| (m[k] / m[0]).ln()).collect();
         r.iter().any(|&x| x > 2.0) && r.iter().any(|&x| x < -2.0)
     };
     assert!(
-        held.masses.len() == n
-            && held
-                .masses
+        s.masses.len() == n
+            && s.masses
                 .iter()
                 .all(|m| (m.iter().sum::<f64>() - 1.0).abs() < 1e-15)
             && spread(1)
@@ -594,19 +607,134 @@ fn check_held(n: u32, held: &Held) {
 }
 
 #[test]
-fn inspector_held_shapes() {
-    check_held(200, &held_shapes(5, 200));
+fn inspector_shapes() {
+    check_shapes(200, &shape_families(5, 200, 0, false));
 }
 
 negative_control!(
-    inspector_held_shapes,
+    inspector_shapes,
     "a family one short must fail",
-    expected = "the held families' counts",
+    expected = "the families' counts",
     {
-        let mut held = held_shapes(5, 200);
-        held.pole.pop();
-        check_held(200, &held)
+        let mut s = shape_families(5, 200, 0, false);
+        s.pole.pop();
+        check_shapes(200, &s)
     }
+);
+
+/// The pole's bound is 2× the worst measured `|w − 1|`, `2⁻⁵²`, exactly: `2⁻⁵¹`, two ulps of 1. Just above 1,
+/// `|w − 1|` takes only multiples of `2⁻⁵²`, so a `w` two ulps above 1 sits on the bound and passes, three ulps fail.
+fn check_pole_bound(bound: f64) {
+    let gap = |ulps: u64| f64::from_bits(1.0f64.to_bits() + ulps) - 1.0;
+    assert!(
+        bound == 2.0 * gap(1) && gap(2) <= bound && gap(3) > bound,
+        "the pole's bound {bound:e} is not two ulps of 1, 2⁻⁵¹"
+    );
+}
+
+#[test]
+fn inspector_pole_bound() {
+    check_pole_bound(POLE_BOUND);
+}
+
+negative_control!(
+    inspector_pole_bound,
+    "the 4.4e-16 rounding, 1.98× the worst, must fail",
+    expected = "is not two ulps of 1",
+    check_pole_bound(4.4e-16)
+);
+
+/// The equator's `|w|` is read on `C(x)`, within its bound (RQ-624).
+fn check_equator_state(read: fn(&Shapes) -> &Vec<f64>) {
+    let s = shape_families(5, 200, 0, false);
+    let w = worst(read(&s)).0;
+    assert!(
+        w <= EQUATOR_BOUND,
+        "the equator's |w|, {w:e}, past its bound"
+    );
+}
+
+#[test]
+fn inspector_equator_state() {
+    check_equator_state(|s| &s.equator);
+}
+
+negative_control!(
+    inspector_equator_state,
+    "|w| read on D(E(x)), the clamp image, must fail the equator's bound (RQ-624)",
+    expected = "past its bound",
+    check_equator_state(|s| &s.clamp_image)
+);
+
+/// The controls' families (RQ-624): `z_β` one ulp off its clamp image fails the bit-for-bit comparison, its bit still
+/// set; the collinear states `off_line` ulps of 1 off the line keep `z_β` at its clamp image, bit for bit, and are
+/// caught by `|w|` on `C(x)`, several times its bound; neither control moves the equilateral family.
+fn check_shape_controls(off_line: u32) {
+    let plain = shape_families(5, 200, 0, false);
+    let nudged = shape_families(5, 200, 0, true);
+    assert_eq!(nudged.beta_bit, [0, 200], "the nudge moves the clamp bit");
+    assert_eq!(
+        nudged.beta_image,
+        [0, 0],
+        "a z_β one ulp off its clamp image is at it"
+    );
+    let lifted = shape_families(5, 200, off_line, false);
+    assert_eq!(
+        lifted.beta_image,
+        [0, 200],
+        "z_β leaves its clamp image inside the band"
+    );
+    let w = worst(&lifted.equator).0;
+    assert!(
+        w > 4.0 * EQUATOR_BOUND,
+        "a state {off_line} ulps off the line is not caught: max |w| {w:e}"
+    );
+    assert!(
+        nudged.pole == plain.pole && lifted.pole == plain.pole,
+        "a control moves the equilateral family"
+    );
+}
+
+#[test]
+fn inspector_shape_controls() {
+    check_shape_controls(1000);
+}
+
+negative_control!(
+    inspector_shape_controls,
+    "one ulp off the line is below the chart's resolution and must not be caught (RQ-624)",
+    expected = "ulps off the line is not caught",
+    check_shape_controls(1)
+);
+
+/// `below` is the float just below a measurement, and below 0 at 0.
+fn check_below(f: fn(f64) -> f64) {
+    for w in [
+        f64::EPSILON,
+        6.765e-14,
+        1.0,
+        f64::MIN_POSITIVE,
+        f64::from_bits(1),
+    ] {
+        let b = f(w);
+        assert!(
+            b < w && f64::from_bits(b.to_bits() + 1) == w,
+            "below({w:e}) is {b:e}, not the float just below"
+        );
+    }
+    assert!(f(0.0) < 0.0, "below(0) is not below 0");
+}
+
+#[test]
+fn inspector_below() {
+    check_below(below);
+}
+
+negative_control!(
+    inspector_below,
+    "a relative step of one epsilon must fail at 1",
+    expected = "not the float just below",
+    check_below(|w| w * (1.0 - f64::EPSILON))
 );
 
 // ── The gates ────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -747,36 +875,7 @@ fn check_reports(tight: f64) {
     let mut i = roundtrip_input(200, EncodeKind::Defaults, 0.0);
     let pass = InspectorRoundtripGate::judge(&rc, "t", &i).unwrap();
     assert_eq!(pass.verdict, Verdict::Pass, "E fails the round-trip gate");
-    assert_eq!(pass.scatter.len(), 2, "no held lines without shapes");
-    i.shapes = 9;
-    let held = InspectorRoundtripGate::judge(&rc, "t", &i).unwrap();
-    let h = held_shapes(i.seed, 9);
-    // An odd count, so a count of the inexact cannot pass for the exact one.
-    let exact = |v: &[f64]| v.iter().filter(|&&x| x == 0.0).count();
-    let counts = |k: usize| {
-        format!(
-            "clamp bit set in {}, at its clamp image in {}",
-            h.beta_bit[k], h.beta_edge[k]
-        )
-    };
-    assert!(
-        exact(&h.pole) > 0
-            && held.scatter[2].contains(&format!("w = 1 exactly in {} of 9", exact(&h.pole)))
-            && held.scatter[2].ends_with(&counts(0))
-            && held.scatter[3].contains(&format!("w = 0 exactly in {} of 9", exact(&h.equator)))
-            && held.scatter[3].ends_with(&counts(1)),
-        "the held counts: {:?}",
-        held.scatter
-    );
-    assert!(
-        held.scatter.len() == 4
-            && held.scatter[2..]
-                .iter()
-                .all(|l| l.starts_with("held (RQ-475")),
-        "the held lines: {:?}",
-        held.scatter
-    );
-    i.shapes = 0;
+    assert_eq!(pass.scatter.len(), 2, "no shape lines without shapes");
     i.shift = (-50f64).exp2();
     let shifted = InspectorRoundtripGate::judge(&rc, "t", &i).unwrap();
     assert_eq!(shifted.verdict, Verdict::Fail, "a shifted CoM passes");
@@ -816,6 +915,732 @@ negative_control!(
     "a threshold at rounding's own scale must fail E",
     expected = "E fails the handles gate",
     check_reports(1e-16)
+);
+
+/// The round trip's shape checks (REQ-VAL-022): judged under the proposed bounds, each line naming its check; each
+/// control fails its own check only, its line saying so; a control without shapes refused.
+fn check_shape_judge(bounds: ShapeBounds) {
+    let rc = config(ROUNDTRIP);
+    let mut i = roundtrip_input(50, EncodeKind::Defaults, 0.0);
+    i.shapes = 101;
+    i.bounds = bounds;
+    let pass = InspectorRoundtripGate::judge(&rc, "t", &i).unwrap();
+    assert_eq!(pass.verdict, Verdict::Pass, "the shape checks fail E");
+    let neg = &pass.negative_results;
+    assert!(
+        neg.len() == 6
+            && neg[2]
+                .contains("clamp bit set in 101 of 101 collinear and 0 of 101 equilateral states")
+            && neg[2].ends_with("at its clamp image in 101 of 101 collinear states; passes")
+            && neg[3].starts_with("the pole's |w − 1| on C(x): 0 of 101 beyond 4.441e-16")
+            && neg[4].starts_with("the equator's |w| on C(x): 0 of 101 beyond 2.500e-13")
+            && neg[5].ends_with("proposed, provisional (REQ-VAL-121, R-71)"),
+        "the shape checks' lines: {neg:?}"
+    );
+    assert!(
+        pass.scatter.len() == 5
+            && pass.scatter[2].starts_with("|w − 1| on C(x), equal-mass equilateral")
+            && pass.scatter[3].starts_with("|w| on C(x), collinear: max ")
+            && pass.scatter[4].contains("not judged: the clamp image, sin2α·sin(π·ε_z): max 3.14"),
+        "the shape scatter: {:?}",
+        pass.scatter
+    );
+    let judge = |i: &RoundtripInput| InspectorRoundtripGate::judge(&rc, "t", i).unwrap();
+    i.beta_nudge = true;
+    let r = judge(&i);
+    assert!(
+        r.verdict == Verdict::Fail
+            && r.negative_results[2].ends_with("in 0 of 101 collinear states; fails")
+            && r.negative_results[3].contains("0 of 101 beyond")
+            && r.negative_results[4].contains("0 of 101 beyond")
+            && r.negative_results[6].contains("the bit-for-bit check must fail"),
+        "the nudge's lines: {:?}",
+        r.negative_results
+    );
+    i.beta_nudge = false;
+    i.off_line = 1000;
+    let r = judge(&i);
+    assert!(
+        r.verdict == Verdict::Fail
+            && r.negative_results[2].ends_with("; passes")
+            && r.negative_results[4].contains("; the worst, ")
+            && r.negative_results[6].contains("moved 1000 ulps of 1 off the line"),
+        "the lift's lines: {:?}",
+        r.negative_results
+    );
+    i.off_line = 0;
+    i.bounds = ShapeBounds::BelowMeasurement;
+    let r = judge(&i);
+    assert!(
+        r.verdict == Verdict::Fail
+            && r.negative_results[2].ends_with("; passes")
+            && r.negative_results[3].ends_with("fails")
+            && r.negative_results[4].ends_with("fails")
+            && r.negative_results[5].contains("one ulp below its own measurement"),
+        "the tightened bounds' lines: {:?}",
+        r.negative_results
+    );
+    i.shapes = 0;
+    for (off_line, beta_nudge, bounds) in [
+        (1, false, ShapeBounds::Proposed),
+        (0, true, ShapeBounds::Proposed),
+        (0, false, ShapeBounds::BelowMeasurement),
+    ] {
+        let r = InspectorRoundtripGate::judge(
+            &rc,
+            "t",
+            &RoundtripInput {
+                off_line,
+                beta_nudge,
+                bounds,
+                ..i.clone()
+            },
+        );
+        assert!(
+            r.is_err_and(|e| e.contains("a shape control with no shapes")),
+            "a shape control without shapes is not refused"
+        );
+    }
+    i.bounds = ShapeBounds::Proposed;
+    assert!(
+        InspectorRoundtripGate::judge(&rc, "t", &i).is_ok(),
+        "no shapes and no control is refused"
+    );
+}
+
+#[test]
+fn inspector_shape_judge() {
+    check_shape_judge(ShapeBounds::Proposed);
+}
+
+negative_control!(
+    inspector_shape_judge,
+    "bounds below the measurement must fail E",
+    expected = "the shape checks fail E",
+    check_shape_judge(ShapeBounds::BelowMeasurement)
+);
+
+/// The Inspector's Randomise: masses in ratio within `[0.4, 1.8]`'s and summing to 1, positions within `±0.9`,
+/// velocities `pᵢ/mᵢ` within `±0.6`, each body's each component reaching across its range.
+fn check_randomise_ic(draw: fn(&mut SplitMix) -> Ic<f64>) {
+    let mut rng = SplitMix::new(23);
+    let xs: Vec<Ic<f64>> = (0..2000).map(|_| draw(&mut rng)).collect();
+    let (lo, hi) = (0.4 / 1.8, 1.8 / 0.4);
+    let mut ratios = Vec::new();
+    for x in &xs {
+        assert!(
+            (x.m.iter().sum::<f64>() - 1.0).abs() <= 2.0 * f64::EPSILON,
+            "the masses do not sum to 1: {:?}",
+            x.m
+        );
+        for (a, b) in [(0, 1), (1, 2), (2, 0)] {
+            let q = x.m[a] / x.m[b];
+            assert!(q > lo && q < hi, "a mass ratio {q} outside [0.4, 1.8]'s");
+            ratios.push(q);
+        }
+        assert!(
+            x.r.iter().flatten().all(|v| v.abs() <= 0.9),
+            "a position past 0.9: {:?}",
+            x.r
+        );
+        let v: Vec<f64> = (0..3).flat_map(|i| x.p[i].map(|p| p / x.m[i])).collect();
+        assert!(
+            v.iter().all(|w| w.abs() <= 0.6 * (1.0 + 1e-12)),
+            "a velocity past 0.6: {v:?}"
+        );
+    }
+    let reach = |pick: &dyn Fn(&Ic<f64>) -> f64, k: f64| {
+        xs.iter().any(|x| pick(x) > k) && xs.iter().any(|x| pick(x) < -k)
+    };
+    let each = (0..3)
+        .all(|i| (0..2).all(|k| reach(&|x| x.r[i][k], 0.8) && reach(&|x| x.p[i][k] / x.m[i], 0.5)));
+    assert!(
+        each && ratios.iter().any(|&q| q > 3.5) && ratios.iter().any(|&q| q < 1.0 / 3.5),
+        "the draws do not reach across their ranges"
+    );
+}
+
+#[test]
+fn inspector_randomise_ic() {
+    check_randomise_ic(randomise_ic);
+}
+
+negative_control!(
+    inspector_randomise_ic,
+    "velocities on ±1.2 must fail",
+    expected = "a velocity past 0.6",
+    check_randomise_ic(|rng| {
+        let mut x = randomise_ic(rng);
+        x.p = x.p.map(|v| v.map(|w| 2.0 * w));
+        x
+    })
+);
+
+/// The Randomise arm's moves: each moves only its own component, drawn on its canvas scale and reaching across it
+/// (the boost to ±0.6), and the buttons at 15° and ×1.25 exactly; [`MOVES`] names them in that order.
+fn check_moves(draw: fn(&mut SplitMix, f64) -> [Gauge; 6]) {
+    let id = Gauge::identity();
+    let mut rng = SplitMix::new(29);
+    let all: Vec<[Gauge; 6]> = (0..400).map(|_| draw(&mut rng, 4.0)).collect();
+    for m in &all {
+        assert!(
+            m[0].a.iter().all(|a| a.abs() <= 0.9) && Gauge { a: id.a, ..m[0] } == id,
+            "translate-all's move: {:?}",
+            m[0]
+        );
+        assert!(
+            m[1].u.iter().all(|u| u.abs() <= 0.6) && Gauge { u: id.u, ..m[1] } == id,
+            "boost-all's move: {:?}",
+            m[1]
+        );
+        assert!(
+            m[2].theta.abs() <= std::f64::consts::PI && Gauge { theta: 0.0, ..m[2] } == id,
+            "rotate-all's move: {:?}",
+            m[2]
+        );
+        assert!(
+            (m[3].theta - 15f64.to_radians()).abs() < 1e-15 && Gauge { theta: 0.0, ..m[3] } == id,
+            "the Rotate button: {:?}",
+            m[3]
+        );
+        assert!(
+            m[4].s.log2().abs() <= 4.0 && Gauge { s: 1.0, ..m[4] } == id,
+            "scale-all's move: {:?}",
+            m[4]
+        );
+        assert_eq!(m[5], Gauge { s: 1.25, ..id }, "the Scale button");
+    }
+    let reach = |pick: fn(&[Gauge; 6]) -> f64, k: f64| {
+        all.iter().any(|m| pick(m) > k) && all.iter().any(|m| pick(m) < -k)
+    };
+    assert!(
+        reach(|m| m[0].a[0], 0.8)
+            && reach(|m| m[0].a[1], 0.8)
+            && reach(|m| m[1].u[0], 0.55)
+            && reach(|m| m[1].u[1], 0.55)
+            && reach(|m| m[2].theta, 2.5)
+            && reach(|m| m[4].s.log2(), 3.2),
+        "the moves' sizes do not reach across their ranges"
+    );
+    assert_eq!(
+        MOVES,
+        [
+            "translate-all, random",
+            "boost-all, random",
+            "rotate-all, random",
+            "rotate-all at 15°",
+            "scale-all, random",
+            "scale-all at ×1.25"
+        ],
+        "the moves' names and order"
+    );
+}
+
+#[test]
+fn inspector_randomise_moves() {
+    check_moves(randomise_moves);
+}
+
+negative_control!(
+    inspector_randomise_moves,
+    "boosts on ±0.3, short of the Randomise velocity scale, must fail",
+    expected = "the moves' sizes do not reach across their ranges",
+    check_moves(|rng, o| {
+        let mut m = randomise_moves(rng, o);
+        m[1].u = m[1].u.map(|u| u / 2.0);
+        m
+    })
+);
+
+/// `inside` is the open ball: a point on the sphere is outside, one an ulp within it inside.
+fn check_inside(f: fn([f64; 8], f64) -> bool) {
+    let mut z = [0.0; 8];
+    z[3] = 4.0;
+    assert!(!f(z, 4.0), "a point on the sphere is inside");
+    z[3] = f64::from_bits(4f64.to_bits() - 1);
+    assert!(f(z, 4.0), "a point an ulp within the sphere is outside");
+    assert!(
+        !f([3.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 3.0], 4.0),
+        "‖(3, …, 3)‖ is inside 4"
+    );
+}
+
+#[test]
+fn inspector_inside() {
+    check_inside(inside);
+}
+
+negative_control!(
+    inspector_inside,
+    "the closed ball must fail",
+    expected = "a point on the sphere is inside",
+    check_inside(|z, r| z_gap(z, [0.0; 8]) <= r)
+);
+
+/// One seed of the arm: its draws, the in-ball flags `‖E(x)‖ < radius` on the same draws, and the worst of each move
+/// over all of them and over the in-ball subset; a leaky `E` is read through (its own move moves `z` by order 1).
+fn check_randomise_seed(pick: fn(&RandomiseSeed, usize, bool) -> (f64, usize)) {
+    let s = randomise_seed(3, 300, 4.0, 4.0, Leak::None);
+    assert!(
+        s.seed == 3 && s.gaps.len() == 300 && s.in_ball.len() == 300,
+        "the seed's counts"
+    );
+    assert_eq!(
+        s,
+        randomise_seed(3, 300, 4.0, 4.0, Leak::None),
+        "one seed, one list"
+    );
+    let mut rng = SplitMix::new(3);
+    for k in 0..300 {
+        let x = randomise_ic(&mut rng);
+        let _ = randomise_moves(&mut rng, 4.0);
+        let z = encode::<Defaults, f64>(&x).z.z;
+        assert_eq!(s.in_ball[k], inside(z, 4.0), "draw {k}'s in-ball flag");
+    }
+    let n_in = s.in_ball.iter().filter(|&&b| b).count();
+    assert!(
+        n_in > 250 && n_in < 300,
+        "the in-ball subset of 300 is {n_in}"
+    );
+    for k in 0..6 {
+        let all = s.gaps.iter().map(|g| g[k]).fold(0.0, f64::max);
+        let ball: f64 = s
+            .gaps
+            .iter()
+            .zip(&s.in_ball)
+            .filter(|(_, &b)| b)
+            .map(|(g, _)| g[k])
+            .fold(0.0, f64::max);
+        assert_eq!(pick(&s, k, false), (all, 300), "move {k}'s worst over all");
+        assert_eq!(
+            pick(&s, k, true),
+            (ball, n_in),
+            "move {k}'s worst in the ball"
+        );
+    }
+    let leaky = randomise_seed(3, 50, 4.0, 4.0, Leak::Scale);
+    let mut v: Vec<f64> = leaky.gaps.iter().map(|g| g[5]).collect();
+    v.sort_by(f64::total_cmp);
+    assert!(
+        v[25] > 1e-3,
+        "the scale leak does not move z under ×1.25 (median {:e})",
+        v[25]
+    );
+}
+
+#[test]
+fn inspector_randomise_seed() {
+    check_randomise_seed(randomise_worst);
+}
+
+negative_control!(
+    inspector_randomise_seed,
+    "a worst that ignores the ball must fail",
+    expected = "worst in the ball",
+    check_randomise_seed(|s, k, _| randomise_worst(s, k, false))
+);
+
+/// The handles gate with the Randomise arm: a line per move after REQ-VAL-021's four, each over both seeds and the
+/// in-ball subset; the arm past REQ-VAL-021's bound, and the verdict REQ-VAL-021's own unless `fed`.
+fn check_randomise_report(fed: bool) {
+    let c = config(HANDLES);
+    let mut i = handles_input(50, Leak::None);
+    i.randomise = Some(RandomiseArm {
+        seeds: vec![1, 2],
+        ics: 400,
+        fed,
+    });
+    let arm_worst = [1, 2]
+        .iter()
+        .flat_map(|&s| randomise_seed(s, 400, 4.0, 4.0, Leak::None).gaps)
+        .flatten()
+        .fold(0.0, f64::max);
+    assert!(
+        arm_worst > c.threshold.value,
+        "the arm, {arm_worst:e}, is within REQ-VAL-021's bound, so the test cannot tell"
+    );
+    let r = InspectorHandlesGate::judge(&c, "t", &i).unwrap();
+    assert_eq!(
+        r.verdict,
+        Verdict::Pass,
+        "the Randomise arm's maximum is read by REQ-VAL-021's verdict"
+    );
+    assert_eq!(r.scatter.len(), 10, "a line per handle and per move");
+    for (line, word) in r.scatter[4..].iter().zip(MOVES) {
+        assert!(
+            line.starts_with(&format!(
+                "Randomise arm (REQ-VAL-193), reported: {word}: max ‖Δz‖ "
+            )) && line.contains(" over 800 draws (by seed: 1 ")
+                && line.contains("in the ball ‖E(x)‖ < 4, "),
+            "a move's line: {line}"
+        );
+    }
+    assert!(
+        r.negative_results
+            .last()
+            .unwrap()
+            .contains(&format!("its verdict separate, reported until REQ-VAL-121 records its bound; its worst, {arm_worst:.3e}")),
+        "the arm's line: {:?}",
+        r.negative_results
+    );
+}
+
+#[test]
+fn inspector_randomise_report() {
+    check_randomise_report(false);
+}
+
+negative_control!(
+    inspector_randomise_report,
+    "the arm fed into REQ-VAL-021's verdict must fail it",
+    expected = "the Randomise arm's maximum is read by REQ-VAL-021's verdict",
+    check_randomise_report(true)
+);
+
+/// The control (REQ-VAL-193): the arm's maximum fed into REQ-VAL-021's verdict fails it, the line saying so; within
+/// the bound it would pass.
+fn check_fed(bound: f64) {
+    let mut c = config(HANDLES);
+    c.threshold.value = bound;
+    let mut i = handles_input(50, Leak::None);
+    i.randomise = Some(RandomiseArm {
+        seeds: vec![1],
+        ics: 400,
+        fed: true,
+    });
+    let r = InspectorHandlesGate::judge(&c, "t", &i).unwrap();
+    assert!(
+        r.verdict == Verdict::Fail
+            && r.negative_results
+                .last()
+                .unwrap()
+                .contains("fed into REQ-VAL-021's verdict at 1.600e-14 (R-176: it must fail)"),
+        "the fed arm passes: {:?}",
+        r.negative_results
+    );
+}
+
+#[test]
+fn inspector_randomise_fed() {
+    check_fed(1.6e-14);
+}
+
+negative_control!(
+    inspector_randomise_fed,
+    "a bound above the arm's maximum must pass the fed arm",
+    expected = "the fed arm passes",
+    check_fed(1.0)
+);
+
+/// The handles gate refuses a Randomise arm with no seeds or no draws, before drawing.
+fn check_arm_refused(ics: u32) {
+    for seeds in [vec![], vec![1]] {
+        let mut i = handles_input(4, Leak::None);
+        let empty = seeds.is_empty();
+        i.randomise = Some(RandomiseArm {
+            seeds,
+            ics: if empty { 10 } else { ics },
+            fed: false,
+        });
+        let r = InspectorHandlesGate::judge(&config(HANDLES), "t", &i);
+        assert!(
+            r.is_err_and(|e| e.contains("a Randomise arm with no seeds or no draws")),
+            "an empty arm is not refused"
+        );
+    }
+}
+
+#[test]
+fn inspector_randomise_refused() {
+    check_arm_refused(0);
+}
+
+negative_control!(
+    inspector_randomise_refused,
+    "an arm with draws must not be refused",
+    expected = "an empty arm is not refused",
+    check_arm_refused(1)
+);
+
+/// The handles gate's `gate.json` with the Randomise arm's bound's `value` set to `value` (JSON null for none), or the
+/// entry dropped when `value` is `None`: the set-bound fixture, built from the committed file so that nothing else
+/// differs.
+fn bound_config(value: Option<serde_json::Value>) -> GateConfig {
+    let dir = root().join("fixtures/gates").join(HANDLES);
+    let mut file: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(dir.join("gate.json")).unwrap()).unwrap();
+    match value {
+        Some(v) => file["randomise_bound"]["value"] = v,
+        None => {
+            file.as_object_mut().unwrap().remove("randomise_bound");
+        }
+    }
+    let requirements = std::fs::read_to_string(root().join("plan/requirements.yaml")).unwrap();
+    GateConfig::parse(&file.to_string(), &requirements).unwrap()
+}
+
+/// The arm's worst over every move and seed in the in-ball subset, this file's own reading of the draws.
+fn in_ball_worst(seeds: &[RandomiseSeed]) -> (f64, usize) {
+    let mut w = 0.0f64;
+    let mut n = 0;
+    for s in seeds {
+        for (g, &b) in s.gaps.iter().zip(&s.in_ball) {
+            if b {
+                n += 1;
+                w = g.iter().fold(w, |a, &x| a.max(x));
+            }
+        }
+    }
+    (w, n)
+}
+
+/// The committed `gate.json` carries the Randomise arm's bound unrecorded: null, REQ-VAL-121's, over the in-ball
+/// subset (REQ-VAL-193; the value is the owner's at the M2 gate).
+fn check_committed_bound(c: &GateConfig) {
+    assert_eq!(
+        c.randomise_bound,
+        Some(ArmBound {
+            value: None,
+            requirement: "REQ-VAL-121".to_owned(),
+            population: Population::InBall,
+        }),
+        "the committed Randomise bound is not null under REQ-VAL-121 over the in-ball subset"
+    );
+}
+
+#[test]
+fn inspector_randomise_bound_committed() {
+    check_committed_bound(&config(HANDLES));
+}
+
+negative_control!(
+    inspector_randomise_bound_committed,
+    "a recorded value must not read as the committed null",
+    expected = "the committed Randomise bound is not null",
+    check_committed_bound(&bound_config(Some(serde_json::json!(1e-13))))
+);
+
+/// REQ-VAL-193's gate at its bound: `population_worst` is the worst over every move and seed in the in-ball subset;
+/// with the bound null the arm is reported and the gate passes; with it recorded at the arm's own worst, the arm passes,
+/// its line naming the bound, the population and the worst. `at` is the recorded bound; the control sets it one step
+/// below the worst, which must fail the arm and the gate.
+fn check_bound(at: fn(f64) -> f64) {
+    let arm = RandomiseArm {
+        seeds: vec![1, 2],
+        ics: 300,
+        fed: false,
+    };
+    let seeds: Vec<RandomiseSeed> = arm
+        .seeds
+        .iter()
+        .map(|&s| randomise_seed(s, arm.ics, 4.0, 4.0, Leak::None))
+        .collect();
+    let (w, n) = in_ball_worst(&seeds);
+    assert!(n > 0 && n < 600, "the in-ball subset of 600 is {n}");
+    assert_eq!(
+        population_worst(&seeds, Population::InBall),
+        (w, n),
+        "the worst over the in-ball subset"
+    );
+    let all = seeds
+        .iter()
+        .flat_map(|s| s.gaps.iter().flatten())
+        .fold(0.0f64, |a, &x| a.max(x));
+    assert!(
+        all > w,
+        "the subset's worst, {w:e}, is the full distribution's, {all:e}, so the test cannot tell them apart"
+    );
+    let mut i = handles_input(50, Leak::None);
+    i.randomise = Some(arm);
+    let null =
+        InspectorHandlesGate::judge(&bound_config(Some(serde_json::Value::Null)), "t", &i).unwrap();
+    assert_eq!(null.verdict, Verdict::Pass, "a null bound fails the arm");
+    assert!(
+        null.negative_results.last().unwrap().contains(&format!(
+            "reported until REQ-VAL-121 records its bound; its worst, {all:.3e}, is not read by REQ-VAL-021's verdict \
+             (R-551); over the in-ball subset, {n} draws, {w:.3e}"
+        )),
+        "the null bound's line: {:?}",
+        null.negative_results
+    );
+    let b = at(w);
+    let set =
+        InspectorHandlesGate::judge(&bound_config(Some(serde_json::json!(b))), "t", &i).unwrap();
+    let line = set.negative_results.last().unwrap();
+    assert!(
+        set.verdict == Verdict::Pass,
+        "the arm fails at bound {b:e}, its worst {w:e}: {line}"
+    );
+    assert!(
+        line.contains(&format!(
+            "gated at its recorded bound {b:.3e} (REQ-VAL-121) over the in-ball subset, {n} draws: its worst, \
+             {w:.3e}, passes"
+        )),
+        "the set bound's line: {line}"
+    );
+}
+
+#[test]
+fn inspector_randomise_bound() {
+    check_bound(|w| w);
+}
+
+negative_control!(
+    inspector_randomise_bound,
+    "a bound set below the arm's measured worst must fail the arm",
+    expected = "the arm fails at bound",
+    check_bound(below)
+);
+
+/// A recorded bound fails the arm above it, the line saying so, and the arm's verdict joins the gate's; it never
+/// moves REQ-VAL-021's: the threshold stays 1.6×10⁻¹⁴, its four judged lines are those without the arm, and a bound
+/// far above the arm does not rescue a rotation leak. `fed` is the control's: the arm read by REQ-VAL-021's verdict.
+fn check_bound_separate(fed: bool) {
+    let arm = RandomiseArm {
+        seeds: vec![1],
+        ics: 300,
+        fed,
+    };
+    let seeds = [randomise_seed(1, 300, 4.0, 4.0, Leak::None)];
+    let (w, _) = in_ball_worst(&seeds);
+    let low = bound_config(Some(serde_json::json!(below(w))));
+    let mut i = handles_input(50, Leak::None);
+    i.randomise = Some(arm);
+    let r = InspectorHandlesGate::judge(&low, "t", &i).unwrap();
+    assert_eq!(r.verdict, Verdict::Fail, "the arm passes above its bound");
+    assert!(
+        r.negative_results[4].contains(&format!("its worst, {w:.3e}, fails")),
+        "the failing arm's line: {:?}",
+        r.negative_results
+    );
+    let high = bound_config(Some(serde_json::json!(1.0)));
+    assert_eq!(
+        high.threshold.value, 1.6e-14,
+        "REQ-VAL-021's threshold moved"
+    );
+    let with = InspectorHandlesGate::judge(&high, "t", &i).unwrap();
+    let without = InspectorHandlesGate::judge(&high, "t", &handles_input(50, Leak::None)).unwrap();
+    assert_eq!(
+        with.verdict,
+        Verdict::Pass,
+        "REQ-VAL-021's verdict reads the Randomise arm"
+    );
+    assert_eq!(
+        with.negative_results[..4],
+        without.negative_results[..4],
+        "the arm's bound moves REQ-VAL-021's judged lines"
+    );
+    let mut leak = i.clone();
+    leak.leak = Leak::Rotate;
+    assert_eq!(
+        InspectorHandlesGate::judge(&high, "t", &leak)
+            .unwrap()
+            .verdict,
+        Verdict::Fail,
+        "the arm's bound rescues a failing REQ-VAL-021 arm"
+    );
+}
+
+#[test]
+fn inspector_randomise_bound_separate() {
+    check_bound_separate(false);
+}
+
+negative_control!(
+    inspector_randomise_bound_separate,
+    "the arm fed into REQ-VAL-021's verdict must fail it",
+    expected = "REQ-VAL-021's verdict reads the Randomise arm",
+    check_bound_separate(true)
+);
+
+/// With a bound recorded and no draw in the in-ball subset, the arm is not measured, and fails; `radius` is the
+/// ball's, the control's large enough for draws to fall in it.
+fn check_empty_population(radius: f64) {
+    let seeds = [randomise_seed(1, 100, radius, 4.0, Leak::None)];
+    let bound = ArmBound {
+        value: Some(1.0),
+        requirement: "REQ-VAL-121".to_owned(),
+        population: Population::InBall,
+    };
+    let (v, line) = arm_verdict(&seeds, 0.0, &bound);
+    assert!(
+        v == Verdict::Fail && line.contains("no draw in the in-ball subset"),
+        "an empty population passes: {line}"
+    );
+}
+
+#[test]
+fn inspector_randomise_empty_population() {
+    check_empty_population(1e-3);
+}
+
+negative_control!(
+    inspector_randomise_empty_population,
+    "a population with draws must pass a bound far above it",
+    expected = "an empty population passes",
+    check_empty_population(4.0)
+);
+
+/// A `gate.json` without the arm's bound refuses an input that runs the arm, before drawing; and a bound naming a
+/// requirement that is not a calibration requirement is refused (R-71). `drop` is the control's: the entry kept.
+fn check_bound_refused(drop: bool) {
+    let c = if drop {
+        bound_config(None)
+    } else {
+        config(HANDLES)
+    };
+    assert!(
+        c.randomise_bound.is_none() == drop,
+        "the entry is not dropped"
+    );
+    let mut i = handles_input(4, Leak::None);
+    assert!(
+        InspectorHandlesGate::judge(&c, "t", &i).is_ok(),
+        "an input without the arm is refused"
+    );
+    i.randomise = Some(RandomiseArm {
+        seeds: vec![1],
+        ics: 10,
+        fed: false,
+    });
+    let r = InspectorHandlesGate::judge(&c, "t", &i);
+    assert!(
+        r.is_err_and(
+            |e| e.contains("gate.json names no bound for the Randomise arm, not even null")
+        ),
+        "an arm with no bound is not refused"
+    );
+    let text = std::fs::read_to_string(
+        root()
+            .join("fixtures/gates")
+            .join(HANDLES)
+            .join("gate.json"),
+    )
+    .unwrap()
+    .replace(
+        r#""randomise_bound": { "value": null, "requirement": "REQ-VAL-121""#,
+        r#""randomise_bound": { "value": null, "requirement": "REQ-VAL-193""#,
+    );
+    let requirements = std::fs::read_to_string(root().join("plan/requirements.yaml")).unwrap();
+    let e = GateConfig::parse(&text, &requirements).unwrap_err();
+    assert!(
+        e.contains(
+            "the Randomise arm's bound names REQ-VAL-193, which is not a calibration requirement"
+        ),
+        "a plain requirement's bound is not refused: {e}"
+    );
+}
+
+#[test]
+fn inspector_randomise_bound_refused() {
+    check_bound_refused(true);
+}
+
+negative_control!(
+    inspector_randomise_bound_refused,
+    "an arm with its bound named must not be refused",
+    expected = "an arm with no bound is not refused",
+    check_bound_refused(false)
 );
 
 /// The runner on `root`'s fixtures gives every input of both gates its expected outcome.

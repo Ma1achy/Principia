@@ -1,10 +1,11 @@
 {
-  "description": "REQ-VAL-021: 2×10⁴ random ICs, each g₀·D(z) with z uniform in the ball ‖z‖ < 4 and g₀ a random gauge element (scale 2^[−4, 4), any turn, either parity, offset s₀·[−1, 1)², boost s₀^{−1/2}·[−1, 1)², each up to the state's own size); each of translate-all, boost-all, rotate-all and scale-all applied at a size drawn alike, and ‖E(h·x) − E(x)‖ read on the f64 encode under the defaults links.",
+  "description": "REQ-VAL-021: 2×10⁴ random ICs, each g₀·D(z) with z uniform in the ball ‖z‖ < 4 and g₀ a random gauge element (scale 2^[−4, 4), any turn, either parity, offset s₀·[−1, 1)², boost s₀^{−1/2}·[−1, 1)², each up to the state's own size); each of translate-all, boost-all, rotate-all and scale-all applied at a size drawn alike, and ‖E(h·x) − E(x)‖ read on the f64 encode under the defaults links. Beside it, the Randomise arm (REQ-VAL-193): the Inspector's Randomise, 2×10⁴ draws on each of seeds 1 to 10, each handle at a random size (offset ±0.9, boost ±0.6, any turn, scale 2^[−4, 4)) and at the buttons' (Rotate 15°, Scale ×1.25), its max ‖Δz‖ reported over all the draws and over the in-ball subset ‖E(x)‖ < 4, judged only once REQ-VAL-121 records gate.json's randomise_bound (null until then), over the in-ball subset.",
   "seed": 1,
   "ics": 20000,
   "radius": 4.0,
   "span": 1.0,
   "octaves": 4.0,
   "leak": "none",
+  "randomise": { "seeds": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], "ics": 20000, "fed": false },
   "expected": "pass"
 }
