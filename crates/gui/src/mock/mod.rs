@@ -21,18 +21,19 @@ pub mod quads;
 pub mod sample;
 pub mod stain;
 
+use engine::contract::history::History;
 use engine::contract::interface::EngineInterface;
 use engine::contract::log::{LogEntry, Severity, Source};
 use engine::contract::render_state::{Hover, Overlays, Palette, Playhead, RenderState, StainGraph};
-use engine::contract::set_field::{Edit, SetField};
+use engine::contract::set_field::{HistoryKey, SetField};
 use engine::contract::sim_config::{
     Chart, Collision, Horizon, Integrator, KernelVariant, Latent, Links, Lock, Plane, Quality,
     SimConfig, Slice, SliceFrame, Window, Z_Q3,
 };
 
 use crate::side::FigureView;
-use engine::contract::snapshot::{FrameSummary, History, LiveMemory, Precision, Snapshot, Tier};
-use engine::contract::store::{set_field_message, write};
+use engine::contract::snapshot::{self, FrameSummary, LiveMemory, Precision, Snapshot, Tier};
+use engine::contract::store::write;
 
 use self::canvas::Line;
 use self::clock::MockClock;
@@ -86,20 +87,15 @@ pub const TILE_BOUNDS_RGBA: [f32; 4] = [1.0, 1.0, 1.0, 0.5];
 /// The hover path's colour, white as 01_main.png's, its opacity by its distance off the slice (a look choice, R-390).
 pub const HOVER_RGB: [f32; 3] = [1.0, 1.0, 1.0];
 
-/// One undoable change: the edit restoring the value before, and the edit itself.
-#[derive(Clone, Debug)]
-struct Change {
-    before: Edit,
-    after: Edit,
-}
-
 /// The mock engine.
 #[derive(Debug)]
 pub struct MockEngine {
     sim: SimConfig,
     render: RenderState,
-    undo: Vec<Change>,
-    redo: Vec<Change>,
+    /// The contract's one history, kept as every engine keeps it (R-52; gui_state_contract §2).
+    history: History,
+    /// How many `SetField`s it has applied, keyed or not.
+    applied: u64,
     log: Vec<LogEntry>,
     clock: MockClock,
     stain: FakeStain,
@@ -150,8 +146,8 @@ impl MockEngine {
         Self {
             sim,
             render,
-            undo: Vec::new(),
-            redo: Vec::new(),
+            history: History::new(),
+            applied: 0,
             log: Vec::new(),
             clock,
             stain: legend::default_stain(),
@@ -159,6 +155,12 @@ impl MockEngine {
             warned: None,
             integrated: Integrated::default(),
         }
+    }
+
+    /// How many `SetField`s the mock has applied, keyed or not, no-history ones included: a test counts a frame's edits
+    /// by it (R-458 F3).
+    pub fn edits_applied(&self) -> u64 {
+        self.applied
     }
 
     /// Whether View › Debug view is on (`RenderState`'s `debug_view`).
@@ -370,21 +372,35 @@ fn state(t: f64) -> (SimConfig, RenderState) {
     )
 }
 
+impl MockEngine {
+    /// Applies `edit` and records it in the history under `key`, logging what the history returns, each line an `info`
+    /// entry from `contract`.
+    fn apply(&mut self, edit: SetField, key: Option<HistoryKey>) {
+        self.applied += 1;
+        let before = write(&mut self.sim, &mut self.render, edit.edit.clone());
+        let lines = self.history.record(before, &edit, key);
+        self.log_lines(lines);
+    }
+
+    fn log_lines(&mut self, lines: Vec<String>) {
+        for line in lines {
+            self.push(Severity::Info, Source::Contract, line);
+        }
+    }
+}
+
 impl EngineInterface for MockEngine {
     fn set_field(&mut self, edit: SetField) {
-        let before = write(&mut self.sim, &mut self.render, edit.edit.clone());
-        self.push(
-            Severity::Info,
-            Source::Contract,
-            set_field_message(&before, &edit),
-        );
-        if !edit.no_history {
-            self.undo.push(Change {
-                before,
-                after: edit.edit,
-            });
-            self.redo.clear();
-        }
+        self.apply(edit, None);
+    }
+
+    fn set_field_under(&mut self, edit: SetField, key: HistoryKey) {
+        self.apply(edit, Some(key));
+    }
+
+    fn end_key(&mut self, key: HistoryKey) {
+        let lines = self.history.end_key(key);
+        self.log_lines(lines);
     }
 
     fn snapshot(&mut self) -> Snapshot {
@@ -393,9 +409,9 @@ impl EngineInterface for MockEngine {
             sim: self.sim.clone(),
             render: self.render.clone(),
             tier: Tier {},
-            history: History {
-                undo_depth: self.undo.len() as u32,
-                redo_depth: self.redo.len() as u32,
+            history: snapshot::History {
+                undo_depth: self.history.undo_depth(),
+                redo_depth: self.history.redo_depth(),
             },
             precision: Precision {
                 decode_switchover: octaves >= MOCK_SWITCHOVER_OCTAVES,
@@ -422,16 +438,18 @@ impl EngineInterface for MockEngine {
     }
 
     fn undo(&mut self) {
-        if let Some(change) = self.undo.pop() {
-            write(&mut self.sim, &mut self.render, change.before.clone());
-            self.redo.push(change);
-        }
+        let (sim, render) = (&mut self.sim, &mut self.render);
+        let lines = self.history.undo(|before| {
+            write(sim, render, before);
+        });
+        self.log_lines(lines);
     }
 
     fn redo(&mut self) {
-        if let Some(change) = self.redo.pop() {
-            write(&mut self.sim, &mut self.render, change.after.clone());
-            self.undo.push(change);
-        }
+        let (sim, render) = (&mut self.sim, &mut self.render);
+        let lines = self.history.redo(|after| {
+            write(sim, render, after);
+        });
+        self.log_lines(lines);
     }
 }

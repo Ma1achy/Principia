@@ -52,6 +52,7 @@ use core::marker::PhantomData;
 use spirv_std::num_traits::Float;
 
 use super::invariant::WarpReal;
+use super::tilt::{shift_controls, Hidden, Shift, Tiltable};
 use super::{AxisMeta, BlockTouch, Chart, ChartDecode, ChartOut, Constraint, ValidationResult};
 use crate::decode::{self, Decoded, Latent};
 use crate::encode::blocks::Ends;
@@ -352,11 +353,20 @@ impl<H: Quantity, V: Quantity, P: Copy> Mixed<H, V, P> {
         v: R,
         p: &LinkParams<R>,
     ) -> [R; 8] {
-        let z = place(
-            self.frozen_at(),
-            H::COORDINATE,
-            H::control_at::<S, R>(self.h(u), p),
-        );
+        self.controls_from::<S, R>(self.frozen_at(), u, v, p)
+    }
+
+    /// [`Mixed::controls_at`] from the frozen controls `z`: the chart's own, or a tilt's, its hidden offsets added
+    /// (`crate::chart::tilt`).
+    #[inline]
+    fn controls_from<S: Selection, R: LinkReal + From<P>>(
+        &self,
+        z: [R; 8],
+        u: R,
+        v: R,
+        p: &LinkParams<R>,
+    ) -> [R; 8] {
+        let z = place(z, H::COORDINATE, H::control_at::<S, R>(self.h(u), p));
         place(z, V::COORDINATE, V::control_at::<S, R>(self.v(v), p))
     }
 
@@ -512,5 +522,40 @@ where
         R: LinkReal + PayloadReal + WarpReal + From<P>,
     {
         Chart::decode_params::<S, R>(self, u, v, p)
+    }
+}
+
+impl<H: Quantity, V: Quantity, P: Copy> Hidden for Mixed<H, V, P>
+where
+    f64: From<P>,
+{
+    /// The six controls the axes leave frozen (R-473 J1, "the controls its axes leave frozen").
+    fn hidden(&self, k: u32) -> bool {
+        k < 8 && k != H::COORDINATE as u32 && k != V::COORDINATE as u32
+    }
+
+    /// The frozen control `k` set.
+    fn sliced(&self, k: u32, value: P) -> Option<Self> {
+        self.hidden(k).then(|| {
+            let mut chart = *self;
+            chart.frozen[k as usize] = value;
+            chart
+        })
+    }
+}
+
+impl<H: Quantity, V: Quantity, P: Copy> Tiltable for Mixed<H, V, P>
+where
+    f64: From<P>,
+{
+    /// The shared decoder on [`Mixed::controls_at`]'s controls, from the frozen controls shifted.
+    #[inline]
+    fn decode_shifted<S, R>(&self, u: R, v: R, shift: &Shift<R>, p: &LinkParams<R>) -> Decoded<R>
+    where
+        S: Selection,
+        R: LinkReal + PayloadReal + From<P>,
+    {
+        let z = shift_controls(self.frozen_at(), shift);
+        decode::decode_at::<S, R>(&Latent::new(self.controls_from::<S, R>(z, u, v, p)), p)
     }
 }

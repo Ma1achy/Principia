@@ -611,3 +611,221 @@ review (F1). For the owner: yes, it is physics where the choice changes the resu
   byte stay, so REQ-SYS-018's "optional" stays true of `SimUniforms`. The refusal is lifted by the task that builds
   the force law.
 - **Waits:** any run with ε ≠ 0. Nothing else waits.
+
+## RQ-621: The control REQ-DEC-011 and REQ-VAL-017 ask of `M₀₁` cannot fail: an unfused or flushed `fma(m₁, 1, m₀)` rounds exactly as the fused one *(conflict: a requirement's control against arithmetic; R-547, RQ-298; REQ-DEC-011, REQ-VAL-017; context: TASK-M2-48)*
+
+*Found by TASK-M2-48's implementer, before building, 30 Oct 2026. For the orchestrator (R-369: tests), except option
+(b), which changes the branch input's definition and is the human's (physics).*
+
+- **File, section:**
+  - `plan/requirements.yaml`, REQ-DEC-011's verify: "control: the explicit fma(m₁, 1, m₀) form, unfused, flips the tag
+    on lavapipe's evaluation of it".
+  - `plan/tasks/M2/TASK-M2-48.md` § "Acceptance tests", `cargo test -p kernel decode_mass`: "control: the unfused
+    `fma(m₁, 1, m₀)` evaluation flips the tag (REQ-DEC-011)".
+  - `plan/requirements.yaml`, REQ-VAL-017's verify, and the same task's `cargo test -p engine decode_parity`: "control:
+    on the same fuzzed inputs the superseded forms (the explicit fma(m₁, 1, m₀), a plain float subtract or compare),
+    evaluated on the CPU under an unfused or flush-to-zero emulation, give a different tag from the unflushed CPU on at
+    least one input".
+  - `docs/design/principia_dd_decoder.md` § "3.1 Mass", "The branch input": "`m₁·1` is exact, so it is the same single
+    rounding of `m₀ + m₁`"; and "Its premise": "Folding `fma(x, 1, y)` to `x + y` is exact and standard … after it, a
+    contracting backend can rebuild `fma(t₇, t₁₃, m₀)` and flip the tag as above."
+- **The conflict:** unfused, `fma(m₁, 1, m₀)` is `round(round(m₁·1) + m₀)`, and `m₁·1` is exact, so it is
+  `round(m₀ + m₁)`: bit for bit the fused value, on every input. Flushed, it differs only where `m₁` or `m₀` is
+  subnormal, and then `M₀₁` is below `2^−125`, far under `ε_M01 = 10⁻⁵`, so the tag is the same. So the control the two
+  requirements name cannot flip `M01_TINY` on any masses, and a test written to it can never fail. Lavapipe's unfused
+  `fma` (RQ-298's measurement) gives the right tag for `M₀₁`. The hazard §3.1 describes is the other one: a backend
+  that folds the `×1` and then contracts `m₀ + t₇·t₁₃` into a fused `fma(t₇, t₁₃, m₀)`, which flips 45 of 40 000 f32
+  onset crossing points and 77 at f64 (`decode_m01_tiny_contraction`'s control already shows it). The other superseded
+  forms REQ-VAL-017 names seem unlikely to flip a tag on test 12's fuzzed inputs either: a plain compare is unchanged
+  by an unfused emulation, and the decoded states have no subnormal pair differences or products for a flush to
+  change. That last point is my reading, not measured.
+- **The question:** what the control for `M₀₁`, and test 12's collective control, should be.
+- **Options seen:**
+  - (a) The control emulates the superseded form as a folding, contracting backend evaluates it: `fma(t₇, t₁₃, m₀)`
+    fused, at TASK-M2-02's onset crossings. It must flip the tag there, and the rewritten form must not. In both
+    requirements' verify and the task's two acceptance lines, "unfused" becomes "with the `×1` folded and the add
+    contracted (fused)". Test 12's inputs gain the onset crossings, so that "the same fuzzed inputs" include points
+    where one rounding decides the tag.
+  - (b) Decide the tag on the exact `m₀ + m₁ < ε` rather than on its one rounded sum. Then the explicit form, fused or
+    not, flips the tag where `round(m₀ + m₁) = ε` but the exact sum is below `ε`, and the control as written holds.
+    This changes §3.1's "one rounded sum" and REQ-DEC-011's "M₀₁ formed …", and it breaks the oracle of
+    `crates/kernel/tests/qa_TASK-M2-02_m01_sum.rs` (`qa_m01_one_rounded_sum`, `qa_m01_crossings`: "its tag is that
+    sum's"), a qa file that only a ruling may change (R-290).
+  - (c) Drop the control for `M₀₁`, and keep the form's proof (physics review) and the cross-backend comparison at the
+    onset crossings. REQ-VAL-017's control is then met by whichever superseded form does flip on test 12's inputs, or
+    reworded to say which.
+- **Applied meanwhile:** none. TASK-M2-48 is not built. The form planned is unaffected by the choice between (a) and
+  (c): `M₀₁` as the one rounded sum, formed from mantissas in `[1, 2)` with integer exponents (`kernel::canon`'s `Wide`
+  addition, R-547's pattern). Only the controls wait.
+- **Waits:** TASK-M2-48's two acceptance controls (REQ-DEC-011, REQ-VAL-017).
+- **30 Oct 2026:** Decided by the orchestrator per R-369 (a test decision), option (a); see PR (TASK-M2-48). The
+  control is the folded-and-fused evaluation, `fma(t₇, t₁₃, m₀)` fused at f32 and f64 on the CPU, at TASK-M2-02's
+  onset crossings, which decoder test 12's inputs gain; REQ-VAL-017's emulation list gains "contracted (fused)";
+  REQ-DEC-011's and REQ-VAL-017's verify text and TASK-M2-48's two acceptance lines drop "unfused" and "on lavapipe".
+  The tag rule, `ε_M01` (REQ-DEC-039) and R-547's form are unchanged. Nothing waits.
+
+## RQ-630: R-554 L3's and the chart contract's summary sentences on Lean each axis say `N_a` and `N_b` vanish together on a tilted view only at the corner, where L3's own closed form also gives both zero at Lean `(±180, 0)`, `(0, ±180)` and `(±180, ±180)` *(conflict: a ruling's summary against its own formula; R-554 L3, R-474 R2; `docs/contracts/principia_chart_decoder_contract.md` § "Repeats and the canonical point"; the physics review of PR #349 (5710611197), P2; REQ-SCHED-101; context: TASK-M2-36, TASK-M8-56)*
+
+*Queued 30 Oct 2026 by TASK-M2-36's fix round 2, on the physics review of PR #349. A wording conflict, not a physics
+question: the code follows the formula, and the physics reviewer agrees it is the physically consistent reading.*
+
+- **File, section:**
+  - `decisions.md` § "R-554 — …", L3: "under Lean each axis `N ∝ (−sin τ₁ cos τ₂, −cos τ₁ sin τ₂, cos τ₁ cos τ₂)`,
+    so on a tilted view they vanish together only at the corner `|τ₁| = |τ₂| = 90°`, where there is no normal and
+    RQ-471 applies no fold, so no pole map either".
+  - The same L3, before it: "the pole maps' condition `N_a = 0` and `N_b = 0` is decided exactly on the stored angles
+    from each map's closed form".
+  - `docs/contracts/principia_chart_decoder_contract.md` § "Repeats and the canonical point": "decided exactly on the
+    stored angles (Tip as sheet `m == 180`; Lean each axis only untilted, its one-target corner ray-degenerate with no
+    fold; two targets iff `τ₁, τ₂ ∈ {0, ±180}`)".
+  - `decisions.md` § "R-474 — …", R2: "A single tilt is identical under both maps."
+- **The conflict:** L3's formula gives `N_a = −sin τ₁ cos τ₂ = 0` and `N_b = −cos τ₁ sin τ₂ = 0` whenever
+  `sin τ₁ = sin τ₂ = 0`, i.e. at Lean `(±180, 0)`, `(0, ±180)` and `(±180, ±180)`, all tilted views, with
+  `N = (0, 0, cos τ₁ cos τ₂) ≠ 0`. There the plane is mirrored and `d ≡ 0`, so the pole maps keep `d`. Lean with one
+  angle at ±180 is the same rotation as Tip as sheet at `m = 180` (R-474 R2), where the contract applies the pole
+  maps. The summary sentences ("only at the corner", "only untilted") say otherwise.
+- **The question:** whether the summary sentences are reworded to match the formula ("Lean each axis iff
+  `sin τ₁ = sin τ₂ = 0`, its one-target corner ray-degenerate with no fold"), or the formula's other zeros are excluded.
+- **Options seen:** (a) reword L3's and the contract's summaries to the formula's zeros (the code's reading);
+  (b) keep the summaries and exclude Lean's ±180 zeros from the pole maps, so that Lean `(180, 0)` and Tip as sheet
+  `(180, 0)`, the same rotation, count differently; (c) another, stated by the owner.
+- **Applied meanwhile:** the formula, as L3's "decided exactly on the stored angles from each map's closed form" says:
+  `TiltSpec::normal_zero` (`crates/kernel/src/chart/tilt.rs`) gives `[true, true]` at Lean `(±180, 0)` and
+  `(0, ±180)` (TASK-M2-36, PR #349).
+- **Waits:** nothing; the summaries' rewording only.
+
+## RQ-631: On a tilted shape sphere, the spherical map's period 2 in `t` makes `(s + k, t + 2j)` the same system as `(s, t)` wherever `N_a·k + 2·N_b·j = 0` for whole `(k, j) ≠ 0`, which R-554 L3's rule counts twice *(physics; silence; R-554 L3, RQ-472 (a), R-408; `docs/contracts/principia_chart_decoder_contract.md` § "Repeats and the canonical point"; the physics review of PR #349 (5710611197), P3; REQ-CHART-062, REQ-SCHED-101; context: TASK-M2-36, TASK-M8-56)*
+
+*Queued 30 Oct 2026 by TASK-M2-36's fix round 2, on the physics review of PR #349. For the owner: yes, it is physics
+where the choice changes the result (which pixels count) and the corpus does not settle it (R-369).*
+
+*30 Oct 2026: Ruled by the owner, R-655 (option (a): "#349 (a): extend the repeat rule to t's period 2, with
+tests.").*
+
+- **File, section:**
+  - `decisions.md` § "R-554 — …", L3: "the pole maps' condition `N_a = 0` and `N_b = 0` is decided exactly on the
+    stored angles from each map's closed form".
+  - `docs/contracts/principia_chart_decoder_contract.md` § "Repeats and the canonical point": "On a tilted view a
+    repeat is the same system only where the type group's map leaves the tilt's hidden offset `d` unchanged"; "the pole
+    maps apply on a tilted view iff `N_a = 0` and `N_b = 0` for chart_reference §3.3's `N`, … and otherwise the view
+    is affine along that axis and draws no image (R-554, ruling RQ-472 (a))".
+  - `decisions.md` § "R-408 — Area statistics count each system once, …".
+- **The silence:** the spherical map repeats every 1 in `s` (θ's period) and every 2 in `t` (two pole maps and θ's
+  period composed): `n(s, t + 2) = n(s, t)`. On a tilted view `d` depends on `(a, b)` through `N_a·a + N_b·b`, so
+  `(s + k, t + 2j)` keeps `d`, and is the same system as `(s, t)`, whenever `N_a·k + 2·N_b·j = 0` for whole numbers
+  `(k, j) ≠ 0`. Cases: `N_b = 0` with `N_a ≠ 0` (e.g. `τ₁` alone), where `t` and `t + 2` repeat; Lean `45°/45°`
+  (`N_a = N_b`), where `(s − 2, t + 2)` repeats `(s, t)`. The ruled rule ("pole maps iff `N_a = N_b = 0`, otherwise
+  affine") counts each such pair twice, against R-408. They lie two chart units out, so a view reaches them only zoomed
+  out.
+- **The question:** whether these lattice repeats are folded, or the ruled rule stands with the exception stated.
+- **Options seen:** (a) fold the lattice of repeats: a pixel counts only at its canonical point under every
+  `(k, j)` with `N_a·k + 2·N_b·j = 0`, decided exactly on the stored angles; (b) keep the ruled rule and state the
+  exception in L3 and the contract (such pixels counted twice, two chart units out); (c) another, stated by the owner.
+- **Applied meanwhile:** the ruled text (R-554 L3): `Tilted::pixel` (`crates/kernel/src/chart/tilt.rs`) uncounts a
+  pixel past θ's period iff `N_a = 0` and one over a pole iff `N_a = N_b = 0`, and counts the lattice repeats
+  (TASK-M2-36, PR #349).
+- **Waits:** nothing built waits; a fold, if ruled, is a follow-up to TASK-M2-36's `Tilted::pixel` and TASK-M8-56.
+
+## RQ-632: Which cuts carry `a` and `b`: two arcs ending at a Lagrange pole cannot reproduce the published classes *(physics; R-125; `docs/contracts/principia_symbolic_dynamics_contract.md` § 1; REQ-PAY-070; context: TASK-M3-16)*
+
+*Queued 30 Oct 2026 by TASK-M3-16, transcribing the convention under R-125. For the owner: yes, it is physics where
+the choice changes the result (the word every sample stores) and the corpus does not settle it (R-369).*
+
+- **File, section:**
+  - `docs/contracts/principia_symbolic_dynamics_contract.md` § "1. Generator ↔ branch-cut convention": "Fix,
+    normatively: which two branch cuts correspond to generators `a` and `b` (arc from which collision point to the
+    Lagrange reference pole); the crossing-direction sign convention (which crossing direction is the generator vs its
+    inverse) — must match the half-open sign convention in payload §3 / the integrator contract."
+  - `decisions.md` § "R-125 — …": "Its convention (the a/b branch-cut assignment and the crossing sign) is transcribed
+    from the literature (Montgomery; Šuvakov–Dmitrašinović) and verified by REQ-VAL-043 against the published braid
+    classes."
+  - The literature, `docs/incoming/2026-10-25_replication/papers/`: Šuvakov & Dmitrašinović, PRL 110, 114301 (2013),
+    p. 1: "A stereographic projection of this sphere onto a plane, using one of the punctures as the "north pole"
+    effectively removes that puncture to infinity … That leads to the aforementioned free group on two letters (a, b),
+    where (for definiteness) a denotes a clockwise full turn around the right-hand-side puncture, and b denotes the
+    counterclockwise full turn around the other puncture". Dmitrašinović, Hudomal, Shibayama & Sugita, J. Phys. A 51,
+    315101 (2018), Appendix B ("Montgomery's topological identification method"), Fig. 7: "Three two-body collision
+    points (solid red) lie on a meridian (dashed circle), with one of them being at the north pole"; and: "a simple
+    loop around the third ("infinite") puncture on the shape sphere corresponds to aB". Its Appendix C: "make the
+    substitution a = 12, A = 21, b = 32, B = 23", the digits being "crossings of the equator on the shape sphere, in
+    one of three corresponding segments on the said equator, where the index of the body passing between the other two
+    is used as a symbol". (Montgomery's own paper, Nonlinearity 11, 363 (1998), is not in the corpus; Appendix B is
+    the authors' account of his method.)
+- **The gap:** the literature's "north pole" is a collision point, not a Lagrange pole. Two cuts from two collision
+  points to a Lagrange pole `L±` (an equilateral shape, not a puncture) leave the cut sphere a punctured disc, not a
+  disc: a loop around the third collision point crosses neither cut and reads as the empty word, though the
+  literature's class is `aB` (the BHH family's); and a small loop around the pole crosses both and reads as a
+  nonempty word, though it is contractible. So no assignment of `a` and `b` to the arcs §1 names reproduces the
+  published classes (REQ-VAL-043). The literature fixes the generators as loops, with Appendix C's reading in
+  syzygies; it names no cuts. Two smaller points ride on the choice: the literature's bodies 1, 2, 3 against ours 0, 1, 2
+  (R-630 labels the Šuvakov plane's middle body our body 1), and which hemisphere is the literature's upper half-plane,
+  the start of `a = 12`, which its figures alone fix and on which the PRL and the gallery differ for 6 of 15 orbits by
+  the `(a, b) ↔ (A, B)` exchange (`docs/incoming/2026-10-26_belgrade_gallery/README.md`, cross-check item 3).
+- **The question:** which two cuts carry `a` and `b`, the body labelling they are read in, and which side of each is
+  negative, so that the positive sense (`d < 0`, then `d ≥ 0`; integrator contract Part 5) is the generator.
+- **Options seen:**
+  - (a) **The literature's own cuts, on the equator** (Appendix C). With the literature's body 1 and body 2 meeting at
+    the puncture `a` circles and bodies 2 and 3 at `b`'s, the third collision, of bodies 1 and 3, at infinity: cut `a`
+    is the equator segment where body 1 is between the others, from the 1–2 collision to the 1–3; cut `b` the segment
+    where body 3 is between, from the 2–3 collision to the 1–3. A crossing of segment 1 out of the hemisphere where `a`
+    starts is `a`, into it `A`; segment 3 likewise for `b`, `B`; segment 2 is not a cut. The word read so is Appendix
+    C's syzygy reading letter for letter. `d` is the triangle's orientation (`n_w`, `L⁺` positive), and which segment
+    is crossed is a second, comparison-only test of which body is between at the crossing. The two cuts lie on one
+    great circle, so one substep crosses at most one of them, and the `τ`-sort never meets two.
+  - (b) **Arcs through the Lagrange poles, to the third collision.** Cut `a` from the 1–2 collision through `L⁺` to the
+    1–3 collision, cut `b` from the 2–3 collision through `L⁻` to the 1–3: each isotopic to (a)'s segment with no
+    puncture between, so a closed orbit reads the same class as under (a). It keeps §1's Lagrange poles; each cut is
+    two quarter-meridians, each with a hemisphere test; the cuts meet only at the 1–3 collision, near which one substep
+    can cross both, so the `τ`-sort is live there.
+  - (c) **Three cuts, one from each collision to `L⁺`** (§1's arcs, made a disc by the third), a crossing of the third
+    appending the punctured-sphere relation's two letters: needs §2's relation, which R-125 put in v2.
+  - (d) Another, stated by the owner.
+  For each: the body map (literal, `1, 2, 3 → 0, 1, 2`, or R-630's, the middle body ours 1), and the side `a`
+  starts on (proposed: `L⁺`'s hemisphere, bodies 0 → 1 → 2 anticlockwise, dd_integrator §3.7), which REQ-VAL-043's
+  comparison up to the `(a, b) ↔ (A, B)` exchange cannot tell apart.
+- **Applied meanwhile:** none. TASK-M3-16's detector (`crates/kernel/src/word/crossing.rs`) takes each cut's signed
+  distances as its input and applies the integrator contract's τ tie rule (Part 5), which does not depend on the cuts'
+  shape; no cut geometry is built and nothing reads a word from a trajectory.
+- **Waits:** the signed distances from the state and §1's convention (REQ-PAY-070, TASK-M3-16), and REQ-VAL-043
+  (TASK-M3-30).
+- **30 Oct 2026:** Decided by the orchestrator per R-369 (consequence of R-125), option (a); confirmed at the M3 gate;
+  see PR (TASK-M3-16). The cuts are the collision equator's segments with body 0 between (`a`, `P₀₁`–`P₀₂`) and body 2
+  between (`b`, `P₁₂`–`P₀₂`), Appendix C's bodies 1, 2, 3 ours 0, 1, 2 (R-630); `d = −(r₁ − r₀) × (r₂ − r₀)`, so `−n_w`,
+  and a generator crosses from `L⁺`'s hemisphere into `L⁻`'s ("`d` is `n_w`, `L⁺` positive" in option (a) above is
+  corrected); the segment classifier is an R-72 definition (REQ-PAY-113). Applied in symbolic_dynamics_contract §1 and
+  integrator contract Part 5. Nothing waits on it; REQ-VAL-043 stays TASK-M3-30's.
+- **31 Oct 2026:** Physics review 5720379930 of PR #358 holds option (a) under R-369, the owner confirming it at the M3
+  gate (R-125, REQ-PAY-070); it re-derives the sign from Appendix C and names two sub-choices that are not literature
+  and change stored words, the hemisphere and the outer-body order, for the gate record. It reopens this entry if
+  REQ-VAL-043 shows the kernel's substeps too coarse for (a). **Provenance:** §1's first read of the ten orbits was a
+  throwaway script of 30 Oct, never in the repo. What stands in for it is `fixtures/crossings/prl_orbits.py`, adapted
+  from it; `crossing_body_relabelling` and `qa_m316_prl_fixture_against_appendix_c`, which check the outer-body claim.
+
+## RQ-634: On a tilted shape sphere a pole map's image also keeps `d` on lines of measure zero, `N_a(½ + k) + N_b(2j − 2t) = 0`, which no ruling names: R-554 L3 counts such a pixel and its image as two systems, and R-408 counts each system once *(physics; silence; R-554 L3, R-655, R-408; `docs/contracts/principia_chart_decoder_contract.md` § "Repeats and the canonical point"; the physics review of PR #349 (5719740344), P2; context: TASK-M2-36, TASK-M8-56)*
+
+*Queued 30 Oct 2026 by TASK-M2-36's fix round, on the physics review of PR #349. For the owner: yes, it is physics
+where the choice changes the result (which pixels count) and the corpus does not settle it (R-369).*
+
+- **File, section:**
+  - `decisions.md` § "R-554 — …", L3: "the pole maps' condition `N_a = 0` and `N_b = 0` is decided exactly on the
+    stored angles from each map's closed form".
+  - `docs/contracts/principia_chart_decoder_contract.md` § "Repeats and the canonical point": "the pole maps apply on a
+    tilted view iff `N_a = 0` and `N_b = 0` for chart_reference §3.3's `N`, decided exactly on the stored angles", and
+    "On a tilted view a repeat is the same system only where the type group's map leaves the tilt's hidden offset `d`
+    unchanged".
+  - `decisions.md` § "R-408 — Area statistics count each system once, …".
+  - `decisions.md` § "R-655 — …": "a pixel `(s + k, t + 2j)` with `N_a·k + 2·N_b·j = 0` for integers `(k, j) ≠ 0` is the
+    same system as `(s, t)`", which covers the type group's translations and not its pole maps.
+- **The silence:** a pole map's image `(s + ½ + k, −t + 2j)` has the same `n̂` as `(s, t)`. On a tilted view it also
+  keeps `d` on the line `N_a(½ + k) + N_b(2j − 2t) = 0`. Under Lean `45°/45°`, `(a, ¼)` and `(a + ½, −¼)` have one shape
+  and one `d`; with `N_a = 0`, `N_b ≠ 0`, the pole rows `t = j` are one system at each `d`. So the contract's "same
+  system only where the map leaves `d` unchanged" holds on these lines, while its "iff `N_a = 0` and `N_b = 0`" and
+  R-554 L3 make the view affine there and count both. No ruling names these lines.
+- **The question:** whether these lines are identified, or R-554 L3 stands with the exception stated.
+- **Options seen:** (a) keep L3 and state these lines as a named exception of measure zero, each pixel counted, as
+  § 3.3 states the circle's identification; (b) fold them as R-655 folds its lattice, one count per system, decided
+  exactly on the stored angles (the line's `t` is a computed coordinate, so what "exactly" means on it needs stating);
+  (c) another, stated by the owner.
+- **Applied meanwhile:** the ruled text, R-554 L3: `Tilted::pixel` (`crates/kernel/src/chart/tilt.rs`) applies no pole
+  map unless `N_a = N_b = 0`, so such pixels count as distinct (TASK-M2-36, PR #349). No code changes for this entry.
+- **Waits:** nothing built waits; a fold, if ruled, is a follow-up to TASK-M2-36's `Tilted::pixel` and TASK-M8-56.

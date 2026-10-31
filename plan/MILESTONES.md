@@ -186,11 +186,11 @@ debug_tooling_plan 0c: the DECODE preset "once the WGSL decode port lands", ROUN
   so in their header or schema.
 
 <!-- gate:M2 -->
-**Exit gate — 221 requirements** (and every earlier gate still green):
+**Exit gate — 222 requirements** (and every earlier gate still green):
 
 - DEC (41): REQ-DEC-001…030, REQ-DEC-038…041, REQ-DEC-043…048, REQ-DEC-050
 - ENC (34): REQ-ENC-001…020, REQ-ENC-022…027, REQ-ENC-029…031, REQ-ENC-034…038
-- CHART (67): REQ-CHART-001…036, REQ-CHART-043…051, REQ-CHART-053, REQ-CHART-055, REQ-CHART-058, REQ-CHART-060…070, REQ-CHART-073, REQ-CHART-075…078, REQ-CHART-081…082, REQ-CHART-089
+- CHART (68): REQ-CHART-001…036, REQ-CHART-043…051, REQ-CHART-053, REQ-CHART-055, REQ-CHART-058, REQ-CHART-060…070, REQ-CHART-073, REQ-CHART-075…078, REQ-CHART-081…082, REQ-CHART-089…090
 - INT (2): REQ-INT-002…003
 - PAY (5): REQ-PAY-034…035, REQ-PAY-088, REQ-PAY-095, REQ-PAY-097
 - GEN (13): REQ-GEN-013…015, REQ-GEN-025…026, REQ-GEN-034, REQ-GEN-036…042
@@ -226,13 +226,13 @@ canonical_spec §1 item 6 and §11: "validate physics numerically", natively, be
 - The CPU-side parity suite (`computeIC`).
 
 <!-- gate:M3 -->
-**Exit gate — 333 requirements** (and every earlier gate still green):
+**Exit gate — 334 requirements** (and every earlier gate still green):
 
 - ENC (1): REQ-ENC-033
 - CHART (4): REQ-CHART-059, REQ-CHART-072, REQ-CHART-085…086
 - INT (83): REQ-INT-004…032, REQ-INT-034…056, REQ-INT-073…074, REQ-INT-076…082, REQ-INT-084…085, REQ-INT-087…092, REQ-INT-094…095, REQ-INT-097…106, REQ-INT-108…109
 - EVT (25): REQ-EVT-001…020, REQ-EVT-023…026, REQ-EVT-032
-- PAY (32): REQ-PAY-036…059, REQ-PAY-070, REQ-PAY-073, REQ-PAY-083, REQ-PAY-086, REQ-PAY-098, REQ-PAY-110…112
+- PAY (33): REQ-PAY-036…059, REQ-PAY-070, REQ-PAY-073, REQ-PAY-083, REQ-PAY-086, REQ-PAY-098, REQ-PAY-110…113
 - GEN (1): REQ-GEN-016
 - SCHED (2): REQ-SCHED-002…003
 - RENDER (1): REQ-RENDER-028

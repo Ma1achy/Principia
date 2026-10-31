@@ -30,6 +30,7 @@ The free-group word encoder reproduces the published braid class of Šuvakov–D
 - `cargo xtask gate word-truncation --propose` — measured truncation rates over the validation fixtures and a representative survey against the proposed threshold; the human confirms it at the M3 gate and it is recorded in decisions.md (REQ-PAY-083).
 
 ## Notes
+- The word is read through `kernel::driver::wrapper::integrate_word`, TASK-M3-16's detector at the kernel's accepted substeps, at the default step, recording the steps taken; a resolution failure is reported as such and re-raises RQ-632 (REQ-VAL-043's note). The fixture's replay of bracketing states says nothing about substeps (symbolic_dynamics_contract §1).
 - Depends on TASK-M3-16's transcribed branch-cut convention (REQ-PAY-070, R-125): a braid class can only be compared once a↔cut and the sign are fixed.
 - Calibrations proposed here (R-71; human confirmation at the M3 gate, then recorded in decisions.md): REQ-PAY-083.
 - RQ-96 ruled: R-125 — the convention is transcribed in TASK-M3-16 and this task's braid-class check verifies it against the published classes.

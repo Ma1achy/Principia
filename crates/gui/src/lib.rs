@@ -34,6 +34,7 @@ mod tests {
     mod mock_axis_labels;
     mod mock_compass;
     mod mock_compass_cube;
+    mod mock_compass_slice_follows_pointer;
     mod mock_compass_steer_latent;
     mod mock_compass_view_keys;
     mod mock_compass_views;
@@ -55,6 +56,7 @@ mod tests {
     mod mock_layout_remembered;
     mod mock_layout_splitters;
     mod mock_legend_keys;
+    mod mock_live_drag;
     mod mock_lock_badge;
     mod mock_manifold_sections;
     mod mock_manifold_view;

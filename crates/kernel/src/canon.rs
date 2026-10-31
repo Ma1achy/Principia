@@ -198,7 +198,7 @@ const ZERO_EXPONENT: i32 = i16::MIN as i32;
 /// `[2^−83, 4)` in magnitude but 0 (f32; `[2^−112, 4)` at f64), and none is subnormal on any backend, whatever the
 /// state's scale or its terms' spread.
 #[derive(Clone, Copy)]
-struct Wide<R> {
+pub(crate) struct Wide<R> {
     m: R,
     e: i32,
 }
@@ -218,7 +218,7 @@ fn renorm<R: LinkReal + IeeeBits>(x: R, k: i32) -> Wide<R> {
 /// into `[1, 2)` where `x` is normal and into `[2^−22, 2)` (f32; `[2^−51, 2)` at f64) where it is subnormal, then
 /// renormalised, so a subnormal `x` (on a backend that keeps it) gets its own mantissa and exponent too.
 #[inline]
-fn wide<R: LinkReal + IeeeBits>(x: R) -> Wide<R> {
+pub(crate) fn wide<R: LinkReal + IeeeBits>(x: R) -> Wide<R> {
     let k = x.exponent();
     let half = k / 2;
     renorm(x * R::pow2(-half) * R::pow2(half - k), k)
@@ -226,7 +226,7 @@ fn wide<R: LinkReal + IeeeBits>(x: R) -> Wide<R> {
 
 /// `a·b`: the mantissas' [`IeeeBits::product`], in `[1, 4)`, whose partial products are at least `2^−46`, renormalised.
 #[inline]
-fn wide_mul<R: LinkReal + IeeeBits>(a: Wide<R>, b: Wide<R>) -> Wide<R> {
+pub(crate) fn wide_mul<R: LinkReal + IeeeBits>(a: Wide<R>, b: Wide<R>) -> Wide<R> {
     renorm(a.m.product(b.m), a.e + b.e)
 }
 
@@ -234,7 +234,7 @@ fn wide_mul<R: LinkReal + IeeeBits>(a: Wide<R>, b: Wide<R>) -> Wide<R> {
 /// 60, below which it is under half an ulp of the larger (so the cap changes no rounding), then renormalised. A
 /// nonzero sum is at least `2^−83` (f32; `2^−112` at f64), the operands being multiples of it: normal.
 #[inline]
-fn wide_add<R: LinkReal + IeeeBits>(a: Wide<R>, b: Wide<R>) -> Wide<R> {
+pub(crate) fn wide_add<R: LinkReal + IeeeBits>(a: Wide<R>, b: Wide<R>) -> Wide<R> {
     let a_big = a.e >= b.e;
     let (big, small) = (select(a_big, a, b), select(a_big, b, a));
     let gap = big.e - small.e;
@@ -250,7 +250,7 @@ fn wide_neg<R: LinkReal + IeeeBits>(a: Wide<R>) -> Wide<R> {
 
 /// `a − b`, one rounding: [`wide_add`] of `−b`.
 #[inline]
-fn wide_sub<R: LinkReal + IeeeBits>(a: Wide<R>, b: Wide<R>) -> Wide<R> {
+pub(crate) fn wide_sub<R: LinkReal + IeeeBits>(a: Wide<R>, b: Wide<R>) -> Wide<R> {
     wide_add(a, wide_neg(b))
 }
 
@@ -265,7 +265,7 @@ fn wide_abs<R: LinkReal + IeeeBits>(a: Wide<R>) -> Wide<R> {
 
 /// `a > b` for `a, b ≥ 0`: by exponent, then by mantissa; a zero, at the [`ZERO_EXPONENT`], is below every other value.
 #[inline]
-fn wide_greater<R: LinkReal + IeeeBits>(a: Wide<R>, b: Wide<R>) -> bool {
+pub(crate) fn wide_greater<R: LinkReal + IeeeBits>(a: Wide<R>, b: Wide<R>) -> bool {
     (a.e > b.e) | ((a.e == b.e) & (a.m > b.m))
 }
 
@@ -277,19 +277,19 @@ fn is_zero<R: LinkReal + IeeeBits>(a: Wide<R>) -> bool {
 
 /// `‖v‖² = v_x² + v_y²`.
 #[inline]
-fn wide_norm2<R: LinkReal + IeeeBits>(v: [Wide<R>; 2]) -> Wide<R> {
+pub(crate) fn wide_norm2<R: LinkReal + IeeeBits>(v: [Wide<R>; 2]) -> Wide<R> {
     wide_add(wide_mul(v[0], v[0]), wide_mul(v[1], v[1]))
 }
 
 /// `v`'s components as [`Wide`]s.
 #[inline]
-fn vector<R: LinkReal + IeeeBits>(v: [R; 2]) -> [Wide<R>; 2] {
+pub(crate) fn vector<R: LinkReal + IeeeBits>(v: [R; 2]) -> [Wide<R>; 2] {
     [wide(v[0]), wide(v[1])]
 }
 
 /// `b − a`, per component.
 #[inline]
-fn difference<R: LinkReal + IeeeBits>(a: [Wide<R>; 2], b: [Wide<R>; 2]) -> [Wide<R>; 2] {
+pub(crate) fn difference<R: LinkReal + IeeeBits>(a: [Wide<R>; 2], b: [Wide<R>; 2]) -> [Wide<R>; 2] {
     [wide_sub(b[0], a[0]), wide_sub(b[1], a[1])]
 }
 
@@ -316,8 +316,21 @@ fn ldexp<R: LinkReal + IeeeBits>(x: R, e: i32) -> R {
 
 /// `a` as a float: [`ldexp`] of its mantissa and exponent.
 #[inline]
-fn to_float<R: LinkReal + IeeeBits>(a: Wide<R>) -> R {
+pub(crate) fn to_float<R: LinkReal + IeeeBits>(a: Wide<R>) -> R {
     ldexp(a.m, a.e)
+}
+
+/// `a` as a float where its exponent is in `R`'s normal range, where [`ldexp`] is exact, and 0 below it: decided on the
+/// exponent, before anything rounds, so no subnormal is formed for a branch to read on any backend (R-547;
+/// gpu_determinism_note § "The discipline", rule 6). A `Wide` just below the range whose float would round up to the
+/// least normal reads 0 like the rest; a backend's flushing or keeping never reaches it.
+#[inline]
+pub(crate) fn to_normal_float<R: LinkReal + IeeeBits>(a: Wide<R>) -> R {
+    if a.e < exponent_range::<R>().0 {
+        R::zero()
+    } else {
+        to_float(a)
+    }
 }
 
 /// `Σ mᵢxᵢ` on one axis, `(m₀x₀ + m₁x₁) + m₂x₂`, as [`Wide`]s.
