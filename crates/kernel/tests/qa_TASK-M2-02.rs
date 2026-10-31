@@ -53,7 +53,7 @@ use validation::{negative_control, prop};
 
 // ── Precisions ──────────────────────────────────────────────────────────────────────────────────────────────────
 
-trait Fp: LinkReal + Debug {
+trait Fp: LinkReal + Debug + kernel::real::IeeeBits {
     fn of(x: f64) -> Self;
     fn f(self) -> f64;
     /// The machine epsilon, as f64.

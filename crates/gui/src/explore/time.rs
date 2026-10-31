@@ -1,9 +1,10 @@
 //! Time (render_gui_spec §G2, §G3; GUI_DESIGN_NOTES § "01 Explore"; 01_main.png; R-101, R-404, R-409 F1): bottom
 //! centre, play, step, a scrubber and speed. Transport, play / pause and speed, is `ViewUI`'s: not undoable, never
 //! read by the engine (R-96). The GUI's clock advances the playhead through `SetField`s marked "no history" while
-//! playing (`crate::clock`); a step is one `SetField`, and a scrub is one coalesced entry, sent when the drag ends, the
-//! scrubber showing the dragged time meanwhile (R-96, R-101). Scrubbing back re-integrates on the real engine
-//! (TASK-M8-07); the mock's figure does not refine, so no progress is shown (applied per R-369).
+//! playing (`crate::clock`); a step is one `SetField`, and a scrub is live, the playhead edit sent every frame the
+//! dragged time changes, so the display time follows the drag, and the whole drag is one coalesced entry, the app
+//! sending each frame's edit under the pointer's hold's key (R-96, R-101, R-458 F2). Scrubbing back re-integrates on
+//! the real engine (TASK-M8-07); the mock's figure does not refine, so no progress is shown (applied per R-369).
 //!
 //! Its keys (§G3, R-409 F1): Time is a scope with children, step back, play, step, speed and the scrubber, in the
 //! order drawn. In navigation mode the arrows move between them and step no time; Enter on a button acts as its click;
@@ -79,13 +80,6 @@ pub const SHORTCUTS: [(&str, &str); 2] = [
     ("Time: Space", "play / pause, in either mode"),
     ("Time: ← →", "step the time, after Enter on the scrubber"),
 ];
-
-/// Time's own scratch state: the scrub in progress. The GUI's, never the engine's.
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
-pub struct Scratch {
-    /// The time the scrubber is dragged to, until the drag ends.
-    pub scrub: Option<f64>,
-}
 
 /// The playhead edit to `t`: a manual move, so it enters the history, one entry (R-96).
 pub fn playhead_edit(t: f64) -> SetField {
@@ -196,8 +190,6 @@ pub struct Panel<'a> {
     pub snapshot: &'a Snapshot,
     /// The transport, `ViewUI`'s.
     pub transport: &'a mut Transport,
-    /// Time's scratch state.
-    pub scratch: &'a mut Scratch,
     /// The keyboard layer, for the places of the controls.
     pub keyboard: &'a mut Keyboard,
     /// The edits its controls make, in order.
@@ -217,7 +209,6 @@ pub fn show(ui: &mut Ui, rect: Rect, panel: &mut Panel<'_>) {
     panel.keyboard.place(TIME, rect);
     let snapshot = panel.snapshot;
     let (t, t_max) = (snapshot.render.playhead.t, snapshot.sim.horizon.t);
-    let shown_t = panel.scratch.scrub.unwrap_or(t);
     let body = rect.shrink(MARGIN);
     let mut column = ui.new_child(UiBuilder::new().max_rect(body));
     column.spacing_mut().item_spacing.y = 8.0;
@@ -246,7 +237,7 @@ pub fn show(ui: &mut Ui, rect: Rect, panel: &mut Panel<'_>) {
             activate(STEP, snapshot, panel.transport, panel.edits);
         }
         row.add_space(8.0);
-        row.label(RichText::new(readout(shown_t)).monospace());
+        row.label(RichText::new(readout(t)).monospace());
         row.add_space(8.0);
         let mut speed = panel.transport.speed;
         row.spacing_mut().slider_width = 90.0;
@@ -260,14 +251,14 @@ pub fn show(ui: &mut Ui, rect: Rect, panel: &mut Panel<'_>) {
             panel.transport.speed = speed.clamp(SPEED_RANGE.0, SPEED_RANGE.1);
         }
     });
-    let mut scrub = shown_t;
+    let mut scrub = t;
     let width = column.available_width();
     column.spacing_mut().slider_width = (width - 70.0).max(40.0);
     let scrubber = column
         .horizontal(|row| {
             let s = row
                 .add(Slider::new(&mut scrub, 0.0..=t_max.max(f64::MIN_POSITIVE)).show_value(false));
-            row.label(RichText::new(format!("{shown_t:.1}")).monospace());
+            row.label(RichText::new(format!("{t:.1}")).monospace());
             s
         })
         .inner;
@@ -288,28 +279,13 @@ pub fn show(ui: &mut Ui, rect: Rect, panel: &mut Panel<'_>) {
     column.with_layout(EguiLayout::left_to_right(Align::Min), |row| {
         row.label(RichText::new(NOTE).weak().small());
     });
-    if let Some(edit) = scrub_edit(panel.scratch, &scrubber, scrub) {
+    if let Some(edit) = scrub_edit(&scrubber, scrub) {
         panel.edits.push(edit);
     }
 }
 
-/// A scrub: while the scrubber is dragged, the dragged time is previewed in `scratch`; when the drag ends, or on a
-/// click, one `SetField` (R-96).
-pub fn scrub_edit(
-    scratch: &mut Scratch,
-    response: &egui::Response,
-    value: f64,
-) -> Option<SetField> {
-    if response.dragged() {
-        scratch.scrub = Some(value);
-        return None;
-    }
-    if response.drag_stopped() {
-        return scratch.scrub.take().map(playhead_edit);
-    }
-    if response.changed() {
-        scratch.scrub = None;
-        return Some(playhead_edit(value));
-    }
-    None
+/// A scrub: each frame the scrubber's value changes, dragged or clicked, one `SetField` to it, the drag's frames one
+/// coalesced entry under the pointer's hold's key (R-96, R-458 F2).
+pub fn scrub_edit(response: &egui::Response, value: f64) -> Option<SetField> {
+    response.changed().then(|| playhead_edit(value))
 }
