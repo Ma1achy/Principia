@@ -1269,7 +1269,7 @@ pub const SLICE_AXIS_Z_Q3: ConstantBuilder = chart(
 // predicates' two thresholds (REQ-INT-085) and the `lin` override's ranges of the two drift views (REQ-TOOL-150). The
 // evidence is `validation::drift`'s measurement on dd_integrator §5's tests 2 and 7, Euler, RK4, KDK, Yoshida-4 and
 // Yoshida-6 at CPU-f32 and CPU-f64 through the one wrapper, read as the predicates read it: the stored latches, the f16
-// `dE_max` and `dLz_max`, and the stored `E_0` (`crates/validation/tests/drift_proposal.rs`, which prints the table).
+// `dE_max` and `dLz_max`, and the stored `E_0` (`crates/validation/tests/drift_proposals.rs`, which prints the table).
 // Each threshold and range is a power of two, so the f32 WGSL literal and the f64 value are the one number.
 
 /// The section that gives the relative-drift floors' defaults: the sim-key parameter table (integrator contract Part 3).
