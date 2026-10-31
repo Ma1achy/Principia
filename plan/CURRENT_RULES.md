@@ -437,6 +437,7 @@ as history only.
 - **R-641** — Breen's own GitHub holds 180 of BR-1's Brutus trajectories (pgbreen/NVM at a35c378): they are the paper's own data, so BR-1 may be scored against them directly, not provisionally, for those 180; they are never committed, only their per-file sha256 table and citation; pgbreen/NvMgeneration at 98906f4 is the exact Brutus the paper used and BR-1's reference code; nothing new is public for GG-1 *(refines R-640)*
 - **R-642** — RQ-598's data: the authors' own data unblocks and scores directly, BR-1 against the 180 NVM trajectories and GG-1 against the Fig. 1 extraction at its stated precision; reproductions unblock provisionally, labelled "vs <source>", re-scored when the authors' full data arrives, and qualify only on the paper's set-up with a converged arbitrary-precision integrator; our Brutus from NvMgeneration at 98906f4 qualifies, two third-party sets are rejected; the owner emails both authors *(amends R-637 and R-640; answers RQ-614 and in part RQ-615)*
 - **R-646** — The converged Burrau reference: arXiv v1 is SP-2's source, the owner also trying for the journal version and its supplementary snapshots through his own access; no separate author email; SP-2 notes that t = 200 is the time-reversed return and tests it as a reversibility check and a trajectory check *(closes RQ-611)*
+- **R-652** — The four drift goldens are re-baselined as TASK-M3-05 renders them, each `BASELINES.md` row leading with R-652, the derived case at `lin`; they are confirmed at the M3 gate *(closes RQ-625)*
 
 ## Values
 

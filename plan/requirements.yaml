@@ -26976,12 +26976,15 @@
     section: 10.1 The shared prelude library
   - file: docs/read_first/principia_01_pitfalls.md
     section: 3. Standing rules earned in this sequence
+  - file: decisions.md
+    section: "R-652 — The four drift goldens are re-baselined as TASK-M3-05 renders them, each `BASELINES.md` row leading with R-652, the derived case at `lin`; they are confirmed at the M3 gate *(closes RQ-625)*"
   verify:
+    detail: "the proposal gives R for energy_drift and for Lz_drift with its evidence: the drifts measured, final and max, for Euler, RK4 and the symplectic occupants (KDK, Yoshida-4, Yoshida-6) on dd_integrator test 2's long bounded orbit and test 7's close-encounter IC, and the lin view rendered at the proposed R (range_norm over the fixed, clamped [−R, R], on the diverging ramp) beside the default symlog view; it passes only if, on test 2's orbit, Euler's and RK4's final drifts render as distinct 8-bit sRGB pixels and neither pixel equals the saturated end colour c− or c+, and fails if the two pixels are equal or either equals c− or c+; the symplectic occupants (KDK, Yoshida-4, Yoshida-6) may render as the neutral c0 and are not required to be told apart; test 7's drifts are recorded and may saturate; distinct 8-bit pixels adds no numeric threshold; checked by a reviewer; confirmed by the human at the M3 gate; recorded in decisions.md The same gate confirms the four drift goldens R-652 re-baselines: debug-views/derived-energy_drift (at lin), debug-views/generated-energy_drift, debug-views/generated-Lz_drift and m1-synthetic/energy_drift_ramp."
     method: numerical gate
-    detail: "the proposal gives R for energy_drift and for Lz_drift with its evidence: the drifts measured, final and max, for Euler, RK4 and the symplectic occupants (KDK, Yoshida-4, Yoshida-6) on dd_integrator test 2's long bounded orbit and test 7's close-encounter IC, and the lin view rendered at the proposed R (range_norm over the fixed, clamped [−R, R], on the diverging ramp) beside the default symlog view; it passes only if, on test 2's orbit, Euler's and RK4's final drifts render as distinct 8-bit sRGB pixels and neither pixel equals the saturated end colour c− or c+, and fails if the two pixels are equal or either equals c− or c+; the symplectic occupants (KDK, Yoshida-4, Yoshida-6) may render as the neutral c0 and are not required to be told apart; test 7's drifts are recorded and may saturate; distinct 8-bit pixels adds no numeric threshold; checked by a reviewer; confirmed by the human at the M3 gate; recorded in decisions.md"
   rulings:
   - R-71
   - R-381
+  - R-652
   milestone: M3
 - id: REQ-TOOL-151
   area: TOOL

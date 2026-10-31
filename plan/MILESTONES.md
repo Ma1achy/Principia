@@ -213,6 +213,8 @@ canonical_spec §1 item 6 and §11: "validate physics numerically", natively, be
 - The full `SimState` accumulator fill on the CPU.
 - The validation orbits and ground truth. The independent convergence reference. The Inspector's RK45
   reference (R-33).
+- R-652 (closing RQ-625): the four drift goldens are re-baselined by TASK-M3-05; the M3 gate confirms them, with
+  REQ-TOOL-150's `lin` range.
 - The physics measurements the corpus leaves to the build:
   - re-validating escape precision and recall against check 2's independent ground truth, with the legacy
     t = 30 set as a comparison (R-95);

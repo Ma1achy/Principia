@@ -28335,6 +28335,37 @@ withdrawn and don't name a ruling still to be ported, so none of their words cha
 
 R-648 is in the "process" group of `plan/rule_groups.yaml`. Changes no requirement.
 
+## R-652 — The four drift goldens are re-baselined as TASK-M3-05 renders them, each `BASELINES.md` row leading with R-652, the derived case at `lin`; they are confirmed at the M3 gate *(closes RQ-625)*
+*30 Oct 2026 · the owner's message of that day; applied in REQ-TOOL-150 (reqio), TASK-M3-05 (its notes and an acceptance
+line), `plan/MILESTONES.md` § "M3 — The integrator, events and physics validation (CPU, native)", `plan/rule_groups.yaml`,
+`REVIEW_QUEUE.md` (RQ-625 moved out) and `docs/archive/review_queue/M0.md` (RQ-625, with its ruling); the
+`fixtures/golden/BASELINES.md` rows are TASK-M3-05's; built by TASK-M3-05*
+
+The owner's words, for this entry (the message's other rulings are not recorded here):
+
+> Rulings: RQ-625 (a).
+
+RQ-625's option (a): "re-baseline all four as TASK-M3-05 renders them, each row leading with the ruling, the derived
+case at `lin` and the nudges above, confirmed at the M3 gate".
+
+*What it decides:*
+- **R-652 is the gate decision R-110 asks for** ("no re-baselining without a gate decision"). TASK-M3-05 re-baselines
+  `debug-views/derived-energy_drift`, `debug-views/generated-energy_drift`, `debug-views/generated-Lz_drift` and
+  `m1-synthetic/energy_drift_ramp` as it renders them; each row leads with R-652 and keeps its history. Any other
+  golden that changes is reported, not re-baselined under R-652.
+- **The cases.** `derived-energy_drift` at `COMPACTION` 1 (`lin`, `±1/16`), nudge 0; `generated-energy_drift` at nudge
+  6; `generated-Lz_drift` at nudge 3. One reference across backends for each.
+- **The M3 gate confirms** the four, with REQ-TOOL-150's `lin` range, whose verify names them.
+- TASK-M3-05's PR no longer waits on RQ-625.
+
+*Applied per R-369:* RQ-625 records that `m1-synthetic/energy_drift_ramp` needs its fixture's start moved, for
+TASK-M3-05 to decide. The start moves from `−1.387` to `−1.364` (`engine::fixtures`), the even steps of 0.4 unchanged:
+at `−1.387` the scene sits 0.0091 of an 8-bit step from a rounding tie, under the 0.01 `golden_scenes_are_tie_free`
+asks; at `−1.364`, the widest margin within 0.025 of the old start, 0.0302. So the case's new SHA-256 is not the one
+RQ-625 lists for the fixture unchanged.
+
+R-652 is in the "design" group of `plan/rule_groups.yaml`, with R-454 and R-504.
+
 ## R-656 — CI throughput: a push runs `ci.yml` only on `main` (and on R-272's `measure/` branches, which have no pull request), a pull request running it through `pull_request`; a pull request's superseded runs are cancelled, never a run on `main`; a docs-only pull request skips the build, test, GPU and mutants work, and one that changes no GPU-path file skips the GPU suites, inside the jobs, every required check still reporting success under its own name; mutants run on the merge-ready head; a bounded target cache is approved in principle, built in a later PR; no paid or self-hosted runner *(amends R-110, R-177, R-186, R-195, R-235, R-285 and R-335)*
 *30 Oct 2026 · the owner's two messages of that day; applied in `.github/workflows/ci.yml`,
 `.github/workflows/mutants.yml`, `scripts/ci_changes.sh` (new), `xtask/tests/ci_changes.rs` (new), three qa files
