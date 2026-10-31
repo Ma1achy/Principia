@@ -311,6 +311,10 @@ impl ProjectionParityGate {
             "a Jacobi conversion is caught where it changes bits; one that round-trips exactly on every state fed would \
              pass, and the source has none in the step (dd_integrator §3.4)"
                 .to_owned(),
+            "the repeat count has no control and cannot differ in-process: both runs are one pure function on one \
+             input in one process, so it could catch only hidden state, never a CPU-to-CPU difference; the written \
+             order's count is the check that fails under its controls (philosophy §4.4; pitfalls §10)"
+                .to_owned(),
             format!(
                 "the region minimum, {} classes of shared states, is REQ-INT-110's proposed value, provisional until \
                  the M3 gate (R-71)",

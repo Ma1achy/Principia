@@ -191,6 +191,16 @@ fn short(fixture: Fixture) -> Vec<Measured> {
 }
 
 negative_control!(
+    drift_thresholds_proposal,
+    "the proposal's criteria read against an energy threshold above Euler's drift",
+    expected = "doesn't light SUSPECT_ENERGY on test 2",
+    {
+        let t = short(drift::figure_eight());
+        check_thresholds(&t, &t, 1e30, SUSPECT_LZ_THRESHOLD.number());
+    }
+);
+
+negative_control!(
     drift_thresholds_energy_over_euler,
     "an energy threshold above Euler's drift",
     expected = "doesn't light SUSPECT_ENERGY on test 2",
@@ -273,9 +283,9 @@ fn lin_pixel(x: f64, r: f64) -> [u8; 3] {
     ))
 }
 
-fn symlog_pixel(x: f64, r: f64) -> [u8; 3] {
+fn symlog_pixel(x: f64, reference: f64, r: f64) -> [u8; 3] {
     pixel(present::dbg_drift(
-        x as f32,
+        present::dbg_drift_shown(x as f32, DRIFT_SYMLOG, reference as f32),
         DRIFT_SYMLOG,
         false,
         r,
@@ -320,6 +330,7 @@ fn print_lin(
     table: &[Measured],
     read: fn(&Drifts) -> f64,
     max: fn(&Drifts) -> f64,
+    reference: fn(&Drifts) -> f64,
     r: f64,
 ) {
     println!(
@@ -333,7 +344,7 @@ fn print_lin(
                 read(d),
                 max(d),
                 lin_pixel(read(d), r),
-                symlog_pixel(read(d), r),
+                symlog_pixel(read(d), reference(d), r),
             );
         }
     }
@@ -346,10 +357,27 @@ fn drift_lin_range_proposal() {
     let (r_e, r_l) = (DRIFT_LIN_R_E.number(), DRIFT_LIN_R_LZ.number());
     let max_e = |d: &Drifts| d.de_max;
     let max_l = |d: &Drifts| d.dlz_max;
-    print_lin("test 2", "energy_drift", &test2, final_energy, max_e, r_e);
-    print_lin("test 2", "Lz_drift", &test2, final_lz, max_l, r_l);
-    print_lin("test 7", "energy_drift", &test7, final_energy, max_e, r_e);
-    print_lin("test 7", "Lz_drift", &test7, final_lz, max_l, r_l);
+    let (e_0, lz_0) = (|d: &Drifts| d.e_0, |d: &Drifts| d.lz_0);
+    print_lin(
+        "test 2",
+        "energy_drift",
+        &test2,
+        final_energy,
+        max_e,
+        e_0,
+        r_e,
+    );
+    print_lin("test 2", "Lz_drift", &test2, final_lz, max_l, lz_0, r_l);
+    print_lin(
+        "test 7",
+        "energy_drift",
+        &test7,
+        final_energy,
+        max_e,
+        e_0,
+        r_e,
+    );
+    print_lin("test 7", "Lz_drift", &test7, final_lz, max_l, lz_0, r_l);
     check_lin_range(&test2, final_energy, r_e);
     check_lin_range(&test2, final_lz, r_l);
 }
@@ -363,6 +391,13 @@ fn short_lin() -> Vec<Measured> {
     };
     drift::measure(&fixture)
 }
+
+negative_control!(
+    drift_lin_range_proposal,
+    "the proposal's criterion read against a range so wide that Euler and RK4 are one pixel",
+    expected = "are one pixel",
+    check_lin_range(&short_lin(), final_energy, 1e9)
+);
 
 negative_control!(
     drift_lin_range_too_wide,
@@ -606,4 +641,52 @@ negative_control!(
     "a hierarchy with its outer body moved",
     expected = "the length ratio",
     check_hierarchy_ratios(|m, a, e, d| drift::hierarchy(m, a, e, 2.0 * d))
+);
+
+// ── REQ-INT-040: no suspect bit in the ledger ────────────────────────────────────────────────────────────────────────
+
+/// Asserts that none of `names` is a suspect bit: none names `suspect`.
+fn check_ledger_names(names: &[String]) {
+    if let Some(n) = names.iter().find(|n| n.to_lowercase().contains("suspect")) {
+        panic!("the ledger stores a suspect bit, `{n}`");
+    }
+}
+
+/// The payload ledger's stored names: every struct member, every packed word and every entry not derived at read. Here
+/// and not in `kernel`'s tests, since `kernel` depends on the ledger at build time only (R-185).
+fn ledger_stored_names() -> Vec<String> {
+    let l = ledger::payload::ledger();
+    let mut names: Vec<String> = ledger::payload::structs()
+        .iter()
+        .flat_map(|s| s.members.iter().map(|m| m.name.to_owned()))
+        .collect();
+    names.extend(l.words.iter().map(|w| w.name.to_owned()));
+    names.extend(
+        l.entries
+            .iter()
+            .filter(|e| !matches!(e.location, Some(ledger::schema::Location::Derived { .. })))
+            .filter_map(|e| e.name.map(str::to_owned)),
+    );
+    names
+}
+
+#[test]
+fn drift_suspect_no_stored_bit_in_the_ledger() {
+    let names = ledger_stored_names();
+    assert!(
+        names.iter().any(|n| n == "packed_b"),
+        "the ledger's stored names hold no `packed_b`, the drift latches' word"
+    );
+    check_ledger_names(&names);
+}
+
+negative_control!(
+    drift_suspect_no_stored_bit_in_the_ledger,
+    "a stored suspect flag is a suspect bit",
+    expected = "the ledger stores a suspect bit",
+    {
+        let mut names = ledger_stored_names();
+        names.push("suspect_energy".to_owned());
+        check_ledger_names(&names);
+    }
 );

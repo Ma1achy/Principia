@@ -38,6 +38,38 @@ fn projection_parity_runs_its_fixtures() {
     result.expect("each input gives its expected outcome");
 }
 
+negative_control!(
+    projection_parity_runs_its_fixtures,
+    "a fixture root whose Jacobi control expects a pass, which it does not give",
+    expected = "control_jacobi.json",
+    {
+        let dir = std::env::temp_dir().join(format!("parity-control-{}", std::process::id()));
+        let gates = dir.join("fixtures/gates").join(NAME);
+        std::fs::create_dir_all(&gates).expect("a temporary fixture root");
+        let source = root().join("fixtures/gates").join(NAME);
+        for entry in std::fs::read_dir(&source).expect("the gate's fixtures") {
+            let path = entry.expect("a fixture").path();
+            let name = path.file_name().expect("a file name").to_owned();
+            let text = std::fs::read_to_string(&path).expect("a fixture's text");
+            let text = if name == "control_jacobi.json" {
+                text.replace("\"expected\": \"fail\"", "\"expected\": \"pass\"")
+            } else {
+                text
+            };
+            std::fs::write(gates.join(name), text).expect("a fixture's copy");
+        }
+        std::fs::create_dir_all(dir.join("plan")).expect("a temporary plan directory");
+        std::fs::copy(
+            root().join("plan/requirements.yaml"),
+            dir.join("plan/requirements.yaml"),
+        )
+        .expect("the requirements' copy");
+        let result = gate::run(&dir, NAME, &dir.join("out"));
+        let _ = std::fs::remove_dir_all(&dir);
+        result.expect("each input gives its expected outcome");
+    }
+);
+
 /// Checks a measurement of the unperturbed gate: nothing differs, every class judged, five occupants on each state.
 fn check_clean(states: u32, m: &validation::projection_parity::Measured) {
     assert_eq!(m.failures(), 0, "{:?}", m.first);
