@@ -585,13 +585,17 @@ pub fn drift_wgsl(e: &Entry, r: &Read, floor: &str, range: f64) -> String {
          compaction, `COMPACTION` 0 `symlog`, the default, at `dbg_sentinel`'s place of `sign(x)·ln(1 + |x|/{floor})`, \
          1 `lin`, `range_norm` over the fixed, clamped `[−LIN_R, LIN_R]`, and 2 `log`, which shows `|drift|`, the \
          magnitude, at `dbg_log`'s place, unsigned; `symlog` and `lin` on the `diverging(c−, c0, c+)` ramp, or viridis \
-         under the palette swap, `PALETTE` 1, and `log` on viridis always; the absence NaN hatched; under `symlog` a \
+         under the palette swap, `PALETTE` 1, and `log` on viridis always; a non-finite reference or drift hatched, \
+         tested on its bits first (R-436); under `symlog` a \
          drift within the neutral band of `{reference}` is drawn as 0 (`dbg_drift_shown`, R-652). Over it the suspect \
          styling of the drift suspect predicates read from the stored latches: rows for `SUSPECT_ENERGY`, columns for \
          `SUSPECT_LZ`. `LIN_R`'s default is the constants register's (REQ-TOOL-150)."
     );
     format!(
-        "{}{uniforms}fn colour(ctx: Ctx) -> vec3<f32> {{\n    let x = {value};\n    \
+        "{}{uniforms}fn colour(ctx: Ctx) -> vec3<f32> {{\n    \
+         if (dbg_drift_non_finite(ctx.sample.{reference})) {{ return debug_invalid(ctx.frag_xy); }}\n    \
+         let x = {value};\n    \
+         if (dbg_drift_non_finite(x)) {{ return debug_invalid(ctx.frag_xy); }}\n    \
          let shown = dbg_drift_shown(x, uniforms.COMPACTION, ctx.sample.{reference});\n    \
          let rgb = dbg_drift(shown, uniforms.COMPACTION, uniforms.PALETTE == 1u, uniforms.LIN_R, uniforms.{eps}, ctx.frag_xy);\n    \
          let energy = suspect_energy(ctx.sample.dE_max, ctx.sample.E_0, uniforms.EPS_E);\n    \

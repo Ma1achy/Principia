@@ -11,6 +11,7 @@
 //! RGB unless a name says sRGB.
 
 use ledger::constants::{HUE_WHEEL_C, HUE_WHEEL_L};
+use ledger::gen::numeric::non_finite;
 use ledger::gen::prelude;
 
 use crate::colour::space;
@@ -446,9 +447,10 @@ pub fn dbg_drift(
 pub const DRIFT_NEUTRAL_BAND: f64 = 1.0 / 65_536.0;
 
 /// `dbg_drift_shown(x, compaction, reference)`: under `symlog`, 0 where `|x| ≤ DRIFT_NEUTRAL_BAND·|reference|`, else `x`;
-/// `lin`, `log` and the absence NaN pass `x` through.
+/// `lin`, `log` and a non-finite `x` or `reference`, tested on the bits first (R-436), pass `x` through.
 pub fn dbg_drift_shown(x: f32, compaction: u32, reference: f32) -> f32 {
-    if x.to_bits() == ABSENT_NAN_BITS || compaction == DRIFT_LIN || compaction == DRIFT_LOG {
+    if non_finite(x) || non_finite(reference) || compaction == DRIFT_LIN || compaction == DRIFT_LOG
+    {
         return x;
     }
     if x.abs() <= (DRIFT_NEUTRAL_BAND as f32) * reference.abs() {

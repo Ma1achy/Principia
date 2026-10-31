@@ -851,6 +851,55 @@ negative_control!(
     )
 );
 
+/// The band never makes a non-finite operand neutral: `|x| ≤ band·|∞|` holds for every `x` (R-436). A NaN of either sign
+/// counts, and the largest finite reference still has its band.
+fn check_shown_non_finite(shown: fn(f32, u32, f32) -> f32) {
+    let symlog = present::DRIFT_SYMLOG;
+    for bad in [
+        f32::INFINITY,
+        f32::NEG_INFINITY,
+        f32::NAN,
+        f32::from_bits(0xFFC0_0000),
+    ] {
+        assert_eq!(
+            shown(1.0, symlog, bad),
+            1.0,
+            "a finite drift against the reference {bad:?}"
+        );
+        assert_eq!(
+            shown(bad, symlog, 1.0).to_bits(),
+            bad.to_bits(),
+            "the drift {bad:?}"
+        );
+        assert_eq!(
+            shown(bad, symlog, bad).to_bits(),
+            bad.to_bits(),
+            "the drift and the reference {bad:?}"
+        );
+    }
+    assert_eq!(shown(1.0, symlog, f32::MAX), 0.0, "the largest reference");
+}
+
+#[test]
+fn drift_view_neutral_band_passes_a_non_finite_operand() {
+    check_shown_non_finite(present::dbg_drift_shown);
+}
+
+negative_control!(
+    drift_view_neutral_band_passes_a_non_finite_operand,
+    "a band testing only the absence NaN, as before R-436's guard, so an infinite reference makes a drift neutral",
+    expected = "a finite drift against the reference inf",
+    check_shown_non_finite(|x, _, r| {
+        if x.to_bits() == present::ABSENT_NAN_BITS {
+            x
+        } else if x.abs() <= (present::DRIFT_NEUTRAL_BAND as f32) * r.abs() {
+            0.0
+        } else {
+            x
+        }
+    })
+);
+
 /// The mirror agrees with the assembled source on the band's literal.
 #[test]
 fn drift_view_neutral_band_literal_is_the_mirrors() {

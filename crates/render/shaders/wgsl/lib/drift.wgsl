@@ -43,12 +43,21 @@ fn dbg_drift_place(x: f32, compaction: u32, lin_r: f32, eps: f32) -> f32 {
 // `crate::present::DRIFT_NEUTRAL_BAND`.
 const DBG_DRIFT_NEUTRAL_BAND: f32 = 1.52587890625e-5;
 
+// Whether `x` is NaN or `±∞`, an exponent of all ones, tested on its bits before any arithmetic (R-436; render_gui_spec
+// §10.1; gpu_determinism_note rule 4). WGSL pins neither the bits of `∞ − ∞` nor a comparison on `∞`, so a drift view
+// tests its reference and its drift by this, and draws the hatch, before it reads either as a number. The CPU mirror is
+// `ledger::gen::numeric::non_finite`.
+fn dbg_drift_non_finite(x: f32) -> bool {
+    return (bitcast<u32>(x) & 0x7f800000u) == 0x7f800000u;
+}
+
 // The value a drift view hands `dbg_drift`: under `symlog`, 0 where `|x| ≤ DBG_DRIFT_NEUTRAL_BAND·|reference|`, the
 // reference `E_0` or `Lz_0`, since a difference of that size is the rounding of `H(r, p) − E_0` or `L_z(r, p) − Lz_0`
 // in live f32 and not physics (R-652); else `x` as it is, so a drift past the band keeps its own place. `lin` and `log`
-// pass `x` through, and so does the absence NaN, tested first by its bits. At a zero reference the band is empty.
+// pass `x` through, and a non-finite `x` or `reference`, tested first on the bits, passes `x` too, so the band never
+// makes a non-finite operand neutral (`|x| ≤ 2⁻¹⁶·|∞|` holds for every `x`). At a zero reference the band is empty.
 fn dbg_drift_shown(x: f32, compaction: u32, reference: f32) -> f32 {
-    if (is_absent_nan(x) || compaction == DBG_DRIFT_LIN || compaction == DBG_DRIFT_LOG) {
+    if (dbg_drift_non_finite(x) || dbg_drift_non_finite(reference) || compaction == DBG_DRIFT_LIN || compaction == DBG_DRIFT_LOG) {
         return x;
     }
     return select(x, 0.0, abs(x) <= DBG_DRIFT_NEUTRAL_BAND * abs(reference));

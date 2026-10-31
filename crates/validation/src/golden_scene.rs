@@ -85,7 +85,7 @@ use engine::synthetic::Synthetic;
 use kernel::payload::{
     canonical_nan, sim_state_from_ftle, ReadParams, SD_DMIN_PAIR_SENTINEL, STATE_RUNNING,
 };
-use ledger::gen::numeric::{NumericView, Ramp, Shown as ViewShown};
+use ledger::gen::numeric::{non_finite, NumericView, Ramp, Shown as ViewShown};
 use ledger::schema::Storage;
 use render::assemble::{self, Fragment, Kind, Node, Occupant, Stain, Tier, View};
 use render::bind::{self, Context};
@@ -475,6 +475,9 @@ impl Look {
             Look::Flat(c) => c,
             Look::Background => present::srgb8(BACKGROUND),
             Look::PresentInvalid => present::present_invalid(),
+            Look::Drift { x, reference, .. } if non_finite(x) || non_finite(reference) => {
+                present::debug_invalid(frag)
+            }
             Look::Drift {
                 x,
                 reference,

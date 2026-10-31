@@ -28398,6 +28398,8 @@ R-652 is in the "design" group of `plan/rule_groups.yaml`, with R-454 and R-504.
   `9ddadbb387b8ab5e3e1ab55aab376204cfbd76759e428313377bbdfd64be5b92`, nudges 6 and 3 kept; only tile 0, the fresh sample,
   changed, on each. `drift_view_neutral_fresh_sample_renders_exactly_neutral` (`crates/render/tests/drift_views.rs`) runs
   on each backend CI has.
+- **A non-finite operand (R-436; qa review 5723138973, Q1).** The band never makes one neutral: each view tests its
+  reference and its drift on their bits first and draws the hatch (render contract Part 5, "The non-finite guard").
 
 ## R-655 — On a tilted shape sphere the spherical map's lattice of repeats is folded: a pixel `(s + k, t + 2j)` with `N_a·k + 2·N_b·j = 0` for integers `(k, j) ≠ 0` is the same system as `(s, t)` and is counted once, at its canonical point, the lattice decided exactly on the stored angles *(closes RQ-631; amends R-554 L3 and R-537 EX7(b))*
 *30 Oct 2026 · the owner's batch of that day; applied in `docs/contracts/principia_chart_decoder_contract.md` § "Repeats

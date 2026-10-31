@@ -383,12 +383,19 @@ with dd_colouring §3.1's sRGB transfer.
     integrator contract Part 3), each a view uniform, `EPS_E` and `EPS_L`. `R` is the view's `LIN_R` uniform, its
     default the constants register's `drift_lin_r_E` or `drift_lin_r_Lz` (REQ-TOOL-150). `ln(1 + a/ε)` is
     `log1p_ratio`'s, which forms no overflowing quotient.
+  - **The non-finite guard (R-436; render_gui_spec §10.1; R-79).** Each view tests its reference, `E_0` or `Lz_0`, and
+    then its drift `x` on their bits, an exponent of all ones (`dbg_drift_non_finite`), before reading either as a
+    number, and a non-finite one draws `debug_invalid(frag_xy)` under every compaction, unstyled. So what reaches
+    `dbg_drift` from a view is finite, and nothing rests on the bits of `∞ − ∞`, which WGSL doesn't pin: a stored `±∞`
+    reference (`E_0`'s `−∞` at the collision pole) hatches with `x` whatever its bits, and `x = ±∞` on a finite
+    reference hatches rather than being clamped.
   - **The neutral band (R-652; the owner's ruling (d) of 31 Oct 2026; REQ-TOOL-149), `dbg_drift_shown(x, compaction,
     reference)`, in `drift.wgsl`.** The current drifts are computed in the fragment, `H(r, p) − E_0` and `L_z(r, p) −
     Lz_0` (dd_generation_root §3.8; payload §5), so a fresh sample's drift is rounding, not physics, and differs by
     backend. Under `symlog` a drift with `|x| ≤ k·2⁻²³·|reference|`, `reference` `E_0` or `Lz_0`, `k = 128`, is drawn
     as 0, at `c0` exactly (or viridis' middle under the palette swap); any other `x` keeps its own place, so a drift
-    past the band is unchanged. `lin` and `log` have no band, and the absence NaN passes through first. The value
+    past the band is unchanged. `lin` and `log` have no band, and a non-finite `x` or `reference` passes through first,
+    on the bits, so the band never makes a non-finite operand neutral (`|x| ≤ k·2⁻²³·|∞|` holds for every `x`). The value
     passed to `dbg_suspect` stays `x`, and the predicates read the latches, so a band never hides a lit predicate.
     **Why `k = 128`:** in units of `2⁻²³`, the relative size of one ULP at most, the difference of a fragment's value
     from the stored reference on a fresh sample is bounded by summing, to first order, each operation's error in
