@@ -423,13 +423,14 @@ negative_control!(
 // --- A timeout while saves fail ---------------------------------------------------------------------------------------
 
 /// A job ignoring SIGTERM passes its timeout while its saves fail. It must still be killed within the grace, with the
-/// saves still failing, and end as timed out once they work. With a long timeout, the control, it is never killed.
+/// saves still failing, and end as timed out once they work. With a long timeout, the control, it is never killed. Its
+/// loop ends by itself after 40 s at least, past both timeouts' checks, should neither the runner nor this test end it.
 fn timeout_while_failing_case(tag: &str, timeout: u64) {
     let q = Q::new(tag, "concurrency = 1\nidle = 10\n");
     let id = q.submit(
         "a",
         timeout,
-        "trap '' TERM; echo $$ > leader; while :; do \"$0\" 0.1; done",
+        "trap '' TERM; echo $$ > leader; i=0; while [ $i -lt 400 ]; do \"$0\" 0.1; i=$((i+1)); done",
     );
     q.started(id);
     let leader = q.work().join("leader");

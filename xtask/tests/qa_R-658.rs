@@ -235,11 +235,51 @@ fn alive(pid: i32) -> bool {
     !stat.is_empty() && !stat.starts_with('Z')
 }
 
+/// Whether `pid` may be given to `kill`: it must name one process, and not this one. `kill -9 -1` reaches every process
+/// of this user and `kill -9 0` this process's group, and these pids come from files a damaged runner may have written.
+fn may_kill(pid: i32, own_pid: i32) -> bool {
+    pid > 1 && pid != own_pid
+}
+
 fn kill(signal: &str, pid: i32) {
+    if !may_kill(pid, std::process::id() as i32) {
+        return;
+    }
     let _ = Command::new("kill")
         .args([signal, &pid.to_string()])
         .output_within(Duration::from_secs(30));
 }
+
+fn may_kill_case(cases: &[(i32, bool)]) {
+    for &(pid, expected) in cases {
+        assert_eq!(
+            may_kill(pid, 500),
+            expected,
+            "this test's kill wrongly judged pid {pid}"
+        );
+    }
+}
+
+#[test]
+fn qa_r658_the_tests_own_kill_names_one_other_process() {
+    may_kill_case(&[
+        (i32::MIN, false),
+        (-1, false),
+        (0, false),
+        (1, false),
+        (500, false),
+        (2, true),
+        (499, true),
+        (501, true),
+    ]);
+}
+
+negative_control!(
+    qa_r658_the_tests_own_kill_names_one_other_process,
+    "pid -1 is every process of this user",
+    expected = "this test's kill wrongly judged pid -1",
+    may_kill_case(&[(-1, true)])
+);
 
 /// Polls `ready` for up to `secs` seconds.
 fn until(secs: u64, mut ready: impl FnMut() -> bool) -> bool {
@@ -606,6 +646,9 @@ fn reused_pgid_case(tag: &str, matching: bool) {
     assert!(until(10, || alive(other)), "stand-in never started");
     let lstart = Command::new("ps")
         .args(["-o", "lstart=", "-p", &other.to_string()])
+        // A job's start time is compared in the C locale and UTC, whatever the caller's are.
+        .env("LC_ALL", "C")
+        .env("TZ", "UTC")
         .output_within(Duration::from_secs(30))
         .expect("ps ran");
     let lstart = String::from_utf8_lossy(&lstart.stdout).trim().to_owned();
@@ -792,8 +835,17 @@ fn never_kills_case(tag: &str, kill_named: bool) {
         "job never ran"
     );
     let heavy_rustc = start_stray(&work, false, &rustc, &["40"]);
-    let heavy_cargo = start_stray(&work, false, &cargo, &["-f", "build"]);
-    let light_cargo = start_stray(&work, false, &cargo, &["-f", "fmt"]);
+    // `tail -f` never ends by itself, so an alarm, which outlives the exec, ends it should this test die first.
+    let tail_for_a_minute = |file: &str| {
+        start_stray(
+            &work,
+            false,
+            "perl",
+            &["-e", "alarm(60); exec @ARGV", &cargo, "-f", file],
+        )
+    };
+    let heavy_cargo = tail_for_a_minute("build");
+    let light_cargo = tail_for_a_minute("fmt");
     let log = q.dir.join("violations.log");
     let read = || std::fs::read_to_string(&log).unwrap_or_default();
     let lines_of = |pid: i32| -> Vec<String> {
