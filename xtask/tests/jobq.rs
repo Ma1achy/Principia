@@ -2839,3 +2839,76 @@ negative_control!(
     expected = "a job already running started again",
     tracked_case("jobq_tracked_control", 2)
 );
+
+/// `ps -o lstart=` for `pid` under `tz` and the C locale.
+fn lstart(pid: i32, tz: &str) -> String {
+    let out = Command::new("ps")
+        .args(["-o", "lstart=", "-p", &pid.to_string()])
+        .env("LC_ALL", "C")
+        .env("TZ", tz)
+        .output_within(Duration::from_secs(30))
+        .expect("ps ran");
+    String::from_utf8_lossy(&out.stdout).trim().to_owned()
+}
+
+/// A runner started under another time zone and locale records its job's start as `ps` gives it under `compare_tz`
+/// and the C locale; so a later runner, in any environment, reads the same text.
+fn start_time_case(tag: &str, compare_tz: &str) {
+    let q = Q::new(tag, "");
+    let work = q.work();
+    let out = q
+        .command(&[
+            "submit",
+            work.to_str().expect("utf-8 path"),
+            "--priority",
+            "peek",
+            "--label",
+            "long",
+            "--env",
+            "CARGO_TARGET_DIR=/nonexistent/jobq-test-target",
+            "--",
+            "sleep",
+            "20",
+        ])
+        .env("TZ", "Asia/Tokyo")
+        .env("LC_ALL", "POSIX")
+        .output_within(Duration::from_secs(45))
+        .expect("xtask job ran");
+    let id: u64 = String::from_utf8_lossy(&out.stdout)
+        .trim()
+        .parse()
+        .expect("submit printed an id");
+    assert!(
+        until(10, || q
+            .queue()
+            .load(id)
+            .is_ok_and(|job| job.leader_start.is_some())),
+        "the job's start was never recorded"
+    );
+    let job = q.queue().load(id).expect("job file");
+    let pid = job.pgid.expect("its group");
+    let expected = lstart(pid, compare_tz);
+    assert!(
+        q.run(&["cancel", &id.to_string()]).status.success(),
+        "cancel failed"
+    );
+    assert_eq!(q.wait(id).0, 130, "the job was not cancelled");
+    q.finish();
+    assert_eq!(
+        job.leader_start.as_deref(),
+        Some(expected.as_str()),
+        "a job's start depends on its runner's environment"
+    );
+}
+
+#[test]
+fn jobq_a_jobs_start_time_is_the_same_in_any_environment() {
+    start_time_case("jobq_start_time", "UTC");
+}
+
+negative_control!(
+    jobq_a_jobs_start_time_is_the_same_in_any_environment,
+    "the same start reads differently in another zone, which is why it is recorded in UTC",
+    expected = "a job's start depends on its runner's environment",
+    start_time_case("jobq_start_time_control", "America/New_York")
+);

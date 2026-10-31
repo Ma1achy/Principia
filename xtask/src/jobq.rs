@@ -189,7 +189,7 @@ pub struct Job {
     pub finished: Option<u64>,
     /// Its process group, the id of its command's process.
     pub pgid: Option<i32>,
-    /// When its command's process started, as `ps -o lstart=` gives it, to tell that process from a later one with
+    /// When its command's process started, as `ps -o lstart=` gives it in the C locale and UTC, to tell that process from a later one with
     /// the same pid.
     pub leader_start: Option<String>,
     pub runner_pid: Option<i32>,
@@ -1503,10 +1503,13 @@ fn leader_exited(pid: u32) -> bool {
     !matches!(waitid(WaitId::Pid(pid), options), Ok(None))
 }
 
-/// When process `pid` started, as `ps -o lstart=` gives it.
+/// When process `pid` started, as `ps -o lstart=` gives it in the C locale and UTC: `ps` prints it by the caller's `TZ`
+/// and locale, and the runner that compares it may not have the environment of the runner that recorded it.
 fn start_time(pid: i32) -> Option<String> {
     let out = Command::new("ps")
         .args(["-o", "lstart=", "-p", &pid.to_string()])
+        .env("LC_ALL", "C")
+        .env("TZ", "UTC")
         .output()
         .ok()?;
     let text = String::from_utf8_lossy(&out.stdout).trim().to_owned();
