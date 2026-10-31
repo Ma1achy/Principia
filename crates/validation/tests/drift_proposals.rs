@@ -11,14 +11,18 @@
 //! **Domain** (pitfalls §10): the two fixtures, at the default sim key, on this platform's CPU; the GPU's f32 stands on
 //! CPU-f32, as REQ-INT-030 has it.
 
+#[cfg(feature = "controls")]
 use kernel::occupant::euler::Euler;
+#[cfg(feature = "controls")]
 use kernel::occupant::kdk::Kdk;
 use ledger::constants::{
     ConstantBuilder, Population, RelativeBasis, DRIFT_LIN_R_E, DRIFT_LIN_R_LZ,
     SUSPECT_ENERGY_THRESHOLD, SUSPECT_LZ_THRESHOLD,
 };
 use render::present::{self, DRIFT_LIN, DRIFT_SYMLOG};
-use validation::drift::{self, Drifts, Fixture, Measured, EPS_DEFAULT};
+#[cfg(feature = "controls")]
+use validation::drift::Fixture;
+use validation::drift::{self, Drifts, Measured, EPS_DEFAULT};
 use validation::negative_control;
 
 const SYMPLECTIC: [&str; 3] = ["KDK", "Yoshida-4", "Yoshida-6"];
@@ -156,6 +160,7 @@ fn drift_thresholds_proposal() {
 }
 
 /// A short run of Euler and KDK, for the controls: whatever the horizon, Euler drifts and KDK's round-off is finite.
+#[cfg(feature = "controls")]
 fn short(fixture: Fixture) -> Vec<Measured> {
     let fixture = Fixture {
         horizon: 1.0,
@@ -352,6 +357,7 @@ fn drift_lin_range_proposal() {
 }
 
 /// Euler and RK4 at a short horizon, for the controls.
+#[cfg(feature = "controls")]
 fn short_lin() -> Vec<Measured> {
     let fixture = Fixture {
         horizon: 1.0,

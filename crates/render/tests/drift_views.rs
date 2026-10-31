@@ -173,7 +173,7 @@ fn symlog_diverging(x: f32, eps: f64) -> Rgb {
 
 /// The suspect styling over `rgb` at the pixel `(x, y)`: rows for `energy`, columns for `lz`, in ink by luminance.
 fn styled(rgb: Rgb, energy: bool, lz: bool, x: u32, y: u32) -> Rgb {
-    if (energy && y % 4 == 0) || (lz && x % 4 == 0) {
+    if (energy && y.is_multiple_of(4)) || (lz && x.is_multiple_of(4)) {
         let luminance = 0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2];
         [if luminance >= 0.18 { 0.0 } else { 1.0 }; 3]
     } else {
