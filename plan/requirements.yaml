@@ -7508,7 +7508,7 @@
   - R-125
   - R-156
   milestone: M3
-  note: "R-125: moved to M3 (TASK-M3-16), transcribed rather than defined under R-72. The punctured-sphere relation and the attribution algorithm (REQ-PAY-071/072) are v2."
+  note: "R-125: moved to M3 (TASK-M3-16), transcribed rather than defined under R-72. The punctured-sphere relation and the attribution algorithm (REQ-PAY-071/072) are v2. RQ-632 (30 Oct 2026), decided by the orchestrator per R-369 as the consequence of R-125, option (a): the cuts are the collision equator's segments with body 0 between (a) and body 2 between (b), sharing d = −(r₁ − r₀) × (r₂ − r₀); the segment classifier is REQ-PAY-113 (R-72); confirmed by the human at the M3 gate, as this requirement already says."
 - id: REQ-PAY-071
   area: PAY
   statement: "Before any per-pair view ships, the thrice-punctured-sphere relation expressing the third collision loop via `a` and `b` must be specified explicitly."
@@ -8343,6 +8343,27 @@
   - R-632
   milestone: M3
   note: "R-632 (27 Oct 2026, RQ-581 (d), else (b)). Closed by TASK-M3-41 with REQ-PAY-111 (applied per R-369). Where the encoding differs from linear binary16, TASK-M3-41 rewrites the f16 wording for the two latches in payload §1, §2 and §6, the render contract's unpack layer, the debug tooling plan's rows and the parity contract, each with a *Was*; d_min stays f16."
+- id: REQ-PAY-113
+  area: PAY
+  kind: definition
+  statement: "The segment classifier — at an endpoint of an accepted substep, which body lies between the other two, and so which segment of the collision equator a side change of the cuts' shared signed function d crosses — must be defined in the symbolic-dynamics contract §1 by the task that needs it, mass-independent and comparison-only, with the endpoint it is read at, and reviewed by the physics reviewer before merge."
+  source:
+  - file: docs/contracts/principia_symbolic_dynamics_contract.md
+    section: 1. Generator ↔ branch-cut convention
+  - file: docs/contracts/principia_integrator_contract.md
+    section: Part 5 — Units and the horizon (inherited scale gauge)
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  - file: decisions.md
+    section: "R-125 — The branch-cut convention is M3's, transcribed from the literature *(closes RQ-96)*"
+  verify:
+    method: review checklist
+    detail: "symbolic_dynamics_contract §1 defines the classifier (the body opposite the longest side, its tie rule, and the substep's non-negative endpoint it is read at) and integrator contract Part 5 the segment gate it feeds; its comparisons are formed under R-547; physics reviewer approved"
+  rulings:
+  - R-72
+  - R-125
+  milestone: M3
+  note: "RQ-632 (30 Oct 2026), option (a), decided by the orchestrator per R-369 as the consequence of R-125: the classifier is a new R-72 definition, written by TASK-M3-16."
 - id: REQ-GEN-001
   area: GEN
   statement: "The catalogue metadata of the `SimState` scalars must match generation-root §3.4's table (scale, range, sentinel), with `energy_drift` and `Lz_drift` on diverging scales."
@@ -29170,7 +29191,7 @@
   - R-125
   - R-630
   milestone: M3
-  note: "The equivalence is R-630's (closes RQ-576), the definition R-72 asks for. Was (verify): \"for each gallery orbit used, computed word (under REQ-PAY-070's transcribed convention) equals the published class\"."
+  note: "The equivalence is R-630's (closes RQ-576), the definition R-72 asks for. Was (verify): \"for each gallery orbit used, computed word (under REQ-PAY-070's transcribed convention) equals the published class\". Physics review 5720379930 of PR #358 (RQ-632): the word is read from the kernel's accepted substeps (integrate_word) at the default step, recording the steps taken; a resolution failure is reported as such, never tuned away, and re-raises RQ-632. Measured at TASK-M3-16, not this requirement's run (ten rows of Table I, RK4 at unit masses, outside the I = 1 gauge, the default N_sub table): at dt_macro = 1e-3 eight read their class and butterfly II and yarn do not; at 2.5e-4 and 1e-4 all ten do."
 - id: REQ-VAL-044
   area: VAL
   statement: "The reversibility test on free-fall brake orbits must be implemented on the reversible occupant, logH's TTL time mode (R-162), bound through the profile's `run_reversible`, which only that occupant carries (R-500)."

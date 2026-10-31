@@ -39,16 +39,19 @@
 use spirv_std::num_traits::Float;
 
 use super::advance::{Advance, AdvanceParams, AdvanceReal, Cadence};
-use super::cadence::WrapperCadence;
+use super::cadence::{WordCadence, WrapperCadence};
 use super::substep::{d2_quantised, NsubThresholds, Quantise, SubstepState};
 use super::welford::{self, Welford};
 use crate::decode::Ic;
+use crate::generated::links::LinkReal;
 use crate::occupant::{Geom, State};
 use crate::payload::{
     pack_times, set_d_min_unset, set_dmin_pair, set_state, PayloadReal, SimStateBaseOf,
     SD_DMIN_PAIR_SENTINEL, STATE_BOUNDED, STATE_RUNNING,
 };
+use crate::real::IeeeBits;
 use crate::shape::shape;
+use crate::word::WordBuffer;
 
 /// The float type the wrapper runs at: an occupant's ([`AdvanceReal`]), a payload's ([`PayloadReal`]), quantised for
 /// the substep law's `d²` ([`Quantise`]), and with the shape map's `Float` functions for the Welford `y`
@@ -79,6 +82,29 @@ pub fn integrate<A: Advance, R: WrapperReal>(
     uniforms: &WrapperUniforms<R>,
 ) -> SimStateBaseOf<R> {
     integrate_with::<A, R, WrapperCadence>(ic, uniforms, &mut WrapperCadence::default())
+}
+
+/// The integration of `ic` under `uniforms` by the occupant `A` with its word: `cadence` the per-substep callback, with
+/// crossing detection added at every accepted substep ([`WordCadence`]), the sample's word at `index` in `words`, empty
+/// at the start. The returned descriptor's `last_symbol` mirrors the word (payload §3).
+#[inline]
+pub fn integrate_word<A, R, C, B>(
+    ic: &Ic<R>,
+    uniforms: &WrapperUniforms<R>,
+    cadence: &mut C,
+    index: usize,
+    words: &mut B,
+) -> SimStateBaseOf<R>
+where
+    A: Advance,
+    R: WrapperReal + LinkReal + IeeeBits,
+    C: Cadence<R>,
+    B: WordBuffer + ?Sized,
+{
+    let mut word_cadence = WordCadence::new(cadence, &ic.r, index, words);
+    let out = integrate_with::<A, R, _>(ic, uniforms, &mut word_cadence);
+    let packed_a = word_cadence.mirror_last_symbol(out.packed_a);
+    SimStateBaseOf { packed_a, ..out }
 }
 
 /// The integration of `ic` under `uniforms` by the occupant `A`, `cadence` the per-substep callback it passes in
