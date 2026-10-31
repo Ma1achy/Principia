@@ -2,7 +2,9 @@
 //! on a copy of `plan/` + the corpus with a task dropped from `tasks.yaml`, a requirement source into `docs/archive/`,
 //! or a task reference to an `ARCHIVE_` brief (R-184: "cites archived file", not "doesn't exist"). It also fails on a
 //! still-open item of `open-questions.md` that names neither a requirement nor an open REVIEW_QUEUE entry, or names a
-//! missing or retired requirement, or an RQ that isn't open (R-334).
+//! missing or retired requirement, or an RQ that isn't open (R-334). It fails too on an RQ heading that a union merge
+//! of `REVIEW_QUEUE.md` left twice, or left open though it is archived (`.gitattributes`; `plan/OPERATIONS.md`
+//! § "Merging").
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -312,5 +314,71 @@ negative_control!(
         let root = copy("plan_check_ctl_open_rq");
         carrier(&root, "REQ-VAL-040");
         fails_naming(&root, "which is not an open entry in REVIEW_QUEUE.md");
+    }
+);
+
+/// Appends `heading` to `root`'s `REVIEW_QUEUE.md`, as a union merge would.
+fn append_to_queue(root: &Path, heading: &str) {
+    let path = root.join("REVIEW_QUEUE.md");
+    let text = fs::read_to_string(&path).expect("queue read");
+    fs::write(&path, format!("{text}{heading}\n")).expect("queue written");
+}
+
+/// The id of the first open entry in `root`'s `REVIEW_QUEUE.md`, so the test outlives any one entry's ruling.
+fn first_open_rq(root: &Path) -> String {
+    let text = fs::read_to_string(root.join("REVIEW_QUEUE.md")).expect("queue read");
+    let line = text
+        .lines()
+        .find(|l| l.starts_with("## RQ-"))
+        .expect("an open entry");
+    let id = line.trim_start_matches("## ");
+    id[..id.find(':').expect("a colon after the id")].to_owned()
+}
+
+#[test]
+fn plan_check_fails_on_an_rq_heading_a_union_merge_left_twice() {
+    let root = copy("plan_check_rq_twice");
+    let rq = first_open_rq(&root);
+    append_to_queue(
+        &root,
+        &format!("## {rq}: the other side's edit of its heading"),
+    );
+    fails_naming(&root, &format!("{rq} is two entries in REVIEW_QUEUE.md"));
+}
+
+#[test]
+fn plan_check_fails_on_an_archived_rq_a_union_merge_left_open() {
+    let root = copy("plan_check_rq_reopened");
+    append_to_queue(
+        &root,
+        &format!("## {ARCHIVED_RQ}: edited on a branch, archived on the other"),
+    );
+    fails_naming(
+        &root,
+        &format!(
+            "{ARCHIVED_RQ} is an entry in both REVIEW_QUEUE.md and docs/archive/review_queue/"
+        ),
+    );
+}
+
+negative_control!(
+    plan_check_fails_on_an_rq_heading_a_union_merge_left_twice,
+    "a heading with an id of its own passes, so the failure check must fail on it",
+    expected = "plan-check passed",
+    {
+        let root = copy("plan_check_ctl_rq_twice");
+        append_to_queue(&root, "## RQ-999999: a new entry");
+        fails_naming(&root, "is two entries in REVIEW_QUEUE.md");
+    }
+);
+
+negative_control!(
+    plan_check_fails_on_an_archived_rq_a_union_merge_left_open,
+    "a heading with an id of its own passes, so the failure check must fail on it",
+    expected = "plan-check passed",
+    {
+        let root = copy("plan_check_ctl_rq_reopened");
+        append_to_queue(&root, "## RQ-999999: a new entry");
+        fails_naming(&root, "is an entry in both REVIEW_QUEUE.md and");
     }
 );

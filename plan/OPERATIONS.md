@@ -312,6 +312,9 @@ test, build script, codegen step or xtask check that reads a doc, spec or data f
 `scripts/ci_changes.sh`'s list of files code reads; `xtask/tests/ci_changes.rs` scans for a literal path missing from it.
 
 **Numbers.**
+- **`REVIEW_QUEUE.md` merges by union** (`.gitattributes`, applied per R-369): both sides' lines stay and nothing
+  conflicts, so an entry edited on two sides keeps both versions, and only a repeated heading fails the plan check:
+  read the queue's merged diff.
 - **RQ ids.** Before filing an RQ, take the next free id across every `origin/*` branch: `git fetch`, then search each
   branch's `REVIEW_QUEUE.md` and `docs/archive/review_queue/`. Two agents once both filed RQ-188.
 - **An RQ open only on a PR branch.** When a rulings PR rules on it, the rulings PR archives it in
