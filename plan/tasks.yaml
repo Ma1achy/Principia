@@ -970,7 +970,7 @@
   title: Branch-cut crossing detection and the τ tie rule
   depends_on: [TASK-M3-04, TASK-M3-15]
   needs: [REQ-PAY-016, REQ-RENDER-002]
-  requirements: [REQ-INT-031, REQ-INT-046, REQ-INT-047, REQ-INT-048, REQ-INT-079, REQ-PAY-070]
+  requirements: [REQ-INT-031, REQ-INT-046, REQ-INT-047, REQ-INT-048, REQ-INT-079, REQ-PAY-070, REQ-PAY-113]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-10]
 - id: TASK-M3-17

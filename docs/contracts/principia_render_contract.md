@@ -73,6 +73,9 @@ that form with each live node's per-node params added, as `"params"`: each unifo
 declares (gui_state_contract §3), by name, its value a list of numbers, one per component, the schema's default where
 none is set. The hash is the 64-bit FNV-1a of the text's UTF-8 bytes, as the fragment key's. The fragment key hashes
 the form without the params, which are uniforms, so a param edit recolours without a recompile.
+A `colour` node's custom-stop ramp (colour_composition §9.4; gui_state_contract §2; TASK-M7-11), where it has one, is
+added beside its params as `"ramp"`, its stops and `cyclic`, so the render key changes with it; the fragment key
+leaves it out, as it leaves out the params.
 
 The bake is an *implementation strategy* for the f(n̂) subset, not a contract change — publicly the occupant is still `colour(ctx)`. Occupants that read dynamical fields (event class, diffusion) skip the bake tier and evaluate per-fragment.
 

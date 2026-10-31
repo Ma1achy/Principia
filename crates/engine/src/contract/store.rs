@@ -142,8 +142,9 @@ fn overlays(o: &Overlays) -> String {
 }
 
 /// The stain graph as the log writes it (gui_state_contract §2): its nodes in id order, each `id kind occupant`, the
-/// occupant a built-in's id, a source's field, `custom` for custom WGSL or `none`, and its params, if any, as
-/// `{name=value, …}`, a value of several components in `(…)`; then its wires, each `from→to.port`.
+/// occupant a built-in's id, a source's field, `custom` for custom WGSL or `none`, its params, if any, as
+/// `{name=value, …}`, a value of several components in `(…)`, and a `colour` node's ramp, if any, as
+/// `ramp[position=(L, a, b), …]`, then ` cyclic` where it is cyclic; then its wires, each `from→to.port`.
 pub fn stain_graph(g: &StainGraph) -> String {
     let number = |v: &[f64]| match v {
         [one] => one.to_string(),
@@ -177,6 +178,17 @@ pub fn stain_graph(g: &StainGraph) -> String {
                     .map(|(name, v)| format!("{name}={}", number(v)))
                     .collect();
                 text.push_str(&format!(" {{{}}}", params.join(", ")));
+            }
+            if let Some(ramp) = &n.ramp {
+                let stops: Vec<String> = ramp
+                    .stops()
+                    .iter()
+                    .map(|s| format!("{}={}", s.position, number(&s.oklab)))
+                    .collect();
+                text.push_str(&format!(" ramp[{}]", stops.join(", ")));
+                if ramp.cyclic() {
+                    text.push_str(" cyclic");
+                }
             }
             text
         })

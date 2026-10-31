@@ -1,24 +1,21 @@
 //! The stain graph (gui_state_contract §5; render_gui_spec Part II §3, §4, §6, §13; R-64): a free, typed node graph on
-//! a fixed backbone. Nodes, their typed ports, the wires and the per-node params are the stain's data, and serialise
-//! as one value; the canonical form ([`Canonical`]) is what the fragment key and the render key hash (lowering
-//! contract Part 5; render contract Part 3; REQ-RENDER-075).
+//! a fixed backbone. Nodes, their typed ports ([`ports`](super::ports)), the wires and the per-node params, a `colour`
+//! node's custom-stop ramp among them ([`Ramp`]), are the stain's data, and serialise with `RenderState` as one value;
+//! the canonical form ([`Canonical`]) is what the fragment key and the render key hash (lowering contract Part 5;
+//! render contract Part 3; REQ-RENDER-075).
 //!
 //! Every construction is checked, an edit and a deserialised graph alike ([`StainGraph::check`]): `combiner` and
 //! `OUT` are singletons, made by [`StainGraph::new`] and never added or deleted; each wire's out-port type is its
 //! in-port's and it keeps the backbone (`render::assemble::check_wire`); an in-port takes one wire, a new one
-//! replacing the old (§6); the graph is acyclic; each param is a value of its occupant's `uniformSchema`; and the
-//! graph lowers ([`StainGraph::lower`]), so the live post chain keeps its bound. A refused edit leaves the graph as it
-//! was.
+//! replacing the old (§6); the graph is acyclic; each param is a value of its occupant's `uniformSchema`, and only a
+//! `colour` node has a ramp; and the graph lowers ([`StainGraph::lower`]), so the live post chain keeps its bound. A
+//! refused edit leaves the graph as it was. The editor's edits, typed and each with its refusal's reason, are
+//! [`edit`](super::edit)'s.
 //!
 //! The port rules, the occupants' declarations and the lowering are the render crate's, the fragment side's
 //! (systems_architecture §7.1: `engine` depends on `render`, never the reverse).
-//!
-//! [`Canonical`]: crate::stain::Canonical
-//! [`StainGraph::check`]: crate::stain::StainGraph::check
-//! [`StainGraph::new`]: crate::stain::StainGraph::new
-//! [`StainGraph::lower`]: crate::stain::StainGraph::lower
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
 use render::assemble::{self, AssembleError, Kind, Stain};
@@ -28,6 +25,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
 use crate::contract::canonical;
+use crate::contract::stain::ports::{Direction, Port, Ports, Subtype};
+pub use crate::contract::stain::ramp::Ramp;
 
 /// A node's id: stable across edits, and not part of the canonical form.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -88,7 +87,8 @@ impl From<&Occupant> for assemble::Occupant {
 }
 
 /// One node: its id, kind, occupant and params, each a uniform's value by the uniform's name, one number per
-/// component.
+/// component, and, on a `colour` node, its custom-stop ramp where it has one (colour_composition §9.4), serialised as
+/// `ramp` and left out where it has none.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Node {
@@ -97,6 +97,8 @@ pub struct Node {
     pub occupant: Occupant,
     #[serde(default)]
     pub params: BTreeMap<String, Vec<f64>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ramp: Option<Ramp>,
 }
 
 /// One wire: from a node's out-port into another's in-port, by its position: a u32, as the graph serialises with
@@ -193,6 +195,7 @@ impl StainGraph {
             kind,
             occupant,
             params: BTreeMap::new(),
+            ramp: None,
         };
         let (combiner, out) = (NodeId(0), NodeId(1));
         StainGraph {
@@ -256,7 +259,7 @@ impl StainGraph {
                 "the {kind:?} is a fixed singleton: it is never added"
             )));
         }
-        let id = NodeId(self.nodes.keys().last().map_or(0, |n| n.0 + 1));
+        let id = self.next_id();
         self.edit(|g| {
             g.nodes.insert(
                 id,
@@ -265,11 +268,37 @@ impl StainGraph {
                     kind,
                     occupant,
                     params: BTreeMap::new(),
+                    ramp: None,
                 },
             );
             Ok(())
         })?;
         Ok(id)
+    }
+
+    /// Adds a copy of node `id`, its kind, occupant, params and ramp, without its wires, its id one past the largest
+    /// in the graph; a combiner or an `OUT` is refused.
+    pub fn duplicate(&mut self, id: NodeId) -> Result<NodeId, GraphError> {
+        let n = self.nodes.get(&id).ok_or_else(|| no_node(id))?;
+        if matches!(n.kind, NodeKind::Combiner | NodeKind::Out) {
+            return Err(GraphError(format!(
+                "the {:?} is a fixed singleton: it is never duplicated",
+                n.kind
+            )));
+        }
+        let copy = self.next_id();
+        let mut node = n.clone();
+        node.id = copy;
+        self.edit(|g| {
+            g.nodes.insert(copy, node);
+            Ok(())
+        })?;
+        Ok(copy)
+    }
+
+    /// The id one past the largest in the graph.
+    fn next_id(&self) -> NodeId {
+        NodeId(self.nodes.keys().last().map_or(0, |n| n.0 + 1))
     }
 
     /// Removes node `id` and its wires; the combiner and `OUT` are refused.
@@ -330,6 +359,132 @@ impl StainGraph {
         })
     }
 
+    /// Sets node `id`'s custom-stop ramp, or removes it with `None`; a ramp on any node but a `colour` is refused.
+    pub fn set_ramp(&mut self, id: NodeId, ramp: Option<Ramp>) -> Result<(), GraphError> {
+        self.edit(|g| {
+            g.nodes.get_mut(&id).ok_or_else(|| no_node(id))?.ramp = ramp;
+            Ok(())
+        })
+    }
+
+    /// The live post chain (render_gui_spec Part II §4, `… → combiner → (post)* → OUT`): the posts `OUT` reads
+    /// through, each feeding the next by its colour in-port, the one nearest the combiner first.
+    pub fn chain(&self) -> Vec<NodeId> {
+        let mut chain = Vec::new();
+        let mut at = self.wires.get(&(self.out(), 0)).copied();
+        while let Some(id) = at.filter(|id| self.nodes[id].kind == NodeKind::Post) {
+            chain.push(id);
+            at = self.wires.get(&(id, 0)).copied();
+        }
+        chain.reverse();
+        chain
+    }
+
+    /// Moves post `post` to `position` in the live post chain ([`StainGraph::chain`]), 0 nearest the combiner, and
+    /// rewires the chain in its new order: each post fed by the one before it, the first by what fed the chain before,
+    /// and `OUT` by the last. One edit, checked as a whole; refused where `post` is not in the chain or `position` is
+    /// past its end.
+    pub fn reorder(&mut self, post: NodeId, position: usize) -> Result<(), GraphError> {
+        let mut chain = self.chain();
+        let at = chain
+            .iter()
+            .position(|&p| p == post)
+            .ok_or_else(|| GraphError(format!("node {} is not in the live post chain", post.0)))?;
+        if position >= chain.len() {
+            return Err(GraphError(format!(
+                "the live post chain holds {} post(s); no position {position}",
+                chain.len()
+            )));
+        }
+        let head = self.wires.get(&(chain[0], 0)).copied();
+        chain.remove(at);
+        chain.insert(position, post);
+        let out = self.out();
+        self.edit(|g| {
+            let mut from = head;
+            for &p in &chain {
+                match from {
+                    Some(f) => g.wires.insert((p, 0), f),
+                    None => g.wires.remove(&(p, 0)),
+                };
+                from = Some(p);
+            }
+            if let Some(last) = from {
+                g.wires.insert((out, 0), last);
+            }
+            Ok(())
+        })
+    }
+
+    /// The `OUT` node's id: a checked graph holds one `OUT`, and no edit removes it.
+    fn out(&self) -> NodeId {
+        self.nodes
+            .values()
+            .find(|n| n.kind == NodeKind::Out)
+            .map(|n| n.id)
+            .expect("a checked graph holds one OUT")
+    }
+
+    /// Whether node `from` feeds node `to`, through one wire or several: so a wire from `to` into `from` would close a
+    /// cycle. A node does not feed itself in an acyclic graph.
+    pub fn feeds(&self, from: NodeId, to: NodeId) -> bool {
+        let mut seen = BTreeSet::new();
+        let mut stack = vec![to];
+        while let Some(id) = stack.pop() {
+            for (_, &f) in self.wires.range((id, 0)..=(id, usize::MAX)) {
+                if f == from {
+                    return true;
+                }
+                if seen.insert(f) {
+                    stack.push(f);
+                }
+            }
+        }
+        false
+    }
+
+    /// Node `id`'s ports (render_gui_spec Part II §3, §3.1): its in-ports in order, each with the subtype arriving on
+    /// its wire where a `field` is wired from a source that states one, and its out-port, a source's with the subtype
+    /// of the field it reads (§5).
+    pub fn ports_of(&self, id: NodeId) -> Result<Ports, GraphError> {
+        let n = self.nodes.get(&id).ok_or_else(|| no_node(id))?;
+        let inputs = self
+            .ports(n)?
+            .into_iter()
+            .enumerate()
+            .map(|(k, ty)| Port {
+                direction: Direction::In,
+                ty,
+                subtype: self
+                    .wires
+                    .get(&(id, k))
+                    .and_then(|f| self.source_subtype(&self.nodes[f])),
+            })
+            .collect();
+        let outputs = n
+            .kind
+            .output()
+            .map(|ty| Port {
+                direction: Direction::Out,
+                ty,
+                subtype: self.source_subtype(n),
+            })
+            .into_iter()
+            .collect();
+        Ok(Ports { inputs, outputs })
+    }
+
+    /// The subtype a source's out-port carries: a built-in source's field's (render_gui_spec Part II §5); `None` for
+    /// any other node, and for a source whose occupant states none.
+    fn source_subtype(&self, n: &Node) -> Option<Subtype> {
+        match (&n.kind, &n.occupant) {
+            (NodeKind::Source, Occupant::Field(f)) => {
+                assemble::field_subtype(f).ok().map(Into::into)
+            }
+            _ => None,
+        }
+    }
+
     /// Applies `f` to a copy and keeps it only if it passes [`StainGraph::check`].
     fn edit(
         &mut self,
@@ -347,6 +502,12 @@ impl StainGraph {
     /// one `OUT` and the post chain within its bound ([`Stain::new`]).
     pub fn check(&self) -> Result<(), GraphError> {
         for n in self.nodes.values() {
+            if n.ramp.is_some() && n.kind != NodeKind::Colour {
+                return Err(GraphError(format!(
+                    "node {} is a {:?}: only a colour node has a ramp",
+                    n.id.0, n.kind
+                )));
+            }
             let d = assemble::declaration(n.kind.into(), &(&n.occupant).into())?;
             for (name, value) in &n.params {
                 let ok = d
@@ -473,6 +634,7 @@ impl StainGraph {
                     occupant: n.occupant.clone(),
                     inputs: lowered.inputs.clone(),
                     params,
+                    ramp: n.ramp.clone(),
                 }
             })
             .collect();
@@ -485,13 +647,14 @@ fn no_node(id: NodeId) -> GraphError {
 }
 
 /// One node of the canonical form: its kind, occupant, the position of the node feeding each in-port (`None` where
-/// absent) and its uniforms' values, each set value or the schema's default.
+/// absent), its uniforms' values, each set value or the schema's default, and its custom-stop ramp where it has one.
 #[derive(Clone, Debug, PartialEq)]
 pub struct CanonicalNode {
     pub kind: NodeKind,
     pub occupant: Occupant,
     pub inputs: Vec<Option<usize>>,
     pub params: BTreeMap<String, Vec<f64>>,
+    pub ramp: Option<Ramp>,
 }
 
 /// The canonical form of a stain graph (lowering contract Part 5; render contract Part 3; REQ-RENDER-075): the
@@ -509,8 +672,8 @@ impl Canonical {
         self.form.text()
     }
 
-    /// The form's text with each node's `params`, its uniforms' values, in JCS (gui_state_contract §2, R-318): the
-    /// render key's graph part.
+    /// The form's text with each node's `params`, its uniforms' values, and a `colour` node's `ramp` where it has one
+    /// (colour_composition §9.4), in JCS (gui_state_contract §2, R-318): the render key's graph part.
     pub fn render_text(&self) -> String {
         let nodes: Vec<Value> = self
             .nodes
@@ -522,16 +685,21 @@ impl Canonical {
                     Occupant::Builtin(id) => json!({ "builtin": id }),
                     Occupant::Custom(text) => json!({ "custom": text }),
                 };
-                json!({
+                let mut node = json!({
                     "kind": Kind::from(n.kind).name(),
                     "occupant": occupant,
                     "inputs": n.inputs,
                     "params": n.params,
-                })
+                });
+                if let Some(ramp) = &n.ramp {
+                    node["ramp"] = json!(ramp);
+                }
+                node
             })
             .collect();
-        // Every number here is a position in the graph, far below 2^53, or a param, a finite f64 (each value is
-        // admitted by its schema), so JCS holds each exactly and the serialisation cannot fail.
+        // Every number here is a position in the graph, far below 2^53, a param, a finite f64 (each value is admitted
+        // by its schema), or a ramp's, finite (each ramp is checked), so JCS holds each exactly and the serialisation
+        // cannot fail.
         canonical::json_to_string(&json!({ "nodes": nodes }))
             .expect("positions and finite params are JCS numbers")
     }

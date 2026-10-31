@@ -895,11 +895,12 @@ pub fn showcase(set: &mut Synthetic, nudge: u32) {
         // The Welford fit: none on the unstepped sample (payload §4: y is sampled after each completed step); else
         // `C_ty` the sample's slope times `C_tt(n)` (the read side's own, `n = t_end_step`), so that each sample's
         // slope, not its step count, sets its diffusion. `C_tt` grows as `n³`, so the slopes shrink as `n` grows,
-        // which keeps both the slopes and `C_ty` spread.
+        // which keeps both the slopes and `C_ty` spread. `mean_y` in `[0, 4]`, the range of payload §4's `y`, a squared
+        // shape-sphere chord (REQ-PAY-073, REQ-PAY-098).
         let n = T_END[k] + t_nudge;
         let (mean_y, c_ty) = match i {
             0 => (0.0, 0.0),
-            _ => (at(0.25, -0.11, 17), SLOPE[k] * diffusion_c_tt(n, DT_MACRO)),
+            _ => (at(0.41, 0.45, 17), SLOPE[k] * diffusion_c_tt(n, DT_MACRO)),
         };
         // Samples 3, 4 and 7 hold long words, 76, 76 and 74 symbols cycling from different starts, whose top limbs,
         // `payload`, spread across its range.

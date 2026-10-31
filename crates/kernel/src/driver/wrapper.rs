@@ -32,22 +32,36 @@
 //! to f16 once, here (payload §1, the precision rule's option (a)); `ΔE_final` and `ΔL_z` final are not stored, the read
 //! side derives them from the final state (payload §5). A terminal's label and step and `d_min` are the cadence's hooks'
 //! (TASK-M3-09, TASK-M3-12); `d_min` is written unset and `dmin_pair` its sentinel until then.
+//!
+//! **The Welford diffusion** (dd_simstate_payload §4; dd_integrator §3.5; [`super::welford`]): after each completed
+//! macro-step, on the state the occupant returns (post-projection), the wrapper takes the sample `y` against the IC's
+//! shape `n̂(r_0, m)`, which it derives once from `ic` before the loop, and updates `mean_y` and `C_ty` with the count
+//! `n` that macro-step makes. A macro-step that `done` cut short is not completed and takes no sample, so the samples
+//! taken are `t_end_step`'s count, the `n` the read side's slope divides by.
+
+use spirv_std::num_traits::Float;
 
 use super::advance::{Advance, AdvanceParams, AdvanceReal, Cadence};
-use super::cadence::WrapperCadence;
+use super::cadence::{WordCadence, WrapperCadence};
 use super::substep::{d2_quantised, NsubThresholds, Quantise, SubstepState};
+use super::welford::{self, Welford};
 use crate::decode::Ic;
+use crate::generated::links::LinkReal;
 use crate::occupant::{Geom, State};
 use crate::payload::{
     pack_packed_b, pack_times, set_d_min_unset, set_dmin_pair, set_state, PayloadReal,
     SimStateBaseOf, SD_DMIN_PAIR_SENTINEL, STATE_BOUNDED, STATE_RUNNING,
 };
+use crate::real::IeeeBits;
+use crate::shape::shape;
+use crate::word::WordBuffer;
 
-/// The float type the wrapper runs at: an occupant's ([`AdvanceReal`]), a payload's ([`PayloadReal`]), and quantised
-/// for the substep law's `d²` ([`Quantise`]): f32 and f64 (R-265).
-pub trait WrapperReal: AdvanceReal + PayloadReal + Quantise {}
+/// The float type the wrapper runs at: an occupant's ([`AdvanceReal`]), a payload's ([`PayloadReal`]), quantised for
+/// the substep law's `d²` ([`Quantise`]), and with the shape map's `Float` functions for the Welford `y`
+/// ([`welford::y`]): f32 and f64 (R-265).
+pub trait WrapperReal: AdvanceReal + PayloadReal + Quantise + Float {}
 
-impl<R: AdvanceReal + PayloadReal + Quantise> WrapperReal for R {}
+impl<R: AdvanceReal + PayloadReal + Quantise + Float> WrapperReal for R {}
 
 /// The sim-key values the wrapper's loop reads (integrator_contract Part 3, "Wrapper config — the loop"), constant
 /// across a dispatch; `SimUniforms` carries them (TASK-M3-06 lays it out and binds it).
@@ -93,6 +107,29 @@ pub fn monitored<R: WrapperReal>(
     }
 }
 
+/// The integration of `ic` under `uniforms` by the occupant `A` with its word: `cadence` the per-substep callback, with
+/// crossing detection added at every accepted substep ([`WordCadence`]), the sample's word at `index` in `words`, empty
+/// at the start. The returned descriptor's `last_symbol` mirrors the word (payload §3).
+#[inline]
+pub fn integrate_word<A, R, C, B>(
+    ic: &Ic<R>,
+    uniforms: &WrapperUniforms<R>,
+    cadence: &mut C,
+    index: usize,
+    words: &mut B,
+) -> SimStateBaseOf<R>
+where
+    A: Advance,
+    R: WrapperReal + LinkReal + IeeeBits,
+    C: Cadence<R>,
+    B: WordBuffer + ?Sized,
+{
+    let mut word_cadence = WordCadence::new(cadence, &ic.r, index, words);
+    let out = integrate_with::<A, R, _>(ic, uniforms, &mut word_cadence);
+    let packed_a = word_cadence.mirror_last_symbol(out.packed_a);
+    SimStateBaseOf { packed_a, ..out }
+}
+
 /// The integration of `ic` under `uniforms` by the occupant `A`, `cadence` the per-substep callback it passes in
 /// (integrator_contract Part 1's loop, under `ADVANCE`; the module's note). The run starts from `ic` alone.
 #[inline]
@@ -111,6 +148,8 @@ pub fn integrate_with<A: Advance, R: WrapperReal, C: Cadence<R>>(
     let mut total_substeps: u32 = 0;
     let mut macro_step: u32 = 0;
     let mut completed: u32 = 0;
+    let n_0 = shape(ic.r, ic.m);
+    let mut diffusion = Welford::default();
     while macro_step < uniforms.horizon_steps && !cadence.done() {
         let n_sub =
             substep.macro_step(d2_quantised(&state.r), &uniforms.thresholds, uniforms.n_max);
@@ -122,7 +161,14 @@ pub fn integrate_with<A: Advance, R: WrapperReal, C: Cadence<R>>(
         state = out.state;
         geom = out.geom;
         total_substeps += out.substeps;
-        completed += u32::from(out.substeps == n_sub);
+        if out.substeps == n_sub {
+            completed += 1;
+            diffusion = diffusion.update(
+                welford::y(state.r, state.m, n_0),
+                completed,
+                uniforms.dt_macro,
+            );
+        }
         macro_step += 1;
     }
     let outcome = if cadence.done() {
@@ -137,6 +183,8 @@ pub fn integrate_with<A: Advance, R: WrapperReal, C: Cadence<R>>(
     SimStateBaseOf {
         r: state.r,
         p: state.p,
+        mean_y: diffusion.mean_y,
+        C_ty: diffusion.c_ty,
         packed_a,
         times: pack_times(completed, 0),
         total_substeps,
