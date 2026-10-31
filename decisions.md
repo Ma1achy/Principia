@@ -28390,13 +28390,13 @@ R-648 is in the "process" group of `plan/rule_groups.yaml`. Changes no requireme
 anchor smoke tests stay continuous and blocking; early peeks, information only, go in a peek log).*
 *Amended in part by R-661 (item 2's "expected to agree statistically" and clarification 2's "expected to agree statistically":
 that tier (a)'s statistics agree is a hypothesis Principia will measure, and no paper establishes it; the owner's words here stay
-as he gave them, and the tier a target binds does not change).*
+as given, and the tier a target binds does not change).*
 *Confirmed 30 Oct 2026 by the owner, on its tier reading (his answers of that day, item 1, in the orchestrator's
 notes, `orch/r630/human-answers-30oct.txt`), verbatim: "Tier reading confirmed: statistical targets are scored on tier
 (a), exact targets on tier (b). Proceed with #342 as corrected." Item 2's applied line below is corrected to it: the
 port's first reading had a statistical target bind (b), with (a) expected to agree (the physics review of PR #342,
 finding F1).*
-*Still in force: all of it, with the owner's two clarifications of 29 Oct 2026 recorded below and his confirmation of
+*Still in force: all of it, with the owner's two clarifications of 29 Oct 2026 recorded below and the owner's confirmation of
 30 Oct 2026 above; R-650 says where and when each external target is scored; R-661 reads "expected to agree statistically"
 as a hypothesis to measure.*
 *29 Oct 2026 · the owner's ruling of that day, and his two clarifications for its port the same day; ported 30 Oct 2026
