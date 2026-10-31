@@ -351,6 +351,8 @@ fn mock_compass_modes_open_in_tilt_and_switch_by_buttons_and_sliders() {
             mode: Touch::Tilt,
             view: crate::explore::compass::views::CompassView::Cube,
             cursor: None,
+            decoder: Default::default(),
+            hover: None,
             drag: None,
             shown: None,
             moving: false,

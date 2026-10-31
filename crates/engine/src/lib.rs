@@ -20,6 +20,7 @@ pub mod contract {
     pub mod canonical;
     pub mod canvas;
     pub mod conformance;
+    pub mod decoded;
     pub mod fast_math;
     pub mod history;
     pub mod interface;
@@ -55,6 +56,7 @@ pub mod contract {
     mod tests {
         mod canonical;
         mod conformance;
+        mod decoded;
         mod latent;
         mod occupant;
         mod profile_v1;

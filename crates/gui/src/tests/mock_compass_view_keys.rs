@@ -341,16 +341,6 @@ fn mock_compass_view_keys_in_the_cube_view_the_arrows_tilt_as_before() {
     let after = View::of(&app.snapshot().sim.plane);
     let d1 = Angles::of(&after).tau1 - Angles::of(&before).tau1;
     assert!((d1 - 1.0).abs() < 1e-9, "→ tilts τ₁ by 1°: {d1}");
-    // In the Jacobi and Shape views, which have no grid yet, the arrows do nothing.
-    for view in [CompassView::Jacobi, CompassView::Shape] {
-        app.manifold.compass.view = view;
-        let rows = app.console().len();
-        press(&mut h, &mut app, Key::ArrowRight, NONE);
-        press(&mut h, &mut app, Key::Space, NONE);
-        let _ = h.frame(&mut app, Vec::new());
-        assert!(setfields(&app, rows).is_empty(), "{view:?}");
-        assert_eq!(app.manifold.compass.cursor, None);
-    }
     rejects("a Cube-view arrow that edits nothing", || {
         assert!(setfields(&app, 0).is_empty())
     });

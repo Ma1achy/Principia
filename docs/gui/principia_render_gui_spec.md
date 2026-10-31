@@ -755,6 +755,14 @@ independent, and in a grid view a drag does nothing. The view is the compass's o
   λ̃ₓ, λ̃ᵧ, p_ρₓ, p_ρᵧ, p_λₓ, p_λᵧ`, as the decoder writes them; Shape's `n₁, n₂, n₃, R, ṅ₁, ṅ₂, ṅ₃, Ṙ`. Both sets, and
   which Jacobian (the corpus's `J_D` is `∂physical/∂(u, v)`, `principia_deep_zoom.md`), are under physics review and
   wait on RQ-341 to RQ-343, RQ-345 and RQ-346".
+- **The reference ranges (REQ-GUI-347, R-72; TASK-M6-35, under physics review).** Each a fixed expression in the
+  decoder's own bounds, never a spread over the image. Jacobi: `α` by `π/2` and `β` by `π` (their domains, `α_min = 0`),
+  the four momenta by `q_max`, the masses by 1. Shape: `θ` by `2π`, `φ` by `π`, the masses by 1, and the four RQ-346
+  does not class from the rates' bound at the mass simplex's centre (`m₀ = m₁ = m₂ = 1/3`, so `μ_ρ = 1/6`, `μ_λ = 2/9`)
+  with each momentum component at `q_max`, where `|ρ̃̇|² + |λ̃̇|² = 2q_max²/μ_ρ + 2q_max²/μ_λ = 21·q_max²`: `L_z` and `Ṙ`
+  by `√21·q_max` (each is at most `√(|ρ̃̇|² + |λ̃̇|²)` on `I = 1`, by Cauchy–Schwarz), `θ̇` and `φ̇` by `2√21·q_max`
+  (`|ṅ| ≤ 2√(|ρ̃̇|² + |λ̃̇|²)` on `I = 1`). They are reference scales at that centre, not bounds over the whole simplex,
+  whose small masses go further; `q_max` is the active one.
 - **Click to steer.** A click on Plücker cell (i, j) sets the slice plane to `z_i × z_j`, the tilts and `γ` reset to 0,
   the zoom and `z₀` kept. A click on a physical cell (i, j) sets it to the latent preimage at `z₀`, `q₁ ∝ J⁻¹ e_i`,
   `q₂ ∝ J⁻¹ e_j`, Gram–Schmidt orthonormalised: both sets have full rank, so `J⁺ = J⁻¹` and no metric on `z` enters
@@ -771,7 +779,15 @@ independent, and in a grid view a drag does nothing. The view is the compass's o
   basis. Its arms: on an `E* = 0` chart the shell-normal direction is refused at every sampled `z`; with `E*` unset none
   is; at a saturated link the cell is refused. Where nothing is dropped `J⁺ = J⁻¹`, so the steer's `q ∝ J⁻¹ e` above
   reads `J⁺` (applied per R-369, R-633). The analytic energy-normal projector, `P = I − n̂ n̂ᵀ` on an `E*` chart, is
-  noted for later, if the gap ever narrows (f32 or deep zoom). The Manifold view's sliders follow as after the
+  noted for later, if the gap ever narrows (f32 or deep zoom). **The tolerance (REQ-GUI-346, proposed by TASK-M6-35,
+  confirmed at the M6 gate) is `0.1`.** The value tested is the light the steer can reach: the steered plane's cell
+  `(i, j)` reads the smaller singular value of `[P e_i, P e_j]`, which on an `E*` chart is `√(1 − n_i² − n_j²)`, `n`
+  the shell's unit normal in the scaled coordinates, so the steer refuses a cell it could light at under 0.1. Measured
+  on the default decoder, the Jacobi set over its ranges, `J`'s `c = 10⁻⁹`, 500 `z` in `[−3, 3]⁸` (splitmix64, seed
+  `0x5EED`): with `E*` unset, exactly 1 to rounding on every cell, so the margin there is 0.9; with `E* = 0`, the least
+  over the cells of a `z` runs from `5.7·10⁻³` to 0.74, its median 0.37, 0.1% of all the cells below `4.3·10⁻²`, 35 of
+  the 500 `z` having a cell refused at 0.1, and the shell's normal itself reads 0 to rounding. The same sample's `σ₈/σ₁` is at most `2.9·10⁻¹²` with `E* = 0` and at
+  least `4.2·10⁻⁶` with `E*` unset, inside RQ-601's gap, `c` between them. The Manifold view's sliders follow as after the
   Chart builder's Apply (§G7). *Was (before R-550):* "`q₁ ∝ J⁺ e_i`, `q₂ ∝ J⁺ e_j`, Gram–Schmidt orthonormalised, and
   is refused, with the reason logged to the console, where the preimage is no 2-plane; the construction waits on RQ-344
   to RQ-346." Every steer is one `SetField` on the basis through the

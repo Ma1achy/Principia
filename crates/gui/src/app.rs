@@ -560,10 +560,10 @@ impl<S: EngineSide> App<S> {
         let activated = self
             .keyboard
             .run(&ctx, self.view.mode, &mut self.view.focus, now);
-        // The Plücker view's cell cursor follows interaction mode on the compass (R-452 C6).
+        // A grid view's cell cursor follows interaction mode on the compass (R-452 C6).
         explore::compass::follow_focus(
             &self.view.focus,
-            &self.snapshot.sim.plane,
+            &self.snapshot.sim,
             &mut self.manifold.compass,
         );
         let mut window_edits = Vec::new();
@@ -719,6 +719,9 @@ impl<S: EngineSide> App<S> {
         for command in std::mem::take(&mut out.commands) {
             self.send(command);
         }
+        for line in std::mem::take(&mut out.refusals) {
+            self.log_warning(line);
+        }
         // The windows asked for, each with the control that opened it: a click, Enter, or the Manifold view's and the
         // Trajectory panel's own openers.
         let mut opens: Vec<(Window, Option<ScopeId>)> = Vec::new();
@@ -834,6 +837,7 @@ impl<S: EngineSide> App<S> {
             out,
         };
         explore::manifold_view::show(ui, layout.manifold_view, &mut panel);
+        self.manifold.compass.hover = self.hover_sent;
         let sim = &self.snapshot.sim;
         explore::compass::show(
             ui,
