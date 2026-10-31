@@ -26,11 +26,15 @@
 //! compares are formed as `crate::canon` forms its branch inputs: each coordinate taken in as a mantissa in `[1, 2)`
 //! and an integer exponent, the differences, the products ([`IeeeBits::product`]'s pattern) and the sums formed on
 //! those, so no intermediate is subnormal and every IEEE backend rounds them alike. The comparisons are on those
-//! pairs; `d` is converted to the float once, and its side read by [`negative`], which reads a subnormal as zero, so a
-//! backend that flushes the conversion's subnormal result reads the same side.
+//! pairs. `d` is decided on the pair's exponent before it is converted: below the normal range it is zero, and in the
+//! range the conversion is exact, so no subnormal is formed and no conversion rounds up across the boundary
+//! ([`crate::canon::to_normal_float`]). Its side is then read by [`negative`], which reads a subnormal handed to it as
+//! zero, so a distance from elsewhere is read as a backend that flushes it reads it.
 
 use super::binding::{on_substep, CrossingHook, SubstepCrossings, WordBuffer};
-use crate::canon::{difference, to_float, vector, wide_greater, wide_mul, wide_norm2, wide_sub};
+use crate::canon::{
+    difference, to_normal_float, vector, wide_greater, wide_mul, wide_norm2, wide_sub,
+};
 use crate::generated::links::LinkReal;
 use crate::payload::inverse;
 use crate::real::IeeeBits;
@@ -189,14 +193,15 @@ pub fn between<R: LinkReal + IeeeBits>(r: &[[R; 2]; 3]) -> u32 {
 
 /// The cuts' shared signed function at positions `r` (symbolic_dynamics_contract §1): `d = −((r₁ − r₀) × (r₂ − r₀))`,
 /// minus the triangle 0 → 1 → 2's doubled signed area, formed as the module's note says, `(r₁ − r₀)_y·(r₂ − r₀)_x −
-/// (r₁ − r₀)_x·(r₂ − r₀)_y` in one rounding of each product and one of the difference, then converted to the float.
+/// (r₁ − r₀)_x·(r₂ − r₀)_y` in one rounding of each product and one of the difference, then taken to the float only
+/// where that exponent is in the normal range, zero below it ([`to_normal_float`]).
 /// Negative on `L⁺`'s hemisphere (0 → 1 → 2 anticlockwise), positive on `L⁻`'s, zero on the equator.
 #[inline]
 pub fn signed_distance<R: LinkReal + IeeeBits>(r: &[[R; 2]; 3]) -> R {
     let p0 = vector(r[0]);
     let u = difference(p0, vector(r[1]));
     let w = difference(p0, vector(r[2]));
-    to_float(wide_sub(wide_mul(u[1], w[0]), wide_mul(u[0], w[1])))
+    to_normal_float(wide_sub(wide_mul(u[1], w[0]), wide_mul(u[0], w[1])))
 }
 
 /// The cuts at positions `r` (symbolic_dynamics_contract §1): both distances [`signed_distance`], cut `a`'s gate open

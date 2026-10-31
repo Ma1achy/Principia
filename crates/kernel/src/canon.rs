@@ -320,6 +320,19 @@ pub(crate) fn to_float<R: LinkReal + IeeeBits>(a: Wide<R>) -> R {
     ldexp(a.m, a.e)
 }
 
+/// `a` as a float where its exponent is in `R`'s normal range, where [`ldexp`] is exact, and 0 below it: decided on the
+/// exponent, before anything rounds, so no subnormal is formed for a branch to read on any backend (R-547;
+/// gpu_determinism_note § "The discipline", rule 6). A `Wide` just below the range whose float would round up to the
+/// least normal reads 0 like the rest; a backend's flushing or keeping never reaches it.
+#[inline]
+pub(crate) fn to_normal_float<R: LinkReal + IeeeBits>(a: Wide<R>) -> R {
+    if a.e < exponent_range::<R>().0 {
+        R::zero()
+    } else {
+        to_float(a)
+    }
+}
+
 /// `Σ mᵢxᵢ` on one axis, `(m₀x₀ + m₁x₁) + m₂x₂`, as [`Wide`]s.
 #[inline]
 fn wide_weighted<R: LinkReal + IeeeBits>(mass: [Wide<R>; 3], x: [Wide<R>; 3]) -> Wide<R> {

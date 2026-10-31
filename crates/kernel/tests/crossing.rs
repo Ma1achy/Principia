@@ -17,12 +17,14 @@
 //!   side, and loops about each collision point reading `A`, `b` and Appendix B's `aB` (`crossing_state_cuts`).
 //! - REQ-PAY-070's cross-check: ten orbits of the PRL's Table I read their published words up to R-630 item 5's
 //!   symmetries, from `fixtures/crossings/prl_orbits.json` (`crossing_published_words`). REQ-VAL-043 is TASK-M3-30's.
+//! - No subnormal `d` feeds the side (R-547): a distance below the normal range reads zero though its float would
+//!   round up to the least normal (`crossing_no_subnormal_distance`).
 //!
 //! Each check takes the detector as a function, so its control runs the same check on a faulty one.
 
 use kernel::payload::{fgw_length_raw, sd_last_symbol, FreeGroupWord, FGW_NO_SYMBOL};
 use kernel::real::IeeeBits;
-use kernel::word::crossing::{negative, product_less, reads_as_zero};
+use kernel::word::crossing::{negative, product_less, reads_as_zero, signed_distance};
 use kernel::word::{
     fgw_decode, set_last_symbol, state_cuts, substep_crossings, CrossingDetector, CrossingHook,
     CutDistances,
@@ -927,4 +929,77 @@ negative_control!(
     "cut a on body 2's segment and b on body 0's reads another word",
     expected = "the word read is not the fixture's",
     check_published_words(swapped_segments)
+);
+
+// ── crossing_no_subnormal_distance (R-547; gpu_determinism_note, rule 6) ─────────────────────────────────────────────
+
+/// A distance from positions: [`signed_distance`], or a control's faulty one.
+type Distance<T> = fn(&[[T; 2]; 3]) -> T;
+
+/// `d = −y·|x|` at positions on the axes, `r₁ = (0, y)`, `r₂ = (−|x|, 0)`, its operands exact, against the side and
+/// value it must read: at the normal range's foot the least normal, negative; one ulp of `y` below it zero, though
+/// its float rounds up to the least normal at a backend keeping subnormals (`round_up`); a whole binade below, zero.
+fn check_no_subnormal_distance<T: Fixture>(
+    distance: Distance<T>,
+    half_range: f64,
+    below_two: f64,
+    least: f64,
+) {
+    let zero = T::of(0.0);
+    let at = |y: f64, x: f64| distance(&[[zero, zero], [zero, T::of(y)], [T::of(-x), zero]]);
+    let x = half_range;
+    let foot = at(half_range, x);
+    assert_eq!(foot, T::of(-least), "the least normal is exact");
+    assert!(negative(foot), "the least normal is on the negative side");
+    let round_up = at(below_two * half_range / 2.0, x);
+    assert_eq!(
+        round_up.exponent(),
+        zero.exponent(),
+        "a distance below the normal range does not read as zero"
+    );
+    assert!(
+        !negative(round_up),
+        "a distance below the normal range is on the cut"
+    );
+    assert!(
+        !negative(at(half_range / 2.0, x)),
+        "a binade below is on the cut"
+    );
+    assert!(negative(at(1.0, 1.0)), "an ordinary distance");
+}
+
+#[test]
+fn crossing_no_subnormal_distance() {
+    // f32: `(2 − 2⁻²³)·2⁻⁶⁴ × 2⁻⁶³`, the code review's value; f64: `(2 − 2⁻⁵²)·2⁻⁵¹² × 2⁻⁵¹¹`.
+    check_no_subnormal_distance::<f32>(
+        signed_distance::<f32>,
+        2f64.powi(-63),
+        2.0 - 2f64.powi(-23),
+        f64::from(f32::MIN_POSITIVE),
+    );
+    check_no_subnormal_distance::<f64>(
+        signed_distance::<f64>,
+        2f64.powi(-511),
+        2.0 - 2f64.powi(-52),
+        f64::MIN_POSITIVE,
+    );
+}
+
+/// `d` as plain float arithmetic: the product rounds to the least normal where the exact value is below it, so a
+/// keeping backend reads the negative side and a flushing one would not.
+#[cfg(feature = "controls")]
+fn rounded_distance(r: &[[f32; 2]; 3]) -> f32 {
+    (r[1][1] - r[0][1]) * (r[2][0] - r[0][0]) - (r[1][0] - r[0][0]) * (r[2][1] - r[0][1])
+}
+
+negative_control!(
+    crossing_no_subnormal_distance,
+    "plain arithmetic's product rounds up to the least normal, so a branch reads a backend-dependent side",
+    expected = "does not read as zero",
+    check_no_subnormal_distance::<f32>(
+        rounded_distance,
+        2f64.powi(-63),
+        2.0 - 2f64.powi(-23),
+        f64::from(f32::MIN_POSITIVE),
+    )
 );
