@@ -29191,7 +29191,7 @@
   - R-125
   - R-630
   milestone: M3
-  note: "The equivalence is R-630's (closes RQ-576), the definition R-72 asks for. Was (verify): \"for each gallery orbit used, computed word (under REQ-PAY-070's transcribed convention) equals the published class\"."
+  note: "The equivalence is R-630's (closes RQ-576), the definition R-72 asks for. Was (verify): \"for each gallery orbit used, computed word (under REQ-PAY-070's transcribed convention) equals the published class\". Physics review 5720379930 of PR #358 (RQ-632): the word is read from the kernel's accepted substeps (integrate_word) at the default step, recording the steps taken; a resolution failure is reported as such, never tuned away, and re-raises RQ-632. Measured at TASK-M3-16, not this requirement's run (ten rows of Table I, RK4 at unit masses, outside the I = 1 gauge, the default N_sub table): at dt_macro = 1e-3 eight read their class and butterfly II and yarn do not; at 2.5e-4 and 1e-4 all ten do."
 - id: REQ-VAL-044
   area: VAL
   statement: "The reversibility test on free-fall brake orbits must be implemented on the reversible occupant, logH's TTL time mode (R-162), bound through the profile's `run_reversible`, which only that occupant carries (R-500)."
