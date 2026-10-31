@@ -476,13 +476,15 @@ fn stopped_by(script: &Path, signal: i32, late: bool, tag: &str) -> (String, usi
         ),
     )
     .expect("stand-in");
-    // `set -m`: a background job of a shell without it starts with SIGINT ignored, and bash can't trap that.
+    // `set -m`: a background job of a shell without it starts with SIGINT ignored, and bash can't trap that. It also
+    // gives the script a group of its own, which the driver ends last: on these stand-ins nothing kills a whole scope, and
+    // what's left of the run would still be writing in the scratch folder as it is removed.
     let driver = format!(
         "set -m\n'{script}' run '{command}' > /dev/null 2>&1 &\nrun=$!\ni=0\n\
          while [ ! -s '{pid}' ] && [ $i -lt 100 ]; do sleep 0.1; i=$((i + 1)); done\n\
          kill -{signal} $run\nwait $run\necho \"status $?\"\n\
          kill -0 \"$(cat '{pid}')\" 2> /dev/null && echo command-alive\n\
-         kill -9 \"$(cat '{pid}')\" 2> /dev/null\nexit 0",
+         kill -9 -- -$run 2> /dev/null\nsleep 0.2\nexit 0",
         script = script.display(),
         command = command.display(),
         pid = pid.display(),
