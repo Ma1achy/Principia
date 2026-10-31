@@ -95,7 +95,7 @@ pub fn integrate<A: Advance, R: WrapperReal>(
 /// `dLz_max = max|ΔL_z|`, rounded to f32 and then packed to f16 (clamped to binary16's finite range first).
 ///
 /// **A run whose monitor latched a non-finite value** is marked, never stored as measured: `state` `sim_failed`, with
-/// its detail by what failed (payload §2: [`failed_detail`]), and both latches the defined failed-state 0.0 (payload §1,
+/// its detail by what failed (payload §2: `failed_detail`), and both latches the defined failed-state 0.0 (payload §1,
 /// "Failed-state contents are defined"; R-79, R-271; `d_min` is unset already). The rest of the failure path, the terminal
 /// that ends the march and the other fields' failed-state values, is TASK-M3-17's and TASK-M3-18's.
 #[inline]
