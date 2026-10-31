@@ -259,6 +259,13 @@ merge:
    own new checks if `main` has moved since its CI ran. "Require branches to be up to date" is off (R-266), so nothing
    else catches a clash: #70's CI was green, but `main` had since gained #75's `spawn::TIMEOUT` uses, which #70 renamed,
    and the merged tree failed to compile (30 Sep 2026).
+   `REVIEW_QUEUE.md` merges by union (`.gitattributes`, applied per R-369), which keeps appended entries from
+   conflicting, and a merge can silently leave: both versions of a line edited on two sides; both bodies under one heading, where two sides file
+   the same new id with an identical heading; new entries interleaved, one's lines under another's RQ, where they share
+   a run of identical lines; a line or whole entry one side deleted, restored because the other side edited it. The
+   plan check catches only an RQ heading repeated in the queue, or in both the queue and its archive. So after each
+   merge the orchestrator reads `git diff <before> <after> -- REVIEW_QUEUE.md`, which the batch merge prints, for a line
+   doubled, restored or under the wrong RQ, and fixes anything wrong by a follow-up PR.
 3. `gh pr merge N --merge --match-head-commit <full sha>`. Never `--admin` (R-266), never squash or rebase.
 4. Then, as a separate command, never chained after the merge with `;`: confirm the remote branch is gone, since
    GitHub's "Automatically delete head branches" deletes it on merge (R-357): `git ls-remote --exit-code origin
@@ -312,9 +319,6 @@ test, build script, codegen step or xtask check that reads a doc, spec or data f
 `scripts/ci_changes.sh`'s list of files code reads; `xtask/tests/ci_changes.rs` scans for a literal path missing from it.
 
 **Numbers.**
-- **`REVIEW_QUEUE.md` merges by union** (`.gitattributes`, applied per R-369): both sides' lines stay and nothing
-  conflicts, so an entry edited on two sides keeps both versions, and only a repeated heading fails the plan check:
-  read the queue's merged diff.
 - **RQ ids.** Before filing an RQ, take the next free id across every `origin/*` branch: `git fetch`, then search each
   branch's `REVIEW_QUEUE.md` and `docs/archive/review_queue/`. Two agents once both filed RQ-188.
 - **An RQ open only on a PR branch.** When a rulings PR rules on it, the rulings PR archives it in
