@@ -49,8 +49,8 @@ use crate::decode::Ic;
 use crate::generated::links::LinkReal;
 use crate::occupant::{Geom, State};
 use crate::payload::{
-    pack_packed_b, pack_times, set_d_min_unset, set_dmin_pair, set_state, PayloadReal,
-    SimStateBaseOf, SD_DMIN_PAIR_SENTINEL, STATE_BOUNDED, STATE_RUNNING,
+    pack_packed_b, pack_times, set_d_min_unset, set_detail, set_dmin_pair, set_state, PayloadReal,
+    SimStateBaseOf, SD_DMIN_PAIR_SENTINEL, STATE_BOUNDED, STATE_RUNNING, STATE_SIM_FAILED,
 };
 use crate::real::IeeeBits;
 use crate::shape::shape;
@@ -93,17 +93,55 @@ pub fn integrate<A: Advance, R: WrapperReal>(
 /// `out` with the monitored fields of the run `cadence` followed (Part 1, "COM projection and invariant monitoring";
 /// payload §1, §2): `E_0` and `Lz_0` as stored before the loop, and `packed_b` holding `dE_max = max|ΔE|` and
 /// `dLz_max = max|ΔL_z|`, rounded to f32 and then packed to f16 (clamped to binary16's finite range first).
+///
+/// **A run whose monitor latched a non-finite value** is marked, never stored as measured: `state` `sim_failed`, with
+/// its detail by what failed (payload §2: [`failed_detail`]), and both latches the defined failed-state 0.0 (payload §1,
+/// "Failed-state contents are defined"; R-79, R-271; `d_min` is unset already). The rest of the failure path, the terminal
+/// that ends the march and the other fields' failed-state values, is TASK-M3-17's and TASK-M3-18's.
 #[inline]
 pub fn monitored<R: WrapperReal>(
     out: SimStateBaseOf<R>,
     cadence: &WrapperCadence<R>,
 ) -> SimStateBaseOf<R> {
     let m = cadence.monitor_state();
+    let failed = m.non_finite();
+    let (packed_a, de_max, dlz_max) = if failed {
+        let marked = set_state(out.packed_a, STATE_SIM_FAILED);
+        (set_detail(marked, failed_detail(&out.r, &out.p)), 0.0, 0.0)
+    } else {
+        (out.packed_a, m.de_max().quantise(), m.dlz_max().quantise())
+    };
     SimStateBaseOf {
         E_0: m.e_0(),
         Lz_0: m.lz_0(),
-        packed_b: pack_packed_b(m.de_max().quantise(), m.dlz_max().quantise()),
+        packed_a,
+        packed_b: pack_packed_b(de_max, dlz_max),
         ..out
+    }
+}
+
+/// `sim_failed`'s detail for a run ending at `(r, p)` (payload §2): 0 for a NaN in the state, else 1 for a `±∞` in it,
+/// else 2, a non-finite derived quantity on a finite state.
+#[inline]
+fn failed_detail<R: WrapperReal>(r: &[[R; 2]; 3], p: &[[R; 2]; 3]) -> u32 {
+    let (mut nan, mut inf) = (false, false);
+    let mut i = 0;
+    while i < 3 {
+        let mut j = 0;
+        while j < 2 {
+            let (a, b) = (r[i][j], p[i][j]);
+            nan = nan || Float::is_nan(a) || Float::is_nan(b);
+            inf = inf || Float::is_infinite(a) || Float::is_infinite(b);
+            j += 1;
+        }
+        i += 1;
+    }
+    if nan {
+        0
+    } else if inf {
+        1
+    } else {
+        2
     }
 }
 

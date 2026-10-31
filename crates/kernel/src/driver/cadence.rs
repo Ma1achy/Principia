@@ -21,6 +21,8 @@
 //! bound ([`super::wrapper::integrate_word`]). The word buffer stays out of a run without one (REQ-PERF-008's symbolic
 //! features off, TASK-M4-05), which is why it is a wrapper around the cadence and not a hook in it.
 
+use spirv_std::num_traits::Float;
+
 use super::advance::Cadence;
 use super::monitor::Monitor;
 use super::project::ComProjection;
@@ -46,7 +48,7 @@ pub struct WrapperCadence<R> {
     done: bool,
 }
 
-impl<R: Real> WrapperCadence<R> {
+impl<R: Real + Float> WrapperCadence<R> {
     /// The cadence of a run from masses `m`, positions `r` and momenta `p`, before its first step: the projection's
     /// `M` formed from `m` and cached, `E₀` and `L_{z,0}` evaluated on the state and stored.
     #[inline]

@@ -15,7 +15,7 @@
 //! **Domain** (pitfalls §10): "`≫`" is read as at least ten times (applied per R-369). "Everywhere" is the rest starts
 //! of the grid below and dd tests 2 and 7: Euler's relative drift there is at least 2.9 at the default horizon, while
 //! over latent cubes with momentum it can fall to 10⁻⁷ on a fast, unbound start that barely interacts, below any
-//! threshold that leaves the symplectic occupants unlit on test 2 (REVIEW_QUEUE RQ-626).
+//! threshold that leaves the symplectic occupants unlit on test 2 (R-660, RQ-626 (a)).
 
 use kernel::decode::{self, Ic, Latent};
 #[cfg(feature = "controls")]
@@ -447,7 +447,7 @@ negative_control!(
 );
 
 /// Asserts the monitor's helpers at their boundaries: `mag`, the magnitude, either side of 0 and at it; `max`, the
-/// latch's larger, above, below, equal, and past a NaN, which it never takes; and the floor of `relative` below the
+/// floor's larger, above, below, equal, and past a NaN, which it never takes; and the floor of `relative` below the
 /// initial value's magnitude, at it and above it.
 fn check_helpers(mag: fn(f64) -> f64, max: fn(f64, f64) -> f64) {
     assert_eq!(
@@ -463,12 +463,12 @@ fn check_helpers(mag: fn(f64) -> f64, max: fn(f64, f64) -> f64) {
     assert_eq!(
         [max(1.0, 2.0), max(2.0, 1.0), max(1.0, f64::NAN)],
         [2.0, 2.0, 1.0],
-        "the latch's larger is wrong"
+        "the floor's larger is wrong"
     );
     assert_eq!(
         max(0.0, -0.0).to_bits(),
         0.0_f64.to_bits(),
-        "the latch's larger replaces an equal value"
+        "the floor's larger replaces an equal value"
     );
     assert_eq!(
         [
@@ -503,19 +503,23 @@ fn check_no_suspect_bits(names: &[String]) {
     }
 }
 
-/// The payload's stored names: every struct member, every packed word and every entry that is not derived at read.
+/// The payload's stored names, by the read side's own generated writers and packed-word accessors: the base struct's
+/// members as its `Debug` prints them, and `set_` writers of `crates/kernel/src/payload/generated.rs`, whose every stored
+/// sub-field has one. `kernel` never reads the ledger itself (R-185), so the source generated from it stands in;
+/// `crates/validation/tests/drift_proposals.rs`'s `drift_suspect_no_stored_bit_in_the_ledger` reads the ledger.
 fn stored_names() -> Vec<String> {
-    let l = ledger::payload::ledger();
-    let mut names: Vec<String> = ledger::payload::structs()
-        .iter()
-        .flat_map(|s| s.members.iter().map(|m| m.name.to_owned()))
+    let base = format!("{:?}", SimStateBase::default());
+    let mut names: Vec<String> = base
+        .split(|c: char| !(c.is_alphanumeric() || c == '_'))
+        .filter(|w| w.chars().next().is_some_and(|c| c.is_alphabetic()))
+        .map(str::to_owned)
         .collect();
-    names.extend(l.words.iter().map(|w| w.name.to_owned()));
+    let source = include_str!("../src/payload/generated.rs");
     names.extend(
-        l.entries
-            .iter()
-            .filter(|e| !matches!(e.location, Some(ledger::schema::Location::Derived { .. })))
-            .filter_map(|e| e.name.map(str::to_owned)),
+        source
+            .split("pub fn set_")
+            .skip(1)
+            .filter_map(|rest| rest.split('(').next().map(str::to_owned)),
     );
     names
 }
@@ -603,8 +607,8 @@ fn lit<A: Stepper>(name: &str, fixture: &Fixture) {
 
 /// Euler lights `SUSPECT_ENERGY` everywhere (REQ-INT-040), read as its bound, interacting states, where its secular
 /// drift has the horizon to act: the 8 × 8 rest starts of [`rest_grid`] and dd tests 2 and 7. Over the whole latent
-/// cube it does not (a sample that separates early stays under the threshold), which RQ-626 puts to the owner; this is
-/// its option (a), applied meanwhile.
+/// cube it does not (a sample that separates early stays under the threshold), so R-660 confirms RQ-626's
+/// option (a).
 #[test]
 fn drift_suspect_read_time_euler_everywhere() {
     for z in rest_grid() {
@@ -664,7 +668,8 @@ fn check_shape(name: &str, max: f64, last: f64) {
 fn close_encounter_drift_shape() {
     let fixture = close_encounter();
     // The stored latch against the final drift read from the stored state: KDK at both precisions and Yoshida-4 at
-    // f64, whose spikes the f16 latch holds.
+    // f64. Yoshida-4 and Yoshida-6 at f32 read 1.1× and 2×: their spikes sit at or below f32's round-off, so their
+    // final drift is round-off too (dd_integrator §5 test 7), and Yoshida-6 at f64 falls under the f16 latch's floor.
     let stored = [
         ("KDK f32", shape::<Kdk, f32>(&fixture)),
         ("KDK f64", shape::<Kdk, f64>(&fixture)),
@@ -888,4 +893,137 @@ negative_control!(
         out.r = [[0.0; 2]; 3];
         out
     })
+);
+
+// ── A non-finite measurement is kept (R-47; philosophy §4.3; payload §1, §2; R-79, R-271) ────────────────────────────
+
+/// Asserts the maximum's latch at its arms: raised, kept, a NaN or `∞` taking a finite maximum and staying past every
+/// later value.
+fn check_latched(latch: fn(f64, f64) -> f64) {
+    assert_eq!(
+        [latch(1.0, 2.0), latch(2.0, 1.0)],
+        [2.0, 2.0],
+        "the plain max"
+    );
+    assert!(latch(1.0, f64::NAN).is_nan(), "a NaN did not latch");
+    assert!(
+        latch(f64::NAN, 1.0).is_nan(),
+        "a later value replaced a latched NaN"
+    );
+    assert!(
+        latch(f64::NAN, f64::INFINITY).is_nan(),
+        "an `∞` replaced a latched NaN"
+    );
+    assert_eq!(
+        latch(1.0, f64::INFINITY),
+        f64::INFINITY,
+        "an `∞` did not latch"
+    );
+    assert_eq!(
+        latch(f64::INFINITY, 1.0),
+        f64::INFINITY,
+        "a later value replaced an `∞`"
+    );
+    assert!(
+        !latch(f64::INFINITY, f64::NAN).is_finite(),
+        "a NaN took a latched `∞` finite"
+    );
+}
+
+#[test]
+fn invariant_monitor_latches_a_non_finite_value() {
+    check_latched(kernel::driver::monitor::latched);
+}
+
+negative_control!(
+    invariant_monitor_latches_a_non_finite_value,
+    "the plain larger, which keeps its old value past a NaN",
+    expected = "a NaN did not latch",
+    check_latched(kernel::driver::monitor::larger)
+);
+
+/// A finite IC whose energy is non-finite on a finite state at f32: momenta whose squares overflow, so `E₀ = E(t) = +∞`
+/// and each `ΔE` is NaN.
+fn overflowing() -> Fixture {
+    Fixture {
+        name: "momenta whose squares overflow at f32",
+        ic: Ic {
+            m: [0.25, 0.25, 0.5],
+            r: [[-0.5, -0.25], [0.5, -0.25], [0.0, 0.25]],
+            p: [[3e19, 0.0], [-3e19, 0.0], [0.0, 0.0]],
+        },
+        horizon: 0.002,
+    }
+}
+
+/// Two coincident bodies from rest: the force is NaN at the first kick, so the state goes NaN, with no terminal detector
+/// yet to stop the march (TASK-M3-09).
+fn coincident() -> Fixture {
+    Fixture {
+        name: "coincident bodies",
+        ic: Ic {
+            m: [0.25, 0.25, 0.5],
+            r: [[0.0, 0.0], [0.0, 0.0], [0.0, 0.5]],
+            p: [[0.0; 2]; 3],
+        },
+        horizon: 0.002,
+    }
+}
+
+/// `out` is marked as a failed run, `detail` its code, its latches the defined 0.0 and nothing NaN in `packed_b`.
+fn check_failed(name: &str, out: &SimStateBase, detail: u32) {
+    use kernel::payload::{sd_detail, sd_state, STATE_SIM_FAILED};
+    assert_eq!(
+        sd_state(out.packed_a),
+        STATE_SIM_FAILED,
+        "{name}: not marked failed"
+    );
+    assert_eq!(sd_detail(out.packed_a), detail, "{name}: the detail");
+    assert_eq!(
+        (
+            pb_dE_max(out.packed_b).to_bits(),
+            pb_dLz_max(out.packed_b).to_bits()
+        ),
+        (0, 0),
+        "{name}: the failed-state latches"
+    );
+}
+
+#[test]
+fn invariant_monitor_marks_a_non_finite_run_failed() {
+    let (out, cadence) = integrate_fixture::<Kdk, f32>(&overflowing());
+    assert!(
+        out.r.iter().flatten().all(|x| x.is_finite()),
+        "the state failed too"
+    );
+    assert!(
+        cadence.monitor_state().de_max().is_nan(),
+        "the live latch holds the NaN"
+    );
+    assert!(cadence.monitor_state().non_finite());
+    check_failed("a NaN energy on a finite state", &out, 2);
+    let (out, cadence) = integrate_fixture::<Kdk, f32>(&coincident());
+    assert!(cadence.monitor_state().non_finite());
+    check_failed("coincident bodies", &out, 0);
+    // A healthy run keeps its measured latches and its label.
+    let (out, cadence) = integrate_fixture::<Kdk, f32>(&figure_eight());
+    assert!(!cadence.monitor_state().non_finite());
+    assert_eq!(
+        kernel::payload::sd_state(out.packed_a),
+        kernel::payload::STATE_BOUNDED
+    );
+    assert!(
+        pb_dE_max(out.packed_b) > 0.0,
+        "a healthy run's latch was zeroed"
+    );
+}
+
+negative_control!(
+    invariant_monitor_marks_a_non_finite_run_failed,
+    "a healthy run read as failed",
+    expected = "not marked failed",
+    {
+        let (out, _) = integrate_fixture::<Kdk, f32>(&figure_eight());
+        check_failed("a healthy run", &out, 2);
+    }
 );
