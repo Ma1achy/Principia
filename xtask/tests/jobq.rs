@@ -19,10 +19,15 @@ use scratch::Scratch;
 use validation::negative_control;
 use validation::spawn::Spawn;
 use xtask::jobq::{
-    archivable, heavy, leader_is_jobs, lock_holder, next_job, parse_etime, parse_ps, parse_submit,
-    run_order, runner_settings, snapshot_env, target_key, timed_out, utc, violations, Config, Job,
-    Priority, Proc, Queue, RunnerLock, State, ARCHIVE_AFTER, MAX_ATTEMPTS, START_SLACK,
+    archivable, heavy, leader_is_jobs, lock_holder, may_signal_group, next_job, parse_etime,
+    parse_ps, parse_submit, pid_alive, run_order, runner_settings, snapshot_env, target_key,
+    timed_out, utc, violations, Config, Job, Priority, Proc, Queue, RunnerLock, State,
+    ARCHIVE_AFTER, MAX_ATTEMPTS, START_SLACK,
 };
+
+/// A job that waits for the file `go`, 40 s at most: its queue's drop can miss it, should the test die, and a gate with
+/// no bound would go on forking `sleep` until the machine ends.
+const GATE: &str = "i=0; while [ ! -e go ] && [ $i -lt 800 ]; do sleep 0.05; i=$((i+1)); done";
 
 /// A queue of the test's own, in a scratch folder, with short timings.
 struct Q {
@@ -50,17 +55,21 @@ impl Q {
         Queue::at(self.dir.to_path_buf())
     }
 
-    /// Runs `xtask job <args>` on this queue, bounded by `within`, under the process cap ([`process_cap`]), which
+    /// Runs `xtask job <args>` on this queue, bounded by `within`, under the process limits ([`Q::command`]), which
     /// the runner it may start and the runner's jobs inherit.
     fn run_within(&self, args: &[&str], within: Duration) -> std::io::Result<Output> {
         self.command(args).output_within(within)
     }
 
-    /// `xtask job <args>` on this queue, under the process cap.
+    /// `xtask job <args>` on this queue, under the process cap ([`process_cap`]), and 600 s of CPU and 1 GiB per file, so
+    /// that a runner that spins (a mutant's) ends, and one that writes without end stops.
     fn command(&self, args: &[&str]) -> Command {
         let mut command = Command::new("/bin/bash");
         command
-            .args(["-c", "ulimit -u \"$0\" && exec \"$@\""])
+            .args([
+                "-c",
+                "ulimit -u \"$0\" && ulimit -t 600 && ulimit -f 1048576 && exec \"$@\"",
+            ])
             .arg(process_cap().to_string())
             .arg(env!("CARGO_BIN_EXE_xtask"))
             .arg("job")
@@ -153,23 +162,14 @@ impl Q {
 }
 
 impl Drop for Q {
-    /// Ends every process still running for this queue, by pid: a runner names its state directory in its arguments,
-    /// and so does each stand-in the tests start. A test that passed leaves none; one that failed, or a mutant, may.
+    /// Ends every process still running for this queue, by pid: one that names its state directory in its arguments, as
+    /// a runner and each stand-in the tests start do, or whose working directory is in it, as a job's is. A test that
+    /// passed leaves none; one that failed, or a mutant, may. Twice, since a runner may start a job as it is read.
     fn drop(&mut self) {
-        let dir = self.dir.to_string_lossy().into_owned();
-        let Ok(out) = Command::new("ps")
-            .args(["-axo", "pid=,args="])
-            .output_within(Duration::from_secs(30))
-        else {
-            return;
-        };
-        for line in String::from_utf8_lossy(&out.stdout).lines() {
-            let line = line.trim_start();
-            let Some((pid, args)) = line.split_once(' ') else {
-                continue;
-            };
-            if args.contains(&dir) && !args.starts_with("ps ") {
-                if let Ok(pid) = pid.parse() {
+        let dir = self.dir.to_string_lossy().to_lowercase();
+        for _ in 0..2 {
+            for (pid, text) in process_texts() {
+                if text.contains(&dir) && !text.starts_with("ps ") {
                     kill("-9", pid);
                 }
             }
@@ -177,37 +177,78 @@ impl Drop for Q {
     }
 }
 
-/// Ends, once per test process, every process left naming the queue of an earlier test process that has gone (a
-/// test killed at a timeout, as cargo-mutants kills one, never drops its queue): its scratch folder,
-/// `<CARGO_TARGET_TMPDIR>/jobq_<tag>-<pid>-<n>`, names that process's pid.
-fn sweep_dead_tests() {
-    static SWEPT: std::sync::Once = std::sync::Once::new();
-    SWEPT.call_once(|| {
-        let prefix = format!("{}/jobq_", env!("CARGO_TARGET_TMPDIR"));
-        let Ok(out) = Command::new("ps")
-            .args(["-axo", "pid=,args="])
-            .output_within(Duration::from_secs(30))
-        else {
-            return;
-        };
-        for line in String::from_utf8_lossy(&out.stdout).lines() {
-            let line = line.trim_start();
-            let (Some((pid, args)), Some(at)) = (line.split_once(' '), line.find(&prefix)) else {
-                continue;
-            };
-            let name = line[at + prefix.len()..]
-                .split('/')
-                .next()
-                .unwrap_or_default();
-            let owner = name.rsplit('-').nth(1).and_then(|p| p.parse::<i32>().ok());
-            let ours = owner == Some(std::process::id() as i32);
-            if let (Some(owner), Ok(pid)) = (owner, pid.parse::<i32>()) {
-                if !ours && !alive(owner) && !args.starts_with("ps ") {
-                    kill("-9", pid);
-                }
+/// Every process's pid, with its command line and working directory as one text, in lower case: `lsof` gives a directory
+/// in the case its volume stores, which on the Mac's case-insensitive volume need not be the case a test named it in.
+fn process_texts() -> Vec<(i32, String)> {
+    let Ok(out) = Command::new("ps")
+        .args(["-axo", "pid=,args="])
+        .output_within(Duration::from_secs(30))
+    else {
+        return Vec::new();
+    };
+    let cwds = working_directories();
+    String::from_utf8_lossy(&out.stdout)
+        .lines()
+        .filter_map(|line| {
+            let (pid, args) = line.trim_start().split_once(' ')?;
+            let pid: i32 = pid.parse().ok()?;
+            let cwd = cwds.get(&pid).map_or("", String::as_str);
+            Some((pid, format!("{args}\n{cwd}").to_lowercase()))
+        })
+        .collect()
+}
+
+/// This user's processes' working directories: from `/proc` on Linux, from `lsof` elsewhere.
+fn working_directories() -> BTreeMap<i32, String> {
+    let mut cwds = BTreeMap::new();
+    if let Ok(entries) = std::fs::read_dir("/proc") {
+        for entry in entries.flatten() {
+            let pid = entry.file_name().to_str().and_then(|n| n.parse().ok());
+            if let (Some(pid), Ok(cwd)) = (pid, std::fs::read_link(entry.path().join("cwd"))) {
+                cwds.insert(pid, cwd.display().to_string());
             }
         }
-    });
+        return cwds;
+    }
+    let Ok(out) = Command::new("sh")
+        .args(["-c", "lsof -a -d cwd -u \"$(id -u)\" -Fpn"])
+        .output_within(Duration::from_secs(30))
+    else {
+        return cwds;
+    };
+    let mut pid = None;
+    for line in String::from_utf8_lossy(&out.stdout).lines() {
+        if let Some(value) = line.strip_prefix('p') {
+            pid = value.parse().ok();
+        } else if let (Some(pid), Some(value)) = (pid, line.strip_prefix('n')) {
+            cwds.insert(pid, value.to_owned());
+        }
+    }
+    cwds
+}
+
+/// Ends, once per test process, every process left of an earlier test process that has gone (a test killed at a
+/// timeout, as nextest and cargo-mutants kill one, never drops its queue).
+fn sweep_dead_tests() {
+    static SWEPT: std::sync::Once = std::sync::Once::new();
+    SWEPT.call_once(sweep_dead_tests_now);
+}
+
+/// Ends every process that names, in its arguments or working directory, a scratch folder of these tests or of qa's
+/// (`<CARGO_TARGET_TMPDIR>/[qa]jobq_<tag>-<pid>-<n>`) whose test process, the `<pid>`, has gone.
+fn sweep_dead_tests_now() {
+    let root = format!("{}/", env!("CARGO_TARGET_TMPDIR")).to_lowercase();
+    for (pid, text) in process_texts() {
+        let dead = text.split(&root).skip(1).any(|rest| {
+            let name = rest.split(['/', ' ', '\n']).next().unwrap_or_default();
+            let owner = name.rsplit('-').nth(1).and_then(|p| p.parse::<i32>().ok());
+            name.contains("jobq_")
+                && owner.is_some_and(|owner| owner != std::process::id() as i32 && !alive(owner))
+        });
+        if dead && !text.starts_with("ps ") {
+            kill("-9", pid);
+        }
+    }
 }
 
 /// The most processes this user may have while an xtask call of these tests runs (`ulimit -u`): as many as it had
@@ -238,7 +279,11 @@ fn alive(pid: i32) -> bool {
         .success()
 }
 
+/// Signals `pid`, or the group `-pid`. Never 0, 1, -1 or their like: `kill -9 -1` is every process of this user.
 fn kill(signal: &str, pid: i32) {
+    if pid.abs() <= 1 {
+        return;
+    }
     let _ = Command::new("kill")
         .args([signal, &pid.to_string()])
         .output_within(Duration::from_secs(30));
@@ -275,12 +320,7 @@ fn read_pid(path: &Path) -> i32 {
 /// label to `order`; lets the gate go and checks the labels ran in the order `expected`.
 fn run_order_case(tag: &str, jobs: &[(&str, &str)], expected: &str) {
     let q = Q::new(tag, "");
-    let gate = q.submit(
-        "peek",
-        "gate",
-        &[],
-        &["sh", "-c", "while [ ! -e go ]; do sleep 0.05; done"],
-    );
+    let gate = q.submit("peek", "gate", &[], &["sh", "-c", GATE]);
     let ids: Vec<u64> = jobs
         .iter()
         .map(|(class, label)| {
@@ -2245,12 +2285,7 @@ fn path_case(tag: &str, on_path: bool) {
         .expect("chmod ran");
     let base = "/usr/bin:/bin";
     let with = format!("{}:{base}", probe.display());
-    let gate = q.submit_with_path(
-        base,
-        "gate",
-        &[],
-        &["/bin/sh", "-c", "while [ ! -e go ]; do sleep 0.05; done"],
-    );
+    let gate = q.submit_with_path(base, "gate", &[], &["/bin/sh", "-c", GATE]);
     let submitter = if on_path { with.as_str() } else { base };
     let found = q.submit_with_path(submitter, "found", &[], &["jobq-path-probe"]);
     let env_path = format!("PATH={base}");
@@ -2325,12 +2360,7 @@ fn live_copies(path: &Path) -> Vec<i32> {
 /// cancellable.
 fn failed_start_save_case(tag: &str, fail: bool) {
     let q = Q::new(tag, "concurrency = 2\nidle = 5\ntick_ms = 100\n");
-    let gate = q.submit(
-        "peek",
-        "gate",
-        &["--timeout", "30"],
-        &["sh", "-c", "while [ ! -e go ]; do sleep 0.05; done"],
-    );
+    let gate = q.submit("peek", "gate", &["--timeout", "30"], &["sh", "-c", GATE]);
     let copies = q.work().join("copies");
     let id = q.submit(
         "peek",
@@ -2411,7 +2441,7 @@ fn failed_end_save_case(tag: &str, fail: bool) {
         "peek",
         "ends",
         &["--timeout", "30"],
-        &["sh", "-c", "while [ ! -e go ]; do sleep 0.05; done; exit 7"],
+        &["sh", "-c", &format!("{GATE}; exit 7")],
     );
     assert!(
         until(10, || q
@@ -2507,8 +2537,9 @@ fn concurrency_case(
     expected: (i32, i32),
 ) {
     let q = Q::new(tag, &format!("concurrency = {concurrency}\n"));
-    let script =
-        |me: &str, other: &str| format!("touch {me}; while [ ! -e {other} ]; do sleep 0.05; done");
+    let script = |me: &str, other: &str| {
+        format!("touch {me}; i=0; while [ ! -e {other} ] && [ $i -lt 800 ]; do sleep 0.05; i=$((i+1)); done")
+    };
     let (a_env, b_env, timeout) = (
         format!("CARGO_TARGET_DIR={a}"),
         format!("CARGO_TARGET_DIR={b}"),
@@ -2567,4 +2598,244 @@ negative_control!(
     "jobs on two target directories run at once",
     expected = "jobs not run 2 at a time",
     shared_target_case("jobq_shared_target_control", &[("/t/a", "/t/b")])
+);
+
+// --- What keeps a run of these tests, mutated or not, from harming its machine ----------------------------------------
+
+/// `may_signal_group` answers `expected` for each group, for a process 500 in group 400.
+fn check_may_signal(cases: &[(i32, bool)]) {
+    for &(pgid, expected) in cases {
+        assert_eq!(
+            may_signal_group(pgid, 500, 400),
+            expected,
+            "group {pgid} wrongly judged"
+        );
+    }
+}
+
+// Only the pure check is tested. No test may plant a group it refuses for the runner to signal: with the check mutated,
+// that would be a real `kill(-1, SIGKILL)` on the machine running the mutant.
+#[test]
+fn jobq_refuses_to_signal_system_and_own_groups() {
+    check_may_signal(&[
+        (i32::MIN, false),
+        (-1, false),
+        (0, false),
+        (1, false),
+        (2, true),
+        (399, true),
+        (400, false),
+        (401, true),
+        (499, true),
+        (500, false),
+        (501, true),
+    ]);
+}
+
+negative_control!(
+    jobq_refuses_to_signal_system_and_own_groups,
+    "group 1, every process of this user, is not to be signalled",
+    expected = "group 1 wrongly judged",
+    check_may_signal(&[(1, true)])
+);
+
+/// `pid_alive` answers `expected` for each pid.
+fn check_pid_alive(cases: &[(i32, bool)]) {
+    for &(pid, expected) in cases {
+        assert_eq!(pid_alive(pid), expected, "pid {pid} wrongly judged");
+    }
+}
+
+#[test]
+fn jobq_a_pid_of_zero_or_below_is_not_alive() {
+    check_pid_alive(&[
+        (-1, false),
+        (0, false),
+        (1, true),
+        (std::process::id() as i32, true),
+        (dead_pid(), false),
+    ]);
+}
+
+negative_control!(
+    jobq_a_pid_of_zero_or_below_is_not_alive,
+    "pid 0 names no process",
+    expected = "pid 0 wrongly judged",
+    check_pid_alive(&[(0, true)])
+);
+
+/// A stand-in naming nothing in its arguments, running in `cwd`, in a group of its own; and the thread reaping it.
+fn start_in(
+    cwd: &Path,
+) -> (
+    i32,
+    std::thread::JoinHandle<std::io::Result<std::process::ExitStatus>>,
+) {
+    let mut child = Command::new("sleep")
+        .arg("60")
+        .current_dir(cwd)
+        .process_group(0)
+        .spawn()
+        .expect("stand-in started");
+    let pid = child.id() as i32;
+    (pid, std::thread::spawn(move || child.wait()))
+}
+
+/// A stand-in running in `cwd` must be ended by `ending`, exactly when `ended`.
+fn check_ended(what: &str, cwd: &Path, ended: bool, ending: impl FnOnce()) {
+    let (pid, reaper) = start_in(cwd);
+    // Until `lsof` or `/proc` shows the stand-in in its folder, `ending` can't find it.
+    assert!(
+        until(10, || working_directories().contains_key(&pid)),
+        "the stand-in never showed a working directory"
+    );
+    ending();
+    let gone = until(5, || !alive(pid));
+    kill("-9", pid);
+    let _ = reaper.join();
+    assert_eq!(gone, ended, "{what}");
+}
+
+/// A process working in the queue's folder, or, without `in_queue`, in another, as a job does though it doesn't name the
+/// folder in its arguments, is ended by the queue's drop.
+fn drop_case(tag: &str, in_queue: bool) {
+    let q = Q::new(tag, "");
+    let other = Scratch::new("jobq_drop_other");
+    std::fs::create_dir_all(&*other).expect("other folder");
+    let cwd = if in_queue {
+        q.work()
+    } else {
+        other.to_path_buf()
+    };
+    check_ended("a job outlived its queue's drop", &cwd, true, move || {
+        drop(q)
+    });
+}
+
+#[test]
+fn jobq_a_queues_drop_ends_its_jobs() {
+    drop_case("jobq_drop", true);
+}
+
+negative_control!(
+    jobq_a_queues_drop_ends_its_jobs,
+    "a process in another folder is no job of this queue",
+    expected = "a job outlived its queue's drop",
+    drop_case("jobq_drop_control", false)
+);
+
+/// A process working in the scratch folder of a test process, gone or (without `owner_dead`) alive, as a job left by a
+/// killed test does, is ended by the sweep only if that test process has gone.
+fn sweep_case(tag: &str, name: &str, owner_dead: bool) {
+    let owner = if owner_dead {
+        dead_pid()
+    } else {
+        std::process::id() as i32
+    };
+    let dir = Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!("{name}_{tag}-{owner}-0"));
+    std::fs::create_dir_all(&dir).expect("folder made");
+    check_ended(
+        "the sweep left a dead test's job running",
+        &dir,
+        true,
+        sweep_dead_tests_now,
+    );
+    std::fs::remove_dir_all(&dir).expect("folder removed");
+}
+
+#[test]
+fn jobq_the_sweep_ends_a_dead_tests_jobs_by_their_folder() {
+    sweep_case("sweep", "jobq", true);
+    sweep_case("sweep", "qajobq", true);
+}
+
+negative_control!(
+    jobq_the_sweep_ends_a_dead_tests_jobs_by_their_folder,
+    "a live test's job is not swept",
+    expected = "the sweep left a dead test's job running",
+    sweep_case("sweep_control", "jobq", false)
+);
+
+// --- The runner's own bounds --------------------------------------------------------------------------------------
+
+/// A job queued with `attempts` starts behind it ends with status `expected`.
+fn start_limit_case(tag: &str, attempts: u32, expected: i32) {
+    let q = Q::new(tag, "");
+    std::fs::create_dir_all(q.dir.join("jobs")).expect("jobs dir");
+    std::fs::write(q.dir.join("next_id"), "2\n").expect("next id");
+    let mut planted = job(1, Priority::Peek, State::Queued, Some("/t"));
+    planted.worktree = q.work();
+    planted.attempts = attempts;
+    planted.command = ["sh", "-c", "exit 7"].map(str::to_owned).to_vec();
+    q.queue().save(&planted).expect("job planted");
+    let code = q.wait(1).0;
+    q.finish();
+    assert_eq!(code, expected, "a job's starts are not limited");
+}
+
+#[test]
+fn jobq_no_job_starts_more_than_max_attempts_times() {
+    start_limit_case("jobq_start_limit", MAX_ATTEMPTS, 125);
+    start_limit_case("jobq_start_limit_last", MAX_ATTEMPTS - 1, 7);
+}
+
+negative_control!(
+    jobq_no_job_starts_more_than_max_attempts_times,
+    "one start short of the limit, the job runs",
+    expected = "a job's starts are not limited",
+    start_limit_case("jobq_start_limit_control", MAX_ATTEMPTS - 1, 125)
+);
+
+/// A running job's file is set back to queued, with a slot free: the runner must not start a second copy, which would
+/// lose the first's timeout and cancel. It must have started `expected` copies.
+fn tracked_case(tag: &str, expected: usize) {
+    let q = Q::new(tag, "concurrency = 2\nidle = 5\n");
+    let id = q.submit(
+        "peek",
+        "long",
+        &["--timeout", "30"],
+        &["sh", "-c", "echo $$ >> copies; exec sleep 20"],
+    );
+    assert!(
+        until(10, || q
+            .queue()
+            .load(id)
+            .is_ok_and(|job| job.leader_start.is_some())),
+        "the job's start was never recorded"
+    );
+    let mut back = q.queue().load(id).expect("job file");
+    back.state = State::Queued;
+    q.queue().save(&back).expect("job set back");
+    // Twenty passes of the runner.
+    std::thread::sleep(Duration::from_secs(1));
+    back.state = State::Running;
+    q.queue().save(&back).expect("job restored");
+    let copies = std::fs::read_to_string(q.work().join("copies")).expect("copies written");
+    let copies: Vec<&str> = copies.lines().collect();
+    assert!(
+        q.run(&["cancel", &id.to_string()]).status.success(),
+        "cancel failed"
+    );
+    assert_eq!(q.wait(id).0, 130, "the job's one copy was not cancelled");
+    q.finish();
+    for pid in &copies {
+        kill("-9", pid.parse().expect("a pid"));
+    }
+    assert_eq!(
+        copies.len(),
+        expected,
+        "a job already running started again"
+    );
+}
+
+#[test]
+fn jobq_a_job_already_running_is_not_started_again() {
+    tracked_case("jobq_tracked", 1);
+}
+
+negative_control!(
+    jobq_a_job_already_running_is_not_started_again,
+    "a job that started once did not start twice",
+    expected = "a job already running started again",
+    tracked_case("jobq_tracked_control", 2)
 );

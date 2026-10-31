@@ -29,6 +29,7 @@
 //! or marks it lost after [`MAX_ATTEMPTS`] starts. A job runs in a
 //! process group of its own; past its timeout, or when cancelled, the runner sends the group SIGTERM, then SIGKILL
 //! after `grace` seconds; and whenever the job's own process ends, the runner kills what is left of its group. A runner with nothing queued or running for `idle` seconds exits, so none is left behind.
+//! Every group signal passes [`may_signal_group`], and a pass starts at most `concurrency` jobs.
 //!
 //! Two limits of that recovery. A runner killed between a job's spawn and its save leaves that start untracked: the
 //! job's file still says queued, so the job runs again while that one copy has no timeout or cancel and may overlap the
@@ -442,13 +443,28 @@ pub fn runner_settings(text: &str) -> String {
     )
 }
 
-/// Whether a process with this pid exists (ours or not).
+/// Whether a process with this pid exists (ours or not). A pid of zero or below, as a damaged lock file could give,
+/// names no process.
 pub fn pid_alive(pid: i32) -> bool {
     use rustix::io::Errno;
+    if pid <= 0 {
+        return false;
+    }
     match rustix::process::Pid::from_raw(pid) {
         Some(pid) => !matches!(rustix::process::test_kill_process(pid), Err(Errno::SRCH)),
         None => false,
     }
+}
+
+/// Whether process group `pgid` may be signalled by the process `own_pid` in group `own_group`: the one check in front
+/// of every group signal ([`signal_group`]). `kill(-1, ...)`, which is what signalling group 1 comes to, reaches every
+/// process this user may signal, and group 0 is the caller's own; ids below those are not groups at all; and neither
+/// the runner's own pid nor group can be a job's, since each job leads a group of its own.
+///
+/// Its tests call only this function. None may ever plant a group this refuses and let the runner signal it: with this
+/// check mutated, that would be a real `kill(-1, SIGKILL)`.
+pub fn may_signal_group(pgid: i32, own_pid: i32, own_group: i32) -> bool {
+    pgid > 1 && pgid != own_pid && pgid != own_group
 }
 
 /// Now, in Unix seconds.
@@ -1296,7 +1312,12 @@ impl Runner {
                 self.me
             ));
         }
-        while self.children.len() < config.concurrency {
+        // At most `concurrency` starts a pass, whatever the choice of job does: a loop on the slots alone would spin, or
+        // start copies without end, on a job whose start doesn't fill one.
+        for _ in 0..config.concurrency {
+            if self.children.len() >= config.concurrency {
+                break;
+            }
             let Some(next) = next_job(&jobs).map(|job| job.id) else {
                 break;
             };
@@ -1314,7 +1335,24 @@ impl Runner {
     /// command can't be started, ends as not started. If the file can't record a start, the start is undone: its group
     /// is killed and reaped and the error returned, so nothing runs that the file doesn't record; otherwise the job,
     /// still queued, would start again on every pass, each copy with no timeout or cancel.
+    ///
+    /// Two limits hold whatever the file says. A job this runner already tracks is not started again, which would drop
+    /// the running copy's child and so its timeout and cancel. And no job starts more than [`MAX_ATTEMPTS`] times: one
+    /// queued with that many starts behind it ends as lost.
     fn start(&mut self, job: &mut Job, config: &Config) -> Result<(), String> {
+        if self.children.contains_key(&job.id) {
+            log(&format!(
+                "runner {}: job {}: already running here; not started again",
+                self.me, job.id
+            ));
+            return Ok(());
+        }
+        if job.attempts >= MAX_ATTEMPTS {
+            job.state = State::Lost;
+            job.finished = Some(now());
+            job.note = Some(format!("lost: queued after {} starts", job.attempts));
+            return self.queue.save(job);
+        }
         job.attempts += 1;
         job.started = Some(now());
         job.runner_pid = Some(self.me);
@@ -1438,8 +1476,17 @@ impl Runner {
     }
 }
 
-/// Sends `signal` to process group `pgid`; a group already gone is not an error.
+/// Sends `signal` to process group `pgid`, if [`may_signal_group`] allows it, and logs it if not; a group already gone
+/// is not an error.
 fn signal_group(pgid: i32, signal: rustix::process::Signal) {
+    let own_pid = std::process::id() as i32;
+    let own_group = rustix::process::getpgrp().as_raw_pid();
+    if !may_signal_group(pgid, own_pid, own_group) {
+        log(&format!(
+            "runner {own_pid}: refused to signal process group {pgid} ({signal:?})"
+        ));
+        return;
+    }
     if let Some(group) = rustix::process::Pid::from_raw(pgid) {
         let _ = rustix::process::kill_process_group(group, signal);
     }

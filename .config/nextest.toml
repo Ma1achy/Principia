@@ -41,6 +41,13 @@ filter = """
 """
 test-group = "xtask-cargo"
 
+# The job queue's live tests (R-658) start runners and jobs in process groups of their own. A hung one is ended by this
+# timer rather than holding a test thread: `slow-timeout` 120 s, ended at the third period, past their 45 s per xtask
+# call. The `ci` profile inherits this override. Applied per R-369.
+[[profile.default.overrides]]
+filter = "binary_id(=xtask::jobq) | binary_id(/^xtask::qa_R-658/)"
+slow-timeout = { period = "120s", terminate-after = 3 }
+
 [test-groups]
 xtask-cargo = { max-threads = 1 }
 
