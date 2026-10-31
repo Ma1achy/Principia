@@ -49,12 +49,12 @@ def power(n, d, alt, reps):
     return hit / reps
 
 
-print(f"c(0.05) = {c(0.05):.4f}; c(0.05/12) = {c(0.05 / 12):.4f}")
-print("n: D_c at 5%; with Bonferroni over 12 tests")
+print(f"c(0.05) = {c(0.05):.4f}; c(0.05/9) = {c(0.05 / 9):.4f}")
+print("n: D_c at 5%; with Bonferroni over 9 tests")
 for n in (256, 1000, 4096, 6257, 7366, 10000):
-    print(f"  {n}: {c(0.05) * sqrt(2 / n):.4f}; {c(0.05 / 12) * sqrt(2 / n):.4f}")
+    print(f"  {n}: {c(0.05) * sqrt(2 / n):.4f}; {c(0.05 / 9) * sqrt(2 / n):.4f}")
 for d in (0.02, 0.03, 0.05):
-    print(f"n with D_c = {d}: {2 * (c(0.05) / d) ** 2:.0f}; with Bonferroni over 12: {2 * (c(0.05 / 12) / d) ** 2:.0f}")
+    print(f"n with D_c = {d}: {2 * (c(0.05) / d) ** 2:.0f}; with Bonferroni over 9: {2 * (c(0.05 / 9) / d) ** 2:.0f}")
 print("Monte Carlo power of the 5% test when the true distance is D_c")
 for n, reps in ((256, 800), (10000, 300)):
     for alt in ("normal shift", "tail mass", "at the median"):
@@ -84,6 +84,6 @@ for n in (256, 4096, 10000):
             break
         lo -= 1
     print(f"  {n}: ranks {lo} to {n - lo + 1}, quantiles {lo / n:.3f} to {(n - lo + 1) / n:.3f}, coverage {cover:.4f}")
-print("n = 256, c starts censored and all on one side of the median: the rank at which the bounds begin")
-for c_ in (112, 113, 127):
-    print(f"  c = {c_}: rank {256 - c_ + 1}")
+print("n = 256, c bounds of one direction: rank 145's end moves out by c ranks among the 256 - c measured ratios")
+for c_ in (111, 112, 127):
+    print(f"  c = {c_}: {256 - c_} measured; {'unbounded' if 256 - c_ < 145 else 'bounded'}")

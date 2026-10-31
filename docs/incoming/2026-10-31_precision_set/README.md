@@ -143,17 +143,19 @@ to a tail, and 0.50 to 0.53 for a difference localised at the median, the worst 
 at a distance of about 0.025 (0.63 at 0.022, 0.82 at 0.025, 0.91 at 0.028). So the owner's "≈0.02 needs n ~ 10⁴" holds as a
 critical value and for the broad differences, and is about 0.025 at 80% in the worst case tried.
 
-| n | D_c | D_c, Bonferroni over 12 tests | Fraction difference at 80% power, p = 0.5 / 1/3 / 0.1 |
+| n | D_c | D_c, Bonferroni over 9 tests | Fraction difference at 80% power, p = 0.5 / 1/3 / 0.1 |
 |---|---|---|---|
-| 256 | **0.120** | 0.155 | 0.124 / 0.117 / 0.074 |
-| 1,000 | 0.061 | 0.079 | 0.063 / 0.059 / 0.038 |
-| 4,096 | 0.030 | 0.039 | 0.031 / 0.029 / 0.019 |
+| 256 | **0.120** | 0.152 | 0.124 / 0.117 / 0.074 |
+| 1,000 | 0.061 | 0.077 | 0.063 / 0.059 / 0.038 |
+| 4,096 | 0.030 | 0.038 | 0.031 / 0.029 / 0.019 |
 | 6,257 (cold equal, Brutus ended by T = 200; conditional) | 0.024 | 0.031 | 0.025 / 0.024 / 0.015 |
-| 7,366 (cold 1:2:4, Brutus ended by T = 200; conditional) | 0.022 | 0.029 | 0.023 / 0.022 / 0.014 |
-| **10,000** | **0.019** | 0.025 | **0.020 / 0.019 / 0.012** |
+| 7,366 (cold 1:2:4, Brutus ended by T = 200; conditional) | 0.022 | 0.028 | 0.023 / 0.022 / 0.014 |
+| **10,000** | **0.019** | 0.024 | **0.020 / 0.019 / 0.012** |
 
-- `D_c = 0.02` needs **n = 9,222**, the owner's n ~ 10⁴; 15,434 with Bonferroni over 12 tests (four statistics, three
-  comparisons). A fraction difference of 0.02 at p = 0.5 needs n = 9,811, of 0.05 n = 1,570, of 0.01 n = 39,244.
+- `D_c = 0.02` needs **n = 9,222**, the owner's n ~ 10⁴; 14,715 with Bonferroni over 9 tests: three end-state statistics (escaper speed, binary semi-major axis and eccentricity) over
+  three comparisons. **Dissolution time is not among them:** it enters by the survival comparison, never by a KS on ended runs.
+  The primary comparisons, over all starts, are that log-rank, the outcome fractions and cumulative incidence, and their
+  correction is part of the calibration (R-71). A fraction difference of 0.02 at p = 0.5 needs n = 9,811, of 0.05 n = 1,570, of 0.01 n = 39,244.
 - **Pairing helps little where runs have parted.** McNemar's `n = (z_{α/2} + z_β)² d/Δ²`, `d` the discordant fraction:
   `d = 0.33` gives n = 6,475 at Δ = 0.02. BPZ find about half their f64 runs diverged, so `d` is not expected to be small at
   f32. It is measured, not assumed; n stays ~10⁴. Two-sample KS on paired samples is conservative where pairs

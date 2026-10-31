@@ -1,14 +1,14 @@
-c(0.05) = 1.3581; c(0.05/12) = 1.7570
-n: D_c at 5%; with Bonferroni over 12 tests
-  256: 0.1200; 0.1553
-  1000: 0.0607; 0.0786
-  4096: 0.0300; 0.0388
-  6257: 0.0243; 0.0314
-  7366: 0.0224; 0.0290
-  10000: 0.0192; 0.0248
-n with D_c = 0.02: 9222; with Bonferroni over 12: 15434
-n with D_c = 0.03: 4099; with Bonferroni over 12: 6860
-n with D_c = 0.05: 1476; with Bonferroni over 12: 2470
+c(0.05) = 1.3581; c(0.05/9) = 1.7155
+n: D_c at 5%; with Bonferroni over 9 tests
+  256: 0.1200; 0.1516
+  1000: 0.0607; 0.0767
+  4096: 0.0300; 0.0379
+  6257: 0.0243; 0.0307
+  7366: 0.0224; 0.0283
+  10000: 0.0192; 0.0243
+n with D_c = 0.02: 9222; with Bonferroni over 9: 14715
+n with D_c = 0.03: 4099; with Bonferroni over 9: 6540
+n with D_c = 0.05: 1476; with Bonferroni over 9: 2354
 Monte Carlo power of the 5% test when the true distance is D_c
   n = 256, normal shift: 0.84 (800 replicates)
   n = 256, tail mass: 0.83 (800 replicates)
@@ -43,7 +43,7 @@ The median, distribution-free: the narrowest rank interval symmetric about the m
   256: ranks 112 to 145, quantiles 0.438 to 0.566, coverage 0.9610
   4096: ranks 1985 to 2112, quantiles 0.485 to 0.516, coverage 0.9528
   10000: ranks 4902 to 5099, quantiles 0.490 to 0.510, coverage 0.9512
-n = 256, c starts censored and all on one side of the median: the rank at which the bounds begin
-  c = 112: rank 145
-  c = 113: rank 144
-  c = 127: rank 130
+n = 256, c bounds of one direction: rank 145's end moves out by c ranks among the 256 - c measured ratios
+  c = 111: 145 measured; bounded
+  c = 112: 144 measured; unbounded
+  c = 127: 129 measured; unbounded

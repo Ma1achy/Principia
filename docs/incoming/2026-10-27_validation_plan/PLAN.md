@@ -371,7 +371,7 @@ binaries" there. So an uncut difference between the arms is a live possibility h
   Cartesian read-out, which differ by 280× to 7100× after a close passage (R-566). Each run records both, and any cut names which
   it uses, or its removed count means nothing. Which one a cut uses: RQ-653. The level of any cut is a calibration (R-71).
 - **Statistics.** Fig. 6's four: dissolution time, escaper speed, binary semi-major axis and binary eccentricity. Beside them,
-  the outcome fractions and the escaper's identity. Twelve tests is those four over three comparisons. Their definitions at the
+  the outcome fractions and the escaper's identity. **Dissolution time enters by the survival comparison, never by a KS on ended runs.** The primary comparisons, over all starts, are the survival comparison (log-rank, with its paired form), the outcome fractions and cumulative incidence. A KS is conditional and only on the other three, over three comparisons: nine tests, and the Bonferroni figures below span those nine and nothing else; how the primary comparisons are corrected is part of the calibration (R-71). Their definitions at the
   stop, the binary's above all, are a definition requirement (R-72) if this is adopted; the sensitivity and margins are
   calibrations (R-71).
 
@@ -410,7 +410,7 @@ binaries" there. So an uncut difference between the arms is a live possibility h
 - Lifetimes, log-rank at 80% power: `events = 4 · 7.85 / ln²HR`: 10⁴ a side reaches a hazard ratio of 1.05, the independent-arm figure.
 - Pairing saves little: discordant fraction d = 0.33 gives 6,475 at Δ = 0.02, and d is measured, not assumed.
 - **Proposed: n = 10⁴ per set, all the records hold.** Sensitivity about 2% in a whole-ensemble fraction, D_c 0.019 on the
-  whole ensemble and, conditional and for scale, about 0.024 and 0.022 on end states within T; with a Bonferroni correction over 12 tests, D_c 0.025 on the whole ensemble and 0.031 and 0.029 within T. Below that
+  whole ensemble and, conditional and for scale, about 0.024 and 0.022 on end states within T; with a Bonferroni correction over the nine conditional KS tests, 0.031 and 0.028 within T (0.024 at n = 10⁴, for scale). Below that
   needs new starts, with their converged side ours too. The sensitivity adopted is itself a calibration (R-71).
 
 *M9 and peeks.* M9 and the peek log rest on R-649 and R-650, in open PR #342, not merged, and they are not copied here. If
