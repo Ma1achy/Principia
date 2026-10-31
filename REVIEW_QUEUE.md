@@ -726,3 +726,40 @@ For the owner: yes, it is REQ-ENC-024's calibration, and the options change what
   RQ-628's scope).
 - **Applied meanwhile:** none; nothing is built for it.
 - **Waits:** nothing.
+
+## RQ-635: The arctangent generator's working precision, 100 fraction bits: a value the corpus doesn't give, and its admissibility class *(a calibration requirement, R-71; REQ-GEN-044; REQ-SYS-005, REQ-SYS-082; R-427; philosophy §4.2; context: RQ-628, TASK-M2-26, PR #343)*
+
+*Queued 31 Oct 2026 from TASK-M2-26's fix round, on code review 5720675453. For the M2 gate's calibration batch; nothing
+waits on it before the gate.*
+
+- **File, section:**
+  - `decisions.md` § "R-71 — A missing value becomes a calibration requirement": "Every value the corpus doesn't give
+    becomes a **calibration** requirement in the milestone that needs it."
+  - `plan/requirements.yaml`, REQ-SYS-082: "every other function there that returns a numeric literal must be moved into
+    the register or named in its doc as ledger or interface data".
+  - `docs/read_first/principia_00_philosophy.md` § "4.2 Every constant must be derived or absent": "A quantity is
+    admissible if it is bounded by its own achievable maximum, fixed by a conservation law, or expressed in canonical
+    units."
+  - `crates/ledger/src/gen/arctan.rs`, `sum_bits()`, before this fix: returned the literal 100, its doc citing nothing.
+- **What it is:** the units, `2⁻¹⁰⁰`, in which the generator sums each `atan(k/8)` in integer arithmetic before rounding
+  to the Q0.64 and Q2.62 words it writes. Only the generator reads it. The emitted file doesn't hold it.
+- **The gap:** no document gives this precision, and RQ-628's decision doesn't name it. It is a choice, not a
+  derivation: 100 is one value on a measured plateau, picked as a round number with room on both sides.
+- **The measurement** (the generator's sum in exact integers, each product checked against `2¹²⁸`, for every bit count
+  from 65 up): every count from 72 to 121 writes the same nine `ATAN_EIGHTHS`, `HALF_PI` and `PI`. At 71, three of the
+  eleven differ. At 122 a product passes `2¹²⁸` and the `u128` arithmetic overflows. The sum's error at 100 bits: under 2
+  units per term, each term carrying its predecessor's truncation (`eₙ₊₁ < eₙ/2 + 1`), which with at most 100 terms and
+  a dropped tail under 4 units is about 204 units; the measured worst is 90.05 units (`k = 8`, 95 terms), against the
+  `2³⁶` units the table keeps.
+- **The question:** confirm 100 at the M2 gate, or another value in 72 to 121, which writes the same file; and whether
+  the class stands.
+- **The class:** proposed as `canonical-units`, a pure number with no physical unit, as `curve_grid_log2` is. It is not
+  a clean fit, and no class is. `docs/design/principia_dd_generation_root.md` § "3.8 Metadata schema (what every entry
+  must carry)" reads: "`achievable-maximum` covers a format's achievable extreme: a value fixed by a number format's
+  limits", and 100 isn't fixed by `u128`'s limit, only bounded by it, though `curve_golden_steps`, a count where a
+  further step resolves nothing, holds that class. No conservation law applies.
+- **Options seen:** (a) confirm 100 as proposed; (b) a value derived from the plateau's edge, 72, which has no margin
+  against a change of the sum; (c) the largest, 121, which has no margin against overflow.
+- **Applied meanwhile (per R-369, R-71, R-427):** `arctan_sum_bits` = 100 in the register, marked provisional until M2,
+  citing REQ-GEN-044; `sum_bits()` reads it. Not hashed into the schema version: it decides no stored bit.
+- **Waits:** the M2 gate only (`gate-provisional --milestone M2` blocks until it is confirmed). TASK-M2-26 proceeds.

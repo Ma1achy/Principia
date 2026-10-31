@@ -1,7 +1,7 @@
 # TASK-M2-26 — The ROUNDTRIP preset and the one encode entry
 
 - **Milestone:** M2
-- **Closes:** REQ-RENDER-025, REQ-ENC-002
+- **Closes:** REQ-RENDER-025, REQ-ENC-002, REQ-GEN-044
 - **Depends on:** TASK-M2-20, TASK-M2-23, TASK-M2-25
 - **Needs (earlier milestones):** REQ-COL-003, REQ-RENDER-005, REQ-COL-001
 - **Reviewers:** code, qa, physics
@@ -48,3 +48,5 @@ The ROUNDTRIP fragment preset renders per pixel the z → D → E → D physical
 - R-297: ROUNDTRIP's residual is computed wholly in the fragment, and its stated tolerance is ε_phys, which R-297's "stated tolerance" names for it; REQ-COL-060 (TASK-M2-29) is the agreement presets' tolerance, fragment against compute, and doesn't apply here. If the residual under fragment fast-math exceeds ε_phys, that is a REVIEW_QUEUE entry, not a second tolerance (applied per R-204, accepted by R-358).
 - **R-437 (RQ-285):** ROUNDTRIP's fragment-side `encode(decode(z))` runs the generated encode, whose `atan2`s take
   their defined pole values by a select (TASK-M2-25), so the residual at a pole is the same on both backends.
+- **REQ-GEN-044 (RQ-635):** the arctangent generator's working precision, which the corpus doesn't give, is proposed in the
+  constants register as `arctan_sum_bits`, provisional until the M2 gate (R-71, R-427; applied per R-369).

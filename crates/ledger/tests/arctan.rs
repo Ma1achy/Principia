@@ -6,6 +6,7 @@
 //!   two); `atan 0 = 0` and `ATAN_EIGHTHS[8] = π/4` exactly, the generator's `π/4`; and `1/(2j + 3)` in Q0.32, rounded
 //!   to nearest.
 
+use ledger::constants::ARCTAN_SUM_BITS;
 use ledger::gen::arctan::{
     arctan_file, atan_eighth, eighth_q64, emit, half_pi_q62, pi_q62, series_q32, series_terms,
     sum_bits, ARCTAN_PATH,
@@ -87,6 +88,11 @@ fn check_numbers((eighths, half_pi, pi, series): Numbers) {
         "atan 1 is the generator's π/4"
     );
     assert!(sum_bits() == 100, "the sums' units are 2⁻¹⁰⁰");
+    assert_eq!(
+        f64::from(sum_bits()),
+        ARCTAN_SUM_BITS.number(),
+        "the sums' units are the register's"
+    );
     for (k, &q) in eighths.iter().enumerate() {
         let want = (k as f64 / 8.0).atan();
         let got = scaled(q, 64);

@@ -881,6 +881,7 @@ citing its calibration requirement, and read from the register like any other; n
 | `decode_sanity` | 16, `k` in `k·ε_R`, lookup's layer-3 tolerance on the CoM and `Σpᵢ` residuals `‖Σmᵢrᵢ‖/R_x` and `‖Σpᵢ‖/P_x` of the decoded lock (inverse-encode contract § "Chart-aware validation", "Layer 3's tolerance"; TASK-M2-19) | canonical-units | M2 | REQ-ENC-027 |
 | `zero_class` | 16, `k` in `k·ε_R`, lookup's layer-1 zero-class band, relative to the first-order bound on each value's rounding, `S_{L_z}` and `S_E` on the entered state's extents, and each clamp's move's own (inverse-encode contract § "Chart-aware validation", "The zero class in floating point"; TASK-M2-19) | canonical-units | M2 | REQ-ENC-037 |
 | `literature_import_tol` | 256, `k` in `k·ε` relative at f64, the literature import's tolerance on each start's `E`, `L_z`, `R` and `L_z²·|E|/(G²·M⁵)` after multiplying back by the recorded rescale (inverse-encode contract Part 7; dd_validation_orbits §1.6 and §2; TASK-M2-20) | canonical-units | M2 | REQ-VAL-120 |
+| `arctan_sum_bits` | 100, the fraction bits of the arctangent generator's integer sum, a working precision: 72 to 121 bits write the same `generated/arctan.rs`, measured (RQ-628's option (a); RQ-635; TASK-M2-26) | canonical-units | M2 | REQ-GEN-044 |
 
 The register's entries confirmed at the M1 gate (R-428): each was provisional until M1 (R-427), is confirmed as
 proposed, and cites R-428 in place of its calibration requirement (REQ-TOOL-160 for the floors, REQ-COL-055 for the

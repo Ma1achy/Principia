@@ -17,6 +17,7 @@
 use std::fmt::Write as _;
 use std::path::PathBuf;
 
+use crate::constants::ARCTAN_SUM_BITS;
 use crate::gen::Generated;
 use crate::schema::{Entry, Word};
 
@@ -31,9 +32,9 @@ pub fn emit(_words: &[Word], _entries: &[Entry]) -> Vec<Generated> {
     }]
 }
 
-/// The fraction bits of [`atan_eighth`]'s sum.
+/// The fraction bits of [`atan_eighth`]'s sum, from the register (`arctan_sum_bits`, REQ-GEN-044).
 pub fn sum_bits() -> u32 {
-    100
+    ARCTAN_SUM_BITS.number() as u32
 }
 
 /// `atan(k/8)` in units of `2^-sum_bits()`, by Euler's series (the module's note), for `k = 0 … 8`: with
