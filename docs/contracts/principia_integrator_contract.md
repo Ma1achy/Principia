@@ -670,7 +670,16 @@ Consequence, worth stating so an agent doesn't add a per-IC time rescale: becaus
   - **Substep granularity.** Detection reads each `d`'s side at a substep's two endpoints only. An even number of
     crossings of one `d`'s zero within one substep, a crossing and its recrossing among them, leaves the two sides
     equal and goes unseen; an odd number reads as one. Detection is as fine as the accepted substeps (payload §3:
-    every accepted adaptive substep), and no finer.
+    every accepted adaptive substep), and no finer. A coarse substep fails in three ways, each a word that is wrong
+    without any flag (`crossing_substep_limits`):
+    - **Lost crossings:** the even count above.
+    - **Misattribution:** the classifier reads the substep's non-negative endpoint, so a substep running past the
+      crossing by more than a quarter turn of a close pair names the wrong segment. With `r₀ = (0, 0)`, `r₂ = (1, 0)`
+      and `r₁` a small `ε` from `r₀`, turning from −20° to 100°, the true crossing, at 0°, has body 1 between and no
+      letter; the detector reads `a`.
+    - **`P₀₂`:** under §1's cuts a substep passing `P₀₂` across both cuts flips `d` twice and reads nothing, losing the
+      `aB` of that loop. §1's cuts lose this case rather than misorder it, which is the case payload §3's `τ`-sort
+      paragraph is about.
   - The word identical CPU/GPU, and the GPU arm of the half-open test, are REQ-VAL-072's at M4 (R-113, R-150).
 - **FTLE partial-interval finalisation (payload §5)**: the Benettin sum `S` accumulates only at renormalisation boundaries. At read/terminalisation, **finalise the partial interval** — `S_final = S + log(δ_current/δ₀)`, then `ftle = S_final / (step_count · dt_macro)` (divide by full elapsed). Do NOT divide the boundary-only `S` by full elapsed time (systematically too small). `completed_renorms = step_count / renorm_interval_steps` (derived; uniform schedule).
 - **`t_end` (SimState termination time) is in the same units**, so it is directly comparable across pixels, quads, and charts. This is what makes the Lehto decay-time map a straight render of `t_end` — the unit system is what lets "decay time" be a chart at all.

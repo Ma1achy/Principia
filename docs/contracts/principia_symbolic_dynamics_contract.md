@@ -65,7 +65,13 @@ confirmed by the owner at the M3 gate, REQ-PAY-070).** Transcribed from the lite
   `crossing_body_relabelling`; physics review 5720379930 of PR #358 holds RQ-632's option (a), with the owner's
   confirmation at the M3 gate, R-125, REQ-PAY-070). Cross-check: ten orbits of the PRL's Table I, integrated from its initial conditions, read their
   published words under this convention, eight up to cyclic permutation and two up to the inverse
-  (`fixtures/crossings/prl_orbits.json`).
+  (`fixtures/crossings/prl_orbits.json`). Their grid is 200000 uniform points per period, DOP853 at
+  `rtol = atol = 1e-12`, and `crossing_published_words` replays only the states bracketing each syzygy, so the
+  cross-check fixes the convention and **says nothing about the march's substeps**. On that integrator, at 5000 points
+  per period 6 of the 10 read a wrong word, and at 20000 two still do; on steps of `η·r_min^{3/2}/√2` all 10 read at
+  `η ≤ 0.35`, 4 fail at `η = 0.5` and all 10 at `η ≥ 0.7` (physics review 5720379930 of PR #358; other grids than the
+  kernel's). Reading the word from the kernel's own accepted substeps is REQ-VAL-043's (integrator contract Part 5,
+  substep granularity).
 - **The segment classifier (R-72, REQ-PAY-113; a definition, written by TASK-M3-16, physics-reviewed before merge).**
   At an endpoint of an accepted substep, the body *between* is the body opposite the longest side: the `k` whose pair's
   squared separation `r²ₖ` (pair `k` the side opposite body `k`, R-22) is the greatest of the three, the lowest `k` on a
