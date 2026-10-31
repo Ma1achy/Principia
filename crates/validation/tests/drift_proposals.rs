@@ -20,9 +20,7 @@ use ledger::constants::{
     SUSPECT_ENERGY_THRESHOLD, SUSPECT_LZ_THRESHOLD,
 };
 use render::present::{self, DRIFT_LIN, DRIFT_SYMLOG};
-#[cfg(feature = "controls")]
-use validation::drift::Fixture;
-use validation::drift::{self, Drifts, Measured, EPS_DEFAULT};
+use validation::drift::{self, Drifts, Fixture, Measured, EPS_DEFAULT};
 use validation::negative_control;
 
 const SYMPLECTIC: [&str; 3] = ["KDK", "Yoshida-4", "Yoshida-6"];
@@ -379,3 +377,141 @@ negative_control!(
     expected = "is saturated",
     check_lin_range(&short_lin(), final_energy, 1e-12)
 );
+
+/// `M`, `I` of an IC in the sim's units (integrator contract Part 5), and its centre of mass.
+fn units(ic: &kernel::decode::Ic<f64>) -> (f64, f64, [f64; 2]) {
+    let total: f64 = ic.m.iter().sum();
+    let com = [0, 1].map(|k| (0..3).map(|i| ic.m[i] * ic.r[i][k]).sum::<f64>() / total);
+    let inertia = (0..3)
+        .map(|i| ic.m[i] * (ic.r[i][0].powi(2) + ic.r[i][1].powi(2)))
+        .sum();
+    (total, inertia, com)
+}
+
+/// Checks that `fixture` holds the sim's units and its centre of mass at the origin.
+fn check_units(fixture: &Fixture) {
+    let (total, inertia, com) = units(&fixture.ic);
+    assert!(
+        (total - 1.0).abs() < 1e-12,
+        "`{}`: M = {total}",
+        fixture.name
+    );
+    assert!(
+        (inertia - 1.0).abs() < 1e-12,
+        "`{}`: I = {inertia}",
+        fixture.name
+    );
+    assert!(
+        com.iter().all(|c| c.abs() < 1e-12),
+        "`{}`: R_com = {com:?}",
+        fixture.name
+    );
+}
+
+#[test]
+fn drift_fixtures_are_the_definitions() {
+    let test2 = drift::figure_eight();
+    let test7 = drift::close_encounter();
+    check_units(&test2);
+    check_units(&test7);
+    assert_eq!(test2.horizon, drift::T_CAP);
+    assert_eq!(test7.horizon, drift::T_DEFAULT);
+    // The figure-eight's masses are equal; its L_z, zero; its shape, closed: one period on, about where it began.
+    assert!(test2.ic.m.iter().all(|m| (m - 1.0 / 3.0).abs() < 1e-12));
+    let lz: f64 = (0..3)
+        .map(|i| test2.ic.r[i][0] * test2.ic.p[i][1] - test2.ic.r[i][1] * test2.ic.p[i][0])
+        .sum();
+    assert!(lz.abs() < 1e-7, "L_z = {lz}");
+    // Test 7's pericentre, above r_sub = 0.05, and about 0.067 (the module's note).
+    let (ic, pericentre) = drift::hierarchy(
+        drift::HIERARCHY_MASSES,
+        drift::HIERARCHY_A,
+        drift::HIERARCHY_E,
+        drift::HIERARCHY_D,
+    );
+    assert!(
+        (pericentre - 0.067).abs() < 0.001,
+        "the pericentre is {pericentre}"
+    );
+    assert_eq!(ic.m, test7.ic.m);
+}
+
+negative_control!(
+    drift_fixtures_are_the_definitions,
+    "an IC out of the sim's units",
+    expected = "I =",
+    {
+        let mut f = drift::figure_eight();
+        f.ic.r[0][0] += 1.0;
+        check_units(&f);
+    }
+);
+
+/// Checks the sim key at horizon `t`: `dt_macro = max(1e-3, t/65535)`, `horizon_steps = ⌈t/dt_macro⌉`.
+fn check_key(t: f64, dt: f64, steps: u32) {
+    let key = drift::sim_key::<f64>(t);
+    assert!(
+        (key.dt_macro - dt).abs() <= 1e-15,
+        "dt_macro {}",
+        key.dt_macro
+    );
+    assert_eq!(key.horizon_steps, steps, "horizon_steps");
+}
+
+#[test]
+fn drift_sim_key_at_and_past_the_floor() {
+    check_key(50.0, 1e-3, 50_000);
+    check_key(200.0, 200.0 / 65535.0, 65_535);
+    // t/65535 = 1e-3 exactly at the floor's edge.
+    check_key(65.535, 1e-3, 65_535);
+    assert_eq!(drift::sim_key::<f32>(50.0).horizon_steps, 50_000);
+}
+
+negative_control!(
+    drift_sim_key_at_and_past_the_floor,
+    "a dt_macro under the floor",
+    expected = "dt_macro",
+    check_key(50.0, 50.0 / 65535.0, 50_000)
+);
+
+#[test]
+fn drift_runs_are_read_whole() {
+    let table = short_horizon_table();
+    let euler = occupant(&table, "Euler");
+    for d in [&euler.f32, &euler.f64] {
+        assert_eq!(d.steps, 1000, "dt 1e-3 to T = 1");
+        assert!(d.de_max >= d.de_final.abs() && d.de_max > 0.0);
+        assert!(d.dlz_max >= d.dlz_final.abs());
+        assert!(!d.saturated);
+        let e = d.e_0.abs().max(EPS_DEFAULT);
+        assert_eq!(d.rel_e_final(EPS_DEFAULT), d.de_final / e);
+        assert_eq!(d.rel_e_max(EPS_DEFAULT), d.de_max / e);
+        assert!(d.lz_0.abs() < 1e-5);
+        assert_eq!(d.e_0_stored, d.e_0 as f32);
+    }
+    // The floor binds where |E₀| is under it.
+    let mut small = euler.f64;
+    small.e_0 = 1e-9;
+    assert_eq!(small.rel_e_max(EPS_DEFAULT), small.de_max / EPS_DEFAULT);
+    let names: Vec<_> = table.iter().map(|m| m.occupant).collect();
+    assert_eq!(names, ["Euler", "RK4", "KDK", "Yoshida-4", "Yoshida-6"]);
+    assert!(table
+        .iter()
+        .all(|m| { m.profile.symplectic == SYMPLECTIC.contains(&m.occupant) }));
+}
+
+negative_control!(
+    drift_runs_are_read_whole,
+    "an occupant the table doesn't hold",
+    expected = "no occupant",
+    {
+        occupant(&short_horizon_table(), "Leapfrog");
+    }
+);
+
+/// Every occupant to `T = 1` on test 2's orbit.
+fn short_horizon_table() -> Vec<Measured> {
+    let mut f = drift::figure_eight();
+    f.horizon = 1.0;
+    drift::measure(&f)
+}
