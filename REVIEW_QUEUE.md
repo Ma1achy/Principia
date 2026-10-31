@@ -851,7 +851,7 @@ where the choice changes the result (which pixels count) and the corpus does not
 *Queued 31 Oct 2026 for the owner, by R-661's port. Applied meanwhile: state the effect size (R-369). It changes what is run, so it is his.*
 
 - **File, section:** `decisions.md` § R-661, item (3): "REQ-VAL-199: re-size its 256 starts by the same power argument, or state the effect size it can detect." REQ-VAL-199: "over all 256 chaotic starts"; `decisions.md` § R-610: "The cap stays at 200 until long horizons are measured for cost."
-- **What 256 can detect:** a two-sample KS at 5%, D_c = 1.358 √(2/256) = 0.12; at 80% power, a fraction difference of 0.12 at p = 0.5 and 0.074 at p = 0.1. The gate's own statistic, a median of ratios, has a 95% half-width of 0.154 of the ratios' spread. Differences of a few percent in outcomes are out of its sight, and the gate never compares outcomes.
+- **What 256 can detect:** a two-sample KS at 5%, D_c = 1.358 √(2/256) = 0.12; at 80% power, a fraction difference of 0.12 at p = 0.5 and 0.074 at p = 0.1. The gate's own statistic, a median of ratios, has a 95% half-width of 0.154 of the ratios' spread if they are normal; distribution-free, ranks 112 to 145, the quantiles 0.44 to 0.57, with 112 or more starts censored on one side putting its end among bounds. Differences of a few percent in outcomes are out of its sight, and the gate never compares outcomes.
 - **Options seen, each in starts × three runs (f32, f64, f64′) × T = 200:**
   - (a) keep 256 and state the effect size: 1.5 × 10⁵ time units, D_c 0.12. The gate stays a test of the parting ratio, and outcome statistics are BZ-1C's.
   - (b) n = 4,096: 16 times the runs, 2.5 × 10⁶ time units, D_c 0.030, median half-width 0.038 of the spread.
@@ -884,3 +884,41 @@ where the choice changes the result (which pixels count) and the corpus does not
 - **Options seen:** (a) score on tier (a) as ruled, each result labelled "f32; agreement with f64 not yet measured", until BZ-1C reports; (b) as (a), and run f64 beside it on a sample sized by the same calculation; (c) statistical targets wait for BZ-1C.
 - **Applied meanwhile:** nothing is scored yet, so nothing is applied. The tier assignment in #342 is not changed here.
 - **Waits:** nothing built.
+
+## RQ-652: Which event BZ-1C's third side is compared on: BPZ's escape criterion or Principia's *(physics; R-661; `docs/incoming/2026-10-27_validation_plan/PLAN.md` § 3.2, BZ-1C; `docs/design/principia_dd_replication.md` rule 9; R-29; context: BZ-1C)*
+
+*Queued 31 Oct 2026 by R-661's port (physics review 5724115938 of PR #363, F2). The two ids before this one are named by `docs/incoming/2026-10-28_external_sources/README.md`, so this takes the next free id (applied per R-369).*
+
+- **File, section:**
+  - Boekholt & Portegies Zwart 2015 § 4: "We stop the simulations when the system is dissolved into a permanent binary and an escaper"; the escaper has "E > 0", "r > 2 rvirial" and "r · v > 0".
+  - `docs/design/principia_dd_replication.md` rule 9: "Record the escape criterion as data, with its parameters and its clock."
+  - The records hold each run's final state and whole-number stop time only, on BPZ's criterion. R-29's criterion cannot be applied to a state they don't hold.
+- **The question:** f32 against f64 can use one classifier. The records can only be read on BPZ's. Which event do the three-way lifetimes and end states use?
+- **Options seen:** (a) apply BPZ's criterion to all three sides, testing Principia's states as BPZ's code did, and report R-29's beside it for f32 against f64 only; (b) R-29 for f32 and f64, the records as they are, the difference labelled and not scored as precision; (c) both for the two arms, so the criteria's own difference is measured on the same runs.
+- **Applied meanwhile:** none; BZ-1C is a proposal. Both criteria are recorded whichever is chosen.
+- **Waits:** BZ-1C's scoring against the records. f32 against f64 does not wait.
+
+## RQ-653: Which energy a BZ-1C energy cut uses: regularised or Cartesian *(physics; R-661; R-566; `docs/incoming/2026-10-27_validation_plan/PLAN.md` § 3.2, BZ-1C; context: BZ-1C)*
+
+*Queued 31 Oct 2026 by R-661's port (physics review 5724115938 of PR #363, F2).*
+
+- **File, section:**
+  - Boekholt & Portegies Zwart 2015 § 6.1: "a relative energy conservation |∆E/E| > 1, or |∆E/E| > 0.1", on Hermite's Cartesian state.
+  - `decisions.md` § R-566: "after a close passage the Cartesian read-out is 280× to 7100× worse than the" regularised energy.
+  - `decisions.md` § R-661: "show any energy cut beside the uncut ensemble with the removed count".
+- **The question:** the removed count depends on the energy. The Cartesian one is like-for-like with BPZ's but is R-566's diagnostic; the regularised one is what Principia's gates read. At what stage it is read also differs.
+- **Options seen:** (a) the Cartesian read-out, like-for-like with BPZ, only from runs that did not stop at an event, as R-566 reads it; (b) the regularised energy; (c) both cuts shown, each with its count.
+- **Applied meanwhile:** none; each run records both.
+- **Waits:** any energy cut in BZ-1C. The uncut ensemble does not wait.
+
+## RQ-654: How BZ-1C's starts reach the f32 GPU kernel: Path B or a new list-of-starts chart *(the human's, by `docs/design/principia_dd_replication.md` § 2; R-594 item 5; R-661; context: BZ-1C)*
+
+*Queued 31 Oct 2026 by R-661's port (physics review 5724115938 of PR #363, F7).*
+
+- **File, section:**
+  - `docs/design/principia_dd_replication.md` § 2: ""Path B" (a known IC encoded, or injected physically, with no chart …), or "new: <name>" for a chart no task builds … each such chart is a question for the human".
+  - `docs/incoming/2026-10-27_validation_plan/PLAN.md` § 3.2, BZ-1C: 2 × 10⁴ starts, f32 on the GPU, f64 on the CPU.
+- **The question:** Path B is a known IC with no chart. Whether it can carry 2 × 10⁴ arbitrary f32 starts through the GPU kernel, as a survey dispatch does, is not stated in the corpus; and the choice bears on the result, since an encoded start's rounding is part of what f32 runs. The rest-start D-plane charts reach these starts' shapes only with a rounding of their own.
+- **Options seen:** (a) Path B, if a batch of injected starts can be dispatched, f64 values rounded once to f32; (b) a new list-of-starts chart, built when BZ-1C is adopted; (c) the Anosova entry, reaching the equal-mass rest starts by encode, with its rounding measured, and no 1:2:4 until a mass point is added.
+- **Applied meanwhile:** none; nothing is built.
+- **Waits:** BZ-1C.

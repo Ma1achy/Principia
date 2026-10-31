@@ -169,7 +169,7 @@ Per-pixel Tier-S is weak on its own; the test that actually certifies the two pi
 
 This is the validation-scratchpad's "CPU proves the method" reframed as "CPU and GPU agree on the survey" — and it is the test that matters for a shareable artefact, because it certifies the shipped GPU picture is the true one. (The exact statistic and threshold — Q3 in the working note — is pinned in the validation phase, alongside literature reproduction.)
 
-*31 Oct 2026, R-661:* that f32 and f64 surveys agree statistically is a hypothesis this test measures: no paper establishes it, and no paper tests f32 ensemble statistics. The test stands as REQ-VAL-065 states it; "certifies" holds only of a survey the test has measured, at the sensitivity its grid gives.
+*31 Oct 2026, R-661:* that f32 and f64 surveys agree statistically is a hypothesis this test measures: no paper establishes it. The test stands as REQ-VAL-065 states it; "certifies" holds only of a survey the test has measured, at the sensitivity its grid gives.
 
 ---
 

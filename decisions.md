@@ -28548,7 +28548,7 @@ The owner's words, 31 Oct 2026, verbatim:
 
 *What it decides:*
 
-- **(1) The hypothesis.** No paper is evidence that f32 ensemble statistics agree with anything. Boekholt & Portegies Zwart
+- **(1) The hypothesis.** That f32 ensemble statistics agree: no paper establishes it. Boekholt & Portegies Zwart
   2015 is f64 against a converged code, and Portegies Zwart 2026's 32-bit numbers are single runs. RQ-646's three
   overstatements are reworded, and RQ-644 closes with them: Fig. 14's side-by-side is compatible with never discarding;
   the "unbiased" claim, which holds only after the cut, is not.
@@ -28585,7 +28585,8 @@ The owner's words, 31 Oct 2026, verbatim:
   RQ-649 asks what a score on tier (a) then says.
 
 *What it amends:* **R-629**, as to BZ-1's cold sets. It closes **RQ-644** and **RQ-646**, and queues **RQ-647** (the re-size),
-**RQ-648** (the trust line's citations, left as the owner's words) and **RQ-649** (tier (a) scores, physics).
+**RQ-648** (the trust line's citations, left as the owner's words) and **RQ-649** (tier (a) scores, physics). Its port also
+queues **RQ-652** (BZ-1C's event), **RQ-653** (BZ-1C's energy) and **RQ-654** (BZ-1C's path to the GPU).
 
 R-661 is in the "design" group of `plan/rule_groups.yaml`, with R-630 and R-639.
 

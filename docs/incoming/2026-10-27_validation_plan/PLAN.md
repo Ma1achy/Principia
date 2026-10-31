@@ -344,7 +344,7 @@ Merged rows list every source. Where one target arises from several records, it 
 | LLL-1 | R | B | `R25` tier B "Mass-plane stability map"; `R25/catalogue.md` §2.4 | Period, angular momentum and stability contours over (m₁, m₂) for one family (13,315 stable of 135,445) | figures; IC tables on the authors' site, not fetched | MassSimplex | periodic-orbit continuation (not planned) | qualitative | blocked: needs continuation, which no task builds; the atlas's 7 `li2021` rows are in OC-1 |
 | SL-1 | R | B | `R25` tier B "Ergodic outcome distributions"; `R25/catalogue.md` §5.1 | Binned binary energy and eccentricity against Stone & Leigh's planar closed forms, with N_scramble ≥ 2 | the paper's closed forms | new: BinaryPlusSingle | outcome classifier; N_scramble | distribution | blocked: chart and classifier not planned |
 | BZ-1 | R | C | `R25` tier C "Ensemble statistics survive trajectory error"; `R25/catalogue.md` §6.1; `PS31/README.md` | Individual double-precision runs diverge from a converged code, while at small steps the Hermite distributions are not significantly different from Brutus's by two-sample KS (η < 2⁻⁵; § 7 states this with the energy criterion too, and whether Fig. 6 was cut is unclear), the error unbiased only after runs violating energy by more than 10% are removed, the uncut bias being the cold sets'. f64 only: no f32 run, no evidence for f32 (R-661) | `PS31/data/` (Brutus's side only; the Hermite results are not published) | — | — | distribution | warm sets out of scope as a replication: 3D (measured, `PS31/README.md`). Cold sets reopened: BZ-1C (R-661). On method: Fig. 14's side-by-side of cut and uncut is compatible with "never discard a copy" once the count removed is given; the "unbiased" claim, which holds only after the cut, is not. REQ-VAL-199 measures parting time, a different quantity · see DRAFT-VAL-08 (note, 27 Oct 2026) |
-| BZ-1C (proposed, 31 Oct 2026) | R | B | R-661; `PS31/README.md`; beside BZ-1 | **A hypothesis to measure, established by no paper:** on the 2 × 10⁴ cold starts of Boekholt & Portegies Zwart 2015, paired runs in f32 and f64 against the converged records give the same outcome fractions, end-state distributions and lifetimes, to a sensitivity of a few percent. Either result is a finding | `PS31/data/40668_2014_5_MOESM{3,4}_ESM.dat`: the starts and Brutus's ends. The Hermite results are not published, so the f64 side is ours | new: a list of starts, each rotated into the plane and rescaled to M = G = I = 1 (none planned) | f32 on the GPU and f64 on the CPU, the same stepper and step control; outcome classifier; per-run status | distribution, paired | data in repo · proposed 31 Oct 2026, no requirement; an M9 target with peek priority, information only, resting on R-649 and R-650 in open PR #342, not merged; blocked: no list-of-starts chart. See the note below |
+| BZ-1C (proposed, 31 Oct 2026) | R | B | R-661; `PS31/README.md`; beside BZ-1 | **A hypothesis to measure, established by no paper:** on the 2 × 10⁴ cold starts of Boekholt & Portegies Zwart 2015, paired runs in f32 and f64 against the converged records give the same outcome fractions, end-state distributions and lifetimes, to a sensitivity of a few percent. Either result is a finding | `PS31/data/40668_2014_5_MOESM{3,4}_ESM.dat`: the starts and Brutus's ends. The Hermite results are not published, so the f64 side is ours | Path B if it can run 2 × 10⁴ f32 starts on the GPU, else new: a list of starts; each rotated into the plane and rescaled to M = G = I = 1 (RQ-654) | f32 on the GPU and f64 on the CPU, the same stepper and step control; outcome classifier; per-run status | distribution, paired | data in repo · proposed 31 Oct 2026, no requirement; an M9 target with peek priority, information only, resting on R-649 and R-650 in open PR #342, not merged; open: RQ-652 (event), RQ-653 (energy), RQ-654 (Path B). See the note below |
 | BR-1 | R | C | `R25` tier C "Converged short trajectories"; `R25/catalogue.md` §1.10 | Per-trajectory agreement with Brutus to t = 10 | not released | Anosova entry (Breen's frame) | M3 | exact | blocked: the data is not available |
 | SP-2 (proposed, 28 Oct 2026) | R | A | Portegies Zwart & Boekholt 2018 (CNSNS 61, 160; arXiv:1802.00970v1), Table 2, § 2, Appendix B: `../2026-10-29_burrau_pzb2018/README.md`; cross-references SP-1, PL-8 | **Burrau converged reference.** Brutus at ε = 10⁻²⁴, L_w = 136 bits, from Table 1's start (= SP-1's): the state at t = 100 agrees pointwise with Table 2's, for the unperturbed run and the perturbed one (δx = 10⁻¹⁰ on mass 3); after every velocity is reversed at t = 100, the state at t = 200 agrees pointwise with Table 2's (the start recovered, to ≤ 3.2×10⁻¹³); t = 200 is the time-reversed return, so its expected state is the initial condition, and it is tested twice: as a **reversibility check** (the state at t = 200 against Table 1's t = 0 start) and as a **trajectory check** (against Table 2's t = 200 values) (the owner, RQ-611; R-646); one body escapes at t ≈ 63.4 (§ 2, footnotes 3 and 4; the paper does not name it, SP-1 says mass 3) | `../2026-10-29_burrau_pzb2018/table2/table2_reconciled.csv` (transcribed twice, 0 disagreements) | BodyPlane Burrau pixel | R-33's convergence reference (pointwise past f64's ~52 horizon, `VO` §1.5); outcome classifier for the escape; a run of 200 (100 forward, 100 reversed), at R-610's cap (note below) | exact against a convergence reference, the agreement in digits a calibration (R-71); escape as a timing window | data transcribed · proposed |
 
@@ -358,12 +358,33 @@ replication: 3D Plummer ICs. Its method is what REQ-VAL-199 and "never discard a
 ensemble differs: Fig. 14's bias "only happens for the cold collapse simulations", and § 5.4.2 has Hermite making "fewer tight
 binaries" there. So an uncut difference between the arms is a live possibility here, not a surprise.
 
+*What BZ-1C compares, named; what is not settled goes to a requirement or the queue, and nothing is invented here:*
+
+- **Event.** BPZ § 4 stops on an escaper with "E > 0", "r > 2 r_virial" and "r · v > 0". Principia's classifier is R-29's. f32
+  against f64 uses one classifier. Both criteria are stored with every comparison, with their parameters and clocks (`dd_replication`
+  rule 9). How the third side is compared is a physics choice: RQ-652. A difference between the criteria must never read as a
+  difference between precisions.
+- **Time axis: the integrator's**, with Brutus's t divided by I^{3/4} per start. Every stored t in MOESM3 and MOESM4 is a whole
+  number, so Brutus's lifetimes are resolved to one Hénon unit, 0.67 to 1.48 integrator units for equal masses and 0.78 to 2.09
+  for 1:2:4, and the survival comparison is no finer than that.
+- **Energy.** BPZ's cut is on the final relative energy error of the Cartesian state. Principia has the regularised energy and the
+  Cartesian read-out, which differ by 280× to 7100× after a close passage (R-566). Each run records both, and any cut names which
+  it uses, or its removed count means nothing. Which one a cut uses: RQ-653. The level of any cut is a calibration (R-71).
+- **Statistics.** Fig. 6's four: dissolution time, escaper speed, binary semi-major axis and binary eccentricity. Beside them,
+  the outcome fractions and the escaper's identity. Twelve tests is those four over three comparisons. Their definitions at the
+  stop, the binary's above all, are a definition requirement (R-72) if this is adopted; the sensitivity and margins are
+  calibrations (R-71).
+
 *What BZ-1C requires of a run, if adopted:*
 
 - **Every run kept, with a status:** ended, censored at T, failed or budget-exhausted, each with its end time (R-563).
 - **Any energy cut is shown beside the uncut ensemble, with the count removed.** Nothing is called unbiased on the strength
   of a cut. The uncut ensemble comes first.
-- **Lifetimes are censored data:** a survival curve and a log-rank test, never a distribution of the runs that ended.
+- **Lifetimes are censored data:** a survival curve and a log-rank test, with a stratified or paired form beside it since the arms
+  share starts, never a distribution of the runs that ended.
+- **End states condition on an outcome, and are labelled so.** The arms' ended sets are different starts, so a lifetime shift
+  moves an end-state distribution by selection alone. Primary: over all starts, outcome fractions with censored runs as their
+  own category, and cumulative incidence by outcome at T. A KS on the ended runs is labelled conditional, with each arm's own n.
 - **The records' zero-placeholder rows** (all-zero finals, with t, e and Lw zero too: 98 cold equal, 16 cold 1:2:4; the
   paper sets them so where "the CPU time was very high") **are undetermined, censored with no known time, and are never
   dropped.** Principia still runs those starts. They are reported as their own class, and any statistic that needs their
@@ -386,10 +407,10 @@ binaries" there. So an uncut difference between the arms is a live possibility h
   n = 256. D_c is a critical value: a Monte Carlo puts the power at it at 0.83 to 0.92 for a shift or a
   tail, and 0.50 to 0.53 for a difference localised at the median, which at n = 10⁴ reaches 80% at about 0.025.
 - A difference Δ in a fraction p at 80% power: `n = 7.85 · 2p(1−p)/Δ²`: Δ = 0.02 at p = 0.5 needs 9,811.
-- Lifetimes, log-rank at 80% power: `events = 4 · 7.85 / ln²HR`: 10⁴ a side reaches a hazard ratio of 1.05.
+- Lifetimes, log-rank at 80% power: `events = 4 · 7.85 / ln²HR`: 10⁴ a side reaches a hazard ratio of 1.05, the independent-arm figure.
 - Pairing saves little: discordant fraction d = 0.33 gives 6,475 at Δ = 0.02, and d is measured, not assumed.
 - **Proposed: n = 10⁴ per set, all the records hold.** Sensitivity about 2% in a whole-ensemble fraction, D_c 0.019 on the
-  whole ensemble and 0.024 and 0.022 on end states within T; with a Bonferroni correction over 12 tests, D_c 0.025 on the whole ensemble and 0.031 and 0.029 within T. Below that
+  whole ensemble and, conditional and for scale, about 0.024 and 0.022 on end states within T; with a Bonferroni correction over 12 tests, D_c 0.025 on the whole ensemble and 0.031 and 0.029 within T. Below that
   needs new starts, with their converged side ours too. The sensitivity adopted is itself a calibration (R-71).
 
 *M9 and peeks.* M9 and the peek log rest on R-649 and R-650, in open PR #342, not merged, and they are not copied here. If

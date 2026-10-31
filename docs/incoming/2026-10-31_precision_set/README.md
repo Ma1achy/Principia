@@ -99,7 +99,8 @@ Our rule: "a failed or budget-exhausted run is shown as such, with its end time 
 ## The records, measured
 
 Each file: a header, 10,000 rows, 46 fields: index; `m x y z vx vy vz` for each body, initial then final; `t e Lw`, where
-`e` is the Bulirsch-Stoer tolerance and `Lw` the word length. **Only Brutus's side is there. The Hermite results are not
+`e` is the Bulirsch-Stoer tolerance and `Lw` the word length. `t` is a whole number in every row of the cold files **[ran]**, so
+lifetimes are resolved to one Hénon unit. **Only Brutus's side is there. The Hermite results are not
 published**, so BPZ's KS tests cannot be recomputed, and any f64 ensemble on these starts is ours.
 
 **[ran]** `tools/measure_records.py`, output in `tools/measure_records_output.txt`. Out of plane is measured from the plane
@@ -147,8 +148,8 @@ critical value and for the broad differences, and is about 0.025 at 80% in the w
 | 256 | **0.120** | 0.155 | 0.124 / 0.117 / 0.074 |
 | 1,000 | 0.061 | 0.079 | 0.063 / 0.059 / 0.038 |
 | 4,096 | 0.030 | 0.039 | 0.031 / 0.029 / 0.019 |
-| 6,257 (cold equal, ended by T = 200) | 0.024 | 0.031 | 0.025 / 0.024 / 0.015 |
-| 7,366 (cold 1:2:4, ended by T = 200) | 0.022 | 0.029 | 0.023 / 0.022 / 0.014 |
+| 6,257 (cold equal, Brutus ended by T = 200; conditional) | 0.024 | 0.031 | 0.025 / 0.024 / 0.015 |
+| 7,366 (cold 1:2:4, Brutus ended by T = 200; conditional) | 0.022 | 0.029 | 0.023 / 0.022 / 0.014 |
 | **10,000** | **0.019** | 0.025 | **0.020 / 0.019 / 0.012** |
 
 - `D_c = 0.02` needs **n = 9,222**, the owner's n ~ 10⁴; 15,434 with Bonferroni over 12 tests (four statistics, three
@@ -158,7 +159,12 @@ critical value and for the broad differences, and is about 0.025 at 80% in the w
   f32. It is measured, not assumed; n stays ~10⁴. Two-sample KS on paired samples is conservative where pairs
   coincide, so the paired tests run beside it.
 - **Lifetimes, by log-rank**, total events `4 (z_{α/2} + z_β)² / ln²HR`: at T = 200 with 10⁴ a side, 12,514 and 14,732
-  events detect a hazard ratio of 1.051 and 1.047.
+  events detect a hazard ratio of 1.051 and 1.047. That formula assumes independent arms and these share starts, so 1.05 is the
+  independent-arm figure; a stratified or paired form runs beside it.
+- **End states condition on an outcome.** The n of 6,257 and 7,366 are Brutus's ended counts, and f32's and f64's ended sets
+  are different starts. If an arm's lifetimes shift, its end-state distribution shifts by selection alone. So the primary
+  comparison is over all starts: outcome fractions with the censored runs as their own category, and cumulative incidence by
+  outcome at T. A KS on end states is labelled conditional and uses each arm's own n, which the table's row only stands in for.
 - **So:** n = 10⁴ per set, all the records hold, gives a sensitivity of 2% in a whole-ensemble fraction, 2 to 3% in KS
   distance (read with the shape caveat above), and 5% in hazard. Going below 2% needs starts beyond the records, whose converged side would be
   ours as well.
