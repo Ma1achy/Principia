@@ -1,3 +1,6 @@
+# Wrapper scripts are experimental in nextest 0.9.146, the version CI pins: the queue's tests' PID namespaces, below.
+experimental = ["wrapper-scripts"]
+
 # cargo-nextest's configuration: CI and the documented local run test through nextest (R-231, REQ-VAL-165).
 #
 # nextest runs each test in a process of its own, and tests from every binary at once. A cargo run into the
@@ -47,6 +50,18 @@ test-group = "xtask-cargo"
 [[profile.default.overrides]]
 filter = "binary_id(=xtask::jobq) | binary_id(/^xtask::qa_R-658/)"
 slow-timeout = { period = "120s", terminate-after = 3 }
+
+# Each of the job queue's test processes in a PID namespace of its own during a mutants run (`scripts/contain.sh test`;
+# a pass-through unless the run sets PRIN_TEST_PIDNS): nothing a mutant of the queue starts outlives its test, and nothing
+# it signals is outside it. `within-wrapper`: the memory cap, the target runner `.cargo/mutants.toml` sets, stays around
+# the test. Applied per R-369.
+[scripts.wrapper.queue-pidns]
+command = { command-line = "scripts/contain.sh test", relative-to = "workspace-root" }
+target-runner = "within-wrapper"
+
+[[profile.default.scripts]]
+filter = "binary_id(=xtask::jobq) | binary_id(/^xtask::qa_R-658/)"
+run-wrapper = "queue-pidns"
 
 [test-groups]
 xtask-cargo = { max-threads = 1 }

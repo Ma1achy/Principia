@@ -1,0 +1,185 @@
+#!/usr/bin/env bash
+# Keeps what a mutant does to processes inside the mutants run (R-658; applied per R-369). The job queue's code signals
+# process groups and starts daemons, so a mutant of it can do anything a user's process can; on 31 Oct 2026 every shard
+# of two runs in a row (41161766829, 41178118082) ended "The hosted runner lost communication", logs gone. The hosted
+# runner's agent runs as the same user as the tests, so `kill(-1)` reaches it, and it shares the machine's memory, tasks
+# and disk with them. This holds whatever the mutated code does:
+#
+# A workflow step uses `run` or `check` as its `shell:`, so its script reads as it would otherwise.
+#
+#   scripts/contain.sh run <command...>   With PRIN_CONTAIN=required (CI's mutants steps): runs the command, as this
+#                                         user, in a PID namespace of its own and a cgroup scope with memory, task and
+#                                         CPU limits. Signals reach only the namespace, whose init is root's, so
+#                                         `kill(-1)` ends the run, not the runner, and the step fails, named; all of it
+#                                         dies with the namespace; an out-of-memory kill stays inside the scope. A
+#                                         heartbeat outside it reports, and stops the run before the disk fills. If
+#                                         these can't be had, it fails: CI never runs this code uncontained. Without
+#                                         PRIN_CONTAIN, it just runs the command: a local run, or a test's stand-in.
+#   scripts/contain.sh test <command...>  nextest's wrapper of the queue's tests (.config/nextest.toml). With
+#                                         PRIN_TEST_PIDNS=1, which `run` sets, runs one test process in a PID namespace
+#                                         of its own: whatever it starts is gone when it ends, and nothing it signals
+#                                         is outside it, so a mutant's `kill(-1)` fails that test and no other.
+#                                         Without it, just runs the command.
+#   scripts/contain.sh check [<script>]   With PRIN_CONTAIN=required: proves both on this machine, with a real
+#                                         `kill -9 -1` inside each; fails if the containment doesn't hold. Then runs
+#                                         the script, if one is given.
+#
+# The heartbeat survives the runner's death: while a run lasts, every 2 minutes, it sets a commit status (context
+# HEARTBEAT_CONTEXT on HEARTBEAT_SHA, with HEARTBEAT_TOKEN) to the memory, disk, tasks, out-of-memory kills, the number of
+# logs and the newest log under HEARTBEAT_OUT/log, the mutant under test (`baseline.log` while the baseline runs). A
+# finished run's says "finished". GitHub keeps a status when a job's log is lost, so after a death
+# `gh api repos/<repo>/commits/<sha>/statuses` names what was running and how the machine stood. Always state `success`:
+# it reports, and never holds a merge. The token is kept from the contained command.
+set -euo pipefail
+
+# Under each: an init that stays while the command runs, so that orphans are reaped; a shell's wait takes any child.
+# `; exit` keeps bash from exec'ing the command in its place.
+TEST_INIT='"$@"; rc=$?; exit "$rc"'
+RUN_INIT='uid=$1 gid=$2 envfile=$3; shift 3
+setpriv --reuid="$uid" --regid="$gid" --init-groups -- bash -c '\''. "$1"; shift; exec "$@"'\'' contain-env "$envfile" "$@"
+rc=$?; exit "$rc"'
+
+# Memory: the runner has 16 GiB and no swap (mutants.yml removes it); this leaves its agent and the kernel the rest.
+MEMORY_MAX=14500M
+TASKS_MAX=16384
+# Below this much free disk the run is stopped: a full disk takes the agent's own logging with it.
+DISK_FLOOR_GIB=3
+SAMPLE_SECS=30
+POST_EVERY=4
+
+die() {
+  echo "::error::contain.sh: $*" >&2
+  exit 125
+}
+
+require_tools() {
+  [ "$(uname -s)" = Linux ] || die "containment required, and this is not Linux"
+  for tool in sudo systemd-run systemctl unshare setpriv; do
+    command -v "$tool" > /dev/null || die "containment required, and there is no $tool"
+  done
+  sudo -n true 2> /dev/null || die "containment required, and sudo needs a password"
+  # ubuntu-24.04 refuses unprivileged user namespaces by default, which `test` needs. Absent on other kernels.
+  sudo -n sysctl -q -w kernel.apparmor_restrict_unprivileged_userns=0 2> /dev/null || true
+}
+
+# One sample of the machine, in a status description's 140 characters.
+sample() {
+  local unit=$1 began=$2 mem disk tasks group oom logs newest
+  mem=$(awk '/^MemAvailable:/ { printf "%.1f", $2 / 1048576 }' /proc/meminfo)
+  disk=$(df -BG --output=avail / | tail -1 | tr -dc 0-9)
+  tasks=$(cut -d' ' -f4 /proc/loadavg)
+  group=$(systemctl show -p ControlGroup --value "$unit.scope" 2> /dev/null || true)
+  oom=$(awk '$1 == "oom_kill" { print $2 }' "/sys/fs/cgroup$group/memory.events" 2> /dev/null || true)
+  logs=$(find "${HEARTBEAT_OUT:-/nonexistent}/log" -type f 2> /dev/null | wc -l || true)
+  # The newest log's name, its last 48 characters: a mutant's file, line and column.
+  newest=$(ls -t "${HEARTBEAT_OUT:-/nonexistent}/log" 2> /dev/null | head -1 | tail -c 48 || true)
+  printf '+%dm mem %sG disk %sG tasks %s oom %s logs %s %s' "$((($(date +%s) - began) / 60))" \
+    "$mem" "$disk" "$tasks" "${oom:-?}" "$logs" "$newest"
+}
+
+post() {
+  [ -n "${HEARTBEAT_CONTEXT:-}" ] && [ -n "${token:-}" ] && [ -n "${HEARTBEAT_SHA:-}" ] || return 0
+  curl -fsS -m 20 -o /dev/null -X POST -H "Authorization: Bearer $token" -H "Accept: application/vnd.github+json" \
+    "${GITHUB_API_URL:-https://api.github.com}/repos/${GITHUB_REPOSITORY:-}/statuses/$HEARTBEAT_SHA" \
+    -d "{\"state\":\"success\",\"context\":\"$HEARTBEAT_CONTEXT\",\"description\":\"${1:0:140}\"}" 2> /dev/null || true
+}
+
+heartbeat() {
+  local unit=$1 began=$2 n=0 line free
+  # A failed sample is not the end of the heartbeat.
+  set +e
+  while :; do
+    line=$(sample "$unit" "$began")
+    echo "$line" >> "${RUNNER_TEMP:-/tmp}/heartbeat.log"
+    if [ $((n % POST_EVERY)) -eq 0 ]; then
+      echo "heartbeat: $line"
+      post "$line"
+    fi
+    n=$((n + 1))
+    free=$(df -BG --output=avail / | tail -1 | tr -dc 0-9)
+    if [ "${free:-0}" -lt "$DISK_FLOOR_GIB" ]; then
+      echo "::error::contain.sh: ${free} GiB of disk left: stopping the run before it takes the runner"
+      post "disk floor: stopped. $line"
+      sudo -n systemctl kill --signal=SIGKILL "$unit.scope" || true
+    fi
+    sleep "$SAMPLE_SECS" > /dev/null 2>&1
+  done
+}
+
+run_contained() {
+  [ "${PRIN_CONTAIN:-}" = required ] || exec "$@"
+  require_tools
+  local unit="prin-contain-$$" began uid gid envfile watcher rc
+  began=$(date +%s)
+  uid=$(id -u)
+  gid=$(id -g)
+  token=${HEARTBEAT_TOKEN:-}
+  unset HEARTBEAT_TOKEN PRIN_CONTAIN
+  export PRIN_TEST_PIDNS=1
+  envfile=$(mktemp "${RUNNER_TEMP:-/tmp}/contain-env.XXXXXX")
+  # sudo strips the environment; the command gets all of this one, PATH and LD_LIBRARY_PATH included.
+  declare -px > "$envfile"
+  heartbeat "$unit" "$began" &
+  watcher=$!
+  set +e
+  sudo -n systemd-run --scope --quiet --unit="$unit" -p MemoryMax="$MEMORY_MAX" -p TasksMax="$TASKS_MAX" \
+    -p CPUWeight=20 -p IOWeight=20 -p OOMPolicy=continue -- \
+    unshare --pid --fork --kill-child --mount-proc \
+    bash -c "$RUN_INIT" contain-init "$uid" "$gid" "$envfile" "$@" < /dev/null
+  rc=$?
+  set -e
+  kill "$watcher" 2> /dev/null || true
+  rm -f "$envfile"
+  post "finished, exit $rc. $(sample "$unit" "$began")"
+  if [ "$rc" -eq 137 ]; then
+    echo "::error::contain.sh: the contained run was killed (SIGKILL): a kill(-1), the out-of-memory killer or the" \
+      "disk floor; see heartbeat.log. Its outcomes so far are in the report."
+  fi
+  return "$rc"
+}
+
+run_test() {
+  [ "${PRIN_TEST_PIDNS:-}" = 1 ] || exec "$@"
+  exec unshare --user --map-current-user --pid --fork --kill-child --mount-proc bash -c "$TEST_INIT" contain-init "$@"
+}
+
+# Each containment: `kill -9 -1` inside must leave a process of this user outside alive, must not see it, and what the
+# command leaves behind must end with it. The control: the same look from outside must see that process.
+check() {
+  if [ "${PRIN_CONTAIN:-}" != required ]; then
+    echo "contain.sh check: containment not required here"
+    return 0
+  fi
+  require_tools
+  sleep 600 > /dev/null 2>&1 &
+  local outer=$! self=$0 mark=299.7531 leak
+  kill -0 "$outer" || die "check: the control can't see its own process $outer"
+  # shellcheck disable=SC2016 # expanded inside
+  local probe='[ "$(cat /proc/1/comm)" = bash ] || exit 41
+    if kill -0 "$1" 2> /dev/null; then exit 42; fi
+    kill -9 -1 2> /dev/null
+    setsid sleep "$2" < /dev/null > /dev/null 2>&1 &
+    exit 0'
+  local mode
+  for mode in run "run $self test"; do
+    # shellcheck disable=SC2086 # the mode's words
+    ( "$self" $mode bash -c "$probe" probe "$outer" "$mark" ) || die "check: inside \`$mode\`: exit $?"
+    kill -0 "$outer" 2> /dev/null || die "check: \`kill -9 -1\` inside \`$mode\` reached a process outside"
+    leak=$(pgrep -fc "sleep $mark" || true)
+    [ "$leak" -eq 0 ] || die "check: $leak process(es) outlived \`$mode\`"
+    echo "contain.sh check: \`$mode\` holds: kill -9 -1 stayed inside, outside unseen, nothing left"
+  done
+  kill "$outer"
+}
+
+mode=${1:-}
+[ "$#" -gt 0 ] && shift
+case "$mode" in
+  run) run_contained "$@" ;;
+  test) run_test "$@" ;;
+  check)
+    check
+    [ "$#" -eq 0 ] || exec bash "$@"
+    ;;
+  *) die "usage: contain.sh run|test <command...> | check [<script>]" ;;
+esac
