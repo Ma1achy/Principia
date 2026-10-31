@@ -227,19 +227,26 @@ def self_test():
     return fails
 
 
-def queue_files():
-    return [QUEUE] + sorted(glob.glob(QUEUE_ARCHIVE + "/*.md"))
+def queue_files(queue=QUEUE, archive=QUEUE_ARCHIVE):
+    return [queue] + sorted(glob.glob(archive + "/*.md"))
 
 
-def rq_ids():
-    """{RQ-n: file} over the live queue and its archive, and the ids that appear more than once."""
+def rq_ids(queue=QUEUE, archive=QUEUE_ARCHIVE):
+    """{RQ-n: file} over the live queue and its archive, and the ids that appear more than once. A branch takes the
+    next free id, so two branches can take the same one; the later PR takes the next free id (plan/OPERATIONS.md
+    § "Merging" step 2). Both default to this tree's; check_plan.py's --queue names others."""
     seen, dupes = {}, []
-    for f in queue_files():
+    for f in queue_files(queue, archive):
         if not os.path.exists(f):
             continue
-        for q in RQ_HEAD.findall(open(f, encoding="utf-8").read()):
-            if q in seen:
-                dupes.append(f"{q} is an entry in both {seen[q]} and {f}" if seen[q] != f else f"{q} is two entries in {f}")
+        text, first = open(f, encoding="utf-8").read(), {}
+        for m in RQ_HEAD.finditer(text):
+            q, n = m.group(1), text.count("\n", 0, m.start()) + 1
+            if q in first:
+                dupes.append(f"{q} is two entries in {f} (lines {first[q]} and {n})")
+            elif q in seen:
+                dupes.append(f"{q} is an entry in both {seen[q]} and {f}")
+            first.setdefault(q, n)
             seen.setdefault(q, f)
     return seen, dupes
 

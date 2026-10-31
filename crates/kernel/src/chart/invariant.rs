@@ -66,6 +66,7 @@ use core::marker::PhantomData;
 
 use spirv_std::num_traits::Float;
 
+use super::tilt::{shift_controls, Hidden, Shift, Tiltable};
 use super::{Chart, ChartOut, Constraint, ValidationResult};
 use crate::decode::config::{self, Config};
 use crate::decode::invariant::{self as construction, infeasible, ExactSign, Outcome};
@@ -171,9 +172,15 @@ impl<P: Copy> Invariant<P> {
     /// (z_μ₁, z_μ₂)`, and the momentum controls `z[2:6]` 0, which the construction does not read.
     #[inline]
     pub fn frozen<F: Float + From<P>>(&self) -> decode::Latent<F> {
+        decode::Latent::new(self.controls())
+    }
+
+    /// [`Invariant::frozen`]'s controls.
+    #[inline]
+    pub fn controls<F: Float + From<P>>(&self) -> [F; 8] {
         let wide = <F as From<P>>::from;
         let zero = F::zero();
-        decode::Latent::new([
+        [
             wide(self.z_cfg[0]),
             wide(self.z_cfg[1]),
             zero,
@@ -182,7 +189,19 @@ impl<P: Copy> Invariant<P> {
             zero,
             wide(self.z_mass[0]),
             wide(self.z_mass[1]),
-        ])
+        ]
+    }
+
+    /// The frozen part with the control `k`, a configuration control or a mass logit, set to `value` (the slice, R-473
+    /// T6); `None` for a momentum control, which the axes write.
+    pub fn sliced(&self, k: u32, value: P) -> Option<Self> {
+        let mut inv = *self;
+        match k {
+            0 | 1 => inv.z_cfg[k as usize] = value,
+            6 | 7 => inv.z_mass[(k - 6) as usize] = value,
+            _ => return None,
+        }
+        Some(inv)
     }
 
     /// The targets at `(u, v)`: §2.1's warp at `(s, t) = (u, v)`.
@@ -469,9 +488,57 @@ where
     R: LinkReal + PayloadReal + WarpReal + From<C::Param>,
     C: InvariantChart,
 {
-    let inv = chart.invariant();
-    let t = inv.targets(u, v);
+    decode_controls::<S, R, C>(chart, u, v, &chart.map(u, v).z, p)
+}
+
+/// [`decode_params()`] with the frozen controls `z` given: the chart's own, or a tilt's, its hidden offsets added
+/// (`crate::chart::tilt`).
+#[inline]
+pub fn decode_controls<S, R, C>(
+    chart: &C,
+    u: R,
+    v: R,
+    z: &decode::Latent<R>,
+    p: &LinkParams<R>,
+) -> (Decoded<R>, Outcome)
+where
+    S: Selection,
+    R: LinkReal + PayloadReal + WarpReal + From<C::Param>,
+    C: InvariantChart,
+{
+    let t = chart.invariant().targets(u, v);
     let mut blocks = InvariantBlocks::<S, R>::new_at(t.lz, t.k, *p);
-    let decoded = decode::decode_with(&mut blocks, &chart.map(u, v).z);
+    let decoded = decode::decode_with(&mut blocks, z);
     (decoded, blocks.outcome())
 }
+
+/// The invariant charts' hidden coordinates and tilt (R-473 J1): the configuration's two controls and the two mass
+/// logits, `{0, 1, 6, 7}`; the axes write the momentum block.
+macro_rules! tiltable {
+    ($($chart:ident),*) => {$(
+        impl<P: Copy> Hidden for $chart<P> {
+            fn hidden(&self, k: u32) -> bool {
+                matches!(k, 0 | 1 | 6 | 7)
+            }
+
+            fn sliced(&self, k: u32, value: P) -> Option<Self> {
+                self.0.sliced(k, value).map($chart)
+            }
+        }
+
+        impl<P: Copy> Tiltable for $chart<P> {
+            /// [`decode_controls()`] on the frozen controls shifted, the outcome dropped.
+            #[inline]
+            fn decode_shifted<S, R>(&self, u: R, v: R, shift: &Shift<R>, p: &LinkParams<R>) -> Decoded<R>
+            where
+                S: Selection,
+                R: LinkReal + PayloadReal + From<P>,
+            {
+                let z = decode::Latent::new(shift_controls(self.0.controls(), shift));
+                decode_controls::<S, R, Self>(self, u, v, &z, p).0
+            }
+        }
+    )*};
+}
+
+tiltable!(InvariantLE, InvariantLK);

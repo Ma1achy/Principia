@@ -259,6 +259,39 @@ merge:
    own new checks if `main` has moved since its CI ran. "Require branches to be up to date" is off (R-266), so nothing
    else catches a clash: #70's CI was green, but `main` had since gained #75's `spawn::TIMEOUT` uses, which #70 renamed,
    and the merged tree failed to compile (30 Sep 2026).
+   `REVIEW_QUEUE.md` merges by union (`.gitattributes`, applied per R-369), which keeps appended entries from
+   conflicting, and the merge itself says nothing of what it leaves: both versions of a line edited on two sides; both
+   bodies under one heading, where two sides file the same new id with an identical heading; new entries interleaved,
+   one's lines under another's RQ, where they share a run of identical lines; a line or whole entry one side deleted,
+   restored because the other side edited it. And two branches that each pass can collide only in their merge: each
+   takes the next free RQ id on its own (§ "Numbers"), and that stays. So the queue has its own check, which
+   `python3 plan/check_plan.py` runs and which runs alone on the would-be merge, before each merge:
+   ```
+   git -C <scratch> merge --no-edit origin/<branch>
+   python3 <scratch>/plan/check_plan.py --queue <scratch>/REVIEW_QUEUE.md
+   ```
+   (`<scratch>` being the worktree above, or for any other file, `--queue <path> --archive <archive dir>`.) It fails on
+   an RQ id twice in the queue, in both the queue and `docs/archive/review_queue/`, or twice across the archive; two
+   entries with one question; two of an entry's one-per-entry fields, or no `File, section` or `Applied meanwhile`; a
+   heading with no body or not in the form `## RQ-n: <question>`; a run of up to eight lines next to one that reads the
+   same, of that length or a line more or less, an edit in an id (`R-n`, `RQ-n`, `TASK-…`, `REQ-…`, `PR #n`) or a
+   `line N` counting as a difference; or a paragraph starting in lower case at the margin.
+
+   **On a failure:** the PR to merge later fixes it on its own branch, by merging `main`, and CI runs on the new head.
+   An id collision: **the later PR takes the next free id** (§ "Numbers"), in its entry and in every reference it added
+   to that id (`rq:` in `plan/requirements.yaml`, its task files, its PR); ids that are already on `main` never change.
+   Two versions of one entry: keep the one the entry's owner meant, or both as dated lines if both hold. A false alarm
+   on two lines meant alike: reword one.
+
+   `ci` on `main` catches what slips through: every job runs on a push to `main` (§ "What CI runs on a pull request"),
+   `plan_check_passes_on_the_tree` among them; a pull request's own CI runs on its merge ref, so it sees only what was on
+   `main` at its last push. The check can't see everything a merge leaves. These still pass:
+   two lines differing only in a plain number, a date or value among them, which read as a list's siblings; lines
+   under 30 characters; runs over eight lines; an interleaving that moves no required field and repeats no
+   one-per-entry field; conflicting notes in different words, or two versions reworded further apart than its likeness
+   allows; two questions in different words; a deletion undone, or an entry restored whole. So after each merge the
+   orchestrator still reads `git diff <before> <after> -- REVIEW_QUEUE.md`, which the batch merge prints, for these: a
+   line doubled, restored or under the wrong RQ, or two notes that disagree. It fixes anything wrong by a follow-up PR.
 3. `gh pr merge N --merge --match-head-commit <full sha>`. Never `--admin` (R-266), never squash or rebase.
 4. Then, as a separate command, never chained after the merge with `;`: confirm the remote branch is gone, since
    GitHub's "Automatically delete head branches" deletes it on merge (R-357): `git ls-remote --exit-code origin
@@ -282,9 +315,42 @@ except for adding `mutants-check`, the one change R-305 allows. The human remove
 checks until #96 (TASK-M0-14) merges, since PRs off `main` never report it. Tell the human the moment #96 merges, so
 they can add it back.
 
+**What CI runs on a pull request (R-656).** `ci.yml` runs on a push to `main` (and to a `measure/` branch, R-272)
+and, for a pull request, through `pull_request` only, once per push. Each workflow that builds or tests keeps one
+`concurrency` group per pull request, so a push cancels the run on the head it supersedes; a run on `main` is never
+cancelled (`reviews.yml`, `no-atlas-params.yml` and `gemini-dispatch.yml` keep none, decisions.md R-656). `ci.yml`'s
+`changes` job, and `mutants-fixture` in a step of its own, classify the change with `scripts/ci_changes.sh` (the pull
+request's merge commit against the base it merges onto; any other run runs everything):
+- **docs-only** (every path on the script's allowlist: `docs/`, the plan's prose and data, the root's markdown; never
+  `.github/` or `plan/`'s Python; and none on its list of files code reads, which count as code, the owner's words
+  of 30 Oct 2026 on #351, decisions.md R-656: every `.md` and `.html` under `docs/`, `docs/gui/design/`,
+  `docs/gui/reference/`, all of `plan/`, the root's markdown and `fixtures/`, each with its readers named in the
+  script, so only `docs/`'s other files, such as the incoming papers and data, are docs-only): the build, test,
+  release and controls jobs and the GPU suites' jobs are skipped, and `ci-workspace` runs the plan checks, the
+  vocabulary lint and the tests that name the allowlist's paths (a backstop) in place of its tests;
+  `mutants-fixture` skips its steps; `mutants`' shards find no `.rs` file and pass;
+- **no GPU-path file** (only docs-only paths, `crates/gui/` and `crates/prin/`; a file code reads is a GPU path):
+  the GPU suites' jobs (`gpu-kernel suites`, `gpu-metal suites`, `gpu-lavapipe suites`) are skipped; everything else
+  runs.
+
+Every required check still reports under its own name and concludes success, so the merge step is unchanged:
+`merge-batch.sh`'s `gh pr checks --required` reads `pass` for each. A skipped job never bears a required name: the
+required checks `ci`, `xtask-ci`, `gpu-kernel`, `gpu-metal` and `gpu-lavapipe` are gates that run whatever their jobs
+ended in and pass a skipped one only on the classification's verdict, and matrix jobs are named `<id> (<shard>)`.
+Mutants run on every head whose diff has Rust in it, and the superseded head's run is cancelled, so the run that
+finishes is the merge-ready head's; nothing requests it at merge time. What a pull request skips runs on `main` after
+it merges, where every job runs. A superseded head's cancelled run leaves its gates failed or cancelled, as before:
+the owner kept them as they are, TASK-M0-45's checks and R-266 standing (30 Oct 2026, on #351, no ruling). A new
+test, build script, codegen step or xtask check that reads a doc, spec or data file adds that file to
+`scripts/ci_changes.sh`'s list of files code reads; `xtask/tests/ci_changes.rs` scans for a literal path missing from it.
+
 **Numbers.**
+- **An RQ's form.** A heading `## RQ-n: <question>`, a `- **File, section:**` field and a `- **Applied meanwhile:**`
+  field (§ "Escalation" of `plan/WORKFLOW.md`); the plan check fails an entry without them.
 - **RQ ids.** Before filing an RQ, take the next free id across every `origin/*` branch: `git fetch`, then search each
-  branch's `REVIEW_QUEUE.md` and `docs/archive/review_queue/`. Two agents once both filed RQ-188.
+  branch's `REVIEW_QUEUE.md` and `docs/archive/review_queue/`. Two agents once both filed RQ-188. A branch filed since
+  can still take the same one: the merged-tree check catches that, and the later PR takes the next free id (§ "Merging"
+  step 2).
 - **An RQ open only on a PR branch.** When a rulings PR rules on it, the rulings PR archives it in
   `docs/archive/review_queue/`, since `plan/tools/rulings.py` rejects a cited RQ that is neither open nor archived. The
   task PR's next fix pass deletes its open copy.
