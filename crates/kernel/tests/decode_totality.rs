@@ -410,7 +410,9 @@ impl Visit for Names {
     }
 }
 
-/// Every `impl … Chart for <Name>` in `kernel/src/chart`.
+/// Every `impl … Chart for <Name>` in `kernel/src/chart`, but `Tilted`: a registered chart under its tilt params, its
+/// name the chart's and its decode the chart's at the tilted point (R-473 J5; `kernel::chart::tilt`), not a chart of
+/// its own.
 fn impls() -> BTreeSet<String> {
     let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("src/chart");
     let mut out = BTreeSet::new();
@@ -419,7 +421,9 @@ fn impls() -> BTreeSet<String> {
         for line in text.lines().filter(|l| l.starts_with("impl")) {
             if let Some(rest) = line.split(" Chart for ").nth(1) {
                 let name: String = rest.chars().take_while(|c| c.is_alphanumeric()).collect();
-                out.insert(name);
+                if name != "Tilted" {
+                    out.insert(name);
+                }
             }
         }
     }

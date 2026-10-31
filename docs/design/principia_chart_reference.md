@@ -534,6 +534,17 @@ centres land on the circle only for a measure-zero set of `s`; the rule decides 
 keep every pixel centre more than `10⁻⁶` from it. *Was (PR #271, under R-503's fold, kept as the record):* the group
 counting 1 or 0 "by the per-pixel rule applied to `−n0`".
 
+**Pixels on `r = π` under a tilt (defined per R-72, REQ-CHART-090; TASK-M2-36; physics review 5719740344 of PR #349,
+P1).** The count above is the untilted view's. A tilted pixel lies on the circle when the `r` computed from its tilted
+`(a, b)` is π, and it keeps its own hidden offsets `d`, so two such pixels share the shape `−n0` and are one system only
+if their `d` agree: a tilted view's pixels on `r = π` count **once per distinct `d`**. Where `N_a = 0` and `N_b = 0`,
+decided exactly on the stored angles as the repeats are (`principia_chart_decoder_contract.md` § "Repeats and the
+canonical point"), the view adds no `d` that varies, so they count once together, whatever rounding leaves in the
+computed offsets. Elsewhere two pixels' `d` are compared exactly as computed at the float type, every target's, with no
+tolerance on them or on a computed `N`, as `r` itself is compared with π: two pixels on a chord along the plane's level
+line, whose computed `d` are equal, stay one system, and `+0` equals `−0`. Pixels on the circle at different `d` have
+different masses or momenta, so they are different systems (R-408).
+
 **Under a tilt (R-473 T1, T2, J1; R-544).** Two pixels fold only when their full `(a, b, d)` decode to the same
 system (`principia_chart_decoder_contract.md` Part 5's definition of `system_image`). Under a nonzero tilt a pixel at
 window offset `(u, v)` maps to `(a, b, d) = R·(u, v, 0)`, and `d` is added to a momentum control or a mass logit (J1).
