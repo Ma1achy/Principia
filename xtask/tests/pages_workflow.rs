@@ -41,38 +41,52 @@ fn pages_workflow_manual() {
     manual(&workflow());
 }
 
-negative_control!(
-    pages_workflow_manual_push,
-    "a `push` trigger added",
-    expected = "not workflow_dispatch alone",
-    manual(&edited(
-        "  workflow_dispatch:\n",
-        "  workflow_dispatch:\n  push:\n"
-    ))
-);
-negative_control!(
-    pages_workflow_manual_schedule,
-    "a `schedule` trigger added under the dispatch's own block",
-    expected = "not workflow_dispatch alone",
-    manual(&edited(
-        "  workflow_dispatch:\n",
-        "  schedule:\n    - cron: '0 0 * * *'\n  workflow_dispatch:\n"
-    ))
-);
-negative_control!(
-    pages_workflow_manual_ref,
-    "the ref condition removed",
-    expected = "not conditioned on refs/heads/main",
-    manual(&edited("    if: github.ref == 'refs/heads/main'\n", ""))
-);
-negative_control!(
-    pages_workflow_manual_other_ref,
-    "the ref condition on another branch",
-    expected = "not conditioned on refs/heads/main",
-    manual(&edited("refs/heads/main'", "refs/heads/dev'"))
-);
-negative_control!(
-    pages_workflow_manual_environment_removed,
+mod push {
+    use super::*;
+    negative_control!(
+        pages_workflow_manual,
+        "a `push` trigger added",
+        expected = "not workflow_dispatch alone",
+        manual(&edited(
+            "  workflow_dispatch:\n",
+            "  workflow_dispatch:\n  push:\n"
+        ))
+    );
+}
+mod schedule {
+    use super::*;
+    negative_control!(
+        pages_workflow_manual,
+        "a `schedule` trigger added under the dispatch's own block",
+        expected = "not workflow_dispatch alone",
+        manual(&edited(
+            "  workflow_dispatch:\n",
+            "  schedule:\n    - cron: '0 0 * * *'\n  workflow_dispatch:\n"
+        ))
+    );
+}
+mod ref_removed {
+    use super::*;
+    negative_control!(
+        pages_workflow_manual,
+        "the ref condition removed",
+        expected = "not conditioned on refs/heads/main",
+        manual(&edited("    if: github.ref == 'refs/heads/main'\n", ""))
+    );
+}
+mod other_ref {
+    use super::*;
+    negative_control!(
+        pages_workflow_manual,
+        "the ref condition on another branch",
+        expected = "not conditioned on refs/heads/main",
+        manual(&edited("refs/heads/main'", "refs/heads/dev'"))
+    );
+}
+mod environment_removed {
+    use super::*;
+    negative_control!(
+pages_workflow_manual,
     "the deploy job's `environment:` removed",
     expected = "names no environment",
     manual(&edited(
@@ -80,45 +94,61 @@ negative_control!(
         ""
     ))
 );
-negative_control!(
-    pages_workflow_manual_environment_renamed,
-    "the deploy job's environment renamed",
-    expected = "not github-pages",
-    manual(&edited("name: github-pages", "name: staging"))
-);
-negative_control!(
-    pages_workflow_manual_permission,
-    "the deploy job without `id-token: write`",
-    expected = "lack `id-token: write`",
-    manual(&edited("      id-token: write\n", ""))
-);
-negative_control!(
-    pages_workflow_manual_third_job,
-    "a third job",
-    expected = "not build and deploy",
-    manual(&edited(
-        "  deploy:\n",
-        "  extra:\n    runs-on: ubuntu-24.04\n\n  deploy:\n"
-    ))
-);
-negative_control!(
-    pages_workflow_manual_moving_tag,
-    "actions/deploy-pages at a moving tag",
-    expected = "deploy-pages at a pinned SHA",
-    manual(&edited(
-        "actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5",
-        "actions/deploy-pages@v4"
-    ))
-);
-negative_control!(
-    pages_workflow_manual_upload_moving_tag,
-    "actions/upload-pages-artifact at a moving tag",
-    expected = "upload-pages-artifact at a pinned SHA",
-    manual(&edited(
-        "actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4.0.0",
-        "actions/upload-pages-artifact@v4"
-    ))
-);
+}
+mod environment_renamed {
+    use super::*;
+    negative_control!(
+        pages_workflow_manual,
+        "the deploy job's environment renamed",
+        expected = "not github-pages",
+        manual(&edited("name: github-pages", "name: staging"))
+    );
+}
+mod permission {
+    use super::*;
+    negative_control!(
+        pages_workflow_manual,
+        "the deploy job without `id-token: write`",
+        expected = "lack `id-token: write`",
+        manual(&edited("      id-token: write\n", ""))
+    );
+}
+mod third_job {
+    use super::*;
+    negative_control!(
+        pages_workflow_manual,
+        "a third job",
+        expected = "not build and deploy",
+        manual(&edited(
+            "  deploy:\n",
+            "  extra:\n    runs-on: ubuntu-24.04\n\n  deploy:\n"
+        ))
+    );
+}
+mod moving_tag {
+    use super::*;
+    negative_control!(
+        pages_workflow_manual,
+        "actions/deploy-pages at a moving tag",
+        expected = "deploy-pages at a pinned SHA",
+        manual(&edited(
+            "actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5",
+            "actions/deploy-pages@v4"
+        ))
+    );
+}
+mod upload_moving_tag {
+    use super::*;
+    negative_control!(
+        pages_workflow_manual,
+        "actions/upload-pages-artifact at a moving tag",
+        expected = "upload-pages-artifact at a pinned SHA",
+        manual(&edited(
+            "actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4.0.0",
+            "actions/upload-pages-artifact@v4"
+        ))
+    );
+}
 
 /// The pin agrees with the lock and the workflow, and the CLI's version is checked exactly.
 fn check_pin(lock: &str, workflow: &str) {
@@ -141,24 +171,30 @@ fn web_skeleton_pins_wasm_bindgen() {
     check_pin(&lock, &workflow());
 }
 
-negative_control!(
-    web_skeleton_pins_wasm_bindgen_lock,
-    "a lock file at another version",
-    expected = "not the lock's wasm-bindgen",
-    check_pin(
-        "name = \"wasm-bindgen\"\nversion = \"0.2.1\"\n",
-        &workflow()
-    )
-);
-negative_control!(
-    web_skeleton_pins_wasm_bindgen_workflow,
-    "a workflow installing another version",
-    expected = "installs another wasm-bindgen-cli",
-    check_pin(
-        &format!("name = \"wasm-bindgen\"\nversion = \"{WASM_BINDGEN_VERSION}\"\n"),
-        &edited("--version 0.2.129", "--version 0.2.1")
-    )
-);
+mod lock {
+    use super::*;
+    negative_control!(
+        web_skeleton_pins_wasm_bindgen,
+        "a lock file at another version",
+        expected = "not the lock's wasm-bindgen",
+        check_pin(
+            "name = \"wasm-bindgen\"\nversion = \"0.2.1\"\n",
+            &workflow()
+        )
+    );
+}
+mod workflow {
+    use super::*;
+    negative_control!(
+        web_skeleton_pins_wasm_bindgen,
+        "a workflow installing another version",
+        expected = "installs another wasm-bindgen-cli",
+        check_pin(
+            &format!("name = \"wasm-bindgen\"\nversion = \"{WASM_BINDGEN_VERSION}\"\n"),
+            &edited("--version 0.2.129", "--version 0.2.1")
+        )
+    );
+}
 
 /// The CLI check takes the pinned version and only it.
 fn check_versions(pinned: &str) {
@@ -179,7 +215,7 @@ fn web_skeleton_checks_the_cli() {
 }
 
 negative_control!(
-    web_skeleton_checks_the_cli_control,
+    web_skeleton_checks_the_cli,
     "another version given as the pinned one",
     expected = "the pinned version is taken",
     check_versions("wasm-bindgen 0.2.1\n")
@@ -198,7 +234,7 @@ fn web_skeleton_site_files_exist() {
 }
 
 negative_control!(
-    web_skeleton_site_files_exist_control,
+    web_skeleton_site_files_exist,
     "a directory without them",
     expected = "the site lacks index.html",
     check_site(&root().join("xtask"))
@@ -245,7 +281,7 @@ fn pages_workflow_names_each_fault() {
 }
 
 negative_control!(
-    pages_workflow_names_each_fault_control,
+    pages_workflow_names_each_fault,
     "a check that passes everything",
     expected = "wanted `no block `on:``",
     check_faults(|_| Ok(()))
@@ -298,7 +334,7 @@ fn web_skeleton_plumbing() {
 }
 
 negative_control!(
-    web_skeleton_plumbing_control,
+    web_skeleton_plumbing,
     "another default place",
     expected = "the site's default place",
     check_plumbing(std::path::PathBuf::from("/elsewhere"))
