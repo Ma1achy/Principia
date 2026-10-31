@@ -229,3 +229,82 @@ negative_control!(
         fails_naming(&dir, "are two versions of one text");
     }
 );
+
+#[test]
+fn one_note_rewrapped_shorter_on_the_later_side_is_caught() {
+    // OPERATIONS § "Merging" step 2: "of that length or a line more or less". The test above has three lines then four;
+    // this is the other order, four then three, which a merge gives by its direction alone.
+    let dir = repo("rewrap_shorter");
+    side(&dir, "a", |d| {
+        add_note(d, "- **31 Oct 2026:** the wrapped text of one note that one branch has written over\n  three separate lines of the queue so that it runs on and on\n  until it stops here, for R-1.");
+    });
+    side(&dir, "b", |d| {
+        add_note(d, "- **31 Oct 2026:** the wrapped text of one note that one\n  branch has written over three separate lines\n  of the queue so that it runs\n  on and on until it stops there, for R-1.");
+    });
+    git(&dir, &["checkout", "-q", "a"]);
+    git(&dir, &["merge", "-q", "--no-edit", "b"]);
+    fails_naming(&dir, "are two versions of one text");
+}
+
+negative_control!(
+    one_note_rewrapped_shorter_on_the_later_side_is_caught,
+    "two notes in different words, the longer one first, pass, so the failure check must fail on them",
+    expected = "queue check passed",
+    {
+        let dir = repo("ctl_rewrap_shorter");
+        side(&dir, "a", |d| {
+            add_note(d, "- **31 Oct 2026 (later):** the owner moved this to\n  another milestone, whose gate\n  reads the census first and\n  rules on it there.");
+        });
+        side(&dir, "b", |d| {
+            add_note(d, "- **31 Oct 2026:** keep the first option as it is applied now, because nothing\n  built so far depends on the other one, and no task waits.");
+        });
+        merge(&dir);
+        fails_naming(&dir, "are two versions of one text");
+    }
+);
+
+/// A union merge of one dated note, written on each side with its own `ids`, on the real queue.
+fn merged_note(name: &str, ours: &str, theirs: &str) -> PathBuf {
+    let dir = repo(name);
+    let note = |ids: &str| format!("- **31 Oct 2026:** closed by {ids}, in the very words of it.");
+    side(&dir, "a", |d| add_note(d, &note(ours)));
+    side(&dir, "b", |d| add_note(d, &note(theirs)));
+    merge(&dir);
+    dir
+}
+
+#[test]
+fn a_note_differing_in_each_kind_of_id_is_caught_on_the_real_queue() {
+    // OPERATIONS § "Merging" step 2: "an edit in an id (`R-n`, `RQ-n`, `TASK-…`, `REQ-…`, `PR #n`) or a `line N`
+    // counting as a difference". Each kind, by a real merge: the two versions are the closest pair the check can meet.
+    for (name, ours, theirs) in [
+        ("ruling", "R-700", "R-701"),
+        ("rq", "RQ-700", "RQ-701"),
+        ("task", "TASK-M2-36", "TASK-M2-37"),
+        ("req", "REQ-VAL-001", "REQ-VAL-002"),
+        ("pr", "PR #359", "PR #360"),
+        ("line", "line 529", "line 547"),
+        (
+            "pr_and_task",
+            "PR #359 and TASK-M2-36",
+            "PR #360 and TASK-M2-37",
+        ),
+    ] {
+        let dir = merged_note(&format!("id_{name}"), ours, theirs);
+        fails_naming(&dir, "are two versions of one text");
+    }
+}
+
+negative_control!(
+    a_note_differing_in_each_kind_of_id_is_caught_on_the_real_queue,
+    "the same words differing in a plain number under one id read as a list's siblings and pass",
+    expected = "queue check passed",
+    {
+        let dir = merged_note(
+            "ctl_id",
+            "R-700 at N = 6 (one of a list)",
+            "R-700 at N = 12 (one of a list)",
+        );
+        fails_naming(&dir, "are two versions of one text");
+    }
+);
