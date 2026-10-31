@@ -391,6 +391,91 @@ negative_control!(
     }
 );
 
+/// Tip as sheet's columns with `m` taken straight from the squares, whatever they underflow to.
+fn columns_from_squares(t1: f64, t2: f64) -> [[f64; 4]; 2] {
+    let m = (t1 * t1 + t2 * t2).sqrt();
+    let (sm, cm) = m.to_radians().sin_cos();
+    let (ka, kb) = (t2 / m, -t1 / m);
+    let w = 1.0 - cm;
+    [
+        [cm + ka * ka * w, ka * kb * w, -kb * sm, 0.0],
+        [ka * kb * w, cm + kb * kb * w, ka * sm, 0.0],
+    ]
+}
+
+/// Tip as sheet at angles whose squares underflow is still the small rotation they name (R-474 K1), and the view keeps
+/// its centre (R-473 J7): to first order `R·e_a = e_a + τ₁ e_X` and `R·e_b = e_b + τ₂ e_X`, `τ` in radians. The arms take
+/// a sum of squares of 0, a subnormal one, a mixed pair, the least double, the exact boundary `2⁻¹⁰²²` and the least
+/// sum above it. A sum exactly at `2⁻¹⁰²²` is normal, so it keeps the formula bit for bit, at a pair whose hypotenuse
+/// rounds one ulp below `2⁻⁵¹¹`. `squares` puts the columns taken straight from the squares into the view (the control).
+fn check_tiny_sheet(squares: bool) {
+    let boundary = (2f64.powi(-511), 2f64.powi(-600));
+    let above = (
+        f64::from_bits(2f64.powi(-511).to_bits() + 1),
+        2f64.powi(-600),
+    );
+    let angles = [
+        (1e-200, 1e-200),
+        (1e-200, -3e-200),
+        (-1e-160, 2e-160),
+        (2e-170, 1e-200),
+        (f64::from_bits(1), f64::from_bits(1)),
+        boundary,
+        above,
+    ];
+    let own = mixed().decode::<Defaults, f64>(CENTRE[0], CENTRE[1]);
+    for (t1, t2) in angles {
+        let s = spec(t1, t2, TiltMap::Sheet, 4, 4);
+        let mut tilt = Tilt::new(&s, CENTRE, SPAN);
+        if squares {
+            tilt.columns = columns_from_squares(t1, t2);
+        }
+        let [c1, c2] = tilt.columns;
+        let flat = c1.iter().chain(&c2).all(|c| c.is_finite());
+        assert!(flat, "a tiny sheet tilt's columns are not finite: {s:?}");
+        let close = |got: f64, want: f64| (got - want).abs() <= 1e-14 * want.abs() + 1e-322;
+        assert_eq!((c1[0], c1[1], c2[0], c2[1]), (1.0, 0.0, 0.0, 1.0), "{s:?}");
+        assert!(
+            close(c1[2], t1.to_radians()) && close(c2[2], t2.to_radians()),
+            "a tiny sheet tilt is not its small rotation: {c1:?}, {c2:?}, {s:?}"
+        );
+        let view = Tilted::new(mixed(), tilt).unwrap();
+        assert!(
+            bits(&view.decode::<Defaults, f64>(CENTRE[0], CENTRE[1])) == bits(&own),
+            "a tiny sheet tilt moved its centre: {s:?}"
+        );
+        let ([a, b], shift) = tilt.place(0.9, 0.2);
+        assert!(
+            a.is_finite() && b.is_finite() && shift.dx.is_finite(),
+            "{s:?}"
+        );
+    }
+    let (t1, t2) = (
+        f64::from_bits(0x1ffe_f324_d87b_c070),
+        f64::from_bits(0x1fe0_4301_7b23_1710),
+    );
+    assert_eq!(t1 * t1 + t2 * t2, f64::MIN_POSITIVE);
+    assert_eq!(
+        Tilt::new(&spec(t1, t2, TiltMap::Sheet, 4, 4), CENTRE, SPAN).columns,
+        columns_from_squares(t1, t2),
+        "a normal sum of squares left the formula as written"
+    );
+}
+
+#[test]
+fn tilt_every_chart_tiny_sheet_angles() {
+    check_tiny_sheet(false);
+}
+
+negative_control!(
+    tilt_every_chart_tiny_sheet_angles,
+    "columns taken straight from squares that underflow hold NaN, so they must fail",
+    expected = "columns are not finite",
+    {
+        check_tiny_sheet(true);
+    }
+);
+
 type Make = fn(ShapeSphere<f64>, Tilt<f64>) -> Option<Tilted<ShapeSphere<f64>, f64>>;
 
 /// A tilt into a coordinate that is not hidden is refused, by `make` (the control admits it as untilted).

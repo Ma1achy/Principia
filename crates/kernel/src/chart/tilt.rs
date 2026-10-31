@@ -364,14 +364,26 @@ fn tip_as_sheet(tau1: f64, tau2: f64) -> [[f64; 4]; 2] {
     } else {
         (tau1, tau2)
     };
-    let m = Float::sqrt(t1 * t1 + t2 * t2);
+    let (m, ka, kb) = sheet_axis(t1, t2);
     let (sm, cm) = Float::sin_cos(Float::to_radians(m));
-    let (ka, kb) = (t2 / m, -t1 / m);
     let w = 1.0 - cm;
     [
         [cm + ka * ka * w, ka * kb * w, -kb * sm, 0.0],
         [ka * kb * w, cm + kb * kb * w, ka * sm, 0.0],
     ]
+}
+
+/// `m = √(τ₁² + τ₂²)` and the in-plane axis `k = (τ₂ e_a − τ₁ e_b)/m` for angles not both 0. Squares that underflow past
+/// the normal doubles leave `m` zero or short and `k` infinite or off its length, though `m` itself is representable, so
+/// there `m` is the hypotenuse, which squares nothing; a normal sum of squares keeps the formula as written, bit for bit.
+fn sheet_axis(t1: f64, t2: f64) -> (f64, f64, f64) {
+    let sum = t1 * t1 + t2 * t2;
+    let m = if sum < f64::MIN_POSITIVE {
+        Float::hypot(t1, t2)
+    } else {
+        Float::sqrt(sum)
+    };
+    (m, t2 / m, -t1 / m)
 }
 
 /// The Gram factor of one-target Lean's columns, `√(|û₁|²|û₂|² − (û₁·û₂)²)`, taken as `|û₁ × û₂|` (Lagrange's
