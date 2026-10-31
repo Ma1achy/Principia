@@ -3,6 +3,7 @@
   all-zero finals 95; of them t = 0: 95, e = 0: 95, Lw = 0: 95
   out of plane, position: median 2.93, max 84.9; velocity: median 0.385, max 4.22
   stored t = 501 (last state kept): 3497; undissolved at 501 with placeholders counted: 35.9%
+  rows whose t is not a whole number: 0
   ended at t <= 200 Henon: 4376; below 501: 6408
   Henon time of integrator T = 200, min/median/max: 47.8 / 60.6 / 14599.7; ended within it: 2077
 40668_2014_5_MOESM2_ESM.dat
@@ -10,6 +11,7 @@
   all-zero finals 98; of them t = 0: 98, e = 0: 98, Lw = 0: 98
   out of plane, position: median 5.63, max 132; velocity: median 0.457, max 6.7
   stored t = 501 (last state kept): 3047; undissolved at 501 with placeholders counted: 31.4%
+  rows whose t is not a whole number: 0
   ended at t <= 200 Henon: 5162; below 501: 6855
   Henon time of integrator T = 200, min/median/max: 33.8 / 41.1 / 9186.9; ended within it: 2162
 40668_2014_5_MOESM3_ESM.dat
@@ -17,6 +19,7 @@
   all-zero finals 98; of them t = 0: 98, e = 0: 98, Lw = 0: 98
   out of plane, position: median 4.44e-16, max 4.29e-09; velocity: median 5.55e-17, max 2.01e-09
   stored t = 501 (last state kept): 1364; undissolved at 501 with placeholders counted: 14.6%
+  rows whose t is not a whole number: 0
   ended at t <= 200 Henon: 6682; below 501: 8538
   Henon time of integrator T = 200, min/median/max: 135.1 / 166.0 / 296.7; ended within it: 6257
 40668_2014_5_MOESM4_ESM.dat
@@ -24,5 +27,6 @@
   all-zero finals 16; of them t = 0: 16, e = 0: 16, Lw = 0: 16
   out of plane, position: median 6.11e-16, max 3.41e-09; velocity: median 8.33e-17, max 2.08e-10
   stored t = 501 (last state kept): 851; undissolved at 501 with placeholders counted: 8.7%
+  rows whose t is not a whole number: 0
   ended at t <= 200 Henon: 8202; below 501: 9133
   Henon time of integrator T = 200, min/median/max: 95.5 / 112.8 / 257.2; ended within it: 7366

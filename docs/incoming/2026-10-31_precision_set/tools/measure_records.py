@@ -45,6 +45,7 @@ def main(paths):
               f"{np.median(hv):.3g}, max {hv.max():.3g}")
         print(f"  stored t = 501 (last state kept): {(t == 501).sum()}; undissolved at 501 with placeholders counted: "
               f"{100 * ((t == 501).sum() + (~kept).sum()) / len(d):.1f}%")
+        print(f"  rows whose t is not a whole number: {(t != np.floor(t)).sum()}")
         print(f"  ended at t <= 200 Henon: {(kept & (t <= 200)).sum()}; below 501: {(kept & (t < 501)).sum()}")
         print(f"  Henon time of integrator T = {CAP}, min/median/max: {t_cap.min():.1f} / {np.median(t_cap):.1f} / "
               f"{t_cap.max():.1f}; ended within it: {(kept & (t < 501) & (t <= t_cap)).sum()}")
