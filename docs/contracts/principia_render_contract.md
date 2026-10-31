@@ -425,6 +425,8 @@ with dd_colouring §3.1's sRGB transfer.
     is neutral. The rounding there is still relative to `K + |V|` or `S`, so a fresh sample with `E_0` or `Lz_0` near a
     cancellation (a near-parabolic start, or a start with `L_z ≈ 0` and moving bodies, the figure-eight among them) can
     show a rounding-level drift off `c0`. It errs toward showing: the band never hides more than `k·2⁻²³·|reference|`.
+    The exact neutrality of a fresh sample is therefore claimed inside the bound only, where `k_E` or `k_L` is at most
+    128; RQ-637 asks the owner whether the band stays as ruled there or scales by `K + |V|` and `S`.
   - **The ramp.** `symlog` and `lin` draw on `diverging(c−, c0, c+)`, `c−` `#3B4CC0`, `c0` `#DDDDDD` and `c+`
     `#B40426` in 8-bit sRGB, Moreland's cool-warm ends and neutral, mixed in linear RGB by `ramp_diverging`, `c0` at
     `t = 0.5`; under the palette swap, the view's `PALETTE` uniform 1, they draw on viridis, so `symlog`'s pixel is

@@ -28398,6 +28398,10 @@ R-652 is in the "design" group of `plan/rule_groups.yaml`, with R-454 and R-504.
   `9ddadbb387b8ab5e3e1ab55aab376204cfbd76759e428313377bbdfd64be5b92`, nudges 6 and 3 kept; only tile 0, the fresh sample,
   changed, on each. `drift_view_neutral_fresh_sample_renders_exactly_neutral` (`crates/render/tests/drift_views.rs`) runs
   on each backend CI has.
+- **The test's domain.** That test judges only the fresh samples whose rounding bound is inside the band, by its
+  `in_domain`: `9K + 15|V| ≤ 128·|E_0|`, and for `L_z` `5·S ≤ 128·|Lz_0|` (render contract Part 5), at least 4 of its 8 in
+  each view. A sample near a cancellation is outside it, and may show a tint; the ruling's two requirements conflict
+  there, a band relative to the reference and an exactly neutral fresh sample, and RQ-637 asks the owner.
 - **A non-finite operand (R-436; qa review 5723138973, Q1).** The band never makes one neutral: each view tests its
   reference and its drift on their bits first and draws the hatch (render contract Part 5, "The non-finite guard").
 
