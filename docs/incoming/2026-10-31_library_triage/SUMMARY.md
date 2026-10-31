@@ -14,8 +14,13 @@ transcribed later, twice, for approved items only.
 - **OFF-FILTER:** fails the filter (three massive bodies, planar subset, printed numbers or a data file). The readers'
   brief called this EXCLUDE; the word is changed so it can't be read as a ruling.
 - **NOW:** a cheap, non-gating peek at data already usable. **M9:** at or after M9, with new measurement or machinery.
-- **`[value]`** in `triage.csv`: a number left out because it comes from a `_local` source. The page and table reference
-  stays, so the number is one lookup away. `[digits in source]`: a long digit string, left out everywhere.
+- **`[value]`** in `triage.csv`: a number taken from a `_local` source, rounded ones included: results, coefficients,
+  thresholds, run settings and mass or start parameters. The page and table reference stays, so the number is one lookup
+  away. Every `_local` row was read for this, not only pattern-matched. Kept in those rows: references (page, table,
+  equation, section); counts of what a source holds (rows, tables, runs, digits); units and normalisation labels such as
+  G=1; the Burrau start, which is already a target; and our own measurements that carry no source value. Atlas rows are
+  `_local` because of `atlas-params.json`; their figures come from the committed CSV and catalogue and from our own sample.
+  `[digits in source]`: a long digit string, left out everywhere.
 
 ## Counts
 
@@ -222,7 +227,8 @@ Not held and not found: 3body821 (its L unread), any Hristov data at L≠0, a Ma
 - Merged Horn (4 rows), Moth13 (3), Neagu (2). Moved the small `li_*` families from M9 to NOW with their group.
 - Added rows: 72 byte-identical already-have PDFs, unread; Moore & Nauenberg 2006 (spot-read by this pass, since no chunk
   read it); Farrés, Ferreira & Prado and dosier.
-- Left numbers from `_local` sources out of the committed text, and shortened the atlas licence note to the terms.
+- Masked numbers taken from `_local` sources as `[value]`, on the terms under "Words used", and shortened the atlas
+  licence note to the terms.
 - Cohler is off-topic. `bhunt` is a catalogue family name.
 
 Removed lines: none.
