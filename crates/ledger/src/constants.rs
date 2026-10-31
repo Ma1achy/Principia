@@ -1293,14 +1293,14 @@ pub const ESCAPE_WINDOW: ConstantBuilder = wrapper(
 /// The escape settling threshold `tau`, `10⁻³`, a bound on `|Δn̂|`, a pure number: Part 3 gives no value, and R-173
 /// rules this one, the provisional `tau` (REQ-EVT-024), prin-rs's `CLOSURE_TAU`, inside the recorded range
 /// `7.04·10⁻⁵ … 2.70·10⁻²` and near its geometric mean. The confirmed `tau`, REQ-EVT-025's calibration inside the
-/// re-measured gap, replaces it at the M3 gate.
-pub const TAU: ConstantBuilder = wrapper(
+/// re-measured gap, replaces it at the M3 gate, so the entry is provisional until M3 and cites that requirement
+/// (R-427; dd_generation_root §3.8).
+pub const TAU: ConstantBuilder = proposed(
     "tau",
     1e-3,
-    Citation::Corpus {
-        file: "decisions.md",
-        section: "R-173 — Tau is split into a provisional and a confirmed value *(closes C2, C3, S3, G6)*",
-    },
+    Admissibility::CanonicalUnits,
+    "REQ-EVT-025",
+    "M3",
 );
 
 /// The collision radius `r_coll`'s default, `10⁻³` of `R`, a length in canonical units, where `R = √I = 1` (Part 5): it
