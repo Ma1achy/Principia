@@ -73,9 +73,9 @@ fn check_conforms<E: EngineInterface>(make: impl FnMut() -> E) {
 fn conformance_real_engine_passes_every_case() {
     assert_eq!(
         CASES.len(),
-        9,
+        11,
         "the suite's four state-semantics cases (RQ-254), the navigation paths', the overlay set's and hover's, the \
-         horizon's, the stain graph's (R-390) and the slice frame's (R-457)"
+         horizon's, the stain graph's (R-390), the slice frame's (R-457) and the history key's two (R-458)"
     );
     check_conforms(|| store(0.0));
     // The cases read the state they start from, so they hold from any playhead.
@@ -136,9 +136,25 @@ enum Rule {
     /// A SetField on the slice frame with the basis is applied as two edits, the basis then the frame: two history
     /// entries.
     SplitFrame,
+    /// An edit under a history key is applied as one under none: an entry, and a line, per edit.
+    IgnoresKey,
+    /// A key's end is dropped, so a drag's entry is logged only when something else closes it.
+    NeverEnds,
 }
 
 impl EngineInterface for Broken {
+    fn set_field_under(&mut self, edit: SetField, key: HistoryKey) {
+        if matches!(self.rule, Rule::IgnoresKey) {
+            self.set_field(edit);
+        } else {
+            self.store.set_field_under(edit, key);
+        }
+    }
+    fn end_key(&mut self, key: HistoryKey) {
+        if !matches!(self.rule, Rule::NeverEnds) {
+            self.store.end_key(key);
+        }
+    }
     fn set_field(&mut self, mut edit: SetField) {
         if matches!(self.rule, Rule::NoHistory) {
             edit.no_history = false;
@@ -282,7 +298,63 @@ fn conformance_non_conforming_double_fails_naming_the_case() {
     ] {
         check_names(rule, SLICE_FRAME);
     }
+    check_names(Rule::IgnoresKey, KEY_ENTRY);
+    for rule in [Rule::IgnoresKey, Rule::NeverEnds] {
+        check_names(rule, KEY_LOG);
+    }
 }
+
+/// The history key's cases.
+const KEY_ENTRY: &str = "edits_under_one_key_are_one_entry";
+/// See [`KEY_ENTRY`].
+const KEY_LOG: &str = "edits_under_one_key_log_one_line_when_it_ends";
+
+/// The key cases hold from any state: a moved playhead, a navigated plane and a history already deep, with redo to
+/// clear; a double that ignores the key fails both, and one that drops the key's end fails the log's.
+fn check_key_cases(rule: Option<Rule>) {
+    let deep = || {
+        let mut s = navigated_store();
+        s.set_field(playhead(-3.5, false));
+        s.set_field(playhead(2.25, false));
+        s.undo();
+        let _ = s.snapshot();
+        s
+    };
+    match rule {
+        None => check_conforms(deep),
+        Some(rule) => {
+            let case = if matches!(rule, Rule::NeverEnds) {
+                KEY_LOG
+            } else {
+                KEY_ENTRY
+            };
+            check_names_with(
+                || Broken {
+                    store: deep(),
+                    rule,
+                },
+                case,
+            );
+        }
+    }
+}
+
+#[test]
+fn conformance_key_cases_hold_from_any_state() {
+    check_key_cases(None);
+    check_key_cases(Some(Rule::IgnoresKey));
+    check_key_cases(Some(Rule::NeverEnds));
+}
+
+validation::negative_control!(
+    conformance_key_cases_hold_from_any_state,
+    "a double that applies each keyed edit as an entry of its own must fail the key case",
+    expected = "conformance case `edits_under_one_key_are_one_entry` failed",
+    check_conforms(|| Broken {
+        store: navigated_store(),
+        rule: Rule::IgnoresKey,
+    })
+);
 
 /// The slice frame's case.
 const SLICE_FRAME: &str = "slice_frame_edit_shows_and_undoes";
@@ -1197,4 +1269,127 @@ validation::negative_control!(
         let _ = s.snapshot();
         s
     })
+);
+
+/// A drag's lines (gui_state_contract §2; R-458 F1): edits of `z₀` and the basis under one key, sent with `send`, log
+/// nothing until the key ends, then one line per field, in the order first set, each from the field's value before the
+/// first edit of it to the last value sent; an undo after it logs nothing more.
+fn check_drag_lines(send: fn(&mut StateStore, SetField, HistoryKey)) {
+    let mut st = navigated_store();
+    let start = st.snapshot().sim.plane;
+    let key = HistoryKey(5);
+    let basis = |k: f64| SetField {
+        edit: Edit::Sim(SimField::Basis {
+            q1: start.q1.map(|x| x * k),
+            q2: start.q2.map(|x| x * k),
+        }),
+        no_history: false,
+    };
+    send(&mut st, z0_at(0.5), key);
+    send(&mut st, basis(2.0), key);
+    send(&mut st, z0_at(0.75), key);
+    send(&mut st, basis(4.0), key);
+    let during: Vec<String> = st.snapshot().log.into_iter().map(|e| e.message).collect();
+    assert_eq!(
+        during,
+        Vec::<String>::new(),
+        "a drag logged before it ended"
+    );
+    st.end_key(key);
+    let end = st.snapshot();
+    let lines: Vec<String> = end.log.iter().map(|e| e.message.clone()).collect();
+    let mut moved = [0.0; 8];
+    moved[0] = 0.75;
+    let want = vec![
+        set_field_message(
+            &Edit::Sim(SimField::Z0(start.z0)),
+            &SetField {
+                edit: Edit::Sim(SimField::Z0(moved)),
+                no_history: false,
+            },
+        ),
+        set_field_message(
+            &Edit::Sim(SimField::Basis {
+                q1: start.q1,
+                q2: start.q2,
+            }),
+            &basis(4.0),
+        ),
+    ];
+    assert_eq!(
+        lines, want,
+        "a drag of two fields is not one line per field"
+    );
+    assert_eq!(end.history.undo_depth, 1, "the drag's entry");
+    st.undo();
+    assert_eq!(
+        st.snapshot().log.len(),
+        0,
+        "an undo after the end logged again"
+    );
+}
+
+#[test]
+fn store_logs_a_drag_once_per_field() {
+    check_drag_lines(|st, e, k| st.set_field_under(e, k));
+}
+
+validation::negative_control!(
+    store_logs_a_drag_once_per_field,
+    "a store logging each frame of a drag",
+    expected = "a drag logged before it ended",
+    check_drag_lines(|st, e, _| st.set_field(e))
+);
+
+/// A double that keeps no history keys: it implements the interface's four required methods alone, so the keyed ones
+/// are the trait's defaults.
+struct Keyless(StateStore);
+
+impl EngineInterface for Keyless {
+    fn set_field(&mut self, edit: SetField) {
+        self.0.set_field(edit);
+    }
+    fn snapshot(&mut self) -> Snapshot {
+        self.0.snapshot()
+    }
+    fn undo(&mut self) {
+        self.0.undo();
+    }
+    fn redo(&mut self) {
+        self.0.redo();
+    }
+}
+
+/// The trait's default `set_field_under`, sent by `send`, applies each edit as `set_field` does, an entry of its own;
+/// the default `end_key` changes nothing.
+fn check_default_keys(send: impl Fn(&mut Keyless, SetField, HistoryKey)) {
+    let mut double = Keyless(store(0.0));
+    let key = HistoryKey(7);
+    for t in [1.0, 2.0, 3.0] {
+        send(&mut double, playhead(t, false), key);
+    }
+    let sent = double.snapshot();
+    assert_eq!(
+        sent.render.playhead.t, 3.0,
+        "the playhead after three edits under a default key"
+    );
+    assert_eq!(sent.history.undo_depth, 3, "an entry per edit");
+    double.end_key(key);
+    assert_eq!(
+        double.snapshot().history.undo_depth,
+        3,
+        "the default end_key changed the history"
+    );
+}
+
+#[test]
+fn interface_default_keyed_methods_apply_each_edit_alone() {
+    check_default_keys(|d, e, k| d.set_field_under(e, k));
+}
+
+validation::negative_control!(
+    interface_default_keyed_methods_apply_each_edit_alone,
+    "a default set_field_under that drops the edit",
+    expected = "the playhead after three edits under a default key",
+    check_default_keys(|_, _, _| {})
 );
