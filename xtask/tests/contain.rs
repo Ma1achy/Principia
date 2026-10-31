@@ -15,7 +15,7 @@ use std::time::Duration;
 
 use scratch::Scratch;
 use validation::negative_control;
-use validation::spawn::Spawn;
+use validation::spawn::{write_executable, Spawn};
 
 fn root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -303,4 +303,109 @@ negative_control!(
     expected = "xtask calls without CPU and file limits",
     check_limits(|name| read(&format!("xtask/tests/{name}.rs"))
         .replace("ulimit -t 600 && ulimit -f 1048576", "ulimit -u 300"))
+);
+
+/// A required run on stand-ins for the privileged tools, whose command notes a sample in the heartbeat's log and exits
+/// `code`: the job's log, and the finished status posted.
+fn finished_run(code: i32, tag: &str) -> (String, String, Scratch) {
+    let dir = Scratch::new(tag);
+    let bin = dir.join("bin");
+    std::fs::create_dir_all(&bin).expect("scratch");
+    let curl = dir.join("curl");
+    let stubs = [
+        ("uname", "echo Linux".to_owned()),
+        ("sudo", "[ \"$1\" = -n ] && shift\nexec \"$@\"".to_owned()),
+        ("sysctl", "exit 0".to_owned()),
+        ("systemctl", "exit 0".to_owned()),
+        ("dmsetup", "exit 0".to_owned()),
+        ("df", "echo Avail\necho 100G".to_owned()),
+        (
+            "systemd-run",
+            "while [ \"$1\" != -- ]; do shift; done\nshift\nexec \"$@\"".to_owned(),
+        ),
+        (
+            "unshare",
+            "while case \"$1\" in --*) true ;; *) false ;; esac; do shift; done\nexec \"$@\""
+                .to_owned(),
+        ),
+        (
+            "setpriv",
+            "while [ \"$1\" != -- ]; do shift; done\nshift\nexec \"$@\"".to_owned(),
+        ),
+        ("setsid", "exec \"$@\"".to_owned()),
+        (
+            "curl",
+            format!("printf '%s\\n' \"$@\" >> '{}'", curl.display()),
+        ),
+    ];
+    for (name, body) in stubs {
+        write_executable(&bin.join(name), format!("#!/bin/bash\n{body}\n")).expect("stand-in");
+    }
+    let script = format!(
+        "echo '+1m mem 1G oom 5 logs 1 sample-while-alive' >> \"$RUNNER_TEMP/heartbeat.log\"; exit {code}"
+    );
+    let mut command = contain(&["run", "sh", "-c", &script]);
+    command
+        .env(
+            "PATH",
+            format!(
+                "{}:{}",
+                bin.display(),
+                std::env::var("PATH").unwrap_or_default()
+            ),
+        )
+        .env("PRIN_CONTAIN", "required")
+        .env("RUNNER_TEMP", &*dir)
+        .env("HEARTBEAT_CONTEXT", "context")
+        .env("HEARTBEAT_SHA", "sha")
+        .env("HEARTBEAT_TOKEN", "token")
+        .env("GITHUB_REPOSITORY", "owner/repo");
+    let out = command
+        .output_within(Duration::from_secs(60))
+        .expect("contain.sh ran");
+    assert_eq!(
+        out.status.code(),
+        Some(code),
+        "the command's status is lost"
+    );
+    let posted = std::fs::read_to_string(&curl).unwrap_or_default();
+    (
+        String::from_utf8_lossy(&out.stdout).into_owned(),
+        posted,
+        dir,
+    )
+}
+
+/// The finished status must carry the count of the last sample made while the scope lived, whatever the run's exit; and
+/// the job's log must hold the samples on a non-zero exit, as `heartbeat.log` is not uploaded.
+fn check_finished(code: i32, tag: &str) {
+    let (log, posted, _dir) = finished_run(code, tag);
+    assert!(
+        posted.contains(&format!("finished, exit {code}.")) && posted.contains(" oom 5 "),
+        "the finished status lost the out-of-memory count: {posted}"
+    );
+    assert_eq!(
+        log.contains("sample-while-alive"),
+        code != 0,
+        "the heartbeat's samples are in the job's log only on a non-zero exit: {log}"
+    );
+}
+
+#[test]
+fn contain_a_finished_run_keeps_its_last_samples() {
+    check_finished(3, "contain_finished");
+    check_finished(0, "contain_finished_clean");
+}
+
+negative_control!(
+    contain_a_finished_run_keeps_its_last_samples,
+    "a run with an unsampled status, seen by the same check",
+    expected = "the finished status lost the out-of-memory count",
+    {
+        let (_, posted, _dir) = finished_run(3, "contain_finished_control");
+        assert!(
+            posted.contains("oom 6"),
+            "the finished status lost the out-of-memory count: {posted}"
+        );
+    }
 );

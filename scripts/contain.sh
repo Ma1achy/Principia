@@ -47,9 +47,15 @@ while :; do
   kill -0 "$child" 2> /dev/null || exit "$rc"
 done'
 # shellcheck disable=SC2016 # expanded inside
+# The shell stays, as root, so a `kill(-1)` from the command leaves it to note the scope's out-of-memory kills as the scope
+# ends: nothing outside can read them afterwards.
 RUN_AS='uid=$1 gid=$2 envfile=$3 limits=$4; shift 4
 eval "$limits"
-exec setpriv --reuid="$uid" --regid="$gid" --init-groups -- bash -c '\''. "$1"; shift; exec "$@"'\'' contain-env "$envfile" "$@"'
+setpriv --reuid="$uid" --regid="$gid" --init-groups -- bash -c '\''. "$1"; shift; exec "$@"'\'' contain-env "$envfile" "$@"
+rc=$?
+awk '\''$1 == "oom_kill" { print $2 }'\'' "/sys/fs/cgroup$(cut -d: -f3 /proc/self/cgroup 2> /dev/null)/memory.events" \
+  > "$envfile.oom" 2> /dev/null
+exit "$rc"'
 
 # Memory: the runner has 16 GiB and no swap (mutants.yml removes it); this leaves its agent and the kernel the rest.
 MEMORY_MAX=14500M
@@ -82,7 +88,7 @@ sample() {
   disk=$(df -BG --output=avail / | tail -1 | tr -dc 0-9)
   tasks=$(cut -d' ' -f4 /proc/loadavg)
   group=$(systemctl show -p ControlGroup --value "$unit.scope" 2> /dev/null || true)
-  oom=$(awk '$1 == "oom_kill" { print $2 }' "/sys/fs/cgroup$group/memory.events" 2> /dev/null || true)
+  oom=${final_oom:-$(awk '$1 == "oom_kill" { print $2 }' "/sys/fs/cgroup$group/memory.events" 2> /dev/null || true)}
   logs=$(find "${HEARTBEAT_OUT:-/nonexistent}/log" -type f 2> /dev/null | wc -l || true)
   # The newest log's name, its last 48 characters: a mutant's file, line and column.
   newest=$(ls -t "${HEARTBEAT_OUT:-/nonexistent}/log" 2> /dev/null | head -1 | tail -c 48 || true)
@@ -137,10 +143,22 @@ stop_run() {
   kill "${watcher:-}" 2> /dev/null || true
 }
 
+# The scope's last out-of-memory count: the one noted as it ended, or, if it was killed whole, the run's last sample's.
+last_oom() {
+  local noted
+  noted=$(cat "$envfile.oom" 2> /dev/null || true)
+  if [ -n "$noted" ]; then
+    echo "$noted"
+  else
+    awk -v run="--- $unit" '$0 == run { oom = "" } match($0, / oom [0-9]+ /) { oom = substr($0, RSTART + 5, RLENGTH - 6) }
+      END { print oom }' "${RUNNER_TEMP:-/tmp}/heartbeat.log" 2> /dev/null || true
+  fi
+}
+
 run_contained() {
   [ "${PRIN_CONTAIN:-}" = required ] || exec "$@"
   require_tools
-  local began uid gid envfile rc limits limit
+  local began uid gid rc limits limit final_oom=""
   unit="prin-contain-$$"
   stopped=""
   began=$(date +%s)
@@ -160,6 +178,7 @@ run_contained() {
   done
   df -h / || true
   sudo -n dmsetup status 2> /dev/null || true
+  echo "--- $unit" >> "${RUNNER_TEMP:-/tmp}/heartbeat.log"
   heartbeat "$unit" "$began" &
   watcher=$!
   trap 'stop_run 15' TERM
@@ -178,11 +197,16 @@ run_contained() {
   trap - TERM INT HUP
   rc=${stopped:-$rc}
   kill "$watcher" 2> /dev/null || true
-  rm -f "$envfile"
+  final_oom=$(last_oom)
+  rm -f "$envfile" "$envfile.oom"
   post "finished, exit $rc. $(sample "$unit" "$began")"
   if [ "$rc" -eq 137 ]; then
-    echo "::error::contain.sh: the contained run was killed (SIGKILL): a kill(-1), the out-of-memory killer or the" \
-      "disk floor; see heartbeat.log. Its outcomes so far are in the report."
+    echo "::error::contain.sh: the contained run was killed (SIGKILL): a kill(-1), the out-of-memory killer" \
+      "(oom ${final_oom:-?}) or the disk floor; the heartbeat's last samples follow. Its outcomes so far are in the report."
+  fi
+  if [ "$rc" -ne 0 ]; then
+    echo "contain.sh: exit $rc, oom ${final_oom:-?}; the heartbeat's last samples:"
+    tail -n 40 "${RUNNER_TEMP:-/tmp}/heartbeat.log" 2> /dev/null || true
   fi
   return "$rc"
 }
