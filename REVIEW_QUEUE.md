@@ -801,3 +801,18 @@ where the choice changes the result (which pixels count) and the corpus does not
 - **Applied meanwhile:** the ruled text, R-554 L3: `Tilted::pixel` (`crates/kernel/src/chart/tilt.rs`) applies no pole
   map unless `N_a = N_b = 0`, so such pixels count as distinct (TASK-M2-36, PR #349). No code changes for this entry.
 - **Waits:** nothing built waits; a fold, if ruled, is a follow-up to TASK-M2-36's `Tilted::pixel` and TASK-M8-56.
+
+## RQ-639: V-11's primary states "f g = 1" at e_in = i = m3 = 0, while its own eq. (11) gives 0.7 there: which holds for the prograde limit? *(conflict inside a source; the owner's 31 Oct request, "V-11 Part I"; `docs/incoming/2026-10-31_research_library/myllari_2018/README.md`; REQ-VAL-330; context: TASK-M3-65)*
+
+*Queued 31 Oct 2026 by the library ingest. For the owner only if the physics review can't settle it: it scales the prograde
+number by (1/0.7)^(1/3) = 1.126 at low e_in.*
+
+- **File, section:**
+  - Mylläri et al. 2018, MNRAS 476, 830 (local only), abstract, p. 830, and p. 836: "At the limit of ein = i = m3 = 0, f g = 1."
+  - The same paper, eq. (11), p. 833, as printed: f(e_in, cos i) = {1 − ⅔e_in[1 − ½e_in²] − 0.3 cos i [1 − ½e_in +
+    2 cos i (1 − (5/2)e_in^(3/2) − cos i)]}, which gives f(0, 1) = 0.7, and f = 1 at cos i = 0 (i = 90°).
+  - `docs/incoming/2026-10-31_research_library/myllari_2018/formula_check.txt`.
+- **The question:** whether V-11 scores against eq. (11) as printed, or treats the stated limit as the paper's intent.
+  Eq. (11) as printed reproduces Fig. 5's curves at cos i = +1 (3.15, 3.97, 4.79 against about 3.2, 4.0, 4.75, by eye), so the
+  sentence looks the likelier slip; it may mean i = 90°.
+- **Applied meanwhile:** eq. (11) as printed, in the record. Nothing is built; REQ-VAL-330's text and TASK-M3-65 are unchanged.

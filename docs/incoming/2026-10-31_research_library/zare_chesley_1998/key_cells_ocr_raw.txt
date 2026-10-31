@@ -1,0 +1,28 @@
+table1_0.png	
+table1_1.png	
+table1_2.png	
+table1_3.png	
+table1_4.png	
+table1_5.png	4 
+table1_6.png	5 
+table1_7.png	
+table2_0.png	
+table2_1.png	
+table2_2.png	3 
+table2_3.png	4 
+table2_4.png	5 
+table2_5.png	
+table3_0.png	
+table3_1.png	2 
+table3_2.png	3 
+table3_3.png	4 
+table3_4.png	5 
+table3_5.png	
+table3_6.png	7 
+table3_7.png	
+table3_8.png	
+table3_9.png	10 
+table3_10.png	11 
+table3_11.png	12 
+table3_12.png	13 
+table3_13.png	14 

@@ -1,0 +1,31 @@
+1. The section's domain (p. 478): 8hQ1^2 + 2Gm1 + 8Gm3 - P1^2 at Q2 = 0, against 1 - Q1^2 - P1^2:
+    0.0 at (Q1, P1) = (1, 0), expected 0
+2. Lattice (p. 479): (m d, n d), d = 0.005, Q1 > 0, Q1^2 + P1^2 < 1: 62605 points; printed 62,605
+3. Decode to Cartesian, from eqs (2), (5), W = p1 Q1^2 + p2 Q2 (p. 478) and p2 = alpha v (p. 477):
+   x = Q1^2, y = Q2, u = P1/(2 Q1), v = P2/alpha; m1 at (-x, -y/3), m2 at (x, -y/3), m3 at (0, 2y/3)
+   at a test point: Cartesian E = -0.025000000000000; 2 m1 h = -0.025000000000000
+   du/dt: Newton -0.542728775368163; eq. (2) -0.542728775368164
+   dv/dt: Newton -0.874568852000655; eq. (2) -0.874568852000656
+   Their units to unit masses, G = 1, E = -1: mass x 10, length x 2.5, time x 1.25, velocity x 2,
+   since E' = E M^2/L = -1.000000 and tau = sqrt(L^3/M) = 1.250000
+   Angular momentum vanishes on the set by symmetry (p. 476: 'zero angular momentum').
+4. Table II against their equations (our integration, DOP853 rtol 1e-13, of eq. (6); a decode check only):
+   k  q_k printed  k counted  f(q_k,0)-(q_k,0)        a_k ours    a_k printed  b_k ours   b_k printed
+   1  0.76297      1          (+1.27e-05, -1.57e-05)      -0.9882     -0.9882     -0.0095     -0.0095
+   2  0.53571      2          (-1.96e-05, +2.39e-05)      -8.6547     -8.6500      6.2773      6.2800
+   3  0.47891      3          (-2.94e-05, +3.85e-05)     -21.5648    -21.6000     15.7153     15.7000
+   4  0.45226      4          (+2.18e-04, -2.99e-04)     -37.0787    -37.2000     26.4067     26.5000
+   5  0.43611      5          (+2.24e-04, -3.16e-04)     -54.8728    -55.0000     38.2906     38.4000
+   6  0.42502      6          (+5.75e-04, -8.28e-04)     -74.4664    -74.9000     51.1073     51.4000
+5. Arithmetic on the printed numbers (recorded, not corrected):
+   e from a1, b1 (p. 487): 0.9981; printed 0.998...
+   rotation number from a1: arccos(a1)/(2 pi) = 0.47553; printed 0.477...
+   a = cos(2 pi 0.477) = -0.9896; printed a1 = -0.9882
+   Table I sum 0.95299; the fit's tail over k >= 7 0.04630; total 0.99929 (should be 1 less the zero-measure sets)
+   fit C k^-beta at k = 1: 0.10170; Table I 0.527
+   fit C k^-beta at k = 2: 0.03241; Table I 0.0368
+   fit C k^-beta at k = 3: 0.01660; Table I 0.0168
+   fit C k^-beta at k = 4: 0.01033; Table I 0.0102
+   fit C k^-beta at k = 5: 0.00715; Table I 0.00703
+   fit C k^-beta at k = 6: 0.00529; Table I 0.00516
+   A_1 less R1 ... R1 = A1 n f(A1) (p. 488): mu(R_1) = 0.2293 <= mu(A_1) = 0.527, as it must be
