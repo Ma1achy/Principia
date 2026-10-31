@@ -20,9 +20,9 @@ use validation::negative_control;
 use validation::spawn::Spawn;
 use xtask::jobq::{
     archivable, heavy, leader_is_jobs, lock_holder, may_signal_group, next_job, parse_etime,
-    parse_ps, parse_submit, pid_alive, run_order, runner_settings, snapshot_env, target_key,
-    timed_out, utc, violations, Config, Job, Priority, Proc, Queue, RunnerLock, State,
-    ARCHIVE_AFTER, MAX_ATTEMPTS, START_SLACK,
+    parse_ps, parse_submit, pid_alive, record_start, run_order, runner_settings, snapshot_env,
+    spawn_too_soon, target_key, timed_out, utc, violations, Config, Job, Priority, Proc, Queue,
+    RunnerLock, State, ARCHIVE_AFTER, MAX_ATTEMPTS, SPAWN_GAP, START_SLACK,
 };
 
 /// A job that waits for the file `go`, 40 s at most: its queue's drop can miss it, should the test die, and a gate with
@@ -1825,8 +1825,8 @@ fn take_state_lock(q: &Q, hold: bool) -> Option<std::fs::File> {
     })
 }
 
-/// With the state lock held (with `hold`) and `lock_wait = 1`, `cancel` of a queued job must give up within a few
-/// seconds, naming the holder's pid and how long it has held the lock, and leave the job queued.
+/// With the state lock held (with `hold`) and `lock_wait = 1`, `cancel` of a queued job must wait out that second, give
+/// up within a few seconds, naming the holder's pid and how long it has held the lock, and leave the job queued.
 fn held_lock_case(tag: &str, hold: bool) {
     let q = Q::new(tag, "lock_wait = 1\n");
     std::fs::create_dir_all(q.dir.join("jobs")).expect("jobs dir");
@@ -1846,6 +1846,7 @@ fn held_lock_case(tag: &str, hold: bool) {
     assert!(
         out.as_ref().is_ok_and(|out| !out.status.success())
             && stderr.contains("held by pid 4242, for 10")
+            && took >= Duration::from_secs(1)
             && took < Duration::from_secs(10)
             && state == State::Queued,
         "state lock wait unbounded or its holder unnamed: {out:?}, after {took:?}, job {state:?}"
@@ -2992,4 +2993,239 @@ negative_control!(
     "two worktrees' own `target` are two directories",
     expected = "relative target wrong",
     check_relative_target(&[("/nonexistent/w", "target", "/nonexistent/x", "target", true)])
+);
+
+/// `spawn_too_soon` at `last + age` for `(age, expected)` from a start at 1000.
+fn check_spawn_gap(cases: &[(u64, bool)]) {
+    for &(age, expected) in cases {
+        assert_eq!(
+            spawn_too_soon(1_000 + age, 1_000),
+            expected,
+            "spawn gap wrong {age} s after a start"
+        );
+    }
+}
+
+#[test]
+fn jobq_starts_one_runner_per_spawn_gap() {
+    check_spawn_gap(&[
+        (0, true),
+        (1, true),
+        (SPAWN_GAP - 1, true),
+        (SPAWN_GAP, false),
+        (SPAWN_GAP + 1, false),
+    ]);
+    assert!(
+        spawn_too_soon(1_000, 2_000),
+        "spawn gap wrong with the clock stepped back"
+    );
+    assert!(
+        !spawn_too_soon(1_000, 0),
+        "spawn gap wrong with no start recorded"
+    );
+}
+
+negative_control!(
+    jobq_starts_one_runner_per_spawn_gap,
+    "a start exactly the gap ago is not too soon, so claiming so fails",
+    expected = "spawn gap wrong",
+    check_spawn_gap(&[(SPAWN_GAP, true)])
+);
+
+/// `record_start` for leader 7 and start `"new"` on `job`: whether it changed it, and the start it then has.
+fn check_record_start(job: &mut Job, changed: bool, leader_start: Option<&str>) {
+    let did = record_start(job, 7, Some("new".to_owned()));
+    assert!(
+        did == changed && job.leader_start.as_deref() == leader_start,
+        "start recorded wrongly: changed {did}, start {:?}, on {:?} with pgid {:?}",
+        job.leader_start,
+        job.state,
+        job.pgid
+    );
+}
+
+/// A job running under leader 7, its start not recorded.
+fn running_under_seven() -> Job {
+    let mut running = job(1, Priority::Peek, State::Running, Some("/t"));
+    running.pgid = Some(7);
+    running
+}
+
+#[test]
+fn jobq_records_a_start_only_for_the_job_still_under_that_leader() {
+    check_record_start(&mut running_under_seven(), true, Some("new"));
+    let mut ended = running_under_seven();
+    ended.state = State::Exited;
+    check_record_start(&mut ended, false, None);
+    let mut requeued = running_under_seven();
+    requeued.state = State::Queued;
+    check_record_start(&mut requeued, false, None);
+    let mut other_leader = running_under_seven();
+    other_leader.pgid = Some(8);
+    check_record_start(&mut other_leader, false, None);
+    let mut no_leader = running_under_seven();
+    no_leader.pgid = None;
+    check_record_start(&mut no_leader, false, None);
+    let mut recorded = running_under_seven();
+    recorded.leader_start = Some("old".to_owned());
+    check_record_start(&mut recorded, false, Some("old"));
+}
+
+negative_control!(
+    jobq_records_a_start_only_for_the_job_still_under_that_leader,
+    "a job already ended takes no start, so expecting one fails",
+    expected = "start recorded wrongly",
+    {
+        let mut ended = running_under_seven();
+        ended.state = State::Exited;
+        check_record_start(&mut ended, true, Some("new"));
+    }
+);
+
+/// Takes and lets go of the state lock through a call that starts nothing (a live runner holds the runner lock: this
+/// process), then, with `holder`, writes a holder's text as one that hadn't let go would have left. The lock file must
+/// then name nobody.
+fn lock_cleared_case(tag: &str, holder: bool) {
+    let q = Q::new(tag, "");
+    let queue = q.queue();
+    let lock = format!(
+        "pid {}\nheartbeat {}\n",
+        std::process::id(),
+        xtask::jobq::now()
+    );
+    std::fs::write(queue.lock_path(), lock).expect("runner lock planted");
+    queue.ensure_runner().expect("the state lock taken");
+    let path = q.dir.join("state.lock");
+    assert!(path.exists(), "the state lock was never taken");
+    if holder {
+        std::fs::write(&path, "pid 4242\nsince 1\n").expect("holder written");
+    }
+    let text = std::fs::read_to_string(&path).expect("state lock read");
+    std::fs::remove_file(queue.lock_path()).expect("runner lock removed");
+    assert!(
+        text.is_empty(),
+        "the state lock still names a holder once let go: {text:?}"
+    );
+}
+
+#[test]
+fn jobq_a_state_lock_let_go_names_nobody() {
+    lock_cleared_case("jobq_lock_cleared", false);
+}
+
+negative_control!(
+    jobq_a_state_lock_let_go_names_nobody,
+    "a lock file holding a holder's text is seen",
+    expected = "the state lock still names a holder",
+    lock_cleared_case("jobq_lock_cleared_control", true)
+);
+
+/// A runner started by hand, with two jobs a dead runner left running, must queue each again and run both itself, with
+/// nothing else to start it again, before it exits idle. Each job exits with `status`.
+fn runner_goes_on_case(tag: &str, status: i32) {
+    let q = Q::new(tag, "");
+    std::fs::create_dir_all(q.dir.join("jobs")).expect("jobs dir");
+    let script = format!("exit {status}");
+    for (id, target) in [(1, "/t/a"), (2, "/t/b")] {
+        let mut planted = job(id, Priority::Peek, State::Running, Some(target));
+        planted.worktree = q.work();
+        planted.attempts = 1;
+        planted.runner_pid = Some(dead_pid());
+        planted.command = ["/bin/sh", "-c", &script].map(str::to_owned).to_vec();
+        q.queue().save(&planted).expect("job planted");
+    }
+    let dir = q.dir.to_str().expect("utf-8 path").to_owned();
+    let out = q.run(&["runner", &dir]);
+    let jobs = q.queue().jobs().expect("jobs read");
+    let ran = jobs
+        .iter()
+        .filter(|j| j.state == State::Exited && j.exit == Some(0) && j.attempts == 2)
+        .count();
+    assert!(
+        out.status.success() && ran == 2,
+        "a runner left its recovered jobs for another: {out:?}, {jobs:?}"
+    );
+}
+
+#[test]
+fn jobq_a_runner_runs_the_jobs_it_recovered() {
+    runner_goes_on_case("jobq_runner_goes_on", 0);
+}
+
+negative_control!(
+    jobq_a_runner_runs_the_jobs_it_recovered,
+    "jobs that fail are not counted as run clean",
+    expected = "a runner left its recovered jobs for another",
+    runner_goes_on_case("jobq_runner_goes_on_control", 3)
+);
+
+/// A running job's stand-in `rustc`, left an orphan in the job's group (its parent gone, so not below the runner), is
+/// the queue's, and is never logged as a violation. A stray `rustc` started after it, once named, shows a sample has
+/// seen both. With `in_group` false the first stand-in runs outside the job, and is logged.
+fn orphan_case(tag: &str, in_group: bool) {
+    let q = Q::new(tag, "");
+    let bin = q.dir.join("bin-standin");
+    std::fs::create_dir_all(&bin).expect("bin dir");
+    let rustc = bin.join("rustc");
+    std::os::unix::fs::symlink("/bin/sleep", &rustc).expect("stand-in linked");
+    let rustc = rustc.to_str().expect("utf-8 path").to_owned();
+    let start = |file: &str| {
+        Command::new("sh")
+            .current_dir(q.work())
+            .args([
+                "-c",
+                "(\"$0\" 30 >/dev/null 2>&1 & echo $! > \"$1\")",
+                &rustc,
+                file,
+            ])
+            .output_within(Duration::from_secs(30))
+            .expect("stand-in started")
+    };
+    if !in_group {
+        start("orphan.pid");
+    }
+    let script = if in_group {
+        "(\"$0\" 30 >/dev/null 2>&1 & echo $! > orphan.pid); exec sleep 30"
+    } else {
+        "exec sleep 30"
+    };
+    let id = q.submit("peek", "orphan", &[], &["sh", "-c", script, &rustc]);
+    let orphan = read_pid(&q.work().join("orphan.pid"));
+    let queue = q.queue();
+    assert!(
+        until(30, || queue.load(id).is_ok_and(|j| j.pgid.is_some())),
+        "job never started"
+    );
+    start("stray.pid");
+    let stray = read_pid(&q.work().join("stray.pid"));
+    let log = q.dir.join("violations.log");
+    let read = || std::fs::read_to_string(&log).unwrap_or_default();
+    let named = |pid: i32| read().lines().any(|l| l.contains(&format!("pid={pid} ")));
+    let sampled = until(20, || named(stray));
+    let orphan_named = named(orphan);
+    q.run(&["cancel", &id.to_string()]);
+    q.wait(id);
+    kill("-9", stray);
+    if !in_group {
+        kill("-9", orphan);
+    }
+    q.finish();
+    assert!(sampled, "no sample named the stray: {}", read());
+    assert!(
+        !orphan_named,
+        "a process in a running job's group logged as outside the queue: {}",
+        read()
+    );
+}
+
+#[test]
+fn jobq_a_process_in_a_running_jobs_group_is_the_queues() {
+    orphan_case("jobq_orphan", true);
+}
+
+negative_control!(
+    jobq_a_process_in_a_running_jobs_group_is_the_queues,
+    "the same process outside the job's group is logged",
+    expected = "logged as outside the queue",
+    orphan_case("jobq_orphan_control", false)
 );

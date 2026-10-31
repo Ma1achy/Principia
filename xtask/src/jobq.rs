@@ -470,6 +470,23 @@ pub fn now() -> u64 {
         .map_or(0, |d| d.as_secs())
 }
 
+/// Whether a runner started at `last` is too recent for another at `now`: under [`SPAWN_GAP`] seconds ago, or, with the
+/// clock stepped back, in the future.
+pub fn spawn_too_soon(now: u64, last: u64) -> bool {
+    now.saturating_sub(last) < SPAWN_GAP
+}
+
+/// Records `start`, what `ps` read as the start time of leader `pid`, into `job`, if `job` is still running under that
+/// leader with no start recorded: the state lock was let go between the job's start and this, so it may have ended,
+/// or changed hands. Returns whether `job` changed, and so wants saving.
+pub fn record_start(job: &mut Job, pid: i32, start: Option<String>) -> bool {
+    let ours = job.state == State::Running && job.pgid == Some(pid) && job.leader_start.is_none();
+    if ours {
+        job.leader_start = start;
+    }
+    ours
+}
+
 /// The queue's state directory.
 #[derive(Clone, Debug)]
 pub struct Queue {
@@ -774,7 +791,7 @@ impl Queue {
             .ok()
             .and_then(|text| text.trim().parse().ok())
             .unwrap_or(0);
-        if now().saturating_sub(last) < SPAWN_GAP {
+        if spawn_too_soon(now(), last) {
             return Ok(());
         }
         Self::write_atomic(&spawned, &format!("{}\n", now()))?;
@@ -1206,17 +1223,13 @@ impl Runner {
         self.unrecorded.clear();
         for (id, pid, start) in read {
             match self.queue.load(id) {
-                Ok(mut job)
-                    if job.state == State::Running
-                        && job.pgid == Some(pid)
-                        && job.leader_start.is_none() =>
-                {
-                    job.leader_start = start;
-                    if let Err(message) = self.queue.save(&job) {
-                        log(&format!("runner {}: {message}", self.me));
+                Ok(mut job) => {
+                    if record_start(&mut job, pid, start) {
+                        if let Err(message) = self.queue.save(&job) {
+                            log(&format!("runner {}: {message}", self.me));
+                        }
                     }
                 }
-                Ok(_) => {}
                 Err(message) => log(&format!("runner {}: {message}", self.me)),
             }
         }
