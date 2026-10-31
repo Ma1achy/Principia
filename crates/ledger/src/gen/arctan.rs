@@ -87,7 +87,8 @@ pub fn series_q32(j: u32) -> u32 {
     (((1u64 << 32) + d / 2) / d) as u32
 }
 
-/// The series' length the kernel evaluates.
+/// Interface data, not a register constant (REQ-SYS-082): the length of the emitted `ATAN_SERIES`, the series' length
+/// the kernel evaluates from `ATAN_SERIES[4]` down.
 pub fn series_terms() -> u32 {
     5
 }
