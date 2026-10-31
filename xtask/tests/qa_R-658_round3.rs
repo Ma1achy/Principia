@@ -60,7 +60,10 @@ impl Q {
     fn command(&self, args: &[&str]) -> Command {
         let mut command = Command::new("/bin/bash");
         command
-            .args(["-c", "ulimit -u \"$0\" && exec \"$@\""])
+            .args([
+                "-c",
+                "ulimit -u \"$0\" && ulimit -t 600 && ulimit -f 1048576 && exec \"$@\"",
+            ])
             .arg(process_cap().to_string())
             .arg(env!("CARGO_BIN_EXE_xtask"))
             .arg("job")
