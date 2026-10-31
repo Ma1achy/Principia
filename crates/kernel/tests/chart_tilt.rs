@@ -1574,7 +1574,7 @@ fn rounded_dir(t1: f64, t2: f64) -> [f64; 2] {
 
 /// The strip's `dir` at Tip as sheet's subnormal angles, given in ulps of `2⁻¹⁰⁷⁴`, is a unit vector along `(τ₂, −τ₁)`
 /// (R-655). A length that rounds to exactly `2⁻¹⁰²²` is a normal length, so `dir` divides by it as it stands, at a pair
-/// whose true length is below that by 3/8 of the grid. `rounded` keeps the rounded length throughout (the control).
+/// whose true length is below that by ≈0.4 of the grid. `rounded` keeps the rounded length throughout (the control).
 fn check_subnormal_dir(rounded: bool) {
     let ulp = f64::from_bits;
     for (t1, t2) in [(1, 1), (2, 1), (3, 3), (1, 16), (1000, 1000), (1 << 51, 3)] {
