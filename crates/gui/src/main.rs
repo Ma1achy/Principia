@@ -4,6 +4,7 @@
 //! On wasm the app starts from `gui::web`, through the skeleton's loader, so the binary there is empty.
 
 #[cfg(target_arch = "wasm32")]
+#[cfg_attr(test, mutants::skip)]
 fn main() {}
 
 #[cfg(not(target_arch = "wasm32"))]

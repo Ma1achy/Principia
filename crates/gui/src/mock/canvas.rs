@@ -212,6 +212,7 @@ impl MockCanvas {
 
     /// Opens a device on the browser's WebGPU, which can only be awaited (TASK-M8-86).
     #[cfg(target_arch = "wasm32")]
+    #[cfg_attr(test, mutants::skip)]
     pub async fn open_browser() -> Result<Self, String> {
         let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
             backends: wgpu::Backends::BROWSER_WEBGPU,

@@ -24,6 +24,7 @@ pub mod mock;
 
 /// The wasm entry of the v1 web skeleton (TASK-M8-86, R-627).
 #[cfg(all(feature = "web", target_arch = "wasm32"))]
+#[cfg_attr(test, mutants::skip)]
 pub mod web;
 
 #[cfg(test)]

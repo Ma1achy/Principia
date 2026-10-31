@@ -63,7 +63,7 @@ pub fn check_cli(output: &str) -> Result<(), String> {
 }
 
 /// Runs `command`, failing with its name.
-fn run(command: &mut Command) -> Result<(), String> {
+pub fn run(command: &mut Command) -> Result<(), String> {
     let status = command
         .status()
         .map_err(|e| format!("{:?}: {e}", command.get_program()))?;
@@ -74,32 +74,31 @@ fn run(command: &mut Command) -> Result<(), String> {
     }
 }
 
-/// The target directory cargo builds in.
-fn target_dir(root: &Path) -> PathBuf {
-    std::env::var_os("CARGO_TARGET_DIR").map_or_else(|| root.join("target"), PathBuf::from)
+/// The target directory cargo builds in, given `CARGO_TARGET_DIR`'s value.
+pub fn target_dir(root: &Path, from_env: Option<std::ffi::OsString>) -> PathBuf {
+    from_env.map_or_else(|| root.join("target"), PathBuf::from)
 }
 
-/// Builds the site into `out`.
-pub fn build(out: &Path) -> Result<(), String> {
+/// Builds the site into `out`, with `cli`, the `wasm-bindgen` executable.
+pub fn build(cli: &str, out: &Path) -> Result<(), String> {
     let root = root();
-    let version = Command::new("wasm-bindgen")
-        .arg("--version")
-        .output()
-        .map_err(|e| {
-            format!(
-                "wasm-bindgen: {e}; run `cargo install wasm-bindgen-cli --version \
+    let version = Command::new(cli).arg("--version").output().map_err(|e| {
+        format!(
+            "{cli}: {e}; run `cargo install wasm-bindgen-cli --version \
                  {WASM_BINDGEN_VERSION} --locked` (plan/HUMAN_SETUP.md §6)"
-            )
-        })?;
+        )
+    })?;
     check_cli(&String::from_utf8_lossy(&version.stdout))?;
     run(Command::new(env!("CARGO"))
         .current_dir(&root)
         .args(["rustc", "-p", "gui", "--lib", "--release", "--locked"])
         .args(["--target", TARGET, "--features", "web"])
         .args(["--crate-type", "cdylib"]))?;
-    let wasm = target_dir(&root).join(TARGET).join("release/gui.wasm");
+    let wasm = target_dir(&root, std::env::var_os("CARGO_TARGET_DIR"))
+        .join(TARGET)
+        .join("release/gui.wasm");
     std::fs::create_dir_all(out).map_err(|e| format!("{}: {e}", out.display()))?;
-    run(Command::new("wasm-bindgen")
+    run(Command::new(cli)
         .arg(&wasm)
         .args(["--target", "web", "--no-typescript", "--out-dir"])
         .arg(out))?;

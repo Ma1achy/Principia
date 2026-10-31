@@ -4,7 +4,8 @@
 use validation::negative_control;
 use xtask::pages_workflow::check;
 use xtask::web_skeleton::{
-    check_cli, cli_version, locked_version, SITE_FILES, WASM_BINDGEN_VERSION,
+    build, check_cli, cli_version, default_out, locked_version, run, target_dir, SITE_FILES,
+    WASM_BINDGEN_VERSION,
 };
 
 fn root() -> std::path::PathBuf {
@@ -19,7 +20,6 @@ fn workflow() -> String {
 }
 
 /// The workflow with `from` replaced by `to`, which must be there.
-#[cfg(feature = "controls")]
 fn edited(from: &str, to: &str) -> String {
     let text = workflow();
     assert!(
@@ -202,4 +202,104 @@ negative_control!(
     "a directory without them",
     expected = "the site lacks index.html",
     check_site(&root().join("xtask"))
+);
+
+/// Each fault of the workflow gets its own reason, in a default build too, where the controls are not compiled; the
+/// faults the controls run, and those a text can only have by hand.
+fn check_faults(check: impl Fn(&str) -> Result<(), String>) {
+    let faults: Vec<(String, &str)> = vec![
+        (workflow().replace("on:\n", "only:\n"), "no block `on:`"),
+        (workflow().replace("jobs:\n", "tasks:\n"), "no block `jobs:`"),
+        (edited("  workflow_dispatch:\n", "  workflow_dispatch:\n  push:\n"), "not workflow_dispatch alone"),
+        (edited("  workflow_dispatch:\n", "  push:\n"), "not workflow_dispatch alone"),
+        (edited("  deploy:\n", "  extra:\n    runs-on: x\n\n  deploy:\n"), "not build and deploy"),
+        (edited("  build:\n", "  compile:\n"), "not build and deploy"),
+        (edited("    if: github.ref == 'refs/heads/main'\n", ""), "not conditioned"),
+        (edited("refs/heads/main'", "refs/heads/dev'"), "not conditioned"),
+        (edited("    environment:\n      name: github-pages\n      url: ${{ steps.deploy.outputs.page_url }}\n", ""), "names no environment"),
+        (edited("name: github-pages", "name: staging"), "not github-pages"),
+        (edited("    permissions:\n      pages: write\n      id-token: write\n", ""), "names no permissions"),
+        (edited("      pages: write\n", ""), "lack `pages: write`"),
+        (edited("      id-token: write\n", ""), "lack `id-token: write`"),
+        (edited("@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5", "@v4"), "deploy-pages at a pinned"),
+        (edited("@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5", "@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03g"), "deploy-pages at a pinned"),
+        (edited("@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4.0.0", "@v4"), "upload-pages-artifact at a pinned"),
+    ];
+    for (text, reason) in faults {
+        match check(&text) {
+            Err(why) if why.contains(reason) => {}
+            other => panic!("wanted `{reason}`, got {other:?}"),
+        }
+    }
+    // A comment is not a trigger; a commented job neither. Blank lines end nothing.
+    let commented = edited(
+        "  workflow_dispatch:\n",
+        "  # push:\n\n  workflow_dispatch:\n",
+    );
+    assert_eq!(check(&commented), Ok(()), "a comment among the triggers");
+}
+
+#[test]
+fn pages_workflow_names_each_fault() {
+    check_faults(check);
+}
+
+negative_control!(
+    pages_workflow_names_each_fault_control,
+    "a check that passes everything",
+    expected = "wanted `no block `on:``",
+    check_faults(|_| Ok(()))
+);
+
+/// The build's small parts.
+fn check_plumbing(default_out: std::path::PathBuf) {
+    assert!(
+        default_out.ends_with("target/web-skeleton"),
+        "the site's default place"
+    );
+    assert!(
+        default_out
+            .parent()
+            .unwrap()
+            .parent()
+            .unwrap()
+            .join("Cargo.toml")
+            .is_file(),
+        "the default place is under the workspace"
+    );
+    let at = std::path::Path::new("/w");
+    assert_eq!(target_dir(at, None), at.join("target"));
+    assert_eq!(
+        target_dir(at, Some("/t".into())),
+        std::path::Path::new("/t")
+    );
+    assert!(
+        run(&mut std::process::Command::new("true")).is_ok(),
+        "success"
+    );
+    assert!(
+        run(&mut std::process::Command::new("false")).is_err(),
+        "failure"
+    );
+    assert!(
+        run(&mut std::process::Command::new("no-such-tool-m886")).is_err(),
+        "no tool"
+    );
+    let refused = build("no-such-tool-m886", at).expect_err("no wasm-bindgen, no site");
+    assert!(
+        refused.contains("HUMAN_SETUP"),
+        "the setup is named: {refused}"
+    );
+}
+
+#[test]
+fn web_skeleton_plumbing() {
+    check_plumbing(default_out());
+}
+
+negative_control!(
+    web_skeleton_plumbing_control,
+    "another default place",
+    expected = "the site's default place",
+    check_plumbing(std::path::PathBuf::from("/elsewhere"))
 );

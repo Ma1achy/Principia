@@ -198,8 +198,12 @@ fn main() -> ExitCode {
                 &workspace_root().join(xtask::mutants_check::EQUIVALENT_LIST),
             )
         }
-        ["web-skeleton"] => xtask::web_skeleton::build(&xtask::web_skeleton::default_out()),
-        ["web-skeleton", "--out", out] => xtask::web_skeleton::build(Path::new(out)),
+        ["web-skeleton"] => {
+            xtask::web_skeleton::build("wasm-bindgen", &xtask::web_skeleton::default_out())
+        }
+        ["web-skeleton", "--out", out] => {
+            xtask::web_skeleton::build("wasm-bindgen", Path::new(out))
+        }
         ["pr-check"] => match std::env::var("GITHUB_EVENT_PATH") {
             Ok(path) => xtask::pr_check::run(Path::new(&path)),
             Err(_) => {
