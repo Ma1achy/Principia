@@ -449,7 +449,8 @@ fn against_loop<S: Stepper, R: Q>(
     let want = contract_loop::<S, R, _>(&ic, &u, &mut StopAfter::new(stop));
     check_against_loop(name, &got, &want);
     if stop.is_none() {
-        // The wrapper's own cadence, hooks empty, is never done: the same as no stop.
+        // The wrapper's own cadence projects and monitors, and detection finds nothing yet, so it is never done: the same
+        // as no stop.
         let own = contract_loop::<S, R, _>(
             &ic,
             &u,
