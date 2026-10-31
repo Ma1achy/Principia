@@ -2,6 +2,11 @@
 
 *Extended by `principia_dd_replication.md` (R-594, R-629): published results of other codes, and the periodic-orbit
 catalogues at scale, as engine tests beside this suite. Nothing here changes.*
+*30 Oct 2026 (R-649, R-650): an external target is a measurement, never a gate, scored in M9 after the core build; the
+internal correctness tests and the anchor smoke tests stay continuous and blocking. Of this suite (§ 3), the
+figure-eight closure is an anchor smoke test, the Lagrange rigidity, the chart landmarks, the reversibility and the
+word calculus (R-125) stay in M3, and the free-fall closure against Hristov et al.'s orbits (REQ-VAL-042) and the
+figure-eight's published shape-sphere curve (REQ-VAL-333) are scored in M9 (`principia_dd_replication.md` § 12).*
 
 **Why these matter:** a periodic orbit **is its own reference.** Integrate one period, compare to the
 start. No second implementation, no analytic formula, no tolerance chosen by eye — the orbit closes
@@ -141,6 +146,13 @@ finding a nearby periodic solution."*
 a qualitative sanity check, not a quantitative test. The *nearby periodic solution* they found is
 the more useful object.
 
+*30 Oct 2026 (R-649 and the owner's clarification 1 of that ruling; R-650):* SP-1 runs to its own break-up, `t_max`
+between 60 and 65 as a per-test parameter, and the default horizon stays 50 (R-610): running a target at its natural
+horizon is not a default change. It is an anchor smoke test, continuous and blocking, for gross breakage only:
+outcome class, escaper and a coarse `t_end` window (REQ-VAL-034, REQ-VAL-132). Its structural comparison with
+Szebehely & Peters is scored in M9 (REQ-VAL-335). SP-2, the converged reference at `t = 100` and `t = 200`, is the
+second Burrau anchor (REQ-VAL-336).
+
 ### 1.6 Agekyan–Anosova region D — the near-rest starts (R-592)
 
 *Ported from the papers by R-592 (closes RQ-566, RQ-571 and RQ-573; RQ-570 stays open, and R-632 closes it). The
@@ -227,6 +239,11 @@ and not asserted until RQ-570 is ruled." Nothing else is imported from the paper
 | `error_ratio`, `worst_energy_drift` | **energy** error only |
 
 **The gates and their values (R-257).** Each passes before any output is trusted:
+
+*30 Oct 2026 (R-650):* these are internal correctness tests, continuous and blocking a merge, never external targets.
+Gauge invariance's "~10 decimals" is finer than f32 resolves, and energy control's `1.0000` names no precision path;
+each one's tolerance on the f32 GPU path is a calibration (REQ-VAL-338, REQ-VAL-339; R-649's clarification 2: on
+the GPU a check is measured within a stated f32 tolerance, not assumed).
 
 | gate | test | passes when |
 |---|---|---|
