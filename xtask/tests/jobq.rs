@@ -478,6 +478,21 @@ fn jobq_target_directories_compare_by_a_normalised_key() {
     check_key(&format!("{real}/sub"), &format!("{link}/SUB/"), true);
     check_key(&format!("{real}/new"), &format!("{link}/New"), true);
     check_key(&format!("{real}/new"), &format!("{real}/other"), false);
+    // A `..` below a missing component, through a link, at the root, and at the start of a relative path.
+    check_key("/repo/new/../target", "/repo/target", true);
+    check_key("/repo/new/a/../../target", "/repo/target", true);
+    check_key("/repo/new/../target", "/repo/new/target", false);
+    check_key("/../t/a", "/t/a", true);
+    check_key(&format!("{real}/new/../sub"), &format!("{real}/sub"), true);
+    check_key(
+        &format!("{link}/new/../new2"),
+        &format!("{real}/New2"),
+        true,
+    );
+    let cwd = std::env::current_dir().expect("a working directory");
+    let parent = path(cwd.parent().expect("a parent").to_path_buf());
+    check_key("..", &parent, true);
+    check_key("../missing", &format!("{parent}/missing"), true);
     // A queued job on another spelling of a running job's target directory waits.
     use Priority::*;
     use State::*;
@@ -495,6 +510,16 @@ negative_control!(
     expected = "target keys wrong",
     check_key("/t/a", "/t/b", true)
 );
+
+mod parent_below_a_missing_component {
+    use super::*;
+    negative_control!(
+        jobq_target_directories_compare_by_a_normalised_key,
+        "a `..` below a missing component takes that component off, and no more",
+        expected = "target keys wrong",
+        check_key("/repo/new/../target", "/target", true)
+    );
+}
 
 // --- Timeouts kill the whole process group ------------------------------------------------------------------------
 

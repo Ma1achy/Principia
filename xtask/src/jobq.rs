@@ -48,7 +48,7 @@ use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::fs::{self, File, OpenOptions};
 use std::io::Write as _;
 use std::os::unix::process::{CommandExt as _, ExitStatusExt as _};
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 use std::process::{Child, Command, ExitCode, ExitStatus, Stdio};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
@@ -236,29 +236,23 @@ impl Job {
     }
 }
 
-/// The key two target directories are compared by (R-658): the path made canonical where it exists, or, where it
-/// doesn't, its nearest existing parent made canonical with the rest joined on, without `.` components or repeated or
-/// trailing `/`; then folded to lower case, since the Mac's volume is case-insensitive. Two spellings of one directory
-/// give one key. (On a case-sensitive volume two directories differing only in case share a key, and so run one after
-/// the other: never at once on one directory, which is the point.)
+/// The key two target directories are compared by (R-658): the path walked from its start, each prefix made canonical
+/// where it exists and joined on as written where it doesn't, and a `..` taking off the last component, so that one
+/// below a missing component resolves too; without `.` components or repeated or trailing `/`; then folded to lower
+/// case, since the Mac's volume is case-insensitive. Two spellings of one directory give one key. (On a case-sensitive
+/// volume two directories differing only in case share a key, and so run one after the other: never at once on one
+/// directory, which is the point.)
 pub fn target_key(dir: &str) -> String {
-    let lexical: PathBuf = Path::new(dir).components().collect();
-    let mut head = lexical.as_path();
-    let mut tail = Vec::new();
-    let mut key = loop {
-        if let Ok(canonical) = fs::canonicalize(head) {
-            break canonical;
+    let mut key = PathBuf::new();
+    for component in Path::new(dir).components() {
+        // What is on the key is canonical or missing, so taking off its last component is what `..` means. A relative
+        // path's leading `..` has nothing to take off, and is joined on.
+        if component == Component::ParentDir && !key.as_os_str().is_empty() {
+            key.pop();
+            continue;
         }
-        match (head.parent(), head.file_name()) {
-            (Some(parent), Some(name)) => {
-                tail.push(name);
-                head = parent;
-            }
-            _ => break head.to_path_buf(),
-        }
-    };
-    for name in tail.iter().rev() {
-        key.push(name);
+        let next = key.join(component);
+        key = fs::canonicalize(&next).unwrap_or(next);
     }
     key.to_string_lossy().to_lowercase()
 }
