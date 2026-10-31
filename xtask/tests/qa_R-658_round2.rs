@@ -134,7 +134,7 @@ impl Drop for Q {
 
 fn kill(signal: &str, pid: &str) {
     let _ = Command::new("kill")
-        .args([signal, pid])
+        .args([signal, "--", pid])
         .output_within(Duration::from_secs(30));
 }
 
