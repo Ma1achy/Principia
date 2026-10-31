@@ -28402,6 +28402,9 @@ R-652 is in the "design" group of `plan/rule_groups.yaml`, with R-454 and R-504.
   `in_domain`: `9K + 15|V| ≤ 128·|E_0|`, and for `L_z` `5·S ≤ 128·|Lz_0|` (render contract Part 5), at least 4 of its 8 in
   each view. A sample near a cancellation is outside it, and may show a tint; the ruling's two requirements conflict
   there, a band relative to the reference and an exactly neutral fresh sample, and RQ-637 asks the owner.
+- **The band's scope (applied per R-369; code review 5723219417, C2).** The band is in the three drift debug views. A
+  field ramp on `energy_drift` or `Lz_drift` (colour_composition §6's `f_edrift`) has none; the code stays, and RQ-638 asks
+  the owner whether to extend it.
 - **A non-finite operand (R-436; qa review 5723138973, Q1).** The band never makes one neutral: each view tests its
   reference and its drift on their bits first and draws the hatch (render contract Part 5, "The non-finite guard").
 

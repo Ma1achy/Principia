@@ -427,6 +427,9 @@ with dd_colouring §3.1's sRGB transfer.
     show a rounding-level drift off `c0`. It errs toward showing: the band never hides more than `k·2⁻²³·|reference|`.
     The exact neutrality of a fresh sample is therefore claimed inside the bound only, where `k_E` or `k_L` is at most
     128; RQ-637 asks the owner whether the band stays as ruled there or scales by `K + |V|` and `S`.
+    **Scope (applied per R-369; RQ-638).** The band is in the three drift debug views above. A field ramp on `energy_drift`
+    or `Lz_drift`, colour_composition §6's `f_edrift` (`default_ramp`'s `Compaction::Diverging`, `compact_symlog`), has no
+    band, so a fresh sample's rounding still shows there at `x₀ = 10⁻⁶`; RQ-638 asks the owner whether to extend it.
   - **The ramp.** `symlog` and `lin` draw on `diverging(c−, c0, c+)`, `c−` `#3B4CC0`, `c0` `#DDDDDD` and `c+`
     `#B40426` in 8-bit sRGB, Moreland's cool-warm ends and neutral, mixed in linear RGB by `ramp_diverging`, `c0` at
     `t = 0.5`; under the palette swap, the view's `PALETTE` uniform 1, they draw on viridis, so `symlog`'s pixel is

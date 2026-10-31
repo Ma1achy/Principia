@@ -870,3 +870,23 @@ shows. Code unchanged; TASK-M3-05's PR doesn't wait on it, the ruling's band bei
   the bound; it departs from the ruling's words;
   (c) another, stated by the owner.
 - **Applied meanwhile:** (a). Nothing waits.
+
+## RQ-638: `symlog`'s neutral band is in the three drift debug views; a field ramp on `energy_drift` or `Lz_drift` has none, so a fresh sample's rounding still shows as colour there *(physics; R-652, the owner's ruling (d); `docs/design/principia_colour_composition.md` § "6. Debug views as presets"; code review 5723219417 of PR #360, C2; REQ-TOOL-149; context: TASK-M3-05)*
+
+*Queued 31 Oct 2026 by TASK-M3-05's fix round. For the owner: yes, it changes what a real stain shows. Code unchanged;
+the scope is stated in render contract Part 5 and R-652, applied per R-369, and TASK-M3-05's PR doesn't wait on it.*
+
+- **File, section:**
+  - `decisions.md` § R-652, the owner's ruling (d), its reason: "every t = 0 pixel is a fresh sample, so Metal's ulp noise
+    rendering as colour would appear on real data too. Fix the view."
+  - `docs/design/principia_colour_composition.md` § 6: "A field view *is* `colour = FieldRamp{field, recommended ramp}`",
+    "`f_edrift` = `energy_drift · diverging · symlog`".
+- **The gap in the code:** `render::colour::defaults::default_ramp` gives these fields `Compaction::Diverging { x0 }`,
+  which is `compact_symlog(x, x0)` in `crates/render/shaders/wgsl/lib/compaction.wgsl`, and `qa_field_either_role_any_field`
+  (`crates/render/tests/qa_TASK-M7-05.rs`) renders a field ramp on `energy_drift`. No band is on that path, so a stain's
+  field ramp still draws a fresh sample's rounding as backend-dependent colour at `x₀ = 10⁻⁶`. No golden exercises it.
+- **The question:** whether "Fix the view" reaches the field-ramp path.
+- **Options seen:** (a) extend the band to it, where the drift is read, since `compact_symlog` has no reference and also
+  serves `E_0` and `Lz_0`, with the fresh-sample test extended; (b) leave it there, the band being the debug views' alone,
+  a field ramp showing the rounding; (c) another, stated by the owner.
+- **Applied meanwhile:** (b), the code unchanged, the scope stated. Nothing waits.
