@@ -9144,6 +9144,8 @@
   - R-71
   - R-427
   milestone: M2
+  rq:
+  - RQ-635
   note: "Raised by code review 5720675453 of PR #343: `sum_bits()` returned 100 as a literal past the lint (REQ-SYS-082), and the corpus gives no working precision. Proposed by TASK-M2-26. The value's question is RQ-635."
 - id: REQ-SCHED-001
   area: SCHED
