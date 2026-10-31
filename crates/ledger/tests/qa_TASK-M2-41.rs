@@ -12,9 +12,10 @@
 //!   entry that breaks only strictly inside its range, its ends admissible, is refused at an interior value, so the
 //!   check really samples the interior (`qa_m241_range_*`).
 //! - REQ-GEN-042: each row's default, lo and hi changes the schema version, its citation does not; the bytes before
-//!   the declarations' block hash to the schema version `main` carried before this task (0x82add40473aecbc5), so the
-//!   entries' and chart constants' hashed bytes are today's; an active value is no input of the hash
-//!   (`qa_m241_hash_*`).
+//!   the declarations' block hash to the schema version `main` carried before this task (0x82add40473aecbc5), with
+//!   `mean_y`'s range as it was then (provisional, (−∞, ∞)), so the entries' and chart constants' hashed bytes are
+//!   today's; with `mean_y`'s range declared [0, 4] by REQ-PAY-098 (R-426, TASK-M3-13) they hash to 0xdb7b6e049a8494f7;
+//!   an active value is no input of the hash (`qa_m241_hash_*`).
 //! - REQ-DEC-048 (host side): `Codomain::range` at an active `q_max` = 1.5 gives the momenta `[−1.5, 1.5]` and moves no
 //!   other codomain's bounds (`qa_m241_range_with_active`).
 //!
@@ -35,8 +36,13 @@ use ledger::version::{canonical, fnv1a64, Hashed};
 use validation::negative_control;
 
 /// The schema version on `main` before TASK-M2-41 (`crates/kernel/src/payload/generated.rs` at the merge base):
-/// the hash of the same ledger without the declarations' block.
+/// the hash of the same ledger without the declarations' block, `mean_y`'s range then provisional over (−∞, ∞).
 const MAIN_SCHEMA_VERSION: u64 = 0x82ad_d404_73ae_cbc5;
+
+/// The hash of the ledger without the declarations' block once REQ-PAY-098 declared `mean_y`'s range [0, 4]
+/// (R-426; TASK-M3-13): the one change to the hashed entries since [`MAIN_SCHEMA_VERSION`], which reverting it
+/// restores (`qa_m241_hash`).
+const MEAN_Y_DECLARED_VERSION: u64 = 0xdb7b_6e04_9a84_94f7;
 
 /// The chart constant `name`'s value.
 fn chart(name: &str) -> f64 {
@@ -390,7 +396,28 @@ negative_control!(
 
 /// The canonical bytes of the payload ledger with the declarations `t`.
 fn bytes(t: &[Tunable]) -> Vec<u8> {
-    let ledger = layout();
+    bytes_of(layout(), t)
+}
+
+/// The payload ledger with `mean_y`'s range as it was before REQ-PAY-098: provisional over (−∞, ∞) (R-426).
+fn mean_y_provisional() -> ledger::schema::Ledger {
+    use ledger::schema::{Bound, Declaration, Range};
+    let mut l = layout();
+    let e = l
+        .entries
+        .iter_mut()
+        .find(|e| e.name == Some("mean_y"))
+        .expect("`mean_y`");
+    e.range = Some(Range {
+        lo: Bound::Unbounded,
+        hi: Bound::Unbounded,
+    });
+    e.declaration = Some(Declaration::Provisional("REQ-PAY-098"));
+    l
+}
+
+/// The canonical bytes of `ledger` with the declarations `t`.
+fn bytes_of(ledger: ledger::schema::Ledger, t: &[Tunable]) -> Vec<u8> {
     let entries = gen::validate(&ledger).expect("the payload ledger validates");
     let structs = payload::structs();
     canonical(&Hashed {
@@ -403,7 +430,12 @@ fn bytes(t: &[Tunable]) -> Vec<u8> {
 /// The bytes before the declarations' block, the ledger as it was hashed before R-481: the bytes with no declaration,
 /// less the empty block's count, which ends them.
 fn before_block() -> Vec<u8> {
-    let mut b = bytes(&[]);
+    before_block_of(layout())
+}
+
+/// [`before_block`] of `ledger`.
+fn before_block_of(ledger: ledger::schema::Ledger) -> Vec<u8> {
+    let mut b = bytes_of(ledger, &[]);
     let n = b.len() - 4;
     assert_eq!(b[n..], [0, 0, 0, 0], "the empty block's count is not last");
     b.truncate(n);
@@ -414,8 +446,8 @@ fn before_block() -> Vec<u8> {
 type Edit = fn(&mut Tunable);
 
 /// Each row's default, lo and hi moves the version, its citation does not, and the bytes before the block are
-/// today's, which hash to `today`.
-fn check_hash(today: u64) {
+/// today's, which hash to `today`, and with `mean_y` provisional again hash to `main`.
+fn check_hash(main: u64, today: u64) {
     let base = fnv1a64(&bytes(tunables()));
     for i in 0..tunables().len() {
         let edits: [(&str, Edit); 3] = [
@@ -450,11 +482,16 @@ fn check_hash(today: u64) {
         today,
         "the bytes before the declarations are not today's (hash)"
     );
+    assert_eq!(
+        fnv1a64(&before_block_of(mean_y_provisional())),
+        main,
+        "the bytes before the declarations, `mean_y` provisional again, are not main's (hash)"
+    );
 }
 
 #[test]
 fn qa_m241_hash() {
-    check_hash(MAIN_SCHEMA_VERSION);
+    check_hash(MAIN_SCHEMA_VERSION, MEAN_Y_DECLARED_VERSION);
     // An active value is the view's state and no input of the hash: evaluating the codomain's bounds at an active
     // mu_max = 4 and q_max = 1.5 leaves the version the ledger's.
     let base = fnv1a64(&bytes(tunables()));
@@ -480,7 +517,7 @@ negative_control!(
     qa_m241_hash,
     "a schema version one off main's is not what the bytes before the block hash to",
     expected = "(hash)",
-    check_hash(MAIN_SCHEMA_VERSION ^ 1)
+    check_hash(MAIN_SCHEMA_VERSION ^ 1, MEAN_Y_DECLARED_VERSION)
 );
 
 // ── REQ-DEC-048, host side: the codomain's bounds at the active value ───────────────────────────────────────────
