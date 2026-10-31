@@ -396,15 +396,14 @@ negative_control!(
 );
 
 /// The wrapper's cadence, but `done` after `limit` substeps: a terminal fired part-way through a macro-step.
-#[derive(Default)]
-struct StopAfter {
-    inner: WrapperCadence,
+struct StopAfter<R> {
+    inner: WrapperCadence<R>,
     limit: u32,
 }
 
-impl<R> Cadence<R> for StopAfter {
+impl<R: kernel::Real> Cadence<R> for StopAfter<R> {
     fn after_step(&mut self, state: &mut State<R>, geom: &mut Geom<R>) {
-        Cadence::<R>::after_step(&mut self.inner, state, geom);
+        self.inner.after_step(state, geom);
     }
 
     fn done(&self) -> bool {
@@ -423,8 +422,8 @@ fn check_cut_short(skip_cut: bool) {
     let ic = scalene::<f64>();
     let stop = 17;
     let mut cadence = StopAfter {
+        inner: WrapperCadence::new(&ic.m, &ic.r, &ic.p),
         limit: 4 * stop + 2,
-        ..StopAfter::default()
     };
     let cut = integrate_with::<Kdk, f64, _>(&ic, &key, &mut cadence);
     let mut whole = key;

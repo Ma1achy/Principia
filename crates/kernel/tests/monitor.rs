@@ -746,21 +746,24 @@ negative_control!(
     check_relative_forms(|_, _| [0.0; 4])
 );
 
+/// A velocity form of a projection.
+type VelocityForm = fn(&ComProjection<f64>, &[[f64; 2]; 3]) -> [[f64; 2]; 3];
+
 /// Checks the projection at `M ≠ 1`: `R_com` and `V_com` zero after it, each body's relative place kept.
-fn check_velocity_form(project: fn(&ComProjection<f64>, &[[f64; 2]; 3]) -> [[f64; 2]; 3]) {
+fn check_velocity_form(project: VelocityForm) {
     let s = plain_state();
     let c = ComProjection::new(&s.m);
     let total: f64 = s.m.iter().sum();
     let got = project(&c, &s.r);
+    let mean = [0, 1].map(|k| (0..3).map(|i| s.m[i] * s.r[i][k]).sum::<f64>() / total);
+    let weighted = c.weighted_mean(&s.r);
     for k in 0..2 {
-        let mean = (0..3).map(|i| s.m[i] * s.r[i][k]).sum::<f64>() / total;
-        assert!(
-            (c.weighted_mean(&s.r)[k] - mean).abs() < 1e-14,
-            "the weighted mean"
-        );
-        for i in 0..3 {
+        assert!((weighted[k] - mean[k]).abs() < 1e-14, "the weighted mean");
+    }
+    for (i, body) in got.iter().enumerate() {
+        for (k, v) in body.iter().enumerate() {
             assert!(
-                (got[i][k] - (s.r[i][k] - mean)).abs() < 1e-14,
+                (v - (s.r[i][k] - mean[k])).abs() < 1e-14,
                 "the velocity form at [{i}][{k}]"
             );
         }
