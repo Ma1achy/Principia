@@ -695,3 +695,115 @@ negative_control!(
         check_shape("KDK f64 on test 2", max, last);
     }
 );
+
+/// A state with `M ≠ 1`, nonzero `E₀` and `L_{z,0}`, no value masked.
+fn plain_state() -> State<f64> {
+    State {
+        m: [0.75, 1.5, 3.25],
+        r: [[0.5, -1.5], [2.5, 0.25], [-3.0, 1.75]],
+        p: [[1.25, -0.5], [-2.0, 3.0], [0.75, 1.5]],
+    }
+}
+
+/// Checks `Monitor`'s four relative forms after one update from `plain_state`, at a floor under both invariants.
+fn check_relative_forms(read: fn(&Monitor<f64>, f64) -> [f64; 4]) {
+    let s = plain_state();
+    let mut monitor = Monitor::new(&s.m, &s.r, &s.p, &Geom::new(&s.m, &s.r));
+    let mut r = s.r;
+    r[0][0] += 0.25;
+    let mut p = s.p;
+    p[1][1] -= 0.125;
+    monitor.update(&s.m, &r, &p, &Geom::new(&s.m, &r));
+    let eps = 1e-6;
+    let want = [
+        relative(monitor.de_final(), monitor.e_0(), eps),
+        relative(monitor.de_max(), monitor.e_0(), eps),
+        relative(monitor.dlz_final(), monitor.lz_0(), eps),
+        relative(monitor.dlz_max(), monitor.lz_0(), eps),
+    ];
+    assert!(want.iter().all(|x| *x != 0.0), "each drift is nonzero");
+    assert_eq!(read(&monitor, eps), want, "the relative forms");
+}
+
+fn relative_forms(m: &Monitor<f64>, eps: f64) -> [f64; 4] {
+    [
+        m.delta_e_final(eps),
+        m.delta_e_max(eps),
+        m.delta_l_final(eps),
+        m.delta_l_max(eps),
+    ]
+}
+
+#[test]
+fn invariant_monitor_relative_forms() {
+    check_relative_forms(relative_forms);
+}
+
+negative_control!(
+    invariant_monitor_relative_forms,
+    "forms that read zero",
+    expected = "the relative forms",
+    check_relative_forms(|_, _| [0.0; 4])
+);
+
+/// Checks the projection at `M ≠ 1`: `R_com` and `V_com` zero after it, each body's relative place kept.
+fn check_velocity_form(project: fn(&ComProjection<f64>, &[[f64; 2]; 3]) -> [[f64; 2]; 3]) {
+    let s = plain_state();
+    let c = ComProjection::new(&s.m);
+    let total: f64 = s.m.iter().sum();
+    let got = project(&c, &s.r);
+    for k in 0..2 {
+        let mean = (0..3).map(|i| s.m[i] * s.r[i][k]).sum::<f64>() / total;
+        assert!(
+            (c.weighted_mean(&s.r)[k] - mean).abs() < 1e-14,
+            "the weighted mean"
+        );
+        for i in 0..3 {
+            assert!(
+                (got[i][k] - (s.r[i][k] - mean)).abs() < 1e-14,
+                "the velocity form at [{i}][{k}]"
+            );
+        }
+    }
+}
+
+#[test]
+fn com_projection_velocity_form() {
+    check_velocity_form(ComProjection::project_velocities);
+}
+
+negative_control!(
+    com_projection_velocity_form,
+    "a velocity form that does nothing",
+    expected = "the velocity form",
+    check_velocity_form(|_, v| *v)
+);
+
+/// Checks that the monitored fields come from the cadence, whatever the march's state held.
+fn check_monitored(lz_0: fn(f32, f32) -> f32) {
+    let fixture = figure_eight();
+    let (out, cadence) = integrate_fixture::<Euler, f32>(&Fixture {
+        horizon: 0.01,
+        ..fixture
+    });
+    let mut stale = out;
+    stale.Lz_0 = 99.0;
+    let got = kernel::driver::wrapper::monitored(stale, &cadence);
+    assert_eq!(
+        lz_0(got.Lz_0, cadence.monitor_state().lz_0()),
+        cadence.monitor_state().lz_0(),
+        "the stored L_z0"
+    );
+}
+
+#[test]
+fn invariant_monitor_stores_the_monitors_lz_0() {
+    check_monitored(|got, _| got);
+}
+
+negative_control!(
+    invariant_monitor_stores_the_monitors_lz_0,
+    "the march's stale L_z0 kept",
+    expected = "the stored L_z0",
+    check_monitored(|_, _| 99.0)
+);

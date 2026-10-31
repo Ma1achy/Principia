@@ -1090,3 +1090,60 @@ negative_control!(
     expected = "the debug view's counts",
     check_inputs(true)
 );
+
+/// Checks that the derived drift view's case is at `lin` and the generated drift views' at their defaults.
+fn check_drift_cases(cases: &[golden_scene::DebugCase]) {
+    let params = |name: &str| {
+        cases
+            .iter()
+            .find(|c| c.name == name)
+            .unwrap_or_else(|| panic!("no case `{name}`"))
+            .params
+            .clone()
+    };
+    assert_eq!(
+        params("derived-energy_drift"),
+        [("COMPACTION".to_owned(), vec![1.0])],
+        "the derived drift case"
+    );
+    assert!(params("generated-energy_drift").is_empty());
+    assert!(params("generated-Lz_drift").is_empty());
+}
+
+#[test]
+fn golden_scene_drift_cases_set_their_params() {
+    check_drift_cases(golden_scene::debug_cases().expect("the cases"));
+}
+
+negative_control!(
+    golden_scene_drift_cases_set_their_params,
+    "no cases at all",
+    expected = "no case",
+    check_drift_cases(&[])
+);
+
+/// Checks the predicates of a sample with `E_0 = 1` and the latches `(de, dlz)`.
+fn check_drift_suspects(de: f32, dlz: f32, want: (bool, bool)) {
+    let mut s = golden_scene::row_scene("t", 1, Colouring::View("state")).expect("the scene");
+    s.set.sample(0).E_0(1.0).drift_max(de, dlz);
+    assert_eq!(
+        golden_scene::drift_suspects(&s.read(0)),
+        want,
+        "the predicates"
+    );
+}
+
+#[test]
+fn golden_scene_drift_suspects_read_the_latches() {
+    check_drift_suspects(0.0, 0.0, (false, false));
+    check_drift_suspects(1.0, 0.0, (true, false));
+    check_drift_suspects(0.0, 1.0, (false, true));
+    check_drift_suspects(1.0, 1.0, (true, true));
+}
+
+negative_control!(
+    golden_scene_drift_suspects_read_the_latches,
+    "a quiet sample read as suspect",
+    expected = "the predicates",
+    check_drift_suspects(0.0, 0.0, (true, true))
+);

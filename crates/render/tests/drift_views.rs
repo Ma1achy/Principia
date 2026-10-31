@@ -503,3 +503,70 @@ negative_control!(
         check_log_unsigned(view, &s, &render(&gpu(), &s));
     }
 );
+
+/// Checks the CPU mirror, `present::dbg_drift`, against each compaction's placement written here.
+fn check_mirror(mirror: fn(f32, u32, bool, f64, f64, [f64; 2]) -> Rgb) {
+    let frag = [0.5, 0.5];
+    for view in VIEWS {
+        for k in DRIFTS_OF_R {
+            let x = (k * view.lin_r) as f32;
+            for (mode, compaction, swap) in [
+                (Mode::Default, present::DRIFT_SYMLOG, false),
+                (Mode::Swap, present::DRIFT_SYMLOG, true),
+                (Mode::Lin, present::DRIFT_LIN, false),
+                (Mode::Log, present::DRIFT_LOG, false),
+                (Mode::Log, present::DRIFT_LOG, true),
+            ] {
+                let got = mirror(x, compaction, swap, view.lin_r, view.eps, frag);
+                let want = placed(view, mode, x, frag);
+                assert!(
+                    near(got, want),
+                    "the mirror at {mode:?}, x = {x}: {got:?}, not {want:?}"
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn drift_view_compaction_mirror_is_the_placement() {
+    check_mirror(present::dbg_drift);
+}
+
+negative_control!(
+    drift_view_compaction_mirror_is_the_placement,
+    "a mirror that ignores the compaction",
+    expected = "the mirror at Lin",
+    check_mirror(|x, _, swap, r, eps, frag| present::dbg_drift(
+        x,
+        present::DRIFT_SYMLOG,
+        swap,
+        r,
+        eps,
+        frag
+    ))
+);
+
+/// Checks the ink at either side of the luminance split, on each channel alone, so that each weight is seen.
+fn check_ink(ink: fn(Rgb) -> Rgb) {
+    for (channel, weight) in [(0, 0.2126), (1, 0.7152), (2, 0.0722)] {
+        for (factor, want) in [(1.01, 0.0), (0.99, 1.0)] {
+            let mut c = [0.0; 3];
+            c[channel] = factor * 0.18 / weight;
+            assert_eq!(ink(c), [want; 3], "the ink over {c:?}");
+        }
+    }
+    assert_eq!(ink([0.18; 3]), [0.0; 3], "the ink at the split");
+}
+
+#[test]
+fn drift_suspect_styling_ink_splits_at_the_luminance() {
+    check_ink(present::suspect_ink);
+}
+
+negative_control!(
+    drift_suspect_styling_ink_splits_at_the_luminance,
+    "ink always black",
+    expected = "the ink over",
+    check_ink(|_| [0.0; 3])
+);

@@ -176,7 +176,7 @@ pub fn written_order(s: &S) -> S {
 }
 
 /// Another order, the control's oracle: `S = m₀x₀ + m₁x₁ + m₂x₂` with no `fma` and `P_com = p₀ + (p₁ + p₂)`.
-fn reordered(s: &S) -> S {
+pub fn reordered(s: &S) -> S {
     let m = s.m;
     let total = (m[0] + m[1]) + m[2];
     let c: [_; 2] =
@@ -189,7 +189,7 @@ fn reordered(s: &S) -> S {
 }
 
 /// The bits of `s`'s positions and momenta.
-fn bits(s: &S) -> [u32; 12] {
+pub fn bits(s: &S) -> [u32; 12] {
     let mut out = [0; 12];
     for i in 0..3 {
         for k in 0..2 {

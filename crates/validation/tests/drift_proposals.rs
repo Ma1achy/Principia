@@ -515,3 +515,56 @@ fn short_horizon_table() -> Vec<Measured> {
     f.horizon = 1.0;
     drift::measure(&f)
 }
+
+/// Checks the hierarchy's geometry in canonical units, the length scale `λ` from its pericentre: the binary's
+/// separation and relative speed at apocentre, and the outer body's distance and relative speed about the binary's
+/// centre of mass. `M = 1`, so lengths scale by `λ` and speeds by `λ^(−1/2)`. Unequal masses, so no weight is masked.
+fn check_hierarchy(hierarchy: fn([f64; 3], f64, f64, f64) -> (kernel::decode::Ic<f64>, f64)) {
+    let (m, a, e, d) = ([0.5, 0.3, 0.2], 1.25, 0.8, 5.0);
+    let (ic, pericentre) = hierarchy(m, a, e, d);
+    let lambda = pericentre / (a * (1.0 - e));
+    let v = |i: usize| [ic.p[i][0] / ic.m[i], ic.p[i][1] / ic.m[i]];
+    let dist = |x: [f64; 2], y: [f64; 2]| (x[0] - y[0]).hypot(x[1] - y[1]);
+    let mb = m[0] + m[1];
+    let bary = |x: [f64; 2], y: [f64; 2]| [0, 1].map(|k| (m[0] * x[k] + m[1] * y[k]) / mb);
+    let close = |got: f64, want: f64, what: &str| {
+        assert!((got - want).abs() < 1e-9, "{what}: {got}, not {want}");
+    };
+    assert_eq!(ic.m, m);
+    close(
+        dist(ic.r[0], ic.r[1]),
+        a * (1.0 + e) * lambda,
+        "the binary's separation",
+    );
+    close(
+        dist(ic.r[2], bary(ic.r[0], ic.r[1])),
+        d * lambda,
+        "the outer distance",
+    );
+    let va = (mb * (1.0 - e) / (a * (1.0 + e))).sqrt();
+    close(
+        dist(v(0), v(1)),
+        va / lambda.sqrt(),
+        "the binary's relative speed",
+    );
+    close(
+        dist(v(2), bary(v(0), v(1))),
+        (1.0 / d).sqrt() / lambda.sqrt(),
+        "the outer speed",
+    );
+}
+
+#[test]
+fn drift_hierarchy_is_its_definition() {
+    check_hierarchy(drift::hierarchy);
+}
+
+negative_control!(
+    drift_hierarchy_is_its_definition,
+    "a hierarchy whose pericentre is misreported",
+    expected = "the binary's separation",
+    check_hierarchy(|m, a, e, d| {
+        let (ic, p) = drift::hierarchy(m, a, e, d);
+        (ic, 2.0 * p)
+    })
+);

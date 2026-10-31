@@ -9,7 +9,7 @@ use validation::decode_f32_eps::SplitMix;
 use validation::gate::{self, Gate, GateConfig, Verdict};
 use validation::negative_control;
 use validation::projection_parity::{
-    jacobi_round_trip, measure, shared_state, written_order, Control, Fuzz, Input,
+    bits, jacobi_round_trip, measure, reordered, shared_state, written_order, Control, Fuzz, Input,
     ProjectionParityGate, CLASSES, NAME,
 };
 
@@ -259,4 +259,153 @@ negative_control!(
             "refused"
         );
     }
+);
+
+/// A state with `M ≠ 1` and no unit separation, so that no weight or factor is masked.
+fn unworked() -> State<f32> {
+    State {
+        m: [0.75, 1.5, 3.25],
+        r: [[0.5, -1.5], [2.5, 0.25], [-3.0, 1.75]],
+        p: [[1.25, -0.5], [-2.0, 3.0], [0.75, 1.5]],
+    }
+}
+
+/// Checks a projection against the closed form in f64, to f32's rounding.
+fn check_projected(project: fn(&State<f32>) -> State<f32>) {
+    let s = unworked();
+    let got = project(&s);
+    let m = s.m.map(f64::from);
+    let total: f64 = m.iter().sum();
+    for k in 0..2 {
+        let com: f64 = (0..3).map(|i| m[i] * f64::from(s.r[i][k])).sum::<f64>() / total;
+        let mom: f64 = (0..3).map(|i| f64::from(s.p[i][k])).sum();
+        for i in 0..3 {
+            let (r, p) = (
+                f64::from(s.r[i][k]) - com,
+                f64::from(s.p[i][k]) - m[i] / total * mom,
+            );
+            assert!((f64::from(got.r[i][k]) - r).abs() < 1e-5, "r[{i}][{k}]");
+            assert!((f64::from(got.p[i][k]) - p).abs() < 1e-5, "p[{i}][{k}]");
+        }
+    }
+}
+
+#[test]
+fn projection_parity_both_orders_project() {
+    check_projected(written_order);
+    check_projected(reordered);
+}
+
+negative_control!(
+    projection_parity_both_orders_project,
+    "the identity is no projection",
+    expected = "r[0][0]",
+    check_projected(|s| *s)
+);
+
+/// Checks a round trip of `unworked` against the identity.
+fn check_round_trip(trip: fn(&State<f32>) -> State<f32>) {
+    let (s, got) = (unworked(), trip(&unworked()));
+    for i in 0..3 {
+        for k in 0..2 {
+            assert!(
+                (s.r[i][k] - got.r[i][k]).abs() < 1e-5,
+                "r[{i}][{k}] after the trip"
+            );
+        }
+    }
+}
+
+#[test]
+fn projection_parity_round_trip_with_every_factor_seen() {
+    check_round_trip(jacobi_round_trip);
+}
+
+negative_control!(
+    projection_parity_round_trip_with_every_factor_seen,
+    "the projection is no round trip",
+    expected = "after the trip",
+    check_round_trip(written_order)
+);
+
+/// Checks that `bits` lays out each of the twelve coordinates at its own slot: `r` then `p`, body by body.
+fn check_bits(read: fn(&State<f32>) -> [u32; 12]) {
+    let s = State {
+        m: [1.0; 3],
+        r: [[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]],
+        p: [[7.0, 8.0], [9.0, 10.0], [11.0, 12.0]],
+    };
+    let want: [u32; 12] = core::array::from_fn(|i| ((i + 1) as f32).to_bits());
+    assert_eq!(read(&s), want, "the bits' layout");
+}
+
+#[test]
+fn projection_parity_bits_hold_every_coordinate() {
+    check_bits(bits);
+}
+
+negative_control!(
+    projection_parity_bits_hold_every_coordinate,
+    "a layout that loses a coordinate",
+    expected = "the bits' layout",
+    check_bits(|s| {
+        let mut b = bits(s);
+        b[11] = b[10];
+        b
+    })
+);
+
+/// Replays `shared_state`'s draws from the seed: masses, positions, momenta, then the class's own.
+fn replayed(seed: u64, class: usize) -> State<f32> {
+    let mut g = SplitMix::new(seed);
+    let raw = [0; 3].map(|_| g.uniform(0.05, 1.0));
+    let total = (raw[0] + raw[1]) + raw[2];
+    let m = raw.map(|x| x / total);
+    let mut draw =
+        |lo: f32, hi: f32, n: usize| -> Vec<f32> { (0..n).map(|_| g.uniform(lo, hi)).collect() };
+    let rv = draw(-1.0, 1.0, 6);
+    let pv = draw(-1.0, 1.0, 6);
+    let mut r: [[f32; 2]; 3] = core::array::from_fn(|i| [rv[2 * i], rv[2 * i + 1]]);
+    let mut p: [[f32; 2]; 3] = core::array::from_fn(|i| [pv[2 * i], pv[2 * i + 1]]);
+    if class == 1 {
+        let d = 10f32.powf(draw(-3.0, -2.0, 1)[0]);
+        let a = draw(0.0, std::f32::consts::TAU, 1)[0];
+        r[1] = [r[0][0] + d * a.cos(), r[0][1] + d * a.sin()];
+    } else if class == 2 {
+        for q in &mut p {
+            *q = [20.0 * q[0], 20.0 * q[1]];
+        }
+    } else if class == 3 {
+        let c = draw(-100.0, 100.0, 2);
+        let b = draw(-5.0, 5.0, 2);
+        r = r.map(|q| [q[0] + c[0], q[1] + c[1]]);
+        p = core::array::from_fn(|i| [p[i][0] + m[i] * b[0], p[i][1] + m[i] * b[1]]);
+    }
+    State { m, r, p }
+}
+
+/// Checks `drawn`, class by class over seeds, against the replay.
+fn check_replay(drawn: fn(&mut SplitMix, usize) -> State<f32>) {
+    for seed in 0..32 {
+        for class in 0..CLASSES.len() {
+            let (got, want) = (
+                drawn(&mut SplitMix::new(seed), class),
+                replayed(seed, class),
+            );
+            assert_eq!(bits(&got), bits(&want), "class {class}, seed {seed}");
+            assert_eq!(got.m, want.m, "class {class}, seed {seed}");
+        }
+    }
+}
+
+#[test]
+fn projection_parity_classes_replay_their_draws() {
+    check_replay(shared_state);
+}
+
+negative_control!(
+    projection_parity_classes_replay_their_draws,
+    "every class drawn as the generic",
+    expected = "class 1",
+    check_replay(|g, _| shared_state(g, 0))
 );

@@ -871,3 +871,19 @@ negative_control!(
         &listing()
     )
 );
+
+#[test]
+fn drift_field_without_a_lin_range_is_refused() {
+    check_refused(
+        &with_probe_bit(|e| e.floor("eps_E")),
+        "probe_bit",
+        "has no `lin` range",
+    );
+}
+
+negative_control!(
+    drift_field_without_a_lin_range_is_refused,
+    "a field with no floor generates",
+    expected = "generation was not refused",
+    check_refused(&with_probe_bit(|e| e), "probe_bit", "has no `lin` range")
+);
