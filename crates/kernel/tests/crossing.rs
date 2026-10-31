@@ -17,6 +17,8 @@
 //!   side, and loops about each collision point reading `A`, `b` and Appendix B's `aB` (`crossing_state_cuts`).
 //! - REQ-PAY-070's cross-check: ten orbits of the PRL's Table I read their published words up to R-630 item 5's
 //!   symmetries, from `fixtures/crossings/prl_orbits.json` (`crossing_published_words`). REQ-VAL-043 is TASK-M3-30's.
+//! - §1's body map: of the six labellings of those orbits, only ours and its outer swap read the published words
+//!   (`crossing_body_relabelling`).
 //! - A march that starts on the cut, or a rounding from it, each way (`crossing_start_on_cut`), and what a coarse
 //!   substep reads wrongly (`crossing_substep_limits`), from `fixtures/crossings/position_marches.json` (integrator
 //!   contract Part 5).
@@ -932,6 +934,89 @@ negative_control!(
     "cut a on body 2's segment and b on body 0's reads another word",
     expected = "the word read is not the fixture's",
     check_published_words(swapped_segments)
+);
+
+// ── crossing_body_relabelling (symbolic_dynamics_contract §1, the body map) ──────────────────────────────────────────
+
+/// How many of the fixture's orbits, read with their bodies permuted by `perm`, are the published word up to R-630
+/// item 5's symmetries.
+fn orbits_matching(cuts: Cuts<f64>, perm: [usize; 3]) -> usize {
+    let path = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../fixtures/crossings/prl_orbits.json"
+    );
+    let text = std::fs::read_to_string(path).expect("read the PRL orbits fixture");
+    let doc: serde_json::Value = serde_json::from_str(&text).expect("the fixture is JSON");
+    doc["orbits"]
+        .as_array()
+        .expect("orbits")
+        .iter()
+        .filter(|orbit| {
+            let states: Vec<[[f64; 2]; 3]> = orbit["states"]
+                .as_array()
+                .expect("states")
+                .iter()
+                .map(|s| {
+                    let body = |k: usize| {
+                        [
+                            s[perm[k]][0].as_f64().expect("x"),
+                            s[perm[k]][1].as_f64().expect("y"),
+                        ]
+                    };
+                    [body(0), body(1), body(2)]
+                })
+                .collect();
+            let mut detector = CrossingDetector::new(cuts(&states[0]));
+            let mut stream = Vec::new();
+            for r in &states[1..] {
+                let c = detector.accept(cuts(r));
+                stream.extend_from_slice(&c.symbols[..c.count as usize]);
+            }
+            let published = cyclic(&codes(orbit["published"].as_str().expect("published")));
+            symmetry(&cyclic(&stream), &published).is_some()
+        })
+        .count()
+}
+
+/// §1's measurement: all ten orbits under ours (0, 1, 2 = Table I's 1, 3, 2) and its outer swap, none under the other
+/// four, Table I's literal labelling among them.
+fn check_body_relabelling(cuts: Cuts<f64>) {
+    for (perm, want) in [
+        ([0, 1, 2], 10),
+        ([2, 1, 0], 10),
+        ([0, 2, 1], 0),
+        ([1, 0, 2], 0),
+        ([1, 2, 0], 0),
+        ([2, 0, 1], 0),
+    ] {
+        assert_eq!(
+            orbits_matching(cuts, perm),
+            want,
+            "ours {perm:?}: how many orbits read their published word"
+        );
+    }
+}
+
+#[test]
+fn crossing_body_relabelling() {
+    check_body_relabelling(state_cuts::<f64>);
+}
+
+/// The cuts on the middle body's segment and body 2's: cut `a` where body 1 is between.
+#[cfg(feature = "controls")]
+fn middle_segment(r: &[[f64; 2]; 3]) -> CutDistances<f64> {
+    let c = state_cuts(r);
+    CutDistances {
+        gate_a: !c.gate_a && !c.gate_b,
+        ..c
+    }
+}
+
+negative_control!(
+    crossing_body_relabelling,
+    "cut a on the middle body's segment reads no orbit's published word",
+    expected = "how many orbits read their published word",
+    check_body_relabelling(middle_segment)
 );
 
 // ── crossing_start_on_cut, crossing_substep_limits (integrator contract Part 5) ──────────────────────────────────────
