@@ -322,3 +322,11 @@ justification = "the fraction is masked to bits 0..52 and 0x3FF0_0000_0000_0000 
 [[equivalent]]
 mutant = "crates/kernel/src/word/crossing.rs:78:28: replace < with <= in negative"
 justification = "the comparison is reached only when !reads_as_zero(d), so d is not ±0, and d <= 0 and d < 0 agree on every other value, NaN included"
+
+[[equivalent]]
+mutant = "crates/gui/src/explore/compass.rs:962:51: replace * with / in Drag::moved"
+justification = "sign is Reading::Vertical's, which reading_of only ever sets to 1.0 or -1.0, and y / ±1 equals y * ±1 exactly"
+
+[[equivalent]]
+mutant = "crates/gui/src/explore/compass.rs:966:53: replace * with / in Drag::moved"
+justification = "Z0_HALF_RANGE is the constant 1.0, and dividing by 1.0 equals multiplying by it exactly; a change to the constant makes the rate tests in mock_compass_cube and mock_compass_slice_follows_pointer tell them apart"

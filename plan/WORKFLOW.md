@@ -26,7 +26,10 @@ with `scripts/cloud-setup.sh`) is in `plan/OPERATIONS.md` (R-346).
 - A task that is to be split is split **in the plan first**: new task files and manifest entries, `plan/check_plan.py`
   green, then the work. Whether to split is judgement, not a line count (§ "Task files", R-369).
 - CI runs on every push (`ci.yml`): the build, `cargo test` and `cargo xtask ci`, which includes `cargo xtask plan-check`
-  (`plan/check_plan.py`) (R-177). The other suites run at the frequency the corpus gives them (`docs/contracts/principia_parity_contract.md` §6, and
+  (`plan/check_plan.py`) (R-177). R-656 reads "every push" and "every commit" here as every push to `main` and every
+  pull-request head (a pull request's pushes run through `pull_request`, once each), with its skips: a docs-only head
+  runs the checks that read the docs in place of the build and tests, and one that changes no GPU-path file skips the
+  GPU suites; every required check still reports, under its own name (`plan/OPERATIONS.md` § "Merging"). The other suites run at the frequency the corpus gives them (`docs/contracts/principia_parity_contract.md` §6, and
   `decisions.md` § "R-110 — What CI runs, where, and against which goldens *(closes RQ-79)*"): unit, property, numerical-gate and native golden suites (the sim-parity
   and codegen suites among them) on every commit; benchmarks and every performance gate on the human's own Mac via
   `prin profile`, at each milestone gate and on demand, never on hosted runners (R-186); GUI screenshots on GUI

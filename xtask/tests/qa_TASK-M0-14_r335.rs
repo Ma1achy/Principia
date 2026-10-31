@@ -67,8 +67,12 @@ fn check_controls_job_runs_and_fails(workflow: &str) {
     let (id, lines) = controls_job(workflow);
     for l in &lines {
         let t = l.trim().trim_start_matches("- ");
+        // R-656's skip of a docs-only pull request is the one job-level `if:` allowed; the gate `xtask-ci` passes
+        // it only on that verdict.
         assert!(
-            !(indent(l) == 4 && t.starts_with("if:")),
+            !(indent(l) == 4
+                && t.starts_with("if:")
+                && t != "if: needs.changes.outputs.docs_only != 'true'"),
             "the controls job `{id}` can be skipped: its own `{t}`"
         );
         assert!(

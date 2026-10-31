@@ -8,6 +8,9 @@
 # builds the kernel, the rust-gpu build under the `gpu-kernel` job's key, `rust-gpu-gpu-kernel-<os>-<channel>` (R-320).
 # None saves: rust-cache's `save-if` holds only on a push to `main`, and there is no save step. rust-cache hashes the
 # environment's CARGO_* variables into its key, so CARGO_TERM_COLOR below is set as in `ci.yml`.
+# R-656: the gate runs on every head of a pull request and a push cancels the run on the head it supersedes
+# (`concurrency` below), so it always runs on the merge-ready head, the last; a shard whose diff names no `.rs` file
+# skips its run (below), and `mutants-fixture` skips its steps on a docs-only pull request (`scripts/ci_changes.sh`).
 name: mutants
 
 on:
@@ -15,7 +18,8 @@ on:
 
 # A newer push to the same ref supersedes an older run, so the older run on that ref is cancelled. On `main` each
 # run has a group of its own (its run id), so no run there is ever cancelled or queued behind another (applied per
-# R-369).
+# R-369). A pull request's runs share one group, its merge ref's, so the gate runs to its end only on the latest head:
+# the merge-ready head is the one whose `mutants-check` the merge waits for (R-656).
 concurrency:
   group: mutants-${{ github.event_name }}-${{ github.ref == 'refs/heads/main' && github.run_id || github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
@@ -228,12 +232,20 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+      # What this change touches (R-656): on a docs-only pull request every later step is skipped and the job passes;
+      # the fixture shows the gate can fire, and no docs-only path reaches the gate. `scripts/ci_changes.sh` holds the
+      # allowlist; any other change runs it in full.
+      - name: scripts/ci_changes.sh detect
+        id: changes
+        run: scripts/ci_changes.sh detect
       # The toolchain rust-toolchain.toml pins, with its components: rust-gpu's nightly, on which the whole workspace
       # builds (R-169).
       - name: rustup toolchain install (rust-toolchain.toml)
+        if: steps.changes.outputs.docs_only != 'true'
         run: rustup toolchain install
       # The cargo registry `ci.yml`'s `ci` job saves on a push to `main`, restored read-only under its key (R-337).
       - uses: Swatinem/rust-cache@v2
+        if: steps.changes.outputs.docs_only != 'true'
         with:
           prefix-key: cargo-registry
           shared-key: ci
@@ -243,12 +255,14 @@ jobs:
       # cargo-nextest: the fixtures' tests run through it, as the shards' do (`test_tool` in `.cargo/mutants.toml`,
       # R-388 item 4).
       - uses: taiki-e/install-action@v2
+        if: steps.changes.outputs.docs_only != 'true'
         with:
           tool: cargo-mutants@27.1.0,cargo-nextest@0.9.146
       # Both runs read the caps and the test tool from `.cargo/mutants.toml` (REQ-VAL-179), as every `cargo mutants`
       # run does: with `--dir`, cargo-mutants would otherwise read the fixture's own `.cargo/mutants.toml`, which does
       # not exist.
       - name: The gate fires on the fixture (REQ-VAL-148)
+        if: steps.changes.outputs.docs_only != 'true'
         run: |
           fixture=fixtures/mutants/untested
           if cargo mutants --dir "$fixture" --in-diff "$fixture/change.diff" --config .cargo/mutants.toml \
@@ -267,6 +281,7 @@ jobs:
       # process, whose allocation fails, so it is caught. The controls (R-176) bound each under its cap: a 5 s hang under
       # the 60 s floor is no timeout, and a 256 MiB allocation under the cap is caught by its assertion, not the cap.
       - name: The caps fire on their fixture (REQ-VAL-179)
+        if: steps.changes.outputs.docs_only != 'true'
         run: |
           fixture=fixtures/mutants/caps
           caps() {
