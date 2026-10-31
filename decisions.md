@@ -28536,7 +28536,8 @@ R-656 is in the "ci" group of `plan/rule_groups.yaml`.
 *31 Oct 2026 · the owner, on the precision set's triage; applied in `docs/incoming/2026-10-31_precision_set/` (new),
 `docs/incoming/2026-10-27_validation_plan/PLAN.md` (§ 0, BZ-1, BZ-1C, its note, § 7's item 10),
 `docs/incoming/2026-10-25_replication/catalogue.md` § 6.1, the 25 Oct instruction's § C (a bracketed correction),
-`docs/incoming/2026-10-25_lit_review/lit_review_2026-10.tex`, `docs/incoming/2026-10-29_research_batches/README.md`
+`docs/incoming/2026-10-25_lit_review/README.md` (a dated note, as R-632's), `docs/incoming/2026-10-25_replication/README.md`
+(a dated note with the two new hashes), `docs/incoming/2026-10-29_research_batches/README.md`
 § 10 (a bracketed correction), `docs/incoming/2026-10-31_fetch_list/README.md`, `docs/design/principia_dd_replication.md`
 § 5.14 and § 5.15, `docs/design/principia_honesty_precision.md` § 4 and § 6, `docs/contracts/principia_parity_contract.md`
 § 5 (a dated line), R-629's forward line, `REVIEW_QUEUE.md`, REQ-VAL-199 (reqio), `plan/section_notes.yaml` and
@@ -28574,7 +28575,7 @@ The owner's words, 31 Oct 2026, verbatim:
   repo.
 - **The name:** the reopened experiment is BZ-1C, beside BZ-1, whose row stays for the paper and the warm sets.
 - **Reach of the search:** `docs/` but `docs/archive` and `docs/reference`, `plan/`, `README.md`, `scripts/` and the
-  requirements. Beyond the owner's three: the lit review, the research batches' quotation of the tier ruling, `dd_replication` § 5.14,
+  requirements. Beyond the owner's three: the lit review (a note, its tex and PDF unchanged), the research batches' quotation of the tier ruling, `dd_replication` § 5.14,
   the fetch list, and dated lines in the honesty design and the parity contract. REQ-VAL-065 keeps its statement: it is a
   test, and the note says what it measures. `principia_00_philosophy.md`'s "ensemble statistics stay correct to within a
   percent" reports Trani et al. on their own integrator, not f32, and stands. No code comment makes the claim.
