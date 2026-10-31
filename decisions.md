@@ -28562,13 +28562,16 @@ The owner's words, 31 Oct 2026, verbatim:
 - **(4) The placeholder rows** (98 and 16) are undetermined, censored with no known time, and never dropped.
 - **(5) The papers.** Boekholt & Portegies Zwart 2015's version of record and files, Portegies Zwart 2026 and Portegies
   Zwart & Boekholt 2023's arXiv copy are committed, each CC BY 4.0, read at source. The other three are in `_local`.
-- **The warm files** are 3D (largest final out-of-plane distance 84.9 and 132, non-zero L₀). Each is CC BY 4.0 and they are
-  committed for completeness. Nothing is proposed from them, and BZ-1's objection stands for them.
+- **The warm files**, fetched as the owner asked, are 3D (largest final out-of-plane distance 84.9 and 132, non-zero L₀).
+  Nothing is proposed from them, and BZ-1's objection stands for them.
 
 *Applied per R-369:*
 
 - **(3)'s choice:** state the effect size, and queue the re-size with its cost for the owner, because re-sizing costs CPU.
   R-610 sets a cap and no CPU budget, so RQ-647 gives the cost in runs and time units, with no seconds invented.
+- **The warm files' commit:** the owner asked for them to be fetched and named only the cold records to commit. Committing
+  them is the orchestrator's decision: 25 MB, each file CC BY 4.0, so the warm sets' 3D measurement can be repeated from the
+  repo.
 - **The name:** the reopened experiment is BZ-1C, beside BZ-1, whose row stays for the paper and the warm sets.
 - **Reach of the search:** `docs/` but `docs/archive` and `docs/reference`, `plan/`, `README.md`, `scripts/` and the
   requirements. Beyond the owner's three: the lit review, the research batches' quotation of the tier ruling, `dd_replication` § 5.14,

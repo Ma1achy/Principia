@@ -115,7 +115,7 @@ through the three bodies at t = 0.
 body's motion in its starting plane to the digits their convergence keeps.
 
 **The warm files are 3D**, by the same measure, and start with velocities out of the plane and non-zero L: the BZ-1
-objection stands for them, and **nothing is proposed from them**. They are committed for completeness, as the owner asked.
+objection stands for them, and **nothing is proposed from them**. They were fetched for completeness, as the owner asked, and committed per R-369: each is CC BY 4.0.
 
 **The horizon.** R-610's cap of 200 is in the integrator's units, `M = G = I = 1` (integrator contract Part 5). BPZ's are
 `M = G = 1`, `E = −0.25`, so a start with inertia `I` has `t_Hénon = t_int · I^{3/4}`. **[ran]** T = 200 is, in Hénon units,
