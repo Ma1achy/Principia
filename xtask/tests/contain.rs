@@ -409,3 +409,162 @@ negative_control!(
         );
     }
 );
+
+/// `script`, as `scripts/contain.sh run`, on stand-ins for the privileged tools, sent `signal` (1 HUP, 2 INT, 15 TERM)
+/// while its command runs: what its driver saw, `status <n>` and, if the command outlived it, `command-alive`, and the
+/// calls of `systemctl kill`. The stand-in `systemctl kill` ends the command; with `late`, the scope doesn't exist yet
+/// for the first call, which does nothing and fails.
+fn stopped_by(script: &Path, signal: i32, late: bool, tag: &str) -> (String, usize) {
+    let dir = Scratch::new(tag);
+    let bin = dir.join("bin");
+    std::fs::create_dir_all(&bin).expect("scratch");
+    let pid = dir.join("pid");
+    let calls = dir.join("calls");
+    let kill_command = format!("kill -9 \"$(cat '{}')\"", pid.display());
+    let kills = if late {
+        format!(
+            "[ \"$(wc -l < '{}')\" -gt 1 ] || exit 1\n{kill_command}",
+            calls.display()
+        )
+    } else {
+        kill_command
+    };
+    let stubs = [
+        ("uname", "echo Linux".to_owned()),
+        ("sudo", "[ \"$1\" = -n ] && shift\nexec \"$@\"".to_owned()),
+        ("sysctl", "exit 0".to_owned()),
+        (
+            "systemctl",
+            format!(
+                "[ \"$1\" = kill ] || exit 0\necho kill >> '{}'\n{kills}",
+                calls.display()
+            ),
+        ),
+        ("dmsetup", "exit 0".to_owned()),
+        ("df", "echo Avail\necho 100G".to_owned()),
+        (
+            "systemd-run",
+            "while [ \"$1\" != -- ]; do shift; done\nshift\nexec \"$@\"".to_owned(),
+        ),
+        (
+            "unshare",
+            "while case \"$1\" in --*) true ;; *) false ;; esac; do shift; done\nexec \"$@\""
+                .to_owned(),
+        ),
+        (
+            "setpriv",
+            "while [ \"$1\" != -- ]; do shift; done\nshift\nexec \"$@\"".to_owned(),
+        ),
+        ("setsid", "exec \"$@\"".to_owned()),
+    ];
+    for (name, body) in stubs {
+        write_executable(&bin.join(name), format!("#!/bin/bash\n{body}\n")).expect("stand-in");
+    }
+    let command = dir.join("command");
+    write_executable(
+        &command,
+        format!(
+            "#!/bin/bash\necho $$ > '{}'\nexec sleep 20\n",
+            pid.display()
+        ),
+    )
+    .expect("stand-in");
+    // `set -m`: a background job of a shell without it starts with SIGINT ignored, and bash can't trap that.
+    let driver = format!(
+        "set -m\n'{script}' run '{command}' > /dev/null 2>&1 &\nrun=$!\ni=0\n\
+         while [ ! -s '{pid}' ] && [ $i -lt 100 ]; do sleep 0.1; i=$((i + 1)); done\n\
+         kill -{signal} $run\nwait $run\necho \"status $?\"\n\
+         kill -0 \"$(cat '{pid}')\" 2> /dev/null && echo command-alive\n\
+         kill -9 \"$(cat '{pid}')\" 2> /dev/null\nexit 0",
+        script = script.display(),
+        command = command.display(),
+        pid = pid.display(),
+    );
+    let out = Command::new("bash")
+        .args(["-c", &driver])
+        .env_remove("PRIN_TEST_PIDNS")
+        .env_remove("HEARTBEAT_CONTEXT")
+        .env(
+            "PATH",
+            format!(
+                "{}:{}",
+                bin.display(),
+                std::env::var("PATH").unwrap_or_default()
+            ),
+        )
+        .env("PRIN_CONTAIN", "required")
+        .env("RUNNER_TEMP", &*dir)
+        .output_within(Duration::from_secs(60))
+        .expect("the driver ran");
+    let called = std::fs::read_to_string(&calls)
+        .unwrap_or_default()
+        .lines()
+        .count();
+    (String::from_utf8_lossy(&out.stdout).into_owned(), called)
+}
+
+fn check_stopped(script: &Path, signal: i32, late: bool, tag: &str) {
+    let (seen, called) = stopped_by(script, signal, late, tag);
+    assert!(
+        seen.contains(&format!("status {}", 128 + signal)) && !seen.contains("command-alive"),
+        "signal {signal} did not end the contained command: {seen:?}, {called} kills"
+    );
+    assert!(
+        called >= if late { 2 } else { 1 },
+        "signal {signal}: {called} kills of its scope"
+    );
+}
+
+#[test]
+fn contain_a_signal_to_a_run_ends_it_whichever_the_signal() {
+    let script = root().join("scripts/contain.sh");
+    check_stopped(&script, 2, false, "contain_sigint");
+    check_stopped(&script, 1, false, "contain_sighup");
+    check_stopped(&script, 15, false, "contain_sigterm");
+}
+
+negative_control!(
+    contain_a_signal_to_a_run_ends_it_whichever_the_signal,
+    "a script whose SIGINT stops nothing",
+    expected = "did not end the contained command",
+    {
+        let dir = Scratch::new("contain_signal_control");
+        std::fs::create_dir_all(&*dir).expect("scratch");
+        let script = dir.join("contain.sh");
+        write_executable(
+            &script,
+            read("scripts/contain.sh")
+                .replace("trap 'stop_run 2' INT", "trap 'stopped=130' INT")
+                .replace("tries=20", "tries=0"),
+        )
+        .expect("the script's copy");
+        check_stopped(&script, 2, false, "contain_signal_control_run");
+    }
+);
+
+#[test]
+fn contain_a_signal_before_the_scope_exists_still_ends_it() {
+    check_stopped(
+        &root().join("scripts/contain.sh"),
+        15,
+        true,
+        "contain_scope_late",
+    );
+}
+
+negative_control!(
+    contain_a_signal_before_the_scope_exists_still_ends_it,
+    "a script that tries the scope once",
+    expected = "did not end the contained command",
+    {
+        let dir = Scratch::new("contain_scope_late_control");
+        std::fs::create_dir_all(&*dir).expect("scratch");
+        let script = dir.join("contain.sh");
+        write_executable(
+            &script,
+            read("scripts/contain.sh").replace("tries=20", "tries=0"),
+        )
+        .expect("the script's copy");
+        check_stopped(&script, 15, true, "contain_scope_late_control_run");
+    }
+);

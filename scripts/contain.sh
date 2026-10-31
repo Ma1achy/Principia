@@ -135,6 +135,15 @@ heartbeat() {
   done
 }
 
+# Whether job `pid` of this shell still runs. `kill -0` can't tell: a job under sudo is root's.
+job_running() {
+  local job
+  for job in $(jobs -rp); do
+    [ "$job" = "$1" ] && return 0
+  done
+  return 1
+}
+
 # A signal to this script: the scope runs as root, out of this user's reach, and would go on through the report's upload.
 stop_run() {
   stopped=$((128 + $1))
@@ -158,7 +167,7 @@ last_oom() {
 run_contained() {
   [ "${PRIN_CONTAIN:-}" = required ] || exec "$@"
   require_tools
-  local began uid gid rc limits limit final_oom=""
+  local began uid gid rc limits limit contained tries=20 final_oom=""
   unit="prin-contain-$$"
   stopped=""
   began=$(date +%s)
@@ -191,8 +200,16 @@ run_contained() {
     bash -c "$INIT" contain-init bash -c "$RUN_AS" contain-user "$uid" "$gid" "$envfile" "$limits" "$@" \
     < /dev/null &
   # In the background, so that a signal is acted on now, not when the foreground command ends.
-  wait "$!"
+  contained=$!
+  wait "$contained"
   rc=$?
+  # A signal in the moment before the scope exists finds none to kill, and it would then start unattended: until the
+  # contained run has gone, kill its scope again. 5 s at most: a cancel's SIGKILL comes about 10 s after its first signal.
+  while [ -n "$stopped" ] && [ "$tries" -gt 0 ] && job_running "$contained"; do
+    sudo -n systemctl kill --signal=SIGKILL "$unit.scope" 2> /dev/null || true
+    sleep 0.25 > /dev/null 2>&1
+    tries=$((tries - 1))
+  done
   set -e
   trap - TERM INT HUP
   rc=${stopped:-$rc}
