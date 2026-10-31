@@ -12,6 +12,9 @@
 //! in f32 on every backend, and drifts of magnitude at least `R/8`, where the f32 rounding of `H` moves a colour by less
 //! than the tolerance. Near zero, `symlog` at the default floor resolves that rounding, so the views are not compared
 //! there (`golden_scene::CASE_PARAMS`).
+//! - `drift_view_neutral_*`: `symlog`'s neutral band (render contract Part 5; R-652): a fresh sample renders exactly
+//!   neutral on the backend the test runs on, a drift past the band still shows, and the band follows `|E_0|`, `|Lz_0|`.
+//!   On Vulkan these run under CI's `ci` job, on lavapipe; on Metal under the `gpu-metal` suites' job and locally.
 
 use ledger::constants::{DRIFT_LIN_R_E, DRIFT_LIN_R_LZ, EPS_E_DEFAULT, EPS_L_DEFAULT};
 use render::present::{self, Rgb};
@@ -569,4 +572,305 @@ negative_control!(
     "ink always black",
     expected = "the ink over",
     check_ink(|_| [0.0; 3])
+);
+
+// ── `symlog`'s neutral band (render contract Part 5; R-652) ─────────────────────────────────────────────────────────
+
+/// A view at its defaults, each by its own read of `s`.
+fn view_of(view: View) -> Colouring {
+    debug(view.id, &[])
+}
+
+/// `c`'s 8-bit values, as the golden harness quantises a render.
+fn bytes(c: Rgb) -> [u8; 3] {
+    c.map(|v| (v * 255.0).round() as u8)
+}
+
+/// The neutral `c0` exactly, by its 8-bit values and within [`TOL`].
+fn check_neutral(s: &Scene, image: &[Rgb], i: u32, what: &str) {
+    let c0 = present::drift_ramp(0.5, false);
+    let width = s.size().0;
+    for (x, y) in s.pixels(i) {
+        let got = image[(y * width + x) as usize];
+        assert!(
+            bytes(got) == bytes(c0) && near(got, c0),
+            "{what}: pixel ({x}, {y}) of sample {i} of `{}` is {got:?}, not neutral {c0:?}",
+            s.name
+        );
+    }
+}
+
+/// A scene of `view` over the showcase's eight states, each sample fresh: `E_0` and `Lz_0` its own `H(r, p)` and
+/// `L_z(r, p)` by the CPU's read side, its latches 0 so that no styling draws. `offset` moves each reference by that
+/// fraction of itself, for the control. Every state's rounding bound is within the band's `k`, asserted here
+/// (the band's domain: `(9K + 15|V|)/|E_0| ≤ 128` and `5·Σ|xᵢp_{y,i}| + |yᵢp_{x,i}| / |Lz_0| ≤ 128`).
+fn fresh_scene(colouring: Colouring, offset: f32) -> Scene {
+    let mut s = row(8, colouring);
+    validation::golden_scene::showcase(&mut s.set, 6);
+    for i in 0..8 {
+        s.set.sample(i).E_0(0.0).Lz_0(0.0).drift_max(0.0, 0.0);
+        let read = s.read(i);
+        let (e, l) = (read.energy_drift, read.Lz_drift);
+        s.set
+            .sample(i)
+            .E_0(e * (1.0 + offset))
+            .Lz_0(l * (1.0 + offset));
+    }
+    s
+}
+
+/// The samples of [`fresh_scene`] whose `H` and `L_z` are not near a cancellation, by their own rounding bounds.
+fn in_domain(s: &Scene, i: u32, energy: bool) -> bool {
+    let read = s.read(i);
+    let m = s.masses(i);
+    let f = |x: f32| f64::from(x);
+    let terms = |k: usize| {
+        (
+            f(read.r[k][0]) * f(read.p[k][1]),
+            f(read.r[k][1]) * f(read.p[k][0]),
+        )
+    };
+    if energy {
+        let kinetic: f64 = (0..3)
+            .map(|k| (f(read.p[k][0]).powi(2) + f(read.p[k][1]).powi(2)) / (2.0 * f(m[k])))
+            .sum();
+        let v: f64 = [(0, 1), (0, 2), (1, 2)]
+            .iter()
+            .map(|&(a, b)| {
+                f(m[a]) * f(m[b])
+                    / (f(read.r[a][0]) - f(read.r[b][0])).hypot(f(read.r[a][1]) - f(read.r[b][1]))
+            })
+            .sum();
+        9.0 * kinetic + 15.0 * v <= 128.0 * f(read.E_0).abs()
+    } else {
+        let sum: f64 = (0..3)
+            .map(|k| {
+                let (a, b) = terms(k);
+                a.abs() + b.abs()
+            })
+            .sum();
+        5.0 * sum <= 128.0 * f(read.Lz_0).abs()
+    }
+}
+
+/// Every in-domain fresh sample of `s` renders exactly neutral; at least `least` of them are in the domain.
+fn check_fresh(h: &GpuHarness, view: View, s: &Scene, least: u32) {
+    let image = render(h, s);
+    let mut judged = 0;
+    for i in 0..8 {
+        if in_domain(s, i, view.energy) {
+            judged += 1;
+            check_neutral(s, &image, i, view.id);
+        }
+    }
+    assert!(judged >= least, "only {judged} fresh samples in the domain");
+}
+
+#[test]
+fn drift_view_neutral_fresh_sample_renders_exactly_neutral() {
+    let h = gpu();
+    for view in VIEWS {
+        check_fresh(&h, view, &fresh_scene(view_of(view), 0.0), 4);
+    }
+}
+
+negative_control!(
+    drift_view_neutral_fresh_sample_renders_exactly_neutral,
+    "each reference off by 2⁻¹⁵ of itself, twice the band: a real drift, not a fresh sample",
+    expected = "not neutral",
+    {
+        let h = gpu();
+        check_fresh(
+            &h,
+            VIEWS[1],
+            &fresh_scene(view_of(VIEWS[1]), 1.0 / 32_768.0),
+            4,
+        );
+    }
+);
+
+/// A three-tile scene of `view` on the dyadic state: tile 0's drift is `inside` times the band at the reference, tile
+/// 1's `past` times it and tile 2's `−past` times it.
+fn band_scene(view: View, colouring: Colouring, inside: f64, past: f64) -> Scene {
+    let mut s = row(3, colouring);
+    let (h, l) = invariants(&mut s, 0);
+    let reference = if view.energy { h } else { l };
+    let band = present::DRIFT_NEUTRAL_BAND * f64::from(reference.abs());
+    let offsets = [inside * band, past * band, -past * band];
+    for (i, off) in offsets.iter().enumerate() {
+        let (mut e, mut z) = (h, l);
+        if view.energy {
+            e = (f64::from(h) - off) as f32;
+        } else {
+            z = (f64::from(l) - off) as f32;
+        }
+        fill(&mut s, i as u32, e, z, 0.0, 0.0);
+    }
+    s
+}
+
+/// Tile 0 of [`band_scene`] is neutral, and tiles 1 and 2 show their drifts: off `c0` on the `c+` side and the `c−` side.
+fn check_band(view: View, s: &Scene, image: &[Rgb]) {
+    check_neutral(s, image, 0, "a drift inside the band");
+    let c0 = present::drift_ramp(0.5, false);
+    let (above, below) = (tile(s, image, 1), tile(s, image, 2));
+    assert!(
+        distance(above, c0) > 0.02 && distance(below, c0) > 0.02,
+        "`{}`: the band swallowed a drift past it: {above:?}, {below:?}, c0 {c0:?}",
+        view.id
+    );
+    assert!(
+        above[0] > above[2] && below[2] > below[0],
+        "`{}`: a drift past the band is on the wrong side of c0: {above:?}, {below:?}",
+        view.id
+    );
+}
+
+#[test]
+fn drift_view_neutral_band_keeps_a_drift_past_it() {
+    let h = gpu();
+    for view in VIEWS {
+        let s = band_scene(view, view_of(view), 0.5, 2.0);
+        check_band(view, &s, &render(&h, &s));
+    }
+}
+
+negative_control!(
+    drift_view_neutral_band_keeps_a_drift_past_it,
+    "a band 8 times wider swallows the drift past it",
+    expected = "the band swallowed a drift past it",
+    {
+        let view = VIEWS[1];
+        let colouring = broken(view.id, "ctx.sample.Lz_0)", "8.0 * ctx.sample.Lz_0)");
+        let s = band_scene(view, colouring, 0.5, 2.0);
+        check_band(view, &s, &render(&gpu(), &s));
+    }
+);
+
+negative_control!(
+    drift_view_neutral_band_is_drawn,
+    "the band removed: a drift inside it shows",
+    expected = "not neutral",
+    {
+        let view = VIEWS[1];
+        let colouring = broken(view.id, "dbg_drift(shown,", "dbg_drift(x,");
+        let s = band_scene(view, colouring, 0.5, 2.0);
+        check_band(view, &s, &render(&gpu(), &s));
+    }
+);
+
+/// Under `log`, which has no band, a drift inside `symlog`'s band keeps its place, off the place of 0.
+fn check_log_unbanded(view: View, s: &Scene, image: &[Rgb]) {
+    let zero = present::dbg_drift(
+        0.0,
+        present::DRIFT_LOG,
+        false,
+        view.lin_r,
+        view.eps,
+        [0.5, 0.5],
+    );
+    assert!(
+        distance(tile(s, image, 0), zero) > 0.02,
+        "`{}`: `log` drew a drift inside `symlog`'s band as 0",
+        view.id
+    );
+}
+
+#[test]
+fn drift_view_neutral_band_is_drawn() {
+    let h = gpu();
+    for view in VIEWS {
+        let s = band_scene(view, debug(view.id, &[("COMPACTION", 2.0)]), 0.5, 2.0);
+        check_log_unbanded(view, &s, &render(&h, &s));
+    }
+    // Under the palette swap `symlog` keeps the band: 0 is viridis at its middle.
+    let view = VIEWS[1];
+    let s = band_scene(view, debug(view.id, &[("PALETTE", 1.0)]), 0.5, 2.0);
+    let middle = present::drift_ramp(0.5, true);
+    assert!(
+        near(tile(&s, &render(&h, &s), 0), middle),
+        "the palette swap dropped the band"
+    );
+}
+
+/// The CPU mirror, at the comparison's boundary and through each passing arm.
+fn check_shown(shown: fn(f32, u32, f32) -> f32) {
+    let band = present::DRIFT_NEUTRAL_BAND as f32;
+    let reference = 4.0_f32;
+    let at = band * reference;
+    let above = f32::from_bits(at.to_bits() + 1);
+    let symlog = present::DRIFT_SYMLOG;
+    assert_eq!(shown(at, symlog, reference), 0.0, "at the band");
+    assert_eq!(shown(-at, symlog, -reference), 0.0, "at the band, negative");
+    assert_eq!(shown(above, symlog, reference), above, "just past the band");
+    assert_eq!(
+        shown(-above, symlog, reference),
+        -above,
+        "just past it, negative"
+    );
+    assert_eq!(
+        shown(at, present::DRIFT_LIN, reference),
+        at,
+        "`lin` has no band"
+    );
+    assert_eq!(
+        shown(at, present::DRIFT_LOG, reference),
+        at,
+        "`log` has no band"
+    );
+    // A zero reference has an empty band: exactly 0 stays 0, and the least drift shows.
+    assert_eq!(shown(0.0, symlog, 0.0), 0.0, "0 at a zero reference");
+    assert_eq!(
+        shown(1e-30, symlog, 0.0),
+        1e-30,
+        "a drift at a zero reference"
+    );
+    let nan = f32::from_bits(present::ABSENT_NAN_BITS);
+    assert_eq!(
+        shown(nan, symlog, reference).to_bits(),
+        present::ABSENT_NAN_BITS,
+        "the absence NaN"
+    );
+}
+
+#[test]
+fn drift_view_neutral_mirror_at_the_boundary() {
+    check_shown(present::dbg_drift_shown);
+}
+
+negative_control!(
+    drift_view_neutral_mirror_at_the_boundary,
+    "a band read with `<`, which drops its boundary",
+    expected = "at the band",
+    check_shown(
+        |x, _, r| if x.abs() < (present::DRIFT_NEUTRAL_BAND as f32) * r.abs() {
+            0.0
+        } else {
+            x
+        }
+    )
+);
+
+/// The mirror agrees with the assembled source on the band's literal.
+#[test]
+fn drift_view_neutral_band_literal_is_the_mirrors() {
+    let source = include_str!("../shaders/wgsl/lib/drift.wgsl");
+    let literal = format!(
+        "const DBG_DRIFT_NEUTRAL_BAND: f32 = {:?};",
+        present::DRIFT_NEUTRAL_BAND
+    );
+    assert!(source.contains(&literal), "no `{literal}` in drift.wgsl");
+}
+
+negative_control!(
+    drift_view_neutral_band_literal_is_the_mirrors,
+    "another literal",
+    expected = "in drift.wgsl",
+    {
+        let source = include_str!("../shaders/wgsl/lib/drift.wgsl");
+        assert!(
+            source.contains("DBG_DRIFT_NEUTRAL_BAND: f32 = 1.0;"),
+            "not in drift.wgsl"
+        );
+    }
 );

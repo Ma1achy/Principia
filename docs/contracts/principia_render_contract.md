@@ -383,6 +383,31 @@ with dd_colouring §3.1's sRGB transfer.
     integrator contract Part 3), each a view uniform, `EPS_E` and `EPS_L`. `R` is the view's `LIN_R` uniform, its
     default the constants register's `drift_lin_r_E` or `drift_lin_r_Lz` (REQ-TOOL-150). `ln(1 + a/ε)` is
     `log1p_ratio`'s, which forms no overflowing quotient.
+  - **The neutral band (R-652; the owner's ruling (d) of 31 Oct 2026; REQ-TOOL-149), `dbg_drift_shown(x, compaction,
+    reference)`, in `drift.wgsl`.** The current drifts are computed in the fragment, `H(r, p) − E_0` and `L_z(r, p) −
+    Lz_0` (dd_generation_root §3.8; payload §5), so a fresh sample's drift is rounding, not physics, and differs by
+    backend. Under `symlog` a drift with `|x| ≤ k·2⁻²³·|reference|`, `reference` `E_0` or `Lz_0`, `k = 128`, is drawn
+    as 0, at `c0` exactly (or viridis' middle under the palette swap); any other `x` keeps its own place, so a drift
+    past the band is unchanged. `lin` and `log` have no band, and the absence NaN passes through first. The value
+    passed to `dbg_suspect` stays `x`, and the predicates read the latches, so a band never hides a lit predicate.
+    **Why `k = 128`:** in units of `2⁻²³`, the relative size of one ULP at most, the difference of a fragment's value
+    from the stored reference on a fresh sample is bounded by summing, to first order, each operation's error in
+    `H = Σ dot(pᵢ, pᵢ)/(2mᵢ) − Σ mᵢmⱼ/√dot(rᵢⱼ, rᵢⱼ)`. In the fragment, under WGSL's accuracy (`+ − ×` ½ ULP, `/` 2.5
+    ULP, `sqrt` 4.5 ULP), with any reassociation of the six-term sum (five additions, each ½ ULP of a partial sum at most
+    `K + |V|`): a kinetic term 3.5, so `K` carries 6; a potential term 0.5 + (2 of the dot, halved by the root, + 4.5) +
+    2.5 = 8.5, so `|V|` carries 11. In a correctly rounded CPU reference, `K` 3 and `|V|` 4. So
+    `|x| ≤ 2⁻²³·(9K + 15|V|)`, `k_E = (9K + 15|V|)/|E_0|`, and for a bound state `|V| = K + |E_0|`, `k_E = 24·K/|E_0| + 15`.
+    For `L_z`, six products and five additions in the fragment, 3 of `S = Σ(|xᵢp_{y,i}| + |yᵢp_{x,i}|)`, and 2 in the
+    reference: `k_L = 5·S/|Lz_0|`. `k = 128` holds the bound for `K/|E_0|` up to 4.7 on a bound state and `S/|Lz_0|` up
+    to 25.6. The golden showcase's fresh sample has `k_E` 63.3 to 64.5 and `k_L` 5.08; Metal's observed differences, +5
+    ULP of `E_0` and −1 ULP of `Lz_0`, are 2.6 and 0.7 in these units, inside the bound and not what sets it. Over 20,000
+    draws of the default decoder's latent cube the bound is met on all of them for `k_E` at full range and on 97% near
+    rest (momentum controls within ±0.4), and for `k_L` on about 97%; the band reads 2⁻¹⁶ of the reference, far under
+    the energy-suspect threshold's 2⁻⁸.
+    **At or near a zero reference** the band narrows to nothing, and is empty at `reference = 0`, where only an exact 0
+    is neutral. The rounding there is still relative to `K + |V|` or `S`, so a fresh sample with `E_0` or `Lz_0` near a
+    cancellation (a near-parabolic start, or a start with `L_z ≈ 0` and moving bodies, the figure-eight among them) can
+    show a rounding-level drift off `c0`. It errs toward showing: the band never hides more than `k·2⁻²³·|reference|`.
   - **The ramp.** `symlog` and `lin` draw on `diverging(c−, c0, c+)`, `c−` `#3B4CC0`, `c0` `#DDDDDD` and `c+`
     `#B40426` in 8-bit sRGB, Moreland's cool-warm ends and neutral, mixed in linear RGB by `ramp_diverging`, `c0` at
     `t = 0.5`; under the palette swap, the view's `PALETTE` uniform 1, they draw on viridis, so `symlog`'s pixel is

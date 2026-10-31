@@ -229,6 +229,10 @@ impl View {
         if self.floor.is_some() {
             out.extend(DRIFT_LATCHES.map(|m| Accessor::Member(m.to_owned())));
             out.extend(DRIFT_PREDICATES.map(|f| Accessor::Function(f.to_owned())));
+            let reference = drift_reference(self.field);
+            if !DRIFT_LATCHES.contains(&reference) {
+                out.push(Accessor::Member(reference.to_owned()));
+            }
         }
         out
     }
@@ -540,6 +544,15 @@ pub fn drift_range(field: &str) -> Option<f64> {
     }
 }
 
+/// The reference of the drift `field`, the stored member its neutral band is relative to (render contract Part 5):
+/// `E_0` for `energy_drift`, `Lz_0` for `Lz_drift`.
+pub fn drift_reference(field: &str) -> &'static str {
+    match field {
+        "Lz_drift" => "Lz_0",
+        _ => "E_0",
+    }
+}
+
 /// The uniform a drift view reads the sim-key floor `floor` from, `eps_E` as `EPS_E`, `eps_L` as `EPS_L`.
 fn floor_uniform(floor: &str) -> String {
     floor.to_uppercase()
@@ -566,18 +579,21 @@ pub fn drift_wgsl(e: &Entry, r: &Read, floor: &str, range: f64) -> String {
         };
         let _ = writeln!(uniforms, "// @uniform {eps}: f32 = {}", float(default));
     }
+    let reference = drift_reference(e.name);
     let colouring = format!(
         "Its colouring is the drift view (render contract Part 5; R-379, R-381): the drift on its ramp by its \
          compaction, `COMPACTION` 0 `symlog`, the default, at `dbg_sentinel`'s place of `sign(x)·ln(1 + |x|/{floor})`, \
          1 `lin`, `range_norm` over the fixed, clamped `[−LIN_R, LIN_R]`, and 2 `log`, which shows `|drift|`, the \
          magnitude, at `dbg_log`'s place, unsigned; `symlog` and `lin` on the `diverging(c−, c0, c+)` ramp, or viridis \
-         under the palette swap, `PALETTE` 1, and `log` on viridis always; the absence NaN hatched. Over it the suspect \
+         under the palette swap, `PALETTE` 1, and `log` on viridis always; the absence NaN hatched; under `symlog` a \
+         drift within the neutral band of `{reference}` is drawn as 0 (`dbg_drift_shown`, R-652). Over it the suspect \
          styling of the drift suspect predicates read from the stored latches: rows for `SUSPECT_ENERGY`, columns for \
          `SUSPECT_LZ`. `LIN_R`'s default is the constants register's (REQ-TOOL-150)."
     );
     format!(
         "{}{uniforms}fn colour(ctx: Ctx) -> vec3<f32> {{\n    let x = {value};\n    \
-         let rgb = dbg_drift(x, uniforms.COMPACTION, uniforms.PALETTE == 1u, uniforms.LIN_R, uniforms.{eps}, ctx.frag_xy);\n    \
+         let shown = dbg_drift_shown(x, uniforms.COMPACTION, ctx.sample.{reference});\n    \
+         let rgb = dbg_drift(shown, uniforms.COMPACTION, uniforms.PALETTE == 1u, uniforms.LIN_R, uniforms.{eps}, ctx.frag_xy);\n    \
          let energy = suspect_energy(ctx.sample.dE_max, ctx.sample.E_0, uniforms.EPS_E);\n    \
          let lz = suspect_lz(ctx.sample.dLz_max);\n    \
          return dbg_suspect(rgb, x, energy, lz, ctx.frag_xy);\n}}\n",
@@ -1156,10 +1172,17 @@ fn drift_check(n: &str) -> String {
         "suspect_lz(pb_dLz_max(s.packed_b))".to_owned(),
         format!("\"`{n}`'s L_z-suspect predicate {NOT_DERIVED}\""),
     ];
+    let reference = drift_reference(n);
+    let band = [
+        format!("read.{reference}.to_bits()"),
+        format!("s.{reference}.to_bits()"),
+        format!("\"`{n}`'s neutral band's reference {NOT_DERIVED}\""),
+    ];
     format!(
-        "{}\n{}",
+        "{}\n{}\n{}",
         call(4, "", "expect", &energy),
-        call(4, "", "expect", &lz)
+        call(4, "", "expect", &lz),
+        call(4, "", "expect", &band)
     )
 }
 

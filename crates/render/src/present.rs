@@ -441,6 +441,23 @@ pub fn dbg_drift(
     drift_ramp(t, viridis || compaction == DRIFT_LOG)
 }
 
+/// The neutral band's half-width as a fraction of the drift's reference: `k·2⁻²³`, `k = 128`, so 2⁻¹⁶ (render contract
+/// Part 5, "The neutral band"; R-652): `drift.wgsl`'s `DBG_DRIFT_NEUTRAL_BAND`.
+pub const DRIFT_NEUTRAL_BAND: f64 = 1.0 / 65_536.0;
+
+/// `dbg_drift_shown(x, compaction, reference)`: under `symlog`, 0 where `|x| ≤ DRIFT_NEUTRAL_BAND·|reference|`, else `x`;
+/// `lin`, `log` and the absence NaN pass `x` through.
+pub fn dbg_drift_shown(x: f32, compaction: u32, reference: f32) -> f32 {
+    if x.to_bits() == ABSENT_NAN_BITS || compaction == DRIFT_LIN || compaction == DRIFT_LOG {
+        return x;
+    }
+    if x.abs() <= (DRIFT_NEUTRAL_BAND as f32) * reference.abs() {
+        0.0
+    } else {
+        x
+    }
+}
+
 /// The suspect styling's period, in pixels: a line where the pixel's coordinate is a multiple of it.
 pub const SUSPECT_PERIOD: i64 = 4;
 

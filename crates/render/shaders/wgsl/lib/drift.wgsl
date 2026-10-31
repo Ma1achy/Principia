@@ -38,6 +38,22 @@ fn dbg_drift_place(x: f32, compaction: u32, lin_r: f32, eps: f32) -> f32 {
     return dbg_literal(select(-s, s, c >= 0.0));
 }
 
+// The neutral band's half-width as a fraction of the drift's reference: `k·2⁻²³` with `k = 128`, so 2⁻¹⁶. The bound
+// behind `k` is the render contract's (Part 5, "The neutral band"). The CPU mirror is
+// `crate::present::DRIFT_NEUTRAL_BAND`.
+const DBG_DRIFT_NEUTRAL_BAND: f32 = 1.52587890625e-5;
+
+// The value a drift view hands `dbg_drift`: under `symlog`, 0 where `|x| ≤ DBG_DRIFT_NEUTRAL_BAND·|reference|`, the
+// reference `E_0` or `Lz_0`, since a difference of that size is the rounding of `H(r, p) − E_0` or `L_z(r, p) − Lz_0`
+// in live f32 and not physics (R-652); else `x` as it is, so a drift past the band keeps its own place. `lin` and `log`
+// pass `x` through, and so does the absence NaN, tested first by its bits. At a zero reference the band is empty.
+fn dbg_drift_shown(x: f32, compaction: u32, reference: f32) -> f32 {
+    if (is_absent_nan(x) || compaction == DBG_DRIFT_LIN || compaction == DBG_DRIFT_LOG) {
+        return x;
+    }
+    return select(x, 0.0, abs(x) <= DBG_DRIFT_NEUTRAL_BAND * abs(reference));
+}
+
 // A drift view's colour of the drift `x` (render contract Part 5; R-381; RQ-208, option 3): the absence NaN, by its
 // exact bits, draws `debug_invalid(frag_xy)`, the hatch, under every compaction (R-136); any other value its place
 // (`dbg_drift_place`) on its ramp: `symlog` and `lin`, the signed compactions, on `diverging`, or viridis under the

@@ -697,6 +697,11 @@ fn check_energy_drift(p: &Probe) {
         suspect_lz(pb_dLz_max(s.packed_b)),
         "`energy_drift`'s L_z-suspect predicate is not its derived accessor's value",
     );
+    expect(
+        read.E_0.to_bits(),
+        s.E_0.to_bits(),
+        "`energy_drift`'s neutral band's reference is not its derived accessor's value",
+    );
 }
 
 #[test]
@@ -731,6 +736,11 @@ fn check_lz_drift(p: &Probe) {
         suspect_lz(read.dLz_max),
         suspect_lz(pb_dLz_max(s.packed_b)),
         "`Lz_drift`'s L_z-suspect predicate is not its derived accessor's value",
+    );
+    expect(
+        read.Lz_0.to_bits(),
+        s.Lz_0.to_bits(),
+        "`Lz_drift`'s neutral band's reference is not its derived accessor's value",
     );
 }
 

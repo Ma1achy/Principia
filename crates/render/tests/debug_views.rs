@@ -751,7 +751,8 @@ fn drift_drawn(s: &Scene, i: u32, _: f32, v: f32, frag: [f64; 2]) -> Rgb {
     let (energy, lz) = golden_scene::drift_suspects(&s.read(i));
     let eps = ledger::constants::EPS_E_DEFAULT.number();
     let lin_r = ledger::constants::DRIFT_LIN_R_E.number();
-    let rgb = present::dbg_drift(v, present::DRIFT_SYMLOG, false, lin_r, eps, frag);
+    let shown = present::dbg_drift_shown(v, present::DRIFT_SYMLOG, s.read(i).E_0);
+    let rgb = present::dbg_drift(shown, present::DRIFT_SYMLOG, false, lin_r, eps, frag);
     present::dbg_suspect(rgb, v, energy, lz, frag)
 }
 

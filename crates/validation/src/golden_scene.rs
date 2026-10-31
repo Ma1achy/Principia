@@ -338,12 +338,12 @@ const EXTRA_CASES: [(&str, &str, &str, f64); 3] = [
 ];
 
 /// The views whose one case sets a param off its header's default: the registry id, the param and its value. The
-/// derived current-drift view at `COMPACTION` 1, `lin`: the view computes `H(r, p) − E_0` in the fragment, so a fresh
-/// sample's drift is the backend's f32 rounding of `H`, a few `1e-7`, which `symlog` at the default `ε_E = 1e-6`
-/// spreads over several 8-bit steps, differently on each backend; on `lin`'s `±1/16` it moves the colour by some
-/// `1e-3` of a step, and the case's one reference holds on every backend (REQ-TOOL-010; applied per R-369,
-/// TASK-M3-05). Its `symlog` default is the generated `energy_drift` view's case's, over the stored drift, and
-/// `derived_views_match_cpu_current_drift`'s (`crates/render/tests/debug_views.rs`).
+/// derived current-drift view at `COMPACTION` 1, `lin` (R-652). Every drift view computes `H(r, p) − E_0` or
+/// `L_z(r, p) − Lz_0` in the fragment, never reading a stored drift (dd_generation_root §3.8; payload §5), so a fresh
+/// sample's drift is the backend's f32 rounding, a few `1e-8`; `symlog` draws that as 0 by its neutral band (render
+/// contract Part 5; R-652), and on `lin`'s `±1/16`, which has no band, it moves the colour by some `1e-4` of a step, so
+/// the case's one reference holds on every backend. Its `symlog` default is the generated `energy_drift` view's case's
+/// and `derived_views_match_cpu_current_drift`'s (`crates/render/tests/debug_views.rs`).
 const CASE_PARAMS: [(&str, &str, f64); 1] = [("debug/derived/energy_drift", "COMPACTION", 1.0)];
 
 /// The case name of the registry id `id`: the id less `debug/`, each `/` read as `-`.
@@ -437,11 +437,13 @@ pub enum Look {
     Background,
     /// The presentation views' invalid colour, `#141418` (R-467 D4): a field ramp's invalid value, not overridden.
     PresentInvalid,
-    /// A drift view at its defaults (render contract Part 5; R-381; TASK-M3-05): the drift `x` at `symlog`'s place on
-    /// the `diverging` ramp, its floor `eps` and `lin` range `lin_r`, the absence NaN hatched, and the suspect styling
+    /// A drift view at its defaults (render contract Part 5; R-381; TASK-M3-05): the drift `x`, within the neutral band of
+    /// its `reference` drawn as 0, at `symlog`'s place on the `diverging` ramp, its floor `eps` and `lin` range `lin_r`,
+    /// the absence NaN hatched, and the suspect styling
     /// of the predicates `energy` and `lz` over it.
     Drift {
         x: f32,
+        reference: f32,
         lin_r: f64,
         eps: f64,
         energy: bool,
@@ -475,12 +477,20 @@ impl Look {
             Look::PresentInvalid => present::present_invalid(),
             Look::Drift {
                 x,
+                reference,
                 lin_r,
                 eps,
                 energy,
                 lz,
             } => present::dbg_suspect(
-                present::dbg_drift(x, present::DRIFT_SYMLOG, false, lin_r, eps, frag),
+                present::dbg_drift(
+                    present::dbg_drift_shown(x, present::DRIFT_SYMLOG, reference),
+                    present::DRIFT_SYMLOG,
+                    false,
+                    lin_r,
+                    eps,
+                    frag,
+                ),
                 x,
                 energy,
                 lz,
@@ -1244,6 +1254,7 @@ impl Scene {
                 let (energy, lz) = drift_suspects(&read);
                 Ok(Look::Drift {
                     x: v,
+                    reference: read.E_0,
                     lin_r: ledger::gen::catalogue::drift_range("energy_drift")
                         .ok_or("`energy_drift` has no drift range")?,
                     eps: ledger::constants::EPS_E_DEFAULT.number(),
