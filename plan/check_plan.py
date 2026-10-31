@@ -19,6 +19,10 @@ Fails if:
     or plan/CURRENT_RULES.md lists a ruling superseded or withdrawn outright (R-293);
   - an R-n or RQ-n reference in the live files or the review queue's archive names no entry, or an RQ id is used
     twice (R-292; plan/tools/rulings.py lists the files);
+  - REVIEW_QUEUE.md, which merges by union, holds what a union merge leaves: two entries with one question, an entry
+    with a one-per-entry field twice or a required one missing, a heading with no body or not in the form
+    "## RQ-n: <question>", lines that are two versions of one text side by side, or a fragment that starts a paragraph
+    mid-sentence; or the check misses one of its built-in bad cases (plan/OPERATIONS.md § "Merging" step 2);
   - a still-open item in open-questions.md (a paragraph or list item with a bold run starting "Open" or "Still open")
     has no "Carried by: …" note naming a requirement or an open REVIEW_QUEUE entry, or its note names a requirement
     that doesn't exist or is retired, or an RQ that isn't open in REVIEW_QUEUE.md (R-334);
@@ -32,15 +36,20 @@ and also runs plan/tools/coverage.py, milestones.py, reviewer_lists.py and curre
 fails if plan/CURRENT_RULES.md is stale, R-292).
 
 Usage: python3 plan/check_plan.py
+       python3 plan/check_plan.py --queue PATH [--archive DIR]
+The second form checks only the review queue at PATH: the checks above on it, and its RQ ids against each other and the
+archive DIR, by default this tree's. Two branches that pass alone can collide only in their merge, so it is the form to
+run on a merged tree or a would-be merge's REVIEW_QUEUE.md (plan/OPERATIONS.md § "Merging" step 2).
 """
-import glob, os, re, subprocess, sys
+import argparse, difflib, glob, os, re, subprocess, sys
 
 import yaml
 
 ROOT = os.path.abspath(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, os.path.join(ROOT, "plan", "tools"))
 from sections import citable_index, sections  # noqa: E402
-from rulings import QUEUE, RQ_HEAD, missing_forward_lines, still_in_force_errors, superseded_listed, unresolved_refs  # noqa: E402
+from rulings import QUEUE, QUEUE_ARCHIVE, RQ_HEAD, missing_forward_lines, rq_ids, still_in_force_errors  # noqa: E402
+from rulings import superseded_listed, unresolved_refs  # noqa: E402
 from rulings import self_test as rulings_self_test  # noqa: E402
 from veto_marks import errors as veto_mark_errors, self_test as veto_self_test  # noqa: E402
 
@@ -58,6 +67,19 @@ OPEN_MARK = re.compile(r"\*\*(?:Still open|Open)\b")  # "**Open:**", "**Still op
 CARRIED = re.compile(r"Carried by:([^*]*)")
 CARRIER = re.compile(r"\b(REQ-[A-Z]+-\d+|RQ-\d+)\b")
 ITEM = re.compile(r"^(?:\d+\.|[-*]) ")
+# A review queue entry's heading, and the question in it: the text before any "*(provenance)*".
+QUEUE_HEAD = re.compile(r"^## RQ-\d+: (.*?)(?: \*\(.*)?$")
+QUEUE_FIELD = re.compile(r"^- \*\*([^*]+?):?\*\*")  # "- **Waits:**", "- **File, section** (RQ-599's questions):"
+# Every entry has these (the "file, section" of WORKFLOW § "Escalation"; "Applied meanwhile" applied per R-369 from the
+# queue's own form), and these fields appear once in an entry, so a second is a second version. "Needed", "Ruling" and
+# dated notes may repeat, and aren't listed.
+QUEUE_REQUIRED = ("File, section", "Applied meanwhile")
+QUEUE_ONE_EACH = QUEUE_REQUIRED + ("The question", "The gap", "Options seen", "Waits")
+# A number that names something: two lines differing here disagree, where two differing in another number are siblings.
+TWIN_NAME = re.compile(r"\b(?:RQ?-\d+|TASK-M\d+-\d+|REQ-[A-Z]+-\d+|PR #\d+|[Ll]ines? \d+)")
+TWIN_RATIO = 0.9  # two versions of a text are at least this alike; RQ-610's two near-identical paths reach 0.81
+TWIN_MIN = 30  # characters: shorter lines are alike by chance
+TWIN_MAX_LINES = 8  # the longest run of lines compared with the run after it
 
 
 def archived(path):
@@ -160,6 +182,199 @@ def truncated_scalars(path):
 
     walk(yaml.compose(text))
     return out
+
+
+def siblings(a, b):
+    """True if two different texts differ only in the digits of plain numbers: "N = 6: …" and "N = 12: …"."""
+    same_but_digits = a != b and re.sub(r"\d+", "", a) == re.sub(r"\d+", "", b)
+    return same_but_digits and TWIN_NAME.findall(a) == TWIN_NAME.findall(b)
+
+
+def twins(body):
+    """(line, line) for each run of lines in `body`, a list of (line number, text), directly followed by a run that
+    reads nearly the same, of the same length or one line more or less, since an edit can rewrap: what a union merge
+    leaves of text edited on two sides. Lines that differ only in the digits of plain numbers are a list's siblings,
+    not versions; a difference in an id or a `line N` is a disagreement (TWIN_NAME)."""
+    out = []
+    plain = [(n, t) for n, t in body if t.strip()]
+    join = lambda lines: " ".join(" ".join(t.split()) for _, t in lines)
+    i = 0
+    while i < len(plain):
+        found = None
+        for k in range(1, TWIN_MAX_LINES + 1):
+            for m in (k, k - 1, k + 1):
+                if m < 1 or i + k + m > len(plain):
+                    continue
+                a, b = join(plain[i:i + k]), join(plain[i + k:i + k + m])
+                if len(a) < TWIN_MIN or len(b) < TWIN_MIN or siblings(a, b):
+                    continue
+                d = difflib.SequenceMatcher(None, a, b, autojunk=False)
+                if d.quick_ratio() >= TWIN_RATIO and d.ratio() >= TWIN_RATIO:
+                    found = k, m
+                    break
+            if found:
+                break
+        if found:
+            out.append((plain[i][0], plain[i + found[0]][0]))
+            i += found[0] + found[1]
+        else:
+            i += 1
+    return out
+
+
+def queue_text_errors(text, path=QUEUE):
+    """One message per thing in a review queue's `text` that a union merge leaves, past the ids rq_ids checks. A line
+    can't say which entry it came from, so this reads each entry's form: see the module's docstring."""
+    errors, cur, preamble, entries = [], None, [], []
+    for n, line in enumerate(text.split("\n"), 1):
+        if line.startswith("## "):
+            cur = {"n": n, "head": line, "body": []}
+            entries.append(cur)
+        else:
+            (cur["body"] if cur else preamble).append((n, line))
+    fix = "keep one, or give the later PR's entry the next free id (plan/OPERATIONS.md § \"Merging\" step 2)"
+    questions = {}
+    for e in entries:
+        m = QUEUE_HEAD.match(e["head"])
+        where = f"{path}:{e['n']}"
+        if not m:
+            errors.append(f"{where}: heading not in the form \"## RQ-n: <question>\": {e['head'][:80]!r}")
+        else:
+            q = " ".join(m.group(1).split()).casefold()
+            if q in questions:
+                errors.append(f"{where}: the same question as the entry at line {questions[q]}: {fix}")
+            questions.setdefault(q, e["n"])
+        if not any(t.strip() for _, t in e["body"]):
+            errors.append(f"{where}: an entry with no body: a union merge moves lines two entries share to the later")
+            continue
+        fields = {}
+        for n, t in e["body"]:
+            f = QUEUE_FIELD.match(t)
+            if f:
+                fields.setdefault(f.group(1), []).append(n)
+        for f in QUEUE_ONE_EACH:
+            if len(fields.get(f, [])) > 1:
+                errors.append(f"{where}: two \"{f}\" fields (lines {fields[f][0]} and {fields[f][1]}): two versions of "
+                              f"one entry: {fix}")
+        for f in QUEUE_REQUIRED:
+            if not any(have.startswith(f) for have in fields):
+                errors.append(f"{where}: no \"- **{f}:**\" field: every entry has one, and a union merge can move it "
+                              f"to the next entry")
+        prev = ""
+        for n, t in e["body"]:
+            if t[:1].islower() and not prev.strip():  # indented, it can be a list item's next paragraph
+                errors.append(f"{path}:{n}: a paragraph that starts mid-sentence, a fragment of an entry: "
+                              f"{t.strip()[:60]!r}")
+            prev = t
+    for body in [preamble] + [e["body"] for e in entries]:
+        for a, b in twins(body):
+            errors.append(f"{path}:{a}: lines {a} and {b} are two versions of one text, as a union merge leaves an "
+                          f"edit on two sides: keep one, or reword one if both are meant")
+    return errors
+
+
+def queue_self_test():
+    """The negative controls: each bad case fails, naming its fault, and each good one passes."""
+    fails = []
+    line = "- **The question:** whether the first thing holds at all."
+    applied = "- **Applied meanwhile:** none."
+    file_a = "- **File, section:** `a.md` § \"1. One section\".\n"
+    good = (f"## RQ-1: One question\n\n*Queued by a task.*\n\n{file_a}{line}\n{applied}\n\n"
+            "## RQ-2: Another question *(context: none)*\n\n- **File, section:** `b.md` § \"2. Another\".\n"
+            "- **Applied meanwhile:** the second answer, as the contract has it.\n")
+    sibling = "  - N = {}: the same long words of a list, one item each"
+    versions = "  - Closed as {0}, by the same words of a ruling.\n  - Closed as {1}, by the same words of a ruling."
+
+    def version(lines, mark):  # `lines` lines, none like another, each marked in its last letter
+        return "".join("  " + "".join(chr(97 + i * j % 26) for j in range(40)) + mark + "\n"
+                       for i in range(1, lines + 1))
+
+    cases = [  # (name, the queue, the fault, or None)
+        ("well formed", good, None),
+        ("sibling lines differing in a plain number", good.replace(
+            line, sibling.format(6) + "\n" + sibling.format(12)), None),
+        ("versions differing in a ruling", good.replace(line, versions.format("R-100", "R-101")),
+         "two versions of one text"),
+        ("versions differing in an RQ", good.replace(line, versions.format("RQ-100", "RQ-101")),
+         "two versions of one text"),
+        ("versions differing in a task", good.replace(line, versions.format("TASK-M2-36", "TASK-M2-37")),
+         "two versions of one text"),
+        ("versions differing in a requirement", good.replace(line, versions.format("REQ-VAL-1", "REQ-VAL-2")),
+         "two versions of one text"),
+        ("versions differing in a PR", good.replace(line, versions.format("PR #359", "PR #360")),
+         "two versions of one text"),
+        ("versions differing in a location", good.replace(line, versions.format("line 529", "line 547")),
+         "two versions of one text"),
+        ("a repeatable field twice", good.replace(line, "- **Parked:** R-1.\n- **Parked:** R-2."), None),
+        ("a line of 29 characters doubled", good.replace(line, "- abcdefghijklmnopqrstuvwxy12\n" * 2), None),
+        ("a line of 30 characters doubled", good.replace(line, "- abcdefghijklmnopqrstuvwxy123\n" * 2),
+         "two versions of one text"),
+        ("ten lines side by side, past the longest run", good.replace(line, version(10, "x") + version(10, "y")), None),
+        ("eight lines side by side, the longest run", good.replace(line, version(8, "x") + version(8, "y")),
+         "two versions of one text"),
+        ("lines alike below the ratio", good.replace(line, "  the first wrapped line of a quote\n"
+                                                     "  a second wrapped line of the same"), None),
+        ("the same question, other provenance", good.replace("Another question", "One question"),
+         "the same question as the entry at line 1"),
+        ("the same question, other case and spacing", good.replace("Another question", "one  QUESTION"),
+         "the same question as the entry at line 1"),
+        ("both bodies under one heading", good.replace(applied, f"{applied}\n- **File, section:** `c.md` § \"3.\"."),
+         "two \"File, section\" fields"),
+        ("a field edited on two sides", good.replace(applied, f"{applied}\n- **Applied meanwhile:** (a), as written."),
+         "two \"Applied meanwhile\" fields"),
+        ("a line edited on two sides", good.replace(line, "  a line of a quotation, edited on this side.\n"
+                                                    "  a line of a quotation, edited on that side."),
+         "two versions of one text"),
+        ("two lines edited on two sides", good.replace(line, "  the first wrapped line of a quotation here,\n"
+                                                       "  and the second wrapped line of it there.\n"
+                                                       "  the first wrapped line of a quote here,\n"
+                                                       "  and the second wrapped line of that there."),
+         "two versions of one text"),
+        ("a note rewrapped on one side", good.replace(line, "  the first wrapped line of a quotation here, and\n"
+                                                      "  the second line of it, which runs on to the end.\n"
+                                                      "  the first wrapped line of a quotation here,\n"
+                                                      "  and the second line of it, which runs\n"
+                                                      "  on to the end."),
+         "two versions of one text"),
+        ("a preamble edited on two sides", "# Review queue\n\nOnly open entries are kept here, by rule.\n"
+         "Only open entries are kept here, by a rule.\n\n" + good, "two versions of one text"),
+        ("an entry emptied by interleaving", good.replace("## RQ-2", "## RQ-3: A third question\n## RQ-2"),
+         "an entry with no body"),
+        ("an entry whose tail moved on", good.replace(applied + "\n", ""), "no \"- **Applied meanwhile:**\" field"),
+        ("an entry with no file", good.replace(file_a, ""), "no \"- **File, section:**\" field"),
+        ("a heading with no colon", good.replace("## RQ-1: One", "## RQ-1 One"), "heading not in the form"),
+        ("a heading with no id", good.replace("## RQ-1: One", "## One"), "heading not in the form"),
+        ("a lower-case fragment", good.replace(applied, f"{applied}\n\nand so the rest of it."), "starts mid-sentence"),
+        ("a list item's next paragraph", good.replace(applied, f"{applied}\n\n  and a table:\n  | a | b |"), None),
+        ("a field with a note", good.replace("**File, section:** `a.md`", "**File, section** (a note): `a.md`"), None),
+        ("a field in two parts", good.replace(file_a, f"{file_a}- **File, section (the finding):** `c.md`.\n"), None),
+    ]
+    for name, text, fault in cases:
+        got = queue_text_errors(text)
+        if fault is None and got:
+            fails.append(f"queue self-test {name!r}: expected no failure, got {got}")
+        elif fault is not None and not any(fault in g for g in got):
+            fails.append(f"queue self-test {name!r}: expected a failure naming {fault!r}, got {got}")
+    return fails
+
+
+def queue_errors(path=QUEUE):
+    """queue_text_errors of the file at `path`, or that it is missing (the id checks skip a missing file)."""
+    if not os.path.exists(path):
+        return [f"{path}: missing"]
+    return queue_text_errors(open(path, encoding="utf-8").read(), path)
+
+
+def queue_main(queue, archive):
+    """The --queue form: the review queue at `queue` alone, with its ids against the archive at `archive`."""
+    errors = queue_self_test() + queue_errors(queue)
+    if not os.path.isdir(archive):
+        errors.append(f"{archive}: no such archive directory")
+    errors += rq_ids(queue, archive)[1]
+    for e in errors:
+        print("FAIL:", e)
+    print(f"{queue}: {len(errors)} failures")
+    sys.exit(1 if errors else 0)
 
 
 def cycle(graph):
@@ -330,6 +545,9 @@ def main():
     errors += superseded_listed()
     errors += unresolved_refs()
 
+    # REVIEW_QUEUE.md merges by union: what that leaves, past the ids unresolved_refs checks; negative controls first
+    errors += queue_self_test() + queue_errors()
+
     # open-questions.md: every still-open item names what carries it (R-334)
     errors += open_question_errors(by_req, live)
 
@@ -352,4 +570,13 @@ def main():
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Check the build plan, or with --queue only a review queue.")
+    parser.add_argument("--queue", help="check only this REVIEW_QUEUE.md, say a merged tree's")
+    parser.add_argument("--archive", help=f"with --queue: the archive to check ids against (this tree's "
+                                          f"{QUEUE_ARCHIVE})")
+    args = parser.parse_args()
+    if args.archive and not args.queue:
+        parser.error("--archive needs --queue")
+    if args.queue:
+        queue_main(args.queue, args.archive or os.path.join(ROOT, QUEUE_ARCHIVE))
     main()
