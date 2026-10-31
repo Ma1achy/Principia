@@ -310,3 +310,11 @@ justification = "at t_target == t_now both arms give a span of 0 (t_target - t_n
 [[equivalent]]
 mutant = "crates/kernel/src/driver/cadence.rs:45:9: replace <impl Cadence<R> for WrapperCadence>::done -> bool with false"
 justification = "done is only ever set from detect, which returns the constant false until TASK-M3-09 fills it (collision), so WrapperCadence::done is always false; TASK-M3-09 removes this entry with the hook"
+
+[[equivalent]]
+mutant = "crates/gui/src/explore/compass.rs:962:51: replace * with / in Drag::moved"
+justification = "sign is Reading::Vertical's, which reading_of only ever sets to 1.0 or -1.0, and y / ±1 equals y * ±1 exactly"
+
+[[equivalent]]
+mutant = "crates/gui/src/explore/compass.rs:966:53: replace * with / in Drag::moved"
+justification = "Z0_HALF_RANGE is the constant 1.0, and dividing by 1.0 equals multiplying by it exactly; a change to the constant makes the rate tests in mock_compass_cube and mock_compass_slice_follows_pointer tell them apart"
