@@ -381,12 +381,13 @@ replication: 3D Plummer ICs. Its method is what REQ-VAL-199 and "never discard a
 *Sizing n, by a power calculation (`PS31/README.md` § "The power calculation"; α = 0.05).*
 
 - KS distance: `D_c = 1.358 √(2/n)`, so **0.02 needs n = 9,222**, ~10⁴ as the owner says; 0.03 needs 4,099, and 0.12 is
-  n = 256. A Monte Carlo puts the power at D_c at 0.83 to 0.90.
+  n = 256. D_c is a critical value: a Monte Carlo puts the power at it at 0.83 to 0.92 for a shift or a
+  tail, and 0.50 to 0.53 for a difference localised at the median, which at n = 10⁴ reaches 80% at about 0.025.
 - A difference Δ in a fraction p at 80% power: `n = 7.85 · 2p(1−p)/Δ²`: Δ = 0.02 at p = 0.5 needs 9,811.
 - Lifetimes, log-rank at 80% power: `events = 4 · 7.85 / ln²HR`: 10⁴ a side reaches a hazard ratio of 1.05.
 - Pairing saves little: discordant fraction d = 0.33 gives 6,475 at Δ = 0.02, and d is measured, not assumed.
 - **Proposed: n = 10⁴ per set, all the records hold.** Sensitivity about 2% in a whole-ensemble fraction, D_c 0.019 on the
-  whole ensemble and 0.024 and 0.022 on end states within T; with a Bonferroni correction over 12 tests, D_c 0.025. Below that
+  whole ensemble and 0.024 and 0.022 on end states within T; with a Bonferroni correction over 12 tests, D_c 0.025 on the whole ensemble and 0.031 and 0.029 within T. Below that
   needs new starts, with their converged side ours too. The sensitivity adopted is itself a calibration (R-71).
 
 *M9 and peeks.* M9 and the peek log rest on R-649 and R-650, in open PR #342, not merged, and they are not copied here. If

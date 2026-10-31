@@ -130,8 +130,11 @@ R-610 stands.
 
 **[ran]** `tools/power.py`, output in `tools/power_output.txt`. α = 0.05, n per sample.
 
-Two-sample KS: `D_c = c(α) √(2/n)`, `c(0.05) = 1.358`. A Monte Carlo of the test with the true distance set to D_c gives
-power 0.83 to 0.90 (n = 256 and 10⁴; a normal shift and mass moved to a tail), so D_c reads as the distance detected.
+Two-sample KS: `D_c = c(α) √(2/n)`, `c(0.05) = 1.358`. **D_c is the critical value; the power at it depends on the shape of
+the difference.** A Monte Carlo with the true distance set to D_c gives 0.83 to 0.92 for a normal shift and for mass moved
+to a tail, and 0.50 to 0.53 for a difference localised at the median, the worst case tried. At n = 10⁴ that case reaches 80%
+at a distance of about 0.025 (0.63 at 0.022, 0.82 at 0.025, 0.91 at 0.028). So the owner's "≈0.02 needs n ~ 10⁴" holds as a
+critical value and for the broad differences, and is about 0.025 at 80% in the worst case tried.
 
 | n | D_c | D_c, Bonferroni over 12 tests | Fraction difference at 80% power, p = 0.5 / 1/3 / 0.1 |
 |---|---|---|---|
@@ -151,7 +154,7 @@ power 0.83 to 0.90 (n = 256 and 10⁴; a normal shift and mass moved to a tail),
 - **Lifetimes, by log-rank**, total events `4 (z_{α/2} + z_β)² / ln²HR`: at T = 200 with 10⁴ a side, 12,514 and 14,732
   events detect a hazard ratio of 1.051 and 1.047.
 - **So:** n = 10⁴ per set, all the records hold, gives a sensitivity of 2% in a whole-ensemble fraction, 2 to 3% in KS
-  distance on end states, and 5% in hazard. Going below 2% needs starts beyond the records, whose converged side would be
+  distance (read with the shape caveat above), and 5% in hazard. Going below 2% needs starts beyond the records, whose converged side would be
   ours as well.
 
 ## What cannot be claimed
