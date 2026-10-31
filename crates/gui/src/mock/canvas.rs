@@ -207,6 +207,34 @@ impl MockCanvas {
         );
         let (device, queue) = pollster::block_on(adapter.request_device(&Default::default()))
             .map_err(|e| format!("request_device failed: {e}"))?;
+        Ok(Self::on(instance, adapter, device, queue))
+    }
+
+    /// Opens a device on the browser's WebGPU, which can only be awaited (TASK-M8-86).
+    #[cfg(target_arch = "wasm32")]
+    pub async fn open_browser() -> Result<Self, String> {
+        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
+            backends: wgpu::Backends::BROWSER_WEBGPU,
+            ..wgpu::InstanceDescriptor::new_without_display_handle()
+        });
+        let adapter = instance
+            .request_adapter(&Default::default())
+            .await
+            .map_err(|e| format!("no WebGPU adapter: {e}"))?;
+        let (device, queue) = adapter
+            .request_device(&Default::default())
+            .await
+            .map_err(|e| format!("request_device failed: {e}"))?;
+        Ok(Self::on(instance, adapter, device, queue))
+    }
+
+    /// The canvas on an open device.
+    fn on(
+        instance: wgpu::Instance,
+        adapter: wgpu::Adapter,
+        device: wgpu::Device,
+        queue: wgpu::Queue,
+    ) -> Self {
         let uniform = |label| {
             device.create_buffer(&wgpu::BufferDescriptor {
                 label: Some(label),
@@ -222,7 +250,7 @@ impl MockCanvas {
             usage: wgpu::BufferUsages::UNIFORM.union(wgpu::BufferUsages::COPY_DST),
             mapped_at_creation: false,
         });
-        Ok(Self {
+        Self {
             context: CanvasContext {
                 instance,
                 adapter,
@@ -244,7 +272,7 @@ impl MockCanvas {
             preview: Mutex::new(None),
             look_buffer,
             look: Mutex::new([0.0; 4]),
-        })
+        }
     }
 
     /// The next previews are drawn in `look`.

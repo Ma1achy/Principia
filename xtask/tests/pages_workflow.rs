@@ -1,0 +1,205 @@
+//! `pages_workflow_manual` (REQ-TOOL-220, R-627): the Pages workflow runs only by hand, deploys only from `main`, only
+//! through `github-pages`; and the skeleton's build is pinned to the `wasm-bindgen` of the lock file.
+
+use validation::negative_control;
+use xtask::pages_workflow::check;
+use xtask::web_skeleton::{
+    check_cli, cli_version, locked_version, SITE_FILES, WASM_BINDGEN_VERSION,
+};
+
+fn root() -> std::path::PathBuf {
+    std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("xtask is in the workspace")
+        .to_owned()
+}
+
+fn workflow() -> String {
+    std::fs::read_to_string(root().join(".github/workflows/pages.yml")).expect("pages.yml")
+}
+
+/// The workflow with `from` replaced by `to`, which must be there.
+#[cfg(feature = "controls")]
+fn edited(from: &str, to: &str) -> String {
+    let text = workflow();
+    assert!(
+        text.contains(from),
+        "the control's `{from}` is not in pages.yml"
+    );
+    text.replace(from, to)
+}
+
+/// Asserts the check passes on `text`, naming the failure.
+fn manual(text: &str) {
+    if let Err(why) = check(text) {
+        panic!("pages.yml: {why}");
+    }
+}
+
+#[test]
+fn pages_workflow_manual() {
+    manual(&workflow());
+}
+
+negative_control!(
+    pages_workflow_manual_push,
+    "a `push` trigger added",
+    expected = "not workflow_dispatch alone",
+    manual(&edited(
+        "  workflow_dispatch:\n",
+        "  workflow_dispatch:\n  push:\n"
+    ))
+);
+negative_control!(
+    pages_workflow_manual_schedule,
+    "a `schedule` trigger added under the dispatch's own block",
+    expected = "not workflow_dispatch alone",
+    manual(&edited(
+        "  workflow_dispatch:\n",
+        "  schedule:\n    - cron: '0 0 * * *'\n  workflow_dispatch:\n"
+    ))
+);
+negative_control!(
+    pages_workflow_manual_ref,
+    "the ref condition removed",
+    expected = "not conditioned on refs/heads/main",
+    manual(&edited("    if: github.ref == 'refs/heads/main'\n", ""))
+);
+negative_control!(
+    pages_workflow_manual_other_ref,
+    "the ref condition on another branch",
+    expected = "not conditioned on refs/heads/main",
+    manual(&edited("refs/heads/main'", "refs/heads/dev'"))
+);
+negative_control!(
+    pages_workflow_manual_environment_removed,
+    "the deploy job's `environment:` removed",
+    expected = "names no environment",
+    manual(&edited(
+        "    environment:\n      name: github-pages\n      url: ${{ steps.deploy.outputs.page_url }}\n",
+        ""
+    ))
+);
+negative_control!(
+    pages_workflow_manual_environment_renamed,
+    "the deploy job's environment renamed",
+    expected = "not github-pages",
+    manual(&edited("name: github-pages", "name: staging"))
+);
+negative_control!(
+    pages_workflow_manual_permission,
+    "the deploy job without `id-token: write`",
+    expected = "lack `id-token: write`",
+    manual(&edited("      id-token: write\n", ""))
+);
+negative_control!(
+    pages_workflow_manual_third_job,
+    "a third job",
+    expected = "not build and deploy",
+    manual(&edited(
+        "  deploy:\n",
+        "  extra:\n    runs-on: ubuntu-24.04\n\n  deploy:\n"
+    ))
+);
+negative_control!(
+    pages_workflow_manual_moving_tag,
+    "actions/deploy-pages at a moving tag",
+    expected = "deploy-pages at a pinned SHA",
+    manual(&edited(
+        "actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5",
+        "actions/deploy-pages@v4"
+    ))
+);
+negative_control!(
+    pages_workflow_manual_upload_moving_tag,
+    "actions/upload-pages-artifact at a moving tag",
+    expected = "upload-pages-artifact at a pinned SHA",
+    manual(&edited(
+        "actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4.0.0",
+        "actions/upload-pages-artifact@v4"
+    ))
+);
+
+/// The pin agrees with the lock and the workflow, and the CLI's version is checked exactly.
+fn check_pin(lock: &str, workflow: &str) {
+    assert_eq!(
+        locked_version(lock),
+        Some(WASM_BINDGEN_VERSION),
+        "the pin is not the lock's wasm-bindgen"
+    );
+    assert!(
+        workflow.contains(&format!(
+            "wasm-bindgen-cli --version {WASM_BINDGEN_VERSION} --locked"
+        )),
+        "pages.yml installs another wasm-bindgen-cli"
+    );
+}
+
+#[test]
+fn web_skeleton_pins_wasm_bindgen() {
+    let lock = std::fs::read_to_string(root().join("Cargo.lock")).expect("Cargo.lock");
+    check_pin(&lock, &workflow());
+}
+
+negative_control!(
+    web_skeleton_pins_wasm_bindgen_lock,
+    "a lock file at another version",
+    expected = "not the lock's wasm-bindgen",
+    check_pin(
+        "name = \"wasm-bindgen\"\nversion = \"0.2.1\"\n",
+        &workflow()
+    )
+);
+negative_control!(
+    web_skeleton_pins_wasm_bindgen_workflow,
+    "a workflow installing another version",
+    expected = "installs another wasm-bindgen-cli",
+    check_pin(
+        &format!("name = \"wasm-bindgen\"\nversion = \"{WASM_BINDGEN_VERSION}\"\n"),
+        &edited("--version 0.2.129", "--version 0.2.1")
+    )
+);
+
+/// The CLI check takes the pinned version and only it.
+fn check_versions(pinned: &str) {
+    check_cli(pinned).expect("the pinned version is taken");
+    assert_eq!(cli_version("wasm-bindgen 1.2.3 (abc)\n"), Some("1.2.3"));
+    assert_eq!(cli_version("something else 1.2.3"), None);
+    assert!(check_cli(&format!("{pinned}.1")).is_err() || pinned.is_empty());
+    assert!(
+        check_cli("wasm-bindgen 0.2.128").is_err(),
+        "an older CLI was taken"
+    );
+    assert!(check_cli("").is_err(), "no output was taken");
+}
+
+#[test]
+fn web_skeleton_checks_the_cli() {
+    check_versions(&format!("wasm-bindgen {WASM_BINDGEN_VERSION}\n"));
+}
+
+negative_control!(
+    web_skeleton_checks_the_cli_control,
+    "another version given as the pinned one",
+    expected = "the pinned version is taken",
+    check_versions("wasm-bindgen 0.2.1\n")
+);
+
+/// Every file of the site is in `dir`.
+fn check_site(dir: &std::path::Path) {
+    for file in SITE_FILES {
+        assert!(dir.join(file).is_file(), "the site lacks {file}");
+    }
+}
+
+#[test]
+fn web_skeleton_site_files_exist() {
+    check_site(&root().join("web/skeleton"));
+}
+
+negative_control!(
+    web_skeleton_site_files_exist_control,
+    "a directory without them",
+    expected = "the site lacks index.html",
+    check_site(&root().join("xtask"))
+);

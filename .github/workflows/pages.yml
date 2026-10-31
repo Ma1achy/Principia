@@ -1,0 +1,44 @@
+# The v1 web skeleton's deploy to GitHub Pages (TASK-M8-86, R-627): by hand only, `gh workflow run pages.yml --ref main`,
+# from `main` only, through the `github-pages` environment, until the human says v1 is ready to be found. No push,
+# pull_request, schedule or other trigger; `cargo test -p xtask pages_workflow_manual` checks it (REQ-TOOL-220).
+name: pages
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      # The toolchain rust-toolchain.toml pins, and the wasm target this workflow alone and `ci.yml`'s `web-skeleton` need.
+      - name: rustup toolchain install (rust-toolchain.toml)
+        run: rustup toolchain install && rustup target add wasm32-unknown-unknown
+      # The version `xtask::web_skeleton::WASM_BINDGEN_VERSION` pins; a test checks the two agree.
+      - name: Install wasm-bindgen-cli
+        run: cargo install wasm-bindgen-cli --version 0.2.129 --locked
+      - name: cargo xtask web-skeleton
+        run: cargo xtask web-skeleton --out _site
+      - uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4.0.0
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    permissions:
+      pages: write
+      id-token: write
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5

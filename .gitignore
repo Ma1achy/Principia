@@ -22,3 +22,6 @@ atlas-params.json
 
 # README explainer GIF builds (scripts/readme_gifs); the committed copies live in docs/readme/
 /scripts/out/
+
+# The web skeleton's browser runner: `npm ci` installs it from its lock (TASK-M8-86).
+/web/skeleton/runner/node_modules/

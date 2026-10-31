@@ -21,3 +21,31 @@ serde_json = "1"
 # the engine `main` runs (RQ-252).
 [features]
 mock = []
+# The v1 web skeleton's wasm entry (TASK-M8-86, R-627): `gui::web`, built for wasm32-unknown-unknown only. The native
+# build compiles none of it.
+web = ["dep:wasm-bindgen", "dep:wasm-bindgen-futures", "dep:js-sys", "dep:web-sys"]
+
+# The browser's clock: `std::time::Instant` and `SystemTime` panic on wasm32-unknown-unknown, and web-time, already in
+# the lock through eframe, is their stand-in (`crate::clock::time`). wasm-bindgen, its futures, js-sys and web-sys bind
+# the wasm entry to the page and the worker; eframe re-exports only the features of web-sys it uses itself.
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+web-time = "1"
+wasm-bindgen = { version = "=0.2.129", optional = true }
+wasm-bindgen-futures = { version = "0.4", optional = true }
+js-sys = { version = "0.3", optional = true }
+web-sys = { version = "0.3", optional = true, features = [
+  "console",
+  "DedicatedWorkerGlobalScope",
+  "Document",
+  "Element",
+  "HtmlCanvasElement",
+  "MessageEvent",
+  "OffscreenCanvas",
+  "Window",
+  "WorkerGlobalScope",
+] }
+
+# The monitor's refresh rate the measurement panel reads natively, as winit reports it (TASK-M8-86): the event loop
+# eframe's `create_native` runs on, at eframe's winit version.
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+winit = { version = "0.30", default-features = false, features = ["rwh_06"] }

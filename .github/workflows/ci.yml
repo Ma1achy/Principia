@@ -390,6 +390,29 @@ jobs:
       - name: cargo xtask deps
         run: cargo xtask deps
 
+  # The v1 web skeleton's wasm build, build only, so a later change that breaks it is seen (TASK-M8-86, applied per
+  # R-369): the command `cargo xtask web-skeleton` builds with, in its debug profile; the wasm-bindgen step and the deploy
+  # are pages.yml's, by hand (R-627). Not gathered by the required check `ci`, as `gpu-kernel` is not. Skipped on a
+  # docs-only pull request (R-656).
+  web-skeleton:
+    needs: changes
+    if: needs.changes.outputs.docs_only != 'true'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: rustup toolchain install (rust-toolchain.toml)
+        run: rustup toolchain install && rustup target add wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+        with:
+          prefix-key: cargo-registry
+          shared-key: ci
+          cache-targets: "false"
+          cache-bin: "false"
+          # It restores, read-only, the key the `ci` job saves on `main` (R-326, R-337).
+          save-if: "false"
+      - name: cargo rustc -p gui (wasm32, the web feature)
+        run: cargo rustc -p gui --lib --locked --target wasm32-unknown-unknown --features web --crate-type cdylib
+
   # The required check `ci` (R-266): every `ci` shard, `ci-checks` and `ci-workspace` passed. It runs whatever they
   # ended in (`always()`), so a failed or cancelled job turns it red rather than skipping it. R-656: a skipped job
   # passes only on a docs-only pull request, which `ci-workspace`, having run its docs checks, passes on (DOCS_ONLY);
