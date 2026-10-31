@@ -207,6 +207,12 @@ The GUI requirement adds **no new state** — it says *expose all of it*. Conseq
 
 **The stain graph (R-72; decided per R-369; TASK-M6-29).** `RenderState`'s stain graph is §5's graph object, the one the engine checks and lowers: its nodes, each `{ id, kind, occupant, params }`, `kind` one of `source`, `colour`, `brightness`, `combiner`, `post` and `out`, `occupant` none, a source's field, a built-in's id or a custom occupant's WGSL, and `params` its uniforms' values by name, one number per component; and its wires, each `{ from, to, port }`, `port` the in-port's position, a u32 (R-329). It serialises with `RenderState` as `{ nodes, wires }`, in id order; the default is the backbone alone, the combiner wired to `OUT`. Its `SetField` path is `RenderField::StainGraph`, the whole graph in one edit, undoable (R-69): picking a node's occupant or setting a param is one edit (REQ-GUI-016, which TASK-M7-11 keeps). It is logged as "SetField StainGraph [before] → [after]", each graph as its nodes in id order, `id kind occupant` (a custom occupant written `custom`) with its params, if any, as `{name=value, …}`, then its wires, each `from→to.port`. A node's place on the editor's canvas, the canvas's pan and zoom, and which nodes are selected are the editor's own, not the graph's (R-390, "Contract fields": the corpus names nodes, wires and per-node params only).
 
+**A colour node's ramp (R-72, R-546; REQ-COL-140; TASK-M7-11).** Beside its `params`, a `colour` node may carry `ramp`,
+its custom-stop ramp (colour_composition §9.4): `{ stops, cyclic }`, each stop `{ position, oklab }`, `oklab` the
+stop's `[L, a, b]`. A node without one carries no `ramp` member, and no other kind carries one. A ramp is a per-node
+param, so setting one is one `RenderField::StainGraph` edit, undoable (R-69), and the log writes it after the node's
+params as `ramp[position=(L, a, b), …]`, followed by ` cyclic` where it is cyclic.
+
 **A param of several components in the log line (R-72; decided per R-369; TASK-M6-29).** In "SetField StainGraph"'s `{name=value, …}`, a param of one component is written as its number, and a param of several components as its numbers in order, comma-separated, in parentheses: `{tint=(0.2, 0.4, 0.6)}`.
 
 ---

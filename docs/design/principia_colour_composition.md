@@ -1006,6 +1006,27 @@ TASK-M7-11 when its graph model needs it (R-72, REQ-COL-140): its stops, their p
 how `cyclic` applies. *Was:* "Whether the item also means that the GUI's gradient editor, "built-in LUT or custom
 stops, cyclic" (render GUI spec §9), unifies §1.2's ramps, and so what a ramp of custom stops is, is RQ-282."
 
+**The custom-stop ramp (R-72, R-546; REQ-COL-140; TASK-M7-11).** The gradient editor's ramp of custom stops is a
+`colour` node's param, its `ramp`, serialised with the node in `RenderState` (gui_state_contract §2, §5), and is set
+apart from the gradient-magnitude ramp above. It maps `t` to a colour:
+- **Stops.** Two or more. Each is a position and a colour, the colour a swatch, an OKLab `(L, a, b)` (§1.1), `L` in
+  `[0, 1]`, `a` and `b` each in `[−1, 1]`, and every number finite. The bound on `a` and `b` keeps the ramp's linear
+  sRGB finite: within it each of the conversion's three cubes (dd_colouring §3.1) is at most 13.5 in magnitude, so
+  each linear sRGB component at most 103, where an unbounded `a` or `b` above about `10¹⁰²` overflows the cube to an
+  infinity and the colour to NaN. It refuses no colour of the sRGB gamut, whose `a` lies in about `[−0.234, 0.276]`
+  and `b` in `[−0.312, 0.199]`, and leaves room for colours past it. The register holds it as `ramp_oklab_ab_max`.
+- **Positions.** Each in `[0, 1]`, the stops in order of position, never decreasing. Two stops may share a position,
+  which draws a hard edge; at that position `t` takes the later stop's colour.
+- **Interpolation space.** OKLab, the perceptual default blend space (§1.1) and the space of §1.5's ramps: between two
+  neighbouring stops, each of `L`, `a` and `b` is interpolated linearly in `t`, and the result is converted to linear
+  sRGB, the `vec3` the colour slot returns. It is never interpolated in the `rgb` blend space.
+- **Ends, and how `cyclic` applies.** Not cyclic, `t` is clamped to `[0, 1]`: below the first stop's position the
+  ramp is the first stop's colour, and at or past the last stop's position the last stop's. Cyclic, `t` is taken
+  modulo 1, so `t` and `t + 1` are one colour, and the ends wrap: past the last stop the ramp runs on, interpolated as
+  above, from the last stop's colour to the first stop's, which it reaches at the first stop's position plus 1. A
+  cyclic ramp is seamless when its colour at 0 and at 1 agree, as a first stop at 0 and a last at 1 of one colour give.
+- **An invalid `t`.** A non-finite `t` takes the ramp's invalid-pixel treatment (§1.2), never a colour of the ramp.
+
 **9.5 Spread per footprint and per quad.** Ensemble spread is a footprint quantity: the resolve stage reduces a
 footprint's E + 1 samples to one spread, one value per nominal sample shared by its copies for display, and no
 `SimState` field holds it (sampling note, "Stability metrics"). It is therefore not anti-aliased, and that is what it

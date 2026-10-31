@@ -521,6 +521,29 @@ Slope of spread `y` on time `t` (the diffusion coefficient), computed as **cente
 
 **Indexing convention (fixed, normative):** `step_count = 0` at the initial state; sample `y` **after each completed macro-step**; sample times are `h, 2h, …, nh` where `h = dt_macro`; **`n = step_count`** (the count *after* completing the current step).
 
+**What `y` is, per sample (definition, R-72; REQ-PAY-073).** `y` is the squared chord on the shape sphere between the
+sample's shape now and its shape at the IC:
+```
+y_k = ‖n̂(r_k, m) − n̂(r_0, m)‖²  =  (u_k − u_0)² + (v_k − v_0)² + (w_k − w_0)²      // y_k ∈ [0, 4]
+```
+- `n̂(r, m) = (u, v, w)/I` is the shape-sphere point of dd_integrator §3.7 (Montgomery's map of the mass-weighted
+  Jacobi vectors; the derived `n` of §5), a unit vector.
+- `r_k` is `SimState.r` after completed macro-step `k` (`k = 1 … n`, post-projection, the state the next macro-step
+  starts from); `r_0` is the IC's decoded positions; `m` is the sample's masses (`ICDescriptor`'s `m0, m1, m2`).
+- `n̂(r_0, m)` is not stored: the march derives it from the sample's own IC, as closure's `n̂(0)` is (§1, R-37). A
+  macro-step that a terminal cuts short is not completed, so it takes no sample, and `n = t_end_step` counts the
+  samples taken.
+- So `y` is `|n̂(t) − n̂(0)|²`, closure's distance squared: rotation and scale are quotiented out, so `y` is
+  dimensionless and inherits no gauge. It is `0` at the IC's own shape, `4` at its antipode, and `2` on average over
+  the sphere.
+- Consequently `mean_y ∈ [0, 4]`, the time-average of `y` over the samples `h … nh` (its ledger range, REQ-PAY-098).
+  The slope `C_ty / C_tt(n)` is the least-squares rate at which the shape departs from its start, in units of
+  1/time. It is signed: positive while the shape spreads away from the IC's, negative while it returns toward it (an
+  orbit closing), and near 0 for a shape that stays put.
+- The sphere is compact, so `y` saturates near its mean of 2 once the shape has spread over the sphere. The slope
+  therefore measures spreading on the window's own timescale, and a shape that has mixed early in the window reads a
+  smaller slope than one still spreading at its end.
+
 **The time-only moments are DERIVED, not a mutable shared global.** An earlier draft had one invocation update shared `n, mean_t, C_tt` and broadcast to all samples per macro-step — **impossible in a GPU dispatch** (synchronisation is workgroup-scoped; no dispatch-wide barrier to publish a global mid-dispatch — the same on Rust → SPIR-V as it was on WGSL). No mutable global is needed: for uniform sampling the time-only quantities are **closed-form**:
 ```
 n       = step_count                          // from the playhead (t_end_step for a latched sample)
