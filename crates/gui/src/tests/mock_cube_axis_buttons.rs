@@ -134,6 +134,28 @@ fn mock_cube_axis_buttons_sit_on_their_edges_in_both_modes() {
     let shapes = compass_shapes(&mut h, &mut app);
     check_painted(&shapes, &drawing(&h, &app));
     assert!(drawing(&h, &app).numbers.is_empty(), "tilt has no numbers");
+    // Each button is its text and the padding round it, the text painted over it.
+    let painted = super::compass_support::texts(&shapes);
+    for (id, text) in [
+        (COMPASS_H, want[0]),
+        (COMPASS_D, want[1]),
+        (COMPASS_V, want[2]),
+    ] {
+        let drawn = painted
+            .iter()
+            .find(|t| t.0 == text)
+            .unwrap_or_else(|| panic!("{text} painted"));
+        let placed = app.keyboard.place_of(id).expect("placed").rect;
+        let pad = 2.0 * compass::AXIS_BUTTON_PAD;
+        assert!(
+            (placed.width() - (drawn.1.width() + pad)).abs() < 1.0,
+            "{id}'s width: {placed:?}"
+        );
+        assert!(
+            (placed.height() - (compass::LABEL_SIZE + pad)).abs() < 0.5,
+            "{id}'s height: {placed:?}"
+        );
+    }
     app.manifold.compass.mode = Touch::Slice;
     settle(&mut h, &mut app);
     check_on_edges(&h, &app, want);
@@ -387,6 +409,58 @@ fn mock_cube_axis_buttons_a_picked_pair_keeps_its_axes_past_45_degrees() {
         read.a, Z_Q0,
         "q₂ has nothing else off the targets: {read:?}"
     );
+}
+
+/// The basis with `q₁` and `q₂` of the components given, each `(axis, value)`, in the frame `(z_q3, z_q3, z_μ1)`.
+fn read_of(q1: &[(usize, f64)], q2: &[(usize, f64)]) -> View {
+    let vector = |parts: &[(usize, f64)]| -> Latent {
+        let mut v = [0.0; 8];
+        for &(i, x) in parts {
+            v[i] = x;
+        }
+        v
+    };
+    View::framed(
+        &Plane {
+            z0: [0.0; 8],
+            q1: vector(q1),
+            q2: vector(q2),
+        },
+        Some(&frame(Z_Q3, Z_Q3, Z_MU1)),
+    )
+}
+
+#[test]
+fn mock_cube_axis_buttons_the_frame_reading_cuts_at_their_boundaries() {
+    let (s, c) = 60.0_f64.to_radians().sin_cos();
+    // A picked pair with rounding off the targets, 1.5e-18 of a total of 2, under the cut 2e-18, keeps its axes past 45°.
+    let leak = 1.5e-18_f64.sqrt();
+    let kept = read_of(&[(Z_Q0, c), (Z_Q3, s), (Z_Q1, leak)], &[(Z_Q2, 1.0)]);
+    assert_eq!((kept.a, kept.b), (Z_Q0, Z_Q2), "within the cut");
+    // Past the cut the basis leaves the pair and the targets: its dominant axes, the first on the target.
+    let leak = 2.5e-18_f64.sqrt();
+    let left = read_of(&[(Z_Q0, c), (Z_Q3, s), (Z_Q1, leak)], &[(Z_Q2, 1.0)]);
+    assert_eq!((left.a, left.b), (Z_Q3, Z_Q2), "past the cut");
+    let far = read_of(&[(Z_Q0, c), (Z_Q3, s), (Z_Q1, 0.01)], &[(Z_Q2, 1.0)]);
+    assert_eq!((far.a, far.b), (Z_Q3, Z_Q2), "well past the cut");
+    // A preset's determinant: a little below 0 by rounding is the preset, 1e-12 of the total of 2.
+    let on = read_of(&[(Z_ALPHA, -1.5e-12), (Z_Q3, 1.0)], &[(Z_BETA, 1.0)]);
+    assert_eq!(on.preset, Some(0), "within the rounding");
+    let off = read_of(&[(Z_ALPHA, -2.5e-12), (Z_Q3, 1.0)], &[(Z_BETA, 1.0)]);
+    assert_eq!(off.preset, None, "past the rounding");
+    // A preset's own cut on what leaves it: 1.5e-18 of the total of 2 holds, 2.5e-18 does not.
+    let leak = 1.5e-18_f64.sqrt();
+    let within = read_of(&[(Z_ALPHA, 1.0)], &[(Z_BETA, 1.0), (Z_Q1, leak)]);
+    assert_eq!(within.preset, Some(0), "within the preset's cut");
+    let leak = 2.5e-18_f64.sqrt();
+    let past = read_of(&[(Z_ALPHA, 1.0)], &[(Z_BETA, 1.0), (Z_Q1, leak)]);
+    assert_eq!(past.preset, None, "past the preset's cut");
+    // The determinant, not its terms' sum: 0.36 − 0.64 is mirrored.
+    let mirrored = read_of(
+        &[(Z_ALPHA, 0.6), (Z_BETA, 0.8)],
+        &[(Z_ALPHA, 0.8), (Z_BETA, 0.6)],
+    );
+    assert_eq!(mirrored.preset, None, "mirrored: no turn of the preset");
 }
 
 #[test]

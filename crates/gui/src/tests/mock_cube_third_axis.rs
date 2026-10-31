@@ -16,7 +16,7 @@ use crate::explore::compass::{
     self, badge_rect, badge_shown, gesture_view, is_set, label_colour, line_parts, third_axis,
     Drag, Drawing, Gesture, Reading, Shows, ANGLE_SET, BADGE, GESTURE_TAU1, GESTURE_TAU2, P3,
 };
-use crate::explore::manifold_view::{basis_edit, frame_edit, Touch, View, TAU2};
+use crate::explore::manifold_view::{basis_edit, frame_edit, Touch, View, GAMMA, TAU1, TAU2};
 use crate::explore::{COMPASS, COMPASS_BADGE, COMPASS_PLUCKER};
 use crate::headless::Headless;
 use crate::side::MockSide;
@@ -127,6 +127,23 @@ fn mock_cube_third_axis_follows_the_rule_in_each_case() {
 }
 
 #[test]
+fn mock_cube_third_axis_labels_at_rest_name_the_three_edges() {
+    let iso = compass::Iso::fit(egui::Rect::from_min_size(
+        egui::pos2(0.0, 0.0),
+        vec2(172.0, 172.0),
+    ));
+    let names = |tau1: f64, mode: Touch| -> Vec<String> {
+        compass::labels(&iso, &two(tau1, 0.0), mode)
+            .into_iter()
+            .map(|l| l.text)
+            .collect()
+    };
+    assert_eq!(names(20.0, Touch::Tilt), ["H z_α", "X z_q3", "V z_β"]);
+    assert_eq!(names(20.0, Touch::Slice), ["H z_α", "D z_q3", "V z_β"]);
+    assert_eq!(names(0.0, Touch::Tilt), ["H z_α", "D z_q3", "V z_β"]);
+}
+
+#[test]
 fn mock_cube_third_axis_an_angle_is_set_past_rounding() {
     assert!(!is_set(0.0));
     assert!(!is_set(ANGLE_SET), "at the cut, not set");
@@ -204,6 +221,28 @@ fn mock_cube_third_axis_during_a_slider_drag_reads_its_target_and_back() {
 }
 
 #[test]
+fn mock_cube_third_axis_during_a_tau1_slider_drag_reads_x_and_a_held_gamma_nothing() {
+    let (mut app, mut h) = app_on(&two(0.0, 15.0));
+    assert_eq!(third(&h, &app), "Y z_μ1");
+    for (id, gesture) in [(TAU1, Some(Gesture::Tau1)), (GAMMA, None)] {
+        let rail = app.keyboard.place_of(id).expect("placed").rect;
+        let from = rail.left_center() + vec2(rail.width() * 0.3, 0.0);
+        let _ = h.frame(&mut app, vec![egui::Event::PointerMoved(from)]);
+        let _ = h.frame(&mut app, vec![button(from, true)]);
+        let _ = h.frame(&mut app, Vec::new());
+        assert_eq!(app.manifold.compass.slider, gesture, "{id} held");
+        let _ = h.frame(&mut app, vec![button(from, false)]);
+        let _ = h.frame(&mut app, Vec::new());
+        // The press set the value where it landed, a real gesture: the rest rule reads the angles next.
+        assert_eq!(app.manifold.compass.slider, None, "{id} released");
+        let tau1 = two(0.0, 15.0);
+        app.set_field(basis_edit(tau1.basis()));
+        follow(&mut h, &mut app);
+        assert_eq!(third(&h, &app), "Y z_μ1", "{id}: back at rest");
+    }
+}
+
+#[test]
 fn mock_cube_third_axis_a_compass_drag_reads_the_angle_moved_further() {
     let (mut app, mut h) = app_on(&two(0.0, 0.0));
     let sq = square(&h);
@@ -257,6 +296,10 @@ fn mock_cube_third_axis_a_drags_gesture_is_the_further_tau1_on_a_tie() {
     assert_eq!(d.gesture(), Some(Gesture::Tau2), "since it began");
     d.tau = (7.0, 6.0);
     assert_eq!(d.gesture(), Some(Gesture::Tau1), "since it began");
+    // The travel, not the angle: τ₁ far from 0 and still, τ₂ moved a little.
+    d.from = (-20.0, 0.0);
+    d.tau = (-20.0, 5.0);
+    assert_eq!(d.gesture(), Some(Gesture::Tau2), "τ₁ has not moved");
     let slicing = Drag::start(Touch::Slice, &plane, &f);
     assert_eq!(slicing.gesture(), None, "a slice is no tilt");
 }
@@ -381,11 +424,7 @@ fn mock_cube_third_axis_with_one_target_no_badge_and_the_whole_plane() {
     let len = (n[0] * n[0] + n[1] * n[1] + n[2] * n[2]).sqrt();
     let cut = d.slice.as_ref().expect("a slice").cut;
     for (got, want) in cut.normal.iter().zip(n) {
-        assert!(
-            (got - want / len).abs() < 1e-12,
-            "{:?}",
-            cut.normal
-        );
+        assert!((got - want / len).abs() < 1e-12, "{:?}", cut.normal);
     }
     assert_eq!(app.keyboard.place_of(COMPASS_BADGE), None, "never placed");
     assert!(
@@ -558,4 +597,51 @@ fn mock_cube_third_axis_the_readouts_line_takes_the_gestures_colour() {
     assert_eq!(colours.len(), 2, "two parts: {colours:?}");
     assert_eq!(colours[0], GESTURE_TAU1);
     assert_ne!(colours[1], GESTURE_TAU1);
+}
+
+#[test]
+fn mock_cube_third_axis_the_capture_cases_set_their_angles_targets_and_mode() {
+    use crate::capture::CompassCase;
+    let parameters = [
+        (CompassCase::Slice, (0.0, 0.0, 0.0), 0.25, Touch::Slice),
+        (CompassCase::Tilt0, (0.0, 0.0, 0.0), 0.0, Touch::Tilt),
+        (CompassCase::TiltRect, (30.0, 0.0, 0.0), 0.0, Touch::Tilt),
+        (CompassCase::TiltHex, (45.0, 45.0, 0.0), 0.0, Touch::Tilt),
+        (CompassCase::ThirdAxis, (0.0, 15.0, 0.0), 0.0, Touch::Tilt),
+        (CompassCase::Badge, (20.0, 15.0, 0.0), 0.0, Touch::Tilt),
+    ];
+    for (case, angles, depth, mode) in parameters {
+        assert_eq!(case.parameters(), (angles, depth, mode), "{case:?}");
+    }
+    // Each R-459 case leaves z₀ 0 on Y and picks Y = z_μ1, in the one edit that sets the basis.
+    let mut app = super::support::mock_app();
+    let mut h = super::support::headless();
+    let _ = h.frame(&mut app, Vec::new());
+    for (case, want) in [
+        (CompassCase::ThirdAxis, two(0.0, 15.0)),
+        (CompassCase::Badge, two(20.0, 15.0)),
+    ] {
+        let depth = app.snapshot().history.undo_depth;
+        for edit in case.edits(&app.snapshot().sim) {
+            app.set_field(edit);
+        }
+        follow(&mut h, &mut app);
+        let sim = &app.snapshot().sim;
+        assert_eq!(sim.slice.frame, want.frame(), "{case:?}'s frame");
+        assert_eq!(sim.plane.z0[Z_MU1], 0.0, "{case:?}: z₀ on Y");
+        assert_eq!(sim.plane.z0[Z_Q3], 0.0, "{case:?}: z₀ on X");
+        let (q1, q2) = want.basis();
+        assert_eq!((sim.plane.q1, sim.plane.q2), (q1, q2), "{case:?}'s basis");
+        assert_eq!(app.snapshot().history.undo_depth, depth + 2, "{case:?}");
+    }
+    // An older case leaves the frame the chart's.
+    let before = app.snapshot().sim.slice.frame;
+    for edit in CompassCase::Tilt0.edits(&app.snapshot().sim) {
+        app.set_field(edit);
+    }
+    follow(&mut h, &mut app);
+    assert_eq!(app.snapshot().sim.slice.frame, before);
+    rejects("a case that picks no target", || {
+        assert_eq!(before, view(0.0, 0.0, 0.0, 1.0).frame())
+    });
 }
