@@ -36,8 +36,15 @@ confirmed by the owner at the M3 gate, REQ-PAY-070).** Transcribed from the lite
   used as a symbol". The three collision points `P₀₁`, `P₀₂`, `P₁₂` cut the equator (the collinear shapes) into three
   segments, each named by the body that lies between the other two along it; the segment with body `k` between runs
   from the collision of `k` with one of the others to its collision with the other.
-- **The body map.** Appendix C's bodies 1, 2, 3 are ours 0, 1, 2, its body 2 being the Šuvakov plane's middle body, our
-  body 1 (R-630, item 3). The puncture at infinity is then `P₀₂` (Appendix C's 1–3), and:
+- **The body map.** The literature leaves it open: Appendix C's note 3 has "irrelevance of which syzygy is denoted by
+  which digit", and Appendix B lists the choice of the north-pole puncture as "Another ambiguity". Here it is settled by
+  measurement and R-630's labelling. Over the six relabellings of `fixtures/crossings/prl_orbits.json`, two read the
+  published words on all ten orbits: Table I's bodies 1, 3, 2 as ours 0, 1, 2, and its outer swap. The other four read
+  words of other lengths or classes on all ten, and Table I's literal labelling, 1, 2, 3 as ours 0, 1, 2, is one of the
+  four: its body 3 starts in the middle (`crossing_body_relabelling`). So the middle body of the orbit, Table I's 3, is
+  ours 1 (R-630, item 3, which labels the plane's chart), and is Appendix C's digit 2; Appendix C's 1 and 3 are ours 0
+  and 2. **The word is not invariant under a body relabelling:** a comparison with a published word first puts that
+  orbit's middle body at ours 1. The puncture at infinity is then `P₀₂` (Appendix C's 1–3), and:
   - cut `a` is the segment with body 0 between, from `P₀₁` to `P₀₂`;
   - cut `b` is the segment with body 2 between, from `P₁₂` to `P₀₂`;
   - the segment with body 1 between, from `P₀₁` to `P₁₂`, is not a cut and appends nothing (Appendix C's
