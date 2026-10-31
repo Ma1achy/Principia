@@ -17,6 +17,9 @@
 //!   side, and loops about each collision point reading `A`, `b` and Appendix B's `aB` (`crossing_state_cuts`).
 //! - REQ-PAY-070's cross-check: ten orbits of the PRL's Table I read their published words up to R-630 item 5's
 //!   symmetries, from `fixtures/crossings/prl_orbits.json` (`crossing_published_words`). REQ-VAL-043 is TASK-M3-30's.
+//! - A march that starts on the cut, or a rounding from it, each way (`crossing_start_on_cut`), and what a coarse
+//!   substep reads wrongly (`crossing_substep_limits`), from `fixtures/crossings/position_marches.json` (integrator
+//!   contract Part 5).
 //! - No subnormal `d` feeds the side (R-547): a distance below the normal range reads zero though its float would
 //!   round up to the least normal (`crossing_no_subnormal_distance`).
 //!
@@ -929,6 +932,80 @@ negative_control!(
     "cut a on body 2's segment and b on body 0's reads another word",
     expected = "the word read is not the fixture's",
     check_published_words(swapped_segments)
+);
+
+// ── crossing_start_on_cut, crossing_substep_limits (integrator contract Part 5) ──────────────────────────────────────
+
+/// The cases of `fixtures/crossings/position_marches.json` named `fixture`, at the precision `T`: the march from each
+/// case's states appends its letters, in order, the first state only seeding the detector.
+fn check_position_marches<T: Fixture>(cuts: Cuts<T>, fixture: &str) {
+    let path = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../fixtures/crossings/position_marches.json"
+    );
+    let text = std::fs::read_to_string(path).expect("read the position marches fixture");
+    let doc: serde_json::Value = serde_json::from_str(&text).expect("the fixture is JSON");
+    let cases: Vec<&serde_json::Value> = doc["cases"]
+        .as_array()
+        .expect("cases")
+        .iter()
+        .filter(|c| c["fixture"] == fixture)
+        .collect();
+    assert!(!cases.is_empty(), "no case of fixture {fixture}");
+    for case in cases {
+        let name = case["name"].as_str().expect("name");
+        let states: Vec<[[T; 2]; 3]> = case["states"]
+            .as_array()
+            .expect("states")
+            .iter()
+            .map(|s| {
+                let body = |k: usize| {
+                    [
+                        T::of(s[k][0].as_f64().expect("x")),
+                        T::of(s[k][1].as_f64().expect("y")),
+                    ]
+                };
+                [body(0), body(1), body(2)]
+            })
+            .collect();
+        let mut detector = CrossingDetector::new(cuts(&states[0]));
+        let mut got = Vec::new();
+        for r in &states[1..] {
+            let c = detector.accept(cuts(r));
+            got.extend_from_slice(&c.symbols[..c.count as usize]);
+        }
+        assert_eq!(
+            got,
+            codes(case["letters"].as_str().expect("letters")),
+            "{name}: the march's letters"
+        );
+    }
+}
+
+#[test]
+fn crossing_start_on_cut() {
+    check_position_marches::<f32>(state_cuts::<f32>, "start");
+    check_position_marches::<f64>(state_cuts::<f64>, "start");
+}
+
+negative_control!(
+    crossing_start_on_cut,
+    "d signed the other way reads the start's other direction",
+    expected = "the march's letters",
+    check_position_marches::<f64>(flipped::<f64>, "start")
+);
+
+#[test]
+fn crossing_substep_limits() {
+    check_position_marches::<f32>(state_cuts::<f32>, "limit");
+    check_position_marches::<f64>(state_cuts::<f64>, "limit");
+}
+
+negative_control!(
+    crossing_substep_limits,
+    "d signed the other way reads a coarse substep's letter inverted",
+    expected = "the march's letters",
+    check_position_marches::<f64>(flipped::<f64>, "limit")
 );
 
 // ── crossing_no_subnormal_distance (R-547; gpu_determinism_note, rule 6) ─────────────────────────────────────────────
