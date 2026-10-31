@@ -852,3 +852,40 @@ negative_control!(
         out
     })
 );
+
+/// A cadence that keeps nothing.
+struct Keeps;
+
+impl<R> kernel::driver::advance::Cadence<R> for Keeps {
+    fn after_step(&mut self, _state: &mut State<R>, _geom: &mut Geom<R>) {}
+    fn done(&self) -> bool {
+        false
+    }
+}
+
+/// Checks that `finish` of a cadence that keeps nothing leaves the finished run's state as it was.
+fn check_finish_leaves(
+    finish: fn(kernel::payload::SimStateBaseOf<f64>) -> kernel::payload::SimStateBaseOf<f64>,
+) {
+    let fixture = figure_eight();
+    let u = validation::drift::sim_key::<f64>(0.01);
+    let out = integrate_with::<Euler, f64, _>(&fixture.ic, &u, &mut Keeps);
+    assert_ne!(out.r, [[0.0; 2]; 3], "the run has a state");
+    assert!(finish(out) == out, "finish changed the state");
+}
+
+#[test]
+fn invariant_monitor_finish_of_a_quiet_cadence() {
+    use kernel::driver::advance::Cadence;
+    check_finish_leaves(|out| Cadence::<f64>::finish(&Keeps, out));
+}
+
+negative_control!(
+    invariant_monitor_finish_of_a_quiet_cadence,
+    "a finish that clears the positions",
+    expected = "finish changed the state",
+    check_finish_leaves(|mut out| {
+        out.r = [[0.0; 2]; 3];
+        out
+    })
+);
