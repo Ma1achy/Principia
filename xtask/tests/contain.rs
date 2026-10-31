@@ -333,6 +333,13 @@ fn finished_run(code: i32, tag: &str) -> (String, String, Scratch) {
             "while [ \"$1\" != -- ]; do shift; done\nshift\nexec \"$@\"".to_owned(),
         ),
         ("setsid", "exec \"$@\"".to_owned()),
+        // The cgroup the run notes its count from: none, as a scope killed whole leaves none noted. On Linux the real
+        // one, this test's own, would read 0 in place of the last sample's.
+        (
+            "cut",
+            "[ \"$1\" = -d: ] && { echo /nonexistent; exit 0; }\nexec /usr/bin/cut \"$@\""
+                .to_owned(),
+        ),
         (
             "curl",
             format!("printf '%s\\n' \"$@\" >> '{}'", curl.display()),
