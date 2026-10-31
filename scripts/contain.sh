@@ -25,25 +25,36 @@
 #                                         the script, if one is given.
 #
 # The heartbeat survives the runner's death: while a run lasts, every 2 minutes, it sets a commit status (context
-# HEARTBEAT_CONTEXT on HEARTBEAT_SHA, with HEARTBEAT_TOKEN) to the memory, disk, tasks, out-of-memory kills, the number of
-# logs and the newest log under HEARTBEAT_OUT/log, the mutant under test (`baseline.log` while the baseline runs). A
+# HEARTBEAT_CONTEXT on HEARTBEAT_SHA, with HEARTBEAT_TOKEN) to the memory, disk, copy-on-write store, tasks, out-of-memory
+# kills, the number of logs and the newest log under HEARTBEAT_OUT/log, the mutant under test (`baseline.log` while the
+# baseline runs). A
 # finished run's says "finished". GitHub keeps a status when a job's log is lost, so after a death
 # `gh api repos/<repo>/commits/<sha>/statuses` names what was running and how the machine stood. Always state `success`:
 # it reports, and never holds a merge. The token is kept from the contained command.
 set -euo pipefail
 
-# Under each: an init that stays while the command runs, so that orphans are reaped; a shell's wait takes any child.
-# `; exit` keeps bash from exec'ing the command in its place.
-TEST_INIT='"$@"; rc=$?; exit "$rc"'
-RUN_INIT='uid=$1 gid=$2 envfile=$3; shift 3
-setpriv --reuid="$uid" --regid="$gid" --init-groups -- bash -c '\''. "$1"; shift; exec "$@"'\'' contain-env "$envfile" "$@"
-rc=$?; exit "$rc"'
+# Under each: an init that stays while the command runs, so that orphans are reaped; a shell's wait takes any child. The
+# command gets a session of its own, so its process group is one the namespace can see: a group outside it reads as 0,
+# which getpgrp's callers don't expect (rustix panics). Group signals from outside, nextest's, then reach only the init,
+# which passes on a SIGTERM. A SIGKILL to the outer group kills `unshare`, and with it the namespace.
+# shellcheck disable=SC2016 # expanded by the init
+INIT='trap '\''kill -TERM "$child" 2> /dev/null'\'' TERM INT
+setsid "$@" &
+child=$!
+while :; do
+  wait "$child"; rc=$?
+  kill -0 "$child" 2> /dev/null || exit "$rc"
+done'
+# shellcheck disable=SC2016 # expanded inside
+RUN_AS='uid=$1 gid=$2 envfile=$3; shift 3
+exec setpriv --reuid="$uid" --regid="$gid" --init-groups -- bash -c '\''. "$1"; shift; exec "$@"'\'' contain-env "$envfile" "$@"'
 
 # Memory: the runner has 16 GiB and no swap (mutants.yml removes it); this leaves its agent and the kernel the rest.
 MEMORY_MAX=14500M
 TASKS_MAX=16384
 # Below this much free disk the run is stopped: a full disk takes the agent's own logging with it.
 DISK_FLOOR_GIB=3
+COW_CEILING_PERCENT=97
 SAMPLE_SECS=30
 POST_EVERY=4
 
@@ -73,8 +84,17 @@ sample() {
   logs=$(find "${HEARTBEAT_OUT:-/nonexistent}/log" -type f 2> /dev/null | wc -l || true)
   # The newest log's name, its last 48 characters: a mutant's file, line and column.
   newest=$(ls -t "${HEARTBEAT_OUT:-/nonexistent}/log" 2> /dev/null | head -1 | tail -c 48 || true)
-  printf '+%dm mem %sG disk %sG tasks %s oom %s logs %s %s' "$((($(date +%s) - began) / 60))" \
-    "$mem" "$disk" "$tasks" "${oom:-?}" "$logs" "$newest"
+  printf '+%dm mem %sG disk %sG cow %s tasks %s oom %s logs %s %s' "$((($(date +%s) - began) / 60))" \
+    "$mem" "$disk" "$(cow_percent)" "$tasks" "${oom:-?}" "$logs" "$newest"
+}
+
+# How full the root's copy-on-write store is, where it has one. Some hosted runners have one (`/dev/mapper/cow-root`,
+# 72G, against the usual 145G `/dev/root`: mutants shard 3 of run 41193733373). Deleting files doesn't empty such a
+# store, so `df` may show room it doesn't have, and a store that fills fails the machine's whole root disk. `-` where
+# there is none.
+cow_percent() {
+  sudo -n dmsetup status 2> /dev/null | awk '$4 == "snapshot" { split($5, u, "/"); if (u[2] > 0) { printf "%d", 100 * u[1] / u[2]; found = 1 } }
+    END { if (!found) printf "-" }' || true
 }
 
 post() {
@@ -85,7 +105,7 @@ post() {
 }
 
 heartbeat() {
-  local unit=$1 began=$2 n=0 line free
+  local unit=$1 began=$2 n=0 line free cow
   # A failed sample is not the end of the heartbeat.
   set +e
   while :; do
@@ -97,8 +117,9 @@ heartbeat() {
     fi
     n=$((n + 1))
     free=$(df -BG --output=avail / | tail -1 | tr -dc 0-9)
-    if [ "${free:-0}" -lt "$DISK_FLOOR_GIB" ]; then
-      echo "::error::contain.sh: ${free} GiB of disk left: stopping the run before it takes the runner"
+    cow=$(cow_percent)
+    if [ "${free:-0}" -lt "$DISK_FLOOR_GIB" ] || { [ "$cow" != - ] && [ "${cow:-0}" -ge "$COW_CEILING_PERCENT" ]; }; then
+      echo "::error::contain.sh: ${free} GiB of disk left, copy-on-write store ${cow}% full: stopping the run before it takes the runner"
       post "disk floor: stopped. $line"
       sudo -n systemctl kill --signal=SIGKILL "$unit.scope" || true
     fi
@@ -119,13 +140,15 @@ run_contained() {
   envfile=$(mktemp "${RUNNER_TEMP:-/tmp}/contain-env.XXXXXX")
   # sudo strips the environment; the command gets all of this one, PATH and LD_LIBRARY_PATH included.
   declare -px > "$envfile"
+  df -h / || true
+  sudo -n dmsetup status 2> /dev/null || true
   heartbeat "$unit" "$began" &
   watcher=$!
   set +e
   sudo -n systemd-run --scope --quiet --unit="$unit" -p MemoryMax="$MEMORY_MAX" -p TasksMax="$TASKS_MAX" \
     -p CPUWeight=20 -p IOWeight=20 -p OOMPolicy=continue -- \
     unshare --pid --fork --kill-child --mount-proc \
-    bash -c "$RUN_INIT" contain-init "$uid" "$gid" "$envfile" "$@" < /dev/null
+    bash -c "$INIT" contain-init bash -c "$RUN_AS" contain-user "$uid" "$gid" "$envfile" "$@" < /dev/null
   rc=$?
   set -e
   kill "$watcher" 2> /dev/null || true
@@ -140,7 +163,7 @@ run_contained() {
 
 run_test() {
   [ "${PRIN_TEST_PIDNS:-}" = 1 ] || exec "$@"
-  exec unshare --user --map-current-user --pid --fork --kill-child --mount-proc bash -c "$TEST_INIT" contain-init "$@"
+  exec unshare --user --map-current-user --pid --fork --kill-child --mount-proc bash -c "$INIT" contain-init "$@"
 }
 
 # Each containment: `kill -9 -1` inside must leave a process of this user outside alive, must not see it, and what the
@@ -157,6 +180,7 @@ check() {
   # shellcheck disable=SC2016 # expanded inside
   local probe='[ "$(cat /proc/1/comm)" = bash ] || exit 41
     if kill -0 "$1" 2> /dev/null; then exit 42; fi
+    [ "$(ps -o pgid= -p $$)" -gt 0 ] || exit 43
     kill -9 -1 2> /dev/null
     setsid sleep "$2" < /dev/null > /dev/null 2>&1 &
     exit 0'
