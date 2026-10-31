@@ -332,9 +332,10 @@ fn button(pos: Pos2, pressed: bool) -> Event {
     }
 }
 
-/// Dragging the fade's slider sends nothing while it moves and one `SetField` when it ends (R-96).
+/// Dragging the fade's slider is live: the graph follows the slider every frame, the whole drag one history entry, one
+/// `SetField` line and one recompile, at the release (R-96, R-458 F2).
 #[test]
-fn mock_stain_preview_a_slider_drag_is_one_set_field() {
+fn mock_stain_preview_a_slider_drag_is_live_and_one_entry() {
     let (mut app, mut h) = on_stain(mock_app());
     select(&mut app, &mut h, LATE_FADE);
     let slider = nodes(&mut h, &mut app)
@@ -344,30 +345,39 @@ fn mock_stain_preview_a_slider_drag_is_one_set_field() {
     let r = slider.rect;
     let at = |f: f32| pos2(r.min.x + f * r.width(), r.center().y);
     let (g0, d0, rows) = (graph(&app).clone(), depth(&app), app.console().len());
-    let mut frames = vec![
-        vec![Event::PointerMoved(at(0.3))],
-        vec![button(at(0.3), true)],
-    ];
+    let fade = |g: &StainGraph| g.node(LATE_FADE).and_then(|n| n.params.get(FADE).cloned());
+    let _ = h.frame(&mut app, vec![Event::PointerMoved(at(0.3))]);
+    let _ = h.frame(&mut app, vec![button(at(0.3), true)]);
+    let mut during = Vec::new();
     for f in [0.4, 0.5, 0.6, 0.7] {
-        frames.push(vec![Event::PointerMoved(at(f))]);
+        let _ = h.frame(&mut app, vec![Event::PointerMoved(at(f))]);
+        during.push((f, depth(&app), fade(graph(&app)).map(|v| v[0])));
     }
-    for events in frames {
-        let _ = h.frame(&mut app, events);
-        assert_eq!(depth(&app), d0, "a SetField mid-drag");
+    for (f, d, v) in &during {
+        assert_eq!(*d, d0 + 1, "one entry while dragged: {during:?}");
+        assert!(
+            v.is_some_and(|v| (v - f64::from(*f)).abs() < 0.05),
+            "the fade at {f}: {during:?}"
+        );
     }
-    assert!(
-        app.stain.param_drag.is_some(),
-        "the drag held in the editor"
-    );
+    rejects("a drag sent only at its end", || {
+        assert!(during.iter().all(|(_, d, _)| *d == d0))
+    });
+    let recompiled = |app: &App<MockSide>| {
+        logged(app, rows)
+            .iter()
+            .filter(|m| *m == RECOMPILED)
+            .count()
+    };
+    assert_eq!(recompiled(&app), 0, "a recompile mid-drag");
     let _ = h.frame(&mut app, vec![button(at(0.7), false)]);
     let _ = h.frame(&mut app, Vec::new());
-    let fade = |g: &StainGraph| g.node(LATE_FADE).and_then(|n| n.params.get(FADE).cloned());
     check_one_edit((&g0, d0, rows), &app, |g| {
         fade(g).is_some_and(|v| (v[0] - 0.7).abs() < 0.05)
     });
-    assert_eq!(app.stain.param_drag, None);
-    rejects("a drag sent at each move", || {
-        assert_eq!(depth(&app), d0 + 5)
+    assert_eq!(recompiled(&app), 1, "one recompile at the release");
+    rejects("a drag of an entry per move", || {
+        assert_eq!(depth(&app), d0 + 4)
     });
 }
 
@@ -429,7 +439,6 @@ fn mock_stain_preview_a_slider_click_is_one_set_field() {
     check_one_edit((&g0, d0, rows), &app, |g| {
         fade(g).is_some_and(|v| (v[0] - 0.8).abs() < 0.05)
     });
-    assert_eq!(app.stain.param_drag, None);
     rejects("the fade unchanged", || {
         check_one_edit((&g0, d0, rows), &app, |g| fade(g).is_none())
     });
@@ -487,30 +496,5 @@ fn mock_stain_preview_inspector_sections() {
     assert_eq!(crate::stain::problems::heading(None), "Problems · 0");
     rejects("Replace-L shown selected", || {
         assert!(lit(rect("Replace-L")))
-    });
-}
-
-/// While the fade's slider is dragged, it shows the dragged value; a drag held for another node or param does not
-/// move it.
-#[test]
-fn mock_stain_preview_a_dragged_slider_shows_its_value() {
-    let (mut app, mut h) = on_stain(mock_app());
-    select(&mut app, &mut h, LATE_FADE);
-    let shown = |app: &mut App<MockSide>, h: &mut Headless, drag: Option<(NodeId, &str)>| {
-        app.stain.param_drag = drag.map(|(n, p)| (n, p.to_owned(), 0.9));
-        let v = nodes(h, app)
-            .into_iter()
-            .find(|n| n.role == Role::Slider)
-            .and_then(|n| n.value)
-            .expect("the slider's value");
-        app.stain.param_drag = None;
-        v
-    };
-    assert!((shown(&mut app, &mut h, Some((LATE_FADE, FADE))) - 0.9).abs() < 1e-6);
-    assert!((shown(&mut app, &mut h, Some((LATE_FADE, "other"))) - 0.12).abs() < 1e-6);
-    assert!((shown(&mut app, &mut h, Some((NodeId(4), FADE))) - 0.12).abs() < 1e-6);
-    assert!((shown(&mut app, &mut h, None) - 0.12).abs() < 1e-6);
-    rejects("another node's drag shown", || {
-        assert!((shown(&mut app, &mut h, Some((NodeId(4), FADE))) - 0.9).abs() < 1e-6)
     });
 }

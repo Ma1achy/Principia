@@ -282,6 +282,35 @@ except for adding `mutants-check`, the one change R-305 allows. The human remove
 checks until #96 (TASK-M0-14) merges, since PRs off `main` never report it. Tell the human the moment #96 merges, so
 they can add it back.
 
+**What CI runs on a pull request (R-656).** `ci.yml` runs on a push to `main` (and to a `measure/` branch, R-272)
+and, for a pull request, through `pull_request` only, once per push. Each workflow that builds or tests keeps one
+`concurrency` group per pull request, so a push cancels the run on the head it supersedes; a run on `main` is never
+cancelled (`reviews.yml`, `no-atlas-params.yml` and `gemini-dispatch.yml` keep none, decisions.md R-656). `ci.yml`'s
+`changes` job, and `mutants-fixture` in a step of its own, classify the change with `scripts/ci_changes.sh` (the pull
+request's merge commit against the base it merges onto; any other run runs everything):
+- **docs-only** (every path on the script's allowlist: `docs/`, the plan's prose and data, the root's markdown; never
+  `.github/` or `plan/`'s Python; and none on its list of files code reads, which count as code, the owner's words
+  of 30 Oct 2026 on #351, decisions.md R-656: every `.md` and `.html` under `docs/`, `docs/gui/design/`,
+  `docs/gui/reference/`, all of `plan/`, the root's markdown and `fixtures/`, each with its readers named in the
+  script, so only `docs/`'s other files, such as the incoming papers and data, are docs-only): the build, test,
+  release and controls jobs and the GPU suites' jobs are skipped, and `ci-workspace` runs the plan checks, the
+  vocabulary lint and the tests that name the allowlist's paths (a backstop) in place of its tests;
+  `mutants-fixture` skips its steps; `mutants`' shards find no `.rs` file and pass;
+- **no GPU-path file** (only docs-only paths, `crates/gui/` and `crates/prin/`; a file code reads is a GPU path):
+  the GPU suites' jobs (`gpu-kernel suites`, `gpu-metal suites`, `gpu-lavapipe suites`) are skipped; everything else
+  runs.
+
+Every required check still reports under its own name and concludes success, so the merge step is unchanged:
+`merge-batch.sh`'s `gh pr checks --required` reads `pass` for each. A skipped job never bears a required name: the
+required checks `ci`, `xtask-ci`, `gpu-kernel`, `gpu-metal` and `gpu-lavapipe` are gates that run whatever their jobs
+ended in and pass a skipped one only on the classification's verdict, and matrix jobs are named `<id> (<shard>)`.
+Mutants run on every head whose diff has Rust in it, and the superseded head's run is cancelled, so the run that
+finishes is the merge-ready head's; nothing requests it at merge time. What a pull request skips runs on `main` after
+it merges, where every job runs. A superseded head's cancelled run leaves its gates failed or cancelled, as before:
+the owner kept them as they are, TASK-M0-45's checks and R-266 standing (30 Oct 2026, on #351, no ruling). A new
+test, build script, codegen step or xtask check that reads a doc, spec or data file adds that file to
+`scripts/ci_changes.sh`'s list of files code reads; `xtask/tests/ci_changes.rs` scans for a literal path missing from it.
+
 **Numbers.**
 - **RQ ids.** Before filing an RQ, take the next free id across every `origin/*` branch: `git fetch`, then search each
   branch's `REVIEW_QUEUE.md` and `docs/archive/review_queue/`. Two agents once both filed RQ-188.

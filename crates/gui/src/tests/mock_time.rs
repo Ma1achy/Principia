@@ -1,6 +1,7 @@
 //! `mock_time` (REQ-GUI-173; render_gui_spec §G2, §G3; R-404, R-409 G1–G6): Time plays through no-history `SetField`s
 //! on the playhead, at the transport's speed, and stops at the horizon `T`; its step buttons move by one `TimeStep`,
-//! each an undoable `SetField`; a scrub is one `SetField`, sent when the drag ends; Space plays in Time, in either mode;
+//! each an undoable `SetField`; a scrub is live, its edit sent every frame the time moves, the drag one entry and one
+//! console line (R-458 F2); Space plays in Time, in either mode;
 //! in interaction mode on the scrubber, ← → step the time by `TimeStep`, on speed by `Bounded`. Each check also runs on
 //! an input it must reject (R-176, through `rejects`).
 
@@ -313,7 +314,7 @@ fn mock_time_enter_on_a_button_is_its_click() {
     });
 }
 
-// --- The scrub: one SetField, sent on release -------------------------------------------------------------------------
+// --- The scrub: live, one entry and one line -------------------------------------------------------------------------
 
 /// Drags the scrubber from fraction `from` of its rail to each of `to`, then releases: the frames' events.
 fn drag(app: &App<MockSide>, from: f32, to: &[f32]) -> Vec<Vec<Event>> {
@@ -348,39 +349,54 @@ fn drag(app: &App<MockSide>, from: f32, to: &[f32]) -> Vec<Vec<Event>> {
 }
 
 #[test]
-fn mock_time_scrub_is_one_setfield_on_release() {
+fn mock_time_scrub_is_live_and_one_entry() {
     let (mut app, mut h) = app();
     let from = app.console().len();
-    let events = drag(&app, 0.1, &[0.3, 0.5, 0.7]);
+    let to = [0.3, 0.5, 0.7];
+    let events = drag(&app, 0.1, &to);
     let n = events.len();
     let mut during = Vec::new();
     for (i, e) in events.into_iter().enumerate() {
         let _ = h.frame(&mut app, e);
-        if i + 2 < n {
-            during.push((app.snapshot().history.undo_depth, app.time.scrub));
+        if (2..n - 2).contains(&i) {
+            let s = app.snapshot();
+            during.push((s.history.undo_depth, s.render.playhead.t));
         }
     }
-    // While dragged, nothing is sent: the scrubber previews the time.
-    assert!(during.iter().all(|(depth, _)| *depth == 0), "{during:?}");
-    assert!(
-        during.iter().any(|(_, s)| s.is_some()),
-        "the drag previews: {during:?}"
-    );
+    // While dragged, the playhead follows the pointer every frame, the whole drag one entry (R-458 F2).
+    assert_eq!(during.len(), to.len(), "{during:?}");
+    for ((depth, t), f) in during.iter().zip(to) {
+        assert_eq!(*depth, 1, "one entry while dragged: {during:?}");
+        assert!(
+            (t - f64::from(f) * MOCK_T_MAX).abs() < 0.05 * MOCK_T_MAX,
+            "the playhead at {f} of the rail: {during:?}"
+        );
+    }
+    rejects("a scrub applied only on release", || {
+        assert!(during.iter().all(|(depth, _)| *depth == 0))
+    });
     let (t, depth) = now(&mut h, &mut app);
-    assert_eq!(depth, 1, "one SetField for the scrub");
-    assert_eq!(playhead_lines(&app, from).len(), 1);
+    assert_eq!(depth, 1, "one entry for the scrub");
+    assert_eq!(
+        playhead_lines(&app, from).len(),
+        1,
+        "one line for the scrub"
+    );
     assert!(
         (t - 0.7 * MOCK_T_MAX).abs() < 0.05 * MOCK_T_MAX,
         "the release's time: {t}"
     );
-    assert_eq!(app.time.scrub, None, "the preview ends with the drag");
-    rejects("a scrub of three SetFields", || assert_eq!(depth, 3));
+    rejects("a scrub of three entries", || assert_eq!(depth, 3));
+    // One undo restores the time before the scrub.
+    app.undo();
+    let (t, depth) = now(&mut h, &mut app);
+    assert_eq!((t, depth), (0.0, 0), "one undo of the scrub");
     // A click on the rail, no drag: one SetField too.
     for e in drag(&app, 0.2, &[]) {
         let _ = h.frame(&mut app, e);
     }
     let (t, depth) = now(&mut h, &mut app);
-    assert_eq!(depth, 2);
+    assert_eq!(depth, 1);
     assert!((t - 0.2 * MOCK_T_MAX).abs() < 0.05 * MOCK_T_MAX, "{t}");
 }
 

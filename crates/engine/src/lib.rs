@@ -21,6 +21,7 @@ pub mod contract {
     pub mod canvas;
     pub mod conformance;
     pub mod fast_math;
+    pub mod history;
     pub mod interface;
     pub mod legend;
     pub mod log;

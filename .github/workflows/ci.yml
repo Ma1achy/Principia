@@ -29,6 +29,24 @@
 # GitHub-hosted runners (R-186); the GPU jobs are GitHub-hosted too, so R-174's same-repository guard stays dormant
 # until a self-hosted job is added (R-186).
 #
+# What runs when (R-656). A push runs this workflow only on `main` (and on a `measure/` branch, which never has a pull
+# request, R-272); a pull request's pushes run it through `pull_request`, once each, never twice. Every run on `main`
+# runs every job. On a pull request, the `changes` job classifies the change with `scripts/ci_changes.sh` (its merge
+# commit against the base it merges onto), and:
+# - a docs-only change (only paths on the script's allowlist, `docs/`, the plan's prose and data and the root's
+#   markdown, and none on its list of files code reads, which count as code: every doc, spec or data file a test, build
+#   script, codegen or xtask check reads, the owner's words of 30 Oct 2026 on #351) skips `ci-archive` and the `ci`
+#   shards, `ci-checks`, `ci-release-archive` and its shards, and `xtask-ci`'s shards, and `ci-workspace` runs the docs
+#   checks in place of its tests: the plan checks, the vocabulary lint and every test whose source names the
+#   allowlist's paths, a backstop;
+# - a change to no GPU-path file (only docs-only paths, `crates/gui/` and `crates/prin/`; a file code reads is a GPU
+#   path) skips the GPU suites' jobs, `gpu-kernel`, `gpu-metal` and `gpu-lavapipe`.
+# The required checks still report, under their own names, and conclude success: each is a gate that runs whatever
+# the jobs it gathers ended in (`ci`, `xtask-ci`, and the GPU suites' gates, which carry the names `gpu-kernel`,
+# `gpu-metal` and `gpu-lavapipe`, the suites' jobs being named `<id> suites`), and passes a gathered job that was
+# skipped only when the classification ran and skipped it. A matrix job is named `<id> (<shard>)`, so a skipped one
+# never reports a bare required name.
+#
 # Caches (R-285), in every workflow: the cargo registry and git directories, through rust-cache with its target cache
 # and ~/.cargo/bin cache off, and the fixture pool, saved by the `ci` job alone. Never a whole target directory, so the
 # repository's Actions cache stays well under GitHub's 10 GB limit. Every key names its job: rust-cache's `shared-key`
@@ -49,11 +67,13 @@ name: ci
 
 on:
   push:
+    branches: [main, "measure/**"]
   pull_request:
 
 # A newer push to the same ref supersedes an older run, so the older run on that ref is cancelled. On `main` each
 # run has a group of its own (its run id), so no run there is ever cancelled or queued behind another (applied per
-# R-369).
+# R-369). A pull request's runs are all `pull_request` runs on its merge ref, `refs/pull/<n>/merge`: one group per pull
+# request, so a push to it cancels the run on the head it supersedes (R-656).
 concurrency:
   group: ci-${{ github.event_name }}-${{ github.ref == 'refs/heads/main' && github.run_id || github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
@@ -68,12 +88,31 @@ env:
   CARGO_PROFILE_TEST_DEBUG: line-tables-only
 
 jobs:
+  # What a pull request's change touches (R-656): `docs_only`, true when every changed path is on the docs-only
+  # allowlist and none on the list of files code reads, and `gpu`, false when no changed path is a GPU path
+  # (`scripts/ci_changes.sh`, which holds the lists).
+  # Every other run, on `main` among them, is neither: everything runs. The jobs below skip on its verdict, and the
+  # gates read it.
+  changes:
+    runs-on: ubuntu-24.04
+    outputs:
+      docs_only: ${{ steps.changes.outputs.docs_only }}
+      gpu: ${{ steps.changes.outputs.gpu }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: scripts/ci_changes.sh detect
+        id: changes
+        run: scripts/ci_changes.sh detect
+
   # The workspace's tests, built once for the `ci` shards (R-372, REQ-SYS-078): `cargo nextest archive` builds every
   # test binary of the one feature set the shards run, the default, and writes them, with what running them needs (the
   # build scripts' output, the standard library, the workspace's metadata), to one archive, which this job uploads as
   # the workflow artifact `nextest-ci`. NEXTEST_PROFILE names the `ci` profile the shards run under
   # (`.config/nextest.toml`).
+  # Skipped on a docs-only pull request (R-656), and with it the `ci` shards, which need its archive.
   ci-archive:
+    needs: changes
+    if: needs.changes.outputs.docs_only != 'true'
     runs-on: ubuntu-24.04
     outputs:
       bytes: ${{ steps.size.outputs.bytes }}
@@ -125,6 +164,7 @@ jobs:
   ci:
     needs: ci-archive
     runs-on: ubuntu-24.04
+    name: ci (${{ matrix.shard }})
     permissions:
       contents: read
       actions: read
@@ -224,10 +264,18 @@ jobs:
   # The xtask tests that run cargo on the workspace's own target directory (`.config/nextest.toml`'s `ci-workspace`
   # profile), beside the `ci` shards and on a build of their own (R-372, REQ-SYS-078): run from the shards' archive,
   # which carries no cargo build state, each would rebuild the workspace in its shard while holding every test thread.
+  # On a docs-only pull request (R-656) it runs the docs checks in their place, the one test job such a pull request
+  # runs: the plan checks, the vocabulary lint, and every test whose source names the allowlist's paths, which
+  # `scripts/ci_changes.sh doc-tests` lists (a test or source naming one; a backstop, since a file code reads counts
+  # as code and never makes a pull request docs-only), under the `ci` profile, as the shards run them; the tests that need the built kernel or run cargo on the workspace's own target, which that profile leaves to
+  # `gpu-kernel` and this job's own run, run on `main`'s push. It passes the classification on to the gate `ci`.
   ci-workspace:
     runs-on: ubuntu-24.04
     env:
       PRIN_GPU_BACKEND: vulkan
+    needs: changes
+    outputs:
+      docs_only: ${{ needs.changes.outputs.docs_only }}
     steps:
       - uses: actions/checkout@v4
       # Runner disk: the xtask build and its tests' own cargo runs on the workspace, `cargo xtask controls` and `cargo
@@ -263,15 +311,45 @@ jobs:
         with:
           tool: cargo-nextest@0.9.146
       - name: cargo nextest run -p xtask
+        if: needs.changes.outputs.docs_only != 'true'
         env:
           NEXTEST_PROFILE: ci-workspace
         run: cargo nextest run -p xtask
       - name: cargo test -p xtask --doc
+        if: needs.changes.outputs.docs_only != 'true'
         run: cargo test -p xtask --doc
+      # The docs checks, on a docs-only pull request only (R-656).
+      - name: python3 plan/check_plan.py
+        if: needs.changes.outputs.docs_only == 'true'
+        run: python3 plan/check_plan.py
+      - name: python3 plan/tools/current_rules.py --check
+        if: needs.changes.outputs.docs_only == 'true'
+        run: python3 plan/tools/current_rules.py --check
+      - name: cargo xtask lint vocab
+        if: needs.changes.outputs.docs_only == 'true'
+        run: cargo xtask lint vocab
+      # One nextest run per package, each over that package's selected targets (`-p <package> --test <target>…`, and
+      # `--lib --bins` where its source names a docs-only path), so cargo builds only those.
+      - name: cargo nextest run (the tests that read docs-only paths)
+        if: needs.changes.outputs.docs_only == 'true'
+        env:
+          NEXTEST_PROFILE: ci
+        run: |
+          set -euo pipefail
+          scripts/ci_changes.sh doc-tests > "$RUNNER_TEMP/doc-tests.txt"
+          cat "$RUNNER_TEMP/doc-tests.txt"
+          while read -r args; do
+            echo "::group::cargo nextest run $args"
+            # shellcheck disable=SC2086 # one word per argument, as the script prints them
+            cargo nextest run --no-tests=pass $args
+            echo "::endgroup::"
+          done < "$RUNNER_TEMP/doc-tests.txt"
 
   # Formatting, lints, the docs, the build and the crate-graph check, once, beside the test shards (R-195, R-387,
-  # REQ-SYS-004).
+  # REQ-SYS-004). Skipped on a docs-only pull request (R-656): no docs-only path is compiled.
   ci-checks:
+    needs: changes
+    if: needs.changes.outputs.docs_only != 'true'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -313,7 +391,9 @@ jobs:
         run: cargo xtask deps
 
   # The required check `ci` (R-266): every `ci` shard, `ci-checks` and `ci-workspace` passed. It runs whatever they
-  # ended in (`always()`), so a failed or cancelled job turns it red rather than skipping it.
+  # ended in (`always()`), so a failed or cancelled job turns it red rather than skipping it. R-656: a skipped job
+  # passes only on a docs-only pull request, which `ci-workspace`, having run its docs checks, passes on (DOCS_ONLY);
+  # if the classification failed, `ci-workspace` was skipped and passes nothing on, so the skips turn it red.
   ci-gate:
     name: ci
     needs: [ci, ci-checks, ci-workspace]
@@ -323,7 +403,8 @@ jobs:
       - name: every job it gathers passed
         env:
           RESULTS: ${{ join(needs.*.result, ' ') }}
-        run: for r in $RESULTS; do [ "$r" = success ] || { echo "a job ci gathers ended $r"; exit 1; }; done
+          DOCS_ONLY: ${{ needs.ci-workspace.outputs.docs_only }}
+        run: for r in $RESULTS; do [ "$r" = success ] || { [ "$r" = skipped ] && [ "$DOCS_ONLY" = true ]; } || { echo "a job ci gathers ended $r"; exit 1; }; done
 
   # The native tests at the release profile, on every push (R-547, REQ-TOOL-189): the pinned nightly miscompiled plain
   # Rust above opt-level 0 in rustc's MIR GVN pass (RQ-299), which the other jobs, building the tests at opt-level 0,
@@ -335,7 +416,11 @@ jobs:
   # those that run cargo on the workspace's own target directory, which `ci-workspace` runs. Not gathered by the
   # required check `ci`, as `gpu-kernel` is not (applied per R-369). The archive job frees the runner's disk as
   # `ci-checks` does.
+  # Skipped on a docs-only pull request (R-656), and with it `ci-release`, which needs its archive; neither is gathered
+  # by a required check.
   ci-release-archive:
+    needs: changes
+    if: needs.changes.outputs.docs_only != 'true'
     runs-on: ubuntu-24.04
     outputs:
       bytes: ${{ steps.size.outputs.bytes }}
@@ -454,6 +539,9 @@ jobs:
     runs-on: ubuntu-24.04
     env:
       PRIN_GPU_BACKEND: vulkan
+    name: gpu-kernel suites
+    needs: changes
+    if: needs.changes.outputs.gpu == 'true'
     steps:
       - uses: actions/checkout@v4
       # The toolchain rust-toolchain.toml pins, with its components: rust-gpu's nightly, on which the whole workspace
@@ -500,6 +588,20 @@ jobs:
       - name: cargo test -p validation -p xtask -p engine --doc
         run: cargo test -p validation -p xtask -p engine --doc
 
+  # The required check `gpu-kernel` (R-656): `gpu-kernel`'s suites passed, or were skipped because the
+  # classification found no GPU-path file in the pull request's change. It runs whatever they ended in (`always()`).
+  gpu-kernel-gate:
+    name: gpu-kernel
+    needs: [changes, gpu-kernel]
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      - name: the suites passed, or the change has no GPU-path file
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+          NO_GPU: ${{ needs.changes.result == 'success' && needs.changes.outputs.gpu == 'false' }}
+        run: for r in $RESULTS; do [ "$r" = success ] || { [ "$r" = skipped ] && [ "$NO_GPU" = true ]; } || { echo "a job gpu-kernel gathers ended $r"; exit 1; }; done
+
   # `cargo xtask ci` in jobs of their own, beside the tests (R-235), as 4 parallel shards (R-360, REQ-SYS-077):
   # `cargo xtask ci --partition <k>/4` runs `cargo xtask build-kernel`, whose WGSL the kernel tests' controls dispatch,
   # in every shard; then `cargo xtask controls` on the controls whose names fall in slice k of 4, failing on any finding
@@ -516,6 +618,11 @@ jobs:
       fail-fast: false
       matrix:
         shard: [1, 2, 3, 4]
+    # R-656: skipped on a docs-only pull request, whose plan-check and vocabulary lint `ci-workspace` runs then; the
+    # gate `xtask-ci` passes the skip only on that verdict. It waits on the classification alone (R-235).
+    name: xtask-ci (${{ matrix.shard }})
+    needs: changes
+    if: needs.changes.outputs.docs_only != 'true'
     steps:
       - uses: actions/checkout@v4
       # Runner disk: on PRs #251 and #252, shard 2 ran out of space 25–30 min into `cargo xtask ci` ("No space left on
@@ -577,23 +684,28 @@ jobs:
           path: ~/.cache/rust-gpu
           key: rust-gpu-xtask-ci-${{ runner.os }}-${{ steps.toolchain.outputs.channel }}
 
-  # The required check `xtask-ci` (R-266): every `xtask-ci` shard passed, as `ci-gate` gathers `ci`'s.
+  # The required check `xtask-ci` (R-266): every `xtask-ci` shard passed, as `ci-gate` gathers `ci`'s. R-656: the
+  # shards may be skipped only when the classification ran and found a docs-only pull request (DOCS_ONLY).
   xtask-ci-gate:
     name: xtask-ci
-    needs: [xtask-ci]
+    needs: [xtask-ci, changes]
     if: always()
     runs-on: ubuntu-24.04
     steps:
       - name: every job it gathers passed
         env:
           RESULTS: ${{ join(needs.*.result, ' ') }}
-        run: for r in $RESULTS; do [ "$r" = success ] || { echo "a job xtask-ci gathers ended $r"; exit 1; }; done
+          DOCS_ONLY: ${{ needs.changes.result == 'success' && needs.changes.outputs.docs_only == 'true' }}
+        run: for r in $RESULTS; do [ "$r" = success ] || { [ "$r" = skipped ] && [ "$DOCS_ONLY" = true ]; } || { echo "a job xtask-ci gathers ended $r"; exit 1; }; done
 
   # GitHub-hosted Apple silicon, paravirtual Metal: the Metal correctness suites only (R-169, R-186).
   gpu-metal:
     runs-on: macos-15
     env:
       PRIN_GPU_BACKEND: metal
+    name: gpu-metal suites
+    needs: changes
+    if: needs.changes.outputs.gpu == 'true'
     steps:
       - uses: actions/checkout@v4
       # The toolchain rust-toolchain.toml pins, with its components: rust-gpu's nightly, on which the whole workspace
@@ -701,11 +813,28 @@ jobs:
       - name: cargo test -p xtask --features controls golden_halfway --doc
         run: cargo test -p xtask --features controls golden_halfway --doc
 
+  # The required check `gpu-metal` (R-656): `gpu-metal`'s suites passed, or were skipped because the
+  # classification found no GPU-path file in the pull request's change. It runs whatever they ended in (`always()`).
+  gpu-metal-gate:
+    name: gpu-metal
+    needs: [changes, gpu-metal]
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      - name: the suites passed, or the change has no GPU-path file
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+          NO_GPU: ${{ needs.changes.result == 'success' && needs.changes.outputs.gpu == 'false' }}
+        run: for r in $RESULTS; do [ "$r" = success ] || { [ "$r" = skipped ] && [ "$NO_GPU" = true ]; } || { echo "a job gpu-metal gathers ended $r"; exit 1; }; done
+
   # lavapipe, Mesa's software Vulkan: the second backend on every commit (R-110, R-169, R-186).
   gpu-lavapipe:
     runs-on: ubuntu-24.04
     env:
       PRIN_GPU_BACKEND: vulkan
+    name: gpu-lavapipe suites
+    needs: changes
+    if: needs.changes.outputs.gpu == 'true'
     steps:
       - uses: actions/checkout@v4
       # Runner disk: the kernel build, then validation, engine and xtask built once per `--features controls` suite and
@@ -791,3 +920,17 @@ jobs:
         run: cargo nextest run -p xtask --features controls golden_halfway --no-capture
       - name: cargo test -p xtask --features controls golden_halfway --doc
         run: cargo test -p xtask --features controls golden_halfway --doc
+
+  # The required check `gpu-lavapipe` (R-656): `gpu-lavapipe`'s suites passed, or were skipped because the
+  # classification found no GPU-path file in the pull request's change. It runs whatever they ended in (`always()`).
+  gpu-lavapipe-gate:
+    name: gpu-lavapipe
+    needs: [changes, gpu-lavapipe]
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      - name: the suites passed, or the change has no GPU-path file
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+          NO_GPU: ${{ needs.changes.result == 'success' && needs.changes.outputs.gpu == 'false' }}
+        run: for r in $RESULTS; do [ "$r" = success ] || { [ "$r" = skipped ] && [ "$NO_GPU" = true ]; } || { echo "a job gpu-lavapipe gathers ended $r"; exit 1; }; done

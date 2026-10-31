@@ -399,18 +399,38 @@ fn nextest_filter(nextest: &str, profile: &str) -> Option<String> {
 
 /// REQ-TOOL-189 on `ci.yml`'s text and `.config/nextest.toml`'s.
 fn check_release_job(workflow: &str, nextest: &str) {
-    // On every push: `on:` names `push` with no filter beneath it.
+    // On every push: `on:` names `push` with no filter beneath it, or, under R-656, with only a `branches:` filter that
+    // names `main` (a pull request's pushes run through `pull_request`).
     let top = top_level(workflow);
     let push = top
         .iter()
         .position(|l| l.trim() == "push:" || l.trim() == "push: {}")
         .expect("ci.yml does not run on push");
     let push_indent = top[push].len() - top[push].trim_start().len();
+    let deeper = |at: usize| {
+        top.get(at)
+            .is_some_and(|l| l.len() - l.trim_start().len() > push_indent)
+    };
+    let filtered = if deeper(push + 1) { push + 2 } else { push + 1 };
+    if filtered == push + 2 {
+        let branches = top[push + 1].trim().strip_prefix("branches:").map(|b| {
+            b.trim()
+                .trim_start_matches('[')
+                .trim_end_matches(']')
+                .split(',')
+                .map(|n| n.trim().trim_matches('"').to_owned())
+                .collect::<Vec<_>>()
+        });
+        assert!(
+            branches.is_some_and(|b| b.iter().any(|n| n == "main")),
+            "ci.yml's push trigger is filtered: {:?}",
+            top.get(push + 1)
+        );
+    }
     assert!(
-        top.get(push + 1)
-            .is_none_or(|l| l.len() - l.trim_start().len() <= push_indent),
+        !deeper(filtered),
         "ci.yml's push trigger is filtered: {:?}",
-        top.get(push + 1)
+        top.get(filtered)
     );
     let workflow_env: Vec<String> = top.clone();
 
@@ -463,8 +483,10 @@ fn check_release_job(workflow: &str, nextest: &str) {
                     );
                 }
                 let own = job.own_lines();
+                // R-656: a docs-only pull request skips the release jobs; no other condition does.
                 assert!(
-                    key(&own, "if").is_none(),
+                    key(&own, "if")
+                        .is_none_or(|c| c == "needs.changes.outputs.docs_only != 'true'"),
                     "the release job `{}` runs only under a condition",
                     job.id
                 );
@@ -637,8 +659,8 @@ negative_control!(
     check_release_job(
         &edited(
             &read(".github/workflows/ci.yml"),
-            "  ci-release-archive:\n    runs-on: ubuntu-24.04\n",
-            "  ci-release-archive:\n    if: github.ref == 'refs/heads/main'\n    runs-on: ubuntu-24.04\n"
+            "  ci-release-archive:\n    needs: changes\n    if: needs.changes.outputs.docs_only != 'true'\n",
+            "  ci-release-archive:\n    needs: changes\n    if: github.ref == 'refs/heads/main'\n"
         ),
         &read(".config/nextest.toml")
     )
