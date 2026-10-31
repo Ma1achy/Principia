@@ -11,7 +11,8 @@
 #                                         user, in a PID namespace of its own and a cgroup scope with memory, task and
 #                                         CPU limits. Signals reach only the namespace, whose init is root's, so
 #                                         `kill(-1)` ends the run, not the runner, and the step fails, named; all of it
-#                                         dies with the namespace; an out-of-memory kill stays inside the scope. A
+#                                         dies with the namespace, and a signal to this script (a step's limit, a
+#                                         cancel) ends the scope; an out-of-memory kill stays inside the scope. A
 #                                         heartbeat outside it reports, and stops the run before the disk fills. If
 #                                         these can't be had, it fails: CI never runs this code uncontained. Without
 #                                         PRIN_CONTAIN, it just runs the command: a local run, or a test's stand-in.
@@ -128,10 +129,20 @@ heartbeat() {
   done
 }
 
+# A signal to this script: the scope runs as root, out of this user's reach, and would go on through the report's upload.
+stop_run() {
+  stopped=$((128 + $1))
+  echo "::error::contain.sh: stopped by signal $1: ending the contained run"
+  sudo -n systemctl kill --signal=SIGKILL "$unit.scope" 2> /dev/null || true
+  kill "${watcher:-}" 2> /dev/null || true
+}
+
 run_contained() {
   [ "${PRIN_CONTAIN:-}" = required ] || exec "$@"
   require_tools
-  local unit="prin-contain-$$" began uid gid envfile watcher rc limits limit
+  local began uid gid envfile rc limits limit
+  unit="prin-contain-$$"
+  stopped=""
   began=$(date +%s)
   uid=$(id -u)
   gid=$(id -g)
@@ -151,14 +162,21 @@ run_contained() {
   sudo -n dmsetup status 2> /dev/null || true
   heartbeat "$unit" "$began" &
   watcher=$!
+  trap 'stop_run 15' TERM
+  trap 'stop_run 2' INT
+  trap 'stop_run 1' HUP
   set +e
   sudo -n systemd-run --scope --quiet --unit="$unit" -p MemoryMax="$MEMORY_MAX" -p TasksMax="$TASKS_MAX" \
     -p CPUWeight=20 -p IOWeight=20 -p OOMPolicy=continue -- \
     unshare --pid --fork --kill-child --mount-proc \
     bash -c "$INIT" contain-init bash -c "$RUN_AS" contain-user "$uid" "$gid" "$envfile" "$limits" "$@" \
-    < /dev/null
+    < /dev/null &
+  # In the background, so that a signal is acted on now, not when the foreground command ends.
+  wait "$!"
   rc=$?
   set -e
+  trap - TERM INT HUP
+  rc=${stopped:-$rc}
   kill "$watcher" 2> /dev/null || true
   rm -f "$envfile"
   post "finished, exit $rc. $(sample "$unit" "$began")"
