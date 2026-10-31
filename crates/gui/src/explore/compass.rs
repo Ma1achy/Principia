@@ -39,26 +39,35 @@
 //! is its own GUI state, as its mode is. The keys: the view buttons follow Slice as siblings, Enter on one switching the
 //! view; in the Plücker view's interaction mode the arrows move the cell cursor ([`adjust`]) and Space steers
 //! ([`space`]).
+//!
+//! Its axis buttons (R-459): the Cube view's three edge labels are buttons in both modes, H (chart x), V (chart y) and the
+//! third axis, each a dropdown of the dimensions not on the other two ([`choices`]), each pick one history entry
+//! ([`pick_edit`]). In Tilt mode the third axis shows what the gesture tilts into ([`third_axis`]), in the gesture's
+//! colour, and the cube draws that gesture's plane exactly ([`gesture_view`]); with both angles set into different
+//! targets the plane is in no one cube, and the "4D: see Plücker" badge switches to the Plücker view ([`badge_shown`]).
 
 pub mod views;
 
 use eframe::egui::{
-    self, pos2, vec2, Color32, Painter, Pos2, Rect, RichText, Sense, Shape, Stroke, Ui, UiBuilder,
-    Vec2,
+    self, pos2, vec2, Button, Color32, Painter, Popup, Pos2, Rect, RichText, Sense, Shape, Stroke,
+    Ui, UiBuilder, Vec2,
 };
 use engine::contract::set_field::{Edit, SetField, SimField};
-use engine::contract::sim_config::{Latent, Lock, Plane, SimConfig, SliceFrame};
+use engine::contract::sim_config::{Latent, Lock, Plane, SimConfig, SliceFrame, LATENT_DIM};
 use engine::contract::view_ui::{Focus, KeyMode};
 
 use crate::explore::lock::GOLD;
 use crate::explore::manifold_view::tilt::{Angles, TILT_RANGE};
 use crate::explore::manifold_view::{
-    about_the_pin, add, axis, basis_edit, chart_coords, plane_s, point, z0_edit, Out, Scratch,
-    Touch, View, AXES, Z0_HALF_RANGE,
+    about_the_pin, add, axis, basis_edit, chart_coords, normal_edit, plane_edit, plane_s, point,
+    target_choices, target_edit, z0_edit, Out, Scratch, Target, Touch, View, AXES, Z0_HALF_RANGE,
 };
-use crate::explore::{COMPASS, COMPASS_SLICE, COMPASS_TILT, COMPASS_VIEW};
+use crate::explore::{
+    COMPASS, COMPASS_BADGE, COMPASS_D, COMPASS_D_ENTRIES, COMPASS_H, COMPASS_H_ENTRIES,
+    COMPASS_SLICE, COMPASS_TILT, COMPASS_V, COMPASS_VIEW, COMPASS_V_ENTRIES,
+};
 use crate::keyboard::keymap::Direction;
-use crate::keyboard::scopes::{Adjust, Base, ScopeTree, StepKind};
+use crate::keyboard::scopes::{Adjust, Base, Scope, ScopeId, ScopeTree, StepKind};
 use crate::keyboard::Keyboard;
 use views::CompassView;
 
@@ -74,6 +83,8 @@ pub const HINT_TILT: &str = "drag across to tilt q₁, up and down to tilt q₂"
 pub const HINT_SLICE: &str = "drag along the normal to move the plane";
 /// The pin's label, as 08_lock.png's.
 pub const PINNED: &str = "pinned";
+/// The badge's text (R-459).
+pub const BADGE: &str = "4D: see Plücker";
 
 // --- the reference's numbers (R-451 B6), transcribed from principia_nav_cube.html ------------------------------------
 
@@ -138,6 +149,18 @@ pub const SAME_POINT: f64 = 1e-9;
 /// An eased value this close to its target is at it, so a still compass draws its target exactly (applied per
 /// R-369).
 pub const EASE_SNAP: f64 = 1e-12;
+
+/// An angle at most this far from 0, in radians, is not set: 0 reached by steps leaves rounding, which the readout already
+/// shows as 0.0 (applied per R-369).
+pub const ANGLE_SET: f64 = 1e-9;
+/// `τ₁`'s gesture colour, an amber (a look choice, R-390; R-459 G7).
+pub const GESTURE_TAU1: Color32 = Color32::from_rgb(240, 170, 90);
+/// `τ₂`'s gesture colour, a violet (a look choice, R-390; R-459 G7).
+pub const GESTURE_TAU2: Color32 = Color32::from_rgb(190, 145, 245);
+/// The room around an axis button's text, a side, in points (a look choice, R-390).
+pub const AXIS_BUTTON_PAD: f32 = 3.0;
+/// The badge's size, in points, in the cube's top-right corner, clear of the drawing (a look choice, R-390; R-459 G8).
+pub const BADGE_SIZE: Vec2 = vec2(92.0, 17.0);
 
 /// A point of the cube's frame, `(x, y, z) = (e_a, e_b, e_d)`, `y` the vertical.
 pub type P3 = [f64; 3];
@@ -510,6 +533,10 @@ pub struct Drawing {
     pub readout: Vec<String>,
     /// The pin, in the cube's frame, while locked.
     pub pin: Option<P3>,
+    /// What the third axis shows.
+    pub third: Shows,
+    /// Whether the "4D: see Plücker" badge is shown.
+    pub badge: bool,
 }
 
 /// The cube's edges and `slice` in the reference's drawing order: by depth key, the slice pushed last so it draws
@@ -562,6 +589,208 @@ pub fn slice_drawing(z0: &Latent, view: &View) -> Option<SliceDrawing> {
     })
 }
 
+// --- the third axis (R-459) -------------------------------------------------------------------------------------------
+
+/// A gesture, each with its colour (R-459 G7).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Gesture {
+    /// The slice along its normal.
+    Slice,
+    /// `τ₁`, into `X`.
+    Tau1,
+    /// `τ₂`, into `Y`.
+    Tau2,
+}
+
+impl Gesture {
+    /// Its colour: the slice keeps the theme's accent, the reference's Depth label's (a look choice, R-390).
+    pub fn colour(self, visuals: &egui::Visuals) -> Color32 {
+        match self {
+            Gesture::Slice => visuals.hyperlink_color,
+            Gesture::Tau1 => GESTURE_TAU1,
+            Gesture::Tau2 => GESTURE_TAU2,
+        }
+    }
+}
+
+/// What the third axis shows.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Shows {
+    /// D, the slice normal.
+    Normal,
+    /// X, `τ₁`'s target.
+    X,
+    /// Y, `τ₂`'s target.
+    Y,
+}
+
+impl Shows {
+    /// Its letter on the button, and in the breadcrumb.
+    pub fn letter(self) -> &'static str {
+        match self {
+            Shows::Normal => "D",
+            Shows::X => "X",
+            Shows::Y => "Y",
+        }
+    }
+
+    /// Its gesture.
+    pub fn gesture(self) -> Gesture {
+        match self {
+            Shows::Normal => Gesture::Slice,
+            Shows::X => Gesture::Tau1,
+            Shows::Y => Gesture::Tau2,
+        }
+    }
+
+    /// The dimension it shows on `view`.
+    pub fn dimension(self, view: &View) -> usize {
+        match self {
+            Shows::Normal => view.d,
+            Shows::X => view.x,
+            Shows::Y => view.y,
+        }
+    }
+}
+
+/// Whether `angle`, in radians, is set: further from 0 than [`ANGLE_SET`].
+pub fn is_set(angle: f64) -> bool {
+    angle.abs() > ANGLE_SET
+}
+
+/// What the third axis shows on `view` in `mode`, `active` the tilt being dragged (R-459): in Slice mode D; in Tilt mode X
+/// while `τ₁` is dragged and Y while `τ₂` is, and with nothing dragged X if `τ₁ ≠ 0`, else Y if `τ₂ ≠ 0`, else D.
+pub fn third_axis(view: &View, mode: Touch, active: Option<Gesture>) -> Shows {
+    if mode == Touch::Slice {
+        return Shows::Normal;
+    }
+    match active {
+        Some(Gesture::Tau1) => Shows::X,
+        Some(Gesture::Tau2) => Shows::Y,
+        _ if is_set(view.tau1) => Shows::X,
+        _ if is_set(view.tau2) => Shows::Y,
+        _ => Shows::Normal,
+    }
+}
+
+/// Whether the cube shows the badge: both angles set, into different targets (R-459 G8).
+pub fn badge_shown(view: &View) -> bool {
+    is_set(view.tau1) && is_set(view.tau2) && view.x != view.y
+}
+
+/// Which plane the cube draws on `view` (R-459 G6): in Tilt mode the third axis's; in Slice mode R-451 B2's in
+/// `(e_a, e_b, e_D)`, but with the badge shown the plane the third axis's rule picks at rest.
+pub fn drawn_gesture(view: &View, mode: Touch, active: Option<Gesture>) -> Shows {
+    if mode == Touch::Slice && !badge_shown(view) {
+        return Shows::Normal;
+    }
+    third_axis(
+        view,
+        Touch::Tilt,
+        if mode == Touch::Slice { None } else { active },
+    )
+}
+
+/// `view` as `shows` draws it (R-459 G6): `View::basis` with the other angle at 0, unless the targets are one, in the
+/// frame `(e_a, e_b, e_T)`, `T` the dimension shown. [`Shows::Normal`] is `view` as it is.
+pub fn view_of_gesture(view: &View, shows: Shows) -> View {
+    match shows {
+        Shows::Normal => *view,
+        Shows::X => View {
+            d: view.x,
+            tau2: if view.x == view.y { view.tau2 } else { 0.0 },
+            ..*view
+        },
+        Shows::Y => View {
+            d: view.y,
+            tau1: if view.x == view.y { view.tau1 } else { 0.0 },
+            ..*view
+        },
+    }
+}
+
+/// The view the cube draws for `view`, in `mode`, `active` the tilt being dragged ([`drawn_gesture`], [`view_of_gesture`]).
+pub fn gesture_view(view: &View, mode: Touch, active: Option<Gesture>) -> View {
+    view_of_gesture(view, drawn_gesture(view, mode, active))
+}
+
+// --- the axis buttons (R-459) -----------------------------------------------------------------------------------------
+
+/// One of the cube's three axis buttons.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Edge {
+    /// H, chart x, the bottom-left edge.
+    H,
+    /// V, chart y, the left vertical edge.
+    V,
+    /// The third axis, the bottom-right edge.
+    D,
+}
+
+/// The three buttons, in their siblings' order (R-459 G9), each with its scope and its dropdown's entries.
+pub const AXIS_BUTTONS: [(Edge, ScopeId, [ScopeId; LATENT_DIM]); 3] = [
+    (Edge::H, COMPASS_H, COMPASS_H_ENTRIES),
+    (Edge::V, COMPASS_V, COMPASS_V_ENTRIES),
+    (Edge::D, COMPASS_D, COMPASS_D_ENTRIES),
+];
+
+/// The dimensions `edge`'s dropdown lists on `view`, in [`AXES`]'s order (R-459 G2): H those not V's or the normal, V
+/// those not H's or the normal, the third axis those not in the plane, the same six whichever it shows.
+pub fn choices(view: &View, edge: Edge) -> Vec<usize> {
+    match edge {
+        Edge::H => (0..LATENT_DIM)
+            .filter(|&i| i != view.b && i != view.d)
+            .collect(),
+        Edge::V => (0..LATENT_DIM)
+            .filter(|&i| i != view.a && i != view.d)
+            .collect(),
+        Edge::D => target_choices(view.a, view.b),
+    }
+}
+
+/// The pick of `to` on `edge` for `sim`'s chart, `shows` what the third axis shows (R-459 G3): H or V the new axis pair at
+/// the kept scale, the tilts and `γ` 0, the slice frame following in the same edit ([`plane_edit`]); the third axis the
+/// slice normal ([`normal_edit`]) or the target it shows ([`target_edit`]). `None` for the dimension it already is, or
+/// one its dropdown does not offer.
+pub fn pick_edit(sim: &SimConfig, edge: Edge, to: usize, shows: Shows) -> Option<SetField> {
+    let view = View::read(sim);
+    if !choices(&view, edge).contains(&to) {
+        return None;
+    }
+    let (a, b) = match edge {
+        Edge::H => (to, view.b),
+        Edge::V => (view.a, to),
+        Edge::D => {
+            return match shows {
+                Shows::Normal => normal_edit(&view, to),
+                Shows::X => target_edit(&view, Target::X, to),
+                Shows::Y => target_edit(&view, Target::Y, to),
+            }
+        }
+    };
+    ((a, b) != (view.a, view.b))
+        .then(|| plane_edit(sim, (axis(a, view.scale), axis(b, view.scale))))
+}
+
+/// Enter on an axis button's dropdown's entry `id`, as a click on it: the pick, one edit. Whether `id` is such an entry.
+pub fn pick(id: &str, sim: &SimConfig, scratch: &mut Scratch, out: &mut Out) -> bool {
+    let found = AXIS_BUTTONS
+        .iter()
+        .find_map(|(edge, _, entries)| entries.iter().position(|e| *e == id).map(|to| (*edge, to)));
+    let Some((edge, to)) = found else {
+        return false;
+    };
+    let shows = third_axis(
+        &View::read(sim),
+        scratch.compass.mode,
+        scratch.compass.active(),
+    );
+    if let Some(edit) = pick_edit(sim, edge, to, shows) {
+        out.edit(edit, None, scratch);
+    }
+    true
+}
+
 /// An axis name on the edge `edge`, centred on it and pushed [`LABEL_OUT`] outward from the cube's centre.
 pub fn edge_label(iso: &Iso, edge: [P3; 2], text: String, accent: bool) -> Label {
     let ([ax, ay], [bx, by]) = (iso.at64(edge[0]), iso.at64(edge[1]));
@@ -579,22 +808,24 @@ pub fn edge_label(iso: &Iso, edge: [P3; 2], text: String, accent: bool) -> Label
     }
 }
 
-/// The labels of `mode` in `view`'s frame: slice mode names Width, Depth and Height by their axes; tilt mode names only
-/// the tilt target, the slice axis, on the bottom-right edge (R-451 B1).
+/// The labels of `mode` in `view`'s frame with nothing dragged ([`labels_showing`]).
 pub fn labels(iso: &Iso, view: &View, mode: Touch) -> Vec<Label> {
-    match mode {
-        Touch::Slice => vec![
-            edge_label(iso, WIDTH_EDGE, AXES[view.a].to_owned(), false),
-            edge_label(iso, DEPTH_EDGE, AXES[view.d].to_owned(), true),
-            edge_label(iso, HEIGHT_EDGE, AXES[view.b].to_owned(), false),
-        ],
-        Touch::Tilt => vec![edge_label(iso, DEPTH_EDGE, tilt_label(view), true)],
-    }
+    labels_showing(iso, view, third_axis(view, mode, None))
 }
 
-/// Tilt mode's one label: "q₁, q₂ → `<axis>`".
-pub fn tilt_label(view: &View) -> String {
-    format!("q₁, q₂ → {}", AXES[view.d])
+/// The three edges' labels in both modes, Width "H z_α", Depth what the third axis shows, "D z_q3" or "X z_q3", the accent
+/// its alone, and Height "V z_β" (R-459 G1).
+pub fn labels_showing(iso: &Iso, view: &View, shows: Shows) -> Vec<Label> {
+    vec![
+        edge_label(iso, WIDTH_EDGE, format!("H {}", AXES[view.a]), false),
+        edge_label(
+            iso,
+            DEPTH_EDGE,
+            format!("{} {}", shows.letter(), AXES[shows.dimension(view)]),
+            true,
+        ),
+        edge_label(iso, HEIGHT_EDGE, format!("V {}", AXES[view.b]), false),
+    ]
 }
 
 /// Slice mode's corner numbers: −1.0 and 1.0 at the ends of Width, Depth and Height, one number per corner, each
@@ -670,6 +901,17 @@ pub fn rotation_readout(view: &View) -> String {
 /// (R-457 E6). Where `s < `[`DRAW_CUT`], a line "no plane drawn: s < 10⁻³ at τ₁ = <τ₁>°, τ₂ = <τ₂>° (RQ-340)" (R-451
 /// B11).
 pub fn readout(z0: &Latent, view: &View, mode: Touch) -> Vec<String> {
+    readout_active(z0, view, mode, None)
+}
+
+/// [`readout`] with `active` the tilt being dragged: the line where no plane is drawn is of the plane the cube draws
+/// ([`gesture_view`]).
+pub fn readout_active(
+    z0: &Latent,
+    view: &View,
+    mode: Touch,
+    active: Option<Gesture>,
+) -> Vec<String> {
     let axis = AXES[view.d];
     let tilted = view.tau1 != 0.0 || view.tau2 != 0.0;
     let mut lines = match mode {
@@ -691,7 +933,7 @@ pub fn readout(z0: &Latent, view: &View, mode: Touch) -> Vec<String> {
             rotation_readout(view),
         ],
     };
-    if drawn_normal(view).is_none() {
+    if drawn_normal(&gesture_view(view, mode, active)).is_none() {
         let a = Angles::of(view);
         lines.push(format!(
             "no plane drawn: s < 10⁻³ at τ₁ = {}°, τ₂ = {}° (RQ-340)",
@@ -700,6 +942,28 @@ pub fn readout(z0: &Latent, view: &View, mode: Touch) -> Vec<String> {
         ));
     }
     lines
+}
+
+/// `line` of the readout in its parts split at " · ", separators with what comes before, each with whether it is the
+/// third axis's, `gesture`'s, that takes its colour (R-459 G7): `τ₁`'s or `τ₂`'s target, or the slice normal's position
+/// and "plane ⟂", `normal` its name.
+pub fn line_parts(line: &str, gesture: Gesture, normal: &str) -> Vec<(String, bool)> {
+    let at = format!("{normal} = ");
+    let parts: Vec<&str> = line.split(" · ").collect();
+    let last = parts.len() - 1;
+    parts
+        .iter()
+        .enumerate()
+        .map(|(i, part)| {
+            let active = match gesture {
+                Gesture::Tau1 => part.starts_with("τ₁ →"),
+                Gesture::Tau2 => part.starts_with("τ₂ →"),
+                Gesture::Slice => part.starts_with("plane ⟂") || part.starts_with(&at),
+            };
+            let sep = if i < last { " · " } else { "" };
+            (format!("{part}{sep}"), active)
+        })
+        .collect()
 }
 
 /// Where the pin goes in the cube's frame, while locked: the anchor's chart point `(s, t)` on `plane`, `z(s, t)`'s
@@ -715,16 +979,34 @@ pub fn pin(plane: &Plane, view: &View, lock: &Lock) -> Option<P3> {
 
 /// What the cube draws in `square` for the plane `plane`, read in `view`'s frame, in `mode`, with `lock`.
 pub fn drawing(square: Rect, plane: &Plane, view: &View, mode: Touch, lock: &Lock) -> Drawing {
+    drawing_of(square, plane, view, view, mode, None, lock)
+}
+
+/// [`drawing`], the plane drawn from `shown`, what the compass shows, by the rule of `target`, the contract's view, with
+/// `active` the tilt being dragged (R-459 G6).
+pub fn drawing_of(
+    square: Rect,
+    plane: &Plane,
+    shown: &View,
+    target: &View,
+    mode: Touch,
+    active: Option<Gesture>,
+    lock: &Lock,
+) -> Drawing {
     let iso = Iso::fit(square);
-    let slice = slice_drawing(&plane.z0, view);
+    let third = third_axis(target, mode, active);
+    let drawn = view_of_gesture(shown, drawn_gesture(target, mode, active));
+    let slice = slice_drawing(&plane.z0, &drawn);
     Drawing {
         iso,
         items: items(slice.as_ref()),
         slice,
-        labels: labels(&iso, view, mode),
+        labels: labels_showing(&iso, target, third),
         numbers: numbers(&iso, mode),
-        readout: readout(&plane.z0, view, mode),
-        pin: pin(plane, view, lock),
+        readout: readout_active(&plane.z0, target, mode, active),
+        pin: pin(plane, &drawn, lock),
+        third,
+        badge: badge_shown(target),
     }
 }
 
@@ -765,6 +1047,16 @@ pub fn label_colour(visuals: &egui::Visuals, accent: bool) -> Color32 {
     }
 }
 
+/// The colour `label` of `drawing` is painted in: the third axis's its gesture's, the others the theme's text colour
+/// (R-459 G7).
+pub fn drawn_label_colour(visuals: &egui::Visuals, drawing: &Drawing, label: &Label) -> Color32 {
+    if label.accent {
+        drawing.third.gesture().colour(visuals)
+    } else {
+        label_colour(visuals, false)
+    }
+}
+
 /// Paints `drawing` with `painter`.
 pub fn paint(painter: &Painter, visuals: &egui::Visuals, drawing: &Drawing) {
     let iso = drawing.iso;
@@ -797,7 +1089,7 @@ pub fn paint(painter: &Painter, visuals: &egui::Visuals, drawing: &Drawing) {
             egui::Align2::CENTER_CENTER,
             &label.text,
             egui::FontId::proportional(LABEL_SIZE),
-            label_colour(visuals, label.accent),
+            drawn_label_colour(visuals, drawing, label),
         );
     }
     for number in &drawing.numbers {
@@ -932,7 +1224,7 @@ impl Drag {
             tau: (a.tau1, a.tau2),
             amount: 0.0,
             start: (plane.z0, plane.q1, plane.q2),
-            reading: reading(&view),
+            reading: reading(&gesture_view(&view, Touch::Slice, None)),
         }
     }
 
@@ -940,6 +1232,19 @@ impl Drag {
     pub fn start_plane(&self) -> Plane {
         let (z0, q1, q2) = self.start;
         Plane { z0, q1, q2 }
+    }
+
+    /// The tilt this drag is: in tilt mode the angle it has moved further since it began, `τ₁` on a tie (R-459 G5); none
+    /// for a slice.
+    pub fn gesture(&self) -> Option<Gesture> {
+        (self.mode == Touch::Tilt).then(|| {
+            let moved = |tau: f64, from: f64| (tau - from).abs();
+            if moved(self.tau.1, self.from.1) > moved(self.tau.0, self.from.0) {
+                Gesture::Tau2
+            } else {
+                Gesture::Tau1
+            }
+        })
     }
 
     /// The pointer moved by `delta` over the cube's `square`: in tilt mode `τ₁` by the horizontal travel over the
@@ -987,10 +1292,11 @@ pub fn drag_edit(plane: &Plane, frame: &SliceFrame, drag: &Drag) -> Option<SetFi
     }
 }
 
-/// The unit normal of `plane` as the compass draws it, in the latent space: [`drawn_normal`] on the preset's
-/// `(e_a, e_b, e_d)`, `e_d` the slice frame `frame`'s normal (R-409 A3; R-451 B3); `None` where `s < `[`DRAW_CUT`].
+/// The unit normal of `plane` as the compass draws it in slice mode, in the latent space: [`drawn_normal`] on the preset's
+/// `(e_a, e_b, e_d)`, `e_d` the slice frame `frame`'s normal, or with the badge shown the third axis's rule's frame
+/// ([`gesture_view`]; R-409 A3; R-451 B3; R-459 G6); `None` where `s < `[`DRAW_CUT`].
 pub fn latent_normal(plane: &Plane, frame: &SliceFrame) -> Option<Latent> {
-    let view = View::framed(plane, Some(frame));
+    let view = gesture_view(&View::framed(plane, Some(frame)), Touch::Slice, None);
     drawn_normal(&view).map(|n| lift(n, &view))
 }
 
@@ -1130,10 +1436,19 @@ pub struct Compass {
     pub cursor: Option<(usize, usize)>,
     /// The drag in progress.
     pub drag: Option<Drag>,
+    /// The tilt whose slider or number box is held, this frame's (R-459): the Tilt section sets it.
+    pub slider: Option<Gesture>,
     /// What it showed last frame, easing toward the plane.
     pub shown: Option<Shown>,
     /// Whether what it shows is still easing.
     pub moving: bool,
+}
+
+impl Compass {
+    /// The tilt being dragged, on the cube or on its slider (R-459).
+    pub fn active(&self) -> Option<Gesture> {
+        self.drag.and_then(|d| d.gesture()).or(self.slider)
+    }
 }
 
 /// The arrows on the compass in interaction mode, by its view and mode. In the Cube view, in tilt mode ← → tilt `τ₁`
@@ -1178,11 +1493,12 @@ pub fn adjust(adjust: &Adjust, sim: &SimConfig, scratch: &mut Scratch, out: &mut
 }
 
 /// Enter on the compass's control `id`, as its click: Tilt or Slice sets the mode, leaving the view; a view button sets
-/// the view, leaving the mode (R-452 C1).
+/// the view, leaving the mode (R-452 C1); the badge sets the Plücker view (R-459 G8).
 pub fn activate(id: &str, scratch: &mut Scratch) {
     match id {
         COMPASS_TILT => scratch.compass.mode = Touch::Tilt,
         COMPASS_SLICE => scratch.compass.mode = Touch::Slice,
+        COMPASS_BADGE => scratch.compass.view = CompassView::Plucker,
         _ => {
             if let Some(view) = CompassView::of_button(id) {
                 scratch.compass.view = view;
@@ -1191,10 +1507,58 @@ pub fn activate(id: &str, scratch: &mut Scratch) {
     }
 }
 
-/// Names the compass in the breadcrumb by its view, "Compass › Plücker" in a grid view (R-452 C6), before the keys run.
-pub fn join(tree: &mut ScopeTree, compass: &Compass) {
+/// Before the keys run: names the compass in the breadcrumb by its view, "Compass › Plücker" in a grid view (R-452 C6),
+/// and keeps the siblings the view shows (R-459 G9): in the Cube view H, V and D, the dropdowns those [`choices`] offers
+/// and the third axis named by what it shows, then the badge while it is shown; in a grid view none, the cube not being
+/// drawn. A focus on one that left moves to the view's button, or to D for the badge gone from the cube, in navigation
+/// mode.
+pub fn join(tree: &mut ScopeTree, compass: &Compass, sim: &SimConfig, focus: &mut Focus) {
     if let Some(scope) = tree.get_mut(COMPASS_VIEW) {
         scope.label = compass.view.breadcrumb();
+    }
+    let view = View::read(sim);
+    let cube = compass.view == CompassView::Cube;
+    let shows = third_axis(&view, compass.mode, compass.active());
+    for (edge, id, entries) in AXIS_BUTTONS {
+        if !cube {
+            tree.remove(id);
+            continue;
+        }
+        if tree.get(id).is_none() {
+            let letter = match edge {
+                Edge::H => "H",
+                Edge::V => "V",
+                Edge::D => shows.letter(),
+            };
+            tree.register(Some(COMPASS), Scope::menu(id, letter));
+        }
+        let want: Vec<ScopeId> = choices(&view, edge).iter().map(|&i| entries[i]).collect();
+        if tree.children(Some(id)) != want {
+            tree.remove_children(id);
+            for &i in &choices(&view, edge) {
+                tree.register(Some(id), Scope::control(entries[i], AXES[i]));
+            }
+        }
+    }
+    if let Some(scope) = tree.get_mut(COMPASS_D) {
+        scope.label = shows.letter();
+    }
+    // The badge is the last sibling: it joins after D, and leaves with it in a grid view.
+    if cube && badge_shown(&view) {
+        if tree.get(COMPASS_BADGE).is_none() {
+            tree.register(Some(COMPASS), Scope::control(COMPASS_BADGE, BADGE));
+        }
+    } else {
+        tree.remove(COMPASS_BADGE);
+    }
+    let in_compass = focus.path.first().is_some_and(|f| f == COMPASS);
+    if in_compass && tree.valid_prefix(&focus.path) < focus.path.len() {
+        let landing = views::VIEWS
+            .iter()
+            .find(|(v, _, _)| !cube && *v == compass.view)
+            .map_or(COMPASS_D, |(_, id, _)| *id);
+        focus.path = vec![COMPASS.to_owned(), landing.to_owned()];
+        focus.mode = KeyMode::Navigation;
     }
 }
 
@@ -1220,11 +1584,10 @@ pub fn space(focus: &Focus, sim: &SimConfig, scratch: &mut Scratch, out: &mut Ou
     if !interacting(focus) || scratch.compass.view != CompassView::Plucker {
         return;
     }
-    let scale = View::read(sim).scale;
     if let Some(edit) = scratch
         .compass
         .cursor
-        .and_then(|(i, j)| views::steer(scale, i, j))
+        .and_then(|(i, j)| views::steer_on(sim, i, j))
     {
         out.edit(edit, None, scratch);
     }
@@ -1250,8 +1613,18 @@ pub fn current(rect: Rect, sim: &SimConfig, compass: &Compass) -> Drawing {
         .shown
         .unwrap_or_else(|| Shown::of(&sim.plane, &sim.slice.frame));
     let plane = shown.plane(&sim.plane);
-    let mut drawn = drawing(square(rect), &plane, &shown.view, compass.mode, &sim.lock);
-    drawn.readout = readout(&sim.plane.z0, &View::read(sim), compass.mode);
+    let target = View::read(sim);
+    let active = compass.active();
+    let mut drawn = drawing_of(
+        square(rect),
+        &plane,
+        &shown.view,
+        &target,
+        compass.mode,
+        active,
+        &sim.lock,
+    );
+    drawn.readout = readout_active(&sim.plane.z0, &target, compass.mode, active);
     drawn
 }
 
@@ -1340,7 +1713,18 @@ pub fn show(
             let mut targeted = sim.clone();
             targeted.plane = after(plane, pending);
             let drawing = current(rect, &targeted, &scratch.compass);
+            axis_buttons(ui, &drawing, sim, keyboard, scratch, out);
             paint(&painter, &visuals, &drawing);
+            if drawing.badge {
+                let badge = ui.put(
+                    badge_rect(square),
+                    Button::new(RichText::new(BADGE).small()),
+                );
+                keyboard.place_widget(COMPASS_BADGE, &badge);
+                if badge.clicked() {
+                    scratch.compass.view = CompassView::Plucker;
+                }
+            }
             let hint = match scratch.compass.mode {
                 Touch::Tilt => HINT_TILT,
                 Touch::Slice => HINT_SLICE,
@@ -1352,7 +1736,7 @@ pub fn show(
             let drawing =
                 views::plucker_drawing_with(square, plane, read.d, scratch.compass.cursor);
             views::paint_plucker(&painter, &visuals, &drawing);
-            cells(ui, &drawing, read.scale, scratch, out);
+            cells(ui, &drawing, sim, scratch, out);
             (vec![drawing.readout], views::PLUCKER_HELP)
         }
         CompassView::Jacobi | CompassView::Shape => {
@@ -1395,11 +1779,119 @@ pub fn show(
             }
         }
     });
+    let (active, normal) = (
+        third_axis(
+            &View::read(sim),
+            scratch.compass.mode,
+            scratch.compass.active(),
+        )
+        .gesture(),
+        AXES[View::read(sim).d],
+    );
     for line in &readout {
-        column.label(RichText::new(line).monospace().small());
+        column.label(readout_line(&column, &visuals, line, active, normal));
     }
     if !hint.is_empty() {
         column.label(RichText::new(hint).weak().small());
+    }
+}
+
+/// `line` of the readout as it is laid out: the part that is the third axis's in the active gesture's colour, the rest
+/// the theme's text colour (R-459 G7).
+fn readout_line(
+    ui: &Ui,
+    visuals: &egui::Visuals,
+    line: &str,
+    active: Gesture,
+    normal: &str,
+) -> egui::text::LayoutJob {
+    let mut job = egui::text::LayoutJob::default();
+    for (part, on) in line_parts(line, active, normal) {
+        let mut text = RichText::new(part).monospace().small();
+        if on {
+            text = text.color(active.colour(visuals));
+        }
+        text.append_to(
+            &mut job,
+            ui.style(),
+            egui::FontSelection::Default,
+            egui::Align::Center,
+        );
+    }
+    job
+}
+
+/// The badge's rect in the cube's `square`: its top-right corner, clear of the drawing (R-459 G8).
+pub fn badge_rect(square: Rect) -> Rect {
+    Rect::from_min_size(square.right_top() - vec2(BADGE_SIZE.x, 0.0), BADGE_SIZE)
+}
+
+/// The axis buttons on `drawing`'s three edges (R-459 G1, G2): each a button under its label, which [`paint`] paints over
+/// it, opening its dropdown; a pick is one edit ([`pick_edit`]).
+fn axis_buttons(
+    ui: &mut Ui,
+    drawing: &Drawing,
+    sim: &SimConfig,
+    keyboard: &mut Keyboard,
+    scratch: &mut Scratch,
+    out: &mut Out,
+) {
+    let view = View::read(sim);
+    // The labels are in the edges' order, Width, Depth, Height: H, D, V.
+    for ((edge, id, entries), label) in
+        AXIS_BUTTONS
+            .into_iter()
+            .zip([&drawing.labels[0], &drawing.labels[2], &drawing.labels[1]])
+    {
+        let width = ui
+            .painter()
+            .layout_no_wrap(
+                label.text.clone(),
+                egui::FontId::proportional(LABEL_SIZE),
+                Color32::PLACEHOLDER,
+            )
+            .size()
+            .x;
+        let rect = Rect::from_center_size(
+            label.at,
+            vec2(
+                width + 2.0 * AXIS_BUTTON_PAD,
+                LABEL_SIZE + 2.0 * AXIS_BUTTON_PAD,
+            ),
+        );
+        let button = ui
+            .interact(rect, egui::Id::new(id), Sense::click())
+            .on_hover_text("choose this axis's dimension");
+        let text = label.text.clone();
+        button.widget_info(|| {
+            egui::WidgetInfo::labeled(egui::WidgetType::Button, true, text.clone())
+        });
+        let style = ui.style().interact(&button);
+        ui.painter().rect(
+            rect,
+            style.corner_radius,
+            style.weak_bg_fill,
+            style.bg_stroke,
+            egui::StrokeKind::Inside,
+        );
+        keyboard.place_widget(id, &button);
+        let shown = match edge {
+            Edge::H => view.a,
+            Edge::V => view.b,
+            Edge::D => drawing.third.dimension(&view),
+        };
+        let mut picked = shown;
+        Popup::menu(&button).show(|ui| {
+            for to in choices(&view, edge) {
+                let entry = ui.selectable_value(&mut picked, to, AXES[to]);
+                keyboard.place_widget(entries[to], &entry);
+            }
+        });
+        if picked != shown {
+            if let Some(edit) = pick_edit(sim, edge, picked, drawing.third) {
+                out.edit(edit, None, scratch);
+            }
+        }
     }
 }
 
@@ -1408,7 +1900,7 @@ pub fn show(
 fn cells(
     ui: &mut Ui,
     drawing: &views::PluckerDrawing,
-    scale: f64,
+    sim: &SimConfig,
     scratch: &mut Scratch,
     out: &mut Out,
 ) {
@@ -1421,7 +1913,7 @@ fn cells(
             )
             .on_hover_text(views::hover_text(&drawing.grid, i, j));
         if cell.clicked() {
-            if let Some(edit) = views::steer(scale, i, j) {
+            if let Some(edit) = views::steer_on(sim, i, j) {
                 out.edit(edit, None, scratch);
             }
         }
@@ -1484,5 +1976,6 @@ pub fn record(drawing: &Drawing, square: Rect) -> serde_json::Value {
         "numbers": labels(&drawing.numbers),
         "readout": drawing.readout,
         "pin": drawing.pin.map(rel),
+        "badge": drawing.badge,
     })
 }

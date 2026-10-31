@@ -232,7 +232,7 @@ pub fn join_targets(tree: &mut ScopeTree, view: &View) {
 
 /// The rows the Manifold view, the figure and the compass add to the `?` overlay (render_gui_spec §G3's "In scope",
 /// read with R-409: the arrows need Enter; the letter shortcuts act in either mode).
-pub const SHORTCUTS: [(&str, &str); 9] = [
+pub const SHORTCUTS: [(&str, &str); 11] = [
     (
         "Enter on a value",
         "interact: the arrows adjust it; Enter or Esc, back to navigating",
@@ -256,6 +256,14 @@ pub const SHORTCUTS: [(&str, &str); 9] = [
     (
         "Compass: Plücker, after Enter",
         "arrows move the cell cursor, Shift to the end; Space steers to it",
+    ),
+    (
+        "Compass: H / V / D",
+        "Enter opens it: ↑ ↓ choose, Enter picks, Esc closes it unchanged",
+    ),
+    (
+        "Compass: 4D: see Plücker",
+        "Enter switches to the Plücker view",
     ),
 ];
 
@@ -312,6 +320,32 @@ pub fn axis_pair(q1: &Latent, q2: &Latent) -> Option<(usize, usize)> {
     };
     let (a, b) = (only(q1)?, only(q2)?);
     (a < b).then_some((a, b))
+}
+
+/// The axes of a basis tilted within `frame`'s targets on axes no preset names, as H and V can pick them: the dominant
+/// axes off the targets, so a tilt past 45° keeps its H and V (R-459 G3). `None` where a vector has nothing off the
+/// targets, or the basis leaves the pair and the targets (`outside`, the part of the basis off them).
+fn tilted_axes(
+    q1: &Latent,
+    q2: &Latent,
+    frame: &SliceFrame,
+    outside: impl Fn(usize, usize) -> f64,
+) -> Option<(usize, usize)> {
+    let off = |q: &Latent| -> Latent {
+        std::array::from_fn(|i| {
+            if i64::from(frame.tilt_x) == i as i64 || i64::from(frame.tilt_y) == i as i64 {
+                0.0
+            } else {
+                q[i]
+            }
+        })
+    };
+    let (rest1, mut rest2) = (off(q1), off(q2));
+    let a = dominant(&rest1);
+    rest2[a] = 0.0;
+    let b = dominant(&rest2);
+    (rest1[a] != 0.0 && rest2[b] != 0.0 && outside(a, b) <= 1e-18 * (dot(q1, q1) + dot(q2, q2)))
+        .then_some((a, b))
 }
 
 /// The chart, as the panel reads it in a preset's frame and the slice frame's hidden dimensions.
@@ -395,17 +429,22 @@ impl View {
                     .all(|i| usize::try_from(i).is_ok_and(|i| i != a && i != b))
             })
         };
+        // A preset's pair the other way round, `q₁` on its `e_b` and `q₂` on its `e_a`, is no turn of the preset, whose
+        // determinant on its axes is `σ² cos τ₁ cos τ₂ ≥ 0`: it is the axes H and V picked so (R-459 G3).
+        let same_way = |a: usize, b: usize| q1[a] * q2[b] - q1[b] * q2[a] >= -1e-12 * total;
         let found = PRESETS.iter().position(|&(a, b)| {
-            fits(a, b) && outside(a, b) <= 1e-18 * total.max(f64::MIN_POSITIVE)
+            fits(a, b) && same_way(a, b) && outside(a, b) <= 1e-18 * total.max(f64::MIN_POSITIVE)
         });
         let (a, b) = match found {
             Some(p) => PRESETS[p],
-            None => {
-                let a = dominant(q1);
-                let mut q2_rest = *q2;
-                q2_rest[a] = 0.0;
-                (a, dominant(&q2_rest))
-            }
+            None => frame
+                .and_then(|f| tilted_axes(q1, q2, f, outside))
+                .unwrap_or_else(|| {
+                    let a = dominant(q1);
+                    let mut q2_rest = *q2;
+                    q2_rest[a] = 0.0;
+                    (a, dominant(&q2_rest))
+                }),
         };
         Self::in_frame(found, a, b, hidden(a, b), q1, q2)
     }
@@ -609,6 +648,25 @@ pub fn target_edit(view: &View, which: Target, to: usize) -> Option<SetField> {
     Some(frame_edit(picked.frame(), basis))
 }
 
+/// The pick of `to` as the slice normal on `view` (R-459 G3): one `SetField` on the slice frame, a target equal to the old
+/// normal following it (R-457 E4), carrying the basis re-tilted where a target that followed has a non-zero angle. `None`
+/// for the normal it already is, or a dimension in the plane.
+pub fn normal_edit(view: &View, to: usize) -> Option<SetField> {
+    if to == view.d || !target_choices(view.a, view.b).contains(&to) {
+        return None;
+    }
+    let follow = |t: usize| if t == view.d { to } else { t };
+    let picked = View {
+        d: to,
+        x: follow(view.x),
+        y: follow(view.y),
+        ..*view
+    };
+    let retilts =
+        (picked.x != view.x && view.tau1 != 0.0) || (picked.y != view.y && view.tau2 != 0.0);
+    Some(frame_edit(picked.frame(), retilts.then(|| picked.basis())))
+}
+
 /// The slice frame `frame` once the plane's axes are `(a, b)` (R-459 G4, R-457 E4): a normal the plane takes moves by
 /// the slice-axis rule ([`slice_axis`]); a target equal to the old normal follows it, and one the plane takes resets to
 /// the normal, moved first; the rest keep their own.
@@ -784,6 +842,9 @@ impl Out {
 /// Enter on control `id`, as its click: the panel's, a target dropdown's entry picking that target among them, and the
 /// compass's Tilt and Slice.
 pub fn activate(id: &str, snapshot: &Snapshot, scratch: &mut Scratch, out: &mut Out) {
+    if compass::pick(id, &snapshot.sim, scratch, out) {
+        return;
+    }
     let view = View::read(&snapshot.sim);
     for (which, entries) in [(Target::X, TILT_X_ENTRIES), (Target::Y, TILT_Y_ENTRIES)] {
         if let Some(to) = entries.iter().position(|e| *e == id) {

@@ -1,5 +1,5 @@
 //! `mock_compass_view_keys` (REQ-GUI-198; render_gui_spec §G3, § "The compass: look and views (R-451, R-452)";
-//! R-452 C6): the Compass scope's seven siblings in order both ways; Enter on each view button switches the view in
+//! R-452 C6): the Compass scope's siblings, the seven and R-459 G9's H, V and D, in order both ways; Enter on each view button switches the view in
 //! navigation mode; in the Plücker view Enter on the compass starts interaction on the dominant cell, the arrows move a
 //! cell cursor over the upper triangle only, Space steers to it (undone by one Ctrl+Z) and Esc or Enter returns; in the
 //! Cube view the arrows tilt as before; the breadcrumb names the view. Each check also runs on an input it must reject
@@ -19,8 +19,8 @@ use crate::explore::compass::views::{
 use crate::explore::manifold_view::tilt::Angles;
 use crate::explore::manifold_view::View;
 use crate::explore::{
-    COMPASS, COMPASS_CUBE, COMPASS_JACOBI, COMPASS_PLUCKER, COMPASS_SHAPE, COMPASS_SLICE,
-    COMPASS_TILT, COMPASS_VIEW,
+    COMPASS, COMPASS_CUBE, COMPASS_D, COMPASS_H, COMPASS_JACOBI, COMPASS_PLUCKER, COMPASS_SHAPE,
+    COMPASS_SLICE, COMPASS_TILT, COMPASS_V, COMPASS_VIEW,
 };
 use crate::headless::Headless;
 use crate::keyboard::keymap::{Command, Direction};
@@ -31,8 +31,8 @@ const NONE: Modifiers = Modifiers::NONE;
 const SHIFT: Modifiers = Modifiers::SHIFT;
 const ALT: Modifiers = Modifiers::ALT;
 
-/// The seven siblings, in order (R-452 C6).
-const SEVEN: [&str; 7] = [
+/// The siblings in the Cube view, in order (R-452 C6; R-459 G9).
+const SIBLINGS: [&str; 10] = [
     COMPASS_VIEW,
     COMPASS_TILT,
     COMPASS_SLICE,
@@ -40,6 +40,9 @@ const SEVEN: [&str; 7] = [
     COMPASS_PLUCKER,
     COMPASS_JACOBI,
     COMPASS_SHAPE,
+    COMPASS_H,
+    COMPASS_V,
+    COMPASS_D,
 ];
 
 /// The app on a tilted plane at rest, the focus moved by Tab onto the compass, in navigation mode.
@@ -69,9 +72,9 @@ fn walk(tree: &ScopeTree) -> Vec<String> {
     };
     tree.navigate(&mut f, Command::Enter, 1.0);
     let mut seen = vec![f.path.last().cloned().unwrap_or_default()];
-    for d in [Direction::Right; 7]
+    for d in [Direction::Right; 10]
         .into_iter()
-        .chain([Direction::Left; 7])
+        .chain([Direction::Left; 10])
     {
         tree.navigate(&mut f, Command::Arrow(d), 1.0);
         seen.push(f.path.last().cloned().unwrap_or_default());
@@ -80,23 +83,23 @@ fn walk(tree: &ScopeTree) -> Vec<String> {
 }
 
 fn check_walk(seen: &[String]) {
-    let mut want: Vec<&str> = SEVEN.to_vec();
-    want.push(COMPASS_SHAPE);
-    want.extend(SEVEN.iter().rev().skip(1));
+    let mut want: Vec<&str> = SIBLINGS.to_vec();
+    want.push(COMPASS_D);
+    want.extend(SIBLINGS.iter().rev().skip(1));
     want.push(COMPASS_VIEW);
-    assert_eq!(seen, want, "the seven siblings, stopping at each end");
+    assert_eq!(seen, want, "the siblings, stopping at each end");
 }
 
 #[test]
-fn mock_compass_view_keys_the_seven_siblings_in_order_both_ways() {
+fn mock_compass_view_keys_the_siblings_in_order_both_ways() {
     let (mut app, mut h) = on_compass();
     check_walk(&walk(app.keyboard.tree(Mode::Explore)));
-    // On the app: → six times reaches Shape, ← six times the compass.
-    for id in SEVEN.iter().skip(1) {
+    // On the app: → nine times reaches D, ← nine times the compass.
+    for id in SIBLINGS.iter().skip(1) {
         press(&mut h, &mut app, Key::ArrowRight, NONE);
         assert_eq!(at(&app), (vec![COMPASS, *id], KeyMode::Navigation));
     }
-    for id in SEVEN.iter().rev().skip(1) {
+    for id in SIBLINGS.iter().rev().skip(1) {
         press(&mut h, &mut app, Key::ArrowLeft, NONE);
         assert_eq!(at(&app), (vec![COMPASS, *id], KeyMode::Navigation));
     }
@@ -113,6 +116,9 @@ fn mock_compass_view_keys_the_seven_siblings_in_order_both_ways() {
         COMPASS_CUBE,
         COMPASS_JACOBI,
         COMPASS_SHAPE,
+        COMPASS_H,
+        COMPASS_V,
+        COMPASS_D,
     ] {
         wrong.register(Some(COMPASS), Scope::control(id, "x"));
     }

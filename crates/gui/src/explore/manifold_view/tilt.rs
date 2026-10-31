@@ -8,9 +8,12 @@
 //! centre slider of that dimension (R-457). Touching an angle or a target dropdown switches the compass to Tilt, its
 //! buttons following (R-409), on the drag's first frame: the slider or its box pressed, the box clicked into to type,
 //! the dropdown pressed, whether or not the value changes, so a press on a thumb at ±90° counts (R-458 F4). A drag
-//! applies its value every frame it changes, the whole drag one history entry (R-458 F1).
+//! applies its value every frame it changes, the whole drag one history entry (R-458 F1). While `τ₁` or `τ₂` is held the
+//! compass's third axis shows its target (R-459).
 
 use eframe::egui::{self, ComboBox, DragValue, Rect, Slider, Ui};
+
+use crate::explore::compass::Gesture;
 
 use super::{
     basis_edit, header, row, row_ui, target_choices, target_edit, Panel, Target, Touch, View, AXES,
@@ -80,6 +83,7 @@ pub fn show(ui: &mut Ui, section: Rect, h: f32, clip: Rect, panel: &mut Panel<'_
     let view = View::read(&panel.snapshot.sim);
     header(ui, section, h, SECTION_TITLES[3], "");
     let angles = Angles::of(&view);
+    panel.scratch.compass.slider = None;
     for (i, (id, label, value, (lo, hi))) in [
         (TAU1, "τ₁", angles.tau1, TILT_RANGE),
         (TAU2, "τ₂", angles.tau2, TILT_RANGE),
@@ -107,6 +111,13 @@ pub fn show(ui: &mut Ui, section: Rect, h: f32, clip: Rect, panel: &mut Panel<'_
         let changed = slider.changed() || field.changed();
         if super::centre::touched(&slider, &field) {
             panel.scratch.compass.mode = Touch::Tilt;
+        }
+        if slider.is_pointer_button_down_on() || field.is_pointer_button_down_on() {
+            panel.scratch.compass.slider = match id {
+                TAU1 => Some(Gesture::Tau1),
+                TAU2 => Some(Gesture::Tau2),
+                _ => None,
+            };
         }
         panel.place(id, &slider.union(field), clip);
         if changed {

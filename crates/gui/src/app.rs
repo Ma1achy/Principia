@@ -544,6 +544,8 @@ impl<S: EngineSide> App<S> {
         explore::compass::join(
             self.keyboard.tree_mut(Mode::Explore),
             &self.manifold.compass,
+            &self.snapshot.sim,
+            &mut self.view.focus,
         );
         windows::chart_builder::join_presets(
             self.keyboard.tree_mut(self.view.mode),
