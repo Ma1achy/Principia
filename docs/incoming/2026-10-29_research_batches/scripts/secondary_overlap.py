@@ -1,4 +1,4 @@
-"""secondary_exclusion.py <yasko_table_reconciled.csv> <iasko_table_reconciled.csv> <threebodyorbits_ics.csv>
+"""secondary_overlap.py <yasko_table_reconciled.csv> <iasko_table_reconciled.csv> <threebodyorbits_ics.csv>
 
 Overlap of Yasko & Orlov 2015 and Iasko & Orlov 2014 with the threebodyorbits snapshot (no integration).
 Both papers use G = 1 and unit masses and quote periods in units of the mean crossing time
