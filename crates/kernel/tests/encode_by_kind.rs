@@ -50,6 +50,7 @@ use kernel::encode::by_kind::{
 use kernel::encode::{encode, Encoded};
 use kernel::generated::links::{Defaults, LinkReal, Selection};
 use kernel::payload::PayloadReal;
+use kernel::real::IeeeBits;
 use kernel::shape::shape;
 #[cfg(feature = "controls")]
 use kernel::shape::shape_vec;
@@ -368,7 +369,7 @@ impl<C, P: Copy> M0Chart<C, P> {
 
 impl<C: Residual, P: Copy> M0Chart<C, P> {
     /// The slice's masses, the convention's held point.
-    fn held<S: Selection, R: LinkReal + From<P>>(&self) -> [R; 3] {
+    fn held<S: Selection, R: LinkReal + IeeeBits + From<P>>(&self) -> [R; 3] {
         let w = <R as From<P>>::from;
         mass::decode::<S, R>([w(self.slice[6]), w(self.slice[7])]).m
     }
@@ -380,7 +381,7 @@ impl<C: Residual, P: Copy> M0Chart<C, P> {
     }
 
     /// The forward axis's latent point at `u`: the slice with its mass block at `m₀(u)` under `C`.
-    fn controls<S: Selection, R: LinkReal + From<P>>(&self, u: R) -> [R; 8] {
+    fn controls<S: Selection, R: LinkReal + IeeeBits + From<P>>(&self, u: R) -> [R; 8] {
         let mut z = self.slice.map(<R as From<P>>::from);
         let [a, b] = C::controls::<S, R>(self.m0_at(u), self.held::<S, R>());
         z[6] = a;

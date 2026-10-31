@@ -25,6 +25,7 @@ use engine::contract::fast_math::FastMath;
 use kernel::decode::invariant::{self, construct, infeasible, ExactSign, Outcome};
 use kernel::decode::{config, mass};
 use kernel::generated::links::Defaults;
+use kernel::real::IeeeBits;
 use validation::decode_f32_eps::SplitMix;
 use validation::gpu::GpuHarness;
 use validation::negative_control;
@@ -440,7 +441,9 @@ fn samples() -> Vec<[f32; 6]> {
 
 /// The CPU's decoder construction at `R` on a sample, its masses and configuration decoded at `R`, its seed decided on
 /// `z_α` (`construct`).
-fn cpu<R: ExactSign + From<f32>>(s: &[f32; 6]) -> kernel::decode::invariant::Construction<R> {
+fn cpu<R: ExactSign + IeeeBits + From<f32>>(
+    s: &[f32; 6],
+) -> kernel::decode::invariant::Construction<R> {
     let w = s.map(<R as From<f32>>::from);
     let masses = mass::decode::<Defaults, R>([w[0], w[1]]);
     let config = config::decode::<Defaults, R>([w[2], w[3]], &masses);

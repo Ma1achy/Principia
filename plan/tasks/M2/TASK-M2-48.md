@@ -29,12 +29,14 @@ every branch input of dd_decoder §2's table in its corrected form.
 
 ## Acceptance tests
 - `cargo test -p kernel decode_mass` — decoder test 4; the tag fires exactly on `M₀₁ < ε` and agrees bit for bit
-  between CPU-f32 and the GPU on Metal and lavapipe at TASK-M2-02's onset crossings; control: the unfused
-  `fma(m₁, 1, m₀)` evaluation flips the tag (REQ-DEC-011).
+  between CPU-f32 and the GPU on Metal and lavapipe at TASK-M2-02's onset crossings; control: the `fma(m₁, 1, m₀)`
+  evaluation with the `×1` folded and the add contracted, `fma(t₇, t₁₃, m₀)` fused on the CPU at f32 and f64, flips
+  the tag (REQ-DEC-011).
 - `cargo test -p engine decode_parity` — decoder test 12 on Metal and lavapipe: continuous outputs within the
   f32-eps-scaled tolerance, branch tags bitwise equal, `C`'s mirror and guard in TASK-M2-47's form; control: on the
-  same fuzzed inputs the superseded forms (the explicit `fma(m₁, 1, m₀)`, a plain float subtract or compare) under an
-  unfused or flush-to-zero CPU emulation give a different tag on at least one input (REQ-VAL-017).
+  same fuzzed inputs, TASK-M2-02's onset crossings among them, the superseded forms (the explicit `fma(m₁, 1, m₀)`, a
+  plain float subtract or compare) under a contracted (fused) or flush-to-zero CPU emulation give a different tag on
+  at least one input (REQ-VAL-017).
 - Review (physics) — each branch input's form and proof (REQ-DEC-011, REQ-VAL-017).
 
 ## Notes
@@ -45,3 +47,9 @@ every branch input of dd_decoder §2's table in its corrected form.
   applied per R-369). *Was:* "REQ-DEC-017 and REQ-DEC-022, already built in the corrected form, stay closed by their
   tasks."
 - The test names above are the existing tests' where they exist; the implementer keeps them.
+- RQ-621, decided by the orchestrator per R-369 (a test decision, option (a), 30 Oct 2026): unfused, `fma(m₁, 1, m₀)`
+  is the one rounded sum, so the two controls are the folded-and-fused evaluation at the onset crossings. The two
+  acceptance lines' earlier controls: *Was:* "control: the unfused `fma(m₁, 1, m₀)` evaluation flips the tag
+  (REQ-DEC-011)" and "control: on the same fuzzed inputs the superseded forms (the explicit `fma(m₁, 1, m₀)`, a plain
+  float subtract or compare) under an unfused or flush-to-zero CPU emulation give a different tag on at least one input
+  (REQ-VAL-017)".

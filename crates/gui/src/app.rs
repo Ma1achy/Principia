@@ -28,7 +28,7 @@ use eframe::egui_wgpu;
 use engine::contract::canvas::Canvas;
 use engine::contract::interface::EngineInterface;
 use engine::contract::log::{LogEntry, Severity, Source};
-use engine::contract::set_field::{Edit, RenderField, SetField};
+use engine::contract::set_field::{Edit, HistoryKey, RenderField, SetField};
 use engine::contract::snapshot::Snapshot;
 use engine::contract::view_ui::{
     Backdrop, DebugCategories, Focus, Inspector, KeptOrbits, KeyMode, LinkedViews, Mode, Selection,
@@ -128,8 +128,6 @@ pub struct App<S: EngineSide> {
     pub keyboard: Keyboard,
     /// The Manifold view's and the compass's own scratch state.
     pub manifold: explore::manifold_view::Scratch,
-    /// Time's own scratch state: the scrub in progress.
-    pub time: explore::time::Scratch,
     /// The Trajectory panel's own state.
     pub trajectory: explore::trajectory::Scratch,
     /// The Stain editor's own state.
@@ -147,6 +145,13 @@ pub struct App<S: EngineSide> {
     counts: Counts,
     last_read: Option<f64>,
     reread: bool,
+    /// The history key of the pointer's hold, while a button is held: every edit sent from the press to the release goes
+    /// under it, so a drag is one history entry (gui_state_contract §2; R-458 F1).
+    hold: Option<HistoryKey>,
+    /// The last history key taken.
+    last_key: u64,
+    /// Whether the hold edited the stain graph with auto-recompile on: it recompiles once, at the release.
+    recompile_at_release: bool,
     format: wgpu::TextureFormat,
 }
 
@@ -196,7 +201,6 @@ impl<S: EngineSide> App<S> {
             scrolled_to: (Vec::new(), 0),
             keyboard: Keyboard::new(),
             manifold: Default::default(),
-            time: Default::default(),
             trajectory: Default::default(),
             stain: Default::default(),
             overlay_default: Default::default(),
@@ -206,6 +210,9 @@ impl<S: EngineSide> App<S> {
             counts,
             last_read: None,
             reread: false,
+            hold: None,
+            last_key: 0,
+            recompile_at_release: false,
             format,
         }
     }
@@ -283,6 +290,35 @@ impl<S: EngineSide> App<S> {
             self.reread = true;
         }
         self.side.engine().set_field(edit);
+    }
+
+    /// A history key not taken before.
+    pub(crate) fn fresh_key(&mut self) -> HistoryKey {
+        self.last_key += 1;
+        HistoryKey(self.last_key)
+    }
+
+    /// Sends one command's edits under one history key, so they are one history entry (gui_state_contract §2; R-458
+    /// F1, R-466): the pointer's hold's while a button is held, so every frame of a drag joins one entry, else a fresh
+    /// key, ended at once. An undoable edit rereads the snapshot and resyncs the clock, as [`App::set_field`]'s.
+    fn send(&mut self, command: Vec<SetField>) {
+        if command.is_empty() {
+            return;
+        }
+        let key = match self.hold {
+            Some(key) => key,
+            None => self.fresh_key(),
+        };
+        for edit in command {
+            if !edit.no_history {
+                self.clock.resync();
+                self.reread = true;
+            }
+            self.side.engine().set_field_under(edit, key);
+        }
+        if self.hold.is_none() {
+            self.side.engine().end_key(key);
+        }
     }
 
     /// Requests undo, rereading the snapshot next frame.
@@ -383,8 +419,34 @@ impl<S: EngineSide> App<S> {
         }
     }
 
-    /// One frame on the root `ui`.
+    /// One frame on the root `ui`. The first frame a pointer button is held takes the hold's history key, which every
+    /// edit sent until the release goes under, the release frame's too; the release frame ends it after its edits, so
+    /// the drag's entry closes and the engine logs it once (R-458 F1). A press released within one frame holds nothing:
+    /// its edits are commands, each under a fresh key. The snapshot is read again after the frame's edits, so it, the
+    /// console and every control read the edit at once.
     pub fn ui(&mut self, ui: &mut egui::Ui) {
+        let ctx = ui.ctx().clone();
+        let down = ctx.input(|i| i.pointer.any_down());
+        if self.hold.is_none() && down {
+            self.hold = Some(self.fresh_key());
+        }
+        self.frame(ui);
+        if !down {
+            if let Some(key) = self.hold.take() {
+                self.side.engine().end_key(key);
+                self.reread = true;
+            }
+            if std::mem::take(&mut self.recompile_at_release) {
+                self.side.recompile();
+            }
+        }
+        if std::mem::take(&mut self.reread) {
+            self.read();
+        }
+    }
+
+    /// The frame's work on the root `ui`, between the hold's start and end.
+    fn frame(&mut self, ui: &mut egui::Ui) {
         let ctx = ui.ctx().clone();
         if !self.present && ctx.input(|i| i.key_pressed(Key::F3)) {
             self.shown = !self.shown;
@@ -593,7 +655,12 @@ impl<S: EngineSide> App<S> {
         }
         let stain_edited = !stain_out.edits.is_empty();
         edits.append(&mut stain_out.edits);
-        if stain_out.recompile || (stain_edited && self.stain.auto_recompile) {
+        // During a hold, a param's drag edits the graph every frame: auto-recompile waits for the hold's end, one
+        // recompile per drag (applied per R-369).
+        if stain_edited && self.stain.auto_recompile && self.hold.is_some() && !stain_out.recompile
+        {
+            self.recompile_at_release = true;
+        } else if stain_out.recompile || (stain_edited && self.stain.auto_recompile) {
             self.side.recompile();
         }
         explore::footer::show(
@@ -640,12 +707,17 @@ impl<S: EngineSide> App<S> {
         let asked = std::mem::take(&mut actions.open);
         self.apply(&ctx, actions);
         for edit in edits {
-            self.set_field(edit);
+            self.send(vec![edit]);
         }
-        // Locked, every basis edit turns about the pin (render_gui_spec §G4): the Manifold view's and the windows'.
+        // Locked, every basis edit turns about the pin (render_gui_spec §G4): the Manifold view's and the windows'. Each
+        // is sent with its recentring as one command, one history entry.
         out.edits.extend(window_edits);
-        for edit in explore::manifold_view::about_the_pin(out.edits, &self.snapshot.sim) {
-            self.set_field(edit);
+        let sim = &self.snapshot.sim;
+        for command in explore::manifold_view::commands_about_the_pin(out.edits, sim) {
+            self.send(command);
+        }
+        for command in std::mem::take(&mut out.commands) {
+            self.send(command);
         }
         // The windows asked for, each with the control that opened it: a click, Enter, or the Manifold view's and the
         // Trajectory panel's own openers.
@@ -707,7 +779,6 @@ impl<S: EngineSide> App<S> {
             &mut explore::time::Panel {
                 snapshot: &self.snapshot,
                 transport: &mut self.view.transport,
-                scratch: &mut self.time,
                 keyboard: &mut self.keyboard,
                 edits,
             },
@@ -736,8 +807,27 @@ impl<S: EngineSide> App<S> {
         if let Some(at) = pin {
             self.pin_at(at);
         }
+        // The compass takes its drag before the Manifold view is drawn, and the view reads the plane as the drag's
+        // edit leaves it, so its sliders show the drag's target in the frame the pointer moves, with the snapshot and
+        // the compass's readout (REQ-GUI-206).
+        let pending = explore::compass::take(
+            ui,
+            layout.compass,
+            &self.snapshot.sim,
+            &mut self.manifold,
+            out,
+        );
+        let targeted;
+        let shown = if pending.is_empty() {
+            &self.snapshot
+        } else {
+            let mut snapshot = self.snapshot.clone();
+            snapshot.sim.plane = explore::compass::after(&snapshot.sim.plane, &pending);
+            targeted = snapshot;
+            &targeted
+        };
         let mut panel = explore::manifold_view::Panel {
-            snapshot: &self.snapshot,
+            snapshot: shown,
             scratch: &mut self.manifold,
             keyboard: &mut self.keyboard,
             focus: &self.view.focus.path,
@@ -749,6 +839,7 @@ impl<S: EngineSide> App<S> {
             ui,
             layout.compass,
             sim,
+            &pending,
             &mut self.keyboard,
             &mut self.manifold,
             out,
