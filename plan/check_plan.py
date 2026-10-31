@@ -183,25 +183,33 @@ def truncated_scalars(path):
 
 
 def twins(body):
-    """(line, line) for each run of lines in `body`, a list of (line number, text), directly followed by a run of the
-    same length that reads nearly the same: what a union merge leaves of text edited on two sides. Lines that differ
-    only in their digits are a list's siblings, not versions."""
+    """(line, line) for each run of lines in `body`, a list of (line number, text), directly followed by a run that
+    reads nearly the same, of the same length or one line more or less, since an edit can rewrap: what a union merge
+    leaves of text edited on two sides. Lines that differ only in their digits are a list's siblings, not versions."""
     out = []
     plain = [(n, t) for n, t in body if t.strip()]
+    join = lambda lines: " ".join(" ".join(t.split()) for _, t in lines)
     i = 0
     while i < len(plain):
+        found = None
         for k in range(1, TWIN_MAX_LINES + 1):
-            if i + 2 * k > len(plain):
+            for m in (k, k - 1, k + 1):
+                if m < 1 or i + k + m > len(plain):
+                    continue
+                a, b = join(plain[i:i + k]), join(plain[i + k:i + k + m])
+                if len(a) < TWIN_MIN or len(b) < TWIN_MIN or (a != b and re.sub(r"\d+", "", a) == re.sub(r"\d+", "", b)):
+                    continue
+                d = difflib.SequenceMatcher(None, a, b, autojunk=False)
+                if d.quick_ratio() >= TWIN_RATIO and d.ratio() >= TWIN_RATIO:
+                    found = k, m
+                    break
+            if found:
                 break
-            a, b = [" ".join(" ".join(t.split()) for _, t in plain[s:s + k]) for s in (i, i + k)]
-            if len(a) < TWIN_MIN or len(b) < TWIN_MIN or (a != b and re.sub(r"\d+", "", a) == re.sub(r"\d+", "", b)):
-                continue
-            m = difflib.SequenceMatcher(None, a, b, autojunk=False)
-            if m.quick_ratio() >= TWIN_RATIO and m.ratio() >= TWIN_RATIO:
-                out.append((plain[i][0], plain[i + k][0]))
-                i += 2 * k - 1
-                break
-        i += 1
+        if found:
+            out.append((plain[i][0], plain[i + found[0]][0]))
+            i += found[0] + found[1]
+        else:
+            i += 1
     return out
 
 
@@ -278,7 +286,7 @@ def queue_self_test():
         ("a line of 29 characters doubled", good.replace(line, "- abcdefghijklmnopqrstuvwxy12\n" * 2), None),
         ("a line of 30 characters doubled", good.replace(line, "- abcdefghijklmnopqrstuvwxy123\n" * 2),
          "two versions of one text"),
-        ("nine lines side by side, past the longest run", good.replace(line, version(9, "x") + version(9, "y")), None),
+        ("ten lines side by side, past the longest run", good.replace(line, version(10, "x") + version(10, "y")), None),
         ("eight lines side by side, the longest run", good.replace(line, version(8, "x") + version(8, "y")),
          "two versions of one text"),
         ("lines alike below the ratio", good.replace(line, "  the first wrapped line of a quote\n"
@@ -298,6 +306,12 @@ def queue_self_test():
                                                        "  and the second wrapped line of it there.\n"
                                                        "  the first wrapped line of a quote here,\n"
                                                        "  and the second wrapped line of that there."),
+         "two versions of one text"),
+        ("a note rewrapped on one side", good.replace(line, "  the first wrapped line of a quotation here, and\n"
+                                                      "  the second line of it, which runs on to the end.\n"
+                                                      "  the first wrapped line of a quotation here,\n"
+                                                      "  and the second line of it, which runs\n"
+                                                      "  on to the end."),
          "two versions of one text"),
         ("a preamble edited on two sides", "# Review queue\n\nOnly open entries are kept here, by rule.\n"
          "Only open entries are kept here, by a rule.\n\n" + good, "two versions of one text"),
