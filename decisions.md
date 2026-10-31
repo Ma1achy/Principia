@@ -28347,7 +28347,8 @@ is the cause.
 measured it: the CLI's JSON output holds its stats only on success, and the four successful-looking runs since PR #344
 (41049011076, 41049015172, 41076896834, 41100935781) each logged "no request count". *After:* one when the first model
 answers; two where a retry is due; eight at most, two on each model. The script counts them itself and logs the count on
-every outcome.
+every outcome. Measured on PR #357's own run, 41146426835: one request, 124,530 bytes of prompt, answered by
+`gemini-3.8-flash` by the API's own `modelVersion`. The fallback steps have not yet answered on the real API.
 
 *Applied per R-369:*
 
