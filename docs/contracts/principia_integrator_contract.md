@@ -640,6 +640,17 @@ Consequence, worth stating so an agent doesn't add a per-IC time rescale: becaus
     an endpoint exactly on a cut is counted once, by whichever of its two substeps changes side: `−, 0, +` is one
     crossing, in the first substep; `+, 0, −` one, in the second; `−, 0, −` is a crossing and its recrossing, which
     free reduction cancels (payload §3).
+  - **The start of a march.** A march's start is an endpoint like any other: it seeds the detection, and nothing is
+    appended for it. A collinear start has `d₀ = 0` on the non-negative side, so leaving into `d > 0` appends nothing,
+    and leaving into `d < 0` is the negative sense, named by the start's own segment: `A` with body 0 between, `B` with
+    body 2, nothing with body 1. Over a closed period this counts the start's syzygy once, whichever way: a period
+    leaving into `d < 0` arrives at its end from `d > 0` and reads nothing there; one leaving into `d > 0` arrives from
+    `d < 0` and reads the generator there. If rounding leaves `d₀` a few ulps below zero, the side is the negative one:
+    leaving into `d > 0` then reads the generator on the first substep, and leaving into `d < 0` reads nothing there,
+    so at an outer body's segment that one letter moves or goes, and it is a deterministic function of `d₀` (Tier B). A
+    few ulps above zero reads as `d₀ = 0`. On the Šuvakov plane's starts (Table I's among them) the middle body is ours
+    1 (R-630, item 3), whose segment carries no letter, so `d₀`'s rounding changes nothing there
+    (`crossing_start_on_cut`).
   - **The sort.** A crossed cut's crossing fraction is `τ = |d₀| / (|d₀| + |d₁|)`, which is `d₀/(d₀ − d₁)` on a
     crossing, lies in `[0, 1]`, and has a nonzero denominator, since one endpoint is negative. `τ` is never computed,
     so no division feeds the branch (Part 4). With both cuts crossed, `τ_b < τ_a` is decided as
