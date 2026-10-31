@@ -2912,3 +2912,59 @@ negative_control!(
     expected = "a job's start depends on its runner's environment",
     start_time_case("jobq_start_time_control", "America/New_York")
 );
+
+/// For each (worktree, target, worktree, target, same): the two jobs have one target key exactly when `same`.
+fn check_relative_target(pairs: &[(&str, &str, &str, &str, bool)]) {
+    for &(worktree_a, a, worktree_b, b, same) in pairs {
+        let mut first = job(1, Priority::Peek, State::Queued, Some(a));
+        first.worktree = PathBuf::from(worktree_a);
+        let mut second = job(2, Priority::Peek, State::Queued, Some(b));
+        second.worktree = PathBuf::from(worktree_b);
+        assert_eq!(
+            first.target_key() == second.target_key(),
+            same,
+            "relative target wrong: {a} in {worktree_a}, {b} in {worktree_b}"
+        );
+    }
+}
+
+#[test]
+fn jobq_a_relative_target_directory_is_its_worktrees() {
+    check_relative_target(&[
+        (
+            "/nonexistent/w",
+            "target",
+            "/other",
+            "/nonexistent/w/target",
+            true,
+        ),
+        (
+            "/nonexistent/w",
+            "./target",
+            "/nonexistent/w",
+            "target",
+            true,
+        ),
+        (
+            "/nonexistent/w",
+            "target",
+            "/nonexistent/x",
+            "target",
+            false,
+        ),
+        (
+            "/nonexistent/w",
+            "/nonexistent/t",
+            "/nonexistent/x",
+            "/nonexistent/t",
+            true,
+        ),
+    ]);
+}
+
+negative_control!(
+    jobq_a_relative_target_directory_is_its_worktrees,
+    "two worktrees' own `target` are two directories",
+    expected = "relative target wrong",
+    check_relative_target(&[("/nonexistent/w", "target", "/nonexistent/x", "target", true)])
+);

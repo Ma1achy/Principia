@@ -228,9 +228,11 @@ impl Job {
         self.env.get("CARGO_TARGET_DIR").map(String::as_str)
     }
 
-    /// The key its target directory is compared by ([`target_key`]).
+    /// The key its target directory is compared by ([`target_key`]). The command runs in the job's worktree, so a
+    /// relative directory is that worktree's, whatever the runner's own working directory is.
     pub fn target_key(&self) -> Option<String> {
-        self.target_dir().map(target_key)
+        self.target_dir()
+            .map(|dir| target_key(&self.worktree.join(dir).to_string_lossy()))
     }
 }
 
