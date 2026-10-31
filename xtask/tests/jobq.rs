@@ -19,10 +19,11 @@ use scratch::Scratch;
 use validation::negative_control;
 use validation::spawn::Spawn;
 use xtask::jobq::{
-    archivable, heavy, leader_is_jobs, lock_holder, may_signal_group, next_job, parse_etime,
-    parse_ps, parse_submit, pid_alive, record_start, run_order, runner_settings, snapshot_env,
-    spawn_too_soon, target_key, timed_out, utc, violations, Config, Job, Priority, Proc, Queue,
-    RunnerLock, State, ARCHIVE_AFTER, MAX_ATTEMPTS, SPAWN_GAP, START_SLACK,
+    archivable, group_members, heavy, leader_is_jobs, lock_holder, may_signal_group, next_job,
+    parse_etime, parse_ps, parse_submit, pid_alive, record_start, run_order, runner_settings,
+    running_for, snapshot_env, spawn_too_soon, start_time, target_key, timed_out, utc, violations,
+    Config, Job, Priority, Proc, Queue, RunnerLock, State, ARCHIVE_AFTER, MAX_ATTEMPTS, SPAWN_GAP,
+    START_SLACK,
 };
 
 /// A job that waits for the file `go`, 40 s at most: its queue's drop can miss it, should the test die, and a gate with
@@ -3228,4 +3229,150 @@ negative_control!(
     "the same process outside the job's group is logged",
     expected = "logged as outside the queue",
     orphan_case("jobq_orphan_control", false)
+);
+
+/// A job with its starts spent, left running by a dead runner in group `pgid`, or in the group of a leader running
+/// `leader` (`$0` is the queue's folder, and it touches `$0/ready` once it is set up; the job's recorded start `ago`
+/// seconds back): the runner marks it lost, and its note must say how the group ended.
+fn stale_note_case(tag: &str, leader: Option<&str>, pgid: Option<i32>, ago: u64, expected: &str) {
+    let q = Q::new(tag, "");
+    std::fs::create_dir_all(q.dir.join("jobs")).expect("jobs dir");
+    let spawned = leader.map(|script| {
+        let child = Command::new("/bin/sh")
+            .args(["-c", script])
+            .arg(&*q.dir)
+            .process_group(0)
+            .spawn()
+            .expect("stand-in started");
+        assert!(
+            until(30, || q.dir.join("ready").exists()),
+            "the stand-in never set up"
+        );
+        child
+    });
+    let pid = spawned.as_ref().map(|child| child.id() as i32);
+    let reaper = spawned.map(|mut child| std::thread::spawn(move || child.wait()));
+    let mut planted = job(1, Priority::Peek, State::Running, Some("/t"));
+    planted.worktree = q.work();
+    planted.attempts = MAX_ATTEMPTS;
+    planted.started = Some(xtask::jobq::now() - ago);
+    planted.pgid = pid.or(pgid);
+    planted.runner_pid = Some(dead_pid());
+    q.queue().save(&planted).expect("job planted");
+    let (code, out) = q.wait(1);
+    if let Some(pid) = pid {
+        kill("-9", -pid);
+    }
+    if let Some(reaper) = reaper {
+        let _ = reaper.join();
+    }
+    let note = q
+        .queue()
+        .load(1)
+        .expect("job file")
+        .note
+        .unwrap_or_default();
+    q.finish();
+    assert!(
+        code == 125 && note.contains(expected),
+        "a stale group's end misreported: status {code}, {out:?}, note {note:?}, not {expected:?}"
+    );
+}
+
+/// A leader that takes 0.3 s over its SIGTERM, within the grace, and ends; bounded, should the test die.
+const SLOW_ON_TERM: &str = "trap 'sleep 0.3; exit 0' TERM; touch \"$0/ready\"; i=0; \
+    while [ $i -lt 800 ]; do sleep 0.05; i=$((i+1)); done";
+/// A leader that ignores SIGTERM; bounded, as above.
+const IGNORES_TERM: &str = "trap '' TERM; touch \"$0/ready\"; i=0; \
+    while [ $i -lt 800 ]; do sleep 0.05; i=$((i+1)); done";
+
+#[test]
+fn jobq_a_stale_group_is_given_its_grace_and_its_end_recorded() {
+    stale_note_case("jobq_stale_none", None, None, 0, "it had no process group");
+    stale_note_case(
+        "jobq_stale_gone",
+        None,
+        Some(dead_pid()),
+        0,
+        "was already gone",
+    );
+    stale_note_case(
+        "jobq_stale_term",
+        Some(SLOW_ON_TERM),
+        None,
+        0,
+        "ended on SIGTERM",
+    );
+    stale_note_case("jobq_stale_kill", Some(IGNORES_TERM), None, 0, "was killed");
+    stale_note_case(
+        "jobq_stale_other",
+        Some(IGNORES_TERM),
+        None,
+        3_600,
+        "is another process's now, left alone",
+    );
+}
+
+negative_control!(
+    jobq_a_stale_group_is_given_its_grace_and_its_end_recorded,
+    "a group that ends on SIGTERM is not recorded as killed",
+    expected = "a stale group's end misreported",
+    stale_note_case(
+        "jobq_stale_control",
+        Some(SLOW_ON_TERM),
+        None,
+        0,
+        "was killed",
+    )
+);
+
+/// What `ps` says of a live process group, with one child beside its leader: its start time as `ps` gives it, its
+/// members, and, within 8 s, that it has run for `ran` seconds; of a dead process, nothing.
+fn process_reads_case(tag: &str, ran: u64) {
+    let q = Q::new(tag, "");
+    let mut leader = Command::new("/bin/sh")
+        .args(["-c", "sleep 30 & wait; :"])
+        .arg(&*q.dir)
+        .process_group(0)
+        .spawn()
+        .expect("stand-in started");
+    let pid = leader.id() as i32;
+    let two = until(10, || group_members(pid).len() == 2);
+    let members = group_members(pid);
+    let lstart = Command::new("ps")
+        .args(["-o", "lstart=", "-p", &pid.to_string()])
+        .env("LC_ALL", "C")
+        .env("TZ", "UTC")
+        .output_within(Duration::from_secs(30))
+        .expect("ps ran");
+    let lstart = String::from_utf8_lossy(&lstart.stdout).trim().to_owned();
+    let start = start_time(pid);
+    let has_run = until(8, || running_for(pid).is_some_and(|secs| secs >= ran));
+    kill("-9", -pid);
+    let _ = leader.wait();
+    let dead = dead_pid();
+    let (dead_start, dead_ran) = (start_time(dead), running_for(dead));
+    assert!(
+        two && members.contains(&pid)
+            && !lstart.is_empty()
+            && start.as_deref() == Some(lstart.as_str())
+            && has_run
+            && dead_start.is_none()
+            && dead_ran.is_none()
+            && group_members(dead).is_empty(),
+        "ps misread: members {members:?} of {pid}, start {start:?} against {lstart:?}, ran {ran} s: {has_run}, \
+         dead {dead_start:?} {dead_ran:?}"
+    );
+}
+
+#[test]
+fn jobq_reads_a_processs_start_group_and_age() {
+    process_reads_case("jobq_process_reads", 2);
+}
+
+negative_control!(
+    jobq_reads_a_processs_start_group_and_age,
+    "a process just started has not run for an hour",
+    expected = "ps misread",
+    process_reads_case("jobq_process_reads_control", 3_600)
 );

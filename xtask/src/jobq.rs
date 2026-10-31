@@ -1514,7 +1514,7 @@ fn leader_exited(pid: u32) -> bool {
 
 /// When process `pid` started, as `ps -o lstart=` gives it in the C locale and UTC: `ps` prints it by the caller's `TZ`
 /// and locale, and the runner that compares it may not have the environment of the runner that recorded it.
-fn start_time(pid: i32) -> Option<String> {
+pub fn start_time(pid: i32) -> Option<String> {
     let out = Command::new("ps")
         .args(["-o", "lstart=", "-p", &pid.to_string()])
         .env("LC_ALL", "C")
@@ -1526,7 +1526,7 @@ fn start_time(pid: i32) -> Option<String> {
 }
 
 /// The members of process group `pgid`.
-fn group_members(pgid: i32) -> Vec<i32> {
+pub fn group_members(pgid: i32) -> Vec<i32> {
     processes()
         .unwrap_or_default()
         .into_iter()
@@ -1536,7 +1536,7 @@ fn group_members(pgid: i32) -> Vec<i32> {
 }
 
 /// How long process `pid` has run, in seconds, from `ps -o etime=`, whose form doesn't depend on the locale or zone.
-fn running_for(pid: i32) -> Option<u64> {
+pub fn running_for(pid: i32) -> Option<u64> {
     let out = Command::new("ps")
         .args(["-o", "etime=", "-p", &pid.to_string()])
         .env("LC_ALL", "C")
