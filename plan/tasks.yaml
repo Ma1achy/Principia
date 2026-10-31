@@ -658,7 +658,7 @@
   title: The ROUNDTRIP preset and the one encode entry
   depends_on: [TASK-M2-20, TASK-M2-23, TASK-M2-25]
   needs: [REQ-COL-003, REQ-RENDER-005, REQ-COL-001]
-  requirements: [REQ-RENDER-025, REQ-ENC-002]
+  requirements: [REQ-RENDER-025, REQ-ENC-002, REQ-GEN-044]  # REQ-GEN-044: RQ-635 (applied per R-369)
   reviewers: [code, qa, physics]
   pitfalls: [PIT-5, PIT-9]
 - id: TASK-M2-27

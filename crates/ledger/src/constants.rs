@@ -1108,6 +1108,24 @@ pub const INV_PHI: ConstantBuilder = ConstantBuilder {
     provisional: None,
 };
 
+/// The fraction bits of the arctangent generator's integer sum (`crate::gen::arctan`; RQ-628's option (a)), 100: each
+/// `atan(k/8)` is summed in units of `2⁻¹⁰⁰` before rounding to the Q0.64 and Q2.62 words the kernel's file holds. Not in
+/// that file, and only the generator reads it. The corpus gives no such precision, so this is REQ-GEN-044's proposal
+/// (R-71), TASK-M2-26's, provisional until the M2 gate (R-427; RQ-635). A choice on a measured plateau, not a derivation:
+/// the generator's sum in exact integers writes the same table at every count from 72 to 121 bits. At 71 three of its
+/// eleven words differ, at 122 a product passes `2¹²⁸`, and the stated bound on those products, a term below `2^bits`
+/// times a numerator below `2¹⁴`, proves it up to 114. 100 is a round number with 28 bits of room above the first count
+/// that writes the table and 22 below the first that overflows. Admissible as expressed in canonical units, a pure
+/// number, as [`CURVE_GRID_LOG2`] is; RQ-635 asks whether that class stands, since no class fits a working precision
+/// exactly.
+pub const ARCTAN_SUM_BITS: ConstantBuilder = proposed(
+    "arctan_sum_bits",
+    100.0,
+    Admissibility::CanonicalUnits,
+    "REQ-GEN-044",
+    "M2",
+);
+
 /// The section that defines `hue_wheel` (R-72).
 const PRELUDE_SECTION: Citation = Citation::Corpus {
     file: "docs/gui/principia_render_gui_spec.md",
@@ -1293,7 +1311,8 @@ pub const TILT_TURN: ConstantBuilder = chart("tilt_turn", 360.0, R474);
 /// `n ≥ 2` (R-245). Then the steppers' coefficients and test 3's rounding-level criterion (TASK-M3-02; REQ-INT-037,
 /// REQ-VAL-191), and the substep law's defaults and its threshold table's maximum length (TASK-M3-03; R-502,
 /// REQ-INT-094), and the view window's square (TASK-M2-21), and the slice frame's default axis (TASK-M6-38), and the
-/// tilt's angles in degrees (TASK-M2-36; R-474), and the custom-stop ramp's OKLab bound (TASK-M7-11).
+/// tilt's angles in degrees (TASK-M2-36; R-474), and the custom-stop ramp's OKLab bound (TASK-M7-11), and the arctangent
+/// generator's working precision (TASK-M2-26; REQ-GEN-044).
 pub const REGISTER: &[ConstantBuilder] = &[
     HORIZON_STEPS_MAX,
     FGW_CAPACITY,
@@ -1368,4 +1387,5 @@ pub const REGISTER: &[ConstantBuilder] = &[
     TILT_RIGHT_ANGLE,
     TILT_HALF_TURN,
     TILT_TURN,
+    ARCTAN_SUM_BITS,
 ];

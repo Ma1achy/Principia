@@ -41,6 +41,23 @@ filter = """
 """
 test-group = "xtask-cargo"
 
+# The tests that exercise TASK-M2-26's own source run first in any run that selects them, ahead of their packages'
+# slower tests. A run's result is unchanged: priority only orders the schedule. It is for the mutants gate (R-302;
+# REQ-VAL-149, R-376): a mutant runs its package's tests in the name order until one fails (`.cargo/mutants.toml`), so a
+# mutant only `roundtrip_preset` catches sat behind about 500 s of render's tests and 1300 s of validation's, for each
+# of 142 mutants, and 8 shards of 300 min could not hold them (run 41098815668: 103 of 714 never ran). These tests
+# themselves take under a minute. Applied per R-369.
+[[profile.default.overrides]]
+filter = """
+    binary_id(=render::roundtrip_preset)
+    | binary_id(=validation::roundtrip_preset)
+    | binary_id(=validation::roundtrip_preset_golden)
+    | binary_id(=validation::qa_TASK-M2-26)
+    | binary_id(=validation::qa_TASK-M2-26_fragment)
+    | binary_id(=xtask::fragment_wgsl)
+"""
+priority = 50
+
 [test-groups]
 xtask-cargo = { max-threads = 1 }
 
@@ -54,7 +71,8 @@ xtask-cargo = { max-threads = 1 }
 # `invariant_gradient_gpu`, TASK-M2-12) and encode's (`engine`'s `encode_gpu` and `qa_TASK-M2-15_gpu`, TASK-M2-15) among
 # them, the per-pixel mass decode's (`engine`'s `per_pixel_mass_gpu`, TASK-M2-13) and decoder test 12 across backends
 # (`engine`'s `decode_cross_backend` and `qa_TASK-M2-24_gpu`, TASK-M2-24), the lock's locked-against-free render
-# (`engine`'s `lock_gpu`, TASK-M2-23), and the agreement preset's against the decode stage (validation's
+# (`engine`'s `lock_gpu`, TASK-M2-23), the kernel's own f32 `atan2` as the backend compiles it (`engine`'s `arctan_gpu`,
+# RQ-628), and the agreement preset's against the decode stage (validation's
 # `agreement_preset_gpu` and `qa_TASK-M2-25_gpu`) and the fragment snippets' check against the kernel's translation
 # (xtask's `fragment_wgsl`, TASK-M2-25); the xtask tests that run cargo on
 # the workspace's own target directory run in the `ci-workspace` job under the `ci-workspace` profile (R-372,
@@ -82,6 +100,7 @@ default-filter = """
         | binary_id(=engine::decode_cross_backend)
         | binary_id(=engine::qa_TASK-M2-24_gpu)
         | binary_id(=engine::lock_gpu)
+        | binary_id(=engine::arctan_gpu)
         | binary_id(=validation::decode_f32_eps_gpu)
         | binary_id(=validation::invariant_gradient_gpu)
         | binary_id(=validation::agreement_preset_gpu)
@@ -129,6 +148,7 @@ default-filter = """
     | binary_id(=engine::decode_cross_backend)
     | binary_id(=engine::qa_TASK-M2-24_gpu)
     | binary_id(=engine::lock_gpu)
+    | binary_id(=engine::arctan_gpu)
     | binary_id(=validation::decode_f32_eps_gpu)
     | binary_id(=validation::invariant_gradient_gpu)
     | binary_id(=validation::agreement_preset_gpu)
@@ -151,4 +171,11 @@ success-output = "immediate"
 # It changes only what is shown; the test and its filter are as before. Applied per R-369.
 [[profile.gpu-kernel.overrides]]
 filter = "binary_id(=engine::qa_TASK-M2-24_gpu) & test(=qa_m224_gpu_canon_turn)"
+success-output = "immediate"
+
+# The kernel's own f32 `atan2` on the job's backend (RQ-628): `arctan_gpu_is_cpu` prints the GPU's accuracy against f64
+# `atan2` on each sweep, shown on success, so lavapipe's run records it. It changes only what is shown. Applied per
+# R-369.
+[[profile.gpu-kernel.overrides]]
+filter = "binary_id(=engine::arctan_gpu) & test(=arctan_gpu_is_cpu)"
 success-output = "immediate"

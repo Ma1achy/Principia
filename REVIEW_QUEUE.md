@@ -636,6 +636,97 @@ choice changes the result and the corpus does not settle it (R-369).*
   REQ-DEC-011's and REQ-VAL-017's verify text and TASK-M2-48's two acceptance lines drop "unfused" and "on lavapipe".
   The tag rule, `ε_M01` (REQ-DEC-039) and R-547's form are unchanged. Nothing waits.
 
+## RQ-628: ROUNDTRIP's interior residual on a backend whose `atan2` is approximate: lavapipe's goes past `ε_phys` *(a calibration requirement, R-71; REQ-ENC-024, REQ-RENDER-025; R-297; inverse-encode contract Part 4, Part 8; context: TASK-M2-26, PR #343)*
+
+*Queued 30 Oct 2026 from TASK-M2-26's fix round, on CI's lavapipe runs of `qa_m226_latent_slices_dark_and_within_eps_phys`.
+For the owner: yes, it is REQ-ENC-024's calibration, and the options change what is built.*
+
+- **File, section:**
+  - `plan/tasks/M2/TASK-M2-26.md` § "Acceptance tests": "`cargo xtask golden roundtrip-preset` in `gpu-metal` and
+    `gpu-lavapipe` — ROUNDTRIP render of the latent and (L_z, E) charts, with the fragment compiled as the backend
+    compiles it (fast-math on Metal, R-297): residual below ε_phys (REQ-ENC-024) except at tagged-expected regions".
+  - The same file, § "Notes": "If the residual under fragment fast-math exceeds ε_phys, that is a REVIEW_QUEUE entry,
+    not a second tolerance (applied per R-204, accepted by R-358)."
+  - `docs/contracts/principia_inverse_encode_contract.md` § "Part 4 — Conditioning: assert in physical units, never in
+    z": "`ε_phys = k·ε_R` … one `k` for both precisions: the interior residual is rounding, the same count of `ε_R` at
+    f64 and f32", and "the `ROUNDTRIP` preset (Part 8) use[s] it unchanged".
+  - `decisions.md` § "R-297 — …": "fragment paths that recompute physics to check agreement (the DECODE/ROUNDTRIP
+    presets, R-116) compare within a stated tolerance, a calibration requirement, not bit-exactly."
+  - `crates/ledger/src/constants.rs`, `EPS_PHYS`: `k = 64`, proposed from the `encode-eps-phys` gate's CPU
+    measurements (worst interior 25.64 `ε_R`, f32).
+- **What was seen:** on CI's lavapipe runners (runs 41003051251 and 41003055485), slice 6 of the qa test (seed
+  `0x0343_2026`, a latent slice reaching 20 along random directions), sample 458 at `(0.328, 0.453)`: untagged, ratio
+  1.053 `ε_phys`. Every control is deep inside its clamp (margins 21 420, 398, 26 149, 17 297, 58 202, 281 223, 284,
+  123 763 clamp-`ε`), no mirror, no clamp, no degenerate decode, so nothing should tag it. The same trip on the CPU at
+  f32 gives 0.004 `ε_phys`; on Metal 0.034 (slice 6's worst untagged 0.26).
+- **The cause:** the state has a light body (`m₀ = 0.0044`), so `|ρ̃| = 0.034 ≪ |λ̃| = 1.0` and
+  `α = atan2(|λ̃|, |ρ̃|)` sits 0.034 below `π/2`. The decode builds `ρ̃` from `cos α`, so an absolute error `δα` in the
+  encode's `α` comes back as a relative error `δα / cos α` in `ρ`, about 30× here. Mesa lowers `atan2` (for lavapipe)
+  to a degree-11 odd polynomial whose leading coefficient is 0.9999793; for `|y/x| > 1` the angle is `π/2 − P(x/y)`,
+  so near `π/2` it is off by about `2.07·10⁻⁵·cos α` (about 174 `ε_R` relative to `cos α`). That gives
+  `Δρ/ρ ≈ 2.07·10⁻⁵`, `Δr₀ ≈ 1.05·10⁻⁵`, `/R_x = 7.7·10⁻⁶ ≈ 1.01 ε_phys`, the 1.053 CI reports. A check on Metal
+  agrees: the same view with `atan2` replaced by that lowering, in WGSL, gives 1.18 `ε_phys` at sample 458 and seven
+  untagged samples past `ε_phys` on slice 6. Changing each other builtin by 8 `ε_R` in turn (exp, log, tanh, atanh,
+  sin, cos, pow, sqrt) leaves sample 458 below 0.27; `atan2` alone takes it to 2. WGSL's and Vulkan's accuracy for
+  `atan2` is 4096 ULP, so this is a conforming backend. The ROUNDTRIP code is not at fault: it runs the generated
+  encode as R-116 requires, and the pixel is interior by every margin.
+- **The gap:** `ε_phys` was calibrated on the CPU, where the interior residual is rounding, and Part 4 assumes that.
+  In the fragment it is also the backend's builtin accuracy (`atan2`, amplified by `1/cos α` near a light body),
+  which no document bounds. The task requires `ε_phys` on lavapipe, and its note forbids a second tolerance without a
+  ruling.
+- **The question:** how ROUNDTRIP's interior is held to a tolerance on a backend whose builtins are only as accurate
+  as WGSL requires.
+- **Options seen:**
+  - (a) The one Rust source gives `α` and `β` an `atan2` of its own, a stated polynomial accurate to a few `ε_R` (as
+    R-437 made the poles backend-independent), so the fragment trip no longer depends on the backend's `atan2`. This
+    changes the generated encode (TASK-M2-25's), and the compute kernel too unless the change is fragment-only.
+  - (b) A stated fragment tolerance for ROUNDTRIP, `k_frag·ε_R` with `k_frag` calibrated on both backends (a second
+    calibration requirement, R-71).
+  - (c) `ε_phys` re-calibrated to cover the fragment on both backends, which loosens T2 on the CPU as well.
+  - (d) The lavapipe run drops from ROUNDTRIP's acceptance, or lavapipe is held to a looser stated bound (dropping or
+    changing an acceptance clause).
+- **Applied meanwhile:** none. No tolerance is changed, and qa's test is unchanged.
+- **Waits:** TASK-M2-26 (PR #343): its required test fails on the lavapipe runners.
+- **30 Oct 2026:** Decided by the orchestrator per R-369, option (a); see PR #343; the owner's veto listed. Built in
+  PR #343's fix round: at f32 the encode's `α` and `β`, the spherical and exponential inverses and the shape sphere
+  decode's `β` take the kernel's own `atan2` (`crates/kernel/src/arctan.rs`), in integer arithmetic, so every backend
+  gives the CPU's bits; the f64 path keeps libm's, bit for bit. No tolerance is changed, and qa's test is unchanged.
+
+## RQ-629: WGSL and Vulkan bound `sin` and `cos` only by an absolute error, where the decode's `cos α` near `π/2` needs a relative one *(a note for future backends; REQ-ENC-024, REQ-RENDER-025; R-297; inverse-encode contract Part 4; dd_decoder §3.2; context: RQ-628, TASK-M2-26, PR #343)*
+
+*Queued 30 Oct 2026 from TASK-M2-26's fix round, as RQ-628's decision directs. No failure today; nothing waits.*
+
+- **File, section:**
+  - The orchestrator's decision on RQ-628 (30 Oct 2026, applied per R-369), its last bullet: "Related, filed
+    separately: WGSL/Vulkan bound sin/cos only by an absolute error of 2^-11 on [-pi, pi], yet cos(alpha) near pi/2
+    needs relative accuracy. There is no failure today; this gets a REVIEW_QUEUE note so a future backend doesn't
+    surprise us. It is out of (a)'s scope."
+  - `docs/design/principia_dd_decoder.md` § "3.2 Configuration — hyperspherical mass-weighted Jacobi":
+    "`ρ̃ = R̃ cos α · (1, 0)`", and "`‖ρ̃‖ = cos α`, so **small α = LARGE inner-pair separation**; `α → π/2` = tight
+    inner binary + distant third body (hierarchical)."
+  - `docs/contracts/principia_inverse_encode_contract.md` § "Part 4 — Conditioning: assert in physical units, never in
+    z": "`ε_phys = k·ε_R` … one `k` for both precisions: the interior residual is rounding, the same count of `ε_R` at
+    f64 and f32", and "the `ROUNDTRIP` preset (Part 8) use[s] it unchanged".
+- **What is seen:** the fragment decode forms `‖ρ̃‖` from the backend's `cos α`. WGSL, and Vulkan for GLSL.std.450,
+  bound `sin` and `cos` only by an absolute error of `2⁻¹¹` on `[−π, π]`. Near `α = π/2`, `cos α` is small (0.034 for
+  RQ-628's light body), so an absolute bound allows a relative error in `‖ρ̃‖` of `2⁻¹¹/cos α`, far past `ε_phys`, as
+  `atan2`'s did in RQ-628. The backends in use do much better than the bound: RQ-628's check that moved each
+  other builtin, `sin` and `cos` among them, by 8 `ε_R` left the worst sample below 0.27 `ε_phys`, and with the
+  kernel's own `atan2` qa's `qa_m226_latent_slices_dark_and_within_eps_phys` passes on Metal (lavapipe's run is PR
+  #343's CI).
+- **The gap:** nothing in the corpus bounds a backend's `sin` and `cos` relative to their value, which `ε_phys`
+  assumes at the fragment's decode. RQ-628's option (a) replaced only `atan2` (the kernel's own, in integer
+  arithmetic); `sin` and `cos` stay the backend's.
+- **The question:** whether a future backend (another driver, WebGPU in a browser) is held to a relative accuracy for
+  `sin` and `cos` near `π/2`, or the decode's `cos α` is formed so that it needs none (for instance as `sin(π/2 − α)`
+  from an exact `π/2 − α`, or by the kernel's own function, as `atan2` now is).
+- **Options seen:** (a) nothing now: a note, acted on when a backend fails ROUNDTRIP's `ε_phys` this way; (b) a
+  per-backend check of `cos` near `π/2` against f64 in the GPU suite, so a new backend that does worse is caught
+  before ROUNDTRIP's acceptance; (c) the kernel's own `sin` and `cos` at f32, as `atan2` (a larger change, beyond
+  RQ-628's scope).
+- **Applied meanwhile:** none; nothing is built for it.
+- **Waits:** nothing.
+
 ## RQ-630: R-554 L3's and the chart contract's summary sentences on Lean each axis say `N_a` and `N_b` vanish together on a tilted view only at the corner, where L3's own closed form also gives both zero at Lean `(±180, 0)`, `(0, ±180)` and `(±180, ±180)` *(conflict: a ruling's summary against its own formula; R-554 L3, R-474 R2; `docs/contracts/principia_chart_decoder_contract.md` § "Repeats and the canonical point"; the physics review of PR #349 (5710611197), P2; REQ-SCHED-101; context: TASK-M2-36, TASK-M8-56)*
 
 *Queued 30 Oct 2026 by TASK-M2-36's fix round 2, on the physics review of PR #349. A wording conflict, not a physics
@@ -801,3 +892,40 @@ where the choice changes the result (which pixels count) and the corpus does not
 - **Applied meanwhile:** the ruled text, R-554 L3: `Tilted::pixel` (`crates/kernel/src/chart/tilt.rs`) applies no pole
   map unless `N_a = N_b = 0`, so such pixels count as distinct (TASK-M2-36, PR #349). No code changes for this entry.
 - **Waits:** nothing built waits; a fold, if ruled, is a follow-up to TASK-M2-36's `Tilted::pixel` and TASK-M8-56.
+
+## RQ-635: The arctangent generator's working precision, 100 fraction bits: a value the corpus doesn't give, and its admissibility class *(a calibration requirement, R-71; REQ-GEN-044; REQ-SYS-005, REQ-SYS-082; R-427; philosophy §4.2; context: RQ-628, TASK-M2-26, PR #343)*
+
+*Queued 31 Oct 2026 from TASK-M2-26's fix round, on code review 5720675453. For the M2 gate's calibration batch; nothing
+waits on it before the gate.*
+
+- **File, section:**
+  - `decisions.md` § "R-71 — A missing value becomes a calibration requirement": "Every value the corpus doesn't give
+    becomes a **calibration** requirement in the milestone that needs it."
+  - `plan/requirements.yaml`, REQ-SYS-082: "every other function there that returns a numeric literal must be moved into
+    the register or named in its doc as ledger or interface data".
+  - `docs/read_first/principia_00_philosophy.md` § "4.2 Every constant must be derived or absent": "A quantity is
+    admissible if it is bounded by its own achievable maximum, fixed by a conservation law, or expressed in canonical
+    units."
+  - `crates/ledger/src/gen/arctan.rs`, `sum_bits()`, before this fix: returned the literal 100, its doc citing nothing.
+- **What it is:** the units, `2⁻¹⁰⁰`, in which the generator sums each `atan(k/8)` in integer arithmetic before rounding
+  to the Q0.64 and Q2.62 words it writes. Only the generator reads it. The emitted file doesn't hold it.
+- **The gap:** no document gives this precision, and RQ-628's decision doesn't name it. It is a choice, not a
+  derivation: 100 is one value on a measured plateau, picked as a round number with room on both sides.
+- **The measurement** (the generator's sum in exact integers, each product checked against `2¹²⁸`, for every bit count
+  from 65 up): every count from 72 to 121 writes the same nine `ATAN_EIGHTHS`, `HALF_PI` and `PI`. At 71, three of the
+  eleven differ. At 122 a product passes `2¹²⁸` and the `u128` arithmetic overflows. The sum's error at 100 bits: under 2
+  units per term, each term carrying its predecessor's truncation (`eₙ₊₁ < eₙ/2 + 1`), which with at most 100 terms and
+  a dropped tail under 4 units is about 204 units; the measured worst is 90.05 units (`k = 8`, 95 terms), against the
+  `2³⁶` units the table keeps.
+- **The question:** confirm 100 at the M2 gate, or another value in 72 to 121, which writes the same file; and whether
+  the class stands.
+- **The class:** proposed as `canonical-units`, a pure number with no physical unit, as `curve_grid_log2` is. It is not
+  a clean fit, and no class is. `docs/design/principia_dd_generation_root.md` § "3.8 Metadata schema (what every entry
+  must carry)" reads: "`achievable-maximum` covers a format's achievable extreme: a value fixed by a number format's
+  limits", and 100 isn't fixed by `u128`'s limit, only bounded by it, though `curve_golden_steps`, a count where a
+  further step resolves nothing, holds that class. No conservation law applies.
+- **Options seen:** (a) confirm 100 as proposed; (b) a value derived from the plateau's edge, 72, which has no margin
+  against a change of the sum; (c) the largest, 121, which has no margin against overflow.
+- **Applied meanwhile (per R-369, R-71, R-427):** `arctan_sum_bits` = 100 in the register, marked provisional until M2,
+  citing REQ-GEN-044; `sum_bits()` reads it. Not hashed into the schema version: it decides no stored bit.
+- **Waits:** the M2 gate only (`gate-provisional --milestone M2` blocks until it is confirmed). TASK-M2-26 proceeds.

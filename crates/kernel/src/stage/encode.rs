@@ -4,10 +4,13 @@
 //!   its encode under the default links, [`encode_words`] words ([`write_encoded`]).
 //! - [`beta()`]: invocation `i` reads the pair `λ̃ = (λ̃_x, λ̃_y)` at words `2i`, `2i + 1` and writes `β` at word `i`, so
 //!   a test gives `β`'s selects their operands' exact bits, `±0` included.
+//! - [`arctangent()`]: invocation `i` reads the pair `(y, x)` at words `2i`, `2i + 1` and writes the kernel's own f32
+//!   `atan2(y, x)` (`crate::arctan`; RQ-628) at word `i`, so a test reads it as the backend compiles it.
 
 use spirv_std::glam::UVec3;
 use spirv_std::spirv;
 
+use crate::arctan::atan2_f32;
 use crate::encode::{self, blocks, Encoded, Report};
 use crate::generated::links::Defaults;
 use crate::stage::decode::{ic_words, read_ic};
@@ -133,5 +136,22 @@ pub fn beta(
         let x = f32::from_bits(lambda_t[2 * i]);
         let y = f32::from_bits(lambda_t[2 * i + 1]);
         out[i] = blocks::beta([x, y]).to_bits();
+    }
+}
+
+/// The kernel's own f32 `atan2` on given operands (`crate::arctan`; RQ-628): invocation `i` reads `(y, x)` at words
+/// `2i`, `2i + 1` of `yx` and writes `atan2_f32(y, x)` at word `i` of `out`; an invocation past the last pair writes
+/// nothing.
+#[spirv(compute(threads(64)))]
+pub fn arctangent(
+    #[spirv(global_invocation_id)] id: UVec3,
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 0)] yx: &[u32],
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 1)] out: &mut [u32],
+) {
+    let i = id.x as usize;
+    if i < yx.len() / 2 {
+        let y = f32::from_bits(yx[2 * i]);
+        let x = f32::from_bits(yx[2 * i + 1]);
+        out[i] = atan2_f32(y, x).to_bits();
     }
 }
