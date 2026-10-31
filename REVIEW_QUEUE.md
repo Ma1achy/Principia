@@ -829,3 +829,37 @@ where the choice changes the result (which pixels count) and the corpus does not
 - **Applied meanwhile:** the ruled text, R-554 L3: `Tilted::pixel` (`crates/kernel/src/chart/tilt.rs`) applies no pole
   map unless `N_a = N_b = 0`, so such pixels count as distinct (TASK-M2-36, PR #349). No code changes for this entry.
 - **Waits:** nothing built waits; a fold, if ruled, is a follow-up to TASK-M2-36's `Tilted::pixel` and TASK-M8-56.
+
+## RQ-639: The escape window is "provisional" (R-29), and no requirement, task or gate ever confirms it *(physics; calibration; silence; R-29, R-610; `docs/contracts/principia_integrator_contract.md` Part 3; `docs/design/principia_dd_generation_root.md` § "3.8 Metadata schema"; REQ-EVT-017, REQ-GUI-103; the code review (5723498808, F2) and physics review (5723511480, call 3) of PR #348; context: TASK-M3-06)*
+
+*Queued 31 Oct 2026 by TASK-M3-06's fix round, in the physics review's text. For the owner: yes, calibration values and
+physics where the choice changes results (R-369).*
+
+- **File, section:**
+  - `decisions.md` § R-29: "**The window** is 0.4 time units, sampled at sync boundaries (**provisional**)."
+  - `docs/contracts/principia_integrator_contract.md` Part 3: "`tau`, escape window | —, 0.4 (provisional)".
+  - `docs/read_first/principia_01_pitfalls.md` § 2.2: "`|Δn̂|` is taken over 0.4 time units (**provisional**)".
+  - `decisions.md` § R-610: "If the window is recalibrated (M3), the floor, the refusal's reason and the line beside
+    the field move with it".
+  - `plan/requirements.yaml`, REQ-EVT-017's note: "the window length is marked provisional in R-29; a change must go
+    through a ruling."
+  - `plan/requirements.yaml`, REQ-GUI-103: "the escape window (0.4 time units, provisional)".
+- **The gap:**
+  - REQ-EVT-025 calibrates `tau` only, and `plan/MILESTONES.md` § M3 lists "the tau gap" but not the window.
+  - TASK-M3-07's proposal covers only "how the closure window's 0.4 time units map onto the grid". TASK-M3-34 measures
+    at the fixed window.
+  - The register's `escape_window` is settled (citing R-29), so `provisional_until` omits it and the M3 gate never
+    blocks on it. `docs/design/principia_dd_generation_root.md` § 3.8 forbids marking it provisional without a
+    calibration requirement.
+- **The question:** is 0.4 confirmed by measurement at M3, or by ruling as it stands? It changes which trajectories
+  fire escape and when, and R-610's horizon floor follows it.
+- **Options seen:**
+  - (a) A new calibration requirement, confirmed at the M3 gate, proposed by the task that re-validates escape
+    (TASK-M3-34), with evidence over a window ladder. The register entry then becomes `proposed(..., <req>, "M3")`.
+  - (b) A ruling confirms 0.4. The word "provisional" comes off by a port, and the entry cites that ruling.
+- **Second question:** the window is carried and shown in the Run window (REQ-GUI-103), but `validate` accepts any
+  finite positive value, and T's floor follows it (`check_horizon`). So what range may it take? That range also bears
+  on the smallest `dt_macro` a carried window can reach; TASK-M3-06 meanwhile refuses a `dt_macro` whose smallest
+  substep is not a normal f32, per R-369.
+- **Applied meanwhile:** 0.4 per R-29, settled in the register, the doc comment saying provisional (TASK-M3-06).
+- **Waits:** the answer is needed by the M3 gate. No task waits.
