@@ -405,12 +405,22 @@ with dd_colouring §3.1's sRGB transfer.
     2.5 = 8.5, so `|V|` carries 11. In a correctly rounded CPU reference, `K` 3 and `|V|` 4. So
     `|x| ≤ 2⁻²³·(9K + 15|V|)`, `k_E = (9K + 15|V|)/|E_0|`, and for a bound state `|V| = K + |E_0|`, `k_E = 24·K/|E_0| + 15`.
     For `L_z`, six products and five additions in the fragment, 3 of `S = Σ(|xᵢp_{y,i}| + |yᵢp_{x,i}|)`, and 2 in the
-    reference: `k_L = 5·S/|Lz_0|`. `k = 128` holds the bound for `K/|E_0|` up to 4.7 on a bound state and `S/|Lz_0|` up
-    to 25.6. The golden showcase's fresh sample has `k_E` 63.3 to 64.5 and `k_L` 5.08; Metal's observed differences, +5
-    ULP of `E_0` and −1 ULP of `Lz_0`, are 2.6 and 0.7 in these units, inside the bound and not what sets it. Over 20,000
-    draws of the default decoder's latent cube the bound is met on all of them for `k_E` at full range and on 97% near
-    rest (momentum controls within ±0.4), and for `k_L` on about 97%; the band reads 2⁻¹⁶ of the reference, far under
-    the energy-suspect threshold's 2⁻⁸.
+    reference: `k_L = 5·S/|Lz_0|`. In a GPU-computed reference, the one kernel source at f32 under the same accuracy, the
+    production path, the reference carries the fragment's own `K` 6 and `|V|` 11, and `L_z` 3: `|x| ≤ 2⁻²³·(12K + 22|V|)`,
+    so `k_E = 34·K/|E_0| + 22`, and `k_L = 6·S/|Lz_0|`. `k = 128` holds the bound for `K/|E_0|` up to 4.7 on a bound state
+    and `S/|Lz_0|` up to 25.6 with a CPU reference, and up to 3.1 and 21.3 with a GPU one. The golden showcase's fresh
+    sample has `k_E` 63.3 to 64.5 and `k_L` 5.08 with a CPU reference, and `k_E` up to 92 and `k_L` 6.1 with a GPU one;
+    Metal's observed differences, +5 ULP of `E_0` and −1 ULP of `Lz_0`, are 2.6 and 0.7 in these units, inside the bound
+    and not what sets it. **128 is** the first power of two above the showcase's worst case with either reference, and a
+    power of two is one number in f32 and f64; 64 fails even the CPU form, at 64.5. The band reads 2⁻¹⁶ of the reference,
+    far under the energy-suspect threshold's 2⁻⁸. No GPU kernel writes real samples until M4, so
+    `drift_view_neutral_fresh_sample_renders_exactly_neutral` takes its references from the CPU read side, and
+    TASK-M4-05 inherits the check on a GPU-computed reference.
+    **The edge is hard.** A colour past the band keeps its own place, so no other tile moves, and `t` jumps at the band's
+    edge: from 0.5 to 0.75 at `|E_0| = 0.1168` (dd test 2) and to 0.87 at `|E_0| = 1`, under `ε_E = 10⁻⁶`, and to the
+    mirror places on the negative side. So a drift oscillating through the edge reads as on and off, and a pixel within
+    rounding of the edge can differ between backends by that whole jump: the band moves this noise to the edge, where a
+    fresh sample isn't, rather than removing it.
     **At or near a zero reference** the band narrows to nothing, and is empty at `reference = 0`, where only an exact 0
     is neutral. The rounding there is still relative to `K + |V|` or `S`, so a fresh sample with `E_0` or `Lz_0` near a
     cancellation (a near-parabolic start, or a start with `L_z ≈ 0` and moving bodies, the figure-eight among them) can
