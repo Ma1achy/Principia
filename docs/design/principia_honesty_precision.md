@@ -347,8 +347,8 @@ the nominal copy, as the f32 run must be to equal the atlas pixel's.
   start's ratio is a bound, it stays in the median over all 256, and the count of censored starts is reported; the
   gate is valid only if fewer than half of the 256 are censored (R-632, closing RQ-575: Q1 (a), Q2 (ii)). The
   tolerance on the median's distance from 1 is a calibration for the gate (REQ-VAL-199). It tests the parting ratio, not
-  outcome statistics. Its median's 95% rank interval over 256 is ranks 112 to 145, the quantiles 0.44 to 0.57, and 112 or
-  more starts censored on one side put that interval's end among bounds; for scale, a KS at 5% over 256 has critical
+  outcome statistics. Its median's 95% rank interval over 256 is ranks 112 to 145, the quantiles 0.44 to 0.57, and c bounds
+  of one direction move the affected end out by c ranks, unbounded at 112 or more; for scale, a KS at 5% over 256 has critical
   distance 0.12, so differences of a few percent are out of its sight (R-661; re-sizing is RQ-647). *Was (R-600):* "the
   median measured `t_part(f32)/t_part(f64)` compared with the predicted one, never with `ln eps₃₂ / ln eps₆₄ ≈ 0.44`.
   Never read off one trajectory. The tolerance is a calibration for the gate (REQ-VAL-199). How a start whose pair
