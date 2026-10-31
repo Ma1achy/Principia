@@ -46,7 +46,8 @@ while :; do
   kill -0 "$child" 2> /dev/null || exit "$rc"
 done'
 # shellcheck disable=SC2016 # expanded inside
-RUN_AS='uid=$1 gid=$2 envfile=$3; shift 3
+RUN_AS='uid=$1 gid=$2 envfile=$3 limits=$4; shift 4
+eval "$limits"
 exec setpriv --reuid="$uid" --regid="$gid" --init-groups -- bash -c '\''. "$1"; shift; exec "$@"'\'' contain-env "$envfile" "$@"'
 
 # Memory: the runner has 16 GiB and no swap (mutants.yml removes it); this leaves its agent and the kernel the rest.
@@ -130,7 +131,7 @@ heartbeat() {
 run_contained() {
   [ "${PRIN_CONTAIN:-}" = required ] || exec "$@"
   require_tools
-  local unit="prin-contain-$$" began uid gid envfile watcher rc
+  local unit="prin-contain-$$" began uid gid envfile watcher rc limits limit
   began=$(date +%s)
   uid=$(id -u)
   gid=$(id -g)
@@ -140,6 +141,12 @@ run_contained() {
   envfile=$(mktemp "${RUNNER_TEMP:-/tmp}/contain-env.XXXXXX")
   # sudo strips the environment; the command gets all of this one, PATH and LD_LIBRARY_PATH included.
   declare -px > "$envfile"
+  # sudo takes the core-dump limit to 0, and only root may raise a hard limit: `prlimit --core=1`, the mutants' memory
+  # cap's runner, then fails on every test. The command gets this shell's limits back, set as root.
+  limits=""
+  for limit in c n s u l v; do
+    limits+="ulimit -H$limit $(ulimit -H$limit) 2> /dev/null; ulimit -S$limit $(ulimit -S$limit) 2> /dev/null; "
+  done
   df -h / || true
   sudo -n dmsetup status 2> /dev/null || true
   heartbeat "$unit" "$began" &
@@ -148,7 +155,8 @@ run_contained() {
   sudo -n systemd-run --scope --quiet --unit="$unit" -p MemoryMax="$MEMORY_MAX" -p TasksMax="$TASKS_MAX" \
     -p CPUWeight=20 -p IOWeight=20 -p OOMPolicy=continue -- \
     unshare --pid --fork --kill-child --mount-proc \
-    bash -c "$INIT" contain-init bash -c "$RUN_AS" contain-user "$uid" "$gid" "$envfile" "$@" < /dev/null
+    bash -c "$INIT" contain-init bash -c "$RUN_AS" contain-user "$uid" "$gid" "$envfile" "$limits" "$@" \
+    < /dev/null
   rc=$?
   set -e
   kill "$watcher" 2> /dev/null || true
@@ -181,6 +189,7 @@ check() {
   local probe='[ "$(cat /proc/1/comm)" = bash ] || exit 41
     if kill -0 "$1" 2> /dev/null; then exit 42; fi
     [ "$(ps -o pgid= -p $$)" -gt 0 ] || exit 43
+    prlimit --as=8589934592 --core=1 true || exit 44
     kill -9 -1 2> /dev/null
     setsid sleep "$2" < /dev/null > /dev/null 2>&1 &
     exit 0'
