@@ -459,7 +459,7 @@ pub fn pid_alive(pid: i32) -> bool {
 }
 
 /// Whether process group `pgid` may be signalled by the process `own_pid` in group `own_group`: the one check in front
-/// of every group signal ([`signal_group`]). `kill(-1, ...)`, which is what signalling group 1 comes to, reaches every
+/// of every group signal (`signal_group`). `kill(-1, ...)`, which is what signalling group 1 comes to, reaches every
 /// process this user may signal, and group 0 is the caller's own; ids below those are not groups at all; and neither
 /// the runner's own pid nor group can be a job's, since each job leads a group of its own.
 ///
