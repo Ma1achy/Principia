@@ -20,7 +20,7 @@ use crate::explore::compass::physical::{
     Matrix, Refusal, Set, CUT, TOLERANCE,
 };
 use crate::explore::compass::views::{orthonormal, upper, CompassView, GridPlace};
-use crate::explore::compass::{MARGIN, SLICE_BUTTON, TILT_BUTTON, TITLE};
+use crate::explore::compass::{COLUMN_BAR, MARGIN, SLICE_BUTTON, TILT_BUTTON, TITLE};
 use crate::explore::manifold_view::{dot, lock_edit, norm, point, View};
 use crate::explore::{COMPASS, COMPASS_JACOBI, COMPASS_SHAPE, COMPASS_TILT};
 use crate::headless::Headless;
@@ -439,6 +439,33 @@ fn help_at(id: &'static str, window: [f32; 2], least: bool) -> (App<MockSide>, H
     let _ = h.frame(&mut app, Vec::new());
     let panel = Layout::with_splits(screen, PIXELS_PER_POINT, &app.splits).compass;
     (app, h, panel)
+}
+
+/// At the artboard's window the column fits, at the pole's wider readout too: no scroll, so no bar and no narrower wrap.
+#[test]
+fn mock_compass_steer_physical_the_help_fits_at_the_artboard_with_no_bar() {
+    let mut pole = start();
+    pole.z0 = at_pole();
+    for (p, id) in [
+        (start(), COMPASS_JACOBI),
+        (start(), COMPASS_SHAPE),
+        (pole, COMPASS_SHAPE),
+    ] {
+        let (mut app, mut h) = app_with(&p, Decoder::default(), id);
+        let output = h.frame(&mut app, Vec::new());
+        let (help, clip, _) = laid_clipped(&output, physical::HELP).expect("the help");
+        assert!(help.max.y <= clip.max.y, "{help:?} ends in {clip:?}");
+        // The column's whole width to wrap in: a bar would take its allocated width from it.
+        let panel = compass_rect(&h);
+        let room = panel.max.x - MARGIN - help.min.x;
+        let bar = COLUMN_BAR + eframe::egui::style::ScrollStyle::solid().bar_inner_margin;
+        assert!(help.width() > room - bar, "{help:?} in {room} wide");
+        // Control: the viewport stopping at the full margin, as it did, ends short of the help.
+        let at_margin = panel.max.y - MARGIN;
+        rejects("the column stopped at the margin", || {
+            assert!(help.max.y <= at_margin, "{help:?}")
+        });
+    }
 }
 
 /// The physical views' help at the least panel and the windows the review measured it past: it is clipped to the panel,

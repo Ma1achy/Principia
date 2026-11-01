@@ -1275,6 +1275,9 @@ pub const MARGIN: f32 = 12.0;
 pub const UNDER_GRID_GAP: f32 = 2.0;
 /// The width of the bar beside the column while it scrolls, in points (a look choice, R-390).
 pub const COLUMN_BAR: f32 = 6.0;
+/// How far the column stops short of the panel's foot, in points (a look choice, R-390): less than [`MARGIN`], so the
+/// physical help, which ends 10 above the foot at the artboard's window, fits there with no bar and no narrower wrap.
+pub const COLUMN_FOOT: f32 = 4.0;
 
 /// The cube's square in the compass's `rect`: at its top left inside the margin, as tall as the margin leaves, at most
 /// half its width, a whole number of points, so the reference renders at its size (applied per R-369).
@@ -1430,7 +1433,7 @@ pub fn show(
     };
     let text = Rect::from_min_max(
         pos2(square.max.x + MARGIN, rect.min.y + MARGIN),
-        rect.max - vec2(MARGIN, MARGIN),
+        rect.max - vec2(MARGIN, COLUMN_FOOT),
     );
     let mut column = ui.new_child(UiBuilder::new().max_rect(text));
     // A scroll area clips its cross axis to its parent's clip, here the whole window.
