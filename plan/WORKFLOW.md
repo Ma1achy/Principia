@@ -161,6 +161,26 @@ pinned version.)
    stacked; if a stack is ever needed, the child PR is retargeted to `main` before the PR below it merges, because
    merging deletes the lower branch at once and deleting a base branch closes its child PRs (CLAUDE.md § Git, R-362).
 
+**Advisory bot reviews (R-651, a standing rule).** Codex, Gemini CLI and GitHub Copilot review alongside the named
+reviewers, advisory only: they never replace the named reviewers' approvals, and `reviews-complete` doesn't count them.
+The orchestrator asks each bot for a fresh review (`@codex review`, `@gemini-cli /review`, Copilot re-requested as a
+reviewer):
+- **before the merge, on the final head:** step 6 waits for a review from each bot on the exact SHA being merged, and
+  re-requests a bot whose last review is on an older head;
+- **after every substantive push:** new logic, physics or algebra, a fix responding to review findings (whatever it
+  changes), or a rebase or merge that changes code; only a docs-only typo push that answers no finding needs none;
+- **periodically on a long-running PR:** at least once a working day while it is open, and every few pushes on a
+  large one, so problems surface partway through rather than at the end.
+
+Under limits the order is pre-merge, then post-push, then periodic. A bot is unavailable when it hasn't reviewed the
+exact SHA within its limit, counted from the request (Codex 25 minutes, Gemini CLI 30, Copilot 15), errors, or refuses
+on quota or rate limit; it is noted on the PR and the merge goes ahead with the others; the owner is told if pre-merge
+reviews start being skipped. Every bot finding is closed out before the merge: verified against the code, the spec or
+the physics, then fixed (the reply names the commit), answered with why it doesn't apply (wrong, out of scope, already
+covered), or moved to a tracked task or RQ; then its thread is resolved. No thread is resolved without a reply, a wrong
+finding is answered, never "fixed" to silence it, and a PR with an unresolved bot thread does not merge
+(`plan/OPERATIONS.md` § "Merging").
+
 ## Human checkpoints: the milestone gates
 
 A milestone exits only at a human checkpoint. Before it:
@@ -186,6 +206,15 @@ R-627 (27 Oct 2026) extends the exception to M8's GUI-track tasks (TASK-M8-05, T
 web skeleton and its measurements): each merges once its reviews pass and CI is green without waiting for the gates of M3 to M6; the gates of M2
 and M7, which R-627 does not name, by R-415's test above, recorded in the PR. Their wiring tasks, TASK-M8-88 to
 TASK-M8-95, run on the real engine and wait for the gates as any other task does.
+*30 Oct 2026 (R-649, R-650):* a replication or verification target is a measurement, never a gate: an external
+target's outcome (PASS, EXPLAINED DIVERGENCE or UNEXPLAINED) blocks no merge and no milestone. The internal
+correctness tests, the GPU-vs-CPU agreement checks within their stated f32 tolerances and the anchor smoke tests
+stay in their milestones' gates and block as before. M9, external replication, follows M8 and has no gate: it exits
+on its report (REQ-VAL-340), which the owner reviews, and the calibrations of its targets are confirmed by the human
+with that report, not at a gate. Scoring waits for M9, and R-415's test above does not bring an M9 task forward.
+Source ingest and transcription (data PRs under `docs/incoming/`) merge whenever their reviews pass. An early peek
+scores a target as information only, in `docs/verification/peek_log.md` (`docs/design/principia_dd_replication.md`
+§ "12.5 Peeks"), never a gate.
 
 ## Escalation
 
