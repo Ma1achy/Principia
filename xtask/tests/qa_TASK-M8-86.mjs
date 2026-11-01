@@ -62,7 +62,7 @@ function probeScenarios(dir) {
 }
 
 // The loader on a stub page: what it started, with what.
-async function runLoader(dir, { search, offscreen = true, gpu = true }) {
+async function runLoader(dir, { search, offscreen = true, gpu = true, isolated = true }) {
   const seen = { main: [], workers: [], transferred: 0 };
   const define = (name, value) => Object.defineProperty(globalThis, name, { value, writable: true, configurable: true });
   define("__seen", seen);
@@ -84,8 +84,12 @@ async function runLoader(dir, { search, offscreen = true, gpu = true }) {
   };
   define("location", { search });
   define("window", globalThis);
-  define("navigator", { platform: "MacIntel", gpu: gpu ? {} : undefined });
-  define("crossOriginIsolated", true);
+  // A page that is not isolated, with its service worker active, as Safari showed one (qa review 5728266391, F2): so no
+  // reload is waited for, no SharedArrayBuffer exists, and a shared memory cannot be posted to a worker.
+  const serviceWorker = isolated ? {} : { serviceWorker: { controller: {} } };
+  define("navigator", { platform: "MacIntel", gpu: gpu ? {} : undefined, ...serviceWorker });
+  define("crossOriginIsolated", isolated);
+  if (!isolated) delete globalThis.SharedArrayBuffer;
   define("self", globalThis);
   define("devicePixelRatio", 1);
   define("addEventListener", () => {});
@@ -105,6 +109,9 @@ async function runLoader(dir, { search, offscreen = true, gpu = true }) {
       seen.workers.push(this);
     }
     postMessage(message) {
+      if (!isolated && this.url.includes("probe-worker")) {
+        throw new DOMException("The object can not be cloned.", "DataCloneError");
+      }
       this.posts.push(message);
       if (this.url.includes("probe-worker") && message.role === "first") setTimeout(() => this.onmessage?.({ data: "ok" }), 0);
       if (this.url.includes("worker.js") && !this.url.includes("probe") && message.type === "start") {
@@ -142,7 +149,39 @@ function loaderScenarios(dir) {
     const span = stamps.at(-1) - stamps[0];
     check(span >= 1900 && span <= 2600, `the idle loop ran ${span} ms, not 2 s`);
   };
+  // Not being isolated is a reading, not a failure (R-649): the fields say so, and the run stays in the layout it asked for,
+  // so `fallback_reason`, which records a worker layout that failed, stays null.
+  const checkNotFailed = (published) => {
+    check(published?.status !== "failed", `a page not isolated was reported as failed: ${published?.reason}`);
+  };
+  const checkNotIsolated = (env, layout, run) => {
+    check(env, "no environment under ?measure");
+    check(env.layout === layout, `the panel's layout is ${env.layout}, not ${layout}`);
+    check(env.fallbackReason === null, `fallback_reason is ${env.fallbackReason}`);
+    check(env.crossOriginIsolated === false, `crossOriginIsolated reads ${env.crossOriginIsolated}`);
+    check(env.sharedArrayBuffer === false, `SharedArrayBuffer reads ${env.sharedArrayBuffer}`);
+    check(/^DataCloneError: /.test(env.wasmThreads), `the probe's result: ${env.wasmThreads}`);
+    check(env.run === run, `the run flag: ${env.run}`);
+    check((env.idleLoopMs ?? []).length > 10, "the idle loop did not run");
+  };
   return {
+    async loader_not_isolated_layout_worker() {
+      const { seen, appWorker, published } = await runLoader(dir, { search: "?layout=worker&measure&run=idle", isolated: false });
+      checkNotFailed(published);
+      check(seen.main.length === 0, "not isolated, and ?layout=worker fell back to the main thread");
+      check(appWorker, "not isolated, and ?layout=worker started no worker");
+      check(seen.transferred === 1, `the canvas was transferred ${seen.transferred} times`);
+      const start = appWorker.posts.find((m) => m.type === "start");
+      checkNotIsolated(JSON.parse(start.environment), "worker", "idle");
+    },
+    async loader_not_isolated_layout_main() {
+      const { seen, appWorker, published } = await runLoader(dir, { search: "?layout=main&measure&run=pan", isolated: false });
+      checkNotFailed(published);
+      check(!appWorker, "not isolated, and ?layout=main started a worker");
+      check(seen.transferred === 0, "not isolated, and ?layout=main transferred its canvas");
+      check(seen.main.length === 1, `?layout=main started ${seen.main.length} main apps`);
+      checkNotIsolated(JSON.parse(seen.main[0]), "main", "pan");
+    },
     async loader_layout_main() {
       const { seen, appWorker } = await runLoader(dir, { search: "?layout=main&measure&frame_delay_ms=7&run=idle" });
       check(!appWorker, "?layout=main started a worker");
@@ -208,6 +247,35 @@ function runnerScenarios(dir) {
         let threw = false;
         try { parseArgs(bad); } catch { threw = true; }
         check(threw, `parseArgs took ${bad}`);
+      }
+    },
+    // Isolation is a measurement, not a failure (R-649): a finished run that is not isolated is a good run, and each run
+    // keeps its own fields, as Safari's pan and idle differed (qa review 5728266391, F2).
+    async runner_each_run_keeps_its_own_isolation() {
+      const { waitForRun, writeFields } = await common();
+      const pan = { status: "done", layout: "worker", fallback_reason: null, cross_origin_isolated: true, shared_array_buffer: true, wasm_threads: "ok" };
+      const idle = {
+        status: "done",
+        layout: "worker",
+        fallback_reason: null,
+        cross_origin_isolated: false,
+        shared_array_buffer: false,
+        wasm_threads: "DataCloneError: The object can not be cloned.",
+      };
+      const got = await waitForRun(async () => idle);
+      check(got === idle, `a finished run that is not isolated came back as ${JSON.stringify(got)}`);
+      const out = join(mkdtempSync(join(tmpdir(), "qa-m8-86-")), "fields.json");
+      const code = writeFields({ url: "http://localhost/", layout: "worker", out }, "safari", { pan, idle });
+      check(code === 0, `a run that is not isolated exited ${code}`);
+      const { results } = JSON.parse(readFileSync(out, "utf8"));
+      check(results.pan.cross_origin_isolated === true && results.pan.wasm_threads === "ok", "the pan run's isolation");
+      check(
+        results.idle.cross_origin_isolated === false && results.idle.shared_array_buffer === false && results.idle.wasm_threads === idle.wasm_threads,
+        "the idle run's isolation",
+      );
+      for (const run of [results.pan, results.idle]) {
+        check(run.fallback_reason === null, `the written fallback_reason is ${run.fallback_reason}`);
+        check(run.layout === "worker", `the written layout is ${run.layout}`);
       }
     },
     async runner_writes_the_fields() {

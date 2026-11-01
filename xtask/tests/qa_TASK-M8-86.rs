@@ -616,6 +616,258 @@ negative_control!(
     )
 );
 
+const NOT_ISOLATED_WORKER: &str = "loader_not_isolated_layout_worker";
+const NOT_ISOLATED_MAIN: &str = "loader_not_isolated_layout_main";
+const EACH_RUN: &str = "runner_each_run_keeps_its_own_isolation";
+
+/// A page that is not isolated (qa review 5728266391, F2): the fields read false, false and the `DataCloneError`, the app
+/// runs in the layout asked for, and `fallback_reason` stays null. The task defines it for a worker layout that failed.
+#[test]
+fn qa_m8_86_not_isolated_the_worker_layout_reads_so_and_stays() {
+    node(NOT_ISOLATED_WORKER, &[]);
+}
+
+mod worker_isolated_hard_coded {
+    use super::*;
+    negative_control!(
+        qa_m8_86_not_isolated_the_worker_layout_reads_so_and_stays,
+        "crossOriginIsolated hard-coded true",
+        expected = "crossOriginIsolated reads true",
+        node(
+            NOT_ISOLATED_WORKER,
+            &[("loader.js", r#"self.crossOriginIsolated === true"#, "true")]
+        )
+    );
+}
+
+mod worker_shared_memory_hard_coded {
+    use super::*;
+    negative_control!(
+        qa_m8_86_not_isolated_the_worker_layout_reads_so_and_stays,
+        "SharedArrayBuffer hard-coded true",
+        expected = "SharedArrayBuffer reads true",
+        node(
+            NOT_ISOLATED_WORKER,
+            &[(
+                "loader.js",
+                r#"typeof SharedArrayBuffer !== "undefined""#,
+                "true"
+            )]
+        )
+    );
+}
+
+mod worker_probe_catch_removed {
+    use super::*;
+    negative_control!(
+        qa_m8_86_not_isolated_the_worker_layout_reads_so_and_stays,
+        "the probe no longer catches the refused post",
+        expected = "was reported as failed: DataCloneError",
+        node(
+            NOT_ISOLATED_WORKER,
+            &[(
+                "loader.js",
+                r#"finish(`${e.name}: ${e.message}`);"#,
+                "throw e;"
+            )]
+        )
+    );
+}
+
+mod worker_reason_filled {
+    use super::*;
+    negative_control!(
+        qa_m8_86_not_isolated_the_worker_layout_reads_so_and_stays,
+        "a reason recorded with no fallback",
+        expected = "fallback_reason is DataCloneError",
+        node(
+            NOT_ISOLATED_WORKER,
+            &[(
+                "loader.js",
+                r#"encode(env, "worker", null)"#,
+                r#"encode(env, "worker", env?.wasmThreads ?? null)"#
+            )]
+        )
+    );
+}
+
+mod worker_gives_up_when_not_isolated {
+    use super::*;
+    negative_control!(
+        qa_m8_86_not_isolated_the_worker_layout_reads_so_and_stays,
+        "the worker layout given up on a page not isolated",
+        expected = "fell back to the main thread",
+        node(
+            NOT_ISOLATED_WORKER,
+            &[(
+                "loader.js",
+                r#"typeof OffscreenCanvas === "undefined""#,
+                r#"typeof OffscreenCanvas === "undefined" || !self.crossOriginIsolated"#
+            )]
+        )
+    );
+}
+
+#[test]
+fn qa_m8_86_not_isolated_the_main_layout_reads_so_and_stays() {
+    node(NOT_ISOLATED_MAIN, &[]);
+}
+
+mod main_isolated_hard_coded {
+    use super::*;
+    negative_control!(
+        qa_m8_86_not_isolated_the_main_layout_reads_so_and_stays,
+        "crossOriginIsolated hard-coded true",
+        expected = "crossOriginIsolated reads true",
+        node(
+            NOT_ISOLATED_MAIN,
+            &[("loader.js", r#"self.crossOriginIsolated === true"#, "true")]
+        )
+    );
+}
+
+mod main_shared_memory_hard_coded {
+    use super::*;
+    negative_control!(
+        qa_m8_86_not_isolated_the_main_layout_reads_so_and_stays,
+        "SharedArrayBuffer hard-coded true",
+        expected = "SharedArrayBuffer reads true",
+        node(
+            NOT_ISOLATED_MAIN,
+            &[(
+                "loader.js",
+                r#"typeof SharedArrayBuffer !== "undefined""#,
+                "true"
+            )]
+        )
+    );
+}
+
+mod main_probe_catch_removed {
+    use super::*;
+    negative_control!(
+        qa_m8_86_not_isolated_the_main_layout_reads_so_and_stays,
+        "the probe no longer catches the refused post",
+        expected = "was reported as failed: DataCloneError",
+        node(
+            NOT_ISOLATED_MAIN,
+            &[(
+                "loader.js",
+                r#"finish(`${e.name}: ${e.message}`);"#,
+                "throw e;"
+            )]
+        )
+    );
+}
+
+mod main_reason_filled {
+    use super::*;
+    negative_control!(
+        qa_m8_86_not_isolated_the_main_layout_reads_so_and_stays,
+        "a reason recorded with no fallback",
+        expected = "fallback_reason is DataCloneError",
+        node(
+            NOT_ISOLATED_MAIN,
+            &[(
+                "loader.js",
+                "await startMain(env, null);",
+                "await startMain(env, env?.wasmThreads ?? null);"
+            )]
+        )
+    );
+}
+
+mod main_refuses_when_not_isolated {
+    use super::*;
+    negative_control!(
+        qa_m8_86_not_isolated_the_main_layout_reads_so_and_stays,
+        "a page not isolated taken as a failure",
+        expected = "was reported as failed: not isolated",
+        node(
+            NOT_ISOLATED_MAIN,
+            &[(
+                "loader.js",
+                "await init();",
+                r#"await init(); if (env && !env.crossOriginIsolated) throw "not isolated";"#
+            )]
+        )
+    );
+}
+
+/// The runner on a pan that is isolated and an idle that is not: isolation is a measurement, not a failure (R-649).
+#[test]
+fn qa_m8_86_each_run_keeps_its_own_isolation_and_exits_0() {
+    node(EACH_RUN, &[]);
+}
+
+mod run_not_isolated_fails_the_script {
+    use super::*;
+    negative_control!(
+        qa_m8_86_each_run_keeps_its_own_isolation_and_exits_0,
+        "a run that is not isolated exits 1",
+        expected = "a run that is not isolated exited 1",
+        node(
+            EACH_RUN,
+            &[(
+                "common.mjs",
+                r#"fields.status !== "done""#,
+                r#"fields.status !== "done" || fields.cross_origin_isolated === false"#
+            )]
+        )
+    );
+}
+
+mod run_idle_takes_the_pans_fields {
+    use super::*;
+    negative_control!(
+        qa_m8_86_each_run_keeps_its_own_isolation_and_exits_0,
+        "the idle run written with the pan run's fields",
+        expected = "the idle run's isolation",
+        node(
+            EACH_RUN,
+            &[(
+                "common.mjs",
+                "layout: options.layout, results }",
+                "layout: options.layout, results: { pan: results.pan, idle: results.pan } }"
+            )]
+        )
+    );
+}
+
+mod run_null_reason_dropped {
+    use super::*;
+    negative_control!(
+        qa_m8_86_each_run_keeps_its_own_isolation_and_exits_0,
+        "a null fallback_reason left out of the file",
+        expected = "the written fallback_reason is undefined",
+        node(
+            EACH_RUN,
+            &[(
+                "common.mjs",
+                "results }, null, 2)",
+                "results }, (key, value) => (value === null ? undefined : value), 2)"
+            )]
+        )
+    );
+}
+
+mod run_wait_discards_not_isolated {
+    use super::*;
+    negative_control!(
+        qa_m8_86_each_run_keeps_its_own_isolation_and_exits_0,
+        "a finished run that is not isolated discarded",
+        expected = "a finished run that is not isolated came back as null",
+        node(
+            EACH_RUN,
+            &[(
+                "common.mjs",
+                "return last;",
+                "return last.cross_origin_isolated === false ? null : last;"
+            )]
+        )
+    );
+}
+
 #[test]
 fn qa_m8_86_the_runner_asks_for_each_flag() {
     node("runner_args_and_url", &[]);
