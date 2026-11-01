@@ -2,11 +2,11 @@
 
 - **Milestone:** M9
 - **Closes:** REQ-VAL-242, REQ-VAL-243, REQ-VAL-244, REQ-VAL-245, REQ-VAL-246, REQ-VAL-247, REQ-VAL-248, REQ-VAL-249
-- **Depends on:** TASK-M3-27, TASK-M3-25, TASK-M3-14, TASK-M3-34, TASK-M2-13
+- **Depends on:** TASK-M3-27, TASK-M3-25, TASK-M3-14, TASK-M3-34, TASK-M2-13, TASK-M4-13
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** PIT-2, PIT-3
-- **Size:** ~380 lines
+- **Size:** ~430 lines
 
 ## Goal
 The replication suite's targets CH-1, B-1, B-2, V-6 run as engine tests (`principia_dd_replication.md`; R-594, R-629). For each of the 16 Pythagorean triangles with hypotenuse below 100, the Newtonian lifetime and the two-body encounter count must be computed and compared with Chitan, Mylläri & Haque's per-triangle values structurally (rule 8: theirs is not a converged code), with both escape criteria recorded (rule 7) (CH-1). Burrau's problem's Newtonian lifetime must be measured and compared with Boekholt, Moerman & Portegies Zwart 2021's plotted plateau, log₁₀ T_l ≈ 1.8 (56 to 71), to the figure's resolution, with their escape criterion (conditions held for 100 time units, from the centre of mass) recorded beside ours (rule 9) (B-1). The Lyapunov exponent of Burrau's problem, measured with the GPU explorer's FTLE on tier (a), the CPU FTLE run beside it and recorded as information, must be compared loosely with λ₁₀ = 0.101 ± 0.005 (τ_L = 4.3 ± 0.2), recorded as a fit over every ζ, relativistic runs included, and not a Newtonian-only number (B-2). Mikkola's near-Pythagorean bounce orbit must be shot from the digitised starts of Valtonen et al. 2016's Fig. 3.16 and compared with the figure's tracks (V-6). Each tolerance is a calibration, proposed here with its evidence and confirmed by the human with the M9 report (R-71).
@@ -28,6 +28,7 @@ The replication suite's targets CH-1, B-1, B-2, V-6 run as engine tests (`princi
 ## Deliverables
 - `fixtures/chitan_2022/newtonian.csv`, transcribed twice, the copies and their diff kept, each row with its page.
 - `crates/validation/src/gates/pythagorean.rs`; the book's ×2 remap as a tested function.
+- B-2's two runs at the Burrau pixel over the one stated window: the GPU explorer's FTLE (TASK-M4-13's f32 shadow, in TASK-M4-06's baked FTLE variants), which scores, and the CPU FTLE (TASK-M3-14), recorded beside it as information.
 - The calibration proposals.
 
 ## Acceptance tests
@@ -47,3 +48,4 @@ The replication suite's targets CH-1, B-1, B-2, V-6 run as engine tests (`princi
 - Reference data are read from the records named in each requirement's verify; the records stay records (R-159), and the contract is `principia_dd_replication.md`.
 - *30 Oct 2026 (R-649, R-650):* moved to M9, external replication, and renumbered: formerly TASK-M3-56 (milestone M3). Its targets are measurements, never gates: each is scored in M9, or early as a peek (information only, `docs/verification/peek_log.md`), and its outcome is PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED, never a failure that blocks; like-for-like is checked first, and nothing is tuned, loosened or special-cased to pass (`docs/design/principia_dd_replication.md` § "12.3 Outcomes, the like-for-like check and the forbidden moves"). The tier each target binds (§ "12.2 Tiers"; a calibration takes its target's): CH-1 (REQ-VAL-242): tier (a); B-1 (REQ-VAL-244): tier (b); B-2 (REQ-VAL-246): tier (a), by the GPU explorer's FTLE, the CPU FTLE beside it as information (R-653, RQ-622 (c); § 12.2's single-trajectory clause does not reach it; *was:* "held on RQ-622"); V-6 (REQ-VAL-248): tier (b). *Was:* "The tier each binds is § '12.2 Tiers''s: (b); (b); (a) statistically or qualitatively." (corrected 30 Oct 2026 to the owner's confirmation of the tier reading, R-649). Its calibrations are confirmed by the human with the M9 report (REQ-VAL-340), *was:* "at the M3 gate". PL-8's first half (REQ-VAL-250, REQ-VAL-251) is internal and moved to TASK-M3-27, with its two acceptance lines and its sentence of the goal; the title's *was:* "Burrau and the Pythagorean family: Chitan et al.'s sixteen triangles, Boekholt et al.'s lifetime and τ_L, Mikkola's bounce orbit and the f64 run against R-33's reference (CH-1, B-1, B-2, V-6, PL-8's first half)".
 - *30 Oct 2026 (code review of PR #342, F3):* Size re-estimated, ~380 lines, *was:* "~450 lines": PL-8a's gate, control and proposal moved to TASK-M3-27 (about 70 lines out of the old ~450 for five targets); applied per R-369.
+- *1 Nov 2026 (R-653; code review 5730587922 of PR #375, C3; applied per R-369):* TASK-M4-13, which builds the GPU FTLE, added to Depends on, *was:* "TASK-M3-27, TASK-M3-25, TASK-M3-14, TASK-M3-34, TASK-M2-13"; B-2's two runs added to Deliverables; Size ~430 lines, *was:* "~380 lines", about 50 for the GPU run and the record beside the CPU run.

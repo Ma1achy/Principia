@@ -28741,6 +28741,7 @@ The owner's words (30 Oct 2026), verbatim, from that day's batch of rulings:
 - REQ-VAL-246's statement names the instrument, so it changes with its verify: option (c) scored on tier (a) cannot stand beside "measured with the CPU FTLE".
 - RQ-622's sub-question on § 12.2's single-trajectory clause: B-2 is scored on (a), so the clause does not reach it, a fit over many runs from one start not being one trajectory set beside a figure.
 - REQ-VAL-246's and the five's compare types, tolerances and controls are unchanged, the controls applying to the scored run.
+- The path to the instruments. TASK-M9-16 depends on TASK-M4-13, which builds the GPU FTLE, and gains B-2's two runs. The five's "GPU explorer's f32 output" is a Result at f32, the survey kernel on the GPU (TASK-M4-17's uniform path, through TASK-M8-74), so TASK-M9-33, TASK-M9-34 and TASK-M9-35 keep their dependencies and name both runs in their Deliverables.
 
 R-653 is in the "design" group of `plan/rule_groups.yaml`, with R-649 and R-650.
 
