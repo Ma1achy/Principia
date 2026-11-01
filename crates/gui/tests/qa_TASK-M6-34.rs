@@ -701,12 +701,16 @@ fn qa_mock_compass_views_open_on_cube_and_views_and_modes_are_independent() {
             "a click on {mode} changed the view"
         );
     }
-    // Jacobi and Shape say they wait on physics review.
+    // Jacobi draws its grid, R-550 having ruled what TASK-M6-34's view waited on: no note, and its coordinates' names.
     rig.click_button("Jacobi");
     let texts = compass_texts(&rig.shapes());
     assert!(
-        texts.iter().any(|t| t.0.contains("RQ-341")),
-        "the Jacobi view does not say it waits on physics review"
+        !texts.iter().any(|t| t.0.contains("RQ-341")),
+        "the Jacobi view still says it waits on physics review"
+    );
+    assert!(
+        texts.iter().any(|t| t.0 == "p_ρx"),
+        "the Jacobi view does not name its coordinates: {texts:?}"
     );
     assert_eq!(
         rig.applied(),

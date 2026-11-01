@@ -17,14 +17,14 @@
 | REF | 52 |
 | RENDER | 120 |
 | COL | 161 |
-| GUI | 385 |
+| GUI | 386 |
 | TOOL | 218 |
 | VAL | 340 |
 | PERF | 115 |
 | SYS | 93 |
-| **total** | **2060** |
+| **total** | **2061** |
 
-Of these: 229 calibration, 175 definition, 1656 obligation. Retired (kept for their ids, not counted): 12.
+Of these: 230 calibration, 175 definition, 1656 obligation. Retired (kept for their ids, not counted): 12.
 
 ## Requirements per milestone
 
@@ -36,14 +36,14 @@ Of these: 229 calibration, 175 definition, 1656 obligation. Retired (kept for th
 | M3 | 231 |
 | M4 | 106 |
 | M5 | 183 |
-| M6 | 224 |
+| M6 | 225 |
 | M7 | 261 |
 | M8 | 470 |
 | M9 | 137 |
 
 ## Sections
 
-1665 sections in 61 files: 1328 yield at least one requirement; 337 yield none and are listed below with the reason.
+1666 sections in 61 files: 1329 yield at least one requirement; 337 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | gap (RQ-378) | 1 |
@@ -401,7 +401,7 @@ Of these: 229 calibration, 175 definition, 1656 obligation. Retired (kept for th
 | 5. The targets | parent heading (obligations are in its subsections) | its subsections hold the targets, one requirement each |
 | 5.1 Targets already ruled | informative only | lists the requirements already in force by id; this port changes none of them (R-594) |
 | 5.13 The precision ladder: waiting for RQ-577 | gap (RQ-577) | PL-1 to PL-12, B-3 and GG-2 wait on RQ-577, which records that no requirement is added from the proposal meanwhile; PL-8's first half is REQ-VAL-250 |
-| 5.14 Out of scope | informative only | V-5, V-10 and BZ-1 are out of scope as PLAN.md says, and D-6 waits on RQ-587; no requirement (R-629) |
+| 5.14 Out of scope | informative only | V-5, V-10 and BZ-1 are out of scope as PLAN.md says, BZ-1's cold sets reopened as a proposal with no requirement (R-661), and D-6 waits on RQ-587; no requirement (R-629) |
 | 5.15 Counts | informative only | counts of what the port added |
 | 7. Sequencing by need | informative only | the task order; the obligations are the tasks' (plan/tasks.yaml) |
 | 8. Rules | parent heading (obligations are in its subsections) | its three subsections, cited by every target |

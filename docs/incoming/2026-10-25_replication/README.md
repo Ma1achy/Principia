@@ -93,3 +93,7 @@ citations are left as written, since they are records.
 
 The files remain in the repository's history. The human's ruling scrubs them from history (option 2) once the open
 PRs have merged. That is a separate, later step and a force-push of `main`.
+
+**Note added 31 Oct 2026 (R-661, closing RQ-646).** Two files changed after the table above was written, and its hashes are the
+files as delivered. By the owner's ruling, `catalogue.md` § 6.1 is reworded and the instruction's § C gains a bracketed
+correction. Their sha256s now: `INSTRUCTION_replication_suite_2026-10-25.md` `07013783acfa19248186a706e8b04883ece77d3ae765489b1ef983f65819c0dd`; `catalogue.md` `9998cdf4674fae5c157749448c46df1671992fb1e35d11ce1558430f2f74b03c`.
