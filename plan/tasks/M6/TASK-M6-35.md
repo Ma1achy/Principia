@@ -96,3 +96,5 @@ state after `η_E`, the fixed-range metric, and the steer by `J⁻¹` with the p
   chart's pole, naming a refused steer's reason \"the chart's pole\" ahead of any other and showing the readout's pole
   line". *Was (render_gui_spec):* "Below it the Shape view's state is at the chart's pole: a refused cell is named for
   the pole ahead of any other cause, and the readout shows the pole's line."
+- **The physics review of PR #365 (F3):** the pole's radius rests on a walk at any azimuth and a finer step; 0.1 stands.
+  *Was (render_gui_spec):* "Measured by `mock_compass_steer_cut_the_pole_radius_holds_on_the_sample` on the first 100 `z` of the same sample, each run into the pole along `z₀ = t`, `z₁ = ±0.7t`, `t` from 1 to `10^(−13.75)`: the pole costs `J` a value out to `sin φ = 5.4·10⁻²` with `E*` unset and `9.6·10⁻⁴` with `E* = 0`, so 0.1 clears the wider by a factor of 1.9."

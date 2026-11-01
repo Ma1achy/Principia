@@ -797,9 +797,12 @@ independent, and in a grid view a drag does nothing. The view is the compass's o
   seven values: the shell alone accounts for that refusal, the pole costing `J` nothing further there, so it is logged
   "normal to the energy shell" (R-550, RQ-345 (b)). `θ̇` and `φ̇` grow without bound toward the
   pole, so `σ₈/σ₁` falls through `c` before `sin φ` reaches 0. Measured by
-  `mock_compass_steer_cut_the_pole_radius_holds_on_the_sample` on the first 100 `z` of the same sample, each run into
-  the pole along `z₀ = t`, `z₁ = ±0.7t`, `t` from 1 to `10^(−13.75)`: the pole costs `J` a value out to
-  `sin φ = 5.4·10⁻²` with `E*` unset and `9.6·10⁻⁴` with `E* = 0`, so 0.1 clears the wider by a factor of 1.9. The same
+  `mock_compass_steer_cut_the_pole_radius_holds_on_the_sample` on a walk of 12,000 points, 2000 `z` of the sample's
+  generator each moved to 6 points about the pole, at any azimuth in `(z₀, z₁)` and `t` log-uniform on `[10⁻⁴, 2]`: the
+  pole costs `J` a value out to `sin φ = 7.5·10⁻²` with `E*` unset and `1.0·10⁻³` with `E* = 0`, and a second walk at
+  another seed gives `7.8·10⁻²` and `9.4·10⁻⁴`, so 0.1 clears the wider by about 1.3 and no point lost a value at
+  `sin φ ≥ 0.1`. This is a sampled figure, not a bound: with `E*` unset the first 3000, 6000 and 12,000 points read
+  `5.7·10⁻²`, `7.5·10⁻²`, `7.5·10⁻²` on the first walk and `6.7·10⁻²`, `6.7·10⁻²`, `7.8·10⁻²` on the second. The same
   sample's `σ₈/σ₁` is at most `1.97·10⁻¹²` with `E* = 0` and at least `4.2·10⁻⁶` with `E*` unset. These differ from the
   gap quoted above, and `c` lies between the sides of both. With `E* = 0` that side is rounding, not a property of the
   decoder: seven further seeds give `1.0·10⁻¹²` to `5.7·10⁻¹²`, and `3.6·10⁻⁶` to `5.2·10⁻⁶` with `E*` unset, each with

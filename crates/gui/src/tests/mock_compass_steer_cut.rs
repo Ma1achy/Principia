@@ -190,21 +190,42 @@ fn mock_compass_steer_cut_the_gap_holds_on_the_sample() {
     });
 }
 
-/// The largest `sin φ` at which the Shape set's `J` keeps fewer than `kept_whole` values, on latent points run into the
-/// pole from the first 100 of the sample, with the energy target `e_star`.
-fn widest_loss_near_the_pole(e_star: Option<f64>, kept_whole: usize) -> f64 {
+/// `base` moved in `(z₀, z₁)` to the distance `t` from the pole at the azimuth `azimuth`.
+fn about_the_pole(base: &Latent, t: f64, azimuth: f64) -> Latent {
+    let mut z = *base;
+    (z[0], z[1]) = (t * azimuth.cos(), t * azimuth.sin());
+    z
+}
+
+/// A pole walk at `seed`: 2000 `z` of the sample's generator, each moved to 6 points about the pole, at any azimuth and
+/// `t` log-uniform on `[1e-4, 2]`: 12,000 points.
+fn pole_walk(seed: u64) -> Vec<Latent> {
+    let mut rng = Rng::new(seed);
+    let mut points = Vec::with_capacity(12_000);
+    for _ in 0..2000 {
+        let base = rng.latent().map(|x| 3.0 * x);
+        for _ in 0..6 {
+            let azimuth = std::f64::consts::PI * rng.next();
+            let t = 1e-4 * (2e4_f64).powf((rng.next() + 1.0) / 2.0);
+            points.push(about_the_pole(&base, t, azimuth));
+        }
+    }
+    points
+}
+
+/// The largest `sin φ` over each of the walk's first quarter, half and whole at which the Shape set's `J` keeps fewer than
+/// `kept_whole` values, with the energy target `e_star`.
+fn widest_loss_near_the_pole(seed: u64, e_star: Option<f64>, kept_whole: usize) -> [f64; 3] {
     let links = Links::defaults();
-    let mut widest: f64 = 0.0;
-    for base in &sample()[..100] {
-        for k in 0..56 {
-            let t = 10f64.powf(-f64::from(k) / 4.0);
-            for sign in [1.0, -1.0] {
-                let mut z = *base;
-                (z[0], z[1]) = (t, sign * 0.7 * t);
-                let j = latent_jacobian(&Decoder::Real { e_star }, Set::Shape, &links, &z);
-                if Inverse::of(&j, CUT).kept < kept_whole {
-                    let s = decoded::state(&z, &links, e_star);
-                    widest = widest.max(Sphere::of(&s).sin_phi);
+    let points = pole_walk(seed);
+    let mut widest = [0.0_f64; 3];
+    for (n, z) in points.iter().enumerate() {
+        let j = latent_jacobian(&Decoder::Real { e_star }, Set::Shape, &links, z);
+        if Inverse::of(&j, CUT).kept < kept_whole {
+            let s = Sphere::of(&decoded::state(z, &links, e_star)).sin_phi;
+            for (slot, part) in widest.iter_mut().zip([4, 2, 1]) {
+                if n < points.len() / part {
+                    *slot = slot.max(s);
                 }
             }
         }
@@ -215,21 +236,34 @@ fn widest_loss_near_the_pole(e_star: Option<f64>, kept_whole: usize) -> f64 {
 #[test]
 fn mock_compass_steer_cut_the_pole_radius_holds_on_the_sample() {
     // REQ-GUI-411's record: POLE_SIN clears the farthest sin φ at which the pole costs J a value, so such a refusal is
-    // named the pole, and not a saturated link.
-    let unset = widest_loss_near_the_pole(None, 8);
-    let shell = widest_loss_near_the_pole(Some(0.0), 7);
-    println!("the pole costs J a value out to sin φ: unset {unset:.3e}; E* = 0 {shell:.3e}");
+    // named the pole, and not a saturated link. Quarter, half and whole of the walk, and a second walk, to show it
+    // settling under refinement.
+    let walk = |seed| {
+        let unset = widest_loss_near_the_pole(seed, None, 8);
+        let shell = widest_loss_near_the_pole(seed, Some(0.0), 7);
+        println!(
+            "seed {seed:#x}: the pole costs J a value out to sin φ, over 3000, 6000, 12000 points: unset {:.3e}, {:.3e}, \
+             {:.3e}; E* = 0 {:.3e}, {:.3e}, {:.3e}; 0.1 clears unset by {:.2}",
+            unset[0],
+            unset[1],
+            unset[2],
+            shell[0],
+            shell[1],
+            shell[2],
+            POLE_SIN / unset[2]
+        );
+        (unset[2], shell[2])
+    };
+    let (unset, shell) = walk(0x5EED);
+    let (second, second_shell) = walk(1);
+    assert!(second < POLE_SIN, "{second}");
+    assert!(second_shell < POLE_SIN, "{second_shell}");
     assert!(unset > 0.0 && shell > 0.0, "the walk reaches the pole");
     assert!(unset < POLE_SIN, "{unset}");
     assert!(shell < POLE_SIN, "{shell}");
     rejects("the first radius, 1e-3", || assert!(unset < 1e-3));
-}
-
-/// `base` moved in `(z₀, z₁)` to the distance `t` from the pole at the azimuth `azimuth`.
-fn about_the_pole(base: &Latent, t: f64, azimuth: f64) -> Latent {
-    let mut z = *base;
-    (z[0], z[1]) = (t * azimuth.cos(), t * azimuth.sin());
-    z
+    // Control: the narrower walk's figure, which this walk passes.
+    rejects("the one-family walk's 5.4e-2", || assert!(unset < 5.4e-2));
 }
 
 /// `base` moved to `sin φ = target` about the pole at the azimuth `azimuth`, by bisection on `t`.
