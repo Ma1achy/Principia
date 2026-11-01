@@ -2,16 +2,20 @@
 //! mutants skips inside the job (changed-files detection, then skip as success under the same check name), not with
 //! workflow-level `paths:`, or required checks will hang pending on docs-only PRs."
 //!
+//! R-662, the owner's words of 31 Oct 2026: "Yeah and if it's like python don't check? Only the actual Principia CODE
+//! matters in ci? If you get me. So GUI and Physics etc for Principia, not random doc stuff".
+//!
 //! - `ci_changes_classifies_conservatively`: `scripts/ci_changes.sh classify` calls a change docs-only only when every
-//!   path is on its allowlist, and skips the GPU suites only when no path is a GPU path; an empty change, a workflow,
-//!   `plan/`'s Python and a path that merely starts like an allowed one run everything.
-//! - `ci_changes_files_code_reads_run_everything`: the owner's words of 30 Oct 2026 on #351, "any doc/spec/data file
-//!   read by a test, build script, codegen or xtask check must count as code, not docs. List those paths explicitly in
-//!   the classifier and add a test that touching one triggers the heavy jobs." Each pattern of the script's
-//!   `reads_code` list is touched through real files it names, each classifying as code: not docs-only, GPU suites run.
+//!   path is on its allowlist, the corpus, the plan's prose and Python, the scripts and the workbench, and skips the
+//!   GPU suites only when no path is a GPU path; an empty change, a workflow, an unknown top-level path and a path that
+//!   merely starts like an allowed one run everything, and so does a mixed change.
+//! - `ci_changes_files_code_reads_run_everything`: each pattern of the script's `reads_code` list, the data code loads
+//!   for behaviour and the classifier itself (R-662), is touched through real files it names, each classifying as code:
+//!   not docs-only, GPU suites run.
 //! - `ci_changes_no_file_code_reads_is_docs_only`: a static scan, best effort, of the string literals in every crate's
-//!   `src/`, `tests/` and `build.rs`, in `xtask/` and in `plan/`'s Python, for a repository file they name; none may
-//!   classify as docs-only, so a new reader cannot silently leave its file docs-only. A `/`-led literal, the tail of
+//!   `src/`, `tests/` and `build.rs`, and in `xtask/`, for a data file they name, and of their `src/` for the plan's
+//!   markdown; none may classify as docs-only, so a new reader cannot silently leave its data docs-only. Prose a test
+//!   checks, and a test of a script, are not data (R-662). A `/`-led literal, the tail of
 //!   `concat!(env!("CARGO_MANIFEST_DIR"), "/../../…")`, is read from its package directory. Its limit: a reader
 //!   walking a directory, or building a path from more than one literal, is not seen; the script lists those by hand.
 //! - `ci_changes_gates_pass_only_on_the_verdict`: the gates `ci`, `xtask-ci`, `gpu-kernel`, `gpu-metal` and
@@ -111,10 +115,9 @@ fn classify(script: &str, paths: &[&str]) -> (bool, bool) {
     (flag("docs_only"), flag("gpu"))
 }
 
-/// Each change, and the verdict R-656 gives it: (paths, docs-only, GPU suites run).
+/// Each change, and the verdict R-656 and R-662 give it: (paths, docs-only, GPU suites run).
 const CASES: &[(&[&str], bool, bool)] = &[
-    // The allowlist's files that no code reads, on their own and together (the paths are made up: no source names
-    // them, so the reader scan below never meets them).
+    // The papers and their data, the reference sources, the workbench.
     (&["docs/incoming/a/b.pdf"], true, false),
     (&["docs/reference/prin-rs/src/a.rs"], true, false),
     (&["docs/experiments/results/a.json"], true, false),
@@ -123,25 +126,39 @@ const CASES: &[(&[&str], bool, bool)] = &[
         true,
         false,
     ),
-    // The allowlist's files that code reads are code: the build, test and GPU jobs run.
+    (&["workbench/a/b.html"], true, false),
+    // The corpus's prose, which some tests read: not Principia's code (R-662).
     (
         &["docs/contracts/principia_parity_contract.md"],
-        false,
         true,
+        false,
     ),
-    (&["docs/archive/a.md"], false, true),
-    (&["docs/reference/a.md"], false, true),
-    (&["docs/archive/a.html"], false, true),
-    (&["docs/gui/design/a.png"], false, true),
-    (&["docs/gui/reference/a/b.json"], false, true),
+    (&["docs/gui/principia_render_gui_spec.md"], true, false),
+    (&["docs/archive/a.md", "docs/archive/a.html"], true, false),
+    // The plan's prose, its other data and its Python.
     (
-        &["docs/incoming/a/b.pdf", "plan/requirements.yaml"],
-        false,
+        &[
+            "plan/OPERATIONS.md",
+            "plan/WORKFLOW.md",
+            "plan/CURRENT_RULES.md",
+            "plan/coverage.md",
+            "plan/rule_groups.yaml",
+            "plan/section_notes.yaml",
+            "plan/reviewers/qa.md",
+        ],
         true,
+        false,
     ),
-    (&["plan/OPERATIONS.md"], false, true),
-    (&["plan/tasks/M2/TASK-M2-01.md"], false, true),
-    (&["plan/reviewers/qa.md"], false, true),
+    (
+        &["plan/check_plan.py", "plan/tools/rulings.py"],
+        true,
+        false,
+    ),
+    // The other scripts.
+    (&["scripts/progress_banner.py"], true, false),
+    (&["scripts/check_no_atlas_params.sh"], true, false),
+    (&["scripts/readme_gifs/figkit.py"], true, false),
+    // The root's markdown.
     (
         &[
             "decisions.md",
@@ -152,21 +169,53 @@ const CASES: &[(&[&str], bool, bool)] = &[
             "AGENTS.md",
             "GEMINI.md",
         ],
-        false,
         true,
+        false,
     ),
-    // The plan's Python is code; so is a workflow, and the brief's copy under `.github/`.
-    (&["plan/check_plan.py"], false, true),
-    (&["plan/tools/rulings.py"], false, true),
+    // The data code loads, and the classifier, are code.
+    (&["docs/gui/design/a.png"], false, true),
+    (&["docs/gui/reference/a/b.json"], false, true),
+    (&["plan/requirements.yaml"], false, true),
+    (&["plan/tasks.yaml"], false, true),
+    (&["plan/MILESTONES.md"], false, true),
+    (&["plan/tasks/M2/TASK-M2-01.md"], false, true),
+    (&["scripts/ci_changes.sh"], false, true),
+    // Principia's code, and what builds it.
+    (&["crates/kernel/tests/qa.rs"], false, true),
+    (&["crates/render/shaders/wgsl/lib/coords.wgsl"], false, true),
+    (&["crates/ledger/wgsl/shape.wgsl"], false, true),
+    (&["xtask/src/main.rs"], false, true),
+    (&["fixtures/golden/a.png"], false, true),
+    (&["Cargo.toml"], false, true),
+    (&["Cargo.lock"], false, true),
+    (&["rust-toolchain.toml"], false, true),
     (&[".github/workflows/ci.yml"], false, true),
     (&[".github/copilot-instructions.md"], false, true),
+    // A path nothing names fails towards full CI: an unknown top-level file or folder, or another dot-folder.
+    (&["newfolder/a.md"], false, true),
+    (&["notes.md"], false, true),
+    (&[".cargo/config.toml"], false, true),
+    (&[".config/nextest.toml"], false, true),
+    (&[".claude/agents/implementer.md"], false, true),
+    (&[".gitignore"], false, true),
     // One code path among docs makes the change code.
     (&["docs/a.md", "crates/kernel/src/lib.rs"], false, true),
     (&["decisions.md", "Cargo.lock"], false, true),
+    (&["plan/WORKFLOW.md", "plan/requirements.yaml"], false, true),
+    (&["scripts/progress_banner.py", "newfolder/a"], false, true),
     // A path that only starts like an allowed one is not on the list.
     (&["docsx/a.md"], false, true),
+    (&["planx/a.md"], false, true),
+    (&["scriptsx/a.sh"], false, true),
+    (&["workbenchx/a"], false, true),
     (&["decisions.md.bak"], false, true),
     (&["plan"], false, true),
+    (&["docs"], false, true),
+    // Nor does a listed datum's near neighbour count as it.
+    (&["plan/requirements.yaml.bak"], true, false),
+    (&["plan/tasksx/a.md"], true, false),
+    (&["docs/gui/designs/a.png"], true, false),
+    (&["scripts/ci_changes.sh.bak"], true, false),
     // The crates no GPU job builds skip the GPU suites, and nothing else.
     (&["crates/gui/src/app.rs"], false, false),
     (
@@ -174,7 +223,12 @@ const CASES: &[(&[&str], bool, bool)] = &[
         false,
         false,
     ),
-    (&["crates/gui/src/app.rs", "docs/a.md"], false, true),
+    (&["crates/gui/src/app.rs", "docs/a.md"], false, false),
+    (
+        &["crates/gui/src/app.rs", "plan/requirements.yaml"],
+        false,
+        true,
+    ),
     (&["crates/guix/src/a.rs"], false, true),
     (
         &[
@@ -184,13 +238,6 @@ const CASES: &[(&[&str], bool, bool)] = &[
         false,
         true,
     ),
-    // Shaders, the kernel, the generated WGSL, fixtures, the toolchain: GPU paths.
-    (&["crates/render/shaders/wgsl/lib/coords.wgsl"], false, true),
-    (&["crates/ledger/wgsl/shape.wgsl"], false, true),
-    (&["crates/kernel/tests/qa.rs"], false, true),
-    (&["fixtures/golden/a.png"], false, true),
-    (&["rust-toolchain.toml"], false, true),
-    (&["scripts/ci_changes.sh"], false, true),
     // No path at all runs everything.
     (&[], false, true),
 ];
@@ -216,60 +263,29 @@ negative_control!(
     expected = "\".github/workflows/ci.yml\"] classified wrongly",
     check_classifier(&edited(
         "scripts/ci_changes.sh",
-        "    docs/*) return 0 ;;",
-        "    docs/* | .github/*) return 0 ;;"
+        "    docs/* | plan/* | scripts/* | workbench/*) return 0 ;;",
+        "    docs/* | plan/* | scripts/* | workbench/* | .github/*) return 0 ;;"
     ))
 );
 
 // ---- The files code reads -----------------------------------------------------------------------------------------
 
 /// Each pattern of `scripts/ci_changes.sh`'s `reads_code` list, in its order, and real files it names: touching any one
-/// of them must run the build, test and GPU jobs (the owner, 30 Oct 2026, on #351).
+/// of them must run the build, test and GPU jobs (R-662).
 const CODE_READ: &[(&str, &[&str])] = &[
-    (
-        "docs/*.md",
-        &[
-            "docs/contracts/principia_parity_contract.md",
-            "docs/read_first/principia_01_pitfalls.md",
-            "docs/archive/review_queue/M0.md",
-        ],
-    ),
-    (
-        "docs/*.html",
-        &["docs/incoming/2026-10-21_trace_playback/demo/trace_markers.html"],
-    ),
     ("docs/gui/design/*", &["docs/gui/design/01_main.png"]),
     (
         "docs/gui/reference/*",
-        &["docs/gui/reference/print_graph/catalogue/presets.json"],
-    ),
-    (
-        "plan/*",
         &[
-            "plan/requirements.yaml",
-            "plan/tasks.yaml",
-            "plan/rule_groups.yaml",
-            "plan/section_notes.yaml",
-            "plan/CURRENT_RULES.md",
-            "plan/MILESTONES.md",
-            "plan/WORKFLOW.md",
-            "plan/OPERATIONS.md",
-            "plan/tasks/M0/TASK-M0-01.md",
-            "plan/reviewers/qa.md",
+            "docs/gui/reference/print_graph/catalogue/presets.json",
+            "docs/gui/reference/principia_nav_cube.html",
         ],
     ),
-    ("decisions.md", &["decisions.md"]),
-    ("REVIEW_QUEUE.md", &["REVIEW_QUEUE.md"]),
-    ("open-questions.md", &["open-questions.md"]),
-    ("README.md", &["README.md"]),
-    ("CLAUDE.md", &["CLAUDE.md"]),
-    ("AGENTS.md", &["AGENTS.md"]),
-    ("GEMINI.md", &["GEMINI.md"]),
-    (
-        ".github/copilot-instructions.md",
-        &[".github/copilot-instructions.md"],
-    ),
-    ("fixtures/*", &["fixtures/README.md"]),
+    ("plan/requirements.yaml", &["plan/requirements.yaml"]),
+    ("plan/tasks.yaml", &["plan/tasks.yaml"]),
+    ("plan/MILESTONES.md", &["plan/MILESTONES.md"]),
+    ("plan/tasks/*", &["plan/tasks/M0/TASK-M0-01.md"]),
+    ("scripts/ci_changes.sh", &["scripts/ci_changes.sh"]),
 ];
 
 /// The patterns of the `reads_code` function in `script`, in order: each `<pattern> | …) return 0 ;;` line's.
@@ -319,7 +335,8 @@ fn ci_changes_files_code_reads_run_everything() {
 negative_control!(
     ci_changes_files_code_reads_run_everything,
     "the script with its list of files code reads emptied",
-    expected = "touching docs/contracts/principia_parity_contract.md (docs/*.md, a file code reads) does not run",
+    expected =
+        "touching docs/gui/design/01_main.png (docs/gui/design/*, a file code reads) does not run",
     check_code_read(&edited(
         "scripts/ci_changes.sh",
         "reads_code() {\n  case \"$1\" in\n",
@@ -327,13 +344,13 @@ negative_control!(
     ))
 );
 
-/// The string literals in `line`: Rust's and Python's `"…"`, and Python's `'…'` when `single`. Best effort: an
-/// escaped quote is stepped over, a raw string's hashes are not read, and a literal spanning lines is missed.
-fn literals(line: &str, single: bool) -> Vec<String> {
+/// The string literals in `line`: Rust's `"…"`. Best effort: an escaped quote is stepped over, a raw string's hashes are
+/// not read, and a literal spanning lines is missed.
+fn literals(line: &str) -> Vec<String> {
     let mut out = Vec::new();
     let mut chars = line.chars();
     while let Some(c) = chars.next() {
-        if c != '"' && !(single && c == '\'') {
+        if c != '"' {
             continue;
         }
         let mut lit = String::new();
@@ -391,13 +408,13 @@ fn sources(dir: &Path, ext: &str, out: &mut Vec<PathBuf>) {
     }
 }
 
-/// The repository files the tests, build scripts, xtask and the plan checks name, best effort: every string literal
-/// in a crate's `src/`, `tests/` or `build.rs`, in `xtask/`, and in `plan/`'s Python, outside a whole-line comment,
+/// The repository files the tests, build scripts and xtask name, best effort: every string literal in a crate's `src/`,
+/// `tests/` or `build.rs`, and in `xtask/`, outside a whole-line comment,
 /// that names an existing file, read from the repository's root, the source's package directory (as a path built on
 /// `CARGO_MANIFEST_DIR` is) or the source's own directory (as `include_str!` reads). A literal starting with `/` (the
 /// tail of `concat!(env!("CARGO_MANIFEST_DIR"), "/../../docs/…")`) is read from the package directory alone, its `/`
 /// stripped. Each as (reader, file), both relative to the root. The limit: a reader that walks a directory (`cargo
-/// xtask lint vocab`, plan-check's globs, the tests that copy `docs/`), builds a path with `format!`, `join` or
+/// xtask lint vocab`, the tests that copy `docs/`), builds a path with `format!`, `join` or
 /// `concat!` in more than one literal (`concat!(env!("CARGO_MANIFEST_DIR"), "/../..")` then `.join(rel)`), or reads a
 /// path from a data file, is not seen here; those are listed by hand in the script, and
 /// `ci_changes_files_code_reads_run_everything` checks them.
@@ -416,12 +433,10 @@ fn named_files() -> Vec<(String, String)> {
             files.push(package.join("build.rs"));
         }
     }
-    sources(Path::new("plan"), ".py", &mut files);
     files.sort();
     let mut out = Vec::new();
     for file in files {
         let text = std::fs::read_to_string(root().join(&file)).expect("ci_changes: a source");
-        let python = file.extension().is_some_and(|x| x == "py");
         let package = packages
             .iter()
             .find(|p| file.starts_with(p))
@@ -430,10 +445,10 @@ fn named_files() -> Vec<(String, String)> {
         let dir = file.parent().expect("a source's folder").to_path_buf();
         for line in text.lines() {
             let t = line.trim_start();
-            if t.starts_with("//") || (python && t.starts_with('#')) {
+            if t.starts_with("//") {
                 continue;
             }
-            for lit in literals(line, python) {
+            for lit in literals(line) {
                 if lit.is_empty() || lit.contains(['{', '*', '\n', '<', '$']) {
                     continue;
                 }
@@ -462,22 +477,31 @@ fn named_files() -> Vec<(String, String)> {
     out
 }
 
-/// The files code names that `script` classifies as docs-only: none may be.
+/// Whether `reader` naming `file` is reading data for behaviour (R-662): anything but prose and scripts, or the plan's
+/// markdown named from a package's `src/`, which a test's mention of it is not. Prose a test checks, a citation in the
+/// ledger's register and a test of a script stay on the docs' side.
+fn loads_data(reader: &str, file: &str) -> bool {
+    let prose_or_script = [".md", ".py", ".sh"].iter().any(|x| file.ends_with(x));
+    !prose_or_script
+        || (file.starts_with("plan/") && file.ends_with(".md") && reader.contains("/src/"))
+}
+
+/// The data code names that `script` classifies as docs-only: none may be.
 fn check_readers(script: &str, named: &[(String, String)]) {
-    // The scan is not vacuous: it finds an `include_str!` from a test's own folder, a `CARGO_MANIFEST_DIR` path, a
-    // `concat!(env!("CARGO_MANIFEST_DIR"), "/../../…")` path, a root-relative path and a Python constant.
+    // The scan is not vacuous: it finds a literal in a test, a package's `src/` reading the plan's data and its
+    // markdown, and a reference a golden compares with.
     for want in [
+        ("xtask/tests/screenshot.rs", "docs/gui/design/01_main.png"),
         (
-            "crates/kernel/tests/qa_TASK-M3-02.rs",
-            "docs/contracts/principia_integrator_contract.md",
+            "crates/validation/src/gate/mod.rs",
+            "plan/requirements.yaml",
         ),
+        ("xtask/src/gate_report.rs", "plan/tasks.yaml"),
+        ("xtask/src/gate_report.rs", "plan/MILESTONES.md"),
         (
-            "crates/ledger/tests/renderquad.rs",
-            "docs/design/principia_dd_generation_root.md",
+            "crates/kernel/tests/qa_TASK-M2-08.rs",
+            "docs/gui/reference/ic_inspector.html",
         ),
-        ("crates/ledger/tests/qa_TASK-M1-18.rs", "decisions.md"),
-        ("xtask/tests/ai_review_rules.rs", "AGENTS.md"),
-        ("plan/check_plan.py", "plan/requirements.yaml"),
     ] {
         assert!(
             named.iter().any(|(r, f)| (r.as_str(), f.as_str()) == want),
@@ -485,10 +509,20 @@ fn check_readers(script: &str, named: &[(String, String)]) {
             want.0,
             want.1
         );
+        assert!(
+            loads_data(want.0, want.1),
+            "ci_changes: {} reading {} is not counted as loading data",
+            want.0,
+            want.1
+        );
     }
     let mut verdicts: std::collections::BTreeMap<&str, bool> = std::collections::BTreeMap::new();
     let mut wrong = Vec::new();
     for (reader, file) in named {
+        // This test names files to classify them, which is no reading.
+        if !loads_data(reader, file) || reader == "xtask/tests/ci_changes.rs" {
+            continue;
+        }
         let docs_only = *verdicts
             .entry(file.as_str())
             .or_insert_with(|| classify(script, &[file.as_str()]).0);
@@ -498,7 +532,7 @@ fn check_readers(script: &str, named: &[(String, String)]) {
     }
     assert!(
         wrong.is_empty(),
-        "ci_changes: files code reads classify as docs-only; list them in the script's `reads_code`:\n  {}",
+        "ci_changes: data code loads classifies as docs-only; list it in the script's `reads_code`:\n  {}",
         wrong.join("\n  ")
     );
 }
@@ -510,12 +544,12 @@ fn ci_changes_no_file_code_reads_is_docs_only() {
 
 negative_control!(
     ci_changes_no_file_code_reads_is_docs_only,
-    "the script without AGENTS.md and GEMINI.md on its list of files code reads",
-    expected = "xtask/tests/ai_review_rules.rs reads AGENTS.md",
+    "the script without the artboards on its list of data code loads",
+    expected = "xtask/tests/screenshot.rs reads docs/gui/design/01_main.png",
     check_readers(
         &edited(
             "scripts/ci_changes.sh",
-            "    AGENTS.md | GEMINI.md) return 0 ;;\n",
+            "    docs/gui/design/*) return 0 ;;\n",
             ""
         ),
         &named_files()
@@ -901,13 +935,17 @@ fn check_skips(yml: &str) {
         "python3 plan/check_plan.py",
         "python3 plan/tools/current_rules.py --check",
         "cargo xtask lint vocab",
-        "scripts/ci_changes.sh doc-tests",
     ] {
         assert!(
             docs.contains(want),
             "ci_changes: `ci-workspace` does not run `{want}` on a docs-only pull request"
         );
     }
+    // Only the cheap checks (R-662): no test run, and no build but the lint's.
+    assert!(
+        !docs.contains("nextest") && !docs.contains("cargo test") && !docs.contains("cargo build"),
+        "ci_changes: `ci-workspace` runs more than the cheap checks on a docs-only pull request: {docs}"
+    );
 }
 
 #[test]

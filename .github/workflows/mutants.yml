@@ -10,7 +10,8 @@
 # environment's CARGO_* variables into its key, so CARGO_TERM_COLOR below is set as in `ci.yml`.
 # R-656: the gate runs on every head of a pull request and a push cancels the run on the head it supersedes
 # (`concurrency` below), so it always runs on the merge-ready head, the last; a shard whose diff names no `.rs` file
-# skips its run (below), and `mutants-fixture` skips its steps on a docs-only pull request (`scripts/ci_changes.sh`).
+# skips its run (below), and `mutants-fixture` skips its steps on a docs-only pull request (`scripts/ci_changes.sh`,
+# R-662).
 name: mutants
 
 on:
@@ -63,13 +64,14 @@ jobs:
       # cargo-mutants mutates only Rust source, so a diff that names no `.rs` file has no mutant (cargo-mutants itself
       # then stops at once: "Diff changes no Rust source files", exit 0). Such a shard, a docs-only or rulings PR's,
       # skips its setup and its run and passes, so `mutants-check` reports on it at once (R-305). A diff naming any
-      # `.rs` file, even one cargo-mutants won't mutate, runs the shard in full.
+      # `.rs` file, even one cargo-mutants won't mutate, runs the shard in full, but for one under `docs/`, `plan/`,
+      # `scripts/` or `workbench/`, the reference sources and the papers' code, which is not Principia's (R-662).
       - name: git diff origin/${{ github.base_ref }}...HEAD
         id: diff
         run: |
           git diff "origin/${{ github.base_ref }}...HEAD" > "$RUNNER_TEMP/pr.diff"
           echo "PR diff: $(wc -l < "$RUNNER_TEMP/pr.diff") lines"
-          if grep -Eq '^\+\+\+ .*\.rs"?[[:space:]]*$' "$RUNNER_TEMP/pr.diff"; then
+          if grep -E '^\+\+\+ .*\.rs"?[[:space:]]*$' "$RUNNER_TEMP/pr.diff" | grep -Ev '^\+\+\+ "?b/(docs|plan|scripts|workbench)/' > /dev/null; then
             echo "rust=true" >> "$GITHUB_OUTPUT"
           else
             echo "rust=false" >> "$GITHUB_OUTPUT"
