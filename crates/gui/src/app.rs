@@ -641,7 +641,7 @@ impl<S: EngineSide> App<S> {
         );
         let focused = self.scroll_focus();
         match self.view.mode {
-            Mode::Explore => self.explore(ui, &layout, &mut out, &mut edits),
+            Mode::Explore => self.explore(ui, &layout, focused.clone(), &mut out, &mut edits),
             Mode::Stain => {
                 self.stain_page(
                     ui,
@@ -756,6 +756,7 @@ impl<S: EngineSide> App<S> {
         &mut self,
         ui: &mut egui::Ui,
         layout: &Layout,
+        focused: Option<String>,
         out: &mut explore::manifold_view::Out,
         edits: &mut Vec<engine::contract::set_field::SetField>,
     ) {
@@ -844,7 +845,10 @@ impl<S: EngineSide> App<S> {
             layout.compass,
             sim,
             &pending,
-            &mut self.keyboard,
+            &mut windows::Keys {
+                keyboard: &mut self.keyboard,
+                focused,
+            },
             &mut self.manifold,
             out,
         );

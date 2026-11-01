@@ -4,7 +4,9 @@
 //! Ctrl+Z; the Shape view's pole refuses, naming it. Each check also runs on an input it must reject (R-176, through
 //! `rejects`).
 
-use eframe::egui::{Event, Key, Modifiers, Rect, Shape};
+use eframe::egui::{
+    pos2, vec2, Event, FullOutput, Key, Modifiers, MouseWheelUnit, Rect, Shape, TouchPhase,
+};
 use engine::contract::set_field::{Edit, SimField};
 use engine::contract::sim_config::{Latent, Links, Lock, Plane, SimConfig, LATENT_DIM};
 
@@ -18,10 +20,11 @@ use crate::explore::compass::physical::{
     Matrix, Refusal, Set, CUT, TOLERANCE,
 };
 use crate::explore::compass::views::{orthonormal, upper, CompassView, GridPlace};
+use crate::explore::compass::{MARGIN, SLICE_BUTTON, TILT_BUTTON, TITLE};
 use crate::explore::manifold_view::{dot, lock_edit, norm, point, View};
-use crate::explore::{COMPASS_JACOBI, COMPASS_SHAPE};
+use crate::explore::{COMPASS, COMPASS_JACOBI, COMPASS_SHAPE, COMPASS_TILT};
 use crate::headless::Headless;
-use crate::layout::Layout;
+use crate::layout::{Layout, Splitter, MIN_BOTTOM_H, MIN_COMPASS_W};
 use crate::side::MockSide;
 
 /// A tilted, zoomed start plane.
@@ -403,6 +406,125 @@ fn mock_compass_steer_physical_the_pole_line_fits_the_panel() {
     rejects("the line in the column", || {
         assert!(panel.contains_rect(back))
     });
+}
+
+/// The drawn rect of the text `wanted`, the rect it is clipped to and its rows, in `output`.
+fn laid_clipped(output: &FullOutput, wanted: &str) -> Option<(Rect, Rect, usize)> {
+    output.shapes.iter().find_map(|c| match &c.shape {
+        Shape::Text(t) if t.galley.text() == wanted => Some((
+            t.galley.rect.translate(t.pos.to_vec2()),
+            c.clip_rect,
+            t.galley.rows.len(),
+        )),
+        _ => None,
+    })
+}
+
+/// `id`'s view in a window `window` points in size, its compass at the least the splitters allow if `least`, and the
+/// panel.
+fn help_at(id: &'static str, window: [f32; 2], least: bool) -> (App<MockSide>, Headless, Rect) {
+    let (mut app, mut h) = app_with(&start(), Decoder::default(), id);
+    h.set_size(window.map(|points| (points * PIXELS_PER_POINT) as u32));
+    let screen = h.screen();
+    if least {
+        let footer = Layout::new(screen, PIXELS_PER_POINT).footer.min.y;
+        app.splits
+            .set(Splitter::CompassTime, MIN_COMPASS_W / screen.width());
+        app.splits.set(
+            Splitter::TopBottom,
+            (footer - MIN_BOTTOM_H) / screen.height(),
+        );
+    }
+    let _ = h.frame(&mut app, Vec::new());
+    let _ = h.frame(&mut app, Vec::new());
+    let panel = Layout::with_splits(screen, PIXELS_PER_POINT, &app.splits).compass;
+    (app, h, panel)
+}
+
+/// The physical views' help at the least panel and the windows the review measured it past: it is clipped to the panel,
+/// the column's buttons whole above it, the wheel brings its last row into view, and the focus moving to a button the
+/// wheel took off brings that back.
+#[test]
+fn mock_compass_steer_physical_the_help_stays_in_the_panel_and_is_reachable() {
+    let sizes = [
+        ("the least panel", [1440.0, 900.0], true),
+        ("1280 by 720", [1280.0, 720.0], false),
+        ("1280 by 800", [1280.0, 800.0], false),
+        ("1024 by 768", [1024.0, 768.0], false),
+    ];
+    for id in [COMPASS_JACOBI, COMPASS_SHAPE] {
+        for (name, window, least) in sizes {
+            let (mut app, mut h, panel) = help_at(id, window, least);
+            if least {
+                let size = panel.size();
+                assert!(
+                    (size.x - MIN_COMPASS_W).abs() < 1.0 && (size.y - MIN_BOTTOM_H).abs() < 1.0,
+                    "{size:?}"
+                );
+            }
+            let output = h.frame(&mut app, Vec::new());
+            for button in [TITLE, TILT_BUTTON, SLICE_BUTTON, "Jacobi", "Shape"] {
+                // The Manifold view has a Slice and a Tilt of its own: the compass's is the one in its panel.
+                let whole = output.shapes.iter().any(|c| match &c.shape {
+                    Shape::Text(t) if t.galley.text() == button => {
+                        let at = t.galley.rect.translate(t.pos.to_vec2());
+                        panel.contains_rect(at) && panel.contains_rect(c.clip_rect)
+                    }
+                    _ => false,
+                });
+                assert!(whole, "{name}: {button} whole in {panel:?}");
+            }
+            // The readout comes first, so at the narrow panels the help starts below the view, and is not drawn yet.
+            let first = laid_clipped(&output, physical::HELP);
+            if let Some((help, clip, _)) = first {
+                assert!(panel.contains_rect(clip), "{name}: {clip:?} in {panel:?}");
+                // Control: the galley itself runs past: the clip, not the text, keeps it in.
+                rejects("the help left unclipped", || {
+                    assert!(panel.contains_rect(help), "{name}: {help:?}")
+                });
+            }
+            // Control: before the wheel its end is not in view, so the wheel is what reaches it.
+            rejects("the help's end without a scroll", || {
+                let (help, clip, _) = first.expect("drawn");
+                assert!(help.max.y <= clip.max.y, "{name}: {help:?}")
+            });
+            let over = pos2(panel.max.x - 2.0 * MARGIN, panel.max.y - 2.0 * MARGIN);
+            let _ = h.frame(&mut app, vec![Event::PointerMoved(over)]);
+            let mut wheel = vec![Event::MouseWheel {
+                unit: MouseWheelUnit::Point,
+                delta: vec2(0.0, -2000.0),
+                phase: TouchPhase::Move,
+                modifiers: Modifiers::NONE,
+            }];
+            for _ in 0..60 {
+                let _ = h.frame(&mut app, std::mem::take(&mut wheel));
+            }
+            let output = h.frame(&mut app, Vec::new());
+            let (help, clip, rows) = laid_clipped(&output, physical::HELP).expect("its last rows");
+            assert!(panel.contains_rect(clip), "{name}: {clip:?} in {panel:?}");
+            let row = help.height() / rows as f32;
+            assert!(clip.height() > row, "{name}: {clip:?}, room to read it");
+            assert!(
+                help.max.y <= clip.max.y,
+                "{name}: {help:?} ends in {clip:?}"
+            );
+            // The wheel took the buttons off at the least panel: the focus moving to one brings it back.
+            if least {
+                let shows = |app: &App<MockSide>| {
+                    let tilt = app.keyboard.place_of(COMPASS_TILT).expect("placed");
+                    tilt.hit.is_positive() && clip.contains_rect(tilt.rect)
+                };
+                rejects("the Tilt button in view after the wheel", || {
+                    assert!(shows(&app))
+                });
+                app.view.focus.path = vec![COMPASS.to_owned(), COMPASS_TILT.to_owned()];
+                for _ in 0..60 {
+                    let _ = h.frame(&mut app, Vec::new());
+                }
+                assert!(shows(&app), "{name}: the focus's button in view");
+            }
+        }
+    }
 }
 
 #[test]

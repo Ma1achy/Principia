@@ -60,7 +60,7 @@ use crate::explore::manifold_view::{
 use crate::explore::{COMPASS, COMPASS_SLICE, COMPASS_TILT, COMPASS_VIEW};
 use crate::keyboard::keymap::Direction;
 use crate::keyboard::scopes::{Adjust, Base, ScopeTree, StepKind};
-use crate::keyboard::Keyboard;
+use crate::windows::Keys;
 use views::CompassView;
 
 /// The compass's title.
@@ -1273,6 +1273,8 @@ pub fn space(focus: &Focus, sim: &SimConfig, scratch: &mut Scratch, out: &mut Ou
 pub const MARGIN: f32 = 12.0;
 /// The gap between the pole's line and the degenerate message under a physical grid, in points (a look choice, R-390).
 pub const UNDER_GRID_GAP: f32 = 2.0;
+/// The width of the bar beside the column while it scrolls, in points (a look choice, R-390).
+pub const COLUMN_BAR: f32 = 6.0;
 
 /// The cube's square in the compass's `rect`: at its top left inside the margin, as tall as the margin leaves, at most
 /// half its width, a whole number of points, so the reference renders at its size (applied per R-369).
@@ -1344,13 +1346,14 @@ pub fn take(
 /// Draws the compass in `rect` and takes its buttons' clicks, `pending` the edit [`take`] sent this frame: the Cube
 /// view's cube, or the Plücker view's grid, its position readout and its cells' clicks, or the Jacobi and Shape views'
 /// grid, what it says under it and its cells' clicks; beside it the title, the Tilt and Slice buttons, the view buttons, the view's readout and
-/// its hint.
+/// its hint. That column never leaves the panel: past its foot it scrolls, by the wheel or the bar, which is drawn while
+/// there is more, and a button the focus moves to comes into view (`keys`), as a window's sections do.
 pub fn show(
     ui: &mut Ui,
     rect: Rect,
     sim: &SimConfig,
     pending: &[SetField],
-    keyboard: &mut Keyboard,
+    keys: &mut Keys<'_>,
     scratch: &mut Scratch,
     out: &mut Out,
 ) {
@@ -1362,9 +1365,9 @@ pub fn show(
         visuals.widgets.noninteractive.bg_stroke,
         egui::StrokeKind::Inside,
     );
-    keyboard.place(COMPASS, rect);
+    keys.keyboard.place(COMPASS, rect);
     let square = square(rect);
-    keyboard.place(COMPASS_VIEW, square);
+    keys.keyboard.place(COMPASS_VIEW, square);
     let (plane, frame) = (&sim.plane, &sim.slice.frame);
     let view = scratch.compass.view;
     let target = Shown::of(&after(plane, pending), frame);
@@ -1430,35 +1433,52 @@ pub fn show(
         rect.max - vec2(MARGIN, MARGIN),
     );
     let mut column = ui.new_child(UiBuilder::new().max_rect(text));
+    // A scroll area clips its cross axis to its parent's clip, here the whole window.
+    column.shrink_clip_rect(rect);
     column.spacing_mut().item_spacing.y = 4.0;
-    column.label(RichText::new(TITLE).heading());
-    column.horizontal(|ui| {
-        for (mode, id, label) in [
-            (Touch::Tilt, COMPASS_TILT, TILT_BUTTON),
-            (Touch::Slice, COMPASS_SLICE, SLICE_BUTTON),
-        ] {
-            let button = ui.selectable_label(scratch.compass.mode == mode, label);
-            keyboard.place_widget(id, &button);
-            if button.clicked() {
-                scratch.compass.mode = mode;
+    column.spacing_mut().scroll = egui::style::ScrollStyle {
+        floating: false,
+        bar_width: COLUMN_BAR,
+        ..egui::style::ScrollStyle::thin()
+    };
+    egui::ScrollArea::vertical()
+        .id_salt("compass column")
+        .auto_shrink([false, true])
+        .min_scrolled_height(0.0)
+        .scroll_source(
+            egui::scroll_area::ScrollSource::SCROLL_BAR
+                | egui::scroll_area::ScrollSource::MOUSE_WHEEL,
+        )
+        .show(&mut column, |column| {
+            column.label(RichText::new(TITLE).heading());
+            column.horizontal(|ui| {
+                for (mode, id, label) in [
+                    (Touch::Tilt, COMPASS_TILT, TILT_BUTTON),
+                    (Touch::Slice, COMPASS_SLICE, SLICE_BUTTON),
+                ] {
+                    let button = ui.selectable_label(scratch.compass.mode == mode, label);
+                    keys.place(id, &button);
+                    if button.clicked() {
+                        scratch.compass.mode = mode;
+                    }
+                }
+            });
+            column.horizontal_wrapped(|ui| {
+                for (view, id, label) in views::VIEWS {
+                    let button = ui.selectable_label(scratch.compass.view == view, label);
+                    keys.place(id, &button);
+                    if button.clicked() {
+                        scratch.compass.view = view;
+                    }
+                }
+            });
+            for line in &readout {
+                column.label(RichText::new(line).monospace().small());
             }
-        }
-    });
-    column.horizontal_wrapped(|ui| {
-        for (view, id, label) in views::VIEWS {
-            let button = ui.selectable_label(scratch.compass.view == view, label);
-            keyboard.place_widget(id, &button);
-            if button.clicked() {
-                scratch.compass.view = view;
+            if !hint.is_empty() {
+                column.label(RichText::new(hint).weak().small());
             }
-        }
-    });
-    for line in &readout {
-        column.label(RichText::new(line).monospace().small());
-    }
-    if !hint.is_empty() {
-        column.label(RichText::new(hint).weak().small());
-    }
+        });
 }
 
 /// What a physical view says under its grid, in the band the Plücker view's position readout takes, so neither pushes
