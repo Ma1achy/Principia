@@ -28754,7 +28754,7 @@ The owner's words (30 Oct 2026), verbatim, from that day's batch of rulings:
 
 > RQ-627 (a), Plummer V = −Σ mᵢmⱼ/√(r² + ε²), with ε canonical: a fraction of the initial hyperradius R fixed at t = 0, never co-moving, recorded in every output header like r_coll. Energy and drift are defined under the softened potential. Schedule the task late (after the core build); runs with ε ≠ 0 stay refused until it lands.
 
-*Context.* RQ-627 is open only on TASK-M3-06's branch (PR #348), queued by that PR's physics review: the corpus made `epsilon` optional and a different force law, and never said which. RQ-627's option (a) read: "Plummer softening, `V = −Σ m_i m_j / √(r_ij² + ε²)`, built by a new task". This rulings PR archives the entry (`plan/OPERATIONS.md` § "Merging", **Numbers**), and PR #348's next fix pass deletes its open copy.
+*Context.* RQ-627 was queued by the physics review of TASK-M3-06's PR #348: the corpus made `epsilon` optional and a different force law, and never said which. RQ-627's option (a) read: "Plummer softening, `V = −Σ m_i m_j / √(r_ij² + ε²)`, built by a new task". PR #348 merged on 1 Nov 2026, bringing the entry onto `main`, and this rulings PR archives it from there (`plan/OPERATIONS.md` § "Merging", **Numbers**).
 
 *What it decides:*
 - **The law.** `V = −Σ mᵢmⱼ/√(r² + ε²)` over the three pairs, `G = 1`. The force is its negative gradient, `Fᵢ = −Σ_{j≠i} mᵢmⱼ (rᵢ − rⱼ)/(r² + ε²)^{3/2}`, a consequence of the law, not a further choice. At `ε = 0` it is the Newtonian law.
