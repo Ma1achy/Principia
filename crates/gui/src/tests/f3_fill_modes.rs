@@ -382,7 +382,19 @@ fn f3_fill_modes_fit_wider_than_tall() {
     rejects("a Fit stretched to W × H, pixels", || {
         check_same_over(&fit.rgba, &stretched, b, "the square, stretched")
     });
-    // A square letterboxed against the wrong side and the shown placement left in the square.
+    // A square scaled to the longer side, letterboxed against the wrong one: it overflows the window's height.
+    let longer = egui::Rect::from_center_size(square.center(), egui::Vec2::splat(l.window.width()));
+    let wrong = stand_in_clipped(
+        &canvas,
+        &mock,
+        Placement::of(longer, l.window),
+        longer.intersect(l.window),
+        UNIT,
+    );
+    rejects("a square scaled to the longer side", || {
+        check_fit(&wrong, size);
+    });
+    // The shown placement left in the square.
     let shown = stand_in_clipped(&canvas, &mock, l.placement(), square, UNIT);
     rejects("the field left at the shown scale in the square", || {
         check_same_over(&fit.rgba, &shown, edges, "the shown scale")
