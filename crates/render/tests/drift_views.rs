@@ -929,6 +929,135 @@ negative_control!(
 
 // ── The non-finite guard (render contract Part 5; R-436) ────────────────────────────────────────────────────────────
 
+/// The guard on a view's drift.
+const X_GUARD: &str = "if (dbg_drift_non_finite(x)) { return debug_invalid(ctx.frag_xy); }";
+
+/// The state of a tile whose drift is `±∞` on finite references: overflowing momenta and coincident bodies for `H`, an
+/// overflowing `x₀p_{y,0}` for `L_z`.
+fn infinite_state(energy: bool, positive: bool) -> ([[f32; 2]; 3], [[f32; 2]; 3]) {
+    let sign = if positive { 1.0 } else { -1.0 };
+    match (energy, positive) {
+        (true, true) => (R, [[2e20, 0.0], [-2e20, 0.0], [0.0, 0.0]]),
+        (true, false) => ([[0.0, 0.0], [0.0, 0.0], [0.0, 0.5]], [[0.0; 2]; 3]),
+        (false, _) => (
+            [[4e33, 0.0], [0.0, 0.5], [0.0, -0.5]],
+            [[1e6, sign * 1e6], [0.0, 0.0], [0.0, 0.0]],
+        ),
+    }
+}
+
+/// Two tiles of `view`, drift `+∞` and `−∞` by the read side (asserted), on the finite references `E_0 = −1` and
+/// `Lz_0 = 1`, the latches 0.
+fn infinite_scene(view: View, colouring: Colouring) -> Scene {
+    let mut s = row(2, colouring);
+    for (i, positive) in [(0, true), (1, false)] {
+        let (r, p) = infinite_state(view.energy, positive);
+        s.set
+            .sample(i)
+            .r(r)
+            .p(p)
+            .E_0(-1.0)
+            .Lz_0(1.0)
+            .times(1000, 500)
+            .drift_max(0.0, 0.0);
+        let want = if positive {
+            f32::INFINITY
+        } else {
+            f32::NEG_INFINITY
+        };
+        assert_eq!(shown(view, &s, i), want, "tile {i}'s drift, `{}`", view.id);
+    }
+    s
+}
+
+/// `view` with its guard cut and its colour the flag "this backend's `x` has an exponent of all ones": white or black.
+fn delivered_probe(view: View) -> Colouring {
+    let Colouring::Probe(wgsl, _) = broken(view.id, X_GUARD, "") else {
+        unreachable!("`broken` is a probe")
+    };
+    let last = "return dbg_suspect(rgb, x, energy, lz, ctx.frag_xy);";
+    assert!(wgsl.contains(last), "`{}` has no `{last}`", view.id);
+    let flag = "return vec3<f32>(select(0.0, 1.0, dbg_drift_non_finite(x)));";
+    Colouring::Probe(wgsl.replace(last, flag), Vec::new())
+}
+
+/// Which of [`infinite_scene`]'s tiles this backend computes `∞`'s bits for. WGSL lets it assume no infinities, so a live
+/// `x` is tested as it was computed (render contract Part 5), and a tile it doesn't deliver is recorded and not judged.
+fn delivered(h: &GpuHarness, view: View) -> [bool; 2] {
+    let s = infinite_scene(view, delivered_probe(view));
+    let image = render(h, &s);
+    [0, 1].map(|i| {
+        let got = tile(&s, &image, i)[0] > 0.5;
+        if !got {
+            eprintln!(
+                "`{}`: tile {i}: this backend does not deliver `∞`'s bits, so the hatch is not judged",
+                view.id
+            );
+        }
+        got
+    })
+}
+
+/// Checks that the delivered tiles of `s` draw the hatch, unstyled.
+fn check_infinite_hatched(s: &Scene, image: &[Rgb], delivered: [bool; 2]) {
+    for (i, judged) in (0u32..).zip(delivered) {
+        if judged {
+            check_tile(
+                s,
+                image,
+                i,
+                &|x, y| present::debug_invalid([f64::from(x) + 0.5, f64::from(y) + 0.5]),
+                "the hatch",
+            );
+        }
+    }
+}
+
+#[test]
+fn drift_view_non_finite_infinite_drift_hatches_under_every_compaction() {
+    let h = gpu();
+    for view in VIEWS {
+        let judged = delivered(&h, view);
+        for mode in [Mode::Default, Mode::Lin, Mode::Log] {
+            let s = infinite_scene(view, debug(view.id, mode.params()));
+            check_infinite_hatched(&s, &render(&h, &s), judged);
+        }
+    }
+}
+
+/// The control's body: `view` at `compaction` with its guard on `x` cut, which clamps the `∞` onto the ramp.
+#[cfg(feature = "controls")]
+fn guard_cut(view: View, compaction: f64) {
+    let h = gpu();
+    let judged = delivered(&h, view);
+    let mut s = infinite_scene(view, broken(view.id, X_GUARD, ""));
+    if let Colouring::Probe(_, params) = &mut s.colouring {
+        params.push(("COMPACTION".to_owned(), vec![compaction]));
+    }
+    check_infinite_hatched(&s, &render(&h, &s), judged);
+}
+
+negative_control!(
+    drift_view_non_finite_infinite_drift_hatches_under_every_compaction,
+    "the generated energy view at `symlog` with its guard on `x` cut",
+    expected = "not the hatch",
+    guard_cut(VIEWS[0], 0.0)
+);
+
+negative_control!(
+    drift_view_non_finite_lz_guard_is_held,
+    "the `L_z` view at `lin` with its guard on `x` cut",
+    expected = "not the hatch",
+    guard_cut(VIEWS[1], 1.0)
+);
+
+negative_control!(
+    drift_view_non_finite_derived_guard_is_held,
+    "the derived energy view at `log` with its guard on `x` cut",
+    expected = "not the hatch",
+    guard_cut(VIEWS[2], 2.0)
+);
+
 /// The energy predicate's line in the `L_z` view.
 #[cfg(feature = "controls")]
 const LZ_ENERGY: &str = "!dbg_drift_non_finite(ctx.sample.E_0) && suspect_energy(ctx.sample.dE_max, ctx.sample.E_0, uniforms.EPS_E)";
