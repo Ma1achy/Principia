@@ -6,7 +6,8 @@
 //! - `θ, φ` are R-14's and the rates are `d/dt` at `t = 0` of the mass-weighted `ρ̃, λ̃`, here by moving the particles
 //!   at `ṙ = p/m` and differencing R-14's map, never through the code's formula.
 //!
-//! Each check runs its control (R-176) through [`rejects`].
+//! Each check runs its control (R-176) through [`rejects`], and each test has one that `cargo xtask controls` runs, by
+//! `negative_control!` (REQ-VAL-147, R-199).
 // The file name `qa_TASK-M6-35` gives a crate name that is not snake case.
 #![allow(non_snake_case)]
 
@@ -14,6 +15,7 @@ use engine::contract::decoded::{state, Sphere, State};
 use engine::contract::sim_config::Links;
 use kernel::decode::{energy_norm, Latent as KernelLatent};
 use kernel::generated::links::Defaults;
+use validation::negative_control;
 
 type Z = [f64; 8];
 type P = [[f64; 2]; 3];
@@ -135,6 +137,17 @@ fn qa_decoded_state_is_the_particles_after_eta_e() {
     rejects("the state before η_E", || check_state(&before, &m, &r, &p));
 }
 
+negative_control!(
+    qa_decoded_state_is_the_particles_after_eta_e,
+    "the state read before η_E must not pass as the particles after it",
+    expected = "p_ρ:",
+    {
+        let z = sample(0x3535, 1)[0];
+        let (m, r, p) = particles(&z, Some(0.0));
+        check_state(&state(&z, &Links::defaults(), None), &m, &r, &p)
+    }
+);
+
 /// `(θ̇, φ̇, Ṙ)` by a central difference in `t` of R-14's map over particles moving at `ṙ = p/m`.
 fn rates_by_motion(m: &[f64; 3], r: &P, p: &P) -> (f64, f64, f64) {
     let dt = 1e-6;
@@ -199,12 +212,25 @@ fn qa_decoded_sphere_is_r14s_and_the_rates_are_d_dt_of_the_motion() {
     });
 }
 
-/// R-14's landmarks on hand-filled states: `L⁺` at `w = +1`, the 0–1 collision at `n = (−1, 0, 0)`, `φ` from `+w`.
-#[test]
-fn qa_decoded_sphere_landmarks_are_r14s() {
-    let m = [1.0 / 3.0; 3];
-    let fill = |rho_t: [f64; 2], lambda_t: [f64; 2]| State {
-        m,
+negative_control!(
+    qa_decoded_sphere_is_r14s_and_the_rates_are_d_dt_of_the_motion,
+    "a sphere with twice the true rates must not pass as d/dt of the motion",
+    expected = "θ̇:",
+    {
+        let links = Links::defaults();
+        let z = sample(0x1414, 1)[0];
+        let (m, r, p) = particles(&z, None);
+        let mut doubled = Sphere::of(&state(&z, &links, None));
+        doubled.theta_dot *= 2.0;
+        doubled.phi_dot *= 2.0;
+        check_sphere(&doubled, &m, &r, &p)
+    }
+);
+
+/// A state of equal masses, at rest, with the given `ρ̃, λ̃`.
+fn fill(rho_t: [f64; 2], lambda_t: [f64; 2]) -> State {
+    State {
+        m: [1.0 / 3.0; 3],
         alpha: 0.0,
         beta: 0.0,
         rho_t,
@@ -212,27 +238,49 @@ fn qa_decoded_sphere_landmarks_are_r14s() {
         p_rho: [0.0; 2],
         p_lambda: [0.0; 2],
         l_z: 0.0,
-    };
+    }
+}
+
+/// R-14's landmarks on hand-filled states, through `sphere`: `L⁺` at `w = +1`, the 0–1 collision at
+/// `n = (−1, 0, 0)`, `φ` from `+w`.
+fn check_landmarks(sphere: impl Fn(&State) -> Sphere) {
     let root = std::f64::consts::FRAC_1_SQRT_2;
-    let up = Sphere::of(&fill([root, 0.0], [0.0, root]));
+    let up = sphere(&fill([root, 0.0], [0.0, root]));
     assert!(up.phi.abs() < 1e-12 && up.sin_phi < 1e-12, "L⁺: {up:?}");
-    let down = Sphere::of(&fill([root, 0.0], [0.0, -root]));
+    let down = sphere(&fill([root, 0.0], [0.0, -root]));
     assert!(
         (down.phi - std::f64::consts::PI).abs() < 1e-12,
         "L⁻: {down:?}"
     );
     assert!(down.theta.is_finite() && down.theta_dot == 0.0, "{down:?}");
-    let collision = Sphere::of(&fill([0.0, 0.0], [1.0, 0.0]));
+    let collision = sphere(&fill([0.0, 0.0], [1.0, 0.0]));
     assert!(
         (collision.theta.abs() - std::f64::consts::PI).abs() < 1e-12,
         "n = (−1, 0, 0): {collision:?}"
     );
     assert!((collision.phi - std::f64::consts::FRAC_PI_2).abs() < 1e-12);
-    let far = Sphere::of(&fill([1.0, 0.0], [0.0, 0.0]));
+    let far = sphere(&fill([1.0, 0.0], [0.0, 0.0]));
     assert!(far.theta.abs() < 1e-12 && (far.phi - std::f64::consts::FRAC_PI_2).abs() < 1e-12);
+}
+
+#[test]
+fn qa_decoded_sphere_landmarks_are_r14s() {
+    check_landmarks(Sphere::of);
+    let root = std::f64::consts::FRAC_1_SQRT_2;
     // Control: the flipped cross puts L⁺ at the other pole.
     rejects("the negated cross", || {
         let flipped = Sphere::of(&fill([root, 0.0], [0.0, -root]));
         assert!(flipped.phi.abs() < 1e-12)
     });
 }
+
+negative_control!(
+    qa_decoded_sphere_landmarks_are_r14s,
+    "the negated cross puts L⁺ at the other pole, so must fail the landmarks",
+    expected = "L⁺:",
+    check_landmarks(|s| {
+        let mut negated = *s;
+        negated.lambda_t[1] = -negated.lambda_t[1];
+        Sphere::of(&negated)
+    })
+);
