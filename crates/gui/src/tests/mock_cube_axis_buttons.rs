@@ -5,6 +5,7 @@
 //! Each check also runs on an input it must reject (R-176, through `rejects`).
 
 use eframe::egui::{Key, Modifiers};
+use engine::contract::set_field::SetField;
 use engine::contract::sim_config::{Latent, Lock, Plane, SliceFrame};
 use engine::contract::view_ui::{KeyMode, Mode};
 
@@ -17,7 +18,8 @@ use crate::explore::compass::{
 };
 use crate::explore::manifold_view::chart::basis_text;
 use crate::explore::manifold_view::{
-    axis, frame_edit, lock_edit, normal_edit, plane_edit, slice_axis, Touch, View,
+    adjust, axis, basis_edit, frame_edit, lock_edit, normal_edit, plane_edit, slice_axis, Out,
+    Scratch, Touch, View, GAMMA, TAU1, TAU2,
 };
 use crate::explore::{
     COMPASS, COMPASS_BADGE, COMPASS_CUBE, COMPASS_D, COMPASS_D_ENTRIES, COMPASS_H,
@@ -25,6 +27,8 @@ use crate::explore::{
     COMPASS_V, COMPASS_VIEW, COMPASS_V_ENTRIES,
 };
 use crate::headless::Headless;
+use crate::keyboard::keymap::Direction;
+use crate::keyboard::scopes::{Adjust, StepKind};
 use crate::side::MockSide;
 
 const NONE: Modifiers = Modifiers::NONE;
@@ -357,6 +361,186 @@ fn swap_h_and_v(h: &mut Headless, app: &mut App<MockSide>) {
         app.set_field(edit);
         settle(h, app);
     }
+}
+
+/// The view at scale 1 on `(a, b)`, in `f`, at these angles in degrees.
+fn view_on((a, b): (usize, usize), f: &SliceFrame, (t1, t2, g): (f64, f64, f64)) -> View {
+    let index = |i: u32| usize::try_from(i).expect("a dimension");
+    View {
+        preset: None,
+        a,
+        b,
+        d: index(f.normal),
+        x: index(f.tilt_x),
+        y: index(f.tilt_y),
+        ..view(t1, t2, g, 1.0)
+    }
+}
+
+/// Asserts `plane` is `want`'s basis, and reading it in `f` keeps `want`'s axes and writes that basis back: an edit made
+/// from the reading does not mirror the chart.
+fn check_stays(plane: &Plane, f: &SliceFrame, want: &View) {
+    let read = View::framed(plane, Some(f));
+    assert_eq!((read.a, read.b), (want.a, want.b), "the axes: {read:?}");
+    let (w1, w2) = want.basis();
+    let (r1, r2) = read.basis();
+    for (got, wanted, what) in [
+        (&plane.q1, &w1, "q₁ stored"),
+        (&plane.q2, &w2, "q₂ stored"),
+        (&r1, &w1, "q₁ read back"),
+        (&r2, &w2, "q₂ read back"),
+    ] {
+        for i in 0..8 {
+            assert!(
+                (got[i] - wanted[i]).abs() < 1e-12,
+                "{what}[{i}]: {} against {}, wanting {want:?}",
+                got[i],
+                wanted[i]
+            );
+        }
+    }
+}
+
+/// The edit the Up arrow makes on the angle `id`, `degrees` of it, with the keys' own [`adjust`], read from `app`'s
+/// snapshot.
+fn turn_key(app: &App<MockSide>, id: &'static str, degrees: f64) -> Vec<SetField> {
+    let mut out = Out::default();
+    let step = Adjust {
+        scope: id,
+        kind: StepKind::Angle,
+        times: degrees,
+        direction: Direction::Up,
+    };
+    adjust(&step, app.snapshot(), &mut Scratch::default(), &mut out);
+    out.edits
+}
+
+/// R-459 G3: a pair picked the other way round stays that pair through the whole of `γ`'s range, and the next edit from
+/// any reading of it keeps the chart's handedness: at `γ = 60°` a reading by the dominant axes gives `(z_α, z_β)` at
+/// `γ = −30°`, whose [`View::basis`] is the stored one with `z_β`'s components negated.
+#[test]
+fn mock_cube_axis_buttons_a_swapped_pair_stays_editable_through_the_full_rotation() {
+    let default = frame(Z_Q3, Z_Q3, Z_Q3);
+    let pair = (Z_BETA, Z_ALPHA);
+    let (mut app, mut h) = app_with((0.0, 0.0, 0.0), 1.0, default);
+    swap_h_and_v(&mut h, &mut app);
+    // With the keys: γ from 0 up to its end, one step at a time, each step made from the reading the last one left.
+    for k in 1..=12 {
+        let at = f64::from(k) * 15.0;
+        for edit in turn_key(&app, GAMMA, 15.0) {
+            app.set_field(edit);
+        }
+        settle(&mut h, &mut app);
+        check_stays(
+            &app.snapshot().sim.plane,
+            &default,
+            &view_on(pair, &default, (0.0, 0.0, at)),
+        );
+        assert_eq!(texts(&h, &app)[0], "H z_β", "H at γ = {at}");
+        assert_eq!(texts(&h, &app)[2], "V z_α", "V at γ = {at}");
+    }
+    // Back down through 0 to the other end.
+    for k in (-12..12).rev() {
+        let at = f64::from(k) * 15.0;
+        for edit in turn_key(&app, GAMMA, -15.0) {
+            app.set_field(edit);
+        }
+        settle(&mut h, &mut app);
+        check_stays(
+            &app.snapshot().sim.plane,
+            &default,
+            &view_on(pair, &default, (0.0, 0.0, at)),
+        );
+    }
+    // The finding's own place: γ = 60°, then a tilt and a turn, each from the last reading.
+    app.set_field(basis_edit(
+        view_on(pair, &default, (0.0, 0.0, 60.0)).basis(),
+    ));
+    settle(&mut h, &mut app);
+    for (id, degrees, want) in [
+        (TAU1, 10.0, (10.0, 0.0, 60.0)),
+        (GAMMA, 5.0, (10.0, 0.0, 65.0)),
+        (TAU2, -20.0, (10.0, -20.0, 65.0)),
+    ] {
+        for edit in turn_key(&app, id, degrees) {
+            app.set_field(edit);
+        }
+        settle(&mut h, &mut app);
+        check_stays(
+            &app.snapshot().sim.plane,
+            &default,
+            &view_on(pair, &default, want),
+        );
+    }
+    // Every rotation, at the tilts' ends too, in a frame of one target and of two; every swapped preset.
+    for f in [default, frame(Z_Q3, Z_Q3, Z_MU1)] {
+        for (t1, t2) in [
+            (0.0, 0.0),
+            (20.0, -30.0),
+            (90.0, 0.0),
+            (0.0, -90.0),
+            (90.0, 90.0),
+        ] {
+            for k in -36..=36 {
+                let want = view_on(pair, &f, (t1, t2, f64::from(k) * 5.0));
+                let (q1, q2) = want.basis();
+                let plane = Plane {
+                    z0: [0.0; 8],
+                    q1,
+                    q2,
+                };
+                check_stays(&plane, &f, &want);
+            }
+        }
+    }
+    for pair in [(Z_Q3, Z_Q2), (Z_MU1, Z_ALPHA), (Z_MU1, Z_Q3)] {
+        let f = frame(Z_BETA, Z_BETA, Z_BETA);
+        for k in -36..=36 {
+            let want = view_on(pair, &f, (0.0, 0.0, f64::from(k) * 5.0));
+            let (q1, q2) = want.basis();
+            let plane = Plane {
+                z0: [0.0; 8],
+                q1,
+                q2,
+            };
+            check_stays(&plane, &f, &want);
+        }
+    }
+    // The chart mirrored: the swapped basis at 60° with z_β's components negated, the reading at −30° on (z_α, z_β).
+    let mirrored = |want: &View| {
+        let (q1, q2) = view_on((Z_ALPHA, Z_BETA), &default, (0.0, 0.0, -30.0)).basis();
+        check_stays(
+            &Plane {
+                z0: [0.0; 8],
+                q1,
+                q2,
+            },
+            &default,
+            want,
+        );
+    };
+    let at_60 = view_on(pair, &default, (0.0, 0.0, 60.0));
+    rejects("the chart mirrored at 60°", || mirrored(&at_60));
+    let (q1, q2) = at_60.basis();
+    let stored = Plane {
+        z0: [0.0; 8],
+        q1,
+        q2,
+    };
+    rejects("the pair read the preset's way", || {
+        check_stays(
+            &stored,
+            &default,
+            &view_on((Z_ALPHA, Z_BETA), &default, (0.0, 0.0, -30.0)),
+        )
+    });
+    rejects("the basis at another rotation", || {
+        check_stays(
+            &stored,
+            &default,
+            &view_on(pair, &default, (0.0, 0.0, 65.0)),
+        )
+    });
 }
 
 #[test]
