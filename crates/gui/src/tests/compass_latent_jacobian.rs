@@ -121,10 +121,30 @@ fn compass_latent_jacobian_takes_j_ds_step_divided_by_the_step_taken() {
     rejects("a difference divided by 2h", || assert_eq!(by_two_h, 1.0));
 }
 
+/// Asserts each entry of `j` is its column's two decoder evaluations at `z`, read at `e_star`, over the step taken and
+/// the row's range.
+fn check_decoder_columns(j: &Matrix, set: Set, links: &Links, z: &Latent, e_star: Option<f64>) {
+    let ranges = set.ranges(links.link_params().q_max);
+    for k in 0..LATENT_DIM {
+        let h = f64::EPSILON.cbrt() * z[k].abs().max(1.0);
+        let (mut up, mut down) = (*z, *z);
+        up[k] += h;
+        down[k] -= h;
+        let (a, b) = (
+            set.coordinates(&decoded::state(&down, links, e_star)),
+            set.coordinates(&decoded::state(&up, links, e_star)),
+        );
+        for r in 0..LATENT_DIM {
+            // θ's own row is checked across the seam below; away from it the two agree.
+            let want = (b[r] - a[r]) / (up[k] - down[k]) / ranges[r];
+            assert_eq!(j[r][k], want, "{set:?}, row {r}, column {k}");
+        }
+    }
+}
+
 #[test]
 fn compass_latent_jacobian_on_the_decoder_each_column_is_its_two_evaluations() {
     let links = Links::defaults();
-    let q_max = links.link_params().q_max;
     let mut rng = Rng::new(21);
     for (set, e_star) in [
         (Set::Jacobi, None),
@@ -134,23 +154,19 @@ fn compass_latent_jacobian_on_the_decoder_each_column_is_its_two_evaluations() {
         let z = rng.latent();
         let d = Decoder::Real { e_star };
         let j = latent_jacobian(&d, set, &links, &z);
-        let ranges = set.ranges(q_max);
-        for k in 0..LATENT_DIM {
-            let h = f64::EPSILON.cbrt() * z[k].abs().max(1.0);
-            let (mut up, mut down) = (z, z);
-            up[k] += h;
-            down[k] -= h;
-            let (a, b) = (
-                set.coordinates(&decoded::state(&down, &links, e_star)),
-                set.coordinates(&decoded::state(&up, &links, e_star)),
-            );
-            for r in 0..LATENT_DIM {
-                // θ's own row is checked across the seam below; away from it the two agree.
-                let want = (b[r] - a[r]) / (up[k] - down[k]) / ranges[r];
-                assert_eq!(j[r][k], want, "{set:?}, row {r}, column {k}");
-            }
-        }
+        check_decoder_columns(&j, set, &links, &z, e_star);
     }
+    // Controls: the Jacobian taken before η_E, and one with a single entry off.
+    let z = rng.latent();
+    let before = latent_jacobian(&Decoder::Real { e_star: None }, Set::Jacobi, &links, &z);
+    rejects("a Jacobian taken before η_E", || {
+        check_decoder_columns(&before, Set::Jacobi, &links, &z, Some(0.0))
+    });
+    let mut off = before;
+    off[7][7] += 1e-12;
+    rejects("a Jacobian with an entry off", || {
+        check_decoder_columns(&off, Set::Jacobi, &links, &z, None)
+    });
 }
 
 #[test]
@@ -180,24 +196,36 @@ fn compass_latent_jacobian_theta_differs_on_the_circle() {
     rejects("θ's raw difference", || assert!(raw.abs() < 1e3));
 }
 
+/// Asserts the Jacobian `at` gives for an `E*` keeps 8 singular values unset and 7 with `E* = 0`.
+fn check_ranks(at: impl Fn(Option<f64>) -> Matrix, what: &str) {
+    let kept = |e_star| Inverse::of(&at(e_star), CUT).kept;
+    assert_eq!(kept(None), 8, "{what}");
+    assert_eq!(kept(Some(0.0)), 7, "{what}");
+}
+
 #[test]
 fn compass_latent_jacobian_has_rank_8_unset_and_7_with_e_star() {
     let links = Links::defaults();
+    let jacobian =
+        |set, z: &Latent, e_star| latent_jacobian(&Decoder::Real { e_star }, set, &links, z);
     for set in [Set::Jacobi, Set::Shape] {
         let mut rng = Rng::new(41);
         for _ in 0..200 {
             let z = rng.latent().map(|x| 3.0 * x);
-            let at = |e_star| {
-                Inverse::of(
-                    &latent_jacobian(&Decoder::Real { e_star }, set, &links, &z),
-                    CUT,
-                )
-                .kept
-            };
-            assert_eq!(at(None), 8, "{set:?} at {z:?}");
-            assert_eq!(at(Some(0.0)), 7, "{set:?} at {z:?}");
+            check_ranks(
+                |e_star| jacobian(set, &z, e_star),
+                &format!("{set:?} at {z:?}"),
+            );
         }
     }
+    // Controls: `E*` ignored, either way, leaves one of the two ranks wrong.
+    let z = Rng::new(41).latent().map(|x| 3.0 * x);
+    rejects("a Jacobian that never takes η_E", || {
+        check_ranks(|_| jacobian(Set::Jacobi, &z, None), "never η_E")
+    });
+    rejects("a Jacobian that always takes η_E", || {
+        check_ranks(|_| jacobian(Set::Jacobi, &z, Some(0.0)), "always η_E")
+    });
 }
 
 #[test]
