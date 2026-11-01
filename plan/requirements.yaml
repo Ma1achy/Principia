@@ -36954,7 +36954,7 @@
   note: "R-649's clarification 2 (30 Oct 2026): every GPU-vs-CPU agreement check states its f32 tolerance; REQ-VAL-173 names no precision path. Internal, continuous and blocking; closed by TASK-M5-18."
 - id: REQ-VAL-340
   area: VAL
-  statement: "M9's report must list every M9 target with its tier, its outcome (PASS, EXPLAINED DIVERGENCE or UNEXPLAINED), its like-for-like checks and, for an explained divergence, the measurement showing the mechanism; a target not yet scored is listed \"not scored\" with what it waits on, never as a failure; every M9 calibration is put to the human with it, or, where its proposal has not landed (REQ-SYS-095, TASK-M9-39's, which the report does not wait on), listed with what it waits on."
+  statement: "M9's report must list every M9 target with its tier, its outcome (PASS, EXPLAINED DIVERGENCE or UNEXPLAINED), its like-for-like checks and, for an explained divergence, the measurement showing the mechanism; a target not yet scored is listed \"not scored\" with what it waits on, never as a failure; every M9 calibration is put to the human with it, or, where its proposal has not landed (REQ-SYS-095, TASK-M9-39's, or the calibration of a target listed \"not scored\"; the report waits on neither), listed with what it waits on."
   source:
   - file: docs/design/principia_dd_replication.md
     section: "12. Targets are measurements: tiers, outcomes and M9 (R-649, R-650)"
@@ -36973,13 +36973,13 @@
   - file: decisions.md
     section: "R-650 — External replication becomes its own final milestone, M9, after the core build: it scores every external target, writes up the explained divergences and tightens the GPU path, and exits on its report; the internal correctness tests and the cheap anchor smoke tests (figure-eight closure, SP-1 run to its horizon, SP-2) stay continuous and block a merge as now; source ingest and transcription go on whenever idle; early peeks score a target as information only, in a peek log *(refines R-649; amends R-594, R-629, R-630, R-640 and R-642: where and when the targets are scored)*"
   verify:
-    detail: "the report covers every M9 target, every live M9 requirement but REQ-INT-110, REQ-SYS-094 and REQ-SYS-095 (TASK-M9-39, a build task, not scored; R-654), REQ-VAL-340 itself and REQ-VAL-341 (TASK-M9-38's definition, which follows the report and has no target); each row has the four fields; the peek log's rows are cited, never counted as scores; physics reviewer approved; the owner reviews it"
+    detail: "the report has one row for each row of principia_dd_replication.md § 12.2's table and no others, so none for a calibration, REQ-INT-110, REQ-SYS-094 and REQ-SYS-095 (TASK-M9-39, a build task, not scored; R-654), REQ-VAL-340 itself or REQ-VAL-341 (TASK-M9-38's definition, which follows the report and has no target); each scored row has the four fields, with a mixed target's exact and statistical parts each carrying their own tier and outcome and an information run § 12.2 names sitting beside the score; a row not yet scored reads \"not scored\" with what it waits on, never a failure; every M9 calibration is in the report's list, with its target's tier and its proposal or what it waits on; REQ-VAL-332's raised-cap run is read in OC-1's, OC-3's and OC-6's rows; the peek log's rows are cited, never counted as scores; physics reviewer approved; the owner reviews it"
     method: review checklist
   rulings:
   - R-649
   - R-650
   milestone: M9
-  note: "M9 exits on this report, not a gate (R-650); closed by TASK-M9-37. Statement *was:* \"every M9 calibration is put to the human with it.\" (REQ-SYS-095, code review 5730587922 of PR #375, C4; applied per R-369). Verify *was:* \"the report covers every live M9 requirement; …\" (code review 5730587922 of PR #375, C2; applied per R-369). Verify *was:* \"every live M9 requirement but REQ-INT-110, REQ-SYS-094 and REQ-SYS-095\" (code review 5730659053 of PR #375, N2; applied per R-369)."
+  note: "M9 exits on this report, not a gate (R-650); closed by TASK-M9-37. Statement *was:* \"every M9 calibration is put to the human with it.\" (REQ-SYS-095, code review 5730587922 of PR #375, C4; applied per R-369). Verify *was:* \"the report covers every live M9 requirement; …\" (code review 5730587922 of PR #375, C2; applied per R-369). Verify *was:* \"every live M9 requirement but REQ-INT-110, REQ-SYS-094 and REQ-SYS-095\" (code review 5730659053 of PR #375, N2; applied per R-369). Statement *was:* \"where its proposal has not landed (REQ-SYS-095, TASK-M9-39's, which the report does not wait on)\"; verify *was:* \"the report covers every M9 target, every live M9 requirement but REQ-INT-110, REQ-SYS-094 and REQ-SYS-095 (…), REQ-VAL-340 itself and REQ-VAL-341 (…); each row has the four fields\" (code review 5730758034 of PR #375, R1; applied per R-369)."
 - id: REQ-VAL-341
   area: VAL
   kind: definition

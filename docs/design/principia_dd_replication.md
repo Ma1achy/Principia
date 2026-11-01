@@ -846,7 +846,10 @@ an earlier milestone, this section governs.*
   REQ-VAL-201 to REQ-VAL-249 and REQ-VAL-252 to REQ-VAL-332, FF-H (REQ-VAL-042), SP-1's feature set (REQ-VAL-127), the
   figure-eight's published shape-sphere curve (REQ-VAL-333, its tolerance REQ-VAL-334) and SP-1's structural comparison
   with Szebehely & Peters (REQ-VAL-335). M9 also holds its report (REQ-VAL-340) and the GPU-path tightening's
-  definition (REQ-VAL-341). A target's control (rule 16) is part of its test and still has to fire.
+  definition (REQ-VAL-341). A target's control (rule 16) is part of its test and still has to fire. *1 Nov 2026 (code
+  review 5730758034 of PR #375, R1; applied per R-369):* those ranges say what moved to M9, and they hold each target's
+  calibration too, which takes its target's tier (§ 12.2) and goes to the human with the report (§ 12.3); the report's
+  rows are § 12.2's table.
 - **Ingest and transcription** (a `docs/incoming/` data PR) go on whenever idle; scoring waits for M9, or is a peek
   (§ 12.5).
 
