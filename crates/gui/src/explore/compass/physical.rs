@@ -43,8 +43,9 @@ pub enum Set {
     Shape,
 }
 
-/// The Jacobi view's coordinate names, as drawn: the theme's font has no `ₓ`, `ᵧ` or combining dot, so `p_ρₓ` reads
-/// `p_ρx` and a rate `θ̇` reads `dθ/dt` (a look choice, R-390).
+/// The Jacobi view's coordinate names, as drawn: no font of the theme's proportional family (Ubuntu Light, egui's emoji
+/// fonts, Hack) has `ₓ`, `ᵧ`, `Ṙ` or a combining dot, so `p_ρₓ` reads `p_ρx` and a rate `θ̇` reads `dθ/dt` (a look
+/// choice, R-390).
 pub const JACOBI_NAMES: [&str; LATENT_DIM] =
     ["α", "β", "p_ρx", "p_ρy", "p_λx", "p_λy", "m₀/M", "m₁/M"];
 /// The Shape view's coordinate names.
@@ -510,8 +511,9 @@ reference range. J at the hovered pixel; nonlinear chart, z₀. Click to steer";
 /// the grid.
 pub const POLE_LINE: &str = "near the chart's pole: θ, φ singular";
 
-/// The message where the pushforward vanishes (REQ-GUI-199): said, not drawn.
-pub const DEGENERATE: &str = "J q̂₁ ∧ J q̂₂ = 0: this plane has no image here. Click a cell to steer";
+/// The message where the pushforward vanishes (REQ-GUI-199): its values said, not drawn, under the empty cells it asks
+/// to be clicked. `q₁`, `q₂` span the plane `q̂₁`, `q̂₂` do, and no font of the theme has the combining hat.
+pub const DEGENERATE: &str = "J q₁ ∧ J q₂ = 0: this plane has no image here. Click a cell to steer";
 
 /// The readout of `push` in `set`: the dominant pair and the area stretch.
 pub fn readout(set: Set, push: &Pushforward) -> String {
