@@ -45,5 +45,6 @@ deep_zoom layer 0's compute side: a flat grid of equal quads covering the view, 
 - `cargo test -p engine word_buffer_separable` — symbolic features disabled: word buffer freed, `SimState` allocation and contents unchanged (REQ-PERF-008).
 
 ## Notes
+- With the word buffer bound, the survey entry runs the wrapper through `integrate_word` (TASK-M3-16), so detection runs at every accepted substep; with symbolic features off, through `integrate`.
 - RQ-92 ruled: R-124 — systems_architecture §5.5 is conformed to R-102 (applied in step 7; the heading above is the new one): each ensemble copy is the same kernel dispatched again with `copy_index` a uniform. This task builds the per-copy dispatch shape; the copy offsets and the (E+1) dispatches are TASK-M4-06's. This settles the gap.
 - R-135 settles where the across-copy reduction lives: its own resolve pass, dispatched after all E+1 copy dispatches for a quad complete, reading their SimState slices and writing the footprint resolve and the QuadReduction fields (REQ-PERF-012). This task dispatches that pass; the reductions it computes are M5's (TASK-M5-17, TASK-M5-18).

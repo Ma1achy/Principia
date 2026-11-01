@@ -24,7 +24,7 @@ use engine::contract::log::{Severity, Source};
 use engine::contract::render_state::{
     Hover, NodeId, NodeKind, Occupant, Overlays, Palette, Playhead, RenderState, StainGraph, Wire,
 };
-use engine::contract::set_field::{Edit, RenderField, SetField};
+use engine::contract::set_field::{Edit, HistoryKey, RenderField, SetField};
 use engine::contract::sim_config::{
     Chart, Collision, Horizon, Integrator, KernelVariant, Latent, Links, Lock, Plane, Quality,
     SimConfig, Slice,
@@ -368,6 +368,15 @@ impl EngineInterface for DropsGraph {
         if !matches!(e.edit, Edit::Render(RenderField::StainGraph(_))) {
             self.0.set_field(e);
         }
+    }
+    // The history key's methods (R-458 F1), forwarded as `set_field` is, so the suite's key cases run on the store.
+    fn set_field_under(&mut self, e: SetField, key: HistoryKey) {
+        if !matches!(e.edit, Edit::Render(RenderField::StainGraph(_))) {
+            self.0.set_field_under(e, key);
+        }
+    }
+    fn end_key(&mut self, key: HistoryKey) {
+        self.0.end_key(key);
     }
     fn snapshot(&mut self) -> Snapshot {
         self.0.snapshot()

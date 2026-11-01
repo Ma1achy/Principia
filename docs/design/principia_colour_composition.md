@@ -811,6 +811,64 @@ and the decode/encode translated to WGSL from the one Rust source (R-116):
   compute shaders don't, by default (R-297), so an agreement preset compares within a stated tolerance, a calibration
   requirement (R-71), not bit-exactly. ROUNDTRIP's residual is computed wholly in the fragment, and its stated
   tolerance is ε_phys (`principia_inverse_encode_contract.md` Part 4; `principia_debug_tooling_plan.md` §A).
+  **The tolerance's scale (R-72; RQ-623, decided by the orchestrator per R-369, option (b); TASK-M2-29).** A sample
+  agrees where `|E − E₀| ≤ F·eps·S`, with `F` the calibrated factor (REQ-COL-060, R-71), `eps` f32's `2⁻²³`, and
+  `S = max(|K₀|, 1) + max(|V₀|, 1) + Σ_{i<j} mᵢmⱼ·wᵢⱼ/ŝᵢⱼ²`, where `wᵢⱼ = ‖rᵢ‖∞ + ‖rⱼ‖∞` and
+  `ŝᵢⱼ = max(‖rᵢ − rⱼ‖∞, eps·max(wᵢⱼ, δ))`, `δ = 2⁻³²`. `K₀` and `V₀` are the stored operands, `(m, r)` the
+  fragment decode's own, and `‖·‖∞` the larger magnitude of a vector's two components. The sum is the conditioning of
+  `V = −Σ mᵢmⱼ/rᵢⱼ` at f32: a separation formed from positions of size `wᵢⱼ` carries a rounding of order `eps·wᵢⱼ`, so
+  the pair's term carries `mᵢmⱼ·eps·wᵢⱼ/rᵢⱼ²`, its own size times `κᵢⱼ = wᵢⱼ/rᵢⱼ`. Beside a binary collision any two
+  f32 evaluations of `E` differ by about that, whether the fragment's with fast-math against the compute's without
+  (R-297), or two of one stage. That is f32's precision there, not a fault of the translation or of the addressing, and
+  the per-operand scale alone, `max(|K₀|, 1) + max(|V₀|, 1)`, draws it red. Away from a collision `κᵢⱼ` is of order 1
+  and the sum of order `|V₀|`, so the check keeps its sensitivity to a dispatch scramble. The floor
+  `ŝᵢⱼ ≥ eps·max(wᵢⱼ, δ)` is that rounding, `eps·wᵢⱼ`, below which the f32 separation keeps no relative digit; it caps
+  `κᵢⱼ` at `1/eps`. It is relative at every size of `wᵢⱼ`: at `wᵢⱼ < 1` the f32 separation keeps digits down to
+  `eps·wᵢⱼ`, not `eps`, and a floor held at `eps` there would stop the term growing while the f32 difference grows as
+  `1/rᵢⱼ²`, short of it by about `1/wᵢⱼ²` (TASK-M2-29, applied per R-369). `δ` only keeps `ŝᵢⱼ` positive where both
+  positions are 0, and acts on no decoded system whose masses are all at least `2⁻⁶²`: with the centre of mass at 0
+  and `I = 1`, the third body `k` has `m_k‖r_k‖ ≤ max(‖rᵢ‖, ‖rⱼ‖)`, so `wᵢⱼ ≥ √m_k/2`, at least `δ` there, and at least
+  `2⁻²²` over the mass floors below (the links', and the Burrau charts' at their default and proposed ranges). The max-norm is within
+  `√2` of the Euclidean either way, so where `ŝᵢⱼ` is the separation the sum is within a factor 2 of
+  `Σ mᵢmⱼ(‖rᵢ‖ + ‖rⱼ‖)/rᵢⱼ²`, which the factor absorbs. **The sum is finite at every pixel whose masses all exceed
+  `2⁻¹²⁴`, wherever `V` is and at the pole too (R-436).** Each term is at most `2⁷⁶`: since `ŝᵢⱼ ≥ eps·max(wᵢⱼ, δ)`, `wᵢⱼ/ŝᵢⱼ ≤ 1/eps`, and since the
+  masses lie on `[0, 1]` with `M = 1`, `mᵢmⱼ ≤ 1/4` and `mᵢmⱼ/ŝᵢⱼ ≤ 1/(4·eps·δ) = 2⁵³`. There is no division by zero,
+  since `ŝᵢⱼ ≥ eps·δ = 2⁻⁵⁵` even where a separation is 0, so no separation need be nonzero. Nor does any intermediate
+  overflow, whatever association a fast-math compiler picks (it may form `mᵢmⱼ·wᵢⱼ/ŝᵢⱼ²`): with positions below `2⁶²` in
+  magnitude, `wᵢⱼ < 2⁶³`, `2⁻¹¹⁰ ≤ ŝᵢⱼ² < 2¹²⁶`, `mᵢmⱼ·wᵢⱼ < 2⁶¹` and `wᵢⱼ/ŝᵢⱼ² ≤ 2⁷⁸`; one that flushes to 0 is below
+  `2⁻¹²⁶`, nothing beside the scale's `max(·, 1)` terms. **The positions are below `2⁶²`** wherever the masses
+  exceed `2⁻¹²⁴`. Under `I = 1`, `mᵢ‖rᵢ‖² ≤ 1`, so `‖rᵢ‖ ≤ 1/√mᵢ`, below `2⁶²` wherever `mᵢ > 2⁻¹²⁴`. The mass links
+  floor every mass far above that (`principia_dd_decoder.md` §3.1; the link registry,
+  `principia_dd_generation_root.md` §3.9), and a Burrau chart's masses are floored by its own range:
+  - `stick_breaking`'s `s` and `u` lie on `[ε_μ/2, 1 − ε_μ/2]`, `ε_μ = 10⁻⁶`, so each mass is at least
+    `ε_μ²/4 = 2.5×10⁻¹³`;
+  - `softmax_tanh`'s `|μₖ| ≤ μ_max`, at most 10 (R-597, REQ-GEN-038), gives each mass at least
+    `e^−μ_max/(1 + e^−μ_max + e^μ_max)`, about `2×10⁻⁹` at 10 and `4.5×10⁻⁵` at the default 5;
+  - the ternary plot's buffer gives each mass at least `ε_m = 10⁻⁴` on the simplex (`principia_chart_reference.md`
+    §4.5);
+  - the Burrau family's masses at `ν` are `(1 + ν²)/(2 + 2ν)`, `ν/(1 + ν)` and `(1 − ν)/2` (`principia_chart_reference.md`
+    §4.2, `m = side/(a + b + c)` with `a + b + c = 2 + 2ν`, §4.3), the first at least `√2 − 1`, so on a `ν` range
+    `[ν_min, ν_max]` the least is `min(ν_min/(1 + ν_min), (1 − ν_max)/2)`: `1/64` at the Euclid plane's default
+    `[1/32, 31/32]` (§4.5). The acute-angle charts' `ν(θ) = cos θ/(1 + sin θ)` lies on `[√2 − 1, 1)` and falls as `θ`
+    grows, so their least is `(1 − ν(θ_min))/2`, about `1/64` at the `θ_min` REQ-CHART-045 proposes, the acute angle of
+    `ν = 31/32`;
+  - the `δm` strip, for `v ∈ [0, 1]`, blends those masses toward its target `m_target`, a convex blend, so its least
+    is at least the smaller of the column's least and `m_target`'s, the same `1/64` at the default equal-mass target.
+    Past `v`'s edges the blend continues until a mass reaches 0, with validation only `mᵢ > 0`
+    (`principia_chart_reference.md` §4.5, "δm, affine"), so no range floors those masses: there the per-pixel
+    conditions are the precondition, a least mass above `2⁻¹²⁴` for finiteness and at least `2⁻⁶²` for `δ` to be inert.
+
+  The Burrau floors are the ranges', not the links': §4.5 gives the ranges as defaults inside `(0, 1)`, with no lower
+  bound on `ν_min`, `1 − ν_max` or `θ_min`.
+
+  So over the links' floors and the Burrau charts' default and proposed ranges, with the `δm` strip inside `v ∈ [0, 1]`
+  at its default target, the least mass is `2.5×10⁻¹³` and `‖rᵢ‖ ≤ 1/√(2.5×10⁻¹³) = 2×10⁶`, below `2²¹`. On a Burrau
+  range set nearer the ends of `(0, 1)`, or a `δm` target with a smaller least mass, the bound `‖rᵢ‖ < 2⁶²`, and with it
+  the sum's finiteness above, holds while that least mass exceeds `2⁻¹²⁴`, and `δ` stays inert while it is at least
+  `2⁻⁶²`; a range, target or pixel past those is outside this argument. The positions are finite where the masses
+  are finite and nonzero; a mass rounded to 0, or a non-finite one, would give a non-finite `r`. The preset tests `m`
+  and `r` on their bits as it does `K` and `V`, so such a pixel draws the invalid colour. `F` is calibrated in this
+  scale (REQ-COL-060).
   **A non-finite operand is invalid (R-436).** `E₀ = K₀ + V₀` reads `−∞` at the f64 collision pole, as computed
   and stored (`principia_dd_decoder.md` §3.6), where the difference would be `(−∞) − (−∞)`, NaN on the CPU and
   unpinned on the GPU. An agreement preset tests each stored operand (`K_0`, `V_0`, and any other it reads) on its
@@ -1005,6 +1063,27 @@ custom-stop ramp, the gradient editor's "built-in LUT or custom stops, cyclic", 
 TASK-M7-11 when its graph model needs it (R-72, REQ-COL-140): its stops, their positions, its interpolation space and
 how `cyclic` applies. *Was:* "Whether the item also means that the GUI's gradient editor, "built-in LUT or custom
 stops, cyclic" (render GUI spec §9), unifies §1.2's ramps, and so what a ramp of custom stops is, is RQ-282."
+
+**The custom-stop ramp (R-72, R-546; REQ-COL-140; TASK-M7-11).** The gradient editor's ramp of custom stops is a
+`colour` node's param, its `ramp`, serialised with the node in `RenderState` (gui_state_contract §2, §5), and is set
+apart from the gradient-magnitude ramp above. It maps `t` to a colour:
+- **Stops.** Two or more. Each is a position and a colour, the colour a swatch, an OKLab `(L, a, b)` (§1.1), `L` in
+  `[0, 1]`, `a` and `b` each in `[−1, 1]`, and every number finite. The bound on `a` and `b` keeps the ramp's linear
+  sRGB finite: within it each of the conversion's three cubes (dd_colouring §3.1) is at most 13.5 in magnitude, so
+  each linear sRGB component at most 103, where an unbounded `a` or `b` above about `10¹⁰²` overflows the cube to an
+  infinity and the colour to NaN. It refuses no colour of the sRGB gamut, whose `a` lies in about `[−0.234, 0.276]`
+  and `b` in `[−0.312, 0.199]`, and leaves room for colours past it. The register holds it as `ramp_oklab_ab_max`.
+- **Positions.** Each in `[0, 1]`, the stops in order of position, never decreasing. Two stops may share a position,
+  which draws a hard edge; at that position `t` takes the later stop's colour.
+- **Interpolation space.** OKLab, the perceptual default blend space (§1.1) and the space of §1.5's ramps: between two
+  neighbouring stops, each of `L`, `a` and `b` is interpolated linearly in `t`, and the result is converted to linear
+  sRGB, the `vec3` the colour slot returns. It is never interpolated in the `rgb` blend space.
+- **Ends, and how `cyclic` applies.** Not cyclic, `t` is clamped to `[0, 1]`: below the first stop's position the
+  ramp is the first stop's colour, and at or past the last stop's position the last stop's. Cyclic, `t` is taken
+  modulo 1, so `t` and `t + 1` are one colour, and the ends wrap: past the last stop the ramp runs on, interpolated as
+  above, from the last stop's colour to the first stop's, which it reaches at the first stop's position plus 1. A
+  cyclic ramp is seamless when its colour at 0 and at 1 agree, as a first stop at 0 and a last at 1 of one colour give.
+- **An invalid `t`.** A non-finite `t` takes the ramp's invalid-pixel treatment (§1.2), never a colour of the ramp.
 
 **9.5 Spread per footprint and per quad.** Ensemble spread is a footprint quantity: the resolve stage reduces a
 footprint's E + 1 samples to one spread, one value per nominal sample shared by its copies for display, and no

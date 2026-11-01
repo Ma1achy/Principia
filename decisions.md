@@ -920,12 +920,14 @@ windowed spectrum) become R-71 / R-72 calibration and definition requirements. T
 fixtures) wait for the human. ✱ marks a design ruling the human may veto.*
 
 ## R-110 — What CI runs, where, and against which goldens *(closes RQ-79)*
-*Amended by R-186.*
+*Amended by R-186 and R-656.*
 *Still in force: the unit, property, numerical-gate and native golden suites on every commit; GUI screenshots on GUI PRs
 and at the gates; lavapipe as the second backend on every commit, meeting M4's two-backend check, and a real non-Metal
-GPU gating Paper 2 (R-58); Chrome stable and Safari for REQ-VAL-116; goldens rendered with native wgpu offscreen from
-M1, checked at M8 by the Playwright suite against the same baselines within tolerance, with no re-baselining without a
-gate decision; the runners and the benchmarks' schedule are R-186's.*
+GPU gating Paper 2 (R-58); "every commit" is every push to `main` and every pull-request head, but for R-656's skips
+(a docs-only head runs only the checks that read the docs; one that changes no GPU-path file skips the GPU suites);
+Chrome stable and Safari for REQ-VAL-116; goldens rendered with native wgpu offscreen from M1, checked at M8 by the
+Playwright suite against the same baselines within tolerance, with no re-baselining without a gate decision; the
+runners and the benchmarks' schedule are R-186's.*
 *25 Sep 2026 · applied in step 7*
 
 - Unit, property, numerical-gate and native golden suites run on every commit. Benchmarks run nightly and at each
@@ -1477,6 +1479,10 @@ through a dev-dependency on `crates/validation`. Tests are matched to their cont
 Crates without the `controls` feature are skipped, not failed.
 
 ## R-177 — Cadence *(closes G4, C6)*
+*Amended by R-656.*
+*Still in force: all of it, `ci.yml`'s "every push" read as R-656 reads it: every push to `main` and every pull-request
+head, a docs-only head running plan-check and the checks that read the docs (in `ci-workspace`) in place of `cargo
+xtask ci`.*
 *25 Sep 2026 · applied in step 8*
 
 - `ci.yml` runs `cargo xtask ci` on every push, and that includes plan-check.
@@ -1544,10 +1550,12 @@ build-dependency only (the ledger generates code into the kernel at build time).
 can compile it.
 
 ## R-186 — GitHub-hosted runners first; no self-hosted runner *(amends R-110, R-169, R-174)*
-*Amended by R-375.*
+*Amended by R-375 and R-656.*
 *Still in force: all of it but the Linux runner's label: CI's Linux jobs run on `ubuntu-24.04`, pinned, not
 `ubuntu-latest`, and moving to Ubuntu 26 is a deliberate later step (R-375); the Metal correctness suites on
-`macos-15`; benchmarks and performance gates on the human's Mac, never on hosted runners; no self-hosted runner.*
+`macos-15`; benchmarks and performance gates on the human's Mac, never on hosted runners; no self-hosted runner, and
+no paid larger runner (R-656); per-commit CI as R-656 reads it, the GPU suites skipped on a head that changes no
+GPU-path file.*
 *26 Sep 2026 · applied in step 8*
 
 Start with GitHub-hosted runners, and no self-hosted runner.
@@ -1683,6 +1691,9 @@ Asked in review of PR #16, the human chose:
    compile doctests.
 
 ## R-195 — CI checks formatting and lints
+*Amended by R-656.*
+*Still in force: `cargo fmt --check` and `cargo clippy --workspace --all-targets -- -D warnings` on every push to
+`main` and every pull-request head but a docs-only one, which compiles nothing (R-656).*
 *26 Sep 2026*
 
 "CI runs cargo fmt --check and cargo clippy --workspace --all-targets -- -D warnings on every push."
@@ -2130,6 +2141,7 @@ Asked about three latent races of R-224's kind, none yet seen failing, the human
 *Applied:* the first race (`qa_TASK-M0-26.rs`'s r206 test spawning `qa_child` while sibling cargo runs rewrite it) is inside R-224's exception for that file, and qa's review of PR #35 found it blocking, so TASK-M0-31 fixes it. The other two go to TASK-M0-32 (new, REQ-VAL-164): `cargo build -p xtask` in `crates/validation/tests/support/qa_m0_21_fixture.rs:35` rewriting the `xtask` binary while sibling tests spawn it; and parallel copies of one fixture building into the shared outer target (`xtask/tests/controls.rs:63`, `qa_m0_21_fixture.rs:143`, `support/qa_m0_21.rs:16`, `crates/validation/tests/expected_message.rs:42`). The proof is R-224's: 20 whole-workspace runs in a row under load. Edits to qa's merged files are limited to the fix, under a one-round exception, with qa reviewing. TASK-M0-32 depends on TASK-M0-31, and TASK-M0-22 depends on TASK-M0-32 (both edit `xtask/tests/controls.rs`).
 
 ## R-228 — Each agent builds and tests with four jobs and four test threads
+*Superseded by R-658.*
 *28 Sep 2026 · applied in CLAUDE.md and the local build environment*
 
 "Each agent: CARGO_BUILD_JOBS=4 and RUST_TEST_THREADS=4."
@@ -2219,6 +2231,9 @@ veto afterwards."
 `check_plan.py` passes, within budget, no REVIEW_QUEUE entry needing the human). Process only.
 
 ## R-235 — `qa_cargo_xtask_alias_runs_deps` uses the listing-only form of `cargo xtask ci`; the controls get their own CI job *(closes RQ-150)*
+*Amended by R-656.*
+*Still in force: all of it; CI's own job runs every control on every push to `main` and every pull-request head but a
+docs-only one, whose `xtask-ci` shards are skipped, the gate `xtask-ci` passing them only on that verdict (R-656).*
 *29 Sep 2026 · applied in TASK-M0-22*
 
 "R-235 (RQ-150): option (c). qa_cargo_xtask_alias_runs_deps uses the listing-only form of cargo xtask ci; CI's own step
@@ -2900,10 +2915,12 @@ exception: it files R-237's add-only rule in REVIEW_QUEUE. PR #80 merged as 7e55
 it only when the content differs, so an unchanged file keeps its mtime and forces no rebuild. Medium priority.
 
 ## R-285 — CI caches only the cargo registry and the fixture pool, with per-job keys
-*Amended by R-320 and R-326.*
+*Amended by R-320, R-326 and R-656.*
 *Still in force: no whole target directories cached; per-job keys; the cargo registry and the fixture pool cached;
 R-320 adds the rust-gpu build (`~/.cache/rust-gpu`), keyed on the pinned toolchain version; R-326 saves caches only on
-pushes to `main`, and pull-request runs restore only.*
+pushes to `main`, and pull-request runs restore only; R-656 approves in principle a bounded build-target cache, saved
+from `main` only, keyed on `Cargo.lock` and the toolchain, for the 2–3 slowest jobs, with eviction keeping the total
+well under 10 GB, built in a later PR, and until then no target directory is cached.*
 *30 Sep 2026 · applied in REQ-SYS-073 and TASK-M0-42 (new)*
 
 "CI cache: cache only the cargo registry and the fixture pool, not whole target dirs, with per-job keys, to stay well
@@ -3855,6 +3872,9 @@ camera not wired into priority, the Burrau quotient, and the Yoshida-6 and OKLab
 PR of its own, after this one.
 
 ## R-335 — qa may narrow `qa_TASK-M0-22_r235.rs`'s `if:` check to the job's own `if:` *(closes RQ-186; amends R-290)*
+*Amended by R-656.*
+*Still in force: all of it; the controls job's own `if:` may be R-656's one skip of a docs-only pull request, and no
+other.*
 *1 Oct 2026 · applied in TASK-M0-14 (PR #96)*
 
 "1 yes." (RQ-186's recommended option 1.)
@@ -17804,11 +17824,13 @@ is the figure, as U7 applied; RQ-417 closed).*
 *Amended in part by R-554 (21 Oct 2026; EX7(b) on a tilted view: the pole maps only where `N_a = 0` and `N_b = 0`,
 decided on the stored angles; the tilted equator fold not applied, the human's shape sphere ruling governing it;
 RQ-472 closed).*
+*Amended in part by R-655 (30 Oct 2026; EX7(b) on a tilted view: the spherical map's lattice of repeats
+`(s + k, t + 2j)` with `N_a·k + 2·N_b·j = 0` maps to its canonical point; RQ-631 closed).*
 *Still in force: all of it but the hemisphere's fold at the equator, EX2's fold type, EX5's fold among the repeats and
 EX7(b)'s equator map, which go with the hemisphere toggle (R-544); θ's period and the pole maps stand; R-552 confirms
 each option (a) applied meanwhile, builds the outline U14 left unbuilt, and leaves EX5's comments and the console's
 pick for the human to define; R-553 keeps EX5's label and detail to a debug view; R-554 narrows EX7(b)'s pole maps on
-a tilted view.*
+a tilted view; R-655 folds the spherical map's lattice of repeats on a tilted view.*
 *20 Oct 2026 · applied in `docs/incoming/2026-10-20_extension_trace/` (added: the bundle as delivered),
 `docs/gui/reference/trace/` (added: the demo and its screenshots), `docs/read_first/principia_INDEX.md` § "GUI" and §
 "Archived — record only, do not implement" (a line each), `docs/contracts/principia_chart_decoder_contract.md` § "Past
@@ -22051,6 +22073,10 @@ REQ-GUI-281 (notes).
 
 ## R-554 — The shape sphere's exponential map past `r = π` is the domain's end by design, blank and unwarned; the Lean-each-axis corner with one target is `ray-degenerate`, unfolded, its area weights 0 and its shares undefined; on a tilted view the pole maps apply only where `N_a = 0` and `N_b = 0`, the equator fold and the mirror's pixel fold left to the human's shape sphere ruling; T16 and T16b against a calibrated threshold; the physical `p_λ` components as the shape sphere's tilt targets *(closes RQ-470 to RQ-474; amends R-467, R-473, R-506, R-537 and R-538)*
 *Settled by R-613 (the equator clause it left unapplied stays unapplied: no fold anywhere).*
+*Amended in part by R-655 (30 Oct 2026; L3: on a tilted view the spherical map's lattice of repeats `(s + k, t + 2j)` with
+`N_a·k + 2·N_b·j = 0` is folded, each system counted once; closes RQ-631).*
+*Still in force: all of it; R-655 adds to L3 the tilted view's lattice of repeats, folded, so that "otherwise the
+view is affine along that axis" holds only where no lattice repeat keeps `d`.*
 *21 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G12. Console (`12_console.png`)" (the exponential
 map's exception) and § "G6. Legend — generated by evaluating the stain (`06_legend.png`)" (undefined shares),
 `docs/design/principia_chart_reference.md` § "3.3 The chart map" (the radius paragraph, a sentence; the rank-losing
@@ -26844,7 +26870,14 @@ built as R-620 rules. Nothing built changes, so it is not asked. #293's R-615 re
 
 ## R-594 — The replication suite is adopted: published three-body results reproduced as engine tests in tiers A–D, ported as a design doc that extends the validation-orbits doc; each target a VAL requirement with its tolerance a calibration; every published table transcribed twice and never tuned to; sequenced by need; the questions it lists queued *(changes no ruling or requirement in force; recorded with R-629's port)*
 *Refined by R-629 (the port follows PLAN.md, which replaces the 25 Oct instruction's tier tables, sequencing and fetch list as the working plan).*
-*Still in force: all of it; its port follows PLAN.md (R-629), which keeps the tiers, rules 1–8 and item 5's order by need.*
+*Amended in part by R-649 (for external targets: item 3's tolerance "confirmed by the human at the gate", now with
+M9's report, and item 6's question "which targets gate a milestone": none does; each target is a measurement with its
+tier).*
+*Amended in part by R-650 (item 5's milestones: the targets are scored in M9, after the core build; the order by need
+orders M9's scoring and the ingest).*
+*Still in force: all of it but, for external targets, item 3's confirmation "at the gate" (with M9's report), item 6's
+gating question (no target gates a milestone, R-649) and item 5's milestones (M9, R-650); its port follows PLAN.md
+(R-629), which keeps the tiers, rules 1–8 and item 5's order by need.*
 *25 Oct 2026 · given before R-595 and recorded here, after R-627, by R-629's port of 27 Oct 2026, the number having been
 held for it; applied in `docs/design/principia_dd_replication.md` (new), `docs/design/principia_dd_validation_orbits.md`
 (a pointer under its title), `docs/read_first/principia_INDEX.md`, `REVIEW_QUEUE.md` (RQ-591 to RQ-598, new),
@@ -26965,6 +26998,10 @@ phase, against the CPU's f32 decode and `Φ`'s f64 angle.
 R-628 is in the "physics" group of `plan/rule_groups.yaml`.
 
 ## R-629 — PLAN.md is adopted as the single plan for verification and replication, superseding as the working plan the 25 Oct instruction's tier tables, sequencing and fetch list; its seven draft requirements are ported as M3 requirements with their tolerances as calibrations; R-594's port follows it, with the orbit catalogue's six tests as tasks; the plan's other questions stay queued *(refines R-594; answers PLAN.md § 9 questions 1 and 2)*
+*Amended in part by R-650 (its drafts, REQ-VAL-201 to REQ-VAL-213, are M9 requirements, scored after the core build,
+not M3 ones).*
+*Still in force: all of it but "ported as M3 requirements": the drafts stand as requirements, their tolerances as
+calibrations, in M9 (R-650).*
 *27 Oct 2026 · the human's answer to whether R-594's port should follow the 27 Oct plan; applied with R-594, in the files
 R-594's line lists; built by TASK-M2-51, TASK-M3-42 to TASK-M3-65, TASK-M4-22 to TASK-M4-25, TASK-M6-52, TASK-M7-71
 and TASK-M8-97 to TASK-M8-99*
@@ -27033,9 +27070,11 @@ R-629 is in the "process" group of `plan/rule_groups.yaml`, with R-594.
 no permission is asked first; RQ-579 is closed with option (a)).*
 *Amended in part by R-632 (item 12: the three corrections RQ-588 to RQ-590 queue are applied, and the documents are
 edited; RQ-577 and RQ-583 unchanged).*
+*Amended in part by R-650 (its "drafts are M3 requirements": they are M9's, scored after the core build).*
 *Still in force: all of it but item 6, whose "ask the authors, keeping (c) meanwhile" R-631 replaces by committing the
 data (R-631), and item 12's "Don't edit those documents", which R-632 replaces by applying the three
-corrections (R-632); items 7 and 9's fetches stand, and item 7's database is committed under R-631.*
+corrections (R-632); items 7 and 9's fetches stand, and item 7's database is committed under R-631; its drafts are
+M9 requirements, not M3 ones (R-650).*
 *27 Oct 2026 · the human's message of that evening; applied in `REVIEW_QUEUE.md` (RQ-577 and RQ-583 noted, RQ-588 to
 RQ-590 stay open), `docs/archive/review_queue/M0.md` (the seven closed entries, moved with their ruling), REQ-VAL-042
 and REQ-VAL-043 (reqio) and `plan/rule_groups.yaml`*
@@ -27579,9 +27618,16 @@ R-634 is in the "process" group of `plan/rule_groups.yaml`.
 Changes no requirement or task.
 
 ## R-635 — Codex, Gemini CLI and GitHub Copilot review PRs as advisory reviewers for a one-week trial, never merge gates; every bot finding is handled before merge with a reply on its thread; after the week, a report per reviewer *(an R-369 note; no CI gate or review step changes)*
+*Amended in part by R-651 (30 Oct 2026: the advisory review cadence, a fresh review from each bot before merge on the
+final head, after every substantive push and periodically on a long-running PR, replaces the single review waited for
+up to 15 minutes after the PR opens; every bot finding is closed out before merge and a PR with an unresolved bot
+thread does not merge; the cadence is a standing rule).*
 *Amended in part by R-659 (how the Gemini review runs: one request to the Gemini API with a fallback chain; the CLI and
 its action are gone; the name `@gemini-cli /review` stays).*
-*Still in force: all of it but how the Gemini workflow runs.*
+*Still in force: all of it but its cadence and how the Gemini workflow runs: the three bots stay advisory, never merge
+gates and never counted by `reviews-complete`; every finding is verified, answered on its thread and resolved, a P0 / CRITICAL claim goes to the
+physics reviewer, a late review is handled as a follow-up, and the trial's tally and report stand; its 15-minute bound
+is replaced by a limit per bot, counted from each review the orchestrator requests (R-651).*
 
 *28 Oct 2026 · applied in `AGENTS.md` (new: its authority line and § "Code Review Rules"), `GEMINI.md` and
 `.github/copilot-instructions.md` (new), `.github/workflows/gemini-dispatch.yml` and
@@ -27701,10 +27747,13 @@ reviews handled as follow-ups. To re-review after fixes, re-request Copilot as a
 *Superseded in part by R-645 (28 Oct 2026: its cloud half, already withdrawn; no cloud session is used at all).*
 *Amended in part by R-637 (28 Oct 2026: the five-chart hold meant only the replication charts; TASK-M2-36's five-chart
 split goes ahead, and TASK-M2-52 after it).*
+*Amended in part by R-649 (its note on RQ-583's targets, "they cannot pass their gates as written": no external
+target has a gate to pass; RQ-608 and RQ-618 stay open on what is built).*
 *Still in force: all of it but its agent-count and cloud clauses and its five-chart hold; R-262, R-277, R-357 and R-391
 stand as they were before it, and the weekly consistency audit stays adopted, report-only and never blocking, run on
 demand when the owner asks (the owner's ruling of 28 Oct 2026 on its RQ-605 clause, quoted in its entry in
-decisions.md); the hold covers only the replication charts (R-637).*
+decisions.md); the hold covers only the replication charts (R-637); its note on RQ-583's targets reads without gates
+(R-649).*
 *Its agent-count and cloud clauses are withdrawn, 28 Oct 2026 (the owner): "like how it was before this cloud
 session stuff started"; the workflow returns to R-357, R-391 and R-277, with no cloud sessions
 (withdrawn in part by R-648).*
@@ -27835,8 +27884,12 @@ REQ-VAL-314 and REQ-VAL-316 (rq, rulings); adds REQ-VAL-332.
 seed, two gates and the labels).*
 *Amended in part by R-640 and R-642 (its RQ-598 line's wait: the authors' own data scores directly, and qualifying
 reproductions unblock TASK-M3-62 and TASK-M3-65 provisionally).*
+*Amended in part by R-649 (its RQ-591 line: "Layer V targets gate their milestone" gives way, for every external
+target, to R-649 item 1, a measurement and never a gate; its layer-R half stands).*
 *Still in force: all of it but its RQ-598 line's "TASK-M3-62/65 keep waiting until data arrives; if none comes, they
-stay waiting, no substitute data", which gives way to R-640 and R-642 (R-642 governs where they differ).*
+stay waiting, no substitute data", which gives way to R-640 and R-642 (R-642 governs where they differ), and its
+RQ-591 line's "Layer V targets gate their milestone (statistical ones on their stated tolerance)", which gives way to
+R-649: no external target gates; each is a measurement, scored in M9 (R-650).*
 *28 Oct 2026 · the owner's message of that afternoon; ported 29 Oct 2026; applied in `REVIEW_QUEUE.md` (RQ-591,
 RQ-598 and RQ-599 closed; RQ-617 and RQ-619 new; RQ-577 and RQ-593 to RQ-597 noted), `docs/archive/review_queue/M0.md`
 (the three closed entries, moved with their ruling), R-636's forward line, TASK-M2-36 and TASK-M2-52 (the hold
@@ -27946,6 +27999,10 @@ R-638 is in the "design" group of `plan/rule_groups.yaml`. Changes REQ-VAL-295 a
 REQ-VAL-330 (rulings, source, note).
 
 ## R-639 — The Šuvakov-plane targets split into a closure part, which stays in M4 or M8 and runs now, and a chart part, which moves to gate the task that builds the Šuvakov chart and is not dropped, a target whose split isn't clean being queued; a read-only licence audit of every committed PDF; none of the five targets splits cleanly, so all five are queued *(answers RQ-608)*
+*Amended in part by R-649 (its chart part "moves to gate the task that builds the Šuvakov chart": no target gates a
+task or a milestone; RQ-618 stays open on what is built).*
+*Still in force: all of it but the chart part's gate (R-649); the five targets stay queued as it found them (RQ-618),
+and score in M9 (R-650).*
 *28 Oct 2026 · the owner's message of that day; ported 29 Oct 2026; applied in `REVIEW_QUEUE.md` (RQ-608 noted, RQ-618
 new), TASK-M4-23 and TASK-M8-99 (notes) and `plan/rule_groups.yaml`; the audit run by the orchestrator (R-643)*
 
@@ -27988,9 +28045,11 @@ reference Brutus).*
 *Amended in part by R-642 (its "provisional" block, where R-642 differs: the authors' own data, BR-1's 180 NVM
 trajectories and GG-1's Fig. 1 extraction, scores directly; a reproduction qualifies only on the paper's set-up with a
 converged arbitrary-precision integrator).*
+*Amended in part by R-650 ("unblock TASK-M3-62 and TASK-M3-65 now": the wait for data stays lifted; the scoring itself
+is M9's, or a peek's, and the two tasks are TASK-M9-22 and TASK-M9-25).*
 *Still in force: the lifted wait, the labels ("vs <source>", never "replicates the paper"), the re-score when the
 authors' data arrives (theirs governs, disagreements queued) and the Fig. 1 extraction scoring at its stated
-precision; where it differs from R-642, R-642 governs.*
+precision; where it differs from R-642, R-642 governs; the scoring itself is M9's, or a peek's (R-650).*
 *28 Oct 2026 · the owner's message of that day; ported 29 Oct 2026; applied in R-637's forward line, `REVIEW_QUEUE.md`
 (RQ-614 closed), `docs/archive/review_queue/M0.md`, `docs/design/principia_dd_replication.md` (dated notes in § 5.10,
 § 5.12 and § 7), REQ-VAL-295, REQ-VAL-297 and REQ-VAL-330 (reqio), TASK-M3-62 and TASK-M3-65 (notes) and
@@ -28053,6 +28112,9 @@ The owner's words, verbatim:
 R-641 is in the "design" group of `plan/rule_groups.yaml`. Changes REQ-VAL-297 (rulings, source, note).
 
 ## R-642 — RQ-598's data: the authors' own data unblocks and scores directly, BR-1 against the 180 NVM trajectories and GG-1 against the Fig. 1 extraction at its stated precision; reproductions unblock provisionally, labelled "vs <source>", re-scored when the authors' full data arrives, and qualify only on the paper's set-up with a converged arbitrary-precision integrator; our Brutus from NvMgeneration at 98906f4 qualifies, two third-party sets are rejected; the owner emails both authors *(amends R-637 and R-640; answers RQ-614 and in part RQ-615)*
+*Amended in part by R-650 (its "unblocks" and "scores directly": the data's standing is as ruled; the scoring itself
+is M9's, or a peek's, information only).*
+*Still in force: all of it; its scoring happens in M9, or early as a peek (R-650).*
 *28 Oct 2026 · the owner's message of that day, which governs wherever it differs from R-640 and R-641; ported
 29 Oct 2026 with R-638; applied in `docs/incoming/2026-10-28_rq598_data/README.md` § 6, `REVIEW_QUEUE.md` (RQ-614
 closed, RQ-615 narrowed), `docs/archive/review_queue/M0.md`, `docs/design/principia_dd_replication.md` (dated notes in
@@ -28094,8 +28156,14 @@ note).
 
 ## R-643 — The licence audit: the four subscription-stamped and six all-rights-reserved PDFs leave the tree for `docs/incoming/_local/` in one ordinary commit, with no history rewrite; the five "unclear" PDFs stay and are queued; the 22 arXiv licences are checked, the 19 arXiv-default PDFs kept and the 3 CC-licensed fine; from now on no publisher PDF is committed unless its licence allows redistribution, checked before commit *(no RQ; a standing rule)*
 *Amended in part by R-644 (option 2, the history scrub, is shelved, not scheduled).*
+*Refined in part, 28 Oct 2026, by the owner, for newly fetched papers: his follow-up message of that late evening
+(after the one R-645 quotes), verbatim, "Your rule for newly fetched papers (commit only CC BY/BY-SA/CC0/public domain;
+arXiv-default to _local/) is approved."; ported 30 Oct 2026, with R-649 and R-650, in `CLAUDE.md` § "Papers and
+licences".*
 *Still in force: all of it but the scheduling of option 2, the scrub, which R-644 shelves; its conditions and method
-are kept as ruled, for when it is revisited.*
+are kept as ruled, for when it is revisited. For a newly fetched paper, the owner's refinement of 28 Oct 2026 (above):
+only a CC BY, CC BY-SA, CC0 or public-domain file is committed, and an arXiv-default one is held in
+`docs/incoming/_local/`; the 19 arXiv-default PDFs already committed stay, as he ruled.*
 *28 Oct 2026 · the owner's licence-audit ruling (a #327 comment), his option-2 ruling the same day, and his answers of
 that late evening; ported 29 Oct 2026; applied by PR #329 (the move), in `REVIEW_QUEUE.md` (RQ-610 new), `CLAUDE.md`
 § "Papers and licences" (new) and `plan/rule_groups.yaml`*
@@ -28318,6 +28386,619 @@ The owner's ruling on R-636's RQ-605 clause, the same night, verbatim (recorded 
 withdrawn and don't name a ruling still to be ported, so none of their words changes here.
 
 R-648 is in the "process" group of `plan/rule_groups.yaml`. Changes no requirement.
+
+## R-649 — Replication and verification targets are measurements, not gates: failing one never blocks building; each declares the tier it binds, (a) the GPU explorer, agreeing statistically or qualitatively only, or (b) the CPU IC inspector, where exact targets bind; three outcomes, PASS, EXPLAINED DIVERGENCE (shown by a measurement) and UNEXPLAINED (open, labelled, non-blocking); no default, physics, criterion, architecture or tolerance is changed and nothing is tuned per target in pursuit of a pass; a comparison is checked like-for-like before anything is called a failure; verification deepening comes after the core build *(amends R-594, R-636, R-637 and R-639 for external targets; applies to RQ-598's targets and every target in force)*
+*Refined by R-650 (external replication becomes the final milestone, M9; the internal correctness tests and the
+anchor smoke tests stay continuous and blocking; early peeks, information only, go in a peek log).*
+*Confirmed 30 Oct 2026 by the owner, on its tier reading (his answers of that day, item 1, in the orchestrator's
+notes, `orch/r630/human-answers-30oct.txt`), verbatim: "Tier reading confirmed: statistical targets are scored on tier
+(a), exact targets on tier (b). Proceed with #342 as corrected." Item 2's applied line below is corrected to it: the
+port's first reading had a statistical target bind (b), with (a) expected to agree (the physics review of PR #342,
+finding F1).*
+*Still in force: all of it, with the owner's two clarifications of 29 Oct 2026 recorded below and his confirmation of
+30 Oct 2026 above; R-650 says where and when each external target is scored.*
+*29 Oct 2026 · the owner's ruling of that day, and his two clarifications for its port the same day; ported 30 Oct 2026
+with R-650; applied in `docs/design/principia_dd_replication.md` (§ 12, new; dated lines in its header, § 2, § 5.1,
+§ 5.6, § 5.10, § 5.15, § 6, § 7, § 8.1, § 8.3 and § 10; the § 5 tables' milestone and task columns),
+`docs/notes/principia_validation_ground_truth_note.md` (§ "The correctness factoring", corrected),
+`docs/design/principia_dd_validation_orbits.md` (dated lines under § 1.5 and § 2's gates), the forward lines on R-594,
+R-636, R-637 and R-639, `REVIEW_QUEUE.md` (dated lines), `CLAUDE.md` (one line), `plan/WORKFLOW.md`,
+`plan/MILESTONES.md`, `plan/reviewers/physics.md` and `plan/reviewers/code.md`, the requirements (reqio), TASK-M3-27,
+TASK-M3-28, TASK-M3-29, TASK-M4-15 and TASK-M5-18, and `plan/rule_groups.yaml`*
+
+The owner's ruling, verbatim:
+
+> Add a standing decision (ADR + plan note) governing all replication/verification targets, before ingesting any:
+> 1. A target is a MEASUREMENT, not a gate. Failing one never blocks building; the build plan proceeds and the result is reported.
+> 2. Each target declares the tier it binds: (a) GPU explorer: fast, f32, interactive; expected to agree statistically or qualitatively only, with error_ratio flagging what it can't resolve; (b) CPU IC inspector: f64/high precision; exact targets (collision points, periods, converged states) bind here. Most precise targets bind (b) only. A GPU miss on an inspector-tier target is expected, not a defect.
+> 3. Three valid outcomes: PASS; EXPLAINED DIVERGENCE (differs for a named mechanism: regularisation, escape criterion, horizon, stopping rule, units/normalisation, precision tier, sampling, the source's own accuracy), which requires a measurement showing the mechanism, not a story; UNEXPLAINED (stays open, labelled, non-blocking).
+> 4. Forbidden in pursuit of a pass: changing defaults, physics, criteria or architecture; per-target parameter tuning; loosening tolerances; special-casing inputs. A design change suggested by a target needs its own ADR justified on Principia's goals (interactive exploration first; accuracy/speed is a deliberate trade). It cannot be justified by the target alone.
+> 5. Before calling anything a failure, check the comparison is like-for-like (frame, units, masses, definition of the event, the source's stated accuracy). Many divergences will be ours being a different instrument, and that is a finding.
+> 6. Verification deepening (making the GPU path agree better while staying interactive) is post-build work, scheduled after the core is complete.
+> Apply this to RQ-598, the task-15 ingest and every existing target. Flag any open PR or task that currently treats a replication as blocking.
+
+The owner's two clarifications for its port, the same day, verbatim:
+
+> Two clarifications for task 4b, no veto on Ruling A (supersession confirmed):
+> 1. SP-1 horizon: R-649 forbids changing DEFAULTS to get a pass; it does not forbid running a target at its own natural horizon. Run SP-1 to its break-up (~59.4 → t_max ~60–65 as a per-test parameter), default horizon 50 unchanged. Rewrite the task as "run to the target's horizon", not "calibrate the horizon".
+> 2. GPU tier: don't delete the ground-truth note, correct it. GPU-vs-CPU agreement within a stated f32 tolerance is an INTERNAL check and stays continuous and blocking, measured not assumed. What goes is the claim that GPU correctness follows from the CPU's. External targets bind tier (b) unless they are statistical, where tier (a) is expected to agree statistically.
+
+"Ruling A" is the orchestrator's supersession list for this port (the "What it amends" bullet below); "task 4b" is
+this port.
+
+*What it decides:*
+
+- **Item 1: a target is a measurement, not a gate.** Failing one never blocks building: the plan proceeds and the
+  result is reported. R-650 draws the line: the internal correctness tests and the anchor smoke tests are not targets in
+  this sense and block a merge as before; every external target (a published or other outside number, or a prototype
+  number held as a tier-D "reproduce or explain" target) is a measurement, scored in M9 or, early, as a peek. A value a
+  contract or design doc adopts as its gate is internal and blocking, even where it came from the prototype (R-650's
+  applied line). A target's control (rule 16, REQ-VAL-007) is a check that the test
+  can fail, not a target: a control that does not fire is still a defect of the test.
+- **Item 2: the tier each target binds.** Each external target declares it: (a) the GPU explorer (f32, interactive,
+  agreeing statistically or qualitatively only, `error_ratio` flagging what it can't resolve) or (b) the CPU IC
+  inspector (f64 or higher; exact targets: collision points, periods, converged states). With the owner's
+  clarification 2, an external target binds (b) unless it is statistical, where (a) is expected to agree
+  statistically; the owner confirmed on 30 Oct 2026 that statistical targets are scored on tier (a) and exact targets
+  on tier (b). *Applied per R-369:* exact targets, measurements, counts, reports and definitions bind (b) and are
+  scored there; statistical targets bind (a) and are scored there, statistically only; qualitative targets over a map
+  or an ensemble bind (a) too, item 2 naming (a) as the tier that agrees "statistically or qualitatively"; a target
+  with an exact part and a statistical or qualitative part is scored on (b) for the first and on (a) for the second.
+  One chaotic trajectory compared qualitatively with a figure (AA-4, V-6, SP-1's structural comparison) is the
+  inspector's, (b). Five map targets whose verify names a Result at f64 (REQ-VAL-308, REQ-VAL-309, REQ-VAL-311,
+  REQ-VAL-312, REQ-VAL-313) bind (a) by the rule; how their f64 Result runs square with it is RQ-622, and their
+  scoring waits on it. Every target requirement's note names its tier, and `docs/design/principia_dd_replication.md`
+  § "12.2 Tiers" lists them. A GPU miss on a (b) target, or on a mixed target's (b) part, is expected, not a defect.
+  *Was (the port's first reading, corrected by the owner's confirmation of 30 Oct 2026):* "statistical targets, and
+  qualitative ones (item 2's "statistically or qualitatively"), bind (b) with (a) expected to agree statistically or
+  qualitatively; a target with an exact part and a statistical part binds (b) for the first, and (a) is expected to
+  agree with the second statistically".
+- **Clarification 2: GPU-vs-CPU agreement is an internal check.** Agreement within a stated f32 tolerance stays
+  continuous and blocking, measured, not assumed; what goes is the claim that GPU correctness follows from the CPU's.
+  The ground-truth note's § "The correctness factoring: validate on CPU, inherit on GPU" is corrected, not deleted:
+  its CPU reference and its parity suite stay, and the line "CPU correct (ground-truth suite) × GPU==CPU (parity) ⇒
+  GPU correct" is replaced, its text kept as *Was*; REQ-VAL-046's verify, "GPU correctness is claimed only via
+  parity", likewise. Every GPU-vs-CPU agreement requirement states its f32 tolerance, read requirement by requirement
+  (`plan/requirements.yaml`): REQ-VAL-017 and REQ-TOOL-029, f32-eps-scaled by REQ-DEC-043's calibration; REQ-VAL-057
+  and REQ-VAL-073, the Tier N/S envelope REQ-VAL-064 sets by measurement; REQ-VAL-059, REQ-VAL-060, REQ-VAL-072 and
+  REQ-VAL-144, exact; REQ-VAL-075, exact outside REQ-VAL-141's calibrated band; REQ-VAL-107, labels equal in a regular
+  region; REQ-VAL-199, its own calibration; REQ-DEC-052, a measurement, bitwise; REQ-VAL-183, measured, never
+  asserted. Two state none for f32: REQ-VAL-172's "identical to ~10 decimals" names no f32 tolerance, and REQ-VAL-173's
+  "`error_ratio` reads 1.0000" names no precision path. Each gets a calibration requirement (R-71), not a guessed
+  value: REQ-VAL-338 and REQ-VAL-339 (M5, TASK-M5-18, which closes the two). REQ-VAL-338's proposal first checks
+  whether the f32 runs agree bit for bit: α ∈ {0.25, 1, 4} and α^{3/2} are powers of two, so the rescaling itself is
+  exact in binary floating point, and only constants that don't scale with α can part the runs; a looser tolerance is
+  stated only where they don't. *Was:* "REQ-VAL-172's "identical to ~10 decimals" is finer than f32 resolves (about
+  seven significant decimal digits)" (reworded 30 Oct 2026 on the physics review of PR #342, its note on REQ-VAL-338). None of these is an external target, and no tier applies to them.
+- **Item 3: three outcomes.** PASS; EXPLAINED DIVERGENCE, for a named mechanism (regularisation, escape criterion,
+  horizon, stopping rule, units or normalisation, precision tier, sampling, the source's own accuracy), with a
+  measurement showing the mechanism, not a story; UNEXPLAINED, open, labelled and non-blocking. "Fail" is not an
+  outcome of an external target; the internal correctness tests keep pass and fail.
+- **Item 4: what is forbidden in pursuit of a pass:** changing defaults, physics, criteria or architecture; per-target
+  parameter tuning; loosening tolerances; special-casing inputs. A design change a target suggests needs its own ADR,
+  justified on Principia's goals (interactive exploration first; accuracy against speed a deliberate trade), never on
+  the target alone. It is a checklist line for the physics and code reviewers. Clarification 1 reads it for SP-1:
+  running a target at its own natural horizon is not a default change. SP-1 (REQ-VAL-034) runs to its break-up,
+  `t_max` between 60 and 65 as a per-test parameter, and the default horizon stays 50 (R-610); the coarse `t_end`
+  window stays a calibration (REQ-VAL-132, R-71); TASK-M3-27's "calibration proposal for the t_end window and horizon"
+  becomes "run to the target's horizon", its old words kept in the task's notes.
+- **Item 5: like-for-like first** (frame, units, masses, the definition of the event, the source's stated accuracy).
+  A divergence that comes from our being a different instrument is a finding. A checklist in
+  `docs/design/principia_dd_replication.md` § "12.3 Outcomes, the like-for-like check and the forbidden moves" and in
+  the physics reviewer's checklist.
+- **Item 6: verification deepening** (the GPU path agreeing better while staying interactive) is post-build work: M9's
+  GPU-path tightening (R-650), defined by REQ-VAL-341 (a definition, R-72) before any of it is built.
+- **What it amends, for external targets** (the forward lines name each): R-594 item 3's "confirmed by the human at the
+  gate" for a target's tolerance (now with M9's report, R-650) and item 6's question "which targets gate a milestone"
+  (none does); R-637's RQ-591 line, "Layer V targets gate their milestone (statistical ones on their stated
+  tolerance)" (no external target gates its milestone; its layer-R half, "run, recorded beside the published number,
+  disagreements queued", stands, the disagreement recorded with its outcome); R-636's note on RQ-583's targets, "they
+  cannot pass their gates as written" (no gate to pass); R-639's "a chart part, which moves to gate the task that builds
+  the Šuvakov chart" (no target gates a task; RQ-618 stays open on what is built). Also superseded for external
+  targets, by R-650's move: RQ-591's option (a) "as ported", applied meanwhile until R-637, and RQ-598's and RQ-614's
+  waits on scoring (both closed, in the archive, unchanged).
+- **"Apply this to RQ-598, the task-15 ingest and every existing target."** RQ-598 is closed (R-637); its targets,
+  GG-1, BR-1 and V-11, are measurements with tiers, scored in M9 (REQ-VAL-295, REQ-VAL-297, REQ-VAL-330). The task-15
+  ingest is PR #337, approved and not yet merged; nothing of it is edited here, and when its rows are applied each takes
+  a tier and no gate (flagged to the orchestrator). Every existing target: REQ-VAL-201 to REQ-VAL-332 but PL-8's first
+  half, REQ-VAL-042 (FF-H) and REQ-VAL-127, and the two parts R-650 splits out (REQ-VAL-333, REQ-VAL-335).
+- **"Flag any open PR or task that currently treats a replication as blocking."** Flagged on 30 Oct 2026, every one
+  now changed by this port and R-650: the 35 replication tasks and their requirements, each in its milestone's exit
+  gate; `plan/MILESTONES.md` § "Assumptions" on requirements waiting on an RQ; RQ-608's and RQ-618's "what the M4 and
+  M8 gates hold"; R-639's chart-part gate; REQ-VAL-034's and TASK-M3-27's horizon calibration; the ground-truth note's
+  GPU inheritance. Open PRs: none of the open task PRs treats a replication as blocking; #337 and #338 (data, approved)
+  carry proposed rows only, applied later with tiers and no gate. The orchestrator's own task files are outside the
+  repo and its own.
+
+*Applied per R-369:*
+- The tier rule's reading for qualitative and mixed targets, and AA-4, V-6 and SP-1's structural comparison as (b),
+  as above (corrected 30 Oct 2026 to the owner's confirmation; RQ-622 for the five f64-Result map targets).
+- The GPU-vs-CPU requirements read for their f32 tolerance as above; REQ-VAL-172 and REQ-VAL-173 get calibration
+  requirements, and nothing else changes in them.
+- Item 4's ADR for a design change is a `decisions.md` ruling with a REVIEW_QUEUE entry before it, as every design
+  change is (the porting rule).
+
+R-649 is in the "design" group of `plan/rule_groups.yaml`. Changes REQ-VAL-034, REQ-VAL-046, REQ-VAL-132 and every
+target R-650 moves (their notes: the tier and the outcome); adds REQ-VAL-338 and REQ-VAL-339.
+
+## R-650 — External replication becomes its own final milestone, M9, after the core build: it scores every external target, writes up the explained divergences and tightens the GPU path, and exits on its report; the internal correctness tests and the cheap anchor smoke tests (figure-eight closure, SP-1 run to its horizon, SP-2) stay continuous and block a merge as now; source ingest and transcription go on whenever idle; early peeks score a target as information only, in a peek log *(refines R-649; amends R-594, R-629, R-630, R-640 and R-642: where and when the targets are scored)*
+*29 Oct 2026 · the owner's follow-up to R-649 that day and his addendum on early peeks the same day; ported 30 Oct
+2026 with R-649; applied in `plan/MILESTONES.md` (§ "M9 — External replication", new; § "Assumptions"),
+`plan/WORKFLOW.md` (§ "Human checkpoints: the milestone gates"), `plan/tools/` (M9 accepted; its block a report, not a
+gate), `docs/design/principia_dd_replication.md` (§ 12, new; § 5.6's SP-2 row, new), `docs/verification/peek_log.md`
+(new, seeded with GG-1), `docs/read_first/principia_INDEX.md`, the forward lines on R-594, R-629, R-630, R-640, R-642
+and R-649, `REVIEW_QUEUE.md` (dated lines), the requirements (reqio), `plan/tasks.yaml` and the task files (35 tasks
+moved and renumbered, three added; TASK-M3-27, TASK-M3-28, TASK-M3-29 and TASK-M4-15 changed), `plan/reviewers/` and
+`plan/rule_groups.yaml`*
+
+The owner's words, verbatim:
+
+> Follow-up to the verification guard: make external replication its own final milestone (after the core build), covering scoring every external target, the explained-divergence write-ups and GPU-path tightening. Two things stay continuous throughout the build and DO block a merge as now: the internal correctness tests (Hamiltonian FD vs analytic derivatives, drift-falls-with-step, xcheck vs reference, gauge invariance, Burrau constants), and cheap anchor smoke tests (figure-eight closure, SP-2), which catch gross breakage only and never steer design. Source ingest and transcription may continue whenever idle; scoring waits for the milestone. Update the plan's milestone list accordingly.
+
+The owner's addendum, the same day, verbatim:
+
+> Non-gating early peeks (R-650 addendum): when a target's data is already transcribed and cheap to run, score it early as INFORMATION ONLY. Results go in a peek log, never a gate. A peek may trigger a fix only if it exposes a genuine bug that is justified independently of the target (a wrong equation, a misencoded outcome, a broken invariant), with its own test and ADR as usual. Never tune to a peek. Prioritise peeks where the vertical slice never looked: long horizons (GG-1, t=1e4), free-fall triple collisions (Li 2021, Tanikawa 1995/2021), unequal-mass and nonzero-L targets (Li 2025, Titov, Dandekar 2026). Peeks run only when idle, after the backlog.
+
+*What it decides:*
+
+- **M9 — External replication, the final milestone, after M8.** It covers scoring every external target, the
+  explained-divergence write-ups and the GPU-path tightening (R-649 item 6). It has no exit gate: a target's outcome
+  never holds it (R-649 items 1 and 3). It exits on its report, REQ-VAL-340 (TASK-M9-37), which lists every M9 target
+  with its tier, its outcome, its like-for-like checks and, for an explained divergence, the measurement showing the
+  mechanism; a target not yet scored is listed "not scored" with what it waits on, never as a failure (as R-636 records
+  a target past the cap). The owner reviews the report; an M9 calibration is confirmed with it, not at a gate. The
+  GPU-path tightening is defined first, by REQ-VAL-341 (a definition, R-72; TASK-M9-38), each change with its own
+  ruling (R-649 item 4). `plan/MILESTONES.md` § "M9 — External replication" holds a report block, not a gate block, so
+  no gate tool reads it.
+- **What moves to M9:** REQ-VAL-201 to REQ-VAL-249 and REQ-VAL-252 to REQ-VAL-332 (130 requirements), REQ-VAL-042
+  (FF-H, the free-fall closure against Hristov et al.'s orbits) and REQ-VAL-127 (SP-1's feature set), with the new
+  REQ-VAL-333 to REQ-VAL-335, REQ-VAL-340 and REQ-VAL-341. The 35 replication tasks move, renumbered by
+  `plan/WORKFLOW.md` § "Task files"'s rule that a task's id names its milestone, in their old order:
+
+  | Was | Now | Was | Now | Was | Now |
+  |---|---|---|---|---|---|
+  | TASK-M2-51 | TASK-M9-01 | TASK-M3-54 | TASK-M9-14 | TASK-M4-22 | TASK-M9-26 |
+  | TASK-M3-42 | TASK-M9-02 | TASK-M3-55 | TASK-M9-15 | TASK-M4-23 | TASK-M9-27 |
+  | TASK-M3-43 | TASK-M9-03 | TASK-M3-56 | TASK-M9-16 | TASK-M4-24 | TASK-M9-28 |
+  | TASK-M3-44 | TASK-M9-04 | TASK-M3-57 | TASK-M9-17 | TASK-M4-25 | TASK-M9-29 |
+  | TASK-M3-45 | TASK-M9-05 | TASK-M3-58 | TASK-M9-18 | TASK-M4-26 | TASK-M9-30 |
+  | TASK-M3-46 | TASK-M9-06 | TASK-M3-59 | TASK-M9-19 | TASK-M6-52 | TASK-M9-31 |
+  | TASK-M3-47 | TASK-M9-07 | TASK-M3-60 | TASK-M9-20 | TASK-M7-71 | TASK-M9-32 |
+  | TASK-M3-48 | TASK-M9-08 | TASK-M3-61 | TASK-M9-21 | TASK-M8-97 | TASK-M9-33 |
+  | TASK-M3-49 | TASK-M9-09 | TASK-M3-62 | TASK-M9-22 | TASK-M8-98 | TASK-M9-34 |
+  | TASK-M3-50 | TASK-M9-10 | TASK-M3-63 | TASK-M9-23 | TASK-M8-99 | TASK-M9-35 |
+  | TASK-M3-51 | TASK-M9-11 | TASK-M3-64 | TASK-M9-24 | | |
+  | TASK-M3-52 | TASK-M9-12 | TASK-M3-65 | TASK-M9-25 | | |
+  | TASK-M3-53 | TASK-M9-13 | | | | |
+
+  Three tasks are added: TASK-M9-36, the ruled targets scored (FF-H, the figure-eight's published curve and SP-1's
+  structural comparison); TASK-M9-37, the M9 report; TASK-M9-38, the GPU-path tightening defined. A ruling or record
+  before this one that names an old id means the new one. Each moved task keeps its depends-on edges, renamed; each
+  keeps its waits on a ruling or data, which now hold its scoring, never a milestone.
+- **What stays continuous and blocks a merge as now**, the owner's two kinds, read requirement by requirement:
+  - *The internal correctness tests:* Hamiltonian FD against analytic derivatives (REQ-VAL-170, REQ-VAL-171);
+    drift-falls-with-step (REQ-VAL-030, REQ-VAL-031 and REQ-VAL-139 on order scaling, the convergence reference
+    REQ-VAL-025 and REQ-VAL-131, reversibility REQ-VAL-032, REQ-VAL-044, REQ-VAL-134, REQ-VAL-190 and REQ-VAL-191);
+    xcheck against reference (REQ-VAL-028 with REQ-VAL-036, REQ-VAL-119 and REQ-VAL-146, and PL-8's first half,
+    REQ-VAL-250 and REQ-VAL-251, our f64 against our own R-33 reference); gauge invariance (REQ-VAL-172, with its f32
+    tolerance REQ-VAL-338); the Burrau constants (REQ-VAL-174, with the import arithmetic REQ-VAL-016, REQ-VAL-019,
+    REQ-VAL-118 and REQ-VAL-120); and the GPU-vs-CPU agreement checks (R-649's clarification 2).
+  - *The anchor smoke tests,* which catch gross breakage only and never steer design: the figure-eight closure
+    (REQ-VAL-041, REQ-VAL-133, TASK-M3-28); SP-1 run to its horizon, outcome class, escaper and the coarse `t_end`
+    window (REQ-VAL-034, REQ-VAL-132, TASK-M3-27); and SP-2, the converged Burrau reference (Portegies Zwart &
+    Boekholt 2018, Table 2; R-646), which was a proposed row of PLAN.md and becomes REQ-VAL-336 with its tolerance
+    REQ-VAL-337 (M3, TASK-M3-27).
+- **Source ingest and transcription go on whenever idle:** a data PR under `docs/incoming/` (as #337 and #338) merges
+  whenever its review passes. Scoring waits for M9, and R-415's early-merge test does not bring an M9 task forward.
+- **Early peeks (the addendum).** One file, `docs/verification/peek_log.md`, headed "Information only — never a gate
+  (R-650 addendum)", one row per peek: date, target, tier, data source, outcome (R-649 item 3), the like-for-like checks,
+  the mechanism measurement where explained, and the commit. Peeks run only when idle, after the backlog, in the
+  owner's priority (long horizons, GG-1 to t = 10⁴; free-fall triple collisions, Li 2021, Tanikawa 1995/2021;
+  unequal-mass and non-zero-L targets, Li 2025, Titov, Dandekar 2026). A peek triggers a fix only for a genuine bug
+  justified independently of the target, with its own test and ruling; nothing is tuned to a peek. The log's first row
+  is GG-1 from PR #335's comparison (HM units, three points, all three UNEXPLAINED; RQ-612).
+- **What it amends:** R-629's and R-630's "M3 requirements" for the drafts, REQ-VAL-201 to REQ-VAL-213 (now M9);
+  R-594 item 5's sequencing by need (it now orders M9's scoring and the ingest, not the core milestones); R-640's
+  "unblock TASK-M3-62 and TASK-M3-65 now" and R-642's "unblocks" (the wait for data is lifted as ruled; the scoring
+  itself is M9's, or a peek's).
+
+*Applied per R-369:*
+- **The line between internal and external,** where the owner's lists name no requirement: an external target scores
+  against a published or other outside number, or against a prototype number held as a tier-D "reproduce or explain"
+  target (`docs/design/principia_dd_replication.md` § 5.11: D-1 to D-5, REQ-VAL-299 to REQ-VAL-306); a check of our
+  arithmetic or our own reference is internal, and so is a value a contract or design doc adopts as its gate, pitfall
+  regressions included, even where the value came from the prototype. So REQ-INT-049, REQ-INT-051, REQ-INT-052,
+  REQ-VAL-045, REQ-VAL-051, REQ-VAL-052 and REQ-EVT-013 stay in M3 and keep blocking. *Was (corrected 30 Oct 2026, the
+  physics review of PR #342, finding F3):* "an external target scores against a published, prototype or other outside
+  number; a check of our arithmetic or our own reference is internal."
+  Likewise: PL-8's first half stays in M3 and moves from TASK-M3-56 (now TASK-M9-16) to TASK-M3-27; W-1 (REQ-VAL-043) stays
+  in M3, because R-125 makes it the verification of the branch-cut convention we transcribe ("verified by REQ-VAL-043
+  against the published braid classes … confirmed at the gate"), a check of our encoding; the Chazy classifier's
+  Fewbody reference (REQ-VAL-184 to REQ-VAL-187, TASK-M7-35 and TASK-M7-36) stays in M7, a ported reference algorithm
+  on synthetic fixtures and invariants, D-3's comparison with the prototype's numbers being REQ-VAL-306, which moves;
+  the closure field at the free-fall orbits (REQ-VAL-076, M4) stays, the self-validating render of the core.
+- **Splits:** REQ-VAL-047 keeps the Lagrange rigidity and the figure-eight's closure, and its "traces its known
+  shape-sphere curve" becomes REQ-VAL-333 (M9), its tolerance REQ-VAL-334, with REQ-VAL-130's "and shape curve"
+  removed (each *Was* kept); REQ-VAL-034 keeps the anchor smoke, and its structural comparison with Szebehely & Peters
+  becomes REQ-VAL-335 (M9), REQ-VAL-127 its feature set.
+- **Edges:** no core task depended on a moved one, so no depends-on edge is dropped. TASK-M4-15's need of REQ-VAL-042
+  is dropped (FF-H scores in M9; the fixture set it reads, REQ-VAL-126, stays needed through TASK-M3-29). TASK-M9-36
+  depends on TASK-M3-25, TASK-M3-27, TASK-M3-28 and TASK-M3-29; TASK-M9-37 on every M9 scoring task that waits on no
+  ruling or data; TASK-M9-38 on TASK-M9-37.
+- **The calibrations of M9's targets** are confirmed by the human with the M9 report, their statements reworded from
+  "at the M<n> gate", each *Was* in its note.
+- **No code changes here** (docs, then plan, then code): `cargo xtask gate-report` and `gate-provisional` refuse M9, as
+  M9 has no gate; their message names "M0 … M8" as the milestones, which is flagged to the orchestrator for a code
+  task, with `.github/workflows/gate.yml`'s input description.
+
+R-650 is in the "design" group of `plan/rule_groups.yaml`. Moves REQ-VAL-042, REQ-VAL-127, REQ-VAL-201 to REQ-VAL-249
+and REQ-VAL-252 to REQ-VAL-332 to M9; changes REQ-VAL-047, REQ-VAL-130, REQ-VAL-250 and REQ-VAL-251 (their task);
+adds REQ-VAL-333 to REQ-VAL-337, REQ-VAL-340 and REQ-VAL-341.
+
+## R-651 — Advisory review cadence: a fresh review from each of Codex, Gemini CLI and Copilot before merge on the final head, after every substantive push and at least once a working day on a long-running PR, in that priority under limits; a bot unavailable or rate-limited is noted on the PR and the merge goes ahead with the others; every bot finding is verified and closed out before merge (fixed, answered or moved to a task or RQ, then its thread resolved), and a PR with an unresolved bot thread does not merge; the bots stay advisory and never replace the required approvals *(amends R-635: its cadence; a standing rule)*
+*30 Oct 2026 · the owner's rule and his two addenda of that day; ported 30 Oct 2026 with R-649 and R-650 (PR #342);
+applied in `plan/WORKFLOW.md` (§ "The review loop"), `plan/OPERATIONS.md` (§ "Merging"), `CLAUDE.md` (§ "Working with
+review"), the forward line on R-635 and `plan/rule_groups.yaml`; the merge script that checks it is the orchestrator's
+own, outside the repository*
+
+The owner's rule, verbatim:
+
+> Codex review cadence change: don't rely on its single review when a PR opens. Request a fresh Codex review (advisory, as now):
+> 1. Before merge, on the final head. A merge script waits for a Codex pass on the exact SHA being merged; if the last Codex review is on an older head, re-request it first.
+> 2. After any substantive push: new logic, physics or algebra, a fix responding to review findings, or a rebase that changes code. Docs-only typo pushes don't need one.
+> 3. On long-running PRs, at least once per working day while open, and after every few commits on large ones, so problems surface partway through rather than at the end.
+> Treat its findings like the other advisory reviewers: verify each against the code or spec before acting, reply on the thread with what you did or why not, and never let it replace the three required approvals. If its rate limits or quota bite, prioritise (1), then (2), then (3), and tell me if pre-merge reviews start getting skipped. Write this into WORKFLOW/OPERATIONS as a standing rule with the next R-number.
+
+His first addendum, the same day, verbatim:
+
+> Addendum: apply the same review cadence to all three advisory reviewers: Codex, Gemini CLI and Copilot. Pre-merge on the final head, after substantive pushes, and periodically on long-running PRs. They stay advisory: verify every finding before acting, and they never replace the three required approvals. Each has its own limits (Gemini's timeouts, see #339; Copilot's premium-request quota). When one is unavailable or rate-limited, note it on the PR and proceed with the others rather than blocking the merge; priority order under limits is pre-merge > post-push > periodic. Record it in the same R-number as the Codex rule.
+
+His second addendum, the same day, verbatim:
+
+> Addendum: every advisory-bot finding gets closed out before merge. For each comment or finding from Codex, Gemini or Copilot: verify it against the code, spec or physics; then either fix it (and reference the fixing commit in the reply), or reply with the reason it's not applicable (wrong, out of scope, or already covered), or move it to a tracked task or RQ if it's real but belongs elsewhere. Then resolve the thread. A PR can't merge with unresolved bot threads; the merge script checks this. Don't resolve a thread without a reply, and never "fix" a finding just to silence it if the finding is wrong: say why it's wrong. Same R-number as the cadence rule.
+
+*What it decides:*
+
+- **Three advisory reviewers, one cadence.** Codex, Gemini CLI and GitHub Copilot are each asked for a fresh review:
+  1. **Before merge, on the final head.** The orchestrator's merge script waits for a review from each bot on the exact
+     SHA it merges; where a bot's last review is on an older head, it re-requests that bot first (`@codex review`,
+     `@gemini-cli /review`, Copilot re-requested as a reviewer).
+  2. **After every substantive push:** new logic, physics or algebra; a fix responding to review findings, whatever it
+     changes; a rebase or merge that changes code. Only a docs-only typo push that answers no finding needs none.
+  3. **Periodically on a long-running PR:** at least once per working day while it is open, and every few commits on
+     a large one, so problems surface partway through rather than at the end.
+- **Under limits, pre-merge comes first, then post-push, then periodic.** Each bot has its own: Gemini's timeouts
+  (PR #339), Copilot's premium-request quota, Codex's rate limits. A bot that is unavailable or rate-limited is noted on
+  the PR, and the merge proceeds on the others; it never blocks a merge. The orchestrator tells the owner if pre-merge
+  reviews start being skipped.
+- **Every bot finding is closed out before merge.** Each is verified against the code, the spec or the physics; then
+  either fixed, the reply naming the fixing commit; or answered with why it doesn't apply (wrong, out of scope, or
+  already covered); or moved to a tracked task or an RQ if it is real but belongs elsewhere. Then its thread is
+  resolved. No thread is resolved without a reply, and a wrong finding is never "fixed" to silence it: the reply says
+  why it is wrong. A PR with an unresolved bot thread cannot merge; the merge script checks this.
+- **The bots stay advisory.** They never replace the required approvals: a PR merges on its named reviewers'
+  `VERDICT: APPROVE` reviews on its head and green CI (R-175, R-369), and `reviews-complete` does not count the bots.
+- **What it amends:** R-635's cadence, a single review per bot waited for up to 15 minutes after the PR opens (or
+  after a re-review asked for) and then passed over, and its "one-week trial" for the cadence, which is now a standing
+  rule. The rest of R-635 stands: its finding handling (which this rule restates and tightens with the merge check),
+  its P0 / CRITICAL route to the physics reviewer, its late-review handling and its trial tally and report.
+
+*Applied per R-369:*
+- **When a bot counts as unavailable:** no review of the exact requested SHA within its limit, counted from the
+  request: Codex 25 minutes, Gemini CLI 30 minutes (its job's 25-minute timeout, PR #339, plus start-up), Copilot 15
+  minutes; or an error; or a quota or rate-limit refusal. These limits replace R-635's flat 15 minutes after the PR
+  opens and match the orchestrator's merge tooling. The PR then notes "no <bot> review on <sha>: <reason>", and the
+  merge proceeds.
+- **"Substantive":** read as the owner's item 2 lists it, and no narrower: new logic, physics or algebra, in the code,
+  the docs or the plan (a decision, a requirement or a rulings port included); any fix responding to review findings,
+  whatever it changes, a wording fix included; and a rebase or merge that changes code. Only a docs-only typo push that
+  answers no review finding is exempt; every other push counts, a code-formatting push included.
+- **"Large" and "every few commits":** a PR whose diff exceeds `plan/WORKFLOW.md`'s ~500-line planning guide; on one,
+  a fresh review is requested at least every third push, whatever the pushes are.
+- **"Working day":** each day on which the orchestrator works the build loop while the PR is open.
+- **"The three required approvals"** is read as the approvals the task's named reviewers give (R-175); their number is
+  the task's.
+- **"Tell me if pre-merge reviews start getting skipped":** each merge that went ahead without a bot's pre-merge
+  review is listed, with the reason, in the orchestrator's next batched summary to the owner (R-369).
+- **`CLAUDE.md` § "Working with review"** is updated to this cadence in this port (PR #342), as R-635's port wrote
+  that section: its heading cites R-651 beside R-635, and R-635's single review waited for up to 15 minutes after the
+  PR opens is replaced by the fresh reviews above, their priority under limits, the unavailable-bot note and the
+  unresolved-thread merge check. Its other bullets, R-635's "Still in force", stand.
+
+R-651 is in the "process" group of `plan/rule_groups.yaml`. It changes no requirement and no code.
+
+## R-655 — On a tilted shape sphere the spherical map's lattice of repeats is folded: a pixel `(s + k, t + 2j)` with `N_a·k + 2·N_b·j = 0` for integers `(k, j) ≠ 0` is the same system as `(s, t)` and is counted once, at its canonical point, the lattice decided exactly on the stored angles *(closes RQ-631; amends R-554 L3 and R-537 EX7(b))*
+*30 Oct 2026 · the owner's batch of that day; applied in `docs/contracts/principia_chart_decoder_contract.md` § "Repeats
+and the canonical point" (a paragraph), R-554's forward line, `REVIEW_QUEUE.md` (RQ-631, a dated closing line),
+REQ-SCHED-101 and REQ-CHART-062 (reqio), TASK-M2-36 and TASK-M8-56 (notes) and `plan/rule_groups.yaml`; built by
+TASK-M2-36 (`Tilted::pixel`) and TASK-M8-56 (the quadtree's canonical address)*
+
+The owner's words (30 Oct 2026), verbatim, from that day's batch of rulings:
+
+> #349 (a): extend the repeat rule to t's period 2, with tests.
+
+*Context.* "#349 (a)" answers RQ-631, which TASK-M2-36's fix round 2 queued on the physics review of PR #349 (P3).
+R-554 L3 applies RQ-472 (a)'s pole maps on a tilted view iff `N_a = 0` and `N_b = 0`, decided exactly on the stored
+angles, and otherwise makes the view affine along that axis; R-408 counts each system once. The spherical map repeats
+every 1 in `s` (θ's period) and every 2 in `t` (the two pole maps and θ's period composed), and on a tilted view the
+hidden offset `d` depends on `(s, t)` through `N_a·s + N_b·t`, so `(s + k, t + 2j)` keeps `d`, and is the same system
+as `(s, t)`, wherever `N_a·k + 2·N_b·j = 0` for integers `(k, j) ≠ 0`. R-554 L3's rule counted those pairs twice: with
+`N_b = 0` and `N_a ≠ 0` (`τ₁` alone), `t` and `t + 2`; under Lean each axis at `τ₁ = τ₂ = 45°` (`N_a = N_b`),
+`(s, t)` and `(s − 2, t + 2)`. RQ-631's option (a) read: "fold the lattice of repeats: a pixel counts only at its
+canonical point under every `(k, j)` with `N_a·k + 2·N_b·j = 0`, decided exactly on the stored angles".
+
+*What it decides:*
+- **Option (a) of RQ-631.** On a tilted view of the shape sphere's spherical map, a pixel `(s + k, t + 2j)` with
+  `N_a·k + 2·N_b·j = 0` for integers `(k, j) ≠ 0` is the same system as `(s, t)` and is counted once, at its canonical
+  point. The exponential map, bounded past its square, has no repeats and is unchanged.
+- **The lattice, exactly on the stored angles,** never by a tolerance on a computed `N`:
+  - `N_a = N_b = 0`: the pole maps and both periods, as R-554 L3 has it.
+  - `N_a = 0` alone: θ's period, the canonical `s` in `[0, 1]`, as before.
+  - Otherwise the multiples of one generator `(k₀, j₀)` with `j₀ ≠ 0`, where one exists. `N_b = 0` alone (`τ₁` alone
+    under either map; two targets with `sin τ₂ = 0`): `t`'s period 2, `(k₀, j₀) = (0, 1)`. Tip as sheet with one target
+    and both angles set: `N_a/N_b = τ₁/τ₂`, a ratio of two stored doubles and so always rational, the generator read
+    exactly from their binary expansions (most such generators lie far beyond any view). Lean each axis with one
+    target and both angles set: `N_a/N_b = tan τ₁/tan τ₂`, which for angles rational in degrees is rational only where
+    `τ₁ ≡ ±τ₂` (mod 180°), the ratio `±1`, or where one angle is `≡ ±30°` and the other `≡ ±60°` (mod 180°), the ratio
+    `±1/3` or `±3`: with `u = e^{2iτ₁}`, `v = e^{2iτ₂}` and the ratio `p/q`, the condition is the vanishing sum
+    `(q − p)uv + (q + p)u − (q + p)v − (q − p) = 0` of roots of unity, and Mann's theorem (1965) bounds a minimal one
+    of four terms to sixth roots of unity. Two targets with `sin τ₂ ≠ 0`: no generator with `j₀ ≠ 0`, `d_Y` moving with
+    `t` alone.
+  - At RQ-471's corner no fold is applied (R-554), as before.
+- **The canonical point** *(applied per R-369, a routine choice that counts each system once)*: where the orbit meets
+  the square, the point in it; with a generator `w = (k₀, 2j₀)` in `(s, t)`, the point whose offset from `(½, ½)` along
+  `w` lies in `[−|w|/2, |w|/2)`, a strip that holds the square (`|k₀| + 2|j₀| < k₀² + 4j₀²` for `j₀ ≠ 0`); for `t`'s
+  period alone, `t` in `[−½, 3/2)`.
+- **Tests,** as the owner asks: `N_b = 0` with `N_a ≠ 0` (`τ₁ = 30°` alone, `t` and `t + 2`) and Lean `45°/45°`
+  (`(s − 2, t + 2)` and `(s, t)`), each pair decoding the same system, one of it counted, with the control that the
+  round-2 rule counts both (REQ-CHART-062, TASK-M2-36); the quadtree's canonical address follows the same fold
+  (REQ-SCHED-101, TASK-M8-56).
+- **RQ-630 stays open:** the wording of R-554 L3's Lean summary is the owner's to rule, apart from this.
+
+*What it amends:* **R-554 L3** (on a tilted view "otherwise the view is affine along that axis" holds only where no
+lattice repeat keeps `d`) and **R-537 EX7(b)** (on a tilted view the canonical address also folds the lattice). Read
+with it: R-408, which it applies. It closes **RQ-631**.
+
+R-655 is in the "physics" group of `plan/rule_groups.yaml`, with R-554 and R-613.
+
+Changes REQ-SCHED-101 (statement, verify, rulings, note) and REQ-CHART-062 (verify, rulings, note).
+
+## R-656 — CI throughput: a push runs `ci.yml` only on `main` (and on R-272's `measure/` branches, which have no pull request), a pull request running it through `pull_request`; a pull request's superseded runs are cancelled, never a run on `main`; a docs-only pull request skips the build, test, GPU and mutants work, and one that changes no GPU-path file skips the GPU suites, inside the jobs, every required check still reporting success under its own name; mutants run on the merge-ready head; a bounded target cache is approved in principle, built in a later PR; no paid or self-hosted runner *(amends R-110, R-177, R-186, R-195, R-235, R-285 and R-335)*
+*30 Oct 2026 · the owner's two messages of that day; applied in `.github/workflows/ci.yml`,
+`.github/workflows/mutants.yml`, `scripts/ci_changes.sh` (new), `xtask/tests/ci_changes.rs` (new), three qa files
+(below), `plan/OPERATIONS.md`, `plan/WORKFLOW.md`, `docs/contracts/principia_parity_contract.md` §6, eight
+requirements' notes and `plan/rule_groups.yaml`*
+
+The owner's words on CI throughput, verbatim:
+
+> Go ahead with 1–3 as one tooling PR, plus: (1b) a per-PR `concurrency` group with cancel-in-progress: true, so superseded runs on the same PR are cancelled; never cancel runs on main. Constraint for 2 and 3: required checks must still report. Do the GPU and mutants skips inside the job (changed-files detection, then skip as success under the same check name), not with workflow-level `paths:`, or required checks will hang pending on docs-only PRs. Mutants must still run on the merge-ready head. Prove it on the PR: one docs-only change and one shader change, showing which jobs ran or were skipped and that branch protection is satisfied in both. Item 4: approved in principle, as a ruling amending R-285. Cache saved from main only, keyed on Cargo.lock + toolchain, limited to the 2–3 slowest jobs, with eviction so total stays well under 10 GB; report actual cache size after a week. Items 5 and 6: no.
+
+The proposal the items refer to, the orchestrator's, filed with the owner's message:
+
+> 1. ci.yml's `push` trigger limited to main (PRs run through `pull_request`), ending the double run per push.
+> 2. mutants less often: only on the merge-ready head, or only for the crates the PR touches.
+> 3. gpu-metal, gpu-lavapipe, gpu-kernel skipped when no shader/kernel code changed.
+> 4. A bounded build-target cache, which R-285 forbids (needs a ruling).
+> 5. Paid larger runners. 6. A self-hosted runner on the Mac.
+
+The CI sentence of the owner's rulings message of the same day, verbatim:
+
+> CI: go ahead as already agreed (per-job skips for docs-only PRs, push trigger limited to main, cancel superseded PR runs, mutants on the merge-ready head, cheap doc-reading checks kept), and no self-hosted runner.
+
+*What it decides:*
+- **The push trigger.** `ci.yml` runs on a push to `main`; a pull request's pushes run it through `pull_request`, once
+  each, so no push to a pull request's branch runs it twice. Every run on `main` runs every job. The other workflows
+  had no double trigger: `no-atlas-params.yml` already ran its push trigger on `main` only, and the rest run on
+  `pull_request`, a schedule or a dispatch.
+- **Superseded runs.** The workflows that build or test on pull requests (`ci.yml`, `mutants.yml`, `pr-check.yml`,
+  `screenshot.yml`, `stand-in-soak.yml`) each keep one `concurrency` group per pull request, its merge ref's
+  (`refs/pull/<n>/merge`), with `cancel-in-progress`, so a push cancels the run on the head it supersedes; a run on
+  `main` has a group of its own, its run id, and is never cancelled. The groups name the event, which after the push
+  change is `pull_request` for every run a pull request starts, so each pull request has one group per workflow. Three
+  keep none (below): `reviews.yml`, `no-atlas-params.yml`, a single grep of a few seconds, and `gemini-dispatch.yml`,
+  the advisory bot's (R-635), which reviews each head.
+- **What a change touches.** `scripts/ci_changes.sh` classifies a pull request's change, its merge commit against the
+  base it merges onto, conservatively: a path is docs-only only if its allowlist names it (`docs/`, the plan's prose
+  and data, the root's markdown; not `plan/`'s Python, not `.github/`), and every path but the docs-only ones and the
+  crates no GPU job builds (`gui`, `prin`) is a GPU path. An empty diff, or one that can't be computed, runs everything.
+  Any run that is not a pull request runs everything. A file code reads is never docs-only, and is a GPU path (below,
+  "The files code reads").
+- **A docs-only pull request** skips the build, test, release and controls jobs (`ci-archive` and the `ci` shards,
+  `ci-checks`, `ci-release-archive` and its shards, `xtask-ci`'s shards), and `ci-workspace` runs the docs checks in
+  place of its tests: the plan checks, the vocabulary lint, and every test that reads a docs-only path. The GPU jobs
+  are skipped too (no docs-only path is a GPU path); `mutants-fixture` skips its steps, and `mutants`' shards already
+  skip a diff with no `.rs` file. `pr-check` and `reviews-complete` run as before.
+- **A pull request that changes no GPU-path file** skips the jobs running the GPU suites (`gpu-kernel suites`,
+  `gpu-metal suites`, `gpu-lavapipe suites`); every other job runs.
+- **The required checks still report, under their own names, and conclude success** (`ci`, `xtask-ci`, `gpu-metal`,
+  `gpu-lavapipe`, `gpu-kernel`, `mutants-check`, `pr-check`, `reviews-complete`; R-266, R-305). No workflow-level
+  `paths:` filter is used. Each of the five that gathers skippable jobs is a gate that runs whatever they ended in
+  (`always()`), and passes a gathered job that was skipped only when the classification ran and its verdict skipped
+  that job; a failed, cancelled or wrongly skipped job, or a failed classification, turns it red. A matrix job is
+  named `<id> (<shard>)`, so a skipped matrix job never reports a bare required name, and a skipped job never bears a
+  required name.
+- **Mutants on the merge-ready head.** The gate runs on every head of a pull request whose diff has Rust in it, and a
+  push cancels the run on the superseded head, so the run that finishes is the merge-ready head's, the last; the merge
+  already waits for that head's `mutants-check`. The orchestrator's merge step is unchanged.
+- **Item 4, approved in principle, not built here.** A bounded build-target cache, amending R-285: saved from `main`
+  only, keyed on `Cargo.lock` and the toolchain, limited to the 2–3 slowest jobs, with eviction so the total stays
+  well under 10 GB, and its actual size reported a week after it lands. A later PR builds it; until then R-285's "no
+  whole target directories cached" holds.
+- **Items 5 and 6: no.** No paid larger runners and no self-hosted runner; R-186 stands.
+- **"Every commit" and "every push".** Where R-110, R-177, R-186, R-195, R-235, the corpus and the plan say a suite
+  runs on every commit or every push, it runs on every push to `main` and on every pull-request head, but for this
+  ruling's skips: a docs-only head runs the checks that read the docs and not the build, test or GPU suites, and a
+  head that changes no GPU-path file does not run the GPU suites. A head's skipped suite runs again on `main` once it
+  merges.
+
+*Applied per R-369:*
+- A push to a `measure/` branch still runs `ci.yml`: R-272's measurements are taken by pushing one, and it never has
+  a pull request, so it never runs twice.
+- "Inside the job" is read as the owner's contrast with a workflow-level `paths:` filter: the check bearing each
+  required name runs on every pull request, reads the classification, and concludes success under that name. The work
+  it gathers is skipped as a job, not step by step: a skipped job takes no runner, where a job skipping its steps
+  still queues for one (a macOS one for `gpu-metal`), which is the load this ruling cuts. A job skipped by its own
+  `if:` reports "skipping", which `merge-batch.sh`'s `gh pr checks --required` doesn't read as a pass, so a skipped job
+  never bears a required name: the GPU suites' jobs are named `gpu-kernel suites`, `gpu-metal suites` and
+  `gpu-lavapipe suites`, and new gate jobs carry the required names.
+- `ci-workspace` runs the docs checks on a docs-only pull request rather than a new job, so the gate `ci` keeps its
+  three gathered jobs. It selects the tests with `scripts/ci_changes.sh doc-tests`: each integration test target whose
+  source, or a support file it names, names a docs-only path outside a comment, and the unit tests of a package whose
+  `src/` does; it runs them under the `ci` nextest profile, as the shards do. So the docs-reading tests that need the
+  built kernel (`gpu-kernel`'s profile) or run cargo on the workspace's own target (`ci-workspace`'s) run on `main`'s
+  push, not on a docs-only pull request.
+- `reviews.yml` keeps no `concurrency` group: a `pull_request_review` run re-runs the `pull_request` run (R-276), and
+  a shared group would cancel the run it means to re-run. `no-atlas-params.yml` and `gemini-dispatch.yml` keep none
+  either: the first costs seconds, and the second is the advisory bots' trial (R-635), outside this ruling.
+- `mutants-fixture` skips its steps on a docs-only pull request; it shows the gate can fire, and no docs-only path
+  reaches the gate.
+- REQ-PAY-011, REQ-GEN-004, REQ-TOOL-003, REQ-TOOL-189, REQ-VAL-057, REQ-VAL-166, REQ-SYS-065 and REQ-SYS-067, whose
+  text says "every commit", "every push" or runs every control, cite this ruling and note how it reads; no statement
+  changes.
+- Three qa files change where this ruling changes the behaviour they test, as R-335 allowed for R-326 (exceptions to
+  R-290, for the orchestrator and the reviewers to confirm): `xtask/tests/qa_TASK-M2-49.rs`, whose push-trigger check
+  accepts a push trigger limited to branches that include `main`, and whose release-job check accepts the one
+  job-level `if:` this ruling adds, the docs-only skip; and `xtask/tests/qa_TASK-M0-22_r235.rs` and
+  `xtask/tests/qa_TASK-M0-14_r335.rs`, whose controls-job checks accept that same one job-level `if:` and, in r235's,
+  a `needs:` on the classification alone. Every other `if:`, `needs:` and `continue-on-error:` still fails them, and
+  their controls are unchanged.
+
+*The files code reads, and the cancelled runs: the owner's words of 30 Oct 2026 on #351, verbatim:*
+
+> #351: leave cancelled-run summary checks as they are (M0-45 and R-266 stand; no ruling). Resume #351's reviews. Reviewers specifically confirm the docs-only classifier: any doc/spec/data file read by a test, build script, codegen or xtask check must count as code, not docs. List those paths explicitly in the classifier and add a test that touching one triggers the heavy jobs. Then merge through the normal route and carry on with the job-queue PR.
+
+*Applied:*
+- **The files code reads count as code.** `scripts/ci_changes.sh` keeps, beside its allowlist, an explicit list of
+  the files code reads, each pattern commented with its readers; a path is docs-only only if it is on the allowlist
+  and not on that list, and a file on the list is a GPU path too, so touching one runs the build, test and GPU jobs.
+  The list, from a search of the tests, the build scripts, codegen and the xtask checks: every `.md` and `.html`
+  under `docs/` (the vocabulary lint; plan-check, its tests copying `docs/`'s markdown, archive included; the tests
+  that read a contract or design doc), `docs/gui/design/` and `docs/gui/reference/` (the screenshot and compass
+  goldens' artboards and references, the print-graph catalogue), all of `plan/` (plan-check, the gate report,
+  reviews-check, the validation gates and their tests), `decisions.md`, `REVIEW_QUEUE.md`, `open-questions.md`,
+  `README.md` and `CLAUDE.md` (plan-check; the golden harness reads `decisions.md`), `AGENTS.md` and `GEMINI.md`
+  (`ai_review_rules`), and, listed though already off the allowlist, `.github/copilot-instructions.md` and
+  `fixtures/`. The build scripts and codegen read nothing outside `crates/`. What stays docs-only is the rest of
+  `docs/`: files that are neither markdown nor HTML outside those two folders (the incoming papers and data, the
+  reference sources, the experiments' results).
+- **The tests.** `xtask/tests/ci_changes.rs` touches each pattern of the list through real files it names, each
+  classifying as not docs-only with the GPU suites run, and checks that the list it touches is the script's; and it
+  scans, best effort, the string literals of every crate's `src/`, `tests/` and `build.rs`, of `xtask/` and of
+  `plan/`'s Python for a repository file they name, failing if any classifies as docs-only. Its stated limit: a
+  reader that walks a directory or builds a path in pieces is not seen, and is listed by hand. Each test has its
+  negative control (R-176).
+- `ci-workspace`'s docs checks on a docs-only pull request (the plan checks, the vocabulary lint, the tests
+  `doc-tests` selects) stay, a backstop: with the files code reads counted as code, a docs-only change touches none
+  of their inputs.
+- **The cancelled runs.** A superseded head's cancelled run leaves its required checks' gates as they are, failed or
+  cancelled, as before this ruling; the owner kept them, with TASK-M0-45's checks and R-266 standing, and made no
+  ruling of it.
+
+R-656 is in the "ci" group of `plan/rule_groups.yaml`.
+
+## R-658 — Heavy commands run only through a local job queue the orchestrator owns, `cargo xtask job`: agents submit them and wait, never run them directly; classes merge, fix, build and peek, first in, first out within each; one runner at a fixed concurrency, each job with cargo's jobs and test threads at the core count; jobs time out, stale locks expire and a new runner recovers a dead one's jobs; heavy processes outside the queue are logged; sccache measured again; mutants scoped to the diff and run through the queue *(supersedes R-228)*
+*30 Oct 2026 · the owner's message of that day; applied in `xtask/src/jobq.rs` and `xtask/tests/jobq.rs` (new),
+`xtask/src/lib.rs`, `xtask/src/main.rs`, `xtask/Cargo.toml`, `CLAUDE.md`, `plan/OPERATIONS.md`
+(§ "Dispatching", § "Reviewers", § "Resources", § "Paths and warm builds" and § "Logs"), the agent files in
+`.claude/agents/` and `plan/rule_groups.yaml`*
+
+The owner's words, verbatim:
+
+> Local build/test orchestration. Agents keep writing, reviewing and acting on results in parallel, but no agent runs heavy commands directly any more.
+> 1. Heavy = cargo build/check/test/clippy, cargo mutants, benches, GPU tests, xtask ci, and anything else that compiles. Light (docs, grep, python checks, reading logs) stays direct.
+> 2. Build one local job queue that you (the orchestrator) own, e.g. `xtask job submit <worktree> <command> --priority <p> --label <task>`. It returns a job id; `xtask job wait <id>` blocks, then returns exit status plus a log path. A small runner executes jobs with a fixed concurrency: start at 1 heavy job (2 if measurement shows it's faster), and cap cargo's -j to the core count, not per-agent. Use flock or a small daemon; keep it simple and robust to agent restarts (no orphaned locks: jobs time out, stale locks expire).
+> 3. Priority order: merge-ready verification of a final head > fix-round tests > new-task builds > exploratory/peek runs.
+> 4. Cut duplicated work: shared sccache across worktrees so dependency crates compile once (don't share one target dir: that brings cargo's file lock back). Mutants scoped to the diff (cargo mutants --in-diff or per changed crate), and only on the merge-ready head, as per the CI rule.
+> 5. Enforce it: put the rule in the agent briefs and CLAUDE.md ("never run heavy commands directly; submit to the queue"), and have the runner log any heavy process it sees running outside the queue so violations are visible.
+> 6. Measure: total wall-clock to verify N PRs before vs after, plus swap/memory pressure. Report the numbers; if serial-1 is slower than 2 concurrent, pick the faster.
+> Do this as a tooling PR now, ahead of new code tasks, since everything else is waiting on it. Record it as a ruling under the next R-number.
+
+(R-658 was the next free number: the numbers before it went to that day's other rulings, on their own branches.)
+
+*What it decides:*
+- **Heavy and light (item 1).** Heavy is cargo build, check, test, clippy, doc and run, cargo mutants, nextest, benches,
+  GPU tests, `cargo xtask` runners, and anything else that compiles. Light runs directly: docs, git, gh, grep, `python3`
+  checks, `cargo fmt`, `cargo metadata`, reading logs.
+- **One queue, the orchestrator's (item 2),** `cargo xtask job`: `submit <worktree> --priority <p> --label <task>
+  [--timeout <s>] [--env K=V]... -- <command>` prints a job id; `wait <id>` blocks, then prints the exit status and the
+  log path and exits with the job's status; `status` and `cancel <id>` besides. Its state lives in
+  `/Volumes/X10 Pro/Principia/orch/jobq/`, outside the repository: one file per job, its log, and the runner's lock.
+- **Concurrency and job counts (items 2 and 6).** One runner runs the jobs at a fixed concurrency, which started at 1
+  and is set by the measurement to 2 (below). Each job runs with `CARGO_BUILD_JOBS` and `RUST_TEST_THREADS` at
+  the core count (`hw.ncpu`, 11 on the Mac), which supersedes R-228's four per agent; a job may set lower ones, as
+  R-439's gui mutants run does. Each job names its own `CARGO_TARGET_DIR`; none shares one.
+- **Priorities (item 3),** highest first: `merge` (merge-ready verification of a final head), `fix` (fix-round tests),
+  `build` (new-task builds), `peek` (exploratory runs); first in, first out within a class.
+- **Robust to restarts (item 2).** Jobs time out (3600 s unless the job says otherwise), and the runner kills the job's
+  whole process group; it kills what is left of the group, too, whenever the job's own process ends, so nothing a
+  finished job started outlives it. A runner lock whose pid is dead or whose heartbeat is stale (120 s) expires. A new
+  runner ends the process groups of the jobs a dead one left running and queues them again, or marks one lost after its
+  third start. A job outlives the agent that submitted it, and `wait` can be re-attached. `submit` starts the runner
+  when none is alive; it needs no launchd, and exits when idle.
+- **Duplicated work (item 4).** sccache was measured again: with the target directory in the environment, as every job
+  has it, 0 hits; with it given as `--target-dir`, 66.9% of a cold build's compile requests hit, the dependency crates,
+  saving about 10 s of 100. It is not enabled, pending the owner's decision: jobs start from APFS-cloned warm targets,
+  whose dependencies are built once already (`plan/OPERATIONS.md` § "Paths and warm builds"). Mutants run scoped to the
+  diff (`--in-diff`, or per changed crate), through the queue, on the head about to be pushed and never on work in
+  progress; CI's gate stays the authority (R-388).
+- **Enforcement (item 5).** `CLAUDE.md` and every agent file say "never run heavy commands directly; submit to the
+  queue", with the heavy and light definition and an example. The runner logs each heavy process outside the queue to
+  `orch/jobq/violations.log`, with its pid, command and cwd; it never kills one.
+- **Measurement (item 6),** 30 Oct 2026, three task heads' targeted tests from warm APFS-cloned targets (`main` at
+  a83b9a53 with TASK-M2-48's kernel tests; TASK-M2-29 at 2f628854 with its validation and render tests; TASK-M2-36 at
+  6aff2c7a with its kernel and ledger tests):
+
+| Run (background load1 at start) | Wall-clock | Peak load1 | Memory pressure, worst | Page-outs/min, mean / worst | Swap-outs |
+|---|---|---|---|---|---|
+| (a) before: three at once, `CARGO_BUILD_JOBS=4` (12.8; 10.8) | 112 s; 89 s | 25.7; 22.9 | 2; 1 | 262 / 484; 18 / 25 | 16,536; 0 |
+| (b) the queue, one job at a time (13.1; 13.0) | 135 s; 135 s | 15.6; 16.8 | 2; 1 | 4 / 7; 1 / 2 | 0; 0 |
+| (c) the queue, two at a time (9.9; 12.6) | 101 s; 97 s | 15.4; 19.5 | 1; 2 | 2 / 4; 63 / 93 | 0; 0 |
+
+  Each cell gives round 1, then round 2, which ran the modes in reverse order. Two at a time was the faster of 1 and 2,
+  so the runner runs two.
+
+*Applied per R-369:*
+- **The queue's design.** The client agents call is an installed copy of xtask,
+  `/Volumes/X10 Pro/Principia/orch/jobq/bin/xtask`, so calling the queue compiles nothing; the orchestrator reinstalls
+  it from `main` after a merge that changes it. State changes hold a `flock` on `orch/jobq/state.lock` (std's file
+  lock; macOS has no flock(1)), released by the kernel if its holder dies; the runner lock is a file with the runner's
+  pid and a heartbeat it rewrites every pass. `submit` requires `--env CARGO_TARGET_DIR`, and a queued job whose target
+  directory a running job uses waits. A job keeps the submitter's paths, locale and cargo, rustup and rustc settings,
+  but not what `cargo run` sets for the submitter, its target directory or its job counts. A job left running by dead
+  runners three times is marked lost, so a job that kills its runner cannot loop. The runner exits after 60 s idle.
+- **Runner starts are bounded.** `submit` and `wait` start at most one runner per queue every 5 s, whatever the lock
+  says, and reap it, so no fault of the lock can fill the machine with runners or zombies: a local mutants run of the
+  first draft did, on 30 Oct 2026, past the Mac's per-user process limit. Nothing of the queue is excluded from
+  mutation: R-196's exclusions for xtask stay `xtask/src/main.rs` and `xtask/src/codegen.rs` (applied per R-204,
+  accepted by R-267). xtask's mutants are not run on the Mac; CI's mutants gate runs them, and a survivor that is
+  truly equivalent goes into `.cargo/mutants-equivalent.toml` (R-202). The queue's tests run each call under
+  `ulimit -u` (the user's processes at the start, plus 300) and end, by pid, every process left naming their state
+  directory.
+- **The state lock is held briefly, and waited for within a bound.** No `ps` call and no grace wait runs while
+  `state.lock` is held: a new runner ends a dead one's groups outside it, and the runner reads a started job's start
+  time after its pass. Its holder writes its pid and the time it took it into the file, and a call that can't take it
+  within `lock_wait` seconds (30) fails, naming that pid and how long it has held the lock, rather than hanging; the
+  runner logs it and tries again.
+- **Target directories are compared by a normalised key:** the path made canonical where it exists (the nearest
+  existing parent otherwise), without a trailing `/`, and folded to lower case, since the Mac's volume is
+  case-insensitive. Two spellings of one directory never run at once; the job keeps the path as given.
+- **Timeouts are measured on a monotonic clock,** from an `Instant` the runner takes when it starts the job, so a clock
+  step or a sleep and wake cannot time a job out. A job a dead runner left running is run again, with a fresh timeout,
+  or marked lost, as above.
+- **`job status` shows the runner's own settings,** its concurrency and cores per job, which the runner writes into
+  its lock, not the defaults of the binary asking.
+- **`wait`'s statuses:** the job's exit code (128 plus the signal for one a signal ended); 124 timed out, 125 lost, 126
+  not started, 130 cancelled, as `timeout(1)` and shells use them.
+- **The violation log** names only the topmost heavy process of a chain outside the queue, each once per runner; a
+  process descended from a queue job's group, the runner or sccache's server is inside.
+- **Priorities by role:** a reviewer's check of the PR head is `merge`; the implementer's builds are `build`, `fix` in
+  a fix round; measurements and exploratory runs are `peek`.
+- **Agent counts** stay R-391's and R-262's: they bound the agents dispatched, each now writing, reviewing and waiting;
+  the queue alone bounds the heavy load.
+- **rustix** joins xtask's dependencies (Unix only) for the process-group signals and the pid test; it is already in
+  the build as validation's, for the same (R-217).
+
+R-658 is in the "process" group of `plan/rule_groups.yaml`. Changes no requirement.
 
 ## R-659 — Gemini reviews make one request and name the model that answered; on a quota refusal they fall back down a chain of four models; a spent chain posts "Gemini quota exhausted, review skipped" and the merge proceeds *(an R-369 note; amends R-635's Gemini workflow)*
 

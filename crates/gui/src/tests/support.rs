@@ -168,7 +168,11 @@ pub struct Node {
 
 /// The nodes with bounds of one more frame of `app`.
 pub fn nodes<S: EngineSide>(headless: &mut Headless, app: &mut App<S>) -> Vec<Node> {
-    let output = headless.frame(app, Vec::new());
+    nodes_of(&headless.frame(app, Vec::new()))
+}
+
+/// The nodes with bounds of the frame that drew `output`.
+pub fn nodes_of(output: &eframe::egui::FullOutput) -> Vec<Node> {
     let Some(update) = &output.platform_output.accesskit_update else {
         return Vec::new();
     };

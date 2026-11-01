@@ -157,6 +157,10 @@ here.*
 *Queued by R-594 (25 Oct 2026), ported 27 Oct 2026. For the human: yes, R-594 item 6: "any new chart a target
 needs".*
 
+*30 Oct 2026 (R-649, R-650):* the targets here are measurements, never gates, scored in M9
+(`docs/design/principia_dd_replication.md` § 12). The context task is now TASK-M9-23 (was TASK-M3-63). This question
+still decides what is built for them, never whether a milestone passes; it stays open.
+
 - **File, section:**
   - `docs/design/principia_dd_replication.md` § "5.12 Targets that wait for a chart, a diagnostic or data": TR-1 (the
     inclination-0 row of Trani et al. 2024's map, "as a 1D scan in binary phase"), MK-1 (Manwadkar et al. 2021's
@@ -187,6 +191,10 @@ needs".*
 *Queued by R-594 (25 Oct 2026), ported 27 Oct 2026. For the human: yes, R-594 item 6: "any new chart a target
 needs".*
 
+*30 Oct 2026 (R-649, R-650):* the targets here are measurements, never gates, scored in M9
+(`docs/design/principia_dd_replication.md` § 12). The context task is now TASK-M9-24 (was TASK-M3-64). This question
+still decides what is built for them, never whether a milestone passes; it stays open.
+
 - **File, section:** `docs/design/principia_dd_replication.md` § "5.12 Targets that wait for a chart, a diagnostic or
   data": PA-1, "Escaper-identity maps in side-ratio space around the Lagrange point", chart "new: SideRatio, or
   ShapeSphere at rest by a tested remap".
@@ -209,6 +217,10 @@ needs".*
 
 *Queued by R-594 (25 Oct 2026), ported 27 Oct 2026. For the human: yes, R-594 item 6: "any new chart a target
 needs".*
+
+*30 Oct 2026 (R-649, R-650):* the targets here are measurements, never gates, scored in M9
+(`docs/design/principia_dd_replication.md` § 12). The context task is now TASK-M9-28 (was TASK-M4-24). This question
+still decides what is built for them, never whether a milestone passes; it stays open.
 
 - **File, section:** `docs/design/principia_dd_replication.md` § "5.12 Targets that wait for a chart, a diagnostic or
   data":
@@ -237,6 +249,10 @@ needs".*
 *Queued by R-594 (25 Oct 2026), ported 27 Oct 2026. For the human: yes, each adds a diagnostic no task builds, as a new
 chart does.*
 
+*30 Oct 2026 (R-649, R-650):* the targets here are measurements, never gates, scored in M9
+(`docs/design/principia_dd_replication.md` § 12). The context tasks are now TASK-M9-23 and TASK-M9-24 (were TASK-M3-63 and
+TASK-M3-64). This question still decides what is built for them, never whether a milestone passes; it stays open.
+
 - **File, section:** `docs/design/principia_dd_replication.md` § "5.12 Targets that wait for a chart, a diagnostic or
   data": SL-1 needs "the cut N_scramble ≥ 2"; PA-1's split "an N_scramble ≥ 4 classifier"; TR-1 "f_col (12 nearest
   neighbours, regular if > 2/3)" as a colouring. PLAN.md § 4: "N_scramble and f_col (PA-1, SL-1, TR-1)" are in no
@@ -258,6 +274,10 @@ chart does.*
 
 *Queued by R-594 (25 Oct 2026), ported 27 Oct 2026. For the human: yes, it adds a capability no task builds.*
 
+*30 Oct 2026 (R-649, R-650):* the targets here are measurements, never gates, scored in M9
+(`docs/design/principia_dd_replication.md` § 12). The context task is now TASK-M9-29 (was TASK-M4-25). This question
+still decides what is built for them, never whether a milestone passes; it stays open.
+
 - **File, section:** `docs/design/principia_dd_replication.md` § "5.12 Targets that wait for a chart, a diagnostic or
   data": LLL-1, "Period, angular momentum and stability contours over (m₁, m₂) for one periodic family … must reproduce
   Li, Li & Liao 2020's on the mass simplex", which needs "periodic-orbit continuation (not planned)" (PLAN.md § 3.2).
@@ -277,6 +297,12 @@ chart does.*
 ## RQ-608: The Šuvakov-plane targets that need a chart, now that no chart is built: OC-4 on the plane, AT-D1, AT-D3, HU-1 and HU-2 *(physics; R-636, closing RQ-583; `docs/design/principia_dd_replication.md` § 5.12; REQ-VAL-311 to REQ-VAL-314, REQ-VAL-316; context: TASK-M4-23, TASK-M8-99)*
 
 *Queued 28 Oct 2026 by R-636's port. For the human: yes, it decides what the M4 and M8 gates hold.*
+
+*30 Oct 2026 (R-649, R-650):* the targets here are measurements, never gates, scored in M9
+(`docs/design/principia_dd_replication.md` § 12). The context tasks are now TASK-M9-27 and TASK-M9-35 (were TASK-M4-23 and
+TASK-M8-99). This question still decides what is built for them, never whether a milestone passes; it stays open. Its
+"what the M4 and M8 gates hold" is answered for the gates by R-650: no gate holds these targets; what is built for them
+is still open.
 
 - **File, section:**
   - `decisions.md` § "R-636 — …", the owner's words: "Šuvakov-plane chart: keep its targets as closures for now; no
@@ -333,6 +359,11 @@ ruled. For the owner: yes, it decides whether five files stay in a public reposi
 *Queued 29 Oct 2026 by the Brutus pilot, as corrected by the physics review of #334. For the owner: yes, it is physics where the choice
 changes the result and the corpus does not settle it (R-369). Not yet ready to rule: the neighbour runs in option (a) come first.*
 
+*30 Oct 2026 (R-649, R-650):* GG-1 and BR-1 are measurements, never gates, scored in M9
+(`docs/design/principia_dd_replication.md` § 12). The context task is now TASK-M9-22 (was TASK-M3-62). This question
+decides how they are scored, never whether a milestone passes; it stays open. PR #335's three-point comparison is the
+peek log's first row (`docs/verification/peek_log.md`), UNEXPLAINED, with this question among its like-for-like checks.
+
 - **File, section:**
   - Boekholt, Portegies Zwart & Valtonen 2020 (arXiv:2002.04029,
     `docs/incoming/2026-10-25_replication/papers/boekholt_pz_valtonen_2020_MNRAS_493_3932_arXiv2002.04029.pdf`), Appendix A: "We evolve
@@ -373,6 +404,10 @@ changes the result and the corpus does not settle it (R-369). Not yet ready to r
 *Queued 29 Oct 2026 by the Brutus pilot, as corrected by the physics review of #334. For the owner: yes, a missing value (R-71), a question
 for the authors, and a decision on whether to spend more probe time before any 10⁻⁷⁰ cost is quoted.*
 
+*30 Oct 2026 (R-649, R-650):* GG-1 and BR-1 are measurements, never gates, scored in M9
+(`docs/design/principia_dd_replication.md` § 12). The context tasks are now TASK-M9-22 and TASK-M9-25 (were TASK-M3-62 and
+TASK-M3-65). This question decides how they are scored, never whether a milestone passes; it stays open.
+
 - **File, section:**
   - Boekholt et al. 2020, Appendix A: "we fix L_w = 1024 bits"; ε is "the Bulirsch-Stoer tolerance"; no `p_max` is given. § 2: "The average
     wall-clock time of our simulations was about 7 hours, with the longest run taking 1 month to complete."
@@ -406,6 +441,10 @@ for the authors, and a decision on whether to spend more probe time before any 1
 
 *Queued 29 Oct 2026. For the owner: yes, a licence and process question outside the repo (R-369).*
 
+*30 Oct 2026 (R-649, R-650):* GG-1 and BR-1 are measurements, never gates, scored in M9
+(`docs/design/principia_dd_replication.md` § 12). The context task is now TASK-M9-22 (was TASK-M3-62). This question
+decides how they are scored, never whether a milestone passes; it stays open.
+
 - **File, section:**
   - `docs/incoming/2026-10-28_rq598_data/README.md` § 2 on BR-1: "No data statement and no code or data release." § 5 corrects it:
     `github.com/pgbreen/NVM` @ `a35c378`, `trainex/data/run10–99.dat` and `validex/data/run9910–9999.dat`, each row `x1 y1 x2 y2` at
@@ -436,6 +475,10 @@ for the authors, and a decision on whether to spend more probe time before any 1
 
 *Queued 29 Oct 2026 from the physics review of #334. For the owner: yes, a definition the corpus does not settle, and it changes the
 converged fraction BR-1 is scored on.*
+
+*30 Oct 2026 (R-649, R-650):* GG-1 and BR-1 are measurements, never gates, scored in M9
+(`docs/design/principia_dd_replication.md` § 12). The context task is now TASK-M9-22 (was TASK-M3-62). This question
+decides how they are scored, never whether a milestone passes; it stays open.
 
 - **File, section:** Breen et al. 2020 (arXiv:1910.07291,
   `docs/incoming/2026-10-25_replication/papers/breen_etal_2020_MNRAS_494_2465_arXiv1910.07291.pdf`), Appendix A, eq. (A1):
@@ -489,6 +532,12 @@ run. No option is recommended here.*
 
 *Queued 29 Oct 2026 by R-639's port. For the owner: yes, R-639 asks for it, and it decides what the M4 and M8 gates
 hold and whether a chart task is added.*
+
+*30 Oct 2026 (R-649, R-650):* the targets here are measurements, never gates, scored in M9
+(`docs/design/principia_dd_replication.md` § 12). The context tasks are now TASK-M9-27 and TASK-M9-35 (were TASK-M4-23 and
+TASK-M8-99). This question still decides what is built for them, never whether a milestone passes; it stays open. Its
+"what the M4 and M8 gates hold" is answered for the gates by R-650: no gate holds these targets; what is built for them
+is still open.
 
 - **File, section:**
   - `decisions.md` § "R-639 — …", the owner's words: "(1) Šuvakov plane targets: split each into its closure part
@@ -553,6 +602,11 @@ builds.*
 
 *Queued 29 Oct 2026 by R-642's port, on the physics review of PR #336. For the owner: yes, it is physics where the
 choice changes the result and the corpus does not settle it (R-369).*
+
+*30 Oct 2026 (R-649, R-650):* GG-1 and BR-1 are measurements, never gates, scored in M9
+(`docs/design/principia_dd_replication.md` § 12). The context task is now TASK-M9-22 (was TASK-M3-62). This question
+decides how they are scored, never whether a milestone passes; it stays open. PR #335's three-point comparison is the
+peek log's first row (`docs/verification/peek_log.md`), UNEXPLAINED, with this question among its like-for-like checks.
 
 - **File, section:**
   - `decisions.md` § "R-642 — …", the owner's words, item 1: "GG-1 against the Fig. 1 vector extraction at its stated
@@ -635,3 +689,296 @@ choice changes the result and the corpus does not settle it (R-369).*
   onset crossings, which decoder test 12's inputs gain; REQ-VAL-017's emulation list gains "contracted (fused)";
   REQ-DEC-011's and REQ-VAL-017's verify text and TASK-M2-48's two acceptance lines drop "unfused" and "on lavapipe".
   The tag rule, `ε_M01` (REQ-DEC-039) and R-547's form are unchanged. Nothing waits.
+
+## RQ-623: The agreement presets' tolerance near a binary collision: no factor of the per-operand form covers the fragment-against-compute differences, which grow as (|rᵢ|+|rⱼ|)/rᵢⱼ, up to about 1/eps, as a pair separation falls *(a calibration requirement, R-71, and the form it is a factor of, a definition requirement, R-72; physics; REQ-COL-060, REQ-COL-006; context: TASK-M2-29)*
+
+*Queued 30 Oct 2026 by TASK-M2-29's implementer, from its measurement. For the owner: yes, it is physics where the
+choice changes what the agreement preset shows and what its gate certifies, and the corpus does not settle it
+(R-369).*
+
+- **File, section:**
+  - `plan/requirements.yaml` REQ-COL-060, verify: "the proposal measures, in gpu-metal and gpu-lavapipe, the agreement
+    presets' fragment-against-compute differences (|E(fragment-decode) − E₀| and the like) over the M2 charts, and
+    states the tolerance that covers them".
+  - `docs/design/principia_colour_composition.md` § "6. Debug views as presets", the agreement presets' bullet: "The
+    fragment shaders may compile with fast-math and the compute shaders don't, by default (R-297), so an agreement
+    preset compares within a stated tolerance, a calibration requirement (R-71), not bit-exactly."
+  - `crates/render/src/presets/agreement.rs`, the tolerance's form TASK-M2-25 chose (applied per R-369 there):
+    `|E − E₀| ≤ FACTOR·eps·(max(|K₀|, 1) + max(|V₀|, 1))`, each operand's difference bounded by `FACTOR·eps·max(|x|, 1)`.
+  - `docs/contracts/principia_inverse_encode_contract.md` Part 4: "every round-trip tolerance is asserted in *physical*
+    space, where the composed map is well-conditioned".
+  - `decisions.md` § R-544: its conditioning-derived δ exclusion near the shape sphere's collision landmarks, recorded
+    as a test detail.
+  - `docs/read_first/principia_01_pitfalls.md` § "3. Standing rules earned in this sequence": "A QUANTITY THAT DOES NOT
+    CONVERGE UNDER REFINEMENT IS MEASURING THE SAMPLING, NOT THE SYSTEM." and "Set thresholds from the observed
+    distribution, or from a measured gap."
+- **The measurement** (Metal, Apple M3 Pro, branch `task/TASK-M2-29` at fab11679; the `decode-agreement` gate's report,
+  each chart at its fixed parameters, the fragment compiled as Metal compiles it, the decode stage with compute
+  fast-math off). The worst `|E − E₀|` in eps of the scale `max(|K₀|, 1) + max(|V₀|, 1)`, every chart, by lattice:
+  16² per chart 7.9; 128² 15.5; 256² 20.2; 512² 60.4 (`shape_sphere`). The median and 99th percentile do not move
+  (`shape_sphere` 2.41 and 4.81 eps at 128², 256² and 512²; `latent` about 0.45 and 8.0); only the worst grows. Every
+  sample over 16 eps at 512² lies on `shape_sphere`'s line `v = 0.5`, the collinear equator, at `u ≈ 0.845` and
+  `u ≈ 0.040`, beside a binary collision. Zooming on `u = 0.84473, v = 0.5` with 128² cells at depths 9 to 21, the
+  worst is 60, 185, 2129, 8606, 19520 (smallest pair separation 9.7·10⁻⁵, `V₀ = −119.7`), 2269, 996 eps; on
+  `u = 0.04004`, up to 1735. At the collision itself `V₀` is `−∞`, hatched and excluded (R-436); next to it, the
+  difference grows as (|rᵢ|+|rⱼ|)/rᵢⱼ, up to about 1/eps.
+- **The mechanism, measured:** the conditioning of `V = −Σ mᵢmⱼ/rᵢⱼ` in f32. A pair separation formed from positions
+  of order 1 carries an absolute rounding of order `eps·(|rᵢ| + |rⱼ|)`, so `V` carries `Σ mᵢmⱼ·eps·(|rᵢ| + |rⱼ|)/rᵢⱼ²`,
+  which the per-operand scale `eps·|V₀|` underestimates by `~(|rᵢ| + |rⱼ|)/rᵢⱼ`. Any two f32 compilations that round
+  differently diverge by that much. It is not fast-math alone: with the decode stage compiled with compute fast-math
+  on, beside the fragment, the worst near the same point is still 3086 eps. With the scale widened by that
+  conditioning, `eps·(max(|K₀|, 1) + max(|V₀|, 1) + Σ mᵢmⱼ(|rᵢ| + |rⱼ|)/rᵢⱼ²)` from the decode stage's own `(m, r)`, the
+  worst over every one of those zoom windows is 1.1 to 5.7.
+- **The gap:** REQ-COL-060 asks for "the tolerance that covers" the measured differences over the M2 charts. In the
+  form the preset compiles, no factor does: the worst grows as the samples near a collision (pitfalls § 3), so a
+  factor that covers the gate's lattices (256 covers every lattice above) still draws pixels near a binary collision
+  red, a disagreement that is f32 conditioning, not a translation or addressing fault. The corpus gives the
+  tolerance as a calibration and says nothing of its form near a collision.
+- **The question:** what the agreement presets' tolerance is where the f32 energy is ill-conditioned, beside a binary
+  collision.
+- **Options seen:**
+  (a) the per-operand form as it is, with a factor that covers the gate's lattices (256 proposed), and the red near a
+  collision stated in colour_composition § 6 as expected, as ROUNDTRIP's "bright at clamps/feasibility edges/mirror
+  tie = expected" is (expected, tagged: render_contract § "Cross-check views (the seams)");
+  (b) a conditioning-aware form, the factor times `eps·(max(|K₀|, 1) + max(|V₀|, 1) + Σ mᵢmⱼ(|rᵢ| + |rⱼ|)/rᵢⱼ²)` from the
+  fragment decode's own `(m, r)`, written into colour_composition § 6 as an R-72 definition, physics-reviewed, and the
+  factor calibrated in it (measured above at 1.1 to 5.7 near the collisions, with the decode stage's `(m, r)`; its
+  value on the lattices still to be measured);
+  (c) the per-operand form, and a pixel whose smallest pair separation falls under a threshold drawn in a tagged
+  "ill-conditioned" style and left out of the gate, the threshold a calibration;
+  (d) another, stated by the owner.
+- **Recommended:** (b): it keeps the check meaningful at every finite pixel, keeps its sensitivity to a dispatch
+  scramble, and its bound is the measured mechanism rather than a margin. (a) leaves false red beside every collision
+  on `shape_sphere`'s equator.
+- **Applied meanwhile:** none. The branch holds the measurement (each chart's worst, median and 99th percentile, and
+  the excluded count, in the gate's report; the `survey` input; the gate run in `gpu-metal` and `gpu-lavapipe`), the
+  threshold still the compiled 256 under REQ-COL-060, provisional. No PR is open.
+- **Waits:** TASK-M2-29's proposal and PR (REQ-COL-060).
+- **30 Oct 2026:** Decided by the orchestrator per R-369, option (b); listed for the owner's veto at the M2 gate with
+  (a) and (c); see PR. Text corrections: ROUNDTRIP's expected brightness is "expected, tagged" (render_contract §
+  "Cross-check views (the seams)"); (b)'s 1.1 to 5.7 was measured with the decode stage's `(m, r)`; "grows without
+  bound" reads "grows as (|rᵢ|+|rⱼ|)/rᵢⱼ, up to about 1/eps"; inverse_encode_contract Part 4 and R-544's δ are cited.
+  Applied: colour_composition § 6's conditioning-aware scale (R-72), the factor proposed in it (R-71), the
+  `collision` windows and the per-operand control in the `decode-agreement` gate (TASK-M2-29).
+## RQ-622: Five statistical or qualitative map targets whose verify names a Result at f64: are they scored on tier (a), the f32 GPU explorer, as R-649's confirmed reading says, or on the f64 Result their verify names *(physics; R-649 item 2 and the owner's confirmation of 30 Oct 2026; `docs/design/principia_dd_replication.md` § 12.2; REQ-VAL-308, REQ-VAL-309, REQ-VAL-311, REQ-VAL-312, REQ-VAL-313; and B-2, REQ-VAL-246, added below; context: TASK-M9-33, TASK-M9-34, TASK-M9-35, TASK-M9-16)*
+
+*Queued 30 Oct 2026 by the fix round of R-649's port (PR #342), applying the owner's confirmation of the tier reading.
+For the owner: yes, it is physics where the choice changes which instrument a target is scored on, and the corpus
+does not settle it (R-369). Numbered RQ-622: the number before it is already held by the branch
+`task/TASK-M2-48` (`plan/OPERATIONS.md` § "Merging", **Numbers**).*
+
+- **File, section:**
+  - `decisions.md` § "R-649 — …", the owner's words, item 2: "(a) GPU explorer: fast, f32, interactive; expected to
+    agree statistically or qualitatively only, with error_ratio flagging what it can't resolve; (b) CPU IC inspector:
+    f64/high precision; exact targets (collision points, periods, converged states) bind here."
+  - The same entry, his confirmation of 30 Oct 2026: "Tier reading confirmed: statistical targets are scored on tier
+    (a), exact targets on tier (b)."
+  - `decisions.md` § "R-572 — Result: a view's region run at full precision, f32 or f64 only, on a uniform grid, as a
+    batch job in the app or by `prin batch` …".
+  - `plan/requirements.yaml`, REQ-VAL-308 (AT-D2), verify: "one Result per mass set (R-572), f64, uniform; each orbit's
+    pixel against REQ-VAL-137's threshold"; REQ-VAL-309 (OC-4 off the Šuvakov plane), verify: "Result runs (R-572) at
+    f64; the island criterion read from the payload; agreement at REQ-VAL-310's level"; REQ-VAL-311 (OC-4 on the
+    plane), verify: "as OC-4"; REQ-VAL-312 (AT-D1), verify: "a Result (R-572) at f64; reviewed by the physics
+    reviewer"; REQ-VAL-313 (AT-D3), verify: "as AT-D1, per value of m₃".
+- **The gap:** the five are statistical (OC-4 on and off the plane) or qualitative over a map (AT-D1, AT-D2, AT-D3), so
+  the confirmed reading scores them on tier (a), the f32 interactive GPU explorer. Their verify, written before R-649,
+  scores them on a Result at f64, a batch run that is neither the interactive f32 explorer nor the CPU IC inspector.
+  Changing the verify to f32 changes what is scored; keeping it scores a statistical target off tier (a).
+- **The question:** on what are these five scored.
+- **Options seen:** (a) on tier (a): the verify's run becomes the GPU explorer's f32 output, and the f64 Result is
+  dropped from the scoring; (b) the verify as written: the f64 Result is the scoring run, recorded as a stated
+  exception to the tier rule; (c) both: scored on tier (a), with the f64 Result run beside it and recorded as
+  information (an explained divergence between the two would be a precision-tier finding); (d) another, stated by the
+  owner.
+- **Applied meanwhile:** the five are listed as tier (a) by the rule, "its f64 Result: RQ-622", in § 12.2 and in their
+  notes; their verify is unchanged. Nothing in M0 to M8 depends on it.
+- **Added (30 Oct 2026, fix round of PR #342, Codex thread on § 12.2's B-2 row): B-2, REQ-VAL-246.** The same
+  question for one statistical target whose statement names the CPU:
+  - `plan/requirements.yaml`, REQ-VAL-246 (B-2), statement: "The Lyapunov exponent of Burrau's problem, measured with
+    the CPU FTLE, must be compared loosely with λ₁₀ = 0.101 ± 0.005 (τ_L = 4.3 ± 0.2), recorded as a fit over every ζ,
+    relativistic runs included, and not a Newtonian-only number (B-2)." Its compare is "statistical (loose)", so the
+    confirmed reading puts it on (a), and § 12.2's table row reads "(a)".
+  - `docs/design/principia_dd_replication.md` § "12.2 Tiers": "A single chaotic trajectory set beside a figure (AA-4,
+    V-6, SP-1's structural comparison) is (b)." B-2's published λ₁₀ is "fitted over all ζ, relativistic runs
+    included" (REQ-VAL-246's note): an FTLE fit over many runs from one start, the Burrau pixel, with a statistical
+    compare. Whether the clause reaches B-2 is part of the question, not a given.
+  - The gap: by its compare B-2 is (a), the f32 GPU explorer, by the owner's confirmed reading; its statement names the
+    CPU FTLE. Which instrument measures the exponent changes the number scored.
+  - The question: does § 12.2's single-trajectory clause reach B-2, a fit over many runs from one start; and is B-2
+    scored on (a), on the CPU FTLE its statement names, or on both.
+  - Options seen: (a) on tier (a), the GPU explorer's FTLE, with the statement's "measured with the CPU FTLE" changed
+    to match; (b) on the CPU FTLE, as the statement says, recorded as a stated exception to the tier rule or as the
+    single-trajectory clause's reach; (c) both: scored on tier (a), with the CPU FTLE run beside it and recorded as
+    information (an explained divergence between the two would be a precision-tier finding); (d) another, stated by
+    the owner.
+  - Applied meanwhile: § 12.2's row reads "(a); its CPU FTLE: RQ-622"; REQ-VAL-246's statement is unchanged and it is
+    held on this entry; TASK-M9-16's note and TASK-M9-37's "not scored" list name the hold. TASK-M9-16 still scores
+    CH-1, B-1 and V-6.
+- **Waits:** the scoring of REQ-VAL-308, REQ-VAL-309, REQ-VAL-311, REQ-VAL-312 and REQ-VAL-313 in M9 (TASK-M9-33,
+  TASK-M9-34, TASK-M9-35), and any peek of them; and B-2's (REQ-VAL-246, TASK-M9-16), and any peek of it.
+
+## RQ-630: R-554 L3's and the chart contract's summary sentences on Lean each axis say `N_a` and `N_b` vanish together on a tilted view only at the corner, where L3's own closed form also gives both zero at Lean `(±180, 0)`, `(0, ±180)` and `(±180, ±180)` *(conflict: a ruling's summary against its own formula; R-554 L3, R-474 R2; `docs/contracts/principia_chart_decoder_contract.md` § "Repeats and the canonical point"; the physics review of PR #349 (5710611197), P2; REQ-SCHED-101; context: TASK-M2-36, TASK-M8-56)*
+
+*Queued 30 Oct 2026 by TASK-M2-36's fix round 2, on the physics review of PR #349. A wording conflict, not a physics
+question: the code follows the formula, and the physics reviewer agrees it is the physically consistent reading.*
+
+- **File, section:**
+  - `decisions.md` § "R-554 — …", L3: "under Lean each axis `N ∝ (−sin τ₁ cos τ₂, −cos τ₁ sin τ₂, cos τ₁ cos τ₂)`,
+    so on a tilted view they vanish together only at the corner `|τ₁| = |τ₂| = 90°`, where there is no normal and
+    RQ-471 applies no fold, so no pole map either".
+  - The same L3, before it: "the pole maps' condition `N_a = 0` and `N_b = 0` is decided exactly on the stored angles
+    from each map's closed form".
+  - `docs/contracts/principia_chart_decoder_contract.md` § "Repeats and the canonical point": "decided exactly on the
+    stored angles (Tip as sheet `m == 180`; Lean each axis only untilted, its one-target corner ray-degenerate with no
+    fold; two targets iff `τ₁, τ₂ ∈ {0, ±180}`)".
+  - `decisions.md` § "R-474 — …", R2: "A single tilt is identical under both maps."
+- **The conflict:** L3's formula gives `N_a = −sin τ₁ cos τ₂ = 0` and `N_b = −cos τ₁ sin τ₂ = 0` whenever
+  `sin τ₁ = sin τ₂ = 0`, i.e. at Lean `(±180, 0)`, `(0, ±180)` and `(±180, ±180)`, all tilted views, with
+  `N = (0, 0, cos τ₁ cos τ₂) ≠ 0`. There the plane is mirrored and `d ≡ 0`, so the pole maps keep `d`. Lean with one
+  angle at ±180 is the same rotation as Tip as sheet at `m = 180` (R-474 R2), where the contract applies the pole
+  maps. The summary sentences ("only at the corner", "only untilted") say otherwise.
+- **The question:** whether the summary sentences are reworded to match the formula ("Lean each axis iff
+  `sin τ₁ = sin τ₂ = 0`, its one-target corner ray-degenerate with no fold"), or the formula's other zeros are excluded.
+- **Options seen:** (a) reword L3's and the contract's summaries to the formula's zeros (the code's reading);
+  (b) keep the summaries and exclude Lean's ±180 zeros from the pole maps, so that Lean `(180, 0)` and Tip as sheet
+  `(180, 0)`, the same rotation, count differently; (c) another, stated by the owner.
+- **Applied meanwhile:** the formula, as L3's "decided exactly on the stored angles from each map's closed form" says:
+  `TiltSpec::normal_zero` (`crates/kernel/src/chart/tilt.rs`) gives `[true, true]` at Lean `(±180, 0)` and
+  `(0, ±180)` (TASK-M2-36, PR #349).
+- **Waits:** nothing; the summaries' rewording only.
+
+## RQ-631: On a tilted shape sphere, the spherical map's period 2 in `t` makes `(s + k, t + 2j)` the same system as `(s, t)` wherever `N_a·k + 2·N_b·j = 0` for whole `(k, j) ≠ 0`, which R-554 L3's rule counts twice *(physics; silence; R-554 L3, RQ-472 (a), R-408; `docs/contracts/principia_chart_decoder_contract.md` § "Repeats and the canonical point"; the physics review of PR #349 (5710611197), P3; REQ-CHART-062, REQ-SCHED-101; context: TASK-M2-36, TASK-M8-56)*
+
+*Queued 30 Oct 2026 by TASK-M2-36's fix round 2, on the physics review of PR #349. For the owner: yes, it is physics
+where the choice changes the result (which pixels count) and the corpus does not settle it (R-369).*
+
+*30 Oct 2026: Ruled by the owner, R-655 (option (a): "#349 (a): extend the repeat rule to t's period 2, with
+tests.").*
+
+- **File, section:**
+  - `decisions.md` § "R-554 — …", L3: "the pole maps' condition `N_a = 0` and `N_b = 0` is decided exactly on the
+    stored angles from each map's closed form".
+  - `docs/contracts/principia_chart_decoder_contract.md` § "Repeats and the canonical point": "On a tilted view a
+    repeat is the same system only where the type group's map leaves the tilt's hidden offset `d` unchanged"; "the pole
+    maps apply on a tilted view iff `N_a = 0` and `N_b = 0` for chart_reference §3.3's `N`, … and otherwise the view
+    is affine along that axis and draws no image (R-554, ruling RQ-472 (a))".
+  - `decisions.md` § "R-408 — Area statistics count each system once, …".
+- **The silence:** the spherical map repeats every 1 in `s` (θ's period) and every 2 in `t` (two pole maps and θ's
+  period composed): `n(s, t + 2) = n(s, t)`. On a tilted view `d` depends on `(a, b)` through `N_a·a + N_b·b`, so
+  `(s + k, t + 2j)` keeps `d`, and is the same system as `(s, t)`, whenever `N_a·k + 2·N_b·j = 0` for whole numbers
+  `(k, j) ≠ 0`. Cases: `N_b = 0` with `N_a ≠ 0` (e.g. `τ₁` alone), where `t` and `t + 2` repeat; Lean `45°/45°`
+  (`N_a = N_b`), where `(s − 2, t + 2)` repeats `(s, t)`. The ruled rule ("pole maps iff `N_a = N_b = 0`, otherwise
+  affine") counts each such pair twice, against R-408. They lie two chart units out, so a view reaches them only zoomed
+  out.
+- **The question:** whether these lattice repeats are folded, or the ruled rule stands with the exception stated.
+- **Options seen:** (a) fold the lattice of repeats: a pixel counts only at its canonical point under every
+  `(k, j)` with `N_a·k + 2·N_b·j = 0`, decided exactly on the stored angles; (b) keep the ruled rule and state the
+  exception in L3 and the contract (such pixels counted twice, two chart units out); (c) another, stated by the owner.
+- **Applied meanwhile:** the ruled text (R-554 L3): `Tilted::pixel` (`crates/kernel/src/chart/tilt.rs`) uncounts a
+  pixel past θ's period iff `N_a = 0` and one over a pole iff `N_a = N_b = 0`, and counts the lattice repeats
+  (TASK-M2-36, PR #349).
+- **Waits:** nothing built waits; a fold, if ruled, is a follow-up to TASK-M2-36's `Tilted::pixel` and TASK-M8-56.
+
+## RQ-632: Which cuts carry `a` and `b`: two arcs ending at a Lagrange pole cannot reproduce the published classes *(physics; R-125; `docs/contracts/principia_symbolic_dynamics_contract.md` § 1; REQ-PAY-070; context: TASK-M3-16)*
+
+*Queued 30 Oct 2026 by TASK-M3-16, transcribing the convention under R-125. For the owner: yes, it is physics where
+the choice changes the result (the word every sample stores) and the corpus does not settle it (R-369).*
+
+- **File, section:**
+  - `docs/contracts/principia_symbolic_dynamics_contract.md` § "1. Generator ↔ branch-cut convention": "Fix,
+    normatively: which two branch cuts correspond to generators `a` and `b` (arc from which collision point to the
+    Lagrange reference pole); the crossing-direction sign convention (which crossing direction is the generator vs its
+    inverse) — must match the half-open sign convention in payload §3 / the integrator contract."
+  - `decisions.md` § "R-125 — …": "Its convention (the a/b branch-cut assignment and the crossing sign) is transcribed
+    from the literature (Montgomery; Šuvakov–Dmitrašinović) and verified by REQ-VAL-043 against the published braid
+    classes."
+  - The literature, `docs/incoming/2026-10-25_replication/papers/`: Šuvakov & Dmitrašinović, PRL 110, 114301 (2013),
+    p. 1: "A stereographic projection of this sphere onto a plane, using one of the punctures as the "north pole"
+    effectively removes that puncture to infinity … That leads to the aforementioned free group on two letters (a, b),
+    where (for definiteness) a denotes a clockwise full turn around the right-hand-side puncture, and b denotes the
+    counterclockwise full turn around the other puncture". Dmitrašinović, Hudomal, Shibayama & Sugita, J. Phys. A 51,
+    315101 (2018), Appendix B ("Montgomery's topological identification method"), Fig. 7: "Three two-body collision
+    points (solid red) lie on a meridian (dashed circle), with one of them being at the north pole"; and: "a simple
+    loop around the third ("infinite") puncture on the shape sphere corresponds to aB". Its Appendix C: "make the
+    substitution a = 12, A = 21, b = 32, B = 23", the digits being "crossings of the equator on the shape sphere, in
+    one of three corresponding segments on the said equator, where the index of the body passing between the other two
+    is used as a symbol". (Montgomery's own paper, Nonlinearity 11, 363 (1998), is not in the corpus; Appendix B is
+    the authors' account of his method.)
+- **The gap:** the literature's "north pole" is a collision point, not a Lagrange pole. Two cuts from two collision
+  points to a Lagrange pole `L±` (an equilateral shape, not a puncture) leave the cut sphere a punctured disc, not a
+  disc: a loop around the third collision point crosses neither cut and reads as the empty word, though the
+  literature's class is `aB` (the BHH family's); and a small loop around the pole crosses both and reads as a
+  nonempty word, though it is contractible. So no assignment of `a` and `b` to the arcs §1 names reproduces the
+  published classes (REQ-VAL-043). The literature fixes the generators as loops, with Appendix C's reading in
+  syzygies; it names no cuts. Two smaller points ride on the choice: the literature's bodies 1, 2, 3 against ours 0, 1, 2
+  (R-630 labels the Šuvakov plane's middle body our body 1), and which hemisphere is the literature's upper half-plane,
+  the start of `a = 12`, which its figures alone fix and on which the PRL and the gallery differ for 6 of 15 orbits by
+  the `(a, b) ↔ (A, B)` exchange (`docs/incoming/2026-10-26_belgrade_gallery/README.md`, cross-check item 3).
+- **The question:** which two cuts carry `a` and `b`, the body labelling they are read in, and which side of each is
+  negative, so that the positive sense (`d < 0`, then `d ≥ 0`; integrator contract Part 5) is the generator.
+- **Options seen:**
+  - (a) **The literature's own cuts, on the equator** (Appendix C). With the literature's body 1 and body 2 meeting at
+    the puncture `a` circles and bodies 2 and 3 at `b`'s, the third collision, of bodies 1 and 3, at infinity: cut `a`
+    is the equator segment where body 1 is between the others, from the 1–2 collision to the 1–3; cut `b` the segment
+    where body 3 is between, from the 2–3 collision to the 1–3. A crossing of segment 1 out of the hemisphere where `a`
+    starts is `a`, into it `A`; segment 3 likewise for `b`, `B`; segment 2 is not a cut. The word read so is Appendix
+    C's syzygy reading letter for letter. `d` is the triangle's orientation (`n_w`, `L⁺` positive), and which segment
+    is crossed is a second, comparison-only test of which body is between at the crossing. The two cuts lie on one
+    great circle, so one substep crosses at most one of them, and the `τ`-sort never meets two.
+  - (b) **Arcs through the Lagrange poles, to the third collision.** Cut `a` from the 1–2 collision through `L⁺` to the
+    1–3 collision, cut `b` from the 2–3 collision through `L⁻` to the 1–3: each isotopic to (a)'s segment with no
+    puncture between, so a closed orbit reads the same class as under (a). It keeps §1's Lagrange poles; each cut is
+    two quarter-meridians, each with a hemisphere test; the cuts meet only at the 1–3 collision, near which one substep
+    can cross both, so the `τ`-sort is live there.
+  - (c) **Three cuts, one from each collision to `L⁺`** (§1's arcs, made a disc by the third), a crossing of the third
+    appending the punctured-sphere relation's two letters: needs §2's relation, which R-125 put in v2.
+  - (d) Another, stated by the owner.
+  For each: the body map (literal, `1, 2, 3 → 0, 1, 2`, or R-630's, the middle body ours 1), and the side `a`
+  starts on (proposed: `L⁺`'s hemisphere, bodies 0 → 1 → 2 anticlockwise, dd_integrator §3.7), which REQ-VAL-043's
+  comparison up to the `(a, b) ↔ (A, B)` exchange cannot tell apart.
+- **Applied meanwhile:** none. TASK-M3-16's detector (`crates/kernel/src/word/crossing.rs`) takes each cut's signed
+  distances as its input and applies the integrator contract's τ tie rule (Part 5), which does not depend on the cuts'
+  shape; no cut geometry is built and nothing reads a word from a trajectory.
+- **Waits:** the signed distances from the state and §1's convention (REQ-PAY-070, TASK-M3-16), and REQ-VAL-043
+  (TASK-M3-30).
+- **30 Oct 2026:** Decided by the orchestrator per R-369 (consequence of R-125), option (a); confirmed at the M3 gate;
+  see PR (TASK-M3-16). The cuts are the collision equator's segments with body 0 between (`a`, `P₀₁`–`P₀₂`) and body 2
+  between (`b`, `P₁₂`–`P₀₂`), Appendix C's bodies 1, 2, 3 ours 0, 1, 2 (R-630); `d = −(r₁ − r₀) × (r₂ − r₀)`, so `−n_w`,
+  and a generator crosses from `L⁺`'s hemisphere into `L⁻`'s ("`d` is `n_w`, `L⁺` positive" in option (a) above is
+  corrected); the segment classifier is an R-72 definition (REQ-PAY-113). Applied in symbolic_dynamics_contract §1 and
+  integrator contract Part 5. Nothing waits on it; REQ-VAL-043 stays TASK-M3-30's.
+- **31 Oct 2026:** Physics review 5720379930 of PR #358 holds option (a) under R-369, the owner confirming it at the M3
+  gate (R-125, REQ-PAY-070); it re-derives the sign from Appendix C and names two sub-choices that are not literature
+  and change stored words, the hemisphere and the outer-body order, for the gate record. It reopens this entry if
+  REQ-VAL-043 shows the kernel's substeps too coarse for (a). **Provenance:** §1's first read of the ten orbits was a
+  throwaway script of 30 Oct, never in the repo. What stands in for it is `fixtures/crossings/prl_orbits.py`, adapted
+  from it; `crossing_body_relabelling` and `qa_m316_prl_fixture_against_appendix_c`, which check the outer-body claim.
+
+## RQ-634: On a tilted shape sphere a pole map's image also keeps `d` on lines of measure zero, `N_a(½ + k) + N_b(2j − 2t) = 0`, which no ruling names: R-554 L3 counts such a pixel and its image as two systems, and R-408 counts each system once *(physics; silence; R-554 L3, R-655, R-408; `docs/contracts/principia_chart_decoder_contract.md` § "Repeats and the canonical point"; the physics review of PR #349 (5719740344), P2; context: TASK-M2-36, TASK-M8-56)*
+
+*Queued 30 Oct 2026 by TASK-M2-36's fix round, on the physics review of PR #349. For the owner: yes, it is physics
+where the choice changes the result (which pixels count) and the corpus does not settle it (R-369).*
+
+- **File, section:**
+  - `decisions.md` § "R-554 — …", L3: "the pole maps' condition `N_a = 0` and `N_b = 0` is decided exactly on the
+    stored angles from each map's closed form".
+  - `docs/contracts/principia_chart_decoder_contract.md` § "Repeats and the canonical point": "the pole maps apply on a
+    tilted view iff `N_a = 0` and `N_b = 0` for chart_reference §3.3's `N`, decided exactly on the stored angles", and
+    "On a tilted view a repeat is the same system only where the type group's map leaves the tilt's hidden offset `d`
+    unchanged".
+  - `decisions.md` § "R-408 — Area statistics count each system once, …".
+  - `decisions.md` § "R-655 — …": "a pixel `(s + k, t + 2j)` with `N_a·k + 2·N_b·j = 0` for integers `(k, j) ≠ 0` is the
+    same system as `(s, t)`", which covers the type group's translations and not its pole maps.
+- **The silence:** a pole map's image `(s + ½ + k, −t + 2j)` has the same `n̂` as `(s, t)`. On a tilted view it also
+  keeps `d` on the line `N_a(½ + k) + N_b(2j − 2t) = 0`. Under Lean `45°/45°`, `(a, ¼)` and `(a + ½, −¼)` have one shape
+  and one `d`; with `N_a = 0`, `N_b ≠ 0`, the pole rows `t = j` are one system at each `d`. So the contract's "same
+  system only where the map leaves `d` unchanged" holds on these lines, while its "iff `N_a = 0` and `N_b = 0`" and
+  R-554 L3 make the view affine there and count both. No ruling names these lines.
+- **The question:** whether these lines are identified, or R-554 L3 stands with the exception stated.
+- **Options seen:** (a) keep L3 and state these lines as a named exception of measure zero, each pixel counted, as
+  § 3.3 states the circle's identification; (b) fold them as R-655 folds its lattice, one count per system, decided
+  exactly on the stored angles (the line's `t` is a computed coordinate, so what "exactly" means on it needs stating);
+  (c) another, stated by the owner.
+- **Applied meanwhile:** the ruled text, R-554 L3: `Tilted::pixel` (`crates/kernel/src/chart/tilt.rs`) applies no pole
+  map unless `N_a = N_b = 0`, so such pixels count as distinct (TASK-M2-36, PR #349). No code changes for this entry.
+- **Waits:** nothing built waits; a fold, if ruled, is a follow-up to TASK-M2-36's `Tilted::pixel` and TASK-M8-56.

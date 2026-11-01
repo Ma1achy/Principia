@@ -21,6 +21,7 @@ pub mod contract {
     pub mod canvas;
     pub mod conformance;
     pub mod fast_math;
+    pub mod history;
     pub mod interface;
     pub mod legend;
     pub mod log;
@@ -39,10 +40,15 @@ pub mod contract {
     /// fate through it.
     pub use ledger::display;
 
-    /// A stain node's colour occupant as the occupant algebra's typed expression tree (colour_composition §1;
-    /// TASK-M7-03).
+    /// The stain (gui_state_contract §5; render_gui_spec Part II §3 to §7; R-64): the graph, its nodes' typed ports,
+    /// its typed edits and the colour nodes' custom-stop ramp (TASK-M7-11), and a stain node's colour occupant as the
+    /// occupant algebra's typed expression tree (colour_composition §1; TASK-M7-03).
     pub mod stain {
+        pub mod edit;
+        pub mod graph;
         pub mod occupant;
+        pub mod ports;
+        pub mod ramp;
     }
 
     #[cfg(test)]
@@ -52,13 +58,17 @@ pub mod contract {
         mod latent;
         mod occupant;
         mod profile_v1;
+        mod stain;
         mod view_state;
     }
 }
 
 /// The stain graph, its edits and its canonical form, which lowers to the render crate's assembler (gui_state_contract
-/// §5; lowering contract Part 5; TASK-M1-04).
-pub mod stain;
+/// §5; lowering contract Part 5; TASK-M1-04): [`contract::stain::graph`], where TASK-M7-11 moved it into the contract
+/// module, reached here too by the crates and presets that name it at this path.
+pub mod stain {
+    pub use crate::contract::stain::graph::*;
+}
 
 /// The synthetic payload harness: CPU-filled `SimState`, word, `ICDescriptor` and `RenderQuad` buffers over a flat grid
 /// of quads, for the fragment to render before any physics exists (debug tooling plan step 0b; TASK-M1-06), and the

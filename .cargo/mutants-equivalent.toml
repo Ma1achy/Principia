@@ -310,3 +310,35 @@ justification = "at t_target == t_now both arms give a span of 0 (t_target - t_n
 [[equivalent]]
 mutant = "crates/kernel/src/driver/cadence.rs:45:9: replace <impl Cadence<R> for WrapperCadence>::done -> bool with false"
 justification = "done is only ever set from detect, which returns the constant false until TASK-M3-09 fills it (collision), so WrapperCadence::done is always false; TASK-M3-09 removes this entry with the hook"
+
+[[equivalent]]
+mutant = "crates/kernel/src/real.rs:165:55: replace | with ^ in <impl IeeeBits for f32>::significand"
+justification = "the fraction is masked to bits 0..23 and 0x3F80_0000 has only bits 23..30 set, so the two are disjoint and their ^ is their |"
+
+[[equivalent]]
+mutant = "crates/kernel/src/real.rs:210:65: replace | with ^ in <impl IeeeBits for f64>::significand"
+justification = "the fraction is masked to bits 0..52 and 0x3FF0_0000_0000_0000 has only bits 52..62 set, so the two are disjoint and their ^ is their |"
+
+[[equivalent]]
+mutant = "crates/kernel/src/word/crossing.rs:82:28: replace < with <= in negative"
+justification = "the comparison is reached only when !reads_as_zero(d), so d is not ±0, and d <= 0 and d < 0 agree on every other value, NaN included"
+
+[[equivalent]]
+mutant = "crates/gui/src/explore/compass.rs:962:51: replace * with / in Drag::moved"
+justification = "sign is Reading::Vertical's, which reading_of only ever sets to 1.0 or -1.0, and y / ±1 equals y * ±1 exactly"
+
+[[equivalent]]
+mutant = "crates/gui/src/explore/compass.rs:966:53: replace * with / in Drag::moved"
+justification = "Z0_HALF_RANGE is the constant 1.0, and dividing by 1.0 equals multiplying by it exactly; a change to the constant makes the rate tests in mock_compass_cube and mock_compass_slice_follows_pointer tell them apart"
+
+[[equivalent]]
+mutant = "xtask/src/jobq.rs:1605:26: replace < with <= in end_stale_group"
+justification = "the two differ only if the clock reads exactly the deadline, to the nanosecond, at that check: at most one more 100 ms sleep and look at the group, inside the grace's own 100 ms granularity, and the same outcome"
+
+[[equivalent]]
+mutant = "xtask/src/jobq.rs:1511:65: replace | with ^ in leader_exited"
+justification = "WNOHANG and WNOWAIT are distinct single-bit waitid options on both the Linux and the Mac targets, so their ^ is their |, and the options passed to waitid are the same bits"
+
+[[equivalent]]
+mutant = "xtask/src/jobq.rs:1511:41: replace | with ^ in leader_exited"
+justification = "WEXITED (0x4) and WNOHANG (0x1) share no bit on both the Linux and the Mac targets, so their ^ is their |, and the options passed to waitid are the same bits"

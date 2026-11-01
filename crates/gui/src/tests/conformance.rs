@@ -4,7 +4,7 @@
 
 use engine::contract::conformance::{self, CASES};
 use engine::contract::interface::EngineInterface;
-use engine::contract::set_field::SetField;
+use engine::contract::set_field::{HistoryKey, SetField};
 use engine::contract::snapshot::Snapshot;
 
 use super::support::rejects;
@@ -27,6 +27,12 @@ impl EngineInterface for NoRedo {
     fn set_field(&mut self, edit: SetField) {
         self.0.set_field(edit);
     }
+    fn set_field_under(&mut self, edit: SetField, key: HistoryKey) {
+        self.0.set_field_under(edit, key);
+    }
+    fn end_key(&mut self, key: HistoryKey) {
+        self.0.end_key(key);
+    }
     fn snapshot(&mut self) -> Snapshot {
         self.0.snapshot()
     }
@@ -40,9 +46,9 @@ impl EngineInterface for NoRedo {
 fn conformance_mock_passes_every_case() {
     assert_eq!(
         CASES.len(),
-        9,
+        11,
         "the four state-semantics cases (RQ-254), the navigation paths' (R-390), the overlay and hover edits', the \
-         horizon's, the stain graph's and the slice frame's (R-457 E3)"
+         horizon's, the stain graph's, the slice frame's (R-457 E3) and the history key's two (R-458 F1)"
     );
     check_conforms(MockEngine::new);
     check_conforms(MockEngine::frozen);
@@ -58,8 +64,51 @@ fn conformance_non_conforming_mock_fails_naming_the_case() {
         err,
         "conformance case `undo_and_redo_restore_and_reapply` failed: the playhead after redo: got 0.0, expected 1.0; \
          conformance case `no_history_edit_leaves_history_unchanged` failed: the playhead after redo past a \
-         no-history edit: got 2.0, expected 1.0"
+         no-history edit: got 2.0, expected 1.0; \
+         conformance case `edits_under_one_key_are_one_entry` failed: the playhead after one redo of the drag, its last \
+         value: got 0.0, expected 3.0"
     );
+}
+
+/// The mock with its history keys dropped: each keyed edit applied as one under none, and a key's end ignored, as the
+/// interface's defaults do.
+struct NoKeys(MockEngine);
+
+impl EngineInterface for NoKeys {
+    fn set_field(&mut self, edit: SetField) {
+        self.0.set_field(edit);
+    }
+    fn snapshot(&mut self) -> Snapshot {
+        self.0.snapshot()
+    }
+    fn undo(&mut self) {
+        self.0.undo();
+    }
+    fn redo(&mut self) {
+        self.0.redo();
+    }
+}
+
+/// The mock keeps the history keys (gui_state_contract §2; R-458 F1): a mock without them fails the two key cases and
+/// no other.
+#[test]
+fn conformance_a_mock_without_keys_fails_the_key_cases() {
+    check_conforms(MockEngine::new);
+    let err = conformance::run(|| NoKeys(MockEngine::new())).expect_err("NoKeys passed");
+    assert!(
+        err.starts_with(
+            "conformance case `edits_under_one_key_are_one_entry` failed: the history after a drag of three edits"
+        ),
+        "{err}"
+    );
+    assert!(
+        err.contains("conformance case `edits_under_one_key_log_one_line_when_it_ends` failed"),
+        "{err}"
+    );
+    assert_eq!(err.matches("conformance case").count(), 2, "{err}");
+    rejects("the mock itself", || {
+        let _ = conformance::run(MockEngine::new).expect_err("the mock passed");
+    });
 }
 
 /// The mock, dropping every horizon edit.
@@ -71,6 +120,15 @@ impl EngineInterface for NoHorizon {
         if !matches!(edit.edit, Edit::Sim(SimField::Horizon(_))) {
             self.0.set_field(edit);
         }
+    }
+    fn set_field_under(&mut self, edit: SetField, key: HistoryKey) {
+        use engine::contract::set_field::{Edit, SimField};
+        if !matches!(edit.edit, Edit::Sim(SimField::Horizon(_))) {
+            self.0.set_field_under(edit, key);
+        }
+    }
+    fn end_key(&mut self, key: HistoryKey) {
+        self.0.end_key(key);
     }
     fn snapshot(&mut self) -> Snapshot {
         self.0.snapshot()
