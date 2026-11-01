@@ -543,6 +543,31 @@ fn console_open_close_the_figures_clip_follows_the_console_in_the_same_frame() {
 }
 
 #[test]
+fn console_open_close_a_discarded_pass_is_no_clock_tick() {
+    let (mut app, mut h) = logged(1);
+    app.view.transport.playing = true;
+    let t = |h: &mut Headless, app: &mut App<MockSide>| {
+        let _ = h.frame(app, Vec::new());
+        app.snapshot().render.playhead.t
+    };
+    let t0 = t(&mut h, &mut app);
+    let t1 = t(&mut h, &mut app);
+    let tick = t1 - t0;
+    assert!(tick > 0.0, "it plays");
+    // The console's first opening: a frame of two passes (only key frames keep the pointer's frames out of the count).
+    app.view.focus.path.clear();
+    press(&mut h, &mut app, Key::Tab, Modifiers::SHIFT);
+    let before = t(&mut h, &mut app);
+    let [down, _] = crate::capture::key(Key::Enter, Modifiers::NONE);
+    let output = h.frame(&mut app, down);
+    assert_eq!(output.platform_output.num_completed_passes, 2);
+    let after = t(&mut h, &mut app);
+    let check = |moved: f64| assert!((moved - 2.0 * tick).abs() < 1e-9, "{moved}, a tick {tick}");
+    check(after - before);
+    rejects("three ticks in two frames", || check(3.0 * tick));
+}
+
+#[test]
 fn console_open_close_outside_the_bench_the_drawing_reads_no_clock() {
     let (mut app, mut h) = logged(3);
     let released = to_release(&mut h, &mut app);

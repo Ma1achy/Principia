@@ -475,9 +475,13 @@ impl<S: EngineSide> App<S> {
         let span = orbit.map_or(0.0, |o| o.path_t);
         let moving = self.trajectory.moving(orbit.is_some())
             || (self.is_open(Window::Inspector) && self.windows.inspector.moving());
+        // One tick a frame: a discarded pass's rerun of the frame is not another (the mock's clock counts ticks).
+        let first_pass = ctx.current_pass_index() == 0;
         let ticked = self.side.time_source().map(|source| {
             (
-                self.clock.frame(source, playback),
+                first_pass
+                    .then(|| self.clock.frame(source, playback))
+                    .flatten(),
                 source.rate_hz(),
                 source.held_seconds(),
             )
