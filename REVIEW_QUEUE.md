@@ -788,6 +788,7 @@ choice changes what the agreement preset shows and what its gate certifies, and 
   bound" reads "grows as (|rᵢ|+|rⱼ|)/rᵢⱼ, up to about 1/eps"; inverse_encode_contract Part 4 and R-544's δ are cited.
   Applied: colour_composition § 6's conditioning-aware scale (R-72), the factor proposed in it (R-71), the
   `collision` windows and the per-operand control in the `decode-agreement` gate (TASK-M2-29).
+
 ## RQ-622: Five statistical or qualitative map targets whose verify names a Result at f64: are they scored on tier (a), the f32 GPU explorer, as R-649's confirmed reading says, or on the f64 Result their verify names *(physics; R-649 item 2 and the owner's confirmation of 30 Oct 2026; `docs/design/principia_dd_replication.md` § 12.2; REQ-VAL-308, REQ-VAL-309, REQ-VAL-311, REQ-VAL-312, REQ-VAL-313; and B-2, REQ-VAL-246, added below; context: TASK-M9-33, TASK-M9-34, TASK-M9-35, TASK-M9-16)*
 
 *Queued 30 Oct 2026 by the fix round of R-649's port (PR #342), applying the owner's confirmation of the tier reading.
@@ -844,6 +845,7 @@ does not settle it (R-369). Numbered RQ-622: the number before it is already hel
     CH-1, B-1 and V-6.
 - **Waits:** the scoring of REQ-VAL-308, REQ-VAL-309, REQ-VAL-311, REQ-VAL-312 and REQ-VAL-313 in M9 (TASK-M9-33,
   TASK-M9-34, TASK-M9-35), and any peek of them; and B-2's (REQ-VAL-246, TASK-M9-16), and any peek of it.
+- *31 Oct 2026, R-661:* the quoted "expected to agree statistically" is a hypothesis Principia will measure, and no paper establishes it. RQ-649 asks what a score on tier (a) says meanwhile; this entry's question stands.
 
 ## RQ-630: R-554 L3's and the chart contract's summary sentences on Lean each axis say `N_a` and `N_b` vanish together on a tilted view only at the corner, where L3's own closed form also gives both zero at Lean `(±180, 0)`, `(0, ±180)` and `(±180, ±180)` *(conflict: a ruling's summary against its own formula; R-554 L3, R-474 R2; `docs/contracts/principia_chart_decoder_contract.md` § "Repeats and the canonical point"; the physics review of PR #349 (5710611197), P2; REQ-SCHED-101; context: TASK-M2-36, TASK-M8-56)*
 
@@ -1339,3 +1341,445 @@ physics where the choice changes results (R-369).*
   floor.
 - **Applied meanwhile:** 0.4 per R-29, settled in the register, the doc comment saying provisional (TASK-M3-06).
 - **Waits:** the answer is needed by the M3 gate. No task waits.
+
+## RQ-624: The Inspector's equator check: `|w|` read on `D(E(x))` is the `β` clamp's image, about π·10⁻⁶, not the 6.8×10⁻¹⁴ R-551 cites, and no check can catch "a state moved off the line by one ulp" *(conflict: the requirement's wording against its ruling's evidence; R-551, R-71, R-72; REQ-VAL-022, REQ-VAL-121; context: TASK-M2-50)*
+
+*Found by TASK-M2-50 before building the shape checks. Nothing is chosen.*
+
+- **File, section:**
+  - `decisions.md` § "R-551 — …", RQ-475, the human's words: "Equilateral → `|w − 1|` and collinear `|w|` lie within
+    an R-71 calibrated bound, with the measured 2.2×10⁻¹⁶ and 6.8×10⁻¹⁴ as evidence." Those two numbers were measured
+    on `C`'s output: `docs/archive/review_queue/M0.md` § "RQ-475", "Measured on the f64 encode, `w` of `C`'s output
+    through `kernel::shape::shape`".
+  - `plan/requirements.yaml` REQ-VAL-022, verify: "max |w − 1| and max |w|, read on the canonical state D(E(x))
+    (where C's mirror puts L⁻ at w = +1), within REQ-VAL-121's bounds (measured 2.2×10⁻¹⁶ and 6.8×10⁻¹⁴)".
+  - `plan/tasks/M2/TASK-M2-50.md` § "Deliverables" and § "Acceptance tests": "max `|w − 1|` and max `|w|`, read on the
+    canonical state `D(E(x))`"; and "controls: a state moved off the line by one ulp is caught".
+  - The wording "read on the canonical state D(E(x))" came from the physics review of PR #274, P3, applied per R-369:
+    "Add "read on the canonical state" (or `D(E(x))`) to both, so the test can't be written against the input." It
+    offered the two as one state; at the equator they differ.
+- **Measured** (f64 encode and decode, the defaults links; RQ-475's families: 2000 of each per seed, through random
+  gauge elements):
+  - Pole, equal-mass equilateral, `L⁺` and `L⁻`: max `|w − 1|` = 2.2×10⁻¹⁶ on `C(x)` and on `D(E(x))` alike (seeds 1,
+    2, 3). No `w` is negative on either, so `C`'s mirror puts `L⁻` at `w = +1` on both.
+  - Equator, collinear with masses from `z_μ` on `[−4, 4)²`: max `|w|` on `C(x)` = 6.8×10⁻¹⁴, 2.4×10⁻¹⁴ and
+    1.2×10⁻¹³ (seeds 1, 2, 3); on `D(E(x))` 3.14156×10⁻⁶, 3.14159×10⁻⁶ and 3.14159×10⁻⁶. Every collinear `z_β` is at
+    its clamp image, so `D` gives `β = π·ε_z`, and `w = sin 2α · sin(π·ε_z)` ≤ π·10⁻⁶. `D(E(x)) = C(x)` holds only
+    off the clamps (REQ-ENC's left inverse, "modulo gauge"), and the equator is on one.
+  - One ulp off the line (each collinear state's body 2 moved in `y` by one ulp of its `x`, then the same gauge
+    elements): `z_β` at its clamp image with its bit set in 2000 of 2000, so the bit-for-bit check passes it; max `|w|`
+    7.2×10⁻¹⁴ on `C(x)`, the same as the states on the line, and π·10⁻⁶ on `D(E(x))`. A physical one-ulp move is below
+    both the clamp (`β < π·ε_z` is clamped) and the gauge's rounding, so neither check catches it.
+- **The question:** (1) on which state the equator's `|w|` is read, and so what its bound measures; (2) what the
+  control "a state moved off the line by one ulp is caught" means, since no check can catch a physical one-ulp move.
+- **Options seen:**
+  - (1a) On `C(x)`, "the canonical state" of P3's first wording, the state R-551's evidence was measured on: the
+    bound is proposed from about 10⁻¹³ (it tests `C`'s rounding off the line); the pole check reads the same state.
+  - (1b) On `D(E(x))`, as written: the bound is proposed from π·ε_z, and 6.8×10⁻¹⁴ is no longer its evidence; the
+    check then tests the clamp's image, which the bit-for-bit `z_β` check already pins.
+  - (1c) Both: `|w − 1|` on either (they agree), `|w|` on `C(x)` judged, on `D(E(x))` reported.
+  - (2a) The control moves `z_β` one ulp off its clamp image (the equator in `z`): the bit-for-bit check fails it,
+    which shows the comparison is exact and has no tolerance.
+  - (2b) The control moves the state off the line by enough to leave the clamp (`β` past π·ε_z), and the bit-for-bit
+    check fails it; "one ulp" is reworded.
+  - (2c) Both (2a) and (2b).
+- **Applied meanwhile:** nothing. The Randomise arm (REQ-VAL-193), the `z_β` bit-for-bit check and the pole's
+  `|w − 1|` do not depend on the answer.
+- **Waits:** REQ-VAL-022's equator `|w|` check and its one-ulp control, and REQ-VAL-121's equator bound (TASK-M2-50).
+- **30 Oct 2026:** Decided by the orchestrator per R-369; see PR #346 (TASK-M2-50). Test and verify-text matters, no
+  physics change: (1a) both shape checks are read on `C(x)`, `D(E(x))`'s `|w|` reported unjudged as the clamp image,
+  sin2α·sin(π·ε_z); (2a) with an in-clamp-band control (a collinear state about 10³ ulps off the line, caught by
+  `|w|` on `C(x)` while `z_β` still clamps) and the bound-tightened control; the one-ulp control dropped. REQ-VAL-022's
+  verify and TASK-M2-50 corrected, `rq: [RQ-624]` removed from REQ-VAL-022 and REQ-VAL-121.
+
+## RQ-628: ROUNDTRIP's interior residual on a backend whose `atan2` is approximate: lavapipe's goes past `ε_phys` *(a calibration requirement, R-71; REQ-ENC-024, REQ-RENDER-025; R-297; inverse-encode contract Part 4, Part 8; context: TASK-M2-26, PR #343)*
+
+*Queued 30 Oct 2026 from TASK-M2-26's fix round, on CI's lavapipe runs of `qa_m226_latent_slices_dark_and_within_eps_phys`.
+For the owner: yes, it is REQ-ENC-024's calibration, and the options change what is built.*
+
+- **File, section:**
+  - `plan/tasks/M2/TASK-M2-26.md` § "Acceptance tests": "`cargo xtask golden roundtrip-preset` in `gpu-metal` and
+    `gpu-lavapipe` — ROUNDTRIP render of the latent and (L_z, E) charts, with the fragment compiled as the backend
+    compiles it (fast-math on Metal, R-297): residual below ε_phys (REQ-ENC-024) except at tagged-expected regions".
+  - The same file, § "Notes": "If the residual under fragment fast-math exceeds ε_phys, that is a REVIEW_QUEUE entry,
+    not a second tolerance (applied per R-204, accepted by R-358)."
+  - `docs/contracts/principia_inverse_encode_contract.md` § "Part 4 — Conditioning: assert in physical units, never in
+    z": "`ε_phys = k·ε_R` … one `k` for both precisions: the interior residual is rounding, the same count of `ε_R` at
+    f64 and f32", and "the `ROUNDTRIP` preset (Part 8) use[s] it unchanged".
+  - `decisions.md` § "R-297 — …": "fragment paths that recompute physics to check agreement (the DECODE/ROUNDTRIP
+    presets, R-116) compare within a stated tolerance, a calibration requirement, not bit-exactly."
+  - `crates/ledger/src/constants.rs`, `EPS_PHYS`: `k = 64`, proposed from the `encode-eps-phys` gate's CPU
+    measurements (worst interior 25.64 `ε_R`, f32).
+- **What was seen:** on CI's lavapipe runners (runs 41003051251 and 41003055485), slice 6 of the qa test (seed
+  `0x0343_2026`, a latent slice reaching 20 along random directions), sample 458 at `(0.328, 0.453)`: untagged, ratio
+  1.053 `ε_phys`. Every control is deep inside its clamp (margins 21 420, 398, 26 149, 17 297, 58 202, 281 223, 284,
+  123 763 clamp-`ε`), no mirror, no clamp, no degenerate decode, so nothing should tag it. The same trip on the CPU at
+  f32 gives 0.004 `ε_phys`; on Metal 0.034 (slice 6's worst untagged 0.26).
+- **The cause:** the state has a light body (`m₀ = 0.0044`), so `|ρ̃| = 0.034 ≪ |λ̃| = 1.0` and
+  `α = atan2(|λ̃|, |ρ̃|)` sits 0.034 below `π/2`. The decode builds `ρ̃` from `cos α`, so an absolute error `δα` in the
+  encode's `α` comes back as a relative error `δα / cos α` in `ρ`, about 30× here. Mesa lowers `atan2` (for lavapipe)
+  to a degree-11 odd polynomial whose leading coefficient is 0.9999793; for `|y/x| > 1` the angle is `π/2 − P(x/y)`,
+  so near `π/2` it is off by about `2.07·10⁻⁵·cos α` (about 174 `ε_R` relative to `cos α`). That gives
+  `Δρ/ρ ≈ 2.07·10⁻⁵`, `Δr₀ ≈ 1.05·10⁻⁵`, `/R_x = 7.7·10⁻⁶ ≈ 1.01 ε_phys`, the 1.053 CI reports. A check on Metal
+  agrees: the same view with `atan2` replaced by that lowering, in WGSL, gives 1.18 `ε_phys` at sample 458 and seven
+  untagged samples past `ε_phys` on slice 6. Changing each other builtin by 8 `ε_R` in turn (exp, log, tanh, atanh,
+  sin, cos, pow, sqrt) leaves sample 458 below 0.27; `atan2` alone takes it to 2. WGSL's and Vulkan's accuracy for
+  `atan2` is 4096 ULP, so this is a conforming backend. The ROUNDTRIP code is not at fault: it runs the generated
+  encode as R-116 requires, and the pixel is interior by every margin.
+- **The gap:** `ε_phys` was calibrated on the CPU, where the interior residual is rounding, and Part 4 assumes that.
+  In the fragment it is also the backend's builtin accuracy (`atan2`, amplified by `1/cos α` near a light body),
+  which no document bounds. The task requires `ε_phys` on lavapipe, and its note forbids a second tolerance without a
+  ruling.
+- **The question:** how ROUNDTRIP's interior is held to a tolerance on a backend whose builtins are only as accurate
+  as WGSL requires.
+- **Options seen:**
+  - (a) The one Rust source gives `α` and `β` an `atan2` of its own, a stated polynomial accurate to a few `ε_R` (as
+    R-437 made the poles backend-independent), so the fragment trip no longer depends on the backend's `atan2`. This
+    changes the generated encode (TASK-M2-25's), and the compute kernel too unless the change is fragment-only.
+  - (b) A stated fragment tolerance for ROUNDTRIP, `k_frag·ε_R` with `k_frag` calibrated on both backends (a second
+    calibration requirement, R-71).
+  - (c) `ε_phys` re-calibrated to cover the fragment on both backends, which loosens T2 on the CPU as well.
+  - (d) The lavapipe run drops from ROUNDTRIP's acceptance, or lavapipe is held to a looser stated bound (dropping or
+    changing an acceptance clause).
+- **Applied meanwhile:** none. No tolerance is changed, and qa's test is unchanged.
+- **Waits:** TASK-M2-26 (PR #343): its required test fails on the lavapipe runners.
+- **30 Oct 2026:** Decided by the orchestrator per R-369, option (a); see PR #343; the owner's veto listed. Built in
+  PR #343's fix round: at f32 the encode's `α` and `β`, the spherical and exponential inverses and the shape sphere
+  decode's `β` take the kernel's own `atan2` (`crates/kernel/src/arctan.rs`), in integer arithmetic, so every backend
+  gives the CPU's bits; the f64 path keeps libm's, bit for bit. No tolerance is changed, and qa's test is unchanged.
+
+## RQ-629: WGSL and Vulkan bound `sin` and `cos` only by an absolute error, where the decode's `cos α` near `π/2` needs a relative one *(a note for future backends; REQ-ENC-024, REQ-RENDER-025; R-297; inverse-encode contract Part 4; dd_decoder §3.2; context: RQ-628, TASK-M2-26, PR #343)*
+
+*Queued 30 Oct 2026 from TASK-M2-26's fix round, as RQ-628's decision directs. No failure today; nothing waits.*
+
+- **File, section:**
+  - The orchestrator's decision on RQ-628 (30 Oct 2026, applied per R-369), its last bullet: "Related, filed
+    separately: WGSL/Vulkan bound sin/cos only by an absolute error of 2^-11 on [-pi, pi], yet cos(alpha) near pi/2
+    needs relative accuracy. There is no failure today; this gets a REVIEW_QUEUE note so a future backend doesn't
+    surprise us. It is out of (a)'s scope."
+  - `docs/design/principia_dd_decoder.md` § "3.2 Configuration — hyperspherical mass-weighted Jacobi":
+    "`ρ̃ = R̃ cos α · (1, 0)`", and "`‖ρ̃‖ = cos α`, so **small α = LARGE inner-pair separation**; `α → π/2` = tight
+    inner binary + distant third body (hierarchical)."
+  - `docs/contracts/principia_inverse_encode_contract.md` § "Part 4 — Conditioning: assert in physical units, never in
+    z": "`ε_phys = k·ε_R` … one `k` for both precisions: the interior residual is rounding, the same count of `ε_R` at
+    f64 and f32", and "the `ROUNDTRIP` preset (Part 8) use[s] it unchanged".
+- **What is seen:** the fragment decode forms `‖ρ̃‖` from the backend's `cos α`. WGSL, and Vulkan for GLSL.std.450,
+  bound `sin` and `cos` only by an absolute error of `2⁻¹¹` on `[−π, π]`. Near `α = π/2`, `cos α` is small (0.034 for
+  RQ-628's light body), so an absolute bound allows a relative error in `‖ρ̃‖` of `2⁻¹¹/cos α`, far past `ε_phys`, as
+  `atan2`'s did in RQ-628. The backends in use do much better than the bound: RQ-628's check that moved each
+  other builtin, `sin` and `cos` among them, by 8 `ε_R` left the worst sample below 0.27 `ε_phys`, and with the
+  kernel's own `atan2` qa's `qa_m226_latent_slices_dark_and_within_eps_phys` passes on Metal (lavapipe's run is PR
+  #343's CI).
+- **The gap:** nothing in the corpus bounds a backend's `sin` and `cos` relative to their value, which `ε_phys`
+  assumes at the fragment's decode. RQ-628's option (a) replaced only `atan2` (the kernel's own, in integer
+  arithmetic); `sin` and `cos` stay the backend's.
+- **The question:** whether a future backend (another driver, WebGPU in a browser) is held to a relative accuracy for
+  `sin` and `cos` near `π/2`, or the decode's `cos α` is formed so that it needs none (for instance as `sin(π/2 − α)`
+  from an exact `π/2 − α`, or by the kernel's own function, as `atan2` now is).
+- **Options seen:** (a) nothing now: a note, acted on when a backend fails ROUNDTRIP's `ε_phys` this way; (b) a
+  per-backend check of `cos` near `π/2` against f64 in the GPU suite, so a new backend that does worse is caught
+  before ROUNDTRIP's acceptance; (c) the kernel's own `sin` and `cos` at f32, as `atan2` (a larger change, beyond
+  RQ-628's scope).
+- **Applied meanwhile:** none; nothing is built for it.
+- **Waits:** nothing.
+
+## RQ-635: The arctangent generator's working precision, 100 fraction bits: a value the corpus doesn't give, and its admissibility class *(a calibration requirement, R-71; REQ-GEN-044; REQ-SYS-005, REQ-SYS-082; R-427; philosophy §4.2; context: RQ-628, TASK-M2-26, PR #343)*
+
+*Queued 31 Oct 2026 from TASK-M2-26's fix round, on code review 5720675453. For the M2 gate's calibration batch; nothing
+waits on it before the gate.*
+
+- **File, section:**
+  - `decisions.md` § "R-71 — A missing value becomes a calibration requirement": "Every value the corpus doesn't give
+    becomes a **calibration** requirement in the milestone that needs it."
+  - `plan/requirements.yaml`, REQ-SYS-082: "every other function there that returns a numeric literal must be moved into
+    the register or named in its doc as ledger or interface data".
+  - `docs/read_first/principia_00_philosophy.md` § "4.2 Every constant must be derived or absent": "A quantity is
+    admissible if it is bounded by its own achievable maximum, fixed by a conservation law, or expressed in canonical
+    units."
+  - `crates/ledger/src/gen/arctan.rs`, `sum_bits()`, before this fix: returned the literal 100, its doc citing nothing.
+- **What it is:** the units, `2⁻¹⁰⁰`, in which the generator sums each `atan(k/8)` in integer arithmetic before rounding
+  to the Q0.64 and Q2.62 words it writes. Only the generator reads it. The emitted file doesn't hold it.
+- **The gap:** no document gives this precision, and RQ-628's decision doesn't name it. It is a choice, not a
+  derivation: 100 is one value on a measured plateau, picked as a round number with room on both sides.
+- **The measurement** (the generator's sum in exact integers, each product checked against `2¹²⁸`, for every bit count
+  from 65 up): every count from 72 to 121 writes the same nine `ATAN_EIGHTHS`, `HALF_PI` and `PI`. At 71, three of the
+  eleven differ. At 122 a product passes `2¹²⁸` and the `u128` arithmetic overflows. The sum's error at 100 bits: under 2
+  units per term, each term carrying its predecessor's truncation (`eₙ₊₁ < eₙ/2 + 1`), which with at most 100 terms and
+  a dropped tail under 4 units is about 204 units; the measured worst is 90.05 units (`k = 8`, 95 terms), against the
+  `2³⁶` units the table keeps.
+- **The question:** confirm 100 at the M2 gate, or another value in 72 to 121, which writes the same file; and whether
+  the class stands.
+- **The class:** proposed as `canonical-units`, a pure number with no physical unit, as `curve_grid_log2` is. It is not
+  a clean fit, and no class is. `docs/design/principia_dd_generation_root.md` § "3.8 Metadata schema (what every entry
+  must carry)" reads: "`achievable-maximum` covers a format's achievable extreme: a value fixed by a number format's
+  limits", and 100 isn't fixed by `u128`'s limit, only bounded by it, though `curve_golden_steps`, a count where a
+  further step resolves nothing, holds that class. No conservation law applies.
+- **Options seen:** (a) confirm 100 as proposed; (b) a value derived from the plateau's edge, 72, which has no margin
+  against a change of the sum; (c) the largest, 121, which has no margin against overflow.
+- **Applied meanwhile (per R-369, R-71, R-427):** `arctan_sum_bits` = 100 in the register, marked provisional until M2,
+  citing REQ-GEN-044; `sum_bits()` reads it. Not hashed into the schema version: it decides no stored bit.
+- **Waits:** the M2 gate only (`gate-provisional --milestone M2` blocks until it is confirmed). TASK-M2-26 proceeds.
+
+## RQ-636: The drift suspect predicates read the unpacked f16 latch: REQ-INT-040 and dd_integrator §3.5 say they must, REQ-INT-045, payload §1 and REQ-PAY-112 say never *(physics; REQ-INT-040; REQ-INT-045; REQ-PAY-112; R-632; context: TASK-M3-05, TASK-M3-41)*
+
+*Queued 31 Oct 2026 by TASK-M3-05's fix round, on physics review 5722380920 of PR #360 (F1). For the owner: yes, it is
+physics, the corpus contradicts itself on what the predicates read. Code unchanged; TASK-M3-05's PR doesn't wait on it,
+by the owner's ruling of 31 Oct 2026 ("(5) Suspect predicates: file the RQ with options, code unchanged.").*
+
+- **File, section, for reading the latch:**
+  - `plan/requirements.yaml`, REQ-INT-040: "The drift suspect predicates must be read-time predicates over the stored
+    drift latches (no stored suspect bits)".
+  - `docs/design/principia_dd_integrator.md` § 3.5: "suspect predicates (READ-TIME, over the stored drift latches — no
+    stored suspect bits, payload §5)".
+  - `plan/tasks/M3/TASK-M3-05.md`, Goal: "The drift suspect predicates are read-time predicates over the stored latches".
+- **File, section, against it:**
+  - `plan/requirements.yaml`, REQ-INT-045: "Threshold and suspect decisions must use the live f32 measurement, never an
+    unpacked f16 latch."
+  - `docs/design/principia_dd_simstate_payload.md` § 1: "threshold/suspect decisions must use the live f32 measurement,
+    never the unpacked f16 latch (the f16 latch is for display, not for control flow)".
+  - `plan/requirements.yaml`, REQ-PAY-112: "threshold and suspect decisions read the live f32 value, never the stored
+    latch"; its verify: "the suspect predicates read the live f32 value; controls: … a predicate fed the unpacked latch
+    fails".
+  - `plan/reviewers/physics.md` § 8: "a threshold or suspect decision uses the live f32 value, not an unpacked f16 latch".
+- **The conflict in the code:** `check_lit` in `crates/kernel/tests/monitor.rs` asserts that the predicates read the latch,
+  so REQ-PAY-112's control, on TASK-M3-41, can't pass as written against this read side.
+- **The physics reviewer's evidence (review 5722380920):** after the march no live `max|ΔE|` exists, the latch being the
+  only stored form, so a read-time predicate with no stored bit can read a live value only if the latch's width or
+  encoding changes (REQ-PAY-112's encoding is TASK-M3-41's to choose). No march branch reads the predicates (`crates/kernel/src`,
+  `crates/engine/src`). On dd tests 2 and 7 stored and live give the same verdict for every occupant (PR #360's table).
+  They can differ for small `|E_0|`: below about 1.5e-5 (2⁻²⁴/τ_E) one f16 subnormal step crosses τ_E; the floor `ε_E`
+  limits this, but a near-zero-energy sample can still flip. The reviewer's reading: stored latches for read-time
+  display, live values for any march control flow; REQ-PAY-112's control doesn't allow that reading.
+- **The question:** what the read-time predicates read, and what REQ-INT-045 and REQ-PAY-112 then forbid.
+- **Options seen:** (a) stored latches for read-time predicates and display, live values only for march control flow:
+  REQ-INT-045, payload §1 and REQ-PAY-112 reworded to say so, REQ-PAY-112's control moved to a march branch; (b) the
+  predicates read a live value at the march's end stored at full f32, a schema change, which also keeps "no stored
+  suspect bit" but gives up the f16 latch for it; (c) TASK-M3-41's encoding makes the latch fine enough that stored and live
+  agree over a stated domain, REQ-PAY-112's control replaced by that domain's check; (d) another, stated by the owner.
+- **Applied meanwhile:** the task's Goal, REQ-INT-040: `drift_suspect`, `suspect_energy`, `suspect_lz` read the stored
+  latches. REQ-INT-040 stays closed by TASK-M3-05, carrying no `rq:` as the owner's ruling says this PR doesn't wait.
+- **Waits:** TASK-M3-41's verify of REQ-PAY-112 (REQ-PAY-112 and REQ-INT-045 carry `rq: RQ-636`).
+
+## RQ-637: Near a zero `E_0` or `L_z`, `symlog`'s neutral band can't give what ruling (d) also asks, an exactly neutral fresh sample: the band is relative to the reference, and the rounding isn't *(physics; R-652, the owner's ruling (d); `docs/contracts/principia_render_contract.md` § "Part 5", "The neutral band"; physics review 5723029285 of PR #360, Q1; REQ-TOOL-149; context: TASK-M3-05)*
+
+*Queued 31 Oct 2026 by TASK-M3-05's fix round. For the owner: yes, it is physics, it changes which real drifts a view
+shows. Code unchanged; TASK-M3-05's PR doesn't wait on it, the ruling's band being built as ruled.*
+
+- **File, section:**
+  - `decisions.md` § R-652, the owner's ruling (d): "give symlog a neutral band of k·f32-ulp relative to |E₀| (and |L| for
+    L_z), with k justified in writing (rounding-level differences aren't physics)".
+  - The same ruling: "add a test that a fresh sample renders exactly neutral on every backend".
+  - `docs/contracts/principia_render_contract.md` Part 5: "At or near a zero reference the band narrows to nothing".
+- **The conflict:** a fresh sample's rounding scales with `K + |V|` for the energy and `S = Σ(|xᵢp_{y,i}| + |yᵢp_{x,i}|)`
+  for `L_z`, not with `|E_0|` or `|Lz_0|`. Near a cancellation the band is narrow while the rounding is not, so both can't
+  hold. `drift_view_neutral_fresh_sample_renders_exactly_neutral` passes on the samples inside its stated domain (R-652,
+  "The test's domain"), at least 4 of 8.
+- **Evidence:**
+  - It errs toward showing a tint: the band never hides more than `k·2⁻²³·|reference|`.
+  - dd test 2's fresh figure-eight has `L_z ≈ 0` with moving bodies, so its band is empty and it is outside "exactly
+    neutral". The physics reviewer's estimate, not a render: a fragment rounding of about 1e-7 at `ε_L = 1e-6` gives
+    `s ≈ 0.1`, `t ≈ 0.54`, a visible tint that depends on the backend.
+  - In the other direction, RK4 at f64 on dd test 7 (ΔE −9.65e-7, relative 5.6e-6) is true truncation drift and now reads
+    neutral under `symlog`; `log` has no band and shows it, and `dE_max` holds it.
+- **The question:** whether the band stays relative to the reference, or scales by the rounding itself.
+- **Options seen:** (a) keep it as ruled, with the limit recorded (render contract Part 5); (b) scale the band by the
+  rounding, `k'·2⁻²³·(K + |V|)` and `k'·2⁻²³·S`, with `k'` from the bound: 15 with a CPU reference, 22 with a GPU one for
+  the energy; 5 and 6 for `L_z`. This closes the gap near zero and hides less at small `K/|E_0|`, where 128 is 8.5 times
+  the bound; it departs from the ruling's words;
+  (c) another, stated by the owner.
+- **Applied meanwhile:** (a). Nothing waits.
+
+## RQ-638: `symlog`'s neutral band is in the three drift debug views; a field ramp on `energy_drift` or `Lz_drift` has none, so a fresh sample's rounding still shows as colour there *(physics; R-652, the owner's ruling (d); `docs/design/principia_colour_composition.md` § "6. Debug views as presets"; code review 5723219417 of PR #360, C2; REQ-TOOL-149; context: TASK-M3-05)*
+
+*Queued 31 Oct 2026 by TASK-M3-05's fix round. For the owner: yes, it changes what a real stain shows. Code unchanged;
+the scope is stated in render contract Part 5 and R-652, applied per R-369, and TASK-M3-05's PR doesn't wait on it.*
+
+- **File, section:**
+  - `decisions.md` § R-652, the owner's ruling (d), its reason: "every t = 0 pixel is a fresh sample, so Metal's ulp noise
+    rendering as colour would appear on real data too. Fix the view."
+  - `docs/design/principia_colour_composition.md` § 6: "A field view *is* `colour = FieldRamp{field, recommended ramp}`",
+    "`f_edrift` = `energy_drift · diverging · symlog`".
+- **The gap in the code:** `render::colour::defaults::default_ramp` gives these fields `Compaction::Diverging { x0 }`,
+  which is `compact_symlog(x, x0)` in `crates/render/shaders/wgsl/lib/compaction.wgsl`, and `qa_field_either_role_any_field`
+  (`crates/render/tests/qa_TASK-M7-05.rs`) renders a field ramp on `energy_drift`. No band is on that path, so a stain's
+  field ramp still draws a fresh sample's rounding as backend-dependent colour at `x₀ = 10⁻⁶`. No golden exercises it.
+- **The question:** whether "Fix the view" reaches the field-ramp path.
+- **Options seen:** (a) extend the band to it, where the drift is read, since `compact_symlog` has no reference and also
+  serves `E_0` and `Lz_0`, with the fresh-sample test extended; (b) leave it there, the band being the debug views' alone,
+  a field ramp showing the rounding; (c) another, stated by the owner.
+- **Applied meanwhile:** (b), the code unchanged, the scope stated. Nothing waits.
+
+## RQ-644: Whether the record should stop calling Boekholt & Portegies Zwart 2015's method an analogue of "never discard", given that its unbiased result is stated with the worst runs removed *(a conflict between a paper and two lines of our record; context: task 15e, BZ-1)*
+
+*Queued 31 Oct 2026 by task 15e. Wording of a record; no target or code depends on it.*
+
+- **File, section:**
+  - `docs/incoming/2026-10-25_replication/catalogue.md` § 6.1: "A direct analogue of the project's "never discard a copy" and `error_ratio` rules".
+  - `docs/incoming/2026-10-27_validation_plan/PLAN.md` § 3.2, BZ-1: "Its method is what REQ-VAL-199 and "never discard a copy" already apply".
+  - `docs/design/principia_honesty_precision.md` line 278: "**Never discard:** a failed or budget-exhausted run is shown as such, with its end time (R-563)."
+  - The paper, abstract: "unbiased, as long as the time-step parameter, η ≤ 2⁻⁵ and when simulations which violate energy conservation by more than 10% are excluded"; passages in `docs/incoming/2026-10-31_fetch_list/README.md`.
+- **The question:** whether to add a dated note to those two lines saying the analogue is the paper's ensemble comparison and not its energy cut.
+- **Options seen:** (a) add the note, and if BZ-1's method is ever run, report the whole ensemble and the cut side by side, as the paper's Fig. 14 does; (b) leave the lines as they are.
+- **Applied meanwhile:** the lines are unchanged; the conflict is stated in the fetch list's README. BZ-1 stays out of scope as a replication.
+- **Waits:** nothing.
+- *31 Oct 2026: Ruled by the owner, R-661: "Fix the three overstatements you found (PLAN's BZ-1 row, catalogue.md §6.1, the
+  replication instruction) via the queue, with Removed-lines notes." Those lines are reworded (RQ-646), and BZ-1 is reopened
+  on the cold sets, any cut shown beside the uncut ensemble with the count removed.*
+
+## RQ-645: Two citations on the owner's 31 Oct fetch list do not verify: "Barrio et al. 2009, PRE 79, 036208" and "Tanikawa & Mikkola 2008, PASJ 60, 883" *(a missing source; context: task 15e)*
+
+*Queued 31 Oct 2026 by task 15e. For the owner, who may know the paper meant.*
+
+- **File, section:**
+  - `docs/incoming/2026-10-31_fetch_list/README.md` § "The sources", the last row and the Tanikawa & Mikkola row.
+  - Crossref's record of doi:10.1103/PhysRevE.79.036208: Barré & Yamaguchi 2009, "Small traveling clusters in attractive and repulsive Hamiltonian mean-field models", not a three-body paper.
+  - doi:10.1093/pasj/60.4.883 returns 404 at doi.org. The paper we already have under that authorship and year, arXiv:0802.2465, has an ASP Conference Series header, and `docs/incoming/2026-10-25_replication/catalogue.md` § 1.4 calls it a precursor of PASJ 67, 115 (2015).
+- **The question:** which papers were meant. Neither a Crossref search nor a web search found a Barrio 2009 paper in PRE on the planar three-body problem; the nearest is Barrio, Borczyk & Breiter 2009, "Spurious structures in chaos indicators maps", Chaos, Solitons & Fractals 40, 1697, doi:10.1016/j.chaos.2007.09.084, which was not read, so it is not offered as the same work.
+- **Options seen:** (a) the owner gives the paper, if it exists; (b) both drop off the list, with arXiv:0802.2465 standing for Tanikawa & Mikkola 2008.
+- **Applied meanwhile:** nothing fetched for Barrio; arXiv:0802.2465 stands for Tanikawa & Mikkola 2008.
+- **Waits:** nothing; no target names either citation.
+
+## RQ-646: Three lines of our record overstate Boekholt & Portegies Zwart 2015 *(a conflict between a paper and our record; R-661; `docs/incoming/2026-10-31_precision_set/README.md`; context: BZ-1, REQ-VAL-199)*
+
+*Queued and closed 31 Oct 2026, by R-661.*
+
+- **File, section:**
+  - `docs/incoming/2026-10-27_validation_plan/PLAN.md` § 3.2, BZ-1: "Its method is what REQ-VAL-199 and "never discard a copy" already apply"; "out of scope as a replication: 3D Plummer ICs".
+  - `docs/incoming/2026-10-25_replication/catalogue.md` § 6.1: "the ensemble statistics agree (KS tests) if the step parameter is ≤ 2⁻⁵ and runs with |dE/E| > 0.1 are rejected".
+  - `docs/incoming/2026-10-25_replication/INSTRUCTION_replication_suite_2026-10-25.md` § C: "This is the empirical basis of the f32/f64 honesty story, and of "never discard a copy"".
+  - The paper, abstract: "unbiased, as long as the time-step parameter, η ≤ 2⁻⁵ and when simulations which violate energy conservation by more than 10% are excluded"; Fig. 6's caption: "For η < 2⁻⁵, the distributions are not significantly different."
+- **The conflict:** the first line reads a cut as never discarding; Fig. 14's side-by-side is compatible, and the "unbiased" claim holds only after the cut. "3D Plummer" does not hold of the cold sets. The second merges the KS claim with the error-distribution claim. The third cites a paper with no f32 run as the basis for f32.
+- **Options seen:** reword, with the old text kept; or leave them.
+- **Applied meanwhile:** the lines stand until the ruling below.
+- *Ruled by the owner, R-661: reworded in PLAN.md and `catalogue.md`, each with a "Was"; the 25 Oct instruction is a dated record, not restated in force elsewhere, so its text stays and a bracketed correction follows it.*
+
+## RQ-647: Whether to re-size REQ-VAL-199's 256 starts by the power argument, and at what cost *(the owner's other option; R-661 item 3; REQ-VAL-199; `docs/incoming/2026-10-31_precision_set/README.md` § "The power calculation"; context: TASK-M8-76)*
+
+*Queued 31 Oct 2026 for the owner, by R-661's port. Applied meanwhile: state the effect size (R-369). It changes what is run, so it is the owner's.*
+
+- **File, section:** `decisions.md` § R-661, item (3): "REQ-VAL-199: re-size its 256 starts by the same power argument, or state the effect size it can detect." REQ-VAL-199: "over all 256 chaotic starts"; `decisions.md` § R-610: "The cap stays at 200 until long horizons are measured for cost."
+- **What 256 can detect:** a two-sample KS at 5%, D_c = 1.358 √(2/256) = 0.12; at 80% power, a fraction difference of 0.12 at p = 0.5 and 0.074 at p = 0.1. The gate's own statistic, a median of ratios, has a 95% half-width of 0.154 of the ratios' spread if they are normal; distribution-free, ranks 112 to 145, the quantiles 0.44 to 0.57, with c bounds of one direction moving the affected end out by c ranks, unbounded at 112 or more. Differences of a few percent in outcomes are out of its sight, and the gate never compares outcomes.
+- **Options seen, each in starts × three runs (f32, f64, f64′) × T = 200:**
+  - (a) keep 256 and state the effect size: 1.5 × 10⁵ time units, D_c 0.12. The gate stays a test of the parting ratio, and outcome statistics are BZ-1C's.
+  - (b) n = 4,096: 16 times the runs, 2.5 × 10⁶ time units, D_c 0.030, median half-width 0.038 of the spread.
+  - (c) n = 10⁴: 39 times the runs, 6 × 10⁶ time units, D_c 0.019, median half-width 0.025 of the spread.
+- **The cost, as far as it is known:** the multiples above are exact, the CPU seconds are not: R-610 sets a cap "until long horizons are measured for cost" and gives no budget figure, and no time per unit is measured here, so none is invented. (b) and (c) are also a change to a statement R-600 fixed ("all 256 starts").
+- **Applied meanwhile:** (a). REQ-VAL-199 states its effect size and keeps its size.
+- **Waits:** nothing. A resize, if ruled, changes REQ-VAL-199 and TASK-M8-76.
+
+## RQ-648: Whether the trust line's two marks should keep citing Boekholt & Portegies Zwart 2015, whose 10⁻³ and 10⁻¹ measure something other than a shape-sphere chord *(physics; a citation against the paper; R-574; `docs/design/principia_honesty_precision.md` § 3; R-661's search; context: TASK-M8-76)*
+
+*Queued 31 Oct 2026 by R-661's port. Not an f32 claim, so R-661's rewording does not reach it; the text is the owner's (R-574), so it is left.*
+
+- **File, section:**
+  - `docs/design/principia_honesty_precision.md` § 3 and § 5 (the owner's words, R-574): "**Faithful until**: f32 and f64 within a shape-sphere chord of **10⁻³**, the reliability threshold of Boekholt & Portegies Zwart (2015, 2020, 2023), stated as keeping the difference in the linear regime"; "**Parted at**: chord **0.1**, the decorrelation threshold (separation at the system's own scale: Boekholt 2015, Hernandez et al. 2020)".
+  - The 2015 paper, § 2.3: converged means the first p decimal places of every phase-space coordinate agree, usually p = 3; § 5.4: a normalised phase-space distance δ of about 10⁻¹ separates same-trajectory from diverged.
+- **The question:** both 2015 numbers are in phase space, for f64 against a converged code, and the marks are chords on the shape sphere for f32 against f64. Are the marks to read "measured here, at values chosen by analogy with", rather than "the threshold of"?
+- **Options seen:** (a) leave the words; (b) add a dated line that the values are chosen by analogy, not transferred, the marks themselves unchanged (they are measured, shown and editable).
+- **Applied meanwhile:** (a). The values, 10⁻³ and 0.1, do not change under either.
+- **Waits:** nothing.
+
+## RQ-649: What a statistical target scored on tier (a) alone says, while f32's statistics are an unmeasured hypothesis *(physics; R-661 against R-649 item 2; context: BZ-1C, M9's statistical targets)*
+
+*Queued 31 Oct 2026 by R-661's port. It blocks nothing.*
+
+- **File, section:**
+  - `decisions.md` § R-649, item 2, the owner's words: "(a) GPU explorer: fast, f32, interactive; expected to agree statistically or qualitatively only"; the clarification: "External targets bind tier (b) unless they are statistical, where tier (a) is expected to agree statistically."
+  - `decisions.md` § R-661: "it is a HYPOTHESIS that Principia will measure, and no paper establishes it."
+  - RQ-622, on five statistical targets whose verify names an f64 Result.
+- **The question:** R-661 makes tier (a)'s agreement a hypothesis, BZ-1C its test. Until BZ-1C has measured it, a statistical target scored only on f32 can pass or fail for two reasons: the physics, or f32. The choice changes how those results read.
+- **Options seen:** (a) score on tier (a) as ruled, each result labelled "f32; agreement with f64 not yet measured", until BZ-1C reports; (b) as (a), and run f64 beside it on a sample sized by the same calculation; (c) statistical targets wait for BZ-1C.
+- **Applied meanwhile:** nothing is scored yet, so nothing is applied. R-649's tier assignment is not changed here.
+- **Waits:** nothing built.
+
+## RQ-652: Which event BZ-1C's third side is compared on: BPZ's escape criterion or Principia's *(physics; R-661; `docs/incoming/2026-10-27_validation_plan/PLAN.md` § 3.2, BZ-1C; `docs/design/principia_dd_replication.md` rule 9; R-29; context: BZ-1C)*
+
+*Queued 31 Oct 2026 by R-661's port (physics review 5724115938 of PR #363, F2). The two ids before this one are named by `docs/incoming/2026-10-28_external_sources/README.md`, so this takes the next free id (applied per R-369).*
+
+- **File, section:**
+  - Boekholt & Portegies Zwart 2015 § 4: "We stop the simulations when the system is dissolved into a permanent binary and an escaper"; the escaper has "E > 0", "r > 2 rvirial" and "r · v > 0".
+  - `docs/design/principia_dd_replication.md` rule 9: "Record the escape criterion as data, with its parameters and its clock."
+  - The records hold each run's final state and whole-number stop time only, on BPZ's criterion. R-29's criterion cannot be applied to a state they don't hold.
+- **The question:** f32 against f64 can use one classifier. The records can only be read on BPZ's. Which event do the three-way lifetimes and end states use?
+- **Options seen:** (a) apply BPZ's criterion to all three sides, testing Principia's states as BPZ's code did, and report R-29's beside it for f32 against f64 only; (b) R-29 for f32 and f64, the records as they are, the difference labelled and not scored as precision; (c) both for the two arms, so the criteria's own difference is measured on the same runs.
+- **Applied meanwhile:** none; BZ-1C is a proposal. Both criteria are recorded whichever is chosen.
+- **Waits:** BZ-1C's scoring against the records. f32 against f64 does not wait.
+
+## RQ-653: Which energy a BZ-1C energy cut uses: regularised or Cartesian *(physics; R-661; R-566; `docs/incoming/2026-10-27_validation_plan/PLAN.md` § 3.2, BZ-1C; context: BZ-1C)*
+
+*Queued 31 Oct 2026 by R-661's port (physics review 5724115938 of PR #363, F2).*
+
+- **File, section:**
+  - Boekholt & Portegies Zwart 2015 § 6.1: "a relative energy conservation |∆E/E| > 1, or |∆E/E| > 0.1", on Hermite's Cartesian state.
+  - `decisions.md` § R-566: "after a close passage the Cartesian read-out is 280× to 7100× worse than the" regularised energy.
+  - `decisions.md` § R-661: "show any energy cut beside the uncut ensemble with the removed count".
+- **The question:** the removed count depends on the energy. The Cartesian one is like-for-like with BPZ's but is R-566's diagnostic; the regularised one is what Principia's gates read. At what stage it is read also differs.
+- **Also open, inside (a):** R-566 does not say whether an escape stop is an "event". Its evidence is a collision and a run parked at one, and `docs/contracts/principia_integrator_contract.md` § "The sync grid is a fixed quantum of physical time (R-565)" lists terminal events as "a collision, a non-finite state, the step budget run out", with escape "sampled at the boundaries". If escape counts, (a) reads only censored runs, can cut nothing among the runs that ended, and is not like-for-like. If it does not, (a) reads the Cartesian state at an escape stop, as BPZ's does. Either way a collision stop has no reading under (a).
+- **Options seen:** (a) the Cartesian read-out, only from runs that did not stop at an event, as R-566 reads it, like-for-like with BPZ only if escape is not such an event; (b) the regularised energy; (c) both cuts shown, each with its count.
+- **Applied meanwhile:** none; each run records both.
+- **Waits:** any energy cut in BZ-1C. The uncut ensemble does not wait.
+
+## RQ-654: How BZ-1C's starts reach the f32 GPU kernel: Path B or a new list-of-starts chart *(the human's, by `docs/design/principia_dd_replication.md` § 2; R-594 item 5; R-661; context: BZ-1C)*
+
+*Queued 31 Oct 2026 by R-661's port (physics review 5724115938 of PR #363, F7).*
+
+- **File, section:**
+  - `docs/design/principia_dd_replication.md` § 2: ""Path B" (a known IC encoded, or injected physically, with no chart …), or "new: <name>" for a chart no task builds … each such chart is a question for the human".
+  - `docs/incoming/2026-10-27_validation_plan/PLAN.md` § 3.2, BZ-1C: 2 × 10⁴ starts, f32 on the GPU, f64 on the CPU.
+- **The question:** Path B is a known IC with no chart. Whether it can carry 2 × 10⁴ arbitrary f32 starts through the GPU kernel, as a survey dispatch does, is not stated in the corpus; and the choice bears on the result, since an encoded start's rounding is part of what f32 runs. The rest-start D-plane charts reach these starts' shapes only with a rounding of their own.
+- **Options seen:** (a) Path B, if a batch of injected starts can be dispatched, f64 values rounded once to f32; (b) a new list-of-starts chart, built when BZ-1C is adopted; (c) the Anosova entry, reaching the equal-mass rest starts by encode, with its rounding measured, and no 1:2:4 until a mass point is added.
+- **Applied meanwhile:** none; nothing is built.
+- **Waits:** BZ-1C.
+
+## RQ-655: R-632's "a bound" is not true of a start where neither pair has parted *(physics; R-632; `plan/requirements.yaml` REQ-VAL-199; `docs/design/principia_honesty_precision.md` § 6; found by the physics review 5724170840 of PR #363, an aside; context: TASK-M8-76)*
+
+*Queued 31 Oct 2026. Ruled text, restated rather than introduced by PR #363, which it does not hold.*
+
+- **File, section:**
+  - REQ-VAL-199: "a pair not parted by the horizon T censored, its t_part taken as T and its start's ratio a bound kept in the median".
+  - `docs/design/principia_honesty_precision.md` § 6: "that pair's `t_part` is taken as `T`, the start's ratio is a bound, it stays in the median over all 256".
+- **The conflict:** with only the f64 pair unparted, the measured ratio t_part(f32)/T is an upper bound on the true one; with only the f32 pair unparted, T/t_part(f64) is a lower bound. With neither parted the ratio is T/T = 1 before dividing by the prediction, and the true ratio may lie on either side, so it bounds nothing. The gate's median and its censored count are unaffected as written; what such a start's entry means is not.
+- **Options seen:** (a) leave the rule and call such a start "unresolved" in the report, counted apart from the one-sided bounds, still in the median over 256; (b) keep the word, as a known looseness; (c) a different treatment of such starts in the median, which changes the statistic.
+- **Applied meanwhile:** none: R-632 and REQ-VAL-199 stand as ruled.
+- **Waits:** nothing.
+
+## RQ-657: REQ-PERF-115 and TASK-M8-96 name the native comparison as `cargo run -p gui --features mock`, which is opt-level 0, while the site they compare it with is built `--release` *(silence: the requirement names no build; R-627; REQ-PERF-115; the perf review of PR #368 (5726255918), F1; context: TASK-M8-86, TASK-M8-96)*
+
+*Queued from the perf review of PR #368. Wording only: what was measured is settled under R-369 below, and the requirement is not changed here.*
+
+- **File, section:**
+  - `plan/requirements.yaml`, REQ-PERF-115, `verify.detail`: "beside `cargo run -p gui --features mock` on the same Mac by the same method (TASK-M8-86's frame statistics)".
+  - `plan/tasks/M8/TASK-M8-96.md` § "Acceptance tests", the REQ-PERF-115 line: "beside `cargo run -p gui --features mock` on the same Mac by the same method".
+  - `plan/tasks/M8/TASK-M8-86.md` § "Deliverables": "The same scripted pan and frame-rate window in the native mock app (`cargo run -p gui --features mock`)".
+- **The silence:** the root `Cargo.toml` has no `[profile.*]`, so that command runs unoptimised, and `xtask/src/web_skeleton.rs` builds the site with `--release`. On one head and window, native idle, the perf review read unoptimised work at about 3 to 7 times release's (work less wait p95, 4.75 to 4.91 ms against 0.72 to 1.41 ms; load-affected, size and direction only). The frame rate on these runs moved between about 60 and 120 in either build, so fps alone does not show the build; this is perf review 5726291237, F3, the correction of 5726255918, F1, whose halved-rate reading it withdraws.
+- **The question:** whether the three lines should name `--release`, for example `cargo run -p gui --features mock --release`.
+- **Options seen:** (a) add `--release` to the measured native row in the REQ-PERF-115 and TASK-M8-96 lines, leaving TASK-M8-86's line, which names the app, as it is; (b) leave the wording, the report's `build` field and this entry being the record.
+- **Applied meanwhile:** applied per R-369, the measured native row uses `--release`. The report and the panel name the build (`build`, "debug" or "release"), and PR #368's "What to try" gives the command. No requirement or task text changes for this entry.
+- **Waits:** nothing built waits. TASK-M8-96's perf reader measures with `--release` and checks the `build` field.
+
+## RQ-666: R-468 E3's mock split formula coarsens under Fit, against E3's own "finer"
+
+*Queued 1 Nov 2026 by TASK-M6-47, on code review 5727858267 of PR #371. Applied per R-369: this is the mock's
+placeholder split rule, no physics, and the formula is agent-applied text (gui review G6) that contradicts the human's
+words, so the task did not wait. The entry is for correcting the text.*
+
+- **File, section:**
+  - `decisions.md`:13485, § "R-468 — …", E3: "reads the quad's width as a fraction of the figure, `frac = quad width /
+    (shown figure width × k)`, with `k = 1` outside Fit".
+  - `plan/requirements.yaml`:21445, REQ-GUI-229's note: "G6, frac = quad width / (shown figure width × k), k = 1
+    outside Fit, so only Fit refines".
+  - `plan/tasks/M6/TASK-M6-47.md`:29, Deliverables: "the fake quads (`crates/gui/src/mock/quads.rs`) split on `frac =
+    quad width / (shown figure width × k)`, `k = 1` outside Fit".
+- **The conflict:** a quad splits while `frac` exceeds a threshold, and with `k > 1` the formula makes `frac` smaller, so
+  fewer quads split and Fit coarsens. Against it: the human's words in R-468, "it requests finer quads"; E3 itself,
+  "about `log₂ k` levels finer" and "only Fit refines"; `docs/gui/principia_render_gui_spec.md` § "G1. Rules that hold
+  everywhere", "the larger screen scale asks for finer quads"; and REQ-GUI-229's verify, "the fake quads' deepest level
+  greater than in Extend for k ≥ 2", which the formula as written cannot pass.
+- **The question:** whether the three texts are corrected to `frac = quad width × k / shown figure width`.
+- **Options seen:** (a) correct the three texts to that form, with a *Was:*; (b) another form, stated by the owner, that
+  refines under Fit and leaves `k = 1` unchanged.
+- **Applied meanwhile:** (a) in code: `frac = (quad width) × k / (shown figure width)` (`leaves_over`,
+  `crates/gui/src/mock/quads.rs`; TASK-M6-47, PR #371). It is identical at `k = 1`, so the shown layout's and Extend's
+  quads and the `mock_tile_bounds` capture are unchanged, and `k = 4` gives two levels more. A control in
+  `f3_fill_modes_quads_finer_only_in_fit` shows the divide-by-`k` rule failing. The three texts are not changed.
+- **Waits:** nothing built waits; REQ-GUI-230's real-engine Fit reads the screen floor, not this formula.
