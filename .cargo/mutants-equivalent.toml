@@ -332,5 +332,5 @@ mutant = "crates/gui/src/explore/compass.rs:966:53: replace * with / in Drag::mo
 justification = "Z0_HALF_RANGE is the constant 1.0, and dividing by 1.0 equals multiplying by it exactly; a change to the constant makes the rate tests in mock_compass_cube and mock_compass_slice_follows_pointer tell them apart"
 
 [[equivalent]]
-mutant = "crates/gui/src/measure/mod.rs:302:37: replace < with <= in Session::begin_frame"
+mutant = "crates/gui/src/measure/mod.rs:335:37: replace < with <= in Session::begin_frame"
 justification = "the two differ only when the elapsed time equals the delay to the last bit, and then <= spins for one more clock read, about a microsecond of a delay no test or user can time to that precision, on a clock that keeps running, so it cannot hang"
