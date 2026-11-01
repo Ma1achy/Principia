@@ -1,6 +1,6 @@
 // The skeleton's worker (TASK-M8-86, R-627): it starts the app on the OffscreenCanvas it is sent, runs its frame loop on
-// this worker's own requestAnimationFrame, and applies what the loader forwards. Anything that stops it is reported, and
-// the loader falls back.
+// this worker's own requestAnimationFrame, and applies what the loader forwards. Anything that stops it is reported: the
+// loader falls back only if the first frame has not yet returned; a failure after that is fatal.
 import init, { WorkerApp } from "./gui.js";
 
 let app = null;

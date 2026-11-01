@@ -1,7 +1,8 @@
 // The skeleton's main-thread loader (TASK-M8-86, R-627). It reads the URL's flags, takes what only the main thread can
 // measure, and starts the app in its layout. The layout flag: `?layout=worker`, a Web Worker on the OffscreenCanvas this
 // loader transfers once, or `?layout=main`, eframe's web runner on this thread; with no flag, the worker, falling back
-// to the main thread. A worker that fails is recorded, its reason and the layout it fell back to in the panel.
+// to the main thread. A worker that fails before its first frame has returned is recorded, its reason and the layout it
+// fell back to in the panel; a failure after that is fatal.
 //
 // In the worker layout this loader forwards what a worker cannot receive: pointer, wheel, keys, text, the clipboard's
 // paste, copy and cut, focus and resize. Pointer moves are coalesced, one a frame (caching_contract Part 6a). All of it
