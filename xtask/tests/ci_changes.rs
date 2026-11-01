@@ -10,8 +10,10 @@
 //!   GPU suites only when no path is a GPU path; an empty change, a workflow, an unknown top-level path and a path that
 //!   merely starts like an allowed one run everything, and so does a mixed change.
 //! - `ci_changes_files_code_reads_run_everything`: each pattern of the script's `reads_code` list, the data code loads
-//!   for behaviour and the classifier itself (R-662), is touched through real files it names, each classifying as code:
-//!   not docs-only, GPU suites run.
+//!   for behaviour, the classifier itself (R-662) and the containment, is touched through real files it names, each
+//!   classifying as code: not docs-only, GPU suites run.
+//! - `ci_changes_a_script_runs_go_through_is_code`: a script named as a workflow step's `shell:` or as nextest's wrapper
+//!   runs that step or test inside it, so a wrong edit to it must run them: each classifies as code.
 //! - `ci_changes_no_file_code_reads_is_docs_only`: a static scan, best effort, of the string literals in every crate's
 //!   `src/`, `tests/` and `build.rs`, and in `xtask/`, for a data file they name, and of their `src/` for the plan's
 //!   markdown; none may classify as docs-only, so a new reader cannot silently leave its data docs-only. Prose a test
@@ -180,6 +182,7 @@ const CASES: &[(&[&str], bool, bool)] = &[
     (&["plan/MILESTONES.md"], false, true),
     (&["plan/tasks/M2/TASK-M2-01.md"], false, true),
     (&["scripts/ci_changes.sh"], false, true),
+    (&["scripts/contain.sh"], false, true),
     // Principia's code, and what builds it.
     (&["crates/kernel/tests/qa.rs"], false, true),
     (&["crates/render/shaders/wgsl/lib/coords.wgsl"], false, true),
@@ -216,6 +219,7 @@ const CASES: &[(&[&str], bool, bool)] = &[
     (&["plan/tasksx/a.md"], true, false),
     (&["docs/gui/designs/a.png"], true, false),
     (&["scripts/ci_changes.sh.bak"], true, false),
+    (&["scripts/contain.sh.bak"], true, false),
     // The crates no GPU job builds skip the GPU suites, and nothing else.
     (&["crates/gui/src/app.rs"], false, false),
     (
@@ -286,6 +290,7 @@ const CODE_READ: &[(&str, &[&str])] = &[
     ("plan/MILESTONES.md", &["plan/MILESTONES.md"]),
     ("plan/tasks/*", &["plan/tasks/M0/TASK-M0-01.md"]),
     ("scripts/ci_changes.sh", &["scripts/ci_changes.sh"]),
+    ("scripts/contain.sh", &["scripts/contain.sh"]),
 ];
 
 /// The patterns of the `reads_code` function in `script`, in order: each `<pattern> | …) return 0 ;;` line's.
@@ -476,6 +481,80 @@ fn named_files() -> Vec<(String, String)> {
     out.dedup();
     out
 }
+
+/// The `scripts/` files runs go through: named as a workflow step's `shell: bash scripts/…` or as nextest's
+/// `command-line = "scripts/…`, with what names each.
+fn wrapping_scripts() -> Vec<(String, String)> {
+    let mut sources = vec![(
+        ".config/nextest.toml".to_owned(),
+        read(".config/nextest.toml"),
+    )];
+    for entry in std::fs::read_dir(root().join(".github/workflows")).expect("ci_changes: workflows")
+    {
+        let name = entry.expect("ci_changes: a workflow").file_name();
+        let rel = format!(".github/workflows/{}", name.to_string_lossy());
+        sources.push((rel.clone(), read(&rel)));
+    }
+    let mut out = Vec::new();
+    for (source, text) in &sources {
+        for line in text.lines() {
+            let line = line.trim_start();
+            if line.starts_with('#') {
+                continue;
+            }
+            for lead in ["shell: bash scripts/", "command-line = \"scripts/"] {
+                let Some(at) = line.find(lead) else { continue };
+                let tail = &line[at + lead.len()..];
+                let end = tail.find([' ', '"']).unwrap_or(tail.len());
+                out.push((source.clone(), format!("scripts/{}", &tail[..end])));
+            }
+        }
+    }
+    out
+}
+
+fn check_wrapping(script: &str, wrapping: &[(String, String)]) {
+    // Not vacuous: the three places that run the containment are found.
+    for source in [
+        ".config/nextest.toml",
+        ".github/workflows/mutants.yml",
+        ".github/workflows/nightly.yml",
+    ] {
+        assert!(
+            wrapping
+                .iter()
+                .any(|(s, f)| s == source && f == "scripts/contain.sh"),
+            "ci_changes: the scan did not find {source} running scripts/contain.sh"
+        );
+    }
+    for (source, file) in wrapping {
+        assert_eq!(
+            classify(script, &[file.as_str()]),
+            (false, true),
+            "ci_changes: {source} runs through {file}, which does not run the build, test and GPU jobs \
+             (docs_only, gpu)"
+        );
+    }
+}
+
+#[test]
+fn ci_changes_a_script_runs_go_through_is_code() {
+    check_wrapping(&read("scripts/ci_changes.sh"), &wrapping_scripts());
+}
+
+negative_control!(
+    ci_changes_a_script_runs_go_through_is_code,
+    "the script without the containment on its list",
+    expected = "runs through scripts/contain.sh, which does not run the build, test and GPU jobs",
+    check_wrapping(
+        &edited(
+            "scripts/ci_changes.sh",
+            "    scripts/contain.sh) return 0 ;;\n",
+            ""
+        ),
+        &wrapping_scripts()
+    )
+);
 
 /// Whether `reader` naming `file` is reading data for behaviour (R-662): anything but prose and scripts, or the plan's
 /// markdown named from a package's `src/`, which a test's mention of it is not. Prose a test checks, a citation in the

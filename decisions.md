@@ -29051,6 +29051,10 @@ red after a green pull request.
 *Applied per R-369:*
 - `scripts/ci_changes.sh` itself runs full CI, though it is a script: it decides what every pull request runs, so it is
   the workflows' machinery, and a wrong edit to it would skip the very checks that catch it.
+- `scripts/contain.sh` runs full CI too, for the same reason: it is the `shell:` of the mutants steps and nextest's
+  wrapper of the job queue's tests, so a wrong edit to it breaks those runs, and only a full run would show it. The other
+  scripts stay docs-only: `check_no_atlas_params.sh` runs on every pull request whatever the verdict, and
+  `progress_banner.py` runs only after a merge, holding no check.
 - `.github/` is full CI whole, the pull-request template and `copilot-instructions.md` included, as the list names what
   skips, and `.claude/`, `.cargo/`, `.config/`, `.gitignore` and the other dot-files run full CI as paths it doesn't
   name.

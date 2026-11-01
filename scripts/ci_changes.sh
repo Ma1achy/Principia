@@ -30,7 +30,8 @@ on_allowlist() {
   return 1
 }
 
-# The files on that allowlist that are data code loads for behaviour, or CI's own machinery, which count as code
+# The files on that allowlist that are data code loads for behaviour, or scripts CI's and the tests' runs go through,
+# which count as code
 # (R-662, narrowing R-656's list of every file any test reads). Each pattern names its readers. A `case` pattern's `*`
 # matches `/` too. `xtask/tests/ci_changes.rs` checks that each pattern classifies as code, and scans the sources for a
 # data file they name that classifies as docs-only.
@@ -54,6 +55,9 @@ reads_code() {
     plan/tasks/*) return 0 ;;
     # This classifier: what it says decides what every pull request runs (`ci.yml`, `mutants.yml`).
     scripts/ci_changes.sh) return 0 ;;
+    # The containment: the `shell:` of the mutants steps (`mutants.yml`, `nightly.yml`), and nextest's wrapper of the
+    # job queue's tests (.config/nextest.toml), so every run of them goes through it.
+    scripts/contain.sh) return 0 ;;
   esac
   return 1
 }

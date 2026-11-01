@@ -35,8 +35,8 @@
 # commit against the base it merges onto), and:
 # - a change to none of Principia's code (R-662; `docs_only`: only paths on the script's allowlist, `docs/`, `plan/`,
 #   `scripts/`, `workbench/` and the root's markdown, and none on its list of data code loads, the artboards and
-#   references, `plan/requirements.yaml`, `plan/tasks.yaml`, `plan/MILESTONES.md`, `plan/tasks/` and the classifier; an
-#   unknown path runs everything) skips `ci-archive` and the `ci` shards, `ci-checks`, `ci-release-archive` and its
+#   references, `plan/requirements.yaml`, `plan/tasks.yaml`, `plan/MILESTONES.md`, `plan/tasks/`, the classifier and
+#   `scripts/contain.sh`; an unknown path runs everything) skips `ci-archive` and the `ci` shards, `ci-checks`, `ci-release-archive` and its
 #   shards, and `xtask-ci`'s shards, and `ci-workspace` runs the cheap checks in place of its tests: the plan checks and
 #   the vocabulary lint (`no-atlas-params.yml`, the atlas guard, runs on every pull request);
 # - a change to no GPU-path file (only docs-only paths, `crates/gui/` and `crates/prin/`; data code loads is a GPU

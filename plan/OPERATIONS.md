@@ -355,8 +355,9 @@ request's merge commit against the base it merges onto; any other run runs every
 - **docs-only**, meaning it changes none of Principia's code (R-662; the owner, 31 Oct 2026: "Only the actual Principia
   CODE matters in ci"): every path is on the script's allowlist, `docs/`, `plan/` (its prose and Python), `scripts/`,
   `workbench/` and the root's markdown, and none is on its list of data code loads: `docs/gui/design/`,
-  `docs/gui/reference/`, `plan/requirements.yaml`, `plan/tasks.yaml`, `plan/MILESTONES.md`, `plan/tasks/`, and the
-  classifier `scripts/ci_changes.sh`, each with its readers named in the script. The build, test, release and controls
+  `docs/gui/reference/`, `plan/requirements.yaml`, `plan/tasks.yaml`, `plan/MILESTONES.md`, `plan/tasks/`, the
+  classifier `scripts/ci_changes.sh` and the containment `scripts/contain.sh`, each with its readers named in the
+  script. The build, test, release and controls
   jobs and the GPU suites' jobs are skipped, and `ci-workspace` runs only the cheap checks, plan-check and the
   vocabulary lint, in place of its tests, beside `no-atlas-params.yml`, the atlas guard; `mutants-fixture` skips its
   steps; `mutants`' shards find no `.rs` file outside those folders and pass;
