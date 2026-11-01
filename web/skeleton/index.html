@@ -6,6 +6,10 @@
 <link rel="icon" href="data:,">
 <title>principia · dev — mock engine</title>
 <!-- Self-hosted, same origin, no CDN (caching_contract Part 6a): it supplies COOP and COEP, which GitHub Pages cannot. -->
+<!-- Before it, which reads `window.coi` as it runs. Left to itself it asks for `COEP: credentialless` once a page is
+     controlled, in any browser with neither `window.chrome` nor `window.netscape`; Safari then loses isolation on every
+     load after the first. The site is all same origin, so `require-corp` serves every browser. -->
+<script>window.coi = { coepCredentialless: () => false };</script>
 <script src="coi-serviceworker.js"></script>
 <style>
   html, body { margin: 0; height: 100%; overflow: hidden; background: #0a0a0a; color: #ddd; font: 14px system-ui; }
