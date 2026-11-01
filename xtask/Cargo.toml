@@ -33,6 +33,11 @@ sha2 = "0.10"
 cargo-gpu-install = "=0.10.0-alpha.1"
 naga = { version = "30", features = ["spv-in", "wgsl-in", "wgsl-out"] }
 
+# `cargo xtask job` (R-658) signals a job's process group and tests whether a pid is alive. rustix is already in the
+# build, as validation's dependency for the same (R-217).
+[target.'cfg(unix)'.dependencies]
+rustix = { version = "1", features = ["process", "std"] }
+
 # Controls reach xtask's tests through a dev-dependency on validation (R-176).
 [dev-dependencies]
 validation = { path = "../crates/validation" }
