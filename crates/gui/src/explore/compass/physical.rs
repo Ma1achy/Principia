@@ -17,7 +17,7 @@ use engine::contract::set_field::SetField;
 use engine::contract::sim_config::{Latent, Links, Plane, SimConfig, LATENT_DIM};
 
 use super::views::{self, upper, Grid};
-use crate::explore::manifold_view::{basis_edit, dot, norm};
+use crate::explore::manifold_view::{basis_edit, dot, norm, plane_edit};
 
 /// `J⁺`'s cut `c` (REQ-GUI-410, an R-71 calibration confirmed at the M6 gate): inside the measured gap, at the order of
 /// its geometric middle, about `2.9e-9`.
@@ -421,16 +421,16 @@ fn gram_schmidt(q1: &Latent, q2: &Latent, lengths: (f64, f64)) -> (Latent, Laten
     (e1.map(|x| x * lengths.0), w.map(|x| x * lengths.1 / n2))
 }
 
-/// The physical steer to cell `(i, j)` from the chart `sim` at `z₀` (REQ-GUI-200), or why it is refused: one `SetField`
-/// on the basis, each axis at the length it had, as after the Chart builder's Apply (§G7). `None` for a cell on or below
-/// the diagonal, which is empty.
-pub fn steer(
+/// The physical steer to cell `(i, j)` from the chart `sim` at `z₀` (REQ-GUI-200), or why it is refused: the basis, each
+/// axis at the length it had, as after the Chart builder's Apply (§G7). `None` for a cell on or below the diagonal, which
+/// is empty.
+fn steered_basis(
     decoder: &Decoder,
     set: Set,
     sim: &SimConfig,
     i: usize,
     j: usize,
-) -> Option<Result<SetField, Refusal>> {
+) -> Option<Result<(Latent, Latent), Refusal>> {
     if i >= j || j >= LATENT_DIM {
         return None;
     }
@@ -440,12 +440,34 @@ pub fn steer(
         let why = Refusal::at(decoder, set, &sim.links, &plane.z0, &inverse, (i, j));
         return Some(Err(why));
     }
-    let basis = gram_schmidt(
+    Some(Ok(gram_schmidt(
         &inverse.preimage(i),
         &inverse.preimage(j),
         (norm(&plane.q1), norm(&plane.q2)),
-    );
-    Some(Ok(basis_edit(basis)))
+    )))
+}
+
+/// [`steered_basis`] as one `SetField` on the basis alone. A click or Space sends [`steer_on`]'s edit.
+pub fn steer(
+    decoder: &Decoder,
+    set: Set,
+    sim: &SimConfig,
+    i: usize,
+    j: usize,
+) -> Option<Result<SetField, Refusal>> {
+    steered_basis(decoder, set, sim, i, j).map(|basis| basis.map(basis_edit))
+}
+
+/// [`steered_basis`] on `sim`'s chart as one `SetField`: a plane that takes the slice normal or a target moves it by the
+/// slice-axis rule in the same edit ([`plane_edit`]; R-459 G4, REQ-GUI-208), as the Chart builder's Apply does.
+pub fn steer_on(
+    decoder: &Decoder,
+    set: Set,
+    sim: &SimConfig,
+    i: usize,
+    j: usize,
+) -> Option<Result<SetField, Refusal>> {
+    steered_basis(decoder, set, sim, i, j).map(|basis| basis.map(|b| plane_edit(sim, b)))
 }
 
 /// The console's line for a refused steer to cell `(i, j)` of `set`.

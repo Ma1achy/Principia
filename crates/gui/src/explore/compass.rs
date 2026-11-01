@@ -1611,7 +1611,7 @@ fn steer_physical(
     scratch: &mut Scratch,
     out: &mut Out,
 ) {
-    match physical::steer(&scratch.compass.decoder, set, sim, i, j) {
+    match physical::steer_on(&scratch.compass.decoder, set, sim, i, j) {
         Some(Ok(edit)) => out.edit(edit, None, scratch),
         Some(Err(why)) => out.refusals.push(physical::refusal_line(set, i, j, why)),
         None => {}
