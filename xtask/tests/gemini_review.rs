@@ -9,6 +9,7 @@ use std::net::{TcpListener, TcpStream};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 
 use serde_json::{json, Value};
 use validation::negative_control;
@@ -87,6 +88,13 @@ fn error(code: u16, status: &str) -> Reply {
     )
 }
 
+/// The stand-in reads the request and never answers it, until the caller's end of the connection closes.
+const HANG: u16 = 0;
+
+fn hang() -> Reply {
+    Reply(HANG, String::new())
+}
+
 /// What the stand-in API saw: each request's model, and its parsed body and key header.
 #[derive(Clone)]
 struct Seen {
@@ -155,6 +163,10 @@ fn handle(
             _ => error(404, "NOT_FOUND"),
         }
     };
+    if reply.0 == HANG {
+        while matches!(stream.read(&mut chunk), Ok(n) if n > 0) {}
+        return;
+    }
     let response = format!(
         "HTTP/1.1 {} X\r\ncontent-type: application/json\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{}",
         reply.0,
@@ -190,9 +202,8 @@ impl Run {
     }
 }
 
-/// Runs `script_source` with `replies` per model and a `diff` of the given bytes.
-fn run_case(script_source: &str, replies: &[(&str, Vec<Reply>)], diff: &[u8]) -> Run {
-    let dir = tempdir();
+/// The script copy and its inputs in `dir`, and the arguments of its `review` command.
+fn review_inputs(dir: &Path, script_source: &str, diff: &[u8]) -> (PathBuf, Vec<String>) {
     let script_path = dir.join("gemini_review.py");
     std::fs::write(&script_path, script_source).expect("the script copy");
     let brief = dir.join("AGENTS.md");
@@ -205,7 +216,30 @@ fn run_case(script_source: &str, replies: &[(&str, Vec<Reply>)], diff: &[u8]) ->
     std::fs::write(&pr, "PR-TEXT\n").expect("the PR");
     let diff_path = dir.join("diff.txt");
     std::fs::write(&diff_path, diff).expect("the diff");
+    let args = vec![
+        "review".to_owned(),
+        "--brief".to_owned(),
+        path(&brief),
+        "--pr".to_owned(),
+        path(&pr),
+        "--diff".to_owned(),
+        path(&diff_path),
+        "--number".to_owned(),
+        "7".to_owned(),
+        "--repo".to_owned(),
+        "o/r".to_owned(),
+        "--result".to_owned(),
+        path(&dir.join("result.json")),
+    ];
+    (script_path, args)
+}
 
+fn path(p: &Path) -> String {
+    p.to_str().expect("a UTF-8 path").to_owned()
+}
+
+/// A stand-in API on a local port, serving `replies`, and its log of what it saw.
+fn start_api(replies: &[(&str, Vec<Reply>)]) -> (u16, Arc<Mutex<Vec<Seen>>>) {
     let listener = TcpListener::bind("127.0.0.1:0").expect("a local port");
     let port = listener.local_addr().expect("its address").port();
     let seen = Arc::new(Mutex::new(Vec::new()));
@@ -217,23 +251,52 @@ fn run_case(script_source: &str, replies: &[(&str, Vec<Reply>)], diff: &[u8]) ->
         let seen = Arc::clone(&seen);
         std::thread::spawn(move || serve(listener, script, seen));
     }
+    (port, seen)
+}
 
+/// The script with the fake key, the stand-in's address and no real waits.
+fn script_command(script_path: &Path, port: u16, args: &[String]) -> Command {
+    let mut command = Command::new("python3");
+    command
+        .arg("-I")
+        .arg(script_path)
+        .args(args)
+        .env("GEMINI_API_KEY", KEY)
+        .env(
+            "GEMINI_REVIEW_API_BASE",
+            format!("http://127.0.0.1:{port}/v1beta"),
+        )
+        .env("GEMINI_REVIEW_TIME_SCALE", "0")
+        .env_remove("GITHUB_STEP_SUMMARY")
+        .stdin(Stdio::null());
+    command
+}
+
+/// The arguments of the `build` command.
+fn build_args(dir: &Path) -> Vec<String> {
+    vec![
+        "build".to_owned(),
+        "--result".to_owned(),
+        path(&dir.join("result.json")),
+        "--sha".to_owned(),
+        "abc123".to_owned(),
+        "--inline".to_owned(),
+        path(&dir.join("inline.json")),
+        "--flat".to_owned(),
+        path(&dir.join("flat.json")),
+    ]
+}
+
+/// Runs `script_source` with `replies` per model and a `diff` of the given bytes.
+fn run_case(script_source: &str, replies: &[(&str, Vec<Reply>)], diff: &[u8]) -> Run {
+    let dir = tempdir();
+    let (script_path, review_args) = review_inputs(&dir, script_source, diff);
+    let (port, seen) = start_api(replies);
     let result_path = dir.join("result.json");
-    let run = |args: &[&str]| {
-        let mut command = Command::new("python3");
-        command
-            .arg("-I")
-            .arg(&script_path)
-            .args(args)
-            .env("GEMINI_API_KEY", KEY)
-            .env(
-                "GEMINI_REVIEW_API_BASE",
-                format!("http://127.0.0.1:{port}/v1beta"),
-            )
-            .env("GEMINI_REVIEW_TIME_SCALE", "0")
-            .env_remove("GITHUB_STEP_SUMMARY")
-            .stdin(Stdio::null());
-        let out = command.output().expect("python3 runs");
+    let run = |args: &[String]| {
+        let out = script_command(&script_path, port, args)
+            .output()
+            .expect("python3 runs");
         assert!(
             out.status.success(),
             "gemini_review: {args:?} failed: {}",
@@ -245,34 +308,9 @@ fn run_case(script_source: &str, replies: &[(&str, Vec<Reply>)], diff: &[u8]) ->
             String::from_utf8_lossy(&out.stderr)
         )
     };
-    let path = |p: &Path| p.to_str().expect("a UTF-8 path").to_owned();
-    let mut printed = run(&[
-        "review",
-        "--brief",
-        &path(&brief),
-        "--pr",
-        &path(&pr),
-        "--diff",
-        &path(&diff_path),
-        "--number",
-        "7",
-        "--repo",
-        "o/r",
-        "--result",
-        &path(&result_path),
-    ]);
+    let mut printed = run(&review_args);
     let (inline_path, flat_path) = (dir.join("inline.json"), dir.join("flat.json"));
-    printed += &run(&[
-        "build",
-        "--result",
-        &path(&result_path),
-        "--sha",
-        "abc123",
-        "--inline",
-        &path(&inline_path),
-        "--flat",
-        &path(&flat_path),
-    ]);
+    printed += &run(&build_args(&dir));
     let mut load = |p: &Path| -> Value {
         let text = std::fs::read_to_string(p).expect("an output file");
         printed += &text;
@@ -697,6 +735,159 @@ negative_control!(
     check_unavailable(&script_text().replacen(
         "    return finish(\"unavailable\")\n\n\ndef summary_lines",
         "    return finish(\"exhausted\")\n\n\ndef summary_lines",
+        1
+    ))
+);
+
+// ---- A killed step --------------------------------------------------------------------------------------------
+
+/// What a step killed during its `requests`th request left behind, read before and after `build` runs on it. `None`
+/// for a result file that isn't there.
+fn killed_during(
+    script: &str,
+    replies: &[(&str, Vec<Reply>)],
+    requests: usize,
+) -> (Option<Value>, Value) {
+    let dir = tempdir();
+    let (script_path, review_args) = review_inputs(&dir, script, SMALL_DIFF);
+    let (port, seen) = start_api(replies);
+    let mut child = script_command(&script_path, port, &review_args)
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()
+        .expect("python3 runs");
+    // Bounded, so a script that never makes the call fails the test and leaves no process behind.
+    let deadline = Instant::now() + Duration::from_secs(60);
+    while seen.lock().expect("the log").len() < requests && Instant::now() < deadline {
+        std::thread::sleep(Duration::from_millis(10));
+    }
+    let reached = seen.lock().expect("the log").len();
+    child.kill().expect("the kill");
+    child.wait().expect("the killed step ends");
+    assert_eq!(
+        reached, requests,
+        "gemini_review: the step didn't reach the request it was to be killed in"
+    );
+    let result = std::fs::read_to_string(dir.join("result.json"))
+        .ok()
+        .map(|text| serde_json::from_str(&text).expect("a killed step's result is whole JSON"));
+    let out = script_command(&script_path, port, &build_args(&dir))
+        .output()
+        .expect("python3 runs");
+    assert!(
+        out.status.success(),
+        "gemini_review: build failed on what a killed step left"
+    );
+    let inline = std::fs::read_to_string(dir.join("inline.json")).expect("the review");
+    std::fs::remove_dir_all(&dir).ok();
+    (result, serde_json::from_str(&inline).expect("JSON"))
+}
+
+fn check_killed(script: &str) {
+    const IN_FLIGHT: &str = "in flight, no outcome recorded";
+    let (result, inline) = killed_during(script, &[(CHAIN[0], vec![hang()])], 1);
+    let result =
+        result.expect("gemini_review: a step killed during its first request left no count");
+    assert_eq!(
+        result["requests"],
+        json!([{"model": CHAIN[0], "http": 0, "result": IN_FLIGHT, "detail": ""}]),
+        "gemini_review: the first request's pending entry is wrong"
+    );
+    assert_eq!(
+        result["status"], "running",
+        "gemini_review: a killed step's result claims an outcome"
+    );
+    let body = inline["body"].as_str().expect("a review body");
+    assert!(
+        body.starts_with("Gemini unavailable, review skipped")
+            && body.contains("Gemini requests this review: 1.")
+            && body.contains(IN_FLIGHT),
+        "gemini_review: the note on a killed step doesn't count its request: {body}"
+    );
+
+    // Killed during a later request: the earlier one has its outcome, and the one in flight still counts.
+    let (result, inline) = killed_during(
+        script,
+        &[(CHAIN[0], vec![error(503, "UNAVAILABLE"), hang()])],
+        2,
+    );
+    let result =
+        result.expect("gemini_review: a step killed during its second request left no count");
+    let requests = result["requests"].as_array().expect("requests");
+    assert_eq!(
+        requests.len(),
+        2,
+        "gemini_review: a step killed during its second request undercounts: {requests:?}"
+    );
+    assert_eq!(
+        (&requests[0]["http"], &requests[0]["result"]),
+        (&json!(503), &json!("overloaded or unreachable")),
+        "gemini_review: a returned request's entry didn't get its outcome"
+    );
+    assert_eq!(
+        requests[1]["result"], IN_FLIGHT,
+        "gemini_review: the request in flight isn't marked so"
+    );
+    let body = inline["body"].as_str().expect("a review body");
+    assert!(
+        body.contains("Gemini requests this review: 2."),
+        "gemini_review: the note on a killed step doesn't count its requests: {body}"
+    );
+}
+
+#[test]
+fn gemini_review_a_step_killed_during_a_request_leaves_a_true_count() {
+    check_killed(&script_text());
+}
+
+negative_control!(
+    gemini_review_a_step_killed_during_a_request_leaves_a_true_count,
+    "the request recorded only after the call returns",
+    expected = "gemini_review: a step killed during its first request left no count",
+    check_killed(&script_text().replacen(
+        "write_json(result_path, result)\n            status, raw = post(",
+        "status, raw = post(",
+        1
+    ))
+);
+
+fn check_outcome_replaces_pending(script: &str) {
+    let run = run_case(
+        script,
+        &[(
+            CHAIN[0],
+            vec![error(503, "UNAVAILABLE"), answer(CLEAN, CHAIN[0])],
+        )],
+        SMALL_DIFF,
+    );
+    let results: Vec<_> = run.result["requests"]
+        .as_array()
+        .expect("requests")
+        .iter()
+        .map(|r| (r["http"].clone(), r["result"].clone()))
+        .collect();
+    assert_eq!(
+        results,
+        [
+            (json!(503), json!("overloaded or unreachable")),
+            (json!(200), json!("answered"))
+        ],
+        "gemini_review: a finished run's entries aren't one per request with its outcome"
+    );
+}
+
+#[test]
+fn gemini_review_a_response_replaces_its_pending_entry() {
+    check_outcome_replaces_pending(&script_text());
+}
+
+negative_control!(
+    gemini_review_a_response_replaces_its_pending_entry,
+    "the outcome added as a second entry, not written over the pending one",
+    expected = "gemini_review: a finished run's entries aren't one per request with its outcome",
+    check_outcome_replaces_pending(&script_text().replacen(
+        "entry.update({\"http\": status,",
+        "entry = dict(entry); requests.append(entry); entry.update({\"http\": status,",
         1
     ))
 );

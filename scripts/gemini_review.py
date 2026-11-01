@@ -53,6 +53,8 @@ QUOTA_MINUTE = "quota (per minute)"
 NOT_AVAILABLE = "model not available"
 OVERLOADED = "overloaded or unreachable"
 REFUSED = "refused"
+# Written before the call and replaced by one of the above when it returns; what stays here if the step is killed.
+IN_FLIGHT = "in flight, no outcome recorded"
 
 
 def brief_section(text):
@@ -224,7 +226,8 @@ def model_matches(asked, answered):
 
 
 def run_chain(key, payload, result_path, base, scale):
-    """Walks CHAIN, recording every request in the result file as it goes, so a killed step still leaves a count."""
+    """Walks CHAIN, recording every request in the result file before it is sent and again with its outcome, so a step
+    killed at any point, even during the first request, leaves a true count."""
     started = time.monotonic()
     requests = []
     result = {"status": "running", "requests": requests}
@@ -246,6 +249,10 @@ def run_chain(key, payload, result_path, base, scale):
             remaining = left()
             if remaining <= 0:
                 return finish("unavailable")
+            # http 0 as post() means it: no response came back.
+            entry = {"model": model, "http": 0, "result": IN_FLIGHT, "detail": ""}
+            requests.append(entry)
+            write_json(result_path, result)
             status, raw = post(
                 f"{base}/models/{model}:generateContent", key, payload, min(REQUEST_TIMEOUT_SECONDS, remaining)
             )
@@ -253,8 +260,7 @@ def run_chain(key, payload, result_path, base, scale):
             if status == 0:
                 kind, wait = OVERLOADED, OVERLOAD_BACKOFF_SECONDS
                 detail = raw.decode("utf-8", "replace")[:200]
-            entry = {"model": model, "http": status, "result": kind, "detail": detail.replace(key, "<key>")}
-            requests.append(entry)
+            entry.update({"http": status, "result": kind, "detail": detail.replace(key, "<key>")})
             print(f"Gemini request {len(requests)}: {model}: HTTP {status}: {kind} {entry['detail']}".rstrip())
             write_json(result_path, result)
             if kind == ANSWERED:
