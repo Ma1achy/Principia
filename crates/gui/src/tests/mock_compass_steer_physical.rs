@@ -441,17 +441,35 @@ fn help_at(id: &'static str, window: [f32; 2], least: bool) -> (App<MockSide>, H
     (app, h, panel)
 }
 
-/// At the artboard's window the column fits, at the pole's readout too: no scroll, so no bar and no narrower wrap. The
-/// pole's readout is the shorter, naming no pair, so its help ends short of the margin anyway: the control is the other
-/// two's.
+/// At the artboard's window the column fits, at both of the pole's readouts too: no scroll, so no bar and no narrower
+/// wrap. Exactly at the pole the readout is the shorter, naming no pair, so its help ends short of the margin anyway.
+/// Just off the pole it is the longest, a pair with the scientific stretch. The control is on those that end past it.
 #[test]
 fn mock_compass_steer_physical_the_help_fits_at_the_artboard_with_no_bar() {
     let mut pole = start();
     pole.z0 = at_pole();
+    let mut near = pole.clone();
+    near.z0[0] = -1e-5;
+    near.z0[1] = 0.5e-5;
+    // The state the near case claims, which the pole's and the start's readouts are not.
+    let pair_and_scientific = |p: &Plane| {
+        let j = latent_jacobian(&Decoder::default(), Set::Shape, &Links::defaults(), &p.z0);
+        let read = physical::readout(Set::Shape, &pushforward(&j, p));
+        let (head, shown) = read.rsplit_once("stretch ").expect("the stretch");
+        assert!(!head.contains('—') && shown.contains('e'), "{read}");
+    };
+    pair_and_scientific(&near);
+    rejects("the pole's readout, naming no pair", || {
+        pair_and_scientific(&pole)
+    });
+    rejects("the start's readout, in plain digits", || {
+        pair_and_scientific(&start())
+    });
     for (p, id, past_the_margin) in [
         (start(), COMPASS_JACOBI, true),
         (start(), COMPASS_SHAPE, true),
         (pole, COMPASS_SHAPE, false),
+        (near, COMPASS_SHAPE, true),
     ] {
         let (mut app, mut h) = app_with(&p, Decoder::default(), id);
         let output = h.frame(&mut app, Vec::new());
