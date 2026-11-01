@@ -1818,7 +1818,6 @@ fn nodes(output: &egui::FullOutput, name: &str) -> Vec<(egui::Rect, bool)> {
 /// index; and its foot line at the window's foot, under a list that takes the rest.
 #[test]
 fn mock_windows_open_console_marks_its_filter_and_lays_out_its_rows() {
-    use crate::mock::MOCK_WARNING;
     let (mut app, mut h) = fresh();
     let ctx = h.ctx.clone();
     for _ in 0..40 {
@@ -1854,30 +1853,48 @@ fn mock_windows_open_console_marks_its_filter_and_lays_out_its_rows() {
         assert_eq!(marks, want, "{filter:?}");
     }
     app.windows.console.filter = console::Filter::All;
-    // Scrolled to row k, a row's message tops the list, as row 0 does unscrolled (only the rows shown are laid out,
-    // R-463; `console_open_close` has the row it is).
+    // Scrolled to row k, row k's message tops the list, as row 0 does unscrolled, and the row after it does not. Only
+    // the rows shown are laid out (R-463), so each row is told by its own line, newest first.
+    const LINES: usize = 40;
+    for i in 0..LINES {
+        app.log_warning(format!("line {i}"));
+    }
+    let line = |k: usize| format!("line {}", LINES - 1 - k);
     let mut tops = Vec::new();
+    let mut nexts = Vec::new();
     for k in [0, 3, 7] {
         app.windows.console.top_row = k;
         app.windows.console.scroll_pending = true;
         settle(&mut h, &mut app);
         let output = h.frame(&mut app, Vec::new());
         let list = app.keyboard.place_of(console::LOG).expect("placed").rect;
-        let rows = nodes(&output, MOCK_WARNING);
-        let top = rows
-            .iter()
-            .map(|r| r.0.min.y - list.min.y)
-            .filter(|top| *top >= -0.5)
-            .fold(f32::INFINITY, f32::min);
-        assert!(top.is_finite(), "{rows:?}");
-        tops.push(top);
+        // In the list: the footer shows the latest line as well.
+        let in_list = |name: &str| -> Vec<_> {
+            let found = nodes(&output, name);
+            found
+                .into_iter()
+                .filter(|r| list.contains(r.0.center()))
+                .collect()
+        };
+        let rows = in_list(&line(k));
+        assert_eq!(rows.len(), 1, "row {k} drawn: {rows:?}");
+        tops.push(rows[0].0.min.y - list.min.y);
+        let next = in_list(&line(k + 1));
+        assert_eq!(next.len(), 1, "row {k}'s next drawn: {next:?}");
+        nexts.push(next[0].0.min.y - list.min.y);
     }
-    for top in &tops {
-        assert!(
-            (top - tops[0]).abs() < 0.5,
-            "row k's top below the list's: {tops:?}"
-        );
-    }
+    let check = |tops: &[f32]| {
+        for top in tops {
+            assert!(
+                (top - tops[0]).abs() < 0.5,
+                "row k's top below the list's: {tops:?}"
+            );
+        }
+    };
+    check(&tops);
+    // The control: a list one row off at row 3 and 7.
+    let off = [tops[0], nexts[1], nexts[2]];
+    rejects("a list scrolled to another row", || check(&off));
     // The foot line sits at the foot of the window's rect: the list takes the rest.
     let output = h.frame(&mut app, Vec::new());
     let window = windows::rect(Window::Console, &layout(&h));
