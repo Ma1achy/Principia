@@ -372,7 +372,8 @@ a gate. Failing one never blocks building"; "(a) GPU explorer … expected to ag
 "Three valid outcomes: PASS; EXPLAINED DIVERGENCE …; UNEXPLAINED"; "Before calling anything a failure, check the
 comparison is like-for-like (frame, units, masses, definition of the event, the source's stated accuracy)"; and early
 peeks are "INFORMATION ONLY"). The PLAN.md column **T** keeps its 25 Oct letters (A exact, B statistics, C
-reliability); the R-649 tier goes in **Status**.
+reliability); the R-649 tier goes in **Status**. **[Corrected 31 Oct 2026, R-661: tier (a)'s "expected to agree
+statistically" is a hypothesis Principia will measure, and no paper establishes it.]**
 
 ### 10.1 PLAN.md § 0, the abbreviation table: add after the `HP27` row
 
