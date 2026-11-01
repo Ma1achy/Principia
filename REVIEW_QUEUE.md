@@ -690,93 +690,6 @@ peek log's first row (`docs/verification/peek_log.md`), UNEXPLAINED, with this q
   REQ-DEC-011's and REQ-VAL-017's verify text and TASK-M2-48's two acceptance lines drop "unfused" and "on lavapipe".
   The tag rule, `ε_M01` (REQ-DEC-039) and R-547's form are unchanged. Nothing waits.
 
-## RQ-622: Five statistical or qualitative map targets whose verify names a Result at f64: are they scored on tier (a), the f32 GPU explorer, as R-649's confirmed reading says, or on the f64 Result their verify names *(physics; R-649 item 2 and the owner's confirmation of 30 Oct 2026; `docs/design/principia_dd_replication.md` § 12.2; REQ-VAL-308, REQ-VAL-309, REQ-VAL-311, REQ-VAL-312, REQ-VAL-313; and B-2, REQ-VAL-246, added below; context: TASK-M9-33, TASK-M9-34, TASK-M9-35, TASK-M9-16)*
-
-*Queued 30 Oct 2026 by the fix round of R-649's port (PR #342), applying the owner's confirmation of the tier reading.
-For the owner: yes, it is physics where the choice changes which instrument a target is scored on, and the corpus
-does not settle it (R-369). Numbered RQ-622: the number before it is already held by the branch
-`task/TASK-M2-48` (`plan/OPERATIONS.md` § "Merging", **Numbers**).*
-
-- **File, section:**
-  - `decisions.md` § "R-649 — …", the owner's words, item 2: "(a) GPU explorer: fast, f32, interactive; expected to
-    agree statistically or qualitatively only, with error_ratio flagging what it can't resolve; (b) CPU IC inspector:
-    f64/high precision; exact targets (collision points, periods, converged states) bind here."
-  - The same entry, his confirmation of 30 Oct 2026: "Tier reading confirmed: statistical targets are scored on tier
-    (a), exact targets on tier (b)."
-  - `decisions.md` § "R-572 — Result: a view's region run at full precision, f32 or f64 only, on a uniform grid, as a
-    batch job in the app or by `prin batch` …".
-  - `plan/requirements.yaml`, REQ-VAL-308 (AT-D2), verify: "one Result per mass set (R-572), f64, uniform; each orbit's
-    pixel against REQ-VAL-137's threshold"; REQ-VAL-309 (OC-4 off the Šuvakov plane), verify: "Result runs (R-572) at
-    f64; the island criterion read from the payload; agreement at REQ-VAL-310's level"; REQ-VAL-311 (OC-4 on the
-    plane), verify: "as OC-4"; REQ-VAL-312 (AT-D1), verify: "a Result (R-572) at f64; reviewed by the physics
-    reviewer"; REQ-VAL-313 (AT-D3), verify: "as AT-D1, per value of m₃".
-- **The gap:** the five are statistical (OC-4 on and off the plane) or qualitative over a map (AT-D1, AT-D2, AT-D3), so
-  the confirmed reading scores them on tier (a), the f32 interactive GPU explorer. Their verify, written before R-649,
-  scores them on a Result at f64, a batch run that is neither the interactive f32 explorer nor the CPU IC inspector.
-  Changing the verify to f32 changes what is scored; keeping it scores a statistical target off tier (a).
-- **The question:** on what are these five scored.
-- **Options seen:** (a) on tier (a): the verify's run becomes the GPU explorer's f32 output, and the f64 Result is
-  dropped from the scoring; (b) the verify as written: the f64 Result is the scoring run, recorded as a stated
-  exception to the tier rule; (c) both: scored on tier (a), with the f64 Result run beside it and recorded as
-  information (an explained divergence between the two would be a precision-tier finding); (d) another, stated by the
-  owner.
-- **Applied meanwhile:** the five are listed as tier (a) by the rule, "its f64 Result: RQ-622", in § 12.2 and in their
-  notes; their verify is unchanged. Nothing in M0 to M8 depends on it.
-- **Added (30 Oct 2026, fix round of PR #342, Codex thread on § 12.2's B-2 row): B-2, REQ-VAL-246.** The same
-  question for one statistical target whose statement names the CPU:
-  - `plan/requirements.yaml`, REQ-VAL-246 (B-2), statement: "The Lyapunov exponent of Burrau's problem, measured with
-    the CPU FTLE, must be compared loosely with λ₁₀ = 0.101 ± 0.005 (τ_L = 4.3 ± 0.2), recorded as a fit over every ζ,
-    relativistic runs included, and not a Newtonian-only number (B-2)." Its compare is "statistical (loose)", so the
-    confirmed reading puts it on (a), and § 12.2's table row reads "(a)".
-  - `docs/design/principia_dd_replication.md` § "12.2 Tiers": "A single chaotic trajectory set beside a figure (AA-4,
-    V-6, SP-1's structural comparison) is (b)." B-2's published λ₁₀ is "fitted over all ζ, relativistic runs
-    included" (REQ-VAL-246's note): an FTLE fit over many runs from one start, the Burrau pixel, with a statistical
-    compare. Whether the clause reaches B-2 is part of the question, not a given.
-  - The gap: by its compare B-2 is (a), the f32 GPU explorer, by the owner's confirmed reading; its statement names the
-    CPU FTLE. Which instrument measures the exponent changes the number scored.
-  - The question: does § 12.2's single-trajectory clause reach B-2, a fit over many runs from one start; and is B-2
-    scored on (a), on the CPU FTLE its statement names, or on both.
-  - Options seen: (a) on tier (a), the GPU explorer's FTLE, with the statement's "measured with the CPU FTLE" changed
-    to match; (b) on the CPU FTLE, as the statement says, recorded as a stated exception to the tier rule or as the
-    single-trajectory clause's reach; (c) both: scored on tier (a), with the CPU FTLE run beside it and recorded as
-    information (an explained divergence between the two would be a precision-tier finding); (d) another, stated by
-    the owner.
-  - Applied meanwhile: § 12.2's row reads "(a); its CPU FTLE: RQ-622"; REQ-VAL-246's statement is unchanged and it is
-    held on this entry; TASK-M9-16's note and TASK-M9-37's "not scored" list name the hold. TASK-M9-16 still scores
-    CH-1, B-1 and V-6.
-- **Waits:** the scoring of REQ-VAL-308, REQ-VAL-309, REQ-VAL-311, REQ-VAL-312 and REQ-VAL-313 in M9 (TASK-M9-33,
-  TASK-M9-34, TASK-M9-35), and any peek of them; and B-2's (REQ-VAL-246, TASK-M9-16), and any peek of it.
-
-## RQ-630: R-554 L3's and the chart contract's summary sentences on Lean each axis say `N_a` and `N_b` vanish together on a tilted view only at the corner, where L3's own closed form also gives both zero at Lean `(±180, 0)`, `(0, ±180)` and `(±180, ±180)` *(conflict: a ruling's summary against its own formula; R-554 L3, R-474 R2; `docs/contracts/principia_chart_decoder_contract.md` § "Repeats and the canonical point"; the physics review of PR #349 (5710611197), P2; REQ-SCHED-101; context: TASK-M2-36, TASK-M8-56)*
-
-*Queued 30 Oct 2026 by TASK-M2-36's fix round 2, on the physics review of PR #349. A wording conflict, not a physics
-question: the code follows the formula, and the physics reviewer agrees it is the physically consistent reading.*
-
-- **File, section:**
-  - `decisions.md` § "R-554 — …", L3: "under Lean each axis `N ∝ (−sin τ₁ cos τ₂, −cos τ₁ sin τ₂, cos τ₁ cos τ₂)`,
-    so on a tilted view they vanish together only at the corner `|τ₁| = |τ₂| = 90°`, where there is no normal and
-    RQ-471 applies no fold, so no pole map either".
-  - The same L3, before it: "the pole maps' condition `N_a = 0` and `N_b = 0` is decided exactly on the stored angles
-    from each map's closed form".
-  - `docs/contracts/principia_chart_decoder_contract.md` § "Repeats and the canonical point": "decided exactly on the
-    stored angles (Tip as sheet `m == 180`; Lean each axis only untilted, its one-target corner ray-degenerate with no
-    fold; two targets iff `τ₁, τ₂ ∈ {0, ±180}`)".
-  - `decisions.md` § "R-474 — …", R2: "A single tilt is identical under both maps."
-- **The conflict:** L3's formula gives `N_a = −sin τ₁ cos τ₂ = 0` and `N_b = −cos τ₁ sin τ₂ = 0` whenever
-  `sin τ₁ = sin τ₂ = 0`, i.e. at Lean `(±180, 0)`, `(0, ±180)` and `(±180, ±180)`, all tilted views, with
-  `N = (0, 0, cos τ₁ cos τ₂) ≠ 0`. There the plane is mirrored and `d ≡ 0`, so the pole maps keep `d`. Lean with one
-  angle at ±180 is the same rotation as Tip as sheet at `m = 180` (R-474 R2), where the contract applies the pole
-  maps. The summary sentences ("only at the corner", "only untilted") say otherwise.
-- **The question:** whether the summary sentences are reworded to match the formula ("Lean each axis iff
-  `sin τ₁ = sin τ₂ = 0`, its one-target corner ray-degenerate with no fold"), or the formula's other zeros are excluded.
-- **Options seen:** (a) reword L3's and the contract's summaries to the formula's zeros (the code's reading);
-  (b) keep the summaries and exclude Lean's ±180 zeros from the pole maps, so that Lean `(180, 0)` and Tip as sheet
-  `(180, 0)`, the same rotation, count differently; (c) another, stated by the owner.
-- **Applied meanwhile:** the formula, as L3's "decided exactly on the stored angles from each map's closed form" says:
-  `TiltSpec::normal_zero` (`crates/kernel/src/chart/tilt.rs`) gives `[true, true]` at Lean `(±180, 0)` and
-  `(0, ±180)` (TASK-M2-36, PR #349).
-- **Waits:** nothing; the summaries' rewording only.
-
 ## RQ-631: On a tilted shape sphere, the spherical map's period 2 in `t` makes `(s + k, t + 2j)` the same system as `(s, t)` wherever `N_a·k + 2·N_b·j = 0` for whole `(k, j) ≠ 0`, which R-554 L3's rule counts twice *(physics; silence; R-554 L3, RQ-472 (a), R-408; `docs/contracts/principia_chart_decoder_contract.md` § "Repeats and the canonical point"; the physics review of PR #349 (5710611197), P3; REQ-CHART-062, REQ-SCHED-101; context: TASK-M2-36, TASK-M8-56)*
 
 *Queued 30 Oct 2026 by TASK-M2-36's fix round 2, on the physics review of PR #349. For the owner: yes, it is physics
@@ -884,31 +797,18 @@ the choice changes the result (the word every sample stores) and the corpus does
   throwaway script of 30 Oct, never in the repo. What stands in for it is `fixtures/crossings/prl_orbits.py`, adapted
   from it; `crossing_body_relabelling` and `qa_m316_prl_fixture_against_appendix_c`, which check the outer-body claim.
 
-## RQ-634: On a tilted shape sphere a pole map's image also keeps `d` on lines of measure zero, `N_a(½ + k) + N_b(2j − 2t) = 0`, which no ruling names: R-554 L3 counts such a pixel and its image as two systems, and R-408 counts each system once *(physics; silence; R-554 L3, R-655, R-408; `docs/contracts/principia_chart_decoder_contract.md` § "Repeats and the canonical point"; the physics review of PR #349 (5719740344), P2; context: TASK-M2-36, TASK-M8-56)*
+## RQ-656: What the collision branch, the regularised occupants and the Chazy classifier read under softening *(physics; silence; R-654, RQ-627; `docs/contracts/principia_integrator_contract.md` Part 2b, Part 7; `docs/design/principia_dd_chazy_final_motion.md`; context: TASK-M9-39)*
 
-*Queued 30 Oct 2026 by TASK-M2-36's fix round, on the physics review of PR #349. For the owner: yes, it is physics
-where the choice changes the result (which pixels count) and the corpus does not settle it (R-369).*
+*Queued 1 Nov 2026 by the port of R-654. For the owner: yes, it is physics where the choice changes the result (which runs collide, and which occupants a softened run may use), and the corpus does not settle it (R-369).*
 
 - **File, section:**
-  - `decisions.md` § "R-554 — …", L3: "the pole maps' condition `N_a = 0` and `N_b = 0` is decided exactly on the
-    stored angles from each map's closed form".
-  - `docs/contracts/principia_chart_decoder_contract.md` § "Repeats and the canonical point": "the pole maps apply on a
-    tilted view iff `N_a = 0` and `N_b = 0` for chart_reference §3.3's `N`, decided exactly on the stored angles", and
-    "On a tilted view a repeat is the same system only where the type group's map leaves the tilt's hidden offset `d`
-    unchanged".
-  - `decisions.md` § "R-408 — Area statistics count each system once, …".
-  - `decisions.md` § "R-655 — …": "a pixel `(s + k, t + 2j)` with `N_a·k + 2·N_b·j = 0` for integers `(k, j) ≠ 0` is the
-    same system as `(s, t)`", which covers the type group's translations and not its pole maps.
-- **The silence:** a pole map's image `(s + ½ + k, −t + 2j)` has the same `n̂` as `(s, t)`. On a tilted view it also
-  keeps `d` on the line `N_a(½ + k) + N_b(2j − 2t) = 0`. Under Lean `45°/45°`, `(a, ¼)` and `(a + ½, −¼)` have one shape
-  and one `d`; with `N_a = 0`, `N_b ≠ 0`, the pole rows `t = j` are one system at each `d`. So the contract's "same
-  system only where the map leaves `d` unchanged" holds on these lines, while its "iff `N_a = 0` and `N_b = 0`" and
-  R-554 L3 make the view affine there and count both. No ruling names these lines.
-- **The question:** whether these lines are identified, or R-554 L3 stands with the exception stated.
-- **Options seen:** (a) keep L3 and state these lines as a named exception of measure zero, each pixel counted, as
-  § 3.3 states the circle's identification; (b) fold them as R-655 folds its lattice, one count per system, decided
-  exactly on the stored angles (the line's `t` is a computed coordinate, so what "exactly" means on it needs stating);
-  (c) another, stated by the owner.
-- **Applied meanwhile:** the ruled text, R-554 L3: `Tilted::pixel` (`crates/kernel/src/chart/tilt.rs`) applies no pole
-  map unless `N_a = N_b = 0`, so such pixels count as distinct (TASK-M2-36, PR #349). No code changes for this entry.
-- **Waits:** nothing built waits; a fold, if ruled, is a follow-up to TASK-M2-36's `Tilted::pixel` and TASK-M8-56.
+  - `decisions.md` § "R-654 — …", the owner's words: "Energy and drift are defined under the softened potential."
+  - RQ-627 (archived), the question: "the softened force law's definition (its potential and force as functions of `r` and ε, and what `E₀`, the drift meters and the collision branch read under it), and the task that builds it."
+  - `docs/contracts/principia_integrator_contract.md` Part 7: "**Collision:** `min_{i<j} ‖r_i − r_j‖ < r_coll`."
+  - `docs/contracts/principia_integrator_contract.md` Part 1: "**Under a regularised occupant, two energies, named (R-566).**"; Part 2b holds the regularised occupants, and no line of the contract gives them a softened form.
+  - `docs/design/principia_dd_chazy_final_motion.md`: "**`E`** is the total energy at `t = 0`, `E_0 = K_0 + V_0`, unsoftened (`energy::energy` at `eps2 = 0` on the initial".
+- **The silence:** the ruling settles the law, `ε`, energy and drift. It does not say (1) whether a softened run keeps the collision test on the geometric `r < r_coll`, softening having removed the singularity it guards; (2) whether the regularised occupants take softening, and how, or a softened run is limited to the unregularised ones; (3) whether the Chazy classifier's `E` follows "energy … under the softened potential" or stays unsoftened as written.
+- **The question:** those three.
+- **Options seen:** (a) the collision test unchanged on geometric `r`; softening offered only on the unregularised occupants, the others refusing `ε ≠ 0`; Chazy's `E` softened as the ruling's energy; (b) as (a), but the regularised occupants given a softened form, defined by TASK-M9-39 with the physics reviewer (R-72); (c) as (a), with Chazy's `E` unsoftened and the classifier refusing, or flagged on, a softened run; (d) another, stated by the owner.
+- **Applied meanwhile:** none needed: dispatch refuses `ε ≠ 0` (R-654; TASK-M3-06), so no softened run exists.
+- **Waits:** TASK-M9-39 (REQ-INT-110, REQ-SYS-094). Nothing in M0 to M8 waits.

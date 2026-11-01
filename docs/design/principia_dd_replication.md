@@ -855,10 +855,13 @@ is scored on (b); a statistical target is scored on (a), statistically only; a q
 ensemble is scored on (a) too, (a) being the tier that agrees "statistically or qualitatively"; a mixed target is
 scored on (b) for its exact part and on (a) for its statistical or qualitative part (*applied per R-369*, R-649). A
 single chaotic trajectory set beside a figure (AA-4, V-6, SP-1's structural comparison) is (b). Five map targets
-whose verify names a Result at f64 (AT-D2, OC-4 off and on the Šuvakov plane, AT-D1, AT-D3) are (a) by the rule;
-how their f64 Result runs square with it is RQ-622, and their scoring waits on it. B-2 (REQ-VAL-246) is
-statistical, so (a) by the rule, but its statement names the CPU FTLE and it is one start, the Burrau pixel; which
-instrument scores it is RQ-622 too, and its scoring waits on it. A GPU miss on a (b) target, or on
+whose verify named a Result at f64 (AT-D2, OC-4 off and on the Šuvakov plane, AT-D1, AT-D3) are scored on (a), with
+the f64 Result run beside it and recorded as information; a divergence between the two is a precision-tier finding
+(R-653, RQ-622 (c)). B-2 (REQ-VAL-246), one start, the Burrau pixel, fitted over many runs and so outside the
+single-trajectory clause, is scored on (a) by the GPU explorer's FTLE, with the CPU FTLE beside it on the same terms
+(R-653). *Was (until R-653):* "are (a) by the rule; how their f64 Result runs square with it is RQ-622, and their
+scoring waits on it. B-2 (REQ-VAL-246) is statistical, so (a) by the rule, but its statement names the CPU FTLE and it
+is one start, the Burrau pixel; which instrument scores it is RQ-622 too, and its scoring waits on it." A GPU miss on a (b) target, or on
 a mixed target's (b) part, is expected, not a defect. A calibration takes its target's tier. *Was (the port's first
 reading, corrected 30 Oct 2026 by the owner's confirmation):* "a statistical or qualitative one binds (b), with (a)
 expected to agree statistically or qualitatively; one with an exact part and a statistical part binds (b) for the
@@ -874,8 +877,8 @@ first, and (a) is expected to agree with the second statistically"; every (a) an
 | OC-5 | REQ-VAL-220 | exact (a count) | (b) |
 | OC-5's counting convention | REQ-VAL-221 | a definition | (b) |
 | OC-6 | REQ-VAL-222 | a report | (b) |
-| AT-D2 | REQ-VAL-308 | qualitative + a calibrated threshold | (a); its f64 Result: RQ-622 |
-| OC-4 (off the Šuvakov plane) | REQ-VAL-309 | statistical | (a); its f64 Result: RQ-622 |
+| AT-D2 | REQ-VAL-308 | qualitative + a calibrated threshold | (a); its f64 Result beside it, information (R-653) |
+| OC-4 (off the Šuvakov plane) | REQ-VAL-309 | statistical | (a); its f64 Result beside it, information (R-653) |
 | LL-1, LL-2 | REQ-VAL-203 | exact | (b) |
 | LL-3 | REQ-VAL-223 | exact | (b) |
 | LL-4 | REQ-VAL-225 | exact per orbit; the fit statistical | (b) per orbit; (a) for the fit |
@@ -892,7 +895,7 @@ first, and (a) is expected to agree with the second statistically"; every (a) an
 | TM-1 | REQ-VAL-240 | exact (scaling) | (b) |
 | CH-1 | REQ-VAL-242 | statistical | (a) |
 | B-1 | REQ-VAL-244 | exact to the figure's resolution | (b) |
-| B-2 | REQ-VAL-246 | statistical (loose) | (a); its CPU FTLE: RQ-622 |
+| B-2 | REQ-VAL-246 | statistical (loose) | (a); its CPU FTLE beside it, information (R-653) |
 | V-6 | REQ-VAL-248 | exact once shot; qualitative against the figure (one trajectory) | (b) |
 | Q-2's Theory row, Q-4 | REQ-VAL-211 | (i) exact; (ii) statistical; no integration | (b) for (i); (a) for (ii) |
 | P-1 | REQ-VAL-252 | qualitative + statistical | (a) |
@@ -928,9 +931,9 @@ first, and (a) is expected to agree with the second statistically"; every (a) an
 | D-4 | REQ-VAL-303 | measurement: reproduce or explain (on the CPU) | (b) |
 | D-5 | REQ-VAL-305 | exact (a count of 0) | (b) |
 | D-3 | REQ-VAL-306 | exact on the fixtures; statistical for the medians | (b) on the fixtures; (a) for the medians |
-| OC-4 on the Šuvakov plane | REQ-VAL-311 | statistical | (a); its f64 Result: RQ-622 |
-| AT-D1 | REQ-VAL-312 | qualitative | (a); its f64 Result: RQ-622 |
-| AT-D3 | REQ-VAL-313 | qualitative | (a); its f64 Result: RQ-622 |
+| OC-4 on the Šuvakov plane | REQ-VAL-311 | statistical | (a); its f64 Result beside it, information (R-653) |
+| AT-D1 | REQ-VAL-312 | qualitative | (a); its f64 Result beside it, information (R-653) |
+| AT-D3 | REQ-VAL-313 | qualitative | (a); its f64 Result beside it, information (R-653) |
 | HU-1 | REQ-VAL-314 | qualitative; exact at Table 23's minima | (b) at Table 23's minima; (a) for the map |
 | HU-2 | REQ-VAL-316 | qualitative + one exact point | (b) at the exact point; (a) for the map |
 | TR-1 | REQ-VAL-318 | qualitative | (a) |

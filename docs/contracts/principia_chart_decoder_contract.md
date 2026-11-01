@@ -288,8 +288,9 @@ from its two level-1 children, as EX7(b) states; the bootstrap is not raised for
 system only where the type group's map leaves the tilt's hidden offset `d` unchanged: along an axis that mixes θ with
 a non-periodic coordinate the chart is affine and draws no image (R-538 TF2.2, J8; R-552, RQ-430 (a); *was:* "RQ-430 (a) applied meanwhile");
 the pole maps apply on a tilted view iff `N_a = 0` and `N_b = 0` for chart_reference §3.3's `N`, decided exactly on the
-stored angles (Tip as sheet `m == 180`; Lean each axis only untilted, its one-target corner ray-degenerate with no
-fold; two targets iff `τ₁, τ₂ ∈ {0, ±180}`), and otherwise the view is affine along that axis and draws no image
+stored angles (Tip as sheet `m == 180`; Lean each axis iff `sin τ₁ = sin τ₂ = 0`, its one-target corner ray-degenerate
+with no fold; two targets iff `τ₁, τ₂ ∈ {0, ±180}`; R-663, closing RQ-630; *was:* "Lean each axis only untilted, its
+one-target corner ray-degenerate with no fold"), and otherwise the view is affine along that axis and draws no image
 (R-554, ruling RQ-472 (a)); there is no equator fold on any view (R-544): R-544 wins and there is no fold anywhere,
 the human's RQ-472 ruling's equator clause, which kept one where `N_b = 0`, and its pixel fold for the statistics not
 applied (R-613, closing RQ-508, as applied meanwhile; *was:* "is RQ-508 (R-544 applied meanwhile; R-554 leaves that
@@ -318,6 +319,11 @@ until it is ruled"; "as §3.3 decides its fold".
 `ix' = (ix + n/2) mod n`; over the pole at `t = 0`, `iy' = −1 − iy` and the same shift; R-412's fold at the equator,
 `t = 0`, `iy' = −1 − iy` with `ix` unchanged; composed" (physics review 5594430380 of PR #263, P3: two maps on one
 edge; applied per R-369).
+**The named exception on a tilted view (R-665, closing RQ-634).** A pole map's image `(s + ½ + k, −t + 2j)` has the same
+`n̂` as `(s, t)`, and where the pole maps do not apply it also keeps `d` on the lines `N_a(½ + k) + N_b(2j − 2t) = 0`:
+under Lean `45°/45°`, `(a, ¼)` and `(a + ½, −¼)`; with `N_a = 0`, `N_b ≠ 0`, the pole rows `t = j` at each `d`. These
+lines are a named exception of measure zero to R-408, as chart_reference §3.3 states the circle's identification: such
+a pixel and its image are one system and each is counted. No fold or test on the computed `t` decides them.
 
 ---
 
