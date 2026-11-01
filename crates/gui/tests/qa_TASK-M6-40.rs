@@ -29,9 +29,10 @@ use engine::contract::snapshot::Snapshot;
 use engine::contract::view_ui::{KeyMode, Mode};
 use gui::app::App;
 use gui::capture::{FORMAT, PIXELS_PER_POINT, SIZE};
+use gui::explore::compass::physical::{Decoder, Matrix};
 use gui::explore::compass::views::{CompassView, GridPlace};
 use gui::explore::compass::{self};
-use gui::explore::manifold_view::{Touch, AXES, TAU1, TAU2, Z0_HALF_RANGE};
+use gui::explore::manifold_view::{Touch, View, AXES, TAU1, TAU2, Z0_HALF_RANGE};
 use gui::explore::{COMPASS, COMPASS_SLICE, COMPASS_TILT, COMPASS_VIEW};
 use gui::headless::Headless;
 use gui::layout::Layout;
@@ -1723,4 +1724,251 @@ fn qa_cube_a_focus_on_the_badge_when_it_goes_stays_in_the_tree() {
         rig.app.view.focus.path[0], COMPASS,
         "it stays in the Compass"
     );
+}
+
+// === REQ-GUI-208: a physical steer that takes D (R-459 G4, render_gui_spec § "The compass: look and views") ==========
+
+/// `J` is this matrix over the ranges, so `J⁺ e_i ∝ e_i`: a cell's steer is the coordinate plane, whatever the scale.
+fn identity_j() -> &'static Matrix {
+    Box::leak(Box::new(std::array::from_fn(|r| e(r, 1.0))))
+}
+
+/// A full-rank `J` whose preimages are off every axis, from a fixed-seed splitmix64: planes that only read on axes.
+fn dense_j() -> &'static Matrix {
+    let mut x = 0x4d36_u64;
+    let mut next = move || {
+        x = x.wrapping_add(0x9e37_79b9_7f4a_7c15);
+        let mut z = x;
+        z = (z ^ (z >> 30)).wrapping_mul(0xbf58_476d_1ce4_e5b9);
+        z = (z ^ (z >> 27)).wrapping_mul(0x94d0_49bb_1331_11eb);
+        ((z ^ (z >> 31)) >> 11) as f64 / (1u64 << 53) as f64
+    };
+    let a: Matrix = std::array::from_fn(|r| {
+        std::array::from_fn(|c| 0.4 * (next() - 0.5) + if r == c { 1.0 } else { 0.0 })
+    });
+    Box::leak(Box::new(a))
+}
+
+/// The slice-axis rule as G4 states it, for planes on two axes: `z_q3`, or the first axis the plane does not show.
+fn slice_axis_of(i: usize, j: usize) -> usize {
+    if i != Q3 && j != Q3 {
+        return Q3;
+    }
+    (0..8).find(|k| *k != i && *k != j).unwrap()
+}
+
+/// A rig on the linear `J` in a physical view, at a tilted plane (`z_β × z_μ2`) no cell's steer leaves as it is, in `f`.
+fn physical_rig(view: CompassView, j: &'static Matrix, f: SliceFrame) -> Rig {
+    let mut rig = mock();
+    rig.chart((BETA, MU2), f, (0.35, 0.0, 0.0), 1.0);
+    rig.app.manifold.compass.decoder = Decoder::Linear { a: j, shell: false };
+    rig.app.manifold.compass.view = view;
+    rig.idle(2);
+    rig
+}
+
+fn click_cell(rig: &mut Rig, i: usize, j: usize) {
+    let at = GridPlace::fit(compass::square(layout().compass))
+        .cell_rect(i, j)
+        .center();
+    rig.click(at);
+}
+
+fn space_cell(rig: &mut Rig, i: usize, j: usize) {
+    rig.focus(COMPASS_VIEW);
+    rig.key(Key::Enter, NONE);
+    assert_eq!(rig.app.view.focus.mode, KeyMode::Interaction);
+    rig.app.manifold.compass.cursor = Some((i, j));
+    rig.key(Key::Space, NONE);
+}
+
+#[test]
+fn qa_cube_a_physical_steer_moves_d_and_the_targets_by_the_rule_in_one_entry() {
+    let cases = [
+        // Takes D: the rule's first axis not shown, the targets on the old D following.
+        ((Q2, Q3), frame(Q3, Q3, Q3), frame(ALPHA, ALPHA, ALPHA)),
+        ((ALPHA, Q3), frame(Q3, Q3, Q3), frame(BETA, BETA, BETA)),
+        // Takes a D that is not z_q3: back to z_q3.
+        ((ALPHA, BETA), frame(ALPHA, ALPHA, ALPHA), frame(Q3, Q3, Q3)),
+        // Takes D, with targets of their own off the plane: they stay.
+        ((Q2, Q3), frame(Q3, MU1, Q0), frame(ALPHA, MU1, Q0)),
+        // Takes a target alone: it resets to D (REQ-GUI-205).
+        ((Q0, Q1), frame(Q3, Q0, MU1), frame(Q3, Q3, MU1)),
+        // Takes nothing: the frame stays.
+        ((Q0, Q1), frame(Q3, Q3, Q3), frame(Q3, Q3, Q3)),
+        ((Q0, Q1), frame(Q3, MU1, Q2), frame(Q3, MU1, Q2)),
+    ];
+    for view in [CompassView::Jacobi, CompassView::Shape] {
+        for by_space in [false, true] {
+            for ((i, j), start, want) in cases {
+                let at = format!("{view:?} ({i}, {j}) from {start:?}, Space {by_space}");
+                let mut rig = physical_rig(view, identity_j(), start);
+                let (before, n0) = (rig.snap(), rig.applied());
+                if by_space {
+                    space_cell(&mut rig, i, j);
+                } else {
+                    click_cell(&mut rig, i, j);
+                }
+                let after = rig.snap();
+                assert_eq!(rig.applied() - n0, 1, "one SetField: {at}");
+                check_one(
+                    1,
+                    i64::from(after.history.undo_depth) - i64::from(before.history.undo_depth),
+                );
+                assert!(close(&after.sim.plane.q1, &e(i, 1.0), 1e-9), "{at}");
+                assert!(close(&after.sim.plane.q2, &e(j, 1.0), 1e-9), "{at}");
+                assert_eq!(after.sim.slice.frame, want, "{at}");
+                rig.undo();
+                let back = rig.snap();
+                assert_eq!(back.sim.slice.frame, start, "one Ctrl+Z, the frame: {at}");
+                assert_eq!(
+                    back.sim.plane, before.sim.plane,
+                    "one Ctrl+Z, the plane: {at}"
+                );
+            }
+        }
+    }
+    // The cube then reads it: D left the plane, H and V on the steered pair.
+    let mut rig = physical_rig(CompassView::Jacobi, identity_j(), frame(Q3, Q3, Q3));
+    click_cell(&mut rig, Q2, Q3);
+    rig.app.manifold.compass.view = CompassView::Cube;
+    rig.settle();
+    check_on_edges(&mut rig, "H z_q2", "D z_α", "V z_q3");
+    // Control: the same plane by a basis edit alone, the steer before this rule, leaves D on z_q3 in the contract.
+    let mut rig = physical_rig(CompassView::Jacobi, identity_j(), frame(Q3, Q3, Q3));
+    rig.set(SimField::Basis {
+        q1: e(Q2, 1.0),
+        q2: e(Q3, 1.0),
+    });
+    let left = rig.snap().sim.slice.frame;
+    rejects("a physical steer that leaves D in the plane", || {
+        assert_eq!(left, frame(ALPHA, ALPHA, ALPHA))
+    });
+}
+
+/// Every cell of both views, the property G1 and G4 give: no dimension twice, whatever plane a steer lands on.
+#[test]
+fn qa_cube_no_physical_steer_leaves_d_or_a_target_on_the_plane_it_reads() {
+    let distinct = |after: &Snapshot, at: &str| {
+        let f = after.sim.slice.frame;
+        let v = View::framed(&after.sim.plane, Some(&f));
+        for (name, axis) in [("D", f.normal), ("X", f.tilt_x), ("Y", f.tilt_y)] {
+            let axis = axis as usize;
+            assert!(
+                axis != v.a && axis != v.b,
+                "{name} = {axis} on the plane read ({}, {}): {at}",
+                v.a,
+                v.b
+            );
+        }
+    };
+    for view in [CompassView::Jacobi, CompassView::Shape] {
+        // The planes on two axes, where the rule's answer is known.
+        let start = frame(Q3, Q3, Q3);
+        let mut rig = physical_rig(view, identity_j(), start);
+        for i in 0..8 {
+            for j in i + 1..8 {
+                let at = format!("identity, {view:?} ({i}, {j})");
+                let before = rig.snap();
+                click_cell(&mut rig, i, j);
+                let after = rig.snap();
+                let d = slice_axis_of(i, j);
+                assert_eq!(after.sim.slice.frame, frame(d, d, d), "{at}");
+                distinct(&after, &at);
+                rig.undo();
+                assert_eq!(rig.snap().sim.slice.frame, start, "{at}");
+                assert_eq!(rig.snap().sim.plane, before.sim.plane, "{at}");
+            }
+        }
+        // Planes off every axis, read by the reader.
+        for start in [frame(Q3, Q3, Q3), frame(ALPHA, Q0, MU1)] {
+            let mut rig = physical_rig(view, dense_j(), start);
+            for i in 0..8 {
+                for j in i + 1..8 {
+                    let at = format!("dense, {view:?} ({i}, {j}) from {start:?}");
+                    let before = rig.snap();
+                    click_cell(&mut rig, i, j);
+                    let after = rig.snap();
+                    assert_ne!(after.sim.plane, before.sim.plane, "it steered: {at}");
+                    check_one(
+                        1,
+                        i64::from(after.history.undo_depth) - i64::from(before.history.undo_depth),
+                    );
+                    distinct(&after, &at);
+                    rig.undo();
+                    assert_eq!(rig.snap().sim.slice.frame, start, "{at}");
+                }
+            }
+        }
+    }
+    // Control: the property fires on a D left in the plane.
+    let mut rig = physical_rig(CompassView::Jacobi, identity_j(), frame(Q3, Q3, Q3));
+    rig.set(SimField::Basis {
+        q1: e(Q2, 1.0),
+        q2: e(Q3, 1.0),
+    });
+    let left = rig.snap();
+    rejects("a D on the plane", || distinct(&left, "control"));
+}
+
+/// §G4: chart changes turn about the pin; the frame moving in the same edit changes neither that nor the one entry.
+#[test]
+fn qa_cube_a_locked_physical_steer_onto_d_turns_about_the_pin_in_one_entry() {
+    let mut rig = physical_rig(CompassView::Jacobi, identity_j(), frame(Q3, Q3, Q3));
+    let p = rig.snap().sim.plane;
+    let (s, t) = (0.75, 0.25);
+    let anchor = add(&add(&p.z0, 2.0 * s - 1.0, &p.q1), 2.0 * t - 1.0, &p.q2);
+    rig.set(SimField::Lock(Lock {
+        locked: true,
+        z_locked: anchor,
+    }));
+    let before = rig.snap();
+    click_cell(&mut rig, Q2, Q3);
+    let after = rig.snap();
+    check_one(
+        1,
+        i64::from(after.history.undo_depth) - i64::from(before.history.undo_depth),
+    );
+    assert_eq!(after.sim.slice.frame, frame(ALPHA, ALPHA, ALPHA));
+    let want = add(
+        &add(&p.z0, 2.0 * s - 1.0, &add(&p.q1, -1.0, &e(Q2, 1.0))),
+        2.0 * t - 1.0,
+        &add(&p.q2, -1.0, &e(Q3, 1.0)),
+    );
+    assert!(
+        close(&after.sim.plane.z0, &want, 1e-9),
+        "z₀ {:?}, want {want:?}",
+        after.sim.plane.z0
+    );
+    rejects("the z₀ a free steer keeps", || {
+        assert!(close(&after.sim.plane.z0, &p.z0, 1e-9))
+    });
+    rig.undo();
+    let back = rig.snap();
+    assert_eq!(back.sim.plane, before.sim.plane, "one Ctrl+Z, the plane");
+    assert_eq!(back.sim.slice.frame, frame(Q3, Q3, Q3), "and the frame");
+}
+
+/// A refused cell edits nothing: not the basis, and not the frame the plane would have moved.
+#[test]
+fn qa_cube_a_refused_physical_steer_keeps_the_frame() {
+    // Rank 7 with the shell's normal e_q3, so √(1 − n_i² − n_j²) = 0 on any cell holding z_q3: refused.
+    let mut a: Matrix = *identity_j();
+    a[Q3] = [0.0; 8];
+    let mut rig = physical_rig(CompassView::Jacobi, identity_j(), frame(Q3, Q3, Q3));
+    rig.app.manifold.compass.decoder = Decoder::Linear {
+        a: Box::leak(Box::new(a)),
+        shell: true,
+    };
+    rig.idle(2);
+    let (before, n0) = (rig.snap(), rig.applied());
+    click_cell(&mut rig, Q2, Q3);
+    let after = rig.snap();
+    assert_eq!(rig.applied(), n0, "no SetField");
+    assert_eq!(after.history.undo_depth, before.history.undo_depth);
+    assert_eq!(after.sim.slice.frame, before.sim.slice.frame);
+    assert_eq!(after.sim.plane, before.sim.plane);
+    // Control: a cell off the normal on the same J does steer, so the click was on the grid.
+    click_cell(&mut rig, Q0, Q1);
+    assert!(close(&rig.snap().sim.plane.q1, &e(Q0, 1.0), 1e-9));
 }
