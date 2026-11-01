@@ -16,13 +16,17 @@
 //! where it is (A5). A click on a console control moves the keyboard's focus onto it (A3), and a click on the search
 //! field starts typing in it (R-456).
 //!
+//! Its rows (R-463, the fix to what `crate::bench` measured): only those the log's rect shows are laid out, each one
+//! line, the columns fixed, so that a frame costs the same at 10 000 entries as at ten. The whole list is still scrolled
+//! and copied.
+//!
 //! Its height (§G12; R-463): it is docked along the bottom, its top edge a splitter (`crate::layout`), remembered with
 //! the layout; the maximise button and the scope's shortcut M, the focus in the console and not typing in the search
 //! field, toggle the full height below the top bar and back to the dragged height ([`State::maximised`]).
 
 use std::time::Instant;
 
-use eframe::egui::{self, Align, Button, Grid, Layout, RichText, ScrollArea, TextEdit, Ui};
+use eframe::egui::{self, vec2, Align, Button, Label, Layout, RichText, ScrollArea, TextEdit, Ui};
 use engine::contract::log::{LogEntry, Severity};
 
 use crate::app::Counts;
@@ -265,6 +269,39 @@ pub fn top_of(offset: f32, row_h: f32) -> usize {
     (offset / row_h - 1e-3).ceil().max(0.0) as usize
 }
 
+/// The columns' widths, in characters of the monospace font: `error`, "12:04:11.251" and `integrator`, the longest of
+/// each (`Severity::name`, [`time_of_day`], `Source::name`).
+pub const COLUMNS: [usize; 3] = [5, 12, 10];
+
+/// Draws one cell `width` wide and `line` tall.
+fn cell(ui: &mut Ui, width: f32, line: f32, text: RichText) {
+    let layout = Layout::left_to_right(Align::Center);
+    ui.allocate_ui_with_layout(vec2(width, line), layout, |ui| {
+        ui.set_min_width(width);
+        ui.label(text);
+    });
+}
+
+/// Draws one row, `line` tall: its columns `widths` wide, then its message on one line, elided at the log's edge, the
+/// rest on hover and in copy, so that every row is the height the scroll takes it to be.
+fn row(ui: &mut Ui, entry: &LogEntry, widths: [f32; 3], line: f32) {
+    let size = vec2(ui.available_width(), line);
+    let layout = Layout::left_to_right(Align::Center);
+    ui.allocate_ui_with_layout(size, layout, |ui| {
+        let colour = severity_colour(ui.visuals(), entry.severity);
+        let severity = RichText::new(entry.severity.name())
+            .monospace()
+            .color(colour);
+        cell(ui, widths[0], line, severity);
+        let time = RichText::new(time_of_day(entry.at)).monospace().weak();
+        cell(ui, widths[1], line, time);
+        let source = RichText::new(entry.source.name()).monospace();
+        cell(ui, widths[2], line, source);
+        let message = RichText::new(&entry.message).monospace().color(colour);
+        ui.add(Label::new(message).truncate());
+    });
+}
+
 /// What the console draws from.
 pub struct View<'a> {
     /// The rows, oldest first.
@@ -359,25 +396,13 @@ pub fn show(ui: &mut Ui, keys: &mut Keys<'_>, state: &mut State, view: &View<'_>
         area = area.vertical_scroll_offset(state.top_row as f32 * row_h);
     }
     let drawing = Instant::now();
-    let list = area.show(ui, |ui| {
-        Grid::new("console rows")
-            .striped(false)
-            .min_row_height(line)
-            .spacing(ui.spacing().item_spacing)
-            .show(ui, |ui| {
-                for entry in &rows {
-                    let colour = severity_colour(ui.visuals(), entry.severity);
-                    ui.label(
-                        RichText::new(entry.severity.name())
-                            .monospace()
-                            .color(colour),
-                    );
-                    ui.label(RichText::new(time_of_day(entry.at)).monospace().weak());
-                    ui.label(RichText::new(entry.source.name()).monospace());
-                    ui.label(RichText::new(&entry.message).monospace().color(colour));
-                    ui.end_row();
-                }
-            });
+    let font = egui::TextStyle::Monospace.resolve(ui.style());
+    let glyph = ui.fonts_mut(|f| f.glyph_width(&font, 'M'));
+    let widths = COLUMNS.map(|chars| chars as f32 * glyph);
+    let list = area.show_rows(ui, line, rows.len(), |ui, shown| {
+        for entry in &rows[shown] {
+            row(ui, entry, widths, line);
+        }
     });
     state.timing.rows_s += drawing.elapsed().as_secs_f64();
     state.page = page_of(list.inner_rect.height(), line, row_h);

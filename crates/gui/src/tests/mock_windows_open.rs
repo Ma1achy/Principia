@@ -1854,7 +1854,8 @@ fn mock_windows_open_console_marks_its_filter_and_lays_out_its_rows() {
         assert_eq!(marks, want, "{filter:?}");
     }
     app.windows.console.filter = console::Filter::All;
-    // Scrolled to row k, row k's message tops the list, as row 0 does unscrolled.
+    // Scrolled to row k, a row's message tops the list, as row 0 does unscrolled (only the rows shown are laid out,
+    // R-463; `console_open_close` has the row it is).
     let mut tops = Vec::new();
     for k in [0, 3, 7] {
         app.windows.console.top_row = k;
@@ -1863,8 +1864,13 @@ fn mock_windows_open_console_marks_its_filter_and_lays_out_its_rows() {
         let output = h.frame(&mut app, Vec::new());
         let list = app.keyboard.place_of(console::LOG).expect("placed").rect;
         let rows = nodes(&output, MOCK_WARNING);
-        assert!(rows.len() > k, "{rows:?}");
-        tops.push(rows[k].0.min.y - list.min.y);
+        let top = rows
+            .iter()
+            .map(|r| r.0.min.y - list.min.y)
+            .filter(|top| *top >= -0.5)
+            .fold(f32::INFINITY, f32::min);
+        assert!(top.is_finite(), "{rows:?}");
+        tops.push(top);
     }
     for top in &tops {
         assert!(

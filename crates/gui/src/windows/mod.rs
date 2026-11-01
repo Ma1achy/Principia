@@ -325,6 +325,11 @@ pub fn frame(
     let (scope, title) = (entry.scope, entry.title);
     let movable = place::movable(entry.window);
     let mut open = true;
+    // egui lays a new area out in an invisible pass first: for the console, opening within its frame (R-463), that pass
+    // is discarded and the frame's second draws it.
+    if !movable && egui::AreaState::load(ctx, window_id(scope)).is_none() {
+        ctx.request_discard("the console's first opening");
+    }
     let shown = egui::Window::new(title)
         .id(window_id(scope))
         // The size first, then the rect: egui lays a new window out in an invisible sizing pass, at its default size
@@ -335,6 +340,8 @@ pub fn frame(
         // smaller than its place. The console's rect is on screen by the layout, and egui, holding it to the screen at
         // last frame's size, would push it up for the frame it shrinks (R-463).
         .constrain_to(Rect::EVERYTHING)
+        // The console appears whole in the frame it opens (R-463), where egui would fade it in over several.
+        .fade_in(movable)
         .collapsible(false)
         .resizable(false)
         .title_bar(false)

@@ -28,6 +28,7 @@ mod tests {
     mod compass_position_gauge;
     mod compass_support;
     mod conformance;
+    mod console_open_close;
     mod degenerate_tilt_guards;
     mod f3_fallback_mock;
     mod f3_fills_window_mock;

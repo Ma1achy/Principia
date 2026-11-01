@@ -256,7 +256,7 @@ impl<S: EngineSide> App<S> {
     }
 
     /// Logs `message` to the console as the app's warning, counted in the footer.
-    fn log_warning(&mut self, message: String) {
+    pub(crate) fn log_warning(&mut self, message: String) {
         let at = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .map_or(0, |d| u64::try_from(d.as_millis()).unwrap_or(u64::MAX));
@@ -684,6 +684,14 @@ impl<S: EngineSide> App<S> {
             &mut self.keyboard,
             &mut actions,
         );
+        // The console asked for this frame is drawn in it, not the next (R-463).
+        let (console, others): (Vec<_>, Vec<_>) = std::mem::take(&mut actions.open)
+            .into_iter()
+            .partition(|id| windows::opened_by(id) == Some(Window::Console));
+        actions.open = others;
+        for opener in console {
+            self.open_window(&ctx, Window::Console, Some(opener));
+        }
         let (closed, held) =
             self.draw_windows(&ctx, &layout, focused, &mut window_edits, &mut acts);
         // A move or resize ended: the places are saved (R-461 I4).
@@ -1312,7 +1320,12 @@ impl<S: EngineSide> App<S> {
                     self.console.clear();
                     self.counts = Counts::default();
                 }
-                windows::console::Act::Close => self.close_window(ctx, Window::Console),
+                windows::console::Act::Close => {
+                    self.close_window(ctx, Window::Console);
+                    // A click on × lands as the console is drawn: the frame's second pass draws it gone, so it closes
+                    // in the click's frame, as Esc does (R-463). egui gives a second pass no input to act on twice.
+                    ctx.request_discard("the console closed by its ×");
+                }
                 windows::console::Act::Focus(id) => self.keyboard.focus_by_click(
                     ctx,
                     self.view.mode,
