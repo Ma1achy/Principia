@@ -1327,6 +1327,8 @@ impl<S: EngineSide> App<S> {
                 self.splits.set_console_top(None);
                 self.windows.console.maximised = false;
                 resets = true;
+                // As its maximise click: drawn, and the figure clipped, at the new height in this frame.
+                ctx.request_discard("the console's edge double-clicked");
             }
         }
         if resets {

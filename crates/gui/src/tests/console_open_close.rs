@@ -583,3 +583,94 @@ fn console_open_close_outside_the_bench_the_drawing_reads_no_clock() {
     assert!(timed.is_some_and(|t| t.rows_s > 0.0), "{timed:?}");
     rejects("a timing kept with no bench", || assert_eq!(timed, None));
 }
+
+/// Asserts the figure's `clip` is what the console `drawn` leaves of `whole`.
+fn clip_matches(clip: Rect, drawn: Rect, whole: Rect) {
+    let bottom = whole.max.y.min(drawn.min.y);
+    assert!(
+        (clip.max.y - bottom).abs() < 0.5 && clip.min == whole.min,
+        "the figure {clip:?} under a console {drawn:?}"
+    );
+}
+
+/// The frames of `events`, each one's clip checked against the console that frame drew; the last frame's clip and console.
+fn frames_match(
+    h: &mut Headless,
+    app: &mut App<MockSide>,
+    events: Vec<Vec<Event>>,
+    whole: Rect,
+) -> (Rect, Rect) {
+    let mut last = None;
+    for events in events {
+        let clip = figure_clip(&h.frame(app, events));
+        let drawn = app.keyboard.place_of(WINDOW).expect("the console").rect;
+        clip_matches(clip, drawn, whole);
+        last = Some((clip, drawn));
+    }
+    last.expect("a frame")
+}
+
+#[test]
+fn console_open_close_a_toggle_by_the_pointer_clips_the_figure_as_it_draws_the_console() {
+    let (mut app, mut h) = with_figure();
+    let layout = Layout::new(h.screen(), h.pixels_per_point());
+    let whole = layout.figure;
+    press(&mut h, &mut app, Key::Tab, Modifiers::SHIFT);
+    press(&mut h, &mut app, Key::Enter, Modifiers::NONE);
+    for _ in 0..3 {
+        let _ = h.frame(&mut app, Vec::new());
+    }
+    let button = |app: &App<MockSide>| {
+        let place = app.keyboard.place_of(console::MAXIMISE).expect("maximise");
+        place.rect.center()
+    };
+    // The click that maximises: covered, in the frame the console fills the height.
+    let click = crate::capture::click(button(&app)).to_vec();
+    let (covering, drawn) = frames_match(&mut h, &mut app, click, whole);
+    assert!(app.windows.console.maximised);
+    assert_eq!(drawn.min.y.round(), layout.page.min.y.round());
+    assert!(covering.height() <= 0.0, "{covering:?}");
+    // The click that restores: the figure back, in the frame the console drops.
+    let click = crate::capture::click(button(&app)).to_vec();
+    let (restored, docked) = frames_match(&mut h, &mut app, click, whole);
+    assert!(!app.windows.console.maximised);
+    assert_eq!(restored, whole);
+    // Maximised again, by the keys, then the edge's double-click: back at the default in its frame.
+    let _ = key_frame(&mut h, &mut app, Key::M);
+    let edge = eframe::egui::pos2(200.0, layout.page.min.y);
+    let double: Vec<Vec<Event>> = crate::capture::click(edge)
+        .into_iter()
+        .chain(crate::capture::click(edge))
+        .collect();
+    h.set_frame_step(0.05);
+    let (after, reset) = frames_match(&mut h, &mut app, double, whole);
+    h.set_frame_step(crate::headless::FRAME_S);
+    assert!(!app.windows.console.maximised, "reset");
+    assert_eq!(after, whole);
+    assert_eq!(reset.min.y.round(), docked.min.y.round());
+    // A drag from maximised is read before anything is drawn: every frame of it matches.
+    let _ = key_frame(&mut h, &mut app, Key::M);
+    let to = edge + eframe::egui::vec2(0.0, 300.0);
+    let press_at = |pos, pressed| Event::PointerButton {
+        pos,
+        button: eframe::egui::PointerButton::Primary,
+        pressed,
+        modifiers: Modifiers::NONE,
+    };
+    let drag = vec![
+        vec![Event::PointerMoved(edge)],
+        vec![press_at(edge, true)],
+        vec![Event::PointerMoved(to)],
+        vec![press_at(to, false)],
+        Vec::new(),
+    ];
+    let (part, _) = frames_match(&mut h, &mut app, drag, whole);
+    assert!((part.max.y - to.y).abs() < 1.0, "{part:?}");
+    // The controls: each frame's clip against the console of the state before it.
+    rejects("the figure over the restored console's old place", || {
+        clip_matches(restored, drawn, whole)
+    });
+    rejects("the figure blanked over a docked console", || {
+        clip_matches(covering, docked, whole)
+    });
+}

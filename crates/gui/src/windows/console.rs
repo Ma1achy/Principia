@@ -324,6 +324,11 @@ fn header_button(
     let response = ui.add(button);
     if response.clicked() {
         acts.push(Act::Focus(id));
+        // Its click lands as the console is drawn at its height: the frame's second pass draws it, and clips the
+        // figure, at the new one (R-463 K2). Enter on it acts before the drawing, with no second pass.
+        if id == MAXIMISE {
+            ui.ctx().request_discard("the console's maximise clicked");
+        }
         // Enter on × closes through the window rule (`windows::closed_by`); its click, as here.
         let act = if id == CLOSE {
             Some(Act::Close)
