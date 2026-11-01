@@ -404,8 +404,8 @@ fn compass_golden_the_labels_numbers_and_readout() {
 
 negative_control!(
     compass_golden_the_labels_numbers_and_readout,
-    "slice mode's labels against tilt mode's one label must fail",
-    expected = "tilt mode draws one label",
+    "slice mode's labels against tilt mode's three edges must fail",
+    expected = "tilt mode draws corner numbers",
     check_same(&golden("mock_compass_cube_tilt_0"), &slice_case())
 );
 

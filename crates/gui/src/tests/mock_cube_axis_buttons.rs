@@ -226,19 +226,27 @@ fn check_h_picked(before: &Plane, after: &Plane, to: usize, b: usize, sigma: f64
 fn mock_cube_axis_buttons_picking_h_sets_the_pair_chart_following_and_one_undo() {
     let (mut app, mut h) = app_with((20.0, 10.0, 5.0), 0.5, frame(Z_Q3, Z_Q3, Z_Q3));
     let before = state(&app);
+    // The scale read back off the tilted basis, which is 0.5 only to the platform's sin and cos; the pick keeps this
+    // value exactly.
+    let kept = View::read(&app.snapshot().sim);
+    assert!(
+        (kept.scale - 0.5).abs() < 1e-12,
+        "the scale read: {}",
+        kept.scale
+    );
     click_scope(&mut h, &mut app, COMPASS_H);
     let _ = h.frame(&mut app, Vec::new());
     click_scope(&mut h, &mut app, COMPASS_H_ENTRIES[Z_Q0]);
     settle(&mut h, &mut app);
     let after = state(&app);
-    check_h_picked(&before.1, &after.1, Z_Q0, Z_BETA, 0.5);
+    check_h_picked(&before.1, &after.1, Z_Q0, Z_BETA, kept.scale);
     let read = View::read(&app.snapshot().sim);
     assert_eq!(
         (read.a, read.b, read.tau1, read.tau2, read.gamma),
         (Z_Q0, Z_BETA, 0.0, 0.0, 0.0),
         "the new pair, every angle 0"
     );
-    assert_eq!(read.zoom(), 1.0, "the zoom kept");
+    assert_eq!(read.zoom(), kept.zoom(), "the zoom kept");
     assert_eq!(texts(&h, &app)[0], "H z_q0");
     // Chart's horizontal q₁ reads it.
     assert_eq!(basis_text(&after.1.q1), "0.50·z_q0");
@@ -251,7 +259,7 @@ fn mock_cube_axis_buttons_picking_h_sets_the_pair_chart_following_and_one_undo()
     ctrl_z(&mut h, &mut app);
     check_one_entry(&before, &after, &state(&app));
     rejects("a pick that keeps the tilt", || {
-        check_h_picked(&before.1, &before.1, Z_Q0, Z_BETA, 0.5)
+        check_h_picked(&before.1, &before.1, Z_Q0, Z_BETA, kept.scale)
     });
 }
 
