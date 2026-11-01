@@ -19,8 +19,9 @@ max_samples=480
 
 sampler() {
   exec 2> /dev/null
-  local nap=""
-  trap 'kill "$nap"; exit 0' TERM
+  # `$!`, not a variable set after the `sleep` starts: a TERM is handled between two commands, so it can fall between
+  # those two, where a variable would not name the `sleep` yet and it would be left running.
+  trap 'kill "${!:-}"; exit 0' TERM
   local n avail text
   for ((n = 1; n <= max_samples; n++)); do
     avail=$(df -Pk / | awk 'NR == 2 { print $4 }')
@@ -32,9 +33,10 @@ $(free -m)"
     if ((n % log_every == 1 || ${avail:-0} < low_kb)); then
       printf '%s\n' "$text"
     fi
-    sleep "$seconds" &
-    nap=$!
-    wait "$nap"
+    # The one child that inherits the step's streams: it gets none, so even a `sleep` nothing ended holds no pipe open,
+    # and in Actions a held pipe can hold the step open.
+    sleep "$seconds" > /dev/null 2>&1 &
+    wait "$!"
   done
 }
 
@@ -44,7 +46,8 @@ sampler_pid=$!
 bash -e "$script"
 status=$?
 
-# The sampler ends at its trap, once the sample in hand is done; it never outlives the step, or holds its output open.
+# The sampler ends at its trap, once the command in hand is done, or at the KILL; it never outlives the step. What it
+# leaves running at a KILL, a `du` in hand, writes to the sample's own pipe and /dev/null, never to the step's output.
 kill -TERM "$sampler_pid" 2> /dev/null
 for _ in {1..15}; do
   kill -0 "$sampler_pid" 2> /dev/null || break

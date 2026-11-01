@@ -1,7 +1,7 @@
 //! `.github/scripts/disk_sampler.sh`, the `shell:` of `cargo xtask ci` in `xtask-ci` (applied per R-369): a measurement
 //! of the runner's disk that can't change the step's result. It exits with the step script's status, under the default
-//! shell's `-e`; it writes its samples, bounded in number; it doesn't outlive the step; and the job wires it in and
-//! uploads what it wrote, on a failure too.
+//! shell's `-e`; it writes its samples, bounded in number; it doesn't outlive the step, or leave the step's output held
+//! open; and the job wires it in and uploads what it wrote, on a failure too.
 #![cfg(unix)]
 
 #[path = "../../crates/validation/tests/support/scratch.rs"]
@@ -166,6 +166,116 @@ negative_control!(
             .replace("kill -TERM \"$sampler_pid\" 2> /dev/null", "")
             .replace("kill -KILL \"$sampler_pid\" 2> /dev/null", "")
     )
+);
+
+/// `from` in `sampler`, replaced: an edit that no longer applies must not quietly leave a sampler the check passes on.
+fn edit(sampler: &str, from: &str, to: &str) -> String {
+    assert!(sampler.contains(from), "the sampler has no {from:?}");
+    sampler.replace(from, to)
+}
+
+/// The sampler's nap, with and without what keeps it off the step's streams.
+const NAP: &str = "sleep \"$seconds\" > /dev/null 2>&1 &";
+const NAP_ON_THE_STREAMS: &str = "sleep \"$seconds\" &";
+/// The trap's end of the nap, by `$!`.
+const TRAP: &str = "trap 'kill \"${!:-}\"; exit 0' TERM";
+const TRAP_LEAVES_THE_NAP: &str = "trap 'exit 0' TERM";
+const NAP_WAITED: &str = "    wait \"$!\"\n";
+/// A TERM in the window CI hit (job 124967987450): the nap has started, and the next command hasn't run.
+const TERM_THEN_NAP_NAMED: &str =
+    "    sh -c 'kill -TERM \"$PPID\"'\n    nap=$!\n    wait \"$nap\"\n";
+
+/// Ends once the first sample is written and the sampler has had a second to reach its nap.
+const STEP_MID_NAP: &str = "for _ in {1..250}; do\n  \
+     grep -q avail_kb \"$RUNNER_TEMP/runner-disk.log\" 2> /dev/null && break\n  sleep 0.1\ndone\n\
+     sleep 1\nexit 0\n";
+
+/// The output closes at the step's end, with the next sample well past the limit and the step ending mid-nap. A nap
+/// still holding the output outlives `LIMIT`, and an orphan with no streams ends soon after.
+fn check_output_closes(sampler: &str) {
+    const NAP_SECONDS: u32 = 45;
+    const LIMIT: u64 = 30;
+    let (_, samples) =
+        run("ci_disk_closes", sampler, STEP_MID_NAP, NAP_SECONDS, LIMIT).expect("the sampler ran");
+    assert!(
+        samples.is_some_and(|s| s.contains("avail_kb=")),
+        "the step ended before the first sample, so no nap was tried"
+    );
+}
+
+#[test]
+fn ci_disk_sampler_closes_the_steps_output_mid_nap() {
+    check_output_closes(&read(SAMPLER));
+}
+
+negative_control!(
+    ci_disk_sampler_closes_the_steps_output_mid_nap,
+    "a nap on the step's streams that nothing ends",
+    expected = "exited, but its output stayed open",
+    check_output_closes(&edit(
+        &edit(&read(SAMPLER), NAP, NAP_ON_THE_STREAMS),
+        TRAP,
+        TRAP_LEAVES_THE_NAP
+    ))
+);
+
+/// With nothing ending the nap, it still holds no stream.
+#[test]
+fn ci_disk_sampler_nap_holds_none_of_the_steps_streams() {
+    check_output_closes(&edit(&read(SAMPLER), TRAP, TRAP_LEAVES_THE_NAP));
+}
+
+negative_control!(
+    ci_disk_sampler_nap_holds_none_of_the_steps_streams,
+    "the nap given the step's streams",
+    expected = "exited, but its output stayed open",
+    check_output_closes(&edit(
+        &edit(&read(SAMPLER), TRAP, TRAP_LEAVES_THE_NAP),
+        NAP,
+        NAP_ON_THE_STREAMS
+    ))
+);
+
+/// On the step's streams, so that only ending it can close them, the nap is ended by the trap.
+#[test]
+fn ci_disk_sampler_trap_ends_the_nap() {
+    check_output_closes(&edit(&read(SAMPLER), NAP, NAP_ON_THE_STREAMS));
+}
+
+negative_control!(
+    ci_disk_sampler_trap_ends_the_nap,
+    "a trap that leaves the nap running",
+    expected = "exited, but its output stayed open",
+    check_output_closes(&edit(
+        &edit(&read(SAMPLER), NAP, NAP_ON_THE_STREAMS),
+        TRAP,
+        TRAP_LEAVES_THE_NAP
+    ))
+);
+
+/// The race itself, on demand: the TERM lands right after the nap starts, and the nap still ends.
+fn with_term_as_the_nap_starts(sampler: &str) -> String {
+    edit(
+        &edit(sampler, NAP, NAP_ON_THE_STREAMS),
+        NAP_WAITED,
+        TERM_THEN_NAP_NAMED,
+    )
+}
+
+#[test]
+fn ci_disk_sampler_ends_a_nap_just_started() {
+    check_output_closes(&with_term_as_the_nap_starts(&read(SAMPLER)));
+}
+
+negative_control!(
+    ci_disk_sampler_ends_a_nap_just_started,
+    "a trap that ends the nap by a variable set after it starts, as when CI failed",
+    expected = "exited, but its output stayed open",
+    check_output_closes(&with_term_as_the_nap_starts(&edit(
+        &read(SAMPLER),
+        TRAP,
+        "trap 'kill \"${nap:-}\"; exit 0' TERM"
+    )))
 );
 
 const STEP: &str = "      - name: cargo xtask ci --partition ${{ matrix.shard }}/4\n        \
