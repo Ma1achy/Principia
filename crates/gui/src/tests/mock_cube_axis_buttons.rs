@@ -19,7 +19,7 @@ use crate::explore::compass::{
 use crate::explore::manifold_view::chart::basis_text;
 use crate::explore::manifold_view::{
     adjust, axis, basis_edit, frame_edit, lock_edit, normal_edit, plane_edit, slice_axis, Out,
-    Scratch, Touch, View, GAMMA, TAU1, TAU2,
+    Scratch, Touch, View, GAMMA, PRESETS, TAU1, TAU2,
 };
 use crate::explore::{
     COMPASS, COMPASS_BADGE, COMPASS_CUBE, COMPASS_D, COMPASS_D_ENTRIES, COMPASS_H,
@@ -472,7 +472,7 @@ fn mock_cube_axis_buttons_a_swapped_pair_stays_editable_through_the_full_rotatio
             &view_on(pair, &default, want),
         );
     }
-    // Every rotation, at the tilts' ends too, in a frame of one target and of two; every swapped preset.
+    // Every rotation, at the tilts' ends too, in a frame of one target and of two.
     for f in [default, frame(Z_Q3, Z_Q3, Z_MU1)] {
         for (t1, t2) in [
             (0.0, 0.0),
@@ -493,8 +493,14 @@ fn mock_cube_axis_buttons_a_swapped_pair_stays_editable_through_the_full_rotatio
             }
         }
     }
-    for pair in [(Z_Q3, Z_Q2), (Z_MU1, Z_ALPHA), (Z_MU1, Z_Q3)] {
-        let f = frame(Z_BETA, Z_BETA, Z_BETA);
+    // Every preset's pair swapped, in a frame holding neither axis: z_β's, or the default's where z_β is on the pair.
+    for (a, b) in PRESETS {
+        let pair = (b, a);
+        let f = if a == Z_BETA || b == Z_BETA {
+            default
+        } else {
+            frame(Z_BETA, Z_BETA, Z_BETA)
+        };
         for k in -36..=36 {
             let want = view_on(pair, &f, (0.0, 0.0, f64::from(k) * 5.0));
             let (q1, q2) = want.basis();
