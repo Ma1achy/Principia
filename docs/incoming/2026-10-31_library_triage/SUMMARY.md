@@ -366,9 +366,9 @@ row 61 is its escape file (NOW, a peek) and row 96 the essay itself (SKIP).
 |---|---|---|---|---|---|
 | HIT | 4 | 7 | 1 | 0 | 12 |
 | PLOT-ONLY | 0 | 0 | 5 | 0 | 5 |
-| CONTEXT | 0 | 0 | 29 | 35 | 64 |
-| PEEK-ONLY | 2 | 0 | 17 | 17 | 36 |
-| PARKED | 0 | 0 | 19 | 32 | 51 |
+| CONTEXT | 0 | 0 | 28 | 34 | 62 |
+| PEEK-ONLY | 2 | 0 | 17 | 16 | 35 |
+| PARKED | 0 | 0 | 20 | 34 | 54 |
 | OFF-FILTER | 0 | 0 | 0 | 5 | 5 |
 | Total | 6 | 7 | 71 | 89 | 173 |
 
@@ -376,7 +376,7 @@ The 7 M9 rows are all read hits. The 12 unread ESCALATE rows below are PARKED an
 hierarchical ruling, which shrinks the M9 list. Pinto 2026 (row 147), which the readers also marked M9, was then read in
 full: PLOT-ONLY and RECORD-ONLY, because it prints no outcome numbers and names no data file. Of the 6 NOW rows,
 Szebehely 1972 (row 45) is the existing NOW-9, unchanged; Kumar 2014 (row 46) is only a cross-check on Chandra & Bhatnagar;
-the essay's escape file (row 61) is unreviewed, a peek, with no licence, so its values stay `_local` and masked here.
+the essay's escape file (row 61) is unreviewed, a peek, with no licence, so its values stay masked here.
 
 ### The four gaps
 
@@ -448,9 +448,15 @@ starts already committed. It needs a monodromy or variational measurement on our
   (item 5). No other PARKED row was marked M9 or NOW. That ruling doesn't reach Pinto 2026 (row 147), which is not
   hierarchical. It is a peer-reviewed planar paper (received, revised and accepted dates printed, p.1), so it was read in
   full; it has no table and no data file, so it stays PLOT-ONLY and RECORD-ONLY on the scope filter.
-- Hierarchical rows, star-plus-planets ones included, are PARKED whatever else they hold (rows 6, 7, 14, 18, 39, 72, 81, 90,
-  141). Papers on a method for hierarchical triples stay CONTEXT (rows 162, 163).
-- A row whose status says unreviewed is PEEK-ONLY, not CONTEXT, ML papers included (rows 134, 151, 166).
-- `licence_action` says `_local` where the copy's terms settle it, and `_local until checked` where no licence is verified
-  (none seen, not read, or only a batch's claim, as for rows 106 and 155). Rows marked `none; commit nothing` are unchanged.
+- Hierarchical rows, star-plus-planets ones included, are PARKED whatever else they hold (rows 6, 7, 13, 14, 18, 39, 72, 81,
+  90, 103, 141, 171). Every row was searched in all its columns for `hierarchical|triple|circumbinary|Kozai|exomoon|S-type|P-type`;
+  the rows that match and aren't PARKED are these. Papers on a method for hierarchical triples stay CONTEXT (162, 163). The
+  word is about something else on the rest: an equal-mass triple collision or encounter (40, 41), the editor named Kozai (43),
+  triples of mass values (45), and rows that say they are not hierarchical (61, 147).
+- A row whose status says unreviewed is PEEK-ONLY, not CONTEXT, ML papers included (rows 134, 151, 166), or PARKED if hierarchical.
+- `licence_action` follows what was verified on the held copy. No terms verified there is `_local until checked`: none seen,
+  not read, a batch's claim, a journal's usual terms, or a copyright line beside a licence not read. Non-redistributable terms
+  verified there are `_local`, with or without the words `(fails CC BY/BY-SA/CC0/PD)`. A CC-style or public-domain licence
+  verified there is committable, however the cell words it. A row of several copies takes the least settled, unless its cell
+  names each copy (rows 73, 91, 92). The one row outside this is row 3: nothing is held, and its action waits on the owner.
 - `_local` in `licence_action` is where a file would go if wanted. This PR holds no PDF, and adds nothing under `_local`.
