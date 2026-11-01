@@ -39239,7 +39239,7 @@
   rulings:
   - R-654
   milestone: M3
-  note: "R-654 (30 Oct 2026, RQ-627 (a)): the law is Plummer's (the two new requirements of TASK-M9-39); until it lands, ε ≠ 0 stays refused. *Was (statement):* ended at \"never pooled with ε = 0 runs.\""
+  note: "R-654 (30 Oct 2026, RQ-627 (a)): the law is Plummer's (REQ-INT-110 and REQ-SYS-094 of TASK-M9-39 for the law and its record, REQ-SYS-095 for the range); until it lands, ε ≠ 0 stays refused. *Was (statement):* ended at \"never pooled with ε = 0 runs.\""
 - id: REQ-SYS-019
   area: SYS
   statement: "Nothing may be discarded: a trajectory that cannot be integrated must be recorded as a measurement outcome (undetermined), and no drift-based filtering of pixels is permitted."
