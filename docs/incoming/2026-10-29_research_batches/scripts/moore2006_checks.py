@@ -6,7 +6,7 @@ Paper arithmetic on Moore & Nauenberg's criss-cross orbit (p. 10-11), no integra
    k = 1, 5, 9, 13; body 3: b3k = +-a3k likewise);
 2. centre of mass, momentum, energy E and angular momentum L with masses 1, G = 1 (the action of p. 3 uses
    unit masses and G = 1) and period T = 2 pi (p. 4: 'we choose T = 2 pi');
-3. exclusion against the threebodyorbits snapshot: equal unit-mass rows, compared by the scale invariants
+3. overlap with data we already have, the threebodyorbits snapshot: equal unit-mass rows, compared by the scale invariants
    T |E|^(3/2) and L^2 |E| (mirror images have the same values). Matching rule: both within 1e-3 relative
    (the printed coefficients converge to 5 decimals).
 """

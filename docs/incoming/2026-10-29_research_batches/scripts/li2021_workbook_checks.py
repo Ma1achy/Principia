@@ -7,7 +7,7 @@ Checks on the parsed Li, Li, He & Liao 2021 workbook (no integration, no engine 
     p. 24, read from the page image for this check only; task 15 owns their transcription), matched to
     the nearest workbook row. Li 2021 §3.2 says the 1653 include these 11, so in the same frame each
     should have a workbook row within the 8-digit rounding of TSM's table (5e-9) plus a margin;
- 4. exclusion overlap: against the threebodyorbits snapshot (docs/incoming/2026-10-26_orbit_catalogues/),
+ 4. overlap with data we already have: against the threebodyorbits snapshot (docs/incoming/2026-10-26_orbit_catalogues/),
     every row with three equal masses and all six velocity components zero (the free-fall rows) is a
     candidate; its free body's (x, y), with the other two at (-0.5, 0) and (0.5, 0), is compared with
     each workbook (x, y) and its mirror (-x, y). Match rule: Euclidean distance < 1e-6.
