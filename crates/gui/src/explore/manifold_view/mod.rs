@@ -323,8 +323,8 @@ pub fn axis_pair(q1: &Latent, q2: &Latent) -> Option<(usize, usize)> {
 }
 
 /// What of a basis may differ from its reading and still be that reading: the squared difference, as a share of the
-/// basis's squared length, the floating point's noise as the preset cut's. A mirrored basis's axes are the other way
-/// round only if they read it back within this (R-459 G3).
+/// basis's squared length, the floating point's noise as the preset cut's. Within this, a mirrored basis's axes the
+/// other way round count as reading it back (R-459 G3); that is not the only case in which they are swapped.
 const READS_BACK: f64 = 1e-18;
 
 /// The axes of a basis tilted within `frame`'s targets on axes no preset names, as H and V can pick them: the two axes
@@ -332,7 +332,7 @@ const READS_BACK: f64 = 1e-18;
 /// kept axis's is `cos 90° ≈ 6e-17`, and it is what still names the axis, [`View::basis`] leaving every other component
 /// exactly 0. `None` where the basis has any other number of axes off the targets, or no plane on the two.
 ///
-/// A positive determinant (`σ² cos τ₁ cos τ₂` whatever `γ`) is `(i, j)`. A negative one may be `(j, i)`, which is a pair
+/// A positive determinant (`σ² cos τ₁ cos τ₂` whatever `γ`) is `(i, j)`. A negative one may be `(j, i)`. That is a pair
 /// picked the other way round, kept to the ends of its range (R-459 G3), only where that order reads the basis back: a
 /// typed component's sign says nothing of H and V. A mirrored basis neither order reads back is outside the map's image,
 /// so some reading of it loses something: `(j, i)` only if it keeps more of the tilt, the components on the targets, and

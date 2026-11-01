@@ -530,7 +530,7 @@ fn mock_cube_axis_buttons_the_frame_reading_cuts_at_their_boundaries() {
     // A preset's exact determinant: 0 is the preset. The least below it is a typed component. This basis has X on q₁,
     // which the pair the other way round cannot hold, so it reads as at 0 and as the least above it, its axes and its
     // angles not jumping. That is this basis's, not every one's with X != Y: with Y on q₁ the swap keeps the tilt, and
-    // it jumps at 0 (the swaps pinned in `..._a_mirrored_basis_is_swapped_only_where_that_reads_it_back`).
+    // it jumps at 0 (the swaps pinned in `..._a_mirrored_basis_is_swapped_where_that_keeps_it`).
     let on = read_of(&[(Z_Q3, 1.0)], &[(Z_BETA, 1.0)]);
     assert_eq!(on.preset, Some(0), "a determinant of 0");
     assert!((on.tau1.to_degrees() - 90.0).abs() < 1e-9, "τ₁ at 0");
@@ -585,10 +585,11 @@ fn read_back_off(read: &View, q1: &Latent, q2: &Latent) -> f64 {
         .fold(0.0, f64::max)
 }
 
-/// R-459 G3: a negative determinant is the pair the other way round only where that order reads the basis back. A typed
-/// mirrored basis outside the map's image keeps its tilt, and the next edit built from the view keeps the plane near it.
+/// R-459 G3: a negative determinant is the pair the other way round where that order reads the basis back, or, reading
+/// back in neither order, where it keeps more of the tilt; otherwise it stays as typed. A typed mirrored basis outside
+/// the map's image keeps its tilt, and the next edit built from the view keeps the plane near it.
 #[test]
-fn mock_cube_axis_buttons_a_mirrored_basis_is_swapped_only_where_that_reads_it_back() {
+fn mock_cube_axis_buttons_a_mirrored_basis_is_swapped_where_that_keeps_it() {
     let vector = |parts: &[(usize, f64)]| -> Latent {
         let mut v = [0.0; 8];
         for &(i, x) in parts {
