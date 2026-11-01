@@ -11,6 +11,7 @@ use engine::contract::interface::EngineInterface;
 
 use super::support::{mock_app, rejects};
 use crate::app::App;
+use crate::cli::mock::{MEASURED_WINDOW_SIZE, WINDOW_SIZE};
 use crate::headless::Headless;
 use crate::measure::stats::{Frame, WARM_UP_MS, WINDOW_MS};
 use crate::measure::{
@@ -275,7 +276,7 @@ fn measure_begin_frame_spends_the_delay() {
 }
 
 /// The fields every report and the panel carry, in every phase.
-const REPORT_KEYS: [&str; 17] = [
+const REPORT_KEYS: [&str; 19] = [
     "status",
     "run",
     "cross_origin_isolated",
@@ -285,6 +286,8 @@ const REPORT_KEYS: [&str; 17] = [
     "fallback_reason",
     "refresh_hz",
     "frame_delay_ms",
+    "app_width",
+    "app_height",
     "frames",
     "mean_fps",
     "mean_fps_capped",
@@ -294,7 +297,7 @@ const REPORT_KEYS: [&str; 17] = [
     "work_p95_ms",
     "acquire_mean_ms",
 ];
-const ROW_LABELS: [&str; 14] = [
+const ROW_LABELS: [&str; 15] = [
     "status",
     "crossOriginIsolated",
     "SharedArrayBuffer",
@@ -303,6 +306,7 @@ const ROW_LABELS: [&str; 14] = [
     "fallback reason",
     "refresh rate",
     "frame delay",
+    "app size",
     "frames",
     "mean fps",
     "5th-percentile fps",
@@ -684,5 +688,66 @@ fn measure_marks_stamp_a_painted_frame() {
     );
     rejects("a frame that took no work", || {
         assert!(frames[0].work_ms <= 0.0);
+    });
+}
+
+/// The measured window leaves the app the plain window's size, the panel's strip added, as the Chrome runner asks.
+#[test]
+fn measure_window_leaves_the_app_its_size() {
+    let check = |window: [f32; 2]| {
+        let window = Rect::from_min_max(pos2(0.0, 0.0), window.into());
+        let want: egui::Vec2 = WINDOW_SIZE.into();
+        assert_eq!(split(window).0.size(), want);
+    };
+    check(MEASURED_WINDOW_SIZE);
+    rejects("the plain window, with the panel inside it", || {
+        check(WINDOW_SIZE)
+    });
+    let chrome = include_str!("../../../../web/skeleton/runner/chrome.mjs");
+    let [width, height] = MEASURED_WINDOW_SIZE;
+    let asked = format!("--window-size={width},{height}");
+    assert!(chrome.contains(&asked), "chrome.mjs asks for {asked}");
+}
+
+/// The panel's fields carry the app's size, from the panel's first report on.
+#[test]
+fn measure_reports_the_apps_size() {
+    let ctx = egui::Context::default();
+    let reports = Arc::new(std::sync::Mutex::new(Vec::new()));
+    let sink = reports.clone();
+    let mut measured = Measured::new(
+        mock_app(),
+        Some(session(None)),
+        Box::new(move |r| sink.lock().unwrap().push(r)),
+    );
+    let s = measured.session.as_ref().expect("the session");
+    assert_eq!(
+        s.report()["app_width"],
+        serde_json::Value::Null,
+        "no frame yet"
+    );
+    assert_eq!(s.report()["app_height"], serde_json::Value::Null);
+    let row = |s: &Session| {
+        s.rows()
+            .into_iter()
+            .find(|r| r.0 == "app size")
+            .expect("the row")
+            .1
+    };
+    assert_eq!(row(s), "–");
+    // Heights apart from the widths, so swapped fields fail.
+    let window = Rect::from_min_max(pos2(0.0, 0.0), pos2(1500.0, 700.0));
+    frame(&ctx, &mut measured, window, 0.0);
+    let first: serde_json::Value =
+        serde_json::from_str(&reports.lock().unwrap()[0]).expect("the JSON");
+    assert_eq!(
+        first["app_width"], 1200.0,
+        "the width less the panel's strip"
+    );
+    assert_eq!(first["app_height"], 700.0);
+    let s = measured.session.as_ref().expect("the session");
+    assert_eq!(row(s), "1200 × 700 pt");
+    rejects("the window's width", || {
+        assert_eq!(first["app_width"], 1500.0);
     });
 }

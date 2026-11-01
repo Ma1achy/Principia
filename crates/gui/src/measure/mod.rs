@@ -230,6 +230,9 @@ pub struct Session {
     pub env: Environment,
     /// Where it is.
     pub phase: Phase,
+    /// The size of the app's part of the window, in points, as of the last frame: what the two builds' figures are laid
+    /// out in, so a display too small for the window a run asked for shows in the fields.
+    pub app_size: Option<egui::Vec2>,
     /// The run a button or a flag asked for, starting at the next step.
     pending: Option<Run>,
     frames: Vec<Frame>,
@@ -243,6 +246,7 @@ impl Session {
             pending: env.run,
             env,
             phase: Phase::Ready,
+            app_size: None,
             frames: Vec::new(),
             marks: Arc::new(Marks {
                 origin: Instant::now(),
@@ -362,6 +366,8 @@ impl Session {
             "fallback_reason": env.fallback_reason,
             "refresh_hz": env.refresh_hz,
             "frame_delay_ms": env.frame_delay_ms,
+            "app_width": self.app_size.map(|s| s.x),
+            "app_height": self.app_size.map(|s| s.y),
             "frames": stats.map(|s| s.frames),
             "mean_fps": stats.map(|s| s.mean_fps.fps),
             "mean_fps_capped": stats.map(|s| s.mean_fps.capped),
@@ -411,6 +417,11 @@ impl Session {
                     .map_or("–".to_owned(), |hz| format!("{hz:.1} Hz")),
             ),
             ("frame delay", format!("{:.0} ms", env.frame_delay_ms)),
+            (
+                "app size",
+                self.app_size
+                    .map_or("–".to_owned(), |s| format!("{:.0} × {:.0} pt", s.x, s.y)),
+            ),
             (
                 "frames",
                 stats.map_or("–".to_owned(), |s| s.frames.to_string()),
@@ -545,6 +556,7 @@ impl<S: EngineSide> Measured<S> {
         let (app_rect, panel_rect) = split(window);
         let ctx = ui.ctx().clone();
         let session = self.session.as_mut().expect("checked above");
+        session.app_size = Some(app_rect.size());
         let step = session.step(session.now_ms());
         if session.running() {
             ctx.request_repaint();
