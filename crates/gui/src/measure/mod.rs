@@ -388,6 +388,7 @@ impl Session {
         json!({
             "status": status,
             "run": run,
+            "build": build_name(cfg!(debug_assertions)),
             "cross_origin_isolated": env.cross_origin_isolated,
             "shared_array_buffer": env.shared_array_buffer,
             "wasm_threads": env.wasm_threads,
@@ -429,6 +430,7 @@ impl Session {
         let env = &self.env;
         vec![
             ("status", format!("{status} {}", run.unwrap_or_default())),
+            ("build", build_name(cfg!(debug_assertions)).to_owned()),
             ("crossOriginIsolated", yes_no(env.cross_origin_isolated)),
             ("SharedArrayBuffer", yes_no(env.shared_array_buffer)),
             (
@@ -461,6 +463,16 @@ impl Session {
             ("work p95", ms(stats.map(|s| s.work_p95_ms))),
             ("surface wait mean", ms(stats.map(|s| s.acquire_mean_ms))),
         ]
+    }
+}
+
+/// The name a report gives its build. The site is built with `--release` and a plain native `cargo run` is unoptimised,
+/// so a run says which it measured: its figures read beside another run's only on the same build.
+pub(crate) fn build_name(debug_assertions: bool) -> &'static str {
+    if debug_assertions {
+        "debug"
+    } else {
+        "release"
     }
 }
 

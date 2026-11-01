@@ -17,8 +17,8 @@ use crate::explore::footer::FOOTER;
 use crate::headless::Headless;
 use crate::measure::stats::{Frame, WARM_UP_MS, WINDOW_MS};
 use crate::measure::{
-    frame_delay, pan_edit, pan_offset, split, Environment, Measured, Phase, Run, Session,
-    PANEL_SCOPE, PANEL_WIDTH, RUN_IDLE, RUN_PAN,
+    build_name, frame_delay, pan_edit, pan_offset, split, Environment, Measured, Phase, Run,
+    Session, PANEL_SCOPE, PANEL_WIDTH, RUN_IDLE, RUN_PAN,
 };
 use crate::mock::canvas::MockCanvas;
 use crate::mock::MockEngine;
@@ -279,9 +279,10 @@ fn measure_begin_frame_spends_the_delay() {
 }
 
 /// The fields every report and the panel carry, in every phase.
-const REPORT_KEYS: [&str; 19] = [
+const REPORT_KEYS: [&str; 20] = [
     "status",
     "run",
+    "build",
     "cross_origin_isolated",
     "shared_array_buffer",
     "wasm_threads",
@@ -300,8 +301,9 @@ const REPORT_KEYS: [&str; 19] = [
     "work_p95_ms",
     "acquire_mean_ms",
 ];
-const ROW_LABELS: [&str; 15] = [
+const ROW_LABELS: [&str; 16] = [
     "status",
+    "build",
     "crossOriginIsolated",
     "SharedArrayBuffer",
     "wasm threads",
@@ -344,6 +346,55 @@ fn measure_report_carries_every_field() {
         let mut report = s.report();
         report.as_object_mut().unwrap().remove("p5_fps_capped");
         check_fields(&report, &s.rows());
+    });
+}
+
+/// The report and the panel's row name the build these tests are in, whatever the phase.
+fn check_build(report: &serde_json::Value, rows: &[(&str, String)], name: &str) {
+    assert_eq!(report["build"], name, "the report's build");
+    let row = rows.iter().find(|r| r.0 == "build").expect("the row");
+    assert_eq!(row.1, name, "the panel's build");
+}
+
+#[test]
+fn measure_report_names_the_build() {
+    assert_eq!(build_name(true), "debug");
+    assert_eq!(build_name(false), "release");
+    let here = if cfg!(debug_assertions) {
+        "debug"
+    } else {
+        "release"
+    };
+    let native = Session::new(
+        Environment::native(Some("1"), None, None, None)
+            .expect("flags")
+            .expect("open"),
+    );
+    let browser = Session::new(Environment::browser(r#"{"layout":"worker"}"#).expect("the JSON"));
+    for s in [&native, &browser] {
+        check_build(&s.report(), &s.rows(), here);
+    }
+    let mut running = session(None);
+    running.request(Run::Idle);
+    running.step(0.0);
+    check_build(&running.report(), &running.rows(), here);
+    running.step(WARM_UP_MS + WINDOW_MS);
+    check_build(&running.report(), &running.rows(), here);
+
+    let other = build_name(!cfg!(debug_assertions));
+    rejects("a report naming the other build", || {
+        let mut report = native.report();
+        report["build"] = other.into();
+        check_build(&report, &native.rows(), here);
+    });
+    rejects("a row naming the other build", || {
+        let rows = vec![("build", other.to_owned())];
+        check_build(&native.report(), &rows, here);
+    });
+    rejects("a report with no build", || {
+        let mut report = native.report();
+        report.as_object_mut().unwrap().remove("build");
+        check_build(&report, &native.rows(), here);
     });
 }
 
