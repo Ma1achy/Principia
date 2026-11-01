@@ -788,6 +788,7 @@ choice changes what the agreement preset shows and what its gate certifies, and 
   bound" reads "grows as (|rᵢ|+|rⱼ|)/rᵢⱼ, up to about 1/eps"; inverse_encode_contract Part 4 and R-544's δ are cited.
   Applied: colour_composition § 6's conditioning-aware scale (R-72), the factor proposed in it (R-71), the
   `collision` windows and the per-operand control in the `decode-agreement` gate (TASK-M2-29).
+
 ## RQ-622: Five statistical or qualitative map targets whose verify names a Result at f64: are they scored on tier (a), the f32 GPU explorer, as R-649's confirmed reading says, or on the f64 Result their verify names *(physics; R-649 item 2 and the owner's confirmation of 30 Oct 2026; `docs/design/principia_dd_replication.md` § 12.2; REQ-VAL-308, REQ-VAL-309, REQ-VAL-311, REQ-VAL-312, REQ-VAL-313; and B-2, REQ-VAL-246, added below; context: TASK-M9-33, TASK-M9-34, TASK-M9-35, TASK-M9-16)*
 
 *Queued 30 Oct 2026 by the fix round of R-649's port (PR #342), applying the owner's confirmation of the tier reading.
