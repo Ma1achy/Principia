@@ -282,8 +282,9 @@ enum Stand {
 /// provisional until the M3 gate, citing REQ-INT-094 (R-502); and the literature import's tolerance
 /// `literature_import_tol`, proposed by TASK-M2-20 and provisional until the M2 gate, citing REQ-VAL-120 (R-592); and
 /// step 0's skip tolerance `tau_i` (`τ_I`), proposed by TASK-M2-47 and provisional until the M2 gate, citing
-/// REQ-ENC-035 (R-547, R-71).
-const TABLE: [(&str, Stand); 37] = [
+/// REQ-ENC-035 (R-547, R-71); and the escape settling threshold `tau`, proposed by R-173 and provisional until the M3
+/// gate, citing REQ-EVT-025, the calibration that replaces it there (R-173, R-427).
+const TABLE: [(&str, Stand); 38] = [
     ("log_floor_d_min", Stand::Confirmed),
     ("log_floor_dE_max", Stand::Confirmed),
     ("log_floor_dLz_max", Stand::Confirmed),
@@ -328,6 +329,7 @@ const TABLE: [(&str, Stand); 37] = [
     ("drift_lin_r_E", Stand::Until("M3", "REQ-TOOL-150")),
     ("drift_lin_r_Lz", Stand::Until("M3", "REQ-TOOL-150")),
     ("tau_i", Stand::Until("M2", "REQ-ENC-035")),
+    ("tau", Stand::Until("M3", "REQ-EVT-025")),
 ];
 
 /// The stand §3.8's table, as R-428 and R-433 leave it, gives `name`.

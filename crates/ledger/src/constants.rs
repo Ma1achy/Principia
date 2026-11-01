@@ -1234,6 +1234,113 @@ pub const NSUB_THRESHOLD_LEAST: ConstantBuilder = ConstantBuilder {
     provisional: None,
 };
 
+// ── The wrapper's loop parameters (integrator_contract Part 3, Part 5; R-132, R-575, R-610; TASK-M3-06) ───────────
+//
+// `SimUniforms`' defaults (engine's `contract::sim_uniforms`), each a sim-key value in canonical units (`G = M = I = 1`,
+// Part 5), and the horizon's cap and macro-step floor, to which dispatch holds a sim key (engine's
+// `dispatch::validate`). The substep law's three defaults are above.
+
+/// A settled default of the wrapper's loop, admissible as expressed in canonical units, with its citation.
+const fn wrapper(name: &'static str, value: f64, citation: Citation) -> ConstantBuilder {
+    ConstantBuilder {
+        name,
+        value: Some(Value::Exact(value)),
+        class: Some(Admissibility::CanonicalUnits),
+        citation: Some(citation),
+        relative_basis: None,
+        provisional: None,
+    }
+}
+
+/// `T_horizon`'s default, 50, physical time in canonical units (Part 3, Part 5; R-132, kept by R-575 and R-610).
+pub const T_HORIZON_DEFAULT: ConstantBuilder =
+    wrapper("t_horizon_default", 50.0, SUBSTEP_PARAMETERS);
+
+/// The horizon's cap, 200: `T_horizon ∈ [0.4, 200]`, the cap until long horizons are measured for cost (R-610). The
+/// floor is no entry of its own: it is one escape window, [`ESCAPE_WINDOW`], and follows the window's value.
+pub const T_HORIZON_MAX: ConstantBuilder = wrapper(
+    "t_horizon_max",
+    200.0,
+    Citation::Corpus {
+        file: "decisions.md",
+        section: "R-610 — The horizon's floor is one closure window, 0.4, below which the escape arm cannot fire, and the settings say so; the cap stays at 200 until long horizons are measured for cost: `T_horizon ∈ [0.4, 200]`, default 50 *(closes RQ-555; amends R-575's interim range)*",
+    },
+);
+
+/// The macro-step's floor, `10⁻³`: `dt_macro = max(10⁻³, T/65535)` (R-132), so the macro-step is `10⁻³` up to
+/// `T = 65.535` and `T/65535` above, where `⌈T/dt_macro⌉` stays at [`HORIZON_STEPS_MAX`].
+pub const DT_MACRO_FLOOR: ConstantBuilder = wrapper(
+    "dt_macro_floor",
+    1e-3,
+    Citation::Corpus {
+        file: "decisions.md",
+        section:
+            "R-132 — The R-71/R-72 classification is accepted, with three changes *(closes RQ-110)*",
+    },
+);
+
+/// The escape window, 0.4 time units, provisional (R-29): the window `|Δn̂|` is taken over (Part 3). The horizon's
+/// floor is one window (R-610): below it the escape arm cannot fire.
+pub const ESCAPE_WINDOW: ConstantBuilder = wrapper(
+    "escape_window",
+    0.4,
+    Citation::Corpus {
+        file: "decisions.md",
+        section: "R-29 — The escape criterion's undefined parts *(IE-1, amended)*",
+    },
+);
+
+/// The escape settling threshold `tau`, `10⁻³`, a bound on `|Δn̂|`, a pure number: Part 3 gives no value, and R-173
+/// rules this one, the provisional `tau` (REQ-EVT-024), prin-rs's `CLOSURE_TAU`, inside the recorded range
+/// `7.04·10⁻⁵ … 2.70·10⁻²` and near its geometric mean. The confirmed `tau`, REQ-EVT-025's calibration inside the
+/// re-measured gap, replaces it at the M3 gate, so the entry is provisional until M3 and cites that requirement
+/// (R-427; dd_generation_root §3.8).
+pub const TAU: ConstantBuilder = proposed(
+    "tau",
+    1e-3,
+    Admissibility::CanonicalUnits,
+    "REQ-EVT-025",
+    "M3",
+);
+
+/// The collision radius `r_coll`'s default, `10⁻³` of `R`, a length in canonical units, where `R = √I = 1` (Part 5): it
+/// separates tail from bulk on the slices measured, and no more (Part 7). A user-exposed sim-key value, nonzero by
+/// default (dd_generation_root §3.7, "Open").
+pub const R_COLL: ConstantBuilder = wrapper(
+    "r_coll",
+    1e-3,
+    Citation::Corpus {
+        file: "docs/contracts/principia_integrator_contract.md",
+        section: "Part 7 — Detectors as the `SimState` producer",
+    },
+);
+
+/// The softening length `epsilon`'s default, 0, a length in canonical units: optional, fixed at `t = 0`, never
+/// co-moving; a run with `epsilon > 0` is tagged and never pooled with one at 0 (dd_generation_root §3.7, "Open").
+pub const EPSILON: ConstantBuilder = wrapper(
+    "epsilon",
+    0.0,
+    Citation::Corpus {
+        file: "docs/design/principia_dd_generation_root.md",
+        section: "Open",
+    },
+);
+
+/// `r_close`'s default, 0.01, the close-encounter counting distance, a length (Part 3).
+pub const R_CLOSE: ConstantBuilder = wrapper("r_close", 0.01, SUBSTEP_PARAMETERS);
+
+/// `eps_E`'s default, `10⁻⁶`, the relative energy drift's floor at rest starts (Part 3).
+pub const EPS_E: ConstantBuilder = wrapper("eps_e", 1e-6, SUBSTEP_PARAMETERS);
+
+/// `eps_L`'s default, `10⁻⁶`, the relative angular momentum drift's floor at rest starts (Part 3).
+pub const EPS_L: ConstantBuilder = wrapper("eps_l", 1e-6, SUBSTEP_PARAMETERS);
+
+/// The gravitational constant `G`, 1 (Part 3; Part 5's unit system).
+pub const G: ConstantBuilder = wrapper("g", 1.0, SUBSTEP_PARAMETERS);
+
+/// The total mass `M_total`, 1 (Part 3; Part 5's unit system).
+pub const M_TOTAL: ConstantBuilder = wrapper("m_total", 1.0, SUBSTEP_PARAMETERS);
+
 /// The section that places the chart's addressing space: `Φ : [0,1]² → Y`, `(s, t) ∈ [0,1]²` (chart_decoder_contract
 /// Part 3).
 const ADDRESSING: Citation = Citation::Corpus {
@@ -1408,9 +1515,10 @@ pub const TILT_TURN: ConstantBuilder = chart("tilt_turn", 360.0, R474);
 /// `n ≥ 2` (R-245). Then the steppers' coefficients and test 3's rounding-level criterion (TASK-M3-02; REQ-INT-037,
 /// REQ-VAL-191), and the substep law's defaults and its threshold table's maximum length (TASK-M3-03; R-502,
 /// REQ-INT-094), and the view window's square (TASK-M2-21), and the slice frame's default axis (TASK-M6-38), and the
-/// custom-stop ramp's OKLab bound (TASK-M7-11). Then the relative-drift floors' defaults, the drift suspect predicates'
-/// thresholds and the drift views' `lin` ranges (TASK-M3-05; REQ-INT-085, REQ-TOOL-150).
-/// tilt's angles in degrees (TASK-M2-36; R-474), and the custom-stop ramp's OKLab bound (TASK-M7-11).
+/// wrapper's loop parameters' defaults, the horizon's cap and the macro-step's floor (TASK-M3-06; R-132, R-610), and the
+/// tilt's angles in degrees (TASK-M2-36; R-474), and the custom-stop ramp's OKLab bound (TASK-M7-11). Then the
+/// relative-drift floors' defaults, the drift suspect predicates' thresholds and the drift views' `lin` ranges
+/// (TASK-M3-05; REQ-INT-085, REQ-TOOL-150).
 pub const REGISTER: &[ConstantBuilder] = &[
     HORIZON_STEPS_MAX,
     FGW_CAPACITY,
@@ -1479,6 +1587,18 @@ pub const REGISTER: &[ConstantBuilder] = &[
     N_MAX,
     NSUB_TABLE_MAX,
     NSUB_THRESHOLD_LEAST,
+    T_HORIZON_DEFAULT,
+    T_HORIZON_MAX,
+    DT_MACRO_FLOOR,
+    ESCAPE_WINDOW,
+    TAU,
+    R_COLL,
+    EPSILON,
+    R_CLOSE,
+    EPS_E,
+    EPS_L,
+    G,
+    M_TOTAL,
     WINDOW_SQUARE_CENTRE,
     WINDOW_SQUARE_HALF,
     SLICE_AXIS_Z_Q3,

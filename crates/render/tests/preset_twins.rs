@@ -1,8 +1,20 @@
 //! The DECODE and agreement presets' CPU twins and helpers (TASK-M2-25; REQ-COL-006, REQ-RENDER-027; R-436):
 //!
 //! - `preset_twins_agreement_ratio_and_colour`: `agreement::ratio` is `None` for a non-finite operand in each place (by
-//!   its bits: `±∞`, NaN), else `|E − E₀|` over `FACTOR·eps·(max(|K₀|, 1) + max(|V₀|, 1))`, each `max` at its edge; and
-//!   `agreement::colour` is the hatch for `None`, green to a ratio of exactly 1, red past it, saturating at `2¹⁶`.
+//!   its bits: `±∞`, NaN), `m` and `r` included, else `|E − E₀|` over `FACTOR·eps·(max(|K₀|, 1) + max(|V₀|, 1) + C)`,
+//!   each `max` at its edge, `C` the conditioning term; and `agreement::colour` is the hatch for `None`, green to a
+//!   ratio of exactly 1, red past it, saturating at `2¹⁶`.
+//! - `preset_twins_agreement_conditioning`: `agreement::conditioning` (colour_composition §6), each pair's
+//!   `(mᵢmⱼ/ŝ)·(w/ŝ)` at the separation's floor `eps·max(w, δ)`, `δ = 2⁻³²`, from either side at `w = 1` and at
+//!   `w = 2⁻⁶` (where the floor is `eps·w`, under `eps`), a zero separation at `w` from 2 down past `δ` (`2⁴³` at
+//!   `w = 2`, `2⁴⁴` at 1, peaking at `2⁷⁶` at `w = δ`), and its pairs and max-norms. Control: a twin that drops the
+//!   floor.
+//! - `preset_twins_agreement_factor_wgsl`: the agreement preset's WGSL declares `AGREEMENT_FACTOR` once, at
+//!   `agreement::FACTOR` (REQ-COL-060, TASK-M2-29), and `AGREEMENT_FLOOR` once, at `agreement::FLOOR`, in each of its
+//!   views and its operand views. Control: another factor differs.
+//! - `preset_twins_agreement_operand_groups`: each operand view (`agreement::operands`) returns its group's four of the
+//!   twelve words, and writes the fragment decode's `K`, `V`, `m` and `r` at the words the gate reads. Control: a group
+//!   read as the next one.
 //! - `preset_twins_non_finite_bits`: the bit test at the exponent's edges.
 //! - `preset_twins_sections`: `presets::section` cuts exactly between its markers, and names a missing or unclosed
 //!   section.
@@ -16,6 +28,12 @@ use validation::negative_control;
 
 const EPS: f64 = f32::EPSILON as f64;
 
+/// No masses: the conditioning term is 0, so the bound is the per-operand terms'.
+const NO_MASS: [f32; 3] = [0.0; 3];
+
+/// Three bodies on a triangle.
+const TRI: [[f32; 2]; 3] = [[0.9, 0.1], [-0.4, 0.7], [-0.5, -0.8]];
+
 /// The agreement twin's checks; `factor` is the factor the expected values are formed with.
 fn check_agreement(factor: f64) {
     for bad in [f32::INFINITY, f32::NEG_INFINITY, f32::NAN] {
@@ -23,20 +41,38 @@ fn check_agreement(factor: f64) {
             let mut o = [0.25f32, -0.5, 0.25, -0.5];
             o[k] = bad;
             assert_eq!(
-                agreement::ratio(o[0], o[1], o[2], o[3]),
+                agreement::ratio(o[0], o[1], o[2], o[3], [0.25; 3], TRI),
                 None,
                 "a non-finite operand {k} ({bad}) is compared"
             );
         }
+        for k in 0..3 {
+            let mut m = [0.25f32; 3];
+            m[k] = bad;
+            assert_eq!(
+                agreement::ratio(0.25, -0.5, 0.25, -0.5, m, TRI),
+                None,
+                "a non-finite mass {k} is compared"
+            );
+        }
+        for k in 0..6 {
+            let mut r = TRI;
+            r[k / 2][k % 2] = bad;
+            assert_eq!(
+                agreement::ratio(0.25, -0.5, 0.25, -0.5, [0.25; 3], r),
+                None,
+                "a non-finite position {k} is compared"
+            );
+        }
     }
-    // Each `max(|x|, 1)` below, at and above 1.
+    // Each `max(|x|, 1)` below, at and above 1, with no conditioning term.
     for (k, v, k0, v0, bound) in [
         (0.5f32, -0.25f32, 0.5f32, -0.25f32, 2.0),
         (2.0, -0.25, 1.0, -1.0, 2.0),
         (3.0, -4.0, 3.0, -2.0, 5.0),
         (0.0, 0.0, -4.0, 0.5, 5.0),
     ] {
-        let got = agreement::ratio(k, v, k0, v0).expect("finite operands");
+        let got = agreement::ratio(k, v, k0, v0, NO_MASS, TRI).expect("finite operands");
         let diff = (f64::from(k) + f64::from(v)) - (f64::from(k0) + f64::from(v0));
         let want = diff.abs() / (factor * EPS * bound);
         assert!(
@@ -44,6 +80,14 @@ fn check_agreement(factor: f64) {
             "ratio({k}, {v}, {k0}, {v0}) = {got}: not the ratio {want}"
         );
     }
+    // The conditioning term adds to the bound.
+    let m = [0.5f32, 0.3, 0.2];
+    let got = agreement::ratio(0.0, -1.0, 0.0, -2.0, m, TRI).expect("finite operands");
+    let want = 1.0 / (factor * EPS * (1.0 + 2.0 + agreement::conditioning(m, TRI)));
+    assert!(
+        (got - want).abs() <= 1e-12 * want,
+        "ratio with masses = {got}: not the ratio {want}"
+    );
     let xy = [3.5, 7.5];
     assert_eq!(
         agreement::colour(None, xy),
@@ -74,6 +118,217 @@ negative_control!(
     "a ratio formed with another factor must differ",
     expected = "not the ratio",
     check_agreement(128.0)
+);
+
+/// The conditioning term at its edges, against `pair`, the expected term of one pair at f64 from its masses' product,
+/// `w` and the separation (the control drops the floor).
+fn check_conditioning(pair: fn(f64, f64, f64) -> f64) {
+    // Only the pair (0, 1) has mass: m₂ = 0.
+    let m = [0.5f32, 0.5, 0.0];
+    let at = |r1: [f32; 2]| agreement::conditioning(m, [[0.5, 0.0], r1, [-1.0, 0.0]]);
+    // w = 1, the floor eps·max(w, δ) = eps: the separation under it, at it and over it.
+    for (dy, why) in [
+        (0.0f32, "a zero separation"),
+        (-2f32.powi(-24), "a separation under the floor"),
+        (-2f32.powi(-23), "a separation at the floor"),
+        (-2f32.powi(-22), "a separation over the floor"),
+        (-0.25, "an ordinary separation"),
+    ] {
+        let got = at([0.5, dy]);
+        let want = pair(0.25, 1.0, f64::from(dy).abs());
+        assert!(
+            (got - want).abs() <= 1e-12 * want,
+            "{why}: the term {got} is not {want}"
+        );
+    }
+    // w = 2⁻⁶, the floor eps·w = 2⁻²⁹, under eps: the separation under it, at it, over it and still under eps.
+    let small = |dy: f32| {
+        agreement::conditioning(m, [[2f32.powi(-7), 0.0], [2f32.powi(-7), dy], [-1.0, 0.0]])
+    };
+    for (dy, why) in [
+        (2f32.powi(-30), "a separation under eps·w"),
+        (2f32.powi(-29), "a separation at eps·w"),
+        (2f32.powi(-28), "a separation over eps·w and under eps"),
+        (2f32.powi(-12), "an ordinary separation"),
+    ] {
+        let got = small(dy);
+        let want = pair(0.25, 2f64.powi(-6), f64::from(dy));
+        assert!(
+            (got - want).abs() <= 1e-12 * want,
+            "{why} at w = 2⁻⁶: the term {got} is not {want}"
+        );
+    }
+    assert_eq!(
+        small(2f32.powi(-28)),
+        2f64.powi(48),
+        "a separation of 2⁻²⁸ at w = 2⁻⁶ is floored above eps·w"
+    );
+    // A zero separation is mm/(eps²·max(w, δ)): 2⁴⁴ at w = 1, rising as w falls to its peak 2⁷⁶ at w = δ = 2⁻³², and
+    // falling under it: max(w, δ) at its edge.
+    assert_eq!(
+        f64::from(agreement::FLOOR),
+        2f64.powi(-32),
+        "the floor's δ is not 2⁻³²"
+    );
+    assert_eq!(
+        at([0.5, 0.0]),
+        2f64.powi(44),
+        "a zero separation at w = 1 is not 2⁴⁴"
+    );
+    let coincident = |x: f32| agreement::conditioning(m, [[x, 0.0], [x, 0.0], [-1.0, 0.0]]);
+    for (x, want, why) in [
+        (1.0f32, 43, "w = 2"),
+        (0.25, 45, "w = 1/2, under eps's floor,"),
+        (2f32.powi(-32), 75, "w = 2⁻³¹"),
+        (2f32.powi(-33), 76, "w = δ"),
+        (2f32.powi(-34), 75, "w = 2⁻³³, under δ,"),
+    ] {
+        assert_eq!(
+            coincident(x),
+            2f64.powi(want),
+            "a zero separation at {why} is not 2^{want}"
+        );
+    }
+    assert_eq!(coincident(0.0), 0.0, "w = 0 is not 0");
+    // Each pair counts, by its own masses and max-norms.
+    let tri_m = [0.5f32, 0.3, 0.2];
+    let n = |v: [f64; 2]| v[0].abs().max(v[1].abs());
+    let r = TRI.map(|p| p.map(f64::from));
+    let want: f64 = [(0, 1), (0, 2), (1, 2)]
+        .iter()
+        .map(|&(i, j)| {
+            let w = n(r[i]) + n(r[j]);
+            let d = n([r[i][0] - r[j][0], r[i][1] - r[j][1]]);
+            pair(f64::from(tri_m[i]) * f64::from(tri_m[j]), w, d)
+        })
+        .sum();
+    let got = agreement::conditioning(tri_m, TRI);
+    assert!(
+        (got - want).abs() <= 1e-12 * want,
+        "the triangle's term {got} is not {want}"
+    );
+}
+
+/// The expected pair term: `(mm/ŝ)·(w/ŝ)`, `ŝ = max(d, eps·max(w, 2⁻³²))`.
+fn floored(mm: f64, w: f64, d: f64) -> f64 {
+    let s = d.max(EPS * w.max(2f64.powi(-32)));
+    (mm / s) * (w / s)
+}
+
+#[test]
+fn preset_twins_agreement_conditioning() {
+    check_conditioning(floored);
+}
+
+/// The pair term without its floor.
+#[cfg(feature = "controls")]
+fn unfloored(mm: f64, w: f64, d: f64) -> f64 {
+    mm * w / (d * d)
+}
+
+negative_control!(
+    preset_twins_agreement_conditioning,
+    "a twin without the separation's floor must differ",
+    expected = "is not",
+    check_conditioning(unfloored)
+);
+
+/// The agreement preset's WGSL compiles [`agreement::FACTOR`] (REQ-COL-060's factor, TASK-M2-29) and
+/// [`agreement::FLOOR`] (the separation floor's `δ`): the colour view, the words view and each operand view declare
+/// `AGREEMENT_FACTOR` and `AGREEMENT_FLOOR` once each, as literals whose values are `factor` and the floor, and use
+/// them in the bound and the floor.
+fn check_factor_wgsl(factor: f32) {
+    let mut presets = vec![agreement::preset(), agreement::words()];
+    presets.extend((0..agreement::OPERAND_GROUPS).map(agreement::operands));
+    for preset in presets {
+        let view = preset.view();
+        for (name, want, what) in [
+            ("AGREEMENT_FACTOR", factor, "factor"),
+            ("AGREEMENT_FLOOR", agreement::FLOOR, "floor"),
+        ] {
+            let decls: Vec<&str> = view
+                .lines()
+                .filter_map(|l| l.strip_prefix(&format!("const {name}: f32 = ")))
+                .collect();
+            assert_eq!(decls.len(), 1, "{name} declared {} times", decls.len());
+            let literal = decls[0]
+                .strip_suffix(';')
+                .expect("the declaration ends in ';'");
+            assert_eq!(
+                literal.parse::<f32>().ok(),
+                Some(want),
+                "the WGSL {what} {literal} is not the compiled {what}"
+            );
+            assert!(
+                literal.contains('.'),
+                "{literal} is not an f32 literal in WGSL"
+            );
+        }
+        assert!(view.contains("let bound = AGREEMENT_FACTOR * AGREEMENT_EPS"));
+        assert!(view.contains("AGREEMENT_EPS * max(w, AGREEMENT_FLOOR)"));
+    }
+}
+
+#[test]
+fn preset_twins_agreement_factor_wgsl() {
+    check_factor_wgsl(agreement::FACTOR);
+}
+
+negative_control!(
+    preset_twins_agreement_factor_wgsl,
+    "a WGSL factor other than the compiled one must be found",
+    expected = "is not the compiled factor",
+    check_factor_wgsl(agreement::FACTOR * 2.0)
+);
+
+/// The operand views' groups (`agreement::operands`): group `g` returns words `4g` to `4g + 3` of the twelve, and the
+/// view writes `K`, `V`, `m` and `r` as bits at the words the gate reads; `skew` shifts the group read (the control).
+fn check_operand_groups(skew: u32) {
+    assert_eq!(
+        (agreement::OPERAND_WORDS, agreement::OPERAND_GROUPS),
+        (12, 3)
+    );
+    for g in 0..agreement::OPERAND_GROUPS {
+        let preset = agreement::operands(g + skew);
+        let view = preset.view();
+        let a = 4 * g;
+        assert!(
+            view.contains(&format!(
+                "return vec4<u32>(w[{a}], w[{}], w[{}], w[{}]);",
+                a + 1,
+                a + 2,
+                a + 3
+            )),
+            "group {g} does not return words {a} to {}",
+            a + 3
+        );
+        for line in [
+            "let d = frag_decode(agreement_point(l));",
+            "w[0] = d.d.K_0;",
+            "w[1] = d.d.V_0;",
+            "w[2] = mb.x;",
+            "w[3] = mb.y;",
+            "w[4] = mb.z;",
+            "w[5u + 2u * b] = rb.x;",
+            "w[6u + 2u * b] = rb.y;",
+            "w[11] = 0u;",
+        ] {
+            assert!(view.contains(line), "group {g} lacks `{line}`");
+        }
+        assert_eq!(preset.output(), render::bind::ViewOutput::Words);
+    }
+}
+
+#[test]
+fn preset_twins_agreement_operand_groups() {
+    check_operand_groups(0);
+}
+
+negative_control!(
+    preset_twins_agreement_operand_groups,
+    "a group returning another group's words must be found",
+    expected = "does not return words",
+    check_operand_groups(1)
 );
 
 /// The bit test at the exponent's edges; `max_finite` is the largest value expected finite.
