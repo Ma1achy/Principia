@@ -639,3 +639,81 @@ fn mock_compass_view_keys_at_the_element_the_wheel_still_scrolls() {
     assert_eq!(unread(&output, panel, &title), None, "{name}");
     assert_eq!(at(&app), (vec![COMPASS, COMPASS_VIEW], KeyMode::Navigation));
 }
+
+/// The focus ring's rects in `output`.
+fn rings_in(output: &FullOutput) -> Vec<Rect> {
+    output
+        .shapes
+        .iter()
+        .filter_map(|c| match &c.shape {
+            Shape::Rect(r) if r.stroke.width == breadcrumb::RING_WIDTH => Some(r.rect),
+            _ => None,
+        })
+        .collect()
+}
+
+/// The ring on a column's button stays in the panel when the wheel moves the button: on the part still shown, partly
+/// scrolled; none at all, wholly scrolled off, where the ring on the button's whole rect would cross the panel's top.
+#[test]
+fn mock_compass_view_keys_the_ring_stays_in_the_panel_under_the_wheel() {
+    let (name, window, least) = SMALL[0];
+    let (mut app, mut h, panel) = at_element(&tilted(), window, least, 3);
+    let output = after_keys(&mut h, &mut app, Key::ArrowRight, 1);
+    assert_eq!(at(&app), (vec![COMPASS, COMPASS_TILT], KeyMode::Navigation));
+    let at_rest = rings_in(&output);
+    assert_eq!(at_rest.len(), 1, "{name}: one ring: {at_rest:?}");
+    let whole = at_rest[0];
+    assert!(panel.contains_rect(whole), "{whole:?} in {panel:?}");
+    // A little: the button partly under the column's top edge, the ring on what shows.
+    let output = wheel(
+        &mut h,
+        &mut app,
+        panel,
+        whole.max.y - panel.min.y - 12.0 - 4.0,
+    );
+    let part = rings_in(&output);
+    assert_eq!(part.len(), 1, "{name}: the part shown: {part:?}");
+    assert!(panel.contains_rect(part[0]), "{part:?} in {panel:?}");
+    assert!(part[0].height() < whole.height(), "{part:?} of {whole:?}");
+    // All the way: the button is above the panel's top, no ring.
+    let output = wheel(&mut h, &mut app, panel, 2000.0);
+    assert_eq!(
+        rings_in(&output),
+        Vec::<Rect>::new(),
+        "{name}: nothing shown"
+    );
+    let place = app.keyboard.place_of(COMPASS_TILT).expect("placed");
+    assert!(!place.shown().is_positive(), "{place:?}: nothing shown");
+    // Control: the ring on the button's whole rect, as it was, crosses the panel's top.
+    rejects("a ring on the whole rect of a button scrolled off", || {
+        assert!(panel.contains_rect(place.rect.expand(3.0)), "{place:?}")
+    });
+}
+
+/// A widget's place shows the part of it its `Ui` shows; wholly clipped, nothing.
+#[test]
+fn mock_compass_view_keys_a_widgets_place_shows_what_its_ui_shows() {
+    let ctx = eframe::egui::Context::default();
+    let clip = Rect::from_min_size(pos2(0.0, 100.0), vec2(100.0, 100.0));
+    let mut keyboard = crate::keyboard::Keyboard::new();
+    let mut rects = Vec::new();
+    let mut output = ctx.run_ui(Default::default(), |ui| {
+        ui.set_clip_rect(clip);
+        for (id, y) in [("inside", 120.0), ("across", 90.0), ("above", 50.0)] {
+            let rect = Rect::from_min_size(pos2(10.0, y), vec2(20.0, 20.0));
+            let response = ui.interact(rect, ui.id().with(id), eframe::egui::Sense::click());
+            keyboard.place_widget(id, &response);
+            rects.push((rect, keyboard.place_of(id).expect("placed").shown()));
+        }
+    });
+    output.textures_delta.clear();
+    let [(inside, placed), (across, part), (_, none)] = rects[..] else {
+        panic!("{rects:?}")
+    };
+    assert_eq!(placed, inside);
+    assert_eq!(part, across.intersect(clip));
+    assert!(!none.is_positive(), "{none:?}");
+    rejects("the widget's whole rect", || {
+        assert!(clip.contains_rect(across))
+    });
+}
