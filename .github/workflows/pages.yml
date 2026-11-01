@@ -11,6 +11,9 @@ permissions:
 
 env:
   CARGO_TERM_COLOR: always
+  # R-374: every CI job builds the dev and test profiles with line tables only; every workflow sets the same values.
+  CARGO_PROFILE_DEV_DEBUG: line-tables-only
+  CARGO_PROFILE_TEST_DEBUG: line-tables-only
 
 jobs:
   build:
@@ -21,8 +24,9 @@ jobs:
       - name: rustup toolchain install (rust-toolchain.toml)
         run: rustup toolchain install && rustup target add wasm32-unknown-unknown
       # The version `xtask::web_skeleton::WASM_BINDGEN_VERSION` pins; a test checks the two agree.
-      - name: Install wasm-bindgen-cli
-        run: cargo install wasm-bindgen-cli --version 0.2.129 --locked
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: wasm-bindgen-cli@0.2.129
       - name: cargo xtask web-skeleton
         run: cargo xtask web-skeleton --out _site
       - uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4.0.0

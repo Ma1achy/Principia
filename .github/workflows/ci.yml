@@ -405,11 +405,10 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           prefix-key: cargo-registry
-          shared-key: ci
+          shared-key: web-skeleton
           cache-targets: "false"
           cache-bin: "false"
-          # It restores, read-only, the key the `ci` job saves on `main` (R-326, R-337).
-          save-if: "false"
+          save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
       - name: cargo rustc -p gui (wasm32, the web feature)
         run: cargo rustc -p gui --lib --locked --target wasm32-unknown-unknown --features web --crate-type cdylib
 

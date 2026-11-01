@@ -44,6 +44,7 @@ die() {
 #   R <ref>            a `dtolnay/rust-toolchain@<ref>` step
 #   C <ref> <comp>     a component that step's `components:` names
 #   F                  a bare `rustup toolchain install`, which installs what the root toolchain file pins
+#   G <target>         a target its `&& rustup target add` adds to that toolchain
 #   T <name> <ver|->   a cargo tool from a `tool:` line, `<name>@<ver>` or unpinned
 #   A <pkg>            an `apt-get install` package
 #   P <ver>            an `actions/setup-python` step's `python-version:`
@@ -95,7 +96,11 @@ ci_records() {
       if (cmd == "" || substr(cmd, 1, 1) == "#") return
       if (index(cmd, "apt-get install") > 0) { words_after(cmd, "apt-get install", "A"); return }
       if (index(cmd, "pip install") > 0) { words_after(cmd, "pip install", "Y"); return }
-      if (cmd ~ /(^|[;&|] *)rustup toolchain install *([;&|]|$)/) { emit("F"); return }
+      if (cmd ~ /(^|[;&|] *)rustup toolchain install *([;&|]|$)/) {
+        emit("F")
+        if (index(cmd, "rustup target add") > 0) words_after(cmd, "rustup target add", "G")
+        return
+      }
       if (cmd ~ /cargo install|cargo binstall|rustup (component|target) add|rustup toolchain install|(^|[^-])apt install|snap install|brew install|npm (install|ci)|curl |wget /) {
         emit("U " FILENAME ":" FNR ": " cmd)
       }
@@ -130,7 +135,7 @@ ci_records() {
       if (t ~ /^uses:/) {
         v = unquote(substr(t, 6))
         if (v ~ /^dtolnay\/rust-toolchain@/) { tc = substr(v, index(v, "@") + 1); emit("R " tc) }
-        else if (v ~ /^(actions\/checkout|actions\/cache|actions\/cache\/restore|actions\/cache\/save|actions\/upload-artifact|actions\/download-artifact|Swatinem\/rust-cache|taiki-e\/install-action|actions\/setup-python)@/) { }
+        else if (v ~ /^(actions\/checkout|actions\/cache|actions\/cache\/restore|actions\/cache\/save|actions\/upload-artifact|actions\/download-artifact|actions\/upload-pages-artifact|actions\/deploy-pages|Swatinem\/rust-cache|taiki-e\/install-action|actions\/setup-python)@/) { }
         # The advisory Gemini review (R-635) installs only the Gemini CLI it runs: nothing builds or tests with it.
         else if (v ~ /^google-github-actions\/run-gemini-cli@/) { }
         else emit("U " FILENAME ":" FNR ": " t)
@@ -227,7 +232,7 @@ method() {
 # The plan, one item per line, `<kind> <name> <version> <method>` (`-` where there is no version), sorted: what this
 # script installs and how, and what `--dry-run` prints.
 plan() {
-  local records unknown values tc
+  local records unknown values tc channel
   records=$(ci_records) || return 1
   unknown=$(printf '%s\n' "$records" | sed -n 's/^U //p')
   [ -z "$unknown" ] || die "CI's Linux jobs install by a step this script doesn't know; teach it, then re-run:
@@ -241,8 +246,11 @@ $unknown"
   # A here-string, not a pipe: under pipefail, `grep -q` quitting at its match could leave printf to die of SIGPIPE,
   # and the check would fail falsely.
   if [ -n "$tc" ] && ! grep -q '^channel ' <<<"$tc"; then die "the root toolchain file names no channel"; fi
+  channel=$(sed -n 's/^channel //p' <<<"$tc")
+  if [ -z "$channel" ] && grep -q '^G ' <<<"$records"; then die "CI's Linux jobs add a target to the root toolchain file's toolchain, and there is no such file"; fi
   {
-    printf '%s\n' "$records" | awk '
+    printf '%s\n' "$records" | awk -v ch="$channel" '
+      $1 == "G" { print "target " ch "/" $2 " -" }
       $1 == "R" { print "toolchain action " $2; print "profile " $2 " minimal" }
       $1 == "C" { print "component " $2 "/" $3 " -" }
       $1 == "T" { print "cargo-tool " $2 " " $3 }

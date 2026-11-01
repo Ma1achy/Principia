@@ -158,9 +158,7 @@ fn check_pin(lock: &str, workflow: &str) {
         "the pin is not the lock's wasm-bindgen"
     );
     assert!(
-        workflow.contains(&format!(
-            "wasm-bindgen-cli --version {WASM_BINDGEN_VERSION} --locked"
-        )),
+        workflow.contains(&format!("tool: wasm-bindgen-cli@{WASM_BINDGEN_VERSION}\n")),
         "pages.yml installs another wasm-bindgen-cli"
     );
 }
@@ -191,7 +189,7 @@ mod workflow {
         expected = "installs another wasm-bindgen-cli",
         check_pin(
             &format!("name = \"wasm-bindgen\"\nversion = \"{WASM_BINDGEN_VERSION}\"\n"),
-            &edited("--version 0.2.129", "--version 0.2.1")
+            &edited("wasm-bindgen-cli@0.2.129", "wasm-bindgen-cli@0.2.1")
         )
     );
 }
