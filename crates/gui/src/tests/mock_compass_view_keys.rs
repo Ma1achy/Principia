@@ -7,7 +7,7 @@
 //! (R-176, through `rejects`).
 
 use eframe::egui::{
-    pos2, vec2, Event, FullOutput, Key, Modifiers, MouseWheelUnit, Rect, Shape, TouchPhase,
+    pos2, vec2, Color32, Event, FullOutput, Key, Modifiers, MouseWheelUnit, Rect, Shape, TouchPhase,
 };
 use engine::contract::sim_config::Plane;
 use engine::contract::view_ui::{Focus, KeyMode, Mode};
@@ -483,10 +483,17 @@ fn tilted() -> Plane {
     plane(&view(30.0, -20.0, 25.0, 1.0), [0.1, -0.2, 0.2])
 }
 
-/// The tilted plane at the Shape sphere's `+w` pole, where the readout's stretch is at its widest.
+/// The tilted plane at the Shape sphere's `+w` pole, where the readout's stretch is at its largest.
 fn at_the_pole() -> Plane {
+    near_the_pole(0.0)
+}
+
+/// The tilted plane `r` off that pole.
+fn near_the_pole(r: f64) -> Plane {
     let mut p = tilted();
     p.z0 = POLE;
+    p.z0[0] = -r;
+    p.z0[1] = 0.5 * r;
     p
 }
 
@@ -562,63 +569,102 @@ fn drawn(output: &FullOutput, wanted: &str) -> (Rect, Rect, f32) {
         .unwrap_or_else(|| panic!("{wanted} drawn"))
 }
 
-/// The Shape view at its pole, the widest readout. At 1280 by 720 the element shows the whole column. At the least panel
-/// and 1024 by 768 the column's text is taller than the view, so one stop cannot show it all: the element shows the hint
-/// and the readout from its second row, and Tilt, a key from it, the readout's first row, at most a point short.
+/// The height `other` would take in place of the drawn `text`, its font and wrap width, in `output`: and the height
+/// `text` takes by the same measure, which is what was drawn.
+fn height_in_place_of(h: &Headless, output: &FullOutput, text: &str, other: &str) -> (f32, f32) {
+    let galley = output
+        .shapes
+        .iter()
+        .find_map(|c| match &c.shape {
+            Shape::Text(t) if t.galley.text() == text => Some(t.galley.clone()),
+            _ => None,
+        })
+        .unwrap_or_else(|| panic!("{text} drawn"));
+    let font = galley.job.sections[0].format.font_id.clone();
+    let wrap = galley.job.wrap.max_width;
+    let height = |text: &str| {
+        h.ctx.fonts_mut(|fonts| {
+            fonts
+                .layout(text.to_owned(), font.clone(), Color32::WHITE, wrap)
+                .rect
+                .height()
+        })
+    };
+    (height(other), height(text))
+}
+
+/// The Shape view at and just off its pole, where the stretch runs past `1e6`: the focus moved there by the keys, the
+/// element shows the whole readout and the whole hint in one stop, at the small panels. The control is the same
+/// readout with the stretch's plain digits, laid out as the drawn one is, which is taller than the view holds at the
+/// two smallest.
 #[test]
-fn mock_compass_view_keys_at_the_pole_the_keys_read_it_in_two_stops() {
+fn mock_compass_view_keys_near_the_pole_the_element_shows_the_whole_column() {
     let shape = 6;
-    let (name, window, least) = SMALL[2];
-    let (mut app, mut h, panel) = at_element(&at_the_pole(), window, least, shape);
-    let output = settled_output(&mut h, &mut app);
-    let text = column_text(&app, panel);
-    assert_eq!(unread(&output, panel, &text), None, "{name}");
-    for (name, window, least) in &SMALL[..2] {
-        let (mut app, mut h, panel) = at_element(&at_the_pole(), *window, *least, shape);
-        let output = settled_output(&mut h, &mut app);
-        let text = column_text(&app, panel);
-        assert_eq!(unread(&output, panel, &text[1..]), None, "{name}: the hint");
-        let (readout, clip, row) = drawn(&output, &text[0]);
-        assert!(readout.max.y <= clip.max.y, "{name}: {readout:?} {clip:?}");
-        assert!(
-            readout.min.y + row >= clip.min.y,
-            "{name}: from its second row: {readout:?} {clip:?}"
-        );
-        // Control: the whole column in one stop is what this view has no room for.
-        rejects("the whole readout, in the view with the whole hint", || {
-            assert_eq!(unread(&output, panel, &text[..1]), None, "{name}")
-        });
-        let output = after_keys(&mut h, &mut app, Key::ArrowRight, 1);
-        assert_eq!(at(&app), (vec![COMPASS, COMPASS_TILT], KeyMode::Navigation));
-        let (readout, clip, row) = drawn(&output, &text[0]);
-        assert!(
-            readout.min.y + row <= clip.max.y + 1.0,
-            "{name}: its first row: {readout:?} {clip:?}"
-        );
+    for (name, window, least) in SMALL {
+        for r in [0.0, 1e-13, 1e-9, 1e-5, 1e-3] {
+            let (mut app, mut h, panel) = at_element(&near_the_pole(r), window, least, shape);
+            let output = settled_output(&mut h, &mut app);
+            let text = column_text(&app, panel);
+            assert_eq!(unread(&output, panel, &text), None, "{name}, r = {r}");
+            // Exactly at the pole no pair is named, and just off it one is.
+            assert_eq!(text[0].contains('—'), r == 0.0, "{name}: {}", text[0]);
+            let c = &app.manifold.compass;
+            let stretch = compass::pushed(&app.snapshot().sim, c, physical::Set::Shape).stretch;
+            assert!(stretch >= 1e6, "{name}, r = {r}: {stretch}");
+            let (head, shown) = text[0].split_once("stretch ").expect("the stretch");
+            assert_eq!(shown, format!("{stretch:.3e}"), "{name}, r = {r}");
+            if window != [1280.0, 720.0] {
+                let plain = format!("{head}stretch {stretch:.3}");
+                let (taller, height) = height_in_place_of(&h, &output, &text[0], &plain);
+                let (readout, clip, _) = drawn(&output, &text[0]);
+                assert!(
+                    (readout.height() - height).abs() < 0.5,
+                    "{name}: {readout:?}"
+                );
+                let (hint, _, _) = drawn(&output, &text[1]);
+                let column = hint.max.y - readout.min.y;
+                assert!(
+                    column <= clip.height(),
+                    "{name}, r = {r}: {column} {clip:?}"
+                );
+                rejects("the stretch's plain digits", || {
+                    let column = column - height + taller;
+                    assert!(
+                        column <= clip.height(),
+                        "{name}, r = {r}: {column} {clip:?}"
+                    )
+                });
+            }
+        }
     }
 }
 
+/// The rows `text` is drawn in, in `output`.
+fn rows_of(output: &FullOutput, text: &str) -> usize {
+    let (at, _, row) = drawn(output, text);
+    (at.height() / row).round() as usize
+}
+
 /// The readout growing a row while the focus is on the element leaves the column's end in view; with the focus on a
-/// button it does not move the column there.
+/// button it does not move the column there. The growth is from the pole, where no pair is named, to just off it.
 #[test]
 fn mock_compass_view_keys_the_element_keeps_the_end_as_the_readout_grows() {
     let shape = 6;
+    let off = near_the_pole(1e-5).z0;
     let (name, window, least) = SMALL[0];
-    let (mut app, mut h, panel) = at_element(&tilted(), window, least, shape);
-    let _ = settled_output(&mut h, &mut app);
-    app.set_field(z0_edit(POLE));
+    let (mut app, mut h, panel) = at_element(&at_the_pole(), window, least, shape);
+    let output = settled_output(&mut h, &mut app);
+    let before = rows_of(&output, &column_text(&app, panel)[0]);
+    app.set_field(z0_edit(off));
     let output = settled_output(&mut h, &mut app);
     let hint = [physical::HELP.to_owned()];
-    assert!(
-        column_text(&app, panel)[0].contains("169"),
-        "the readout grew: {:?}",
-        column_text(&app, panel)
-    );
+    let after = rows_of(&output, &column_text(&app, panel)[0]);
+    assert!(after > before, "the readout grew: {before} to {after} rows");
     assert_eq!(unread(&output, panel, &hint), None, "{name}");
     // The same edit with the focus on a button leaves the hint where it was, off the view.
-    let (mut app, mut h, panel) = at_element(&tilted(), window, least, shape);
+    let (mut app, mut h, panel) = at_element(&at_the_pole(), window, least, shape);
     let _ = after_keys(&mut h, &mut app, Key::ArrowRight, 1);
-    app.set_field(z0_edit(POLE));
+    app.set_field(z0_edit(off));
     let output = settled_output(&mut h, &mut app);
     rejects("the hint's end with the focus on a button", || {
         assert_eq!(unread(&output, panel, &hint), None, "{name}")

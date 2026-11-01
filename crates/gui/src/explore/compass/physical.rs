@@ -528,7 +528,26 @@ pub fn readout(set: Set, push: &Pushforward) -> String {
         ),
         None => "—".to_owned(),
     };
-    format!("strongest: {strongest} · stretch {:.3}", push.stretch)
+    format!(
+        "strongest: {strongest} · stretch {}",
+        stretch_text(push.stretch)
+    )
+}
+
+/// From here up the readout's stretch is in scientific form. Measured at the least panel and at 1024 by 768, with each
+/// view's widest pairs and the focus on the compass element: the whole column shows in one stop with plain digits up to
+/// `99999.999`, not at `999999.999`. The stretch grows past `1e18` toward the Shape sphere's pole, and from here up the
+/// plain digits are no shorter than `1.699e18` (a look choice, R-390).
+pub const STRETCH_SCIENTIFIC_FROM: f64 = 1e4;
+
+/// The area stretch as the readout reads it: three decimals, or three in scientific form from
+/// [`STRETCH_SCIENTIFIC_FROM`] up, whose widest value, `1.798e308`, is whole in the same measure.
+fn stretch_text(stretch: f64) -> String {
+    if stretch < STRETCH_SCIENTIFIC_FROM {
+        format!("{stretch:.3}")
+    } else {
+        format!("{stretch:.3e}")
+    }
 }
 
 /// The hover text of cell `(i, j)` of `grid` in `set`.

@@ -455,6 +455,37 @@ fn compass_physical_views_a_degenerate_pushforward_keeps_the_cursor() {
     });
 }
 
+/// The stretch reads in plain decimals below `STRETCH_SCIENTIFIC_FROM` and in scientific form from it up.
+#[test]
+fn compass_physical_views_the_readout_shortens_a_large_stretch() {
+    let read = |stretch: f64| {
+        let push = Pushforward {
+            grid: [[0.0; LATENT_DIM]; LATENT_DIM],
+            stretch,
+            degenerate: false,
+        };
+        physical::readout(Set::Jacobi, &push)
+            .rsplit_once("stretch ")
+            .expect("the stretch")
+            .1
+            .to_owned()
+    };
+    assert_eq!(physical::STRETCH_SCIENTIFIC_FROM, 1e4);
+    assert_eq!(read(9999.999), "9999.999");
+    // The last value below it still reads plain, rounded up.
+    assert_eq!(read(1e4f64.next_down()), "10000.000");
+    assert_eq!(read(1e4), "1.000e4");
+    assert_eq!(read(1699334285400252416.0), "1.699e18");
+    assert_eq!(read(f64::MAX), "1.798e308");
+    // Control: the plain digits at the pole's stretch, as the readout had them.
+    rejects("the stretch's plain digits", || {
+        assert_eq!(
+            format!("{:.3}", 1699334285400252416.0),
+            read(1699334285400252416.0)
+        )
+    });
+}
+
 #[test]
 fn compass_physical_views_the_readout_and_hover_name_the_sets() {
     let mut grid = [[0.0; LATENT_DIM]; LATENT_DIM];

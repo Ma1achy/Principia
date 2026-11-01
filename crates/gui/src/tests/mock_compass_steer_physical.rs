@@ -373,7 +373,7 @@ fn laid(shapes: &[Shape], wanted: &str) -> Option<(Rect, usize)> {
 
 #[test]
 fn mock_compass_steer_physical_the_pole_line_fits_the_panel() {
-    // At the artboard's window size: the widest readout there is, the rates' stretch at the very pole.
+    // At the artboard's window size: the rates' stretch at the very pole.
     let mut p = start();
     p.z0 = at_pole();
     let (mut app, mut h) = app_with(&p, Decoder::default(), COMPASS_SHAPE);
@@ -441,15 +441,17 @@ fn help_at(id: &'static str, window: [f32; 2], least: bool) -> (App<MockSide>, H
     (app, h, panel)
 }
 
-/// At the artboard's window the column fits, at the pole's wider readout too: no scroll, so no bar and no narrower wrap.
+/// At the artboard's window the column fits, at the pole's readout too: no scroll, so no bar and no narrower wrap. The
+/// pole's readout is the shorter, naming no pair, so its help ends short of the margin anyway: the control is the other
+/// two's.
 #[test]
 fn mock_compass_steer_physical_the_help_fits_at_the_artboard_with_no_bar() {
     let mut pole = start();
     pole.z0 = at_pole();
-    for (p, id) in [
-        (start(), COMPASS_JACOBI),
-        (start(), COMPASS_SHAPE),
-        (pole, COMPASS_SHAPE),
+    for (p, id, past_the_margin) in [
+        (start(), COMPASS_JACOBI, true),
+        (start(), COMPASS_SHAPE, true),
+        (pole, COMPASS_SHAPE, false),
     ] {
         let (mut app, mut h) = app_with(&p, Decoder::default(), id);
         let output = h.frame(&mut app, Vec::new());
@@ -462,9 +464,11 @@ fn mock_compass_steer_physical_the_help_fits_at_the_artboard_with_no_bar() {
         assert!(help.width() > room - bar, "{help:?} in {room} wide");
         // Control: the viewport stopping at the full margin, as it did, ends short of the help.
         let at_margin = panel.max.y - MARGIN;
-        rejects("the column stopped at the margin", || {
-            assert!(help.max.y <= at_margin, "{help:?}")
-        });
+        if past_the_margin {
+            rejects("the column stopped at the margin", || {
+                assert!(help.max.y <= at_margin, "{help:?}")
+            });
+        }
     }
 }
 
