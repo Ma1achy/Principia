@@ -28747,7 +28747,7 @@ R-653 is in the "design" group of `plan/rule_groups.yaml`, with R-649 and R-650.
 Changes REQ-VAL-246 (statement, verify, rulings, note), REQ-VAL-308, REQ-VAL-309, REQ-VAL-311, REQ-VAL-312 and REQ-VAL-313 (verify, rulings, note), REQ-VAL-247 and REQ-VAL-310 (rulings, note); `rq: RQ-622` removed from the six.
 
 ## R-654 — The softened force law is Plummer softening, `V = −Σ mᵢmⱼ/√(r² + ε²)`, with `ε` canonical, a fraction of the initial hyperradius `R` fixed at `t = 0` and never co-moving, recorded in every output header like `r_coll`; energy and drift are defined under the softened potential; its task is scheduled late, after the core build, and runs with `ε ≠ 0` stay refused until it lands *(closes RQ-627; queues RQ-656)*
-*30 Oct 2026 · the owner's batch of that day; applied in `docs/design/principia_dd_generation_root.md` § "Open" (a paragraph), `docs/contracts/principia_integrator_contract.md` Part 3 (a row) and Part 7 (a paragraph), `docs/archive/review_queue/M0.md` (RQ-627, moved with this ruling), `REVIEW_QUEUE.md` (RQ-656), REQ-SYS-018 (reqio), REQ-INT-110 and REQ-SYS-094 (reqio, new), TASK-M9-39 (new), TASK-M3-06 (a note), `plan/MILESTONES.md`, `plan/tasks.yaml` and `plan/rule_groups.yaml`; built by TASK-M9-39, and the refusal by TASK-M3-06*
+*30 Oct 2026 · the owner's batch of that day; applied in `docs/design/principia_dd_generation_root.md` § "Open" (a paragraph), `docs/contracts/principia_integrator_contract.md` Part 3 (a row) and Part 7 (a paragraph), `docs/archive/review_queue/M0.md` (RQ-627, moved with this ruling), `REVIEW_QUEUE.md` (RQ-656), REQ-SYS-018 (reqio), REQ-INT-110, REQ-SYS-094 and REQ-SYS-095 (reqio, new), REQ-VAL-340 (reqio), TASK-M9-37 (lines), TASK-M9-39 (new), TASK-M3-06 (a note), `plan/MILESTONES.md`, `plan/tasks.yaml` and `plan/rule_groups.yaml`; built by TASK-M9-39, and the refusal by TASK-M3-06*
 
 The owner's words (30 Oct 2026), verbatim, from that day's batch of rulings:
 
@@ -28766,11 +28766,11 @@ The owner's words (30 Oct 2026), verbatim, from that day's batch of rulings:
 
 *Applied per R-369:*
 - **The milestone.** R-650 and `plan/MILESTONES.md` call M0 to M8 the core build, and no other milestone follows it, so the task is TASK-M9-39. It is a build task, not a target: its tests block its own merge, it is not scored, and M9's report, TASK-M9-37, does not wait on it.
-- **The requirements:** one for the law, one for the record and the refusal's lifting, and REQ-SYS-018 gains the refusal.
+- **The requirements:** one for the law, one for the record and the refusal's lifting, one calibrating the range of `ε` (REQ-SYS-095), and REQ-SYS-018 gains the refusal. The ruling gives no bounds, and they change which runs are admitted, so they are values (R-71). REQ-VAL-340 lists REQ-SYS-095 with what it waits on if TASK-M9-39 has not landed by the report, which does not wait on it.
 
 R-654 is in the "physics" group of `plan/rule_groups.yaml`, with R-554 and R-655.
 
-Changes REQ-SYS-018 (statement, verify, rulings, source, note); adds REQ-INT-110 and REQ-SYS-094.
+Changes REQ-SYS-018 (statement, verify, rulings, source, note) and REQ-VAL-340 (statement, note); adds REQ-INT-110, REQ-SYS-094 and REQ-SYS-095.
 
 ## R-655 — On a tilted shape sphere the spherical map's lattice of repeats is folded: a pixel `(s + k, t + 2j)` with `N_a·k + 2·N_b·j = 0` for integers `(k, j) ≠ 0` is the same system as `(s, t)` and is counted once, at its canonical point, the lattice decided exactly on the stored angles *(closes RQ-631; amends R-554 L3 and R-537 EX7(b))*
 *30 Oct 2026 · the owner's batch of that day; applied in `docs/contracts/principia_chart_decoder_contract.md` § "Repeats

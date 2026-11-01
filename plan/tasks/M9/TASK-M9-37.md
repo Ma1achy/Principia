@@ -9,7 +9,7 @@
 - **Size:** ~200 lines
 
 ## Goal
-M9 exits on this report, not a gate (R-650). It lists every M9 target with its tier, its outcome (PASS, EXPLAINED DIVERGENCE or UNEXPLAINED), its like-for-like checks and, for an explained divergence, the measurement showing the mechanism. A target not yet scored, waiting on a ruling or data, is listed "not scored" with what it waits on, never as a failure. Every M9 calibration is put to the human with it, and the owner reviews it.
+M9 exits on this report, not a gate (R-650). It lists every M9 target with its tier, its outcome (PASS, EXPLAINED DIVERGENCE or UNEXPLAINED), its like-for-like checks and, for an explained divergence, the measurement showing the mechanism. A target not yet scored, waiting on a ruling or data, is listed "not scored" with what it waits on, never as a failure. Every M9 calibration is put to the human with it, or, where its proposal has not landed (REQ-SYS-095, TASK-M9-39's), listed with what it waits on, and the owner reviews it.
 
 ## References
 - `docs/design/principia_dd_replication.md` § "12. Targets are measurements: tiers, outcomes and M9 (R-649, R-650)"
@@ -23,7 +23,7 @@ M9 exits on this report, not a gate (R-650). It lists every M9 target with its t
 
 ## Deliverables
 - `docs/verification/m9_report.md` — the report, one row per M9 requirement, from the scoring commands' outputs where they exist.
-- The list of M9 calibrations, each with its proposal, for the human.
+- The list of M9 calibrations, each with its proposal or, for REQ-SYS-095 if TASK-M9-39 has not landed, what it waits on, for the human.
 
 ## Acceptance tests
 - Review (physics): the report covers every live M9 requirement; each row has its tier, its outcome, its like-for-like checks and, for an explained divergence, the measurement; the peek log's rows are cited, never counted as scores (REQ-VAL-340).

@@ -476,8 +476,8 @@ and tightens the GPU path (`docs/design/principia_dd_replication.md` § 12).
   Szebehely & Peters); TASK-M9-37, the report; TASK-M9-38, the GPU-path tightening defined (REQ-VAL-341, a definition,
   R-72), each change it proposes with its own ruling.
 - **One build task:** TASK-M9-39, the softened force law, scheduled after the core build at the owner's word (R-654;
-  REQ-INT-110, REQ-SYS-094). It is not a target and is not scored: its tests block its own merge, and the report does not
-  wait on it. The block below lists its two requirements because the block lists every M9 requirement.
+  REQ-INT-110, REQ-SYS-094, REQ-SYS-095). It is not a target and is not scored: its tests block its own merge, and the report does not
+  wait on it. The block below lists its three requirements because the block lists every M9 requirement.
 - **When:** scoring waits for M9, and R-415's early-merge test does not bring an M9 task forward. Source ingest and
   transcription (data PRs under `docs/incoming/`) go on whenever idle, and an early peek scores a target as
   information only, in `docs/verification/peek_log.md`, never a gate, nothing tuned to it.
@@ -487,9 +487,9 @@ and tightens the GPU path (`docs/design/principia_dd_replication.md` § 12).
   below is a report block, not a gate block.
 
 <!-- report:M9 -->
-**Scored, never gated — 139 requirements** (R-649, R-650; each outcome PASS, EXPLAINED DIVERGENCE or UNEXPLAINED, in the report):
+**Scored, never gated — 140 requirements** (R-649, R-650; each outcome PASS, EXPLAINED DIVERGENCE or UNEXPLAINED, in the report):
 
 - INT (1): REQ-INT-110
 - VAL (137): REQ-VAL-042, REQ-VAL-127, REQ-VAL-201…249, REQ-VAL-252…335, REQ-VAL-340…341
-- SYS (1): REQ-SYS-094
+- SYS (2): REQ-SYS-094…095
 <!-- /report:M9 -->

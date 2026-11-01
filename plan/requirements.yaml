@@ -36952,7 +36952,7 @@
   note: "R-649's clarification 2 (30 Oct 2026): every GPU-vs-CPU agreement check states its f32 tolerance; REQ-VAL-173 names no precision path. Internal, continuous and blocking; closed by TASK-M5-18."
 - id: REQ-VAL-340
   area: VAL
-  statement: "M9's report must list every M9 target with its tier, its outcome (PASS, EXPLAINED DIVERGENCE or UNEXPLAINED), its like-for-like checks and, for an explained divergence, the measurement showing the mechanism; a target not yet scored is listed \"not scored\" with what it waits on, never as a failure; every M9 calibration is put to the human with it."
+  statement: "M9's report must list every M9 target with its tier, its outcome (PASS, EXPLAINED DIVERGENCE or UNEXPLAINED), its like-for-like checks and, for an explained divergence, the measurement showing the mechanism; a target not yet scored is listed \"not scored\" with what it waits on, never as a failure; every M9 calibration is put to the human with it, or, where its proposal has not landed (REQ-SYS-095, TASK-M9-39's, which the report does not wait on), listed with what it waits on."
   source:
   - file: docs/design/principia_dd_replication.md
     section: "12. Targets are measurements: tiers, outcomes and M9 (R-649, R-650)"
@@ -36977,7 +36977,7 @@
   - R-649
   - R-650
   milestone: M9
-  note: "M9 exits on this report, not a gate (R-650); closed by TASK-M9-37."
+  note: "M9 exits on this report, not a gate (R-650); closed by TASK-M9-37. Statement *was:* \"every M9 calibration is put to the human with it.\" (REQ-SYS-095, code review 5730587922 of PR #375, C4; applied per R-369)."
 - id: REQ-VAL-341
   area: VAL
   kind: definition
@@ -40525,7 +40525,7 @@
   note: "R-627 (27 Oct 2026): closed by TASK-M8-96, the v1 web skeleton's measurements on the Pages deploy of TASK-M8-86, on the mock engine. It measures for RQ-550 and RQ-551 and settles neither, so it carries no `rq` and waits on neither. *Was (R-627's port, before code review 5663981956 F1, applied per R-369):* \"closed by TASK-M8-86, the v1 web skeleton, on the mock engine\"."
 - id: REQ-SYS-094
   area: SYS
-  statement: "`epsilon` must be recorded in every output header as `r_coll` is, and TASK-M9-39 must lift dispatch's refusal of ε ≠ 0 only for finite ε in the range its definition states, NaN, ±∞ and negative ε staying refused."
+  statement: "`epsilon` must be recorded in every output header as `r_coll` is, and TASK-M9-39 must lift dispatch's refusal of ε ≠ 0 only for finite ε in the range REQ-SYS-095 calibrates, NaN, ±∞ and negative ε staying refused."
   source:
   - file: decisions.md
     section: "R-654 — The softened force law is Plummer softening, `V = −Σ mᵢmⱼ/√(r² + ε²)`, with `ε` canonical, a fraction of the initial hyperradius `R` fixed at `t = 0` and never co-moving, recorded in every output header like `r_coll`; energy and drift are defined under the softened potential; its task is scheduled late, after the core build, and runs with `ε ≠ 0` stay refused until it lands *(closes RQ-627; queues RQ-656)*"
@@ -40539,4 +40539,21 @@
   milestone: M9
   rq:
   - RQ-656
-  note: "R-654. Closed by TASK-M9-39. The range of ε is a definition written by that task (R-72; physics reviewer approves). It waits on RQ-656, as its task does."
+  note: "R-654. Closed by TASK-M9-39. The range of ε is REQ-SYS-095's, a calibration (R-71). It waits on RQ-656, as its task does. *Was (the range):* \"a definition written by that task (R-72; physics reviewer approves)\"; statement *was:* \"in the range its definition states\"."
+- id: REQ-SYS-095
+  area: SYS
+  kind: calibration
+  statement: "The range of `epsilon` dispatch admits once TASK-M9-39 lands must be calibrated: its ends, each a fraction of the initial hyperradius R, proposed with their evidence by the task that needs it, checked by a reviewer, confirmed by the human and recorded in decisions.md."
+  source:
+  - file: decisions.md
+    section: "R-654 — The softened force law is Plummer softening, `V = −Σ mᵢmⱼ/√(r² + ε²)`, with `ε` canonical, a fraction of the initial hyperradius `R` fixed at `t = 0` and never co-moving, recorded in every output header like `r_coll`; energy and drift are defined under the softened potential; its task is scheduled late, after the core build, and runs with `ε ≠ 0` stay refused until it lands *(closes RQ-627; queues RQ-656)*"
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    detail: "CALIBRATION (R-71): the proposal measures what sets each end of the range and states it, with its evidence; physics reviewer checked; R-654 gives no value."
+    method: review checklist
+  rulings:
+  - R-71
+  - R-654
+  milestone: M9
+  note: "R-654 gives ε's form and no bounds; the bounds change which runs are admitted, so they are values, not a definition (R-71; applied per R-369, code review 5730587922 of PR #375, C4). Closed by TASK-M9-39, a build task. Confirmed by the human with the M9 report if TASK-M9-39 has landed by then, otherwise in the next batch of calibrations after it lands, since the report does not wait on it. It waits on RQ-656, as its task does."

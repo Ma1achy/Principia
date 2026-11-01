@@ -882,7 +882,7 @@ the choice changes the result (the word every sample stores) and the corpus does
 - **The question:** those three.
 - **Options seen:** (a) the collision test unchanged on geometric `r`; softening offered only on the unregularised occupants, the others refusing `ε ≠ 0`; Chazy's `E` softened as the ruling's energy; (b) as (a), but the regularised occupants given a softened form, defined by TASK-M9-39 with the physics reviewer (R-72); (c) as (a), with Chazy's `E` unsoftened and the classifier refusing, or flagged on, a softened run; (d) another, stated by the owner.
 - **Applied meanwhile:** none needed: dispatch refuses `ε ≠ 0` (R-654; TASK-M3-06), so no softened run exists.
-- **Waits:** TASK-M9-39 (REQ-INT-110, REQ-SYS-094). Nothing in M0 to M8 waits.
+- **Waits:** TASK-M9-39 (REQ-INT-110, REQ-SYS-094, REQ-SYS-095). Nothing in M0 to M8 waits.
 ## RQ-640: Tanikawa 2000's time unit, for the time columns of its eight tables (proposed T2000-1) *(the owner's request of 29 Oct 2026, "Tanikawa 2000 Collision orbits II (8 tables)"; `docs/incoming/2026-10-29_research_batches/README.md` § 5.6, § 10.5; context: none built)*
 
 *Drafted 29 Oct 2026 by the agent ingesting the owner's 29 Oct research batches (that README's § 10.5); filed 1 Nov 2026.*
