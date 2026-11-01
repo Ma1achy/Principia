@@ -706,23 +706,55 @@ fn f3_fill_modes_present_follows_the_mode() {
     rejects("present mode ignoring the mode", || assert_eq!(fit, extend));
 }
 
-/// Extend at each launch: the choice is `ViewUI`'s, kept for the session and not across one.
+/// The settings file `text` does not name the fill.
+fn check_mode_not_saved(text: &str) {
+    assert!(!text.contains("f3_fill") && !text.contains("Fit"), "{text}");
+}
+
+/// Extend at each launch: the choice is `ViewUI`'s, kept for the session and not across one (R-468 E4). The relaunch is
+/// real: a new app reading the settings file the first saved, which a moved splitter shows it read.
 #[test]
 fn f3_fill_modes_extend_at_each_launch() {
     let check = |fill: F3Fill| assert_eq!(fill, F3Fill::Extend);
     assert_eq!(crate::app::initial_view().f3_fill, F3Fill::Extend);
-    let mut session = mock_app();
+    let dir = std::env::temp_dir().join(format!("principia-gui-f3-fill-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).expect("a scratch directory");
+    let launch = |path: &std::path::Path| {
+        App::with_settings(
+            MockSide::new(MockEngine::frozen(), None),
+            FORMAT,
+            crate::settings::Store::at(path),
+        )
+    };
+    let path = dir.join("settings.json");
+    let mut session = launch(&path);
     let mut h = headless();
     frames(&mut h, &mut session, 2);
     check(session.view.f3_fill);
     session.view.f3_fill = F3Fill::Fit;
+    session
+        .splits
+        .set(crate::layout::Splitter::ManifoldFigure, 0.3);
     press(&mut h, &mut session, Key::F3, Modifiers::NONE);
     press(&mut h, &mut session, Key::F3, Modifiers::NONE);
     assert_eq!(session.view.f3_fill, F3Fill::Fit, "kept for the session");
-    // A relaunch: a new app, from the settings the first saved.
-    let relaunched = mock_app();
+    session.save_settings();
+    let saved = std::fs::read_to_string(&path).expect("the settings saved");
+    check_mode_not_saved(&saved);
+    let relaunched = launch(&path);
+    assert_eq!(relaunched.splits, session.splits, "the settings were read");
     check(relaunched.view.f3_fill);
+    // Controls: a relaunch that came back in Fit; a settings file that holds the mode; a relaunch from a file that was
+    // never saved, which shows the check on the splitter can fail.
     rejects("a mode that persists across a relaunch", || {
         check(session.view.f3_fill)
     });
+    rejects("a settings file that holds the mode", || {
+        check_mode_not_saved(&format!("{saved}\"f3_fill\": \"Fit\""))
+    });
+    rejects("a relaunch from nothing saved", || {
+        assert_eq!(launch(&dir.join("unsaved.json")).splits, session.splits)
+    });
+    let _ = std::fs::remove_dir_all(&dir);
 }
