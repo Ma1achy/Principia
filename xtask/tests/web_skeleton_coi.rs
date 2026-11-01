@@ -14,6 +14,13 @@ const OVERRIDE: &str = "<script>window.coi = { coepCredentialless: () => false }
 /// The vendored file's tag.
 const COI_TAG: &str = "<script src=\"coi-serviceworker.js\"></script>\n";
 
+/// Node's flag for a capped address space. This test's own code has no wasm, but touching the stubs' `Response` and
+/// `Headers` loads Node's undici, which instantiates its llhttp parser as wasm. By default V8 reserves about 10 GiB of
+/// guard regions for that memory, so the instantiation throws a RangeError under `.cargo/mutants.toml`'s 8 GiB
+/// `RLIMIT_AS` (REQ-VAL-181). With the flag, V8 compiles inline bounds checks and reserves only the memory itself. It is
+/// on everywhere, so the test runs one way with or without the cap.
+const WASM_UNDER_A_CAP: &str = "--disable-wasm-trap-handler";
+
 /// Runs the navigations as `browser` on the real scripts, the page's text passed through `edit`, panicking with what it
 /// reports.
 fn run(browser: &str, edit: impl Fn(&str) -> String) {
@@ -33,6 +40,7 @@ fn run(browser: &str, edit: impl Fn(&str) -> String) {
     )
     .expect("the vendored script");
     let output = std::process::Command::new("node")
+        .arg(WASM_UNDER_A_CAP)
         .arg(tests.join("web_skeleton_coi.mjs"))
         .arg(&dir)
         .arg(browser)
