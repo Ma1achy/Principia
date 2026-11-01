@@ -3,6 +3,7 @@
 //! or the real engine's data contract. The `mock` feature only chooses the engine the binary runs (RQ-252).
 
 pub mod app;
+pub mod bench;
 pub mod capture;
 pub mod cli;
 pub mod clock;

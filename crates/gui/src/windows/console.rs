@@ -16,6 +16,8 @@
 //! where it is (A5). A click on a console control moves the keyboard's focus onto it (A3), and a click on the search
 //! field starts typing in it (R-456).
 
+use std::time::Instant;
+
 use eframe::egui::{self, Align, Button, Grid, Layout, RichText, ScrollArea, TextEdit, Ui};
 use engine::contract::log::{LogEntry, Severity};
 
@@ -98,6 +100,17 @@ pub struct State {
     pub scroll_pending: bool,
     /// The text copy last put on the clipboard.
     pub copied: Option<String>,
+    /// Where this frame's drawing went, for `crate::bench` (R-463 K4).
+    pub timing: Timing,
+}
+
+/// The time the console's drawing took since it was last reset, in seconds: over all of egui's passes (R-463 K4).
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct Timing {
+    /// Filtering the log.
+    pub filter_s: f64,
+    /// Laying out and painting the rows.
+    pub rows_s: f64,
 }
 
 /// What a console control asks of the app.
@@ -304,7 +317,9 @@ pub fn show(ui: &mut Ui, keys: &mut Keys<'_>, state: &mut State, view: &View<'_>
         .response;
     keys.place_rect(ui, HEADER, header.rect);
     ui.separator();
+    let filter = Instant::now();
     let rows = shown(view.entries, state);
+    state.timing.filter_s += filter.elapsed().as_secs_f64();
     // A row is the grid's line, at least a control's height, as egui's grid makes it, and its spacing below.
     let line = ui
         .text_style_height(&egui::TextStyle::Monospace)
@@ -319,6 +334,7 @@ pub fn show(ui: &mut Ui, keys: &mut Keys<'_>, state: &mut State, view: &View<'_>
     if pending {
         area = area.vertical_scroll_offset(state.top_row as f32 * row_h);
     }
+    let drawing = Instant::now();
     let list = area.show(ui, |ui| {
         Grid::new("console rows")
             .striped(false)
@@ -339,6 +355,7 @@ pub fn show(ui: &mut Ui, keys: &mut Keys<'_>, state: &mut State, view: &View<'_>
                 }
             });
     });
+    state.timing.rows_s += drawing.elapsed().as_secs_f64();
     state.page = page_of(list.inner_rect.height(), line, row_h);
     if !pending {
         // The wheel's scroll is where the keys go on from: its first row drawn whole.

@@ -1,8 +1,8 @@
 //! The `gui` binary's commands (REQ-GUI-165; R-274, RQ-253): with no argument it opens the app's window on the mock
 //! engine, in an `eframe` 0.36 window on its wgpu renderer, built from the device and queue the mock provides
 //! (RQ-247, RQ-251); `capture --screen <screen> --steps <steps> --out <dir>` is the headless capture mode the screenshot
-//! runner spawns. Both run on the mock: without the `mock` feature there is no engine side with a figure yet, the real
-//! engine's frame loop and canvas being TASK-M8-05's, so both say so and fail. Both read `PRIN_MOCK_INVALID`, the mock's
+//! runner spawns; `--bench console-open-close` measures the console's frames (R-463 K4; `crate::bench`). All run on the mock: without the `mock` feature there is no engine side with a figure yet, the real
+//! engine's frame loop and canvas being TASK-M8-05's, so all say so and fail. All read `PRIN_MOCK_INVALID`, the mock's
 //! invalid-pixel test hook's launch switch (R-467 D8), and refuse a malformed value, naming it.
 
 /// What the binary says without the `mock` feature.
@@ -101,8 +101,15 @@ pub mod mock {
                 capture::write(&shot, &args.out)?;
                 compass.map_or(Ok(()), |compass| capture::write_compass(&compass, &args.out))
             }
+            Some("--bench") => {
+                let name = args.get(1).map(String::as_str);
+                print!("{}", crate::bench::run(name, canvas)?);
+                Ok(())
+            }
             Some(other) => Err(format!(
-                "gui: unknown command `{other}`; run with no argument, or `capture --screen … --steps … --out …`"
+                "gui: unknown command `{other}`; run with no argument, `capture --screen … --steps … --out …`, or \
+                 `--bench {}`",
+                crate::bench::NAME
             )),
         }
     }
