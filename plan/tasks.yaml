@@ -3762,7 +3762,7 @@
 - id: TASK-M9-37
   milestone: M9
   title: "M9's report: every external target with its tier, outcome and like-for-like checks"
-  depends_on: [TASK-M9-01, TASK-M9-02, TASK-M9-03, TASK-M9-04, TASK-M9-05, TASK-M9-06, TASK-M9-08, TASK-M9-10, TASK-M9-11, TASK-M9-12, TASK-M9-13, TASK-M9-14, TASK-M9-15, TASK-M9-16, TASK-M9-17, TASK-M9-18, TASK-M9-19, TASK-M9-20, TASK-M9-21, TASK-M9-26, TASK-M9-30, TASK-M9-31, TASK-M9-32, TASK-M9-36]
+  depends_on: [TASK-M9-01, TASK-M9-02, TASK-M9-03, TASK-M9-04, TASK-M9-05, TASK-M9-06, TASK-M9-08, TASK-M9-10, TASK-M9-11, TASK-M9-12, TASK-M9-13, TASK-M9-14, TASK-M9-15, TASK-M9-16, TASK-M9-17, TASK-M9-18, TASK-M9-19, TASK-M9-20, TASK-M9-21, TASK-M9-26, TASK-M9-30, TASK-M9-31, TASK-M9-32, TASK-M9-33, TASK-M9-34, TASK-M9-36]
   needs: []
   requirements: [REQ-VAL-340]  # R-650 (30 Oct 2026)
   reviewers: [code, qa, physics]
@@ -3775,3 +3775,11 @@
   requirements: [REQ-VAL-341]  # R-649, R-650 (30 Oct 2026)
   reviewers: [code, qa, physics]
   pitfalls: []
+- id: TASK-M9-39
+  milestone: M9
+  title: "The softened force law: Plummer softening, built after the core build, and the refusal of ε ≠ 0 lifted"
+  depends_on: [TASK-M3-01, TASK-M3-05, TASK-M3-06]
+  needs: []
+  requirements: [REQ-INT-110, REQ-SYS-094]  # R-654 (30 Oct 2026)
+  reviewers: [code, qa, physics, perf]
+  pitfalls: [PIT-9]

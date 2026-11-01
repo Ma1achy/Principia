@@ -631,6 +631,7 @@ anything outside the repository and its build and scratch directories without as
 - The terminal and Claude Code have Full Disk Access (29 Sep 2026). If "Operation not permitted" failures come back,
   report them to the human; they are not test findings.
 - sccache was tried and dropped: no hits across target directories, since their paths enter its hash (27 Sep 2026).
+- sccache stays off, the owner's word of 31 Oct 2026 (R-666): the job queue's builds and local builds do not use it.
 
 **Linux cloud.**
 - Use `$HOME/principia-work/worktrees/` and `$HOME/principia-work/targets/`, with the same rules: one worktree and one
