@@ -19,7 +19,8 @@ use engine::contract::sim_config::{Latent, Links, Plane, SimConfig, LATENT_DIM};
 use super::views::{self, upper, Grid};
 use crate::explore::manifold_view::{basis_edit, dot, norm};
 
-/// `J⁺`'s cut `c` (REQ-GUI-410, an R-71 calibration confirmed at the M6 gate): the geometric middle of the measured gap.
+/// `J⁺`'s cut `c` (REQ-GUI-410, an R-71 calibration confirmed at the M6 gate): inside the measured gap, at the order of
+/// its geometric middle, about `2.9e-9`.
 pub const CUT: f64 = 1e-9;
 /// The refusal tolerance on `[P e_i, P e_j]`'s smaller singular value (REQ-GUI-346, an R-71 calibration confirmed at the
 /// M6 gate; the measurement is render_gui_spec's).
