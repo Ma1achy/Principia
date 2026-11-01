@@ -1,8 +1,12 @@
-# Milestones — M0 to M8
+# Milestones — M0 to M9
 
 The build plan's milestones, in dependency order. Each has a scope, the build order it comes from, and an exit
 gate stated as requirement ids from `plan/requirements.yaml`. The gate blocks are generated
 (`plan/tools/milestones.py`); the prose is not.
+
+*30 Oct 2026 (R-649, R-650):* M9, external replication, follows M8 and has no exit gate: its targets are measurements,
+never gates, and it exits on its report (§ "M9 — External replication"). Its block is a report block, generated the
+same way; the title's *was:* "M0 to M8".
 
 ## Assumptions
 
@@ -20,9 +24,21 @@ gate stated as requirement ids from `plan/requirements.yaml`. The gate blocks ar
 - **A value the corpus doesn't give is a calibration requirement (R-71)** in the milestone that first needs
   it: the task proposes the value with its evidence, a reviewer checks it, and the human confirms it at that
   milestone's gate before it is recorded in `decisions.md`. A missing definition is a definition requirement
-  (R-72), written into the docs by the task and reviewed by the physics reviewer.
+  (R-72), written into the docs by the task and reviewed by the physics reviewer. *30 Oct 2026 (R-650):* a
+  calibration of an M9 target is confirmed by the human with M9's report, not at a gate.
 - **Requirements waiting on an open REVIEW_QUEUE entry** carry `rq:` in `requirements.yaml`. They stay in
-  their milestone's gate; the milestone can't exit until the RQ is ruled and the requirement passes.
+  their milestone's gate; the milestone can't exit until the RQ is ruled and the requirement passes. *30 Oct 2026
+  (R-649, R-650):* not for an external replication or verification target: it is a measurement, never a gate, scored
+  in M9 (or early, as a peek, information only), and an RQ it waits on holds its scoring, never a milestone; in M9's
+  report it is listed "not scored", with what it waits on.
+- **Targets are measurements, not gates (R-649, R-650).** An external target (one scored against a published or
+  other outside number, or against a prototype number held as a tier-D "reproduce or explain" target; *was:* "a
+  published, prototype or other outside number", corrected 30 Oct 2026, the physics review of PR #342, F3) declares the tier it binds, (a) the GPU explorer or (b) the CPU IC inspector, and
+  its outcome is PASS, EXPLAINED DIVERGENCE or UNEXPLAINED; failing one never blocks building. The internal
+  correctness tests, the GPU-vs-CPU agreement checks within their stated f32 tolerances and the anchor smoke tests
+  (the figure-eight closure, SP-1 run to its horizon, SP-2) stay in their milestones' gates and block a merge as
+  before, and so does every value a contract or design doc adopts as its gate, even where it came from the prototype
+  (`docs/design/principia_dd_replication.md` § "12.1 What stays continuous, and what moves to M9").
 
 ## Where the order comes from
 
@@ -186,7 +202,7 @@ debug_tooling_plan 0c: the DECODE preset "once the WGSL decode port lands", ROUN
   so in their header or schema.
 
 <!-- gate:M2 -->
-**Exit gate — 222 requirements** (and every earlier gate still green):
+**Exit gate — 218 requirements** (and every earlier gate still green):
 
 - DEC (41): REQ-DEC-001…030, REQ-DEC-038…041, REQ-DEC-043…048, REQ-DEC-050
 - ENC (34): REQ-ENC-001…020, REQ-ENC-022…027, REQ-ENC-029…031, REQ-ENC-034…038
@@ -198,7 +214,7 @@ debug_tooling_plan 0c: the DECODE preset "once the WGSL decode port lands", ROUN
 - COL (12): REQ-COL-006, REQ-COL-057, REQ-COL-060, REQ-COL-070, REQ-COL-101…105, REQ-COL-108…110
 - GUI (7): REQ-GUI-002…007, REQ-GUI-188
 - TOOL (5): REQ-TOOL-029…030, REQ-TOOL-163, REQ-TOOL-188…189
-- VAL (22): REQ-VAL-013…024, REQ-VAL-118, REQ-VAL-120…121, REQ-VAL-174, REQ-VAL-192…193, REQ-VAL-214…217
+- VAL (18): REQ-VAL-013…024, REQ-VAL-118, REQ-VAL-120…121, REQ-VAL-174, REQ-VAL-192…193
 - SYS (10): REQ-SYS-010…016, REQ-SYS-083…085
 <!-- /gate:M2 -->
 
@@ -228,7 +244,7 @@ canonical_spec §1 item 6 and §11: "validate physics numerically", natively, be
 - The CPU-side parity suite (`computeIC`).
 
 <!-- gate:M3 -->
-**Exit gate — 335 requirements** (and every earlier gate still green):
+**Exit gate — 232 requirements** (and every earlier gate still green):
 
 - ENC (1): REQ-ENC-033
 - CHART (4): REQ-CHART-059, REQ-CHART-072, REQ-CHART-085…086
@@ -240,7 +256,7 @@ canonical_spec §1 item 6 and §11: "validate physics numerically", natively, be
 - RENDER (1): REQ-RENDER-028
 - GUI (1): REQ-GUI-008
 - TOOL (14): REQ-TOOL-031…039, REQ-TOOL-125, REQ-TOOL-132, REQ-TOOL-149…150, REQ-TOOL-219
-- VAL (160): REQ-VAL-025…055, REQ-VAL-115, REQ-VAL-117, REQ-VAL-119, REQ-VAL-123…124, REQ-VAL-126…136, REQ-VAL-139, REQ-VAL-146, REQ-VAL-168, REQ-VAL-170…171, REQ-VAL-190…191, REQ-VAL-195, REQ-VAL-201…213, REQ-VAL-218…289, REQ-VAL-295…305, REQ-VAL-318…324, REQ-VAL-330…331
+- VAL (57): REQ-VAL-025…041, REQ-VAL-043…055, REQ-VAL-115, REQ-VAL-117, REQ-VAL-119, REQ-VAL-123…124, REQ-VAL-126, REQ-VAL-128…136, REQ-VAL-139, REQ-VAL-146, REQ-VAL-168, REQ-VAL-170…171, REQ-VAL-190…191, REQ-VAL-195, REQ-VAL-250…251, REQ-VAL-336…337
 - PERF (6): REQ-PERF-001…004, REQ-PERF-083, REQ-PERF-085
 - SYS (3): REQ-SYS-017…019
 <!-- /gate:M3 -->
@@ -258,7 +274,7 @@ render_contract "→ flat compute"; deep_zoom §3 layer 0: "defines the three co
 - The first kernel benchmarks.
 
 <!-- gate:M4 -->
-**Exit gate — 119 requirements** (and every earlier gate still green):
+**Exit gate — 106 requirements** (and every earlier gate still green):
 
 - CHART (3): REQ-CHART-037, REQ-CHART-052, REQ-CHART-074
 - INT (16): REQ-INT-057…071, REQ-INT-083
@@ -267,7 +283,7 @@ render_contract "→ flat compute"; deep_zoom §3 layer 0: "defines the three co
 - SCHED (12): REQ-SCHED-004…013, REQ-SCHED-084, REQ-SCHED-097
 - RENDER (11): REQ-RENDER-029…036, REQ-RENDER-078, REQ-RENDER-082, REQ-RENDER-099
 - TOOL (8): REQ-TOOL-040…045, REQ-TOOL-126…127
-- VAL (43): REQ-VAL-056…079, REQ-VAL-112, REQ-VAL-125, REQ-VAL-137, REQ-VAL-140…141, REQ-VAL-177, REQ-VAL-290…292, REQ-VAL-314…317, REQ-VAL-325…329, REQ-VAL-332
+- VAL (30): REQ-VAL-056…079, REQ-VAL-112, REQ-VAL-125, REQ-VAL-137, REQ-VAL-140…141, REQ-VAL-177
 - PERF (13): REQ-PERF-005…013, REQ-PERF-077, REQ-PERF-081, REQ-PERF-086, REQ-PERF-094
 - SYS (10): REQ-SYS-020…029
 <!-- /gate:M4 -->
@@ -284,7 +300,7 @@ render_contract "→ quads"; deep_zoom §3 layer 1: "panning never blanks".
 - Sampling, MSAA and ensemble copies.
 
 <!-- gate:M5 -->
-**Exit gate — 181 requirements** (and every earlier gate still green):
+**Exit gate — 183 requirements** (and every earlier gate still green):
 
 - DEC (5): REQ-DEC-031…032, REQ-DEC-036, REQ-DEC-051…052
 - CHART (3): REQ-CHART-038…039, REQ-CHART-041
@@ -298,7 +314,7 @@ render_contract "→ quads"; deep_zoom §3 layer 1: "panning never blanks".
 - COL (2): REQ-COL-007, REQ-COL-071
 - GUI (1): REQ-GUI-009
 - TOOL (19): REQ-TOOL-046…054, REQ-TOOL-116…117, REQ-TOOL-130, REQ-TOOL-133, REQ-TOOL-140, REQ-TOOL-158, REQ-TOOL-164…166, REQ-TOOL-187
-- VAL (6): REQ-VAL-080…083, REQ-VAL-172…173
+- VAL (8): REQ-VAL-080…083, REQ-VAL-172…173, REQ-VAL-338…339
 - PERF (24): REQ-PERF-014…033, REQ-PERF-082, REQ-PERF-087, REQ-PERF-093, REQ-PERF-095
 - SYS (8): REQ-SYS-030…037
 <!-- /gate:M5 -->
@@ -322,7 +338,7 @@ render_contract "→ adaptive"; deep_zoom §3 layer 2 and §4.
   slots, merges without waiting for the gates of M1 to M5, and never holds up M1 or M2.
 
 <!-- gate:M6 -->
-**Exit gate — 226 requirements** (and every earlier gate still green):
+**Exit gate — 224 requirements** (and every earlier gate still green):
 
 - DEC (6): REQ-DEC-033…035, REQ-DEC-037, REQ-DEC-042, REQ-DEC-049
 - PAY (5): REQ-PAY-069, REQ-PAY-080…082, REQ-PAY-084
@@ -331,7 +347,7 @@ render_contract "→ adaptive"; deep_zoom §3 layer 2 and §4.
 - REF (38): REQ-REF-011…037, REQ-REF-039…040, REQ-REF-042…044, REQ-REF-046…051
 - GUI (88): REQ-GUI-010…015, REQ-GUI-162, REQ-GUI-165…179, REQ-GUI-181…183, REQ-GUI-189…226, REQ-GUI-229, REQ-GUI-231…240, REQ-GUI-251…252, REQ-GUI-254…260, REQ-GUI-262, REQ-GUI-265, REQ-GUI-346…347, REQ-GUI-410
 - TOOL (5): REQ-TOOL-055…058, REQ-TOOL-159
-- VAL (15): REQ-VAL-084…095, REQ-VAL-142, REQ-VAL-293…294
+- VAL (13): REQ-VAL-084…095, REQ-VAL-142
 - PERF (38): REQ-PERF-034…067, REQ-PERF-084, REQ-PERF-088…090
 - SYS (1): REQ-SYS-038
 <!-- /gate:M6 -->
@@ -371,7 +387,7 @@ contract §7, "What this contract does *not* cover"). So it builds on a working 
   REQ-RENDER-110 (TASK-M7-69, a leaf), and so this gate, until it is ruled."
 
 <!-- gate:M7 -->
-**Exit gate — 263 requirements** (and every earlier gate still green):
+**Exit gate — 261 requirements** (and every earlier gate still green):
 
 - EVT (5): REQ-EVT-027…031
 - PAY (10): REQ-PAY-099…108
@@ -381,7 +397,7 @@ contract §7, "What this contract does *not* cover"). So it builds on a working 
 - COL (126): REQ-COL-008…036, REQ-COL-038…046, REQ-COL-049…052, REQ-COL-054, REQ-COL-058…059, REQ-COL-061, REQ-COL-065…066, REQ-COL-072…100, REQ-COL-106…107, REQ-COL-112…120, REQ-COL-122…134, REQ-COL-136…159, REQ-COL-162
 - GUI (23): REQ-GUI-016…031, REQ-GUI-151…152, REQ-GUI-335…338, REQ-GUI-340
 - TOOL (30): REQ-TOOL-059…072, REQ-TOOL-109…113, REQ-TOOL-118, REQ-TOOL-142, REQ-TOOL-151, REQ-TOOL-171…174, REQ-TOOL-179…181, REQ-TOOL-186
-- VAL (13): REQ-VAL-096…098, REQ-VAL-145, REQ-VAL-183…189, REQ-VAL-306…307
+- VAL (11): REQ-VAL-096…098, REQ-VAL-145, REQ-VAL-183…189
 - PERF (5): REQ-PERF-068…069, REQ-PERF-096…097, REQ-PERF-113
 <!-- /gate:M7 -->
 
@@ -428,7 +444,7 @@ no milestone yet (R-571). *Was (title):* "The dev GUI, tooling, the browser prod
   each, and the orchestrator enters them in systems_architecture §3; the gate does not pass until both are recorded".
 
 <!-- gate:M8 -->
-**Exit gate — 476 requirements** (and every earlier gate still green):
+**Exit gate — 470 requirements** (and every earlier gate still green):
 
 - ENC (3): REQ-ENC-021, REQ-ENC-028, REQ-ENC-032
 - CHART (11): REQ-CHART-040, REQ-CHART-054, REQ-CHART-056…057, REQ-CHART-071, REQ-CHART-079…080, REQ-CHART-083…084, REQ-CHART-087…088
@@ -440,7 +456,37 @@ no milestone yet (R-571). *Was (title):* "The dev GUI, tooling, the browser prod
 - COL (7): REQ-COL-047…048, REQ-COL-111, REQ-COL-121, REQ-COL-135, REQ-COL-160…161
 - GUI (264): REQ-GUI-032…047, REQ-GUI-049…150, REQ-GUI-153…161, REQ-GUI-163…164, REQ-GUI-180, REQ-GUI-184…187, REQ-GUI-227…228, REQ-GUI-230, REQ-GUI-241…250, REQ-GUI-253, REQ-GUI-261, REQ-GUI-263…264, REQ-GUI-266…283, REQ-GUI-308…334, REQ-GUI-339, REQ-GUI-341…345, REQ-GUI-348…409
 - TOOL (83): REQ-TOOL-073…092, REQ-TOOL-094…108, REQ-TOOL-114…115, REQ-TOOL-128…129, REQ-TOOL-135, REQ-TOOL-143, REQ-TOOL-146, REQ-TOOL-167…170, REQ-TOOL-175…178, REQ-TOOL-182…183, REQ-TOOL-185, REQ-TOOL-190…218, REQ-TOOL-220
-- VAL (29): REQ-VAL-099…103, REQ-VAL-105…111, REQ-VAL-113…114, REQ-VAL-116, REQ-VAL-143…144, REQ-VAL-194, REQ-VAL-196…200, REQ-VAL-308…313
+- VAL (23): REQ-VAL-099…103, REQ-VAL-105…111, REQ-VAL-113…114, REQ-VAL-116, REQ-VAL-143…144, REQ-VAL-194, REQ-VAL-196…200
 - PERF (29): REQ-PERF-070…076, REQ-PERF-078…080, REQ-PERF-091…092, REQ-PERF-098…112, REQ-PERF-114…115
 - SYS (32): REQ-SYS-039…062, REQ-SYS-086…093
 <!-- /gate:M8 -->
+
+## M9 — External replication
+
+*Added 30 Oct 2026 by R-650 (the owner's ruling of 29 Oct 2026), with R-649.* The final milestone, after the core
+build (M0 to M8): it scores every external replication and verification target, writes up the explained divergences,
+and tightens the GPU path (`docs/design/principia_dd_replication.md` § 12).
+
+- **No exit gate.** Every target is a measurement (R-649): its outcome, PASS, EXPLAINED DIVERGENCE (with the
+  measurement showing the mechanism) or UNEXPLAINED (open, labelled, non-blocking), never holds the milestone. M9
+  exits on its report, REQ-VAL-340 (TASK-M9-37), which the owner reviews; the calibrations of its targets are
+  confirmed by the human with it. A target not yet scored, waiting on a ruling or data, is listed "not scored" with
+  what it waits on.
+- **The tasks:** the 35 replication tasks, moved from M2, M3, M4, M6, M7 and M8 and renumbered TASK-M9-01 to
+  TASK-M9-35 in their old order (§ "12.4 The tasks in M9" of the replication design doc gives the map); TASK-M9-36,
+  the ruled targets scored (FF-H, the figure-eight's published shape-sphere curve, SP-1's structural comparison with
+  Szebehely & Peters); TASK-M9-37, the report; TASK-M9-38, the GPU-path tightening defined (REQ-VAL-341, a definition,
+  R-72), each change it proposes with its own ruling.
+- **When:** scoring waits for M9, and R-415's early-merge test does not bring an M9 task forward. Source ingest and
+  transcription (data PRs under `docs/incoming/`) go on whenever idle, and an early peek scores a target as
+  information only, in `docs/verification/peek_log.md`, never a gate, nothing tuned to it.
+- **What stays behind in the core milestones:** the internal correctness tests, the GPU-vs-CPU agreement checks and
+  the anchor smoke tests, continuous and blocking (§ "Assumptions").
+- **The gate tools** (`cargo xtask gate-report`, `gate-provisional`) read the gate blocks only, M0 to M8; the block
+  below is a report block, not a gate block.
+
+<!-- report:M9 -->
+**Scored, never gated — 137 requirements** (R-649, R-650; each outcome PASS, EXPLAINED DIVERGENCE or UNEXPLAINED, in the report):
+
+- VAL (137): REQ-VAL-042, REQ-VAL-127, REQ-VAL-201…249, REQ-VAL-252…335, REQ-VAL-340…341
+<!-- /report:M9 -->

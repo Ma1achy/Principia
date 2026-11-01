@@ -1,7 +1,7 @@
 # TASK-M3-29 — Free-fall brake orbits and the reversibility diagnostic
 
 - **Milestone:** M3
-- **Closes:** REQ-VAL-042, REQ-VAL-044, REQ-VAL-134, REQ-INT-032
+- **Closes:** REQ-VAL-044, REQ-VAL-134, REQ-INT-032
 - **Depends on:** TASK-M3-24, TASK-M3-28, TASK-M3-08
 - **Needs (earlier milestones):** REQ-ENC-002
 - **Reviewers:** code, qa, physics
@@ -9,7 +9,7 @@
 - **Size:** ~400 lines
 
 ## Goal
-Two or three free-fall (brake) periodic orbits from Hristov et al. 2023 or the Three-body Gallery run as closure tests asserting a return to rest in the same configuration, with the order reported. The reversibility diagnostic exists — replaying the recorded macro-step + substep schedule in reverse, or binding a fixed-step reversible occupant with COM projection disabled — and refuses occupants whose profile has `reversible: false`. The reversibility measure `xi` is defined in dd_validation_orbits (R-72) and the brake-orbit reversibility test runs on the reversible occupant, logH's TTL time mode (R-162).
+Two or three free-fall (brake) periodic orbits from Hristov et al. 2023 or the Three-body Gallery are chosen and committed as fixtures for the reversibility test. The reversibility diagnostic exists — replaying the recorded macro-step + substep schedule in reverse, or binding a fixed-step reversible occupant with COM projection disabled — and refuses occupants whose profile has `reversible: false`. The reversibility measure `xi` is defined in dd_validation_orbits (R-72) and the brake-orbit reversibility test runs on the reversible occupant, logH's TTL time mode (R-162).
 
 ## References
 - `docs/design/principia_dd_validation_orbits.md` § "3. Proposed suite"
@@ -30,7 +30,6 @@ Two or three free-fall (brake) periodic orbits from Hristov et al. 2023 or the T
 - `xtask gate reversibility-xi` over the brake orbits.
 
 ## Acceptance tests
-- `cargo xtask gate free-fall-closure` — each orbit returns to rest in the same configuration after one period (tolerance: REQ-VAL-130, calibrated); order reported (REQ-VAL-042).
 - `cargo xtask gate reversibility-xi` — time symmetry via `xi` on the brake orbits, run on logH-TTL, bound through `run_reversible` (R-162, R-500) (REQ-VAL-044).
 - The doc gives xi's formula and what a reversible occupant should read; physics reviewer approved (REQ-VAL-134).
 - Review (physics): the reversibility diagnostic refuses an occupant with step_reversible = false on either route (R-500; *was:* "reversible = false"); the implementation uses one of the two named routes (REQ-INT-032).
@@ -38,3 +37,4 @@ Two or three free-fall (brake) periodic orbits from Hristov et al. 2023 or the T
 ## Notes
 - *Was: "Gap: the only `reversible: true` occupant in the Part 2a table is AZ + time-transformed leapfrog (Mikkola–Tanikawa), whose equations the corpus doesn't give and whose build in M3 isn't decided; without it REQ-VAL-044's gate cannot run ('blocked on a reversible occupant')."* RQ-102 ruled: R-162 — a reversible occupant exists: logH's TTL time mode, built in TASK-M3-08; Aarseth–Zare with Mikkola–Tanikawa isn't required.
 - Definitions written here (R-72; physics reviewer approves before merge): REQ-VAL-134.
+- *30 Oct 2026 (R-650):* FF-H, the free-fall closure against Hristov et al.'s orbits (REQ-VAL-042), is external and moves to TASK-M9-36 in M9; the brake orbits stay here as fixtures for the reversibility diagnostic (REQ-VAL-044). *Was:* Closes "REQ-VAL-042, REQ-VAL-044, REQ-VAL-134, REQ-INT-032"; the goal's "run as closure tests asserting a return to rest in the same configuration, with the order reported"; the acceptance test "`cargo xtask gate free-fall-closure` — each orbit returns to rest in the same configuration after one period (tolerance: REQ-VAL-130, calibrated); order reported (REQ-VAL-042).".
