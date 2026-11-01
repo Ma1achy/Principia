@@ -30,8 +30,10 @@
 //!
 //! **The negative inputs.** `shift` writes each sample's descriptor `shift` samples on (a dispatch scramble): every
 //! sample compares its own decode with another's, so the disagreement is spatial, and the gate must fail it, reporting
-//! how many samples of each chart disagree. `poison` stores `V₀ = −∞`'s bits at the samples it names, the collision
-//! pole as the decode stage writes it: they must draw the hatch and drop out of the comparison, so that input passes.
+//! how many samples of each chart disagree. An f64 store rewrites every sample's `K₀` and `V₀` at its own point, the
+//! only descriptor fields the comparison reads, which would undo the scramble, so [`check`] refuses the two together.
+//! `poison` stores `V₀ = −∞`'s bits at the samples it names, the collision pole as the decode stage writes it: they
+//! must draw the hatch and drop out of the comparison, so that input passes.
 //!
 //! **The measurement** (REQ-COL-060, TASK-M2-29). Each run's line in the report gives, over its compared samples, the
 //! worst factor in f32 `eps` of the scale as the shader computes it ([`Sample::factor`]: the preset's ratio times
@@ -80,7 +82,8 @@ pub struct Input {
     /// What the payload's `K₀` and `V₀` hold.
     #[serde(default)]
     pub stored: Stored,
-    /// The dispatch scramble: sample `q`'s descriptor written at sample `(q + shift) mod count`; 0 is none.
+    /// The dispatch scramble: sample `q`'s descriptor written at sample `(q + shift) mod count`; 0 is none. Refused with
+    /// [`Stored::F64`], which would undo it.
     #[serde(default)]
     pub shift: u32,
     /// The samples whose stored `V₀` is set to `−∞`'s bits after the decode stage writes it.
@@ -449,6 +452,13 @@ pub fn check(config: &GateConfig, input: &Input) -> Result<(), String> {
     if u64::from(input.shift) >= count {
         return Err(format!(
             "refused: the shift {} is not below the {count} samples",
+            input.shift
+        ));
+    }
+    if input.stored == Stored::F64 && input.shift != 0 {
+        return Err(format!(
+            "refused: the shift {} with the f64 store tests nothing: the store rewrites every sample's K₀ and V₀ at its \
+             own point, the only descriptor fields the comparison reads, undoing the scramble",
             input.shift
         ));
     }

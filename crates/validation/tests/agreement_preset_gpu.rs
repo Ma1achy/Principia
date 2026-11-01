@@ -16,6 +16,8 @@
 //! - `agreement_preset_gate_runs`: the `decode-agreement` gate through its trait on 4 × 4 lattices: healthy passes,
 //!   a poisoned `V₀` is hatched and the input passes, a scramble fails, an input without its fields is refused.
 //!   Control: the scramble expected to pass.
+//! - `agreement_preset_permitted_stores`: the f64 store unscrambled and the stage store scrambled each run on the GPU;
+//!   an f64 store with a scramble is refused (`decode_agreement_f64_scramble`). Control: the f64 store given a shift.
 //! - `agreement_preset_operands`: the operand view (`agreement::operands`, `Scene::agreement_operands`) reads the
 //!   decode the preset draws, on every M2 chart's 8 × 8 lattice with a stored `V₀ = −∞` and `K₀ = NaN`: the preset's
 //!   validity is `operands_finite` of the stored `K₀`, `V₀` and the view's `K`, `V`, `m`, `r`; its `E` is the view's
@@ -585,6 +587,44 @@ negative_control!(
     "the stores read the other way round must be found",
     expected = "is not formed from its store",
     check_measure_store(true)
+);
+
+/// The combinations of the store and the scramble the gate permits still draw: the f64 store unscrambled and the stage
+/// store scrambled each give a report on the GPU, the second its scramble's failure. `shift` is the f64 input's (the
+/// control gives one, which the gate refuses).
+fn check_permitted_stores(shift: u32) {
+    use validation::gate::Gate;
+    let root: PathBuf = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let config = validation::gate::config(&root, "decode-agreement").unwrap();
+    let run = |stored: &str, shift: u32| {
+        DecodeAgreementGate.run(
+            &config,
+            "t.json",
+            &serde_json::json!({
+                "description": "s", "side": [4, 4], "depth": 2, "stored": stored, "shift": shift
+            }),
+        )
+    };
+    let exact = run("f64", shift).expect("the permitted f64 store did not run");
+    assert_eq!(exact.verdict, Verdict::Pass, "{:?}", exact.negative_results);
+    assert!(exact
+        .negative_results
+        .iter()
+        .any(|l| l.contains("the f64 decodeOnly()'s at each sample's point")));
+    let scrambled = run("stage", 5).expect("the permitted scramble did not run");
+    assert_eq!(scrambled.verdict, Verdict::Fail);
+}
+
+#[test]
+fn agreement_preset_permitted_stores() {
+    check_permitted_stores(0);
+}
+
+negative_control!(
+    agreement_preset_permitted_stores,
+    "a scrambled f64 store must not run",
+    expected = "the permitted f64 store did not run",
+    check_permitted_stores(1)
 );
 
 /// The operand view against the preset's own draw: on every chart's lattice, with sample 5's stored `V₀` `−∞` and

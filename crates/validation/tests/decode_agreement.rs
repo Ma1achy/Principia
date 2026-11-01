@@ -853,6 +853,63 @@ negative_control!(
     check_fields("F64")
 );
 
+/// An f64 store with a scramble is refused, at the least shift and the last, on a lattice and on windows, by `check`
+/// and by the gate from its JSON before any GPU is asked for: `store_exact` rewrites every sample's `K₀` and `V₀` at its
+/// own point, the only descriptor fields the comparison reads, so the scramble would test nothing. Each store's other
+/// combination stays permitted. `least` is the least shift expected to be refused (the control gives 0).
+fn check_f64_scramble(least: u32) {
+    use validation::gate::Gate;
+    let c = config(&format!("{:?}", f64::from(FACTOR)));
+    let store = |stored: Stored, shift: u32| Input {
+        stored,
+        shift,
+        ..input([16, 16], 4, 0, vec![])
+    };
+    for shift in [least, 255] {
+        let e =
+            check(&c, &store(Stored::F64, shift)).expect_err("a scrambled f64 store was accepted");
+        assert!(e.starts_with("refused: "), "{e}");
+        assert!(e.contains(&format!("shift {shift}")), "{e}");
+        assert!(e.contains("f64"), "{e}");
+    }
+    check(&c, &store(Stored::F64, 0)).expect("an unscrambled f64 store is refused");
+    check(&c, &store(Stored::Stage, 0)).expect("an unscrambled stage store is refused");
+    check(&c, &store(Stored::Stage, 1)).expect("the least scramble of the stage store is refused");
+    check(&c, &store(Stored::Stage, 255)).expect("the last scramble of the stage store is refused");
+    let windows = |stored: Stored, shift: u32| Input {
+        stored,
+        shift,
+        ..windowed([4, 4], vec![window("shape_sphere", [0.5, 0.5], vec![11])])
+    };
+    check(&c, &windows(Stored::F64, 0)).expect("an f64 store of windows is refused");
+    check(&c, &windows(Stored::Stage, 5)).expect("a scramble of windows is refused");
+    check(&c, &windows(Stored::F64, 5)).expect_err("a scrambled f64 store of windows was accepted");
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let gate_config = validation::gate::config(&root, "decode-agreement").unwrap();
+    let e = DecodeAgreementGate
+        .run(
+            &gate_config,
+            "t.json",
+            &serde_json::json!({
+                "description": "s", "side": [4, 4], "depth": 2, "stored": "f64", "shift": 5
+            }),
+        )
+        .expect_err("the gate ran a scrambled f64 store");
+    assert!(e.starts_with("refused: "), "{e}");
+}
+
+#[test]
+fn decode_agreement_f64_scramble() {
+    check_f64_scramble(1);
+}
+
+negative_control!(
+    decode_agreement_f64_scramble,
+    "a refusal expected of the unscrambled f64 store must be found missing",
+    expected = "a scrambled f64 store was accepted",
+    check_f64_scramble(0)
+);
+
 /// The hatch's operands ([`operands_finite`]): the payload's `K₀` and `V₀` and every word of the fragment decode's `K`,
 /// `V`, `m` and `r`. Each made `+∞`, `−∞` or NaN in turn reads non-finite; each at a finite edge (the largest finite
 /// value either sign, the least normal, the least subnormal, `−0`) reads finite. `poison` is the value written as the
