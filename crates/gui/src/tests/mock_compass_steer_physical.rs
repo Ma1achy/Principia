@@ -503,7 +503,7 @@ fn mock_compass_steer_physical_from_the_keyboard() {
         out.refusals,
         [refusal_line(Set::Jacobi, 1, 2, Refusal::EnergyShell)]
     );
-    // A degenerate view draws no cell and still steers, its cells the way out of it.
+    // A degenerate view draws no values and still steers, its cells the way out of it.
     let mut degenerate = sim.clone();
     degenerate.plane.q2 = degenerate.plane.q1;
     scratch.compass.decoder = d;

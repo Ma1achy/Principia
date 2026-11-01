@@ -4,12 +4,13 @@
 //! `J` at the hovered pixel over the figure; a degenerate pushforward said, not drawn. Each check also runs on an input
 //! it must reject (R-176, through `rejects`).
 
-use eframe::egui::{Event, Shape};
+use eframe::egui::{Event, Key, Modifiers, Shape};
 use engine::contract::sim_config::{Latent, Links, Plane, LATENT_DIM};
+use engine::contract::view_ui::KeyMode;
 
 use super::compass_plucker::Rng;
 use super::compass_support::{app_at, compass_shapes, plane, square, view};
-use super::support::{click_scope, rejects};
+use super::support::{click_scope, press, rejects};
 use crate::app::App;
 use crate::explore::compass::physical::{
     self, apply, gram, latent_jacobian, latent_point, pushforward, Decoder, Matrix, Pushforward,
@@ -20,7 +21,7 @@ use crate::explore::compass::views::{
 };
 use crate::explore::compass::{pushed, Compass};
 use crate::explore::manifold_view::z0_edit;
-use crate::explore::{COMPASS_JACOBI, COMPASS_SHAPE};
+use crate::explore::{COMPASS, COMPASS_JACOBI, COMPASS_SHAPE, COMPASS_VIEW};
 use crate::headless::Headless;
 use crate::layout::Layout;
 use crate::side::MockSide;
@@ -339,11 +340,9 @@ fn compass_physical_views_say_a_degenerate_pushforward() {
         })
         .expect("the message");
     let laid = note.galley.rect.translate(note.pos.to_vec2());
-    assert!(
-        (laid.center() - square(&h).center()).length() < 1.0,
-        "centred in the square"
-    );
     let place = GridPlace::fit(square(&h));
+    assert!(square(&h).contains_rect(laid), "in the square: {laid:?}");
+    assert!(!laid.intersects(place.rect()), "under the grid: {laid:?}");
     let cells = upper()
         .filter(|&(i, k)| {
             let at = place.cell_rect(i, k).shrink(0.5);
@@ -353,6 +352,11 @@ fn compass_physical_views_say_a_degenerate_pushforward() {
         })
         .count();
     assert_eq!(cells, 0, "said, not drawn");
+    assert_eq!(
+        outlined(&shapes, place),
+        upper().count(),
+        "every empty cell outlined, a click's target"
+    );
     // On the fixture: one vector in the null space, boundary of the cut.
     let a = missing(linear_a(), 0);
     let null = Plane {
@@ -385,6 +389,70 @@ fn compass_physical_views_say_a_degenerate_pushforward() {
     let (mut app, mut h) = app_in(&start(), COMPASS_JACOBI);
     let drawn = compass_shapes(&mut h, &mut app);
     rejects("a view with a plane", || says(&drawn));
+}
+
+/// How many upper cells of `place` carry an outline of the theme's stroke, with no fill.
+fn outlined(shapes: &[Shape], place: GridPlace) -> usize {
+    let stroke = eframe::egui::Visuals::dark()
+        .widgets
+        .noninteractive
+        .bg_stroke;
+    upper()
+        .filter(|&(i, k)| {
+            shapes.iter().any(|s| {
+                matches!(s, Shape::Rect(r) if r.rect == place.cell_rect(i, k) && r.stroke == stroke
+                    && r.fill == eframe::egui::Color32::TRANSPARENT)
+            })
+        })
+        .count()
+}
+
+/// Whether `shapes` ring cell `at` of `place` in the cursor's stroke.
+fn ringed(shapes: &[Shape], place: GridPlace, at: (usize, usize)) -> bool {
+    let visuals = eframe::egui::Visuals::dark();
+    shapes.iter().any(|s| {
+        matches!(s, Shape::Rect(r) if r.rect == place.cell_rect(at.0, at.1)
+            && r.stroke == eframe::egui::Stroke::new(views::CURSOR_W, visuals.hyperlink_color))
+    })
+}
+
+#[test]
+fn compass_physical_views_a_degenerate_pushforward_keeps_the_cursor() {
+    // Both columns of J are 0 in this plane, as in the test above: no values, and the arrows and Space still act.
+    let mut z0 = [0.2; LATENT_DIM];
+    z0[0] = 1000.0;
+    z0[1] = 1000.0;
+    let e = |k: usize| -> Latent { std::array::from_fn(|n| if n == k { 1.0 } else { 0.0 }) };
+    let p = Plane {
+        z0,
+        q1: e(0),
+        q2: e(1),
+    };
+    let (mut app, mut h) = app_in(&p, COMPASS_JACOBI);
+    assert!(push_of(&app).degenerate);
+    let place = GridPlace::fit(square(&h));
+    app.view.focus.path = vec![COMPASS.to_owned(), COMPASS_VIEW.to_owned()];
+    app.view.focus.mode = KeyMode::Interaction;
+    let _ = h.frame(&mut app, Vec::new());
+    assert_eq!(app.manifold.compass.cursor, Some((0, 1)), "the first cell");
+    let shapes = compass_shapes(&mut h, &mut app);
+    assert!(ringed(&shapes, place, (0, 1)), "the cursor shows");
+    // The arrows move the ring it shows.
+    press(&mut h, &mut app, Key::ArrowRight, Modifiers::NONE);
+    assert_eq!(app.manifold.compass.cursor, Some((0, 2)));
+    let shapes = compass_shapes(&mut h, &mut app);
+    assert!(ringed(&shapes, place, (0, 2)), "the cursor moved");
+    assert!(!ringed(&shapes, place, (0, 1)), "the cursor left its cell");
+    // Out of interaction mode, no ring.
+    app.view.focus.mode = KeyMode::Navigation;
+    let _ = h.frame(&mut app, Vec::new());
+    let left = compass_shapes(&mut h, &mut app);
+    assert!(!ringed(&left, place, (0, 2)), "no cursor navigating");
+    assert_eq!(outlined(&left, place), upper().count());
+    // Control: the ring on a cell the cursor is not on.
+    rejects("a ring on another cell", || {
+        assert!(ringed(&shapes, place, (3, 4)))
+    });
 }
 
 #[test]

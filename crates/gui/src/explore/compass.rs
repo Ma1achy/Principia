@@ -1341,7 +1341,7 @@ pub fn take(
 
 /// Draws the compass in `rect` and takes its buttons' clicks, `pending` the edit [`take`] sent this frame: the Cube
 /// view's cube, or the Plücker view's grid, its position readout and its cells' clicks, or the Jacobi and Shape views'
-/// grid and its cells' clicks; beside it the title, the Tilt and Slice buttons, the view buttons, the view's readout and
+/// grid, what it says under it and its cells' clicks; beside it the title, the Tilt and Slice buttons, the view buttons, the view's readout and
 /// its hint.
 pub fn show(
     ui: &mut Ui,
@@ -1400,14 +1400,7 @@ pub fn show(
             let push = pushed(sim, &scratch.compass, set);
             let place = views::GridPlace::fit(square);
             if push.degenerate {
-                let galley = painter.layout(
-                    physical::DEGENERATE.to_owned(),
-                    egui::FontId::proportional(LABEL_SIZE),
-                    visuals.weak_text_color(),
-                    square.width(),
-                );
-                let at = square.center() - galley.size() / 2.0;
-                painter.galley(at, galley, visuals.weak_text_color());
+                views::paint_empty_cells(&painter, &visuals, place, scratch.compass.cursor);
             } else {
                 views::paint_cells(
                     &painter,
@@ -1422,6 +1415,7 @@ pub fn show(
                 views::paint_edge_names(&painter, &visuals, place, k, name);
             }
             physical_cells(ui, place, set, &push, sim, scratch, out);
+            under_grid(ui, square, place, push.degenerate);
             let mut lines = vec![physical::readout(set, &push)];
             let decoder = &scratch.compass.decoder;
             if physical::at_pole(decoder, set, &sim.links, &read_at(sim, &scratch.compass)) {
@@ -1463,6 +1457,19 @@ pub fn show(
     }
     if !hint.is_empty() {
         column.label(RichText::new(hint).weak().small());
+    }
+}
+
+/// What a physical view says under its grid, in the band the Plücker view's position readout takes: the message of a
+/// degenerate pushforward.
+fn under_grid(ui: &mut Ui, square: Rect, place: views::GridPlace, degenerate: bool) {
+    let band = Rect::from_min_max(
+        pos2(square.min.x, place.rect().max.y + views::GAUGE_GAP),
+        square.max,
+    );
+    let mut under = ui.new_child(UiBuilder::new().max_rect(band));
+    if degenerate {
+        under.label(RichText::new(physical::DEGENERATE).size(LABEL_SIZE).weak());
     }
 }
 

@@ -383,6 +383,35 @@ pub fn paint_cells(
             egui::StrokeKind::Inside,
         );
     }
+    paint_cursor(painter, visuals, place, cursor);
+}
+
+/// Paints the upper cells at `place` outlined and empty, with the `cursor`: a grid with no values to draw, whose cells a
+/// click or the keyboard's cursor still steers to (R-452 C5, C6).
+pub fn paint_empty_cells(
+    painter: &Painter,
+    visuals: &egui::Visuals,
+    place: GridPlace,
+    cursor: Option<(usize, usize)>,
+) {
+    for (i, j) in upper() {
+        painter.rect_stroke(
+            place.cell_rect(i, j),
+            0.0,
+            visuals.widgets.noninteractive.bg_stroke,
+            egui::StrokeKind::Inside,
+        );
+    }
+    paint_cursor(painter, visuals, place, cursor);
+}
+
+/// Paints the keyboard's cell cursor's ring, in interaction mode's blue (R-452 C6).
+fn paint_cursor(
+    painter: &Painter,
+    visuals: &egui::Visuals,
+    place: GridPlace,
+    cursor: Option<(usize, usize)>,
+) {
     if let Some((i, j)) = cursor {
         painter.rect_stroke(
             place.cell_rect(i, j),
