@@ -322,30 +322,56 @@ pub fn axis_pair(q1: &Latent, q2: &Latent) -> Option<(usize, usize)> {
     (a < b).then_some((a, b))
 }
 
+/// What of a basis may differ from its reading and still be that reading: the squared difference, as a share of the
+/// basis's squared length, the floating point's noise as the preset cut's. A mirrored basis's axes are the other way
+/// round only if they read it back within this (R-459 G3).
+const READS_BACK: f64 = 1e-18;
+
 /// The axes of a basis tilted within `frame`'s targets on axes no preset names, as H and V can pick them: the two axes
-/// the basis has anything on off the targets, in the order that gives them a positive determinant (`σ² cos τ₁ cos τ₂`
-/// whatever `γ`), so a tilt keeps its H and V to the ends of its range (R-459 G3). How large a component is says nothing
-/// here: at `τ = ±90°` the kept axis's is `cos 90° ≈ 6e-17`, and it is what still names the axis, [`View::basis`] leaving
-/// every other component exactly 0. `None` where the basis has any other number of axes off the targets, or no plane on
-/// the two.
-fn tilted_axes(q1: &Latent, q2: &Latent, frame: &SliceFrame) -> Option<(usize, usize)> {
-    let mut on = (0..LATENT_DIM).filter(|&i| {
-        i64::from(frame.tilt_x) != i as i64
-            && i64::from(frame.tilt_y) != i as i64
-            && (q1[i] != 0.0 || q2[i] != 0.0)
-    });
+/// the basis has anything on off the targets, `i < j`. How large a component is says nothing here: at `τ = ±90°` the
+/// kept axis's is `cos 90° ≈ 6e-17`, and it is what still names the axis, [`View::basis`] leaving every other component
+/// exactly 0. `None` where the basis has any other number of axes off the targets, or no plane on the two.
+///
+/// A positive determinant (`σ² cos τ₁ cos τ₂` whatever `γ`) is `(i, j)`. A negative one may be `(j, i)`, which is a pair
+/// picked the other way round, kept to the ends of its range (R-459 G3), only where that order reads the basis back: a
+/// typed component's sign says nothing of H and V. A mirrored basis neither order reads back is outside the map's image,
+/// so some reading of it loses something: `(j, i)` only if it keeps more of the tilt, the components on the targets, and
+/// else `(i, j)`, so the reading of such a basis is one reading on both sides of a component passing through 0.
+/// `read` is [`View::framed`]'s reading on an order.
+fn tilted_axes(
+    q1: &Latent,
+    q2: &Latent,
+    frame: &SliceFrame,
+    read: impl Fn(usize, usize) -> View,
+) -> Option<(usize, usize)> {
+    let on_target =
+        |i: usize| i64::from(frame.tilt_x) == i as i64 || i64::from(frame.tilt_y) == i as i64;
+    let mut on = (0..LATENT_DIM).filter(|&i| !on_target(i) && (q1[i] != 0.0 || q2[i] != 0.0));
     let (i, j) = (on.next()?, on.next()?);
     if on.next().is_some() {
         return None;
     }
     let turn = q1[i] * q2[j] - q1[j] * q2[i];
     if turn > 0.0 {
-        Some((i, j))
-    } else if turn < 0.0 {
-        Some((j, i))
-    } else {
-        None
+        return Some((i, j));
     }
+    if turn == 0.0 {
+        return None;
+    }
+    let lost = |(a, b): (usize, usize), counted: &dyn Fn(usize) -> bool| -> f64 {
+        let (p1, p2) = read(a, b).basis();
+        (0..LATENT_DIM)
+            .filter(|&k| counted(k))
+            .map(|k| (p1[k] - q1[k]).powi(2) + (p2[k] - q2[k]).powi(2))
+            .sum()
+    };
+    let reads_back = lost((j, i), &|_| true) <= READS_BACK * (dot(q1, q1) + dot(q2, q2));
+    let keeps_more = lost((j, i), &on_target) < lost((i, j), &on_target);
+    Some(if reads_back || keeps_more {
+        (j, i)
+    } else {
+        (i, j)
+    })
 }
 
 /// The chart, as the panel reads it in a preset's frame and the slice frame's hidden dimensions.
@@ -453,7 +479,11 @@ impl View {
         };
         let (found, (a, b)) = if let Some(p) = preset_where(&exactly) {
             (Some(p), PRESETS[p])
-        } else if let Some(pair) = frame.and_then(|f| tilted_axes(q1, q2, f)) {
+        } else if let Some(pair) = frame.and_then(|f| {
+            tilted_axes(q1, q2, f, |a, b| {
+                Self::in_frame(None, a, b, hidden(a, b), q1, q2)
+            })
+        }) {
             (None, pair)
         } else if let Some(p) = preset_where(&within_noise) {
             (Some(p), PRESETS[p])

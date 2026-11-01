@@ -527,15 +527,22 @@ fn mock_cube_axis_buttons_the_frame_reading_cuts_at_their_boundaries() {
     assert_eq!((left.a, left.b), (Z_Q3, Z_Q2), "off them, by the least");
     let left = read_of(&[(Z_Q0, c), (Z_Q3, s)], &[(Z_Q2, 1.0), (Z_Q1, least)]);
     assert_eq!((left.a, left.b), (Z_Q3, Z_Q2), "off them on q₂");
-    // A preset's exact determinant: 0 is the preset; the least below it is the pair the other way round, read as such.
+    // A preset's exact determinant: 0 is the preset. The least below it is a typed component, with X != Y no pair the
+    // other way round can read back: it reads as at 0 and as the least above it, its axes and its angles not jumping.
     let on = read_of(&[(Z_Q3, 1.0)], &[(Z_BETA, 1.0)]);
     assert_eq!(on.preset, Some(0), "a determinant of 0");
-    let off = read_of(&[(Z_ALPHA, -least), (Z_Q3, 1.0)], &[(Z_BETA, 1.0)]);
-    assert_eq!(
-        (off.preset, off.a, off.b),
-        (None, Z_BETA, Z_ALPHA),
-        "just below 0"
-    );
+    assert!((on.tau1.to_degrees() - 90.0).abs() < 1e-9, "τ₁ at 0");
+    for component in [-least, least] {
+        let near = read_of(&[(Z_ALPHA, component), (Z_Q3, 1.0)], &[(Z_BETA, 1.0)]);
+        assert_eq!((near.a, near.b), (on.a, on.b), "the axes at {component}");
+        for (got, want, what) in [
+            (near.tau1, on.tau1, "τ₁"),
+            (near.tau2, on.tau2, "τ₂"),
+            (near.gamma, on.gamma, "γ"),
+        ] {
+            assert!((got - want).abs() < 1e-9, "{what} at {component}");
+        }
+    }
     // A preset's frame, exactly: all of it holds, whatever is on the targets.
     let within = read_of(&[(Z_ALPHA, 1.0)], &[(Z_BETA, 1.0), (Z_MU1, 0.5)]);
     assert_eq!(within.preset, Some(0), "on the targets");
@@ -566,6 +573,106 @@ fn mock_cube_axis_buttons_the_frame_reading_cuts_at_their_boundaries() {
         &[(Z_ALPHA, 0.8), (Z_BETA, 0.6)],
     );
     assert_eq!(mirrored.preset, None, "mirrored: no turn of the preset");
+}
+
+/// The largest difference, on any component, between `read`'s basis and `(q1, q2)`.
+fn read_back_off(read: &View, q1: &Latent, q2: &Latent) -> f64 {
+    let (p1, p2) = read.basis();
+    (0..8)
+        .map(|k| (p1[k] - q1[k]).abs().max((p2[k] - q2[k]).abs()))
+        .fold(0.0, f64::max)
+}
+
+/// R-459 G3: a negative determinant is the pair the other way round only where that order reads the basis back. A typed
+/// mirrored basis outside the map's image keeps its tilt, and the next edit built from the view keeps the plane near it.
+#[test]
+fn mock_cube_axis_buttons_a_mirrored_basis_is_swapped_only_where_that_reads_it_back() {
+    let vector = |parts: &[(usize, f64)]| -> Latent {
+        let mut v = [0.0; 8];
+        for &(i, x) in parts {
+            v[i] = x;
+        }
+        v
+    };
+    let in_frame = |f: SliceFrame, q1: &[(usize, f64)], q2: &[(usize, f64)]| {
+        View::framed(
+            &Plane {
+                z0: [0.0; 8],
+                q1: vector(q1),
+                q2: vector(q2),
+            },
+            Some(&f),
+        )
+    };
+    let (q1, q2) = ([(Z_ALPHA, -0.6), (Z_Q3, 0.8)], [(Z_BETA, 1.0)]);
+    // X != Y: the swap would lose z_q3. The tilt is kept, on the axes as typed; only α's sign is lost.
+    let tilt = 0.8_f64.atan2(0.6).to_degrees();
+    let read = in_frame(frame(Z_Q3, Z_Q3, Z_MU1), &q1, &q2);
+    assert_eq!((read.a, read.b), (Z_ALPHA, Z_BETA));
+    assert!((read.tau1.to_degrees() - tilt).abs() < 1e-9, "{read:?}");
+    assert!(
+        read.tau2.abs() < 1e-9 && read.gamma.abs() < 1e-9,
+        "{read:?}"
+    );
+    let (p1, p2) = read.basis();
+    assert!((p1[Z_Q3] - 0.8).abs() < 1e-12, "z_q3 kept: {p1:?}");
+    assert!((p1[Z_ALPHA] - 0.6).abs() < 1e-12, "the sign is what goes");
+    assert!((p2[Z_BETA] - 1.0).abs() < 1e-12, "{p2:?}");
+    // The next edit built from the view, a zoom, leaves the axes and the tilt where they were.
+    let (p1, p2) = read.with_zoom(1.0).basis();
+    let zoomed = View::framed(
+        &Plane {
+            z0: [0.0; 8],
+            q1: p1,
+            q2: p2,
+        },
+        Some(&frame(Z_Q3, Z_Q3, Z_MU1)),
+    );
+    assert_eq!((zoomed.a, zoomed.b), (Z_ALPHA, Z_BETA), "zoomed");
+    assert!((zoomed.tau1.to_degrees() - tilt).abs() < 1e-9, "{zoomed:?}");
+    rejects("a swap that loses the tilt", || {
+        assert_eq!((read.a, read.b), (Z_BETA, Z_ALPHA))
+    });
+    // X = Y: the swap holds it, exactly.
+    let read = in_frame(frame(Z_Q3, Z_Q3, Z_Q3), &q1, &q2);
+    assert_eq!((read.a, read.b), (Z_BETA, Z_ALPHA));
+    assert!((read.tau2.to_degrees() + tilt).abs() < 1e-9, "{read:?}");
+    assert!((read.gamma.to_degrees() + 90.0).abs() < 1e-9, "{read:?}");
+    assert!(read_back_off(&read, &vector(&q1), &vector(&q2)) < 1e-12);
+    // X != Y with the tilt on the target the swap can hold: it reads back, so it is swapped.
+    let (q1, q2) = ([(Z_ALPHA, -0.6), (Z_MU1, 0.8)], [(Z_BETA, 1.0)]);
+    let read = in_frame(frame(Z_Q3, Z_Q3, Z_MU1), &q1, &q2);
+    assert_eq!((read.a, read.b), (Z_BETA, Z_ALPHA));
+    assert!(read_back_off(&read, &vector(&q1), &vector(&q2)) < 1e-12);
+    // The read-back's cut, of a total of 2: 1.5e-18 of it left on z_q3 is the swap's noise, 2.5e-18 is not.
+    let at = |left: f64| {
+        in_frame(
+            frame(Z_Q3, Z_Q3, Z_MU1),
+            &[(Z_ALPHA, -1.0), (Z_Q3, left.sqrt())],
+            &[(Z_BETA, 1.0)],
+        )
+    };
+    assert_eq!((at(1.5e-18).a, at(1.5e-18).b), (Z_BETA, Z_ALPHA), "within");
+    assert_eq!((at(2.5e-18).a, at(2.5e-18).b), (Z_ALPHA, Z_BETA), "past it");
+    // Neither order reads it back: the swap only if it keeps more of the tilt. Here it keeps both targets' parts, and
+    // the order as typed neither.
+    let read = in_frame(
+        frame(Z_Q3, Z_Q3, Z_MU1),
+        &[(Z_ALPHA, -0.6), (Z_MU1, 0.8)],
+        &[(Z_BETA, 1.0), (Z_Q3, 0.3)],
+    );
+    assert_eq!(
+        (read.a, read.b),
+        (Z_BETA, Z_ALPHA),
+        "keeps more of the tilt"
+    );
+    // And a tie, no tilt to keep, stays as typed: the unequal lengths are no reading's, so no read-back.
+    let read = in_frame(
+        frame(Z_Q3, Z_Q3, Z_MU1),
+        &[(Z_ALPHA, -0.6), (Z_BETA, 0.1)],
+        &[(Z_ALPHA, 0.1), (Z_BETA, 1.0)],
+    );
+    assert_eq!((read.a, read.b), (Z_ALPHA, Z_BETA), "a tie");
 }
 
 #[test]
