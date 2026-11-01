@@ -32417,7 +32417,7 @@
 - id: REQ-VAL-210
   area: VAL
   kind: calibration
-  statement: "REQ-VAL-209's per-row tolerance on T (AA-6) must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human with the M9 report and recorded in decisions.md."
+  statement: "REQ-VAL-209's per-row tolerance on T, and the statistic and level for its other 87 rows (AA-6), must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human with the M9 report and recorded in decisions.md."
   source:
   - file: docs/design/principia_dd_replication.md
     section: "5.8 Region D: Agekyan & Anosova, and Anosova 1969"
@@ -32440,8 +32440,8 @@
   - file: docs/design/principia_dd_replication.md
     section: "12.3 Outcomes, the like-for-like check and the forbidden moves"
   verify:
+    detail: "CALIBRATION (R-71), form proposed: the larger of the printed resolution (0.1τ) and the spread of our T across the eta ladder and the two criteria; their integrator was unregularised and reached |ΔE/E| = 0.019, so a disagreement is recorded first and attributed only by measurement (rule 5). The other 87 rows' statistic and its level are proposed with their evidence, the level from our own spread across eta and the two criteria, as AA-2's is (REQ-VAL-269); no value is set here."
     method: review checklist
-    detail: "CALIBRATION (R-71), form proposed: the larger of the printed resolution (0.1τ) and the spread of our T across the eta ladder and the two criteria; their integrator was unregularised and reached |ΔE/E| = 0.019, so a disagreement is recorded first and attributed only by measurement (rule 5)."
   rulings:
   - R-71
   - R-594
@@ -32449,7 +32449,7 @@
   - R-649
   - R-650
   milestone: M9
-  note: "Calibrates REQ-VAL-209 (AA-6); never set from a published number to make it pass (rule 4). Closed by TASK-M9-10 (was TASK-M3-50) (R-594, R-629). Ported from PLAN.md § 6's DRAFT-VAL-05c by R-629. 30 Oct 2026 (R-649, R-650): calibrates a measurement, never a gate; scored in M9 (was M3); confirmed by the human with the M9 report (REQ-VAL-340), not at a gate. Its target's tier: Tier (b), the CPU IC inspector, for the 13 short-lived rows, where a GPU miss is expected, not a defect; tier (a), the GPU explorer, for the rest, scored there statistically or qualitatively only (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026). Statement *was:* \"…confirmed by the human at the M3 gate…\". Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b) for its exact part, its statistical part (b) too, with (a) expected to agree\"."
+  note: "Calibrates REQ-VAL-209 (AA-6); never set from a published number to make it pass (rule 4). Closed by TASK-M9-10 (was TASK-M3-50) (R-594, R-629). Ported from PLAN.md § 6's DRAFT-VAL-05c by R-629. 30 Oct 2026 (R-649, R-650): calibrates a measurement, never a gate; scored in M9 (was M3); confirmed by the human with the M9 report (REQ-VAL-340), not at a gate. Its target's tier: Tier (b), the CPU IC inspector, for the 13 short-lived rows, where a GPU miss is expected, not a defect; tier (a), the GPU explorer, for the rest, scored there statistically or qualitatively only (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026). Statement *was:* \"…confirmed by the human at the M3 gate…\". Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b) for its exact part, its statistical part (b) too, with (a) expected to agree\". Statement *was:* \"REQ-VAL-209's per-row tolerance on T (AA-6) must be calibrated\": the 87 rows' statistical part, now with its own outcome, had no criterion to hold against, and a missing value becomes a calibration (R-71) (physics review 5730823192 of PR #375, M4; applied per R-369)."
 - id: REQ-VAL-211
   area: VAL
   statement: "Two controls that need no integration: (i) Monaghan's planar eccentricity distribution f(E) = E/(1 − E²)^{1/2}, integrated over ten bins of width 0.1 and rounded half-up, must reproduce Aarseth et al. 1994b's Table II 'Theory' row exactly (1, 2, 3, 4, 5, 7, 9, 11, 16, 44 %; median 0.87); (ii) 2,500 triangles drawn uniformly in the unit disc, with Z computed by the validation crate's own Z, must give a distribution compatible with that paper's 17, 16, 14, 14, 12, 10, 8, 5, 4, 1 %."
