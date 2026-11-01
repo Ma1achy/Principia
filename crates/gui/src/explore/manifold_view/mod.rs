@@ -322,30 +322,30 @@ pub fn axis_pair(q1: &Latent, q2: &Latent) -> Option<(usize, usize)> {
     (a < b).then_some((a, b))
 }
 
-/// The axes of a basis tilted within `frame`'s targets on axes no preset names, as H and V can pick them: the dominant
-/// axes off the targets, so a tilt past 45° keeps its H and V (R-459 G3). `None` where a vector has nothing off the
-/// targets, or the basis leaves the pair and the targets (`outside`, the part of the basis off them).
-fn tilted_axes(
-    q1: &Latent,
-    q2: &Latent,
-    frame: &SliceFrame,
-    outside: impl Fn(usize, usize) -> f64,
-) -> Option<(usize, usize)> {
-    let off = |q: &Latent| -> Latent {
-        std::array::from_fn(|i| {
-            if i64::from(frame.tilt_x) == i as i64 || i64::from(frame.tilt_y) == i as i64 {
-                0.0
-            } else {
-                q[i]
-            }
-        })
-    };
-    let (rest1, mut rest2) = (off(q1), off(q2));
-    let a = dominant(&rest1);
-    rest2[a] = 0.0;
-    let b = dominant(&rest2);
-    (rest1[a] != 0.0 && rest2[b] != 0.0 && outside(a, b) <= 1e-18 * (dot(q1, q1) + dot(q2, q2)))
-        .then_some((a, b))
+/// The axes of a basis tilted within `frame`'s targets on axes no preset names, as H and V can pick them: the two axes
+/// the basis has anything on off the targets, in the order that gives them a positive determinant (`σ² cos τ₁ cos τ₂`
+/// whatever `γ`), so a tilt keeps its H and V to the ends of its range (R-459 G3). How large a component is says nothing
+/// here: at `τ = ±90°` the kept axis's is `cos 90° ≈ 6e-17`, and it is what still names the axis, [`View::basis`] leaving
+/// every other component exactly 0. `None` where the basis has any other number of axes off the targets, or no plane on
+/// the two.
+fn tilted_axes(q1: &Latent, q2: &Latent, frame: &SliceFrame) -> Option<(usize, usize)> {
+    let mut on = (0..LATENT_DIM).filter(|&i| {
+        i64::from(frame.tilt_x) != i as i64
+            && i64::from(frame.tilt_y) != i as i64
+            && (q1[i] != 0.0 || q2[i] != 0.0)
+    });
+    let (i, j) = (on.next()?, on.next()?);
+    if on.next().is_some() {
+        return None;
+    }
+    let turn = q1[i] * q2[j] - q1[j] * q2[i];
+    if turn > 0.0 {
+        Some((i, j))
+    } else if turn < 0.0 {
+        Some((j, i))
+    } else {
+        None
+    }
 }
 
 /// The chart, as the panel reads it in a preset's frame and the slice frame's hidden dimensions.
@@ -392,6 +392,12 @@ impl View {
     /// reads as before. On the axes `(a, b)` each of the frame's three is read as the frame holds it, or as the slice
     /// axis where it is one of `a`, `b`, which no frame holds for its own plane (R-459 G4), or no latent dimension; a
     /// preset is found only where the frame holds none of its axes.
+    ///
+    /// The exact readings come first. [`View::basis`] leaves every component off its axes and targets exactly 0, and a
+    /// kept axis at `τ = ±90°` is itself only `cos 90° ≈ 6e-17`, so a basis on two axes and its targets exactly is read
+    /// on them, however small a component, before any preset is allowed its rounding: otherwise a pair picked with H or
+    /// V loses that axis at the tilt's ends (R-459 G3). Only a basis no exact reading holds is a preset's with stray
+    /// components at the floating point's noise, and failing that its dominant axes' frame.
     pub fn framed(plane: &Plane, frame: Option<&SliceFrame>) -> Self {
         let (q1, q2) = (&plane.q1, &plane.q2);
         let total = dot(q1, q1) + dot(q2, q2);
@@ -408,12 +414,11 @@ impl View {
                 on(frame.map(|f| f.tilt_y)),
             ]
         };
-        let outside = |a: usize, b: usize| -> f64 {
+        let holds = |a: usize, b: usize| -> bool {
             let [_, x, y] = hidden(a, b);
             (0..LATENT_DIM)
                 .filter(|i| ![a, b, x, y].contains(i))
-                .map(|i| q1[i] * q1[i] + q2[i] * q2[i])
-                .sum()
+                .all(|i| q1[i] == 0.0 && q2[i] == 0.0)
         };
         if let Some((a, b)) = axis_pair(q1, q2) {
             let preset = PRESETS.iter().position(|&p| p == (a, b));
@@ -431,20 +436,32 @@ impl View {
         };
         // A preset's pair the other way round, `q₁` on its `e_b` and `q₂` on its `e_a`, is no turn of the preset, whose
         // determinant on its axes is `σ² cos τ₁ cos τ₂ ≥ 0`: it is the axes H and V picked so (R-459 G3).
-        let same_way = |a: usize, b: usize| q1[a] * q2[b] - q1[b] * q2[a] >= -1e-12 * total;
-        let found = PRESETS.iter().position(|&(a, b)| {
-            fits(a, b) && same_way(a, b) && outside(a, b) <= 1e-18 * total.max(f64::MIN_POSITIVE)
-        });
-        let (a, b) = match found {
-            Some(p) => PRESETS[p],
-            None => frame
-                .and_then(|f| tilted_axes(q1, q2, f, outside))
-                .unwrap_or_else(|| {
-                    let a = dominant(q1);
-                    let mut q2_rest = *q2;
-                    q2_rest[a] = 0.0;
-                    (a, dominant(&q2_rest))
-                }),
+        let turn = |a: usize, b: usize| q1[a] * q2[b] - q1[b] * q2[a];
+        let exactly = |a: usize, b: usize| turn(a, b) >= 0.0 && holds(a, b);
+        let within_noise = |a: usize, b: usize| {
+            let off: f64 = {
+                let [_, x, y] = hidden(a, b);
+                (0..LATENT_DIM)
+                    .filter(|i| ![a, b, x, y].contains(i))
+                    .map(|i| q1[i] * q1[i] + q2[i] * q2[i])
+                    .sum()
+            };
+            turn(a, b) >= -1e-12 * total && off <= 1e-18 * total.max(f64::MIN_POSITIVE)
+        };
+        let preset_where = |test: &dyn Fn(usize, usize) -> bool| {
+            PRESETS.iter().position(|&(a, b)| fits(a, b) && test(a, b))
+        };
+        let (found, (a, b)) = if let Some(p) = preset_where(&exactly) {
+            (Some(p), PRESETS[p])
+        } else if let Some(pair) = frame.and_then(|f| tilted_axes(q1, q2, f)) {
+            (None, pair)
+        } else if let Some(p) = preset_where(&within_noise) {
+            (Some(p), PRESETS[p])
+        } else {
+            let a = dominant(q1);
+            let mut q2_rest = *q2;
+            q2_rest[a] = 0.0;
+            (None, (a, dominant(&q2_rest)))
         };
         Self::in_frame(found, a, b, hidden(a, b), q1, q2)
     }

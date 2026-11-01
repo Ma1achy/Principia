@@ -411,6 +411,87 @@ fn mock_cube_axis_buttons_a_picked_pair_keeps_its_axes_past_45_degrees() {
     );
 }
 
+/// Asserts the view on the axes `(a, b)` at these angles, in `f`, reads back on `(a, b)` with its own angles.
+fn check_reads_back((a, b): (usize, usize), f: SliceFrame, (t1, t2, g): (f64, f64, f64)) {
+    let v = View {
+        preset: None,
+        a,
+        b,
+        d: usize::try_from(f.normal).expect("a dimension"),
+        x: usize::try_from(f.tilt_x).expect("a dimension"),
+        y: usize::try_from(f.tilt_y).expect("a dimension"),
+        ..view(t1, t2, g, 1.0)
+    };
+    let (q1, q2) = v.basis();
+    let read = View::framed(
+        &Plane {
+            z0: [0.0; 8],
+            q1,
+            q2,
+        },
+        Some(&f),
+    );
+    let at = format!("({t1}, {t2}, {g})");
+    assert_eq!((read.a, read.b), (a, b), "{at}");
+    for (got, want, what) in [
+        (read.tau1, t1, "τ₁"),
+        (read.tau2, t2, "τ₂"),
+        (read.gamma, g, "γ"),
+    ] {
+        assert!((got.to_degrees() - want).abs() < 1e-9, "{what} {at}");
+    }
+}
+
+/// R-459 G3: H and V move only with a pick or an edit in Chart, so no angle in the range reads another pair. At ±90° the
+/// kept axis is only `cos 90°`, and at a rotation past 45° it is not the largest off the targets.
+#[test]
+fn mock_cube_axis_buttons_a_pair_keeps_its_axes_at_the_ends_of_the_range_and_under_a_turn() {
+    let f = frame(Z_Q3, Z_Q3, Z_MU1);
+    let angles = [
+        (90.0, 0.0, 0.0),
+        (-90.0, 0.0, 0.0),
+        (0.0, 90.0, 0.0),
+        (90.0, 90.0, 0.0),
+        (-90.0, 45.0, 0.0),
+        (90.0, -90.0, 30.0),
+        (90.0, 0.0, 30.0),
+        (30.0, 20.0, 60.0),
+        (0.0, 0.0, 60.0),
+        (0.0, 0.0, -120.0),
+    ];
+    for at in angles {
+        check_reads_back((Z_Q0, Z_BETA), f, at);
+        // A preset's axes, the other way round, are no turn of that preset (R-459 G3): the determinant says so at the
+        // ends too, where it is only `cos² 90°`.
+        check_reads_back((Z_BETA, Z_ALPHA), f, at);
+        // And a preset stays that preset.
+        check_reads_back((Z_ALPHA, Z_BETA), f, at);
+    }
+    // At the smallest zoom's scale too.
+    let small = View {
+        preset: None,
+        a: Z_Q0,
+        b: Z_BETA,
+        d: Z_Q3,
+        x: Z_Q3,
+        y: Z_MU1,
+        ..view(90.0, 90.0, 30.0, (-48.0_f64).exp2())
+    };
+    let (q1, q2) = small.basis();
+    let read = View::framed(
+        &Plane {
+            z0: [0.0; 8],
+            q1,
+            q2,
+        },
+        Some(&f),
+    );
+    assert_eq!((read.a, read.b), (Z_Q0, Z_BETA), "zoomed in");
+    rejects("a pair read as another's axes", || {
+        check_reads_back((Z_Q0, Z_BETA), frame(Z_Q3, Z_Q3, Z_Q0), (90.0, 0.0, 0.0))
+    });
+}
+
 /// The basis with `q₁` and `q₂` of the components given, each `(axis, value)`, in the frame `(z_q3, z_q3, z_μ1)`.
 fn read_of(q1: &[(usize, f64)], q2: &[(usize, f64)]) -> View {
     let vector = |parts: &[(usize, f64)]| -> Latent {
@@ -433,28 +514,52 @@ fn read_of(q1: &[(usize, f64)], q2: &[(usize, f64)]) -> View {
 #[test]
 fn mock_cube_axis_buttons_the_frame_reading_cuts_at_their_boundaries() {
     let (s, c) = 60.0_f64.to_radians().sin_cos();
-    // A picked pair with rounding off the targets, 1.5e-18 of a total of 2, under the cut 2e-18, keeps its axes past 45°.
-    let leak = 1.5e-18_f64.sqrt();
-    let kept = read_of(&[(Z_Q0, c), (Z_Q3, s), (Z_Q1, leak)], &[(Z_Q2, 1.0)]);
-    assert_eq!((kept.a, kept.b), (Z_Q0, Z_Q2), "within the cut");
-    // Past the cut the basis leaves the pair and the targets: its dominant axes, the first on the target.
-    let leak = 2.5e-18_f64.sqrt();
-    let left = read_of(&[(Z_Q0, c), (Z_Q3, s), (Z_Q1, leak)], &[(Z_Q2, 1.0)]);
-    assert_eq!((left.a, left.b), (Z_Q3, Z_Q2), "past the cut");
-    let far = read_of(&[(Z_Q0, c), (Z_Q3, s), (Z_Q1, 0.01)], &[(Z_Q2, 1.0)]);
-    assert_eq!((far.a, far.b), (Z_Q3, Z_Q2), "well past the cut");
-    // A preset's determinant: a little below 0 by rounding is the preset, 1e-12 of the total of 2.
-    let on = read_of(&[(Z_ALPHA, -1.5e-12), (Z_Q3, 1.0)], &[(Z_BETA, 1.0)]);
+    // No component is rounding: the smallest off the pair and the targets leaves them, to its dominant axes, the first
+    // on the target. Its square would read 0, so the test is on the component.
+    let least = f64::MIN_POSITIVE;
+    let kept = read_of(&[(Z_Q0, c), (Z_Q3, s)], &[(Z_Q2, 1.0)]);
+    assert_eq!(
+        (kept.a, kept.b),
+        (Z_Q0, Z_Q2),
+        "on the pair and the targets"
+    );
+    let left = read_of(&[(Z_Q0, c), (Z_Q3, s), (Z_Q1, least)], &[(Z_Q2, 1.0)]);
+    assert_eq!((left.a, left.b), (Z_Q3, Z_Q2), "off them, by the least");
+    let left = read_of(&[(Z_Q0, c), (Z_Q3, s)], &[(Z_Q2, 1.0), (Z_Q1, least)]);
+    assert_eq!((left.a, left.b), (Z_Q3, Z_Q2), "off them on q₂");
+    // A preset's exact determinant: 0 is the preset; the least below it is the pair the other way round, read as such.
+    let on = read_of(&[(Z_Q3, 1.0)], &[(Z_BETA, 1.0)]);
+    assert_eq!(on.preset, Some(0), "a determinant of 0");
+    let off = read_of(&[(Z_ALPHA, -least), (Z_Q3, 1.0)], &[(Z_BETA, 1.0)]);
+    assert_eq!(
+        (off.preset, off.a, off.b),
+        (None, Z_BETA, Z_ALPHA),
+        "just below 0"
+    );
+    // A preset's frame, exactly: all of it holds, whatever is on the targets.
+    let within = read_of(&[(Z_ALPHA, 1.0)], &[(Z_BETA, 1.0), (Z_MU1, 0.5)]);
+    assert_eq!(within.preset, Some(0), "on the targets");
+    // Where no exact reading holds, a preset allows noise. Its determinant: 1e-12 of the total of 2 below 0.
+    let noise = 1e-12;
+    let on = read_of(
+        &[(Z_ALPHA, -1.5e-12), (Z_Q3, 1.0), (Z_Q1, noise)],
+        &[(Z_BETA, 1.0)],
+    );
     assert_eq!(on.preset, Some(0), "within the rounding");
-    let off = read_of(&[(Z_ALPHA, -2.5e-12), (Z_Q3, 1.0)], &[(Z_BETA, 1.0)]);
+    let off = read_of(
+        &[(Z_ALPHA, -2.5e-12), (Z_Q3, 1.0), (Z_Q1, noise)],
+        &[(Z_BETA, 1.0)],
+    );
     assert_eq!(off.preset, None, "past the rounding");
-    // A preset's own cut on what leaves it: 1.5e-18 of the total of 2 holds, 2.5e-18 does not.
+    // And what leaves it: 1.5e-18 of the total of 2 holds, on either vector, and 2.5e-18 does not.
     let leak = 1.5e-18_f64.sqrt();
-    let within = read_of(&[(Z_ALPHA, 1.0)], &[(Z_BETA, 1.0), (Z_Q1, leak)]);
-    assert_eq!(within.preset, Some(0), "within the preset's cut");
+    let on = read_of(&[(Z_ALPHA, 1.0)], &[(Z_BETA, 1.0), (Z_Q1, leak)]);
+    assert_eq!(on.preset, Some(0), "within the preset's cut, on q₂");
+    let on = read_of(&[(Z_ALPHA, 1.0), (Z_Q1, leak)], &[(Z_BETA, 1.0)]);
+    assert_eq!(on.preset, Some(0), "within the preset's cut, on q₁");
     let leak = 2.5e-18_f64.sqrt();
-    let past = read_of(&[(Z_ALPHA, 1.0)], &[(Z_BETA, 1.0), (Z_Q1, leak)]);
-    assert_eq!(past.preset, None, "past the preset's cut");
+    let off = read_of(&[(Z_ALPHA, 1.0)], &[(Z_BETA, 1.0), (Z_Q1, leak)]);
+    assert_eq!(off.preset, None, "past the preset's cut");
     // The determinant, not its terms' sum: 0.36 − 0.64 is mirrored.
     let mirrored = read_of(
         &[(Z_ALPHA, 0.6), (Z_BETA, 0.8)],
