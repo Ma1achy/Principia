@@ -1,5 +1,5 @@
 //! Each drift view's floor uniforms default to the constants register's values (`ledger::gen::catalogue::drift_wgsl`;
-//! render contract Part 5; TASK-M3-05): `EPS_E` from `eps_E_default` in both views, `EPS_L` from `eps_L_default` in
+//! render contract Part 5; TASK-M3-05): `EPS_E` from `eps_e` in both views, `EPS_L` from `eps_l` in
 //! `Lz_drift`'s. The two defaults are equal today, so no test tells them apart yet (`.cargo/mutants-equivalent.toml`,
 //! `drift_wgsl`'s `eps_L` arm); this one does the day they differ.
 

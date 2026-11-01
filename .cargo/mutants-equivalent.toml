@@ -341,7 +341,7 @@ justification = "repeat is two runs of one pure function on one input, so u32::f
 
 [[equivalent]]
 mutant = "crates/ledger/src/gen/catalogue.rs:577:13: delete match arm \"eps_L\" in drift_wgsl"
-justification = "EPS_L_DEFAULT and EPS_E_DEFAULT are both 1e-6 in the register, so the wildcard arm gives the same default; a change to either makes drift_view_floor_uniforms_default_to_the_register tell them apart"
+justification = "EPS_L_DEFAULT and EPS_E_DEFAULT, the register's eps_l and eps_e, are both 1e-6, so the wildcard arm gives the same default; a change to either makes drift_view_floor_uniforms_default_to_the_register tell them apart"
 
 [[equivalent]]
 mutant = "xtask/src/jobq.rs:1605:26: replace < with <= in end_stale_group"

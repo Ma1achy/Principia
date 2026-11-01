@@ -1371,29 +1371,26 @@ pub const SLICE_AXIS_Z_Q3: ConstantBuilder = chart(
 
 // ── The invariant monitor and the drift views (TASK-M3-05; REQ-INT-085, REQ-TOOL-150; R-71, R-381, R-382) ──────────
 //
-// The relative-drift floors' defaults, sim-key parameters the integrator contract gives (Part 3), and three values the
-// corpus leaves open, each proposed with its evidence and provisional until the M3 gate (R-427): the drift suspect
-// predicates' two thresholds (REQ-INT-085) and the `lin` override's ranges of the two drift views (REQ-TOOL-150). The
-// evidence is `validation::drift`'s measurement on dd_integrator §5's tests 2 and 7, Euler, RK4, KDK, Yoshida-4 and
-// Yoshida-6 at CPU-f32 and CPU-f64 through the one wrapper, read as the predicates read it: the stored latches, the f16
-// `dE_max` and `dLz_max`, and the stored `E_0` (`crates/validation/tests/drift_proposals.rs`, which prints the table).
-// Each threshold and range is a power of two, so the f32 WGSL literal and the f64 value are the one number.
-
-/// The section that gives the relative-drift floors' defaults: the sim-key parameter table (integrator contract Part 3).
-const PARAMETERS: Citation = Citation::Corpus {
-    file: "docs/contracts/principia_integrator_contract.md",
-    section: "Part 3 — Parameter ownership (who owns what)",
-};
+// The relative-drift floors' defaults, the names the read side and the views read `EPS_E` and `EPS_L` by, and three
+// values the corpus leaves open, each proposed with its evidence and provisional until the M3 gate (R-427): the drift
+// suspect predicates' two thresholds (REQ-INT-085) and the `lin` override's ranges of the two drift views
+// (REQ-TOOL-150). The evidence is `validation::drift`'s measurement on dd_integrator §5's tests 2 and 7, Euler, RK4,
+// KDK, Yoshida-4 and Yoshida-6 at CPU-f32 and CPU-f64 through the one wrapper, read as the predicates read it: the
+// stored latches, the f16 `dE_max` and `dLz_max`, and the stored `E_0` (`crates/validation/tests/drift_proposals.rs`,
+// which prints the table). Each threshold and range is a power of two, so the f32 WGSL literal and the f64 value are
+// the one number.
 
 /// `ε_E`'s default, 10⁻⁶: the relative energy drift's floor, `δ_E = ΔE / max(ε_E, |E₀|)`, a sim-key parameter
 /// (integrator contract Part 3; dd_integrator §3.5). The energy-suspect predicate and the energy-drift view's
-/// compactions read it where no sim key gives another.
-pub const EPS_E_DEFAULT: ConstantBuilder = chart("eps_E_default", 1e-6, PARAMETERS);
+/// compactions read it where no sim key gives another. It is the register's [`EPS_E`], Part 3's one row, so a ruling
+/// that changes the sim key's default changes this floor with it.
+pub const EPS_E_DEFAULT: ConstantBuilder = EPS_E;
 
 /// `ε_L`'s default, 10⁻⁶: the relative `L_z` drift's floor, `δ_L = ΔL_z / max(ε_L, |L_{z,0}|)`, a sim-key parameter
 /// (integrator contract Part 3; dd_integrator §3.5). The `L_z`-drift view's compactions read it where no sim key gives
-/// another.
-pub const EPS_L_DEFAULT: ConstantBuilder = chart("eps_L_default", 1e-6, PARAMETERS);
+/// another. It is the register's [`EPS_L`], Part 3's one row, so a ruling that changes the sim key's default changes
+/// this floor with it.
+pub const EPS_L_DEFAULT: ConstantBuilder = EPS_L;
 
 /// The measurement the drift thresholds and ranges are proposed from (dd_integrator §5's tests 2 and 7).
 const DRIFT_MEASUREMENT: Citation = Citation::Corpus {
@@ -1517,8 +1514,7 @@ pub const TILT_TURN: ConstantBuilder = chart("tilt_turn", 360.0, R474);
 /// REQ-INT-094), and the view window's square (TASK-M2-21), and the slice frame's default axis (TASK-M6-38), and the
 /// wrapper's loop parameters' defaults, the horizon's cap and the macro-step's floor (TASK-M3-06; R-132, R-610), and the
 /// tilt's angles in degrees (TASK-M2-36; R-474), and the custom-stop ramp's OKLab bound (TASK-M7-11). Then the
-/// relative-drift floors' defaults, the drift suspect predicates' thresholds and the drift views' `lin` ranges
-/// (TASK-M3-05; REQ-INT-085, REQ-TOOL-150).
+/// drift suspect predicates' thresholds and the drift views' `lin` ranges (TASK-M3-05; REQ-INT-085, REQ-TOOL-150).
 pub const REGISTER: &[ConstantBuilder] = &[
     HORIZON_STEPS_MAX,
     FGW_CAPACITY,
@@ -1602,8 +1598,6 @@ pub const REGISTER: &[ConstantBuilder] = &[
     WINDOW_SQUARE_CENTRE,
     WINDOW_SQUARE_HALF,
     SLICE_AXIS_Z_Q3,
-    EPS_E_DEFAULT,
-    EPS_L_DEFAULT,
     SUSPECT_ENERGY_THRESHOLD,
     SUSPECT_LZ_THRESHOLD,
     DRIFT_LIN_R_E,

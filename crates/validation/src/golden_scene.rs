@@ -1770,7 +1770,7 @@ impl DebugCounts {
     }
 }
 
-/// The drift suspect predicates of `read`'s stored latches at the default floor `eps_E_default`, `(SUSPECT_ENERGY,
+/// The drift suspect predicates of `read`'s stored latches at the default floor `eps_e`, `(SUSPECT_ENERGY,
 /// SUSPECT_LZ)`: the read side's `suspect_energy` and `suspect_lz` (TASK-M3-05), as a drift view at its defaults
 /// styles them, the energy predicate unlit on a non-finite `E_0`, tested on its bits first (R-436).
 pub fn drift_suspects(read: &kernel::payload::SimState) -> (bool, bool) {

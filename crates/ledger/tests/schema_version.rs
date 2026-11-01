@@ -607,12 +607,9 @@ const WINDOW: [&str; 2] = ["window_square_centre", "window_square_half"];
 const SLICE: [&str; 1] = ["slice_axis_z_q3"];
 
 /// The invariant monitor's and the drift views' entries (TASK-M3-05; dd_integrator §3.5, render contract Part 5): the
-/// relative-drift floors' defaults, the drift suspect predicates' thresholds (REQ-INT-085) and the drift views' `lin`
-/// ranges (REQ-TOOL-150). The predicates are read at read time and the views draw, so they decide what a read shows,
-/// never what a stored bit means (no suspect bit is stored, payload §5), and they are not hashed.
-const MONITOR: [&str; 6] = [
-    "eps_E_default",
-    "eps_L_default",
+/// drift suspect predicates' thresholds (REQ-INT-085) and the drift views' `lin` ranges (REQ-TOOL-150). The predicates
+/// are read at read time and the views draw, so they decide what a read shows, never what a stored bit means (no suspect bit is stored, payload §5), and they are not hashed.
+const MONITOR: [&str; 4] = [
     "suspect_energy_threshold",
     "suspect_lz_threshold",
     "drift_lin_r_E",

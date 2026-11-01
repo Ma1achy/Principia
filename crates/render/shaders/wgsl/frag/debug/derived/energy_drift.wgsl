@@ -8,7 +8,7 @@
 // swap, `PALETTE` 1, and `log` on viridis always; a non-finite reference or drift hatched, tested on its bits first
 // (R-436); under `symlog` a drift within the neutral band of `E_0` is drawn as 0 (`dbg_drift_shown`, R-652). Over it the suspect styling of the drift
 // suspect predicates read from the stored latches: rows for `SUSPECT_ENERGY`, columns for `SUSPECT_LZ`. `LIN_R`'s and
-// `EPS_E`'s defaults are the constants register's `drift_lin_r_E` (REQ-TOOL-150) and `eps_E_default`, as the generated
+// `EPS_E`'s defaults are the constants register's `drift_lin_r_E` (REQ-TOOL-150) and `eps_e`, as the generated
 // `energy_drift` view's are.
 // @uniform COMPACTION: u32 = 0 [0, 2]
 // @uniform PALETTE: u32 = 0 [0, 1]
