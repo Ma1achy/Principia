@@ -386,9 +386,11 @@ with dd_colouring §3.1's sRGB transfer.
   - **The non-finite guard (R-436; render_gui_spec §10.1; R-79).** Each view tests its reference, `E_0` or `Lz_0`, and
     then its drift `x` on their bits, an exponent of all ones (`dbg_drift_non_finite`), before reading either as a
     number, and a non-finite one draws `debug_invalid(frag_xy)` under every compaction, unstyled. So what reaches
-    `dbg_drift` from a view is finite, and nothing rests on the bits of `∞ − ∞`, which WGSL doesn't pin: a stored `±∞`
-    reference (`E_0`'s `−∞` at the collision pole) hatches with `x` whatever its bits, and `x = ±∞` on a finite
-    reference hatches rather than being clamped.
+    `dbg_drift` from a view is finite by its bits, and a stored `±∞` reference (`E_0`'s `−∞` at the collision pole)
+    hatches with `x` whatever its bits, so nothing there rests on the bits of `∞ − ∞`, which WGSL doesn't pin. `x = ±∞`
+    on a finite reference hatches rather than being clamped, but a live `x` is tested as the backend computed it, WGSL
+    letting an implementation assume no infinities, so a state with coincident bodies or overflowing momenta is unpinned
+    on the GPU, marked by `sim_failed` (TASK-M3-18).
   - **The neutral band (R-652; the owner's ruling (d) of 31 Oct 2026; REQ-TOOL-149), `dbg_drift_shown(x, compaction,
     reference)`, in `drift.wgsl`.** The current drifts are computed in the fragment, `H(r, p) − E_0` and `L_z(r, p) −
     Lz_0` (dd_generation_root §3.8; payload §5), so a fresh sample's drift is rounding, not physics, and differs by
