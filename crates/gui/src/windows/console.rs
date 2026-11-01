@@ -7,7 +7,7 @@
 //! Its keys (§G3, §G12; R-405, R-409 G4–G6, R-450): a window of exactly two scopes, top to bottom, the header bar and
 //! the log. Opening it from the footer or Windows › Console lands in navigation mode on the header bar scope itself; ↑
 //! ↓, Tab and Shift+Tab move between the two, inside the window (A1). Enter on the header bar goes in, onto All, and ←
-//! → cross its controls in visual order, All, Warnings, Errors, Info, the search field, Copy, Clear and ×, stopping at
+//! → cross its controls in visual order, All, Warnings, Errors, Info, the search field, Copy, Clear, maximise and × (R-463 K3), stopping at
 //! its ends; Esc goes back up to it (A2). The search field is §G3's text field: Enter starts typing, in which every key
 //! but Esc, Enter and Tab goes to it; Esc or Enter stops and keeps the text. × is a button: Enter or a click closes the
 //! console, the focus back on whatever opened it. Esc at the top level, on either scope, closes it too. Enter on the
@@ -15,6 +15,10 @@
 //! End to its first and last entry, Shift ×10, over the whole filtered list, clamped (A4); an empty list leaves the log
 //! where it is (A5). A click on a console control moves the keyboard's focus onto it (A3), and a click on the search
 //! field starts typing in it (R-456).
+//!
+//! Its height (§G12; R-463): it is docked along the bottom, its top edge a splitter (`crate::layout`), remembered with
+//! the layout; the maximise button and the scope's shortcut M, the focus in the console and not typing in the search
+//! field, toggle the full height below the top bar and back to the dragged height ([`State::maximised`]).
 
 use std::time::Instant;
 
@@ -41,6 +45,8 @@ pub const SEARCH: ScopeId = "cs_search";
 pub const COPY: ScopeId = "cs_copy";
 /// Clear: empties the console and resets the footer's counts.
 pub const CLEAR: ScopeId = "cs_clear";
+/// Maximise: toggles the full height below the top bar (R-463 K2).
+pub const MAXIMISE: ScopeId = "cs_maximise";
 /// ×: closes the console, the focus back on its opener (R-450).
 pub const CLOSE: ScopeId = "cs_close";
 
@@ -52,6 +58,9 @@ pub const FILTER_IDS: [(ScopeId, Filter, &str, &str); 4] = [
     ("cs_errors", Filter::Errors, "errors", "Errors"),
     ("cs_info", Filter::Info, "info", "Info"),
 ];
+
+/// The maximise button's text, lit while maximised (a look choice, R-390).
+pub const MAXIMISE_TEXT: &str = "maximise";
 
 /// The text filter's hint (12_console.png).
 pub const TEXT_HINT: &str = "filter…";
@@ -100,6 +109,9 @@ pub struct State {
     pub scroll_pending: bool,
     /// The text copy last put on the clipboard.
     pub copied: Option<String>,
+    /// Whether it fills the height below the top bar, for this session: not among the settings, which keep the dragged
+    /// height it returns to (R-463 K2).
+    pub maximised: bool,
     /// Where this frame's drawing went, for `crate::bench` (R-463 K4).
     pub timing: Timing,
 }
@@ -174,12 +186,14 @@ pub fn register(tree: &mut ScopeTree) {
     tree.register(Some(HEADER), Scope::text(SEARCH, "Search"));
     tree.register(Some(HEADER), Scope::control(COPY, "Copy"));
     tree.register(Some(HEADER), Scope::control(CLEAR, "Clear"));
+    tree.register(Some(HEADER), Scope::control(MAXIMISE, "Maximise"));
     tree.register(Some(HEADER), Scope::control(CLOSE, CLOSE_LABEL));
     tree.register(Some(WINDOW), Scope::scroll(LOG, "Log"));
     tree.register_shortcut(
         "Page Up / Down · Home / End",
         "the console's log, interacting: a page · its first / last entry",
     );
+    tree.register_shortcut("M", "the console: its full height, and back");
 }
 
 /// Enter on control `id`, as its click, with the console's `entries`.
@@ -201,6 +215,10 @@ pub fn activate(id: &str, state: &mut State, entries: &[LogEntry]) -> Option<Act
             state.top_row = 0;
             state.scroll_pending = true;
             Some(Act::Clear)
+        }
+        MAXIMISE => {
+            state.maximised = !state.maximised;
+            None
         }
         _ => None,
     }
@@ -279,10 +297,12 @@ fn header_button(
     keys.place(id, &response);
 }
 
-/// Draws the console's content, its header bar first (its title, then its controls in order, Copy, Clear and × at
-/// the right, as 12_console.png's row has copy and clear); returns what its controls asked for, in order.
+/// Draws the console's content, its header bar first (its title, then its controls in order, Copy, Clear, maximise and
+/// × at the right, as 12_console.png's row has copy and clear); returns what its controls asked for, in order.
 pub fn show(ui: &mut Ui, keys: &mut Keys<'_>, state: &mut State, view: &View<'_>) -> Vec<Act> {
     let mut acts = Vec::new();
+    // Docked: the window fills its rect, down to the footer, whatever its rows take.
+    ui.set_min_height(ui.available_height());
     let header = ui
         .horizontal(|ui| {
             ui.label(RichText::new(TITLE).strong());
@@ -308,7 +328,11 @@ pub fn show(ui: &mut Ui, keys: &mut Keys<'_>, state: &mut State, view: &View<'_>
                 state.scroll_pending = true;
             }
             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                for (id, label) in [(CLOSE, CLOSE_TEXT), (CLEAR, "clear"), (COPY, "copy")] {
+                let button = Button::new(CLOSE_TEXT);
+                header_button(ui, keys, CLOSE, button, state, view.entries, &mut acts);
+                let button = Button::selectable(state.maximised, MAXIMISE_TEXT);
+                header_button(ui, keys, MAXIMISE, button, state, view.entries, &mut acts);
+                for (id, label) in [(CLEAR, "clear"), (COPY, "copy")] {
                     let button = Button::new(label);
                     header_button(ui, keys, id, button, state, view.entries, &mut acts);
                 }

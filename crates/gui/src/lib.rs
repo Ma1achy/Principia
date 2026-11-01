@@ -39,6 +39,7 @@ mod tests {
     mod mock_compass_steer_latent;
     mod mock_compass_view_keys;
     mod mock_compass_views;
+    mod mock_console_height;
     mod mock_console_keys;
     mod mock_content;
     mod mock_debug_view;

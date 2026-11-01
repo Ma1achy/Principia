@@ -19,7 +19,9 @@
 //! splitter (`crate::layout`), dragged, double-clicked to reset it, and all reset by View › reset layout; the layout is
 //! saved to the same settings as each drag ends and at each reset (R-462). The field keeps its place on the screen
 //! whatever the splitters, so a resized canvas shows more or less of it at the same scale, and the engine side is told
-//! the span shown, computing only what it newly exposes: no `SetField` (R-462 J4).
+//! the span shown, computing only what it newly exposes: no `SetField` (R-462 J4). The console's top edge is a splitter
+//! as well, on either page, its height remembered with the layout and reset with it; its maximise button and M toggle
+//! the height below the top bar, over the panels and the figure until toggled back (R-463).
 
 use std::sync::Arc;
 
@@ -118,6 +120,9 @@ pub struct App<S: EngineSide> {
     /// While a drag holds a splitter: its edge, in points, and its place when the drag began. egui ends one drag, a
     /// frame with none, before it begins another, so this is the held splitter's.
     splitting: Option<(f32, f32)>,
+    /// While a drag holds the console's top edge: the edge when it began, in points, and the place and maximised state
+    /// the drag started from, for a drag back to where it began (R-463 K1).
+    console_drag: Option<(f32, Option<f32>, bool)>,
     /// Where the GUI's settings are kept (R-461 I4).
     store: Store,
     /// Whether a save of the settings has failed this session: it is logged once.
@@ -195,6 +200,7 @@ impl<S: EngineSide> App<S> {
             places: Default::default(),
             splits: Splits::default(),
             splitting: None,
+            console_drag: None,
             store: Store::default(),
             save_failed: false,
             present: false,
@@ -513,6 +519,7 @@ impl<S: EngineSide> App<S> {
         // there is followed to its end, wherever the pointer and the layer then are.
         let held = Layout::with_splits(ui.max_rect(), ctx.pixels_per_point(), &self.splits);
         self.follow_splitter(&ctx, &held);
+        self.follow_console_edge(&ctx, &held);
         let layout = Layout::with_splits(ui.max_rect(), ctx.pixels_per_point(), &self.splits);
         if self.present {
             self.presenting(&ctx, &layout);
@@ -616,6 +623,7 @@ impl<S: EngineSide> App<S> {
         }
         self.undo_keys(&ctx);
         self.shortcuts(&ctx, &mut actions, &mut edits, &mut out);
+        self.console_shortcut(&ctx);
         if let Some(due) = self.keyboard.next_repeat_s() {
             ctx.request_repaint_after(std::time::Duration::from_secs_f64((due - now).max(0.0)));
         }
@@ -847,8 +855,9 @@ impl<S: EngineSide> App<S> {
         let span = layout.span(true);
         explore::axis_labels::show(ui, layout.axis_x, layout.axis_y, canvas, &sim.plane, span);
         let reticle = explore::lock::reticle_at(&sim.lock, &sim.plane, field);
-        if let Some(at) = reticle.filter(|at| canvas.contains(*at)) {
-            explore::lock::reticle(ui.ctx(), canvas, at);
+        let uncovered = self.uncovered(canvas, layout);
+        if let Some(at) = reticle.filter(|at| uncovered.contains(*at)) {
+            explore::lock::reticle(ui.ctx(), uncovered, at);
         }
         // The splitters' handles, after the panels, so they take the pointer at the boundaries; a double-click resets
         // one, and the layout is saved (R-462 J3, J5).
@@ -868,7 +877,12 @@ impl<S: EngineSide> App<S> {
             .iter()
             .any(|e| windows::held(&ctx, e).is_some())
             || self.splitting.is_some()
-            || pointer.and_then(|p| layout.splitter_at(p)).is_some();
+            || self.console_drag.is_some()
+            || pointer.and_then(|p| layout.splitter_at(p)).is_some()
+            || pointer.is_some_and(|p| {
+                self.console_open
+                    && crate::layout::console_handle(self.console_rect(layout)).contains(p)
+            });
         let over_figure = !carrying
             && pointer
                 .and_then(|p| ctx.layer_id_at(p))
@@ -913,6 +927,79 @@ impl<S: EngineSide> App<S> {
                     self.save_settings();
                 }
             }
+        }
+    }
+
+    /// Where the console is in `layout`: at its dragged height, or the whole height below the top bar (R-463 K1, K2).
+    pub fn console_rect(&self, layout: &Layout) -> egui::Rect {
+        if self.windows.console.maximised {
+            layout.page
+        } else {
+            layout.console
+        }
+    }
+
+    /// The figure's canvas as it shows: `canvas`, less what an open console covers (R-463 K2). The figure and its marks
+    /// are drawn on layers above the windows', so they are clipped to this.
+    fn uncovered(&self, canvas: egui::Rect, layout: &Layout) -> egui::Rect {
+        let mut shown = canvas;
+        if self.console_open {
+            shown.max.y = shown.max.y.min(self.console_rect(layout).min.y);
+        }
+        shown
+    }
+
+    /// This frame's drag on the console's top edge, read before anything is drawn, as a splitter's: from its edge when
+    /// the drag began by the pointer's travel since its press, held to its range; a maximised console drops to the
+    /// height the drag gives. Back where it began, it is as it was. When the drag ends the layout is saved (R-463 K1).
+    fn follow_console_edge(&mut self, ctx: &egui::Context, layout: &Layout) {
+        let Some(delta) = windows::console_held(ctx) else {
+            if self.console_drag.take().is_some() {
+                self.save_settings();
+            }
+            return;
+        };
+        let rect = self.console_rect(layout);
+        let (start, top, maximised) = *self.console_drag.get_or_insert((
+            rect.min.y,
+            self.splits.console_top(),
+            self.windows.console.maximised,
+        ));
+        if delta == 0.0 {
+            self.splits.set_console_top(top);
+            self.windows.console.maximised = maximised;
+        } else {
+            let fraction = layout.console_dragged(start, delta);
+            self.splits.set_console_top(Some(fraction));
+            self.windows.console.maximised = false;
+        }
+    }
+
+    /// M, the console scope's shortcut: with the focus in the console, in either mode, on either page, toggles its full
+    /// height, as its button does; a search field being typed in keeps its 'm', and the `?` overlay takes every key
+    /// (§G3; R-463 K2). The system's repeats of a held press are not presses.
+    fn console_shortcut(&mut self, ctx: &egui::Context) {
+        let in_console = self
+            .view
+            .focus
+            .path
+            .first()
+            .is_some_and(|f| f == windows::console::WINDOW);
+        if !in_console || ctx.text_edit_focused() || self.keyboard.shortcuts_open {
+            return;
+        }
+        let presses = ctx.input(|i| {
+            i.events
+                .iter()
+                .filter(|e| {
+                    matches!(e, egui::Event::Key { key: Key::M, pressed: true, repeat: false, modifiers, .. }
+                        if modifiers.is_none())
+                })
+                .count()
+        });
+        for _ in 0..presses {
+            let console = &mut self.windows.console;
+            console.maximised = !console.maximised;
         }
     }
 
@@ -1112,6 +1199,7 @@ impl<S: EngineSide> App<S> {
     ) -> (Vec<Window>, bool) {
         let mut closed = Vec::new();
         let mut held = false;
+        let mut resets = false;
         let mut open = self.view.windows.open.clone();
         if self.console_open {
             open.push(Window::Console);
@@ -1120,13 +1208,18 @@ impl<S: EngineSide> App<S> {
         let view_px =
             [layout.figure.width(), layout.figure.height()].map(|v| (v * ppp).round() as u32);
         let quick = self.side.canvas().map(|c| (c, self.format));
+        let console_rect = self.console_rect(layout);
         let mut keys = windows::Keys {
             keyboard: &mut self.keyboard,
             focused,
         };
         for window in open {
             let e = windows::entry(window);
-            let default = windows::rect(window, layout);
+            let default = if window == Window::Console {
+                console_rect
+            } else {
+                windows::rect(window, layout)
+            };
             let mut rect = if windows::place::movable(window) {
                 self.places.shown(window, default, layout.window)
             } else {
@@ -1197,6 +1290,15 @@ impl<S: EngineSide> App<S> {
             if !still {
                 closed.push(window);
             }
+            // The console's top edge: a double-click resets the height, and the layout is saved (R-463 K1; R-462 J3).
+            if window == Window::Console && windows::console_edge(ctx, rect) {
+                self.splits.set_console_top(None);
+                self.windows.console.maximised = false;
+                resets = true;
+            }
+        }
+        if resets {
+            self.save_settings();
         }
         (closed, held)
     }
@@ -1257,6 +1359,7 @@ impl<S: EngineSide> App<S> {
         }
         if actions.reset_layout {
             self.splits = Splits::default();
+            self.windows.console.maximised = false;
             self.save_settings();
         }
         if actions.quit {
@@ -1279,6 +1382,13 @@ impl<S: EngineSide> App<S> {
         let Some(canvas) = self.side.figure(layout.placement()) else {
             return;
         };
+        // The console covers what it is over, on a layer this one draws above (R-463 K2); hidden, the layer has none.
+        let whole = layout.figure_rect(shown);
+        let clip = if shown {
+            self.uncovered(whole, layout)
+        } else {
+            whole
+        };
         let callback = egui_wgpu::Callback::new_paint_callback(
             layout.window,
             FigureCallback {
@@ -1287,7 +1397,7 @@ impl<S: EngineSide> App<S> {
             },
         );
         ctx.layer_painter(LayerId::new(Order::Middle, Id::new("figure")))
-            .with_clip_rect(layout.figure_rect(shown))
+            .with_clip_rect(clip)
             .add(callback);
     }
 }

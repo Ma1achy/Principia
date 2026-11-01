@@ -6,7 +6,9 @@
 //! the figure's rect is the whole window. The field keeps the place the default layout gives it, whatever the
 //! splitters and the layer (R-406; R-462 J4): the canvas is given that placement, [`Placement`], so it draws each point
 //! of the field where the default layout puts it, more of the field around it where the canvas is larger, less where
-//! it is smaller, never at another scale. The figure's axis labels take a strip along the bottom of the figure's box
+//! it is smaller, never at another scale. The console, docked along the bottom over the bottom row, has its own top edge
+//! ([`Splits::console_top`], [`Layout::console`]; R-463 K1), dragged between [`MIN_CONSOLE_H`] and the whole of
+//! [`Layout::page`], at the bottom row's top until first dragged. The figure's axis labels take a strip along the bottom of the figure's box
 //! and one down its left side, so they sit beside the figure and never over it (render_gui_spec §G1, §G2).
 
 use eframe::egui::{self, pos2, vec2, CursorIcon, Id, Rect, Sense, Ui};
@@ -53,6 +55,10 @@ pub const MIN_TIME_W: f32 = 340.0;
 /// The Legend's least width, in points: a key's swatch, label and share on one row (J2; a look choice, R-390: its rows
 /// elide rather than overflow).
 pub const MIN_LEGEND_W: f32 = 240.0;
+
+/// The console's least height, in points: its header bar and three log rows, with its window's margins and the line
+/// under the list, whole (R-463 K1; measured: below this its log shows two rows).
+pub const MIN_CONSOLE_H: f32 = 128.0;
 
 /// The width of a splitter's handle, centred on its boundary, in points (a look choice, R-390).
 pub const HANDLE: f32 = 6.0;
@@ -128,29 +134,46 @@ impl Splitter {
 /// layout keeps its proportions as the window is resized. The GUI's own state, kept across sessions in its settings
 /// (R-462 J5; `crate::settings`); never the contract's.
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub struct Splits([f32; 5]);
+pub struct Splits {
+    at: [f32; 5],
+    console_top: Option<f32>,
+}
 
 impl Default for Splits {
     /// 01_main.png's layout.
     fn default() -> Self {
-        Self(Splitter::ALL.map(Splitter::default_fraction))
+        Self {
+            at: Splitter::ALL.map(Splitter::default_fraction),
+            console_top: None,
+        }
     }
 }
 
 impl Splits {
     /// Where `splitter` is.
     pub fn get(&self, splitter: Splitter) -> f32 {
-        self.0[splitter.index()]
+        self.at[splitter.index()]
     }
 
     /// Puts `splitter` at `fraction`.
     pub fn set(&mut self, splitter: Splitter, fraction: f32) {
-        self.0[splitter.index()] = fraction;
+        self.at[splitter.index()] = fraction;
     }
 
     /// Returns `splitter`, and only it, to its default (R-462 J3).
     pub fn reset(&mut self, splitter: Splitter) {
         self.set(splitter, splitter.default_fraction());
+    }
+
+    /// Where the console's top edge was dragged to, as a fraction of the window's height; none at the default, the
+    /// bottom row's top (R-463 K1).
+    pub fn console_top(&self) -> Option<f32> {
+        self.console_top
+    }
+
+    /// Puts the console's top edge at `fraction`, or, with none, back at its default.
+    pub fn set_console_top(&mut self, fraction: Option<f32>) {
+        self.console_top = fraction;
     }
 }
 
@@ -164,6 +187,7 @@ struct Edges {
     bottom: f32,
     compass: f32,
     legend: f32,
+    console: Option<f32>,
 }
 
 /// `v` held to `[lo, hi]`, `hi` winning where they cross.
@@ -186,6 +210,7 @@ impl Edges {
             bottom: y(splits.get(Splitter::TopBottom)),
             compass: x(Splitter::CompassTime),
             legend: x(Splitter::TimeLegend),
+            console: splits.console_top().map(y),
         }
     }
 }
@@ -218,7 +243,9 @@ pub struct Layout {
     pub footer: Rect,
     /// The whole bottom row, where the console opens, above the footer (12_console.png).
     pub bottom_row: Rect,
-    /// Everything between the top bar and the footer: the Stain page's frame.
+    /// Where the console is docked at its dragged height, above the footer (R-463 K1).
+    pub console: Rect,
+    /// Everything between the top bar and the footer: the Stain page's frame, and the console maximised (R-463 K2).
     pub page: Rect,
     /// The whole window.
     pub window: Rect,
@@ -255,6 +282,16 @@ impl Layout {
             legend: rect(e.legend, e.bottom, x1, e.footer),
             footer: rect(x0, e.footer, x1, y1),
             bottom_row: rect(x0, e.bottom, x1, e.footer),
+            console: rect(
+                x0,
+                between(
+                    e.console.unwrap_or(e.bottom),
+                    e.top,
+                    snap(e.footer - MIN_CONSOLE_H),
+                ),
+                x1,
+                e.footer,
+            ),
             page: rect(x0, e.top, x1, e.footer),
             window: screen,
         }
@@ -320,6 +357,17 @@ impl Layout {
                 w.max.x - MIN_LEGEND_W,
             ),
         }
+    }
+
+    /// The console's top edge dragged from `start`, where it was when the drag began, by `delta` points: the fraction of
+    /// the window's height it then stands at, held between the height below the top bar and [`MIN_CONSOLE_H`] (R-463 K1).
+    pub fn console_dragged(&self, start: f32, delta: f32) -> f32 {
+        let edge = between(
+            start + delta,
+            self.page.min.y,
+            self.page.max.y - MIN_CONSOLE_H,
+        );
+        (edge - self.window.min.y) / self.window.height()
     }
 
     /// `splitter` reset in `splits` (R-462 J3): to its default, `default`'s edge, when that is inside
@@ -418,6 +466,16 @@ pub fn held(ctx: &egui::Context) -> Option<(Splitter, f32)> {
         .input(|i| i.pointer.total_drag_delta())
         .unwrap_or(vec2(0.0, 0.0));
     Some((splitter, if splitter.across() { delta.x } else { delta.y }))
+}
+
+/// The console's top edge's handle, where the console is `rect`: a strip [`HANDLE`] tall centred on the edge, its whole
+/// width (R-463 K1).
+pub fn console_handle(rect: Rect) -> Rect {
+    let half = HANDLE / 2.0;
+    Rect::from_min_max(
+        pos2(rect.min.x, rect.min.y - half),
+        pos2(rect.max.x, rect.min.y + half),
+    )
 }
 
 /// Where the field is drawn in a canvas's viewport (R-406): the shown figure's rect, `[0,1]²` of the field, as its

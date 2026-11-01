@@ -13,7 +13,9 @@ use crate::app::App;
 use crate::headless::Headless;
 use crate::keyboard::scopes::{Scope, ScopeId, ScopeTree};
 use crate::side::{EngineSide, MockSide};
-use crate::windows::console::{self, Filter, CLEAR, CLOSE, COPY, HEADER, LOG, SEARCH, WINDOW};
+use crate::windows::console::{
+    self, Filter, CLEAR, CLOSE, COPY, HEADER, LOG, MAXIMISE, SEARCH, WINDOW,
+};
 use crate::windows::{entry, REGISTRY};
 
 fn settle(h: &mut Headless, app: &mut App<MockSide>) {
@@ -186,7 +188,7 @@ fn mock_reachability_the_console_in_each_state_reaches_every_control_in_one_orde
     for (what, opened, app) in &states {
         check_opened(&format!("the console, {what}"), app, opened);
         check_same_order(what, &opened.reached, first);
-        for id in [HEADER, LOG, SEARCH, COPY, CLEAR, CLOSE] {
+        for id in [HEADER, LOG, SEARCH, COPY, CLEAR, MAXIMISE, CLOSE] {
             assert!(opened.reached.iter().any(|r| r == id), "{what}: {id}");
         }
     }
@@ -353,7 +355,12 @@ fn fixture(skip: &[ScopeId], rows: Option<usize>) -> ScopeTree {
     if !skip.contains(&SEARCH) {
         tree.register(Some(HEADER), Scope::text(SEARCH, "Search"));
     }
-    for (id, label) in [(COPY, "Copy"), (CLEAR, "Clear"), (CLOSE, "Close")] {
+    for (id, label) in [
+        (COPY, "Copy"),
+        (CLEAR, "Clear"),
+        (MAXIMISE, "Maximise"),
+        (CLOSE, "Close"),
+    ] {
         if !skip.contains(&id) {
             tree.register(Some(HEADER), Scope::control(id, label));
         }
