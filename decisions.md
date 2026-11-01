@@ -29227,7 +29227,7 @@ The owner's words (31 Oct 2026), verbatim, from that day's message:
 
 > RQ-630 (a).
 
-*Context.* RQ-630's option (a) read: "reword L3's and the contract's summaries to the formula's zeros (the code's reading)". L3's closed form `N ∝ (−sin τ₁ cos τ₂, −cos τ₁ sin τ₂, cos τ₁ cos τ₂)` gives `N_a = N_b = 0` at Lean `(±180, 0)`, `(0, ±180)` and `(±180, ±180)`, tilted views with a normal, the plane mirrored and `d ≡ 0`, so the pole maps keep `d` there; Lean with one angle at ±180 is the same rotation as Tip as sheet at `m = 180` (R-474 R2). It changes no behaviour: only the summaries said otherwise.
+*Context.* RQ-630's option (a) read: "reword L3's and the contract's summaries to the formula's zeros (the code's reading)". L3's closed form `N ∝ (−sin τ₁ cos τ₂, −cos τ₁ sin τ₂, cos τ₁ cos τ₂)` gives `N_a = N_b = 0` at Lean `(±180, 0)`, `(0, ±180)` and `(±180, ±180)`, tilted views with a normal, the plane mirrored or, at `(±180, ±180)`, turned by 180°, and `d ≡ 0`, so the pole maps keep `d` there; Lean with one angle at ±180 is the same rotation as Tip as sheet at `m = 180` (R-474 R2). It changes no behaviour: only the summaries said otherwise.
 
 *What it decides:* the wording, as the heading says. The corner stays as RQ-471 left it.
 
