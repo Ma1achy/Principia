@@ -189,16 +189,27 @@ negative_control!(
     )
 );
 
-/// Tilt mode at 0 as gui draws it: the reference's tilt-mode corners and edges, slice mode's rectangle at 0, the one
-/// label on the bottom-right edge, no corner numbers.
+/// Tilt mode at 0 as gui draws it: the reference's tilt-mode corners and edges, slice mode's rectangle at 0, the three
+/// edges' labels, the third axis's on the bottom-right edge, no corner numbers (R-459 G1).
 fn tilt_case() -> Record {
     let tilt = record("tilt_0");
     let mut ours = tilt.clone();
     ours.polygon = record("slice_0").polygon;
-    ours.labels = vec![Label {
-        text: "q₁, q₂ → z_q3".to_owned(),
-        at: tilt.labels[1].at,
-    }];
+    let slice = record("slice_0");
+    ours.labels = vec![
+        Label {
+            text: "H z_α".to_owned(),
+            at: tilt.labels[0].at,
+        },
+        Label {
+            text: "D z_q3".to_owned(),
+            at: tilt.labels[1].at,
+        },
+        Label {
+            text: "V z_β".to_owned(),
+            at: slice.labels[2].at,
+        },
+    ];
     ours.numbers = Vec::new();
     ours
 }
@@ -228,10 +239,10 @@ negative_control!(
     check_same(&golden("mock_compass_cube_tilt_0"), &horizontal())
 );
 
-/// Tilt mode with its label on the bottom-left edge.
+/// Tilt mode with its third axis's label on the bottom-left edge.
 fn wrong_edge() -> Record {
     let mut ours = tilt_case();
-    ours.labels[0].at = record("tilt_0").labels[0].at;
+    ours.labels[1].at = record("tilt_0").labels[0].at;
     ours
 }
 
@@ -244,7 +255,7 @@ fn compass_golden_the_tilt_label_and_no_numbers() {
         "{failures:?}"
     );
     let mut renamed = tilt_case();
-    renamed.labels[0].text = "q₁ → z_q3".to_owned();
+    renamed.labels[1].text = "q₁ → z_q3".to_owned();
     let failures = compass_golden::compare(&g, &renamed);
     assert!(
         failures.len() == 1 && failures[0].contains("reads"),
@@ -261,7 +272,7 @@ fn compass_golden_the_tilt_label_and_no_numbers() {
     two.labels = record("tilt_0").labels;
     let failures = compass_golden::compare(&g, &two);
     assert!(
-        failures.len() == 1 && failures[0].contains("one label"),
+        failures.len() == 1 && failures[0].contains("three labels"),
         "{failures:?}"
     );
 }
@@ -271,6 +282,94 @@ negative_control!(
     "the tilt label on the bottom-left edge must fail",
     expected = "the reference's bottom-right label",
     check_same(&golden("mock_compass_cube_tilt_0"), &wrong_edge())
+);
+
+/// R-459's badge case as gui records it: the corners and edges of the reference's tilt mode at 0, the gesture's plane
+/// from the decoder's computation, the third axis on X, the readout naming both targets, the badge shown.
+fn badge_case() -> Record {
+    let mut ours = tilt_case();
+    let plane = fs::read_to_string(dir().join("decoder/mock_compass_cube_badge.json"))
+        .expect("the decoder's record");
+    let plane: compass_golden::Decoder = serde_json::from_str(&plane).expect("its form");
+    ours.polygon = plane.polygon;
+    ours.labels[1].text = "X z_q3".to_owned();
+    ours.readout = [
+        "mode tilt",
+        "τ₁ → z_q3 +20.0° · τ₂ → z_μ1 +15.0°",
+        "γ +0.0°",
+    ]
+    .map(str::to_owned)
+    .to_vec();
+    ours.badge = true;
+    ours
+}
+
+fn badge_golden() -> compass_golden::Golden {
+    compass_golden::Golden::read(&dir().join("../../compass/mock_compass_cube_badge.json"))
+        .expect("the compass suite's badge spec")
+}
+
+#[test]
+fn compass_golden_the_badge_case_compares_its_plane_readout_and_badge() {
+    let g = badge_golden();
+    check_same(&g, &badge_case());
+    let mut none = badge_case();
+    none.badge = false;
+    let failures = compass_golden::compare(&g, &none);
+    assert_eq!(failures, ["the badge shown is false, not true"]);
+    let mut one = badge_case();
+    one.readout[1] = "τ₁ → z_q3 +20.0°".to_owned();
+    let failures = compass_golden::compare(&g, &one);
+    assert!(
+        failures.len() == 1 && failures[0].starts_with("the readout is"),
+        "{failures:?}"
+    );
+    let mut third = badge_case();
+    third.labels[1].text = "D z_q3".to_owned();
+    let failures = compass_golden::compare(&g, &third);
+    assert!(
+        failures.len() == 1 && failures[0].contains("reads"),
+        "{failures:?}"
+    );
+}
+
+negative_control!(
+    compass_golden_the_badge_case_compares_its_plane_readout_and_badge,
+    "the case with no badge shown must fail",
+    expected = "the badge shown is false",
+    {
+        let mut none = badge_case();
+        none.badge = false;
+        check_same(&badge_golden(), &none)
+    }
+);
+
+#[test]
+fn compass_golden_a_label_may_carry_its_letter_before_the_references_name() {
+    let g = golden("mock_compass_cube_slice");
+    let mut lettered = slice_case();
+    for (label, letter) in lettered.labels.iter_mut().zip(["H", "D", "V"]) {
+        label.text = format!("{letter} {}", label.text);
+    }
+    check_same(&g, &lettered);
+    let mut wrong = lettered.clone();
+    wrong.labels[0].text = "H z_β".to_owned();
+    let failures = compass_golden::compare(&g, &wrong);
+    assert!(
+        failures.len() == 1 && failures[0].starts_with("label \"H z_β\""),
+        "{failures:?}"
+    );
+}
+
+negative_control!(
+    compass_golden_a_label_may_carry_its_letter_before_the_references_name,
+    "a letter before the wrong name must fail",
+    expected = "the reference's",
+    {
+        let mut wrong = slice_case();
+        wrong.labels[0].text = "H z_β".to_owned();
+        check_same(&golden("mock_compass_cube_slice"), &wrong)
+    }
 );
 
 #[test]
@@ -305,8 +404,8 @@ fn compass_golden_the_labels_numbers_and_readout() {
 
 negative_control!(
     compass_golden_the_labels_numbers_and_readout,
-    "slice mode's labels against tilt mode's one label must fail",
-    expected = "tilt mode draws one label",
+    "slice mode's labels against tilt mode's three edges must fail",
+    expected = "tilt mode draws corner numbers",
     check_same(&golden("mock_compass_cube_tilt_0"), &slice_case())
 );
 

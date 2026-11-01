@@ -86,6 +86,12 @@ pub enum CompassCase {
     TiltRect,
     /// `mock_compass_cube_tilt_hex`: tilt mode, `τ₁ = τ₂ = 45°`, `γ = 0`, `z₀ = 0` on the frame.
     TiltHex,
+    /// `mock_compass_cube_third_axis`: tilt mode, `τ₁ = 0`, `τ₂ = 15°`, `γ = 0`, `X = z_q3`, `Y = z_μ1`, `z₀ = 0` on the
+    /// frame: the third axis shows Y (R-459).
+    ThirdAxis,
+    /// `mock_compass_cube_badge`: tilt mode, `τ₁ = 20°`, `τ₂ = 15°`, `γ = 0`, `X = z_q3`, `Y = z_μ1`, `z₀ = 0` on the
+    /// frame: the third axis shows X, with the badge (R-459).
+    Badge,
 }
 
 impl CompassCase {
@@ -97,25 +103,42 @@ impl CompassCase {
             CompassCase::Tilt0 => ((0.0, 0.0, 0.0), 0.0, Touch::Tilt),
             CompassCase::TiltRect => ((30.0, 0.0, 0.0), 0.0, Touch::Tilt),
             CompassCase::TiltHex => ((45.0, 45.0, 0.0), 0.0, Touch::Tilt),
+            CompassCase::ThirdAxis => ((0.0, 15.0, 0.0), 0.0, Touch::Tilt),
+            CompassCase::Badge => ((20.0, 15.0, 0.0), 0.0, Touch::Tilt),
         }
     }
 
-    /// The edits setting the case on `sim`'s chart: `z₀` with its components on `e_a`, `e_b` set to 0 and on `e_d` to the
-    /// case's, then the basis at the case's angles, its scale and frame kept.
+    /// The edits setting the case on `sim`'s chart: `z₀` with its components on `e_a`, `e_b` and the case's targets set to
+    /// 0 and on `e_d` to the case's, then the basis at the case's angles, its scale kept, and its frame, but for the
+    /// cases that pick `Y = z_μ1`, whose one edit sets the frame and the basis together.
     pub fn edits(
         self,
         sim: &engine::contract::sim_config::SimConfig,
     ) -> [engine::contract::set_field::SetField; 2] {
         use crate::explore::manifold_view::tilt::Angles;
-        use crate::explore::manifold_view::{basis_edit, z0_edit, View, Z0_HALF_RANGE};
+        use crate::explore::manifold_view::{basis_edit, frame_edit, z0_edit, View, Z0_HALF_RANGE};
         let ((tau1, tau2, gamma), depth, _) = self.parameters();
-        let view = View::read(sim);
+        let mut view = View::read(sim);
+        let picks = matches!(self, CompassCase::ThirdAxis | CompassCase::Badge);
+        if picks {
+            view.y = crate::explore::manifold_view::AXES
+                .iter()
+                .position(|name| *name == "z_μ1")
+                .expect("z_μ1 is a latent dimension");
+        }
         let mut z0 = sim.plane.z0;
         z0[view.a] = 0.0;
         z0[view.b] = 0.0;
+        z0[view.x] = 0.0;
+        z0[view.y] = 0.0;
         z0[view.d] = depth * Z0_HALF_RANGE;
         let basis = Angles { tau1, tau2, gamma }.apply(view).basis();
-        [z0_edit(z0), basis_edit(basis)]
+        let edit = if picks {
+            frame_edit(view.frame(), Some(basis))
+        } else {
+            basis_edit(basis)
+        };
+        [z0_edit(z0), edit]
     }
 }
 
@@ -140,7 +163,7 @@ pub const LOCK_AT: (f32, f32) = (0.35, 0.6);
 
 /// The steps by name: the closed list (RQ-253), with the keyboard's keys (TASK-M6-25), the Manifold view's
 /// (TASK-M6-26), the hover, Alt+1 and Space (TASK-M6-27), and R-451 B8's compass cases (TASK-M6-33).
-pub const STEPS: [(&str, Step); 24] = [
+pub const STEPS: [(&str, Step); 26] = [
     ("f3", Step::F3),
     ("raise_warning", Step::RaiseWarning),
     ("raise_error", Step::RaiseError),
@@ -168,6 +191,11 @@ pub const STEPS: [(&str, Step); 24] = [
         Step::Compass(CompassCase::TiltRect),
     ),
     ("compass_case_tilt_hex", Step::Compass(CompassCase::TiltHex)),
+    (
+        "compass_case_third_axis",
+        Step::Compass(CompassCase::ThirdAxis),
+    ),
+    ("compass_case_badge", Step::Compass(CompassCase::Badge)),
 ];
 
 impl Step {

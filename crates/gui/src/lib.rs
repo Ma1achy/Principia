@@ -44,6 +44,8 @@ mod tests {
     mod mock_compass_views;
     mod mock_console_keys;
     mod mock_content;
+    mod mock_cube_axis_buttons;
+    mod mock_cube_third_axis;
     mod mock_debug_view;
     mod mock_drawn;
     mod mock_engine;

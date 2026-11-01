@@ -354,6 +354,7 @@ fn mock_compass_modes_open_in_tilt_and_switch_by_buttons_and_sliders() {
             decoder: Default::default(),
             hover: None,
             drag: None,
+            slider: None,
             shown: None,
             moving: false,
             at_element: false,

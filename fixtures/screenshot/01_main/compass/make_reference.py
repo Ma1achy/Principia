@@ -54,6 +54,9 @@ DECODER = {
     "mock_compass_cube_tilt_0": (0.0, 0.0, 0.0),
     "mock_compass_cube_tilt_rect": (30.0, 0.0, 0.0),
     "mock_compass_cube_tilt_hex": (45.0, 45.0, 0.0),
+    # R-459's cases: the gesture's plane, the other angle at 0, in the frame (e_a, e_b, e_T): the same construction.
+    "mock_compass_cube_third_axis": (0.0, 15.0, 0.0),
+    "mock_compass_cube_badge": (20.0, 0.0, 0.0),
 }
 
 STYLE = """<style id="principia-golden">

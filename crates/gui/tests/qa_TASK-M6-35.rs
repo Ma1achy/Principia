@@ -876,11 +876,23 @@ fn qa_mock_compass_steer_physical_a_click_is_one_setfield_undone_by_one_ctrl_z()
         for (a, b) in [(0, 1), (2, 5), (4, 7)] {
             let mut r = rig(&p, view);
             let before = r.plane();
+            let frame_before = r.app.snapshot().sim.slice.frame;
             let depth = r.app.snapshot().history.undo_depth;
             let from = r.app.console().len();
             r.click(r.cell(a, b));
             assert_eq!(r.edits(from).len(), 1, "{:?}", r.edits(from));
-            assert!(r.edits(from)[0].starts_with("SetField Plane.q1 Plane.q2"));
+            // One SetField carrying the basis: on the basis alone, or, where the plane took the slice normal or a target,
+            // on the slice frame too, in the same edit (REQ-GUI-208, R-459 G4).
+            let want_edit = if r.app.snapshot().sim.slice.frame == frame_before {
+                "SetField Plane.q1 Plane.q2"
+            } else {
+                "SetField Slice.frame Plane.q1 Plane.q2"
+            };
+            assert!(
+                r.edits(from)[0].starts_with(want_edit),
+                "{:?}",
+                r.edits(from)
+            );
             assert_eq!(r.app.snapshot().history.undo_depth, depth + 1);
             let after = r.plane();
             assert_eq!(after.z0, before.z0, "z₀ kept");
@@ -904,6 +916,11 @@ fn qa_mock_compass_steer_physical_a_click_is_one_setfield_undone_by_one_ctrl_z()
             }
             r.undo();
             assert_eq!(r.plane(), before, "one Ctrl+Z restores it");
+            assert_eq!(
+                r.app.snapshot().sim.slice.frame,
+                frame_before,
+                "the frame too"
+            );
             assert_eq!(r.app.snapshot().history.undo_depth, depth);
             // Control: the steer did move the plane, so the restore can fail.
             rejects("a steer that moved nothing", || assert_eq!(after, before));

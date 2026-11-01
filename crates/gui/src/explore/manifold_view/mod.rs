@@ -232,7 +232,7 @@ pub fn join_targets(tree: &mut ScopeTree, view: &View) {
 
 /// The rows the Manifold view, the figure and the compass add to the `?` overlay (render_gui_spec §G3's "In scope",
 /// read with R-409: the arrows need Enter; the letter shortcuts act in either mode).
-pub const SHORTCUTS: [(&str, &str); 9] = [
+pub const SHORTCUTS: [(&str, &str); 11] = [
     (
         "Enter on a value",
         "interact: the arrows adjust it; Enter or Esc, back to navigating",
@@ -256,6 +256,14 @@ pub const SHORTCUTS: [(&str, &str); 9] = [
     (
         "Compass: Plücker, after Enter",
         "arrows move the cell cursor, Shift to the end; Space steers to it",
+    ),
+    (
+        "Compass: H / V / D",
+        "Enter opens it: ↑ ↓ choose, Enter picks, Esc closes it unchanged",
+    ),
+    (
+        "Compass: 4D: see Plücker",
+        "Enter switches to the Plücker view",
     ),
 ];
 
@@ -314,6 +322,60 @@ pub fn axis_pair(q1: &Latent, q2: &Latent) -> Option<(usize, usize)> {
     (a < b).then_some((a, b))
 }
 
+/// What of a basis may differ from its reading and still be that reading: the squared difference, as a share of the
+/// basis's squared length, the floating point's noise as the preset cut's. Within this, a mirrored basis's axes the
+/// other way round count as reading it back (R-459 G3); that is not the only case in which they are swapped.
+const READS_BACK: f64 = 1e-18;
+
+/// The axes of a basis tilted within `frame`'s targets on axes no preset names, as H and V can pick them: the two axes
+/// the basis has anything on off the targets, `i < j`. How large a component is says nothing here: at `τ = ±90°` the
+/// kept axis's is `cos 90° ≈ 6e-17`, and it is what still names the axis, [`View::basis`] leaving every other component
+/// exactly 0. `None` where the basis has any other number of axes off the targets, or no plane on the two.
+///
+/// A positive determinant (`σ² cos τ₁ cos τ₂` whatever `γ`) is `(i, j)`. A negative one may be `(j, i)`. That is a pair
+/// picked the other way round, kept to the ends of its range (R-459 G3), only where that order reads the basis back: a
+/// typed component's sign says nothing of H and V. A mirrored basis neither order reads back is outside the map's image,
+/// so some reading of it loses something: `(j, i)` only if it keeps more of the tilt, the components on the targets, and
+/// else `(i, j)`. Only that last case reads alike on both sides of a component passing through 0. Where the swap is
+/// taken, axes, angles and scale jump there: the swap keeps the tilt on the target it can hold, as with `X = z_q3`,
+/// `Y = z_μ1`, `q₁ = ε e_α + 0.8 e_μ1`, `q₂ = e_β`, which below 0 reads `(z_β, z_α)`, `σ = 1`, and from 0 up
+/// `(z_α, z_β)`, `σ = ε`. `read` is [`View::framed`]'s reading on an order.
+fn tilted_axes(
+    q1: &Latent,
+    q2: &Latent,
+    frame: &SliceFrame,
+    read: impl Fn(usize, usize) -> View,
+) -> Option<(usize, usize)> {
+    let on_target =
+        |i: usize| i64::from(frame.tilt_x) == i as i64 || i64::from(frame.tilt_y) == i as i64;
+    let mut on = (0..LATENT_DIM).filter(|&i| !on_target(i) && (q1[i] != 0.0 || q2[i] != 0.0));
+    let (i, j) = (on.next()?, on.next()?);
+    if on.next().is_some() {
+        return None;
+    }
+    let turn = q1[i] * q2[j] - q1[j] * q2[i];
+    if turn > 0.0 {
+        return Some((i, j));
+    }
+    if turn == 0.0 {
+        return None;
+    }
+    let lost = |(a, b): (usize, usize), counted: &dyn Fn(usize) -> bool| -> f64 {
+        let (p1, p2) = read(a, b).basis();
+        (0..LATENT_DIM)
+            .filter(|&k| counted(k))
+            .map(|k| (p1[k] - q1[k]).powi(2) + (p2[k] - q2[k]).powi(2))
+            .sum()
+    };
+    let reads_back = lost((j, i), &|_| true) <= READS_BACK * (dot(q1, q1) + dot(q2, q2));
+    let keeps_more = lost((j, i), &on_target) < lost((i, j), &on_target);
+    Some(if reads_back || keeps_more {
+        (j, i)
+    } else {
+        (i, j)
+    })
+}
+
 /// The chart, as the panel reads it in a preset's frame and the slice frame's hidden dimensions.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct View {
@@ -358,6 +420,12 @@ impl View {
     /// reads as before. On the axes `(a, b)` each of the frame's three is read as the frame holds it, or as the slice
     /// axis where it is one of `a`, `b`, which no frame holds for its own plane (R-459 G4), or no latent dimension; a
     /// preset is found only where the frame holds none of its axes.
+    ///
+    /// The exact readings come first. [`View::basis`] leaves every component off its axes and targets exactly 0, and a
+    /// kept axis at `τ = ±90°` is itself only `cos 90° ≈ 6e-17`, so a basis on two axes and its targets exactly is read
+    /// on them, however small a component, before any preset is allowed its rounding: otherwise a pair picked with H or
+    /// V loses that axis at the tilt's ends (R-459 G3). Only a basis no exact reading holds is a preset's with stray
+    /// components at the floating point's noise, and failing that its dominant axes' frame.
     pub fn framed(plane: &Plane, frame: Option<&SliceFrame>) -> Self {
         let (q1, q2) = (&plane.q1, &plane.q2);
         let total = dot(q1, q1) + dot(q2, q2);
@@ -374,12 +442,11 @@ impl View {
                 on(frame.map(|f| f.tilt_y)),
             ]
         };
-        let outside = |a: usize, b: usize| -> f64 {
+        let holds = |a: usize, b: usize| -> bool {
             let [_, x, y] = hidden(a, b);
             (0..LATENT_DIM)
                 .filter(|i| ![a, b, x, y].contains(i))
-                .map(|i| q1[i] * q1[i] + q2[i] * q2[i])
-                .sum()
+                .all(|i| q1[i] == 0.0 && q2[i] == 0.0)
         };
         if let Some((a, b)) = axis_pair(q1, q2) {
             let preset = PRESETS.iter().position(|&p| p == (a, b));
@@ -395,17 +462,38 @@ impl View {
                     .all(|i| usize::try_from(i).is_ok_and(|i| i != a && i != b))
             })
         };
-        let found = PRESETS.iter().position(|&(a, b)| {
-            fits(a, b) && outside(a, b) <= 1e-18 * total.max(f64::MIN_POSITIVE)
-        });
-        let (a, b) = match found {
-            Some(p) => PRESETS[p],
-            None => {
-                let a = dominant(q1);
-                let mut q2_rest = *q2;
-                q2_rest[a] = 0.0;
-                (a, dominant(&q2_rest))
-            }
+        // A preset's pair the other way round, `q₁` on its `e_b` and `q₂` on its `e_a`, is no turn of the preset, whose
+        // determinant on its axes is `σ² cos τ₁ cos τ₂ ≥ 0`: it is the axes H and V picked so (R-459 G3).
+        let turn = |a: usize, b: usize| q1[a] * q2[b] - q1[b] * q2[a];
+        let exactly = |a: usize, b: usize| turn(a, b) >= 0.0 && holds(a, b);
+        let within_noise = |a: usize, b: usize| {
+            let off: f64 = {
+                let [_, x, y] = hidden(a, b);
+                (0..LATENT_DIM)
+                    .filter(|i| ![a, b, x, y].contains(i))
+                    .map(|i| q1[i] * q1[i] + q2[i] * q2[i])
+                    .sum()
+            };
+            turn(a, b) >= -1e-12 * total && off <= 1e-18 * total.max(f64::MIN_POSITIVE)
+        };
+        let preset_where = |test: &dyn Fn(usize, usize) -> bool| {
+            PRESETS.iter().position(|&(a, b)| fits(a, b) && test(a, b))
+        };
+        let (found, (a, b)) = if let Some(p) = preset_where(&exactly) {
+            (Some(p), PRESETS[p])
+        } else if let Some(pair) = frame.and_then(|f| {
+            tilted_axes(q1, q2, f, |a, b| {
+                Self::in_frame(None, a, b, hidden(a, b), q1, q2)
+            })
+        }) {
+            (None, pair)
+        } else if let Some(p) = preset_where(&within_noise) {
+            (Some(p), PRESETS[p])
+        } else {
+            let a = dominant(q1);
+            let mut q2_rest = *q2;
+            q2_rest[a] = 0.0;
+            (None, (a, dominant(&q2_rest)))
         };
         Self::in_frame(found, a, b, hidden(a, b), q1, q2)
     }
@@ -609,6 +697,25 @@ pub fn target_edit(view: &View, which: Target, to: usize) -> Option<SetField> {
     Some(frame_edit(picked.frame(), basis))
 }
 
+/// The pick of `to` as the slice normal on `view` (R-459 G3): one `SetField` on the slice frame, a target equal to the old
+/// normal following it (R-457 E4), carrying the basis re-tilted where a target that followed has a non-zero angle. `None`
+/// for the normal it already is, or a dimension in the plane.
+pub fn normal_edit(view: &View, to: usize) -> Option<SetField> {
+    if to == view.d || !target_choices(view.a, view.b).contains(&to) {
+        return None;
+    }
+    let follow = |t: usize| if t == view.d { to } else { t };
+    let picked = View {
+        d: to,
+        x: follow(view.x),
+        y: follow(view.y),
+        ..*view
+    };
+    let retilts =
+        (picked.x != view.x && view.tau1 != 0.0) || (picked.y != view.y && view.tau2 != 0.0);
+    Some(frame_edit(picked.frame(), retilts.then(|| picked.basis())))
+}
+
 /// The slice frame `frame` once the plane's axes are `(a, b)` (R-459 G4, R-457 E4): a normal the plane takes moves by
 /// the slice-axis rule ([`slice_axis`]); a target equal to the old normal follows it, and one the plane takes resets to
 /// the normal, moved first; the rest keep their own.
@@ -786,6 +893,9 @@ impl Out {
 /// Enter on control `id`, as its click: the panel's, a target dropdown's entry picking that target among them, and the
 /// compass's Tilt and Slice.
 pub fn activate(id: &str, snapshot: &Snapshot, scratch: &mut Scratch, out: &mut Out) {
+    if compass::pick(id, &snapshot.sim, scratch, out) {
+        return;
+    }
     let view = View::read(&snapshot.sim);
     for (which, entries) in [(Target::X, TILT_X_ENTRIES), (Target::Y, TILT_Y_ENTRIES)] {
         if let Some(to) = entries.iter().position(|e| *e == id) {

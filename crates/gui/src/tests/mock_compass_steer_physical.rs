@@ -8,7 +8,7 @@ use eframe::egui::{
     pos2, vec2, Event, FullOutput, Key, Modifiers, MouseWheelUnit, Rect, Shape, TouchPhase,
 };
 use engine::contract::set_field::{Edit, SimField};
-use engine::contract::sim_config::{Latent, Links, Lock, Plane, SimConfig, LATENT_DIM};
+use engine::contract::sim_config::{Latent, Links, Lock, Plane, SimConfig, SliceFrame, LATENT_DIM};
 
 use super::compass_physical_views::{leaked, linear_a, missing};
 use super::compass_support::{app_at, compass_rect, plane, setfields, square, view};
@@ -16,12 +16,12 @@ use super::support::{click_scope, press, rejects};
 use crate::app::App;
 use crate::capture::{PIXELS_PER_POINT, SIZE};
 use crate::explore::compass::physical::{
-    self, latent_jacobian, pushforward, refusal_line, smaller_singular, steer, Decoder, Inverse,
-    Matrix, Refusal, Set, CUT, TOLERANCE,
+    self, latent_jacobian, pushforward, refusal_line, smaller_singular, steer, steer_on, Decoder,
+    Inverse, Matrix, Refusal, Set, CUT, TOLERANCE,
 };
 use crate::explore::compass::views::{orthonormal, upper, CompassView, GridPlace};
 use crate::explore::compass::{COLUMN_BAR, MARGIN, SLICE_BUTTON, TILT_BUTTON, TITLE};
-use crate::explore::manifold_view::{dot, lock_edit, norm, point, View};
+use crate::explore::manifold_view::{dot, frame_edit, lock_edit, norm, point, View};
 use crate::explore::{COMPASS, COMPASS_JACOBI, COMPASS_SHAPE, COMPASS_TILT};
 use crate::headless::Headless;
 use crate::layout::{Layout, Splitter, MIN_BOTTOM_H, MIN_COMPASS_W};
@@ -93,20 +93,29 @@ fn mock_compass_steer_physical_every_cell_on_the_fixture_lights() {
     let p = start();
     let (mut app, mut h) = app_with(&p, d, COMPASS_JACOBI);
     let before = app.snapshot().sim.plane.clone();
+    let start_frame = app.snapshot().sim.slice.frame;
     for (i, j) in upper() {
         let (rows, depth) = (app.console().len(), app.snapshot().history.undo_depth);
         click_cell(&mut h, &mut app, i, j);
         let after = app.snapshot().sim.plane.clone();
-        assert_eq!(
-            setfields(&app, rows),
-            ["basis"],
-            "one SetField on the basis"
-        );
+        // One SetField carrying the basis: on the slice frame too where the plane takes it (R-459 G4).
+        let frame = app.snapshot().sim.slice.frame;
+        let kind = if frame == start_frame {
+            "basis"
+        } else {
+            "other"
+        };
+        assert_eq!(setfields(&app, rows), [kind], "one SetField on the basis");
         assert_eq!(app.snapshot().history.undo_depth, depth + 1);
         assert!(
-            app.console()[rows..]
-                .iter()
-                .any(|e| e.message.starts_with("SetField Plane.q1 Plane.q2 ")),
+            app.console()[rows..].iter().any(|e| {
+                let prefix = if frame == start_frame {
+                    "SetField Plane.q1 Plane.q2 "
+                } else {
+                    "SetField Slice.frame Plane.q1 Plane.q2 "
+                };
+                e.message.starts_with(prefix)
+            }),
             "the steer logged in the console"
         );
         check_lit(&d, Set::Jacobi, &after, (i, j), 1e-9);
@@ -118,6 +127,7 @@ fn mock_compass_steer_physical_every_cell_on_the_fixture_lights() {
         );
         ctrl_z(&mut h, &mut app);
         assert_eq!(app.snapshot().sim.plane, before, "undone by one Ctrl+Z");
+        assert_eq!(app.snapshot().sim.slice.frame, start_frame, "the frame too");
         assert_eq!(app.snapshot().history.undo_depth, depth);
     }
 }
@@ -704,7 +714,7 @@ fn mock_compass_steer_physical_from_the_keyboard() {
     assert_eq!(out.edits.len(), 1, "one SetField");
     assert_eq!(
         Ok(out.edits[0].clone()),
-        steer(&d, Set::Jacobi, &sim, 1, 2).expect("a cell")
+        steer_on(&d, Set::Jacobi, &sim, 1, 2).expect("a cell")
     );
     // No cursor, or the Cube view: nothing more.
     scratch.compass.cursor = None;
@@ -754,5 +764,144 @@ fn mock_compass_steer_physical_from_the_keyboard() {
     let moved = app2.manifold.compass.cursor;
     rejects("a cursor that does not move", || {
         assert_eq!(moved, Some((0, 1)))
+    });
+}
+
+/// The identity decoder: a cell's preimage is its two axes, so a steer's plane reads on them.
+fn identity() -> Decoder {
+    Decoder::Linear {
+        a: leaked(std::array::from_fn(|r| {
+            std::array::from_fn(|c| f64::from(r == c))
+        })),
+        shell: false,
+    }
+}
+
+const fn slice_frame(normal: u32, tilt_x: u32, tilt_y: u32) -> SliceFrame {
+    SliceFrame {
+        normal,
+        tilt_x,
+        tilt_y,
+    }
+}
+
+/// The app in the grid view `id` at `start()`, on the identity decoder, with the slice frame `frame`.
+fn framed_app(id: &'static str, frame: SliceFrame) -> (App<MockSide>, Headless) {
+    let (mut app, mut h) = app_with(&start(), identity(), id);
+    app.set_field(frame_edit(frame, None));
+    let _ = h.frame(&mut app, Vec::new());
+    (app, h)
+}
+
+/// Space on cell `(i, j)` through the app, in the compass's interaction mode.
+fn space_cell(h: &mut Headless, app: &mut App<MockSide>, i: usize, j: usize) {
+    app.view.focus.path = vec![COMPASS.to_owned(), crate::explore::COMPASS_VIEW.to_owned()];
+    app.view.focus.mode = engine::contract::view_ui::KeyMode::Interaction;
+    let _ = h.frame(app, Vec::new());
+    app.manifold.compass.cursor = Some((i, j));
+    press(h, app, Key::Space, Modifiers::NONE);
+    let _ = h.frame(app, Vec::new());
+}
+
+/// REQ-GUI-208 (R-459 G4): a physical steer whose plane takes the slice normal or a target moves it by the slice-axis
+/// rule in the same entry, by a click and by Space, in both views; one that takes neither keeps the frame.
+#[test]
+fn mock_compass_steer_physical_moves_the_frame_by_the_slice_axis_rule() {
+    let (alpha, q0, q1, q3, mu0, mu1) = (0, 2, 3, 5, 6, 7);
+    let cases = [
+        // Takes D: the normal moves to the first axis off the plane, a target on it follows.
+        (
+            (2, 5),
+            slice_frame(q3, q3, q3),
+            slice_frame(alpha, alpha, alpha),
+        ),
+        // Takes D and a target of its own: X keeps its own, Y resets to the moved normal.
+        (
+            (2, 5),
+            slice_frame(q3, mu0, q0),
+            slice_frame(alpha, mu0, alpha),
+        ),
+        // Takes a target alone: the normal stays, and the target resets to it.
+        ((2, 3), slice_frame(q3, q0, mu1), slice_frame(q3, q3, mu1)),
+        ((2, 3), slice_frame(q3, mu1, q1), slice_frame(q3, mu1, q3)),
+        // Takes neither: the frame stays, and the edit is on the basis alone.
+        ((2, 3), slice_frame(q3, q3, q3), slice_frame(q3, q3, q3)),
+        ((0, 1), slice_frame(q3, mu0, mu1), slice_frame(q3, mu0, mu1)),
+    ];
+    for id in [COMPASS_JACOBI, COMPASS_SHAPE] {
+        for by_space in [false, true] {
+            for ((i, j), frame, want) in cases {
+                let (mut app, mut h) = framed_app(id, frame);
+                let before = app.snapshot().sim.plane.clone();
+                let (rows, depth) = (app.console().len(), app.snapshot().history.undo_depth);
+                if by_space {
+                    space_cell(&mut h, &mut app, i, j);
+                } else {
+                    click_cell(&mut h, &mut app, i, j);
+                }
+                let at = format!("({i}, {j}), {frame:?}, Space {by_space}");
+                let snapshot = app.snapshot();
+                assert_eq!(snapshot.sim.slice.frame, want, "{at}");
+                let kind = if want == frame { "basis" } else { "other" };
+                assert_eq!(setfields(&app, rows), [kind], "one SetField: {at}");
+                assert_eq!(snapshot.history.undo_depth, depth + 1, "one entry: {at}");
+                let after = &snapshot.sim.plane;
+                assert_eq!(after.z0, before.z0, "{at}");
+                let cut = |q: &Latent, k: usize| q[k].abs() > 0.5 * norm(q);
+                assert!(cut(&after.q1, i) && cut(&after.q2, j), "the plane: {at}");
+                ctrl_z(&mut h, &mut app);
+                let snapshot = app.snapshot();
+                assert_eq!(snapshot.sim.plane, before, "one Ctrl+Z: {at}");
+                assert_eq!(snapshot.sim.slice.frame, frame, "one Ctrl+Z: {at}");
+                assert_eq!(snapshot.history.undo_depth, depth, "{at}");
+            }
+        }
+    }
+    // Control: the steer's edit on the basis alone leaves z_q3 in the plane.
+    let (mut app, mut h) = framed_app(COMPASS_JACOBI, slice_frame(q3, q3, q3));
+    let sim = app.snapshot().sim.clone();
+    app.set_field(
+        steer(&identity(), Set::Jacobi, &sim, 2, 5)
+            .expect("a cell")
+            .expect("accepted"),
+    );
+    let _ = h.frame(&mut app, Vec::new());
+    let left = app.snapshot().sim.slice.frame;
+    rejects("a basis-only steer, D left in the plane", || {
+        assert_eq!(left, slice_frame(alpha, alpha, alpha))
+    });
+}
+
+/// The refusals and empty cells are as they were: a refused steer leaves the frame and logs, whatever the plane would
+/// have taken, and `steer_on` answers as `steer` does.
+#[test]
+fn mock_compass_steer_physical_a_refused_steer_keeps_the_frame() {
+    let d = shell_fixture(5);
+    let frame = slice_frame(5, 5, 5);
+    let (mut app, mut h) = app_with(&start(), d, COMPASS_JACOBI);
+    app.set_field(frame_edit(frame, None));
+    let _ = h.frame(&mut app, Vec::new());
+    let before = app.snapshot().sim.plane.clone();
+    let (rows, depth) = (app.console().len(), app.snapshot().history.undo_depth);
+    click_cell(&mut h, &mut app, 2, 5);
+    let line = refusal_line(Set::Jacobi, 2, 5, Refusal::EnergyShell);
+    assert!(app.console()[rows..].iter().any(|e| e.message == line));
+    assert!(setfields(&app, rows).is_empty(), "no SetField");
+    assert_eq!(app.snapshot().sim.slice.frame, frame);
+    assert_eq!(app.snapshot().sim.plane, before);
+    assert_eq!(app.snapshot().history.undo_depth, depth);
+    let sim = app.snapshot().sim.clone();
+    assert_eq!(
+        steer_on(&d, Set::Jacobi, &sim, 2, 5),
+        Some(Err(Refusal::EnergyShell))
+    );
+    for (i, j) in [(0, 0), (5, 2), (7, 7), (0, LATENT_DIM)] {
+        assert_eq!(steer_on(&d, Set::Jacobi, &sim, i, j), None, "({i}, {j})");
+    }
+    assert!(steer_on(&identity(), Set::Jacobi, &sim, 6, 7).is_some());
+    // Control: an accepted steer is no refusal.
+    let accepted = steer_on(&identity(), Set::Jacobi, &sim, 2, 5);
+    rejects("a steer accepted on a refused case", || {
+        assert_eq!(accepted, Some(Err(Refusal::EnergyShell)))
     });
 }

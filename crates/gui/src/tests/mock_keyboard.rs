@@ -1614,7 +1614,9 @@ fn mock_keyboard_capture_steps() {
             "compass_case_slice",
             "compass_case_tilt_0",
             "compass_case_tilt_rect",
-            "compass_case_tilt_hex"
+            "compass_case_tilt_hex",
+            "compass_case_third_axis",
+            "compass_case_badge"
         ]
     );
     let err = Step::parse("zoom").expect_err("an unknown step");
@@ -1886,7 +1888,10 @@ fn mock_keyboard_manifold_view_scopes() {
             crate::explore::COMPASS_CUBE,
             crate::explore::COMPASS_PLUCKER,
             crate::explore::COMPASS_JACOBI,
-            crate::explore::COMPASS_SHAPE
+            crate::explore::COMPASS_SHAPE,
+            crate::explore::COMPASS_H,
+            crate::explore::COMPASS_V,
+            crate::explore::COMPASS_D
         ]
     );
     assert_eq!(

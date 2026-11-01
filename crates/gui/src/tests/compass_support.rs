@@ -8,8 +8,8 @@ use engine::contract::sim_config::{Latent, Plane};
 use super::support::{headless, mock_app, shapes};
 use crate::app::App;
 use crate::explore::compass::{
-    self, edge_colour, label_colour, plane_colour, Drawing, Item, Label, CORNERS, EDGES,
-    GRID_WIDTH, LABEL_SIZE, NUMBER_SIZE, OUTLINE_WIDTH, P3,
+    self, edge_colour, plane_colour, Drawing, Item, Label, CORNERS, EDGES, GRID_WIDTH, LABEL_SIZE,
+    NUMBER_SIZE, OUTLINE_WIDTH, P3,
 };
 use crate::explore::manifold_view::{basis_edit, z0_edit, View, PRESETS, SLICE_AXIS};
 use crate::headless::Headless;
@@ -336,9 +336,10 @@ pub fn check_painted(shapes: &[Shape], drawing: &Drawing) {
         (&drawing.labels, LABEL_SIZE),
         (&drawing.numbers, NUMBER_SIZE),
     ] {
-        for Label { text, at, accent } in labels {
+        for label in labels {
+            let Label { text, at, .. } = label;
             let colour = if size == LABEL_SIZE {
-                label_colour(&visuals, *accent)
+                compass::drawn_label_colour(&visuals, drawing, label)
             } else {
                 visuals.weak_text_color()
             };
