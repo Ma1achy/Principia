@@ -104,6 +104,8 @@ pub struct MockEngine {
     /// The view the decoder-bug warning was last logged for.
     warned: Option<WarnedView>,
     integrated: Integrated,
+    /// Fit's scale, `None` outside Fit (R-468 E3): the fake quads split at it.
+    fit: Option<f64>,
 }
 
 /// A view as the decoder-bug warning tells views apart (R-467 D7): `z₀` and the basis, the chart's window, and the
@@ -126,8 +128,8 @@ struct Integrated {
     quads: Vec<quads::Quad>,
     /// The quads' bits, to look one up.
     held: std::collections::HashSet<[u64; 4]>,
-    /// The last span shown: shown again under the same sim key, it integrates nothing.
-    span: Option<[f64; 4]>,
+    /// The last span shown and the quads' scale then: shown again under the same sim key, they integrate nothing.
+    span: Option<([f64; 4], f64)>,
 }
 
 impl MockEngine {
@@ -154,6 +156,7 @@ impl MockEngine {
             flagged: invalid::Flagged::default(),
             warned: None,
             integrated: Integrated::default(),
+            fit: None,
         }
     }
 
@@ -202,20 +205,40 @@ impl MockEngine {
         }
     }
 
-    /// The figure shows `span` of the field, `[s₀, t₀, s₁, t₁]`: the fake quads over it ([`quads::quads_over`]) not
-    /// yet integrated under the sim key as it stands are integrated, after those kept; an edit of the sim key since the
-    /// last span discards every quad first (R-406; R-462 J4).
+    /// The figure is in Fit at scale `k`, or `None` outside Fit (R-468 E3).
+    pub fn set_fit(&mut self, k: Option<f64>) {
+        self.fit = k;
+    }
+
+    /// The fake quads' screen scale: Fit's, 1 outside it.
+    fn quad_scale(&self) -> f64 {
+        self.fit.unwrap_or(1.0)
+    }
+
+    /// The span of the field the marks are over with the field at `placement` in the viewport: in Fit the view's square
+    /// alone, nothing being drawn past it (R-468 E2); otherwise the viewport's.
+    pub fn figure_span(&self, placement: crate::layout::Placement) -> [f64; 4] {
+        match self.fit {
+            Some(_) => quads::UNIT,
+            None => placement.span(),
+        }
+    }
+
+    /// The figure shows `span` of the field, `[s₀, t₀, s₁, t₁]`: the fake quads over it ([`quads::quads_at`], at the
+    /// scale Fit gives) not yet integrated under the sim key as it stands are integrated, after those kept; an edit of
+    /// the sim key since the last span discards every quad first (R-406; R-462 J4; R-468 E3).
     pub fn show_span(&mut self, span: [f64; 4]) {
+        let k = self.quad_scale();
         if self.integrated.sim.as_ref() != Some(&self.sim) {
             self.integrated = Integrated {
                 sim: Some(self.sim.clone()),
                 ..Integrated::default()
             };
-        } else if self.integrated.span == Some(span) {
+        } else if self.integrated.span == Some((span, k)) {
             return;
         }
-        self.integrated.span = Some(span);
-        for quad in quads::quads_over(&self.sim.plane, span) {
+        self.integrated.span = Some((span, k));
+        for quad in quads::quads_at(&self.sim.plane, span, k) {
             if self.integrated.held.insert(quad.map(f64::to_bits)) {
                 self.integrated.quads.push(quad);
             }
@@ -250,7 +273,7 @@ impl MockEngine {
         let mut lines = Vec::new();
         if self.render.overlays.tile_bounds {
             lines.extend(
-                quads::bounds_over(plane, span)
+                quads::bounds_at(plane, span, self.quad_scale())
                     .into_iter()
                     .map(|([a, b], outside)| Line {
                         ends: [a.map(|v| v as f32), b.map(|v| v as f32)],

@@ -369,9 +369,20 @@ pub(crate) fn render(
     primitives: &[egui::ClippedPrimitive],
     clear: egui::Color32,
 ) -> Vec<u8> {
+    render_at(canvas, textures, primitives, clear, SIZE)
+}
+
+/// [`render`] at `size`, in pixels.
+pub(crate) fn render_at(
+    canvas: &dyn Canvas,
+    textures: &egui::TexturesDelta,
+    primitives: &[egui::ClippedPrimitive],
+    clear: egui::Color32,
+    size: [u32; 2],
+) -> Vec<u8> {
     let context = canvas.context();
     let (device, queue) = (&context.device, &context.queue);
-    let [w, h] = SIZE;
+    let [w, h] = size;
     let mut renderer = egui_wgpu::Renderer::new(device, FORMAT, Default::default());
     for (id, deltas) in &textures.set {
         for delta in deltas {
@@ -379,7 +390,7 @@ pub(crate) fn render(
         }
     }
     let screen = egui_wgpu::ScreenDescriptor {
-        size_in_pixels: SIZE,
+        size_in_pixels: size,
         pixels_per_point: PIXELS_PER_POINT,
     };
     let extent = wgpu::Extent3d {

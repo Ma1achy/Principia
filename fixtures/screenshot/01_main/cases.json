@@ -113,9 +113,14 @@
     },
     {
       "name": "mock_debug_view",
-      "surface": { "kind": "gui", "screen": "01_main", "steps": ["tab", "enter", "arrow_right", "enter", "arrow_down", "enter"] },
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["tab", "enter", "arrow_right", "enter", "arrow_down", "arrow_down", "enter"] },
       "artboard": "docs/gui/design/01_main.png",
       "mock_invalid": "-0.5,-0.5,0.25,1.5"
+    },
+    {
+      "name": "mock_f3_fit",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["tab", "enter", "arrow_right", "enter", "arrow_down", "enter", "arrow_right", "enter", "f3"] },
+      "artboard": "docs/gui/design/01_main.png"
     },
     {
       "name": "mock_compass_plucker",

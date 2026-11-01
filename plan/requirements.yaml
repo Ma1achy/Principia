@@ -21440,6 +21440,8 @@
   - R-406
   - R-468
   milestone: M6
+  rq:
+  - RQ-666
   note: "R-468 (20 Oct 2026), E1 to E6. Closed by TASK-M6-47. The real engine's Fit is REQ-GUI-230. Gui review 5585209592 of PR #253 (applied per R-369): G6, frac = quad width / (shown figure width × k), k = 1 outside Fit, so only Fit refines; G7, keyboard reach. R-472 (20 Oct 2026): X2's \"remembered\" is read as R-468 E4's \"for the session\" (flagged); present mode following the mode is now the human's words (X2c); the sidecar's f3_fill is REQ-TOOL-168."
 - id: REQ-GUI-230
   area: GUI

@@ -42,6 +42,12 @@ pub trait EngineSide {
     /// pixels it is clipped to and the canvas background (R-406; R-467 D2). Nothing by default: the real engine's
     /// frame loop is TASK-M8-05's.
     fn figure_view(&mut self, _view: FigureView) {}
+
+    /// Fit's scale this frame, `None` outside Fit (R-468 E2, E3), told before [`EngineSide::show_span`]: the figure's
+    /// screen scale, which asks for finer quads. No `SetField`. Nothing by default: the real engine's Fit is
+    /// REQ-GUI-230's.
+    fn fit(&mut self, _k: Option<f64>) {}
+
     /// The span of the field the figure shows this frame, `[s₀, t₀, s₁, t₁]` of the field's `[0, 1]²`, `t` Y-up: the
     /// engine side computes only what of it it does not already hold, keeping what it has, so a canvas resized by a
     /// splitter or by F3 is re-framed, never re-integrated (R-406; R-462 J4). It is no `SetField`: the contract has no
@@ -91,14 +97,27 @@ impl FigureView {
     /// The figure of `layout` at `pixels_per_point`, the egui layer `shown` or hidden, over `background`: the viewport
     /// the window, clipped to the figure's rect as it stands (`Layout::figure_rect`).
     pub fn of(layout: &Layout, shown: bool, pixels_per_point: f32, background: [u8; 3]) -> Self {
+        let extend = engine::contract::view_ui::F3Fill::Extend;
+        let drawn = layout.drawn(shown, extend, pixels_per_point);
+        Self::of_drawn(layout, &drawn, pixels_per_point, background)
+    }
+
+    /// The figure of `layout` as `drawn` at `pixels_per_point`, over `background`: the viewport the window, clipped to
+    /// `drawn`'s rect.
+    pub fn of_drawn(
+        layout: &Layout,
+        drawn: &crate::layout::Drawn,
+        pixels_per_point: f32,
+        background: [u8; 3],
+    ) -> Self {
         let px = |v: f32| (v * pixels_per_point).round().max(0.0) as u32;
         let window = layout.window;
         let [w, h] = [px(window.width()), px(window.height())];
-        let clip = layout.figure_rect(shown);
+        let clip = drawn.clip;
         let at = |v: f32, min: f32, max: u32| px(v - min).min(max);
         Self {
             size: [w, h],
-            placement: layout.placement(),
+            placement: drawn.placement,
             clip: [
                 at(clip.min.x, window.min.x, w),
                 at(clip.min.y, window.min.y, h),
@@ -222,8 +241,14 @@ impl EngineSide for MockSide {
         let canvas = self.canvas.clone()?;
         canvas.set_chart(self.engine.plane());
         canvas.set_debug_view(self.engine.debug_view());
-        canvas.set_placement(placement, self.engine.marks_over(placement.span()));
+        let span = self.engine.figure_span(placement);
+        canvas.set_placement(placement, self.engine.marks_over(span));
         Some(Arc::new(crate::mock::canvas::FigureCanvas(canvas)) as Arc<dyn Canvas>)
+    }
+
+    /// The mock told Fit's scale, at which its fake quads split (R-468 E3).
+    fn fit(&mut self, k: Option<f64>) {
+        self.engine.set_fit(k);
     }
 
     /// The canvas told the background and the debug view, and the mock told the figure's pixels and the region its

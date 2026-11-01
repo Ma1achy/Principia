@@ -6,10 +6,13 @@
 //! the figure's rect is the whole window. The field keeps the place the default layout gives it, whatever the
 //! splitters and the layer (R-406; R-462 J4): the canvas is given that placement, [`Placement`], so it draws each point
 //! of the field where the default layout puts it, more of the field around it where the canvas is larger, less where
-//! it is smaller, never at another scale. The figure's axis labels take a strip along the bottom of the figure's box
-//! and one down its left side, so they sit beside the figure and never over it (render_gui_spec §G1, §G2).
+//! it is smaller, never at another scale. Hidden in Fit (R-468 E2) the field's `[0, 1]²` is instead scaled to the
+//! window's shorter side, centred, and nothing is drawn around it ([`Layout::drawn`]). The figure's axis labels take a
+//! strip along the bottom of the figure's box and one down its left side, so they sit beside the figure and never over
+//! it (render_gui_spec §G1, §G2).
 
 use eframe::egui::{self, pos2, vec2, CursorIcon, Id, Rect, Sense, Ui};
+use engine::contract::view_ui::F3Fill;
 
 /// The artboard 01_main.png's size, in pixels.
 pub const ARTBOARD: [f32; 2] = [2160.0, 1350.0];
@@ -282,6 +285,44 @@ impl Layout {
         span_of(self.figure_rect(shown), self.field)
     }
 
+    /// Fit's square (R-468 E2): the window's shorter side, centred, its corner on a whole physical pixel, so its pixels
+    /// are square and centred within one.
+    pub fn fit_rect(&self, pixels_per_point: f32) -> Rect {
+        let w = self.window;
+        let side = w.width().min(w.height());
+        let inset = |room: f32| (room / 2.0 * pixels_per_point).round() / pixels_per_point;
+        let min = w.min + vec2(inset(w.width() - side), inset(w.height() - side));
+        Rect::from_min_size(min, vec2(side, side))
+    }
+
+    /// Fit's scale (R-468 E2), `k = min(W, H) / w`, `w` the shown figure's width in the default layout, the rect that
+    /// holds the field's `[0, 1]²` ([`Layout::field`]), floored at a point so a window too small to have a figure
+    /// never asks for a limitless refinement.
+    pub fn fit_scale(&self) -> f64 {
+        let w = self.window;
+        f64::from(w.width().min(w.height())) / f64::from(self.field.width().max(1.0))
+    }
+
+    /// The figure as it is drawn this frame: the layer `shown`, or hidden in `fill` (R-406; R-468).
+    pub fn drawn(&self, shown: bool, fill: F3Fill, pixels_per_point: f32) -> Drawn {
+        if !shown && fill == F3Fill::Fit {
+            let square = self.fit_rect(pixels_per_point);
+            Drawn {
+                clip: square,
+                placement: Placement::of(square, self.window),
+                span: [0.0, 0.0, 1.0, 1.0],
+                fit: Some(self.fit_scale()),
+            }
+        } else {
+            Drawn {
+                clip: self.figure_rect(shown),
+                placement: self.placement(),
+                span: self.span(shown),
+                fit: None,
+            }
+        }
+    }
+
     /// Where `splitter` is, in points: its boundary's `x`, or `y` for the top row's bottom.
     pub fn edge(&self, splitter: Splitter) -> f32 {
         match splitter {
@@ -418,6 +459,19 @@ pub fn held(ctx: &egui::Context) -> Option<(Splitter, f32)> {
         .input(|i| i.pointer.total_drag_delta())
         .unwrap_or(vec2(0.0, 0.0));
     Some((splitter, if splitter.across() { delta.x } else { delta.y }))
+}
+
+/// The figure as it is drawn this frame ([`Layout::drawn`]).
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Drawn {
+    /// The rect the draw is clipped to: past it the window keeps its clear colour.
+    pub clip: Rect,
+    /// Where the field is in the viewport, the window.
+    pub placement: Placement,
+    /// The span of the field shown, `[s₀, t₀, s₁, t₁]`, `t` Y-up.
+    pub span: [f64; 4],
+    /// Fit's scale `k`, or `None` outside Fit.
+    pub fit: Option<f64>,
 }
 
 /// Where the field is drawn in a canvas's viewport (R-406): the shown figure's rect, `[0,1]²` of the field, as its

@@ -87,6 +87,7 @@ pub fn initial_view() -> ViewUI {
             speed: explore::time::SPEED_DEFAULT,
         },
         mode: Mode::Explore,
+        f3_fill: Default::default(),
     }
 }
 
@@ -176,6 +177,8 @@ pub struct Actions {
     pub debug_view: bool,
     /// Return every splitter to its default (View › reset layout, R-462 J3).
     pub reset_layout: bool,
+    /// The fill View's row chose (R-468 E4): `ViewUI`'s, so no `SetField`.
+    pub f3_fill: Option<engine::contract::view_ui::F3Fill>,
 }
 
 impl<S: EngineSide> App<S> {
@@ -635,6 +638,7 @@ impl<S: EngineSide> App<S> {
                 mode: self.view.mode,
                 breadcrumb: &breadcrumb,
                 keys: self.view.focus.mode,
+                f3_fill: self.view.f3_fill,
             },
             &mut self.keyboard,
             &mut actions,
@@ -1252,6 +1256,9 @@ impl<S: EngineSide> App<S> {
         if let Some(mode) = actions.mode {
             self.view.mode = mode;
         }
+        if let Some(fill) = actions.f3_fill {
+            self.view.f3_fill = fill;
+        }
         if actions.shortcuts {
             self.keyboard.shortcuts_open = true;
         }
@@ -1269,14 +1276,18 @@ impl<S: EngineSide> App<S> {
     /// to the figure's rect as it stands: the canvas with the egui layer `shown`, else the window (R-406). So over the
     /// canvas the two states draw the same pixels, and a splitter that resizes the canvas re-frames the figure, never
     /// moving or scaling the field (R-462 J4). The engine side is told the span shown first, to compute only what it
-    /// does not hold, then the figure's view with its background (R-467 D2).
+    /// does not hold, then the figure's view with its background (R-467 D2). Hidden in Fit, the field is at the view's
+    /// square and clipped to it, the window's clear colour around it (R-468 E2); present mode is hidden too (E6).
     fn paint_figure(&mut self, ctx: &egui::Context, layout: &Layout, shown: bool) {
-        self.side.show_span(layout.span(shown));
+        let drawn = layout.drawn(shown, self.view.f3_fill, ctx.pixels_per_point());
+        self.side.fit(drawn.fit);
+        self.side.show_span(drawn.span);
         let background = clear_colour(&ctx.global_style().visuals).to_array();
         let [r, g, b, _] = background;
-        let view = crate::side::FigureView::of(layout, shown, ctx.pixels_per_point(), [r, g, b]);
+        let view =
+            crate::side::FigureView::of_drawn(layout, &drawn, ctx.pixels_per_point(), [r, g, b]);
         self.side.figure_view(view);
-        let Some(canvas) = self.side.figure(layout.placement()) else {
+        let Some(canvas) = self.side.figure(drawn.placement) else {
             return;
         };
         let callback = egui_wgpu::Callback::new_paint_callback(
@@ -1287,7 +1298,7 @@ impl<S: EngineSide> App<S> {
             },
         );
         ctx.layer_painter(LayerId::new(Order::Middle, Id::new("figure")))
-            .with_clip_rect(layout.figure_rect(shown))
+            .with_clip_rect(drawn.clip)
             .add(callback);
     }
 }

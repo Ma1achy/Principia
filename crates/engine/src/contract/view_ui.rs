@@ -25,6 +25,19 @@ pub struct ViewUI {
     pub transport: Transport,
     /// The mode the mode switch shows, Explore or Stain (render_gui_spec §G2; RQ-249).
     pub mode: Mode,
+    /// How the figure fills the window with the egui layer hidden, Extend or Fit (R-468 E4): kept for the session, each
+    /// launch starting at Extend; never undoable.
+    pub f3_fill: F3Fill,
+}
+
+/// How the figure fills the window with the egui layer hidden, by F3 or in present mode (R-468; render_gui_spec §G1).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum F3Fill {
+    /// More of the field at the same scale (R-406).
+    #[default]
+    Extend,
+    /// The view's square scaled to the window's shorter side, centred, the rest the canvas background.
+    Fit,
 }
 
 /// Backdrop ref (gui_state_contract §2).
