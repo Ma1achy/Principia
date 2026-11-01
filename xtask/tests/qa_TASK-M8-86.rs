@@ -389,8 +389,20 @@ negative_control!(
 
 static RUNS: AtomicU32 = AtomicU32::new(0);
 
+/// Node's flag for a capped address space. By default V8 reserves about 10 GiB of guard regions for any wasm memory, so
+/// `new WebAssembly.Memory` throws a RangeError under `.cargo/mutants.toml`'s 8 GiB `RLIMIT_AS` (REQ-VAL-181), however
+/// small the memory. With the flag, V8 compiles inline bounds checks and reserves only the memory itself. The probe still
+/// makes a real shared memory and runs real atomics across two threads, and the flag is on everywhere, so these tests run
+/// one way with or without the cap, with no skip.
+const WASM_UNDER_A_CAP: &str = "--disable-wasm-trap-handler";
+
 /// Runs `scenario` of the harness on the skeleton's scripts, each `(file, from, to)` edit applied.
 fn node(scenario: &str, edits: &[(&str, &str, &str)]) {
+    harness(&["node", WASM_UNDER_A_CAP], scenario, edits);
+}
+
+/// [`node`], with `command` as the command line up to the harness's path.
+fn harness(command: &[&str], scenario: &str, edits: &[(&str, &str, &str)]) {
     let skeleton = root().join("web/skeleton");
     let dir = Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!(
         "qa-m8-86-{}-{}",
@@ -414,9 +426,10 @@ fn node(scenario: &str, edits: &[(&str, &str, &str)]) {
         }
         std::fs::write(dir.join(file), text).expect("a scratch script");
     }
-    let harness = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/qa_TASK-M8-86.mjs");
-    let output = std::process::Command::new("node")
-        .arg(harness)
+    let script = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/qa_TASK-M8-86.mjs");
+    let output = std::process::Command::new(command[0])
+        .args(&command[1..])
+        .arg(script)
         .arg(&dir)
         .arg(scenario)
         .timed_output()
@@ -428,6 +441,36 @@ fn node(scenario: &str, edits: &[(&str, &str, &str)]) {
         String::from_utf8_lossy(&output.stderr)
     );
 }
+
+/// The probe's scenario under the cap the mutants job sets (the value read from its configuration), through `flags`.
+#[cfg(target_os = "linux")]
+fn probe_under_the_mutants_cap(flags: &[&str]) {
+    let config = read(".cargo/mutants.toml");
+    let cap = config
+        .split("'--as=")
+        .nth(1)
+        .and_then(|rest| rest.split('\'').next())
+        .expect("the runner's cap in .cargo/mutants.toml");
+    let cap = format!("--as={cap}");
+    let mut command = vec!["prlimit", &cap, "--core=1", "node"];
+    command.extend_from_slice(flags);
+    harness(&command, "probe_shared_memory_says_ok", &[]);
+}
+
+// Linux alone: macOS has no `prlimit`, and its `setrlimit` refuses this limit.
+#[cfg(target_os = "linux")]
+#[test]
+fn qa_m8_86_the_probe_runs_under_the_mutants_cap() {
+    probe_under_the_mutants_cap(&[WASM_UNDER_A_CAP]);
+}
+
+#[cfg(target_os = "linux")]
+negative_control!(
+    qa_m8_86_the_probe_runs_under_the_mutants_cap,
+    "node without the flag, which the cap must stop",
+    expected = "could not allocate memory",
+    probe_under_the_mutants_cap(&[])
+);
 
 #[test]
 fn qa_m8_86_probe_says_ok_on_shared_memory() {
