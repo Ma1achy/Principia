@@ -4,7 +4,7 @@
 use kernel::decode::{energy_norm, Latent as KernelLatent};
 use kernel::generated::links::Defaults;
 
-use crate::contract::decoded::{state, State};
+use crate::contract::decoded::{state, Sphere, State};
 use crate::contract::sim_config::{Latent, Links};
 
 /// A latent point at unequal masses, moving.
@@ -60,6 +60,100 @@ fn decoded_state_is_the_decoders() {
     assert_eq!((on.m, on.alpha, on.beta), (s.m, s.alpha, s.beta));
     assert_ne!(on.p_rho, s.p_rho);
 }
+
+/// The state a time `t` along its rates: `ρ̃ + t ρ̃̇`, `λ̃ + t λ̃̇`.
+fn advanced(s: &State, t: f64) -> State {
+    let m01 = s.m[0] + s.m[1];
+    let (a, b) = ((s.m[0] * s.m[1] / m01).sqrt(), (s.m[2] * m01).sqrt());
+    State {
+        rho_t: std::array::from_fn(|k| s.rho_t[k] + t * s.p_rho[k] / a),
+        lambda_t: std::array::from_fn(|k| s.lambda_t[k] + t * s.p_lambda[k] / b),
+        ..*s
+    }
+}
+
+/// A state off the scale gauge, `I = 4`, where the rates' divisions by `I` and `√I` matter.
+fn off_gauge() -> State {
+    State {
+        m: [0.2, 0.3, 0.5],
+        alpha: 0.0,
+        beta: 0.0,
+        rho_t: [1.2, 0.3],
+        lambda_t: [0.4, 1.5],
+        p_rho: [0.11, -0.12],
+        p_lambda: [0.13, 0.14],
+        l_z: 0.0,
+    }
+}
+
+/// Asserts `sphere`'s rates are `d/dt` of `s` by central difference, against `shape_vec`'s angles.
+fn check_rates(s: &State, sphere: &Sphere) {
+    let h = 1e-6;
+    let (up, down) = (Sphere::of(&advanced(s, h)), Sphere::of(&advanced(s, -h)));
+    let near = |rate: f64, want: f64, what: &str| {
+        assert!((rate - want).abs() <= 1e-6, "{what}: {rate} against {want}");
+    };
+    near((up.theta - down.theta) / (2.0 * h), sphere.theta_dot, "θ̇");
+    near((up.phi - down.phi) / (2.0 * h), sphere.phi_dot, "φ̇");
+    let root_i = |x: &State| {
+        let n2 = |v: [f64; 2]| v[0] * v[0] + v[1] * v[1];
+        (n2(x.rho_t) + n2(x.lambda_t)).sqrt()
+    };
+    near(
+        (root_i(&advanced(s, h)) - root_i(&advanced(s, -h))) / (2.0 * h),
+        sphere.r_dot,
+        "Ṙ",
+    );
+}
+
+#[test]
+fn decoded_sphere_is_shape_vecs_with_its_rates() {
+    let s = off_gauge();
+    let sphere = Sphere::of(&s);
+    let n = kernel::shape::shape_vec(s.rho_t, s.lambda_t);
+    assert_eq!(sphere.sin_phi, (n[0] * n[0] + n[1] * n[1]).sqrt());
+    assert_eq!(sphere.theta, n[1].atan2(n[0]));
+    assert_eq!(sphere.phi, sphere.sin_phi.atan2(n[2]), "φ from +w");
+    check_rates(&s, &sphere);
+    // At the exact pole the azimuth and the angles' rates are defined as 0, never NaN; Ṙ is still the state's.
+    let at = State {
+        rho_t: [1.0, 0.0],
+        lambda_t: [0.0, 1.0],
+        p_rho: [0.1, 0.2],
+        p_lambda: [0.3, 0.4],
+        ..s
+    };
+    let pole = Sphere::of(&at);
+    assert_eq!(
+        (pole.theta, pole.theta_dot, pole.phi_dot, pole.sin_phi),
+        (0.0, 0.0, 0.0, 0.0)
+    );
+    assert_eq!(pole.phi, 0.0, "the +w pole");
+    assert!(pole.r_dot != 0.0 && pole.r_dot.is_finite());
+    // Beside the pole, its rates are not the pole's zeros.
+    let beside = State {
+        rho_t: [1.0, 1e-3],
+        ..at
+    };
+    let near = Sphere::of(&beside);
+    assert!(near.theta != 0.0 && near.theta_dot != 0.0 && near.phi_dot != 0.0);
+}
+
+/// The check on rates read at twice the state's speed.
+#[cfg(feature = "controls")]
+fn check_doubled_rates() {
+    let s = off_gauge();
+    let mut sphere = Sphere::of(&s);
+    sphere.r_dot *= 2.0;
+    check_rates(&s, &sphere);
+}
+
+validation::negative_control!(
+    decoded_sphere_is_shape_vecs_with_its_rates,
+    "a rate off the state's d/dt must be rejected",
+    expected = "Ṙ",
+    check_doubled_rates()
+);
 
 /// The check on a state read before `η_E`, against the target.
 #[cfg(feature = "controls")]

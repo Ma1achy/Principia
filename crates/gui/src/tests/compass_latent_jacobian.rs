@@ -5,14 +5,14 @@
 
 use std::cell::RefCell;
 
-use engine::contract::decoded;
+use engine::contract::decoded::{self, Sphere};
 use engine::contract::sim_config::{Latent, Links, Plane, LATENT_DIM};
 
 use super::compass_plucker::Rng;
 use super::support::rejects;
 use crate::explore::compass::physical::{
     apply, central_column, difference, gram, latent_jacobian, near_pole, refuses, smaller_singular,
-    svd, Decoder, Inverse, Matrix, Set, Sphere, CUT, JACOBI_NAMES, SHAPE_NAMES,
+    svd, Decoder, Inverse, Matrix, Set, CUT, JACOBI_NAMES, SHAPE_NAMES,
 };
 use crate::explore::compass::views::orthonormal;
 
@@ -549,40 +549,5 @@ fn compass_latent_jacobian_the_boundaries_hold() {
     assert!(near_pole(POLE_SIN * (1.0 - f64::EPSILON)));
     rejects("a θ difference off the circle", || {
         assert!((difference(Set::Jacobi, 0, a, b) - 0.02).abs() <= 1e-12)
-    });
-}
-
-#[test]
-fn compass_latent_jacobian_the_sphere_holds_off_the_scale_gauge() {
-    // I = 4: the formulas' divisions by I and √I matter here, each rate checked against d/dt of the state.
-    let s = decoded::State {
-        m: [0.2, 0.3, 0.5],
-        alpha: 0.0,
-        beta: 0.0,
-        rho_t: [1.2, 0.3],
-        lambda_t: [0.4, 1.5],
-        p_rho: [0.11, -0.12],
-        p_lambda: [0.13, 0.14],
-        l_z: 0.0,
-    };
-    let sphere = Sphere::of(&s);
-    let h = 1e-6;
-    let (up, down) = (Sphere::of(&advanced(&s, h)), Sphere::of(&advanced(&s, -h)));
-    let near = |rate: f64, want: f64, what: &str| {
-        assert!((rate - want).abs() <= 1e-6, "{what}: {rate} against {want}");
-    };
-    near((up.theta - down.theta) / (2.0 * h), sphere.theta_dot, "θ̇");
-    near((up.phi - down.phi) / (2.0 * h), sphere.phi_dot, "φ̇");
-    let root_i = |x: &decoded::State| {
-        (x.rho_t[0].powi(2) + x.rho_t[1].powi(2) + x.lambda_t[0].powi(2) + x.lambda_t[1].powi(2))
-            .sqrt()
-    };
-    near(
-        (root_i(&advanced(&s, h)) - root_i(&advanced(&s, -h))) / (2.0 * h),
-        sphere.r_dot,
-        "Ṙ",
-    );
-    rejects("a rate off by its scale", || {
-        near(2.0 * sphere.r_dot, sphere.r_dot, "Ṙ")
     });
 }
