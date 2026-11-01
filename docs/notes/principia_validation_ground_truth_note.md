@@ -106,7 +106,8 @@ exact target, where a GPU miss is expected and not a defect; the GPU explorer (a
 there, statistically or qualitatively only (the owner's confirmation of 30 Oct 2026, R-649: "statistical targets are
 scored on tier (a), exact targets on tier (b)"). *Was:* "the GPU explorer (a) is expected to agree statistically or
 qualitatively only, on the statistical targets." The heading's "inherit on GPU" is kept as the section's citation key;
-read it as this paragraph says.
+read it as this paragraph says. *31 Oct 2026, R-661:* that tier (a)'s f32 statistics agree is a hypothesis Principia will
+measure, and no paper establishes it.
 
 Don't validate Burrau/figure-eight on *both* precisions independently. **Validate the *physics* on the trustworthy f64 CPU reference** (against analytic/periodic/literature), and **separately the parity suite measures GPU against CPU**, within stated f32 tolerances. *Was:* "and **separately the parity suite proves GPU==CPU**. Compose:"
 

@@ -86,7 +86,7 @@ stay there.
 
 | target | source | what is asserted |
 |---|---|---|
-| Ensemble statistics survive trajectory error | Boekholt & Portegies Zwart 2015 (*Comput. Astrophys. Cosmol.* 2, 2; **public figshare data**) | individual double-precision runs diverge while the ensemble statistics agree (KS). This is the empirical basis of the f32/f64 honesty story, and of "never discard a copy" |
+| Ensemble statistics survive trajectory error | Boekholt & Portegies Zwart 2015 (*Comput. Astrophys. Cosmol.* 2, 2; **public figshare data**) | individual double-precision runs diverge while the ensemble statistics agree (KS). This is the empirical basis of the f32/f64 honesty story, and of "never discard a copy" **[Corrected 31 Oct 2026, R-661: the paper has no f32 run and is the basis of no f32 claim; that f32 statistics agree is a hypothesis Principia will measure, and no paper establishes it. Its "unbiased" result holds only after an energy cut, so it is not the basis of "never discard" either; its Fig. 14, showing the ensemble cut and uncut, is compatible with it.]** |
 | Irreversibility | Boekholt et al. 2020 (above) | about 1% of region D is irreversible at ε = 10⁻⁷⁰. Needs a reversible occupant (logH's TTL mode) |
 | Converged short trajectories | Breen et al. 2020 (*MNRAS* 494, 2465) | per-trajectory agreement with Brutus to t = 10, if their data can be obtained |
 
