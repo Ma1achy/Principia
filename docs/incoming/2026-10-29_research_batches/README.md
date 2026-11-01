@@ -31,6 +31,8 @@ The owner, 29 Oct 2026, verbatim:
 > 2004 against the periodic-catalogue exclusion. Context: the rest per the READMEs. Burrau 1913 and Schubart 1956 were
 > blocked on Wiley: fetch the ADS scans instead.
 
+[Wording since corrected by the owner, 31 Oct 2026: this means data we already have; it stays usable as targets.]
+
 And, the same day, verbatim:
 
 > Also ~/Downloads/papers-2/ (README, manifest.json, checksums): Burrau 1913 (AN 195, 113; ADS 1913AN....195..113B):
@@ -98,7 +100,7 @@ out.
 | Hernandez & Bertschinger 2015, MNRAS 452, 1934 | 10.1093/mnras/stv1439 | Crossref none; arXiv 1503.02728v2 non-exclusive | transcription | conditional, information only (HB15-1) | `hernandez_2015/` |
 | Rantala et al. 2020, MNRAS 492, 4131 | 10.1093/mnras/staa084 | OUP CHORUS standard; arXiv 2001.03180v1 non-exclusive | transcription (§ 5.2 values) | information beside SP-2 (RA20-1) | `rantala_2020/` |
 | Broucke, Elipe & Riaguas 2006, CSF 30, 513 | 10.1016/j.chaos.2005.11.082 | Elsevier TDM user licence | transcription | no target until RQ-641 | `broucke_2006/` |
-| Moore & Nauenberg 2006, JCND 1, 307 | 10.1115/1.2338323 | Crossref none; arXiv math/0511219v2 non-exclusive | transcription | excluded (in the catalogue) | `moore_2006/` |
+| Moore & Nauenberg 2006, JCND 1, 307 | 10.1115/1.2338323 | Crossref none; arXiv math/0511219v2 non-exclusive | transcription | already have (in the catalogue) | `moore_2006/` |
 | Vanderbei 2004, Ann. NY Acad. Sci. 1017, 422 | 10.1196/annals.1311.024 | Wiley terms; arXiv astro-ph/0303153 assumed-1991-2003 | transcription | context (no ICs) | `vanderbei_2004/` |
 | Tanikawa & Umehara 1998, CeMDA 70, 167 | 10.1023/A:1008301405839 | Springer Nature TDM | transcription | context (three examples) | `tanikawa_umehara_1998/` |
 | Martynova & Orlov 2014, Astron. Rep. 58, 756 | 10.1134/S1063772914100084 | Springer Nature TDM | transcription | target, statistics (MO14-1); RQ-642 | `martynova_orlov_2014/` |
@@ -161,7 +163,7 @@ the same time unit (`li2021/workbook_checks.txt` item 3). Tanikawa & Umehara 199
 (pp. 756–758, Agekyan–Anosova's A, B, C at (−0.5, 0), (0.5, 0), (ξ, η)) use the same D; Tanikawa 2000 refers to Paper I
 for it. Li 2025 (Fig. 1, p. 2) keeps the positions and varies the masses (m3 = 1 throughout Table 1).
 
-### 5.2 Li et al. 2021: the workbook, Table 2, and the exclusion
+### 5.2 Li et al. 2021: the workbook, Table 2, and the catalogue we already have
 
 - The XLSX parses to 1653 rows (label, x, y, T) and 1653 symbol sequences, labels unique and aligned, 12 to 15
   significant digits per value as stored. All 1653 lie in D; no duplicate (x, y); T from 0.4817 to 17.447; sequences 3
@@ -170,11 +172,12 @@ for it. Li 2025 (Fig. 1, p. 2) keeps the positions and varies the masses (m3 = 1
 - Accuracy stated by the authors: "d(T, q) < 10⁻⁸" for the Newton iteration's stop, "error tolerance of 10⁻⁶⁰", and
   "The minimum of any two bodies' distance is larger than 10⁻⁶ before the three bodies collide" (pp. 4–6). Their
   levels, not bounds.
-- **The exclusion.** The repo records no separate exclusion list: grepping `docs/incoming/2026-10-26_orbit_catalogues/`,
-  PLAN.md and REVIEW_QUEUE.md finds "exclu…" only in a licence quote. The exclusion is therefore the threebodyorbits
-  snapshot itself (PLAN.md's `OC26`, already targeted by OC-1 to OC-6). Its free-fall rows with equal unit masses at
-  rest: 27. **Matching rule:** same frame, position distance < 1e-6, either mirror. **Overlap: 0 of 1653**; the
-  closest pair is 1.19e-3 apart (freefall_part1_f17111 and GT-770). The Li 2021 set is new to the corpus.
+- **The catalogue we already have.** The repo records no separate list of it: grepping
+  `docs/incoming/2026-10-26_orbit_catalogues/`, PLAN.md and REVIEW_QUEUE.md finds "exclu…" only in a licence quote. The
+  data we already have is therefore the threebodyorbits snapshot itself (PLAN.md's `OC26`, already targeted by OC-1 to
+  OC-6). Its free-fall rows with equal unit masses at rest: 27. **Matching rule:** same frame, position distance < 1e-6,
+  either mirror. **Overlap: 0 of 1653**; the closest pair is 1.19e-3 apart (freefall_part1_f17111 and GT-770). The Li
+  2021 set is new to the corpus.
 
 ### 5.3 Li et al. 2025
 
@@ -293,7 +296,8 @@ not a bound. The collision point is the barycentre, ((m1 x − (m2 − m3)/2)/Σ
 
 - Moore & Nauenberg 2006 criss-cross: the Fourier series reproduces the printed ICs (truncation: vy3 1.03660 against
   1.03678); E = −1.107938, L = −0.744624, T = 2π. By the scale invariants T|E|^{3/2} and L²|E| it is threebodyorbits
-  broucke_broucke_a_7 to 5.6e-6 relative: already in the catalogue, so excluded.
+  broucke_broucke_a_7 to 5.6e-6 relative: already in the catalogue, so already have; no target of its
+  own, for that reason alone.
 - Vanderbei 2004: stability eigenvalues only, no ICs (FigureEight3, Ducati3, Hill3_15, Lagrange3 are the three-body
   ones; the catalogue has no Ducati). Context, no target.
 - Yasko 2015: 0 of 22 match the catalogue's 27 equal-mass free-fall rows (rule: distance < 1e-3 and |ΔT| < 0.05 τ).
@@ -311,7 +315,8 @@ not a bound. The collision point is the barycentre, ((m1 x − (m2 − m3)/2)/Σ
 ## 6. Labels
 
 Each source's label is in § 3's table: **target** (proposed in § 10, tier stated there), **context** (cited, no
-target, reason in § 5 or § 7), **excluded** (already in the threebodyorbits catalogue), **record only** (Burrau).
+target, reason in § 5 or § 7), **already have** (in the threebodyorbits catalogue, which stays usable as
+targets and in triage; no target of its own, for that reason alone), **record only** (Burrau).
 
 ## 7. Context entries (the owner: "the rest per the READMEs")
 

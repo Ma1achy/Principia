@@ -36,7 +36,8 @@ AREAS = ["DEC", "ENC", "CHART", "INT", "EVT", "PAY", "GEN", "SCHED", "REF", "REN
 KINDS = {"calibration", "definition"}
 METHODS = {"unit test", "property test", "golden image", "numerical gate", "benchmark", "review checklist",
            "GUI screenshot"}
-MILESTONES = [f"M{i}" for i in range(9)]
+# M0 to M8 have exit gates; M9, external replication, has a report instead (R-650).
+MILESTONES = [f"M{i}" for i in range(10)]
 KEY_ORDER = ["id", "area", "kind", "statement", "source", "verify", "rulings", "milestone", "rq", "note", "retired"]
 
 

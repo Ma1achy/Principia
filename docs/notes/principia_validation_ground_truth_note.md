@@ -96,13 +96,31 @@ The **conditioning-number-across-links/charts *is* the test** for coordinate-art
 
 ## The correctness factoring: validate on CPU, inherit on GPU
 
-Don't validate Burrau/figure-eight on *both* precisions independently. **Validate the *physics* on the trustworthy f64 CPU reference** (against analytic/periodic/literature), and **separately the parity suite proves GPU==CPU**. Compose:
+*Corrected 30 Oct 2026 (R-649, the owner's clarification 2 of 29 Oct 2026: "don't delete the ground-truth note,
+correct it. GPU-vs-CPU agreement within a stated f32 tolerance is an INTERNAL check and stays continuous and blocking,
+measured not assumed. What goes is the claim that GPU correctness follows from the CPU's.").* The CPU reference and the
+parity suite below stand. What changes is the composition: the GPU's agreement with the CPU is **measured**, within
+each check's stated f32 tolerance, and blocks a merge like any internal correctness test (R-650); it is not a proof
+that the GPU is correct. An external target binds the tier it declares (R-649 item 2): the CPU IC inspector (b) for an
+exact target, where a GPU miss is expected and not a defect; the GPU explorer (a) for a statistical target, scored
+there, statistically or qualitatively only (the owner's confirmation of 30 Oct 2026, R-649: "statistical targets are
+scored on tier (a), exact targets on tier (b)"). *Was:* "the GPU explorer (a) is expected to agree statistically or
+qualitatively only, on the statistical targets." The heading's "inherit on GPU" is kept as the section's citation key;
+read it as this paragraph says.
+
+Don't validate Burrau/figure-eight on *both* precisions independently. **Validate the *physics* on the trustworthy f64 CPU reference** (against analytic/periodic/literature), and **separately the parity suite measures GPU against CPU**, within stated f32 tolerances. *Was:* "and **separately the parity suite proves GPU==CPU**. Compose:"
 
 > **Substrate nuance (shared source):** under the Rust-kernel substrate the "f64 CPU reference" is the *same shared kernel* run on the CPU at f64 — its value here is **precision** (f64 removes the numerical ambiguity that would muddy a ground-truth comparison), **not independence**. Because it shares source with the survey, a *shared-source logic bug* would sit in both — but the ground-truth check catches exactly that, since it compares against **external** truth (theorems, published orbits), not against the survey. Where genuine *independence* is wanted — the integration-floor falsifiability probe, a Burrau reference that cannot inherit the survey's bugs — that is the **separate, deliberately-independent high-precision convergence integrator** (Brutus-style: CPU arbitrary precision with convergence gating — raise the precision and tighten the tolerance until the result stops changing; double-double is a fast screen only, R-33; Precision ring, systems-architecture §1), *not* the shared kernel. Two references, two jobs: the shared kernel at f64 for precision-removes-ambiguity ground truth, the independent integrator for shared-bug-immune convergence checks.
 
-> CPU correct (ground-truth suite) **×** GPU==CPU (parity) **⇒** GPU correct.
+> CPU correct (ground-truth suite), **and** GPU agreeing with CPU within each check's stated f32 tolerance (parity:
+> an internal check, continuous and blocking, measured, not assumed). GPU correctness does **not** follow from the
+> CPU's: on an external target the GPU explorer is held to its tier (a), statistical or qualitative agreement, and a
+> GPU miss on an inspector-tier (b) target is expected, not a defect (R-649).
 
-Physics-correctness and precision-fidelity are **separate properties, separate suites, multiplied**. The expensive "is it right" checks run on the f64 reference where precision removes numerical ambiguity; the GPU inherits correctness through parity rather than being independently validated against theory.
+*Was:* "> CPU correct (ground-truth suite) **×** GPU==CPU (parity) **⇒** GPU correct." (replaced by R-649's
+clarification 2, 29 Oct 2026).
+
+Physics-correctness and precision-fidelity are **separate properties, separate suites**. The expensive "is it right" checks run on the f64 reference where precision removes numerical ambiguity; the GPU's agreement with that reference is measured by the parity suite, within stated f32 tolerances, and is not taken as proof of the GPU's correctness. *Was:* "separate properties, separate suites, multiplied" and "the GPU inherits correctness through parity rather than being independently validated against theory" (R-649).
 
 ---
 
