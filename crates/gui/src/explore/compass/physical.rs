@@ -447,7 +447,7 @@ fn steered_basis(
     )))
 }
 
-/// [`steered_basis`] as one `SetField` on the basis alone. A click or Space sends [`steer_on`]'s edit.
+/// The steered basis as one `SetField` on the basis alone. A click or Space sends [`steer_on`]'s edit.
 pub fn steer(
     decoder: &Decoder,
     set: Set,
@@ -458,7 +458,7 @@ pub fn steer(
     steered_basis(decoder, set, sim, i, j).map(|basis| basis.map(basis_edit))
 }
 
-/// [`steered_basis`] on `sim`'s chart as one `SetField`: a plane that takes the slice normal or a target moves it by the
+/// The steered basis on `sim`'s chart as one `SetField`: a plane that takes the slice normal or a target moves it by the
 /// slice-axis rule in the same edit ([`plane_edit`]; R-459 G4, REQ-GUI-208), as the Chart builder's Apply does.
 pub fn steer_on(
     decoder: &Decoder,
