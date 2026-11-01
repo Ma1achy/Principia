@@ -1369,6 +1369,118 @@ pub const SLICE_AXIS_Z_Q3: ConstantBuilder = chart(
     },
 );
 
+// ── The invariant monitor and the drift views (TASK-M3-05; REQ-INT-085, REQ-TOOL-150; R-71, R-381, R-382) ──────────
+//
+// The relative-drift floors' defaults, the names the read side and the views read `EPS_E` and `EPS_L` by, and three
+// values the corpus leaves open, each proposed with its evidence and provisional until the M3 gate (R-427): the drift
+// suspect predicates' two thresholds (REQ-INT-085) and the `lin` override's ranges of the two drift views
+// (REQ-TOOL-150). The evidence is `validation::drift`'s measurement on dd_integrator §5's tests 2 and 7, Euler, RK4,
+// KDK, Yoshida-4 and Yoshida-6 at CPU-f32 and CPU-f64 through the one wrapper, read as the predicates read it: the
+// stored latches, the f16 `dE_max` and `dLz_max`, and the stored `E_0` (`crates/validation/tests/drift_proposals.rs`,
+// which prints the table). Each threshold and range is a power of two, so the f32 WGSL literal and the f64 value are
+// the one number.
+
+/// `ε_E`'s default, 10⁻⁶: the relative energy drift's floor, `δ_E = ΔE / max(ε_E, |E₀|)`, a sim-key parameter
+/// (integrator contract Part 3; dd_integrator §3.5). The energy-suspect predicate and the energy-drift view's
+/// compactions read it where no sim key gives another. It is the register's [`EPS_E`], Part 3's one row, so a ruling
+/// that changes the sim key's default changes this floor with it.
+pub const EPS_E_DEFAULT: ConstantBuilder = EPS_E;
+
+/// `ε_L`'s default, 10⁻⁶: the relative `L_z` drift's floor, `δ_L = ΔL_z / max(ε_L, |L_{z,0}|)`, a sim-key parameter
+/// (integrator contract Part 3; dd_integrator §3.5). The `L_z`-drift view's compactions read it where no sim key gives
+/// another. It is the register's [`EPS_L`], Part 3's one row, so a ruling that changes the sim key's default changes
+/// this floor with it.
+pub const EPS_L_DEFAULT: ConstantBuilder = EPS_L;
+
+/// The measurement the drift thresholds and ranges are proposed from (dd_integrator §5's tests 2 and 7).
+const DRIFT_MEASUREMENT: Citation = Citation::Corpus {
+    file: "docs/design/principia_dd_integrator.md",
+    section: "5. Unit tests",
+};
+
+/// The energy-suspect threshold `τ_E` on the relative energy drift the stored latches give,
+/// `dE_max / max(ε_E, |E_0|) > τ_E` (dd_integrator §3.5; payload §5). REQ-INT-085's proposal (R-71), provisional until
+/// the M3 gate (R-427): 2⁻⁸ ≈ 3.91e-3, the power of two at the geometric middle of the gap on test 2's orbit between
+/// the symplectic occupants, at most 4.03e-5 (Yoshida-4 at f32), and Euler, 0.278 at f32 and f64. On test 2 Euler
+/// lights it and no symplectic occupant does at either precision, test 2's pass condition; RK4 reads 2.50e-5 at f32,
+/// unlit. On test 7's close encounter KDK's recovered spike reads 8.81e-3 at f32 and 8.89e-3 at f64 and lights it,
+/// recorded, not a criterion (REQ-INT-085); Yoshida-4 and Yoshida-6 read at most 1.87e-4, and Euler 1.70.
+pub const SUSPECT_ENERGY_THRESHOLD: ConstantBuilder = ConstantBuilder {
+    name: "suspect_energy_threshold",
+    value: Some(Value::Threshold(1.0 / 256.0)),
+    class: Some(Admissibility::CanonicalUnits),
+    citation: Some(Citation::Calibration("REQ-INT-085")),
+    provisional: Some("M3"),
+    relative_basis: Some(RelativeBasis::Gap {
+        source: DRIFT_MEASUREMENT,
+        below: Population {
+            name: "test 2's orbit, KDK, Yoshida-4 and Yoshida-6 at f32 and f64: the stored dE_max / max(ε_E, |E_0|)",
+            lo: 0.0,
+            hi: 4.0324e-5,
+            count: 6,
+        },
+        above: Population {
+            name: "test 2's orbit, Euler at f32 and f64: the stored dE_max / max(ε_E, |E_0|)",
+            lo: 0.27755,
+            hi: 0.27755,
+            count: 2,
+        },
+    }),
+};
+
+/// The `L_z`-suspect threshold `τ_L` on the absolute `L_z` drift the stored latch gives, `dLz_max > τ_L`
+/// (dd_integrator §3.5; payload §5). REQ-INT-085's proposal (R-71, R-382), provisional until the M3 gate (R-427):
+/// 2⁻¹⁴ ≈ 6.10e-5, the power of two at the geometric middle of the gap between the symplectic occupants' round-off on
+/// tests 2 and 7, at most 5.19e-6 (Yoshida-4 at f32, test 2), and Euler's drift on test 2, 7.26e-4 at f64. Euler lights
+/// it on test 2, and no symplectic occupant on either test at either precision, R-382's criterion; RK4 reads at most
+/// 2.68e-6, unlit, recorded with no requirement.
+pub const SUSPECT_LZ_THRESHOLD: ConstantBuilder = ConstantBuilder {
+    name: "suspect_lz_threshold",
+    value: Some(Value::Threshold(1.0 / 16_384.0)),
+    class: Some(Admissibility::CanonicalUnits),
+    citation: Some(Citation::Calibration("REQ-INT-085")),
+    provisional: Some("M3"),
+    relative_basis: Some(RelativeBasis::Gap {
+        source: DRIFT_MEASUREMENT,
+        below: Population {
+            name: "tests 2 and 7, KDK, Yoshida-4 and Yoshida-6 at f32 and f64: the stored dLz_max",
+            lo: 0.0,
+            hi: 5.1856e-6,
+            count: 12,
+        },
+        above: Population {
+            name: "test 2's orbit, Euler at f32 and f64: the stored dLz_max",
+            lo: 7.2622e-4,
+            hi: 7.2670e-4,
+            count: 2,
+        },
+    }),
+};
+
+/// The energy-drift view's `lin` range `R`, `range_norm(x, −R, R, false, ·)` (render contract Part 5; R-381).
+/// REQ-TOOL-150's proposal (R-71), provisional until the M3 gate (R-427): 2⁻⁴ = 0.0625, the smallest power of two that
+/// holds Euler's drift on test 2's orbit, final and max, 3.24e-2 at f32 and f64, so Euler's final drift sits at
+/// `t` ≈ 0.76, inside the ramp, and RK4's, 2.88e-6 at f32, at the neutral's side, a distinct pixel; the symplectic
+/// occupants read as the neutral `c0`, as REQ-TOOL-150 allows. Test 7's drifts, Euler's 0.29, saturate, recorded.
+pub const DRIFT_LIN_R_E: ConstantBuilder = proposed(
+    "drift_lin_r_E",
+    1.0 / 16.0,
+    Admissibility::CanonicalUnits,
+    "REQ-TOOL-150",
+    "M3",
+);
+
+/// The `L_z`-drift view's `lin` range `R` (render contract Part 5; R-381). REQ-TOOL-150's proposal (R-71), provisional
+/// until the M3 gate (R-427): 2⁻¹⁰ ≈ 9.77e-4, the smallest power of two that holds Euler's `L_z` drift on test 2's
+/// orbit, final and max, at most 7.27e-4, so Euler's final drift, −1.13e-4 at f32 and −1.14e-4 at f64, sits at
+/// `t` ≈ 0.44 and RK4's, −2.44e-6 at f32, at `t` ≈ 0.499, distinct pixels; test 7's, Euler's 1.1e-2, saturates.
+pub const DRIFT_LIN_R_LZ: ConstantBuilder = proposed(
+    "drift_lin_r_Lz",
+    1.0 / 1024.0,
+    Admissibility::CanonicalUnits,
+    "REQ-TOOL-150",
+    "M3",
+);
 /// The ruling that settles the tilt's two maps, Tip as sheet's wrap in total tip and Lean each axis's dead zone
 /// (R-474).
 const R474: Citation = Citation::Corpus {
@@ -1401,7 +1513,8 @@ pub const TILT_TURN: ConstantBuilder = chart("tilt_turn", 360.0, R474);
 /// REQ-VAL-191), and the substep law's defaults and its threshold table's maximum length (TASK-M3-03; R-502,
 /// REQ-INT-094), and the view window's square (TASK-M2-21), and the slice frame's default axis (TASK-M6-38), and the
 /// wrapper's loop parameters' defaults, the horizon's cap and the macro-step's floor (TASK-M3-06; R-132, R-610), and the
-/// tilt's angles in degrees (TASK-M2-36; R-474), and the custom-stop ramp's OKLab bound (TASK-M7-11).
+/// tilt's angles in degrees (TASK-M2-36; R-474), and the custom-stop ramp's OKLab bound (TASK-M7-11). Then the
+/// drift suspect predicates' thresholds and the drift views' `lin` ranges (TASK-M3-05; REQ-INT-085, REQ-TOOL-150).
 pub const REGISTER: &[ConstantBuilder] = &[
     HORIZON_STEPS_MAX,
     FGW_CAPACITY,
@@ -1485,6 +1598,10 @@ pub const REGISTER: &[ConstantBuilder] = &[
     WINDOW_SQUARE_CENTRE,
     WINDOW_SQUARE_HALF,
     SLICE_AXIS_Z_Q3,
+    SUSPECT_ENERGY_THRESHOLD,
+    SUSPECT_LZ_THRESHOLD,
+    DRIFT_LIN_R_E,
+    DRIFT_LIN_R_LZ,
     TILT_RIGHT_ANGLE,
     TILT_HALF_TURN,
     TILT_TURN,

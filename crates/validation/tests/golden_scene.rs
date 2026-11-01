@@ -19,7 +19,7 @@ fn named(name: &str) -> Scene {
 }
 
 /// A look's kind: `I`nvalid, `L`iteral, `N`ot yet, `R`amp, `O`verride, `F`lat, `B`ackground, `P`resentation's invalid
-/// colour.
+/// colour, `D`rift view.
 fn kind(l: Look) -> char {
     match l {
         Look::Background => 'B',
@@ -30,6 +30,7 @@ fn kind(l: Look) -> char {
         Look::Ramp { .. } => 'R',
         Look::Override => 'O',
         Look::Flat(_) => 'F',
+        Look::Drift { .. } => 'D',
     }
 }
 
@@ -64,7 +65,7 @@ const SCENES: [(&str, &str, &str); 29] = [
     ("virial_ratio", "virial_ratio", "RRRRRRRR"),
     ("set_state", "state", "FFFFFFFF"),
     ("known_escaper", "state", "FFFFFFFF"),
-    ("energy_drift_ramp", "energy_drift", "LLLLLLLL"),
+    ("energy_drift_ramp", "energy_drift", "DDDDDDDD"),
     ("adversarial_state", "state", "FFFFFFFF"),
     ("adversarial_detail", "detail", "FFFFFFFF"),
     ("adversarial_saturated", "saturated", "FFFFFFFF"),
@@ -1088,4 +1089,100 @@ negative_control!(
     "counts taken as R-408's statistic, the forbidden pixels out of them, are not the debug view's",
     expected = "the debug view's counts",
     check_inputs(true)
+);
+
+/// Checks that the derived drift view's case is at `lin` and the generated drift views' at their defaults.
+fn check_drift_cases(cases: &[golden_scene::DebugCase]) {
+    let params = |name: &str| {
+        cases
+            .iter()
+            .find(|c| c.name == name)
+            .unwrap_or_else(|| panic!("no case `{name}`"))
+            .params
+            .clone()
+    };
+    assert_eq!(
+        params("derived-energy_drift"),
+        [("COMPACTION".to_owned(), vec![1.0])],
+        "the derived drift case"
+    );
+    assert!(params("generated-energy_drift").is_empty());
+    assert!(params("generated-Lz_drift").is_empty());
+}
+
+#[test]
+fn golden_scene_drift_cases_set_their_params() {
+    check_drift_cases(golden_scene::debug_cases().expect("the cases"));
+}
+
+negative_control!(
+    golden_scene_drift_cases_set_their_params,
+    "no cases at all",
+    expected = "no case",
+    check_drift_cases(&[])
+);
+
+/// Checks the predicates of a sample with `E_0 = 1` and the latches `(de, dlz)`.
+fn check_drift_suspects(de: f32, dlz: f32, want: (bool, bool)) {
+    let mut s = golden_scene::row_scene("t", 1, Colouring::View("state")).expect("the scene");
+    s.set.sample(0).E_0(1.0).drift_max(de, dlz);
+    assert_eq!(
+        golden_scene::drift_suspects(&s.read(0)),
+        want,
+        "the predicates"
+    );
+}
+
+#[test]
+fn golden_scene_drift_suspects_read_the_latches() {
+    check_drift_suspects(0.0, 0.0, (false, false));
+    check_drift_suspects(1.0, 0.0, (true, false));
+    check_drift_suspects(0.0, 1.0, (false, true));
+    check_drift_suspects(1.0, 1.0, (true, true));
+}
+
+negative_control!(
+    golden_scene_drift_suspects_read_the_latches,
+    "a quiet sample read as suspect",
+    expected = "the predicates",
+    check_drift_suspects(0.0, 0.0, (true, true))
+);
+
+/// The energy predicate on a non-finite `E_0` with a latch that lights it on any finite one, by `predicates`: unlit, on
+/// `E_0`'s bits (R-436), and the `L_z` predicate still read.
+fn check_drift_suspects_on_a_non_finite_e_0(
+    predicates: fn(&kernel::payload::SimState) -> (bool, bool),
+) {
+    let mut s = golden_scene::row_scene("t", 1, Colouring::View("state")).expect("the scene");
+    for e_0 in [
+        f32::NAN,
+        f32::from_bits(0xFFC0_0000),
+        f32::INFINITY,
+        f32::NEG_INFINITY,
+    ] {
+        s.set.sample(0).E_0(e_0).drift_max(1.0, 1.0);
+        assert_eq!(
+            predicates(&s.read(0)),
+            (false, true),
+            "the predicates at E_0 = {e_0:?}"
+        );
+    }
+    // A finite `E_0` is still read as a number: this one's relative drift is 1, which lights.
+    s.set.sample(0).E_0(1024.0).drift_max(1024.0, 0.0);
+    assert_eq!(predicates(&s.read(0)), (true, false), "a finite E_0");
+}
+
+#[test]
+fn golden_scene_drift_suspects_test_e_0_on_its_bits() {
+    check_drift_suspects_on_a_non_finite_e_0(golden_scene::drift_suspects);
+}
+
+negative_control!(
+    golden_scene_drift_suspects_test_e_0_on_its_bits,
+    "the predicate without the test, whose `max` drops the NaN and divides by the floor",
+    expected = "the predicates at E_0 = NaN",
+    check_drift_suspects_on_a_non_finite_e_0(|read| (
+        kernel::payload::suspect_energy(read.dE_max, read.E_0, 1e-6),
+        kernel::payload::suspect_lz(read.dLz_max),
+    ))
 );

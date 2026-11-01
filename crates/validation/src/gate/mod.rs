@@ -35,6 +35,7 @@ use crate::inspector::{InspectorHandlesGate, InspectorRoundtripGate};
 use crate::invariant_gradient::InvariantGradientGate;
 use crate::nsub_bucket::NsubBucketGate;
 use crate::oklab::OklabRoundtripGate;
+use crate::projection_parity::ProjectionParityGate;
 use crate::shape_roundtrip::ShapeRoundtripGate;
 
 /// A numerical gate.
@@ -66,6 +67,7 @@ pub const REGISTRY: &[&dyn Gate] = &[
     &NsubBucketGate,
     &DecodeAgreementGate,
     &LiteratureImportGate,
+    &ProjectionParityGate,
 ];
 
 /// Whether a threshold is confirmed, or a calibration requirement's provisional value.

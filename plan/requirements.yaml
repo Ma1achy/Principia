@@ -4305,11 +4305,15 @@
     section: Part 2 — Occupants and the capability profile
   - file: docs/design/principia_dd_integrator.md
     section: 2. Consolidated contract
+  - file: decisions.md
+    section: R-660 — RQ-626 (a) confirmed *(closes RQ-626)*
   verify:
     method: unit test
-    detail: "payload has no suspect bits; predicate evaluated at read; Euler + energy-drift view lights SUSPECT_ENERGY everywhere"
-  rulings: []
+    detail: "payload has no suspect bits; predicate evaluated at read; Euler + energy-drift view lights SUSPECT_ENERGY everywhere, read by R-660 over bound, interacting states: an 8 x 8 grid of rest starts and dd tests 2 and 7"
+  rulings:
+  - R-660
   milestone: M3
+  note: "R-660 (31 Oct 2026, RQ-626 (a)). What the predicates read beside REQ-INT-045 and REQ-PAY-112 is RQ-636, which this requirement does not wait on (the owner's ruling of 31 Oct 2026)."
 - id: REQ-INT-041
   area: INT
   statement: "The diffusion slope must be a Welford streaming slope per macro-step: the time-only part derived in closed form (n = step_count, mean_t = (n+1)h/2, C_tt = h²n(n²−1)/12), the per-sample part updating mean_y and C_ty in two f32 accumulators with the old-mean time deviation δ_t = 0.5·n·h, never as stored (t, y) points or naive raw sums, and the slope C_ty/C_tt(n) read as NaN for n < 2 (R-245)."
@@ -4417,6 +4421,8 @@
     detail: "every control-flow comparison on drift/d_min reads the live f32 value; grep the kernel for unpack2x16float feeding a branch"
   rulings: []
   milestone: M3
+  rq:
+  - RQ-636
 - id: REQ-INT-046
   area: INT
   statement: "Branch-cut crossing detection must run at every accepted adaptive substep, unless the topology contract proves that each tested segment holds at most one crossing."
@@ -5644,6 +5650,22 @@
   - R-605
   milestone: M3
   note: "R-605 (25 Oct 2026, RQ-528 (d)): REQ-INT-085 is closed by TASK-M3-05 before Heggie is built, so the recalibration is its own calibration, applied per R-369. Closed by TASK-M3-41. Physics review 5644374613 of PR #293, F2 (applied per R-369): the value replaces REQ-INT-085's one threshold, so the proposal reports every occupant's verdict at it."
+- id: REQ-INT-110
+  area: INT
+  kind: calibration
+  statement: "The projection-parity gate's minimum number of regions, the classes of shared states its stepOnce property test must cover before its verdict on REQ-INT-030 stands (parity contract §3: synthetic states a trajectory reaches rarely, fed as shared states), must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M3 gate and recorded in decisions.md."
+  source:
+  - file: docs/contracts/principia_parity_contract.md
+    section: "3. The load-bearing discipline: never accumulate before comparing"
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: numerical gate
+    detail: "cargo xtask gate projection-parity prints the classes of shared states it fed and their count against the minimum, and flags a verdict drawn from fewer; the proposal states the minimum with its evidence; recorded in decisions.md at the M3 gate"
+  rulings:
+  - R-71
+  milestone: M3
+  note: "Proposed by TASK-M3-05 (applied per R-369): the gate framework names a calibration requirement for every gate's region minimum, and REQ-INT-030's own threshold, 0, is not one. Proposed at 4: a generic state, a close pair, a high-momentum state and a state far off its centre of mass with a bulk momentum."
 - id: REQ-EVT-001
   area: EVT
   statement: "Every pixel must get a labelled output — escape, collision or bounded (reaching the horizon is bounded), sim_failed or decode_failed, or RUNNING while in flight — with no timeout state, and substep-cap saturation a confidence flag, never a terminal."
@@ -8364,6 +8386,8 @@
   - R-605
   - R-632
   milestone: M3
+  rq:
+  - RQ-636
   note: "R-632 (27 Oct 2026, RQ-581 (d), else (b)). Closed by TASK-M3-41 with REQ-PAY-111 (applied per R-369). Where the encoding differs from linear binary16, TASK-M3-41 rewrites the f16 wording for the two latches in payload §1, §2 and §6, the render contract's unpack layer, the debug tooling plan's rows and the parity contract, each with a *Was*; d_min stays f16."
 - id: REQ-PAY-113
   area: PAY
@@ -27025,12 +27049,15 @@
     section: 10.1 The shared prelude library
   - file: docs/read_first/principia_01_pitfalls.md
     section: 3. Standing rules earned in this sequence
+  - file: decisions.md
+    section: "R-652 — The four drift goldens are re-baselined as TASK-M3-05 renders them, each `BASELINES.md` row leading with R-652, the derived case at `lin`; they are confirmed at the M3 gate *(closes RQ-625)*"
   verify:
+    detail: "the proposal gives R for energy_drift and for Lz_drift with its evidence: the drifts measured, final and max, for Euler, RK4 and the symplectic occupants (KDK, Yoshida-4, Yoshida-6) on dd_integrator test 2's long bounded orbit and test 7's close-encounter IC, and the lin view rendered at the proposed R (range_norm over the fixed, clamped [−R, R], on the diverging ramp) beside the default symlog view; it passes only if, on test 2's orbit, Euler's and RK4's final drifts render as distinct 8-bit sRGB pixels and neither pixel equals the saturated end colour c− or c+, and fails if the two pixels are equal or either equals c− or c+; the symplectic occupants (KDK, Yoshida-4, Yoshida-6) may render as the neutral c0 and are not required to be told apart; test 7's drifts are recorded and may saturate; distinct 8-bit pixels adds no numeric threshold; checked by a reviewer; confirmed by the human at the M3 gate; recorded in decisions.md The same gate confirms the four drift goldens R-652 re-baselines: debug-views/derived-energy_drift (at lin), debug-views/generated-energy_drift, debug-views/generated-Lz_drift and m1-synthetic/energy_drift_ramp."
     method: numerical gate
-    detail: "the proposal gives R for energy_drift and for Lz_drift with its evidence: the drifts measured, final and max, for Euler, RK4 and the symplectic occupants (KDK, Yoshida-4, Yoshida-6) on dd_integrator test 2's long bounded orbit and test 7's close-encounter IC, and the lin view rendered at the proposed R (range_norm over the fixed, clamped [−R, R], on the diverging ramp) beside the default symlog view; it passes only if, on test 2's orbit, Euler's and RK4's final drifts render as distinct 8-bit sRGB pixels and neither pixel equals the saturated end colour c− or c+, and fails if the two pixels are equal or either equals c− or c+; the symplectic occupants (KDK, Yoshida-4, Yoshida-6) may render as the neutral c0 and are not required to be told apart; test 7's drifts are recorded and may saturate; distinct 8-bit pixels adds no numeric threshold; checked by a reviewer; confirmed by the human at the M3 gate; recorded in decisions.md"
   rulings:
   - R-71
   - R-381
+  - R-652
   milestone: M3
 - id: REQ-TOOL-151
   area: TOOL

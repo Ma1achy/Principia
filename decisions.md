@@ -28713,6 +28713,73 @@ His second addendum, the same day, verbatim:
 
 R-651 is in the "process" group of `plan/rule_groups.yaml`. It changes no requirement and no code.
 
+## R-652 — The four drift goldens are re-baselined as TASK-M3-05 renders them, each `BASELINES.md` row leading with R-652, the derived case at `lin`; they are confirmed at the M3 gate *(closes RQ-625)*
+*30 Oct 2026 · the owner's message of that day; applied in REQ-TOOL-150 (reqio), TASK-M3-05 (its notes and an acceptance
+line), `plan/MILESTONES.md` § "M3 — The integrator, events and physics validation (CPU, native)", `plan/rule_groups.yaml`,
+`REVIEW_QUEUE.md` (RQ-625 moved out) and `docs/archive/review_queue/M0.md` (RQ-625, with its ruling); the
+`fixtures/golden/BASELINES.md` rows are TASK-M3-05's; built by TASK-M3-05*
+
+The owner's words, for this entry (the message's other rulings are not recorded here):
+
+> Rulings: RQ-625 (a).
+
+RQ-625's option (a): "re-baseline all four as TASK-M3-05 renders them, each row leading with the ruling, the derived
+case at `lin` and the nudges above, confirmed at the M3 gate".
+
+*What it decides:*
+- **R-652 is the gate decision R-110 asks for** ("no re-baselining without a gate decision"). TASK-M3-05 re-baselines
+  `debug-views/derived-energy_drift`, `debug-views/generated-energy_drift`, `debug-views/generated-Lz_drift` and
+  `m1-synthetic/energy_drift_ramp` as it renders them; each row leads with R-652 and keeps its history. Any other
+  golden that changes is reported, not re-baselined under R-652.
+- **The cases.** `derived-energy_drift` at `COMPACTION` 1 (`lin`, `±1/16`), nudge 0; `generated-energy_drift` at nudge
+  6; `generated-Lz_drift` at nudge 3. One reference across backends for each.
+- **The M3 gate confirms** the four, with REQ-TOOL-150's `lin` range, whose verify names them.
+- TASK-M3-05's PR no longer waits on RQ-625.
+
+*Applied per R-369:* RQ-625 records that `m1-synthetic/energy_drift_ramp` needs its fixture's start moved, for
+TASK-M3-05 to decide. The start moves from `−1.387` to `−1.364` (`engine::fixtures`), the even steps of 0.4 unchanged:
+at `−1.387` the scene sits 0.0091 of an 8-bit step from a rounding tie, under the 0.01 `golden_scenes_are_tie_free`
+asks; at `−1.364`, the widest margin within 0.025 of the old start, 0.0302. So the case's new SHA-256 is not the one
+RQ-625 lists for the fixture unchanged.
+
+R-652 is in the "design" group of `plan/rule_groups.yaml`, with R-454 and R-504.
+
+*Added 31 Oct 2026, the owner's words, for this entry (the messages' other rulings are not recorded here):*
+
+> (4) #360: the ramp fixture move is accepted; record the new hash and the reason (the old start sat near a tie) under RQ-625.
+
+> #360 goldens: ruling (d), not (a), (b) or (c). (a) would make the test unable to see a real defect: every t = 0 pixel is a fresh sample, so Metal's ulp noise rendering as colour would appear on real data too. Fix the view. First check the spec/dd for whether generated-energy_drift and generated-Lz_drift were meant to read the STORED drift (as the code comment says); if so, make the code match, which removes display-stage fast-math from the computation. If the spec says fragment-computed, instead give symlog a neutral band of k·f32-ulp relative to |E₀| (and |L| for L_z), with k justified in writing (rounding-level differences aren't physics), keeping nudges 6 and 3. Either way: one reference across backends, regenerated to the neutral fresh tile; add a test that a fresh sample renders exactly neutral on every backend. Record under R-652 that tie margins don't bound cross-backend differences, and correct the comment if it stays wrong.
+
+*Applied:*
+- **The ramp fixture.** `m1-synthetic/energy_drift_ramp`'s new SHA-256 is
+  `e6a4e1a8be049ac1b13ed2ab28044388a1cf25d468a8cdc9f8669b24dffc67e3`; the fixture's start moved because the old start,
+  `−1.387`, sat near a rounding tie (0.0091 of an 8-bit step, under the 0.01 asked).
+- **Tie margins do not bound cross-backend differences.** A case's tie margin (`golden_scene::tie_margin`) measures how
+  far the CPU twin's pixels sit from a rounding tie. It says nothing of how far another backend's f32 arithmetic moves a
+  value, which on a resolved near-zero drift was 5 to 6 steps at margins of 0.0249 and 0.0113. A case needs a reason of
+  its own to hold across backends.
+- **Fragment-computed, by the corpus.** `docs/design/principia_dd_generation_root.md` §3.8: `energy_drift` is
+  "`derived(from: [r, p, m0, m1, m2, E_0])` (R-246) | `H(r,p) − E_0`", `Lz_drift` "`derived(from: [r, p, Lz_0])` (R-246)".
+  `docs/design/principia_dd_simstate_payload.md` §5: "current drift `ΔE` | `H(r,p) − E_0`", and storage removes
+  "`energy_drift`/`Lz_drift` current (derived)". The render contract's unpack layer: "current drift (H(r,p)-E_0)", among
+  the derived. So the neutral band's branch holds: render contract Part 5, "The neutral band", `k = 128` with its bound;
+  the comment at `golden_scene::CASE_PARAMS` that read "over the stored drift" is corrected. (R-605's stored drift is the
+  regularised latches, read under a regularised occupant by TASK-M3-41; it is not these views' value.)
+- **The references.** `debug-views/generated-energy_drift`
+  `31c33abdfd32f142274f46d409ec8eadd198f630e9de7436a76795db328245b9` and `debug-views/generated-Lz_drift`
+  `9ddadbb387b8ab5e3e1ab55aab376204cfbd76759e428313377bbdfd64be5b92`, nudges 6 and 3 kept; only tile 0, the fresh sample,
+  changed, on each. `drift_view_neutral_fresh_sample_renders_exactly_neutral` (`crates/render/tests/drift_views.rs`) runs
+  on each backend CI has.
+- **The test's domain.** That test judges only the fresh samples whose rounding bound is inside the band, by its
+  `in_domain`: `9K + 15|V| ≤ 128·|E_0|`, and for `L_z` `5·S ≤ 128·|Lz_0|` (render contract Part 5), at least 4 of its 8 in
+  each view. A sample near a cancellation is outside it, and may show a tint; the ruling's two requirements conflict
+  there, a band relative to the reference and an exactly neutral fresh sample, and RQ-637 asks the owner.
+- **The band's scope (applied per R-369; code review 5723219417, C2).** The band is in the three drift debug views. A
+  field ramp on `energy_drift` or `Lz_drift` (colour_composition §6's `f_edrift`) has none; the code stays, and RQ-638 asks
+  the owner whether to extend it.
+- **A non-finite operand (R-436; qa review 5723138973, Q1).** The band never makes one neutral: each view tests its
+  reference and its drift on their bits first and draws the hatch (render contract Part 5, "The non-finite guard").
+
 ## R-655 — On a tilted shape sphere the spherical map's lattice of repeats is folded: a pixel `(s + k, t + 2j)` with `N_a·k + 2·N_b·j = 0` for integers `(k, j) ≠ 0` is the same system as `(s, t)` and is counted once, at its canonical point, the lattice decided exactly on the stored angles *(closes RQ-631; amends R-554 L3 and R-537 EX7(b))*
 *30 Oct 2026 · the owner's batch of that day; applied in `docs/contracts/principia_chart_decoder_contract.md` § "Repeats
 and the canonical point" (a paragraph), R-554's forward line, `REVIEW_QUEUE.md` (RQ-631, a dated closing line),
@@ -29010,6 +29077,20 @@ The owner's words, verbatim:
   the build as validation's, for the same (R-217).
 
 R-658 is in the "process" group of `plan/rule_groups.yaml`. Changes no requirement.
+
+## R-660 — RQ-626 (a) confirmed *(closes RQ-626)*
+*31 Oct 2026 · the owner's message of that day; applied in `docs/contracts/principia_integrator_contract.md` Part 2 (a
+clause), REQ-INT-040 (reqio), TASK-M3-05 (a note), `plan/rule_groups.yaml`, `REVIEW_QUEUE.md` (RQ-626 moved out) and
+`docs/archive/review_queue/M0.md` (RQ-626, with its ruling); built by TASK-M3-05*
+
+The owner's words, for this entry (the message's other rulings are not recorded here):
+
+> RQ-626 (a) confirmed.
+
+RQ-626's option (a): "everywhere" over the states where Euler's secular drift has time to act: bound, interacting states
+(rest starts, dd tests 2 and 7), the test's domain named in REQ-INT-040's detail.
+
+R-660 is in the "design" group of `plan/rule_groups.yaml`, with R-652.
 
 ## R-661 — That tier (a)'s f32 statistics agree, with f64's or with a converged reference's, is a hypothesis Principia will measure, established by no paper; BZ-1 is reopened on the cold sets, which start from rest and so are planar, with a paired f32, f64 and converged experiment proposed for M9 at peek priority; REQ-VAL-199 states the effect size its 256 starts can detect; the CC BY papers and records are committed *(closes RQ-644 and RQ-646; amends R-629; queues RQ-647, RQ-648 and RQ-649)*
 *31 Oct 2026 · the owner, on the precision set's triage; applied in `docs/incoming/2026-10-31_precision_set/` (new),

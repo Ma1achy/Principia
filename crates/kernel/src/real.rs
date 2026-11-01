@@ -95,6 +95,10 @@ pub trait IeeeBits: Real + crate::chart::invariant::WarpReal {
     /// arithmetic on `self`.
     fn non_finite_bits(self) -> bool;
 
+    /// Whether `self` is NaN, not `±∞`: its exponent field all ones and its fraction field non-zero, a test on the bits,
+    /// made before any arithmetic on `self`.
+    fn nan_bits(self) -> bool;
+
     /// `|self|`'s unbiased exponent field, read from the bits: `e` with `2^e ≤ |self| < 2^(e+1)` for a normal `self`,
     /// the field's least value (`−127` at f32, `−1023` at f64) for `±0` and subnormals, its greatest (128, 1024) for
     /// `±∞` and NaN.
@@ -151,6 +155,11 @@ impl IeeeBits for f32 {
     }
 
     #[inline]
+    fn nan_bits(self) -> bool {
+        self.to_bits() & 0x7FFF_FFFF > 0x7F80_0000
+    }
+
+    #[inline]
     fn exponent(self) -> i32 {
         ((self.to_bits() >> 23) & 0xFF) as i32 - 127
     }
@@ -193,6 +202,11 @@ impl IeeeBits for f64 {
     #[inline]
     fn non_finite_bits(self) -> bool {
         self.to_bits() & 0x7FF0_0000_0000_0000 == 0x7FF0_0000_0000_0000
+    }
+
+    #[inline]
+    fn nan_bits(self) -> bool {
+        self.to_bits() & 0x7FFF_FFFF_FFFF_FFFF > 0x7FF0_0000_0000_0000
     }
 
     #[inline]

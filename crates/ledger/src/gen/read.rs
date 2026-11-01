@@ -44,6 +44,13 @@
 //! read takes them as an argument, `masses` (the fragment's `ctx.ic`, render contract Part 1). Both are f32, the live
 //! f32 values, not the f16 latches (payload §1, §5).
 //!
+//! **The drift suspect predicates** (dd_integrator §3.5; payload §5; TASK-M3-05) are read-time predicates over the
+//! stored latches, no suspect bit being stored: `suspect_energy(dE_max, E_0, eps_e)`, the relative energy drift
+//! `dE_max / max(ε_E, |E_0|)` above `τ_E`, and `suspect_lz(dLz_max)`, the absolute `L_z` drift above `τ_L`, both
+//! thresholds the constants register's (REQ-INT-085). `ε_E` is the sim key's, an argument. The Rust side also gives
+//! `drift_suspect`, which carries the occupant's `symplectic` flag beside them, since what the energy predicate
+//! measures depends on it (integrator contract Part 2).
+//!
 //! **The shape point** `n = shape(r, masses)` (payload §5; integrator dd §3.7; chart_reference §3.1; R-14) has one Rust
 //! source, `kernel::shape::shape`, the march's own, which the Rust read side re-exports and calls; the WGSL read side's
 //! `shape` is that function's translation, rust-gpu → SPIR-V → WGSL, which `cargo xtask build-kernel` emits to
@@ -331,6 +338,7 @@ pub struct SimState {{
     }
     out.push_str("}\n");
     out.push_str(RUST_HELPERS);
+    out.push_str(&suspect_rust());
     for variant in variants(&crate::payload::structs()) {
         out.push_str(&rust_unpack(variant, &members));
     }
@@ -521,6 +529,104 @@ pub fn Lz_drift(r: [[f32; 2]; 3], p: [[f32; 2]; 3], lz_0: f32) -> f32 {
     angular_momentum_z(r, p) - lz_0
 }
 "#;
+
+/// `x`, a register value, as an f32 literal of both targets: the shortest form that reads back to it.
+fn f32_literal(x: f64) -> String {
+    format!("{:?}", x as f32)
+}
+
+/// The drift suspect predicates' thresholds, from the register (REQ-INT-085; R-71): `τ_E` on the relative energy
+/// drift and `τ_L` on the absolute `L_z` drift.
+fn thresholds() -> (String, String) {
+    use crate::constants::{SUSPECT_ENERGY_THRESHOLD, SUSPECT_LZ_THRESHOLD};
+    (
+        f32_literal(SUSPECT_ENERGY_THRESHOLD.number()),
+        f32_literal(SUSPECT_LZ_THRESHOLD.number()),
+    )
+}
+
+/// The Rust drift suspect predicates (dd_integrator §3.5; payload §5; integrator contract Part 2): read-time
+/// predicates over the stored latches, no stored suspect bit, and the occupant's `symplectic` flag carried beside them,
+/// which says what the energy-suspect predicate measures.
+fn suspect_rust() -> String {
+    let (tau_e, tau_l) = thresholds();
+    format!(
+        r#"
+/// The energy-suspect threshold `τ_E` on the relative energy drift (dd_integrator §3.5; REQ-INT-085's proposal,
+/// provisional until the M3 gate): the constants register's `suspect_energy_threshold`.
+pub const SUSPECT_ENERGY_THRESHOLD: f32 = {tau_e};
+
+/// The `L_z`-suspect threshold `τ_L` on the absolute `L_z` drift (dd_integrator §3.5; R-382; REQ-INT-085's proposal,
+/// provisional until the M3 gate): the constants register's `suspect_lz_threshold`.
+pub const SUSPECT_LZ_THRESHOLD: f32 = {tau_l};
+
+/// The energy-suspect predicate, read at read time over the stored latches (payload §5; no stored suspect bit): the
+/// relative energy drift the latch gives, `dE_max / max(eps_e, |E_0|)`, above `τ_E` (dd_integrator §3.5). `eps_e > 0`
+/// is the sim key's `ε_E`. A NaN `de_max` reads false. `e_0` is read as a number, and `max` drops a NaN there and
+/// divides by the floor, so a caller tests `e_0` on its bits first (R-436).
+#[inline]
+pub fn suspect_energy(de_max: f32, e_0: f32, eps_e: f32) -> bool {{
+    de_max / Float::max(eps_e, Float::abs(e_0)) > SUSPECT_ENERGY_THRESHOLD
+}}
+
+/// The `L_z`-suspect predicate, read at read time over the stored latch: the absolute `L_z` drift `dLz_max` above
+/// `τ_L` (dd_integrator §3.5; R-382). A NaN reads false.
+#[inline]
+pub fn suspect_lz(dlz_max: f32) -> bool {{
+    dlz_max > SUSPECT_LZ_THRESHOLD
+}}
+
+/// A sample's drift suspect predicates, read at read time, with what they measure (integrator contract Part 2:
+/// "a debug/stats layer must read `symplectic` before interpreting drift").
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct DriftSuspect {{
+    /// `SUSPECT_ENERGY`: [`suspect_energy`].
+    pub energy: bool,
+    /// `SUSPECT_LZ`: [`suspect_lz`].
+    pub lz: bool,
+    /// The occupant's `symplectic` flag: on a symplectic occupant the energy drift measures the dynamics,
+    /// close-encounter stress; on any other it measures the integrator's own error.
+    pub reads_dynamics: bool,
+}}
+
+/// The drift suspect predicates of the read-side `s`, at the sim key's `eps_e`, under an occupant whose profile's
+/// `symplectic` flag is `symplectic` (dd_integrator §3.5; integrator contract Part 2).
+#[inline]
+pub fn drift_suspect(s: &SimState, eps_e: f32, symplectic: bool) -> DriftSuspect {{
+    DriftSuspect {{
+        energy: suspect_energy(s.dE_max, s.E_0, eps_e),
+        lz: suspect_lz(s.dLz_max),
+        reads_dynamics: symplectic,
+    }}
+}}
+"#
+    )
+}
+
+/// The WGSL drift suspect predicates, as [`suspect_rust`]'s: the drift views read them (render contract Part 5).
+fn suspect_wgsl() -> String {
+    let (tau_e, tau_l) = thresholds();
+    format!(
+        r"
+// The energy-suspect threshold `τ_E` on the relative energy drift and the `L_z`-suspect threshold `τ_L` on the
+// absolute `L_z` drift (dd_integrator §3.5; R-382; REQ-INT-085's proposals, provisional until the M3 gate): the
+// constants register's.
+const SUSPECT_ENERGY_THRESHOLD: f32 = {tau_e};
+const SUSPECT_LZ_THRESHOLD: f32 = {tau_l};
+
+// The energy-suspect predicate, read at read time over the stored latches (payload §5; no stored suspect bit):
+// `dE_max / max(eps_e, |E_0|)` above `τ_E`, `eps_e > 0` the sim key's `ε_E`.
+fn suspect_energy(de_max: f32, e_0: f32, eps_e: f32) -> bool {{
+    return de_max / max(eps_e, abs(e_0)) > SUSPECT_ENERGY_THRESHOLD;
+}}
+
+// The `L_z`-suspect predicate, read at read time over the stored latch: `dLz_max` above `τ_L`.
+fn suspect_lz(dlz_max: f32) -> bool {{
+    return dlz_max > SUSPECT_LZ_THRESHOLD;
+}}
+"
+    )
+}
 
 /// A tier as the read side sees it (lowering Part 3a; payload §1): whether the stored variant is `SimStateFTLE`, with
 /// the Benettin shadow, or `SimStateBase`, and whether the word buffer is bound. The assembler bakes the same two as
@@ -981,6 +1087,7 @@ struct SimState {{
     }
     out.push_str("}\n");
     out.push_str(WGSL_HELPERS);
+    out.push_str(&suspect_wgsl());
     out.push_str(SHAPE_WGSL);
     let (ic, sample): (Vec<&str>, Vec<&str>) = fields.iter().partition(|f| f.starts_with("ic."));
     out.push_str(&sample_read(&members, tier, &sample)?);

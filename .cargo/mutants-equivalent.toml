@@ -332,6 +332,18 @@ mutant = "crates/gui/src/explore/compass.rs:966:53: replace * with / in Drag::mo
 justification = "Z0_HALF_RANGE is the constant 1.0, and dividing by 1.0 equals multiplying by it exactly; a change to the constant makes the rate tests in mock_compass_cube and mock_compass_slice_follows_pointer tell them apart"
 
 [[equivalent]]
+mutant = "crates/validation/src/projection_parity.rs:247:26: replace += with -= in judge"
+justification = "repeat is two runs of one pure function on one input, so u32::from(repeat) is 0 on every reachable call, and x - 0 equals x + 0"
+
+[[equivalent]]
+mutant = "crates/validation/src/projection_parity.rs:247:26: replace += with *= in judge"
+justification = "repeat is two runs of one pure function on one input, so u32::from(repeat) is 0 and repeat_differences stays 0 either way"
+
+[[equivalent]]
+mutant = "crates/ledger/src/gen/catalogue.rs:577:13: delete match arm \"eps_L\" in drift_wgsl"
+justification = "EPS_L_DEFAULT and EPS_E_DEFAULT, the register's eps_l and eps_e, are both 1e-6, so the wildcard arm gives the same default; a change to either makes drift_view_floor_uniforms_default_to_the_register tell them apart"
+
+[[equivalent]]
 mutant = "xtask/src/jobq.rs:1605:26: replace < with <= in end_stale_group"
 justification = "the two differ only if the clock reads exactly the deadline, to the nanosecond, at that check: at most one more 100 ms sleep and look at the group, inside the grace's own 100 ms granularity, and the same outcome"
 
