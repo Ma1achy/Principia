@@ -1440,3 +1440,7 @@
   section: "R-658 — Heavy commands run only through a local job queue the orchestrator owns, `cargo xtask job`: agents submit them and wait, never run them directly; classes merge, fix, build and peek, first in, first out within each; one runner at a fixed concurrency, each job with cargo's jobs and test threads at the core count; jobs time out, stale locks expire and a new runner recovers a dead one's jobs; heavy processes outside the queue are logged; sccache measured again; mutants scoped to the diff and run through the queue *(supersedes R-228)*"
   reason: informative only
   note: "the owner's ruling of 30 Oct 2026: heavy commands only through the local job queue (cargo xtask job); process, carried by CLAUDE.md, plan/OPERATIONS.md § Resources and the agent files, and built in xtask/src/jobq.rs; changes no requirement"
+- file: decisions.md
+  section: "R-659 — Gemini reviews make one request and name the model that answered; on a quota refusal they fall back down a chain of four models; a spent chain posts \"Gemini quota exhausted, review skipped\" and the merge proceeds *(an R-369 note; amends R-635's Gemini workflow)*"
+  reason: informative only
+  note: "the owner's message of 30 Oct 2026: one Gemini request per review, a four-model fallback chain on quota errors, the model stamped, a note when the chain is spent; process, carried by the gemini-dispatch workflow and scripts/gemini_review.py; changes no requirement"

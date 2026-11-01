@@ -9,8 +9,7 @@
 # from the `tool:` lines of the `taiki-e/install-action` steps; the apt packages from the `apt-get install` lines; the
 # Python version from the `actions/setup-python` steps' `python-version:`; the Python packages from the `pip install`
 # lines, a `\`-ended line read with the next; and PRIN_GPU_BACKEND from the jobs' and steps' `env:`, or the
-# workflow's top-level `env:`. Only jobs that run on `ubuntu-*` are read; the advisory Gemini review's action
-# (R-635), which installs only the Gemini CLI it runs, installs nothing here. A step that installs something by a means
+# workflow's top-level `env:`. Only jobs that run on `ubuntu-*` are read. A step that installs something by a means
 # this script doesn't know stops it, naming the step, so CI cannot gain an install the script misses.
 # `xtask/tests/cloud_setup.rs` checks that this script's plan and CI agree, and that this file holds no version.
 #
@@ -131,8 +130,6 @@ ci_records() {
         v = unquote(substr(t, 6))
         if (v ~ /^dtolnay\/rust-toolchain@/) { tc = substr(v, index(v, "@") + 1); emit("R " tc) }
         else if (v ~ /^(actions\/checkout|actions\/cache|actions\/cache\/restore|actions\/cache\/save|actions\/upload-artifact|actions\/download-artifact|Swatinem\/rust-cache|taiki-e\/install-action|actions\/setup-python)@/) { }
-        # The advisory Gemini review (R-635) installs only the Gemini CLI it runs: nothing builds or tests with it.
-        else if (v ~ /^google-github-actions\/run-gemini-cli@/) { }
         else emit("U " FILENAME ":" FNR ": " t)
         next
       }
