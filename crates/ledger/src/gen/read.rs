@@ -562,7 +562,8 @@ pub const SUSPECT_LZ_THRESHOLD: f32 = {tau_l};
 
 /// The energy-suspect predicate, read at read time over the stored latches (payload §5; no stored suspect bit): the
 /// relative energy drift the latch gives, `dE_max / max(eps_e, |E_0|)`, above `τ_E` (dd_integrator §3.5). `eps_e > 0`
-/// is the sim key's `ε_E`. A NaN reads false.
+/// is the sim key's `ε_E`. A NaN `de_max` reads false. `e_0` is read as a number, and `max` drops a NaN there and
+/// divides by the floor, so a caller tests `e_0` on its bits first (R-436).
 #[inline]
 pub fn suspect_energy(de_max: f32, e_0: f32, eps_e: f32) -> bool {{
     de_max / Float::max(eps_e, Float::abs(e_0)) > SUSPECT_ENERGY_THRESHOLD
