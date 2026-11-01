@@ -24613,7 +24613,7 @@
 - id: REQ-GUI-411
   area: GUI
   kind: calibration
-  statement: "The radius of the Shape view's pole, the value of sin φ below which the compass's Shape view calls its state at the chart's pole, naming a refused steer's reason \"the chart's pole\" ahead of any other and showing the readout's pole line, must be a calibrated value (R-71; R-550, RQ-343 (b), J6), proposed by TASK-M6-35 from the farthest sin φ at which the pole costs the latent Jacobian a singular value at REQ-GUI-410's cut, measured over a fixed, recorded sample with E* unset and set, and confirmed at the M6 gate."
+  statement: "The radius of the Shape view's pole, the value of sin φ below which the compass's Shape view calls its state near the chart's pole, showing the readout's pole line and naming a refused steer's reason \"the chart's pole\", except on an E*-normalised chart where the latent Jacobian keeps seven values at REQ-GUI-410's cut, the shell alone accounting for the refusal, which is named \"normal to the energy shell\" (R-550, RQ-345 (b)), must be a calibrated value (R-71; R-550, RQ-343 (b), J6), proposed by TASK-M6-35 from the farthest sin φ at which the pole costs the latent Jacobian a singular value at REQ-GUI-410's cut, measured over a fixed, recorded sample with E* unset and set, and confirmed at the M6 gate."
   source:
   - file: decisions.md
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"

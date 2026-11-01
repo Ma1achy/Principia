@@ -385,8 +385,17 @@ fn mock_compass_steer_physical_at_the_shape_pole_names_it() {
     assert!(steer(&d, Set::Shape, &off, 4, 6).expect("a cell").is_ok());
     // The Jacobi view has no pole there.
     assert!(steer(&d, Set::Jacobi, &sim, 4, 6).expect("a cell").is_ok());
-    // A pole on an E* chart names the pole first.
+    // A pole on an E* chart that costs J more than the shell's value names the pole first.
     let shell = Decoder::Real { e_star: Some(0.0) };
+    let kept = Inverse::of(
+        &latent_jacobian(&shell, Set::Shape, &sim.links, &sim.plane.z0),
+        physical::CUT,
+    )
+    .kept;
+    assert!(
+        kept < 7,
+        "kept {kept}: the shell alone would account for it"
+    );
     assert_eq!(
         steer(&shell, Set::Shape, &sim, 4, 6),
         Some(Err(Refusal::Pole))

@@ -10,7 +10,8 @@ use super::compass_plucker::Rng;
 use super::compass_support::{app_at, plane, view};
 use super::support::rejects;
 use crate::explore::compass::physical::{
-    latent_jacobian, steer, Decoder, Inverse, Matrix, Refusal, Set, CUT, POLE_SIN, TOLERANCE,
+    at_pole, latent_jacobian, steer, Decoder, Inverse, Matrix, Refusal, Set, CUT, POLE_SIN,
+    TOLERANCE,
 };
 use crate::explore::compass::views::upper;
 
@@ -197,6 +198,112 @@ fn mock_compass_steer_cut_the_pole_radius_holds_on_the_sample() {
     assert!(unset < POLE_SIN, "{unset}");
     assert!(shell < POLE_SIN, "{shell}");
     rejects("the first radius, 1e-3", || assert!(unset < 1e-3));
+}
+
+/// `base` moved in `(z₀, z₁)` to the distance `t` from the pole at the azimuth `azimuth`.
+fn about_the_pole(base: &Latent, t: f64, azimuth: f64) -> Latent {
+    let mut z = *base;
+    (z[0], z[1]) = (t * azimuth.cos(), t * azimuth.sin());
+    z
+}
+
+/// `base` moved to `sin φ = target` about the pole at the azimuth `azimuth`, by bisection on `t`.
+fn at_sin_phi(base: &Latent, azimuth: f64, target: f64, e_star: Option<f64>) -> Latent {
+    let links = Links::defaults();
+    let (mut low, mut high) = (0.0, 1.0);
+    for _ in 0..50 {
+        let t = (low + high) / 2.0;
+        let s = decoded::state(&about_the_pole(base, t, azimuth), &links, e_star);
+        if Sphere::of(&s).sin_phi < target {
+            low = t;
+        } else {
+            high = t;
+        }
+    }
+    about_the_pole(base, low, azimuth)
+}
+
+/// The sample's `z` at `sin φ = target` on `d`, with their refused cells where `J` keeps `kept(_)`, at most `most` of them.
+fn refused_near_the_pole(
+    d: &Decoder,
+    target: f64,
+    kept: impl Fn(usize) -> bool,
+    most: usize,
+) -> Vec<(Latent, (usize, usize))> {
+    let Decoder::Real { e_star } = *d else {
+        panic!("the real decoder has the pole");
+    };
+    let links = Links::defaults();
+    let mut found = Vec::new();
+    for (n, base) in sample().iter().enumerate() {
+        let azimuth = 0.7 * n as f64;
+        let z = at_sin_phi(base, azimuth, target, e_star);
+        let inverse = Inverse::of(&latent_jacobian(d, Set::Shape, &links, &z), CUT);
+        if !kept(inverse.kept) {
+            continue;
+        }
+        if let Some(cell) = upper().find(|(a, b)| inverse.smaller(*a, *b) < TOLERANCE) {
+            found.push((z, cell));
+            if found.len() == most {
+                break;
+            }
+        }
+    }
+    found
+}
+
+#[test]
+fn mock_compass_steer_cut_inside_the_pole_radius_the_shell_keeps_its_name() {
+    // R-550, RQ-345 (b): seven kept on a shell chart is the shell's refusal, inside the pole's radius as well. The pole
+    // keeps its name where the shell does not account for the loss.
+    let p: Plane = plane(&view(10.0, 5.0, 0.0, 0.8), [0.1, -0.3, 0.25]);
+    let (app, _h) = app_at(&p);
+    let mut sim = app.snapshot().sim.clone();
+    let links = Links::defaults();
+    let shell = Decoder::Real { e_star: Some(0.0) };
+    let found = refused_near_the_pole(&shell, 0.05, |kept| kept == 7, 8);
+    assert!(!found.is_empty(), "no shell refusal at sin φ = 0.05");
+    for (z, (a, b)) in &found {
+        assert!(at_pole(&shell, Set::Shape, &links, z), "inside, at {z:?}");
+        sim.plane.z0 = *z;
+        assert_eq!(
+            steer(&shell, Set::Shape, &sim, *a, *b),
+            Some(Err(Refusal::EnergyShell)),
+            "({a}, {b}) at {z:?}"
+        );
+    }
+    // Six kept at the same chart, deep inside: the shell does not account for the loss, so the pole.
+    let deep = refused_near_the_pole(&shell, 1e-5, |kept| kept < 7, 4);
+    assert!(!deep.is_empty(), "no loss past the shell's at sin φ = 1e-5");
+    for (z, (a, b)) in &deep {
+        sim.plane.z0 = *z;
+        assert_eq!(
+            steer(&shell, Set::Shape, &sim, *a, *b),
+            Some(Err(Refusal::Pole)),
+            "({a}, {b}) at {z:?}"
+        );
+    }
+    // No shell: seven kept is the pole's loss, not the shell's.
+    let unset = Decoder::Real { e_star: None };
+    let bare = refused_near_the_pole(&unset, 1e-3, |kept| kept == 7, 4);
+    assert!(!bare.is_empty(), "no loss with E* unset at sin φ = 1e-3");
+    for (z, (a, b)) in &bare {
+        sim.plane.z0 = *z;
+        assert_eq!(
+            steer(&unset, Set::Shape, &sim, *a, *b),
+            Some(Err(Refusal::Pole)),
+            "({a}, {b}) at {z:?}"
+        );
+    }
+    // Control: the pole named ahead of the shell, the fault this test is here for.
+    let (z, (a, b)) = found[0];
+    sim.plane.z0 = z;
+    rejects("the pole named ahead of the shell", || {
+        assert_eq!(
+            steer(&shell, Set::Shape, &sim, a, b),
+            Some(Err(Refusal::Pole))
+        )
+    });
 }
 
 #[test]

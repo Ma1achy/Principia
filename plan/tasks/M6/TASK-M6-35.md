@@ -91,3 +91,8 @@ state after `η_E`, the fixed-range metric, and the steer by `J⁻¹` with the p
   `mock_compass_steer_cut`. *Was (Closes):* "REQ-GUI-199, REQ-GUI-200, REQ-DEC-049, REQ-GUI-346, REQ-GUI-347,
   REQ-GUI-410". *Was (acceptance):* "The reference ranges (REQ-GUI-347) and the steer's tolerance (REQ-GUI-346):
   written".
+- **The physics review of PR #365 (F1):** on an `E*` chart a cell the shell alone refuses keeps the shell's name inside
+  the pole's radius (R-550, RQ-345 (b)), and the readout says "near". *Was (REQ-GUI-411):* "calls its state at the
+  chart's pole, naming a refused steer's reason \"the chart's pole\" ahead of any other and showing the readout's pole
+  line". *Was (render_gui_spec):* "Below it the Shape view's state is at the chart's pole: a refused cell is named for
+  the pole ahead of any other cause, and the readout shows the pole's line."

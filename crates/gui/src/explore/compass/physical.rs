@@ -24,8 +24,8 @@ pub const CUT: f64 = 1e-9;
 /// The refusal tolerance on `[P e_i, P e_j]`'s smaller singular value (REQ-GUI-346, an R-71 calibration confirmed at the
 /// M6 gate; the measurement is render_gui_spec's).
 pub const TOLERANCE: f64 = 0.1;
-/// Where `sin φ` is below this, the Shape view's state is at the chart's pole, for naming a refusal's reason and for the
-/// readout's line (REQ-GUI-411, an R-71 calibration confirmed at the M6 gate; the measurement is render_gui_spec's).
+/// Where `sin φ` is below this, the Shape view's state is near the chart's pole, for naming a refusal's reason and for
+/// the readout's line (REQ-GUI-411, an R-71 calibration confirmed at the M6 gate; the measurement is render_gui_spec's).
 pub const POLE_SIN: f64 = 0.1;
 
 /// The singular values `J` keeps on an `E*` chart with nothing else rank-deficient: the shell drops one (R-550).
@@ -351,10 +351,12 @@ impl Refusal {
         }
     }
 
-    /// Why cell `(i, j)`, refused by `inverse` at `z`, is refused: the pole first, a state with no chart there. Off a
-    /// shell chart the cause is `J`'s own rank. On one, the shell accounts for one dropped value, so seven kept leaves it
-    /// the only cause. Fewer kept means something else is rank-deficient too, and the cell is told apart by whether it is
-    /// still refused with `η_E` off, the shell gone; a fixture has no such chart, and names the other cause.
+    /// Why cell `(i, j)`, refused by `inverse` at `z`, is refused. On a shell chart the shell accounts for one dropped
+    /// value, so seven kept leaves it the only cause, inside the pole's radius as well: the pole costs `J` nothing more
+    /// there (R-550; REQ-GUI-411's record). Otherwise the pole comes first, a state with no chart there. Off a shell chart
+    /// the other cause is `J`'s own rank. On one, fewer kept means something else is rank-deficient too, and the cell is
+    /// told apart by whether it is still refused with `η_E` off, the shell gone; a fixture has no such chart, and names
+    /// the other cause.
     fn at(
         decoder: &Decoder,
         set: Set,
@@ -363,14 +365,14 @@ impl Refusal {
         inverse: &Inverse,
         (i, j): (usize, usize),
     ) -> Self {
+        if decoder.on_shell() && inverse.kept >= SHELL_KEPT {
+            return Refusal::EnergyShell;
+        }
         if at_pole(decoder, set, links, z) {
             return Refusal::Pole;
         }
         if !decoder.on_shell() {
             return Refusal::Saturated;
-        }
-        if inverse.kept >= SHELL_KEPT {
-            return Refusal::EnergyShell;
         }
         match decoder {
             Decoder::Real { .. } => {
@@ -397,7 +399,7 @@ pub fn refuses(smaller: f64) -> bool {
     smaller < TOLERANCE
 }
 
-/// Whether `z` is at a pole of the Shape view's sphere, on the decoder.
+/// Whether `z` is within the pole's radius of the Shape view's sphere, on the decoder.
 pub fn at_pole(decoder: &Decoder, set: Set, links: &Links, z: &Latent) -> bool {
     match (set, decoder) {
         (Set::Shape, Decoder::Real { e_star }) => {
@@ -503,8 +505,9 @@ pub fn latent_point(plane: &Plane, hover: Option<[f64; 2]>) -> Latent {
 pub const HELP: &str = "changes as the slice moves, J depending on z₀; Plücker does not. Each coordinate over its fixed \
 reference range. J at the hovered pixel; nonlinear chart, z₀. Click to steer";
 
-/// The readout's line at a pole of the sphere (RQ-343 (b)): named as the chart's singularity.
-pub const POLE_LINE: &str = "at the chart's pole, a singularity of θ, φ";
+/// The readout's line within the pole's radius of the sphere (RQ-343 (b)): named as the chart's singularity. Near, not at:
+/// the radius runs to about 5.7°, where the grid still draws and steers are accepted.
+pub const POLE_LINE: &str = "near the chart's pole, a singularity of θ, φ";
 
 /// The message where the pushforward vanishes (REQ-GUI-199): said, not drawn.
 pub const DEGENERATE: &str = "J q̂₁ ∧ J q̂₂ = 0: this plane has no image here. Click a cell to steer";
