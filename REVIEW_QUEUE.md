@@ -780,6 +780,76 @@ For the owner: yes, it is REQ-ENC-024's calibration, and the options change what
   RQ-628's scope).
 - **Applied meanwhile:** none; nothing is built for it.
 - **Waits:** nothing.
+## RQ-623: The agreement presets' tolerance near a binary collision: no factor of the per-operand form covers the fragment-against-compute differences, which grow as (|rᵢ|+|rⱼ|)/rᵢⱼ, up to about 1/eps, as a pair separation falls *(a calibration requirement, R-71, and the form it is a factor of, a definition requirement, R-72; physics; REQ-COL-060, REQ-COL-006; context: TASK-M2-29)*
+
+*Queued 30 Oct 2026 by TASK-M2-29's implementer, from its measurement. For the owner: yes, it is physics where the
+choice changes what the agreement preset shows and what its gate certifies, and the corpus does not settle it
+(R-369).*
+
+- **File, section:**
+  - `plan/requirements.yaml` REQ-COL-060, verify: "the proposal measures, in gpu-metal and gpu-lavapipe, the agreement
+    presets' fragment-against-compute differences (|E(fragment-decode) − E₀| and the like) over the M2 charts, and
+    states the tolerance that covers them".
+  - `docs/design/principia_colour_composition.md` § "6. Debug views as presets", the agreement presets' bullet: "The
+    fragment shaders may compile with fast-math and the compute shaders don't, by default (R-297), so an agreement
+    preset compares within a stated tolerance, a calibration requirement (R-71), not bit-exactly."
+  - `crates/render/src/presets/agreement.rs`, the tolerance's form TASK-M2-25 chose (applied per R-369 there):
+    `|E − E₀| ≤ FACTOR·eps·(max(|K₀|, 1) + max(|V₀|, 1))`, each operand's difference bounded by `FACTOR·eps·max(|x|, 1)`.
+  - `docs/contracts/principia_inverse_encode_contract.md` Part 4: "every round-trip tolerance is asserted in *physical*
+    space, where the composed map is well-conditioned".
+  - `decisions.md` § R-544: its conditioning-derived δ exclusion near the shape sphere's collision landmarks, recorded
+    as a test detail.
+  - `docs/read_first/principia_01_pitfalls.md` § "3. Standing rules earned in this sequence": "A QUANTITY THAT DOES NOT
+    CONVERGE UNDER REFINEMENT IS MEASURING THE SAMPLING, NOT THE SYSTEM." and "Set thresholds from the observed
+    distribution, or from a measured gap."
+- **The measurement** (Metal, Apple M3 Pro, branch `task/TASK-M2-29` at fab11679; the `decode-agreement` gate's report,
+  each chart at its fixed parameters, the fragment compiled as Metal compiles it, the decode stage with compute
+  fast-math off). The worst `|E − E₀|` in eps of the scale `max(|K₀|, 1) + max(|V₀|, 1)`, every chart, by lattice:
+  16² per chart 7.9; 128² 15.5; 256² 20.2; 512² 60.4 (`shape_sphere`). The median and 99th percentile do not move
+  (`shape_sphere` 2.41 and 4.81 eps at 128², 256² and 512²; `latent` about 0.45 and 8.0); only the worst grows. Every
+  sample over 16 eps at 512² lies on `shape_sphere`'s line `v = 0.5`, the collinear equator, at `u ≈ 0.845` and
+  `u ≈ 0.040`, beside a binary collision. Zooming on `u = 0.84473, v = 0.5` with 128² cells at depths 9 to 21, the
+  worst is 60, 185, 2129, 8606, 19520 (smallest pair separation 9.7·10⁻⁵, `V₀ = −119.7`), 2269, 996 eps; on
+  `u = 0.04004`, up to 1735. At the collision itself `V₀` is `−∞`, hatched and excluded (R-436); next to it, the
+  difference grows as (|rᵢ|+|rⱼ|)/rᵢⱼ, up to about 1/eps.
+- **The mechanism, measured:** the conditioning of `V = −Σ mᵢmⱼ/rᵢⱼ` in f32. A pair separation formed from positions
+  of order 1 carries an absolute rounding of order `eps·(|rᵢ| + |rⱼ|)`, so `V` carries `Σ mᵢmⱼ·eps·(|rᵢ| + |rⱼ|)/rᵢⱼ²`,
+  which the per-operand scale `eps·|V₀|` underestimates by `~(|rᵢ| + |rⱼ|)/rᵢⱼ`. Any two f32 compilations that round
+  differently diverge by that much. It is not fast-math alone: with the decode stage compiled with compute fast-math
+  on, beside the fragment, the worst near the same point is still 3086 eps. With the scale widened by that
+  conditioning, `eps·(max(|K₀|, 1) + max(|V₀|, 1) + Σ mᵢmⱼ(|rᵢ| + |rⱼ|)/rᵢⱼ²)` from the decode stage's own `(m, r)`, the
+  worst over every one of those zoom windows is 1.1 to 5.7.
+- **The gap:** REQ-COL-060 asks for "the tolerance that covers" the measured differences over the M2 charts. In the
+  form the preset compiles, no factor does: the worst grows as the samples near a collision (pitfalls § 3), so a
+  factor that covers the gate's lattices (256 covers every lattice above) still draws pixels near a binary collision
+  red, a disagreement that is f32 conditioning, not a translation or addressing fault. The corpus gives the
+  tolerance as a calibration and says nothing of its form near a collision.
+- **The question:** what the agreement presets' tolerance is where the f32 energy is ill-conditioned, beside a binary
+  collision.
+- **Options seen:**
+  (a) the per-operand form as it is, with a factor that covers the gate's lattices (256 proposed), and the red near a
+  collision stated in colour_composition § 6 as expected, as ROUNDTRIP's "bright at clamps/feasibility edges/mirror
+  tie = expected" is (expected, tagged: render_contract § "Cross-check views (the seams)");
+  (b) a conditioning-aware form, the factor times `eps·(max(|K₀|, 1) + max(|V₀|, 1) + Σ mᵢmⱼ(|rᵢ| + |rⱼ|)/rᵢⱼ²)` from the
+  fragment decode's own `(m, r)`, written into colour_composition § 6 as an R-72 definition, physics-reviewed, and the
+  factor calibrated in it (measured above at 1.1 to 5.7 near the collisions, with the decode stage's `(m, r)`; its
+  value on the lattices still to be measured);
+  (c) the per-operand form, and a pixel whose smallest pair separation falls under a threshold drawn in a tagged
+  "ill-conditioned" style and left out of the gate, the threshold a calibration;
+  (d) another, stated by the owner.
+- **Recommended:** (b): it keeps the check meaningful at every finite pixel, keeps its sensitivity to a dispatch
+  scramble, and its bound is the measured mechanism rather than a margin. (a) leaves false red beside every collision
+  on `shape_sphere`'s equator.
+- **Applied meanwhile:** none. The branch holds the measurement (each chart's worst, median and 99th percentile, and
+  the excluded count, in the gate's report; the `survey` input; the gate run in `gpu-metal` and `gpu-lavapipe`), the
+  threshold still the compiled 256 under REQ-COL-060, provisional. No PR is open.
+- **Waits:** TASK-M2-29's proposal and PR (REQ-COL-060).
+- **30 Oct 2026:** Decided by the orchestrator per R-369, option (b); listed for the owner's veto at the M2 gate with
+  (a) and (c); see PR. Text corrections: ROUNDTRIP's expected brightness is "expected, tagged" (render_contract §
+  "Cross-check views (the seams)"); (b)'s 1.1 to 5.7 was measured with the decode stage's `(m, r)`; "grows without
+  bound" reads "grows as (|rᵢ|+|rⱼ|)/rᵢⱼ, up to about 1/eps"; inverse_encode_contract Part 4 and R-544's δ are cited.
+  Applied: colour_composition § 6's conditioning-aware scale (R-72), the factor proposed in it (R-71), the
+  `collision` windows and the per-operand control in the `decode-agreement` gate (TASK-M2-29).
 ## RQ-622: Five statistical or qualitative map targets whose verify names a Result at f64: are they scored on tier (a), the f32 GPU explorer, as R-649's confirmed reading says, or on the f64 Result their verify names *(physics; R-649 item 2 and the owner's confirmation of 30 Oct 2026; `docs/design/principia_dd_replication.md` § 12.2; REQ-VAL-308, REQ-VAL-309, REQ-VAL-311, REQ-VAL-312, REQ-VAL-313; and B-2, REQ-VAL-246, added below; context: TASK-M9-33, TASK-M9-34, TASK-M9-35, TASK-M9-16)*
 
 *Queued 30 Oct 2026 by the fix round of R-649's port (PR #342), applying the owner's confirmation of the tier reading.

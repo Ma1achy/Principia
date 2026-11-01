@@ -15133,7 +15133,7 @@
   - R-358
   - R-436
   milestone: M2
-  note: "ROUNDTRIP's residual is computed wholly in the fragment, and its stated tolerance is ε_phys (REQ-ENC-024, REQ-RENDER-025), not this one (applied per R-204, accepted by R-358, R-297's Applied note). R-436: a pixel with a non-finite operand is invalid, so it is no sample of the tolerance."
+  note: "ROUNDTRIP's residual is computed wholly in the fragment, and its stated tolerance is ε_phys (REQ-ENC-024, REQ-RENDER-025), not this one (applied per R-204, accepted by R-358, R-297's Applied note). R-436: a pixel with a non-finite operand is invalid, so it is no sample of the tolerance. The tolerance is the factor times colour_composition §6's conditioning-aware scale, eps·(max(|K₀|, 1) + max(|V₀|, 1) + Σ mᵢmⱼ·wᵢⱼ/ŝᵢⱼ²) from the fragment decode's own (m, r), an R-72 definition written by TASK-M2-29 (RQ-623, option (b), decided by the orchestrator per R-369 and listed for the owner's veto at the M2 gate); the factor is calibrated in that scale."
 - id: REQ-COL-061
   area: COL
   kind: calibration
