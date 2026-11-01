@@ -937,11 +937,25 @@ fn mock_cube_axis_buttons_a_mirrored_basis_is_told_by_its_determinant() {
         }
     };
     check(&read);
+    // A mirrored basis that does read in the order as typed: the swap would lose its z_q3, so only the pair's assertion
+    // is reached.
+    let as_typed = read_of(&[(Z_ALPHA, -0.6), (Z_Q3, 0.8)], &[(Z_BETA, 1.0)]);
+    assert_eq!((as_typed.a, as_typed.b), (Z_ALPHA, Z_BETA), "{as_typed:?}");
     rejects("the mirrored basis read in the order as typed", || {
-        check(&read_of(
-            &[(Z_ALPHA, 1.0), (Z_BETA, 0.5), (Z_Q3, 0.8)],
-            &[(Z_ALPHA, 2.0), (Z_BETA, 0.5), (Z_MU1, 0.3)],
-        ))
+        check(&as_typed)
+    });
+    // The same pair, with the tilts on each other's targets: the pair's assertion holds, and the angles' do not.
+    let other_tilt = read_of(
+        &[(Z_ALPHA, 1.0), (Z_BETA, 0.5), (Z_Q3, 0.8)],
+        &[(Z_ALPHA, 2.0), (Z_BETA, 0.5), (Z_MU1, 0.3)],
+    );
+    assert_eq!(
+        (other_tilt.a, other_tilt.b),
+        (Z_BETA, Z_ALPHA),
+        "{other_tilt:?}"
+    );
+    rejects("the same pair with the tilts exchanged", || {
+        check(&other_tilt)
     });
     rejects("the same axes at another turn", || {
         check(&View {
