@@ -364,16 +364,15 @@ says to dedupe).
 | Verdict | NOW | M9 | RECORD-ONLY | SKIP | Rows |
 |---|---|---|---|---|---|
 | HIT | 4 | 7 | 1 | 0 | 12 |
-| PLOT-ONLY | 0 | 1 | 5 | 1 | 7 |
+| PLOT-ONLY | 0 | 0 | 6 | 1 | 7 |
 | CONTEXT | 0 | 0 | 32 | 39 | 71 |
 | PEEK-ONLY | 2 | 0 | 15 | 19 | 36 |
-| PARKED | 0 | 12 | 4 | 26 | 42 |
+| PARKED | 0 | 0 | 16 | 26 | 42 |
 | OFF-FILTER | 0 | 0 | 0 | 5 | 5 |
-| Total | 6 | 20 | 57 | 90 | 173 |
+| Total | 6 | 7 | 70 | 90 | 173 |
 
-Of the 20 M9 rows, 7 are read hits and 13 are the unread ESCALATE rows below. M9 on those 13 means "read this first", not
-a place in the M9 list, and the 12 of them that are PARKED stay parked under the owner's hierarchical ruling unless the
-reading shows otherwise. Of the 6 NOW rows, Szebehely 1972 (row 45) is the existing NOW-9, unchanged; Kumar 2014 (row 46)
+The 7 M9 rows are all read hits. The 13 unread ESCALATE rows below are RECORD-ONLY: 12 are PARKED under the owner's
+hierarchical ruling, which shrinks the M9 list, and the thirteenth is Pinto 2026 (PLOT-ONLY). Of the 6 NOW rows, Szebehely 1972 (row 45) is the existing NOW-9, unchanged; Kumar 2014 (row 46)
 is only a cross-check on Chandra & Bhatnagar; the essay's escape file (row 61) is unreviewed, a peek.
 
 ### The four gaps
@@ -438,4 +437,6 @@ starts already committed. It needs a monodromy or variational measurement on our
 - Values from published papers stay in the rows, with citation, under the owner's data-reuse ruling of 1 Nov 2026 (items 3
   and 9); that is later than the `[value]` masking above. Values from repository files that are not a paper, and have no
   licence for their data, are masked as `[value]` (rows 3, 4, 8, 9, 61).
+- The 12 PARKED ESCALATE rows and Pinto 2026 (row 147), which the readers marked M9, are RECORD-ONLY, under the owner's
+  parking ruling of 1 Nov 2026 (item 5). No other PARKED row was marked M9 or NOW.
 - `_local` in `licence_action` is where a file would go if wanted. This PR holds no PDF, and adds nothing under `_local`.
