@@ -1,0 +1,11 @@
+{
+  "description": "R-176, the bit-for-bit check can fire (RQ-624): the same draws, fewer of them, with every z_β moved one ulp off its encoded value before it is compared with its clamp image, so the bit-for-bit check must fail while the round trip, the CoM and |w| pass.",
+  "seed": 1,
+  "samples": 2000,
+  "radius": 4.0,
+  "encode": "defaults",
+  "shift": 0.0,
+  "shapes": 2000,
+  "beta_nudge": true,
+  "expected": "fail"
+}

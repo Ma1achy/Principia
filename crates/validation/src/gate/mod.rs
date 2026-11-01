@@ -13,8 +13,12 @@
 //! }
 //! ```
 //!
-//! A threshold is refused unless it names a live requirement of `plan/requirements.yaml`; a provisional one, or a
-//! region minimum, unless that requirement is a calibration requirement. Each input carries `"expected"`: `"pass"`,
+//! A gate with a second, separately judged arm names that arm's bound too, `inspector-handles`'s Randomise arm
+//! (REQ-VAL-193): `"randomise_bound": { "value": null, "requirement": "REQ-VAL-121", "population": "in_ball" }`, null
+//! until its calibration requirement records it, like the region minimum ([`ArmBound`]).
+//!
+//! A threshold is refused unless it names a live requirement of `plan/requirements.yaml`; a provisional one, a region
+//! minimum, or an arm's bound, unless that requirement is a calibration requirement. Each input carries `"expected"`: `"pass"`,
 //! `"fail"` or `"refused"`; the run fails naming each input whose outcome is not the expected one.
 
 pub mod report;
@@ -127,6 +131,29 @@ struct MinRegionsField {
     requirement: String,
 }
 
+/// The draws a second arm's bound is judged over.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Population {
+    /// The in-ball subset, the draws whose `‖E(x)‖` is inside the gate's ball (RQ-624 (3): the inverse-encode
+    /// contract's Part 4 makes the chart near saturation no test criterion).
+    InBall,
+}
+
+/// A second arm's bound, `gate.json`'s `randomise_bound`: `None` until its calibration requirement records it (R-71),
+/// the arm then reported only; once recorded, the arm fails above it, over `population`.
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ArmBound {
+    /// The recorded bound, or `None` (JSON null) until it is recorded.
+    pub value: Option<f64>,
+    /// The calibration requirement that records it.
+    #[serde(default)]
+    pub requirement: String,
+    /// The draws it is judged over.
+    pub population: Population,
+}
+
 /// `gate.json` as written.
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -135,6 +162,8 @@ struct GateFile {
     inputs: Vec<String>,
     threshold: Threshold,
     min_regions: MinRegionsField,
+    #[serde(default)]
+    randomise_bound: Option<ArmBound>,
 }
 
 /// A gate's configuration, read from `fixtures/gates/<gate>/gate.json` and checked against the requirements.
@@ -148,6 +177,8 @@ pub struct GateConfig {
     pub threshold: Threshold,
     /// The region minimum.
     pub min_regions: Minimum,
+    /// The Randomise arm's bound, if `gate.json` names one (REQ-VAL-193).
+    pub randomise_bound: Option<ArmBound>,
 }
 
 /// A requirement's kind in `plan/requirements.yaml`: `None` for a plain requirement, else its `kind:`.
@@ -245,6 +276,15 @@ impl GateConfig {
                 requirement: m.requirement.clone(),
             },
         };
+        if let Some(b) = &file.randomise_bound {
+            // serde_json refuses a number out of f64's range, so a parsed value is finite.
+            check_requirement(
+                requirements,
+                "gate.json: the Randomise arm's bound",
+                &b.requirement,
+                true,
+            )?;
+        }
         if file.inputs.is_empty() {
             return Err("gate.json: no inputs".to_owned());
         }
@@ -253,6 +293,7 @@ impl GateConfig {
             inputs: file.inputs,
             threshold: file.threshold,
             min_regions,
+            randomise_bound: file.randomise_bound,
         })
     }
 }
