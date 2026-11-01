@@ -1025,9 +1025,10 @@ where the choice changes the result (which pixels count) and the corpus does not
   Mikkola 2021 (TM-1's source) uses, so whether the rows' "D11 mirror remap" and the general sentence stand. The
   research-batches record (`docs/incoming/2026-10-29_research_batches/README.md`) does state a frame for it: § 10.3:
   "LI21-1, LI25-1, TM23-1 and T2000-1 share one frame with TSM 2019 and TM-1 (§ 5.1 there: same D, no mirror of
-  positions)"; § 10.4: "§ 5.1's finding that, for TSM 2019 and these papers, D11 is D with no mirror of positions", which it holds for the owner's
-  confirmation; and, as evidence in the data, § 5.4: "Table 2's 11 triple-collision points are TSM 2019's Table 1 (and
-  so Li 2021 GT rows)". But § 5.1 quotes no set-up from the 2021 paper: neither its list nor its quotes include it.
+  positions)"; § 10.4: "§ 5.1's finding that, for TSM 2019 and these papers, D11 is D with no mirror of positions",
+  which it holds for the owner's confirmation; and, as evidence in the data, § 5.4: "Table 2's 11 triple-collision
+  points are TSM 2019's Table 1 (and so Li 2021 GT rows)". But § 5.1 quotes no set-up from the 2021 paper: neither its
+  list nor its quotes include it.
 - **Options seen:** (a) a porter reads Tanikawa & Mikkola 2021's set-up section and corrects the sentence to name the
   papers that use each frame, with TM2008's (x − 0.5)² recorded as printed; (b) drop "mirror" and name D11 as TSM 2019
   and TM2015 define it.
