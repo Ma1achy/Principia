@@ -342,4 +342,4 @@ statements under "Repo statements that overstate these sources".
   the deposit is unread and not held. Masked values from unlicensed or `_local` sources where a `commit` row quoted them: the
   2014 half-lives in the records row, Onishi's repository values, and a stop distance in the Quarles 2018 row, whose paper stays out.
 
-Removed lines: none.
+Removed lines in the first-pass commit (735cde24): none. Each later commit carries its own note.
