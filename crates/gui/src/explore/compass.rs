@@ -1208,9 +1208,14 @@ pub fn interacting(focus: &Focus) -> bool {
     focus.mode == KeyMode::Interaction && focus.path.last().is_some_and(|id| id == COMPASS_VIEW)
 }
 
+/// The latent point a physical view reads, its grid and its readout alike (R-550 J2).
+fn read_at(sim: &SimConfig, compass: &Compass) -> engine::contract::sim_config::Latent {
+    physical::latent_point(&sim.plane, compass.hover)
+}
+
 /// The view's pushforward of `sim`'s plane in `set`, at the latent point the view reads (R-550).
 pub fn pushed(sim: &SimConfig, compass: &Compass, set: physical::Set) -> physical::Pushforward {
-    let at = physical::latent_point(&sim.plane, compass.hover);
+    let at = read_at(sim, compass);
     let j = physical::latent_jacobian(&compass.decoder, set, &sim.links, &at);
     physical::pushforward(&j, &sim.plane)
 }
@@ -1419,7 +1424,7 @@ pub fn show(
             physical_cells(ui, place, set, &push, sim, scratch, out);
             let mut lines = vec![physical::readout(set, &push)];
             let decoder = &scratch.compass.decoder;
-            if physical::at_pole(decoder, set, &sim.links, &sim.plane.z0) {
+            if physical::at_pole(decoder, set, &sim.links, &read_at(sim, &scratch.compass)) {
                 lines.push(physical::POLE_LINE.to_owned());
             }
             (lines, physical::HELP)

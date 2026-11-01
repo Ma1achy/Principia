@@ -4,7 +4,7 @@
 //! Ctrl+Z; the Shape view's pole refuses, naming it. Each check also runs on an input it must reject (R-176, through
 //! `rejects`).
 
-use eframe::egui::{Key, Modifiers};
+use eframe::egui::{Event, Key, Modifiers};
 use engine::contract::set_field::{Edit, SimField};
 use engine::contract::sim_config::{Latent, Links, Lock, Plane, SimConfig, LATENT_DIM};
 
@@ -20,6 +20,7 @@ use crate::explore::compass::views::{orthonormal, upper, CompassView, GridPlace}
 use crate::explore::manifold_view::{dot, lock_edit, norm, point, View};
 use crate::explore::{COMPASS_JACOBI, COMPASS_SHAPE};
 use crate::headless::Headless;
+use crate::layout::Layout;
 use crate::side::MockSide;
 
 /// A tilted, zoomed start plane.
@@ -317,6 +318,42 @@ fn mock_compass_steer_physical_refuses_below_the_tolerance_only() {
 /// The latent point of the Shape sphere's `+w` pole, `α = π/4`, `β = π/2`, at equal-ish masses and moving.
 fn at_pole() -> Latent {
     [0.0, 0.0, 0.3, -0.2, 0.5, 0.1, 0.0, 0.0]
+}
+
+/// Whether the frame's readout carries the pole's line, the pointer `off` the figure's centre.
+fn pole_line_shown(p: &Plane, off: eframe::egui::Vec2) -> (bool, Latent) {
+    let (mut app, mut h) = app_with(p, Decoder::default(), COMPASS_SHAPE);
+    let figure = Layout::new(h.screen(), crate::capture::PIXELS_PER_POINT).figure;
+    let moved = Event::PointerMoved(figure.center() + off);
+    let _ = h.frame(&mut app, vec![moved]);
+    let _ = h.frame(&mut app, Vec::new());
+    let hover = app.manifold.compass.hover.expect("over the figure");
+    let texts = super::support::frame_texts(&mut h, &mut app);
+    let shown = texts.contains(&physical::POLE_LINE.to_owned());
+    (shown, physical::latent_point(p, Some(hover)))
+}
+
+#[test]
+fn mock_compass_steer_physical_the_pole_line_reads_the_hovered_point() {
+    let (d, links) = (Decoder::default(), Links::defaults());
+    let is_pole = |z: &Latent| physical::at_pole(&d, Set::Shape, &links, z);
+    let off = eframe::egui::vec2(90.0, -70.0);
+    // z₀ at the pole, the pixel under the pointer off it: the grid's point, so no line.
+    let mut p = start();
+    p.z0 = at_pole();
+    let (shown, hovered) = pole_line_shown(&p, off);
+    assert!(is_pole(&p.z0) && !is_pole(&hovered), "at {hovered:?}");
+    assert!(!shown, "z₀'s pole under a grid taken off it");
+    // z₀ off the pole, the pixel under the pointer on it: the line.
+    let mut q = start();
+    q.z0 = std::array::from_fn(|k| at_pole()[k] - (hovered[k] - p.z0[k]));
+    let (shown, hovered) = pole_line_shown(&q, off);
+    assert!(!is_pole(&q.z0) && is_pole(&hovered), "z₀ {:?}", q.z0);
+    assert!(shown, "the hovered pole named");
+    // Control: the line read at z₀ would say the reverse.
+    rejects("the line read at z₀", || {
+        assert_eq!(is_pole(&q.z0), shown)
+    });
 }
 
 #[test]
