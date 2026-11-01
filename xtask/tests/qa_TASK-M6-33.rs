@@ -334,25 +334,30 @@ fn qa_compass_golden_tilt_records_place_their_label_on_the_bottom_right_edge() {
     let iso = Iso::fit(172.0, 172.0);
     for name in ["tilt_0", "tilt_30_0", "tilt_45_45"] {
         let r = json(&dir().join("reference").join(format!("{name}.json")));
-        // The cases compare the one label with the reference's label 1 (their `reference_label`): it must be the
-        // bottom-right edge's, B8's place for "q₁, q₂ → <axis>".
+        // The cases compare the third axis's label with the reference's label 1 (their `reference_label`): it must be
+        // the bottom-right edge's, its place in both modes (R-459 G1, G11).
         check_tilt_label(name, &r, DEPTH_EDGE);
         let l = &r["labels"][1];
         rejects("label 1 on the bottom-left edge", || {
             assert!(near2(label_at(&iso, WIDTH_EDGE), p2(&l["at"]), POS))
         });
     }
-    for case in [
-        "mock_compass_cube_tilt_0",
-        "mock_compass_cube_tilt_rect",
-        "mock_compass_cube_tilt_hex",
-    ] {
+    // R-459 G1, G11: the third axis's letter and dimension, by its rule at rest: the slice normal at τ₁ = τ₂ = 0, X at
+    // τ₁ ≠ 0.
+    for (case, text) in TILT_THIRD_AXIS {
         let spec = json(&dir().join(format!("{case}.json")));
         assert_eq!(spec["labels"]["from"], "tilt", "{case}");
         assert_eq!(spec["labels"]["reference_label"], 1, "{case}");
-        assert_eq!(spec["labels"]["text"], "q₁, q₂ → z_q3", "{case}");
+        assert_eq!(spec["labels"]["text"], text, "{case}");
     }
 }
+
+/// The tilt-mode cases and their third axis's label at rest (R-459 G1).
+const TILT_THIRD_AXIS: [(&str, &str); 3] = [
+    ("mock_compass_cube_tilt_0", "D z_q3"),
+    ("mock_compass_cube_tilt_rect", "X z_q3"),
+    ("mock_compass_cube_tilt_hex", "X z_q3"),
+];
 
 /// The record `r`'s label 1 is on `edge`.
 fn check_tilt_label(name: &str, r: &Value, edge: (P3, P3)) {
@@ -445,19 +450,21 @@ fn check_decoder(case: &str, t: (f64, f64)) {
 #[test]
 fn qa_compass_golden_compare_refuses_a_label_on_every_wrong_edge() {
     let iso = Iso::fit(172.0, 172.0);
-    // Tilt mode: the one label on any edge but the bottom-right.
-    for case in [
-        "mock_compass_cube_tilt_0",
-        "mock_compass_cube_tilt_rect",
-        "mock_compass_cube_tilt_hex",
-    ] {
+    // Tilt mode: the third axis's label on any edge but the bottom-right (R-459 G1, G11).
+    for (case, third) in TILT_THIRD_AXIS {
         let golden = Golden::read(&dir().join(format!("{case}.json"))).expect("the spec");
         let mut ours: Record = golden.reference.clone();
         ours.polygon = golden.polygon.clone().expect("a polygon");
-        ours.labels = vec![compass_golden::Label {
-            text: "q₁, q₂ → z_q3".to_owned(),
-            at: label_at(&iso, DEPTH_EDGE),
-        }];
+        ours.labels = [
+            ("H z_α", WIDTH_EDGE),
+            (third, DEPTH_EDGE),
+            ("V z_β", HEIGHT_EDGE),
+        ]
+        .map(|(text, edge)| compass_golden::Label {
+            text: text.to_owned(),
+            at: label_at(&iso, edge),
+        })
+        .to_vec();
         ours.numbers = Vec::new();
         // The slice's place in the order: the reference's slice item stands where the polygon's key puts it only
         // in the slice records, so the record keeps its own items and the failures are filtered to the labels.
@@ -477,7 +484,7 @@ fn qa_compass_golden_compare_refuses_a_label_on_every_wrong_edge() {
                 continue;
             }
             let mut wrong = ours.clone();
-            wrong.labels[0].at = label_at(&iso, edge);
+            wrong.labels[1].at = label_at(&iso, edge);
             check_refused(
                 &label_failures(&wrong),
                 &format!("{case}: the tilt label on {edge:?}"),
