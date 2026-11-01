@@ -580,6 +580,14 @@ pub fn drift_wgsl(e: &Entry, r: &Read, floor: &str, range: f64) -> String {
         let _ = writeln!(uniforms, "// @uniform {eps}: f32 = {}", float(default));
     }
     let reference = drift_reference(e.name);
+    // The energy predicate reads `E_0`, which is tested before any arithmetic on it (R-436): above, in a view whose
+    // reference it is; here in the `L_z` view, where it is unlit on a non-finite `E_0`, relative `δE` having no meaning
+    // there, and the view keeps its finite `L_z` drift.
+    let energy_finite = if reference == "E_0" {
+        ""
+    } else {
+        "!dbg_drift_non_finite(ctx.sample.E_0) && "
+    };
     let colouring = format!(
         "Its colouring is the drift view (render contract Part 5; R-379, R-381): the drift on its ramp by its \
          compaction, `COMPACTION` 0 `symlog`, the default, at `dbg_sentinel`'s place of `sign(x)·ln(1 + |x|/{floor})`, \
@@ -598,7 +606,7 @@ pub fn drift_wgsl(e: &Entry, r: &Read, floor: &str, range: f64) -> String {
          if (dbg_drift_non_finite(x)) {{ return debug_invalid(ctx.frag_xy); }}\n    \
          let shown = dbg_drift_shown(x, uniforms.COMPACTION, ctx.sample.{reference});\n    \
          let rgb = dbg_drift(shown, uniforms.COMPACTION, uniforms.PALETTE == 1u, uniforms.LIN_R, uniforms.{eps}, ctx.frag_xy);\n    \
-         let energy = suspect_energy(ctx.sample.dE_max, ctx.sample.E_0, uniforms.EPS_E);\n    \
+         let energy = {energy_finite}suspect_energy(ctx.sample.dE_max, ctx.sample.E_0, uniforms.EPS_E);\n    \
          let lz = suspect_lz(ctx.sample.dLz_max);\n    \
          return dbg_suspect(rgb, x, energy, lz, ctx.frag_xy);\n}}\n",
         header(e, r, &colouring)

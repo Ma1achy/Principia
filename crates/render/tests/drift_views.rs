@@ -15,6 +15,9 @@
 //! - `drift_view_neutral_*`: `symlog`'s neutral band (render contract Part 5; R-652): a fresh sample renders exactly
 //!   neutral on the backend the test runs on, a drift past the band still shows, and the band follows `|E_0|`, `|Lz_0|`.
 //!   On Vulkan these run under CI's `ci` job, on lavapipe; on Metal under the `gpu-metal` suites' job and locally.
+//! - `drift_view_non_finite_*`: the non-finite guard (render contract Part 5; R-436): `x = ±∞` on a finite reference
+//!   hatches in every view under every compaction, where the backend delivers `∞`'s bits; and the `L_z` view keeps its
+//!   finite drift, the energy predicate unlit, on a non-finite `E_0`.
 
 use ledger::constants::{DRIFT_LIN_R_E, DRIFT_LIN_R_LZ, EPS_E_DEFAULT, EPS_L_DEFAULT};
 use render::present::{self, Rgb};
@@ -921,5 +924,52 @@ negative_control!(
             source.contains("DBG_DRIFT_NEUTRAL_BAND: f32 = 1.0;"),
             "not in drift.wgsl"
         );
+    }
+);
+
+// ── The non-finite guard (render contract Part 5; R-436) ────────────────────────────────────────────────────────────
+
+/// The energy predicate's line in the `L_z` view.
+#[cfg(feature = "controls")]
+const LZ_ENERGY: &str = "!dbg_drift_non_finite(ctx.sample.E_0) && suspect_energy(ctx.sample.dE_max, ctx.sample.E_0, uniforms.EPS_E)";
+
+/// A tile per non-finite `E_0`, the `L_z` drift finite and off the band, a latch that lights the energy predicate on any
+/// finite `E_0`.
+fn lz_on_bad_e_0(colouring: Colouring) -> Scene {
+    let mut s = row(4, colouring);
+    let (_, lz) = invariants(&mut s, 0);
+    for (i, e_0) in (0u32..).zip([
+        f32::INFINITY,
+        f32::NEG_INFINITY,
+        f32::NAN,
+        f32::from_bits(0xFFC0_0000),
+    ]) {
+        fill(&mut s, i, e_0, lz - 0.25, 1.0, 0.0);
+    }
+    s
+}
+
+/// Checks that each tile shows its finite drift on the ramp, unstyled.
+fn check_lz_on_bad_e_0(s: &Scene, image: &[Rgb]) {
+    let view = VIEWS[1];
+    for i in 0..4 {
+        let rgb = symlog_diverging(shown(view, s, i), view.eps);
+        check_tile(s, image, i, &|_, _| rgb, "the unstyled ramp");
+    }
+}
+
+#[test]
+fn drift_view_non_finite_e_0_leaves_the_lz_view_unlit() {
+    let s = lz_on_bad_e_0(debug(VIEWS[1].id, &[]));
+    check_lz_on_bad_e_0(&s, &render(&gpu(), &s));
+}
+
+negative_control!(
+    drift_view_non_finite_e_0_leaves_the_lz_view_unlit,
+    "the `L_z` view with the energy predicate lit on a non-finite `E_0`",
+    expected = "not the unstyled ramp",
+    {
+        let s = lz_on_bad_e_0(broken(VIEWS[1].id, LZ_ENERGY, "true"));
+        check_lz_on_bad_e_0(&s, &render(&gpu(), &s));
     }
 );

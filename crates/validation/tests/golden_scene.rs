@@ -1147,3 +1147,42 @@ negative_control!(
     expected = "the predicates",
     check_drift_suspects(0.0, 0.0, (true, true))
 );
+
+/// The energy predicate on a non-finite `E_0` with a latch that lights it on any finite one, by `predicates`: unlit, on
+/// `E_0`'s bits (R-436), and the `L_z` predicate still read.
+fn check_drift_suspects_on_a_non_finite_e_0(
+    predicates: fn(&kernel::payload::SimState) -> (bool, bool),
+) {
+    let mut s = golden_scene::row_scene("t", 1, Colouring::View("state")).expect("the scene");
+    for e_0 in [
+        f32::NAN,
+        f32::from_bits(0xFFC0_0000),
+        f32::INFINITY,
+        f32::NEG_INFINITY,
+    ] {
+        s.set.sample(0).E_0(e_0).drift_max(1.0, 1.0);
+        assert_eq!(
+            predicates(&s.read(0)),
+            (false, true),
+            "the predicates at E_0 = {e_0:?}"
+        );
+    }
+    // A finite `E_0` is still read as a number: this one's relative drift is 1, which lights.
+    s.set.sample(0).E_0(1024.0).drift_max(1024.0, 0.0);
+    assert_eq!(predicates(&s.read(0)), (true, false), "a finite E_0");
+}
+
+#[test]
+fn golden_scene_drift_suspects_test_e_0_on_its_bits() {
+    check_drift_suspects_on_a_non_finite_e_0(golden_scene::drift_suspects);
+}
+
+negative_control!(
+    golden_scene_drift_suspects_test_e_0_on_its_bits,
+    "the predicate without the test, whose `max` drops the NaN and divides by the floor",
+    expected = "the predicates at E_0 = NaN",
+    check_drift_suspects_on_a_non_finite_e_0(|read| (
+        kernel::payload::suspect_energy(read.dE_max, read.E_0, 1e-6),
+        kernel::payload::suspect_lz(read.dLz_max),
+    ))
+);

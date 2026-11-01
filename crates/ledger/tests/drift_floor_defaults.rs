@@ -49,3 +49,37 @@ negative_control!(
     expected = "`Lz_drift` lacks // @uniform EPS_L",
     check_defaults(2.0 * EPS_L_DEFAULT.number())
 );
+
+/// The energy predicate's `E_0` test (R-436): the view's own first line where `E_0` is the reference, and on the
+/// predicate where it isn't, in `lz` and `energy` the views' WGSL.
+fn check_e_0_tested(lz: &str, energy: &str) {
+    let tested = "let energy = !dbg_drift_non_finite(ctx.sample.E_0) && suspect_energy(";
+    assert!(lz.contains(tested), "`Lz_drift` reads `E_0` untested");
+    assert!(
+        !lz.contains("if (dbg_drift_non_finite(ctx.sample.E_0))"),
+        "`Lz_drift` hatches on `E_0`, not its reference"
+    );
+    assert!(
+        energy.contains("if (dbg_drift_non_finite(ctx.sample.E_0))"),
+        "`energy_drift` does not hatch on `E_0`"
+    );
+    assert!(
+        !energy.contains(tested),
+        "`energy_drift` tests `E_0` a second time"
+    );
+}
+
+#[test]
+fn drift_view_predicate_tests_e_0_before_reading_it() {
+    check_e_0_tested(&view("Lz_drift"), &view("energy_drift"));
+}
+
+negative_control!(
+    drift_view_predicate_tests_e_0_before_reading_it,
+    "the `L_z` view's predicate without its test",
+    expected = "`Lz_drift` reads `E_0` untested",
+    check_e_0_tested(
+        &view("Lz_drift").replace("!dbg_drift_non_finite(ctx.sample.E_0) && ", ""),
+        &view("energy_drift")
+    )
+);

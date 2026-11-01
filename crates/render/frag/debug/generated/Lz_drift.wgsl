@@ -22,7 +22,7 @@ fn colour(ctx: Ctx) -> vec3<f32> {
     if (dbg_drift_non_finite(x)) { return debug_invalid(ctx.frag_xy); }
     let shown = dbg_drift_shown(x, uniforms.COMPACTION, ctx.sample.Lz_0);
     let rgb = dbg_drift(shown, uniforms.COMPACTION, uniforms.PALETTE == 1u, uniforms.LIN_R, uniforms.EPS_L, ctx.frag_xy);
-    let energy = suspect_energy(ctx.sample.dE_max, ctx.sample.E_0, uniforms.EPS_E);
+    let energy = !dbg_drift_non_finite(ctx.sample.E_0) && suspect_energy(ctx.sample.dE_max, ctx.sample.E_0, uniforms.EPS_E);
     let lz = suspect_lz(ctx.sample.dLz_max);
     return dbg_suspect(rgb, x, energy, lz, ctx.frag_xy);
 }
