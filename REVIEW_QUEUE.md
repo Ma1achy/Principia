@@ -912,3 +912,17 @@ where the choice changes the result (which pixels count) and the corpus does not
 - **Applied meanwhile:** the ruled text, R-554 L3: `Tilted::pixel` (`crates/kernel/src/chart/tilt.rs`) applies no pole
   map unless `N_a = N_b = 0`, so such pixels count as distinct (TASK-M2-36, PR #349). No code changes for this entry.
 - **Waits:** nothing built waits; a fold, if ruled, is a follow-up to TASK-M2-36's `Tilted::pixel` and TASK-M8-56.
+
+## RQ-657: REQ-PERF-115 and TASK-M8-96 name the native comparison as `cargo run -p gui --features mock`, which is opt-level 0, while the site they compare it with is built `--release` *(silence: the requirement names no build; R-627; REQ-PERF-115; the perf review of PR #368 (5726255918), F1; context: TASK-M8-86, TASK-M8-96)*
+
+*Queued from the perf review of PR #368. Wording only: what was measured is settled under R-369 below, and the requirement is not changed here.*
+
+- **File, section:**
+  - `plan/requirements.yaml`, REQ-PERF-115, `verify.detail`: "beside `cargo run -p gui --features mock` on the same Mac by the same method (TASK-M8-86's frame statistics)".
+  - `plan/tasks/M8/TASK-M8-96.md` § "Acceptance tests", the REQ-PERF-115 line: "beside `cargo run -p gui --features mock` on the same Mac by the same method".
+  - `plan/tasks/M8/TASK-M8-86.md` § "Deliverables": "The same scripted pan and frame-rate window in the native mock app (`cargo run -p gui --features mock`)".
+- **The silence:** the root `Cargo.toml` has no `[profile.*]`, so that command runs unoptimised, and `xtask/src/web_skeleton.rs` builds the site with `--release`. On one head and window the perf review read native idle at 62.37 fps uncapped in debug and 120.00 capped in release (load-affected, size and direction only). Followed as written, the native row reads about half its real rate beside a release web row.
+- **The question:** whether the three lines should name `--release`, for example `cargo run -p gui --features mock --release`.
+- **Options seen:** (a) add `--release` to the measured native row in the REQ-PERF-115 and TASK-M8-96 lines, leaving TASK-M8-86's line, which names the app, as it is; (b) leave the wording, the report's `build` field and this entry being the record.
+- **Applied meanwhile:** applied per R-369, the measured native row uses `--release`. The report and the panel name the build (`build`, "debug" or "release"), and PR #368's "What to try" gives the command. No requirement or task text changes for this entry.
+- **Waits:** nothing built waits. TASK-M8-96's perf reader measures with `--release` and checks the `build` field.
