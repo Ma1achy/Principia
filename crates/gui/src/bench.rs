@@ -328,7 +328,7 @@ impl Run {
 
     /// Runs one frame on `events`, drawn, and returns its time.
     fn frame(&mut self, events: Vec<Event>) -> FrameTime {
-        self.app.windows.console.timing = console::Timing::default();
+        self.app.windows.console.timing = Some(console::Timing::default());
         let start = Instant::now();
         let output = self.headless.frame(&mut self.app, events);
         let pass_ms = ms(start.elapsed().as_secs_f64());
@@ -346,7 +346,7 @@ impl Run {
             ms(start.elapsed().as_secs_f64())
         });
         textures.clear();
-        let timing = self.app.windows.console.timing;
+        let timing = self.app.windows.console.timing.unwrap_or_default();
         let (filter_ms, rows_ms) = (ms(timing.filter_s), ms(timing.rows_s));
         FrameTime {
             layout_ms: rest_of(pass_ms, filter_ms, rows_ms),

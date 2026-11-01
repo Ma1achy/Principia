@@ -538,3 +538,20 @@ fn console_open_close_the_figures_clip_follows_the_console_in_the_same_frame() {
         assert!((whole.max.y - top).abs() < 1.0)
     });
 }
+
+#[test]
+fn console_open_close_outside_the_bench_the_drawing_reads_no_clock() {
+    let (mut app, mut h) = logged(3);
+    let released = to_release(&mut h, &mut app);
+    let _ = h.frame(&mut app, released);
+    let _ = h.frame(&mut app, Vec::new());
+    assert!(app.is_open(Window::Console));
+    let timing = app.windows.console.timing;
+    assert_eq!(timing, None);
+    // Asked, it times; it never starts by itself.
+    app.windows.console.timing = Some(console::Timing::default());
+    let _ = h.frame(&mut app, Vec::new());
+    let timed = app.windows.console.timing;
+    assert!(timed.is_some_and(|t| t.rows_s > 0.0), "{timed:?}");
+    rejects("a timing kept with no bench", || assert_eq!(timed, None));
+}

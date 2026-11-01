@@ -116,8 +116,9 @@ pub struct State {
     /// Whether it fills the height below the top bar, for this session: not among the settings, which keep the dragged
     /// height it returns to (R-463 K2).
     pub maximised: bool,
-    /// Where this frame's drawing went, for `crate::bench` (R-463 K4).
-    pub timing: Timing,
+    /// Where the drawing went, while `crate::bench` asks (R-463 K4); none otherwise, when the drawing reads no clock,
+    /// which a wasm32 build has not got (R-571).
+    pub timing: Option<Timing>,
 }
 
 /// The time the console's drawing took since it was last reset, in seconds: over all of egui's passes (R-463 K4).
@@ -378,9 +379,11 @@ pub fn show(ui: &mut Ui, keys: &mut Keys<'_>, state: &mut State, view: &View<'_>
         .response;
     keys.place_rect(ui, HEADER, header.rect);
     ui.separator();
-    let filter = Instant::now();
+    let filter = state.timing.map(|_| Instant::now());
     let rows = shown(view.entries, state);
-    state.timing.filter_s += filter.elapsed().as_secs_f64();
+    if let (Some(timing), Some(start)) = (&mut state.timing, filter) {
+        timing.filter_s += start.elapsed().as_secs_f64();
+    }
     // A row is the grid's line, at least a control's height, as egui's grid makes it, and its spacing below.
     let line = ui
         .text_style_height(&egui::TextStyle::Monospace)
@@ -395,7 +398,7 @@ pub fn show(ui: &mut Ui, keys: &mut Keys<'_>, state: &mut State, view: &View<'_>
     if pending {
         area = area.vertical_scroll_offset(state.top_row as f32 * row_h);
     }
-    let drawing = Instant::now();
+    let drawing = state.timing.map(|_| Instant::now());
     let font = egui::TextStyle::Monospace.resolve(ui.style());
     let glyph = ui.fonts_mut(|f| f.glyph_width(&font, 'M'));
     let widths = COLUMNS.map(|chars| chars as f32 * glyph);
@@ -404,7 +407,9 @@ pub fn show(ui: &mut Ui, keys: &mut Keys<'_>, state: &mut State, view: &View<'_>
             row(ui, entry, widths, line);
         }
     });
-    state.timing.rows_s += drawing.elapsed().as_secs_f64();
+    if let (Some(timing), Some(start)) = (&mut state.timing, drawing) {
+        timing.rows_s += start.elapsed().as_secs_f64();
+    }
     state.page = page_of(list.inner_rect.height(), line, row_h);
     if !pending {
         // The wheel's scroll is where the keys go on from: its first row drawn whole.
