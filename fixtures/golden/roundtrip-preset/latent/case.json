@@ -1,0 +1,6 @@
+{
+  "render": { "harness": "roundtrip-preset-latent", "width": 48, "height": 24 },
+  "reference": "reference.png",
+  "tolerance": "REQ-VAL-138",
+  "expect": "pass"
+}

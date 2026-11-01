@@ -5,7 +5,8 @@
 //! - `fragment_wgsl_check_fails_on_a_hand_edit`: `fragment_wgsl::check` passes files equal to their translation, fails
 //!   naming a file edited by hand or missing, and with `--bless` rewrites them. Control: a hand edit passes.
 //! - `fragment_wgsl_snippets_are_checked_in`: the snippets of `target/spirv/kernel.spv` are the checked-in files, each
-//!   under the generated header, each chart's section present in `decode.wgsl`. Control: a snippet one byte off is
+//!   under the generated header, each chart's section, the descriptor's and the free decode's present in
+//!   `decode.wgsl`. Control: a snippet one byte off is
 //!   found. It reads `target/spirv/kernel.spv`, so `cargo xtask build-kernel` runs first, as CI runs it.
 
 use std::fs;
@@ -92,7 +93,11 @@ fn check_snippets(alter: impl Fn(&mut String)) {
             "a snippet lacks the generated header"
         );
     }
-    for (section, _) in DECODE_CHARTS {
+    let sections = DECODE_CHARTS
+        .iter()
+        .map(|c| c.0)
+        .chain(["describe", "free"]);
+    for section in sections {
         let decode = &fresh[0].1;
         let open = decode.find(&section_start(section));
         let close = decode.find(&section_end(section));

@@ -15,7 +15,8 @@
 //!
 //! **What `Real` gives the physics layer** (integrator_contract Part 2c, "Rules the new kernel must hold by
 //! construction"): the four operations and negation, [`RealOps::fma`], [`RealOps::square_root`] and the comparisons
-//! of `PartialOrd`, and nothing else. It carries no numeric constant, no epsilon, no largest value, no infinity: rule 1
+//! of `PartialOrd`, and nothing else; its one other function, [`Real::arctan2`], asks for `num_traits::Float` too, so
+//! code bounded by `Real` alone cannot reach it. It carries no numeric constant, no epsilon, no largest value, no infinity: rule 1
 //! forbids a precision-dependent constant in a control-flow decision, so code bounded by `Real` alone, as
 //! [`crate::physics`] is, has none to reach. A tolerance that must scale with precision is supplied where the value is
 //! used, never where a branch is taken. `NAME` is the precision row's label for the ledger, not a number. The two
@@ -44,10 +45,28 @@ pub trait Real:
 {
     /// The name the ledger's precision row gives this type (dd_simstate_payload §1).
     const NAME: &'static str;
+
+    /// `atan2(self, x)`, the angle of the point `(x, self)`, in `[−π, π]`, for a type that is also a `Float`: libm's
+    /// by default, so the f64 path is libm's bit for bit, and at f32, the GPU's precision, the kernel's own,
+    /// [`crate::arctan::atan2_f32`], in integer arithmetic, so every backend gives the CPU's bits (RQ-628, decided by the
+    /// orchestrator per R-369, option (a)). The encode's angles and the shape sphere decode's `β` call it, so the
+    /// precision chooses it through `crate::generated::links::LinkReal`, whose bound holds `Real`.
+    #[inline]
+    fn arctan2(self, x: Self) -> Self
+    where
+        Self: Float,
+    {
+        Float::atan2(self, x)
+    }
 }
 
 impl Real for f32 {
     const NAME: &'static str = "f32";
+
+    #[inline]
+    fn arctan2(self, x: f32) -> f32 {
+        crate::arctan::atan2_f32(self, x)
+    }
 }
 
 impl Real for f64 {

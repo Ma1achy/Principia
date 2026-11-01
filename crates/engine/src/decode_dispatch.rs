@@ -52,6 +52,9 @@ pub const ENCODE_ENTRY: &str = "stage_encode_encode";
 /// The WGSL entry point naga names for `kernel::stage::encode::beta`.
 pub const BETA_ENTRY: &str = "stage_encode_beta";
 
+/// The WGSL entry point naga names for `kernel::stage::encode::arctangent`.
+pub const ARCTANGENT_ENTRY: &str = "stage_encode_arctangent";
+
 /// The decode-only readback of one dispatch, as words: the integrator's input buffer, the tags and the descriptors.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Words {
@@ -551,6 +554,31 @@ pub fn beta_gpu(
         (wgsl, BETA_ENTRY),
         &words,
         (lambda_t.len(), 1),
+        setting,
+    )?;
+    Ok(read.into_iter().map(f32::from_bits).collect())
+}
+
+/// The kernel's own f32 `atan2` (`kernel::arctan`; RQ-628), `kernel::stage::encode::arctangent`, dispatched on `device`
+/// over the operands `yx`, each `(y, x)` passed by its bits, `±0` kept, under the fast-math `setting`: each one's
+/// `atan2(y, x)` as the GPU computes it. Its pipeline is made per call: a test's.
+pub fn arctan2_gpu(
+    device: &wgpu::Device,
+    queue: &wgpu::Queue,
+    wgsl: &str,
+    yx: &[[f32; 2]],
+    setting: FastMath,
+) -> Result<Vec<f32>, ComputeError> {
+    if yx.is_empty() {
+        return Ok(Vec::new());
+    }
+    let words: Vec<u32> = yx.as_flattened().iter().map(|x| x.to_bits()).collect();
+    let read = run_entry(
+        device,
+        queue,
+        (wgsl, ARCTANGENT_ENTRY),
+        &words,
+        (yx.len(), 1),
         setting,
     )?;
     Ok(read.into_iter().map(f32::from_bits).collect())
