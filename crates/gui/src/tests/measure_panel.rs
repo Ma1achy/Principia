@@ -279,7 +279,7 @@ fn measure_begin_frame_spends_the_delay() {
 }
 
 /// The fields every report and the panel carry, in every phase.
-const REPORT_KEYS: [&str; 20] = [
+const REPORT_KEYS: [&str; 21] = [
     "status",
     "run",
     "build",
@@ -300,8 +300,9 @@ const REPORT_KEYS: [&str; 20] = [
     "work_mean_ms",
     "work_p95_ms",
     "acquire_mean_ms",
+    "work_less_wait_p95_ms",
 ];
-const ROW_LABELS: [&str; 16] = [
+const ROW_LABELS: [&str; 17] = [
     "status",
     "build",
     "crossOriginIsolated",
@@ -318,6 +319,7 @@ const ROW_LABELS: [&str; 16] = [
     "work mean",
     "work p95",
     "surface wait mean",
+    "work less wait p95",
 ];
 
 fn check_fields(report: &serde_json::Value, rows: &[(&str, String)]) {
@@ -437,6 +439,10 @@ fn measure_rows_mark_a_capped_figure() {
     );
     assert_eq!(row(&s, "work mean"), "2.00 ms");
     assert_eq!(row(&s, "surface wait mean"), "0.50 ms");
+    assert_eq!(row(&s, "work p95"), "2.00 ms");
+    assert_eq!(row(&s, "work less wait p95"), "1.50 ms");
+    assert_eq!(s.report()["work_p95_ms"], 2.0);
+    assert_eq!(s.report()["work_less_wait_p95_ms"], 1.5);
     let mut low = session(None);
     let stats = crate::measure::stats::window_stats(&stamps, Some(120.0));
     low.phase = Phase::Done {

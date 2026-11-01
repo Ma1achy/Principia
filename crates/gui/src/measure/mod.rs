@@ -406,6 +406,7 @@ impl Session {
             "work_mean_ms": stats.map(|s| s.work_mean_ms),
             "work_p95_ms": stats.map(|s| s.work_p95_ms),
             "acquire_mean_ms": stats.map(|s| s.acquire_mean_ms),
+            "work_less_wait_p95_ms": stats.map(|s| s.work_less_wait_p95_ms),
         })
     }
 
@@ -462,6 +463,10 @@ impl Session {
             ("work mean", ms(stats.map(|s| s.work_mean_ms))),
             ("work p95", ms(stats.map(|s| s.work_p95_ms))),
             ("surface wait mean", ms(stats.map(|s| s.acquire_mean_ms))),
+            (
+                "work less wait p95",
+                ms(stats.map(|s| s.work_less_wait_p95_ms)),
+            ),
         ]
     }
 }

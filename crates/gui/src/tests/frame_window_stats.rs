@@ -308,3 +308,90 @@ fn frame_window_stats_reads_no_rate_from_a_zero_interval() {
         })
     });
 }
+
+/// A window of 20 frames whose work less wait is apart from what the means or the percentiles of the two sides give: the
+/// frames that work longest mostly wait. 16 frames of 10 ms, 9 of it waiting; 20 less 19; 19 less 18; 8 less 1; 9 less 0.
+/// A warm-up frame and a frame past the window would each take a rank if they were counted.
+fn waiting_run() -> Vec<Frame> {
+    let mut sides = vec![(10.0, 9.0); 16];
+    sides.extend([(20.0, 19.0), (19.0, 18.0), (8.0, 1.0), (9.0, 0.0)]);
+    let mut frames = vec![Frame {
+        at_ms: WARM_UP_MS - 20.0,
+        work_ms: 500.0,
+        acquire_ms: 0.0,
+    }];
+    let mut at = WARM_UP_MS;
+    for (work_ms, acquire_ms) in sides {
+        frames.push(Frame {
+            at_ms: at,
+            work_ms,
+            acquire_ms,
+        });
+        at += 20.0;
+    }
+    frames.push(Frame {
+        at_ms: WARM_UP_MS + WINDOW_MS,
+        work_ms: 700.0,
+        acquire_ms: 0.0,
+    });
+    frames
+}
+
+/// Rank 19 of the 20 frames' work less wait, 18 of them 1 ms, then 7 and 9; the work time's own figures as they were.
+fn check_less_wait(stats: impl Fn(&[Frame], Option<f64>) -> Option<WindowStats>) {
+    let got = stats(&waiting_run(), None).expect("frames in the window");
+    assert_eq!(got.frames, 20);
+    assert_eq!(
+        got.work_less_wait_p95_ms, 7.0,
+        "the frames' own differences"
+    );
+    assert_eq!(got.work_p95_ms, 19.0, "the work p95 keeps the wait");
+    assert!(
+        (got.work_mean_ms - 10.8).abs() < 1e-9,
+        "the work mean keeps the wait: {}",
+        got.work_mean_ms
+    );
+    assert!(
+        (got.acquire_mean_ms - 9.1).abs() < 1e-9,
+        "the surface wait's mean: {}",
+        got.acquire_mean_ms
+    );
+}
+
+#[test]
+fn frame_window_stats_takes_work_less_wait_frame_by_frame() {
+    check_less_wait(window_stats);
+    rejects("the work p95 less the wait's mean", || {
+        check_less_wait(|f, r| {
+            let mut s = window_stats(f, r)?;
+            s.work_less_wait_p95_ms = s.work_p95_ms - s.acquire_mean_ms;
+            Some(s)
+        })
+    });
+    rejects("the work p95 less the wait's p95", || {
+        check_less_wait(|f, r| {
+            let mut s = window_stats(f, r)?;
+            let waits: Vec<f64> = f[1..f.len() - 1].iter().map(|x| x.acquire_ms).collect();
+            s.work_less_wait_p95_ms = s.work_p95_ms - nearest_rank(&waits, 95.0)?;
+            Some(s)
+        })
+    });
+    rejects("a percentile taken over the warm-up too", || {
+        check_less_wait(|f, r| {
+            let mut s = window_stats(f, r)?;
+            let nets: Vec<f64> = f[..f.len() - 1]
+                .iter()
+                .map(|x| x.work_ms - x.acquire_ms)
+                .collect();
+            s.work_less_wait_p95_ms = nearest_rank(&nets, 95.0)?;
+            Some(s)
+        })
+    });
+    rejects("the work p95 redefined without the wait", || {
+        check_less_wait(|f, r| {
+            let mut s = window_stats(f, r)?;
+            s.work_p95_ms = s.work_less_wait_p95_ms;
+            Some(s)
+        })
+    });
+}

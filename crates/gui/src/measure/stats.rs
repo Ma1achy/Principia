@@ -3,6 +3,9 @@
 //! the frames presented in the window over the window's duration; the 5th-percentile fps is the nearest-rank 5th
 //! percentile of `1000 / interval_ms` over those frames; the work time's mean and 95th percentile are over the same
 //! frames. A figure within 2% of the display's refresh rate is marked capped: it then reads the display, not the work.
+//! The work time runs from start to submit, so natively it is mostly the surface's vsync wait, and in the browser, whose
+//! surface does not block, it is not: the 95th percentile of each frame's work less its wait, over the same frames, is
+//! reported beside it, since a reader can subtract a mean from a mean but not from a percentile.
 
 /// The warm-up, in ms: its frames are in no figure.
 pub const WARM_UP_MS: f64 = 5_000.0;
@@ -47,6 +50,8 @@ pub struct WindowStats {
     pub work_p95_ms: f64,
     /// The surface wait's mean, in ms.
     pub acquire_mean_ms: f64,
+    /// The 95th percentile of each frame's work time less its surface wait, in ms.
+    pub work_less_wait_p95_ms: f64,
 }
 
 /// The `p`th percentile of `values` by the nearest rank: the value at rank `⌈p/100 · n⌉` of the sorted values, the
@@ -104,6 +109,7 @@ pub fn window_stats(frames: &[Frame], refresh_hz: Option<f64>) -> Option<WindowS
     };
     let n = window.len() as f64;
     let work: Vec<f64> = window.iter().map(|f| f.work_ms).collect();
+    let less_wait: Vec<f64> = window.iter().map(|f| f.work_ms - f.acquire_ms).collect();
     Some(WindowStats {
         frames: window.len(),
         mean_fps: figure(n / (WINDOW_MS / 1000.0)),
@@ -111,5 +117,6 @@ pub fn window_stats(frames: &[Frame], refresh_hz: Option<f64>) -> Option<WindowS
         work_mean_ms: work.iter().sum::<f64>() / n,
         work_p95_ms: nearest_rank(&work, 95.0)?,
         acquire_mean_ms: window.iter().map(|f| f.acquire_ms).sum::<f64>() / n,
+        work_less_wait_p95_ms: nearest_rank(&less_wait, 95.0)?,
     })
 }
