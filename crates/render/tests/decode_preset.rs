@@ -25,7 +25,7 @@
 
 use std::path::{Path, PathBuf};
 
-use render::presets::{self, agreement, DecodeChart};
+use render::presets::{self, DecodeChart};
 use validation::decode_preset::{self as dp, Scene};
 use validation::gpu::GpuHarness;
 use validation::negative_control;
@@ -356,8 +356,7 @@ fn agree(gpu: u32, cpu: u32) -> bool {
     if presets::non_finite_bits(g) || presets::non_finite_bits(c) {
         return gpu == cpu;
     }
-    let bound =
-        f64::from(agreement::FACTOR) * f64::from(f32::EPSILON) * f64::from(c.abs()).max(1.0);
+    let bound = factor() * f64::from(f32::EPSILON) * f64::from(c.abs()).max(1.0);
     (f64::from(g) - f64::from(c)).abs() <= bound
 }
 
