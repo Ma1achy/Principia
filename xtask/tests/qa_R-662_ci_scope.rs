@@ -98,7 +98,7 @@ fn data_code_loads(path: &str) -> bool {
             "plan/MILESTONES.md",
         ]
         .contains(&path)
-        || path == "scripts/ci_changes.sh"
+        || ["scripts/ci_changes.sh", "scripts/contain.sh"].contains(&path)
 }
 
 /// R-662's "only the cheap checks": `docs/`, `plan/`, `scripts/`, `workbench/` and the root's markdown, but that data.
