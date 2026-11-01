@@ -525,10 +525,12 @@ impl<S: EngineSide> App<S> {
             self.presenting(&ctx, &layout);
             return;
         }
-        if self.view.mode == Mode::Explore {
-            self.paint_figure(&ctx, &layout, self.shown);
-        }
         if !self.shown {
+            // Hidden, no console changes what covers the figure: it is painted now. Shown, once the frame's keys and
+            // controls have settled the console (below).
+            if self.view.mode == Mode::Explore {
+                self.paint_figure(&ctx, &layout, false);
+            }
             // Hidden, the layer takes no key: it forgets the ones it held, whose releases now go to egui. The hover,
             // the layer's, goes with it.
             self.keyboard.stand_down();
@@ -647,6 +649,8 @@ impl<S: EngineSide> App<S> {
             &mut self.keyboard,
             &mut actions,
         );
+        // The console the keys or the top bar asked for is over the page, whose hover is read below.
+        self.open_asked_console(&ctx, &mut actions);
         let focused = self.scroll_focus();
         match self.view.mode {
             Mode::Explore => self.explore(ui, &layout, &mut out, &mut edits),
@@ -684,14 +688,8 @@ impl<S: EngineSide> App<S> {
             &mut self.keyboard,
             &mut actions,
         );
-        // The console asked for this frame is drawn in it, not the next (R-463).
-        let (console, others): (Vec<_>, Vec<_>) = std::mem::take(&mut actions.open)
-            .into_iter()
-            .partition(|id| windows::opened_by(id) == Some(Window::Console));
-        actions.open = others;
-        for opener in console {
-            self.open_window(&ctx, Window::Console, Some(opener));
-        }
+        // And the footer's click.
+        self.open_asked_console(&ctx, &mut actions);
         let (closed, held) =
             self.draw_windows(&ctx, &layout, focused, &mut window_edits, &mut acts);
         // A move or resize ended: the places are saved (R-461 I4).
@@ -702,6 +700,11 @@ impl<S: EngineSide> App<S> {
             self.close_window(&ctx, window);
         }
         self.act(&ctx, acts);
+        // The console is settled for the frame: what it leaves of the figure is known (R-463 K2).
+        if self.view.mode == Mode::Explore {
+            self.paint_figure(&ctx, &layout, true);
+            self.paint_reticle(&ctx, &layout);
+        }
         // A click on a text field starts typing in it, on every page and in every window (R-456).
         self.keyboard
             .follow_text_clicks(&ctx, self.view.mode, &mut self.view.focus);
@@ -862,11 +865,6 @@ impl<S: EngineSide> App<S> {
         );
         let span = layout.span(true);
         explore::axis_labels::show(ui, layout.axis_x, layout.axis_y, canvas, &sim.plane, span);
-        let reticle = explore::lock::reticle_at(&sim.lock, &sim.plane, field);
-        let uncovered = self.uncovered(canvas, layout);
-        if let Some(at) = reticle.filter(|at| uncovered.contains(*at)) {
-            explore::lock::reticle(ui.ctx(), uncovered, at);
-        }
         // The splitters' handles, after the panels, so they take the pointer at the boundaries; a double-click resets
         // one, and the layout is saved (R-462 J3, J5).
         let resets = crate::layout::splitters(ui, layout);
@@ -878,6 +876,7 @@ impl<S: EngineSide> App<S> {
             self.save_settings();
         }
         let ctx = ui.ctx().clone();
+        let uncovered = self.uncovered(canvas, layout);
         let pointer = ctx.pointer_hover_pos();
         // A pointer carrying a window, by its title bar or an edge, hovers no figure point (R-461; gui_state_contract
         // §2's hover is the figure point under the cursor), nor one on a splitter or dragging it (R-462).
@@ -898,7 +897,7 @@ impl<S: EngineSide> App<S> {
         // The figure point is read in the field, on the canvas only.
         self.send_hover(explore::hover_label::figure_point(
             field,
-            pointer.filter(|p| canvas.contains(*p)),
+            pointer.filter(|p| uncovered.contains(*p)),
             over_figure,
         ));
         if let (Some(sample), Some(cursor), Some(_)) =
@@ -935,6 +934,27 @@ impl<S: EngineSide> App<S> {
                     self.save_settings();
                 }
             }
+        }
+    }
+
+    /// Opens the console if a control in `actions` asked for it, so that it is drawn in this frame, not the next (R-463).
+    fn open_asked_console(&mut self, ctx: &egui::Context, actions: &mut Actions) {
+        let (console, others): (Vec<_>, Vec<_>) = std::mem::take(&mut actions.open)
+            .into_iter()
+            .partition(|id| windows::opened_by(id) == Some(Window::Console));
+        actions.open = others;
+        for opener in console {
+            self.open_window(ctx, Window::Console, Some(opener));
+        }
+    }
+
+    /// The lock's reticle on the figure, on what the console leaves of it.
+    fn paint_reticle(&self, ctx: &egui::Context, layout: &Layout) {
+        let sim = &self.snapshot.sim;
+        let uncovered = self.uncovered(layout.figure, layout);
+        let reticle = explore::lock::reticle_at(&sim.lock, &sim.plane, layout.field);
+        if let Some(at) = reticle.filter(|at| uncovered.contains(*at)) {
+            explore::lock::reticle(ctx, uncovered, at);
         }
     }
 

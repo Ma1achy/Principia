@@ -464,3 +464,77 @@ fn console_open_close_bench_times_the_filter_while_open() {
     assert!(filter > 0.0, "{filter}");
     rejects("no filter timed", || assert!(filter <= 0.0));
 }
+
+/// A GUI on the mock with a figure, the keys on, settled.
+fn with_figure() -> (App<MockSide>, Headless) {
+    let canvas = crate::cli::mock::canvas_flagging(None).expect("the mock's device");
+    let side = MockSide::new(crate::mock::MockEngine::new(), Some(canvas));
+    let mut app = App::new(side, crate::capture::FORMAT);
+    let mut h = headless();
+    for _ in 0..3 {
+        let _ = h.frame(&mut app, Vec::new());
+    }
+    (app, h)
+}
+
+/// The figure's clip in `output`: its paint callback's.
+fn figure_clip(output: &eframe::egui::FullOutput) -> Rect {
+    output
+        .shapes
+        .iter()
+        .find(|s| matches!(s.shape, Shape::Callback(_)))
+        .expect("the figure painted")
+        .clip_rect
+}
+
+/// The frame of `key`'s press: the keys act and the figure paints in it.
+fn key_frame(h: &mut Headless, app: &mut App<MockSide>, key: Key) -> Rect {
+    let [down, up] = crate::capture::key(key, Modifiers::NONE);
+    let clip = figure_clip(&h.frame(app, down));
+    let _ = h.frame(app, up);
+    clip
+}
+
+#[test]
+fn console_open_close_the_figures_clip_follows_the_console_in_the_same_frame() {
+    let (mut app, mut h) = with_figure();
+    let layout = Layout::new(h.screen(), h.pixels_per_point());
+    let whole = layout.figure;
+    let covered = |clip: Rect| assert!(clip.height() <= 0.0, "the figure over it: {clip:?}");
+    let shown = |clip: Rect| assert_eq!(clip, whole);
+    press(&mut h, &mut app, Key::Tab, Modifiers::SHIFT);
+    // Docked over the bottom row it covers none of the figure.
+    shown(key_frame(&mut h, &mut app, Key::Enter));
+    assert!(app.is_open(Window::Console));
+    // M's frame: covered at once, and restored at once.
+    let maximised = key_frame(&mut h, &mut app, Key::M);
+    covered(maximised);
+    shown(key_frame(&mut h, &mut app, Key::M));
+    covered(key_frame(&mut h, &mut app, Key::M));
+    // Esc's frame, closed while maximised: all of it back at once.
+    let closing = key_frame(&mut h, &mut app, Key::Escape);
+    assert!(!app.is_open(Window::Console));
+    shown(closing);
+    // Opened again, still maximised: covered in its opening frame.
+    let opening = key_frame(&mut h, &mut app, Key::Enter);
+    assert!(app.is_open(Window::Console));
+    assert!(app.windows.console.maximised);
+    covered(opening);
+    // By a click on the footer, which lands after the page is drawn.
+    let _ = key_frame(&mut h, &mut app, Key::Escape);
+    let released = to_release(&mut h, &mut app);
+    covered(figure_clip(&h.frame(&mut app, released)));
+    // A console part way up the figure: the figure stops at its top edge.
+    let _ = key_frame(&mut h, &mut app, Key::M);
+    let top = whole.center().y;
+    app.splits.set_console_top(Some(top / h.screen().height()));
+    let clip = figure_clip(&h.frame(&mut app, Vec::new()));
+    assert!((clip.max.y - top).abs() < 1.0, "{clip:?} at {top}");
+    assert_eq!(clip.min, whole.min);
+    // The controls: the clip the frame before each change had.
+    rejects("the frame before M's clip", || covered(whole));
+    rejects("the frame before Esc's clip", || shown(maximised));
+    rejects("a clip that ignored the edge", || {
+        assert!((whole.max.y - top).abs() < 1.0)
+    });
+}
