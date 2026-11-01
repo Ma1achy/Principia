@@ -457,6 +457,21 @@ fn console_open_close_bench_starts_with_the_log_asked_for_settled() {
 }
 
 #[test]
+fn console_open_close_bench_each_logged_line_is_its_own_millisecond() {
+    let run = bench::Run::new(3, None);
+    let lines: Vec<&str> = run.app.console().iter().map(|e| &*e.message).collect();
+    let ends = |wanted: [&str; 3]| {
+        assert_eq!(lines.len(), wanted.len(), "{lines:?}");
+        for (line, t) in lines.iter().zip(wanted) {
+            assert!(line.ends_with(&format!(" → {t}")), "{line} ends at {t}");
+        }
+    };
+    ends(["0", "0.001", "0.002"]);
+    rejects("a second's step between lines", || ends(["0", "1", "2"]));
+    rejects("every line the same", || ends(["0", "0", "0"]));
+}
+
+#[test]
 fn console_open_close_bench_times_the_filter_while_open() {
     let tables = bench::measure(&[1000], 2, None);
     let filter: f64 = tables[0]
