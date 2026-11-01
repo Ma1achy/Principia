@@ -157,9 +157,14 @@ const NO_INSTALL: &[&str] = &[
     "actions/cache/save@",
     "actions/upload-artifact@",
     "actions/download-artifact@",
+    "actions/upload-pages-artifact@",
+    "actions/deploy-pages@",
     "Swatinem/rust-cache@",
     "google-github-actions/run-gemini-cli@",
 ];
+
+/// The kind of a target a `rustup toolchain install && rustup target add` step adds, until `ci_plan` has the channel.
+const ADDED_TARGET: &str = "added-target";
 
 /// What a shell command in a Linux job installs, into `plan`. A command that installs by a means the check doesn't
 /// know fails it.
@@ -185,7 +190,15 @@ fn scan_command(file: &str, command: &str, plan: &mut BTreeSet<Item>) {
         .split(['&', ';', '|'])
         .any(|part| part.trim() == "rustup toolchain install")
     {
-        // The root toolchain file's toolchain, which `ci_plan` adds from the file itself.
+        // The root toolchain file's toolchain, which `ci_plan` adds from the file itself, and the targets a
+        // `&& rustup target add` adds to it, which `ci_plan` names with that toolchain's channel.
+        if command.contains("rustup target add") {
+            plan.extend(
+                installed_after(command, "rustup target add")
+                    .into_iter()
+                    .map(|t| item(ADDED_TARGET, t)),
+            );
+        }
     } else {
         let unknown = [
             "cargo install",
@@ -303,6 +316,22 @@ fn ci_plan(workflows: &[(String, String)], toolchain: Option<&str>) -> BTreeSet<
     }
     if let Some(text) = toolchain {
         plan.extend(toolchain_items(text));
+    }
+    let channel = plan
+        .iter()
+        .find(|(kind, name, _)| kind == "toolchain" && name == "file")
+        .map(|(_, _, channel)| channel.clone());
+    let added: Vec<Item> = plan
+        .iter()
+        .filter(|(kind, _, _)| kind == ADDED_TARGET)
+        .cloned()
+        .collect();
+    for target in added {
+        plan.remove(&target);
+        let channel = channel
+            .as_deref()
+            .expect("a target added to the root toolchain file's toolchain, with no such file");
+        plan.insert(item("target", &format!("{channel}/{}", target.1), "-"));
     }
     plan
 }
@@ -615,6 +644,49 @@ validation::negative_control!(
         let copy = scratch("follows_control");
         copy_tree(&copy, bump, Some(COPY_TOOLCHAIN));
         check_follows(&copy, &root())
+    }
+);
+
+/// The wasm target `ci.yml`'s `web-skeleton` and `pages.yml` add to the pinned toolchain.
+const ADDED: &str = "/wasm32-unknown-unknown";
+
+/// Both plans hold the target CI's `rustup toolchain install && rustup target add` adds, on the toolchain file's channel.
+fn check_added_target(ci: &BTreeSet<Item>, script: &BTreeSet<Item>) {
+    for (who, plan) in [("this check", ci), ("cloud-setup.sh", script)] {
+        let channel = &plan
+            .iter()
+            .find(|(kind, name, _)| kind == "toolchain" && name == "file")
+            .expect("the toolchain file's channel")
+            .2;
+        let want = (
+            "target".to_owned(),
+            format!("{channel}{ADDED}"),
+            "-".to_owned(),
+        );
+        assert!(
+            plan.contains(&want),
+            "{who}'s plan misses CI's added target"
+        );
+    }
+}
+
+#[test]
+fn cloud_setup_installs_the_target_ci_adds_to_the_toolchain() {
+    check_added_target(&the_ci_plan(), &script_plan(&root()));
+}
+
+validation::negative_control!(
+    cloud_setup_installs_the_target_ci_adds_to_the_toolchain,
+    "CI's steps with the target add taken out, which the script then has no target to read from",
+    expected = "cloud-setup.sh's plan misses CI's added target",
+    {
+        let copy = scratch("added_target");
+        copy_tree(
+            &copy,
+            |text| text.replace(" && rustup target add wasm32-unknown-unknown", ""),
+            None,
+        );
+        check_added_target(&the_ci_plan(), &script_plan(&copy))
     }
 );
 

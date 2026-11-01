@@ -20,10 +20,12 @@ pub mod lint_no_alloc;
 pub mod lint_vocab;
 pub mod lint_wgsl;
 pub mod mutants_check;
+pub mod pages_workflow;
 pub mod plan_check;
 pub mod pr_check;
 pub mod reviews_check;
 pub mod screenshot;
+pub mod web_skeleton;
 
 use std::path::{Path, PathBuf};
 

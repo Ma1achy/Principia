@@ -251,8 +251,8 @@ impl<S: EngineSide> App<S> {
 
     /// Logs `message` to the console as the app's warning, counted in the footer.
     fn log_warning(&mut self, message: String) {
-        let at = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
+        let at = crate::clock::time::SystemTime::now()
+            .duration_since(crate::clock::time::UNIX_EPOCH)
             .map_or(0, |d| u64::try_from(d.as_millis()).unwrap_or(u64::MAX));
         self.console.push(LogEntry {
             severity: Severity::Warn,
@@ -1230,7 +1230,7 @@ impl<S: EngineSide> App<S> {
 
     /// Draws the focus ring on the focused scope, where it was drawn this frame, while keyboard navigation is on
     /// (R-460 H4, R-464).
-    fn draw_ring(&self, ctx: &egui::Context) {
+    pub(crate) fn draw_ring(&self, ctx: &egui::Context) {
         if !self.keyboard.navigating() {
             return;
         }

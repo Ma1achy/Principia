@@ -1676,10 +1676,16 @@ version = "0.1.0"
 dependencies = [
  "eframe",
  "engine",
+ "js-sys",
  "png",
  "pollster",
  "serde_json",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
+ "web-time",
  "wgpu",
+ "winit",
 ]
 
 [[package]]

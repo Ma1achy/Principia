@@ -131,7 +131,12 @@ pub const DOCS: &str = "docs";
 pub const DOCS_EXCLUDED: [&str; 2] = ["docs/archive", "docs/reference"];
 
 /// The paths not read, relative to the workspace root: the term list and the fixtures (RQ-160).
-pub const EXCLUDED: [&str; 2] = ["xtask/src/lint_vocab.rs", "xtask/tests/fixtures/vocab"];
+pub const EXCLUDED: [&str; 3] = [
+    "xtask/src/lint_vocab.rs",
+    "xtask/tests/fixtures/vocab",
+    // The web skeleton's runner's installed packages, gitignored, nobody's prose (TASK-M8-86).
+    "web/skeleton/runner/node_modules",
+];
 
 /// The markers wrapping a retirement passage in the docs (R-111).
 pub const OPEN: &str = "<!-- retired-terms -->";
