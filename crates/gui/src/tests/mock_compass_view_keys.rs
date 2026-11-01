@@ -639,6 +639,37 @@ fn mock_compass_view_keys_near_the_pole_the_element_shows_the_whole_column() {
     }
 }
 
+/// The threshold's plain side: `r` here puts the stretch just under `physical::STRETCH_SCIENTIFIC_FROM`, so the readout
+/// has its longest plain digits and a pair. The focus moved there by the keys, the element shows the whole readout and
+/// the whole hint in one stop, at the small panels. The controls are the scientific form, which this stretch does not
+/// read in, and the wheel-only column, which does not bring the same text into view.
+#[test]
+fn mock_compass_view_keys_just_under_the_threshold_the_element_shows_the_plain_digits() {
+    let shape = 6;
+    for (name, window, least) in SMALL {
+        let (mut app, mut h, panel) = at_element(&near_the_pole(8.889e-3), window, least, shape);
+        let output = settled_output(&mut h, &mut app);
+        let text = column_text(&app, panel);
+        assert_eq!(unread(&output, panel, &text), None, "{name}");
+        assert!(!text[0].contains('—'), "{name}: {}", text[0]);
+        let c = &app.manifold.compass;
+        let stretch = compass::pushed(&app.snapshot().sim, c, physical::Set::Shape).stretch;
+        assert!(
+            (9990.0..physical::STRETCH_SCIENTIFIC_FROM).contains(&stretch),
+            "{name}: {stretch}"
+        );
+        let (_, shown) = text[0].split_once("stretch ").expect("the stretch");
+        assert_eq!(shown, format!("{stretch:.3}"), "{name}");
+        rejects("the scientific form", || {
+            assert_eq!(shown, format!("{stretch:.3e}"), "{name}")
+        });
+        let output = after_keys(&mut h, &mut app, Key::ArrowRight, 1);
+        rejects("the wheel-only column", || {
+            assert_eq!(unread(&output, panel, &text), None, "{name}")
+        });
+    }
+}
+
 /// The rows `text` is drawn in, in `output`.
 fn rows_of(output: &FullOutput, text: &str) -> usize {
     let (at, _, row) = drawn(output, text);
