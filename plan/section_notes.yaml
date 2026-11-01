@@ -1371,7 +1371,7 @@
 - file: docs/design/principia_dd_replication.md
   section: "5.14 Out of scope"
   reason: informative only
-  note: "V-5, V-10 and BZ-1 are out of scope as PLAN.md says, and D-6 waits on RQ-587; no requirement (R-629)"
+  note: "V-5, V-10 and BZ-1 are out of scope as PLAN.md says, BZ-1's cold sets reopened as a proposal with no requirement (R-661), and D-6 waits on RQ-587; no requirement (R-629)"
 - file: docs/design/principia_dd_replication.md
   section: "5.15 Counts"
   reason: informative only
@@ -1440,6 +1440,10 @@
   section: "R-657 — The R-369 decisions listed in the orchestrator's summary of 30 Oct 2026 stand, with no veto"
   reason: informative only
   note: "the owner's words of 30 and 31 Oct 2026: the listed R-369 decisions stand, with no veto; process; changes no requirement"
+- file: decisions.md
+  section: "R-658 — Heavy commands run only through a local job queue the orchestrator owns, `cargo xtask job`: agents submit them and wait, never run them directly; classes merge, fix, build and peek, first in, first out within each; one runner at a fixed concurrency, each job with cargo's jobs and test threads at the core count; jobs time out, stale locks expire and a new runner recovers a dead one's jobs; heavy processes outside the queue are logged; sccache measured again; mutants scoped to the diff and run through the queue *(supersedes R-228)*"
+  reason: informative only
+  note: "the owner's ruling of 30 Oct 2026: heavy commands only through the local job queue (cargo xtask job); process, carried by CLAUDE.md, plan/OPERATIONS.md § Resources and the agent files, and built in xtask/src/jobq.rs; changes no requirement"
 - file: decisions.md
   section: "R-664 — `generation_root` §3.5 no longer claims R² from the Welford accumulators: it cannot be derived from what is stored and nothing reads it; no per-sample field is added *(closes RQ-633)*"
   reason: informative only

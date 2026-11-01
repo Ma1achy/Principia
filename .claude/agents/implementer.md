@@ -22,8 +22,9 @@ only what the task's References tell you to, and cite the contract rather than t
 3. Run every acceptance command the task lists, and keep the output.
 4. Test the boundary of every comparison and match arm you add. Before opening the PR, run `cargo mutants
    --in-diff` on your own diff against `origin/main` (`git diff origin/main...HEAD` written to a file in your scratch
-   directory), with `CARGO_TARGET_DIR` set to the `<target>-mutants` directory the dispatch names, and delete that
-   directory straight after. Kill each survivor with a test, or as `plan/OPERATIONS.md` § "Reviewers" (its
+   directory), through the job queue (R-658) on the head you are about to push, never on work in progress, with
+   `CARGO_TARGET_DIR` set to the `<target>-mutants` directory the dispatch names (`--env`), and delete that directory
+   straight after. Kill each survivor with a test, or as `plan/OPERATIONS.md` § "Reviewers" (its
    **Mutants** item) says for an equivalent mutant. Run it again before pushing fixes for survivors CI reports. CI's
    mutants gate stays the authority (R-388). If your diff touches `crates/gui/`, run the gui crate's mutants on their
    own with the hard limits that item gives (`-j 1 --timeout 90`, a generous `--build-timeout`, nextest at one test
@@ -32,6 +33,25 @@ only what the task's References tell you to, and cite the contract rather than t
    requirement closed, give the acceptance command and its output. Label it `design`, `investigation` or
    `validation` where that applies. A benchmark command runs on the human's Mac: say it waits for that run (R-186).
 6. Commits touching `docs/`, `decisions.md` or `plan/` end with a "Removed lines" note.
+
+**Heavy commands go through the job queue (R-658).** Never run a heavy command directly: anything that compiles (cargo
+build, check, test, clippy, doc and run, `cargo xtask` runners, cargo mutants, nextest, benches, GPU tests). Submit it
+to the queue at priority `build` for a new task and `fix` in a fix round, and wait for it; light commands (git, gh,
+grep, reading files and logs, `python3` checks, `cargo fmt`) run directly. `job submit` prints the job id; `job wait`
+blocks until the job ends, prints its log path and exits with the job's status. The job runs on whatever happens to your
+call, so if `wait` would outlast it, run it in the background or run it again. The job runs with your `PATH` (unless
+`--env PATH=…` sets one), so export it with `/opt/homebrew/opt/rustup/bin` first before you submit: rustup's proxies
+there have clippy and fmt, and `~/.cargo/bin`'s cargo has neither. For example:
+
+```
+export PATH="/opt/homebrew/opt/rustup/bin:$PATH"
+"/Volumes/X10 Pro/Principia/orch/jobq/bin/xtask" job submit <worktree> --priority build --label <TASK-id> \
+  --env CARGO_TARGET_DIR=<target> -- cargo test -p kernel --test roundtrip
+"/Volumes/X10 Pro/Principia/orch/jobq/bin/xtask" job wait <id>
+```
+
+A mutants run goes through the queue too, with R-439's limits as its flags and `--env RUST_TEST_THREADS=1` for a gui
+run.
 
 **When the corpus is silent or in conflict, or a value is missing:** stop. Write the `REVIEW_QUEUE.md` entry (file,
 section, quoted text) and report back. Never guess and never defer (`plan/WORKFLOW.md` § "Escalation").

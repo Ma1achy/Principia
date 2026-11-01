@@ -920,11 +920,12 @@ windowed spectrum) become R-71 / R-72 calibration and definition requirements. T
 fixtures) wait for the human. ✱ marks a design ruling the human may veto.*
 
 ## R-110 — What CI runs, where, and against which goldens *(closes RQ-79)*
-*Amended by R-186 and R-656.*
+*Amended by R-186, R-656 and R-662.*
 *Still in force: the unit, property, numerical-gate and native golden suites on every commit; GUI screenshots on GUI PRs
 and at the gates; lavapipe as the second backend on every commit, meeting M4's two-backend check, and a real non-Metal
 GPU gating Paper 2 (R-58); "every commit" is every push to `main` and every pull-request head, but for R-656's skips
-(a docs-only head runs only the checks that read the docs; one that changes no GPU-path file skips the GPU suites);
+as R-662 scopes them (a head that changes none of Principia's code runs only the cheap checks; one that changes no
+GPU-path file skips the GPU suites);
 Chrome stable and Safari for REQ-VAL-116; goldens rendered with native wgpu offscreen from M1, checked at M8 by the
 Playwright suite against the same baselines within tolerance, with no re-baselining without a gate decision; the
 runners and the benchmarks' schedule are R-186's.*
@@ -1479,10 +1480,10 @@ through a dev-dependency on `crates/validation`. Tests are matched to their cont
 Crates without the `controls` feature are skipped, not failed.
 
 ## R-177 — Cadence *(closes G4, C6)*
-*Amended by R-656.*
+*Amended by R-656 and R-662.*
 *Still in force: all of it, `ci.yml`'s "every push" read as R-656 reads it: every push to `main` and every pull-request
-head, a docs-only head running plan-check and the checks that read the docs (in `ci-workspace`) in place of `cargo
-xtask ci`.*
+head, a head that changes none of Principia's code (R-662) running plan-check and the vocabulary lint (in
+`ci-workspace`) in place of `cargo xtask ci`.*
 *25 Sep 2026 · applied in step 8*
 
 - `ci.yml` runs `cargo xtask ci` on every push, and that includes plan-check.
@@ -2141,6 +2142,7 @@ Asked about three latent races of R-224's kind, none yet seen failing, the human
 *Applied:* the first race (`qa_TASK-M0-26.rs`'s r206 test spawning `qa_child` while sibling cargo runs rewrite it) is inside R-224's exception for that file, and qa's review of PR #35 found it blocking, so TASK-M0-31 fixes it. The other two go to TASK-M0-32 (new, REQ-VAL-164): `cargo build -p xtask` in `crates/validation/tests/support/qa_m0_21_fixture.rs:35` rewriting the `xtask` binary while sibling tests spawn it; and parallel copies of one fixture building into the shared outer target (`xtask/tests/controls.rs:63`, `qa_m0_21_fixture.rs:143`, `support/qa_m0_21.rs:16`, `crates/validation/tests/expected_message.rs:42`). The proof is R-224's: 20 whole-workspace runs in a row under load. Edits to qa's merged files are limited to the fix, under a one-round exception, with qa reviewing. TASK-M0-32 depends on TASK-M0-31, and TASK-M0-22 depends on TASK-M0-32 (both edit `xtask/tests/controls.rs`).
 
 ## R-228 — Each agent builds and tests with four jobs and four test threads
+*Superseded by R-658.*
 *28 Sep 2026 · applied in CLAUDE.md and the local build environment*
 
 "Each agent: CARGO_BUILD_JOBS=4 and RUST_TEST_THREADS=4."
@@ -27006,8 +27008,9 @@ R-628 is in the "physics" group of `plan/rule_groups.yaml`.
 ## R-629 — PLAN.md is adopted as the single plan for verification and replication, superseding as the working plan the 25 Oct instruction's tier tables, sequencing and fetch list; its seven draft requirements are ported as M3 requirements with their tolerances as calibrations; R-594's port follows it, with the orbit catalogue's six tests as tasks; the plan's other questions stay queued *(refines R-594; answers PLAN.md § 9 questions 1 and 2)*
 *Amended in part by R-650 (its drafts, REQ-VAL-201 to REQ-VAL-213, are M9 requirements, scored after the core build,
 not M3 ones).*
+*Amended in part by R-661 (BZ-1's "out of scope": the cold sets are reopened as a proposal; its warm sets stay out).*
 *Still in force: all of it but "ported as M3 requirements": the drafts stand as requirements, their tolerances as
-calibrations, in M9 (R-650).*
+calibrations, in M9 (R-650); and but BZ-1's cold sets, which R-661 reopens, no requirement being added for BZ-1.*
 *27 Oct 2026 · the human's answer to whether R-594's port should follow the 27 Oct plan; applied with R-594, in the files
 R-594's line lists; built by TASK-M2-51, TASK-M3-42 to TASK-M3-65, TASK-M4-22 to TASK-M4-25, TASK-M6-52, TASK-M7-71
 and TASK-M8-97 to TASK-M8-99*
@@ -28394,6 +28397,9 @@ R-648 is in the "process" group of `plan/rule_groups.yaml`. Changes no requireme
 ## R-649 — Replication and verification targets are measurements, not gates: failing one never blocks building; each declares the tier it binds, (a) the GPU explorer, agreeing statistically or qualitatively only, or (b) the CPU IC inspector, where exact targets bind; three outcomes, PASS, EXPLAINED DIVERGENCE (shown by a measurement) and UNEXPLAINED (open, labelled, non-blocking); no default, physics, criterion, architecture or tolerance is changed and nothing is tuned per target in pursuit of a pass; a comparison is checked like-for-like before anything is called a failure; verification deepening comes after the core build *(amends R-594, R-636, R-637 and R-639 for external targets; applies to RQ-598's targets and every target in force)*
 *Refined by R-650 (external replication becomes the final milestone, M9; the internal correctness tests and the
 anchor smoke tests stay continuous and blocking; early peeks, information only, go in a peek log).*
+*Amended in part by R-661 (item 2's "expected to agree statistically" and clarification 2's "expected to agree statistically":
+that tier (a)'s statistics agree is a hypothesis Principia will measure, and no paper establishes it; the owner's words here stay
+as given, and the tier a target binds does not change).*
 *Confirmed 30 Oct 2026 by the owner, on its tier reading (his answers of that day, item 1, in the orchestrator's
 notes, `orch/r630/human-answers-30oct.txt`), verbatim: "Tier reading confirmed: statistical targets are scored on tier
 (a), exact targets on tier (b). Proceed with #342 as corrected." Item 2's applied line below is corrected to it: the
@@ -28401,9 +28407,9 @@ port's first reading had a statistical target bind (b), with (a) expected to agr
 finding F1).*
 *Refined by R-653 (30 Oct 2026; RQ-622 (c): the five f64-Result map targets and B-2 are scored on tier (a), the f64 Result
 or CPU FTLE run beside it as information).*
-*Still in force: all of it, with the owner's two clarifications of 29 Oct 2026 recorded below and his confirmation of
+*Still in force: all of it, with the owner's two clarifications of 29 Oct 2026 recorded below and the owner's confirmation of
 30 Oct 2026 above; R-650 says where and when each external target is scored, and R-653 how the five map targets and B-2
-square with the tier rule.*
+square with the tier rule; R-661 reads "expected to agree statistically" as a hypothesis to measure.*
 *29 Oct 2026 · the owner's ruling of that day, and his two clarifications for its port the same day; ported 30 Oct 2026
 with R-650; applied in `docs/design/principia_dd_replication.md` (§ 12, new; dated lines in its header, § 2, § 5.1,
 § 5.6, § 5.10, § 5.15, § 6, § 7, § 8.1, § 8.3 and § 10; the § 5 tables' milestone and task columns),
@@ -28529,6 +28535,8 @@ R-649 is in the "design" group of `plan/rule_groups.yaml`. Changes REQ-VAL-034, 
 target R-650 moves (their notes: the tier and the outcome); adds REQ-VAL-338 and REQ-VAL-339.
 
 ## R-650 — External replication becomes its own final milestone, M9, after the core build: it scores every external target, writes up the explained divergences and tightens the GPU path, and exits on its report; the internal correctness tests and the cheap anchor smoke tests (figure-eight closure, SP-1 run to its horizon, SP-2) stay continuous and block a merge as now; source ingest and transcription go on whenever idle; early peeks score a target as information only, in a peek log *(refines R-649; amends R-594, R-629, R-630, R-640 and R-642: where and when the targets are scored)*
+*Extended by R-661 (BZ-1C, on the BPZ cold starts, proposed as an M9 target with peek priority, with no requirement).*
+*Still in force: all of it; R-661 adds one proposed target and changes nothing else.*
 *29 Oct 2026 · the owner's follow-up to R-649 that day and his addendum on early peeks the same day; ported 30 Oct
 2026 with R-649; applied in `plan/MILESTONES.md` (§ "M9 — External replication", new; § "Assumptions"),
 `plan/WORKFLOW.md` (§ "Human checkpoints: the milestone gates"), `plan/tools/` (M9 accepted; its block a report, not a
@@ -28821,6 +28829,11 @@ R-655 is in the "physics" group of `plan/rule_groups.yaml`, with R-554 and R-613
 Changes REQ-SCHED-101 (statement, verify, rulings, note) and REQ-CHART-062 (verify, rulings, note).
 
 ## R-656 — CI throughput: a push runs `ci.yml` only on `main` (and on R-272's `measure/` branches, which have no pull request), a pull request running it through `pull_request`; a pull request's superseded runs are cancelled, never a run on `main`; a docs-only pull request skips the build, test, GPU and mutants work, and one that changes no GPU-path file skips the GPU suites, inside the jobs, every required check still reporting success under its own name; mutants run on the merge-ready head; a bounded target cache is approved in principle, built in a later PR; no paid or self-hosted runner *(amends R-110, R-177, R-186, R-195, R-235, R-285 and R-335)*
+*Amended in part by R-662 (31 Oct 2026: full CI runs only when a pull request changes Principia's code; the list of
+files code reads narrows to data code loads for behaviour, and the docs checks to the cheap checks).*
+*Still in force: all of it but what counts as docs-only and what a docs-only head runs, which are R-662's: the push
+trigger, the cancelled runs, the in-job skips under each required check's own name, mutants on the merge-ready head,
+the approved target cache and no paid or self-hosted runner.*
 *30 Oct 2026 · the owner's two messages of that day; applied in `.github/workflows/ci.yml`,
 `.github/workflows/mutants.yml`, `scripts/ci_changes.sh` (new), `xtask/tests/ci_changes.rs` (new), three qa files
 (below), `plan/OPERATIONS.md`, `plan/WORKFLOW.md`, `docs/contracts/principia_parity_contract.md` §6, eight
@@ -28970,6 +28983,242 @@ And on 31 Oct 2026, verbatim, in his replies of that morning, on that day's list
 
 R-657 is in the "process" group of `plan/rule_groups.yaml`.
 
+## R-658 — Heavy commands run only through a local job queue the orchestrator owns, `cargo xtask job`: agents submit them and wait, never run them directly; classes merge, fix, build and peek, first in, first out within each; one runner at a fixed concurrency, each job with cargo's jobs and test threads at the core count; jobs time out, stale locks expire and a new runner recovers a dead one's jobs; heavy processes outside the queue are logged; sccache measured again; mutants scoped to the diff and run through the queue *(supersedes R-228)*
+*Refined by R-666 (31 Oct 2026: the decision item 4's measurement left pending is taken: sccache stays off).*
+*Still in force: all of it; R-666 takes the sccache decision that item 4's measurement left pending.*
+*30 Oct 2026 · the owner's message of that day; applied in `xtask/src/jobq.rs` and `xtask/tests/jobq.rs` (new),
+`xtask/src/lib.rs`, `xtask/src/main.rs`, `xtask/Cargo.toml`, `CLAUDE.md`, `plan/OPERATIONS.md`
+(§ "Dispatching", § "Reviewers", § "Resources", § "Paths and warm builds" and § "Logs"), the agent files in
+`.claude/agents/` and `plan/rule_groups.yaml`*
+
+The owner's words, verbatim:
+
+> Local build/test orchestration. Agents keep writing, reviewing and acting on results in parallel, but no agent runs heavy commands directly any more.
+> 1. Heavy = cargo build/check/test/clippy, cargo mutants, benches, GPU tests, xtask ci, and anything else that compiles. Light (docs, grep, python checks, reading logs) stays direct.
+> 2. Build one local job queue that you (the orchestrator) own, e.g. `xtask job submit <worktree> <command> --priority <p> --label <task>`. It returns a job id; `xtask job wait <id>` blocks, then returns exit status plus a log path. A small runner executes jobs with a fixed concurrency: start at 1 heavy job (2 if measurement shows it's faster), and cap cargo's -j to the core count, not per-agent. Use flock or a small daemon; keep it simple and robust to agent restarts (no orphaned locks: jobs time out, stale locks expire).
+> 3. Priority order: merge-ready verification of a final head > fix-round tests > new-task builds > exploratory/peek runs.
+> 4. Cut duplicated work: shared sccache across worktrees so dependency crates compile once (don't share one target dir: that brings cargo's file lock back). Mutants scoped to the diff (cargo mutants --in-diff or per changed crate), and only on the merge-ready head, as per the CI rule.
+> 5. Enforce it: put the rule in the agent briefs and CLAUDE.md ("never run heavy commands directly; submit to the queue"), and have the runner log any heavy process it sees running outside the queue so violations are visible.
+> 6. Measure: total wall-clock to verify N PRs before vs after, plus swap/memory pressure. Report the numbers; if serial-1 is slower than 2 concurrent, pick the faster.
+> Do this as a tooling PR now, ahead of new code tasks, since everything else is waiting on it. Record it as a ruling under the next R-number.
+
+(R-658 was the next free number: the numbers before it went to that day's other rulings, on their own branches.)
+
+*What it decides:*
+- **Heavy and light (item 1).** Heavy is cargo build, check, test, clippy, doc and run, cargo mutants, nextest, benches,
+  GPU tests, `cargo xtask` runners, and anything else that compiles. Light runs directly: docs, git, gh, grep, `python3`
+  checks, `cargo fmt`, `cargo metadata`, reading logs.
+- **One queue, the orchestrator's (item 2),** `cargo xtask job`: `submit <worktree> --priority <p> --label <task>
+  [--timeout <s>] [--env K=V]... -- <command>` prints a job id; `wait <id>` blocks, then prints the exit status and the
+  log path and exits with the job's status; `status` and `cancel <id>` besides. Its state lives in
+  `/Volumes/X10 Pro/Principia/orch/jobq/`, outside the repository: one file per job, its log, and the runner's lock.
+- **Concurrency and job counts (items 2 and 6).** One runner runs the jobs at a fixed concurrency, which started at 1
+  and is set by the measurement to 2 (below). Each job runs with `CARGO_BUILD_JOBS` and `RUST_TEST_THREADS` at
+  the core count (`hw.ncpu`, 11 on the Mac), which supersedes R-228's four per agent; a job may set lower ones, as
+  R-439's gui mutants run does. Each job names its own `CARGO_TARGET_DIR`; none shares one.
+- **Priorities (item 3),** highest first: `merge` (merge-ready verification of a final head), `fix` (fix-round tests),
+  `build` (new-task builds), `peek` (exploratory runs); first in, first out within a class.
+- **Robust to restarts (item 2).** Jobs time out (3600 s unless the job says otherwise), and the runner kills the job's
+  whole process group; it kills what is left of the group, too, whenever the job's own process ends, so nothing a
+  finished job started outlives it. A runner lock whose pid is dead or whose heartbeat is stale (120 s) expires. A new
+  runner ends the process groups of the jobs a dead one left running and queues them again, or marks one lost after its
+  third start. A job outlives the agent that submitted it, and `wait` can be re-attached. `submit` starts the runner
+  when none is alive; it needs no launchd, and exits when idle.
+- **Duplicated work (item 4).** sccache was measured again: with the target directory in the environment, as every job
+  has it, 0 hits; with it given as `--target-dir`, 66.9% of a cold build's compile requests hit, the dependency crates,
+  saving about 10 s of 100. It is not enabled, pending the owner's decision: jobs start from APFS-cloned warm targets,
+  whose dependencies are built once already (`plan/OPERATIONS.md` § "Paths and warm builds"). Mutants run scoped to the
+  diff (`--in-diff`, or per changed crate), through the queue, on the head about to be pushed and never on work in
+  progress; CI's gate stays the authority (R-388).
+- **Enforcement (item 5).** `CLAUDE.md` and every agent file say "never run heavy commands directly; submit to the
+  queue", with the heavy and light definition and an example. The runner logs each heavy process outside the queue to
+  `orch/jobq/violations.log`, with its pid, command and cwd; it never kills one.
+- **Measurement (item 6),** 30 Oct 2026, three task heads' targeted tests from warm APFS-cloned targets (`main` at
+  a83b9a53 with TASK-M2-48's kernel tests; TASK-M2-29 at 2f628854 with its validation and render tests; TASK-M2-36 at
+  6aff2c7a with its kernel and ledger tests):
+
+| Run (background load1 at start) | Wall-clock | Peak load1 | Memory pressure, worst | Page-outs/min, mean / worst | Swap-outs |
+|---|---|---|---|---|---|
+| (a) before: three at once, `CARGO_BUILD_JOBS=4` (12.8; 10.8) | 112 s; 89 s | 25.7; 22.9 | 2; 1 | 262 / 484; 18 / 25 | 16,536; 0 |
+| (b) the queue, one job at a time (13.1; 13.0) | 135 s; 135 s | 15.6; 16.8 | 2; 1 | 4 / 7; 1 / 2 | 0; 0 |
+| (c) the queue, two at a time (9.9; 12.6) | 101 s; 97 s | 15.4; 19.5 | 1; 2 | 2 / 4; 63 / 93 | 0; 0 |
+
+  Each cell gives round 1, then round 2, which ran the modes in reverse order. Two at a time was the faster of 1 and 2,
+  so the runner runs two.
+
+*Applied per R-369:*
+- **The queue's design.** The client agents call is an installed copy of xtask,
+  `/Volumes/X10 Pro/Principia/orch/jobq/bin/xtask`, so calling the queue compiles nothing; the orchestrator reinstalls
+  it from `main` after a merge that changes it. State changes hold a `flock` on `orch/jobq/state.lock` (std's file
+  lock; macOS has no flock(1)), released by the kernel if its holder dies; the runner lock is a file with the runner's
+  pid and a heartbeat it rewrites every pass. `submit` requires `--env CARGO_TARGET_DIR`, and a queued job whose target
+  directory a running job uses waits. A job keeps the submitter's paths, locale and cargo, rustup and rustc settings,
+  but not what `cargo run` sets for the submitter, its target directory or its job counts. A job left running by dead
+  runners three times is marked lost, so a job that kills its runner cannot loop. The runner exits after 60 s idle.
+- **Runner starts are bounded.** `submit` and `wait` start at most one runner per queue every 5 s, whatever the lock
+  says, and reap it, so no fault of the lock can fill the machine with runners or zombies: a local mutants run of the
+  first draft did, on 30 Oct 2026, past the Mac's per-user process limit. Nothing of the queue is excluded from
+  mutation: R-196's exclusions for xtask stay `xtask/src/main.rs` and `xtask/src/codegen.rs` (applied per R-204,
+  accepted by R-267). xtask's mutants are not run on the Mac; CI's mutants gate runs them, and a survivor that is
+  truly equivalent goes into `.cargo/mutants-equivalent.toml` (R-202). The queue's tests run each call under
+  `ulimit -u` (the user's processes at the start, plus 300) and end, by pid, every process left naming their state
+  directory.
+- **The state lock is held briefly, and waited for within a bound.** No `ps` call and no grace wait runs while
+  `state.lock` is held: a new runner ends a dead one's groups outside it, and the runner reads a started job's start
+  time after its pass. Its holder writes its pid and the time it took it into the file, and a call that can't take it
+  within `lock_wait` seconds (30) fails, naming that pid and how long it has held the lock, rather than hanging; the
+  runner logs it and tries again.
+- **Target directories are compared by a normalised key:** the path made canonical where it exists (the nearest
+  existing parent otherwise), without a trailing `/`, and folded to lower case, since the Mac's volume is
+  case-insensitive. Two spellings of one directory never run at once; the job keeps the path as given.
+- **Timeouts are measured on a monotonic clock,** from an `Instant` the runner takes when it starts the job, so a clock
+  step or a sleep and wake cannot time a job out. A job a dead runner left running is run again, with a fresh timeout,
+  or marked lost, as above.
+- **`job status` shows the runner's own settings,** its concurrency and cores per job, which the runner writes into
+  its lock, not the defaults of the binary asking.
+- **`wait`'s statuses:** the job's exit code (128 plus the signal for one a signal ended); 124 timed out, 125 lost, 126
+  not started, 130 cancelled, as `timeout(1)` and shells use them.
+- **The violation log** names only the topmost heavy process of a chain outside the queue, each once per runner; a
+  process descended from a queue job's group, the runner or sccache's server is inside.
+- **Priorities by role:** a reviewer's check of the PR head is `merge`; the implementer's builds are `build`, `fix` in
+  a fix round; measurements and exploratory runs are `peek`.
+- **Agent counts** stay R-391's and R-262's: they bound the agents dispatched, each now writing, reviewing and waiting;
+  the queue alone bounds the heavy load.
+- **rustix** joins xtask's dependencies (Unix only) for the process-group signals and the pid test; it is already in
+  the build as validation's, for the same (R-217).
+
+R-658 is in the "process" group of `plan/rule_groups.yaml`. Changes no requirement.
+
+## R-661 — That tier (a)'s f32 statistics agree, with f64's or with a converged reference's, is a hypothesis Principia will measure, established by no paper; BZ-1 is reopened on the cold sets, which start from rest and so are planar, with a paired f32, f64 and converged experiment proposed for M9 at peek priority; REQ-VAL-199 states the effect size its 256 starts can detect; the CC BY papers and records are committed *(closes RQ-644 and RQ-646; amends R-629; queues RQ-647, RQ-648 and RQ-649)*
+*31 Oct 2026 · the owner, on the precision set's triage; applied in `docs/incoming/2026-10-31_precision_set/` (new),
+`docs/incoming/2026-10-27_validation_plan/PLAN.md` (§ 0, BZ-1, BZ-1C, its note, § 7's item 10),
+`docs/incoming/2026-10-25_replication/catalogue.md` § 6.1, the 25 Oct instruction's § C (a bracketed correction),
+`docs/incoming/2026-10-25_lit_review/README.md` (a dated note, as R-632's), `docs/incoming/2026-10-25_replication/README.md`
+(a dated note with the two new hashes), `docs/incoming/2026-10-29_research_batches/README.md`
+§ 10 (a bracketed correction), `docs/incoming/2026-10-31_fetch_list/README.md`, `docs/design/principia_dd_replication.md`
+§ 5.14 and § 5.15, `docs/design/principia_honesty_precision.md` § 4 and § 6, `docs/contracts/principia_parity_contract.md`
+§ 5 (a dated line), R-629's forward line, `REVIEW_QUEUE.md`, REQ-VAL-199 (reqio), `plan/section_notes.yaml` and
+`plan/rule_groups.yaml`*
+
+The owner's words, 31 Oct 2026, verbatim:
+
+> Precision set: excellent, thank you. Actions: (1) Reword everywhere that tier (a) "agrees statistically" or cites Boekholt & PZ 2015 as evidence for f32: it is a HYPOTHESIS that Principia will measure, and no paper establishes it. Fix the three overstatements you found (PLAN's BZ-1 row, catalogue.md §6.1, the replication instruction) via the queue, with Removed-lines notes. (2) Reopen BZ-1 on the cold sets: from rest means planar. Propose the paired f32 / f64 / converged experiment on the BPZ cold initial conditions as an M9 target with peek priority: keep every run with a status, show any energy cut beside the uncut ensemble with the removed count, treat lifetimes as censored, and size n by a power calculation (target sensitivity of a few percent; KS distance ≈0.02 needs n ~ 10⁴). Thresholds stay calibration requirements, not adopted from the paper. (3) REQ-VAL-199: re-size its 256 starts by the same power argument, or state the effect size it can detect. (4) BPZ zero-placeholder rows: treat as undetermined/censored, never dropped; note it in the target. (5) Commit the CC BY ones (Boekholt & PZ 2015 with cold records, Portegies Zwart 2026, PZ & Boekholt 2023); the rest to _local. Fetch the BPZ warm files from figshare for completeness, but check whether they're 3D before proposing anything from them.
+
+*What it decides:*
+
+- **(1) The hypothesis.** That f32 ensemble statistics agree: no paper establishes it. Boekholt & Portegies Zwart
+  2015 is f64 against a converged code, and Portegies Zwart 2026's 32-bit numbers are single runs. RQ-646's three
+  overstatements are reworded, and RQ-644 closes with them: Fig. 14's side-by-side is compatible with never discarding;
+  the "unbiased" claim, which holds only after the cut, is not.
+- **(2) BZ-1 reopened.** The cold sets: from rest means planar, the cause the owner's. Measured in the records: largest final
+  out-of-plane distance 4.3×10⁻⁹ and 3.4×10⁻⁹. The proposal is PLAN.md's BZ-1C, with no requirement, as PLAN.md's other
+  proposed rows have none. The Hermite results are not published, so its f64 is ours.
+- **The power calculation.** α = 0.05. KS: `D_c = 1.358 √(2/n)`, so 0.02 needs n = 9,222 and 256 reaches 0.12. Fractions at 80%
+  power: `n = 7.85 · 2p(1−p)/Δ²`. Lifetimes by log-rank: `events = 4 · 7.85 / ln²HR`. n = 10⁴ per set is proposed: about 2%
+  in a fraction, a hazard ratio of 1.05. Its working is `docs/incoming/2026-10-31_precision_set/README.md`.
+- **(3) REQ-VAL-199** states what it can detect and keeps its 256 starts. The re-size is the owner's other option: RQ-647.
+- **(4) The placeholder rows** (98 and 16) are undetermined, censored with no known time, and never dropped.
+- **(5) The papers.** Boekholt & Portegies Zwart 2015's version of record and files, Portegies Zwart 2026 and Portegies
+  Zwart & Boekholt 2023's arXiv copy are committed, each CC BY 4.0, read at source. The other three are in `_local`.
+- **The warm files**, fetched as the owner asked, are 3D (largest final out-of-plane distance 84.9 and 132, non-zero L₀).
+  Nothing is proposed from them, and BZ-1's objection stands for them.
+
+*Applied per R-369:*
+
+- **(3)'s choice:** state the effect size, and queue the re-size with its cost for the owner, because re-sizing costs CPU.
+  R-610 sets a cap and no CPU budget, so RQ-647 gives the cost in runs and time units, with no seconds invented.
+- **The warm files' commit:** the owner asked for them to be fetched and named only the cold records to commit. Committing
+  them is the orchestrator's decision: 25 MB, each file CC BY 4.0, so the warm sets' 3D measurement can be repeated from the
+  repo.
+- **The name:** the reopened experiment is BZ-1C, beside BZ-1, whose row stays for the paper and the warm sets.
+- **Reach of the search:** `docs/` but `docs/archive` and `docs/reference`, `plan/`, `README.md`, `scripts/` and the
+  requirements. Beyond the owner's three: the lit review (a note, its tex and PDF unchanged), the research batches' quotation of R-649, `dd_replication` § 5.14,
+  the fetch list, and dated lines in the honesty design and the parity contract. REQ-VAL-065 keeps its statement: it is a
+  test, and the note says what it measures. `principia_00_philosophy.md`'s "ensemble statistics stay correct to within a
+  percent" reports Trani et al. on their own integrator, not f32, and stands. No code comment makes the claim.
+- **M9:** the proposal's status rests on R-649 and R-650, cited and not copied. R-649's own words, "expected to agree
+  statistically", are the owner's and stay as quoted there, each ruling with its forward line here. `dd_replication` § 12.2 and
+  the ground-truth note take a dated line, the physics reviewer's list a clause, RQ-622 a dated line, and RQ-649 asks what a score on
+  tier (a) then says. The requirements' and task files' "scored there, statistically or qualitatively only" say where a target
+  is scored and how, and claim no agreement, so they stand.
+
+*What it amends:* **R-629**, as to BZ-1's cold sets, and it amends R-649, as to how "expected to agree statistically" reads; it extends R-650 by the one proposed target. It closes **RQ-644** and **RQ-646**, and queues **RQ-647** (the re-size),
+**RQ-648** (the trust line's citations, left as the owner's words) and **RQ-649** (tier (a) scores, physics). Its port also
+queues **RQ-652** (BZ-1C's event), **RQ-653** (BZ-1C's energy), **RQ-654** (BZ-1C's path to the GPU) and **RQ-655** (R-632's "a bound", physics).
+
+R-661 is in the "design" group of `plan/rule_groups.yaml`, with R-630 and R-639.
+
+Changes REQ-VAL-199 (statement, rulings, source, note).
+
+## R-662 — Full CI runs only when a pull request changes Principia's code: docs, plan prose, papers, Python and other scripts get only plan-check, the vocabulary lint and the atlas guard; a mixed change and an unknown path run full CI; every required check still reports *(amends R-656's docs-only list and docs checks, R-110 and R-177)*
+*31 Oct 2026 · the owner's message of that day; applied in `scripts/ci_changes.sh`, `.github/workflows/ci.yml`,
+`.github/workflows/mutants.yml`, `xtask/tests/ci_changes.rs`, `xtask/tests/mutants_no_mutant.rs`,
+`xtask/tests/qa_R-656_ci_changes.rs`, `plan/OPERATIONS.md`, `plan/WORKFLOW.md`,
+`docs/contracts/principia_parity_contract.md` §6, REQ-SYS-067's note and `plan/rule_groups.yaml`*
+
+The owner's words, verbatim:
+
+> Yeah and if it's like python don't check? Only the actual Principia CODE matters in ci? If you get me. So GUI and Physics etc for Principia, not random doc stuff
+
+*What it decides:*
+- **Full CI** runs when a pull request changes `crates/` (shaders and the ledger among it), `xtask/`, `fixtures/` (the
+  goldens among it), `Cargo.toml`, `Cargo.lock`, `rust-toolchain.toml` or `.github/`, or the data code loads, below.
+- **Only the cheap checks** run when every path is on the classifier's allowlist and none of them is that data: `docs/`
+  (the corpus and the papers), `plan/` (its prose and its Python), `scripts/`, `workbench/` and the root's markdown.
+  The cheap checks are plan-check and the vocabulary lint, in `ci-workspace`, and the atlas guard,
+  `no-atlas-params.yml`, which runs on every pull request anyway.
+- **It fails towards full CI.** An unknown top-level path runs full CI, because the list names what skips, never what
+  runs; so does a mixed change, and a diff that can't be computed.
+- **The required checks still report** under their own names and conclude success, by the gates R-656 built.
+
+*The data code loads, read from the code:*
+- `plan/requirements.yaml`: the validation gates refuse a threshold that names no live requirement of the right kind
+  (`crates/validation/src/gate/mod.rs`, `config` and `check_requirement`); `cargo xtask gate-report` reads each
+  requirement's `verify` (`xtask/src/gate_report.rs`).
+- `plan/tasks.yaml` and `plan/MILESTONES.md`: `cargo xtask gate-report`, for which task closes a review-checklist
+  requirement and which ids each gate block lists (`xtask/src/gate_report.rs`).
+- `plan/tasks/`: `cargo xtask reviews-check`, whose `Reviewers` field decides `reviews-complete`
+  (`xtask/src/reviews_check.rs`).
+- `docs/gui/design/` and `docs/gui/reference/`: the screenshot suites' artboards (`fixtures/screenshot/*/cases.json`),
+  the compass golden's reference (`xtask/src/compass_golden.rs`), the print-graph catalogue and the HTML references the
+  tests compare with.
+- The rest of `plan/` is read by the plan checks alone, which still run, or by a test as prose.
+
+*This narrows R-656, in the owner's later words.* R-656 recorded his words of 30 Oct 2026 on #351, "any doc/spec/data
+file read by a test, build script, codegen or xtask check must count as code, not docs". This ruling takes contracts,
+design documents, plan prose and root markdown off that list, though tests read them. What that costs, recorded rather
+than guarded: a head that changes only such a file does not run the tests that read it, which run on `main` once it
+merges (every run on `main` runs every job, R-656). Those are the tests that check a contract's text, the ledger
+register's corpus citations (`crates/ledger/tests/constants.rs`), the plan checks' own tests, `ai_review_rules`' copies
+of `AGENTS.md`, and the golden harness's search of `decisions.md` for a baseline's ruling (`xtask/src/golden.rs`, which
+fails only if a recorded ruling goes, and rulings are permanent). A heading renamed in a contract can so turn `main`
+red after a green pull request.
+
+*Applied per R-369:*
+- `scripts/ci_changes.sh` itself runs full CI, though it is a script: it decides what every pull request runs, so it is
+  the workflows' machinery, and a wrong edit to it would skip the very checks that catch it.
+- `scripts/contain.sh` runs full CI too, for the same reason: it is the `shell:` of the mutants steps and nextest's
+  wrapper of the job queue's tests, so a wrong edit to it breaks those runs, and only a full run would show it. The other
+  scripts stay docs-only: `check_no_atlas_params.sh` runs on every pull request whatever the verdict, and
+  `progress_banner.py` runs only after a merge, holding no check.
+- `.github/` is full CI whole, the pull-request template and `copilot-instructions.md` included, as the list names what
+  skips, and `.claude/`, `.cargo/`, `.config/`, `.gitignore` and the other dot-files run full CI as paths it doesn't
+  name.
+- `workbench/` is on the allowlist: no code reads it (R-159).
+- `docs_only` keeps its name in the workflows and the script, reading "changes no Principia code", so the gates, R-335's
+  `if:` and the qa checks that name it stand.
+- `scripts/ci_changes.sh doc-tests` and the step that ran its tests are removed: R-656's backstop, which R-662's "only
+  the cheap checks" ends.
+- A `mutants` shard no longer counts a `.rs` file under `docs/`, `plan/`, `scripts/` or `workbench/` as Rust to mutate,
+  as `docs/reference/prin-rs/` would otherwise set up and run every shard on a docs pull request. `mutants-check` passes
+  as it does on any diff with no mutant.
+- `xtask/tests/qa_R-656_ci_changes.rs` changes where this ruling changes the behaviour it tests, as R-335 allowed for
+  R-326 (an exception to R-290, for the orchestrator and the reviewers to confirm): its sample of files code reads, its
+  register citations, its detect case and its controls move to data code loads. Nothing else in it is weakened.
+- This ruling follows R-656 in the file: the numbers between them are on other branches.
+
+R-662 is in the "ci" group of `plan/rule_groups.yaml`.
+
 ## R-663 — R-554 L3's and the chart contract's summaries on Lean each axis are reworded to the closed form's zeros: `N_a` and `N_b` vanish together iff `sin τ₁ = sin τ₂ = 0`, and at the one-target corner, ray-degenerate with no fold *(closes RQ-630; amends R-554 L3)*
 *31 Oct 2026 · the owner's message of that day; applied in R-554 L3 and its forward line, R-655's closing bullet (a dated clause), `docs/contracts/principia_chart_decoder_contract.md` § "Repeats and the canonical point", `docs/archive/review_queue/M0.md` (RQ-630, moved with this ruling), REQ-SCHED-101 (reqio) and `plan/rule_groups.yaml`; the code already reads the formula (TASK-M2-36, `TiltSpec::normal_zero`)*
 
@@ -29017,14 +29266,14 @@ R-665 is in the "physics" group of `plan/rule_groups.yaml`, with R-554 and R-655
 Changes REQ-CHART-062 and REQ-SCHED-101 (rulings, source, note).
 
 ## R-666 — sccache stays off: the job queue's builds do not use it
-*31 Oct 2026 · the owner's message of that day; applied in `plan/OPERATIONS.md` § "Paths and warm builds" (a dated line), `plan/rule_groups.yaml` and `plan/section_notes.yaml`; changes no requirement*
+*31 Oct 2026 · the owner's message of that day; applied in R-658's forward line, `plan/OPERATIONS.md` § "Paths and warm builds" (a dated line), `plan/rule_groups.yaml` and `plan/section_notes.yaml`; changes no requirement*
 
 The owner's words (31 Oct 2026), verbatim, from that day's message:
 
 > sccache: off, agreed.
 
-*Context.* The owner's job-queue instruction asked for shared sccache across worktrees; PR #355 (the job queue, its ruling not yet on `main` when this was ported) measured it again and did not enable it, and the orchestrator asked, recommending off. The owner agreed. Warm targets cloned from a seed remain the way builds are shared.
+*Context.* The owner's job-queue instruction asked for shared sccache across worktrees; R-658 (the job queue, PR #355) measured it again and did not enable it, pending the owner's decision, and the orchestrator asked, recommending off. The owner agreed. Warm targets cloned from a seed remain the way builds are shared.
 
-*What it decides:* sccache is not enabled for local builds or the job queue. It changes nothing in CI, which does not use it.
+*What it decides:* sccache is not enabled for local builds or the job queue, which refines R-658, item 4. It changes nothing in CI, which does not use it.
 
 R-666 is in the "process" group of `plan/rule_groups.yaml`.

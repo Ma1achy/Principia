@@ -15,11 +15,13 @@
 /// [`EngineInterface`](contract::interface::EngineInterface), which the real engine's
 /// [`StateStore`](contract::store::StateStore) implements and [`conformance`](contract::conformance) checks; the
 /// [`log`](contract::log) entries ride in the snapshot; [`canvas`](contract::canvas) is §1's sanctioned exception (R-390,
-/// TASK-M6-24).
+/// TASK-M6-24). [`SimUniforms`](contract::sim_uniforms::SimUniforms) is the wrapper's loop parameters, bound once per
+/// frame and tier (integrator_contract Part 3; TASK-M3-06).
 pub mod contract {
     pub mod canonical;
     pub mod canvas;
     pub mod conformance;
+    pub mod decoded;
     pub mod fast_math;
     pub mod history;
     pub mod interface;
@@ -30,6 +32,7 @@ pub mod contract {
     pub mod sample;
     pub mod set_field;
     pub mod sim_config;
+    pub mod sim_uniforms;
     pub mod snapshot;
     pub mod store;
     pub mod view_state;
@@ -55,6 +58,7 @@ pub mod contract {
     mod tests {
         mod canonical;
         mod conformance;
+        mod decoded;
         mod latent;
         mod occupant;
         mod profile_v1;
@@ -123,6 +127,13 @@ pub mod quad {
 
     pub use generated::*;
     pub use meta::QuadMeta;
+}
+
+/// Dispatch's refusals: a [`SimUniforms`](contract::sim_uniforms::SimUniforms) is held to the horizon's range and its
+/// u16 step limit, the `N_sub` table's generator and the `total_substeps` bound before anything is dispatched under it
+/// (integrator_contract Part 5; R-86, R-502, R-610; TASK-M3-06).
+pub mod dispatch {
+    pub mod validate;
 }
 
 /// The compute-pipeline entry point: every compute pipeline is created through it, under an explicit fast-math setting

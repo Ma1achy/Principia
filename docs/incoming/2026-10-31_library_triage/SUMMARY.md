@@ -28,30 +28,30 @@ transcribed later, twice, for approved items only.
 
 | Verdict | Rows |
 |---|---|
-| HIT | 103 |
-| PLOT-ONLY | 17 |
-| CONTEXT | 45 |
-| OFF-FILTER | 22 |
+| HIT | 111 |
+| PLOT-ONLY | 21 |
+| CONTEXT | 58 |
+| OFF-FILTER | 27 |
 | NOT-READ | 72 |
 | REJECTED | 4 |
-| Total | 263 |
+| Total | 293 |
 
 | Recommendation | Rows |
 |---|---|
-| NOW | 33 |
-| M9 | 34 |
-| RECORD-ONLY | 66 |
+| NOW | 35 |
+| M9 | 35 |
+| RECORD-ONLY | 84 |
 | ALREADY-HAVE | 93 |
-| SKIP | 33 |
+| SKIP | 42 |
 | REJECTED | 4 |
-| Total | 263 |
+| Total | 293 |
 
 | Status | Rows |
 |---|---|
-| candidate | 96 |
+| candidate | 126 |
 | already-have | 163 |
 | rejected | 4 |
-| Total | 263 |
+| Total | 293 |
 
 NOT-READ is the 72 PDFs byte-identical to something already in `docs/incoming`; they were skipped, as asked.
 
@@ -165,6 +165,15 @@ Hudomal's thesis.
 | `papers/TUM_1785709_Thesis.pdf` | OFF-FILTER | No comparable numbers |
 | `papers/Valtonen_et_al_2016_Pythagoras_to_Hawking_preview_scans.pdf` | OFF-FILTER | Front matter only |
 | `papers/Voyatzis_2017_Rectilinear_Eccentric.pdf` | OFF-FILTER | Fails three massive bodies. |
+| `papers/Dindar_2013_Swarm_NG.pdf` and fixtures | HIT | Meets the filter by the letter only; GPL; tests nothing beyond internal checks. |
+| `papers/Hernandez_Dehnen_2023_Reversible_Switching.pdf` | OFF-FILTER | Restricted problem and planetary systems. |
+| `papers/Venkatesh_2021_Coupling_Recoupling.pdf` | CONTEXT | Qualitative note, nothing to compare. |
+| `papers/Farhani_Asl_2026_Binary_Formation.pdf` | OFF-FILTER | 3D, no planar subset. |
+| `papers/Farhani_Asl_2026_Binary_Single_ML.pdf` | OFF-FILTER | 3D. |
+| `papers/Portegies_Zwart_et_al_2022_Chaos_Manybody_*.pdf` | CONTEXT | Not planar three-body. |
+| `papers/Wang_Hernandez_Zheng_Huang_2026_P3T_CONTEXT.pdf` | OFF-FILTER | Clusters, not three bodies. |
+| `papers/Heggie_1996_Statistics_Small_N.pdf` | CONTEXT | Clusters, method only. |
+| Batch apparatus, papers-7 to papers-10 | CONTEXT | Notes and retrieval evidence; packaging of the rows above. |
 
 ## Conflicts between and inside sources
 
@@ -195,6 +204,97 @@ Values are in the sources named; the `conflict` column in `triage.csv` marks eve
 - **Free-fall website rows:** PLAN 2.1 says the 82 website-only orbits have words but no initial conditions. The authors'
   committed table holds their starts, so PLAN 2.1 is out of date on this.
 
+## Addendum, 1 Nov 2026
+
+Rows 265 to 294 of `triage.csv` (30 rows) come from two later reads: the papers-7 to papers-10 batches, and the owner's
+precision set below. Ranks NOW-20, NOW-21 and M9-33 are added after the existing ones; the first pass's ranks and the Top
+10 tables above are not re-ranked against them.
+
+- **NOW-20, Li, Tao, Li & Liao 2025 (`_local`).** Table 1 prints T and theta for 16 orbits at L≠0, equal masses. It is the
+  only source here that scores rotating-frame closure with the authors' own return time and angle (question 4). Our sample
+  run closes all 18 rows only with the printed rotation. One rights-reserved table, one reading, a sign misprint in the
+  caption and an off-by-one L label: see the row.
+- **NOW-21, three-body-search (MIT).** 143 equal-mass L≠0 orbits with full starts, closing in the inertial frame. Unreviewed
+  and AI-produced, so a peek only, as question 6 asks of Habl and Majumder.
+- **M9-33, the BPZ cold records.** See below.
+- **Planetary and hierarchical sets:** Tamayo 2021, Quarles 2018, Georgakarakos 2024, Iwakura 2025 and others are
+  RECORD-ONLY, on question 5. Iwakura has three comparable masses and would outrank the planetary sets if that opens.
+  Georgakarakos's ip=180, ep>0 records equal its ip=0 ones to every printed digit: don't use them until that's explained.
+- **Onishi 2026:** read for scope. Paper and held source disagree on whether the runs are planar; not comparable as it stands.
+
+## Precision against statistics
+
+The owner's set: does any paper test f32 ensemble statistics, and do the thresholds quoted from Boekholt & Portegies Zwart
+2015 (BPZ) hold? Read from the PDFs; nothing in the library was run. "Ours" marks our own reading or computation.
+
+- **No paper in this set tests f32 ensemble statistics.** The gap stands for this set, worded as "not found in these
+  records": it is not an exhaustive search. The nearest sentence is the abstract of Portegies Zwart 2026, that fp32 "could
+  be used for statistical ensemble calculations". That paper runs no ensemble, and its § 4.2.1 says no 32-bit Pythagorean
+  solution is reliable enough for any scientific computation. Its 32-bit evidence is single runs on CPU, one code (Table 4:
+  fp32 |dE/E0| 1.3e-4 on the figure-eight, 0.57 on Pythagorean, at eta = 1e-4).
+- **BPZ is f64 against converged, N = 3.** Its "unbiased" claim holds only after runs with |dE/E| > 0.1 are removed, and the
+  number removed is not stated ("a few"). So the claim doesn't fit never-discard (R-563) as it stands; Fig. 14, showing the
+  ensemble cut and uncut, fits as a method if the count is reported. Rows whose run hit the CPU limit are kept with zeroed
+  coordinates, t, e and Lw, so they lose their end time and carry no flag.
+- **The pair "eta <= 2^-5 and |dE/E| < 0.1" merges two results.** It describes the error distribution of the inaccurate runs
+  (abstract, § 7). The KS result is strict, eta < 2^-5 (Fig. 6, § 6.3), and cold a_bin already differs above 2^-6 (§ 5.2).
+  Portegies Zwart & Boekholt 2014 give another step limit, [value], on the same starts, and state the energy bound as a
+  conjecture. Ours: cite 2015 for the limit and say the value moved.
+- **The cold records are usable, on the converged side only.** MOESM3 and MOESM4 hold Brutus runs, 10,000 each, CC BY 4.0 per
+  figshare. Hermite results are not published, so Fig. 6's KS tests can't be recomputed. Ours, with `python3 -I` on the
+  records: largest out-of-plane position 4.3e-9 and 3.4e-9, so planar up to a rotation; largest final |dE/E| 6.7e-5 and
+  1.6e-4; undissolved at the stored t = 501, 14.6% and 8.7% (paper ~10% for cold 1:2:4); half-lives 41 and 24 crossings (2014
+  caption [value] and [value]); all-zero rows 98 and 16. Treating the zero rows as undissolved is our assumption. t = 501
+  means stopped, not undissolved at that time. A recomputation of Table 1's binding-energy indices was inconclusive.
+- **Energy error is not a certificate.** Rein, Brown & Kanda 2025 (Solar System, not three bodies) show KS passing where an
+  instability rate already differs, and say relative energy error is only a necessary condition. They keep unstable runs in
+  their distributions, the best model here for never-discard.
+- **Punctuated Chaos 2023** calls statistical validity "an article of faith" and reliability "a fundamental unsolved
+  problem", citing BPZ: a limit on how strongly BPZ is quoted. **Portegies Zwart & Boekholt 2023** adds irreversibility fits
+  and one clause on statistics.
+
+| Paper | Precisions compared | N; geometry | Ensemble | f32 | Large-error runs | Never-discard |
+|---|---|---|---|---|---|---|
+| BPZ 2015 | f64 vs converged | 3; warm 3D, cold planar | 4×10⁴ | none | shown both ways; claim needs the cut | method fits; claim doesn't; zeroed rows conflict |
+| BPZ records | converged only | 3; planar after rotation | 2×10⁴ | none | none above 1e-3 | rows kept; 114 lack an end time |
+| PZB 2014 | f64 vs converged | 3; as above | 4×10⁴ | none | not stated | silent; claim conditional |
+| PZ 2026 | fp16 to fp128, posits vs converged | 3, 100; planar and 3D | none | single runs only | tabulated | fits for 32-bit |
+| BPZH 2023 | none | model | none | none | silent | silent |
+| PZB 2023 | tolerance scan | 3 and up | size not given, irreversibility only | none | silent | silent |
+| Rein 2025 | step scan, f64 | 9; 3D | ~2,000 | none | kept, reported | fits |
+
+**Claims that can't be drawn:** that f32 ensemble statistics match f64 or the true statistics, on any start set; "fp32 is
+fine for ensembles (Portegies Zwart 2026)"; any |dE/E| value as a rule for Principia; eta <= 2^-5 for a non-Hermite
+integrator or f32; statistics preserved past the horizon or at L≠0 in the plane; that f32 on a GPU behaves like these CPU
+runs. Three different "0.1"s shouldn't be read across: BPZ's energy cut, the phase-space distance delta, and Principia's
+parted mark, a shape-sphere chord (R-574).
+
+**What a Principia f32 against f64 comparison would need (proposals, ours).** Per start and per precision: stop time and
+status (ended, censored, failed), outcome class, escaper, binary a and e, final energy error. Every statistic on the full
+ensemble first, failed runs as a class; any energy cut shown beside it with the count and which runs. Paired tests alongside
+two-sample KS, because starts are shared and KS can miss a real effect (Fig. 14, Rein); an equivalence margin, not
+"p > 0.05"; a correction for many statistics; lifetimes as censored data. Margin and sample size are calibration
+requirements (R-71). For scale, by the standard formula: two-sample KS at 5% has a critical distance near 0.019 at n = 10⁴
+and 0.12 at n = 256, so REQ-VAL-199's 256 starts couldn't see outcome differences of a few percent. References: the cold
+records, which we already have in the library, truncated at T; Principia's own f64 on the same starts, with a higher tier
+on a subset. A planar L≠0 statistical reference wasn't found, so f32 at L≠0 would be a self-comparison and must say so. A
+paired f32, f64, converged comparison with all runs kept isn't in these records, whatever its outcome.
+
+**Repo statements that overstate these sources, reported and not edited:**
+
+1. PLAN BZ-1 (`docs/incoming/2026-10-27_validation_plan/PLAN.md:345`): "Its method is what REQ-VAL-199 and "never discard a
+   copy" already apply." BPZ removes runs for its headline claim; REQ-VAL-199 keeps all 256 starts and measures another
+   quantity.
+2. PLAN BZ-1: "out of scope as a replication: 3D Plummer ICs" and "figshare (not fetched)". The cold sets are planar and two
+   of the four files are held. What stands: no published Hermite side, and t ≤ 500 against R-610's cap of 200 (units to convert).
+3. `docs/incoming/2026-10-25_replication/catalogue.md` § 6.1 merges the error-distribution claim with the KS claim, calls BPZ
+   a direct analogue of never-discard, and says the starts are 3D, which holds for the warm sets only.
+4. `docs/incoming/2026-10-25_replication/INSTRUCTION_replication_suite_2026-10-25.md:89`: "the empirical basis of the f32/f64
+   honesty story". The paper has no f32. That evidence has to come from elsewhere; ours: Principia's own measurement.
+
+**Not held:** the BPZ warm supplements (additional files 1 and 2); the Hermite results; the Zenodo data of Portegies Zwart
+2026, which the paper names with no identifier.
+
 ## Licence check: `agekyan_anosova_1968_Ap_4_11_part2.pdf`
 
 On RQ-610's list, first item: `docs/incoming/2026-10-24_anosova/papers/agekyan_anosova_1968_Ap_4_11_part2.pdf`, sha256
@@ -218,11 +318,15 @@ prefix `7d160daf` matches, tracked, no open licence seen. It stays until ruled, 
 6. **Unreviewed sources.** May Habl 2026 and Majumder 2026 (both AI-assisted, unrefereed) become targets, or peeks only?
 7. **Li & Liao free-fall table.** It could replace hand transcription for LL-1, which needs a ruling.
 8. **Horn in the repo.** Commit the paper plus the 9.7 MB training file, or a sample? The 930 MB file stays out either way.
+9. **Li, Tao, Li & Liao 2025.** Table 1 is rights reserved, and there is no data file. Is transcribing it for approved use
+   acceptable, and should the authors be asked for their long-decimal data? Does question 4's answer change with it?
+10. **BPZ cold records.** Commit both files (CC BY 4.0, 11.6 and 10.6 MB), or a sample? Is BZ-1 reopened for the cold sets?
 
 **For the queue, once you say so; this PR files nothing:** PLAN row BR-1 still says the data isn't available, stale against
 R-641. REQ-VAL-319 and design 5.12 say Manwadkar's Table 1 where the probabilities are in Table 2. PLAN's 437 L≠0 rows list
 families summing to 435; the other 2 are `rose` rows with refinement drift. RQ-640 and RQ-642 as above. PLAN 2.1 as above.
-Not held and not found: 3body821 (its L unread), any Hristov data at L≠0, a Manwadkar 2024.
+Not held and not found: 3body821 (its L unread), any Hristov data at L≠0, a Manwadkar 2024. Also, from the addendum: the four
+statements under "Repo statements that overstate these sources".
 
 ## Decisions recorded (applied per R-369)
 
@@ -232,5 +336,127 @@ Not held and not found: 3body821 (its L unread), any Hristov data at L≠0, a Ma
 - Masked numbers taken from `_local` sources as `[value]`, on the terms under "Words used", and shortened the atlas
   licence note to the terms.
 - Cohler is off-topic. `bhunt` is a catalogue family name.
+- Addendum: appended the rows after row 264 so that existing row numbers stay; added ranks after the existing ones without
+  re-ranking. Folded two duplicates into their rows: the published Tory 2022 into M9-18, and the further Quarles 2020 files
+  into row 236. Set `licence_action` to `_local` on Farhani Asl's Binary Formation row, whose held PDF is arXiv non-exclusive;
+  the deposit is unread and not held. Masked values from unlicensed or `_local` sources where a `commit` row quoted them: the
+  2014 half-lives in the records row, Onishi's repository values, and a stop distance in the Quarles 2018 row, whose paper stays out.
 
-Removed lines: none.
+Removed lines in the first-pass commit (735cde24): none. Each later commit carries its own note.
+
+## Papers-14 to 80, 1 Nov 2026
+
+**Proposals only.** Nothing here becomes a target until the owner rules. No requirement or plan changes. Source:
+`~/Downloads/principia-research-library`, final at 374 unique PDFs by the owner's count, including papers-80, the last
+batch. One row per item in `triage-14-80.csv`, in the columns of `triage.csv` plus `group`, the reading pass that wrote
+the row. A row number is the line in that file. `batch-notes-14-79.md` holds each batch's own claims, all marked
+unverified: they are ChatGPT's notes, and only what a row says it checked was checked.
+
+As the owner asked, reading went first to the four gaps, then peer-reviewed planar hits. 2026 unreviewed preprints,
+hierarchical, circumbinary and context items are one line each, most from the first page only. Unreviewed or AI-assisted
+sources are peeks only. Hierarchical triples are parked with the v2+ 3D extension.
+
+### Counts
+
+Rows, not papers: `PENN.pdf`, `3BodyProblem.pdf` and the Brasser 2023 PDF each appear in two rows (the Brasser row 29
+says to dedupe). The PENN rows (92, 146) and the Brasser rows (29, 104) agree; `3BodyProblem.pdf` differs on purpose, as
+row 61 is its escape file (NOW, a peek) and row 96 the essay itself (SKIP).
+
+| Verdict | NOW | M9 | RECORD-ONLY | SKIP | Rows |
+|---|---|---|---|---|---|
+| HIT | 4 | 7 | 1 | 0 | 12 |
+| PLOT-ONLY | 0 | 0 | 5 | 0 | 5 |
+| CONTEXT | 0 | 0 | 28 | 34 | 62 |
+| PEEK-ONLY | 2 | 0 | 17 | 16 | 35 |
+| PARKED | 0 | 0 | 20 | 34 | 54 |
+| OFF-FILTER | 0 | 0 | 0 | 5 | 5 |
+| Total | 6 | 7 | 71 | 89 | 173 |
+
+The 7 M9 rows are all read hits. The 12 unread ESCALATE rows below are PARKED and RECORD-ONLY under the owner's
+hierarchical ruling, which shrinks the M9 list. Pinto 2026 (row 147), which the readers also marked M9, was then read in
+full: PLOT-ONLY and RECORD-ONLY, because it prints no outcome numbers and names no data file. Of the 6 NOW rows,
+Szebehely 1972 (row 45) is the existing NOW-9, unchanged; Kumar 2014 (row 46) is only a cross-check on Chandra & Bhatnagar;
+the essay's escape file (row 61) is unreviewed, a peek, with no licence, so its values stay masked here.
+
+### The four gaps
+
+No gap is closed.
+
+- **Per-point Lyapunov or FTLE file: none found.** The nearest are a per-system table of planetary MEGNO and Lyapunov
+  times (row 5, parked), a 31x31 MEGNO grid for one star and two planets (row 6, parked, unreviewed), a MEGNO catalogue (row 7, parked) and
+  six running-exponent trajectories (row 8, already have). The Sofia lead below would be per orbit, not a map.
+- **Planar final-binary distribution as numbers: none found.** What is printed is per case or a deterministic family: Chandra
+  & Bhatnagar Table V and Alexander Table II (below), and Szebehely 1972 Table I (row 45, already NOW-9). Valtonen 1976
+  prints binned counts for 3D sets only; its planar data are figures (row 49). Kumar 2016's "distributions" are theory
+  formulas evaluated per orbit (row 47). Row 61's 200 runs have no a or e. Pinto 2026
+  plots a stability index of the binary eccentricity (Fig. 6b, p.9), with no numbers (row 147).
+- **f32 statistics at N=3: no test found.** The nearest is Smith 1977, A&A 61, 305-312 (row 2): 5 examples per level, N=16,
+  3D, the same starts at d=17, 7, 6 and 5 significant figures, with t tests on ensemble statistics (Tables 1 to 4, pp.307-308).
+  It finds no significant distortion at d=6 and d=7, and blow-up at d=5, on chopped IBM 360 arithmetic rather than IEEE
+  f32. It is a design precedent, not a target. Pruett 2003 p.307-308 (row 39, parked) has true single precision on a planar
+  three-body case, but one trajectory; Brasser 2023 (row 29) has FP32 against FP64 statistics on 80 terrestrial-planet runs.
+- **L≠0 and unequal-mass digits: new, at small masses or low precision.** Bengochea 2011 and 2013 give peer-reviewed L≠0 digits,
+  2013 with unequal masses in 3 rows, but all with two small masses; Hénon 1974 (Celest. Mech. 10, 375-388; approved by the owner's "14 yes", 1 Nov, ranked
+  NOW-22 in the papers-11 to 13 triage, which isn't on `main`, so not yet in `triage.csv`) and Davoust remain the
+  comparable-mass cases. Tsouroplis & Zagouras span more masses at about 1e-3. Chandra & Bhatnagar add a nonzero-L equal-mass
+  family. Broucke & Boggs Table I has two closing rows, 1 and 40, that the atlas lacks (row 65).
+
+### New top items
+
+Checks are ours, in f64, unless the row says otherwise; each row has the detail and the misprints found.
+
+| Item | Where | What | Check | Row | Proposal |
+|---|---|---|---|---|---|
+| Bengochea 2011 | Table 2, p.404 | 6 horseshoe orbits, L≠0, 15 significant digits | all 6 close | 62 | NOW |
+| Bengochea 2013 | Table 1, p.412 | 6 rows, 5 new orbits, rotation closure | all 6 close with rotation +2 theta_c | 63 | NOW |
+| Alexander 1986 | Table II, p.207 | 2 planar equal-mass L=0 starts; final binary a, e, agreed among methods | T1 agrees in a; e differs in the third figure; T2 unfinished | 41 | NOW |
+| Chandra & Bhatnagar 2000 I | Table V, p.391 | final a, e, v, theta; 187 members; L≠0; ICs on p.374 | 9 members finished, about 3 figures at best; two misprints | 40 | M9 |
+| Tsouroplis & Zagouras 1984 | Tables I-VII, pp.84-92 | 96 asymmetric orbits, unequal masses, 5-6 decimals | 73 of 96 reach reduced closure below 2e-2; a closure at about 1e-3 | 64 | M9 |
+| Valtonen 1975 | Table II, p.80 | escape frequency per body by mass ratio, within 1 degree of planar, n=120 each | by eye, not transcribed; not run | 42 | M9 |
+| Valtonen 1974 | Table V, p.220 | lifetime quartiles, 3 disk sets, n=118-139 | not run; not reproducible from this paper alone | 43 | M9 |
+
+### The Sofia lead
+
+The likeliest route to per-orbit exponents is three files on the Sofia databases, `res_exponents.txt`, `res_eigen.txt` and
+`eigenvalues_12431.txt`, listed under "Not fetched" in `docs/incoming/2026-10-27_hp_ics_freefall/README.md` (row 3). **This is
+inferred.** We have not read them, so their contents, row count and units are unknown. The inference: a repository file in
+papers-70 carries a "published" exponent on 518 free-fall rows that join `sol_80.txt` on T* (518 of 518, sampling every 24th
+distinct solution); that the source is `res_exponents.txt` is our guess. If it holds, it would compare a per-orbit exponent point by point on
+starts already committed. It needs a monodromy or variational measurement on our side, and it isn't an FTLE map.
+
+### Not read
+
+- **12 ESCALATE rows, first page only:** De Cesare & Capuzzo-Dolcetta 2021 (row 111), Donnison & Mikulskis 1994, 1995 and 1996
+  (114 to 116; the first two are scans, with an empty text layer), Georgakarakos 2013 (124), Kiseleva et al. 1994, two papers
+  (132, 133), McDonald 1986 (140), Trifonov 2018, two copies (158, 159),
+  Walker 1980 (160), Walker & Roy 1983 (161). What these rows say they hold is the batches' claim.
+- **Scanned or otherwise not read:** Gander & Hrebicek (row 121), `hd127195_stability.pdf` (172), the NAOJ 2003 and 2004
+  volumes (143, 144).
+- **Archives:** the zip and tar archives under `batches/` (142 by listing, 123 of them zip) were not opened for this triage.
+  Files a row names as header-only, or not opened, are marked in the row.
+
+### Decisions recorded (applied per R-369)
+
+- `EXCLUDE` in the readers' brief is `OFF-FILTER` here, as in `triage.csv`, on the terms under "Words used". One overlap cell
+  reworded the same way (row 4).
+- Values from published papers stay in the rows, with citation, under the owner's data-reuse ruling of 1 Nov 2026 (items 3
+  and 9); that is later than the `[value]` masking above. Measured values and start states from repository files that are
+  not a paper, and have no licence for their data, are masked as `[value]` (rows 3, 4, 8, 9, 61, 99). File sizes, row
+  counts, field names, a sampler's set-up and statistics we computed ourselves stay. The essay behind row 61 has no licence
+  (`repository_metadata.json`: license null) and isn't established as a paper, so the ruling isn't applied to it.
+- The 12 PARKED ESCALATE rows, which the readers marked M9, are RECORD-ONLY under the owner's parking ruling of 1 Nov 2026
+  (item 5). No other PARKED row was marked M9 or NOW. That ruling doesn't reach Pinto 2026 (row 147), which is not
+  hierarchical. It is a peer-reviewed planar paper (received, revised and accepted dates printed, p.1), so it was read in
+  full; it has no table and no data file, so it stays PLOT-ONLY and RECORD-ONLY on the scope filter.
+- Hierarchical rows, star-plus-planets ones included, are PARKED whatever else they hold (rows 6, 7, 13, 14, 18, 39, 72, 81,
+  90, 103, 141, 171). Every row was searched in all its columns for `hierarchical|triple|circumbinary|Kozai|exomoon|S-type|P-type`;
+  the rows that match and aren't PARKED are these. Papers on a method for hierarchical triples stay CONTEXT (162, 163). The
+  word is about something else on the rest: an equal-mass triple collision or encounter (40, 41), the editor named Kozai (43),
+  triples of mass values (45), and rows that say they are not hierarchical (61, 147).
+- A row whose status says unreviewed is PEEK-ONLY, not CONTEXT, ML papers included (rows 134, 151, 166), or PARKED if hierarchical.
+- `licence_action` follows what was verified on the held copy. No terms verified there is `_local until checked`: none seen,
+  not read, a batch's claim, a journal's usual terms, or a copyright line beside a licence not read. Non-redistributable terms
+  verified there are `_local`, with or without the words `(fails CC BY/BY-SA/CC0/PD)`. A CC-style or public-domain licence
+  verified there is committable, however the cell words it. A row of several copies takes the least settled, unless its cell
+  names each copy (rows 73, 91, 92). The one row outside this is row 3: nothing is held, and its action waits on the owner.
+- `_local` in `licence_action` is where a file would go if wanted. This PR holds no PDF, and adds nothing under `_local`.

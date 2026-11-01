@@ -690,6 +690,77 @@ peek log's first row (`docs/verification/peek_log.md`), UNEXPLAINED, with this q
   REQ-DEC-011's and REQ-VAL-017's verify text and TASK-M2-48's two acceptance lines drop "unfused" and "on lavapipe".
   The tag rule, `ε_M01` (REQ-DEC-039) and R-547's form are unchanged. Nothing waits.
 
+## RQ-623: The agreement presets' tolerance near a binary collision: no factor of the per-operand form covers the fragment-against-compute differences, which grow as (|rᵢ|+|rⱼ|)/rᵢⱼ, up to about 1/eps, as a pair separation falls *(a calibration requirement, R-71, and the form it is a factor of, a definition requirement, R-72; physics; REQ-COL-060, REQ-COL-006; context: TASK-M2-29)*
+
+*Queued 30 Oct 2026 by TASK-M2-29's implementer, from its measurement. For the owner: yes, it is physics where the
+choice changes what the agreement preset shows and what its gate certifies, and the corpus does not settle it
+(R-369).*
+
+- **File, section:**
+  - `plan/requirements.yaml` REQ-COL-060, verify: "the proposal measures, in gpu-metal and gpu-lavapipe, the agreement
+    presets' fragment-against-compute differences (|E(fragment-decode) − E₀| and the like) over the M2 charts, and
+    states the tolerance that covers them".
+  - `docs/design/principia_colour_composition.md` § "6. Debug views as presets", the agreement presets' bullet: "The
+    fragment shaders may compile with fast-math and the compute shaders don't, by default (R-297), so an agreement
+    preset compares within a stated tolerance, a calibration requirement (R-71), not bit-exactly."
+  - `crates/render/src/presets/agreement.rs`, the tolerance's form TASK-M2-25 chose (applied per R-369 there):
+    `|E − E₀| ≤ FACTOR·eps·(max(|K₀|, 1) + max(|V₀|, 1))`, each operand's difference bounded by `FACTOR·eps·max(|x|, 1)`.
+  - `docs/contracts/principia_inverse_encode_contract.md` Part 4: "every round-trip tolerance is asserted in *physical*
+    space, where the composed map is well-conditioned".
+  - `decisions.md` § R-544: its conditioning-derived δ exclusion near the shape sphere's collision landmarks, recorded
+    as a test detail.
+  - `docs/read_first/principia_01_pitfalls.md` § "3. Standing rules earned in this sequence": "A QUANTITY THAT DOES NOT
+    CONVERGE UNDER REFINEMENT IS MEASURING THE SAMPLING, NOT THE SYSTEM." and "Set thresholds from the observed
+    distribution, or from a measured gap."
+- **The measurement** (Metal, Apple M3 Pro, branch `task/TASK-M2-29` at fab11679; the `decode-agreement` gate's report,
+  each chart at its fixed parameters, the fragment compiled as Metal compiles it, the decode stage with compute
+  fast-math off). The worst `|E − E₀|` in eps of the scale `max(|K₀|, 1) + max(|V₀|, 1)`, every chart, by lattice:
+  16² per chart 7.9; 128² 15.5; 256² 20.2; 512² 60.4 (`shape_sphere`). The median and 99th percentile do not move
+  (`shape_sphere` 2.41 and 4.81 eps at 128², 256² and 512²; `latent` about 0.45 and 8.0); only the worst grows. Every
+  sample over 16 eps at 512² lies on `shape_sphere`'s line `v = 0.5`, the collinear equator, at `u ≈ 0.845` and
+  `u ≈ 0.040`, beside a binary collision. Zooming on `u = 0.84473, v = 0.5` with 128² cells at depths 9 to 21, the
+  worst is 60, 185, 2129, 8606, 19520 (smallest pair separation 9.7·10⁻⁵, `V₀ = −119.7`), 2269, 996 eps; on
+  `u = 0.04004`, up to 1735. At the collision itself `V₀` is `−∞`, hatched and excluded (R-436); next to it, the
+  difference grows as (|rᵢ|+|rⱼ|)/rᵢⱼ, up to about 1/eps.
+- **The mechanism, measured:** the conditioning of `V = −Σ mᵢmⱼ/rᵢⱼ` in f32. A pair separation formed from positions
+  of order 1 carries an absolute rounding of order `eps·(|rᵢ| + |rⱼ|)`, so `V` carries `Σ mᵢmⱼ·eps·(|rᵢ| + |rⱼ|)/rᵢⱼ²`,
+  which the per-operand scale `eps·|V₀|` underestimates by `~(|rᵢ| + |rⱼ|)/rᵢⱼ`. Any two f32 compilations that round
+  differently diverge by that much. It is not fast-math alone: with the decode stage compiled with compute fast-math
+  on, beside the fragment, the worst near the same point is still 3086 eps. With the scale widened by that
+  conditioning, `eps·(max(|K₀|, 1) + max(|V₀|, 1) + Σ mᵢmⱼ(|rᵢ| + |rⱼ|)/rᵢⱼ²)` from the decode stage's own `(m, r)`, the
+  worst over every one of those zoom windows is 1.1 to 5.7.
+- **The gap:** REQ-COL-060 asks for "the tolerance that covers" the measured differences over the M2 charts. In the
+  form the preset compiles, no factor does: the worst grows as the samples near a collision (pitfalls § 3), so a
+  factor that covers the gate's lattices (256 covers every lattice above) still draws pixels near a binary collision
+  red, a disagreement that is f32 conditioning, not a translation or addressing fault. The corpus gives the
+  tolerance as a calibration and says nothing of its form near a collision.
+- **The question:** what the agreement presets' tolerance is where the f32 energy is ill-conditioned, beside a binary
+  collision.
+- **Options seen:**
+  (a) the per-operand form as it is, with a factor that covers the gate's lattices (256 proposed), and the red near a
+  collision stated in colour_composition § 6 as expected, as ROUNDTRIP's "bright at clamps/feasibility edges/mirror
+  tie = expected" is (expected, tagged: render_contract § "Cross-check views (the seams)");
+  (b) a conditioning-aware form, the factor times `eps·(max(|K₀|, 1) + max(|V₀|, 1) + Σ mᵢmⱼ(|rᵢ| + |rⱼ|)/rᵢⱼ²)` from the
+  fragment decode's own `(m, r)`, written into colour_composition § 6 as an R-72 definition, physics-reviewed, and the
+  factor calibrated in it (measured above at 1.1 to 5.7 near the collisions, with the decode stage's `(m, r)`; its
+  value on the lattices still to be measured);
+  (c) the per-operand form, and a pixel whose smallest pair separation falls under a threshold drawn in a tagged
+  "ill-conditioned" style and left out of the gate, the threshold a calibration;
+  (d) another, stated by the owner.
+- **Recommended:** (b): it keeps the check meaningful at every finite pixel, keeps its sensitivity to a dispatch
+  scramble, and its bound is the measured mechanism rather than a margin. (a) leaves false red beside every collision
+  on `shape_sphere`'s equator.
+- **Applied meanwhile:** none. The branch holds the measurement (each chart's worst, median and 99th percentile, and
+  the excluded count, in the gate's report; the `survey` input; the gate run in `gpu-metal` and `gpu-lavapipe`), the
+  threshold still the compiled 256 under REQ-COL-060, provisional. No PR is open.
+- **Waits:** TASK-M2-29's proposal and PR (REQ-COL-060).
+- **30 Oct 2026:** Decided by the orchestrator per R-369, option (b); listed for the owner's veto at the M2 gate with
+  (a) and (c); see PR. Text corrections: ROUNDTRIP's expected brightness is "expected, tagged" (render_contract §
+  "Cross-check views (the seams)"); (b)'s 1.1 to 5.7 was measured with the decode stage's `(m, r)`; "grows without
+  bound" reads "grows as (|rᵢ|+|rⱼ|)/rᵢⱼ, up to about 1/eps"; inverse_encode_contract Part 4 and R-544's δ are cited.
+  Applied: colour_composition § 6's conditioning-aware scale (R-72), the factor proposed in it (R-71), the
+  `collision` windows and the per-operand control in the `decode-agreement` gate (TASK-M2-29).
+
 ## RQ-631: On a tilted shape sphere, the spherical map's period 2 in `t` makes `(s + k, t + 2j)` the same system as `(s, t)` wherever `N_a·k + 2·N_b·j = 0` for whole `(k, j) ≠ 0`, which R-554 L3's rule counts twice *(physics; silence; R-554 L3, RQ-472 (a), R-408; `docs/contracts/principia_chart_decoder_contract.md` § "Repeats and the canonical point"; the physics review of PR #349 (5710611197), P3; REQ-CHART-062, REQ-SCHED-101; context: TASK-M2-36, TASK-M8-56)*
 
 *Queued 30 Oct 2026 by TASK-M2-36's fix round 2, on the physics review of PR #349. For the owner: yes, it is physics
@@ -812,3 +883,465 @@ the choice changes the result (the word every sample stores) and the corpus does
 - **Options seen:** (a) the collision test unchanged on geometric `r`; softening offered only on the unregularised occupants, the others refusing `ε ≠ 0`; Chazy's `E` softened as the ruling's energy; (b) as (a), but the regularised occupants given a softened form, defined by TASK-M9-39 with the physics reviewer (R-72); (c) as (a), with Chazy's `E` unsoftened and the classifier refusing, or flagged on, a softened run; (d) another, stated by the owner.
 - **Applied meanwhile:** none needed: dispatch refuses `ε ≠ 0` (R-654; TASK-M3-06), so no softened run exists.
 - **Waits:** TASK-M9-39 (REQ-INT-110, REQ-SYS-094). Nothing in M0 to M8 waits.
+## RQ-640: Tanikawa 2000's time unit, for the time columns of its eight tables (proposed T2000-1) *(the owner's request of 29 Oct 2026, "Tanikawa 2000 Collision orbits II (8 tables)"; `docs/incoming/2026-10-29_research_batches/README.md` § 5.6, § 10.5; context: none built)*
+
+*Drafted 29 Oct 2026 by the agent ingesting the owner's 29 Oct research batches (that README's § 10.5); filed 1 Nov 2026.*
+
+- **File, section:** `docs/incoming/2026-10-29_research_batches/README.md` § 5.6: "**Units are not stated:** "m1 = m2 =
+  m3" (p. 157), with neither the mass value, G nor a time unit", and "so the unit cannot be fixed that way. RQ-640."; §
+  9: "Tanikawa 2000's "time" for its triple-collision points is short (0.39–0.49 in Table I) beside Li 2021's T for
+  nearby orbits (6.9–11.3), so either the unit or the quantity differs; part of RQ-640." Tanikawa 2000, CeMDA 76, 157,
+  p. 157: "m1 = m2 = m3".
+- **What is settled without it:** the positions. Equal-mass free fall is scale-free in position, the frame is TSM
+  2019's (§ 5.1), and the Fig. 11 point agrees with Li et al. 2021's GT-36 to 1.06e-6.
+- **What is not:** the 'time' columns of Tables I–VIII. No Tanikawa 2000 point coincides with a Li 2021 orbit (closest
+  1.1e-2, `tanikawa_2000/vs_li2021.txt`), so the unit cannot be fixed from a shared orbit.
+- **Read since the draft:** Paper I is now in the record. `docs/incoming/2026-10-28_external_sources/README.md` §
+  "Tanikawa, Umehara & Abe 1995": "**Units**, p. 342, quoted: "In the units G = 1, M = 1, AB = 1"", decoded by
+  integration as each mass 1; and of its tables, "Time is when the n_min-th encounter occurs". Whether Tanikawa 2000
+  keeps both has not been checked.
+- **Options seen:** (a) read the normalisation from Paper I (Tanikawa, Umehara & Abe 1995, task 15 item 16) and decode;
+  (b) compare positions only, permanently; (c) ask the author.
+- **Applied meanwhile:** (b) for now. T2000-1 compares positions; its times wait.
+
+## RQ-641: Broucke, Elipe & Riaguas 2006's rotating Jacobi variables cannot be decoded from the paper *(the owner's request of 29 Oct 2026, "Broucke 2006 (rotating Jacobi variables)"; `docs/incoming/2026-10-29_research_batches/README.md` § 5.11, § 10.5, `broucke_2006/decode_attempt.txt`; context: none built)*
+
+*Drafted 29 Oct 2026 by the agent ingesting the owner's 29 Oct research batches (that README's § 10.5); filed 1 Nov
+2026. For the owner: (a) is a fetch from publishers, outside the repo.*
+
+- **File, section:** `docs/incoming/2026-10-29_research_batches/broucke_2006/decode_attempt.txt`: "The variables cannot
+  be decoded from this paper alone; the equations are in refs [7] (Broucke, Elipe & Riaguas, AIAA 2002-4544) and [10]
+  (Broucke & Boggs 1975, CM 11, 13-38), neither in the repo." Broucke et al. 2006, CSF 30, 513, § 3 and Tables 1–3.
+- **What is settled:** the transcription (two readings, all differences resolved against the page); Table 2's y/r
+  equals Table 1's y to 1e-8; Table 3's f1, f3 follow from a1, a2.
+- **What is not:** the map from (y, ẋ, T) to an inertial state. Read as G = 1 with masses 1/3, both Table 1 states have
+  E > 0 (unbound); with masses 1, T|E|^{3/2} is 4.08 and 3.45, not the figure-eight's 9.2377; no single G fits both rows.
+- **Options seen:** (a) the owner fetches refs. [7] and [10] into `docs/incoming/_local/`, and the decoding is redone;
+  (b) leave Broucke 2006 as context.
+- **Applied meanwhile:** (b). No target is proposed from it.
+
+## RQ-642: Martynova & Orlov 2014's grid count: 306,346 printed, 306,402 counted *(the owner's request of 29 Oct 2026, ChatGPT's `Martynova_Orlov_2014_figure_initial_conditions.json` against the paper; `docs/incoming/2026-10-29_research_batches/README.md` § 5.9, § 10.5; context: proposed MO14-1)*
+
+*Drafted 29 Oct 2026 by the agent ingesting the owner's 29 Oct research batches (that README's § 10.5); filed 1 Nov 2026.*
+
+- **File, section:** Martynova & Orlov 2014, Astron. Rep. 58, 756, p. 760: "We scanned the inner part of the domain D
+  in both coordinates with steps Δξ = Δη = 0.001 (the boundaries were not included). In all, we considered 306,346
+  versions of the initial conditions. In 306,320 of these cases … decay … In the 26 remaining cases …"; D as bounded
+  by the axes and the unit arc about (−0.5, 0) (p. 758).
+- **What is settled:** 306,320 + 26 = 306,346, as printed.
+- **What is not:** an exact integer count of the grid points strictly inside D at step 0.001 gives 306,402 (306,406
+  with the arc included), 56 (60) more than printed (`martynova_orlov_2014/checks.txt`). Which points they left out,
+  or whether their grid was offset, the paper does not say. A like-for-like survivor count needs the same grid.
+- **Options seen:** (a) compare fractions, 26/306,346 against ours over 306,402, and record the 56 as a stated
+  difference; (b) ask the authors which points were dropped; (c) treat the count as UNEXPLAINED in the score.
+- **Applied meanwhile:** (a), with the difference stated beside the score.
+
+## RQ-643: The collinear statistical targets' stops lie past R-610's horizon cap in the integrator's units (proposed OR02-1, OR03-1, MH89-1) *(physics review of the 29 Oct research-batches ingest, finding F4; `docs/incoming/2026-10-29_research_batches/README.md` § 10.3, § 10.5, `horizons_integrator_units.txt`; context: none built)*
+
+*Drafted 29 Oct 2026 by the agent ingesting the owner's 29 Oct research batches (that README's § 10.5); filed 1 Nov 2026.*
+
+- **File, section:** `docs/contracts/principia_integrator_contract.md` Part 5: "a **single global horizon `T` is
+  legitimate across every pixel**" and "`T ∈ [0.4, 200]` (R-610, closing RQ-555): … the cap stays at 200 until long
+  horizons are measured for cost"; `docs/incoming/2026-10-27_validation_plan/PLAN.md` § 8 rule 18: "Respect the
+  horizon cap; queue, don't raise it. … A target past 200 (Boekholt et al. 2020's t = 10⁴) is compared only over the
+  systems that end before 200."
+- **What is settled:** the conversion. Each source's fixed-energy stop, brought to M = G = I = 1 by the inverse-encode
+  contract's Part 2, is a per-start horizon: Orlov 2002's t = 100 is 60.3 to 5.94×10⁴, past 200 for 44 of its 99 k
+  values; Orlov 2003's t = 1000 is 36.1 to 9.95×10⁵, past 200 in 443 of its 475 (ε1, ε2, k) cells; Mikkola &
+  Hietarinta 1989's lifetimes reach 9×10⁷ of their units, and the cap is their t = 0.119 to 334, so Table 3's last
+  3/8 lie past it at every start (`docs/incoming/2026-10-29_research_batches/horizons_integrator_units.txt`).
+- **What is not:** how rule 18's "compared only over the systems that end before 200" applies here. The three papers
+  publish fractions over the whole grid (Orlov 2002 Table 1; Orlov 2003's table, by (ε1, ε2)) or over every break-up
+  (Mikkola & Hietarinta 1989 Tables 2–3), not per start, so the source has no subset ending before 200 to compare
+  with.
+- **Options seen:** (a) a ruling raising the cap for these runs once long horizons are measured for cost, R-610's
+  condition; (b) compare only what the cap reaches and the source states, e.g. Mikkola & Hietarinta 1989 Table 3's
+  t1–t4 at the starts where they fall inside 200; (c) leave the past-cap parts blocked by the horizon, as MO14-1's
+  long-time part is.
+- **Applied meanwhile:** (c). The rows state the conversion and which parts the cap blocks; no new cap is chosen.
+
+## RQ-644: Whether the record should stop calling Boekholt & Portegies Zwart 2015's method an analogue of "never discard", given that its unbiased result is stated with the worst runs removed *(a conflict between a paper and two lines of our record; context: task 15e, BZ-1)*
+
+*Queued 31 Oct 2026 by task 15e. Wording of a record; no target or code depends on it.*
+
+- **File, section:**
+  - `docs/incoming/2026-10-25_replication/catalogue.md` § 6.1: "A direct analogue of the project's "never discard a copy" and `error_ratio` rules".
+  - `docs/incoming/2026-10-27_validation_plan/PLAN.md` § 3.2, BZ-1: "Its method is what REQ-VAL-199 and "never discard a copy" already apply".
+  - `docs/design/principia_honesty_precision.md` line 278: "**Never discard:** a failed or budget-exhausted run is shown as such, with its end time (R-563)."
+  - The paper, abstract: "unbiased, as long as the time-step parameter, η ≤ 2⁻⁵ and when simulations which violate energy conservation by more than 10% are excluded"; passages in `docs/incoming/2026-10-31_fetch_list/README.md`.
+- **The question:** whether to add a dated note to those two lines saying the analogue is the paper's ensemble comparison and not its energy cut.
+- **Options seen:** (a) add the note, and if BZ-1's method is ever run, report the whole ensemble and the cut side by side, as the paper's Fig. 14 does; (b) leave the lines as they are.
+- **Applied meanwhile:** the lines are unchanged; the conflict is stated in the fetch list's README. BZ-1 stays out of scope as a replication.
+- **Waits:** nothing.
+- *31 Oct 2026: Ruled by the owner, R-661: "Fix the three overstatements you found (PLAN's BZ-1 row, catalogue.md §6.1, the
+  replication instruction) via the queue, with Removed-lines notes." Those lines are reworded (RQ-646), and BZ-1 is reopened
+  on the cold sets, any cut shown beside the uncut ensemble with the count removed.*
+
+## RQ-645: Two citations on the owner's 31 Oct fetch list do not verify: "Barrio et al. 2009, PRE 79, 036208" and "Tanikawa & Mikkola 2008, PASJ 60, 883" *(a missing source; context: task 15e)*
+
+*Queued 31 Oct 2026 by task 15e. For the owner, who may know the paper meant.*
+
+- **File, section:**
+  - `docs/incoming/2026-10-31_fetch_list/README.md` § "The sources", the last row and the Tanikawa & Mikkola row.
+  - Crossref's record of doi:10.1103/PhysRevE.79.036208: Barré & Yamaguchi 2009, "Small traveling clusters in attractive and repulsive Hamiltonian mean-field models", not a three-body paper.
+  - doi:10.1093/pasj/60.4.883 returns 404 at doi.org. The paper we already have under that authorship and year, arXiv:0802.2465, has an ASP Conference Series header, and `docs/incoming/2026-10-25_replication/catalogue.md` § 1.4 calls it a precursor of PASJ 67, 115 (2015).
+- **The question:** which papers were meant. Neither a Crossref search nor a web search found a Barrio 2009 paper in PRE on the planar three-body problem; the nearest is Barrio, Borczyk & Breiter 2009, "Spurious structures in chaos indicators maps", Chaos, Solitons & Fractals 40, 1697, doi:10.1016/j.chaos.2007.09.084, which was not read, so it is not offered as the same work.
+- **Options seen:** (a) the owner gives the paper, if it exists; (b) both drop off the list, with arXiv:0802.2465 standing for Tanikawa & Mikkola 2008.
+- **Applied meanwhile:** nothing fetched for Barrio; arXiv:0802.2465 stands for Tanikawa & Mikkola 2008.
+- **Waits:** nothing; no target names either citation.
+
+## RQ-646: Three lines of our record overstate Boekholt & Portegies Zwart 2015 *(a conflict between a paper and our record; R-661; `docs/incoming/2026-10-31_precision_set/README.md`; context: BZ-1, REQ-VAL-199)*
+
+*Queued and closed 31 Oct 2026, by R-661.*
+
+- **File, section:**
+  - `docs/incoming/2026-10-27_validation_plan/PLAN.md` § 3.2, BZ-1: "Its method is what REQ-VAL-199 and "never discard a copy" already apply"; "out of scope as a replication: 3D Plummer ICs".
+  - `docs/incoming/2026-10-25_replication/catalogue.md` § 6.1: "the ensemble statistics agree (KS tests) if the step parameter is ≤ 2⁻⁵ and runs with |dE/E| > 0.1 are rejected".
+  - `docs/incoming/2026-10-25_replication/INSTRUCTION_replication_suite_2026-10-25.md` § C: "This is the empirical basis of the f32/f64 honesty story, and of "never discard a copy"".
+  - The paper, abstract: "unbiased, as long as the time-step parameter, η ≤ 2⁻⁵ and when simulations which violate energy conservation by more than 10% are excluded"; Fig. 6's caption: "For η < 2⁻⁵, the distributions are not significantly different."
+- **The conflict:** the first line reads a cut as never discarding; Fig. 14's side-by-side is compatible, and the "unbiased" claim holds only after the cut. "3D Plummer" does not hold of the cold sets. The second merges the KS claim with the error-distribution claim. The third cites a paper with no f32 run as the basis for f32.
+- **Options seen:** reword, with the old text kept; or leave them.
+- **Applied meanwhile:** the lines stand until the ruling below.
+- *Ruled by the owner, R-661: reworded in PLAN.md and `catalogue.md`, each with a "Was"; the 25 Oct instruction is a dated record, not restated in force elsewhere, so its text stays and a bracketed correction follows it.*
+
+## RQ-647: Whether to re-size REQ-VAL-199's 256 starts by the power argument, and at what cost *(the owner's other option; R-661 item 3; REQ-VAL-199; `docs/incoming/2026-10-31_precision_set/README.md` § "The power calculation"; context: TASK-M8-76)*
+
+*Queued 31 Oct 2026 for the owner, by R-661's port. Applied meanwhile: state the effect size (R-369). It changes what is run, so it is the owner's.*
+
+- **File, section:** `decisions.md` § R-661, item (3): "REQ-VAL-199: re-size its 256 starts by the same power argument, or state the effect size it can detect." REQ-VAL-199: "over all 256 chaotic starts"; `decisions.md` § R-610: "The cap stays at 200 until long horizons are measured for cost."
+- **What 256 can detect:** a two-sample KS at 5%, D_c = 1.358 √(2/256) = 0.12; at 80% power, a fraction difference of 0.12 at p = 0.5 and 0.074 at p = 0.1. The gate's own statistic, a median of ratios, has a 95% half-width of 0.154 of the ratios' spread if they are normal; distribution-free, ranks 112 to 145, the quantiles 0.44 to 0.57, with c bounds of one direction moving the affected end out by c ranks, unbounded at 112 or more. Differences of a few percent in outcomes are out of its sight, and the gate never compares outcomes.
+- **Options seen, each in starts × three runs (f32, f64, f64′) × T = 200:**
+  - (a) keep 256 and state the effect size: 1.5 × 10⁵ time units, D_c 0.12. The gate stays a test of the parting ratio, and outcome statistics are BZ-1C's.
+  - (b) n = 4,096: 16 times the runs, 2.5 × 10⁶ time units, D_c 0.030, median half-width 0.038 of the spread.
+  - (c) n = 10⁴: 39 times the runs, 6 × 10⁶ time units, D_c 0.019, median half-width 0.025 of the spread.
+- **The cost, as far as it is known:** the multiples above are exact, the CPU seconds are not: R-610 sets a cap "until long horizons are measured for cost" and gives no budget figure, and no time per unit is measured here, so none is invented. (b) and (c) are also a change to a statement R-600 fixed ("all 256 starts").
+- **Applied meanwhile:** (a). REQ-VAL-199 states its effect size and keeps its size.
+- **Waits:** nothing. A resize, if ruled, changes REQ-VAL-199 and TASK-M8-76.
+
+## RQ-648: Whether the trust line's two marks should keep citing Boekholt & Portegies Zwart 2015, whose 10⁻³ and 10⁻¹ measure something other than a shape-sphere chord *(physics; a citation against the paper; R-574; `docs/design/principia_honesty_precision.md` § 3; R-661's search; context: TASK-M8-76)*
+
+*Queued 31 Oct 2026 by R-661's port. Not an f32 claim, so R-661's rewording does not reach it; the text is the owner's (R-574), so it is left.*
+
+- **File, section:**
+  - `docs/design/principia_honesty_precision.md` § 3 and § 5 (the owner's words, R-574): "**Faithful until**: f32 and f64 within a shape-sphere chord of **10⁻³**, the reliability threshold of Boekholt & Portegies Zwart (2015, 2020, 2023), stated as keeping the difference in the linear regime"; "**Parted at**: chord **0.1**, the decorrelation threshold (separation at the system's own scale: Boekholt 2015, Hernandez et al. 2020)".
+  - The 2015 paper, § 2.3: converged means the first p decimal places of every phase-space coordinate agree, usually p = 3; § 5.4: a normalised phase-space distance δ of about 10⁻¹ separates same-trajectory from diverged.
+- **The question:** both 2015 numbers are in phase space, for f64 against a converged code, and the marks are chords on the shape sphere for f32 against f64. Are the marks to read "measured here, at values chosen by analogy with", rather than "the threshold of"?
+- **Options seen:** (a) leave the words; (b) add a dated line that the values are chosen by analogy, not transferred, the marks themselves unchanged (they are measured, shown and editable).
+- **Applied meanwhile:** (a). The values, 10⁻³ and 0.1, do not change under either.
+- **Waits:** nothing.
+
+## RQ-649: What a statistical target scored on tier (a) alone says, while f32's statistics are an unmeasured hypothesis *(physics; R-661 against R-649 item 2; context: BZ-1C, M9's statistical targets)*
+
+*Queued 31 Oct 2026 by R-661's port. It blocks nothing.*
+
+- **File, section:**
+  - `decisions.md` § R-649, item 2, the owner's words: "(a) GPU explorer: fast, f32, interactive; expected to agree statistically or qualitatively only"; the clarification: "External targets bind tier (b) unless they are statistical, where tier (a) is expected to agree statistically."
+  - `decisions.md` § R-661: "it is a HYPOTHESIS that Principia will measure, and no paper establishes it."
+  - RQ-622, on five statistical targets whose verify names an f64 Result.
+- **The question:** R-661 makes tier (a)'s agreement a hypothesis, BZ-1C its test. Until BZ-1C has measured it, a statistical target scored only on f32 can pass or fail for two reasons: the physics, or f32. The choice changes how those results read.
+- **Options seen:** (a) score on tier (a) as ruled, each result labelled "f32; agreement with f64 not yet measured", until BZ-1C reports; (b) as (a), and run f64 beside it on a sample sized by the same calculation; (c) statistical targets wait for BZ-1C.
+- **Applied meanwhile:** nothing is scored yet, so nothing is applied. R-649's tier assignment is not changed here.
+- **Waits:** nothing built.
+
+## RQ-650: Which frame Tanikawa's free-fall papers use: the repo says "the mirror labelling D11 = {(x−0.5)² + y² ≤ 1}", three of the papers say Anosova's region and one prints the mirror *(physics; `docs/incoming/2026-10-25_replication/catalogue.md` line 13; `docs/design/principia_dd_replication.md` line 639; PLAN.md line 707; `docs/incoming/2026-10-28_external_sources/README.md` § 9; context: TM-1, TS-1, TS-2, proposed TSM-1 and TUA-1)*
+
+*Drafted 29 Oct 2026 by the agent ingesting the external sources (`docs/incoming/2026-10-28_external_sources/README.md`
+§ "Corrections and contradictions", § 9); filed 1 Nov 2026, with the design doc's line number brought up to date.*
+
+- **File, section, quoted:**
+  - `docs/incoming/2026-10-25_replication/catalogue.md` line 13: "Tanikawa's papers use D11 = {x ≥ 0, y ≥ 0,
+    (x−0.5)² + y² ≤ 1}, the mirror labelling."
+  - `docs/design/principia_dd_replication.md` line 639 and `docs/incoming/2026-10-27_validation_plan/PLAN.md` line 707:
+    "Tanikawa uses the mirror labelling D11."
+  - Tanikawa, Umehara & Abe 1995, eq. (1): "Let mass points m₂ and m₃ stand still at A(−0.5, 0) and B(+0.5, 0) … m₁
+    stand still at a point P(x, y) where (x, y) ∈ D = {(x, y) : x ≥ 0, y ≥ 0, (x + 0.5)² + y² ≤ 1}."
+  - Tanikawa, Saito & Mikkola 2019, §3: the same D, and "D11 corresponds to Anosova's region".
+  - Tanikawa & Mikkola 2008 (arXiv:0802.2465; committed at
+    `docs/incoming/2026-10-25_replication/papers/tanikawa_mikkola_2008_arXiv0802.2465.pdf`), p. 3: "We want to extend
+    the free fall problem with equal masses (Anosova & Orlov 1986; Tanikawa et al. 1995), in which bodies 2 and 3
+    initially stand still at (−0.5, 0) and (0.5, 0), respectively, whereas body 1 stands still at (x, y) ∈ D11 =
+    {x ≥ 0, y ≥ 0, (x − 0.5)² + y² ≤ 1}."
+  - Tanikawa & Mikkola 2015 (PASJ 67, 115; the owner's copy, local-only, not committed:
+    `docs/incoming/_local/tanikawa_mikkola_2015_PASJ_67_115.pdf`), p. 115-2, eq. (9): "Initially, body m2 stands still
+    at (−0.5, 0), and body m3 stands still at (0.5, 0) of the (x, y)-plane. Body m1 stands still at any position in
+    D = {(x, y) : x ≥ 0, y ≥ 0, (x + 0.5)² + y² ≤ 1}."; Fig. 1's caption, p. 115-3: "Anosova's D region is equivalent
+    with any of them, say, region D11."
+- **What is settled:** the 1995 and 2019 papers use the Agekyan–Anosova frame itself, so TSM-1 and TUA-1 need no remap;
+  task 15b's record (`docs/incoming/2026-10-29_research_batches/README.md` § 5.1) finds the same for Li et al. 2021,
+  Tanikawa & Umehara 1998, Tanikawa 2000 and Martynova & Orlov 2014, and its § 10.4 holds TM-1's remap wording for the
+  owner's confirmation; this entry is the question that confirmation answers.
+- **Also read:** Tanikawa & Mikkola 2015 uses Anosova's region, (x + 0.5)², like the 1995 and 2019 papers. Tanikawa
+  & Mikkola 2008 prints (x − 0.5)², very likely the source of the repo's "mirror labelling" sentence; it is probably a
+  typo, since the paper cites Tanikawa et al. 1995 (whose eq. (1) prints (x + 0.5)²) for this very set-up, and the
+  printed region does not keep AB the longest side: (1.4, 0.3) is inside it, with PA = 1.92 > AB = 1.
+- **What is not:** whether TM2008's (x − 0.5)² is a typo or the frame its runs used, and which frame Tanikawa &
+  Mikkola 2021 (TM-1's source) uses, so whether the rows' "D11 mirror remap" and the general sentence stand. The
+  research-batches record (`docs/incoming/2026-10-29_research_batches/README.md`) does state a frame for it: § 10.3:
+  "LI21-1, LI25-1, TM23-1 and T2000-1 share one frame with TSM 2019 and TM-1 (§ 5.1 there: same D, no mirror of
+  positions)"; § 10.4: "§ 5.1's finding that, for TSM 2019 and these papers, D11 is D with no mirror of positions",
+  which it holds for the owner's confirmation; and, as evidence in the data, § 5.4: "Table 2's 11 triple-collision
+  points are TSM 2019's Table 1 (and so Li 2021 GT rows)". But § 5.1 quotes no set-up from the 2021 paper: neither its
+  list nor its quotes include it.
+- **Options seen:** (a) a porter reads Tanikawa & Mikkola 2021's set-up section and corrects the sentence to name the
+  papers that use each frame, with TM2008's (x − 0.5)² recorded as printed; (b) drop "mirror" and name D11 as TSM 2019
+  and TM2015 define it.
+- **Applied meanwhile:** nothing; the proposed rows TSM-1 and TUA-1 state their frame from their own papers.
+
+## RQ-651: Anosova 1986's time unit τ: eq. (1) as printed is not a time *(physics; `docs/incoming/2026-10-28_external_sources/README.md` § "Anosova 1986", § 9; context: proposed AN-2, AN-1)*
+
+*Drafted 29 Oct 2026 by the agent ingesting the external sources (that README's § 9); filed 1 Nov 2026.*
+
+- **File, section, quoted:** Anosova 1986 (Ap&SS 124, 217), p. 218: "The unit of time, τ = 1, is then the mean crossing
+  time of a particle through the system"; eq. (1) as printed: τ = G √(Σᵢ Mᵢ Σ_{i≠j} MᵢMⱼ) / (−2E)^{3/2}, the radical
+  over both sums; eq. (2): d = G Σ_{i≠j} MᵢMⱼ / 2E. `docs/incoming/2026-10-27_papers/README.md` line 201 records
+  Aarseth, Anosova, Orlov & Szebehely 1994b's "τ = G M_t^{1/2}(Σ M_iM_j)/(−2E)^{3/2}".
+- **What is not settled:** eq. (1) gives G M^{3/2}/(−2E)^{3/2}, not a time; whether Σ_{i≠j} counts each pair once or
+  twice; Table V's escape distance (20d or 30d, p. 229) and its number of runs.
+- **Options seen:** (a) read τ as 1994b's (the radical over Σ Mᵢ only, each pair once); (b) treat AN-2 as shape-only
+  (compare the normalised distribution up to a free time scale); (c) drop AN-2.
+- **Applied meanwhile:** nothing; AN-2 is proposed as waiting on this.
+
+## RQ-652: Which event BZ-1C's third side is compared on: BPZ's escape criterion or Principia's *(physics; R-661; `docs/incoming/2026-10-27_validation_plan/PLAN.md` § 3.2, BZ-1C; `docs/design/principia_dd_replication.md` rule 9; R-29; context: BZ-1C)*
+
+*Queued 31 Oct 2026 by R-661's port (physics review 5724115938 of PR #363, F2). The two ids before this one are named by `docs/incoming/2026-10-28_external_sources/README.md`, so this takes the next free id (applied per R-369).*
+
+- **File, section:**
+  - Boekholt & Portegies Zwart 2015 § 4: "We stop the simulations when the system is dissolved into a permanent binary and an escaper"; the escaper has "E > 0", "r > 2 rvirial" and "r · v > 0".
+  - `docs/design/principia_dd_replication.md` rule 9: "Record the escape criterion as data, with its parameters and its clock."
+  - The records hold each run's final state and whole-number stop time only, on BPZ's criterion. R-29's criterion cannot be applied to a state they don't hold.
+- **The question:** f32 against f64 can use one classifier. The records can only be read on BPZ's. Which event do the three-way lifetimes and end states use?
+- **Options seen:** (a) apply BPZ's criterion to all three sides, testing Principia's states as BPZ's code did, and report R-29's beside it for f32 against f64 only; (b) R-29 for f32 and f64, the records as they are, the difference labelled and not scored as precision; (c) both for the two arms, so the criteria's own difference is measured on the same runs.
+- **Applied meanwhile:** none; BZ-1C is a proposal. Both criteria are recorded whichever is chosen.
+- **Waits:** BZ-1C's scoring against the records. f32 against f64 does not wait.
+
+## RQ-653: Which energy a BZ-1C energy cut uses: regularised or Cartesian *(physics; R-661; R-566; `docs/incoming/2026-10-27_validation_plan/PLAN.md` § 3.2, BZ-1C; context: BZ-1C)*
+
+*Queued 31 Oct 2026 by R-661's port (physics review 5724115938 of PR #363, F2).*
+
+- **File, section:**
+  - Boekholt & Portegies Zwart 2015 § 6.1: "a relative energy conservation |∆E/E| > 1, or |∆E/E| > 0.1", on Hermite's Cartesian state.
+  - `decisions.md` § R-566: "after a close passage the Cartesian read-out is 280× to 7100× worse than the" regularised energy.
+  - `decisions.md` § R-661: "show any energy cut beside the uncut ensemble with the removed count".
+- **The question:** the removed count depends on the energy. The Cartesian one is like-for-like with BPZ's but is R-566's diagnostic; the regularised one is what Principia's gates read. At what stage it is read also differs.
+- **Also open, inside (a):** R-566 does not say whether an escape stop is an "event". Its evidence is a collision and a run parked at one, and `docs/contracts/principia_integrator_contract.md` § "The sync grid is a fixed quantum of physical time (R-565)" lists terminal events as "a collision, a non-finite state, the step budget run out", with escape "sampled at the boundaries". If escape counts, (a) reads only censored runs, can cut nothing among the runs that ended, and is not like-for-like. If it does not, (a) reads the Cartesian state at an escape stop, as BPZ's does. Either way a collision stop has no reading under (a).
+- **Options seen:** (a) the Cartesian read-out, only from runs that did not stop at an event, as R-566 reads it, like-for-like with BPZ only if escape is not such an event; (b) the regularised energy; (c) both cuts shown, each with its count.
+- **Applied meanwhile:** none; each run records both.
+- **Waits:** any energy cut in BZ-1C. The uncut ensemble does not wait.
+
+## RQ-654: How BZ-1C's starts reach the f32 GPU kernel: Path B or a new list-of-starts chart *(the human's, by `docs/design/principia_dd_replication.md` § 2; R-594 item 5; R-661; context: BZ-1C)*
+
+*Queued 31 Oct 2026 by R-661's port (physics review 5724115938 of PR #363, F7).*
+
+- **File, section:**
+  - `docs/design/principia_dd_replication.md` § 2: ""Path B" (a known IC encoded, or injected physically, with no chart …), or "new: <name>" for a chart no task builds … each such chart is a question for the human".
+  - `docs/incoming/2026-10-27_validation_plan/PLAN.md` § 3.2, BZ-1C: 2 × 10⁴ starts, f32 on the GPU, f64 on the CPU.
+- **The question:** Path B is a known IC with no chart. Whether it can carry 2 × 10⁴ arbitrary f32 starts through the GPU kernel, as a survey dispatch does, is not stated in the corpus; and the choice bears on the result, since an encoded start's rounding is part of what f32 runs. The rest-start D-plane charts reach these starts' shapes only with a rounding of their own.
+- **Options seen:** (a) Path B, if a batch of injected starts can be dispatched, f64 values rounded once to f32; (b) a new list-of-starts chart, built when BZ-1C is adopted; (c) the Anosova entry, reaching the equal-mass rest starts by encode, with its rounding measured, and no 1:2:4 until a mass point is added.
+- **Applied meanwhile:** none; nothing is built.
+- **Waits:** BZ-1C.
+
+## RQ-655: R-632's "a bound" is not true of a start where neither pair has parted *(physics; R-632; `plan/requirements.yaml` REQ-VAL-199; `docs/design/principia_honesty_precision.md` § 6; found by the physics review 5724170840 of PR #363, an aside; context: TASK-M8-76)*
+
+*Queued 31 Oct 2026. Ruled text, restated rather than introduced by PR #363, which it does not hold.*
+
+- **File, section:**
+  - REQ-VAL-199: "a pair not parted by the horizon T censored, its t_part taken as T and its start's ratio a bound kept in the median".
+  - `docs/design/principia_honesty_precision.md` § 6: "that pair's `t_part` is taken as `T`, the start's ratio is a bound, it stays in the median over all 256".
+- **The conflict:** with only the f64 pair unparted, the measured ratio t_part(f32)/T is an upper bound on the true one; with only the f32 pair unparted, T/t_part(f64) is a lower bound. With neither parted the ratio is T/T = 1 before dividing by the prediction, and the true ratio may lie on either side, so it bounds nothing. The gate's median and its censored count are unaffected as written; what such a start's entry means is not.
+- **Options seen:** (a) leave the rule and call such a start "unresolved" in the report, counted apart from the one-sided bounds, still in the median over 256; (b) keep the word, as a known looseness; (c) a different treatment of such starts in the median, which changes the statistic.
+- **Applied meanwhile:** none: R-632 and REQ-VAL-199 stand as ruled.
+- **Waits:** nothing.
+
+## RQ-658: PLAN.md's BR-1 row still says the data is not available, against R-641 and R-642 *(a stale record against a ruling; R-641, R-642; `docs/incoming/2026-10-27_validation_plan/PLAN.md` § 3.2; `docs/design/principia_dd_replication.md` § 5.10; REQ-VAL-297; context: TASK-M3-62, TASK-M9-22)*
+
+*Queued 1 Nov 2026 by the orchestrator's filing task, from the library triage's follow-ups.*
+
+- **File, section:**
+  - `docs/incoming/2026-10-27_validation_plan/PLAN.md` § 3.2, the BR-1 row: Ref. data "not released"; Status "blocked:
+    the data is not available".
+  - `decisions.md` § "R-641 — …": "**BR-1** (REQ-VAL-297) may be scored against those 180 directly, as the paper's own
+    data, not provisionally."; `decisions.md` § "R-642 — …": "BR-1 against the 180 NVM trajectories (pgbreen/NVM @
+    a35c378; kept in docs/incoming/_local/, never committed, no licence)".
+  - `docs/design/principia_dd_replication.md` § 5.10 already carries this, in its note of 28 Oct 2026: "BR-1 against
+    the 180 trajectories of `github.com/pgbreen/NVM` at `a35c378`, never committed".
+- **The conflict:** the plan's row predates the rulings and was never given a dated note; its R-631 note in § 3.1 is
+  the form such a note has taken. Nothing in the row says that 180 of the paper's ~10⁴ now score directly, or that the
+  scoring is in M9 (R-650). The ruled text governs; only the plan's record is stale.
+- **Options seen:** (a) a dated note beside the row, leaving it as written, as § 3.1 does for R-631; (b) correct the
+  row's Ref. data and Status cells; (c) leave it, the design doc being the current text.
+- **Applied meanwhile:** the rulings. No code or target waits.
+
+## RQ-659: REQ-VAL-319 names Manwadkar et al. 2021's Table 1 for the escape probabilities, which are in its Table 2 *(a conflict between a requirement and its source; REQ-VAL-319; `docs/design/principia_dd_replication.md` § 5.12; `docs/incoming/2026-10-27_validation_plan/PLAN.md` § 3.2; context: MK-1, TASK-M9-23)*
+
+*Queued 1 Nov 2026 by the orchestrator's filing task, from the library triage's follow-ups.*
+
+- **File, section:**
+  - `plan/requirements.yaml`, REQ-VAL-319: "Per-body escape probabilities over Manwadkar et al. 2021's eight mass sets
+    must be measured in a planar re-run and compared as distributions with their Table 1 (MK-1)."; its verify detail:
+    "Table 1 transcribed twice (rule 2)"; its note: "per-body escape probabilities over eight mass sets (Table 1)".
+  - `docs/design/principia_dd_replication.md` § 5.12, the MK-1 row: "per-body escape probabilities over eight mass sets
+    (Table 1)".
+  - `docs/incoming/2026-10-27_validation_plan/PLAN.md` § 3.2, the MK-1 row: Ref. data "Table 1 (not transcribed)".
+  - `docs/incoming/2026-10-25_replication/papers/manwadkar_kol_trani_leigh_2021_MNRAS_arXiv2101.03661.pdf`, Table 1:
+    "Summary of the three-body simulations sets."; Table 2: "The escape probabilities 𝑃𝑠 and total number of
+    realizations 𝑁𝑠 by escaper mass in different three-body systems."
+  - `docs/incoming/2026-10-25_replication/catalogue.md` § 5.2: "**Table 1:** Eight mass sets", right of Table 1; it
+    gives the probabilities no table.
+- **What is settled:** the paper's Table 1 is the mass sets and set-up, and its Table 2 is the probabilities.
+- **What is not:** Table 2 prints three cuts: "[1] The entire set, [2] Removing prompt ejections (𝜏 D > 30yrs), [3]
+  ergodic subset (𝜏 gap > 10yrs and 𝜏 D > 80yrs)". REQ-VAL-319 names no cut. The paper compares cut 3 with the theories
+  ("The probabilities of the ergodic subset are being compared to theoretical formalisms").
+- **Options seen:** (a) correct the reference to Table 2, with Table 1 for the mass sets, in the requirement and both
+  rows; (b) as (a), and also name the cut; (c) as (a), comparing all three cuts.
+- **Applied meanwhile:** nothing. Nothing built waits: MK-1 also waits on RQ-593 and scores in M9.
+
+## RQ-660: PLAN.md's 437 non-zero angular momentum rows count two Rose rows its own list doesn't name, whose L is refinement drift: the named families sum to 435 *(a count against its breakdown; `docs/incoming/2026-10-27_validation_plan/PLAN.md` § 2.3, § 7; `docs/design/principia_dd_replication.md` lines 176, 726; `docs/incoming/2026-10-26_orbit_catalogues/threebodyorbits_ics.csv`; `docs/incoming/2026-10-31_library_triage/SUMMARY.md`; context: OC-1)*
+
+*Queued 1 Nov 2026 by the orchestrator's filing task, from the library triage's follow-ups.*
+
+- **File, section:**
+  - `docs/incoming/2026-10-27_validation_plan/PLAN.md` § 2.3: "437 with \|L\| > 1e-6".
+  - The same, § 7: "OC-1 (437 rows: Simó 344, Broucke, BHH, Sheen, Šuvakov's other orbits)".
+  - `docs/design/principia_dd_replication.md` line 176: "437 with |L| > 1e-6; 86 other."; line 726: "OC-1 (437 rows)".
+  - `docs/incoming/2026-10-31_library_triage/SUMMARY.md` lines 223-224: "PLAN's 437 L≠0 rows list families summing to
+    435; the other 2 are `rose` rows with refinement drift."
+  - `docs/incoming/2026-10-31_library_triage/triage.csv`, the `threebodyorbits_ics.csv, family rose` row: "Rose (2016),
+    'Geometric phase and periodic orbits of the equal-mass, planar three-body problem with vanishing angular
+    momentum'" and "These are general L=0 orbits"; the `atlas-params.json, family rose` row: "The 2 rows with L over
+    1e-6 are refinement drift in ref_*, not real nonzero L".
+- **Measured, 1 Nov 2026,** on `threebodyorbits_ics.csv`'s `L_cat` (`L_recomp` gives the same): |L| > 1e-6 on 437 rows:
+  `simo` 344, `brouckeS` 23, `brouckeA` 16, `brouckeR` 13, `bhhsat` 15, `suvakov_pc` 13, `sheen` 11, and `rose` 2. The
+  families § 7 names sum to 435. The two others are `rose2016_t0k4i2_1_1_1` (L = 4.84147e-05) and
+  `rose2016_t0k2i4_1_1_1` (L = −3.76993e-06), from a source whose title says vanishing angular momentum. The 413 in
+  § 0 holds on the same rows (`closure_refined` < 1e-9). Σ m(x·vy − y·vx) on those two rows' `pub_*` gives 0.0 on both;
+  on their `ref_*` it gives 4.841466815563855e-05 and −3.7699259047840883e-06, so `L_cat` and `L_recomp` are the refined
+  state's values.
+- **What is settled:** the two are L = 0 orbits whose refined state drifted over § 2.3's threshold: the CSV's published
+  starts have L = 0 exactly, and the triage reads them the same way. Rose's thesis is not held, so `pub_*` is not
+  checked against it here.
+- **What is not:** how the plan and the design doc word the count: 437 as the cut measures it, or 435 orbits with
+  L ≠ 0.
+- **Options seen:** (a) keep 437 as what the cut measures, and add Rose's 2 to § 7's list, named as refinement drift;
+  (b) state 435, with the two recorded as L = 0 rows whose refined state is above the cut; (c) a dated note beside
+  each, the rows left as written.
+- **Applied meanwhile:** nothing. No test depends on the count.
+
+## RQ-661: PLAN.md § 2.1 says the 82 website-only free-fall orbits have no traced initial conditions, and the authors' GitHub table gives them *(a stale record; whether its condition lapses; `docs/incoming/2026-10-27_validation_plan/PLAN.md` § 2.1; R-630 item 8, R-631; `docs/incoming/2026-10-27_hp_ics_freefall/README.md`; REQ-VAL-227; context: LL-5, TASK-M3-46)*
+
+*Queued 1 Nov 2026 by the orchestrator's filing task, from the library triage's follow-ups.*
+
+- **File, section:**
+  - `docs/incoming/2026-10-27_validation_plan/PLAN.md` § 2.1: "That page gives words only, no initial conditions.", and
+    "for this plan they are closure tests only until their initial conditions are traced to a source the authors
+    publish (the website's word page has none)."
+  - `docs/incoming/2026-10-27_hp_ics_freefall/README.md`: "So the 82 website-only orbits, of which the atlas carries 81
+    (LL-5), have published initial conditions after all, at 10 decimals, here. … It is recorded here and changes no
+    target: LL-5 stays a closure test on the atlas's `ref_*` (rule 13)."
+  - `docs/design/principia_dd_replication.md` § 4.1: "it gives the initial conditions, (x, y, T) at 10 decimals,
+    for all 316, the 82 website-only orbits included. … LL-5 still tests closure on the atlas's rows only (rule 13)."
+  - `decisions.md` § "R-630 — …", item 8: "the 81 atlas rows the paper does not contain are closure tests (PLAN.md's
+    LL-5), not published references." REQ-VAL-227: "must close after one period as closure tests only, never cited as
+    Li & Liao 2019's published results (rule 13)".
+  - `docs/incoming/2026-10-31_library_triage/triage.csv`, the table's row: "PLAN.md 2.1's 'words only, no initial
+    conditions' is out of date on this".
+- **Checked:** `data/liliao_github/free-fall-3b-pictures.md` has rows for the three website-only mass sets: 48 + 19 + 15
+  = 82, each with x, y, T.
+- **The conflict:** § 2.1's "until … traced" reads as a condition, and it is now met, while R-630 item 8 and REQ-VAL-227
+  carry no condition. § 3.1's R-631 note corrects the file's location, and leaves the § 2.1 sentence as written.
+- **The question:** whether § 2.1 only needs a dated note, or whether the 81 rows may now be tested against the authors'
+  own table, which would change REQ-VAL-227.
+- **Options seen:** (a) a dated note in § 2.1 pointing at the GitHub table, LL-5 staying as ruled; (b) as (a), and a new
+  target comparing all 316 against the authors' table (the triage's NOW-3), a ruling's to add.
+- **Applied meanwhile:** (a)'s reading of the target: LL-5 stays closure only, as ruled. No code waits.
+
+## RQ-662: The layout at sizes it allows: the default split puts the bottom row under its minimum at 1280×720, and at the compass's least size the Plücker readout passes the panel *(a conflict between code and its doc; R-462 J2; `crates/gui/src/layout.rs`; found by the gui review of PR #365 (5726156060); context: found beside TASK-M6-35, outside its diff)*
+
+*Queued 1 Nov 2026 by the orchestrator's filing task, on that review's "Outside this PR, for the orchestrator".*
+
+- **File, section:**
+  - `crates/gui/src/layout.rs:44-46`: "The bottom row's least height, in points: the compass's cube, buttons and readout,
+    and Time's transport, whole (J2; measured: the compass's readout passes the footer below 154.7).", `MIN_BOTTOM_H:
+    f32 = 160.0`.
+  - The same, `:47-49`: "The compass's least width, in points: its cube and its buttons beside it, and its readout (J2;
+    measured: the readout passes the edge below 224, a tilted readout a few characters longer).", `MIN_COMPASS_W: f32 =
+    240.0`.
+  - `Layout::with_splits`'s doc: "the minimums hold the splitters' drags ([`Layout::range`])", so they hold drags only.
+  - `decisions.md` § "R-462 — …", J2: "Each panel's minimum keeps its controls usable (the Manifold view its widest row,
+    the compass its cube and buttons, Time its transport)".
+  - The gui review of PR #365 (5726156060): "at 1280×720 the default row is 157.3 high, below `MIN_BOTTOM_H`. A default
+    split is therefore not held to the minimum in `Layout::with_splits`. At 240 × 160 the Plücker readout also passes
+    the panel (883.3 against 876.7), contrary to the doc at `layout.rs:44-48`. Both predate this diff."
+- **Checked:** the first by the constants: the default row is `(FOOTER_TOP − BOTTOM_TOP) / ARTBOARD[1]` = 295/1350 of the
+  height, so 157.3 at 720, and under 160 for any window under about 732 high. No minimum window size is set
+  (`crates/gui/src/cli.rs`'s only size is `with_inner_size`, 1440×900, where the row is 196.7). The second is the
+  review's measurement, not repeated here: a docs-only filing runs no build.
+- **The question:** what a size below the minimum does. Neither J2 nor the spec says what holds at small windows.
+- **Options seen:** (a) hold every split, the default included, to the minimums in `Layout::with_splits`, where the
+  window has room; (b) set a least window size at which the default layout meets them; (c) re-measure `MIN_COMPASS_W` and
+  `MIN_BOTTOM_H` against the widest readout, for the second part; (d) correct the doc to say they bind drags only.
+- **Applied meanwhile:** nothing; the code stands as on `main`. Nothing waits. PR #365's own help text is its own finding,
+  apart from this entry.
+
+## RQ-663: With X ≠ Y, a typed basis with Y on q₁ or X on q₂ reads with that component ignored: q₁ = 0.8 e_μ1, q₂ = e_β reads σ = 0, and the next zoom edit rewrites the plane *(a defect in the reading; R-457 E1, R-459 G3, G4; `crates/gui/src/explore/manifold_view/mod.rs`; found by the code review of PR #366 (5726096107); context: found beside TASK-M6-40, outside its diff)*
+
+*Queued 1 Nov 2026 by the orchestrator's filing task, on that review's "Not this PR's: for the orchestrator to file".*
+
+- **File, section:**
+  - The code review of PR #366 (5726096107): "With X != Y, a typed basis with Y on q₁ (or X on q₂) has that component
+    ignored. σ is then the α part alone: q₁ = 0.6 e_α + 0.8 e_μ1, q₂ = e_β reads σ = 0.6 and off by 0.8. q₁ = 0.8 e_μ1,
+    q₂ = e_β reads σ = 0, so the zoom is infinite. The next zoom edit (`navigate.rs`,
+    `basis_edit(view.with_zoom(zoom).basis())`) then rewrites the plane."
+  - `crates/gui/src/explore/manifold_view/mod.rs`, `View::in_frame`: `let sin1 = cos_g * q1[x] - sin_g * q2[x];`, `let
+    sin2 = sin_g * q1[y] + cos_g * q2[y];`, and `scale: cos1.hypot(sin1)`; `View::framed`'s preset test `outside(a, b)`
+    leaves out `a`, `b`, `x` and `y` alike, whichever vector carries them; `View::zoom`: `-self.scale.log2()`.
+  - `crates/gui/src/explore/manifold_view/navigate.rs`, the zoom row: `basis_edit(view.with_zoom(zoom).basis())`.
+  - `decisions.md` § "R-459 — …", G3: "an edit in Chart (the preset, a basis editor) moves H and V with it".
+- **Traced on `main`'s code, by reading (no build; X = z_q3, Y = z_μ1):** q₁ = 0.8 e_μ1, q₂ = e_β is not an `axis_pair`
+  (6 > 1), and preset (α, β) holds it, as `outside` ignores μ1. So `a` = α, `b` = β; `cos1` = 0, `cos2` = 1, γ = 0; `sin1`
+  = q₁[q3] = 0 and `sin2` = q₂[μ1] = 0; σ = `cos1.hypot(sin1)` = 0, and the zoom is +∞. `with_zoom(z).basis()` then gives
+  q₁ along e_α, q₂ along e_β, so a zoom edit replaces the typed μ1 direction with α. The plane moves on an edit that names
+  only the scale.
+- **The question:** how a basis whose X and Y components sit on the wrong vector is read, so that a zoom keeps the plane.
+- **Options seen:** (a) make the preset's test count those components, so the basis reads in the dominant axes' frame;
+  (b) have zoom scale the stored basis rather than rebuild it; (c) both.
+- **Applied meanwhile:** nothing; `main`'s reading stands. PR #366 leaves this reading as it is, its review not blocking
+  on it and not waiving it. Nothing built waits.
+
+## RQ-639: The escape window is "provisional" (R-29), and no requirement, task or gate ever confirms it *(physics; calibration; silence; R-29, R-610; `docs/contracts/principia_integrator_contract.md` Part 3; `docs/design/principia_dd_generation_root.md` § "3.8 Metadata schema"; REQ-EVT-017, REQ-GUI-103; the code review (5723498808, F2) and physics review (5723511480, call 3) of PR #348; context: TASK-M3-06)*
+
+*Queued 31 Oct 2026 by TASK-M3-06's fix round, in the physics review's text. For the owner: yes, calibration values and
+physics where the choice changes results (R-369).*
+
+- **File, section:**
+  - `decisions.md` § R-29: "**The window** is 0.4 time units, sampled at sync boundaries (**provisional**)."
+  - `docs/contracts/principia_integrator_contract.md` Part 3: "`tau`, escape window | —, 0.4 (provisional)".
+  - `docs/read_first/principia_01_pitfalls.md` § 2.2: "`|Δn̂|` is taken over 0.4 time units (**provisional**)".
+  - `decisions.md` § R-610: "If the window is recalibrated (M3), the floor, the refusal's reason and the line beside
+    the field move with it".
+  - `plan/requirements.yaml`, REQ-EVT-017's note: "the window length is marked provisional in R-29; a change must go
+    through a ruling."
+  - `plan/requirements.yaml`, REQ-GUI-103: "the escape window (0.4 time units, provisional)".
+- **The gap:**
+  - REQ-EVT-025 calibrates `tau` only, and `plan/MILESTONES.md` § M3 lists "the tau gap" but not the window.
+  - TASK-M3-07's proposal covers only "how the closure window's 0.4 time units map onto the grid". TASK-M3-34 measures
+    at the fixed window.
+  - The register's `escape_window` is settled (citing R-29), so `provisional_until` omits it and the M3 gate never
+    blocks on it. `docs/design/principia_dd_generation_root.md` § 3.8 forbids marking it provisional without a
+    calibration requirement.
+- **The question:** is 0.4 confirmed by measurement at M3, or by ruling as it stands? It changes which trajectories
+  fire escape and when, and R-610's horizon floor follows it.
+- **Options seen:**
+  - (a) A new calibration requirement, confirmed at the M3 gate, proposed by the task that re-validates escape
+    (TASK-M3-34), with evidence over a window ladder. The register entry then becomes `proposed(..., <req>, "M3")`.
+  - (b) A ruling confirms 0.4. The word "provisional" comes off by a port, and the entry cites that ruling.
+- **Second question:** the window is carried and shown in the Run window (REQ-GUI-103), but `validate` accepts any
+  finite positive value, and T's floor follows it (`check_horizon`). So what range may it take? That range also bears
+  on the smallest `dt_macro` a carried window can reach; TASK-M3-06 meanwhile refuses a `dt_macro` whose smallest
+  substep is not a normal f32, per R-369. That refusal bounds the substep only: at its floor the stages' `c·dt` (KDK's
+  half-kick, 2⁻¹²⁷ at `N_max` = 64) are still subnormal and a flushing backend reads them as 0, with no branch affected
+  and no dynamics at that scale. Every stage size stays normal for a window of at least about 2⁻⁹⁸, and at the window
+  of 0.4 it is near 2⁻²⁹. So any lower bound the range sets at or above 2⁻⁹⁸ makes the `dt_macro` refusal unreachable.
+  The range is also where a physically meaningful lower bound belongs: f32 rounding absorbs a step far above this
+  floor.
+- **Applied meanwhile:** 0.4 per R-29, settled in the register, the doc comment saying provisional (TASK-M3-06).
+- **Waits:** the answer is needed by the M3 gate. No task waits.

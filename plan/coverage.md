@@ -17,14 +17,14 @@
 | REF | 52 |
 | RENDER | 120 |
 | COL | 161 |
-| GUI | 385 |
+| GUI | 386 |
 | TOOL | 218 |
 | VAL | 340 |
 | PERF | 115 |
 | SYS | 94 |
-| **total** | **2062** |
+| **total** | **2063** |
 
-Of these: 229 calibration, 175 definition, 1658 obligation. Retired (kept for their ids, not counted): 12.
+Of these: 230 calibration, 175 definition, 1658 obligation. Retired (kept for their ids, not counted): 12.
 
 ## Requirements per milestone
 
@@ -36,21 +36,21 @@ Of these: 229 calibration, 175 definition, 1658 obligation. Retired (kept for th
 | M3 | 231 |
 | M4 | 106 |
 | M5 | 183 |
-| M6 | 224 |
+| M6 | 225 |
 | M7 | 261 |
 | M8 | 470 |
 | M9 | 139 |
 
 ## Sections
 
-1669 sections in 61 files: 1331 yield at least one requirement; 338 yield none and are listed below with the reason.
+1672 sections in 61 files: 1333 yield at least one requirement; 339 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | gap (RQ-378) | 1 |
 | gap (RQ-391) | 2 |
 | gap (RQ-577) | 2 |
 | gap (RQ-618) | 1 |
-| informative only | 230 |
+| informative only | 231 |
 | out of v1 (R-125) | 1 |
 | out of v1 (R-420) | 1 |
 | parent heading (obligations are in its subsections) | 55 |
@@ -197,6 +197,7 @@ Of these: 229 calibration, 175 definition, 1658 obligation. Retired (kept for th
 | R-648 — The workflow returns to main's, R-357, R-391 and R-277, with one addition, never a cloud session: R-634 is withdrawn, and so are R-636's agent-count and cloud clauses; three agents at normal memory pressure, two if the Mac is swapping; the RQ-605 audit on demand only *(supersedes R-634; withdraws R-636's agent-count and cloud clauses; amends R-645 and R-647)* | informative only | the owner's ruling of 28 Oct 2026: the workflow returns to R-357, R-391 and R-277, with no cloud sessions; R-634 and R-636's agent-count and cloud clauses withdrawn; process; changes no requirement |
 | R-651 — Advisory review cadence: a fresh review from each of Codex, Gemini CLI and Copilot before merge on the final head, after every substantive push and at least once a working day on a long-running PR, in that priority under limits; a bot unavailable or rate-limited is noted on the PR and the merge goes ahead with the others; every bot finding is verified and closed out before merge (fixed, answered or moved to a task or RQ, then its thread resolved), and a PR with an unresolved bot thread does not merge; the bots stay advisory and never replace the required approvals *(amends R-635: its cadence; a standing rule)* | informative only | the owner's standing rule of 30 Oct 2026 with its two addenda: a fresh advisory review from Codex, Gemini CLI and Copilot before merge on the final head, after substantive pushes and periodically, every bot finding closed out before merge; process, carried by plan/WORKFLOW.md § The review loop, plan/OPERATIONS.md § Merging and the orchestrator's merge script; amends R-635's cadence; changes no requirement |
 | R-657 — The R-369 decisions listed in the orchestrator's summary of 30 Oct 2026 stand, with no veto | informative only | the owner's words of 30 and 31 Oct 2026: the listed R-369 decisions stand, with no veto; process; changes no requirement |
+| R-658 — Heavy commands run only through a local job queue the orchestrator owns, `cargo xtask job`: agents submit them and wait, never run them directly; classes merge, fix, build and peek, first in, first out within each; one runner at a fixed concurrency, each job with cargo's jobs and test threads at the core count; jobs time out, stale locks expire and a new runner recovers a dead one's jobs; heavy processes outside the queue are logged; sccache measured again; mutants scoped to the diff and run through the queue *(supersedes R-228)* | informative only | the owner's ruling of 30 Oct 2026: heavy commands only through the local job queue (cargo xtask job); process, carried by CLAUDE.md, plan/OPERATIONS.md § Resources and the agent files, and built in xtask/src/jobq.rs; changes no requirement |
 | R-664 — `generation_root` §3.5 no longer claims R² from the Welford accumulators: it cannot be derived from what is stored and nothing reads it; no per-sample field is added *(closes RQ-633)* | informative only | the owner's ruling of 31 Oct 2026 closing RQ-633: "+ R²" struck from generation_root §3.5, no new per-sample field; no requirement read it |
 | R-666 — sccache stays off: the job queue's builds do not use it | informative only | the owner's word of 31 Oct 2026: sccache stays off; process; changes no requirement |
 
@@ -402,7 +403,7 @@ Of these: 229 calibration, 175 definition, 1658 obligation. Retired (kept for th
 | 5. The targets | parent heading (obligations are in its subsections) | its subsections hold the targets, one requirement each |
 | 5.1 Targets already ruled | informative only | lists the requirements already in force by id; this port changes none of them (R-594) |
 | 5.13 The precision ladder: waiting for RQ-577 | gap (RQ-577) | PL-1 to PL-12, B-3 and GG-2 wait on RQ-577, which records that no requirement is added from the proposal meanwhile; PL-8's first half is REQ-VAL-250 |
-| 5.14 Out of scope | informative only | V-5, V-10 and BZ-1 are out of scope as PLAN.md says, and D-6 waits on RQ-587; no requirement (R-629) |
+| 5.14 Out of scope | informative only | V-5, V-10 and BZ-1 are out of scope as PLAN.md says, BZ-1's cold sets reopened as a proposal with no requirement (R-661), and D-6 waits on RQ-587; no requirement (R-629) |
 | 5.15 Counts | informative only | counts of what the port added |
 | 7. Sequencing by need | informative only | the task order; the obligations are the tasks' (plan/tasks.yaml) |
 | 8. Rules | parent heading (obligations are in its subsections) | its three subsections, cited by every target |

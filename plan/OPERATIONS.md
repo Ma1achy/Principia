@@ -144,8 +144,15 @@ or reviews" and `plan/WORKFLOW.md` § "The review loop". In addition:
     `--build-timeout` of its gui run and the hard limits that run takes (R-439);
   - for a task started early off a dependency's approved head, that head's sha, and that the PR waits for the
     dependency to merge (R-388; § "Roles and the loop");
-  - the environment: `CARGO_BUILD_JOBS=4`, `RUST_TEST_THREADS=4` (R-228), `CARGO_INCREMENTAL=0`,
-    `RUSTUP_AUTO_INSTALL=0` (R-414; § "Toolchain"), and on the Mac the PATH fix (§ "Paths and warm builds");
+  - the environment: `CARGO_INCREMENTAL=0`, `RUSTUP_AUTO_INSTALL=0` (R-414; § "Toolchain"), and on the Mac the PATH
+    fix (§ "Paths and warm builds"), with `/opt/homebrew/opt/rustup/bin` first on the PATH exported before `job
+    submit`, since a job runs with its submitter's PATH; no job counts, which the job queue sets (R-658);
+  - that every heavy command goes through the job queue, at the agent's priority, with these two lines (R-658;
+    § "Resources", "The job queue"):
+    `"/Volumes/X10 Pro/Principia/orch/jobq/bin/xtask" job submit <worktree> --priority <p> --label <TASK-id> --env
+    CARGO_TARGET_DIR=<target> -- <command>` prints a job id; `"/Volumes/X10 Pro/Principia/orch/jobq/bin/xtask" job
+    wait <id>` blocks, prints the log path and exits with the job's status (re-run it, or run it in the background,
+    if it would outlast the agent's call);
   - a private scratch subdirectory for PR bodies and temp files, `<scratchpad>/<pr>-<role>/`. Agents sharing one
     scratch directory overwrote each other's `body.md`, and PR #54's description briefly showed TASK-M0-09's
     (30 Sep 2026);
@@ -210,7 +217,8 @@ or reviews" and `plan/WORKFLOW.md` § "The review loop". In addition:
   comparison and match arm it adds. Reviewers don't run it, and CI's mutants gate stays the authority (`mutants.yml`,
   R-302): a clean local run doesn't replace a green `mutants-check`. The local run gets a target directory of its own
   (`<target>-mutants`), since a mutants run can leave a mutated build that cargo treats as fresh, deleted straight
-  after, and it counts as an agent against R-277's limit (§ "Resources"). A local run uses R-348's two caps, the
+  after. It runs through the job queue (R-658), at the implementer's priority (`build`, or `fix` in a fix round), on
+  the head the implementer is about to push, never on work in progress. A local run uses R-348's two caps, the
   per-mutant timeout and the memory cap on test processes, at the values CI uses (REQ-VAL-180, REQ-VAL-181), where the
   machine enforces them (applied per R-204, accepted by R-352): on macOS a local run gets the timeout only, and CI's
   Linux runners enforce both caps (R-352). The `mutants::skip` marker doesn't compile without the `mutants` crate as a
@@ -338,21 +346,24 @@ except for adding `mutants-check`, the one change R-305 allows. The human remove
 checks until #96 (TASK-M0-14) merges, since PRs off `main` never report it. Tell the human the moment #96 merges, so
 they can add it back.
 
-**What CI runs on a pull request (R-656).** `ci.yml` runs on a push to `main` (and to a `measure/` branch, R-272)
+**What CI runs on a pull request (R-656, R-662).** `ci.yml` runs on a push to `main` (and to a `measure/` branch, R-272)
 and, for a pull request, through `pull_request` only, once per push. Each workflow that builds or tests keeps one
 `concurrency` group per pull request, so a push cancels the run on the head it supersedes; a run on `main` is never
 cancelled (`reviews.yml`, `no-atlas-params.yml` and `gemini-dispatch.yml` keep none, decisions.md R-656). `ci.yml`'s
 `changes` job, and `mutants-fixture` in a step of its own, classify the change with `scripts/ci_changes.sh` (the pull
 request's merge commit against the base it merges onto; any other run runs everything):
-- **docs-only** (every path on the script's allowlist: `docs/`, the plan's prose and data, the root's markdown; never
-  `.github/` or `plan/`'s Python; and none on its list of files code reads, which count as code, the owner's words
-  of 30 Oct 2026 on #351, decisions.md R-656: every `.md` and `.html` under `docs/`, `docs/gui/design/`,
-  `docs/gui/reference/`, all of `plan/`, the root's markdown and `fixtures/`, each with its readers named in the
-  script, so only `docs/`'s other files, such as the incoming papers and data, are docs-only): the build, test,
-  release and controls jobs and the GPU suites' jobs are skipped, and `ci-workspace` runs the plan checks, the
-  vocabulary lint and the tests that name the allowlist's paths (a backstop) in place of its tests;
-  `mutants-fixture` skips its steps; `mutants`' shards find no `.rs` file and pass;
-- **no GPU-path file** (only docs-only paths, `crates/gui/` and `crates/prin/`; a file code reads is a GPU path):
+- **docs-only**, meaning it changes none of Principia's code (R-662; the owner, 31 Oct 2026: "Only the actual Principia
+  CODE matters in ci"): every path is on the script's allowlist, `docs/`, `plan/` (its prose and Python), `scripts/`,
+  `workbench/` and the root's markdown, and none is on its list of data code loads: `docs/gui/design/`,
+  `docs/gui/reference/`, `plan/requirements.yaml`, `plan/tasks.yaml`, `plan/MILESTONES.md`, `plan/tasks/`, the
+  classifier `scripts/ci_changes.sh` and the containment `scripts/contain.sh`, each with its readers named in the
+  script. The build, test, release and controls
+  jobs and the GPU suites' jobs are skipped, and `ci-workspace` runs only the cheap checks, plan-check and the
+  vocabulary lint, in place of its tests, beside `no-atlas-params.yml`, the atlas guard; `mutants-fixture` skips its
+  steps; `mutants`' shards find no `.rs` file outside those folders and pass;
+- **full CI** for everything else: `crates/`, `xtask/`, `fixtures/`, the Cargo files, the toolchain, `.github/`, a mixed
+  change, and any path the allowlist doesn't name, so an unknown top-level path fails towards full CI;
+- **no GPU-path file** (only docs-only paths, `crates/gui/` and `crates/prin/`; data code loads is a GPU path):
   the GPU suites' jobs (`gpu-kernel suites`, `gpu-metal suites`, `gpu-lavapipe suites`) are skipped; everything else
   runs.
 
@@ -363,9 +374,11 @@ ended in and pass a skipped one only on the classification's verdict, and matrix
 Mutants run on every head whose diff has Rust in it, and the superseded head's run is cancelled, so the run that
 finishes is the merge-ready head's; nothing requests it at merge time. What a pull request skips runs on `main` after
 it merges, where every job runs. A superseded head's cancelled run leaves its gates failed or cancelled, as before:
-the owner kept them as they are, TASK-M0-45's checks and R-266 standing (30 Oct 2026, on #351, no ruling). A new
-test, build script, codegen step or xtask check that reads a doc, spec or data file adds that file to
-`scripts/ci_changes.sh`'s list of files code reads; `xtask/tests/ci_changes.rs` scans for a literal path missing from it.
+the owner kept them as they are, TASK-M0-45's checks and R-266 standing (30 Oct 2026, on #351, no ruling). A
+head that changes only prose a test reads does not run that test, which runs on `main` once it merges, so a contract's
+renamed heading can turn `main` red after a green pull request (R-662). New code that loads a data file for behaviour
+adds that file to `scripts/ci_changes.sh`'s list; `xtask/tests/ci_changes.rs` scans for a literal data path missing
+from it.
 
 **Numbers.**
 - **An RQ's form.** A heading `## RQ-n: <question>`, a `- **File, section:**` field and a `- **Applied meanwhile:**`
@@ -561,9 +574,9 @@ Check free disk and memory pressure before every dispatch, build or reviewer.
 | | Mac (the human's machine) | Linux cloud |
 |---|---|---|
 | Memory pressure | `sysctl kern.memorystatus_vm_pressure_level`: 1 normal, 2 warning, 4 critical (R-252); not swap, which macOS keeps allocated | `/proc/pressure/memory` (PSI) where the kernel has it, else `free -m`. R-347: read `some avg10` as normal below 10, warning from 10, critical from 40 or when `full avg10` passes 5; without PSI, read "available" below 25% of total as warning and below 10% as critical |
-| Agents at once | 3 at normal (R-277); at warning, 3 unless the Mac is swapping, and then 2 (R-391's trial, below; R-277's 2 at warning is the fallback); at critical only the running work finishes (R-277); never more than 3 (R-262) | the same levels as R-277 gives them, 2 at warning (R-391's trial is Mac only), and (R-347) no more agents than `nproc` / 4, since each builds with 4 jobs |
+| Agents at once | 3 at normal (R-277); at warning, 3 unless the Mac is swapping, and then 2 (R-391's trial, below; R-277's 2 at warning is the fallback); at critical only the running work finishes (R-277); never more than 3 (R-262) | the same levels as R-277 gives them, 2 at warning (R-391's trial is Mac only), and (R-347) no more agents than `nproc` / 4, R-347's cloud rule, set when each agent built with 4 jobs (R-228, superseded by R-658, whose queue is Mac only) |
 | Free disk | aim for ≥ 25 GB; start nothing below 15 GB; below 20 GB, clean (R-262, 28 Sep 2026). Read `df -h`, not `du`: `du` counts APFS clones in full | the same thresholds (R-347), read with `df -h "$HOME"` |
-| Build settings | `CARGO_BUILD_JOBS=4`, `RUST_TEST_THREADS=4` (R-228), `CARGO_INCREMENTAL=0` | the same |
+| Build settings | heavy commands through the job queue only, each job with `CARGO_BUILD_JOBS` and `RUST_TEST_THREADS` at the core count (R-658, below); `CARGO_INCREMENTAL=0` | the same |
 
 **The swap check (R-391, a trial from 6 Oct 2026; Mac only).** At warning, before each dispatch, read "Pageouts" from
 `vm_stat` twice, 60 s apart (`vm_stat | awk '/Pageouts/ {print $2}'`; wait with Monitor, not a foreground `sleep`).
@@ -585,6 +598,98 @@ per-process memory cap of its own (R-352): the guard is the Mac's stand-in, not 
 Applied per R-369: it selects by the executable's path and kills by PID, never by `pkill -f` on a pattern; it logs its
 start and each kill to `/Volumes/X10 Pro/Principia/orch/mem-guard.log` (§ "Logs"); and it is stopped when the
 session's last agent finishes, leaving no process behind.
+
+**The job queue (R-658; Mac).** No agent runs a heavy command directly, the orchestrator included: it submits it to
+the local job queue, `cargo xtask job` (`xtask/src/jobq.rs`), and waits for it.
+- **Heavy and light.** Heavy is anything that compiles: cargo build, check, test, clippy, doc and run; `cargo xtask`
+  (but for its `job` command); cargo mutants and nextest; benches and GPU tests. Light runs directly: docs, git, gh,
+  grep, `python3` checks such as `plan/check_plan.py`, `cargo fmt`, `cargo metadata`, reading logs.
+- **How an agent calls it.** Through the installed client, `"/Volumes/X10 Pro/Principia/orch/jobq/bin/xtask"`, so
+  that calling the queue compiles nothing:
+
+  ```
+  export PATH="/opt/homebrew/opt/rustup/bin:$PATH"
+  "/Volumes/X10 Pro/Principia/orch/jobq/bin/xtask" job submit <worktree> --priority fix --label TASK-M2-36 \
+    --env CARGO_TARGET_DIR=<target> -- cargo test -p kernel --test roundtrip
+  "/Volumes/X10 Pro/Principia/orch/jobq/bin/xtask" job wait <id>
+  ```
+
+  `submit` prints the job id; `wait` blocks until the job ends, prints how it ended and its log path, and exits with
+  the job's status (its exit code; 124 timed out, 125 lost, 126 not started, 130 cancelled). The job doesn't belong to
+  its caller: an agent whose call would time out runs `wait` in the background or again, and an agent that dies leaves
+  its job to finish or time out. `job status` lists the runner, the running jobs, the queue in run order and the recent
+  jobs; `job cancel <id>` drops a queued job or ends a running one with its process group. After a merge that changes
+  `xtask/src/jobq.rs`, the orchestrator builds xtask from `main` through the queue and runs `<target>/debug/xtask job
+  install`, which copies it to the client's path.
+- **Priorities,** highest first, first in, first out within each: `merge`, merge-ready verification of a final head (a
+  reviewer's check of the PR head, the orchestrator's pre-merge checks); `fix`, fix-round tests; `build`, a new task's
+  builds; `peek`, exploratory runs and measurements.
+- **The runner** runs two heavy jobs at a time (`concurrency` in the config; measured, below). Each job gets
+  `CARGO_BUILD_JOBS` and `RUST_TEST_THREADS` at the core count (11 on the Mac), in place of R-228's four per agent,
+  unless its `--env` sets them (a gui mutants run's `RUST_TEST_THREADS=1`, R-439). `--env CARGO_TARGET_DIR=<target>` is
+  required, and a queued job whose target directory a running job uses waits, so no two jobs share one; directories are
+  compared made canonical, without a trailing `/` and in lower case, so two spellings of one are one. A job keeps the
+  submitter's `PATH`, `HOME`, locale and its `CARGO_*`, `RUSTUP_*` and `RUST*` settings, but not what `cargo run` sets
+  for the submitter itself, the target directory or the job counts; its `--env` comes last, so `--env PATH=…` replaces
+  the submitter's PATH. The job's command is looked up on that PATH, not the runner's, so an agent exports PATH with
+  `/opt/homebrew/opt/rustup/bin` first before it submits: rustup's proxies there read `rust-toolchain.toml` and have
+  clippy and fmt, and `~/.cargo/bin`'s cargo has neither (jobs failed with "cargo: command not found" or without
+  clippy and fmt on 30 Oct 2026, applied per R-369). `submit` starts the runner
+  when none is alive, and so does `wait`, at most one every 5 s, so no fault of the lock can multiply runners, and reaps
+  it. With nothing queued or running for 60 s the runner exits, and nothing else stays behind. No launchd.
+- **Not mutation-tested locally.** xtask's mutants are not run on the Mac: a mutant that breaks the live-runner check
+  or the lock starts runners in process groups of their own, outside any test's reach, and a local `cargo mutants` run
+  of the first draft (30 Oct 2026) pushed the Mac past its per-user process limit, failing every agent's forks. CI's
+  mutants gate runs them, on a throwaway runner. Nothing of the queue is excluded from mutation (R-196's xtask
+  exclusions stay `main.rs` and `codegen.rs`); a survivor that is truly equivalent goes into
+  `.cargo/mutants-equivalent.toml` (R-202).
+- **State** lives in `/Volumes/X10 Pro/Principia/orch/jobq/`, outside the repository: `jobs/<id>.json`, one file per
+  job; `logs/<id>.log`; `runner.lock`, the runner's pid, heartbeat, concurrency and cores per job; `state.lock`, a
+  `flock` every change to the state holds briefly, with no `ps` call or grace wait inside it, and the holder's pid and
+  the time it took it written in it: a call that can't take it within `lock_wait` seconds fails, naming that pid and
+  how long it has held it; `config`; `runner.log`; `violations.log`.
+- **Robust to restarts.** A job runs in a process group of its own; past its timeout (3600 s unless `--timeout` says
+  otherwise, measured on a monotonic clock from the job's start) or when cancelled, the runner sends the group SIGTERM,
+  then SIGKILL after 10 s; whenever the job's own process ends, the runner kills what is left of its group. A runner
+  lock whose pid is dead or whose heartbeat is more than 120 s old has expired, and the next `submit` or `wait` starts a
+  runner in its place. A new runner ends the group of every job a dead one left running, and queues it again, or marks
+  it lost after its third start.
+- **The limits of that recovery** (applied per R-369). A runner killed between a job's spawn and its save leaves that
+  start untracked: its file still says queued, so the job runs again while that one copy has no timeout or cancel and
+  may overlap the second start on one target directory. Cargo's own lock serialises the builds, but test binaries can
+  overlap, so a verdict from that run may be flaky. `runner.log` shows the start, and `violations.log` a heavy copy,
+  its group being in no running job. No lock is orphaned: `state.lock` goes with the dead runner, `runner.lock` expires
+  at 120 s and cargo's lock goes with its process. Closing the window would take a gate wrapper around every job, out of
+  proportion to one spawn return and one small write. A second limit: when a job's file holds no leader start time, the
+  new runner ends a live group only if its leader started within 5 s of the job's recorded start; a leader further off
+  is left alone, as possibly another process's, and the job is queued again.
+- **A failed save in a live runner** starts nothing and runs nothing the file doesn't record. If the save after a spawn
+  fails, the runner kills and reaps that start's group and the job stays queued, so at most one copy is alive and none
+  after the failure; each later pass tries again. If the save at a job's end fails, the runner keeps the job, with its
+  exit status and end time, and saves it again on the next pass. A pass with a failed save starts no job and counts as
+  idle, so a runner that can't write exits after `idle` seconds, and the next runner ends and queues again each job
+  still marked running.
+- **Violations.** While it runs, the runner reads `ps` every 30 s and appends each heavy process that no queue job
+  started to `violations.log`, with its pid, parent, cwd and command: only the topmost of a chain, each once. It never
+  kills one. The orchestrator reads the log at its summaries.
+- **The config,** `orch/jobq/config`, one `key = value` per line: `concurrency` (2), `timeout` (3600), `stale`
+  (120), `sample` (30), `idle` (60), `grace` (10), `tick_ms` (500), `lock_wait` (30), `cores`, and `env KEY=VALUE`
+  lines every job starts with.
+- **Agents.** R-391's and R-262's counts still bound the agents dispatched; each writes, reviews and waits, and the
+  queue alone bounds the heavy load (applied per R-369).
+- **Measured** (30 Oct 2026, R-658 item 6): the three task heads' targeted tests from warm APFS-cloned targets, each
+  mode twice, in the order a, b, c, c, b, a, with the background load at the start below 1.5 × the cores (round 1,
+  then round 2, in each cell):
+
+  | Run (background load1 at start) | Wall-clock | Peak load1 | Memory pressure, worst | Page-outs/min, mean / worst | Swap-outs |
+  |---|---|---|---|---|---|
+  | (a) before: three at once, `CARGO_BUILD_JOBS=4` (12.8; 10.8) | 112 s; 89 s | 25.7; 22.9 | 2; 1 | 262 / 484; 18 / 25 | 16,536; 0 |
+  | (b) the queue, one job at a time (13.1; 13.0) | 135 s; 135 s | 15.6; 16.8 | 2; 1 | 4 / 7; 1 / 2 | 0; 0 |
+  | (c) the queue, two at a time (9.9; 12.6) | 101 s; 97 s | 15.4; 19.5 | 1; 2 | 2 / 4; 63 / 93 | 0; 0 |
+
+  Two at a time verified the three heads in 97–101 s, one at a time in 135 s, so the runner runs two. Three agents'
+  own builds at four jobs each were about as fast (89–112 s) but peaked at a load of 23–26 and paged out, and that
+  pattern, at seven agents with mutants and a GPU sweep beside them, is what took the load to about 100.
 
 **Cleaning disk** (28 Sep 2026): delete each reviewer's worktree and target when its review ends, and each task's when
 its PR merges (R-345). Below 20 GB, `cargo clean` stale targets (merged or abandoned first, then the main checkout's),
@@ -625,12 +730,23 @@ anything outside the repository and its build and scratch directories without as
   `$HOME/.rustup/toolchains/stable-aarch64-apple-darwin/bin` on PATH. `cargo` on PATH is `~/.cargo/bin/cargo`, a
   standalone binary with no fmt or clippy that shadows rustup's toolchain; the second directory supplies `cargo-fmt`
   and `clippy-driver`. Before that fix, agents wrongly reported rustfmt and clippy missing (26 Sep 2026). For the
-  pinned nightly (§ "Toolchain"), put that toolchain's `bin` directory first instead.
+  pinned nightly (§ "Toolchain"), put that toolchain's `bin` directory first instead. For the job queue, export PATH
+  with `/opt/homebrew/opt/rustup/bin` first before `job submit`: a job runs with its submitter's PATH, and rustup's
+  proxies there pick the pinned nightly from `rust-toolchain.toml` (§ "Resources", "The job queue"; R-658).
 - `syspolicyd` can stall the launch of freshly built binaries: a stuck test run sits at 0% CPU. After a long agent run,
   check `ps` for leftovers.
 - The terminal and Claude Code have Full Disk Access (29 Sep 2026). If "Operation not permitted" failures come back,
   report them to the human; they are not test findings.
-- sccache was tried and dropped: no hits across target directories, since their paths enter its hash (27 Sep 2026).
+- sccache: measured again on 30 Oct 2026 (R-658), a cold `cargo build -p xtask` of one commit in two worktrees, each
+  with its own target directory, through one cache. With `CARGO_TARGET_DIR` in the environment, as every job has it, 0
+  of 175 compile requests hit, with or without `SCCACHE_BASEDIRS` (sccache 0.18): sccache hashes every `CARGO_*`
+  variable, and the target directory is one. With it given as `--target-dir` instead, 117 of 175 hit (66.9%), the
+  dependency crates, with or without `SCCACHE_BASEDIRS`; the workspace's crates and those reading `OUT_DIR` missed. The
+  hits saved about 10 s of a 100 s cold build (99–110 s against 90–91 s, at a background load of about 45). Not enabled,
+  pending the owner's decision: every job's command would have to carry `--target-dir`, and jobs start from APFS-cloned
+  warm targets whose dependencies are already built, which leaves it nothing to hit. `--remap-path-prefix` through
+  `RUSTFLAGS` can't be used here: the paths hold a space, which `RUSTFLAGS` splits on. (Tried first on 27 Sep 2026, with
+  no hits.)
 - sccache stays off, the owner's word of 31 Oct 2026 (R-666): the job queue's builds and local builds do not use it.
 
 **Linux cloud.**
@@ -696,6 +812,9 @@ don't route around it.
   the trial was reverted (§ "Resources").
 - **The memory guard's log (R-439; Mac only).** `/Volumes/X10 Pro/Principia/orch/mem-guard.log`: the guard's start,
   with its limit and PID, and each kill, with the PID, RSS and executable (§ "Resources").
+- **The job queue's logs (R-658; Mac only).** In `/Volumes/X10 Pro/Principia/orch/jobq/`: `runner.log`, each runner's
+  start, jobs and exit; `logs/<id>.log`, each job's output; `violations.log`, the heavy processes run outside the queue
+  (§ "Resources").
 - **Linux cloud.** A cloud machine's disk may not outlive the session. Under R-347,
   keep the running log in the session's scratch directory, and post the away-mode summary as the session's final
   message and as a comment on each PR it concerns.

@@ -1858,7 +1858,7 @@
   title: "The compass's Jacobi and Shape views and the physical steer (R-452)"
   depends_on: [TASK-M6-34]  # RQ-341 to RQ-346 ruled by R-550; no longer waits
   needs: []
-  requirements: [REQ-GUI-199, REQ-GUI-200, REQ-DEC-049, REQ-GUI-346, REQ-GUI-347, REQ-GUI-410]  # REQ-GUI-410: R-633 (RQ-601), J⁺'s cut
+  requirements: [REQ-GUI-199, REQ-GUI-200, REQ-DEC-049, REQ-GUI-346, REQ-GUI-347, REQ-GUI-410, REQ-GUI-411]  # REQ-GUI-410: R-633 (RQ-601), J⁺'s cut; REQ-GUI-411: R-71, the pole's radius
   reviewers: [code, qa, gui, physics]
   pitfalls: []
 - id: TASK-M6-36

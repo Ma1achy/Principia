@@ -498,8 +498,13 @@ no requirement while RQ-577 is open.
 
 - **V-5**, the book's statistical statements: no set-up stated; each is a pointer to a primary paper.
 - **V-10**, the post-Newtonian Pythagorean problem: Principia is Newtonian.
-- **BZ-1**, Boekholt & Portegies Zwart 2015, ensemble statistics surviving trajectory error: 3D Plummer initial
-  conditions. Its method is what REQ-VAL-199 and "never discard a copy" already apply.
+- **BZ-1**, Boekholt & Portegies Zwart 2015, f64 against a converged code: the two warm sets stay out of scope, being 3D.
+  The cold sets start from rest, so planar (the owner), and are **reopened** as a proposal, with no requirement: the
+  paired f32, f64 and converged experiment, `../incoming/2026-10-27_validation_plan/PLAN.md` § 3.2, BZ-1C (R-661). The
+  paper has no f32 run: that f32 statistics agree is a hypothesis Principia will measure, and no paper establishes it. Its
+  "unbiased" result holds only after an energy cut, so it is not what "never discard a copy" applies; its Fig. 14, cut
+  beside uncut, is compatible. REQ-VAL-199 measures parting time, a different quantity. *Was (R-661):* "Boekholt & Portegies Zwart 2015, ensemble
+  statistics surviving trajectory error: 3D Plummer initial conditions. Its method is what REQ-VAL-199 and "never discard a copy" already apply."
 - **D-6**, the prototype's other numbers, as a list: RQ-587 (§ 5.11).
 
 Most of the scattering literature is 3D; only planar subsets apply. Results with no published data and no figure
@@ -511,7 +516,7 @@ detail stay qualitative until the paper is in hand.
 - **By milestone (targets + definition, then calibrations):** M2 2 + 2; M3 58 + 47; M4 8 + 4; M6 2 + 0; M7 1 + 1; M8 5 + 1.
 - **Tasks added:** 34 (M2 1, M3 24, M4 4, M6 1, M7 1, M8 3), § 7.
 - **Waiting on an RQ:** 18 targets (§ 5.12, § 5.5, § 5.3, § 5.10).
-- **No requirement:** PL-1 to PL-7, PL-8's second half, PL-9 to PL-12, B-3 and GG-2 (RQ-577, § 5.13); V-5, V-10 and BZ-1 (out of scope); D-6 (RQ-587). FF-H and W-1 are ruled requirements (REQ-VAL-042, -043).
+- **No requirement:** PL-1 to PL-7, PL-8's second half, PL-9 to PL-12, B-3 and GG-2 (RQ-577, § 5.13); V-5, V-10 and BZ-1 (out of scope, BZ-1's cold sets reopened as a proposal, R-661); D-6 (RQ-587). FF-H and W-1 are ruled requirements (REQ-VAL-042, -043).
 - *30 Oct 2026 (R-649, R-650):* by milestone now, M9 holds every requirement from REQ-VAL-201 to REQ-VAL-332 but PL-8's
   first half (REQ-VAL-250 and REQ-VAL-251, still M3), with REQ-VAL-042 and REQ-VAL-127, and five R-650 adds
   (REQ-VAL-333 to REQ-VAL-335, REQ-VAL-340, REQ-VAL-341); SP-2 adds two in M3 (REQ-VAL-336, REQ-VAL-337). The 34 tasks above and
@@ -854,7 +859,7 @@ on tier (a), exact targets on tier (b)" (R-649). So an exact target, a measureme
 is scored on (b); a statistical target is scored on (a), statistically only; a qualitative target over a map or an
 ensemble is scored on (a) too, (a) being the tier that agrees "statistically or qualitatively"; a mixed target is
 scored on (b) for its exact part and on (a) for its statistical or qualitative part (*applied per R-369*, R-649). A
-single chaotic trajectory set beside a figure (AA-4, V-6, SP-1's structural comparison) is (b). Five map targets
+single chaotic trajectory set beside a figure (AA-4, V-6, SP-1's structural comparison) is (b). *31 Oct 2026, R-661:* "expected to agree statistically", "agrees" and "agreeing statistically", here and in this section's other lines, state what tier (a) is scored on, not a known result. That its f32 statistics agree is a hypothesis Principia will measure (BZ-1C), and no paper establishes it; what a score on (a) says meanwhile is RQ-649. Five map targets
 whose verify named a Result at f64 (AT-D2, OC-4 off and on the Šuvakov plane, AT-D1, AT-D3) are scored on (a), with
 the f64 Result run beside it and recorded as information; a divergence between the two is a precision-tier finding
 (R-653, RQ-622 (c)). B-2 (REQ-VAL-246), one start, the Burrau pixel, fitted over many runs and so outside the
