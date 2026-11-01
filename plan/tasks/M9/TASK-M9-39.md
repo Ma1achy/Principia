@@ -2,7 +2,7 @@
 
 - **Milestone:** M9
 - **Closes:** REQ-INT-110, REQ-SYS-094, REQ-SYS-095
-- **Depends on:** TASK-M3-01, TASK-M3-05, TASK-M3-06, TASK-M4-06
+- **Depends on:** TASK-M3-01, TASK-M3-05, TASK-M3-06, TASK-M4-06, TASK-M4-04, TASK-M4-13
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics, perf
 - **Pitfalls:** PIT-9
@@ -40,6 +40,8 @@
 
 ## Notes
 - Lifting the refusal admits `ε ≠ 0` on the f32 GPU kernel, the tier the explorer runs on, and shared source does not certify a backend, so the GPU evidence and TASK-M4-06 are this task's (physics review 5730650164 of PR #375, P2; applied per R-369). *Was:* Depends on TASK-M3-01, TASK-M3-05 and TASK-M3-06, ~300 lines, both acceptance tests on the CPU.
+- `softened_gpu_parity` holds each comparison to its Tier-N tolerance of the f64 CPU, the FTLE shadow's included, so TASK-M4-04 (the Tier-N comparison and its measured tolerances, on TASK-M4-02's shared-state harness) and TASK-M4-13 (the f32 FTLE shadow on the GPU) are dependencies; through them `softened_dispatch`'s `r_coll` record, TASK-M3-09's, is reached too (physics review 5730735077 of PR #375, P6; code review 5730758034, R2; applied per R-369). *Was:* Depends on TASK-M3-01, TASK-M3-05, TASK-M3-06 and TASK-M4-06.
+- Further dependencies follow RQ-656's ruling: the Chazy classifier, TASK-M7-35, is not reached today, and whether this task needs it is that ruling's (code review 5730758034 of PR #375, R2).
 - Added by R-654 (30 Oct 2026; the port, 1 Nov 2026). A build task, not a target: it is not scored, its tests block its own merge, and TASK-M9-37, the report, does not wait on it. In M9 because R-650 and `plan/MILESTONES.md` call M0 to M8 the core build and no other milestone follows it (applied per R-369).
 - Calibrations proposed here (R-71; human confirmation with the M9 report if this task has landed by then, otherwise in the next batch after it lands, then recorded in decisions.md): REQ-SYS-095, the range of `ε`. *Was:* "Definitions written here (R-72; physics reviewer approves before merge): the range of `ε`." (code review 5730587922 of PR #375, C4; applied per R-369).
 - Scheduled at the owner's word; R-415's early-merge test does not bring it forward.

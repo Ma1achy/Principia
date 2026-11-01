@@ -3778,7 +3778,7 @@
 - id: TASK-M9-39
   milestone: M9
   title: "The softened force law: Plummer softening, built after the core build, and the refusal of ε ≠ 0 lifted"
-  depends_on: [TASK-M3-01, TASK-M3-05, TASK-M3-06, TASK-M4-06]
+  depends_on: [TASK-M3-01, TASK-M3-05, TASK-M3-06, TASK-M4-06, TASK-M4-04, TASK-M4-13]
   needs: []
   requirements: [REQ-INT-110, REQ-SYS-094, REQ-SYS-095]  # R-654 (30 Oct 2026)
   reviewers: [code, qa, physics, perf]
