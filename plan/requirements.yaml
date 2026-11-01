@@ -33738,8 +33738,8 @@
   - file: decisions.md
     section: "R-653 — Five map targets and B-2 are scored on tier (a), their f64 Result or CPU FTLE run beside it and recorded as information, an explained divergence between the two being a precision-tier finding *(closes RQ-622; refines R-649)*"
   verify:
+    detail: "scored on tier (a): the GPU explorer's FTLE over a window stated with it, beside theirs; within REQ-VAL-247; the CPU FTLE over the same window run beside it and recorded as information, an explained divergence between the two a precision-tier finding; control: an FTLE on the stable figure-eight must read near zero"
     method: numerical gate
-    detail: "scored on tier (a): the GPU explorer's FTLE over a window stated with it, beside theirs; within REQ-VAL-247; the CPU FTLE over the same window run beside it and recorded as information, a divergence between the two a precision-tier finding; control: an FTLE on the stable figure-eight must read near zero"
   rulings:
   - R-71
   - R-594
@@ -35901,8 +35901,8 @@
   - file: decisions.md
     section: "R-653 — Five map targets and B-2 are scored on tier (a), their f64 Result or CPU FTLE run beside it and recorded as information, an explained divergence between the two being a precision-tier finding *(closes RQ-622; refines R-649)*"
   verify:
+    detail: "scored on tier (a): the GPU explorer's f32 output per mass set, uniform; each orbit's pixel against REQ-VAL-137's threshold; the f64 Result (R-572) run beside it and recorded as information, an explained divergence between the two a precision-tier finding; the figure carries the atlas's credit line; control: the markers moved by a pixel row must miss the low closure"
     method: golden image
-    detail: "scored on tier (a): the GPU explorer's f32 output per mass set, uniform; each orbit's pixel against REQ-VAL-137's threshold; the f64 Result (R-572) run beside it and recorded as information, a divergence between the two a precision-tier finding; the figure carries the atlas's credit line; control: the markers moved by a pixel row must miss the low closure"
   rulings:
   - R-594
   - R-629
@@ -35938,8 +35938,8 @@
   - file: decisions.md
     section: "R-653 — Five map targets and B-2 are scored on tier (a), their f64 Result or CPU FTLE run beside it and recorded as information, an explained divergence between the two being a precision-tier finding *(closes RQ-622; refines R-649)*"
   verify:
+    detail: "scored on tier (a): the GPU explorer's f32 output; the island criterion read from the payload; agreement at REQ-VAL-310's level; every disagreement listed with both labels and its source; the f64 Result (R-572) run beside it and recorded as information, an explained divergence between the two a precision-tier finding; control: labels shuffled between orbits must lower the agreement to chance"
     method: numerical gate
-    detail: "scored on tier (a): the GPU explorer's f32 output; the island criterion read from the payload; agreement at REQ-VAL-310's level; every disagreement listed with both labels and its source; the f64 Result (R-572) run beside it and recorded as information, a divergence between the two a precision-tier finding; control: labels shuffled between orbits must lower the agreement to chance"
   rulings:
   - R-71
   - R-594
@@ -36055,8 +36055,8 @@
   - file: decisions.md
     section: "R-653 — Five map targets and B-2 are scored on tier (a), their f64 Result or CPU FTLE run beside it and recorded as information, an explained divergence between the two being a precision-tier finding *(closes RQ-622; refines R-649)*"
   verify:
+    detail: "scored on tier (a): the GPU explorer's f32 output; reviewed by the physics reviewer; the f64 Result (R-572) run beside it and recorded as information, an explained divergence between the two a precision-tier finding; the atlas's credit line on the figure; control: each marker's IC re-encoded must land on its marker"
     method: review checklist
-    detail: "scored on tier (a): the GPU explorer's f32 output; reviewed by the physics reviewer; the f64 Result (R-572) run beside it and recorded as information, a divergence between the two a precision-tier finding; the atlas's credit line on the figure; control: each marker's IC re-encoded must land on its marker"
   rulings:
   - R-594
   - R-629

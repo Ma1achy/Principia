@@ -861,7 +861,7 @@ ensemble is scored on (a) too, (a) being the tier that agrees "statistically or 
 scored on (b) for its exact part and on (a) for its statistical or qualitative part (*applied per R-369*, R-649). A
 single chaotic trajectory set beside a figure (AA-4, V-6, SP-1's structural comparison) is (b). *31 Oct 2026, R-661:* "expected to agree statistically", "agrees" and "agreeing statistically", here and in this section's other lines, state what tier (a) is scored on, not a known result. That its f32 statistics agree is a hypothesis Principia will measure (BZ-1C), and no paper establishes it; what a score on (a) says meanwhile is RQ-649. Five map targets
 whose verify named a Result at f64 (AT-D2, OC-4 off and on the Šuvakov plane, AT-D1, AT-D3) are scored on (a), with
-the f64 Result run beside it and recorded as information; a divergence between the two is a precision-tier finding
+the f64 Result run beside it and recorded as information; an explained divergence between the two is a precision-tier finding
 (R-653, RQ-622 (c)). B-2 (REQ-VAL-246), one start, the Burrau pixel, fitted over many runs and so outside the
 single-trajectory clause, is scored on (a) by the GPU explorer's FTLE, with the CPU FTLE beside it on the same terms
 (R-653). *Was (until R-653):* "are (a) by the rule; how their f64 Result runs square with it is RQ-622, and their

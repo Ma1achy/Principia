@@ -28,7 +28,7 @@ The replication suite's targets AT-D2 run as engine tests (`principia_dd_replica
 - One Result per mass set on the latent `z_q = 0` plane, at f32 (what scores: the GPU explorer's f32 output) and at f64 (beside it, as information), with the 311 orbits marked, the atlas's credit line on each figure.
 
 ## Acceptance tests
-- `cargo xtask gate replication --target AT-D2` — scored on tier (a): the GPU explorer's f32 output per mass set, uniform; each orbit's pixel against REQ-VAL-137's threshold; the f64 Result (R-572) run beside it and recorded as information, a divergence between the two a precision-tier finding; the figure carries the atlas's credit line; control: the markers moved by a pixel row must miss the low closure; the outcome recorded with its tier: PASS where the comparison above holds, otherwise EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED, never a merge condition (R-649); the control still has to fire (REQ-VAL-308).
+- `cargo xtask gate replication --target AT-D2` — scored on tier (a): the GPU explorer's f32 output per mass set, uniform; each orbit's pixel against REQ-VAL-137's threshold; the f64 Result (R-572) run beside it and recorded as information, an explained divergence between the two a precision-tier finding; the figure carries the atlas's credit line; control: the markers moved by a pixel row must miss the low closure; the outcome recorded with its tier: PASS where the comparison above holds, otherwise EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED, never a merge condition (R-649); the control still has to fire (REQ-VAL-308).
 - `scripts/check_no_atlas_params.sh` — prints `ok`: `atlas-params.json` is not committed, and nothing in this task reads it.
 
 ## Notes

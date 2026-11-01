@@ -28734,7 +28734,7 @@ The owner's words (30 Oct 2026), verbatim, from that day's batch of rulings:
 *What it decides:*
 - **The five** (REQ-VAL-308, REQ-VAL-309, REQ-VAL-311, REQ-VAL-312, REQ-VAL-313): each is scored on tier (a), the GPU explorer's f32 output; the f64 Result (R-572) runs beside it, recorded as information, and does not score.
 - **B-2** (REQ-VAL-246, with its calibration REQ-VAL-247): scored on tier (a), the GPU explorer's FTLE; the CPU FTLE runs beside it, recorded as information, and does not score.
-- **A divergence between the two** is a precision-tier finding, in the target's outcome record.
+- **An explained divergence between the two** is a precision-tier finding, in the target's outcome record.
 - **Their scoring no longer waits on the entry.** TASK-M9-33 and TASK-M9-34, whose only hold was this, rejoin TASK-M9-37's dependencies; B-2 joins TASK-M9-16's scored targets; TASK-M9-35 stays held on its other entries.
 
 *Applied per R-369:*
