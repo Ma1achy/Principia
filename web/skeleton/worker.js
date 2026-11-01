@@ -4,6 +4,7 @@
 import init, { WorkerApp } from "./gui.js";
 
 let app = null;
+let started = false;
 const early = [];
 
 function failed(e) {
@@ -17,6 +18,10 @@ function call({ method, args }) {
 function tick() {
   try {
     app.frame();
+    if (!started) {
+      started = true;
+      self.postMessage({ type: "started" });
+    }
     requestAnimationFrame(tick);
   } catch (e) {
     failed(e);
@@ -31,7 +36,6 @@ async function start({ canvas, environment, width, height, dpr, isMac }) {
   const output = (type, value) => self.postMessage({ type, value });
   app = await WorkerApp.start(canvas, environment ?? undefined, width, height, dpr, isMac, report, output);
   early.splice(0).forEach(call);
-  self.postMessage({ type: "started" });
   requestAnimationFrame(tick);
 }
 
