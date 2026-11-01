@@ -387,3 +387,42 @@ fn console_open_close_bench_takes_only_its_name() {
     let err = crate::cli::mock::dispatch(&args, |_, _, _| Ok(())).expect_err("unknown");
     assert!(err.contains(&format!("--bench {NAME}")), "{err}");
 }
+
+#[test]
+fn console_open_close_bench_draws_each_frame_through_wgpu() {
+    let canvas = crate::cli::mock::canvas_flagging(None).expect("the mock's device");
+    let tables = bench::measure(&[3], 1, Some(canvas));
+    assert_eq!(tables[0].log, 3);
+    let wgpu = |t: &Table| -> f64 {
+        let times = t.rows.iter().flat_map(|r| r.times.iter());
+        times.map(|f| f.wgpu_ms).sum()
+    };
+    assert!(wgpu(&tables[0]) > 0.0, "nothing drawn");
+    for row in &tables[0].rows {
+        let frame = row.times[0];
+        assert!(frame.wgpu_ms > 0.0, "{}", row.frame);
+        assert!(frame.tessellate_ms > 0.0, "{}", row.frame);
+    }
+    let none = bench::measure(&[0], 1, None);
+    rejects("a run with no device drew", || {
+        assert!(wgpu(&none[0]) > 0.0)
+    });
+}
+
+#[test]
+fn console_open_close_bench_the_report_names_its_run_and_every_size() {
+    let report = bench::report(&[table(&[("a", 2.0)]), table(&[("b", 3.0)])]);
+    assert!(
+        report.starts_with(&format!("{NAME}: 2160 x 1350 px at 1.5 pixels per point, ")),
+        "{report}"
+    );
+    assert!(report.contains("`a`") && report.contains("`b`"), "{report}");
+    assert_eq!(
+        report.contains("A DEBUG BUILD"),
+        cfg!(debug_assertions),
+        "{report}"
+    );
+    rejects("a report of nothing", || {
+        assert!(bench::report(&[]).contains("`a`"))
+    });
+}

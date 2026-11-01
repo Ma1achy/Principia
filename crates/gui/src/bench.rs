@@ -328,11 +328,11 @@ impl Run {
             .tessellate(output.shapes, PIXELS_PER_POINT);
         let tessellate_ms = start.elapsed().as_secs_f64() * 1e3;
         let mut textures = std::mem::take(&mut self.headless.textures);
-        let start = Instant::now();
-        if let Some(gpu) = &mut self.gpu {
+        let wgpu_ms = self.gpu.as_mut().map_or(0.0, |gpu| {
+            let start = Instant::now();
             gpu.draw(&textures, &primitives);
-        }
-        let wgpu_ms = start.elapsed().as_secs_f64() * 1e3;
+            start.elapsed().as_secs_f64() * 1e3
+        });
         textures.clear();
         let timing = self.app.windows.console.timing;
         let (filter_ms, rows_ms) = (timing.filter_s * 1e3, timing.rows_s * 1e3);
@@ -380,7 +380,7 @@ impl Run {
     }
 }
 
-/// Measures [`CYCLES`]-long tables, `cycles` cycles at each of `sizes`; the frames drawn on `canvas`, if any.
+/// Measures a table of `cycles` cycles at each of `sizes`; the frames drawn on `canvas`, if any.
 pub fn measure(sizes: &[usize], cycles: usize, canvas: Option<Arc<MockCanvas>>) -> Vec<Table> {
     sizes
         .iter()
@@ -421,7 +421,11 @@ pub fn run(
             ))
         }
     }
-    let tables = measure(&LOG_SIZES, CYCLES, Some(canvas()?));
+    Ok(report(&measure(&LOG_SIZES, CYCLES, Some(canvas()?))))
+}
+
+/// The run's text: what it ran on, then each table.
+pub fn report(tables: &[Table]) -> String {
     let mut text = format!(
         "{NAME}: {} x {} px at {PIXELS_PER_POINT} pixels per point, {CYCLES} cycles, in milliseconds{}\n",
         SIZE[0],
@@ -432,9 +436,9 @@ pub fn run(
             ""
         }
     );
-    for table in &tables {
+    for table in tables {
         text += "\n";
         text += &render_table(table);
     }
-    Ok(text)
+    text
 }
