@@ -13,7 +13,7 @@
 //! no input. A click on cell (i, j) steers the slice to the coordinate plane `z_i × z_j`, the tilts and `γ` reset to 0,
 //! the zoom and `z₀` kept: one `SetField` on the basis, turned about the pin while locked, as every basis edit is (C5).
 //!
-//! From the keyboard, in the Plücker view's interaction mode the arrows move a cell cursor over the upper triangle,
+//! From the keyboard, in a grid view's interaction mode the arrows move a cell cursor over the upper triangle,
 //! starting on the dominant cell, Space steering to it as a click does (C6). The Jacobi and Shape views draw the same
 //! grid over physical coordinates ([`super::physical`]; R-550).
 

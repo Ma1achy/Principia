@@ -38,8 +38,7 @@
 //! cell, or Space on the keyboard's cell cursor, steers the slice: in the Plücker view to that coordinate plane, in the
 //! Jacobi and Shape views ([`physical`]; R-550) to its latent preimage, or refuses and logs why. The view
 //! is its own GUI state, as its mode is. The keys: the view buttons follow Slice as siblings, Enter on one switching the
-//! view; in the Plücker view's interaction mode the arrows move the cell cursor ([`adjust`]) and Space steers
-//! ([`space`]).
+//! view; in a grid view's interaction mode the arrows move the cell cursor ([`adjust`]) and Space steers ([`space`]).
 
 pub mod physical;
 pub mod views;
@@ -1342,7 +1341,8 @@ pub fn take(
 
 /// Draws the compass in `rect` and takes its buttons' clicks, `pending` the edit [`take`] sent this frame: the Cube
 /// view's cube, or the Plücker view's grid, its position readout and its cells' clicks, or the Jacobi and Shape views'
-/// grid and its cells' clicks; beside it the title, the Tilt and Slice buttons, the view buttons, the view's readout and its hint.
+/// grid and its cells' clicks; beside it the title, the Tilt and Slice buttons, the view buttons, the view's readout and
+/// its hint.
 pub fn show(
     ui: &mut Ui,
     rect: Rect,
