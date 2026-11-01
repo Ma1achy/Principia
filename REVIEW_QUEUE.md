@@ -1637,3 +1637,22 @@ words, so the task did not wait. The entry is for correcting the text.*
 - **Q-4 (ii), separately:** it has no integration under any option, so no GPU explorer run exists to bind, and option (i) gives it nothing to run. Reporting "(a)" there would misstate the instrument, and § 12.2's own row says both "(a)" and "no integration". Seen: (x) a stated reading of the row, for instance the tier naming the comparison's kind where there is no instrument; (y) it is recorded with no tier, which changes § 12.2's row; (z) it follows whichever option the rest take, with the row's text corrected to match.
 - **Applied meanwhile:** nothing. Nothing is scored yet. § 12.2's tiers, the tasks' dependencies and their comparisons are unchanged; the mixed targets' acceptance lines record each part with its own tier and name this entry.
 - **Waits:** nothing built, and nothing before M9. TASK-M9-37's rows for these targets take their meaning from the ruling.
+
+## RQ-670: REQ-VAL-127 and REQ-VAL-221 are definitions with an outcome in § 12.2 and their notes, while their verify lines and tasks ask only for physics approval *(conflict; `docs/design/principia_dd_replication.md` § 12.2; R-649, R-650, R-72; context: TASK-M9-04, TASK-M9-36, TASK-M9-37)*
+
+*Queued 1 Nov 2026 by R-663 to R-666's port, on physics review 5730823192 of PR #375, which keeps both rows. It settles nothing, and both rows stay.*
+
+- **File, section:**
+  - `docs/design/principia_dd_replication.md` § "12.2 Tiers": "an exact target, a measurement, a count, a report or a definition is scored on (b)"; its table: "| OC-5's counting convention | REQ-VAL-221 | a definition | (b) |", "| SP-1's feature set | REQ-VAL-127 | a definition | (b) |".
+  - `plan/requirements.yaml`, the notes of REQ-VAL-127 and REQ-VAL-221: "a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED".
+  - The same requirements' verify. REQ-VAL-127: "the note lists each feature and how it is compared structurally; physics reviewer approved". REQ-VAL-221: "§ 5.2 states which crossings count, how an endpoint syzygy is counted, and how the count is read from the crossing counter; checked against a sample of rows' `syz` before the full comparison; physics reviewer approved".
+  - `plan/tasks/M9/TASK-M9-04.md`, acceptance: "Doc review (physics): … the physics reviewer approved (REQ-VAL-221)." `plan/tasks/M9/TASK-M9-36.md`, acceptance: "The note lists each feature and how it is compared structurally; physics reviewer approved (REQ-VAL-127)."
+  - `plan/tasks/M9/TASK-M9-37.md`, acceptance: "one row for each row of `principia_dd_replication.md` § 12.2's table", and "each scored row has its tier, its outcome, its like-for-like checks".
+- **The conflict:** the table and the notes give each definition an outcome, and TASK-M9-37 needs one in its row. Neither task's acceptance produces an outcome: a definition is written and approved, with no comparison that could read PASS, EXPLAINED DIVERGENCE or UNEXPLAINED. The comparisons that use them are other targets' rows: OC-5 (REQ-VAL-220) and SP-1's structural comparison (REQ-VAL-335).
+- **The question:** what does a definition's row in the report carry as its outcome?
+- **Options seen:**
+  - (a) The verify lines and the two tasks' acceptance gain an outcome, with what is compared stated. REQ-VAL-221's sample check against `syz` is a candidate comparison; REQ-VAL-127 would need one named.
+  - (b) The row reads the outcome of the target the definition serves (OC-5, SP-1's structural comparison), and otherwise records the approval. The notes and § 12.2 say so; the outcome is counted once.
+  - (c) A definition has no outcome: its row records "defined, physics reviewer approved", or the two leave the table. This changes § 12.2, the notes, and TASK-M9-37's count of 79 rows.
+- **Applied meanwhile:** nothing. Nothing is scored yet. Both rows, their notes, their verify lines and the two tasks' acceptance are unchanged.
+- **Waits:** nothing built, and nothing before M9. TASK-M9-37's two rows take their content from the ruling.
