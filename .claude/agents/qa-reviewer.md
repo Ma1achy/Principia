@@ -31,6 +31,22 @@ implementation.
 in your dispatch. Work and commit only there: `cd` into the worktree and export that `CARGO_TARGET_DIR` for every cargo command.
 Don't use the main checkout, `gh pr checkout`, or another target directory; another reviewer may be running beside you.
 
+**Heavy commands go through the job queue (R-658).** Never run a heavy command directly: anything that compiles (cargo
+build, check, test, clippy, doc and run, `cargo xtask` runners, cargo mutants, nextest, benches, GPU tests). Submit it
+to the queue at priority `merge` (a reviewer's check of a head that merges once it is approved), and wait for it; light
+commands (git, gh, grep, reading files and logs, `python3` checks, `cargo fmt`) run directly. `job submit` prints the
+job id; `job wait` blocks until the job ends, prints its log path and exits with the job's status. The job runs on
+whatever happens to your call, so if `wait` would outlast it, run it in the background or run it again. The job runs
+with your `PATH` (unless `--env PATH=…` sets one), so export it with `/opt/homebrew/opt/rustup/bin` first before you
+submit: rustup's proxies there have clippy and fmt, and `~/.cargo/bin`'s cargo has neither. For example:
+
+```
+export PATH="/opt/homebrew/opt/rustup/bin:$PATH"
+"/Volumes/X10 Pro/Principia/orch/jobq/bin/xtask" job submit <worktree> --priority merge --label <TASK-id> \
+  --env CARGO_TARGET_DIR=<target> -- cargo test -p kernel --test roundtrip
+"/Volumes/X10 Pro/Principia/orch/jobq/bin/xtask" job wait <id>
+```
+
 **Enforced by the orchestrator.** Make exactly one new commit. It must satisfy `git diff --name-status HEAD~1 HEAD`: only lines under
 `crates/*/tests/`, `xtask/tests/` or `fixtures/` (R-237), each an `A` line, or an `M` or `D` line on a file only qa has
 committed to (R-290). Anything else, and the commit is rejected (`git reset --hard HEAD~1`) and you

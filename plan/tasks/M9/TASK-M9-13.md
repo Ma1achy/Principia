@@ -1,0 +1,50 @@
+# TASK-M9-13 — The Belgrade orbits close: the PRL's 15, the gallery's 206 sequence orbits and 57 BHH satellites, Hudomal's 38 and his E = −0.5 periods (SD-1, BG-1, BG-2, HU-3, HU-5)
+
+- **Milestone:** M9
+- **Closes:** REQ-VAL-228, REQ-VAL-229, REQ-VAL-230, REQ-VAL-231, REQ-VAL-232, REQ-VAL-233, REQ-VAL-234, REQ-VAL-235, REQ-VAL-238, REQ-VAL-239
+- **Depends on:** TASK-M3-24, TASK-M3-08
+- **Needs (earlier milestones):** none
+- **Reviewers:** code, qa, physics
+- **Pitfalls:** PIT-3
+- **Size:** ~450 lines
+
+## Goal
+The replication suite's targets SD-1, BG-1, BG-2, HU-3, HU-5 run as engine tests (`principia_dd_replication.md`; R-594, R-629). The 15 initial conditions of Šuvakov & Dmitrašinović 2013's Table 1 must close after their period T under the default occupant (SD-1). The Belgrade gallery's 206 sequence orbits must close after their period at their printed precision (six decimals in p₁, p₂), and each orbit's sequence label must agree with its word as the gallery prints them (BG-1). The Belgrade gallery's 57 BHH satellites at non-zero angular momentum must close after their period from the gallery's relative coordinates, and the atlas's 15 `bhhsat` rows must close as closure tests only (rule 13) (BG-2). The 38 orbits of Hudomal's thesis Table 23 must close at six-digit precision, the table's return-proximity column being the published bar, and the five thesis labels renamed later must be recorded under both names (HU-3). The periods at E = −0.5 and their ratios to the figure-eight's T_M8 = 26.1281 in Hudomal's Table 2 (for example yarn / moth I = 3.00114 against a word-length ratio of 3) must be reproduced from our runs, rescaled to E = −0.5 by a tested function (rule 11) (HU-5). Each tolerance is a calibration, proposed here with its evidence and confirmed by the human with the M9 report (R-71).
+
+## References
+- `docs/design/principia_dd_replication.md` § "5.4 The Belgrade orbits"
+- `docs/design/principia_dd_replication.md` § "8.1 Carried over from the 25 Oct instruction"
+- `docs/design/principia_dd_replication.md` § "8.2 Learnt since"
+- `docs/design/principia_dd_replication.md` § "8.3 How the tasks apply them"
+- `decisions.md` § "R-594 — The replication suite is adopted: published three-body results reproduced as engine tests in tiers A–D, ported as a design doc that extends the validation-orbits doc; each target a VAL requirement with its tolerance a calibration; every published table transcribed twice and never tuned to; sequenced by need; the questions it lists queued *(changes no ruling or requirement in force; recorded with R-629's port)*"
+- `decisions.md` § "R-629 — PLAN.md is adopted as the single plan for verification and replication, superseding as the working plan the 25 Oct instruction's tier tables, sequencing and fetch list; its seven draft requirements are ported as M3 requirements with their tolerances as calibrations; R-594's port follows it, with the orbit catalogue's six tests as tasks; the plan's other questions stay queued *(refines R-594; answers PLAN.md § 9 questions 1 and 2)*"
+- `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+- `docs/design/principia_dd_validation_orbits.md` § "1.4 Šuvakov–Dmitrašinović (13 families, 2013) and Broucke–Hénon–Hadjidemetriou"
+- `docs/notes/principia_validation_ground_truth_note.md` § "Four tiers of ground truth (increasing in what they prove)"
+- `docs/notes/principia_validation_ground_truth_note.md` § "Chaos forbids pointwise comparison (exact vs structural)"
+
+## Deliverables
+- `fixtures/belgrade/prl_2013_table1.csv`, `fixtures/belgrade/hudomal_table23.csv` and `fixtures/belgrade/hudomal_table2.csv`, each transcribed twice from its source, the copies and their diff kept, each row with its page; the gallery CSV copied with its sha256.
+- The relative-coordinate and E = −0.5 remaps as tested functions; `crates/validation/src/gates/belgrade.rs`.
+- The calibration proposals for the five tolerances.
+
+## Acceptance tests
+- `cargo xtask gate replication --target SD-1` — Table 1 transcribed twice from the PRL (rule 2) and cross-checked against the gallery CSV (which agrees with the PRL to 4.1e-5); per orbit closure and fitted order within REQ-VAL-229; control: one orbit integrated to 0.9·T must fail; the outcome recorded with its tier: PASS where the comparison above holds, otherwise EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED, never a merge condition (R-649); the control still has to fire (REQ-VAL-228).
+- `cargo xtask gate replication --target SD-1 --propose` — the proposal measures what sets the tolerance and states it, with its evidence; reviewer-checked, confirmed by the human with the M9 report and recorded in `decisions.md` (REQ-VAL-229).
+- `cargo xtask gate replication --target BG-1` — the gallery CSV (sha256 recorded); per orbit closure within REQ-VAL-231; the label/word agreement checked on the printed data, and any disagreement queued, not corrected (rule 10); control: one orbit with p₁ perturbed in its sixth decimal by ten units must fail; the outcome recorded with its tier: PASS where the comparison above holds, otherwise EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED, never a merge condition (R-649); the control still has to fire (REQ-VAL-230).
+- `cargo xtask gate replication --target BG-1 --propose` — the proposal measures what sets the tolerance and states it, with its evidence; reviewer-checked, confirmed by the human with the M9 report and recorded in `decisions.md` (REQ-VAL-231).
+- `cargo xtask gate replication --target BG-2` — the relative-coordinate remap into the canonical frame is a tested function with a round trip (rule 11); per orbit closure within REQ-VAL-233; the gallery's satellite data were extracted by script and are not cross-checked against a paper, which the report says; control: one satellite with the sign of L flipped must fail; the outcome recorded with its tier: PASS where the comparison above holds, otherwise EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED, never a merge condition (R-649); the control still has to fire (REQ-VAL-232).
+- `cargo xtask gate replication --target BG-2 --propose` — the proposal measures what sets the tolerance and states it, with its evidence; reviewer-checked, confirmed by the human with the M9 report and recorded in `decisions.md` (REQ-VAL-233).
+- `cargo xtask gate replication --target HU-3` — Table 23 transcribed twice from docs/incoming/2026-10-26_orbit_catalogues/hudomal_2015_msc_belgrade.pdf (rule 2); per orbit our return proximity beside the table's, within REQ-VAL-235; control: an orbit integrated to 0.9·T must fail; the outcome recorded with its tier: PASS where the comparison above holds, otherwise EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED, never a merge condition (R-649); the control still has to fire (REQ-VAL-234).
+- `cargo xtask gate replication --target HU-3 --propose` — the proposal measures what sets the tolerance and states it, with its evidence; reviewer-checked, confirmed by the human with the M9 report and recorded in `decisions.md` (REQ-VAL-235).
+- `cargo xtask gate replication --target HU-5` — Table 2 transcribed twice (rule 2); per orbit T at E = −0.5 and the ratio within REQ-VAL-239; control: a rescaling with the wrong power of |E| must fail; the outcome recorded with its tier: PASS where the comparison above holds, otherwise EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED, never a merge condition (R-649); the control still has to fire (REQ-VAL-238).
+- `cargo xtask gate replication --target HU-5 --propose` — the proposal measures what sets the tolerance and states it, with its evidence; reviewer-checked, confirmed by the human with the M9 report and recorded in `decisions.md` (REQ-VAL-239).
+- `scripts/check_no_atlas_params.sh` — prints `ok`: `atlas-params.json` is not committed, and nothing in this task reads it.
+- `git diff --no-index` of each fixture table's two transcriptions — empty, or each difference settled against the page and recorded beside the fixture, before the fixture is committed (R-594 item 4).
+
+## Notes
+- Calibrations proposed here (R-71; human confirmation with the M9 report, then recorded in decisions.md): REQ-VAL-229, REQ-VAL-231, REQ-VAL-233, REQ-VAL-235, REQ-VAL-239.
+- R-594 item 4: every published table this task commits as a fixture is transcribed twice, independently, and the two copies are diffed before the commit, each row recording its page; both copies and the diff stay beside the fixture. A table a record has already transcribed twice and diffed is copied with its sha256 and the record's diff cited. Never tune to match: a disagreement with the paper goes to `REVIEW_QUEUE.md` with both numbers, as RQ-570 did, and the fixture is not edited.
+- The atlas data are used under CC BY 4.0, credited to https://www.threebodyorbits.com with `docs/incoming/2026-10-26_orbit_catalogues/CITATIONS.md`'s per-family credits, on every fixture, export and figure. `atlas-params.json` never enters the repo (`scripts/check_no_atlas_params.sh`); no task may commit it.
+- Reference data are read from the records named in each requirement's verify; the records stay records (R-159), and the contract is `principia_dd_replication.md`.
+- *30 Oct 2026 (R-649, R-650):* moved to M9, external replication, and renumbered: formerly TASK-M3-53 (milestone M3). Its targets are measurements, never gates: each is scored in M9, or early as a peek (information only, `docs/verification/peek_log.md`), and its outcome is PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED, never a failure that blocks; like-for-like is checked first, and nothing is tuned, loosened or special-cased to pass (`docs/design/principia_dd_replication.md` § "12.3 Outcomes, the like-for-like check and the forbidden moves"). The tier each binds is § "12.2 Tiers"'s: (b). Its calibrations are confirmed by the human with the M9 report (REQ-VAL-340), *was:* "at the M3 gate".
