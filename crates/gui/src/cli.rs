@@ -90,8 +90,10 @@ pub mod mock {
     /// point.
     pub const WINDOW_SIZE: [f32; 2] = [1440.0, 900.0];
 
-    /// The measured window's size when it opens: wider by the panel's strip, so the app keeps [`WINDOW_SIZE`], as the
-    /// browser runner's window (`web/skeleton/runner/chrome.mjs`) asks for it.
+    /// The measured window's size when it opens, its inner size: wider by the panel's strip, so the app keeps
+    /// [`WINDOW_SIZE`] where the display has room. The browser runner (`web/skeleton/runner/chrome.mjs`) asks for the same
+    /// numbers, but `--window-size` sets Chrome's outer window, so there the app's height is less by the toolbars. The
+    /// two sizes need not match: each run's report gives the size it got, `app_width` and `app_height`.
     pub const MEASURED_WINDOW_SIZE: [f32; 2] =
         [WINDOW_SIZE[0] + measure::PANEL_WIDTH, WINDOW_SIZE[1]];
 
