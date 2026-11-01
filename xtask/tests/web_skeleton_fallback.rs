@@ -1,6 +1,6 @@
 //! The skeleton's fallback (TASK-M8-86, R-627): a worker layout that fails before its first frame has returned gives way
-//! to the main thread. `web_skeleton_fallback.mjs` runs the real `worker.js` on Node, with a stub `gui.js`; each control
-//! runs it on the file with the fix undone.
+//! to the main thread, leaving none of its forwards behind. `web_skeleton_fallback.mjs` runs the real `worker.js` and
+//! `loader.js` on Node, with a stub `gui.js` and a stub page; each control runs it on the file with the fix undone.
 
 use std::sync::atomic::{AtomicU32, Ordering};
 
@@ -112,5 +112,167 @@ negative_control!(
             "async function start({",
             "async function start(args) { self.postMessage({ type: \"started\" }); return begin(args); }\nasync function begin({"
         )]
+    )
+);
+
+/// One edit of `loader.js`.
+const fn loader<'a>(from: &'a str, to: &'a str) -> [(&'a str, &'a str, &'a str); 1] {
+    [("loader.js", from, to)]
+}
+
+const FAILED: &str = "loader_failed_worker_gives_up_its_forwards";
+
+#[test]
+fn loader_failed_worker_gives_up_its_forwards() {
+    run(FAILED, &[]);
+}
+
+mod failed_input_stays {
+    use super::*;
+    negative_control!(
+        loader_failed_worker_gives_up_its_forwards,
+        "the hidden input not removed",
+        expected = "the hidden input stays",
+        run(FAILED, &loader("    ime.remove();\n", ""))
+    );
+}
+
+mod failed_observer_stays {
+    use super::*;
+    negative_control!(
+        loader_failed_worker_gives_up_its_forwards,
+        "the ResizeObserver not disconnected",
+        expected = "the ResizeObserver stays",
+        run(FAILED, &loader("    resized.disconnect();\n", ""))
+    );
+}
+
+mod failed_keys_stay {
+    use super::*;
+    negative_control!(
+        loader_failed_worker_gives_up_its_forwards,
+        "the window's keydown listener left in place",
+        expected = "the window's keydown is still forwarded",
+        run(
+            FAILED,
+            &loader(
+                "addEventListener(\"keydown\", key(true), { signal });",
+                "addEventListener(\"keydown\", key(true));"
+            )
+        )
+    );
+}
+
+mod failed_focus_stays {
+    use super::*;
+    negative_control!(
+        loader_failed_worker_gives_up_its_forwards,
+        "the window's focus listener left in place",
+        expected = "the window's focus is still forwarded",
+        run(
+            FAILED,
+            &loader(
+                "addEventListener(\"focus\", () => { ime.focus(); post(\"focus\", true); }, { signal });",
+                "addEventListener(\"focus\", () => { ime.focus(); post(\"focus\", true); });"
+            )
+        )
+    );
+}
+
+mod failed_canvas_stays {
+    use super::*;
+    negative_control!(
+        loader_failed_worker_gives_up_its_forwards,
+        "the old canvas's press listener left in place",
+        expected = "the canvas's pointerdown is still forwarded",
+        run(
+            FAILED,
+            &loader(
+                "canvas.addEventListener(\"pointerdown\", button(true), { signal });",
+                "canvas.addEventListener(\"pointerdown\", button(true));"
+            )
+        )
+    );
+}
+
+mod failed_no_focus {
+    use super::*;
+    negative_control!(
+        loader_failed_worker_gives_up_its_forwards,
+        "the fallback's canvas not focused",
+        expected = "the fallback's canvas does not hold the keyboard",
+        run(FAILED, &loader("  canvas.focus();\n", ""))
+    );
+}
+
+#[test]
+fn loader_broken_worker_gives_up_its_forwards() {
+    run("loader_broken_worker_gives_up_its_forwards", &[]);
+}
+
+negative_control!(
+    loader_broken_worker_gives_up_its_forwards,
+    "failed stops the worker but keeps the forwards",
+    expected = "the hidden input stays",
+    run(
+        "loader_broken_worker_gives_up_its_forwards",
+        &loader(
+            "      clearTimeout(timer);\n      stop();\n",
+            "      clearTimeout(timer);\n      worker.terminate();\n"
+        )
+    )
+);
+
+#[test]
+fn loader_timed_out_worker_gives_up_its_forwards() {
+    run("loader_timed_out_worker_gives_up_its_forwards", &[]);
+}
+
+negative_control!(
+    loader_timed_out_worker_gives_up_its_forwards,
+    "the timer stops the worker but keeps the forwards",
+    expected = "the hidden input stays",
+    run(
+        "loader_timed_out_worker_gives_up_its_forwards",
+        &loader(
+            "      stop();\n      reject(",
+            "      worker.terminate();\n      reject("
+        )
+    )
+);
+
+#[test]
+fn loader_started_worker_keeps_its_forwards() {
+    run("loader_started_worker_keeps_its_forwards", &[]);
+}
+
+negative_control!(
+    loader_started_worker_keeps_its_forwards,
+    "the forwards undone on the start",
+    expected = "a key is not forwarded",
+    run(
+        "loader_started_worker_keeps_its_forwards",
+        &loader(
+            "          started = true;\n",
+            "          started = true;\n          unforward();\n"
+        )
+    )
+);
+
+#[test]
+fn loader_fatal_worker_gives_up_its_forwards() {
+    run("loader_fatal_worker_gives_up_its_forwards", &[]);
+}
+
+negative_control!(
+    loader_fatal_worker_gives_up_its_forwards,
+    "a fatal failure keeps the forwards",
+    expected = "the hidden input stays",
+    run(
+        "loader_fatal_worker_gives_up_its_forwards",
+        &loader(
+            "      clearTimeout(timer);\n      stop();\n",
+            "      clearTimeout(timer);\n      worker.terminate();\n"
+        )
     )
 );

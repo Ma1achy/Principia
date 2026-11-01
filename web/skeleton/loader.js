@@ -4,7 +4,8 @@
 // to the main thread. A worker that fails is recorded, its reason and the layout it fell back to in the panel.
 //
 // In the worker layout this loader forwards what a worker cannot receive: pointer, wheel, keys, text, the clipboard's
-// paste, copy and cut, focus and resize. Pointer moves are coalesced, one a frame (caching_contract Part 6a).
+// paste, copy and cut, focus and resize. Pointer moves are coalesced, one a frame (caching_contract Part 6a). All of it
+// is undone when the worker layout is given up, or its hidden input would keep the keyboard from the app that replaces it.
 //
 // The panel's fields are published as `window.__principiaMeasure`, for the runner's scripts.
 import init, { start_main, title } from "./gui.js";
@@ -106,7 +107,10 @@ function freshCanvas() {
 
 async function startMain(env, fallbackReason) {
   document.title = title();
-  await start_main(document.getElementById("app"), encode(env, "main", fallbackReason), (json) => publish(JSON.parse(json)));
+  const canvas = document.getElementById("app");
+  await start_main(canvas, encode(env, "main", fallbackReason), (json) => publish(JSON.parse(json)));
+  // eframe reads keys only while its canvas or its text agent has the focus.
+  canvas.focus();
 }
 
 function canvasSize(canvas) {
@@ -114,7 +118,10 @@ function canvasSize(canvas) {
   return [Math.round(canvas.clientWidth * dpr), Math.round(canvas.clientHeight * dpr), dpr];
 }
 
+// Installs the forwards; returns what undoes them.
 function forward(worker, canvas) {
+  const listening = new AbortController();
+  const { signal } = listening;
   const post = (method, ...args) => worker.postMessage({ type: "call", method, args });
   const mods = (e) => [e.shiftKey, e.ctrlKey, e.altKey, e.metaKey];
   let moved = null;
@@ -125,8 +132,8 @@ function forward(worker, canvas) {
   canvas.addEventListener("pointermove", (e) => {
     if (!moved) requestAnimationFrame(flush);
     moved = [e.clientX, e.clientY];
-  });
-  canvas.addEventListener("pointerleave", () => { flush(); post("pointer_gone"); });
+  }, { signal });
+  canvas.addEventListener("pointerleave", () => { flush(); post("pointer_gone"); }, { signal });
   const button = (pressed) => (e) => {
     flush();
     if (pressed) canvas.setPointerCapture(e.pointerId);
@@ -134,14 +141,14 @@ function forward(worker, canvas) {
     ime.focus();
     e.preventDefault();
   };
-  canvas.addEventListener("pointerdown", button(true));
-  canvas.addEventListener("pointerup", button(false));
-  canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+  canvas.addEventListener("pointerdown", button(true), { signal });
+  canvas.addEventListener("pointerup", button(false), { signal });
+  canvas.addEventListener("contextmenu", (e) => e.preventDefault(), { signal });
   canvas.addEventListener("wheel", (e) => {
     flush();
     post("wheel", e.deltaX, e.deltaY, e.deltaMode, ...mods(e));
     e.preventDefault();
-  }, { passive: false });
+  }, { passive: false, signal });
   // A hidden input holds the keyboard: typed text and compositions arrive on it, and the page's clipboard events.
   const ime = document.createElement("input");
   ime.id = "ime";
@@ -149,8 +156,8 @@ function forward(worker, canvas) {
   document.body.append(ime);
   ime.focus();
   const typed = (text) => { if (text) post("text", text); ime.value = ""; };
-  ime.addEventListener("input", (e) => { if (!e.isComposing) typed(e.data); });
-  ime.addEventListener("compositionend", (e) => typed(e.data));
+  ime.addEventListener("input", (e) => { if (!e.isComposing) typed(e.data); }, { signal });
+  ime.addEventListener("compositionend", (e) => typed(e.data), { signal });
   const key = (pressed) => (e) => {
     if (e.isComposing) return;
     post("key", e.key, e.code, pressed, e.repeat, ...mods(e));
@@ -159,17 +166,24 @@ function forward(worker, canvas) {
     if (e.key.length !== 1 && e.key !== "Dead" && !chord) e.preventDefault();
     if (chord && !"vcx".includes(e.key.toLowerCase())) e.preventDefault();
   };
-  addEventListener("keydown", key(true));
-  addEventListener("keyup", key(false));
+  addEventListener("keydown", key(true), { signal });
+  addEventListener("keyup", key(false), { signal });
   addEventListener("paste", (e) => {
     post("paste", e.clipboardData.getData("text"));
     e.preventDefault();
-  });
-  addEventListener("copy", (e) => { post("copy"); e.preventDefault(); });
-  addEventListener("cut", (e) => { post("cut"); e.preventDefault(); });
-  addEventListener("focus", () => { ime.focus(); post("focus", true); });
-  addEventListener("blur", () => post("focus", false));
-  new ResizeObserver(() => post("resize", ...canvasSize(canvas))).observe(canvas);
+  }, { signal });
+  addEventListener("copy", (e) => { post("copy"); e.preventDefault(); }, { signal });
+  addEventListener("cut", (e) => { post("cut"); e.preventDefault(); }, { signal });
+  addEventListener("focus", () => { ime.focus(); post("focus", true); }, { signal });
+  addEventListener("blur", () => post("focus", false), { signal });
+  const resized = new ResizeObserver(() => post("resize", ...canvasSize(canvas)));
+  resized.observe(canvas);
+  return () => {
+    listening.abort();
+    resized.disconnect();
+    ime.remove();
+    moved = null;
+  };
 }
 
 // Starts the worker layout; rejects with the reason it cannot run.
@@ -186,13 +200,18 @@ function startWorker(env) {
     }
     const worker = new Worker("worker.js", { type: "module" });
     let started = false;
-    const timer = setTimeout(() => {
+    let unforward = () => {};
+    const stop = () => {
       worker.terminate();
+      unforward();
+    };
+    const timer = setTimeout(() => {
+      stop();
       reject(`the worker did not start in ${WORKER_START_TIMEOUT_MS} ms`);
     }, WORKER_START_TIMEOUT_MS);
     const failed = (reason) => {
       clearTimeout(timer);
-      worker.terminate();
+      stop();
       if (started) fatal(reason, {});
       else reject(reason);
     };
@@ -221,7 +240,7 @@ function startWorker(env) {
     };
     const [width, height, dpr] = canvasSize(canvas);
     const offscreen = canvas.transferControlToOffscreen();
-    forward(worker, canvas);
+    unforward = forward(worker, canvas);
     worker.postMessage(
       { type: "start", canvas: offscreen, environment: encode(env, "worker", null), width, height, dpr, isMac },
       [offscreen],

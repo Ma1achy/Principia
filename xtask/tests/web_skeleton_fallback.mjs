@@ -88,7 +88,179 @@ const WORKER_SCENARIOS = {
   },
 };
 
-const scenarios = { ...WORKER_SCENARIOS };
+// loader.js on a stub page: its worker, its timers, and the input it installs, run by hand.
+class Element extends EventTarget {
+  style = {};
+  clientWidth = 800;
+  clientHeight = 600;
+  focus() { page.document.activeElement = this; }
+  remove() {
+    page.body = page.body.filter((e) => e !== this);
+    if (page.document.activeElement === this) page.document.activeElement = null;
+  }
+  replaceWith(other) { if (page.app === this) page.app = other; }
+  cloneNode() { return new Element(); }
+  setPointerCapture() {}
+  transferControlToOffscreen() { return {}; }
+}
+
+const page = {
+  app: null,
+  body: [],
+  observers: [],
+  workers: [],
+  timers: [],
+  window: new EventTarget(),
+  document: {
+    title: "",
+    activeElement: null,
+    body: { append(element) { page.body.push(element); } },
+    getElementById: () => page.app,
+    createElement: () => new Element(),
+  },
+};
+
+async function startLoader() {
+  page.app = new Element();
+  define("location", { search: "?layout=worker" });
+  define("window", {});
+  define("navigator", { gpu: {}, platform: "test" });
+  define("document", page.document);
+  define("devicePixelRatio", 1);
+  define("crossOriginIsolated", true);
+  define("OffscreenCanvas", class {});
+  define("requestAnimationFrame", () => {});
+  define("addEventListener", page.window.addEventListener.bind(page.window));
+  define("setTimeout", (callback) => page.timers.push(callback));
+  define("clearTimeout", () => { page.timers.length = 0; });
+  define("ResizeObserver", class {
+    connected = false;
+    constructor() { page.observers.push(this); }
+    observe() { this.connected = true; }
+    disconnect() { this.connected = false; }
+  });
+  define("Worker", class {
+    posts = [];
+    terminated = false;
+    constructor() { page.workers.push(this); }
+    postMessage(message) { this.posts.push(message); }
+    terminate() { this.terminated = true; }
+  });
+  console.warn = () => {};
+  console.error = () => {};
+  const canvas = page.app;
+  await load("loader.js");
+  await settle();
+  const worker = page.workers[0];
+  check(worker, "the worker layout did not start");
+  const calls = () => worker.posts.filter((m) => m.type === "call").map((m) => m.method);
+  const ime = page.body[0];
+  check(ime && page.document.activeElement === ime, "the hidden input does not hold the keyboard");
+  return { canvas, worker, calls, ime };
+}
+
+const event = (type, fields = {}) => Object.assign(new Event(type, { cancelable: true }), fields);
+const KEY = { key: "ArrowLeft", code: "ArrowLeft", repeat: false };
+const windowEvents = () => [
+  event("keydown", KEY),
+  event("keyup", KEY),
+  event("paste", { clipboardData: { getData: () => "text" } }),
+  event("copy"),
+  event("cut"),
+  event("focus"),
+  event("blur"),
+];
+const canvasEvents = () => ["pointermove", "pointerleave", "pointerdown", "pointerup", "contextmenu", "wheel"].map((type) => event(type, { pointerId: 1 }));
+
+// The forwards work, or nothing that follows shows they went.
+function checkForwarding({ canvas, calls, ime }) {
+  const before = calls().length;
+  const key = event("keydown", KEY);
+  page.window.dispatchEvent(key);
+  check(calls().length === before + 1 && calls().at(-1) === "key", "a key is not forwarded");
+  check(key.defaultPrevented, "the worker layout left an arrow key to the page");
+  check(page.body.includes(ime), "the hidden input went");
+  check(page.observers[0].connected, "the ResizeObserver is not connected");
+  canvas.dispatchEvent(event("pointerdown", { pointerId: 1 }));
+  check(calls().at(-1) === "pointer_button", "a press is not forwarded");
+}
+
+// Nothing of the worker layout is left: not its input, its focus, nor a listener on the window, the canvas or the input.
+function checkUndone({ canvas, calls, ime }) {
+  check(!page.body.includes(ime), "the hidden input stays");
+  check(page.document.activeElement !== ime, "the hidden input keeps the focus");
+  check(!page.observers[0].connected, "the ResizeObserver stays");
+  const before = calls().length;
+  for (const e of windowEvents()) {
+    page.window.dispatchEvent(e);
+    check(calls().length === before, `the window's ${e.type} is still forwarded`);
+    check(!e.defaultPrevented, `the window's ${e.type} is still cancelled`);
+  }
+  check(page.document.activeElement !== ime, "the window's focus gives the hidden input the focus back");
+  for (const e of canvasEvents()) {
+    canvas.dispatchEvent(e);
+    check(calls().length === before, `the canvas's ${e.type} is still forwarded`);
+    check(!e.defaultPrevented, `the canvas's ${e.type} is still cancelled`);
+  }
+  for (const type of ["input", "compositionend"]) {
+    ime.dispatchEvent(event(type, { data: "a" }));
+    check(calls().length === before, `the input's ${type} is still forwarded`);
+  }
+}
+
+// The worker layout given up: the worker is stopped, its forwards undone, and the main thread holds a new canvas and the
+// keyboard.
+async function checkFallback(started) {
+  await settle();
+  check(started.worker.terminated, "the worker was not stopped");
+  checkUndone(started);
+  const canvas = gui.mainCanvases[0];
+  check(canvas, "the app did not start on the main thread");
+  check(canvas !== started.canvas && canvas === page.app, "the fallback runs on the canvas the worker took");
+  check(page.document.activeElement === canvas, "the fallback's canvas does not hold the keyboard");
+}
+
+const LOADER_SCENARIOS = {
+  async loader_failed_worker_gives_up_its_forwards() {
+    const started = await startLoader();
+    checkForwarding(started);
+    started.worker.onmessage({ data: { type: "failed", reason: "forced" } });
+    await checkFallback(started);
+  },
+  async loader_broken_worker_gives_up_its_forwards() {
+    const started = await startLoader();
+    checkForwarding(started);
+    started.worker.onerror({ message: "forced" });
+    await checkFallback(started);
+  },
+  async loader_timed_out_worker_gives_up_its_forwards() {
+    const started = await startLoader();
+    checkForwarding(started);
+    page.timers[0]();
+    await checkFallback(started);
+  },
+  async loader_started_worker_keeps_its_forwards() {
+    const started = await startLoader();
+    started.worker.onmessage({ data: { type: "started" } });
+    await settle();
+    check(!started.worker.terminated, "a started worker was stopped");
+    check(page.timers.length === 0, "a started worker is still on the start's timer");
+    checkForwarding(started);
+    check(gui.mainCanvases.length === 0, "a started worker gave way to the main thread");
+  },
+  async loader_fatal_worker_gives_up_its_forwards() {
+    const started = await startLoader();
+    started.worker.onmessage({ data: { type: "started" } });
+    await settle();
+    started.worker.onmessage({ data: { type: "failed", reason: "forced" } });
+    await settle();
+    check(started.worker.terminated, "the worker was not stopped");
+    check(gui.mainCanvases.length === 0, "a worker past its first frame fell back");
+    checkUndone(started);
+  },
+};
+
+const scenarios = { ...WORKER_SCENARIOS, ...LOADER_SCENARIOS };
 if (!scenarios[scenario]) throw new Error(`no scenario ${scenario}`);
 await scenarios[scenario]();
 process.exit(0);
