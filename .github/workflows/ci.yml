@@ -797,6 +797,11 @@ jobs:
         run: cargo nextest run -p engine --features controls encode_ --no-capture
       - name: cargo test -p engine --features controls encode_ --doc
         run: cargo test -p engine --features controls encode_ --doc
+      # The agreement presets' tolerance on Metal (REQ-COL-060; R-297; TASK-M2-29): the fragment compiled as Metal
+      # compiles it, with fast-math, against the kernel decode stage compiled with compute fast-math off, every M2
+      # chart's measured |E − E₀| written to the gate report; the dispatch scramble still fails it.
+      - name: cargo xtask gate decode-agreement
+        run: cargo xtask gate decode-agreement
       # The codegen self-test on Metal, its controls included (debug_tooling_plan §H; TASK-M0-15).
       - name: cargo nextest run -p validation --features controls codegen_selftest
         run: cargo nextest run -p validation --features controls codegen_selftest --no-capture
@@ -889,6 +894,11 @@ jobs:
         run: cargo nextest run -p validation --features controls compute_fast_math --no-capture
       - name: cargo test -p validation --features controls compute_fast_math --doc
         run: cargo test -p validation --features controls compute_fast_math --doc
+      # The agreement presets' tolerance on lavapipe (REQ-COL-060; R-297; TASK-M2-29): the fragment compiled as
+      # Vulkan compiles it against the kernel decode stage compiled with compute fast-math off, every M2 chart's
+      # measured |E − E₀| written to the gate report; the dispatch scramble still fails it.
+      - name: cargo xtask gate decode-agreement
+        run: cargo xtask gate decode-agreement
       # The codegen self-test on lavapipe, its controls included (debug_tooling_plan §H; TASK-M0-15).
       - name: cargo nextest run -p validation --features controls codegen_selftest
         run: cargo nextest run -p validation --features controls codegen_selftest --no-capture

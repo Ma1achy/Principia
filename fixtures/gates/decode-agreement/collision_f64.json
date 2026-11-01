@@ -1,0 +1,11 @@
+{
+  "description": "The collision windows against the exact value (REQ-COL-060; colour_composition §6, the conditioning-aware scale; RQ-623): the collision input's windows with the payload's K₀ and V₀ the f64 decodeOnly()'s at each sample's point, rounded to f32. Every f32 evaluation misses them by about κ·eps beside a collision, on every backend, so this shows the conditioned worst flat under refinement where the fragment and the decode stage compile alike (lavapipe); it stays within the tolerance at every depth.",
+  "side": [64, 64],
+  "stored": "f64",
+  "windows": [
+    { "chart": "shape_sphere", "centre": [0.0392193, 0.5], "depths": [11, 13, 15, 17, 19, 21, 23] },
+    { "chart": "shape_sphere", "centre": [0.5, 0.5], "depths": [11, 13, 15, 17, 19, 21, 23] },
+    { "chart": "shape_sphere", "centre": [0.844518, 0.5], "depths": [11, 13, 15, 17, 19, 21, 23] }
+  ],
+  "expected": "pass"
+}
