@@ -3432,3 +3432,94 @@ negative_control!(
     expected = "kill missed its group",
     group_kill_case(false)
 );
+
+// --- A job's grace after SIGTERM, the end of the violations' walk, the runner's own command -------------------------
+
+/// A job whose TERM handler takes `handler` to finish, marking `cleaned` and exiting 7, cancelled on a queue whose grace
+/// is `grace` s: SIGKILL waits for the grace, so a handler inside it finishes, and the job keeps the handler's status.
+fn grace_case(tag: &str, grace: u64, handler: &str) {
+    let q = Q::new(tag, &format!("grace = {grace}\n"));
+    let script =
+        format!("trap 'sleep {handler}; touch cleaned; exit 7' TERM; touch ready; sleep 30 & wait");
+    let id = q.submit("build", "grace", &[], &["sh", "-c", &script]);
+    let ready = until(30, || q.work().join("ready").exists());
+    q.run(&["cancel", &id.to_string()]);
+    let (code, _) = q.wait(id);
+    let exit = q.queue().load(id).map(|job| job.exit);
+    let cleaned = q.work().join("cleaned").exists();
+    q.finish();
+    assert!(
+        ready && code == 130 && cleaned && exit == Ok(Some(7)),
+        "TERM handler cut short: ready {ready}, status {code}, exit {exit:?}, cleaned {cleaned}"
+    );
+}
+
+#[test]
+fn jobq_sigkill_waits_for_the_grace() {
+    grace_case("jobq_grace", 30, "0.5");
+}
+
+negative_control!(
+    jobq_sigkill_waits_for_the_grace,
+    "a handler that outlasts the grace is killed, and the check sees it",
+    expected = "TERM handler cut short",
+    grace_case("jobq_grace_control", 1, "5")
+);
+
+#[test]
+fn jobq_violations_stop_their_walk_at_the_top_of_the_tree() {
+    let rustc = "/tc/bin/rustc";
+    // Processes 0 and 1 stand in the table, in the groups given as the queue's: the walk must not reach them, so what
+    // hangs off them is outside the queue.
+    let procs = [
+        proc(0, 0, 7, "/kernel", "kernel"),
+        proc(1, 0, 1, "/sbin/init", "init"),
+        proc(600, 1, 600, rustc, "rustc --crate-name a"),
+        proc(601, 0, 601, rustc, "rustc --crate-name b"),
+    ];
+    check_violations(&procs, &[1, 7], &[600, 601]);
+}
+
+negative_control!(
+    jobq_violations_stop_their_walk_at_the_top_of_the_tree,
+    "under a parent past the top of the tree, the walk does reach the queue's group",
+    expected = "violations named wrong",
+    check_violations(
+        &[
+            proc(50, 1, 1, "/bin/sh", "sh"),
+            proc(600, 50, 600, "/tc/bin/rustc", "rustc --crate-name a")
+        ],
+        &[1],
+        &[600]
+    )
+);
+
+/// `xtask job <args>` on a queue with nothing to do must run a runner on the queue `PRINCIPIA_JOBQ` names, which starts,
+/// idles for a second, exits 0 and gives its lock back.
+fn runner_command_case(tag: &str, args: &[&str]) {
+    let q = Q::new(tag, "");
+    let out = q.run(args);
+    let log = String::from_utf8_lossy(&out.stderr);
+    let (started, idled) = (
+        log.contains(": started"),
+        log.contains("idle for 1 s; exiting"),
+    );
+    let locked = q.dir.join("runner.lock").exists();
+    assert!(
+        out.status.success() && started && idled && !locked,
+        "job runner did not run: {:?}, lock left {locked}, log {log:?}",
+        out.status
+    );
+}
+
+#[test]
+fn jobq_runner_command_runs_on_the_environments_queue() {
+    runner_command_case("jobq_runner_command", &["runner"]);
+}
+
+negative_control!(
+    jobq_runner_command_runs_on_the_environments_queue,
+    "a runner command with a stray argument is refused and runs nothing",
+    expected = "job runner did not run",
+    runner_command_case("jobq_runner_command_control", &["runner", "a", "b"])
+);

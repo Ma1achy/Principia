@@ -334,3 +334,7 @@ justification = "Z0_HALF_RANGE is the constant 1.0, and dividing by 1.0 equals m
 [[equivalent]]
 mutant = "xtask/src/jobq.rs:1605:26: replace < with <= in end_stale_group"
 justification = "the two differ only if the clock reads exactly the deadline, to the nanosecond, at that check: at most one more 100 ms sleep and look at the group, inside the grace's own 100 ms granularity, and the same outcome"
+
+[[equivalent]]
+mutant = "xtask/src/jobq.rs:1511:65: replace | with ^ in leader_exited"
+justification = "WNOHANG and WNOWAIT are distinct single-bit waitid options on both the Linux and the Mac targets, so their ^ is their |, and the options passed to waitid are the same bits"
