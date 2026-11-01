@@ -5649,7 +5649,7 @@
   note: "R-605 (25 Oct 2026, RQ-528 (d)): REQ-INT-085 is closed by TASK-M3-05 before Heggie is built, so the recalibration is its own calibration, applied per R-369. Closed by TASK-M3-41. Physics review 5644374613 of PR #293, F2 (applied per R-369): the value replaces REQ-INT-085's one threshold, so the proposal reports every occupant's verdict at it."
 - id: REQ-INT-110
   area: INT
-  statement: "With `epsilon` ≠ 0 the force law must be Plummer softening, V = −Σ mᵢmⱼ/√(r² + ε²) with F the negative gradient of V, ε a fraction of the initial hyperradius R fixed at t = 0 and never co-moving, and E, E₀ and the drift meters must read the softened V."
+  statement: "With `epsilon` ≠ 0 the force law must be Plummer softening, V = −Σ mᵢmⱼ/√(r² + ε²) with F the negative gradient of V, ε a fraction of the initial hyperradius R fixed at t = 0 and never co-moving (R₀ = √(I₀/M) = 1 in the gauge, so the sim-key value is the fraction and the length, read as given and never recomputed from the state), and E, E₀ and the drift meters must read the softened V."
   source:
   - file: decisions.md
     section: "R-654 — The softened force law is Plummer softening, `V = −Σ mᵢmⱼ/√(r² + ε²)`, with `ε` canonical, a fraction of the initial hyperradius `R` fixed at `t = 0` and never co-moving, recorded in every output header like `r_coll`; energy and drift are defined under the softened potential; its task is scheduled late, after the core build, and runs with `ε ≠ 0` stay refused until it lands *(closes RQ-627; queues RQ-656)*"
@@ -5658,14 +5658,14 @@
   - file: docs/design/principia_dd_generation_root.md
     section: Open
   verify:
+    detail: "the force equals the central difference of V at f64, for ε = 0, a small ε and an ε above the pair distance; ε = 0 is bit-identical to the Newtonian force and energy; ε is bitwise the sim-key value at every step and on every sample, along a run in which R changes; a softened leapfrog's drift under the softened V converges with step size; at ε ≠ 0 the decode stage's E₀ agrees with the kernel's E₀ under the softened V, the descriptor's V₀ being in the form RQ-656's ruling gives; controls: E read with the Newtonian V at ε ≠ 0 fails that drift bound, an E₀ read with the Newtonian V at ε ≠ 0 fails that agreement, and an ε recomputed from the state or from R(t) fails the bitwise check"
     method: unit test
-    detail: "the force equals the central difference of V at f64, for ε = 0, a small ε and an ε above the pair distance; ε = 0 is bit-identical to the Newtonian force and energy; ε scales with the initial R and does not change as R does along a run; a softened leapfrog's drift under the softened V converges with step size; at ε ≠ 0 the decode stage's E₀ agrees with the kernel's E₀ under the softened V, the descriptor's V₀ being in the form RQ-656's ruling gives; controls: E read with the Newtonian V at ε ≠ 0 fails that drift bound, and an E₀ read with the Newtonian V at ε ≠ 0 fails that agreement"
   rulings:
   - R-654
   milestone: M9
   rq:
   - RQ-656
-  note: "R-654. Closed by TASK-M9-39, a build task after the core build, not a target: it is not scored, and its tests block its own merge. It waits on RQ-656 for the collision branch, the regularised occupants, the Chazy classifier, the escape test, the decode's V₀, η_E and the substep law. The E₀ agreement in its verify: physics review 5730650164 of PR #375, P1; what V₀ holds is RQ-656's, question (5), so the test holds E₀ to the softened V, as ruled, and V₀ to that ruling."
+  note: "R-654. Closed by TASK-M9-39, a build task after the core build, not a target: it is not scored, and its tests block its own merge. It waits on RQ-656 for the collision branch, the regularised occupants, the Chazy classifier, the escape test, the decode's V₀, η_E and the substep law. The E₀ agreement in its verify: physics review 5730650164 of PR #375, P1; what V₀ holds is RQ-656's, question (5), so the test holds E₀ to the softened V, as ruled, and V₀ to that ruling. Verify *was:* \"ε scales with the initial R and does not change as R does along a run\", which cannot fail on a canonical run, R₀ being 1 on all of them (physics review 5730650164 of PR #375, P3; applied per R-369)."
 - id: REQ-EVT-001
   area: EVT
   statement: "Every pixel must get a labelled output — escape, collision or bounded (reaching the horizon is bounded), sim_failed or decode_failed, or RUNNING while in flight — with no timeout state, and substep-cap saturation a confidence flag, never a terminal."

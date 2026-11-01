@@ -619,8 +619,9 @@ default 0 and optional.**
 
 **The softened force law (R-654, closing RQ-627).** Where `epsilon` is not 0, the law is Plummer softening,
 `V = −Σ mᵢmⱼ/√(r² + ε²)`, its force the negative gradient. `ε` is canonical: a fraction of the initial hyperradius `R`,
-fixed at `t = 0`, never co-moving, recorded in every output header like `r_coll`. Energy and drift are defined under the
-softened potential. Built by a task after the core build (TASK-M9-39); until it lands, runs with `ε ≠ 0` are refused.
+fixed at `t = 0`, never co-moving, recorded in every output header like `r_coll`. In the gauge `R₀ = √(I₀/M) = 1`, so the
+sim-key value is the fraction and the length, read as given and never recomputed from the state. Energy and drift are
+defined under the softened potential. Built by a task after the core build (TASK-M9-39); until it lands, runs with `ε ≠ 0` are refused.
 What the collision branch, the regularised occupants, the Chazy classifier, the escape test, the decode's `V₀`, `η_E` and
 the substep law read under it is RQ-656.
 
