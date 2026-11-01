@@ -7,11 +7,13 @@
 //! mutants skips inside the job (changed-files detection, then skip as success under the same check name), not with
 //! workflow-level `paths:`".
 //!
-//! - `qa_r656_files_real_readers_read_are_code`: a sample of readers qa found by its own search (a test's
-//!   `include_str!` or `fs::read` of a contract, the ledger register's corpus citations its test resolves, plan-check's
-//!   globs, lint vocab's walk, `ai_review_rules`' AGENTS.md and GEMINI.md, the screenshot artboard and the print-graph
-//!   catalogue): each file, touched alone, classifies `docs_only=false gpu=true`, so the build, test and GPU jobs run.
-//!   Files a directory walker would pick up if added (a new note, a new HTML page, a new archived queue file) too.
+//! R-662 narrowed that list to data code loads for behaviour, the owner's words of 31 Oct 2026: "Only the actual
+//! Principia CODE matters in ci". This file changes only where that ruling changes the behaviour it tests.
+//!
+//! - `qa_r656_files_real_readers_read_are_code`: a sample of data code loads, qa's readers kept where R-662 keeps them
+//!   (the screenshot artboard, the print-graph catalogue and the golden references, the plan's requirements, tasks and
+//!   gate blocks): each file, touched alone, classifies `docs_only=false gpu=true`, so the build, test and GPU jobs run.
+//!   Files a directory walker would pick up if added (a new task file, artboard or catalogue entry) too.
 //! - `qa_r656_unread_docs_stay_docs_only`: real files under `docs/` that no code, plan check or script names (the
 //!   README's images, an incoming data table, the reference sources, an experiment's results) classify
 //!   `docs_only=true gpu=false`, alone and together; the test first checks that no source names them.
@@ -98,26 +100,6 @@ fn flags(text: &str) -> (bool, bool) {
 /// (a reader, a file it reads), found by qa's own search of the sources. Each reader names the file's base name.
 const READERS: &[(&str, &str)] = &[
     (
-        "crates/kernel/tests/qa_TASK-M3-02.rs",
-        "docs/design/principia_dd_integrator.md",
-    ),
-    (
-        "crates/render/tests/qa_TASK-M7-20.rs",
-        "docs/gui/principia_render_gui_spec.md",
-    ),
-    (
-        "crates/validation/tests/part6_catalogue.rs",
-        "docs/contracts/principia_render_contract.md",
-    ),
-    (
-        "xtask/tests/qa_TASK-M0-16.rs",
-        "docs/contracts/principia_canonical_spec.md",
-    ),
-    (
-        "xtask/tests/qa_TASK-M0-03.rs",
-        "docs/read_first/principia_00_philosophy.md",
-    ),
-    (
         "crates/render/tests/qa_TASK-M1-03.rs",
         "docs/gui/reference/principia_colour_explorer.html",
     ),
@@ -126,63 +108,19 @@ const READERS: &[(&str, &str)] = &[
         "docs/gui/reference/ic_inspector.html",
     ),
     ("xtask/tests/screenshot.rs", "docs/gui/design/01_main.png"),
-    ("xtask/tests/ai_review_rules.rs", "AGENTS.md"),
-    ("xtask/tests/ai_review_rules.rs", "GEMINI.md"),
-    ("crates/ledger/tests/qa_TASK-M1-18.rs", "decisions.md"),
     ("plan/check_plan.py", "plan/requirements.yaml"),
     ("plan/check_plan.py", "plan/tasks.yaml"),
-    ("plan/tools/veto_marks.py", "CLAUDE.md"),
-    ("plan/tools/rulings.py", "REVIEW_QUEUE.md"),
-    ("plan/check_plan.py", "open-questions.md"),
-    ("plan/tools/rulings.py", "README.md"),
-    ("plan/tools/current_rules.py", "plan/rule_groups.yaml"),
     ("scripts/progress_banner.py", "plan/MILESTONES.md"),
 ];
 
 /// Files a directory-walking reader reads, the first in the tree and the rest as a pull request might add them:
-/// plan-check's task files (plan/check_plan.py's `plan/tasks/M*/TASK-*.md` glob; xtask/src/reviews_check.rs); its corpus
-/// glob `docs/notes/*.md` (plan/tools/sections.py) and lint vocab's `.md` walk; lint vocab's `.html` walk
-/// (xtask/src/lint_vocab.rs, all of docs/ but archive/ and reference/); plan-check's queue archive
-/// (plan/tools/rulings.py, `docs/archive/review_queue/*.md`) and its copies in xtask/tests/plan_check.rs; a new task
-/// file; a new artboard and a new reference catalogue entry.
+/// a task file (xtask/src/reviews_check.rs), a new task file, a new artboard and a new reference catalogue entry.
 const WALKED: &[&str] = &[
     "plan/tasks/M0/TASK-M0-01.md",
-    "docs/notes/principia_qa_new_note.md",
-    "docs/experiments/qa_new/page.html",
-    "docs/archive/review_queue/M9.md",
     "plan/tasks/M9/TASK-M9-99.md",
     "docs/gui/design/99_qa.png",
     "docs/gui/reference/print_graph/catalogue/qa.json",
 ];
-
-/// The corpus files the ledger's constant register cites (`Citation::Corpus { file, … }` in crates/ledger/src), which
-/// crates/ledger/tests/constants.rs opens to resolve each cited heading.
-fn register_citations() -> Vec<String> {
-    let mut out = Vec::new();
-    let mut stack = vec![root().join("crates/ledger/src")];
-    while let Some(dir) = stack.pop() {
-        for entry in std::fs::read_dir(&dir).expect("qa_r656: crates/ledger/src") {
-            let path = entry.expect("entry").path();
-            if path.is_dir() {
-                stack.push(path);
-                continue;
-            }
-            if path.extension().is_none_or(|x| x != "rs") {
-                continue;
-            }
-            let text = std::fs::read_to_string(&path).expect("source");
-            for piece in text.split("file: \"").skip(1) {
-                let file = piece.split('"').next().unwrap_or_default();
-                if file.ends_with(".md") && root().join(file).is_file() {
-                    out.push(file.to_owned());
-                }
-            }
-        }
-    }
-    out.sort();
-    out.dedup();
-    out
-}
 
 fn check_readers_are_code(script: &str) {
     let mut touched: Vec<String> = Vec::new();
@@ -202,12 +140,6 @@ fn check_readers_are_code(script: &str) {
         );
         touched.push((*file).to_owned());
     }
-    let cited = register_citations();
-    assert!(
-        cited.len() >= 5,
-        "qa_r656: the register's corpus citations were not found: {cited:?}"
-    );
-    touched.extend(cited);
     touched.extend(WALKED.iter().map(|f| (*f).to_owned()));
     for file in &touched {
         assert_eq!(
@@ -218,9 +150,12 @@ fn check_readers_are_code(script: &str) {
     }
     // With a docs-only file beside it, the read file still makes the change code.
     assert_eq!(
-        verdict(script, &["docs/incoming/qa/b.pdf", "AGENTS.md"]),
+        verdict(
+            script,
+            &["docs/incoming/qa/b.pdf", "plan/requirements.yaml"]
+        ),
         (false, true),
-        "qa_r656: AGENTS.md beside a docs-only file does not run the heavy jobs"
+        "qa_r656: plan/requirements.yaml beside a docs-only file does not run the heavy jobs"
     );
 }
 
@@ -231,11 +166,12 @@ fn qa_r656_files_real_readers_read_are_code() {
 
 negative_control!(
     qa_r656_files_real_readers_read_are_code,
-    "the script with every `.md` under docs/ dropped from its list of files code reads",
-    expected = "touching docs/design/principia_dd_integrator.md, which code reads, does not run the heavy jobs",
+    "the script with the artboards dropped from its list of data code loads",
+    expected =
+        "touching docs/gui/design/01_main.png, which code reads, does not run the heavy jobs",
     check_readers_are_code(&swap(
         &read("scripts/ci_changes.sh"),
-        "    docs/*.md) return 0 ;;\n",
+        "    docs/gui/design/*) return 0 ;;\n",
         ""
     ))
 );
@@ -330,7 +266,7 @@ negative_control!(
     expected = "docs/readme/hero.jpg, which no code reads, is not docs-only",
     check_unread_docs_only(&swap(
         &read("scripts/ci_changes.sh"),
-        "    docs/*.md) return 0 ;;\n",
+        "    docs/gui/design/*) return 0 ;;\n",
         "    docs/*) return 0 ;;\n"
     ))
 );
@@ -441,13 +377,13 @@ fn check_detect(script: &str) {
         (false, true),
         "qa_r656: detect on a commit that is no merge does not run everything (docs_only, gpu)"
     );
-    // A pull request touching a file code reads runs everything.
+    // A pull request touching a file code loads runs everything.
     let read = dir.join("read");
-    let (merge, _) = merge_repo(&read, "docs/contracts/principia_parity_contract.md");
+    let (merge, _) = merge_repo(&read, "docs/gui/design/qa.png");
     assert_eq!(
         detect(script, &read, "pull_request", &merge),
         (false, true),
-        "qa_r656: detect on a pull request touching a contract does not run everything (docs_only, gpu)"
+        "qa_r656: detect on a pull request touching an artboard does not run everything (docs_only, gpu)"
     );
 }
 

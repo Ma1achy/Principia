@@ -341,6 +341,26 @@ const COMMENT_DIFF: &str = "diff --git a/crates/kernel/src/lib.rs b/crates/kerne
 +// A comment.
 ";
 
+/// A reference source under `docs/`, Rust that is not Principia's (R-662).
+const REFERENCE_DIFF: &str = "\
+diff --git a/docs/reference/prin-rs/src/a.rs b/docs/reference/prin-rs/src/a.rs
+--- a/docs/reference/prin-rs/src/a.rs
++++ b/docs/reference/prin-rs/src/a.rs
+@@ -1 +1,2 @@
+ //! A reference.
++// A comment.
+";
+
+/// The same under `workbench/`, the path quoted as git quotes one with a space in it.
+const WORKBENCH_DIFF: &str = "\
+diff --git \"a/workbench/a b.rs\" \"b/workbench/a b.rs\"
+--- \"a/workbench/a b.rs\"
++++ \"b/workbench/a b.rs\"
+@@ -1 +1,2 @@
+ //! A sketch.
++// A comment.
+";
+
 /// The setup a shard with no mutant must not pay: every `uses:` but the checkout and the report's upload.
 fn setup(used: &[String]) -> Vec<&String> {
     used.iter()
@@ -365,7 +385,12 @@ fn shard(yml: &str, tag: &str, diff: &str) -> Run {
 /// up nothing and called neither cargo nor the installers; on a diff naming Rust source it sets up and runs
 /// `cargo mutants --in-diff` on the diff, and passes when cargo-mutants finds nothing to mutate.
 fn shard_passes_with_no_mutant(yml: &str) {
-    for (tag, diff) in [("docs", DOCS_DIFF), ("empty", "")] {
+    for (tag, diff) in [
+        ("docs", DOCS_DIFF),
+        ("empty", ""),
+        ("reference", REFERENCE_DIFF),
+        ("workbench", WORKBENCH_DIFF),
+    ] {
         let run = shard(yml, tag, diff);
         println!("mutants shard 3/8, {tag} diff:\n{}", run.log);
         assert!(
@@ -407,7 +432,7 @@ fn mutants_shard_passes_a_diff_with_no_mutant() {
 // Read only by the controls.
 #[cfg(feature = "controls")]
 const GATE: &str =
-    "if grep -Eq '^\\+\\+\\+ .*\\.rs\"?[[:space:]]*$' \"$RUNNER_TEMP/pr.diff\"; then";
+    "if grep -E '^\\+\\+\\+ .*\\.rs\"?[[:space:]]*$' \"$RUNNER_TEMP/pr.diff\" | grep -Ev '^\\+\\+\\+ \"?b/(docs|plan|scripts|workbench)/' > /dev/null; then";
 
 negative_control!(
     mutants_shard_passes_a_diff_with_no_mutant,
