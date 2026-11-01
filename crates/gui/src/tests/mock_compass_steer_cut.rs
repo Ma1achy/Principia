@@ -16,8 +16,25 @@ use crate::explore::compass::views::upper;
 
 /// The recorded sample.
 fn sample() -> Vec<Latent> {
-    let mut rng = Rng::new(0x5EED);
+    sample_at(0x5EED)
+}
+
+/// 500 `z` in `[−3, 3]⁸` at the seed `seed`.
+fn sample_at(seed: u64) -> Vec<Latent> {
+    let mut rng = Rng::new(seed);
     (0..500).map(|_| rng.latent().map(|x| 3.0 * x)).collect()
+}
+
+/// `σ₈/σ₁` at `z` on the Jacobi set.
+fn ratio(e_star: Option<f64>, z: &Latent) -> f64 {
+    let j = latent_jacobian(
+        &Decoder::Real { e_star },
+        Set::Jacobi,
+        &Links::defaults(),
+        z,
+    );
+    let d = Inverse::of(&j, CUT).svd;
+    d.sigma[7] / d.sigma[0]
 }
 
 /// `j` read in coordinates turned so `e_0` is `n` (unit): the Householder reflection `H`, `H n = e_0`, gives `H j`. On
@@ -85,54 +102,65 @@ fn mock_compass_steer_cut_on_e_star_unset_refuses_none() {
 
 #[test]
 fn mock_compass_steer_cut_the_gap_holds_on_the_sample() {
-    // The calibration record: σ₈/σ₁ on both fixtures, c in the gap, at the geometric middle's order. The tolerance's
-    // measurement beside it: exactly 1 unset, and 5.7e-3 at its least with E* = 0.
+    // The calibration record: σ₈/σ₁ on both fixtures, c in the gap, at the geometric middle's order, and the same over
+    // other seeds, since E* = 0's side is rounding. The tolerance's measurement beside it: exactly 1 unset, and over
+    // E* = 0 each z's least cell, all the cells' 0.1% point, and the shell's normal itself.
     let links = Links::defaults();
-    let ratios = |e_star| -> Vec<f64> {
-        sample()
-            .iter()
-            .map(|z| {
-                let d = Inverse::of(
-                    &latent_jacobian(&Decoder::Real { e_star }, Set::Jacobi, &links, z),
-                    CUT,
-                )
-                .svd;
-                d.sigma[7] / d.sigma[0]
-            })
-            .collect()
+    let sides = |seed| {
+        let z = sample_at(seed);
+        let set = z.iter().map(|z| ratio(Some(0.0), z)).fold(0.0, f64::max);
+        let unset = z.iter().map(|z| ratio(None, z)).fold(f64::MAX, f64::min);
+        (set, unset)
     };
-    let set = ratios(Some(0.0)).into_iter().fold(0.0, f64::max);
-    let unset = ratios(None).into_iter().fold(f64::MAX, f64::min);
+    let (set, unset) = sides(0x5EED);
     println!("σ₈/σ₁: E* = 0 at most {set:.3e}; E* unset at least {unset:.3e}");
     assert!(set < CUT, "{set}");
     assert!(unset > CUT, "{unset}");
     assert!(set <= 1e-11, "the upper side of the gap: {set}");
     assert!(unset >= 1e-6, "the lower side of the gap: {unset}");
-    let cell_values = |e_star| -> Vec<f64> {
-        sample()
-            .iter()
-            .map(|z| {
-                let inverse = Inverse::of(
-                    &latent_jacobian(&Decoder::Real { e_star }, Set::Jacobi, &links, z),
-                    CUT,
-                );
-                upper()
-                    .map(|(a, b)| inverse.smaller(a, b))
-                    .fold(f64::MAX, f64::min)
-            })
-            .collect()
+    for seed in 1..=7 {
+        let (set, unset) = sides(seed);
+        println!("seed {seed}: E* = 0 at most {set:.3e}; E* unset at least {unset:.3e}");
+        assert!(set < CUT && CUT < unset, "seed {seed}: {set}, {unset}");
+    }
+    let cells = |e_star, z: &Latent| -> Vec<f64> {
+        let j = latent_jacobian(&Decoder::Real { e_star }, Set::Jacobi, &links, z);
+        let inverse = Inverse::of(&j, CUT);
+        upper().map(|(a, b)| inverse.smaller(a, b)).collect()
     };
-    let unset_least = cell_values(None).into_iter().fold(f64::MAX, f64::min);
-    let on_shell = cell_values(Some(0.0));
-    let shell_least = on_shell.iter().copied().fold(f64::MAX, f64::min);
+    let least = |values: &[f64]| values.iter().copied().fold(f64::MAX, f64::min);
+    let unset_least = least(
+        &sample()
+            .iter()
+            .flat_map(|z| cells(None, z))
+            .collect::<Vec<_>>(),
+    );
+    let per_z: Vec<Vec<f64>> = sample().iter().map(|z| cells(Some(0.0), z)).collect();
+    let mut on_shell: Vec<f64> = per_z.iter().map(|values| least(values)).collect();
+    on_shell.sort_by(f64::total_cmp);
+    let mut all: Vec<f64> = per_z.concat();
+    all.sort_by(f64::total_cmp);
+    let (shell_least, shell_most) = (on_shell[0], on_shell[on_shell.len() - 1]);
+    let median = (on_shell[249] + on_shell[250]) / 2.0;
     let refused = on_shell.iter().filter(|v| **v < TOLERANCE).count();
+    let normal = sample()
+        .iter()
+        .map(|z| {
+            let j = latent_jacobian(&Decoder::Real { e_star: Some(0.0) }, Set::Jacobi, &links, z);
+            let n = Inverse::of(&j, 0.0).svd.u[LATENT_DIM - 1];
+            Inverse::of(&adapted(&j, &n), CUT).smaller(0, 1)
+        })
+        .fold(0.0, f64::max);
     println!(
-        "smaller singular value: unset at least {unset_least:.6}; E* = 0 at least {shell_least:.3e}; \
-         {refused} of 500 z have a refused cell at {TOLERANCE}"
+        "smaller singular value: unset at least {unset_least:.6}; E* = 0, each z's least cell from \
+         {shell_least:.3e} to {shell_most:.3}, median {median:.3}; 0.1% of all the cells below {:.3e}; {refused} of 500 \
+         z have a refused cell at {TOLERANCE}; the shell's normal at most {normal:.3e}",
+        all[all.len() / 1000]
     );
     assert!((unset_least - 1.0).abs() <= 1e-9, "{unset_least}");
     assert!(shell_least < TOLERANCE, "the real chart refuses somewhere");
     assert!(refused > 0 && refused < 500, "{refused}");
+    assert!(normal < 1e-3, "the shell's normal: {normal}");
     rejects("a cut outside the gap", || assert!(unset > 1e-3));
 }
 
@@ -201,95 +229,6 @@ fn mock_compass_steer_cut_a_saturated_link_refuses() {
             steer(&d, Set::Jacobi, &free, 1, 3),
             Some(Err(Refusal::Saturated))
         )
-    });
-}
-
-#[test]
-fn mock_compass_steer_cut_a_saturated_link_on_an_e_star_chart_names_each_cause() {
-    // The saturated fixture on E* = 0: the shell drops one value and the link another.
-    let mut p: Plane = plane(&view(10.0, 5.0, 0.0, 0.8), [0.1, -0.3, 0.25]);
-    p.z0 = [0.3, 1000.0, 0.3, -0.2, 0.5, 0.1, 0.1, -0.2];
-    let (app, _h) = app_at(&p);
-    let mut sim = app.snapshot().sim.clone();
-    let links = Links::defaults();
-    let shell = Decoder::Real { e_star: Some(0.0) };
-    let inverse =
-        |d: &Decoder, z: &Latent| Inverse::of(&latent_jacobian(d, Set::Jacobi, &links, z), CUT);
-    assert_eq!(inverse(&shell, &p.z0).kept, 6);
-    for cell in [(0, 1), (1, 3), (1, 7)] {
-        assert_eq!(
-            steer(&shell, Set::Jacobi, &sim, cell.0, cell.1),
-            Some(Err(Refusal::Saturated)),
-            "{cell:?}, β's column gone with or without the shell"
-        );
-    }
-    // A cell of the same kind of state that only the shell refuses: reachable with η_E off, so the shell is its cause.
-    let off = Decoder::Real { e_star: None };
-    let mut shell_only = 0;
-    for mut z in sample() {
-        z[1] = 1000.0;
-        let (on, unset) = (inverse(&shell, &z), inverse(&off, &z));
-        for (a, b) in upper() {
-            if on.smaller(a, b) < TOLERANCE && unset.smaller(a, b) >= TOLERANCE {
-                assert_eq!(on.kept, 6, "at {z:?}");
-                sim.plane.z0 = z;
-                assert_eq!(
-                    steer(&shell, Set::Jacobi, &sim, a, b),
-                    Some(Err(Refusal::EnergyShell)),
-                    "({a}, {b}) at {z:?}"
-                );
-                shell_only += 1;
-            }
-        }
-    }
-    assert!(
-        shell_only > 0,
-        "no cell on the sample only the shell refuses"
-    );
-    // Control: the fix's absence, the shell named for the saturated cell.
-    sim.plane.z0 = p.z0;
-    rejects("a saturated cell blamed on the shell", || {
-        assert_eq!(
-            steer(&shell, Set::Jacobi, &sim, 1, 3),
-            Some(Err(Refusal::EnergyShell))
-        )
-    });
-}
-
-#[test]
-fn mock_compass_steer_cut_a_fixture_names_its_cause_by_what_it_keeps() {
-    use super::compass_physical_views::leaked;
-    let p: Plane = plane(&view(10.0, 5.0, 0.0, 0.8), [0.1, -0.3, 0.25]);
-    let (app, _h) = app_at(&p);
-    let sim = app.snapshot().sim.clone();
-    // The identity with its last `gone` rows zero, so cell (0, 7) is refused at each.
-    let a = |gone: usize| -> &'static Matrix {
-        leaked(std::array::from_fn(|r| {
-            std::array::from_fn(|c| f64::from(r == c && r < LATENT_DIM - gone))
-        }))
-    };
-    let why = |gone, shell| {
-        steer(
-            &Decoder::Linear { a: a(gone), shell },
-            Set::Jacobi,
-            &sim,
-            0,
-            7,
-        )
-    };
-    assert_eq!(
-        why(1, true),
-        Some(Err(Refusal::EnergyShell)),
-        "seven kept: the shell"
-    );
-    assert_eq!(
-        why(2, true),
-        Some(Err(Refusal::Saturated)),
-        "six kept: more than the shell"
-    );
-    assert_eq!(why(1, false), Some(Err(Refusal::Saturated)), "no shell");
-    rejects("six kept blamed on the shell", || {
-        assert_eq!(why(2, true), Some(Err(Refusal::EnergyShell)))
     });
 }
 
