@@ -4,14 +4,15 @@
 //! Ctrl+Z; the Shape view's pole refuses, naming it. Each check also runs on an input it must reject (R-176, through
 //! `rejects`).
 
-use eframe::egui::{Event, Key, Modifiers};
+use eframe::egui::{Event, Key, Modifiers, Rect, Shape};
 use engine::contract::set_field::{Edit, SimField};
 use engine::contract::sim_config::{Latent, Links, Lock, Plane, SimConfig, LATENT_DIM};
 
 use super::compass_physical_views::{leaked, linear_a, missing};
-use super::compass_support::{app_at, plane, setfields, square, view};
+use super::compass_support::{app_at, compass_rect, plane, setfields, square, view};
 use super::support::{click_scope, press, rejects};
 use crate::app::App;
+use crate::capture::{PIXELS_PER_POINT, SIZE};
 use crate::explore::compass::physical::{
     self, latent_jacobian, pushforward, refusal_line, smaller_singular, steer, Decoder, Inverse,
     Matrix, Refusal, Set, CUT, TOLERANCE,
@@ -353,6 +354,54 @@ fn mock_compass_steer_physical_the_pole_line_reads_the_hovered_point() {
     // Control: the line read at z₀ would say the reverse.
     rejects("the line read at z₀", || {
         assert_eq!(is_pole(&q.z0), shown)
+    });
+}
+
+/// The drawn rect of the text `wanted`, and its rows, in `shapes`.
+fn laid(shapes: &[Shape], wanted: &str) -> Option<(Rect, usize)> {
+    shapes.iter().find_map(|s| match s {
+        Shape::Text(t) if t.galley.text() == wanted => Some((
+            t.galley.rect.translate(t.pos.to_vec2()),
+            t.galley.rows.len(),
+        )),
+        _ => None,
+    })
+}
+
+#[test]
+fn mock_compass_steer_physical_the_pole_line_fits_the_panel() {
+    // At the artboard's window size: the widest readout there is, the rates' stretch at the very pole.
+    let mut p = start();
+    p.z0 = at_pole();
+    let (mut app, mut h) = app_with(&p, Decoder::default(), COMPASS_SHAPE);
+    let size = h.screen().size() * PIXELS_PER_POINT;
+    assert_eq!(
+        [size.x as u32, size.y as u32],
+        SIZE,
+        "the artboard's window"
+    );
+    let panel = compass_rect(&h);
+    let grid = GridPlace::fit(square(&h)).rect();
+    let shapes = super::support::shapes(&mut h, &mut app);
+    let (line, rows) = laid(&shapes, physical::POLE_LINE).expect("the pole's line");
+    assert_eq!(rows, 1, "one line: {line:?}");
+    assert!(square(&h).contains_rect(line), "under the grid: {line:?}");
+    assert!(!line.intersects(grid), "clear of the cells: {line:?}");
+    let (help, _) = laid(&shapes, physical::HELP).expect("the help");
+    assert!(panel.contains_rect(help), "{help:?} in {panel:?}");
+    // Degenerate at the pole as well: the message under the line, both in the square.
+    let mut flat = p.clone();
+    flat.q2 = flat.q1;
+    let (mut app, mut h) = app_with(&flat, Decoder::default(), COMPASS_SHAPE);
+    let shapes = super::support::shapes(&mut h, &mut app);
+    let (first, _) = laid(&shapes, physical::POLE_LINE).expect("the pole's line");
+    let (second, _) = laid(&shapes, physical::DEGENERATE).expect("the message");
+    assert!(square(&h).contains_rect(first.union(second)), "{second:?}");
+    assert!(first.max.y <= second.min.y, "{first:?} over {second:?}");
+    // Control: the line back in the column, its two rows above the help, runs the help out of the panel.
+    let back = help.translate(eframe::egui::vec2(0.0, 2.0 * line.height() + 4.0));
+    rejects("the line in the column", || {
+        assert!(panel.contains_rect(back))
     });
 }
 

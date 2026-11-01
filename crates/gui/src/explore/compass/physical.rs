@@ -506,8 +506,9 @@ pub const HELP: &str = "changes as the slice moves, J depending on z₀; Plücke
 reference range. J at the hovered pixel; nonlinear chart, z₀. Click to steer";
 
 /// The readout's line within the pole's radius of the sphere (RQ-343 (b)): named as the chart's singularity. Near, not at:
-/// the radius runs to about 5.7°, where the grid still draws and steers are accepted.
-pub const POLE_LINE: &str = "near the chart's pole, a singularity of θ, φ";
+/// the radius runs to about 5.7°, where the grid still draws and steers are accepted. Short enough for one line under
+/// the grid.
+pub const POLE_LINE: &str = "near the chart's pole: θ, φ singular";
 
 /// The message where the pushforward vanishes (REQ-GUI-199): said, not drawn.
 pub const DEGENERATE: &str = "J q̂₁ ∧ J q̂₂ = 0: this plane has no image here. Click a cell to steer";

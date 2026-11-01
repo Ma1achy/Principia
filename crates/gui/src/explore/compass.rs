@@ -1271,6 +1271,8 @@ pub fn space(focus: &Focus, sim: &SimConfig, scratch: &mut Scratch, out: &mut Ou
 
 /// The compass's margin, in points (a look choice, R-390).
 pub const MARGIN: f32 = 12.0;
+/// The gap between the pole's line and the degenerate message under a physical grid, in points (a look choice, R-390).
+pub const UNDER_GRID_GAP: f32 = 2.0;
 
 /// The cube's square in the compass's `rect`: at its top left inside the margin, as tall as the margin leaves, at most
 /// half its width, a whole number of points, so the reference renders at its size (applied per R-369).
@@ -1415,12 +1417,11 @@ pub fn show(
                 views::paint_edge_names(&painter, &visuals, place, k, name);
             }
             physical_cells(ui, place, set, &push, sim, scratch, out);
-            under_grid(ui, square, place, push.degenerate);
-            let mut lines = vec![physical::readout(set, &push)];
             let decoder = &scratch.compass.decoder;
-            if physical::at_pole(decoder, set, &sim.links, &read_at(sim, &scratch.compass)) {
-                lines.push(physical::POLE_LINE.to_owned());
-            }
+            let at_pole =
+                physical::at_pole(decoder, set, &sim.links, &read_at(sim, &scratch.compass));
+            under_grid(ui, square, place, at_pole, push.degenerate);
+            let lines = vec![physical::readout(set, &push)];
             (lines, physical::HELP)
         }
     };
@@ -1460,14 +1461,18 @@ pub fn show(
     }
 }
 
-/// What a physical view says under its grid, in the band the Plücker view's position readout takes: the message of a
-/// degenerate pushforward.
-fn under_grid(ui: &mut Ui, square: Rect, place: views::GridPlace, degenerate: bool) {
+/// What a physical view says under its grid, in the band the Plücker view's position readout takes, so neither pushes
+/// the column's help out of the panel: the pole's line, then the message of a degenerate pushforward.
+fn under_grid(ui: &mut Ui, square: Rect, place: views::GridPlace, at_pole: bool, degenerate: bool) {
     let band = Rect::from_min_max(
         pos2(square.min.x, place.rect().max.y + views::GAUGE_GAP),
         square.max,
     );
     let mut under = ui.new_child(UiBuilder::new().max_rect(band));
+    under.spacing_mut().item_spacing.y = UNDER_GRID_GAP;
+    if at_pole {
+        under.label(RichText::new(physical::POLE_LINE).monospace().small());
+    }
     if degenerate {
         under.label(RichText::new(physical::DEGENERATE).size(LABEL_SIZE).weak());
     }
