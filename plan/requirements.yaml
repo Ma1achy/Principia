@@ -5663,6 +5663,8 @@
   rulings:
   - R-654
   milestone: M9
+  rq:
+  - RQ-656
   note: "R-654. Closed by TASK-M9-39, a build task after the core build, not a target: it is not scored, and its tests block its own merge. It waits on RQ-656 for the collision branch, the regularised occupants and the Chazy classifier."
 - id: REQ-EVT-001
   area: EVT
@@ -40535,4 +40537,6 @@
   rulings:
   - R-654
   milestone: M9
-  note: "R-654. Closed by TASK-M9-39. The range of ε is a definition written by that task (R-72; physics reviewer approves)."
+  rq:
+  - RQ-656
+  note: "R-654. Closed by TASK-M9-39. The range of ε is a definition written by that task (R-72; physics reviewer approves). It waits on RQ-656, as its task does."
