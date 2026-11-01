@@ -308,8 +308,9 @@ impl Run {
     /// Logs `log` lines, one per `SetField`, and reads them: a frame's time is the step before it, so the second frame
     /// is the one past the snapshot's interval.
     fn fill(&mut self, log: usize) {
-        for _ in 0..log {
-            let edit = crate::explore::time::playhead_edit(1.0);
+        for i in 0..log {
+            // Each line its own, as a session's are: identical lines would all come from egui's text cache.
+            let edit = crate::explore::time::playhead_edit(i as f64 * 1e-3);
             self.app.side().engine().set_field(edit);
         }
         self.headless
