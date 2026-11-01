@@ -638,6 +638,34 @@ peek log's first row (`docs/verification/peek_log.md`), UNEXPLAINED, with this q
   `principia_dd_replication.md` § 5.10, the RQ-598 README § 6 and TASK-M3-62's note point here.
 - **Waits:** GG-1's per-point scoring against the Fig. 1 extraction (TASK-M3-62). BR-1 does not wait on it.
 
+## RQ-627: The softened force law: `epsilon` is a carried, tagged sim-key value, but no document defines softened gravity and no task builds it *(a definition requirement, R-72; physics; `docs/design/principia_dd_generation_root.md` § "Open"; REQ-SYS-018; the physics review of PR #348, F1; context: TASK-M3-06)*
+
+*Queued 30 Oct 2026 by TASK-M3-06's fix round, on the physics review of PR #348 (F1), the code review (C1) and the qa
+review (F1). For the owner: yes, it is physics where the choice changes the result and the corpus does not settle it
+(R-369).*
+
+- **File, section:**
+  - `docs/design/principia_dd_generation_root.md` § "Open": "softened gravity is a different force law at any
+    `epsilon`, and ε>0 runs must be tagged and never pooled with ε=0 runs; and **`r_coll` is the better default
+    mechanism**, since softening makes the dynamics wrong everywhere … **Adopted: `r_coll` nonzero by default,
+    `epsilon` default 0 and optional.**"
+  - `plan/requirements.yaml`, REQ-SYS-018: "`r_coll` must be nonzero by default and `epsilon` 0 by default and
+    optional, both expressed in canonical units and fixed at t = 0 (never co-moving), and ε > 0 runs must be tagged
+    and never pooled with ε = 0 runs."
+- **The gap:** the corpus makes `epsilon` optional and says a run with ε > 0 is a different force law, but never says
+  which one: not its form (Plummer, `1/(r² + ε²)`, or another), nor `V`'s dependence on ε, and so nor `E₀` or the
+  drift meters under it. No force law in `crates/kernel` reads a softening length, and no task in `plan/tasks` builds
+  one. A run dispatched with ε > 0 would come back Newtonian under the `softened` tag, against canonical_spec §9 W13.
+- **The question:** the softened force law's definition (its potential and force as functions of `r` and ε, and what
+  `E₀`, the drift meters and the collision branch read under it), and the task that builds it.
+- **Options seen:** (a) Plummer softening, `V = −Σ m_i m_j / √(r_ij² + ε²)`, built by a new task; (b) another kernel,
+  named by the owner; (c) drop the option: `epsilon` stays 0 and the field is retired, by ruling.
+- **Applied meanwhile:** dispatch refuses any `epsilon` other than 0, NaN and ±∞ included, with a typed reason
+  (`engine::dispatch::validate`, TASK-M3-06). The field, its default 0, the `softened` provenance tag and its sim-key
+  byte stay, so REQ-SYS-018's "optional" stays true of `SimUniforms`. The refusal is lifted by the task that builds
+  the force law.
+- **Waits:** any run with ε ≠ 0. Nothing else waits.
+
 ## RQ-621: The control REQ-DEC-011 and REQ-VAL-017 ask of `M₀₁` cannot fail: an unfused or flushed `fma(m₁, 1, m₀)` rounds exactly as the fused one *(conflict: a requirement's control against arithmetic; R-547, RQ-298; REQ-DEC-011, REQ-VAL-017; context: TASK-M2-48)*
 
 *Found by TASK-M2-48's implementer, before building, 30 Oct 2026. For the orchestrator (R-369: tests), except option
@@ -689,6 +717,77 @@ peek log's first row (`docs/verification/peek_log.md`), UNEXPLAINED, with this q
   onset crossings, which decoder test 12's inputs gain; REQ-VAL-017's emulation list gains "contracted (fused)";
   REQ-DEC-011's and REQ-VAL-017's verify text and TASK-M2-48's two acceptance lines drop "unfused" and "on lavapipe".
   The tag rule, `ε_M01` (REQ-DEC-039) and R-547's form are unchanged. Nothing waits.
+
+## RQ-623: The agreement presets' tolerance near a binary collision: no factor of the per-operand form covers the fragment-against-compute differences, which grow as (|rᵢ|+|rⱼ|)/rᵢⱼ, up to about 1/eps, as a pair separation falls *(a calibration requirement, R-71, and the form it is a factor of, a definition requirement, R-72; physics; REQ-COL-060, REQ-COL-006; context: TASK-M2-29)*
+
+*Queued 30 Oct 2026 by TASK-M2-29's implementer, from its measurement. For the owner: yes, it is physics where the
+choice changes what the agreement preset shows and what its gate certifies, and the corpus does not settle it
+(R-369).*
+
+- **File, section:**
+  - `plan/requirements.yaml` REQ-COL-060, verify: "the proposal measures, in gpu-metal and gpu-lavapipe, the agreement
+    presets' fragment-against-compute differences (|E(fragment-decode) − E₀| and the like) over the M2 charts, and
+    states the tolerance that covers them".
+  - `docs/design/principia_colour_composition.md` § "6. Debug views as presets", the agreement presets' bullet: "The
+    fragment shaders may compile with fast-math and the compute shaders don't, by default (R-297), so an agreement
+    preset compares within a stated tolerance, a calibration requirement (R-71), not bit-exactly."
+  - `crates/render/src/presets/agreement.rs`, the tolerance's form TASK-M2-25 chose (applied per R-369 there):
+    `|E − E₀| ≤ FACTOR·eps·(max(|K₀|, 1) + max(|V₀|, 1))`, each operand's difference bounded by `FACTOR·eps·max(|x|, 1)`.
+  - `docs/contracts/principia_inverse_encode_contract.md` Part 4: "every round-trip tolerance is asserted in *physical*
+    space, where the composed map is well-conditioned".
+  - `decisions.md` § R-544: its conditioning-derived δ exclusion near the shape sphere's collision landmarks, recorded
+    as a test detail.
+  - `docs/read_first/principia_01_pitfalls.md` § "3. Standing rules earned in this sequence": "A QUANTITY THAT DOES NOT
+    CONVERGE UNDER REFINEMENT IS MEASURING THE SAMPLING, NOT THE SYSTEM." and "Set thresholds from the observed
+    distribution, or from a measured gap."
+- **The measurement** (Metal, Apple M3 Pro, branch `task/TASK-M2-29` at fab11679; the `decode-agreement` gate's report,
+  each chart at its fixed parameters, the fragment compiled as Metal compiles it, the decode stage with compute
+  fast-math off). The worst `|E − E₀|` in eps of the scale `max(|K₀|, 1) + max(|V₀|, 1)`, every chart, by lattice:
+  16² per chart 7.9; 128² 15.5; 256² 20.2; 512² 60.4 (`shape_sphere`). The median and 99th percentile do not move
+  (`shape_sphere` 2.41 and 4.81 eps at 128², 256² and 512²; `latent` about 0.45 and 8.0); only the worst grows. Every
+  sample over 16 eps at 512² lies on `shape_sphere`'s line `v = 0.5`, the collinear equator, at `u ≈ 0.845` and
+  `u ≈ 0.040`, beside a binary collision. Zooming on `u = 0.84473, v = 0.5` with 128² cells at depths 9 to 21, the
+  worst is 60, 185, 2129, 8606, 19520 (smallest pair separation 9.7·10⁻⁵, `V₀ = −119.7`), 2269, 996 eps; on
+  `u = 0.04004`, up to 1735. At the collision itself `V₀` is `−∞`, hatched and excluded (R-436); next to it, the
+  difference grows as (|rᵢ|+|rⱼ|)/rᵢⱼ, up to about 1/eps.
+- **The mechanism, measured:** the conditioning of `V = −Σ mᵢmⱼ/rᵢⱼ` in f32. A pair separation formed from positions
+  of order 1 carries an absolute rounding of order `eps·(|rᵢ| + |rⱼ|)`, so `V` carries `Σ mᵢmⱼ·eps·(|rᵢ| + |rⱼ|)/rᵢⱼ²`,
+  which the per-operand scale `eps·|V₀|` underestimates by `~(|rᵢ| + |rⱼ|)/rᵢⱼ`. Any two f32 compilations that round
+  differently diverge by that much. It is not fast-math alone: with the decode stage compiled with compute fast-math
+  on, beside the fragment, the worst near the same point is still 3086 eps. With the scale widened by that
+  conditioning, `eps·(max(|K₀|, 1) + max(|V₀|, 1) + Σ mᵢmⱼ(|rᵢ| + |rⱼ|)/rᵢⱼ²)` from the decode stage's own `(m, r)`, the
+  worst over every one of those zoom windows is 1.1 to 5.7.
+- **The gap:** REQ-COL-060 asks for "the tolerance that covers" the measured differences over the M2 charts. In the
+  form the preset compiles, no factor does: the worst grows as the samples near a collision (pitfalls § 3), so a
+  factor that covers the gate's lattices (256 covers every lattice above) still draws pixels near a binary collision
+  red, a disagreement that is f32 conditioning, not a translation or addressing fault. The corpus gives the
+  tolerance as a calibration and says nothing of its form near a collision.
+- **The question:** what the agreement presets' tolerance is where the f32 energy is ill-conditioned, beside a binary
+  collision.
+- **Options seen:**
+  (a) the per-operand form as it is, with a factor that covers the gate's lattices (256 proposed), and the red near a
+  collision stated in colour_composition § 6 as expected, as ROUNDTRIP's "bright at clamps/feasibility edges/mirror
+  tie = expected" is (expected, tagged: render_contract § "Cross-check views (the seams)");
+  (b) a conditioning-aware form, the factor times `eps·(max(|K₀|, 1) + max(|V₀|, 1) + Σ mᵢmⱼ(|rᵢ| + |rⱼ|)/rᵢⱼ²)` from the
+  fragment decode's own `(m, r)`, written into colour_composition § 6 as an R-72 definition, physics-reviewed, and the
+  factor calibrated in it (measured above at 1.1 to 5.7 near the collisions, with the decode stage's `(m, r)`; its
+  value on the lattices still to be measured);
+  (c) the per-operand form, and a pixel whose smallest pair separation falls under a threshold drawn in a tagged
+  "ill-conditioned" style and left out of the gate, the threshold a calibration;
+  (d) another, stated by the owner.
+- **Recommended:** (b): it keeps the check meaningful at every finite pixel, keeps its sensitivity to a dispatch
+  scramble, and its bound is the measured mechanism rather than a margin. (a) leaves false red beside every collision
+  on `shape_sphere`'s equator.
+- **Applied meanwhile:** none. The branch holds the measurement (each chart's worst, median and 99th percentile, and
+  the excluded count, in the gate's report; the `survey` input; the gate run in `gpu-metal` and `gpu-lavapipe`), the
+  threshold still the compiled 256 under REQ-COL-060, provisional. No PR is open.
+- **Waits:** TASK-M2-29's proposal and PR (REQ-COL-060).
+- **30 Oct 2026:** Decided by the orchestrator per R-369, option (b); listed for the owner's veto at the M2 gate with
+  (a) and (c); see PR. Text corrections: ROUNDTRIP's expected brightness is "expected, tagged" (render_contract §
+  "Cross-check views (the seams)"); (b)'s 1.1 to 5.7 was measured with the decode stage's `(m, r)`; "grows without
+  bound" reads "grows as (|rᵢ|+|rⱼ|)/rᵢⱼ, up to about 1/eps"; inverse_encode_contract Part 4 and R-544's δ are cited.
+  Applied: colour_composition § 6's conditioning-aware scale (R-72), the factor proposed in it (R-71), the
+  `collision` windows and the per-operand control in the `decode-agreement` gate (TASK-M2-29).
 
 ## RQ-622: Five statistical or qualitative map targets whose verify names a Result at f64: are they scored on tier (a), the f32 GPU explorer, as R-649's confirmed reading says, or on the f64 Result their verify names *(physics; R-649 item 2 and the owner's confirmation of 30 Oct 2026; `docs/design/principia_dd_replication.md` § 12.2; REQ-VAL-308, REQ-VAL-309, REQ-VAL-311, REQ-VAL-312, REQ-VAL-313; and B-2, REQ-VAL-246, added below; context: TASK-M9-33, TASK-M9-34, TASK-M9-35, TASK-M9-16)*
 
@@ -926,3 +1025,42 @@ where the choice changes the result (which pixels count) and the corpus does not
 - **Options seen:** (a) add `--release` to the measured native row in the REQ-PERF-115 and TASK-M8-96 lines, leaving TASK-M8-86's line, which names the app, as it is; (b) leave the wording, the report's `build` field and this entry being the record.
 - **Applied meanwhile:** applied per R-369, the measured native row uses `--release`. The report and the panel name the build (`build`, "debug" or "release"), and PR #368's "What to try" gives the command. No requirement or task text changes for this entry.
 - **Waits:** nothing built waits. TASK-M8-96's perf reader measures with `--release` and checks the `build` field.
+
+## RQ-639: The escape window is "provisional" (R-29), and no requirement, task or gate ever confirms it *(physics; calibration; silence; R-29, R-610; `docs/contracts/principia_integrator_contract.md` Part 3; `docs/design/principia_dd_generation_root.md` § "3.8 Metadata schema"; REQ-EVT-017, REQ-GUI-103; the code review (5723498808, F2) and physics review (5723511480, call 3) of PR #348; context: TASK-M3-06)*
+
+*Queued 31 Oct 2026 by TASK-M3-06's fix round, in the physics review's text. For the owner: yes, calibration values and
+physics where the choice changes results (R-369).*
+
+- **File, section:**
+  - `decisions.md` § R-29: "**The window** is 0.4 time units, sampled at sync boundaries (**provisional**)."
+  - `docs/contracts/principia_integrator_contract.md` Part 3: "`tau`, escape window | —, 0.4 (provisional)".
+  - `docs/read_first/principia_01_pitfalls.md` § 2.2: "`|Δn̂|` is taken over 0.4 time units (**provisional**)".
+  - `decisions.md` § R-610: "If the window is recalibrated (M3), the floor, the refusal's reason and the line beside
+    the field move with it".
+  - `plan/requirements.yaml`, REQ-EVT-017's note: "the window length is marked provisional in R-29; a change must go
+    through a ruling."
+  - `plan/requirements.yaml`, REQ-GUI-103: "the escape window (0.4 time units, provisional)".
+- **The gap:**
+  - REQ-EVT-025 calibrates `tau` only, and `plan/MILESTONES.md` § M3 lists "the tau gap" but not the window.
+  - TASK-M3-07's proposal covers only "how the closure window's 0.4 time units map onto the grid". TASK-M3-34 measures
+    at the fixed window.
+  - The register's `escape_window` is settled (citing R-29), so `provisional_until` omits it and the M3 gate never
+    blocks on it. `docs/design/principia_dd_generation_root.md` § 3.8 forbids marking it provisional without a
+    calibration requirement.
+- **The question:** is 0.4 confirmed by measurement at M3, or by ruling as it stands? It changes which trajectories
+  fire escape and when, and R-610's horizon floor follows it.
+- **Options seen:**
+  - (a) A new calibration requirement, confirmed at the M3 gate, proposed by the task that re-validates escape
+    (TASK-M3-34), with evidence over a window ladder. The register entry then becomes `proposed(..., <req>, "M3")`.
+  - (b) A ruling confirms 0.4. The word "provisional" comes off by a port, and the entry cites that ruling.
+- **Second question:** the window is carried and shown in the Run window (REQ-GUI-103), but `validate` accepts any
+  finite positive value, and T's floor follows it (`check_horizon`). So what range may it take? That range also bears
+  on the smallest `dt_macro` a carried window can reach; TASK-M3-06 meanwhile refuses a `dt_macro` whose smallest
+  substep is not a normal f32, per R-369. That refusal bounds the substep only: at its floor the stages' `c·dt` (KDK's
+  half-kick, 2⁻¹²⁷ at `N_max` = 64) are still subnormal and a flushing backend reads them as 0, with no branch affected
+  and no dynamics at that scale. Every stage size stays normal for a window of at least about 2⁻⁹⁸, and at the window
+  of 0.4 it is near 2⁻²⁹. So any lower bound the range sets at or above 2⁻⁹⁸ makes the `dt_macro` refusal unreachable.
+  The range is also where a physically meaningful lower bound belongs: f32 rounding absorbs a step far above this
+  floor.
+- **Applied meanwhile:** 0.4 per R-29, settled in the register, the doc comment saying provisional (TASK-M3-06).
+- **Waits:** the answer is needed by the M3 gate. No task waits.
