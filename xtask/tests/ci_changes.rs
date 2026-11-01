@@ -24,7 +24,7 @@
 //!   classification failed, when a job its verdict runs was skipped, and on any failed or cancelled job.
 //! - `ci_changes_jobs_skip_on_the_verdict`: the `changes` job runs the classifier and cannot be skipped; the build,
 //!   test and GPU jobs wait on it alone and skip on its verdict (docs-only, or no GPU-path file); `ci-workspace` runs
-//!   its tests or, on a docs-only pull request, the docs checks, and passes the verdict to the gate `ci`.
+//!   its tests or, on a docs-only pull request, the cheap checks, and passes the verdict to the gate `ci`.
 //! - `ci_changes_no_skipped_job_reports_a_required_name`: every workflow that runs on pull requests has no
 //!   workflow-level `paths:` or `paths-ignore:`; the required checks are each reported by exactly one job; a job that
 //!   can be skipped (a job-level `if:` or a `needs:`) is never named for a required check unless its `if:` is
@@ -716,7 +716,7 @@ const GATES: &[Gate] = &[
                 false,
             ),
             run(
-                "a docs-only pull request whose docs checks failed",
+                "a docs-only pull request whose cheap checks failed",
                 "skipped skipped failure",
                 "true",
                 false,
@@ -898,7 +898,7 @@ fn check_skips(yml: &str) {
             text(&job["if"])
         );
     }
-    // `ci-workspace` runs either its tests or the docs checks, and passes the verdict to the gate `ci`.
+    // `ci-workspace` runs either its tests or the cheap checks, and passes the verdict to the gate `ci`.
     let ws = &wf["jobs"]["ci-workspace"];
     assert_eq!(
         text(&ws["needs"]),

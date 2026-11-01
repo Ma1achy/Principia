@@ -373,7 +373,7 @@ jobs:
 
   # The required check `ci` (R-266): every `ci` shard, `ci-checks` and `ci-workspace` passed. It runs whatever they
   # ended in (`always()`), so a failed or cancelled job turns it red rather than skipping it. R-656: a skipped job
-  # passes only on a docs-only pull request, which `ci-workspace`, having run its docs checks, passes on (DOCS_ONLY);
+  # passes only on a docs-only pull request, which `ci-workspace`, having run its cheap checks, passes on (DOCS_ONLY);
   # if the classification failed, `ci-workspace` was skipped and passes nothing on, so the skips turn it red.
   ci-gate:
     name: ci
