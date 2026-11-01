@@ -24610,6 +24610,25 @@
   - R-633
   milestone: M6
   note: "R-633 (28 Oct 2026, RQ-601 (a); (b), one value for both, rejected; (c), the analytic energy-normal projector, noted for later, if the gap ever narrows, f32 or deep zoom). Closed by TASK-M6-35, proposed for the M6 gate. Physics review is required."
+- id: REQ-GUI-411
+  area: GUI
+  kind: calibration
+  statement: "The radius of the Shape view's pole, the value of sin φ below which the compass's Shape view calls its state at the chart's pole, naming a refused steer's reason \"the chart's pole\" ahead of any other and showing the readout's pole line, must be a calibrated value (R-71; R-550, RQ-343 (b), J6), proposed by TASK-M6-35 from the farthest sin φ at which the pole costs the latent Jacobian a singular value at REQ-GUI-410's cut, measured over a fixed, recorded sample with E* unset and set, and confirmed at the M6 gate."
+  source:
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: decisions.md
+    section: "R-550 — The compass's physical views and steer: an eight-column f64 central-difference Jacobian `∂x/∂z` of the decoder, read after `η_E`; Jacobi's eight `α, β`, the four Jacobi momenta and two mass fractions, Shape's `θ, φ, θ̇, φ̇, L_z, Ṙ` and the two mass fractions, both of full rank, so the steer is `J⁻¹` with the projector test refusing; each coordinate divided by a fixed reference range *(closes RQ-341, RQ-342, RQ-343, RQ-344, RQ-345 and RQ-346; amends R-452)*"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: "The compass: look and views (R-451, R-452)"
+  verify:
+    method: review checklist
+    detail: "physics reviewer: TASK-M6-35's calibration record gives the measured sin φ over the recorded sample (E* unset and set), the proposed radius and its margin, and cargo test -p gui mock_compass_steer_cut prints that measurement and asserts the radius clears it; confirmed at the M6 gate"
+  rulings:
+  - R-71
+  - R-550
+  milestone: M6
+  note: "Found by the code review of PR #365 (F4): the corpus sets no value for it. Closed by TASK-M6-35, proposed for the M6 gate. Physics review is required."
 - id: REQ-TOOL-001
   area: TOOL
   statement: "Each session must record once: device (GPU/CPU model, core counts, VRAM or unified memory size in its own field), backend and driver version, precision support and f64 rate, build (commit hash, profile, feature flags) and display (resolution, refresh, DPI scale)."

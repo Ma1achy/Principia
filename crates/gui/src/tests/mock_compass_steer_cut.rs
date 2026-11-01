@@ -3,13 +3,14 @@
 //! fixture refuses none, a saturated-link fixture refuses; controls: no cut, and a cut at `1e-3`, each fail. The sample
 //! is the fixed-seed one the calibration record gives: 500 `z` in `[−3, 3]⁸`, seed `0x5EED`, the Jacobi set.
 
+use engine::contract::decoded::{self, Sphere};
 use engine::contract::sim_config::{Latent, Links, Plane, LATENT_DIM};
 
 use super::compass_plucker::Rng;
 use super::compass_support::{app_at, plane, view};
 use super::support::rejects;
 use crate::explore::compass::physical::{
-    latent_jacobian, steer, Decoder, Inverse, Matrix, Refusal, Set, CUT, TOLERANCE,
+    latent_jacobian, steer, Decoder, Inverse, Matrix, Refusal, Set, CUT, POLE_SIN, TOLERANCE,
 };
 use crate::explore::compass::views::upper;
 
@@ -135,6 +136,41 @@ fn mock_compass_steer_cut_the_gap_holds_on_the_sample() {
     rejects("a cut outside the gap", || assert!(unset > 1e-3));
 }
 
+/// The largest `sin φ` at which the Shape set's `J` keeps fewer than `kept_whole` values, on latent points run into the
+/// pole from the first 100 of the sample, with the energy target `e_star`.
+fn widest_loss_near_the_pole(e_star: Option<f64>, kept_whole: usize) -> f64 {
+    let links = Links::defaults();
+    let mut widest: f64 = 0.0;
+    for base in &sample()[..100] {
+        for k in 0..56 {
+            let t = 10f64.powf(-f64::from(k) / 4.0);
+            for sign in [1.0, -1.0] {
+                let mut z = *base;
+                (z[0], z[1]) = (t, sign * 0.7 * t);
+                let j = latent_jacobian(&Decoder::Real { e_star }, Set::Shape, &links, &z);
+                if Inverse::of(&j, CUT).kept < kept_whole {
+                    let s = decoded::state(&z, &links, e_star);
+                    widest = widest.max(Sphere::of(&s).sin_phi);
+                }
+            }
+        }
+    }
+    widest
+}
+
+#[test]
+fn mock_compass_steer_cut_the_pole_radius_holds_on_the_sample() {
+    // REQ-GUI-411's record: POLE_SIN clears the farthest sin φ at which the pole costs J a value, so such a refusal is
+    // named the pole, and not a saturated link.
+    let unset = widest_loss_near_the_pole(None, 8);
+    let shell = widest_loss_near_the_pole(Some(0.0), 7);
+    println!("the pole costs J a value out to sin φ: unset {unset:.3e}; E* = 0 {shell:.3e}");
+    assert!(unset > 0.0 && shell > 0.0, "the walk reaches the pole");
+    assert!(unset < POLE_SIN, "{unset}");
+    assert!(shell < POLE_SIN, "{shell}");
+    rejects("the first radius, 1e-3", || assert!(unset < 1e-3));
+}
+
 #[test]
 fn mock_compass_steer_cut_a_saturated_link_refuses() {
     // z_β far along its sigmoid: β's column is exactly 0, its row nowhere reached.
@@ -165,6 +201,95 @@ fn mock_compass_steer_cut_a_saturated_link_refuses() {
             steer(&d, Set::Jacobi, &free, 1, 3),
             Some(Err(Refusal::Saturated))
         )
+    });
+}
+
+#[test]
+fn mock_compass_steer_cut_a_saturated_link_on_an_e_star_chart_names_each_cause() {
+    // The saturated fixture on E* = 0: the shell drops one value and the link another.
+    let mut p: Plane = plane(&view(10.0, 5.0, 0.0, 0.8), [0.1, -0.3, 0.25]);
+    p.z0 = [0.3, 1000.0, 0.3, -0.2, 0.5, 0.1, 0.1, -0.2];
+    let (app, _h) = app_at(&p);
+    let mut sim = app.snapshot().sim.clone();
+    let links = Links::defaults();
+    let shell = Decoder::Real { e_star: Some(0.0) };
+    let inverse =
+        |d: &Decoder, z: &Latent| Inverse::of(&latent_jacobian(d, Set::Jacobi, &links, z), CUT);
+    assert_eq!(inverse(&shell, &p.z0).kept, 6);
+    for cell in [(0, 1), (1, 3), (1, 7)] {
+        assert_eq!(
+            steer(&shell, Set::Jacobi, &sim, cell.0, cell.1),
+            Some(Err(Refusal::Saturated)),
+            "{cell:?}, β's column gone with or without the shell"
+        );
+    }
+    // A cell of the same kind of state that only the shell refuses: reachable with η_E off, so the shell is its cause.
+    let off = Decoder::Real { e_star: None };
+    let mut shell_only = 0;
+    for mut z in sample() {
+        z[1] = 1000.0;
+        let (on, unset) = (inverse(&shell, &z), inverse(&off, &z));
+        for (a, b) in upper() {
+            if on.smaller(a, b) < TOLERANCE && unset.smaller(a, b) >= TOLERANCE {
+                assert_eq!(on.kept, 6, "at {z:?}");
+                sim.plane.z0 = z;
+                assert_eq!(
+                    steer(&shell, Set::Jacobi, &sim, a, b),
+                    Some(Err(Refusal::EnergyShell)),
+                    "({a}, {b}) at {z:?}"
+                );
+                shell_only += 1;
+            }
+        }
+    }
+    assert!(
+        shell_only > 0,
+        "no cell on the sample only the shell refuses"
+    );
+    // Control: the fix's absence, the shell named for the saturated cell.
+    sim.plane.z0 = p.z0;
+    rejects("a saturated cell blamed on the shell", || {
+        assert_eq!(
+            steer(&shell, Set::Jacobi, &sim, 1, 3),
+            Some(Err(Refusal::EnergyShell))
+        )
+    });
+}
+
+#[test]
+fn mock_compass_steer_cut_a_fixture_names_its_cause_by_what_it_keeps() {
+    use super::compass_physical_views::leaked;
+    let p: Plane = plane(&view(10.0, 5.0, 0.0, 0.8), [0.1, -0.3, 0.25]);
+    let (app, _h) = app_at(&p);
+    let sim = app.snapshot().sim.clone();
+    // The identity with its last `gone` rows zero, so cell (0, 7) is refused at each.
+    let a = |gone: usize| -> &'static Matrix {
+        leaked(std::array::from_fn(|r| {
+            std::array::from_fn(|c| f64::from(r == c && r < LATENT_DIM - gone))
+        }))
+    };
+    let why = |gone, shell| {
+        steer(
+            &Decoder::Linear { a: a(gone), shell },
+            Set::Jacobi,
+            &sim,
+            0,
+            7,
+        )
+    };
+    assert_eq!(
+        why(1, true),
+        Some(Err(Refusal::EnergyShell)),
+        "seven kept: the shell"
+    );
+    assert_eq!(
+        why(2, true),
+        Some(Err(Refusal::Saturated)),
+        "six kept: more than the shell"
+    );
+    assert_eq!(why(1, false), Some(Err(Refusal::Saturated)), "no shell");
+    rejects("six kept blamed on the shell", || {
+        assert_eq!(why(2, true), Some(Err(Refusal::EnergyShell)))
     });
 }
 

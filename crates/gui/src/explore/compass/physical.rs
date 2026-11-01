@@ -24,8 +24,9 @@ pub const CUT: f64 = 1e-9;
 /// The refusal tolerance on `[P e_i, P e_j]`'s smaller singular value (REQ-GUI-346, an R-71 calibration confirmed at the
 /// M6 gate; the measurement is render_gui_spec's).
 pub const TOLERANCE: f64 = 0.1;
-/// Where `sin φ` is below this, the Shape view's state is at the chart's pole, for naming a refusal's reason.
-pub const POLE_SIN: f64 = 1e-3;
+/// Where `sin φ` is below this, the Shape view's state is at the chart's pole, for naming a refusal's reason and for the
+/// readout's line (REQ-GUI-411, an R-71 calibration confirmed at the M6 gate; the measurement is render_gui_spec's).
+pub const POLE_SIN: f64 = 0.1;
 
 /// The singular values `J` keeps on an `E*` chart with nothing else rank-deficient: the shell drops one (R-550).
 const SHELL_KEPT: usize = LATENT_DIM - 1;

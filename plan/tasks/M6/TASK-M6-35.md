@@ -1,7 +1,7 @@
 # TASK-M6-35 — The compass's Jacobi and Shape views and the physical steer (R-452)
 
 - **Milestone:** M6
-- **Closes:** REQ-GUI-199, REQ-GUI-200, REQ-DEC-049, REQ-GUI-346, REQ-GUI-347, REQ-GUI-410
+- **Closes:** REQ-GUI-199, REQ-GUI-200, REQ-DEC-049, REQ-GUI-346, REQ-GUI-347, REQ-GUI-410, REQ-GUI-411
 - **Depends on:** TASK-M6-34
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, gui, physics
@@ -62,7 +62,7 @@ state after `η_E`, the fixed-range metric, and the steer by `J⁻¹` with the p
 ## Acceptance tests
 - `cargo test -p gui compass_physical_views` and `cargo xtask screenshot 01_main` (mock_compass_jacobi, mock_compass_shape) — on the linear-decoder fixture the grid equals the normalised bivector of J q₁ ∧ J q₂ within 1e-12 and the stretch the Gram factor; on the decoder a slice edit changes the physical grid where J depends on z₀ and leaves the Plücker grid unchanged; the hovered pixel's J is used while the pointer is over the figure; a degenerate pushforward shows its message; controls: the reference's synthetic Jacobian and un-orthonormalised u₁, u₂ each fail; review checklist (physics reviewer): the Jacobian, the coordinate sets, the stage read and the physical metric are R-550's (REQ-GUI-199).
 - `cargo test -p gui compass_latent_jacobian` — REQ-DEC-049's verify (the eight columns, the stage after `η_E`, the stretch on the orthonormalised pair).
-- The reference ranges (REQ-GUI-347) and the steer's tolerance (REQ-GUI-346): written into render_gui_spec's compass section and the PR's calibration record; review checklist (physics reviewer).
+- The reference ranges (REQ-GUI-347), the steer's tolerance (REQ-GUI-346) and the pole's radius (REQ-GUI-411): written into render_gui_spec's compass section and the PR's calibration record; review checklist (physics reviewer).
 - `cargo test -p gui mock_compass_steer_cut` — REQ-GUI-410's verify: at `c = 1e-9`, the `E* = 0` fixture refuses the shell-normal direction at every sampled `z`, the `E*`-unset fixture refuses none, a saturated-link fixture refuses; controls: no cut, and a cut at `1e-3`, each fail; the cut and its measured gap in the PR's calibration record; review checklist (physics reviewer) (R-633).
 - `cargo test -p gui mock_compass_steer_physical` — on the fixture a click on a physical cell with e_i, e_j in J's range steers to a plane whose pushforward lights (i, j) at ±1 within REQ-GUI-346's tolerance; a cell needing the energy shell's normal on an `E*` chart is refused with "normal to the energy shell" and no SetField; each steer is one SetField, logged, undone by one Ctrl+Z; controls: a steer accepted on a refused case and one without Gram–Schmidt each fail; review checklist (physics reviewer): the construction is R-550's (REQ-GUI-200).
 
@@ -86,3 +86,8 @@ state after `η_E`, the fixed-range metric, and the steer by `J⁻¹` with the p
   analytic energy-normal projector (RQ-601 (c)) is noted for later and not built. *Was (deliverables):* "The physical
   steer — `q₁ ∝ J⁻¹ e_i`, `q₂ ∝ J⁻¹ e_j`, Gram–Schmidt orthonormalised;" and "tests `compass_physical_views` and
   `mock_compass_steer_physical`".
+- **REQ-GUI-411 (R-71; the code review of PR #365, F4):** naming a refusal for the pole and the readout's pole line need
+  a radius on `sin φ`, and the corpus sets none, so it is a calibration this task proposes, measured in
+  `mock_compass_steer_cut`. *Was (Closes):* "REQ-GUI-199, REQ-GUI-200, REQ-DEC-049, REQ-GUI-346, REQ-GUI-347,
+  REQ-GUI-410". *Was (acceptance):* "The reference ranges (REQ-GUI-347) and the steer's tolerance (REQ-GUI-346):
+  written".

@@ -786,7 +786,13 @@ independent, and in a grid view a drag does nothing. The view is the compass's o
   on the default decoder, the Jacobi set over its ranges, `J`'s `c = 10⁻⁹`, 500 `z` in `[−3, 3]⁸` (splitmix64, seed
   `0x5EED`): with `E*` unset, exactly 1 to rounding on every cell, so the margin there is 0.9; with `E* = 0`, the least
   over the cells of a `z` runs from `5.7·10⁻³` to 0.74, its median 0.37, 0.1% of all the cells below `4.3·10⁻²`, 35 of
-  the 500 `z` having a cell refused at 0.1, and the shell's normal itself reads 0 to rounding. The same sample's `σ₈/σ₁` is at most `2.9·10⁻¹²` with `E* = 0` and at
+  the 500 `z` having a cell refused at 0.1, and the shell's normal itself reads 0 to rounding. **The pole's radius (REQ-GUI-411, R-71, proposed by TASK-M6-35, confirmed at
+  the M6 gate) is `sin φ < 0.1`.** Below it the Shape view's state is at the chart's pole: a refused cell is named for
+  the pole ahead of any other cause, and the readout shows the pole's line. `θ̇` and `φ̇` grow without bound toward the
+  pole, so `σ₈/σ₁` falls through `c` before `sin φ` reaches 0. Measured by
+  `mock_compass_steer_cut_the_pole_radius_holds_on_the_sample` on the first 100 `z` of the same sample, each run into
+  the pole along `z₀ = t`, `z₁ = ±0.7t`, `t` from 1 to `10^(−13.75)`: the pole costs `J` a value out to
+  `sin φ = 5.4·10⁻²` with `E*` unset and `9.6·10⁻⁴` with `E* = 0`, so 0.1 clears the wider by a factor of 1.9. The same sample's `σ₈/σ₁` is at most `2.9·10⁻¹²` with `E* = 0` and at
   least `4.2·10⁻⁶` with `E*` unset, inside RQ-601's gap, `c` between them. The Manifold view's sliders follow as after the
   Chart builder's Apply (§G7). *Was (before R-550):* "`q₁ ∝ J⁺ e_i`, `q₂ ∝ J⁺ e_j`, Gram–Schmidt orthonormalised, and
   is refused, with the reason logged to the console, where the preimage is no 2-plane; the construction waits on RQ-344
