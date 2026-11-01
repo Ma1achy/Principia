@@ -3523,3 +3523,91 @@ negative_control!(
     expected = "job runner did not run",
     runner_command_case("jobq_runner_command_control", &["runner", "a", "b"])
 );
+
+/// A leader that holds its SIGTERM until `$0/release` appears, having marked `$0/termed`: the time between is the window
+/// in which a runner is ending the group, outside the state lock. Bounded, should the test die.
+const HOLDS_TERM: &str = "trap 'touch \"$0/termed\"; i=0; \
+    while [ ! -e \"$0/release\" ] && [ $i -lt 800 ]; do sleep 0.05; i=$((i+1)); done; exit 0' TERM; \
+    touch \"$0/ready\"; i=0; while [ $i -lt 800 ]; do sleep 0.05; i=$((i+1)); done";
+
+/// A job left by a dead runner, with its starts spent, is given `change` while the new runner is ending its group, outside
+/// the state lock. Once the group has ended the runner must leave a job changed under it just as it stands. Job 2, left
+/// the same way with no group, is recovered right after job 1, so it ending as lost says job 1's recovery is over.
+fn changed_hands_case(tag: &str, change: impl FnOnce(&mut Job)) {
+    let q = Q::new(tag, "grace = 30\n");
+    std::fs::create_dir_all(q.dir.join("jobs")).expect("jobs dir");
+    let mut leader = Command::new("/bin/sh")
+        .args(["-c", HOLDS_TERM])
+        .arg(&*q.dir)
+        .process_group(0)
+        .spawn()
+        .expect("stand-in started");
+    let set_up = until(30, || q.dir.join("ready").exists());
+    let pid = leader.id() as i32;
+    let reaper = std::thread::spawn(move || leader.wait());
+    let left = |id: u64, pgid: Option<i32>| {
+        let mut planted = job(id, Priority::Peek, State::Running, Some("/t"));
+        planted.worktree = q.work();
+        planted.attempts = MAX_ATTEMPTS;
+        planted.started = Some(xtask::jobq::now());
+        planted.pgid = pgid;
+        planted.runner_pid = Some(dead_pid());
+        planted
+    };
+    let mut planted = left(1, Some(pid));
+    q.queue().save(&planted).expect("job planted");
+    q.queue().save(&left(2, None)).expect("second job planted");
+    let mut runner = q.command(&["runner"]);
+    let runner = std::thread::spawn(move || runner.output_within(Duration::from_secs(60)));
+    let termed = until(30, || q.dir.join("termed").exists());
+    change(&mut planted);
+    q.queue().save(&planted).expect("job changed");
+    std::fs::write(q.dir.join("release"), "").expect("release written");
+    let over = until(30, || {
+        q.queue()
+            .load(2)
+            .is_ok_and(|second| second.state == State::Lost)
+    });
+    let after = q.queue().load(1).expect("job file");
+    // A job left running under another runner keeps this one busy, so it is ended here for the runner to go idle.
+    if after.state == State::Running {
+        let mut ended = after.clone();
+        ended.state = State::Exited;
+        q.queue().save(&ended).expect("job ended");
+    }
+    q.finish();
+    let _ = runner.join();
+    kill("-9", -pid);
+    let _ = reaper.join();
+    assert!(
+        set_up && termed && over,
+        "the recovery never ran: set up {set_up}, termed {termed}, second job recovered {over}"
+    );
+    assert!(
+        after == planted,
+        "a recovery overwrote a job changed under it: {after:?}, not {planted:?}"
+    );
+}
+
+#[test]
+fn jobq_a_recovery_leaves_a_job_changed_under_it() {
+    // It ended, under the same runner's name: only its state tells.
+    changed_hands_case("jobq_changed_state", |job| {
+        job.state = State::Exited;
+        job.exit = Some(0);
+        job.finished = Some(xtask::jobq::now());
+        job.note = Some("ended meanwhile".to_owned());
+    });
+    // It runs under another runner: only the runner's name tells.
+    changed_hands_case("jobq_changed_runner", |job| {
+        job.runner_pid = Some(std::process::id() as i32);
+        job.note = Some("taken meanwhile".to_owned());
+    });
+}
+
+negative_control!(
+    jobq_a_recovery_leaves_a_job_changed_under_it,
+    "a job nothing changed is recovered, and the check sees its file change",
+    expected = "a recovery overwrote a job changed under it",
+    changed_hands_case("jobq_changed_control", |_| {})
+);

@@ -338,3 +338,7 @@ justification = "the two differ only if the clock reads exactly the deadline, to
 [[equivalent]]
 mutant = "xtask/src/jobq.rs:1511:65: replace | with ^ in leader_exited"
 justification = "WNOHANG and WNOWAIT are distinct single-bit waitid options on both the Linux and the Mac targets, so their ^ is their |, and the options passed to waitid are the same bits"
+
+[[equivalent]]
+mutant = "xtask/src/jobq.rs:1511:41: replace | with ^ in leader_exited"
+justification = "WEXITED (0x4) and WNOHANG (0x1) share no bit on both the Linux and the Mac targets, so their ^ is their |, and the options passed to waitid are the same bits"
