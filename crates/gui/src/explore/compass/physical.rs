@@ -335,7 +335,7 @@ pub fn smaller_singular(x: &Latent, y: &Latent) -> f64 {
 pub enum Refusal {
     /// The cell's plane needs the direction normal to the energy shell, on an `E*`-normalised chart.
     EnergyShell,
-    /// The state is at a pole of the Shape view's sphere, the chart's singularity.
+    /// The state is within the pole's radius of the Shape view's sphere, the chart's singularity.
     Pole,
     /// `J` cannot reach the cell's plane: a saturated link.
     Saturated,
