@@ -346,21 +346,24 @@ except for adding `mutants-check`, the one change R-305 allows. The human remove
 checks until #96 (TASK-M0-14) merges, since PRs off `main` never report it. Tell the human the moment #96 merges, so
 they can add it back.
 
-**What CI runs on a pull request (R-656).** `ci.yml` runs on a push to `main` (and to a `measure/` branch, R-272)
+**What CI runs on a pull request (R-656, R-662).** `ci.yml` runs on a push to `main` (and to a `measure/` branch, R-272)
 and, for a pull request, through `pull_request` only, once per push. Each workflow that builds or tests keeps one
 `concurrency` group per pull request, so a push cancels the run on the head it supersedes; a run on `main` is never
 cancelled (`reviews.yml`, `no-atlas-params.yml` and `gemini-dispatch.yml` keep none, decisions.md R-656). `ci.yml`'s
 `changes` job, and `mutants-fixture` in a step of its own, classify the change with `scripts/ci_changes.sh` (the pull
 request's merge commit against the base it merges onto; any other run runs everything):
-- **docs-only** (every path on the script's allowlist: `docs/`, the plan's prose and data, the root's markdown; never
-  `.github/` or `plan/`'s Python; and none on its list of files code reads, which count as code, the owner's words
-  of 30 Oct 2026 on #351, decisions.md R-656: every `.md` and `.html` under `docs/`, `docs/gui/design/`,
-  `docs/gui/reference/`, all of `plan/`, the root's markdown and `fixtures/`, each with its readers named in the
-  script, so only `docs/`'s other files, such as the incoming papers and data, are docs-only): the build, test,
-  release and controls jobs and the GPU suites' jobs are skipped, and `ci-workspace` runs the plan checks, the
-  vocabulary lint and the tests that name the allowlist's paths (a backstop) in place of its tests;
-  `mutants-fixture` skips its steps; `mutants`' shards find no `.rs` file and pass;
-- **no GPU-path file** (only docs-only paths, `crates/gui/` and `crates/prin/`; a file code reads is a GPU path):
+- **docs-only**, meaning it changes none of Principia's code (R-662; the owner, 31 Oct 2026: "Only the actual Principia
+  CODE matters in ci"): every path is on the script's allowlist, `docs/`, `plan/` (its prose and Python), `scripts/`,
+  `workbench/` and the root's markdown, and none is on its list of data code loads: `docs/gui/design/`,
+  `docs/gui/reference/`, `plan/requirements.yaml`, `plan/tasks.yaml`, `plan/MILESTONES.md`, `plan/tasks/`, the
+  classifier `scripts/ci_changes.sh` and the containment `scripts/contain.sh`, each with its readers named in the
+  script. The build, test, release and controls
+  jobs and the GPU suites' jobs are skipped, and `ci-workspace` runs only the cheap checks, plan-check and the
+  vocabulary lint, in place of its tests, beside `no-atlas-params.yml`, the atlas guard; `mutants-fixture` skips its
+  steps; `mutants`' shards find no `.rs` file outside those folders and pass;
+- **full CI** for everything else: `crates/`, `xtask/`, `fixtures/`, the Cargo files, the toolchain, `.github/`, a mixed
+  change, and any path the allowlist doesn't name, so an unknown top-level path fails towards full CI;
+- **no GPU-path file** (only docs-only paths, `crates/gui/` and `crates/prin/`; data code loads is a GPU path):
   the GPU suites' jobs (`gpu-kernel suites`, `gpu-metal suites`, `gpu-lavapipe suites`) are skipped; everything else
   runs.
 
@@ -371,9 +374,11 @@ ended in and pass a skipped one only on the classification's verdict, and matrix
 Mutants run on every head whose diff has Rust in it, and the superseded head's run is cancelled, so the run that
 finishes is the merge-ready head's; nothing requests it at merge time. What a pull request skips runs on `main` after
 it merges, where every job runs. A superseded head's cancelled run leaves its gates failed or cancelled, as before:
-the owner kept them as they are, TASK-M0-45's checks and R-266 standing (30 Oct 2026, on #351, no ruling). A new
-test, build script, codegen step or xtask check that reads a doc, spec or data file adds that file to
-`scripts/ci_changes.sh`'s list of files code reads; `xtask/tests/ci_changes.rs` scans for a literal path missing from it.
+the owner kept them as they are, TASK-M0-45's checks and R-266 standing (30 Oct 2026, on #351, no ruling). A
+head that changes only prose a test reads does not run that test, which runs on `main` once it merges, so a contract's
+renamed heading can turn `main` red after a green pull request (R-662). New code that loads a data file for behaviour
+adds that file to `scripts/ci_changes.sh`'s list; `xtask/tests/ci_changes.rs` scans for a literal data path missing
+from it.
 
 **Numbers.**
 - **An RQ's form.** A heading `## RQ-n: <question>`, a `- **File, section:**` field and a `- **Applied meanwhile:**`

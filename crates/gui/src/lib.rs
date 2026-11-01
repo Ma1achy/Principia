@@ -23,6 +23,8 @@ mod tests {
     mod canvas_gestures_mock;
     mod cli;
     mod compass_cross_section;
+    mod compass_latent_jacobian;
+    mod compass_physical_views;
     mod compass_plucker;
     mod compass_position_gauge;
     mod compass_support;
@@ -35,7 +37,9 @@ mod tests {
     mod mock_compass;
     mod mock_compass_cube;
     mod mock_compass_slice_follows_pointer;
+    mod mock_compass_steer_cut;
     mod mock_compass_steer_latent;
+    mod mock_compass_steer_physical;
     mod mock_compass_view_keys;
     mod mock_compass_views;
     mod mock_console_keys;
