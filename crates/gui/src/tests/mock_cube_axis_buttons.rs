@@ -286,17 +286,32 @@ fn mock_cube_axis_buttons_picking_v_and_a_chart_edit_move_v() {
     });
 }
 
+/// Asserts `read` is on the axes `(a, b)` at `τ₁` and `γ`, in degrees.
+fn check_reading(read: &View, (a, b): (usize, usize), (tau1, gamma): (f64, f64)) {
+    assert_eq!(
+        (read.a, read.b),
+        (a, b),
+        "the axes, τ₁ = {tau1}, γ = {gamma}"
+    );
+    assert!(
+        (read.tau1.to_degrees() - tau1).abs() < 1e-9,
+        "τ₁ {} against {tau1}",
+        read.tau1.to_degrees()
+    );
+    assert!(
+        (read.gamma.to_degrees() - gamma).abs() < 1e-9,
+        "γ {} against {gamma}",
+        read.gamma.to_degrees()
+    );
+}
+
 #[test]
 fn mock_cube_axis_buttons_the_pair_the_other_way_round_reads_as_picked() {
     // H and V swapped by two picks: no turn of the preset whose axes they are, so it reads as picked, every angle 0.
     let (mut app, mut h) = app_with((0.0, 0.0, 0.0), 1.0, frame(Z_Q3, Z_Q3, Z_Q3));
-    for (edge, to) in [(Edge::H, Z_Q0), (Edge::V, Z_ALPHA), (Edge::H, Z_BETA)] {
-        let edit = pick_edit(&app.snapshot().sim, edge, to, Shows::Normal).expect("offered");
-        app.set_field(edit);
-        settle(&mut h, &mut app);
-    }
-    let read = View::read(&app.snapshot().sim);
-    assert_eq!((read.a, read.b, read.gamma), (Z_BETA, Z_ALPHA, 0.0));
+    swap_h_and_v(&mut h, &mut app);
+    let swapped = View::read(&app.snapshot().sim);
+    check_reading(&swapped, (Z_BETA, Z_ALPHA), (0.0, 0.0));
     assert_eq!(texts(&h, &app)[0], "H z_β");
     assert_eq!(texts(&h, &app)[2], "V z_α");
     // The preset turned by 90°, a real turn, still reads as the preset.
@@ -305,9 +320,9 @@ fn mock_cube_axis_buttons_the_pair_the_other_way_round_reads_as_picked() {
         q1: axis(Z_BETA, 1.0),
         q2: axis(Z_ALPHA, -1.0),
     };
-    let read = View::framed(&turned, Some(&frame(Z_Q3, Z_Q3, Z_Q3)));
-    assert_eq!((read.a, read.b, read.preset), (Z_ALPHA, Z_BETA, Some(0)));
-    assert!((read.gamma.to_degrees() - 90.0).abs() < 1e-9);
+    let turned = View::framed(&turned, Some(&frame(Z_Q3, Z_Q3, Z_Q3)));
+    check_reading(&turned, (Z_ALPHA, Z_BETA), (0.0, 90.0));
+    assert_eq!(turned.preset, Some(0));
     // And tilted, the swapped pair keeps its axes, past 45° too.
     let tilted = |tau: f64| {
         let (s, c) = tau.to_radians().sin_cos();
@@ -321,8 +336,26 @@ fn mock_cube_axis_buttons_the_pair_the_other_way_round_reads_as_picked() {
     };
     for tau in [20.0, 60.0, 89.0] {
         let read = View::framed(&tilted(tau), Some(&frame(Z_Q3, Z_Q3, Z_Q3)));
-        assert_eq!((read.a, read.b), (Z_BETA, Z_ALPHA), "τ₁ = {tau}");
-        assert!((read.tau1.to_degrees() - tau).abs() < 1e-9, "τ₁ = {tau}");
+        check_reading(&read, (Z_BETA, Z_ALPHA), (tau, 0.0));
+    }
+    rejects("the swapped pair read as the preset", || {
+        check_reading(&swapped, (Z_ALPHA, Z_BETA), (0.0, 0.0))
+    });
+    rejects("the preset's real turn read at no angle", || {
+        check_reading(&turned, (Z_ALPHA, Z_BETA), (0.0, 0.0))
+    });
+    rejects("a swapped pair's tilt read as another", || {
+        let read = View::framed(&tilted(60.0), Some(&frame(Z_Q3, Z_Q3, Z_Q3)));
+        check_reading(&read, (Z_BETA, Z_ALPHA), (20.0, 0.0))
+    });
+}
+
+/// H and V swapped by the picks: `H z_β`, `V z_α`, every angle 0.
+fn swap_h_and_v(h: &mut Headless, app: &mut App<MockSide>) {
+    for (edge, to) in [(Edge::H, Z_Q0), (Edge::V, Z_ALPHA), (Edge::H, Z_BETA)] {
+        let edit = pick_edit(&app.snapshot().sim, edge, to, Shows::Normal).expect("offered");
+        app.set_field(edit);
+        settle(h, app);
     }
 }
 
