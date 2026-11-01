@@ -870,6 +870,8 @@ pub struct Out {
     pub commands: Vec<Vec<SetField>>,
     /// The windows to open.
     pub windows: Vec<Window>,
+    /// The console's lines for the physical steers refused (R-550).
+    pub refusals: Vec<String>,
 }
 
 impl Out {

@@ -2,22 +2,29 @@
 //! R-452 C6): the Compass scope's siblings, the seven and R-459 G9's H, V and D, in order both ways; Enter on each view button switches the view in
 //! navigation mode; in the Plücker view Enter on the compass starts interaction on the dominant cell, the arrows move a
 //! cell cursor over the upper triangle only, Space steers to it (undone by one Ctrl+Z) and Esc or Enter returns; in the
-//! Cube view the arrows tilt as before; the breadcrumb names the view. Each check also runs on an input it must reject
+//! Cube view the arrows tilt as before; the breadcrumb names the view; the focus on the compass element brings the
+//! column's text into view at the small panels; the ring stays in the panel under the wheel. Each check also runs on an input it must reject
 //! (R-176, through `rejects`).
 
-use eframe::egui::{Key, Modifiers};
+use eframe::egui::{
+    pos2, vec2, Color32, Event, FullOutput, Key, Modifiers, MouseWheelUnit, Rect, Shape, TouchPhase,
+};
+use engine::contract::sim_config::Plane;
 use engine::contract::view_ui::{Focus, KeyMode, Mode};
 
 use super::compass_support::{app_at, plane, setfields, view};
 use super::support::{focus, rejects};
 use crate::app::App;
+use crate::capture::PIXELS_PER_POINT;
 use crate::explore::breadcrumb;
 use crate::explore::compass;
+use crate::explore::compass::physical;
 use crate::explore::compass::views::{
-    cursor_moved, cursor_start, dominant, plucker, upper, CompassView, VIEWS,
+    cursor_moved, cursor_start, dominant, plucker, plucker_drawing_with, upper, CompassView,
+    PLUCKER_HELP, VIEWS,
 };
 use crate::explore::manifold_view::tilt::Angles;
-use crate::explore::manifold_view::View;
+use crate::explore::manifold_view::{z0_edit, View};
 use crate::explore::{
     COMPASS, COMPASS_CUBE, COMPASS_D, COMPASS_H, COMPASS_JACOBI, COMPASS_PLUCKER, COMPASS_SHAPE,
     COMPASS_SLICE, COMPASS_TILT, COMPASS_V, COMPASS_VIEW,
@@ -25,6 +32,7 @@ use crate::explore::{
 use crate::headless::Headless;
 use crate::keyboard::keymap::{Command, Direction};
 use crate::keyboard::scopes::{Scope, ScopeTree, StepKind};
+use crate::layout::{Layout, Splitter, MIN_BOTTOM_H, MIN_COMPASS_W};
 use crate::side::MockSide;
 
 const NONE: Modifiers = Modifiers::NONE;
@@ -347,16 +355,6 @@ fn mock_compass_view_keys_in_the_cube_view_the_arrows_tilt_as_before() {
     let after = View::of(&app.snapshot().sim.plane);
     let d1 = Angles::of(&after).tau1 - Angles::of(&before).tau1;
     assert!((d1 - 1.0).abs() < 1e-9, "→ tilts τ₁ by 1°: {d1}");
-    // In the Jacobi and Shape views, which have no grid yet, the arrows do nothing.
-    for view in [CompassView::Jacobi, CompassView::Shape] {
-        app.manifold.compass.view = view;
-        let rows = app.console().len();
-        press(&mut h, &mut app, Key::ArrowRight, NONE);
-        press(&mut h, &mut app, Key::Space, NONE);
-        let _ = h.frame(&mut app, Vec::new());
-        assert!(setfields(&app, rows).is_empty(), "{view:?}");
-        assert_eq!(app.manifold.compass.cursor, None);
-    }
     rejects("a Cube-view arrow that edits nothing", || {
         assert!(setfields(&app, 0).is_empty())
     });
@@ -383,5 +381,422 @@ fn mock_compass_view_keys_the_breadcrumb_names_the_view() {
     let shown = crumb(&app);
     rejects("a breadcrumb that does not name the view", || {
         assert_eq!(shown, "Compass › compass")
+    });
+}
+
+/// The compass's whole text in `app`'s current view: each readout line and the hint.
+fn column_text(app: &App<MockSide>, panel: Rect) -> Vec<String> {
+    let sim = &app.snapshot().sim;
+    let c = &app.manifold.compass;
+    match c.view {
+        CompassView::Cube => {
+            let mut text = compass::current(panel, sim, c).readout;
+            text.push(compass::HINT_TILT.to_owned());
+            text
+        }
+        CompassView::Plucker => vec![
+            plucker_drawing_with(
+                compass::square(panel),
+                &sim.plane,
+                View::read(sim).d,
+                c.cursor,
+            )
+            .readout,
+            PLUCKER_HELP.to_owned(),
+        ],
+        CompassView::Jacobi | CompassView::Shape => {
+            let set = c.view.physical().expect("a physical view");
+            vec![
+                physical::readout(set, &compass::pushed(sim, c, set)),
+                physical::HELP.to_owned(),
+            ]
+        }
+    }
+}
+
+/// The first of `wanted` not wholly in the panel's column in `output`, by the rect it is drawn in and its clip.
+fn unread(output: &FullOutput, panel: Rect, wanted: &[String]) -> Option<String> {
+    wanted
+        .iter()
+        .find(|text| {
+            !output.shapes.iter().any(|c| match &c.shape {
+                Shape::Text(t) if t.galley.text() == text.as_str() => {
+                    let at = t.galley.rect.translate(t.pos.to_vec2());
+                    panel.contains_rect(c.clip_rect) && c.clip_rect.contains_rect(at)
+                }
+                _ => false,
+            })
+        })
+        .cloned()
+}
+
+/// Runs enough frames for the column's scroll to finish, then one whose output is returned.
+fn settled_output(h: &mut Headless, app: &mut App<MockSide>) -> FullOutput {
+    for _ in 0..60 {
+        let _ = h.frame(app, Vec::new());
+    }
+    h.frame(app, Vec::new())
+}
+
+/// The app at `p` in a window of `window` points, at the least panel if `least`, the focus on the compass element by
+/// Tab and Enter, in view `index` of [`SIBLINGS`] by the keys, back on the element: and the panel.
+fn at_element(
+    p: &Plane,
+    window: [f32; 2],
+    least: bool,
+    index: usize,
+) -> (App<MockSide>, Headless, Rect) {
+    let (mut app, mut h) = app_at(p);
+    h.set_size(window.map(|points| (points * PIXELS_PER_POINT) as u32));
+    let screen = h.screen();
+    if least {
+        let footer = Layout::new(screen, PIXELS_PER_POINT).footer.min.y;
+        app.splits
+            .set(Splitter::CompassTime, MIN_COMPASS_W / screen.width());
+        app.splits.set(
+            Splitter::TopBottom,
+            (footer - MIN_BOTTOM_H) / screen.height(),
+        );
+    }
+    for key in [Key::Tab; 5] {
+        press(&mut h, &mut app, key, NONE);
+    }
+    press(&mut h, &mut app, Key::Enter, NONE);
+    for _ in 0..index {
+        press(&mut h, &mut app, Key::ArrowRight, NONE);
+    }
+    press(&mut h, &mut app, Key::Enter, NONE);
+    for _ in 0..index {
+        press(&mut h, &mut app, Key::ArrowLeft, NONE);
+    }
+    assert_eq!(at(&app), (vec![COMPASS, COMPASS_VIEW], KeyMode::Navigation));
+    let panel = Layout::with_splits(screen, PIXELS_PER_POINT, &app.splits).compass;
+    (app, h, panel)
+}
+
+/// The sizes the column overflows at, the windows the gui review measured.
+const SMALL: [(&str, [f32; 2], bool); 3] = [
+    ("the least panel", [1440.0, 900.0], true),
+    ("1024 by 768", [1024.0, 768.0], false),
+    ("1280 by 720", [1280.0, 720.0], false),
+];
+
+/// The views by their place in [`SIBLINGS`].
+const FOUR: [usize; 4] = [3, 4, 5, 6];
+
+/// The tilted plane the tests start from.
+fn tilted() -> Plane {
+    plane(&view(30.0, -20.0, 25.0, 1.0), [0.1, -0.2, 0.2])
+}
+
+/// The tilted plane at the Shape sphere's `+w` pole, where the readout's stretch is at its largest.
+fn at_the_pole() -> Plane {
+    near_the_pole(0.0)
+}
+
+/// The tilted plane `r` off that pole.
+fn near_the_pole(r: f64) -> Plane {
+    let mut p = tilted();
+    p.z0 = POLE;
+    p.z0[0] = -r;
+    p.z0[1] = 0.5 * r;
+    p
+}
+
+/// The point of [`at_the_pole`].
+const POLE: engine::contract::sim_config::Latent = [0.0, 0.0, 0.3, -0.2, 0.5, 0.1, 0.0, 0.0];
+
+/// Presses `key` `times` times, then the frames for the column's scroll to finish: the last one's output.
+fn after_keys(h: &mut Headless, app: &mut App<MockSide>, key: Key, times: usize) -> FullOutput {
+    for _ in 0..times {
+        press(h, app, key, NONE);
+    }
+    settled_output(h, app)
+}
+
+/// Wheels the column down by `points` (up if negative), the pointer over it, then the frames for it to finish.
+fn wheel(h: &mut Headless, app: &mut App<MockSide>, panel: Rect, points: f32) -> FullOutput {
+    let over = pos2(panel.max.x - 30.0, panel.max.y - 30.0);
+    let _ = h.frame(app, vec![Event::PointerMoved(over)]);
+    let _ = h.frame(
+        app,
+        vec![Event::MouseWheel {
+            unit: MouseWheelUnit::Point,
+            delta: vec2(0.0, -points),
+            phase: TouchPhase::Move,
+            modifiers: NONE,
+        }],
+    );
+    settled_output(h, app)
+}
+
+/// The keys alone bring every readout line and the hint's last row into view, at the small panels in all four views:
+/// the column's text is read with the focus on the compass element. The control is the wheel-only column, the same
+/// text where the buttons leave it, which fails wherever the column overflows.
+#[test]
+fn mock_compass_view_keys_the_element_brings_the_column_text_into_view() {
+    for (name, window, least) in SMALL {
+        for index in FOUR {
+            let (mut app, mut h, panel) = at_element(&tilted(), window, least, index);
+            let output = settled_output(&mut h, &mut app);
+            let text = column_text(&app, panel);
+            assert_eq!(
+                unread(&output, panel, &text),
+                None,
+                "{name}, {}: in {panel:?}",
+                SIBLINGS[index]
+            );
+            let output = after_keys(&mut h, &mut app, Key::ArrowRight, 1);
+            // At 1280 by 720 the Cube's and the Plücker view's column fits, so nothing needs the keys.
+            let fits = window == [1280.0, 720.0] && index < 5;
+            if fits {
+                assert_eq!(unread(&output, panel, &text), None, "{name}, {index}");
+            } else {
+                rejects("the wheel-only column", || {
+                    assert_eq!(unread(&output, panel, &text), None, "{name}, {index}")
+                });
+            }
+        }
+    }
+}
+
+/// The rect `wanted` is drawn in and its clip, in `output`, with its rows' height.
+fn drawn(output: &FullOutput, wanted: &str) -> (Rect, Rect, f32) {
+    output
+        .shapes
+        .iter()
+        .find_map(|c| match &c.shape {
+            Shape::Text(t) if t.galley.text() == wanted => {
+                let at = t.galley.rect.translate(t.pos.to_vec2());
+                Some((at, c.clip_rect, at.height() / t.galley.rows.len() as f32))
+            }
+            _ => None,
+        })
+        .unwrap_or_else(|| panic!("{wanted} drawn"))
+}
+
+/// The height `other` would take in place of the drawn `text`, its font and wrap width, in `output`: and the height
+/// `text` takes by the same measure, which is what was drawn.
+fn height_in_place_of(h: &Headless, output: &FullOutput, text: &str, other: &str) -> (f32, f32) {
+    let galley = output
+        .shapes
+        .iter()
+        .find_map(|c| match &c.shape {
+            Shape::Text(t) if t.galley.text() == text => Some(t.galley.clone()),
+            _ => None,
+        })
+        .unwrap_or_else(|| panic!("{text} drawn"));
+    let font = galley.job.sections[0].format.font_id.clone();
+    let wrap = galley.job.wrap.max_width;
+    let height = |text: &str| {
+        h.ctx.fonts_mut(|fonts| {
+            fonts
+                .layout(text.to_owned(), font.clone(), Color32::WHITE, wrap)
+                .rect
+                .height()
+        })
+    };
+    (height(other), height(text))
+}
+
+/// The Shape view at and just off its pole, where the stretch runs past `1e6`: the focus moved there by the keys, the
+/// element shows the whole readout and the whole hint in one stop, at the small panels. The control is the same
+/// readout with the stretch's plain digits, laid out as the drawn one is, which is taller than the view holds at the
+/// two smallest.
+#[test]
+fn mock_compass_view_keys_near_the_pole_the_element_shows_the_whole_column() {
+    let shape = 6;
+    for (name, window, least) in SMALL {
+        for r in [0.0, 1e-13, 1e-9, 1e-5, 1e-3] {
+            let (mut app, mut h, panel) = at_element(&near_the_pole(r), window, least, shape);
+            let output = settled_output(&mut h, &mut app);
+            let text = column_text(&app, panel);
+            assert_eq!(unread(&output, panel, &text), None, "{name}, r = {r}");
+            // Exactly at the pole no pair is named, and just off it one is.
+            assert_eq!(text[0].contains('—'), r == 0.0, "{name}: {}", text[0]);
+            let c = &app.manifold.compass;
+            let stretch = compass::pushed(&app.snapshot().sim, c, physical::Set::Shape).stretch;
+            assert!(stretch >= 1e6, "{name}, r = {r}: {stretch}");
+            let (head, shown) = text[0].split_once("stretch ").expect("the stretch");
+            assert_eq!(shown, format!("{stretch:.3e}"), "{name}, r = {r}");
+            if window != [1280.0, 720.0] {
+                let plain = format!("{head}stretch {stretch:.3}");
+                let (taller, height) = height_in_place_of(&h, &output, &text[0], &plain);
+                let (readout, clip, _) = drawn(&output, &text[0]);
+                assert!(
+                    (readout.height() - height).abs() < 0.5,
+                    "{name}: {readout:?}"
+                );
+                let (hint, _, _) = drawn(&output, &text[1]);
+                let column = hint.max.y - readout.min.y;
+                assert!(
+                    column <= clip.height(),
+                    "{name}, r = {r}: {column} {clip:?}"
+                );
+                rejects("the stretch's plain digits", || {
+                    let column = column - height + taller;
+                    assert!(
+                        column <= clip.height(),
+                        "{name}, r = {r}: {column} {clip:?}"
+                    )
+                });
+            }
+        }
+    }
+}
+
+/// The threshold's plain side: `r` here puts the stretch just under `physical::STRETCH_SCIENTIFIC_FROM`, so the readout
+/// has its longest plain digits and a pair. The focus moved there by the keys, the element shows the whole readout and
+/// the whole hint in one stop, at the small panels. The controls are the scientific form, which this stretch does not
+/// read in, and the wheel-only column, which does not bring the same text into view.
+#[test]
+fn mock_compass_view_keys_just_under_the_threshold_the_element_shows_the_plain_digits() {
+    let shape = 6;
+    for (name, window, least) in SMALL {
+        let (mut app, mut h, panel) = at_element(&near_the_pole(8.889e-3), window, least, shape);
+        let output = settled_output(&mut h, &mut app);
+        let text = column_text(&app, panel);
+        assert_eq!(unread(&output, panel, &text), None, "{name}");
+        assert!(!text[0].contains('—'), "{name}: {}", text[0]);
+        let c = &app.manifold.compass;
+        let stretch = compass::pushed(&app.snapshot().sim, c, physical::Set::Shape).stretch;
+        assert!(
+            (9990.0..physical::STRETCH_SCIENTIFIC_FROM).contains(&stretch),
+            "{name}: {stretch}"
+        );
+        let (_, shown) = text[0].split_once("stretch ").expect("the stretch");
+        assert_eq!(shown, format!("{stretch:.3}"), "{name}");
+        rejects("the scientific form", || {
+            assert_eq!(shown, format!("{stretch:.3e}"), "{name}")
+        });
+        let output = after_keys(&mut h, &mut app, Key::ArrowRight, 1);
+        rejects("the wheel-only column", || {
+            assert_eq!(unread(&output, panel, &text), None, "{name}")
+        });
+    }
+}
+
+/// The rows `text` is drawn in, in `output`.
+fn rows_of(output: &FullOutput, text: &str) -> usize {
+    let (at, _, row) = drawn(output, text);
+    (at.height() / row).round() as usize
+}
+
+/// The readout growing a row while the focus is on the element leaves the column's end in view; with the focus on a
+/// button it does not move the column there. The growth is from the pole, where no pair is named, to just off it.
+#[test]
+fn mock_compass_view_keys_the_element_keeps_the_end_as_the_readout_grows() {
+    let shape = 6;
+    let off = near_the_pole(1e-5).z0;
+    let (name, window, least) = SMALL[0];
+    let (mut app, mut h, panel) = at_element(&at_the_pole(), window, least, shape);
+    let output = settled_output(&mut h, &mut app);
+    let before = rows_of(&output, &column_text(&app, panel)[0]);
+    app.set_field(z0_edit(off));
+    let output = settled_output(&mut h, &mut app);
+    let hint = [physical::HELP.to_owned()];
+    let after = rows_of(&output, &column_text(&app, panel)[0]);
+    assert!(after > before, "the readout grew: {before} to {after} rows");
+    assert_eq!(unread(&output, panel, &hint), None, "{name}");
+    // The same edit with the focus on a button leaves the hint where it was, off the view.
+    let (mut app, mut h, panel) = at_element(&at_the_pole(), window, least, shape);
+    let _ = after_keys(&mut h, &mut app, Key::ArrowRight, 1);
+    app.set_field(z0_edit(off));
+    let output = settled_output(&mut h, &mut app);
+    rejects("the hint's end with the focus on a button", || {
+        assert_eq!(unread(&output, panel, &hint), None, "{name}")
+    });
+}
+
+/// With the focus on the element the wheel is still the user's: it takes the column back up, and stays there.
+#[test]
+fn mock_compass_view_keys_at_the_element_the_wheel_still_scrolls() {
+    let (name, window, least) = SMALL[0];
+    let (mut app, mut h, panel) = at_element(&tilted(), window, least, 3);
+    let output = settled_output(&mut h, &mut app);
+    let title = [compass::TITLE.to_owned()];
+    rejects("the title at the column's end", || {
+        assert_eq!(unread(&output, panel, &title), None, "{name}")
+    });
+    let output = wheel(&mut h, &mut app, panel, -2000.0);
+    assert_eq!(unread(&output, panel, &title), None, "{name}");
+    assert_eq!(at(&app), (vec![COMPASS, COMPASS_VIEW], KeyMode::Navigation));
+}
+
+/// The focus ring's rects in `output`.
+fn rings_in(output: &FullOutput) -> Vec<Rect> {
+    output
+        .shapes
+        .iter()
+        .filter_map(|c| match &c.shape {
+            Shape::Rect(r) if r.stroke.width == breadcrumb::RING_WIDTH => Some(r.rect),
+            _ => None,
+        })
+        .collect()
+}
+
+/// The ring on a column's button stays in the panel when the wheel moves the button: on the part still shown, partly
+/// scrolled; none at all, wholly scrolled off, where the ring on the button's whole rect would cross the panel's top.
+#[test]
+fn mock_compass_view_keys_the_ring_stays_in_the_panel_under_the_wheel() {
+    let (name, window, least) = SMALL[0];
+    let (mut app, mut h, panel) = at_element(&tilted(), window, least, 3);
+    let output = after_keys(&mut h, &mut app, Key::ArrowRight, 1);
+    assert_eq!(at(&app), (vec![COMPASS, COMPASS_TILT], KeyMode::Navigation));
+    let at_rest = rings_in(&output);
+    assert_eq!(at_rest.len(), 1, "{name}: one ring: {at_rest:?}");
+    let whole = at_rest[0];
+    assert!(panel.contains_rect(whole), "{whole:?} in {panel:?}");
+    // A little: the button partly under the column's top edge, the ring on what shows.
+    let output = wheel(
+        &mut h,
+        &mut app,
+        panel,
+        whole.max.y - panel.min.y - 12.0 - 4.0,
+    );
+    let part = rings_in(&output);
+    assert_eq!(part.len(), 1, "{name}: the part shown: {part:?}");
+    assert!(panel.contains_rect(part[0]), "{part:?} in {panel:?}");
+    assert!(part[0].height() < whole.height(), "{part:?} of {whole:?}");
+    // All the way: the button is above the panel's top, no ring.
+    let output = wheel(&mut h, &mut app, panel, 2000.0);
+    assert_eq!(
+        rings_in(&output),
+        Vec::<Rect>::new(),
+        "{name}: nothing shown"
+    );
+    let place = app.keyboard.place_of(COMPASS_TILT).expect("placed");
+    assert!(!place.shown().is_positive(), "{place:?}: nothing shown");
+    // Control: the ring on the button's whole rect, as it was, crosses the panel's top.
+    rejects("a ring on the whole rect of a button scrolled off", || {
+        assert!(panel.contains_rect(place.rect.expand(3.0)), "{place:?}")
+    });
+}
+
+/// A widget's place shows the part of it its `Ui` shows; wholly clipped, nothing.
+#[test]
+fn mock_compass_view_keys_a_widgets_place_shows_what_its_ui_shows() {
+    let ctx = eframe::egui::Context::default();
+    let clip = Rect::from_min_size(pos2(0.0, 100.0), vec2(100.0, 100.0));
+    let mut keyboard = crate::keyboard::Keyboard::new();
+    let mut rects = Vec::new();
+    let mut output = ctx.run_ui(Default::default(), |ui| {
+        ui.set_clip_rect(clip);
+        for (id, y) in [("inside", 120.0), ("across", 90.0), ("above", 50.0)] {
+            let rect = Rect::from_min_size(pos2(10.0, y), vec2(20.0, 20.0));
+            let response = ui.interact(rect, ui.id().with(id), eframe::egui::Sense::click());
+            keyboard.place_widget(id, &response);
+            rects.push((rect, keyboard.place_of(id).expect("placed").shown()));
+        }
+    });
+    output.textures_delta.clear();
+    let [(inside, placed), (across, part), (_, none)] = rects[..] else {
+        panic!("{rects:?}")
+    };
+    assert_eq!(placed, inside);
+    assert_eq!(part, across.intersect(clip));
+    assert!(!none.is_positive(), "{none:?}");
+    rejects("the widget's whole rect", || {
+        assert!(clip.contains_rect(across))
     });
 }

@@ -41,11 +41,13 @@ pub const MIN_TOP_H: f32 = 590.0;
 /// The figure's canvas's least width, in points, its axis strip apart: so no splitter can close it (J2; a look choice,
 /// R-390). Its height is held by [`MIN_TOP_H`].
 pub const MIN_CANVAS_W: f32 = 240.0;
-/// The bottom row's least height, in points: the compass's cube, buttons and readout, and Time's transport, whole (J2;
-/// measured: the compass's readout passes the footer below 154.7).
+/// The bottom row's least height, in points: the compass's cube and buttons, and Time's transport, whole (J2). The rest
+/// of the compass's column is not whole in one view here: it scrolls inside the panel, and the focus on the compass
+/// element brings its end into view (measured: at the compass's default width, 354, the Cube view's column fits with no
+/// bar from 158.7 up; at [`MIN_COMPASS_W`] only from 232.7, and the physical views' help scrolls at this height).
 pub const MIN_BOTTOM_H: f32 = 160.0;
-/// The compass's least width, in points: its cube and its buttons beside it, and its readout (J2; measured: the readout
-/// passes the edge below 224, a tilted readout a few characters longer).
+/// The compass's least width, in points: its cube and its buttons beside it (J2). The readout and the hint wrap in the
+/// column and never pass the edge (measured: with the column's bar, the title wraps to a second row below 236).
 pub const MIN_COMPASS_W: f32 = 240.0;
 /// Time's least width, in points: its transport row, the speed slider and its value, whole (J2; measured: the speed's
 /// value passes the edge below 336).

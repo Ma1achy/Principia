@@ -33,13 +33,13 @@
 # request, R-272); a pull request's pushes run it through `pull_request`, once each, never twice. Every run on `main`
 # runs every job. On a pull request, the `changes` job classifies the change with `scripts/ci_changes.sh` (its merge
 # commit against the base it merges onto), and:
-# - a docs-only change (only paths on the script's allowlist, `docs/`, the plan's prose and data and the root's
-#   markdown, and none on its list of files code reads, which count as code: every doc, spec or data file a test, build
-#   script, codegen or xtask check reads, the owner's words of 30 Oct 2026 on #351) skips `ci-archive` and the `ci`
-#   shards, `ci-checks`, `ci-release-archive` and its shards, and `xtask-ci`'s shards, and `ci-workspace` runs the docs
-#   checks in place of its tests: the plan checks, the vocabulary lint and every test whose source names the
-#   allowlist's paths, a backstop;
-# - a change to no GPU-path file (only docs-only paths, `crates/gui/` and `crates/prin/`; a file code reads is a GPU
+# - a change to none of Principia's code (R-662; `docs_only`: only paths on the script's allowlist, `docs/`, `plan/`,
+#   `scripts/`, `workbench/` and the root's markdown, and none on its list of data code loads, the artboards and
+#   references, `plan/requirements.yaml`, `plan/tasks.yaml`, `plan/MILESTONES.md`, `plan/tasks/`, the classifier and
+#   `scripts/contain.sh`; an unknown path runs everything) skips `ci-archive` and the `ci` shards, `ci-checks`, `ci-release-archive` and its
+#   shards, and `xtask-ci`'s shards, and `ci-workspace` runs the cheap checks in place of its tests: the plan checks and
+#   the vocabulary lint (`no-atlas-params.yml`, the atlas guard, runs on every pull request);
+# - a change to no GPU-path file (only docs-only paths, `crates/gui/` and `crates/prin/`; data code loads is a GPU
 #   path) skips the GPU suites' jobs, `gpu-kernel`, `gpu-metal` and `gpu-lavapipe`.
 # The required checks still report, under their own names, and conclude success: each is a gate that runs whatever
 # the jobs it gathers ended in (`ci`, `xtask-ci`, and the GPU suites' gates, which carry the names `gpu-kernel`,
@@ -88,8 +88,8 @@ env:
   CARGO_PROFILE_TEST_DEBUG: line-tables-only
 
 jobs:
-  # What a pull request's change touches (R-656): `docs_only`, true when every changed path is on the docs-only
-  # allowlist and none on the list of files code reads, and `gpu`, false when no changed path is a GPU path
+  # What a pull request's change touches (R-656, R-662): `docs_only`, true when every changed path is on the docs-only
+  # allowlist and none on the list of data code loads, and `gpu`, false when no changed path is a GPU path
   # (`scripts/ci_changes.sh`, which holds the lists).
   # Every other run, on `main` among them, is neither: everything runs. The jobs below skip on its verdict, and the
   # gates read it.
@@ -264,11 +264,8 @@ jobs:
   # The xtask tests that run cargo on the workspace's own target directory (`.config/nextest.toml`'s `ci-workspace`
   # profile), beside the `ci` shards and on a build of their own (R-372, REQ-SYS-078): run from the shards' archive,
   # which carries no cargo build state, each would rebuild the workspace in its shard while holding every test thread.
-  # On a docs-only pull request (R-656) it runs the docs checks in their place, the one test job such a pull request
-  # runs: the plan checks, the vocabulary lint, and every test whose source names the allowlist's paths, which
-  # `scripts/ci_changes.sh doc-tests` lists (a test or source naming one; a backstop, since a file code reads counts
-  # as code and never makes a pull request docs-only), under the `ci` profile, as the shards run them; the tests that need the built kernel or run cargo on the workspace's own target, which that profile leaves to
-  # `gpu-kernel` and this job's own run, run on `main`'s push. It passes the classification on to the gate `ci`.
+  # On a docs-only pull request (R-656, R-662) it runs the cheap checks in their place, the one test job such a pull
+  # request runs: the plan checks and the vocabulary lint. It passes the classification on to the gate `ci`.
   ci-workspace:
     runs-on: ubuntu-24.04
     env:
@@ -318,7 +315,7 @@ jobs:
       - name: cargo test -p xtask --doc
         if: needs.changes.outputs.docs_only != 'true'
         run: cargo test -p xtask --doc
-      # The docs checks, on a docs-only pull request only (R-656).
+      # The cheap checks, on a docs-only pull request only (R-656, R-662).
       - name: python3 plan/check_plan.py
         if: needs.changes.outputs.docs_only == 'true'
         run: python3 plan/check_plan.py
@@ -328,22 +325,6 @@ jobs:
       - name: cargo xtask lint vocab
         if: needs.changes.outputs.docs_only == 'true'
         run: cargo xtask lint vocab
-      # One nextest run per package, each over that package's selected targets (`-p <package> --test <target>…`, and
-      # `--lib --bins` where its source names a docs-only path), so cargo builds only those.
-      - name: cargo nextest run (the tests that read docs-only paths)
-        if: needs.changes.outputs.docs_only == 'true'
-        env:
-          NEXTEST_PROFILE: ci
-        run: |
-          set -euo pipefail
-          scripts/ci_changes.sh doc-tests > "$RUNNER_TEMP/doc-tests.txt"
-          cat "$RUNNER_TEMP/doc-tests.txt"
-          while read -r args; do
-            echo "::group::cargo nextest run $args"
-            # shellcheck disable=SC2086 # one word per argument, as the script prints them
-            cargo nextest run --no-tests=pass $args
-            echo "::endgroup::"
-          done < "$RUNNER_TEMP/doc-tests.txt"
 
   # Formatting, lints, the docs, the build and the crate-graph check, once, beside the test shards (R-195, R-387,
   # REQ-SYS-004). Skipped on a docs-only pull request (R-656): no docs-only path is compiled.
@@ -392,7 +373,7 @@ jobs:
 
   # The required check `ci` (R-266): every `ci` shard, `ci-checks` and `ci-workspace` passed. It runs whatever they
   # ended in (`always()`), so a failed or cancelled job turns it red rather than skipping it. R-656: a skipped job
-  # passes only on a docs-only pull request, which `ci-workspace`, having run its docs checks, passes on (DOCS_ONLY);
+  # passes only on a docs-only pull request, which `ci-workspace`, having run its cheap checks, passes on (DOCS_ONLY);
   # if the classification failed, `ci-workspace` was skipped and passes nothing on, so the skips turn it red.
   ci-gate:
     name: ci
@@ -797,6 +778,11 @@ jobs:
         run: cargo nextest run -p engine --features controls encode_ --no-capture
       - name: cargo test -p engine --features controls encode_ --doc
         run: cargo test -p engine --features controls encode_ --doc
+      # The agreement presets' tolerance on Metal (REQ-COL-060; R-297; TASK-M2-29): the fragment compiled as Metal
+      # compiles it, with fast-math, against the kernel decode stage compiled with compute fast-math off, every M2
+      # chart's measured |E − E₀| written to the gate report; the dispatch scramble still fails it.
+      - name: cargo xtask gate decode-agreement
+        run: cargo xtask gate decode-agreement
       # The codegen self-test on Metal, its controls included (debug_tooling_plan §H; TASK-M0-15).
       - name: cargo nextest run -p validation --features controls codegen_selftest
         run: cargo nextest run -p validation --features controls codegen_selftest --no-capture
@@ -889,6 +875,11 @@ jobs:
         run: cargo nextest run -p validation --features controls compute_fast_math --no-capture
       - name: cargo test -p validation --features controls compute_fast_math --doc
         run: cargo test -p validation --features controls compute_fast_math --doc
+      # The agreement presets' tolerance on lavapipe (REQ-COL-060; R-297; TASK-M2-29): the fragment compiled as
+      # Vulkan compiles it against the kernel decode stage compiled with compute fast-math off, every M2 chart's
+      # measured |E − E₀| written to the gate report; the dispatch scramble still fails it.
+      - name: cargo xtask gate decode-agreement
+        run: cargo xtask gate decode-agreement
       # The codegen self-test on lavapipe, its controls included (debug_tooling_plan §H; TASK-M0-15).
       - name: cargo nextest run -p validation --features controls codegen_selftest
         run: cargo nextest run -p validation --features controls codegen_selftest --no-capture

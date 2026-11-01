@@ -383,6 +383,35 @@ impl Scene {
     }
 }
 
+impl Scene {
+    /// The agreement preset's fragment decode's operands at every sample (`render::presets::agreement::operands`), in
+    /// sample order: `K`, `V`, `m` and `r` as bits, then 0; one render per word group, on one-pixel tiles.
+    pub fn agreement_operands(
+        &self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+    ) -> Result<Vec<[u32; render::presets::agreement::OPERAND_WORDS]>, String> {
+        use render::presets::agreement::{operands, OPERAND_GROUPS, OPERAND_WORDS};
+        let grid = self.context.grid;
+        if grid.tile_px != 1 {
+            return Err("the agreement operands are read one pixel per sample".to_owned());
+        }
+        let mut out = vec![[0u32; OPERAND_WORDS]; grid.quad_count() as usize];
+        let (width, height) = self.size();
+        for g in 0..OPERAND_GROUPS {
+            let image = self.draw(device, queue, &operands(g))?;
+            for y in 0..height {
+                for x in 0..width {
+                    let w = image.words(x, y);
+                    let q = grid.cell(x, y).quad as usize;
+                    out[q][4 * g as usize..4 * g as usize + 4].copy_from_slice(&w[..4]);
+                }
+            }
+        }
+        Ok(out)
+    }
+}
+
 /// The f32 value of `bits`, widened.
 pub fn f(bits: u32) -> f64 {
     f64::from(f32::from_bits(bits))

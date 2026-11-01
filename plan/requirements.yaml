@@ -15110,7 +15110,7 @@
   - R-358
   - R-436
   milestone: M2
-  note: "ROUNDTRIP's residual is computed wholly in the fragment, and its stated tolerance is ε_phys (REQ-ENC-024, REQ-RENDER-025), not this one (applied per R-204, accepted by R-358, R-297's Applied note). R-436: a pixel with a non-finite operand is invalid, so it is no sample of the tolerance."
+  note: "ROUNDTRIP's residual is computed wholly in the fragment, and its stated tolerance is ε_phys (REQ-ENC-024, REQ-RENDER-025), not this one (applied per R-204, accepted by R-358, R-297's Applied note). R-436: a pixel with a non-finite operand is invalid, so it is no sample of the tolerance. The tolerance is the factor times colour_composition §6's conditioning-aware scale, eps·(max(|K₀|, 1) + max(|V₀|, 1) + Σ mᵢmⱼ·wᵢⱼ/ŝᵢⱼ²) from the fragment decode's own (m, r), an R-72 definition written by TASK-M2-29 (RQ-623, option (b), decided by the orchestrator per R-369 and listed for the owner's veto at the M2 gate); the factor is calibrated in that scale."
 - id: REQ-COL-061
   area: COL
   kind: calibration
@@ -24610,6 +24610,25 @@
   - R-633
   milestone: M6
   note: "R-633 (28 Oct 2026, RQ-601 (a); (b), one value for both, rejected; (c), the analytic energy-normal projector, noted for later, if the gap ever narrows, f32 or deep zoom). Closed by TASK-M6-35, proposed for the M6 gate. Physics review is required."
+- id: REQ-GUI-411
+  area: GUI
+  kind: calibration
+  statement: "The radius of the Shape view's pole, the value of sin φ below which the compass's Shape view calls its state near the chart's pole, showing the readout's pole line and naming a refused steer's reason \"the chart's pole\", except on an E*-normalised chart where the latent Jacobian keeps seven values at REQ-GUI-410's cut, the shell alone accounting for the refusal, which is named \"normal to the energy shell\" (R-550, RQ-345 (b)), must be a calibrated value (R-71; R-550, RQ-343 (b), J6), proposed by TASK-M6-35 from the farthest sin φ at which the pole costs the latent Jacobian a singular value at REQ-GUI-410's cut, measured over a fixed, recorded sample with E* unset and set, and confirmed at the M6 gate."
+  source:
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: decisions.md
+    section: "R-550 — The compass's physical views and steer: an eight-column f64 central-difference Jacobian `∂x/∂z` of the decoder, read after `η_E`; Jacobi's eight `α, β`, the four Jacobi momenta and two mass fractions, Shape's `θ, φ, θ̇, φ̇, L_z, Ṙ` and the two mass fractions, both of full rank, so the steer is `J⁻¹` with the projector test refusing; each coordinate divided by a fixed reference range *(closes RQ-341, RQ-342, RQ-343, RQ-344, RQ-345 and RQ-346; amends R-452)*"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: "The compass: look and views (R-451, R-452)"
+  verify:
+    method: review checklist
+    detail: "physics reviewer: TASK-M6-35's calibration record gives the measured sin φ over the recorded sample (E* unset and set), the proposed radius and its margin, and cargo test -p gui mock_compass_steer_cut prints that measurement and asserts the radius clears it; confirmed at the M6 gate"
+  rulings:
+  - R-71
+  - R-550
+  milestone: M6
+  note: "Found by the code review of PR #365 (F4): the corpus sets no value for it. Closed by TASK-M6-35, proposed for the M6 gate. Physics review is required."
 - id: REQ-TOOL-001
   area: TOOL
   statement: "Each session must record once: device (GPU/CPU model, core counts, VRAM or unified memory size in its own field), backend and driver version, precision support and f64 rate, build (commit hash, profile, feature flags) and display (resolution, refresh, DPI scale)."
@@ -39978,6 +39997,8 @@
     section: R-195 — CI checks formatting and lints
   - file: decisions.md
     section: "R-656 — CI throughput: a push runs `ci.yml` only on `main` (and on R-272's `measure/` branches, which have no pull request), a pull request running it through `pull_request`; a pull request's superseded runs are cancelled, never a run on `main`; a docs-only pull request skips the build, test, GPU and mutants work, and one that changes no GPU-path file skips the GPU suites, inside the jobs, every required check still reporting success under its own name; mutants run on the merge-ready head; a bounded target cache is approved in principle, built in a later PR; no paid or self-hosted runner *(amends R-110, R-177, R-186, R-195, R-235, R-285 and R-335)*"
+  - file: decisions.md
+    section: "R-662 — Full CI runs only when a pull request changes Principia's code: docs, plan prose, papers, Python and other scripts get only plan-check, the vocabulary lint and the atlas guard; a mixed change and an unknown path run full CI; every required check still reports *(amends R-656's docs-only list and docs checks, R-110 and R-177)*"
   verify:
     method: unit test
     detail: "the gate-report fixture lists every requirement of the milestone's and earlier gate blocks, fails on a missing one, and marks benchmark requirements awaiting the human's run until their prin profile files are supplied; review: no workflow runs bench, nightly.yml is scheduled, gate.yml takes a milestone input"
@@ -39988,8 +40009,9 @@
   - R-186
   - R-195
   - R-656
+  - R-662
   milestone: M0
-  note: "R-656: ci.yml runs on a push to main (and to a measure/ branch, R-272) and on every pull-request head; a docs-only head runs plan-check, the vocabulary lint and the tests that read the docs (in ci-workspace) in place of the build, fmt, clippy, the tests and cargo xtask ci, which run again on main once it merges."
+  note: "R-656: ci.yml runs on a push to main (and to a measure/ branch, R-272) and on every pull-request head; R-662: a head that changes none of Principia's code runs plan-check and the vocabulary lint (in ci-workspace) in place of the build, fmt, clippy, the tests and cargo xtask ci, which run again on main once it merges."
 - id: REQ-SYS-068
   area: SYS
   statement: "`reviews-check` must count a role's APPROVE on an earlier commit when every later commit is qa's own `qa: tests for <TASK-id>` commit adding files only under `crates/*/tests/`, `xtask/tests/` or `fixtures/` (R-260), and must pass a PR whose title names no task, printing \"no task, no named reviewers\" (R-261)."

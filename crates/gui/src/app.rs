@@ -562,10 +562,10 @@ impl<S: EngineSide> App<S> {
         let activated = self
             .keyboard
             .run(&ctx, self.view.mode, &mut self.view.focus, now);
-        // The Plücker view's cell cursor follows interaction mode on the compass (R-452 C6).
+        // A grid view's cell cursor follows interaction mode on the compass (R-452 C6).
         explore::compass::follow_focus(
             &self.view.focus,
-            &self.snapshot.sim.plane,
+            &self.snapshot.sim,
             &mut self.manifold.compass,
         );
         let mut window_edits = Vec::new();
@@ -643,7 +643,7 @@ impl<S: EngineSide> App<S> {
         );
         let focused = self.scroll_focus();
         match self.view.mode {
-            Mode::Explore => self.explore(ui, &layout, &mut out, &mut edits),
+            Mode::Explore => self.explore(ui, &layout, focused.clone(), &mut out, &mut edits),
             Mode::Stain => {
                 self.stain_page(
                     ui,
@@ -721,6 +721,9 @@ impl<S: EngineSide> App<S> {
         for command in std::mem::take(&mut out.commands) {
             self.send(command);
         }
+        for line in std::mem::take(&mut out.refusals) {
+            self.log_warning(line);
+        }
         // The windows asked for, each with the control that opened it: a click, Enter, or the Manifold view's and the
         // Trajectory panel's own openers.
         let mut opens: Vec<(Window, Option<ScopeId>)> = Vec::new();
@@ -755,6 +758,7 @@ impl<S: EngineSide> App<S> {
         &mut self,
         ui: &mut egui::Ui,
         layout: &Layout,
+        focused: Option<String>,
         out: &mut explore::manifold_view::Out,
         edits: &mut Vec<engine::contract::set_field::SetField>,
     ) {
@@ -836,13 +840,17 @@ impl<S: EngineSide> App<S> {
             out,
         };
         explore::manifold_view::show(ui, layout.manifold_view, &mut panel);
+        self.manifold.compass.hover = self.hover_sent;
         let sim = &self.snapshot.sim;
         explore::compass::show(
             ui,
             layout.compass,
             sim,
             &pending,
-            &mut self.keyboard,
+            &mut windows::Keys {
+                keyboard: &mut self.keyboard,
+                focused,
+            },
             &mut self.manifold,
             out,
         );
