@@ -7,8 +7,9 @@ ranges per area, with the count.
 
 M9, external replication, has no exit gate (R-650): its targets are measurements, never gates (R-649), and it exits
 on its report. Its block is `<!-- report:M9 -->` … `<!-- /report:M9 -->`, listing the same way what M9 scores and,
-apart, the requirements of its build tasks, which are not scored (R-654); no gate tool reads it, and the gate blocks
-stay M0 to M8, `ledger::constants::MILESTONES`.
+apart, the requirements of its build tasks, which are not scored (R-654), and of the report and the definition that
+follows it, which are not targets; no gate tool reads it, and the gate blocks stay M0 to M8,
+`ledger::constants::MILESTONES`.
 
 Usage: python3 plan/tools/milestones.py [--check]   (--check: exit 1 if MILESTONES.md is out of date)
 """
@@ -26,6 +27,8 @@ MILESTONES = [f"M{i}" for i in range(9)]  # the milestones with exit gates
 REPORTS = ["M9"]  # the milestones that exit on a report, not a gate (R-650)
 # The build tasks in a report milestone: not scored, the report not waiting on them (R-654).
 BUILD_TASKS = {"M9": ["TASK-M9-39"]}
+# The tasks in a report milestone that close no target: the report itself and a definition it precedes.
+REPORT_TASKS = {"M9": ["TASK-M9-37", "TASK-M9-38"]}
 
 
 def ranges(nums):
@@ -56,18 +59,23 @@ def area_lines(ids):
     return lines
 
 
-def gate_block(reqs, m, report=False, built=()):
+def gate_block(reqs, m, report=False, built=(), reporting=()):
     ids = [r["id"] for r in reqs if r["milestone"] == m and not r.get("retired")]
     if not report:
         return "\n".join([f"**Exit gate — {len(ids)} requirements** (and every earlier gate still green):", "",
                           *area_lines(ids)])
-    scored = [i for i in ids if i not in built]
+    scored = [i for i in ids if i not in built and i not in reporting]
     unscored = [i for i in ids if i in built]
     lines = [f"**Scored, never gated — {len(scored)} requirements** (R-649, R-650; each outcome PASS, EXPLAINED "
              "DIVERGENCE or UNEXPLAINED, in the report):", "", *area_lines(scored)]
     if unscored:
         lines += ["", f"**Built, not scored — {len(unscored)} requirements** ({', '.join(BUILD_TASKS[m])}, R-654; no "
                   "outcome and no row in the report, its tests blocking its own merge):", "", *area_lines(unscored)]
+    notarget = [i for i in ids if i in reporting]
+    if notarget:
+        lines += ["", f"**The report and the definition — {len(notarget)} requirements** "
+                  f"({', '.join(REPORT_TASKS[m])}, R-650; no target to score and no row in the report):", "",
+                  *area_lines(notarget)]
     return "\n".join(lines)
 
 
@@ -89,7 +97,9 @@ def main():
         if not pat.search(new):
             sys.exit(f"{DOC}: no report block for {m}")
         built = {rid for t in BUILD_TASKS.get(m, []) for rid in tasks[t]["requirements"]}
-        new = pat.sub(lambda mo: mo.group(1) + gate_block(reqs, m, report=True, built=built) + mo.group(2), new)
+        reporting = {rid for t in REPORT_TASKS.get(m, []) for rid in tasks[t]["requirements"]}
+        new = pat.sub(lambda mo: mo.group(1) + gate_block(reqs, m, report=True, built=built, reporting=reporting)
+                      + mo.group(2), new)
     unknown = sorted({r["milestone"] for r in reqs} - set(MILESTONES) - set(REPORTS))
     if unknown:
         sys.exit(f"{REQS}: unknown milestones {unknown}")
