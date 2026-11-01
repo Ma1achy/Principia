@@ -185,6 +185,13 @@ fn frame_window_stats() {
     rejects("a capped mark at 10%", || {
         check_capped(|fps, hz| hz.is_some_and(|hz| (fps - hz).abs() <= 0.10 * hz))
     });
+    rejects(
+        "a capped mark with no room for rounding at exactly 2%",
+        || check_capped(|fps, hz| hz.is_some_and(|hz| (fps - hz).abs() <= 0.02 * hz)),
+    );
+    rejects("a capped mark with room well past rounding", || {
+        check_capped(|fps, hz| hz.is_some_and(|hz| (fps - hz).abs() <= 0.0205 * hz))
+    });
     rejects("a refresh rate taken from the app's own intervals", || {
         check_refresh(|_idle| {
             // The app's frames, overrun: their rate, whatever the idle loop gave.
@@ -211,6 +218,11 @@ fn check_capped(capped: impl Fn(f64, Option<f64>) -> bool) {
     assert!(!capped(102.1, hz), "past 2% above");
     assert!(!capped(95.0, hz), "5% below is between 2% and 10%");
     assert!(!capped(100.0, None), "no rate to read");
+    // Exactly 2% away, where the subtraction and the product round apart: 1.176470588235297 against 1.1764705882352942.
+    let whole_ms = Some(1000.0 / 17.0);
+    assert!(capped(60.0, whole_ms), "exactly 2% above, rounded");
+    assert!(!capped(60.001, whole_ms), "just past 2% above");
+    assert!(!capped(57.647, whole_ms), "just past 2% below");
 }
 
 /// The refresh rate is the median interval of the idle loop it is given.
@@ -268,6 +280,25 @@ fn frame_window_stats_marks_each_figure_on_its_own() {
     );
     rejects("a mark taken from the other figure", || {
         assert!(got.p5_fps.capped, "the 5th percentile's own mark");
+    });
+}
+
+/// A run at 60 fps on a clock of whole milliseconds, as Safari's on a page that is not isolated: its intervals are 17, 17
+/// and 16 ms, so the idle loop reads `1000 / 17` Hz, and the mean, 60 fps, is exactly 2% above that. It reads the display,
+/// so it is marked.
+#[test]
+fn frame_window_stats_marks_a_mean_exactly_two_percent_from_a_whole_ms_rate() {
+    let stamps: Vec<f64> = (0..2200)
+        .map(|i| (f64::from(i) * 1000.0 / 60.0).round())
+        .collect();
+    let frames: Vec<Frame> = stamps.iter().map(|at| frame(*at, 1.0)).collect();
+    let hz = refresh_hz(&stamps);
+    assert_eq!(hz, Some(1000.0 / 17.0));
+    let got = window_stats(&frames, hz).expect("frames");
+    assert_eq!(got.mean_fps.fps, 60.0);
+    assert!(got.mean_fps.capped, "a figure exactly 2% from the rate");
+    rejects("the rate of a clock that is not whole ms", || {
+        assert_eq!(hz, Some(60.0));
     });
 }
 

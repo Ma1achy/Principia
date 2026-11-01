@@ -13,6 +13,9 @@ pub const WARM_UP_MS: f64 = 5_000.0;
 pub const WINDOW_MS: f64 = 30_000.0;
 /// How near the refresh rate a figure is capped, as a fraction of the rate.
 pub const CAPPED_WITHIN: f64 = 0.02;
+/// What rounding may add to a figure's distance from the rate, as a fraction of the rate: a figure exactly 2% away counts
+/// as within 2%, as 60 fps does against a rate of `1000 / 17` Hz. Far below anything a run can tell apart.
+const ROUNDING: f64 = 1e-9;
 
 /// One frame a run recorded, its times in ms.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -86,7 +89,7 @@ pub fn refresh_hz(stamps: &[f64]) -> Option<f64> {
 
 /// Whether `fps` is within [`CAPPED_WITHIN`] of `refresh_hz`; an unknown rate caps nothing.
 pub fn capped(fps: f64, refresh_hz: Option<f64>) -> bool {
-    refresh_hz.is_some_and(|hz| (fps - hz).abs() <= CAPPED_WITHIN * hz)
+    refresh_hz.is_some_and(|hz| (fps - hz).abs() <= (CAPPED_WITHIN + ROUNDING) * hz)
 }
 
 /// The statistics of a run's `frames`, in the order presented, against the measured `refresh_hz`. `None` with no frame
