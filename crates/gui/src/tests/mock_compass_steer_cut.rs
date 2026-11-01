@@ -1,7 +1,8 @@
 //! `mock_compass_steer_cut` (REQ-GUI-410, REQ-GUI-346; render_gui_spec § "The compass: look and views (R-451, R-452)";
 //! R-633): at `c = 1e-9`, the `E* = 0` fixture refuses the shell-normal direction at every sampled `z`, the `E*`-unset
 //! fixture refuses none, a saturated-link fixture refuses; controls: no cut, and a cut at `1e-3`, each fail. The sample
-//! is the fixed-seed one the calibration record gives: 500 `z` in `[−3, 3]⁸`, seed `0x5EED`, the Jacobi set.
+//! is the fixed-seed one the calibration record gives: 500 `z` in `[−3, 3]⁸`, seed `0x5EED`, the Jacobi set, and the
+//! Shape set beside it, its `z` inside the pole's radius set apart.
 
 use engine::contract::decoded::{self, Sphere};
 use engine::contract::sim_config::{Latent, Links, Plane, LATENT_DIM};
@@ -26,14 +27,9 @@ fn sample_at(seed: u64) -> Vec<Latent> {
     (0..500).map(|_| rng.latent().map(|x| 3.0 * x)).collect()
 }
 
-/// `σ₈/σ₁` at `z` on the Jacobi set.
-fn ratio(e_star: Option<f64>, z: &Latent) -> f64 {
-    let j = latent_jacobian(
-        &Decoder::Real { e_star },
-        Set::Jacobi,
-        &Links::defaults(),
-        z,
-    );
+/// `σ₈/σ₁` at `z` on the set `set`.
+fn ratio(set: Set, e_star: Option<f64>, z: &Latent) -> f64 {
+    let j = latent_jacobian(&Decoder::Real { e_star }, set, &Links::defaults(), z);
     let d = Inverse::of(&j, CUT).svd;
     d.sigma[7] / d.sigma[0]
 }
@@ -101,68 +97,97 @@ fn mock_compass_steer_cut_on_e_star_unset_refuses_none() {
     rejects("a cut at 1e-3", || check_unset_refuses_none(1e-3));
 }
 
-#[test]
-fn mock_compass_steer_cut_the_gap_holds_on_the_sample() {
-    // The calibration record: σ₈/σ₁ on both fixtures, c in the gap, at the geometric middle's order, and the same over
-    // other seeds, since E* = 0's side is rounding. The tolerance's measurement beside it: exactly 1 unset, and over
-    // E* = 0 each z's least cell, all the cells' 0.1% point, and the shell's normal itself.
+/// The sample at `seed` outside the pole's radius on `set`, and how many of its 500 lie inside. The pole may cost `J` a
+/// value inside the radius, which is REQ-GUI-411's measurement, not the cut's; the Jacobi set has no pole.
+fn off_the_pole(set: Set, seed: u64) -> (Vec<Latent>, usize) {
+    let links = Links::defaults();
+    let d = Decoder::Real { e_star: None };
+    let all = sample_at(seed);
+    let total = all.len();
+    let off: Vec<Latent> = all
+        .into_iter()
+        .filter(|z| !at_pole(&d, set, &links, z))
+        .collect();
+    let inside = total - off.len();
+    (off, inside)
+}
+
+/// One set's calibration record, printed: `σ₈/σ₁` on both fixtures at each seed, and the tolerance's measurement. Asserts
+/// `c` in the gap at every seed, the gap's sides against `floors`, exactly 1 unset, and the real chart refusing some but
+/// not all `z`. Returns the recorded seed's two sides, so a caller can tell the sets apart.
+fn check_the_set(set: Set, floors: (f64, f64)) -> (f64, f64) {
     let links = Links::defaults();
     let sides = |seed| {
-        let z = sample_at(seed);
-        let set = z.iter().map(|z| ratio(Some(0.0), z)).fold(0.0, f64::max);
-        let unset = z.iter().map(|z| ratio(None, z)).fold(f64::MAX, f64::min);
-        (set, unset)
+        let (z, inside) = off_the_pole(set, seed);
+        let on = z.iter().map(|z| ratio(set, Some(0.0), z));
+        let off = z.iter().map(|z| ratio(set, None, z));
+        (on.fold(0.0, f64::max), off.fold(f64::MAX, f64::min), inside)
     };
-    let (set, unset) = sides(0x5EED);
-    println!("σ₈/σ₁: E* = 0 at most {set:.3e}; E* unset at least {unset:.3e}");
-    assert!(set < CUT, "{set}");
-    assert!(unset > CUT, "{unset}");
-    assert!(set <= 1e-11, "the upper side of the gap: {set}");
-    assert!(unset >= 1e-6, "the lower side of the gap: {unset}");
+    let (on, off, inside) = sides(0x5EED);
+    println!(
+        "{set:?} σ₈/σ₁: E* = 0 at most {on:.3e}; E* unset at least {off:.3e}; {inside} of 500 z inside the pole's radius, \
+         set apart"
+    );
+    assert!(on < CUT, "{on}");
+    assert!(off > CUT, "{off}");
+    assert!(on <= floors.0, "the upper side of the gap: {on}");
+    assert!(off >= floors.1, "the lower side of the gap: {off}");
     for seed in 1..=7 {
-        let (set, unset) = sides(seed);
-        println!("seed {seed}: E* = 0 at most {set:.3e}; E* unset at least {unset:.3e}");
-        assert!(set < CUT && CUT < unset, "seed {seed}: {set}, {unset}");
+        let (on, off, inside) = sides(seed);
+        println!("{set:?} seed {seed}: E* = 0 at most {on:.3e}; E* unset at least {off:.3e}; {inside} inside");
+        assert!(on < CUT && CUT < off, "seed {seed}: {on}, {off}");
     }
+    let (z, _) = off_the_pole(set, 0x5EED);
+    let count = z.len();
     let cells = |e_star, z: &Latent| -> Vec<f64> {
-        let j = latent_jacobian(&Decoder::Real { e_star }, Set::Jacobi, &links, z);
+        let j = latent_jacobian(&Decoder::Real { e_star }, set, &links, z);
         let inverse = Inverse::of(&j, CUT);
         upper().map(|(a, b)| inverse.smaller(a, b)).collect()
     };
     let least = |values: &[f64]| values.iter().copied().fold(f64::MAX, f64::min);
-    let unset_least = least(
-        &sample()
-            .iter()
-            .flat_map(|z| cells(None, z))
-            .collect::<Vec<_>>(),
-    );
-    let per_z: Vec<Vec<f64>> = sample().iter().map(|z| cells(Some(0.0), z)).collect();
+    let unset_least = least(&z.iter().flat_map(|z| cells(None, z)).collect::<Vec<_>>());
+    let per_z: Vec<Vec<f64>> = z.iter().map(|z| cells(Some(0.0), z)).collect();
     let mut on_shell: Vec<f64> = per_z.iter().map(|values| least(values)).collect();
     on_shell.sort_by(f64::total_cmp);
     let mut all: Vec<f64> = per_z.concat();
     all.sort_by(f64::total_cmp);
-    let (shell_least, shell_most) = (on_shell[0], on_shell[on_shell.len() - 1]);
-    let median = (on_shell[249] + on_shell[250]) / 2.0;
+    let (shell_least, shell_most) = (on_shell[0], on_shell[count - 1]);
+    let median = (on_shell[(count - 1) / 2] + on_shell[count / 2]) / 2.0;
     let refused = on_shell.iter().filter(|v| **v < TOLERANCE).count();
-    let normal = sample()
+    let normal = z
         .iter()
         .map(|z| {
-            let j = latent_jacobian(&Decoder::Real { e_star: Some(0.0) }, Set::Jacobi, &links, z);
+            let j = latent_jacobian(&Decoder::Real { e_star: Some(0.0) }, set, &links, z);
             let n = Inverse::of(&j, 0.0).svd.u[LATENT_DIM - 1];
             Inverse::of(&adapted(&j, &n), CUT).smaller(0, 1)
         })
         .fold(0.0, f64::max);
     println!(
-        "smaller singular value: unset at least {unset_least:.6}; E* = 0, each z's least cell from \
-         {shell_least:.3e} to {shell_most:.3}, median {median:.3}; 0.1% of all the cells below {:.3e}; {refused} of 500 \
-         z have a refused cell at {TOLERANCE}; the shell's normal at most {normal:.3e}",
+        "{set:?} smaller singular value: unset at least {unset_least:.6}; E* = 0, each z's least cell from \
+         {shell_least:.3e} to {shell_most:.3}, median {median:.3}; 0.1% of all the cells below {:.3e}; {refused} of \
+         {count} z have a refused cell at {TOLERANCE}; the shell's normal at most {normal:.3e}",
         all[all.len() / 1000]
     );
     assert!((unset_least - 1.0).abs() <= 1e-9, "{unset_least}");
     assert!(shell_least < TOLERANCE, "the real chart refuses somewhere");
-    assert!(refused > 0 && refused < 500, "{refused}");
+    assert!(refused > 0 && refused < count, "{refused}");
     assert!(normal < 1e-3, "the shell's normal: {normal}");
-    rejects("a cut outside the gap", || assert!(unset > 1e-3));
+    (on, off)
+}
+
+#[test]
+fn mock_compass_steer_cut_the_gap_holds_on_the_sample() {
+    // The calibration record, for each set the steer reads: σ₈/σ₁ on both fixtures, c in the gap, at the geometric
+    // middle's order, and the same over other seeds, since E* = 0's side is rounding. The tolerance's measurement beside
+    // it: exactly 1 unset, and over E* = 0 each z's least cell, all the cells' 0.1% point, and the shell's normal itself.
+    let jacobi = check_the_set(Set::Jacobi, (1e-11, 1e-6));
+    let shape = check_the_set(Set::Shape, (1e-10, 1e-8));
+    rejects("a cut outside the gap", || assert!(jacobi.1 > 1e-3));
+    rejects("a cut outside Shape's gap", || assert!(shape.1 > 1e-3));
+    // Control: the Shape run reads its own set, not Jacobi's numbers.
+    rejects("Shape reading Jacobi's figures", || {
+        assert_eq!(shape, jacobi)
+    });
 }
 
 /// The largest `sin φ` at which the Shape set's `J` keeps fewer than `kept_whole` values, on latent points run into the

@@ -787,7 +787,11 @@ independent, and in a grid view a drag does nothing. The view is the compass's o
   `0x5EED`), as `mock_compass_steer_cut_the_gap_holds_on_the_sample` prints it: with `E*` unset, exactly 1 to rounding on
   every cell, so the margin there is 0.9; with `E* = 0`, the least over the cells of a `z` runs from `5.7·10⁻³` to 0.74,
   its median 0.37, 0.1% of all the cells below `4.3·10⁻²`, 35 of the 500 `z` having a cell refused at 0.1, and the
-  shell's normal itself reads 0 to rounding. **The pole's radius (REQ-GUI-411, R-71, proposed by TASK-M6-35, confirmed at
+  shell's normal itself reads 0 to rounding. On the Shape set, by the same test and the same `z`, a `z` inside the pole's
+  radius set apart since that radius has its own measurement below (none of the recorded 500; at most 2 of 500 at seven
+  further seeds): with `E*` unset, exactly 1 to rounding on every cell; with `E* = 0`, the least over the cells of a `z`
+  runs from `2.7·10⁻²` to 0.78, its median 0.45, 0.1% of all the cells below `4.8·10⁻²`, 15 of the 500 `z` having a cell
+  refused at 0.1, and the shell's normal reads 0 to rounding. **The pole's radius (REQ-GUI-411, R-71, proposed by TASK-M6-35, confirmed at
   the M6 gate) is `sin φ < 0.1`.** Below it the Shape view's state is near the chart's pole, and the readout shows the pole's
   line, "near the chart's pole". A refused cell is named for the pole, except on an `E*`-normalised chart where `J` keeps
   seven values: the shell alone accounts for that refusal, the pole costing `J` nothing further there, so it is logged
@@ -799,7 +803,10 @@ independent, and in a grid view a drag does nothing. The view is the compass's o
   sample's `σ₈/σ₁` is at most `1.97·10⁻¹²` with `E* = 0` and at least `4.2·10⁻⁶` with `E*` unset. These differ from the
   gap quoted above, and `c` lies between the sides of both. With `E* = 0` that side is rounding, not a property of the
   decoder: seven further seeds give `1.0·10⁻¹²` to `5.7·10⁻¹²`, and `3.6·10⁻⁶` to `5.2·10⁻⁶` with `E*` unset, each with
-  `c` between them. The Manifold view's sliders follow as after the
+  `c` between them. On the Shape set, `z` inside the pole's radius set apart as above, the sample's `σ₈/σ₁` is at most
+  `9.4·10⁻¹²` with `E* = 0` and at least `2.4·10⁻⁸` with `E*` unset, and the seven further seeds give `7.9·10⁻¹²` to
+  `3.1·10⁻¹¹` and `9.5·10⁻⁹` to `6.4·10⁻⁸`, each with `c` between them. So `c` clears Shape's lower side by about 24 on
+  the sample and about 9.5 at the narrowest seed, against about 4000 on Jacobi's. The Manifold view's sliders follow as after the
   Chart builder's Apply (§G7). *Was (before R-550):* "`q₁ ∝ J⁺ e_i`, `q₂ ∝ J⁺ e_j`, Gram–Schmidt orthonormalised, and
   is refused, with the reason logged to the console, where the preimage is no 2-plane; the construction waits on RQ-344
   to RQ-346." Every steer is one `SetField` on the basis through the
