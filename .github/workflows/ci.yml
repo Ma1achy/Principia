@@ -611,10 +611,20 @@ jobs:
       # beside the pinned nightly with rustc-dev and llvm-tools (R-169). Remove the preinstalled toolsets it does not
       # use (.NET, Android, GHC, CodeQL, the docker images), as `ci-checks` does, logging the free space before and
       # after. Test infrastructure only.
+      # Still too little: job 124915235110 had 109G free after this step and the runner warned "Free space left: 63 MB"
+      # 38 min later, with 36G still in use here. So the rest goes too: none of this job's steps, `cargo xtask ci` nor
+      # its tests run a JVM, Swift, a browser, PowerShell, Boost, Conda, Node or a cloud CLI (the actions' Node is the
+      # runner's own, under its `externals`). Kept: the tool cache's Python, for setup-python, and the system's
+      # compilers, linker and LLVM, for the toolchain's builds and Mesa.
       - name: Free runner disk
         run: |
           df -h /
-          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache/CodeQL
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache/CodeQL \
+            /usr/lib/jvm /opt/hostedtoolcache/Java_* /usr/share/swift \
+            /usr/local/share/chromium /opt/google /opt/microsoft /usr/local/share/powershell /usr/local/share/boost \
+            /usr/share/miniconda /usr/local/julia* /usr/local/lib/node_modules \
+            /opt/hostedtoolcache/go /opt/hostedtoolcache/node /opt/hostedtoolcache/PyPy /opt/hostedtoolcache/Ruby \
+            /usr/lib/google-cloud-sdk /usr/local/aws-cli /usr/local/aws-sam-cli /opt/az /usr/share/az_*
           sudo docker image prune --all --force > /dev/null
           df -h /
       # The toolchain rust-toolchain.toml pins, with its components: rust-gpu's nightly, on which the whole workspace
@@ -657,8 +667,24 @@ jobs:
       - uses: taiki-e/install-action@v2
         with:
           tool: cargo-nextest@0.9.146
+      # The disk beside the run, as no check does: `cargo xtask ci` under a shell that samples it and exits with its
+      # status (`.github/scripts/disk_sampler.sh`), then a last `df` and the samples, on a failure too. A measurement,
+      # read by no gate; a green run shows little, and the "Free space left" warning and the sampler's lowest free are
+      # what say how close it came.
       - name: cargo xtask ci --partition ${{ matrix.shard }}/4
+        shell: bash .github/scripts/disk_sampler.sh {0}
         run: cargo xtask ci --partition ${{ matrix.shard }}/4
+      - name: Runner disk after cargo xtask ci
+        if: always()
+        run: df -h /
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: runner-disk-xtask-ci-${{ matrix.shard }}
+          path: ${{ runner.temp }}/runner-disk.log
+          if-no-files-found: warn
+          retention-days: 14
+          overwrite: true
       - uses: actions/cache/save@v4
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         with:
