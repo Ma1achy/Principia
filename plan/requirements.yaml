@@ -36971,13 +36971,13 @@
   - file: decisions.md
     section: "R-650 — External replication becomes its own final milestone, M9, after the core build: it scores every external target, writes up the explained divergences and tightens the GPU path, and exits on its report; the internal correctness tests and the cheap anchor smoke tests (figure-eight closure, SP-1 run to its horizon, SP-2) stay continuous and block a merge as now; source ingest and transcription go on whenever idle; early peeks score a target as information only, in a peek log *(refines R-649; amends R-594, R-629, R-630, R-640 and R-642: where and when the targets are scored)*"
   verify:
+    detail: "the report covers every M9 target, every live M9 requirement but REQ-INT-110, REQ-SYS-094 and REQ-SYS-095 (TASK-M9-39, a build task, not scored; R-654); each row has the four fields; the peek log's rows are cited, never counted as scores; physics reviewer approved; the owner reviews it"
     method: review checklist
-    detail: "the report covers every live M9 requirement; each row has the four fields; the peek log's rows are cited, never counted as scores; physics reviewer approved; the owner reviews it"
   rulings:
   - R-649
   - R-650
   milestone: M9
-  note: "M9 exits on this report, not a gate (R-650); closed by TASK-M9-37. Statement *was:* \"every M9 calibration is put to the human with it.\" (REQ-SYS-095, code review 5730587922 of PR #375, C4; applied per R-369)."
+  note: "M9 exits on this report, not a gate (R-650); closed by TASK-M9-37. Statement *was:* \"every M9 calibration is put to the human with it.\" (REQ-SYS-095, code review 5730587922 of PR #375, C4; applied per R-369). Verify *was:* \"the report covers every live M9 requirement; …\" (code review 5730587922 of PR #375, C2; applied per R-369)."
 - id: REQ-VAL-341
   area: VAL
   kind: definition
