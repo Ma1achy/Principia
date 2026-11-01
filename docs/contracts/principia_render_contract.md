@@ -389,8 +389,8 @@ with dd_colouring §3.1's sRGB transfer.
     `dbg_drift` from a view is finite by its bits, and a stored `±∞` reference (`E_0`'s `−∞` at the collision pole)
     hatches with `x` whatever its bits, so nothing there rests on the bits of `∞ − ∞`, which WGSL doesn't pin. `x = ±∞`
     on a finite reference hatches rather than being clamped, but a live `x` is tested as the backend computed it, WGSL
-    letting an implementation assume no infinities, so a state with coincident bodies or overflowing momenta is unpinned
-    on the GPU, marked by `sim_failed` (TASK-M3-18).
+    letting an implementation assume no infinities, so a state with coincident bodies, overflowing momenta or an
+    overflowing `L_z` is unpinned on the GPU, marked by `sim_failed` (TASK-M3-18).
   - **The neutral band (R-652; the owner's ruling (d) of 31 Oct 2026; REQ-TOOL-149), `dbg_drift_shown(x, compaction,
     reference)`, in `drift.wgsl`.** The current drifts are computed in the fragment, `H(r, p) − E_0` and `L_z(r, p) −
     Lz_0` (dd_generation_root §3.8; payload §5), so a fresh sample's drift is rounding, not physics, and differs by
@@ -443,11 +443,15 @@ with dd_colouring §3.1's sRGB transfer.
     0.18 and white below, so the lines stay visible on every part of either ramp. **Which predicate drives which
     style:** the energy-suspect predicate (`suspect_energy`, relative `δE`) draws rows, where `p.y & 3 = 0`; the
     L_z-suspect predicate (`suspect_lz`, absolute `ΔL_z`) draws columns, where `p.x & 3 = 0`; both, a grid. Both
-    views apply both styles, each from its own predicate, so either view shows which predicate a sample lights. A
-    pixel off the lines, and every pixel of a sample neither predicate lights, is `rgb` unchanged; the hatch is never
-    styled. The predicates are the generated read side's, read at read time over the stored latches, `dE_max`, `E_0`
-    and `dLz_max` (dd_integrator §3.5; payload §5), the energy one at the view's `EPS_E`; no suspect bit is stored and
-    none reaches `dbg_sentinel`, whose signature is unchanged (R-379). Lines, not a tint, so the ramp colour between
+    views apply both styles, each from its own predicate, so either view shows which predicate a sample lights. The
+    `L_z` view's reference is `Lz_0`, so a non-finite `E_0` doesn't hatch it. It tests `E_0` on its bits before the
+    energy predicate reads it (R-436), and the predicate is unlit there, relative `δE` having no meaning on a non-finite
+    reference; the finite `L_z` drift and `suspect_lz` still show. The energy views have hatched by then. A pixel off
+    the lines, and every pixel of a sample neither predicate lights, is `rgb` unchanged; the hatch is never styled. The
+    predicates are the generated read side's, read at read time over the stored latches, `dE_max`, `E_0` and `dLz_max`
+    (dd_integrator §3.5; payload §5), the energy one at the view's `EPS_E`. The read side's `suspect_energy` reads `E_0`
+    as a number, so its caller tests `E_0` on its bits first, as above. No suspect bit is stored and none reaches
+    `dbg_sentinel`, whose signature is unchanged (R-379). Lines, not a tint, so the ramp colour between
     them still reads as the drift's place, and rows and columns, not two colours, so the two predicates are told apart
     without colour vision. What a lit predicate means depends on the occupant: on a symplectic one the energy drift
     measures the dynamics (close-encounter stress), on any other the integrator's error (integrator contract Part 2),
