@@ -982,3 +982,30 @@ where the choice changes the result (which pixels count) and the corpus does not
 - **Applied meanwhile:** the ruled text, R-554 L3: `Tilted::pixel` (`crates/kernel/src/chart/tilt.rs`) applies no pole
   map unless `N_a = N_b = 0`, so such pixels count as distinct (TASK-M2-36, PR #349). No code changes for this entry.
 - **Waits:** nothing built waits; a fold, if ruled, is a follow-up to TASK-M2-36's `Tilted::pixel` and TASK-M8-56.
+
+## RQ-666: R-468 E3's mock split formula coarsens under Fit, against E3's own "finer"
+
+*Queued 1 Nov 2026 by TASK-M6-47, on code review 5727858267 of PR #371. Applied per R-369: this is the mock's
+placeholder split rule, no physics, and the formula is agent-applied text (gui review G6) that contradicts the human's
+words, so the task did not wait. The entry is for correcting the text.*
+
+- **File, section:**
+  - `decisions.md`:13485, § "R-468 — …", E3: "reads the quad's width as a fraction of the figure, `frac = quad width /
+    (shown figure width × k)`, with `k = 1` outside Fit".
+  - `plan/requirements.yaml`:21443, REQ-GUI-229's note: "G6, frac = quad width / (shown figure width × k), k = 1
+    outside Fit, so only Fit refines".
+  - `plan/tasks/M6/TASK-M6-47.md`:29, Deliverables: "the fake quads (`crates/gui/src/mock/quads.rs`) split on `frac =
+    quad width / (shown figure width × k)`, `k = 1` outside Fit".
+- **The conflict:** a quad splits while `frac` exceeds a threshold, and with `k > 1` the formula makes `frac` smaller, so
+  fewer quads split and Fit coarsens. Against it: the human's words in R-468, "it requests finer quads"; E3 itself,
+  "about `log₂ k` levels finer" and "only Fit refines"; `docs/gui/principia_render_gui_spec.md` § "G1. Rules that hold
+  everywhere", "the larger screen scale asks for finer quads"; and REQ-GUI-229's verify, "the fake quads' deepest level
+  greater than in Extend for k ≥ 2", which the formula as written cannot pass.
+- **The question:** whether the three texts are corrected to `frac = quad width × k / shown figure width`.
+- **Options seen:** (a) correct the three texts to that form, with a *Was:*; (b) another form, stated by the owner, that
+  refines under Fit and leaves `k = 1` unchanged.
+- **Applied meanwhile:** (a) in code: `frac = (quad width) × k / (shown figure width)` (`leaves_over`,
+  `crates/gui/src/mock/quads.rs`; TASK-M6-47, PR #371). It is identical at `k = 1`, so the shown layout's and Extend's
+  quads and the `mock_tile_bounds` capture are unchanged, and `k = 4` gives two levels more. A control in
+  `f3_fill_modes_quads_finer_only_in_fit` shows the divide-by-`k` rule failing. The three texts are not changed.
+- **Waits:** nothing built waits; REQ-GUI-230's real-engine Fit reads the screen floor, not this formula.
