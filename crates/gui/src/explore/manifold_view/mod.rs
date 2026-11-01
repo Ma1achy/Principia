@@ -336,8 +336,10 @@ const READS_BACK: f64 = 1e-18;
 /// picked the other way round, kept to the ends of its range (R-459 G3), only where that order reads the basis back: a
 /// typed component's sign says nothing of H and V. A mirrored basis neither order reads back is outside the map's image,
 /// so some reading of it loses something: `(j, i)` only if it keeps more of the tilt, the components on the targets, and
-/// else `(i, j)`, so the reading of such a basis is one reading on both sides of a component passing through 0.
-/// `read` is [`View::framed`]'s reading on an order.
+/// else `(i, j)`. Only that last case reads alike on both sides of a component passing through 0. Where the swap is
+/// taken, axes, angles and scale jump there: the swap keeps the tilt on the target it can hold, as with `X = z_q3`,
+/// `Y = z_μ1`, `q₁ = ε e_α + 0.8 e_μ1`, `q₂ = e_β`, which below 0 reads `(z_β, z_α)`, `σ = 1`, and from 0 up
+/// `(z_α, z_β)`, `σ = ε`. `read` is [`View::framed`]'s reading on an order.
 fn tilted_axes(
     q1: &Latent,
     q2: &Latent,

@@ -527,8 +527,10 @@ fn mock_cube_axis_buttons_the_frame_reading_cuts_at_their_boundaries() {
     assert_eq!((left.a, left.b), (Z_Q3, Z_Q2), "off them, by the least");
     let left = read_of(&[(Z_Q0, c), (Z_Q3, s)], &[(Z_Q2, 1.0), (Z_Q1, least)]);
     assert_eq!((left.a, left.b), (Z_Q3, Z_Q2), "off them on q₂");
-    // A preset's exact determinant: 0 is the preset. The least below it is a typed component, with X != Y no pair the
-    // other way round can read back: it reads as at 0 and as the least above it, its axes and its angles not jumping.
+    // A preset's exact determinant: 0 is the preset. The least below it is a typed component. This basis has X on q₁,
+    // which the pair the other way round cannot hold, so it reads as at 0 and as the least above it, its axes and its
+    // angles not jumping. That is this basis's, not every one's with X != Y: with Y on q₁ the swap keeps the tilt, and
+    // it jumps at 0 (the swaps pinned in `..._a_mirrored_basis_is_swapped_only_where_that_reads_it_back`).
     let on = read_of(&[(Z_Q3, 1.0)], &[(Z_BETA, 1.0)]);
     assert_eq!(on.preset, Some(0), "a determinant of 0");
     assert!((on.tau1.to_degrees() - 90.0).abs() < 1e-9, "τ₁ at 0");
