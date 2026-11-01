@@ -82,13 +82,25 @@ fn check_controls_job_runs_and_fails(workflow: &str) {
     }
 }
 
+/// Whether this workflow line is an `if:` below a job's own keys: a step's, as R-326's save, never the job's (indent 4).
+fn is_step_level_if(l: &str) -> bool {
+    indent(l) > 4 && l.trim().trim_start_matches("- ").starts_with("if:")
+}
+
+/// The workflow without any step-level `if:`, whatever its condition, every job-level `if:` kept.
+fn without_step_level_ifs(workflow: &str) -> String {
+    workflow
+        .lines()
+        .filter(|l| !is_step_level_if(l))
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
 /// The checked-in controls job has a step-level `if:` (R-326's save), so the check above reads it and lets it pass.
 fn check_a_step_if_is_read(workflow: &str) {
     let (id, lines) = controls_job(workflow);
     assert!(
-        lines
-            .iter()
-            .any(|l| indent(l) > 4 && l.trim().trim_start_matches("- ").starts_with("if:")),
+        lines.iter().any(|l| is_step_level_if(l)),
         "the controls job `{id}` has no step-level `if:`: R-326's conditional save is gone or unread"
     );
     check_controls_job_runs_and_fails(workflow);
@@ -135,8 +147,5 @@ negative_control!(
     qa_r335_a_step_level_if_is_allowed,
     "the checked-in workflow with every step-level `if:` in the controls job removed",
     expected = "has no step-level `if:`",
-    check_a_step_if_is_read(&the_workflow().replace(
-        "        if: github.event_name == 'push' && github.ref == 'refs/heads/main'\n",
-        ""
-    ))
+    check_a_step_if_is_read(&without_step_level_ifs(&the_workflow()))
 );
