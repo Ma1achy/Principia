@@ -638,6 +638,34 @@ peek log's first row (`docs/verification/peek_log.md`), UNEXPLAINED, with this q
   `principia_dd_replication.md` § 5.10, the RQ-598 README § 6 and TASK-M3-62's note point here.
 - **Waits:** GG-1's per-point scoring against the Fig. 1 extraction (TASK-M3-62). BR-1 does not wait on it.
 
+## RQ-627: The softened force law: `epsilon` is a carried, tagged sim-key value, but no document defines softened gravity and no task builds it *(a definition requirement, R-72; physics; `docs/design/principia_dd_generation_root.md` § "Open"; REQ-SYS-018; the physics review of PR #348, F1; context: TASK-M3-06)*
+
+*Queued 30 Oct 2026 by TASK-M3-06's fix round, on the physics review of PR #348 (F1), the code review (C1) and the qa
+review (F1). For the owner: yes, it is physics where the choice changes the result and the corpus does not settle it
+(R-369).*
+
+- **File, section:**
+  - `docs/design/principia_dd_generation_root.md` § "Open": "softened gravity is a different force law at any
+    `epsilon`, and ε>0 runs must be tagged and never pooled with ε=0 runs; and **`r_coll` is the better default
+    mechanism**, since softening makes the dynamics wrong everywhere … **Adopted: `r_coll` nonzero by default,
+    `epsilon` default 0 and optional.**"
+  - `plan/requirements.yaml`, REQ-SYS-018: "`r_coll` must be nonzero by default and `epsilon` 0 by default and
+    optional, both expressed in canonical units and fixed at t = 0 (never co-moving), and ε > 0 runs must be tagged
+    and never pooled with ε = 0 runs."
+- **The gap:** the corpus makes `epsilon` optional and says a run with ε > 0 is a different force law, but never says
+  which one: not its form (Plummer, `1/(r² + ε²)`, or another), nor `V`'s dependence on ε, and so nor `E₀` or the
+  drift meters under it. No force law in `crates/kernel` reads a softening length, and no task in `plan/tasks` builds
+  one. A run dispatched with ε > 0 would come back Newtonian under the `softened` tag, against canonical_spec §9 W13.
+- **The question:** the softened force law's definition (its potential and force as functions of `r` and ε, and what
+  `E₀`, the drift meters and the collision branch read under it), and the task that builds it.
+- **Options seen:** (a) Plummer softening, `V = −Σ m_i m_j / √(r_ij² + ε²)`, built by a new task; (b) another kernel,
+  named by the owner; (c) drop the option: `epsilon` stays 0 and the field is retired, by ruling.
+- **Applied meanwhile:** dispatch refuses any `epsilon` other than 0, NaN and ±∞ included, with a typed reason
+  (`engine::dispatch::validate`, TASK-M3-06). The field, its default 0, the `softened` provenance tag and its sim-key
+  byte stay, so REQ-SYS-018's "optional" stays true of `SimUniforms`. The refusal is lifted by the task that builds
+  the force law.
+- **Waits:** any run with ε ≠ 0. Nothing else waits.
+
 ## RQ-621: The control REQ-DEC-011 and REQ-VAL-017 ask of `M₀₁` cannot fail: an unfused or flushed `fma(m₁, 1, m₀)` rounds exactly as the fused one *(conflict: a requirement's control against arithmetic; R-547, RQ-298; REQ-DEC-011, REQ-VAL-017; context: TASK-M2-48)*
 
 *Found by TASK-M2-48's implementer, before building, 30 Oct 2026. For the orchestrator (R-369: tests), except option
@@ -982,3 +1010,42 @@ where the choice changes the result (which pixels count) and the corpus does not
 - **Applied meanwhile:** the ruled text, R-554 L3: `Tilted::pixel` (`crates/kernel/src/chart/tilt.rs`) applies no pole
   map unless `N_a = N_b = 0`, so such pixels count as distinct (TASK-M2-36, PR #349). No code changes for this entry.
 - **Waits:** nothing built waits; a fold, if ruled, is a follow-up to TASK-M2-36's `Tilted::pixel` and TASK-M8-56.
+
+## RQ-639: The escape window is "provisional" (R-29), and no requirement, task or gate ever confirms it *(physics; calibration; silence; R-29, R-610; `docs/contracts/principia_integrator_contract.md` Part 3; `docs/design/principia_dd_generation_root.md` § "3.8 Metadata schema"; REQ-EVT-017, REQ-GUI-103; the code review (5723498808, F2) and physics review (5723511480, call 3) of PR #348; context: TASK-M3-06)*
+
+*Queued 31 Oct 2026 by TASK-M3-06's fix round, in the physics review's text. For the owner: yes, calibration values and
+physics where the choice changes results (R-369).*
+
+- **File, section:**
+  - `decisions.md` § R-29: "**The window** is 0.4 time units, sampled at sync boundaries (**provisional**)."
+  - `docs/contracts/principia_integrator_contract.md` Part 3: "`tau`, escape window | —, 0.4 (provisional)".
+  - `docs/read_first/principia_01_pitfalls.md` § 2.2: "`|Δn̂|` is taken over 0.4 time units (**provisional**)".
+  - `decisions.md` § R-610: "If the window is recalibrated (M3), the floor, the refusal's reason and the line beside
+    the field move with it".
+  - `plan/requirements.yaml`, REQ-EVT-017's note: "the window length is marked provisional in R-29; a change must go
+    through a ruling."
+  - `plan/requirements.yaml`, REQ-GUI-103: "the escape window (0.4 time units, provisional)".
+- **The gap:**
+  - REQ-EVT-025 calibrates `tau` only, and `plan/MILESTONES.md` § M3 lists "the tau gap" but not the window.
+  - TASK-M3-07's proposal covers only "how the closure window's 0.4 time units map onto the grid". TASK-M3-34 measures
+    at the fixed window.
+  - The register's `escape_window` is settled (citing R-29), so `provisional_until` omits it and the M3 gate never
+    blocks on it. `docs/design/principia_dd_generation_root.md` § 3.8 forbids marking it provisional without a
+    calibration requirement.
+- **The question:** is 0.4 confirmed by measurement at M3, or by ruling as it stands? It changes which trajectories
+  fire escape and when, and R-610's horizon floor follows it.
+- **Options seen:**
+  - (a) A new calibration requirement, confirmed at the M3 gate, proposed by the task that re-validates escape
+    (TASK-M3-34), with evidence over a window ladder. The register entry then becomes `proposed(..., <req>, "M3")`.
+  - (b) A ruling confirms 0.4. The word "provisional" comes off by a port, and the entry cites that ruling.
+- **Second question:** the window is carried and shown in the Run window (REQ-GUI-103), but `validate` accepts any
+  finite positive value, and T's floor follows it (`check_horizon`). So what range may it take? That range also bears
+  on the smallest `dt_macro` a carried window can reach; TASK-M3-06 meanwhile refuses a `dt_macro` whose smallest
+  substep is not a normal f32, per R-369. That refusal bounds the substep only: at its floor the stages' `c·dt` (KDK's
+  half-kick, 2⁻¹²⁷ at `N_max` = 64) are still subnormal and a flushing backend reads them as 0, with no branch affected
+  and no dynamics at that scale. Every stage size stays normal for a window of at least about 2⁻⁹⁸, and at the window
+  of 0.4 it is near 2⁻²⁹. So any lower bound the range sets at or above 2⁻⁹⁸ makes the `dt_macro` refusal unreachable.
+  The range is also where a physically meaningful lower bound belongs: f32 rounding absorbs a step far above this
+  floor.
+- **Applied meanwhile:** 0.4 per R-29, settled in the register, the doc comment saying provisional (TASK-M3-06).
+- **Waits:** the answer is needed by the M3 gate. No task waits.

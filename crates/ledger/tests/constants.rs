@@ -639,7 +639,8 @@ fn check_list_by_gate(register: &[ConstantBuilder]) {
             "step_reversal_edge_f64",
             "step_reversal_edge_f32",
             "step_reversal_edge_max",
-            "nsub_table_max"
+            "nsub_table_max",
+            "tau"
         ],
         "the entries provisional until M3"
     );
@@ -794,6 +795,41 @@ negative_control!(
         }
         check_diverging_x0(&register);
     }
+);
+
+/// `k` is `tau` as R-173 and R-427 make it: `10⁻³`, provisional until the M3 gate, citing REQ-EVT-025, the calibration
+/// that confirms it there.
+fn check_tau(k: &ConstantBuilder) {
+    assert_eq!(k.value, Some(Value::Exact(1e-3)), "`tau`'s value");
+    assert_eq!(k.provisional, Some("M3"), "`tau`'s mark");
+    assert_eq!(
+        k.citation,
+        Some(Citation::Calibration("REQ-EVT-025")),
+        "`tau`'s citation"
+    );
+}
+
+/// The register's `tau`.
+fn register_tau() -> ConstantBuilder {
+    *REGISTER
+        .iter()
+        .find(|k| k.name == "tau")
+        .expect("`tau` is not in the register")
+}
+
+#[test]
+fn constants_provisional_tau_waits_for_m3() {
+    check_tau(&register_tau());
+}
+
+negative_control!(
+    constants_provisional_tau_waits_for_m3,
+    "a settled `tau` drops out of the M3 gate's report and no longer blocks it",
+    expected = "`tau`'s mark",
+    check_tau(&ConstantBuilder {
+        provisional: None,
+        ..register_tau()
+    })
 );
 
 /// Checks that `hatch` is the confirmed hatch (REQ-COL-055, R-428), violet `#9B00FF` and cyan `#48FFFF` in 4 px
