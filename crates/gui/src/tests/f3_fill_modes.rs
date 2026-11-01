@@ -616,8 +616,13 @@ fn f3_fill_modes_mock_integrates_at_fit_and_keeps() {
     });
 }
 
-/// F3 twice in `fill` on a mock app, from the state the app is in: the layout rects, the view, the capture, the edits.
-fn check_round_trip(canvas: &Arc<MockCanvas>, fill: F3Fill) {
+/// F3 twice in `fill` on a mock app, `while_hidden` running with the layer hidden: the edits, the view, the layout rects
+/// and the capture all as they were.
+fn check_round_trip(
+    canvas: &Arc<MockCanvas>,
+    fill: F3Fill,
+    while_hidden: impl FnOnce(&mut App<MockSide>),
+) {
     let side = MockSide::new(MockEngine::frozen(), Some(canvas.clone()));
     let mut app = App::new(side, FORMAT);
     let mut h = headless();
@@ -630,21 +635,23 @@ fn check_round_trip(canvas: &Arc<MockCanvas>, fill: F3Fill) {
     );
     let before = capture::render_frame(canvas, &mut app, &mut h);
     press(&mut h, &mut app, Key::F3, Modifiers::NONE);
+    while_hidden(&mut app);
     frames(&mut h, &mut app, 2);
     let hidden = capture::render_frame(canvas, &mut app, &mut h);
     assert_ne!(hidden.rgba, before.rgba, "hidden differs from shown");
     press(&mut h, &mut app, Key::F3, Modifiers::NONE);
     frames(&mut h, &mut app, 2);
     let back = capture::render_frame(canvas, &mut app, &mut h);
-    assert_eq!(
-        back.rgba, before.rgba,
-        "{fill:?}: the capture after F3 twice"
-    );
-    assert_eq!(view_bits(&app), view, "{fill:?}: the view");
+    // The edits first, so a Fit that sends a `SetField` fails here and not on what it drew.
     assert_eq!(
         edits(&mut app),
         count,
         "{fill:?}: a SetField or an undo entry"
+    );
+    assert_eq!(view_bits(&app), view, "{fill:?}: the view");
+    assert_eq!(
+        back.rgba, before.rgba,
+        "{fill:?}: the capture after F3 twice"
     );
     let after = Layout::with_splits(h.screen(), PIXELS_PER_POINT, &app.splits);
     assert_eq!(
@@ -668,8 +675,19 @@ fn check_round_trip(canvas: &Arc<MockCanvas>, fill: F3Fill) {
 #[test]
 fn f3_fill_modes_f3_twice_returns_everything() {
     let canvas = canvas();
-    check_round_trip(&canvas, F3Fill::Extend);
-    check_round_trip(&canvas, F3Fill::Fit);
+    check_round_trip(&canvas, F3Fill::Extend, |_| {});
+    check_round_trip(&canvas, F3Fill::Fit, |_| {});
+    // Control: a Fit that edits the zoom, one `SetField` halving the basis.
+    rejects("a Fit that edits the zoom (a SetField)", || {
+        check_round_trip(&canvas, F3Fill::Fit, |app| {
+            let plane = app.snapshot().sim.plane.clone();
+            let half = |q: &engine::contract::sim_config::Latent| q.map(|v| v * 0.5);
+            app.set_field(crate::explore::manifold_view::basis_edit((
+                half(&plane.q1),
+                half(&plane.q2),
+            )));
+        })
+    });
 }
 
 #[test]
