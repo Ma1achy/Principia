@@ -343,3 +343,99 @@ statements under "Repo statements that overstate these sources".
   2014 half-lives in the records row, Onishi's repository values, and a stop distance in the Quarles 2018 row, whose paper stays out.
 
 Removed lines in the first-pass commit (735cde24): none. Each later commit carries its own note.
+
+## Papers-14 to 80, 1 Nov 2026
+
+**Proposals only.** Nothing here becomes a target until the owner rules. No requirement or plan changes. Source:
+`~/Downloads/principia-research-library`, final at 374 unique PDFs by the owner's count, including papers-80, the last
+batch. One row per item in `triage-14-80.csv`, in the columns of `triage.csv` plus `group`, the reading pass that wrote
+the row. A row number is the line in that file. `batch-notes-14-79.md` holds each batch's own claims, all marked
+unverified: they are ChatGPT's notes, and only what a row says it checked was checked.
+
+As the owner asked, reading went first to the four gaps, then peer-reviewed planar hits. 2026 unreviewed preprints,
+hierarchical, circumbinary and context items are one line each, most from the first page only. Unreviewed or AI-assisted
+sources are peeks only. Hierarchical triples are parked with the v2+ 3D extension.
+
+### Counts
+
+Rows, not papers: `PENN.pdf`, `3BodyProblem.pdf` and the Brasser 2023 PDF each appear in two rows (the Brasser row 29
+says to dedupe).
+
+| Verdict | NOW | M9 | RECORD-ONLY | SKIP | Rows |
+|---|---|---|---|---|---|
+| HIT | 4 | 7 | 1 | 0 | 12 |
+| PLOT-ONLY | 0 | 1 | 5 | 1 | 7 |
+| CONTEXT | 0 | 0 | 32 | 39 | 71 |
+| PEEK-ONLY | 2 | 0 | 15 | 19 | 36 |
+| PARKED | 0 | 12 | 4 | 26 | 42 |
+| OFF-FILTER | 0 | 0 | 0 | 5 | 5 |
+| Total | 6 | 20 | 57 | 90 | 173 |
+
+Of the 20 M9 rows, 7 are read hits and 13 are the unread ESCALATE rows below. M9 on those 13 means "read this first", not
+a place in the M9 list, and the 12 of them that are PARKED stay parked under the owner's hierarchical ruling unless the
+reading shows otherwise. Of the 6 NOW rows, Szebehely 1972 (row 45) is the existing NOW-9, unchanged; Kumar 2014 (row 46)
+is only a cross-check on Chandra & Bhatnagar; the essay's escape file (row 61) is unreviewed, a peek.
+
+### The four gaps
+
+No gap is closed.
+
+- **Per-point Lyapunov or FTLE file: none found.** The nearest are a per-system table of planetary MEGNO and Lyapunov
+  times (row 5, parked), a 31x31 MEGNO grid for one star and two planets (row 6, unreviewed), a MEGNO catalogue (row 7) and
+  six running-exponent trajectories (row 8, already have). The Sofia lead below would be per orbit, not a map.
+- **Planar final-binary distribution as numbers: none found.** What is printed is per case or a deterministic family: Chandra
+  & Bhatnagar Table V and Alexander Table II (below), and Szebehely 1972 Table I (row 45, already NOW-9). Valtonen 1976
+  prints binned counts for 3D sets only; its planar data are figures (row 49). Kumar 2016's "distributions" are theory
+  formulas evaluated per orbit (row 47). Row 61's 200 runs have no a or e.
+- **f32 statistics at N=3: no test found.** The nearest is Smith 1977, A&A 61, 305-312 (row 2): 5 examples per level, N=16,
+  3D, the same starts at d=17, 7, 6 and 5 significant figures, with t tests on ensemble statistics (Tables 1 to 4, pp.307-308).
+  It finds no significant distortion at d=6 and d=7, and blow-up at d=5, on chopped IBM 360 arithmetic rather than IEEE
+  f32. It is a design precedent, not a target. Pruett 2003 p.307-308 (row 39) has true single precision on a planar
+  three-body case, but one trajectory; Brasser 2023 (row 29) has FP32 against FP64 statistics on 80 terrestrial-planet runs.
+- **L≠0 and unequal-mass digits: new, at small masses or low precision.** Bengochea 2011 and 2013 give peer-reviewed L≠0 digits,
+  2013 with unequal masses in 3 rows, but all with two small masses; Hénon 1974 (NOW-22) and Davoust remain the
+  comparable-mass cases. Tsouroplis & Zagouras span more masses at about 1e-3. Chandra & Bhatnagar add a nonzero-L equal-mass
+  family. Broucke & Boggs Table I has two closing rows, 1 and 40, that the atlas lacks (row 65).
+
+### New top items
+
+Checks are ours, in f64, unless the row says otherwise; each row has the detail and the misprints found.
+
+| Item | Where | What | Check | Row | Proposal |
+|---|---|---|---|---|---|
+| Bengochea 2011 | Table 2, p.404 | 6 horseshoe orbits, L≠0, 15 significant digits | all 6 close | 62 | NOW |
+| Bengochea 2013 | Table 1, p.412 | 6 rows, 5 new orbits, rotation closure | all 6 close with rotation +2 theta_c | 63 | NOW |
+| Alexander 1986 | Table II, p.207 | 2 planar equal-mass L=0 starts; final binary a, e, agreed among methods | T1 agrees in a; e differs in the third figure; T2 unfinished | 41 | NOW |
+| Chandra & Bhatnagar 2000 I | Table V, p.391 | final a, e, v, theta; 187 members; L≠0; ICs on p.374 | 9 members finished, about 3 figures at best; two misprints | 40 | M9 |
+| Tsouroplis & Zagouras 1984 | Tables I-VII, pp.84-92 | 96 asymmetric orbits, unequal masses, 5-6 decimals | 73 of 96 reach reduced closure below 2e-2; a closure at about 1e-3 | 64 | M9 |
+| Valtonen 1975 | Table II, p.80 | escape frequency per body by mass ratio, within 1 degree of planar, n=120 each | by eye, not transcribed; not run | 42 | M9 |
+| Valtonen 1974 | Table V, p.220 | lifetime quartiles, 3 disk sets, n=118-139 | not run; not reproducible from this paper alone | 43 | M9 |
+
+### The Sofia lead
+
+The likeliest route to per-orbit exponents is three files on the Sofia databases, `res_exponents.txt`, `res_eigen.txt` and
+`eigenvalues_12431.txt`, listed under "Not fetched" in `docs/incoming/2026-10-27_hp_ics_freefall/README.md` (row 3). **This is
+inferred.** We have not read them, so their contents, row count and units are unknown. The inference: a repository file in
+papers-70 carries a "published" exponent on 518 free-fall rows that join `sol_80.txt` on T* (518 of 518, sampling every 24th
+distinct solution); that the source is `res_exponents.txt` is our guess. If it holds, it would compare a per-orbit exponent point by point on
+starts already committed. It needs a monodromy or variational measurement on our side, and it isn't an FTLE map.
+
+### Not read
+
+- **13 ESCALATE rows, first page only:** De Cesare & Capuzzo-Dolcetta 2021 (row 111), Donnison & Mikulskis 1994, 1995 and 1996
+  (114 to 116; the first two are scans, with an empty text layer), Georgakarakos 2013 (124), Kiseleva et al. 1994, two papers
+  (132, 133), McDonald 1986 (140), Pinto 2026 (147, the one that isn't PARKED), Trifonov 2018, two copies (158, 159),
+  Walker 1980 (160), Walker & Roy 1983 (161). What these rows say they hold is the batches' claim.
+- **Scanned or otherwise not read:** Gander & Hrebicek (row 121), `hd127195_stability.pdf` (172), the NAOJ 2003 and 2004
+  volumes (143, 144).
+- **Archives:** the zip and tar archives under `batches/` (142 by listing, 123 of them zip) were not opened for this triage.
+  Files a row names as header-only, or not opened, are marked in the row.
+
+### Decisions recorded (applied per R-369)
+
+- `EXCLUDE` in the readers' brief is `OFF-FILTER` here, as in `triage.csv`, on the terms under "Words used". One overlap cell
+  reworded the same way (row 4).
+- Values from published papers stay in the rows, with citation, under the owner's data-reuse ruling of 1 Nov 2026 (items 3
+  and 9); that is later than the `[value]` masking above. Values from repository files that are not a paper, and have no
+  licence for their data, are masked as `[value]` (rows 3, 4, 8, 9, 61).
+- `_local` in `licence_action` is where a file would go if wanted. This PR holds no PDF, and adds nothing under `_local`.
