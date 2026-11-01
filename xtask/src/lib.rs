@@ -12,6 +12,8 @@ pub mod fragment_wgsl;
 pub mod gate;
 pub mod gate_report;
 pub mod golden;
+#[cfg(unix)]
+pub mod jobq;
 pub mod lint_compute;
 pub mod lint_constants;
 pub mod lint_no_alloc;
