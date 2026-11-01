@@ -47,6 +47,10 @@ jobs:
   mutants:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-24.04
+    # statuses: the heartbeat of a shard's run (`scripts/contain.sh`).
+    permissions:
+      contents: read
+      statuses: write
     env:
       PRIN_GPU_BACKEND: vulkan
     strategy:
@@ -179,11 +183,41 @@ jobs:
       # - the per-process memory cap (REQ-VAL-181), `prlimit --as` (core dumps off) as nextest's runner on Linux: each
       #   test process of the baseline and of every mutant runs under it, and an allocation past it kills that test,
       #   not cargo-mutants, cargo, nextest or this step.
+      #
+      # The run is contained, by the step's `shell` (`scripts/contain.sh`; R-658, applied per R-369): mutants of the job queue signal process
+      # groups and start daemons, as the user the runner's agent runs as, and every shard of two runs in a row lost its
+      # runner. The check below proves the containment on this machine, with a real `kill -9 -1`, before anything relies
+      # on it. On a diff that changes the queue, its tests then run alone in their namespaces, so a harness that breaks
+      # there fails in minutes, not after the baseline. Should a runner still die, the commit's status
+      # `mutants-heartbeat (<shard>)` keeps its last memory, disk, task count and mutant under test.
+      - name: scripts/contain.sh check
+        if: steps.diff.outputs.rust == 'true'
+        env:
+          PRIN_CONTAIN: required
+        shell: bash scripts/contain.sh check {0}
+        run: echo "the containment holds"
+      - name: The job queue's tests in their PID namespaces, when the diff changes the queue
+        if: steps.diff.outputs.rust == 'true'
+        env:
+          PRIN_CONTAIN: required
+          RUSTFLAGS: -C link-arg=-Wl,--compress-debug-sections=zlib -Zmir-enable-passes=-GVN
+        shell: bash scripts/contain.sh run bash --noprofile --norc -eo pipefail {0}
+        run: |
+          if grep -q '^+++ b/xtask/src/jobq\.rs' "$RUNNER_TEMP/pr.diff"; then
+            cargo nextest run --package xtask --test jobq --test qa_R-658 \
+              --test qa_R-658_round2 --test qa_R-658_round3 --test qa_R-658_round4
+          fi
       - name: cargo mutants --in-diff --shard ${{ matrix.shard }}/8 (REQ-VAL-149 per-shard limit, R-376)
         id: run
         if: steps.diff.outputs.rust == 'true'
         env:
           RUSTFLAGS: -C link-arg=-Wl,--compress-debug-sections=zlib -Zmir-enable-passes=-GVN
+          PRIN_CONTAIN: required
+          HEARTBEAT_CONTEXT: mutants-heartbeat (${{ matrix.shard }})
+          HEARTBEAT_OUT: ${{ runner.temp }}/mutants.out
+          HEARTBEAT_SHA: ${{ github.event.pull_request.head.sha }}
+          HEARTBEAT_TOKEN: ${{ github.token }}
+        shell: bash scripts/contain.sh run bash --noprofile --norc -eo pipefail {0}
         # REQ-VAL-149: 300 minutes per shard, confirmed by the human at the M0 gate (R-376; R-71, R-302): a ceiling
         # for unusually large diffs, not a target. Every PR's shards but #124's have ended in 52 minutes or less
         # (RQ-202); with each shard's setup the job stays under GitHub's 360-minute limit for a hosted job.
@@ -238,6 +272,13 @@ jobs:
       - name: scripts/ci_changes.sh detect
         id: changes
         run: scripts/ci_changes.sh detect
+      # The shards' containment holds on a runner (`scripts/contain.sh`), seen in a second, not after a shard's baseline.
+      - name: scripts/contain.sh check
+        if: steps.changes.outputs.docs_only != 'true'
+        env:
+          PRIN_CONTAIN: required
+        shell: bash scripts/contain.sh check {0}
+        run: echo "the containment holds"
       # The toolchain rust-toolchain.toml pins, with its components: rust-gpu's nightly, on which the whole workspace
       # builds (R-169).
       - name: rustup toolchain install (rust-toolchain.toml)
