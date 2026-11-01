@@ -4,6 +4,8 @@
 //! on it following and the plane re-tilting; a plane that takes D moves it by the slice-axis rule; the keys reach them.
 //! Each check also runs on an input it must reject (R-176, through `rejects`).
 
+use std::f64::consts::PI;
+
 use eframe::egui::{Key, Modifiers};
 use engine::contract::set_field::SetField;
 use engine::contract::sim_config::{Latent, Lock, Plane, SliceFrame};
@@ -907,6 +909,74 @@ fn mock_cube_axis_buttons_a_mirrored_basis_is_swapped_where_that_keeps_it() {
         &[(Z_ALPHA, 0.1), (Z_BETA, 1.0)],
     );
     assert_eq!((read.a, read.b), (Z_ALPHA, Z_BETA), "a tie");
+}
+
+/// `tilted_axes`'s determinant is the difference of the products, not of a quotient: the basis below has `1 · 0.5 −
+/// 0.5 · 2 = −0.5`, so it is mirrored, while `1 / 0.5 − 0.5 · 2` and `1 · 0.5 − 0.5 / 2` are both positive. Reading back
+/// in neither order, it swaps because that keeps more of the tilt, and the swap's reading is worked by hand from
+/// `View::in_frame`: on `(z_β, z_α)`, `γ = atan2(1, 2)`, so `sin γ = 1/√5`, `cos γ = 2/√5`; `σ cos τ₁ = √0.5`,
+/// `σ sin τ₁ = −0.3/√5`; `tan τ₂ = (0.8/√5) / √5 = 0.16`.
+#[test]
+fn mock_cube_axis_buttons_a_mirrored_basis_is_told_by_its_determinant() {
+    let read = read_of(
+        &[(Z_ALPHA, 1.0), (Z_BETA, 0.5), (Z_MU1, 0.8)],
+        &[(Z_ALPHA, 2.0), (Z_BETA, 0.5), (Z_Q3, 0.3)],
+    );
+    let check = |read: &View| {
+        let root5 = 5.0_f64.sqrt();
+        let (cos1, sin1) = (0.5_f64.sqrt(), -0.3 / root5);
+        assert_eq!((read.a, read.b), (Z_BETA, Z_ALPHA), "{read:?}");
+        assert_eq!(read.preset, None, "{read:?}");
+        for (got, want, what) in [
+            (read.gamma, 1.0_f64.atan2(2.0), "γ"),
+            (read.scale, cos1.hypot(sin1), "σ"),
+            (read.tau1, sin1.atan2(cos1), "τ₁"),
+            (read.tau2, 0.8_f64.atan2(5.0), "τ₂"),
+        ] {
+            assert!((got - want).abs() < 1e-12, "{what}: {got} for {want}");
+        }
+    };
+    check(&read);
+    rejects("the mirrored basis read in the order as typed", || {
+        check(&read_of(
+            &[(Z_ALPHA, 1.0), (Z_BETA, 0.5), (Z_Q3, 0.8)],
+            &[(Z_ALPHA, 2.0), (Z_BETA, 0.5), (Z_MU1, 0.3)],
+        ))
+    });
+    rejects("the same axes at another turn", || {
+        check(&View {
+            gamma: read.gamma + 1e-6,
+            ..read
+        })
+    });
+}
+
+/// The read-back's cut counts what the swap loses on `q₂` as it does what it loses on `q₁`, the other vector from
+/// `..._a_mirrored_basis_is_swapped_where_that_keeps_it`'s cut, of a total of 2: what is left is on `q₂`'s `z_μ1`, which
+/// the swap's `q₂ = u₁` cannot hold. A difference of the two vectors' losses would read this one back at any size.
+#[test]
+fn mock_cube_axis_buttons_the_read_back_counts_what_q2_loses() {
+    let at = |left: f64| read_of(&[(Z_ALPHA, -1.0)], &[(Z_BETA, 1.0), (Z_MU1, left.sqrt())]);
+    let pair = |read: View| (read.a, read.b);
+    let check = |left: f64, want: (usize, usize)| {
+        assert_eq!(pair(at(left)), want, "{left} left on q₂");
+    };
+    check(1.5e-18, (Z_BETA, Z_ALPHA));
+    check(2.5e-18, (Z_ALPHA, Z_BETA));
+    // Far past it, the order as typed holds the tilt: τ₂ is what is on z_μ1, turned by γ = −180° as q₁ = −e_α says.
+    check(0.25, (Z_ALPHA, Z_BETA));
+    let read = at(0.25);
+    assert!(
+        (read.tau2 - (-0.5_f64).atan2(1.0)).abs() < 1e-12,
+        "{read:?}"
+    );
+    assert!((read.gamma.abs() - PI).abs() < 1e-12, "{read:?}");
+    rejects("past the cut, read back as a swap", || {
+        check(2.5e-18, (Z_BETA, Z_ALPHA))
+    });
+    rejects("within the cut, left as typed", || {
+        check(1.5e-18, (Z_ALPHA, Z_BETA))
+    });
 }
 
 #[test]
