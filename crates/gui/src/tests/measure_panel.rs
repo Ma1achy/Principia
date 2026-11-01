@@ -1033,6 +1033,30 @@ fn measure_window_leaves_the_app_its_size() {
     let [width, height] = MEASURED_WINDOW_SIZE;
     let asked = format!("--window-size={width},{height}");
     assert!(chrome.contains(&asked), "chrome.mjs asks for {asked}");
+    let safari = include_str!("../../../../web/skeleton/runner/safari.mjs");
+    let sized_first = |script: &str| {
+        let asked = format!("setRect({{ width: {width}, height: {height} }})");
+        let sized = script.find(&asked);
+        assert!(sized.is_some(), "safari.mjs asks for {asked}");
+        assert!(sized < script.find("driver.get("), "before the first load");
+    };
+    sized_first(safari);
+    rejects("a Safari window at its own size", || {
+        sized_first(&safari.replace("setRect", "getRect"))
+    });
+    rejects("a Safari window sized after the first load", || {
+        sized_first(
+            &safari
+                .replace("driver.get(", "driver.getCurrentUrl(); ")
+                .replace(
+                    "await driver.manage().window()",
+                    "await driver.get(url); await driver.manage().window()",
+                ),
+        )
+    });
+    rejects("a Safari window at other numbers", || {
+        sized_first(&safari.replace(&width.to_string(), "1000"))
+    });
 }
 
 /// The panel's fields carry the app's size, from the panel's first report on.
