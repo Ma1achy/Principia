@@ -169,6 +169,95 @@ fn mock_compass_steer_cut_a_saturated_link_refuses() {
 }
 
 #[test]
+fn mock_compass_steer_cut_a_saturated_link_on_an_e_star_chart_names_each_cause() {
+    // The saturated fixture on E* = 0: the shell drops one value and the link another.
+    let mut p: Plane = plane(&view(10.0, 5.0, 0.0, 0.8), [0.1, -0.3, 0.25]);
+    p.z0 = [0.3, 1000.0, 0.3, -0.2, 0.5, 0.1, 0.1, -0.2];
+    let (app, _h) = app_at(&p);
+    let mut sim = app.snapshot().sim.clone();
+    let links = Links::defaults();
+    let shell = Decoder::Real { e_star: Some(0.0) };
+    let inverse =
+        |d: &Decoder, z: &Latent| Inverse::of(&latent_jacobian(d, Set::Jacobi, &links, z), CUT);
+    assert_eq!(inverse(&shell, &p.z0).kept, 6);
+    for cell in [(0, 1), (1, 3), (1, 7)] {
+        assert_eq!(
+            steer(&shell, Set::Jacobi, &sim, cell.0, cell.1),
+            Some(Err(Refusal::Saturated)),
+            "{cell:?}, β's column gone with or without the shell"
+        );
+    }
+    // A cell of the same kind of state that only the shell refuses: reachable with η_E off, so the shell is its cause.
+    let off = Decoder::Real { e_star: None };
+    let mut shell_only = 0;
+    for mut z in sample() {
+        z[1] = 1000.0;
+        let (on, unset) = (inverse(&shell, &z), inverse(&off, &z));
+        for (a, b) in upper() {
+            if on.smaller(a, b) < TOLERANCE && unset.smaller(a, b) >= TOLERANCE {
+                assert_eq!(on.kept, 6, "at {z:?}");
+                sim.plane.z0 = z;
+                assert_eq!(
+                    steer(&shell, Set::Jacobi, &sim, a, b),
+                    Some(Err(Refusal::EnergyShell)),
+                    "({a}, {b}) at {z:?}"
+                );
+                shell_only += 1;
+            }
+        }
+    }
+    assert!(
+        shell_only > 0,
+        "no cell on the sample only the shell refuses"
+    );
+    // Control: the fix's absence, the shell named for the saturated cell.
+    sim.plane.z0 = p.z0;
+    rejects("a saturated cell blamed on the shell", || {
+        assert_eq!(
+            steer(&shell, Set::Jacobi, &sim, 1, 3),
+            Some(Err(Refusal::EnergyShell))
+        )
+    });
+}
+
+#[test]
+fn mock_compass_steer_cut_a_fixture_names_its_cause_by_what_it_keeps() {
+    use super::compass_physical_views::leaked;
+    let p: Plane = plane(&view(10.0, 5.0, 0.0, 0.8), [0.1, -0.3, 0.25]);
+    let (app, _h) = app_at(&p);
+    let sim = app.snapshot().sim.clone();
+    // The identity with its last `gone` rows zero, so cell (0, 7) is refused at each.
+    let a = |gone: usize| -> &'static Matrix {
+        leaked(std::array::from_fn(|r| {
+            std::array::from_fn(|c| f64::from(r == c && r < LATENT_DIM - gone))
+        }))
+    };
+    let why = |gone, shell| {
+        steer(
+            &Decoder::Linear { a: a(gone), shell },
+            Set::Jacobi,
+            &sim,
+            0,
+            7,
+        )
+    };
+    assert_eq!(
+        why(1, true),
+        Some(Err(Refusal::EnergyShell)),
+        "seven kept: the shell"
+    );
+    assert_eq!(
+        why(2, true),
+        Some(Err(Refusal::Saturated)),
+        "six kept: more than the shell"
+    );
+    assert_eq!(why(1, false), Some(Err(Refusal::Saturated)), "no shell");
+    rejects("six kept blamed on the shell", || {
+        assert_eq!(why(2, true), Some(Err(Refusal::EnergyShell)))
+    });
+}
+
+#[test]
 fn mock_compass_steer_cut_keeps_only_what_clears_the_cut() {
     // A diagonal J with σ₁ = 1 and one value at each side of c·σ₁, and exactly at it, which is kept ("below" drops).
     let mut j = [[0.0; LATENT_DIM]; LATENT_DIM];

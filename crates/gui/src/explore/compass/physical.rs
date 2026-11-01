@@ -27,6 +27,9 @@ pub const TOLERANCE: f64 = 0.1;
 /// Where `sin φ` is below this, the Shape view's state is at the chart's pole, for naming a refusal's reason.
 pub const POLE_SIN: f64 = 1e-3;
 
+/// The singular values `J` keeps on an `E*` chart with nothing else rank-deficient: the shell drops one (R-550).
+const SHELL_KEPT: usize = LATENT_DIM - 1;
+
 /// A matrix, rows first.
 pub type Matrix = [[f64; LATENT_DIM]; LATENT_DIM];
 
@@ -347,14 +350,38 @@ impl Refusal {
         }
     }
 
-    /// Why a refused cell is refused at `z`: the pole first, a state with no chart there, then the shell.
-    fn at(decoder: &Decoder, set: Set, links: &Links, z: &Latent) -> Self {
+    /// Why cell `(i, j)`, refused by `inverse` at `z`, is refused: the pole first, a state with no chart there. Off a
+    /// shell chart the cause is `J`'s own rank. On one, the shell accounts for one dropped value, so seven kept leaves it
+    /// the only cause. Fewer kept means something else is rank-deficient too, and the cell is told apart by whether it is
+    /// still refused with `η_E` off, the shell gone; a fixture has no such chart, and names the other cause.
+    fn at(
+        decoder: &Decoder,
+        set: Set,
+        links: &Links,
+        z: &Latent,
+        inverse: &Inverse,
+        (i, j): (usize, usize),
+    ) -> Self {
         if at_pole(decoder, set, links, z) {
-            Refusal::Pole
-        } else if decoder.on_shell() {
-            Refusal::EnergyShell
-        } else {
-            Refusal::Saturated
+            return Refusal::Pole;
+        }
+        if !decoder.on_shell() {
+            return Refusal::Saturated;
+        }
+        if inverse.kept >= SHELL_KEPT {
+            return Refusal::EnergyShell;
+        }
+        match decoder {
+            Decoder::Real { .. } => {
+                let off = Decoder::Real { e_star: None };
+                let off = Inverse::of(&latent_jacobian(&off, set, links, z), CUT);
+                if refuses(off.smaller(i, j)) {
+                    Refusal::Saturated
+                } else {
+                    Refusal::EnergyShell
+                }
+            }
+            Decoder::Linear { .. } => Refusal::Saturated,
         }
     }
 }
@@ -405,7 +432,8 @@ pub fn steer(
     let plane = &sim.plane;
     let inverse = Inverse::of(&latent_jacobian(decoder, set, &sim.links, &plane.z0), CUT);
     if refuses(inverse.smaller(i, j)) {
-        return Some(Err(Refusal::at(decoder, set, &sim.links, &plane.z0)));
+        let why = Refusal::at(decoder, set, &sim.links, &plane.z0, &inverse, (i, j));
+        return Some(Err(why));
     }
     let basis = gram_schmidt(
         &inverse.preimage(i),
