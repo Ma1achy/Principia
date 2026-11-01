@@ -1230,7 +1230,7 @@ impl<S: EngineSide> App<S> {
 
     /// Draws the focus ring on the focused scope, where it was drawn this frame, while keyboard navigation is on
     /// (R-460 H4, R-464).
-    fn draw_ring(&self, ctx: &egui::Context) {
+    pub(crate) fn draw_ring(&self, ctx: &egui::Context) {
         if !self.keyboard.navigating() {
             return;
         }

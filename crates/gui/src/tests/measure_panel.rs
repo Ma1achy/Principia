@@ -5,22 +5,25 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use eframe::egui::{self, pos2, Rect, ViewportId};
+use eframe::egui::{self, pos2, Key, Modifiers, Rect, ViewportId};
 use eframe::egui_wgpu;
 use engine::contract::interface::EngineInterface;
 
 use super::support::{mock_app, rejects};
 use crate::app::App;
 use crate::cli::mock::{MEASURED_WINDOW_SIZE, WINDOW_SIZE};
+use crate::explore::breadcrumb::{self, RING_WIDTH};
+use crate::explore::footer::FOOTER;
 use crate::headless::Headless;
 use crate::measure::stats::{Frame, WARM_UP_MS, WINDOW_MS};
 use crate::measure::{
     frame_delay, pan_edit, pan_offset, split, Environment, Measured, Phase, Run, Session,
-    PANEL_WIDTH,
+    PANEL_SCOPE, PANEL_WIDTH, RUN_IDLE, RUN_PAN,
 };
 use crate::mock::canvas::MockCanvas;
 use crate::mock::MockEngine;
 use crate::side::{EngineSide, MockSide};
+use engine::contract::view_ui::{KeyMode, Mode};
 
 fn session(run: Option<Run>) -> Session {
     Session::new(Environment {
@@ -688,6 +691,272 @@ fn measure_marks_stamp_a_painted_frame() {
     );
     rejects("a frame that took no work", || {
         assert!(frames[0].work_ms <= 0.0);
+    });
+}
+
+/// The measured native window: the panel's strip added to the window's size, so the app keeps it.
+fn measured_window() -> Rect {
+    Rect::from_min_max(pos2(0.0, 0.0), MEASURED_WINDOW_SIZE.into())
+}
+
+/// One frame of `measured` with `events`, its focus rings' rects: the rects `RING_WIDTH` wide.
+fn step_rings(
+    ctx: &egui::Context,
+    measured: &mut Measured<MockSide>,
+    events: Vec<egui::Event>,
+) -> Vec<Rect> {
+    let mut raw = egui::RawInput {
+        screen_rect: Some(measured_window()),
+        events,
+        ..Default::default()
+    };
+    measured.raw_input_hook(ctx, &mut raw);
+    let mut out = ctx.run_ui(raw, |ui| measured.ui(ui));
+    out.textures_delta.clear();
+    fn collect(shape: &egui::Shape, rings: &mut Vec<Rect>) {
+        match shape {
+            egui::Shape::Vec(v) => v.iter().for_each(|s| collect(s, rings)),
+            egui::Shape::Rect(r) if r.stroke.width == RING_WIDTH => rings.push(r.rect),
+            _ => {}
+        }
+    }
+    let mut rings = Vec::new();
+    out.shapes
+        .iter()
+        .for_each(|c| collect(&c.shape, &mut rings));
+    rings
+}
+
+/// Presses and releases `key`, with `modifiers`.
+fn press_on(
+    ctx: &egui::Context,
+    measured: &mut Measured<MockSide>,
+    key: Key,
+    modifiers: Modifiers,
+) {
+    for events in crate::capture::key(key, modifiers) {
+        step_rings(ctx, measured, events);
+    }
+}
+
+fn measured_panel() -> (egui::Context, Measured<MockSide>) {
+    let ctx = egui::Context::default();
+    let measured = Measured::new(mock_app(), Some(session(None)), Box::new(|_| {}));
+    (ctx, measured)
+}
+
+fn focus_of(measured: &Measured<MockSide>) -> Vec<&str> {
+    let path = &measured.app.view.focus.path;
+    path.iter().map(String::as_str).collect()
+}
+
+fn phase_of(measured: &Measured<MockSide>) -> Phase {
+    measured.session.as_ref().expect("the session").phase
+}
+
+/// Tab and Enter reach the panel's buttons in navigation mode, the ring and the breadcrumb following; the arrows move
+/// between them and start nothing; Enter on one acts as its click, stays in navigation mode and adds no undo entry.
+#[test]
+fn measure_panel_keyboard_tab_and_enter_reach_its_buttons() {
+    let (ctx, mut measured) = measured_panel();
+    step_rings(&ctx, &mut measured, Vec::new());
+    let before = measured.app.side().engine().snapshot();
+    let none = Modifiers::NONE;
+    press_on(&ctx, &mut measured, Key::Tab, Modifiers::SHIFT);
+    assert_eq!(focus_of(&measured), [PANEL_SCOPE], "last in the Tab order");
+    press_on(&ctx, &mut measured, Key::Tab, Modifiers::SHIFT);
+    assert_eq!(focus_of(&measured), [FOOTER], "the footer comes before it");
+    press_on(&ctx, &mut measured, Key::Tab, none);
+    assert_eq!(focus_of(&measured), [PANEL_SCOPE], "Tab from the footer");
+    let tree = measured.app.keyboard.tree(Mode::Explore);
+    let first = tree.bigs()[0];
+    let label = |id: &str| tree.get(id).expect("the scope").label;
+    assert_eq!(label(PANEL_SCOPE), "Measurement");
+    let breadcrumb_at = |m: &Measured<MockSide>| {
+        let tree = m.app.keyboard.tree(Mode::Explore);
+        breadcrumb::text(tree, &m.app.view.focus)
+    };
+    assert!(breadcrumb_at(&measured).contains("Measurement"));
+    let rings = step_rings(&ctx, &mut measured, Vec::new());
+    let strip = split(measured_window()).1;
+    assert_eq!(rings, [strip], "the ring on the panel");
+
+    press_on(&ctx, &mut measured, Key::Enter, none);
+    assert_eq!(focus_of(&measured), [PANEL_SCOPE, RUN_PAN], "Enter goes in");
+    assert_eq!(measured.app.view.focus.mode, KeyMode::Navigation);
+    assert!(breadcrumb_at(&measured).ends_with("Run the scripted pan"));
+    let check_ring_on = |measured: &mut Measured<MockSide>, id: &str| {
+        let rings = step_rings(&ctx, measured, Vec::new());
+        let place = measured.app.keyboard.place_of(id).expect("its place");
+        assert!(place.widget.is_some(), "the button's widget");
+        assert!(strip.contains_rect(place.rect), "in the panel's strip");
+        assert_eq!(rings, [place.rect], "one ring, on the button");
+    };
+    check_ring_on(&mut measured, RUN_PAN);
+
+    press_on(&ctx, &mut measured, Key::ArrowDown, none);
+    assert_eq!(focus_of(&measured), [PANEL_SCOPE, RUN_IDLE], "↓ moves on");
+    assert!(breadcrumb_at(&measured).ends_with("Run idle"));
+    check_ring_on(&mut measured, RUN_IDLE);
+    assert_eq!(phase_of(&measured), Phase::Ready, "an arrow starts nothing");
+
+    press_on(&ctx, &mut measured, Key::Enter, none);
+    step_rings(&ctx, &mut measured, Vec::new());
+    assert!(
+        matches!(phase_of(&measured), Phase::Running { run: Run::Idle, .. }),
+        "Enter on Run idle: {:?}",
+        phase_of(&measured)
+    );
+    assert_eq!(measured.app.view.focus.mode, KeyMode::Navigation);
+    assert_eq!(focus_of(&measured), [PANEL_SCOPE, RUN_IDLE], "it stays");
+    let after = measured.app.side().engine().snapshot();
+    assert_eq!(after.history.undo_depth, before.history.undo_depth);
+
+    press_on(&ctx, &mut measured, Key::Escape, none);
+    assert_eq!(focus_of(&measured), [PANEL_SCOPE], "Esc goes up");
+    press_on(&ctx, &mut measured, Key::Tab, none);
+    assert_eq!(focus_of(&measured), [first], "Tab wraps to the first scope");
+    rejects("a focus left on the footer", || {
+        assert_eq!(focus_of(&measured), [FOOTER]);
+    });
+}
+
+/// Enter on a button during a run neither restarts it nor changes it, as a click on the disabled button does not.
+#[test]
+fn measure_panel_keyboard_enter_during_a_run_starts_nothing() {
+    let (ctx, mut measured) = measured_panel();
+    for key in [Key::Tab, Key::Enter, Key::Enter] {
+        let modifiers = if key == Key::Tab {
+            Modifiers::SHIFT
+        } else {
+            Modifiers::NONE
+        };
+        press_on(&ctx, &mut measured, key, modifiers);
+    }
+    step_rings(&ctx, &mut measured, Vec::new());
+    let running = phase_of(&measured);
+    assert!(
+        matches!(running, Phase::Running { run: Run::Pan, .. }),
+        "Enter on Run the scripted pan: {running:?}"
+    );
+    press_on(&ctx, &mut measured, Key::ArrowDown, Modifiers::NONE);
+    press_on(&ctx, &mut measured, Key::Enter, Modifiers::NONE);
+    step_rings(&ctx, &mut measured, Vec::new());
+    assert_eq!(phase_of(&measured), running, "the run goes on, unchanged");
+    rejects("a run the other button replaced", || {
+        assert!(matches!(
+            phase_of(&measured),
+            Phase::Running { run: Run::Idle, .. }
+        ));
+    });
+}
+
+/// The panel joins both pages' trees, last in the Tab order, only while it is open.
+#[test]
+fn measure_panel_keyboard_joins_both_trees_only_while_open() {
+    let (_, measured) = measured_panel();
+    let check = |measured: &Measured<MockSide>| {
+        for mode in [Mode::Explore, Mode::Stain] {
+            let tree = measured.app.keyboard.tree(mode);
+            assert_eq!(tree.bigs().last(), Some(&PANEL_SCOPE), "{mode:?}");
+            assert_eq!(tree.children(Some(PANEL_SCOPE)), [RUN_PAN, RUN_IDLE]);
+        }
+    };
+    check(&measured);
+    let plain = Measured::new(mock_app(), None, Box::new(|_| {}));
+    for mode in [Mode::Explore, Mode::Stain] {
+        let tree = plain.app.keyboard.tree(mode);
+        assert_eq!(tree.get(PANEL_SCOPE), None, "no session, no scope");
+    }
+    rejects("a tree with no panel", || check(&plain));
+}
+
+/// The ring is drawn once wherever the focus is, and the panel places no scope and draws no ring while the layer is
+/// hidden or presenting: nothing would clear the places.
+#[test]
+fn measure_panel_keyboard_ring_follows_the_layer() {
+    let (ctx, mut measured) = measured_panel();
+    step_rings(&ctx, &mut measured, Vec::new());
+    press_on(&ctx, &mut measured, Key::Tab, Modifiers::SHIFT);
+    press_on(&ctx, &mut measured, Key::Tab, Modifiers::SHIFT);
+    assert_eq!(focus_of(&measured), [FOOTER]);
+    let rings = step_rings(&ctx, &mut measured, Vec::new());
+    assert_eq!(rings.len(), 1, "the app's ring, not drawn twice: {rings:?}");
+    press_on(&ctx, &mut measured, Key::Tab, Modifiers::NONE);
+    assert_eq!(focus_of(&measured), [PANEL_SCOPE]);
+    assert_eq!(step_rings(&ctx, &mut measured, Vec::new()).len(), 1);
+
+    measured.app.shown = false;
+    assert_eq!(step_rings(&ctx, &mut measured, Vec::new()), [], "hidden");
+    measured.app.shown = true;
+    assert_eq!(step_rings(&ctx, &mut measured, Vec::new()).len(), 1);
+    measured.app.present = true;
+    assert_eq!(
+        step_rings(&ctx, &mut measured, Vec::new()),
+        [],
+        "presenting"
+    );
+    rejects("a ring drawn while presenting", || {
+        assert_eq!(step_rings(&ctx, &mut measured, Vec::new()).len(), 1);
+    });
+}
+
+/// An Enter pressed and released within one frame still starts the run: nothing but the panel asks for the next frame,
+/// the layer having taken the keys out of egui's input.
+#[test]
+fn measure_panel_keyboard_enter_asks_for_the_frame_that_starts_the_run() {
+    let (ctx, mut measured) = measured_panel();
+    press_on(&ctx, &mut measured, Key::Tab, Modifiers::SHIFT);
+    press_on(&ctx, &mut measured, Key::Enter, Modifiers::NONE);
+    let delay_after = |measured: &mut Measured<MockSide>, key: Key| {
+        let [down, up] = crate::capture::key(key, Modifiers::NONE);
+        let mut raw = egui::RawInput {
+            screen_rect: Some(measured_window()),
+            events: [down, up].concat(),
+            ..Default::default()
+        };
+        measured.raw_input_hook(&ctx, &mut raw);
+        let mut out = ctx.run_ui(raw, |ui| measured.ui(ui));
+        out.textures_delta.clear();
+        out.viewport_output[&ViewportId::ROOT].repaint_delay
+    };
+    // Settled, so the frames before these ask for nothing of their own.
+    for _ in 0..5 {
+        step_rings(&ctx, &mut measured, Vec::new());
+    }
+    let unrelated = delay_after(&mut measured, Key::ArrowDown);
+    assert_eq!(focus_of(&measured), [PANEL_SCOPE, RUN_IDLE]);
+    assert_eq!(phase_of(&measured), Phase::Ready);
+    assert_ne!(unrelated, Duration::ZERO, "an arrow asks for no frame");
+    let enter = delay_after(&mut measured, Key::Enter);
+    assert_eq!(
+        enter,
+        Duration::ZERO,
+        "Enter asks for the next frame at once"
+    );
+    rejects("a frame that is not asked for at once", || {
+        assert_eq!(unrelated, Duration::ZERO);
+    });
+}
+
+/// A frame the layer does not run leaves no activation of an earlier frame behind.
+#[test]
+fn measure_panel_keyboard_activation_does_not_outlive_its_frame() {
+    let (ctx, mut measured) = measured_panel();
+    press_on(&ctx, &mut measured, Key::Tab, Modifiers::SHIFT);
+    press_on(&ctx, &mut measured, Key::Enter, Modifiers::NONE);
+    let [enter, release] = crate::capture::key(Key::Enter, Modifiers::NONE);
+    step_rings(&ctx, &mut measured, enter);
+    assert_eq!(measured.app.keyboard.activated(), [RUN_PAN], "its frame");
+    measured.app.shown = false;
+    step_rings(&ctx, &mut measured, release);
+    assert_eq!(
+        measured.app.keyboard.activated(),
+        [] as [&str; 0],
+        "stood down"
+    );
+    rejects("a stale activation", || {
+        assert_eq!(measured.app.keyboard.activated(), [RUN_PAN]);
     });
 }
 

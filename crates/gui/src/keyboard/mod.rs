@@ -82,6 +82,8 @@ pub struct Keyboard {
     open_menu: Option<ScopeId>,
     adjusted: Vec<Adjust>,
     scrolled: Vec<Scroll>,
+    /// The controls Enter activated in the last run.
+    activated: Vec<ScopeId>,
     /// Whether a text scope is being typed in from the keyboard: interaction mode on it after the last run.
     typing: Option<ScopeId>,
     /// Each open window that took the focus, with the path of the scope that opened it: where the focus goes back to
@@ -128,6 +130,7 @@ impl Keyboard {
             open_menu: None,
             adjusted: Vec::new(),
             scrolled: Vec::new(),
+            activated: Vec::new(),
             typing: None,
             openers: Vec::new(),
             left: Vec::new(),
@@ -278,6 +281,7 @@ impl Keyboard {
     pub fn stand_down(&mut self) {
         self.adjusted.clear();
         self.scrolled.clear();
+        self.activated.clear();
         self.typing = None;
         self.pending.clear();
         self.down.clear();
@@ -382,7 +386,14 @@ impl Keyboard {
         }
         self.show_menus(ctx, mode);
         self.follow_typing(ctx, mode, focus);
+        self.activated.clone_from(&activated);
         activated
+    }
+
+    /// The controls Enter activated in the last run, for a control drawn outside the app's frame (the measurement
+    /// panel's buttons).
+    pub fn activated(&self) -> &[ScopeId] {
+        &self.activated
     }
 
     /// Starts typing in a text scope Enter put in interaction mode, giving its widget egui's focus; ends it when the

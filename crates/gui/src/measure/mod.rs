@@ -4,6 +4,10 @@
 //! View › Debug view: opening it sends no `SetField` and adds no undo entry. A run is the scripted pan or idle (no
 //! input), repainting every frame throughout, for the warm-up and the window of [`stats`].
 //!
+//! The panel joins both keyboard trees (render_gui_spec §G3; R-390, R-409) while it is open: a big scope after the
+//! footer, its two buttons inside it, Enter on a button acting as its click. The app's frame clears the scopes' places
+//! and draws the ring on what it drew, so the panel draws after the app's frame, and draws its own ring.
+//!
 //! A frame's times come from two paint callbacks, the frame's first and last: the work time runs from the frame's
 //! start, the app's input hook, to the last callback's paint, the last thing that runs before the submit (eframe has no
 //! hook past it, and a callback is the one mechanism all three drivers share); the surface wait is what lies between the
@@ -17,11 +21,13 @@ use eframe::egui::{self, vec2, Button, Id, LayerId, Order, Rect, RichText, UiBui
 use eframe::egui_wgpu;
 use engine::contract::set_field::{Edit, SetField};
 use engine::contract::sim_config::Plane;
+use engine::contract::view_ui::Mode;
 use serde_json::{json, Value};
 
 use crate::app::App;
 use crate::clock::time::Instant;
 use crate::explore::manifold_view::navigate;
+use crate::keyboard::scopes::{Scope, ScopeId};
 use crate::side::EngineSide;
 use stats::{window_stats, Frame, WindowStats, WARM_UP_MS, WINDOW_MS};
 
@@ -35,6 +41,13 @@ pub const RUN_VAR: &str = "PRIN_MEASURE_RUN";
 
 /// The panel's width, in points.
 pub const PANEL_WIDTH: f32 = 300.0;
+/// The panel's keyboard scope: the big scope after the footer.
+pub const PANEL_SCOPE: ScopeId = "measure panel";
+/// The scope of the button that runs the scripted pan.
+pub const RUN_PAN: ScopeId = "measure run pan";
+/// The scope of the button that runs idle.
+pub const RUN_IDLE: ScopeId = "measure run idle";
+
 /// The time the scripted pan takes over one figure width, one way, in ms.
 pub const PAN_LEG_MS: f64 = 5_000.0;
 
@@ -53,6 +66,22 @@ impl Run {
         match self {
             Run::Pan => "pan",
             Run::Idle => "idle",
+        }
+    }
+
+    /// Its button's scope.
+    fn scope(self) -> ScopeId {
+        match self {
+            Run::Pan => RUN_PAN,
+            Run::Idle => RUN_IDLE,
+        }
+    }
+
+    /// Its button's label, and its name in the breadcrumb.
+    fn label(self) -> &'static str {
+        match self {
+            Run::Pan => "Run the scripted pan",
+            Run::Idle => "Run idle",
         }
     }
 
@@ -445,8 +474,8 @@ pub fn split(window: Rect) -> (Rect, Rect) {
     (app, panel)
 }
 
-/// Draws the panel in `ui`, filling `rect`; a button clicked asks for its run.
-fn panel(ui: &mut egui::Ui, rect: Rect, session: &mut Session) {
+/// Draws the panel in `ui`, filling `rect`; a button clicked asks for its run. Returns the buttons, with their scopes.
+fn panel(ui: &mut egui::Ui, rect: Rect, session: &mut Session) -> Vec<(ScopeId, egui::Response)> {
     let fill = ui.visuals().panel_fill;
     ui.painter().rect_filled(rect, 0.0, fill);
     let mut ui = ui.new_child(
@@ -466,15 +495,15 @@ fn panel(ui: &mut egui::Ui, rect: Rect, session: &mut Session) {
         });
     ui.add_space(8.0);
     let free = !session.running();
-    for run in [Run::Pan, Run::Idle] {
-        let label = match run {
-            Run::Pan => "Run the scripted pan",
-            Run::Idle => "Run idle",
-        };
-        if ui.add_enabled(free, Button::new(label)).clicked() {
-            session.request(run);
-        }
-    }
+    [Run::Pan, Run::Idle]
+        .map(|run| {
+            let response = ui.add_enabled(free, Button::new(run.label()));
+            if response.clicked() {
+                session.request(run);
+            }
+            (run.scope(), response)
+        })
+        .into()
 }
 
 /// The paint callback that stamps a frame's times; see the module's note.
@@ -527,8 +556,17 @@ pub struct Measured<S: EngineSide> {
 }
 
 impl<S: EngineSide> Measured<S> {
-    /// `app` under `session`, its reports told to `sink`.
-    pub fn new(app: App<S>, session: Option<Session>, sink: Box<dyn FnMut(String)>) -> Self {
+    /// `app` under `session`, its reports told to `sink`; with a session, the panel joins both keyboard trees.
+    pub fn new(mut app: App<S>, session: Option<Session>, sink: Box<dyn FnMut(String)>) -> Self {
+        if session.is_some() {
+            for mode in [Mode::Explore, Mode::Stain] {
+                let tree = app.keyboard.tree_mut(mode);
+                tree.register(None, Scope::group(PANEL_SCOPE, "Measurement"));
+                for run in [Run::Pan, Run::Idle] {
+                    tree.register(Some(PANEL_SCOPE), Scope::control(run.scope(), run.label()));
+                }
+            }
+        }
         Self {
             app,
             session,
@@ -561,7 +599,6 @@ impl<S: EngineSide> Measured<S> {
         if session.running() {
             ctx.request_repaint();
         }
-        panel(ui, panel_rect, session);
         let marks = session.marks.clone();
         let report = step.finished || !self.reported;
         if report {
@@ -576,6 +613,27 @@ impl<S: EngineSide> Measured<S> {
         }
         self.app
             .ui(&mut ui.new_child(UiBuilder::new().id_salt("measured app").max_rect(app_rect)));
+        for run in [Run::Pan, Run::Idle] {
+            if self.app.keyboard.activated().contains(&run.scope()) {
+                session.request(run);
+            }
+        }
+        let buttons = panel(ui, panel_rect, session);
+        // A run asked for starts next frame; the layer's keys are out of egui's input, so nothing else asks for one.
+        if session.pending.is_some() {
+            ctx.request_repaint();
+        }
+        // The places only while the layer runs: nothing clears them otherwise.
+        if self.app.shown && !self.app.present {
+            let keyboard = &mut self.app.keyboard;
+            keyboard.place(PANEL_SCOPE, panel_rect);
+            for (scope, response) in &buttons {
+                keyboard.place_widget(scope, response);
+            }
+            if self.app.view.focus.path.first().map(String::as_str) == Some(PANEL_SCOPE) {
+                self.app.draw_ring(&ctx);
+            }
+        }
         for (layer, first) in [
             (LayerId::background(), true),
             (LayerId::new(Order::Debug, Id::new("measure last")), false),
