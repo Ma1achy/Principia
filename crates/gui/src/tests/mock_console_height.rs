@@ -179,7 +179,6 @@ fn mock_console_height_is_held_at_both_ends() {
     let row = app.windows.console.page as f32;
     let spare = log.height() - (row * 18.0 + (row - 1.0) * 3.0);
     assert!(spare < 21.0, "{spare} spare");
-    // The controls: a drag that stopped at neither end.
     // The controls: a GUI whose drags took no hold of the edge, starting off its handle, reached neither end.
     let (mut slack, mut h2) = opened();
     let off = pos2(200.0, drawn(&slack).min.y + HANDLE * 4.0);
