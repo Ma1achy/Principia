@@ -13,14 +13,15 @@
 //! no input. A click on cell (i, j) steers the slice to the coordinate plane `z_i × z_j`, the tilts and `γ` reset to 0,
 //! the zoom and `z₀` kept: one `SetField` on the basis, turned about the pin while locked, as every basis edit is (C5).
 //!
-//! From the keyboard, in the Plücker view's interaction mode the arrows move a cell cursor over the upper triangle,
-//! starting on the dominant cell, Space steering to it as a click does (C6). The Jacobi and Shape views wait on physics
-//! review (RQ-341 to RQ-346; TASK-M6-35): their buttons are here, and their views say so.
+//! From the keyboard, in a grid view's interaction mode the arrows move a cell cursor over the upper triangle,
+//! starting on the dominant cell, Space steering to it as a click does (C6). The Jacobi and Shape views draw the same
+//! grid over physical coordinates ([`super::physical`]; R-550).
 
 use eframe::egui::{self, pos2, vec2, Color32, Painter, Pos2, Rect, Stroke};
 use engine::contract::set_field::SetField;
 use engine::contract::sim_config::{Latent, Plane, LATENT_DIM};
 
+use super::physical::Set;
 use crate::explore::manifold_view::{
     axis, basis_edit, dot, norm, spans_no_plane, View, AXES, Z0_HALF_RANGE,
 };
@@ -36,9 +37,9 @@ pub enum CompassView {
     Cube,
     /// The slice plane's Plücker coordinates in the latent chart.
     Plucker,
-    /// The plane pushed into Jacobi coordinates: TASK-M6-35's, waiting on physics review.
+    /// The plane pushed into Jacobi coordinates (R-550).
     Jacobi,
-    /// The plane pushed into shape-sphere coordinates: TASK-M6-35's, waiting on physics review.
+    /// The plane pushed into shape-sphere coordinates (R-550).
     Shape,
 }
 
@@ -49,9 +50,6 @@ pub const VIEWS: [(CompassView, ScopeId, &str); 4] = [
     (CompassView::Jacobi, COMPASS_JACOBI, "Jacobi"),
     (CompassView::Shape, COMPASS_SHAPE, "Shape"),
 ];
-
-/// What the Jacobi and Shape views show until TASK-M6-35 builds them.
-pub const WAITS: &str = "waits on physics review (RQ-341 to RQ-346)";
 
 /// The Plücker view's help text, under the compass's buttons (a look choice, R-390): it shows heading, not position, and
 /// does not change as the slice moves.
@@ -71,6 +69,15 @@ impl CompassView {
             .find(|(v, _, _)| *v == self)
             .map(|(_, _, l)| *l)
             .expect("every view has a button")
+    }
+
+    /// The physical coordinate set this view draws, if it is a physical view.
+    pub fn physical(self) -> Option<Set> {
+        match self {
+            CompassView::Jacobi => Some(Set::Jacobi),
+            CompassView::Shape => Some(Set::Shape),
+            CompassView::Cube | CompassView::Plucker => None,
+        }
     }
 
     /// The compass's name in the breadcrumb in this view: "compass" in the Cube view, the view's name in a grid view
@@ -352,18 +359,23 @@ pub fn plucker_drawing_with(
     }
 }
 
-/// Paints `drawing` with `painter`: the upper cells, the outline and the cursor, the names on both edges, and the
-/// position readout with its zero line and names, the slice axis's bar and name in the accent colour.
-pub fn paint_plucker(painter: &Painter, visuals: &egui::Visuals, drawing: &PluckerDrawing) {
-    let place = drawing.place;
+/// Paints the upper cells of `grid` at `place`, with the `outline` and the `cursor`.
+pub fn paint_cells(
+    painter: &Painter,
+    visuals: &egui::Visuals,
+    place: GridPlace,
+    grid: &Grid,
+    outline: Option<(usize, usize)>,
+    cursor: Option<(usize, usize)>,
+) {
     for (i, j) in upper() {
         painter.rect_filled(
             place.cell_rect(i, j).shrink(0.5),
             0.0,
-            cell_colour(visuals, drawing.grid[i][j]),
+            cell_colour(visuals, grid[i][j]),
         );
     }
-    if let Some((i, j)) = drawing.outline {
+    if let Some((i, j)) = outline {
         painter.rect_stroke(
             place.cell_rect(i, j),
             0.0,
@@ -371,7 +383,36 @@ pub fn paint_plucker(painter: &Painter, visuals: &egui::Visuals, drawing: &Pluck
             egui::StrokeKind::Inside,
         );
     }
-    if let Some((i, j)) = drawing.cursor {
+    paint_cursor(painter, visuals, place, cursor);
+}
+
+/// Paints the upper cells at `place` outlined and empty, with the `cursor`: a grid with no values to draw, whose cells a
+/// click or the keyboard's cursor still steers to (R-452 C5, C6).
+pub fn paint_empty_cells(
+    painter: &Painter,
+    visuals: &egui::Visuals,
+    place: GridPlace,
+    cursor: Option<(usize, usize)>,
+) {
+    for (i, j) in upper() {
+        painter.rect_stroke(
+            place.cell_rect(i, j),
+            0.0,
+            visuals.widgets.noninteractive.bg_stroke,
+            egui::StrokeKind::Inside,
+        );
+    }
+    paint_cursor(painter, visuals, place, cursor);
+}
+
+/// Paints the keyboard's cell cursor's ring, in interaction mode's blue (R-452 C6).
+fn paint_cursor(
+    painter: &Painter,
+    visuals: &egui::Visuals,
+    place: GridPlace,
+    cursor: Option<(usize, usize)>,
+) {
+    if let Some((i, j)) = cursor {
         painter.rect_stroke(
             place.cell_rect(i, j),
             0.0,
@@ -379,8 +420,48 @@ pub fn paint_plucker(painter: &Painter, visuals: &egui::Visuals, drawing: &Pluck
             egui::StrokeKind::Outside,
         );
     }
+}
+
+/// Paints coordinate `k`'s `name` on the grid's left and top edges.
+pub fn paint_edge_names(
+    painter: &Painter,
+    visuals: &egui::Visuals,
+    place: GridPlace,
+    k: usize,
+    name: &str,
+) {
     let font = egui::FontId::proportional(NAME_SIZE);
     let grid = place.rect();
+    painter.text(
+        pos2(grid.min.x - 3.0, place.cell_rect(k, 0).center().y),
+        egui::Align2::RIGHT_CENTER,
+        name,
+        font.clone(),
+        visuals.weak_text_color(),
+    );
+    upright(
+        painter,
+        pos2(place.cell_rect(0, k).center().x, grid.min.y - 3.0),
+        name,
+        &font,
+        visuals.weak_text_color(),
+        true,
+    );
+}
+
+/// Paints `drawing` with `painter`: the upper cells, the outline and the cursor, the names on both edges, and the
+/// position readout with its zero line and names, the slice axis's bar and name in the accent colour.
+pub fn paint_plucker(painter: &Painter, visuals: &egui::Visuals, drawing: &PluckerDrawing) {
+    let place = drawing.place;
+    paint_cells(
+        painter,
+        visuals,
+        place,
+        &drawing.grid,
+        drawing.outline,
+        drawing.cursor,
+    );
+    let font = egui::FontId::proportional(NAME_SIZE);
     let gauge = place.gauge_rect();
     for (k, name) in AXES.iter().enumerate() {
         let colour = if k == drawing.slice_axis {
@@ -388,22 +469,8 @@ pub fn paint_plucker(painter: &Painter, visuals: &egui::Visuals, drawing: &Pluck
         } else {
             visuals.weak_text_color()
         };
-        painter.text(
-            pos2(grid.min.x - 3.0, place.cell_rect(k, 0).center().y),
-            egui::Align2::RIGHT_CENTER,
-            *name,
-            font.clone(),
-            visuals.weak_text_color(),
-        );
+        paint_edge_names(painter, visuals, place, k, name);
         let x = place.cell_rect(0, k).center().x;
-        upright(
-            painter,
-            pos2(x, grid.min.y - 3.0),
-            name,
-            &font,
-            visuals.weak_text_color(),
-            true,
-        );
         painter.rect_filled(place.bar_rect(k, drawing.bars[k]), 0.0, colour);
         upright(
             painter,
