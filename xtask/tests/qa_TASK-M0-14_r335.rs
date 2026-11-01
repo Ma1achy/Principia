@@ -88,6 +88,7 @@ fn is_step_level_if(l: &str) -> bool {
 }
 
 /// The workflow without any step-level `if:`, whatever its condition, every job-level `if:` kept.
+#[cfg(feature = "controls")]
 fn without_step_level_ifs(workflow: &str) -> String {
     workflow
         .lines()
