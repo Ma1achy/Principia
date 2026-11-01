@@ -1139,6 +1139,9 @@ pub struct Compass {
     pub shown: Option<Shown>,
     /// Whether what it shows is still easing.
     pub moving: bool,
+    /// Whether the focus is on the compass element itself, whose arrows change the readout: the column then keeps its
+    /// end in view as the readout grows, until the wheel takes it away.
+    pub at_element: bool,
 }
 
 /// The arrows on the compass in interaction mode, by its view and mode. In the Cube view, in tilt mode ← → tilt `τ₁`
@@ -1223,6 +1226,7 @@ pub fn pushed(sim: &SimConfig, compass: &Compass, set: physical::Set) -> physica
 /// dominant cell, or the first upper cell when none is, and keeps it there as the arrows move it; leaving interaction
 /// mode, or the view, takes it away (R-452 C6).
 pub fn follow_focus(focus: &Focus, sim: &SimConfig, compass: &mut Compass) {
+    compass.at_element = focus.path.last().is_some_and(|id| id == COMPASS_VIEW);
     if !interacting(focus) || compass.view == CompassView::Cube {
         compass.cursor = None;
     } else if compass.cursor.is_none() {
@@ -1350,7 +1354,8 @@ pub fn take(
 /// view's cube, or the Plücker view's grid, its position readout and its cells' clicks, or the Jacobi and Shape views'
 /// grid, what it says under it and its cells' clicks; beside it the title, the Tilt and Slice buttons, the view buttons, the view's readout and
 /// its hint. That column never leaves the panel: past its foot it scrolls, by the wheel or the bar, which is drawn while
-/// there is more, and a button the focus moves to comes into view (`keys`), as a window's sections do.
+/// there is more, and a button the focus moves to comes into view (`keys`), as a window's sections do. The focus moving
+/// to the compass element scrolls the column to its end, so the keys reach the readout they change and the hint.
 pub fn show(
     ui: &mut Ui,
     rect: Rect,
@@ -1448,6 +1453,7 @@ pub fn show(
         .id_salt("compass column")
         .auto_shrink([false, true])
         .min_scrolled_height(0.0)
+        .stick_to_bottom(scratch.compass.at_element)
         .scroll_source(
             egui::scroll_area::ScrollSource::SCROLL_BAR
                 | egui::scroll_area::ScrollSource::MOUSE_WHEEL,
@@ -1480,6 +1486,9 @@ pub fn show(
             }
             if !hint.is_empty() {
                 column.label(RichText::new(hint).weak().small());
+            }
+            if keys.focused.as_deref() == Some(COMPASS_VIEW) {
+                column.scroll_to_cursor(Some(egui::Align::BOTTOM));
             }
         });
 }

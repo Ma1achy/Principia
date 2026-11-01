@@ -356,6 +356,7 @@ fn mock_compass_modes_open_in_tilt_and_switch_by_buttons_and_sliders() {
             drag: None,
             shown: None,
             moving: false,
+            at_element: false,
         },
         "Tilt by default"
     );
