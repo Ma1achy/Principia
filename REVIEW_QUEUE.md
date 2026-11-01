@@ -1613,3 +1613,27 @@ words, so the task did not wait. The entry is for correcting the text.*
   quads and the `mock_tile_bounds` capture are unchanged, and `k = 4` gives two levels more. A control in
   `f3_fill_modes_quads_finer_only_in_fit` shows the divide-by-`k` rule failing. The three texts are not changed.
 - **Waits:** nothing built waits; REQ-GUI-230's real-engine Fit reads the screen floor, not this formula.
+
+## RQ-669: What scores a statistical or qualitative part on tier (a) in a task with no GPU run *(physics; silence; R-649 item 2, R-653; `docs/design/principia_dd_replication.md` § 12.2; context: TASK-M9-37)*
+
+*Queued 1 Nov 2026 by R-663 to R-666's port, on physics review 5730823192 of PR #375, M3. It settles nothing. No dependency, tier or row changes for it.*
+
+- **File, section:**
+  - `docs/design/principia_dd_replication.md` § "12.2 Tiers": "(a) the GPU explorer, f32 and interactive, expected to agree statistically or qualitatively only"; "a statistical target is scored on (a), statistically only"; "a mixed target is scored on (b) for its exact part and on (a) for its statistical or qualitative part".
+  - The same section's table, Q-4's row (REQ-VAL-211): "(i) exact; (ii) statistical; no integration | (b) for (i); (a) for (ii)".
+  - `plan/tasks/M9/TASK-M9-14.md`, acceptance, LL-4: "the fit recomputed and compared as a distribution"; HU-4: "each fit's slope and intercept recomputed and compared as a distribution". Both from the (b) orbit runs.
+  - `plan/tasks/M9/TASK-M9-10.md`, acceptance, AA-6: "the other 87 rows are compared as a distribution, not per row". `plan/tasks/M9/TASK-M9-19.md`, AA-2: "the rest by a statistic at its level". `plan/tasks/M9/TASK-M9-22.md`, GG-1: "agreement scored against REQ-VAL-296". `plan/tasks/M9/TASK-M9-32.md`, D-3: "the medians within REQ-VAL-307 or explained". None describes an f32 run.
+  - `plan/requirements.yaml`, REQ-VAL-211's note: "Chart: none (no integration)"; its statement: "2,500 triangles drawn uniformly in the unit disc, with Z computed by the validation crate's own Z".
+  - `plan/tasks/M9/TASK-M9-37.md` and REQ-VAL-340's verify: "a mixed target's exact part and its statistical or qualitative part each carrying their own tier and outcome".
+- **The silence:** by `plan/tasks.yaml`'s transitive `depends_on`, these tasks reach no M4 or M5 task, so neither TASK-M4-05, TASK-M4-06 nor TASK-M4-17 (the GPU survey path), nor TASK-M4-04, TASK-M4-13 or TASK-M8-74:
+  - Seven of the nine mixed targets' (a) parts: TASK-M9-10 (AA-6), TASK-M9-11 (Q-4), TASK-M9-14 (LL-4, HU-4), TASK-M9-19 (AA-2), TASK-M9-22 (GG-1), TASK-M9-32 (D-3). The other two, HU-1 and HU-2, are TASK-M9-27's, which reaches the GPU.
+  - 24 rows that are (a) throughout: TASK-M9-17 (P-1 to P-6), TASK-M9-18 (Q-1 to Q-3), TASK-M9-19 (AA-3, AA-5, AA-7, AA-8, AN-1), TASK-M9-20 (L-3 to L-5), TASK-M9-21 (V-9, MT-1), TASK-M9-23 (TR-1, MK-1, SL-1), TASK-M9-24 (PA-1), TASK-M9-25 (V-11).
+  R-653 and RQ-622 settled the instrument only for the five map targets and B-2. RQ-649 asks what a score on (a) says, given an f32 run. RQ-654 is BZ-1C's only. None says what scores these parts.
+- **The question:** what scores a statistical or qualitative (a) part in a task with no GPU run? The answer changes what the report's outcomes mean: which instrument agreed, at which precision.
+- **Options seen:**
+  - (i) The task gains an f32 run on the GPU path, and the dependencies that needs. § 12.2 stands as written. The work and the dependency edges grow, and RQ-649's question then applies to each of them.
+  - (ii) The statistic is computed from the f64 runs and recorded at (b), or under a stated reading. This needs no new run, and it changes § 12.2 for these rows. A ruling would say which.
+  - (iii) The part reads "not scored", with what it waits on, until a run exists. § 12.2 stands, and M9's report leaves these parts unscored until then. R-650 lists a target not yet scored as such, never as a failure, and the report's verify holds that of a part.
+- **Q-4 (ii), separately:** it has no integration under any option, so no GPU explorer run exists to bind, and option (i) gives it nothing to run. Reporting "(a)" there would misstate the instrument, and § 12.2's own row says both "(a)" and "no integration". Seen: (x) a stated reading of the row, for instance the tier naming the comparison's kind where there is no instrument; (y) it is recorded with no tier, which changes § 12.2's row; (z) it follows whichever option the rest take, with the row's text corrected to match.
+- **Applied meanwhile:** nothing. Nothing is scored yet. § 12.2's tiers, the tasks' dependencies and their comparisons are unchanged; the mixed targets' acceptance lines record each part with its own tier and name this entry.
+- **Waits:** nothing built, and nothing before M9. TASK-M9-37's rows for these targets take their meaning from the ruling.
