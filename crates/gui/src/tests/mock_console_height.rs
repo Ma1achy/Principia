@@ -180,11 +180,19 @@ fn mock_console_height_is_held_at_both_ends() {
     let spare = log.height() - (row * 18.0 + (row - 1.0) * 3.0);
     assert!(spare < 21.0, "{spare} spare");
     // The controls: a drag that stopped at neither end.
-    rejects("a console past the top bar", || {
-        assert_eq!(page.min.y - 100.0, page.min.y)
+    // The controls: a GUI whose drags took no hold of the edge, starting off its handle, reached neither end.
+    let (mut slack, mut h2) = opened();
+    let off = pos2(200.0, drawn(&slack).min.y + HANDLE * 4.0);
+    drag(&mut h2, &mut slack, off, off + vec2(0.0, -2000.0));
+    let top = drawn(&slack);
+    rejects("a drag that stopped short of the top bar", || {
+        same(top, page)
     });
-    let check = |h: f32| near(h, MIN_CONSOLE_H, "the least height");
-    rejects("a console shut below its minimum", || check(0.0));
+    drag(&mut h2, &mut slack, off, off + vec2(0.0, 2000.0));
+    let height = drawn(&slack).height();
+    rejects("a drag that stopped short of the least height", || {
+        near(height, MIN_CONSOLE_H, "the least height")
+    });
 }
 
 #[test]
@@ -205,6 +213,11 @@ fn mock_console_height_keeps_its_share_held_as_the_window_shrinks() {
         &app.splits,
     );
     assert_eq!(tiny.console.min.y, tiny.footer.min.y - MIN_CONSOLE_H);
+    // The control: a console that kept the height below the top bar, not its least.
+    let whole = layout.page.height();
+    rejects("a console not held as the window shrank", || {
+        near(whole, MIN_CONSOLE_H, "held at its least")
+    });
 }
 
 #[test]
@@ -290,6 +303,7 @@ fn mock_console_height_view_reset_layout_restores_it() {
     let path = dir.join(FILE);
     let (mut app, mut h) = opened_at(&path);
     drag_edge(&mut h, &mut app, -100.0);
+    let dragged = drawn(&app);
     click_scope(&mut h, &mut app, MAXIMISE);
     assert!(app.windows.console.maximised);
     click(&mut h, &mut app, "View");
@@ -299,6 +313,10 @@ fn mock_console_height_view_reset_layout_restores_it() {
     assert!(!app.windows.console.maximised, "reset takes it back");
     same(drawn(&app), current(&h, &app).bottom_row);
     assert_eq!(Store::at(&path).load().settings.layout, Splits::default());
+    let default = current(&h, &app).bottom_row;
+    rejects("a reset that left the dragged height", || {
+        same(dragged, default)
+    });
     let _ = std::fs::remove_dir_all(&dir);
 }
 
@@ -337,7 +355,11 @@ fn mock_console_height_on_the_stain_page_too() {
     near(drawn(&app).min.y, before.min.y - 60.0, "the top edge");
     m(&mut h, &mut app, NONE);
     assert!(app.windows.console.maximised, "M on the Stain page");
-    same(drawn(&app), full(&h, &app));
+    let page = full(&h, &app);
+    same(drawn(&app), page);
+    rejects("a console that M left docked on the Stain page", || {
+        same(before, page)
+    });
 }
 
 #[test]
@@ -600,7 +622,9 @@ fn mock_console_height_the_drag_is_held_in_any_window() {
         "its most",
     );
     near(edge(layout.console_dragged(500.0, 10.0)), 510.0, "between");
+    // The control: the fraction a drag held nowhere gives.
+    let unheld = (500.0 + 5000.0 - screen.min.y) / screen.height();
     rejects("a drag held nowhere", || {
-        near(5500.0, footer - MIN_CONSOLE_H, "its least")
+        near(edge(unheld), footer - MIN_CONSOLE_H, "its least")
     });
 }

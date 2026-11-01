@@ -294,6 +294,9 @@ fn console_open_close_bench_a_row_reads_its_cycles() {
     assert_eq!(none.first_ms(), 0.0);
     assert_eq!(none.median_ms(), 0.0);
     assert_eq!(none.slowest(), FrameTime::default());
+    rejects("a median that is the first cycle's", || {
+        assert_eq!(row.median_ms(), row.first_ms())
+    });
 }
 
 /// A table of one frame at each of `ms`.
