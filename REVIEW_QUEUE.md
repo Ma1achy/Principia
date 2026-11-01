@@ -966,6 +966,30 @@ where the choice changes the result (which pixels count) and the corpus does not
   difference; (b) ask the authors which points were dropped; (c) treat the count as UNEXPLAINED in the score.
 - **Applied meanwhile:** (a), with the difference stated beside the score.
 
+## RQ-643: The collinear statistical targets' stops lie past R-610's horizon cap in the integrator's units (proposed OR02-1, OR03-1, MH89-1) *(physics review of the 29 Oct research-batches ingest, finding F4; `docs/incoming/2026-10-29_research_batches/README.md` § 10.3, § 10.5, `horizons_integrator_units.txt`; context: none built)*
+
+*Drafted 29 Oct 2026 by the agent ingesting the owner's 29 Oct research batches (that README's § 10.5); filed 1 Nov 2026.*
+
+- **File, section:** `docs/contracts/principia_integrator_contract.md` Part 5: "a **single global horizon `T` is
+  legitimate across every pixel**" and "`T ∈ [0.4, 200]` (R-610, closing RQ-555): … the cap stays at 200 until long
+  horizons are measured for cost"; `docs/incoming/2026-10-27_validation_plan/PLAN.md` § 8 rule 18: "Respect the
+  horizon cap; queue, don't raise it. … A target past 200 (Boekholt et al. 2020's t = 10⁴) is compared only over the
+  systems that end before 200."
+- **What is settled:** the conversion. Each source's fixed-energy stop, brought to M = G = I = 1 by the inverse-encode
+  contract's Part 2, is a per-start horizon: Orlov 2002's t = 100 is 60.3 to 5.94×10⁴, past 200 for 44 of its 99 k
+  values; Orlov 2003's t = 1000 is 36.1 to 9.95×10⁵, past 200 in 443 of its 475 (ε1, ε2, k) cells; Mikkola &
+  Hietarinta 1989's lifetimes reach 9×10⁷ of their units, and the cap is their t = 0.119 to 334, so Table 3's last
+  3/8 lie past it at every start (`docs/incoming/2026-10-29_research_batches/horizons_integrator_units.txt`).
+- **What is not:** how rule 18's "compared only over the systems that end before 200" applies here. The three papers
+  publish fractions over the whole grid (Orlov 2002 Table 1; Orlov 2003's table, by (ε1, ε2)) or over every break-up
+  (Mikkola & Hietarinta 1989 Tables 2–3), not per start, so the source has no subset ending before 200 to compare
+  with.
+- **Options seen:** (a) a ruling raising the cap for these runs once long horizons are measured for cost, R-610's
+  condition; (b) compare only what the cap reaches and the source states, e.g. Mikkola & Hietarinta 1989 Table 3's
+  t1–t4 at the starts where they fall inside 200; (c) leave the past-cap parts blocked by the horizon, as MO14-1's
+  long-time part is.
+- **Applied meanwhile:** (c). The rows state the conversion and which parts the cap blocks; no new cap is chosen.
+
 ## RQ-650: Which frame Tanikawa's free-fall papers use: the repo says "the mirror labelling D11 = {(x−0.5)² + y² ≤ 1}", three of the papers say Anosova's region and one prints the mirror *(physics; `docs/incoming/2026-10-25_replication/catalogue.md` line 13; `docs/design/principia_dd_replication.md` line 639; PLAN.md line 707; `docs/incoming/2026-10-28_external_sources/README.md` § 9; context: TM-1, TS-1, TS-2, proposed TSM-1 and TUA-1)*
 
 *Drafted 29 Oct 2026 by the agent ingesting the external sources (`docs/incoming/2026-10-28_external_sources/README.md`
@@ -998,8 +1022,12 @@ where the choice changes the result (which pixels count) and the corpus does not
   typo, since the paper cites Tanikawa et al. 1995 (whose eq. (1) prints (x + 0.5)²) for this very set-up, and the
   printed region does not keep AB the longest side: (1.4, 0.3) is inside it, with PA = 1.92 > AB = 1.
 - **What is not:** whether TM2008's (x − 0.5)² is a typo or the frame its runs used, and which frame Tanikawa &
-  Mikkola 2021 (TM-1's source) uses: the research-batches record transcribes its tables and states no frame for it
-  (§ 5.4), so whether the rows' "D11 mirror remap" and the general sentence stand.
+  Mikkola 2021 (TM-1's source) uses, so whether the rows' "D11 mirror remap" and the general sentence stand. The
+  research-batches record (`docs/incoming/2026-10-29_research_batches/README.md`) does state a frame for it: § 10.3:
+  "LI21-1, LI25-1, TM23-1 and T2000-1 share one frame with TSM 2019 and TM-1 (§ 5.1 there: same D, no mirror of
+  positions)"; § 10.4: "§ 5.1's finding that, for TSM 2019 and these papers, D11 is D with no mirror of positions", which it holds for the owner's
+  confirmation; and, as evidence in the data, § 5.4: "Table 2's 11 triple-collision points are TSM 2019's Table 1 (and
+  so Li 2021 GT rows)". But § 5.1 quotes no set-up from the 2021 paper: neither its list nor its quotes include it.
 - **Options seen:** (a) a porter reads Tanikawa & Mikkola 2021's set-up section and corrects the sentence to name the
   papers that use each frame, with TM2008's (x − 0.5)² recorded as printed; (b) drop "mirror" and name D11 as TSM 2019
   and TM2015 define it.
@@ -1062,24 +1090,35 @@ where the choice changes the result (which pixels count) and the corpus does not
   rows; (b) as (a), and also name the cut; (c) as (a), comparing all three cuts.
 - **Applied meanwhile:** nothing. Nothing built waits: MK-1 also waits on RQ-593 and scores in M9.
 
-## RQ-660: PLAN.md's 437 non-zero angular momentum rows count two Rose rows its own list doesn't name, whose |L| is small: the named families sum to 435 *(a count against its breakdown; `docs/incoming/2026-10-27_validation_plan/PLAN.md` § 2.3, § 7; `docs/incoming/2026-10-26_orbit_catalogues/threebodyorbits_ics.csv`; context: OC-1)*
+## RQ-660: PLAN.md's 437 non-zero angular momentum rows count two Rose rows its own list doesn't name, whose L is refinement drift: the named families sum to 435 *(a count against its breakdown; `docs/incoming/2026-10-27_validation_plan/PLAN.md` § 2.3, § 7; `docs/design/principia_dd_replication.md` lines 176, 726; `docs/incoming/2026-10-26_orbit_catalogues/threebodyorbits_ics.csv`; `docs/incoming/2026-10-31_library_triage/SUMMARY.md`; context: OC-1)*
 
 *Queued 1 Nov 2026 by the orchestrator's filing task, from the library triage's follow-ups.*
 
 - **File, section:**
   - `docs/incoming/2026-10-27_validation_plan/PLAN.md` § 2.3: "437 with \|L\| > 1e-6".
   - The same, § 7: "OC-1 (437 rows: Simó 344, Broucke, BHH, Sheen, Šuvakov's other orbits)".
-  - `docs/incoming/2026-10-31_library_triage/triage.csv`, family `rose`: "Rose (2016), 'Geometric phase and periodic
-    orbits of the equal-mass, planar three-body problem with vanishing angular momentum'".
+  - `docs/design/principia_dd_replication.md` line 176: "437 with |L| > 1e-6; 86 other."; line 726: "OC-1 (437 rows)".
+  - `docs/incoming/2026-10-31_library_triage/SUMMARY.md` lines 223-224: "PLAN's 437 L≠0 rows list families summing to
+    435; the other 2 are `rose` rows with refinement drift."
+  - `docs/incoming/2026-10-31_library_triage/triage.csv`, the `threebodyorbits_ics.csv, family rose` row: "Rose (2016),
+    'Geometric phase and periodic orbits of the equal-mass, planar three-body problem with vanishing angular
+    momentum'" and "These are general L=0 orbits"; the `atlas-params.json, family rose` row: "The 2 rows with L over
+    1e-6 are refinement drift in ref_*, not real nonzero L".
 - **Measured, 1 Nov 2026,** on `threebodyorbits_ics.csv`'s `L_cat` (`L_recomp` gives the same): |L| > 1e-6 on 437 rows:
   `simo` 344, `brouckeS` 23, `brouckeA` 16, `brouckeR` 13, `bhhsat` 15, `suvakov_pc` 13, `sheen` 11, and `rose` 2. The
   families § 7 names sum to 435. The two others are `rose2016_t0k4i2_1_1_1` (L = 4.84147e-05) and
   `rose2016_t0k2i4_1_1_1` (L = −3.76993e-06), from a source whose title says vanishing angular momentum. The 413 in
-  § 0 holds on the same rows (`closure_refined` < 1e-9).
-- **What is not settled:** whether those two rows are non-zero L orbits at all or L = 0 orbits above § 2.3's threshold,
-  and so whether "non-zero angular momentum" is 437 or 435. Rose's thesis is not held, so its value can't be read here.
-- **Options seen:** (a) keep 437 as what the cut measures, and add Rose's 2 to § 7's list; (b) state 435, with the two
-  recorded as L = 0 rows above the cut, if they are; (c) a dated note beside both, the rows left as written.
+  § 0 holds on the same rows (`closure_refined` < 1e-9). Σ m(x·vy − y·vx) on those two rows' `pub_*` gives 0.0 on both;
+  on their `ref_*` it gives 4.841466815563855e-05 and −3.7699259047840883e-06, so `L_cat` and `L_recomp` are the refined
+  state's values.
+- **What is settled:** the two are L = 0 orbits whose refined state drifted over § 2.3's threshold: the CSV's published
+  starts have L = 0 exactly, and the triage reads them the same way. Rose's thesis is not held, so `pub_*` is not
+  checked against it here.
+- **What is not:** how the plan and the design doc word the count: 437 as the cut measures it, or 435 orbits with
+  L ≠ 0.
+- **Options seen:** (a) keep 437 as what the cut measures, and add Rose's 2 to § 7's list, named as refinement drift;
+  (b) state 435, with the two recorded as L = 0 rows whose refined state is above the cut; (c) a dated note beside
+  each, the rows left as written.
 - **Applied meanwhile:** nothing. No test depends on the count.
 
 ## RQ-661: PLAN.md § 2.1 says the 82 website-only free-fall orbits have no traced initial conditions, and the authors' GitHub table gives them *(a stale record; whether its condition lapses; `docs/incoming/2026-10-27_validation_plan/PLAN.md` § 2.1; R-630 item 8, R-631; `docs/incoming/2026-10-27_hp_ics_freefall/README.md`; REQ-VAL-227; context: LL-5, TASK-M3-46)*
