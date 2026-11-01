@@ -3,6 +3,7 @@
 //! or the real engine's data contract. The `mock` feature only chooses the engine the binary runs (RQ-252).
 
 pub mod app;
+pub mod bench;
 pub mod capture;
 pub mod cli;
 pub mod clock;
@@ -27,6 +28,7 @@ mod tests {
     mod compass_position_gauge;
     mod compass_support;
     mod conformance;
+    mod console_open_close;
     mod degenerate_tilt_guards;
     mod f3_fallback_mock;
     mod f3_fills_window_mock;
@@ -38,6 +40,7 @@ mod tests {
     mod mock_compass_steer_latent;
     mod mock_compass_view_keys;
     mod mock_compass_views;
+    mod mock_console_height;
     mod mock_console_keys;
     mod mock_content;
     mod mock_debug_view;
