@@ -44,6 +44,7 @@ fn run(scenario: &str, edits: &[(&str, &str, &str)]) {
 }
 
 /// `started` posted as the app is made, before any frame: the old order.
+#[cfg(feature = "controls")]
 const STARTED_EARLY: (&str, &str, &str) = (
     "worker.js",
     "  early.splice(0).forEach(call);\n",
@@ -116,6 +117,7 @@ negative_control!(
 );
 
 /// One edit of `loader.js`.
+#[cfg(feature = "controls")]
 const fn loader<'a>(from: &'a str, to: &'a str) -> [(&'a str, &'a str, &'a str); 1] {
     [("loader.js", from, to)]
 }
