@@ -7,8 +7,9 @@
 //! splitters and the layer (R-406; R-462 J4): the canvas is given that placement, [`Placement`], so it draws each point
 //! of the field where the default layout puts it, more of the field around it where the canvas is larger, less where
 //! it is smaller, never at another scale. Hidden in Fit (R-468 E2) the field's `[0, 1]²` is instead scaled to the
-//! window's shorter side, centred, and nothing is drawn around it ([`Layout::drawn`]). The figure's axis labels take a strip along the bottom of the figure's box
-//! and one down its left side, so they sit beside the figure and never over it (render_gui_spec §G1, §G2).
+//! window's shorter side, centred, and nothing is drawn around it ([`Layout::drawn`]). The figure's axis labels take a
+//! strip along the bottom of the figure's box and one down its left side, so they sit beside the figure and never over
+//! it (render_gui_spec §G1, §G2).
 
 use eframe::egui::{self, pos2, vec2, CursorIcon, Id, Rect, Sense, Ui};
 use engine::contract::view_ui::F3Fill;
