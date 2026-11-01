@@ -40,7 +40,7 @@ use kernel::stage::fragment::{
     DECODE_Z_LATENT,
 };
 use render::bind::ViewOutput;
-use render::presets::{self, agreement, DecodeChart};
+use render::presets::{self, DecodeChart};
 use validation::decode_preset::{self as dp, Scene};
 use validation::gpu::GpuHarness;
 use validation::negative_control;
@@ -125,9 +125,21 @@ fn pairs() -> Vec<(usize, usize, String)> {
     out
 }
 
+/// REQ-DEC-043's factor, in f32 eps: `decode-f32-eps`'s threshold, read once.
+fn factor() -> f64 {
+    static FACTOR: std::sync::OnceLock<f64> = std::sync::OnceLock::new();
+    *FACTOR.get_or_init(|| {
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+        validation::gate::config(&root, "decode-f32-eps")
+            .expect("decode-f32-eps's gate.json")
+            .threshold
+            .value
+    })
+}
+
 /// REQ-DEC-043's factor of f32's ε, relative to `c`, floored at 1.
 fn bound(c: f64) -> f64 {
-    f64::from(agreement::FACTOR) * f64::from(f32::EPSILON) * c.abs().max(1.0)
+    factor() * f64::from(f32::EPSILON) * c.abs().max(1.0)
 }
 
 /// One fragment word against the CPU's at f32: bit for bit where either is non-finite (R-436), else within
