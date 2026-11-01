@@ -6,6 +6,7 @@
 //! reject (R-176, through `rejects`; gui takes no dependency on validation, R-187).
 
 use eframe::egui::{Color32, Event, Key, Modifiers, Rect, Shape};
+use engine::contract::interface::EngineInterface;
 use engine::contract::log::{Severity, Source};
 use engine::contract::view_ui::Window;
 
@@ -673,4 +674,30 @@ fn console_open_close_a_toggle_by_the_pointer_clips_the_figure_as_it_draws_the_c
     rejects("the figure blanked over a docked console", || {
         clip_matches(covering, docked, whole)
     });
+}
+
+#[test]
+fn console_open_close_no_hover_in_the_frame_it_opens_over_the_pointer() {
+    let (mut app, mut h) = logged(1);
+    let layout = Layout::new(h.screen(), h.pixels_per_point());
+    press(&mut h, &mut app, Key::Tab, Modifiers::SHIFT);
+    press(&mut h, &mut app, Key::Enter, Modifiers::NONE);
+    press(&mut h, &mut app, Key::M, Modifiers::NONE);
+    press(&mut h, &mut app, Key::Escape, Modifiers::NONE);
+    assert!(!app.is_open(Window::Console));
+    assert!(app.windows.console.maximised, "it reopens maximised");
+    // The pointer on the figure hovers it.
+    let over = layout.figure.center();
+    let _ = h.frame(&mut app, vec![Event::PointerMoved(over)]);
+    let _ = h.frame(&mut app, Vec::new());
+    let hover = |app: &mut App<MockSide>| app.side().engine().snapshot().render.hover;
+    let before = hover(&mut app);
+    let none = |got: &engine::contract::render_state::Hover| assert_eq!(*got, Default::default());
+    rejects("a hover on the bare figure", || none(&before));
+    // Enter, the pointer unmoved: the opening frame already sends none.
+    let [enter, _] = crate::capture::key(Key::Enter, Modifiers::NONE);
+    let output = h.frame(&mut app, enter);
+    assert!(app.is_open(Window::Console));
+    assert_eq!(output.platform_output.num_completed_passes, 1);
+    none(&hover(&mut app));
 }
