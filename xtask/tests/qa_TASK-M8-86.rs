@@ -105,10 +105,25 @@ fn check_trigger_faults(check_one: impl Fn(&str, &str)) {
     );
 }
 
+/// The workflow must be accepted.
+fn accepted(text: &str) {
+    assert_eq!(check(text), Ok(()));
+}
+
 #[test]
 fn qa_m8_86_the_real_workflow_passes() {
-    assert_eq!(check(&workflow()), Ok(()));
+    accepted(&workflow());
 }
+
+negative_control!(
+    qa_m8_86_the_real_workflow_passes,
+    "the real file with a push trigger added",
+    expected = "not workflow_dispatch alone",
+    accepted(&edited(
+        "  workflow_dispatch:\n",
+        "  workflow_dispatch:\n  push:\n"
+    ))
+);
 
 #[test]
 fn qa_m8_86_each_trigger_ref_and_environment_fault_is_refused() {
