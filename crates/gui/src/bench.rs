@@ -171,6 +171,16 @@ pub fn render_table(table: &Table) -> String {
     text
 }
 
+/// `seconds` in milliseconds.
+pub(crate) fn ms(seconds: f64) -> f64 {
+    seconds * 1e3
+}
+
+/// What of a pass of `pass_ms` is neither the filter's nor the rows': never below zero, as separate clocks can make it.
+pub(crate) fn rest_of(pass_ms: f64, filter_ms: f64, rows_ms: f64) -> f64 {
+    (pass_ms - filter_ms - rows_ms).max(0.0)
+}
+
 /// A primary click at `pos`: its move, press and release, one frame each.
 fn click_frames(pos: Pos2) -> [Vec<Event>; 3] {
     let button = |pressed| Event::PointerButton {
@@ -263,16 +273,16 @@ impl Gpu {
 }
 
 /// The GUI under measurement.
-struct Run {
-    app: App<MockSide>,
-    headless: Headless,
+pub(crate) struct Run {
+    pub(crate) app: App<MockSide>,
+    pub(crate) headless: Headless,
     gpu: Option<Gpu>,
 }
 
 impl Run {
     /// A new GUI with `log` entries in its console: the mock's own lines, one per `SetField`, the log the console shows
     /// after a session's use.
-    fn new(log: usize, canvas: Option<Arc<MockCanvas>>) -> Self {
+    pub(crate) fn new(log: usize, canvas: Option<Arc<MockCanvas>>) -> Self {
         let side = MockSide::new(MockEngine::new(), canvas.clone());
         let mut app = App::new(side, FORMAT);
         let mut headless = Headless::new(SIZE, PIXELS_PER_POINT);
@@ -287,25 +297,27 @@ impl Run {
         };
         run.fill(log);
         run.idle(SETTLE);
+        if let Some(gpu) = &run.gpu {
+            // The frames so far went through it, the font's atlas with them: a run that drew nothing measures nothing.
+            let atlas = egui::TextureId::default();
+            assert!(gpu.renderer.texture(&atlas).is_some(), "nothing was drawn");
+        }
         run
     }
 
-    /// Logs `log` lines, in steps a frame reads.
+    /// Logs `log` lines, one per `SetField`, and reads them: a frame's time is the step before it, so the second frame
+    /// is the one past the snapshot's interval.
     fn fill(&mut self, log: usize) {
-        let mut t = 0.0;
-        while self.app.console().len() < log {
-            let left = log - self.app.console().len();
-            for _ in 0..left {
-                t += 1e-3;
-                let edit = crate::explore::time::playhead_edit(t);
-                self.app.side().engine().set_field(edit);
-            }
-            // Past the interval, so the frame reads a snapshot.
-            self.headless
-                .set_frame_step(crate::app::SNAPSHOT_INTERVAL_S);
-            let _ = self.headless.frame(&mut self.app, Vec::new());
-            self.headless.set_frame_step(FRAME_S);
+        for _ in 0..log {
+            let edit = crate::explore::time::playhead_edit(1.0);
+            self.app.side().engine().set_field(edit);
         }
+        self.headless
+            .set_frame_step(crate::app::SNAPSHOT_INTERVAL_S);
+        for _ in 0..2 {
+            let _ = self.headless.frame(&mut self.app, Vec::new());
+        }
+        self.headless.set_frame_step(FRAME_S);
     }
 
     fn idle(&mut self, frames: usize) {
@@ -319,25 +331,25 @@ impl Run {
         self.app.windows.console.timing = console::Timing::default();
         let start = Instant::now();
         let output = self.headless.frame(&mut self.app, events);
-        let pass_ms = start.elapsed().as_secs_f64() * 1e3;
+        let pass_ms = ms(start.elapsed().as_secs_f64());
         let passes = output.platform_output.num_completed_passes;
         let start = Instant::now();
         let primitives = self
             .headless
             .ctx
             .tessellate(output.shapes, PIXELS_PER_POINT);
-        let tessellate_ms = start.elapsed().as_secs_f64() * 1e3;
+        let tessellate_ms = ms(start.elapsed().as_secs_f64());
         let mut textures = std::mem::take(&mut self.headless.textures);
         let wgpu_ms = self.gpu.as_mut().map_or(0.0, |gpu| {
             let start = Instant::now();
             gpu.draw(&textures, &primitives);
-            start.elapsed().as_secs_f64() * 1e3
+            ms(start.elapsed().as_secs_f64())
         });
         textures.clear();
         let timing = self.app.windows.console.timing;
-        let (filter_ms, rows_ms) = (timing.filter_s * 1e3, timing.rows_s * 1e3);
+        let (filter_ms, rows_ms) = (ms(timing.filter_s), ms(timing.rows_s));
         FrameTime {
-            layout_ms: (pass_ms - filter_ms - rows_ms).max(0.0),
+            layout_ms: rest_of(pass_ms, filter_ms, rows_ms),
             filter_ms,
             rows_ms,
             tessellate_ms,

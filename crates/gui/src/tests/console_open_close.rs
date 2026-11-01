@@ -426,3 +426,41 @@ fn console_open_close_bench_the_report_names_its_run_and_every_size() {
         assert!(bench::report(&[]).contains("`a`"))
     });
 }
+
+#[test]
+fn console_open_close_bench_its_numbers_convert() {
+    assert_eq!(bench::ms(0.5), 500.0);
+    assert_eq!(bench::ms(2.0), 2000.0);
+    assert_eq!(bench::rest_of(10.0, 2.0, 3.0), 5.0);
+    assert_eq!(bench::rest_of(1.0, 2.0, 3.0), 0.0, "never below zero");
+    rejects("a rest with the rows added", || {
+        assert_eq!(bench::rest_of(10.0, 2.0, 3.0), 11.0)
+    });
+    // The first of two equally slow frames is the one named.
+    assert_eq!(table(&[("a", 5.0), ("b", 5.0)]).worst(), ("a", 5.0));
+}
+
+#[test]
+fn console_open_close_bench_starts_with_the_log_asked_for_settled() {
+    for log in [0, 1, 7] {
+        let run = bench::Run::new(log, None);
+        assert_eq!(run.app.console().len(), log, "the log it measures at");
+        assert!(run.headless.ctx.cumulative_pass_nr() > 10, "settled");
+    }
+    let run = bench::Run::new(1, None);
+    let got = run.app.console().len();
+    rejects("a log not filled", || assert_eq!(got, 7));
+}
+
+#[test]
+fn console_open_close_bench_times_the_filter_while_open() {
+    let tables = bench::measure(&[1000], 2, None);
+    let filter: f64 = tables[0]
+        .rows
+        .iter()
+        .filter(|r| r.frame == "open, before")
+        .flat_map(|r| r.times.iter().map(|f| f.filter_ms))
+        .sum();
+    assert!(filter > 0.0, "{filter}");
+    rejects("no filter timed", || assert!(filter <= 0.0));
+}

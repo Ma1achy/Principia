@@ -581,3 +581,26 @@ fn mock_console_height_maximised_it_covers_the_panels_and_the_figure() {
         assert_eq!(hover, Default::default())
     });
 }
+
+#[test]
+fn mock_console_height_the_drag_is_held_in_any_window() {
+    // A window off the screen's origin, so each edge's offset counts.
+    let screen = Rect::from_min_size(pos2(0.0, 100.0), vec2(1000.0, 1000.0));
+    let layout = Layout::new(screen, 1.0);
+    let (top, footer) = (layout.page.min.y, layout.page.max.y);
+    let edge = |fraction: f32| screen.min.y + fraction * screen.height();
+    near(
+        edge(layout.console_dragged(500.0, 5000.0)),
+        footer - MIN_CONSOLE_H,
+        "its least",
+    );
+    near(
+        edge(layout.console_dragged(500.0, -5000.0)),
+        top,
+        "its most",
+    );
+    near(edge(layout.console_dragged(500.0, 10.0)), 510.0, "between");
+    rejects("a drag held nowhere", || {
+        near(5500.0, footer - MIN_CONSOLE_H, "its least")
+    });
+}
