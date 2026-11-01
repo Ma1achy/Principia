@@ -268,8 +268,13 @@ impl Session {
         }
     }
 
+    /// The frames the current or last run recorded.
+    pub fn frames(&self) -> &[Frame] {
+        &self.frames
+    }
+
     /// Records a frame during a run, its stamps on the session's clock: the frame finished, at `times`.
-    fn record(&mut self, start: f64, prepared: f64, first_paint: f64, last_paint: f64) {
+    pub(crate) fn record(&mut self, start: f64, prepared: f64, first_paint: f64, last_paint: f64) {
         if let Phase::Running { start_ms, .. } = self.phase {
             self.frames.push(Frame {
                 at_ms: last_paint - start_ms,

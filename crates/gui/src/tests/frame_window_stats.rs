@@ -270,3 +270,41 @@ fn frame_window_stats_marks_each_figure_on_its_own() {
         assert!(got.p5_fps.capped, "the 5th percentile's own mark");
     });
 }
+
+/// A frame presented on the stamp of the one before has no interval to read: it counts as presented, but is no rate of
+/// its own, neither an infinite one nor a rank in the percentile.
+fn check_zero_interval(stats: impl Fn(&[Frame], Option<f64>) -> Option<WindowStats>) {
+    // 22 frames, 21 intervals: 40 ms, nineteen of 20 ms and a zero. The 5th percentile's rank is 1 of the 20 positive
+    // ones, and would be 2 of 21 with the zero's infinite rate among them.
+    let mut frames = vec![frame(WARM_UP_MS, 1.0)];
+    let mut at = WARM_UP_MS + 40.0;
+    frames.push(frame(at, 1.0));
+    for _ in 0..19 {
+        at += 20.0;
+        frames.push(frame(at, 1.0));
+    }
+    frames.push(frame(at, 1.0));
+    let got = stats(&frames, None).expect("frames in the window");
+    assert_eq!(got.frames, 22);
+    assert!(
+        (got.p5_fps.fps - 25.0).abs() < 1e-9,
+        "the rank over the positive intervals: {}",
+        got.p5_fps.fps
+    );
+    // Only a zero interval: no rate at all to take a percentile of.
+    let only = [frame(WARM_UP_MS, 1.0), frame(WARM_UP_MS, 1.0)];
+    assert_eq!(stats(&only, None), None, "no positive interval");
+}
+
+#[test]
+fn frame_window_stats_reads_no_rate_from_a_zero_interval() {
+    check_zero_interval(window_stats);
+    rejects("a zero interval read as an infinite rate", || {
+        // What keeping the zero gives: 21 rates, the rank 2, 1000 / 20 ms.
+        check_zero_interval(|f, r| {
+            let mut s = window_stats(f, r)?;
+            s.p5_fps.fps = 50.0;
+            Some(s)
+        })
+    });
+}

@@ -2,16 +2,23 @@
 //! `SetField` and adds no undo entry; a run's script; the flags; and the report's fields, each in both builds' one
 //! implementation.
 
+use std::sync::Arc;
+use std::time::Duration;
+
 use eframe::egui::{self, pos2, Rect, ViewportId};
+use eframe::egui_wgpu;
 use engine::contract::interface::EngineInterface;
 
 use super::support::{mock_app, rejects};
 use crate::app::App;
+use crate::headless::Headless;
 use crate::measure::stats::{Frame, WARM_UP_MS, WINDOW_MS};
 use crate::measure::{
     frame_delay, pan_edit, pan_offset, split, Environment, Measured, Phase, Run, Session,
     PANEL_WIDTH,
 };
+use crate::mock::canvas::MockCanvas;
+use crate::mock::MockEngine;
 use crate::side::{EngineSide, MockSide};
 
 fn session(run: Option<Run>) -> Session {
@@ -228,6 +235,23 @@ fn measure_flag_starts_its_run() {
     assert!(!s.step(1.0).started, "once");
 }
 
+/// `begin_frame` on a thread of its own: its delay spins on the session's clock, so a clock that does not reach the
+/// delay fails this, in [`SPIN_LIMIT`], and never hangs the test.
+fn begin_frame_bounded(session: Session, limit: Duration) -> Session {
+    let (done, finished) = std::sync::mpsc::channel();
+    std::thread::spawn(move || {
+        let mut session = session;
+        session.begin_frame();
+        let _ = done.send(session);
+    });
+    finished
+        .recv_timeout(limit)
+        .expect("the frame's delay did not end in time")
+}
+
+/// Far past any delay these tests ask for, and three tries of it inside the per-mutant timeout.
+const SPIN_LIMIT: Duration = Duration::from_secs(10);
+
 #[test]
 fn measure_begin_frame_spends_the_delay() {
     let mut s = Session::new(Environment {
@@ -235,8 +259,15 @@ fn measure_begin_frame_spends_the_delay() {
         ..Environment::default()
     });
     let start = s.now_ms();
-    s.begin_frame();
+    s = begin_frame_bounded(s, SPIN_LIMIT);
     assert!(s.now_ms() - start >= 20.0, "the delay is spent");
+    rejects("a delay past the limit, which fails, not hangs", || {
+        let slow = Session::new(Environment {
+            frame_delay_ms: 2_000.0,
+            ..Environment::default()
+        });
+        begin_frame_bounded(slow, Duration::from_millis(10));
+    });
     let mut s = session(None);
     let start = s.now_ms();
     s.begin_frame();
@@ -444,4 +475,214 @@ fn measure_run_names_round_trip() {
         assert_eq!(Run::parse(run.name()), Ok(run));
     }
     assert!(Run::parse("").is_err());
+}
+
+#[test]
+fn measure_record_reads_a_frame_from_its_stamps() {
+    let mut s = session(None);
+    s.record(1.0, 2.0, 3.0, 4.0);
+    assert!(s.frames().is_empty(), "no run, nothing recorded");
+    s.request(Run::Idle);
+    s.step(100.0);
+    s.record(110.0, 113.0, 117.0, 130.0);
+    let expected = Frame {
+        at_ms: 30.0,
+        work_ms: 20.0,
+        acquire_ms: 4.0,
+    };
+    assert_eq!(s.frames(), [expected]);
+    rejects("a frame stamped from the run's end, not its start", || {
+        let wrong = Frame {
+            at_ms: 130.0,
+            ..expected
+        };
+        assert_eq!(s.frames(), [wrong]);
+    });
+}
+
+#[test]
+fn measure_clock_reads_milliseconds() {
+    let mut s = Session::new(Environment {
+        frame_delay_ms: 25.0,
+        ..Environment::default()
+    });
+    let wall = std::time::Instant::now();
+    let start = s.now_ms();
+    s = begin_frame_bounded(s, SPIN_LIMIT);
+    let spent = wall.elapsed();
+    assert!(spent.as_millis() >= 25, "the delay is real time");
+    assert!(spent.as_millis() < 5_000, "and not a thousand times it");
+    assert!(s.now_ms() - start >= 25.0, "the session's clock agrees");
+    rejects(
+        "a clock in seconds, whose delay ends a thousand times late",
+        || {
+            assert!(spent.as_millis() < 1, "no real time at all");
+        },
+    );
+}
+
+/// The panel's rows and its buttons are drawn, and a button starts its run only while none is under way.
+#[test]
+fn measure_panel_draws_its_rows_and_its_buttons_start_a_run() {
+    let ctx = egui::Context::default();
+    ctx.enable_accesskit();
+    let scale = Headless::new([1440, 900], 1.0);
+    let window = Rect::from_min_max(pos2(0.0, 0.0), pos2(1440.0, 900.0));
+    let mut measured = Measured::new(mock_app(), Some(session(None)), Box::new(|_| {}));
+    let step = |measured: &mut Measured<MockSide>, events: Vec<egui::Event>| {
+        let mut raw = egui::RawInput {
+            screen_rect: Some(window),
+            events,
+            ..Default::default()
+        };
+        measured.raw_input_hook(&ctx, &mut raw);
+        let mut out = ctx.run_ui(raw, |ui| measured.ui(ui));
+        out.textures_delta.clear();
+        scale.names(&out)
+    };
+    let names = step(&mut measured, Vec::new());
+    for label in ["crossOriginIsolated", "work p95", "Run the scripted pan"] {
+        assert!(names.iter().any(|n| n.name == label), "no `{label}` drawn");
+    }
+    let idle = names
+        .iter()
+        .find(|n| n.name == "Run idle")
+        .expect("the button");
+    let rect = idle.rect.expect("its rect");
+    assert!(
+        rect[0] >= 1440.0 - f64::from(PANEL_WIDTH),
+        "in the panel's strip"
+    );
+    let at = pos2(
+        ((rect[0] + rect[2]) / 2.0) as f32,
+        ((rect[1] + rect[3]) / 2.0) as f32,
+    );
+    for events in crate::capture::click(at) {
+        step(&mut measured, events);
+    }
+    step(&mut measured, Vec::new());
+    let s = measured.session.as_ref().expect("the session");
+    assert!(
+        matches!(s.phase, Phase::Running { run: Run::Idle, .. }),
+        "the click started the run: {:?}",
+        s.phase
+    );
+    rejects("the other button's run", || {
+        assert!(matches!(s.phase, Phase::Running { run: Run::Pan, .. }));
+    });
+}
+
+/// The window's clear colour is the app's, through eframe's trait.
+#[test]
+fn measure_clear_colour_is_the_apps() {
+    let visuals = egui::Visuals::dark();
+    let measured = Measured::new(mock_app(), None, Box::new(|_| {}));
+    let check = |got: [f32; 4]| {
+        assert_eq!(
+            got,
+            crate::app::clear_colour(&visuals).to_normalized_gamma_f32()
+        );
+    };
+    check(eframe::App::clear_color(&measured, &visuals));
+    rejects("another colour", || check([0.0; 4]));
+}
+
+/// A real frame through egui-wgpu, as the drivers paint one, through eframe's trait as they call it: the two marks stamp
+/// it, and the next frame's start records it. Bounded: three frames.
+#[test]
+fn measure_marks_stamp_a_painted_frame() {
+    let canvas = Arc::new(MockCanvas::new().expect("a GPU adapter for the mock's canvas"));
+    let context = engine::contract::canvas::Canvas::context(&*canvas).clone();
+    let format = wgpu::TextureFormat::Rgba8Unorm;
+    let mut renderer = egui_wgpu::Renderer::new(
+        &context.device,
+        format,
+        egui_wgpu::RendererOptions::default(),
+    );
+    let target = context.device.create_texture(&wgpu::TextureDescriptor {
+        label: Some("measure target"),
+        size: wgpu::Extent3d {
+            width: 1440,
+            height: 900,
+            depth_or_array_layers: 1,
+        },
+        mip_level_count: 1,
+        sample_count: 1,
+        dimension: wgpu::TextureDimension::D2,
+        format,
+        usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+        view_formats: &[],
+    });
+    let view = target.create_view(&Default::default());
+    let ctx = egui::Context::default();
+    let window = Rect::from_min_max(pos2(0.0, 0.0), pos2(1440.0, 900.0));
+    let app = App::new(MockSide::new(MockEngine::new(), None), format);
+    let mut measured = Measured::new(app, Some(session(Some(Run::Idle))), Box::new(|_| {}));
+    let mut eframe_frame = eframe::Frame::_new_kittest();
+    for _ in 0..3 {
+        let mut raw = egui::RawInput {
+            screen_rect: Some(window),
+            ..Default::default()
+        };
+        eframe::App::raw_input_hook(&mut measured, &ctx, &mut raw);
+        let mut out = ctx.run_ui(raw, |ui| {
+            eframe::App::ui(&mut measured, ui, &mut eframe_frame);
+        });
+        let primitives = ctx.tessellate(std::mem::take(&mut out.shapes), out.pixels_per_point);
+        for (id, deltas) in &out.textures_delta.set {
+            for delta in deltas {
+                renderer.update_texture(&context.device, &context.queue, *id, delta);
+            }
+        }
+        let descriptor = egui_wgpu::ScreenDescriptor {
+            size_in_pixels: [1440, 900],
+            pixels_per_point: out.pixels_per_point,
+        };
+        let mut encoder = context.device.create_command_encoder(&Default::default());
+        let commands = renderer.update_buffers(
+            &context.device,
+            &context.queue,
+            &mut encoder,
+            &primitives,
+            &descriptor,
+        );
+        let pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+            label: None,
+            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                view: &view,
+                resolve_target: None,
+                ops: wgpu::Operations {
+                    load: wgpu::LoadOp::Clear(wgpu::Color::BLACK),
+                    store: wgpu::StoreOp::Store,
+                },
+                depth_slice: None,
+            })],
+            depth_stencil_attachment: None,
+            timestamp_writes: None,
+            occlusion_query_set: None,
+            multiview_mask: None,
+        });
+        renderer.render(&mut pass.forget_lifetime(), &primitives, &descriptor);
+        context
+            .queue
+            .submit(commands.into_iter().chain([encoder.finish()]));
+        out.textures_delta.clear();
+    }
+    // The run started in the first frame's step, after that frame's start: the first frame's paint is in it; the third
+    // is still in flight.
+    let s = measured.session.as_ref().expect("the session");
+    let frames = s.frames();
+    assert_eq!(frames.len(), 2, "two frames finished and recorded");
+    assert!(frames[1].at_ms > frames[0].at_ms, "in order: {frames:?}");
+    assert!(
+        frames[0].work_ms > 0.0,
+        "work from the frame's start: {frames:?}"
+    );
+    assert!(
+        frames[0].acquire_ms >= 0.0,
+        "the marks in order: {frames:?}"
+    );
+    rejects("a frame that took no work", || {
+        assert!(frames[0].work_ms <= 0.0);
+    });
 }

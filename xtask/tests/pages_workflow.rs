@@ -290,6 +290,10 @@ negative_control!(
 /// The build's small parts.
 fn check_plumbing(default_out: std::path::PathBuf) {
     assert!(
+        default_out.is_absolute(),
+        "the site's default place is in the workspace"
+    );
+    assert!(
         default_out.ends_with("target/web-skeleton"),
         "the site's default place"
     );
