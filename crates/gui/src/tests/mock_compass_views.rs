@@ -11,7 +11,8 @@ use super::compass_support::{
 };
 use super::support::{click_scope, headless, mock_app, press, rejects, SLICE_FRAME};
 use crate::app::App;
-use crate::explore::compass::views::{self, CompassView, GridPlace, VIEWS, WAITS};
+use crate::explore::compass::physical::{JACOBI_NAMES, SHAPE_NAMES};
+use crate::explore::compass::views::{self, CompassView, GridPlace, VIEWS};
 use crate::explore::compass::{self, SLICE_BUTTON, TILT_BUTTON};
 use crate::explore::manifold_view::Touch;
 use crate::headless::Headless;
@@ -45,8 +46,7 @@ fn selected_views(h: &mut Headless, app: &mut App<MockSide>) -> Vec<bool> {
         .collect()
 }
 
-/// What the compass draws in `shapes`, by view: the cube's twelve edges, the Plücker grid's 28 cells, or the note
-/// that the view waits on physics review.
+/// What the compass draws in `shapes`, by view: the cube's twelve edges, or a grid's 28 cells, told apart by its names.
 fn drawn_view(shapes: &[Shape], h: &Headless, app: &App<MockSide>) -> CompassView {
     let cube = compass::current(compass_rect(h), &app.snapshot().sim, &app.manifold.compass);
     if painted_edges(shapes, &cube).len() == 12 {
@@ -61,16 +61,18 @@ fn drawn_view(shapes: &[Shape], h: &Headless, app: &App<MockSide>) -> CompassVie
                 .any(|s| matches!(s, Shape::Rect(r) if r.rect == at))
         })
         .count();
-    let waits = shapes
-        .iter()
-        .any(|s| matches!(s, Shape::Text(t) if t.galley.text() == WAITS));
-    match (cells, waits) {
-        (28, false) => CompassView::Plucker,
-        (0, true) => {
-            // The Jacobi and Shape views draw the same note: their selected button tells them apart.
-            app.manifold.compass.view
-        }
-        other => panic!("the compass draws no view: {other:?}"),
+    assert_eq!(cells, 28, "the compass draws no view");
+    let names = |name: &str| {
+        shapes
+            .iter()
+            .any(|s| matches!(s, Shape::Text(t) if t.galley.text() == name))
+    };
+    if names(JACOBI_NAMES[2]) {
+        CompassView::Jacobi
+    } else if names(SHAPE_NAMES[2]) {
+        CompassView::Shape
+    } else {
+        CompassView::Plucker
     }
 }
 
@@ -269,35 +271,6 @@ fn mock_compass_views_a_view_switch_emits_no_setfield() {
     app.set_field(crate::explore::manifold_view::z0_edit([0.3; 8]));
     let _ = h.frame(&mut app, Vec::new());
     rejects("an edit", || check_no_edit(&app, rows, depth, "an edit"));
-}
-
-#[test]
-fn mock_compass_views_jacobi_and_shape_wait_on_physics_review() {
-    for (view, id) in [
-        (CompassView::Jacobi, crate::explore::COMPASS_JACOBI),
-        (CompassView::Shape, crate::explore::COMPASS_SHAPE),
-    ] {
-        let (mut app, mut h) = tilted_app();
-        click_scope(&mut h, &mut app, id);
-        let shapes = compass_shapes(&mut h, &mut app);
-        let note = shapes
-            .iter()
-            .find(|s| matches!(s, Shape::Text(t) if t.galley.text() == WAITS))
-            .unwrap_or_else(|| panic!("{view:?}: the note"));
-        let Shape::Text(t) = note else { unreachable!() };
-        let laid = t.galley.rect.translate(t.pos.to_vec2());
-        let sq = square(&h);
-        assert!(
-            (laid.center() - sq.center()).length() < 1.0,
-            "{view:?}: centred in the square"
-        );
-        assert!(
-            laid.width() <= sq.width() + 1e-3,
-            "{view:?}: wrapped to the square"
-        );
-        assert_eq!(app.manifold.compass.view, view);
-    }
-    assert_eq!(WAITS, "waits on physics review (RQ-341 to RQ-346)");
 }
 
 #[test]
