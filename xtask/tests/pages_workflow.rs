@@ -240,6 +240,31 @@ negative_control!(
     check_site(&root().join("xtask"))
 );
 
+mod deploy_in_build {
+    use super::*;
+    negative_control!(
+        pages_workflow_manual,
+        "actions/deploy-pages as a step of the build job",
+        expected = "outside the deploy job",
+        manual(&edited(
+            "      - uses: actions/checkout@v4\n",
+            "      - uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e\n      - uses: actions/checkout@v4\n"
+        ))
+    );
+}
+mod grant_in_build {
+    use super::*;
+    negative_control!(
+        pages_workflow_manual,
+        "`pages: write` granted to the build job",
+        expected = "outside the deploy job",
+        manual(&edited(
+            "    steps:\n      - uses: actions/checkout@v4\n",
+            "    permissions:\n      pages: write\n    steps:\n      - uses: actions/checkout@v4\n"
+        ))
+    );
+}
+
 /// Each fault of the workflow gets its own reason, in a default build too, where the controls are not compiled; the
 /// faults the controls run, and those a text can only have by hand.
 fn check_faults(check: impl Fn(&str) -> Result<(), String>) {
@@ -260,6 +285,16 @@ fn check_faults(check: impl Fn(&str) -> Result<(), String>) {
         (edited("@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5", "@v4"), "deploy-pages at a pinned"),
         (edited("@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5", "@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03g"), "deploy-pages at a pinned"),
         (edited("@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4.0.0", "@v4"), "upload-pages-artifact at a pinned"),
+        // Nothing outside the deploy job can deploy: not a step, nor a grant, in the build job, or above or below the jobs.
+        (edited("      - uses: actions/checkout@v4\n", "      - uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e\n"), "`- uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e` can deploy outside"),
+        (edited("      - uses: actions/checkout@v4\n", "      - uses: \"actions/deploy-pages@v4\"\n"), "can deploy outside"),
+        (edited("    steps:\n      - uses: actions/checkout", "    permissions:\n      pages: write\n    steps:\n      - uses: actions/checkout"), "`pages: write` can deploy outside"),
+        (edited("    steps:\n      - uses: actions/checkout", "    permissions:\n      id-token: write\n    steps:\n      - uses: actions/checkout"), "`id-token: write` can deploy outside"),
+        (edited("    steps:\n      - uses: actions/checkout", "    permissions: write-all\n    steps:\n      - uses: actions/checkout"), "`permissions: write-all` can deploy outside"),
+        (edited("    steps:\n      - uses: actions/checkout", "    permissions: { pages: write }\n    steps:\n      - uses: actions/checkout"), "can deploy outside"),
+        (edited("  contents: read\n", "  contents: read\n  pages: 'write'\n"), "`pages: 'write'` can deploy outside"),
+        (edited("  contents: read\n", "  contents: read\n  \"id-token\":  write\n"), "can deploy outside"),
+        (format!("{}permissions:\n  pages: write\n", workflow()), "can deploy outside"),
     ];
     for (text, reason) in faults {
         match check(&text) {
@@ -273,6 +308,12 @@ fn check_faults(check: impl Fn(&str) -> Result<(), String>) {
         "  # push:\n\n  workflow_dispatch:\n",
     );
     assert_eq!(check(&commented), Ok(()), "a comment among the triggers");
+    // A commented grant in the build job grants nothing, and a read grant there is no deploy right.
+    let harmless = edited(
+        "    steps:\n      - uses: actions/checkout",
+        "    # pages: write\n    permissions:\n      pages: read\n      id-token: read\n    steps:\n      - uses: actions/checkout",
+    );
+    assert_eq!(check(&harmless), Ok(()), "read grants in the build job");
 }
 
 #[test]

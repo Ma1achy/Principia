@@ -1,6 +1,6 @@
 //! The check of `.github/workflows/pages.yml` (REQ-TOOL-220, R-627): its only trigger is `workflow_dispatch`, and of its
 //! two jobs, `build` and `deploy`, the deploy job runs only from `refs/heads/main`, through the `github-pages`
-//! environment, with the permissions a Pages deploy needs. It reads the workflow by its indentation: the file is ours,
+//! environment, with the permissions a Pages deploy needs, and nothing outside that job can deploy. It reads the workflow by its indentation: the file is ours,
 //! and two spaces a level, as all of them are.
 
 /// What a block holds: each line, with its indent removed, from after `header` at column `indent`, to the next line at
@@ -49,6 +49,24 @@ fn uses_pinned(job: &[&str], name: &str) -> bool {
         .any(|uses| pinned(uses, name))
 }
 
+/// Whether `line` holds what deploys or grants the right to: the deploy action, `pages: write`, `id-token: write`, or
+/// `write-all`, which holds both. Spaces and quotes don't count, so the flow and quoted spellings of a grant are caught;
+/// a trailing comment naming one is refused too, which errs the safe way.
+fn can_deploy(line: &str) -> bool {
+    let bare: String = line
+        .chars()
+        .filter(|c| !c.is_whitespace() && !matches!(c, '\'' | '"'))
+        .collect();
+    [
+        "actions/deploy-pages",
+        "pages:write",
+        "id-token:write",
+        "write-all",
+    ]
+    .iter()
+    .any(|mark| bare.contains(mark))
+}
+
 /// Checks the workflow's `text`; the error names what is wrong.
 pub fn check(text: &str) -> Result<(), String> {
     let lines = significant(text);
@@ -71,6 +89,17 @@ pub fn check(text: &str) -> Result<(), String> {
         );
     }
     let deploy = block(&jobs, "deploy:", 0).ok_or("no deploy job")?;
+    let at = lines
+        .iter()
+        .position(|l| l.trim_end() == "  deploy:")
+        .ok_or("no deploy job")?;
+    let outside = lines[..at].iter().chain(&lines[at + 1 + deploy.len()..]);
+    if let Some(line) = outside.into_iter().find(|l| can_deploy(l)) {
+        return Err(format!(
+            "`{}` can deploy outside the deploy job, off its ref condition and its environment",
+            line.trim()
+        ));
+    }
     if !deploy
         .iter()
         .any(|l| l.trim_end() == "if: github.ref == 'refs/heads/main'")
