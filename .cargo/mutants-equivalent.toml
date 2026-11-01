@@ -342,3 +342,15 @@ justification = "repeat is two runs of one pure function on one input, so u32::f
 [[equivalent]]
 mutant = "crates/ledger/src/gen/catalogue.rs:577:13: delete match arm \"eps_L\" in drift_wgsl"
 justification = "EPS_L_DEFAULT and EPS_E_DEFAULT are both 1e-6 in the register, so the wildcard arm gives the same default; a change to either makes drift_view_floor_uniforms_default_to_the_register tell them apart"
+
+[[equivalent]]
+mutant = "xtask/src/jobq.rs:1605:26: replace < with <= in end_stale_group"
+justification = "the two differ only if the clock reads exactly the deadline, to the nanosecond, at that check: at most one more 100 ms sleep and look at the group, inside the grace's own 100 ms granularity, and the same outcome"
+
+[[equivalent]]
+mutant = "xtask/src/jobq.rs:1511:65: replace | with ^ in leader_exited"
+justification = "WNOHANG and WNOWAIT are distinct single-bit waitid options on both the Linux and the Mac targets, so their ^ is their |, and the options passed to waitid are the same bits"
+
+[[equivalent]]
+mutant = "xtask/src/jobq.rs:1511:41: replace | with ^ in leader_exited"
+justification = "WEXITED (0x4) and WNOHANG (0x1) share no bit on both the Linux and the Mac targets, so their ^ is their |, and the options passed to waitid are the same bits"

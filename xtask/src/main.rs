@@ -142,6 +142,8 @@ fn main() -> ExitCode {
                 !bless.is_empty(),
             )
         }
+        #[cfg(unix)]
+        ["job", rest @ ..] => return xtask::jobq::cli(rest),
         ["gate-report", rest @ ..] => gate_report(rest),
         ["gate-provisional", "--milestone", milestone] => {
             xtask::gate_report::run_provisional(&workspace_root(), milestone)
@@ -218,6 +220,8 @@ fn main() -> ExitCode {
         ["deps", "--metadata", path] => run_deps(Source::Fixture(PathBuf::from(path))),
         ["--help"] | ["-h"] => {
             println!("{USAGE}");
+            #[cfg(unix)]
+            println!("{}", xtask::jobq::USAGE);
             return ExitCode::SUCCESS;
         }
         _ => {
