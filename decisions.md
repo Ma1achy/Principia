@@ -28763,7 +28763,7 @@ The owner's words (30 Oct 2026), verbatim, from that day's batch of rulings:
 - **Energy and drift** are defined under the softened potential: `E₀`, and the drift meters read against it.
 - **The schedule.** A task after the core build, M0 to M8; the refusal of `ε ≠ 0` stands until it lands.
 
-*Not ruled here:* RQ-627's question also named what "the collision branch" reads under ε, and the corpus has more that reads the Newtonian potential, the regularised occupants and the Chazy classifier's `E`. The ruling is silent on them, so they are **RQ-656**, for the owner; TASK-M9-39 waits on it.
+*Not ruled here:* RQ-627's question also named what "the collision branch" reads under ε, and the corpus has more that reads the Newtonian potential or a pair's distance: the regularised occupants, the Chazy classifier's `E`, the escape test's `E_rel` and the ionisation gate's pairwise energies, the decode's `V₀` with `virial_ratio` and its collision pole, `η_E`'s `E* ≥ U`, and the substep law's `r_min`. The ruling is silent on them, so they are **RQ-656**, for the owner; TASK-M9-39 waits on it.
 
 *Applied per R-369:*
 - **The milestone.** R-650 and `plan/MILESTONES.md` call M0 to M8 the core build, and no other milestone follows it, so the task is TASK-M9-39. It is a build task, not a target: its tests block its own merge, it is not scored, and M9's report, TASK-M9-37, does not wait on it.

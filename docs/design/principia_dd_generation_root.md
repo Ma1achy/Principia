@@ -621,7 +621,8 @@ default 0 and optional.**
 `V = −Σ mᵢmⱼ/√(r² + ε²)`, its force the negative gradient. `ε` is canonical: a fraction of the initial hyperradius `R`,
 fixed at `t = 0`, never co-moving, recorded in every output header like `r_coll`. Energy and drift are defined under the
 softened potential. Built by a task after the core build (TASK-M9-39); until it lands, runs with `ε ≠ 0` are refused.
-What the collision branch, the regularised occupants and the Chazy classifier read under it is RQ-656.
+What the collision branch, the regularised occupants, the Chazy classifier, the escape test, the decode's `V₀`, `η_E` and
+the substep law read under it is RQ-656.
 
 **Long-horizon behaviour is now a reporting property rather than a limit.** With nothing discarded
 and `error_ratio` read as the trust flag (R-87), a pixel whose copies cannot be integrated reads
