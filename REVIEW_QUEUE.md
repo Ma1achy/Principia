@@ -971,6 +971,11 @@ physics where the choice changes results (R-369).*
 - **Second question:** the window is carried and shown in the Run window (REQ-GUI-103), but `validate` accepts any
   finite positive value, and T's floor follows it (`check_horizon`). So what range may it take? That range also bears
   on the smallest `dt_macro` a carried window can reach; TASK-M3-06 meanwhile refuses a `dt_macro` whose smallest
-  substep is not a normal f32, per R-369.
+  substep is not a normal f32, per R-369. That refusal bounds the substep only: at its floor the stages' `c·dt` (KDK's
+  half-kick, 2⁻¹²⁷ at `N_max` = 64) are still subnormal and a flushing backend reads them as 0, with no branch affected
+  and no dynamics at that scale. Every stage size stays normal for a window of at least about 2⁻⁹⁸, and at the window
+  of 0.4 it is near 2⁻²⁹. So any lower bound the range sets at or above 2⁻⁹⁸ makes the `dt_macro` refusal unreachable.
+  The range is also where a physically meaningful lower bound belongs: f32 rounding absorbs a step far above this
+  floor.
 - **Applied meanwhile:** 0.4 per R-29, settled in the register, the doc comment saying provisional (TASK-M3-06).
 - **Waits:** the answer is needed by the M3 gate. No task waits.

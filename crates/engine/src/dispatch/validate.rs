@@ -13,7 +13,8 @@
 //!   must stay finite rounded to f32 as well, since [`Validated::wrapper_uniforms_f32`] hands that value to the
 //!   kernel, and its smallest substep, `dt_macro / N_max` at f32, must be a normal f32: infinity or 0 would make every
 //!   substep's `dt` not a time step, and a backend that flushes subnormal results (Metal; determinism note rule 6,
-//!   R-547; integrator contract Part 2c) reads a subnormal substep as 0 where the CPU keeps it.
+//!   R-547; integrator contract Part 5, branch-cut crossing detection) reads a subnormal substep as 0 where the CPU
+//!   keeps it.
 //! - **The `N_sub` table** (R-502): the host generator's refusal of the carried `r_sub`, `gamma_sub` and `N_max`
 //!   (`kernel::driver::nsub_table`), an `N_max` above the table's maximum length among them, is returned as it is;
 //!   and the carried table must be the generator's for them, bit for bit, never another config's.
