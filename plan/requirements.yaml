@@ -40534,14 +40534,14 @@
   - file: docs/contracts/principia_integrator_contract.md
     section: Part 7 — Detectors as the `SimState` producer
   verify:
+    detail: "every output header of a run carries ε beside r_coll, equal to the dispatched value's bits; an ε > 0 run is tagged and refused pooling with ε = 0; finite ε at each end of the range dispatches, and just outside it, negative ε, NaN and ±∞ are refused with the typed reason; ε = 0 dispatches untagged at any calibrated range; control: a header writer dropping ε fails"
     method: unit test
-    detail: "every output header of a run carries ε beside r_coll, equal to the dispatched value's bits; an ε > 0 run is tagged and refused pooling with ε = 0; finite ε at each end of the range dispatches, and just outside it, NaN and ±∞ are refused with the typed reason; control: a header writer dropping ε fails"
   rulings:
   - R-654
   milestone: M9
   rq:
   - RQ-656
-  note: "R-654. Closed by TASK-M9-39. The range of ε is REQ-SYS-095's, a calibration (R-71). It waits on RQ-656, as its task does. *Was (the range):* \"a definition written by that task (R-72; physics reviewer approves)\"; statement *was:* \"in the range its definition states\"."
+  note: "R-654. Closed by TASK-M9-39. The range of ε is REQ-SYS-095's, a calibration (R-71). It waits on RQ-656, as its task does. *Was (the range):* \"a definition written by that task (R-72; physics reviewer approves)\"; statement *was:* \"in the range its definition states\". Verify *was:* \"and just outside it, NaN and ±∞ are refused with the typed reason\", with no negative ε and no ε = 0 (physics review 5730650164 of PR #375, P4; applied per R-369)."
 - id: REQ-SYS-095
   area: SYS
   kind: calibration
