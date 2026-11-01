@@ -40005,6 +40005,8 @@
     section: R-195 — CI checks formatting and lints
   - file: decisions.md
     section: "R-656 — CI throughput: a push runs `ci.yml` only on `main` (and on R-272's `measure/` branches, which have no pull request), a pull request running it through `pull_request`; a pull request's superseded runs are cancelled, never a run on `main`; a docs-only pull request skips the build, test, GPU and mutants work, and one that changes no GPU-path file skips the GPU suites, inside the jobs, every required check still reporting success under its own name; mutants run on the merge-ready head; a bounded target cache is approved in principle, built in a later PR; no paid or self-hosted runner *(amends R-110, R-177, R-186, R-195, R-235, R-285 and R-335)*"
+  - file: decisions.md
+    section: "R-662 — Full CI runs only when a pull request changes Principia's code: docs, plan prose, papers, Python and other scripts get only plan-check, the vocabulary lint and the atlas guard; a mixed change and an unknown path run full CI; every required check still reports *(amends R-656's docs-only list and docs checks, R-110 and R-177)*"
   verify:
     method: unit test
     detail: "the gate-report fixture lists every requirement of the milestone's and earlier gate blocks, fails on a missing one, and marks benchmark requirements awaiting the human's run until their prin profile files are supplied; review: no workflow runs bench, nightly.yml is scheduled, gate.yml takes a milestone input"
@@ -40015,8 +40017,9 @@
   - R-186
   - R-195
   - R-656
+  - R-662
   milestone: M0
-  note: "R-656: ci.yml runs on a push to main (and to a measure/ branch, R-272) and on every pull-request head; a docs-only head runs plan-check, the vocabulary lint and the tests that read the docs (in ci-workspace) in place of the build, fmt, clippy, the tests and cargo xtask ci, which run again on main once it merges."
+  note: "R-656: ci.yml runs on a push to main (and to a measure/ branch, R-272) and on every pull-request head; R-662: a head that changes none of Principia's code runs plan-check and the vocabulary lint (in ci-workspace) in place of the build, fmt, clippy, the tests and cargo xtask ci, which run again on main once it merges."
 - id: REQ-SYS-068
   area: SYS
   statement: "`reviews-check` must count a role's APPROVE on an earlier commit when every later commit is qa's own `qa: tests for <TASK-id>` commit adding files only under `crates/*/tests/`, `xtask/tests/` or `fixtures/` (R-260), and must pass a PR whose title names no task, printing \"no task, no named reviewers\" (R-261)."

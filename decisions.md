@@ -920,11 +920,12 @@ windowed spectrum) become R-71 / R-72 calibration and definition requirements. T
 fixtures) wait for the human. ✱ marks a design ruling the human may veto.*
 
 ## R-110 — What CI runs, where, and against which goldens *(closes RQ-79)*
-*Amended by R-186 and R-656.*
+*Amended by R-186, R-656 and R-662.*
 *Still in force: the unit, property, numerical-gate and native golden suites on every commit; GUI screenshots on GUI PRs
 and at the gates; lavapipe as the second backend on every commit, meeting M4's two-backend check, and a real non-Metal
 GPU gating Paper 2 (R-58); "every commit" is every push to `main` and every pull-request head, but for R-656's skips
-(a docs-only head runs only the checks that read the docs; one that changes no GPU-path file skips the GPU suites);
+as R-662 scopes them (a head that changes none of Principia's code runs only the cheap checks; one that changes no
+GPU-path file skips the GPU suites);
 Chrome stable and Safari for REQ-VAL-116; goldens rendered with native wgpu offscreen from M1, checked at M8 by the
 Playwright suite against the same baselines within tolerance, with no re-baselining without a gate decision; the
 runners and the benchmarks' schedule are R-186's.*
@@ -1479,10 +1480,10 @@ through a dev-dependency on `crates/validation`. Tests are matched to their cont
 Crates without the `controls` feature are skipped, not failed.
 
 ## R-177 — Cadence *(closes G4, C6)*
-*Amended by R-656.*
+*Amended by R-656 and R-662.*
 *Still in force: all of it, `ci.yml`'s "every push" read as R-656 reads it: every push to `main` and every pull-request
-head, a docs-only head running plan-check and the checks that read the docs (in `ci-workspace`) in place of `cargo
-xtask ci`.*
+head, a head that changes none of Principia's code (R-662) running plan-check and the vocabulary lint (in
+`ci-workspace`) in place of `cargo xtask ci`.*
 *25 Sep 2026 · applied in step 8*
 
 - `ci.yml` runs `cargo xtask ci` on every push, and that includes plan-check.
@@ -28829,6 +28830,11 @@ R-655 is in the "physics" group of `plan/rule_groups.yaml`, with R-554 and R-613
 Changes REQ-SCHED-101 (statement, verify, rulings, note) and REQ-CHART-062 (verify, rulings, note).
 
 ## R-656 — CI throughput: a push runs `ci.yml` only on `main` (and on R-272's `measure/` branches, which have no pull request), a pull request running it through `pull_request`; a pull request's superseded runs are cancelled, never a run on `main`; a docs-only pull request skips the build, test, GPU and mutants work, and one that changes no GPU-path file skips the GPU suites, inside the jobs, every required check still reporting success under its own name; mutants run on the merge-ready head; a bounded target cache is approved in principle, built in a later PR; no paid or self-hosted runner *(amends R-110, R-177, R-186, R-195, R-235, R-285 and R-335)*
+*Amended in part by R-662 (31 Oct 2026: full CI runs only when a pull request changes Principia's code; the list of
+files code reads narrows to data code loads for behaviour, and the docs checks to the cheap checks).*
+*Still in force: all of it but what counts as docs-only and what a docs-only head runs, which are R-662's: the push
+trigger, the cancelled runs, the in-job skips under each required check's own name, mutants on the merge-ready head,
+the approved target cache and no paid or self-hosted runner.*
 *30 Oct 2026 · the owner's two messages of that day; applied in `.github/workflows/ci.yml`,
 `.github/workflows/mutants.yml`, `scripts/ci_changes.sh` (new), `xtask/tests/ci_changes.rs` (new), three qa files
 (below), `plan/OPERATIONS.md`, `plan/WORKFLOW.md`, `docs/contracts/principia_parity_contract.md` §6, eight
@@ -29078,3 +29084,72 @@ RQ-626's option (a): "everywhere" over the states where Euler's secular drift ha
 (rest starts, dd tests 2 and 7), the test's domain named in REQ-INT-040's detail.
 
 R-660 is in the "design" group of `plan/rule_groups.yaml`, with R-652.
+
+## R-662 — Full CI runs only when a pull request changes Principia's code: docs, plan prose, papers, Python and other scripts get only plan-check, the vocabulary lint and the atlas guard; a mixed change and an unknown path run full CI; every required check still reports *(amends R-656's docs-only list and docs checks, R-110 and R-177)*
+*31 Oct 2026 · the owner's message of that day; applied in `scripts/ci_changes.sh`, `.github/workflows/ci.yml`,
+`.github/workflows/mutants.yml`, `xtask/tests/ci_changes.rs`, `xtask/tests/mutants_no_mutant.rs`,
+`xtask/tests/qa_R-656_ci_changes.rs`, `plan/OPERATIONS.md`, `plan/WORKFLOW.md`,
+`docs/contracts/principia_parity_contract.md` §6, REQ-SYS-067's note and `plan/rule_groups.yaml`*
+
+The owner's words, verbatim:
+
+> Yeah and if it's like python don't check? Only the actual Principia CODE matters in ci? If you get me. So GUI and Physics etc for Principia, not random doc stuff
+
+*What it decides:*
+- **Full CI** runs when a pull request changes `crates/` (shaders and the ledger among it), `xtask/`, `fixtures/` (the
+  goldens among it), `Cargo.toml`, `Cargo.lock`, `rust-toolchain.toml` or `.github/`, or the data code loads, below.
+- **Only the cheap checks** run when every path is on the classifier's allowlist and none of them is that data: `docs/`
+  (the corpus and the papers), `plan/` (its prose and its Python), `scripts/`, `workbench/` and the root's markdown.
+  The cheap checks are plan-check and the vocabulary lint, in `ci-workspace`, and the atlas guard,
+  `no-atlas-params.yml`, which runs on every pull request anyway.
+- **It fails towards full CI.** An unknown top-level path runs full CI, because the list names what skips, never what
+  runs; so does a mixed change, and a diff that can't be computed.
+- **The required checks still report** under their own names and conclude success, by the gates R-656 built.
+
+*The data code loads, read from the code:*
+- `plan/requirements.yaml`: the validation gates refuse a threshold that names no live requirement of the right kind
+  (`crates/validation/src/gate/mod.rs`, `config` and `check_requirement`); `cargo xtask gate-report` reads each
+  requirement's `verify` (`xtask/src/gate_report.rs`).
+- `plan/tasks.yaml` and `plan/MILESTONES.md`: `cargo xtask gate-report`, for which task closes a review-checklist
+  requirement and which ids each gate block lists (`xtask/src/gate_report.rs`).
+- `plan/tasks/`: `cargo xtask reviews-check`, whose `Reviewers` field decides `reviews-complete`
+  (`xtask/src/reviews_check.rs`).
+- `docs/gui/design/` and `docs/gui/reference/`: the screenshot suites' artboards (`fixtures/screenshot/*/cases.json`),
+  the compass golden's reference (`xtask/src/compass_golden.rs`), the print-graph catalogue and the HTML references the
+  tests compare with.
+- The rest of `plan/` is read by the plan checks alone, which still run, or by a test as prose.
+
+*This narrows R-656, in the owner's later words.* R-656 recorded his words of 30 Oct 2026 on #351, "any doc/spec/data
+file read by a test, build script, codegen or xtask check must count as code, not docs". This ruling takes contracts,
+design documents, plan prose and root markdown off that list, though tests read them. What that costs, recorded rather
+than guarded: a head that changes only such a file does not run the tests that read it, which run on `main` once it
+merges (every run on `main` runs every job, R-656). Those are the tests that check a contract's text, the ledger
+register's corpus citations (`crates/ledger/tests/constants.rs`), the plan checks' own tests, `ai_review_rules`' copies
+of `AGENTS.md`, and the golden harness's search of `decisions.md` for a baseline's ruling (`xtask/src/golden.rs`, which
+fails only if a recorded ruling goes, and rulings are permanent). A heading renamed in a contract can so turn `main`
+red after a green pull request.
+
+*Applied per R-369:*
+- `scripts/ci_changes.sh` itself runs full CI, though it is a script: it decides what every pull request runs, so it is
+  the workflows' machinery, and a wrong edit to it would skip the very checks that catch it.
+- `scripts/contain.sh` runs full CI too, for the same reason: it is the `shell:` of the mutants steps and nextest's
+  wrapper of the job queue's tests, so a wrong edit to it breaks those runs, and only a full run would show it. The other
+  scripts stay docs-only: `check_no_atlas_params.sh` runs on every pull request whatever the verdict, and
+  `progress_banner.py` runs only after a merge, holding no check.
+- `.github/` is full CI whole, the pull-request template and `copilot-instructions.md` included, as the list names what
+  skips, and `.claude/`, `.cargo/`, `.config/`, `.gitignore` and the other dot-files run full CI as paths it doesn't
+  name.
+- `workbench/` is on the allowlist: no code reads it (R-159).
+- `docs_only` keeps its name in the workflows and the script, reading "changes no Principia code", so the gates, R-335's
+  `if:` and the qa checks that name it stand.
+- `scripts/ci_changes.sh doc-tests` and the step that ran its tests are removed: R-656's backstop, which R-662's "only
+  the cheap checks" ends.
+- A `mutants` shard no longer counts a `.rs` file under `docs/`, `plan/`, `scripts/` or `workbench/` as Rust to mutate,
+  as `docs/reference/prin-rs/` would otherwise set up and run every shard on a docs pull request. `mutants-check` passes
+  as it does on any diff with no mutant.
+- `xtask/tests/qa_R-656_ci_changes.rs` changes where this ruling changes the behaviour it tests, as R-335 allowed for
+  R-326 (an exception to R-290, for the orchestrator and the reviewers to confirm): its sample of files code reads, its
+  register citations, its detect case and its controls move to data code loads. Nothing else in it is weakened.
+- This ruling follows R-656 in the file: the numbers between them are on other branches.
+
+R-662 is in the "ci" group of `plan/rule_groups.yaml`.
