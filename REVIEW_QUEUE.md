@@ -1734,3 +1734,53 @@ words, so the task did not wait. The entry is for correcting the text.*
   quads and the `mock_tile_bounds` capture are unchanged, and `k = 4` gives two levels more. A control in
   `f3_fill_modes_quads_finer_only_in_fit` shows the divide-by-`k` rule failing. The three texts are not changed.
 - **Waits:** nothing built waits; REQ-GUI-230's real-engine Fit reads the screen floor, not this formula.
+
+## RQ-671: REQ-GUI-216's slowest-frame target is missed about as often with no console action as with one, in the wait on the device
+
+*Queued 2 Nov 2026 by TASK-M6-44, on perf review 5732685040 of PR #370. How REQ-GUI-216 is judged is a change to the
+requirement, so it is the owner's (R-369). Neither the limit nor the slowest-frame rule has been changed.*
+
+- **File, section:**
+  - `decisions.md`:12552, § "R-463 — …", K4: "The target: open and close each within one frame at 60 fps, 16.7 ms, at
+    every log size measured."
+  - `plan/requirements.yaml`:21168, REQ-GUI-216's statement: "the console must open and must close each within one
+    frame at 60 fps (16.7 ms), with an empty log, with 1 000 entries and with CONSOLE_ROWS entries, on the human's Mac".
+  - `plan/requirements.yaml`:21176, its verify: "after the fix each is under 16.7 ms at every size; review checklist
+    (perf reviewer): the breakdown names where the time went before the fix, the fix addresses it, and the after-table
+    meets the target".
+  - `plan/tasks/M6/TASK-M6-44.md`, § "Acceptance tests", the same words.
+  - `docs/gui/principia_render_gui_spec.md`:1778, § "G12. Console (`12_console.png`)": "Opening and closing it each
+    complete within one frame at 60 fps (16.7 ms), measured on the human's Mac before and after the fix".
+- **The figures:** job 702 at `ad1f9c1d`, ten release runs on the Mac with the queue otherwise empty. Each table has 120
+  frames, 15 cycles of 8, and each action cycle is followed on the same GUI by a control cycle of the same frames with
+  no input and the console closed.
+
+  | Arm | Tables that miss | Frames at or over 16.7 ms | Frames at or over 10 ms | Slowest frame | Largest CPU part of any frame |
+  |---|---:|---:|---:|---:|---:|
+  | Open and close | 3 of 30 | 3 of 3 600 | 31 of 3 600 | 28.31 ms | 3.07 ms |
+  | Control | 1 of 30 | 1 of 3 600 | 21 of 3 600 | 18.93 ms | 4.48 ms |
+
+  The four misses are `close: +2` 17.23 ms (wait 15.70), `close: click` 28.31 ms (wait 27.36), `open: +2` 25.36 ms (wait
+  24.78) and the control's `idle 4` 18.93 ms (wait 18.47). 3 against 1 and 31 against 21 don't separate the arms (one-sided
+  Fisher p about 0.31 and 0.10), and neither count shows that the arms are equal. Layout at most 1.84 ms and submit at most
+  4.26 ms in any row's slowest frame. Load 6.9 to 9.5 on 11 cores; Finder, mds, mds_stores, mdworker, WindowServer and
+  the Codex app were active, and none was stopped. The earlier job 691, on the code this harness now measures, without a
+  control, missed in 4 of 30 tables at 21.89 to 27.37 ms.
+- **The conflict:** the target as written is still missed, on opening and closing frames among others. The fix removed
+  the cost the requirement was written about (101 ms of rows at 10 000 entries, now at most 0.44 ms), and what is left
+  is occasional and in the wait on the device, including on frames with no console action. The texts don't say whether
+  a machine's stall counts against the console: "on the human's Mac" names no load and no treatment of a shared GPU.
+- **The question:** how REQ-GUI-216 is judged.
+- **Options seen:**
+  - (a) Keep it as written, the slowest frame of every table in every run: it stays unclosed until a run meets it, and
+    TASK-M6-44 doesn't merge meanwhile. The owner would need to say how the machine is prepared, since this one is shared.
+  - (b) Keep the slowest-frame rule and the limit, on a stated quiet machine (indexing and other apps off, or the owner's
+    own run), and accept that run's tables.
+  - (c) Judge the CPU part of the frame against 16.7 ms and report the wait: every frame here meets it (at most 4.48 ms).
+  - (d) Judge the action arm against the control: no more misses than the control, beyond what chance explains, over a
+    stated number of runs.
+  - (e) Judge a quantile instead of the slowest frame: over job 702's action arm, 99% of frames are under 10 ms.
+- **Applied meanwhile:** nothing. `TARGET_MS` and the slowest-frame judgement are unchanged, the harness reports MISSED
+  where a table misses, and no run was repeated in search of a pass. What changed is what the harness reports: the wait
+  apart from the CPU's work, and the control arm.
+- **Waits:** TASK-M6-44 (PR #370) and the closing of REQ-GUI-216. REQ-GUI-215 is met, in the same PR.
