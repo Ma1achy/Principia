@@ -28,7 +28,8 @@
 //!   test and GPU jobs wait on it alone and skip on its verdict (docs-only, or no GPU-path file); `ci-workspace` runs
 //!   its tests or, on a docs-only pull request, the cheap checks, and passes the verdict to the gate `ci`.
 //! - `ci_changes_no_skipped_job_reports_a_required_name`: every workflow that runs on pull requests has no
-//!   workflow-level `paths:` or `paths-ignore:`; the required checks are each reported by exactly one job; a job that
+//!   workflow-level `paths:` or `paths-ignore:`; the required checks are each reported by exactly one job, but
+//!   `mutants-check`, which `mutants.yml` posts and no job bears (R-656, the merge-ready run); a job that
 //!   can be skipped (a job-level `if:` or a `needs:`) is never named for a required check unless its `if:` is
 //!   `always()`; and a matrix job never bears a required check's name without its shard.
 //!
@@ -1067,8 +1068,23 @@ fn reports(id: &str, job: &Value) -> String {
     job.get("name").map(text).unwrap_or_else(|| id.to_owned())
 }
 
+/// The required checks a workflow posts through the Checks API rather than as a job, so that no run that skips the job
+/// reports it passed: `mutants-check`, pending until the merge-ready run posts its verdict (R-656; the owner's CI plan
+/// of 2 Nov 2026). Each with the workflow that posts it.
+const POSTED: [(&str, &str); 1] = [("mutants-check", "mutants.yml")];
+
 fn check_required(workflows: &[(String, String)]) {
     let mut found: Vec<(String, String)> = Vec::new();
+    for (check, poster) in POSTED {
+        let posts = workflows
+            .iter()
+            .any(|(f, yml)| f == poster && yml.contains(&format!("-f name={check} ")));
+        assert!(
+            posts,
+            "ci_changes: {poster} does not post the required check `{check}`"
+        );
+        found.push((check.to_owned(), format!("{poster}: posted")));
+    }
     for (file, yml) in workflows {
         let wf = parse(yml);
         let on = &wf["on"];
@@ -1098,6 +1114,10 @@ fn check_required(workflows: &[(String, String)]) {
                     "ci_changes: {file}'s matrix job `{id}` is named `{name}`, without its shard; skipped, it would \
                      report the required name `{name}`"
                 );
+                continue;
+            }
+            if POSTED.iter().any(|(c, _)| *c == name) {
+                found.push((name.clone(), format!("{file}: {id}")));
                 continue;
             }
             if !REQUIRED.contains(&name.as_str()) || !runs_on_prs {
@@ -1150,3 +1170,25 @@ negative_control!(
         check_required(&workflows)
     }
 );
+
+mod posted_by_a_job {
+    use super::*;
+    negative_control!(
+        ci_changes_no_skipped_job_reports_a_required_name,
+        "mutants.yml's verdict job named mutants-check, which the run of a label other than merge-ready skips",
+        expected = "the required check `mutants-check` is reported by 2 jobs",
+        {
+            let mut workflows = pull_request_workflows();
+            let at = workflows
+                .iter()
+                .position(|(f, _)| f == "mutants.yml")
+                .expect("ci_changes: no mutants.yml");
+            workflows[at].1 = edited(
+                ".github/workflows/mutants.yml",
+                "  mutants-verdict:\n",
+                "  mutants-check:\n",
+            );
+            check_required(&workflows)
+        }
+    );
+}
