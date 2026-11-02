@@ -29247,8 +29247,9 @@ for changed crates plus their dependents (target ≤10 min)." Items (3) and (5) 
   R-305's "passes trivially when the diff has no mutants" loses, recorded rather than guarded: a pull request that is
   not docs-only but has nothing to mutate, one whose Rust is only test files among them, now needs a label cycle before
   its `mutants-check` passes.
-- **Fix rounds are checked locally first (item 2).** A fix round runs the tests its fixes touch, their controls and its
-  mutants run through the job queue (R-658) on the head it is about to push; CI confirms that head.
+- **Fix rounds are checked locally first (item 2).** A fix round runs the tests its fixes touch, their controls, and its
+  mutants run where R-388 asks for one, through the job queue (R-658) on the head it is about to push; CI confirms
+  that head.
 - **Superseded `reviews` runs are cancelled (item 4).** `reviews.yml` keeps one `concurrency` group per pull request and
   event, its merge ref's, with `cancel-in-progress`, never cancelling a run on `main`. In R-656, this amends "Three keep
   none (below): `reviews.yml`, …" for `reviews.yml`; `no-atlas-params.yml` and `gemini-dispatch.yml` still keep none.
