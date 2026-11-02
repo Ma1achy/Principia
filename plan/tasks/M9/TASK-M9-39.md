@@ -1,7 +1,7 @@
 # TASK-M9-39 — The softened force law: Plummer softening, built after the core build, and the refusal of ε ≠ 0 lifted
 
 - **Milestone:** M9
-- **Closes:** REQ-INT-110, REQ-SYS-094, REQ-SYS-095
+- **Closes:** REQ-INT-111, REQ-SYS-094, REQ-SYS-095
 - **Depends on:** TASK-M3-01, TASK-M3-05, TASK-M3-06, TASK-M4-06, TASK-M4-04, TASK-M4-13
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics, perf
@@ -33,8 +33,8 @@
 - What RQ-656's ruling requires of the collision test, the regularised occupants, the Chazy classifier, `E_rel` and the ionisation gate, the decode's `V₀` with `virial_ratio` and the collision pole (REQ-VAL-027, REQ-COL-006, the fragment decode included), `η_E`'s `U` and its outcomes, and the substep law.
 
 ## Acceptance tests
-- `cargo test -p kernel softened_force` — the force equals the central difference of V at f64, for ε = 0, a small ε and an ε above the pair distance; ε = 0 is bit-identical to the Newtonian force and energy; ε is bitwise the sim-key value at every step and on every sample, along a run in which R changes; a softened leapfrog's drift under the softened V converges with step size; at ε ≠ 0 the decode stage's E₀ agrees with the kernel's E₀ under the softened V, the descriptor's V₀ being in the form RQ-656's ruling gives; controls: E read with the Newtonian V at ε ≠ 0 fails that drift bound, an E₀ read with the Newtonian V at ε ≠ 0 fails that agreement, and an ε recomputed from the state or from R(t) fails the bitwise check (REQ-INT-110).
-- `cargo test -p validation softened_gpu_parity` — on gpu-metal and on gpu-lavapipe, each its own run, per step and per decode, both pipelines fed the same input: with ε ≠ 0 each comparison, the FTLE shadow's included, is within its Tier-N tolerance of the f64 CPU; at ε = 0 the GPU output is the same bits as the Newtonian kernel's; control: a GPU build whose force drops ε fails (REQ-INT-110).
+- `cargo test -p kernel softened_force` — the force equals the central difference of V at f64, for ε = 0, a small ε and an ε above the pair distance; ε = 0 is bit-identical to the Newtonian force and energy; ε is bitwise the sim-key value at every step and on every sample, along a run in which R changes; a softened leapfrog's drift under the softened V converges with step size; at ε ≠ 0 the decode stage's E₀ agrees with the kernel's E₀ under the softened V, the descriptor's V₀ being in the form RQ-656's ruling gives; controls: E read with the Newtonian V at ε ≠ 0 fails that drift bound, an E₀ read with the Newtonian V at ε ≠ 0 fails that agreement, and an ε recomputed from the state or from R(t) fails the bitwise check (REQ-INT-111).
+- `cargo test -p validation softened_gpu_parity` — on gpu-metal and on gpu-lavapipe, each its own run, per step and per decode, both pipelines fed the same input: with ε ≠ 0 each comparison, the FTLE shadow's included, is within its Tier-N tolerance of the f64 CPU; at ε = 0 the GPU output is the same bits as the Newtonian kernel's; control: a GPU build whose force drops ε fails (REQ-INT-111).
 - `cargo test -p engine softened_dispatch` — every output header of a run carries ε beside r_coll, equal to the dispatched value's bits; an ε > 0 run is tagged and refused pooling with ε = 0; finite ε at each end of the range dispatches, and just outside it, negative ε, NaN and ±∞ are refused with the typed reason; ε = 0 dispatches untagged at any calibrated range; control: a header writer dropping ε fails (REQ-SYS-094).
 - Review checklist (physics reviewer) — the range of `ε`: the proposal measures what sets each end and states it, with its evidence; reviewer-checked, confirmed by the human and recorded in `decisions.md` (REQ-SYS-095).
 
