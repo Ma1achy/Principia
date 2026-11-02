@@ -107,3 +107,12 @@ orbits lie on nine planes, one per mass set, not "one plane". The sentence "Unde
 plane, a stack of planes indexed by mass, and one plane" is read with its last "one plane" as "nine planes, one per
 mass set" (PLAN.md § 2.3). The review is a record, so the text and its sha256 above are not changed; this note is the
 correction.
+
+**Note added 31 Oct 2026 (R-661, closing RQ-646).** A correction to `lit_review_2026-10.tex` § "Numerical reliability" and its
+typeset PDF: "Boekholt \& Portegies Zwart~\cite{boekholt2015} showed that, for ensembles of chaotic systems, conventional
+double-precision integrations can be statistically reliable even when individual trajectories are not", followed by "Principia
+takes these results as its honesty requirement". That paper is f64 against a converged code at N = 3. Its error is unbiased only
+once runs violating energy conservation by more than 10% are excluded, and its § 7 states its KS result with that criterion too.
+It has no f32 run. That f32 statistics agree is a hypothesis Principia will measure, and no paper establishes it
+(`../2026-10-31_precision_set/README.md`). The review is a record, so the text and its sha256 above are not changed; this note
+is the correction.
