@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
-# The `shell:` of `cargo xtask ci` in `xtask-ci` (.github/workflows/ci.yml): runs the step's script exactly as the
+# The `shell:` of `cargo xtask ci` in `xtask-ci`, and of the heavy steps of the `ci` shards and `gpu-kernel`
+# (.github/workflows/ci.yml): runs the step's script exactly as the
 # default shell would (`bash -e {0}`), samples the runner's disk beside it, and exits with the script's own status. No
 # gate reads what it measures, and nothing it does can change that status: it has no `set -e`, and every sampling
 # failure, a write to a full disk among them, is ignored. It is here and not in `scripts/` because `.github/` is full CI
 # whole, as a step's shell must be (R-662).
 #
-# Each sample goes to $RUNNER_TEMP/runner-disk.log, which the job uploads. A runner that dies uploads nothing, so a
+# Each sample goes to $RUNNER_TEMP/runner-disk.log, which `xtask-ci` uploads. A runner that dies uploads nothing, so a
 # coarse part also goes to the step's log: the first sample, every fifth, and every sample once under 2 GiB is free.
 # Bounded: at most 480 samples of at most 40 `du` lines, more than the runner's 6 h job limit at the 60 s interval.
 set -u
