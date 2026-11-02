@@ -13419,8 +13419,10 @@ scope tree (§G3; gui G7); the render contract's R-467 bullet follows the stippl
 ## R-468 — With the egui layer hidden, F3 fills the window by one of two modes: Extend, the default and R-406's, more of the field at the same scale, or Fit, the view's square scaled to the window's shorter side, never stretched, the rest canvas background; chosen in View › "F3 fills by: Extend / Fit" for the session, a view change and never an edit *(amends R-406)*
 *Amended in part by R-472 (20 Oct 2026; an image export, a snapshot and a share link name the fill mode in their
 sidecar, `f3_fill=extend|fit`, and present mode follows it).*
+*Corrected in part by R-668 (2 Nov 2026; RQ-666 (a): E3's mock split formula reads `frac = quad width × k / shown
+figure width`, so only Fit refines, as E3 says).*
 *Still in force: all of it, E4's "for the session" included (R-472, flagged); R-472 adds the sidecar's `f3_fill` and
-present mode following the mode.*
+present mode following the mode; E3's mock split formula reads as R-668 corrects it.*
 *20 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G1. Rules that hold everywhere" (the F3 bullet),
 § "G2. Explore — the everyday view (`01_main.png`)" (the top bar) and § "Export & share" (the Present line),
 `docs/contracts/principia_chart_decoder_contract.md` § "Past the unit square — each axis's extension type (R-407)" and
@@ -13490,6 +13492,10 @@ recorded verbatim:
   outside Fit, so the shown layout's and Extend's quads, and the `mock_tile_bounds` capture, are unchanged and only Fit
   refines (gui review 5585209592 of PR #253, G6, applied per R-369). *As first ported:* "is read in screen points, so
   they refine under Fit".
+  *2 Nov 2026 (R-668, RQ-666 (a)):* the formula reads `frac = quad width × k / shown figure width`: `frac` grows with
+  `k`, so more quads pass the split threshold and Fit refines, about `log₂ k` levels, as this clause and the owner's
+  "it requests finer quads" say; at `k = 1` it is unchanged. *Was:* "`frac = quad width / (shown figure width × k)`",
+  which makes `frac` smaller under Fit and coarsens it.
 - **E4. The menu.** View holds, in order: Home (R-466), a separator, F3 hide, **F3 fills by: Extend / Fit** (one row,
   its two options as radio buttons, the chosen one marked), Debug view (R-467 D5) and reset layout (R-462). The row is
   chosen with the layer shown and acts at the next F3. The mode is `ViewUI`'s `F3Fill { Extend, Fit }`, the GUI's own
@@ -29279,3 +29285,45 @@ The owner's words (31 Oct 2026), verbatim, from that day's message:
 *What it decides:* sccache is not enabled for local builds or the job queue, which refines R-658, item 4. It changes nothing in CI, which does not use it.
 
 R-666 is in the "process" group of `plan/rule_groups.yaml`.
+
+## R-668 — The 1 Nov library triage rulings: the site-note families stay, marked "operator's own search, unreviewed", closure peeks only and never targets, `bhhsat` with them unless Davoust & Broucke's comparison matches, `suvakov_pc` closure only; a digit match is a trace, marked "inferred"; values printed in a paper, or in a public database a paper points to, are stored with credit and citation, an author emailed only as a last resort; unreviewed and AI-assisted sources are peeks only; hierarchical triples are parked with the v2+ 3D extension; RQ-666 is confirmed; the kernel stays at `G = 1`, another `G` converted at the import boundary and what can't be converted refused *(closes RQ-666 and RQ-668; corrects R-468)*
+*1 Nov 2026 · the owner's two messages of that day on the library triage, the second reversing the first's item 1; ported 2 Nov 2026; applied in `docs/design/principia_dd_replication.md` § 3 (a dated paragraph), § 5.12 (a dated line) and § 5.14 (a bullet), `docs/contracts/principia_integrator_contract.md` Part 5 (a dated paragraph), `docs/incoming/2026-10-31_library_triage/SUMMARY.md` (a dated note under its open questions), R-468's forward line and E3 (a dated correction), `docs/archive/review_queue/M0.md` (RQ-666 moved; RQ-668 filed and moved with this ruling), `REVIEW_QUEUE.md`, REQ-GUI-229, REQ-VAL-330 and REQ-VAL-331 (reqio), REQ-SYS-096 (reqio, new), TASK-M3-66 (new), TASK-M6-47, TASK-M9-25 and TASK-M9-37 (notes), `plan/tasks.yaml` and `plan/rule_groups.yaml`*
+
+The owner's words, 1 Nov 2026, verbatim, the first message:
+
+> Rulings on the triage: 1: the five site-note families are almost certainly the atlas operator's unpublished "hunt" orbits, which my agreement with them excludes from use. Leave them out entirely (not closure-only), and keep them out of every target and output. Check bhhsat separately: if it traces to the published Broucke–Hadjidemetriou–Hénon satellites (Belgrade site / paper), it's usable; else out. suvakov_pc (personal communication): closure-only. 2: yes, a digit match counts as tracing; mark "inferred". 3 and 9: per my standing data-reuse rule, values published in a paper or a public database a paper points to may be stored with credit and citation, no permission needed. Commit the SJTU table VALUES with citation (not their code); transcribe Li, Tao, Li & Liao 2025 Table 1 (twice, diffed). Don't email authors (last resort only). 4: Kapela & Simó 2017 + Davoust & Broucke 1982 suffice, plus Titov's rotating-frame orbits. 5: hierarchical triples out of scope for now; park them with the v2+ 3D extension; shrink the M9 list accordingly. 6: unreviewed/AI-assisted sources (Habl, Majumder, Adamini, and the 2026 preprints in papers-11 to 13) are peeks only, never targets. 7: yes, if a sample checks against the paper. 8: commit the Horn paper and the 9.7 MB file once CC BY is confirmed; the 930 MB file stays out. 10: commit both BPZ cold files. RQ-666: confirmed. RQ-668: kernel stays G = 1; convert other G at the import boundary (time rescaling), refuse what can't be converted. For the other RQs: apply your recommendation under R-369 wherever it follows from existing rulings, and batch only genuine choices (physics, scope, values, cost) for me with options. Library: papers-11, -12 and -13 are now added (INDEX.csv updated). Parischewsky 2023 is free on arXiv (2108.06335).
+
+The second message, the same day, item (1), verbatim:
+
+> (1) Site-note families: reverse my removal instruction. Evidence says they're the operator's own search orbits inside the CC BY atlas, not the excluded hunt orbits (my earlier claim was a guess). Keep them; mark them "operator's own search, unreviewed"; closure peeks only, never targets (same as rule 6). bhhsat: same treatment unless the Davoust & Broucke comparison matches, in which case cite that.
+
+*Context.* The numbered items answer the ten open questions of `docs/incoming/2026-10-31_library_triage/SUMMARY.md` § "Open questions for the owner", in their order. RQ-666 is R-468 E3's mock split formula; RQ-668, filed here from the orchestrator's note and moved with this ruling, is `check_carried`'s acceptance of any `g`.
+
+*What it decides:*
+
+- **Item 1, as the second message reverses it.** The five site-note families (`r4new`, `rosette`, `bhhsat`, `bhunt`, `pancake`; 81 rows of the atlas snapshot) stay in the committed catalogue, marked "operator's own search, unreviewed". They are closure peeks only, never targets, as item 6's unreviewed sources are. `bhhsat` is treated the same unless the comparison with Davoust & Broucke 1982 matches, in which case that paper is cited for it. `suvakov_pc` (personal communication) is closure only. The first message's removal is withdrawn by the second: nothing leaves the catalogue.
+- **Item 2.** A digit match counts as a trace; a row so traced is marked "inferred".
+- **Items 3 and 9: the data-reuse rule, the owner's standing rule as he states it.** Values published in a paper, or in a public database a paper points to, may be stored with credit and citation, with no permission needed. The SJTU tables' values are committed with their citation, never their code; Li, Tao, Li & Liao 2025's Table 1 is transcribed twice and diffed (R-594 item 4). Authors are not emailed, but as a last resort.
+- **Item 4.** For rotating-frame closure, Kapela & Simó 2017 and Davoust & Broucke 1982 suffice, with Titov's rotating-frame orbits.
+- **Item 5.** Hierarchical triples are out of scope for now, parked with the v2+ 3D extension, and the triage's M9 list shrinks by them. V-11 (REQ-VAL-330), whose target is "hierarchical stability limits", is parked with them: it reads "not scored: parked" in the M9 report, and its requirement, calibration, task and data stay (applied per R-369: the target is a hierarchical triple by its own statement, and parking retires nothing). The binary-plus-single targets TR-1, MK-1 and SL-1 are not hierarchical triples; whether the parking reaches them is RQ-593's residual.
+- **Item 6.** Unreviewed and AI-assisted sources (Habl, Majumder, Adamini, and the 2026 preprints in papers-11 to 13) are peeks only, never targets.
+- **Item 7.** Li & Liao's free-fall table replaces hand transcription for LL-1 if a sample checks against the paper.
+- **Item 8.** The Horn paper and its 9.7 MB file are committed once CC BY is confirmed; the 930 MB file stays out.
+- **Item 10.** Both BPZ cold files are committed (done by R-661's port).
+- **RQ-666, option (a).** R-468 E3's split formula, REQ-GUI-229's note and TASK-M6-47's Deliverables read `frac = quad width × k / shown figure width`, each with a *Was*. It is identical at `k = 1`, and the code already reads it (TASK-M6-47, PR #371).
+- **RQ-668.** The kernel stays at `G = 1`, and `M = I = 1` (integrator contract Part 5). A source in another `G` is converted at the import boundary, by the recorded rescale (`principia_dd_validation_orbits.md` § 2, "The recorded rescale", whose velocities `vᵢ/√(GM)` are its time rescaling); a source that cannot be converted is refused there. The import already does both:
+  `validation::import` (TASK-M2-20) applies the rescale and refuses a `G` or a mass that is not finite and positive. What
+  was missing is at dispatch, which refuses a `SimUniforms` whose `g` or `m_total` is not 1, with a typed reason, as it refuses `ε ≠ 0`: REQ-SYS-096, built by TASK-M3-66.
+
+*Applied per R-369:*
+
+- **`m_total` beside `g`.** The owner's words name `G`. `SimUniforms` carries both `g` and `m_total`, each documented as 1, and Part 5 fixes `M = Σmᵢ = 1` beside `G = 1`; a run under `m_total = 2` would be the same mislabelled run as one under `g = 2`. So the refusal covers both. (The pass that recommended this ruling found no `m_total` field; there is one, `crates/engine/src/contract/sim_uniforms.rs`.)
+- **The refusal's task.** TASK-M3-06, which built `check_carried`, is merged; the refusal is a new task in M3, TASK-M3-66. TASK-M3-42 is not reused, being TASK-M9-02's old id (`principia_dd_replication.md` § 12.4).
+- **The data actions** (items 1 to 3, 7 and 8: marking the site-note rows and the inferred traces, committing the SJTU values, transcribing Li, Tao, Li & Liao 2025's Table 1 and Hénon 1974, the Horn files once CC BY is confirmed, LL-1's sample check) are data work for the orchestrator's data PRs, under these rules; this port records the rules and changes no data.
+- **"For the other RQs":** the recommendations the owner adopts there that follow from existing rulings are applied by a later port; this one applies only what the owner's messages of 1 and 2 Nov name.
+
+*What it corrects:* **R-468**, E3's split formula (RQ-666). It closes **RQ-666** and **RQ-668**.
+
+R-668 is in the "design" group of `plan/rule_groups.yaml`, with R-630 and R-661.
+
+Adds REQ-SYS-096; changes REQ-GUI-229, REQ-VAL-330 and REQ-VAL-331 (notes).

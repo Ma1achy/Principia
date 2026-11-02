@@ -322,6 +322,16 @@ prefix `7d160daf` matches, tracked, no open licence seen. It stays until ruled, 
    acceptable, and should the authors be asked for their long-decimal data? Does question 4's answer change with it?
 10. **BPZ cold records.** Commit both files (CC BY 4.0, 11.6 and 10.6 MB), or a sample? Is BZ-1 reopened for the cold sets?
 
+*Answered 1 Nov 2026 (R-668).* In
+order: 1, the five families stay, marked "operator's own search, unreviewed", closure peeks only, never targets (the
+owner's second message reversing his first), `bhhsat` the same unless Davoust & Broucke's comparison matches,
+`suvakov_pc` closure only; 2, yes, marked "inferred"; 3 and 9, values with credit and citation under the owner's
+data-reuse rule, the SJTU values committed, Li, Tao, Li & Liao 2025's Table 1 transcribed twice and diffed, authors
+emailed only as a last resort; 4, Kapela & Simó 2017 and Davoust & Broucke 1982 suffice, with Titov's rotating-frame
+orbits; 5, out of scope for now, parked with the v2+ 3D extension, the M9 list shrinking by them; 6, peeks only;
+7, yes, if a sample checks against the paper; 8, the paper and the 9.7 MB file once CC BY is confirmed, the 930 MB file
+out; 10, both committed (R-661). This record's rows are not rewritten; the rulings apply to them as read.
+
 **For the queue, once you say so; this PR files nothing:** PLAN row BR-1 still says the data isn't available, stale against
 R-641. REQ-VAL-319 and design 5.12 say Manwadkar's Table 1 where the probabilities are in Table 2. PLAN's 437 L≠0 rows list
 families summing to 435; the other 2 are `rose` rows with refinement drift. RQ-640 and RQ-642 as above. PLAN 2.1 as above.

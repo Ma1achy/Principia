@@ -242,7 +242,7 @@ canonical_spec §1 item 6 and §11: "validate physics numerically", natively, be
 - The CPU-side parity suite (`computeIC`).
 
 <!-- gate:M3 -->
-**Exit gate — 231 requirements** (and every earlier gate still green):
+**Exit gate — 232 requirements** (and every earlier gate still green):
 
 - ENC (1): REQ-ENC-033
 - CHART (4): REQ-CHART-059, REQ-CHART-072, REQ-CHART-085…086
@@ -256,7 +256,7 @@ canonical_spec §1 item 6 and §11: "validate physics numerically", natively, be
 - TOOL (14): REQ-TOOL-031…039, REQ-TOOL-125, REQ-TOOL-132, REQ-TOOL-149…150, REQ-TOOL-219
 - VAL (57): REQ-VAL-025…041, REQ-VAL-043…055, REQ-VAL-115, REQ-VAL-117, REQ-VAL-119, REQ-VAL-123…124, REQ-VAL-126, REQ-VAL-128…136, REQ-VAL-139, REQ-VAL-146, REQ-VAL-168, REQ-VAL-170…171, REQ-VAL-190…191, REQ-VAL-195, REQ-VAL-250…251, REQ-VAL-336…337
 - PERF (6): REQ-PERF-001…004, REQ-PERF-083, REQ-PERF-085
-- SYS (3): REQ-SYS-017…019
+- SYS (4): REQ-SYS-017…019, REQ-SYS-096
 <!-- /gate:M3 -->
 
 ## M4 — Flat compute on the GPU (deep_zoom layer 0)

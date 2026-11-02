@@ -115,6 +115,20 @@ al.'s databases, Simó's archive and Li & Liao's tables state no terms; they are
 stays the provenance check. *Was:* "Hristov et al.'s databases, Simó's and Li & Liao's tables state no terms, so they
 are fetched and hash-checked, not committed, while RQ-579 is open." The atlas's hunt orbits are not in the snapshot and stay out until the operator publishes them.
 
+*1 Nov 2026 (R-668, the owner's triage rulings):*
+- **The site-note families** (`r4new`, `rosette`, `bhhsat`, `bhunt`, `pancake`; 81 rows of OC26's snapshot) stay in it,
+  marked "operator's own search, unreviewed": closure peeks only, never targets. `bhhsat` is treated so unless its
+  comparison with Davoust & Broucke 1982 matches, in which case that paper is cited for it. `suvakov_pc` (personal
+  communication) is closure only.
+- **A digit match is a trace**, and a row so traced is marked "inferred" (HP27's 97 `hristov2026` rows, "inferred by
+  matching", among them).
+- **Data reuse** (the owner's standing rule): values published in a paper, or in a public database a paper points to,
+  may be stored with credit and citation, with no permission needed; a code is not. An author is emailed only as a last
+  resort.
+- **Unreviewed and AI-assisted sources** (Habl, Majumder, Adamini, the 2026 preprints in the library's papers-11 to 13)
+  are peeks only (§ 12.5), never targets.
+- **Rotating-frame closure** takes Kapela & Simó 2017, Davoust & Broucke 1982 and Titov's rotating-frame orbits.
+
 ---
 
 ## 4. Three findings carried over from the plan
@@ -463,6 +477,9 @@ split isn't clean; none of the five splits cleanly (R-639), so all five are RQ-6
 RQ-608. R-637 closes RQ-598: V-11's primaries are fetched (Part I held locally, never committed; Part II committed,
 CC BY 4.0), and V-11 proceeds from Part I, read from the University of Turku repository's version (R-638). The
 data-not-in-the-repo row above stands for GG-1 and BR-1 only as far as the authors' full data goes (§ 5.10's note).
+*1 Nov 2026 (R-668, item 5):* hierarchical triples are parked with the v2+ 3D extension. V-11, "hierarchical stability
+limits", is parked with them: it reads "not scored: parked" in the M9 report, its requirement, calibration, task and data
+kept. TR-1, MK-1 and SL-1 are binary-plus-single scatterings, not hierarchical triples (RQ-593's residual).
 
 | Target | Requirement | L / T | Reproduces | Chart | Milestone | Compare | Tolerance | Task |
 |---|---|---|---|---|---|---|---|---|
@@ -506,6 +523,9 @@ no requirement while RQ-577 is open.
   beside uncut, is compatible. REQ-VAL-199 measures parting time, a different quantity. *Was (R-661):* "Boekholt & Portegies Zwart 2015, ensemble
   statistics surviving trajectory error: 3D Plummer initial conditions. Its method is what REQ-VAL-199 and "never discard a copy" already apply."
 - **D-6**, the prototype's other numbers, as a list: RQ-587 (§ 5.11).
+- **Hierarchical triples** (R-668, 1 Nov 2026): out of scope for now, parked with the v2+ 3D extension. Among the
+  library's sources, Vynatheya, Harrington, Tory, Hayashi, HopOn, Mushkin, Antoniadou and Figueras; among the targets,
+  V-11 (§ 5.12), kept and reading "not scored: parked".
 
 Most of the scattering literature is 3D; only planar subsets apply. Results with no published data and no figure
 detail stay qualitative until the paper is in hand.

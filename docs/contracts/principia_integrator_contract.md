@@ -617,6 +617,11 @@ State the boundary explicitly in code: values may diverge by precision; **branch
 
 **Everything runs in one fixed dimensionless N-body unit system: `M = Σmᵢ = 1`, `G = 1`, `I = 1`.** This is not a new choice — `I = 1` is the *same* scale gauge as the config decoder's `R̃ = 1` (chart contract Part 1). The integrator **inherits** the scale gauge; it does not impose one.
 
+*1 Nov 2026 (R-668, RQ-668):* the kernel stays at `G = 1` and `M = 1`. A source in another `G` (or total mass) is
+converted at the import boundary, by the recorded rescale (`principia_dd_validation_orbits.md` § 2,
+"The recorded rescale", its velocities `vᵢ/√(GM)` the time rescaling), and one that can't be converted is refused there. Dispatch
+refuses a `SimUniforms` whose `g` or `m_total` is not 1, with a typed reason, as it refuses `ε ≠ 0` (REQ-SYS-096).
+
 Consequence, worth stating so an agent doesn't add a per-IC time rescale: because the similarity symmetry `r → λr, t → λ^{3/2}t` is gauged out (scale fixed to 1), a **single global horizon `T` is legitimate across every pixel**. Two different-scale ICs would need different physical `T` to reach the same dynamical state — but there are no different-scale ICs; scale is fixed. That is *why* one `T` works for the whole map.
 
 - **`T` is physical time in these units, not a step count.** Default 50, and it can be raised or lowered (R-575, amending R-132): `T ∈ [0.4, 200]` (R-610, closing RQ-555): the floor is one escape window (0.4 provisional, R-29; the floor follows the window's value), below which the escape arm cannot fire, and the settings say so; the cap stays at 200 until long horizons are measured for cost. *Was:* "`T ∈ (0, 200]` meanwhile, the lowest value and the cap being RQ-555". Tens to a couple hundred dynamical (crossing) times, the window in which Burrau resolves into binary + escaper, at the default and above. *Was:* "`T ∈ [50, 200]`, default 50 (R-132)".
