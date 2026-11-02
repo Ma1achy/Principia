@@ -841,19 +841,101 @@ fn mock_compass_steer_physical_moves_the_frame_by_the_slice_axis_rule() {
                 }
                 let at = format!("({i}, {j}), {frame:?}, Space {by_space}");
                 let snapshot = app.snapshot();
-                assert_eq!(snapshot.sim.slice.frame, want, "{at}");
-                let kind = if want == frame { "basis" } else { "other" };
-                assert_eq!(setfields(&app, rows), [kind], "one SetField: {at}");
-                assert_eq!(snapshot.history.undo_depth, depth + 1, "one entry: {at}");
-                let after = &snapshot.sim.plane;
-                assert_eq!(after.z0, before.z0, "{at}");
-                let cut = |q: &Latent, k: usize| q[k].abs() > 0.5 * norm(q);
-                assert!(cut(&after.q1, i) && cut(&after.q2, j), "the plane: {at}");
+                let steered = Steered {
+                    frame: snapshot.sim.slice.frame,
+                    fields: setfields(&app, rows),
+                    depth: snapshot.history.undo_depth,
+                    plane: snapshot.sim.plane.clone(),
+                };
+                let start = Steered {
+                    frame,
+                    fields: Vec::new(),
+                    depth,
+                    plane: before.clone(),
+                };
+                check_frame_steer(&steered, &start, want, (i, j), &at);
                 ctrl_z(&mut h, &mut app);
                 let snapshot = app.snapshot();
-                assert_eq!(snapshot.sim.plane, before, "one Ctrl+Z: {at}");
-                assert_eq!(snapshot.sim.slice.frame, frame, "one Ctrl+Z: {at}");
-                assert_eq!(snapshot.history.undo_depth, depth, "{at}");
+                let undone = Steered {
+                    frame: snapshot.sim.slice.frame,
+                    fields: Vec::new(),
+                    depth: snapshot.history.undo_depth,
+                    plane: snapshot.sim.plane.clone(),
+                };
+                check_undone_steer(&undone, &start, &at);
+                if (i, j) == (2, 5) && frame == slice_frame(q3, q3, q3) {
+                    rejects("a steer that moved nothing", || {
+                        check_frame_steer(&start, &start, want, (i, j), &at)
+                    });
+                    rejects("a frame steer logged as a basis edit", || {
+                        check_frame_steer(
+                            &Steered {
+                                fields: vec!["basis"],
+                                ..steered.clone()
+                            },
+                            &start,
+                            want,
+                            (i, j),
+                            &at,
+                        )
+                    });
+                    rejects("a steer in two entries", || {
+                        check_frame_steer(
+                            &Steered {
+                                depth: depth + 2,
+                                ..steered.clone()
+                            },
+                            &start,
+                            want,
+                            (i, j),
+                            &at,
+                        )
+                    });
+                    rejects("a steer that moved z₀", || {
+                        let mut moved = steered.clone();
+                        moved.plane.z0[0] += 0.1;
+                        check_frame_steer(&moved, &start, want, (i, j), &at)
+                    });
+                    rejects("a steer onto the cell's axes the other way round", || {
+                        let mut swapped = steered.clone();
+                        std::mem::swap(&mut swapped.plane.q1, &mut swapped.plane.q2);
+                        check_frame_steer(&swapped, &start, want, (i, j), &at)
+                    });
+                    rejects("an undo that leaves the frame", || {
+                        check_undone_steer(
+                            &Steered {
+                                frame: want,
+                                ..undone.clone()
+                            },
+                            &start,
+                            &at,
+                        )
+                    });
+                    rejects("an undo that leaves the plane", || {
+                        check_undone_steer(
+                            &Steered {
+                                plane: steered.plane.clone(),
+                                ..undone.clone()
+                            },
+                            &start,
+                            &at,
+                        )
+                    });
+                }
+                if (i, j) == (2, 3) && frame == slice_frame(q3, q3, q3) {
+                    rejects("a frame left alone, logged as a frame edit", || {
+                        check_frame_steer(
+                            &Steered {
+                                fields: vec!["other"],
+                                ..steered.clone()
+                            },
+                            &start,
+                            want,
+                            (i, j),
+                            &at,
+                        )
+                    });
+                }
             }
         }
     }
@@ -872,6 +954,47 @@ fn mock_compass_steer_physical_moves_the_frame_by_the_slice_axis_rule() {
     });
 }
 
+/// The state a steer edits: the slice frame, the SetFields it logged, the undo depth and the plane.
+#[derive(Clone, Debug)]
+struct Steered {
+    frame: SliceFrame,
+    fields: Vec<&'static str>,
+    depth: u32,
+    plane: Plane,
+}
+
+/// Asserts the steer onto cell `(i, j)` from `start` left `got`: the frame `want`, one SetField, on the frame where it
+/// moved and on the basis alone where not, one entry, `z₀` kept, the plane on the cell's axes.
+fn check_frame_steer(
+    got: &Steered,
+    start: &Steered,
+    want: SliceFrame,
+    (i, j): (usize, usize),
+    at: &str,
+) {
+    assert_eq!(got.frame, want, "{at}");
+    let kind = if want == start.frame {
+        "basis"
+    } else {
+        "other"
+    };
+    assert_eq!(got.fields, [kind], "one SetField: {at}");
+    assert_eq!(got.depth, start.depth + 1, "one entry: {at}");
+    assert_eq!(got.plane.z0, start.plane.z0, "{at}");
+    let cut = |q: &Latent, k: usize| q[k].abs() > 0.5 * norm(q);
+    assert!(
+        cut(&got.plane.q1, i) && cut(&got.plane.q2, j),
+        "the plane: {at}"
+    );
+}
+
+/// Asserts one Ctrl+Z after a steer left `got` the state `start`: its plane, its frame and its depth.
+fn check_undone_steer(got: &Steered, start: &Steered, at: &str) {
+    assert_eq!(got.plane, start.plane, "one Ctrl+Z: {at}");
+    assert_eq!(got.frame, start.frame, "one Ctrl+Z: {at}");
+    assert_eq!(got.depth, start.depth, "{at}");
+}
+
 /// The refusals and empty cells are as they were: a refused steer leaves the frame and logs, whatever the plane would
 /// have taken, and `steer_on` answers as `steer` does.
 #[test]
@@ -883,25 +1006,81 @@ fn mock_compass_steer_physical_a_refused_steer_keeps_the_frame() {
     let _ = h.frame(&mut app, Vec::new());
     let before = app.snapshot().sim.plane.clone();
     let (rows, depth) = (app.console().len(), app.snapshot().history.undo_depth);
+    let start = Steered {
+        frame,
+        fields: Vec::new(),
+        depth,
+        plane: before.clone(),
+    };
     click_cell(&mut h, &mut app, 2, 5);
     let line = refusal_line(Set::Jacobi, 2, 5, Refusal::EnergyShell);
-    assert!(app.console()[rows..].iter().any(|e| e.message == line));
-    assert!(setfields(&app, rows).is_empty(), "no SetField");
-    assert_eq!(app.snapshot().sim.slice.frame, frame);
-    assert_eq!(app.snapshot().sim.plane, before);
-    assert_eq!(app.snapshot().history.undo_depth, depth);
+    let logged: Vec<String> = app.console()[rows..]
+        .iter()
+        .map(|e| e.message.clone())
+        .collect();
+    let refused = Steered {
+        frame: app.snapshot().sim.slice.frame,
+        fields: setfields(&app, rows),
+        depth: app.snapshot().history.undo_depth,
+        plane: app.snapshot().sim.plane.clone(),
+    };
+    check_refused(&logged, &line, &refused, &start);
+    rejects("a refusal not logged", || {
+        check_refused(&logged[..0], &line, &refused, &start)
+    });
+    rejects("a refused steer that moved the frame", || {
+        check_refused(
+            &logged,
+            &line,
+            &Steered {
+                frame: slice_frame(0, 0, 0),
+                ..refused.clone()
+            },
+            &start,
+        )
+    });
+    rejects("a refused steer that made an edit", || {
+        check_refused(
+            &logged,
+            &line,
+            &Steered {
+                fields: vec!["other"],
+                depth: depth + 1,
+                ..refused.clone()
+            },
+            &start,
+        )
+    });
     let sim = app.snapshot().sim.clone();
     assert_eq!(
         steer_on(&d, Set::Jacobi, &sim, 2, 5),
         Some(Err(Refusal::EnergyShell))
     );
     for (i, j) in [(0, 0), (5, 2), (7, 7), (0, LATENT_DIM)] {
-        assert_eq!(steer_on(&d, Set::Jacobi, &sim, i, j), None, "({i}, {j})");
+        check_empty_cell(steer_on(&d, Set::Jacobi, &sim, i, j), (i, j));
     }
-    assert!(steer_on(&identity(), Set::Jacobi, &sim, 6, 7).is_some());
+    let cell = steer_on(&identity(), Set::Jacobi, &sim, 6, 7);
+    assert!(cell.is_some());
+    rejects("a cell of the upper triangle read as empty", || {
+        check_empty_cell(cell, (6, 7))
+    });
     // Control: an accepted steer is no refusal.
     let accepted = steer_on(&identity(), Set::Jacobi, &sim, 2, 5);
     rejects("a steer accepted on a refused case", || {
         assert_eq!(accepted, Some(Err(Refusal::EnergyShell)))
     });
+}
+
+/// Asserts a refused steer logged `line` among `logged` and left `got` the state `start`, with no SetField.
+fn check_refused(logged: &[String], line: &str, got: &Steered, start: &Steered) {
+    assert!(logged.iter().any(|m| m == line));
+    assert!(got.fields.is_empty(), "no SetField");
+    assert_eq!(got.frame, start.frame);
+    assert_eq!(got.plane, start.plane);
+    assert_eq!(got.depth, start.depth);
+}
+
+/// Asserts the cell `(i, j)` steers nothing: `got` is `None`.
+fn check_empty_cell<T: std::fmt::Debug>(got: Option<T>, (i, j): (usize, usize)) {
+    assert!(got.is_none(), "({i}, {j}): {got:?}");
 }

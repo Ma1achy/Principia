@@ -6,7 +6,7 @@
 
 use std::f64::consts::PI;
 
-use eframe::egui::{Key, Modifiers};
+use eframe::egui::{vec2, Key, Modifiers, Rect};
 use engine::contract::set_field::SetField;
 use engine::contract::sim_config::{Latent, Lock, Plane, SliceFrame};
 use engine::contract::view_ui::{KeyMode, Mode};
@@ -16,7 +16,8 @@ use super::support::{click_scope, focus, frame_texts, press, rejects};
 use crate::app::App;
 use crate::explore::compass::views::{CompassView, GridPlace};
 use crate::explore::compass::{
-    self, choices, edge_label, pick_edit, Edge, Iso, Shows, DEPTH_EDGE, HEIGHT_EDGE, WIDTH_EDGE,
+    self, choices, edge_label, pick_edit, Drawing, Edge, Iso, Shows, DEPTH_EDGE, HEIGHT_EDGE,
+    WIDTH_EDGE,
 };
 use crate::explore::manifold_view::chart::basis_text;
 use crate::explore::manifold_view::{
@@ -132,6 +133,25 @@ fn check_on_edges(h: &Headless, app: &App<MockSide>, want: [&str; 3]) {
     }
 }
 
+/// Asserts the button `id`, placed at `placed`, is its painted text's width `text_width` and the label size, each with
+/// the padding round it.
+fn check_padded(id: &str, placed: Rect, text_width: f32) {
+    let pad = 2.0 * compass::AXIS_BUTTON_PAD;
+    assert!(
+        (placed.width() - (text_width + pad)).abs() < 1.0,
+        "{id}'s width: {placed:?}"
+    );
+    assert!(
+        (placed.height() - (compass::LABEL_SIZE + pad)).abs() < 0.5,
+        "{id}'s height: {placed:?}"
+    );
+}
+
+/// Asserts the drawing has corner numbers exactly where `shown` says.
+fn check_numbers(d: &Drawing, shown: bool) {
+    assert_eq!(!d.numbers.is_empty(), shown, "the numbers: {:?}", d.numbers);
+}
+
 #[test]
 fn mock_cube_axis_buttons_sit_on_their_edges_in_both_modes() {
     let (mut app, mut h) = app_at(&plane(&view(0.0, 0.0, 0.0, 1.0), [0.0, 0.0, 0.0]));
@@ -139,9 +159,11 @@ fn mock_cube_axis_buttons_sit_on_their_edges_in_both_modes() {
     check_on_edges(&h, &app, want);
     let shapes = compass_shapes(&mut h, &mut app);
     check_painted(&shapes, &drawing(&h, &app));
-    assert!(drawing(&h, &app).numbers.is_empty(), "tilt has no numbers");
+    let tilt = drawing(&h, &app);
+    check_numbers(&tilt, false);
     // Each button is its text and the padding round it, the text painted over it.
     let painted = super::compass_support::texts(&shapes);
+    let mut sized = Vec::new();
     for (id, text) in [
         (COMPASS_H, want[0]),
         (COMPASS_D, want[1]),
@@ -152,20 +174,14 @@ fn mock_cube_axis_buttons_sit_on_their_edges_in_both_modes() {
             .find(|t| t.0 == text)
             .unwrap_or_else(|| panic!("{text} painted"));
         let placed = app.keyboard.place_of(id).expect("placed").rect;
-        let pad = 2.0 * compass::AXIS_BUTTON_PAD;
-        assert!(
-            (placed.width() - (drawn.1.width() + pad)).abs() < 1.0,
-            "{id}'s width: {placed:?}"
-        );
-        assert!(
-            (placed.height() - (compass::LABEL_SIZE + pad)).abs() < 0.5,
-            "{id}'s height: {placed:?}"
-        );
+        check_padded(id, placed, drawn.1.width());
+        sized.push((id, placed, drawn.1.width()));
     }
     app.manifold.compass.mode = Touch::Slice;
     settle(&mut h, &mut app);
     check_on_edges(&h, &app, want);
-    assert!(!drawing(&h, &app).numbers.is_empty(), "slice keeps them");
+    let slice = drawing(&h, &app);
+    check_numbers(&slice, true);
     let shapes = compass_shapes(&mut h, &mut app);
     check_painted(&shapes, &drawing(&h, &app));
     rejects("H and V on each other's edges", || {
@@ -173,6 +189,21 @@ fn mock_cube_axis_buttons_sit_on_their_edges_in_both_modes() {
     });
     rejects("a button without its letter", || {
         check_on_edges(&h, &app, ["z_α", "D z_q3", "V z_β"])
+    });
+    for (id, placed, text_width) in sized {
+        rejects("a button of its text alone, no padding", || {
+            check_padded(
+                id,
+                Rect::from_center_size(placed.center(), vec2(text_width, compass::LABEL_SIZE)),
+                text_width,
+            )
+        });
+    }
+    rejects("tilt's drawing, with no numbers, in slice mode", || {
+        check_numbers(&tilt, true)
+    });
+    rejects("slice's drawing, with numbers, in tilt mode", || {
+        check_numbers(&slice, false)
     });
 }
 
@@ -201,24 +232,45 @@ fn mock_cube_axis_buttons_each_dropdown_lists_the_dimensions_not_on_the_other_tw
         (COMPASS_V, COMPASS_V_ENTRIES, &v_list),
         (COMPASS_D, COMPASS_D_ENTRIES, &d_list),
     ] {
-        let want: Vec<&str> = list.iter().map(|&i| entries[i]).collect();
-        assert_eq!(tree.children(Some(id)), want, "{id}'s entries");
+        let got = tree.children(Some(id));
+        check_entries(id, &got, entries, list);
+        rejects("a menu missing its last entry", || {
+            check_entries(id, &got[..got.len() - 1], entries, list)
+        });
     }
     // A dimension not offered is no pick; nor is the one it already is.
     let sim = &app.snapshot().sim;
-    assert_eq!(pick_edit(sim, Edge::H, Z_BETA, Shows::Normal), None);
-    assert_eq!(pick_edit(sim, Edge::H, Z_Q3, Shows::Normal), None);
-    assert_eq!(pick_edit(sim, Edge::H, Z_ALPHA, Shows::Normal), None);
-    assert_eq!(pick_edit(sim, Edge::V, Z_ALPHA, Shows::Normal), None);
-    assert_eq!(pick_edit(sim, Edge::V, Z_Q3, Shows::Normal), None);
-    assert_eq!(pick_edit(sim, Edge::V, Z_BETA, Shows::Normal), None);
-    assert_eq!(pick_edit(sim, Edge::D, Z_BETA, Shows::Normal), None);
-    assert_eq!(pick_edit(sim, Edge::D, Z_Q3, Shows::Normal), None);
+    for (edge, to) in [
+        (Edge::H, Z_BETA),
+        (Edge::H, Z_Q3),
+        (Edge::H, Z_ALPHA),
+        (Edge::V, Z_ALPHA),
+        (Edge::V, Z_Q3),
+        (Edge::V, Z_BETA),
+        (Edge::D, Z_BETA),
+        (Edge::D, Z_Q3),
+    ] {
+        check_no_pick(pick_edit(sim, edge, to, Shows::Normal), edge, to);
+    }
     let mut with_v = h_list.clone();
     with_v.insert(1, read.b);
     rejects("a dropdown that offers V's dimension in H's list", || {
         check_lists(&read, [&with_v, &v_list, &d_list])
     });
+    rejects("an offered dimension's pick", || {
+        check_no_pick(pick_edit(sim, Edge::H, Z_Q0, Shows::Normal), Edge::H, Z_Q0)
+    });
+}
+
+/// Asserts the menu `id`'s entries `got` are `entries` of the dimensions in `list`, in order.
+fn check_entries(id: &str, got: &[&str], entries: [&str; 8], list: &[usize]) {
+    let want: Vec<&str> = list.iter().map(|&i| entries[i]).collect();
+    assert_eq!(got, want, "{id}'s entries");
+}
+
+/// Asserts `edit`, the pick of `to` on `edge`, is no edit.
+fn check_no_pick(edit: Option<SetField>, edge: Edge, to: usize) {
+    assert_eq!(edit, None, "{edge:?} to {to}");
 }
 
 /// Asserts the H pick `to` from `before` to `after`: `q₁ = σ e_to`, `q₂ = σ e_b`, so the tilts and `γ` are 0, `z₀` kept.
@@ -240,6 +292,7 @@ fn mock_cube_axis_buttons_picking_h_sets_the_pair_chart_following_and_one_undo()
         "the scale read: {}",
         kept.scale
     );
+    let unpicked = (texts(&h, &app), frame_texts(&mut h, &mut app));
     click_scope(&mut h, &mut app, COMPASS_H);
     let _ = h.frame(&mut app, Vec::new());
     click_scope(&mut h, &mut app, COMPASS_H_ENTRIES[Z_Q0]);
@@ -247,49 +300,120 @@ fn mock_cube_axis_buttons_picking_h_sets_the_pair_chart_following_and_one_undo()
     let after = state(&app);
     check_h_picked(&before.1, &after.1, Z_Q0, Z_BETA, kept.scale);
     let read = View::read(&app.snapshot().sim);
-    assert_eq!(
-        (read.a, read.b, read.tau1, read.tau2, read.gamma),
-        (Z_Q0, Z_BETA, 0.0, 0.0, 0.0),
-        "the new pair, every angle 0"
-    );
-    assert_eq!(read.zoom(), kept.zoom(), "the zoom kept");
-    assert_eq!(texts(&h, &app)[0], "H z_q0");
+    check_read_as_picked(&read, (Z_Q0, Z_BETA), &kept);
+    let picked = texts(&h, &app);
+    check_text(&picked[0], "H z_q0");
     // Chart's horizontal q₁ reads it.
-    assert_eq!(basis_text(&after.1.q1), "0.50·z_q0");
-    assert!(
-        frame_texts(&mut h, &mut app)
-            .iter()
-            .any(|t| t == "0.50·z_q0"),
-        "Chart's row"
-    );
+    let rows = frame_texts(&mut h, &mut app);
+    check_chart_row(&after.1.q1, &rows, "0.50·z_q0");
     ctrl_z(&mut h, &mut app);
-    check_one_entry(&before, &after, &state(&app));
+    let undone = state(&app);
+    check_one_entry(&before, &after, &undone);
     rejects("a pick that keeps the tilt", || {
         check_h_picked(&before.1, &before.1, Z_Q0, Z_BETA, kept.scale)
     });
+    rejects("the new pair read at the old tilt", || {
+        check_read_as_picked(&View { a: Z_Q0, ..kept }, (Z_Q0, Z_BETA), &kept)
+    });
+    rejects("the pair at another zoom", || {
+        check_read_as_picked(&read.with_zoom(read.zoom() + 1.0), (Z_Q0, Z_BETA), &kept)
+    });
+    rejects("H's button left on its old dimension", || {
+        check_text(&unpicked.0[0], "H z_q0")
+    });
+    rejects("Chart's row left on the old q₁", || {
+        check_chart_row(&before.1.q1, &unpicked.1, "0.50·z_q0")
+    });
+    rejects("an undo that leaves the pick", || {
+        check_one_entry(&before, &after, &after)
+    });
+    rejects("a pick that made no entry", || {
+        check_one_entry(&before, &before, &undone)
+    });
+}
+
+/// Asserts `read` is on the axes `(a, b)` with every angle 0, at `kept`'s zoom.
+fn check_read_as_picked(read: &View, (a, b): (usize, usize), kept: &View) {
+    assert_eq!(
+        (read.a, read.b, read.tau1, read.tau2, read.gamma),
+        (a, b, 0.0, 0.0, 0.0),
+        "the new pair, every angle 0"
+    );
+    assert_eq!(read.zoom(), kept.zoom(), "the zoom kept");
+}
+
+/// Asserts a button's text.
+fn check_text(got: &str, want: &str) {
+    assert_eq!(got, want, "the button's text");
+}
+
+/// Asserts Chart's horizontal row reads `q1` as `want`, the frame's texts `rows` showing it.
+fn check_chart_row(q1: &Latent, rows: &[String], want: &str) {
+    assert_eq!(basis_text(q1), want);
+    assert!(rows.iter().any(|t| t == want), "Chart's row: {rows:?}");
 }
 
 #[test]
 fn mock_cube_axis_buttons_picking_v_and_a_chart_edit_move_v() {
     let (mut app, mut h) = app_with((0.0, 0.0, 0.0), 1.0, frame(Z_Q3, Z_Q3, Z_Q3));
     let before = state(&app);
+    let unpicked = texts(&h, &app);
     let edit = pick_edit(&app.snapshot().sim, Edge::V, Z_Q2, Shows::Normal).expect("offered");
     app.set_field(edit);
     settle(&mut h, &mut app);
-    assert_eq!(app.snapshot().sim.plane.q2, axis(Z_Q2, 1.0));
-    assert_eq!(app.snapshot().sim.plane.q1, axis(Z_ALPHA, 1.0));
-    assert_eq!(texts(&h, &app)[2], "V z_q2");
+    let after = state(&app);
+    check_v_picked(&after.1, Z_Q2, Z_ALPHA);
+    let picked = texts(&h, &app);
+    check_text(&picked[2], "V z_q2");
     ctrl_z(&mut h, &mut app);
-    assert_eq!(state(&app), before);
+    let undone = state(&app);
+    check_undone(&undone, &before);
     // Chart: editing q₂ to e_q1 moves V to z_q1, as H and V are the axes the view reads.
     let sim = app.snapshot().sim.clone();
     app.set_field(plane_edit(&sim, (sim.plane.q1, axis(Z_Q1, 1.0))));
     settle(&mut h, &mut app);
-    assert_eq!(texts(&h, &app)[2], "V z_q1");
-    assert_eq!(texts(&h, &app)[0], "H z_α");
+    let edited = texts(&h, &app);
+    check_text(&edited[2], "V z_q1");
+    check_text(&edited[0], "H z_α");
     rejects("V left behind by a Chart edit", || {
         assert_eq!(texts(&h, &app)[2], "V z_β")
     });
+    rejects("a V pick that left q₂", || {
+        check_v_picked(&before.1, Z_Q2, Z_ALPHA)
+    });
+    rejects("a V pick that moved H too", || {
+        check_v_picked(
+            &Plane {
+                q1: axis(Z_Q0, 1.0),
+                ..after.1.clone()
+            },
+            Z_Q2,
+            Z_ALPHA,
+        )
+    });
+    rejects("V's button left on its old dimension", || {
+        check_text(&unpicked[2], "V z_q2")
+    });
+    rejects("an undo that leaves the pick", || {
+        check_undone(&after, &before)
+    });
+    rejects("V's button left by a Chart edit", || {
+        check_text(&unpicked[2], "V z_q1")
+    });
+    rejects("H moved onto the axis a Chart edit of q₂ took", || {
+        check_text("H z_q1", "H z_α")
+    });
+}
+
+/// Asserts the V pick `to` set `q₂ = e_to` and kept `q₁ = e_h`, at scale 1.
+fn check_v_picked(after: &Plane, to: usize, h: usize) {
+    assert_eq!(after.q2, axis(to, 1.0), "q₂ ∝ e_to");
+    assert_eq!(after.q1, axis(h, 1.0), "q₁ kept");
+}
+
+/// Asserts `got`, after one Ctrl+Z, is the state `before` the edit.
+fn check_undone(got: &(u32, Plane, SliceFrame), before: &(u32, Plane, SliceFrame)) {
+    assert_eq!(got, before, "one Ctrl+Z undoes it");
 }
 
 /// Asserts `read` is on the axes `(a, b)` at `τ₁` and `γ`, in degrees.
@@ -315,11 +439,15 @@ fn check_reading(read: &View, (a, b): (usize, usize), (tau1, gamma): (f64, f64))
 fn mock_cube_axis_buttons_the_pair_the_other_way_round_reads_as_picked() {
     // H and V swapped by two picks: no turn of the preset whose axes they are, so it reads as picked, every angle 0.
     let (mut app, mut h) = app_with((0.0, 0.0, 0.0), 1.0, frame(Z_Q3, Z_Q3, Z_Q3));
+    let unswapped = texts(&h, &app);
     swap_h_and_v(&mut h, &mut app);
     let swapped = View::read(&app.snapshot().sim);
     check_reading(&swapped, (Z_BETA, Z_ALPHA), (0.0, 0.0));
-    assert_eq!(texts(&h, &app)[0], "H z_β");
-    assert_eq!(texts(&h, &app)[2], "V z_α");
+    let swapped_texts = texts(&h, &app);
+    check_h_and_v(&swapped_texts, "H z_β", "V z_α");
+    rejects("the buttons left on the preset's pair", || {
+        check_h_and_v(&unswapped, "H z_β", "V z_α")
+    });
     // The preset turned by 90°, a real turn, still reads as the preset.
     let turned = Plane {
         z0: [0.0; 8],
@@ -328,7 +456,10 @@ fn mock_cube_axis_buttons_the_pair_the_other_way_round_reads_as_picked() {
     };
     let turned = View::framed(&turned, Some(&frame(Z_Q3, Z_Q3, Z_Q3)));
     check_reading(&turned, (Z_ALPHA, Z_BETA), (0.0, 90.0));
-    assert_eq!(turned.preset, Some(0));
+    check_preset(&turned, Some(0));
+    rejects("the swapped pair read as a turn of the preset", || {
+        check_preset(&swapped, Some(0))
+    });
     // And tilted, the swapped pair keeps its axes, past 45° too.
     let tilted = |tau: f64| {
         let (s, c) = tau.to_radians().sin_cos();
@@ -354,6 +485,16 @@ fn mock_cube_axis_buttons_the_pair_the_other_way_round_reads_as_picked() {
         let read = View::framed(&tilted(60.0), Some(&frame(Z_Q3, Z_Q3, Z_Q3)));
         check_reading(&read, (Z_BETA, Z_ALPHA), (20.0, 0.0))
     });
+}
+
+/// Asserts the buttons' texts `got` read `h` on H and `v` on V.
+fn check_h_and_v(got: &[String; 3], h: &str, v: &str) {
+    assert_eq!((got[0].as_str(), got[2].as_str()), (h, v), "H and V");
+}
+
+/// Asserts `read` is the preset `want`, or none.
+fn check_preset(read: &View, want: Option<usize>) {
+    assert_eq!(read.preset, want, "the preset: {read:?}");
 }
 
 /// H and V swapped by the picks: `H z_β`, `V z_α`, every angle 0.
@@ -425,6 +566,7 @@ fn mock_cube_axis_buttons_a_swapped_pair_stays_editable_through_the_full_rotatio
     let default = frame(Z_Q3, Z_Q3, Z_Q3);
     let pair = (Z_BETA, Z_ALPHA);
     let (mut app, mut h) = app_with((0.0, 0.0, 0.0), 1.0, default);
+    let unswapped = texts(&h, &app);
     swap_h_and_v(&mut h, &mut app);
     // With the keys: γ from 0 up to its end, one step at a time, each step made from the reading the last one left.
     for k in 1..=12 {
@@ -438,9 +580,11 @@ fn mock_cube_axis_buttons_a_swapped_pair_stays_editable_through_the_full_rotatio
             &default,
             &view_on(pair, &default, (0.0, 0.0, at)),
         );
-        assert_eq!(texts(&h, &app)[0], "H z_β", "H at γ = {at}");
-        assert_eq!(texts(&h, &app)[2], "V z_α", "V at γ = {at}");
+        check_h_and_v(&texts(&h, &app), "H z_β", "V z_α");
     }
+    rejects("the buttons back on the preset's pair under a turn", || {
+        check_h_and_v(&unswapped, "H z_β", "V z_α")
+    });
     // Back down through 0 to the other end.
     for k in (-12..12).rev() {
         let at = f64::from(k) * 15.0;
@@ -563,6 +707,17 @@ fn mock_cube_axis_buttons_a_picked_pair_keeps_its_axes_past_45_degrees() {
         y: Z_MU1,
         ..view(t1, t2, 0.0, 1.0)
     };
+    let read_at = |t1: f64, t2: f64| {
+        let (q1, q2) = at(t1, t2).basis();
+        View::framed(
+            &Plane {
+                z0: [0.0; 8],
+                q1,
+                q2,
+            },
+            Some(&f),
+        )
+    };
     for (t1, t2) in [
         (0.0, 0.0),
         (44.0, 10.0),
@@ -570,26 +725,21 @@ fn mock_cube_axis_buttons_a_picked_pair_keeps_its_axes_past_45_degrees() {
         (89.0, 89.0),
         (-70.0, 50.0),
     ] {
-        let v = at(t1, t2);
-        let (q1, q2) = v.basis();
-        let read = View::framed(
-            &Plane {
-                z0: [0.0; 8],
-                q1,
-                q2,
-            },
-            Some(&f),
-        );
-        assert_eq!((read.a, read.b), (Z_Q0, Z_Q2), "({t1}, {t2})");
-        assert!(
-            (read.tau1.to_degrees() - t1).abs() < 1e-9,
-            "τ₁ ({t1}, {t2})"
-        );
-        assert!(
-            (read.tau2.to_degrees() - t2).abs() < 1e-9,
-            "τ₂ ({t1}, {t2})"
-        );
+        check_tilted_pair(&read_at(t1, t2), (Z_Q0, Z_Q2), (t1, t2));
     }
+    rejects("past 45°, a reading of the dominant axes", || {
+        check_tilted_pair(
+            &View {
+                a: Z_Q3,
+                ..read_at(60.0, 70.0)
+            },
+            (Z_Q0, Z_Q2),
+            (60.0, 70.0),
+        )
+    });
+    rejects("the pair read at another tilt", || {
+        check_tilted_pair(&read_at(44.0, 10.0), (Z_Q0, Z_Q2), (60.0, 70.0))
+    });
     // A basis leaving the pair and the targets is read by its dominant axes, as before.
     let mut q1: Latent = axis(Z_Q1, 0.8);
     q1[Z_Q2] = 0.2;
@@ -602,7 +752,11 @@ fn mock_cube_axis_buttons_a_picked_pair_keeps_its_axes_past_45_degrees() {
         },
         Some(&f),
     );
-    assert_eq!((read.a, read.b), (Z_Q1, Z_MU1), "the dominant axes");
+    check_axes(&read, (Z_Q1, Z_MU1), "the dominant axes");
+    let leaving = read;
+    rejects("a basis leaving the pair, read on the pair", || {
+        check_axes(&read_at(20.0, 10.0), (Z_Q1, Z_MU1), "the dominant axes")
+    });
     // A vector all on the targets has nothing off them: the dominant axes too.
     let read = View::framed(
         &Plane {
@@ -620,7 +774,10 @@ fn mock_cube_axis_buttons_a_picked_pair_keeps_its_axes_past_45_degrees() {
         },
         Some(&f),
     );
-    assert_eq!((read.a, read.b), (Z_MU1, Z_Q2), "nothing off the targets");
+    check_axes(&read, (Z_MU1, Z_Q2), "nothing off the targets");
+    rejects("a vector on the targets read as one leaving them", || {
+        check_axes(&leaving, (Z_MU1, Z_Q2), "nothing off the targets")
+    });
     // And one whose q₂ is all on q₁'s axis and the targets.
     let read = View::framed(
         &Plane {
@@ -638,9 +795,32 @@ fn mock_cube_axis_buttons_a_picked_pair_keeps_its_axes_past_45_degrees() {
         },
         Some(&f),
     );
-    assert_eq!(
-        read.a, Z_Q0,
-        "q₂ has nothing else off the targets: {read:?}"
+    check_first_axis(&read, Z_Q0);
+    rejects("q₁ read on a target", || {
+        check_first_axis(&View { a: Z_Q3, ..read }, Z_Q0)
+    });
+}
+
+/// Asserts `read`'s first axis is `a`.
+fn check_first_axis(read: &View, a: usize) {
+    assert_eq!(read.a, a, "q₂ has nothing else off the targets: {read:?}");
+}
+
+/// Asserts `read` is on the axes `(a, b)`.
+fn check_axes(read: &View, (a, b): (usize, usize), what: &str) {
+    assert_eq!((read.a, read.b), (a, b), "{what}: {read:?}");
+}
+
+/// Asserts `read` is on the axes `(a, b)` at the tilts `(τ₁, τ₂)`, in degrees.
+fn check_tilted_pair(read: &View, (a, b): (usize, usize), (t1, t2): (f64, f64)) {
+    check_axes(read, (a, b), &format!("({t1}, {t2})"));
+    assert!(
+        (read.tau1.to_degrees() - t1).abs() < 1e-9,
+        "τ₁ ({t1}, {t2})"
+    );
+    assert!(
+        (read.tau2.to_degrees() - t2).abs() < 1e-9,
+        "τ₂ ({t1}, {t2})"
     );
 }
 
@@ -719,7 +899,10 @@ fn mock_cube_axis_buttons_a_pair_keeps_its_axes_at_the_ends_of_the_range_and_und
         },
         Some(&f),
     );
-    assert_eq!((read.a, read.b), (Z_Q0, Z_BETA), "zoomed in");
+    check_axes(&read, (Z_Q0, Z_BETA), "zoomed in");
+    rejects("zoomed in, a pair read off its tilt's target", || {
+        check_axes(&View { a: Z_Q3, ..read }, (Z_Q0, Z_BETA), "zoomed in")
+    });
     rejects("a pair read as another's axes", || {
         check_reads_back((Z_Q0, Z_BETA), frame(Z_Q3, Z_Q3, Z_Q0), (90.0, 0.0, 0.0))
     });
@@ -751,63 +934,110 @@ fn mock_cube_axis_buttons_the_frame_reading_cuts_at_their_boundaries() {
     // on the target. Its square would read 0, so the test is on the component.
     let least = f64::MIN_POSITIVE;
     let kept = read_of(&[(Z_Q0, c), (Z_Q3, s)], &[(Z_Q2, 1.0)]);
-    assert_eq!(
-        (kept.a, kept.b),
-        (Z_Q0, Z_Q2),
-        "on the pair and the targets"
-    );
-    let left = read_of(&[(Z_Q0, c), (Z_Q3, s), (Z_Q1, least)], &[(Z_Q2, 1.0)]);
-    assert_eq!((left.a, left.b), (Z_Q3, Z_Q2), "off them, by the least");
-    let left = read_of(&[(Z_Q0, c), (Z_Q3, s)], &[(Z_Q2, 1.0), (Z_Q1, least)]);
-    assert_eq!((left.a, left.b), (Z_Q3, Z_Q2), "off them on q₂");
+    check_axes(&kept, (Z_Q0, Z_Q2), "on the pair and the targets");
+    let left_q1 = read_of(&[(Z_Q0, c), (Z_Q3, s), (Z_Q1, least)], &[(Z_Q2, 1.0)]);
+    check_axes(&left_q1, (Z_Q3, Z_Q2), "off them, by the least");
+    let left_q2 = read_of(&[(Z_Q0, c), (Z_Q3, s)], &[(Z_Q2, 1.0), (Z_Q1, least)]);
+    check_axes(&left_q2, (Z_Q3, Z_Q2), "off them on q₂");
+    rejects("the least off them, kept on the pair", || {
+        check_axes(&left_q1, (Z_Q0, Z_Q2), "on the pair and the targets")
+    });
+    rejects("on them, read as left", || {
+        check_axes(&kept, (Z_Q3, Z_Q2), "off them, by the least")
+    });
     // A preset's exact determinant: 0 is the preset. The least below it is a typed component. This basis has X on q₁,
     // which the pair the other way round cannot hold, so it reads as at 0 and as the least above it, its axes and its
     // angles not jumping. That is this basis's, not every one's with X != Y: with Y on q₁ the swap keeps the tilt, and
     // it jumps at 0 (the swaps pinned in `..._a_mirrored_basis_is_swapped_where_that_keeps_it`).
     let on = read_of(&[(Z_Q3, 1.0)], &[(Z_BETA, 1.0)]);
-    assert_eq!(on.preset, Some(0), "a determinant of 0");
-    assert!((on.tau1.to_degrees() - 90.0).abs() < 1e-9, "τ₁ at 0");
+    check_preset(&on, Some(0));
+    check_tau1(&on, 90.0);
     for component in [-least, least] {
         let near = read_of(&[(Z_ALPHA, component), (Z_Q3, 1.0)], &[(Z_BETA, 1.0)]);
-        assert_eq!((near.a, near.b), (on.a, on.b), "the axes at {component}");
-        for (got, want, what) in [
-            (near.tau1, on.tau1, "τ₁"),
-            (near.tau2, on.tau2, "τ₂"),
-            (near.gamma, on.gamma, "γ"),
-        ] {
-            assert!((got - want).abs() < 1e-9, "{what} at {component}");
-        }
+        check_same_reading(&near, &on, component);
     }
+    rejects("a reading jumping to another tilt", || {
+        check_same_reading(
+            &View {
+                tau1: on.tau1 - 1e-6,
+                ..on
+            },
+            &on,
+            least,
+        )
+    });
+    rejects("a reading jumping to another pair", || {
+        check_same_reading(&View { a: Z_Q0, ..on }, &on, least)
+    });
     // A preset's frame, exactly: all of it holds, whatever is on the targets.
     let within = read_of(&[(Z_ALPHA, 1.0)], &[(Z_BETA, 1.0), (Z_MU1, 0.5)]);
-    assert_eq!(within.preset, Some(0), "on the targets");
+    check_preset(&within, Some(0));
+    rejects("the preset at no tilt, read at τ₁ = 90°", || {
+        check_tau1(&within, 90.0)
+    });
     // Where no exact reading holds, a preset allows noise. Its determinant: 1e-12 of the total of 2 below 0.
     let noise = 1e-12;
     let on = read_of(
         &[(Z_ALPHA, -1.5e-12), (Z_Q3, 1.0), (Z_Q1, noise)],
         &[(Z_BETA, 1.0)],
     );
-    assert_eq!(on.preset, Some(0), "within the rounding");
+    check_preset(&on, Some(0));
     let off = read_of(
         &[(Z_ALPHA, -2.5e-12), (Z_Q3, 1.0), (Z_Q1, noise)],
         &[(Z_BETA, 1.0)],
     );
-    assert_eq!(off.preset, None, "past the rounding");
+    check_preset(&off, None);
+    rejects("past the rounding, read as the preset", || {
+        check_preset(&off, Some(0))
+    });
+    rejects("within the rounding, read as no preset", || {
+        check_preset(&on, None)
+    });
     // And what leaves it: 1.5e-18 of the total of 2 holds, on either vector, and 2.5e-18 does not.
     let leak = 1.5e-18_f64.sqrt();
-    let on = read_of(&[(Z_ALPHA, 1.0)], &[(Z_BETA, 1.0), (Z_Q1, leak)]);
-    assert_eq!(on.preset, Some(0), "within the preset's cut, on q₂");
-    let on = read_of(&[(Z_ALPHA, 1.0), (Z_Q1, leak)], &[(Z_BETA, 1.0)]);
-    assert_eq!(on.preset, Some(0), "within the preset's cut, on q₁");
+    let on_q2 = read_of(&[(Z_ALPHA, 1.0)], &[(Z_BETA, 1.0), (Z_Q1, leak)]);
+    check_preset(&on_q2, Some(0));
+    let on_q1 = read_of(&[(Z_ALPHA, 1.0), (Z_Q1, leak)], &[(Z_BETA, 1.0)]);
+    check_preset(&on_q1, Some(0));
     let leak = 2.5e-18_f64.sqrt();
     let off = read_of(&[(Z_ALPHA, 1.0)], &[(Z_BETA, 1.0), (Z_Q1, leak)]);
-    assert_eq!(off.preset, None, "past the preset's cut");
+    check_preset(&off, None);
+    rejects("past the preset's cut, read as the preset", || {
+        check_preset(&off, Some(0))
+    });
+    rejects("within the preset's cut, read as no preset", || {
+        check_preset(&on_q2, None)
+    });
     // The determinant, not its terms' sum: 0.36 − 0.64 is mirrored.
     let mirrored = read_of(
         &[(Z_ALPHA, 0.6), (Z_BETA, 0.8)],
         &[(Z_ALPHA, 0.8), (Z_BETA, 0.6)],
     );
-    assert_eq!(mirrored.preset, None, "mirrored: no turn of the preset");
+    check_preset(&mirrored, None);
+    rejects("a mirrored basis read as a turn of the preset", || {
+        check_preset(&mirrored, Some(0))
+    });
+}
+
+/// Asserts `read`'s `τ₁` is `degrees`.
+fn check_tau1(read: &View, degrees: f64) {
+    assert!(
+        (read.tau1.to_degrees() - degrees).abs() < 1e-9,
+        "τ₁ {} for {degrees}",
+        read.tau1.to_degrees()
+    );
+}
+
+/// Asserts `near`, the basis with `component` on a typed axis, reads as `on` does: its axes and its angles.
+fn check_same_reading(near: &View, on: &View, component: f64) {
+    assert_eq!((near.a, near.b), (on.a, on.b), "the axes at {component}");
+    for (got, want, what) in [
+        (near.tau1, on.tau1, "τ₁"),
+        (near.tau2, on.tau2, "τ₂"),
+        (near.gamma, on.gamma, "γ"),
+    ] {
+        assert!((got - want).abs() < 1e-9, "{what} at {component}");
+    }
 }
 
 /// The largest difference, on any component, between `read`'s basis and `(q1, q2)`.
@@ -843,8 +1073,106 @@ fn mock_cube_axis_buttons_a_mirrored_basis_is_swapped_where_that_keeps_it() {
     let (q1, q2) = ([(Z_ALPHA, -0.6), (Z_Q3, 0.8)], [(Z_BETA, 1.0)]);
     // X != Y: the swap would lose z_q3. The tilt is kept, on the axes as typed; only α's sign is lost.
     let tilt = 0.8_f64.atan2(0.6).to_degrees();
+    let as_typed = in_frame(frame(Z_Q3, Z_Q3, Z_MU1), &q1, &q2);
+    check_tilt_kept(&as_typed, tilt);
+    // The next edit built from the view, a zoom, leaves the axes and the tilt where they were.
+    let (p1, p2) = as_typed.with_zoom(1.0).basis();
+    let zoomed = View::framed(
+        &Plane {
+            z0: [0.0; 8],
+            q1: p1,
+            q2: p2,
+        },
+        Some(&frame(Z_Q3, Z_Q3, Z_MU1)),
+    );
+    check_axes(&zoomed, (Z_ALPHA, Z_BETA), "zoomed");
+    check_tau1(&zoomed, tilt);
+    rejects("a swap that loses the tilt", || {
+        assert_eq!((as_typed.a, as_typed.b), (Z_BETA, Z_ALPHA))
+    });
+    // X = Y: the swap holds it, exactly.
+    let swapped = in_frame(frame(Z_Q3, Z_Q3, Z_Q3), &q1, &q2);
+    check_swapped_tilt(&swapped, tilt);
+    check_reads_basis(&swapped, &vector(&q1), &vector(&q2));
+    rejects(
+        "X != Y's reading, as typed, where the swap holds it",
+        || check_swapped_tilt(&as_typed, tilt),
+    );
+    rejects("the reading as typed, which loses α's sign", || {
+        check_reads_basis(&as_typed, &vector(&q1), &vector(&q2))
+    });
+    rejects("the swap's reading where X != Y loses z_q3", || {
+        check_tilt_kept(&swapped, tilt)
+    });
+    rejects("a zoom that loses the tilt", || {
+        check_tau1(
+            &View {
+                tau1: 0.0,
+                ..zoomed
+            },
+            tilt,
+        )
+    });
+    // X != Y with the tilt on the target the swap can hold: it reads back, so it is swapped.
+    let (q1, q2) = ([(Z_ALPHA, -0.6), (Z_MU1, 0.8)], [(Z_BETA, 1.0)]);
     let read = in_frame(frame(Z_Q3, Z_Q3, Z_MU1), &q1, &q2);
-    assert_eq!((read.a, read.b), (Z_ALPHA, Z_BETA));
+    check_axes(&read, (Z_BETA, Z_ALPHA), "on the target the swap holds");
+    check_reads_basis(&read, &vector(&q1), &vector(&q2));
+    rejects("the same basis read in the order as typed", || {
+        check_reads_basis(
+            &View {
+                a: Z_ALPHA,
+                b: Z_BETA,
+                ..read
+            },
+            &vector(&q1),
+            &vector(&q2),
+        )
+    });
+    // The read-back's cut, of a total of 2: 1.5e-18 of it left on z_q3 is the swap's noise, 2.5e-18 is not.
+    let at = |left: f64| {
+        in_frame(
+            frame(Z_Q3, Z_Q3, Z_MU1),
+            &[(Z_ALPHA, -1.0), (Z_Q3, left.sqrt())],
+            &[(Z_BETA, 1.0)],
+        )
+    };
+    check_axes(&at(1.5e-18), (Z_BETA, Z_ALPHA), "within");
+    check_axes(&at(2.5e-18), (Z_ALPHA, Z_BETA), "past it");
+    rejects("past the cut, read as the swap's noise", || {
+        check_axes(&at(2.5e-18), (Z_BETA, Z_ALPHA), "within")
+    });
+    rejects("within the cut, read as past it", || {
+        check_axes(&at(1.5e-18), (Z_ALPHA, Z_BETA), "past it")
+    });
+    // Neither order reads it back: the swap only if it keeps more of the tilt. Here it keeps both targets' parts, and
+    // the order as typed neither.
+    let more = in_frame(
+        frame(Z_Q3, Z_Q3, Z_MU1),
+        &[(Z_ALPHA, -0.6), (Z_MU1, 0.8)],
+        &[(Z_BETA, 1.0), (Z_Q3, 0.3)],
+    );
+    check_axes(&more, (Z_BETA, Z_ALPHA), "keeps more of the tilt");
+    // And a tie, no tilt to keep, stays as typed: the unequal lengths are no reading's, so no read-back.
+    let tie = in_frame(
+        frame(Z_Q3, Z_Q3, Z_MU1),
+        &[(Z_ALPHA, -0.6), (Z_BETA, 0.1)],
+        &[(Z_ALPHA, 0.1), (Z_BETA, 1.0)],
+    );
+    check_axes(&tie, (Z_ALPHA, Z_BETA), "a tie");
+    rejects("a tie swapped", || {
+        check_axes(&tie, (Z_BETA, Z_ALPHA), "keeps more of the tilt")
+    });
+    rejects(
+        "the swap that keeps more of the tilt, left as typed",
+        || check_axes(&more, (Z_ALPHA, Z_BETA), "a tie"),
+    );
+}
+
+/// Asserts `read`, of `(−0.6 e_α + 0.8 e_q3, e_β)` with X != Y, keeps the tilt `tilt` degrees on the axes as typed, and
+/// only α's sign is lost from its basis.
+fn check_tilt_kept(read: &View, tilt: f64) {
+    check_axes(read, (Z_ALPHA, Z_BETA), "as typed");
     assert!((read.tau1.to_degrees() - tilt).abs() < 1e-9, "{read:?}");
     assert!(
         read.tau2.abs() < 1e-9 && read.gamma.abs() < 1e-9,
@@ -854,61 +1182,18 @@ fn mock_cube_axis_buttons_a_mirrored_basis_is_swapped_where_that_keeps_it() {
     assert!((p1[Z_Q3] - 0.8).abs() < 1e-12, "z_q3 kept: {p1:?}");
     assert!((p1[Z_ALPHA] - 0.6).abs() < 1e-12, "the sign is what goes");
     assert!((p2[Z_BETA] - 1.0).abs() < 1e-12, "{p2:?}");
-    // The next edit built from the view, a zoom, leaves the axes and the tilt where they were.
-    let (p1, p2) = read.with_zoom(1.0).basis();
-    let zoomed = View::framed(
-        &Plane {
-            z0: [0.0; 8],
-            q1: p1,
-            q2: p2,
-        },
-        Some(&frame(Z_Q3, Z_Q3, Z_MU1)),
-    );
-    assert_eq!((zoomed.a, zoomed.b), (Z_ALPHA, Z_BETA), "zoomed");
-    assert!((zoomed.tau1.to_degrees() - tilt).abs() < 1e-9, "{zoomed:?}");
-    rejects("a swap that loses the tilt", || {
-        assert_eq!((read.a, read.b), (Z_BETA, Z_ALPHA))
-    });
-    // X = Y: the swap holds it, exactly.
-    let read = in_frame(frame(Z_Q3, Z_Q3, Z_Q3), &q1, &q2);
-    assert_eq!((read.a, read.b), (Z_BETA, Z_ALPHA));
+}
+
+/// Asserts `read`, of the same basis with X = Y, is the swap: `τ₂ = −tilt`, `γ = −90°`.
+fn check_swapped_tilt(read: &View, tilt: f64) {
+    check_axes(read, (Z_BETA, Z_ALPHA), "swapped");
     assert!((read.tau2.to_degrees() + tilt).abs() < 1e-9, "{read:?}");
     assert!((read.gamma.to_degrees() + 90.0).abs() < 1e-9, "{read:?}");
-    assert!(read_back_off(&read, &vector(&q1), &vector(&q2)) < 1e-12);
-    // X != Y with the tilt on the target the swap can hold: it reads back, so it is swapped.
-    let (q1, q2) = ([(Z_ALPHA, -0.6), (Z_MU1, 0.8)], [(Z_BETA, 1.0)]);
-    let read = in_frame(frame(Z_Q3, Z_Q3, Z_MU1), &q1, &q2);
-    assert_eq!((read.a, read.b), (Z_BETA, Z_ALPHA));
-    assert!(read_back_off(&read, &vector(&q1), &vector(&q2)) < 1e-12);
-    // The read-back's cut, of a total of 2: 1.5e-18 of it left on z_q3 is the swap's noise, 2.5e-18 is not.
-    let at = |left: f64| {
-        in_frame(
-            frame(Z_Q3, Z_Q3, Z_MU1),
-            &[(Z_ALPHA, -1.0), (Z_Q3, left.sqrt())],
-            &[(Z_BETA, 1.0)],
-        )
-    };
-    assert_eq!((at(1.5e-18).a, at(1.5e-18).b), (Z_BETA, Z_ALPHA), "within");
-    assert_eq!((at(2.5e-18).a, at(2.5e-18).b), (Z_ALPHA, Z_BETA), "past it");
-    // Neither order reads it back: the swap only if it keeps more of the tilt. Here it keeps both targets' parts, and
-    // the order as typed neither.
-    let read = in_frame(
-        frame(Z_Q3, Z_Q3, Z_MU1),
-        &[(Z_ALPHA, -0.6), (Z_MU1, 0.8)],
-        &[(Z_BETA, 1.0), (Z_Q3, 0.3)],
-    );
-    assert_eq!(
-        (read.a, read.b),
-        (Z_BETA, Z_ALPHA),
-        "keeps more of the tilt"
-    );
-    // And a tie, no tilt to keep, stays as typed: the unequal lengths are no reading's, so no read-back.
-    let read = in_frame(
-        frame(Z_Q3, Z_Q3, Z_MU1),
-        &[(Z_ALPHA, -0.6), (Z_BETA, 0.1)],
-        &[(Z_ALPHA, 0.1), (Z_BETA, 1.0)],
-    );
-    assert_eq!((read.a, read.b), (Z_ALPHA, Z_BETA), "a tie");
+}
+
+/// Asserts `read`'s basis is `(q1, q2)`.
+fn check_reads_basis(read: &View, q1: &Latent, q2: &Latent) {
+    assert!(read_back_off(read, q1, q2) < 1e-12, "{read:?}");
 }
 
 /// `tilted_axes`'s determinant is the difference of the products, not of a quotient: the basis below has `1 · 0.5 −
@@ -979,12 +1264,29 @@ fn mock_cube_axis_buttons_the_read_back_counts_what_q2_loses() {
     check(2.5e-18, (Z_ALPHA, Z_BETA));
     // Far past it, the order as typed holds the tilt: τ₂ is what is on z_μ1, turned by γ = −180° as q₁ = −e_α says.
     check(0.25, (Z_ALPHA, Z_BETA));
-    let read = at(0.25);
-    assert!(
-        (read.tau2 - (-0.5_f64).atan2(1.0)).abs() < 1e-12,
-        "{read:?}"
-    );
-    assert!((read.gamma.abs() - PI).abs() < 1e-12, "{read:?}");
+    let check_far = |read: &View| {
+        assert!(
+            (read.tau2 - (-0.5_f64).atan2(1.0)).abs() < 1e-12,
+            "{read:?}"
+        );
+        assert!((read.gamma.abs() - PI).abs() < 1e-12, "{read:?}");
+    };
+    check_far(&at(0.25));
+    rejects("within the cut, the swap's reading", || {
+        check_far(&at(1.5e-18))
+    });
+    rejects("far past it, τ₂ read off z_μ1 unturned", || {
+        check_far(&View {
+            tau2: -(-0.5_f64).atan2(1.0),
+            ..at(0.25)
+        })
+    });
+    rejects("far past it, γ not turned", || {
+        check_far(&View {
+            gamma: 0.0,
+            ..at(0.25)
+        })
+    });
     rejects("past the cut, read back as a swap", || {
         check(2.5e-18, (Z_BETA, Z_ALPHA))
     });
@@ -1004,30 +1306,44 @@ fn mock_cube_axis_buttons_picking_d_sets_the_normal_and_re_tilts_in_one_entry() 
     // The button shows X while τ₁ is set: at rest in Slice mode it is D, the normal's.
     app.manifold.compass.mode = Touch::Slice;
     settle(&mut h, &mut app);
-    assert_eq!(texts(&h, &app)[1], "D z_q3");
+    let unpicked = texts(&h, &app);
+    check_text(&unpicked[1], "D z_q3");
     let before = state(&app);
     click_scope(&mut h, &mut app, COMPASS_D);
     let _ = h.frame(&mut app, Vec::new());
     click_scope(&mut h, &mut app, COMPASS_D_ENTRIES[Z_MU1]);
     settle(&mut h, &mut app);
     let after = state(&app);
-    assert_eq!(after.2, frame(Z_MU1, Z_MU1, Z_Q2), "X followed; Y kept");
     let (s, c) = 20.0_f64.to_radians().sin_cos();
     let mut q1 = axis(Z_ALPHA, c);
     q1[Z_MU1] = s;
-    let off = q1
-        .iter()
-        .zip(&after.1.q1)
-        .map(|(a, b)| (a - b).abs())
-        .fold(0.0, f64::max);
-    assert!(off < 1e-15, "q₁ re-tilted into e_μ1: {:?}", after.1.q1);
-    assert_eq!(after.1.q2, before.1.q2, "τ₂ is 0");
-    assert_eq!(after.1.z0, before.1.z0, "z₀ kept");
-    assert_eq!(texts(&h, &app)[1], "D z_μ1");
+    check_d_picked(&before, &after, &q1);
+    let picked = texts(&h, &app);
+    check_text(&picked[1], "D z_μ1");
     ctrl_z(&mut h, &mut app);
     let undone = state(&app);
     check_one_entry(&before, &after, &undone);
-    assert_eq!(texts(&h, &app)[1], "D z_q3");
+    check_text(&texts(&h, &app)[1], "D z_q3");
+    rejects("a D pick that moved nothing", || {
+        check_d_picked(&before, &before, &q1)
+    });
+    rejects(
+        "a D pick that moved the frame and left the plane in the old one",
+        || check_d_picked(&before, &(after.0, before.1.clone(), after.2), &q1),
+    );
+    rejects("a D pick that moved Y with X", || {
+        check_d_picked(
+            &before,
+            &(after.0, after.1.clone(), frame(Z_MU1, Z_MU1, Z_MU1)),
+            &q1,
+        )
+    });
+    rejects("D's button left on the old normal", || {
+        check_text(&unpicked[1], "D z_μ1")
+    });
+    rejects("an undo that leaves D's button on the pick", || {
+        check_text(&picked[1], "D z_q3")
+    });
     // The control: the same pick as two edits, the frame then the basis, is two entries.
     let d0 = state(&app);
     app.set_field(frame_edit(frame(Z_MU1, Z_MU1, Z_Q2), None));
@@ -1042,6 +1358,24 @@ fn mock_cube_axis_buttons_picking_d_sets_the_normal_and_re_tilts_in_one_entry() 
     rejects("a D pick that makes two entries", || {
         check_one_entry(&d0, &d1, &d2)
     });
+}
+
+/// Asserts the D pick of `z_μ1` from `before` to `after`, from `(z_q3, z_q3, z_q2)` at `τ₁ = 20°`: the normal and X
+/// on `z_μ1`, Y kept, `q₁` re-tilted into it as `q1`, `q₂` and `z₀` kept.
+fn check_d_picked(
+    before: &(u32, Plane, SliceFrame),
+    after: &(u32, Plane, SliceFrame),
+    q1: &Latent,
+) {
+    assert_eq!(after.2, frame(Z_MU1, Z_MU1, Z_Q2), "X followed; Y kept");
+    let off = q1
+        .iter()
+        .zip(&after.1.q1)
+        .map(|(a, b)| (a - b).abs())
+        .fold(0.0, f64::max);
+    assert!(off < 1e-15, "q₁ re-tilted into e_μ1: {:?}", after.1.q1);
+    assert_eq!(after.1.q2, before.1.q2, "τ₂ is 0");
+    assert_eq!(after.1.z0, before.1.z0, "z₀ kept");
 }
 
 /// The normal edit to `to` from the view at `(t1, t2)` on frame `(x, y)`: its normal and whether it carries a basis.
@@ -1118,6 +1452,46 @@ fn mock_cube_axis_buttons_the_third_axis_dropdown_picks_the_target_it_shows() {
             Edit::Sim(SimField::SliceFrame { frame, .. }) => frame,
             other => panic!("not a frame edit: {other:?}"),
         };
+    check_routed(&framed);
+    rejects("X's and Y's picks routed to each other's target", || {
+        check_routed(&|shows: Shows, to: usize| {
+            let swapped = match shows {
+                Shows::X => Shows::Y,
+                Shows::Y => Shows::X,
+                Shows::Normal => Shows::Normal,
+            };
+            framed(swapped, to)
+        })
+    });
+    rejects("D's pick routed to X", || {
+        check_routed(&|shows: Shows, to: usize| {
+            framed(
+                if shows == Shows::Normal {
+                    Shows::X
+                } else {
+                    shows
+                },
+                to,
+            )
+        })
+    });
+    rejects("X's pick routed to the normal", || {
+        check_routed(&|shows: Shows, to: usize| {
+            framed(
+                if shows == Shows::X {
+                    Shows::Normal
+                } else {
+                    shows
+                },
+                to,
+            )
+        })
+    });
+}
+
+/// Asserts the third axis's pick of `z_q2` from the frame `(z_q3, z_q3, z_μ1)`, by `framed` the frame each pick sets,
+/// moves the target or the normal the button shows, and only it.
+fn check_routed(framed: &dyn Fn(Shows, usize) -> SliceFrame) {
     assert_eq!(framed(Shows::X, Z_Q2), frame(Z_Q3, Z_Q2, Z_MU1), "X's");
     assert_eq!(framed(Shows::Y, Z_Q2), frame(Z_Q3, Z_Q3, Z_Q2), "Y's");
     assert_eq!(framed(Shows::Normal, Z_Q2), frame(Z_Q2, Z_Q2, Z_MU1), "D's");
@@ -1127,6 +1501,7 @@ fn mock_cube_axis_buttons_the_third_axis_dropdown_picks_the_target_it_shows() {
 fn mock_cube_axis_buttons_a_plucker_steer_taking_d_moves_it_by_the_slice_axis_rule() {
     let (mut app, mut h) = app_with((0.0, 0.0, 0.0), 1.0, frame(Z_Q3, Z_Q3, Z_Q3));
     let before = state(&app);
+    let unsteered = texts(&h, &app);
     app.manifold.compass.view = CompassView::Plucker;
     settle(&mut h, &mut app);
     let at = GridPlace::fit(square(&h)).cell_rect(Z_Q2, Z_Q3).center();
@@ -1137,6 +1512,49 @@ fn mock_cube_axis_buttons_a_plucker_steer_taking_d_moves_it_by_the_slice_axis_ru
     let after = state(&app);
     let rule = slice_axis(Z_Q2, Z_Q3);
     assert_eq!(rule, Z_ALPHA, "the first axis the plane does not show");
+    check_steered(&after, rule);
+    app.manifold.compass.view = CompassView::Cube;
+    settle(&mut h, &mut app);
+    let steered = texts(&h, &app);
+    check_steered_texts(&steered);
+    ctrl_z(&mut h, &mut app);
+    check_one_entry(&before, &after, &state(&app));
+    rejects("a steer that leaves D in the plane", || {
+        assert_eq!(after.2, frame(Z_Q3, Z_Q3, Z_Q3))
+    });
+    rejects("a steer that moved nothing", || {
+        check_steered(&before, rule)
+    });
+    rejects("a steer that moved D and left the plane", || {
+        check_steered(&(after.0, before.1.clone(), after.2), rule)
+    });
+    rejects("D moved, its target left in the plane", || {
+        check_steered(&(after.0, after.1.clone(), frame(rule, Z_Q3, Z_Q3)), rule)
+    });
+    rejects("the buttons as before the steer", || {
+        check_steered_texts(&unsteered)
+    });
+    // From the keyboard, Space on the cell cursor, the same rule.
+    let sim = app.snapshot().sim.clone();
+    check_no_cell(
+        compass::views::steer_on(&sim, Z_Q3, Z_Q2),
+        "the lower triangle is empty",
+    );
+    check_no_cell(
+        compass::views::steer_on(&sim, Z_Q3, Z_Q3),
+        "the diagonal is empty",
+    );
+    check_no_cell(compass::views::steer_on(&sim, 7, 8), "past the grid");
+    let cell = compass::views::steer_on(&sim, 6, 7);
+    assert!(cell.is_some());
+    rejects("a cell of the upper triangle read as empty", || {
+        check_no_cell(cell, "the upper triangle")
+    });
+}
+
+/// Asserts the steer onto `(z_q2, z_q3)` from `(z_q3, z_q3, z_q3)` left `after`: the normal and both targets on `rule`,
+/// the plane on the cell's axes.
+fn check_steered(after: &(u32, Plane, SliceFrame), rule: usize) {
     assert_eq!(
         after.2,
         frame(rule, rule, rule),
@@ -1144,31 +1562,16 @@ fn mock_cube_axis_buttons_a_plucker_steer_taking_d_moves_it_by_the_slice_axis_ru
     );
     assert_eq!(after.1.q1, axis(Z_Q2, 1.0));
     assert_eq!(after.1.q2, axis(Z_Q3, 1.0));
-    app.manifold.compass.view = CompassView::Cube;
-    settle(&mut h, &mut app);
-    assert_eq!(texts(&h, &app), ["H z_q2", "D z_α", "V z_q3"]);
-    ctrl_z(&mut h, &mut app);
-    check_one_entry(&before, &after, &state(&app));
-    rejects("a steer that leaves D in the plane", || {
-        assert_eq!(after.2, frame(Z_Q3, Z_Q3, Z_Q3))
-    });
-    // From the keyboard, Space on the cell cursor, the same rule.
-    assert_eq!(
-        compass::views::steer_on(&app.snapshot().sim, Z_Q3, Z_Q2),
-        None,
-        "the lower triangle is empty"
-    );
-    assert_eq!(
-        compass::views::steer_on(&app.snapshot().sim, Z_Q3, Z_Q3),
-        None,
-        "the diagonal is empty"
-    );
-    assert_eq!(
-        compass::views::steer_on(&app.snapshot().sim, 7, 8),
-        None,
-        "past the grid"
-    );
-    assert!(compass::views::steer_on(&app.snapshot().sim, 6, 7).is_some());
+}
+
+/// Asserts the buttons after that steer: H and V on the cell's axes, D on the rule's.
+fn check_steered_texts(got: &[String; 3]) {
+    assert_eq!(got, &["H z_q2", "D z_α", "V z_q3"]);
+}
+
+/// Asserts no cell steers: `got` is `None`.
+fn check_no_cell<T: std::fmt::Debug>(got: Option<T>, what: &str) {
+    assert!(got.is_none(), "{what}: {got:?}");
 }
 
 #[test]
@@ -1186,13 +1589,39 @@ fn mock_cube_axis_buttons_locked_a_pick_turns_about_the_pin() {
     click_scope(&mut h, &mut app, COMPASS_H_ENTRIES[Z_Q0]);
     settle(&mut h, &mut app);
     let after = app.snapshot().sim.plane.clone();
+    check_turned_about_the_pin(&sim.plane, &after, &anchor);
+    rejects("a pick turned about the centre, the pin displaced", || {
+        check_turned_about_the_pin(
+            &sim.plane,
+            &Plane {
+                z0: sim.plane.z0,
+                ..after.clone()
+            },
+            &anchor,
+        )
+    });
+    rejects("a pick that turned nothing", || {
+        check_turned_about_the_pin(&sim.plane, &sim.plane, &anchor)
+    });
+    rejects("the pin's chart point moved along the new q₁", || {
+        let mut slid = after.clone();
+        for (z, q) in slid.z0.iter_mut().zip(after.q1) {
+            *z += 0.1 * q;
+        }
+        check_turned_about_the_pin(&sim.plane, &slid, &anchor)
+    });
+}
+
+/// Asserts the locked H pick of `z_q0` turned `before` to `after` about the pin `anchor`, at chart point `(0.75, 0.5)`:
+/// `q₁ = 0.5 e_q0`, the anchor at the same chart point, the centre moved.
+fn check_turned_about_the_pin(before: &Plane, after: &Plane, anchor: &Latent) {
     assert_eq!(after.q1, axis(Z_Q0, 0.5));
-    let (s, t) = crate::explore::manifold_view::chart_coords(&after, &anchor).expect("a plane");
+    let (s, t) = crate::explore::manifold_view::chart_coords(after, anchor).expect("a plane");
     assert!(
         (s - 0.75).abs() < 1e-12 && (t - 0.5).abs() < 1e-12,
         "the anchor's chart point kept: ({s}, {t})"
     );
-    assert_ne!(after.z0, sim.plane.z0, "the centre moved about the pin");
+    assert_ne!(after.z0, before.z0, "the centre moved about the pin");
 }
 
 /// Tab onto the Compass, Enter in, onto the compass.
@@ -1208,6 +1637,7 @@ fn into_compass(h: &mut Headless, app: &mut App<MockSide>) {
 fn mock_cube_axis_buttons_keyboard_tab_enter_right_to_h_enter_down_enter_picks() {
     let (mut app, mut h) = app_with((0.0, 0.0, 0.0), 1.0, frame(Z_Q3, Z_Q3, Z_Q3));
     into_compass(&mut h, &mut app);
+    let on_view = path(&app);
     for id in [
         COMPASS_TILT,
         COMPASS_SLICE,
@@ -1218,47 +1648,99 @@ fn mock_cube_axis_buttons_keyboard_tab_enter_right_to_h_enter_down_enter_picks()
         COMPASS_H,
     ] {
         press(&mut h, &mut app, Key::ArrowRight, NONE);
-        assert_eq!(focus(&app), [COMPASS, id]);
+        check_path(&path(&app), &[COMPASS, id], "→ along the siblings");
     }
+    rejects("→ that stays on the view", || {
+        check_path(&on_view, &[COMPASS, COMPASS_TILT], "→ along the siblings")
+    });
     let before = state(&app);
+    let on_h = path(&app);
     press(&mut h, &mut app, Key::Enter, NONE);
-    assert_eq!(
-        focus(&app),
-        [COMPASS, COMPASS_H, COMPASS_H_ENTRIES[Z_ALPHA]],
-        "Enter opens it, on its first entry"
+    let opened = path(&app);
+    check_path(
+        &opened,
+        &[COMPASS, COMPASS_H, COMPASS_H_ENTRIES[Z_ALPHA]],
+        "Enter opens it, on its first entry",
     );
     // Esc closes it unchanged.
     press(&mut h, &mut app, Key::Escape, NONE);
-    assert_eq!(focus(&app), [COMPASS, COMPASS_H]);
-    assert_eq!(state(&app), before);
+    let closed = (path(&app), state(&app));
+    check_path(&closed.0, &[COMPASS, COMPASS_H], "Esc closes it");
+    check_undone(&closed.1, &before);
     press(&mut h, &mut app, Key::Enter, NONE);
     press(&mut h, &mut app, Key::ArrowDown, NONE);
-    assert_eq!(focus(&app), [COMPASS, COMPASS_H, COMPASS_H_ENTRIES[Z_Q0]]);
+    let down = path(&app);
+    check_path(&down, &[COMPASS, COMPASS_H, COMPASS_H_ENTRIES[Z_Q0]], "↓");
     press(&mut h, &mut app, Key::Enter, NONE);
-    assert_eq!(focus(&app), [COMPASS, COMPASS_H], "back on the button");
+    let back = path(&app);
+    check_path(&back, &[COMPASS, COMPASS_H], "back on the button");
     assert_eq!(app.view.focus.mode, KeyMode::Navigation);
     settle(&mut h, &mut app);
-    assert_eq!(app.snapshot().sim.plane.q1, axis(Z_Q0, 1.0), "picked");
-    assert_eq!(texts(&h, &app)[0], "H z_q0");
-    assert_eq!(state(&app).0, before.0 + 1);
+    let after = state(&app);
+    let picked = texts(&h, &app);
+    check_key_pick(&before, &after, &picked);
     ctrl_z(&mut h, &mut app);
-    assert_eq!(state(&app), before, "one Ctrl+Z");
+    check_undone(&state(&app), &before);
+    rejects("Enter that leaves the menu closed", || {
+        check_path(
+            &on_h,
+            &[COMPASS, COMPASS_H, COMPASS_H_ENTRIES[Z_ALPHA]],
+            "Enter opens it, on its first entry",
+        )
+    });
+    rejects("Esc that leaves the menu open", || {
+        check_path(&opened, &[COMPASS, COMPASS_H], "Esc closes it")
+    });
+    rejects("↓ that stays on the first entry", || {
+        check_path(&opened, &[COMPASS, COMPASS_H, COMPASS_H_ENTRIES[Z_Q0]], "↓")
+    });
+    rejects(
+        "Enter on an entry that leaves the focus in the menu",
+        || check_path(&down, &[COMPASS, COMPASS_H], "back on the button"),
+    );
+    rejects("Enter on an entry that picks nothing", || {
+        check_key_pick(&before, &closed.1, &picked)
+    });
     // V and D, then nothing more: → stops on the last sibling.
     press(&mut h, &mut app, Key::ArrowRight, NONE);
-    assert_eq!(focus(&app), [COMPASS, COMPASS_V]);
+    let on_v = path(&app);
+    check_path(&on_v, &[COMPASS, COMPASS_V], "→ onto V");
     press(&mut h, &mut app, Key::ArrowRight, NONE);
-    assert_eq!(focus(&app), [COMPASS, COMPASS_D]);
+    check_path(&path(&app), &[COMPASS, COMPASS_D], "→ onto D");
     press(&mut h, &mut app, Key::ArrowRight, NONE);
-    assert_eq!(focus(&app), [COMPASS, COMPASS_D], "D is last with no badge");
+    check_path(
+        &path(&app),
+        &[COMPASS, COMPASS_D],
+        "D is last with no badge",
+    );
+    rejects("→ that stays on V", || {
+        check_path(&on_v, &[COMPASS, COMPASS_D], "→ onto D")
+    });
+    rejects("→ past the last sibling", || {
+        check_path(
+            &[COMPASS.to_owned(), COMPASS_BADGE.to_owned()],
+            &[COMPASS, COMPASS_D],
+            "D is last with no badge",
+        )
+    });
     // A D pick from the keyboard, in Tilt with both angles 0: the normal.
+    let unpicked = app.snapshot().sim.slice.frame;
     press(&mut h, &mut app, Key::Enter, NONE);
     for _ in 0..4 {
         press(&mut h, &mut app, Key::ArrowDown, NONE);
     }
-    assert_eq!(focus(&app), [COMPASS, COMPASS_D, COMPASS_D_ENTRIES[Z_MU1]]);
+    check_path(
+        &path(&app),
+        &[COMPASS, COMPASS_D, COMPASS_D_ENTRIES[Z_MU1]],
+        "four ↓ in D's menu",
+    );
     press(&mut h, &mut app, Key::Enter, NONE);
     settle(&mut h, &mut app);
-    assert_eq!(app.snapshot().sim.slice.frame, frame(Z_MU1, Z_MU1, Z_MU1));
+    let d_picked = app.snapshot().sim.slice.frame;
+    check_frame(d_picked, frame(Z_MU1, Z_MU1, Z_MU1));
+    rejects("a D pick from the keys that left the frame", || {
+        check_frame(unpicked, frame(Z_MU1, Z_MU1, Z_MU1))
+    });
     // A V pick too.
     press(&mut h, &mut app, Key::ArrowLeft, NONE);
     press(&mut h, &mut app, Key::Enter, NONE);
@@ -1268,6 +1750,32 @@ fn mock_cube_axis_buttons_keyboard_tab_enter_right_to_h_enter_down_enter_picks()
     rejects("the pick by the wrong entry", || {
         assert_eq!(app.snapshot().sim.plane.q1, axis(Z_Q1, 1.0))
     });
+}
+
+/// `ViewUI`'s focus path, owned.
+fn path(app: &App<MockSide>) -> Vec<String> {
+    focus(app).into_iter().map(str::to_owned).collect()
+}
+
+/// Asserts the focus path `got` is `want`.
+fn check_path(got: &[String], want: &[&str], what: &str) {
+    assert_eq!(got, want, "{what}");
+}
+
+/// Asserts the slice frame `got` is `want`.
+fn check_frame(got: SliceFrame, want: SliceFrame) {
+    assert_eq!(got, want, "the slice frame");
+}
+
+/// Asserts the keys' H pick of `z_q0` from `before` to `after` at scale 1: `q₁ = e_q0`, H's button on it, one entry.
+fn check_key_pick(
+    before: &(u32, Plane, SliceFrame),
+    after: &(u32, Plane, SliceFrame),
+    texts: &[String; 3],
+) {
+    assert_eq!(after.1.q1, axis(Z_Q0, 1.0), "picked");
+    check_text(&texts[0], "H z_q0");
+    assert_eq!(after.0, before.0 + 1);
 }
 
 #[test]
@@ -1294,45 +1802,102 @@ fn mock_cube_axis_buttons_are_the_cube_views_siblings_and_leave_with_it() {
         COMPASS_D,
         COMPASS_BADGE,
     ];
-    assert_eq!(siblings(&app), cube, "the badge last while it is shown");
+    let shown = siblings(&app);
+    check_siblings(&shown, &cube, "the badge last while it is shown");
     // The third axis's breadcrumb name follows what it shows.
-    assert_eq!(
+    let label = |app: &App<MockSide>| {
         app.keyboard
             .tree(Mode::Explore)
             .get(COMPASS_D)
-            .map(|s| s.label),
-        Some("X")
-    );
+            .map(|s| s.label)
+    };
+    let tilted = label(&app);
+    check_label(tilted, "X");
     // A focus on H when the mouse picks a grid view moves to that view's button.
     app.view.focus.path = vec![COMPASS.to_owned(), COMPASS_H.to_owned()];
+    let on_h = path(&app);
     app.manifold.compass.view = CompassView::Jacobi;
     settle(&mut h, &mut app);
-    assert_eq!(siblings(&app), cube[..7], "none of them in a grid view");
-    assert_eq!(focus(&app), [COMPASS, COMPASS_JACOBI]);
+    let in_grid = siblings(&app);
+    check_siblings(&in_grid, &cube[..7], "none of them in a grid view");
+    check_path(
+        &path(&app),
+        &[COMPASS, COMPASS_JACOBI],
+        "onto the grid view's button",
+    );
+    rejects("H left focused in a grid view", || {
+        check_path(
+            &on_h,
+            &[COMPASS, COMPASS_JACOBI],
+            "onto the grid view's button",
+        )
+    });
+    rejects("the axis buttons kept in a grid view", || {
+        check_siblings(&shown, &cube[..7], "none of them in a grid view")
+    });
     // Back on the Cube, they come back in order.
     app.manifold.compass.view = CompassView::Cube;
     settle(&mut h, &mut app);
-    assert_eq!(siblings(&app), cube);
+    check_siblings(&siblings(&app), &cube, "back on the Cube");
+    rejects("the axis buttons not back on the Cube", || {
+        check_siblings(&in_grid, &cube, "back on the Cube")
+    });
     // The badge goes when an angle does; a focus on it moves to D.
     app.view.focus.path = vec![COMPASS.to_owned(), COMPASS_BADGE.to_owned()];
     app.view.focus.mode = KeyMode::Interaction;
+    let on_badge = (path(&app), app.view.focus.mode);
     let v = View {
         y: Z_MU1,
         ..view(20.0, 0.0, 0.0, 1.0)
     };
     app.set_field(crate::explore::manifold_view::basis_edit(v.basis()));
     settle(&mut h, &mut app);
-    assert_eq!(siblings(&app), cube[..10]);
-    assert_eq!(focus(&app), [COMPASS, COMPASS_D]);
-    assert_eq!(app.view.focus.mode, KeyMode::Navigation);
+    check_siblings(&siblings(&app), &cube[..10], "no badge");
+    let moved = (path(&app), app.view.focus.mode);
+    check_moved_to_d(&moved);
+    rejects("a focus left on the gone badge", || {
+        check_moved_to_d(&on_badge)
+    });
     // A focus elsewhere, and a whole path in the compass, stay where they are.
     app.view.focus.path = vec![COMPASS.to_owned(), COMPASS_V.to_owned()];
     let _ = h.frame(&mut app, Vec::new());
-    assert_eq!(focus(&app), [COMPASS, COMPASS_V]);
+    check_path(&path(&app), &[COMPASS, COMPASS_V], "V stays");
+    rejects("V's focus moved to D", || {
+        check_path(&moved.0, &[COMPASS, COMPASS_V], "V stays")
+    });
     app.view.focus.path = vec!["figure".to_owned(), "gone".to_owned()];
     let _ = h.frame(&mut app, Vec::new());
-    assert_eq!(focus(&app)[0], "figure", "not the compass's to move");
+    let elsewhere = path(&app);
+    check_outside(&elsewhere);
+    rejects("a focus outside moved into the compass", || {
+        check_outside(&moved.0)
+    });
+    rejects("the third axis's breadcrumb as D while it shows X", || {
+        check_label(Some("D"), "X")
+    });
+    rejects("no breadcrumb name", || check_label(None, "X"));
     rejects("the badge kept as a sibling with no badge", || {
         assert_eq!(siblings(&app), cube)
     });
+}
+
+/// Asserts the compass's siblings `got` are `want`.
+fn check_siblings(got: &[String], want: &[&str], what: &str) {
+    assert_eq!(got, want, "{what}");
+}
+
+/// Asserts the third axis's breadcrumb name.
+fn check_label(got: Option<&str>, want: &str) {
+    assert_eq!(got, Some(want), "the third axis's breadcrumb");
+}
+
+/// Asserts a focus on the gone badge moved to D, in navigation mode.
+fn check_moved_to_d((at, mode): &(Vec<String>, KeyMode)) {
+    check_path(at, &[COMPASS, COMPASS_D], "onto D");
+    assert_eq!(*mode, KeyMode::Navigation);
+}
+
+/// Asserts a focus outside the compass stayed outside it.
+fn check_outside(at: &[String]) {
+    assert_eq!(at[0], "figure", "not the compass's to move");
 }
