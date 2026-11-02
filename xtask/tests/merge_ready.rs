@@ -6,12 +6,13 @@
 //!
 //! - `merge_ready_mutants_gate_waits_for_the_label`: `mutants.yml` runs on a pull request's new heads and on its
 //!   labels, with no filter; its shards, fixture and verdict run only on the `merge-ready` label's run, the verdict
-//!   whatever the shards ended in; no job bears the name `mutants-check`, so no skipped job reports it; `mutants-pending`
-//!   runs on every other run that is not a label's. Its scripts, run under bash with a stand-in `gh`, post a new head's
-//!   `mutants-check` queued, or passed only on a docs-only head, and leave one already there alone; a push takes the
-//!   `merge-ready` label off; the verdict completes every `mutants-check` on the head, success only when the verdict
-//!   step passed, and posts one if there is none. A run on `main` and a run of another label have groups of their own,
-//!   and only a pull request's runs are cancelled.
+//!   whatever the shards ended in; no job bears the name `mutants-check`, so no skipped job reports it;
+//!   `mutants-pending` runs on every other run that is not a label's. Its scripts, run under bash with a stand-in `gh`,
+//!   post a new head's `mutants-check` queued, or passed only on a docs-only head, and leave one already there alone; a
+//!   push takes the `merge-ready` label off, a 404 (the label already off) passing and any other error failing; the
+//!   verdict completes every `mutants-check` on the head, success only when the verdict step passed, and posts one if
+//!   there is none. A run on `main` and a run of another label have groups of their own, and only a pull request's runs
+//!   are cancelled.
 //! - `merge_ready_reviews_runs_cancel_per_pr_and_event`: `reviews.yml` keeps one cancelling group per pull request and
 //!   event, never cancelling on `main`; `reviews-complete` still runs on every run; and the re-run of the stale
 //!   `pull_request` run (R-276), run under bash with a stand-in `gh`, re-runs it on the live head and leaves a
@@ -107,7 +108,7 @@ struct Ran {
 /// Runs `script` under bash as a workflow step runs, with `env`, and a stand-in `gh` on the `PATH` that logs each call
 /// and answers: a check-run count `$STUB_COUNT`, check-run ids `$STUB_IDS`, a pull request's head `$STUB_LIVE` (from
 /// its second read on, `$STUB_LIVE_LATER` if set: a push between the reads), and, for `gh run list`, run 42, completed,
-/// concluded `$STUB_CONCLUSION`.
+/// concluded `$STUB_CONCLUSION`; a DELETE fails with `gh: $STUB_DELETE_ERR` if that is set.
 fn run(tag: &str, script: &str, env: &[(&str, &str)]) -> Ran {
     let dir = Scratch::new(&format!("merge_ready_{tag}"));
     let bin = dir.join("bin");
@@ -119,6 +120,7 @@ fn run(tag: &str, script: &str, env: &[(&str, &str)]) -> Ran {
         "#!/bin/sh\n\
          printf '%s\\n' \"gh $*\" >> \"$STUB_CALLS\"\n\
          case \"$*\" in\n\
+           *'--method DELETE'*) [ -z \"$STUB_DELETE_ERR\" ] || { echo \"gh: $STUB_DELETE_ERR\" >&2; exit 1; } ;;\n\
            *total_count*) echo \"$STUB_COUNT\" ;;\n\
            *'check_runs[].id'*) [ -z \"$STUB_IDS\" ] || printf '%s\\n' $STUB_IDS ;;\n\
            *'/pulls/'*)\n\
@@ -283,15 +285,41 @@ fn check_gate(yml: &str) {
             && !cond.contains("||"),
         "merge_ready: the label is not taken off on a push: `{cond}`"
     );
-    let ran = run("drop", drop["run"].as_str().expect("run"), &[]);
-    assert!(
-        ran.ok
-            && ran
-                .calls
+    // GitHub's answer to the DELETE: none (the label came off), a 404 (an earlier push's run took it off: the label is
+    // off, so the step passes and the head's check is still posted), or any other error, which fails the step.
+    let drop = drop["run"].as_str().expect("run");
+    for (err, ok, case) in [
+        ("", true, "the label taken off"),
+        (
+            "Label does not exist (HTTP 404)",
+            true,
+            "a 404, the label already off",
+        ),
+        (
+            "Resource not accessible by integration (HTTP 403)",
+            false,
+            "a 403",
+        ),
+        ("Server Error (HTTP 500)", false, "a 500"),
+    ] {
+        let ran = run(
+            &format!("drop_{}", err.len()),
+            drop,
+            &[("STUB_DELETE_ERR", err)],
+        );
+        assert!(
+            ran.calls
                 .contains("gh api --method DELETE repos/o/r/issues/7/labels/merge-ready"),
-        "merge_ready: the push's run did not take the label off: {}",
-        ran.calls
-    );
+            "merge_ready: the push's run did not take the label off: {}",
+            ran.calls
+        );
+        assert!(
+            ran.ok == ok,
+            "merge_ready: the label step {} on {case}: {}",
+            if ran.ok { "passed" } else { "failed" },
+            ran.log
+        );
+    }
 
     // The verdict, on every `mutants-check` of the head.
     let verdict = step(
@@ -414,8 +442,37 @@ mod label_kept {
         expected = "the push's run did not take the label off",
         check_gate(&edited(
             "mutants.yml",
-            "          gh api --method DELETE \"repos/$GH_REPO/issues/$PR/labels/merge-ready\" > /dev/null\n",
-            "          true\n"
+            "          if err=$(gh api --method DELETE \"repos/$GH_REPO/issues/$PR/labels/merge-ready\" 2>&1 > \
+             /dev/null); then\n",
+            "          if true; then\n"
+        ))
+    );
+}
+
+mod label_404_fails {
+    use super::*;
+    negative_control!(
+        merge_ready_mutants_gate_waits_for_the_label,
+        "a label step that fails on a 404, so a second quick push's head gets no mutants-check",
+        expected = "the label step failed on a 404, the label already off",
+        check_gate(&edited(
+            "mutants.yml",
+            "          elif grep -q 'HTTP 404' <<< \"$err\"; then\n",
+            "          elif false; then\n"
+        ))
+    );
+}
+
+mod label_errors_pass {
+    use super::*;
+    negative_control!(
+        merge_ready_mutants_gate_waits_for_the_label,
+        "a label step that passes on any error",
+        expected = "the label step passed on a 403",
+        check_gate(&edited(
+            "mutants.yml",
+            "          elif grep -q 'HTTP 404' <<< \"$err\"; then\n",
+            "          elif true; then\n"
         ))
     );
 }

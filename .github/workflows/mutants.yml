@@ -80,9 +80,20 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           PR: ${{ github.event.pull_request.number }}
+        # The payload lists the labels as they were when the push fired: after two quick pushes, the second's still
+        # lists the label the first's run took off, and GitHub answers 404 (`gh` prints "HTTP 404"). The label is off
+        # then, which is what this step is for, so a 404 passes and the head's check below is still posted; any other
+        # error fails the step.
         run: |
-          gh api --method DELETE "repos/$GH_REPO/issues/$PR/labels/merge-ready" > /dev/null
-          echo "#$PR: merge-ready taken off; the gate runs again once the new head is approved and labelled"
+          set -uo pipefail
+          if err=$(gh api --method DELETE "repos/$GH_REPO/issues/$PR/labels/merge-ready" 2>&1 > /dev/null); then
+            echo "#$PR: merge-ready taken off; the gate runs again once the new head is approved and labelled"
+          elif grep -q 'HTTP 404' <<< "$err"; then
+            echo "#$PR: merge-ready already off, taken off by an earlier push's run ($err)"
+          else
+            echo "$err" >&2
+            exit 1
+          fi
       - name: Post mutants-check on the head
         env:
           GH_TOKEN: ${{ github.token }}
