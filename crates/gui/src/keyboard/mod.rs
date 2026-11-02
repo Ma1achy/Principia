@@ -65,6 +65,14 @@ enum Taken {
     FocusLost,
 }
 
+impl Place {
+    /// The part of the scope that shows: all of `rect`, less what a scroll area has clipped of a widget. Empty when
+    /// the area has taken it wholly off.
+    pub fn shown(&self) -> Rect {
+        self.rect.intersect(self.hit)
+    }
+}
+
 /// The keyboard layer.
 pub struct Keyboard {
     explore: ScopeTree,

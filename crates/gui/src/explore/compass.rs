@@ -34,12 +34,13 @@
 //! Shift ×10 and Alt ×0.1 as everywhere (R-409 F3).
 //!
 //! Its views (R-452; [`views`]): four buttons beside Tilt and Slice, Cube (the default), Plücker, Jacobi and Shape, set
-//! what it draws, the mode staying what a drag on the Cube does; in a grid view a drag does nothing, and in the Plücker
-//! view a click on a cell, or Space on the keyboard's cell cursor, steers the slice to that coordinate plane. The view
+//! what it draws, the mode staying what a drag on the Cube does; in a grid view a drag does nothing, and a click on a
+//! cell, or Space on the keyboard's cell cursor, steers the slice: in the Plücker view to that coordinate plane, in the
+//! Jacobi and Shape views ([`physical`]; R-550) to its latent preimage, or refuses and logs why. The view
 //! is its own GUI state, as its mode is. The keys: the view buttons follow Slice as siblings, Enter on one switching the
-//! view; in the Plücker view's interaction mode the arrows move the cell cursor ([`adjust`]) and Space steers
-//! ([`space`]).
+//! view; in a grid view's interaction mode the arrows move the cell cursor ([`adjust`]) and Space steers ([`space`]).
 
+pub mod physical;
 pub mod views;
 
 use eframe::egui::{
@@ -59,7 +60,7 @@ use crate::explore::manifold_view::{
 use crate::explore::{COMPASS, COMPASS_SLICE, COMPASS_TILT, COMPASS_VIEW};
 use crate::keyboard::keymap::Direction;
 use crate::keyboard::scopes::{Adjust, Base, ScopeTree, StepKind};
-use crate::keyboard::Keyboard;
+use crate::windows::Keys;
 use views::CompassView;
 
 /// The compass's title.
@@ -1125,34 +1126,40 @@ pub struct Compass {
     pub mode: Touch,
     /// Its view, which its view buttons show: Cube by default (R-452).
     pub view: CompassView,
-    /// The keyboard's cell cursor in the Plücker view, `(i, j)` with `i < j`, while the compass is in interaction mode
+    /// The keyboard's cell cursor in a grid view, `(i, j)` with `i < j`, while the compass is in interaction mode
     /// (R-452 C6).
     pub cursor: Option<(usize, usize)>,
+    /// What the physical views differentiate (R-550).
+    pub decoder: physical::Decoder,
+    /// The figure point under the pointer, where the physical views take `J` while it is over the figure (R-452 C4).
+    pub hover: Option<[f64; 2]>,
     /// The drag in progress.
     pub drag: Option<Drag>,
     /// What it showed last frame, easing toward the plane.
     pub shown: Option<Shown>,
     /// Whether what it shows is still easing.
     pub moving: bool,
+    /// Whether the focus is on the compass element itself, whose arrows change the readout: the column then keeps its
+    /// end in view as the readout grows, until the wheel takes it away.
+    pub at_element: bool,
 }
 
 /// The arrows on the compass in interaction mode, by its view and mode. In the Cube view, in tilt mode ← → tilt `τ₁`
 /// and ↑ ↓ `τ₂` by the `Tilt` step; in slice mode ↑ and → move the slice along the normal, ↓ and ← back, by the
 /// `SliceNormal` step (REQ-GUI-184), and nothing where the compass draws no plane (R-451 B11). Shift's ×10 and Alt's
-/// ×0.1 are in `adjust.times`, as everywhere (R-409 F3). In the Plücker view they move the cell cursor
-/// ([`views::cursor_moved`]; R-452 C6), editing nothing; in the Jacobi and Shape views, which have no grid yet, nothing.
+/// ×0.1 are in `adjust.times`, as everywhere (R-409 F3). In a grid view they move the cell cursor
+/// ([`views::cursor_moved`]; R-452 C6), editing nothing.
 pub fn adjust(adjust: &Adjust, sim: &SimConfig, scratch: &mut Scratch, out: &mut Out) {
     let (plane, frame) = (&sim.plane, &sim.slice.frame);
     match scratch.compass.view {
         CompassView::Cube => {}
-        CompassView::Plucker => {
+        CompassView::Plucker | CompassView::Jacobi | CompassView::Shape => {
             if let Some(at) = scratch.compass.cursor {
                 scratch.compass.cursor =
                     Some(views::cursor_moved(at, adjust.direction, adjust.times));
             }
             return;
         }
-        CompassView::Jacobi | CompassView::Shape => return,
     }
     match scratch.compass.mode {
         Touch::Tilt => {
@@ -1203,35 +1210,78 @@ pub fn interacting(focus: &Focus) -> bool {
     focus.mode == KeyMode::Interaction && focus.path.last().is_some_and(|id| id == COMPASS_VIEW)
 }
 
-/// Follows the keyboard after its keys ran: in the Plücker view, interaction mode on the compass puts the cell cursor
-/// on the dominant cell, or the first upper cell when none is, and keeps it there as the arrows move it; leaving
-/// interaction mode, or the view, takes it away (R-452 C6).
-pub fn follow_focus(focus: &Focus, plane: &Plane, compass: &mut Compass) {
-    if !interacting(focus) || compass.view != CompassView::Plucker {
+/// The latent point a physical view reads, its grid and its readout alike (R-550 J2).
+fn read_at(sim: &SimConfig, compass: &Compass) -> engine::contract::sim_config::Latent {
+    physical::latent_point(&sim.plane, compass.hover)
+}
+
+/// The view's pushforward of `sim`'s plane in `set`, at the latent point the view reads (R-550).
+pub fn pushed(sim: &SimConfig, compass: &Compass, set: physical::Set) -> physical::Pushforward {
+    let at = read_at(sim, compass);
+    let j = physical::latent_jacobian(&compass.decoder, set, &sim.links, &at);
+    physical::pushforward(&j, &sim.plane)
+}
+
+/// Follows the keyboard after its keys ran: in a grid view, interaction mode on the compass puts the cell cursor on the
+/// dominant cell, or the first upper cell when none is, and keeps it there as the arrows move it; leaving interaction
+/// mode, or the view, takes it away (R-452 C6).
+pub fn follow_focus(focus: &Focus, sim: &SimConfig, compass: &mut Compass) {
+    compass.at_element = focus.path.last().is_some_and(|id| id == COMPASS_VIEW);
+    if !interacting(focus) || compass.view == CompassView::Cube {
         compass.cursor = None;
     } else if compass.cursor.is_none() {
-        compass.cursor = Some(views::cursor_start(&views::plucker(plane)));
+        let grid = match compass.view.physical() {
+            Some(set) => pushed(sim, compass, set).grid,
+            None => views::plucker(&sim.plane),
+        };
+        compass.cursor = Some(views::cursor_start(&grid));
     }
 }
 
-/// Space on the compass in the Plücker view's interaction mode: the steer to the cell cursor, as a click on its cell
-/// (R-452 C6). Nothing in navigation mode, or in another view.
+/// The steer to cell `(i, j)` in the physical view `set`, as a click or Space asks: its edit, or its refusal logged.
+fn steer_physical(
+    set: physical::Set,
+    sim: &SimConfig,
+    (i, j): (usize, usize),
+    scratch: &mut Scratch,
+    out: &mut Out,
+) {
+    match physical::steer(&scratch.compass.decoder, set, sim, i, j) {
+        Some(Ok(edit)) => out.edit(edit, None, scratch),
+        Some(Err(why)) => out.refusals.push(physical::refusal_line(set, i, j, why)),
+        None => {}
+    }
+}
+
+/// Space on the compass in a grid view's interaction mode: the steer to the cell cursor, as a click on its cell (R-452
+/// C6). Nothing in navigation mode or in the Cube view.
 pub fn space(focus: &Focus, sim: &SimConfig, scratch: &mut Scratch, out: &mut Out) {
-    if !interacting(focus) || scratch.compass.view != CompassView::Plucker {
+    let view = scratch.compass.view;
+    if !interacting(focus) || view == CompassView::Cube {
         return;
     }
-    let scale = View::read(sim).scale;
-    if let Some(edit) = scratch
-        .compass
-        .cursor
-        .and_then(|(i, j)| views::steer(scale, i, j))
-    {
-        out.edit(edit, None, scratch);
+    let Some((i, j)) = scratch.compass.cursor else {
+        return;
+    };
+    match view.physical() {
+        Some(set) => steer_physical(set, sim, (i, j), scratch, out),
+        None => {
+            if let Some(edit) = views::steer(View::read(sim).scale, i, j) {
+                out.edit(edit, None, scratch);
+            }
+        }
     }
 }
 
 /// The compass's margin, in points (a look choice, R-390).
 pub const MARGIN: f32 = 12.0;
+/// The gap between the pole's line and the degenerate message under a physical grid, in points (a look choice, R-390).
+pub const UNDER_GRID_GAP: f32 = 2.0;
+/// The width of the bar beside the column while it scrolls, in points (a look choice, R-390).
+pub const COLUMN_BAR: f32 = 6.0;
+/// How far the column stops short of the panel's foot, in points (a look choice, R-390): less than [`MARGIN`], so the
+/// physical help, which ends 10 above the foot at the artboard's window, fits there with no bar and no narrower wrap.
+pub const COLUMN_FOOT: f32 = 4.0;
 
 /// The cube's square in the compass's `rect`: at its top left inside the margin, as tall as the margin leaves, at most
 /// half its width, a whole number of points, so the reference renders at its size (applied per R-369).
@@ -1302,13 +1352,16 @@ pub fn take(
 
 /// Draws the compass in `rect` and takes its buttons' clicks, `pending` the edit [`take`] sent this frame: the Cube
 /// view's cube, or the Plücker view's grid, its position readout and its cells' clicks, or the Jacobi and Shape views'
-/// note; beside it the title, the Tilt and Slice buttons, the view buttons, the view's readout and its hint.
+/// grid, what it says under it and its cells' clicks; beside it the title, the Tilt and Slice buttons, the view buttons, the view's readout and
+/// its hint. That column never leaves the panel: past its foot it scrolls, by the wheel or the bar, which is drawn while
+/// there is more, and a button the focus moves to comes into view (`keys`), as a window's sections do. The focus moving
+/// to the compass element scrolls the column to its end, so the keys reach the readout they change and the hint.
 pub fn show(
     ui: &mut Ui,
     rect: Rect,
     sim: &SimConfig,
     pending: &[SetField],
-    keyboard: &mut Keyboard,
+    keys: &mut Keys<'_>,
     scratch: &mut Scratch,
     out: &mut Out,
 ) {
@@ -1320,9 +1373,9 @@ pub fn show(
         visuals.widgets.noninteractive.bg_stroke,
         egui::StrokeKind::Inside,
     );
-    keyboard.place(COMPASS, rect);
+    keys.keyboard.place(COMPASS, rect);
     let square = square(rect);
-    keyboard.place(COMPASS_VIEW, square);
+    keys.keyboard.place(COMPASS_VIEW, square);
     let (plane, frame) = (&sim.plane, &sim.slice.frame);
     let view = scratch.compass.view;
     let target = Shown::of(&after(plane, pending), frame);
@@ -1356,50 +1409,104 @@ pub fn show(
             (vec![drawing.readout], views::PLUCKER_HELP)
         }
         CompassView::Jacobi | CompassView::Shape => {
-            let galley = painter.layout(
-                views::WAITS.to_owned(),
-                egui::FontId::proportional(LABEL_SIZE),
-                visuals.weak_text_color(),
-                square.width(),
-            );
-            let at = square.center() - galley.size() / 2.0;
-            painter.galley(at, galley, visuals.weak_text_color());
-            (Vec::new(), "")
+            let set = view.physical().expect("a physical view");
+            let push = pushed(sim, &scratch.compass, set);
+            let place = views::GridPlace::fit(square);
+            if push.degenerate {
+                views::paint_empty_cells(&painter, &visuals, place, scratch.compass.cursor);
+            } else {
+                views::paint_cells(
+                    &painter,
+                    &visuals,
+                    place,
+                    &push.grid,
+                    views::dominant(&push.grid),
+                    scratch.compass.cursor,
+                );
+            }
+            for (k, name) in set.names().iter().enumerate() {
+                views::paint_edge_names(&painter, &visuals, place, k, name);
+            }
+            physical_cells(ui, place, set, &push, sim, scratch, out);
+            let decoder = &scratch.compass.decoder;
+            let at_pole =
+                physical::at_pole(decoder, set, &sim.links, &read_at(sim, &scratch.compass));
+            under_grid(ui, square, place, at_pole, push.degenerate);
+            let lines = vec![physical::readout(set, &push)];
+            (lines, physical::HELP)
         }
     };
     let text = Rect::from_min_max(
         pos2(square.max.x + MARGIN, rect.min.y + MARGIN),
-        rect.max - vec2(MARGIN, MARGIN),
+        rect.max - vec2(MARGIN, COLUMN_FOOT),
     );
     let mut column = ui.new_child(UiBuilder::new().max_rect(text));
+    // A scroll area clips its cross axis to its parent's clip, here the whole window.
+    column.shrink_clip_rect(rect);
     column.spacing_mut().item_spacing.y = 4.0;
-    column.label(RichText::new(TITLE).heading());
-    column.horizontal(|ui| {
-        for (mode, id, label) in [
-            (Touch::Tilt, COMPASS_TILT, TILT_BUTTON),
-            (Touch::Slice, COMPASS_SLICE, SLICE_BUTTON),
-        ] {
-            let button = ui.selectable_label(scratch.compass.mode == mode, label);
-            keyboard.place_widget(id, &button);
-            if button.clicked() {
-                scratch.compass.mode = mode;
+    column.spacing_mut().scroll = egui::style::ScrollStyle {
+        floating: false,
+        bar_width: COLUMN_BAR,
+        ..egui::style::ScrollStyle::thin()
+    };
+    egui::ScrollArea::vertical()
+        .id_salt("compass column")
+        .auto_shrink([false, true])
+        .min_scrolled_height(0.0)
+        .stick_to_bottom(scratch.compass.at_element)
+        .scroll_source(
+            egui::scroll_area::ScrollSource::SCROLL_BAR
+                | egui::scroll_area::ScrollSource::MOUSE_WHEEL,
+        )
+        .show(&mut column, |column| {
+            column.label(RichText::new(TITLE).heading());
+            column.horizontal(|ui| {
+                for (mode, id, label) in [
+                    (Touch::Tilt, COMPASS_TILT, TILT_BUTTON),
+                    (Touch::Slice, COMPASS_SLICE, SLICE_BUTTON),
+                ] {
+                    let button = ui.selectable_label(scratch.compass.mode == mode, label);
+                    keys.place(id, &button);
+                    if button.clicked() {
+                        scratch.compass.mode = mode;
+                    }
+                }
+            });
+            column.horizontal_wrapped(|ui| {
+                for (view, id, label) in views::VIEWS {
+                    let button = ui.selectable_label(scratch.compass.view == view, label);
+                    keys.place(id, &button);
+                    if button.clicked() {
+                        scratch.compass.view = view;
+                    }
+                }
+            });
+            for line in &readout {
+                column.label(RichText::new(line).monospace().small());
             }
-        }
-    });
-    column.horizontal_wrapped(|ui| {
-        for (view, id, label) in views::VIEWS {
-            let button = ui.selectable_label(scratch.compass.view == view, label);
-            keyboard.place_widget(id, &button);
-            if button.clicked() {
-                scratch.compass.view = view;
+            if !hint.is_empty() {
+                column.label(RichText::new(hint).weak().small());
             }
-        }
-    });
-    for line in &readout {
-        column.label(RichText::new(line).monospace().small());
+            if keys.focused.as_deref() == Some(COMPASS_VIEW) {
+                column.scroll_to_cursor(Some(egui::Align::BOTTOM));
+            }
+        });
+}
+
+/// What a physical view says under its grid, in the band the Plücker view's position readout takes, so neither pushes
+/// the column's help out of the panel: the pole's line, then the message of a degenerate pushforward.
+fn under_grid(ui: &mut Ui, square: Rect, place: views::GridPlace, at_pole: bool, degenerate: bool) {
+    let band = Rect::from_min_max(
+        pos2(square.min.x, place.rect().max.y + views::GAUGE_GAP),
+        square.max,
+    );
+    let mut under = ui.new_child(UiBuilder::new().max_rect(band));
+    under.spacing_mut().item_spacing.y = UNDER_GRID_GAP;
+    if at_pole {
+        under.label(RichText::new(physical::POLE_LINE).monospace().small());
     }
-    if !hint.is_empty() {
-        column.label(RichText::new(hint).weak().small());
+    if degenerate {
+        under.label(RichText::new(physical::DEGENERATE).size(LABEL_SIZE).weak());
     }
 }
 
@@ -1424,6 +1531,31 @@ fn cells(
             if let Some(edit) = views::steer(scale, i, j) {
                 out.edit(edit, None, scratch);
             }
+        }
+    }
+}
+
+/// A physical view's upper cells as widgets: each shows its names and value on hover, and a click on one steers the slice
+/// to its latent preimage, or refuses and logs why (REQ-GUI-200).
+fn physical_cells(
+    ui: &mut Ui,
+    place: views::GridPlace,
+    set: physical::Set,
+    push: &physical::Pushforward,
+    sim: &SimConfig,
+    scratch: &mut Scratch,
+    out: &mut Out,
+) {
+    for (i, j) in views::upper() {
+        let cell = ui
+            .interact(
+                place.cell_rect(i, j),
+                egui::Id::new(("physical cell", i, j)),
+                Sense::click(),
+            )
+            .on_hover_text(physical::hover_text(set, &push.grid, i, j));
+        if cell.clicked() {
+            steer_physical(set, sim, (i, j), scratch, out);
         }
     }
 }

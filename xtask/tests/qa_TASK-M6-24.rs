@@ -124,7 +124,7 @@ fn steps(c: &Case) -> Vec<GuiStep> {
 /// `mock_compass_cube_tilt_0`, `mock_compass_cube_tilt_rect` and `mock_compass_cube_tilt_hex` (REQ-GUI-191); and, since
 /// TASK-M6-36, `mock_trajectory_views` (REQ-GUI-202, R-453); and, since TASK-M6-34, `mock_compass_views` and
 /// `mock_compass_plucker` (REQ-GUI-194, REQ-GUI-195, R-452); and, since TASK-M6-46, `mock_debug_view` (REQ-GUI-225,
-/// R-467); and no other.
+/// R-467); and, since TASK-M6-35, `mock_compass_jacobi` and `mock_compass_shape` (REQ-GUI-199, R-452); and no other.
 fn check_01_main(cases: &[Case]) {
     let mut names: Vec<&str> = cases.iter().map(|c| c.name.as_str()).collect();
     names.sort_unstable();
@@ -136,7 +136,9 @@ fn check_01_main(cases: &[Case]) {
             "mock_compass_cube_tilt_0",
             "mock_compass_cube_tilt_hex",
             "mock_compass_cube_tilt_rect",
+            "mock_compass_jacobi",
             "mock_compass_plucker",
+            "mock_compass_shape",
             "mock_compass_slice",
             "mock_compass_tilt",
             "mock_compass_views",

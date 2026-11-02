@@ -1,0 +1,49 @@
+c(0.05) = 1.3581; c(0.05/9) = 1.7155
+n: D_c at 5%; with Bonferroni over 9 tests
+  256: 0.1200; 0.1516
+  1000: 0.0607; 0.0767
+  4096: 0.0300; 0.0379
+  6257: 0.0243; 0.0307
+  7366: 0.0224; 0.0283
+  10000: 0.0192; 0.0243
+n with D_c = 0.02: 9222; with Bonferroni over 9: 14715
+n with D_c = 0.03: 4099; with Bonferroni over 9: 6540
+n with D_c = 0.05: 1476; with Bonferroni over 9: 2354
+Monte Carlo power of the 5% test when the true distance is D_c
+  n = 256, normal shift: 0.84 (800 replicates)
+  n = 256, tail mass: 0.83 (800 replicates)
+  n = 256, at the median: 0.53 (800 replicates)
+  n = 10000, normal shift: 0.84 (300 replicates)
+  n = 10000, tail mass: 0.92 (300 replicates)
+  n = 10000, at the median: 0.50 (300 replicates)
+  n = 10000, at the median, true distance 0.022: 0.63 (300 replicates)
+  n = 10000, at the median, true distance 0.025: 0.82 (300 replicates)
+  n = 10000, at the median, true distance 0.028: 0.91 (300 replicates)
+n: smallest difference in a fraction p detected at 80% power, independent samples; p = 0.5, 1/3, 0.1
+  256: 0.124, 0.117, 0.074
+  1000: 0.063, 0.059, 0.038
+  4096: 0.031, 0.029, 0.019
+  6257: 0.025, 0.024, 0.015
+  7366: 0.023, 0.022, 0.014
+  10000: 0.020, 0.019, 0.012
+delta: n at 80% power; p = 0.5, 1/3, 0.1; paired with d = 0.33
+  0.01: 39244, 34884, 14128; 25901
+  0.02: 9811, 8721, 3532; 6475
+  0.03: 4360, 3876, 1570; 2878
+  0.05: 1570, 1395, 565; 1036
+Log-rank at 80% power: events in both arms, the hazard ratio detected
+  cold equal, 10^4 a side, T = 200: 12514 events, HR 1.051
+  cold 1:2:4, 10^4 a side, T = 200: 14732 events, HR 1.047
+  256 a side, half censored: 256 events, HR 1.419
+The median of n values: 95% half-width in units of the spread s (normal), 1.96 * 1.2533 / sqrt(n)
+  256: 0.154 s
+  4096: 0.038 s
+  10000: 0.025 s
+The median, distribution-free: the narrowest rank interval symmetric about the middle with exact coverage >= 95%
+  256: ranks 112 to 145, quantiles 0.438 to 0.566, coverage 0.9610
+  4096: ranks 1985 to 2112, quantiles 0.485 to 0.516, coverage 0.9528
+  10000: ranks 4902 to 5099, quantiles 0.490 to 0.510, coverage 0.9512
+n = 256, c bounds of one direction: rank 145's end moves out by c ranks among the 256 - c measured ratios
+  c = 111: 145 measured; bounded
+  c = 112: 144 measured; unbounded
+  c = 127: 129 measured; unbounded
