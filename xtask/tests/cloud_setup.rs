@@ -147,9 +147,7 @@ fn installed_after(command: &str, key: &str) -> Vec<String> {
         .collect()
 }
 
-/// The actions CI uses that install nothing a cloud machine needs: checkout, caches and artifacts, and the advisory
-/// Gemini review's action, which installs only the Gemini CLI that review runs; nothing builds or tests with it
-/// (decisions.md R-635).
+/// The actions CI uses that install nothing a cloud machine needs: checkout, caches and artifacts.
 const NO_INSTALL: &[&str] = &[
     "actions/checkout@",
     "actions/cache@",
@@ -160,7 +158,6 @@ const NO_INSTALL: &[&str] = &[
     "actions/upload-pages-artifact@",
     "actions/deploy-pages@",
     "Swatinem/rust-cache@",
-    "google-github-actions/run-gemini-cli@",
 ];
 
 /// The kind of a target a `rustup toolchain install && rustup target add` step adds, until `ci_plan` has the channel.

@@ -28,9 +28,24 @@
 //! defaults swapped (`crate::eps_phys::Mismatched`), and its `shift` moves `C`'s output by a known offset before the CoM
 //! is read, so the CoM check must fail it.
 //!
-//! **Held** (RQ-355, RQ-475). REQ-VAL-022's "equilateral → pole and collinear → `w = 0` exactly" is reported, not
-//! judged: what "exactly" means on floating-point states is RQ-475's, and the pole is the equilateral triangle's at
-//! equal masses only (RQ-355). The gate prints the measured `w` on both families.
+//! **The shape checks** (TASK-M2-50; R-551, RQ-475; R-549, RQ-355; RQ-624). Over RQ-475's families, equal-mass
+//! equilateral triangles and collinear states, each through a random gauge element ([`shape_families`]): every collinear
+//! state's `z_β` at its clamp image with its `lookup_clamped` bit set, and no equilateral state's set, bit for bit;
+//! `max |w − 1|` at the pole and `max |w|` at the equator, read on the canonical state `C(x)`, within the bounds
+//! [`POLE_BOUND`] and [`EQUATOR_BOUND`] proposed under REQ-VAL-121. On `D(E(x))` a collinear state's `|w|` is the `β`
+//! clamp's image, `sin2α·sin(π·ε_z)`, by design: it is reported, not judged (RQ-624, decided per R-369). The controls
+//! (R-176): `z_β` moved one ulp off its clamp image ([`RoundtripInput::beta_nudge`]); the collinear states moved off
+//! the line inside the clamp's band ([`RoundtripInput::off_line`]), which only `|w|` on `C(x)` catches; and both bounds
+//! one step below their own measurement ([`ShapeBounds::BelowMeasurement`]).
+//!
+//! **The Randomise arm** (REQ-VAL-193; R-551, RQ-477 (c); [`RandomiseArm`]). The Inspector's Randomise distribution
+//! (render GUI spec §G8's Randomise: masses on `[0.4, 1.8]` normalised, positions on `±0.9`, velocities on `±0.6`,
+//! [`randomise_ic`]) runs beside REQ-VAL-021's arm, each handle at a random size and at the tool's button sizes
+//! (Rotate 15°, Scale ×1.25), its max `‖Δz‖` reported over the draws as stated and over its in-ball subset
+//! `‖E(x)‖ < radius` beside them, per seed. Its verdict is separate: it is reported while its bound in `gate.json`
+//! (`randomise_bound`, [`crate::gate::ArmBound`]) is null, until REQ-VAL-121 records it; once recorded, the arm fails
+//! when its worst over every move and seed, over the in-ball subset, is above it, and that verdict joins the gate's
+//! ([`arm_verdict`]). It is never read by REQ-VAL-021's verdict, except in its control ([`RandomiseArm::fed`]).
 
 use serde::Deserialize;
 
@@ -45,7 +60,7 @@ use kernel::shape::shape;
 use crate::decode_f32_eps::SplitMix;
 use crate::eps_phys::{EncodeKind, Mismatched};
 use crate::gate::report::{GateReport, RegionCount, Regions, Verdict};
-use crate::gate::{Gate, GateConfig};
+use crate::gate::{ArmBound, Gate, GateConfig, Population};
 use crate::gauge::{uniform, Gauge};
 use crate::oklab::quantile;
 
@@ -57,6 +72,15 @@ pub const ROUNDTRIP: &str = "inspector-roundtrip";
 
 /// The canonical CoM's bound, REQ-VAL-022's own value: `‖Σ mᵢrᵢ‖ ≤ 1.7×10⁻¹⁶` on `C`'s output.
 pub const COM_BOUND: f64 = 1.7e-16;
+
+/// The pole's bound, `max |w − 1|` on `C(x)` over the equal-mass equilateral family: proposed under REQ-VAL-121 (R-71)
+/// by TASK-M2-50 from the Rust measurement, provisional until the human confirms it at the M2 gate. It is `2⁻⁵¹`, two
+/// ulps of 1, exactly twice the worst measured `2⁻⁵²`: just above 1, `|w − 1|` takes only multiples of `2⁻⁵²`.
+pub const POLE_BOUND: f64 = 2.0 * f64::EPSILON;
+
+/// The equator's bound, `max |w|` on `C(x)` over the collinear family: proposed under REQ-VAL-121 (R-71) by TASK-M2-50
+/// from the Rust measurement, provisional until the human confirms it at the M2 gate.
+pub const EQUATOR_BOUND: f64 = 2.5e-13;
 
 const PI: f64 = std::f64::consts::PI;
 
@@ -226,6 +250,214 @@ pub struct HandlesInput {
     pub octaves: f64,
     /// The step of `C` dropped, `none` for `E` itself.
     pub leak: Leak,
+    /// The Randomise arm, if the input runs it (REQ-VAL-193).
+    #[serde(default)]
+    pub randomise: Option<RandomiseArm>,
+}
+
+/// The Randomise arm of the handles gate (REQ-VAL-193).
+#[derive(Clone, Debug, PartialEq, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct RandomiseArm {
+    /// The seeds, each drawn and reported on its own.
+    pub seeds: Vec<u64>,
+    /// The draws per seed.
+    pub ics: u32,
+    /// The control (R-176): the arm's maximum fed into REQ-VAL-021's verdict, which must then fail.
+    #[serde(default)]
+    pub fed: bool,
+}
+
+/// The Inspector's Rotate button, 15°.
+pub const BUTTON_TURN: f64 = PI / 12.0;
+
+/// The Inspector's Scale button, ×1.25.
+pub const BUTTON_SCALE: f64 = 1.25;
+
+/// The Randomise arm's moves, in [`randomise_moves`]' order: each handle at a random size, and the two buttons that
+/// have a size. Translate-all (body-dragging) and boost-all ("Boost →", to which the corpus gives no size) are drawn
+/// only.
+pub const MOVES: [&str; 6] = [
+    "translate-all, random",
+    "boost-all, random",
+    "rotate-all, random",
+    "rotate-all at 15°",
+    "scale-all, random",
+    "scale-all at ×1.25",
+];
+
+/// The Inspector's Randomise: masses on `[0.4, 1.8]`, normalised so that `Σmᵢ = 1` (the last `1 − m₀ − m₁`),
+/// positions on `±0.9`, velocities on `±0.6`, `pᵢ = mᵢvᵢ`; the CoM and the total momentum as drawn.
+pub fn randomise_ic(rng: &mut SplitMix) -> Ic<f64> {
+    let raw: [f64; 3] = std::array::from_fn(|_| uniform(rng, 0.4, 1.8));
+    let total: f64 = raw.iter().sum();
+    let (m0, m1) = (raw[0] / total, raw[1] / total);
+    let m = [m0, m1, 1.0 - m0 - m1];
+    let r: [[f64; 2]; 3] =
+        std::array::from_fn(|_| [uniform(rng, -0.9, 0.9), uniform(rng, -0.9, 0.9)]);
+    let v: [[f64; 2]; 3] =
+        std::array::from_fn(|_| [uniform(rng, -0.6, 0.6), uniform(rng, -0.6, 0.6)]);
+    let p = std::array::from_fn(|i| [m[i] * v[i][0], m[i] * v[i][1]]);
+    Ic { m, r, p }
+}
+
+/// The six moves of [`MOVES`] on a Randomise IC, drawn on the canvas's own scales (applied per R-369): the offset on
+/// `[−0.9, 0.9)²`, the boost on `[−0.6, 0.6)²` (the Randomise velocity scale), the turn on `[−π, π)`, the factor on
+/// `2^[−octaves, octaves)`; and the buttons, 15° and ×1.25.
+pub fn randomise_moves(rng: &mut SplitMix, octaves: f64) -> [Gauge; 6] {
+    let id = Gauge::identity();
+    let mut pair = |k: f64| [uniform(rng, -k, k), uniform(rng, -k, k)];
+    let a = pair(0.9);
+    let u = pair(0.6);
+    let theta = uniform(rng, -PI, PI);
+    let s = uniform(rng, -octaves, octaves).exp2();
+    [
+        Gauge { a, ..id },
+        Gauge { u, ..id },
+        Gauge { theta, ..id },
+        Gauge {
+            theta: BUTTON_TURN,
+            ..id
+        },
+        Gauge { s, ..id },
+        Gauge {
+            s: BUTTON_SCALE,
+            ..id
+        },
+    ]
+}
+
+/// One seed of the Randomise arm, measured under `E` with `leak`'s step dropped: per draw, `‖E(h·x) − E(x)‖` for each
+/// move of [`MOVES`], and whether `x` is in the ball, `‖E(x)‖ < radius`.
+#[derive(Clone, Debug, PartialEq)]
+pub struct RandomiseSeed {
+    /// The seed.
+    pub seed: u64,
+    /// Per draw, the six moves' `‖Δz‖`.
+    pub gaps: Vec<[f64; 6]>,
+    /// Per draw, whether `‖E(x)‖ < radius`.
+    pub in_ball: Vec<bool>,
+}
+
+/// The Randomise arm's `ics` draws from `seed`, measured (see [`RandomiseSeed`]).
+pub fn randomise_seed(seed: u64, ics: u32, radius: f64, octaves: f64, leak: Leak) -> RandomiseSeed {
+    let mut rng = SplitMix::new(seed);
+    let mut out = RandomiseSeed {
+        seed,
+        gaps: Vec::new(),
+        in_ball: Vec::new(),
+    };
+    for _ in 0..ics {
+        let x = randomise_ic(&mut rng);
+        let moves = randomise_moves(&mut rng, octaves);
+        let z0 = encode_leaky(&x, leak);
+        out.in_ball.push(inside(z0, radius));
+        out.gaps
+            .push(moves.map(|g| z_gap(z0, encode_leaky(&g.act(&x), leak))));
+    }
+    out
+}
+
+/// Whether `z` is in the open ball `‖z‖ < radius`.
+pub fn inside(z: [f64; 8], radius: f64) -> bool {
+    z_gap(z, [0.0; 8]) < radius
+}
+
+/// The worst of move `k` over `seed`'s draws, all of them or the in-ball subset only; and how many draws that is.
+pub fn randomise_worst(seed: &RandomiseSeed, k: usize, ball_only: bool) -> (f64, usize) {
+    let v: Vec<f64> = seed
+        .gaps
+        .iter()
+        .zip(&seed.in_ball)
+        .filter(|(_, &inside)| inside || !ball_only)
+        .map(|(g, _)| g[k])
+        .collect();
+    (worst(&v).0, v.len())
+}
+
+/// The Randomise arm's lines, one per move, each its maximum over all the draws and over the in-ball subset, overall
+/// and by seed; and its worst over every move and draw.
+fn randomise_lines(seeds: &[RandomiseSeed], radius: f64) -> (Vec<String>, f64) {
+    let mut lines = Vec::new();
+    let mut all_worst = Vec::new();
+    for (k, word) in MOVES.iter().enumerate() {
+        let per = |ball: bool| -> (f64, usize, String) {
+            let each: Vec<(f64, usize)> =
+                seeds.iter().map(|s| randomise_worst(s, k, ball)).collect();
+            let w = worst(&each.iter().map(|e| e.0).collect::<Vec<_>>()).0;
+            let n = each.iter().map(|e| e.1).sum();
+            let by: Vec<String> = seeds
+                .iter()
+                .zip(&each)
+                .map(|(s, e)| format!("{} {:.3e}", s.seed, e.0))
+                .collect();
+            (w, n, by.join(", "))
+        };
+        let (w, n, by) = per(false);
+        let (wb, nb, byb) = per(true);
+        all_worst.push(w);
+        lines.push(format!(
+            "Randomise arm (REQ-VAL-193), reported: {word}: max ‖Δz‖ {w:.3e} over {n} draws (by seed: {by}); in the \
+             ball ‖E(x)‖ < {radius}, {nb} of {n}: max {wb:.3e} (by seed: {byb})"
+        ));
+    }
+    (lines, worst(&all_worst).0)
+}
+
+/// The worst of every move over every seed's draws in `population`, and how many draws that is.
+pub fn population_worst(seeds: &[RandomiseSeed], population: Population) -> (f64, usize) {
+    let ball_only = match population {
+        Population::InBall => true,
+    };
+    let per: Vec<(f64, usize)> = seeds
+        .iter()
+        .flat_map(|s| (0..MOVES.len()).map(move |k| randomise_worst(s, k, ball_only)))
+        .collect();
+    let w = worst(&per.iter().map(|e| e.0).collect::<Vec<_>>()).0;
+    let n = seeds
+        .iter()
+        .map(|s| randomise_worst(s, 0, ball_only).1)
+        .sum();
+    (w, n)
+}
+
+/// The Randomise arm's own verdict and its line (REQ-VAL-193): with `bound`'s value null, reported only, a pass, its
+/// worst `arm_worst` over all the draws beside its worst over `bound`'s population; with it recorded, a fail when the
+/// worst over the population is above it, or when the population is empty.
+pub fn arm_verdict(seeds: &[RandomiseSeed], arm_worst: f64, bound: &ArmBound) -> (Verdict, String) {
+    let (w, n) = population_worst(seeds, bound.population);
+    let req = &bound.requirement;
+    match bound.value {
+        None => (
+            Verdict::Pass,
+            format!(
+                "the Randomise arm: its verdict separate, reported until {req} records its bound; its worst, \
+                 {arm_worst:.3e}, is not read by REQ-VAL-021's verdict (R-551); over the in-ball subset, {n} draws, \
+                 {w:.3e}"
+            ),
+        ),
+        Some(b) if n == 0 => (
+            Verdict::Fail,
+            format!(
+                "the Randomise arm, gated at its recorded bound {b:.3e} ({req}): no draw in the in-ball subset, so \
+                 it is not measured, and fails"
+            ),
+        ),
+        Some(b) => {
+            let v = verdict(w, b);
+            let word = match v {
+                Verdict::Pass => "passes",
+                Verdict::Fail => "fails",
+            };
+            (
+                v,
+                format!(
+                    "the Randomise arm, gated at its recorded bound {b:.3e} ({req}) over the in-ball subset, {n} \
+                     draws: its worst, {w:.3e}, {word}; its own verdict, not read by REQ-VAL-021's (R-551)"
+                ),
+            )
+        }
+    }
 }
 
 /// One random IC and its four handles.
@@ -344,6 +576,22 @@ impl InspectorHandlesGate {
         if input.ics == 0 {
             return Err("refused: no ICs".to_owned());
         }
+        if input
+            .randomise
+            .as_ref()
+            .is_some_and(|arm| arm.seeds.is_empty() || arm.ics == 0)
+        {
+            return Err("refused: a Randomise arm with no seeds or no draws".to_owned());
+        }
+        let arm_bound = match (&input.randomise, &config.randomise_bound) {
+            (Some(_), None) => {
+                return Err(
+                    "refused: gate.json names no bound for the Randomise arm, not even null (REQ-VAL-193)"
+                        .to_owned(),
+                )
+            }
+            (_, bound) => bound,
+        };
         if let Some(refusal) = radius_refusal(input.radius) {
             return Err(refusal);
         }
@@ -369,6 +617,32 @@ impl InspectorHandlesGate {
                 "measured with C's {:?} step dropped (PIT-3: its own handle must fail)",
                 input.leak
             ));
+        }
+        if let Some(arm) = &input.randomise {
+            let seeds: Vec<RandomiseSeed> = arm
+                .seeds
+                .iter()
+                .map(|&s| randomise_seed(s, arm.ics, input.radius, input.octaves, input.leak))
+                .collect();
+            let (lines, arm_worst) = randomise_lines(&seeds, input.radius);
+            scatter.extend(lines);
+            if let Some(arm_bound) = arm_bound {
+                let (v, line) = arm_verdict(&seeds, arm_worst, arm_bound);
+                if v == Verdict::Fail {
+                    all = Verdict::Fail;
+                }
+                negative.push(line);
+            }
+            if arm.fed {
+                let line = format!(
+                    "the Randomise arm's maximum, {arm_worst:.3e}, fed into REQ-VAL-021's verdict at {bound:.3e} \
+                     (R-176: it must fail)"
+                );
+                if verdict(arm_worst, bound) == Verdict::Fail {
+                    all = Verdict::Fail;
+                }
+                negative.push(line);
+            }
         }
         Ok(GateReport {
             gate: HANDLES.to_owned(),
@@ -416,8 +690,38 @@ pub struct RoundtripInput {
     pub encode: EncodeKind,
     /// An offset added to every coordinate of `C`'s output before its CoM is read: 0, or the CoM control's.
     pub shift: f64,
-    /// The draws of each held family, equilateral and collinear, reported only (RQ-475).
+    /// The draws of each shape family, equilateral and collinear; 0 for none.
     pub shapes: u32,
+    /// The in-clamp-band control (RQ-624): each collinear state's body 2 moved off the line by this many ulps of 1,
+    /// before its gauge element; 0 for on the line.
+    #[serde(default)]
+    pub off_line: u32,
+    /// The bit-for-bit control (RQ-624): each `z_β` moved one ulp off its encoded value before it is compared.
+    #[serde(default)]
+    pub beta_nudge: bool,
+    /// The bounds the shape checks are judged against.
+    #[serde(default)]
+    pub bounds: ShapeBounds,
+}
+
+/// The bounds the shape checks are judged against.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ShapeBounds {
+    /// [`POLE_BOUND`] and [`EQUATOR_BOUND`].
+    #[default]
+    Proposed,
+    /// The control (R-176): each bound the largest float below its own measurement, so both checks must fail.
+    BelowMeasurement,
+}
+
+/// The largest float below a measured `w ≥ 0`: one ulp down, or below 0 at 0.
+pub fn below(w: f64) -> f64 {
+    if w > 0.0 {
+        f64::from_bits(w.to_bits() - 1)
+    } else {
+        -f64::from_bits(1)
+    }
 }
 
 /// `(s, e)` with `s + e = a + b` exactly.
@@ -463,41 +767,53 @@ pub fn latents(input: &RoundtripInput) -> Vec<[f64; 8]> {
         .collect()
 }
 
-/// The held families (RQ-475), measured: `[equilateral, collinear]` in each count.
+/// RQ-475's families, measured (see [`shape_families`]): `[equilateral, collinear]` in each count.
 #[derive(Clone, Debug, PartialEq)]
-pub struct Held {
-    /// The equilateral states' `|w − 1|`.
+pub struct Shapes {
+    /// The equilateral states' `|w − 1|` on `C(x)`.
     pub pole: Vec<f64>,
-    /// The collinear states' `|w|`.
+    /// The collinear states' `|w|` on `C(x)`.
     pub equator: Vec<f64>,
+    /// The collinear states' `|w|` on `D(E(x))`, the clamp image `sin2α·sin(π·ε_z)`: reported, not judged (RQ-624).
+    pub clamp_image: Vec<f64>,
     /// How many of each family have `z_β`'s clamp bit set.
     pub beta_bit: [usize; 2],
-    /// How many of each family have `z_β` exactly at its clamp image, `β ∈ {0, π̂}` clamped.
-    pub beta_edge: [usize; 2],
+    /// How many of each family have `z_β` at its clamp image bit for bit, `β ∈ {0, π̂}` clamped.
+    pub beta_image: [usize; 2],
     /// The collinear states' masses.
     pub masses: Vec<[f64; 3]>,
 }
 
-/// The held families, `n` of each, `w` read on `C`'s output through `kernel::shape::shape`: the equal-mass unit
-/// equilateral triangle, and three bodies on the `x`-axis with masses from the mass block at `z_μ` on `[−4, 4)²`, each
-/// through a random gauge element (either parity, so `L⁺` and `L⁻` both), at rest before it. Neither `w` nor `z_β`
-/// reads the momenta.
-pub fn held_shapes(seed: u64, n: u32) -> Held {
-    let mut rng = SplitMix::new(seed);
+/// `z_β`'s two clamp images under the defaults, `β = 0` and `β = π̂` through the β link's inverse.
+pub fn beta_images() -> [f64; 2] {
     type BetaLink = <Defaults as Selection>::BetaLink;
-    let edge = [0.0, pi_image::<f64>()].map(|b| BetaLink::inverse([b])[0]);
+    [0.0, pi_image::<f64>()].map(|b| BetaLink::inverse([b])[0])
+}
+
+/// RQ-475's families, `n` of each from `seed`: the equal-mass unit equilateral triangle, and three bodies on the
+/// `x`-axis with masses from the mass block at `z_μ` on `[−4, 4)²`, body 2 moved off the line by `off_line` ulps of 1;
+/// each at rest, then through a random gauge element (either parity, so `L⁺` and `L⁻` both). `w` is read through
+/// `kernel::shape::shape` on `C(x)`, the canonical state `E` reads, and on `D(E(x))`. `z_β` is moved one ulp where
+/// `beta_nudge`, then compared with its clamp images bit for bit. Neither `w` nor `z_β` reads the momenta.
+pub fn shape_families(seed: u64, n: u32, off_line: u32, beta_nudge: bool) -> Shapes {
+    let mut rng = SplitMix::new(seed);
+    let images = beta_images();
     let equal = mass::decode::<Defaults, f64>([0.0, 0.0]).m;
     let triangle = [[0.0, 0.0], [1.0, 0.0], [0.5, 3f64.sqrt() / 2.0]];
-    let mut held = Held {
+    let lift = f64::from(off_line) * f64::EPSILON;
+    let mut out = Shapes {
         pole: Vec::new(),
         equator: Vec::new(),
+        clamp_image: Vec::new(),
         beta_bit: [0; 2],
-        beta_edge: [0; 2],
+        beta_image: [0; 2],
         masses: Vec::new(),
     };
     for _ in 0..n {
         let z_mu = [uniform(&mut rng, -4.0, 4.0), uniform(&mut rng, -4.0, 4.0)];
         let line: [f64; 3] = std::array::from_fn(|_| uniform(&mut rng, -1.0, 1.0));
+        let mut r = line.map(|t| [t, 0.0]);
+        r[2][1] = lift;
         let states = [
             Ic {
                 m: equal,
@@ -506,7 +822,7 @@ pub fn held_shapes(seed: u64, n: u32) -> Held {
             },
             Ic {
                 m: mass::decode::<Defaults, f64>(z_mu).m,
-                r: line.map(|t| [t, 0.0]),
+                r,
                 p: [[0.0; 2]; 3],
             },
         ];
@@ -515,16 +831,93 @@ pub fn held_shapes(seed: u64, n: u32) -> Held {
             let e = encode::<Defaults, f64>(&x);
             let w = shape(e.canonical.ic.r, x.m)[2];
             if k == 0 {
-                held.pole.push((w - 1.0).abs());
+                out.pole.push((w - 1.0).abs());
             } else {
-                held.equator.push(w.abs());
-                held.masses.push(x.m);
+                out.equator.push(w.abs());
+                let back = decode_z(e.z.z);
+                out.clamp_image.push(shape(back.r, back.m)[2].abs());
+                out.masses.push(x.m);
             }
-            held.beta_bit[k] += usize::from(e.report.clamped_controls & 2 != 0);
-            held.beta_edge[k] += usize::from(edge.contains(&e.z.z[1]));
+            let mut z_beta = e.z.z[1];
+            if beta_nudge {
+                z_beta = f64::from_bits(z_beta.to_bits() + 1);
+            }
+            out.beta_bit[k] += usize::from(e.report.clamped_controls & 2 != 0);
+            out.beta_image[k] +=
+                usize::from(images.iter().any(|i| i.to_bits() == z_beta.to_bits()));
         }
     }
-    held
+    out
+}
+
+/// The shape checks' verdict and lines on `input`'s families: the bit-for-bit `z_β` check, the pole's `|w − 1|` and the
+/// equator's `|w|` on `C(x)` judged; `D(E(x))`'s `|w|` reported.
+fn shape_checks(input: &RoundtripInput) -> (Verdict, Vec<String>, Vec<String>) {
+    let s = shape_families(input.seed, input.shapes, input.off_line, input.beta_nudge);
+    let n = input.shapes as usize;
+    let scatter = vec![
+        summary(
+            "|w − 1| on C(x), equal-mass equilateral (L⁺ and L⁻)",
+            &s.pole,
+        ),
+        summary("|w| on C(x), collinear", &s.equator),
+        summary(
+            "|w| on D(E(x)), collinear, reported, not judged: the clamp image, sin2α·sin(π·ε_z)",
+            &s.clamp_image,
+        ),
+    ];
+    let bits = if s.beta_bit == [0, n] && s.beta_image[1] == n {
+        Verdict::Pass
+    } else {
+        Verdict::Fail
+    };
+    let (pole_bound, equator_bound) = match input.bounds {
+        ShapeBounds::Proposed => (POLE_BOUND, EQUATOR_BOUND),
+        ShapeBounds::BelowMeasurement => (below(worst(&s.pole).0), below(worst(&s.equator).0)),
+    };
+    let (pole, pole_line) = outcome("the pole's |w − 1| on C(x)", &s.pole, pole_bound);
+    let (equator, equator_line) = outcome("the equator's |w| on C(x)", &s.equator, equator_bound);
+    let mut negative = vec![
+        format!(
+            "z_β bit for bit: the clamp bit set in {} of {n} collinear and {} of {n} equilateral states; z_β at its \
+             clamp image in {} of {n} collinear states; {}",
+            s.beta_bit[1],
+            s.beta_bit[0],
+            s.beta_image[1],
+            if bits == Verdict::Pass { "passes" } else { "fails" }
+        ),
+        pole_line,
+        equator_line,
+    ];
+    negative.push(match input.bounds {
+        ShapeBounds::Proposed => format!(
+            "the shape bounds, |w − 1| ≤ {POLE_BOUND:e} and |w| ≤ {EQUATOR_BOUND:e}: proposed, provisional \
+             (REQ-VAL-121, R-71)"
+        ),
+        ShapeBounds::BelowMeasurement => {
+            "each shape bound one ulp below its own measurement (R-176: both must fail)".to_owned()
+        }
+    });
+    if input.off_line > 0 {
+        negative.push(format!(
+            "every collinear state moved {} ulps of 1 off the line (R-176: the |w| check must fail it, z_β still \
+             clamped)",
+            input.off_line
+        ));
+    }
+    if input.beta_nudge {
+        negative.push(
+            "every z_β moved one ulp off its encoded value (R-176: the bit-for-bit check must fail)".to_owned(),
+        );
+    }
+    let all = [bits, pole, equator]
+        .into_iter()
+        .all(|v| v == Verdict::Pass);
+    (
+        if all { Verdict::Pass } else { Verdict::Fail },
+        scatter,
+        negative,
+    )
 }
 
 /// The `inspector-roundtrip` gate.
@@ -539,6 +932,11 @@ impl InspectorRoundtripGate {
     ) -> Result<GateReport, String> {
         if input.samples == 0 {
             return Err("refused: no samples".to_owned());
+        }
+        let control =
+            input.off_line > 0 || input.beta_nudge || input.bounds != ShapeBounds::Proposed;
+        if input.shapes == 0 && control {
+            return Err("refused: a shape control with no shapes".to_owned());
         }
         if let Some(refusal) = radius_refusal(input.radius) {
             return Err(refusal);
@@ -568,28 +966,14 @@ impl InspectorRoundtripGate {
                 input.shift
             ));
         }
+        let mut v_shape = Verdict::Pass;
         if input.shapes > 0 {
-            let held = held_shapes(input.seed, input.shapes);
-            let exact = |v: &[f64]| v.iter().filter(|&&x| x == 0.0).count();
-            let n = input.shapes;
-            scatter.push(format!(
-                "held (RQ-475, RQ-355), not judged: equal-mass equilateral, L⁺ and L⁻ through a random gauge: max \
-                 |w − 1| {:.3e}, w = 1 exactly in {} of {n}; z_β's clamp bit set in {}, at its clamp image in {}",
-                worst(&held.pole).0,
-                exact(&held.pole),
-                held.beta_bit[0],
-                held.beta_edge[0]
-            ));
-            scatter.push(format!(
-                "held (RQ-475), not judged: collinear on a random line through a random gauge: max |w| {:.3e}, w = 0 \
-                 exactly in {} of {n}; z_β's clamp bit set in {}, at its clamp image in {}",
-                worst(&held.equator).0,
-                exact(&held.equator),
-                held.beta_bit[1],
-                held.beta_edge[1]
-            ));
+            let (v, lines, negatives) = shape_checks(input);
+            v_shape = v;
+            scatter.extend(lines);
+            negative.extend(negatives);
         }
-        let pass = v_gap == Verdict::Pass && v_com == Verdict::Pass;
+        let pass = v_gap == Verdict::Pass && v_com == Verdict::Pass && v_shape == Verdict::Pass;
         Ok(GateReport {
             gate: ROUNDTRIP.to_owned(),
             input: name.to_owned(),

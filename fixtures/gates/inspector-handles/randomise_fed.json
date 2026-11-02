@@ -1,0 +1,11 @@
+{
+  "description": "R-176, the Randomise arm's verdict is separate (REQ-VAL-193): REQ-VAL-021's draws, fewer of them, and the Randomise arm on seed 1 with its maximum fed into REQ-VAL-021's verdict at 1.6×10⁻¹⁴, which must fail.",
+  "seed": 1,
+  "ics": 2000,
+  "radius": 4.0,
+  "span": 1.0,
+  "octaves": 4.0,
+  "leak": "none",
+  "randomise": { "seeds": [1], "ics": 2000, "fed": true },
+  "expected": "fail"
+}
