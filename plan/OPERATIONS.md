@@ -401,6 +401,14 @@ the verdict) runs once per approved head, not on every push:
   head's `mutants-check` as `queued`, so the gate runs again only once the new head is approved and labelled again,
   and the push cancels a merge-ready run still going on the old head. Other labels start nothing. To re-run the gate on
   the same head (a flaky shard), take the label off and put it back.
+- **A failed verdict.** Every approval comes before any mutant has run, so a survivor first shows after them, and it is
+  still a qa finding (R-196; `plan/reviewers/qa.md`'s mutants item). The orchestrator reads the failed
+  `mutants-check`: the verdict run's log and each shard's report of survivors (a shard that failed flakily, with no
+  survivor, is re-labelled as above). It dispatches qa to judge the survivors, a review of the head that names each
+  one, and then the implementer for a fix round: a test that kills each survivor, or an entry in
+  `.cargo/mutants-equivalent.toml` with its one-line justification, which the code and qa reviewers approve (R-202).
+  The fix round's push takes the label off, every reviewer the task names approves the new head again, and only then
+  does the watcher put the label back on, starting the new head's merge-ready run.
 - **What branch protection sees.** `mutants-check` is a check run the workflow posts through the Checks API, under the
   GitHub Actions app, never a job: before the label it is `queued` (pending), or "expected" if nothing posted it, so
   the merge waits; it is never a skipped job, which GitHub would count as passed. A docs-only head's is posted passed
