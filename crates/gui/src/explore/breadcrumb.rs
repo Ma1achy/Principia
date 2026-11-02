@@ -56,13 +56,18 @@ pub fn show(ui: &mut Ui, text: &str, mode: KeyMode) {
 }
 
 /// Draws the focus ring on `place` in `mode`'s colour, above the figure's layer, inside the rect or outside it as
-/// `ring` says.
+/// `ring` says: on the part of it that shows, so a ring on a widget a scroll area moves stays in the area, and none when
+/// nothing shows.
 pub fn ring(ctx: &egui::Context, place: Place, ring: Ring, mode: KeyMode) {
+    let shown = place.shown();
+    if !shown.is_positive() {
+        return;
+    }
     let colour = colour(&ctx.global_style().visuals, mode);
     // Outside, the rect grows by a point first, so the stroke's anti-aliasing stays off the rect too.
     let (rect, kind) = match ring {
-        Ring::Inside => (place.rect, StrokeKind::Inside),
-        Ring::Outside => (place.rect.expand(1.0), StrokeKind::Outside),
+        Ring::Inside => (shown, StrokeKind::Inside),
+        Ring::Outside => (shown.expand(1.0), StrokeKind::Outside),
     };
     ctx.layer_painter(LayerId::new(Order::Foreground, Id::new("focus ring")))
         .rect_stroke(rect, RING_ROUNDING, Stroke::new(RING_WIDTH, colour), kind);
