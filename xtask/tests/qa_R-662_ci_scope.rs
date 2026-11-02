@@ -666,9 +666,11 @@ fn check_required(ci: &str, mutants: &str) {
         "qa_r662: `ci` passes when its archive job failed"
     );
 
-    // `mutants-check`: always runs, and its own script passes a run with no report and fails a failed shard.
+    // `mutants-check`: its verdict job (`mutants-verdict`, which posts the check, R-656's merge-ready run) always runs
+    // once started, posts the check whatever happened, and its own script passes a run with no report and fails a
+    // failed shard.
     let mutants = parse(mutants);
-    let job = &mutants["jobs"]["mutants-check"];
+    let job = &mutants["jobs"]["mutants-verdict"];
     assert!(
         s(&job["if"]).starts_with("always()"),
         "qa_r662: `mutants-check` can be skipped"
@@ -676,6 +678,12 @@ fn check_required(ci: &str, mutants: &str) {
     let steps = job["steps"]
         .as_array()
         .expect("qa_r662: mutants-check's steps");
+    assert!(
+        steps.iter().any(|st| s(&st["if"]) == "always()"
+            && s(&st["run"]).contains("check-runs")
+            && s(&st["run"]).contains("name=mutants-check")),
+        "qa_r662: the verdict is not posted as `mutants-check` whatever happened"
+    );
     let step = steps
         .iter()
         .find(|st| s(&st["run"]).contains("cargo xtask mutants-check"))

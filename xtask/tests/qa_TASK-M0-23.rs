@@ -61,8 +61,9 @@ fn job<'a>(yml: &'a str, name: &str) -> Vec<&'a str> {
         .collect()
 }
 
-/// REQ-VAL-148: on pull_request events, on ubuntu-24.04 (R-186, pinned by R-375), `cargo mutants --in-diff` reads the
-/// diff written by `git diff origin/<base>...HEAD`, the checked-in list decides, and the report is uploaded.
+/// REQ-VAL-148: on pull_request events (the merge-ready run, R-656), on ubuntu-24.04 (R-186, pinned by R-375), `cargo
+/// mutants --in-diff` reads the diff written by `git diff origin/<base>...HEAD`, the checked-in list decides, and the
+/// report is uploaded.
 fn checks_job(yml: &str) {
     assert!(
         yml.lines().any(|l| l.trim_end() == "  pull_request:"),
@@ -73,6 +74,12 @@ fn checks_job(yml: &str) {
     assert!(
         has("if: github.event_name == 'pull_request'"),
         "qa23: the mutants job is not limited to pull_request events"
+    );
+    // R-656: the merge-ready run, the one the `merge-ready` label starts, runs the shards (the owner's CI plan of
+    // 2 Nov 2026).
+    assert!(
+        has("github.event.action == 'labeled'") && has("github.event.label.name == 'merge-ready'"),
+        "qa23: the mutants job is not limited to the merge-ready run (R-656)"
     );
     assert!(
         lines.iter().any(|l| l.trim() == "runs-on: ubuntu-24.04"),
@@ -215,8 +222,10 @@ mod latest_runner {
         expected = "qa23: the mutants job is not on ubuntu-24.04 (R-375)",
         checks_job(&edit(
             &read(".github/workflows/mutants.yml"),
-            "  mutants:\n    if: github.event_name == 'pull_request'\n    runs-on: ubuntu-24.04\n",
-            "  mutants:\n    if: github.event_name == 'pull_request'\n    runs-on: ubuntu-latest\n"
+            "  mutants:\n    if: github.event_name == 'pull_request' && github.event.action == 'labeled' && \
+             github.event.label.name == 'merge-ready'\n    runs-on: ubuntu-24.04\n",
+            "  mutants:\n    if: github.event_name == 'pull_request' && github.event.action == 'labeled' && \
+             github.event.label.name == 'merge-ready'\n    runs-on: ubuntu-latest\n"
         ))
     );
 }
