@@ -9693,6 +9693,10 @@ Changes REQ-TOOL-010 (rulings, sources, note).
 ## R-436 — The descriptor's `±∞` at the poles are stored as computed; every consumer, CPU and GPU alike, colours a non-finite input as invalid, tested by comparing the stored value, never by arithmetic on `∞` *(closes RQ-284; extends R-79)*
 *Read by R-467 (20 Oct 2026; a presentation view colours a non-finite input `#141418`; the debug views keep the
 invalid hatch, and View › Debug view draws NaN and `±∞` in a style of their own).*
+*Amended in part by R-670 (2 Nov 2026; RQ-656 (5)(i): at `ε ≠ 0` the decode's `V₀` is softened and finite at a zero
+separation, so there is no collision pole there; the `−∞` select applies at `ε = 0` only).*
+*Still in force: all of it at `ε = 0`; at `ε ≠ 0` the collision pole's `−∞` gives way to the finite softened `V₀`
+(R-670), `rho_ratio`'s `+∞` at `α = 0` unchanged.*
 *15 Oct 2026 · applied in `docs/design/principia_dd_decoder.md` § "3.6 ICDescriptor derived quantities (decode-time,
 pre-integration)" (a sentence reworded, a bullet added), `docs/design/principia_colour_composition.md` § "6. Debug views
 as presets", `docs/contracts/principia_render_contract.md` § "Cross-check views (the seams)",
@@ -28765,6 +28769,10 @@ R-653 is in the "design" group of `plan/rule_groups.yaml`, with R-649 and R-650.
 Changes REQ-VAL-246 (statement, verify, rulings, note), REQ-VAL-308, REQ-VAL-309, REQ-VAL-311, REQ-VAL-312 and REQ-VAL-313 (verify, rulings, note), REQ-VAL-247 and REQ-VAL-310 (rulings, note); `rq: RQ-622` removed from the six.
 
 ## R-654 — The softened force law is Plummer softening, `V = −Σ mᵢmⱼ/√(r² + ε²)`, with `ε` canonical, a fraction of the initial hyperradius `R` fixed at `t = 0` and never co-moving, recorded in every output header like `r_coll`; energy and drift are defined under the softened potential; its task is scheduled late, after the core build, and runs with `ε ≠ 0` stay refused until it lands *(closes RQ-627; queues RQ-656)*
+*Amended in part by R-670 (2 Nov 2026; RQ-656: the collision test stays geometric, the regularised occupants refuse
+`ε ≠ 0`, and Chazy's `E`, the escape test's and the ionisation gate's pair energies and the decode's `V₀` take the
+softened potential; a view refuses `ε ≠ 0` with any `Some(E*)`; the substep law stays geometric).*
+*Still in force: all of it; R-670 says what the softened potential reaches.*
 *30 Oct 2026 · the owner's batch of that day; applied in `docs/design/principia_dd_generation_root.md` § "Open" (a paragraph), `docs/contracts/principia_integrator_contract.md` Part 3 (a row) and Part 7 (a paragraph), `docs/archive/review_queue/M0.md` (RQ-627, moved with this ruling), `REVIEW_QUEUE.md` (RQ-656), REQ-SYS-018 (reqio), REQ-INT-110, REQ-SYS-094 and REQ-SYS-095 (reqio, new), REQ-VAL-340 (reqio), TASK-M9-37 (lines), TASK-M9-39 (new), TASK-M3-06 (a note), `plan/MILESTONES.md`, `plan/tasks.yaml` and `plan/rule_groups.yaml`; built by TASK-M9-39, and the refusal by TASK-M3-06*
 
 The owner's words (30 Oct 2026), verbatim, from that day's batch of rulings:
@@ -29377,3 +29385,34 @@ The owner's words, 1 Nov 2026, verbatim, the second message's item (2) and what 
 R-669 is in the "design" group of `plan/rule_groups.yaml`, with R-639 and R-661.
 
 Adds REQ-CHART-091, REQ-VAL-342 and REQ-VAL-343; changes REQ-INT-045 and REQ-PAY-112 (statement, verify, note), REQ-VAL-199, REQ-VAL-295, REQ-VAL-311 to REQ-VAL-314, REQ-VAL-316, REQ-VAL-318, REQ-VAL-319, REQ-VAL-321, REQ-VAL-323, REQ-VAL-325 to REQ-VAL-327 and REQ-VAL-329 (rulings, rq, notes).
+
+## R-670 — Softening's reach: a softened run keeps the collision test on geometric `r`, softening offered only on the unregularised occupants, the regularised ones refusing `ε ≠ 0`, and Chazy's `E` softened; the escape test's and the ionisation gate's pair energies take the softened potential, identical at `ε = 0`; the decode's `V₀` is softened, with `virial_ratio` following and `E₀ = K₀ + V₀`, so REQ-VAL-027, REQ-COL-006 and R-436's collision pole are restated for `ε ≠ 0` and unchanged at `ε = 0`; a view refuses `ε ≠ 0` with any `Some(E*)`; the substep law stays on geometric `d²` and `r_min` *(closes RQ-656; amends R-436 and R-654)*
+*1 and 2 Nov 2026 · the owner's second message of 1 Nov (questions (1) to (3)) and his message of 2 Nov (questions (4) to (7)); ported 2 Nov 2026; applied in `docs/contracts/principia_integrator_contract.md` Part 7 (the softening paragraph, a dated restatement), `docs/design/principia_dd_decoder.md` § 2, § 3.6 and § 3.7 (dated lines), `docs/design/principia_chart_reference.md` § 0.6 (a dated line), `docs/design/principia_dd_chazy_final_motion.md` § 3.1 (a dated line), `docs/design/principia_dd_generation_root.md` § "Open" (a dated line), the forward lines of R-436 and R-654, `docs/archive/review_queue/M0.md` (RQ-656 moved), `REVIEW_QUEUE.md`, REQ-VAL-027, REQ-COL-006, REQ-INT-110, REQ-SYS-094 and REQ-SYS-095 (reqio), TASK-M9-39 and `plan/rule_groups.yaml`*
+
+The owner's words, verbatim. 1 Nov 2026, his second message, item (2), of RQ-656's questions (1) to (3), which were all it then asked:
+
+> 656 (a)
+
+2 Nov 2026, of questions (4) to (7), added to the entry by PR #375's physics review:
+
+> 656: (4)(ii): soften the escape test's pair energy, same potential as the dynamics (identical at ε = 0, so no unsoftened run changes); (5)(i), restating the two tests that rely on V₀ → ∞; (6)(iii); (7)(i).
+
+*What it decides:*
+
+- **(1) to (3), option (a).** "The collision test unchanged on geometric `r`; softening offered only on the unregularised occupants, the others refusing `ε ≠ 0`; Chazy's `E` softened as the ruling's energy." A softened run collides at `min ‖rᵢ − rⱼ‖ < r_coll`, as an unsoftened one does. A regularised occupant refuses `ε ≠ 0` at dispatch, with a typed reason. The Chazy classifier's `E` is the run's `E_0` under the softened potential, its "unsoftened" (§ 3.1) read as the `ε = 0` case.
+- **(4), option (ii).** The escape test's `E_rel` and the ionisation gate's three pairwise relative energies take the softened potential, the dynamics' own: `d` read as `√(d² + ε²)` in the potential term, the kinetic term and the separations' growth unchanged. At `ε = 0` they are the formulas as written, so no unsoftened run changes. `tau`'s measured gap and `E_rel`'s to-re-measure note were not taken under softening, and are not claimed for it.
+- **(5), option (i).** The decode's `V₀` is the softened potential, `V₀ = −Σ mᵢmⱼ/√(‖rᵢ − rⱼ‖² + ε²)`, and `virial_ratio = 2K₀/|V₀|` follows, so `E₀ = K₀ + V₀` holds as § 3.6 writes it and agrees with the kernel's softened `E_0`. `ε` is an input of the decode stage and of the fragment decode. At `ε ≠ 0`, `V₀` is finite at a zero separation, so there is no collision pole: the two tests that rely on `V₀ → −∞` there, REQ-VAL-027's and REQ-COL-006's, and R-436's pole, are restated for `ε ≠ 0`: the `−∞` select applies at `ε = 0` only, and at `ε ≠ 0` a zero separation's `V₀` is the finite softened value, checked like any other pixel. At `ε = 0` every word of them stands.
+- **(6), option (iii).** A view refuses `ε ≠ 0` with any `Some(E*)`, as a forbidding chart refuses any `Some(E*)` (dd_decoder § 3.7, R-25): `η_E` never runs on a softened decode, so a pixel's IC never depends on `ε`, and `ENERGY_INFEASIBLE` and `ENERGY_UNSCALABLE` keep their meaning.
+- **(7), option (i).** The substep law stays on the geometric `d²` and `r_min`, as written.
+
+*Applied per R-369:*
+
+- **The refusals' place.** The regularised occupants' refusal of `ε ≠ 0` and the view's refusal of `ε ≠ 0` with `Some(E*)` are TASK-M9-39's, built when it lifts the refusal of `ε ≠ 0`; until then dispatch refuses every `ε ≠ 0` (R-654), so neither can be reached.
+- **The restatements.** REQ-VAL-027 and REQ-COL-006 gain an `ε ≠ 0` sentence, their `ε = 0` statements and verifies unchanged; the `ε ≠ 0` clause is verified by TASK-M9-39, since no softened run exists before it.
+- **Chazy's pair energies.** RQ-656 (3) asked of `E` only, and this ruling softens `E`. The classifier's pair and outer two-body energies (§ 3.1's `pair_kup`, `out_kup`) are not ruled here; TASK-M9-39 reaches the classifier only if its tests need it, and any such reading goes to the queue first.
+
+*What it amends:* **R-654**, softening's reach (its "energy and drift are defined under the softened potential" now reaches Chazy's `E`, the escape test's and the ionisation gate's pair energies and the decode's `V₀`); **R-436**, its collision pole at `ε ≠ 0`. It closes **RQ-656**.
+
+R-670 is in the "physics" group of `plan/rule_groups.yaml`, with R-654.
+
+Changes REQ-VAL-027 and REQ-COL-006 (statement, rulings, note), REQ-INT-110, REQ-SYS-094 and REQ-SYS-095 (rq, rulings, note).

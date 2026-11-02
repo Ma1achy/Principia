@@ -5684,15 +5684,16 @@
     section: Open
   - file: docs/contracts/principia_parity_contract.md
     section: "Tier N — tight numerical (checkable because nothing amplifies)"
+  - file: decisions.md
+    section: "R-670 — Softening's reach: a softened run keeps the collision test on geometric `r`, softening offered only on the unregularised occupants, the regularised ones refusing `ε ≠ 0`, and Chazy's `E` softened; the escape test's and the ionisation gate's pair energies take the softened potential, identical at `ε = 0`; the decode's `V₀` is softened, with `virial_ratio` following and `E₀ = K₀ + V₀`, so REQ-VAL-027, REQ-COL-006 and R-436's collision pole are restated for `ε ≠ 0` and unchanged at `ε = 0`; a view refuses `ε ≠ 0` with any `Some(E*)`; the substep law stays on geometric `d²` and `r_min` *(closes RQ-656; amends R-436 and R-654)*"
   verify:
-    detail: "the force equals the central difference of V at f64, for ε = 0, a small ε and an ε above the pair distance; ε = 0 is bit-identical to the Newtonian force and energy; ε is bitwise the sim-key value at every step and on every sample, along a run in which R changes; a softened leapfrog's drift under the softened V converges with step size; at ε ≠ 0 the decode stage's E₀ agrees with the kernel's E₀ under the softened V, the descriptor's V₀ being in the form RQ-656's ruling gives; controls: E read with the Newtonian V at ε ≠ 0 fails that drift bound, an E₀ read with the Newtonian V at ε ≠ 0 fails that agreement, and an ε recomputed from the state or from R(t) fails the bitwise check; on gpu-metal and gpu-lavapipe, per step and per decode, each with ε ≠ 0 within its Tier-N tolerance of the f64 CPU, the FTLE shadow included, and at ε = 0 the same bits as the Newtonian kernel's, with the control that a GPU build whose force drops ε fails"
     method: unit test
+    detail: "the force equals the central difference of V at f64, for ε = 0, a small ε and an ε above the pair distance; ε = 0 is bit-identical to the Newtonian force and energy; ε is bitwise the sim-key value at every step and on every sample, along a run in which R changes; a softened leapfrog's drift under the softened V converges with step size; at ε ≠ 0 the decode stage's E₀ agrees with the kernel's E₀ under the softened V, the descriptor's V₀ softened (R-670); controls: E read with the Newtonian V at ε ≠ 0 fails that drift bound, an E₀ read with the Newtonian V at ε ≠ 0 fails that agreement, and an ε recomputed from the state or from R(t) fails the bitwise check; on gpu-metal and gpu-lavapipe, per step and per decode, each with ε ≠ 0 within its Tier-N tolerance of the f64 CPU, the FTLE shadow included, and at ε = 0 the same bits as the Newtonian kernel's, with the control that a GPU build whose force drops ε fails"
   rulings:
   - R-654
+  - R-670
   milestone: M9
-  rq:
-  - RQ-656
-  note: "R-654. Closed by TASK-M9-39, a build task after the core build, not a target: it is not scored, and its tests block its own merge. It waits on RQ-656 for the collision branch, the regularised occupants, the Chazy classifier, the escape test, the decode's V₀, η_E and the substep law. The E₀ agreement in its verify: physics review 5730650164 of PR #375, P1; what V₀ holds is RQ-656's, question (5), so the test holds E₀ to the softened V, as ruled, and V₀ to that ruling. Verify *was:* \"ε scales with the initial R and does not change as R does along a run\", which cannot fail on a canonical run, R₀ being 1 on all of them (physics review 5730650164 of PR #375, P3; applied per R-369). The GPU clause of its verify: physics review 5730650164 of PR #375, P2; applied per R-369."
+  note: "R-654. Closed by TASK-M9-39, a build task after the core build, not a target: it is not scored, and its tests block its own merge. It waits on RQ-656 for the collision branch, the regularised occupants, the Chazy classifier, the escape test, the decode's V₀, η_E and the substep law. The E₀ agreement in its verify: physics review 5730650164 of PR #375, P1; what V₀ holds is RQ-656's, question (5), so the test holds E₀ to the softened V, as ruled, and V₀ to that ruling. Verify *was:* \"ε scales with the initial R and does not change as R does along a run\", which cannot fail on a canonical run, R₀ being 1 on all of them (physics review 5730650164 of PR #375, P3; applied per R-369). The GPU clause of its verify: physics review 5730650164 of PR #375, P2; applied per R-369. R-670 (2 Nov 2026, closing RQ-656): the collision test stays geometric; the regularised occupants refuse ε ≠ 0; Chazy's E, E_rel and the ionisation gate's pair energies and the decode's V₀ take the softened potential; a view refuses ε ≠ 0 with any Some(E*); the substep law stays geometric. *Was (verify):* \"…the descriptor's V₀ being in the form RQ-656's ruling gives…\"; *was (rq):* RQ-656."
 - id: REQ-EVT-001
   area: EVT
   statement: "Every pixel must get a labelled output — escape, collision or bounded (reaching the horizon is bounded), sim_failed or decode_failed, or RUNNING while in flight — with no timeout state, and substep-cap saturation a confidence flag, never a terminal."
@@ -14143,7 +14144,7 @@
   note: "Render contract Part 4's named exceptions read past seam 6, each excepted by the task that builds it: ROUNDTRIP and DECODE, and Chart position (R-558, RQ-489; REQ-COL-141)."
 - id: REQ-COL-006
   area: COL
-  statement: "The chart decode and encode must be available to the fragment as WGSL generated from the one Rust source (R-116), so fragment presets can recompute decode(z) and encode(decode(z)) from ctx.chart.z, including agreement presets that check the translation by comparing fragment decode against the kernel payload."
+  statement: "The chart decode and encode must be available to the fragment as WGSL generated from the one Rust source (R-116), so fragment presets can recompute decode(z) and encode(decode(z)) from ctx.chart.z, including agreement presets that check the translation by comparing fragment decode against the kernel payload. At ε ≠ 0 (R-670), the fragment decode takes ε as an input and forms the softened V, finite at a zero pair separation, so no −∞ is selected and the agreement preset compares as at any other pixel; at ε = 0 every clause stands."
   source:
   - file: docs/design/principia_colour_composition.md
     section: 3. The `ctx` contract
@@ -14163,6 +14164,8 @@
     section: "R-438 — The encode reads `β = atan2(|λ̃_y|, λ̃_x)`, the mirror's quotient for `β` only, so `β ∈ [0, π]` holds because `β` reads `|λ̃_y|`; at `λ̃ = 0` it takes R-437's pole value by a select; R-82 is unchanged *(closes RQ-287)*"
   - file: decisions.md
     section: "R-628 — The descriptor's `rho_angle` is read from the configuration block's own `(ρ̃, λ̃)`, `Φ`'s vectors, not from the Jacobi vectors re-formed from the re-centred positions; the other descriptor fields keep their positional forms *(amends dd_decoder §3.6's \"Each is read from the decoded `(m, r, p)` alone\" for `rho_angle`; asked directly, no RQ)*"
+  - file: decisions.md
+    section: "R-670 — Softening's reach: a softened run keeps the collision test on geometric `r`, softening offered only on the unregularised occupants, the regularised ones refusing `ε ≠ 0`, and Chazy's `E` softened; the escape test's and the ionisation gate's pair energies take the softened potential, identical at `ε = 0`; the decode's `V₀` is softened, with `virial_ratio` following and `E₀ = K₀ + V₀`, so REQ-VAL-027, REQ-COL-006 and R-436's collision pole are restated for `ε ≠ 0` and unchanged at `ε = 0`; a view refuses `ε ≠ 0` with any `Some(E*)`; the substep law stays on geometric `d²` and `r_min` *(closes RQ-656; amends R-436 and R-654)*"
   verify:
     detail: "agreement preset |E(fragment-decode) − E₀| is within REQ-DEC-043's calibrated f32 decode factor on a healthy survey (from TASK-M2-29 on, within REQ-COL-060's calibrated tolerance instead, R-297), with E₀ the decode stage's K₀ + V₀ (R-86), not SimState.E_0 (R-133); a deliberate dispatch scramble shows spatial disagreement; a pixel with a non-finite operand (E₀ = K₀ + V₀ = −∞ at the collision pole, at f32 or f64) draws the invalid colour on gpu-metal, gpu-lavapipe and the CPU twin, each operand tested on its bits before any arithmetic, K₀ + V₀ included, and the fragment decode's own V tested on its bits before it forms E; the generated fragment decode selects V's −∞ bits where a pair separation is 0, written by bitcast, never 1/0 or an infinite literal (R-436); the generated WGSL decode and encode take R-437's defined 0 at every atan2 pole by a select on the operands against 0, never atan2(0, 0), and agree with the CPU there, ±0 operands included; the generated WGSL encode selects β = π̂ on the −x half-axis (λ̃_y compares equal to 0, λ̃_x < 0) and agrees with the CPU there, ±0 operands included (R-438); the decoded descriptor's rho_angle, read from the configuration block's own (ρ̃, λ̃) (R-628), is held strictly at and near the shape sphere's λ̃ = 0 pole (n₀ = (+1, ε, 0) and (+1, 0, ε), both signs of ε, φ_f = 0 and a generic phase), the generated fragment decode against the CPU's f32 decode within REQ-DEC-043's factor and both against Φ's f64 angle"
     method: numerical gate
@@ -14176,8 +14179,9 @@
   - R-437
   - R-438
   - R-628
+  - R-670
   milestone: M2
-  note: "R-133, as R-297 amends it: 'f32 noise' is read as REQ-DEC-043's calibrated f32 decode factor until TASK-M2-29 calibrates REQ-COL-060, the agreement presets' tolerance under fragment fast-math; from then on the agreement gate uses REQ-COL-060's tolerance, as the verify detail says. R-436: a non-finite operand is invalid, tested on its bits, never by arithmetic on ±∞. R-437: the pole values are defined and selected, as dd_decoder §3.2 lists them. R-628: the descriptor's rho_angle is read from the configuration block's own (ρ̃, λ̃), so the pole test holds it strictly. Verify *Was:* \"… and agrees with the CPU there, ±0 operands included (R-438)\"."
+  note: "R-133, as R-297 amends it: 'f32 noise' is read as REQ-DEC-043's calibrated f32 decode factor until TASK-M2-29 calibrates REQ-COL-060, the agreement presets' tolerance under fragment fast-math; from then on the agreement gate uses REQ-COL-060's tolerance, as the verify detail says. R-436: a non-finite operand is invalid, tested on its bits, never by arithmetic on ±∞. R-437: the pole values are defined and selected, as dd_decoder §3.2 lists them. R-628: the descriptor's rho_angle is read from the configuration block's own (ρ̃, λ̃), so the pole test holds it strictly. Verify *Was:* \"… and agrees with the CPU there, ±0 operands included (R-438)\". R-670 (2 Nov 2026, RQ-656 (5)(i)): the ε ≠ 0 sentence is added, verified by TASK-M9-39 (softened_decode), since no softened run exists before it; the statement and verify at ε = 0 are unchanged."
 - id: REQ-COL-007
   area: COL
   statement: "A category must never be interpolated: mixed categorical pixels must be resolved by per-sample colour then SSAA resolve, never by averaging state indices or by majority + desaturation."
@@ -28969,7 +28973,7 @@
   milestone: M3
 - id: REQ-VAL-027
   area: VAL
-  statement: "The energy-agreement view must show log|E_0 − (K_0 + V_0)|, comparing SimState's E_0 with the ICDescriptor's derived energy (E₀ is K₀ + V₀, derived, not stored)."
+  statement: "The energy-agreement view must show log|E_0 − (K_0 + V_0)|, comparing SimState's E_0 with the ICDescriptor's derived energy (E₀ is K₀ + V₀, derived, not stored). At ε ≠ 0 (R-670), V_0 is the softened potential, finite at a zero pair separation, so there is no collision pole: E_0 is compared with the softened K_0 + V_0 like any other pixel, and the −∞ case applies at ε = 0 only."
   source:
   - file: docs/contracts/principia_render_contract.md
     section: Cross-check views (the seams)
@@ -28985,6 +28989,8 @@
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
   - file: decisions.md
     section: "R-436 — The descriptor's `±∞` at the poles are stored as computed; every consumer, CPU and GPU alike, colours a non-finite input as invalid, tested by comparing the stored value, never by arithmetic on `∞` *(closes RQ-284; extends R-79)*"
+  - file: decisions.md
+    section: "R-670 — Softening's reach: a softened run keeps the collision test on geometric `r`, softening offered only on the unregularised occupants, the regularised ones refusing `ε ≠ 0`, and Chazy's `E` softened; the escape test's and the ionisation gate's pair energies take the softened potential, identical at `ε = 0`; the decode's `V₀` is softened, with `virial_ratio` following and `E₀ = K₀ + V₀`, so REQ-VAL-027, REQ-COL-006 and R-436's collision pole are restated for `ε ≠ 0` and unchanged at `ε = 0`; a view refuses `ε ≠ 0` with any `Some(E*)`; the substep law stays on geometric `d²` and `r_min` *(closes RQ-656; amends R-436 and R-654)*"
   verify:
     method: numerical gate
     detail: "on a synthetic and a real survey, |E_0 − (K_0+V_0)| is within the calibrated E₀ agreement tolerance everywhere; the ICDescriptor stores no E₀ field; a pixel whose stored E_0, K_0 or V_0 is non-finite (V_0 = −∞ at the collision pole, at f32 or f64, its bits selected by the decode stage, never 1/0, dd_decoder §3.6) draws the invalid colour on the CPU and the GPU, each operand tested on its bits before any arithmetic, K_0 + V_0 included, and is excluded from the tolerance check (R-436)"
@@ -28992,8 +28998,9 @@
   - R-71
   - R-86
   - R-436
+  - R-670
   milestone: M3
-  note: "Tolerance: REQ-VAL-117 (calibration). R-436: a non-finite operand is invalid, tested on its bits, never by arithmetic on ±∞."
+  note: "Tolerance: REQ-VAL-117 (calibration). R-436: a non-finite operand is invalid, tested on its bits, never by arithmetic on ±∞. R-670 (2 Nov 2026, RQ-656 (5)(i)): the ε ≠ 0 sentence is added, verified by TASK-M9-39 (softened_decode), since no softened run exists before it; the statement and verify at ε = 0 are unchanged."
 - id: REQ-VAL-028
   area: VAL
   statement: "The BodyPlane chart (today's slice) must be kept and reproduce the recorded reference, the Python reference's output: bit-exact where the operation order is identical (parity_contract), otherwise within a calibrated tolerance (R-71), with the Python cross-check green (R-166)."
@@ -40691,10 +40698,9 @@
     method: unit test
   rulings:
   - R-654
+  - R-670
   milestone: M9
-  rq:
-  - RQ-656
-  note: "R-654. Closed by TASK-M9-39. The range of ε is REQ-SYS-095's, a calibration (R-71). It waits on RQ-656, as its task does. *Was (the range):* \"a definition written by that task (R-72; physics reviewer approves)\"; statement *was:* \"in the range its definition states\". Verify *was:* \"and just outside it, NaN and ±∞ are refused with the typed reason\", with no negative ε and no ε = 0 (physics review 5730650164 of PR #375, P4; applied per R-369)."
+  note: "R-654. Closed by TASK-M9-39. The range of ε is REQ-SYS-095's, a calibration (R-71). It waits on RQ-656, as its task does. *Was (the range):* \"a definition written by that task (R-72; physics reviewer approves)\"; statement *was:* \"in the range its definition states\". Verify *was:* \"and just outside it, NaN and ±∞ are refused with the typed reason\", with no negative ε and no ε = 0 (physics review 5730650164 of PR #375, P4; applied per R-369). R-670 (2 Nov 2026) closes RQ-656, and the wait on it ends; *was (rq):* RQ-656."
 - id: REQ-SYS-095
   area: SYS
   kind: calibration
@@ -40710,10 +40716,9 @@
   rulings:
   - R-71
   - R-654
+  - R-670
   milestone: M9
-  rq:
-  - RQ-656
-  note: "R-654 gives ε's form and no bounds; the bounds change which runs are admitted, so they are values, not a definition (R-71; applied per R-369, code review 5730587922 of PR #375, C4). Closed by TASK-M9-39, a build task. Confirmed by the human with the M9 report if TASK-M9-39 has landed by then, otherwise in the next batch of calibrations after it lands, since the report does not wait on it. It waits on RQ-656, as its task does."
+  note: "R-654 gives ε's form and no bounds; the bounds change which runs are admitted, so they are values, not a definition (R-71; applied per R-369, code review 5730587922 of PR #375, C4). Closed by TASK-M9-39, a build task. Confirmed by the human with the M9 report if TASK-M9-39 has landed by then, otherwise in the next batch of calibrations after it lands, since the report does not wait on it. It waits on RQ-656, as its task does. R-670 (2 Nov 2026) closes RQ-656, and the wait on it ends; *was (rq):* RQ-656."
 - id: REQ-SYS-096
   area: SYS
   statement: "Dispatch must refuse a `SimUniforms` whose `g` or `m_total` is not 1, NaN and ±∞ included, with a typed reason, as it refuses `ε ≠ 0`: the kernel runs only at `G = 1` and `M = 1`, and a source in another `G` is converted at the import boundary, never carried to the kernel (R-668)."
