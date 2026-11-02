@@ -342,11 +342,30 @@ jobs:
       - uses: taiki-e/install-action@v2
         with:
           tool: cargo-nextest@0.9.146
+      # Runner disk, again: each test here builds the workspace on its one target, in several configurations (the
+      # alias test's `cargo xtask ci --list` with `--features controls`, controls, qa02's `xtask ci`, nextest, the
+      # screenshot runner), and with 109 GB free after the step above the job sat at the limit: a pull request that
+      # only added xtask test files ran it out of space ("No space left on device", run 41513956938). Every dependency
+      # is built without debug info, in both profiles those builds use, `dev` (`cargo build`, `cargo run`, the alias)
+      # and `test` (`cargo test`, nextest); the workspace's own crates keep R-374's line tables, so a panic still names
+      # file and line and a backtrace still names every frame, with file and line for the workspace's own. As
+      # `ci-archive`'s step: a cargo config in the runner's CARGO_HOME, read by every cargo the job runs, the tests'
+      # child runs among them, never in the repository (R-233 governs local builds), and outside rust-cache's key,
+      # which hashes the CARGO_* environment (R-337). A package override has no environment form, so it is a file.
+      # Test infrastructure only.
+      - name: Dependencies without debug info, dev and test
+        run: printf '[profile.dev.package."*"]\ndebug = false\n[profile.test.package."*"]\ndebug = false\n' >> "${CARGO_HOME:-$HOME/.cargo}/config.toml"
+      # Under the disk sampler (`.github/scripts/disk_sampler.sh`), as the `ci` shards' run is: a measurement, read by
+      # no gate; the step's log notes the job's lowest free, and the next step its free space at the end.
       - name: cargo nextest run -p xtask
         if: needs.changes.outputs.docs_only != 'true'
         env:
           NEXTEST_PROFILE: ci-workspace
         run: cargo nextest run -p xtask
+        shell: bash .github/scripts/disk_sampler.sh {0}
+      - name: Runner disk after the tests
+        if: needs.changes.outputs.docs_only != 'true'
+        run: df -h /
       - name: cargo test -p xtask --doc
         if: needs.changes.outputs.docs_only != 'true'
         run: cargo test -p xtask --doc
