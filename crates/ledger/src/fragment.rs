@@ -9,7 +9,9 @@
 //! before it, and the layout's size their sum. The lengths are the parts' own: `(u, v)` two f32; `Φ`'s `z` the eight
 //! latent controls; the canonical `(m, r, p)` fifteen f32 (three masses, three positions and three momenta of two
 //! components), in the decode stage's word order; the `ICDescriptor`'s twelve fields; `kernel::stage::encode`'s twelve
-//! words (`z`, `α`, `β`, `λ` and the notices word); the shape map's `r` (six), `m` (three) and `n` (three).
+//! words (`z`, `α`, `β`, `λ` and the notices word) and the encode's canonical state `C(x)` (fifteen); the shape map's
+//! `r` (six), `m` (three) and `n` (three); the free decode's latent `z` (eight), its `(m, r, p)` and its tag word; and
+//! the decode's one word saying whether the chart's decode lands on `C`'s section (TASK-M2-26).
 
 /// One part of a layout: its name, as the generated constant's suffix, and its length in words.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -48,8 +50,8 @@ const fn part(name: &'static str, len: usize) -> Part {
     Part { name, len }
 }
 
-/// The decode's words: `(u, v)` in; `Φ`'s `z`, the latent flag, the canonical `(m, r, p)`, the descriptor and the tag
-/// word out.
+/// The decode's words: `(u, v)` in; `Φ`'s `z`, the latent flag, the canonical `(m, r, p)`, the descriptor, the tag
+/// word and the section flag out (1 where the chart's decode lands on `C`'s section, 0 on the shape sphere, R-544).
 pub fn decode() -> Layout {
     Layout {
         name: "DECODE",
@@ -60,6 +62,7 @@ pub fn decode() -> Layout {
             part("IC", 15),
             part("DESCRIPTOR", 12),
             part("TAG", 1),
+            part("ON_SECTION", 1),
         ],
     }
 }
@@ -72,11 +75,12 @@ pub fn describe() -> Layout {
     }
 }
 
-/// The encode's words: `(m, r, p)` in; `kernel::stage::encode`'s twelve words out.
+/// The encode's words: `(m, r, p)` in; `kernel::stage::encode`'s twelve words and the canonical state `C(x)` out
+/// (TASK-M2-26: the ROUNDTRIP preset's reference on the shape sphere, inverse-encode Part 4, R-544).
 pub fn encode() -> Layout {
     Layout {
         name: "ENCODE",
-        parts: vec![part("IC", 15), part("OUT", 12)],
+        parts: vec![part("IC", 15), part("OUT", 12), part("CANON", 15)],
     }
 }
 
@@ -88,7 +92,16 @@ pub fn shape() -> Layout {
     }
 }
 
+/// The free decode's words: a latent `z` in; the canonical `(m, r, p)` and the tag word out (TASK-M2-26: the
+/// ROUNDTRIP preset's second `D`, of the encode's `z`).
+pub fn free() -> Layout {
+    Layout {
+        name: "FREE",
+        parts: vec![part("Z", 8), part("IC", 15), part("TAG", 1)],
+    }
+}
+
 /// Every layout, in the order the generated file lists them.
-pub fn layouts() -> [Layout; 4] {
-    [decode(), describe(), encode(), shape()]
+pub fn layouts() -> [Layout; 5] {
+    [decode(), describe(), encode(), shape(), free()]
 }

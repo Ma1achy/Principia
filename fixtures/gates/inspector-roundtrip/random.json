@@ -1,5 +1,5 @@
 {
-  "description": "REQ-VAL-022: 2×10⁴ random z uniform in the ball ‖z‖ < 4, decoded, canonicalised and encoded under the defaults links at f64: ‖z − E(D(z))‖, and the CoM of C(D(z)) within 1.7×10⁻¹⁶ of the origin; with 2000 equal-mass equilateral and 2000 collinear states through random gauge elements, their w reported, held by RQ-475 and RQ-355.",
+  "description": "REQ-VAL-022: 2×10⁴ random z uniform in the ball ‖z‖ < 4, decoded, canonicalised and encoded under the defaults links at f64: ‖z − E(D(z))‖, and the CoM of C(D(z)) within 1.7×10⁻¹⁶ of the origin; with RQ-475's families, 2000 equal-mass equilateral and 2000 collinear states through random gauge elements: every collinear z_β at its clamp image with its lookup_clamped bit set and no equilateral state's set, bit for bit, and max |w − 1| and max |w| on C(x) within REQ-VAL-121's proposed bounds; D(E(x))'s |w|, the clamp image, reported.",
   "seed": 1,
   "samples": 20000,
   "radius": 4.0,
