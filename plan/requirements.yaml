@@ -30771,6 +30771,8 @@
     section: "12.3 Outcomes, the like-for-like check and the forbidden moves"
   - file: docs/design/principia_dd_replication.md
     section: 12.1 What stays continuous, and what moves to M9
+  - file: decisions.md
+    section: "R-672 — A definition's row in M9's report reads the outcome of the target it serves, and otherwise records its approval; the outcome is counted once *(closes RQ-670; refines R-650)*"
   verify:
     method: review checklist
     detail: "the note lists each feature and how it is compared structurally; physics reviewer approved"
@@ -30778,10 +30780,9 @@
   - R-72
   - R-649
   - R-650
+  - R-672
   milestone: M9
-  rq:
-  - RQ-670
-  note: "30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (b), the CPU IC inspector: it binds at f64 or higher, and a GPU miss on it is expected, not a defect (R-649 item 2). Closed by TASK-M9-36 (was TASK-M3-27, R-650): the feature set REQ-VAL-335's structural comparison asserts."
+  note: "30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (b), the CPU IC inspector: it binds at f64 or higher, and a GPU miss on it is expected, not a defect (R-649 item 2). Closed by TASK-M9-36 (was TASK-M3-27, R-650): the feature set REQ-VAL-335's structural comparison asserts. R-672 (2 Nov 2026, RQ-670 (b)): its row in M9's report reads the outcome of SP-1's structural comparison (REQ-VAL-335), with this definition's approval, and until that target is scored records the approval; the outcome is counted once, in that target's row. *Was (rq):* RQ-670."
 - id: REQ-VAL-128
   area: VAL
   kind: calibration
@@ -32444,6 +32445,8 @@
     section: 12.2 Tiers
   - file: docs/design/principia_dd_replication.md
     section: "12.3 Outcomes, the like-for-like check and the forbidden moves"
+  - file: decisions.md
+    section: "R-671 — In a task with no GPU run, a statistical or qualitative target's statistic from the f64 runs is recorded at tier (b), its instrument stated, and its (a) part stays listed \"not scored yet: needs a GPU run\", the tier not relabelled; Q-4's no-integration part is recorded with no tier *(closes RQ-669; refines R-649)*"
   verify:
     method: numerical gate
     detail: "reference data docs/incoming/2026-10-27_papers/agekyan_anosova_II_table1_exact_rest.csv (twice-transcribed, its README § 6); the remap (G = 6.67e-8 in their units against G = 1; τ per row) is a tested function (rule 6); the energy column is recorded and not asserted (RQ-570's kind of discrepancy); the other 87 rows are compared as a distribution, not per row; control: a run with the remap's τ deliberately set from L₀ = 7.5e-9 (paper I's near-rest value) must move the comparison"
@@ -32455,10 +32458,9 @@
   - R-632
   - R-649
   - R-650
+  - R-671
   milestone: M9
-  rq:
-  - RQ-669
-  note: "Reproduces: Agekyan & Anosova II, Table 1 (decay time per exact-rest start; ensemble 110.1 ± 12.5 τ; Table 2's counts). Chart: the Anosova physical-frame entry at exact rest. Milestone: M9 (was M3; R-650). Compare: exact on the 13 short-lived rows; statistical otherwise (rule 8). Tolerance: REQ-VAL-210 (calibration, R-71). Row AA-6 (DRAFT-VAL-05) of principia_dd_replication.md § \"5.8 Region D: Agekyan & Anosova, and Anosova 1969\"; layer replication, tier A; closed by TASK-M9-10 (was TASK-M3-50) (R-594, R-629). Ported from PLAN.md § 6's DRAFT-VAL-05 by R-629, with its rq. R-632 (27 Oct 2026, RQ-570 (a)): the energy column stays recorded and is never asserted; no longer rq: RQ-570. 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (b), the CPU IC inspector, for the 13 short-lived rows, where a GPU miss is expected, not a defect; tier (a), the GPU explorer, for the rest, scored there statistically or qualitatively only (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b) for its exact part, its statistical part (b) too, with (a) expected to agree\"."
+  note: "Reproduces: Agekyan & Anosova II, Table 1 (decay time per exact-rest start; ensemble 110.1 ± 12.5 τ; Table 2's counts). Chart: the Anosova physical-frame entry at exact rest. Milestone: M9 (was M3; R-650). Compare: exact on the 13 short-lived rows; statistical otherwise (rule 8). Tolerance: REQ-VAL-210 (calibration, R-71). Row AA-6 (DRAFT-VAL-05) of principia_dd_replication.md § \"5.8 Region D: Agekyan & Anosova, and Anosova 1969\"; layer replication, tier A; closed by TASK-M9-10 (was TASK-M3-50) (R-594, R-629). Ported from PLAN.md § 6's DRAFT-VAL-05 by R-629, with its rq. R-632 (27 Oct 2026, RQ-570 (a)): the energy column stays recorded and is never asserted; no longer rq: RQ-570. 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (b), the CPU IC inspector, for the 13 short-lived rows, where a GPU miss is expected, not a defect; tier (a), the GPU explorer, for the rest, scored there statistically or qualitatively only (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b) for its exact part, its statistical part (b) too, with (a) expected to agree\". R-671 (2 Nov 2026, RQ-669 (ii)): its task has no GPU run, so its (a) part keeps its tier and reads \"not scored yet: needs a GPU run\" in M9's report, and the same statistic from the task's f64 runs is recorded beside it at (b), with its outcome and instrument stated. *Was (rq):* RQ-669."
 - id: REQ-VAL-210
   area: VAL
   kind: calibration
@@ -32521,6 +32523,8 @@
     section: 12.2 Tiers
   - file: docs/design/principia_dd_replication.md
     section: "12.3 Outcomes, the like-for-like check and the forbidden moves"
+  - file: decisions.md
+    section: "R-671 — In a task with no GPU run, a statistical or qualitative target's statistic from the f64 runs is recorded at tier (b), its instrument stated, and its (a) part stays listed \"not scored yet: needs a GPU run\", the tier not relabelled; Q-4's no-integration part is recorded with no tier *(closes RQ-669; refines R-649)*"
   verify:
     method: unit test
     detail: "(i) exact; its negative control, the 3D thermal form f(E) = 2E, must fail; (ii) a χ² or KS statistic against the printed bins at REQ-VAL-212's level, with both readings of 'the maximum distance represents the binary' run and recorded; the eccentricity and Z functions are the ones the outcome code uses, not copies"
@@ -32530,10 +32534,9 @@
   - R-629
   - R-649
   - R-650
+  - R-671
   milestone: M9
-  rq:
-  - RQ-669
-  note: "Reproduces: Aarseth et al. 1994b, Table II's 'Theory' row (1, 2, 3, 4, 5, 7, 9, 11, 16, 44 %; median 0.87) and p. 135's Z control (17, 16, 14, 14, 12, 10, 8, 5, 4, 1 %). Chart: none (no integration). Milestone: M9 (was M3; R-650). Compare: (i) exact; (ii) statistical (rule 8). Tolerance: REQ-VAL-212 (calibration, R-71). Row Q-2's Theory row, Q-4 (DRAFT-VAL-06) of principia_dd_replication.md § \"5.7 The Burrau neighbourhood: Aarseth et al. 1994a and 1994b\"; layer replication, tier B; closed by TASK-M9-11 (was TASK-M3-51) (R-594, R-629). Ported from PLAN.md § 6's DRAFT-VAL-06 by R-629. 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (b), the CPU IC inspector, for (i), where a GPU miss is expected, not a defect; tier (a), the GPU explorer, for (ii), scored there statistically or qualitatively only (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b)\" for both parts."
+  note: "Reproduces: Aarseth et al. 1994b, Table II's 'Theory' row (1, 2, 3, 4, 5, 7, 9, 11, 16, 44 %; median 0.87) and p. 135's Z control (17, 16, 14, 14, 12, 10, 8, 5, 4, 1 %). Chart: none (no integration). Milestone: M9 (was M3; R-650). Compare: (i) exact; (ii) statistical (rule 8). Tolerance: REQ-VAL-212 (calibration, R-71). Row Q-2's Theory row, Q-4 (DRAFT-VAL-06) of principia_dd_replication.md § \"5.7 The Burrau neighbourhood: Aarseth et al. 1994a and 1994b\"; layer replication, tier B; closed by TASK-M9-11 (was TASK-M3-51) (R-594, R-629). Ported from PLAN.md § 6's DRAFT-VAL-06 by R-629. 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (b), the CPU IC inspector, for (i), where a GPU miss is expected, not a defect; tier (a), the GPU explorer, for (ii), scored there statistically or qualitatively only (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b)\" for both parts. R-671 (2 Nov 2026, RQ-669, Q-4 (y)): (ii) has no integration, so it is recorded with no tier, its outcome stated; (i) stays (b). *Was (rq):* RQ-669."
 - id: REQ-VAL-212
   area: VAL
   kind: calibration
@@ -32885,6 +32888,8 @@
     section: 12.2 Tiers
   - file: docs/design/principia_dd_replication.md
     section: "12.3 Outcomes, the like-for-like check and the forbidden moves"
+  - file: decisions.md
+    section: "R-672 — A definition's row in M9's report reads the outcome of the target it serves, and otherwise records its approval; the outcome is counted once *(closes RQ-670; refines R-650)*"
   verify:
     method: review checklist
     detail: "§ 5.2 states which crossings count, how an endpoint syzygy is counted, and how the count is read from the crossing counter; checked against a sample of rows' `syz` before the full comparison; physics reviewer approved"
@@ -32894,10 +32899,9 @@
   - R-629
   - R-649
   - R-650
+  - R-672
   milestone: M9
-  rq:
-  - RQ-670
-  note: "Defines the counting convention OC-5 (REQ-VAL-220) uses; written by TASK-M9-04 (was TASK-M3-44) (R-72, R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (b), the CPU IC inspector: it binds at f64 or higher, and a GPU miss on it is expected, not a defect (R-649 item 2)."
+  note: "Defines the counting convention OC-5 (REQ-VAL-220) uses; written by TASK-M9-04 (was TASK-M3-44) (R-72, R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (b), the CPU IC inspector: it binds at f64 or higher, and a GPU miss on it is expected, not a defect (R-649 item 2). R-672 (2 Nov 2026, RQ-670 (b)): its row in M9's report reads the outcome of OC-5 (REQ-VAL-220), with this definition's approval, and until that target is scored records the approval; the outcome is counted once, in that target's row. *Was (rq):* RQ-670."
 - id: REQ-VAL-222
   area: VAL
   statement: "A per-family coverage report must print, for every atlas family, the rows tested, the closure order achieved and the failures, from OC-1's, OC-3's and OC-5's runs; a family in which every row fails must be investigated, and its cause located, before the engine is blamed (OC-6)."
@@ -33034,6 +33038,8 @@
     section: 12.2 Tiers
   - file: docs/design/principia_dd_replication.md
     section: "12.3 Outcomes, the like-for-like check and the forbidden moves"
+  - file: decisions.md
+    section: "R-671 — In a task with no GPU run, a statistical or qualitative target's statistic from the f64 runs is recorded at tier (b), its instrument stated, and its (a) part stays listed \"not scored yet: needs a GPU run\", the tier not relabelled; Q-4's no-integration part is recorded with no tier *(closes RQ-669; refines R-649)*"
   verify:
     method: numerical gate
     detail: "Tables A6–A10 (the words) transcribed twice (rule 2); per orbit T̄* from our T and E against the tables' within REQ-VAL-226; the fit recomputed and compared as a distribution; the words compared with the word reader's where its convention allows (RQ-576 governs any word comparison); control: T̄* computed with L_f off by one must move every mass set's mean"
@@ -33043,10 +33049,9 @@
   - R-629
   - R-649
   - R-650
+  - R-671
   milestone: M9
-  rq:
-  - RQ-669
-  note: "Reproduces: Li & Liao 2019 p. 3 and Fig. 3: T̄* ≈ 2.363 at equal masses; 1.663, 1.191, 0.776, 0.527 at m₃ = 0.8 … 0.2; fit 1.912 m₃ + 0.084. Chart: none. Milestone: M9 (was M3; R-650). Compare: exact per orbit; the fit statistical (rule 8). Tolerance: REQ-VAL-226 (calibration, R-71). Row LL-4 of principia_dd_replication.md § \"5.3 Free-fall periodic orbits: Li & Liao 2019\"; layer verification, tier A; closed by TASK-M9-14 (was TASK-M3-54) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (b), the CPU IC inspector, for each orbit, where a GPU miss is expected, not a defect; tier (a), the GPU explorer, for the fit, scored there statistically or qualitatively only (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b) for its exact part, its statistical part (b) too, with (a) expected to agree\"."
+  note: "Reproduces: Li & Liao 2019 p. 3 and Fig. 3: T̄* ≈ 2.363 at equal masses; 1.663, 1.191, 0.776, 0.527 at m₃ = 0.8 … 0.2; fit 1.912 m₃ + 0.084. Chart: none. Milestone: M9 (was M3; R-650). Compare: exact per orbit; the fit statistical (rule 8). Tolerance: REQ-VAL-226 (calibration, R-71). Row LL-4 of principia_dd_replication.md § \"5.3 Free-fall periodic orbits: Li & Liao 2019\"; layer verification, tier A; closed by TASK-M9-14 (was TASK-M3-54) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (b), the CPU IC inspector, for each orbit, where a GPU miss is expected, not a defect; tier (a), the GPU explorer, for the fit, scored there statistically or qualitatively only (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b) for its exact part, its statistical part (b) too, with (a) expected to agree\". R-671 (2 Nov 2026, RQ-669 (ii)): its task has no GPU run, so its (a) part keeps its tier and reads \"not scored yet: needs a GPU run\" in M9's report, and the same statistic from the task's f64 runs is recorded beside it at (b), with its outcome and instrument stated. *Was (rq):* RQ-669."
 - id: REQ-VAL-226
   area: VAL
   kind: calibration
@@ -33436,6 +33441,8 @@
     section: 12.2 Tiers
   - file: docs/design/principia_dd_replication.md
     section: "12.3 Outcomes, the like-for-like check and the forbidden moves"
+  - file: decisions.md
+    section: "R-671 — In a task with no GPU run, a statistical or qualitative target's statistic from the f64 runs is recorded at tier (b), its instrument stated, and its (a) part stays listed \"not scored yet: needs a GPU run\", the tier not relabelled; Q-4's no-integration part is recorded with no tier *(closes RQ-669; refines R-649)*"
   verify:
     method: numerical gate
     detail: "the sequence tables transcribed twice (rule 2); per orbit T|E|^{3/2} within REQ-VAL-237; each fit's slope and intercept recomputed and compared as a distribution; words compared only under RQ-576's equivalence once ruled; control: one sequence's word lengths shuffled must break its fit"
@@ -33445,10 +33452,9 @@
   - R-629
   - R-649
   - R-650
+  - R-671
   milestone: M9
-  rq:
-  - RQ-669
-  note: "Reproduces: Hudomal 2015 §4.1 (Tables 3, 5, 7, 9, 11, 13, 15) and Dmitrašinović et al. 2018: the seven linear fits of T|E|^{3/2} against word length. Chart: none. Milestone: M9 (was M3; R-650). Compare: exact per orbit; the fits statistical (rule 8). Tolerance: REQ-VAL-237 (calibration, R-71). Row HU-4 (+ Dmitrašinović et al. 2018; the 25 Oct tier A's 'period against word length') of principia_dd_replication.md § \"5.4 The Belgrade orbits\"; layer verification, tier A; closed by TASK-M9-14 (was TASK-M3-54) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (b), the CPU IC inspector, for each orbit, where a GPU miss is expected, not a defect; tier (a), the GPU explorer, for the fits, scored there statistically or qualitatively only (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b) for its exact part, its statistical part (b) too, with (a) expected to agree\"."
+  note: "Reproduces: Hudomal 2015 §4.1 (Tables 3, 5, 7, 9, 11, 13, 15) and Dmitrašinović et al. 2018: the seven linear fits of T|E|^{3/2} against word length. Chart: none. Milestone: M9 (was M3; R-650). Compare: exact per orbit; the fits statistical (rule 8). Tolerance: REQ-VAL-237 (calibration, R-71). Row HU-4 (+ Dmitrašinović et al. 2018; the 25 Oct tier A's 'period against word length') of principia_dd_replication.md § \"5.4 The Belgrade orbits\"; layer verification, tier A; closed by TASK-M9-14 (was TASK-M3-54) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (b), the CPU IC inspector, for each orbit, where a GPU miss is expected, not a defect; tier (a), the GPU explorer, for the fits, scored there statistically or qualitatively only (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b) for its exact part, its statistical part (b) too, with (a) expected to agree\". R-671 (2 Nov 2026, RQ-669 (ii)): its task has no GPU run, so its (a) part keeps its tier and reads \"not scored yet: needs a GPU run\" in M9's report, and the same statistic from the task's f64 runs is recorded beside it at (b), with its outcome and instrument stated. *Was (rq):* RQ-669."
 - id: REQ-VAL-237
   area: VAL
   kind: calibration
@@ -33996,6 +34002,8 @@
     section: 12.2 Tiers
   - file: docs/design/principia_dd_replication.md
     section: "12.3 Outcomes, the like-for-like check and the forbidden moves"
+  - file: decisions.md
+    section: "R-671 — In a task with no GPU run, a statistical or qualitative target's statistic from the f64 runs is recorded at tier (b), its instrument stated, and its (a) part stays listed \"not scored yet: needs a GPU run\", the tier not relabelled; Q-4's no-integration part is recorded with no tier *(closes RQ-669; refines R-649)*"
   verify:
     method: numerical gate
     detail: "the polar ring sampler a tested function; the ring's extent per body within REQ-VAL-253; control: δ = 5×10⁻³ must break the ring"
@@ -34006,10 +34014,9 @@
   - R-629
   - R-649
   - R-650
+  - R-671
   milestone: M9
-  rq:
-  - RQ-669
-  note: "Reproduces: Aarseth, Anosova, Orlov & Szebehely 1994a (CeMDA 58, 1), Figs. 2 and 3, Table II. Chart: BodyPlane, polar ring sampling (six circles × 100 azimuths). Milestone: M9 (was M3; R-650). Compare: qualitative + statistical (rule 8). Tolerance: REQ-VAL-253 (calibration, R-71). Row P-1 of principia_dd_replication.md § \"5.7 The Burrau neighbourhood: Aarseth et al. 1994a and 1994b\"; layer replication, tier B; closed by TASK-M9-17 (was TASK-M3-57) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\"."
+  note: "Reproduces: Aarseth, Anosova, Orlov & Szebehely 1994a (CeMDA 58, 1), Figs. 2 and 3, Table II. Chart: BodyPlane, polar ring sampling (six circles × 100 azimuths). Milestone: M9 (was M3; R-650). Compare: qualitative + statistical (rule 8). Tolerance: REQ-VAL-253 (calibration, R-71). Row P-1 of principia_dd_replication.md § \"5.7 The Burrau neighbourhood: Aarseth et al. 1994a and 1994b\"; layer replication, tier B; closed by TASK-M9-17 (was TASK-M3-57) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\". R-671 (2 Nov 2026, RQ-669 (ii)): its task has no GPU run, so its (a) part keeps its tier and reads \"not scored yet: needs a GPU run\" in M9's report, and the same statistic from the task's f64 runs is recorded beside it at (b), with its outcome and instrument stated. *Was (rq):* RQ-669."
 - id: REQ-VAL-253
   area: VAL
   kind: calibration
@@ -34068,6 +34075,8 @@
     section: 12.2 Tiers
   - file: docs/design/principia_dd_replication.md
     section: "12.3 Outcomes, the like-for-like check and the forbidden moves"
+  - file: decisions.md
+    section: "R-671 — In a task with no GPU run, a statistical or qualitative target's statistic from the f64 runs is recorded at tier (b), its instrument stated, and its (a) part stays listed \"not scored yet: needs a GPU run\", the tier not relabelled; Q-4's no-integration part is recorded with no tier *(closes RQ-669; refines R-649)*"
   verify:
     method: numerical gate
     detail: "Table I as transcribed in the record; per ring a χ² or KS statistic at REQ-VAL-255's level; their criterion (5R_grav for conditional escape) and ours recorded (rule 9); control: a shuffled ring assignment must fail"
@@ -34078,10 +34087,9 @@
   - R-629
   - R-649
   - R-650
+  - R-671
   milestone: M9
-  rq:
-  - RQ-669
-  note: "Reproduces: Aarseth, Anosova, Orlov & Szebehely 1994a (CeMDA 58, 1), Table I. Chart: BodyPlane, polar ring sampling (six circles × 100 azimuths). Milestone: M9 (was M3; R-650). Compare: statistical (rule 8). Tolerance: REQ-VAL-255 (calibration, R-71). Row P-2 of principia_dd_replication.md § \"5.7 The Burrau neighbourhood: Aarseth et al. 1994a and 1994b\"; layer replication, tier B; closed by TASK-M9-17 (was TASK-M3-57) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\"."
+  note: "Reproduces: Aarseth, Anosova, Orlov & Szebehely 1994a (CeMDA 58, 1), Table I. Chart: BodyPlane, polar ring sampling (six circles × 100 azimuths). Milestone: M9 (was M3; R-650). Compare: statistical (rule 8). Tolerance: REQ-VAL-255 (calibration, R-71). Row P-2 of principia_dd_replication.md § \"5.7 The Burrau neighbourhood: Aarseth et al. 1994a and 1994b\"; layer replication, tier B; closed by TASK-M9-17 (was TASK-M3-57) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\". R-671 (2 Nov 2026, RQ-669 (ii)): its task has no GPU run, so its (a) part keeps its tier and reads \"not scored yet: needs a GPU run\" in M9's report, and the same statistic from the task's f64 runs is recorded beside it at (b), with its outcome and instrument stated. *Was (rq):* RQ-669."
 - id: REQ-VAL-255
   area: VAL
   kind: calibration
@@ -34138,6 +34146,8 @@
     section: 12.2 Tiers
   - file: docs/design/principia_dd_replication.md
     section: "12.3 Outcomes, the like-for-like check and the forbidden moves"
+  - file: decisions.md
+    section: "R-671 — In a task with no GPU run, a statistical or qualitative target's statistic from the f64 runs is recorded at tier (b), its instrument stated, and its (a) part stays listed \"not scored yet: needs a GPU run\", the tier not relabelled; Q-4's no-integration part is recorded with no tier *(closes RQ-669; refines R-649)*"
   verify:
     method: review checklist
     detail: "the four classes plotted per ring and reviewed against Fig. 4 by the physics reviewer; control: a ring at δ = 5×10⁻³ must not show the regular class"
@@ -34147,10 +34157,9 @@
   - R-629
   - R-649
   - R-650
+  - R-671
   milestone: M9
-  rq:
-  - RQ-669
-  note: "Reproduces: Aarseth, Anosova, Orlov & Szebehely 1994a (CeMDA 58, 1), Fig. 4. Chart: BodyPlane, polar ring sampling (six circles × 100 azimuths). Milestone: M9 (was M3; R-650). Compare: qualitative (rule 8). Tolerance: none: qualitative, reviewed against the figure by the physics reviewer. Row P-3 of principia_dd_replication.md § \"5.7 The Burrau neighbourhood: Aarseth et al. 1994a and 1994b\"; layer replication, tier B; closed by TASK-M9-17 (was TASK-M3-57) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\"."
+  note: "Reproduces: Aarseth, Anosova, Orlov & Szebehely 1994a (CeMDA 58, 1), Fig. 4. Chart: BodyPlane, polar ring sampling (six circles × 100 azimuths). Milestone: M9 (was M3; R-650). Compare: qualitative (rule 8). Tolerance: none: qualitative, reviewed against the figure by the physics reviewer. Row P-3 of principia_dd_replication.md § \"5.7 The Burrau neighbourhood: Aarseth et al. 1994a and 1994b\"; layer replication, tier B; closed by TASK-M9-17 (was TASK-M3-57) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\". R-671 (2 Nov 2026, RQ-669 (ii)): its task has no GPU run, so its (a) part keeps its tier and reads \"not scored yet: needs a GPU run\" in M9's report, and the same statistic from the task's f64 runs is recorded beside it at (b), with its outcome and instrument stated. *Was (rq):* RQ-669."
 - id: REQ-VAL-257
   area: VAL
   statement: "Tables II–VII per ring (the paper's β, A, E, P, I and R) must be reproduced as distributions; Table VII is their integrator's floor and is recorded, not a target (P-4)."
@@ -34175,6 +34184,8 @@
     section: 12.2 Tiers
   - file: docs/design/principia_dd_replication.md
     section: "12.3 Outcomes, the like-for-like check and the forbidden moves"
+  - file: decisions.md
+    section: "R-671 — In a task with no GPU run, a statistical or qualitative target's statistic from the f64 runs is recorded at tier (b), its instrument stated, and its (a) part stays listed \"not scored yet: needs a GPU run\", the tier not relabelled; Q-4's no-integration part is recorded with no tier *(closes RQ-669; refines R-649)*"
   verify:
     method: numerical gate
     detail: "Tables II–VII as transcribed in the record; per column a statistic at REQ-VAL-258's level; control: columns swapped between rings must fail"
@@ -34185,10 +34196,9 @@
   - R-629
   - R-649
   - R-650
+  - R-671
   milestone: M9
-  rq:
-  - RQ-669
-  note: "Reproduces: Aarseth, Anosova, Orlov & Szebehely 1994a (CeMDA 58, 1), Tables II–VII. Chart: BodyPlane, polar ring sampling (six circles × 100 azimuths). Milestone: M9 (was M3; R-650). Compare: statistical (rule 8). Tolerance: REQ-VAL-258 (calibration, R-71). Row P-4 of principia_dd_replication.md § \"5.7 The Burrau neighbourhood: Aarseth et al. 1994a and 1994b\"; layer replication, tier B; closed by TASK-M9-17 (was TASK-M3-57) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\"."
+  note: "Reproduces: Aarseth, Anosova, Orlov & Szebehely 1994a (CeMDA 58, 1), Tables II–VII. Chart: BodyPlane, polar ring sampling (six circles × 100 azimuths). Milestone: M9 (was M3; R-650). Compare: statistical (rule 8). Tolerance: REQ-VAL-258 (calibration, R-71). Row P-4 of principia_dd_replication.md § \"5.7 The Burrau neighbourhood: Aarseth et al. 1994a and 1994b\"; layer replication, tier B; closed by TASK-M9-17 (was TASK-M3-57) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\". R-671 (2 Nov 2026, RQ-669 (ii)): its task has no GPU run, so its (a) part keeps its tier and reads \"not scored yet: needs a GPU run\" in M9's report, and the same statistic from the task's f64 runs is recorded beside it at (b), with its outcome and instrument stated. *Was (rq):* RQ-669."
 - id: REQ-VAL-258
   area: VAL
   kind: calibration
@@ -34247,6 +34257,8 @@
     section: 12.2 Tiers
   - file: docs/design/principia_dd_replication.md
     section: "12.3 Outcomes, the like-for-like check and the forbidden moves"
+  - file: decisions.md
+    section: "R-671 — In a task with no GPU run, a statistical or qualitative target's statistic from the f64 runs is recorded at tier (b), its instrument stated, and its (a) part stays listed \"not scored yet: needs a GPU run\", the tier not relabelled; Q-4's no-integration part is recorded with no tier *(closes RQ-669; refines R-649)*"
   verify:
     method: numerical gate
     detail: "Table VIII as transcribed; a multinomial test at REQ-VAL-260's level; control: the shares with bodies relabelled must fail"
@@ -34257,10 +34269,9 @@
   - R-629
   - R-649
   - R-650
+  - R-671
   milestone: M9
-  rq:
-  - RQ-669
-  note: "Reproduces: Aarseth, Anosova, Orlov & Szebehely 1994a (CeMDA 58, 1), Table VIII. Chart: BodyPlane, polar ring sampling (six circles × 100 azimuths). Milestone: M9 (was M3; R-650). Compare: statistical (rule 8). Tolerance: REQ-VAL-260 (calibration, R-71). Row P-5 of principia_dd_replication.md § \"5.7 The Burrau neighbourhood: Aarseth et al. 1994a and 1994b\"; layer replication, tier B; closed by TASK-M9-17 (was TASK-M3-57) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\"."
+  note: "Reproduces: Aarseth, Anosova, Orlov & Szebehely 1994a (CeMDA 58, 1), Table VIII. Chart: BodyPlane, polar ring sampling (six circles × 100 azimuths). Milestone: M9 (was M3; R-650). Compare: statistical (rule 8). Tolerance: REQ-VAL-260 (calibration, R-71). Row P-5 of principia_dd_replication.md § \"5.7 The Burrau neighbourhood: Aarseth et al. 1994a and 1994b\"; layer replication, tier B; closed by TASK-M9-17 (was TASK-M3-57) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\". R-671 (2 Nov 2026, RQ-669 (ii)): its task has no GPU run, so its (a) part keeps its tier and reads \"not scored yet: needs a GPU run\" in M9's report, and the same statistic from the task's f64 runs is recorded beside it at (b), with its outcome and instrument stated. *Was (rq):* RQ-669."
 - id: REQ-VAL-260
   area: VAL
   kind: calibration
@@ -34317,6 +34328,8 @@
     section: 12.2 Tiers
   - file: docs/design/principia_dd_replication.md
     section: "12.3 Outcomes, the like-for-like check and the forbidden moves"
+  - file: decisions.md
+    section: "R-671 — In a task with no GPU run, a statistical or qualitative target's statistic from the f64 runs is recorded at tier (b), its instrument stated, and its (a) part stays listed \"not scored yet: needs a GPU run\", the tier not relabelled; Q-4's no-integration part is recorded with no tier *(closes RQ-669; refines R-649)*"
   verify:
     method: review checklist
     detail: "the zoomed sector rendered and reviewed by the physics reviewer against the text; control: a sector away from the boundaries must not oscillate"
@@ -34326,10 +34339,9 @@
   - R-629
   - R-649
   - R-650
+  - R-671
   milestone: M9
-  rq:
-  - RQ-669
-  note: "Reproduces: Aarseth, Anosova, Orlov & Szebehely 1994a (CeMDA 58, 1), p. 8. Chart: BodyPlane, a zoomed polar sector. Milestone: M9 (was M3; R-650). Compare: qualitative (rule 8). Tolerance: none: qualitative, reviewed against the figure by the physics reviewer. Row P-6 of principia_dd_replication.md § \"5.7 The Burrau neighbourhood: Aarseth et al. 1994a and 1994b\"; layer replication, tier B; closed by TASK-M9-17 (was TASK-M3-57) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\"."
+  note: "Reproduces: Aarseth, Anosova, Orlov & Szebehely 1994a (CeMDA 58, 1), p. 8. Chart: BodyPlane, a zoomed polar sector. Milestone: M9 (was M3; R-650). Compare: qualitative (rule 8). Tolerance: none: qualitative, reviewed against the figure by the physics reviewer. Row P-6 of principia_dd_replication.md § \"5.7 The Burrau neighbourhood: Aarseth et al. 1994a and 1994b\"; layer replication, tier B; closed by TASK-M9-17 (was TASK-M3-57) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\". R-671 (2 Nov 2026, RQ-669 (ii)): its task has no GPU run, so its (a) part keeps its tier and reads \"not scored yet: needs a GPU run\" in M9's report, and the same statistic from the task's f64 runs is recorded beside it at (b), with its outcome and instrument stated. *Was (rq):* RQ-669."
 - id: REQ-VAL-262
   area: VAL
   statement: "Aarseth et al. 1994b's Table I triple-approach means over 2,500 region-D systems and 2,500 circle-R systems must be reproduced as distributions, with the paper's escape criterion (10d) recorded beside ours (rule 9) (Q-1)."
@@ -34354,6 +34366,8 @@
     section: 12.2 Tiers
   - file: docs/design/principia_dd_replication.md
     section: "12.3 Outcomes, the like-for-like check and the forbidden moves"
+  - file: decisions.md
+    section: "R-671 — In a task with no GPU run, a statistical or qualitative target's statistic from the f64 runs is recorded at tier (b), its instrument stated, and its (a) part stays listed \"not scored yet: needs a GPU run\", the tier not relabelled; Q-4's no-integration part is recorded with no tier *(closes RQ-669; refines R-649)*"
   verify:
     method: numerical gate
     detail: "region D through the Anosova entry, circle R's starts injected by Path B (no chart); a statistic at REQ-VAL-263's level; control: region D's sample drawn from a disc of the wrong radius must fail"
@@ -34363,10 +34377,9 @@
   - R-629
   - R-649
   - R-650
+  - R-671
   milestone: M9
-  rq:
-  - RQ-669
-  note: "Reproduces: Aarseth et al. 1994b (CeMDA 60, 131), Table I. Chart: the Anosova physical-frame entry (region D); Path B for circle R. Milestone: M9 (was M3; R-650). Compare: statistical (rule 8). Tolerance: REQ-VAL-263 (calibration, R-71). Row Q-1 of principia_dd_replication.md § \"5.7 The Burrau neighbourhood: Aarseth et al. 1994a and 1994b\"; layer replication, tier B; closed by TASK-M9-18 (was TASK-M3-58) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\"."
+  note: "Reproduces: Aarseth et al. 1994b (CeMDA 60, 131), Table I. Chart: the Anosova physical-frame entry (region D); Path B for circle R. Milestone: M9 (was M3; R-650). Compare: statistical (rule 8). Tolerance: REQ-VAL-263 (calibration, R-71). Row Q-1 of principia_dd_replication.md § \"5.7 The Burrau neighbourhood: Aarseth et al. 1994a and 1994b\"; layer replication, tier B; closed by TASK-M9-18 (was TASK-M3-58) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\". R-671 (2 Nov 2026, RQ-669 (ii)): its task has no GPU run, so its (a) part keeps its tier and reads \"not scored yet: needs a GPU run\" in M9's report, and the same statistic from the task's f64 runs is recorded beside it at (b), with its outcome and instrument stated. *Was (rq):* RQ-669."
 - id: REQ-VAL-263
   area: VAL
   kind: calibration
@@ -34425,6 +34438,8 @@
     section: 12.2 Tiers
   - file: docs/design/principia_dd_replication.md
     section: "12.3 Outcomes, the like-for-like check and the forbidden moves"
+  - file: decisions.md
+    section: "R-671 — In a task with no GPU run, a statistical or qualitative target's statistic from the f64 runs is recorded at tier (b), its instrument stated, and its (a) part stays listed \"not scored yet: needs a GPU run\", the tier not relabelled; Q-4's no-integration part is recorded with no tier *(closes RQ-669; refines R-649)*"
   verify:
     method: numerical gate
     detail: "Table II as transcribed; the eccentricity and Z of the first batch's control; per column a statistic at REQ-VAL-265's level; control: a sample drawn at E > 0 must fail"
@@ -34434,10 +34449,9 @@
   - R-629
   - R-649
   - R-650
+  - R-671
   milestone: M9
-  rq:
-  - RQ-669
-  note: "Reproduces: Aarseth et al. 1994b, Table II. Chart: as Q-1. Milestone: M9 (was M3; R-650). Compare: statistical (rule 8). Tolerance: REQ-VAL-265 (calibration, R-71). Row Q-2 of principia_dd_replication.md § \"5.7 The Burrau neighbourhood: Aarseth et al. 1994a and 1994b\"; layer replication, tier B; closed by TASK-M9-18 (was TASK-M3-58) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\"."
+  note: "Reproduces: Aarseth et al. 1994b, Table II. Chart: as Q-1. Milestone: M9 (was M3; R-650). Compare: statistical (rule 8). Tolerance: REQ-VAL-265 (calibration, R-71). Row Q-2 of principia_dd_replication.md § \"5.7 The Burrau neighbourhood: Aarseth et al. 1994a and 1994b\"; layer replication, tier B; closed by TASK-M9-18 (was TASK-M3-58) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\". R-671 (2 Nov 2026, RQ-669 (ii)): its task has no GPU run, so its (a) part keeps its tier and reads \"not scored yet: needs a GPU run\" in M9's report, and the same statistic from the task's f64 runs is recorded beside it at (b), with its outcome and instrument stated. *Was (rq):* RQ-669."
 - id: REQ-VAL-265
   area: VAL
   kind: calibration
@@ -34496,6 +34510,8 @@
     section: 12.2 Tiers
   - file: docs/design/principia_dd_replication.md
     section: "12.3 Outcomes, the like-for-like check and the forbidden moves"
+  - file: decisions.md
+    section: "R-671 — In a task with no GPU run, a statistical or qualitative target's statistic from the f64 runs is recorded at tier (b), its instrument stated, and its (a) part stays listed \"not scored yet: needs a GPU run\", the tier not relabelled; Q-4's no-integration part is recorded with no tier *(closes RQ-669; refines R-649)*"
   verify:
     method: numerical gate
     detail: "the unit remap a tested function (rule 11); a statistic at REQ-VAL-267's level; control: the units left unconverted must fail"
@@ -34505,10 +34521,9 @@
   - R-629
   - R-649
   - R-650
+  - R-671
   milestone: M9
-  rq:
-  - RQ-669
-  note: "Reproduces: Aarseth et al. 1994b, Table III. Chart: as Q-1; P-1's rings. Milestone: M9 (was M3; R-650). Compare: statistical (rule 8). Tolerance: REQ-VAL-267 (calibration, R-71). Row Q-3 of principia_dd_replication.md § \"5.7 The Burrau neighbourhood: Aarseth et al. 1994a and 1994b\"; layer replication, tier B; closed by TASK-M9-18 (was TASK-M3-58) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\"."
+  note: "Reproduces: Aarseth et al. 1994b, Table III. Chart: as Q-1; P-1's rings. Milestone: M9 (was M3; R-650). Compare: statistical (rule 8). Tolerance: REQ-VAL-267 (calibration, R-71). Row Q-3 of principia_dd_replication.md § \"5.7 The Burrau neighbourhood: Aarseth et al. 1994a and 1994b\"; layer replication, tier B; closed by TASK-M9-18 (was TASK-M3-58) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\". R-671 (2 Nov 2026, RQ-669 (ii)): its task has no GPU run, so its (a) part keeps its tier and reads \"not scored yet: needs a GPU run\" in M9's report, and the same statistic from the task's f64 runs is recorded beside it at (b), with its outcome and instrument stated. *Was (rq):* RQ-669."
 - id: REQ-VAL-267
   area: VAL
   kind: calibration
@@ -34567,6 +34582,8 @@
     section: 12.2 Tiers
   - file: docs/design/principia_dd_replication.md
     section: "12.3 Outcomes, the like-for-like check and the forbidden moves"
+  - file: decisions.md
+    section: "R-671 — In a task with no GPU run, a statistical or qualitative target's statistic from the f64 runs is recorded at tier (b), its instrument stated, and its (a) part stays listed \"not scored yet: needs a GPU run\", the tier not relabelled; Q-4's no-integration part is recorded with no tier *(closes RQ-669; refines R-649)*"
   verify:
     method: numerical gate
     detail: "docs/incoming/2026-10-27_papers/agekyan_anosova_I_table1_cols5to8.csv (twice-transcribed); the remap of AA-6 reused; per short-lived row within REQ-VAL-269; the rest by a statistic at its level; control: the τ remap omitted must fail"
@@ -34577,10 +34594,9 @@
   - R-629
   - R-649
   - R-650
+  - R-671
   milestone: M9
-  rq:
-  - RQ-669
-  note: "Reproduces: Agekyan & Anosova I, Table 1 cols. 5–8. Chart: the Anosova physical-frame entry, eq. (3) velocities. Milestone: M9 (was M3; R-650). Compare: exact on the short-lived rows; statistical otherwise (rule 8). Tolerance: REQ-VAL-269 (calibration, R-71). Row AA-2 of principia_dd_replication.md § \"5.8 Region D: Agekyan & Anosova, and Anosova 1969\"; layer replication, tier A; closed by TASK-M9-19 (was TASK-M3-59) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (b), the CPU IC inspector, for the short-lived rows, where a GPU miss is expected, not a defect; tier (a), the GPU explorer, for the rest, scored there statistically or qualitatively only (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b) for its exact part, its statistical part (b) too, with (a) expected to agree\"."
+  note: "Reproduces: Agekyan & Anosova I, Table 1 cols. 5–8. Chart: the Anosova physical-frame entry, eq. (3) velocities. Milestone: M9 (was M3; R-650). Compare: exact on the short-lived rows; statistical otherwise (rule 8). Tolerance: REQ-VAL-269 (calibration, R-71). Row AA-2 of principia_dd_replication.md § \"5.8 Region D: Agekyan & Anosova, and Anosova 1969\"; layer replication, tier A; closed by TASK-M9-19 (was TASK-M3-59) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (b), the CPU IC inspector, for the short-lived rows, where a GPU miss is expected, not a defect; tier (a), the GPU explorer, for the rest, scored there statistically or qualitatively only (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b) for its exact part, its statistical part (b) too, with (a) expected to agree\". R-671 (2 Nov 2026, RQ-669 (ii)): its task has no GPU run, so its (a) part keeps its tier and reads \"not scored yet: needs a GPU run\" in M9's report, and the same statistic from the task's f64 runs is recorded beside it at (b), with its outcome and instrument stated. *Was (rq):* RQ-669."
 - id: REQ-VAL-269
   area: VAL
   kind: calibration
@@ -34639,6 +34655,8 @@
     section: 12.2 Tiers
   - file: docs/design/principia_dd_replication.md
     section: "12.3 Outcomes, the like-for-like check and the forbidden moves"
+  - file: decisions.md
+    section: "R-671 — In a task with no GPU run, a statistical or qualitative target's statistic from the f64 runs is recorded at tier (b), its instrument stated, and its (a) part stays listed \"not scored yet: needs a GPU run\", the tier not relabelled; Q-4's no-integration part is recorded with no tier *(closes RQ-669; refines R-649)*"
   verify:
     method: numerical gate
     detail: "a statistic at REQ-VAL-271's level; the two means recorded, neither chosen; control: the near-rest velocities set to zero must move the mean"
@@ -34649,10 +34667,9 @@
   - R-629
   - R-649
   - R-650
+  - R-671
   milestone: M9
-  rq:
-  - RQ-669
-  note: "Reproduces: Agekyan & Anosova I, pp. 1012–1014 and Fig. 4. Chart: the Anosova physical-frame entry. Milestone: M9 (was M3; R-650). Compare: statistical (rule 8). Tolerance: REQ-VAL-271 (calibration, R-71). Row AA-3 of principia_dd_replication.md § \"5.8 Region D: Agekyan & Anosova, and Anosova 1969\"; layer replication, tier B; closed by TASK-M9-19 (was TASK-M3-59) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\"."
+  note: "Reproduces: Agekyan & Anosova I, pp. 1012–1014 and Fig. 4. Chart: the Anosova physical-frame entry. Milestone: M9 (was M3; R-650). Compare: statistical (rule 8). Tolerance: REQ-VAL-271 (calibration, R-71). Row AA-3 of principia_dd_replication.md § \"5.8 Region D: Agekyan & Anosova, and Anosova 1969\"; layer replication, tier B; closed by TASK-M9-19 (was TASK-M3-59) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\". R-671 (2 Nov 2026, RQ-669 (ii)): its task has no GPU run, so its (a) part keeps its tier and reads \"not scored yet: needs a GPU run\" in M9's report, and the same statistic from the task's f64 runs is recorded beside it at (b), with its outcome and instrument stated. *Was (rq):* RQ-669."
 - id: REQ-VAL-271
   area: VAL
   kind: calibration
@@ -34744,6 +34761,8 @@
     section: 12.2 Tiers
   - file: docs/design/principia_dd_replication.md
     section: "12.3 Outcomes, the like-for-like check and the forbidden moves"
+  - file: decisions.md
+    section: "R-671 — In a task with no GPU run, a statistical or qualitative target's statistic from the f64 runs is recorded at tier (b), its instrument stated, and its (a) part stays listed \"not scored yet: needs a GPU run\", the tier not relabelled; Q-4's no-integration part is recorded with no tier *(closes RQ-669; refines R-649)*"
   verify:
     method: numerical gate
     detail: "the rates beside the paper's (they lost 21 of 100 runs to energy error, and say so); a statistic at REQ-VAL-274's level; control: a classifier with the escape window halved must change the rates"
@@ -34754,10 +34773,9 @@
   - R-629
   - R-649
   - R-650
+  - R-671
   milestone: M9
-  rq:
-  - RQ-669
-  note: "Reproduces: Agekyan & Anosova I, pp. 1006, 1008–1009. Chart: the Anosova physical-frame entry. Milestone: M9 (was M3; R-650). Compare: statistical (rule 8). Tolerance: REQ-VAL-274 (calibration, R-71). Row AA-5 of principia_dd_replication.md § \"5.8 Region D: Agekyan & Anosova, and Anosova 1969\"; layer replication, tier B; closed by TASK-M9-19 (was TASK-M3-59) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\"."
+  note: "Reproduces: Agekyan & Anosova I, pp. 1006, 1008–1009. Chart: the Anosova physical-frame entry. Milestone: M9 (was M3; R-650). Compare: statistical (rule 8). Tolerance: REQ-VAL-274 (calibration, R-71). Row AA-5 of principia_dd_replication.md § \"5.8 Region D: Agekyan & Anosova, and Anosova 1969\"; layer replication, tier B; closed by TASK-M9-19 (was TASK-M3-59) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\". R-671 (2 Nov 2026, RQ-669 (ii)): its task has no GPU run, so its (a) part keeps its tier and reads \"not scored yet: needs a GPU run\" in M9's report, and the same statistic from the task's f64 runs is recorded beside it at (b), with its outcome and instrument stated. *Was (rq):* RQ-669."
 - id: REQ-VAL-274
   area: VAL
   kind: calibration
@@ -34816,6 +34834,8 @@
     section: 12.2 Tiers
   - file: docs/design/principia_dd_replication.md
     section: "12.3 Outcomes, the like-for-like check and the forbidden moves"
+  - file: decisions.md
+    section: "R-671 — In a task with no GPU run, a statistical or qualitative target's statistic from the f64 runs is recorded at tier (b), its instrument stated, and its (a) part stays listed \"not scored yet: needs a GPU run\", the tier not relabelled; Q-4's no-integration part is recorded with no tier *(closes RQ-669; refines R-649)*"
   verify:
     method: numerical gate
     detail: "docs/incoming/2026-10-27_papers/agekyan_anosova_II_table3_near_rest_completed.csv (twice-transcribed); a statistic at REQ-VAL-276's level; control: the rows' τ swapped must fail"
@@ -34826,10 +34846,9 @@
   - R-629
   - R-649
   - R-650
+  - R-671
   milestone: M9
-  rq:
-  - RQ-669
-  note: "Reproduces: Agekyan & Anosova II, Table 3. Chart: the Anosova physical-frame entry, eq. (3) velocities. Milestone: M9 (was M3; R-650). Compare: statistical (rule 8). Tolerance: REQ-VAL-276 (calibration, R-71). Row AA-7 of principia_dd_replication.md § \"5.8 Region D: Agekyan & Anosova, and Anosova 1969\"; layer replication, tier B; closed by TASK-M9-19 (was TASK-M3-59) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\"."
+  note: "Reproduces: Agekyan & Anosova II, Table 3. Chart: the Anosova physical-frame entry, eq. (3) velocities. Milestone: M9 (was M3; R-650). Compare: statistical (rule 8). Tolerance: REQ-VAL-276 (calibration, R-71). Row AA-7 of principia_dd_replication.md § \"5.8 Region D: Agekyan & Anosova, and Anosova 1969\"; layer replication, tier B; closed by TASK-M9-19 (was TASK-M3-59) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\". R-671 (2 Nov 2026, RQ-669 (ii)): its task has no GPU run, so its (a) part keeps its tier and reads \"not scored yet: needs a GPU run\" in M9's report, and the same statistic from the task's f64 runs is recorded beside it at (b), with its outcome and instrument stated. *Was (rq):* RQ-669."
 - id: REQ-VAL-276
   area: VAL
   kind: calibration
@@ -34888,6 +34907,8 @@
     section: 12.2 Tiers
   - file: docs/design/principia_dd_replication.md
     section: "12.3 Outcomes, the like-for-like check and the forbidden moves"
+  - file: decisions.md
+    section: "R-671 — In a task with no GPU run, a statistical or qualitative target's statistic from the f64 runs is recorded at tier (b), its instrument stated, and its (a) part stays listed \"not scored yet: needs a GPU run\", the tier not relabelled; Q-4's no-integration part is recorded with no tier *(closes RQ-669; refines R-649)*"
   verify:
     method: numerical gate
     detail: "the three CSVs; two runs per start, at rest and near rest; a statistic at REQ-VAL-278's level; control: the same run twice must show no sensitivity"
@@ -34898,10 +34919,9 @@
   - R-629
   - R-649
   - R-650
+  - R-671
   milestone: M9
-  rq:
-  - RQ-669
-  note: "Reproduces: Agekyan & Anosova I Table 1, II Tables 1 and 3. Chart: Latent with one momentum axis, or two runs per start. Milestone: M9 (was M3; R-650). Compare: statistical (rule 8). Tolerance: REQ-VAL-278 (calibration, R-71). Row AA-8 of principia_dd_replication.md § \"5.8 Region D: Agekyan & Anosova, and Anosova 1969\"; layer replication, tier B; closed by TASK-M9-19 (was TASK-M3-59) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\"."
+  note: "Reproduces: Agekyan & Anosova I Table 1, II Tables 1 and 3. Chart: Latent with one momentum axis, or two runs per start. Milestone: M9 (was M3; R-650). Compare: statistical (rule 8). Tolerance: REQ-VAL-278 (calibration, R-71). Row AA-8 of principia_dd_replication.md § \"5.8 Region D: Agekyan & Anosova, and Anosova 1969\"; layer replication, tier B; closed by TASK-M9-19 (was TASK-M3-59) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\". R-671 (2 Nov 2026, RQ-669 (ii)): its task has no GPU run, so its (a) part keeps its tier and reads \"not scored yet: needs a GPU run\" in M9's report, and the same statistic from the task's f64 runs is recorded beside it at (b), with its outcome and instrument stated. *Was (rq):* RQ-669."
 - id: REQ-VAL-278
   area: VAL
   kind: calibration
@@ -34960,6 +34980,8 @@
     section: 12.2 Tiers
   - file: docs/design/principia_dd_replication.md
     section: "12.3 Outcomes, the like-for-like check and the forbidden moves"
+  - file: decisions.md
+    section: "R-671 — In a task with no GPU run, a statistical or qualitative target's statistic from the f64 runs is recorded at tier (b), its instrument stated, and its (a) part stays listed \"not scored yet: needs a GPU run\", the tier not relabelled; Q-4's no-integration part is recorded with no tier *(closes RQ-669; refines R-649)*"
   verify:
     method: numerical gate
     detail: "the paper's tables transcribed twice (rule 2); a statistic at REQ-VAL-280's level; control: the masses relabelled so the lightest is not body 3 must move the escaper share to the relabelled body"
@@ -34970,10 +34992,9 @@
   - R-629
   - R-649
   - R-650
+  - R-671
   milestone: M9
-  rq:
-  - RQ-669
-  note: "Reproduces: Anosova 1969 (Astrophysics 5, 81), its tables. Chart: the Anosova physical-frame entry at a mass point; MassSimplex. Milestone: M9 (was M3; R-650). Compare: statistical (rule 8). Tolerance: REQ-VAL-280 (calibration, R-71). Row AN-1 of principia_dd_replication.md § \"5.8 Region D: Agekyan & Anosova, and Anosova 1969\"; layer replication, tier B; closed by TASK-M9-19 (was TASK-M3-59) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\"."
+  note: "Reproduces: Anosova 1969 (Astrophysics 5, 81), its tables. Chart: the Anosova physical-frame entry at a mass point; MassSimplex. Milestone: M9 (was M3; R-650). Compare: statistical (rule 8). Tolerance: REQ-VAL-280 (calibration, R-71). Row AN-1 of principia_dd_replication.md § \"5.8 Region D: Agekyan & Anosova, and Anosova 1969\"; layer replication, tier B; closed by TASK-M9-19 (was TASK-M3-59) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\". R-671 (2 Nov 2026, RQ-669 (ii)): its task has no GPU run, so its (a) part keeps its tier and reads \"not scored yet: needs a GPU run\" in M9's report, and the same statistic from the task's f64 runs is recorded beside it at (b), with its outcome and instrument stated. *Was (rq):* RQ-669."
 - id: REQ-VAL-280
   area: VAL
   kind: calibration
@@ -35032,6 +35053,8 @@
     section: 12.2 Tiers
   - file: docs/design/principia_dd_replication.md
     section: "12.3 Outcomes, the like-for-like check and the forbidden moves"
+  - file: decisions.md
+    section: "R-671 — In a task with no GPU run, a statistical or qualitative target's statistic from the f64 runs is recorded at tier (b), its instrument stated, and its (a) part stays listed \"not scored yet: needs a GPU run\", the tier not relabelled; Q-4's no-integration part is recorded with no tier *(closes RQ-669; refines R-649)*"
   verify:
     method: numerical gate
     detail: "their escape criterion (ratio 100 or 2000) and ours recorded (rule 9); the statistic per bin size at REQ-VAL-282's level; control: a map with its pixels shuffled must lose the homogeneity"
@@ -35041,10 +35064,9 @@
   - R-629
   - R-649
   - R-650
+  - R-671
   milestone: M9
-  rq:
-  - RQ-669
-  note: "Reproduces: Lehto et al. 2008 §2.3: 6,212 of 21,699 (28.6 %) locally homogeneous at ε = 1.25×10⁻³; 28.6 → 8.6 % over six bin sizes; p_ε ∝ ε^−0.5. Chart: the Anosova entry, or ShapeSphere at rest, through a tested lens remap (rule 6). Milestone: M9 (was M3; R-650). Compare: statistical (rule 8). Tolerance: REQ-VAL-282 (calibration, R-71). Row L-3 (+ the 25 Oct tier B's Maasai shield statistics) of principia_dd_replication.md § \"5.9 Region D: maps and statistics\"; layer replication, tier B; closed by TASK-M9-20 (was TASK-M3-60) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\"."
+  note: "Reproduces: Lehto et al. 2008 §2.3: 6,212 of 21,699 (28.6 %) locally homogeneous at ε = 1.25×10⁻³; 28.6 → 8.6 % over six bin sizes; p_ε ∝ ε^−0.5. Chart: the Anosova entry, or ShapeSphere at rest, through a tested lens remap (rule 6). Milestone: M9 (was M3; R-650). Compare: statistical (rule 8). Tolerance: REQ-VAL-282 (calibration, R-71). Row L-3 (+ the 25 Oct tier B's Maasai shield statistics) of principia_dd_replication.md § \"5.9 Region D: maps and statistics\"; layer replication, tier B; closed by TASK-M9-20 (was TASK-M3-60) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\". R-671 (2 Nov 2026, RQ-669 (ii)): its task has no GPU run, so its (a) part keeps its tier and reads \"not scored yet: needs a GPU run\" in M9's report, and the same statistic from the task's f64 runs is recorded beside it at (b), with its outcome and instrument stated. *Was (rq):* RQ-669."
 - id: REQ-VAL-282
   area: VAL
   kind: calibration
@@ -35103,6 +35125,8 @@
     section: 12.2 Tiers
   - file: docs/design/principia_dd_replication.md
     section: "12.3 Outcomes, the like-for-like check and the forbidden moves"
+  - file: decisions.md
+    section: "R-671 — In a task with no GPU run, a statistical or qualitative target's statistic from the f64 runs is recorded at tier (b), its instrument stated, and its (a) part stays listed \"not scored yet: needs a GPU run\", the tier not relabelled; Q-4's no-integration part is recorded with no tier *(closes RQ-669; refines R-649)*"
   verify:
     method: numerical gate
     detail: "runs on logH-TTL selected by run_reversible (R-500); the two populations' fits at REQ-VAL-284's level; Lehto's ξ is theirs, not REQ-VAL-134's definition, which it may inform; control: the same map on a non-reversible occupant must be refused"
@@ -35114,10 +35138,9 @@
   - R-629
   - R-649
   - R-650
+  - R-671
   milestone: M9
-  rq:
-  - RQ-669
-  note: "Reproduces: Lehto et al. 2008 §3 and Figs. 4–9: the reversibility ξ map and populations I and II (Fig. 9 fits). Chart: as L-3. Milestone: M9 (was M3; R-650). Compare: statistical / qualitative (rule 8). Tolerance: REQ-VAL-284 (calibration, R-71). Row L-4 of principia_dd_replication.md § \"5.9 Region D: maps and statistics\"; layer replication, tier C; closed by TASK-M9-20 (was TASK-M3-60) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\"."
+  note: "Reproduces: Lehto et al. 2008 §3 and Figs. 4–9: the reversibility ξ map and populations I and II (Fig. 9 fits). Chart: as L-3. Milestone: M9 (was M3; R-650). Compare: statistical / qualitative (rule 8). Tolerance: REQ-VAL-284 (calibration, R-71). Row L-4 of principia_dd_replication.md § \"5.9 Region D: maps and statistics\"; layer replication, tier C; closed by TASK-M9-20 (was TASK-M3-60) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\". R-671 (2 Nov 2026, RQ-669 (ii)): its task has no GPU run, so its (a) part keeps its tier and reads \"not scored yet: needs a GPU run\" in M9's report, and the same statistic from the task's f64 runs is recorded beside it at (b), with its outcome and instrument stated. *Was (rq):* RQ-669."
 - id: REQ-VAL-284
   area: VAL
   kind: calibration
@@ -35174,6 +35197,8 @@
     section: 12.2 Tiers
   - file: docs/design/principia_dd_replication.md
     section: "12.3 Outcomes, the like-for-like check and the forbidden moves"
+  - file: decisions.md
+    section: "R-671 — In a task with no GPU run, a statistical or qualitative target's statistic from the f64 runs is recorded at tier (b), its instrument stated, and its (a) part stays listed \"not scored yet: needs a GPU run\", the tier not relabelled; Q-4's no-integration part is recorded with no tier *(closes RQ-669; refines R-649)*"
   verify:
     method: review checklist
     detail: "the three maps rendered at a small grid and reviewed by the physics reviewer; control: a map whose structure moves under step halving must be reported as failing"
@@ -35182,10 +35207,9 @@
   - R-629
   - R-649
   - R-650
+  - R-671
   milestone: M9
-  rq:
-  - RQ-669
-  note: "Reproduces: Lehto et al. 2008 §4: step halving only sharpens boundaries; an unregularised run reproduces the main structures. Chart: as L-3. Milestone: M9 (was M3; R-650). Compare: qualitative (rule 8). Tolerance: none: qualitative, reviewed by the physics reviewer. Row L-5 of principia_dd_replication.md § \"5.9 Region D: maps and statistics\"; layer replication, tier B; closed by TASK-M9-20 (was TASK-M3-60) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\"."
+  note: "Reproduces: Lehto et al. 2008 §4: step halving only sharpens boundaries; an unregularised run reproduces the main structures. Chart: as L-3. Milestone: M9 (was M3; R-650). Compare: qualitative (rule 8). Tolerance: none: qualitative, reviewed by the physics reviewer. Row L-5 of principia_dd_replication.md § \"5.9 Region D: maps and statistics\"; layer replication, tier B; closed by TASK-M9-20 (was TASK-M3-60) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\". R-671 (2 Nov 2026, RQ-669 (ii)): its task has no GPU run, so its (a) part keeps its tier and reads \"not scored yet: needs a GPU run\" in M9's report, and the same statistic from the task's f64 runs is recorded beside it at (b), with its outcome and instrument stated. *Was (rq):* RQ-669."
 - id: REQ-VAL-286
   area: VAL
   statement: "The t_end histogram's tail on the free-fall surface must be classed as a power law (differential index about −1.4 to −1.7) or as exponential, with the criterion stated (V-9)."
@@ -35210,6 +35234,8 @@
     section: 12.2 Tiers
   - file: docs/design/principia_dd_replication.md
     section: "12.3 Outcomes, the like-for-like check and the forbidden moves"
+  - file: decisions.md
+    section: "R-671 — In a task with no GPU run, a statistical or qualitative target's statistic from the f64 runs is recorded at tier (b), its instrument stated, and its (a) part stays listed \"not scored yet: needs a GPU run\", the tier not relabelled; Q-4's no-integration part is recorded with no tier *(closes RQ-669; refines R-649)*"
   verify:
     method: numerical gate
     detail: "the fit and its criterion at REQ-VAL-287's level; systems still bound at 200 counted as censored, not dropped (rule 18); control: an exponential sample must not be classed as a power law"
@@ -35219,10 +35245,9 @@
   - R-629
   - R-649
   - R-650
+  - R-671
   milestone: M9
-  rq:
-  - RQ-669
-  note: "Reproduces: Valtonen et al. 2016 p. 77; Orlov, Rubinov & Shevchenko 2010: the t_end histogram's tail, power law (differential index about −1.4 to −1.7) or exponential. Chart: the Anosova physical-frame entry; P-1's rings. Milestone: M9 (was M3; R-650). Compare: statistical (rule 8). Tolerance: REQ-VAL-287 (calibration, R-71). Row V-9 (+ Orlov et al. 2010; the 25 Oct tier B's lifetime tails) of principia_dd_replication.md § \"5.9 Region D: maps and statistics\"; layer replication, tier B; closed by TASK-M9-21 (was TASK-M3-61) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\"."
+  note: "Reproduces: Valtonen et al. 2016 p. 77; Orlov, Rubinov & Shevchenko 2010: the t_end histogram's tail, power law (differential index about −1.4 to −1.7) or exponential. Chart: the Anosova physical-frame entry; P-1's rings. Milestone: M9 (was M3; R-650). Compare: statistical (rule 8). Tolerance: REQ-VAL-287 (calibration, R-71). Row V-9 (+ Orlov et al. 2010; the 25 Oct tier B's lifetime tails) of principia_dd_replication.md § \"5.9 Region D: maps and statistics\"; layer replication, tier B; closed by TASK-M9-21 (was TASK-M3-61) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\". R-671 (2 Nov 2026, RQ-669 (ii)): its task has no GPU run, so its (a) part keeps its tier and reads \"not scored yet: needs a GPU run\" in M9's report, and the same statistic from the task's f64 runs is recorded beside it at (b), with its outcome and instrument stated. *Was (rq):* RQ-669."
 - id: REQ-VAL-287
   area: VAL
   kind: calibration
@@ -35281,6 +35306,8 @@
     section: 12.2 Tiers
   - file: docs/design/principia_dd_replication.md
     section: "12.3 Outcomes, the like-for-like check and the forbidden moves"
+  - file: decisions.md
+    section: "R-671 — In a task with no GPU run, a statistical or qualitative target's statistic from the f64 runs is recorded at tier (b), its instrument stated, and its (a) part stays listed \"not scored yet: needs a GPU run\", the tier not relabelled; Q-4's no-integration part is recorded with no tier *(closes RQ-669; refines R-649)*"
   verify:
     method: numerical gate
     detail: "our lifetime and FTLE on the same starts; the two-segment fit at REQ-VAL-289's level; control: lifetimes paired with shuffled FTLEs must lose the relation"
@@ -35290,10 +35317,9 @@
   - R-629
   - R-649
   - R-650
+  - R-671
   milestone: M9
-  rq:
-  - RQ-669
-  note: "Reproduces: Mikkola & Tanikawa 2007 (MNRAS 379, L21): t_d ≈ 10 t_e^1.8 on free fall, a two-segment fit. Chart: the Anosova physical-frame entry. Milestone: M9 (was M3; R-650). Compare: statistical (rule 8). Tolerance: REQ-VAL-289 (calibration, R-71). Row MT-1 of principia_dd_replication.md § \"5.9 Region D: maps and statistics\"; layer replication, tier B; closed by TASK-M9-21 (was TASK-M3-61) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\"."
+  note: "Reproduces: Mikkola & Tanikawa 2007 (MNRAS 379, L21): t_d ≈ 10 t_e^1.8 on free fall, a two-segment fit. Chart: the Anosova physical-frame entry. Milestone: M9 (was M3; R-650). Compare: statistical (rule 8). Tolerance: REQ-VAL-289 (calibration, R-71). Row MT-1 of principia_dd_replication.md § \"5.9 Region D: maps and statistics\"; layer replication, tier B; closed by TASK-M9-21 (was TASK-M3-61) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\". R-671 (2 Nov 2026, RQ-669 (ii)): its task has no GPU run, so its (a) part keeps its tier and reads \"not scored yet: needs a GPU run\" in M9's report, and the same statistic from the task's f64 runs is recorded beside it at (b), with its outcome and instrument stated. *Was (rq):* RQ-669."
 - id: REQ-VAL-289
   area: VAL
   kind: calibration
@@ -35523,6 +35549,8 @@
     section: "12.3 Outcomes, the like-for-like check and the forbidden moves"
   - file: decisions.md
     section: "R-669 — The owner adopts the recommendations on the fifteen questions of 1 Nov but RQ-656: the Šuvakov-plane chart is one M9 task, its five targets waiting on it whole; a syzygy-symbol field only; N_scramble only; no periodic-orbit continuation, after the SJTU partial check; TR-1, MK-1 and SL-1 stay in M9, not scored, with no chart; the census's CI cadence as § 8.1 and § 8.2 write it, lavapipe in the smoke job; REQ-VAL-199 keeps 256 starts; GG-1's panels by like ε; the drift predicates read the stored latch, live values only for control flow; BZ-1C's starts by Path B, a list-of-starts chart the fallback; Hénon 1974 joins the rotating-frame set; Heggie & Sweatman 1991 in M9, not scored *(closes RQ-593, RQ-595, RQ-596, RQ-597, RQ-608, RQ-617, RQ-618, RQ-620, RQ-636, RQ-647 and RQ-654; amends R-636, R-637 and R-639; refines R-642)*"
+  - file: decisions.md
+    section: "R-671 — In a task with no GPU run, a statistical or qualitative target's statistic from the f64 runs is recorded at tier (b), its instrument stated, and its (a) part stays listed \"not scored yet: needs a GPU run\", the tier not relabelled; Q-4's no-integration part is recorded with no tier *(closes RQ-669; refines R-649)*"
   verify:
     method: numerical gate
     detail: "per-point lifetimes as they publish them, if obtained (RQ-598); the reliability of our run read from the convergence reference (R-33); agreement within REQ-VAL-296; control: lifetimes to the criterion firing rather than to the last close approach must disagree"
@@ -35540,10 +35568,9 @@
   - R-649
   - R-650
   - R-669
+  - R-671
   milestone: M9
-  rq:
-  - RQ-669
-  note: "Reproduces: Boekholt, Portegies Zwart & Valtonen 2020 (MNRAS 493, 3932): 1,212 points at spacing 1/64, converged with Brutus to t = 10⁴; lifetime to the last close approach. Chart: the Anosova physical-frame entry. Milestone: M9 (was M3; R-650). Compare: per point where reliable (rule 8: a converged code); KS otherwise (rule 8). Tolerance: REQ-VAL-296 (calibration, R-71). Row GG-1 (the 25 Oct tier B's converged lifetime grid) of principia_dd_replication.md § \"5.10 Converged-code references\"; layer replication, tier B; closed by TASK-M9-22 (was TASK-M3-62) (R-594, R-629). Systems that end past 200 are recorded as \"not evaluated within cap\", never as failures (R-636, closing RQ-592). RQ-598 closed by R-637 (option (a)); scored as R-638 and R-640 to R-642 rule it, R-642 governing: the Fig. 1 extraction (docs/incoming/2026-10-28_rq598_data/transcriptions/gg1_fig1/) is the paper's own published values and scores directly, all 1212 points per panel at one LUT step (3/256 ≈ 0.0117 dex), the three-entry bin (LUT 29–31) at its wider precision, black meaning censored above 1000 (GG-1's per-point reference panel is undefined: Fig. 1's two panels, ε = 10⁻⁶ and ε = 10⁻⁷⁰, differ point by point, and no panel is chosen; RQ-620, R-72); a qualifying reproduction (the paper's set-up, a converged arbitrary-precision integrator; our Brutus from pgbreen/NvMgeneration at 98906f4) scores provisionally, labelled \"vs <source>\" (\"vs Brutus, run here\"), never \"replicates the paper\". Re-score obligation (R-640, R-642): when the authors' per-point lifetimes arrive, every result scored against a reproduction is re-scored against them; where ours and theirs disagree, theirs governs and the disagreement is queued. The cost per point is reported before any Brutus run is scaled or goes below ε = 10⁻⁶ (R-638). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (b), the CPU IC inspector, for each point where reliable, where a GPU miss is expected, not a defect; tier (a), the GPU explorer, for the KS part, scored there statistically or qualitatively only (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b) for its exact part, its statistical part (b) too, with (a) expected to agree\". R-669 (1 Nov 2026, RQ-620 as recommended): a reproduction is compared per point only with the Fig. 1 panel at its own ε (ε = 10⁻⁶ the left, ε = 10⁻⁷⁰ the right); our lifetimes per point with the ε = 10⁻⁷⁰ panel, and with the ε = 10⁻⁶ panel by KS only; the reliability mask, where the two panels agree within one LUT step, reported beside them."
+  note: "Reproduces: Boekholt, Portegies Zwart & Valtonen 2020 (MNRAS 493, 3932): 1,212 points at spacing 1/64, converged with Brutus to t = 10⁴; lifetime to the last close approach. Chart: the Anosova physical-frame entry. Milestone: M9 (was M3; R-650). Compare: per point where reliable (rule 8: a converged code); KS otherwise (rule 8). Tolerance: REQ-VAL-296 (calibration, R-71). Row GG-1 (the 25 Oct tier B's converged lifetime grid) of principia_dd_replication.md § \"5.10 Converged-code references\"; layer replication, tier B; closed by TASK-M9-22 (was TASK-M3-62) (R-594, R-629). Systems that end past 200 are recorded as \"not evaluated within cap\", never as failures (R-636, closing RQ-592). RQ-598 closed by R-637 (option (a)); scored as R-638 and R-640 to R-642 rule it, R-642 governing: the Fig. 1 extraction (docs/incoming/2026-10-28_rq598_data/transcriptions/gg1_fig1/) is the paper's own published values and scores directly, all 1212 points per panel at one LUT step (3/256 ≈ 0.0117 dex), the three-entry bin (LUT 29–31) at its wider precision, black meaning censored above 1000 (GG-1's per-point reference panel is undefined: Fig. 1's two panels, ε = 10⁻⁶ and ε = 10⁻⁷⁰, differ point by point, and no panel is chosen; RQ-620, R-72); a qualifying reproduction (the paper's set-up, a converged arbitrary-precision integrator; our Brutus from pgbreen/NvMgeneration at 98906f4) scores provisionally, labelled \"vs <source>\" (\"vs Brutus, run here\"), never \"replicates the paper\". Re-score obligation (R-640, R-642): when the authors' per-point lifetimes arrive, every result scored against a reproduction is re-scored against them; where ours and theirs disagree, theirs governs and the disagreement is queued. The cost per point is reported before any Brutus run is scaled or goes below ε = 10⁻⁶ (R-638). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (b), the CPU IC inspector, for each point where reliable, where a GPU miss is expected, not a defect; tier (a), the GPU explorer, for the KS part, scored there statistically or qualitatively only (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b) for its exact part, its statistical part (b) too, with (a) expected to agree\". R-669 (1 Nov 2026, RQ-620 as recommended): a reproduction is compared per point only with the Fig. 1 panel at its own ε (ε = 10⁻⁶ the left, ε = 10⁻⁷⁰ the right); our lifetimes per point with the ε = 10⁻⁷⁰ panel, and with the ε = 10⁻⁶ panel by KS only; the reliability mask, where the two panels agree within one LUT step, reported beside them. R-671 (2 Nov 2026, RQ-669 (ii)): its task has no GPU run, so its (a) part keeps its tier and reads \"not scored yet: needs a GPU run\" in M9's report, and the same statistic from the task's f64 runs is recorded beside it at (b), with its outcome and instrument stated. *Was (rq):* RQ-669."
 - id: REQ-VAL-296
   area: VAL
   kind: calibration
@@ -35927,6 +35954,8 @@
     section: 12.2 Tiers
   - file: docs/design/principia_dd_replication.md
     section: "12.3 Outcomes, the like-for-like check and the forbidden moves"
+  - file: decisions.md
+    section: "R-671 — In a task with no GPU run, a statistical or qualitative target's statistic from the f64 runs is recorded at tier (b), its instrument stated, and its (a) part stays listed \"not scored yet: needs a GPU run\", the tier not relabelled; Q-4's no-integration part is recorded with no tier *(closes RQ-669; refines R-649)*"
   verify:
     method: numerical gate
     detail: "the § 4.1 table's fixtures; the wrong-commit count is 0; the medians within REQ-VAL-307 or explained; control: a classifier variant that commits at the first B-so-far must make a wrong commit"
@@ -35938,10 +35967,9 @@
   - R-629
   - R-649
   - R-650
+  - R-671
   milestone: M9
-  rq:
-  - RQ-669
-  note: "Reproduces: the prototype's classifier against Fewbody's termination test: no wrong commit on E < 0; median first correct label 51.6 / 40.8 against Fewbody's 69.6 / 69.6 (δ = 1e-5) (Chazy drill-down § 4.1). Chart: free-fall; Burrau. Milestone: M9 (was M7; R-650). Compare: exact on the fixtures; statistical for the medians (rule 8). Tolerance: REQ-VAL-307 (calibration, R-71). Row D-3 (folded into REQ-VAL-184's row by PLAN.md) of principia_dd_replication.md § \"5.11 The prototype's results (tier D)\"; layer verification, tier D; closed by TASK-M9-32 (was TASK-M7-71) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M7), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (b), the CPU IC inspector, for the fixtures, where a GPU miss is expected, not a defect; tier (a), the GPU explorer, for the medians, scored there statistically or qualitatively only (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b) for its exact part, its statistical part (b) too, with (a) expected to agree\"."
+  note: "Reproduces: the prototype's classifier against Fewbody's termination test: no wrong commit on E < 0; median first correct label 51.6 / 40.8 against Fewbody's 69.6 / 69.6 (δ = 1e-5) (Chazy drill-down § 4.1). Chart: free-fall; Burrau. Milestone: M9 (was M7; R-650). Compare: exact on the fixtures; statistical for the medians (rule 8). Tolerance: REQ-VAL-307 (calibration, R-71). Row D-3 (folded into REQ-VAL-184's row by PLAN.md) of principia_dd_replication.md § \"5.11 The prototype's results (tier D)\"; layer verification, tier D; closed by TASK-M9-32 (was TASK-M7-71) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M7), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (b), the CPU IC inspector, for the fixtures, where a GPU miss is expected, not a defect; tier (a), the GPU explorer, for the medians, scored there statistically or qualitatively only (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b) for its exact part, its statistical part (b) too, with (a) expected to agree\". R-671 (2 Nov 2026, RQ-669 (ii)): its task has no GPU run, so its (a) part keeps its tier and reads \"not scored yet: needs a GPU run\" in M9's report, and the same statistic from the task's f64 runs is recorded beside it at (b), with its outcome and instrument stated. *Was (rq):* RQ-669."
 - id: REQ-VAL-307
   area: VAL
   kind: calibration
@@ -36384,6 +36412,8 @@
     section: "12.3 Outcomes, the like-for-like check and the forbidden moves"
   - file: decisions.md
     section: "R-669 — The owner adopts the recommendations on the fifteen questions of 1 Nov but RQ-656: the Šuvakov-plane chart is one M9 task, its five targets waiting on it whole; a syzygy-symbol field only; N_scramble only; no periodic-orbit continuation, after the SJTU partial check; TR-1, MK-1 and SL-1 stay in M9, not scored, with no chart; the census's CI cadence as § 8.1 and § 8.2 write it, lavapipe in the smoke job; REQ-VAL-199 keeps 256 starts; GG-1's panels by like ε; the drift predicates read the stored latch, live values only for control flow; BZ-1C's starts by Path B, a list-of-starts chart the fallback; Hénon 1974 joins the rotating-frame set; Heggie & Sweatman 1991 in M9, not scored *(closes RQ-593, RQ-595, RQ-596, RQ-597, RQ-608, RQ-617, RQ-618, RQ-620, RQ-636, RQ-647 and RQ-654; amends R-636, R-637 and R-639; refines R-642)*"
+  - file: decisions.md
+    section: "R-671 — In a task with no GPU run, a statistical or qualitative target's statistic from the f64 runs is recorded at tier (b), its instrument stated, and its (a) part stays listed \"not scored yet: needs a GPU run\", the tier not relabelled; Q-4's no-integration part is recorded with no tier *(closes RQ-669; refines R-649)*"
   verify:
     method: review checklist
     detail: "the scan on a binary-plus-single chart once RQ-593 is ruled, f_col once RQ-596 is; reviewed by the physics reviewer against the figure; control: a scan at a different binary eccentricity must differ"
@@ -36393,10 +36423,9 @@
   - R-649
   - R-650
   - R-669
+  - R-671
   milestone: M9
-  rq:
-  - RQ-669
-  note: "Reproduces: Trani et al. 2024 (A&A 689, A24): the inclination-0 row of their map; f_col (12 nearest neighbours, regular above 2/3). Chart: new: BinaryPlusSingle. Milestone: M9 (was M3; R-650). Compare: qualitative (rule 8). Tolerance: none: qualitative. Row TR-1 of principia_dd_replication.md § \"5.12 Targets that wait for a chart, a diagnostic or data\"; layer replication, tier B; closed by TASK-M9-23 (was TASK-M3-63) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\". R-669 (1 Nov 2026, RQ-593 (c), RQ-596 (b)): no binary-plus-single chart is built and f_col is not built; it stays in M9, reading \"not scored: no chart\" (and its colouring \"not scored: no f_col\"). *Was (rq):* RQ-593, RQ-596."
+  note: "Reproduces: Trani et al. 2024 (A&A 689, A24): the inclination-0 row of their map; f_col (12 nearest neighbours, regular above 2/3). Chart: new: BinaryPlusSingle. Milestone: M9 (was M3; R-650). Compare: qualitative (rule 8). Tolerance: none: qualitative. Row TR-1 of principia_dd_replication.md § \"5.12 Targets that wait for a chart, a diagnostic or data\"; layer replication, tier B; closed by TASK-M9-23 (was TASK-M3-63) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\". R-669 (1 Nov 2026, RQ-593 (c), RQ-596 (b)): no binary-plus-single chart is built and f_col is not built; it stays in M9, reading \"not scored: no chart\" (and its colouring \"not scored: no f_col\"). *Was (rq):* RQ-593, RQ-596. R-671 (2 Nov 2026, RQ-669 (ii)): its task has no GPU run, so its (a) part keeps its tier and reads \"not scored yet: needs a GPU run\" in M9's report, and the same statistic from the task's f64 runs is recorded beside it at (b), with its outcome and instrument stated. *Was (rq):* RQ-669."
 - id: REQ-VAL-319
   area: VAL
   statement: "Per-body escape probabilities over Manwadkar et al. 2021's eight mass sets must be measured in a planar re-run and compared as distributions with their Table 1 (MK-1)."
@@ -36423,6 +36452,8 @@
     section: "12.3 Outcomes, the like-for-like check and the forbidden moves"
   - file: decisions.md
     section: "R-669 — The owner adopts the recommendations on the fifteen questions of 1 Nov but RQ-656: the Šuvakov-plane chart is one M9 task, its five targets waiting on it whole; a syzygy-symbol field only; N_scramble only; no periodic-orbit continuation, after the SJTU partial check; TR-1, MK-1 and SL-1 stay in M9, not scored, with no chart; the census's CI cadence as § 8.1 and § 8.2 write it, lavapipe in the smoke job; REQ-VAL-199 keeps 256 starts; GG-1's panels by like ε; the drift predicates read the stored latch, live values only for control flow; BZ-1C's starts by Path B, a list-of-starts chart the fallback; Hénon 1974 joins the rotating-frame set; Heggie & Sweatman 1991 in M9, not scored *(closes RQ-593, RQ-595, RQ-596, RQ-597, RQ-608, RQ-617, RQ-618, RQ-620, RQ-636, RQ-647 and RQ-654; amends R-636, R-637 and R-639; refines R-642)*"
+  - file: decisions.md
+    section: "R-671 — In a task with no GPU run, a statistical or qualitative target's statistic from the f64 runs is recorded at tier (b), its instrument stated, and its (a) part stays listed \"not scored yet: needs a GPU run\", the tier not relabelled; Q-4's no-integration part is recorded with no tier *(closes RQ-669; refines R-649)*"
   verify:
     method: numerical gate
     detail: "Table 1 transcribed twice (rule 2); a statistic at REQ-VAL-320's level; their runs are 3D, so the comparison is of a different experiment, which the report states (RQ-593); control: masses relabelled must move the probabilities"
@@ -36433,10 +36464,9 @@
   - R-649
   - R-650
   - R-669
+  - R-671
   milestone: M9
-  rq:
-  - RQ-669
-  note: "Reproduces: Manwadkar, Kol, Trani & Leigh 2021: per-body escape probabilities over eight mass sets (Table 1). Chart: new: BinaryPlusSingle at a mass point. Milestone: M9 (was M3; R-650). Compare: statistical (rule 8). Tolerance: REQ-VAL-320 (calibration, R-71). Row MK-1 of principia_dd_replication.md § \"5.12 Targets that wait for a chart, a diagnostic or data\"; layer replication, tier B; closed by TASK-M9-23 (was TASK-M3-63) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\". R-669 (1 Nov 2026, RQ-593 (c)): no binary-plus-single chart is built; it stays in M9, reading \"not scored: no chart\". *Was (rq):* RQ-593."
+  note: "Reproduces: Manwadkar, Kol, Trani & Leigh 2021: per-body escape probabilities over eight mass sets (Table 1). Chart: new: BinaryPlusSingle at a mass point. Milestone: M9 (was M3; R-650). Compare: statistical (rule 8). Tolerance: REQ-VAL-320 (calibration, R-71). Row MK-1 of principia_dd_replication.md § \"5.12 Targets that wait for a chart, a diagnostic or data\"; layer replication, tier B; closed by TASK-M9-23 (was TASK-M3-63) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\". R-669 (1 Nov 2026, RQ-593 (c)): no binary-plus-single chart is built; it stays in M9, reading \"not scored: no chart\". *Was (rq):* RQ-593. R-671 (2 Nov 2026, RQ-669 (ii)): its task has no GPU run, so its (a) part keeps its tier and reads \"not scored yet: needs a GPU run\" in M9's report, and the same statistic from the task's f64 runs is recorded beside it at (b), with its outcome and instrument stated. *Was (rq):* RQ-669."
 - id: REQ-VAL-320
   area: VAL
   kind: calibration
@@ -36497,6 +36527,8 @@
     section: "12.3 Outcomes, the like-for-like check and the forbidden moves"
   - file: decisions.md
     section: "R-669 — The owner adopts the recommendations on the fifteen questions of 1 Nov but RQ-656: the Šuvakov-plane chart is one M9 task, its five targets waiting on it whole; a syzygy-symbol field only; N_scramble only; no periodic-orbit continuation, after the SJTU partial check; TR-1, MK-1 and SL-1 stay in M9, not scored, with no chart; the census's CI cadence as § 8.1 and § 8.2 write it, lavapipe in the smoke job; REQ-VAL-199 keeps 256 starts; GG-1's panels by like ε; the drift predicates read the stored latch, live values only for control flow; BZ-1C's starts by Path B, a list-of-starts chart the fallback; Hénon 1974 joins the rotating-frame set; Heggie & Sweatman 1991 in M9, not scored *(closes RQ-593, RQ-595, RQ-596, RQ-597, RQ-608, RQ-617, RQ-618, RQ-620, RQ-636, RQ-647 and RQ-654; amends R-636, R-637 and R-639; refines R-642)*"
+  - file: decisions.md
+    section: "R-671 — In a task with no GPU run, a statistical or qualitative target's statistic from the f64 runs is recorded at tier (b), its instrument stated, and its (a) part stays listed \"not scored yet: needs a GPU run\", the tier not relabelled; Q-4's no-integration part is recorded with no tier *(closes RQ-669; refines R-649)*"
   verify:
     method: numerical gate
     detail: "the closed forms transcribed (rule 2); N_scramble once RQ-596 is ruled; a statistic at REQ-VAL-322's level; control: the 3D forms must fail"
@@ -36507,10 +36539,9 @@
   - R-649
   - R-650
   - R-669
+  - R-671
   milestone: M9
-  rq:
-  - RQ-669
-  note: "Reproduces: Stone & Leigh 2019 (Nature 576, 406): the planar closed forms for the binary's energy and eccentricity. Chart: new: BinaryPlusSingle. Milestone: M9 (was M3; R-650). Compare: statistical (rule 8). Tolerance: REQ-VAL-322 (calibration, R-71). Row SL-1 of principia_dd_replication.md § \"5.12 Targets that wait for a chart, a diagnostic or data\"; layer replication, tier B; closed by TASK-M9-23 (was TASK-M3-63) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\". R-669 (1 Nov 2026, RQ-593 (c), RQ-596 (b)): no binary-plus-single chart is built; it stays in M9, reading \"not scored: no chart\"; its N_scramble cut is REQ-VAL-343's once a chart exists. *Was (rq):* RQ-593, RQ-596."
+  note: "Reproduces: Stone & Leigh 2019 (Nature 576, 406): the planar closed forms for the binary's energy and eccentricity. Chart: new: BinaryPlusSingle. Milestone: M9 (was M3; R-650). Compare: statistical (rule 8). Tolerance: REQ-VAL-322 (calibration, R-71). Row SL-1 of principia_dd_replication.md § \"5.12 Targets that wait for a chart, a diagnostic or data\"; layer replication, tier B; closed by TASK-M9-23 (was TASK-M3-63) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\". R-669 (1 Nov 2026, RQ-593 (c), RQ-596 (b)): no binary-plus-single chart is built; it stays in M9, reading \"not scored: no chart\"; its N_scramble cut is REQ-VAL-343's once a chart exists. *Was (rq):* RQ-593, RQ-596. R-671 (2 Nov 2026, RQ-669 (ii)): its task has no GPU run, so its (a) part keeps its tier and reads \"not scored yet: needs a GPU run\" in M9's report, and the same statistic from the task's f64 runs is recorded beside it at (b), with its outcome and instrument stated. *Was (rq):* RQ-669."
 - id: REQ-VAL-322
   area: VAL
   kind: calibration
@@ -36571,6 +36602,8 @@
     section: "12.3 Outcomes, the like-for-like check and the forbidden moves"
   - file: decisions.md
     section: "R-669 — The owner adopts the recommendations on the fifteen questions of 1 Nov but RQ-656: the Šuvakov-plane chart is one M9 task, its five targets waiting on it whole; a syzygy-symbol field only; N_scramble only; no periodic-orbit continuation, after the SJTU partial check; TR-1, MK-1 and SL-1 stay in M9, not scored, with no chart; the census's CI cadence as § 8.1 and § 8.2 write it, lavapipe in the smoke job; REQ-VAL-199 keeps 256 starts; GG-1's panels by like ε; the drift predicates read the stored latch, live values only for control flow; BZ-1C's starts by Path B, a list-of-starts chart the fallback; Hénon 1974 joins the rotating-frame set; Heggie & Sweatman 1991 in M9, not scored *(closes RQ-593, RQ-595, RQ-596, RQ-597, RQ-608, RQ-617, RQ-618, RQ-620, RQ-636, RQ-647 and RQ-654; amends R-636, R-637 and R-639; refines R-642)*"
+  - file: decisions.md
+    section: "R-671 — In a task with no GPU run, a statistical or qualitative target's statistic from the f64 runs is recorded at tier (b), its instrument stated, and its (a) part stays listed \"not scored yet: needs a GPU run\", the tier not relabelled; Q-4's no-integration part is recorded with no tier *(closes RQ-669; refines R-649)*"
   verify:
     method: numerical gate
     detail: "the chart RQ-594 rules, the split once RQ-596 is; the maps reviewed by the physics reviewer; the split at REQ-VAL-324's level; control: a map at the wrong side ratio range must misplace the regular region"
@@ -36581,11 +36614,11 @@
   - R-649
   - R-650
   - R-669
+  - R-671
   milestone: M9
   rq:
   - RQ-594
-  - RQ-669
-  note: "Reproduces: Parischewsky, Trani & Leigh 2023 (SciPost Phys. Core 6, 016): escaper maps in side-ratio space around Lagrange; 82.1 % chaotic, 17.9 % regular. Chart: new: SideRatio, or ShapeSphere at rest by a tested remap. Milestone: M9 (was M3; R-650). Compare: qualitative; the split statistical (rule 8). Tolerance: REQ-VAL-324 (calibration, R-71). Row PA-1 of principia_dd_replication.md § \"5.12 Targets that wait for a chart, a diagnostic or data\"; layer replication, tier B; closed by TASK-M9-24 (was TASK-M3-64) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\". R-669 (1 Nov 2026, RQ-596 (b)): N_scramble is REQ-VAL-343, defined and built by TASK-M9-24; the chart still waits on RQ-594. *Was (rq):* RQ-594, RQ-596."
+  note: "Reproduces: Parischewsky, Trani & Leigh 2023 (SciPost Phys. Core 6, 016): escaper maps in side-ratio space around Lagrange; 82.1 % chaotic, 17.9 % regular. Chart: new: SideRatio, or ShapeSphere at rest by a tested remap. Milestone: M9 (was M3; R-650). Compare: qualitative; the split statistical (rule 8). Tolerance: REQ-VAL-324 (calibration, R-71). Row PA-1 of principia_dd_replication.md § \"5.12 Targets that wait for a chart, a diagnostic or data\"; layer replication, tier B; closed by TASK-M9-24 (was TASK-M3-64) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\". R-669 (1 Nov 2026, RQ-596 (b)): N_scramble is REQ-VAL-343, defined and built by TASK-M9-24; the chart still waits on RQ-594. *Was (rq):* RQ-594, RQ-596. R-671 (2 Nov 2026, RQ-669 (ii)): its task has no GPU run, so its (a) part keeps its tier and reads \"not scored yet: needs a GPU run\" in M9's report, and the same statistic from the task's f64 runs is recorded beside it at (b), with its outcome and instrument stated. *Was (rq):* RQ-669."
 - id: REQ-VAL-324
   area: VAL
   kind: calibration
@@ -36827,6 +36860,8 @@
     section: "12.3 Outcomes, the like-for-like check and the forbidden moves"
   - file: decisions.md
     section: "R-668 — The 1 Nov library triage rulings: the site-note families stay, marked \"operator's own search, unreviewed\", closure peeks only and never targets, `bhhsat` with them unless Davoust & Broucke's comparison matches, `suvakov_pc` closure only; a digit match is a trace, marked \"inferred\"; values printed in a paper, or in a public database a paper points to, are stored with credit and citation, an author emailed only as a last resort; unreviewed and AI-assisted sources are peeks only; hierarchical triples are parked with the v2+ 3D extension; RQ-666 is confirmed; the kernel stays at `G = 1`, another `G` converted at the import boundary and what can't be converted refused *(closes RQ-666 and RQ-668; corrects R-468)*"
+  - file: decisions.md
+    section: "R-671 — In a task with no GPU run, a statistical or qualitative target's statistic from the f64 runs is recorded at tier (b), its instrument stated, and its (a) part stays listed \"not scored yet: needs a GPU run\", the tier not relabelled; Q-4's no-integration part is recorded with no tier *(closes RQ-669; refines R-649)*"
   verify:
     method: numerical gate
     detail: "the primaries once in the repo (rule 1; RQ-598); their tables transcribed twice; the limits at REQ-VAL-331's level; control: the prograde limit applied to retrograde runs must fail"
@@ -36840,10 +36875,9 @@
   - R-649
   - R-650
   - R-668
+  - R-671
   milestone: M9
-  rq:
-  - RQ-669
-  note: "Reproduces: Valtonen et al. 2016 pp. 82–84, 114, 140, and its primaries (Valtonen & Karttunen 2006; Mylläri et al. 2018): hierarchical stability limits, prograde and retrograde. Chart: Latent, or a hierarchical slice. Milestone: M9 (was M3; R-650). Compare: statistical (rule 8). Tolerance: REQ-VAL-331 (calibration, R-71). Row V-11 of principia_dd_replication.md § \"5.12 Targets that wait for a chart, a diagnostic or data\"; layer replication, tier B; closed by TASK-M9-25 (was TASK-M3-65) (R-594, R-629). RQ-598 closed by R-637 (option (a)): Part I (Mylläri et al. 2018) is held locally, never committed (its publisher PDF is a subscription download), and Part II (Pasechnik et al. 2023, CC BY 4.0) is committed; V-11 proceeds from Part I, read from the University of Turku repository's version, its tables transcribed twice (R-638), the wait on RQ-598 lifted (R-640). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\". 1 Nov 2026 (R-668, item 5): hierarchical triples are parked with the v2+ 3D extension, and V-11 with them: it reads \"not scored: parked\" in the M9 report (REQ-VAL-340); this requirement, its calibration, TASK-M9-25 and the data stay, retired by nothing (applied per R-369: V-11 is a hierarchical triple by its own statement)."
+  note: "Reproduces: Valtonen et al. 2016 pp. 82–84, 114, 140, and its primaries (Valtonen & Karttunen 2006; Mylläri et al. 2018): hierarchical stability limits, prograde and retrograde. Chart: Latent, or a hierarchical slice. Milestone: M9 (was M3; R-650). Compare: statistical (rule 8). Tolerance: REQ-VAL-331 (calibration, R-71). Row V-11 of principia_dd_replication.md § \"5.12 Targets that wait for a chart, a diagnostic or data\"; layer replication, tier B; closed by TASK-M9-25 (was TASK-M3-65) (R-594, R-629). RQ-598 closed by R-637 (option (a)): Part I (Mylläri et al. 2018) is held locally, never committed (its publisher PDF is a subscription download), and Part II (Pasechnik et al. 2023, CC BY 4.0) is committed; V-11 proceeds from Part I, read from the University of Turku repository's version, its tables transcribed twice (R-638), the wait on RQ-598 lifted (R-640). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\". 1 Nov 2026 (R-668, item 5): hierarchical triples are parked with the v2+ 3D extension, and V-11 with them: it reads \"not scored: parked\" in the M9 report (REQ-VAL-340); this requirement, its calibration, TASK-M9-25 and the data stay, retired by nothing (applied per R-369: V-11 is a hierarchical triple by its own statement). R-671 (2 Nov 2026, RQ-669 (ii)): its task has no GPU run, so its (a) part keeps its tier and reads \"not scored yet: needs a GPU run\" in M9's report, and the same statistic from the task's f64 runs is recorded beside it at (b), with its outcome and instrument stated. *Was (rq):* RQ-669."
 - id: REQ-VAL-331
   area: VAL
   kind: calibration
@@ -37090,18 +37124,21 @@
     section: "R-649 — Replication and verification targets are measurements, not gates: failing one never blocks building; each declares the tier it binds, (a) the GPU explorer, agreeing statistically or qualitatively only, or (b) the CPU IC inspector, where exact targets bind; three outcomes, PASS, EXPLAINED DIVERGENCE (shown by a measurement) and UNEXPLAINED (open, labelled, non-blocking); no default, physics, criterion, architecture or tolerance is changed and nothing is tuned per target in pursuit of a pass; a comparison is checked like-for-like before anything is called a failure; verification deepening comes after the core build *(amends R-594, R-636, R-637 and R-639 for external targets; applies to RQ-598's targets and every target in force)*"
   - file: decisions.md
     section: "R-650 — External replication becomes its own final milestone, M9, after the core build: it scores every external target, writes up the explained divergences and tightens the GPU path, and exits on its report; the internal correctness tests and the cheap anchor smoke tests (figure-eight closure, SP-1 run to its horizon, SP-2) stay continuous and block a merge as now; source ingest and transcription go on whenever idle; early peeks score a target as information only, in a peek log *(refines R-649; amends R-594, R-629, R-630, R-640 and R-642: where and when the targets are scored)*"
+  - file: decisions.md
+    section: "R-671 — In a task with no GPU run, a statistical or qualitative target's statistic from the f64 runs is recorded at tier (b), its instrument stated, and its (a) part stays listed \"not scored yet: needs a GPU run\", the tier not relabelled; Q-4's no-integration part is recorded with no tier *(closes RQ-669; refines R-649)*"
+  - file: decisions.md
+    section: "R-672 — A definition's row in M9's report reads the outcome of the target it serves, and otherwise records its approval; the outcome is counted once *(closes RQ-670; refines R-650)*"
   verify:
     method: review checklist
-    detail: "the report has one row for each row of principia_dd_replication.md § 12.2's table and no others, so none for a calibration, REQ-INT-110, REQ-SYS-094 and REQ-SYS-095 (TASK-M9-39, a build task, not scored; R-654), REQ-CHART-091 (TASK-M9-40, a build task, not scored; R-669), REQ-VAL-340 itself or REQ-VAL-341 (TASK-M9-38's definition, which follows the report and has no target); each scored row has the four fields, with a mixed target's exact part and its statistical or qualitative part each carrying their own tier and outcome, a part not yet scored reading \"not scored\" with what it waits on, and an information run § 12.2 names sitting beside the score; a row not yet scored reads \"not scored\" with what it waits on, never a failure; every M9 calibration is in the report's list, with its target's tier and its proposal or what it waits on; REQ-VAL-332's raised-cap run is read in OC-1's, OC-3's and OC-6's rows; the peek log's rows are cited, never counted as scores; physics reviewer approved; the owner reviews it"
+    detail: "the report has one row for each row of principia_dd_replication.md § 12.2's table and no others, so none for a calibration, REQ-INT-110, REQ-SYS-094 and REQ-SYS-095 (TASK-M9-39, a build task, not scored; R-654), REQ-CHART-091 (TASK-M9-40, a build task, not scored; R-669), REQ-VAL-340 itself or REQ-VAL-341 (TASK-M9-38's definition, which follows the report and has no target); each scored row has the four fields, with a mixed target's exact part and its statistical or qualitative part each carrying their own tier and outcome, a part not yet scored reading \"not scored\" with what it waits on, in a task with no GPU run its (a) part reading \"not scored yet: needs a GPU run\" with the f64 statistic beside it at (b), its instrument stated, and Q-4's (ii) with no tier (R-671), a definition's row reading the outcome of the target it serves, counted once in that target's row, otherwise its approval (R-672), and an information run § 12.2 names sitting beside the score; a row not yet scored reads \"not scored\" with what it waits on, never a failure; every M9 calibration is in the report's list, with its target's tier and its proposal or what it waits on; REQ-VAL-332's raised-cap run is read in OC-1's, OC-3's and OC-6's rows; the peek log's rows are cited, never counted as scores; physics reviewer approved; the owner reviews it"
   rulings:
   - R-649
   - R-650
   - R-669
+  - R-671
+  - R-672
   milestone: M9
-  rq:
-  - RQ-669
-  - RQ-670
-  note: "M9 exits on this report, not a gate (R-650); closed by TASK-M9-37. Statement *was:* \"every M9 calibration is put to the human with it.\" (REQ-SYS-095, code review 5730587922 of PR #375, C4; applied per R-369). Verify *was:* \"the report covers every live M9 requirement; …\" (code review 5730587922 of PR #375, C2; applied per R-369). Verify *was:* \"every live M9 requirement but REQ-INT-110, REQ-SYS-094 and REQ-SYS-095\" (code review 5730659053 of PR #375, N2; applied per R-369). Statement *was:* \"where its proposal has not landed (REQ-SYS-095, TASK-M9-39's, which the report does not wait on)\"; verify *was:* \"the report covers every M9 target, every live M9 requirement but REQ-INT-110, REQ-SYS-094 and REQ-SYS-095 (…), REQ-VAL-340 itself and REQ-VAL-341 (…); each row has the four fields\" (code review 5730758034 of PR #375, R1; applied per R-369). Verify *was:* \"a mixed target's exact and statistical parts each carrying their own tier and outcome\", which left out HU-1's and HU-2's qualitative parts; § 12.2 says \"its statistical or qualitative part\" (physics review 5730823192 of PR #375, M1; applied per R-369). What scores a statistical or qualitative (a) part in a task with no GPU run is RQ-669, open (physics review 5730823192 of PR #375, M3). What a definition's row carries as its outcome (REQ-VAL-127, REQ-VAL-221) is RQ-670, open (physics review 5730823192 of PR #375); both rows stay. R-669 (1 Nov 2026): REQ-CHART-091, TASK-M9-40's chart, a build task and not scored, has no row; § 12.2's table gains REQ-VAL-342 and REQ-VAL-343, two definitions. *Was (verify):* \"…(TASK-M9-39, a build task, not scored; R-654), REQ-VAL-340 itself…\"."
+  note: "M9 exits on this report, not a gate (R-650); closed by TASK-M9-37. Statement *was:* \"every M9 calibration is put to the human with it.\" (REQ-SYS-095, code review 5730587922 of PR #375, C4; applied per R-369). Verify *was:* \"the report covers every live M9 requirement; …\" (code review 5730587922 of PR #375, C2; applied per R-369). Verify *was:* \"every live M9 requirement but REQ-INT-110, REQ-SYS-094 and REQ-SYS-095\" (code review 5730659053 of PR #375, N2; applied per R-369). Statement *was:* \"where its proposal has not landed (REQ-SYS-095, TASK-M9-39's, which the report does not wait on)\"; verify *was:* \"the report covers every M9 target, every live M9 requirement but REQ-INT-110, REQ-SYS-094 and REQ-SYS-095 (…), REQ-VAL-340 itself and REQ-VAL-341 (…); each row has the four fields\" (code review 5730758034 of PR #375, R1; applied per R-369). Verify *was:* \"a mixed target's exact and statistical parts each carrying their own tier and outcome\", which left out HU-1's and HU-2's qualitative parts; § 12.2 says \"its statistical or qualitative part\" (physics review 5730823192 of PR #375, M1; applied per R-369). What scores a statistical or qualitative (a) part in a task with no GPU run was RQ-669 (physics review 5730823192 of PR #375, M3), ruled by R-671. What a definition's row carries as its outcome (REQ-VAL-127, REQ-VAL-221) was RQ-670 (physics review 5730823192 of PR #375), ruled by R-672; both rows stay. R-669 (1 Nov 2026): REQ-CHART-091, TASK-M9-40's chart, a build task and not scored, has no row; § 12.2's table gains REQ-VAL-342 and REQ-VAL-343, two definitions. *Was (verify):* \"…(TASK-M9-39, a build task, not scored; R-654), REQ-VAL-340 itself…\". *Was (verify, until R-671 and R-672):* \"…a part not yet scored reading \"not scored\" with what it waits on, and an information run…\"."
 - id: REQ-VAL-341
   area: VAL
   kind: definition
@@ -37141,8 +37178,9 @@
   rulings:
   - R-72
   - R-669
+  - R-672
   milestone: M9
-  note: "R-669 (1 Nov 2026, RQ-595 (b)): the symbol field only; TS-2's fixed-k velocity chart is not built. Closed by TASK-M9-28."
+  note: "R-669 (1 Nov 2026, RQ-595 (b)): the symbol field only; TS-2's fixed-k velocity chart is not built. Closed by TASK-M9-28. R-672 (2 Nov 2026): its row in M9's report reads the outcomes of TS-1 (REQ-VAL-325) and V-7 (REQ-VAL-327), each counted once in its own row, with this definition's approval."
 - id: REQ-VAL-343
   area: VAL
   kind: definition
@@ -37160,8 +37198,9 @@
   rulings:
   - R-72
   - R-669
+  - R-672
   milestone: M9
-  note: "R-669 (1 Nov 2026, RQ-596 (b)): N_scramble only; f_col is not built. Closed by TASK-M9-24, PA-1 being the target that runs on a chart; SL-1 reads it once a binary-plus-single chart exists."
+  note: "R-669 (1 Nov 2026, RQ-596 (b)): N_scramble only; f_col is not built. Closed by TASK-M9-24, PA-1 being the target that runs on a chart; SL-1 reads it once a binary-plus-single chart exists. R-672 (2 Nov 2026): its row in M9's report reads the outcomes of PA-1 (REQ-VAL-323) and SL-1 (REQ-VAL-321), each counted once in its own row, with this definition's approval."
 - id: REQ-PERF-001
   area: PERF
   statement: "The per-step energy evaluation must reuse the pairwise distances from the force computation."

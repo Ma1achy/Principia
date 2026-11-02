@@ -947,7 +947,7 @@ first, and (a) is expected to agree with the second statistically"; every (a) an
 | B-1 | REQ-VAL-244 | exact to the figure's resolution | (b) |
 | B-2 | REQ-VAL-246 | statistical (loose) | (a); its CPU FTLE beside it, information (R-653) |
 | V-6 | REQ-VAL-248 | exact once shot; qualitative against the figure (one trajectory) | (b) |
-| Q-2's Theory row, Q-4 | REQ-VAL-211 | (i) exact; (ii) statistical; no integration | (b) for (i); (a) for (ii) |
+| Q-2's Theory row, Q-4 | REQ-VAL-211 | (i) exact; (ii) statistical; no integration | (b) for (i); no tier for (ii) (R-671; *was:* "(a) for (ii)") |
 | P-1 | REQ-VAL-252 | qualitative + statistical | (a) |
 | P-2 | REQ-VAL-254 | statistical | (a) |
 | P-3 | REQ-VAL-256 | qualitative | (a) |
@@ -1005,6 +1005,14 @@ first, and (a) is expected to agree with the second statistically"; every (a) an
 *1 Nov 2026 (R-669):* the last two rows are the definitions RQ-595 (b) and RQ-596 (b) call for, each written by the task
 that first needs it, as OC-5's counting convention is. The Šuvakov-plane chart (REQ-CHART-091, TASK-M9-40) is a build
 task's, not a target, and has no row, as TASK-M9-39's softening has none.
+*2 Nov 2026 (R-671, closing RQ-669):* in a task that has no GPU run, a target's (a) part, or a row that is (a)
+throughout, keeps its tier and is listed "not scored yet: needs a GPU run" until an f32 GPU run scores it; beside it,
+the same statistic computed from the task's f64 runs is recorded at (b), with its outcome and its instrument stated (the
+CPU IC inspector at f64). The tier is not relabelled: that tier (a)'s f32 statistics agree is the unmeasured hypothesis
+of R-661, which BZ-1C measures. Q-4's (ii) has no integration on any instrument and is recorded with no tier.
+*2 Nov 2026 (R-672, closing RQ-670):* a definition's row (OC-5's counting convention, SP-1's feature set and R-669's
+two) reads the outcome of the target it serves, with the definition's approval by the physics reviewer, and until that
+target is scored records the approval; the outcome is counted once, in the served target's row.
 
 ### 12.3 Outcomes, the like-for-like check and the forbidden moves
 

@@ -28428,9 +28428,12 @@ port's first reading had a statistical target bind (b), with (a) expected to agr
 finding F1).*
 *Refined by R-653 (30 Oct 2026; RQ-622 (c): the five f64-Result map targets and B-2 are scored on tier (a), the f64 Result
 or CPU FTLE run beside it as information).*
+*Refined by R-671 (2 Nov 2026; RQ-669 (ii): in a task with no GPU run, the f64 statistic is recorded at (b), its
+instrument stated, and the (a) part stays "not scored yet: needs a GPU run"; Q-4's no-integration part has no tier).*
 *Still in force: all of it, with the owner's two clarifications of 29 Oct 2026 recorded below and the owner's confirmation of
 30 Oct 2026 above; R-650 says where and when each external target is scored, and R-653 how the five map targets and B-2
-square with the tier rule; R-661 reads "expected to agree statistically" as a hypothesis to measure.*
+square with the tier rule; R-661 reads "expected to agree statistically" as a hypothesis to measure; R-671 how a task with
+no GPU run records its (a) parts.*
 *29 Oct 2026 · the owner's ruling of that day, and his two clarifications for its port the same day; ported 30 Oct 2026
 with R-650; applied in `docs/design/principia_dd_replication.md` (§ 12, new; dated lines in its header, § 2, § 5.1,
 § 5.6, § 5.10, § 5.15, § 6, § 7, § 8.1, § 8.3 and § 10; the § 5 tables' milestone and task columns),
@@ -28557,7 +28560,10 @@ target R-650 moves (their notes: the tier and the outcome); adds REQ-VAL-338 and
 
 ## R-650 — External replication becomes its own final milestone, M9, after the core build: it scores every external target, writes up the explained divergences and tightens the GPU path, and exits on its report; the internal correctness tests and the cheap anchor smoke tests (figure-eight closure, SP-1 run to its horizon, SP-2) stay continuous and block a merge as now; source ingest and transcription go on whenever idle; early peeks score a target as information only, in a peek log *(refines R-649; amends R-594, R-629, R-630, R-640 and R-642: where and when the targets are scored)*
 *Extended by R-661 (BZ-1C, on the BPZ cold starts, proposed as an M9 target with peek priority, with no requirement).*
-*Still in force: all of it; R-661 adds one proposed target and changes nothing else.*
+*Refined by R-672 (2 Nov 2026; RQ-670 (b): a definition's row in the report reads the outcome of the target it serves,
+otherwise its approval, the outcome counted once).*
+*Still in force: all of it; R-661 adds one proposed target and changes nothing else; R-672 says how the report reads a
+definition's row.*
 *29 Oct 2026 · the owner's follow-up to R-649 that day and his addendum on early peeks the same day; ported 30 Oct
 2026 with R-649; applied in `plan/MILESTONES.md` (§ "M9 — External replication", new; § "Assumptions"),
 `plan/WORKFLOW.md` (§ "Human checkpoints: the milestone gates"), `plan/tools/` (M9 accepted; its block a report, not a
@@ -29416,3 +29422,45 @@ The owner's words, verbatim. 1 Nov 2026, his second message, item (2), of RQ-656
 R-670 is in the "physics" group of `plan/rule_groups.yaml`, with R-654.
 
 Changes REQ-VAL-027 and REQ-COL-006 (statement, rulings, note), REQ-INT-110, REQ-SYS-094 and REQ-SYS-095 (rq, rulings, note).
+
+## R-671 — In a task with no GPU run, a statistical or qualitative target's statistic from the f64 runs is recorded at tier (b), its instrument stated, and its (a) part stays listed "not scored yet: needs a GPU run", the tier not relabelled; Q-4's no-integration part is recorded with no tier *(closes RQ-669; refines R-649)*
+*2 Nov 2026 · the owner's message of that day; applied in `docs/design/principia_dd_replication.md` § 12.2 (a dated paragraph and Q-4's row), the forward line of R-649, `docs/archive/review_queue/M0.md` (RQ-669 moved), `REVIEW_QUEUE.md`, the 31 requirements besides REQ-VAL-340 that carried `rq: RQ-669`, and REQ-VAL-340 (reqio), TASK-M9-10, TASK-M9-11, TASK-M9-14, TASK-M9-17 to TASK-M9-25, TASK-M9-32 and TASK-M9-37, and `plan/rule_groups.yaml`*
+
+The owner's words, 2 Nov 2026, verbatim, of RQ-669:
+
+> 669: (ii) for the f64 statistic, recorded as (b) with the instrument stated, AND keep each (a) half listed as "not scored yet: needs a GPU run". Don't relabel the tier, since the f32 statistical claim is the unmeasured hypothesis from R-661 and must stay visible; BZ-1C is where it gets filled. Q-4: (y), no tier.
+
+*Context.* RQ-669 found that seven of the nine mixed targets' (a) parts, and 24 rows that are (a) throughout, sit in tasks that reach no GPU run, so nothing scores them on the tier § 12.2 gives them. Its option (ii): "The statistic is computed from the f64 runs and recorded at (b), or under a stated reading." Q-4's (y): "it is recorded with no tier, which changes § 12.2's row".
+
+*What it decides:*
+
+- **The f64 statistic.** In such a task, the statistic a target's (a) part compares is computed from the task's f64 runs and recorded at tier (b), with its outcome and its instrument stated (the CPU IC inspector at f64, and the run it read).
+- **The (a) part stays.** Each such (a) part, or row, keeps its tier (a) and is listed "not scored yet: needs a GPU run" in M9's report until an f32 GPU run scores it. The tier is not relabelled: that tier (a)'s f32 statistics agree is the unmeasured hypothesis of R-661, and stays visible; BZ-1C is where it is measured.
+- **Q-4's (ii).** It has no integration under any instrument, so it is recorded with no tier, its outcome stated; § 12.2's row reads "(b) for (i); no tier for (ii)".
+
+*Applied per R-369:* the (b) record is its own entry in the report's row, beside the (a) part's "not scored yet: needs a GPU run", so neither hides the other and the (a) part is not counted as scored. A mixed target's (b) part is unaffected.
+
+*What it refines:* **R-649**, item 2's tiers, for a task with no GPU run. It closes **RQ-669**.
+
+R-671 is in the "design" group of `plan/rule_groups.yaml`, with R-649 and R-653.
+
+Changes the 31 requirements besides REQ-VAL-340 that carried `rq: RQ-669` (rq, rulings, notes) and REQ-VAL-340 (verify, note).
+
+## R-672 — A definition's row in M9's report reads the outcome of the target it serves, and otherwise records its approval; the outcome is counted once *(closes RQ-670; refines R-650)*
+*2 Nov 2026 · the owner's message of that day; applied in `docs/design/principia_dd_replication.md` § 12.2 (a dated line), `docs/archive/review_queue/M0.md` (RQ-670 moved), `REVIEW_QUEUE.md`, REQ-VAL-127, REQ-VAL-221, REQ-VAL-342, REQ-VAL-343 and REQ-VAL-340 (reqio), TASK-M9-37 (a note) and `plan/rule_groups.yaml`*
+
+The owner's words, 2 Nov 2026, verbatim, of RQ-670:
+
+> 670 (b).
+
+*Context.* RQ-670's option (b): "The row reads the outcome of the target the definition serves (OC-5, SP-1's structural comparison), and otherwise records the approval. The notes and § 12.2 say so; the outcome is counted once."
+
+*What it decides:* a definition's row in M9's report carries the outcome of the target it serves, and the definition's approval by the physics reviewer; until that target is scored, the row records the approval and reads "not scored" with what it waits on. The outcome is the served target's, counted once, in that target's row. REQ-VAL-221 serves OC-5 (REQ-VAL-220), REQ-VAL-127 serves SP-1's structural comparison (REQ-VAL-335), and R-669's two serve two each: REQ-VAL-342 TS-1 (REQ-VAL-325) and V-7 (REQ-VAL-327), REQ-VAL-343 PA-1 (REQ-VAL-323) and SL-1 (REQ-VAL-321).
+
+*Applied per R-369:* a definition serving two targets reads both outcomes, each counted once, in its own target's row.
+
+*What it refines:* **R-650**, how M9's report reads a definition's row. It closes **RQ-670**.
+
+R-672 is in the "design" group of `plan/rule_groups.yaml`.
+
+Changes REQ-VAL-127, REQ-VAL-221, REQ-VAL-342 and REQ-VAL-343 (rq, rulings, notes) and REQ-VAL-340 (verify, note).
