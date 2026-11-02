@@ -2,7 +2,7 @@
 
 - **Milestone:** M9
 - **Closes:** REQ-VAL-314, REQ-VAL-315, REQ-VAL-316, REQ-VAL-317
-- **Depends on:** TASK-M9-13, TASK-M4-17, TASK-M3-11
+- **Depends on:** TASK-M9-13, TASK-M4-17, TASK-M3-11, TASK-M9-40
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** PIT-3
@@ -24,7 +24,7 @@ The replication suite's targets HU-1, HU-2 run as engine tests (`principia_dd_re
 - `decisions.md` § "R-639 — The Šuvakov-plane targets split into a closure part, which stays in M4 or M8 and runs now, and a chart part, which moves to gate the task that builds the Šuvakov chart and is not dropped, a target whose split isn't clean being queued; a read-only licence audit of every committed PDF; none of the five targets splits cleanly, so all five are queued *(answers RQ-608)*"
 
 ## Deliverables
-- The maps on the chart RQ-583 rules, in RQ-582's labelling; no chart is built here ahead of those rulings.
+- The maps on the Šuvakov-plane chart TASK-M9-40 builds (R-669), in RQ-582's labelling; no chart is built here. *Was:* "The maps on the chart RQ-583 rules, in RQ-582's labelling; no chart is built here ahead of those rulings."
 - The calibration proposals.
 
 ## Acceptance tests
@@ -41,3 +41,4 @@ The replication suite's targets HU-1, HU-2 run as engine tests (`principia_dd_re
 - *28 Oct 2026 (R-639):* the owner ruled that each Šuvakov-plane target splits into a closure part, kept here and run now, and a chart part, which gates the task that builds the chart, and that a target whose split isn't clean is queued. None of this task's targets splits cleanly (R-639), so they are queued as RQ-618 and stay as they are; the task still waits on RQ-608, now with RQ-618.
 - *30 Oct 2026 (R-649, R-650):* moved to M9, external replication, and renumbered: formerly TASK-M4-23 (milestone M4). Its targets are measurements, never gates: each is scored in M9, or early as a peek (information only, `docs/verification/peek_log.md`), and its outcome is PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED, never a failure that blocks; like-for-like is checked first, and nothing is tuned, loosened or special-cased to pass (`docs/design/principia_dd_replication.md` § "12.3 Outcomes, the like-for-like check and the forbidden moves"). The tier each target binds (§ "12.2 Tiers"; a calibration takes its target's): HU-1 (REQ-VAL-314): tier (b) at Table 23's minima, tier (a) for the map; HU-2 (REQ-VAL-316): tier (b) at the exact point, tier (a) for the map. *Was:* "The tier each binds is § '12.2 Tiers''s: (b); its statistical part also (a)." (corrected 30 Oct 2026 to the owner's confirmation of the tier reading, R-649). Its calibrations are confirmed by the human with the M9 report (REQ-VAL-340), *was:* "at the M4 gate". A wait on a ruling or data below holds this task's scoring, never a milestone. R-639's chart part, "which moves to gate the task that builds the Šuvakov chart", gates nothing now (R-649): it is scored when that chart exists, and RQ-618 stays open on what is built.
 - *1 Nov 2026 (physics review 5730823192 of PR #375, M2; applied per R-369):* HU-1 and HU-2 are mixed targets, scored on two tiers (`principia_dd_replication.md` § 12.2), so each part records its own outcome and TASK-M9-37 reads them part by part; a GPU miss on the (b) part is expected, not a defect, and a single outcome would hide which instrument agreed. *Was (acceptance):* "the outcome recorded with its tier: PASS where the comparison above holds, otherwise EXPLAINED DIVERGENCE …".
+- *1 Nov 2026 (R-669, RQ-608 and RQ-618 (a)):* the Šuvakov-plane chart is one M9 task, TASK-M9-40, and this task depends on it; HU-1 and HU-2 move whole, with no closure part (HU-3 tests it). The waits on RQ-583, RQ-608 and RQ-618 end; "once RQ-583 is ruled" in the acceptance reads as that chart.

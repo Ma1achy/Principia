@@ -3583,6 +3583,27 @@
   - R-408
   milestone: M2
   note: "Physics review 5719740344 of PR #349, P1, on REQ-CHART-078's premise that the circle is one system, which holds untilted. Written by TASK-M2-36."
+- id: REQ-CHART-091
+  area: CHART
+  kind: definition
+  statement: "The Šuvakov-plane chart, `SuvakovPlane`, over the plane of Šuvakov & Dmitrašinović's initial conditions at equal masses and at fixed m₃, in RQ-582's labelling (R-630 item 3: the middle body is body 1, at β = 0, Hudomal eq. (18)'s), must be defined (R-72) in the chart reference, its axes, ranges, decode to the shared decoder `D` and what it holds fixed stated, and built as one chart, its decode a tested function (R-669)."
+  source:
+  - file: docs/design/principia_dd_replication.md
+    section: 5.12 Targets that wait for a chart, a diagnostic or data
+  - file: docs/design/principia_chart_reference.md
+    section: 5.1 One trait, one dispatch
+  - file: decisions.md
+    section: "R-669 — The owner adopts the recommendations on the fifteen questions of 1 Nov but RQ-656: the Šuvakov-plane chart is one M9 task, its five targets waiting on it whole; a syzygy-symbol field only; N_scramble only; no periodic-orbit continuation, after the SJTU partial check; TR-1, MK-1 and SL-1 stay in M9, not scored, with no chart; the census's CI cadence as § 8.1 and § 8.2 write it, lavapipe in the smoke job; REQ-VAL-199 keeps 256 starts; GG-1's panels by like ε; the drift predicates read the stored latch, live values only for control flow; BZ-1C's starts by Path B, a list-of-starts chart the fallback; Hénon 1974 joins the rotating-frame set; Heggie & Sweatman 1991 in M9, not scored *(closes RQ-593, RQ-595, RQ-596, RQ-597, RQ-608, RQ-617, RQ-618, RQ-620, RQ-636, RQ-647 and RQ-654; amends R-636, R-637 and R-639; refines R-642)*"
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "DEFINITION (R-72): the chart reference gains the chart's section, approved by the physics reviewer; cargo test -p kernel suvakov_plane: each atlas orbit on the plane at equal masses and at each m₃ decodes from its marked pixel to its catalogue initial conditions within the decode's tolerance; control: a decode with bodies 0 and 1 swapped misses the markers"
+  rulings:
+  - R-72
+  - R-669
+  milestone: M9
+  note: "R-669 (1 Nov 2026, RQ-608 and RQ-618 (a)): one M9 chart task, TASK-M9-40; OC-4 on the plane, AT-D1, AT-D3, HU-1 and HU-2 (REQ-VAL-311 to REQ-VAL-314, REQ-VAL-316) wait on it whole. A build task, not a target: not scored."
 - id: REQ-INT-001
   area: INT
   statement: "The unwrapped phase `θ̃` must be a running SimState accumulator that adds the principal-value delta of `atan2(n_v, n_u)` each step, with `orbit_count = ⌊|θ̃|/2π⌋` and `retrograde = sign(θ̃) < 0` derived at read."
@@ -4407,7 +4428,7 @@
   note: applies to the AZ occupant
 - id: REQ-INT-045
   area: INT
-  statement: "Threshold and suspect decisions must use the live f32 measurement, never an unpacked f16 latch."
+  statement: "Threshold and suspect decisions in the march's control flow must use the live f32 measurement, never an unpacked f16 latch; the read-time suspect predicates, which run after the march, read the stored latches (R-669, RQ-636 (a))."
   source:
   - file: docs/design/principia_dd_simstate_payload.md
     section: Why closure is here, at this width, unconditionally
@@ -4415,11 +4436,15 @@
     section: 5. Derived — computed at read, NOT stored
   - file: docs/design/principia_dd_generation_root.md
     section: 3.1 `sample_descriptor` (u32)
+  - file: decisions.md
+    section: "R-669 — The owner adopts the recommendations on the fifteen questions of 1 Nov but RQ-656: the Šuvakov-plane chart is one M9 task, its five targets waiting on it whole; a syzygy-symbol field only; N_scramble only; no periodic-orbit continuation, after the SJTU partial check; TR-1, MK-1 and SL-1 stay in M9, not scored, with no chart; the census's CI cadence as § 8.1 and § 8.2 write it, lavapipe in the smoke job; REQ-VAL-199 keeps 256 starts; GG-1's panels by like ε; the drift predicates read the stored latch, live values only for control flow; BZ-1C's starts by Path B, a list-of-starts chart the fallback; Hénon 1974 joins the rotating-frame set; Heggie & Sweatman 1991 in M9, not scored *(closes RQ-593, RQ-595, RQ-596, RQ-597, RQ-608, RQ-617, RQ-618, RQ-620, RQ-636, RQ-647 and RQ-654; amends R-636, R-637 and R-639; refines R-642)*"
   verify:
     method: review checklist
     detail: "every control-flow comparison on drift/d_min reads the live f32 value; grep the kernel for unpack2x16float feeding a branch"
-  rulings: []
+  rulings:
+  - R-669
   milestone: M3
+  note: "R-669 (1 Nov 2026, RQ-636 (a)): \"decisions\" are the march's control flow; the read-time predicates and the display read the stored latches (REQ-INT-040). *Was (statement):* \"Threshold and suspect decisions must use the live f32 measurement, never an unpacked f16 latch.\""
 - id: REQ-INT-046
   area: INT
   statement: "Branch-cut crossing detection must run at every accepted adaptive substep, unless the topology contract proves that each tested segment holds at most one crossing."
@@ -8371,7 +8396,7 @@
   note: "R-605 (25 Oct 2026, RQ-528 (b)): a schema change; the layout a definition, applied per R-369. Closed by TASK-M3-41. perf review 5661999637 of PR #293, P1, applied per R-369: the byte cost and place, one hot u32 (*was:* the statement ending \"approved by the physics and code reviewers before merge (R-72).\" and the verify ending \"the physics and code reviewers approved\"). code review 5662211284 of PR #293, note (a), applied per R-369: the statement says what is fixed (the u32, its place, two f16 halves) and what stays open (the names, which half is which, the accessors). *Was (statement):* \"The payload fields that store a regularised occupant's energy drift latches (final and max) beside the Cartesian ones (R-605) must be defined: their names, widths and place, written into the payload drill-down's §1 and §5 by the task that needs it, a schema change whose version follows from the ledger's hash (R-36), and approved by the physics and code reviewers before merge (R-72), within one u32 of the hot SimState, dE_reg (two f16 halves, final and max, as packed_b's Cartesian latches), placed after budget_word (REQ-PAY-009's recheck in payload §1: with REQ-PAY-110's word, +8 B per copy at every precision row, f32 152 / 104 B, f64 280 / 184 B, DoubleF64 528 / 336 B).\" *Was (verify start):* \"payload §1 and §5 name the regularised drift fields, their widths and place beside the Cartesian ones and which accessor reads which;\" physics review 5662346996 of PR #293, F1, applied per R-369: the halves are 16-bit with their encoding open, since R-605's words name no f16 and linear binary16 would floor a round-off drift; no byte changes, so the widths stand (the note's earlier \"two f16 halves\" reads \"two 16-bit halves\"). *Was (statement):* \"…as two f16 halves (as packed_b's Cartesian latches),… the two halves' field names (dE_reg is a placeholder), which half holds which latch, and which accessor reads which.\" *Was (verify start):* \"payload §1 names dE_reg's two f16 halves and which holds the final and which the max latch, and §5 which accessor reads which;\" Applied per R-369 (the orchestrator, before the re-checks of PR #293): the new widths marked \"from TASK-M3-41 on\". *Was:* \"+8 B per copy at every precision row (f32\" R-632 (27 Oct 2026, RQ-581 (d)): packed_b's Cartesian latches dE_max and dLz_max take the encoding chosen here, or a log-encoded 16-bit form if none is settled for both halves (REQ-PAY-112)."
 - id: REQ-PAY-112
   area: PAY
-  statement: "`packed_b`'s Cartesian drift latches dE_max and dLz_max must take the 16-bit encoding TASK-M3-41 chooses for dE_reg's halves against REQ-INT-106's measured drift (REQ-PAY-111), or, if it does not settle on one encoding for both halves, a log-encoded 16-bit form in the same bits, packed_b keeping its size; the failed-state 0.0 and the clamp (R-271) keep their meaning in that encoding, threshold and suspect decisions read the live f32 value, never the stored latch, and the accessors, the field views and REQ-TOOL-023's round-trip follow the encoding (R-632)."
+  statement: "`packed_b`'s Cartesian drift latches dE_max and dLz_max must take the 16-bit encoding TASK-M3-41 chooses for dE_reg's halves against REQ-INT-106's measured drift (REQ-PAY-111), or, if it does not settle on one encoding for both halves, a log-encoded 16-bit form in the same bits, packed_b keeping its size; the failed-state 0.0 and the clamp (R-271) keep their meaning in that encoding, a threshold or suspect decision in the march's control flow reads the live f32 value, never the stored latch, the read-time suspect predicates reading the stored latch (R-669), and the accessors, the field views and REQ-TOOL-023's round-trip follow the encoding (R-632)."
   source:
   - file: docs/design/principia_dd_simstate_payload.md
     section: 1. `SimState` — the hot struct
@@ -8381,14 +8406,17 @@
     section: "R-605 — Both energy drifts are stored: the suspect flags and the drift view read the regularised drift, the Cartesian drift being diagnostic only; an event-stopped run draws as now, its readout saying \"stopped at event\"; the energy-suspect threshold is recalibrated on Heggie × RK4's regularised drift at the M3 gate, measured first *(closes RQ-528; a schema change)*"
   - file: decisions.md
     section: "R-632 — On the f32 GPU path the linearised decoder's floor is the measured value, quoted with `|x₀|`, measured by a gate and taken as a calibration; the ensemble ratio censors an unparted start at `T` and compares the median of measured over predicted with 1; column 8 is never asserted; the Cartesian drift latches take `dE_reg`'s encoding; the plan's three corrections are applied *(closes RQ-570, RQ-575, RQ-578, RQ-581, RQ-588, RQ-589 and RQ-590)*"
+  - file: decisions.md
+    section: "R-669 — The owner adopts the recommendations on the fifteen questions of 1 Nov but RQ-656: the Šuvakov-plane chart is one M9 task, its five targets waiting on it whole; a syzygy-symbol field only; N_scramble only; no periodic-orbit continuation, after the SJTU partial check; TR-1, MK-1 and SL-1 stay in M9, not scored, with no chart; the census's CI cadence as § 8.1 and § 8.2 write it, lavapipe in the smoke job; REQ-VAL-199 keeps 256 starts; GG-1's panels by like ε; the drift predicates read the stored latch, live values only for control flow; BZ-1C's starts by Path B, a list-of-starts chart the fallback; Hénon 1974 joins the rotating-frame set; Heggie & Sweatman 1991 in M9, not scored *(closes RQ-593, RQ-595, RQ-596, RQ-597, RQ-608, RQ-617, RQ-618, RQ-620, RQ-636, RQ-647 and RQ-654; amends R-636, R-637 and R-639; refines R-642)*"
   verify:
     method: unit test
-    detail: "cargo test -p kernel packed_b_encoding: dE_max and dLz_max pack and unpack through the encoding dE_reg's halves use (or, failing one, the log-encoded form), a drift at the encoding's stated floor reads back non-zero within its stated resolution, a failed state reads 0.0, and the suspect predicates read the live f32 value; controls: packed_b packed as linear binary16 while dE_reg's halves use another encoding fails, and a predicate fed the unpacked latch fails"
+    detail: "cargo test -p kernel packed_b_encoding: dE_max and dLz_max pack and unpack through the encoding dE_reg's halves use (or, failing one, the log-encoded form), a drift at the encoding's stated floor reads back non-zero within its stated resolution, a failed state reads 0.0, and a march branch on dE_max or dLz_max reads the live f32 value; controls: packed_b packed as linear binary16 while dE_reg's halves use another encoding fails, and a march branch fed the unpacked latch fails"
   rulings:
   - R-605
   - R-632
+  - R-669
   milestone: M3
-  note: "R-632 (27 Oct 2026, RQ-581 (d), else (b)). Closed by TASK-M3-41 with REQ-PAY-111 (applied per R-369). Where the encoding differs from linear binary16, TASK-M3-41 rewrites the f16 wording for the two latches in payload §1, §2 and §6, the render contract's unpack layer, the debug tooling plan's rows and the parity contract, each with a *Was*; d_min stays f16."
+  note: "R-632 (27 Oct 2026, RQ-581 (d), else (b)). Closed by TASK-M3-41 with REQ-PAY-111 (applied per R-369). Where the encoding differs from linear binary16, TASK-M3-41 rewrites the f16 wording for the two latches in payload §1, §2 and §6, the render contract's unpack layer, the debug tooling plan's rows and the parity contract, each with a *Was*; d_min stays f16. R-669 (1 Nov 2026, RQ-636 (a)): the control moves to a march branch; the read-time predicates read the stored latch, as REQ-INT-040 has them. *Was (statement):* \"…threshold and suspect decisions read the live f32 value, never the stored latch,…\". *Was (verify):* \"…and the suspect predicates read the live f32 value; controls: … and a predicate fed the unpacked latch fails\"."
 - id: REQ-PAY-113
   area: PAY
   kind: definition
@@ -32044,6 +32072,8 @@
     section: "R-632 — On the f32 GPU path the linearised decoder's floor is the measured value, quoted with `|x₀|`, measured by a gate and taken as a calibration; the ensemble ratio censors an unparted start at `T` and compares the median of measured over predicted with 1; column 8 is never asserted; the Cartesian drift latches take `dE_reg`'s encoding; the plan's three corrections are applied *(closes RQ-570, RQ-575, RQ-578, RQ-581, RQ-588, RQ-589 and RQ-590)*"
   - file: decisions.md
     section: "R-661 — That tier (a)'s f32 statistics agree, with f64's or with a converged reference's, is a hypothesis Principia will measure, established by no paper; BZ-1 is reopened on the cold sets, which start from rest and so are planar, with a paired f32, f64 and converged experiment proposed for M9 at peek priority; REQ-VAL-199 states the effect size its 256 starts can detect; the CC BY papers and records are committed *(closes RQ-644 and RQ-646; amends R-629; queues RQ-647, RQ-648 and RQ-649)*"
+  - file: decisions.md
+    section: "R-669 — The owner adopts the recommendations on the fifteen questions of 1 Nov but RQ-656: the Šuvakov-plane chart is one M9 task, its five targets waiting on it whole; a syzygy-symbol field only; N_scramble only; no periodic-orbit continuation, after the SJTU partial check; TR-1, MK-1 and SL-1 stay in M9, not scored, with no chart; the census's CI cadence as § 8.1 and § 8.2 write it, lavapipe in the smoke job; REQ-VAL-199 keeps 256 starts; GG-1's panels by like ε; the drift predicates read the stored latch, live values only for control flow; BZ-1C's starts by Path B, a list-of-starts chart the fallback; Hénon 1974 joins the rotating-frame set; Heggie & Sweatman 1991 in M9, not scored *(closes RQ-593, RQ-595, RQ-596, RQ-597, RQ-608, RQ-617, RQ-618, RQ-620, RQ-636, RQ-647 and RQ-654; amends R-636, R-637 and R-639; refines R-642)*"
   verify:
     method: numerical gate
     detail: "cargo xtask gate parting-ratio --propose: at T = 200 over all 256 starts, each start's predicted ratio ln(θ/δ₃₂)/ln(θ/δ₆₄) from its measured chords at the first sync boundary (t = Δ_sync), the median over the starts of each start's measured ratio divided by its predicted ratio against 1, a pair not parted by T censored at T (its start's ratio a bound, kept in the median), the censored count reported and the gate reported invalid, not passed, when half or more of the 256 are censored, the tolerance on the distance from 1 proposed from the spread; recorded in decisions.md; controls: the draft's constant ln eps₃₂ / ln eps₆₄ ≈ 0.44 in place of the per-start prediction fails the gate's input check; 127 censored starts leave the gate valid and 128 make it invalid; on a fixture where they differ, the median of the measured ratios against the median of the predicted, or a median that drops the censored starts, gives a different statistic and fails (R-632)"
@@ -32053,8 +32083,9 @@
   - R-600
   - R-632
   - R-661
+  - R-669
   milestone: M8
-  note: "Physics review 5724115938 of PR #363, F4 (applied per R-369): the effect size restated as the gate's own, the median's, with its rank interval and the effect of censoring. R-661 (31 Oct 2026, the owner's item 3, \"re-size its 256 starts by the same power argument, or state the effect size it can detect\"): the effect size stated and the 256 starts kept (applied per R-369), the re-size, with its cost, queued for the owner as RQ-647. *Was (statement, before R-661):* \"The ensemble ratio gate — over all 256 chaotic starts, not a subset, the median over the starts of each start's measured t_part(f32)/t_part(f64) at the parted mark divided by its predicted ratio, compared with 1, never read off one trajectory, the predicted ratio from the start's measured initial gaps, ln(θ/δ₃₂)/ln(θ/δ₆₄), θ the parted mark (0.1, R-574) and δ₀ each pair's chord at the first sync boundary, k = 1, t = Δ_sync (REQ-INT-080), never ln ε₃₂ / ln ε₆₄ (R-600); a pair not parted by the horizon T censored, its t_part taken as T and its start's ratio a bound kept in the median, the count of censored starts reported, and the gate valid only if fewer than half of the 256 are censored (R-632) — must have its tolerance on the median's distance from 1 calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M8 gate and recorded in decisions.md.\" R-632 (27 Oct 2026, RQ-575 Q1 (a), Q2 (ii)): an unparted pair censored at T, the median over all 256, the censored count reported, the gate valid only if fewer than half are censored; the statistic the median of each start's measured over predicted ratio against 1, and this requirement's tolerance the one on its distance from 1, an R-71 calibration (no second requirement, applied per R-369). A start is censored when either of its pairs has not parted by T (applied per R-369). *Was (statement, R-600):* \"The ensemble ratio gate — over all 256 chaotic starts, not a subset, the median t_part(f32)/t_part(f64) at the parted mark against its expected value, never read off one trajectory, the expected value predicted per start from its measured initial gaps, ln(θ/δ₃₂)/ln(θ/δ₆₄), θ the parted mark (0.1, R-574) and δ₀ each pair's chord at the first sync boundary, k = 1, t = Δ_sync (REQ-INT-080), never ln ε₃₂ / ln ε₆₄ (R-600) — must have its tolerance calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M8 gate and recorded in decisions.md.\" *Was (verify, R-600):* \"cargo xtask gate parting-ratio --propose: at T = 200 over all 256 starts, each start's predicted ratio ln(θ/δ₃₂)/ln(θ/δ₆₄) from its measured chords at the first sync boundary (t = Δ_sync), the measured ratios against the predicted by the statistic RQ-575 rules (the median of the measured against the median of the predicted, or the median of each start's measured over predicted), a start whose pair has not parted by T entering as RQ-575 rules, the tolerance proposed from the spread; recorded in decisions.md; control: the draft's constant ln eps₃₂ / ln eps₆₄ ≈ 0.44 in place of the per-start prediction fails the gate's input check\" Before R-632: R-600 (25 Oct 2026, RQ-557 (b)): the prediction per start from its measured initial gap, all 256 starts, the tolerance a calibration for the gate; the human's tol in ln(tol/δ0) read as θ, the parted mark, and δ₀ as the chord at the first sync boundary, t = Δ_sync (applied per R-369, flagged in R-600; physics review 5644374613 of PR #293, F3). How a start whose pair has not parted by the horizon enters, and which statistic compares the ratios, are RQ-575, which this requirement waits on for those two rules only. Waits on RQ-557: the draft's 0.44 and the probe's deep-interior medians (12.1 / 39.4 ≈ 0.31, over the 19 % whose f64 runs parted by 50) disagree. fix round 1 of PR #283 (physics review 5627073272, F2): the rq field added, as R-574 and RQ-557 say. *Was (statement):* \"The ensemble ratio gate — over at least 256 chaotic ICs, the median t_part(f32)/t_part(f64) at the parted mark against its expected value, never read off one trajectory — must have its expected value and tolerance calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M8 gate and recorded in decisions.md.\" *Was (verify):* \"cargo xtask gate parting-ratio --propose: at T = 200 over the ICs where both pairs part, the count reported, the median ratio against the value RQ-557 rules (the draft's ln eps₃₂ / ln eps₆₄ ≈ 0.44, or the predicted ln(θ/δ₃₂)/ln(θ/δ₆₄)), the tolerance proposed from the spread; recorded in decisions.md\""
+  note: "Physics review 5724115938 of PR #363, F4 (applied per R-369): the effect size restated as the gate's own, the median's, with its rank interval and the effect of censoring. R-661 (31 Oct 2026, the owner's item 3, \"re-size its 256 starts by the same power argument, or state the effect size it can detect\"): the effect size stated and the 256 starts kept (applied per R-369), the re-size, with its cost, queued for the owner as RQ-647. *Was (statement, before R-661):* \"The ensemble ratio gate — over all 256 chaotic starts, not a subset, the median over the starts of each start's measured t_part(f32)/t_part(f64) at the parted mark divided by its predicted ratio, compared with 1, never read off one trajectory, the predicted ratio from the start's measured initial gaps, ln(θ/δ₃₂)/ln(θ/δ₆₄), θ the parted mark (0.1, R-574) and δ₀ each pair's chord at the first sync boundary, k = 1, t = Δ_sync (REQ-INT-080), never ln ε₃₂ / ln ε₆₄ (R-600); a pair not parted by the horizon T censored, its t_part taken as T and its start's ratio a bound kept in the median, the count of censored starts reported, and the gate valid only if fewer than half of the 256 are censored (R-632) — must have its tolerance on the median's distance from 1 calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M8 gate and recorded in decisions.md.\" R-632 (27 Oct 2026, RQ-575 Q1 (a), Q2 (ii)): an unparted pair censored at T, the median over all 256, the censored count reported, the gate valid only if fewer than half are censored; the statistic the median of each start's measured over predicted ratio against 1, and this requirement's tolerance the one on its distance from 1, an R-71 calibration (no second requirement, applied per R-369). A start is censored when either of its pairs has not parted by T (applied per R-369). *Was (statement, R-600):* \"The ensemble ratio gate — over all 256 chaotic starts, not a subset, the median t_part(f32)/t_part(f64) at the parted mark against its expected value, never read off one trajectory, the expected value predicted per start from its measured initial gaps, ln(θ/δ₃₂)/ln(θ/δ₆₄), θ the parted mark (0.1, R-574) and δ₀ each pair's chord at the first sync boundary, k = 1, t = Δ_sync (REQ-INT-080), never ln ε₃₂ / ln ε₆₄ (R-600) — must have its tolerance calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M8 gate and recorded in decisions.md.\" *Was (verify, R-600):* \"cargo xtask gate parting-ratio --propose: at T = 200 over all 256 starts, each start's predicted ratio ln(θ/δ₃₂)/ln(θ/δ₆₄) from its measured chords at the first sync boundary (t = Δ_sync), the measured ratios against the predicted by the statistic RQ-575 rules (the median of the measured against the median of the predicted, or the median of each start's measured over predicted), a start whose pair has not parted by T entering as RQ-575 rules, the tolerance proposed from the spread; recorded in decisions.md; control: the draft's constant ln eps₃₂ / ln eps₆₄ ≈ 0.44 in place of the per-start prediction fails the gate's input check\" Before R-632: R-600 (25 Oct 2026, RQ-557 (b)): the prediction per start from its measured initial gap, all 256 starts, the tolerance a calibration for the gate; the human's tol in ln(tol/δ0) read as θ, the parted mark, and δ₀ as the chord at the first sync boundary, t = Δ_sync (applied per R-369, flagged in R-600; physics review 5644374613 of PR #293, F3). How a start whose pair has not parted by the horizon enters, and which statistic compares the ratios, are RQ-575, which this requirement waits on for those two rules only. Waits on RQ-557: the draft's 0.44 and the probe's deep-interior medians (12.1 / 39.4 ≈ 0.31, over the 19 % whose f64 runs parted by 50) disagree. fix round 1 of PR #283 (physics review 5627073272, F2): the rq field added, as R-574 and RQ-557 say. *Was (statement):* \"The ensemble ratio gate — over at least 256 chaotic ICs, the median t_part(f32)/t_part(f64) at the parted mark against its expected value, never read off one trajectory — must have its expected value and tolerance calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M8 gate and recorded in decisions.md.\" *Was (verify):* \"cargo xtask gate parting-ratio --propose: at T = 200 over the ICs where both pairs part, the count reported, the median ratio against the value RQ-557 rules (the draft's ln eps₃₂ / ln eps₆₄ ≈ 0.44, or the predicted ln(θ/δ₃₂)/ln(θ/δ₆₄)), the tolerance proposed from the spread; recorded in decisions.md\" R-669 (1 Nov 2026, RQ-647 (a)): the 256 starts are kept, with the effect size stated; outcome statistics are BZ-1C's."
 - id: REQ-VAL-200
   area: VAL
   kind: definition
@@ -35483,6 +35514,8 @@
     section: 12.2 Tiers
   - file: docs/design/principia_dd_replication.md
     section: "12.3 Outcomes, the like-for-like check and the forbidden moves"
+  - file: decisions.md
+    section: "R-669 — The owner adopts the recommendations on the fifteen questions of 1 Nov but RQ-656: the Šuvakov-plane chart is one M9 task, its five targets waiting on it whole; a syzygy-symbol field only; N_scramble only; no periodic-orbit continuation, after the SJTU partial check; TR-1, MK-1 and SL-1 stay in M9, not scored, with no chart; the census's CI cadence as § 8.1 and § 8.2 write it, lavapipe in the smoke job; REQ-VAL-199 keeps 256 starts; GG-1's panels by like ε; the drift predicates read the stored latch, live values only for control flow; BZ-1C's starts by Path B, a list-of-starts chart the fallback; Hénon 1974 joins the rotating-frame set; Heggie & Sweatman 1991 in M9, not scored *(closes RQ-593, RQ-595, RQ-596, RQ-597, RQ-608, RQ-617, RQ-618, RQ-620, RQ-636, RQ-647 and RQ-654; amends R-636, R-637 and R-639; refines R-642)*"
   verify:
     method: numerical gate
     detail: "per-point lifetimes as they publish them, if obtained (RQ-598); the reliability of our run read from the convergence reference (R-33); agreement within REQ-VAL-296; control: lifetimes to the criterion firing rather than to the last close approach must disagree"
@@ -35499,11 +35532,11 @@
   - R-642
   - R-649
   - R-650
+  - R-669
   milestone: M9
   rq:
-  - RQ-620
   - RQ-669
-  note: "Reproduces: Boekholt, Portegies Zwart & Valtonen 2020 (MNRAS 493, 3932): 1,212 points at spacing 1/64, converged with Brutus to t = 10⁴; lifetime to the last close approach. Chart: the Anosova physical-frame entry. Milestone: M9 (was M3; R-650). Compare: per point where reliable (rule 8: a converged code); KS otherwise (rule 8). Tolerance: REQ-VAL-296 (calibration, R-71). Row GG-1 (the 25 Oct tier B's converged lifetime grid) of principia_dd_replication.md § \"5.10 Converged-code references\"; layer replication, tier B; closed by TASK-M9-22 (was TASK-M3-62) (R-594, R-629). Systems that end past 200 are recorded as \"not evaluated within cap\", never as failures (R-636, closing RQ-592). RQ-598 closed by R-637 (option (a)); scored as R-638 and R-640 to R-642 rule it, R-642 governing: the Fig. 1 extraction (docs/incoming/2026-10-28_rq598_data/transcriptions/gg1_fig1/) is the paper's own published values and scores directly, all 1212 points per panel at one LUT step (3/256 ≈ 0.0117 dex), the three-entry bin (LUT 29–31) at its wider precision, black meaning censored above 1000 (GG-1's per-point reference panel is undefined: Fig. 1's two panels, ε = 10⁻⁶ and ε = 10⁻⁷⁰, differ point by point, and no panel is chosen; RQ-620, R-72); a qualifying reproduction (the paper's set-up, a converged arbitrary-precision integrator; our Brutus from pgbreen/NvMgeneration at 98906f4) scores provisionally, labelled \"vs <source>\" (\"vs Brutus, run here\"), never \"replicates the paper\". Re-score obligation (R-640, R-642): when the authors' per-point lifetimes arrive, every result scored against a reproduction is re-scored against them; where ours and theirs disagree, theirs governs and the disagreement is queued. The cost per point is reported before any Brutus run is scaled or goes below ε = 10⁻⁶ (R-638). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (b), the CPU IC inspector, for each point where reliable, where a GPU miss is expected, not a defect; tier (a), the GPU explorer, for the KS part, scored there statistically or qualitatively only (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b) for its exact part, its statistical part (b) too, with (a) expected to agree\"."
+  note: "Reproduces: Boekholt, Portegies Zwart & Valtonen 2020 (MNRAS 493, 3932): 1,212 points at spacing 1/64, converged with Brutus to t = 10⁴; lifetime to the last close approach. Chart: the Anosova physical-frame entry. Milestone: M9 (was M3; R-650). Compare: per point where reliable (rule 8: a converged code); KS otherwise (rule 8). Tolerance: REQ-VAL-296 (calibration, R-71). Row GG-1 (the 25 Oct tier B's converged lifetime grid) of principia_dd_replication.md § \"5.10 Converged-code references\"; layer replication, tier B; closed by TASK-M9-22 (was TASK-M3-62) (R-594, R-629). Systems that end past 200 are recorded as \"not evaluated within cap\", never as failures (R-636, closing RQ-592). RQ-598 closed by R-637 (option (a)); scored as R-638 and R-640 to R-642 rule it, R-642 governing: the Fig. 1 extraction (docs/incoming/2026-10-28_rq598_data/transcriptions/gg1_fig1/) is the paper's own published values and scores directly, all 1212 points per panel at one LUT step (3/256 ≈ 0.0117 dex), the three-entry bin (LUT 29–31) at its wider precision, black meaning censored above 1000 (GG-1's per-point reference panel is undefined: Fig. 1's two panels, ε = 10⁻⁶ and ε = 10⁻⁷⁰, differ point by point, and no panel is chosen; RQ-620, R-72); a qualifying reproduction (the paper's set-up, a converged arbitrary-precision integrator; our Brutus from pgbreen/NvMgeneration at 98906f4) scores provisionally, labelled \"vs <source>\" (\"vs Brutus, run here\"), never \"replicates the paper\". Re-score obligation (R-640, R-642): when the authors' per-point lifetimes arrive, every result scored against a reproduction is re-scored against them; where ours and theirs disagree, theirs governs and the disagreement is queued. The cost per point is reported before any Brutus run is scaled or goes below ε = 10⁻⁶ (R-638). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (b), the CPU IC inspector, for each point where reliable, where a GPU miss is expected, not a defect; tier (a), the GPU explorer, for the KS part, scored there statistically or qualitatively only (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b) for its exact part, its statistical part (b) too, with (a) expected to agree\". R-669 (1 Nov 2026, RQ-620 as recommended): a reproduction is compared per point only with the Fig. 1 panel at its own ε (ε = 10⁻⁶ the left, ε = 10⁻⁷⁰ the right); our lifetimes per point with the ε = 10⁻⁷⁰ panel, and with the ε = 10⁻⁶ panel by KS only; the reliability mask, where the two panels agree within one LUT step, reported beside them."
 - id: REQ-VAL-296
   area: VAL
   kind: calibration
@@ -36072,6 +36105,8 @@
     section: "12.3 Outcomes, the like-for-like check and the forbidden moves"
   - file: decisions.md
     section: "R-653 — Five map targets and B-2 are scored on tier (a), their f64 Result or CPU FTLE run beside it and recorded as information, an explained divergence between the two being a precision-tier finding *(closes RQ-622; refines R-649)*"
+  - file: decisions.md
+    section: "R-669 — The owner adopts the recommendations on the fifteen questions of 1 Nov but RQ-656: the Šuvakov-plane chart is one M9 task, its five targets waiting on it whole; a syzygy-symbol field only; N_scramble only; no periodic-orbit continuation, after the SJTU partial check; TR-1, MK-1 and SL-1 stay in M9, not scored, with no chart; the census's CI cadence as § 8.1 and § 8.2 write it, lavapipe in the smoke job; REQ-VAL-199 keeps 256 starts; GG-1's panels by like ε; the drift predicates read the stored latch, live values only for control flow; BZ-1C's starts by Path B, a list-of-starts chart the fallback; Hénon 1974 joins the rotating-frame set; Heggie & Sweatman 1991 in M9, not scored *(closes RQ-593, RQ-595, RQ-596, RQ-597, RQ-608, RQ-617, RQ-618, RQ-620, RQ-636, RQ-647 and RQ-654; amends R-636, R-637 and R-639; refines R-642)*"
   verify:
     method: numerical gate
     detail: "as OC-4 (tier (a), the f64 Result beside it as information, R-653), on the Šuvakov-plane chart once RQ-583 (and its labelling, RQ-582) is ruled; agreement at OC-4's calibrated level; control as OC-4's"
@@ -36083,11 +36118,9 @@
   - R-649
   - R-650
   - R-653
+  - R-669
   milestone: M9
-  rq:
-  - RQ-583
-  - RQ-608
-  note: "Reproduces: as OC-4, for the 1,759 equal-mass and 1,350 m₃-free rows on the Šuvakov plane (§ 4.3). Chart: new: SuvakovPlane, at equal masses and at fixed m₃. Milestone: M9 (was M8; R-650). Compare: statistical (rule 8). Tolerance: OC-4's (REQ-VAL-310). Row OC-4 on the Šuvakov plane of principia_dd_replication.md § \"5.12 Targets that wait for a chart, a diagnostic or data\"; layer replication, tier B; closed by TASK-M9-35 (was TASK-M8-99) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M8), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026); its verify scores it there, with the f64 Result beside it as information (R-653, RQ-622 (c)). Verify *was:* \"as OC-4, on the Šuvakov-plane chart once RQ-583 (and its labelling, RQ-582) is ruled; agreement at OC-4's calibrated level; control as OC-4's\". Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\"."
+  note: "Reproduces: as OC-4, for the 1,759 equal-mass and 1,350 m₃-free rows on the Šuvakov plane (§ 4.3). Chart: new: SuvakovPlane, at equal masses and at fixed m₃. Milestone: M9 (was M8; R-650). Compare: statistical (rule 8). Tolerance: OC-4's (REQ-VAL-310). Row OC-4 on the Šuvakov plane of principia_dd_replication.md § \"5.12 Targets that wait for a chart, a diagnostic or data\"; layer replication, tier B; closed by TASK-M9-35 (was TASK-M8-99) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M8), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026); its verify scores it there, with the f64 Result beside it as information (R-653, RQ-622 (c)). Verify *was:* \"as OC-4, on the Šuvakov-plane chart once RQ-583 (and its labelling, RQ-582) is ruled; agreement at OC-4's calibrated level; control as OC-4's\". Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\". R-669 (1 Nov 2026, RQ-608 and RQ-618 (a)): it waits whole on the Šuvakov-plane chart, built by TASK-M9-40 (REQ-CHART-091), with no closure part split off; its \"once RQ-583 is ruled\" reads as that chart. *Was (rq):* RQ-583, RQ-608."
 - id: REQ-VAL-312
   area: VAL
   statement: "The Šuvakov plane must be rendered at equal masses with all 1,759 atlas orbits on it marked and the stable ones highlighted, on the papers' axes (AT-D1)."
@@ -36114,6 +36147,8 @@
     section: "12.3 Outcomes, the like-for-like check and the forbidden moves"
   - file: decisions.md
     section: "R-653 — Five map targets and B-2 are scored on tier (a), their f64 Result or CPU FTLE run beside it and recorded as information, an explained divergence between the two being a precision-tier finding *(closes RQ-622; refines R-649)*"
+  - file: decisions.md
+    section: "R-669 — The owner adopts the recommendations on the fifteen questions of 1 Nov but RQ-656: the Šuvakov-plane chart is one M9 task, its five targets waiting on it whole; a syzygy-symbol field only; N_scramble only; no periodic-orbit continuation, after the SJTU partial check; TR-1, MK-1 and SL-1 stay in M9, not scored, with no chart; the census's CI cadence as § 8.1 and § 8.2 write it, lavapipe in the smoke job; REQ-VAL-199 keeps 256 starts; GG-1's panels by like ε; the drift predicates read the stored latch, live values only for control flow; BZ-1C's starts by Path B, a list-of-starts chart the fallback; Hénon 1974 joins the rotating-frame set; Heggie & Sweatman 1991 in M9, not scored *(closes RQ-593, RQ-595, RQ-596, RQ-597, RQ-608, RQ-617, RQ-618, RQ-620, RQ-636, RQ-647 and RQ-654; amends R-636, R-637 and R-639; refines R-642)*"
   verify:
     detail: "scored on tier (a): the GPU explorer's f32 output; reviewed by the physics reviewer; the f64 Result (R-572) run beside it and recorded as information, an explained divergence between the two a precision-tier finding; the atlas's credit line on the figure; control: each marker's IC re-encoded must land on its marker"
     method: review checklist
@@ -36125,11 +36160,9 @@
   - R-649
   - R-650
   - R-653
+  - R-669
   milestone: M9
-  rq:
-  - RQ-583
-  - RQ-608
-  note: "Reproduces: the atlas's 1,759 equal-mass orbits on the Šuvakov plane, the stable ones highlighted. Chart: new: SuvakovPlane. Milestone: M9 (was M8; R-650). Compare: qualitative (rule 8). Tolerance: none: qualitative. Row AT-D1 of principia_dd_replication.md § \"5.12 Targets that wait for a chart, a diagnostic or data\"; layer replication, tier B; closed by TASK-M9-35 (was TASK-M8-99) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M8), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026); its verify scores it there, with the f64 Result beside it as information (R-653, RQ-622 (c)). Verify *was:* \"a Result (R-572) at f64; reviewed by the physics reviewer; the atlas's credit line on the figure; control: each marker's IC re-encoded must land on its marker\". Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\"."
+  note: "Reproduces: the atlas's 1,759 equal-mass orbits on the Šuvakov plane, the stable ones highlighted. Chart: new: SuvakovPlane. Milestone: M9 (was M8; R-650). Compare: qualitative (rule 8). Tolerance: none: qualitative. Row AT-D1 of principia_dd_replication.md § \"5.12 Targets that wait for a chart, a diagnostic or data\"; layer replication, tier B; closed by TASK-M9-35 (was TASK-M8-99) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M8), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026); its verify scores it there, with the f64 Result beside it as information (R-653, RQ-622 (c)). Verify *was:* \"a Result (R-572) at f64; reviewed by the physics reviewer; the atlas's credit line on the figure; control: each marker's IC re-encoded must land on its marker\". Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\". R-669 (1 Nov 2026, RQ-608 and RQ-618 (a)): it waits whole on the Šuvakov-plane chart, built by TASK-M9-40 (REQ-CHART-091), with no closure part split off; its \"once RQ-583 is ruled\" reads as that chart. *Was (rq):* RQ-583, RQ-608."
 - id: REQ-VAL-313
   area: VAL
   statement: "The Šuvakov plane must be rendered at each of the eight values of m₃ the atlas holds (0.5, 0.75, 2, 4, 5, 8, 10, 1.001), each with its orbits marked (AT-D3)."
@@ -36156,6 +36189,8 @@
     section: "12.3 Outcomes, the like-for-like check and the forbidden moves"
   - file: decisions.md
     section: "R-653 — Five map targets and B-2 are scored on tier (a), their f64 Result or CPU FTLE run beside it and recorded as information, an explained divergence between the two being a precision-tier finding *(closes RQ-622; refines R-649)*"
+  - file: decisions.md
+    section: "R-669 — The owner adopts the recommendations on the fifteen questions of 1 Nov but RQ-656: the Šuvakov-plane chart is one M9 task, its five targets waiting on it whole; a syzygy-symbol field only; N_scramble only; no periodic-orbit continuation, after the SJTU partial check; TR-1, MK-1 and SL-1 stay in M9, not scored, with no chart; the census's CI cadence as § 8.1 and § 8.2 write it, lavapipe in the smoke job; REQ-VAL-199 keeps 256 starts; GG-1's panels by like ε; the drift predicates read the stored latch, live values only for control flow; BZ-1C's starts by Path B, a list-of-starts chart the fallback; Hénon 1974 joins the rotating-frame set; Heggie & Sweatman 1991 in M9, not scored *(closes RQ-593, RQ-595, RQ-596, RQ-597, RQ-608, RQ-617, RQ-618, RQ-620, RQ-636, RQ-647 and RQ-654; amends R-636, R-637 and R-639; refines R-642)*"
   verify:
     method: review checklist
     detail: "as AT-D1 (tier (a), the f64 Result beside it as information, R-653), per value of m₃"
@@ -36167,11 +36202,9 @@
   - R-649
   - R-650
   - R-653
+  - R-669
   milestone: M9
-  rq:
-  - RQ-583
-  - RQ-608
-  note: "Reproduces: the atlas's 1,350 m₃-free orbits on the eight values of m₃. Chart: new: SuvakovPlane at fixed m₃. Milestone: M9 (was M8; R-650). Compare: qualitative (rule 8). Tolerance: none: qualitative. Row AT-D3 of principia_dd_replication.md § \"5.12 Targets that wait for a chart, a diagnostic or data\"; layer replication, tier B; closed by TASK-M9-35 (was TASK-M8-99) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M8), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026); its verify scores it there, with the f64 Result beside it as information (R-653, RQ-622 (c)). Verify *was:* \"as AT-D1, per value of m₃\". Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\"."
+  note: "Reproduces: the atlas's 1,350 m₃-free orbits on the eight values of m₃. Chart: new: SuvakovPlane at fixed m₃. Milestone: M9 (was M8; R-650). Compare: qualitative (rule 8). Tolerance: none: qualitative. Row AT-D3 of principia_dd_replication.md § \"5.12 Targets that wait for a chart, a diagnostic or data\"; layer replication, tier B; closed by TASK-M9-35 (was TASK-M8-99) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M8), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026); its verify scores it there, with the f64 Result beside it as information (R-653, RQ-622 (c)). Verify *was:* \"as AT-D1, per value of m₃\". Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\". R-669 (1 Nov 2026, RQ-608 and RQ-618 (a)): it waits whole on the Šuvakov-plane chart, built by TASK-M9-40 (REQ-CHART-091), with no closure part split off; its \"once RQ-583 is ruled\" reads as that chart. *Was (rq):* RQ-583, RQ-608."
 - id: REQ-VAL-314
   area: VAL
   statement: "The return-proximity map over (p₁, p₂) ∈ [0.3, 0.5] × [0.1, 0.5] must show Hudomal's bright candidate spots and dark collision lines (Fig. 8), with its minima at Table 23's points (HU-1)."
@@ -36196,6 +36229,8 @@
     section: 12.2 Tiers
   - file: docs/design/principia_dd_replication.md
     section: "12.3 Outcomes, the like-for-like check and the forbidden moves"
+  - file: decisions.md
+    section: "R-669 — The owner adopts the recommendations on the fifteen questions of 1 Nov but RQ-656: the Šuvakov-plane chart is one M9 task, its five targets waiting on it whole; a syzygy-symbol field only; N_scramble only; no periodic-orbit continuation, after the SJTU partial check; TR-1, MK-1 and SL-1 stay in M9, not scored, with no chart; the census's CI cadence as § 8.1 and § 8.2 write it, lavapipe in the smoke job; REQ-VAL-199 keeps 256 starts; GG-1's panels by like ε; the drift predicates read the stored latch, live values only for control flow; BZ-1C's starts by Path B, a list-of-starts chart the fallback; Hénon 1974 joins the rotating-frame set; Heggie & Sweatman 1991 in M9, not scored *(closes RQ-593, RQ-595, RQ-596, RQ-597, RQ-608, RQ-617, RQ-618, RQ-620, RQ-636, RQ-647 and RQ-654; amends R-636, R-637 and R-639; refines R-642)*"
   verify:
     method: numerical gate
     detail: "the closure field on the Šuvakov-plane chart once RQ-583 is ruled; each Table 23 minimum within REQ-VAL-315; the map reviewed by the physics reviewer; control: a map at m₃ = 2 must not show the equal-mass minima"
@@ -36207,11 +36242,9 @@
   - R-636
   - R-649
   - R-650
+  - R-669
   milestone: M9
-  rq:
-  - RQ-583
-  - RQ-608
-  note: "Reproduces: Hudomal 2015 Fig. 8: the return-proximity map over (p₁, p₂) ∈ [0.3, 0.5] × [0.1, 0.5]; Table 23's minima. Chart: new: SuvakovPlane. Milestone: M9 (was M4; R-650). Compare: qualitative; exact at Table 23's minima (rule 8). Tolerance: REQ-VAL-315 (calibration, R-71). Row HU-1 of principia_dd_replication.md § \"5.12 Targets that wait for a chart, a diagnostic or data\"; layer replication, tier B; closed by TASK-M9-27 (was TASK-M4-23) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M4), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (b), the CPU IC inspector, for Table 23's minima, where a GPU miss is expected, not a defect; tier (a), the GPU explorer, for the map, scored there statistically or qualitatively only (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b) for its exact part, its statistical part (b) too, with (a) expected to agree\"."
+  note: "Reproduces: Hudomal 2015 Fig. 8: the return-proximity map over (p₁, p₂) ∈ [0.3, 0.5] × [0.1, 0.5]; Table 23's minima. Chart: new: SuvakovPlane. Milestone: M9 (was M4; R-650). Compare: qualitative; exact at Table 23's minima (rule 8). Tolerance: REQ-VAL-315 (calibration, R-71). Row HU-1 of principia_dd_replication.md § \"5.12 Targets that wait for a chart, a diagnostic or data\"; layer replication, tier B; closed by TASK-M9-27 (was TASK-M4-23) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M4), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (b), the CPU IC inspector, for Table 23's minima, where a GPU miss is expected, not a defect; tier (a), the GPU explorer, for the map, scored there statistically or qualitatively only (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b) for its exact part, its statistical part (b) too, with (a) expected to agree\". R-669 (1 Nov 2026, RQ-608 and RQ-618 (a)): it waits whole on the Šuvakov-plane chart, built by TASK-M9-40 (REQ-CHART-091), with no closure part split off; its \"once RQ-583 is ruled\" reads as that chart. *Was (rq):* RQ-583, RQ-608."
 - id: REQ-VAL-315
   area: VAL
   kind: calibration
@@ -36270,6 +36303,8 @@
     section: 12.2 Tiers
   - file: docs/design/principia_dd_replication.md
     section: "12.3 Outcomes, the like-for-like check and the forbidden moves"
+  - file: decisions.md
+    section: "R-669 — The owner adopts the recommendations on the fifteen questions of 1 Nov but RQ-656: the Šuvakov-plane chart is one M9 task, its five targets waiting on it whole; a syzygy-symbol field only; N_scramble only; no periodic-orbit continuation, after the SJTU partial check; TR-1, MK-1 and SL-1 stay in M9, not scored, with no chart; the census's CI cadence as § 8.1 and § 8.2 write it, lavapipe in the smoke job; REQ-VAL-199 keeps 256 starts; GG-1's panels by like ε; the drift predicates read the stored latch, live values only for control flow; BZ-1C's starts by Path B, a list-of-starts chart the fallback; Hénon 1974 joins the rotating-frame set; Heggie & Sweatman 1991 in M9, not scored *(closes RQ-593, RQ-595, RQ-596, RQ-597, RQ-608, RQ-617, RQ-618, RQ-620, RQ-636, RQ-647 and RQ-654; amends R-636, R-637 and R-639; refines R-642)*"
   verify:
     method: numerical gate
     detail: "as HU-1, zoomed; the middle candidate's position and period within REQ-VAL-317"
@@ -36281,11 +36316,9 @@
   - R-636
   - R-649
   - R-650
+  - R-669
   milestone: M9
-  rq:
-  - RQ-583
-  - RQ-608
-  note: "Reproduces: Hudomal 2015 Fig. 34 and Table 23: the butterfly III zoom, three candidates, the middle one at (0.405916, 0.230163), T = 13.866. Chart: new: SuvakovPlane, zoomed. Milestone: M9 (was M4; R-650). Compare: qualitative + one exact point (rule 8). Tolerance: REQ-VAL-317 (calibration, R-71). Row HU-2 of principia_dd_replication.md § \"5.12 Targets that wait for a chart, a diagnostic or data\"; layer replication, tier B; closed by TASK-M9-27 (was TASK-M4-23) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M4), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (b), the CPU IC inspector, for the exact point, where a GPU miss is expected, not a defect; tier (a), the GPU explorer, for the map, scored there statistically or qualitatively only (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b) for its exact part, its statistical part (b) too, with (a) expected to agree\"."
+  note: "Reproduces: Hudomal 2015 Fig. 34 and Table 23: the butterfly III zoom, three candidates, the middle one at (0.405916, 0.230163), T = 13.866. Chart: new: SuvakovPlane, zoomed. Milestone: M9 (was M4; R-650). Compare: qualitative + one exact point (rule 8). Tolerance: REQ-VAL-317 (calibration, R-71). Row HU-2 of principia_dd_replication.md § \"5.12 Targets that wait for a chart, a diagnostic or data\"; layer replication, tier B; closed by TASK-M9-27 (was TASK-M4-23) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M4), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (b), the CPU IC inspector, for the exact point, where a GPU miss is expected, not a defect; tier (a), the GPU explorer, for the map, scored there statistically or qualitatively only (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b) for its exact part, its statistical part (b) too, with (a) expected to agree\". R-669 (1 Nov 2026, RQ-608 and RQ-618 (a)): it waits whole on the Šuvakov-plane chart, built by TASK-M9-40 (REQ-CHART-091), with no closure part split off; its \"once RQ-583 is ruled\" reads as that chart. *Was (rq):* RQ-583, RQ-608."
 - id: REQ-VAL-317
   area: VAL
   kind: calibration
@@ -36342,6 +36375,8 @@
     section: 12.2 Tiers
   - file: docs/design/principia_dd_replication.md
     section: "12.3 Outcomes, the like-for-like check and the forbidden moves"
+  - file: decisions.md
+    section: "R-669 — The owner adopts the recommendations on the fifteen questions of 1 Nov but RQ-656: the Šuvakov-plane chart is one M9 task, its five targets waiting on it whole; a syzygy-symbol field only; N_scramble only; no periodic-orbit continuation, after the SJTU partial check; TR-1, MK-1 and SL-1 stay in M9, not scored, with no chart; the census's CI cadence as § 8.1 and § 8.2 write it, lavapipe in the smoke job; REQ-VAL-199 keeps 256 starts; GG-1's panels by like ε; the drift predicates read the stored latch, live values only for control flow; BZ-1C's starts by Path B, a list-of-starts chart the fallback; Hénon 1974 joins the rotating-frame set; Heggie & Sweatman 1991 in M9, not scored *(closes RQ-593, RQ-595, RQ-596, RQ-597, RQ-608, RQ-617, RQ-618, RQ-620, RQ-636, RQ-647 and RQ-654; amends R-636, R-637 and R-639; refines R-642)*"
   verify:
     method: review checklist
     detail: "the scan on a binary-plus-single chart once RQ-593 is ruled, f_col once RQ-596 is; reviewed by the physics reviewer against the figure; control: a scan at a different binary eccentricity must differ"
@@ -36350,12 +36385,11 @@
   - R-629
   - R-649
   - R-650
+  - R-669
   milestone: M9
   rq:
-  - RQ-593
-  - RQ-596
   - RQ-669
-  note: "Reproduces: Trani et al. 2024 (A&A 689, A24): the inclination-0 row of their map; f_col (12 nearest neighbours, regular above 2/3). Chart: new: BinaryPlusSingle. Milestone: M9 (was M3; R-650). Compare: qualitative (rule 8). Tolerance: none: qualitative. Row TR-1 of principia_dd_replication.md § \"5.12 Targets that wait for a chart, a diagnostic or data\"; layer replication, tier B; closed by TASK-M9-23 (was TASK-M3-63) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\"."
+  note: "Reproduces: Trani et al. 2024 (A&A 689, A24): the inclination-0 row of their map; f_col (12 nearest neighbours, regular above 2/3). Chart: new: BinaryPlusSingle. Milestone: M9 (was M3; R-650). Compare: qualitative (rule 8). Tolerance: none: qualitative. Row TR-1 of principia_dd_replication.md § \"5.12 Targets that wait for a chart, a diagnostic or data\"; layer replication, tier B; closed by TASK-M9-23 (was TASK-M3-63) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\". R-669 (1 Nov 2026, RQ-593 (c), RQ-596 (b)): no binary-plus-single chart is built and f_col is not built; it stays in M9, reading \"not scored: no chart\" (and its colouring \"not scored: no f_col\"). *Was (rq):* RQ-593, RQ-596."
 - id: REQ-VAL-319
   area: VAL
   statement: "Per-body escape probabilities over Manwadkar et al. 2021's eight mass sets must be measured in a planar re-run and compared as distributions with their Table 1 (MK-1)."
@@ -36380,6 +36414,8 @@
     section: 12.2 Tiers
   - file: docs/design/principia_dd_replication.md
     section: "12.3 Outcomes, the like-for-like check and the forbidden moves"
+  - file: decisions.md
+    section: "R-669 — The owner adopts the recommendations on the fifteen questions of 1 Nov but RQ-656: the Šuvakov-plane chart is one M9 task, its five targets waiting on it whole; a syzygy-symbol field only; N_scramble only; no periodic-orbit continuation, after the SJTU partial check; TR-1, MK-1 and SL-1 stay in M9, not scored, with no chart; the census's CI cadence as § 8.1 and § 8.2 write it, lavapipe in the smoke job; REQ-VAL-199 keeps 256 starts; GG-1's panels by like ε; the drift predicates read the stored latch, live values only for control flow; BZ-1C's starts by Path B, a list-of-starts chart the fallback; Hénon 1974 joins the rotating-frame set; Heggie & Sweatman 1991 in M9, not scored *(closes RQ-593, RQ-595, RQ-596, RQ-597, RQ-608, RQ-617, RQ-618, RQ-620, RQ-636, RQ-647 and RQ-654; amends R-636, R-637 and R-639; refines R-642)*"
   verify:
     method: numerical gate
     detail: "Table 1 transcribed twice (rule 2); a statistic at REQ-VAL-320's level; their runs are 3D, so the comparison is of a different experiment, which the report states (RQ-593); control: masses relabelled must move the probabilities"
@@ -36389,11 +36425,11 @@
   - R-629
   - R-649
   - R-650
+  - R-669
   milestone: M9
   rq:
-  - RQ-593
   - RQ-669
-  note: "Reproduces: Manwadkar, Kol, Trani & Leigh 2021: per-body escape probabilities over eight mass sets (Table 1). Chart: new: BinaryPlusSingle at a mass point. Milestone: M9 (was M3; R-650). Compare: statistical (rule 8). Tolerance: REQ-VAL-320 (calibration, R-71). Row MK-1 of principia_dd_replication.md § \"5.12 Targets that wait for a chart, a diagnostic or data\"; layer replication, tier B; closed by TASK-M9-23 (was TASK-M3-63) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\"."
+  note: "Reproduces: Manwadkar, Kol, Trani & Leigh 2021: per-body escape probabilities over eight mass sets (Table 1). Chart: new: BinaryPlusSingle at a mass point. Milestone: M9 (was M3; R-650). Compare: statistical (rule 8). Tolerance: REQ-VAL-320 (calibration, R-71). Row MK-1 of principia_dd_replication.md § \"5.12 Targets that wait for a chart, a diagnostic or data\"; layer replication, tier B; closed by TASK-M9-23 (was TASK-M3-63) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\". R-669 (1 Nov 2026, RQ-593 (c)): no binary-plus-single chart is built; it stays in M9, reading \"not scored: no chart\". *Was (rq):* RQ-593."
 - id: REQ-VAL-320
   area: VAL
   kind: calibration
@@ -36452,6 +36488,8 @@
     section: 12.2 Tiers
   - file: docs/design/principia_dd_replication.md
     section: "12.3 Outcomes, the like-for-like check and the forbidden moves"
+  - file: decisions.md
+    section: "R-669 — The owner adopts the recommendations on the fifteen questions of 1 Nov but RQ-656: the Šuvakov-plane chart is one M9 task, its five targets waiting on it whole; a syzygy-symbol field only; N_scramble only; no periodic-orbit continuation, after the SJTU partial check; TR-1, MK-1 and SL-1 stay in M9, not scored, with no chart; the census's CI cadence as § 8.1 and § 8.2 write it, lavapipe in the smoke job; REQ-VAL-199 keeps 256 starts; GG-1's panels by like ε; the drift predicates read the stored latch, live values only for control flow; BZ-1C's starts by Path B, a list-of-starts chart the fallback; Hénon 1974 joins the rotating-frame set; Heggie & Sweatman 1991 in M9, not scored *(closes RQ-593, RQ-595, RQ-596, RQ-597, RQ-608, RQ-617, RQ-618, RQ-620, RQ-636, RQ-647 and RQ-654; amends R-636, R-637 and R-639; refines R-642)*"
   verify:
     method: numerical gate
     detail: "the closed forms transcribed (rule 2); N_scramble once RQ-596 is ruled; a statistic at REQ-VAL-322's level; control: the 3D forms must fail"
@@ -36461,12 +36499,11 @@
   - R-629
   - R-649
   - R-650
+  - R-669
   milestone: M9
   rq:
-  - RQ-593
-  - RQ-596
   - RQ-669
-  note: "Reproduces: Stone & Leigh 2019 (Nature 576, 406): the planar closed forms for the binary's energy and eccentricity. Chart: new: BinaryPlusSingle. Milestone: M9 (was M3; R-650). Compare: statistical (rule 8). Tolerance: REQ-VAL-322 (calibration, R-71). Row SL-1 of principia_dd_replication.md § \"5.12 Targets that wait for a chart, a diagnostic or data\"; layer replication, tier B; closed by TASK-M9-23 (was TASK-M3-63) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\"."
+  note: "Reproduces: Stone & Leigh 2019 (Nature 576, 406): the planar closed forms for the binary's energy and eccentricity. Chart: new: BinaryPlusSingle. Milestone: M9 (was M3; R-650). Compare: statistical (rule 8). Tolerance: REQ-VAL-322 (calibration, R-71). Row SL-1 of principia_dd_replication.md § \"5.12 Targets that wait for a chart, a diagnostic or data\"; layer replication, tier B; closed by TASK-M9-23 (was TASK-M3-63) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\". R-669 (1 Nov 2026, RQ-593 (c), RQ-596 (b)): no binary-plus-single chart is built; it stays in M9, reading \"not scored: no chart\"; its N_scramble cut is REQ-VAL-343's once a chart exists. *Was (rq):* RQ-593, RQ-596."
 - id: REQ-VAL-322
   area: VAL
   kind: calibration
@@ -36525,6 +36562,8 @@
     section: 12.2 Tiers
   - file: docs/design/principia_dd_replication.md
     section: "12.3 Outcomes, the like-for-like check and the forbidden moves"
+  - file: decisions.md
+    section: "R-669 — The owner adopts the recommendations on the fifteen questions of 1 Nov but RQ-656: the Šuvakov-plane chart is one M9 task, its five targets waiting on it whole; a syzygy-symbol field only; N_scramble only; no periodic-orbit continuation, after the SJTU partial check; TR-1, MK-1 and SL-1 stay in M9, not scored, with no chart; the census's CI cadence as § 8.1 and § 8.2 write it, lavapipe in the smoke job; REQ-VAL-199 keeps 256 starts; GG-1's panels by like ε; the drift predicates read the stored latch, live values only for control flow; BZ-1C's starts by Path B, a list-of-starts chart the fallback; Hénon 1974 joins the rotating-frame set; Heggie & Sweatman 1991 in M9, not scored *(closes RQ-593, RQ-595, RQ-596, RQ-597, RQ-608, RQ-617, RQ-618, RQ-620, RQ-636, RQ-647 and RQ-654; amends R-636, R-637 and R-639; refines R-642)*"
   verify:
     method: numerical gate
     detail: "the chart RQ-594 rules, the split once RQ-596 is; the maps reviewed by the physics reviewer; the split at REQ-VAL-324's level; control: a map at the wrong side ratio range must misplace the regular region"
@@ -36534,12 +36573,12 @@
   - R-629
   - R-649
   - R-650
+  - R-669
   milestone: M9
   rq:
   - RQ-594
-  - RQ-596
   - RQ-669
-  note: "Reproduces: Parischewsky, Trani & Leigh 2023 (SciPost Phys. Core 6, 016): escaper maps in side-ratio space around Lagrange; 82.1 % chaotic, 17.9 % regular. Chart: new: SideRatio, or ShapeSphere at rest by a tested remap. Milestone: M9 (was M3; R-650). Compare: qualitative; the split statistical (rule 8). Tolerance: REQ-VAL-324 (calibration, R-71). Row PA-1 of principia_dd_replication.md § \"5.12 Targets that wait for a chart, a diagnostic or data\"; layer replication, tier B; closed by TASK-M9-24 (was TASK-M3-64) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\"."
+  note: "Reproduces: Parischewsky, Trani & Leigh 2023 (SciPost Phys. Core 6, 016): escaper maps in side-ratio space around Lagrange; 82.1 % chaotic, 17.9 % regular. Chart: new: SideRatio, or ShapeSphere at rest by a tested remap. Milestone: M9 (was M3; R-650). Compare: qualitative; the split statistical (rule 8). Tolerance: REQ-VAL-324 (calibration, R-71). Row PA-1 of principia_dd_replication.md § \"5.12 Targets that wait for a chart, a diagnostic or data\"; layer replication, tier B; closed by TASK-M9-24 (was TASK-M3-64) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\". R-669 (1 Nov 2026, RQ-596 (b)): N_scramble is REQ-VAL-343, defined and built by TASK-M9-24; the chart still waits on RQ-594. *Was (rq):* RQ-594, RQ-596."
 - id: REQ-VAL-324
   area: VAL
   kind: calibration
@@ -36596,6 +36635,8 @@
     section: 12.2 Tiers
   - file: docs/design/principia_dd_replication.md
     section: "12.3 Outcomes, the like-for-like check and the forbidden moves"
+  - file: decisions.md
+    section: "R-669 — The owner adopts the recommendations on the fifteen questions of 1 Nov but RQ-656: the Šuvakov-plane chart is one M9 task, its five targets waiting on it whole; a syzygy-symbol field only; N_scramble only; no periodic-orbit continuation, after the SJTU partial check; TR-1, MK-1 and SL-1 stay in M9, not scored, with no chart; the census's CI cadence as § 8.1 and § 8.2 write it, lavapipe in the smoke job; REQ-VAL-199 keeps 256 starts; GG-1's panels by like ε; the drift predicates read the stored latch, live values only for control flow; BZ-1C's starts by Path B, a list-of-starts chart the fallback; Hénon 1974 joins the rotating-frame set; Heggie & Sweatman 1991 in M9, not scored *(closes RQ-593, RQ-595, RQ-596, RQ-597, RQ-608, RQ-617, RQ-618, RQ-620, RQ-636, RQ-647 and RQ-654; amends R-636, R-637 and R-639; refines R-642)*"
   verify:
     method: review checklist
     detail: "the syzygy-symbol field once RQ-595 is ruled; reviewed by the physics reviewer; control: the map without the mirror remap must be mirrored"
@@ -36604,10 +36645,9 @@
   - R-629
   - R-649
   - R-650
+  - R-669
   milestone: M9
-  rq:
-  - RQ-595
-  note: "Reproduces: Tanikawa & Mikkola 2008 (arXiv:0802.2465) and 2015 (PASJ 67, 115): maps of the first 2–4 syzygy symbols over the free-fall plane. Chart: the Anosova physical-frame entry, through the D11 mirror remap. Milestone: M9 (was M4; R-650). Compare: qualitative (rule 8). Tolerance: none: qualitative. Row TS-1 (the 25 Oct tier B's symbol-sequence maps) of principia_dd_replication.md § \"5.12 Targets that wait for a chart, a diagnostic or data\"; layer replication, tier B; closed by TASK-M9-28 (was TASK-M4-24) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M4), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\"."
+  note: "Reproduces: Tanikawa & Mikkola 2008 (arXiv:0802.2465) and 2015 (PASJ 67, 115): maps of the first 2–4 syzygy symbols over the free-fall plane. Chart: the Anosova physical-frame entry, through the D11 mirror remap. Milestone: M9 (was M4; R-650). Compare: qualitative (rule 8). Tolerance: none: qualitative. Row TS-1 (the 25 Oct tier B's symbol-sequence maps) of principia_dd_replication.md § \"5.12 Targets that wait for a chart, a diagnostic or data\"; layer replication, tier B; closed by TASK-M9-28 (was TASK-M4-24) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M4), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\". R-669 (1 Nov 2026, RQ-595 (b)): the syzygy-symbol field is REQ-VAL-342, defined and built by TASK-M9-28; \"once RQ-595 is ruled\" reads as that field. *Was (rq):* RQ-595."
 - id: REQ-VAL-326
   area: VAL
   statement: "First-symbol maps at non-zero angular momentum, virial ratio 0 to 0.7 (Tanikawa & Mikkola 2008, Fig. 7), must be reproduced, the fixed-k velocity prescription read from the 2015 PASJ paper (TS-2)."
@@ -36630,6 +36670,8 @@
     section: 12.2 Tiers
   - file: docs/design/principia_dd_replication.md
     section: "12.3 Outcomes, the like-for-like check and the forbidden moves"
+  - file: decisions.md
+    section: "R-669 — The owner adopts the recommendations on the fifteen questions of 1 Nov but RQ-656: the Šuvakov-plane chart is one M9 task, its five targets waiting on it whole; a syzygy-symbol field only; N_scramble only; no periodic-orbit continuation, after the SJTU partial check; TR-1, MK-1 and SL-1 stay in M9, not scored, with no chart; the census's CI cadence as § 8.1 and § 8.2 write it, lavapipe in the smoke job; REQ-VAL-199 keeps 256 starts; GG-1's panels by like ε; the drift predicates read the stored latch, live values only for control flow; BZ-1C's starts by Path B, a list-of-starts chart the fallback; Hénon 1974 joins the rotating-frame set; Heggie & Sweatman 1991 in M9, not scored *(closes RQ-593, RQ-595, RQ-596, RQ-597, RQ-608, RQ-617, RQ-618, RQ-620, RQ-636, RQ-647 and RQ-654; amends R-636, R-637 and R-639; refines R-642)*"
   verify:
     method: review checklist
     detail: "as TS-1, on the chart RQ-595 rules; control: the k = 0 map must equal TS-1's first-symbol map"
@@ -36638,10 +36680,9 @@
   - R-629
   - R-649
   - R-650
+  - R-669
   milestone: M9
-  rq:
-  - RQ-595
-  note: "Reproduces: Tanikawa & Mikkola 2008, Fig. 7: first-symbol maps at non-zero angular momentum, virial ratio 0 to 0.7. Chart: new: a fixed-k velocity prescription over D11 ∪ D12. Milestone: M9 (was M4; R-650). Compare: qualitative (rule 8). Tolerance: none: qualitative. Row TS-2 of principia_dd_replication.md § \"5.12 Targets that wait for a chart, a diagnostic or data\"; layer replication, tier B; closed by TASK-M9-28 (was TASK-M4-24) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M4), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\"."
+  note: "Reproduces: Tanikawa & Mikkola 2008, Fig. 7: first-symbol maps at non-zero angular momentum, virial ratio 0 to 0.7. Chart: new: a fixed-k velocity prescription over D11 ∪ D12. Milestone: M9 (was M4; R-650). Compare: qualitative (rule 8). Tolerance: none: qualitative. Row TS-2 of principia_dd_replication.md § \"5.12 Targets that wait for a chart, a diagnostic or data\"; layer replication, tier B; closed by TASK-M9-28 (was TASK-M4-24) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M4), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\". R-669 (1 Nov 2026, RQ-595 (b)): no fixed-k velocity chart is built; it stays in M9, reading \"not scored: no fixed-k velocity chart\". *Was (rq):* RQ-595."
 - id: REQ-VAL-327
   area: VAL
   statement: "The L/M/A/H partition of the Agekyan–Anosova map as Valtonen et al. 2016 draw it, and a transition-entropy map, must be reproduced, with the high-entropy share (0.66–0.83 measured from the figure, against the text's 'roughly one half') compared as a distribution (V-1, V-3, V-7)."
@@ -36666,6 +36707,8 @@
     section: 12.2 Tiers
   - file: docs/design/principia_dd_replication.md
     section: "12.3 Outcomes, the like-for-like check and the forbidden moves"
+  - file: decisions.md
+    section: "R-669 — The owner adopts the recommendations on the fifteen questions of 1 Nov but RQ-656: the Šuvakov-plane chart is one M9 task, its five targets waiting on it whole; a syzygy-symbol field only; N_scramble only; no periodic-orbit continuation, after the SJTU partial check; TR-1, MK-1 and SL-1 stay in M9, not scored, with no chart; the census's CI cadence as § 8.1 and § 8.2 write it, lavapipe in the smoke job; REQ-VAL-199 keeps 256 starts; GG-1's panels by like ε; the drift predicates read the stored latch, live values only for control flow; BZ-1C's starts by Path B, a list-of-starts chart the fallback; Hénon 1974 joins the rotating-frame set; Heggie & Sweatman 1991 in M9, not scored *(closes RQ-593, RQ-595, RQ-596, RQ-597, RQ-608, RQ-617, RQ-618, RQ-620, RQ-636, RQ-647 and RQ-654; amends R-636, R-637 and R-639; refines R-642)*"
   verify:
     method: numerical gate
     detail: "the symbol-sequence field and Chernin et al.'s definitions once RQ-595 is ruled; the share at REQ-VAL-328's level; control: a partition at the wrong scale must misplace the boundaries"
@@ -36675,10 +36718,9 @@
   - R-629
   - R-649
   - R-650
+  - R-669
   milestone: M9
-  rq:
-  - RQ-595
-  note: "Reproduces: Valtonen et al. 2016, Figs. 4.1 and 4.9 (fits in `valtonen2016/data/fig4_1_*`): the L/M/A/H partition; the high-entropy share 0.66–0.83 against the text's 'roughly one half'. Chart: the Anosova physical-frame entry, at the book's ×2 scale. Milestone: M9 (was M4; R-650). Compare: qualitative; the share statistical (rule 8). Tolerance: REQ-VAL-328 (calibration, R-71). Row V-1 / V-3 / V-7 of principia_dd_replication.md § \"5.12 Targets that wait for a chart, a diagnostic or data\"; layer replication, tier B; closed by TASK-M9-28 (was TASK-M4-24) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M4), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\"."
+  note: "Reproduces: Valtonen et al. 2016, Figs. 4.1 and 4.9 (fits in `valtonen2016/data/fig4_1_*`): the L/M/A/H partition; the high-entropy share 0.66–0.83 against the text's 'roughly one half'. Chart: the Anosova physical-frame entry, at the book's ×2 scale. Milestone: M9 (was M4; R-650). Compare: qualitative; the share statistical (rule 8). Tolerance: REQ-VAL-328 (calibration, R-71). Row V-1 / V-3 / V-7 of principia_dd_replication.md § \"5.12 Targets that wait for a chart, a diagnostic or data\"; layer replication, tier B; closed by TASK-M9-28 (was TASK-M4-24) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M4), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\". R-669 (1 Nov 2026, RQ-595 (b)): the field is REQ-VAL-342 (TASK-M9-28); V-7 runs once Chernin et al.'s definitions are in hand, and reads \"not scored: Chernin et al.'s definitions not in hand\" until then. *Was (rq):* RQ-595."
 - id: REQ-VAL-328
   area: VAL
   kind: calibration
@@ -36735,6 +36777,8 @@
     section: 12.2 Tiers
   - file: docs/design/principia_dd_replication.md
     section: "12.3 Outcomes, the like-for-like check and the forbidden moves"
+  - file: decisions.md
+    section: "R-669 — The owner adopts the recommendations on the fifteen questions of 1 Nov but RQ-656: the Šuvakov-plane chart is one M9 task, its five targets waiting on it whole; a syzygy-symbol field only; N_scramble only; no periodic-orbit continuation, after the SJTU partial check; TR-1, MK-1 and SL-1 stay in M9, not scored, with no chart; the census's CI cadence as § 8.1 and § 8.2 write it, lavapipe in the smoke job; REQ-VAL-199 keeps 256 starts; GG-1's panels by like ε; the drift predicates read the stored latch, live values only for control flow; BZ-1C's starts by Path B, a list-of-starts chart the fallback; Hénon 1974 joins the rotating-frame set; Heggie & Sweatman 1991 in M9, not scored *(closes RQ-593, RQ-595, RQ-596, RQ-597, RQ-608, RQ-617, RQ-618, RQ-620, RQ-636, RQ-647 and RQ-654; amends R-636, R-637 and R-639; refines R-642)*"
   verify:
     method: review checklist
     detail: "periodic-orbit continuation once RQ-597 is ruled; reviewed by the physics reviewer; the atlas's 7 `li2021` rows are OC-1's; control: a family continued from a wrong seed must not match"
@@ -36743,10 +36787,9 @@
   - R-629
   - R-649
   - R-650
+  - R-669
   milestone: M9
-  rq:
-  - RQ-597
-  note: "Reproduces: Li, Li & Liao 2020 (arXiv:2007.10184): period, angular momentum and stability contours over (m₁, m₂) for one family (13,315 stable of 135,445). Chart: MassSimplex. Milestone: M9 (was M4; R-650). Compare: qualitative (rule 8). Tolerance: none: qualitative. Row LLL-1 of principia_dd_replication.md § \"5.12 Targets that wait for a chart, a diagnostic or data\"; layer replication, tier B; closed by TASK-M9-29 (was TASK-M4-25) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M4), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\"."
+  note: "Reproduces: Li, Li & Liao 2020 (arXiv:2007.10184): period, angular momentum and stability contours over (m₁, m₂) for one family (13,315 stable of 135,445). Chart: MassSimplex. Milestone: M9 (was M4; R-650). Compare: qualitative (rule 8). Tolerance: none: qualitative. Row LLL-1 of principia_dd_replication.md § \"5.12 Targets that wait for a chart, a diagnostic or data\"; layer replication, tier B; closed by TASK-M9-29 (was TASK-M4-25) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M4), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\". R-669 (1 Nov 2026, RQ-597 (b), after the SJTU partial check): no continuation is built; it stays in M9, reading \"not scored: no continuation\"; the atlas's `li2021` rows stay OC-1's closures, and the SJTU values are checked for a partial comparison as a peek. *Was (rq):* RQ-597."
 - id: REQ-VAL-330
   area: VAL
   statement: "The hierarchical stability limits, prograde and retrograde, must be reproduced from their primaries as distributions (V-11)."
@@ -37041,16 +37084,17 @@
   - file: decisions.md
     section: "R-650 — External replication becomes its own final milestone, M9, after the core build: it scores every external target, writes up the explained divergences and tightens the GPU path, and exits on its report; the internal correctness tests and the cheap anchor smoke tests (figure-eight closure, SP-1 run to its horizon, SP-2) stay continuous and block a merge as now; source ingest and transcription go on whenever idle; early peeks score a target as information only, in a peek log *(refines R-649; amends R-594, R-629, R-630, R-640 and R-642: where and when the targets are scored)*"
   verify:
-    detail: "the report has one row for each row of principia_dd_replication.md § 12.2's table and no others, so none for a calibration, REQ-INT-110, REQ-SYS-094 and REQ-SYS-095 (TASK-M9-39, a build task, not scored; R-654), REQ-VAL-340 itself or REQ-VAL-341 (TASK-M9-38's definition, which follows the report and has no target); each scored row has the four fields, with a mixed target's exact part and its statistical or qualitative part each carrying their own tier and outcome, a part not yet scored reading \"not scored\" with what it waits on, and an information run § 12.2 names sitting beside the score; a row not yet scored reads \"not scored\" with what it waits on, never a failure; every M9 calibration is in the report's list, with its target's tier and its proposal or what it waits on; REQ-VAL-332's raised-cap run is read in OC-1's, OC-3's and OC-6's rows; the peek log's rows are cited, never counted as scores; physics reviewer approved; the owner reviews it"
     method: review checklist
+    detail: "the report has one row for each row of principia_dd_replication.md § 12.2's table and no others, so none for a calibration, REQ-INT-110, REQ-SYS-094 and REQ-SYS-095 (TASK-M9-39, a build task, not scored; R-654), REQ-CHART-091 (TASK-M9-40, a build task, not scored; R-669), REQ-VAL-340 itself or REQ-VAL-341 (TASK-M9-38's definition, which follows the report and has no target); each scored row has the four fields, with a mixed target's exact part and its statistical or qualitative part each carrying their own tier and outcome, a part not yet scored reading \"not scored\" with what it waits on, and an information run § 12.2 names sitting beside the score; a row not yet scored reads \"not scored\" with what it waits on, never a failure; every M9 calibration is in the report's list, with its target's tier and its proposal or what it waits on; REQ-VAL-332's raised-cap run is read in OC-1's, OC-3's and OC-6's rows; the peek log's rows are cited, never counted as scores; physics reviewer approved; the owner reviews it"
   rulings:
   - R-649
   - R-650
+  - R-669
   milestone: M9
   rq:
   - RQ-669
   - RQ-670
-  note: "M9 exits on this report, not a gate (R-650); closed by TASK-M9-37. Statement *was:* \"every M9 calibration is put to the human with it.\" (REQ-SYS-095, code review 5730587922 of PR #375, C4; applied per R-369). Verify *was:* \"the report covers every live M9 requirement; …\" (code review 5730587922 of PR #375, C2; applied per R-369). Verify *was:* \"every live M9 requirement but REQ-INT-110, REQ-SYS-094 and REQ-SYS-095\" (code review 5730659053 of PR #375, N2; applied per R-369). Statement *was:* \"where its proposal has not landed (REQ-SYS-095, TASK-M9-39's, which the report does not wait on)\"; verify *was:* \"the report covers every M9 target, every live M9 requirement but REQ-INT-110, REQ-SYS-094 and REQ-SYS-095 (…), REQ-VAL-340 itself and REQ-VAL-341 (…); each row has the four fields\" (code review 5730758034 of PR #375, R1; applied per R-369). Verify *was:* \"a mixed target's exact and statistical parts each carrying their own tier and outcome\", which left out HU-1's and HU-2's qualitative parts; § 12.2 says \"its statistical or qualitative part\" (physics review 5730823192 of PR #375, M1; applied per R-369). What scores a statistical or qualitative (a) part in a task with no GPU run is RQ-669, open (physics review 5730823192 of PR #375, M3). What a definition's row carries as its outcome (REQ-VAL-127, REQ-VAL-221) is RQ-670, open (physics review 5730823192 of PR #375); both rows stay."
+  note: "M9 exits on this report, not a gate (R-650); closed by TASK-M9-37. Statement *was:* \"every M9 calibration is put to the human with it.\" (REQ-SYS-095, code review 5730587922 of PR #375, C4; applied per R-369). Verify *was:* \"the report covers every live M9 requirement; …\" (code review 5730587922 of PR #375, C2; applied per R-369). Verify *was:* \"every live M9 requirement but REQ-INT-110, REQ-SYS-094 and REQ-SYS-095\" (code review 5730659053 of PR #375, N2; applied per R-369). Statement *was:* \"where its proposal has not landed (REQ-SYS-095, TASK-M9-39's, which the report does not wait on)\"; verify *was:* \"the report covers every M9 target, every live M9 requirement but REQ-INT-110, REQ-SYS-094 and REQ-SYS-095 (…), REQ-VAL-340 itself and REQ-VAL-341 (…); each row has the four fields\" (code review 5730758034 of PR #375, R1; applied per R-369). Verify *was:* \"a mixed target's exact and statistical parts each carrying their own tier and outcome\", which left out HU-1's and HU-2's qualitative parts; § 12.2 says \"its statistical or qualitative part\" (physics review 5730823192 of PR #375, M1; applied per R-369). What scores a statistical or qualitative (a) part in a task with no GPU run is RQ-669, open (physics review 5730823192 of PR #375, M3). What a definition's row carries as its outcome (REQ-VAL-127, REQ-VAL-221) is RQ-670, open (physics review 5730823192 of PR #375); both rows stay. R-669 (1 Nov 2026): REQ-CHART-091, TASK-M9-40's chart, a build task and not scored, has no row; § 12.2's table gains REQ-VAL-342 and REQ-VAL-343, two definitions. *Was (verify):* \"…(TASK-M9-39, a build task, not scored; R-654), REQ-VAL-340 itself…\"."
 - id: REQ-VAL-341
   area: VAL
   kind: definition
@@ -37073,6 +37117,44 @@
   - R-650
   milestone: M9
   note: "R-649 item 6: verification deepening is post-build work; closed by TASK-M9-38."
+- id: REQ-VAL-342
+  area: VAL
+  kind: definition
+  statement: "The per-pixel syzygy-symbol field that TS-1 reads, and V-7 with Chernin et al.'s definitions, must be defined (R-72): the symbols recorded (the first two to four syzygies, in Tanikawa & Mikkola's convention after the D11 mirror remap), how a syzygy is detected and counted, and where the field is stored (R-669)."
+  source:
+  - file: docs/design/principia_dd_replication.md
+    section: 5.12 Targets that wait for a chart, a diagnostic or data
+  - file: decisions.md
+    section: "R-669 — The owner adopts the recommendations on the fifteen questions of 1 Nov but RQ-656: the Šuvakov-plane chart is one M9 task, its five targets waiting on it whole; a syzygy-symbol field only; N_scramble only; no periodic-orbit continuation, after the SJTU partial check; TR-1, MK-1 and SL-1 stay in M9, not scored, with no chart; the census's CI cadence as § 8.1 and § 8.2 write it, lavapipe in the smoke job; REQ-VAL-199 keeps 256 starts; GG-1's panels by like ε; the drift predicates read the stored latch, live values only for control flow; BZ-1C's starts by Path B, a list-of-starts chart the fallback; Hénon 1974 joins the rotating-frame set; Heggie & Sweatman 1991 in M9, not scored *(closes RQ-593, RQ-595, RQ-596, RQ-597, RQ-608, RQ-617, RQ-618, RQ-620, RQ-636, RQ-647 and RQ-654; amends R-636, R-637 and R-639; refines R-642)*"
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "DEFINITION (R-72): the definition written beside TS-1's row of principia_dd_replication.md § 5.12, approved by the physics reviewer, with how it relates to the crossing classifier of the symbolic-dynamics contract stated; checked against a sample of Tanikawa & Mikkola's printed symbol sequences before the maps are drawn"
+  rulings:
+  - R-72
+  - R-669
+  milestone: M9
+  note: "R-669 (1 Nov 2026, RQ-595 (b)): the symbol field only; TS-2's fixed-k velocity chart is not built. Closed by TASK-M9-28."
+- id: REQ-VAL-343
+  area: VAL
+  kind: definition
+  statement: "N_scramble, the number of democratic resonance phases before escape that PA-1's split (N_scramble ≥ 4) and SL-1's cut (N_scramble ≥ 2) read, must be defined (R-72) from its papers, Parischewsky, Trani & Leigh 2023 and Stone & Leigh 2019, with what counts as one scramble and how it is read from a run (R-669)."
+  source:
+  - file: docs/design/principia_dd_replication.md
+    section: 5.12 Targets that wait for a chart, a diagnostic or data
+  - file: decisions.md
+    section: "R-669 — The owner adopts the recommendations on the fifteen questions of 1 Nov but RQ-656: the Šuvakov-plane chart is one M9 task, its five targets waiting on it whole; a syzygy-symbol field only; N_scramble only; no periodic-orbit continuation, after the SJTU partial check; TR-1, MK-1 and SL-1 stay in M9, not scored, with no chart; the census's CI cadence as § 8.1 and § 8.2 write it, lavapipe in the smoke job; REQ-VAL-199 keeps 256 starts; GG-1's panels by like ε; the drift predicates read the stored latch, live values only for control flow; BZ-1C's starts by Path B, a list-of-starts chart the fallback; Hénon 1974 joins the rotating-frame set; Heggie & Sweatman 1991 in M9, not scored *(closes RQ-593, RQ-595, RQ-596, RQ-597, RQ-608, RQ-617, RQ-618, RQ-620, RQ-636, RQ-647 and RQ-654; amends R-636, R-637 and R-639; refines R-642)*"
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "DEFINITION (R-72): the definition written beside PA-1's row of principia_dd_replication.md § 5.12, both papers' words quoted, approved by the physics reviewer; where the two papers differ, the difference stated and queued, never chosen"
+  rulings:
+  - R-72
+  - R-669
+  milestone: M9
+  note: "R-669 (1 Nov 2026, RQ-596 (b)): N_scramble only; f_col is not built. Closed by TASK-M9-24, PA-1 being the target that runs on a chart; SL-1 reads it once a binary-plus-single chart exists."
 - id: REQ-PERF-001
   area: PERF
   statement: "The per-step energy evaluation must reuse the pairwise distances from the force computation."

@@ -322,7 +322,7 @@ prefix `7d160daf` matches, tracked, no open licence seen. It stays until ruled, 
    acceptable, and should the authors be asked for their long-decimal data? Does question 4's answer change with it?
 10. **BPZ cold records.** Commit both files (CC BY 4.0, 11.6 and 10.6 MB), or a sample? Is BZ-1 reopened for the cold sets?
 
-*Answered 1 Nov 2026 (R-668).* In
+*Answered 1 Nov 2026 (R-668; R-669 for questions 14 and 15 of the papers-11 to 13 triage, which isn't on `main`: Hénon 1974 joins the rotating-frame set, Heggie & Sweatman 1991 in M9, not scored).* In
 order: 1, the five families stay, marked "operator's own search, unreviewed", closure peeks only, never targets (the
 owner's second message reversing his first), `bhhsat` the same unless Davoust & Broucke's comparison matches,
 `suvakov_pc` closure only; 2, yes, marked "inferred"; 3 and 9, values with credit and citation under the owner's

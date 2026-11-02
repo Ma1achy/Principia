@@ -27762,7 +27762,10 @@ reviews handled as follow-ups. To re-review after fixes, re-request Copilot as a
 split goes ahead, and TASK-M2-52 after it).*
 *Amended in part by R-649 (its note on RQ-583's targets, "they cannot pass their gates as written": no external
 target has a gate to pass; RQ-608 and RQ-618 stay open on what is built).*
-*Still in force: all of it but its agent-count and cloud clauses and its five-chart hold; R-262, R-277, R-357 and R-391
+*Amended in part by R-669 (1 Nov 2026; RQ-608 and RQ-618 (a): "no chart build yet" gives way to one M9 task that
+builds the Šuvakov-plane chart, TASK-M9-40, its five targets waiting on it).*
+*Still in force: all of it but its agent-count and cloud clauses, its five-chart hold and its "no chart build yet",
+which R-669 makes one M9 task; R-262, R-277, R-357 and R-391
 stand as they were before it, and the weekly consistency audit stays adopted, report-only and never blocking, run on
 demand when the owner asks (the owner's ruling of 28 Oct 2026 on its RQ-605 clause, quoted in its entry in
 decisions.md); the hold covers only the replication charts (R-637); its note on RQ-583's targets reads without gates
@@ -27899,10 +27902,13 @@ seed, two gates and the labels).*
 reproductions unblock TASK-M3-62 and TASK-M3-65 provisionally).*
 *Amended in part by R-649 (its RQ-591 line: "Layer V targets gate their milestone" gives way, for every external
 target, to R-649 item 1, a measurement and never a gate; its layer-R half stands).*
+*Amended in part by R-669 (1 Nov 2026; RQ-617 (a): the census's CI cadence is the proposal's § 8.1 and § 8.2 as
+written, its smoke job running lavapipe).*
 *Still in force: all of it but its RQ-598 line's "TASK-M3-62/65 keep waiting until data arrives; if none comes, they
 stay waiting, no substitute data", which gives way to R-640 and R-642 (R-642 governs where they differ), and its
 RQ-591 line's "Layer V targets gate their milestone (statistical ones on their stated tolerance)", which gives way to
-R-649: no external target gates; each is a measurement, scored in M9 (R-650).*
+R-649: no external target gates; each is a measurement, scored in M9 (R-650); and the census's CI cadence, read as
+R-669 gives it.*
 *28 Oct 2026 · the owner's message of that afternoon; ported 29 Oct 2026; applied in `REVIEW_QUEUE.md` (RQ-591,
 RQ-598 and RQ-599 closed; RQ-617 and RQ-619 new; RQ-577 and RQ-593 to RQ-597 noted), `docs/archive/review_queue/M0.md`
 (the three closed entries, moved with their ruling), R-636's forward line, TASK-M2-36 and TASK-M2-52 (the hold
@@ -28014,8 +28020,10 @@ REQ-VAL-330 (rulings, source, note).
 ## R-639 — The Šuvakov-plane targets split into a closure part, which stays in M4 or M8 and runs now, and a chart part, which moves to gate the task that builds the Šuvakov chart and is not dropped, a target whose split isn't clean being queued; a read-only licence audit of every committed PDF; none of the five targets splits cleanly, so all five are queued *(answers RQ-608)*
 *Amended in part by R-649 (its chart part "moves to gate the task that builds the Šuvakov chart": no target gates a
 task or a milestone; RQ-618 stays open on what is built).*
-*Still in force: all of it but the chart part's gate (R-649); the five targets stay queued as it found them (RQ-618),
-and score in M9 (R-650).*
+*Amended in part by R-669 (1 Nov 2026; RQ-608 and RQ-618 (a): no target splits; the five move whole to wait on the
+Šuvakov-plane chart's task, TASK-M9-40, HU-1 and HU-2 gaining no closure part).*
+*Still in force: all of it but the chart part's gate (R-649) and the split, which R-669 replaces by the move whole; the
+five targets wait on TASK-M9-40 and score in M9 (R-650); the licence audit stands.*
 *28 Oct 2026 · the owner's message of that day; ported 29 Oct 2026; applied in `REVIEW_QUEUE.md` (RQ-608 noted, RQ-618
 new), TASK-M4-23 and TASK-M8-99 (notes) and `plan/rule_groups.yaml`; the audit run by the orchestrator (R-643)*
 
@@ -28127,7 +28135,10 @@ R-641 is in the "design" group of `plan/rule_groups.yaml`. Changes REQ-VAL-297 (
 ## R-642 — RQ-598's data: the authors' own data unblocks and scores directly, BR-1 against the 180 NVM trajectories and GG-1 against the Fig. 1 extraction at its stated precision; reproductions unblock provisionally, labelled "vs <source>", re-scored when the authors' full data arrives, and qualify only on the paper's set-up with a converged arbitrary-precision integrator; our Brutus from NvMgeneration at 98906f4 qualifies, two third-party sets are rejected; the owner emails both authors *(amends R-637 and R-640; answers RQ-614 and in part RQ-615)*
 *Amended in part by R-650 (its "unblocks" and "scores directly": the data's standing is as ruled; the scoring itself
 is M9's, or a peek's, information only).*
-*Still in force: all of it; its scoring happens in M9, or early as a peek (R-650).*
+*Refined by R-669 (1 Nov 2026; RQ-620: GG-1's per-point panel, a reproduction against the panel at its own ε, our
+lifetimes per point against the ε = 10⁻⁷⁰ panel and by KS against the ε = 10⁻⁶ one, the reliability mask beside).*
+*Still in force: all of it; its scoring happens in M9, or early as a peek (R-650); item 1's per-point panel as R-669
+refines it.*
 *28 Oct 2026 · the owner's message of that day, which governs wherever it differs from R-640 and R-641; ported
 29 Oct 2026 with R-638; applied in `docs/incoming/2026-10-28_rq598_data/README.md` § 6, `REVIEW_QUEUE.md` (RQ-614
 closed, RQ-615 narrowed), `docs/archive/review_queue/M0.md`, `docs/design/principia_dd_replication.md` (dated notes in
@@ -29304,8 +29315,8 @@ The second message, the same day, item (1), verbatim:
 - **Item 1, as the second message reverses it.** The five site-note families (`r4new`, `rosette`, `bhhsat`, `bhunt`, `pancake`; 81 rows of the atlas snapshot) stay in the committed catalogue, marked "operator's own search, unreviewed". They are closure peeks only, never targets, as item 6's unreviewed sources are. `bhhsat` is treated the same unless the comparison with Davoust & Broucke 1982 matches, in which case that paper is cited for it. `suvakov_pc` (personal communication) is closure only. The first message's removal is withdrawn by the second: nothing leaves the catalogue.
 - **Item 2.** A digit match counts as a trace; a row so traced is marked "inferred".
 - **Items 3 and 9: the data-reuse rule, the owner's standing rule as he states it.** Values published in a paper, or in a public database a paper points to, may be stored with credit and citation, with no permission needed. The SJTU tables' values are committed with their citation, never their code; Li, Tao, Li & Liao 2025's Table 1 is transcribed twice and diffed (R-594 item 4). Authors are not emailed, but as a last resort.
-- **Item 4.** For rotating-frame closure, Kapela & Simó 2017 and Davoust & Broucke 1982 suffice, with Titov's rotating-frame orbits.
-- **Item 5.** Hierarchical triples are out of scope for now, parked with the v2+ 3D extension, and the triage's M9 list shrinks by them. V-11 (REQ-VAL-330), whose target is "hierarchical stability limits", is parked with them: it reads "not scored: parked" in the M9 report, and its requirement, calibration, task and data stay (applied per R-369: the target is a hierarchical triple by its own statement, and parking retires nothing). The binary-plus-single targets TR-1, MK-1 and SL-1 are not hierarchical triples; whether the parking reaches them is RQ-593's residual.
+- **Item 4.** For rotating-frame closure, Kapela & Simó 2017 and Davoust & Broucke 1982 suffice, with Titov's rotating-frame orbits. R-669 adds Hénon 1974 to the set.
+- **Item 5.** Hierarchical triples are out of scope for now, parked with the v2+ 3D extension, and the triage's M9 list shrinks by them. V-11 (REQ-VAL-330), whose target is "hierarchical stability limits", is parked with them: it reads "not scored: parked" in the M9 report, and its requirement, calibration, task and data stay (applied per R-369: the target is a hierarchical triple by its own statement, and parking retires nothing). The binary-plus-single targets TR-1, MK-1 and SL-1 are not hierarchical triples; whether the parking reaches them was RQ-593's residual, which R-669 rules.
 - **Item 6.** Unreviewed and AI-assisted sources (Habl, Majumder, Adamini, and the 2026 preprints in papers-11 to 13) are peeks only, never targets.
 - **Item 7.** Li & Liao's free-fall table replaces hand transcription for LL-1 if a sample checks against the paper.
 - **Item 8.** The Horn paper and its 9.7 MB file are committed once CC BY is confirmed; the 930 MB file stays out.
@@ -29327,3 +29338,42 @@ The second message, the same day, item (1), verbatim:
 R-668 is in the "design" group of `plan/rule_groups.yaml`, with R-630 and R-661.
 
 Adds REQ-SYS-096; changes REQ-GUI-229, REQ-VAL-330 and REQ-VAL-331 (notes).
+
+## R-669 — The owner adopts the recommendations on the fifteen questions of 1 Nov but RQ-656: the Šuvakov-plane chart is one M9 task, its five targets waiting on it whole; a syzygy-symbol field only; N_scramble only; no periodic-orbit continuation, after the SJTU partial check; TR-1, MK-1 and SL-1 stay in M9, not scored, with no chart; the census's CI cadence as § 8.1 and § 8.2 write it, lavapipe in the smoke job; REQ-VAL-199 keeps 256 starts; GG-1's panels by like ε; the drift predicates read the stored latch, live values only for control flow; BZ-1C's starts by Path B, a list-of-starts chart the fallback; Hénon 1974 joins the rotating-frame set; Heggie & Sweatman 1991 in M9, not scored *(closes RQ-593, RQ-595, RQ-596, RQ-597, RQ-608, RQ-617, RQ-618, RQ-620, RQ-636, RQ-647 and RQ-654; amends R-636, R-637 and R-639; refines R-642)*
+*1 Nov 2026 · the owner's second message of that day, item (2); ported 2 Nov 2026; applied in `docs/design/principia_dd_replication.md` § 3 (a bullet), § 5.10, § 5.12 and § 7 (dated lines), `docs/design/principia_dd_simstate_payload.md` § 1 (a dated line), `docs/design/principia_honesty_precision.md` § 6 (a clause), `docs/incoming/2026-10-27_validation_plan/PLAN.md` (a dated note under BZ-1C), `docs/incoming/2026-10-27_validation_plan/PROPOSAL_occupant_matrix_census_2026-10-27.md` § 8.1 (a dated note), `docs/incoming/2026-10-31_library_triage/SUMMARY.md` (its dated note), the forward lines of R-636, R-637, R-639 and R-642, `docs/archive/review_queue/M0.md` (eleven entries moved), `REVIEW_QUEUE.md`, `plan/reviewers/physics.md` § 8, REQ-INT-045, REQ-PAY-112, REQ-VAL-199, REQ-VAL-295, REQ-VAL-311 to REQ-VAL-314, REQ-VAL-316, REQ-VAL-318, REQ-VAL-319, REQ-VAL-321, REQ-VAL-323, REQ-VAL-325 to REQ-VAL-327 and REQ-VAL-329 (reqio), REQ-CHART-091, REQ-VAL-342 and REQ-VAL-343 (reqio, new), TASK-M9-40 (new), TASK-M3-41, TASK-M9-22 to TASK-M9-24, TASK-M9-27 to TASK-M9-29, TASK-M9-35 and TASK-M9-37, `plan/tasks.yaml` and `plan/rule_groups.yaml`*
+
+The owner's words, 1 Nov 2026, verbatim, the second message's item (2) and what follows it:
+
+> (2) The 15 questions: go with your recommendations on all of them, namely RQ-608/618 (a), 595 (b), 596 (b), 597 (b) after the SJTU partial check, 593 leftover (c), 617 (a) with lavapipe in the smoke job, 647 (a) with the detectable effect size stated in REQ-VAL-199, 620 as recommended, 636 (a), 637 (b), 638 (a), 654 (a)→(b) fallback, 656 (a), 14 yes (Hénon 1974, values with citation, PDF local), 15 treated like RQ-593 (in M9, not scored). RQ-610 stays open. RQ-613 probe as a peek: fine. Swap Parischewsky to the CC BY SciPost copy. Transcribe Hénon from the page, as found.
+
+*Context.* The fifteen are the orchestrator's B list of 1 Nov (`orch/tasks/rq-pass-1nov.md`), twelve questions from thirteen queue entries plus RQ-593's residual, and the two questions of the papers-11 to 13 triage (`orch/tasks/triage-11-13/summary.md`). The recommendations the owner adopts, as the B list states them, are quoted below. Question 14 there: "add Henon 1974 to rotating-frame set?" (its NOW-22: "Rotating-frame closure at L≠0 and **unequal masses**, with the authors' own T and phi", "Batch transcription error in one row; one row has a collision at T/2"). Question 15: "Heggie & Sweatman 1991 scattering, park or M9?" (its M9-34: "Binary-single scattering: moves to parked if ruling 5 is meant to cover it"). RQ-656 and RQ-610 are ruled apart, the next day. The two entries of the list the owner calls 637 and 638 are on PR #360's branch, beside the ruling they ask of; they are not on this branch, so they are not closed here.
+
+*What it decides, question by question* (each recommendation quoted from the B list):
+
+- **RQ-608 and RQ-618, option (a).** "One M9 chart task; all five targets move to it whole. HU-1 and HU-2 gain no closure part, because HU-3 already tests it." The Šuvakov-plane chart, `SuvakovPlane`, at equal masses and at fixed m₃, is defined (R-72) and built by one M9 task, TASK-M9-40 (REQ-CHART-091). OC-4 on the plane, AT-D1, AT-D3, HU-1 and HU-2 wait on it whole: TASK-M9-27 and TASK-M9-35 depend on it, and none of the five gains a closure part. R-636's "no chart build yet" gives way to this one M9 task, and R-639's split to the move whole.
+- **RQ-595, option (b).** "Symbol field only (TS-1, plus V-7 once the definitions are in hand); TS-2 waits." The per-pixel syzygy-symbol field is defined (R-72) and built by TASK-M9-28 (REQ-VAL-342). TS-1 runs on it; V-7 (REQ-VAL-327) when Chernin et al.'s definitions are in hand; TS-2 (REQ-VAL-326) reads "not scored: no fixed-k velocity chart" in the M9 report. The B list's note stands: "RQ-632's crossing classifier may reduce the work".
+- **RQ-596, option (b).** "N_scramble only (PA-1's 82.1/17.9 split)." N_scramble is defined (R-72) and built by TASK-M9-24 (REQ-VAL-343), for PA-1's split and SL-1's cut. f_col is not built: TR-1's colouring reads "not scored: no f_col".
+- **RQ-597, option (b), after the SJTU partial check.** "Don't; LLL-1 waits and the `li2021` rows stay closures." No continuation is built. LLL-1 (REQ-VAL-329) reads "not scored: no continuation". The SJTU tables' values, committed under R-668's item 3, are checked first for a partial comparison with LLL-1, as a peek (`docs/verification/peek_log.md`); a partial comparison found is a peek's row, information only.
+- **RQ-593's residual, option (c).** "All three stay in M9, "not scored: no chart"." TR-1, MK-1 and SL-1 are binary-plus-single scatterings, not hierarchical triples, so R-668's parking does not reach them; no binary-plus-single chart is built, and each reads "not scored: no chart". RQ-593's option (c) stood meanwhile and now stands as ruled.
+- **Question 15, treated like RQ-593.** Heggie & Sweatman 1991 (planar binary-single scattering near triple collision, MNRAS 250, 555) is in M9, not scored, with no requirement: it waits on a binary-plus-single chart, as TR-1, MK-1 and SL-1 do.
+- **Question 14, yes.** Hénon 1974 (Celest. Mech. 10, 375) joins the rotating-frame closure set beside R-668 item 4's: its values stored with citation, its PDF held locally (all rights reserved), transcribed from the page, not from the batch, which misreads Table II's `A = .005` row (x₁ `.24516190` on p. 383, `.24916190` in the batch). Its `A = 0` family 2 row has a binary collision at T/2 and needs a regularised occupant.
+- **RQ-617, option (a), lavapipe in the smoke job.** "§ 8.1 and § 8.2 as written; cheapest", "with the smoke job stated to include lavapipe". `census-smoke` runs lavapipe; the Metal runner runs weekly or on demand. R-637's "lavapipe in cloud per PR" reads as that smoke job, on the PRs § 8.1 names, and "Metal runner nightly/weekly" as § 8.2's weekly.
+- **RQ-647, option (a).** "Keep 256 (1.5×10⁵ time units, D_c 0.12)." REQ-VAL-199 keeps its 256 starts and states the effect size it can detect, as R-661's port wrote it; outcome statistics are BZ-1C's.
+- **RQ-620, as recommended.** "(b) for reproductions, with (a) for our lifetimes and (c)'s mask reported beside it." A reproduction ("vs Brutus, run here") is compared per point only with the panel at its own ε: at ε = 10⁻⁶ with the left panel, at ε = 10⁻⁷⁰ with the right. Our lifetimes are compared per point with the ε = 10⁻⁷⁰ panel and with the ε = 10⁻⁶ panel by KS only. Beside them, the reliability mask, the points where the two panels agree within one LUT step, is reported.
+- **RQ-636, option (a).** "Latch at read time, live value only for march control flow; reword three texts." The read-time predicates (`drift_suspect`, `suspect_energy`, `suspect_lz`) and the display read the stored latches; a threshold or suspect decision in the march's control flow reads the live f32 value, never an unpacked latch. REQ-INT-045, payload § 1 and REQ-PAY-112 say so, and REQ-PAY-112's control moves to a march branch. The limit stands recorded: near a zero `E_0` a sample can read differently stored and live (the physics review's 1.5×10⁻⁵).
+- **RQ-654, option (a), (b) the fallback.** "Path B batch, f64 rounded once, if a batch can be dispatched", "with (b) as the fallback if a batch can't be dispatched". BZ-1C's starts reach the f32 kernel as a Path B batch, each f64 start rounded once to f32; if a batch of injected starts can't be dispatched, by a list-of-starts chart (R-594 item 6), built when BZ-1C is adopted.
+- **RQ-613's probe, as a peek.** The owner: "RQ-613 probe as a peek: fine." It runs as a peek when idle; RQ-613 stays open.
+- **The Parischewsky copy.** The committed arXiv copy is swapped for SciPost's CC BY 4.0 version (a data PR).
+
+*Applied per R-369:*
+
+- **The chart's requirement and task.** "One M9 chart task" needs a requirement to close (`plan/WORKFLOW.md` § "Task files"): REQ-CHART-091, a definition (R-72), since the chart reference has no Šuvakov-plane section, closed by TASK-M9-40. The five targets keep their tasks and requirements; "move to it whole" is their dependency on it.
+- **The field and N_scramble** are missing definitions (R-72; RQ-596's (a) named them so): REQ-VAL-342 (the field) and REQ-VAL-343 (N_scramble), each closed by the task that first needs it. N_scramble is TASK-M9-24's, PA-1 being the target that runs on a chart; SL-1 reads it when a chart exists.
+- **"Not scored" with its reason** is R-650's listing and TASK-M9-37's (a part not yet scored reads "not scored" with what it waits on); no requirement is retired.
+- **The two the owner calls 637 and 638** are left for the port once PR #360 merges: this branch does not hold their entries or the ruling they ask of.
+
+*What it amends:* **R-636**, its "no chart build yet" (the Šuvakov-plane chart is one M9 task); **R-639**, its split (the five move whole, no closure part); **R-637**, its CI cadence words (§ 8.1 and § 8.2, lavapipe in the smoke job). It refines **R-642**, item 1 (GG-1's per-point panel). It closes **RQ-593**, **RQ-595**, **RQ-596**, **RQ-597**, **RQ-608**, **RQ-617**, **RQ-618**, **RQ-620**, **RQ-636**, **RQ-647** and **RQ-654**.
+
+R-669 is in the "design" group of `plan/rule_groups.yaml`, with R-639 and R-661.
+
+Adds REQ-CHART-091, REQ-VAL-342 and REQ-VAL-343; changes REQ-INT-045 and REQ-PAY-112 (statement, verify, note), REQ-VAL-199, REQ-VAL-295, REQ-VAL-311 to REQ-VAL-314, REQ-VAL-316, REQ-VAL-318, REQ-VAL-319, REQ-VAL-321, REQ-VAL-323, REQ-VAL-325 to REQ-VAL-327 and REQ-VAL-329 (rulings, rq, notes).
