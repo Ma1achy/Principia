@@ -94,12 +94,16 @@ fn mock_compass_steer_physical_every_cell_on_the_fixture_lights() {
     let (mut app, mut h) = app_with(&p, d, COMPASS_JACOBI);
     let before = app.snapshot().sim.plane.clone();
     let start_frame = app.snapshot().sim.slice.frame;
+    let mut moved = None;
     for (i, j) in upper() {
         let (rows, depth) = (app.console().len(), app.snapshot().history.undo_depth);
         click_cell(&mut h, &mut app, i, j);
         let after = app.snapshot().sim.plane.clone();
         // One SetField carrying the basis: on the slice frame too where the plane takes it (R-459 G4).
         let frame = app.snapshot().sim.slice.frame;
+        if frame != start_frame {
+            moved = Some(frame);
+        }
         let kind = if frame == start_frame {
             "basis"
         } else {
@@ -127,9 +131,18 @@ fn mock_compass_steer_physical_every_cell_on_the_fixture_lights() {
         );
         ctrl_z(&mut h, &mut app);
         assert_eq!(app.snapshot().sim.plane, before, "undone by one Ctrl+Z");
-        assert_eq!(app.snapshot().sim.slice.frame, start_frame, "the frame too");
+        check_frame_undone(app.snapshot().sim.slice.frame, start_frame);
         assert_eq!(app.snapshot().history.undo_depth, depth);
     }
+    let moved = moved.expect("a steer that took the slice normal");
+    rejects("an undo that leaves the steer's frame", || {
+        check_frame_undone(moved, start_frame)
+    });
+}
+
+/// Asserts one Ctrl+Z after a steer left the slice frame `got` the frame it started on.
+fn check_frame_undone(got: SliceFrame, start: SliceFrame) {
+    assert_eq!(got, start, "the frame too");
 }
 
 /// `sim` from the mock at the plane `p`.
