@@ -1,6 +1,7 @@
 //! R-305: `mutants-check`, a required status check on `main`, reports on every pull request's merge-ready run (R-656)
-//! and passes when the PR's diff has no mutant. A diff that names no `.rs` file (a docs-only or rulings PR) skips each shard's setup and run;
-//! a diff naming Rust source runs `cargo mutants`, and a shard of it with nothing to mutate passes (REQ-VAL-148).
+//! and passes when the PR's diff has no mutant. A diff that names no `.rs` file under `crates/` (a docs, rulings or
+//! xtask-only PR; R-677: mutants run only when `crates/` source changes) skips each shard's setup and run; a diff naming
+//! Rust source under `crates/` runs `cargo mutants`, and a shard of it with nothing to mutate passes (REQ-VAL-148).
 //!
 //! These tests run the `mutants` and `mutants-verdict` jobs of `.github/workflows/mutants.yml` as a runner would, step
 //! by step, on the merge-ready run (the `merge-ready` label's): each step's `if:` is evaluated (the subset of GitHub's
@@ -395,6 +396,26 @@ diff --git \"a/workbench/a b.rs\" \"b/workbench/a b.rs\"
 +// A comment.
 ";
 
+/// Rust source outside `crates/`: xtask's, which the merge-ready head's mutants do not run on (R-677).
+const XTASK_DIFF: &str = "\
+diff --git a/xtask/src/ci.rs b/xtask/src/ci.rs
+--- a/xtask/src/ci.rs
++++ b/xtask/src/ci.rs
+@@ -1 +1,2 @@
+ //! The ci runner.
++// A comment.
+";
+
+/// Rust source under `crates/`, the path quoted as git quotes one with a space in it.
+const QUOTED_CRATES_DIFF: &str = "\
+diff --git \"a/crates/kernel/src/a b.rs\" \"b/crates/kernel/src/a b.rs\"
+--- \"a/crates/kernel/src/a b.rs\"
++++ \"b/crates/kernel/src/a b.rs\"
+@@ -1 +1,2 @@
+ //! A module.
++// A comment.
+";
+
 /// The setup a shard with no mutant must not pay: every `uses:` but the checkout and the report's upload.
 fn setup(used: &[String]) -> Vec<&String> {
     used.iter()
@@ -415,15 +436,17 @@ fn shard(yml: &str, tag: &str, diff: &str) -> Run {
     )
 }
 
-/// R-305: on a diff naming no `.rs` file, or on no diff at all, a shard passes saying it has no mutant, having set
-/// up nothing and called neither cargo nor the installers; on a diff naming Rust source it sets up and runs
-/// `cargo mutants --in-diff` on the diff, and passes when cargo-mutants finds nothing to mutate.
+/// R-305: on a diff naming no `.rs` file under `crates/` (R-677), or on no diff at all, a shard passes saying it has no
+/// mutant, having set up nothing and called neither cargo nor the installers; on a diff naming Rust source under
+/// `crates/`, its path quoted or not, it sets up and runs `cargo mutants --in-diff` on the diff, and passes when
+/// cargo-mutants finds nothing to mutate.
 fn shard_passes_with_no_mutant(yml: &str) {
     for (tag, diff) in [
         ("docs", DOCS_DIFF),
         ("empty", ""),
         ("reference", REFERENCE_DIFF),
         ("workbench", WORKBENCH_DIFF),
+        ("xtask", XTASK_DIFF),
     ] {
         let run = shard(yml, tag, diff);
         println!("mutants shard 3/8, {tag} diff:\n{}", run.log);
@@ -437,25 +460,27 @@ fn shard_passes_with_no_mutant(yml: &str) {
             run.log
         );
     }
-    let run = shard(yml, "comment", COMMENT_DIFF);
-    println!(
-        "mutants shard 3/8, Rust comment diff:\n{}calls:\n{}",
-        run.log, run.calls
-    );
-    assert!(
-        run.calls.lines().any(|c| c.starts_with("cargo mutants")
-            && c.contains("--in-diff")
-            && c.contains("--shard 3/8"))
-            && !setup(&run.used).is_empty(),
-        "a shard of a diff naming Rust source skipped cargo mutants: calls {:?}, log {}",
-        run.calls,
-        run.log
-    );
-    assert!(
-        run.ok && run.log.contains("no mutant in this shard"),
-        "a shard of a Rust diff with nothing to mutate failed: {}",
-        run.log
-    );
+    for (tag, diff) in [("comment", COMMENT_DIFF), ("quoted", QUOTED_CRATES_DIFF)] {
+        let run = shard(yml, tag, diff);
+        println!(
+            "mutants shard 3/8, Rust {tag} diff:\n{}calls:\n{}",
+            run.log, run.calls
+        );
+        assert!(
+            run.calls.lines().any(|c| c.starts_with("cargo mutants")
+                && c.contains("--in-diff")
+                && c.contains("--shard 3/8"))
+                && !setup(&run.used).is_empty(),
+            "a shard of a diff naming Rust source skipped cargo mutants ({tag}): calls {:?}, log {}",
+            run.calls,
+            run.log
+        );
+        assert!(
+            run.ok && run.log.contains("no mutant in this shard"),
+            "a shard of a Rust diff with nothing to mutate failed ({tag}): {}",
+            run.log
+        );
+    }
 }
 
 #[test]
@@ -466,7 +491,7 @@ fn mutants_shard_passes_a_diff_with_no_mutant() {
 // Read only by the controls.
 #[cfg(feature = "controls")]
 const GATE: &str =
-    "if grep -E '^\\+\\+\\+ .*\\.rs\"?[[:space:]]*$' \"$RUNNER_TEMP/pr.diff\" | grep -Ev '^\\+\\+\\+ \"?b/(docs|plan|scripts|workbench)/' > /dev/null; then";
+    "if grep -E '^\\+\\+\\+ \"?b/crates/.*\\.rs\"?[[:space:]]*$' \"$RUNNER_TEMP/pr.diff\" > /dev/null; then";
 
 negative_control!(
     mutants_shard_passes_a_diff_with_no_mutant,
@@ -495,6 +520,47 @@ mod never_rust {
                 "the control's gate text is not in mutants.yml"
             );
             shard_passes_with_no_mutant(&yml.replace(GATE, "if false; then"))
+        }
+    );
+}
+
+mod any_rust {
+    use super::*;
+    negative_control!(
+        mutants_shard_passes_a_diff_with_no_mutant,
+        "a shard that takes Rust source anywhere but crates/ for a mutant, as before R-677",
+        expected = "set up or ran more than the diff, or failed (xtask)",
+        {
+            let yml = mutants_yml();
+            assert!(
+                yml.contains(GATE),
+                "the control's gate text is not in mutants.yml"
+            );
+            shard_passes_with_no_mutant(&yml.replace(
+                GATE,
+                "if grep -E '^\\+\\+\\+ .*\\.rs\"?[[:space:]]*$' \"$RUNNER_TEMP/pr.diff\" \
+                 | grep -Ev '^\\+\\+\\+ \"?b/(docs|plan|scripts|workbench)/' > /dev/null; then",
+            ))
+        }
+    );
+}
+
+mod crates_unquoted {
+    use super::*;
+    negative_control!(
+        mutants_shard_passes_a_diff_with_no_mutant,
+        "a shard that reads only an unquoted crates/ path as Rust source",
+        expected = "a shard of a diff naming Rust source skipped cargo mutants (quoted)",
+        {
+            let yml = mutants_yml();
+            assert!(
+                yml.contains(GATE),
+                "the control's gate text is not in mutants.yml"
+            );
+            shard_passes_with_no_mutant(&yml.replace(
+                GATE,
+                "if grep -E '^\\+\\+\\+ b/crates/.*\\.rs[[:space:]]*$' \"$RUNNER_TEMP/pr.diff\" > /dev/null; then",
+            ))
         }
     );
 }

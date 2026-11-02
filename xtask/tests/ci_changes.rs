@@ -5,28 +5,40 @@
 //! R-662, the owner's words of 31 Oct 2026: "Yeah and if it's like python don't check? Only the actual Principia CODE
 //! matters in ci? If you get me. So GUI and Physics etc for Principia, not random doc stuff".
 //!
-//! - `ci_changes_classifies_conservatively`: `scripts/ci_changes.sh classify` calls a change docs-only only when every
-//!   path is on its allowlist, the corpus, the plan's prose and Python, the scripts and the workbench, and skips the
-//!   GPU suites only when no path is a GPU path; an empty change, a workflow, an unknown top-level path and a path that
-//!   merely starts like an allowed one run everything, and so does a mixed change.
-//! - `ci_changes_files_code_reads_run_everything`: each pattern of the script's `reads_code` list, the data code loads
-//!   for behaviour, the classifier itself (R-662) and the containment, is touched through real files it names, each
+//! R-677, the owner's words of 2 Nov 2026: "a three-tier classifier in scripts/ci_changes.sh. (a) CODE … → full CI as
+//! now. (b) PLAN-DATA: the reads_code files … → only the checks that read them … (c) DOCS: as now, cheap checks only.
+//! Mutants run only when crates/ source changes, on the merge-ready head."
+//!
+//! - `ci_changes_classifies_conservatively`: `scripts/ci_changes.sh classify` gives each change its tier, the highest
+//!   of its paths': docs only when every path is on its allowlist, the corpus, the plan's prose and Python, the scripts
+//!   and the workbench; data when the plan's task data or the GUI's artboards and references are among them; code
+//!   otherwise. It skips the GPU suites only when no path is a GPU path, and runs mutants only when a `.rs` file under
+//!   `crates/` changes. An empty change, a workflow, an unknown top-level path and a path that merely starts like an
+//!   allowed one run everything, and so does a mixed change; `docs_only` is true exactly on a data or docs change.
+//! - `ci_changes_files_code_reads_run_everything`: each pattern of the script's `reads_code` list, the data only full
+//!   CI reads, the classifier itself (R-662) and the containment, is touched through real files it names, each
 //!   classifying as code: not docs-only, GPU suites run.
+//! - `ci_changes_data_lands_in_tier_b`: each pattern of the script's `plan_data` and `gui_data` lists (R-677), touched
+//!   through real files it names, classifies as data, with its own flag, no GPU suite and no mutants.
 //! - `ci_changes_a_script_runs_go_through_is_code`: a script named as a workflow step's `shell:` or as nextest's wrapper
 //!   runs that step or test inside it, so a wrong edit to it must run them: each classifies as code.
 //! - `ci_changes_no_file_code_reads_is_docs_only`: a static scan, best effort, of the string literals in every crate's
 //!   `src/`, `tests/` and `build.rs`, and in `xtask/`, for a data file they name, and of their `src/` for the plan's
-//!   markdown; none may classify as docs-only, so a new reader cannot silently leave its data docs-only. Prose a test
+//!   markdown; none may classify as docs, so a new reader cannot silently leave its data in tier (c). Prose a test
 //!   checks, and a test of a script, are not data (R-662). A `/`-led literal, the tail of
 //!   `concat!(env!("CARGO_MANIFEST_DIR"), "/../../…")`, is read from its package directory. Its limit: a reader
 //!   walking a directory, or building a path from more than one literal, is not seen; the script lists those by hand.
+//! - `ci_changes_data_tier_runs_every_reader`: on a data change `ci-workspace` runs the tests of every reader of what
+//!   changed, as that scan finds them and as the walkers listed here by hand read them: each test file reading tier
+//!   (b)'s data, and each xtask module's own tests, is among the `--test`s of the step its flag runs (R-677).
 //! - `ci_changes_gates_pass_only_on_the_verdict`: the gates `ci`, `xtask-ci`, `gpu-kernel`, `gpu-metal` and
 //!   `gpu-lavapipe` run whatever their jobs ended in, read every one's result and a flag set from the classification,
 //!   and (their one-line scripts, run under bash) pass a job skipped on that verdict, and fail when the
 //!   classification failed, when a job its verdict runs was skipped, and on any failed or cancelled job.
 //! - `ci_changes_jobs_skip_on_the_verdict`: the `changes` job runs the classifier and cannot be skipped; the build,
-//!   test and GPU jobs wait on it alone and skip on its verdict (docs-only, or no GPU-path file); `ci-workspace` runs
-//!   its tests or, on a docs-only pull request, the cheap checks, and passes the verdict to the gate `ci`.
+//!   test and GPU jobs wait on it alone and skip on its verdict (data or docs, or no GPU-path file); `ci-workspace`
+//!   runs its tests or, on a data or docs pull request, the cheap checks, and on a data one its readers' tests, built
+//!   one test binary at a time, and passes the verdict to the gate `ci`.
 //! - `ci_changes_no_skipped_job_reports_a_required_name`: every workflow that runs on pull requests has no
 //!   workflow-level `paths:` or `paths-ignore:`; the required checks are each reported by exactly one job, but
 //!   `mutants-check`, which `mutants.yml` posts and no job bears (R-656, the merge-ready run); a job that
@@ -84,8 +96,20 @@ fn edited(rel: &str, from: &str, to: &str) -> String {
 
 // ---- The classifier ----------------------------------------------------------------------------------------------
 
-/// `script` (the text of `scripts/ci_changes.sh`) run as `classify` on `paths`: its `(docs_only, gpu)` verdict.
-fn classify(script: &str, paths: &[&str]) -> (bool, bool) {
+/// A change's verdict, as `classify` prints it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct Verdict {
+    /// `code`, `data` or `docs`.
+    tier: String,
+    gpu: bool,
+    plan_data: bool,
+    gui_data: bool,
+    mutants: bool,
+}
+
+/// `script` (the text of `scripts/ci_changes.sh`) run as `classify` on `paths`: its verdict. Its `docs_only` must be
+/// true exactly when the tier is data or docs.
+fn classify(script: &str, paths: &[&str]) -> Verdict {
     let dir = Scratch::new("ci_changes_classify");
     std::fs::create_dir_all(&*dir).expect("scratch folder");
     let file = dir.join("ci_changes.sh");
@@ -104,40 +128,77 @@ fn classify(script: &str, paths: &[&str]) -> (bool, bool) {
         "ci_changes: classify failed: {stdout}{}",
         String::from_utf8_lossy(&out.stderr)
     );
-    let flag = |key: &str| -> bool {
-        let line = stdout
+    let value = |key: &str| -> String {
+        let lines: Vec<&str> = stdout
             .lines()
-            .find_map(|l| l.strip_prefix(&format!("{key}=")))
-            .unwrap_or_else(|| panic!("ci_changes: classify printed no `{key}=`: {stdout}"));
-        match line {
+            .filter_map(|l| l.strip_prefix(&format!("{key}=")))
+            .collect();
+        assert_eq!(
+            lines.len(),
+            1,
+            "ci_changes: classify printed not one `{key}=`: {stdout}"
+        );
+        lines[0].to_owned()
+    };
+    let flag = |key: &str| -> bool {
+        match value(key).as_str() {
             "true" => true,
             "false" => false,
             other => panic!("ci_changes: `{key}={other}` is neither true nor false"),
         }
     };
-    (flag("docs_only"), flag("gpu"))
+    let tier = value("tier");
+    assert!(
+        ["code", "data", "docs"].contains(&tier.as_str()),
+        "ci_changes: `tier={tier}` is none of code, data and docs"
+    );
+    assert_eq!(
+        flag("docs_only"),
+        tier != "code",
+        "ci_changes: {paths:?}: `docs_only` is not true exactly on a data or docs change (tier {tier})"
+    );
+    Verdict {
+        gpu: flag("gpu"),
+        plan_data: flag("plan_data"),
+        gui_data: flag("gui_data"),
+        mutants: flag("mutants"),
+        tier,
+    }
 }
 
-/// Each change, and the verdict R-656 and R-662 give it: (paths, docs-only, GPU suites run).
-const CASES: &[(&[&str], bool, bool)] = &[
+/// Each change, and the verdict R-656, R-662 and R-677 give it: (paths, tier, GPU suites run, mutants run).
+const CASES: &[(&[&str], &str, bool, bool)] = &[
     // The papers and their data, the reference sources, the workbench.
-    (&["docs/incoming/a/b.pdf"], true, false),
-    (&["docs/reference/prin-rs/src/a.rs"], true, false),
-    (&["docs/experiments/results/a.json"], true, false),
+    (&["docs/incoming/a/b.pdf"], "docs", false, false),
+    (&["docs/reference/prin-rs/src/a.rs"], "docs", false, false),
+    (&["docs/experiments/results/a.json"], "docs", false, false),
     (
         &["docs/archive/a.png", "docs/incoming/a/b.csv"],
-        true,
+        "docs",
+        false,
         false,
     ),
-    (&["workbench/a/b.html"], true, false),
+    (&["workbench/a/b.html"], "docs", false, false),
+    (&["workbench/a/b.rs"], "docs", false, false),
     // The corpus's prose, which some tests read: not Principia's code (R-662).
     (
         &["docs/contracts/principia_parity_contract.md"],
-        true,
+        "docs",
+        false,
         false,
     ),
-    (&["docs/gui/principia_render_gui_spec.md"], true, false),
-    (&["docs/archive/a.md", "docs/archive/a.html"], true, false),
+    (
+        &["docs/gui/principia_render_gui_spec.md"],
+        "docs",
+        false,
+        false,
+    ),
+    (
+        &["docs/archive/a.md", "docs/archive/a.html"],
+        "docs",
+        false,
+        false,
+    ),
     // The plan's prose, its other data and its Python.
     (
         &[
@@ -149,18 +210,20 @@ const CASES: &[(&[&str], bool, bool)] = &[
             "plan/section_notes.yaml",
             "plan/reviewers/qa.md",
         ],
-        true,
+        "docs",
+        false,
         false,
     ),
     (
         &["plan/check_plan.py", "plan/tools/rulings.py"],
-        true,
+        "docs",
+        false,
         false,
     ),
     // The other scripts.
-    (&["scripts/progress_banner.py"], true, false),
-    (&["scripts/check_no_atlas_params.sh"], true, false),
-    (&["scripts/readme_gifs/figkit.py"], true, false),
+    (&["scripts/progress_banner.py"], "docs", false, false),
+    (&["scripts/check_no_atlas_params.sh"], "docs", false, false),
+    (&["scripts/readme_gifs/figkit.py"], "docs", false, false),
     // The root's markdown.
     (
         &[
@@ -172,87 +235,184 @@ const CASES: &[(&[&str], bool, bool)] = &[
             "AGENTS.md",
             "GEMINI.md",
         ],
+        "docs",
+        false,
+        false,
+    ),
+    // Tier (b), the data only the cheap checks and its readers' tests read (R-677): no GPU suite, no mutants.
+    (&["docs/gui/design/a.png"], "data", false, false),
+    (&["docs/gui/reference/a/b.json"], "data", false, false),
+    (&["plan/tasks.yaml"], "data", false, false),
+    (&["plan/MILESTONES.md"], "data", false, false),
+    (&["plan/tasks/M2/TASK-M2-01.md"], "data", false, false),
+    // With docs beside it, a data change stays data: the highest tier.
+    (
+        &["plan/tasks.yaml", "docs/gui/design/a.png", "decisions.md"],
+        "data",
+        false,
+        false,
+    ),
+    // The data only full CI reads, and the classifier, are code.
+    (&["plan/requirements.yaml"], "code", true, false),
+    (&["scripts/ci_changes.sh"], "code", true, false),
+    (&["scripts/contain.sh"], "code", true, false),
+    // Principia's code, and what builds it. Only Rust under `crates/` has mutants the gate runs (R-677).
+    (&["crates/kernel/tests/qa.rs"], "code", true, true),
+    (&["crates/kernel/src/lib.rs"], "code", true, true),
+    (&["crates/kernel/build.rs"], "code", true, true),
+    (
+        &["crates/render/shaders/wgsl/lib/coords.wgsl"],
+        "code",
         true,
         false,
     ),
-    // The data code loads, and the classifier, are code.
-    (&["docs/gui/design/a.png"], false, true),
-    (&["docs/gui/reference/a/b.json"], false, true),
-    (&["plan/requirements.yaml"], false, true),
-    (&["plan/tasks.yaml"], false, true),
-    (&["plan/MILESTONES.md"], false, true),
-    (&["plan/tasks/M2/TASK-M2-01.md"], false, true),
-    (&["scripts/ci_changes.sh"], false, true),
-    (&["scripts/contain.sh"], false, true),
-    // Principia's code, and what builds it.
-    (&["crates/kernel/tests/qa.rs"], false, true),
-    (&["crates/render/shaders/wgsl/lib/coords.wgsl"], false, true),
-    (&["crates/ledger/wgsl/shape.wgsl"], false, true),
-    (&["xtask/src/main.rs"], false, true),
-    (&["fixtures/golden/a.png"], false, true),
-    (&["Cargo.toml"], false, true),
-    (&["Cargo.lock"], false, true),
-    (&["rust-toolchain.toml"], false, true),
-    (&[".github/workflows/ci.yml"], false, true),
-    (&[".github/copilot-instructions.md"], false, true),
+    (&["crates/ledger/wgsl/shape.wgsl"], "code", true, false),
+    (&["crates/kernel/Cargo.toml"], "code", true, false),
+    (&["xtask/src/main.rs"], "code", true, false),
+    (&["xtask/tests/ci_changes.rs"], "code", true, false),
+    (&["fixtures/golden/a.png"], "code", true, false),
+    (
+        &["fixtures/mutants/untested/src/lib.rs"],
+        "code",
+        true,
+        false,
+    ),
+    (&["Cargo.toml"], "code", true, false),
+    (&["Cargo.lock"], "code", true, false),
+    (&["rust-toolchain.toml"], "code", true, false),
+    (&[".github/workflows/ci.yml"], "code", true, false),
+    (&[".github/copilot-instructions.md"], "code", true, false),
     // A path nothing names fails towards full CI: an unknown top-level file or folder, or another dot-folder.
-    (&["newfolder/a.md"], false, true),
-    (&["notes.md"], false, true),
-    (&[".cargo/config.toml"], false, true),
-    (&[".config/nextest.toml"], false, true),
-    (&[".claude/agents/implementer.md"], false, true),
-    (&[".gitignore"], false, true),
-    // One code path among docs makes the change code.
-    (&["docs/a.md", "crates/kernel/src/lib.rs"], false, true),
-    (&["decisions.md", "Cargo.lock"], false, true),
-    (&["plan/WORKFLOW.md", "plan/requirements.yaml"], false, true),
-    (&["scripts/progress_banner.py", "newfolder/a"], false, true),
+    (&["newfolder/a.md"], "code", true, false),
+    (&["newfolder/crates/a.rs"], "code", true, false),
+    (&["notes.md"], "code", true, false),
+    (&[".cargo/config.toml"], "code", true, false),
+    (&[".config/nextest.toml"], "code", true, false),
+    (&[".claude/agents/implementer.md"], "code", true, false),
+    (&[".gitignore"], "code", true, false),
+    // One code path among docs or data makes the change code.
+    (
+        &["docs/a.md", "crates/kernel/src/lib.rs"],
+        "code",
+        true,
+        true,
+    ),
+    (&["decisions.md", "Cargo.lock"], "code", true, false),
+    (
+        &["plan/WORKFLOW.md", "plan/requirements.yaml"],
+        "code",
+        true,
+        false,
+    ),
+    (
+        &["plan/requirements.yaml", "plan/tasks.yaml"],
+        "code",
+        true,
+        false,
+    ),
+    (
+        &["docs/gui/design/a.png", "xtask/src/a.rs"],
+        "code",
+        true,
+        false,
+    ),
+    (
+        &["scripts/progress_banner.py", "newfolder/a"],
+        "code",
+        true,
+        false,
+    ),
     // A path that only starts like an allowed one is not on the list.
-    (&["docsx/a.md"], false, true),
-    (&["planx/a.md"], false, true),
-    (&["scriptsx/a.sh"], false, true),
-    (&["workbenchx/a"], false, true),
-    (&["decisions.md.bak"], false, true),
-    (&["plan"], false, true),
-    (&["docs"], false, true),
+    (&["docsx/a.md"], "code", true, false),
+    (&["planx/a.md"], "code", true, false),
+    (&["scriptsx/a.sh"], "code", true, false),
+    (&["workbenchx/a"], "code", true, false),
+    (&["decisions.md.bak"], "code", true, false),
+    (&["plan"], "code", true, false),
+    (&["docs"], "code", true, false),
+    (&["cratesx/a.rs"], "code", true, false),
     // Nor does a listed datum's near neighbour count as it.
-    (&["plan/requirements.yaml.bak"], true, false),
-    (&["plan/tasksx/a.md"], true, false),
-    (&["docs/gui/designs/a.png"], true, false),
-    (&["scripts/ci_changes.sh.bak"], true, false),
-    (&["scripts/contain.sh.bak"], true, false),
+    (&["plan/requirements.yaml.bak"], "docs", false, false),
+    (&["plan/tasks.yaml.bak"], "docs", false, false),
+    (&["plan/MILESTONES.md.bak"], "docs", false, false),
+    (&["plan/tasksx/a.md"], "docs", false, false),
+    (&["docs/gui/designs/a.png"], "docs", false, false),
+    (&["docs/gui/references/a.html"], "docs", false, false),
+    (&["scripts/ci_changes.sh.bak"], "docs", false, false),
+    (&["scripts/contain.sh.bak"], "docs", false, false),
     // The crates no GPU job builds skip the GPU suites, and nothing else.
-    (&["crates/gui/src/app.rs"], false, false),
+    (&["crates/gui/src/app.rs"], "code", false, true),
     (
         &["crates/prin/src/main.rs", "docs/incoming/a.pdf"],
-        false,
-        false,
-    ),
-    (&["crates/gui/src/app.rs", "docs/a.md"], false, false),
-    (
-        &["crates/gui/src/app.rs", "plan/requirements.yaml"],
+        "code",
         false,
         true,
     ),
-    (&["crates/guix/src/a.rs"], false, true),
+    (&["crates/gui/src/app.rs", "docs/a.md"], "code", false, true),
+    (
+        &["crates/gui/src/app.rs", "docs/gui/design/a.png"],
+        "code",
+        false,
+        true,
+    ),
+    (
+        &["crates/gui/src/app.rs", "plan/requirements.yaml"],
+        "code",
+        true,
+        true,
+    ),
+    (&["crates/guix/src/a.rs"], "code", true, true),
     (
         &[
             "crates/gui/src/a.rs",
             "crates/render/shaders/wgsl/lib/coords.wgsl",
         ],
-        false,
+        "code",
+        true,
         true,
     ),
-    // No path at all runs everything.
-    (&[], false, true),
+    // No path at all runs everything, its mutants among it.
+    (&[], "code", true, true),
+];
+
+/// Which of tier (b)'s data each change names: (paths, plan_data, gui_data). A code change keeps its flags, which no
+/// job then reads.
+const DATA_CASES: &[(&[&str], bool, bool)] = &[
+    (&["plan/tasks/M0/TASK-M0-01.md"], true, false),
+    (&["plan/tasks.yaml", "decisions.md"], true, false),
+    (&["plan/MILESTONES.md"], true, false),
+    (&["docs/gui/design/01_main.png"], false, true),
+    (&["docs/gui/reference/a.html", "docs/a.md"], false, true),
+    (
+        &["plan/tasks.yaml", "docs/gui/reference/a.html"],
+        true,
+        true,
+    ),
+    (&["docs/a.md", "plan/WORKFLOW.md"], false, false),
+    (&["plan/requirements.yaml"], false, false),
+    (
+        &["crates/kernel/src/lib.rs", "plan/tasks.yaml"],
+        true,
+        false,
+    ),
+    (&[], false, false),
 ];
 
 fn check_classifier(script: &str) {
-    for (paths, docs_only, gpu) in CASES {
+    for (paths, tier, gpu, mutants) in CASES {
+        let got = classify(script, paths);
         assert_eq!(
-            classify(script, paths),
-            (*docs_only, *gpu),
-            "ci_changes: {paths:?} classified wrongly (docs_only, gpu)"
+            (got.tier.as_str(), got.gpu, got.mutants),
+            (*tier, *gpu, *mutants),
+            "ci_changes: {paths:?} classified wrongly (tier, gpu, mutants)"
+        );
+    }
+    for (paths, plan, gui) in DATA_CASES {
+        let got = classify(script, paths);
+        assert_eq!(
+            (got.plan_data, got.gui_data),
+            (*plan, *gui),
+            "ci_changes: {paths:?} names the wrong data (plan_data, gui_data)"
         );
     }
 }
@@ -273,36 +433,101 @@ negative_control!(
     ))
 );
 
+mod data_below_docs {
+    use super::*;
+    negative_control!(
+        ci_changes_classifies_conservatively,
+        "the script letting a later docs path lower a data change to docs, not taking the highest tier",
+        expected = "\"plan/tasks.yaml\", \"docs/gui/design/a.png\", \"decisions.md\"] classified wrongly",
+        check_classifier(&edited(
+            "scripts/ci_changes.sh",
+            "      data) if [ \"$tier\" = docs ]; then tier=data; fi ;;\n",
+            "      data) if [ \"$tier\" = docs ]; then tier=data; fi ;;\n      docs) if [ \"$tier\" = data ]; then tier=docs; fi ;;\n"
+        ))
+    );
+}
+
+mod data_over_code {
+    use super::*;
+    negative_control!(
+        ci_changes_classifies_conservatively,
+        "the script letting a data path lower a code change to data",
+        expected = "\"plan/requirements.yaml\", \"plan/tasks.yaml\"] classified wrongly",
+        check_classifier(&edited(
+            "scripts/ci_changes.sh",
+            "      data) if [ \"$tier\" = docs ]; then tier=data; fi ;;\n",
+            "      data) tier=data ;;\n"
+        ))
+    );
+}
+
+mod mutants_anywhere {
+    use super::*;
+    negative_control!(
+        ci_changes_classifies_conservatively,
+        "the script running mutants on Rust source outside crates/",
+        expected = "\"docs/reference/prin-rs/src/a.rs\"] classified wrongly",
+        check_classifier(&edited(
+            "scripts/ci_changes.sh",
+            "    crates/*.rs) return 0 ;;\n",
+            "    *.rs) return 0 ;;\n"
+        ))
+    );
+}
+
+mod no_mutants_on_no_diff {
+    use super::*;
+    negative_control!(
+        ci_changes_classifies_conservatively,
+        "the script running no mutants when the diff can't be computed",
+        expected = "[] classified wrongly",
+        check_classifier(&edited(
+            "scripts/ci_changes.sh",
+            "    gpu=true\n    mutants=true\n",
+            "    gpu=true\n"
+        ))
+    );
+}
+
+mod gpu_on_data {
+    use super::*;
+    negative_control!(
+        ci_changes_classifies_conservatively,
+        "the script running the GPU suites on tier (b)'s data, as before R-677",
+        expected = "\"docs/gui/design/a.png\"] classified wrongly",
+        check_classifier(&edited(
+            "scripts/ci_changes.sh",
+            "  if [ \"$(tier_of \"$1\")\" != code ]; then\n",
+            "  if [ \"$(tier_of \"$1\")\" = docs ]; then\n"
+        ))
+    );
+}
+
+mod plan_flag_lost {
+    use super::*;
+    negative_control!(
+        ci_changes_classifies_conservatively,
+        "the script never setting plan_data",
+        expected = "\"plan/tasks/M0/TASK-M0-01.md\"] names the wrong data",
+        check_classifier(&edited(
+            "scripts/ci_changes.sh",
+            "    if plan_data \"$path\"; then plan=true; fi\n",
+            ""
+        ))
+    );
+}
+
 // ---- The files code reads -----------------------------------------------------------------------------------------
 
-/// Each pattern of `scripts/ci_changes.sh`'s `reads_code` list, in its order, and real files it names: touching any one
-/// of them must run the build, test and GPU jobs (R-662).
-const CODE_READ: &[(&str, &[&str])] = &[
-    ("docs/gui/design/*", &["docs/gui/design/01_main.png"]),
-    (
-        "docs/gui/reference/*",
-        &[
-            "docs/gui/reference/print_graph/catalogue/presets.json",
-            "docs/gui/reference/principia_nav_cube.html",
-        ],
-    ),
-    ("plan/requirements.yaml", &["plan/requirements.yaml"]),
-    ("plan/tasks.yaml", &["plan/tasks.yaml"]),
-    ("plan/MILESTONES.md", &["plan/MILESTONES.md"]),
-    ("plan/tasks/*", &["plan/tasks/M0/TASK-M0-01.md"]),
-    ("scripts/ci_changes.sh", &["scripts/ci_changes.sh"]),
-    ("scripts/contain.sh", &["scripts/contain.sh"]),
-];
-
-/// The patterns of the `reads_code` function in `script`, in order: each `<pattern> | …) return 0 ;;` line's.
-fn reads_code_patterns(script: &str) -> Vec<String> {
+/// The patterns of the function `name` in `script`, in order: each `<pattern> | …) return 0 ;;` line's.
+fn patterns(script: &str, name: &str) -> Vec<String> {
     let start = script
-        .find("\nreads_code() {\n")
-        .expect("ci_changes: the script has no `reads_code` function");
+        .find(&format!("\n{name}() {{\n"))
+        .unwrap_or_else(|| panic!("ci_changes: the script has no `{name}` function"));
     let body = &script[start..];
     let end = body
         .find("\n}\n")
-        .expect("ci_changes: `reads_code` does not end");
+        .unwrap_or_else(|| panic!("ci_changes: `{name}` does not end"));
     body[..end]
         .lines()
         .filter_map(|l| l.trim().strip_suffix(") return 0 ;;"))
@@ -310,12 +535,20 @@ fn reads_code_patterns(script: &str) -> Vec<String> {
         .collect()
 }
 
+/// Each pattern of `scripts/ci_changes.sh`'s `reads_code` list, in its order, and real files it names: touching any one
+/// of them must run the build, test and GPU jobs (R-662, R-677).
+const CODE_READ: &[(&str, &[&str])] = &[
+    ("plan/requirements.yaml", &["plan/requirements.yaml"]),
+    ("scripts/ci_changes.sh", &["scripts/ci_changes.sh"]),
+    ("scripts/contain.sh", &["scripts/contain.sh"]),
+];
+
 fn check_code_read(script: &str) {
-    let listed = reads_code_patterns(script);
     let tested: Vec<&str> = CODE_READ.iter().map(|(p, _)| *p).collect();
     assert_eq!(
-        listed, tested,
-        "ci_changes: the script's list of files code reads is not the one this test touches"
+        patterns(script, "reads_code"),
+        tested,
+        "ci_changes: the script's list of files only full CI reads is not the one this test touches"
     );
     for (pattern, paths) in CODE_READ {
         for path in *paths {
@@ -323,11 +556,12 @@ fn check_code_read(script: &str) {
                 root().join(path).is_file(),
                 "ci_changes: {path}, {pattern}'s representative, is not a file in the repository"
             );
+            let got = classify(script, &[path]);
             assert_eq!(
-                classify(script, &[path]),
-                (false, true),
-                "ci_changes: touching {path} ({pattern}, a file code reads) does not run the build, test and GPU \
-                 jobs (docs_only, gpu)"
+                (got.tier.as_str(), got.gpu),
+                ("code", true),
+                "ci_changes: touching {path} ({pattern}, a file only full CI reads) does not run the build, test \
+                 and GPU jobs (tier, gpu)"
             );
         }
     }
@@ -340,15 +574,105 @@ fn ci_changes_files_code_reads_run_everything() {
 
 negative_control!(
     ci_changes_files_code_reads_run_everything,
-    "the script with its list of files code reads emptied",
-    expected =
-        "touching docs/gui/design/01_main.png (docs/gui/design/*, a file code reads) does not run",
+    "the script with its list of files only full CI reads emptied",
+    expected = "touching plan/requirements.yaml (plan/requirements.yaml, a file only full CI reads) does not run",
     check_code_read(&edited(
         "scripts/ci_changes.sh",
         "reads_code() {\n  case \"$1\" in\n",
         "reads_code() {\n  return 1\n  case \"$1\" in\n"
     ))
 );
+
+/// Each pattern of `scripts/ci_changes.sh`'s `plan_data` and `gui_data` lists, the function's name, and real files it
+/// names: touching any one of them is tier (b) (R-677), with that function's flag.
+const TIER_B: &[(&str, &str, &[&str])] = &[
+    (
+        "plan_data",
+        "plan/tasks/*",
+        &["plan/tasks/M0/TASK-M0-01.md"],
+    ),
+    ("plan_data", "plan/tasks.yaml", &["plan/tasks.yaml"]),
+    ("plan_data", "plan/MILESTONES.md", &["plan/MILESTONES.md"]),
+    (
+        "gui_data",
+        "docs/gui/design/*",
+        &["docs/gui/design/01_main.png"],
+    ),
+    (
+        "gui_data",
+        "docs/gui/reference/*",
+        &[
+            "docs/gui/reference/print_graph/catalogue/presets.json",
+            "docs/gui/reference/ic_inspector.html",
+        ],
+    ),
+];
+
+fn check_tier_b(script: &str) {
+    for function in ["plan_data", "gui_data"] {
+        let tested: Vec<&str> = TIER_B
+            .iter()
+            .filter(|(f, _, _)| *f == function)
+            .map(|(_, p, _)| *p)
+            .collect();
+        assert_eq!(
+            patterns(script, function),
+            tested,
+            "ci_changes: the script's `{function}` list is not the one this test touches"
+        );
+    }
+    for (function, pattern, paths) in TIER_B {
+        for path in *paths {
+            assert!(
+                root().join(path).is_file(),
+                "ci_changes: {path}, {pattern}'s representative, is not a file in the repository"
+            );
+            let got = classify(script, &[path]);
+            let want = Verdict {
+                tier: "data".to_owned(),
+                gpu: false,
+                plan_data: *function == "plan_data",
+                gui_data: *function == "gui_data",
+                mutants: false,
+            };
+            assert_eq!(
+                got, want,
+                "ci_changes: touching {path} ({pattern}, tier (b)'s {function}) is not tier (b)"
+            );
+        }
+    }
+}
+
+#[test]
+fn ci_changes_data_lands_in_tier_b() {
+    check_tier_b(&read("scripts/ci_changes.sh"));
+}
+
+negative_control!(
+    ci_changes_data_lands_in_tier_b,
+    "the script with the task files moved back to the files only full CI reads",
+    expected =
+        "touching plan/tasks/M0/TASK-M0-01.md (plan/tasks/*, tier (b)'s plan_data) is not tier (b)",
+    check_tier_b(&edited(
+        "scripts/ci_changes.sh",
+        "    plan/requirements.yaml) return 0 ;;\n",
+        "    plan/requirements.yaml | plan/tasks/*) return 0 ;;\n"
+    ))
+);
+
+mod gui_as_plan {
+    use super::*;
+    negative_control!(
+        ci_changes_data_lands_in_tier_b,
+        "the script setting the plan's flag on the GUI's artboards",
+        expected = "touching docs/gui/design/01_main.png (docs/gui/design/*, tier (b)'s gui_data) is not tier (b)",
+        check_tier_b(&edited(
+            "scripts/ci_changes.sh",
+            "    if plan_data \"$path\"; then plan=true; fi\n",
+            "    if plan_data \"$path\" || gui_data \"$path\"; then plan=true; fi\n"
+        ))
+    );
+}
 
 /// The string literals in `line`: Rust's `"…"`. Best effort: an escaped quote is stepped over, a raw string's hashes are
 /// not read, and a literal spanning lines is missed.
@@ -529,11 +853,11 @@ fn check_wrapping(script: &str, wrapping: &[(String, String)]) {
         );
     }
     for (source, file) in wrapping {
+        let got = classify(script, &[file.as_str()]);
         assert_eq!(
-            classify(script, &[file.as_str()]),
-            (false, true),
-            "ci_changes: {source} runs through {file}, which does not run the build, test and GPU jobs \
-             (docs_only, gpu)"
+            (got.tier.as_str(), got.gpu),
+            ("code", true),
+            "ci_changes: {source} runs through {file}, which does not run the build, test and GPU jobs (tier, gpu)"
         );
     }
 }
@@ -603,16 +927,17 @@ fn check_readers(script: &str, named: &[(String, String)]) {
         if !loads_data(reader, file) || reader == "xtask/tests/ci_changes.rs" {
             continue;
         }
-        let docs_only = *verdicts
+        let docs = *verdicts
             .entry(file.as_str())
-            .or_insert_with(|| classify(script, &[file.as_str()]).0);
-        if docs_only {
+            .or_insert_with(|| classify(script, &[file.as_str()]).tier == "docs");
+        if docs {
             wrong.push(format!("{reader} reads {file}"));
         }
     }
     assert!(
         wrong.is_empty(),
-        "ci_changes: data code loads classifies as docs-only; list it in the script's `reads_code`:\n  {}",
+        "ci_changes: data code loads classifies as docs; list it in the script's `reads_code`, `plan_data` or \
+         `gui_data`:\n  {}",
         wrong.join("\n  ")
     );
 }
@@ -624,7 +949,7 @@ fn ci_changes_no_file_code_reads_is_docs_only() {
 
 negative_control!(
     ci_changes_no_file_code_reads_is_docs_only,
-    "the script without the artboards on its list of data code loads",
+    "the script without the artboards on its tier (b) list",
     expected = "xtask/tests/screenshot.rs reads docs/gui/design/01_main.png",
     check_readers(
         &edited(
@@ -635,6 +960,234 @@ negative_control!(
         &named_files()
     )
 );
+
+// ---- Tier (b) runs its readers' tests ----------------------------------------------------------------------------
+
+/// The readers the scan cannot see, each walking a folder or copying a tree of tier (b)'s data, listed by hand: (the
+/// reader, a literal in it that shows the walk, a file of that data it reads).
+const WALKERS: &[(&str, &str, &str)] = &[
+    (
+        "xtask/tests/qa_TASK-M0-36.rs",
+        "\"plan/tasks\"",
+        "plan/tasks/M0/TASK-M0-01.md",
+    ),
+    (
+        "xtask/tests/qa_R-485_print_graph_coverage.rs",
+        "\"plan/tasks\"",
+        "plan/tasks/M0/TASK-M0-01.md",
+    ),
+    (
+        "xtask/tests/qa_R-485_print_graph_coverage.rs",
+        "\"docs/gui/reference/print_graph/catalogue/\"",
+        "docs/gui/reference/print_graph/catalogue/presets.json",
+    ),
+    (
+        "crates/validation/tests/part6_catalogue.rs",
+        "join(\"tasks\")",
+        "plan/tasks/M0/TASK-M0-01.md",
+    ),
+    (
+        "xtask/tests/plan_check.rs",
+        "join(\"plan\")",
+        "plan/tasks.yaml",
+    ),
+    (
+        "xtask/tests/qa_TASK-M0-02.rs",
+        "join(\"plan\")",
+        "plan/tasks.yaml",
+    ),
+];
+
+/// The tests of the classifier, which name the data to classify it, no reading: the classifier is code, so they run
+/// with full CI whenever it changes.
+const CLASSIFIER_TESTS: &[&str] = &[
+    "xtask/tests/ci_changes.rs",
+    "xtask/tests/qa_R-656_ci_changes.rs",
+    "xtask/tests/qa_R-662_ci_scope.rs",
+];
+
+/// The step condition `ci-workspace` runs a tier (b) flag's readers' tests on.
+fn data_condition(flag: &str) -> String {
+    format!("needs.changes.outputs.tier == 'data' && needs.changes.outputs.{flag} == 'true'")
+}
+
+/// The tests `ci-workspace` runs on a data change that sets `flag` (`plan_data` or `gui_data`): each step on
+/// [`data_condition`] runs `cargo nextest run -p <package> --test <test>…`, and nothing else, as (package, test).
+fn data_tests(wf: &Value, flag: &str) -> Vec<(String, String)> {
+    let steps = wf["jobs"]["ci-workspace"]["steps"]
+        .as_array()
+        .expect("ci_changes: ci-workspace's steps");
+    let mut out = Vec::new();
+    for step in steps
+        .iter()
+        .filter(|s| text(&s["if"]) == data_condition(flag))
+    {
+        let run = text(&step["run"]);
+        let words: Vec<&str> = run.split_whitespace().collect();
+        let (package, tests) = match words.as_slice() {
+            ["cargo", "nextest", "run", "-p", package, tests @ ..] => (*package, tests),
+            _ => panic!("ci_changes: a {flag} step runs `{run}`, not `cargo nextest run -p <package> --test …`"),
+        };
+        assert!(
+            !tests.is_empty() && tests.len() % 2 == 0,
+            "ci_changes: the {flag} step `{run}` names no test, or an argument that is no `--test <name>`"
+        );
+        for pair in tests.chunks(2) {
+            assert_eq!(
+                pair[0], "--test",
+                "ci_changes: the {flag} step `{run}` passes `{}`, which is no `--test <name>`: it would build more \
+                 than its readers' tests",
+                pair[0]
+            );
+            out.push((package.to_owned(), pair[1].to_owned()));
+        }
+    }
+    out
+}
+
+/// The test a reader of tier (b)'s data runs as: a test file is its own (package, test); an xtask module is its own
+/// tests', `xtask/tests/<module>.rs`. Anything else has no test to name.
+fn reader_test(reader: &str) -> Option<(String, String)> {
+    let path = Path::new(reader);
+    let stem = path.file_stem()?.to_string_lossy().into_owned();
+    let parent = path.parent()?.to_string_lossy().into_owned();
+    if parent == "xtask/tests" {
+        return Some(("xtask".to_owned(), stem));
+    }
+    if parent == "xtask/src" && root().join(format!("xtask/tests/{stem}.rs")).is_file() {
+        return Some(("xtask".to_owned(), stem));
+    }
+    let package = parent.strip_prefix("crates/")?.strip_suffix("/tests")?;
+    (!package.contains('/')).then(|| (package.to_owned(), stem))
+}
+
+fn check_data_readers(script: &str, wf: &str, named: &[(String, String)]) {
+    let wf = parse(wf);
+    let plan = data_tests(&wf, "plan_data");
+    let gui = data_tests(&wf, "gui_data");
+    // Not vacuous: the scan finds gate-report's module and tests reading the plan's data, and a screenshot test and a
+    // reference test reading the GUI's.
+    for want in [
+        ("xtask/src/gate_report.rs", "plan/MILESTONES.md"),
+        ("xtask/tests/gate_report.rs", "plan/MILESTONES.md"),
+        ("xtask/tests/screenshot.rs", "docs/gui/design/01_main.png"),
+        (
+            "crates/kernel/tests/qa_TASK-M2-08.rs",
+            "docs/gui/reference/ic_inspector.html",
+        ),
+    ] {
+        assert!(
+            named.iter().any(|(r, f)| (r.as_str(), f.as_str()) == want),
+            "ci_changes: the reader scan did not find {} reading {}",
+            want.0,
+            want.1
+        );
+    }
+    let mut readers: Vec<(String, String)> = named.to_vec();
+    for (reader, marker, file) in WALKERS {
+        assert!(
+            read(reader).contains(marker),
+            "ci_changes: {reader} no longer shows its walk ({marker}); the list of walkers is stale"
+        );
+        readers.push(((*reader).to_owned(), (*file).to_owned()));
+    }
+    let mut wrong = Vec::new();
+    for (reader, file) in &readers {
+        if CLASSIFIER_TESTS.contains(&reader.as_str()) {
+            continue;
+        }
+        let verdict = classify(script, &[file.as_str()]);
+        if verdict.tier != "data" {
+            continue;
+        }
+        let ran = match reader_test(reader) {
+            Some(test) => {
+                (verdict.plan_data && plan.contains(&test))
+                    || (verdict.gui_data && gui.contains(&test))
+            }
+            None => false,
+        };
+        if !ran {
+            wrong.push(format!("{reader} reads {file}"));
+        }
+    }
+    assert!(
+        wrong.is_empty(),
+        "ci_changes: a reader of tier (b)'s data whose tests `ci-workspace` does not run on that data; name its test \
+         in the step, or move the file to `reads_code`:\n  {}",
+        wrong.join("\n  ")
+    );
+}
+
+#[test]
+fn ci_changes_data_tier_runs_every_reader() {
+    check_data_readers(
+        &read("scripts/ci_changes.sh"),
+        &read(".github/workflows/ci.yml"),
+        &named_files(),
+    );
+}
+
+negative_control!(
+    ci_changes_data_tier_runs_every_reader,
+    "ci.yml's plan-data step without gate-report's tests",
+    expected = "xtask/src/gate_report.rs reads plan/MILESTONES.md",
+    check_data_readers(
+        &read("scripts/ci_changes.sh"),
+        &edited(".github/workflows/ci.yml", " --test gate_report ", " "),
+        &named_files(),
+    )
+);
+
+mod walker_dropped {
+    use super::*;
+    negative_control!(
+        ci_changes_data_tier_runs_every_reader,
+        "ci.yml's plan-data step without the test that walks every task file",
+        expected = "xtask/tests/qa_TASK-M0-36.rs reads plan/tasks/M0/TASK-M0-01.md",
+        check_data_readers(
+            &read("scripts/ci_changes.sh"),
+            &edited(".github/workflows/ci.yml", " --test qa_TASK-M0-36 ", " "),
+            &named_files(),
+        )
+    );
+}
+
+mod gui_reader_dropped {
+    use super::*;
+    negative_control!(
+        ci_changes_data_tier_runs_every_reader,
+        "ci.yml's GUI-data steps without render's colour explorer test",
+        expected = "crates/render/tests/qa_TASK-M1-03.rs reads docs/gui/reference/principia_colour_explorer.html",
+        check_data_readers(
+            &read("scripts/ci_changes.sh"),
+            &edited(
+                ".github/workflows/ci.yml",
+                "        run: cargo nextest run -p render --test qa_TASK-M1-03\n",
+                "        run: cargo nextest run -p render --test qa_TASK-M7-02\n"
+            ),
+            &named_files(),
+        )
+    );
+}
+
+mod workspace_build {
+    use super::*;
+    negative_control!(
+        ci_changes_data_tier_runs_every_reader,
+        "ci.yml's plan-data step building the whole workspace's tests",
+        expected = "is no `--test <name>`",
+        check_data_readers(
+            &read("scripts/ci_changes.sh"),
+            &edited(
+                ".github/workflows/ci.yml",
+                "        run: cargo nextest run -p validation --test part6_catalogue\n",
+                "        run: cargo nextest run -p validation --workspace --test part6_catalogue\n"
+            ),
+            &named_files(),
+        )
+    );
+}
 
 // ---- The workflows, parsed ---------------------------------------------------------------------------------------
 
@@ -964,6 +1517,14 @@ fn check_skips(yml: &str) {
         changes.get("if").is_none() && changes.get("needs").is_none(),
         "ci_changes: the `changes` job can be skipped"
     );
+    // Each part of the verdict the jobs read, passed on as the classifier wrote it (R-677).
+    for key in ["tier", "docs_only", "gpu", "plan_data", "gui_data"] {
+        assert_eq!(
+            text(&changes["outputs"][key]),
+            format!("${{{{ steps.changes.outputs.{key} }}}}"),
+            "ci_changes: the `changes` job does not pass on `{key}`"
+        );
+    }
     for (id, cond) in SKIPS {
         let job = &wf["jobs"][id];
         assert_eq!(
@@ -1026,11 +1587,59 @@ fn check_skips(yml: &str) {
         !docs.contains("nextest") && !docs.contains("cargo test") && !docs.contains("cargo build"),
         "ci_changes: `ci-workspace` runs more than the cheap checks on a docs-only pull request: {docs}"
     );
+    // A data change's readers' tests (R-677) run on exactly a data verdict and its own flag; no other step reads the
+    // tier.
+    for step in ws["steps"]
+        .as_array()
+        .expect("ci_changes: ci-workspace's steps")
+    {
+        let cond = text(&step["if"]);
+        if cond.contains("outputs.tier") {
+            assert!(
+                cond == data_condition("plan_data") || cond == data_condition("gui_data"),
+                "ci_changes: a `ci-workspace` step runs on `{cond}`, not on a data verdict and its flag"
+            );
+        }
+    }
+    for flag in ["plan_data", "gui_data"] {
+        assert!(
+            !runs(&data_condition(flag)).is_empty(),
+            "ci_changes: `ci-workspace` runs nothing on a data change that sets `{flag}`"
+        );
+    }
 }
 
 #[test]
 fn ci_changes_jobs_skip_on_the_verdict() {
     check_skips(&read(".github/workflows/ci.yml"));
+}
+
+mod tier_not_passed_on {
+    use super::*;
+    negative_control!(
+        ci_changes_jobs_skip_on_the_verdict,
+        "ci.yml whose `changes` job does not pass the tier on",
+        expected = "the `changes` job does not pass on `tier`",
+        check_skips(&edited(
+            ".github/workflows/ci.yml",
+            "      tier: ${{ steps.changes.outputs.tier }}\n",
+            ""
+        ))
+    );
+}
+
+mod data_steps_on_code {
+    use super::*;
+    negative_control!(
+        ci_changes_jobs_skip_on_the_verdict,
+        "ci.yml running the GUI data's readers on any tier but docs",
+        expected = "runs on `needs.changes.outputs.tier != 'docs'",
+        check_skips(&edited(
+            ".github/workflows/ci.yml",
+            "        if: needs.changes.outputs.tier == 'data' && needs.changes.outputs.gui_data == 'true'\n        run: cargo nextest run -p kernel",
+            "        if: needs.changes.outputs.tier != 'docs' && needs.changes.outputs.gui_data == 'true'\n        run: cargo nextest run -p kernel"
+        ))
+    );
 }
 
 negative_control!(
