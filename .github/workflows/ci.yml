@@ -34,11 +34,13 @@
 # runs every job. On a pull request, the `changes` job classifies the change with `scripts/ci_changes.sh` (its merge
 # commit against the base it merges onto) into three tiers (R-677), a change touching several taking the highest:
 # - code (tier a): `crates/`, `xtask/`, `fixtures/`, the Cargo files, the toolchain, `.github/`, `.cargo/`, the data
-#   only full CI reads (`plan/requirements.yaml`), the classifier, `scripts/contain.sh` and any path the script's
-#   allowlist doesn't name: every job runs;
-# - data (tier b): the plan's task data (`plan/tasks/`, `plan/tasks.yaml`, `plan/MILESTONES.md`) or the GUI's artboards
-#   and references (`docs/gui/design/`, `docs/gui/reference/`), with docs beside them or not: `ci-workspace` runs the
-#   cheap checks and the tests that read what changed, in place of its own tests;
+#   only full CI reads (`plan/requirements.yaml` when a field code reads changes, or a requirement is added or
+#   removed), the classifier and its field check, `scripts/contain.sh` and any path the script's allowlist doesn't
+#   name: every job runs;
+# - data (tier b): the plan's task data (`plan/tasks/`, `plan/tasks.yaml`, `plan/MILESTONES.md`, and
+#   `plan/requirements.yaml` when only fields no code reads change, `scripts/ci_req_fields.py` deciding) or the GUI's
+#   artboards and references (`docs/gui/design/`, `docs/gui/reference/`), with docs beside them or not: `ci-workspace`
+#   runs the cheap checks and the tests that read what changed, in place of its own tests;
 # - docs (tier c; R-662): the rest of `docs/`, `plan/` (its prose and Python), `scripts/`, `workbench/` and the root's
 #   markdown: `ci-workspace` runs only the cheap checks, the plan checks and the vocabulary lint
 #   (`no-atlas-params.yml`, the atlas guard, runs on every pull request).
@@ -108,6 +110,13 @@ jobs:
       gui_data: ${{ steps.changes.outputs.gui_data }}
     steps:
       - uses: actions/checkout@v4
+      # The field check of `plan/requirements.yaml` (`scripts/ci_req_fields.py`) parses it with PyYAML; without it the
+      # check fails, and the file runs full CI.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install PyYAML
+        run: python3 -m pip install pyyaml
       - name: scripts/ci_changes.sh detect
         id: changes
         run: scripts/ci_changes.sh detect
@@ -339,8 +348,10 @@ jobs:
       # blocks, the closing tasks), `cargo xtask reviews-check`'s (every task file's Reviewers field), the plan checks'
       # and the progress banner's, and the print-graph coverage; in validation, the Part 6 catalogue, which walks the
       # task files. `scripts/ci_changes.sh` (`plan_data`) names each reader, and `xtask/tests/ci_changes.rs` checks that
-      # every one the sources show is here. Under the `ci` profile, so the one test among them that runs `cargo xtask
-      # ci` on the workspace (`qa02_a_failing_plan_check_turns_xtask_ci_red`) stays with full CI.
+      # every one the sources show is here. A `plan/requirements.yaml` change in tier (b) runs these too: the print-graph
+      # coverage reads its statements, and `xtask/tests/ci_changes.rs` checks that any test reading a field outside
+      # `scripts/ci_req_fields.py`'s CODE_FIELDS is among them. Under the `ci` profile, so the one test among them that
+      # runs `cargo xtask ci` on the workspace (`qa02_a_failing_plan_check_turns_xtask_ci_red`) stays with full CI.
       - name: cargo nextest run -p xtask (the plan's task data's readers)
         if: needs.changes.outputs.tier == 'data' && needs.changes.outputs.plan_data == 'true'
         env:

@@ -20,6 +20,20 @@
 //!   classifying as code: not docs-only, GPU suites run.
 //! - `ci_changes_data_lands_in_tier_b`: each pattern of the script's `plan_data` and `gui_data` lists (R-677), touched
 //!   through real files it names, classifies as data, with its own flag, no GPU suite and no mutants.
+//! - `plan/requirements.yaml`, field by field (R-677, the owner, 2 Nov 2026: "Yeah do that then, make it good and work
+//!   well"; "keep it simple and make ci fast without sacrificing testing on actual code"): on scratch copies, never the
+//!   real file, a note, statement, source or comment edit is tier (b) with `plan_data`
+//!   (`ci_changes_requirements_unread_field_edit_is_tier_b`); a change to a field of `scripts/ci_req_fields.py`'s
+//!   CODE_FIELDS, a field on neither list or a reformatted line code reads is code
+//!   (`ci_changes_requirements_code_field_edit_is_full_ci`); so are an added or removed requirement
+//!   (`ci_changes_requirements_added_is_full_ci`), a copy that does not parse, holds no list of ids, or is missing
+//!   (`ci_changes_requirements_malformed_is_full_ci`), and a tier (b) edit beside a `crates/` file
+//!   (`ci_changes_requirements_beside_code_is_full_ci`); each prints one reason line naming the id and field. `detect`
+//!   gives the field check the merge's base and head copies (`ci_changes_detect_checks_the_requirements_fields`).
+//! - `ci_changes_code_fields_cover_every_loader`: every source naming `plan/requirements.yaml` (each crate's and
+//!   xtask's `src/` and `tests/`, and the workflows) reads, as a string literal starting `<field>:` or a `get("…")`
+//!   lookup shows, only fields in CODE_FIELDS, but the tests tier (b) runs on the plan's data and the classifier's own
+//!   tests. Its limit: a reader that builds the field name some other way is not seen.
 //! - `ci_changes_a_script_runs_go_through_is_code`: a script named as a workflow step's `shell:` or as nextest's wrapper
 //!   runs that step or test inside it, so a wrong edit to it must run them: each classifies as code.
 //! - `ci_changes_no_file_code_reads_is_docs_only`: a static scan, best effort, of the string literals in every crate's
@@ -110,18 +124,30 @@ struct Verdict {
 /// `script` (the text of `scripts/ci_changes.sh`) run as `classify` on `paths`: its verdict. Its `docs_only` must be
 /// true exactly when the tier is data or docs.
 fn classify(script: &str, paths: &[&str]) -> Verdict {
+    classify_with(script, paths, &[]).0
+}
+
+/// [`classify`] with `env` set, as `(name, value)`: its verdict and what it printed on stderr.
+fn classify_with(script: &str, paths: &[&str], env: &[(&str, &Path)]) -> (Verdict, String) {
     let dir = Scratch::new("ci_changes_classify");
     std::fs::create_dir_all(&*dir).expect("scratch folder");
     let file = dir.join("ci_changes.sh");
     let input = dir.join("paths.txt");
     std::fs::write(&file, script).expect("script written");
     std::fs::write(&input, paths.join("\n")).expect("paths written");
-    let out = Command::new("bash")
+    let mut command = Command::new("bash");
+    command
         .args(["-c", "bash \"$0\" classify < \"$1\""])
         .arg(&file)
         .arg(&input)
-        .timed_output()
-        .expect("ci_changes: bash ran");
+        .env_remove("CI_REQS_BASE")
+        .env_remove("CI_REQS_HEAD")
+        .env_remove("CI_REQ_FIELDS");
+    for (name, value) in env {
+        command.env(name, value);
+    }
+    let out = command.timed_output().expect("ci_changes: bash ran");
+    let stderr = String::from_utf8_lossy(&out.stderr).into_owned();
     let stdout = String::from_utf8_lossy(&out.stdout).into_owned();
     assert!(
         out.status.success(),
@@ -157,13 +183,14 @@ fn classify(script: &str, paths: &[&str]) -> Verdict {
         tier != "code",
         "ci_changes: {paths:?}: `docs_only` is not true exactly on a data or docs change (tier {tier})"
     );
-    Verdict {
+    let verdict = Verdict {
         gpu: flag("gpu"),
         plan_data: flag("plan_data"),
         gui_data: flag("gui_data"),
         mutants: flag("mutants"),
         tier,
-    }
+    };
+    (verdict, stderr)
 }
 
 /// Each change, and the verdict R-656, R-662 and R-677 give it: (paths, tier, GPU suites run, mutants run).
@@ -539,6 +566,7 @@ fn patterns(script: &str, name: &str) -> Vec<String> {
 /// of them must run the build, test and GPU jobs (R-662, R-677).
 const CODE_READ: &[(&str, &[&str])] = &[
     ("plan/requirements.yaml", &["plan/requirements.yaml"]),
+    ("scripts/ci_req_fields.py", &["scripts/ci_req_fields.py"]),
     ("scripts/ci_changes.sh", &["scripts/ci_changes.sh"]),
     ("scripts/contain.sh", &["scripts/contain.sh"]),
 ];
@@ -671,6 +699,706 @@ mod gui_as_plan {
             "    if plan_data \"$path\"; then plan=true; fi\n",
             "    if plan_data \"$path\" || gui_data \"$path\"; then plan=true; fi\n"
         ))
+    );
+}
+
+// ---- plan/requirements.yaml, field by field ------------------------------------------------------------------------
+
+/// A scratch `plan/requirements.yaml`, never the real one: two requirements, with every field the plan uses.
+const REQS: &str = "# Principia build requirements (a fixture).\n\
+- id: REQ-QA-001\n  area: QA\n  kind: calibration\n  statement: \"the first\"\n  source:\n  - file: docs/a.md\n    \
+section: A\n  verify:\n    method: numerical gate\n    detail: \"the gate\"\n  rulings: [R-1]\n  milestone: M2\n  \
+note: \"a note\"\n\
+- id: REQ-QA-002\n  area: QA\n  statement: \"the second\"\n  source:\n  - file: docs/b.md\n    section: B\n  \
+verify:\n    method: unit test\n    detail: \"a test\"\n  rulings: []\n  milestone: M3\n";
+
+/// [`REQS`] with `from` replaced by `to` once, failing if `from` is gone.
+fn reqs_edited(from: &str, to: &str) -> String {
+    assert!(
+        REQS.contains(from),
+        "ci_changes: the fixture's edit target is gone: {from}"
+    );
+    REQS.replacen(from, to, 1)
+}
+
+/// `script` and `fields` (the texts of `scripts/ci_changes.sh` and `scripts/ci_req_fields.py`) run as `classify` on
+/// `paths`, with scratch copies of `plan/requirements.yaml` at the base (`base`) and the head (`head`), or no base copy
+/// at all when `base` is `None`: the verdict and the field check's reason line.
+fn classify_reqs(
+    script: &str,
+    fields: &str,
+    paths: &[&str],
+    base: Option<&str>,
+    head: &str,
+) -> (Verdict, String) {
+    let dir = Scratch::new("ci_changes_reqs");
+    std::fs::create_dir_all(&*dir).expect("scratch folder");
+    let fields_file = dir.join("ci_req_fields.py");
+    let base_file = dir.join("base.yaml");
+    let head_file = dir.join("head.yaml");
+    std::fs::write(&fields_file, fields).expect("field check written");
+    if let Some(base) = base {
+        std::fs::write(&base_file, base).expect("base written");
+    }
+    std::fs::write(&head_file, head).expect("head written");
+    classify_with(
+        script,
+        paths,
+        &[
+            ("CI_REQ_FIELDS", &fields_file),
+            ("CI_REQS_BASE", &base_file),
+            ("CI_REQS_HEAD", &head_file),
+        ],
+    )
+}
+
+/// A requirements change: what it is, its paths, the head's text (the base is [`REQS`], or none when `None`), the tier
+/// and `plan_data` it gets, and a part of the reason line it prints.
+struct ReqCase {
+    what: &'static str,
+    paths: &'static [&'static str],
+    base: Option<&'static str>,
+    head: fn() -> String,
+    tier: &'static str,
+    plan_data: bool,
+    reason: &'static str,
+}
+
+const REQ_PATH: &[&str] = &["plan/requirements.yaml"];
+
+fn check_reqs(script: &str, fields: &str, cases: &[ReqCase]) {
+    for case in cases {
+        let (got, stderr) = classify_reqs(script, fields, case.paths, case.base, &(case.head)());
+        assert_eq!(
+            (got.tier.as_str(), got.plan_data),
+            (case.tier, case.plan_data),
+            "ci_changes: {} classified wrongly (tier, plan_data); the field check said: {stderr}",
+            case.what
+        );
+        if got.tier == "data" {
+            assert!(
+                !got.gpu && !got.mutants,
+                "ci_changes: {} runs the GPU suites or mutants in tier (b)",
+                case.what
+            );
+        }
+        let reasons: Vec<&str> = stderr
+            .lines()
+            .filter(|l| l.starts_with("plan/requirements.yaml: "))
+            .collect();
+        assert!(
+            reasons.len() == 1 && reasons[0].contains(case.reason),
+            "ci_changes: {}: not one reason line naming `{}`: {stderr}",
+            case.what,
+            case.reason
+        );
+    }
+}
+
+/// Edits to fields no code reads: tier (b), with the plan's readers' tests.
+const TIER_B_REQS: &[ReqCase] = &[
+    ReqCase {
+        what: "a note edit",
+        paths: REQ_PATH,
+        base: Some(REQS),
+        head: || reqs_edited("  note: \"a note\"", "  note: \"a longer note\""),
+        tier: "data",
+        plan_data: true,
+        reason: "REQ-QA-001 note",
+    },
+    ReqCase {
+        what: "a statement edit",
+        paths: REQ_PATH,
+        base: Some(REQS),
+        head: || reqs_edited("\"the second\"", "\"the second, reworded\""),
+        tier: "data",
+        plan_data: true,
+        reason: "REQ-QA-002 statement",
+    },
+    ReqCase {
+        what: "a note added and a source moved",
+        paths: REQ_PATH,
+        base: Some(REQS),
+        head: || {
+            reqs_edited("  milestone: M3\n", "  milestone: M3\n  note: \"new\"\n").replacen(
+                "docs/b.md",
+                "docs/c.md",
+                1,
+            )
+        },
+        tier: "data",
+        plan_data: true,
+        reason: "REQ-QA-002 note and 1 more",
+    },
+    ReqCase {
+        what: "a comment edit",
+        paths: REQ_PATH,
+        base: Some(REQS),
+        head: || reqs_edited("(a fixture)", "(a fixture, reworded)"),
+        tier: "data",
+        plan_data: true,
+        reason: "no requirement's fields changed",
+    },
+    ReqCase {
+        what: "a statement edit beside a task file",
+        paths: &["plan/requirements.yaml", "plan/tasks.yaml"],
+        base: Some(REQS),
+        head: || reqs_edited("\"the first\"", "\"the first, reworded\""),
+        tier: "data",
+        plan_data: true,
+        reason: "REQ-QA-001 statement",
+    },
+];
+
+#[test]
+fn ci_changes_requirements_unread_field_edit_is_tier_b() {
+    check_reqs(
+        &read("scripts/ci_changes.sh"),
+        &read("scripts/ci_req_fields.py"),
+        TIER_B_REQS,
+    );
+}
+
+negative_control!(
+    ci_changes_requirements_unread_field_edit_is_tier_b,
+    "the script never asking the field check, so plan/requirements.yaml is always code",
+    expected = "a note edit classified wrongly",
+    check_reqs(
+        &edited(
+            "scripts/ci_changes.sh",
+            "  if requirements_data \"$1\"; then\n",
+            "  if false; then\n"
+        ),
+        &read("scripts/ci_req_fields.py"),
+        TIER_B_REQS,
+    )
+);
+
+/// A change to a field code reads, or to the lines it reads: full CI.
+const CODE_FIELD_REQS: &[ReqCase] = &[
+    ReqCase {
+        what: "a milestone change",
+        paths: REQ_PATH,
+        base: Some(REQS),
+        head: || reqs_edited("  milestone: M2", "  milestone: M4"),
+        tier: "code",
+        plan_data: false,
+        reason: "REQ-QA-001 milestone changed, which code reads",
+    },
+    ReqCase {
+        what: "a kind removed",
+        paths: REQ_PATH,
+        base: Some(REQS),
+        head: || reqs_edited("  kind: calibration\n", ""),
+        tier: "code",
+        plan_data: false,
+        reason: "REQ-QA-001 kind changed",
+    },
+    ReqCase {
+        what: "a requirement retired",
+        paths: REQ_PATH,
+        base: Some(REQS),
+        head: || reqs_edited("  milestone: M3\n", "  milestone: M3\n  retired: \"R-2\"\n"),
+        tier: "code",
+        plan_data: false,
+        reason: "REQ-QA-002 retired changed",
+    },
+    ReqCase {
+        what: "a verify detail edit",
+        paths: REQ_PATH,
+        base: Some(REQS),
+        head: || reqs_edited("\"a test\"", "\"another test\""),
+        tier: "code",
+        plan_data: false,
+        reason: "REQ-QA-002 verify changed",
+    },
+    ReqCase {
+        what: "a field on neither list",
+        paths: REQ_PATH,
+        base: Some(REQS),
+        head: || reqs_edited("  milestone: M3\n", "  milestone: M3\n  owner: qa\n"),
+        tier: "code",
+        plan_data: false,
+        reason: "REQ-QA-002 owner changed, a field on neither list",
+    },
+];
+
+/// The lines code reads, changed with the parsed fields equal: full CI, as the loaders read lines.
+const CODE_LINE_REQS: &[ReqCase] = &[ReqCase {
+    what: "a kind requoted",
+    paths: REQ_PATH,
+    base: Some(REQS),
+    head: || reqs_edited("  kind: calibration", "  kind: \"calibration\""),
+    tier: "code",
+    plan_data: false,
+    reason: "a line code reads moved or changed: kind: \"calibration\"",
+}];
+
+#[test]
+fn ci_changes_requirements_code_field_edit_is_full_ci() {
+    let fields = read("scripts/ci_req_fields.py");
+    check_reqs(&read("scripts/ci_changes.sh"), &fields, CODE_FIELD_REQS);
+    check_reqs(&read("scripts/ci_changes.sh"), &fields, CODE_LINE_REQS);
+}
+
+negative_control!(
+    ci_changes_requirements_code_field_edit_is_full_ci,
+    "the field check with `milestone` moved from CODE_FIELDS to DATA_FIELDS",
+    expected = "a milestone change classified wrongly",
+    check_reqs(
+        &read("scripts/ci_changes.sh"),
+        &edited("scripts/ci_req_fields.py", "    \"milestone\",\n", "").replacen(
+            "DATA_FIELDS = {\"area\",",
+            "DATA_FIELDS = {\"milestone\", \"area\",",
+            1
+        ),
+        CODE_FIELD_REQS,
+    )
+);
+
+mod code_lines_unchecked {
+    use super::*;
+    negative_control!(
+        ci_changes_requirements_code_field_edit_is_full_ci,
+        "the field check comparing parsed fields only, not the lines code reads",
+        expected = "a kind requoted classified wrongly",
+        check_reqs(
+            &read("scripts/ci_changes.sh"),
+            &edited(
+                "scripts/ci_req_fields.py",
+                "    if old != new:\n",
+                "    if False:\n"
+            ),
+            CODE_LINE_REQS,
+        )
+    );
+}
+
+/// A requirement added or removed: full CI.
+const ADDED_REQS: &[ReqCase] = &[
+    ReqCase {
+        what: "an added requirement",
+        paths: REQ_PATH,
+        base: Some(REQS),
+        head: || format!("{REQS}- id: REQ-QA-003\n  area: QA\n  statement: \"new\"\n"),
+        tier: "code",
+        plan_data: false,
+        reason: "REQ-QA-003 added",
+    },
+    ReqCase {
+        what: "a removed requirement",
+        paths: REQ_PATH,
+        base: Some(REQS),
+        head: || REQS[..REQS.find("- id: REQ-QA-002").expect("the second")].to_owned(),
+        tier: "code",
+        plan_data: false,
+        reason: "REQ-QA-002 removed",
+    },
+];
+
+#[test]
+fn ci_changes_requirements_added_is_full_ci() {
+    check_reqs(
+        &read("scripts/ci_changes.sh"),
+        &read("scripts/ci_req_fields.py"),
+        ADDED_REQS,
+    );
+}
+
+negative_control!(
+    ci_changes_requirements_added_is_full_ci,
+    "the script taking tier (b) whatever the field check says",
+    expected = "an added requirement classified wrongly",
+    check_reqs(
+        &edited(
+            "scripts/ci_changes.sh",
+            "    && python3 -I \"$fields\" \"$CI_REQS_BASE\" \"$CI_REQS_HEAD\" >&2; then\n",
+            "    && { python3 -I \"$fields\" \"$CI_REQS_BASE\" \"$CI_REQS_HEAD\" >&2 || true; }; then\n"
+        ),
+        &read("scripts/ci_req_fields.py"),
+        ADDED_REQS,
+    )
+);
+
+/// A copy that does not parse, or is missing: full CI.
+const MALFORMED_REQS: &[ReqCase] = &[
+    ReqCase {
+        what: "malformed YAML",
+        paths: REQ_PATH,
+        base: Some(REQS),
+        head: || format!("{REQS}- id: [\n"),
+        tier: "code",
+        plan_data: false,
+        reason: "does not parse",
+    },
+    ReqCase {
+        what: "a mapping, not a list",
+        paths: REQ_PATH,
+        base: Some(REQS),
+        head: || "id: REQ-QA-001\n".to_owned(),
+        tier: "code",
+        plan_data: false,
+        reason: "does not parse",
+    },
+    ReqCase {
+        what: "an entry without an id",
+        paths: REQ_PATH,
+        base: Some(REQS),
+        head: || format!("{REQS}- area: QA\n"),
+        tier: "code",
+        plan_data: false,
+        reason: "does not parse",
+    },
+    ReqCase {
+        what: "an id twice",
+        paths: REQ_PATH,
+        base: Some(REQS),
+        head: || format!("{REQS}- id: REQ-QA-001\n  area: QA\n"),
+        tier: "code",
+        plan_data: false,
+        reason: "does not parse",
+    },
+    ReqCase {
+        what: "no base copy",
+        paths: REQ_PATH,
+        base: None,
+        head: || REQS.to_owned(),
+        tier: "code",
+        plan_data: false,
+        reason: "does not parse",
+    },
+];
+
+#[test]
+fn ci_changes_requirements_malformed_is_full_ci() {
+    check_reqs(
+        &read("scripts/ci_changes.sh"),
+        &read("scripts/ci_req_fields.py"),
+        MALFORMED_REQS,
+    );
+}
+
+negative_control!(
+    ci_changes_requirements_malformed_is_full_ci,
+    "the field check taking a file that does not parse as tier (b)",
+    expected = "malformed YAML classified wrongly",
+    check_reqs(
+        &read("scripts/ci_changes.sh"),
+        &edited(
+            "scripts/ci_req_fields.py",
+            "        return False, \"does not parse: \"",
+            "        return True, \"does not parse: \""
+        ),
+        MALFORMED_REQS,
+    )
+);
+
+/// An edit to fields no code reads beside a code path: full CI.
+const BESIDE_CODE_REQS: &[ReqCase] = &[ReqCase {
+    what: "a note edit beside a crates/ file",
+    paths: &["crates/kernel/src/lib.rs", "plan/requirements.yaml"],
+    base: Some(REQS),
+    head: || reqs_edited("  note: \"a note\"", "  note: \"a longer note\""),
+    tier: "code",
+    plan_data: true,
+    reason: "REQ-QA-001 note",
+}];
+
+#[test]
+fn ci_changes_requirements_beside_code_is_full_ci() {
+    check_reqs(
+        &read("scripts/ci_changes.sh"),
+        &read("scripts/ci_req_fields.py"),
+        BESIDE_CODE_REQS,
+    );
+}
+
+negative_control!(
+    ci_changes_requirements_beside_code_is_full_ci,
+    "the script letting a data path lower a code change to data",
+    expected = "a note edit beside a crates/ file classified wrongly",
+    check_reqs(
+        &edited(
+            "scripts/ci_changes.sh",
+            "      data) if [ \"$tier\" = docs ]; then tier=data; fi ;;\n",
+            "      data) tier=data ;;\n"
+        ),
+        &read("scripts/ci_req_fields.py"),
+        BESIDE_CODE_REQS,
+    )
+);
+
+/// `git` in `repo`, with no user or system configuration; its trimmed stdout.
+fn git(repo: &Path, args: &[&str]) -> String {
+    let out = Command::new("git")
+        .args(["-c", "user.name=qa", "-c", "user.email=qa@example.invalid"])
+        .args(args)
+        .current_dir(repo)
+        .env("GIT_CONFIG_NOSYSTEM", "1")
+        .env("GIT_CONFIG_GLOBAL", "/dev/null")
+        .timed_output()
+        .expect("ci_changes: git ran");
+    assert!(
+        out.status.success(),
+        "ci_changes: git {args:?} failed: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    String::from_utf8_lossy(&out.stdout).trim().to_owned()
+}
+
+/// `script` run as `detect` on a pull request's merge commit whose branch edits a note in [`REQS`], the base having
+/// moved on with code: its tier.
+fn detect_reqs(script: &str) -> String {
+    let repo = Scratch::new("ci_changes_detect_reqs");
+    std::fs::create_dir_all(repo.join("plan")).expect("repo");
+    git(&repo, &["init", "-q", "-b", "main"]);
+    std::fs::write(repo.join("plan/requirements.yaml"), REQS).expect("written");
+    std::fs::write(repo.join("lib.rs"), "// base\n").expect("written");
+    git(&repo, &["add", "-A"]);
+    git(&repo, &["commit", "-q", "-m", "base"]);
+    git(&repo, &["checkout", "-q", "-b", "pr"]);
+    std::fs::write(
+        repo.join("plan/requirements.yaml"),
+        reqs_edited("  note: \"a note\"", "  note: \"a longer note\""),
+    )
+    .expect("written");
+    git(&repo, &["commit", "-q", "-am", "pr"]);
+    git(&repo, &["checkout", "-q", "main"]);
+    std::fs::write(repo.join("lib.rs"), "// main moved on\n").expect("written");
+    git(&repo, &["commit", "-q", "-am", "main"]);
+    git(&repo, &["merge", "-q", "--no-ff", "-m", "merge", "pr"]);
+    let sha = git(&repo, &["rev-parse", "HEAD"]);
+    let file = repo.join("ci_changes_under_test.sh");
+    let output = repo.join("github_output");
+    std::fs::write(&file, script).expect("script written");
+    let out = Command::new("bash")
+        .arg(&file)
+        .arg("detect")
+        .current_dir(&repo)
+        .env("GIT_CONFIG_NOSYSTEM", "1")
+        .env("GIT_CONFIG_GLOBAL", "/dev/null")
+        .env("GITHUB_EVENT_NAME", "pull_request")
+        .env("GITHUB_SHA", &sha)
+        .env("GITHUB_OUTPUT", &output)
+        .env("CI_REQ_FIELDS", root().join("scripts/ci_req_fields.py"))
+        .env_remove("CI_REQS_BASE")
+        .env_remove("CI_REQS_HEAD")
+        .timed_output()
+        .expect("ci_changes: bash ran");
+    assert!(
+        out.status.success(),
+        "ci_changes: detect failed: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let written =
+        std::fs::read_to_string(&output).expect("ci_changes: detect wrote no GITHUB_OUTPUT");
+    written
+        .lines()
+        .find_map(|l| l.strip_prefix("tier="))
+        .unwrap_or_else(|| panic!("ci_changes: detect wrote no tier: {written}"))
+        .to_owned()
+}
+
+fn check_detect_reqs(script: &str) {
+    assert_eq!(
+        detect_reqs(script),
+        "data",
+        "ci_changes: detect on a pull request editing a note in plan/requirements.yaml is not tier (b)"
+    );
+}
+
+#[test]
+fn ci_changes_detect_checks_the_requirements_fields() {
+    check_detect_reqs(&read("scripts/ci_changes.sh"));
+}
+
+negative_control!(
+    ci_changes_detect_checks_the_requirements_fields,
+    "detect never writing the base's and the head's copies",
+    expected = "editing a note in plan/requirements.yaml is not tier (b)",
+    check_detect_reqs(&edited(
+        "scripts/ci_changes.sh",
+        "      requirements_copies\n",
+        "      true\n"
+    ))
+);
+
+/// The field names `scripts/ci_req_fields.py` lists in its set `name` (`CODE_FIELDS`).
+fn field_set(fields: &str, name: &str) -> Vec<String> {
+    let start = fields
+        .find(&format!("\n{name} = {{\n"))
+        .unwrap_or_else(|| panic!("ci_changes: the field check has no `{name}`"));
+    let body = &fields[start..];
+    let end = body
+        .find("\n}\n")
+        .unwrap_or_else(|| panic!("ci_changes: `{name}` does not end"));
+    body[..end]
+        .lines()
+        .map(str::trim)
+        .filter(|l| !l.starts_with('#'))
+        .filter_map(|l| l.strip_prefix('"')?.strip_suffix("\","))
+        .map(str::to_owned)
+        .collect()
+}
+
+/// The field names of the real `plan/requirements.yaml`: each key of a requirement and of its `source` and `verify`.
+fn requirement_fields() -> Vec<String> {
+    let mut out: Vec<String> = Vec::new();
+    for line in read("plan/requirements.yaml").lines() {
+        let indent = line.len() - line.trim_start_matches(' ').len();
+        if line.starts_with('#') || indent > 4 {
+            continue;
+        }
+        let key = line.trim_start_matches(' ');
+        let key = key.strip_prefix("- ").unwrap_or(key);
+        let Some((name, _)) = key.split_once(':') else {
+            continue;
+        };
+        if !name.is_empty() && name.chars().all(|c| c.is_ascii_lowercase() || c == '_') {
+            out.push(name.to_owned());
+        }
+    }
+    out.sort();
+    out.dedup();
+    out
+}
+
+/// The requirement fields `text` reads, best effort: a string literal that starts (after an optional `\n`, spaces and
+/// `- `) with `<field>:`, as the line-reading loaders match `"  kind: "`, `"\n  milestone: M3"` or
+/// `format!("method: {method}")`, or a literal `"<field>"` right after `get(` or `[`, as gate.yml's Python does. A
+/// literal is any `"` the text holds, so a fixture whose first line names a field counts too: a false reading fails
+/// towards full CI.
+fn fields_read(text: &str, fields: &[String]) -> Vec<String> {
+    let mut out = Vec::new();
+    for (at, _) in text.match_indices('"') {
+        let before = &text[..at];
+        let mut rest = &text[at + 1..];
+        let lookup = before.ends_with("get(") || before.ends_with('[');
+        for field in fields {
+            if lookup && rest.starts_with(&format!("{field}\"")) {
+                out.push(field.clone());
+            }
+        }
+        rest = rest.strip_prefix("\\n").unwrap_or(rest);
+        rest = rest.trim_start_matches(' ');
+        rest = rest.strip_prefix("- ").unwrap_or(rest);
+        for field in fields {
+            if rest.starts_with(&format!("{field}:")) {
+                out.push(field.clone());
+            }
+        }
+    }
+    out.sort();
+    out.dedup();
+    out
+}
+
+/// Every source that loads `plan/requirements.yaml`: each crate's and xtask's `src/`, `tests/` and `build.rs`, and the
+/// workflows, naming the file.
+fn requirement_loaders() -> Vec<(String, String)> {
+    let mut files = Vec::new();
+    let crates = std::fs::read_dir(root().join("crates")).expect("ci_changes: crates/");
+    let mut packages: Vec<PathBuf> = crates
+        .map(|e| Path::new("crates").join(e.expect("entry").file_name()))
+        .collect();
+    packages.push(PathBuf::from("xtask"));
+    for package in &packages {
+        sources(&package.join("src"), ".rs", &mut files);
+        sources(&package.join("tests"), ".rs", &mut files);
+        files.push(package.join("build.rs"));
+    }
+    sources(Path::new(".github/workflows"), ".yml", &mut files);
+    files.sort();
+    files
+        .into_iter()
+        .filter_map(|file| {
+            let text = std::fs::read_to_string(root().join(&file)).ok()?;
+            text.contains("requirements.yaml")
+                .then(|| (file.to_string_lossy().into_owned(), text))
+        })
+        .collect()
+}
+
+/// Each loader of `plan/requirements.yaml` reads only fields of `fields`'s CODE_FIELDS, but a test tier (b) runs on a
+/// plan-data change (ci.yml's plan-data steps, from `wf`), which then checks the field, and the classifier's tests,
+/// which name fields to classify them.
+fn check_code_fields(fields: &str, wf: &str, loaders: &[(String, String)]) {
+    let code = field_set(fields, "CODE_FIELDS");
+    let known = requirement_fields();
+    let plan = data_tests(&parse(wf), "plan_data");
+    // Not vacuous: the gates' check of a threshold's requirement, and gate.yml's results by method, are found.
+    for (want, field) in [
+        ("crates/validation/src/gate/mod.rs", "retired"),
+        (".github/workflows/gate.yml", "verify"),
+    ] {
+        let (_, text) = loaders.iter().find(|(f, _)| f == want).unwrap_or_else(|| {
+            panic!("ci_changes: {want} is not found loading plan/requirements.yaml")
+        });
+        assert!(
+            fields_read(text, &known).contains(&field.to_owned()),
+            "ci_changes: {want} is not found reading `{field}`"
+        );
+    }
+    let mut wrong = Vec::new();
+    for (file, text) in loaders {
+        if CLASSIFIER_TESTS.contains(&file.as_str()) {
+            continue;
+        }
+        let path = Path::new(file);
+        let tier_b_test = path.parent().is_some_and(|p| p.ends_with("tests"))
+            && reader_test(file).is_some_and(|t| plan.contains(&t));
+        if tier_b_test {
+            continue;
+        }
+        for field in fields_read(text, &known) {
+            if !code.contains(&field) {
+                wrong.push(format!("{file} reads `{field}`"));
+            }
+        }
+    }
+    assert!(
+        wrong.is_empty(),
+        "ci_changes: a loader of plan/requirements.yaml outside tier (b)'s tests reads a field not in \
+         scripts/ci_req_fields.py's CODE_FIELDS; add it there, naming its reader:\n  {}",
+        wrong.join("\n  ")
+    );
+}
+
+#[test]
+fn ci_changes_code_fields_cover_every_loader() {
+    check_code_fields(
+        &read("scripts/ci_req_fields.py"),
+        &read(".github/workflows/ci.yml"),
+        &requirement_loaders(),
+    );
+}
+
+negative_control!(
+    ci_changes_code_fields_cover_every_loader,
+    "CODE_FIELDS without `retired`, which the gates read",
+    expected = "crates/validation/src/gate/mod.rs reads `retired`",
+    check_code_fields(
+        &edited("scripts/ci_req_fields.py", "    \"retired\",\n", ""),
+        &read(".github/workflows/ci.yml"),
+        &requirement_loaders(),
+    )
+);
+
+mod statement_reader_dropped {
+    use super::*;
+    negative_control!(
+        ci_changes_code_fields_cover_every_loader,
+        "ci.yml's plan-data step without the print-graph coverage, which reads the statements",
+        expected = "xtask/tests/qa_R-485_print_graph_coverage.rs reads `statement`",
+        check_code_fields(
+            &read("scripts/ci_req_fields.py"),
+            &edited(
+                ".github/workflows/ci.yml",
+                " --test qa_R-485_print_graph_coverage --test qa_TASK-M0-02 ",
+                " --test qa_TASK-M0-02 "
+            ),
+            &requirement_loaders(),
+        )
     );
 }
 

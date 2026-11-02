@@ -2,9 +2,11 @@
 # What a CI run's change touches, for the in-job skips R-656 allows, R-662 scopes and R-677 splits into three tiers:
 #   (a) code: full CI runs when a pull request changes Principia's code (the owner, 31 Oct 2026: "Only the actual
 #       Principia CODE matters in ci"), or data code loads that only full CI's jobs read;
-#   (b) data: a change to the plan's task data (`plan/tasks/`, `plan/tasks.yaml`, `plan/MILESTONES.md`) or the GUI's
-#       artboards and references (`docs/gui/design/`, `docs/gui/reference/`) runs only the cheap checks and the tests
-#       that read what it changed (R-677; `ci.yml`'s `ci-workspace`): no build, no test shard, no GPU suite, no mutants;
+#   (b) data: a change to the plan's task data (`plan/tasks/`, `plan/tasks.yaml`, `plan/MILESTONES.md`, and
+#       `plan/requirements.yaml` when only fields no code reads change, as `scripts/ci_req_fields.py` decides) or the
+#       GUI's artboards and references (`docs/gui/design/`, `docs/gui/reference/`) runs only the cheap checks and the
+#       tests that read what it changed (R-677; `ci.yml`'s `ci-workspace`): no build, no test shard, no GPU suite, no
+#       mutants;
 #   (c) docs: the rest of the corpus, the plan's prose and Python, the scripts and the workbench run only the cheap
 #       checks, plan-check, the vocabulary lint and the atlas guard (R-662).
 # A change touching several tiers runs the highest. One that touches no `.rs` file under `crates/` has no mutant to
@@ -13,7 +15,10 @@
 #
 #   scripts/ci_changes.sh detect       In a workflow step: classify this run's change and write its verdict to
 #                                      $GITHUB_OUTPUT (and print it, with the changed paths).
-#   scripts/ci_changes.sh classify     Read changed paths from stdin, one per line; print the verdict.
+#   scripts/ci_changes.sh classify     Read changed paths from stdin, one per line; print the verdict. With
+#                                      CI_REQS_BASE and CI_REQS_HEAD naming the base's and the head's copies of
+#                                      `plan/requirements.yaml`, that file is tier (b) when `scripts/ci_req_fields.py`
+#                                      (or CI_REQ_FIELDS, naming it) says so; without them it is code.
 #
 # The verdict, one `key=value` per line:
 #   tier=code|data|docs   the highest tier of any path;
@@ -21,7 +26,7 @@
 #                         the gates and R-335's `if:` stand; R-662 read it "changes no Principia code", R-677 reads it
 #                         "runs no full CI";
 #   gpu=true|false        false when no path is a GPU path, as on every data or docs change;
-#   plan_data=true|false  some path is the plan's task data (tier b);
+#   plan_data=true|false  some path is the plan's task data (tier b), `plan/requirements.yaml` among it when tier (b);
 #   gui_data=true|false   some path is the GUI's artboards or references (tier b);
 #   mutants=true|false    some path is a `.rs` file under `crates/`, so the merge-ready head's mutants run (R-677).
 #
@@ -30,8 +35,27 @@
 # request, and runs everything. It fails towards full CI: a path is data or docs only if the allowlist below names it
 # and the list of data only full CI reads does not, so an unknown top-level path, `.github/`, `.cargo/` or a new folder
 # runs everything, and every code path the GPU list doesn't exempt runs the GPU suites. A diff that can't be computed,
-# or is empty, runs everything too, its mutants among it, with a warning.
+# or is empty, runs everything too, its mutants among it, with a warning. `plan/requirements.yaml` is code unless
+# `scripts/ci_req_fields.py` finds both copies and says only fields no code reads changed (R-677): an added or removed
+# requirement, a field code reads, an unknown field, a parse error or a missing copy runs everything.
 set -euo pipefail
+
+# Whether this change's `plan/requirements.yaml` is tier (b): set once by `classify`, from CI_REQS_BASE and
+# CI_REQS_HEAD. The field check prints its one reason line on stderr, so the job's log shows why.
+reqs_data=false
+requirements_check() {
+  local fields="${CI_REQ_FIELDS:-$(dirname "${BASH_SOURCE[0]}")/ci_req_fields.py}"
+  reqs_data=false
+  if [ -n "${CI_REQS_BASE:-}" ] && [ -n "${CI_REQS_HEAD:-}" ] \
+    && python3 -I "$fields" "$CI_REQS_BASE" "$CI_REQS_HEAD" >&2; then
+    reqs_data=true
+  fi
+}
+
+# Whether the path is `plan/requirements.yaml` with only fields no code reads changed (R-677).
+requirements_data() {
+  [ "$1" = plan/requirements.yaml ] && [ "$reqs_data" = true ]
+}
 
 # The allowlist of what is not Principia's code: the corpus and its papers, the plan's prose, data and Python, the
 # scripts, the workbench and the root's markdown (R-662).
@@ -55,8 +79,11 @@ reads_code() {
     # decode-agreement` and the gpu-kernel profile's crates/validation/tests/decode_f32_eps_gpu.rs and
     # invariant_gradient_gpu.rs among them. The constants register's calibration citations
     # (crates/ledger/tests/qa_TASK-M3-06_tau.rs) and validation's gate tests read it too. Tier (b) builds no kernel and
-    # runs no GPU suite, so it stays code (R-677, applied per R-369).
+    # runs no GPU suite, so it is code (R-677, applied per R-369), unless `scripts/ci_req_fields.py` says only fields
+    # none of these read changed (`requirements_data`, which `tier_of` asks first).
     plan/requirements.yaml) return 0 ;;
+    # The field check that decides that.
+    scripts/ci_req_fields.py) return 0 ;;
     # This classifier: what it says decides what every pull request runs (`ci.yml`, `mutants.yml`).
     scripts/ci_changes.sh) return 0 ;;
     # The containment: the `shell:` of the mutants steps (`mutants.yml`, `nightly.yml`), and nextest's wrapper of the
@@ -105,7 +132,9 @@ gui_data() {
 
 # A path's tier: code, data or docs.
 tier_of() {
-  if ! on_allowlist "$1" || reads_code "$1"; then
+  if requirements_data "$1"; then
+    echo data
+  elif ! on_allowlist "$1" || reads_code "$1"; then
     echo code
   elif plan_data "$1" || gui_data "$1"; then
     echo data
@@ -138,6 +167,7 @@ has_mutants() {
 # Reads paths on stdin; prints the verdict. No path at all runs everything.
 classify() {
   local tier=docs gpu=false plan=false gui=false mutants=false n=0 path
+  requirements_check
   while IFS= read -r path || [ -n "$path" ]; do
     [ -n "$path" ] || continue
     n=$((n + 1))
@@ -147,6 +177,7 @@ classify() {
     esac
     if ! is_not_gpu "$path"; then gpu=true; fi
     if plan_data "$path"; then plan=true; fi
+    if requirements_data "$path"; then plan=true; fi
     if gui_data "$path"; then gui=true; fi
     if has_mutants "$path"; then mutants=true; fi
   done
@@ -176,8 +207,21 @@ changed_paths() {
   git -c core.quotePath=false diff --name-only --no-renames "$head^1" "$head" || true
 }
 
+# Writes the base's and the head's `plan/requirements.yaml` to a fresh folder and names them in CI_REQS_BASE and
+# CI_REQS_HEAD, for `classify`'s field check. A copy git cannot show (a file added or deleted) is left unnamed, so the
+# file stays code.
+requirements_copies() {
+  local head="${GITHUB_SHA:?GITHUB_SHA is not set}" dir
+  dir=$(mktemp -d)
+  if git show "$head^1:plan/requirements.yaml" > "$dir/base.yaml" 2> /dev/null \
+    && git show "$head:plan/requirements.yaml" > "$dir/head.yaml" 2> /dev/null; then
+    export CI_REQS_BASE="$dir/base.yaml" CI_REQS_HEAD="$dir/head.yaml"
+  fi
+}
+
 detect() {
   local verdict paths
+  unset CI_REQS_BASE CI_REQS_HEAD
   if [ "${GITHUB_EVENT_NAME:-}" = pull_request ]; then
     paths=$(changed_paths)
     if [ -z "$paths" ]; then
@@ -185,6 +229,9 @@ detect() {
     else
       echo "Changed paths ($(printf '%s\n' "$paths" | wc -l | tr -d ' ')):"
       printf '%s\n' "$paths" | sed 's/^/  /'
+    fi
+    if printf '%s\n' "$paths" | grep -qx 'plan/requirements.yaml'; then
+      requirements_copies
     fi
   else
     paths=""
