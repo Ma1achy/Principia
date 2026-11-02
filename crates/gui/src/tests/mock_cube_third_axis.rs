@@ -269,6 +269,7 @@ fn mock_cube_third_axis_during_a_slider_drag_reads_its_target_and_back() {
     let (mut app, mut h) = app_on(&two(20.0, 0.0));
     let at_rest = (app.manifold.compass.slider, third(&h, &app));
     check_third(&at_rest.1, "X z_q3", "at rest: X");
+    let rest_shows = drawing(&h, &app).third;
     let rail = app.keyboard.place_of(TAU2).expect("τ₂ placed").rect;
     let from = rail.left_center() + vec2(rail.width() * 0.3, 0.0);
     let _ = h.frame(&mut app, vec![egui::Event::PointerMoved(from)]);
@@ -282,8 +283,11 @@ fn mock_cube_third_axis_during_a_slider_drag_reads_its_target_and_back() {
     );
     let _ = h.frame(&mut app, Vec::new());
     check_third(&third(&h, &app), "Y z_μ1", "dragged: Y");
-    let d = drawing(&h, &app);
-    assert_eq!(d.third, Shows::Y);
+    check_shows(drawing(&h, &app).third, Shows::Y);
+    rejects(
+        "the drawing's third axis read at rest while τ₂ is dragged",
+        || check_shows(rest_shows, Shows::Y),
+    );
     rejects("τ₂'s slider held, read at rest", || {
         check_held(&at_rest, Some(Gesture::Tau2), "Y z_μ1")
     });
@@ -301,8 +305,11 @@ fn mock_cube_third_axis_during_a_slider_drag_reads_its_target_and_back() {
     let colour = |text: &str| found.iter().find(|t| t.0 == text).map(|t| t.3);
     assert_eq!(colour("Y z_μ1"), Some(GESTURE_TAU2));
     let text = label_colour(&egui::Visuals::dark(), false);
-    assert_eq!(colour("H z_α"), Some(text));
-    assert_eq!(colour("V z_β"), Some(text));
+    check_theme(colour("H z_α"), text);
+    check_theme(colour("V z_β"), text);
+    rejects("an edge label in the gesture's colour", || {
+        check_theme(colour("Y z_μ1"), text)
+    });
     rejects("the label in τ₁'s colour while τ₂ is dragged", || {
         assert_eq!(colour("Y z_μ1"), Some(GESTURE_TAU1))
     });
@@ -316,6 +323,16 @@ fn mock_cube_third_axis_during_a_slider_drag_reads_its_target_and_back() {
     });
 }
 
+/// Asserts what the drawing's third axis shows.
+fn check_shows(got: Shows, want: Shows) {
+    assert_eq!(got, want, "the third axis shows");
+}
+
+/// Asserts a label painted in the theme's text colour: `got`, its colour, is `text`.
+fn check_theme(got: Option<egui::Color32>, text: egui::Color32) {
+    assert_eq!(got, Some(text), "the theme's colour");
+}
+
 /// Asserts the slider `held`, and the third axis's text with it: `(slider, text)`.
 fn check_held((slider, text): &(Option<Gesture>, String), gesture: Option<Gesture>, want: &str) {
     assert_eq!(*slider, gesture, "the slider held");
@@ -327,13 +344,18 @@ fn mock_cube_third_axis_during_a_tau1_slider_drag_reads_x_and_a_held_gamma_nothi
     let (mut app, mut h) = app_on(&two(0.0, 15.0));
     check_third(&third(&h, &app), "Y z_μ1", "at rest");
     let mut seen = Vec::new();
-    for (id, gesture) in [(TAU1, Some(Gesture::Tau1)), (GAMMA, None)] {
+    for (id, gesture) in [
+        (TAU1, Some(Gesture::Tau1)),
+        (GAMMA, None),
+        (TAU2, Some(Gesture::Tau2)),
+    ] {
         let rail = app.keyboard.place_of(id).expect("placed").rect;
         let from = rail.left_center() + vec2(rail.width() * 0.3, 0.0);
         let _ = h.frame(&mut app, vec![egui::Event::PointerMoved(from)]);
         let _ = h.frame(&mut app, vec![button(from, true)]);
         let _ = h.frame(&mut app, Vec::new());
         let held = app.manifold.compass.slider;
+        let held_text = third(&h, &app);
         check_slider(held, gesture, &format!("{id} held"));
         let _ = h.frame(&mut app, vec![button(from, false)]);
         let _ = h.frame(&mut app, Vec::new());
@@ -344,10 +366,10 @@ fn mock_cube_third_axis_during_a_tau1_slider_drag_reads_x_and_a_held_gamma_nothi
         app.set_field(basis_edit(tau1.basis()));
         follow(&mut h, &mut app);
         check_third(&third(&h, &app), "Y z_μ1", &format!("{id}: back at rest"));
-        seen.push((held, released));
+        seen.push((held, released, held_text));
     }
     rejects("τ₁'s slider held as τ₂'s", || {
-        check_slider(Some(Gesture::Tau2), Some(Gesture::Tau1), "τ₁ held")
+        check_slider(seen[2].0, Some(Gesture::Tau1), "τ₁ held")
     });
     rejects("γ's slider held as a tilt", || {
         check_slider(seen[0].0, None, "γ held")
@@ -359,7 +381,7 @@ fn mock_cube_third_axis_during_a_tau1_slider_drag_reads_x_and_a_held_gamma_nothi
         check_slider(seen[0].0, None, "τ₁ released")
     });
     rejects("back at rest on X", || {
-        check_third("X z_q3", "Y z_μ1", "back at rest")
+        check_third(&seen[0].2, "Y z_μ1", "back at rest")
     });
 }
 
@@ -386,7 +408,8 @@ fn mock_cube_third_axis_a_compass_drag_reads_the_angle_moved_further() {
     let _ = h.frame(&mut app, Vec::new());
     let dragging = third(&h, &app);
     check_third(&dragging, "Y z_μ1", "τ₂ moved further");
-    assert_eq!(drawing(&h, &app).third.gesture(), Gesture::Tau2);
+    let drag_gesture = drawing(&h, &app).third.gesture();
+    check_gesture(drag_gesture, Gesture::Tau2);
     let drag = app.manifold.compass.drag.expect("dragging");
     check_drag_moved_tau2(&drag);
     let _ = h.frame(&mut app, vec![button(from + delta, false)]);
@@ -394,6 +417,10 @@ fn mock_cube_third_axis_a_compass_drag_reads_the_angle_moved_further() {
     // At rest both are set: X, by the rest rule.
     let rest = third(&h, &app);
     check_third(&rest, "X z_q3", "at rest");
+    let rest_gesture = drawing(&h, &app).third.gesture();
+    rejects("the drag's gesture read by the rest rule", || {
+        check_gesture(rest_gesture, Gesture::Tau2)
+    });
     rejects("the drag's reading kept at rest", || {
         assert_eq!(third(&h, &app), "Y z_μ1")
     });
@@ -415,6 +442,11 @@ fn mock_cube_third_axis_a_compass_drag_reads_the_angle_moved_further() {
             ..drag
         })
     });
+}
+
+/// Asserts the gesture the third axis shows.
+fn check_gesture(got: Gesture, want: Gesture) {
+    assert_eq!(got, want, "the third axis's gesture");
 }
 
 /// Asserts the drag of `(+10°, +30°)` from `(0, 0)` is `τ₂`'s, at those targets.
@@ -689,7 +721,12 @@ fn mock_cube_third_axis_with_one_target_no_badge_and_the_whole_plane() {
     let (mut app, mut h) = app_on(&v);
     let d = drawing(&h, &app);
     assert!(!d.badge);
-    assert_eq!(d.third, Shows::X);
+    check_shows(d.third, Shows::X);
+    let (tau2_alone, h_alone) = app_on(&view(0.0, 15.0, 0.0, 1.0));
+    let alone = drawing(&h_alone, &tau2_alone).third;
+    rejects("X = Y with τ₂ alone set read as X", || {
+        check_shows(alone, Shows::X)
+    });
     // R-451 B2's plane: the normal of (cos 20, 0, sin 20) × (0, cos 15, sin 15).
     let (s1, c1) = 20.0_f64.to_radians().sin_cos();
     let (s2, c2) = 15.0_f64.to_radians().sin_cos();

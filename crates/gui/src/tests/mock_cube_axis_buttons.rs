@@ -400,8 +400,13 @@ fn mock_cube_axis_buttons_picking_v_and_a_chart_edit_move_v() {
     rejects("V's button left by a Chart edit", || {
         check_text(&unpicked[2], "V z_q1")
     });
-    rejects("H moved onto the axis a Chart edit of q₂ took", || {
-        check_text("H z_q1", "H z_α")
+    // Control: a Chart edit of q₁ does move H.
+    let sim = app.snapshot().sim.clone();
+    app.set_field(plane_edit(&sim, (axis(Z_Q0, 1.0), sim.plane.q2)));
+    settle(&mut h, &mut app);
+    let h_moved = texts(&h, &app);
+    rejects("H moved by a Chart edit of q₂", || {
+        check_text(&h_moved[0], "H z_α")
     });
 }
 
@@ -1674,7 +1679,8 @@ fn mock_cube_axis_buttons_keyboard_tab_enter_right_to_h_enter_down_enter_picks()
     press(&mut h, &mut app, Key::Enter, NONE);
     let back = path(&app);
     check_path(&back, &[COMPASS, COMPASS_H], "back on the button");
-    assert_eq!(app.view.focus.mode, KeyMode::Navigation);
+    let back_mode = app.view.focus.mode;
+    check_navigating(back_mode);
     settle(&mut h, &mut app);
     let after = state(&app);
     let picked = texts(&h, &app);
@@ -1741,15 +1747,59 @@ fn mock_cube_axis_buttons_keyboard_tab_enter_right_to_h_enter_down_enter_picks()
     rejects("a D pick from the keys that left the frame", || {
         check_frame(unpicked, frame(Z_MU1, Z_MU1, Z_MU1))
     });
-    // A V pick too.
+    // A V pick too: its menu opens on z_β, V's own, so ↓ onto z_q0 and Enter.
     press(&mut h, &mut app, Key::ArrowLeft, NONE);
+    check_path(&path(&app), &[COMPASS, COMPASS_V], "← onto V");
+    let v_unpicked = state(&app);
     press(&mut h, &mut app, Key::Enter, NONE);
+    let v_opened = path(&app);
+    check_path(
+        &v_opened,
+        &[COMPASS, COMPASS_V, COMPASS_V_ENTRIES[Z_BETA]],
+        "V's menu on its first entry",
+    );
+    press(&mut h, &mut app, Key::ArrowDown, NONE);
+    check_path(
+        &path(&app),
+        &[COMPASS, COMPASS_V, COMPASS_V_ENTRIES[Z_Q0]],
+        "↓ in V's menu",
+    );
     press(&mut h, &mut app, Key::Enter, NONE);
     settle(&mut h, &mut app);
-    assert_eq!(app.snapshot().sim.plane.q2, axis(Z_BETA, 1.0), "z_β kept");
-    rejects("the pick by the wrong entry", || {
-        assert_eq!(app.snapshot().sim.plane.q1, axis(Z_Q1, 1.0))
+    let v_picked = state(&app);
+    check_key_v_pick(&v_unpicked, &v_picked);
+    rejects("a V pick from the keys that changed nothing", || {
+        check_key_v_pick(&v_unpicked, &v_unpicked)
     });
+    rejects("a V pick from the keys that made no entry", || {
+        check_key_v_pick(&v_unpicked, &(v_unpicked.0, v_picked.1.clone(), v_picked.2))
+    });
+    rejects("Enter on V that leaves its menu closed", || {
+        check_path(
+            &on_v,
+            &[COMPASS, COMPASS_V, COMPASS_V_ENTRIES[Z_BETA]],
+            "V's menu on its first entry",
+        )
+    });
+    // Control: Enter on the compass itself is interaction mode, which a pick must not leave.
+    app.view.focus.path = vec![COMPASS.to_owned(), COMPASS_VIEW.to_owned()];
+    app.view.focus.mode = KeyMode::Navigation;
+    press(&mut h, &mut app, Key::Enter, NONE);
+    let interacting = app.view.focus.mode;
+    rejects("a pick that leaves interaction mode", || {
+        check_navigating(interacting)
+    });
+}
+
+/// Asserts the focus `mode` is navigation mode.
+fn check_navigating(mode: KeyMode) {
+    assert_eq!(mode, KeyMode::Navigation);
+}
+
+/// Asserts the keys' V pick of `z_q0` from `before` to `after` at scale 1: `q₂ = e_q0`, one entry.
+fn check_key_v_pick(before: &(u32, Plane, SliceFrame), after: &(u32, Plane, SliceFrame)) {
+    assert_eq!(after.1.q2, axis(Z_Q0, 1.0), "picked");
+    assert_eq!(after.0, before.0 + 1, "one entry");
 }
 
 /// `ViewUI`'s focus path, owned.
@@ -1819,6 +1869,7 @@ fn mock_cube_axis_buttons_are_the_cube_views_siblings_and_leave_with_it() {
     app.manifold.compass.view = CompassView::Jacobi;
     settle(&mut h, &mut app);
     let in_grid = siblings(&app);
+    let grid_label = label(&app);
     check_siblings(&in_grid, &cube[..7], "none of them in a grid view");
     check_path(
         &path(&app),
@@ -1872,12 +1923,16 @@ fn mock_cube_axis_buttons_are_the_cube_views_siblings_and_leave_with_it() {
     rejects("a focus outside moved into the compass", || {
         check_outside(&moved.0)
     });
-    rejects("the third axis's breadcrumb as D while it shows X", || {
-        check_label(Some("D"), "X")
-    });
-    rejects("no breadcrumb name", || check_label(None, "X"));
+    rejects("no breadcrumb name", || check_label(grid_label, "X"));
     rejects("the badge kept as a sibling with no badge", || {
         assert_eq!(siblings(&app), cube)
+    });
+    // Control: in Slice mode the third axis shows D, its breadcrumb with it.
+    app.manifold.compass.mode = Touch::Slice;
+    settle(&mut h, &mut app);
+    let sliced = label(&app);
+    rejects("the third axis's breadcrumb as D while it shows X", || {
+        check_label(sliced, "X")
     });
 }
 

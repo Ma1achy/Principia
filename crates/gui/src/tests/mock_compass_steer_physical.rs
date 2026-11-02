@@ -95,33 +95,29 @@ fn mock_compass_steer_physical_every_cell_on_the_fixture_lights() {
     let before = app.snapshot().sim.plane.clone();
     let start_frame = app.snapshot().sim.slice.frame;
     let mut moved = None;
+    // A steer's log, `(SetField kinds, console lines)`, on the basis alone and on the frame too.
+    let (mut basis_log, mut frame_log) = (None, None);
     for (i, j) in upper() {
         let (rows, depth) = (app.console().len(), app.snapshot().history.undo_depth);
         click_cell(&mut h, &mut app, i, j);
         let after = app.snapshot().sim.plane.clone();
         // One SetField carrying the basis: on the slice frame too where the plane takes it (R-459 G4).
         let frame = app.snapshot().sim.slice.frame;
-        if frame != start_frame {
-            moved = Some(frame);
-        }
-        let kind = if frame == start_frame {
-            "basis"
-        } else {
-            "other"
-        };
-        assert_eq!(setfields(&app, rows), [kind], "one SetField on the basis");
-        assert_eq!(app.snapshot().history.undo_depth, depth + 1);
-        assert!(
-            app.console()[rows..].iter().any(|e| {
-                let prefix = if frame == start_frame {
-                    "SetField Plane.q1 Plane.q2 "
-                } else {
-                    "SetField Slice.frame Plane.q1 Plane.q2 "
-                };
-                e.message.starts_with(prefix)
-            }),
-            "the steer logged in the console"
+        let log = (
+            setfields(&app, rows),
+            app.console()[rows..]
+                .iter()
+                .map(|e| e.message.clone())
+                .collect::<Vec<_>>(),
         );
+        check_steer_logged(&log, frame != start_frame);
+        if frame == start_frame {
+            basis_log.get_or_insert(log);
+        } else {
+            moved = Some(frame);
+            frame_log.get_or_insert(log);
+        }
+        assert_eq!(app.snapshot().history.undo_depth, depth + 1);
         check_lit(&d, Set::Jacobi, &after, (i, j), 1e-9);
         check_apply_form(&before, &after);
         // The Manifold view's sliders read the plane, as after Apply.
@@ -138,6 +134,37 @@ fn mock_compass_steer_physical_every_cell_on_the_fixture_lights() {
     rejects("an undo that leaves the steer's frame", || {
         check_frame_undone(moved, start_frame)
     });
+    let basis_log = basis_log.expect("a steer that kept the frame");
+    let frame_log = frame_log.expect("a steer that moved the frame");
+    rejects("a frame steer logged as a basis edit", || {
+        check_steer_logged(&basis_log, true)
+    });
+    rejects("a basis steer logged as a frame edit", || {
+        check_steer_logged(&frame_log, false)
+    });
+    rejects(
+        "a frame steer's SetField with a basis edit's console line",
+        || check_steer_logged(&(frame_log.0.clone(), basis_log.1.clone()), true),
+    );
+    rejects(
+        "a basis steer's SetField with a frame edit's console line",
+        || check_steer_logged(&(basis_log.0.clone(), frame_log.1.clone()), false),
+    );
+}
+
+/// Asserts a steer logged `(kinds, lines)`: one SetField, on the frame too where it `moved` the frame and on the
+/// basis alone where not, with its console line.
+fn check_steer_logged((kinds, lines): &(Vec<&'static str>, Vec<String>), moved: bool) {
+    let (kind, prefix) = if moved {
+        ("other", "SetField Slice.frame Plane.q1 Plane.q2 ")
+    } else {
+        ("basis", "SetField Plane.q1 Plane.q2 ")
+    };
+    assert_eq!(kinds, &[kind], "one SetField on the basis");
+    assert!(
+        lines.iter().any(|m| m.starts_with(prefix)),
+        "the steer logged in the console"
+    );
 }
 
 /// Asserts one Ctrl+Z after a steer left the slice frame `got` the frame it started on.
