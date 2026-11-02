@@ -15,7 +15,7 @@
 //! - `merge_ready_reviews_runs_cancel_per_pr_and_event`: `reviews.yml` keeps one cancelling group per pull request and
 //!   event, never cancelling on `main`; `reviews-complete` still runs on every run; and the re-run of the stale
 //!   `pull_request` run (R-276), run under bash with a stand-in `gh`, re-runs it on the live head and leaves a
-//!   superseded head's alone.
+//!   superseded head's alone, the head read again after any wait, so a push during the wait is seen.
 //!
 //! Each test has its registered negative controls (R-176), each feeding the same check a workflow differing in the one
 //! respect it turns on. The workflows are parsed with PyYAML, as `xtask/tests/ci_changes.rs` parses them.
@@ -105,8 +105,9 @@ struct Ran {
 }
 
 /// Runs `script` under bash as a workflow step runs, with `env`, and a stand-in `gh` on the `PATH` that logs each call
-/// and answers: a check-run count `$STUB_COUNT`, check-run ids `$STUB_IDS`, a pull request's head `$STUB_LIVE`, and,
-/// for `gh run list`, run 42, completed, concluded `$STUB_CONCLUSION`.
+/// and answers: a check-run count `$STUB_COUNT`, check-run ids `$STUB_IDS`, a pull request's head `$STUB_LIVE` (from
+/// its second read on, `$STUB_LIVE_LATER` if set: a push between the reads), and, for `gh run list`, run 42, completed,
+/// concluded `$STUB_CONCLUSION`.
 fn run(tag: &str, script: &str, env: &[(&str, &str)]) -> Ran {
     let dir = Scratch::new(&format!("merge_ready_{tag}"));
     let bin = dir.join("bin");
@@ -120,7 +121,12 @@ fn run(tag: &str, script: &str, env: &[(&str, &str)]) -> Ran {
          case \"$*\" in\n\
            *total_count*) echo \"$STUB_COUNT\" ;;\n\
            *'check_runs[].id'*) [ -z \"$STUB_IDS\" ] || printf '%s\\n' $STUB_IDS ;;\n\
-           *'/pulls/'*) echo \"$STUB_LIVE\" ;;\n\
+           *'/pulls/'*)\n\
+             if [ \"$(grep -c /pulls/ \"$STUB_CALLS\")\" -gt 1 ] && [ -n \"$STUB_LIVE_LATER\" ]; then\n\
+               echo \"$STUB_LIVE_LATER\"\n\
+             else\n\
+               echo \"$STUB_LIVE\"\n\
+             fi ;;\n\
            'run list'*'| .databaseId') echo 42 ;;\n\
            'run list'*'| .status') echo completed ;;\n\
            'run list'*'| .conclusion') echo \"$STUB_CONCLUSION\" ;;\n\
@@ -459,15 +465,33 @@ fn check_reviews(yml: &str) {
     )["run"]
         .as_str()
         .expect("run");
-    for (live, conclusion, reruns, case) in [
-        ("abc", "failure", true, "the live head's failed run"),
-        ("abc", "success", false, "the live head's passed run"),
-        ("def", "failure", false, "a superseded head's run"),
+    for (live, later, conclusion, reruns, case) in [
+        ("abc", "", "failure", true, "the live head's failed run"),
+        (
+            "abc",
+            "abc",
+            "failure",
+            true,
+            "the live head's failed run, read twice",
+        ),
+        ("abc", "", "success", false, "the live head's passed run"),
+        ("def", "", "failure", false, "a superseded head's run"),
+        (
+            "abc",
+            "def",
+            "cancelled",
+            false,
+            "a head superseded during the wait",
+        ),
     ] {
         let ran = run(
-            &format!("rerun_{live}_{conclusion}"),
+            &format!("rerun_{live}_{later}_{conclusion}"),
             rerun,
-            &[("STUB_LIVE", live), ("STUB_CONCLUSION", conclusion)],
+            &[
+                ("STUB_LIVE", live),
+                ("STUB_LIVE_LATER", later),
+                ("STUB_CONCLUSION", conclusion),
+            ],
         );
         let did = ran.calls.contains("gh run rerun 42");
         assert!(
@@ -520,6 +544,20 @@ mod superseded_rerun {
             "reviews.yml",
             "          if [ \"$live\" != \"$HEAD_SHA\" ]; then\n",
             "          if false; then\n"
+        ))
+    );
+}
+
+mod superseded_during_wait {
+    use super::*;
+    negative_control!(
+        merge_ready_reviews_runs_cancel_per_pr_and_event,
+        "a review's run that reads the head only before the wait, so a push during it goes unseen",
+        expected = "re-ran a head superseded during the wait",
+        check_reviews(&edited(
+            "reviews.yml",
+            "          # The head again, now, after the wait.\n          live=$(live_head)\n",
+            "          # The head again, now, after the wait.\n"
         ))
     );
 }
