@@ -719,7 +719,8 @@ numbers are the preprint's.** Catalogue §6.3.
 
 ## Hudomal 2015, MSc thesis, Belgrade
 
-File: `../2026-10-26_orbit_catalogues/hudomal_2015_msc_belgrade.pdf`. The thesis's printed page numbers equal its PDF
+File: `../2026-10-26_orbit_catalogues/hudomal_2015_msc_belgrade.pdf`, held locally since 2 Nov 2026 at
+`../_local/hudomal_2015_msc_belgrade.pdf` (R-673). The thesis's printed page numbers equal its PDF
 pages. **Already used elsewhere:**
 
 - Tables 1 and 16–22 (`../2026-10-26_belgrade_gallery/crosscheck.py`);

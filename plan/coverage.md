@@ -43,7 +43,7 @@ Of these: 231 calibration, 178 definition, 1659 obligation. Retired (kept for th
 
 ## Sections
 
-1677 sections in 61 files: 1338 yield at least one requirement; 339 yield none and are listed below with the reason.
+1678 sections in 61 files: 1339 yield at least one requirement; 339 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | gap (RQ-378) | 1 |

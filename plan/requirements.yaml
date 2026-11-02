@@ -33369,6 +33369,8 @@
     section: 12.2 Tiers
   - file: docs/design/principia_dd_replication.md
     section: "12.3 Outcomes, the like-for-like check and the forbidden moves"
+  - file: decisions.md
+    section: "R-673 — Of the five \"unclear\" PDFs, the Belgrade gallery's initial-conditions PDF stays under its site's copy-and-use terms, crediting the gallery; the two Agekyan & Anosova translations, Anosova 1969 and Hudomal's thesis leave the tree for `docs/incoming/_local/`, with no history rewrite *(closes RQ-610; amends R-643)*"
   verify:
     method: numerical gate
     detail: "Table 23 transcribed twice from docs/incoming/2026-10-26_orbit_catalogues/hudomal_2015_msc_belgrade.pdf (rule 2); per orbit our return proximity beside the table's, within REQ-VAL-235; control: an orbit integrated to 0.9·T must fail"
@@ -33379,8 +33381,9 @@
   - R-629
   - R-649
   - R-650
+  - R-673
   milestone: M9
-  note: "Reproduces: Hudomal 2015 (MSc thesis), Table 23: 38 orbits, six-digit initial conditions, periods and return proximities. Chart: none (Path A). Milestone: M9 (was M3; R-650). Compare: exact (rule 8). Tolerance: REQ-VAL-235 (calibration, R-71). Row HU-3 (+ the gallery's cross-check 4) of principia_dd_replication.md § \"5.4 The Belgrade orbits\"; layer verification, tier A; closed by TASK-M9-13 (was TASK-M3-53) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (b), the CPU IC inspector: it binds at f64 or higher, and a GPU miss on it is expected, not a defect (R-649 item 2)."
+  note: "Reproduces: Hudomal 2015 (MSc thesis), Table 23: 38 orbits, six-digit initial conditions, periods and return proximities. Chart: none (Path A). Milestone: M9 (was M3; R-650). Compare: exact (rule 8). Tolerance: REQ-VAL-235 (calibration, R-71). Row HU-3 (+ the gallery's cross-check 4) of principia_dd_replication.md § \"5.4 The Belgrade orbits\"; layer verification, tier A; closed by TASK-M9-13 (was TASK-M3-53) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (b), the CPU IC inspector: it binds at f64 or higher, and a GPU miss on it is expected, not a defect (R-649 item 2). R-673 (2 Nov 2026, RQ-610 (c)): the thesis is held locally at docs/incoming/_local/hudomal_2015_msc_belgrade.pdf (gitignored), no longer in the repo; the path in the detail resolves there and is left as written, since it is a record. Table 23's two transcriptions, made with citation, are committed as usual."
 - id: REQ-VAL-235
   area: VAL
   kind: calibration

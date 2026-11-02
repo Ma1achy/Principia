@@ -179,31 +179,6 @@ still decides what is built for them, never whether a milestone passes; it stays
   five-chart split may go ahead." R-636's hold is lifted for TASK-M2-36 and TASK-M2-52. This entry's chart is a replication chart and is not built ahead of
   its ruling (R-594 item 5). Stays open.
 
-## RQ-610: Five committed PDFs whose licence is unclear: the Agekyan–Anosova and Anosova translations, the Belgrade gallery's initial-conditions PDF, and Hudomal's MSc thesis *(the owner's licence-audit ruling of 28 Oct 2026; the read-only audit posted on PR #327; context: none built)*
-
-*Queued by the owner (28 Oct 2026): "The 5 "unclear" ones stay for now; queue them." They stay in the repo until
-ruled. For the owner: yes, it decides whether five files stay in a public repository.*
-
-- **File, section:** the audit's rows 12 to 16 (PR #327, comment "Read-only licence audit of every committed PDF"):
-  - `docs/incoming/2026-10-24_anosova/papers/agekyan_anosova_1968_Ap_4_11_part2.pdf` (sha256 `7d160daf…1c9368`): "No
-    copyright line, stamp or licence text found (text layer is OCR only). Missing: any statement of who holds the
-    rights to the translation."
-  - `docs/incoming/2026-10-24_anosova/papers/agekyan_anosova_1968_SvA_11_1006.pdf` (sha256 `5bb197a9…d2574f8`): "Image
-    only … no copyright line, stamp or licence readable by text search". Its README: "ADS scan".
-  - `docs/incoming/2026-10-25_replication/papers/anosova_1969_Ap_5_81_part3.pdf` (sha256 `be19ced2…88bcf`): "No
-    copyright line, stamp or licence text found. Missing: rights statement."
-  - `docs/incoming/2026-10-26_belgrade_gallery/archive/initial-conditions.pdf` (sha256 `5b76cfd6…3ade5b`): the
-    gallery's "Use and Copyright" page, as its README quotes: "You may copy and use any images or data from this web
-    gallery. Please, credit us by citing this page and our paper [8]." Whether that covers this PDF as a document is
-    not stated.
-  - `docs/incoming/2026-10-26_orbit_catalogues/hudomal_2015_msc_belgrade.pdf` (sha256 `b30dbad2…c2fb0`): "No
-    copyright, stamp or licence in the file (searched all 62 pages)", from https://www.scl.rs/theses/msc_ahudomal.pdf.
-- **The question:** for each file, keep it in the repo or move it to `docs/incoming/_local/` as the ten were.
-- **Options seen:** (a) keep all five; (b) move all five; (c) per file: for example, keep the gallery's PDF under its
-  "copy and use" terms, and move the translations and the thesis.
-- **Applied meanwhile:** all five stay, as the owner ruled.
-- **Waits:** nothing built.
-
 ## RQ-612: GG-1's lifetime T: which definition and which units reproduce the paper's Fig. 1, and whether (3, 43) is a grid offset *(queued by the Brutus pilot; `docs/incoming/2026-10-28_rq598_data/brutus_run_here/REPORT.md` § 2; the data-and-papers entry on PR #309; context: TASK-M3-62)*
 
 *Queued 29 Oct 2026 by the Brutus pilot, as corrected by the physics review of #334. For the owner: yes, it is physics where the choice

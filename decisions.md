@@ -28184,12 +28184,15 @@ note).
 
 ## R-643 — The licence audit: the four subscription-stamped and six all-rights-reserved PDFs leave the tree for `docs/incoming/_local/` in one ordinary commit, with no history rewrite; the five "unclear" PDFs stay and are queued; the 22 arXiv licences are checked, the 19 arXiv-default PDFs kept and the 3 CC-licensed fine; from now on no publisher PDF is committed unless its licence allows redistribution, checked before commit *(no RQ; a standing rule)*
 *Amended in part by R-644 (option 2, the history scrub, is shelved, not scheduled).*
+*Amended in part by R-673 (2 Nov 2026, RQ-610 (c)): of the five "unclear" PDFs, four leave the tree for
+`docs/incoming/_local/` and the Belgrade gallery's stays, crediting the gallery.*
 *Refined in part, 28 Oct 2026, by the owner, for newly fetched papers: his follow-up message of that late evening
 (after the one R-645 quotes), verbatim, "Your rule for newly fetched papers (commit only CC BY/BY-SA/CC0/public domain;
 arXiv-default to _local/) is approved."; ported 30 Oct 2026, with R-649 and R-650, in `CLAUDE.md` § "Papers and
 licences".*
 *Still in force: all of it but the scheduling of option 2, the scrub, which R-644 shelves; its conditions and method
-are kept as ruled, for when it is revisited. For a newly fetched paper, the owner's refinement of 28 Oct 2026 (above):
+are kept as ruled, for when it is revisited; and the five "unclear" PDFs, which R-673 rules (four held locally, the
+gallery's kept). For a newly fetched paper, the owner's refinement of 28 Oct 2026 (above):
 only a CC BY, CC BY-SA, CC0 or public-domain file is committed, and an arXiv-default one is held in
 `docs/incoming/_local/`; the 19 arXiv-default PDFs already committed stay, as he ruled.*
 *28 Oct 2026 · the owner's licence-audit ruling (a #327 comment), his option-2 ruling the same day, and his answers of
@@ -29464,3 +29467,47 @@ The owner's words, 2 Nov 2026, verbatim, of RQ-670:
 R-672 is in the "design" group of `plan/rule_groups.yaml`.
 
 Changes REQ-VAL-127, REQ-VAL-221, REQ-VAL-342 and REQ-VAL-343 (rq, rulings, notes) and REQ-VAL-340 (verify, note).
+
+## R-673 — Of the five "unclear" PDFs, the Belgrade gallery's initial-conditions PDF stays under its site's copy-and-use terms, crediting the gallery; the two Agekyan & Anosova translations, Anosova 1969 and Hudomal's thesis leave the tree for `docs/incoming/_local/`, with no history rewrite *(closes RQ-610; amends R-643)*
+*2 Nov 2026 · the owner's message of that day; applied in one ordinary commit removing the four files, with the README
+and index lines that name them (`docs/incoming/2026-10-24_anosova/README.md`, `2026-10-25_replication/README.md`,
+`2026-10-26_orbit_catalogues/README.md`, `2026-10-26_belgrade_gallery/README.md`, `2026-10-27_papers/README.md`,
+`2026-10-27_papers/TARGETS.md`, `2026-10-27_papers/transcriptions/build.py`, `2026-10-28_rq598_data/README.md`,
+`2026-10-31_library_triage/SUMMARY.md`), `docs/archive/review_queue/M0.md` (RQ-610 moved), `REVIEW_QUEUE.md`,
+REQ-VAL-234 (a note), TASK-M9-13 (a note) and `plan/rule_groups.yaml`*
+
+The owner's words, 2 Nov 2026, verbatim, of RQ-610:
+
+> 610 (c): keep the gallery PDF (its site's copy-and-use terms; credit them), and move the two Agekyan & Anosova
+> translations, Anosova 1969 and the Hudomal thesis to _local.
+
+*Context.* His message of 1 Nov 2026 had said "RQ-610 stays open"; this ruling, the next day, closes it. RQ-610's
+option (c): "per file: for example, keep the gallery's PDF under its 'copy and use' terms, and move the translations and
+the thesis."
+
+*What it decides:*
+
+- **Kept:** `docs/incoming/2026-10-26_belgrade_gallery/archive/initial-conditions.pdf` (sha256 `5b76cfd6…3ade5b`), under
+  the gallery's "Use and Copyright" terms ("You may copy and use any images or data from this web gallery. Please,
+  credit us by citing this page and our paper [8]."), crediting the gallery: every use cites
+  `http://three-body.ipb.ac.rs/` and its paper [8], Šuvakov & Dmitrašinović 2013, as that folder's README says.
+- **Moved to `docs/incoming/_local/`, same filenames, gitignored:** `agekyan_anosova_1968_Ap_4_11_part2.pdf`
+  (sha256 `7d160daf…1c9368`) and `agekyan_anosova_1968_SvA_11_1006.pdf` (`5bb197a9…d2574f8`), from
+  `docs/incoming/2026-10-24_anosova/papers/`; `anosova_1969_Ap_5_81_part3.pdf` (`be19ced2…68a8bcf`), from
+  `docs/incoming/2026-10-25_replication/papers/`; and `hudomal_2015_msc_belgrade.pdf` (`b30dbad2…2c1fb0`), from
+  `docs/incoming/2026-10-26_orbit_catalogues/`. Each local copy's sha256 was checked against the tracked file before
+  `git rm`.
+- **As R-643 did for the ten:** one ordinary commit, no history rewrite (R-644 stands). Their README rows keep their
+  sha256 values and say where each is held; a path to one cited elsewhere in the docs resolves to `_local/` under the
+  same name, and those citations are left as written, since they are records. Transcriptions from them, made with
+  citation, stay in the repo.
+
+*Applied per R-369:* RQ-610 printed two sha256 suffixes wrongly: the Anosova 1969 file's as "…88bcf" (the tracked
+file's is `…68a8bcf`) and the thesis's as "…c2fb0" (it is `…2c1fb0`). Both prefixes match as RQ-610 gives them, and
+each is the file the audit named at that path; the queue entry is archived as written.
+
+*What it amends:* **R-643**, which kept the five "unclear" PDFs in the repo until ruled. It closes **RQ-610**.
+
+R-673 is in the "process" group of `plan/rule_groups.yaml`, with R-643.
+
+Changes REQ-VAL-234 (rulings, note).

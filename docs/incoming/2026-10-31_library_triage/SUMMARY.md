@@ -302,6 +302,10 @@ prefix `7d160daf` matches, tracked, no open licence seen. It stays until ruled, 
 `from_zips/three_body_papers/BF01013153.pdf` is byte-identical. `agekyan_anosova_1968_SvA_11_1006.pdf` and the Anosova
 1969 translation, also in this triage's already-have rows, are on RQ-610 too.
 
+*2 Nov 2026 (R-673, closing RQ-610 at (c)):* all three, and Hudomal's thesis, now held locally at
+`docs/incoming/_local/` under the same filenames, not in the repo; the Belgrade gallery's `initial-conditions.pdf` stays,
+under the gallery's copy-and-use terms, crediting the gallery. They remain "already have".
+
 ## Open questions for the owner
 
 1. **Does a site note count as "published"?** The five families (`r4new`, `rosette`, `bhhsat`, `bhunt`, `pancake`; 81 rows)
