@@ -1044,35 +1044,68 @@ fn mock_cube_axis_buttons_picking_d_sets_the_normal_and_re_tilts_in_one_entry() 
     });
 }
 
+/// The normal edit to `to` from the view at `(t1, t2)` on frame `(x, y)`: its normal and whether it carries a basis.
+fn normal_edit_of(t1: f64, t2: f64, x: usize, y: usize, to: usize) -> Option<(usize, bool)> {
+    use engine::contract::set_field::{Edit, SimField};
+    let v = View {
+        x,
+        y,
+        ..view(t1, t2, 0.0, 1.0)
+    };
+    normal_edit(&v, to).map(|e| match e.edit {
+        Edit::Sim(SimField::SliceFrame { basis, frame }) => {
+            (frame.normal as usize, basis.is_some())
+        }
+        other => panic!("not a frame edit: {other:?}"),
+    })
+}
+
+/// No edit where `want` is `None`; otherwise an edit to normal `to` carrying a basis exactly where `want` says.
+fn check_carries(got: Option<(usize, bool)>, to: usize, want: Option<bool>) {
+    match (got, want) {
+        (None, None) => {}
+        (Some((normal, basis)), Some(want)) => {
+            assert_eq!(normal, to, "the edit sets the picked normal");
+            assert_eq!(
+                basis, want,
+                "a basis carried only where a follower is tilted"
+            );
+        }
+        (got, want) => panic!("edit {got:?}, wanted basis presence {want:?}"),
+    }
+}
+
 #[test]
 fn mock_cube_axis_buttons_normal_edit_carries_the_basis_only_where_a_follower_is_tilted() {
-    use engine::contract::set_field::{Edit, SimField};
-    let carries = |t1: f64, t2: f64, x: usize, y: usize, to: usize| -> Option<bool> {
-        let v = View {
-            x,
-            y,
-            ..view(t1, t2, 0.0, 1.0)
-        };
-        normal_edit(&v, to).map(|e| match e.edit {
-            Edit::Sim(SimField::SliceFrame { basis, frame }) => {
-                assert_eq!(frame.normal as usize, to);
-                basis.is_some()
-            }
-            other => panic!("not a frame edit: {other:?}"),
-        })
+    let carries = |t1: f64, t2: f64, x: usize, y: usize, to: usize, want: Option<bool>| {
+        check_carries(normal_edit_of(t1, t2, x, y, to), to, want)
     };
     // None for the normal it is and for a dimension in the plane.
-    assert_eq!(carries(0.0, 0.0, Z_Q3, Z_Q3, Z_Q3), None);
-    assert_eq!(carries(0.0, 0.0, Z_Q3, Z_Q3, Z_ALPHA), None);
-    assert_eq!(carries(0.0, 0.0, Z_Q3, Z_Q3, Z_BETA), None);
+    carries(0.0, 0.0, Z_Q3, Z_Q3, Z_Q3, None);
+    carries(0.0, 0.0, Z_Q3, Z_Q3, Z_ALPHA, None);
+    carries(0.0, 0.0, Z_Q3, Z_Q3, Z_BETA, None);
     // Zero angles: the frame alone.
-    assert_eq!(carries(0.0, 0.0, Z_Q3, Z_Q3, Z_MU1), Some(false));
+    carries(0.0, 0.0, Z_Q3, Z_Q3, Z_MU1, Some(false));
     // X follows, τ₁ set; Y follows, τ₂ set; a target that does not follow keeps the plane.
-    assert_eq!(carries(20.0, 0.0, Z_Q3, Z_Q2, Z_MU1), Some(true));
-    assert_eq!(carries(0.0, 15.0, Z_Q2, Z_Q3, Z_MU1), Some(true));
-    assert_eq!(carries(20.0, 0.0, Z_Q2, Z_Q3, Z_MU1), Some(false));
-    assert_eq!(carries(0.0, 15.0, Z_Q3, Z_Q2, Z_MU1), Some(false));
-    assert_eq!(carries(20.0, 15.0, Z_Q2, Z_Q0, Z_MU1), Some(false));
+    carries(20.0, 0.0, Z_Q3, Z_Q2, Z_MU1, Some(true));
+    carries(0.0, 15.0, Z_Q2, Z_Q3, Z_MU1, Some(true));
+    carries(20.0, 0.0, Z_Q2, Z_Q3, Z_MU1, Some(false));
+    carries(0.0, 15.0, Z_Q3, Z_Q2, Z_MU1, Some(false));
+    carries(20.0, 15.0, Z_Q2, Z_Q0, Z_MU1, Some(false));
+    // The controls: a wrong basis presence, a wrong normal, and an edit where there must be none.
+    let tilted = normal_edit_of(20.0, 0.0, Z_Q3, Z_Q2, Z_MU1);
+    rejects("a tilted follower's edit without its basis", || {
+        check_carries(tilted.map(|(n, _)| (n, false)), Z_MU1, Some(true))
+    });
+    rejects("an untilted edit carrying a basis", || {
+        check_carries(Some((Z_MU1, true)), Z_MU1, Some(false))
+    });
+    rejects("the edit to another normal", || {
+        check_carries(tilted.map(|(_, b)| (Z_Q2, b)), Z_MU1, Some(true))
+    });
+    rejects("an edit for a dimension in the plane", || {
+        check_carries(Some((Z_ALPHA, false)), Z_ALPHA, None)
+    });
 }
 
 #[test]
