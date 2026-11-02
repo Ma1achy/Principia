@@ -27624,8 +27624,10 @@ Changes no requirement or task.
 final head, after every substantive push and periodically on a long-running PR, replaces the single review waited for
 up to 15 minutes after the PR opens; every bot finding is closed out before merge and a PR with an unresolved bot
 thread does not merge; the cadence is a standing rule).*
-*Still in force: all of it but its cadence: the three bots stay advisory, never merge gates and never counted by
-`reviews-complete`; every finding is verified, answered on its thread and resolved, a P0 / CRITICAL claim goes to the
+*Amended in part by R-659 (how the Gemini review runs: one request to the Gemini API with a fallback chain; the CLI and
+its action are gone; the name `@gemini-cli /review` stays).*
+*Still in force: all of it but its cadence and how the Gemini workflow runs: the three bots stay advisory, never merge
+gates and never counted by `reviews-complete`; every finding is verified, answered on its thread and resolved, a P0 / CRITICAL claim goes to the
 physics reviewer, a late review is handled as a follow-up, and the trial's tally and report stand; its 15-minute bound
 is replaced by a limit per bot, counted from each review the orchestrator requests (R-651).*
 
@@ -29010,6 +29012,72 @@ The owner's words, verbatim:
   the build as validation's, for the same (R-217).
 
 R-658 is in the "process" group of `plan/rule_groups.yaml`. Changes no requirement.
+
+## R-659 — Gemini reviews make one request and name the model that answered; on a quota refusal they fall back down a chain of four models; a spent chain posts "Gemini quota exhausted, review skipped" and the merge proceeds *(an R-369 note; amends R-635's Gemini workflow)*
+
+*30 Oct 2026 · the owner's message of that day, verbatim below; applied in `.github/workflows/gemini-dispatch.yml`,
+`scripts/gemini_review.py` (new), `xtask/tests/gemini_review.rs` (new), `plan/OPERATIONS.md` (§ "Reviewers"), the brief's
+one line naming the Gemini reviewer in `AGENTS.md`, `GEMINI.md` and `.github/copilot-instructions.md`, the header of
+`xtask/tests/ai_review_rules.rs`, `scripts/cloud-setup.sh` and `xtask/tests/cloud_setup.rs` (the action's allowance gone
+with the action), the forward line on R-635 and `plan/rule_groups.yaml`*
+
+The owner's words, verbatim:
+
+> Gemini reviewer: free-tier daily limits are the likely root cause of missing reviews. The dashboard shows Gemini 3.8 Flash at 45 requests against a 20/day limit, so requests past 20 fail with 429s. Confirm this in the run logs, then: (1) Cut requests per review: measure how many model calls one review makes; if the CLI is calling the model agentically many times, switch to a single request per review (diff plus the bot-rules context in one prompt, output posted as one review). (2) Add a fallback chain on 429/quota errors: gemini-3.8-flash → gemini-3-flash → gemini-2.5-flash → gemini-2.5-flash-lite. Each model has its own free quota (20 RPD; 5–10 RPM). Respect RPM with backoff, don't hammer. Stamp the model name in each review's header. (3) If the whole chain is exhausted, post a short "Gemini quota exhausted, review skipped" note on the PR rather than failing silently, and the merge proceeds per R-651. Report requests/review before and after.
+
+*What it decides:*
+
+- **One request per review.** The prompt holds `AGENTS.md` § "Code Review Rules", the PR's title and body, the
+  requester's extra instructions and the diff. The request offers no tools, so the model cannot ask for a second turn.
+- **The chain, on 429 or quota errors:** `gemini-3.8-flash`, `gemini-3-flash`, `gemini-2.5-flash`,
+  `gemini-2.5-flash-lite`. The review's header names the model that answered.
+- **A spent chain** posts the short note, and the merge proceeds per R-651.
+
+*The run logs, as the owner asked:* run 41031297522 on PR #342 failed with `TerminalQuotaError`, HTTP 429,
+`generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash`, "Please retry in 20h2m58s". The daily limit
+is the cause.
+
+*Requests per review, before:* read-only file tools, `maxSessionTurns: 8` and `maxAttempts: 4` allowed up to 32. No run
+measured it: the CLI's JSON output holds its stats only on success, and the four successful-looking runs since PR #344
+(41049011076, 41049015172, 41076896834, 41100935781) each logged "no request count". *After:* one when the first model
+answers; two where a retry is due; eight at most, two on each model. The script counts them itself and logs the count on
+every outcome. Measured on PR #357's own run, 41146426835: one request, 124,530 bytes of prompt, answered by
+`gemini-3.8-flash` by the API's own `modelVersion`. The fallback steps have not yet answered on the real API.
+
+*Applied per R-369:*
+
+- **The Gemini CLI and its action are out of the path, because the CLI cannot make the owner's chain.** CLI 0.64.0, on
+  API-key auth, rewrites `gemini-3-flash` and `gemini-3.5-flash` to `gemini-3.8-flash` as the request leaves
+  (`getBackendModelMappings`, in its `ModelMappingContentGenerator`; `hasLatestFlashGAAccess()` is always true on that
+  auth). Run against a local stand-in for the API, CLI 0.64.0 given `--model gemini-3-flash` sent
+  `POST /v1beta/models/gemini-3.8-flash:streamGenerateContent`, as it did with `models/gemini-3-flash`, with
+  `modelConfigs.customOverrides` and with `experimental.dynamicModelConfiguration`. So the chain's second step would
+  spend a request on the model that had just refused it. `scripts/gemini_review.py` calls `generateContent` itself with
+  the standard library. This changes how R-635's review runs and not who reviews: the reviewer's name, the
+  `@gemini-cli /review` trigger and `GEMINI.md`'s copy of the brief stay. The workflow's name stays too.
+- **The count comes from the script, not the CLI's stats,** since no CLI runs: it writes each request to the result file
+  as it goes, so a killed step still leaves a count.
+- **What the header stamps** is the `modelVersion` in the API's reply. A dated or preview build of the model asked for
+  counts as that model; any other name is stated as "(asked for ...)" with a warning in the log.
+- **Retries:** one per model, whatever the cause. A 429 whose quota is per minute, or that asks for a wait of 120 s or
+  less, is waited out and retried once. A daily quota, or a longer wait, moves straight on. A 5xx, a timeout or a network
+  error is retried once after about 30 s, then moves on, since each model has its own capacity. That last is a choice:
+  the owner's words name 429s only, and moving on costs at most one more request than giving up.
+- **A 403 or a 404** means the key has no such model: the chain moves on without a retry, and the log says which models
+  worked. Any other 4xx moves on the same way.
+- **The notes.** A chain that ended with a quota refusal and nothing but quota refusals or absent models says the
+  owner's words. A chain ended by anything else (an outage, or absent models alone) says "Gemini unavailable, review
+  skipped". A reply with no text ends the walk and says so, since the next model would get the same prompt. Each note
+  is a `COMMENT` review of the PR's head, as a review is, so a merge script finds it the same way.
+- **The diff's bound stays 450,000 bytes** (about 110K tokens), cut at a line boundary. The model is told; the review
+  says how much it saw and names the files it never saw.
+- **Timeouts:** the script stops itself at 20 minutes, its step at 22 and the job at 25, down from a 25-minute step and a
+  30-minute job. A request gets at most 5 minutes. R-651's 30-minute limit for Gemini, in PR #342, stands: its "job's
+  25-minute timeout" now describes this job.
+- **Which file a run uses:** `pull_request` and `pull_request_review_comment` runs use the branch's workflow and script;
+  `issue_comment` runs use `main`'s.
+
+R-659 is in the "process" group of `plan/rule_groups.yaml`. Changes no requirement.
 
 ## R-661 — That tier (a)'s f32 statistics agree, with f64's or with a converged reference's, is a hypothesis Principia will measure, established by no paper; BZ-1 is reopened on the cold sets, which start from rest and so are planar, with a paired f32, f64 and converged experiment proposed for M9 at peek priority; REQ-VAL-199 states the effect size its 256 starts can detect; the CC BY papers and records are committed *(closes RQ-644 and RQ-646; amends R-629; queues RQ-647, RQ-648 and RQ-649)*
 *31 Oct 2026 · the owner, on the precision set's triage; applied in `docs/incoming/2026-10-31_precision_set/` (new),

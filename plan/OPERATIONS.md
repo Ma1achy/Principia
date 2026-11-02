@@ -236,6 +236,13 @@ or reviews" and `plan/WORKFLOW.md` § "The review loop". In addition:
     this run only; CI's caps (REQ-VAL-180, REQ-VAL-181) are unchanged. The rest of the diff, every other crate, runs
     as above, unchanged, in a run of its own that leaves gui out (`--exclude 'crates/gui/**'`). The orchestrator's
     memory guard (§ "Resources") runs throughout.
+- **The Gemini review (R-659).** `gemini-dispatch.yml` runs `scripts/gemini_review.py`, which makes one request to the
+  Gemini API, no CLI and no tools. On a quota refusal it goes down `gemini-3.8-flash`, `gemini-3-flash`,
+  `gemini-2.5-flash`, `gemini-2.5-flash-lite`; each has its own free quota of about 20 requests a day. The review's
+  header names the model that answered, and the run's summary logs the request count and each model's result. A spent
+  chain posts "Gemini quota exhausted, review skipped" as a review of the head, and the merge proceeds (R-651). An
+  outage posts "Gemini unavailable, review skipped" the same way. A `pull_request` run or an `@gemini-cli /review`
+  inline comment uses the branch's files; an `@gemini-cli /review` PR comment uses `main`'s.
 
 ## qa commits
 

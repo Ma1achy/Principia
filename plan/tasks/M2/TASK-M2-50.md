@@ -27,7 +27,8 @@ adds the Randomise arm, and proposes the bounds.
 - In `cargo xtask gate inspector-roundtrip` (`crates/validation/`): the shape checks over RQ-475's families (random
   gauge elements; equal-mass equilateral triangles, `L⁺` and `L⁻`; collinear states with masses from `z_μ` on
   `[−4, 4)²`) judged: the `lookup_clamped` bit and `z_β`'s clamp image bit for bit, `|w − 1|` and `|w|`, read on the canonical
-  state `D(E(x))` (where `C`'s mirror puts `L⁻` at `w = +1`), against REQ-VAL-121's bounds; each with a registered negative control (R-176).
+  state `C(x)` (where `C`'s mirror puts `L⁻` at `w = +1`), against REQ-VAL-121's bounds, and `D(E(x))`'s `|w|` reported
+  unjudged, the clamp image, sin2α·sin(π·ε_z); each with a registered negative control (R-176).
 - In `cargo xtask gate inspector-handles`: the Randomise arm beside REQ-VAL-021's, its per-handle maxima reported, its
   verdict separate.
 - The calibration proposal for the shape bounds and the Randomise arm's bound, with TASK-M2-27's proposal for the
@@ -36,9 +37,10 @@ adds the Randomise arm, and proposes the bounds.
 ## Acceptance tests
 - `cargo xtask gate inspector-roundtrip` — the fixed, recorded seed's 2×10⁴ `z` in the ball `‖z‖ < 4`: max
   `‖z − E(D(z))‖ ≤ 1.2×10⁻¹³`, canonical CoM ≤ 1.7×10⁻¹⁶; every collinear state's `z_β` at its clamp image with
-  `lookup_clamped` set and no equilateral state's set, bit for bit; max `|w − 1|` and max `|w|`, read on the canonical state `D(E(x))`, within REQ-VAL-121's
-  bounds; controls: a state moved off the line by one ulp is caught, and a bound tightened below the measurement fails
-  (REQ-VAL-022).
+  `lookup_clamped` set and no equilateral state's set, bit for bit; max `|w − 1|` and max `|w|`, read on the canonical state `C(x)`, within REQ-VAL-121's
+  bounds; controls: `z_β` moved one ulp off its clamp image fails the bit-for-bit check, a collinear state moved about
+  10³ ulps off the line is caught by `|w|` on `C(x)` while its `z_β` still clamps, and a bound tightened below the
+  measurement fails (REQ-VAL-022).
 - `cargo xtask gate inspector-handles` — REQ-VAL-021's arm at 1.6×10⁻¹⁴ unchanged; the Randomise arm's max `‖Δz‖`
   per handle reported over seeded draws; control: feeding the Randomise arm's maximum into REQ-VAL-021's verdict fails
   (REQ-VAL-193).
@@ -52,3 +54,8 @@ adds the Randomise arm, and proposes the bounds.
   the round trip runs; the bounds are measured on the final `C`.
 - The pole check runs at equal masses only, where `L±` are the poles (R-549, RQ-355); at unequal masses the
   equilateral configuration is not at `w = ±1`.
+- Applied per R-369 (RQ-624, decided by the orchestrator, 30 Oct 2026): `|w − 1|` and `|w|` are read on `C(x)`, the
+  state R-551's evidence was measured on; on `D(E(x))` a collinear state's `|w|` is the `β` clamp's image. The control
+  "a state moved off the line by one ulp is caught" is dropped: the chart cannot resolve it, by design. The Randomise
+  arm is reported as REQ-VAL-193 states it, with its in-ball subset `‖E(x)‖ < 4` beside it, and boost-all is measured
+  at random sizes up to ±0.6, the corpus giving "Boost →" no size.
