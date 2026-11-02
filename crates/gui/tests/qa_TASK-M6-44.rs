@@ -25,6 +25,7 @@ use eframe::egui::{
 use engine::contract::interface::EngineInterface;
 use engine::contract::render_state::Playhead;
 use engine::contract::set_field::{Edit, RenderField, SetField};
+use engine::contract::sim_config::{KernelVariant, SimConfig};
 use engine::contract::view_ui::{Focus, KeyMode, Mode, Window};
 use gui::app::{App, CONSOLE_ROWS};
 use gui::bench::{self, FrameTime, Row, Table};
@@ -706,12 +707,23 @@ fn qa_m6_44_m_outside_the_console_neither_toggles_nor_types() {
 #[test]
 fn qa_m6_44_m_is_on_the_shortcuts_sheet() {
     // §G3: a scope's letters are its shortcuts, on the `?` sheet.
+    let check = |rows: &[(&str, &str)]| {
+        assert!(
+            rows.iter().any(|(key, _)| *key == "M"),
+            "M not on the sheet: {rows:?}"
+        );
+    };
     let (app, _h) = opened();
     let rows = app.keyboard.tree(app.view.mode).shortcuts();
-    assert!(
-        rows.iter().any(|(key, _)| *key == "M"),
-        "M not on the sheet: {rows:?}"
-    );
+    check(rows);
+    // The control: the same sheet with M's row taken out.
+    let without: Vec<(&str, &str)> = rows
+        .iter()
+        .copied()
+        .filter(|(key, _)| *key != "M")
+        .collect();
+    assert!(!without.is_empty(), "the sheet has other rows");
+    rejects("a sheet without M", || check(&without));
 }
 
 // --- REQ-GUI-215: the header bar ---------------------------------------------------------------------------------------
@@ -1303,14 +1315,52 @@ fn qa_m6_44_the_height_is_never_the_contracts() {
             app.view.windows.open.clone(),
         )
     };
+    let check = |now: &(Focus, Mode, Vec<Window>),
+                 before: &(Focus, Mode, Vec<Window>),
+                 sim: &SimConfig,
+                 sim_before: &SimConfig| {
+        assert_eq!(now, before, "the height reached ViewUI");
+        assert_eq!(sim, sim_before, "the height reached the snapshot");
+    };
     let before = keep(&app);
     let snapshot = app.snapshot().clone();
     drag_edge(&mut h, &mut app, -100.0);
     m(&mut h, &mut app);
-    assert_eq!(keep(&app), before, "the height reached ViewUI");
-    assert_eq!(
-        app.snapshot().sim,
-        snapshot.sim,
-        "the height reached the snapshot"
-    );
+    let now = keep(&app);
+    check(&now, &before, &app.snapshot().sim, &snapshot.sim);
+    // The controls: the same checks on a contract state changed on purpose, each part on its own.
+    let mut focus = before.clone();
+    focus.0.path.pop();
+    rejects("a focus moved", || {
+        check(&focus, &before, &snapshot.sim, &snapshot.sim)
+    });
+    let mut keys = before.clone();
+    keys.0.mode = match keys.0.mode {
+        KeyMode::Navigation => KeyMode::Interaction,
+        KeyMode::Interaction => KeyMode::Navigation,
+    };
+    rejects("a key mode changed", || {
+        check(&keys, &before, &snapshot.sim, &snapshot.sim)
+    });
+    let mut mode = before.clone();
+    mode.1 = match mode.1 {
+        Mode::Explore => Mode::Stain,
+        Mode::Stain => Mode::Explore,
+    };
+    rejects("a page changed", || {
+        check(&mode, &before, &snapshot.sim, &snapshot.sim)
+    });
+    let mut windows = before.clone();
+    windows.2.push(Window::Profiler);
+    rejects("a window opened", || {
+        check(&windows, &before, &snapshot.sim, &snapshot.sim)
+    });
+    let mut sim = snapshot.sim.clone();
+    sim.kernel_variant = match sim.kernel_variant {
+        KernelVariant::Physics => KernelVariant::BringUp,
+        KernelVariant::BringUp => KernelVariant::Physics,
+    };
+    rejects("a sim changed", || {
+        check(&before, &before, &sim, &snapshot.sim)
+    });
 }
