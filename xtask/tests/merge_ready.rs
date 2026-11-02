@@ -1,5 +1,5 @@
-//! Mutants on the merge-ready head, and one `reviews` run per burst (R-656; the owner's CI plan of 2 Nov 2026, items 1
-//! and 4: "The FULL suite plus mutants runs once on the merge-ready head (all required approvals present, or a
+//! Mutants on the merge-ready head, and one `reviews` run per burst (R-656, R-676; the owner's words of 2 Nov 2026,
+//! items 1 and 4: "The FULL suite plus mutants runs once on the merge-ready head (all required approvals present, or a
 //! ready-to-merge label your merge watcher applies), and again only if that head changes", "required check names must
 //! report correctly in both tiers (skip-as-success only where the tier logic allows it)", "cancel superseded `reviews`
 //! runs per PR").

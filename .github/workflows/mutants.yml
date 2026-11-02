@@ -9,11 +9,11 @@
 # None saves: rust-cache's `save-if` holds only on a push to `main`, and there is no save step. rust-cache hashes the
 # environment's CARGO_* variables into its key, so CARGO_TERM_COLOR below is set as in `ci.yml`.
 #
-# Mutants run on the merge-ready head (R-656; the owner's CI plan of 2 Nov 2026, items 1 and 4): the shards, the
-# fixture and the verdict run only when the `merge-ready` label is put on the pull request, which the orchestrator's
-# merge watcher does once every reviewer the task names has approved the head (`plan/OPERATIONS.md` § "The
-# merge-ready label"). A push to the pull request takes the label off (`mutants-pending`), so the gate runs again only
-# on a head approved again, and cancels a run on the head it supersedes (`concurrency` below).
+# Mutants run on the merge-ready head (R-656, R-676): the shards, the fixture and the verdict run only when the
+# `merge-ready` label is put on the pull request, which the orchestrator's merge watcher does once every reviewer the
+# task names has approved the head (`plan/OPERATIONS.md` § "The merge-ready label"). A push to the pull request takes
+# the label off (`mutants-pending`), so the gate runs again only on a head approved again, and cancels a run on the head
+# it supersedes (`concurrency` below).
 #
 # `mutants-check` is therefore a check run this workflow posts through the Checks API, under the GitHub Actions app
 # branch protection pins it to, never a job: a job here that the label skipped would report "skipped", which GitHub

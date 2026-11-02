@@ -356,12 +356,11 @@ they can add it back.
 **What CI runs on a pull request (R-656, R-662).** `ci.yml` runs on a push to `main` (and to a `measure/` branch, R-272)
 and, for a pull request, through `pull_request` only, once per push. Each workflow that builds or tests keeps one
 `concurrency` group per pull request, so a push cancels the run on the head it supersedes; a run on `main` is never
-cancelled (`no-atlas-params.yml` and `gemini-dispatch.yml` keep none, decisions.md R-656). `reviews.yml` keeps one
-group per pull request and event, so a burst of reviews leaves one run, and the `pull_request_review` run that re-runs
-the `pull_request` run (R-276) is not in that run's group, which would cancel it (the owner's CI plan of 2 Nov 2026,
-item 4). `ci.yml`'s `changes` job, `mutants-pending` and `mutants-fixture` classify the change with
-`scripts/ci_changes.sh` (the pull
-request's merge commit against the base it merges onto; any other run runs everything):
+cancelled (`no-atlas-params.yml` and `gemini-dispatch.yml` keep none, decisions.md R-656). `reviews.yml` keeps one group
+per pull request and event, so a burst of reviews leaves one run, and the `pull_request_review` run that re-runs the
+`pull_request` run (R-276) is not in that run's group, which would cancel it (R-676). `ci.yml`'s `changes` job,
+`mutants-pending` and `mutants-fixture` classify the change with `scripts/ci_changes.sh` (the pull request's merge
+commit against the base it merges onto; any other run runs everything):
 - **docs-only**, meaning it changes none of Principia's code (R-662; the owner, 31 Oct 2026: "Only the actual Principia
   CODE matters in ci"): every path is on the script's allowlist, `docs/`, `plan/` (its prose and Python), `scripts/`,
   `workbench/` and the root's markdown, and none is on its list of data code loads: `docs/gui/design/`,
@@ -390,8 +389,8 @@ renamed heading can turn `main` red after a green pull request (R-662). New code
 adds that file to `scripts/ci_changes.sh`'s list; `xtask/tests/ci_changes.rs` scans for a literal data path missing
 from it.
 
-**Mutants on the merge-ready head (R-656; the owner's CI plan of 2 Nov 2026, items 1 and 4).** The mutants gate
-(`mutants.yml`: the shards, `mutants-fixture` and the verdict) runs once per approved head, not on every push:
+**Mutants on the merge-ready head (R-656, R-676).** The mutants gate (`mutants.yml`: the shards, `mutants-fixture` and
+the verdict) runs once per approved head, not on every push:
 - **The `merge-ready` label.** The orchestrator's merge watcher puts it on a pull request once every reviewer its task
   names has approved the current head, with the user's own token, not a workflow's (a label a workflow's
   `GITHUB_TOKEN` puts on starts no run):
@@ -407,17 +406,15 @@ from it.
   the merge waits; it is never a skipped job, which GitHub would count as passed. A docs-only head's is posted passed
   at once (R-662), the verdict the shards would reach.
 
-**Fix rounds are verified locally first (the owner's CI plan of 2 Nov 2026, item 2).** A fix round runs the tests its
-fixes touch, their controls, and its mutants run where R-388 asks for one, through the job queue (R-658) on the head it
-is about to push, before it pushes; CI then confirms that head. A push is never how a fix round finds out whether its
-fix compiles or passes.
+**Fix rounds are verified locally first (R-676).** A fix round runs the tests its fixes touch, their controls, and its
+mutants run where R-388 asks for one, through the job queue (R-658) on the head it is about to push, before it pushes;
+CI then confirms that head. A push is never how a fix round finds out whether its fix compiles or passes.
 
-**Merging `main` into an open pull request, in batches (the owner's CI plan of 2 Nov 2026, item 4).** Each push to a
-pull request re-runs its CI and takes its `merge-ready` label off, so `main` is not merged into open pull requests
-after every merge to `main`. It is merged in only when the pull request conflicts with `main`, when a merged change
-it depends on must be in its tree, or once, right before the `merge-ready` label, after the reviewers' approvals and
-before § "Merging" step 2's merged-tree check. Approvals are of a head, so the reviewers approve the merged head again
-before the watcher labels it.
+**Merging `main` into an open pull request, in batches (R-676).** Each push to a pull request re-runs its CI and takes
+its `merge-ready` label off, so `main` is not merged into open pull requests after every merge to `main`. It is merged
+in only when the pull request conflicts with `main`, when a merged change it depends on must be in its tree, or once,
+right before the `merge-ready` label, after the reviewers' approvals and before § "Merging" step 2's merged-tree check.
+Approvals are of a head, so the reviewers approve the merged head again before the watcher labels it.
 
 **Numbers.**
 - **An RQ's form.** A heading `## RQ-n: <question>`, a `- **File, section:**` field and a `- **Applied meanwhile:**`

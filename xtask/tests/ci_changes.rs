@@ -1069,8 +1069,8 @@ fn reports(id: &str, job: &Value) -> String {
 }
 
 /// The required checks a workflow posts through the Checks API rather than as a job, so that no run that skips the job
-/// reports it passed: `mutants-check`, pending until the merge-ready run posts its verdict (R-656; the owner's CI plan
-/// of 2 Nov 2026). Each with the workflow that posts it.
+/// reports it passed: `mutants-check`, pending until the merge-ready run posts its verdict (R-656, R-676).
+/// Each with the workflow that posts it.
 const POSTED: [(&str, &str); 1] = [("mutants-check", "mutants.yml")];
 
 fn check_required(workflows: &[(String, String)]) {

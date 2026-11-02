@@ -12,13 +12,12 @@ on:
   pull_request:
   pull_request_review:
 
-# A burst of review events leaves one run (the owner's CI plan of 2 Nov 2026, item 4): each pull request has one group
-# per event, its merge ref's, with cancel-in-progress, so a newer review cancels the review run before it, and a push
-# cancels the `pull_request` run on the head it supersedes. The events keep groups of their own because a
-# `pull_request_review` run re-runs the `pull_request` run (R-276): in one group, the re-run would cancel the run that
-# started it (R-656). A cancelled run's `reviews-complete` gives way to the newer run's of the same event, which checks
-# the same reviews afresh. A run on `main`, which this workflow never has, would have a group of its own, its run id,
-# and never be cancelled.
+# A burst of review events leaves one run (R-676): each pull request has one group per event, its merge ref's, with
+# cancel-in-progress, so a newer review cancels the review run before it, and a push cancels the `pull_request` run on
+# the head it supersedes. The events keep groups of their own because a `pull_request_review` run re-runs the
+# `pull_request` run (R-276): in one group, the re-run would cancel the run that started it (R-656). A cancelled run's
+# `reviews-complete` gives way to the newer run's of the same event, which checks the same reviews afresh. A run on
+# `main`, which this workflow never has, would have a group of its own, its run id, and never be cancelled.
 concurrency:
   group: reviews-${{ github.event_name }}-${{ github.ref == 'refs/heads/main' && github.run_id || github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
