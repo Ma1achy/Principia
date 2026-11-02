@@ -12,7 +12,7 @@
 | INT | 108 |
 | EVT | 32 |
 | PAY | 111 |
-| GEN | 43 |
+| GEN | 44 |
 | SCHED | 103 |
 | REF | 52 |
 | RENDER | 120 |
@@ -32,7 +32,7 @@ Of these: 230 calibration, 175 definition, 1656 obligation. Retired (kept for th
 |---|---|
 | M0 | 122 |
 | M1 | 108 |
-| M2 | 218 |
+| M2 | 219 |
 | M3 | 231 |
 | M4 | 106 |
 | M5 | 183 |
