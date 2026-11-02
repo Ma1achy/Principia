@@ -3,8 +3,10 @@
 //! on the mock as the window does (a click on the footer opens the console, a click on its × closes it, at 01_main.png's
 //! size, AccessKit off and one frame every 1/60 s of input time), and draws each frame through egui-wgpu on the mock's
 //! device, offscreen: the surface's present and the wait for vsync are not in it. The first cycle at each size starts
-//! from a new GUI, so it holds what a first opening pays; the rest are the usual case. The numbers mean something only
-//! in a release build on the human's Mac (R-186).
+//! from a new GUI, so it holds what a first opening pays; the rest are the usual case. After each cycle a control cycle
+//! runs on the same GUI: the same frames with no input and the console closed, so that a tail from the machine shows in
+//! both arms and a tail from the console's action in one. The judgement is one rule in both: the slowest frame against
+//! [`TARGET_MS`]. The numbers mean something only in a release build on the human's Mac (R-186).
 
 use std::sync::Arc;
 use std::time::Instant;
@@ -31,6 +33,8 @@ pub const LOG_SIZES: [usize; 3] = [0, 1_000, CONSOLE_ROWS];
 pub const TARGET_MS: f64 = 1000.0 / 60.0;
 /// The open-and-close cycles at each size.
 pub const CYCLES: usize = 15;
+/// The lesser limit a table also counts frames at, in milliseconds, to compare the arms' tails: a count, not a target.
+pub const TAIL_MS: f64 = 10.0;
 /// The input time between frames, in seconds: 60 fps.
 const FRAME_S: f64 = 1.0 / 60.0;
 /// The frames between one measured stretch and the next, so that nothing the last action started is still running.
@@ -49,6 +53,11 @@ pub const FRAMES: [&str; 8] = [
     "close: +2",
 ];
 
+/// The control arm's frames, slot for slot with [`FRAMES`]: the same place in the cycle, with no input.
+pub const CONTROL_FRAMES: [&str; FRAMES.len()] = [
+    "idle 1", "idle 2", "idle 3", "idle 4", "idle 5", "idle 6", "idle 7", "idle 8",
+];
+
 /// One frame's time and where it went, in milliseconds.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct FrameTime {
@@ -60,8 +69,10 @@ pub struct FrameTime {
     pub rows_ms: f64,
     /// Tessellating the frame's shapes.
     pub tessellate_ms: f64,
-    /// Uploading and drawing the frame through wgpu, waiting for the device to finish.
-    pub wgpu_ms: f64,
+    /// The CPU's work through wgpu: uploading, encoding the frame (the figure's callback with it) and submitting it.
+    pub submit_ms: f64,
+    /// The wait for the device to finish what was submitted.
+    pub wait_ms: f64,
     /// egui's passes this frame: 2 where something asked to discard the first.
     pub passes: usize,
 }
@@ -69,7 +80,12 @@ pub struct FrameTime {
 impl FrameTime {
     /// The whole frame.
     pub fn total_ms(&self) -> f64 {
-        self.layout_ms + self.filter_ms + self.rows_ms + self.tessellate_ms + self.wgpu_ms
+        self.cpu_ms() + self.wait_ms
+    }
+
+    /// The frame less the wait on the device: what the CPU spent.
+    pub fn cpu_ms(&self) -> f64 {
+        self.layout_ms + self.filter_ms + self.rows_ms + self.tessellate_ms + self.submit_ms
     }
 }
 
@@ -127,12 +143,36 @@ impl Table {
     pub fn meets_target(&self) -> bool {
         self.worst().1 < TARGET_MS
     }
+
+    /// Every frame measured.
+    fn frames(&self) -> impl Iterator<Item = &FrameTime> {
+        self.rows.iter().flat_map(|r| r.times.iter())
+    }
+
+    /// How many frames measured reach `limit_ms`; a frame at it counts, as it misses [`TARGET_MS`] there.
+    pub fn at_or_over(&self, limit_ms: f64) -> usize {
+        self.frames().filter(|f| f.total_ms() >= limit_ms).count()
+    }
+
+    /// The largest CPU part of any frame measured: the table's rows show only each one's slowest frame.
+    pub fn largest_cpu_ms(&self) -> f64 {
+        self.frames().map(FrameTime::cpu_ms).fold(0.0, f64::max)
+    }
+}
+
+/// The two arms at one log size.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Arms {
+    /// The cycles that open and close the console.
+    pub action: Table,
+    /// The same frames between them with no input, the console closed.
+    pub control: Table,
 }
 
 /// The table's text, as the PR gives it.
 pub fn render_table(table: &Table) -> String {
     let mut text = format!(
-        "log {} entries\n{:<16}{:>9}{:>9}{:>9} | slowest:{:>8}{:>8}{:>8}{:>8}{:>8}{:>7}\n",
+        "log {} entries\n{:<16}{:>9}{:>9}{:>9} | slowest:{:>8}{:>8}{:>8}{:>8}{:>8}{:>8}{:>7}\n",
         table.log,
         "frame",
         "first",
@@ -142,13 +182,14 @@ pub fn render_table(table: &Table) -> String {
         "filter",
         "rows",
         "tess",
-        "wgpu",
+        "submit",
+        "wait",
         "pass"
     );
     for row in &table.rows {
         let s = row.slowest();
         text += &format!(
-            "{:<16}{:>9.2}{:>9.2}{:>9.2} |         {:>8.2}{:>8.2}{:>8.2}{:>8.2}{:>8.2}{:>7}\n",
+            "{:<16}{:>9.2}{:>9.2}{:>9.2} |         {:>8.2}{:>8.2}{:>8.2}{:>8.2}{:>8.2}{:>8.2}{:>7}\n",
             row.frame,
             row.first_ms(),
             row.median_ms(),
@@ -157,10 +198,18 @@ pub fn render_table(table: &Table) -> String {
             s.filter_ms,
             s.rows_ms,
             s.tessellate_ms,
-            s.wgpu_ms,
+            s.submit_ms,
+            s.wait_ms,
             s.passes
         );
     }
+    text += &format!(
+        "of {} frames: {} at or over {TARGET_MS:.1} ms, {} at or over {TAIL_MS:.1} ms; the largest CPU part {:.2} ms\n",
+        table.frames().count(),
+        table.at_or_over(TARGET_MS),
+        table.at_or_over(TAIL_MS),
+        table.largest_cpu_ms()
+    );
     let (frame, ms) = table.worst();
     let verdict = if table.meets_target() {
         "met"
@@ -181,8 +230,11 @@ pub(crate) fn rest_of(pass_ms: f64, filter_ms: f64, rows_ms: f64) -> f64 {
     (pass_ms - filter_ms - rows_ms).max(0.0)
 }
 
+/// The input of three frames in a row.
+type Inputs = [Vec<Event>; 3];
+
 /// A primary click at `pos`: its move, press and release, one frame each.
-fn click_frames(pos: Pos2) -> [Vec<Event>; 3] {
+fn click_frames(pos: Pos2) -> Inputs {
     let button = |pressed| Event::PointerButton {
         pos,
         button: PointerButton::Primary,
@@ -229,7 +281,13 @@ impl Gpu {
         }
     }
 
-    fn draw(&mut self, textures: &egui::TexturesDelta, primitives: &[egui::ClippedPrimitive]) {
+    /// Draws the frame, and returns the CPU's work through wgpu and the wait on the device, in milliseconds.
+    fn draw(
+        &mut self,
+        textures: &egui::TexturesDelta,
+        primitives: &[egui::ClippedPrimitive],
+    ) -> (f64, f64) {
+        let start = Instant::now();
         let context = self.canvas.context();
         let (device, queue) = (&context.device, &context.queue);
         for (id, deltas) in &textures.set {
@@ -263,12 +321,17 @@ impl Gpu {
         }
         commands.push(encoder.finish());
         queue.submit(commands);
+        let submit_s = start.elapsed().as_secs_f64();
+        let start = Instant::now();
         device
             .poll(wgpu::PollType::wait_indefinitely())
             .expect("device poll failed");
+        let wait_s = start.elapsed().as_secs_f64();
+        let start = Instant::now();
         for id in &textures.free {
             self.renderer.free_texture(id);
         }
+        (ms(submit_s + start.elapsed().as_secs_f64()), ms(wait_s))
     }
 }
 
@@ -341,11 +404,10 @@ impl Run {
             .tessellate(output.shapes, PIXELS_PER_POINT);
         let tessellate_ms = ms(start.elapsed().as_secs_f64());
         let mut textures = std::mem::take(&mut self.headless.textures);
-        let wgpu_ms = self.gpu.as_mut().map_or(0.0, |gpu| {
-            let start = Instant::now();
-            gpu.draw(&textures, &primitives);
-            ms(start.elapsed().as_secs_f64())
-        });
+        let (submit_ms, wait_ms) = self
+            .gpu
+            .as_mut()
+            .map_or((0.0, 0.0), |gpu| gpu.draw(&textures, &primitives));
         textures.clear();
         let timing = self.app.windows.console.timing.unwrap_or_default();
         let (filter_ms, rows_ms) = (ms(timing.filter_s), ms(timing.rows_s));
@@ -354,15 +416,16 @@ impl Run {
             filter_ms,
             rows_ms,
             tessellate_ms,
-            wgpu_ms,
+            submit_ms,
+            wait_ms,
             passes,
         }
     }
 
-    /// A click at `pos`, then the idle frames: the frame before its input, not its move or its press, the release
+    /// Three frames' `input`, then the idle frames: the frame before its input, not its move or its press, the release
     /// that acts, and the two after it.
-    fn clicked(&mut self, pos: Pos2) -> [FrameTime; 3] {
-        let [moved, pressed, released] = click_frames(pos);
+    fn stretch(&mut self, input: Inputs) -> [FrameTime; 3] {
+        let [moved, pressed, released] = input;
         let _ = self.frame(moved);
         let _ = self.frame(pressed);
         [
@@ -372,14 +435,15 @@ impl Run {
         ]
     }
 
-    /// One open-and-close cycle, by the frames of [`FRAMES`].
-    fn cycle(&mut self) -> [FrameTime; FRAMES.len()] {
+    /// The click on the footer that opens the console.
+    fn open_click(&self) -> Inputs {
         let screen = self.headless.screen();
         let layout = Layout::with_splits(screen, PIXELS_PER_POINT, &self.app.splits);
-        let closed = self.frame(Vec::new());
-        let [open, open_1, open_2] = self.clicked(footer_point(layout.footer));
-        self.idle(SETTLE);
-        let shown = self.frame(Vec::new());
+        click_frames(footer_point(layout.footer))
+    }
+
+    /// The click on the × that closes it.
+    fn close_click(&self) -> Inputs {
         let close_at = self
             .app
             .keyboard
@@ -387,32 +451,87 @@ impl Run {
             .expect("the console is drawn with its ×")
             .rect
             .center();
-        let [close, close_1, close_2] = self.clicked(close_at);
+        click_frames(close_at)
+    }
+
+    /// One cycle's frames, with `opening` and `closing` as the input of its two stretches.
+    fn script(
+        &mut self,
+        opening: impl FnOnce(&Self) -> Inputs,
+        closing: impl FnOnce(&Self) -> Inputs,
+    ) -> [FrameTime; FRAMES.len()] {
+        let closed = self.frame(Vec::new());
+        let input = opening(self);
+        let [open, open_1, open_2] = self.stretch(input);
+        self.idle(SETTLE);
+        let shown = self.frame(Vec::new());
+        let input = closing(self);
+        let [close, close_1, close_2] = self.stretch(input);
         self.idle(SETTLE);
         [closed, open, open_1, open_2, shown, close, close_1, close_2]
     }
+
+    /// One open-and-close cycle, by the frames of [`FRAMES`].
+    pub(crate) fn cycle(&mut self) -> [FrameTime; FRAMES.len()] {
+        self.script(Self::open_click, Self::close_click)
+    }
+
+    /// One control cycle: the same frames as [`Self::cycle`], by [`CONTROL_FRAMES`], with no input at all.
+    pub(crate) fn control_cycle(&mut self) -> [FrameTime; FRAMES.len()] {
+        self.script(|_| Default::default(), |_| Default::default())
+    }
 }
 
-/// Measures a table of `cycles` cycles at each of `sizes`; the frames drawn on `canvas`, if any.
-pub fn measure(sizes: &[usize], cycles: usize, canvas: Option<Arc<MockCanvas>>) -> Vec<Table> {
+/// An empty row for each of `frames`, with room for `cycles`.
+fn rows_for(frames: &[&'static str], cycles: usize) -> Vec<Row> {
+    frames
+        .iter()
+        .map(|frame| Row {
+            frame,
+            times: Vec::with_capacity(cycles),
+        })
+        .collect()
+}
+
+/// Adds one cycle's times to `rows`.
+fn record(rows: &mut [Row], times: [FrameTime; FRAMES.len()]) {
+    for (row, time) in rows.iter_mut().zip(times) {
+        row.times.push(time);
+    }
+}
+
+/// Measures both arms for `cycles` cycles at each of `sizes`, a cycle of one then a cycle of the other, so that they see
+/// the same machine; the frames drawn on `canvas`, if any.
+pub fn measure_arms(sizes: &[usize], cycles: usize, canvas: Option<Arc<MockCanvas>>) -> Vec<Arms> {
     sizes
         .iter()
         .map(|log| {
             let mut run = Run::new(*log, canvas.clone());
-            let mut rows: Vec<Row> = FRAMES
-                .iter()
-                .map(|frame| Row {
-                    frame,
-                    times: Vec::with_capacity(cycles),
-                })
-                .collect();
+            let mut action = rows_for(&FRAMES, cycles);
+            let mut control = rows_for(&CONTROL_FRAMES, cycles);
             for _ in 0..cycles {
-                for (row, time) in rows.iter_mut().zip(run.cycle()) {
-                    row.times.push(time);
-                }
+                record(&mut action, run.cycle());
+                record(&mut control, run.control_cycle());
             }
-            Table { log: *log, rows }
+            Arms {
+                action: Table {
+                    log: *log,
+                    rows: action,
+                },
+                control: Table {
+                    log: *log,
+                    rows: control,
+                },
+            }
         })
+        .collect()
+}
+
+/// The tables of the cycles that open and close the console, from [`measure_arms`].
+pub fn measure(sizes: &[usize], cycles: usize, canvas: Option<Arc<MockCanvas>>) -> Vec<Table> {
+    measure_arms(sizes, cycles, canvas)
+        .into_iter()
+        .map(|arms| arms.action)
         .collect()
 }
 
@@ -434,11 +553,11 @@ pub fn run(
             ))
         }
     }
-    Ok(report(&measure(&LOG_SIZES, CYCLES, Some(canvas()?))))
+    Ok(report(&measure_arms(&LOG_SIZES, CYCLES, Some(canvas()?))))
 }
 
-/// The run's text: what it ran on, then each table.
-pub fn report(tables: &[Table]) -> String {
+/// The run's text: what it ran on, then each size's table and its control's.
+pub fn report(arms: &[Arms]) -> String {
     let mut text = format!(
         "{NAME}: {} x {} px at {PIXELS_PER_POINT} pixels per point, {CYCLES} cycles, in milliseconds{}\n",
         SIZE[0],
@@ -449,9 +568,11 @@ pub fn report(tables: &[Table]) -> String {
             ""
         }
     );
-    for table in tables {
+    for arm in arms {
         text += "\n";
-        text += &render_table(table);
+        text += &render_table(&arm.action);
+        text += "\ncontrol, no console action: ";
+        text += &render_table(&arm.control);
     }
     text
 }

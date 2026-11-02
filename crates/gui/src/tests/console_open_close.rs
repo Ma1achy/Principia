@@ -12,7 +12,9 @@ use engine::contract::view_ui::Window;
 
 use super::support::{focus, headless, mock_app, nodes_of, press, rejects};
 use crate::app::{App, CONSOLE_ROWS};
-use crate::bench::{self, FrameTime, Row, Table, FRAMES, LOG_SIZES, NAME, TARGET_MS};
+use crate::bench::{
+    self, Arms, FrameTime, Row, Table, CONTROL_FRAMES, FRAMES, LOG_SIZES, NAME, TAIL_MS, TARGET_MS,
+};
 use crate::capture::footer_point;
 use crate::headless::Headless;
 use crate::layout::Layout;
@@ -265,10 +267,15 @@ fn console_open_close_bench_a_frame_totals_its_parts() {
         filter_ms: 2.0,
         rows_ms: 4.0,
         tessellate_ms: 8.0,
-        wgpu_ms: 16.0,
+        submit_ms: 16.0,
+        wait_ms: 32.0,
         passes: 1,
     };
-    assert_eq!(frame.total_ms(), 31.0);
+    assert_eq!(frame.total_ms(), 63.0);
+    assert_eq!(frame.cpu_ms(), 31.0, "all but the wait");
+    rejects("a CPU part with the wait in it", || {
+        assert_eq!(frame.cpu_ms(), frame.total_ms())
+    });
     rejects("a total short of a part", || {
         assert_eq!(frame.total_ms(), 15.0)
     });
@@ -399,12 +406,13 @@ fn console_open_close_bench_draws_each_frame_through_wgpu() {
     assert_eq!(tables[0].log, 3);
     let wgpu = |t: &Table| -> f64 {
         let times = t.rows.iter().flat_map(|r| r.times.iter());
-        times.map(|f| f.wgpu_ms).sum()
+        times.map(|f| f.submit_ms + f.wait_ms).sum()
     };
     assert!(wgpu(&tables[0]) > 0.0, "nothing drawn");
     for row in &tables[0].rows {
         let frame = row.times[0];
-        assert!(frame.wgpu_ms > 0.0, "{}", row.frame);
+        assert!(frame.submit_ms > 0.0, "{}", row.frame);
+        assert!(frame.wait_ms > 0.0, "{}", row.frame);
         assert!(frame.tessellate_ms > 0.0, "{}", row.frame);
     }
     let none = bench::measure(&[0], 1, None);
@@ -415,7 +423,25 @@ fn console_open_close_bench_draws_each_frame_through_wgpu() {
 
 #[test]
 fn console_open_close_bench_the_report_names_its_run_and_every_size() {
-    let report = bench::report(&[table(&[("a", 2.0)]), table(&[("b", 3.0)])]);
+    let report = bench::report(&[
+        Arms {
+            action: table(&[("a", 2.0)]),
+            control: table(&[("c", 4.0)]),
+        },
+        Arms {
+            action: table(&[("b", 3.0)]),
+            control: table(&[("d", 5.0)]),
+        },
+    ]);
+    assert!(
+        report.contains("control, no console action: log 7 entries"),
+        "{report}"
+    );
+    assert!(report.contains("`c`") && report.contains("`d`"), "{report}");
+    assert!(
+        report.find("`a`") < report.find("`c`") && report.find("`c`") < report.find("`b`"),
+        "each size's control beside it: {report}"
+    );
     assert!(
         report.starts_with(&format!("{NAME}: 2160 x 1350 px at 1.5 pixels per point, ")),
         "{report}"
@@ -715,4 +741,139 @@ fn console_open_close_no_hover_in_the_frame_it_opens_over_the_pointer() {
     assert!(app.is_open(Window::Console));
     assert_eq!(output.platform_output.num_completed_passes, 1);
     none(&hover(&mut app));
+}
+
+#[test]
+fn console_open_close_bench_the_columns_split_the_cpu_from_the_wait() {
+    let slow = FrameTime {
+        submit_ms: 1.25,
+        wait_ms: 20.5,
+        passes: 1,
+        ..FrameTime::default()
+    };
+    let t = Table {
+        log: 7,
+        rows: vec![Row {
+            frame: "a",
+            times: vec![slow],
+        }],
+    };
+    let text = bench::render_table(&t);
+    assert!(text.contains("submit") && text.contains("wait"), "{text}");
+    assert!(!text.contains("wgpu"), "{text}");
+    let row = text.lines().nth(2).expect("the row");
+    let cells: Vec<&str> = row.split_whitespace().collect();
+    assert_eq!(&cells[cells.len() - 3..], ["1.25", "20.50", "1"], "{text}");
+    assert!(
+        text.contains(
+            "of 1 frames: 1 at or over 16.7 ms, 1 at or over 10.0 ms; the largest CPU part 1.25 ms"
+        ),
+        "{text}"
+    );
+    assert!(text.contains("MISSED"), "{text}");
+    rejects("a wait read as the CPU's", || {
+        assert_eq!(&cells[cells.len() - 3..], ["20.50", "1.25", "1"])
+    });
+}
+
+#[test]
+fn console_open_close_bench_a_table_counts_every_frame_at_a_limit() {
+    let t = Table {
+        log: 0,
+        rows: vec![
+            Row {
+                frame: "a",
+                times: [TAIL_MS - 0.01, TAIL_MS, 30.0].map(time).to_vec(),
+            },
+            Row {
+                frame: "b",
+                times: [TAIL_MS + 0.01, TARGET_MS].map(time).to_vec(),
+            },
+        ],
+    };
+    assert_eq!(t.at_or_over(TAIL_MS), 4, "at the limit counts");
+    assert_eq!(t.at_or_over(TARGET_MS), 2, "at the target counts");
+    assert_eq!(t.at_or_over(31.0), 0);
+    rejects("only each row's slowest counted", || {
+        assert_eq!(t.at_or_over(TAIL_MS), 2)
+    });
+    // The largest CPU part is over every frame, not only the slowest, and leaves out the wait.
+    let waited = FrameTime {
+        wait_ms: 50.0,
+        layout_ms: 1.0,
+        ..FrameTime::default()
+    };
+    let t = Table {
+        log: 0,
+        rows: vec![Row {
+            frame: "a",
+            times: vec![waited, time(4.0)],
+        }],
+    };
+    assert_eq!(t.largest_cpu_ms(), 4.0);
+    assert_eq!(t.worst().1, 51.0, "the judgement stays the whole frame");
+    assert!(!t.meets_target(), "a frame slow on the wait still misses");
+    rejects("a judgement of the CPU part alone", || {
+        assert!(t.meets_target())
+    });
+}
+
+#[test]
+fn console_open_close_bench_the_control_measures_the_same_frames_with_no_console() {
+    let arms = bench::measure_arms(&[0, 7], 2, None);
+    assert_eq!(arms.len(), 2);
+    for (arm, log) in arms.iter().zip([0, 7]) {
+        assert_eq!((arm.action.log, arm.control.log), (log, log));
+        let names = |t: &Table| t.rows.iter().map(|r| r.frame).collect::<Vec<_>>();
+        assert_eq!(names(&arm.action), FRAMES);
+        assert_eq!(names(&arm.control), CONTROL_FRAMES);
+        for row in &arm.control.rows {
+            assert_eq!(row.times.len(), 2, "{}", row.frame);
+            for frame in &row.times {
+                assert!(frame.layout_ms > 0.0, "{}", row.frame);
+                assert_eq!(frame.filter_ms, 0.0, "{}: filtered", row.frame);
+                assert_eq!(frame.rows_ms, 0.0, "{}: the console drawn", row.frame);
+            }
+        }
+        let open = arm.action.rows.iter().find(|r| r.frame == "open, before");
+        let rows_ms = open.expect("the frame").times[0].rows_ms;
+        rejects("a control arm with the console open", || {
+            assert_eq!(rows_ms, 0.0)
+        });
+    }
+}
+
+#[test]
+fn console_open_close_bench_a_control_cycle_takes_as_many_frames_as_a_cycle() {
+    let mut run = bench::Run::new(0, None);
+    let time = |run: &bench::Run| run.headless.ctx.input(|i| i.time);
+    // The first cycle's opening may ask for a second pass; input time counts frames, one step each.
+    let start = time(&run);
+    let _ = run.cycle();
+    let cycle = time(&run) - start;
+    let start = time(&run);
+    let _ = run.control_cycle();
+    let control = time(&run) - start;
+    assert!(cycle > 0.0);
+    assert!((cycle - control).abs() < 1e-6, "{cycle} and {control}");
+    rejects("a control a frame short", || {
+        assert!((cycle - (control - 1.0 / 60.0)).abs() < 1e-6)
+    });
+    // It leaves the console closed for the next cycle, whose click must open it.
+    let shown = run.cycle()[1].rows_ms;
+    assert!(shown > 0.0, "the next cycle's opening drew nothing");
+}
+
+#[test]
+fn console_open_close_bench_the_control_tail_limit_is_not_the_target() {
+    assert_eq!(TAIL_MS, 10.0);
+    let text = bench::render_table(&table(&[("a", 12.0)]));
+    assert!(text.contains("target 16.7 ms: met"), "{text}");
+    assert!(
+        text.contains("0 at or over 16.7 ms, 1 at or over 10.0 ms"),
+        "{text}"
+    );
+    rejects("a frame in the tail that misses", || {
+        assert!(text.contains("MISSED"))
+    });
 }
