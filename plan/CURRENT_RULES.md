@@ -565,6 +565,8 @@ as history only.
 - **R-658** — Heavy commands run only through a local job queue the orchestrator owns, `cargo xtask job`: agents submit them and wait, never run them directly; classes merge, fix, build and peek, first in, first out within each; one runner at a fixed concurrency, each job with cargo's jobs and test threads at the core count; jobs time out, stale locks expire and a new runner recovers a dead one's jobs; heavy processes outside the queue are logged; sccache measured again; mutants scoped to the diff and run through the queue *(supersedes R-228)*. Still in force: all of it; R-666 takes the sccache decision that item 4's measurement left pending. Refined by R-666 (31 Oct 2026: the decision item 4's measurement left pending is taken: sccache stays off).
 - **R-666** — sccache stays off: the job queue's builds do not use it
 - **R-673** — Of the five "unclear" PDFs, the Belgrade gallery's initial-conditions PDF stays under its site's copy-and-use terms, crediting the gallery; the two Agekyan & Anosova translations, Anosova 1969 and Hudomal's thesis leave the tree for `docs/incoming/_local/`, with no history rewrite *(closes RQ-610; amends R-643)*
+- **R-674** — #368's Safari check runs once Safari is free, in both layouts, not deferred; a Safari run starts with Safari quit, by the human
+- **R-675** — The PR sweep is a standing duty: the orchestrator periodically checks every open PR and its CI state, and picks up any that was dropped or missed
 
 ## CI
 

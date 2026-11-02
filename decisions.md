@@ -29511,3 +29511,49 @@ each is the file the audit named at that path; the queue entry is archived as wr
 R-673 is in the "process" group of `plan/rule_groups.yaml`, with R-643.
 
 Changes REQ-VAL-234 (rulings, note).
+
+## R-674 — #368's Safari check runs once Safari is free, in both layouts, not deferred; a Safari run starts with Safari quit, by the human
+*1 Nov 2026 · the owner's two messages of that day, the second superseding the first; ported 2 Nov 2026; applied in `plan/HUMAN_SETUP.md` § 6, item 4 (Safari's WebDriver), `plan/rule_groups.yaml` and `plan/section_notes.yaml`; changes no requirement*
+
+The owner's words (1 Nov 2026), verbatim, the first message:
+
+> #368: Safari is in use by my ChatGPT research session, so don't touch it. Defer #368's Safari check: merge #368 on
+> its other checks, and open a follow-up task to run the Safari script in both layouts the next time Safari is free
+> (ask me first, so it doesn't collide with ChatGPT). Record the deferral in the PR.
+
+The second, the same day, verbatim, superseding the deferral:
+
+> Two things. (1) Safari is free now: ChatGPT's research has stopped. Run #368's Safari check in both layouts now
+> instead of deferring it. […]
+
+And from his message of that day on the fifteen questions (R-669): "I'm quitting Safari now for #368."
+
+*What it decides:* the deferral is withdrawn before it took effect: no follow-up task is opened, and #368's Safari check
+runs in both layouts as part of #368, not after its merge. Safari is the human's application, outside the repo: an agent
+does not drive it while he is using it, and does not quit it. Before each Safari run, Safari is quit first, by the human,
+as he did for #368; `plan/HUMAN_SETUP.md` § 6, item 4, says so.
+
+*Applied per R-369:* "quit Safari first" sits in the WebDriver item of § 6, where Safari's automation is set up, so the
+step is with the setup the human does; an agent that finds Safari open asks, under R-349, rather than closing it.
+
+R-674 is in the "process" group of `plan/rule_groups.yaml`.
+
+## R-675 — The PR sweep is a standing duty: the orchestrator periodically checks every open PR and its CI state, and picks up any that was dropped or missed
+*1 Nov 2026 · the owner's message of that day; ported 2 Nov 2026; applied in `plan/OPERATIONS.md` § "Autonomy (R-369)" (a paragraph), `plan/rule_groups.yaml` and `plan/section_notes.yaml`; changes no requirement*
+
+The owner's words (1 Nov 2026), verbatim:
+
+> Yeah make it part of the process now for you to periodically check for open PRs and their CI states and check if any
+> have been dropped / missed accidentally and to pick them up again
+
+*What it decides:* the orchestrator's standing duties gain the PR sweep: at intervals, every open PR and its CI state
+is checked, and any PR dropped or missed by accident (failed or cancelled checks, a conflict, a changes verdict nobody
+is fixing, an approved head with no merge under way, a head with no review) is picked up again by dispatching what it
+needs next. A PR whose work is under way is not dropped.
+
+*Applied per R-369:* `plan/OPERATIONS.md` names `orch/pr-sweep.sh` only as the current mechanism (it lists each open PR
+as ok, active or DROPPED, and its `--watch` mode exits when a newly dropped PR appears); the duty stands whatever runs
+it, and the interval is the orchestrator's (the script's default is 20 minutes).
+
+R-675 is in the "process" group of `plan/rule_groups.yaml`.
+
