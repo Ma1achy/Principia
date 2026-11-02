@@ -364,9 +364,14 @@ commit against the base it merges onto; any other run runs everything) into thre
 taking the highest (R-677):
 - **code**, tier (a): `crates/`, `xtask/`, `fixtures/`, the Cargo files, the toolchain, `.github/`, `.cargo/`, the one
   datum only full CI reads (`plan/requirements.yaml`, which every numerical gate and the gpu-kernel tests check their
-  thresholds against), the classifier `scripts/ci_changes.sh`, the containment `scripts/contain.sh`, and any path the
-  allowlist doesn't name, so an unknown top-level path fails towards full CI: full CI;
-- **data**, tier (b): the plan's task data, `plan/tasks/`, `plan/tasks.yaml` and `plan/MILESTONES.md`, and the GUI's
+  thresholds against, when a requirement is added or removed, a field code reads changes, or the field check cannot
+  tell), the classifier `scripts/ci_changes.sh` and its field check `scripts/ci_req_fields.py`, the containment
+  `scripts/contain.sh`, and any path the allowlist doesn't name, so an unknown top-level path fails towards full CI:
+  full CI;
+- **data**, tier (b): the plan's task data, `plan/tasks/`, `plan/tasks.yaml` and `plan/MILESTONES.md`, and
+  `plan/requirements.yaml` when only fields no code reads change (`statement`, `note`, `source`, `rulings`, `area`,
+  `rq`; `scripts/ci_req_fields.py` decides, printing one reason line in the `changes` job's log, and
+  `xtask/tests/ci_changes.rs` checks its list of the fields code reads against the loaders), and the GUI's
   artboards and references, `docs/gui/design/` and `docs/gui/reference/`, each with its readers named in the script:
   the build, test, release and controls jobs and the GPU suites' jobs are skipped, and `ci-workspace` runs the cheap
   checks and the tests of the code that reads what changed, each test binary built alone (`gate-report`'s,

@@ -29160,10 +29160,11 @@ Changes REQ-VAL-199 (statement, rulings, source, note).
 
 ## R-662 — Full CI runs only when a pull request changes Principia's code: docs, plan prose, papers, Python and other scripts get only plan-check, the vocabulary lint and the atlas guard; a mixed change and an unknown path run full CI; every required check still reports *(amends R-656's docs-only list and docs checks, R-110 and R-177)*
 *Amended in part by R-677 (2 Nov 2026: the plan's task data and the GUI's artboards and references leave the data code
-loads that run full CI for tier (b), which runs the cheap checks and the tests that read them).*
+loads that run full CI for tier (b), which runs the cheap checks and the tests that read them, and so does a change to
+`plan/requirements.yaml` that changes only fields no code reads).*
 *Still in force: all of it but which of the data code loads runs full CI: the allowlist, the cheap checks, failing
-towards full CI, the required checks reporting, `plan/requirements.yaml`, the classifier and `scripts/contain.sh` as
-full CI, and what a head that changes only prose costs.*
+towards full CI, the required checks reporting, `plan/requirements.yaml` (but a change to fields no code reads alone,
+R-677's), the classifier and `scripts/contain.sh` as full CI, and what a head that changes only prose costs.*
 *31 Oct 2026 · the owner's message of that day; applied in `scripts/ci_changes.sh`, `.github/workflows/ci.yml`,
 `.github/workflows/mutants.yml`, `xtask/tests/ci_changes.rs`, `xtask/tests/mutants_no_mutant.rs`,
 `xtask/tests/qa_R-656_ci_changes.rs`, `plan/OPERATIONS.md`, `plan/WORKFLOW.md`,
@@ -29305,7 +29306,8 @@ R-676 is in the "ci" group of `plan/rule_groups.yaml`.
 Changes REQ-VAL-148 (source, rulings, note).
 
 ## R-677 — CI runs in three tiers: a change to Principia's code runs full CI as before; one to the plan's task data or the GUI's artboards and references runs only the cheap checks and the tests that read what it changed, with no build, test shard, GPU suite or mutants; one to the docs runs only the cheap checks; a change takes its highest tier, and an unknown path runs full CI; mutants run only when `crates/` source changes, on the merge-ready head; every required check still reports under its own name *(amends R-656, R-662, R-110, R-177, R-235, R-305 and R-676)*
-*2 Nov 2026 · the owner's message of that day, item 3; applied in `scripts/ci_changes.sh`, `.github/workflows/ci.yml`,
+*2 Nov 2026 · the owner's message of that day, item 3, and his two replies on `plan/requirements.yaml` later that day;
+applied in `scripts/ci_changes.sh`, `scripts/ci_req_fields.py`, `.github/workflows/ci.yml`,
 `.github/workflows/mutants.yml`, `xtask/tests/ci_changes.rs`, `xtask/tests/merge_ready.rs`,
 `xtask/tests/mutants_no_mutant.rs`, five qa files (below), `plan/OPERATIONS.md`, `plan/HUMAN_SETUP.md` §2,
 `docs/contracts/principia_parity_contract.md` §6, REQ-VAL-148's and REQ-SYS-067's notes and `plan/rule_groups.yaml`*
@@ -29317,14 +29319,27 @@ everything else waits."
 
 Items 1, 2 and 4 of the message (the freeze, the order the CI fixes land in, and the report) are outside this ruling.
 
+The owner's words later on 2 Nov 2026, on `plan/requirements.yaml`'s tier, verbatim. About 17:25 he asked "Do you think
+plan/requirements.yaml should be in plan-data? Idk"; the orchestrator recommended a field-level split (only fields no
+code reads to plan-data; any code-read field, new or unknown field, new requirement or unparseable diff to the code
+tier; a test that fails if code starts reading a field not on the list), and he answered:
+
+> Yeah do that then, make it good and work well
+
+and about 17:30, while it was being built:
+
+> keep it simple and make ci fast without sacrificing testing on actual code
+
 *What it decides:*
 - **Three tiers (`scripts/ci_changes.sh`, `tier=code|data|docs`).** (a) **Code**: `crates/`, `xtask/`, `fixtures/`,
-  `Cargo.toml`, `Cargo.lock`, `rust-toolchain.toml`, `.github/`, `.cargo/`, the classifier, `scripts/contain.sh`, the
-  one datum only full CI reads (`plan/requirements.yaml`, below) and any path the allowlist doesn't name: full CI, as
-  R-662 ran it. (b) **Data**: the plan's task data, `plan/tasks/`, `plan/tasks.yaml` and `plan/MILESTONES.md`, and the
-  GUI's artboards and references, `docs/gui/design/` and `docs/gui/reference/`: `ci-workspace` runs the cheap checks
-  and the tests of the code that reads what changed, each built alone; no build, no test shard, no release, controls or
-  GPU suite, no mutants. (c) **Docs**: the rest of R-662's allowlist: the cheap checks only, as R-662 ran them.
+  `Cargo.toml`, `Cargo.lock`, `rust-toolchain.toml`, `.github/`, `.cargo/`, the classifier and its field check,
+  `scripts/contain.sh`, the one datum only full CI reads (`plan/requirements.yaml`, when a field code reads changes;
+  below) and any path the allowlist doesn't name: full CI, as R-662 ran it. (b) **Data**: the plan's task data,
+  `plan/tasks/`, `plan/tasks.yaml` and `plan/MILESTONES.md` (and `plan/requirements.yaml` when only fields no code
+  reads change), and the GUI's artboards and references, `docs/gui/design/` and `docs/gui/reference/`:
+  `ci-workspace` runs the cheap checks and the tests of the code that reads what changed, each built alone; no build,
+  no test shard, no release, controls or GPU suite, no mutants. (c) **Docs**: the rest of R-662's allowlist: the cheap
+  checks only, as R-662 ran them.
 - **The highest tier wins.** A change touching several tiers runs the highest: code over data, data over docs. An
   unknown path is code, and a diff that can't be computed, or is empty, runs everything, its mutants among it.
 - **Tier (b)'s tests.** For the plan's task data: in xtask, the tests of `cargo xtask gate-report` and
@@ -29345,9 +29360,9 @@ Items 1, 2 and 4 of the message (the freeze, the order the CI fixes land in, and
 *What it amends, quoted:*
 - R-656: "a docs-only pull request skips the build, test, GPU and mutants work" now reads for a tier (b) or (c) pull
   request; its mutants skip is R-677's `crates/` test.
-- R-662: "Full CI runs when a pull request changes … or the data code loads" keeps only `plan/requirements.yaml`, the
-  classifier and `scripts/contain.sh` among that data; "`plan/tasks.yaml` and `plan/MILESTONES.md` … `plan/tasks/` …
-  `docs/gui/design/` and `docs/gui/reference/`" move to tier (b).
+- R-662: "Full CI runs when a pull request changes … or the data code loads" keeps only `plan/requirements.yaml` (a
+  change to a field code reads), the classifier and `scripts/contain.sh` among that data; "`plan/tasks.yaml` and
+  `plan/MILESTONES.md` … `plan/tasks/` … `docs/gui/design/` and `docs/gui/reference/`" move to tier (b).
 - R-110: "a head that changes none of Principia's code runs only the cheap checks" gains "one that changes only tier
   (b)'s data runs the cheap checks and the tests that read it".
 - R-177: "a head that changes none of Principia's code (R-662) running plan-check and the vocabulary lint … in place of
@@ -29359,15 +29374,31 @@ Items 1, 2 and 4 of the message (the freeze, the order the CI fixes land in, and
   file under `crates/`.
 
 *Where the owner's list meets the code, applied per R-369 and recorded for him:*
-- **`plan/requirements.yaml` stays in tier (a).** His list puts it in (b), "only the checks that read them", but more
-  than those checks read it: every numerical gate refuses a threshold that names no live requirement of the right kind
-  (`crates/validation/src/gate/mod.rs`, `config` and `check_requirement`), which the GPU suites run (`cargo xtask gate
-  decode-agreement`), and so do the gpu-kernel profile's `decode_f32_eps_gpu` and `invariant_gradient_gpu`, which need
-  the built kernel; the constants register's calibration citations (`crates/ledger/tests/qa_TASK-M3-06_tau.rs`) and
-  validation's gate tests read it too. Tier (b) builds no kernel and runs no GPU suite, so a retired or re-kinded
-  requirement a gate names would pass a tier (b) head and turn `main` red. It keeps failing towards full CI until he
-  rules otherwise; tier (b) for it would add `cargo xtask gate --list`, which checks every gate's configuration against
-  it with no GPU, and the readers' tests that need none.
+- **`plan/requirements.yaml` is tier (b) when only fields no code reads change, and (a) otherwise** (his words of
+  17:25 and 17:30 above). `scripts/ci_changes.sh detect` writes the file at the merge's base and at its head, and
+  `scripts/ci_req_fields.py` (`python3 -I`, PyYAML's `safe_load`) loads both: tier (b) only if both parse as a list of
+  requirements with unique ids, the ids are the same set, every field a requirement changes is one no code outside
+  tier (b)'s tests reads (`area`, `statement`, `source`, `rulings`, `note`, `rq`), and the lines naming a field code
+  reads are the same lines, since the loaders read lines. Anything else is tier (a): an added or removed requirement, a
+  change to a field of its CODE_FIELDS (`id`, `kind`, `retired`, `milestone`, `verify` with `method` and `detail`,
+  each with its reader named there: the gates' `find_requirement`, the constants register's tau citation,
+  `cargo xtask gate-report` and `gate.yml`'s results step), a field on neither list, a reformatted line code reads, a
+  copy that does not parse or is missing, and a check that fails for any reason. It prints one reason line (the id
+  and field) in the `changes` job's log. A tier (b) change to it sets `plan_data`, so the plan's readers' tests run,
+  the print-graph coverage reading the statements among them. `xtask/tests/ci_changes.rs` reads every source naming
+  the file, the workflows among them, and fails if one outside tier (b)'s tests reads a field not in CODE_FIELDS;
+  the field check is code, as the classifier is. Applied per R-369 inside his rule: the field lists, the line check
+  and `milestone` among the code fields (the tau test reads it).
+  *Was (R-677 as first written, before his words of 17:25):* "**`plan/requirements.yaml` stays in tier (a).** His
+  list puts it in (b), "only the checks that read them", but more than those checks read it: every numerical gate
+  refuses a threshold that names no live requirement of the right kind (`crates/validation/src/gate/mod.rs`, `config`
+  and `check_requirement`), which the GPU suites run (`cargo xtask gate decode-agreement`), and so do the gpu-kernel
+  profile's `decode_f32_eps_gpu` and `invariant_gradient_gpu`, which need the built kernel; the constants register's
+  calibration citations (`crates/ledger/tests/qa_TASK-M3-06_tau.rs`) and validation's gate tests read it too. Tier (b)
+  builds no kernel and runs no GPU suite, so a retired or re-kinded requirement a gate names would pass a tier (b) head
+  and turn `main` red. It keeps failing towards full CI until he rules otherwise; tier (b) for it would add `cargo
+  xtask gate --list`, which checks every gate's configuration against it with no GPU, and the readers' tests that need
+  none."
 - **`cargo xtask gate-report` and `cargo xtask reviews-check` run as their tests.** The commands themselves need what
   a plan-data head has not: `gate-report` a milestone's test results (`--results`, or `--write-test-list`, which builds
   every test the gate names), and `reviews-check` a pull request's reviews, which `reviews-complete` reads on every pull
@@ -29393,6 +29424,8 @@ Items 1, 2 and 4 of the message (the freeze, the order the CI fixes land in, and
   shard), `xtask/tests/qa_ci_throughput_a.rs` (`mutants-check` passes on `mutants=false`, not on `docs_only`),
   `xtask/tests/qa_TASK-M0-23_r305.rs` (a Rust change outside `crates/` runs no shard) and
   `xtask/tests/qa_TASK-M0-33.rs` (a `--test` step pairs with no doctest step). qa makes the changes.
+  `xtask/tests/qa_R-662_ci_scope.rs`'s list of the scripts that are code gains the field check,
+  `scripts/ci_req_fields.py`, for the same reason.
 - This ruling follows R-676 in the file.
 
 R-677 is in the "ci" group of `plan/rule_groups.yaml`.
