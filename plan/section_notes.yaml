@@ -1445,6 +1445,10 @@
   reason: informative only
   note: "the owner's ruling of 30 Oct 2026: heavy commands only through the local job queue (cargo xtask job); process, carried by CLAUDE.md, plan/OPERATIONS.md § Resources and the agent files, and built in xtask/src/jobq.rs; changes no requirement"
 - file: decisions.md
+  section: "R-659 — Gemini reviews make one request and name the model that answered; on a quota refusal they fall back down a chain of four models; a spent chain posts \"Gemini quota exhausted, review skipped\" and the merge proceeds *(an R-369 note; amends R-635's Gemini workflow)*"
+  reason: informative only
+  note: "the owner's message of 30 Oct 2026: one Gemini request per review, a four-model fallback chain on quota errors, the model stamped, a note when the chain is spent; process, carried by the gemini-dispatch workflow and scripts/gemini_review.py; changes no requirement"
+- file: decisions.md
   section: "R-664 — `generation_root` §3.5 no longer claims R² from the Welford accumulators: it cannot be derived from what is stored and nothing reads it; no per-sample field is added *(closes RQ-633)*"
   reason: informative only
   note: "the owner's ruling of 31 Oct 2026 closing RQ-633: \"+ R²\" struck from generation_root §3.5, no new per-sample field; no requirement read it"
