@@ -711,9 +711,15 @@ fn qa_cube_the_lists_follow_a_pick_so_no_dimension_can_appear_twice() {
     let _ = rig.pick(WIDTH_EDGE, Q0);
     let opened: Vec<usize> = rig.open(HEIGHT_EDGE).iter().map(|(i, _)| *i).collect();
     check_offers(&opened, [Q0, Q3], "V after H = z_q0");
+    rejects("V's list as it was before the pick, z_q0 offered", || {
+        check_offers(&opened, [ALPHA, Q3], "V after H = z_q0")
+    });
     rig.key(Key::Escape, NONE);
     let opened: Vec<usize> = rig.open(DEPTH_EDGE).iter().map(|(i, _)| *i).collect();
     check_offers(&opened, [Q0, BETA], "D after H = z_q0");
+    rejects("D's list as it was before the pick, z_q0 offered", || {
+        check_offers(&opened, [ALPHA, BETA], "D after H = z_q0")
+    });
 }
 
 // === REQ-GUI-208: H and V ============================================================================================
@@ -793,17 +799,28 @@ fn qa_cube_picking_v_sets_chart_vertical_and_one_taking_a_target_resets_it() {
     rig.chart((ALPHA, BETA), frame(Q3, MU1, Q3), (0.0, 0.0, 0.0), 1.0);
     let (n, entries, before, after) = rig.pick(HEIGHT_EDGE, MU1);
     assert_eq!((n, entries), (1, 1), "one SetField, one entry");
-    assert!(close(&after.sim.plane.q2, &e(MU1, 1.0), 1e-12));
-    assert_eq!(
-        after.sim.slice.frame,
-        frame(Q3, Q3, Q3),
-        "a plane that takes X resets it to the normal (R-457 E4), in the entry"
-    );
+    let check_picked = |s: &Snapshot| {
+        assert!(close(&s.sim.plane.q2, &e(MU1, 1.0), 1e-12));
+        assert_eq!(
+            s.sim.slice.frame,
+            frame(Q3, Q3, Q3),
+            "a plane that takes X resets it to the normal (R-457 E4), in the entry"
+        );
+    };
+    check_picked(&after);
+    rejects("the state before the V pick", || check_picked(&before));
     check_on_edges(&mut rig, "H z_α", "D z_q3", "V z_μ1");
     check_chart_row(&mut rig, "vertical q₂", "z_μ1");
+    rejects("V left on z_β", || {
+        check_on_edges(&mut rig, "H z_α", "D z_q3", "V z_β")
+    });
     rig.undo();
-    assert_eq!(rig.snap().sim.slice.frame, before.sim.slice.frame);
-    assert_eq!(rig.snap().sim.plane, before.sim.plane);
+    let check_undone = |s: &Snapshot| {
+        assert_eq!(s.sim.slice.frame, before.sim.slice.frame);
+        assert_eq!(s.sim.plane, before.sim.plane);
+    };
+    check_undone(&rig.snap());
+    rejects("an undo that leaves the V pick", || check_undone(&after));
 }
 
 /// The anchor keeps its chart point across a basis edit (§G4): `z₀' = z₀ + (2s−1)(q₁ − q₁') + (2t−1)(q₂ − q₂')`.
@@ -844,34 +861,63 @@ fn qa_cube_tilting_a_picked_pair_keeps_its_h_and_v_and_reads_its_angles() {
     let mut rig = mock();
     rig.chart((Q0, BETA), frame(Q3, Q3, MU1), (60.0, 70.0, 0.0), 1.0);
     check_on_edges(&mut rig, "H z_q0", "X z_q3", "V z_β");
+    rejects("H read by q₁'s largest component past 45°", || {
+        check_on_edges(&mut rig, "H z_q3", "X z_q3", "V z_β")
+    });
     let text = rig.compass_text();
-    assert!(
-        text.contains("τ₁ → z_q3 +60.0°") && text.contains("τ₂ → z_μ1 +70.0°"),
-        "{text}"
-    );
+    let check_angles = |text: &str, two: &str| {
+        assert!(
+            text.contains("τ₁ → z_q3 +60.0°") && text.contains(two),
+            "{text}"
+        );
+    };
+    check_angles(&text, "τ₂ → z_μ1 +70.0°");
+    rejects("τ₂ read into the normal, not its own target", || {
+        check_angles(&text, "τ₂ → z_q3 +70.0°")
+    });
 }
 
 /// The pair `z_q0 × z_β`, picked with H, read at each angle to the ends of the tilt's range (±90°, TILT_RANGE; R-459 G3:
 /// "the plane becomes the new axis pair", H and V moving only with a pick or an edit in Chart).
 #[test]
 fn qa_cube_a_picked_pair_keeps_its_h_and_v_to_the_ends_of_the_range() {
-    let mut wrong = Vec::new();
-    for (t1, t2) in [
-        (89.0, 0.0),
-        (90.0, 0.0),
-        (-90.0, 0.0),
-        (0.0, 90.0),
-        (90.0, 90.0),
-        (-90.0, 45.0),
-    ] {
-        let mut rig = mock();
-        rig.chart((Q0, BETA), frame(Q3, Q3, MU1), (t1, t2, 0.0), 1.0);
-        let (h, v) = (rig.on_edge(WIDTH_EDGE).text, rig.on_edge(HEIGHT_EDGE).text);
-        if (h.as_str(), v.as_str()) != ("H z_q0", "V z_β") {
-            wrong.push(format!("({t1}°, {t2}°): {h}, {v}"));
-        }
-    }
-    assert!(wrong.is_empty(), "H or V moved without a pick: {wrong:?}");
+    let read = |pair: (usize, usize), angles: &[(f64, f64)]| {
+        angles
+            .iter()
+            .map(|&(t1, t2)| {
+                let mut rig = mock();
+                rig.chart(pair, frame(Q3, Q3, MU1), (t1, t2, 0.0), 1.0);
+                (
+                    (t1, t2),
+                    rig.on_edge(WIDTH_EDGE).text,
+                    rig.on_edge(HEIGHT_EDGE).text,
+                )
+            })
+            .collect::<Vec<_>>()
+    };
+    let check = |seen: &[((f64, f64), String, String)]| {
+        let wrong: Vec<String> = seen
+            .iter()
+            .filter(|(_, h, v)| (h.as_str(), v.as_str()) != ("H z_q0", "V z_β"))
+            .map(|((t1, t2), h, v)| format!("({t1}°, {t2}°): {h}, {v}"))
+            .collect();
+        assert!(wrong.is_empty(), "H or V moved without a pick: {wrong:?}");
+    };
+    let seen = read(
+        (Q0, BETA),
+        &[
+            (89.0, 0.0),
+            (90.0, 0.0),
+            (-90.0, 0.0),
+            (0.0, 90.0),
+            (90.0, 90.0),
+            (-90.0, 45.0),
+        ],
+    );
+    check(&seen);
+    // Control: the preset's pair at the end of the range is not the picked pair.
+    let other = read((ALPHA, BETA), &[(90.0, 0.0)]);
+    rejects("another pair read as the picked one", || check(&other));
 }
 
 /// The user's path to it: pick H = z_q0, drag τ₁ to the slider's end, drag it back. The plane must come back on z_q0.
@@ -880,19 +926,27 @@ fn qa_cube_a_tilt_dragged_to_90_and_back_stays_on_the_picked_pair() {
     let mut rig = mock();
     rig.tilted(frame(Q3, Q3, Q3), 0.0, 0.0);
     let _ = rig.pick(WIDTH_EDGE, Q0);
+    let unpicked = e(ALPHA, 1.0);
     let rail = rig.rail(TAU1);
     let (_, end) = rig.slider_drag(TAU1, rail.width());
     rig.release(end);
-    let q1 = rig.snap().sim.plane.q1;
-    assert!(q1[Q3] > 0.99, "τ₁ at the slider's end: q₁ {q1:?}");
+    let at_end = rig.snap().sim.plane.q1;
+    let check_end = |q1: &Z| assert!(q1[Q3] > 0.99, "τ₁ at the slider's end: q₁ {q1:?}");
+    check_end(&at_end);
+    rejects("τ₁ left at 0", || check_end(&unpicked));
     let (_, end) = rig.slider_drag(TAU1, -rail.width() / 4.0);
     rig.release(end);
     let q1 = rig.snap().sim.plane.q1;
-    assert!(
-        q1[Q0].abs() > 0.1 && q1[ALPHA] == 0.0,
-        "dragged back, q₁ {q1:?} has left the picked z_q0 (H reads {:?})",
-        rig.on_edge(WIDTH_EDGE).text
-    );
+    let check_back = |q1: &Z| {
+        assert!(
+            q1[Q0].abs() > 0.1 && q1[ALPHA] == 0.0,
+            "dragged back, q₁ {q1:?} has left the picked z_q0"
+        );
+    };
+    check_back(&q1);
+    rejects("dragged back onto z_α, the preset's pair", || {
+        check_back(&add(&scaled(&unpicked, 0.8), 0.6, &e(Q3, 1.0)))
+    });
 }
 
 #[test]
@@ -903,11 +957,18 @@ fn qa_cube_h_and_v_may_be_a_presets_axes_the_other_way_round() {
     rig.tilted(frame(Q3, Q3, Q3), 0.0, 0.0);
     let _ = rig.pick(HEIGHT_EDGE, MU1);
     let _ = rig.pick(WIDTH_EDGE, BETA);
-    let (n, entries, _, after) = rig.pick(HEIGHT_EDGE, ALPHA);
+    let (n, entries, before, after) = rig.pick(HEIGHT_EDGE, ALPHA);
     check_one(n, entries);
-    assert!(close(&after.sim.plane.q1, &e(BETA, 1.0), 1e-12));
-    assert!(close(&after.sim.plane.q2, &e(ALPHA, 1.0), 1e-12));
+    let check_swapped = |s: &Snapshot| {
+        assert!(close(&s.sim.plane.q1, &e(BETA, 1.0), 1e-12));
+        assert!(close(&s.sim.plane.q2, &e(ALPHA, 1.0), 1e-12));
+    };
+    check_swapped(&after);
+    rejects("the state before V = z_α", || check_swapped(&before));
     check_on_edges(&mut rig, "H z_β", "D z_q3", "V z_α");
+    rejects("the swapped pair read as the preset's", || {
+        check_on_edges(&mut rig, "H z_α", "D z_q3", "V z_β")
+    });
     check_chart_row(&mut rig, "horizontal q₁", "z_β");
     check_chart_row(&mut rig, "vertical q₂", "z_α");
     rig.chart((BETA, ALPHA), frame(Q3, Q3, Q3), (30.0, 0.0, 0.0), 1.0);
@@ -976,6 +1037,12 @@ fn qa_cube_a_preset_change_moves_h_and_v() {
     // The next preset after z_α × z_β is z_q0 × z_q1 (§G2's list).
     check_on_edges(&mut rig, "H z_q0", "D z_q3", "V z_q1");
     check_chart_row(&mut rig, "horizontal q₁", "z_q0");
+    rejects("H and V left on the old preset", || {
+        check_on_edges(&mut rig, "H z_α", "D z_q3", "V z_β")
+    });
+    rejects("Chart's row left on the old preset", || {
+        check_chart_row(&mut rig, "horizontal q₁", "z_α")
+    });
 }
 
 // === REQ-GUI-208: D ==================================================================================================
@@ -1029,9 +1096,19 @@ fn qa_cube_picking_d_at_rest_edits_the_frame_alone_and_a_target_off_it_keeps_its
     rig.tilted(frame(Q3, Q2, Q3), 0.0, 0.0);
     let (n, entries, before, after) = rig.pick(DEPTH_EDGE, MU2);
     assert_eq!((n, entries), (1, 1));
-    assert_eq!(after.sim.slice.frame, frame(MU2, Q2, MU2));
-    assert_eq!(after.sim.plane, before.sim.plane, "nothing re-tilted");
+    let check_picked = |s: &Snapshot| {
+        assert_eq!(s.sim.slice.frame, frame(MU2, Q2, MU2));
+        assert_eq!(s.sim.plane, before.sim.plane, "nothing re-tilted");
+    };
+    check_picked(&after);
+    rejects("the frame before the D pick", || check_picked(&before));
+    let mut retilted = after.clone();
+    retilted.sim.plane.q1 = e(MU2, 1.0);
+    rejects("a D pick at rest that re-tilts", || check_picked(&retilted));
     check_on_edges(&mut rig, "H z_α", "D z_μ2", "V z_β");
+    rejects("D left on z_q3", || {
+        check_on_edges(&mut rig, "H z_α", "D z_q3", "V z_β")
+    });
 }
 
 #[test]
@@ -1045,13 +1122,27 @@ fn qa_cube_the_third_axis_is_the_shown_targets_dropdown_in_tilt_mode() {
     rig.key(Key::Escape, NONE);
     let (n, entries, before, after) = rig.pick(DEPTH_EDGE, Q2);
     assert_eq!((n, entries), (1, 1));
-    assert_eq!(after.sim.slice.frame, frame(Q3, Q3, Q2), "Y alone");
     let (_, q2) = map(ALPHA, BETA, Q3, Q2, 0.0, 15.0, 0.0, 1.0);
-    assert!(close(&after.sim.plane.q2, &q2, 1e-12));
+    let check_picked = |s: &Snapshot| {
+        assert_eq!(s.sim.slice.frame, frame(Q3, Q3, Q2), "Y alone");
+        assert!(close(&s.sim.plane.q2, &q2, 1e-12));
+    };
+    check_picked(&after);
+    rejects("the state before the Y pick", || check_picked(&before));
+    let mut normal = after.clone();
+    normal.sim.slice.frame = frame(Q2, Q2, Q2);
+    rejects("the pick routed to the normal", || check_picked(&normal));
     assert_eq!(rig.third(), "Y z_q2");
+    rejects("the third axis left on the old target", || {
+        assert_eq!(rig.third(), "Y z_μ1")
+    });
     rig.undo();
-    assert_eq!(rig.snap().sim.slice.frame, before.sim.slice.frame);
-    assert_eq!(rig.snap().sim.plane, before.sim.plane);
+    let check_undone = |s: &Snapshot| {
+        assert_eq!(s.sim.slice.frame, before.sim.slice.frame);
+        assert_eq!(s.sim.plane, before.sim.plane);
+    };
+    check_undone(&rig.snap());
+    rejects("an undo that leaves the Y pick", || check_undone(&after));
 }
 
 // === REQ-GUI-208: the slice-axis rule ================================================================================
@@ -1110,11 +1201,22 @@ fn qa_cube_a_plucker_space_steer_moves_d_too() {
     rig.key(Key::Enter, NONE);
     assert_eq!(rig.app.view.focus.mode, KeyMode::Interaction);
     rig.app.manifold.compass.cursor = Some((Q2, Q3));
-    let depth = rig.snap().history.undo_depth;
+    let before = rig.snap();
     rig.key(Key::Space, NONE);
     let after = rig.snap();
-    assert_eq!(after.history.undo_depth, depth + 1, "one entry");
-    assert_eq!(after.sim.slice.frame, frame(ALPHA, ALPHA, ALPHA));
+    let check = |s: &Snapshot| {
+        assert_eq!(
+            s.history.undo_depth,
+            before.history.undo_depth + 1,
+            "one entry"
+        );
+        assert_eq!(s.sim.slice.frame, frame(ALPHA, ALPHA, ALPHA));
+    };
+    check(&after);
+    rejects("a Space that steers nothing", || check(&before));
+    let mut left = after.clone();
+    left.sim.slice.frame = frame(Q3, Q3, Q3);
+    rejects("a Space steer that leaves D in the plane", || check(&left));
 }
 
 // === REQ-GUI-208: the keys ===========================================================================================
@@ -1199,6 +1301,11 @@ fn qa_cube_keyboard_tab_to_the_compass_enter_right_to_h_enter_down_enter_picks()
     if rig.focus_labels().last().is_some_and(|l| l != "H") {
         rig.key(Key::Escape, NONE);
     }
+    rig.idle(1);
+    let shut = rig.name_counts();
+    rejects("Enter checked against the closed dropdown", || {
+        assert_ne!(shut, closed, "Enter did not open H's dropdown on screen")
+    });
     assert_eq!(rig.focus_labels().last().unwrap(), "H");
     let n0 = rig.applied();
     rig.key(Key::Enter, NONE);
@@ -1217,8 +1324,14 @@ fn qa_cube_keyboard_tab_to_the_compass_enter_right_to_h_enter_down_enter_picks()
     assert!(![BETA, Q3].contains(&picked), "picked {}", AXES[picked]);
     assert_eq!(rig.third(), "D z_q3");
     assert_eq!(rig.on_edge(WIDTH_EDGE).text, format!("H {}", AXES[picked]));
+    rejects("a pick by keys checked as Esc's no change", || {
+        assert_eq!(after.sim.plane, before.sim.plane, "Esc changes nothing")
+    });
     rig.undo();
     assert_eq!(rig.snap().sim.plane, before.sim.plane, "one Ctrl+Z");
+    rejects("H's button left on the pick after the undo", || {
+        assert_eq!(rig.on_edge(WIDTH_EDGE).text, format!("H {}", AXES[picked]))
+    });
 }
 
 #[test]
@@ -1236,9 +1349,19 @@ fn qa_cube_the_third_axis_scope_is_named_by_what_it_shows() {
     rig.key(Key::Enter, NONE);
     rig.settle();
     let after = rig.snap();
-    assert_eq!(after.history.undo_depth, before.history.undo_depth + 1);
-    assert_eq!(after.sim.slice.frame.normal, Q3 as u32, "the normal keeps");
-    assert_ne!(after.sim.slice.frame.tilt_y, MU1 as u32, "Y moved");
+    let check = |s: &Snapshot| {
+        assert_eq!(s.history.undo_depth, before.history.undo_depth + 1);
+        assert_eq!(s.sim.slice.frame.normal, Q3 as u32, "the normal keeps");
+        assert_ne!(s.sim.slice.frame.tilt_y, MU1 as u32, "Y moved");
+    };
+    check(&after);
+    rejects("Enter ↓ Enter that picks nothing", || check(&before));
+    // Control: at rest with both angles 0 the scope is D's, not Y's.
+    let mut rest = mock();
+    rest.tilted(frame(Q3, Q3, MU1), 0.0, 0.0);
+    rejects("a third axis named Y with τ₂ at 0", || {
+        assert!(rest.tree_labels(COMPASS).contains(&"Y"))
+    });
 }
 
 // === REQ-GUI-209: the rule at rest ===================================================================================
@@ -1314,14 +1437,25 @@ fn qa_cube_third_axis_during_a_tau1_slider_drag_reads_x_from_slice_mode_too() {
     let mut rig = mock();
     rig.tilted(frame(Q3, Q2, MU1), 0.0, 15.0);
     rig.mode(COMPASS_SLICE);
-    assert_eq!(rig.third(), "D z_q3");
+    let sliced = rig.third();
+    assert_eq!(sliced, "D z_q3");
     let (seen, end) = rig.slider_drag(TAU1, 30.0);
-    assert!(
-        seen.iter().all(|s| s == "X z_q2"),
-        "a drag on a tilt slider switches to Tilt (R-458) and shows X: {seen:?}"
-    );
+    let check_x = |seen: &[String]| {
+        assert!(
+            seen.iter().all(|s| s == "X z_q2"),
+            "a drag on a tilt slider switches to Tilt (R-458) and shows X: {seen:?}"
+        );
+    };
+    check_x(&seen);
+    rejects("the third axis left on D, Slice mode's", || {
+        check_x(std::slice::from_ref(&sliced))
+    });
     rig.release(end);
-    assert_eq!(rig.third(), "X z_q2", "τ₁ ≠ 0 at rest");
+    let rest = rig.third();
+    assert_eq!(rest, "X z_q2", "τ₁ ≠ 0 at rest");
+    rejects("D at rest with τ₁ ≠ 0", || {
+        assert_eq!(sliced, "X z_q2")
+    });
 }
 
 #[test]
@@ -1445,7 +1579,17 @@ fn qa_cube_a_tau2_drag_changes_the_labels_colour_while_it_lasts() {
         "the label's colour stays τ₁'s during τ₂'s drag"
     );
     rig.release(end);
-    assert_eq!(rig.on_edge(DEPTH_EDGE).sections[0].1, rest);
+    let after = rig.on_edge(DEPTH_EDGE).sections[0].1;
+    assert_eq!(after, rest);
+    rejects("the colour checked as changed after the drag ended", || {
+        assert_ne!(
+            after, rest,
+            "the label's colour stays τ₁'s during τ₂'s drag"
+        )
+    });
+    rejects("the drag's colour kept at rest", || {
+        assert_eq!(during, rest)
+    });
 }
 
 // === REQ-GUI-209: the plane ==========================================================================================
@@ -1501,15 +1645,20 @@ fn qa_cube_during_a_tau2_drag_it_draws_tau2s_plane() {
     };
     // Eased: run the drawing to rest with the pointer held still.
     rig.settle();
-    check_polygon(
-        &rig.fill(),
-        &plane_in(Q3, MU1, 0.0, tau2_now, MU1, [0.0; 3]),
-        &iso,
-    );
+    let during = rig.fill();
+    let tau2_plane = plane_in(Q3, MU1, 0.0, tau2_now, MU1, [0.0; 3]);
+    check_polygon(&during, &tau2_plane, &iso);
     rig.release(end);
     // Back at rest, X's plane.
     let tau1_plane = plane_in(Q3, MU1, 20.0, 0.0, Q3, [0.0; 3]);
-    check_polygon(&rig.fill(), &tau1_plane, &iso);
+    let rest = rig.fill();
+    check_polygon(&rest, &tau1_plane, &iso);
+    rejects("X's plane drawn during τ₂'s drag", || {
+        check_polygon(&during, &tau1_plane, &iso)
+    });
+    rejects("τ₂'s plane kept at rest", || {
+        check_polygon(&rest, &tau2_plane, &iso)
+    });
 }
 
 #[test]
@@ -1560,17 +1709,24 @@ fn qa_cube_slice_mode_draws_b2s_plane_in_the_normals_frame() {
     rig.mode(COMPASS_SLICE);
     let (q1, q2) = map(ALPHA, BETA, Q3, MU1, 0.0, 15.0, 0.0, 1.0);
     let want = cross_section(in_frame(&q1, Q3), in_frame(&q2, Q3), [0.0; 3]);
-    check_polygon(&rig.fill(), &want, &iso);
+    let one = rig.fill();
+    check_polygon(&one, &want, &iso);
+    rejects("Y's frame's plane in Slice mode", || {
+        check_polygon(&one, &plane_in(Q3, MU1, 0.0, 15.0, MU1, [0.0; 3]), &iso)
+    });
+    rejects("a badge with one angle set", || {
+        assert!(rig.painted().iter().any(|t| t.text == BADGE), "the badge")
+    });
     // G6: with both set and X ≠ Y, the third axis's rule's plane: X's, the badge shown.
     let mut rig = mock();
     rig.centred(frame(Q3, Q2, MU1), 20.0, 15.0);
     rig.mode(COMPASS_SLICE);
     assert!(rig.painted().iter().any(|t| t.text == BADGE), "the badge");
-    check_polygon(
-        &rig.fill(),
-        &plane_in(Q2, MU1, 20.0, 0.0, Q2, [0.0; 3]),
-        &iso,
-    );
+    let both = rig.fill();
+    check_polygon(&both, &plane_in(Q2, MU1, 20.0, 0.0, Q2, [0.0; 3]), &iso);
+    rejects("Y's plane with the badge in Slice mode", || {
+        check_polygon(&both, &plane_in(Q2, MU1, 0.0, 15.0, MU1, [0.0; 3]), &iso)
+    });
 }
 
 // === REQ-GUI-209: the badge ==========================================================================================
@@ -1682,14 +1838,22 @@ fn qa_cube_the_badge_is_the_last_sibling_and_enter_on_it_sets_the_plucker_view()
     rig.tilted(frame(Q3, Q3, MU1), 20.0, 15.0);
     let labels = rig.tree_labels(COMPASS);
     assert_eq!(labels.last().unwrap(), &BADGE, "{labels:?}");
+    let shown = labels;
     let id = rig.sibling(BADGE);
     rig.focus(id);
     let depth = rig.snap().history.undo_depth;
+    let cube = rig.app.manifold.compass.view;
     rig.key(Key::Enter, NONE);
     assert_eq!(rig.app.manifold.compass.view, CompassView::Plucker);
+    rejects("the view before Enter", || {
+        assert_eq!(cube, CompassView::Plucker)
+    });
     assert_eq!(rig.snap().history.undo_depth, depth);
     let labels = rig.tree_labels(COMPASS);
     assert!(!labels.contains(&BADGE), "gone with the cube: {labels:?}");
+    rejects("the siblings while the badge is shown", || {
+        assert!(!shown.contains(&BADGE), "gone with the cube: {shown:?}")
+    });
     assert!(
         !rig.focus_labels().is_empty()
             && rig
@@ -1709,21 +1873,25 @@ fn qa_cube_a_focus_on_the_badge_when_it_goes_stays_in_the_tree() {
     rig.tilted(frame(Q3, Q3, MU1), 20.0, 15.0);
     let id = rig.sibling(BADGE);
     rig.focus(id);
+    let on_badge = rig.app.view.focus.path.clone();
     rig.set(SimField::Basis {
         q1: e(ALPHA, 1.0),
         q2: e(BETA, 1.0),
     });
     let tree = rig.app.keyboard.tree(Mode::Explore);
-    assert_eq!(
-        tree.valid_prefix(&rig.app.view.focus.path),
-        rig.app.view.focus.path.len(),
-        "the focus {:?} on a scope that left",
-        rig.app.view.focus.path
-    );
-    assert_eq!(
-        rig.app.view.focus.path[0], COMPASS,
-        "it stays in the Compass"
-    );
+    let check = |path: &[String]| {
+        assert_eq!(
+            tree.valid_prefix(path),
+            path.len(),
+            "the focus {path:?} on a scope that left"
+        );
+        assert_eq!(path[0], COMPASS, "it stays in the Compass");
+    };
+    check(&rig.app.view.focus.path);
+    rejects("the focus left on the gone badge", || check(&on_badge));
+    rejects("the focus thrown out of the Compass", || {
+        check(&["figure".to_owned()])
+    });
 }
 
 // === REQ-GUI-208: a physical steer that takes D (R-459 G4, render_gui_spec § "The compass: look and views") ==========
@@ -1964,11 +2132,19 @@ fn qa_cube_a_refused_physical_steer_keeps_the_frame() {
     let (before, n0) = (rig.snap(), rig.applied());
     click_cell(&mut rig, Q2, Q3);
     let after = rig.snap();
-    assert_eq!(rig.applied(), n0, "no SetField");
-    assert_eq!(after.history.undo_depth, before.history.undo_depth);
-    assert_eq!(after.sim.slice.frame, before.sim.slice.frame);
-    assert_eq!(after.sim.plane, before.sim.plane);
-    // Control: a cell off the normal on the same J does steer, so the click was on the grid.
+    let check = |applied: usize, s: &Snapshot| {
+        assert_eq!(applied, n0, "no SetField");
+        assert_eq!(s.history.undo_depth, before.history.undo_depth);
+        assert_eq!(s.sim.slice.frame, before.sim.slice.frame);
+        assert_eq!(s.sim.plane, before.sim.plane);
+    };
+    check(rig.applied(), &after);
+    // Control: a cell off the normal on the same J does steer, so the click was on the grid, and the check fails on it.
     click_cell(&mut rig, Q0, Q1);
-    assert!(close(&rig.snap().sim.plane.q1, &e(Q0, 1.0), 1e-9));
+    let steered = rig.snap();
+    assert!(close(&steered.sim.plane.q1, &e(Q0, 1.0), 1e-9));
+    let applied = rig.applied();
+    rejects("an accepted steer, checked as refused", || {
+        check(applied, &steered)
+    });
 }
