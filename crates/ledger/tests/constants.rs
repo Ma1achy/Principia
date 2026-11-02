@@ -592,8 +592,8 @@ const R433: &str = "R-433 — ";
 /// skip tolerance `tau_i` (REQ-ENC-035), [`UNTIL_M2`], citing REQ-TOOL-163, and the shape sphere's
 /// `shape_vec_js_tol` (REQ-CHART-049) and `shape_roundtrip_bound` (REQ-CHART-053), the round trip's `eps_phys`
 /// (REQ-ENC-024), and lookup's layer-3 `decode_sanity` (REQ-ENC-027) and layer-1 `zero_class` (REQ-ENC-037), and the
-/// literature import's `literature_import_tol` (REQ-VAL-120), for
-/// M2; `r_pole`, citing REQ-INT-086, and `step_reversal_tol`, `step_reversal_edge_f64`, `step_reversal_edge_f32` and
+/// literature import's `literature_import_tol` (REQ-VAL-120), and the arctangent generator's `arctan_sum_bits`
+/// (REQ-GEN-044), for M2; `r_pole`, citing REQ-INT-086, and `step_reversal_tol`, `step_reversal_edge_f64`, `step_reversal_edge_f32` and
 /// `step_reversal_edge_max`, citing REQ-VAL-191 (TASK-M3-02), and `nsub_table_max`, citing REQ-INT-094 (TASK-M3-03), for
 /// M3; none for M0; that the seven of [`M1_PROPOSED`]
 /// confirmed outright are unmarked and cite R-428 in `decisions.md`, and `n_norm_tol` R-433; and that [`LOG_FLOORS`]
@@ -627,7 +627,8 @@ fn check_list_by_gate(register: &[ConstantBuilder]) {
             "eps_phys",
             "decode_sanity",
             "zero_class",
-            "literature_import_tol"
+            "literature_import_tol",
+            "arctan_sum_bits"
         ],
         "the entries provisional until M2"
     );

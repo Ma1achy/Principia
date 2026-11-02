@@ -2,6 +2,7 @@
 //! reaches it only as a dev-dependency, and `gui` never does (systems_architecture §7.1; R-176,
 //! R-187).
 
+pub mod arctan;
 pub mod bench;
 pub mod bringup;
 pub mod control;
@@ -26,6 +27,7 @@ pub mod projection_parity;
 pub mod prop;
 pub mod reference;
 pub mod roundtrip;
+pub mod roundtrip_preset;
 pub mod shape_roundtrip;
 pub mod shape_scene;
 pub mod spawn;
