@@ -747,6 +747,7 @@ anything outside the repository and its build and scratch directories without as
   warm targets whose dependencies are already built, which leaves it nothing to hit. `--remap-path-prefix` through
   `RUSTFLAGS` can't be used here: the paths hold a space, which `RUSTFLAGS` splits on. (Tried first on 27 Sep 2026, with
   no hits.)
+- sccache stays off, the owner's word of 31 Oct 2026 (R-666): the job queue's builds and local builds do not use it.
 
 **Linux cloud.**
 - Use `$HOME/principia-work/worktrees/` and `$HOME/principia-work/targets/`, with the same rules: one worktree and one

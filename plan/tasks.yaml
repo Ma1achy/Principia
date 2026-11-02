@@ -3594,7 +3594,7 @@
 - id: TASK-M9-16
   milestone: M9
   title: "Burrau and the Pythagorean family: Chitan et al.'s sixteen triangles, Boekholt et al.'s lifetime and τ_L and Mikkola's bounce orbit (CH-1, B-1, B-2, V-6)"
-  depends_on: [TASK-M3-27, TASK-M3-25, TASK-M3-14, TASK-M3-34, TASK-M2-13]
+  depends_on: [TASK-M3-27, TASK-M3-25, TASK-M3-14, TASK-M3-34, TASK-M2-13, TASK-M4-13]
   needs: []
   requirements: [REQ-VAL-242, REQ-VAL-243, REQ-VAL-244, REQ-VAL-245, REQ-VAL-246, REQ-VAL-247, REQ-VAL-248, REQ-VAL-249]  # R-594, R-629 (27 Oct 2026)
   reviewers: [code, qa, physics]
@@ -3762,7 +3762,7 @@
 - id: TASK-M9-37
   milestone: M9
   title: "M9's report: every external target with its tier, outcome and like-for-like checks"
-  depends_on: [TASK-M9-01, TASK-M9-02, TASK-M9-03, TASK-M9-04, TASK-M9-05, TASK-M9-06, TASK-M9-08, TASK-M9-10, TASK-M9-11, TASK-M9-12, TASK-M9-13, TASK-M9-14, TASK-M9-15, TASK-M9-16, TASK-M9-17, TASK-M9-18, TASK-M9-19, TASK-M9-20, TASK-M9-21, TASK-M9-26, TASK-M9-30, TASK-M9-31, TASK-M9-32, TASK-M9-36]
+  depends_on: [TASK-M9-01, TASK-M9-02, TASK-M9-03, TASK-M9-04, TASK-M9-05, TASK-M9-06, TASK-M9-08, TASK-M9-10, TASK-M9-11, TASK-M9-12, TASK-M9-13, TASK-M9-14, TASK-M9-15, TASK-M9-16, TASK-M9-17, TASK-M9-18, TASK-M9-19, TASK-M9-20, TASK-M9-21, TASK-M9-26, TASK-M9-30, TASK-M9-31, TASK-M9-32, TASK-M9-33, TASK-M9-34, TASK-M9-36]
   needs: []
   requirements: [REQ-VAL-340]  # R-650 (30 Oct 2026)
   reviewers: [code, qa, physics]
@@ -3775,3 +3775,11 @@
   requirements: [REQ-VAL-341]  # R-649, R-650 (30 Oct 2026)
   reviewers: [code, qa, physics]
   pitfalls: []
+- id: TASK-M9-39
+  milestone: M9
+  title: "The softened force law: Plummer softening, built after the core build, and the refusal of ε ≠ 0 lifted"
+  depends_on: [TASK-M3-01, TASK-M3-05, TASK-M3-06, TASK-M4-06, TASK-M4-04, TASK-M4-13]
+  needs: []
+  requirements: [REQ-INT-110, REQ-SYS-094, REQ-SYS-095]  # R-654 (30 Oct 2026)
+  reviewers: [code, qa, physics, perf]
+  pitfalls: [PIT-9]

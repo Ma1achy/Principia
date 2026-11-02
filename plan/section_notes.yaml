@@ -1437,6 +1437,18 @@
   reason: informative only
   note: "the owner's standing rule of 30 Oct 2026 with its two addenda: a fresh advisory review from Codex, Gemini CLI and Copilot before merge on the final head, after substantive pushes and periodically, every bot finding closed out before merge; process, carried by plan/WORKFLOW.md § The review loop, plan/OPERATIONS.md § Merging and the orchestrator's merge script; amends R-635's cadence; changes no requirement"
 - file: decisions.md
+  section: "R-657 — The R-369 decisions listed in the orchestrator's summary of 30 Oct 2026 stand, with no veto"
+  reason: informative only
+  note: "the owner's words of 30 and 31 Oct 2026: the listed R-369 decisions stand, with no veto; process; changes no requirement"
+- file: decisions.md
   section: "R-658 — Heavy commands run only through a local job queue the orchestrator owns, `cargo xtask job`: agents submit them and wait, never run them directly; classes merge, fix, build and peek, first in, first out within each; one runner at a fixed concurrency, each job with cargo's jobs and test threads at the core count; jobs time out, stale locks expire and a new runner recovers a dead one's jobs; heavy processes outside the queue are logged; sccache measured again; mutants scoped to the diff and run through the queue *(supersedes R-228)*"
   reason: informative only
   note: "the owner's ruling of 30 Oct 2026: heavy commands only through the local job queue (cargo xtask job); process, carried by CLAUDE.md, plan/OPERATIONS.md § Resources and the agent files, and built in xtask/src/jobq.rs; changes no requirement"
+- file: decisions.md
+  section: "R-664 — `generation_root` §3.5 no longer claims R² from the Welford accumulators: it cannot be derived from what is stored and nothing reads it; no per-sample field is added *(closes RQ-633)*"
+  reason: informative only
+  note: "the owner's ruling of 31 Oct 2026 closing RQ-633: \"+ R²\" struck from generation_root §3.5, no new per-sample field; no requirement read it"
+- file: decisions.md
+  section: "R-666 — sccache stays off: the job queue's builds do not use it"
+  reason: informative only
+  note: "the owner's word of 31 Oct 2026: sccache stays off; process; changes no requirement"
