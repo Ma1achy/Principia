@@ -5,8 +5,10 @@
 //! device, offscreen: the surface's present and the wait for vsync are not in it. The first cycle at each size starts
 //! from a new GUI, so it holds what a first opening pays; the rest are the usual case. After each cycle a control cycle
 //! runs on the same GUI: the same frames with no input and the console closed, so that a tail from the machine shows in
-//! both arms and a tail from the console's action in one. The judgement is one rule in both: the slowest frame against
-//! [`TARGET_MS`]. The numbers mean something only in a release build on the human's Mac (R-186).
+//! both arms and a tail from the console's action in one. The judgement is one rule in both: the CPU part of the slowest
+//! frame, the frame less its wait on the device, against [`TARGET_MS`] (R-667). The wait is reported, and so is the
+//! action arm against the control, which is not a gate. The numbers mean something only in a release build on the human's
+//! Mac (R-186).
 
 use std::sync::Arc;
 use std::time::Instant;
@@ -29,7 +31,7 @@ use crate::windows::console;
 pub const NAME: &str = "console-open-close";
 /// The log sizes it measures at (R-463 K4): empty, 1 000 entries, and the most the console keeps.
 pub const LOG_SIZES: [usize; 3] = [0, 1_000, CONSOLE_ROWS];
-/// The target for every frame measured, in milliseconds: one frame at 60 fps (R-463).
+/// The target for every frame measured, in milliseconds: one frame at 60 fps (R-463), for its CPU part (R-667).
 pub const TARGET_MS: f64 = 1000.0 / 60.0;
 /// The open-and-close cycles at each size.
 pub const CYCLES: usize = 15;
@@ -131,22 +133,46 @@ pub struct Table {
 }
 
 impl Table {
-    /// The slowest frame measured, and its time in milliseconds.
+    /// The slowest whole frame measured, and its time in milliseconds.
     pub fn worst(&self) -> (&'static str, f64) {
-        self.rows
-            .iter()
-            .map(|r| (r.frame, r.slowest().total_ms()))
+        let (frame, time) = self.slowest_whole();
+        (frame, time.total_ms())
+    }
+
+    /// The slowest whole frame measured, wait and all, the first of equals: the wait it shows is reported, not judged.
+    pub fn slowest_whole(&self) -> (&'static str, FrameTime) {
+        self.named_frames()
+            .fold(("", FrameTime::default()), |a, b| {
+                if b.1.total_ms() > a.1.total_ms() {
+                    b
+                } else {
+                    a
+                }
+            })
+    }
+
+    /// The largest CPU part of any frame measured, the first of equals, and its time in milliseconds: what is judged.
+    pub fn worst_cpu(&self) -> (&'static str, f64) {
+        self.named_frames()
+            .map(|(frame, time)| (frame, time.cpu_ms()))
             .fold(("", 0.0), |a, b| if b.1 > a.1 { b } else { a })
     }
 
-    /// Whether every frame measured is within [`TARGET_MS`].
+    /// Whether the CPU part of every frame measured is within [`TARGET_MS`] (R-667): the wait on the device is not.
     pub fn meets_target(&self) -> bool {
-        self.worst().1 < TARGET_MS
+        self.worst_cpu().1 < TARGET_MS
     }
 
     /// Every frame measured.
     fn frames(&self) -> impl Iterator<Item = &FrameTime> {
         self.rows.iter().flat_map(|r| r.times.iter())
+    }
+
+    /// Every frame measured, with its row's name.
+    fn named_frames(&self) -> impl Iterator<Item = (&'static str, FrameTime)> + '_ {
+        self.rows
+            .iter()
+            .flat_map(|r| r.times.iter().map(move |t| (r.frame, *t)))
     }
 
     /// How many frames measured reach `limit_ms`; a frame at it counts, as it misses [`TARGET_MS`] there.
@@ -156,7 +182,7 @@ impl Table {
 
     /// The largest CPU part of any frame measured: the table's rows show only each one's slowest frame.
     pub fn largest_cpu_ms(&self) -> f64 {
-        self.frames().map(FrameTime::cpu_ms).fold(0.0, f64::max)
+        self.worst_cpu().1
     }
 }
 
@@ -210,14 +236,75 @@ pub fn render_table(table: &Table) -> String {
         table.at_or_over(TAIL_MS),
         table.largest_cpu_ms()
     );
-    let (frame, ms) = table.worst();
+    let (frame, ms) = table.worst_cpu();
     let verdict = if table.meets_target() {
         "met"
     } else {
         "MISSED"
     };
-    text += &format!("target {TARGET_MS:.1} ms: {verdict}, the worst {ms:.2} ms at `{frame}`\n");
+    text += &format!(
+        "target {TARGET_MS:.1} ms on the CPU part (R-667): {verdict}, the largest {ms:.2} ms at `{frame}`\n"
+    );
+    let (frame, whole) = table.slowest_whole();
+    text += &format!(
+        "reported, not judged: the slowest whole frame {:.2} ms at `{frame}`, its wait on the device {:.2} ms\n",
+        whole.total_ms(),
+        whole.wait_ms
+    );
     text
+}
+
+/// Frames of the action arm against the control's, over every size, at one limit: reported beside the verdict, not a
+/// gate (R-667).
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Tail {
+    /// The limit, in milliseconds; a frame at it counts.
+    pub limit_ms: f64,
+    /// The action arm's frames at or over it, and its frames.
+    pub action: (usize, usize),
+    /// The control arm's frames at or over it, and its frames.
+    pub control: (usize, usize),
+}
+
+impl Tail {
+    /// The counts at `limit_ms` over every size's two arms.
+    pub fn of(arms: &[Arms], limit_ms: f64) -> Self {
+        let count = |table: &Table| (table.at_or_over(limit_ms), table.frames().count());
+        let add = |a: (usize, usize), b: (usize, usize)| (a.0 + b.0, a.1 + b.1);
+        let (action, control) = arms.iter().fold(((0, 0), (0, 0)), |(a, c), arm| {
+            (add(a, count(&arm.action)), add(c, count(&arm.control)))
+        });
+        Self {
+            limit_ms,
+            action,
+            control,
+        }
+    }
+
+    /// The one-sided Fisher exact p of the action arm having this many frames at the limit or more, were the arms alike.
+    pub fn p(&self) -> f64 {
+        fisher_greater(self.action.0, self.action.1, self.control.0, self.control.1)
+    }
+}
+
+/// The one-sided Fisher exact p of `a` of `n1` against `c` of `n2`: the chance, given the margins, that the first group
+/// holds `a` of the `a + c` or more (the hypergeometric's upper tail).
+pub fn fisher_greater(a: usize, n1: usize, c: usize, n2: usize) -> f64 {
+    let (total, hits) = (n1 + n2, a + c);
+    // ln n! for n from 0 to `total`.
+    let ln_fact: Vec<f64> = std::iter::once(0.0)
+        .chain((1..=total).scan(0.0, |sum, n| {
+            *sum += (n as f64).ln();
+            Some(*sum)
+        }))
+        .collect();
+    let ln_choose = |n: usize, k: usize| ln_fact[n] - ln_fact[k] - ln_fact[n - k];
+    let all = ln_choose(total, n1);
+    // Each term's draws outside the hits, `n1 - x`, fit in the misses, `total - hits`, as `x >= a` and `c <= n2`.
+    let p: f64 = (a..=hits.min(n1))
+        .map(|x| (ln_choose(hits, x) + ln_choose(total - hits, n1 - x) - all).exp())
+        .sum();
+    p.min(1.0)
 }
 
 /// `seconds` in milliseconds.
@@ -578,6 +665,18 @@ pub fn report(arms: &[Arms]) -> String {
         text += &render_table(&arm.action);
         text += "\ncontrol, no console action: ";
         text += &render_table(&arm.control);
+    }
+    text += "\naction against control, every size (R-667: reported, not a gate)\n";
+    for limit_ms in [TARGET_MS, TAIL_MS] {
+        let tail = Tail::of(arms, limit_ms);
+        text += &format!(
+            "at or over {limit_ms:.1} ms: action {} of {}, control {} of {}, one-sided Fisher p {:.3}\n",
+            tail.action.0,
+            tail.action.1,
+            tail.control.0,
+            tail.control.1,
+            tail.p()
+        );
     }
     text
 }

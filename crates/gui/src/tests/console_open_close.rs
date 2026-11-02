@@ -337,12 +337,12 @@ fn console_open_close_bench_the_target_is_every_frame_under_one_at_60_fps() {
     let met = bench::render_table(&table(&[("a", 2.0)]));
     assert!(met.contains("log 7 entries"), "{met}");
     assert!(
-        met.contains("target 16.7 ms: met, the worst 2.00 ms at `a`"),
+        met.contains("target 16.7 ms on the CPU part (R-667): met, the largest 2.00 ms at `a`"),
         "{met}"
     );
     let missed = bench::render_table(&table(&[("b", 20.0)]));
     assert!(
-        missed.contains("MISSED, the worst 20.00 ms at `b`"),
+        missed.contains("MISSED, the largest 20.00 ms at `b`"),
         "{missed}"
     );
 }
@@ -774,9 +774,19 @@ fn console_open_close_bench_the_columns_split_the_cpu_from_the_wait() {
         ),
         "{text}"
     );
-    assert!(text.contains("MISSED"), "{text}");
+    // Judged on the CPU part, the wait reported (R-667).
+    assert!(text.contains("met, the largest 1.25 ms at `a`"), "{text}");
+    assert!(
+        text.contains(
+            "reported, not judged: the slowest whole frame 21.75 ms at `a`, its wait on the device 20.50 ms"
+        ),
+        "{text}"
+    );
     rejects("a wait read as the CPU's", || {
         assert_eq!(&cells[cells.len() - 3..], ["20.50", "1.25", "1"])
+    });
+    rejects("a frame slow on the wait judged", || {
+        assert!(text.contains("MISSED"))
     });
 }
 
@@ -815,10 +825,147 @@ fn console_open_close_bench_a_table_counts_every_frame_at_a_limit() {
         }],
     };
     assert_eq!(t.largest_cpu_ms(), 4.0);
-    assert_eq!(t.worst().1, 51.0, "the judgement stays the whole frame");
-    assert!(!t.meets_target(), "a frame slow on the wait still misses");
-    rejects("a judgement of the CPU part alone", || {
-        assert!(t.meets_target())
+    assert_eq!(t.worst().1, 51.0, "the slowest whole frame, reported");
+    assert!(t.meets_target(), "a frame slow on the wait meets (R-667)");
+    rejects("a judgement of the whole frame", || {
+        assert!(!t.meets_target())
+    });
+}
+
+/// A frame of `cpu_ms` spent through wgpu and `wait_ms` on the device.
+fn waited(cpu_ms: f64, wait_ms: f64) -> FrameTime {
+    FrameTime {
+        submit_ms: cpu_ms,
+        wait_ms,
+        ..FrameTime::default()
+    }
+}
+
+#[test]
+fn console_open_close_bench_the_cpu_part_is_judged_and_the_wait_reported() {
+    let one = |frame: FrameTime| Table {
+        log: 0,
+        rows: vec![Row {
+            frame: "a",
+            times: vec![frame],
+        }],
+    };
+    // At the boundary, on the CPU part alone, however long the wait.
+    assert!(one(waited(TARGET_MS - 0.01, 100.0)).meets_target());
+    assert!(!one(waited(TARGET_MS, 0.0)).meets_target(), "at the target");
+    assert!(!one(waited(TARGET_MS + 0.01, 0.0)).meets_target());
+    let split = FrameTime {
+        layout_ms: 10.0,
+        submit_ms: TARGET_MS - 10.0,
+        ..FrameTime::default()
+    };
+    assert!(!one(split).meets_target(), "the CPU's parts summed");
+    rejects("the wait judged", || {
+        assert!(!one(waited(1.0, 100.0)).meets_target())
+    });
+    // The largest CPU part over every frame, which need not be the slowest whole frame, the first of equals named.
+    let t = Table {
+        log: 0,
+        rows: vec![
+            Row {
+                frame: "a",
+                times: vec![waited(1.0, 50.0), waited(2.0, 0.0)],
+            },
+            Row {
+                frame: "b",
+                times: vec![waited(3.0, 0.0), waited(4.0, 0.0)],
+            },
+            Row {
+                frame: "c",
+                times: vec![waited(4.0, 0.0), waited(1.0, 50.0)],
+            },
+        ],
+    };
+    assert_eq!(t.worst_cpu(), ("b", 4.0));
+    assert_eq!(t.slowest_whole(), ("a", waited(1.0, 50.0)));
+    assert_eq!(t.worst(), ("a", 51.0));
+    rejects("the slowest whole frame judged", || {
+        assert_eq!(t.worst_cpu().0, t.slowest_whole().0)
+    });
+    let empty = Table {
+        log: 0,
+        rows: Vec::new(),
+    };
+    assert_eq!(empty.worst_cpu(), ("", 0.0));
+    assert_eq!(empty.slowest_whole(), ("", FrameTime::default()));
+    let text = bench::render_table(&t);
+    assert!(
+        text.contains("target 16.7 ms on the CPU part (R-667): met, the largest 4.00 ms at `b`"),
+        "{text}"
+    );
+    assert!(
+        text.contains("the slowest whole frame 51.00 ms at `a`, its wait on the device 50.00 ms"),
+        "{text}"
+    );
+}
+
+#[test]
+fn console_open_close_bench_fishers_p_is_the_upper_tail() {
+    let close = |a: f64, b: f64| (a - b).abs() < 1e-9;
+    assert!(close(bench::fisher_greater(1, 1, 0, 1), 0.5));
+    assert!(close(bench::fisher_greater(2, 2, 0, 2), 1.0 / 6.0));
+    assert!(
+        close(bench::fisher_greater(0, 5, 3, 5), 1.0),
+        "none: certain"
+    );
+    assert!(close(bench::fisher_greater(1, 1, 1, 1), 1.0), "every frame");
+    assert!(close(bench::fisher_greater(2, 5, 2, 3), 13.0 / 14.0));
+    // Job 702's counts (RQ-671): about 0.31 and 0.10.
+    assert!(close(
+        bench::fisher_greater(3, 3600, 1, 3600),
+        0.312_447_898_575_14
+    ));
+    assert!(close(
+        bench::fisher_greater(31, 3600, 21, 3600),
+        0.104_976_188_036_797
+    ));
+    rejects("the lower tail", || {
+        assert!(close(bench::fisher_greater(2, 2, 0, 2), 1.0))
+    });
+}
+
+#[test]
+fn console_open_close_bench_the_report_compares_the_arms_beside_the_verdict() {
+    let arms = [
+        Arms {
+            action: table(&[("a", 20.0), ("b", 12.0)]),
+            control: table(&[("c", 30.0)]),
+        },
+        Arms {
+            action: table(&[("a", 20.0), ("b", 12.0), ("x", 1.0)]),
+            control: table(&[("c", 2.0), ("d", 17.0)]),
+        },
+    ];
+    let at_target = bench::Tail::of(&arms, TARGET_MS);
+    assert_eq!(at_target.limit_ms, TARGET_MS);
+    assert_eq!((at_target.action, at_target.control), ((2, 5), (2, 3)));
+    let in_tail = bench::Tail::of(&arms, TAIL_MS);
+    assert_eq!((in_tail.action, in_tail.control), ((4, 5), (2, 3)));
+    assert!((at_target.p() - 13.0 / 14.0).abs() < 1e-9);
+    assert!((in_tail.p() - 9.0 / 14.0).abs() < 1e-9);
+    rejects("the arms swapped", || {
+        assert_eq!(at_target.p(), bench::fisher_greater(2, 3, 2, 5))
+    });
+    let report = bench::report(&arms);
+    let lines = [
+        "action against control, every size (R-667: reported, not a gate)",
+        "at or over 16.7 ms: action 2 of 5, control 2 of 3, one-sided Fisher p 0.929",
+        "at or over 10.0 ms: action 4 of 5, control 2 of 3, one-sided Fisher p 0.643",
+    ];
+    for line in lines {
+        assert!(report.contains(line), "{line} in {report}");
+    }
+    assert!(
+        report.find(lines[0]) > report.rfind("control, no console action"),
+        "after every table: {report}"
+    );
+    rejects("a comparison of the first size only", || {
+        assert!(report.contains("action 1 of 2"))
     });
 }
 
@@ -872,7 +1019,10 @@ fn console_open_close_bench_a_control_cycle_takes_as_many_frames_as_a_cycle() {
 fn console_open_close_bench_the_control_tail_limit_is_not_the_target() {
     assert_eq!(TAIL_MS, 10.0);
     let text = bench::render_table(&table(&[("a", 12.0)]));
-    assert!(text.contains("target 16.7 ms: met"), "{text}");
+    assert!(
+        text.contains("target 16.7 ms on the CPU part (R-667): met"),
+        "{text}"
+    );
     assert!(
         text.contains("0 at or over 16.7 ms, 1 at or over 10.0 ms"),
         "{text}"
