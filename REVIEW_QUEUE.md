@@ -1475,3 +1475,262 @@ physics where the choice changes results (R-369).*
   floor.
 - **Applied meanwhile:** 0.4 per R-29, settled in the register, the doc comment saying provisional (TASK-M3-06).
 - **Waits:** the answer is needed by the M3 gate. No task waits.
+
+## RQ-624: The Inspector's equator check: `|w|` read on `D(E(x))` is the `β` clamp's image, about π·10⁻⁶, not the 6.8×10⁻¹⁴ R-551 cites, and no check can catch "a state moved off the line by one ulp" *(conflict: the requirement's wording against its ruling's evidence; R-551, R-71, R-72; REQ-VAL-022, REQ-VAL-121; context: TASK-M2-50)*
+
+*Found by TASK-M2-50 before building the shape checks. Nothing is chosen.*
+
+- **File, section:**
+  - `decisions.md` § "R-551 — …", RQ-475, the human's words: "Equilateral → `|w − 1|` and collinear `|w|` lie within
+    an R-71 calibrated bound, with the measured 2.2×10⁻¹⁶ and 6.8×10⁻¹⁴ as evidence." Those two numbers were measured
+    on `C`'s output: `docs/archive/review_queue/M0.md` § "RQ-475", "Measured on the f64 encode, `w` of `C`'s output
+    through `kernel::shape::shape`".
+  - `plan/requirements.yaml` REQ-VAL-022, verify: "max |w − 1| and max |w|, read on the canonical state D(E(x))
+    (where C's mirror puts L⁻ at w = +1), within REQ-VAL-121's bounds (measured 2.2×10⁻¹⁶ and 6.8×10⁻¹⁴)".
+  - `plan/tasks/M2/TASK-M2-50.md` § "Deliverables" and § "Acceptance tests": "max `|w − 1|` and max `|w|`, read on the
+    canonical state `D(E(x))`"; and "controls: a state moved off the line by one ulp is caught".
+  - The wording "read on the canonical state D(E(x))" came from the physics review of PR #274, P3, applied per R-369:
+    "Add "read on the canonical state" (or `D(E(x))`) to both, so the test can't be written against the input." It
+    offered the two as one state; at the equator they differ.
+- **Measured** (f64 encode and decode, the defaults links; RQ-475's families: 2000 of each per seed, through random
+  gauge elements):
+  - Pole, equal-mass equilateral, `L⁺` and `L⁻`: max `|w − 1|` = 2.2×10⁻¹⁶ on `C(x)` and on `D(E(x))` alike (seeds 1,
+    2, 3). No `w` is negative on either, so `C`'s mirror puts `L⁻` at `w = +1` on both.
+  - Equator, collinear with masses from `z_μ` on `[−4, 4)²`: max `|w|` on `C(x)` = 6.8×10⁻¹⁴, 2.4×10⁻¹⁴ and
+    1.2×10⁻¹³ (seeds 1, 2, 3); on `D(E(x))` 3.14156×10⁻⁶, 3.14159×10⁻⁶ and 3.14159×10⁻⁶. Every collinear `z_β` is at
+    its clamp image, so `D` gives `β = π·ε_z`, and `w = sin 2α · sin(π·ε_z)` ≤ π·10⁻⁶. `D(E(x)) = C(x)` holds only
+    off the clamps (REQ-ENC's left inverse, "modulo gauge"), and the equator is on one.
+  - One ulp off the line (each collinear state's body 2 moved in `y` by one ulp of its `x`, then the same gauge
+    elements): `z_β` at its clamp image with its bit set in 2000 of 2000, so the bit-for-bit check passes it; max `|w|`
+    7.2×10⁻¹⁴ on `C(x)`, the same as the states on the line, and π·10⁻⁶ on `D(E(x))`. A physical one-ulp move is below
+    both the clamp (`β < π·ε_z` is clamped) and the gauge's rounding, so neither check catches it.
+- **The question:** (1) on which state the equator's `|w|` is read, and so what its bound measures; (2) what the
+  control "a state moved off the line by one ulp is caught" means, since no check can catch a physical one-ulp move.
+- **Options seen:**
+  - (1a) On `C(x)`, "the canonical state" of P3's first wording, the state R-551's evidence was measured on: the
+    bound is proposed from about 10⁻¹³ (it tests `C`'s rounding off the line); the pole check reads the same state.
+  - (1b) On `D(E(x))`, as written: the bound is proposed from π·ε_z, and 6.8×10⁻¹⁴ is no longer its evidence; the
+    check then tests the clamp's image, which the bit-for-bit `z_β` check already pins.
+  - (1c) Both: `|w − 1|` on either (they agree), `|w|` on `C(x)` judged, on `D(E(x))` reported.
+  - (2a) The control moves `z_β` one ulp off its clamp image (the equator in `z`): the bit-for-bit check fails it,
+    which shows the comparison is exact and has no tolerance.
+  - (2b) The control moves the state off the line by enough to leave the clamp (`β` past π·ε_z), and the bit-for-bit
+    check fails it; "one ulp" is reworded.
+  - (2c) Both (2a) and (2b).
+- **Applied meanwhile:** nothing. The Randomise arm (REQ-VAL-193), the `z_β` bit-for-bit check and the pole's
+  `|w − 1|` do not depend on the answer.
+- **Waits:** REQ-VAL-022's equator `|w|` check and its one-ulp control, and REQ-VAL-121's equator bound (TASK-M2-50).
+- **30 Oct 2026:** Decided by the orchestrator per R-369; see PR #346 (TASK-M2-50). Test and verify-text matters, no
+  physics change: (1a) both shape checks are read on `C(x)`, `D(E(x))`'s `|w|` reported unjudged as the clamp image,
+  sin2α·sin(π·ε_z); (2a) with an in-clamp-band control (a collinear state about 10³ ulps off the line, caught by
+  `|w|` on `C(x)` while `z_β` still clamps) and the bound-tightened control; the one-ulp control dropped. REQ-VAL-022's
+  verify and TASK-M2-50 corrected, `rq: [RQ-624]` removed from REQ-VAL-022 and REQ-VAL-121.
+
+## RQ-628: ROUNDTRIP's interior residual on a backend whose `atan2` is approximate: lavapipe's goes past `ε_phys` *(a calibration requirement, R-71; REQ-ENC-024, REQ-RENDER-025; R-297; inverse-encode contract Part 4, Part 8; context: TASK-M2-26, PR #343)*
+
+*Queued 30 Oct 2026 from TASK-M2-26's fix round, on CI's lavapipe runs of `qa_m226_latent_slices_dark_and_within_eps_phys`.
+For the owner: yes, it is REQ-ENC-024's calibration, and the options change what is built.*
+
+- **File, section:**
+  - `plan/tasks/M2/TASK-M2-26.md` § "Acceptance tests": "`cargo xtask golden roundtrip-preset` in `gpu-metal` and
+    `gpu-lavapipe` — ROUNDTRIP render of the latent and (L_z, E) charts, with the fragment compiled as the backend
+    compiles it (fast-math on Metal, R-297): residual below ε_phys (REQ-ENC-024) except at tagged-expected regions".
+  - The same file, § "Notes": "If the residual under fragment fast-math exceeds ε_phys, that is a REVIEW_QUEUE entry,
+    not a second tolerance (applied per R-204, accepted by R-358)."
+  - `docs/contracts/principia_inverse_encode_contract.md` § "Part 4 — Conditioning: assert in physical units, never in
+    z": "`ε_phys = k·ε_R` … one `k` for both precisions: the interior residual is rounding, the same count of `ε_R` at
+    f64 and f32", and "the `ROUNDTRIP` preset (Part 8) use[s] it unchanged".
+  - `decisions.md` § "R-297 — …": "fragment paths that recompute physics to check agreement (the DECODE/ROUNDTRIP
+    presets, R-116) compare within a stated tolerance, a calibration requirement, not bit-exactly."
+  - `crates/ledger/src/constants.rs`, `EPS_PHYS`: `k = 64`, proposed from the `encode-eps-phys` gate's CPU
+    measurements (worst interior 25.64 `ε_R`, f32).
+- **What was seen:** on CI's lavapipe runners (runs 41003051251 and 41003055485), slice 6 of the qa test (seed
+  `0x0343_2026`, a latent slice reaching 20 along random directions), sample 458 at `(0.328, 0.453)`: untagged, ratio
+  1.053 `ε_phys`. Every control is deep inside its clamp (margins 21 420, 398, 26 149, 17 297, 58 202, 281 223, 284,
+  123 763 clamp-`ε`), no mirror, no clamp, no degenerate decode, so nothing should tag it. The same trip on the CPU at
+  f32 gives 0.004 `ε_phys`; on Metal 0.034 (slice 6's worst untagged 0.26).
+- **The cause:** the state has a light body (`m₀ = 0.0044`), so `|ρ̃| = 0.034 ≪ |λ̃| = 1.0` and
+  `α = atan2(|λ̃|, |ρ̃|)` sits 0.034 below `π/2`. The decode builds `ρ̃` from `cos α`, so an absolute error `δα` in the
+  encode's `α` comes back as a relative error `δα / cos α` in `ρ`, about 30× here. Mesa lowers `atan2` (for lavapipe)
+  to a degree-11 odd polynomial whose leading coefficient is 0.9999793; for `|y/x| > 1` the angle is `π/2 − P(x/y)`,
+  so near `π/2` it is off by about `2.07·10⁻⁵·cos α` (about 174 `ε_R` relative to `cos α`). That gives
+  `Δρ/ρ ≈ 2.07·10⁻⁵`, `Δr₀ ≈ 1.05·10⁻⁵`, `/R_x = 7.7·10⁻⁶ ≈ 1.01 ε_phys`, the 1.053 CI reports. A check on Metal
+  agrees: the same view with `atan2` replaced by that lowering, in WGSL, gives 1.18 `ε_phys` at sample 458 and seven
+  untagged samples past `ε_phys` on slice 6. Changing each other builtin by 8 `ε_R` in turn (exp, log, tanh, atanh,
+  sin, cos, pow, sqrt) leaves sample 458 below 0.27; `atan2` alone takes it to 2. WGSL's and Vulkan's accuracy for
+  `atan2` is 4096 ULP, so this is a conforming backend. The ROUNDTRIP code is not at fault: it runs the generated
+  encode as R-116 requires, and the pixel is interior by every margin.
+- **The gap:** `ε_phys` was calibrated on the CPU, where the interior residual is rounding, and Part 4 assumes that.
+  In the fragment it is also the backend's builtin accuracy (`atan2`, amplified by `1/cos α` near a light body),
+  which no document bounds. The task requires `ε_phys` on lavapipe, and its note forbids a second tolerance without a
+  ruling.
+- **The question:** how ROUNDTRIP's interior is held to a tolerance on a backend whose builtins are only as accurate
+  as WGSL requires.
+- **Options seen:**
+  - (a) The one Rust source gives `α` and `β` an `atan2` of its own, a stated polynomial accurate to a few `ε_R` (as
+    R-437 made the poles backend-independent), so the fragment trip no longer depends on the backend's `atan2`. This
+    changes the generated encode (TASK-M2-25's), and the compute kernel too unless the change is fragment-only.
+  - (b) A stated fragment tolerance for ROUNDTRIP, `k_frag·ε_R` with `k_frag` calibrated on both backends (a second
+    calibration requirement, R-71).
+  - (c) `ε_phys` re-calibrated to cover the fragment on both backends, which loosens T2 on the CPU as well.
+  - (d) The lavapipe run drops from ROUNDTRIP's acceptance, or lavapipe is held to a looser stated bound (dropping or
+    changing an acceptance clause).
+- **Applied meanwhile:** none. No tolerance is changed, and qa's test is unchanged.
+- **Waits:** TASK-M2-26 (PR #343): its required test fails on the lavapipe runners.
+- **30 Oct 2026:** Decided by the orchestrator per R-369, option (a); see PR #343; the owner's veto listed. Built in
+  PR #343's fix round: at f32 the encode's `α` and `β`, the spherical and exponential inverses and the shape sphere
+  decode's `β` take the kernel's own `atan2` (`crates/kernel/src/arctan.rs`), in integer arithmetic, so every backend
+  gives the CPU's bits; the f64 path keeps libm's, bit for bit. No tolerance is changed, and qa's test is unchanged.
+
+## RQ-629: WGSL and Vulkan bound `sin` and `cos` only by an absolute error, where the decode's `cos α` near `π/2` needs a relative one *(a note for future backends; REQ-ENC-024, REQ-RENDER-025; R-297; inverse-encode contract Part 4; dd_decoder §3.2; context: RQ-628, TASK-M2-26, PR #343)*
+
+*Queued 30 Oct 2026 from TASK-M2-26's fix round, as RQ-628's decision directs. No failure today; nothing waits.*
+
+- **File, section:**
+  - The orchestrator's decision on RQ-628 (30 Oct 2026, applied per R-369), its last bullet: "Related, filed
+    separately: WGSL/Vulkan bound sin/cos only by an absolute error of 2^-11 on [-pi, pi], yet cos(alpha) near pi/2
+    needs relative accuracy. There is no failure today; this gets a REVIEW_QUEUE note so a future backend doesn't
+    surprise us. It is out of (a)'s scope."
+  - `docs/design/principia_dd_decoder.md` § "3.2 Configuration — hyperspherical mass-weighted Jacobi":
+    "`ρ̃ = R̃ cos α · (1, 0)`", and "`‖ρ̃‖ = cos α`, so **small α = LARGE inner-pair separation**; `α → π/2` = tight
+    inner binary + distant third body (hierarchical)."
+  - `docs/contracts/principia_inverse_encode_contract.md` § "Part 4 — Conditioning: assert in physical units, never in
+    z": "`ε_phys = k·ε_R` … one `k` for both precisions: the interior residual is rounding, the same count of `ε_R` at
+    f64 and f32", and "the `ROUNDTRIP` preset (Part 8) use[s] it unchanged".
+- **What is seen:** the fragment decode forms `‖ρ̃‖` from the backend's `cos α`. WGSL, and Vulkan for GLSL.std.450,
+  bound `sin` and `cos` only by an absolute error of `2⁻¹¹` on `[−π, π]`. Near `α = π/2`, `cos α` is small (0.034 for
+  RQ-628's light body), so an absolute bound allows a relative error in `‖ρ̃‖` of `2⁻¹¹/cos α`, far past `ε_phys`, as
+  `atan2`'s did in RQ-628. The backends in use do much better than the bound: RQ-628's check that moved each
+  other builtin, `sin` and `cos` among them, by 8 `ε_R` left the worst sample below 0.27 `ε_phys`, and with the
+  kernel's own `atan2` qa's `qa_m226_latent_slices_dark_and_within_eps_phys` passes on Metal (lavapipe's run is PR
+  #343's CI).
+- **The gap:** nothing in the corpus bounds a backend's `sin` and `cos` relative to their value, which `ε_phys`
+  assumes at the fragment's decode. RQ-628's option (a) replaced only `atan2` (the kernel's own, in integer
+  arithmetic); `sin` and `cos` stay the backend's.
+- **The question:** whether a future backend (another driver, WebGPU in a browser) is held to a relative accuracy for
+  `sin` and `cos` near `π/2`, or the decode's `cos α` is formed so that it needs none (for instance as `sin(π/2 − α)`
+  from an exact `π/2 − α`, or by the kernel's own function, as `atan2` now is).
+- **Options seen:** (a) nothing now: a note, acted on when a backend fails ROUNDTRIP's `ε_phys` this way; (b) a
+  per-backend check of `cos` near `π/2` against f64 in the GPU suite, so a new backend that does worse is caught
+  before ROUNDTRIP's acceptance; (c) the kernel's own `sin` and `cos` at f32, as `atan2` (a larger change, beyond
+  RQ-628's scope).
+- **Applied meanwhile:** none; nothing is built for it.
+- **Waits:** nothing.
+
+## RQ-635: The arctangent generator's working precision, 100 fraction bits: a value the corpus doesn't give, and its admissibility class *(a calibration requirement, R-71; REQ-GEN-044; REQ-SYS-005, REQ-SYS-082; R-427; philosophy §4.2; context: RQ-628, TASK-M2-26, PR #343)*
+
+*Queued 31 Oct 2026 from TASK-M2-26's fix round, on code review 5720675453. For the M2 gate's calibration batch; nothing
+waits on it before the gate.*
+
+- **File, section:**
+  - `decisions.md` § "R-71 — A missing value becomes a calibration requirement": "Every value the corpus doesn't give
+    becomes a **calibration** requirement in the milestone that needs it."
+  - `plan/requirements.yaml`, REQ-SYS-082: "every other function there that returns a numeric literal must be moved into
+    the register or named in its doc as ledger or interface data".
+  - `docs/read_first/principia_00_philosophy.md` § "4.2 Every constant must be derived or absent": "A quantity is
+    admissible if it is bounded by its own achievable maximum, fixed by a conservation law, or expressed in canonical
+    units."
+  - `crates/ledger/src/gen/arctan.rs`, `sum_bits()`, before this fix: returned the literal 100, its doc citing nothing.
+- **What it is:** the units, `2⁻¹⁰⁰`, in which the generator sums each `atan(k/8)` in integer arithmetic before rounding
+  to the Q0.64 and Q2.62 words it writes. Only the generator reads it. The emitted file doesn't hold it.
+- **The gap:** no document gives this precision, and RQ-628's decision doesn't name it. It is a choice, not a
+  derivation: 100 is one value on a measured plateau, picked as a round number with room on both sides.
+- **The measurement** (the generator's sum in exact integers, each product checked against `2¹²⁸`, for every bit count
+  from 65 up): every count from 72 to 121 writes the same nine `ATAN_EIGHTHS`, `HALF_PI` and `PI`. At 71, three of the
+  eleven differ. At 122 a product passes `2¹²⁸` and the `u128` arithmetic overflows. The sum's error at 100 bits: under 2
+  units per term, each term carrying its predecessor's truncation (`eₙ₊₁ < eₙ/2 + 1`), which with at most 100 terms and
+  a dropped tail under 4 units is about 204 units; the measured worst is 90.05 units (`k = 8`, 95 terms), against the
+  `2³⁶` units the table keeps.
+- **The question:** confirm 100 at the M2 gate, or another value in 72 to 121, which writes the same file; and whether
+  the class stands.
+- **The class:** proposed as `canonical-units`, a pure number with no physical unit, as `curve_grid_log2` is. It is not
+  a clean fit, and no class is. `docs/design/principia_dd_generation_root.md` § "3.8 Metadata schema (what every entry
+  must carry)" reads: "`achievable-maximum` covers a format's achievable extreme: a value fixed by a number format's
+  limits", and 100 isn't fixed by `u128`'s limit, only bounded by it, though `curve_golden_steps`, a count where a
+  further step resolves nothing, holds that class. No conservation law applies.
+- **Options seen:** (a) confirm 100 as proposed; (b) a value derived from the plateau's edge, 72, which has no margin
+  against a change of the sum; (c) the largest, 121, which has no margin against overflow.
+- **Applied meanwhile (per R-369, R-71, R-427):** `arctan_sum_bits` = 100 in the register, marked provisional until M2,
+  citing REQ-GEN-044; `sum_bits()` reads it. Not hashed into the schema version: it decides no stored bit.
+- **Waits:** the M2 gate only (`gate-provisional --milestone M2` blocks until it is confirmed). TASK-M2-26 proceeds.
+
+## RQ-636: The drift suspect predicates read the unpacked f16 latch: REQ-INT-040 and dd_integrator §3.5 say they must, REQ-INT-045, payload §1 and REQ-PAY-112 say never *(physics; REQ-INT-040; REQ-INT-045; REQ-PAY-112; R-632; context: TASK-M3-05, TASK-M3-41)*
+
+*Queued 31 Oct 2026 by TASK-M3-05's fix round, on physics review 5722380920 of PR #360 (F1). For the owner: yes, it is
+physics, the corpus contradicts itself on what the predicates read. Code unchanged; TASK-M3-05's PR doesn't wait on it,
+by the owner's ruling of 31 Oct 2026 ("(5) Suspect predicates: file the RQ with options, code unchanged.").*
+
+- **File, section, for reading the latch:**
+  - `plan/requirements.yaml`, REQ-INT-040: "The drift suspect predicates must be read-time predicates over the stored
+    drift latches (no stored suspect bits)".
+  - `docs/design/principia_dd_integrator.md` § 3.5: "suspect predicates (READ-TIME, over the stored drift latches — no
+    stored suspect bits, payload §5)".
+  - `plan/tasks/M3/TASK-M3-05.md`, Goal: "The drift suspect predicates are read-time predicates over the stored latches".
+- **File, section, against it:**
+  - `plan/requirements.yaml`, REQ-INT-045: "Threshold and suspect decisions must use the live f32 measurement, never an
+    unpacked f16 latch."
+  - `docs/design/principia_dd_simstate_payload.md` § 1: "threshold/suspect decisions must use the live f32 measurement,
+    never the unpacked f16 latch (the f16 latch is for display, not for control flow)".
+  - `plan/requirements.yaml`, REQ-PAY-112: "threshold and suspect decisions read the live f32 value, never the stored
+    latch"; its verify: "the suspect predicates read the live f32 value; controls: … a predicate fed the unpacked latch
+    fails".
+  - `plan/reviewers/physics.md` § 8: "a threshold or suspect decision uses the live f32 value, not an unpacked f16 latch".
+- **The conflict in the code:** `check_lit` in `crates/kernel/tests/monitor.rs` asserts that the predicates read the latch,
+  so REQ-PAY-112's control, on TASK-M3-41, can't pass as written against this read side.
+- **The physics reviewer's evidence (review 5722380920):** after the march no live `max|ΔE|` exists, the latch being the
+  only stored form, so a read-time predicate with no stored bit can read a live value only if the latch's width or
+  encoding changes (REQ-PAY-112's encoding is TASK-M3-41's to choose). No march branch reads the predicates (`crates/kernel/src`,
+  `crates/engine/src`). On dd tests 2 and 7 stored and live give the same verdict for every occupant (PR #360's table).
+  They can differ for small `|E_0|`: below about 1.5e-5 (2⁻²⁴/τ_E) one f16 subnormal step crosses τ_E; the floor `ε_E`
+  limits this, but a near-zero-energy sample can still flip. The reviewer's reading: stored latches for read-time
+  display, live values for any march control flow; REQ-PAY-112's control doesn't allow that reading.
+- **The question:** what the read-time predicates read, and what REQ-INT-045 and REQ-PAY-112 then forbid.
+- **Options seen:** (a) stored latches for read-time predicates and display, live values only for march control flow:
+  REQ-INT-045, payload §1 and REQ-PAY-112 reworded to say so, REQ-PAY-112's control moved to a march branch; (b) the
+  predicates read a live value at the march's end stored at full f32, a schema change, which also keeps "no stored
+  suspect bit" but gives up the f16 latch for it; (c) TASK-M3-41's encoding makes the latch fine enough that stored and live
+  agree over a stated domain, REQ-PAY-112's control replaced by that domain's check; (d) another, stated by the owner.
+- **Applied meanwhile:** the task's Goal, REQ-INT-040: `drift_suspect`, `suspect_energy`, `suspect_lz` read the stored
+  latches. REQ-INT-040 stays closed by TASK-M3-05, carrying no `rq:` as the owner's ruling says this PR doesn't wait.
+- **Waits:** TASK-M3-41's verify of REQ-PAY-112 (REQ-PAY-112 and REQ-INT-045 carry `rq: RQ-636`).
+
+## RQ-657: REQ-PERF-115 and TASK-M8-96 name the native comparison as `cargo run -p gui --features mock`, which is opt-level 0, while the site they compare it with is built `--release` *(silence: the requirement names no build; R-627; REQ-PERF-115; the perf review of PR #368 (5726255918), F1; context: TASK-M8-86, TASK-M8-96)*
+
+*Queued from the perf review of PR #368. Wording only: what was measured is settled under R-369 below, and the requirement is not changed here.*
+
+- **File, section:**
+  - `plan/requirements.yaml`, REQ-PERF-115, `verify.detail`: "beside `cargo run -p gui --features mock` on the same Mac by the same method (TASK-M8-86's frame statistics)".
+  - `plan/tasks/M8/TASK-M8-96.md` § "Acceptance tests", the REQ-PERF-115 line: "beside `cargo run -p gui --features mock` on the same Mac by the same method".
+  - `plan/tasks/M8/TASK-M8-86.md` § "Deliverables": "The same scripted pan and frame-rate window in the native mock app (`cargo run -p gui --features mock`)".
+- **The silence:** the root `Cargo.toml` has no `[profile.*]`, so that command runs unoptimised, and `xtask/src/web_skeleton.rs` builds the site with `--release`. On one head and window, native idle, the perf review read unoptimised work at about 3 to 7 times release's (work less wait p95, 4.75 to 4.91 ms against 0.72 to 1.41 ms; load-affected, size and direction only). The frame rate on these runs moved between about 60 and 120 in either build, so fps alone does not show the build; this is perf review 5726291237, F3, the correction of 5726255918, F1, whose halved-rate reading it withdraws.
+- **The question:** whether the three lines should name `--release`, for example `cargo run -p gui --features mock --release`.
+- **Options seen:** (a) add `--release` to the measured native row in the REQ-PERF-115 and TASK-M8-96 lines, leaving TASK-M8-86's line, which names the app, as it is; (b) leave the wording, the report's `build` field and this entry being the record.
+- **Applied meanwhile:** applied per R-369, the measured native row uses `--release`. The report and the panel name the build (`build`, "debug" or "release"), and PR #368's "What to try" gives the command. No requirement or task text changes for this entry.
+- **Waits:** nothing built waits. TASK-M8-96's perf reader measures with `--release` and checks the `build` field.
+
+## RQ-666: R-468 E3's mock split formula coarsens under Fit, against E3's own "finer"
+
+*Queued 1 Nov 2026 by TASK-M6-47, on code review 5727858267 of PR #371. Applied per R-369: this is the mock's
+placeholder split rule, no physics, and the formula is agent-applied text (gui review G6) that contradicts the human's
+words, so the task did not wait. The entry is for correcting the text.*
+
+- **File, section:**
+  - `decisions.md`:13485, § "R-468 — …", E3: "reads the quad's width as a fraction of the figure, `frac = quad width /
+    (shown figure width × k)`, with `k = 1` outside Fit".
+  - `plan/requirements.yaml`:21445, REQ-GUI-229's note: "G6, frac = quad width / (shown figure width × k), k = 1
+    outside Fit, so only Fit refines".
+  - `plan/tasks/M6/TASK-M6-47.md`:29, Deliverables: "the fake quads (`crates/gui/src/mock/quads.rs`) split on `frac =
+    quad width / (shown figure width × k)`, `k = 1` outside Fit".
+- **The conflict:** a quad splits while `frac` exceeds a threshold, and with `k > 1` the formula makes `frac` smaller, so
+  fewer quads split and Fit coarsens. Against it: the human's words in R-468, "it requests finer quads"; E3 itself,
+  "about `log₂ k` levels finer" and "only Fit refines"; `docs/gui/principia_render_gui_spec.md` § "G1. Rules that hold
+  everywhere", "the larger screen scale asks for finer quads"; and REQ-GUI-229's verify, "the fake quads' deepest level
+  greater than in Extend for k ≥ 2", which the formula as written cannot pass.
+- **The question:** whether the three texts are corrected to `frac = quad width × k / shown figure width`.
+- **Options seen:** (a) correct the three texts to that form, with a *Was:*; (b) another form, stated by the owner, that
+  refines under Fit and leaves `k = 1` unchanged.
+- **Applied meanwhile:** (a) in code: `frac = (quad width) × k / (shown figure width)` (`leaves_over`,
+  `crates/gui/src/mock/quads.rs`; TASK-M6-47, PR #371). It is identical at `k = 1`, so the shown layout's and Extend's
+  quads and the `mock_tile_bounds` capture are unchanged, and `k = 4` gives two levels more. A control in
+  `f3_fill_modes_quads_finer_only_in_fit` shows the divide-by-`k` rule failing. The three texts are not changed.
+- **Waits:** nothing built waits; REQ-GUI-230's real-engine Fit reads the screen floor, not this formula.
