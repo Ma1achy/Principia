@@ -461,6 +461,10 @@ fn console_open_close_bench_the_report_names_its_run_and_every_size() {
 fn console_open_close_bench_its_numbers_convert() {
     assert_eq!(bench::ms(0.5), 500.0);
     assert_eq!(bench::ms(2.0), 2000.0);
+    assert_eq!(bench::submit_and_wait(2.0, 8.0, 3.0), (5000.0, 8000.0));
+    rejects("the time after the wait taken off", || {
+        assert_eq!(bench::submit_and_wait(2.0, 8.0, 3.0).0, -1000.0)
+    });
     assert_eq!(bench::rest_of(10.0, 2.0, 3.0), 5.0);
     assert_eq!(bench::rest_of(1.0, 2.0, 3.0), 0.0, "never below zero");
     rejects("a rest with the rows added", || {

@@ -225,6 +225,11 @@ pub(crate) fn ms(seconds: f64) -> f64 {
     seconds * 1e3
 }
 
+/// The CPU's work and the wait, in milliseconds, of a draw that spent `before_s` before the wait and `after_s` after it.
+pub(crate) fn submit_and_wait(before_s: f64, wait_s: f64, after_s: f64) -> (f64, f64) {
+    (ms(before_s + after_s), ms(wait_s))
+}
+
 /// What of a pass of `pass_ms` is neither the filter's nor the rows': never below zero, as separate clocks can make it.
 pub(crate) fn rest_of(pass_ms: f64, filter_ms: f64, rows_ms: f64) -> f64 {
     (pass_ms - filter_ms - rows_ms).max(0.0)
@@ -331,7 +336,7 @@ impl Gpu {
         for id in &textures.free {
             self.renderer.free_texture(id);
         }
-        (ms(submit_s + start.elapsed().as_secs_f64()), ms(wait_s))
+        submit_and_wait(submit_s, wait_s, start.elapsed().as_secs_f64())
     }
 }
 
