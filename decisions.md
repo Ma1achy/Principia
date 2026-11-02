@@ -28782,7 +28782,7 @@ Changes REQ-VAL-246 (statement, verify, rulings, note), REQ-VAL-308, REQ-VAL-309
 `ε ≠ 0`, and Chazy's `E`, the escape test's and the ionisation gate's pair energies and the decode's `V₀` take the
 softened potential; a view refuses `ε ≠ 0` with any `Some(E*)`; the substep law stays geometric).*
 *Still in force: all of it; R-670 says what the softened potential reaches.*
-*30 Oct 2026 · the owner's batch of that day; applied in `docs/design/principia_dd_generation_root.md` § "Open" (a paragraph), `docs/contracts/principia_integrator_contract.md` Part 3 (a row) and Part 7 (a paragraph), `docs/archive/review_queue/M0.md` (RQ-627, moved with this ruling), `REVIEW_QUEUE.md` (RQ-656), REQ-SYS-018 (reqio), REQ-INT-110, REQ-SYS-094 and REQ-SYS-095 (reqio, new), REQ-VAL-340 (reqio), TASK-M9-37 (lines), TASK-M9-39 (new), TASK-M3-06 (a note), `plan/MILESTONES.md`, `plan/tasks.yaml` and `plan/rule_groups.yaml`; built by TASK-M9-39, and the refusal by TASK-M3-06*
+*30 Oct 2026 · the owner's batch of that day; applied in `docs/design/principia_dd_generation_root.md` § "Open" (a paragraph), `docs/contracts/principia_integrator_contract.md` Part 3 (a row) and Part 7 (a paragraph), `docs/archive/review_queue/M0.md` (RQ-627, moved with this ruling), `REVIEW_QUEUE.md` (RQ-656), REQ-SYS-018 (reqio), REQ-INT-111, REQ-SYS-094 and REQ-SYS-095 (reqio, new), REQ-VAL-340 (reqio), TASK-M9-37 (lines), TASK-M9-39 (new), TASK-M3-06 (a note), `plan/MILESTONES.md`, `plan/tasks.yaml` and `plan/rule_groups.yaml`; built by TASK-M9-39, and the refusal by TASK-M3-06*
 
 The owner's words (30 Oct 2026), verbatim, from that day's batch of rulings:
 
@@ -28803,10 +28803,11 @@ The owner's words (30 Oct 2026), verbatim, from that day's batch of rulings:
 - **`R` in the gauge** (physics review 5730650164 of PR #375, P3, a mechanical consequence of "canonical"). The corpus defines `R₀ = √(I₀/M)` (`dd_chazy_final_motion` § 3.1), and the gauge has `M = I = 1` (integrator contract Part 5), so `R₀ = 1`, and the fraction and the length are one number, the sim-key value. It is read as given and never recomputed from the state, whose `I` is 1 only to rounding, which would make `ε` a per-sample, per-precision, per-backend value.
 - **The milestone.** R-650 and `plan/MILESTONES.md` call M0 to M8 the core build, and no other milestone follows it, so the task is TASK-M9-39. It is a build task, not a target: its tests block its own merge, it is not scored, and M9's report, TASK-M9-37, does not wait on it.
 - **The requirements:** one for the law, one for the record and the refusal's lifting, one calibrating the range of `ε` (REQ-SYS-095), and REQ-SYS-018 gains the refusal. The ruling gives no bounds, and they change which runs are admitted, so they are values (R-71). REQ-VAL-340 lists REQ-SYS-095 with what it waits on if TASK-M9-39 has not landed by the report, which does not wait on it.
+- *2 Nov 2026:* applied per R-369: REQ-INT-110 renumbered REQ-INT-111 (collision with PR #360's REQ-INT-110).
 
 R-654 is in the "physics" group of `plan/rule_groups.yaml`, with R-554 and R-655.
 
-Changes REQ-SYS-018 (statement, verify, rulings, source, note) and REQ-VAL-340 (statement, note); adds REQ-INT-110, REQ-SYS-094 and REQ-SYS-095.
+Changes REQ-SYS-018 (statement, verify, rulings, source, note) and REQ-VAL-340 (statement, note); adds REQ-INT-111, REQ-SYS-094 and REQ-SYS-095.
 
 ## R-655 — On a tilted shape sphere the spherical map's lattice of repeats is folded: a pixel `(s + k, t + 2j)` with `N_a·k + 2·N_b·j = 0` for integers `(k, j) ≠ 0` is the same system as `(s, t)` and is counted once, at its canonical point, the lattice decided exactly on the stored angles *(closes RQ-631; amends R-554 L3 and R-537 EX7(b))*
 *30 Oct 2026 · the owner's batch of that day; applied in `docs/contracts/principia_chart_decoder_contract.md` § "Repeats
@@ -29396,7 +29397,7 @@ R-669 is in the "design" group of `plan/rule_groups.yaml`, with R-639 and R-661.
 Adds REQ-CHART-091, REQ-VAL-342 and REQ-VAL-343; changes REQ-INT-045 and REQ-PAY-112 (statement, verify, note), REQ-VAL-199, REQ-VAL-295, REQ-VAL-311 to REQ-VAL-314, REQ-VAL-316, REQ-VAL-318, REQ-VAL-319, REQ-VAL-321, REQ-VAL-323, REQ-VAL-325 to REQ-VAL-327 and REQ-VAL-329 (rulings, rq, notes).
 
 ## R-670 — Softening's reach: a softened run keeps the collision test on geometric `r`, softening offered only on the unregularised occupants, the regularised ones refusing `ε ≠ 0`, and Chazy's `E` softened; the escape test's and the ionisation gate's pair energies take the softened potential, identical at `ε = 0`; the decode's `V₀` is softened, with `virial_ratio` following and `E₀ = K₀ + V₀`, so REQ-VAL-027, REQ-COL-006 and R-436's collision pole are restated for `ε ≠ 0` and unchanged at `ε = 0`; a view refuses `ε ≠ 0` with any `Some(E*)`; the substep law stays on geometric `d²` and `r_min` *(closes RQ-656; amends R-436 and R-654)*
-*1 and 2 Nov 2026 · the owner's second message of 1 Nov (questions (1) to (3)) and his message of 2 Nov (questions (4) to (7)); ported 2 Nov 2026; applied in `docs/contracts/principia_integrator_contract.md` Part 7 (the softening paragraph, a dated restatement), `docs/design/principia_dd_decoder.md` § 2, § 3.6 and § 3.7 (dated lines), `docs/design/principia_chart_reference.md` § 0.6 (a dated line), `docs/design/principia_dd_chazy_final_motion.md` § 3.1 (a dated line), `docs/design/principia_dd_generation_root.md` § "Open" (a dated line), the forward lines of R-436 and R-654, `docs/archive/review_queue/M0.md` (RQ-656 moved), `REVIEW_QUEUE.md`, REQ-VAL-027, REQ-COL-006, REQ-INT-110, REQ-SYS-094 and REQ-SYS-095 (reqio), TASK-M9-39 and `plan/rule_groups.yaml`*
+*1 and 2 Nov 2026 · the owner's second message of 1 Nov (questions (1) to (3)) and his message of 2 Nov (questions (4) to (7)); ported 2 Nov 2026; applied in `docs/contracts/principia_integrator_contract.md` Part 7 (the softening paragraph, a dated restatement), `docs/design/principia_dd_decoder.md` § 2, § 3.6 and § 3.7 (dated lines), `docs/design/principia_chart_reference.md` § 0.6 (a dated line), `docs/design/principia_dd_chazy_final_motion.md` § 3.1 (a dated line), `docs/design/principia_dd_generation_root.md` § "Open" (a dated line), the forward lines of R-436 and R-654, `docs/archive/review_queue/M0.md` (RQ-656 moved), `REVIEW_QUEUE.md`, REQ-VAL-027, REQ-COL-006, REQ-INT-111, REQ-SYS-094 and REQ-SYS-095 (reqio), TASK-M9-39 and `plan/rule_groups.yaml`*
 
 The owner's words, verbatim. 1 Nov 2026, his second message, item (2), of RQ-656's questions (1) to (3), which were all it then asked:
 
@@ -29424,7 +29425,7 @@ The owner's words, verbatim. 1 Nov 2026, his second message, item (2), of RQ-656
 
 R-670 is in the "physics" group of `plan/rule_groups.yaml`, with R-654.
 
-Changes REQ-VAL-027 and REQ-COL-006 (statement, rulings, note), REQ-INT-110, REQ-SYS-094 and REQ-SYS-095 (rq, rulings, note).
+Changes REQ-VAL-027 and REQ-COL-006 (statement, rulings, note), REQ-INT-111, REQ-SYS-094 and REQ-SYS-095 (rq, rulings, note).
 
 ## R-671 — In a task with no GPU run, a statistical or qualitative target's statistic from the f64 runs is recorded at tier (b), its instrument stated, and its (a) part stays listed "not scored yet: needs a GPU run", the tier not relabelled; Q-4's no-integration part is recorded with no tier *(closes RQ-669; refines R-649)*
 *2 Nov 2026 · the owner's message of that day; applied in `docs/design/principia_dd_replication.md` § 12.2 (a dated paragraph and Q-4's row), the forward line of R-649, `docs/archive/review_queue/M0.md` (RQ-669 moved), `REVIEW_QUEUE.md`, the 31 requirements besides REQ-VAL-340 that carried `rq: RQ-669`, and REQ-VAL-340 (reqio), TASK-M9-10, TASK-M9-11, TASK-M9-14, TASK-M9-17 to TASK-M9-25, TASK-M9-32 and TASK-M9-37, and `plan/rule_groups.yaml`*
