@@ -189,7 +189,9 @@ jobs:
       # restored read-only under the key `ci.yml`'s `gpu-kernel` job saves it under on a push to `main`: that job and the
       # channel rust-toolchain.toml pins, so a toolchain bump starts a fresh cache (R-320, R-337; REQ-SYS-075). Restored
       # in every run that builds the kernel; never saved here. Each checkout and cache step here has a limit of its own,
-      # so a stalled one fails the shard in minutes, not after the 300 minutes below (the limits on `mutants-check`).
+      # so a stalled one fails the shard in minutes; the 300 minutes below are the cargo mutants step's alone, and the
+      # job has no limit of its own, so a stall would otherwise run to GitHub's 360 minutes for a hosted job (the
+      # limits are sized as on `mutants-check`).
       - uses: actions/cache/restore@v4
         if: steps.diff.outputs.rust == 'true'
         with:

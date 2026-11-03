@@ -848,8 +848,8 @@ mod notice_not_applicable {
 }
 
 /// The longest, in minutes, a step before `mutants-check`'s report, or a checkout or cache step of a `mutants.yml`
-/// job, may run before its own limit fails it: twice the workflow's longest normal step, a full-history checkout of
-/// 189 s (`mutants.yml`'s comment on the limits).
+/// job, may run before its own limit fails it: about three times the longest checkout these jobs logged, a shard's
+/// full history in 189 s, rounded up to a whole 10 minutes (`mutants.yml`'s comment on the limits).
 const STEP_LIMIT: u64 = 10;
 
 /// `mutants-check` is never left unreported by a stalled step: each step before its report, and each checkout and cache
