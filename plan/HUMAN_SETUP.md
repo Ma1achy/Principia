@@ -31,6 +31,8 @@ In **Settings → Branches → Add branch protection rule** (or a ruleset) for `
   push to main runs CI again;
 - turn on "do not allow bypassing the above settings", so the required checks bind every merge, the agent's included
   (R-266).
+  *3 Nov 2026 (R-682):* the owner allows admin bypass on `main`, so that he can merge by hand when a required check
+  hangs. Agents never use it, and the required checks still bind every merge an agent makes.
 - turn on "require conversation resolution before merging" (R-276): a PR merges only when every review thread on it
   is resolved.
 

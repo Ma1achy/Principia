@@ -2671,6 +2671,10 @@ precision question needs it and the Brutus-style reference is too slow. Recorded
 stay as they are (§7.1 already parks extended precision; this is its kernel-instantiation row).
 
 ## R-266 — "Require branches to be up to date" stays off; bypassing is not allowed *(amends HUMAN_SETUP §2)*
+*Amended in part by R-682 (3 Nov 2026: branch protection allows admin bypass on `main`, for the owner alone; agents
+never use it, and merge scripts merge only when every required check has passed).*
+*Still in force: all of it but "Do not allow bypassing": the up-to-date requirement stays off, and no merge an agent
+makes lands with a required check red.*
 *30 Sep 2026 · applied in plan/HUMAN_SETUP.md §2*
 
 "R-266: "Require branches to be up to date" stays off: CI runs on each PR merged with main, and every push to main runs
@@ -5312,6 +5316,9 @@ Changes no requirement.
 - R-368 is in the "physics" group of `plan/rule_groups.yaml`.
 
 ## R-369 — Standing rule on autonomy: no size gate; decide and continue; ask the human only for the five kinds listed *(supersedes R-234 and R-367; amends R-175, R-204, R-208, R-211, R-264, R-283, R-290 and R-357)*
+*Refined by R-681 (3 Nov 2026: while `main` is red or a required check is stuck, agents open and update no other pull
+request, whatever else could proceed).*
+*Still in force: all of it, R-681's stop added to "stop only when nothing at all can proceed".*
 *2 Oct 2026 · applied in CLAUDE.md, `plan/OPERATIONS.md`, `plan/WORKFLOW.md` and `plan/CURRENT_RULES.md`, and the
 forward lines of the rulings it names*
 
@@ -29941,3 +29948,104 @@ The owner's words (3 Nov 2026), verbatim:
 row to a target, whichever task takes it.
 
 R-680 is in the "process" group of `plan/rule_groups.yaml`.
+
+## R-681 — Standing rules: while `main` is red, or a required check is stuck, agents open and update no other pull request, and the owner is told in one message; a CI-tooling pull request shows its own `xtask-ci` passing before it merges; a stuck check is cleared by re-running only the job that reports it, never the whole pipeline *(refines R-369)*
+*3 Nov 2026 · the owner's three messages of that day on `main`'s red `xtask-ci` and the stuck `mutants-check`; ported
+3 Nov 2026; applied in `plan/OPERATIONS.md` § "Merging" (a paragraph) and § "Autonomy (R-369)" (a line), R-369's
+forward line and `plan/rule_groups.yaml`; changes no requirement*
+
+The owner's words (3 Nov 2026), verbatim: item (3) of the message that opens "Top priority, nothing else until done:
+main's xtask-ci fails on every PR since #381":
+
+> (3) Standing rule from now: if main is red, all agents stop opening/updating other PRs until it's green again, and a CI-tooling PR must show its own xtask-ci passing before merge (#381 merged and broke main).
+
+Item 4 of his message that opens "`mutants-check` is no longer a required check on main":
+
+> 4. Standing rules: never re-run a whole pipeline to clear a stuck check (re-run only the job that reports it); if main is red or a required check is stuck, stop other PR work and tell me in one message.
+
+And the last sentence of his message that opens "#384 is blocked only by the required `mutants-check` showing
+"Expected — waiting for status"":
+
+> Re-running full CI to clear a stuck required check is banned from now: re-run the single job that reports it.
+
+*Context.* R-678 (PR #389) quotes item (2) of the third message and item 3 of the second, and leaves this part of them
+outside it ("re-running only the job that reports a stuck check, stopping other work when `main` is red"); this ruling
+ports it. The rest of the three messages (landing #384, #382 and #383, the mutants workflow's fix, the push-to-green
+report, and "Don't start other work while I'm away") were the day's instructions, acts rather than standing rules.
+
+*What it decides:*
+
+- **`main` red, or a required check stuck.** While `main`'s CI is red, or a required check on a pull request is stuck
+  (expected and never reported, or hanging), no agent opens or updates any other pull request until
+  `main` is green again or the check reports. The owner is told in one message what is red or stuck. Work that pushes
+  nothing goes on, as R-369 has it; the fix for `main` is the one pull request worked.
+- **A CI-tooling pull request** (one that changes what CI runs or checks) shows its own `xtask-ci` passing on its head
+  before it merges. #381 merged and broke `main`.
+- **A stuck check is re-run alone.** A stuck required check is cleared by re-running only the job that reports it,
+  never by re-running a whole pipeline or full CI. This tightens R-633's note ("prefer re-running the failed jobs over
+  closing and reopening the PR") for a stuck check.
+
+*Applied per R-369:*
+
+- "Passing" is a run of `xtask-ci` on the head that passes; a pass reported without running it, by a tier that skips
+  it (R-677), does not count for a CI-tooling pull request.
+- "Stop other PR work" is read with item (3)'s "stop opening/updating other PRs": no push, no new pull request, no
+  merge of another pull request; reviews and local work that push nothing go on.
+- In R-369, this refines "stop only when nothing at all can proceed": a red `main` or a stuck required check stops
+  other pull-request work at once, whatever else could proceed.
+- `CLAUDE.md` is not changed by this port.
+
+R-681 is in the "process" group of `plan/rule_groups.yaml`.
+
+## R-682 — Admin bypass on `main` is the owner's alone: agents never use it, by `gh pr merge --admin` or any API merge that skips a required check; merge scripts merge only when every required check has passed; a stuck check goes to the owner, who decides whether to bypass *(amends R-266)*
+*3 Nov 2026 · the owner's message of that day; ported 3 Nov 2026; applied in `plan/HUMAN_SETUP.md` § 2 (a dated note),
+`plan/OPERATIONS.md` § "Merging" (step 3), R-266's forward lines and `plan/rule_groups.yaml`; changes no requirement*
+
+The owner's words (3 Nov 2026), verbatim:
+
+> Branch protection: I'm allowing admin bypass on main so I can merge manually when a required check hangs. Agents must NEVER use admin bypass (no `gh pr merge --admin`, no API merges that skip required checks). Merge scripts merge only when every required check has passed. If a check is stuck, tell me and I'll decide whether to bypass.
+
+*What it decides:*
+
+- **Bypass is the owner's.** Branch protection on `main` allows admin bypass, so that the owner can merge by hand when
+  a required check hangs. In R-266, this amends "I'm turning on "Do not allow bypassing", so the required checks bind
+  every merge, including yours": the setting is off for the owner's bypass, and the required checks still bind every
+  merge an agent makes.
+- **Agents never bypass:** no `gh pr merge --admin`, and no API merge that skips a required check.
+- **Merge scripts merge only when every required check has passed.**
+- **A stuck check goes to the owner**, who decides whether to bypass (with R-681, in one message).
+
+R-682 is in the "process" group of `plan/rule_groups.yaml`.
+
+## R-683 — The CI speed-up series, after the current CI fixes land: measure first, then five tooling pull requests in order, each with before and after numbers: one test binary per crate, a quick tier on every push, mutants in-diff on the merge-ready head, a bounded dependency cache saved from `main` only, and nightly compiler flags kept only if faster; R-285's amendment approved in principle only, its wording with step (4)'s pull request
+*3 Nov 2026 · the owner's message of that day; ported 3 Nov 2026; applied in `plan/rule_groups.yaml` and
+`plan/section_notes.yaml`; changes no requirement and no ruling in force*
+
+The owner's words (3 Nov 2026), verbatim:
+
+> CI speed-up research, after the current CI fixes land (#384, #382, #383, the mutants-check fix). Measure first: per job, split wall time into setup/archive download, build, link and test run, so we know where time goes. Then, in order, each as its own tooling PR with before/after numbers: (1) Consolidate integration tests: there are ~606 test binaries (engine 73, gui 28, kernel 107, ledger 74, prin 10, render 72, validation 94, xtask 148). Make one test binary per crate via tests/<crate>/main.rs that `mod`-includes the existing files unchanged (qa_TASK files stay separate files and keep their review ownership). Measure build+link time, archive size and mutants time. Check that nextest filters, per-test controls (REQ-VAL-147), screenshot/golden harnesses and reviews-check still work. (2) Quick tier on every push: only changed crates plus reverse dependencies (e.g. guppy/cargo-hakari determinator or a cargo-metadata script); full suite once at merge-ready; required checks always report. (3) cargo mutants --in-diff on the merge-ready head. (4) Bounded dependency cache saved from main only (rust-cache or sccache; amend R-285 as I approved in principle). (5) Try nightly `-Z threads=8` and `-Z share-generics=y` in CI builds, and opt-level 1–2 for dependencies in the test profile; keep each only if measured faster. Skip mold. Report each step's numbers. Don't propose paid runners or moving the repo to an organisation; I'll decide those later.
+
+*What it decides:*
+
+- **When.** After the current CI fixes land: #384, #382, #383 and the mutants-check fix (PR #389).
+- **Measure first.** Per job, wall time split into setup and archive download, build, link and test run.
+- **Then, in order, each its own tooling pull request with before and after numbers:** (1) one integration-test binary
+  per crate, `tests/<crate>/main.rs` `mod`-including the existing files unchanged, qa's `qa_TASK` files staying
+  separate files with their review ownership (R-290), measured for build and link time, archive size and mutants time,
+  and checked against nextest's filters, the per-test controls (REQ-VAL-147), the screenshot and golden harnesses and
+  `reviews-check`; (2) a quick tier on every push, only the changed crates and their reverse dependencies, the full
+  suite once at merge-ready, every required check still reporting; (3) `cargo mutants --in-diff` on the merge-ready
+  head; (4) a bounded dependency cache saved from `main` only, by `rust-cache` or sccache; (5) nightly `-Z threads=8`
+  and `-Z share-generics=y` in CI builds, and opt-level 1 to 2 for dependencies in the test profile, each kept only if
+  measured faster. mold is skipped. Each step's numbers are reported.
+- **R-285, approved in principle only.** "amend R-285 as I approved in principle" is the approval in principle R-656
+  recorded for a bounded cache saved from `main` only. R-285 is not amended by this ruling: the amendment's wording
+  comes with step (4)'s pull request, for the owner's ruling then.
+- **Not proposed:** paid runners, or moving the repo to an organisation; the owner decides those later.
+
+*Applied per R-369:* this ruling orders the work and changes no ruling in force. Where a step changes what a ruling
+fixes, the step's pull request brings the conflict to the owner, as R-676 did for the quick tier: step (2) against
+R-110, R-177 and R-235 as R-677 leaves them, step (4) against R-285, and, if it uses sccache, R-666's "off" for the
+job queue, which leaves CI unchanged.
+
+R-683 is in the "ci" group of `plan/rule_groups.yaml`.
