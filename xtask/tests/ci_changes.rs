@@ -54,15 +54,22 @@
 //!   runs its tests or, on a data or docs pull request, the cheap checks, and on a data one its readers' tests, built
 //!   one test binary at a time, and passes the verdict to the gate `ci`.
 //! - `ci_changes_no_skipped_job_reports_a_required_name`: every workflow that runs on pull requests has no
-//!   workflow-level `paths:` or `paths-ignore:`; the required checks are each reported by exactly one job, but
-//!   `mutants-check`, which `mutants.yml` posts and no job bears (R-656, the merge-ready run); a job that
-//!   can be skipped (a job-level `if:` or a `needs:`) is never named for a required check unless its `if:` is
-//!   `always()`; and a matrix job never bears a required check's name without its shard.
+//!   workflow-level `paths:` or `paths-ignore:`; the required checks are each reported by exactly one job,
+//!   `mutants-check` among them, a job of every run of `mutants.yml` (R-678); a job that can be skipped (a job-level
+//!   `if:` or a `needs:`) is never named for a required check unless its `if:` is `always()`; and a matrix job never
+//!   bears a required check's name without its shard.
 //! - `ci_changes_every_required_check_reports_on_every_tier`: a change of each tier, classified by the script, is run
 //!   through `ci.yml`'s jobs (their `if:`s and `needs:` evaluated as GitHub does, every job that runs succeeding) and
 //!   each gate's script run under bash: `ci`, `xtask-ci` and the three GPU gates pass on every tier. `mutants.yml`'s
-//!   `mutants-pending`, its post step run with a stand-in `gh`, posts `mutants-check` passed with its reason on a data
-//!   or docs change and pending on a code one (R-677); `pr-check` and `reviews-complete` read no classification.
+//!   `mutants-check`, its report step run with a stand-in `gh`, passes a push of each "not applicable", with its
+//!   reason: no Rust under `crates/` on a data or docs change, not merge-ready on a code one (R-677, R-678);
+//!   `pr-check` and `reviews-complete` read no classification.
+//! - `ci_changes_every_required_check_reports_on_every_path`: the required checks are `plan/HUMAN_SETUP.md` §2's, and
+//!   each reports on every path the owner named (3 Nov 2026, R-678): a push of code, plan-data and docs, a label put on
+//!   and taken off, `merge-ready` and another. GitHub counts, of each workflow's runs on the head, only the latest run's
+//!   check suite, so the workflow bearing a check either runs on the event, the job bearing it unskippable and, in
+//!   `ci.yml` and `mutants.yml`, concluding as it should, or runs on every new head, its push run standing; a workflow
+//!   runs on both label changes or neither, and filters no pull request.
 //! - `ci_changes_mutants_fixture_runs_on_the_gates_own_files`: `mutants.yml`'s `mutants-fixture`, the gate's self-test on
 //!   its fixtures, runs every step after its classification on a change to the gate's configuration
 //!   (`.cargo/mutants.toml`, `fixtures/mutants/untested/`, `fixtures/mutants/caps/`), which has no Rust under `crates/`,
@@ -84,7 +91,8 @@ use validation::spawn::Spawn;
 mod scratch;
 use scratch::Scratch;
 
-/// The checks branch protection requires on `main` (R-266, R-305, and `gpu-kernel` since TASK-M0-14).
+/// The checks branch protection requires on `main` (R-266, R-305, and `gpu-kernel` since TASK-M0-14), as
+/// `plan/HUMAN_SETUP.md` §2 records them (`ci_changes_every_required_check_reports_on_every_path` checks it).
 const REQUIRED: [&str; 8] = [
     "ci",
     "gpu-metal",
@@ -2535,23 +2543,8 @@ fn reports(id: &str, job: &Value) -> String {
     job.get("name").map(text).unwrap_or_else(|| id.to_owned())
 }
 
-/// The required checks a workflow posts through the Checks API rather than as a job, so that no run that skips the job
-/// reports it passed: `mutants-check`, pending until the merge-ready run posts its verdict (R-656, R-676).
-/// Each with the workflow that posts it.
-const POSTED: [(&str, &str); 1] = [("mutants-check", "mutants.yml")];
-
 fn check_required(workflows: &[(String, String)]) {
     let mut found: Vec<(String, String)> = Vec::new();
-    for (check, poster) in POSTED {
-        let posts = workflows
-            .iter()
-            .any(|(f, yml)| f == poster && yml.contains(&format!("-f name={check} ")));
-        assert!(
-            posts,
-            "ci_changes: {poster} does not post the required check `{check}`"
-        );
-        found.push((check.to_owned(), format!("{poster}: posted")));
-    }
     for (file, yml) in workflows {
         let wf = parse(yml);
         let on = &wf["on"];
@@ -2581,10 +2574,6 @@ fn check_required(workflows: &[(String, String)]) {
                     "ci_changes: {file}'s matrix job `{id}` is named `{name}`, without its shard; skipped, it would \
                      report the required name `{name}`"
                 );
-                continue;
-            }
-            if POSTED.iter().any(|(c, _)| *c == name) {
-                found.push((name.clone(), format!("{file}: {id}")));
                 continue;
             }
             if !REQUIRED.contains(&name.as_str()) || !runs_on_prs {
@@ -2638,12 +2627,13 @@ negative_control!(
     }
 );
 
-mod posted_by_a_job {
+mod posted_not_a_job {
     use super::*;
     negative_control!(
         ci_changes_no_skipped_job_reports_a_required_name,
-        "mutants.yml's verdict job named mutants-check, which the run of a label other than merge-ready skips",
-        expected = "the required check `mutants-check` is reported by 2 jobs",
+        "mutants.yml with no job bearing mutants-check, as when it was a check run posted through the Checks API, which \
+         a later run's check suite supersedes (#384, R-678)",
+        expected = "the required check `mutants-check` is reported by 0 jobs",
         {
             let mut workflows = pull_request_workflows();
             let at = workflows
@@ -2652,8 +2642,30 @@ mod posted_by_a_job {
                 .expect("ci_changes: no mutants.yml");
             workflows[at].1 = edited(
                 ".github/workflows/mutants.yml",
-                "  mutants-verdict:\n",
                 "  mutants-check:\n",
+                "  mutants-report:\n",
+            );
+            check_required(&workflows)
+        }
+    );
+}
+
+mod skippable_mutants_check {
+    use super::*;
+    negative_control!(
+        ci_changes_no_skipped_job_reports_a_required_name,
+        "mutants.yml's mutants-check job run only on the merge-ready label's run, so every other run reports it skipped",
+        expected = "the required check `mutants-check`, can be skipped",
+        {
+            let mut workflows = pull_request_workflows();
+            let at = workflows
+                .iter()
+                .position(|(f, _)| f == "mutants.yml")
+                .expect("ci_changes: no mutants.yml");
+            workflows[at].1 = edited(
+                ".github/workflows/mutants.yml",
+                "  mutants-check:\n    if: always()\n",
+                "  mutants-check:\n    if: github.event.label.name == 'merge-ready'\n",
             );
             check_required(&workflows)
         }
@@ -2846,75 +2858,93 @@ fn ci_run(yml: &str, verdict: &[(&str, String)]) -> Vec<(String, bool)> {
     reported
 }
 
-/// What `mutants.yml`'s `mutants-pending` posts as `mutants-check` on a new head whose classification found
-/// `mutants`: the stand-in `gh`'s log of the check run it posted, or empty if the job does not run.
-fn mutants_posted(yml: &str, mutants: &str) -> String {
-    use std::collections::BTreeMap;
+/// What `mutants.yml`'s `mutants-check` job reported: whether its report step passed, its log and its job summary.
+struct Reported {
+    ok: bool,
+    log: String,
+    summary: String,
+}
+
+/// `mutants.yml`'s `mutants-check` job, run as a runner runs it on an event whose context is `env` (`ACTION`, `LABEL`,
+/// `READY`, `MUTANTS`, `VERDICT`): its classification step reads the classifier, and its report step runs under bash
+/// with a stand-in `gh` that answers the pull request's head `0123abcd`, one earlier run of the workflow on it, run 5,
+/// and that run's `mutants-verdict` as `$STUB_JOB`; a stand-in `sleep` fails, so a wait ends the step at once.
+fn mutants_report(yml: &str, env: &[(&str, &str)]) -> Reported {
     let wf = parse(yml);
-    let job = &wf["jobs"]["mutants-pending"];
-    let results = BTreeMap::new();
-    let outputs = BTreeMap::new();
-    let ctx = Ctx {
-        action: "opened",
-        results: &results,
-        outputs: &outputs,
-        needs: &[],
-    };
-    if evaluate(&text(&job["if"]), &ctx) != "true" {
-        return String::new();
-    }
+    let job = &wf["jobs"]["mutants-check"];
     let steps = job["steps"]
         .as_array()
-        .expect("ci_changes: mutants-pending's steps");
+        .expect("ci_changes: mutants-check's steps");
     assert!(
         steps.iter().any(|s| text(&s["id"]) == "changes"
             && text(&s["run"]).trim() == "scripts/ci_changes.sh detect"),
-        "ci_changes: mutants-pending does not run the classifier"
+        "ci_changes: mutants-check does not run the classifier"
     );
-    let post = steps
+    let step = steps
         .iter()
-        .find(|s| text(&s["name"]) == "Post mutants-check on the head")
-        .expect("ci_changes: mutants-pending posts no mutants-check");
+        .find(|s| text(&s["name"]) == "Report mutants-check")
+        .expect("ci_changes: mutants-check has no report step");
     assert_eq!(
-        text(&post["env"]["MUTANTS"]),
+        text(&step["env"]["MUTANTS"]),
         "${{ steps.changes.outputs.mutants }}",
-        "ci_changes: mutants-pending's post does not read the classification's `mutants`"
+        "ci_changes: mutants-check's report does not read the classification's `mutants`"
     );
-    let dir = Scratch::new("ci_changes_mutants_post");
+    let dir = Scratch::new("ci_changes_mutants_report");
     std::fs::create_dir_all(&*dir).expect("scratch folder");
-    let gh = dir.join("gh");
-    std::fs::write(
-        &gh,
-        "#!/usr/bin/env bash\n\
-         for a in \"$@\"; do [ \"$a\" = --jq ] && { echo 0; exit 0; }; done\n\
-         printf '%s\\n' \"$*\" >> \"$GH_LOG\"\n",
-    )
-    .expect("stand-in gh written");
-    {
+    for (name, body) in [
+        (
+            "gh",
+            "#!/usr/bin/env bash\n\
+             case \"$*\" in\n\
+               *'/pulls/'*) echo 0123abcd ;;\n\
+               *'/jobs'*) echo \"$STUB_JOB\" ;;\n\
+               *'/runs?'*) echo 5 ;;\n\
+             esac\n",
+        ),
+        ("sleep", "#!/bin/sh\nexit 1\n"),
+    ] {
+        let file = dir.join(name);
+        std::fs::write(&file, body).expect("stand-in written");
         use std::os::unix::fs::PermissionsExt;
-        std::fs::set_permissions(&gh, std::fs::Permissions::from_mode(0o755)).expect("gh mode");
+        std::fs::set_permissions(&file, std::fs::Permissions::from_mode(0o755)).expect("mode");
     }
-    let log = dir.join("gh.log");
-    let path = format!(
-        "{}:{}",
-        dir.display(),
-        std::env::var("PATH").unwrap_or_default()
-    );
-    let log_s = log.display().to_string();
-    let ran = passes(
-        &text(&post["run"]),
-        &[
-            ("PATH", path.as_str()),
-            ("GH_LOG", log_s.as_str()),
-            ("GH_TOKEN", "t"),
-            ("GH_REPO", "o/r"),
-            ("HEAD_SHA", "0123abcd"),
-            ("MUTANTS", mutants),
-        ],
-    );
-    assert!(ran, "ci_changes: mutants-pending's post step failed");
-    std::fs::read_to_string(&log).unwrap_or_default()
+    let summary = dir.join("summary.md");
+    let mut cmd = Command::new("bash");
+    cmd.args(["-e", "-c", &text(&step["run"])])
+        .env(
+            "PATH",
+            format!(
+                "{}:{}",
+                dir.display(),
+                std::env::var("PATH").unwrap_or_default()
+            ),
+        )
+        .env("GITHUB_STEP_SUMMARY", &summary)
+        .env("GH_TOKEN", "t")
+        .env("GH_REPO", "o/r")
+        .env("PR", "7")
+        .env("HEAD_SHA", "0123abcd")
+        .env("RUN_ID", "9")
+        .env("STUB_JOB", "completed success");
+    for (k, v) in env {
+        cmd.env(k, v);
+    }
+    let out = cmd.timed_output().expect("ci_changes: bash ran");
+    Reported {
+        ok: out.status.success(),
+        log: format!(
+            "{}{}",
+            String::from_utf8_lossy(&out.stdout),
+            String::from_utf8_lossy(&out.stderr)
+        ),
+        summary: std::fs::read_to_string(&summary).unwrap_or_default(),
+    }
 }
+
+/// The reason `mutants-check` gives for "not applicable" on a change with no `.rs` file under `crates/`, and on a head
+/// that is not merge-ready.
+const NO_CRATES: &str = "touches no Rust source under crates/";
+const NOT_READY: &str = "The head is not merge-ready";
 
 fn check_every_tier_reports(ci: &str, mutants: &str) {
     let script = read("scripts/ci_changes.sh");
@@ -2942,32 +2972,30 @@ fn check_every_tier_reports(ci: &str, mutants: &str) {
                 v.tier
             );
         }
-        let posted = mutants_posted(mutants, &v.mutants.to_string());
-        let lines: Vec<&str> = posted
-            .lines()
-            .filter(|l| l.contains("-f name=mutants-check"))
-            .collect();
-        assert_eq!(
-            lines.len(),
-            1,
-            "ci_changes: `mutants-check` is not posted once on {what}: {posted}"
+        // A push of the change, its head not merge-ready: `mutants-check` passes, not applicable, for the reason the
+        // tier gives (R-677, R-678).
+        let mutants_flag = v.mutants.to_string();
+        let got = mutants_report(
+            mutants,
+            &[
+                ("ACTION", "synchronize"),
+                ("LABEL", ""),
+                ("READY", "false"),
+                ("MUTANTS", mutants_flag.as_str()),
+                ("VERDICT", "skipped"),
+            ],
         );
-        if v.tier == "code" {
-            assert!(
-                lines[0].contains("status=queued"),
-                "ci_changes: `mutants-check` on {what} does not wait for the merge-ready run: {}",
-                lines[0]
-            );
+        let why = if v.tier == "code" {
+            NOT_READY
         } else {
-            assert!(
-                lines[0].contains("status=completed")
-                    && lines[0].contains("conclusion=success")
-                    && lines[0]
-                        .contains("output[summary]=Mutants run only when crates/ source changes"),
-                "ci_changes: `mutants-check` on {what} is not posted passed with its reason: {}",
-                lines[0]
-            );
-        }
+            NO_CRATES
+        };
+        assert!(
+            got.ok && got.summary.contains("not applicable") && got.summary.contains(why),
+            "ci_changes: `mutants-check` on {what} does not report not applicable with its reason ({why}): {} {}",
+            got.summary,
+            got.log
+        );
     }
     // `pr-check` and `reviews-complete` read no classification: each runs on every pull request, whatever its tier.
     for (file, check) in [
@@ -3037,8 +3065,8 @@ mod mutants_pending_on_data {
     use super::*;
     negative_control!(
         ci_changes_every_required_check_reports_on_every_tier,
-        "mutants.yml posting mutants-check pending on every head",
-        expected = "`mutants-check` on a data change (the plan's task data) is not posted passed with its reason",
+        "mutants.yml's mutants-check reading no classification, so a data change's reports not merge-ready",
+        expected = "`mutants-check` on a data change (the plan's task data) does not report not applicable with its reason",
         check_every_tier_reports(
             &read(".github/workflows/ci.yml"),
             &edited(
@@ -3063,6 +3091,478 @@ mod gpu_gate_on_docs_only {
                 "    name: gpu-kernel suites\n    needs: changes\n    if: needs.changes.outputs.tier == 'docs'\n",
             ),
             &read(".github/workflows/mutants.yml"),
+        )
+    );
+}
+
+// ---- Every required check reports on every path ----------------------------------------------------------------
+
+/// The checks `plan/HUMAN_SETUP.md` §2 records branch protection as requiring on `main`: the names in its bullet
+/// "require status checks to pass: …" before its first parenthesis, and the one in "require `…` too".
+fn recorded_required(setup: &str) -> Vec<String> {
+    let section: Vec<&str> = setup
+        .lines()
+        .skip_while(|l| !l.starts_with("## 2."))
+        .skip(1)
+        .take_while(|l| !l.starts_with("## "))
+        .collect();
+    let mut bullets: Vec<String> = Vec::new();
+    for line in section {
+        if let Some(b) = line.strip_prefix("- ") {
+            bullets.push(b.to_owned());
+        } else if let (Some(last), true) = (bullets.last_mut(), line.starts_with("  ")) {
+            last.push(' ');
+            last.push_str(line.trim());
+        }
+    }
+    let ticked =
+        |t: &str| -> Vec<String> { t.split('`').skip(1).step_by(2).map(str::to_owned).collect() };
+    let mut names = Vec::new();
+    for b in &bullets {
+        if let Some(rest) = b.strip_prefix("require status checks to pass:") {
+            names.extend(ticked(rest.split('(').next().unwrap_or("")));
+        } else if b.starts_with("require `") {
+            let first = ticked(b).into_iter().next().unwrap_or_default();
+            if b.contains(&format!("`{first}` too")) {
+                names.push(first);
+            }
+        }
+    }
+    names
+}
+
+/// A pull request's event on its head, as GitHub starts runs on it: what it is, the event's action, the label it
+/// names, whether the head carries `merge-ready` (the event's labels), the change's paths, and what `mutants-check`
+/// reports in `mutants.yml`'s run of it, the merge-ready run's verdict and that head's earlier merge-ready run passing.
+struct EventPath {
+    what: &'static str,
+    action: &'static str,
+    label: &'static str,
+    ready: bool,
+    paths: &'static [&'static str],
+    mutants_check: &'static str,
+}
+
+const CODE_PATHS: &[&str] = &["crates/kernel/src/lib.rs"];
+const PLAN_PATHS: &[&str] = &["plan/tasks.yaml"];
+const DOCS_PATHS: &[&str] = &["docs/design/principia_dd_replication.md"];
+
+/// The paths the owner named (3 Nov 2026, R-678): label added, label removed, docs-only, plan-data and code.
+const EVENT_PATHS: &[EventPath] = &[
+    EventPath {
+        what: "code, a push",
+        action: "synchronize",
+        label: "",
+        ready: false,
+        paths: CODE_PATHS,
+        mutants_check: NOT_READY,
+    },
+    EventPath {
+        what: "code, a push to a merge-ready head",
+        action: "synchronize",
+        label: "",
+        ready: true,
+        paths: CODE_PATHS,
+        mutants_check: NOT_READY,
+    },
+    EventPath {
+        what: "code, opened",
+        action: "opened",
+        label: "",
+        ready: false,
+        paths: CODE_PATHS,
+        mutants_check: NOT_READY,
+    },
+    EventPath {
+        what: "plan-data, a push",
+        action: "synchronize",
+        label: "",
+        ready: false,
+        paths: PLAN_PATHS,
+        mutants_check: NO_CRATES,
+    },
+    EventPath {
+        what: "docs-only, a push",
+        action: "synchronize",
+        label: "",
+        ready: false,
+        paths: DOCS_PATHS,
+        mutants_check: NO_CRATES,
+    },
+    EventPath {
+        what: "label added: merge-ready, code",
+        action: "labeled",
+        label: "merge-ready",
+        ready: true,
+        paths: CODE_PATHS,
+        mutants_check: "no surviving mutant",
+    },
+    EventPath {
+        what: "label added: merge-ready, docs-only",
+        action: "labeled",
+        label: "merge-ready",
+        ready: true,
+        paths: DOCS_PATHS,
+        mutants_check: "no surviving mutant",
+    },
+    EventPath {
+        what: "label added: another, code",
+        action: "labeled",
+        label: "design",
+        ready: false,
+        paths: CODE_PATHS,
+        mutants_check: NOT_READY,
+    },
+    EventPath {
+        what: "label added: another, on a merge-ready code head",
+        action: "labeled",
+        label: "design",
+        ready: true,
+        paths: CODE_PATHS,
+        mutants_check: "no surviving mutant",
+    },
+    EventPath {
+        what: "label added: another, plan-data",
+        action: "labeled",
+        label: "design",
+        ready: true,
+        paths: PLAN_PATHS,
+        mutants_check: NO_CRATES,
+    },
+    EventPath {
+        what: "label removed: merge-ready, code",
+        action: "unlabeled",
+        label: "merge-ready",
+        ready: false,
+        paths: CODE_PATHS,
+        mutants_check: NOT_READY,
+    },
+    EventPath {
+        what: "label removed: another, on a merge-ready code head",
+        action: "unlabeled",
+        label: "design",
+        ready: true,
+        paths: CODE_PATHS,
+        mutants_check: "no surviving mutant",
+    },
+    EventPath {
+        what: "label removed: another, docs-only",
+        action: "unlabeled",
+        label: "design",
+        ready: false,
+        paths: DOCS_PATHS,
+        mutants_check: NO_CRATES,
+    },
+];
+
+/// The `pull_request` activity types a workflow runs on: its `types:`, or GitHub's defaults.
+fn pr_types(wf: &Value) -> Vec<String> {
+    wf["on"]["pull_request"]["types"]
+        .as_array()
+        .map(|a| a.iter().map(text).collect())
+        .unwrap_or_else(|| {
+            ["opened", "synchronize", "reopened"]
+                .map(str::to_owned)
+                .to_vec()
+        })
+}
+
+/// R-678: every check branch protection requires (`plan/HUMAN_SETUP.md` §2, which `REQUIRED` must match) reports on
+/// every path, as GitHub counts checks: of each workflow's runs on the head, only the latest run's check suite. On each
+/// path, the workflow bearing the check either runs, and then the job bearing it cannot be skipped (no `if:` and no
+/// `needs:`, or `if: always()`) and, in `ci.yml` and `mutants.yml`, concludes as it should; or it does not run on the
+/// event, and then its run on the head's push stands, which it must have. A workflow that runs on one label change runs
+/// on both, so a label taken off never leaves the run of its putting on standing; no workflow bearing a check filters
+/// its pull requests.
+fn check_every_path_reports(workflows: &[(String, String)], setup: &str) {
+    let mut recorded = recorded_required(setup);
+    recorded.sort();
+    let mut required: Vec<String> = REQUIRED.iter().map(|s| (*s).to_owned()).collect();
+    required.sort();
+    assert_eq!(
+        recorded, required,
+        "ci_changes: plan/HUMAN_SETUP.md §2's required checks are not this test's"
+    );
+    let script = read("scripts/ci_changes.sh");
+    // The workflows a pull request runs: the rest (`gate.yml`'s `gpu-metal` among them) report nothing on one.
+    let parsed: Vec<(String, Value)> = workflows
+        .iter()
+        .map(|(f, yml)| (f.clone(), parse(yml)))
+        .filter(|(_, wf)| {
+            let on = &wf["on"];
+            on.get("pull_request").is_some()
+                || on
+                    .as_array()
+                    .is_some_and(|a| a.iter().any(|t| t == "pull_request"))
+                || on.as_str() == Some("pull_request")
+        })
+        .collect();
+    for path in EVENT_PATHS {
+        let v = classify(&script, path.paths);
+        let verdict = [
+            ("tier", v.tier.clone()),
+            ("docs_only", (v.tier != "code").to_string()),
+            ("gpu", v.gpu.to_string()),
+            ("plan_data", v.plan_data.to_string()),
+            ("gui_data", v.gui_data.to_string()),
+            ("mutants", v.mutants.to_string()),
+        ];
+        let mut ci_reported: Option<Vec<(String, bool)>> = None;
+        for check in REQUIRED {
+            let owners: Vec<(&String, &Value, String)> = parsed
+                .iter()
+                .flat_map(|(f, wf)| {
+                    jobs(wf)
+                        .into_iter()
+                        .filter(|(id, j)| reports(id, j) == check)
+                        .map(move |(id, _)| (f, wf, id))
+                })
+                .collect();
+            assert_eq!(
+                owners.len(),
+                1,
+                "ci_changes: `{check}` is reported by no job, or by more than one, on {}",
+                path.what
+            );
+            let (file, wf, id) = &owners[0];
+            let job = &wf["jobs"][id.as_str()];
+            let pr = &wf["on"]["pull_request"];
+            for key in ["paths", "paths-ignore", "branches", "branches-ignore"] {
+                assert!(
+                    pr.get(key).is_none(),
+                    "ci_changes: `{check}` is not reported on {}: {file} filters its pull requests with `{key}:`",
+                    path.what
+                );
+            }
+            let types = pr_types(wf);
+            let on = |t: &str| types.iter().any(|x| x == t);
+            assert!(
+                on("labeled") == on("unlabeled"),
+                "ci_changes: `{check}` is not reported on {}: {file} runs on one label change and not the other",
+                path.what
+            );
+            if !on(path.action) {
+                // The head's push run's suite stands: the workflow must run on every new head.
+                assert!(
+                    on("opened") && on("synchronize") && on("reopened"),
+                    "ci_changes: `{check}` is not reported on {}: {file} runs neither on it nor on every new head",
+                    path.what
+                );
+                continue;
+            }
+            // The job runs on this event: no `if:` and no `needs:`, or an `if:` led by `always()` that holds on it.
+            let cond = job.get("if").map(text).unwrap_or_default();
+            let results = std::collections::BTreeMap::new();
+            let outputs = std::collections::BTreeMap::new();
+            let ctx = Ctx {
+                action: path.action,
+                results: &results,
+                outputs: &outputs,
+                needs: &[],
+            };
+            let runs = (cond.is_empty() && job.get("needs").is_none())
+                || (cond.trim_start().starts_with("always()") && evaluate(&cond, &ctx) == "true");
+            assert!(
+                runs,
+                "ci_changes: `{check}` is not reported on {}: {file}'s `{id}` can be skipped (if: `{cond}`)",
+                path.what
+            );
+            if file.as_str() == "ci.yml" {
+                let reported = ci_reported.get_or_insert_with(|| {
+                    let yml = &workflows
+                        .iter()
+                        .find(|(f, _)| f == "ci.yml")
+                        .expect("ci.yml")
+                        .1;
+                    ci_run(yml, &verdict)
+                });
+                assert!(
+                    reported.iter().any(|(n, pass)| n == check && *pass),
+                    "ci_changes: `{check}` does not pass on {} (tier {})",
+                    path.what,
+                    v.tier
+                );
+            }
+            if check == "mutants-check" {
+                let merge_ready = path.action == "labeled" && path.label == "merge-ready";
+                // The merge-ready run does not classify; its verdict passed. Any other run's verdict job is skipped.
+                let mutants = if merge_ready {
+                    String::new()
+                } else {
+                    v.mutants.to_string()
+                };
+                let ready = path.ready.to_string();
+                let yml = &workflows
+                    .iter()
+                    .find(|(f, _)| f == file.as_str())
+                    .expect("workflow")
+                    .1;
+                let got = mutants_report(
+                    yml,
+                    &[
+                        ("ACTION", path.action),
+                        ("LABEL", path.label),
+                        ("READY", ready.as_str()),
+                        ("MUTANTS", mutants.as_str()),
+                        ("VERDICT", if merge_ready { "success" } else { "skipped" }),
+                    ],
+                );
+                assert!(
+                    got.ok && got.summary.contains(path.mutants_check),
+                    "ci_changes: `mutants-check` on {} does not pass with \"{}\": {} {}",
+                    path.what,
+                    path.mutants_check,
+                    got.summary,
+                    got.log
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn ci_changes_every_required_check_reports_on_every_path() {
+    check_every_path_reports(&pull_request_workflows(), &read("plan/HUMAN_SETUP.md"));
+}
+
+/// The pull-request workflows with `file`'s text edited once, `from` to `to`.
+#[cfg(feature = "controls")]
+fn workflows_edited(file: &str, from: &str, to: &str) -> Vec<(String, String)> {
+    let mut workflows = pull_request_workflows();
+    let at = workflows
+        .iter()
+        .position(|(f, _)| f == file)
+        .unwrap_or_else(|| panic!("ci_changes: no {file}"));
+    workflows[at].1 = edited(&format!(".github/workflows/{file}"), from, to);
+    workflows
+}
+
+negative_control!(
+    ci_changes_every_required_check_reports_on_every_path,
+    "mutants.yml's mutants-check skipped on a label taken off",
+    expected = "`mutants-check` is not reported on label removed: merge-ready, code: mutants.yml's `mutants-check` can be skipped",
+    check_every_path_reports(
+        &workflows_edited(
+            "mutants.yml",
+            "  mutants-check:\n    if: always()\n",
+            "  mutants-check:\n    if: always() && github.event.action != 'unlabeled'\n",
+        ),
+        &read("plan/HUMAN_SETUP.md"),
+    )
+);
+
+mod path_no_unlabeled {
+    use super::*;
+    negative_control!(
+        ci_changes_every_required_check_reports_on_every_path,
+        "mutants.yml not run on a label taken off, so the merge-ready run's check stands once the label is off",
+        expected = "`mutants-check` is not reported on code, a push: mutants.yml runs on one label change and not the other",
+        check_every_path_reports(
+            &workflows_edited(
+                "mutants.yml",
+                "    types: [opened, synchronize, reopened, labeled, unlabeled]\n",
+                "    types: [opened, synchronize, reopened, labeled]\n",
+            ),
+            &read("plan/HUMAN_SETUP.md"),
+        )
+    );
+}
+
+mod path_posted {
+    use super::*;
+    negative_control!(
+        ci_changes_every_required_check_reports_on_every_path,
+        "mutants-check posted through the Checks API, no job bearing it, as #379 had it (#384)",
+        expected = "`mutants-check` is reported by no job, or by more than one, on code, a push",
+        check_every_path_reports(
+            &workflows_edited("mutants.yml", "  mutants-check:\n", "  mutants-report:\n"),
+            &read("plan/HUMAN_SETUP.md"),
+        )
+    );
+}
+
+mod path_filtered {
+    use super::*;
+    negative_control!(
+        ci_changes_every_required_check_reports_on_every_path,
+        "pr-check.yml run only on code paths, so a docs-only or plan-data head never reports pr-check",
+        expected = "`pr-check` is not reported on code, a push: pr-check.yml filters its pull requests with `paths:`",
+        check_every_path_reports(
+            &workflows_edited(
+                "pr-check.yml",
+                "    types: [opened, edited, synchronize, reopened, labeled, unlabeled]\n",
+                "    types: [opened, edited, synchronize, reopened, labeled, unlabeled]\n    paths: ['crates/**']\n",
+            ),
+            &read("plan/HUMAN_SETUP.md"),
+        )
+    );
+}
+
+mod path_plan_data {
+    use super::*;
+    negative_control!(
+        ci_changes_every_required_check_reports_on_every_path,
+        "ci.yml whose ci-workspace skips on a data or docs change, so `ci` never passes a plan-data head",
+        expected = "`ci` does not pass on plan-data, a push (tier data)",
+        check_every_path_reports(
+            &workflows_edited(
+                "ci.yml",
+                "  ci-workspace:\n    runs-on: ubuntu-24.04\n",
+                "  ci-workspace:\n    if: needs.changes.outputs.docs_only != 'true'\n    runs-on: ubuntu-24.04\n",
+            ),
+            &read("plan/HUMAN_SETUP.md"),
+        )
+    );
+}
+
+mod path_docs_only {
+    use super::*;
+    negative_control!(
+        ci_changes_every_required_check_reports_on_every_path,
+        "ci.yml whose xtask-ci gate passes a skip on the data tier alone, so a docs-only head fails it",
+        expected = "`xtask-ci` does not pass on docs-only, a push (tier docs)",
+        check_every_path_reports(
+            &workflows_edited(
+                "ci.yml",
+                "          DOCS_ONLY: ${{ needs.changes.result == 'success' && needs.changes.outputs.docs_only == 'true' }}\n",
+                "          DOCS_ONLY: ${{ needs.changes.result == 'success' && needs.changes.outputs.tier == 'data' }}\n",
+            ),
+            &read("plan/HUMAN_SETUP.md"),
+        )
+    );
+}
+
+mod path_label_added {
+    use super::*;
+    negative_control!(
+        ci_changes_every_required_check_reports_on_every_path,
+        "mutants.yml's mutants-check passing a merge-ready head not applicable when another label goes on, without its \
+         merge-ready run's verdict",
+        expected = "`mutants-check` on label added: another, on a merge-ready code head does not pass with \"no surviving mutant\"",
+        check_every_path_reports(
+            &workflows_edited(
+                "mutants.yml",
+                "          if [ \"$ACTION\" = synchronize ] || [ \"$READY\" != true ]; then\n",
+                "          if true; then\n",
+            ),
+            &read("plan/HUMAN_SETUP.md"),
+        )
+    );
+}
+
+mod path_recorded {
+    use super::*;
+    negative_control!(
+        ci_changes_every_required_check_reports_on_every_path,
+        "plan/HUMAN_SETUP.md §2 with gpu-kernel missing from its required checks",
+        expected = "plan/HUMAN_SETUP.md §2's required checks are not this test's",
+        check_every_path_reports(
+            &pull_request_workflows(),
+            &edited(
+                "plan/HUMAN_SETUP.md",
+                "`xtask-ci`, `gpu-kernel`, ",
+                "`xtask-ci`, "
+            ),
         )
     );
 }

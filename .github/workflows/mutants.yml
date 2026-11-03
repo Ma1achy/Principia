@@ -15,32 +15,40 @@
 # the label off (`mutants-pending`), so the gate runs again only on a head approved again, and cancels a run on the head
 # it supersedes (`concurrency` below).
 #
-# `mutants-check` is therefore a check run this workflow posts through the Checks API, under the GitHub Actions app
-# branch protection pins it to, never a job: a job here that the label skipped would report "skipped", which GitHub
-# counts as passed, on a head whose mutants never ran. On each new head `mutants-pending` posts it `queued`, so branch
-# protection holds the merge on it as pending; the merge-ready run's `mutants-verdict` completes it with its verdict,
-# success or failure. Until then, and on a head where nothing posted it, it is pending or "expected", never a pass. The
-# one success posted without a run is that of a head whose change has no `.rs` file under `crates/` (R-677:
-# `scripts/ci_changes.sh`'s `mutants`), whose diff has no mutant the gate runs, exactly the verdict the shards would
-# reach: each finds no `.rs` file under `crates/` and passes. Mutants run only when `crates/` source changes (R-677);
-# xtask's own code is mutated by the nightly full run.
+# `mutants-check` is a job of every run of this workflow, `if: always()`, so it is never skipped (R-678). Branch
+# protection counts, of each workflow's runs on a head, only the latest run's check suite, as #384 and #386 showed: a
+# later run of the same workflow (a label's) supersedes an earlier run's suite and every check in it. A check run
+# posted through the Checks API with a run's token joins a suite GitHub picks, not the posting run's, and counts only
+# while that suite is still its workflow's latest (#384: two `mutants-check` runs passed in the push run's suite, which
+# the merge-ready run's had superseded, and the merge read "expected"; #386: the one posted joined `reviews`'s suite,
+# the latest of that workflow, and counted). So each run reports `mutants-check` itself, as a job:
+# - the merge-ready run (the `merge-ready` label's): the verdict over every shard, success or failure;
+# - a change with no `.rs` file under `crates/` (R-677: `scripts/ci_changes.sh`'s `mutants`), whose diff has no mutant
+#   the gate runs: success, "not applicable", exactly the verdict the shards would reach;
+# - a head that is not merge-ready (a push, which takes the label off, or a label event with the label absent): success,
+#   "not applicable" (the owner, 3 Nov 2026); its merge-ready run reports the real verdict once the label goes on;
+# - another label put on or taken off a merge-ready head: the verdict of that head's merge-ready run, waited for.
+# Mutants run only when `crates/` source changes (R-677); xtask's own code is mutated by the nightly full run.
 name: mutants
 
-# `labeled` starts the merge-ready run; `opened`, `synchronize` and `reopened`, GitHub's defaults, start
-# `mutants-pending` on each new head. No `paths:` or `branches:` filter: every pull request reaches the gate.
+# `labeled` starts the merge-ready run; `opened`, `synchronize` and `reopened`, GitHub's defaults, run on each new head;
+# `labeled` and `unlabeled` on every label change, so every run that supersedes this workflow's last one on the head
+# reports `mutants-check` again (R-678). No `paths:` or `branches:` filter: every pull request reaches the gate.
 on:
   pull_request:
-    types: [opened, synchronize, reopened, labeled]
+    types: [opened, synchronize, reopened, labeled, unlabeled]
 
 # A newer push to the same ref supersedes an older run, so the older run on that ref is cancelled: a push cancels the
 # merge-ready run on the head it supersedes. On `main` each run has a group of its own (its run id), so no run there is
 # ever cancelled or queued behind another (applied per R-369). A pull request's runs share one group, its merge ref's,
-# but for a run started by any label other than `merge-ready`: that run does nothing, and has a group of its own (its
-# run id), so it never cancels the merge-ready run.
+# but for a run started by any label other than `merge-ready`, put on or taken off: that run only reports
+# `mutants-check`, and has a group of its own (its run id), so it never cancels the merge-ready run. Taking
+# `merge-ready` off cancels its run.
 concurrency:
   group: >-
     mutants-${{ github.event_name }}-${{ (github.ref == 'refs/heads/main'
-    || (github.event.action == 'labeled' && github.event.label.name != 'merge-ready'))
+    || ((github.event.action == 'labeled' || github.event.action == 'unlabeled')
+    && github.event.label.name != 'merge-ready'))
     && github.run_id || github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
@@ -57,24 +65,14 @@ env:
   CARGO_PROFILE_TEST_DEBUG: line-tables-only
 
 jobs:
-  # A new head's `mutants-check` (above): posted `queued` until the merge-ready run completes it, or, on a head with no
-  # `.rs` file under `crates/` (R-677), posted passed at once. A push also takes the `merge-ready` label off, since the
-  # reviewers approved the head it supersedes. On a reopened pull request whose head already has a `mutants-check`, that
-  # check stands.
-  mutants-pending:
-    if: github.event_name == 'pull_request' && github.event.action != 'labeled'
+  # A push takes the `merge-ready` label off, since the reviewers approved the head it supersedes: the gate runs again
+  # only once the new head is approved and labelled again.
+  merge-ready-off:
+    if: github.event_name == 'pull_request' && github.event.action == 'synchronize'
     runs-on: ubuntu-24.04
     permissions:
-      contents: read
-      checks: write
       pull-requests: write
     steps:
-      - uses: actions/checkout@v4
-      # What this change touches (R-677): a change with no `.rs` file under `crates/` has no mutant the gate runs, so
-      # its gate passes at once.
-      - name: scripts/ci_changes.sh detect
-        id: changes
-        run: scripts/ci_changes.sh detect
       - name: Take the merge-ready label off the pushed pull request
         if: >-
           github.event.action == 'synchronize'
@@ -85,8 +83,8 @@ jobs:
           PR: ${{ github.event.pull_request.number }}
         # The payload lists the labels as they were when the push fired: after two quick pushes, the second's still
         # lists the label the first's run took off, and GitHub answers 404 (`gh` prints "HTTP 404"). The label is off
-        # then, which is what this step is for, so a 404 passes and the head's check below is still posted; any other
-        # error fails the step.
+        # then, which is what this step is for, so a 404 passes; any other error fails the step. This run's
+        # `mutants-check` reports whatever this step ends in.
         run: |
           set -uo pipefail
           if err=$(gh api --method DELETE "repos/$GH_REPO/issues/$PR/labels/merge-ready" 2>&1 > /dev/null); then
@@ -96,37 +94,6 @@ jobs:
           else
             echo "$err" >&2
             exit 1
-          fi
-      - name: Post mutants-check on the head
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-          MUTANTS: ${{ steps.changes.outputs.mutants }}
-        # Every `mutants-check` the GitHub Actions app (id 15368, the source branch protection pins) has on the head,
-        # in any check suite.
-        run: |
-          set -euo pipefail
-          runs="repos/$GH_REPO/commits/$HEAD_SHA/check-runs?check_name=mutants-check&app_id=15368&filter=all"
-          existing=$(gh api "$runs" --jq '.total_count')
-          if [ "$existing" != 0 ]; then
-            echo "mutants-check: $existing already on $HEAD_SHA; it stands"
-            exit 0
-          fi
-          post() {
-            gh api --method POST "repos/$GH_REPO/check-runs" -f name=mutants-check -f head_sha="$HEAD_SHA" \
-              -f "output[title]=$1" -f "output[summary]=$2" "${@:3}" > /dev/null
-          }
-          if [ "$MUTANTS" = false ]; then
-            post "No mutant: the change touches no Rust source under crates/" \
-              "Mutants run only when crates/ source changes (R-677, scripts/ci_changes.sh): no .rs file to mutate." \
-              -f status=completed -f conclusion=success
-            echo "mutants-check: passed on $HEAD_SHA, a change with no .rs file under crates/"
-          else
-            post "Waiting for the merge-ready label" \
-              "The mutants gate runs once every named reviewer has approved this head (R-656)." \
-              -f status=queued
-            echo "mutants-check: pending on $HEAD_SHA until the merge-ready run"
           fi
   # The per-PR mutation gate (R-196, R-202; TASK-M0-23): `cargo mutants --in-diff` on the PR's diff against its base,
   # on pull requests only, since `--in-diff` needs a base. The run is sharded across n parallel jobs, shard k of n each
@@ -458,17 +425,15 @@ jobs:
 
   # The sharded run's verdict (R-202, R-302): runs after every shard, whatever their result. It fails if any shard
   # failed or was cut off by its limit, and checks every shard's report together against the equivalent-mutants list,
-  # listing each survivor of the whole run. Its last step posts the verdict as `mutants-check`, the required status
-  # check on `main` (R-305): `always()` makes it report on every merge-ready run, a cancelled or skipped shard included
-  # (then it fails), and it passes when no shard has a mutant. Its own job is named `mutants-verdict`, so the run a
-  # label other than `merge-ready` starts, which skips it, never reports a skipped `mutants-check`.
+  # listing each survivor of the whole run. `always()` makes it run on every merge-ready run, a cancelled or skipped
+  # shard included (then it fails), and it passes when no shard has a mutant. `mutants-check`, below, reports its
+  # result. It runs only on the merge-ready run, so it is not named `mutants-check`, which every run reports.
   mutants-verdict:
     if: always() && github.event_name == 'pull_request' && github.event.action == 'labeled' && github.event.label.name == 'merge-ready'
     needs: mutants
     runs-on: ubuntu-24.04
     permissions:
       contents: read
-      checks: write
     steps:
       - uses: actions/checkout@v4
       # The toolchain rust-toolchain.toml pins, with its components: rust-gpu's nightly, on which the whole workspace
@@ -509,33 +474,101 @@ jobs:
             echo "mutants-check: no shard tested a mutant of this PR's diff"
           fi
           exit "$fail"
-      # `mutants-check` on the head, every one the GitHub Actions app has there completed with this run's verdict:
-      # success only if the step above passed; a failure, a skip or a cancellation before it posts failure.
-      - name: Post mutants-check's verdict on the head
-        if: always()
+
+  # `mutants-check`, the required status check on `main` (R-305), reported by every run of this workflow as a job of its
+  # own run (R-678; the header above). `always()`: it runs whatever the verdict ended in, skipped included, so it is
+  # never itself skipped, which GitHub counts as passed. Its one step concludes it:
+  # - the merge-ready run: the verdict's result, success only if `mutants-verdict` passed;
+  # - a change with no `.rs` file under `crates/` (`mutants=false`), or a head that is not merge-ready (a push, which
+  #   takes the label off, or the label absent): success, "not applicable", with its reason in the job's summary;
+  # - another label put on or taken off a merge-ready head: the result of `mutants-verdict` in that head's latest
+  #   merge-ready run, waited for while it runs; with no such run on the head, or the head superseded, failure.
+  # A classification that fails fails it; an empty one is not `mutants=false`.
+  mutants-check:
+    if: always()
+    needs: mutants-verdict
+    runs-on: ubuntu-24.04
+    # The wait for a merge-ready run in progress: its shards' 300 minutes (REQ-VAL-149) and their setup, under GitHub's
+    # 360-minute limit for a hosted job.
+    timeout-minutes: 355
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v4
+      # What this change touches (R-677): a change with no `.rs` file under `crates/` has no mutant the gate runs. The
+      # merge-ready run reports its verdict whatever the change, and does not classify it.
+      - name: scripts/ci_changes.sh detect
+        id: changes
+        if: github.event.action != 'labeled' || github.event.label.name != 'merge-ready'
+        run: scripts/ci_changes.sh detect
+      - name: Report mutants-check
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-          VERDICT: ${{ steps.verdict.outcome }}
-          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          RUN_ID: ${{ github.run_id }}
+          ACTION: ${{ github.event.action }}
+          LABEL: ${{ github.event.label.name }}
+          READY: ${{ contains(github.event.pull_request.labels.*.name, 'merge-ready') }}
+          MUTANTS: ${{ steps.changes.outputs.mutants }}
+          VERDICT: ${{ needs.mutants-verdict.result }}
         run: |
           set -euo pipefail
-          if [ "$VERDICT" = success ]; then
-            conclusion=success title="Mutants: no surviving mutant"
-          else
-            conclusion=failure title="Mutants: a survivor, or a shard that did not finish ($VERDICT)"
+          summary="${GITHUB_STEP_SUMMARY:-/dev/null}"
+          report() { # report <exit> <title> <why>
+            echo "mutants-check on $HEAD_SHA: $2. $3"
+            printf '## mutants-check: %s\n\n%s\n' "$2" "$3" >> "$summary"
+            if [ "$1" = 0 ]; then
+              echo "::notice title=mutants-check::$2"
+            else
+              echo "::error title=mutants-check::$2. $3"
+            fi
+            exit "$1"
+          }
+          verdict() { # verdict <result of mutants-verdict> <where>
+            if [ "$1" = success ]; then
+              report 0 "no surviving mutant" "The merge-ready run's verdict over every shard ($2)."
+            fi
+            report 1 "a survivor, or a shard that did not finish ($1)" "The merge-ready run's verdict ($2)."
+          }
+          if [ "$ACTION" = labeled ] && [ "$LABEL" = merge-ready ]; then
+            verdict "$VERDICT" "this run, $RUN_ID"
           fi
-          summary="The merge-ready run's verdict over every shard: $RUN_URL"
-          runs="repos/$GH_REPO/commits/$HEAD_SHA/check-runs?check_name=mutants-check&app_id=15368&filter=all"
-          ids=$(gh api --paginate "$runs&per_page=100" --jq '.check_runs[].id')
-          if [ -z "$ids" ]; then
-            gh api --method POST "repos/$GH_REPO/check-runs" -f name=mutants-check -f head_sha="$HEAD_SHA" \
-              -f status=completed -f conclusion="$conclusion" -f "output[title]=$title" \
-              -f "output[summary]=$summary" > /dev/null
+          if [ "$MUTANTS" = false ]; then
+            report 0 "not applicable" \
+              "The change touches no Rust source under crates/: mutants run only when crates/ source changes (R-677)."
           fi
-          for id in $ids; do
-            gh api --method PATCH "repos/$GH_REPO/check-runs/$id" -f status=completed -f conclusion="$conclusion" \
-              -f "output[title]=$title" -f "output[summary]=$summary" > /dev/null
+          if [ "$ACTION" = synchronize ] || [ "$READY" != true ]; then
+            report 0 "not applicable" \
+              "The head is not merge-ready: the gate runs once every named reviewer has approved it (R-656, R-676)."
+          fi
+          # A label put on or taken off a merge-ready head: the verdict of its latest merge-ready run, the one whose
+          # `mutants-verdict` is not skipped, waited for while it runs.
+          runs="repos/$GH_REPO/actions/workflows/mutants.yml/runs?head_sha=$HEAD_SHA&event=pull_request&per_page=100"
+          while :; do
+            live=$(gh api "repos/$GH_REPO/pulls/$PR" --jq '.head.sha')
+            if [ "$live" != "$HEAD_SHA" ]; then
+              report 1 "superseded" "The pull request's head is now $live."
+            fi
+            wait=""
+            ids=$(gh api "$runs" --jq '.workflow_runs[].id')
+            for id in $ids; do
+              [ "$id" != "$RUN_ID" ] || continue
+              state=$(gh api "repos/$GH_REPO/actions/runs/$id/jobs?per_page=100" \
+                --jq '.jobs[] | select(.name == "mutants-verdict") | "\(.status) \(.conclusion)"')
+              case "$state" in
+                "completed skipped") continue ;;
+                "completed "*) verdict "${state#completed }" "run $id" ;;
+                *) wait="run $id: ${state:-no jobs yet}"; break ;;
+              esac
+            done
+            if [ -z "$wait" ]; then
+              report 1 "no merge-ready run" \
+                "The merge-ready label is on, but no run of it is on this head: take the label off and put it back."
+            fi
+            echo "waiting for the merge-ready run ($wait)"
+            sleep 30
           done
-          echo "mutants-check on $HEAD_SHA: $conclusion"

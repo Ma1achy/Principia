@@ -8,14 +8,13 @@
 //! expressions the jobs use), a `uses:` step that runs is recorded but not executed, and each `run:` script runs in
 //! bash with its `${{ … }}` expressions substituted, in its step's `env:`. The programs the scripts call are stand-ins
 //! that log each call: `git diff` prints the test's diff, `cargo` (for `cargo mutants`) writes no outcomes, as
-//! cargo-mutants does when it finds no mutant, `gh` (posting `mutants-check`) finds no check run and posts one, and
-//! `sudo` and `python3` do nothing. `cargo xtask` is the built xtask. Each test's control (R-176) runs the same test on a workflow with the
+//! cargo-mutants does when it finds no mutant, and `gh`, `sudo` and `python3` do nothing. `cargo xtask` is the built xtask. Each test's control (R-176) runs the same test on a workflow with the
 //! one step it turns on broken, and trips it by its message.
 //!
 //! A job-level `if:` does not stop a workflow run from reporting the job: skipped, which GitHub counts as passed for a
-//! required check. So the gate is a workflow of its own that only `pull_request` runs, and no workflow has a
-//! `mutants-check` job, which a `push` run, or a pull request's run without the label, would report skipped (R-305):
-//! the verdict job, `mutants-verdict`, posts `mutants-check` as a check run.
+//! required check. So the gate is a workflow of its own that only `pull_request` runs, and the one workflow with a
+//! `mutants-check` job, which a `push` run would report skipped (R-305). That job, `if: always()`, reports the verdict
+//! job's result, `mutants-verdict`'s, in the merge-ready run (R-678; `xtask/tests/merge_ready.rs`).
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -566,11 +565,11 @@ mod crates_unquoted {
 }
 
 // ---------------------------------------------------------------------------------------------------------------
-// The aggregate, `mutants-verdict`, which posts `mutants-check`.
+// The aggregate, `mutants-verdict`, whose result `mutants-check` reports.
 
-/// R-305: the verdict runs whatever the shards' result, so `mutants-check` always reports; with every shard passed and
-/// no shard report (no shard had a mutant, so none uploaded one) it passes, running no check, and posts
-/// `mutants-check` passed; with the shards failed, cancelled or skipped it fails, and posts it failed.
+/// R-305: the verdict runs whatever the shards' result, so `mutants-check` always has a verdict to report; with every
+/// shard passed and no shard report (no shard had a mutant, so none uploaded one) it passes, running no check; with
+/// the shards failed, cancelled or skipped it fails.
 fn aggregate_reports_with_no_mutant(yml: &str) {
     for needs in ["success", "failure", "cancelled", "skipped"] {
         let run = run_job(
@@ -600,20 +599,6 @@ fn aggregate_reports_with_no_mutant(yml: &str) {
                 run.log
             );
         }
-        let want = if needs == "success" {
-            "success"
-        } else {
-            "failure"
-        };
-        assert!(
-            run.calls
-                .lines()
-                .any(|c| c.starts_with("gh api --method POST")
-                    && c.contains("name=mutants-check")
-                    && c.contains(&format!("conclusion={want}"))),
-            "mutants-check was not posted {want} with the shards {needs}: {}",
-            run.calls
-        );
     }
 }
 
@@ -678,9 +663,8 @@ fn events(yml: &str) -> Vec<String> {
         .collect()
 }
 
-/// R-305: `mutants.yml` runs on `pull_request` alone, and no workflow has a `mutants-check` job, so the only
-/// `mutants-check` check run on a commit is the one `mutants.yml` posts, never a skipped job's from a `push` run or
-/// from a pull request's run without the `merge-ready` label.
+/// R-305: `mutants.yml` runs on `pull_request` alone, and no other workflow has a `mutants-check` job, so the only
+/// `mutants-check` on a commit is a pull request's run's, never a skipped job's from a `push` run.
 fn only_pull_requests_report(workflows: &[(String, String)]) {
     let (_, mutants) = workflows
         .iter()
@@ -693,7 +677,7 @@ fn only_pull_requests_report(workflows: &[(String, String)]) {
     );
     for (name, yml) in workflows {
         assert!(
-            !yml.lines().any(|l| l.trim_end() == "  mutants-check:"),
+            name == "mutants.yml" || !yml.lines().any(|l| l.trim_end() == "  mutants-check:"),
             "a workflow, {name}, has a mutants-check job"
         );
     }
