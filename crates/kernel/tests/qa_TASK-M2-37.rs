@@ -1296,3 +1296,221 @@ negative_control!(
     expected = "is not the chart bitwise",
     check_mapped_is_own(1.5, true)
 );
+
+// ── Fix round 1: a warped lone `t` axis at a held `L_z ≠ 0`; the virial ratio's own asked range ───────────────────────
+
+/// The held `L_z` of the refusal tests (test data).
+const HELD_LZ: f64 = 0.3;
+
+/// The configuration's `I` at `(u, t)` on a lone `Q` axis: read from the held `L_z = 0` chart's decode, whose
+/// configuration is the held-`L_z` chart's (the energy axis solves into the momenta alone, kind 3).
+fn config_i<Q: EnergyAxis>(u: f64, t: f64) -> f64 {
+    let d = lone::<Q>(0.0, Mapping::Warped, gamma_k()).decode::<Defaults, f64>(u, t);
+    phys(&d).i
+}
+
+/// A warped lone `Q` axis at the held `L_z = held` (chart_reference §2.1, "A warped `t` axis at a held `L_z ≠ 0` is
+/// not offered"; R-471 E1, R-506 W1; RQ-683 (a), applied per R-369): its line of the warp reaches `K* < L_z²/2I`
+/// inside the square (recomputed here from §2.1's line and the pixel's own `I`), so the chart is not offered, and
+/// `validate` refuses every pixel of `[0,1]²`: none validates, clamps or projects, and R-408's count makes each
+/// forbidden, none a system. `k_star` is §2.1's `K*` at `(t, U)`.
+fn check_unoffered_axis<Q: EnergyAxis>(held: f64, k_star: &dyn Fn(f64, f64) -> f64) {
+    let chart = lone::<Q>(held, Mapping::Warped, gamma_k());
+    let name = format!("{:?}", Q::QUANTITY);
+    let mut nonsystems = 0;
+    for [u, t] in unit() {
+        let base = phys(&lone::<Q>(0.0, Mapping::Warped, gamma_k()).decode::<Defaults, f64>(u, t));
+        let k = k_star(t, base.u);
+        nonsystems += usize::from(held * held > 2.0 * base.i * k * (1.0 + 64.0 * EPS));
+        let valid = chart.validate(u, t);
+        assert!(
+            matches!(valid, ValidationResult::Reject { .. }),
+            "{name} warped at the held L_z = {held}: ({u}, {t}) is offered: {valid:?}"
+        );
+        assert_eq!(
+            count([Sides::both(ExtensionType::Bounded); 2], [u, t], false),
+            Count::Forbidden,
+            "{name}: a refused in-square pixel is not forbidden"
+        );
+    }
+    assert!(
+        held == 0.0 || nonsystems > 0,
+        "{name} warped at the held L_z = {held} has no pixel with K* < L_z²/2I: the refusal has no ground"
+    );
+}
+
+/// Every warped lone `K`, `KE`, `E` and virial axis at the held `L_z = held` refused (the section above).
+fn check_unoffered(held: f64) {
+    let g = gamma_k();
+    let kt = move |t: f64, _: f64| warp_k(g, t);
+    check_unoffered_axis::<AxisK>(held, &kt);
+    check_unoffered_axis::<AxisKE>(held, &kt);
+    check_unoffered_axis::<AxisE>(held, &kt);
+    check_unoffered_axis::<AxisVirial>(held, &move |t, u| Q_MAX * t.powf(g) * u.abs() / 2.0);
+}
+
+#[test]
+fn qa_energy_axes_warped_held_lz_refused() {
+    check_unoffered(HELD_LZ);
+    check_unoffered(-HELD_LZ);
+}
+
+negative_control!(
+    qa_energy_axes_warped_held_lz_refused,
+    "at the held L_z = 0 the warped axes are offered, every pixel a system (qa_energy_axes_warped_every_pixel)",
+    expected = "is offered",
+    check_unoffered(0.0)
+);
+
+/// The linear option at the same held `L_z = 0.3` is offered (chart_reference §2.1: "Under the linear option it is
+/// offered, its pixels with `K* < L_z²/2I` not a system"), on a lone `K` and `KE` axis, `K* = K_max·t`: a pixel with
+/// `K* < L_z²/2I` at its own `I` is refused, one above it validates and decodes `K*` and the held `L_z`, and both kinds
+/// occur. `mapping` is the chart's (`Linear`; the control's `Warped`, refused everywhere).
+fn check_linear_held(mapping: Mapping) {
+    fn axis<Q: EnergyAxis>(mapping: Mapping) {
+        let chart = lone::<Q>(HELD_LZ, mapping, gamma_k());
+        let (mut blank, mut systems) = (0, 0);
+        for [u, t] in unit() {
+            let i = config_i::<Q>(u, t);
+            let k = k_max() * t;
+            let bound = HELD_LZ * HELD_LZ / (2.0 * i);
+            let valid = chart.validate(u, t);
+            if k < bound * (1.0 - 64.0 * EPS) {
+                blank += 1;
+                assert!(
+                    valid != ValidationResult::Valid,
+                    "{:?} linear: ({u}, {t}) with K* < L_z²/2I is a system",
+                    Q::QUANTITY
+                );
+            } else if k > bound * (1.0 + 64.0 * EPS) {
+                systems += 1;
+                let d = chart.decode::<Defaults, f64>(u, t);
+                let p = phys(&d);
+                assert!(
+                    valid == ValidationResult::Valid
+                        && d.degenerate.is_none()
+                        && (p.k - k).abs() <= (TOL_K + RND) * EPS * k
+                        && (p.lz - HELD_LZ).abs()
+                            <= TOL_L * EPS * (HELD_LZ + (2.0 * k).sqrt()) + RND * EPS * p.lz_scale,
+                    "{:?} linear at the held L_z = {HELD_LZ}: ({u}, {t}) is not its system: {valid:?}, K = {} not {k}, \
+                     L_z = {}",
+                    Q::QUANTITY,
+                    p.k,
+                    p.lz
+                );
+            }
+        }
+        assert!(
+            blank > 0 && systems > 0,
+            "{:?}: {blank} blank, {systems} systems",
+            Q::QUANTITY
+        );
+    }
+    axis::<AxisK>(mapping);
+    axis::<AxisKE>(mapping);
+}
+
+#[test]
+fn qa_energy_axis_linear_option_held_lz() {
+    check_linear_held(Mapping::Linear);
+}
+
+negative_control!(
+    qa_energy_axis_linear_option_held_lz,
+    "the warped axis at the held L_z = 0.3 is refused everywhere, so its feasible pixels are not systems",
+    expected = "is not its system",
+    check_linear_held(Mapping::Warped)
+);
+
+/// A virial-ratio axis beside `z_μ₁` over the asked range `asked`, at the held `L_z = 0`, under `mapping`.
+fn virial_on(
+    asked: [f64; 2],
+    mapping: Mapping,
+) -> Option<MixedEnergy<ZMu1, AxisVirial, Defaults, f64>> {
+    MixedEnergy::virial(Z0, RANGE, asked, gamma_k(), 0.0, mapping)
+}
+
+/// The virial ratio keeps its own asked range `[Q_lo, Q_hi]` (R-471 H4; chart_reference §2.1's paragraph): warped,
+/// `Q(t) = Q₀ + (Q_hi − Q₀)·t^γ_K`, `Q₀ = max(Q_lo, 0)`, every pixel of `[0,1]²` validating and decoding
+/// `K* = Q·|U|/2` at the pixel's own `U`, bounded past both edges; linear, `Q_lo + (Q_hi − Q_lo)·t`, affine, its
+/// pixels with `Q < 0` refused and R-408-forbidden, the others decoding their `K*`; a warped range with `Q_hi ≤ 0` is
+/// offered by no chart. `want` is the ratio the test asserts at `(asked, mapping, t)` (§2.1's; the control's).
+fn check_virial_asked(want: fn([f64; 2], Mapping, f64) -> f64) {
+    for (asked, mapping) in [
+        ([0.4, 1.5], Mapping::Warped),
+        ([-0.5, 1.5], Mapping::Warped),
+        ([0.4, 1.5], Mapping::Linear),
+        ([-0.5, 1.5], Mapping::Linear),
+    ] {
+        let name = format!("virial {asked:?} {mapping:?}");
+        let chart = virial_on(asked, mapping).expect("an offered virial range");
+        let sides = match mapping {
+            Mapping::Warped => Sides::both(ExtensionType::Bounded),
+            Mapping::Linear => Sides::both(ExtensionType::Affine),
+        };
+        assert_eq!(chart.extension(), sides, "{name}'s extension type");
+        let feasible: Vec<_> = unit()
+            .into_iter()
+            .filter(|&[u, t]| {
+                let q = want(asked, mapping, t);
+                if q < 0.0 {
+                    let valid = chart.validate(u, t);
+                    assert!(
+                        valid != ValidationResult::Valid
+                            && count([Sides::both(ExtensionType::Affine), sides], [u, t], false)
+                                == Count::Forbidden,
+                        "{name}: ({u}, {t}) at Q = {q} < 0 is a system: {valid:?}"
+                    );
+                }
+                q >= 0.0
+            })
+            .collect();
+        assert!(
+            mapping == Mapping::Warped || asked[0] >= 0.0 || feasible.len() < unit().len(),
+            "{name}: no pixel at Q < 0"
+        );
+        let target = move |_: f64, t: f64, p: &Phys| {
+            assert!(p.u < 0.0, "U = {} at positive masses", p.u);
+            Want {
+                k: want(asked, mapping, t) * p.u.abs() / 2.0,
+                lz: 0.0,
+            }
+        };
+        check_chart(&name, &chart, &target, &feasible);
+        if mapping == Mapping::Warped {
+            for t in [-0.1, 1.1] {
+                assert!(
+                    chart.validate(0.5, t) != ValidationResult::Valid,
+                    "{name} passes t = {t}"
+                );
+            }
+        }
+    }
+    assert!(
+        virial_on([-1.0, -0.2], Mapping::Warped).is_none(),
+        "a warped virial range with no feasible part is offered"
+    );
+}
+
+/// §2.1's ratio at `t` on `asked` under `mapping`.
+fn virial_asked_want([lo, hi]: [f64; 2], mapping: Mapping, t: f64) -> f64 {
+    match mapping {
+        Mapping::Warped => {
+            let q0 = lo.max(0.0);
+            q0 + (hi - q0) * t.powf(gamma_k())
+        }
+        Mapping::Linear => lo + (hi - lo) * t,
+    }
+}
+
+#[test]
+fn qa_physical_axis_warps_virial_asked() {
+    check_virial_asked(virial_asked_want);
+}
+
+negative_control!(
+    qa_physical_axis_warps_virial_asked,
+    "the range fixed at [0, Q_hi], as before the fix, is not the asked range's axis",
+    expected = "is not its warp's system",
+    check_virial_asked(|[_, hi], mapping, t| virial_asked_want([0.0, hi], mapping, t))
+);
