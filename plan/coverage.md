@@ -8,8 +8,8 @@
 |---|---|
 | DEC | 52 |
 | ENC | 38 |
-| CHART | 89 |
-| INT | 108 |
+| CHART | 90 |
+| INT | 109 |
 | EVT | 32 |
 | PAY | 111 |
 | GEN | 44 |
@@ -19,12 +19,12 @@
 | COL | 161 |
 | GUI | 386 |
 | TOOL | 218 |
-| VAL | 340 |
+| VAL | 342 |
 | PERF | 115 |
-| SYS | 93 |
-| **total** | **2062** |
+| SYS | 96 |
+| **total** | **2069** |
 
-Of these: 231 calibration, 175 definition, 1656 obligation. Retired (kept for their ids, not counted): 12.
+Of these: 232 calibration, 178 definition, 1659 obligation. Retired (kept for their ids, not counted): 12.
 
 ## Requirements per milestone
 
@@ -33,24 +33,24 @@ Of these: 231 calibration, 175 definition, 1656 obligation. Retired (kept for th
 | M0 | 122 |
 | M1 | 108 |
 | M2 | 219 |
-| M3 | 231 |
+| M3 | 232 |
 | M4 | 106 |
 | M5 | 183 |
 | M6 | 225 |
 | M7 | 261 |
 | M8 | 470 |
-| M9 | 137 |
+| M9 | 143 |
 
 ## Sections
 
-1667 sections in 61 files: 1330 yield at least one requirement; 337 yield none and are listed below with the reason.
+1683 sections in 61 files: 1341 yield at least one requirement; 342 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | gap (RQ-378) | 1 |
 | gap (RQ-391) | 2 |
 | gap (RQ-577) | 2 |
 | gap (RQ-618) | 1 |
-| informative only | 229 |
+| informative only | 234 |
 | out of v1 (R-125) | 1 |
 | out of v1 (R-420) | 1 |
 | parent heading (obligations are in its subsections) | 55 |
@@ -196,8 +196,13 @@ Of these: 231 calibration, 175 definition, 1656 obligation. Retired (kept for th
 | R-647 — A standing rule, no exceptions: no cloud sessions and no briefs addressed to the owner; the orchestrator never asks him to start, paste into, restart or check a session; every agent is the orchestrator's own, dispatched locally by it; an agent's written instructions are internal task files *(amends R-645)* | informative only | the owner's standing rule of 28 Oct 2026: no cloud sessions and no briefs addressed to the owner; process, carried by CLAUDE.md and plan/OPERATIONS.md § Dispatching; changes no requirement |
 | R-648 — The workflow returns to main's, R-357, R-391 and R-277, with one addition, never a cloud session: R-634 is withdrawn, and so are R-636's agent-count and cloud clauses; three agents at normal memory pressure, two if the Mac is swapping; the RQ-605 audit on demand only *(supersedes R-634; withdraws R-636's agent-count and cloud clauses; amends R-645 and R-647)* | informative only | the owner's ruling of 28 Oct 2026: the workflow returns to R-357, R-391 and R-277, with no cloud sessions; R-634 and R-636's agent-count and cloud clauses withdrawn; process; changes no requirement |
 | R-651 — Advisory review cadence: a fresh review from each of Codex, Gemini CLI and Copilot before merge on the final head, after every substantive push and at least once a working day on a long-running PR, in that priority under limits; a bot unavailable or rate-limited is noted on the PR and the merge goes ahead with the others; every bot finding is verified and closed out before merge (fixed, answered or moved to a task or RQ, then its thread resolved), and a PR with an unresolved bot thread does not merge; the bots stay advisory and never replace the required approvals *(amends R-635: its cadence; a standing rule)* | informative only | the owner's standing rule of 30 Oct 2026 with its two addenda: a fresh advisory review from Codex, Gemini CLI and Copilot before merge on the final head, after substantive pushes and periodically, every bot finding closed out before merge; process, carried by plan/WORKFLOW.md § The review loop, plan/OPERATIONS.md § Merging and the orchestrator's merge script; amends R-635's cadence; changes no requirement |
+| R-657 — The R-369 decisions listed in the orchestrator's summary of 30 Oct 2026 stand, with no veto | informative only | the owner's words of 30 and 31 Oct 2026: the listed R-369 decisions stand, with no veto; process; changes no requirement |
 | R-658 — Heavy commands run only through a local job queue the orchestrator owns, `cargo xtask job`: agents submit them and wait, never run them directly; classes merge, fix, build and peek, first in, first out within each; one runner at a fixed concurrency, each job with cargo's jobs and test threads at the core count; jobs time out, stale locks expire and a new runner recovers a dead one's jobs; heavy processes outside the queue are logged; sccache measured again; mutants scoped to the diff and run through the queue *(supersedes R-228)* | informative only | the owner's ruling of 30 Oct 2026: heavy commands only through the local job queue (cargo xtask job); process, carried by CLAUDE.md, plan/OPERATIONS.md § Resources and the agent files, and built in xtask/src/jobq.rs; changes no requirement |
 | R-659 — Gemini reviews make one request and name the model that answered; on a quota refusal they fall back down a chain of four models; a spent chain posts "Gemini quota exhausted, review skipped" and the merge proceeds *(an R-369 note; amends R-635's Gemini workflow)* | informative only | the owner's message of 30 Oct 2026: one Gemini request per review, a four-model fallback chain on quota errors, the model stamped, a note when the chain is spent; process, carried by the gemini-dispatch workflow and scripts/gemini_review.py; changes no requirement |
+| R-664 — `generation_root` §3.5 no longer claims R² from the Welford accumulators: it cannot be derived from what is stored and nothing reads it; no per-sample field is added *(closes RQ-633)* | informative only | the owner's ruling of 31 Oct 2026 closing RQ-633: "+ R²" struck from generation_root §3.5, no new per-sample field; no requirement read it |
+| R-666 — sccache stays off: the job queue's builds do not use it | informative only | the owner's word of 31 Oct 2026: sccache stays off; process; changes no requirement |
+| R-674 — #368's Safari check runs once Safari is free, in both layouts, not deferred; a Safari run starts with Safari quit, by the human | informative only | the owner's two messages of 1 Nov 2026 on #368's Safari check, the deferral superseded; process (plan/HUMAN_SETUP.md § 6); changes no requirement |
+| R-675 — The PR sweep is a standing duty: the orchestrator periodically checks every open PR and its CI state, and picks up any that was dropped or missed | informative only | the owner's message of 1 Nov 2026: the periodic PR sweep; process (plan/OPERATIONS.md § Autonomy); changes no requirement |
 
 ### `docs/contracts/principia_canonical_spec.md`
 

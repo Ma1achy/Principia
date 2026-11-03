@@ -153,27 +153,64 @@ fn ci_workspace_builds_dependencies_without_debug_info() {
     check_step(&ci_yml());
 }
 
-/// `ci.yml` with `from` replaced by `to`, once; an edit that no longer applies stops the control.
+/// The byte range, in `ci`, of the step whose first line is `name` in job `ci-workspace`: from that line to the next
+/// line at the step's indent or less (the next step, a comment above it, the next job). Another job's step of the
+/// same name or text is outside it.
 #[cfg(feature = "controls")]
-fn edited(from: &str, to: &str) -> String {
-    let ci = ci_yml();
-    assert!(ci.contains(from), "ci.yml has no `{from}` to edit");
-    ci.replacen(from, to, 1)
+fn step_range(ci: &str, name: &str) -> std::ops::Range<usize> {
+    let header = format!("\n  {JOB}:\n");
+    let mut at = ci
+        .find(&header)
+        .unwrap_or_else(|| panic!("ci.yml has no job {JOB}"))
+        + header.len();
+    let indent = |l: &str| l.len() - l.trim_start().len();
+    let mut start: Option<(usize, usize)> = None;
+    for line in ci[at..].split_inclusive('\n') {
+        let l = line.trim_end();
+        if !l.is_empty() {
+            match start {
+                None if indent(l) <= 2 => break,
+                None if l.trim() == name => start = Some((at, indent(l))),
+                Some((from, step)) if indent(l) <= step => return from..at,
+                _ => {}
+            }
+        }
+        at += line.len();
+    }
+    let (from, _) = start.unwrap_or_else(|| panic!("{JOB} has no step `{name}`"));
+    from..at
 }
 
-/// The config step's two lines, as ci.yml holds them.
+/// `ci.yml` with `from` replaced by `to`, once, inside `ci-workspace`'s step `name`; an edit that no longer applies
+/// there stops the control.
+#[cfg(feature = "controls")]
+fn edited(name: &str, from: &str, to: &str) -> String {
+    let ci = ci_yml();
+    let r = step_range(&ci, name);
+    let step = &ci[r.clone()];
+    assert!(
+        step.contains(from),
+        "{JOB}'s step `{name}` has no `{from}` to edit"
+    );
+    format!(
+        "{}{}{}",
+        &ci[..r.start],
+        step.replacen(from, to, 1),
+        &ci[r.end..]
+    )
+}
+
+/// `ci-workspace`'s config step, as ci.yml holds it.
 #[cfg(feature = "controls")]
 fn step_text(ci: &str) -> String {
-    let lines: Vec<&str> = ci.lines().collect();
-    let at = lines.iter().position(|l| l.trim() == STEP).unwrap();
-    format!("{}\n{}\n", lines[at], lines[at + 1])
+    ci[step_range(ci, STEP)].to_owned()
 }
 
 negative_control!(
     ci_workspace_builds_dependencies_without_debug_info,
     "a config step that strips the test profile alone, leaving `cargo run`'s dev builds their dependencies' line tables",
     expected = "the dev profile's dependencies keep their debug info",
-    check_step(&edited("[profile.dev.package.\"*\"]\\ndebug = false\\n", ""))
+    check_step(&edited(STEP, "[profile.dev.package.\"*\"]\\ndebug = false\\n", ""))
 );
 
 #[cfg(feature = "controls")]
@@ -184,7 +221,11 @@ mod whole_profile {
         ci_workspace_builds_dependencies_without_debug_info,
         "a strip that takes the workspace's own crates' line tables as well (R-374)",
         expected = "is not the dependency-only table",
-        check_step(&edited("[profile.test.package.\"*\"]", "[profile.test]"))
+        check_step(&edited(
+            STEP,
+            "[profile.test.package.\"*\"]",
+            "[profile.test]"
+        ))
     );
 }
 
@@ -197,6 +238,7 @@ mod other_key {
         "a strip that also changes the dependencies' optimisation",
         expected = "not `debug = false`",
         check_step(&edited(
+            STEP,
             "[profile.test.package.\"*\"]\\ndebug = false\\n",
             "[profile.test.package.\"*\"]\\ndebug = false\\nopt-level = 1\\n",
         ))
@@ -311,6 +353,7 @@ negative_control!(
     "the nextest run back on the default shell",
     expected = "nextest run is not under the disk sampler",
     check_sampler(&edited(
+        NEXTEST,
         "        run: cargo nextest run -p xtask\n        shell: bash .github/scripts/disk_sampler.sh {0}\n",
         "        run: cargo nextest run -p xtask\n",
     ))
