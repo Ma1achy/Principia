@@ -8,8 +8,9 @@
 //! expressions the jobs use), a `uses:` step that runs is recorded but not executed, and each `run:` script runs in
 //! bash with its `${{ … }}` expressions substituted, in its step's `env:`. The programs the scripts call are stand-ins
 //! that log each call: `git diff` prints the test's diff, `cargo` (for `cargo mutants`) writes no outcomes, as
-//! cargo-mutants does when it finds no mutant, and `gh`, `sudo` and `python3` do nothing. `cargo xtask` is the built xtask. Each test's control (R-176) runs the same test on a workflow with the
-//! one step it turns on broken, and trips it by its message.
+//! cargo-mutants does when it finds no mutant, and `gh`, `sudo` and `python3` do nothing. `cargo xtask` is the built
+//! xtask. Each test's control (R-176) runs the same test on a workflow with the one step it turns on broken, and trips
+//! it by its message.
 //!
 //! A job-level `if:` does not stop a workflow run from reporting the job: skipped, which GitHub counts as passed for a
 //! required check. So the gate is a workflow of its own that only `pull_request` runs, and the one workflow with a
