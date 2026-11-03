@@ -1788,7 +1788,8 @@ words, so the task did not wait. The entry is for correcting the text.*
     (R-132) in a debug view and `#141418` in a presentation view, which draws no hatch (R-467)".
 - **Checked on `main`'s code:** `crates/render/src/assemble.rs` already walks the graph in backbone order (`shade(ctx)`,
   :1154ff), bounds the live post chain at `MAX_POSTS` = 8 (:120, :697-699) and builds the post chain (:733ff), its git
-  history TASK-M1-04's and later M1 tasks'; `crates/render/src/codegen/combine.rs` gives None's identity, both-None the
+  history TASK-M1-04's, M1-07's, M1-08's, M1-09's, M1-10's, M1-13's, M2-32's, M2-34's, M7-02's, M7-04's, M7-05's and
+  M7-08's; `crates/render/src/codegen/combine.rs` gives None's identity, both-None the
   flat mid-grey (TASK-M7-04). A `codegen/walk.rs` beside them would be a second path to `shade()`.
 - **The gaps:** (1) the deliverables name new files for what `assemble.rs` and `combine.rs` hold; (2) a proptest over
   `StainGraph` edit sequences cannot be a `-p render` test, `render` not depending on `engine`; (3) the fallback's
@@ -1857,12 +1858,22 @@ it is physics, the two rulings give different results on one chart.*
   shape as the hidden coordinates it covers; c2 adds a momentum one.
 - **The question:** on the tilted `(ν, K)` and `Φ_θ,K` charts (and `Φ_θ,L_z` tilted into `K`), does every in-square pixel
   validate (E3), or may cells be refused (c2)?
-- **Options seen:** (a) E3 holds: the `K` warp takes the pixel's own held `L_z` (its floor `L_z²/2I`), so c2's refusal
-  is reached only under the linear option; (b) c2 holds: refused cells occur under tilt, warped or not, and REQ-CHART-061's
+- **Options seen:** (a) E3 holds: on `(ν, K)` and `Φ_θ,K` the `K` warp takes the pixel's own held `L_z` (its floor
+  `L_z²/2I`); on `Φ_θ,L_z`, whose `L_z` axis is not that warp but `docs/design/principia_chart_reference.md` § 4.5's
+  linear band `L_z(v) = (2v − 1)·λ_L·L_max(K)`, `L_max(K) = √(2IK)` is taken at the pixel's own tilted held `K`. c2's
+  refusal is then reached only under the linear option if the floored warp is additive, such as
+  `K = L_z²/2I + K_max·t^γ`; a form that keeps `K ≤ K_max` still has no feasible pixel once `L_z²/2I > K_max`, so the
+  form is part of the option; (b) c2 holds: refused cells occur under tilt, warped or not, and REQ-CHART-061's
   arm on those charts counts a refused cell as not a failure (E3 and REQ-CHART-067 read as covering masses and shape);
   (c) another, stated by the owner.
-- **Applied meanwhile:** nothing.
-- **Waits:** TASK-M2-38 (REQ-CHART-061's tilted Burrau `K` arm).
+- **Applied meanwhile:** TASK-M2-52 builds c2 now, as R-633 words it (its refused-cell arm), and is reworked under (a)
+  (applied per R-369 by the orchestrator: TASK-M2-52 is not held; it proceeds on the corpus as written).
+- **Waits:** TASK-M2-38 (REQ-CHART-061's tilted Burrau `K` arm); TASK-M2-52's rework under (a) (it proceeds
+  meanwhile, above), as it builds c2's refusal, option (b): its
+  Deliverables' refused cell (`plan/tasks/M2/TASK-M2-52.md`:32, "on the three Burrau charts, a cell whose tilted value
+  leaves no momentum construction (`K < L_z²/2I`, §2.2's terminal case) is no system") and `tilt_every_chart`'s arm
+  (:37) "cells with `K < L_z²/2I` refused … and every other cell
+  valid", with its control, on the warped `(ν, K)` and `Φ_θ,K`. Under (a) that `K` decode and that test change.
 
 ## RQ-679: The slider span of `ν₀`, the held `L_z` and the held `K`, which R-507 U1 divides a hidden offset by, while § G2's Slice centre lists only the eight latent sliders *(a definition requirement, R-72, and a value, R-71; R-507 U1; R-633; render_gui_spec § G2; context: TASK-M8-48, TASK-M2-52)*
 
@@ -1881,10 +1892,15 @@ it is physics, the two rulings give different results on one chart.*
 - **The gap:** `ν₀`, the held `L_z` and the held `K` are physical hidden coordinates with no latent slider, so § G2 gives
   them no slider and no range, and U1's `d̃` has no span to divide by.
 - **Options seen:** (a) each span is the coordinate's feasible range at the view's centre, a definition (R-72) written
-  into § G2; (b) a fixed span per coordinate, a calibration (R-71); (c) another, stated by the owner.
+  into § G2. Open within (a): the held `K`'s feasible range at the centre is `[L_z²/2I, ∞)`, with no upper end, so (a)
+  needs a cap, for example (a1) the invariant warp's `K_max` (REQ-CHART-044) or (a2) `Φ_θ,L_z`'s calibrated `K`
+  (REQ-CHART-046); and `ν₀`'s range is either `(0, 1)` or `docs/design/principia_chart_reference.md` § 4.5's
+  `[ν_min, ν_max]`, not yet chosen; (b) a fixed span per coordinate, a calibration (R-71); (c) another, stated by the
+  owner.
 - **Applied meanwhile:** nothing.
-- **Waits:** TASK-M8-48's sliders. The pre-flight read TASK-M2-52's kernel work as not waiting; its line 30 above offers
-  the three as tilt targets, which U1's scaled rotation divides by the span, so its reviewers check that reading.
+- **Waits:** only the span a view supplies, through TASK-M8-48's sliders. TASK-M2-52's kernel work does not wait: the
+  span is the caller's input to `Tilt::new(spec, centre, span)` (`crates/kernel/src/chart/tilt.rs`:509-530), used only
+  as `d = span·d̃` (`Tilt::offsets`, :555-564), and no TASK-M2-52 acceptance arm depends on its value.
 
 ## RQ-680: TASK-M7-52's target charts: SM1's table has `θ × dilation` and `ν × dilation`, which no app chart has *(a definition requirement, R-72; R-542; state_map SM1; REQ-COL-113, REQ-COL-115, REQ-COL-129, REQ-COL-134; context: TASK-M7-52, TASK-M7-47)*
 
@@ -1902,11 +1918,16 @@ it is physics, the two rulings give different results on one chart.*
 - **Checked:** "dilation" appears in neither `docs/design/principia_chart_reference.md` nor
   `docs/gui/principia_render_gui_spec.md` (§ G7, the Chart builder, included), nor under `crates/kernel/src`. The app's
   charts encode through `crates/kernel/src/encode/by_kind.rs`'s `encode_into` (:210), and a curve axis's nearest point is
-  `crates/kernel/src/encode/curve.rs`'s `nearest` (:242).
+  `crates/kernel/src/encode/curve.rs`'s `nearest` (:242). The corpus does name the dilation rate as an axis quantity:
+  `decisions.md`:18628, the traces' leave table, "A physical quantity (`E`, `L_z`, `K`, a momentum, the dilation rate)",
+  and `docs/design/principia_lines.md`:333, § "8. Traces", "a physical quantity (`E`, `L_z`, `K`, a momentum, the
+  dilation rate)".
 - **The gap:** which charts are "each target chart" for the one projection: SM1's targets are the prototype's, two of
   them with an axis the app does not define.
 - **Options seen:** (a) the targets are the app's charts, through `encode_into` and `curve::nearest`, SM1's dilation rows
-  and REQ-COL-113's, -115's and -129's θ × h and ν × h read as the prototype's record; (b) define the two dilation charts
+  and REQ-COL-113's, -115's and -129's θ × h and ν × h read as the prototype's record. (a) leaves REQ-COL-129's
+  `θ × h` and `ν × h` tolerances, and TASK-M7-47's arms on them, without a target, so it drops requirement content and
+  is the owner's call; (b) define the two dilation charts
   (their `h` axis, range and link) and build them as targets; (c) another, stated by the owner.
 - **Applied meanwhile:** nothing.
 - **Waits:** TASK-M7-52 (and TASK-M7-47's `θ × h` and `ν × h` arms through it).
@@ -1930,18 +1951,24 @@ it is physics, the two rulings give different results on one chart.*
     `E_cat` and `L_cat` to their printed precision"; REQ-VAL-215: one tolerance on E and L.
     `docs/incoming/2026-10-26_orbit_catalogues/INSTRUCTION_orbit_catalogues_2026-10-26.md`:24-25: "`pub_*` as the source
     paper published them and `ref_*` as the site re-converged them. E and L are recomputed from `ref_*` as a check on
-    the layout." RQ-660 measured on two Rose rows that `L_cat` is the refined state's (Σ m(x·vy − y·vx) 4.84e-5 from `ref_*`, 0.0 from
-    `pub_*`).
+    the layout." RQ-660 measured on two Rose rows that `L_cat` is the refined state's (Σ m(x·vy − y·vx)
+    4.841466815563855e-05 and −3.7699259047840883e-06 from `ref_*`, 0.0 on both from `pub_*`).
 - **Measured, 3 Nov 2026,** on `threebodyorbits_ics.csv` (3,943 rows): `E_cat` is printed with 1 to 8 decimals (1 on
   343 rows, all −4.5 or −1.0; 6 on 2,872). `L_cat` is "0.0" on 402 rows, a plain decimal of 3 to 8 places on 434, and in
-  exponent form on 3,107 (magnitudes 8.2e-35 to 4.8e-5, up to 17 significant digits).
+  exponent form on 3,107 (magnitudes 8.2e-35 to 4.8e-5, up to 17 significant digits). E and L recomputed (G = 1, the
+  masses as given) on all 3,943 rows: from `ref_*`, E matches `E_cat` to at most 4.9e-7 relative on every row, and the
+  worst |L − `L_cat`| is 5.0e-6; from `pub_*`, typical rows are off by about 1e-7 relative in E, but the worst is off by
+  2.8e-1, 16 rows by more than 1e-3 (family V 2, li_IIC 2, III 2, IVa 3, IVb 2, IVc 2, simo 1, II 1, sheen 1), and the
+  worst |L − `L_cat`| is 2.3e-2.
 - **The gaps:** (a) no task's deliverables build the replication scoring command, with `--target`, `--propose` and the
   three outcomes; (b) which rows are scaled twins (which rescaling, found how), and the fitted plane's coordinates and
   fit, are undefined, and their source is outside the repo; (c) whether OC-2 recomputes from `pub_*` or `ref_*`, and what
   "printed precision" means for a value printed to one decimal or in exponent form, against one tolerance.
 - **Options seen:** (a) a deliverable in TASK-M3-27 (the earlier milestone that calls it) or TASK-M9-01, or a new owning task;
   (b) definitions written by TASK-M9-01 (R-72), physics-reviewed, or the ATP draft brought into the repo as a record;
-  (c) `ref_*`, the state RQ-660 found `L_cat` matches, or `pub_*` with the refinement drift reported, and a
-  tolerance per row from its printed digits, or one tolerance with the coarse rows reported apart.
+  (c) `ref_*`, the state RQ-660 found `L_cat` matches, or `pub_*` with the drift reported (on the 16 rows above, more
+  than refinement drift: up to 2.8e-1 relative in E); and a tolerance per row from its printed digits, or one tolerance
+  with the coarse rows reported apart, or an absolute tolerance on L (most `L_cat` are numerically zero, 3,107 in
+  exponent form at most 4.84e-5 in magnitude and 402 reading 0.0, where a count of printed digits means nothing).
 - **Applied meanwhile:** nothing.
 - **Waits:** TASK-M9-01; TASK-M3-27 for (a).
