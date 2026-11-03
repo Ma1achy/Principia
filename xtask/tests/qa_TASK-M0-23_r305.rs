@@ -16,8 +16,10 @@
 //! - a PR whose diff changes no Rust source (docs-only, rulings-only) passes every shard without running
 //!   cargo-mutants, and says so ("no mutant"); the aggregate verdict then runs, passes and posts `mutants-check`
 //!   passed;
-//! - a PR whose diff changes Rust source (an edit, a rename with an edit, a path with spaces, a quoted non-ASCII
-//!   path, Rust among docs) runs `cargo mutants --in-diff <the PR's diff> --shard k/n` on every shard;
+//! - a PR whose diff changes Rust source under `crates/` (an edit, a rename with an edit, a path with spaces, a quoted
+//!   non-ASCII path, Rust among docs) runs `cargo mutants --in-diff <the PR's diff> --shard k/n` on every shard. R-677
+//!   runs mutants only when `crates/` source changes, so the fixture's Rust sits under `crates/k/` (R-677's exception
+//!   to R-290: that move, and the control's pattern with it, are the only change here);
 //! - a diff that cannot be computed fails the shard, never passes it as "no mutant";
 //! - `mutants-check` is posted only by `pull_request` runs, on every pull request (no path filter) and every new head,
 //!   never by a job bearing its name; the verdict that posts it on the merge-ready run holds whatever the shards'
@@ -452,8 +454,8 @@ fn pr(tag: &str, ops: &[Op], with_base: bool) -> Scratch {
         "plan/requirements.yaml",
         "- id: REQ-X-001\n  statement: x\n",
     );
-    put("src/lib.rs", LIB);
-    put("src/old.rs", LIB);
+    put("crates/k/src/lib.rs", LIB);
+    put("crates/k/src/old.rs", LIB);
     git(&dir, &["init", "-q"]);
     git(&dir, &["add", "-A"]);
     git(&dir, &["commit", "-q", "-m", "base"]);
@@ -677,23 +679,29 @@ fn qa23r_a_rust_change_runs_every_shard() {
     rust_change_runs(
         &yml,
         "edit",
-        &[Op::Write("src/lib.rs", "\npub fn d() -> u32 {\n    4\n}\n")],
-        "src/lib.rs",
+        &[Op::Write(
+            "crates/k/src/lib.rs",
+            "\npub fn d() -> u32 {\n    4\n}\n",
+        )],
+        "crates/k/src/lib.rs",
     );
     rust_change_runs(
         &yml,
         "rename",
         &[
-            Op::Rename("src/old.rs", "src/renamed.rs"),
-            Op::Write("src/renamed.rs", "\npub fn e() -> bool {\n    true\n}\n"),
+            Op::Rename("crates/k/src/old.rs", "crates/k/src/renamed.rs"),
+            Op::Write(
+                "crates/k/src/renamed.rs",
+                "\npub fn e() -> bool {\n    true\n}\n",
+            ),
         ],
-        "src/renamed.rs",
+        "crates/k/src/renamed.rs",
     );
     rust_change_runs(
         &yml,
         "spaces",
         &[Op::Write(
-            "src/my dir/a b.rs",
+            "crates/k/src/my dir/a b.rs",
             "pub fn f() -> u32 {\n    5\n}\n",
         )],
         "my dir/a b.rs",
@@ -702,7 +710,7 @@ fn qa23r_a_rust_change_runs_every_shard() {
         &yml,
         "non_ascii",
         &[Op::Write(
-            "src/donn\u{e9}es.rs",
+            "crates/k/src/donn\u{e9}es.rs",
             "pub fn g() -> u32 {\n    6\n}\n",
         )],
         "donn",
@@ -712,10 +720,10 @@ fn qa23r_a_rust_change_runs_every_shard() {
         "mixed",
         &[
             Op::Write("docs/guide.md", "More.\n"),
-            Op::Write("src/lib.rs", "\npub fn h() -> u32 {\n    7\n}\n"),
+            Op::Write("crates/k/src/lib.rs", "\npub fn h() -> u32 {\n    7\n}\n"),
             Op::Write("decisions.md", "\n## R-3\nA third.\n"),
         ],
-        "src/lib.rs",
+        "crates/k/src/lib.rs",
     );
 }
 
@@ -725,12 +733,12 @@ negative_control!(
     expected = "qa23r: a Rust change did not run cargo mutants once on shard 0",
     rust_change_runs(
         &mutants_yml().replace(
-            r#"'^\+\+\+ .*\.rs"?[[:space:]]*$'"#,
-            r#"'^\+\+\+ b/[^ "]*\.rs$'"#
+            r#"'^\+\+\+ "?b/crates/.*\.rs"?[[:space:]]*$'"#,
+            r#"'^\+\+\+ b/crates/[^ "]*\.rs$'"#
         ),
         "spaces_ctl",
         &[Op::Write(
-            "src/my dir/a b.rs",
+            "crates/k/src/my dir/a b.rs",
             "pub fn f() -> u32 {\n    5\n}\n"
         )],
         "my dir/a b.rs",
@@ -746,8 +754,11 @@ mod skips_everything {
         rust_change_runs(
             &mutants_yml().replace("echo \"rust=true\"", "echo \"rust=false\""),
             "edit_ctl",
-            &[Op::Write("src/lib.rs", "\npub fn d() -> u32 {\n    4\n}\n")],
-            "src/lib.rs",
+            &[Op::Write(
+                "crates/k/src/lib.rs",
+                "\npub fn d() -> u32 {\n    4\n}\n"
+            )],
+            "crates/k/src/lib.rs",
         )
     );
 }
@@ -756,7 +767,10 @@ mod skips_everything {
 fn no_diff_fails(yml: &str) {
     let repo = pr(
         "nobase",
-        &[Op::Write("src/lib.rs", "\npub fn d() -> u32 {\n    4\n}\n")],
+        &[Op::Write(
+            "crates/k/src/lib.rs",
+            "\npub fn d() -> u32 {\n    4\n}\n",
+        )],
         false,
     );
     for (k, run) in shards_on(yml, &repo, "nobase") {
