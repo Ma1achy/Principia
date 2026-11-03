@@ -28,8 +28,9 @@
 //! `L(z_mass)`, so every pixel's masses are positive and sum to 1. Warped, `q(t) = q₀·(q₁/q₀)^t` over `[q₀, q₁]`, the
 //! part of the asked range the link realises at `m_c` at its active parameters ([`MixedMassRatio::new`]); linear,
 //! `q(t) = q_lo + (q_hi − q_lo)·t` over the asked range, a pixel whose ratio the link does not realise, or at or below
-//! 0, not a system. A ratio is realised where the link's inverse followed by its forward returns it to within `ε_μ`,
-//! relative: the inverse saturates past what the link reaches. `ε_μ` is the register's link clamp
+//! 0, not a system. A ratio is realised where the link's inverse followed by its forward returns its masses
+//! `(m_a, m_b, m_c)`, `m_c` at its held value, to within `ε_μ`, relative: the inverse saturates past what the link
+//! reaches. `ε_μ` is the register's link clamp
 //! (chart_decoder_contract § "Three hard requirements on any registered link", item 2; inverse_encode_contract Part 3),
 //! reused here as the round trip's tolerance, not a new constant.
 //!
@@ -774,7 +775,10 @@ impl<A: Coordinate, S: Selection> MixedMassRatio<A, S, f64> {
     }
 
     /// Whether the link realises the ratio `q` at the held `m_c`: `q` positive and finite, and the link's inverse then
-    /// forward returning masses positive, summing to 1 and with ratio `q`, each to within `ε_μ`, relative.
+    /// forward returning the masses [`ratio_masses`] writes, positive, summing to 1, with ratio `q` and the third body's
+    /// mass at the held `m_c`, each to within `ε_μ`, relative. The last test is not implied by the others: where the
+    /// logit that sets `m_c` saturates before the ratio's does, the round trip keeps the ratio and the sum and moves
+    /// `m_c`, a system off the slice.
     pub fn realised(&self, q: f64, p: &LinkParams<f64>) -> bool {
         self.realised_within(q, <f64 as ChartConstants>::EPS_MU, p)
     }
@@ -789,7 +793,12 @@ impl<A: Coordinate, S: Selection> MixedMassRatio<A, S, f64> {
         let back = <S::MassLink as Link<2, 3>>::forward_at(link, p);
         let positive = back.iter().all(|&x| x > 0.0);
         let sum = back[0] + back[1] + back[2];
-        positive && (sum - 1.0).abs() <= eps && (ratio_of(self.bodies, back) - q).abs() <= eps * q
+        let [a, b] = self.bodies;
+        let m_c = back[(3 - a - b) as usize];
+        positive
+            && (sum - 1.0).abs() <= eps
+            && (ratio_of(self.bodies, back) - q).abs() <= eps * q
+            && (m_c - self.held).abs() <= eps * self.held
     }
 
     /// The end of the realised range from the realised ratio `from` toward the asked end `toward`, the range's upper

@@ -24,7 +24,6 @@ use kernel::chart::energy::{
 };
 use kernel::chart::invariant::{self, Invariant};
 use kernel::chart::mixed::{Alpha, Quantity as _, ZAlpha, ZBeta, ZMu1};
-#[cfg(feature = "controls")]
 use kernel::chart::physical::ratio_masses;
 use kernel::chart::physical::{
     ratio_of, AxisE, AxisK, AxisKE, AxisLz, AxisVirial, EnergyAxis, MixedEnergy, MixedMassRatio,
@@ -41,7 +40,7 @@ use kernel::decode::{mass, Decoded, Degenerate, Latent};
 use kernel::generated::constants::ChartConstants;
 use kernel::generated::links::{
     Defaults, Link, LinkParams, Select, Selection, SigmoidAlpha, SigmoidBeta, SigmoidQ,
-    StickBreaking,
+    SoftmaxTanh, StickBreaking,
 };
 use validation::{negative_control, tunables, GAMMA_K, K_MAX};
 
@@ -1954,7 +1953,7 @@ enum Formula {
 
 /// The mass-ratio axis on `[0.05, 20]` of each body pair, under `stick_breaking` and under `softmax_tanh` at both ends
 /// of `μ_max`'s range (REQ-GEN-038's, `validation::tunables`) and at its default: every pixel of `[0,1]²` validates and
-/// decodes masses positive, summing to 1, with the ratio `q(t)`.
+/// decodes masses positive, summing to 1, with the ratio `q(t)` and the third body's mass at the held `m_c`.
 fn check_mass_ratio(formula: Formula) {
     let range = tunables()
         .iter()
@@ -1972,7 +1971,12 @@ fn check_mass_ratio(formula: Formula) {
     }
 }
 
-/// One arm of [`check_mass_ratio`] under the selection `S` at `p`.
+/// The third body of the pair `(a, b)`, whose mass a mass-ratio axis holds.
+fn third([a, b]: [u32; 2]) -> usize {
+    (3 - a - b) as usize
+}
+
+/// One arm of [`check_mass_ratio`] under the selection `S` at `p`, the decoded `m_c` at the held value too.
 fn check_ratio_arm<S: Selection>(
     link: &str,
     pair: [u32; 2],
@@ -2004,13 +2008,17 @@ fn check_ratio_arm<S: Selection>(
         };
         let m = <S::MassLink as Link<2, 3>>::forward_at(z, p);
         let ratio = ratio_of(pair, m);
+        let m_c = m[third(pair)];
         assert!(
             chart.validate_params(u, v, p) == ValidationResult::Valid
                 && m.iter().all(|&x| x > 0.0)
                 && (m.iter().sum::<f64>() - 1.0).abs() <= 4.0 * f64::EPSILON
-                && (ratio - q).abs() <= RATIO_TOL * q,
-            "the mass ratio {pair:?} under {link} at μ_max = {} at ({u}, {v}) decodes {ratio}, not {q}",
-            p.mu_max
+                && (ratio - q).abs() <= RATIO_TOL * q
+                && (m_c - chart.held).abs() <= RATIO_TOL * chart.held,
+            "the mass ratio {pair:?} under {link} at μ_max = {} at ({u}, {v}) decodes {ratio} and m_c = {m_c}, not {q} \
+             and the held {}",
+            p.mu_max,
+            chart.held
         );
     }
 }
@@ -2242,4 +2250,352 @@ negative_control!(
             "the held mass is not the third body's at z₀"
         );
     }
+);
+
+// ── Fix round 2: a ratio is realised only at the held m_c (chart_reference §2.1) ─────────────────────────────────────────
+
+/// A slice whose mass logit for `m_c` saturates before the ratio's does: `mass` the frozen mass controls, `pair` the
+/// bodies, `mu_max` the link's parameter, `asked` the asked range.
+struct Saturating {
+    mass: [f64; 2],
+    pair: [u32; 2],
+    mu_max: f64,
+    asked: [f64; 2],
+    /// A ratio past the `m_c` logit's clamp, which the link's round trip keeps.
+    past: f64,
+}
+
+/// Codex's input (`μ_max = 1`, mass controls `(0, 3)`, bodies `(0, 1)`), the same at the default `μ_max = 5`, where
+/// the `m_c` logit clamps at the range's top, and mass controls `(0, −3)` at `μ_max = 5`, where it clamps at its bottom
+/// with `m_c` small.
+const SATURATING: [Saturating; 3] = [
+    Saturating {
+        mass: [0.0, 3.0],
+        pair: [0, 1],
+        mu_max: 1.0,
+        asked: [0.5, 4.0],
+        past: 2.0,
+    },
+    Saturating {
+        mass: [0.0, 3.0],
+        pair: [0, 1],
+        mu_max: 5.0,
+        asked: [0.5, 20.0],
+        past: 2.0,
+    },
+    Saturating {
+        mass: [0.0, -3.0],
+        pair: [0, 1],
+        mu_max: 5.0,
+        asked: [0.05, 2.0],
+        past: 0.875,
+    },
+];
+
+/// The slice centre `Z0` with the mass controls `mass`.
+fn with_mass(mass: [f64; 2]) -> [f64; 8] {
+    let mut z = Z0;
+    z[6] = mass[0];
+    z[7] = mass[1];
+    z
+}
+
+/// The mass-ratio chart under `S` at `p` at the slice centre `Z0` with the mass controls `mass`.
+fn saturating_chart<S: Selection>(
+    mass: [f64; 2],
+    pair: [u32; 2],
+    asked: [f64; 2],
+    mapping: Mapping,
+    p: &LinkParams<f64>,
+) -> Option<MixedMassRatio<ZBeta, S, f64>> {
+    MixedMassRatio::<ZBeta, S, f64>::new(with_mass(mass), [-2.0, 2.0], asked, pair, mapping, p)
+}
+
+fn mu(mu_max: f64) -> LinkParams<f64> {
+    LinkParams {
+        mu_max,
+        ..LinkParams::DEFAULT
+    }
+}
+
+/// The predicate without the held mass's test: the round trip's masses positive, summing to 1 and with ratio `q`, to
+/// within `ε_μ`, relative (the negative controls' predicate).
+fn ratio_only<S: Selection>(
+    chart: &MixedMassRatio<ZBeta, S, f64>,
+    q: f64,
+    p: &LinkParams<f64>,
+) -> bool {
+    let m = ratio_masses(chart.bodies, chart.held, q);
+    let link = <S::MassLink as Link<2, 3>>::inverse_at(m, p);
+    let back = <S::MassLink as Link<2, 3>>::forward_at(link, p);
+    let sum: f64 = back.iter().sum();
+    back.iter().all(|&x| x > 0.0)
+        && (sum - 1.0).abs() <= RATIO_TOL
+        && (ratio_of(chart.bodies, back) - q).abs() <= RATIO_TOL * q
+}
+
+/// The predicate the chart's check applies: `realised` where `own`, else [`ratio_only`].
+fn predicate<S: Selection>(
+    own: bool,
+) -> impl Fn(&MixedMassRatio<ZBeta, S, f64>, f64, &LinkParams<f64>) -> bool {
+    move |chart, q, p| {
+        if own {
+            chart.realised(q, p)
+        } else {
+            ratio_only(chart, q, p)
+        }
+    }
+}
+
+/// A ratio past the `m_c` logit's clamp is not realised where the round trip moves `m_c`: under `softmax_tanh` on
+/// [`SATURATING`] (`q = 2` on the first two, 0.875 below the bottom's clamp on the third), and under `stick_breaking`,
+/// `q = 2`, with the held mass the reference body's at mass controls `(8, 0)`, `m₀ ≈ 6·10⁻⁷`, whose first coordinate
+/// the inverse clamps (bodies `(1, 2)`). The linear chart refuses its pixel at that ratio, and `stick_breaking`'s
+/// warped chart, realising no ratio at that `m_c`, is none.
+fn check_held_refused(own: bool) {
+    let refused = |name: &str, realised: bool, q: f64, m: [f64; 3], held: f64| {
+        assert!(
+            !realised,
+            "{name} realises q = {q}, its round trip at {m:?} moving m_c off the held {held}"
+        );
+    };
+    for s in &SATURATING {
+        let p = mu(s.mu_max);
+        let chart = saturating_chart::<Defaults>(s.mass, s.pair, s.asked, Mapping::Warped, &p)
+            .expect("a realised range");
+        let m = ratio_masses(s.pair, chart.held, s.past);
+        let back = <SoftmaxTanh as Link<2, 3>>::forward_at(SoftmaxTanh::inverse_at(m, &p), &p);
+        assert!(
+            (ratio_of(s.pair, back) - s.past).abs() <= RATIO_TOL * s.past,
+            "the round trip does not keep the ratio {}",
+            s.past
+        );
+        refused(
+            &format!(
+                "softmax_tanh at μ_max = {}, mass controls {:?}",
+                s.mu_max, s.mass
+            ),
+            predicate::<Defaults>(own)(&chart, s.past, &p),
+            s.past,
+            back,
+            chart.held,
+        );
+        let around = [0.5 * s.past, 1.5 * s.past];
+        let linear = saturating_chart::<Defaults>(s.mass, s.pair, around, Mapping::Linear, &p)
+            .expect("a linear chart");
+        assert_eq!(linear.ratio_at(0.5), s.past);
+        assert!(
+            matches!(
+                linear.validate_params(0.5, 0.5, &p),
+                ValidationResult::Reject { .. }
+            ),
+            "the linear chart takes q = {} at μ_max = {}, mass controls {:?}",
+            s.past,
+            s.mu_max,
+            s.mass
+        );
+    }
+    let p = LinkParams::DEFAULT;
+    let stick = |mapping| saturating_chart::<Stick>([8.0, 0.0], [1, 2], [1.0, 3.0], mapping, &p);
+    assert!(
+        stick(Mapping::Warped).is_none(),
+        "stick_breaking's warped chart realises a ratio"
+    );
+    let linear = stick(Mapping::Linear).expect("a linear chart");
+    let m = ratio_masses([1, 2], linear.held, 2.0);
+    let back = <StickBreaking as Link<2, 3>>::forward_at(StickBreaking::inverse_at(m, &p), &p);
+    refused(
+        "stick_breaking at mass controls (8, 0)",
+        predicate::<Stick>(own)(&linear, 2.0, &p),
+        2.0,
+        back,
+        linear.held,
+    );
+    assert_eq!(linear.ratio_at(0.5), 2.0);
+    assert!(
+        matches!(
+            linear.validate_params(0.5, 0.5, &p),
+            ValidationResult::Reject { .. }
+        ),
+        "stick_breaking's linear chart takes q = 2"
+    );
+}
+
+#[test]
+fn physical_axis_warps_mass_ratio_held_refused() {
+    check_held_refused(true);
+}
+
+negative_control!(
+    physical_axis_warps_mass_ratio_held_refused,
+    "the ratio-only predicate, which never compares m_c with the held mass, admits q = 2, so it must fail",
+    expected = "realises q =",
+    check_held_refused(false)
+);
+
+/// The warped range's end where the `m_c` logit clamps: bodies `(0, 1)` under `softmax_tanh`,
+/// `ln(m_c/m₀) = ln(m_c·(1 + q)/(1 − m_c))` reaches `±(1 − ε_μ)·μ_max` at `q* = e^{±(1 − ε_μ)μ_max}·(1 − m_c)/m_c − 1`,
+/// the top on [`SATURATING`]'s first two, the bottom on its third, the other end the asked one, the end past `q*` by
+/// no more than `ε_μ` over the round trip's slope there. `at_ratio` names the
+/// formula the check expects instead: the end where the ratio's own logit `ln q` clamps, `e^{±(1 − ε_μ)μ_max}`, or the
+/// asked end, what a predicate blind to `m_c` gives.
+fn check_held_edge(at_ratio: bool) {
+    let eps = <f64 as ChartConstants>::EPS_MU;
+    for (k, s) in SATURATING.iter().enumerate() {
+        let p = mu(s.mu_max);
+        let chart = saturating_chart::<Defaults>(s.mass, s.pair, s.asked, Mapping::Warped, &p)
+            .expect("a realised range");
+        let h = chart.held;
+        let up = k < 2;
+        let sign = if up { 1.0 } else { -1.0 };
+        let clamp = (sign * (1.0 - eps) * s.mu_max).exp();
+        let want = if at_ratio {
+            if up {
+                clamp.min(s.asked[1])
+            } else {
+                clamp.max(s.asked[0])
+            }
+        } else {
+            clamp * (1.0 - h) / h - 1.0
+        };
+        let [lo, hi] = chart.ratio;
+        let (end, other, asked) = if up {
+            (hi, lo, s.asked[0])
+        } else {
+            (lo, hi, s.asked[1])
+        };
+        // Past q*, the round trip's m_c moves as d ln m_c/d ln q = −(1 − m_c)·q/(1 + q), so the bisection's end, where
+        // m_c's error reaches ε_μ/2, lies past q* by about ε_μ/2 over that slope: at most ε_μ over it, relative.
+        let slope = (1.0 - h) * want / (1.0 + want);
+        let past = if up {
+            end / want - 1.0
+        } else {
+            want / end - 1.0
+        };
+        assert!(
+            (-1e-9..=eps / slope).contains(&past) && other == asked,
+            "the range [{lo}, {hi}] at μ_max = {}, mass controls {:?}: its end {end} is not at {want}",
+            s.mu_max,
+            s.mass
+        );
+    }
+}
+
+#[test]
+fn physical_axis_warps_mass_ratio_held_edge() {
+    check_held_edge(false);
+}
+
+negative_control!(
+    physical_axis_warps_mass_ratio_held_edge,
+    "the range's end at the ratio logit's clamp, or the asked end, is where a predicate blind to m_c puts it, so it \
+     must fail",
+    expected = "is not at",
+    check_held_edge(true)
+);
+
+/// Every pixel of `[0,1]²` on [`SATURATING`]'s warped charts decodes the third body's mass at the held `m_c`, to within
+/// `ε_μ`, relative; `chart` builds the chart from the slice, its mass controls and `μ_max`.
+fn check_held_pixels(
+    chart: impl Fn(&Saturating, &LinkParams<f64>) -> MixedMassRatio<ZBeta, Defaults, f64>,
+) {
+    for s in &SATURATING {
+        let p = mu(s.mu_max);
+        let chart = chart(s, &p);
+        for [u, v] in grid(0.0, 1.0) {
+            let m_c = chart.decode_params::<Defaults, f64>(u, v, &p).ic.m[third(s.pair)];
+            assert!(
+                (m_c - chart.held).abs() <= RATIO_TOL * chart.held,
+                "μ_max = {}, mass controls {:?}: the pixel ({u}, {v}) at q = {} decodes m_c = {m_c}, not the held {}",
+                s.mu_max,
+                s.mass,
+                chart.ratio_at(v),
+                chart.held
+            );
+        }
+    }
+}
+
+#[test]
+fn physical_axis_warps_mass_ratio_held_pixels() {
+    check_held_pixels(|s, p| {
+        saturating_chart(s.mass, s.pair, s.asked, Mapping::Warped, p).expect("a realised range")
+    });
+}
+
+negative_control!(
+    physical_axis_warps_mass_ratio_held_pixels,
+    "the linear chart over the asked range draws ratios past the m_c logit's clamp, whose decode moves m_c, so it must \
+     fail",
+    expected = "not the held",
+    check_held_pixels(|s, p| {
+        saturating_chart(s.mass, s.pair, s.asked, Mapping::Linear, p).expect("a linear chart")
+    })
+);
+
+/// The ratios `realised(chart, q)` takes on the grid `q = 10^{k/100}`, `k ∈ [−600, 600]`, are one run, not empty, on
+/// [`SATURATING`] and `Z0` at each body pair under `softmax_tanh` at both ends of `μ_max`'s range and its default, and
+/// under `stick_breaking`: the realised set is one interval in `ln q`, which `edge`'s bisection needs.
+fn check_interval<S: Selection>(
+    link: &str,
+    realised: &impl Fn(&MixedMassRatio<ZBeta, S, f64>, f64, &LinkParams<f64>) -> bool,
+    mass: [f64; 2],
+    pair: [u32; 2],
+    p: &LinkParams<f64>,
+) {
+    let chart =
+        saturating_chart::<S>(mass, pair, [0.5, 2.0], Mapping::Linear, p).expect("a linear chart");
+    let taken: Vec<bool> = (-600..=600)
+        .map(|k| realised(&chart, 10f64.powf(f64::from(k) / 100.0), p))
+        .collect();
+    let starts = taken.windows(2).filter(|w| !w[0] && w[1]).count() + usize::from(taken[0]);
+    assert!(
+        starts == 1,
+        "{link} at μ_max = {}, mass controls {mass:?}, bodies {pair:?}: the realised ratios are {starts} runs, not one \
+         interval",
+        p.mu_max
+    );
+}
+
+/// [`check_interval`] on each slice, the chart's own predicate, with the band `|q − 1| < 0.1` refused where `gap`.
+fn check_intervals(gap: bool) {
+    let softmax = |c: &MixedMassRatio<ZBeta, Defaults, f64>, q: f64, p: &LinkParams<f64>| {
+        c.realised(q, p) && !(gap && (q - 1.0).abs() < 0.1)
+    };
+    let stick = |c: &MixedMassRatio<ZBeta, Stick, f64>, q: f64, p: &LinkParams<f64>| {
+        c.realised(q, p) && !(gap && (q - 1.0).abs() < 0.1)
+    };
+    for s in &SATURATING {
+        check_interval("softmax_tanh", &softmax, s.mass, s.pair, &mu(s.mu_max));
+    }
+    let range = tunables()
+        .iter()
+        .find(|t| t.entry == "softmax_tanh" && t.param == "mu_max")
+        .expect("μ_max's range");
+    for pair in [[0, 1], [0, 2], [1, 2], [2, 0]] {
+        let z = [Z0[6], Z0[7]];
+        check_interval("stick_breaking", &stick, z, pair, &LinkParams::DEFAULT);
+        check_interval(
+            "stick_breaking",
+            &stick,
+            [-3.0, 2.0],
+            pair,
+            &LinkParams::DEFAULT,
+        );
+        for mu_max in [range.lo, range.default, range.hi] {
+            check_interval("softmax_tanh", &softmax, z, pair, &mu(mu_max));
+        }
+    }
+}
+
+#[test]
+fn physical_axis_warps_mass_ratio_held_interval() {
+    check_intervals(false);
+}
+
+negative_control!(
+    physical_axis_warps_mass_ratio_held_interval,
+    "a predicate refusing the band |q − 1| < 0.1 inside the realised set splits it in two runs, so it must fail",
+    expected = "not one interval",
+    check_intervals(true)
 );
