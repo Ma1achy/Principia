@@ -671,7 +671,7 @@ macro_rules! mapped_invariant {
                 self.validate_params(u, v, &LinkParams::DEFAULT)
             }
 
-            /// The chart's own check where every axis is warped; else [`invariant_validate`].
+            /// The chart's own check where every axis is warped; else `invariant_validate`.
             fn validate_params(&self, u: f64, v: f64, p: &LinkParams<f64>) -> ValidationResult {
                 if self.own() {
                     self.chart.validate_params(u, v, p)
@@ -738,7 +738,7 @@ macro_rules! mapped_invariant {
                 }
             }
 
-            /// The chart's own where every axis is warped; else [`invariant_validate_shifted`].
+            /// The chart's own where every axis is warped; else `invariant_validate_shifted`.
             fn validate_shifted(&self, a: f64, b: f64, shift: &Shift<f64>, p: &LinkParams<f64>) -> ValidationResult {
                 if self.own() {
                     self.chart.validate_shifted(a, b, shift, p)
