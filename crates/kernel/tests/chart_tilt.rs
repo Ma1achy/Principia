@@ -3379,3 +3379,109 @@ fn slice_k() {
         assert!((kin - 0.8).abs() < 1e-12, "Φ_θ,L_z: K = {kin}");
     }
 }
+
+/// A rest start whose flags are the opposite of every registered one's: it forbids `η_E` and holds uniform masses.
+#[derive(Clone, Copy)]
+struct Flipped(EuclidPlane<f64>);
+
+impl Chart for Flipped {
+    type Param = f64;
+
+    fn map<F: Float + From<f64>>(&self, u: F, v: F) -> kernel::chart::ChartOut<F> {
+        self.0.map(u, v)
+    }
+
+    fn forbids_energy_normalisation(&self) -> bool {
+        true
+    }
+
+    fn name(&self) -> &str {
+        "Flipped"
+    }
+
+    fn requires_per_pixel_mass(&self) -> bool {
+        false
+    }
+
+    fn validate(&self, u: f64, v: f64) -> ValidationResult {
+        self.0.validate(u, v)
+    }
+}
+
+impl RestChart for Flipped {
+    fn decode_moving<S, R>(
+        &self,
+        u: R,
+        v: R,
+        z_mom: [R; 4],
+        shift: &Shift<R>,
+        p: &LinkParams<R>,
+    ) -> Decoded<R>
+    where
+        S: kernel::generated::links::Selection,
+        R: kernel::generated::links::LinkReal + kernel::payload::PayloadReal + From<f64>,
+    {
+        self.0.decode_moving::<S, R>(u, v, z_mom, shift, p)
+    }
+}
+
+/// A held-`L_z` chart that allows `η_E`, the opposite of the registered ones.
+#[derive(Clone, Copy)]
+struct Allowing(Burrau<f64>);
+
+impl Chart for Allowing {
+    type Param = f64;
+
+    fn map<F: Float + From<f64>>(&self, u: F, v: F) -> kernel::chart::ChartOut<F> {
+        self.0.map(u, v)
+    }
+
+    fn name(&self) -> &str {
+        "Allowing"
+    }
+
+    fn validate(&self, u: f64, v: f64) -> ValidationResult {
+        self.0.validate(u, v)
+    }
+}
+
+impl LzChart for Allowing {
+    fn kinetic_at(&self, v: f64) -> f64 {
+        self.0.kinetic_at(v)
+    }
+
+    fn decode_lz<R>(&self, u: R, v: R, lz: R) -> Decoded<R>
+    where
+        R: kernel::generated::links::LinkReal + kernel::payload::PayloadReal + From<f64>,
+    {
+        self.0.decode_lz(u, v, lz)
+    }
+}
+
+/// The wrappers' flags are the chart's own, whatever it declares; `own` reads a fixed value instead (the control).
+fn check_flags(own: bool) {
+    let rest = RestStart::new(Flipped(euclid().chart));
+    let lz = HeldLz::new(Allowing(nu_k().chart));
+    let read = |x: bool, fixed: bool| if own { fixed } else { x };
+    assert!(
+        read(rest.forbids_energy_normalisation(), false)
+            && !read(rest.requires_per_pixel_mass(), true)
+            && !read(lz.forbids_energy_normalisation(), true),
+        "a wrapper's flags are not its chart's"
+    );
+    assert!(lz.requires_per_pixel_mass() && rest.name() == "Flipped" && lz.name() == "Allowing");
+}
+
+#[test]
+fn tilt_every_chart_construction_flags() {
+    check_flags(false);
+}
+
+negative_control!(
+    tilt_every_chart_construction_flags,
+    "a wrapper reading the registered charts' common flags, not its chart's, must fail",
+    expected = "a wrapper's flags are not its chart's",
+    {
+        check_flags(true);
+    }
+);
