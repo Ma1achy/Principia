@@ -18,6 +18,12 @@
 //!   passed verdict and on no other path, as the merge watcher reads it. A run on `main`, a run of another label, put
 //!   on or taken off, and a reopened pull request's run have groups of their own, and only a pull request's runs are
 //!   cancelled.
+//! - `merge_ready_mutants_check_reports_a_stalled_step`: no stalled step leaves `mutants-check` unreported. Each step
+//!   before its report, and each checkout and cache step of every `mutants.yml` job but the shards, has a limit of its
+//!   own of at most `STEP_LIMIT` minutes, so a runner stall fails the job in minutes, not at the 355 minutes the
+//!   label-change wait needs. The report runs only when each passed, so one failing (a timeout among them) or cancelled
+//!   skips it and fails the job, and the step after it runs exactly then and, run under bash, fails with an error
+//!   annotation and a summary naming each earlier step's outcome.
 //! - `merge_ready_reviews_runs_cancel_per_pr_and_event`: `reviews.yml` keeps one cancelling group per pull request and
 //!   event, never cancelling on `main`; `reviews-complete` still runs on every run; and the re-run of the stale
 //!   `pull_request` run (R-276), run under bash with a stand-in `gh`, re-runs it on the live head and leaves a
@@ -837,6 +843,263 @@ mod notice_not_applicable {
             "mutants.yml",
             "            report 0 \"not applicable\" \\\n",
             "            report 0 \"not applicable: no surviving mutant\" \\\n"
+        ))
+    );
+}
+
+/// The longest, in minutes, a step before `mutants-check`'s report, or a checkout or cache step of a `mutants.yml`
+/// job, may run before its own limit fails it: twice the workflow's longest normal step, a full-history checkout of
+/// 189 s (`mutants.yml`'s comment on the limits).
+const STEP_LIMIT: u64 = 10;
+
+/// `mutants-check` is never left unreported by a stalled step: each step before its report, and each checkout and cache
+/// step of every job but the shards, has a limit of its own of at most `STEP_LIMIT` minutes. The report runs only when
+/// every step before it passed (no `if:`), so one failing, a timeout among them, or cancelled skips it and fails the
+/// job; the step after it runs exactly then (`always()`, on the report skipped) and, run under bash, fails with an
+/// error annotation and a summary naming each earlier step's outcome.
+fn check_step_limits(yml: &str) {
+    let wf = parse(yml);
+    let within = |s: &Value| {
+        s["timeout-minutes"]
+            .as_u64()
+            .is_some_and(|m| (1..=STEP_LIMIT).contains(&m))
+    };
+    let name = |s: &Value| {
+        let n = text(&s["name"]);
+        if n.is_empty() {
+            text(&s["uses"])
+        } else {
+            n
+        }
+    };
+    let steps = wf["jobs"]["mutants-check"]["steps"]
+        .as_array()
+        .expect("merge_ready: mutants-check's steps");
+    let at = steps
+        .iter()
+        .position(|s| s["name"].as_str() == Some("Report mutants-check"))
+        .expect("merge_ready: mutants-check has no report step");
+    assert!(
+        at > 0,
+        "merge_ready: mutants-check's report has no step before it"
+    );
+    for s in &steps[..at] {
+        assert!(
+            within(s),
+            "merge_ready: mutants-check's step `{}` has no limit of its own of at most {STEP_LIMIT} minutes \
+             (timeout-minutes: {})",
+            name(s),
+            s["timeout-minutes"]
+        );
+    }
+    let jobs = wf["jobs"]
+        .as_object()
+        .expect("merge_ready: mutants.yml's jobs");
+    // The shards' steps are not checked: `xtask/tests/qa_TASK-M0-23.rs` reads the `mutants` job's first
+    // `timeout-minutes:` as the per-shard limit (REQ-VAL-149), so a step limit before it waits on the qa-file exception
+    // put to the orchestrator in PR #389's fix round 3.
+    for (id, job) in jobs.iter().filter(|(id, _)| id.as_str() != "mutants") {
+        for s in job["steps"].as_array().into_iter().flatten() {
+            let uses = text(&s["uses"]);
+            if ["actions/checkout@", "Swatinem/rust-cache@", "actions/cache"]
+                .iter()
+                .any(|p| uses.starts_with(p))
+            {
+                assert!(
+                    within(s),
+                    "merge_ready: {id}'s step `{uses}` has no limit of its own of at most {STEP_LIMIT} minutes \
+                     (timeout-minutes: {})",
+                    s["timeout-minutes"]
+                );
+            }
+        }
+    }
+    let report_step = &steps[at];
+    assert!(
+        text(&report_step["id"]) == "report" && report_step.get("if").is_none(),
+        "merge_ready: mutants-check's report is not `report`, run only when every step before it passed (if: {})",
+        report_step["if"]
+    );
+    let stalled = steps[at + 1..]
+        .iter()
+        .find(|s| s["name"].as_str() == Some("A step before the report did not finish"))
+        .expect(
+            "merge_ready: mutants-check has no step saying a step before the report did not finish",
+        );
+    assert_eq!(
+        text(&stalled["if"]),
+        "always() && steps.report.outcome == 'skipped'",
+        "merge_ready: mutants-check's step after a stall does not run when the report is skipped, and only then"
+    );
+    for (key, want) in [
+        ("CHECKOUT", "${{ steps.checkout.outcome }}"),
+        ("CLASSIFY", "${{ steps.changes.outcome }}"),
+    ] {
+        assert_eq!(
+            text(&stalled["env"][key]),
+            want,
+            "merge_ready: mutants-check's step after a stall does not read `{key}`, an earlier step's outcome"
+        );
+    }
+    assert!(
+        steps[..at].iter().any(|s| text(&s["id"]) == "checkout")
+            && steps[..at].iter().any(|s| text(&s["id"]) == "changes"),
+        "merge_ready: mutants-check's step after a stall reads the outcome of a step that is not before the report"
+    );
+    let script = stalled["run"].as_str().expect("run");
+    for (i, (checkout, classify)) in [
+        ("failure", "skipped"),
+        ("cancelled", "skipped"),
+        ("success", "failure"),
+        ("success", "cancelled"),
+    ]
+    .iter()
+    .enumerate()
+    {
+        let got = report(
+            &format!("stall_{i}"),
+            script,
+            &[("CHECKOUT", checkout), ("CLASSIFY", classify)],
+        );
+        let says = format!("The checkout: {checkout}; the classification: {classify}.");
+        assert!(
+            !got.ok
+                && got.summary.contains("a step before the report did not finish")
+                && got.summary.contains(&says)
+                && got.log.contains("::error title=mutants-check::"),
+            "merge_ready: mutants-check {} after the checkout {checkout} and the classification {classify}, \
+             summary `{}`, not failed with an error annotation and `{says}`: {}",
+            if got.ok { "passed" } else { "failed" },
+            got.summary.trim(),
+            got.log
+        );
+    }
+}
+
+#[test]
+fn merge_ready_mutants_check_reports_a_stalled_step() {
+    check_step_limits(&workflow("mutants.yml"));
+}
+
+negative_control!(
+    merge_ready_mutants_check_reports_a_stalled_step,
+    "mutants-check's checkout with no limit of its own, so a stall runs to the job's 355 minutes",
+    expected = "mutants-check's step `actions/checkout@v4` has no limit of its own",
+    check_step_limits(&edited(
+        "mutants.yml",
+        "        id: checkout\n        timeout-minutes: 10\n",
+        "        id: checkout\n"
+    ))
+);
+
+mod stall_limit_too_long {
+    use super::*;
+    negative_control!(
+        merge_ready_mutants_check_reports_a_stalled_step,
+        "mutants-check's classification limited one minute past the bound",
+        expected = "mutants-check's step `scripts/ci_changes.sh detect` has no limit of its own of at most 10 minutes",
+        check_step_limits(&edited(
+            "mutants.yml",
+            "merge-ready'\n        timeout-minutes: 5\n",
+            "merge-ready'\n        timeout-minutes: 11\n"
+        ))
+    );
+}
+
+mod stall_fixture_cache {
+    use super::*;
+    negative_control!(
+        merge_ready_mutants_check_reports_a_stalled_step,
+        "mutants-fixture's cargo registry restore with no limit of its own",
+        expected = "mutants-fixture's step `Swatinem/rust-cache@v2` has no limit of its own",
+        check_step_limits(&edited(
+            "mutants.yml",
+            "        if: steps.changes.outputs.tier != 'docs'\n        timeout-minutes: 5\n",
+            "        if: steps.changes.outputs.tier != 'docs'\n"
+        ))
+    );
+}
+
+mod stall_verdict_checkout {
+    use super::*;
+    negative_control!(
+        merge_ready_mutants_check_reports_a_stalled_step,
+        "mutants-verdict's checkout with no limit of its own",
+        expected = "mutants-verdict's step `actions/checkout@v4` has no limit of its own",
+        check_step_limits(&edited(
+            "mutants.yml",
+            "      contents: read\n    steps:\n      - uses: actions/checkout@v4\n        timeout-minutes: 10\n",
+            "      contents: read\n    steps:\n      - uses: actions/checkout@v4\n"
+        ))
+    );
+}
+
+mod stall_unsaid {
+    use super::*;
+    negative_control!(
+        merge_ready_mutants_check_reports_a_stalled_step,
+        "no step after the report, so a stalled checkout fails mutants-check with nothing saying why",
+        expected = "mutants-check has no step saying a step before the report did not finish",
+        check_step_limits(&edited(
+            "mutants.yml",
+            "      - name: A step before the report did not finish\n",
+            "      - name: After the report\n"
+        ))
+    );
+}
+
+mod stall_step_skipped {
+    use super::*;
+    negative_control!(
+        merge_ready_mutants_check_reports_a_stalled_step,
+        "the step after a stall run only on success, so it is skipped exactly when it is needed",
+        expected = "does not run when the report is skipped",
+        check_step_limits(&edited(
+            "mutants.yml",
+            "        if: always() && steps.report.outcome == 'skipped'\n",
+            "        if: steps.report.outcome == 'skipped'\n"
+        ))
+    );
+}
+
+mod stall_unread {
+    use super::*;
+    negative_control!(
+        merge_ready_mutants_check_reports_a_stalled_step,
+        "the step after a stall not reading the checkout's outcome",
+        expected = "does not read `CHECKOUT`",
+        check_step_limits(&edited(
+            "mutants.yml",
+            "          CHECKOUT: ${{ steps.checkout.outcome }}\n",
+            ""
+        ))
+    );
+}
+
+mod stall_passed {
+    use super::*;
+    negative_control!(
+        merge_ready_mutants_check_reports_a_stalled_step,
+        "the step after a stall passing, so the job's failure carries no error annotation",
+        expected = "after the checkout failure and the classification skipped",
+        check_step_limits(&edited(
+            "mutants.yml",
+            "          echo \"::error title=mutants-check::$title. $why\"\n          exit 1\n",
+            "          exit 0\n"
+        ))
+    );
+}
+
+mod stall_report_guarded {
+    use super::*;
+    negative_control!(
+        merge_ready_mutants_check_reports_a_stalled_step,
+        "the report run always, so the step after a stall never runs",
+        expected = "run only when every step before it passed",
+        check_step_limits(&edited(
+            "mutants.yml",
+            "        id: report\n",
+            "        id: report\n        if: always()\n"
         ))
     );
 }

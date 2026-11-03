@@ -327,6 +327,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+        timeout-minutes: 10
       # What this change touches (R-656, R-677): on a pull request of tier (c), docs only, every later step is skipped
       # and the job passes; the fixture shows the gate can fire, and no such change reaches the gate. Unlike the
       # shards, it does not wait for Rust under `crates/`: a change to the gate's own configuration (`.cargo/`,
@@ -335,6 +336,7 @@ jobs:
       # and a classification that says nothing, runs it in full.
       - name: scripts/ci_changes.sh detect
         id: changes
+        timeout-minutes: 5
         run: scripts/ci_changes.sh detect
       # The shards' containment holds on a runner (`scripts/contain.sh`), seen in a second, not after a shard's baseline.
       - name: scripts/contain.sh check
@@ -351,6 +353,7 @@ jobs:
       # The cargo registry `ci.yml`'s `ci` job saves on a push to `main`, restored read-only under its key (R-337).
       - uses: Swatinem/rust-cache@v2
         if: steps.changes.outputs.tier != 'docs'
+        timeout-minutes: 5
         with:
           prefix-key: cargo-registry
           shared-key: ci
@@ -438,12 +441,14 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
+        timeout-minutes: 10
       # The toolchain rust-toolchain.toml pins, with its components: rust-gpu's nightly, on which the whole workspace
       # builds (R-169).
       - name: rustup toolchain install (rust-toolchain.toml)
         run: rustup toolchain install
       # The cargo registry `ci.yml`'s `ci` job saves on a push to `main`, restored read-only under its key (R-337).
       - uses: Swatinem/rust-cache@v2
+        timeout-minutes: 5
         with:
           prefix-key: cargo-registry
           shared-key: ci
@@ -479,13 +484,21 @@ jobs:
 
   # `mutants-check`, the required status check on `main` (R-305), reported by every run of this workflow as a job of its
   # own run (R-678; the header above). `always()`: it runs whatever the verdict ended in, skipped included, so it is
-  # never itself skipped, which GitHub counts as passed. Its one step concludes it:
+  # never itself skipped, which GitHub counts as passed. Its report step concludes it:
   # - the merge-ready run: the verdict's result, success only if `mutants-verdict` passed;
   # - a change with no `.rs` file under `crates/` (`mutants=false`), or a head that is not merge-ready (a push, which
   #   takes the label off, or the label absent): success, "not applicable", with its reason in the job's summary;
   # - another label put on or taken off a merge-ready head: the result of `mutants-verdict` in that head's latest
   #   merge-ready run, waited for while it runs; with no such run on the head, or the head superseded, failure.
   # A classification that fails fails it; an empty one is not `mutants=false`.
+  # A step before the report that fails, or stalls past its own limit, fails `mutants-check`, reported: the report is
+  # then skipped and the job fails, and the step after it, which runs only then and needs nothing of the tree, says
+  # which step did not finish, in the check run's error annotation and the job's summary.
+  # The limits (applied per R-369), sized from this workflow's runs on 3 Nov 2026 (140 shard, 17 fixture, 16 verdict
+  # and 32 report and pending checkouts): a checkout 10 minutes, its longest 189 s (a shard's full history) against a
+  # median of 17 s; the classification 5 minutes, its longest 21 s; a cache restore 5 minutes, its longest 19 s. On
+  # ad883784 a checkout stalled past 11 minutes (run 41702550011), which the 355 minutes below would have left
+  # unreported for hours.
   mutants-check:
     if: always()
     needs: mutants-verdict
@@ -499,13 +512,17 @@ jobs:
       pull-requests: read
     steps:
       - uses: actions/checkout@v4
+        id: checkout
+        timeout-minutes: 10
       # What this change touches (R-677): a change with no `.rs` file under `crates/` has no mutant the gate runs. The
       # merge-ready run reports its verdict whatever the change, and does not classify it.
       - name: scripts/ci_changes.sh detect
         id: changes
         if: github.event.action != 'labeled' || github.event.label.name != 'merge-ready'
+        timeout-minutes: 5
         run: scripts/ci_changes.sh detect
       - name: Report mutants-check
+        id: report
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
@@ -576,3 +593,20 @@ jobs:
             echo "waiting for the merge-ready run ($wait)"
             sleep 30
           done
+      # The report skipped: a step before it failed, stalled past its own limit or was cancelled, and the job fails.
+      # This says so where the report would have, its script here and needing nothing of the tree.
+      - name: A step before the report did not finish
+        if: always() && steps.report.outcome == 'skipped'
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          CHECKOUT: ${{ steps.checkout.outcome }}
+          CLASSIFY: ${{ steps.changes.outcome }}
+        run: |
+          set -uo pipefail
+          title="a step before the report did not finish"
+          why="The checkout: ${CHECKOUT:-not run}; the classification: ${CLASSIFY:-not run}. A step failed, or stalled"
+          why="$why past its own limit; re-run the job."
+          echo "mutants-check on $HEAD_SHA: $title. $why"
+          printf '## mutants-check: %s\n\n%s\n' "$title" "$why" >> "${GITHUB_STEP_SUMMARY:-/dev/null}"
+          echo "::error title=mutants-check::$title. $why"
+          exit 1
