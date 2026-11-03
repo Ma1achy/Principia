@@ -63,6 +63,11 @@
 //!   each gate's script run under bash: `ci`, `xtask-ci` and the three GPU gates pass on every tier. `mutants.yml`'s
 //!   `mutants-pending`, its post step run with a stand-in `gh`, posts `mutants-check` passed with its reason on a data
 //!   or docs change and pending on a code one (R-677); `pr-check` and `reviews-complete` read no classification.
+//! - `ci_changes_mutants_fixture_runs_on_the_gates_own_files`: `mutants.yml`'s `mutants-fixture`, the gate's self-test on
+//!   its fixtures, runs every step after its classification on a change to the gate's configuration
+//!   (`.cargo/mutants.toml`, `fixtures/mutants/untested/`, `fixtures/mutants/caps/`), which has no Rust under `crates/`,
+//!   and on a crate's source and tier (b)'s data, as before R-677; on a docs change it skips them all (R-677, as applied
+//!   after PR #382's code review).
 //!
 //! Each test has its registered negative control (R-176), which feeds the same check a script or workflow differing in
 //! the one respect it turns on. The workflows are parsed with PyYAML, as `plan/check_plan.py` and the qa tests that read
@@ -1325,10 +1330,11 @@ fn requirement_loaders() -> Vec<(String, String)> {
 }
 
 /// Each loader of `plan/requirements.yaml` reads only fields of `fields`'s CODE_FIELDS, but a test tier (b) runs on a
-/// plan-data change (ci.yml's plan-data steps, from `wf`), which then checks the field, and the classifier's tests,
-/// which name fields to classify them.
+/// plan-data change (ci.yml's plan-data steps, from `wf`), which then checks the field, and the classifier's tests
+/// ([`runs_classifier`]), which name fields to classify them.
 fn check_code_fields(fields: &str, wf: &str, loaders: &[(String, String)]) {
     let code = field_set(fields, "CODE_FIELDS");
+    let classifier = classifier_tests(loaders);
     let known = requirement_fields();
     let plan = data_tests(&parse(wf), "plan_data");
     // Not vacuous: the gates' check of a threshold's requirement, and gate.yml's results by method, are found.
@@ -1346,7 +1352,7 @@ fn check_code_fields(fields: &str, wf: &str, loaders: &[(String, String)]) {
     }
     let mut wrong = Vec::new();
     for (file, text) in loaders {
-        if CLASSIFIER_TESTS.contains(&file.as_str()) {
+        if classifier.contains(file) {
             continue;
         }
         let path = Path::new(file);
@@ -1388,6 +1394,25 @@ negative_control!(
         &requirement_loaders(),
     )
 );
+
+mod not_a_classifier_test_reads_a_field {
+    use super::*;
+    negative_control!(
+        ci_changes_code_fields_cover_every_loader,
+        "a test naming a requirement field and the classifier, but not running it",
+        expected = "xtask/tests/qa_not_a_classifier_test.rs reads `statement`",
+        {
+            let (file, text) = NOT_A_CLASSIFIER_TEST;
+            let mut loaders = requirement_loaders();
+            loaders.push((file.to_owned(), text.to_owned()));
+            check_code_fields(
+                &read("scripts/ci_req_fields.py"),
+                &read(".github/workflows/ci.yml"),
+                &loaders,
+            )
+        }
+    );
+}
 
 mod statement_reader_dropped {
     use super::*;
@@ -1731,13 +1756,78 @@ const WALKERS: &[(&str, &str, &str)] = &[
     ),
 ];
 
-/// The tests of the classifier, which name the data to classify it, no reading: the classifier is code, so they run
-/// with full CI whenever it changes.
-const CLASSIFIER_TESTS: &[&str] = &[
-    "xtask/tests/ci_changes.rs",
-    "xtask/tests/qa_R-656_ci_changes.rs",
-    "xtask/tests/qa_R-662_ci_scope.rs",
-];
+/// Whether `text`, a test file's source, runs the classifier: outside whole-line comments, one string literal is
+/// `scripts/ci_changes.sh` and one has `classify` or `detect`, the script's subcommands, as a whole word (`.arg("detect")`,
+/// `"bash \"$0\" classify < \"$1\""`). Such a test names plan paths and field lines to classify them, no reading: the
+/// classifier is code, so it runs with full CI whenever the classifier changes, and a new one needs no list kept here.
+/// Its limit: a test that also reads the plan's data for itself is taken for a classifier test.
+fn runs_classifier(text: &str) -> bool {
+    let (mut names, mut runs) = (false, false);
+    for line in text.lines() {
+        if line.trim_start().starts_with("//") {
+            continue;
+        }
+        for lit in literals(line) {
+            names |= lit == "scripts/ci_changes.sh";
+            runs |= lit
+                .split(|c: char| c.is_whitespace() || c == '"')
+                .any(|w| w == "classify" || w == "detect");
+        }
+    }
+    names && runs
+}
+
+/// The test files (a `tests/` folder's) among `sources`, as (file, text), that run the classifier ([`runs_classifier`]).
+/// Not vacuous: this file, which runs it, is among them.
+fn classifier_tests(sources: &[(String, String)]) -> Vec<String> {
+    let out: Vec<String> = sources
+        .iter()
+        .filter(|(file, text)| {
+            Path::new(file)
+                .parent()
+                .is_some_and(|p| p.ends_with("tests"))
+                && runs_classifier(text)
+        })
+        .map(|(file, _)| file.clone())
+        .collect();
+    assert!(
+        out.iter().any(|f| f == "xtask/tests/ci_changes.rs"),
+        "ci_changes: the classifier's own tests are not recognised as running it"
+    );
+    out
+}
+
+/// Every test file, each crate's and xtask's `tests/`, as (file, text).
+fn test_sources() -> Vec<(String, String)> {
+    let mut files = Vec::new();
+    let crates = std::fs::read_dir(root().join("crates")).expect("ci_changes: crates/");
+    for e in crates {
+        let package = Path::new("crates").join(e.expect("entry").file_name());
+        sources(&package.join("tests"), ".rs", &mut files);
+    }
+    sources(Path::new("xtask/tests"), ".rs", &mut files);
+    files.sort();
+    files
+        .into_iter()
+        .map(|f| {
+            let text = std::fs::read_to_string(root().join(&f)).expect("ci_changes: a test source");
+            (f.to_string_lossy().into_owned(), text)
+        })
+        .collect()
+}
+
+#[cfg(feature = "controls")]
+/// A test that names plan paths and a requirement field, and names the classifier, but does not run it: a comment and a
+/// literal speak of classifying, and no literal runs a subcommand. The guards must still flag it.
+const NOT_A_CLASSIFIER_TEST: (&str, &str) = (
+    "xtask/tests/qa_not_a_classifier_test.rs",
+    "// Runs `scripts/ci_changes.sh classify`, its comment says, but it does not.\n\
+     const SCRIPT: &str = \"scripts/ci_changes.sh\";\n\
+     const NOTE: &str = \"reclassify-later\";\n\
+     const REQS: &str = \"plan/requirements.yaml\";\n\
+     const TASKS: &str = \"plan/tasks.yaml\";\n\
+     fn statement(line: &str) -> bool { line.starts_with(\"  statement: \") }\n",
+);
 
 /// The step condition `ci-workspace` runs a tier (b) flag's readers' tests on.
 fn data_condition(flag: &str) -> String {
@@ -1794,7 +1884,15 @@ fn reader_test(reader: &str) -> Option<(String, String)> {
     (!package.contains('/')).then(|| (package.to_owned(), stem))
 }
 
-fn check_data_readers(script: &str, wf: &str, named: &[(String, String)]) {
+/// Each reader in `named` (reader, file), and each walker listed by hand, of tier (b)'s data has its test run by
+/// `ci-workspace`'s step for that data, but the tests among `tests` (file, text) that run the classifier.
+fn check_data_readers(
+    script: &str,
+    wf: &str,
+    named: &[(String, String)],
+    tests: &[(String, String)],
+) {
+    let classifier = classifier_tests(tests);
     let wf = parse(wf);
     let plan = data_tests(&wf, "plan_data");
     let gui = data_tests(&wf, "gui_data");
@@ -1826,7 +1924,7 @@ fn check_data_readers(script: &str, wf: &str, named: &[(String, String)]) {
     }
     let mut wrong = Vec::new();
     for (reader, file) in &readers {
-        if CLASSIFIER_TESTS.contains(&reader.as_str()) {
+        if classifier.contains(reader) {
             continue;
         }
         let verdict = classify(script, &[file.as_str()]);
@@ -1858,6 +1956,7 @@ fn ci_changes_data_tier_runs_every_reader() {
         &read("scripts/ci_changes.sh"),
         &read(".github/workflows/ci.yml"),
         &named_files(),
+        &test_sources(),
     );
 }
 
@@ -1869,8 +1968,31 @@ negative_control!(
         &read("scripts/ci_changes.sh"),
         &edited(".github/workflows/ci.yml", " --test gate_report ", " "),
         &named_files(),
+        &test_sources(),
     )
 );
+
+mod not_a_classifier_test_reads_plan_data {
+    use super::*;
+    negative_control!(
+        ci_changes_data_tier_runs_every_reader,
+        "a test naming the plan's task data and the classifier, but not running it",
+        expected = "xtask/tests/qa_not_a_classifier_test.rs reads plan/tasks.yaml",
+        {
+            let (file, text) = NOT_A_CLASSIFIER_TEST;
+            let mut named = named_files();
+            named.push((file.to_owned(), "plan/tasks.yaml".to_owned()));
+            let mut tests = test_sources();
+            tests.push((file.to_owned(), text.to_owned()));
+            check_data_readers(
+                &read("scripts/ci_changes.sh"),
+                &read(".github/workflows/ci.yml"),
+                &named,
+                &tests,
+            )
+        }
+    );
+}
 
 mod walker_dropped {
     use super::*;
@@ -1882,6 +2004,7 @@ mod walker_dropped {
             &read("scripts/ci_changes.sh"),
             &edited(".github/workflows/ci.yml", " --test qa_TASK-M0-36 ", " "),
             &named_files(),
+            &test_sources(),
         )
     );
 }
@@ -1900,6 +2023,7 @@ mod gui_reader_dropped {
                 "        run: cargo nextest run -p render --test qa_TASK-M7-02\n"
             ),
             &named_files(),
+            &test_sources(),
         )
     );
 }
@@ -1918,6 +2042,7 @@ mod workspace_build {
                 "        run: cargo nextest run -p validation --workspace --test part6_catalogue\n"
             ),
             &named_files(),
+            &test_sources(),
         )
     );
 }
@@ -2939,5 +3064,157 @@ mod gpu_gate_on_docs_only {
             ),
             &read(".github/workflows/mutants.yml"),
         )
+    );
+}
+
+// ---- The mutants gate's self-test ----------------------------------------------------------------------------------
+
+/// Changes `mutants-fixture` must run on, each with what it is: the gate's own configuration (no Rust under `crates/`),
+/// a crate's source and tier (b)'s data.
+const FIXTURE_RUNS: [(&str, &[&str]); 5] = [
+    ("a `.cargo/mutants.toml` change", &[".cargo/mutants.toml"]),
+    (
+        "a `fixtures/mutants/` change",
+        &["fixtures/mutants/untested/src/lib.rs"],
+    ),
+    (
+        "a change to the caps' fixture",
+        &["fixtures/mutants/caps/src/lib.rs"],
+    ),
+    ("a crate's source change", &["crates/kernel/src/lib.rs"]),
+    ("a data change (the plan's task data)", &["plan/tasks.yaml"]),
+];
+
+/// The change `mutants-fixture` must skip on: docs only.
+const FIXTURE_SKIPS: (&str, &[&str]) = (
+    "a docs change",
+    &["docs/design/principia_dd_replication.md"],
+);
+
+/// Which of `mutants.yml`'s `mutants-fixture` steps after its classification run on the verdict `script` gives
+/// `paths`: each step's name and whether its `if:` holds. Steps whose `if:` is `always()` (the report upload, which
+/// costs nothing) are left out.
+fn fixture_steps(yml: &str, script: &str, paths: &[&str]) -> Vec<(String, bool)> {
+    use std::collections::BTreeMap;
+    let v = classify(script, paths);
+    let verdict = [
+        ("tier", v.tier.clone()),
+        ("docs_only", (v.tier != "code").to_string()),
+        ("gpu", v.gpu.to_string()),
+        ("plan_data", v.plan_data.to_string()),
+        ("gui_data", v.gui_data.to_string()),
+        ("mutants", v.mutants.to_string()),
+    ];
+    let wf = parse(yml);
+    let steps = wf["jobs"]["mutants-fixture"]["steps"]
+        .as_array()
+        .expect("ci_changes: mutants-fixture's steps")
+        .clone();
+    let after = steps
+        .iter()
+        .position(|s| {
+            text(&s["id"]) == "changes" && text(&s["run"]).trim() == "scripts/ci_changes.sh detect"
+        })
+        .expect("ci_changes: mutants-fixture does not run the classifier");
+    let results = BTreeMap::new();
+    let outputs = BTreeMap::new();
+    let ctx = Ctx {
+        action: "labeled",
+        results: &results,
+        outputs: &outputs,
+        needs: &[],
+    };
+    let mut out = Vec::new();
+    for s in &steps[after + 1..] {
+        let mut cond = text(&s["if"]);
+        if cond.trim().starts_with("always()") {
+            continue;
+        }
+        for (k, val) in &verdict {
+            cond = cond.replace(&format!("steps.changes.outputs.{k}"), &format!("'{val}'"));
+        }
+        let runs = cond.trim().is_empty() || evaluate(&cond, &ctx) == "true";
+        let name = format!("{}{}", text(&s["name"]), text(&s["uses"]));
+        out.push((name, runs));
+    }
+    out
+}
+
+fn check_fixture_gate(yml: &str) {
+    let script = read("scripts/ci_changes.sh");
+    for (what, paths) in FIXTURE_RUNS {
+        let steps = fixture_steps(yml, &script, paths);
+        assert!(
+            steps.len() >= 2,
+            "ci_changes: mutants-fixture has no work after its classification"
+        );
+        for (name, runs) in &steps {
+            assert!(
+                runs,
+                "ci_changes: mutants-fixture skips `{name}` on {what}, a change that configures or reaches the gate"
+            );
+        }
+    }
+    let (what, paths) = FIXTURE_SKIPS;
+    for (name, runs) in fixture_steps(yml, &script, paths) {
+        assert!(
+            !runs,
+            "ci_changes: mutants-fixture runs `{name}` on {what}, which reaches no gate"
+        );
+    }
+}
+
+#[test]
+fn ci_changes_mutants_fixture_runs_on_the_gates_own_files() {
+    check_fixture_gate(&read(".github/workflows/mutants.yml"));
+}
+
+#[cfg(feature = "controls")]
+/// `mutants.yml` with every `mutants-fixture` step gated on `from` replaced by `to`.
+fn fixture_gated(to: &str) -> String {
+    let text = read(".github/workflows/mutants.yml");
+    let from = "        if: steps.changes.outputs.tier != 'docs'\n";
+    assert!(
+        text.matches(from).count() >= 2,
+        "ci_changes: the control's edit target is gone from mutants.yml: {from}"
+    );
+    text.replace(from, to)
+}
+
+mod fixture_on_crates_rust_only {
+    use super::*;
+    negative_control!(
+        ci_changes_mutants_fixture_runs_on_the_gates_own_files,
+        "mutants.yml whose fixture steps run only when Rust under crates/ changed",
+        expected =
+            "on a `.cargo/mutants.toml` change, a change that configures or reaches the gate",
+        check_fixture_gate(&fixture_gated(
+            "        if: steps.changes.outputs.mutants != 'false'\n"
+        ))
+    );
+}
+
+mod fixture_on_code_tier_only {
+    use super::*;
+    negative_control!(
+        ci_changes_mutants_fixture_runs_on_the_gates_own_files,
+        "mutants.yml whose fixture steps run only on tier (a)",
+        expected =
+            "on a data change (the plan's task data), a change that configures or reaches the gate",
+        check_fixture_gate(&fixture_gated(
+            "        if: steps.changes.outputs.docs_only != 'true'\n"
+        ))
+    );
+}
+
+mod fixture_on_docs_too {
+    use super::*;
+    negative_control!(
+        ci_changes_mutants_fixture_runs_on_the_gates_own_files,
+        "mutants.yml whose fixture steps run on every change",
+        expected = "on a docs change, which reaches no gate",
+        check_fixture_gate(&fixture_gated(
+            "        if: steps.changes.outputs.tier != ''\n"
+        ))
     );
 }

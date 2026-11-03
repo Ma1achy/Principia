@@ -358,16 +358,18 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      # What this change touches (R-656, R-677): on a pull request with no `.rs` file under `crates/` every later step
-      # is skipped and the job passes; the fixture shows the gate can fire, and no such change reaches the gate.
-      # `scripts/ci_changes.sh` decides (`mutants`); any other change, and a classification that says neither, runs
-      # it in full.
+      # What this change touches (R-656, R-677): on a pull request of tier (c), docs only, every later step is skipped
+      # and the job passes; the fixture shows the gate can fire, and no such change reaches the gate. Unlike the
+      # shards, it does not wait for Rust under `crates/`: a change to the gate's own configuration (`.cargo/`,
+      # `fixtures/mutants/`, `scripts/contain.sh`, this workflow's pins, xtask's mutants-check) is tier (a) and runs
+      # it, as do the data of tier (b), as before R-677. `scripts/ci_changes.sh` decides (`tier`); any other change,
+      # and a classification that says nothing, runs it in full.
       - name: scripts/ci_changes.sh detect
         id: changes
         run: scripts/ci_changes.sh detect
       # The shards' containment holds on a runner (`scripts/contain.sh`), seen in a second, not after a shard's baseline.
       - name: scripts/contain.sh check
-        if: steps.changes.outputs.mutants != 'false'
+        if: steps.changes.outputs.tier != 'docs'
         env:
           PRIN_CONTAIN: required
         shell: bash scripts/contain.sh check {0}
@@ -375,11 +377,11 @@ jobs:
       # The toolchain rust-toolchain.toml pins, with its components: rust-gpu's nightly, on which the whole workspace
       # builds (R-169).
       - name: rustup toolchain install (rust-toolchain.toml)
-        if: steps.changes.outputs.mutants != 'false'
+        if: steps.changes.outputs.tier != 'docs'
         run: rustup toolchain install
       # The cargo registry `ci.yml`'s `ci` job saves on a push to `main`, restored read-only under its key (R-337).
       - uses: Swatinem/rust-cache@v2
-        if: steps.changes.outputs.mutants != 'false'
+        if: steps.changes.outputs.tier != 'docs'
         with:
           prefix-key: cargo-registry
           shared-key: ci
@@ -389,14 +391,14 @@ jobs:
       # cargo-nextest: the fixtures' tests run through it, as the shards' do (`test_tool` in `.cargo/mutants.toml`,
       # R-388 item 4).
       - uses: taiki-e/install-action@v2
-        if: steps.changes.outputs.mutants != 'false'
+        if: steps.changes.outputs.tier != 'docs'
         with:
           tool: cargo-mutants@27.1.0,cargo-nextest@0.9.146
       # Both runs read the caps and the test tool from `.cargo/mutants.toml` (REQ-VAL-179), as every `cargo mutants`
       # run does: with `--dir`, cargo-mutants would otherwise read the fixture's own `.cargo/mutants.toml`, which does
       # not exist.
       - name: The gate fires on the fixture (REQ-VAL-148)
-        if: steps.changes.outputs.mutants != 'false'
+        if: steps.changes.outputs.tier != 'docs'
         run: |
           fixture=fixtures/mutants/untested
           if cargo mutants --dir "$fixture" --in-diff "$fixture/change.diff" --config .cargo/mutants.toml \
@@ -415,7 +417,7 @@ jobs:
       # process, whose allocation fails, so it is caught. The controls (R-176) bound each under its cap: a 5 s hang under
       # the 60 s floor is no timeout, and a 256 MiB allocation under the cap is caught by its assertion, not the cap.
       - name: The caps fire on their fixture (REQ-VAL-179)
-        if: steps.changes.outputs.mutants != 'false'
+        if: steps.changes.outputs.tier != 'docs'
         run: |
           fixture=fixtures/mutants/caps
           caps() {
