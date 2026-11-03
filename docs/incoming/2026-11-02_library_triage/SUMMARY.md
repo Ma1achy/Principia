@@ -299,6 +299,37 @@ sources named there: eljja, RATISS, Charlie-Zhao, Anosova 1990, Pruett 2003.
    be planned as M9 peek outputs, which needs new requirements, or stay recorded here?
    Queued as RQ-674 in `REVIEW_QUEUE.md`.
 
+## The owner's spot-check of 3 Nov 2026
+
+The owner spot-checked the triage on 3 Nov: of 14 items, 11 confirmed and none wrong, with six fixes asked for before
+any becomes a target. The standing rule from it: the source page is re-read before a triage item becomes a target. Each
+fix below was made from the source itself, re-read on 3 Nov.
+
+1. **Li, Li, He & Liao 2021.** Both printed counts are quoted, with where each appears: 1658 and 1646 new in the
+   abstract (p. 1) and § 4 (p. 9); 1653 and 1642 new in § 3.2 (p. 6). The workbook stores at most 15 significant
+   digits, not 90 (`docs/incoming/2026-10-31_library_triage/triage.csv`:79; LI21-1's precision and § 5.2 in
+   `docs/incoming/2026-10-29_research_batches/README.md`).
+2. **Tanikawa, Umehara & Abe 1995, Table IV.** Re-read from p. 360 of the held PDF (`docs/incoming/_local/`). The
+   transcription committed on 28 Oct (`docs/incoming/2026-10-28_external_sources/tanikawa_umehara_abe_1995/table4_reconciled.csv`)
+   matches the page in all 80 cells. The two misprints are kept as printed and noted: row 9's x is printed 0.49111357,
+   and 0.4911357 fits; row 1's α is printed π/2, and the rule gives π/3 (`triage.csv`:220;
+   `docs/incoming/2026-10-28_external_sources/README.md`).
+3. **Horn et al. 2025.** The t ≤ 10 horizon is unverified: it rests on the batch's provenance file and 5 runs, and the
+   paper trains to t = 5 and tests to t = 7 (§ 5.4, p. 14). It is to be checked against the HDF5 itself when the HDF5 is
+   next touched (row 216; `triage.csv`:25; gap 7).
+4. **`eucliss_releases.json`.** Missing from the library; the held file with the same bytes is cited (§ "ChatGPT's
+   shortlist and final guide: what was wrong"; row 214).
+5. **The batch-152 fate plane (NOW-28).** Mirror-pair escaper agreement is 0.97 (t < 10), 0.84 (10–20), 0.63 (20–50)
+   and 0.51 (> 50), which our recount from `fatemap.json` reproduces. It replaces "noise past t ≈ 20" (Top 10 NOW row 1;
+   § "The precision-gap answer"; row 204; gap 5).
+6. **Stone & Leigh 2019 and Ginat & Perets 2021.** Both were fetched and both are committed, though neither is in the
+   research library. Stone & Leigh 2019 is
+   `docs/incoming/2026-10-25_replication/papers/stone_leigh_2019_Nature_576_406_arXiv1909.05272.pdf` (arXiv:1909.05272,
+   sha256 `125e3c2e…76c6`; arXiv's default licence, kept under the licence audit, `decisions.md` § R-643). Ginat &
+   Perets 2021 is `docs/incoming/2026-10-31_fetch_list/papers/ginat_perets_2021_PRX_11_031020.pdf` (Phys. Rev. X 11,
+   031020, CC BY 4.0, from the owner's 31 Oct fetch list, `docs/incoming/2026-10-31_fetch_list/README.md`). The triage
+   mentions them only as context, Stone & Leigh in `triage.csv`:42's conflict. Nothing is left to fetch.
+
 ## Decisions recorded (applied per R-369)
 
 - `EXCLUDE` in the readers' brief is `OFF-FILTER` here, and planetary and hierarchical items are `PARKED`, as in the
