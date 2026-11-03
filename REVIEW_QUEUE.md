@@ -1215,9 +1215,9 @@ papers-11 to 13 addendum"). The question went to the owner on 2 Nov and is unans
 - **File, section:**
   - `decisions.md`:27137, § "R-630 — …", item 9: "Fetch Tanikawa & Mikkola 2021, Standish 1970 and Yasko & Orlov 2015
     (TM-1, LL-3). If any is paywalled, list it for the owner to fetch instead."
-  - `docs/design/principia_dd_replication.md`:280, the LL-3 row: "REQ-VAL-223 (waits: the owner's copies of the two
+  - `docs/design/principia_dd_replication.md`:295, the LL-3 row: "REQ-VAL-223 (waits: the owner's copies of the two
     papers, paywalled, R-630 item 9; …)"; "Li & Liao 2019 p. 3: F1 at (0.6, 0.8, 1) is Standish's 1970 orbit".
-  - `docs/incoming/2026-11-02_library_triage/SUMMARY.md`:284-286, "Open questions for the owner" 1: "Hénon 1974's Table
+  - `docs/incoming/2026-11-02_library_triage/SUMMARY.md`:291-293, "Open questions for the owner" 1: "Hénon 1974's Table
     I A = 0 row is Standish's orbit and matches Li & Liao's F1(0.6, 0.8, 1) period to 2e-10 (ours). Should LL-3 take
     Hénon 1974, already held under R-669, as its independent printed source, so it stops
     waiting on Standish? Or keep waiting?"
@@ -1244,10 +1244,10 @@ come back with the 3D extension.*
   - `decisions.md`:29429, § "R-668 — …", item 5: "Hierarchical triples are out of scope for now, parked with the v2+ 3D
     extension, and the triage's M9 list shrinks by them." It names hierarchical triples, not planetary systems.
   - `docs/incoming/2026-11-02_library_triage/SUMMARY.md`:15-16, "PARKED for hierarchical and planetary systems, parked
-    with the v2+ 3D extension (R-668)", and :94-96, "star-plus-planets, star-planet-moon,
+    with the v2+ 3D extension (R-668)", and :93-94, "star-plus-planets, star-planet-moon,
     circumbinary-planet, co-orbital, free-floating-planet and test-particle problems fail "three massive bodies" or the
     planar subset".
-  - `docs/incoming/2026-11-02_library_triage/SUMMARY.md`:288-289, "Open questions for the owner" 2: "Star-plus-planets
+  - `docs/incoming/2026-11-02_library_triage/SUMMARY.md`:295-296, "Open questions for the owner" 2: "Star-plus-planets
     papers are read here as parked with the hierarchical triples (R-668), so they would return
     with the v2+ 3D extension. Are they parked, or out of scope for good?"
 - **The question:** whether R-668's parking reaches planetary systems, or they are out of scope for good.
@@ -1264,7 +1264,7 @@ papers-11 to 13 addendum"). The question went to the owner on 2 Nov and is unans
 which only the owner may.*
 
 - **File, section:**
-  - `docs/incoming/2026-11-02_library_triage/SUMMARY.md`:291-293, "Open questions for the owner" 3: "Gap 1 already has
+  - `docs/incoming/2026-11-02_library_triage/SUMMARY.md`:298-300, "Open questions for the owner" 3: "Gap 1 already has
     BZ-1C (R-661). Should per-point FTLE maps (gap 2, over the eucliss free-fall plane and the two unequal-mass planes)
     and time-weighted shape-sphere residence statistics (gap 3) be planned as M9 peek outputs, which needs new
     requirements, or stay recorded here?"

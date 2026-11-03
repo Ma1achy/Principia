@@ -239,7 +239,8 @@ Every row with a conflict carries it in the `conflict` column:
 
 ## Corrections to the earlier triage
 
-Recorded here; the earlier files are left unchanged.
+Recorded here; the earlier files are left unchanged, but for `triage.csv` rows 25, 79 and 220, which take the owner's
+spot-check of 3 Nov (§ "The owner's spot-check of 3 Nov 2026").
 
 - **Dey 2026** (`triage-14-80.csv:173`, CONTEXT, RECORD-ONLY, unread): now read. A two-body flyby with a near-massless
   perturber, so OFF-FILTER, SKIP (row 37).
@@ -352,9 +353,10 @@ fix below was made from the source itself, re-read on 3 Nov.
 - cft-rebound and Pickett 2026 are raised from RECORD-ONLY to NOW peeks, and Puodzius 2026 to an M9 peek; Doumbouya
   2026 moves from NOW-27 to M9-43. New ranks run on after the existing ones without re-ranking them.
 - Duplicates cite `<file:row>` and keep the earlier verdict unless corrected; corrections are recorded here, and the
-  earlier files are left unchanged.
+  earlier files are left unchanged, but for the three `triage.csv` rows the owner's spot-check of 3 Nov corrected.
 - The papers-11 to 13 addendum is committed unchanged as `docs/incoming/2026-10-31_library_triage/triage-11-13.csv`,
   because R-669 cites its ranks and these rows cite it. It adds a file and changes nothing existing.
 
 Removed lines in this PR's commits: none in the first two; later commits reword the 17 stale addendum citations, this
-file's addendum paragraph and this line, each listed in its commit's note.
+file's addendum paragraph and this line, and the 3 Nov commits the R-668 and R-669 citations and the values the owner's
+spot-check replaced, each listed in its commit's note.
