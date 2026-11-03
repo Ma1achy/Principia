@@ -3,7 +3,8 @@
 //! - `energy_axes_warped_*` (REQ-CHART-067): every chart with an energy-type axis validates every pixel of a 65 × 65
 //!   grid over `[0,1]²`, its decode feasible; the existing charts are bitwise their own under the default mapping; a
 //!   lone `E` axis decodes `E = U + K_max·t^γ_K`; the warp's `t` axis continues past `t = 1` and is bounded below
-//!   `t = 0`, its `s` axis bounded; a mass-ratio axis keeps every pixel's masses positive and summing to 1.
+//!   `t = 0`, its `s` axis bounded, and R-408 counts it so; a mass-ratio axis keeps every pixel's masses positive and
+//!   summing to 1.
 //! - `energy_axis_linear_option_*` (REQ-CHART-068): under the linear option `(L_z, E)`'s corners past the parabola are
 //!   not a system, never integrated, never warned; the row `t = 1`, the point `(½, 0)` and `L_z = 0` on the column
 //!   `s = ½` agree with the warp; R-408's count makes those pixels forbidden; a mass-ratio axis's non-positive ratio is
@@ -30,12 +31,12 @@ use kernel::chart::physical::{
 };
 #[cfg(feature = "controls")]
 use kernel::chart::tilt::shift_controls;
-use kernel::chart::tilt::Tiltable;
+use kernel::chart::tilt::{Hidden, Shift, Tiltable};
 use kernel::chart::{
-    Burrau, BurrauThetaK, BurrauThetaLz, Chart, ChartDecode, InvariantLE, InvariantLK, Tilt,
-    TiltMap, TiltSpec, Tilted, ValidationResult,
+    Burrau, BurrauThetaK, BurrauThetaLz, Chart, ChartDecode, Constraint, InvariantLE, InvariantLK,
+    Tilt, TiltMap, TiltSpec, Tilted, ValidationResult,
 };
-use kernel::decode::invariant::infeasible;
+use kernel::decode::invariant::{infeasible, Outcome};
 use kernel::decode::{mass, Decoded, Degenerate, Latent};
 use kernel::generated::links::{
     Defaults, Link, LinkParams, Select, Selection, SigmoidAlpha, SigmoidBeta, SigmoidQ,
@@ -286,6 +287,40 @@ negative_control!(
     }
 );
 
+/// A mapped chart is its chart and its mappings, and no more: equal where both are, unequal where either differs, and
+/// its debug form names both.
+fn check_mapped_value(other: Invariant<f64>) {
+    let inv = invariant();
+    let at = |i: Invariant<f64>, m: [Mapping; 2]| Mapped::<_, Defaults>::new(InvariantLK(i), m);
+    let warped = mapped_all(Mapping::Warped);
+    let linear = [Mapping::Warped, Mapping::Linear];
+    assert!(
+        at(inv, linear) == at(inv, linear)
+            && at(inv, linear) != at(inv, warped)
+            && at(inv, linear) != at(other, linear),
+        "a mapped chart's equality is not its chart's and its mappings'"
+    );
+    let text = format!("{:?}", at(inv, linear));
+    assert!(
+        text.starts_with("Mapped {")
+            && text.contains(&format!("{:?}", InvariantLK(inv)))
+            && text.contains("[Warped, Linear]"),
+        "the debug form {text}"
+    );
+}
+
+#[test]
+fn energy_axis_linear_option_mapped_value() {
+    check_mapped_value(off_placeholders());
+}
+
+negative_control!(
+    energy_axis_linear_option_mapped_value,
+    "the same chart read as another must fail",
+    expected = "is not its chart's and its mappings'",
+    check_mapped_value(invariant())
+);
+
 /// The warp's rule (`invariant_rule` through `decode_rule`) is the invariant chart's own decode, bit for bit, over the
 /// grid, on `inv`: the rule's machinery adds nothing to the warp. `through_e` forms `K*` as `(U + K(t)) − U` (the
 /// control), rounding off the chart's `K* = K(t)`.
@@ -375,6 +410,112 @@ negative_control!(
     "E mapped linearly from the centre's U puts K* = E − U off K_max·t^γ_K, so it must fail",
     expected = "does not decode E = U + K_max·t^γ_K",
     check_lone_e(&lone::<AxisE>(0.0, Mapping::Linear))
+);
+
+/// A lone `E` axis under the linear option decodes `E = U₀ + K_max·t`, `U₀` the slice centre's potential, wherever
+/// `validate` takes the pixel: `K* = E − U` at the pixel's own `U`, which varies along `α`, so the decoded `K` is not
+/// `K_max·t` there.
+fn check_linear_lone_e(chart: &MixedEnergy<Alpha, AxisE, Defaults, f64>) {
+    let u0 = kernel::chart::energy::centre_potential::<Defaults, f64>(
+        &chart.frozen,
+        &LinkParams::DEFAULT,
+    );
+    let (mut valid, mut off) = (0, 0);
+    for [u, v] in grid(0.0, 1.0) {
+        if chart.validate(u, v) != ValidationResult::Valid {
+            continue;
+        }
+        valid += 1;
+        let d = chart.decode::<Defaults, f64>(u, v);
+        let e = d.descriptor.V_0 + d.descriptor.K_0;
+        let want = u0 + k_max() * v;
+        assert!(
+            (e - want).abs() <= 1e-12 * (1.0 + want.abs()),
+            "the linear E axis at ({u}, {v}) decodes E = {e}, not U₀ + K_max·t = {want}"
+        );
+        off += u32::from((d.descriptor.K_0 - k_max() * v).abs() > 1e-6);
+    }
+    assert!(
+        valid > 0 && off > 0,
+        "{valid} valid pixels, {off} with K* ≠ K_max·t"
+    );
+}
+
+#[test]
+fn energy_axis_linear_option_lone_e() {
+    check_linear_lone_e(&lone::<AxisE>(0.0, Mapping::Linear));
+}
+
+negative_control!(
+    energy_axis_linear_option_lone_e,
+    "the warped E axis decodes U + K_max·t^γ_K, not U₀ + K_max·t, so it must fail",
+    expected = "not U₀ + K_max·t",
+    check_linear_lone_e(&lone::<AxisE>(0.0, Mapping::Warped))
+);
+
+/// A physical-quantity mixed-axis chart is its parameters and no more: equal where every one is, unequal where any
+/// one differs; its debug form names the chart.
+fn check_physical_values(differ: bool) {
+    let e = lone::<AxisK>(0.0, Mapping::Warped);
+    let edit = |f: &dyn Fn(&mut MixedEnergy<Alpha, AxisK, Defaults, f64>)| {
+        let mut c = e;
+        f(&mut c);
+        c
+    };
+    let changed = [
+        edit(&|c| c.frozen = [0.0; 8]),
+        edit(&|c| c.a_range = [0.0, 1.0]),
+        edit(&|c| c.top = 2.0),
+        edit(&|c| c.gamma_k = 1.0),
+        edit(&|c| c.held = 0.5),
+        edit(&|c| c.mapping = Mapping::Linear),
+    ];
+    for c in changed {
+        assert!(
+            (c != e) == differ && c == c,
+            "a lone K chart's equality is not its parameters': {c:?}"
+        );
+    }
+    let r = ratio_chart([0.1, 10.0], Mapping::Warped);
+    let edit = |f: &dyn Fn(&mut MixedMassRatio<ZAlpha, Defaults, f64>)| {
+        let mut c = r;
+        f(&mut c);
+        c
+    };
+    let changed = [
+        edit(&|c| c.frozen = [0.0; 8]),
+        edit(&|c| c.a_range = [0.0, 1.0]),
+        edit(&|c| c.ratio = [0.2, 5.0]),
+        edit(&|c| c.bodies = [1, 2]),
+        edit(&|c| c.held = 0.25),
+        edit(&|c| c.mapping = Mapping::Linear),
+    ];
+    for c in changed {
+        assert!(
+            (c != r) == differ && c == c,
+            "a mass-ratio chart's equality is not its parameters': {c:?}"
+        );
+    }
+    let (te, tr) = (format!("{e:?}"), format!("{r:?}"));
+    assert!(
+        te.starts_with("MixedEnergy {")
+            && te.contains("held: 0.0")
+            && tr.starts_with("MixedMassRatio {")
+            && tr.contains("bodies: [0, 1]"),
+        "the debug forms {te} and {tr}"
+    );
+}
+
+#[test]
+fn physical_axis_warps_values() {
+    check_physical_values(true);
+}
+
+negative_control!(
+    physical_axis_warps_values,
+    "charts that differ in one parameter read as equal must fail",
+    expected = "equality is not its parameters'",
+    check_physical_values(false)
 );
 
 // ── R-508: the t axis continues past t = 1, bounded below t = 0; s bounded ────────────────────────────────────────────
@@ -473,6 +614,60 @@ fn check_r508(gamma: f64, below: Option<ExtensionType>) {
         }
     }
 }
+
+/// R-408's count through the warp's types on `(L_z, E)` (R-508; R-506 W4), at each edge and just past it: `s` past
+/// either edge and `t < 0` are the domain's end, `t > 1` is counted, a system or forbidden by `validate`, and the edges
+/// themselves are inside; a periodic or pole-crossing side alone is not counted, and a bounded one beside it wins.
+fn check_warped_count(sides: [Sides; 2]) {
+    let past = 1e-9;
+    let cases = [
+        ([0.5, 0.0], true, Count::System),
+        ([0.0, 1.0], true, Count::System),
+        ([1.0, 0.5], false, Count::Forbidden),
+        ([0.5, -past], true, Count::DomainEnd),
+        ([-past, 0.5], true, Count::DomainEnd),
+        ([1.0 + past, 0.5], true, Count::DomainEnd),
+        ([0.5, 1.0 + past], true, Count::System),
+        ([0.5, 1.25], false, Count::Forbidden),
+    ];
+    for (at, valid, want) in cases {
+        assert_eq!(
+            count(sides, at, valid),
+            want,
+            "the warp's count at {at:?}, valid {valid}"
+        );
+    }
+    let periodic = Sides::both(ExtensionType::Periodic);
+    let pole = Sides::both(ExtensionType::PoleCrossing);
+    let affine = Sides::both(ExtensionType::Affine);
+    for (types, want) in [
+        ([periodic, affine], Count::NotCounted),
+        ([affine, pole], Count::NotCounted),
+        ([periodic, sides[0]], Count::DomainEnd),
+    ] {
+        assert_eq!(
+            count(types, [1.5, 1.5], true),
+            want,
+            "the count past {types:?}"
+        );
+    }
+}
+
+#[test]
+fn energy_axes_warped_count() {
+    let le = Mapped::<_, Defaults>::new(InvariantLE(invariant()), mapped_all(Mapping::Warped));
+    check_warped_count(le.extension());
+}
+
+negative_control!(
+    energy_axes_warped_count,
+    "the linear option's types count the pixels past s's edges, so the warp's count must fail on them",
+    expected = "the warp's count at",
+    {
+        let le = Mapped::<_, Defaults>::new(InvariantLE(invariant()), mapped_all(Mapping::Linear));
+        check_warped_count(le.extension());
+    }
+);
 
 #[test]
 fn energy_axes_warped_t_continues() {
@@ -580,6 +775,134 @@ fn check_linear_corners(decode: impl Fn(f64, f64) -> Decoded<f64>) {
         "a warped chart warns of nothing"
     );
 }
+
+/// How far past a projected `s` the parabola's outside must begin: `10⁻⁹`, a hair, as `s`'s ulps near the edge are
+/// finer than `L_z`'s.
+const OFF_EDGE: f64 = 1e-9;
+
+/// How a mapped invariant chart's check reads at each point: `validate`, the construction's verdict at a point, and
+/// whether its `L_z` axis is warped, with the constraints its own chart names below `t = 0` and past the parabola.
+struct Projection<'a> {
+    name: &'a str,
+    validate: &'a dyn Fn(f64, f64) -> ValidationResult,
+    feasible: &'a dyn Fn(f64, f64) -> bool,
+    warped_s: bool,
+    low: Constraint,
+    wide: Constraint,
+}
+
+/// Over `[−¼, 1¼]²`, the check of a mapped invariant chart with a linear axis (R-26): a valid point is feasible; any
+/// other is projected to `t = max(t, 0)` and, past the parabola, a warped `L_z` clamped to `s`'s edge and a linear one
+/// moved to a feasible `s` on its own side on the parabola, [`OFF_EDGE`] further out infeasible, or to `½`; the
+/// constraint named is `low` where `t` moved, else `wide`. A non-finite coordinate is refused, naming its axis.
+fn check_projection(c: &Projection) {
+    let name = c.name;
+    let (mut moved, mut valid) = (0, 0);
+    for [u, v] in grid(-0.25, 1.25) {
+        match (c.validate)(u, v) {
+            ValidationResult::Valid => {
+                valid += 1;
+                assert!(
+                    v >= 0.0 && (!c.warped_s || (0.0..=1.0).contains(&u)) && (c.feasible)(u, v),
+                    "{name}: ({u}, {v}) is valid and not a system"
+                );
+            }
+            ValidationResult::Project { u: s, v: t, failed } => {
+                assert!(
+                    t == v.max(0.0) && (s, t) != (u, v) && (c.feasible)(s, t),
+                    "{name}: ({u}, {v}) is projected to ({s}, {t}), not a system on the edge"
+                );
+                assert_eq!(
+                    failed,
+                    if t != v { c.low } else { c.wide },
+                    "{name}: the constraint ({u}, {v}) names"
+                );
+                if c.warped_s {
+                    assert_eq!(s, u.clamp(0.0, 1.0), "{name}: s at ({u}, {v})");
+                } else if s != u {
+                    moved += 1;
+                    let out = if u > 0.5 { s + OFF_EDGE } else { s - OFF_EDGE };
+                    assert!(
+                        (s - 0.5) * (u - 0.5) >= 0.0 && (s == 0.5 || !(c.feasible)(out, t)),
+                        "{name}: ({u}, {v}) moves to {s}, not the nearest feasible s"
+                    );
+                }
+            }
+            other => panic!("{name}: ({u}, {v}) gives {other:?}"),
+        }
+    }
+    assert!(
+        valid > 0 && (c.warped_s || moved > 0),
+        "{name}: {valid} valid, {moved} moved"
+    );
+    for (u, v, failed) in [
+        (f64::NAN, 0.5, c.wide),
+        (f64::INFINITY, 0.5, c.wide),
+        (0.5, f64::NAN, c.low),
+        (0.5, f64::NEG_INFINITY, c.low),
+    ] {
+        assert_eq!(
+            (c.validate)(u, v),
+            ValidationResult::Reject { failed },
+            "{name}: ({u}, {v})"
+        );
+    }
+}
+
+/// [`check_projection`] on `(L_z, K)` and `(L_z, E)` under each mapping with a linear axis, `check` wrapping each
+/// chart's `validate`.
+fn check_projections(check: fn(ValidationResult) -> ValidationResult) {
+    let inv = invariant();
+    let z = inv.frozen();
+    let p = LinkParams::DEFAULT;
+    let linear_s = [Mapping::Linear, Mapping::Warped];
+    let linear_t = [Mapping::Warped, Mapping::Linear];
+    for mapping in [mapped_all(Mapping::Linear), linear_s, linear_t] {
+        let warped_s = mapping[0] == Mapping::Warped;
+        let lk = Mapped::<_, Defaults>::new(InvariantLK(inv), mapping);
+        check_projection(&Projection {
+            name: &format!("(L_z, K) {mapping:?}"),
+            validate: &|u, v| check(lk.validate(u, v)),
+            feasible: &|s, t| lk.decode_from(s, t, &z, &p).1 != Outcome::Infeasible,
+            warped_s,
+            low: Constraint::KNonNegative,
+            wide: Constraint::KAboveLzBound,
+        });
+        let le = Mapped::<_, Defaults>::new(InvariantLE(inv), mapping);
+        check_projection(&Projection {
+            name: &format!("(L_z, E) {mapping:?}"),
+            validate: &|u, v| check(le.validate(u, v)),
+            feasible: &|s, t| le.decode_from(s, t, &z, &p).1 != Outcome::Infeasible,
+            warped_s,
+            low: Constraint::LzEParabola,
+            wide: Constraint::LzEParabola,
+        });
+    }
+}
+
+/// The check as the chart gives it.
+fn as_given(r: ValidationResult) -> ValidationResult {
+    r
+}
+
+#[test]
+fn energy_axis_linear_option_projection() {
+    check_projections(as_given);
+}
+
+negative_control!(
+    energy_axis_linear_option_projection,
+    "a check that projects a refused linear L_z 10⁻⁶ inside the parabola lands off it, so it must fail",
+    expected = "not the nearest feasible s",
+    check_projections(|r| match r {
+        ValidationResult::Project { u: s, v, failed } if s != 0.5 => ValidationResult::Project {
+            u: if s > 0.5 { s - 1e-6 } else { s + 1e-6 },
+            v,
+            failed,
+        },
+        other => other,
+    })
+);
 
 #[test]
 fn energy_axis_linear_option_corners() {
@@ -995,6 +1318,109 @@ negative_control!(
         let linear = Mapped::<_, Defaults>::new(InvariantLE(invariant()), mapped_all(Mapping::Linear));
         check_agree(&Unshifted(linear), &spec(45.0, 0.0, TiltMap::Sheet, 6));
     }
+);
+
+/// The hidden coordinates a tilt may target on the physical-quantity mixed-axis charts (R-473 J1): every control but
+/// the other axis's and the physical axis's block, the momenta for an energy axis, the masses for the mass ratio; a
+/// slice sets one only where it is hidden. `momenta` and `masses` are the blocks the check reads as written.
+fn check_hidden(momenta: [u32; 4], masses: [u32; 2]) {
+    let e = lone::<AxisK>(0.0, Mapping::Warped);
+    let r = ratio_chart([0.1, 10.0], Mapping::Warped);
+    let alpha = Alpha::COORDINATE as u32;
+    let z_alpha = ZAlpha::COORDINATE as u32;
+    for k in 0..9 {
+        let want_e = k < 8 && k != alpha && !momenta.contains(&k);
+        let want_r = k < 8 && k != z_alpha && !masses.contains(&k);
+        assert!(
+            e.hidden(k) == want_e && r.hidden(k) == want_r,
+            "control {k} is hidden {} on the lone K chart and {} on the ratio chart",
+            e.hidden(k),
+            r.hidden(k)
+        );
+        assert_eq!(
+            e.sliced(k, 0.25).map(|c| c.frozen[k as usize]),
+            want_e.then_some(0.25),
+            "the lone K chart sliced at control {k}"
+        );
+        assert_eq!(
+            r.sliced(k, 0.25).map(|c| c.frozen[k as usize]),
+            want_r.then_some(0.25),
+            "the ratio chart sliced at control {k}"
+        );
+    }
+}
+
+#[test]
+fn energy_warp_per_pixel_hidden() {
+    check_hidden([2, 3, 4, 5], [6, 7]);
+}
+
+negative_control!(
+    energy_warp_per_pixel_hidden,
+    "a check that reads the masses as written by the lone K chart must fail",
+    expected = "is hidden",
+    check_hidden([2, 3, 4, 6], [6, 7])
+);
+
+/// A mapped `(L_z, K)` chart's check at a tilt's `(a, b)`, a mass logit shifted (R-473 J1, E3): `want` at each point,
+/// under each mapping with one axis linear. A warped axis is refused past its bounded side, naming its constraint;
+/// past a linear one the construction's exact test decides; a non-finite coordinate names the axis it is on.
+fn check_shifted(want: &[([Mapping; 2], [f64; 2], Option<Constraint>)]) {
+    let lk = |m| Mapped::<_, Defaults>::new(InvariantLK(invariant()), m);
+    let shift = Shift {
+        x: 6,
+        dx: 0.1,
+        y: 0,
+        dy: 0.0,
+        two: false,
+    };
+    for &(mapping, [a, b], failed) in want {
+        let got = lk(mapping).validate_shifted(a, b, &shift, &LinkParams::DEFAULT);
+        let want = failed.map_or(ValidationResult::Valid, |failed| ValidationResult::Reject {
+            failed,
+        });
+        assert_eq!(got, want, "{mapping:?} at ({a}, {b})");
+    }
+}
+
+/// The shifted check's cases: `(mapping, (a, b), the constraint refused or none)`.
+const SHIFTED: [([Mapping; 2], [f64; 2], Option<Constraint>); 13] = {
+    let (lin, war) = (Mapping::Linear, Mapping::Warped);
+    let (low, wide) = (
+        Some(Constraint::KNonNegative),
+        Some(Constraint::KAboveLzBound),
+    );
+    [
+        ([lin, war], [0.5, -0.1], low),
+        ([lin, war], [0.5, 0.0], None),
+        ([lin, war], [0.5, 0.5], None),
+        ([lin, war], [1.2, 1.5], None),
+        ([lin, war], [1.2, 0.5], wide),
+        ([lin, war], [f64::NAN, 0.5], wide),
+        ([lin, war], [0.5, f64::NAN], low),
+        ([war, lin], [0.5, -0.1], wide),
+        ([war, lin], [0.5, 0.5], None),
+        ([war, lin], [1.0, 0.5], None),
+        ([war, lin], [1.2, 0.5], wide),
+        ([war, lin], [-0.2, 0.5], wide),
+        ([war, lin], [f64::INFINITY, f64::NAN], low),
+    ]
+};
+
+#[test]
+fn energy_warp_per_pixel_shifted_check() {
+    check_shifted(&SHIFTED);
+}
+
+negative_control!(
+    energy_warp_per_pixel_shifted_check,
+    "a linear K below t = 0 read as the warp's bounded side, refused by K ≥ 0, must fail",
+    expected = "at (0.5, -0.1)",
+    check_shifted(&[(
+        [Mapping::Warped, Mapping::Linear],
+        [0.5, -0.1],
+        Some(Constraint::KNonNegative)
+    )])
 );
 
 /// Untilted, a tilted view of each invariant chart under each mapping is the chart's own, bit for bit.

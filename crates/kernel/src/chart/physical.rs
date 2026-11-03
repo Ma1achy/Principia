@@ -193,9 +193,7 @@ impl EnergyAxis for AxisVirial {
     #[inline]
     fn rule<R: WarpReal>(x: R, held: R, _linear: bool, _u_ref: R) -> Rule<R> {
         Rule {
-            k0: R::zero(),
             weight: x / (R::one() + R::one()),
-            u_ref: R::zero(),
             ..kinetic_rule(R::zero(), held)
         }
     }
