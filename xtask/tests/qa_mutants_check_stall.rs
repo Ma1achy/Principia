@@ -13,10 +13,15 @@
 //!   file.
 //! - `qa_mcs_every_job_before_the_report_is_bounded`: on the merge-ready run, `mutants-check` waits (`needs:`) for
 //!   `mutants-verdict`, which reads the shards' reports, so a stall there leaves `mutants-check` unreported exactly as
-//!   a stalled checkout of its own would. Each job `mutants-check` needs, but the shards (whose step limits the
-//!   orchestrator left to a later PR, applied per R-369), ends within `VERDICT_LIMIT` minutes once it starts: a
-//!   `timeout-minutes` of the job's own no larger, or one on every step, adding up to no more. GitHub's default for a
-//!   job with neither is 360 minutes.
+//!   a stalled checkout of its own would. Each job `mutants-check` needs, but the shards, ends within `VERDICT_LIMIT`
+//!   minutes once it starts: a `timeout-minutes` of the job's own no larger, or one on every step, adding up to no
+//!   more. GitHub's default for a job with neither is 360 minutes.
+//! - `qa_mcs_every_shard_step_is_bounded`: the shards (`mutants`), which `mutants-verdict` needs, are covered too (the
+//!   orchestrator's round-4 reading of the owner's order on PR #389: "never left unreported" covers every job
+//!   `mutants-check` waits on). A shard runs for up to REQ-VAL-149's 300 minutes by design, so no job-level bound
+//!   tells a stall from a long run; a stall is bounded only by a limit on the step it happens in. Every step of the
+//!   shard job has a `timeout-minutes` of its own, so a step that stalls (a download, an install, a build, an upload)
+//!   fails the shard at its own limit, not at GitHub's 360 minutes for the job.
 //!
 //! Each has its negative controls (R-176), a workflow differing in the one respect the test turns on.
 
@@ -267,7 +272,7 @@ fn check_awaited_bounded(yml: &str) {
         jobs.iter().any(|j| j == "mutants-verdict"),
         "qa_mcs: mutants-check does not wait for mutants-verdict ({jobs:?}), so it cannot report the verdict"
     );
-    // The shards apart: their step limits are left to a later PR (applied per R-369, noted on PR #389).
+    // The shards apart: `qa_mcs_every_shard_step_is_bounded` covers them, since their run is long by design.
     for j in jobs.iter().filter(|j| j.as_str() != "mutants") {
         let job = &wf["jobs"][j];
         let unbounded: Vec<String> = job["steps"]
@@ -306,9 +311,11 @@ negative_control!(
     qa_mcs_every_job_before_the_report_is_bounded,
     "mutants-verdict limited to an hour and a minute, past the bound",
     expected = "may run 61 minutes",
+    // The job's own limit edited in place: a second `timeout-minutes` key would lose to the job's later one, which
+    // PyYAML, like GitHub, keeps.
     check_awaited_bounded(&edited(
-        "  mutants-verdict:\n",
-        "  mutants-verdict:\n    timeout-minutes: 61\n"
+        "    needs: mutants\n    runs-on: ubuntu-24.04\n    timeout-minutes: 30\n",
+        "    needs: mutants\n    runs-on: ubuntu-24.04\n    timeout-minutes: 61\n"
     ))
 );
 
@@ -322,5 +329,89 @@ mod verdict_not_awaited {
             "    needs: mutants-verdict\n",
             "    needs: merge-ready-off\n"
         ))
+    );
+}
+
+// ---- qa_mcs_every_shard_step_is_bounded --------------------------------------------------------------------------
+
+/// The shard job's steps without a positive `timeout-minutes` of their own, by name (or action), in order.
+fn unlimited_shard_steps(wf: &Value) -> Vec<String> {
+    steps(wf, "mutants")
+        .iter()
+        .filter(|s| s["timeout-minutes"].as_u64().is_none_or(|m| m == 0))
+        .map(|s| {
+            s["name"]
+                .as_str()
+                .or(s["uses"].as_str())
+                .unwrap_or("?")
+                .to_owned()
+        })
+        .collect()
+}
+
+fn check_shard_steps_bounded(yml: &str) {
+    let wf = parse(yml);
+    assert!(
+        awaited(&wf, "mutants-check").iter().any(|j| j == "mutants"),
+        "qa_mcs: mutants-check does not wait, through mutants-verdict, for the shards (`mutants`)"
+    );
+    let unlimited = unlimited_shard_steps(&wf);
+    assert!(
+        unlimited.is_empty(),
+        "qa_mcs: shard steps with no limit of their own, so a stall in one holds mutants-check unreported for \
+         GitHub's 360 minutes: {unlimited:?}"
+    );
+}
+
+/// A shard job shaped as `mutants.yml`'s, every step limited: the check passes on it, so its controls trip on the one
+/// edit each makes.
+const SHARDS: &str = "on:\n  pull_request:\njobs:\n  mutants:\n    runs-on: ubuntu-24.04\n    steps:\n      \
+                      - uses: actions/checkout@v4\n        timeout-minutes: 10\n      \
+                      - name: rustup toolchain install\n        timeout-minutes: 5\n        \
+                      run: rustup toolchain install\n      \
+                      - name: cargo mutants\n        timeout-minutes: 300\n        run: cargo mutants\n      \
+                      - uses: actions/upload-artifact@v4\n        if: always()\n        timeout-minutes: 5\n  \
+                      mutants-verdict:\n    needs: mutants\n    timeout-minutes: 30\n    steps:\n      - run: true\n  \
+                      mutants-check:\n    needs: mutants-verdict\n    steps:\n      - run: true\n";
+
+#[test]
+fn qa_mcs_every_shard_step_is_bounded() {
+    check_shard_steps_bounded(SHARDS);
+    check_shard_steps_bounded(&mutants_yml());
+}
+
+negative_control!(
+    qa_mcs_every_shard_step_is_bounded,
+    "a shard whose toolchain install has no limit, the checkout's and cargo mutants' kept",
+    expected =
+        "shard steps with no limit of their own, so a stall in one holds mutants-check unreported",
+    check_shard_steps_bounded(&SHARDS.replacen(
+        "        timeout-minutes: 5\n        run: rustup toolchain install\n",
+        "        run: rustup toolchain install\n",
+        1
+    ))
+);
+
+mod shard_upload_unlimited {
+    use super::*;
+    negative_control!(
+        qa_mcs_every_shard_step_is_bounded,
+        "a shard whose report upload, after cargo mutants, has no limit",
+        expected = "shard steps with no limit of their own, so a stall in one holds mutants-check unreported",
+        check_shard_steps_bounded(&SHARDS.replacen(
+            "        if: always()\n        timeout-minutes: 5\n",
+            "        if: always()\n",
+            1
+        ))
+    );
+}
+
+mod shards_not_awaited {
+    use super::*;
+    negative_control!(
+        qa_mcs_every_shard_step_is_bounded,
+        "mutants-verdict waiting for nothing, so the shards' bound is not what mutants-check waits on",
+        expected = "does not wait, through mutants-verdict, for the shards",
+        check_shard_steps_bounded(&SHARDS.replacen("    needs: mutants\n", "", 1))
     );
 }
