@@ -156,22 +156,54 @@ fn hidden_set<Ch: Hidden>(c: &Ch) -> Vec<u32> {
     (0..16).filter(|&k| c.hidden(k)).collect()
 }
 
-#[test]
-fn qa_tilt_every_chart_hidden_set() {
+/// `swap`: the control's wrong table, `ν₀` claimed on the Euclid plane and the held `K` on `(ν, K)`.
+fn check_hidden_set(swap: bool) {
     let mom = vec![2, 3, 4, 5];
     let mut with_nu0 = mom.clone();
     with_nu0.push(NU0);
-    assert_eq!(hidden_set(&RestStart::new(simplex(0.5))), with_nu0);
-    assert_eq!(hidden_set(&RestStart::new(euclid())), mom);
-    assert_eq!(hidden_set(&RestStart::new(delta_m())), mom);
-    assert_eq!(hidden_set(&HeldLz::new(nu_k())), vec![HELD_LZ]);
-    assert_eq!(hidden_set(&HeldLz::new(theta_k())), vec![HELD_LZ]);
-    assert_eq!(hidden_set(&theta_lz(0.5)), vec![HELD_K]);
+    let (euclid_set, nu_k_set) = if swap {
+        (with_nu0.clone(), vec![HELD_K])
+    } else {
+        (mom.clone(), vec![HELD_LZ])
+    };
+    let cases: [(&str, Vec<u32>, Vec<u32>); 6] = [
+        (
+            "the mass simplex",
+            hidden_set(&RestStart::new(simplex(0.5))),
+            with_nu0,
+        ),
+        (
+            "the Euclid plane",
+            hidden_set(&RestStart::new(euclid())),
+            euclid_set,
+        ),
+        ("the δm strip", hidden_set(&RestStart::new(delta_m())), mom),
+        ("(ν, K)", hidden_set(&HeldLz::new(nu_k())), nu_k_set),
+        ("Φ_θ,K", hidden_set(&HeldLz::new(theta_k())), vec![HELD_LZ]),
+        ("Φ_θ,L_z", hidden_set(&theta_lz(0.5)), vec![HELD_K]),
+    ];
+    for (name, got, want) in cases {
+        assert_eq!(got, want, "the hidden set of {name} is not §4.5's table's");
+    }
     // A physical index is distinct from every latent control.
     for k in [NU0, HELD_LZ, HELD_K] {
         assert!(k >= 8, "{k} collides with a latent control");
     }
 }
+
+#[test]
+fn qa_tilt_every_chart_hidden_set() {
+    check_hidden_set(false);
+}
+
+negative_control!(
+    qa_tilt_every_chart_hidden_set,
+    "a chart claimed to offer another chart's hidden coordinate must fail",
+    expected = "is not §4.5's table's",
+    {
+        check_hidden_set(true);
+    }
+);
 
 // ── The held L_z and the held K ──────────────────────────────────────────────────────────────────────────────────────
 
