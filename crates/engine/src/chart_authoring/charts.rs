@@ -5,7 +5,10 @@
 //! **The slices.** The latent chart holds its plane's orthogonal complement, the six directions `z₀` fixes. The shape
 //! sphere holds `z₀`'s mass and momentum blocks (chart_reference §3, "The held values"); the invariant charts their
 //! configuration and mass controls (§2). A mixed-axis chart holds its six other controls (§1.3). The ternary mass plot
-//! holds the triangle at `ν₀` (§4.5), and the bifurcation strips the invariant they do not sweep, `L_z = 0` or `K`.
+//! holds the triangle at `ν₀` (§4.5), and the bifurcation strips the invariant they do not sweep, `L_z = 0` or `K`. A
+//! mixed-axis chart with a lone energy-type axis holds the other upstream controls and the invariant it does not sweep,
+//! with the seed; one with a mass ratio holds the other controls, the third body's mass its axis's residual (§2.1). An
+//! energy chart under a mapping (`kernel::chart::Mapped`) declares its own chart's descriptors.
 //!
 //! **The conventions.** A Burrau rest start and the mass plot set every momentum 0; on the invariant charts and the
 //! strips the construction's deterministic seed pins the momentum block's two DOF the two invariants leave
@@ -23,9 +26,11 @@ use kernel::burrau::System;
 use kernel::chart::burrau::embed;
 use kernel::chart::burrau_acute::nu_of;
 use kernel::chart::mixed::{Coordinate, Quantity};
+use kernel::chart::physical::{AxisE, AxisK, AxisKE, AxisLz, EnergyAxis};
 use kernel::chart::{
     BlockTouch, Burrau, BurrauThetaDeltaM, BurrauThetaK, BurrauThetaLz, Chart, EuclidPlane,
-    InvariantLE, InvariantLK, Latent, MassSimplex, Mixed, ShapeMap, ShapeSphere, SystemImage,
+    InvariantLE, InvariantLK, Latent, Mapped, MassSimplex, Mixed, MixedEnergy, MixedMassRatio,
+    ShapeMap, ShapeSphere, SystemImage,
 };
 
 use super::axis::{
@@ -439,5 +444,103 @@ where
             coupling: Coupling::none(),
             annotation: false,
         }
+    }
+}
+
+/// An energy-type axis of a mixed-axis chart (`kernel::chart::physical`): its kind-3 quantity, its name, and the
+/// invariant the chart holds beside it. The virial ratio is not kind 3 (R-471 H3) and has no descriptor here.
+pub trait EnergyInvariant: EnergyAxis {
+    /// The kind-3 quantity.
+    const INVARIANT: InvariantQuantity;
+    /// The axis's name.
+    const NAME: &'static str;
+    /// The held invariant, pinning one momentum DOF.
+    const HELD: &'static str;
+}
+
+impl EnergyInvariant for AxisK {
+    const INVARIANT: InvariantQuantity = InvariantQuantity::K;
+    const NAME: &'static str = "K";
+    const HELD: &'static str = "the chart's L_z";
+}
+
+impl EnergyInvariant for AxisKE {
+    const INVARIANT: InvariantQuantity = InvariantQuantity::KE;
+    const NAME: &'static str = "KE";
+    const HELD: &'static str = "the chart's L_z";
+}
+
+impl EnergyInvariant for AxisE {
+    const INVARIANT: InvariantQuantity = InvariantQuantity::E;
+    const NAME: &'static str = "E";
+    const HELD: &'static str = "the chart's L_z";
+}
+
+impl EnergyInvariant for AxisLz {
+    const INVARIANT: InvariantQuantity = InvariantQuantity::Lz;
+    const NAME: &'static str = "L_z";
+    const HELD: &'static str = "the chart's K";
+}
+
+impl<A: Quantity, V: EnergyInvariant, S, P> Authored for MixedEnergy<A, V, S, P>
+where
+    MixedEnergy<A, V, S, P>: Chart,
+{
+    /// `A`, kind 1 or 2, and the energy-type axis, kind 3 into the momenta; the other controls upstream held, the
+    /// chart's held invariant and the seed pinning the momenta's other three DOF (chart_reference §2.1, §2.2).
+    fn descriptor(&self) -> ChartDescriptor {
+        let mut slice = frozen(|c| c != A::COORDINATE && Block::of(c) != Block::Momentum);
+        slice.push(Frozen::Held {
+            quantity: V::HELD,
+            block: Block::Momentum,
+            dof: 1,
+        });
+        ChartDescriptor {
+            axes: [mixed_axis::<A>(), invariant(V::NAME, V::INVARIANT)],
+            slice,
+            conventions: vec![seed()],
+            system_image: SystemImage::Bijective,
+            has_feasibility_boundary: true,
+            coupling: Coupling::none(),
+            annotation: false,
+        }
+    }
+}
+
+impl<A: Quantity, S, P> Authored for MixedMassRatio<A, S, P>
+where
+    MixedMassRatio<A, S, P>: Chart,
+{
+    /// `A`, kind 1 or 2, and the mass ratio, kind 2 in the masses, its residual the third body's mass held; the other
+    /// controls held (R-506 W3).
+    fn descriptor(&self) -> ChartDescriptor {
+        let ratio = AxisDescriptor::derived(
+            "q = m_b/m_a",
+            Block::Mass,
+            None,
+            Residual {
+                pins: 1,
+                statement: "the third body's mass m_c, held at the slice centre's",
+            },
+        );
+        ChartDescriptor {
+            axes: [mixed_axis::<A>(), ratio],
+            slice: frozen(|c| c != A::COORDINATE && Block::of(c) != Block::Mass),
+            conventions: vec![],
+            system_image: SystemImage::Bijective,
+            has_feasibility_boundary: false,
+            coupling: Coupling::none(),
+            annotation: false,
+        }
+    }
+}
+
+impl<C: Authored, S> Authored for Mapped<C, S>
+where
+    Mapped<C, S>: Chart,
+{
+    /// The chart's own: a mapping changes what an axis's `[0, 1]` reaches, not what it pins (R-471 E2).
+    fn descriptor(&self) -> ChartDescriptor {
+        self.chart.descriptor()
     }
 }

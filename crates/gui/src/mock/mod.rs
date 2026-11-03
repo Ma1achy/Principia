@@ -364,6 +364,7 @@ fn state(t: f64) -> (SimConfig, RenderState) {
         SimConfig {
             chart: Chart {
                 window: Window::SQUARE,
+                mapping: Default::default(),
             },
             plane: Plane {
                 z0: MOCK_Z0,

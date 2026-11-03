@@ -653,8 +653,10 @@ pub trait Tiltable: Hidden {
         R: LinkReal + PayloadReal + From<Self::Param>;
 
     /// The check at the chart point `(a, b)` with `shift` added to the hidden coordinates at the slice centre, at the
-    /// tunable parameters `p`: by default the chart's own, every value of a latent control being a system; a chart
-    /// whose hidden coordinate is a physical value adds [`Tiltable::refusal`] (R-633).
+    /// tunable parameters `p`: by default the chart's own at `(a, b)`, where the axes' types act (X3a), every value of a
+    /// latent control being a system; a chart whose hidden coordinate is a physical value adds [`Tiltable::refusal`]
+    /// (R-633), and a chart whose feasibility reads the pixel's own decode, a linear energy axis (R-471 E2, E3;
+    /// `super::energy::Mapped`), overrides it.
     fn validate_shifted(
         &self,
         a: f64,
@@ -748,9 +750,9 @@ where
         self.chart.requires_per_pixel_mass() || (self.tilt.on && tilted)
     }
 
-    /// The chart's check on the tilted `(a, b)` with the hidden offsets ([`Tiltable::validate_shifted`]), where its
-    /// axes' types act (X3a); a failure is reported as refused, since a projected or clamped `(a, b)` names no point of
-    /// the tilted view.
+    /// The chart's check on the tilted `(a, b)` with the pixel's hidden offsets ([`Tiltable::validate_shifted`]), where
+    /// its axes' types act (X3a); a failure is reported as refused, since a projected or clamped `(a, b)` names no point
+    /// of the tilted view.
     fn validate(&self, u: f64, v: f64) -> ValidationResult {
         self.validate_params(u, v, &LinkParams::DEFAULT)
     }

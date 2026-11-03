@@ -72,7 +72,10 @@ type Off = Select<StickBreaking, SoftsignAlpha, SigmoidBeta, TanhQ, TanhQ, TanhQ
 
 fn sim(plane: Plane, window: Window, links: Links) -> SimConfig {
     SimConfig {
-        chart: Chart { window },
+        chart: Chart {
+            window,
+            mapping: Default::default(),
+        },
         plane,
         slice: Slice {
             // The slice frame (R-457 E3), at its defaults: the normal and both targets z_q3.
