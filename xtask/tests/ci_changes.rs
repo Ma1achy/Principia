@@ -58,6 +58,11 @@
 //!   `mutants-check`, which `mutants.yml` posts and no job bears (R-656, the merge-ready run); a job that
 //!   can be skipped (a job-level `if:` or a `needs:`) is never named for a required check unless its `if:` is
 //!   `always()`; and a matrix job never bears a required check's name without its shard.
+//! - `ci_changes_every_required_check_reports_on_every_tier`: a change of each tier, classified by the script, is run
+//!   through `ci.yml`'s jobs (their `if:`s and `needs:` evaluated as GitHub does, every job that runs succeeding) and
+//!   each gate's script run under bash: `ci`, `xtask-ci` and the three GPU gates pass on every tier. `mutants.yml`'s
+//!   `mutants-pending`, its post step run with a stand-in `gh`, posts `mutants-check` passed with its reason on a data
+//!   or docs change and pending on a code one (R-677); `pr-check` and `reviews-complete` read no classification.
 //!
 //! Each test has its registered negative control (R-176), which feeds the same check a script or workflow differing in
 //! the one respect it turns on. The workflows are parsed with PyYAML, as `plan/check_plan.py` and the qa tests that read
@@ -2527,5 +2532,412 @@ mod posted_by_a_job {
             );
             check_required(&workflows)
         }
+    );
+}
+
+// ---- Every required check reports on every tier ------------------------------------------------------------------
+
+/// A change of each tier, as a pull request makes it: what it is and its paths.
+const TIER_CHANGES: [(&str, &[&str]); 4] = [
+    ("a code change", &["crates/kernel/src/lib.rs"]),
+    ("a data change (the plan's task data)", &["plan/tasks.yaml"]),
+    (
+        "a data change (the GUI's references)",
+        &["docs/gui/reference/principia_colour_explorer.html"],
+    ),
+    (
+        "a docs change",
+        &["docs/design/principia_dd_replication.md"],
+    ),
+];
+
+/// What a job-level `if:` or an env expression of a pull request's run reads: the event, each job's result and
+/// outputs. Only the forms the workflows use are understood; any other fails the test, so a new form is looked at.
+struct Ctx<'a> {
+    action: &'a str,
+    results: &'a std::collections::BTreeMap<String, String>,
+    outputs: &'a std::collections::BTreeMap<String, std::collections::BTreeMap<String, String>>,
+    needs: &'a [String],
+}
+
+fn operand(term: &str, ctx: &Ctx) -> String {
+    let term = term.trim();
+    if let Some(lit) = term.strip_prefix('\'').and_then(|t| t.strip_suffix('\'')) {
+        return lit.to_owned();
+    }
+    match term {
+        "always()" => return "true".to_owned(),
+        "github.event_name" => return "pull_request".to_owned(),
+        "github.event.action" => return ctx.action.to_owned(),
+        "join(needs.*.result, ' ')" => {
+            return ctx
+                .needs
+                .iter()
+                .map(|n| ctx.results[n].clone())
+                .collect::<Vec<_>>()
+                .join(" ")
+        }
+        _ => {}
+    }
+    let parts: Vec<&str> = term.split('.').collect();
+    match parts.as_slice() {
+        ["needs", job, "result"] => ctx.results[*job].clone(),
+        ["needs", job, "outputs", key] => {
+            // A job that did not succeed passes no outputs on.
+            if ctx.results.get(*job).map(String::as_str) == Some("success") {
+                ctx.outputs
+                    .get(*job)
+                    .and_then(|o| o.get(*key))
+                    .cloned()
+                    .unwrap_or_default()
+            } else {
+                String::new()
+            }
+        }
+        _ => panic!("ci_changes: an expression this test does not read: `{term}`"),
+    }
+}
+
+/// An expression's value: `a && b && …` of `x == 'v'`, `x != 'v'` or `x`, inside `${{ }}` or not.
+fn evaluate(expr: &str, ctx: &Ctx) -> String {
+    let expr = expr.trim();
+    let expr = expr
+        .strip_prefix("${{")
+        .and_then(|e| e.strip_suffix("}}"))
+        .unwrap_or(expr);
+    let terms: Vec<&str> = expr.split(" && ").collect();
+    let value = |term: &str| -> String {
+        if let Some((a, b)) = term.split_once(" == ") {
+            (operand(a, ctx) == operand(b, ctx)).to_string()
+        } else if let Some((a, b)) = term.split_once(" != ") {
+            (operand(a, ctx) != operand(b, ctx)).to_string()
+        } else {
+            operand(term, ctx)
+        }
+    };
+    if terms.len() == 1 {
+        return value(terms[0]);
+    }
+    terms.iter().all(|t| value(t) == "true").to_string()
+}
+
+fn needs_of(job: &Value) -> Vec<String> {
+    match job.get("needs") {
+        None => Vec::new(),
+        Some(Value::Array(a)) => a.iter().map(text).collect(),
+        Some(v) => vec![text(v)],
+    }
+}
+
+/// `ci.yml`'s run on a pull request whose classification is `verdict`: every job's result, each job that runs
+/// succeeding, and each required check it reports with whether its gate's script passes.
+fn ci_run(yml: &str, verdict: &[(&str, String)]) -> Vec<(String, bool)> {
+    use std::collections::BTreeMap;
+    let wf = parse(yml);
+    let all = jobs(&wf);
+    let mut results: BTreeMap<String, String> = BTreeMap::new();
+    let mut outputs: BTreeMap<String, BTreeMap<String, String>> = BTreeMap::new();
+    outputs.insert(
+        "changes".to_owned(),
+        verdict
+            .iter()
+            .map(|(k, v)| ((*k).to_owned(), v.clone()))
+            .collect(),
+    );
+    while results.len() < all.len() {
+        let before = results.len();
+        for (id, job) in &all {
+            let needs = needs_of(job);
+            if results.contains_key(id) || !needs.iter().all(|n| results.contains_key(n)) {
+                continue;
+            }
+            let ctx = Ctx {
+                action: "opened",
+                results: &results,
+                outputs: &outputs,
+                needs: &needs,
+            };
+            let cond = job.get("if").map(text).unwrap_or_default();
+            let ran = if cond.starts_with("always()") {
+                evaluate(&cond, &ctx) == "true"
+            } else {
+                needs.iter().all(|n| results[n] == "success")
+                    && (cond.is_empty() || evaluate(&cond, &ctx) == "true")
+            };
+            if id != "changes" && ran {
+                let outs: BTreeMap<String, String> = job
+                    .get("outputs")
+                    .and_then(Value::as_object)
+                    .map(|o| {
+                        o.iter()
+                            .filter(|(_, e)| text(e).contains("needs."))
+                            .map(|(k, e)| (k.clone(), evaluate(&text(e), &ctx)))
+                            .collect()
+                    })
+                    .unwrap_or_default();
+                outputs.insert(id.clone(), outs);
+            }
+            let result = if ran { "success" } else { "skipped" };
+            results.insert(id.clone(), result.to_owned());
+        }
+        assert!(
+            results.len() > before,
+            "ci_changes: ci.yml's jobs need one another in a cycle"
+        );
+    }
+    let mut reported = Vec::new();
+    for (id, job) in &all {
+        let name = reports(id, job);
+        if !REQUIRED.contains(&name.as_str()) {
+            continue;
+        }
+        let needs = needs_of(job);
+        let ctx = Ctx {
+            action: "opened",
+            results: &results,
+            outputs: &outputs,
+            needs: &needs,
+        };
+        let steps = job["steps"]
+            .as_array()
+            .unwrap_or_else(|| panic!("ci_changes: the required check `{name}` has no steps"));
+        let pass = results[id] == "success"
+            && steps.iter().all(|s| {
+                let env: Vec<(String, String)> = s
+                    .get("env")
+                    .and_then(Value::as_object)
+                    .map(|e| {
+                        e.iter()
+                            .map(|(k, v)| (k.clone(), evaluate(&text(v), &ctx)))
+                            .collect()
+                    })
+                    .unwrap_or_default();
+                let env: Vec<(&str, &str)> =
+                    env.iter().map(|(k, v)| (k.as_str(), v.as_str())).collect();
+                passes(&text(&s["run"]), &env)
+            });
+        reported.push((name, pass));
+    }
+    reported
+}
+
+/// What `mutants.yml`'s `mutants-pending` posts as `mutants-check` on a new head whose classification found
+/// `mutants`: the stand-in `gh`'s log of the check run it posted, or empty if the job does not run.
+fn mutants_posted(yml: &str, mutants: &str) -> String {
+    use std::collections::BTreeMap;
+    let wf = parse(yml);
+    let job = &wf["jobs"]["mutants-pending"];
+    let results = BTreeMap::new();
+    let outputs = BTreeMap::new();
+    let ctx = Ctx {
+        action: "opened",
+        results: &results,
+        outputs: &outputs,
+        needs: &[],
+    };
+    if evaluate(&text(&job["if"]), &ctx) != "true" {
+        return String::new();
+    }
+    let steps = job["steps"]
+        .as_array()
+        .expect("ci_changes: mutants-pending's steps");
+    assert!(
+        steps.iter().any(|s| text(&s["id"]) == "changes"
+            && text(&s["run"]).trim() == "scripts/ci_changes.sh detect"),
+        "ci_changes: mutants-pending does not run the classifier"
+    );
+    let post = steps
+        .iter()
+        .find(|s| text(&s["name"]) == "Post mutants-check on the head")
+        .expect("ci_changes: mutants-pending posts no mutants-check");
+    assert_eq!(
+        text(&post["env"]["MUTANTS"]),
+        "${{ steps.changes.outputs.mutants }}",
+        "ci_changes: mutants-pending's post does not read the classification's `mutants`"
+    );
+    let dir = Scratch::new("ci_changes_mutants_post");
+    std::fs::create_dir_all(&*dir).expect("scratch folder");
+    let gh = dir.join("gh");
+    std::fs::write(
+        &gh,
+        "#!/usr/bin/env bash\n\
+         for a in \"$@\"; do [ \"$a\" = --jq ] && { echo 0; exit 0; }; done\n\
+         printf '%s\\n' \"$*\" >> \"$GH_LOG\"\n",
+    )
+    .expect("stand-in gh written");
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&gh, std::fs::Permissions::from_mode(0o755)).expect("gh mode");
+    }
+    let log = dir.join("gh.log");
+    let path = format!(
+        "{}:{}",
+        dir.display(),
+        std::env::var("PATH").unwrap_or_default()
+    );
+    let log_s = log.display().to_string();
+    let ran = passes(
+        &text(&post["run"]),
+        &[
+            ("PATH", path.as_str()),
+            ("GH_LOG", log_s.as_str()),
+            ("GH_TOKEN", "t"),
+            ("GH_REPO", "o/r"),
+            ("HEAD_SHA", "0123abcd"),
+            ("MUTANTS", mutants),
+        ],
+    );
+    assert!(ran, "ci_changes: mutants-pending's post step failed");
+    std::fs::read_to_string(&log).unwrap_or_default()
+}
+
+fn check_every_tier_reports(ci: &str, mutants: &str) {
+    let script = read("scripts/ci_changes.sh");
+    for (what, paths) in TIER_CHANGES {
+        let v = classify(&script, paths);
+        let verdict = [
+            ("tier", v.tier.clone()),
+            ("docs_only", (v.tier != "code").to_string()),
+            ("gpu", v.gpu.to_string()),
+            ("plan_data", v.plan_data.to_string()),
+            ("gui_data", v.gui_data.to_string()),
+            ("mutants", v.mutants.to_string()),
+        ];
+        let reported = ci_run(ci, &verdict);
+        for check in ["ci", "xtask-ci", "gpu-kernel", "gpu-metal", "gpu-lavapipe"] {
+            let by: Vec<bool> = reported
+                .iter()
+                .filter(|(n, _)| n == check)
+                .map(|(_, p)| *p)
+                .collect();
+            assert_eq!(
+                by,
+                [true],
+                "ci_changes: the required check `{check}` does not pass on {what} (tier {})",
+                v.tier
+            );
+        }
+        let posted = mutants_posted(mutants, &v.mutants.to_string());
+        let lines: Vec<&str> = posted
+            .lines()
+            .filter(|l| l.contains("-f name=mutants-check"))
+            .collect();
+        assert_eq!(
+            lines.len(),
+            1,
+            "ci_changes: `mutants-check` is not posted once on {what}: {posted}"
+        );
+        if v.tier == "code" {
+            assert!(
+                lines[0].contains("status=queued"),
+                "ci_changes: `mutants-check` on {what} does not wait for the merge-ready run: {}",
+                lines[0]
+            );
+        } else {
+            assert!(
+                lines[0].contains("status=completed")
+                    && lines[0].contains("conclusion=success")
+                    && lines[0]
+                        .contains("output[summary]=Mutants run only when crates/ source changes"),
+                "ci_changes: `mutants-check` on {what} is not posted passed with its reason: {}",
+                lines[0]
+            );
+        }
+    }
+    // `pr-check` and `reviews-complete` read no classification: each runs on every pull request, whatever its tier.
+    for (file, check) in [
+        ("pr-check.yml", "pr-check"),
+        ("reviews.yml", "reviews-complete"),
+    ] {
+        let yml = read(&format!(".github/workflows/{file}"));
+        let wf = parse(&yml);
+        let (id, job) = jobs(&wf)
+            .into_iter()
+            .find(|(id, j)| reports(id, j) == check)
+            .unwrap_or_else(|| panic!("ci_changes: {file} reports no `{check}`"));
+        assert!(
+            job.get("if").is_none() && job.get("needs").is_none(),
+            "ci_changes: {file}'s `{id}` can be skipped"
+        );
+        assert!(
+            !yml.contains("ci_changes.sh") && !yml.contains("docs_only"),
+            "ci_changes: {file} reads the classification"
+        );
+    }
+}
+
+#[test]
+fn ci_changes_every_required_check_reports_on_every_tier() {
+    check_every_tier_reports(
+        &read(".github/workflows/ci.yml"),
+        &read(".github/workflows/mutants.yml"),
+    );
+}
+
+mod workspace_skipped_on_docs {
+    use super::*;
+    negative_control!(
+        ci_changes_every_required_check_reports_on_every_tier,
+        "ci.yml whose ci-workspace skips on a data or docs change, so it passes no verdict on to `ci`",
+        expected = "the required check `ci` does not pass on a data change (the plan's task data)",
+        check_every_tier_reports(
+            &edited(
+                ".github/workflows/ci.yml",
+                "  ci-workspace:\n    runs-on: ubuntu-24.04\n",
+                "  ci-workspace:\n    if: needs.changes.outputs.docs_only != 'true'\n    runs-on: ubuntu-24.04\n",
+            ),
+            &read(".github/workflows/mutants.yml"),
+        )
+    );
+}
+
+mod xtask_ci_docs_tier_only {
+    use super::*;
+    negative_control!(
+        ci_changes_every_required_check_reports_on_every_tier,
+        "ci.yml whose xtask-ci gate passes a skip on the docs tier alone",
+        expected = "the required check `xtask-ci` does not pass on a data change (the plan's task data)",
+        check_every_tier_reports(
+            &edited(
+                ".github/workflows/ci.yml",
+                "          DOCS_ONLY: ${{ needs.changes.result == 'success' && needs.changes.outputs.docs_only == 'true' }}\n",
+                "          DOCS_ONLY: ${{ needs.changes.result == 'success' && needs.changes.outputs.tier == 'docs' }}\n",
+            ),
+            &read(".github/workflows/mutants.yml"),
+        )
+    );
+}
+
+mod mutants_pending_on_data {
+    use super::*;
+    negative_control!(
+        ci_changes_every_required_check_reports_on_every_tier,
+        "mutants.yml posting mutants-check pending on every head",
+        expected = "`mutants-check` on a data change (the plan's task data) is not posted passed with its reason",
+        check_every_tier_reports(
+            &read(".github/workflows/ci.yml"),
+            &edited(
+                ".github/workflows/mutants.yml",
+                "          if [ \"$MUTANTS\" = false ]; then\n",
+                "          if [ \"$MUTANTS\" = never ]; then\n",
+            ),
+        )
+    );
+}
+
+mod gpu_gate_on_docs_only {
+    use super::*;
+    negative_control!(
+        ci_changes_every_required_check_reports_on_every_tier,
+        "ci.yml whose gpu-kernel suites run on a docs change alone, so a code change skips them and the gate fails",
+        expected = "the required check `gpu-kernel` does not pass on a code change",
+        check_every_tier_reports(
+            &edited(
+                ".github/workflows/ci.yml",
+                "    name: gpu-kernel suites\n    needs: changes\n    if: needs.changes.outputs.gpu == 'true'\n",
+                "    name: gpu-kernel suites\n    needs: changes\n    if: needs.changes.outputs.tier == 'docs'\n",
+            ),
+            &read(".github/workflows/mutants.yml"),
+        )
     );
 }
