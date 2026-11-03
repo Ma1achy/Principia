@@ -1864,14 +1864,15 @@ it is physics, the two rulings give different results on one chart.*
   `(ν, K)` and `Φ_θ,K`, c2's refusal is then reached only under the linear option if the floored warp is additive, such
   as `K = L_z²/2I + K_max·t^γ`; a form that keeps `K ≤ K_max` still has no feasible pixel once `L_z²/2I > K_max`, so the
   form is part of the option. On `Φ_θ,L_z` the tilt moves the held `K` itself (`K = K_centre + d`, `d = span·d̃`,
-  `crates/kernel/src/chart/tilt.rs`:555-564), and the band gives `L_z²/2I = (2v − 1)²·λ_L²·K ≤ K` for every `K ≥ 0`
-  (`v ∈ [0, 1]`, `λ_L ∈ (0, 1]`, § 4.5); so there a tilt that drives the held `K` below 0 (`d < −K_centre`) is refused
-  under either option and whatever the floor form, as `√(2IK)` has no value and §2.2's construction has none ("`K ≥ 0`
-  always", `decisions.md`:18628). Open within (a), not chosen: whether the held `K`'s tilt on `Φ_θ,L_z` is bounded or
-  warped to stay at or above 0 (which would give E3 there too), or those cells stay refused (compare RQ-679 (a), where
-  the held `K`'s range at that `L_z` has 0 as its lower end); (b) c2 holds: refused cells occur under tilt, warped or
-  not, and REQ-CHART-061's arm on those charts counts a refused cell as not a failure (E3 and REQ-CHART-067 read as
-  covering masses and shape); (c) another, stated by the owner.
+  `crates/kernel/src/chart/tilt.rs`:555-564; the offset is added to its target at :596, on `main` so far only for the
+  latent controls; TASK-M2-52 adds the held `K` as a target), and the band gives `L_z²/2I = (2v − 1)²·λ_L²·K ≤ K` for
+  every `K ≥ 0` (`v ∈ [0, 1]`, `λ_L ∈ (0, 1]`, § 4.5); so there a tilt that drives the held `K` below 0
+  (`d < −K_centre`) is refused under either option and whatever the floor form, as `√(2IK)` has no value and §2.2's
+  construction has none ("`K ≥ 0` always", `decisions.md`:18628). Open within (a), not chosen: whether the held `K`'s
+  tilt on `Φ_θ,L_z` is bounded or warped to stay at or above 0 (which would give E3 there too), or those cells stay
+  refused; (b) c2 holds: refused cells occur under tilt, warped or not, and REQ-CHART-061's arm on those charts counts a
+  refused cell as not a failure (E3 and REQ-CHART-067 read as covering masses and shape); (c) another, stated by the
+  owner.
 - **Applied meanwhile:** TASK-M2-52 builds c2 now, as R-633 words it (its refused-cell arm), and is reworked under (a)
   (applied per R-369 by the orchestrator: TASK-M2-52 is not held; it proceeds on the corpus as written).
 - **Waits:** TASK-M2-38 (REQ-CHART-061's tilted Burrau `K` arm); TASK-M2-52's rework under (a) (it proceeds meanwhile,
