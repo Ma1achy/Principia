@@ -305,9 +305,9 @@ physical-quantity axes are all warped.
 
 **The `PE` axis: no chart offers it (REQ-CHART-070, R-471 H2).** `PE = U` is a function of the configuration and the
 masses alone, so a `PE` axis would solve into the configuration block, not the momenta (kind 3, reading the masses).
-At the masses and scale gauge (§0.5) it is bounded above, by its value at the Lagrange equilateral triangle, where
-`|U|·√I` is least, and unbounded below, toward a collision; a level `U = U*` is a curve in the configuration's DOF, so
-an axis of it needs a residual convention to pick a point on that curve, as well as a warp of `t` onto the range. This
+At the masses and scale gauge (§0.5) it is unbounded below, toward a collision; a level `U = U*` is a curve in the
+configuration's DOF, so an axis of it needs a residual convention to pick a point on that curve, as well as a warp of
+`t` onto the range. This
 section writes neither, so no chart offers a `PE` axis: the well-posedness validator refuses one (TASK-M2-37). A warp
 for it is a new paragraph here, under physics review, before any chart offers it.
 
