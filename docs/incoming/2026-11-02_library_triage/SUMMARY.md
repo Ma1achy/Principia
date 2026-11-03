@@ -16,8 +16,7 @@ OFF-FILTER for the readers' EXCLUDE; PEEK-ONLY for unreviewed or AI-assisted sou
 planetary systems, parked with the v2+ 3D extension (R-668).
 
 Rulings cited, not re-proposed: R-661 (the precision set, BZ-1C), R-668 (hierarchical triples parked; site notes;
-G = 1), R-673, and R-669 (Hénon 1974; Heggie & Sweatman 1991), which is on the port branch
-`rulings/2026-11-02-port`, not yet merged.
+G = 1), R-673, and R-669 (Hénon 1974; Heggie & Sweatman 1991).
 
 ## The papers-11 to 13 addendum
 
@@ -307,7 +306,7 @@ sources named there: eljja, RATISS, Charlie-Zhao, Anosova 1990, Pruett 2003.
   printed on p.564 settles the Sweatman thesis row.
 - BKM (Doumbouya 2026) is kept `_local` until a peek needs it.
 - Values from repositories with no licence for their data are masked as `[value]` (mikha08-rgb/Nbody, eucliss and
-  others); values from published papers stay, with citation, under the owner's data-reuse ruling of 1 Nov.
+  others); values from published papers stay, with citation, under R-668 (items 3 and 9, the owner's data-reuse rule).
 - Tomihisa 2011 (row 151) takes the guide verifier's reading over chunk 07's one-liner, since the owner put it in the
   precision-gap check.
 - Anosova, Bertov & Orlov 1984's velocity recipe is Anosova 1969, Trudy AO LGU 26, 88, not held; R-673's Anosova 1969 is

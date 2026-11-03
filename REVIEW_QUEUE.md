@@ -1207,54 +1207,50 @@ waits on it before the gate.*
 - **Applied meanwhile:** applied per R-369, the measured native row uses `--release`. The report and the panel name the build (`build`, "debug" or "release"), and PR #368's "What to try" gives the command. No requirement or task text changes for this entry.
 - **Waits:** nothing built waits. TASK-M8-96's perf reader measures with `--release` and checks the `build` field.
 
-## RQ-672: Whether LL-3 (REQ-VAL-223) takes Hénon 1974, held under the owner's 1 Nov ruling on the fifteen questions, as its independent printed source for Standish's orbit, instead of waiting for Standish 1970 *(the owner's; asked 2 Nov 2026, unanswered; R-630 item 9; the 1 Nov fifteen-questions ruling, question 14; REQ-VAL-223; `docs/incoming/2026-11-02_library_triage/SUMMARY.md` § "Open questions for the owner" 1; context: LL-3, TASK-M3-47)*
+## RQ-672: Whether LL-3 (REQ-VAL-223) takes Hénon 1974, held under R-669, as its independent printed source for Standish's orbit, instead of waiting for Standish 1970 *(the owner's; asked 2 Nov 2026, unanswered; R-630 item 9; R-669, question 14; REQ-VAL-223; `docs/incoming/2026-11-02_library_triage/SUMMARY.md` § "Open questions for the owner" 1; context: LL-3, TASK-M3-47)*
 
 *Queued 3 Nov 2026 by the library triage of batches 81 to 153 (PR "data: library triage, batches 81-153, and the
-papers-11 to 13 addendum"). The question went to the owner on 2 Nov and is unanswered; it changes what LL-3 waits on.
-The two 1 Nov rulings cited here are on the port branch `rulings/2026-11-02-port`, not yet merged, so they are named,
-not numbered.*
+papers-11 to 13 addendum"). The question went to the owner on 2 Nov and is unanswered; it changes what LL-3 waits on.*
 
 - **File, section:**
-  - `decisions.md`:27109, § "R-630 — …", item 9: "Fetch Tanikawa & Mikkola 2021, Standish 1970 and Yasko & Orlov 2015
+  - `decisions.md`:27137, § "R-630 — …", item 9: "Fetch Tanikawa & Mikkola 2021, Standish 1970 and Yasko & Orlov 2015
     (TM-1, LL-3). If any is paywalled, list it for the owner to fetch instead."
   - `docs/design/principia_dd_replication.md`:280, the LL-3 row: "REQ-VAL-223 (waits: the owner's copies of the two
     papers, paywalled, R-630 item 9; …)"; "Li & Liao 2019 p. 3: F1 at (0.6, 0.8, 1) is Standish's 1970 orbit".
   - `docs/incoming/2026-11-02_library_triage/SUMMARY.md`:284-286, "Open questions for the owner" 1: "Hénon 1974's Table
     I A = 0 row is Standish's orbit and matches Li & Liao's F1(0.6, 0.8, 1) period to 2e-10 (ours). Should LL-3 take
-    Hénon 1974, already held under [the fifteen-questions ruling], as its independent printed source, so it stops
+    Hénon 1974, already held under R-669, as its independent printed source, so it stops
     waiting on Standish? Or keep waiting?"
-  - The owner's 1 Nov ruling on the fifteen questions (port branch), question 14: "Hénon 1974 (Celest. Mech. 10, 375)
-    joins the rotating-frame closure set beside [the library triage ruling's] item 4's: its values stored with
-    citation, its PDF held locally (all rights reserved), transcribed from the page".
+  - `decisions.md`:29469, § "R-669 — …", question 14: "Hénon 1974 (Celest. Mech. 10, 375) joins the rotating-frame
+    closure set beside R-668 item 4's: its values stored with citation, its PDF held locally (all rights reserved),
+    transcribed from the page".
   - `docs/incoming/2026-11-02_library_triage/triage-81-153.csv`:68, the Hénon 1974 row.
 - **The question:** whether Hénon 1974 stands in for Standish 1970 as the printed source for LL-3's first half (F1 at
   (0.6, 0.8, 1) is Standish's orbit), so that half no longer waits on a paywalled paper.
 - **Options seen:** (a) yes: LL-3's Standish half takes Hénon 1974's Table I A = 0 row as its source, transcribed from
-  the page under that ruling, and Yasko & Orlov 2015 still gates the other half; (b) no: LL-3 keeps waiting on the
+  the page under R-669, and Yasko & Orlov 2015 still gates the other half; (b) no: LL-3 keeps waiting on the
   owner's copy of Standish 1970 (R-630 item 9), and Hénon 1974 serves only the rotating-frame set; (c) both: Hénon 1974
   scores the half now, and Standish 1970 is checked against it once held.
 - **Applied meanwhile:** nothing; LL-3 waits as R-630 item 9 has it.
 - **Waits:** LL-3's Standish half (REQ-VAL-223, TASK-M3-47).
 
-## RQ-673: Whether planetary (star-plus-planets) three-body systems are parked with the hierarchical triples under the 1 Nov library triage ruling, to return with the v2+ 3D extension, or out of scope for good *(the owner's; asked 2 Nov 2026, unanswered; the 1 Nov library triage ruling, item 5; `docs/incoming/2026-11-02_library_triage/SUMMARY.md` § "Open questions for the owner" 2; context: the triage filter, no target built)*
+## RQ-673: Whether planetary (star-plus-planets) three-body systems are parked with the hierarchical triples under R-668, to return with the v2+ 3D extension, or out of scope for good *(the owner's; asked 2 Nov 2026, unanswered; R-668, item 5; `docs/incoming/2026-11-02_library_triage/SUMMARY.md` § "Open questions for the owner" 2; context: the triage filter, no target built)*
 
 *Queued 3 Nov 2026 by the library triage of batches 81 to 153 (PR "data: library triage, batches 81-153, and the
 papers-11 to 13 addendum"). The question went to the owner on 2 Nov and is unanswered; it decides whether these rows
-come back with the 3D extension. The 1 Nov library triage ruling is on the port branch `rulings/2026-11-02-port`, not
-yet merged, so it is named, not numbered.*
+come back with the 3D extension.*
 
 - **File, section:**
-  - The 1 Nov library triage ruling (port branch), item 5: "Hierarchical triples are out of scope for now, parked with
-    the v2+ 3D extension, and the triage's M9 list shrinks by them." It names hierarchical triples, not planetary
-    systems.
+  - `decisions.md`:29429, § "R-668 — …", item 5: "Hierarchical triples are out of scope for now, parked with the v2+ 3D
+    extension, and the triage's M9 list shrinks by them." It names hierarchical triples, not planetary systems.
   - `docs/incoming/2026-11-02_library_triage/SUMMARY.md`:15-16, "PARKED for hierarchical and planetary systems, parked
-    with the v2+ 3D extension ([the library triage ruling])", and :94-96, "star-plus-planets, star-planet-moon,
+    with the v2+ 3D extension (R-668)", and :94-96, "star-plus-planets, star-planet-moon,
     circumbinary-planet, co-orbital, free-floating-planet and test-particle problems fail "three massive bodies" or the
     planar subset".
   - `docs/incoming/2026-11-02_library_triage/SUMMARY.md`:288-289, "Open questions for the owner" 2: "Star-plus-planets
-    papers are read here as parked with the hierarchical triples ([the library triage ruling]), so they would return
+    papers are read here as parked with the hierarchical triples (R-668), so they would return
     with the v2+ 3D extension. Are they parked, or out of scope for good?"
-- **The question:** whether that ruling's parking reaches planetary systems, or they are out of scope for good.
+- **The question:** whether R-668's parking reaches planetary systems, or they are out of scope for good.
 - **Options seen:** (a) parked: star-plus-planets rows read PARKED, as the triage writes them, and return with the v2+
   3D extension; (b) out of scope for good: they read OFF-FILTER and do not return; (c) parked only where every body is
   massive (no test particles), the rest OFF-FILTER, as the test-particle case Quarles 2018 already is.
