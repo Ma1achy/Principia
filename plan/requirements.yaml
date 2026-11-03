@@ -31152,6 +31152,8 @@
     section: "R-302 — Per-PR mutation runs are sharded across parallel CI jobs; the nightly full run is the backstop *(closes RQ-176; amends R-196)*"
   - file: decisions.md
     section: "R-676 — Mutants run once per approved head, on the `merge-ready` label the merge watcher puts on, and again only when the head changes, `mutants-check` posted pending until then and never passed by a skipped job; fix rounds are checked locally through the job queue before they push; superseded `reviews` runs are cancelled per pull request; `main` is merged into open pull requests in batches; the quick and full tiers of `ci.yml` are not ruled *(amends R-656 and R-305)*"
+  - file: decisions.md
+    section: "R-677 — CI runs in three tiers: a change to Principia's code runs full CI as before; one to the plan's task data or the GUI's artboards and references runs only the cheap checks and the tests that read what it changed, with no build, test shard, GPU suite or mutants; one to the docs runs only the cheap checks; a change takes its highest tier, and an unknown path runs full CI; mutants run only when `crates/` source changes, on the merge-ready head; every required check still reports under its own name *(amends R-656, R-662, R-110, R-177, R-235, R-305 and R-676)*"
   verify:
     detail: "code: the `mutants.yml` workflow runs `cargo mutants --in-diff` against the PR's base on pull_request events as a matrix of n shards, each `--shard k/n` with its own timeout, and a shard cut off by its timeout fails the job (R-302); each exclusion names which of R-196's three categories it falls in; code and qa: each entry in the equivalent-mutants list carries a one-line justification and both reviewers approve it (R-202); qa: the checklist line (every surviving mutant in the diff is a finding, killed or justified as equivalent); the job can fire: on a fixture crate whose diff adds an untested branch it reports a surviving mutant and fails, with the test added it reports none, and with that mutant in the equivalent-mutants list it passes"
     method: review checklist
@@ -31161,8 +31163,9 @@
   - R-202
   - R-302
   - R-676
+  - R-677
   milestone: M0
-  note: "R-676: a pull request's run is on its merge-ready head, the run the `merge-ready` label starts once every reviewer its task names has approved that head, and again only if the head changes; `mutants-check` is pending until then, and a docs-only head, with no mutant, passes at once (R-662)."
+  note: "R-676: a pull request's run is on its merge-ready head, the run the `merge-ready` label starts once every reviewer its task names has approved that head, and again only if the head changes; `mutants-check` is pending until then, and a head whose change has no `.rs` file under `crates/`, with no mutant the gate runs, passes at once (R-677)."
 - id: REQ-VAL-149
   area: VAL
   kind: calibration
@@ -40144,6 +40147,8 @@
     section: "R-656 — CI throughput: a push runs `ci.yml` only on `main` (and on R-272's `measure/` branches, which have no pull request), a pull request running it through `pull_request`; a pull request's superseded runs are cancelled, never a run on `main`; a docs-only pull request skips the build, test, GPU and mutants work, and one that changes no GPU-path file skips the GPU suites, inside the jobs, every required check still reporting success under its own name; mutants run on the merge-ready head; a bounded target cache is approved in principle, built in a later PR; no paid or self-hosted runner *(amends R-110, R-177, R-186, R-195, R-235, R-285 and R-335)*"
   - file: decisions.md
     section: "R-662 — Full CI runs only when a pull request changes Principia's code: docs, plan prose, papers, Python and other scripts get only plan-check, the vocabulary lint and the atlas guard; a mixed change and an unknown path run full CI; every required check still reports *(amends R-656's docs-only list and docs checks, R-110 and R-177)*"
+  - file: decisions.md
+    section: "R-677 — CI runs in three tiers: a change to Principia's code runs full CI as before; one to the plan's task data or the GUI's artboards and references runs only the cheap checks and the tests that read what it changed, with no build, test shard, GPU suite or mutants; one to the docs runs only the cheap checks; a change takes its highest tier, and an unknown path runs full CI; mutants run only when `crates/` source changes, on the merge-ready head; every required check still reports under its own name *(amends R-656, R-662, R-110, R-177, R-235, R-305 and R-676)*"
   verify:
     method: unit test
     detail: "the gate-report fixture lists every requirement of the milestone's and earlier gate blocks, fails on a missing one, and marks benchmark requirements awaiting the human's run until their prin profile files are supplied; review: no workflow runs bench, nightly.yml is scheduled, gate.yml takes a milestone input"
@@ -40155,8 +40160,9 @@
   - R-195
   - R-656
   - R-662
+  - R-677
   milestone: M0
-  note: "R-656: ci.yml runs on a push to main (and to a measure/ branch, R-272) and on every pull-request head; R-662: a head that changes none of Principia's code runs plan-check and the vocabulary lint (in ci-workspace) in place of the build, fmt, clippy, the tests and cargo xtask ci, which run again on main once it merges."
+  note: "R-656: ci.yml runs on a push to main (and to a measure/ branch, R-272) and on every pull-request head; R-662: a head that changes none of Principia's code runs plan-check and the vocabulary lint (in ci-workspace) in place of the build, fmt, clippy, the tests and cargo xtask ci, which run again on main once it merges; R-677: a head that changes only the plan's task data or the GUI's artboards and references runs those and the tests that read what it changed."
 - id: REQ-SYS-068
   area: SYS
   statement: "`reviews-check` must count a role's APPROVE on an earlier commit when every later commit is qa's own `qa: tests for <TASK-id>` commit adding files only under `crates/*/tests/`, `xtask/tests/` or `fixtures/` (R-260), and must pass a PR whose title names no task, printing \"no task, no named reviewers\" (R-261)."
