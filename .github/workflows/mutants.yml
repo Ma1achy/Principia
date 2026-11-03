@@ -433,10 +433,14 @@ jobs:
   # listing each survivor of the whole run. `always()` makes it run on every merge-ready run, a cancelled or skipped
   # shard included (then it fails), and it passes when no shard has a mutant. `mutants-check`, below, reports its
   # result. It runs only on the merge-ready run, so it is not named `mutants-check`, which every run reports.
+  # `mutants-check` waits for it, so it is bounded, a stall failing it in minutes (applied per R-369; the limits on
+  # `mutants-check` below): the job 30 minutes, its longest run on 3 Nov 2026 under 2 minutes; the toolchain install 5,
+  # its longest 24 s in any job here; the download of the shards' reports 5, its longest 2 s.
   mutants-verdict:
     if: always() && github.event_name == 'pull_request' && github.event.action == 'labeled' && github.event.label.name == 'merge-ready'
     needs: mutants
     runs-on: ubuntu-24.04
+    timeout-minutes: 30
     permissions:
       contents: read
     steps:
@@ -445,6 +449,7 @@ jobs:
       # The toolchain rust-toolchain.toml pins, with its components: rust-gpu's nightly, on which the whole workspace
       # builds (R-169).
       - name: rustup toolchain install (rust-toolchain.toml)
+        timeout-minutes: 5
         run: rustup toolchain install
       # The cargo registry `ci.yml`'s `ci` job saves on a push to `main`, restored read-only under its key (R-337).
       - uses: Swatinem/rust-cache@v2
@@ -456,6 +461,7 @@ jobs:
           cache-bin: "false"
           save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
       - uses: actions/download-artifact@v4
+        timeout-minutes: 5
         with:
           pattern: mutants-report-shard-*
           path: ${{ runner.temp }}/shards
