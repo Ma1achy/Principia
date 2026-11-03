@@ -164,13 +164,13 @@ fn mapped_invariant<R: Q>(
 
 impl Totality for Mapped<InvariantLE<f32>, Defaults> {
     fn construction<R: Q>(&self, u: R, v: R) -> Option<Degenerate> {
-        mapped_invariant(&self.chart.invariant(), self.mapping, true, u, v)
+        mapped_invariant(self.chart.invariant(), self.mapping, true, u, v)
     }
 }
 
 impl Totality for Mapped<InvariantLK<f32>, Defaults> {
     fn construction<R: Q>(&self, u: R, v: R) -> Option<Degenerate> {
-        mapped_invariant(&self.chart.invariant(), self.mapping, false, u, v)
+        mapped_invariant(self.chart.invariant(), self.mapping, false, u, v)
     }
 }
 

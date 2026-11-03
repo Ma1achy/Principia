@@ -29,13 +29,15 @@ use engine::chart_authoring::{
 };
 use kernel::chart::invariant::Invariant;
 use kernel::chart::mixed::{Alpha, Coordinate, PRhoX, ZMu1, ZQ0, ZQ2, ZQ3};
+use kernel::chart::physical::{AxisE, MixedEnergy, MixedMassRatio};
 use kernel::chart::{
     Axis, BlockTouch, Burrau, BurrauThetaDeltaM, BurrauThetaK, BurrauThetaLz, Chart, ChartOut,
     EuclidPlane, Float, InvariantLE, InvariantLK, Latent, MassSimplex, Mixed, ShapeMap,
     ShapeSphere, SystemImage, ValidationResult,
 };
+use kernel::chart::{Mapped, Mapping};
 use kernel::decode::{self, Decoded};
-use kernel::generated::links::Defaults;
+use kernel::generated::links::{Defaults, LinkParams};
 use validation::negative_control;
 
 // ── Fixtures ───────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -1132,6 +1134,44 @@ fn chart_descriptors_registered_charts() {
         bij,
     );
     assert_eq!(raw.kind(), ChartKind::Affine);
+    // The physical-quantity mixed-axis charts and a mapped chart (TASK-M2-37): a lone E solves into the momenta, the
+    // mass ratio is kind 2 in the masses, and a mapping leaves the descriptor the chart's own.
+    let energy = check_registered(
+        MixedEnergy::<ZMu1, AxisE, Defaults, f64>::new(
+            [0.0; 8],
+            [-1.0, 1.0],
+            1.0,
+            2.0,
+            0.0,
+            Mapping::Warped,
+        ),
+        2,
+        bij,
+    );
+    assert!(energy.has_feasibility_boundary);
+    let ratio = check_registered(
+        MixedMassRatio::<Alpha, Defaults, f64>::new(
+            [0.0; 8],
+            [0.1, 1.4],
+            [0.05, 20.0],
+            [0, 1],
+            Mapping::Warped,
+            &LinkParams::DEFAULT,
+        )
+        .expect("a realised range"),
+        2,
+        bij,
+    );
+    assert_eq!(ratio.axes[1].kind(), Some(AxisKind::DerivedInBlock));
+    let mapped = check_registered(
+        Mapped::<_, Defaults>::new(
+            InvariantLK(invariant_params()),
+            [Mapping::Linear, Mapping::Linear],
+        ),
+        2,
+        bij,
+    );
+    assert_eq!(mapped, InvariantLK(invariant_params()).descriptor());
 }
 
 negative_control!(
