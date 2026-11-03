@@ -10,9 +10,15 @@
 //! R-662 narrowed that list to data code loads for behaviour, the owner's words of 31 Oct 2026: "Only the actual
 //! Principia CODE matters in ci". This file changes only where that ruling changes the behaviour it tests.
 //!
+//! R-677 (2 Nov 2026) moved the plan's task data and the GUI's artboards and references to tier (b): touching one runs
+//! the tests of the code that reads it, in `ci-workspace`, in place of the full suite. Here too the file changes only
+//! where that ruling changes the behaviour it tests: a file code reads runs full CI, or is tier (b) data whose readers
+//! run (R-677's exception to R-290).
+//!
 //! - `qa_r656_files_real_readers_read_are_code`: a sample of data code loads, qa's readers kept where R-662 keeps them
 //!   (the screenshot artboard, the print-graph catalogue and the golden references, the plan's requirements, tasks and
-//!   gate blocks): each file, touched alone, classifies `docs_only=false gpu=true`, so the build, test and GPU jobs run.
+//!   gate blocks): each file, touched alone, classifies `docs_only=false gpu=true`, so the build, test and GPU jobs run,
+//!   or, under R-677, as tier (b) data with its flag set, `ci.yml`'s `ci-workspace` then running its reader.
 //!   Files a directory walker would pick up if added (a new task file, artboard or catalogue entry) too.
 //! - `qa_r656_unread_docs_stay_docs_only`: real files under `docs/` that no code, plan check or script names (the
 //!   README's images, an incoming data table, the reference sources, an experiment's results) classify
@@ -63,6 +69,11 @@ fn swap(text: &str, from: &str, to: &str) -> String {
 
 /// The script's verdict `(docs_only, gpu)` on a change of `paths`, through `classify`.
 fn verdict(script: &str, paths: &[&str]) -> (bool, bool) {
+    flags(&verdict_text(script, paths))
+}
+
+/// The script's whole verdict on a change of `paths`, through `classify`: one `key=value` a line.
+fn verdict_text(script: &str, paths: &[&str]) -> String {
     let dir = Scratch::new("qa_r656_classify");
     std::fs::create_dir_all(&*dir).expect("scratch");
     let file = dir.join("ci_changes.sh");
@@ -77,7 +88,17 @@ fn verdict(script: &str, paths: &[&str]) -> (bool, bool) {
         .expect("qa_r656: bash ran");
     let stdout = String::from_utf8_lossy(&out.stdout).into_owned();
     assert!(out.status.success(), "qa_r656: classify failed: {stdout}");
-    flags(&stdout)
+    stdout
+}
+
+/// The one value of `key=` in a classifier's output.
+fn value(text: &str, key: &str) -> String {
+    let lines: Vec<&str> = text
+        .lines()
+        .filter_map(|l| l.strip_prefix(&format!("{key}=")))
+        .collect();
+    assert_eq!(lines.len(), 1, "qa_r656: not one `{key}=` in: {text}");
+    lines[0].to_owned()
 }
 
 /// `docs_only=…` and `gpu=…` from a classifier's output.
@@ -115,6 +136,59 @@ const READERS: &[(&str, &str)] = &[
     ("scripts/progress_banner.py", "plan/MILESTONES.md"),
 ];
 
+/// Where a tier (b) verdict runs a reader of `READERS` (R-677): a test, by its package and its `--test` name, or a
+/// script's step. `scripts/progress_banner.py` runs through xtask's progress banner tests.
+fn reader_run(reader: &str) -> (&'static str, String) {
+    match reader {
+        "plan/check_plan.py" => ("step", "python3 plan/check_plan.py".to_owned()),
+        "scripts/progress_banner.py" => ("xtask", "progress_banner".to_owned()),
+        other => {
+            let pkg = if other.starts_with("xtask/") {
+                "xtask"
+            } else {
+                ["kernel", "render"]
+                    .into_iter()
+                    .find(|p| other.starts_with(&format!("crates/{p}/")))
+                    .unwrap_or_else(|| panic!("qa_r656: no package for {other}"))
+            };
+            let stem = Path::new(other)
+                .file_stem()
+                .expect("stem")
+                .to_string_lossy()
+                .into_owned();
+            (pkg, stem)
+        }
+    }
+}
+
+/// Whether `ci.yml`'s `ci-workspace` runs `run` (a package's test, or a step's command) on a verdict whose `flag` is
+/// true: the step's `if:` must hold on a tier (b) verdict with that flag, by this file's own reading of the expression.
+fn ci_workspace_runs(ci: &Value, flag: &str, run: &(&str, String)) -> bool {
+    let steps = ci["jobs"]["ci-workspace"]["steps"]
+        .as_array()
+        .expect("qa_r656: ci-workspace's steps");
+    steps.iter().any(|st| {
+        let cond = s(&st["if"]);
+        let holds = cond.split("&&").all(|c| {
+            let c = c.trim();
+            c == "needs.changes.outputs.docs_only == 'true'"
+                || c == "needs.changes.outputs.tier == 'data'"
+                || c == format!("needs.changes.outputs.{flag} == 'true'")
+        }) && !cond.is_empty();
+        let cmd = s(&st["run"]);
+        let words: Vec<&str> = cmd.split_whitespace().collect();
+        let names = match run {
+            ("step", c) => cmd.trim() == c.as_str(),
+            (pkg, test) => {
+                cmd.starts_with("cargo nextest run ")
+                    && words.windows(2).any(|w| w == ["-p", *pkg])
+                    && words.windows(2).any(|w| w == ["--test", test.as_str()])
+            }
+        };
+        holds && names
+    })
+}
+
 /// Files a directory-walking reader reads, the first in the tree and the rest as a pull request might add them:
 /// a task file (xtask/src/reviews_check.rs), a new task file, a new artboard and a new reference catalogue entry.
 const WALKED: &[&str] = &[
@@ -125,7 +199,8 @@ const WALKED: &[&str] = &[
 ];
 
 fn check_readers_are_code(script: &str) {
-    let mut touched: Vec<String> = Vec::new();
+    let ci = parse(&read(".github/workflows/ci.yml"));
+    let mut touched: Vec<(String, Option<&str>)> = Vec::new();
     for (reader, file) in READERS {
         let base = Path::new(file)
             .file_name()
@@ -140,14 +215,27 @@ fn check_readers_are_code(script: &str) {
             root().join(file).is_file(),
             "qa_r656: {file} is not in the tree"
         );
-        touched.push((*file).to_owned());
+        touched.push(((*file).to_owned(), Some(*reader)));
     }
-    touched.extend(WALKED.iter().map(|f| (*f).to_owned()));
-    for file in &touched {
-        assert_eq!(
-            verdict(script, &[file]),
-            (false, true),
-            "qa_r656: touching {file}, which code reads, does not run the heavy jobs (docs_only, gpu)"
+    touched.extend(WALKED.iter().map(|f| ((*f).to_owned(), None)));
+    for (file, reader) in &touched {
+        // Full CI runs it (R-656), or it is tier (b) data whose readers run in `ci-workspace` (R-677).
+        let out = verdict_text(script, &[file]);
+        if flags(&out) == (false, true) {
+            continue;
+        }
+        let flag = if file.starts_with("docs/gui/") {
+            "gui_data"
+        } else {
+            "plan_data"
+        };
+        let runs = reader.is_none_or(|r| ci_workspace_runs(&ci, flag, &reader_run(r)));
+        assert!(
+            flags(&out) == (true, false)
+                && value(&out, "tier") == "data"
+                && value(&out, flag) == "true"
+                && runs,
+            "qa_r656: touching {file}, which code reads, does not run its readers (reader {reader:?} run: {runs}):\n{out}"
         );
     }
     // With a docs-only file beside it, the read file still makes the change code.
@@ -169,8 +257,7 @@ fn qa_r656_files_real_readers_read_are_code() {
 negative_control!(
     qa_r656_files_real_readers_read_are_code,
     "the script with the artboards dropped from its list of data code loads",
-    expected =
-        "touching docs/gui/design/01_main.png, which code reads, does not run the heavy jobs",
+    expected = "touching docs/gui/design/01_main.png, which code reads, does not run its readers",
     check_readers_are_code(&swap(
         &read("scripts/ci_changes.sh"),
         "    docs/gui/design/*) return 0 ;;\n",
@@ -243,10 +330,10 @@ fn check_unread_docs_only(script: &str) {
                 src.display()
             );
         }
-        assert_eq!(
-            verdict(script, &[file]),
-            (true, false),
-            "qa_r656: {file}, which no code reads, is not docs-only (docs_only, gpu)"
+        let out = verdict_text(script, &[file]);
+        assert!(
+            flags(&out) == (true, false) && value(&out, "tier") == "docs",
+            "qa_r656: {file}, which no code reads, is not docs-only (tier c, R-677):\n{out}"
         );
     }
     let all: Vec<&str> = files.iter().map(String::as_str).collect();
@@ -265,7 +352,7 @@ fn qa_r656_unread_docs_stay_docs_only() {
 negative_control!(
     qa_r656_unread_docs_stay_docs_only,
     "the script with every path under docs/ counted as code",
-    expected = "docs/readme/hero.jpg, which no code reads, is not docs-only",
+    expected = "docs/readme/hero.jpg, which no code reads, is not docs-only (tier c",
     check_unread_docs_only(&swap(
         &read("scripts/ci_changes.sh"),
         "    docs/gui/design/*) return 0 ;;\n",
@@ -331,8 +418,13 @@ fn merge_repo(repo: &Path, pr_path: &str) -> (String, String) {
     (git(repo, &["rev-parse", "HEAD"]), plain)
 }
 
-/// `detect` run in `repo` on `sha` under `event`: the verdict it writes to GITHUB_OUTPUT.
+/// `detect` run in `repo` on `sha` under `event`: the verdict `(docs_only, gpu)` it writes to GITHUB_OUTPUT.
 fn detect(script: &str, repo: &Path, event: &str, sha: &str) -> (bool, bool) {
+    flags(&detect_text(script, repo, event, sha))
+}
+
+/// `detect` run in `repo` on `sha` under `event`: the whole verdict it writes to GITHUB_OUTPUT.
+fn detect_text(script: &str, repo: &Path, event: &str, sha: &str) -> String {
     let file = repo.join("ci_changes_under_test.sh");
     let output = repo.join("github_output");
     std::fs::write(&file, script).expect("script written");
@@ -354,7 +446,7 @@ fn detect(script: &str, repo: &Path, event: &str, sha: &str) -> (bool, bool) {
         String::from_utf8_lossy(&out.stdout),
         String::from_utf8_lossy(&out.stderr)
     );
-    flags(&std::fs::read_to_string(&output).expect("qa_r656: detect wrote no GITHUB_OUTPUT"))
+    std::fs::read_to_string(&output).expect("qa_r656: detect wrote no GITHUB_OUTPUT")
 }
 
 fn check_detect(script: &str) {
@@ -379,13 +471,15 @@ fn check_detect(script: &str) {
         (false, true),
         "qa_r656: detect on a commit that is no merge does not run everything (docs_only, gpu)"
     );
-    // A pull request touching a file code loads runs everything.
+    // A pull request touching a file code loads runs its readers: an artboard is tier (b), the GUI's data (R-677).
     let read = dir.join("read");
     let (merge, _) = merge_repo(&read, "docs/gui/design/qa.png");
-    assert_eq!(
-        detect(script, &read, "pull_request", &merge),
-        (false, true),
-        "qa_r656: detect on a pull request touching an artboard does not run everything (docs_only, gpu)"
+    let out = detect_text(script, &read, "pull_request", &merge);
+    assert!(
+        flags(&out) == (true, false)
+            && value(&out, "tier") == "data"
+            && value(&out, "gui_data") == "true",
+        "qa_r656: detect on a pull request touching an artboard does not run its readers (tier b):\n{out}"
     );
 }
 

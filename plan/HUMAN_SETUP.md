@@ -23,8 +23,9 @@ In **Settings → Branches → Add branch protection rule** (or a ruleset) for `
 - require status checks to pass: `ci`, `pr-check`, `reviews-complete`, `xtask-ci`, `gpu-metal` and `gpu-lavapipe`
   (R-266; each appears in the list after its workflow has run once);
 - require `mutants-check` too (R-305), the per-PR mutation gate's verdict over every shard (TASK-M0-23). It reports on
-  every pull request: a docs-only head's passes at once, and any other head's is pending until the `merge-ready`
-  label's run completes it, passing when the diff has no surviving mutant (R-676). The human authorised the agent to
+  every pull request: a head whose change has no `.rs` file under `crates/` passes at once (R-677), and any other
+  head's is pending until the `merge-ready` label's run completes it, passing when the diff has no surviving mutant
+  (R-676). The human authorised the agent to
   add it, once TASK-M0-23 merges, and this is the one settings change R-305 allows;
 - leave "require branches to be up to date before merging" off (R-266): CI runs on each PR merged with main, and every
   push to main runs CI again;
