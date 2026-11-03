@@ -284,11 +284,14 @@ sources named there: eljja, RATISS, Charlie-Zhao, Anosova 1990, Pruett 2003.
 1. LL-3 and Hénon 1974. LL-3 (REQ-VAL-223) waits on a paywalled Standish 1970 (R-630 item 9). Hénon 1974's Table I A = 0
    row is Standish's orbit and matches Li & Liao's F1(0.6, 0.8, 1) period to 2e-10 (ours). Should LL-3 take Hénon 1974,
    already held under R-669, as its independent printed source, so it stops waiting on Standish? Or keep waiting?
+   Queued as RQ-672 in `REVIEW_QUEUE.md`.
 2. Planetary systems. Star-plus-planets papers are read here as parked with the hierarchical triples (R-668), so they would
    return with the v2+ 3D extension. Are they parked, or out of scope for good?
+   Queued as RQ-673 in `REVIEW_QUEUE.md`.
 3. The precision gaps as Principia's own output. Gap 1 already has BZ-1C (R-661). Should per-point FTLE maps (gap 2, over
    the eucliss free-fall plane and the two unequal-mass planes) and time-weighted shape-sphere residence statistics (gap 3)
    be planned as M9 peek outputs, which needs new requirements, or stay recorded here?
+   Queued as RQ-674 in `REVIEW_QUEUE.md`.
 
 ## Decisions recorded (applied per R-369)
 
@@ -316,4 +319,5 @@ sources named there: eljja, RATISS, Charlie-Zhao, Anosova 1990, Pruett 2003.
 - The papers-11 to 13 addendum is committed unchanged as `docs/incoming/2026-10-31_library_triage/triage-11-13.csv`,
   because R-669 cites its ranks and these rows cite it. It adds a file and changes nothing existing.
 
-Removed lines in this PR's commits: none.
+Removed lines in this PR's commits: none in the first two; later commits reword the 17 stale addendum citations, this
+file's addendum paragraph and this line, each listed in its commit's note.
