@@ -303,6 +303,35 @@ does not write (the virial ratio's, a ratio's range in the logits) are REQ-CHART
 under physics review before a chart offers them. The decoder-bug warning (R-467, clause 4) is for a chart whose
 physical-quantity axes are all warped.
 
+**The `PE` axis: no chart offers it (REQ-CHART-070, R-471 H2).** `PE = U` is a function of the configuration and the
+masses alone, so a `PE` axis would solve into the configuration block, not the momenta (kind 3, reading the masses).
+At the masses and scale gauge (§0.5) it is bounded above, by its value at the Lagrange equilateral triangle, where
+`|U|·√I` is least, and unbounded below, toward a collision; a level `U = U*` is a curve in the configuration's DOF, so
+an axis of it needs a residual convention to pick a point on that curve, as well as a warp of `t` onto the range. This
+section writes neither, so no chart offers a `PE` axis: the well-posedness validator refuses one (TASK-M2-37). A warp
+for it is a new paragraph here, under physics review, before any chart offers it.
+
+**The virial ratio's warp (REQ-CHART-070, R-506 W2).** For `Q = 2K/|U|` (`U < 0` at positive masses), the warp is
+`Q(t) = Q_max·t^γ_K`, where `Q_max` is the top of the axis's range and `γ_K` is this section's exponent. The kinetic
+energy at the pixel is `K* = Q(t)·|U|/2`, using the pixel's own `U` (E3). `K*` is built by §2.2's construction at the
+chart's held `L_z`. At a held `L_z = 0` every pixel of `[0,1]²` is feasible, since `K* ≥ 0`. The axis is bounded past
+both of its edges. Under the linear option the axis is `Q = Q_max·t`, affine, and its pixels with `K* < L_z²/2I` are
+not a system.
+
+**The mass ratio's range in the link's inputs (REQ-CHART-070, R-506 W3).** For two bodies `a` and `b`, the axis is the
+ratio `q = m_b/m_a`, with the third body's mass `m_c` held at its slice-centre value. Then `m_a = (1 − m_c)/(1 + q)`
+and `m_b = q·m_a`. The axis writes the active mass link's inputs, `z_mass = L⁻¹(m)`, and the decode reads the masses
+back through the link, `m = L(z_mass)`, so every pixel's masses are positive and sum to 1.
+
+A ratio is realised when the link's inverse followed by its forward returns it to within `ε_μ`, relative (§0.1's
+interior buffer), since the inverse saturates past what the link reaches.
+
+Warped, `q(t) = q₀·(q₁/q₀)^t`, geometric, over `[q₀, q₁]`: the part of the asked range the link realises at `m_c` and
+at its active parameters. The axis is bounded past both of its edges.
+
+Linear, `q(t) = q_lo + (q_hi − q_lo)·t`, affine, over the asked range. A pixel whose ratio is at or below 0, or is not
+realised, is not a system.
+
 ### 2.2 Deterministic momentum construction
 
 Given target `Lz` and `K*`, construct `pᵢ` with `Σpᵢ = 0`, `K = K*`, `Lz` as specified. Work in
