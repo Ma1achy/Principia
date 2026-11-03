@@ -19,8 +19,8 @@
 //!   on or taken off, and a reopened pull request's run have groups of their own, and only a pull request's runs are
 //!   cancelled.
 //! - `merge_ready_mutants_check_reports_a_stalled_step`: no stalled step leaves `mutants-check` unreported. Each step
-//!   before its report, and each checkout and cache step of every `mutants.yml` job but the shards, has a limit of its
-//!   own of at most `STEP_LIMIT` minutes, so a runner stall fails the job in minutes, not at the 355 minutes the
+//!   before its report, and each checkout and cache step of every `mutants.yml` job, the shards included, has a limit
+//!   of its own of at most `STEP_LIMIT` minutes, so a runner stall fails the job in minutes, not at the 355 minutes the
 //!   label-change wait needs. The report runs only when each passed, so one failing (a timeout among them) or cancelled
 //!   skips it and fails the job, and the step after it runs exactly then and, run under bash, fails with an error
 //!   annotation and a summary naming each earlier step's outcome.
@@ -853,10 +853,10 @@ mod notice_not_applicable {
 const STEP_LIMIT: u64 = 10;
 
 /// `mutants-check` is never left unreported by a stalled step: each step before its report, and each checkout and cache
-/// step of every job but the shards, has a limit of its own of at most `STEP_LIMIT` minutes. The report runs only when
-/// every step before it passed (no `if:`), so one failing, a timeout among them, or cancelled skips it and fails the
-/// job; the step after it runs exactly then (`always()`, on the report skipped) and, run under bash, fails with an
-/// error annotation and a summary naming each earlier step's outcome.
+/// step of every job, the shards included, has a limit of its own of at most `STEP_LIMIT` minutes. The report runs
+/// only when every step before it passed (no `if:`), so one failing, a timeout among them, or cancelled skips it and
+/// fails the job; the step after it runs exactly then (`always()`, on the report skipped) and, run under bash, fails
+/// with an error annotation and a summary naming each earlier step's outcome.
 fn check_step_limits(yml: &str) {
     let wf = parse(yml);
     let within = |s: &Value| {
@@ -895,10 +895,8 @@ fn check_step_limits(yml: &str) {
     let jobs = wf["jobs"]
         .as_object()
         .expect("merge_ready: mutants.yml's jobs");
-    // The shards' steps are not checked: `xtask/tests/qa_TASK-M0-23.rs` reads the `mutants` job's first
-    // `timeout-minutes:` as the per-shard limit (REQ-VAL-149), so a step limit before it waits on the qa-file exception
-    // put to the orchestrator in PR #389's fix round 3.
-    for (id, job) in jobs.iter().filter(|(id, _)| id.as_str() != "mutants") {
+    // The shards included: `mutants-verdict` waits for them, and `mutants-check` for it.
+    for (id, job) in jobs {
         for s in job["steps"].as_array().into_iter().flatten() {
             let uses = text(&s["uses"]);
             if ["actions/checkout@", "Swatinem/rust-cache@", "actions/cache"]
@@ -1030,6 +1028,34 @@ mod stall_verdict_checkout {
             "mutants.yml",
             "      contents: read\n    steps:\n      - uses: actions/checkout@v4\n        timeout-minutes: 10\n",
             "      contents: read\n    steps:\n      - uses: actions/checkout@v4\n"
+        ))
+    );
+}
+
+mod stall_shard_checkout {
+    use super::*;
+    negative_control!(
+        merge_ready_mutants_check_reports_a_stalled_step,
+        "a shard's checkout with no limit of its own, so a stall holds the verdict, and mutants-check, for hours",
+        expected = "mutants's step `actions/checkout@v4` has no limit of its own",
+        check_step_limits(&edited(
+            "mutants.yml",
+            "      - uses: actions/checkout@v4\n        timeout-minutes: 10\n        with:\n          fetch-depth: 0\n",
+            "      - uses: actions/checkout@v4\n        with:\n          fetch-depth: 0\n"
+        ))
+    );
+}
+
+mod stall_shard_rust_gpu {
+    use super::*;
+    negative_control!(
+        merge_ready_mutants_check_reports_a_stalled_step,
+        "a shard's rust-gpu restore with no limit of its own",
+        expected = "mutants's step `actions/cache/restore@v4` has no limit of its own",
+        check_step_limits(&edited(
+            "mutants.yml",
+            "steps.toolchain.outputs.channel }}\n        timeout-minutes: 5\n",
+            "steps.toolchain.outputs.channel }}\n"
         ))
     );
 }
