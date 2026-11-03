@@ -3439,9 +3439,12 @@ PR merges once its named reviewers approve its head and CI is green.
 
 ## R-305 — #65's provisional mutation values and items 10–13 stand; `mutants-check` becomes a required check on `main`
 *Amended by R-376.*
-*Still in force: all of it but the per-shard value: n = 8 shards stands, confirmed, and R-376 replaces 120 minutes per
-shard with 300, a ceiling for unusually large diffs, not a target; items 10–13, the required `mutants-check` and the
-comment-width nit stand.*
+*Amended in part by R-676 (2 Nov 2026: `mutants-check` passes at once only on a docs-only head; any other head's waits
+for its merge-ready run).*
+*Still in force: all of it but the per-shard value and when `mutants-check` passes: n = 8 shards stands, confirmed, and
+R-376 replaces 120 minutes per shard with 300, a ceiling for unusually large diffs, not a target; items 10–13, the
+required `mutants-check` and the comment-width nit stand; `mutants-check` reports on every pull request, passing at
+once on a docs-only head and on any other once its merge-ready run finds no mutant (R-676).*
 *30 Sep 2026 · applied in PR #65 (TASK-M0-23): `.github/workflows/mutants.yml` and `plan/HUMAN_SETUP.md` §2*
 
 "#65 (R-305):
@@ -28836,9 +28839,12 @@ Changes REQ-SCHED-101 (statement, verify, rulings, note) and REQ-CHART-062 (veri
 ## R-656 — CI throughput: a push runs `ci.yml` only on `main` (and on R-272's `measure/` branches, which have no pull request), a pull request running it through `pull_request`; a pull request's superseded runs are cancelled, never a run on `main`; a docs-only pull request skips the build, test, GPU and mutants work, and one that changes no GPU-path file skips the GPU suites, inside the jobs, every required check still reporting success under its own name; mutants run on the merge-ready head; a bounded target cache is approved in principle, built in a later PR; no paid or self-hosted runner *(amends R-110, R-177, R-186, R-195, R-235, R-285 and R-335)*
 *Amended in part by R-662 (31 Oct 2026: full CI runs only when a pull request changes Principia's code; the list of
 files code reads narrows to data code loads for behaviour, and the docs checks to the cheap checks).*
-*Still in force: all of it but what counts as docs-only and what a docs-only head runs, which are R-662's: the push
-trigger, the cancelled runs, the in-job skips under each required check's own name, mutants on the merge-ready head,
-the approved target cache and no paid or self-hosted runner.*
+*Amended in part by R-676 (2 Nov 2026: mutants run only on the run the `merge-ready` label starts, a push taking the
+label off; `reviews.yml` cancels its superseded runs per pull request and event).*
+*Still in force: all of it but what counts as docs-only and what a docs-only head runs, which are R-662's, and how the
+merge-ready head's mutants run and `reviews.yml`'s concurrency, which are R-676's: the push trigger, the cancelled
+runs, the in-job skips under each required check's own name, mutants on the merge-ready head, the approved target
+cache and no paid or self-hosted runner.*
 *30 Oct 2026 · the owner's two messages of that day; applied in `.github/workflows/ci.yml`,
 `.github/workflows/mutants.yml`, `scripts/ci_changes.sh` (new), `xtask/tests/ci_changes.rs` (new), three qa files
 (below), `plan/OPERATIONS.md`, `plan/WORKFLOW.md`, `docs/contracts/principia_parity_contract.md` §6, eight
@@ -29348,3 +29354,70 @@ The owner's words (31 Oct 2026), verbatim, from that day's message:
 *What it decides:* sccache is not enabled for local builds or the job queue, which refines R-658, item 4. It changes nothing in CI, which does not use it.
 
 R-666 is in the "process" group of `plan/rule_groups.yaml`.
+
+## R-676 — Mutants run once per approved head, on the `merge-ready` label the merge watcher puts on, and again only when the head changes, `mutants-check` posted pending until then and never passed by a skipped job; fix rounds are checked locally through the job queue before they push; superseded `reviews` runs are cancelled per pull request; `main` is merged into open pull requests in batches; the quick and full tiers of `ci.yml` are not ruled *(amends R-656 and R-305)*
+*2 Nov 2026 · the owner's CI plan of that day; applied in `.github/workflows/mutants.yml`,
+`.github/workflows/reviews.yml`, `xtask/tests/merge_ready.rs` (new), `xtask/tests/ci_changes.rs`,
+`xtask/tests/mutants_no_mutant.rs`, qa's `xtask/tests/qa_ci_throughput_a.rs` (new) and five qa files (below),
+`plan/OPERATIONS.md`, `plan/HUMAN_SETUP.md` §2, REQ-VAL-148's note and `plan/rule_groups.yaml`*
+
+The owner's words, 2 Nov 2026, verbatim: items (1), but for its quick tier, (2) and (4) of the message, which opens
+"CI plan, approved; do it as one tooling PR (or two if cleaner), then re-measure the same table after 48 h of normal
+load."
+
+> (1) Two-tier CI. […] The FULL suite plus mutants runs once on the merge-ready head (all required approvals present, or a ready-to-merge label your merge watcher applies), and again only if that head changes. Branch protection must still require the full checks on the merged head, so required check names must report correctly in both tiers (skip-as-success only where the tier logic allows it). Check rulings first (M0-45, R-266, any requiring mutants per push); if one conflicts, bring me the conflict instead of working around it. (2) Fix rounds are verified locally through the job queue (#355) first; CI confirms. […] (4) Your cuts 2, 3 and 5: cancel superseded `reviews` runs per PR; verify the docs-only skip shipped; batch main merges into PRs.
+
+The part of item (1) left out, the quick tier, verbatim: "Every push runs a QUICK tier: fmt, clippy, build, and tests
+for changed crates plus their dependents (target ≤10 min)." Items (3) and (5) are outside this ruling.
+
+*What it decides:*
+- **Mutants on the merge-ready head (item 1).** `mutants.yml`'s shards, `mutants-fixture` and its verdict run only in
+  the run the `merge-ready` label starts. The orchestrator's merge watcher puts the label on once every reviewer the
+  task names has approved the head, and a push to the pull request takes it off, so the gate runs again only on a head
+  approved again. In R-656, this amends "The gate runs on every head of a pull request whose diff has Rust in it" and
+  "The orchestrator's merge step is unchanged": the merge step now labels the approved head and waits for its
+  `mutants-check` (`plan/OPERATIONS.md` § "Mutants on the merge-ready head").
+- **`mutants-check` reports correctly (item 1's constraint).** It is a check run the workflow posts through the Checks
+  API, under the GitHub Actions app branch protection pins, never a job, so no skipped job can report it passed. Each
+  new head's is posted `queued`, and the merge-ready run's verdict completes it, success or failure. The one pass
+  posted without a run is a docs-only head's (R-662), whose diff has no mutant: the skip the tier logic allows. Branch
+  protection still requires `mutants-check` (R-305), unchanged.
+- **R-305, amended.** `mutants-check` still reports on every pull request, and a docs-only one's still passes at once.
+  Any other pull request's is pending until its head is labelled, and then passes if the diff has no mutant. What
+  R-305's "passes trivially when the diff has no mutants" loses, recorded rather than guarded: a pull request that is
+  not docs-only but has nothing to mutate, one whose Rust is only test files among them, now needs a label cycle before
+  its `mutants-check` passes.
+- **Fix rounds are checked locally first (item 2).** A fix round runs the tests its fixes touch, their controls, and its
+  mutants run where R-388 asks for one, through the job queue (R-658) on the head it is about to push; CI confirms
+  that head.
+- **Superseded `reviews` runs are cancelled (item 4).** `reviews.yml` keeps one `concurrency` group per pull request and
+  event, its merge ref's, with `cancel-in-progress`, never cancelling a run on `main`. In R-656, this amends "Three keep
+  none (below): `reviews.yml`, …" for `reviews.yml`; `no-atlas-params.yml` and `gemini-dispatch.yml` still keep none.
+  The events keep groups of their own, since a `pull_request_review` run re-runs the `pull_request` run (R-276), and in
+  one group the re-run would cancel the run that started it. The re-run reads the pull request's head before it waits
+  on the `pull_request` run and again just before re-running it, so a review's run never re-runs a superseded head's
+  run, which would cancel the new head's in the same group.
+- **`main` is merged into open pull requests in batches (item 4).** Each push re-runs a pull request's CI and takes its
+  label off, so `main` is merged in only on a conflict, when a merged change must be in the tree, or once right before
+  the label, the reviewers then approving the merged head (`plan/OPERATIONS.md` § "Merging `main` into an open pull
+  request, in batches").
+- **Not ruled: the quick and full tiers of `ci.yml` (item 1's first half).** Every push running only a quick tier, and
+  the full suite only on the merge-ready head, conflicts with R-110 (the unit, property, numerical-gate and native
+  golden suites on every commit), R-177 (`ci.yml` runs `cargo xtask ci` on every push) and R-235 (every control on
+  every push), as R-656 and R-662 read them. As the owner asked, the conflict is with him, and `ci.yml` is unchanged.
+
+*Applied per R-369:*
+- The label is named `merge-ready`, and the merge watcher puts it on with the user's own token, since a label a
+  workflow's `GITHUB_TOKEN` puts on starts no run.
+- A push's run tolerates a 404 when it takes the label off: after two quick pushes the second's payload still lists the
+  label the first's run took off. Any other error fails the step.
+- Five qa files change where this ruling changes the behaviour they test, as R-335 allowed for R-326 (exceptions to
+  R-290, named by the orchestrator, for the reviewers to confirm): `xtask/tests/qa_R-656_ci_changes.rs`,
+  `xtask/tests/qa_R-662_ci_scope.rs`, `xtask/tests/qa_TASK-M0-23.rs`, `xtask/tests/qa_TASK-M0-23_r305.rs` and
+  `xtask/tests/qa_TASK-M0-23_shards.rs`, each reading the verdict from `mutants-verdict` and the check from the posted
+  check run, the job `mutants-check` being gone. qa made the changes.
+- This ruling follows R-662 in the file: the numbers between them are on other branches, a rulings port among them.
+
+R-676 is in the "ci" group of `plan/rule_groups.yaml`.
+
+Changes REQ-VAL-148 (source, rulings, note).

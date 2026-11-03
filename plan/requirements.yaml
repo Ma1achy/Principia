@@ -9191,6 +9191,29 @@
   - R-545
   milestone: M7
   note: "R-545 (21 Oct 2026, RQ-297, option (a)). Closed by TASK-M7-53 (applied per R-369, R-545 C1). QA re-check 5606819712 of PR #274, Q11 (applied per R-369): the seam-5 test is renamed, the existing ledger_scale_restyle_zero_recompute (crates/render/tests/compaction_ramps.rs:1615) passing on main without the schema version. *Was (verify):* \"cargo test -p render ledger_scale_restyle_zero_recompute: with the regenerated ledger the view re-styles, the cache serves the same payload and the dispatch counter is unchanged;\""
+- id: REQ-GEN-044
+  area: GEN
+  kind: calibration
+  statement: "The fraction bits `arctan_sum_bits` of the arctangent generator's integer sum (`crates/ledger/src/gen/arctan.rs`, RQ-628's option (a)), which the corpus does not give, must be calibrated (R-71): proposed with its evidence by the task that needs it, held in the constants register marked provisional until the M2 gate (R-427), checked by the physics reviewer, confirmed by the human at the M2 gate and recorded in decisions.md."
+  source:
+  - file: docs/design/principia_dd_generation_root.md
+    section: 3.8 Metadata schema (what every entry must carry)
+  - file: docs/read_first/principia_00_philosophy.md
+    section: 4.2 Every constant must be derived or absent
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: decisions.md
+    section: "R-427 — Veto of TASK-M1-18's floor functions: the floors are constants-register entries, marked provisional until the M1 gate and read from there, and the register holds provisional values for every gate; TASK-M1-18 states whether `d_min`'s floor at f16's smallest normal is intended; no veto on decisions 1, 2 and 4–7"
+  verify:
+    method: numerical gate
+    detail: "the proposal gives the value, its admissibility class, and the measured range of bits that write the same `generated/arctan.rs`, with the sum's error bound and its measured worst error; `cargo test -p ledger --test arctan` holds the emitted file and that `sum_bits()` reads the entry; physics reviewer approves; recorded in decisions.md"
+  rulings:
+  - R-71
+  - R-427
+  milestone: M2
+  rq:
+  - RQ-635
+  note: "Raised by code review 5720675453 of PR #343: `sum_bits()` returned 100 as a literal past the lint (REQ-SYS-082), and the corpus gives no working precision. Proposed by TASK-M2-26. The value's question is RQ-635."
 - id: REQ-SCHED-001
   area: SCHED
   statement: "The quadtree must be built in three layers in order, each a working system: L0 flat grid (SimState, decoder, fragment contracts), L1 quad cache with ancestor fallback (FIFO queue, CPU tracks cache membership only, no sim data GPU→CPU), L2 adaptive refinement with the linearised-decoder uniforms."
@@ -21470,6 +21493,8 @@
   - R-406
   - R-468
   milestone: M6
+  rq:
+  - RQ-666
   note: "R-468 (20 Oct 2026), E1 to E6. Closed by TASK-M6-47. The real engine's Fit is REQ-GUI-230. Gui review 5585209592 of PR #253 (applied per R-369): G6, frac = quad width / (shown figure width × k), k = 1 outside Fit, so only Fit refines; G7, keyboard reach. R-472 (20 Oct 2026): X2's \"remembered\" is read as R-468 E4's \"for the session\" (flagged); present mode following the mode is now the human's words (X2c); the sidecar's f3_fill is REQ-TOOL-168."
 - id: REQ-GUI-230
   area: GUI
@@ -31125,6 +31150,8 @@
     section: "R-202 — A surviving mutant fails the per-PR job unless it is a listed, justified equivalent *(closes RQ-139)*"
   - file: decisions.md
     section: "R-302 — Per-PR mutation runs are sharded across parallel CI jobs; the nightly full run is the backstop *(closes RQ-176; amends R-196)*"
+  - file: decisions.md
+    section: "R-676 — Mutants run once per approved head, on the `merge-ready` label the merge watcher puts on, and again only when the head changes, `mutants-check` posted pending until then and never passed by a skipped job; fix rounds are checked locally through the job queue before they push; superseded `reviews` runs are cancelled per pull request; `main` is merged into open pull requests in batches; the quick and full tiers of `ci.yml` are not ruled *(amends R-656 and R-305)*"
   verify:
     detail: "code: the `mutants.yml` workflow runs `cargo mutants --in-diff` against the PR's base on pull_request events as a matrix of n shards, each `--shard k/n` with its own timeout, and a shard cut off by its timeout fails the job (R-302); each exclusion names which of R-196's three categories it falls in; code and qa: each entry in the equivalent-mutants list carries a one-line justification and both reviewers approve it (R-202); qa: the checklist line (every surviving mutant in the diff is a finding, killed or justified as equivalent); the job can fire: on a fixture crate whose diff adds an untested branch it reports a surviving mutant and fails, with the test added it reports none, and with that mutant in the equivalent-mutants list it passes"
     method: review checklist
@@ -31133,7 +31160,9 @@
   - R-198
   - R-202
   - R-302
+  - R-676
   milestone: M0
+  note: "R-676: a pull request's run is on its merge-ready head, the run the `merge-ready` label starts once every reviewer its task names has approved that head, and again only if the head changes; `mutants-check` is pending until then, and a docs-only head, with no mutant, passes at once (R-662)."
 - id: REQ-VAL-149
   area: VAL
   kind: calibration

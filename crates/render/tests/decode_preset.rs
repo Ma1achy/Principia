@@ -150,13 +150,17 @@ negative_control!(
     check_vs_decode_only(1e-3)
 );
 
-/// The preset library's DECODE and agreement presets are locked, and a fork starts as the preset and leaves it
-/// unchanged when edited; `library` is the library checked.
+/// The preset library's DECODE, agreement and ROUNDTRIP presets are locked, and a fork starts as the preset and leaves
+/// it unchanged when edited; `library` is the library checked.
 fn check_locked(library: &[presets::Preset]) {
     let names: Vec<&str> = library.iter().map(|p| p.name()).collect();
     assert_eq!(
         names,
-        [presets::decode::NAME, presets::agreement::NAME],
+        [
+            presets::decode::NAME,
+            presets::agreement::NAME,
+            presets::roundtrip::NAME
+        ],
         "the library's fragment-recompute presets"
     );
     for p in library {
