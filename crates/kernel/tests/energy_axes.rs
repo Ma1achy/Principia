@@ -483,11 +483,16 @@ negative_control!(
     check_linear_lone_e(&lone::<AxisE>(0.0, Mapping::Warped))
 );
 
+/// A lone `K` axis beside `α`.
+type LoneK = MixedEnergy<Alpha, AxisK, Defaults, f64>;
+/// A mass-ratio axis beside `z_α`.
+type RatioAlpha = MixedMassRatio<ZAlpha, Defaults, f64>;
+
 /// A physical-quantity mixed-axis chart is its parameters and no more: equal where every one is, unequal where any
 /// one differs; its debug form names the chart.
 fn check_physical_values(differ: bool) {
     let e = lone::<AxisK>(0.0, Mapping::Warped);
-    let edit = |f: &dyn Fn(&mut MixedEnergy<Alpha, AxisK, Defaults, f64>)| {
+    let edit = |f: &dyn Fn(&mut LoneK)| {
         let mut c = e;
         f(&mut c);
         c
@@ -501,13 +506,14 @@ fn check_physical_values(differ: bool) {
         edit(&|c| c.mapping = Mapping::Linear),
     ];
     for c in changed {
+        let copy = c;
         assert!(
-            (c != e) == differ && c == c,
+            (c != e) == differ && c == copy,
             "a lone K chart's equality is not its parameters': {c:?}"
         );
     }
     let r = ratio_chart([0.1, 10.0], Mapping::Warped);
-    let edit = |f: &dyn Fn(&mut MixedMassRatio<ZAlpha, Defaults, f64>)| {
+    let edit = |f: &dyn Fn(&mut RatioAlpha)| {
         let mut c = r;
         f(&mut c);
         c
@@ -521,8 +527,9 @@ fn check_physical_values(differ: bool) {
         edit(&|c| c.mapping = Mapping::Linear),
     ];
     for c in changed {
+        let copy = c;
         assert!(
-            (c != r) == differ && c == c,
+            (c != r) == differ && c == copy,
             "a mass-ratio chart's equality is not its parameters': {c:?}"
         );
     }
