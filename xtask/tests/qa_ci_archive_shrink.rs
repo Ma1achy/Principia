@@ -209,12 +209,56 @@ fn edited_ci(from: &str, to: &str) -> (String, Vec<(String, String)>) {
     with_ci(ci.replacen(from, to, 1))
 }
 
+/// `ci.yml` with `from` replaced by `to`, once, inside `ci-archive`'s step `STEP` alone: from the step's line to the
+/// next line at its indent or less. Text the same in another job's step (`ci-workspace` writes the same CARGO_HOME
+/// config) is never the one edited, whatever order the jobs are in.
+#[cfg(feature = "controls")]
+fn edited_archive_step(from: &str, to: &str) -> (String, Vec<(String, String)>) {
+    let ci = ci_yml();
+    let header = "\n  ci-archive:\n";
+    let mut at = ci.find(header).expect("ci.yml has no job ci-archive") + header.len();
+    let indent = |l: &str| l.len() - l.trim_start().len();
+    let mut range: Option<(usize, usize)> = None;
+    let mut step_indent = 0;
+    for line in ci[at..].split_inclusive('\n') {
+        let l = uncommented(line.trim_end());
+        if !l.trim().is_empty() {
+            match range {
+                None if indent(l) <= 2 => break,
+                None if l.trim() == STEP => {
+                    range = Some((at, ci.len()));
+                    step_indent = indent(l);
+                }
+                Some((start, _)) if indent(l) <= step_indent => {
+                    range = Some((start, at));
+                    break;
+                }
+                _ => {}
+            }
+        }
+        at += line.len();
+    }
+    let (start, end) = range.unwrap_or_else(|| panic!("ci-archive has no step `{STEP}`"));
+    let step = &ci[start..end];
+    assert!(
+        step.contains(from),
+        "ci-archive's step `{STEP}` has no `{from}` to edit"
+    );
+    let edited = format!(
+        "{}{}{}",
+        &ci[..start],
+        step.replacen(from, to, 1),
+        &ci[end..]
+    );
+    with_ci(edited)
+}
+
 negative_control!(
     qa_archive_dependency_strip_reaches_only_the_archive_build,
     "a strip that covers the workspace's own crates as well as the dependencies",
     expected = "is not a dependency-only table",
     {
-        let (ci, all) = edited_ci(
+        let (ci, all) = edited_archive_step(
             "printf '[profile.test.package.\"*\"]",
             "printf '[profile.test]",
         );
@@ -231,7 +275,7 @@ mod repository_config {
         "a strip written into the repository's .cargo/config.toml, which local builds read (R-233)",
         expected = "is not the runner's CARGO_HOME config",
         {
-            let (ci, all) = edited_ci(CARGO_HOME_CONFIG, "\".cargo/config.toml\"");
+            let (ci, all) = edited_archive_step(CARGO_HOME_CONFIG, "\".cargo/config.toml\"");
             check_scoping(&ci, &all)
         }
     );
