@@ -190,8 +190,14 @@ Both are readings, not authority; every claim was checked against the native fil
   integrating.
 - Hirayama's quadruple-precision Pythagorean chapter: not in the library; the only Hirayama item held is a one-page 2006
   abstract with no numbers.
-- Links: the BKM and CFT links resolve to earlier byte-identical copies (papers-12, papers-72), and
-  `papers-152/.../metadata/eucliss_releases.json` is a 3-byte empty list.
+- Links: the BKM and CFT links resolve to earlier byte-identical copies (papers-12, papers-72).
+- `eucliss_releases.json` is missing from the library (checked 3 Nov 2026, the owner's spot-check, item 4; this file
+  cited it as `papers-152/.../metadata/eucliss_releases.json`, "a 3-byte empty list"). Papers-152's `manifest.json` and
+  `checksums.sha256` list `metadata/eucliss_releases.json` (3 bytes, sha256 `37517e5f…b570`), but its `metadata/`
+  folder does not hold it. The library holds that hash once, as
+  `batches/papers-75/2026-11-01/source_evidence/NBotox_releases.json`, a 3-byte empty list, and `INDEX.csv` line 11935
+  maps the papers-152 path to it. So the citation is to that file, whose bytes, by the shared hash, are the listed
+  file's: an empty list, `[]`.
 - Confirmed: the status "no matched f32/f64/mixed planar chaotic ensemble", "open for native FTLE", "open for
   time-weighted occupation", the pass notes for 140 to 153, and Tomihisa's abstract maxima differing from its thesis.
 
