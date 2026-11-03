@@ -356,35 +356,51 @@ except for adding `mutants-check`, the one change R-305 allows. The human remove
 checks until #96 (TASK-M0-14) merges, since PRs off `main` never report it. Tell the human the moment #96 merges, so
 they can add it back.
 
-**What CI runs on a pull request (R-656, R-662).** `ci.yml` runs on a push to `main` (and to a `measure/` branch, R-272)
-and, for a pull request, through `pull_request` only, once per push. Each workflow that builds or tests keeps one
-`concurrency` group per pull request, so a push cancels the run on the head it supersedes; a run on `main` is never
-cancelled (`no-atlas-params.yml` and `gemini-dispatch.yml` keep none, decisions.md R-656). `reviews.yml` keeps one group
-per pull request and event, so a burst of reviews leaves one run, and the `pull_request_review` run that re-runs the
-`pull_request` run (R-276) is not in that run's group, which would cancel it (R-676). `ci.yml`'s `changes` job,
+**What CI runs on a pull request (R-656, R-662, R-677).** `ci.yml` runs on a push to `main` (and to a `measure/`
+branch, R-272) and, for a pull request, through `pull_request` only, once per push. Each workflow that builds or tests
+keeps one `concurrency` group per pull request, so a push cancels the run on the head it supersedes; a run on `main` is
+never cancelled (`no-atlas-params.yml` and `gemini-dispatch.yml` keep none, decisions.md R-656). `reviews.yml` keeps one
+group per pull request and event, so a burst of reviews leaves one run, and the `pull_request_review` run that re-runs
+the `pull_request` run (R-276) is not in that run's group, which would cancel it (R-676). `ci.yml`'s `changes` job,
 `mutants-pending` and `mutants-fixture` classify the change with `scripts/ci_changes.sh` (the pull request's merge
-commit against the base it merges onto; any other run runs everything):
-- **docs-only**, meaning it changes none of Principia's code (R-662; the owner, 31 Oct 2026: "Only the actual Principia
-  CODE matters in ci"): every path is on the script's allowlist, `docs/`, `plan/` (its prose and Python), `scripts/`,
-  `workbench/` and the root's markdown, and none is on its list of data code loads: `docs/gui/design/`,
-  `docs/gui/reference/`, `plan/requirements.yaml`, `plan/tasks.yaml`, `plan/MILESTONES.md`, `plan/tasks/`, the
-  classifier `scripts/ci_changes.sh` and the containment `scripts/contain.sh`, each with its readers named in the
-  script. The build, test, release and controls
-  jobs and the GPU suites' jobs are skipped, and `ci-workspace` runs only the cheap checks, plan-check and the
-  vocabulary lint, in place of its tests, beside `no-atlas-params.yml`, the atlas guard; `mutants-fixture` skips its
-  steps; `mutants`' shards find no `.rs` file outside those folders and pass;
-- **full CI** for everything else: `crates/`, `xtask/`, `fixtures/`, the Cargo files, the toolchain, `.github/`, a mixed
-  change, and any path the allowlist doesn't name, so an unknown top-level path fails towards full CI;
-- **no GPU-path file** (only docs-only paths, `crates/gui/` and `crates/prin/`; data code loads is a GPU path):
-  the GPU suites' jobs (`gpu-kernel suites`, `gpu-metal suites`, `gpu-lavapipe suites`) are skipped; everything else
-  runs.
+commit against the base it merges onto; any other run runs everything) into three tiers, a change touching several
+taking the highest (R-677):
+- **code**, tier (a): `crates/`, `xtask/`, `fixtures/`, the Cargo files, the toolchain, `.github/`, `.cargo/`, the one
+  datum only full CI reads (`plan/requirements.yaml`, which every numerical gate and the gpu-kernel tests check their
+  thresholds against, when a requirement is added or removed, a field code reads changes, or the field check cannot
+  tell), the classifier `scripts/ci_changes.sh` and its field check `scripts/ci_req_fields.py`, the containment
+  `scripts/contain.sh`, and any path the allowlist doesn't name, so an unknown top-level path fails towards full CI:
+  full CI;
+- **data**, tier (b): the plan's task data, `plan/tasks/`, `plan/tasks.yaml` and `plan/MILESTONES.md`, and
+  `plan/requirements.yaml` when only fields no code reads change (`statement`, `note`, `source`, `rulings`, `area`,
+  `rq`; `scripts/ci_req_fields.py` decides, printing one reason line in the `changes` job's log, and
+  `xtask/tests/ci_changes.rs` checks its list of the fields code reads against the loaders), and the GUI's
+  artboards and references, `docs/gui/design/` and `docs/gui/reference/`, each with its readers named in the script:
+  the build, test, release and controls jobs and the GPU suites' jobs are skipped, and `ci-workspace` runs the cheap
+  checks and the tests of the code that reads what changed, each test binary built alone (`gate-report`'s,
+  `gate-provisional`'s, `reviews-check`'s, the plan checks' and the progress banner's in xtask and validation's Part 6
+  catalogue for the task data; the screenshot tests and the HTML references' tests for the GUI's), in place of its own
+  tests; `xtask/tests/ci_changes.rs` checks that every reader its scan finds is among them;
+- **docs**, tier (c), meaning it changes none of Principia's code (R-662; the owner, 31 Oct 2026: "Only the actual
+  Principia CODE matters in ci"): every other path on the script's allowlist, `docs/`, `plan/` (its prose and Python),
+  `scripts/`, `workbench/` and the root's markdown: as tier (b), but `ci-workspace` runs only the cheap checks,
+  plan-check and the vocabulary lint, beside `no-atlas-params.yml`, the atlas guard;
+- **no GPU-path file** (only data and docs paths, `crates/gui/` and `crates/prin/`): the GPU suites' jobs (`gpu-kernel
+  suites`, `gpu-metal suites`, `gpu-lavapipe suites`) are skipped; everything else runs;
+- **no `.rs` file under `crates/`** (`mutants=false`; the owner, 2 Nov 2026: "Mutants run only when crates/ source
+  changes, on the merge-ready head"): `mutants-check` is posted passed at once and `mutants`' shards find no `.rs` file
+  under `crates/` and pass. xtask's own code is mutated by the nightly full run. `mutants-fixture`, the gate's
+  self-test on its fixtures, skips its steps only on a docs change, tier (c) (`tier=docs`), so a change to the gate's
+  configuration (`.cargo/mutants.toml`, `fixtures/mutants/`, `scripts/contain.sh`, `mutants.yml`) runs it.
+`docs_only`, the name R-656 gave the verdict, is true on a tier (b) or (c) change, so the skips and gates kept it.
 
 Every required check still reports under its own name and concludes success, so the merge step is unchanged:
 `merge-batch.sh`'s `gh pr checks --required` reads `pass` for each. A skipped job never bears a required name: the
 required checks `ci`, `xtask-ci`, `gpu-kernel`, `gpu-metal` and `gpu-lavapipe` are gates that run whatever their jobs
 ended in and pass a skipped one only on the classification's verdict, and matrix jobs are named `<id> (<shard>)`.
 `mutants-check` is the exception: it is pending until the merge-ready run (below) posts its verdict, and is posted
-passed at once only on a docs-only head, which has no mutant. What a pull request skips runs on `main` after
+passed at once only on a head whose change has no `.rs` file under `crates/`, which has no mutant the gate runs
+(R-677). What a pull request skips runs on `main` after
 it merges, where every job runs. A superseded head's cancelled run leaves its gates failed or cancelled, as before:
 the owner kept them as they are, TASK-M0-45's checks and R-266 standing (30 Oct 2026, on #351, no ruling). A
 head that changes only prose a test reads does not run that test, which runs on `main` once it merges, so a contract's
@@ -414,8 +430,8 @@ the verdict) runs once per approved head, not on every push:
   does the watcher put the label back on, starting the new head's merge-ready run.
 - **What branch protection sees.** `mutants-check` is a check run the workflow posts through the Checks API, under the
   GitHub Actions app, never a job: before the label it is `queued` (pending), or "expected" if nothing posted it, so
-  the merge waits; it is never a skipped job, which GitHub would count as passed. A docs-only head's is posted passed
-  at once (R-662), the verdict the shards would reach.
+  the merge waits; it is never a skipped job, which GitHub would count as passed. A head whose change has no `.rs`
+  file under `crates/` has its posted passed at once (R-677), the verdict the shards would reach.
 
 **Fix rounds are verified locally first (R-676).** A fix round runs the tests its fixes touch, their controls, and its
 mutants run where R-388 asks for one, through the job queue (R-658) on the head it is about to push, before it pushes;

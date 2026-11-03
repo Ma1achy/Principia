@@ -23,9 +23,10 @@
 //!   GitHub (check runs and labels kept in a file, served by a stand-in `gh`), each job's `gh` steps run under bash as
 //!   a runner runs them, the shards' outcome given. After each event the head's `mutants-check`, as branch protection
 //!   reads it, is: pending on a new code head; failed on a failed, cancelled or skipped merge-ready verdict; passed
-//!   only by a passing merge-ready run, or at once on a docs-only head; one check run per head, so no stale queued
-//!   one is left beside the verdict; a push takes the label off, a reopen leaves a passed head passed, and a docs-only
-//!   head pushed while an earlier push's run already took the label off still passes at once.
+//!   only by a passing merge-ready run, or at once on a head with no `.rs` file under `crates/` (R-677, which moved
+//!   this from a docs-only head's; the one change here, R-677's exception to R-290); one check run per head, so no
+//!   stale queued one is left beside the verdict; a push takes the label off, a reopen leaves a passed head passed, and
+//!   such a head pushed while an earlier push's run already took the label off still passes at once.
 //! - `qa_cta_superseded_runs_cancel_per_pull_request`: the concurrency groups, evaluated per event: in `mutants.yml` a
 //!   push shares the merge-ready run's group (so it cancels it), another label's run does not, two pull requests never
 //!   share one, and nothing on `main` is cancelled; in `reviews.yml` a review cancels the review run before it on the
@@ -870,10 +871,11 @@ impl Pr {
     }
 
     /// Event `e` on the pull request: the jobs that run, and in each the steps that call `gh`, run under bash as a
-    /// runner runs them with their `env:`. The change classification gives `docs_only`, and the verdict step's outcome
-    /// is `verdict` (the shards ending likewise); every other step that calls no `gh` stands in as passed. Returns the
-    /// jobs that ran, and each `gh` step's log.
-    fn on(&self, e: &Ev, docs_only: bool, verdict: &str) -> (BTreeSet<String>, String) {
+    /// runner runs them with their `env:`. The change classification says whether the change has no mutant (R-677:
+    /// `no_mutant`, a change with no `.rs` file under `crates/`, `mutants=false`), and the verdict step's
+    /// outcome is `verdict` (the shards ending likewise); every other step that calls no `gh` stands in as passed.
+    /// Returns the jobs that ran, and each `gh` step's log.
+    fn on(&self, e: &Ev, no_mutant: bool, verdict: &str) -> (BTreeSet<String>, String) {
         let results = jobs_run(&self.wf, e, verdict);
         let jobs = ran(&results);
         let mut log = String::new();
@@ -891,7 +893,12 @@ impl Pr {
             {
                 let sid = step.get("id").map(text).unwrap_or_else(|| format!("__{i}"));
                 if sid == "changes" {
-                    let outputs = HashMap::from([("docs_only".to_owned(), docs_only.to_string())]);
+                    // R-677: the gate passes at once on `mutants=false`, whatever the tier. The classification here
+                    // is never `docs_only`, so a workflow still passing on `docs_only` posts nothing passed.
+                    let outputs = HashMap::from([
+                        ("docs_only".to_owned(), "false".to_owned()),
+                        ("mutants".to_owned(), (!no_mutant).to_string()),
+                    ]);
                     ctx.steps.insert(sid, ("success".to_owned(), outputs));
                     continue;
                 }
@@ -958,7 +965,7 @@ impl Pr {
     fn merge_ready(
         &self,
         head: &str,
-        docs_only: bool,
+        no_mutant: bool,
         verdict: &str,
     ) -> (BTreeSet<String>, String) {
         let mut labels = self.labels();
@@ -968,16 +975,16 @@ impl Pr {
         self.set_labels(&refs);
         self.on(
             &ev("labeled", "merge-ready", head, &refs),
-            docs_only,
+            no_mutant,
             verdict,
         )
     }
 
     /// A push of `head`: the `synchronize` event's payload lists the labels on the pull request when it fired.
-    fn push(&self, head: &str, docs_only: bool) -> (BTreeSet<String>, String) {
+    fn push(&self, head: &str, no_mutant: bool) -> (BTreeSet<String>, String) {
         let labels = self.labels();
         let refs: Vec<&str> = labels.iter().map(String::as_str).collect();
-        self.on(&ev("synchronize", "", head, &refs), docs_only, "success")
+        self.on(&ev("synchronize", "", head, &refs), no_mutant, "success")
     }
 }
 
@@ -1085,14 +1092,14 @@ fn life(yml: &str) {
         )
     );
 
-    // A docs-only head passes at once (R-305, R-662), and the label comes off.
+    // A head with no `.rs` file under `crates/` passes at once (R-305, R-677), and the label comes off.
     let (_, log) = pr.push("c", true);
     assert!(
         pr.gate("c") == "passed" && !pr.labels().contains(&"merge-ready".to_owned()),
         "qa_cta: {}",
         say(
             &format!(
-                "a docs-only head's mutants-check is {}, not passed at once",
+                "a head with no Rust under crates/: its mutants-check is {}, not passed at once",
                 pr.gate("c")
             ),
             &log
@@ -1124,7 +1131,8 @@ fn life(yml: &str) {
     );
 
     // Two pushes close together: the second's payload still lists the label the first's run has since taken off. The
-    // docs-only head still passes at once, so no pull request waits on a check that never reports (R-305).
+    // head with no Rust under crates/ still passes at once, so no pull request waits on a check that never reports
+    // (R-305, R-677).
     pr.set_labels(&[]);
     let (_, log) = pr.on(
         &ev("synchronize", "", "f", &["merge-ready"]),
@@ -1136,7 +1144,7 @@ fn life(yml: &str) {
         "passed",
         "qa_cta: {}",
         say(
-            "a docs-only head pushed after the label came off is not passed at once",
+            "a head with no Rust under crates/ pushed after the label came off is not passed at once",
             &log
         )
     );
@@ -1162,11 +1170,11 @@ mod new_head_passed {
     use super::*;
     negative_control!(
         qa_cta_mutants_check_through_a_pull_requests_life,
-        "every new head's mutants-check posted passed, docs-only or not",
+        "every new head's mutants-check posted passed, with Rust under crates/ or not",
         expected = "a new code head's mutants-check is not pending",
         life(&edited(
             "mutants.yml",
-            "          if [ \"$DOCS_ONLY\" = true ]; then\n",
+            "          if [ \"$MUTANTS\" = false ]; then\n",
             "          if true; then\n"
         ))
     );
@@ -1218,11 +1226,12 @@ mod docs_only_waits {
     use super::*;
     negative_control!(
         qa_cta_mutants_check_through_a_pull_requests_life,
-        "a docs-only head's check posted queued like a code head's",
-        expected = "a docs-only head's mutants-check is pending, not passed at once",
+        "a head with no Rust under crates/ posted queued like a code head's",
+        expected =
+            "a head with no Rust under crates/: its mutants-check is pending, not passed at once",
         life(&edited(
             "mutants.yml",
-            "          if [ \"$DOCS_ONLY\" = true ]; then\n",
+            "          if [ \"$MUTANTS\" = false ]; then\n",
             "          if false; then\n"
         ))
     );
