@@ -520,6 +520,8 @@ jobs:
         run: |
           set -euo pipefail
           summary="${GITHUB_STEP_SUMMARY:-/dev/null}"
+          # The notice's message is the one text the check run carries (a step summary never reaches it): the merge
+          # watcher reads it among the check run's annotations, and a passed verdict's reads `no surviving mutant`.
           report() { # report <exit> <title> <why>
             echo "mutants-check on $HEAD_SHA: $2. $3"
             printf '## mutants-check: %s\n\n%s\n' "$2" "$3" >> "$summary"

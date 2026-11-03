@@ -423,7 +423,10 @@ the verdict) runs once per approved head, not on every push:
   `gh api --method POST repos/Ma1achy/Principia/issues/<N>/labels -f 'labels[]=merge-ready'`. It puts it on only
   where it is absent; adding it again starts nothing. That starts the merge-ready run, whose `mutants-check` is the
   verdict, success or failure. Before the label a code head's `mutants-check` passes "not applicable" (R-678), so the
-  merge waits for the merge-ready run's `mutants-check`, its summary "no surviving mutant", not for any pass.
+  merge waits for the merge-ready run's `mutants-check` to pass with the notice "no surviving mutant", not for any
+  pass. The watcher reads that notice from the check run's annotations
+  (`gh api repos/Ma1achy/Principia/check-runs/<id>/annotations`, the message of the one titled `mutants-check`): a
+  job's step summary never reaches its check run, whose `output` title, summary and text are null.
 - **A push takes it off.** On every push to the pull request, `merge-ready-off` removes the label, and that run's
   `mutants-check` passes "not applicable", so the gate runs again only once the new head is approved and labelled
   again, and the push cancels a merge-ready run still going on the old head. Another label put on or taken off runs

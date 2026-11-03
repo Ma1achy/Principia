@@ -13,9 +13,10 @@
 //!   `crates/` (R-677; `mutants=false`, an empty classification not among them) and on a head that is not merge-ready, a
 //!   push's included; and on another label put on or taken off a merge-ready head, the verdict of its latest merge-ready
 //!   run, waited for while it runs, failing with none, or on a head a push has superseded. `merge-ready-off` runs on a
-//!   push alone and takes the label off, a 404 (the label already off) passing and any other error failing. A run on
-//!   `main`, a run of another label, put on or taken off, and a reopened pull request's run have groups of their own,
-//!   and only a pull request's runs are cancelled.
+//!   push alone and takes the label off, a 404 (the label already off) passing and any other error failing. The notice
+//!   annotation, the one text the check run carries, reads `no surviving mutant` on a passed verdict and on no other
+//!   path, as the merge watcher reads it. A run on `main`, a run of another label, put on or taken off, and a reopened
+//!   pull request's run have groups of their own, and only a pull request's runs are cancelled.
 //! - `merge_ready_reviews_runs_cancel_per_pr_and_event`: `reviews.yml` keeps one cancelling group per pull request and
 //!   event, never cancelling on `main`; `reviews-complete` still runs on every run; and the re-run of the stale
 //!   `pull_request` run (R-276), run under bash with a stand-in `gh`, re-runs it on the live head and leaves a
@@ -525,6 +526,20 @@ fn check_gate(yml: &str) {
             got.log,
             got.calls
         );
+        // The merge watcher reads the notice annotation (a step summary never reaches the check run): it names a
+        // passed verdict, `no surviving mutant`, and nothing else does.
+        let notice = got
+            .log
+            .lines()
+            .find_map(|l| l.strip_prefix("::notice title=mutants-check::"));
+        let passed = *ok && *says == "no surviving mutant";
+        assert!(
+            notice.is_some() == got.ok
+                && notice.is_some_and(|n| n.contains("no surviving mutant")) == passed,
+            "merge_ready: mutants-check's notice on {what} is {notice:?}, not one that says `no surviving mutant` \
+             exactly when the verdict passed: {}",
+            got.log
+        );
         assert!(
             !got.summary.is_empty() || what.contains("never ending"),
             "merge_ready: mutants-check on {what} wrote no summary: {}",
@@ -793,6 +808,34 @@ mod reopened_cancels {
             "mutants.yml",
             "    || github.event.action == 'reopened'\n",
             ""
+        ))
+    );
+}
+
+mod notice_unnamed {
+    use super::*;
+    negative_control!(
+        merge_ready_mutants_gate_waits_for_the_label,
+        "a success notice that does not name the verdict, so the merge watcher never reads `no surviving mutant`",
+        expected = "not one that says `no surviving mutant` exactly when the verdict passed",
+        check_gate(&edited(
+            "mutants.yml",
+            "              echo \"::notice title=mutants-check::$2\"\n",
+            "              echo \"::notice title=mutants-check::passed\"\n"
+        ))
+    );
+}
+
+mod notice_not_applicable {
+    use super::*;
+    negative_control!(
+        merge_ready_mutants_gate_waits_for_the_label,
+        "a not-applicable notice that says `no surviving mutant`, so the watcher passes a head mutants never ran on",
+        expected = "not one that says `no surviving mutant` exactly when the verdict passed",
+        check_gate(&edited(
+            "mutants.yml",
+            "            report 0 \"not applicable\" \\\n",
+            "            report 0 \"not applicable: no surviving mutant\" \\\n"
         ))
     );
 }
