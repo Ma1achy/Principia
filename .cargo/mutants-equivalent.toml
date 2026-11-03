@@ -386,3 +386,35 @@ justification = "WNOHANG and WNOWAIT are distinct single-bit waitid options on b
 [[equivalent]]
 mutant = "xtask/src/jobq.rs:1511:41: replace | with ^ in leader_exited"
 justification = "WEXITED (0x4) and WNOHANG (0x1) share no bit on both the Linux and the Mac targets, so their ^ is their |, and the options passed to waitid are the same bits"
+
+[[equivalent]]
+mutant = "crates/kernel/src/chart/energy.rs:404:9: replace Mapped<C, S>::own -> bool with false"
+justification = "own() picks the wrapped chart's own decode and check where every axis is warped, and the rule path it otherwise takes is that chart's bit for bit, untilted and tilted (energy_axes_warped_rule_is_the_warp, energy_axes_warped_bitwise_own, energy_warp_per_pixel_tilted_own), so false only takes the equal path"
+
+[[equivalent]]
+mutant = "crates/kernel/src/chart/energy.rs:478:26: replace & with | in invariant_decode"
+justification = "u_ref is read only through the rule's weight, which invariant_rule sets non-zero only for a linear E, so computing it for more mappings changes no K*"
+
+[[equivalent]]
+mutant = "crates/kernel/src/chart/energy.rs:494:31: replace > with >= in nearest_linear_s"
+justification = "nearest_linear_s is reached only for an infeasible linear L_z after t is clamped to t >= 0, and u = 1/2 gives L_z = 0, feasible at every K* = K_max*t >= 0, so u is never 1/2 there"
+
+[[equivalent]]
+mutant = "crates/kernel/src/chart/physical.rs:316:31: replace & with | in MixedEnergy<A, Q, S, P>::decode_from"
+justification = "u_ref is read only through the rule's weight on a linear E (AxisE::rule); the K, KE, L_z and virial rules ignore it and a warped E's weight is 0, so computing it for more axes changes no K*"
+
+[[equivalent]]
+mutant = "crates/kernel/src/chart/physical.rs:723:28: replace && with || in MixedMassRatio<A, S, f64>::realised_within"
+justification = "a q the guard then lets through, finite and <= 0, fails the last test, |ratio - q| <= eps*q being false for q <= 0, so the guard only skips the round trip"
+
+[[equivalent]]
+mutant = "crates/kernel/src/chart/physical.rs:723:33: replace > with >= in MixedMassRatio<A, S, f64>::realised_within"
+justification = "q = 0 then reaches the last test, |ratio - 0| <= eps*0, which a round trip of positive masses fails, as the guard does"
+
+[[equivalent]]
+mutant = "crates/kernel/src/chart/physical.rs:729:47: replace > with >= in MixedMassRatio<A, S, f64>::realised_within"
+justification = "a round-trip mass of exactly 0 is m_a or m_b, making the ratio 0 or infinite and failing its eps test, or m_c, the held slice-centre mass round-tripped, a decoded mass and never 0"
+
+[[equivalent]]
+mutant = "crates/kernel/src/chart/physical.rs:745:29: replace > with >= in MixedMassRatio<A, S, f64>::edge"
+justification = "toward = from never reaches the test: new's only from is the centre's ratio, realised to within eps_mu/2, so edge returns at its first test for toward = from"

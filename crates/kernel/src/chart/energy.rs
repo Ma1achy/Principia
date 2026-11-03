@@ -485,18 +485,19 @@ where
 }
 
 /// The `s` nearest `u` at which a linear `L_z` is feasible at `K* = k`, at the same `t`: the parabola's edge on `u`'s
-/// side, `½ ± ½·L_max(K*)/L_max(K_max)`, stepped toward `½` while the construction's exact test still finds it
-/// infeasible, eight steps at most, then `½` itself, where `L_z = 0`.
+/// side, `½ ± ½·L_max(K*)/L_max(K_max)`, its offset from `½` shrunk by four ulps at a time while the construction's
+/// exact test still finds it infeasible, eight steps at most, then `½` itself, where `L_z = 0`. Each step moves `L_z` by a
+/// few of its own ulps wherever `s` lies (an ulp of `s` near 0 is far finer than one of `L_z`).
 fn nearest_linear_s(k_max: f64, k: f64, u: f64) -> f64 {
     let lin = invariant::l_max(k_max);
     let reach = 0.5 * invariant::l_max(k) / lin;
-    let up = u > 0.5;
-    let mut s = select(up, 0.5 + reach, 0.5 - reach);
+    let mut offset = select(u > 0.5, reach, -reach);
     for _ in 0..8 {
+        let s = 0.5 + offset;
         if !infeasible(1.0, k, (s + s - 1.0) * lin) {
             return s;
         }
-        s = select(up, s.next_down(), s.next_up());
+        offset *= 1.0 - 4.0 * f64::EPSILON;
     }
     0.5
 }

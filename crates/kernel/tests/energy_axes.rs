@@ -38,6 +38,7 @@ use kernel::chart::{
 };
 use kernel::decode::invariant::{infeasible, Outcome};
 use kernel::decode::{mass, Decoded, Degenerate, Latent};
+use kernel::generated::constants::ChartConstants;
 use kernel::generated::links::{
     Defaults, Link, LinkParams, Select, Selection, SigmoidAlpha, SigmoidBeta, SigmoidQ,
     StickBreaking,
@@ -213,6 +214,35 @@ negative_control!(
      it must fail",
     expected = "is not a system",
     check_every_pixel("α × L_z's line, wrong K", lone_lz_line(2.0 * k_max()))
+);
+
+/// A lone `L_z` axis decodes its line of the warp at the held `K`: `K(p) = K` and `L_z(p) = (2t − 1)·L_max(K)`, each
+/// within REQ-DEC-046's tolerances, at every pixel of the grid; `line(t)` is the line's `2t − 1` as the check reads it.
+fn check_lone_lz(line: fn(f64) -> f64) {
+    let held = k_max();
+    let chart = lone::<AxisLz>(held, Mapping::Warped);
+    let eps = f64::EPSILON;
+    let l_max = invariant::l_max(held);
+    for [u, v] in grid(0.0, 1.0) {
+        let (lz, k) = lz_k(&chart.decode::<Defaults, f64>(u, v));
+        let want = line(v) * l_max;
+        assert!(
+            (k - held).abs() <= TOL_K * eps * held && (lz - want).abs() <= TOL_L * eps * l_max,
+            "the lone L_z axis at ({u}, {v}) decodes L_z = {lz}, K = {k}, not (2t − 1)·L_max(K) = {want} at K = {held}"
+        );
+    }
+}
+
+#[test]
+fn energy_axes_warped_lone_lz() {
+    check_lone_lz(|t| t + t - 1.0);
+}
+
+negative_control!(
+    energy_axes_warped_lone_lz,
+    "the line read as 1 − 2t, L_z's sign flipped, must fail",
+    expected = "not (2t − 1)·L_max(K)",
+    check_lone_lz(|t| 1.0 - t - t)
 );
 
 /// The default mapping is the chart's own, bit for bit: decode, `map` and `validate` over the grid and past it.
@@ -518,6 +548,112 @@ negative_control!(
     check_physical_values(false)
 );
 
+/// A lone physical axis's check over `[−¼, 1¼]²` (R-26; R-407, R-508): the vertical axis clamped past each bounded
+/// side, as its declared types say, the horizontal `α` clamped to its domain; a point that moved is `Clamp`, naming
+/// `α`'s domain where `α` moved and `vertical` otherwise, onto a system; a warped chart refuses nothing in the window, a
+/// linear one only points whose construction fails. A non-finite coordinate is refused, naming its axis.
+fn check_past<Q: EnergyAxis>(chart: &MixedEnergy<Alpha, Q, Defaults, f64>, vertical: Constraint) {
+    let name = format!("α × {:?} {:?}", Q::QUANTITY, chart.mapping);
+    let p = LinkParams::DEFAULT;
+    let feasible = |u, v| chart.decode_from(chart.frozen, u, v, &p).1 != Outcome::Infeasible;
+    let sides = chart.extension();
+    let bounded = |t| t == ExtensionType::Bounded;
+    let warped = chart.mapping == Mapping::Warped;
+    let (mut across, mut up) = (0, 0);
+    for [u, v] in grid(-0.25, 1.25) {
+        let mut cv = v;
+        if bounded(sides.below) {
+            cv = cv.max(0.0);
+        }
+        if bounded(sides.above) {
+            cv = cv.min(1.0);
+        }
+        match chart.validate(u, v) {
+            ValidationResult::Valid => assert!(
+                cv == v && feasible(u, v),
+                "{name}: ({u}, {v}) is valid past a bounded side, or not a system"
+            ),
+            ValidationResult::Clamp {
+                u: cu,
+                v: got,
+                moved,
+                failed,
+            } => {
+                assert!(
+                    got == cv
+                        && moved == [cu != u, cv != v]
+                        && (cu, cv) != (u, v)
+                        && feasible(cu, cv)
+                        && failed
+                            == if cu != u {
+                                Constraint::AxisDomain
+                            } else {
+                                vertical
+                            },
+                    "{name}: ({u}, {v}) is clamped to ({cu}, {got}), {moved:?}, naming {failed:?}"
+                );
+                across += u32::from(cu != u);
+                up += u32::from(cv != v);
+            }
+            ValidationResult::Reject { failed } => assert!(
+                !warped && failed == Constraint::KAboveLzBound,
+                "{name}: ({u}, {v}) is refused, naming {failed:?}"
+            ),
+            other => panic!("{name}: ({u}, {v}) gives {other:?}"),
+        }
+    }
+    let clamps_up = bounded(sides.below) || bounded(sides.above);
+    assert!(
+        across > 0 && (up > 0) == clamps_up,
+        "{name}: {across} clamped across, {up} up"
+    );
+    for (u, v, failed) in [
+        (f64::NAN, 0.5, Constraint::AxisDomain),
+        (f64::NEG_INFINITY, f64::NAN, Constraint::AxisDomain),
+        (0.5, f64::NAN, vertical),
+        (0.5, f64::INFINITY, vertical),
+    ] {
+        assert_eq!(
+            chart.validate(u, v),
+            ValidationResult::Reject { failed },
+            "{name}: ({u}, {v})"
+        );
+    }
+}
+
+/// [`check_past`] on each lone axis under each mapping, `lz` the constraint read for the `L_z` axis.
+fn check_lone_past(lz: Constraint) {
+    let k = Constraint::KNonNegative;
+    for mapping in [Mapping::Warped, Mapping::Linear] {
+        check_past(&lone::<AxisK>(0.0, mapping), k);
+        check_past(&lone::<AxisE>(0.0, mapping), k);
+        check_past(&lone::<AxisVirial>(0.0, mapping), k);
+        check_past(&lone::<AxisLz>(k_max(), mapping), lz);
+    }
+    let mass: MixedEnergy<ZMu1, AxisK, Defaults, f64> =
+        MixedEnergy::new(Z0, [-2.0, 2.0], k_max(), gamma_k(), 0.0, Mapping::Warped);
+    let alpha = lone::<AxisK>(0.0, Mapping::Warped);
+    assert!(
+        mass.forbids_energy_normalisation()
+            && alpha.forbids_energy_normalisation()
+            && mass.requires_per_pixel_mass()
+            && !alpha.requires_per_pixel_mass(),
+        "the lone K charts' flags"
+    );
+}
+
+#[test]
+fn energy_axes_warped_past_edges() {
+    check_lone_past(Constraint::KAboveLzBound);
+}
+
+negative_control!(
+    energy_axes_warped_past_edges,
+    "an L_z axis read as naming K ≥ 0 where it is clamped must fail",
+    expected = "naming",
+    check_lone_past(Constraint::KNonNegative)
+);
+
 // ── R-508: the t axis continues past t = 1, bounded below t = 0; s bounded ────────────────────────────────────────────
 
 /// The `t` axis declared `sides` against what its formula `k(t)` decodes past each edge: past an affine side every
@@ -793,8 +929,9 @@ struct Projection<'a> {
 
 /// Over `[−¼, 1¼]²`, the check of a mapped invariant chart with a linear axis (R-26): a valid point is feasible; any
 /// other is projected to `t = max(t, 0)` and, past the parabola, a warped `L_z` clamped to `s`'s edge and a linear one
-/// moved to a feasible `s` on its own side on the parabola, [`OFF_EDGE`] further out infeasible, or to `½`; the
-/// constraint named is `low` where `t` moved, else `wide`. A non-finite coordinate is refused, naming its axis.
+/// moved to a feasible `s` on its own side on the parabola, [`OFF_EDGE`] further out infeasible (at `t = 0`, `K = 0`,
+/// that is `½`); the constraint named is `low` where `t` moved, else `wide`. A non-finite coordinate is refused,
+/// naming its axis.
 fn check_projection(c: &Projection) {
     let name = c.name;
     let (mut moved, mut valid) = (0, 0);
@@ -823,7 +960,7 @@ fn check_projection(c: &Projection) {
                     moved += 1;
                     let out = if u > 0.5 { s + OFF_EDGE } else { s - OFF_EDGE };
                     assert!(
-                        (s - 0.5) * (u - 0.5) >= 0.0 && (s == 0.5 || !(c.feasible)(out, t)),
+                        (s - 0.5) * (u - 0.5) >= 0.0 && !(c.feasible)(out, t),
                         "{name}: ({u}, {v}) moves to {s}, not the nearest feasible s"
                     );
                 }
@@ -1433,6 +1570,52 @@ fn energy_warp_per_pixel_untilted_bitwise() {
     }
 }
 
+/// Tilted, the default mapping is still the chart's own, bit for bit: `chart` and `mapped` under one tilt into a mass
+/// logit and one into a shape control decode and validate alike over `[−¼, 1¼]²`.
+fn check_tilted_own<C, W>(chart: C, mapped: W)
+where
+    C: Tiltable<Param = f64> + ChartDecode + Copy,
+    W: Tiltable<Param = f64> + ChartDecode + Copy,
+{
+    for (x, tau) in [(6, 30.0), (1, 45.0)] {
+        let tilt = || Tilt::new(&spec(tau, 20.0, TiltMap::Lean, x), CENTRE, SPAN);
+        let a = Tilted::new(chart, tilt()).expect("a hidden target");
+        let b = Tilted::new(mapped, tilt()).expect("a hidden target");
+        for [u, v] in grid(-0.25, 1.25) {
+            assert!(
+                bits(&a.decode::<Defaults, f64>(u, v)) == bits(&b.decode::<Defaults, f64>(u, v))
+                    && a.validate(u, v) == b.validate(u, v),
+                "{} tilted into {x} at ({u}, {v}) is not bitwise its own chart under the mapping",
+                chart.name()
+            );
+        }
+    }
+}
+
+#[test]
+fn energy_warp_per_pixel_tilted_own() {
+    let inv = invariant();
+    let warped = mapped_all(Mapping::Warped);
+    check_tilted_own(
+        InvariantLE(inv),
+        Mapped::<_, Defaults>::new(InvariantLE(inv), warped),
+    );
+    check_tilted_own(
+        InvariantLK(inv),
+        Mapped::<_, Defaults>::new(InvariantLK(inv), warped),
+    );
+}
+
+negative_control!(
+    energy_warp_per_pixel_tilted_own,
+    "the linear option tilted is not the warped chart tilted, so it must fail",
+    expected = "is not bitwise its own chart under the mapping",
+    check_tilted_own(
+        InvariantLK(invariant()),
+        Mapped::<_, Defaults>::new(InvariantLK(invariant()), [Mapping::Warped, Mapping::Linear])
+    )
+);
+
 /// At `τ = 0` no tilt path and every entry the chart's own; `identity_path` forces the path on (the control).
 fn check_untilted<C: Tiltable<Param = f64> + ChartDecode + Copy>(chart: C, identity_path: bool) {
     let mut view = Tilted::new(
@@ -1657,6 +1840,171 @@ negative_control!(
      end of μ_max's range, so it must fail",
     expected = "decodes",
     check_mass_ratio(Formula::Softmax5)
+);
+
+/// The mass ratio's formula, read off the chart's own range `[q₀, q₁]`: warped `q₀·(q₁/q₀)^t`, geometric, its
+/// midpoint `√(q₀q₁)`; linear `q₀ + (q₁ − q₀)·t`, its midpoint the mean. `warped` names which the check reads.
+fn check_ratio_formula(chart: &MixedMassRatio<ZAlpha, Defaults, f64>, warped: bool) {
+    let [q0, q1] = chart.ratio;
+    let mid = if warped {
+        (q0 * q1).sqrt()
+    } else {
+        0.5 * (q0 + q1)
+    };
+    let close = |a: f64, b: f64| (a - b).abs() <= 1e-12 * b;
+    assert!(
+        close(chart.ratio_at(0.0), q0)
+            && close(chart.ratio_at(1.0), q1)
+            && close(chart.ratio_at(0.5), mid),
+        "the ratio's formula on [{q0}, {q1}]: {}, {}, {}",
+        chart.ratio_at(0.0),
+        chart.ratio_at(0.5),
+        chart.ratio_at(1.0)
+    );
+}
+
+#[test]
+fn physical_axis_warps_ratio_formula() {
+    check_ratio_formula(&ratio_chart([0.25, 4.0], Mapping::Warped), true);
+    check_ratio_formula(&ratio_chart([0.25, 4.0], Mapping::Linear), false);
+}
+
+negative_control!(
+    physical_axis_warps_ratio_formula,
+    "the warped ratio read as linear must fail",
+    expected = "the ratio's formula",
+    check_ratio_formula(&ratio_chart([0.25, 4.0], Mapping::Warped), false)
+);
+
+/// Warped, a mass-ratio chart asked for more than the link reaches at `μ_max` keeps the part it realises: both ends
+/// realised, and `growth` past either one not; asked for a range wholly past the reach, there is no chart.
+fn check_reach(growth: f64) {
+    let range = tunables()
+        .iter()
+        .find(|t| t.entry == "softmax_tanh" && t.param == "mu_max")
+        .expect("μ_max's range");
+    let p = LinkParams {
+        mu_max: range.lo,
+        ..LinkParams::DEFAULT
+    };
+    let at = |asked| {
+        MixedMassRatio::<ZAlpha, Defaults, f64>::new(
+            Z0,
+            [-2.0, 2.0],
+            asked,
+            [0, 1],
+            Mapping::Warped,
+            &p,
+        )
+    };
+    let chart = at([1e-3, 1e3]).expect("a realised part");
+    let [q0, q1] = chart.ratio;
+    assert!(
+        1e-3 < q0 && q1 < 1e3 && chart.realised(q0, &p) && chart.realised(q1, &p),
+        "the reach [{q0}, {q1}] at μ_max = {} is not realised",
+        p.mu_max
+    );
+    assert!(
+        !chart.realised(q0 / growth, &p) && !chart.realised(q1 * growth, &p),
+        "the reach [{q0}, {q1}] at μ_max = {} stops short of the link's",
+        p.mu_max
+    );
+    assert!(
+        at([1e4, 1e5]).is_none() && at([1e-5, 1e-4]).is_none(),
+        "a range past the reach gives a chart"
+    );
+}
+
+#[test]
+fn physical_axis_warps_ratio_reach() {
+    check_reach(1.0 + 10.0 * <f64 as ChartConstants>::EPS_MU);
+}
+
+negative_control!(
+    physical_axis_warps_ratio_reach,
+    "a ratio 10⁻⁹ past the reach, inside ε_μ, is realised, so it must fail",
+    expected = "stops short",
+    check_reach(1.0 + 1e-9)
+);
+
+/// A mass-ratio chart's check over `[−¼, 1¼]²` (R-26; R-506 W3, W4): warped, `t` clamped to `[0, 1]`; linear, a ratio
+/// the link does not realise, or at or below 0, refused; `α` clamped to its domain; a point that moved is `Clamp` onto a
+/// realised ratio, naming the axis domain. A non-finite coordinate is refused.
+fn check_ratio_past(mapping: Mapping, clamps_up: bool) {
+    let p = LinkParams::DEFAULT;
+    let chart = MixedMassRatio::<Alpha, Defaults, f64>::new(
+        Z0,
+        [0.2, 1.3],
+        [0.05, 20.0],
+        [0, 1],
+        mapping,
+        &p,
+    )
+    .expect("a chart");
+    let (mut across, mut up) = (0, 0);
+    for [u, v] in grid(-0.25, 1.25) {
+        let cv = if clamps_up { v.clamp(0.0, 1.0) } else { v };
+        match chart.validate(u, v) {
+            ValidationResult::Valid => assert!(
+                cv == v && chart.realised(chart.ratio_at(v), &p),
+                "{mapping:?}: ({u}, {v}) is valid past the ratio's edge, or unrealised"
+            ),
+            ValidationResult::Clamp {
+                u: cu,
+                v: got,
+                moved,
+                failed,
+            } => {
+                assert!(
+                    got == cv
+                        && moved == [cu != u, cv != v]
+                        && (cu, cv) != (u, v)
+                        && failed == Constraint::AxisDomain
+                        && chart.realised(chart.ratio_at(cv), &p),
+                    "{mapping:?}: ({u}, {v}) is clamped to ({cu}, {got}), {moved:?}"
+                );
+                across += u32::from(cu != u);
+                up += u32::from(cv != v);
+            }
+            ValidationResult::Reject { failed } => assert!(
+                !clamps_up
+                    && failed == Constraint::AxisDomain
+                    && !chart.realised(chart.ratio_at(v), &p),
+                "{mapping:?}: ({u}, {v}) is refused"
+            ),
+            other => panic!("{mapping:?}: ({u}, {v}) gives {other:?}"),
+        }
+    }
+    assert!(
+        across > 0 && (up > 0) == clamps_up,
+        "{mapping:?}: {across} across, {up} up"
+    );
+    for [u, v] in [[f64::NAN, 0.5], [0.5, f64::NAN], [0.5, f64::INFINITY]] {
+        assert_eq!(
+            chart.validate(u, v),
+            ValidationResult::Reject {
+                failed: Constraint::AxisDomain
+            },
+            "{mapping:?}: ({u}, {v})"
+        );
+    }
+    assert!(
+        chart.requires_per_pixel_mass(),
+        "the ratio chart's masses are per pixel"
+    );
+}
+
+#[test]
+fn physical_axis_warps_ratio_past_edges() {
+    check_ratio_past(Mapping::Warped, true);
+    check_ratio_past(Mapping::Linear, false);
+}
+
+negative_control!(
+    physical_axis_warps_ratio_past_edges,
+    "the linear ratio read as clamped past its edges must fail",
+    expected = "Linear",
+    check_ratio_past(Mapping::Linear, true)
 );
 
 /// `held` is the third body's mass at the centre under the chart's link.
