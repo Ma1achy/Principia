@@ -238,8 +238,11 @@ or reviews" and `plan/WORKFLOW.md` § "The review loop". In addition:
     memory guard (§ "Resources") runs throughout.
 - **The Gemini review (R-659).** `gemini-dispatch.yml` runs `scripts/gemini_review.py`, which makes one request to the
   Gemini API, no CLI and no tools. On a quota refusal it goes down `gemini-3.8-flash`, `gemini-3-flash`,
-  `gemini-2.5-flash`, `gemini-2.5-flash-lite`; each has its own free quota of about 20 requests a day. The review's
-  header names the model that answered, and the run's summary logs the request count and each model's result. A spent
+  `gemini-2.5-flash`, `gemini-2.5-flash-lite`; each has its own free quota of about 20 requests a day. Before the
+  request it reads the key's model list (`GET models`, not a generateContent request) and requests only models that
+  list names: the first choice, then the listed flash models, the owner's four before the rest, newest first, `-lite`
+  last, four at most. If the list can't be read, it tries the first choice alone. The review's header names the model
+  that answered, and the run's summary logs the listed model names, the request count and each model's result. A spent
   chain posts "Gemini quota exhausted, review skipped" as a review of the head, and the merge proceeds (R-651). An
   outage posts "Gemini unavailable, review skipped" the same way. A `pull_request` run or an `@gemini-cli /review`
   inline comment uses the branch's files; an `@gemini-cli /review` PR comment uses `main`'s.
