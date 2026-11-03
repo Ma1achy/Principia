@@ -1877,6 +1877,72 @@ negative_control!(
     check_virial_range(|[_, hi], mapping, t| virial_want([0.0, hi], mapping, t))
 );
 
+/// A warped lone `K`, `KE`, `E` or virial axis at a held `L_z ≠ 0` is not offered (chart_reference §2.1; R-471 E1,
+/// R-506; RQ-683): `validate` refuses every point of `[−¼, 1¼]²` and every non-finite one, naming `K ≥ L_z²/2I`. At
+/// the held `held`, so `held = 0` (the control) is offered and fails it. The cases that stay offered: a held 0 or −0,
+/// the linear option at the same held value, and a warped `L_z` axis at a held `K ≠ 0`.
+fn check_unoffered(held: f64) {
+    fn refused<Q: EnergyAxis>(held: f64) {
+        let chart = lone::<Q>(held, Mapping::Warped);
+        assert!(
+            !chart.offered(),
+            "{:?} warped at L_z = {held} is offered",
+            Q::QUANTITY
+        );
+        let all = grid(-0.25, 1.25)
+            .into_iter()
+            .chain([[f64::NAN, 0.5], [0.5, f64::INFINITY]]);
+        for [u, v] in all {
+            assert_eq!(
+                chart.validate(u, v),
+                ValidationResult::Reject {
+                    failed: Constraint::KAboveLzBound
+                },
+                "{:?} warped at L_z = {held}: ({u}, {v}) is not refused",
+                Q::QUANTITY
+            );
+        }
+    }
+    refused::<AxisK>(held);
+    refused::<AxisKE>(held);
+    refused::<AxisE>(held);
+    refused::<AxisVirial>(held);
+    for zero in [0.0, -0.0] {
+        assert!(
+            lone::<AxisK>(zero, Mapping::Warped).offered()
+                && lone::<AxisVirial>(zero, Mapping::Warped).offered(),
+            "a warped axis at L_z = {zero} is not offered"
+        );
+    }
+    assert!(
+        !lone::<AxisK>(f64::NAN, Mapping::Warped).offered(),
+        "a warped axis at a NaN L_z is offered"
+    );
+    let linear = lone::<AxisK>(0.3, Mapping::Linear);
+    assert!(
+        linear.offered() && linear.validate(0.5, 1.0) == ValidationResult::Valid,
+        "the linear option at L_z = 0.3 is not offered"
+    );
+    let lz = lone::<AxisLz>(0.3, Mapping::Warped);
+    assert!(
+        lz.offered() && lz.validate(0.5, 0.5) == ValidationResult::Valid,
+        "a warped L_z axis at K = 0.3 is not offered"
+    );
+}
+
+#[test]
+fn energy_axes_warped_held_lz_unoffered() {
+    check_unoffered(0.3);
+    check_unoffered(-1e-300);
+}
+
+negative_control!(
+    energy_axes_warped_held_lz_unoffered,
+    "a held L_z = 0 is offered and its pixels are systems, so it must fail",
+    expected = "is offered",
+    check_unoffered(0.0)
+);
+
 /// How a mass-ratio arm forms its mass controls: the chart's own (its link's inverse at the ratio's masses), or the
 /// control's formula written for softmax_tanh at `μ_max = 5` alone, `m_i/m₀ = exp(5·tanh z_i)` solved for `z_i`.
 #[derive(Clone, Copy, PartialEq)]

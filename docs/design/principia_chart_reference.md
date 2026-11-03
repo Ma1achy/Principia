@@ -321,6 +321,12 @@ since `K* ≥ 0`. The axis is bounded past both of its edges. Under the linear o
 `Q(t) = Q_lo + (Q_hi − Q_lo)·t`, affine, over the asked range, and its pixels with `Q < 0` or `K* < L_z²/2I` are not a
 system.
 
+**A warped `t` axis at a held `L_z ≠ 0` is not offered (R-471 E1, R-506; RQ-683).** A lone `K`, `KE`, `E` or virial
+axis holds `L_z` at the chart's value. At a held `L_z ≠ 0` its pixels with `K* < L_z²/2I`, near `t = 0`, would be
+non-systems inside the square, and no warp written here makes them feasible. So no chart offers that axis warped at a
+held `L_z ≠ 0`: `validate` refuses every point of it (applied per R-369, TASK-M2-37). Whether such an axis should exist,
+and under what warp, is RQ-683's. Under the linear option it is offered, its pixels with `K* < L_z²/2I` not a system.
+
 **The mass ratio's range in the link's inputs (REQ-CHART-070, R-506 W3).** For two bodies `a` and `b`, the axis is the
 ratio `q = m_b/m_a`, with the third body's mass `m_c` held at its slice-centre value. Then `m_a = (1 − m_c)/(1 + q)`
 and `m_b = q·m_a`. The axis writes the active mass link's inputs, `z_mass = L⁻¹(m)`, and the decode reads the masses

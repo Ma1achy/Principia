@@ -2005,3 +2005,35 @@ authoring descriptor, so the well-posedness validator cannot take a chart with o
 - **Applied meanwhile:** nothing. The engine's descriptors cover the lone `K`, `KE`, `E` and `L_z` axes and the mass
   ratio (kind 2 in the masses, its residual the third body's mass), not the virial ratio.
 - **Waits:** the builder's virial-ratio axis (TASK-M8-18).
+
+## RQ-683: Whether a warped lone `K`, `KE`, `E` or virial-ratio axis at a held `L_z ≠ 0` should exist, and under what warp *(physics; silence: R-471 E1, R-506; REQ-CHART-067; context: TASK-M2-37)*
+
+*Queued 3 Nov 2026 by TASK-M2-37's fix round (physics review 5748188476 of PR #387, F1). For the owner: yes, it is
+physics; the warp's form changes which systems the axis shows. RQ-678 does not cover it: RQ-678 asks only about the
+tilted `(ν, K)`, `Φ_θ,K` and `Φ_θ,L_z` charts.*
+
+- **File, section:**
+  - `decisions.md`:13840-13842, § "R-471 — …", E1: "`K = K_max t^γ_K`, `L_max = √(2IK)`, `L_z = (2s−1) L_max`. Every
+    pixel inside `[0,1]²` is feasible by construction."
+  - `decisions.md` § "R-506 — …", W1: "A Chart-builder chart logs R-467's decoder-bug warning for a pixel inside
+    `[0,1]²` that is not a system when every physical-quantity axis it has is warped, the chart then valid there by
+    construction".
+  - `plan/requirements.yaml`, REQ-CHART-067: "alone or beside a non-energy axis each takes its own line of the warp,
+    K (KE) = K_max·t^γ_K, E = U + K_max·t^γ_K, …"
+  - `docs/design/principia_chart_reference.md` § "2.1 …", the virial ratio's paragraph: "At a held `L_z = 0` every pixel
+    of `[0,1]²` is feasible, since `K* ≥ 0`."
+- **The silence:** a lone `K`, `KE`, `E` or virial-ratio axis holds the chart's `L_z`. At a held `L_z ≠ 0`, its line of
+  the warp, `K* = K_max·t^γ_K` (or `Q(t)·|U|/2`), reaches `K* < L_z²/2I` near `t = 0`, so those pixels inside the square
+  are not a system, against E1's "feasible by construction", and under W1 they would log the decoder-bug warning. No
+  ruling or section says whether such an axis is offered warped, or with what floor.
+- **The question:** should a warped lone `K`, `KE`, `E` or virial axis at a held `L_z ≠ 0` exist, and if so under what
+  warp?
+- **Options seen:** (a) refused, as built: no chart offers it warped, `validate` refusing every point; the linear option
+  offers it, its pixels with `K* < L_z²/2I` not a system (E2); (b) a floored warp, such as `K* = L_z²/2I + K_max·t^γ_K`
+  on `K` and `KE` (with `E = U + K*` and the virial ratio's `Q` floored at `L_z²/(I·|U|)` at the pixel's own `U` and
+  `I`), written as a §2.1 paragraph under physics review; (c) another reading, stated by the owner.
+- **Applied meanwhile:** (a), applied per R-369 (TASK-M2-37): `kernel::chart::physical::MixedEnergy::offered` is false
+  for such a chart and its `validate` refuses every point, naming `K ≥ L_z²/2I`; chart_reference §2.1 says so. No
+  floored form is chosen.
+- **Waits:** nothing in TASK-M2-37; a Chart-builder lone `t` axis at a held `L_z ≠ 0` (TASK-M8-18) stays refused,
+  warped, until the ruling.
