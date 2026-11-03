@@ -9,14 +9,15 @@
 //! - `K` and `KE` ([`AxisK`], [`AxisKE`]): `K* = K_max·t^γ_K`, at the chart's held `L_z`.
 //! - `E` ([`AxisE`]): `E = U + K_max·t^γ_K`, `U` the pixel's own potential, so `K* = K_max·t^γ_K` (E3).
 //! - `L_z` ([`AxisLz`]): `L_z = (2t − 1)·L_max`, `L_max = √(2·I·K)` at the chart's held `K`, `I = 1`.
-//! - The virial ratio ([`AxisVirial`]; chart_reference §2.1's paragraph): `Q = Q_max·t^γ_K`, `K* = Q·|U|/2` on the
-//!   pixel's own `U`, at the held `L_z`.
+//! - The virial ratio ([`AxisVirial`]; chart_reference §2.1's paragraph) over the asked range `[Q_lo, Q_hi]`
+//!   ([`MixedEnergy::virial`]; [`MixedEnergy::new`]'s is `[0, Q_max]`): `Q = Q₀ + (Q_hi − Q₀)·t^γ_K`,
+//!   `Q₀ = max(Q_lo, 0)`, `K* = Q·|U|/2` on the pixel's own `U`, at the held `L_z`.
 //!
 //! At the held `L_z = 0` (`Φ_θ,K`'s), every pixel of `[0,1]²` is feasible on a `t` axis, `K* ≥ 0 = K_min`; an `L_z`
 //! axis is feasible at every held `K ≥ 0`. A held `L_z ≠ 0` leaves the pixels with `K* < L_z²/2I` infeasible, which
 //! `validate` refuses: no warp of H1's makes them feasible, and what such a chart should do is the review queue's (the
 //! PR records it). Under the linear option (`super::energy::Mapping::Linear`) `K` and `KE` are `K_max·t`, `E` is
-//! `U₀ + K_max·t` with `U₀` the slice centre's potential, so `K* = E − U` at the pixel, the virial ratio `Q_max·t`, and
+//! `U₀ + K_max·t` with `U₀` the slice centre's potential, so `K* = E − U` at the pixel, the virial ratio `Q_lo + (Q_hi − Q_lo)·t`, and
 //! `L_z`'s line is already linear at its held `K` and `I = I₀ = 1`, so its two mappings decode alike and differ only
 //! in their extension types.
 //!
@@ -209,9 +210,12 @@ pub struct MixedEnergy<A, Q, S, P> {
     pub frozen: [P; 8],
     /// `[lo, hi]`, the horizontal axis's value at `u = 0` and `u = 1`.
     pub a_range: [P; 2],
-    /// The vertical axis's value scale at `t = 1`: `K_max` on `K`, `KE` and `E`, `Q_max` on the virial ratio; not read
-    /// on `L_z`.
+    /// The vertical axis's value scale at `t = 1`: `K_max` on `K`, `KE` and `E`, `Q_hi`, the top of the asked range,
+    /// on the virial ratio; not read on `L_z`.
     pub top: P,
+    /// `Q_lo`, the bottom of the virial ratio's asked range ([`MixedEnergy::virial`]); 0 from [`MixedEnergy::new`], and
+    /// read only on the virial ratio.
+    pub bottom: P,
     /// `γ_K ≥ 1`, the warp's exponent.
     pub gamma_k: P,
     /// The held value: `L_z` on a `K`, `KE`, `E` or virial axis, `K` on an `L_z` axis.
@@ -234,6 +238,7 @@ impl<A, Q, S, P: PartialEq> PartialEq for MixedEnergy<A, Q, S, P> {
         self.frozen == other.frozen
             && self.a_range == other.a_range
             && self.top == other.top
+            && self.bottom == other.bottom
             && self.gamma_k == other.gamma_k
             && self.held == other.held
             && self.mapping == other.mapping
@@ -248,6 +253,7 @@ impl<A: Coordinate, Q: EnergyAxis, S, P: fmt::Debug> fmt::Debug for MixedEnergy<
             .field("frozen", &self.frozen)
             .field("a_range", &self.a_range)
             .field("top", &self.top)
+            .field("bottom", &self.bottom)
             .field("gamma_k", &self.gamma_k)
             .field("held", &self.held)
             .field("mapping", &self.mapping)
@@ -255,15 +261,8 @@ impl<A: Coordinate, Q: EnergyAxis, S, P: fmt::Debug> fmt::Debug for MixedEnergy<
     }
 }
 
-impl<A: Coordinate, Q: EnergyAxis, S: Selection, P: Copy> MixedEnergy<A, Q, S, P> {
-    /// The horizontal axis sits upstream of the momentum block the energy axis solves into (kind 3), checked where the
-    /// chart is built.
-    const UPSTREAM: () = assert!(
-        !momentum_index(A::COORDINATE as u32),
-        "an energy-type axis solves into the momentum block, which the other axis writes"
-    );
-
-    /// The chart (the module's note).
+impl<A: Coordinate, Q: EnergyAxis, S: Selection, P: Float> MixedEnergy<A, Q, S, P> {
+    /// The chart (the module's note); on the virial ratio, over the asked range `[0, top]`.
     #[inline]
     pub fn new(
         frozen: [P; 8],
@@ -278,12 +277,46 @@ impl<A: Coordinate, Q: EnergyAxis, S: Selection, P: Copy> MixedEnergy<A, Q, S, P
             frozen,
             a_range,
             top,
+            bottom: P::zero(),
             gamma_k,
             held,
             mapping,
             axes: PhantomData,
         }
     }
+}
+
+impl<A: Coordinate, S: Selection, P: Float> MixedEnergy<A, AxisVirial, S, P> {
+    /// The virial-ratio chart over the asked range `asked = [Q_lo, Q_hi]`, a Chart-builder axis's own range (R-471 H4;
+    /// chart_reference §2.1's paragraph): warped over its feasible part `[max(Q_lo, 0), Q_hi]`, linear over `asked`.
+    /// `None` where `asked` is not an increasing finite range or, warped, its feasible part is empty or one point
+    /// (`Q_hi ≤ 0`).
+    #[inline]
+    pub fn virial(
+        frozen: [P; 8],
+        a_range: [P; 2],
+        asked: [P; 2],
+        gamma_k: P,
+        held: P,
+        mapping: Mapping,
+    ) -> Option<Self> {
+        let [lo, hi] = asked;
+        let ordered = lo.is_finite() && hi.is_finite() && lo < hi;
+        let feasible = mapping == Mapping::Linear || hi > P::zero();
+        (ordered && feasible).then(|| MixedEnergy {
+            bottom: lo,
+            ..MixedEnergy::new(frozen, a_range, hi, gamma_k, held, mapping)
+        })
+    }
+}
+
+impl<A: Coordinate, Q: EnergyAxis, S: Selection, P: Copy> MixedEnergy<A, Q, S, P> {
+    /// The horizontal axis sits upstream of the momentum block the energy axis solves into (kind 3), checked where the
+    /// chart is built.
+    const UPSTREAM: () = assert!(
+        !momentum_index(A::COORDINATE as u32),
+        "an energy-type axis solves into the momentum block, which the other axis writes"
+    );
 
     /// The vertical axis's extension type ([`super::energy::extension`]).
     #[inline]
@@ -291,16 +324,22 @@ impl<A: Coordinate, Q: EnergyAxis, S: Selection, P: Copy> MixedEnergy<A, Q, S, P
         sides(Q::QUANTITY, self.mapping)
     }
 
-    /// The vertical axis's value scale at `t`: warped `top·t^γ_K`, linear `top·t`; on `L_z`, `2t − 1`.
+    /// The vertical axis's value scale at `t`: on `K`, `KE` and `E` warped `top·t^γ_K`, linear `top·t`; on the virial
+    /// ratio warped `Q₀ + (top − Q₀)·t^γ_K`, `Q₀ = max(bottom, 0)`, linear `bottom + (top − bottom)·t`; on `L_z`,
+    /// `2t − 1`.
     #[inline]
     pub fn scale<R: WarpReal + From<P>>(&self, t: R) -> R {
         let w = <R as From<P>>::from;
         let linear = self.mapping == Mapping::Linear;
-        let x = select(
+        let (top, gamma) = (w(self.top), w(self.gamma_k));
+        let x = select(linear, top * t, invariant::kinetic(top, gamma, t));
+        let q0 = Float::max(w(self.bottom), R::zero());
+        let q = select(
             linear,
-            w(self.top) * t,
-            invariant::kinetic(w(self.top), w(self.gamma_k), t),
+            lerp([w(self.bottom), top], t),
+            q0 + invariant::kinetic(top - q0, gamma, t),
         );
+        let x = select(Q::QUANTITY == Quantity::VirialRatio, q, x);
         select(Q::QUANTITY == Quantity::Lz, t + t - R::one(), x)
     }
 

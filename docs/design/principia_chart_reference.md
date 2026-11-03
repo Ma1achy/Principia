@@ -311,12 +311,15 @@ configuration's DOF, so an axis of it needs a residual convention to pick a poin
 section writes neither, so no chart offers a `PE` axis: the well-posedness validator refuses one (TASK-M2-37). A warp
 for it is a new paragraph here, under physics review, before any chart offers it.
 
-**The virial ratio's warp (REQ-CHART-070, R-506 W2).** For `Q = 2K/|U|` (`U < 0` at positive masses), the warp is
-`Q(t) = Q_max·t^γ_K`, where `Q_max` is the top of the axis's range and `γ_K` is this section's exponent. The kinetic
-energy at the pixel is `K* = Q(t)·|U|/2`, using the pixel's own `U` (E3). `K*` is built by §2.2's construction at the
-chart's held `L_z`. At a held `L_z = 0` every pixel of `[0,1]²` is feasible, since `K* ≥ 0`. The axis is bounded past
-both of its edges. Under the linear option the axis is `Q = Q_max·t`, affine, and its pixels with `K* < L_z²/2I` are
-not a system.
+**The virial ratio's warp (REQ-CHART-070, R-506 W2).** For `Q = 2K/|U|` (`U < 0` at positive masses), the axis keeps
+its own asked range `[Q_lo, Q_hi]`, as a Chart-builder axis does (R-471 H4; render_gui_spec §G7). Warped, it runs
+over the range's feasible part `[Q₀, Q_hi]`, `Q₀ = max(Q_lo, 0)`: `Q(t) = Q₀ + (Q_hi − Q₀)·t^γ_K`, where `γ_K` is this
+section's exponent, so the range `[0, Q_max]` gives `Q_max·t^γ_K`; a range with `Q_hi ≤ 0` has no feasible part, and
+no chart offers it. The kinetic energy at the pixel is `K* = Q(t)·|U|/2`, using the pixel's own `U` (E3). `K*` is
+built by §2.2's construction at the chart's held `L_z`. At a held `L_z = 0` every pixel of `[0,1]²` is feasible,
+since `K* ≥ 0`. The axis is bounded past both of its edges. Under the linear option the axis is
+`Q(t) = Q_lo + (Q_hi − Q_lo)·t`, affine, over the asked range, and its pixels with `Q < 0` or `K* < L_z²/2I` are not a
+system.
 
 **The mass ratio's range in the link's inputs (REQ-CHART-070, R-506 W3).** For two bodies `a` and `b`, the axis is the
 ratio `q = m_b/m_a`, with the third body's mass `m_c` held at its slice-centre value. Then `m_a = (1 − m_c)/(1 + q)`

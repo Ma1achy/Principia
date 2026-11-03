@@ -501,6 +501,7 @@ fn check_physical_values(differ: bool) {
         edit(&|c| c.frozen = [0.0; 8]),
         edit(&|c| c.a_range = [0.0, 1.0]),
         edit(&|c| c.top = 2.0),
+        edit(&|c| c.bottom = 0.5),
         edit(&|c| c.gamma_k = 1.0),
         edit(&|c| c.held = 0.5),
         edit(&|c| c.mapping = Mapping::Linear),
@@ -1754,6 +1755,126 @@ negative_control!(
     "K* = Q·|U₀|/2 from the centre's potential misses the pixel's own virial ratio along α, so it must fail",
     expected = "decodes 2K/|U|",
     check_virial(false)
+);
+
+/// The virial-ratio axis beside `α` on the asked range `asked`, its held `L_z = 0`, under `mapping`.
+fn virial(
+    asked: [f64; 2],
+    mapping: Mapping,
+) -> Option<MixedEnergy<Alpha, AxisVirial, Defaults, f64>> {
+    MixedEnergy::virial(Z0, [0.2, 1.3], asked, gamma_k(), 0.0, mapping)
+}
+
+/// The virial ratio over its own asked range `[Q_lo, Q_hi]` (R-471 H4; chart_reference §2.1): warped, every pixel of
+/// `[0,1]²` validates and decodes `2K/|U| = Q₀ + (Q_hi − Q₀)·t^γ_K`, `Q₀ = max(Q_lo, 0)`, a range reaching below 0
+/// decoding as its feasible part, bit for bit; linear, `Q_lo + (Q_hi − Q_lo)·t`, its pixels with `Q < 0` refused and
+/// `Q = 0` a system; a range not increasing and finite, or warped with `Q_hi ≤ 0`, builds no chart. `want` gives the
+/// ratio the test expects at `(asked, mapping, t)`: the section's, or the control's.
+fn check_virial_range(want: fn([f64; 2], Mapping, f64) -> f64) {
+    for (asked, mapping) in [
+        ([0.2, 1.5], Mapping::Warped),
+        ([-0.5, 1.5], Mapping::Warped),
+        ([0.2, 1.5], Mapping::Linear),
+        ([-0.5, 1.5], Mapping::Linear),
+    ] {
+        let chart = virial(asked, mapping).expect("a virial range");
+        assert_eq!(
+            chart.extension(),
+            sides_of(mapping),
+            "the virial axis's extension type"
+        );
+        for [u, v] in grid(0.0, 1.0) {
+            let q = want(asked, mapping, v);
+            let d = chart.decode::<Defaults, f64>(u, v);
+            let valid = chart.validate(u, v);
+            if q < 0.0 {
+                assert_eq!(
+                    valid,
+                    ValidationResult::Reject {
+                        failed: Constraint::KAboveLzBound
+                    },
+                    "the virial pixel ({u}, {v}) at Q = {q} < 0 is a system"
+                );
+                continue;
+            }
+            let (_, k) = lz_k(&d);
+            let ratio = 2.0 * k / d.descriptor.V_0.abs();
+            assert!(
+                valid == ValidationResult::Valid
+                    && d.degenerate.is_none()
+                    && (ratio - q).abs() <= 1e-12 * (1.0 + q),
+                "the virial axis on {asked:?} {mapping:?} at ({u}, {v}) decodes 2K/|U| = {ratio}, not {q}"
+            );
+        }
+    }
+    // A range reaching below 0, warped, is its feasible part's: [−0.5, 1.5] is [0, 1.5], MixedEnergy::new's.
+    let below = virial([-0.5, 1.5], Mapping::Warped).expect("a virial range");
+    let from_zero = lone_virial(1.5);
+    for [u, v] in grid(-0.25, 1.25) {
+        assert_eq!(
+            bits(&below.decode::<Defaults, f64>(u, v)),
+            bits(&from_zero.decode::<Defaults, f64>(u, v)),
+            "[−0.5, 1.5] warped is not [0, 1.5] at ({u}, {v})"
+        );
+    }
+    let linear = virial([-0.5, 1.5], Mapping::Linear).expect("a virial range");
+    assert_eq!(
+        linear.validate(0.5, 0.25),
+        ValidationResult::Valid,
+        "Q = 0 is not a system"
+    );
+    for (asked, mapping, builds) in [
+        ([1.0, 1.0], Mapping::Linear, false),
+        ([1.0, 0.5], Mapping::Linear, false),
+        ([f64::NAN, 1.0], Mapping::Linear, false),
+        ([0.0, f64::INFINITY], Mapping::Linear, false),
+        ([f64::NEG_INFINITY, 1.0], Mapping::Warped, false),
+        ([-1.0, 0.0], Mapping::Warped, false),
+        ([-1.0, 0.0], Mapping::Linear, true),
+        ([-1.0, f64::MIN_POSITIVE], Mapping::Warped, true),
+    ] {
+        assert_eq!(
+            virial(asked, mapping).is_some(),
+            builds,
+            "the virial range {asked:?} {mapping:?}"
+        );
+    }
+}
+
+/// The extension type of a virial axis under `mapping` (chart_reference §2.1).
+fn sides_of(mapping: Mapping) -> Sides {
+    match mapping {
+        Mapping::Warped => Sides::both(ExtensionType::Bounded),
+        Mapping::Linear => Sides::both(ExtensionType::Affine),
+    }
+}
+
+/// A virial axis beside `α` from [`MixedEnergy::new`], its range `[0, top]`.
+fn lone_virial(top: f64) -> MixedEnergy<Alpha, AxisVirial, Defaults, f64> {
+    MixedEnergy::new(Z0, [0.2, 1.3], top, gamma_k(), 0.0, Mapping::Warped)
+}
+
+/// The ratio §2.1 writes at `t` on the asked range `[lo, hi]`.
+fn virial_want([lo, hi]: [f64; 2], mapping: Mapping, t: f64) -> f64 {
+    match mapping {
+        Mapping::Warped => {
+            let q0 = lo.max(0.0);
+            q0 + (hi - q0) * t.powf(gamma_k())
+        }
+        Mapping::Linear => lo + (hi - lo) * t,
+    }
+}
+
+#[test]
+fn physical_axis_warps_virial_range() {
+    check_virial_range(virial_want);
+}
+
+negative_control!(
+    physical_axis_warps_virial_range,
+    "the range fixed at [0, Q_hi], its bottom dropped, is not the asked range's axis, so it must fail",
+    expected = "decodes 2K/|U|",
+    check_virial_range(|[_, hi], mapping, t| virial_want([0.0, hi], mapping, t))
 );
 
 /// How a mass-ratio arm forms its mass controls: the chart's own (its link's inverse at the ratio's masses), or the
