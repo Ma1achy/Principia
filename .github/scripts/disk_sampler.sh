@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
-# The `shell:` of `cargo xtask ci` in `xtask-ci` (.github/workflows/ci.yml): runs the step's script exactly as the
+# The `shell:` of `cargo xtask ci` in `xtask-ci`, and of the heavy steps of the `ci` shards and `gpu-kernel`
+# (.github/workflows/ci.yml): runs the step's script exactly as the
 # default shell would (`bash -e {0}`), samples the runner's disk beside it, and exits with the script's own status. No
 # gate reads what it measures, and nothing it does can change that status: it has no `set -e`, and every sampling
 # failure, a write to a full disk among them, is ignored. It is here and not in `scripts/` because `.github/` is full CI
 # whole, as a step's shell must be (R-662).
 #
-# Each sample goes to $RUNNER_TEMP/runner-disk.log, which the job uploads. A runner that dies uploads nothing, so a
+# Each sample goes to $RUNNER_TEMP/runner-disk.log, which `xtask-ci` uploads. A runner that dies uploads nothing, so a
 # coarse part also goes to the step's log: the first sample, every fifth, and every sample once under 2 GiB is free.
 # Bounded: at most 480 samples of at most 40 `du` lines, more than the runner's 6 h job limit at the 60 s interval.
 set -u
@@ -19,8 +20,9 @@ max_samples=480
 
 sampler() {
   exec 2> /dev/null
-  # `$!`, not a variable set after the `sleep` starts: a TERM is handled between two commands, so it can fall between
-  # those two, where a variable would not name the `sleep` yet and it would be left running.
+  # The trap runs between two commands, never during one, so it waits for a command in hand to end; the main shell's
+  # KILL of the group is what bounds that. `$!`, not a variable set after the `sleep` starts: a TERM can fall between
+  # those two commands, where a variable would not name the `sleep` yet and it would be left running.
   trap 'kill "${!:-}"; exit 0' TERM
   local n avail text
   for ((n = 1; n <= max_samples; n++)); do
@@ -40,20 +42,24 @@ $(free -m)"
   done
 }
 
+# In its own process group (`set -m` only for this start), so the KILL below reaches whatever it has in hand.
+set -m
 sampler &
 sampler_pid=$!
+set +m
 
 bash -e "$script"
 status=$?
 
-# The sampler ends at its trap, once the command in hand is done, or at the KILL; it never outlives the step. What it
-# leaves running at a KILL, a `du` in hand, writes to the sample's own pipe and /dev/null, never to the step's output.
+# Bounded here, not by the sampler: its trap runs only once the command in hand is done (a `df` or `du`, or the shell
+# retrying a fork), so a sampler still there after at most 2 s gets a KILL to its whole group, that command and the
+# nap among them. A sampler gone by then went at its trap, between two commands, which ended the nap and left nothing.
 kill -TERM "$sampler_pid" 2> /dev/null
-for _ in {1..15}; do
-  kill -0 "$sampler_pid" 2> /dev/null || break
-  sleep 1
+end=$((SECONDS + 2))
+while kill -0 "$sampler_pid" 2> /dev/null && ((SECONDS < end)); do
+  sleep 0.1
 done
-kill -KILL "$sampler_pid" 2> /dev/null
+kill -0 "$sampler_pid" 2> /dev/null && kill -KILL -- "-$sampler_pid" 2> /dev/null
 wait "$sampler_pid" 2> /dev/null
 
 awk 'match($0, /avail_kb=[0-9]+/) {

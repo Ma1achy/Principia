@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """The advisory Gemini review of one pull request (decisions.md R-635, R-659): one prompt, one reply, one review.
 
-`review` sends the brief, the PR and its diff to the Gemini API in a single generateContent request, moving down CHAIN
-when a model is out of quota or absent. `build` turns what came back into the review to post: the model's findings
-under a header naming the model that answered, or the short note that says the review was skipped. The workflow,
-.github/workflows/gemini-dispatch.yml, reads the PR and posts the review; this file only talks to the model.
+`review` first asks the API which models the key can reach (`GET models`, not a generateContent request), and builds
+its chain from that list (`build_chain`), so it never requests a model the list doesn't name. It then sends the brief,
+the PR and its diff in a single generateContent request, moving down the chain when a model is out of quota or absent.
+`build` turns what came back into the review to post: the model's findings under a header naming the model that
+answered, or the short note that says the review was skipped. The workflow, .github/workflows/gemini-dispatch.yml,
+reads the PR and posts the review; this file only talks to the model.
 
 It calls the API itself and not through the Gemini CLI because the CLI (0.64.0, on API-key auth) cannot send
 gemini-3-flash: its ModelMappingContentGenerator rewrites that name, and gemini-3.5-flash, to gemini-3.8-flash on the
@@ -23,9 +25,23 @@ import re
 import sys
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 
-CHAIN = ("gemini-3.8-flash", "gemini-3-flash", "gemini-2.5-flash", "gemini-2.5-flash-lite")
+# The owner's chain (R-659), now the ordering hint only: its first is the first choice, and its models go before other
+# listed models of their kind. A model is requested only if the key's model list names it.
+PREFERENCE = ("gemini-3.8-flash", "gemini-3-flash", "gemini-2.5-flash", "gemini-2.5-flash-lite")
+# At most four models, so a review still spends eight requests at most (R-659).
+MAX_CHAIN_MODELS = 4
+# The flash text models: a version, `-flash`, then `-lite`, then a preview or experimental tag and its date. Dated
+# builds (`-001`), image, audio and other variants don't match, and are never in the chain.
+FLASH_MODEL = re.compile(
+    r"gemini-(?P<version>\d+(?:\.\d+)*)-flash(?P<lite>-lite)?(?P<tag>-(?:preview|exp|experimental)(?:-\d+)*)?"
+)
+# The model list's pages: up to 1000 models a page, and a list longer than this many pages counts as a failed one.
+LIST_PAGE_SIZE = 1000
+MAX_LIST_PAGES = 10
+LIST_TIMEOUT_SECONDS = 30
 API_BASE = "https://generativelanguage.googleapis.com/v1beta"
 
 # About 110K tokens at most, inside the free tier's per-minute token limit.
@@ -212,6 +228,87 @@ def post(url, key, payload, timeout):
         return 0, str(err).encode()
 
 
+def get(url, key, timeout):
+    """One GET: (HTTP status, response bytes), with status 0 where no response came back."""
+    request = urllib.request.Request(url, headers={"x-goog-api-key": key}, method="GET")
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            return response.status, response.read()
+    except urllib.error.HTTPError as err:
+        return err.code, err.read()
+    except OSError as err:
+        return 0, str(err).encode()
+
+
+def list_models(key, base):
+    """The names of the models the key can call generateContent on, from every page of `GET models`, and None with the
+    reason (key scrubbed) if the list can't be read whole."""
+    names, token = [], ""
+    for _ in range(MAX_LIST_PAGES):
+        url = f"{base}/models?pageSize={LIST_PAGE_SIZE}"
+        if token:
+            url += "&pageToken=" + urllib.parse.quote(token, safe="")
+        status, raw = get(url, key, LIST_TIMEOUT_SECONDS)
+        try:
+            body = json.loads(raw)
+        except ValueError:
+            body = None
+        if status != 200 or not isinstance(body, dict) or not isinstance(body.get("models", []), list):
+            error = body.get("error") if isinstance(body, dict) and isinstance(body.get("error"), dict) else {}
+            detail = str(error.get("status") or "") if status else raw.decode("utf-8", "replace")[:200]
+            return None, f"HTTP {status} {detail}".strip().replace(key, "<key>")
+        for model in body.get("models", []):
+            if not isinstance(model, dict):
+                continue
+            methods = model.get("supportedGenerationMethods")
+            if isinstance(methods, list) and "generateContent" in methods:
+                names.append(str(model.get("name") or "").removeprefix("models/"))
+        token = str(body.get("nextPageToken") or "")
+        if not token:
+            return names, ""
+    return None, f"more than {MAX_LIST_PAGES} pages"
+
+
+def build_chain(listed):
+    """The models to try, in order, all from the list: the first choice; then the other listed flash models, non-lite
+    before -lite, and within each the owner's chain's models before the rest, newest version first. Preview and
+    experimental names come in only when the list has no other flash model. Four at most. Listing the owner's four
+    gives the owner's chain."""
+    found = {}
+    for name in listed:
+        match = FLASH_MODEL.fullmatch(name)
+        if match:
+            found[name] = match
+    stable = [name for name, match in found.items() if not match["tag"]]
+    pool = stable or list(found)
+
+    def order(name):
+        match = found[name]
+        version = tuple(int(part) for part in match["version"].split("."))
+        newest_first = tuple(-part for part in version + (0,) * (4 - len(version)))
+        return (name != PREFERENCE[0], match["lite"] is not None, name not in PREFERENCE, newest_first, name)
+
+    return sorted(pool, key=order)[:MAX_CHAIN_MODELS]
+
+
+def choose_chain(key, base):
+    """The chain and the lines that say how it was chosen, for the log and the step summary. A list that can't be read
+    leaves the first choice alone, as before the list was asked for."""
+    listed, why = list_models(key, base)
+    if listed is None:
+        chain = [PREFERENCE[0]]
+        lines = [f"The model list failed ({why}); trying the first choice, `{PREFERENCE[0]}`, alone."]
+    else:
+        chain = build_chain(listed)
+        named = ", ".join(f"`{name}`" for name in listed) or "none"
+        lines = [f"Models the key lists for generateContent ({len(listed)}): {named}."]
+        if chain:
+            lines.append("Chain: " + " -> ".join(f"`{name}`" for name in chain) + ".")
+        else:
+            lines.append("Chain: none; the list names no flash model the review can use, so no request is made.")
+    return chain, listed, lines
+
+
 def write_json(path, value):
     temp = f"{path}.tmp"
     with open(temp, "w", encoding="utf-8") as fh:
@@ -225,10 +322,10 @@ def model_matches(asked, answered):
     return re.fullmatch(re.escape(asked) + r"(-preview\b.*|-\d.*)?", answered) is not None
 
 
-def run_chain(key, payload, result_path, base, scale):
-    """Walks CHAIN, recording every request in the result file before it is sent and again with its outcome, so a step
-    killed at any point, even during the first request, leaves a true count."""
-    started = time.monotonic()
+def run_chain(key, payload, result_path, base, scale, chain, started):
+    """Walks the chain, recording every request in the result file before it is sent and again with its outcome, so a
+    step killed at any point, even during the first request, leaves a true count. The deadline counts from `started`,
+    before the model list was read."""
     requests = []
     result = {"status": "running", "requests": requests}
 
@@ -244,7 +341,7 @@ def run_chain(key, payload, result_path, base, scale):
         return result
 
     # Any time the deadline stops the walk, the outcome is "unavailable": a later model was never asked.
-    for index, model in enumerate(CHAIN):
+    for index, model in enumerate(chain):
         for attempt in range(ATTEMPTS_PER_MODEL):
             remaining = left()
             if remaining <= 0:
@@ -280,7 +377,7 @@ def run_chain(key, payload, result_path, base, scale):
                 return finish("unavailable")
             print(f"Waiting about {wait:.0f} s, then one retry of {model}.")
             pause(wait)
-        if index + 1 < len(CHAIN):
+        if index + 1 < len(chain):
             pause(BETWEEN_MODELS_SECONDS)
     # Exhausted only if a quota refused the review and nothing else stood in the way of it.
     last = {}
@@ -325,10 +422,13 @@ def cmd_review(args):
     base = os.environ.get("GEMINI_REVIEW_API_BASE") or API_BASE
     scale = float(os.environ.get("GEMINI_REVIEW_TIME_SCALE") or 1)
     print(f"Prompt: {len(payload)} bytes; diff truncated: {truncated is not None}.")
-    result = run_chain(key, payload, args.result, base, scale)
-    result["truncated"] = truncated
+    started = time.monotonic()
+    chain, listed, chosen = choose_chain(key, base)
+    print("\n".join(chosen))
+    result = run_chain(key, payload, args.result, base, scale, chain, started)
+    result.update(truncated=truncated, listed=listed, chain=chain)
     write_json(args.result, result)
-    lines = summary_lines(result) + [f"Outcome: {result['status']}."]
+    lines = chosen + summary_lines(result) + [f"Outcome: {result['status']}."]
     print("\n".join(lines))
     summary = os.environ.get("GITHUB_STEP_SUMMARY")
     if summary:
@@ -362,6 +462,8 @@ def skipped_note(result):
     parts = [f"{first}. Advisory (R-659): the merge proceeds per R-651."]
     if result.get("requests"):
         parts.append("\n".join(summary_lines(result)))
+    elif result.get("chain") == []:
+        parts.append("The key's model list names no flash model the review can use, so no request was made.")
     else:
         parts.append("The review step left no count of its requests; see the workflow run.")
     return "\n\n".join(parts)

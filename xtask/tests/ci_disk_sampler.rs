@@ -146,9 +146,28 @@ negative_control!(
     check_bounded(&read(SAMPLER).replace("n <= max_samples", "n <= max_samples + 1"))
 );
 
-/// Well under the sampler's own 15 s wait, so its cleanup has to work; the next sample, at 600 s, is far past it.
+/// The sampler's start in a process group of its own, and the cleanup that ends it: what the controls take out.
+#[cfg(feature = "controls")]
+const OWN_GROUP: &str = "set -m\nsampler &\nsampler_pid=$!\nset +m\n";
+#[cfg(feature = "controls")]
+const TERM: &str = "kill -TERM \"$sampler_pid\" 2> /dev/null\n";
+#[cfg(feature = "controls")]
+const GROUP_KILL: &str =
+    "kill -0 \"$sampler_pid\" 2> /dev/null && kill -KILL -- \"-$sampler_pid\" 2> /dev/null\n";
+#[cfg(feature = "controls")]
+const SAMPLER_ONLY_KILL: &str =
+    "kill -0 \"$sampler_pid\" 2> /dev/null && kill -KILL \"$sampler_pid\" 2> /dev/null\n";
+#[cfg(feature = "controls")]
+/// The start without `set -m`: the sampler in the step's own process group.
+const SHARED_GROUP: &str = "sampler &\nsampler_pid=$!\n";
+
+/// The limit on the step's end: well past the cleanup's own bound of about 2 s, and far short of the next sample, at
+/// 600 s, or of a slow command's 12 s.
+const ENDS_WITHIN: u64 = 10;
+
+/// The sampler ends with the step: a TERM between two of its commands, and its cleanup at once.
 fn check_ends(sampler: &str) {
-    run("ci_disk_ends", sampler, "exit 0\n", 600, 10)
+    run("ci_disk_ends", sampler, "exit 0\n", 600, ENDS_WITHIN)
         .expect("the sampler outlived the step's script");
 }
 
@@ -157,16 +176,77 @@ fn ci_disk_sampler_does_not_outlive_the_step() {
     check_ends(&read(SAMPLER));
 }
 
+// In the step's process group, as without `set -m`, so the run's own end reaches the sampler left running.
 negative_control!(
     ci_disk_sampler_does_not_outlive_the_step,
     "a sampler left running when the step's script ends",
     expected = "the sampler outlived the step's script",
-    check_ends(
-        &read(SAMPLER)
-            .replace("kill -TERM \"$sampler_pid\" 2> /dev/null", "")
-            .replace("kill -KILL \"$sampler_pid\" 2> /dev/null", "")
-    )
+    check_ends(&edit(
+        &edit(&edit(&read(SAMPLER), TERM, ""), GROUP_KILL, ""),
+        OWN_GROUP,
+        SHARED_GROUP
+    ))
 );
+
+/// A command in hand longer than the bound, before the first sample, as a `df` or `du` on a slow disk would be: bash
+/// runs the trap only once it is done, so only the cleanup's own bound can end the step in time.
+fn with_a_slow_command_in_hand(sampler: &str) -> String {
+    edit(
+        sampler,
+        "    avail=$(df -Pk / |",
+        "    sleep 12\n    avail=$(df -Pk / |",
+    )
+}
+
+/// On the step's streams, the slow command holds them open until it is ended, so ending only the sampler is not enough.
+fn check_ends_with_a_slow_command(sampler: &str) {
+    run("ci_disk_slow", sampler, "exit 0\n", 600, ENDS_WITHIN)
+        .expect("the step outlived its bound with a slow command in the sampler's hand");
+}
+
+#[test]
+fn ci_disk_sampler_ends_with_a_slow_command_in_hand() {
+    check_ends_with_a_slow_command(&with_a_slow_command_in_hand(&read(SAMPLER)));
+}
+
+negative_control!(
+    ci_disk_sampler_ends_with_a_slow_command_in_hand,
+    "a cleanup that waits for the sampler's trap, as when CI failed (job 125622051950)",
+    expected = "the step outlived its bound with a slow command in the sampler's hand",
+    check_ends_with_a_slow_command(&with_a_slow_command_in_hand(&edit(
+        &read(SAMPLER),
+        "((SECONDS < end))",
+        "((SECONDS < end + 13))"
+    )))
+);
+
+mod sampler_only {
+    use super::*;
+    negative_control!(
+        ci_disk_sampler_ends_with_a_slow_command_in_hand,
+        "a KILL of the sampler alone, which leaves the command in hand running",
+        expected = "the step outlived its bound with a slow command in the sampler's hand",
+        check_ends_with_a_slow_command(&with_a_slow_command_in_hand(&edit(
+            &read(SAMPLER),
+            GROUP_KILL,
+            SAMPLER_ONLY_KILL
+        )))
+    );
+}
+
+mod no_own_group {
+    use super::*;
+    negative_control!(
+        ci_disk_sampler_ends_with_a_slow_command_in_hand,
+        "a sampler in the step's own process group, so the KILL of its group finds none",
+        expected = "the step outlived its bound with a slow command in the sampler's hand",
+        check_ends_with_a_slow_command(&with_a_slow_command_in_hand(&edit(
+            &read(SAMPLER),
+            OWN_GROUP,
+            SHARED_GROUP
+        )))
+    );
+}
 
 /// `from` in `sampler`, replaced: an edit that no longer applies must not quietly leave a sampler the check passes on.
 fn edit(sampler: &str, from: &str, to: &str) -> String {

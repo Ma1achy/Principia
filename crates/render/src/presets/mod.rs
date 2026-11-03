@@ -1,13 +1,15 @@
 //! The preset library's debug presets over fragment-side recompute (colour_composition §3, "Fragment-side recompute",
-//! and §6, "Debug views as presets"; R-75, R-116; TASK-M2-25): the DECODE preset ([`decode`]) and the agreement preset
-//! ([`agreement`]), each a view over `ctx` that calls the generated decode, never a kernel mode (R-75).
+//! and §6, "Debug views as presets"; R-75, R-116; TASK-M2-25, TASK-M2-26): the DECODE preset ([`decode`]), the
+//! agreement preset ([`agreement`]) and the ROUNDTRIP preset ([`roundtrip`]), each a view over `ctx` that calls the
+//! generated decode, and ROUNDTRIP the generated encode, never a kernel mode (R-75).
 //!
 //! **The generated snippets** (R-116; REQ-COL-006). [`DECODE_WGSL`] and [`ENCODE_WGSL`] are build outputs of the rust-gpu
 //! → SPIR-V → WGSL translation of the one Rust source (`kernel::stage::fragment`), which `cargo xtask build-kernel`
 //! emits and refuses to find edited by hand. The decode has one section per chart, each defining `frag_decode(uv)`, the
 //! chart's own `Φ` and the shared decoder monomorphised as the kernel's decode stage is ([`DecodeChart`]): the
 //! assembled module places the chart's section, so no preset names a chart and none special-cases one (REQ-RENDER-027;
-//! lowering Part 3, "Code that differs gets baked"). The encode, `frag_encode(m, r, p)`, is [`ENCODE_WGSL`] whole.
+//! lowering Part 3, "Code that differs gets baked"). Its `free` section is the free decode of a latent `z`,
+//! `frag_decode_free(z)`, the round trip's second `D`. The encode, `frag_encode(m, r, p)`, is [`ENCODE_WGSL`] whole.
 //!
 //! **`ctx.chart.z` per pixel** (colour_composition §3, REQ-COL-057). A preset places the chart lane's `z` from the
 //! decode it runs: `Φ`'s `z` at the pixel's `ctx.chart.slice_uv`, the 8-D latent on the latent chart; on a chart whose
@@ -20,6 +22,7 @@
 
 pub mod agreement;
 pub mod decode;
+pub mod roundtrip;
 
 use crate::bind::{self, ViewOutput};
 
@@ -165,9 +168,9 @@ pub fn module(view: &str, output: ViewOutput, chart: DecodeChart) -> Result<Stri
     bind::module(&format!("{}\n{view}", decode_snippet(chart)?), output)
 }
 
-/// The library's debug presets over fragment-side recompute, each locked: DECODE and the agreement preset.
+/// The library's debug presets over fragment-side recompute, each locked: DECODE, the agreement preset and ROUNDTRIP.
 pub fn library() -> Vec<Preset> {
-    vec![decode::preset(), agreement::preset()]
+    vec![decode::preset(), agreement::preset(), roundtrip::preset()]
 }
 
 /// Whether the f32 `x`'s bits are non-finite: an exponent field of all ones, tested on the bits, never by arithmetic on

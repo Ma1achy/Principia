@@ -114,10 +114,15 @@ fn mock_debug_view_clicked_is_one_undoable_set_field() {
 fn mock_debug_view_entry_after_f3_hide_with_a_check_mark() {
     let mut tree = ScopeTree::new();
     crate::explore::top_bar::register(&mut tree);
-    // Debug view after F3 hide, before reset layout (render_gui_spec §G2's View menu).
+    // Debug view after F3 hide and F3 fills by, before reset layout (render_gui_spec §G2's View menu).
     assert_eq!(
         tree.children(Some("view")),
-        [HIDE.0, ENTRY.0, crate::explore::top_bar::RESET_LAYOUT.0]
+        [
+            HIDE.0,
+            crate::explore::top_bar::FILL_ROW.0,
+            ENTRY.0,
+            crate::explore::top_bar::RESET_LAYOUT.0
+        ]
     );
     assert!(tree.get(ENTRY.0).unwrap().activates, "Enter acts on it");
     // Drawn below F3 hide, as a check box, ticked as the contract holds it.
@@ -156,12 +161,13 @@ fn mock_debug_view_keyboard() {
     frames(&mut h, &mut app, 2);
     let sim = app.snapshot().sim.clone();
     let depth = app.snapshot().history.undo_depth;
-    // Tab to the top bar, Enter, → to View, Enter: the menu open on F3 hide; ↓ to Debug view.
+    // Tab to the top bar, Enter, → to View, Enter: the menu open on F3 hide; ↓ to F3 fills by, ↓ to Debug view.
     for key in [
         Key::Tab,
         Key::Enter,
         Key::ArrowRight,
         Key::Enter,
+        Key::ArrowDown,
         Key::ArrowDown,
     ] {
         press(&mut h, &mut app, key, Modifiers::NONE);

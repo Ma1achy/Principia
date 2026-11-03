@@ -921,11 +921,14 @@ fixtures) wait for the human. ✱ marks a design ruling the human may veto.*
 
 ## R-110 — What CI runs, where, and against which goldens *(closes RQ-79)*
 *Amended by R-186, R-656 and R-662.*
+*Amended in part by R-677 (2 Nov 2026: a head that changes only the plan's task data or the GUI's artboards and
+references, tier (b), runs the cheap checks and the tests that read what it changed in place of the suites).*
 *Still in force: the unit, property, numerical-gate and native golden suites on every commit; GUI screenshots on GUI PRs
 and at the gates; lavapipe as the second backend on every commit, meeting M4's two-backend check, and a real non-Metal
 GPU gating Paper 2 (R-58); "every commit" is every push to `main` and every pull-request head, but for R-656's skips
-as R-662 scopes them (a head that changes none of Principia's code runs only the cheap checks; one that changes no
-GPU-path file skips the GPU suites);
+as R-662 and R-677 scope them (a head that changes none of Principia's code runs only the cheap checks; one that
+changes only tier (b)'s data runs the cheap checks and the tests that read it; one that changes no GPU-path file skips
+the GPU suites);
 Chrome stable and Safari for REQ-VAL-116; goldens rendered with native wgpu offscreen from M1, checked at M8 by the
 Playwright suite against the same baselines within tolerance, with no re-baselining without a gate decision; the
 runners and the benchmarks' schedule are R-186's.*
@@ -1481,9 +1484,12 @@ Crates without the `controls` feature are skipped, not failed.
 
 ## R-177 — Cadence *(closes G4, C6)*
 *Amended by R-656 and R-662.*
+*Amended in part by R-677 (2 Nov 2026: a head that changes only tier (b)'s data runs the tests that read it beside the
+cheap checks, in place of `cargo xtask ci`).*
 *Still in force: all of it, `ci.yml`'s "every push" read as R-656 reads it: every push to `main` and every pull-request
 head, a head that changes none of Principia's code (R-662) running plan-check and the vocabulary lint (in
-`ci-workspace`) in place of `cargo xtask ci`.*
+`ci-workspace`) in place of `cargo xtask ci`, and one that changes only the plan's task data or the GUI's artboards and
+references (R-677) running those and the tests that read what it changed.*
 *25 Sep 2026 · applied in step 8*
 
 - `ci.yml` runs `cargo xtask ci` on every push, and that includes plan-check.
@@ -2233,8 +2239,10 @@ veto afterwards."
 
 ## R-235 — `qa_cargo_xtask_alias_runs_deps` uses the listing-only form of `cargo xtask ci`; the controls get their own CI job *(closes RQ-150)*
 *Amended by R-656.*
+*Amended in part by R-677 (2 Nov 2026: "docs-only" reads "runs no full CI", a tier (b) or tier (c) head).*
 *Still in force: all of it; CI's own job runs every control on every push to `main` and every pull-request head but a
-docs-only one, whose `xtask-ci` shards are skipped, the gate `xtask-ci` passing them only on that verdict (R-656).*
+docs-only one, a head of R-677's tier (b) or (c), whose `xtask-ci` shards are skipped, the gate `xtask-ci` passing
+them only on that verdict (R-656).*
 *29 Sep 2026 · applied in TASK-M0-22*
 
 "R-235 (RQ-150): option (c). qa_cargo_xtask_alias_runs_deps uses the listing-only form of cargo xtask ci; CI's own step
@@ -3439,9 +3447,15 @@ PR merges once its named reviewers approve its head and CI is green.
 
 ## R-305 — #65's provisional mutation values and items 10–13 stand; `mutants-check` becomes a required check on `main`
 *Amended by R-376.*
-*Still in force: all of it but the per-shard value: n = 8 shards stands, confirmed, and R-376 replaces 120 minutes per
-shard with 300, a ceiling for unusually large diffs, not a target; items 10–13, the required `mutants-check` and the
-comment-width nit stand.*
+*Amended in part by R-676 (2 Nov 2026: `mutants-check` passes at once only on a docs-only head; any other head's waits
+for its merge-ready run).*
+*Amended in part by R-677 (2 Nov 2026: the head whose `mutants-check` passes at once is one whose change has no `.rs`
+file under `crates/`).*
+*Still in force: all of it but the per-shard value and when `mutants-check` passes: n = 8 shards stands, confirmed, and
+R-376 replaces 120 minutes per shard with 300, a ceiling for unusually large diffs, not a target; items 10–13, the
+required `mutants-check` and the comment-width nit stand; `mutants-check` reports on every pull request, passing at
+once on a head whose change has no `.rs` file under `crates/` (R-677) and on any other once its merge-ready run finds
+no mutant (R-676).*
 *30 Sep 2026 · applied in PR #65 (TASK-M0-23): `.github/workflows/mutants.yml` and `plan/HUMAN_SETUP.md` §2*
 
 "#65 (R-305):
@@ -28870,9 +28884,13 @@ Changes REQ-SCHED-101 (statement, verify, rulings, note) and REQ-CHART-062 (veri
 ## R-656 — CI throughput: a push runs `ci.yml` only on `main` (and on R-272's `measure/` branches, which have no pull request), a pull request running it through `pull_request`; a pull request's superseded runs are cancelled, never a run on `main`; a docs-only pull request skips the build, test, GPU and mutants work, and one that changes no GPU-path file skips the GPU suites, inside the jobs, every required check still reporting success under its own name; mutants run on the merge-ready head; a bounded target cache is approved in principle, built in a later PR; no paid or self-hosted runner *(amends R-110, R-177, R-186, R-195, R-235, R-285 and R-335)*
 *Amended in part by R-662 (31 Oct 2026: full CI runs only when a pull request changes Principia's code; the list of
 files code reads narrows to data code loads for behaviour, and the docs checks to the cheap checks).*
-*Still in force: all of it but what counts as docs-only and what a docs-only head runs, which are R-662's: the push
-trigger, the cancelled runs, the in-job skips under each required check's own name, mutants on the merge-ready head,
-the approved target cache and no paid or self-hosted runner.*
+*Amended in part by R-676 (2 Nov 2026: mutants run only on the run the `merge-ready` label starts, a push taking the
+label off; `reviews.yml` cancels its superseded runs per pull request and event).*
+*Amended in part by R-677 (2 Nov 2026: three tiers, code, data and docs; mutants only when `crates/` source changes).*
+*Still in force: all of it but what counts as docs-only and what a docs-only head runs, which are R-662's and R-677's,
+how the merge-ready head's mutants run and `reviews.yml`'s concurrency, which are R-676's, and which heads' mutants run,
+which is R-677's: the push trigger, the cancelled runs, the in-job skips under each required check's own name, mutants
+on the merge-ready head, the approved target cache and no paid or self-hosted runner.*
 *30 Oct 2026 · the owner's two messages of that day; applied in `.github/workflows/ci.yml`,
 `.github/workflows/mutants.yml`, `scripts/ci_changes.sh` (new), `xtask/tests/ci_changes.rs` (new), three qa files
 (below), `plan/OPERATIONS.md`, `plan/WORKFLOW.md`, `docs/contracts/principia_parity_contract.md` §6, eight
@@ -29256,6 +29274,12 @@ R-661 is in the "design" group of `plan/rule_groups.yaml`, with R-630 and R-639.
 Changes REQ-VAL-199 (statement, rulings, source, note).
 
 ## R-662 — Full CI runs only when a pull request changes Principia's code: docs, plan prose, papers, Python and other scripts get only plan-check, the vocabulary lint and the atlas guard; a mixed change and an unknown path run full CI; every required check still reports *(amends R-656's docs-only list and docs checks, R-110 and R-177)*
+*Amended in part by R-677 (2 Nov 2026: the plan's task data and the GUI's artboards and references leave the data code
+loads that run full CI for tier (b), which runs the cheap checks and the tests that read them, and so does a change to
+`plan/requirements.yaml` that changes only fields no code reads).*
+*Still in force: all of it but which of the data code loads runs full CI: the allowlist, the cheap checks, failing
+towards full CI, the required checks reporting, `plan/requirements.yaml` (but a change to fields no code reads alone,
+R-677's), the classifier and `scripts/contain.sh` as full CI, and what a head that changes only prose costs.*
 *31 Oct 2026 · the owner's message of that day; applied in `scripts/ci_changes.sh`, `.github/workflows/ci.yml`,
 `.github/workflows/mutants.yml`, `xtask/tests/ci_changes.rs`, `xtask/tests/mutants_no_mutant.rs`,
 `xtask/tests/qa_R-656_ci_changes.rs`, `plan/OPERATIONS.md`, `plan/WORKFLOW.md`,
@@ -29626,3 +29650,206 @@ it, and the interval is the orchestrator's (the script's default is 20 minutes).
 
 R-675 is in the "process" group of `plan/rule_groups.yaml`.
 
+## R-676 — Mutants run once per approved head, on the `merge-ready` label the merge watcher puts on, and again only when the head changes, `mutants-check` posted pending until then and never passed by a skipped job; fix rounds are checked locally through the job queue before they push; superseded `reviews` runs are cancelled per pull request; `main` is merged into open pull requests in batches; the quick and full tiers of `ci.yml` are not ruled *(amends R-656 and R-305)*
+*Amended in part by R-677 (2 Nov 2026: the one pass posted without a run is a head whose change has no `.rs` file under
+`crates/`, not a docs-only head).*
+*Still in force: all of it but which head's `mutants-check` is posted passed without a run: the `merge-ready` label's
+run, the posted check, the label taken off on a push, fix rounds checked locally, the `reviews` runs cancelled, `main`
+merged in in batches, and the quick and full tiers not ruled.*
+*2 Nov 2026 · the owner's CI plan of that day; applied in `.github/workflows/mutants.yml`,
+`.github/workflows/reviews.yml`, `xtask/tests/merge_ready.rs` (new), `xtask/tests/ci_changes.rs`,
+`xtask/tests/mutants_no_mutant.rs`, qa's `xtask/tests/qa_ci_throughput_a.rs` (new) and five qa files (below),
+`plan/OPERATIONS.md`, `plan/HUMAN_SETUP.md` §2, REQ-VAL-148's note and `plan/rule_groups.yaml`*
+
+The owner's words, 2 Nov 2026, verbatim: items (1), but for its quick tier, (2) and (4) of the message, which opens
+"CI plan, approved; do it as one tooling PR (or two if cleaner), then re-measure the same table after 48 h of normal
+load."
+
+> (1) Two-tier CI. […] The FULL suite plus mutants runs once on the merge-ready head (all required approvals present, or a ready-to-merge label your merge watcher applies), and again only if that head changes. Branch protection must still require the full checks on the merged head, so required check names must report correctly in both tiers (skip-as-success only where the tier logic allows it). Check rulings first (M0-45, R-266, any requiring mutants per push); if one conflicts, bring me the conflict instead of working around it. (2) Fix rounds are verified locally through the job queue (#355) first; CI confirms. […] (4) Your cuts 2, 3 and 5: cancel superseded `reviews` runs per PR; verify the docs-only skip shipped; batch main merges into PRs.
+
+The part of item (1) left out, the quick tier, verbatim: "Every push runs a QUICK tier: fmt, clippy, build, and tests
+for changed crates plus their dependents (target ≤10 min)." Items (3) and (5) are outside this ruling.
+
+*What it decides:*
+- **Mutants on the merge-ready head (item 1).** `mutants.yml`'s shards, `mutants-fixture` and its verdict run only in
+  the run the `merge-ready` label starts. The orchestrator's merge watcher puts the label on once every reviewer the
+  task names has approved the head, and a push to the pull request takes it off, so the gate runs again only on a head
+  approved again. In R-656, this amends "The gate runs on every head of a pull request whose diff has Rust in it" and
+  "The orchestrator's merge step is unchanged": the merge step now labels the approved head and waits for its
+  `mutants-check` (`plan/OPERATIONS.md` § "Mutants on the merge-ready head").
+- **`mutants-check` reports correctly (item 1's constraint).** It is a check run the workflow posts through the Checks
+  API, under the GitHub Actions app branch protection pins, never a job, so no skipped job can report it passed. Each
+  new head's is posted `queued`, and the merge-ready run's verdict completes it, success or failure. The one pass
+  posted without a run is a docs-only head's (R-662), whose diff has no mutant: the skip the tier logic allows. Branch
+  protection still requires `mutants-check` (R-305), unchanged.
+- **R-305, amended.** `mutants-check` still reports on every pull request, and a docs-only one's still passes at once.
+  Any other pull request's is pending until its head is labelled, and then passes if the diff has no mutant. What
+  R-305's "passes trivially when the diff has no mutants" loses, recorded rather than guarded: a pull request that is
+  not docs-only but has nothing to mutate, one whose Rust is only test files among them, now needs a label cycle before
+  its `mutants-check` passes.
+- **Fix rounds are checked locally first (item 2).** A fix round runs the tests its fixes touch, their controls, and its
+  mutants run where R-388 asks for one, through the job queue (R-658) on the head it is about to push; CI confirms
+  that head.
+- **Superseded `reviews` runs are cancelled (item 4).** `reviews.yml` keeps one `concurrency` group per pull request and
+  event, its merge ref's, with `cancel-in-progress`, never cancelling a run on `main`. In R-656, this amends "Three keep
+  none (below): `reviews.yml`, …" for `reviews.yml`; `no-atlas-params.yml` and `gemini-dispatch.yml` still keep none.
+  The events keep groups of their own, since a `pull_request_review` run re-runs the `pull_request` run (R-276), and in
+  one group the re-run would cancel the run that started it. The re-run reads the pull request's head before it waits
+  on the `pull_request` run and again just before re-running it, so a review's run never re-runs a superseded head's
+  run, which would cancel the new head's in the same group.
+- **`main` is merged into open pull requests in batches (item 4).** Each push re-runs a pull request's CI and takes its
+  label off, so `main` is merged in only on a conflict, when a merged change must be in the tree, or once right before
+  the label, the reviewers then approving the merged head (`plan/OPERATIONS.md` § "Merging `main` into an open pull
+  request, in batches").
+- **Not ruled: the quick and full tiers of `ci.yml` (item 1's first half).** Every push running only a quick tier, and
+  the full suite only on the merge-ready head, conflicts with R-110 (the unit, property, numerical-gate and native
+  golden suites on every commit), R-177 (`ci.yml` runs `cargo xtask ci` on every push) and R-235 (every control on
+  every push), as R-656 and R-662 read them. As the owner asked, the conflict is with him, and `ci.yml` is unchanged.
+
+*Applied per R-369:*
+- The label is named `merge-ready`, and the merge watcher puts it on with the user's own token, since a label a
+  workflow's `GITHUB_TOKEN` puts on starts no run.
+- A push's run tolerates a 404 when it takes the label off: after two quick pushes the second's payload still lists the
+  label the first's run took off. Any other error fails the step.
+- Five qa files change where this ruling changes the behaviour they test, as R-335 allowed for R-326 (exceptions to
+  R-290, named by the orchestrator, for the reviewers to confirm): `xtask/tests/qa_R-656_ci_changes.rs`,
+  `xtask/tests/qa_R-662_ci_scope.rs`, `xtask/tests/qa_TASK-M0-23.rs`, `xtask/tests/qa_TASK-M0-23_r305.rs` and
+  `xtask/tests/qa_TASK-M0-23_shards.rs`, each reading the verdict from `mutants-verdict` and the check from the posted
+  check run, the job `mutants-check` being gone. qa made the changes.
+- This ruling follows R-662 in the file: the numbers between them are on other branches, a rulings port among them.
+
+R-676 is in the "ci" group of `plan/rule_groups.yaml`.
+
+Changes REQ-VAL-148 (source, rulings, note).
+
+## R-677 — CI runs in three tiers: a change to Principia's code runs full CI as before; one to the plan's task data or the GUI's artboards and references runs only the cheap checks and the tests that read what it changed, with no build, test shard, GPU suite or mutants; one to the docs runs only the cheap checks; a change takes its highest tier, and an unknown path runs full CI; mutants run only when `crates/` source changes, on the merge-ready head; every required check still reports under its own name *(amends R-656, R-662, R-110, R-177, R-235, R-305 and R-676)*
+*2 Nov 2026 · the owner's message of that day, item 3, and his two replies on `plan/requirements.yaml` later that day;
+applied in `scripts/ci_changes.sh`, `scripts/ci_req_fields.py`, `.github/workflows/ci.yml`,
+`.github/workflows/mutants.yml`, `xtask/tests/ci_changes.rs`, `xtask/tests/merge_ready.rs`,
+`xtask/tests/mutants_no_mutant.rs`, five qa files (below), `plan/OPERATIONS.md`, `plan/HUMAN_SETUP.md` §2,
+`docs/contracts/principia_parity_contract.md` §6, REQ-VAL-148's and REQ-SYS-067's notes and `plan/rule_groups.yaml`*
+
+The owner's words, 2 Nov 2026, verbatim: item 3 of the message that opens "PRIORITY OVERRIDE: CI fixes first;
+everything else waits."
+
+> 3. New tooling PR, straight after: a three-tier classifier in scripts/ci_changes.sh. (a) CODE: anything under crates/, xtask/, Cargo.*, rust-toolchain, .github/, .cargo/, fixtures/, the classifier and contain.sh → full CI as now. (b) PLAN-DATA: the reads_code files (plan/tasks/*, plan/tasks.yaml, plan/requirements.yaml, plan/MILESTONES.md) → only the checks that read them: plan-check, vocabulary lint, `cargo xtask gate-report` and `cargo xtask reviews-check` (build xtask only); no test shards, no GPU, no mutants. docs/gui/design/* and docs/gui/reference/* → only the screenshot/golden tests that read them. (c) DOCS: as now, cheap checks only. Mutants run only when crates/ source changes, on the merge-ready head. Every required check still reports under its own name and concludes success only where the tier logic allows it; failing toward full CI on anything unknown stays. Extend xtask/tests/ci_changes.rs to cover every reads_code path landing in tier (b), and a crates/ path landing in (a). Check this against R-656/R-662 and amend them by ruling text in the same PR; I approve the change.
+
+Items 1, 2 and 4 of the message (the freeze, the order the CI fixes land in, and the report) are outside this ruling.
+
+The owner's words later on 2 Nov 2026, on `plan/requirements.yaml`'s tier, verbatim. About 17:25 he asked "Do you think
+plan/requirements.yaml should be in plan-data? Idk"; the orchestrator recommended a field-level split (only fields no
+code reads to plan-data; any code-read field, new or unknown field, new requirement or unparseable diff to the code
+tier; a test that fails if code starts reading a field not on the list), and he answered:
+
+> Yeah do that then, make it good and work well
+
+and about 17:30, while it was being built:
+
+> keep it simple and make ci fast without sacrificing testing on actual code
+
+*What it decides:*
+- **Three tiers (`scripts/ci_changes.sh`, `tier=code|data|docs`).** (a) **Code**: `crates/`, `xtask/`, `fixtures/`,
+  `Cargo.toml`, `Cargo.lock`, `rust-toolchain.toml`, `.github/`, `.cargo/`, the classifier and its field check,
+  `scripts/contain.sh`, the one datum only full CI reads (`plan/requirements.yaml`, when a field code reads changes;
+  below) and any path the allowlist doesn't name: full CI, as R-662 ran it. (b) **Data**: the plan's task data,
+  `plan/tasks/`, `plan/tasks.yaml` and `plan/MILESTONES.md` (and `plan/requirements.yaml` when only fields no code
+  reads change), and the GUI's artboards and references, `docs/gui/design/` and `docs/gui/reference/`:
+  `ci-workspace` runs the cheap checks and the tests of the code that reads what changed, each built alone; no build,
+  no test shard, no release, controls or GPU suite, no mutants. (c) **Docs**: the rest of R-662's allowlist: the cheap
+  checks only, as R-662 ran them.
+- **The highest tier wins.** A change touching several tiers runs the highest: code over data, data over docs. An
+  unknown path is code, and a diff that can't be computed, or is empty, runs everything, its mutants among it.
+- **Tier (b)'s tests.** For the plan's task data: in xtask, the tests of `cargo xtask gate-report` and
+  `gate-provisional` (the gate blocks and the closing tasks), of `cargo xtask reviews-check` (each task file's
+  Reviewers field), of the plan checks and of the progress banner, and the print-graph coverage; in validation, the
+  Part 6 catalogue, which walks the task files. For the GUI's: xtask's screenshot tests and screenshot-case checks and
+  the print-graph coverage, kernel's initial-conditions inspector (`ic_inspector.html`) and render's colour explorer
+  (`principia_colour_explorer.html`), each against its reference. `xtask/tests/ci_changes.rs` checks that every reader
+  its scan of the sources finds, and every directory walker it lists by hand, is among those tests.
+- **Mutants run only when `crates/` source changes.** A change with no `.rs` file under `crates/` (`mutants=false`) has
+  its `mutants-check` posted passed at once, as R-676 posted a docs-only head's, and each shard finds no `.rs` file
+  under `crates/` in its diff and passes. Any other head's gate runs on the merge-ready head, R-676's label gate
+  unchanged. `mutants-fixture`, which mutates no part of the pull request but shows on its fixtures that the gate can
+  still fire, skips its steps only on a tier (c) change (`tier=docs`), as R-656 skipped it on a docs-only one: a change
+  to the gate's own configuration (`.cargo/mutants.toml`, `fixtures/mutants/`, `scripts/contain.sh`, the pinned
+  cargo-mutants in `mutants.yml`, xtask's `mutants-check`) is tier (a), "full CI as now", and runs it, and tier (b)'s
+  data, which R-662 counted as code, runs it as before (applied per R-369, after the code review of PR #382).
+  *Was (R-677 as first written):* "`mutants-fixture` skips its steps" on a change with no `.rs` file under `crates/`.
+- **The required checks still report** under their own names, each concluding success only where the tier allows: the
+  gates `ci` and `xtask-ci` pass a skipped job only on a data or docs verdict, the GPU gates only on a verdict with no
+  GPU-path file, and `ci` gathers `ci-workspace`, which runs tier (b)'s tests, so a failing reader turns it red.
+
+*What it amends, quoted:*
+- R-656: "a docs-only pull request skips the build, test, GPU and mutants work" now reads for a tier (b) or (c) pull
+  request; its mutants skip is R-677's `crates/` test.
+- R-662: "Full CI runs when a pull request changes … or the data code loads" keeps only `plan/requirements.yaml` (a
+  change to a field code reads), the classifier and `scripts/contain.sh` among that data; "`plan/tasks.yaml` and
+  `plan/MILESTONES.md` … `plan/tasks/` … `docs/gui/design/` and `docs/gui/reference/`" move to tier (b).
+- R-110: "a head that changes none of Principia's code runs only the cheap checks" gains "one that changes only tier
+  (b)'s data runs the cheap checks and the tests that read it".
+- R-177: "a head that changes none of Principia's code (R-662) running plan-check and the vocabulary lint … in place of
+  `cargo xtask ci`" gains tier (b)'s heads, running those and the tests that read what changed.
+- R-235: "every pull-request head but a docs-only one" reads "docs-only" as "a head of tier (b) or (c)".
+- R-305, as R-676 amended it: "passing at once on a docs-only head" becomes "on a head whose change has no `.rs` file
+  under `crates/`".
+- R-676: "The one pass posted without a run is a docs-only head's (R-662)" becomes a head whose change has no `.rs`
+  file under `crates/`.
+
+*Where the owner's list meets the code, applied per R-369 and recorded for him:*
+- **`plan/requirements.yaml` is tier (b) when only fields no code reads change, and (a) otherwise** (his words of
+  17:25 and 17:30 above). `scripts/ci_changes.sh detect` writes the file at the merge's base and at its head, and
+  `scripts/ci_req_fields.py` (`python3 -I`, PyYAML's `safe_load`) loads both: tier (b) only if both parse as a list of
+  requirements with unique ids, the ids are the same set, every field a requirement changes is one no code outside
+  tier (b)'s tests reads (`area`, `statement`, `source`, `rulings`, `note`, `rq`), and the lines naming a field code
+  reads are the same lines, since the loaders read lines. Anything else is tier (a): an added or removed requirement, a
+  change to a field of its CODE_FIELDS (`id`, `kind`, `retired`, `milestone`, `verify` with `method` and `detail`,
+  each with its reader named there: the gates' `find_requirement`, the constants register's tau citation,
+  `cargo xtask gate-report` and `gate.yml`'s results step), a field on neither list, a reformatted line code reads, a
+  copy that does not parse or is missing, and a check that fails for any reason. It prints one reason line (the id
+  and field) in the `changes` job's log. A tier (b) change to it sets `plan_data`, so the plan's readers' tests run,
+  the print-graph coverage reading the statements among them. `xtask/tests/ci_changes.rs` reads every source naming
+  the file, the workflows among them, and fails if one outside tier (b)'s tests reads a field not in CODE_FIELDS;
+  the field check is code, as the classifier is. Applied per R-369 inside his rule: the field lists, the line check
+  and `milestone` among the code fields (the tau test reads it).
+  *Was (R-677 as first written, before his words of 17:25):* "**`plan/requirements.yaml` stays in tier (a).** His
+  list puts it in (b), "only the checks that read them", but more than those checks read it: every numerical gate
+  refuses a threshold that names no live requirement of the right kind (`crates/validation/src/gate/mod.rs`, `config`
+  and `check_requirement`), which the GPU suites run (`cargo xtask gate decode-agreement`), and so do the gpu-kernel
+  profile's `decode_f32_eps_gpu` and `invariant_gradient_gpu`, which need the built kernel; the constants register's
+  calibration citations (`crates/ledger/tests/qa_TASK-M3-06_tau.rs`) and validation's gate tests read it too. Tier (b)
+  builds no kernel and runs no GPU suite, so a retired or re-kinded requirement a gate names would pass a tier (b) head
+  and turn `main` red. It keeps failing towards full CI until he rules otherwise; tier (b) for it would add `cargo
+  xtask gate --list`, which checks every gate's configuration against it with no GPU, and the readers' tests that need
+  none."
+- **`cargo xtask gate-report` and `cargo xtask reviews-check` run as their tests.** The commands themselves need what
+  a plan-data head has not: `gate-report` a milestone's test results (`--results`, or `--write-test-list`, which builds
+  every test the gate names), and `reviews-check` a pull request's reviews, which `reviews-complete` reads on every pull
+  request anyway (`reviews.yml`). Their tests read the real task data, and build xtask's test binaries alone.
+- **"Build xtask only"** is met by building only the readers' own test binaries (`cargo nextest run -p <package> --test
+  …`): xtask's, and validation's, kernel's and render's one reader each, never the workspace's tests.
+- **No golden reads `docs/gui/`.** The compass golden compares with records made from `principia_nav_cube.html`, which
+  are fixtures (`fixtures/screenshot/01_main/compass/reference/`), and so code. `screenshot.yml` runs every screenshot
+  suite (`cargo xtask screenshot --all`) on a pull request touching `docs/gui/`, as it did.
+- **No file outside the owner's lists is read by code:** the scan of the sources finds no data they load in tier (c).
+- **`docs_only` keeps its name**, now reading "runs no full CI" (tier b or c), so the jobs' skips, the gates and R-335's
+  `if:` stand; `tier`, `plan_data`, `gui_data` and `mutants` are new outputs beside it.
+- **xtask's own code has no per-PR mutants** under "only when crates/ source changes": the nightly full run
+  (`nightly.yml`, R-302's backstop) still mutates it.
+- **Tier (b)'s steps have no doctest step.** Each selects its test binaries with `--test`, which `cargo test --doc`
+  refuses beside it ("can't mix --doc with other target selecting options"); a `--test` selection runs no doctest
+  under `cargo test` either, so none is dropped (R-231), and every doctest runs on `main` and on every code head.
+- **What it costs, recorded rather than guarded:** a tier (b) head runs only the readers the scan and the hand list
+  find; a reader they miss, or a test that reads the task data only through prose, runs on `main` once it merges.
+- **Five qa files change** where this ruling changes the behaviour they test, as R-335 allowed for R-326 (exceptions to
+  R-290, named by the orchestrator, for the reviewers to confirm): `xtask/tests/qa_R-656_ci_changes.rs` and
+  `xtask/tests/qa_R-662_ci_scope.rs` (tier (b)'s data no longer runs the heavy jobs; xtask's Rust no longer runs a
+  shard), `xtask/tests/qa_ci_throughput_a.rs` (`mutants-check` passes on `mutants=false`, not on `docs_only`),
+  `xtask/tests/qa_TASK-M0-23_r305.rs` (a Rust change outside `crates/` runs no shard) and
+  `xtask/tests/qa_TASK-M0-33.rs` (a `--test` step pairs with no doctest step). qa makes the changes.
+  `xtask/tests/qa_R-662_ci_scope.rs`'s list of the scripts that are code gains the field check,
+  `scripts/ci_req_fields.py`, for the same reason.
+- This ruling follows R-676 in the file.
+
+R-677 is in the "ci" group of `plan/rule_groups.yaml`.
+
+Changes REQ-VAL-148 (source, rulings, note) and REQ-SYS-067 (source, rulings, note).

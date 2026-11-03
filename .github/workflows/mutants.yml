@@ -8,21 +8,40 @@
 # builds the kernel, the rust-gpu build under the `gpu-kernel` job's key, `rust-gpu-gpu-kernel-<os>-<channel>` (R-320).
 # None saves: rust-cache's `save-if` holds only on a push to `main`, and there is no save step. rust-cache hashes the
 # environment's CARGO_* variables into its key, so CARGO_TERM_COLOR below is set as in `ci.yml`.
-# R-656: the gate runs on every head of a pull request and a push cancels the run on the head it supersedes
-# (`concurrency` below), so it always runs on the merge-ready head, the last; a shard whose diff names no `.rs` file
-# skips its run (below), and `mutants-fixture` skips its steps on a docs-only pull request (`scripts/ci_changes.sh`,
-# R-662).
+#
+# Mutants run on the merge-ready head (R-656, R-676): the shards, the fixture and the verdict run only when the
+# `merge-ready` label is put on the pull request, which the orchestrator's merge watcher does once every reviewer the
+# task names has approved the head (`plan/OPERATIONS.md` § "The merge-ready label"). A push to the pull request takes
+# the label off (`mutants-pending`), so the gate runs again only on a head approved again, and cancels a run on the head
+# it supersedes (`concurrency` below).
+#
+# `mutants-check` is therefore a check run this workflow posts through the Checks API, under the GitHub Actions app
+# branch protection pins it to, never a job: a job here that the label skipped would report "skipped", which GitHub
+# counts as passed, on a head whose mutants never ran. On each new head `mutants-pending` posts it `queued`, so branch
+# protection holds the merge on it as pending; the merge-ready run's `mutants-verdict` completes it with its verdict,
+# success or failure. Until then, and on a head where nothing posted it, it is pending or "expected", never a pass. The
+# one success posted without a run is that of a head whose change has no `.rs` file under `crates/` (R-677:
+# `scripts/ci_changes.sh`'s `mutants`), whose diff has no mutant the gate runs, exactly the verdict the shards would
+# reach: each finds no `.rs` file under `crates/` and passes. Mutants run only when `crates/` source changes (R-677);
+# xtask's own code is mutated by the nightly full run.
 name: mutants
 
+# `labeled` starts the merge-ready run; `opened`, `synchronize` and `reopened`, GitHub's defaults, start
+# `mutants-pending` on each new head. No `paths:` or `branches:` filter: every pull request reaches the gate.
 on:
   pull_request:
+    types: [opened, synchronize, reopened, labeled]
 
-# A newer push to the same ref supersedes an older run, so the older run on that ref is cancelled. On `main` each
-# run has a group of its own (its run id), so no run there is ever cancelled or queued behind another (applied per
-# R-369). A pull request's runs share one group, its merge ref's, so the gate runs to its end only on the latest head:
-# the merge-ready head is the one whose `mutants-check` the merge waits for (R-656).
+# A newer push to the same ref supersedes an older run, so the older run on that ref is cancelled: a push cancels the
+# merge-ready run on the head it supersedes. On `main` each run has a group of its own (its run id), so no run there is
+# ever cancelled or queued behind another (applied per R-369). A pull request's runs share one group, its merge ref's,
+# but for a run started by any label other than `merge-ready`: that run does nothing, and has a group of its own (its
+# run id), so it never cancels the merge-ready run.
 concurrency:
-  group: mutants-${{ github.event_name }}-${{ github.ref == 'refs/heads/main' && github.run_id || github.ref }}
+  group: >-
+    mutants-${{ github.event_name }}-${{ (github.ref == 'refs/heads/main'
+    || (github.event.action == 'labeled' && github.event.label.name != 'merge-ready'))
+    && github.run_id || github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 permissions:
@@ -38,6 +57,77 @@ env:
   CARGO_PROFILE_TEST_DEBUG: line-tables-only
 
 jobs:
+  # A new head's `mutants-check` (above): posted `queued` until the merge-ready run completes it, or, on a head with no
+  # `.rs` file under `crates/` (R-677), posted passed at once. A push also takes the `merge-ready` label off, since the
+  # reviewers approved the head it supersedes. On a reopened pull request whose head already has a `mutants-check`, that
+  # check stands.
+  mutants-pending:
+    if: github.event_name == 'pull_request' && github.event.action != 'labeled'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      checks: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      # What this change touches (R-677): a change with no `.rs` file under `crates/` has no mutant the gate runs, so
+      # its gate passes at once.
+      - name: scripts/ci_changes.sh detect
+        id: changes
+        run: scripts/ci_changes.sh detect
+      - name: Take the merge-ready label off the pushed pull request
+        if: >-
+          github.event.action == 'synchronize'
+          && contains(github.event.pull_request.labels.*.name, 'merge-ready')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+        # The payload lists the labels as they were when the push fired: after two quick pushes, the second's still
+        # lists the label the first's run took off, and GitHub answers 404 (`gh` prints "HTTP 404"). The label is off
+        # then, which is what this step is for, so a 404 passes and the head's check below is still posted; any other
+        # error fails the step.
+        run: |
+          set -uo pipefail
+          if err=$(gh api --method DELETE "repos/$GH_REPO/issues/$PR/labels/merge-ready" 2>&1 > /dev/null); then
+            echo "#$PR: merge-ready taken off; the gate runs again once the new head is approved and labelled"
+          elif grep -q 'HTTP 404' <<< "$err"; then
+            echo "#$PR: merge-ready already off, taken off by an earlier push's run ($err)"
+          else
+            echo "$err" >&2
+            exit 1
+          fi
+      - name: Post mutants-check on the head
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          MUTANTS: ${{ steps.changes.outputs.mutants }}
+        # Every `mutants-check` the GitHub Actions app (id 15368, the source branch protection pins) has on the head,
+        # in any check suite.
+        run: |
+          set -euo pipefail
+          runs="repos/$GH_REPO/commits/$HEAD_SHA/check-runs?check_name=mutants-check&app_id=15368&filter=all"
+          existing=$(gh api "$runs" --jq '.total_count')
+          if [ "$existing" != 0 ]; then
+            echo "mutants-check: $existing already on $HEAD_SHA; it stands"
+            exit 0
+          fi
+          post() {
+            gh api --method POST "repos/$GH_REPO/check-runs" -f name=mutants-check -f head_sha="$HEAD_SHA" \
+              -f "output[title]=$1" -f "output[summary]=$2" "${@:3}" > /dev/null
+          }
+          if [ "$MUTANTS" = false ]; then
+            post "No mutant: the change touches no Rust source under crates/" \
+              "Mutants run only when crates/ source changes (R-677, scripts/ci_changes.sh): no .rs file to mutate." \
+              -f status=completed -f conclusion=success
+            echo "mutants-check: passed on $HEAD_SHA, a change with no .rs file under crates/"
+          else
+            post "Waiting for the merge-ready label" \
+              "The mutants gate runs once every named reviewer has approved this head (R-656)." \
+              -f status=queued
+            echo "mutants-check: pending on $HEAD_SHA until the merge-ready run"
+          fi
   # The per-PR mutation gate (R-196, R-202; TASK-M0-23): `cargo mutants --in-diff` on the PR's diff against its base,
   # on pull requests only, since `--in-diff` needs a base. The run is sharded across n parallel jobs, shard k of n each
   # (`--shard k/n`), each under its own time limit (R-302); the nightly full run (TASK-M0-19) is the backstop. Every
@@ -46,7 +136,7 @@ jobs:
   # below then checks every shard's report together, and fails if any shard failed or was cut off by its limit.
   # `mutants-fixture` shows, on `fixtures/mutants/untested/`, that the gate can fire.
   mutants:
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' && github.event.action == 'labeled' && github.event.label.name == 'merge-ready'
     runs-on: ubuntu-24.04
     # statuses: the heartbeat of a shard's run (`scripts/contain.sh`).
     permissions:
@@ -66,20 +156,20 @@ jobs:
         with:
           fetch-depth: 0
       # cargo-mutants mutates only Rust source, so a diff that names no `.rs` file has no mutant (cargo-mutants itself
-      # then stops at once: "Diff changes no Rust source files", exit 0). Such a shard, a docs-only or rulings PR's,
-      # skips its setup and its run and passes, so `mutants-check` reports on it at once (R-305). A diff naming any
-      # `.rs` file, even one cargo-mutants won't mutate, runs the shard in full, but for one under `docs/`, `plan/`,
-      # `scripts/` or `workbench/`, the reference sources and the papers' code, which is not Principia's (R-662).
+      # then stops at once: "Diff changes no Rust source files", exit 0). Mutants run only when `crates/` source changes
+      # (R-677), so a shard whose diff names no `.rs` file under `crates/`, a docs, plan or xtask-only PR's, skips its
+      # setup and its run and passes, so `mutants-check` reports on it at once (R-305). A diff naming any `.rs` file
+      # under `crates/`, even one cargo-mutants won't mutate, runs the shard in full, on the whole diff.
       - name: git diff origin/${{ github.base_ref }}...HEAD
         id: diff
         run: |
           git diff "origin/${{ github.base_ref }}...HEAD" > "$RUNNER_TEMP/pr.diff"
           echo "PR diff: $(wc -l < "$RUNNER_TEMP/pr.diff") lines"
-          if grep -E '^\+\+\+ .*\.rs"?[[:space:]]*$' "$RUNNER_TEMP/pr.diff" | grep -Ev '^\+\+\+ "?b/(docs|plan|scripts|workbench)/' > /dev/null; then
+          if grep -E '^\+\+\+ "?b/crates/.*\.rs"?[[:space:]]*$' "$RUNNER_TEMP/pr.diff" > /dev/null; then
             echo "rust=true" >> "$GITHUB_OUTPUT"
           else
             echo "rust=false" >> "$GITHUB_OUTPUT"
-            echo "cargo mutants: no mutant in this shard of the PR's diff: it changes no Rust source (.rs)"
+            echo "cargo mutants: no mutant in this shard of the PR's diff: it changes no Rust source (.rs) under crates/"
           fi
       # Runner disk: the pinned nightly with rustc-dev and llvm-tools (R-169), the rust-gpu build, the workspace's
       # build and, when the diff mutates xtask, the baseline's fixture targets (each a wgpu build of its own under
@@ -264,19 +354,22 @@ jobs:
   # mutants-check fails naming them; listed, it passes; with the killing test none survives. Beside the shards. Then the
   # caps (R-348) fire on `fixtures/mutants/caps/` (REQ-VAL-179).
   mutants-fixture:
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' && github.event.action == 'labeled' && github.event.label.name == 'merge-ready'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      # What this change touches (R-656): on a docs-only pull request every later step is skipped and the job passes;
-      # the fixture shows the gate can fire, and no docs-only path reaches the gate. `scripts/ci_changes.sh` holds the
-      # allowlist; any other change runs it in full.
+      # What this change touches (R-656, R-677): on a pull request of tier (c), docs only, every later step is skipped
+      # and the job passes; the fixture shows the gate can fire, and no such change reaches the gate. Unlike the
+      # shards, it does not wait for Rust under `crates/`: a change to the gate's own configuration (`.cargo/`,
+      # `fixtures/mutants/`, `scripts/contain.sh`, this workflow's pins, xtask's mutants-check) is tier (a) and runs
+      # it, as do the data of tier (b), as before R-677. `scripts/ci_changes.sh` decides (`tier`); any other change,
+      # and a classification that says nothing, runs it in full.
       - name: scripts/ci_changes.sh detect
         id: changes
         run: scripts/ci_changes.sh detect
       # The shards' containment holds on a runner (`scripts/contain.sh`), seen in a second, not after a shard's baseline.
       - name: scripts/contain.sh check
-        if: steps.changes.outputs.docs_only != 'true'
+        if: steps.changes.outputs.tier != 'docs'
         env:
           PRIN_CONTAIN: required
         shell: bash scripts/contain.sh check {0}
@@ -284,11 +377,11 @@ jobs:
       # The toolchain rust-toolchain.toml pins, with its components: rust-gpu's nightly, on which the whole workspace
       # builds (R-169).
       - name: rustup toolchain install (rust-toolchain.toml)
-        if: steps.changes.outputs.docs_only != 'true'
+        if: steps.changes.outputs.tier != 'docs'
         run: rustup toolchain install
       # The cargo registry `ci.yml`'s `ci` job saves on a push to `main`, restored read-only under its key (R-337).
       - uses: Swatinem/rust-cache@v2
-        if: steps.changes.outputs.docs_only != 'true'
+        if: steps.changes.outputs.tier != 'docs'
         with:
           prefix-key: cargo-registry
           shared-key: ci
@@ -298,14 +391,14 @@ jobs:
       # cargo-nextest: the fixtures' tests run through it, as the shards' do (`test_tool` in `.cargo/mutants.toml`,
       # R-388 item 4).
       - uses: taiki-e/install-action@v2
-        if: steps.changes.outputs.docs_only != 'true'
+        if: steps.changes.outputs.tier != 'docs'
         with:
           tool: cargo-mutants@27.1.0,cargo-nextest@0.9.146
       # Both runs read the caps and the test tool from `.cargo/mutants.toml` (REQ-VAL-179), as every `cargo mutants`
       # run does: with `--dir`, cargo-mutants would otherwise read the fixture's own `.cargo/mutants.toml`, which does
       # not exist.
       - name: The gate fires on the fixture (REQ-VAL-148)
-        if: steps.changes.outputs.docs_only != 'true'
+        if: steps.changes.outputs.tier != 'docs'
         run: |
           fixture=fixtures/mutants/untested
           if cargo mutants --dir "$fixture" --in-diff "$fixture/change.diff" --config .cargo/mutants.toml \
@@ -324,7 +417,7 @@ jobs:
       # process, whose allocation fails, so it is caught. The controls (R-176) bound each under its cap: a 5 s hang under
       # the 60 s floor is no timeout, and a 256 MiB allocation under the cap is caught by its assertion, not the cap.
       - name: The caps fire on their fixture (REQ-VAL-179)
-        if: steps.changes.outputs.docs_only != 'true'
+        if: steps.changes.outputs.tier != 'docs'
         run: |
           fixture=fixtures/mutants/caps
           caps() {
@@ -365,12 +458,17 @@ jobs:
 
   # The sharded run's verdict (R-202, R-302): runs after every shard, whatever their result. It fails if any shard
   # failed or was cut off by its limit, and checks every shard's report together against the equivalent-mutants list,
-  # listing each survivor of the whole run. A required status check on `main` (R-305): `always()` makes it report on
-  # every pull request, a cancelled or skipped shard included (then it fails), and it passes when no shard has a mutant.
-  mutants-check:
-    if: always() && github.event_name == 'pull_request'
+  # listing each survivor of the whole run. Its last step posts the verdict as `mutants-check`, the required status
+  # check on `main` (R-305): `always()` makes it report on every merge-ready run, a cancelled or skipped shard included
+  # (then it fails), and it passes when no shard has a mutant. Its own job is named `mutants-verdict`, so the run a
+  # label other than `merge-ready` starts, which skips it, never reports a skipped `mutants-check`.
+  mutants-verdict:
+    if: always() && github.event_name == 'pull_request' && github.event.action == 'labeled' && github.event.label.name == 'merge-ready'
     needs: mutants
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      checks: write
     steps:
       - uses: actions/checkout@v4
       # The toolchain rust-toolchain.toml pins, with its components: rust-gpu's nightly, on which the whole workspace
@@ -390,6 +488,7 @@ jobs:
           pattern: mutants-report-shard-*
           path: ${{ runner.temp }}/shards
       - name: cargo xtask mutants-check over every shard (R-202, R-302)
+        id: verdict
         run: |
           # No report at all is a PR whose diff has no mutant (R-305): no shard uploaded one, and this passes.
           shopt -s nullglob
@@ -410,3 +509,33 @@ jobs:
             echo "mutants-check: no shard tested a mutant of this PR's diff"
           fi
           exit "$fail"
+      # `mutants-check` on the head, every one the GitHub Actions app has there completed with this run's verdict:
+      # success only if the step above passed; a failure, a skip or a cancellation before it posts failure.
+      - name: Post mutants-check's verdict on the head
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          VERDICT: ${{ steps.verdict.outcome }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          if [ "$VERDICT" = success ]; then
+            conclusion=success title="Mutants: no surviving mutant"
+          else
+            conclusion=failure title="Mutants: a survivor, or a shard that did not finish ($VERDICT)"
+          fi
+          summary="The merge-ready run's verdict over every shard: $RUN_URL"
+          runs="repos/$GH_REPO/commits/$HEAD_SHA/check-runs?check_name=mutants-check&app_id=15368&filter=all"
+          ids=$(gh api --paginate "$runs&per_page=100" --jq '.check_runs[].id')
+          if [ -z "$ids" ]; then
+            gh api --method POST "repos/$GH_REPO/check-runs" -f name=mutants-check -f head_sha="$HEAD_SHA" \
+              -f status=completed -f conclusion="$conclusion" -f "output[title]=$title" \
+              -f "output[summary]=$summary" > /dev/null
+          fi
+          for id in $ids; do
+            gh api --method PATCH "repos/$GH_REPO/check-runs/$id" -f status=completed -f conclusion="$conclusion" \
+              -f "output[title]=$title" -f "output[summary]=$summary" > /dev/null
+          done
+          echo "mutants-check on $HEAD_SHA: $conclusion"
