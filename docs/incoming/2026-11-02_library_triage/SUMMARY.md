@@ -54,7 +54,7 @@ existing ones (NOW-28 to NOW-34, M9-35 to M9-46); the earlier ranks are not re-r
 
 | # | Rank | Item | What it tests | Effort | Watch for | Row |
 |---|---|---|---|---|---|---|
-| 1 | NOW-28 | eucliss free-fall fate plane (papers-152), 400 × 240, t ≤ 200 | Free-fall escapes at equal masses: escaper fractions, escape-time histogram, survivors; the mirror-pair floor (gap 5) | S | AI-authored, unlicensed: peek, `_local`. Copy its escape predicate. Per-pixel fate is noise past t ≈ 20 | 204 |
+| 1 | NOW-28 | eucliss free-fall fate plane (papers-152), 400 × 240, t ≤ 200 | Free-fall escapes at equal masses: escaper fractions, escape-time histogram, survivors; the mirror-pair floor (gap 5) | S | AI-authored, unlicensed: peek, `_local`. Copy its escape predicate. Mirror-pair escaper agreement 0.97 (t < 10), 0.84 (10–20), 0.63 (20–50), 0.51 (> 50) | 204 |
 | 2 | NOW-29 | cft-rebound Burrau divergence (papers-72) | f64 against fp128 and fp256 on Burrau to t = 73.4; an 8-member ulp ensemble | S | GPL-3.0-or-later: never committed. Unreviewed, AI-assisted. Raised from RECORD-ONLY | 221 |
 | 3 | NOW-25 (standing) | Maissouradze 2026, 7 stable free-fall orbits | Free-fall closure at unequal masses, a 7.7e-5 passage | S | AI-assisted; data path is papers-12, not papers-128 | 90 |
 | 4 | NOW-24 (standing) | Kandel 2026, 86 refined starts | L≠0 closure, equal masses | S | Ours: 7 are atlas rows and 1 nearly; peek on the other 78 | 190 |
@@ -275,8 +275,9 @@ Never targets; scored, if at all, as a peek (`docs/verification/peek_log.md`).
 No source in the library compares f32, f64 and a converged reference across an ensemble of planar three-body runs, and
 none compares CPU with GPU. R-661 stands as a hypothesis Principia must measure. Closest: cft-rebound (f64 vs fp128/fp256,
 one Burrau trajectory); Portegies Zwart 2026 Table 4 (single-run 32-bit energy errors); mikha08-rgb/Nbody (f32 GPU vs
-f64 CPU, figure-eight only); eucliss free-fall plane mirror pairs (f64 round-off alone decorrelates per-point fate past
-t ≈ 20); Tomihisa 2011 (a CPU-GPU parity check must state whether FMA contraction is on).
+f64 CPU, figure-eight only); eucliss free-fall plane mirror pairs (f64 round-off alone: the mirrored escaper agrees
+0.97 of the time for t < 10, 0.84 for 10–20, 0.63 for 20–50 and 0.51 past 50, chance about 1/3; `gaps-precision.csv`
+gap 5); Tomihisa 2011 (a CPU-GPU parity check must state whether FMA contraction is on).
 
 `gaps-precision.csv` holds seven gaps, the owner's three first (matched f32/f64/mixed/converged ensembles; per-point FTLE
 maps; shape-sphere residence statistics), each framed as something Principia could produce and publish. The other four:
