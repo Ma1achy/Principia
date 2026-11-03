@@ -9,7 +9,7 @@
 - **Size:** ~200 lines
 
 ## Goal
-The replication suite's targets LL-3 run as engine tests (`principia_dd_replication.md`; R-594, R-629). Li & Liao's F1 at masses (0.6, 0.8, 1) must be shown to be Standish's 1970 orbit, and F1 and F2 at (1, 1, 1) Yasko & Orlov's 2015 Orbits 16 and 17, by integrating each from both sources' initial conditions and comparing the orbits after the remap (rule 11); F1 and F2 at (1, 1, 1) must also be shown to be one orbit (§ 4.1) (LL-3). Each tolerance is a calibration, proposed here with its evidence and confirmed by the human with the M9 report (R-71).
+The replication suite's targets LL-3 run as engine tests (`principia_dd_replication.md`; R-594, R-629). Li & Liao's F1 at masses (0.6, 0.8, 1) must be shown to be Standish's 1970 orbit, as Hénon 1974 prints it in Table I's `A = 0` row (R-679), and F1 and F2 at (1, 1, 1) Yasko & Orlov's 2015 Orbits 16 and 17, by integrating each from both sources' initial conditions and comparing the orbits after the remap (rule 11); F1 and F2 at (1, 1, 1) must also be shown to be one orbit (§ 4.1) (LL-3). Each tolerance is a calibration, proposed here with its evidence and confirmed by the human with the M9 report (R-71).
 
 ## References
 - `docs/design/principia_dd_replication.md` § "5.3 Free-fall periodic orbits: Li & Liao 2019"
@@ -34,6 +34,11 @@ The replication suite's targets LL-3 run as engine tests (`principia_dd_replicat
 
 ## Notes
 - Calibrations proposed here (R-71; human confirmation with the M9 report, then recorded in decisions.md): REQ-VAL-224.
+- *3 Nov 2026 (R-679, item 1, RQ-672):* the Standish half takes Hénon 1974 (Celest. Mech. 10, 375), held under R-669,
+  as its independent printed source, Table I's `A = 0` row, transcribed twice from the page (R-594 item 4); its period
+  agreement with Li & Liao's F1 at (0.6, 0.8, 1) to 2e-10, the library triage's measurement, is recorded as
+  information. That half no longer waits on Standish 1970, which is added beside Hénon 1974 if it is obtained; the
+  Yasko & Orlov half still waits as the note below says.
 - Waits on Standish 1970 (doi:10.1007/978-94-010-3323-7_34) and Yasko & Orlov 2015 (doi:10.1134/S106377291505008X): RQ-586 is closed by R-630 item 9, which has them fetched; both are paywalled, so they are listed for the human to fetch, and the task starts only once they are in the repo (R-630 item 9; R-594 item 5).
 - R-594 item 4: every published table this task commits as a fixture is transcribed twice, independently, and the two copies are diffed before the commit, each row recording its page; both copies and the diff stay beside the fixture. A table a record has already transcribed twice and diffed is copied with its sha256 and the record's diff cited. Never tune to match: a disagreement with the paper goes to `REVIEW_QUEUE.md` with both numbers, as RQ-570 did, and the fixture is not edited.
 - Reference data are read from the records named in each requirement's verify; the records stay records (R-159), and the contract is `principia_dd_replication.md`.

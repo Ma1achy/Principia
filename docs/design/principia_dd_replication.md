@@ -296,6 +296,12 @@ atlas's rows (§ 4.1).
 | LL-4 | REQ-VAL-225 | V / A | Li & Liao 2019 p. 3 and Fig. 3: T̄* ≈ 2.363 at equal masses; 1.663, 1.191, 0.776, 0.527 at m₃ = 0.8 … 0.2; fit 1.912 m₃ + 0.084 | none | M9 | exact per orbit; the fit statistical | REQ-VAL-226 (calibration, R-71) | TASK-M9-14 |
 | LL-5 | REQ-VAL-227 | V / A | the authors' website list of 316 free-fall orbits (82 beyond the paper's 234), carried by the atlas as 81 rows on three further mass sets | MassSimplex points | M9 | exact (closure only) | OC-1's (REQ-VAL-202): the same form, the same f64 refined initial conditions | TASK-M9-06 |
 
+*3 Nov 2026 (R-679, item 1, closing RQ-672):* LL-3's Standish half takes Hénon 1974 (Celest. Mech. 10, 375), held
+under R-669, as its independent printed source: Table I's `A = 0` row is Standish's orbit, and its period agrees with
+Li & Liao's F1 at (0.6, 0.8, 1) to 2e-10, the library triage's measurement (PR #385), recorded as information. That
+half no longer waits on Standish 1970, which is added beside Hénon 1974 if it is obtained. The Yasko & Orlov half
+still waits on the owner's copy of Yasko & Orlov 2015 (R-630 item 9).
+
 ### 5.4 The Belgrade orbits
 
 Šuvakov & Dmitrašinović 2013 (*PRL* 110, 114301, Table 1), the recovered gallery (BG26), Hudomal's 2015 thesis (OC26)
@@ -546,6 +552,8 @@ no requirement while RQ-577 is open.
 - **Hierarchical triples** (R-668, 1 Nov 2026): out of scope for now, parked with the v2+ 3D extension. Among the
   library's sources, Vynatheya, Harrington, Tory, Hayashi, HopOn, Mushkin, Antoniadou and Figueras; among the targets,
   V-11 (§ 5.12), kept and reading "not scored: parked".
+- **Planetary (star-plus-planets) sources** (R-679, item 2, 3 Nov 2026, closing RQ-673): parked with the hierarchical
+  triples, revisited with the v2+ 3D extension, not out of scope for good.
 
 Most of the scattering literature is 3D; only planar subsets apply. Results with no published data and no figure
 detail stay qualitative until the paper is in hand.
@@ -756,6 +764,9 @@ PLAN.md § 8's rules 9–18, transcribed:
 - *30 Oct 2026 (R-649, R-650):* for an external target "the gate" above is the scoring command, not a gate: it reports
   the outcome (§ 12.3) and blocks nothing, and its tolerance is confirmed by the human with M9's report, not at a
   milestone's gate. A target's control still fires or the test is broken (rule 16).
+- *3 Nov 2026 (R-680):* **the source page is re-read before any triage item becomes a target.** A library triage
+  row is a lead, not a transcription: its numbers, precision and horizon are checked against the page they cite, and
+  what the page contradicts is recorded as rule 10 has it, before a requirement or a fixture is written from it.
 
 ---
 
@@ -1166,6 +1177,14 @@ triple collisions (Li 2021, Tanikawa 1995 and 2021); unequal-mass and non-zero-L
 2026). Each peek is a row of `docs/verification/peek_log.md`: date, target, tier, data source, outcome (§ 12.3), the
 like-for-like checks, the mechanism measurement where explained, and the commit. A peek is never a gate, and nothing
 is tuned to one.
+
+*3 Nov 2026 (R-679, item 3, closing RQ-674): candidate original results.* Two outputs no paper gives are planned as
+M9 peeks, non-gating, recorded as candidate original results, with no build before M9: per-point FTLE maps over the
+batch-152 planes (the eucliss free-fall plane and its two unequal-mass velocity planes, held locally and AI-authored,
+so peeks only, R-668 item 6), from the planned FTLE field (REQ-VAL-344); and shape-sphere residence statistics, from a
+time-weighted occupancy accumulator (REQ-VAL-345, its cell partition REQ-VAL-346's definition). Having no reference,
+they have no PASS or divergence: each is a row of `docs/verification/peek_log.md` whose outcome reads "candidate
+original result", with its tier, its inputs and its conventions. TASK-M9-41 builds both.
 
 ### 12.6 Verification deepening (post-build)
 

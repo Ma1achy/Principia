@@ -32969,7 +32969,7 @@
   note: "Reproduces: the atlas's 41 families. Chart: none. Milestone: M9 (was M3; R-650). Compare: a report (rule 8). Tolerance: none: a report. Row OC-6 of principia_dd_replication.md § \"5.2 The orbit atlas\"; layer verification, tier A; closed by TASK-M9-05 (was TASK-M3-45) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (b), the CPU IC inspector: it binds at f64 or higher, and a GPU miss on it is expected, not a defect (R-649 item 2)."
 - id: REQ-VAL-223
   area: VAL
-  statement: "Li & Liao's F1 at masses (0.6, 0.8, 1) must be shown to be Standish's 1970 orbit, and F1 and F2 at (1, 1, 1) Yasko & Orlov's 2015 Orbits 16 and 17, by integrating each from both sources' initial conditions and comparing the orbits after the remap (rule 11); F1 and F2 at (1, 1, 1) must also be shown to be one orbit (§ 4.1) (LL-3)."
+  statement: "Li & Liao's F1 at masses (0.6, 0.8, 1) must be shown to be Standish's 1970 orbit, as Hénon 1974 (Celest. Mech. 10, 375) prints it in Table I's `A = 0` row, and F1 and F2 at (1, 1, 1) Yasko & Orlov's 2015 Orbits 16 and 17, by integrating each from both sources' initial conditions and comparing the orbits after the remap (rule 11); F1 and F2 at (1, 1, 1) must also be shown to be one orbit (§ 4.1) (LL-3)."
   source:
   - file: docs/design/principia_dd_replication.md
     section: "5.3 Free-fall periodic orbits: Li & Liao 2019"
@@ -32995,6 +32995,10 @@
     section: 12.2 Tiers
   - file: docs/design/principia_dd_replication.md
     section: "12.3 Outcomes, the like-for-like check and the forbidden moves"
+  - file: decisions.md
+    section: "R-669 — The owner adopts the recommendations on the fifteen questions of 1 Nov but RQ-656: the Šuvakov-plane chart is one M9 task, its five targets waiting on it whole; a syzygy-symbol field only; N_scramble only; no periodic-orbit continuation, after the SJTU partial check; TR-1, MK-1 and SL-1 stay in M9, not scored, with no chart; the census's CI cadence as § 8.1 and § 8.2 write it, lavapipe in the smoke job; REQ-VAL-199 keeps 256 starts; GG-1's panels by like ε; the drift predicates read the stored latch, live values only for control flow; BZ-1C's starts by Path B, a list-of-starts chart the fallback; Hénon 1974 joins the rotating-frame set; Heggie & Sweatman 1991 in M9, not scored *(closes RQ-593, RQ-595, RQ-596, RQ-597, RQ-608, RQ-617, RQ-618, RQ-620, RQ-636, RQ-647 and RQ-654; amends R-636, R-637 and R-639; refines R-642)*"
+  - file: decisions.md
+    section: "R-679 — The 3 Nov triage rulings: LL-3 takes Hénon 1974 as its independent printed source for Standish's orbit, its period agreement with Li & Liao to 2e-10 recorded, and stops waiting on Standish 1970; planetary (star-plus-planets) sources are parked with the hierarchical triples, revisited with the v2+ 3D extension, not out of scope for good; per-point FTLE maps over the batch-152 planes, from the planned FTLE field, and shape-sphere residence statistics, from a new time-weighted occupancy accumulator, are M9 peeks, non-gating, recorded as candidate original results, with no build before M9 *(closes RQ-672, RQ-673 and RQ-674; amends R-630 item 9; refines R-668 item 5)*"
   verify:
     method: numerical gate
     detail: "both sources' ICs, remapped by a tested function, integrated one period under the default occupant; agreement of the shape and of T·|E|^{3/2} within REQ-VAL-224's tolerance; control: F1 at (0.6, 0.8, 1) against Yasko & Orlov's Orbit 16 must differ"
@@ -33006,8 +33010,10 @@
   - R-630
   - R-649
   - R-650
+  - R-669
+  - R-679
   milestone: M9
-  note: "Reproduces: Li & Liao 2019 p. 3: F1 at (0.6, 0.8, 1) is Standish's 1970 orbit; F1 and F2 at (1, 1, 1) are Yasko & Orlov's 2015 Orbits 16 and 17. Chart: the Anosova physical-frame entry; a MassSimplex point. Milestone: M9 (was M3; R-650). Compare: exact (rule 8). Tolerance: REQ-VAL-224 (calibration, R-71). Row LL-3 of principia_dd_replication.md § \"5.3 Free-fall periodic orbits: Li & Liao 2019\"; layer verification, tier A; closed by TASK-M9-07 (was TASK-M3-47) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (b), the CPU IC inspector: it binds at f64 or higher, and a GPU miss on it is expected, not a defect (R-649 item 2)."
+  note: "Reproduces: Li & Liao 2019 p. 3: F1 at (0.6, 0.8, 1) is Standish's 1970 orbit; F1 and F2 at (1, 1, 1) are Yasko & Orlov's 2015 Orbits 16 and 17. Chart: the Anosova physical-frame entry; a MassSimplex point. Milestone: M9 (was M3; R-650). Compare: exact (rule 8). Tolerance: REQ-VAL-224 (calibration, R-71). Row LL-3 of principia_dd_replication.md § \"5.3 Free-fall periodic orbits: Li & Liao 2019\"; layer verification, tier A; closed by TASK-M9-07 (was TASK-M3-47) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (b), the CPU IC inspector: it binds at f64 or higher, and a GPU miss on it is expected, not a defect (R-649 item 2). R-679 (3 Nov 2026, item 1, RQ-672): the Standish half takes Hénon 1974's Table I `A = 0` row, held under R-669, as its independent printed source, its period agreeing with Li & Liao's F1 at (0.6, 0.8, 1) to 2e-10 (the library triage's measurement, PR #385, recorded as information); it no longer waits on Standish 1970, which is added if obtained. The Yasko & Orlov half still waits on the owner's copy (R-630 item 9). Statement *was:* \"Li & Liao's F1 at masses (0.6, 0.8, 1) must be shown to be Standish's 1970 orbit, and F1 and F2 at (1, 1, 1) Yasko & Orlov's 2015 Orbits 16 and 17, by integrating each from both sources' initial conditions and comparing the orbits after the remap (rule 11); F1 and F2 at (1, 1, 1) must also be shown to be one orbit (§ 4.1) (LL-3).\"."
 - id: REQ-VAL-224
   area: VAL
   kind: calibration
@@ -37234,6 +37240,66 @@
   - R-672
   milestone: M9
   note: "R-669 (1 Nov 2026, RQ-596 (b)): N_scramble only; f_col is not built. Closed by TASK-M9-24, PA-1 being the target that runs on a chart; SL-1 reads it once a binary-plus-single chart exists. R-672 (2 Nov 2026): its row in M9's report reads the outcomes of PA-1 (REQ-VAL-323) and SL-1 (REQ-VAL-321), each counted once in its own row, with this definition's approval."
+- id: REQ-VAL-344
+  area: VAL
+  statement: "Per-point FTLE maps must be produced over the batch-152 planes (the eucliss free-fall fate plane, 400 × 240, and its two unequal-mass velocity planes, m₃ = 0.25 and 0.5), using the planned FTLE field and no new one: at each start of each plane, at the pixel centres the plane gives, the Benettin FTLE (REQ-INT-043) as the payload derives it (REQ-PAY-021, REQ-PAY-032), read at each horizon stated with the map, invalid wherever `ftle_valid` is false and frozen at escape (REQ-PAY-058). Each map must be recorded as an M9 peek, non-gating, a candidate original result, with its tier (R-649), its horizons, the starts' source and the field's conventions (norm, renormalisation interval, finalisation); nothing is built for it before M9 (R-679)."
+  source:
+  - file: decisions.md
+    section: "R-679 — The 3 Nov triage rulings: LL-3 takes Hénon 1974 as its independent printed source for Standish's orbit, its period agreement with Li & Liao to 2e-10 recorded, and stops waiting on Standish 1970; planetary (star-plus-planets) sources are parked with the hierarchical triples, revisited with the v2+ 3D extension, not out of scope for good; per-point FTLE maps over the batch-152 planes, from the planned FTLE field, and shape-sphere residence statistics, from a new time-weighted occupancy accumulator, are M9 peeks, non-gating, recorded as candidate original results, with no build before M9 *(closes RQ-672, RQ-673 and RQ-674; amends R-630 item 9; refines R-668 item 5)*"
+  - file: docs/design/principia_dd_replication.md
+    section: 12.5 Peeks
+  - file: docs/design/principia_dd_replication.md
+    section: 12.2 Tiers
+  - file: decisions.md
+    section: "R-668 — The 1 Nov library triage rulings: the site-note families stay, marked \"operator's own search, unreviewed\", closure peeks only and never targets, `bhhsat` with them unless Davoust & Broucke's comparison matches, `suvakov_pc` closure only; a digit match is a trace, marked \"inferred\"; values printed in a paper, or in a public database a paper points to, are stored with credit and citation, an author emailed only as a last resort; unreviewed and AI-assisted sources are peeks only; hierarchical triples are parked with the v2+ 3D extension; RQ-666 is confirmed; the kernel stays at `G = 1`, another `G` converted at the import boundary and what can't be converted refused *(closes RQ-666 and RQ-668; corrects R-468)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p validation ftle_plane_map: on a small grid of a plane's starts, each pixel's map value equals the FTLE field read for that start run alone, at each stated horizon, bit for bit at f64; a start with `ftle_valid` false reads invalid, never a number; an escaping start's value is the one frozen at t_esc; the three maps recorded as rows of docs/verification/peek_log.md whose outcome reads \"candidate original result\", each with its tier, horizons, starts' source and conventions; review (physics): the conventions as recorded; controls: a map that reads another horizon than the one it labels, one that writes a number where `ftle_valid` is false, and one that reads a pixel's corner for its centre, each fail. Non-gating: the maps' values gate nothing; these tests block only the task's own merge"
+  rulings:
+  - R-649
+  - R-650
+  - R-668
+  - R-679
+  milestone: M9
+  note: "R-679 (3 Nov 2026, item 3, RQ-674): an M9 peek, non-gating, a candidate original result; no build before M9. The batch-152 planes are the triage's batches/papers-152 eucliss planes (PR #385; RQ-674's gap 2), AI-authored and held locally, so peeks only (R-668 item 6): their starts are used, never their outcomes as a reference. Reuses REQ-INT-043, REQ-PAY-021, REQ-PAY-032, REQ-PAY-058 and REQ-TOOL-043, adding nothing to the field. Closed by TASK-M9-41."
+- id: REQ-VAL-345
+  area: VAL
+  statement: "A time-weighted shape-sphere occupancy accumulator must be built in M9: over a run, it must add each step's physical time to the cell, of REQ-VAL-346's equal-area partition of the shape sphere, that holds the run's shape point `n` (REQ-PAY-031), sampled as REQ-VAL-346 defines, so that each cell's total over the run's physical duration is the fraction of time spent there, the fractions summing to 1. Shape-sphere residence statistics over an ensemble of starts must combine the per-run fractions with the ensemble's sampling measure, stated. Each set of statistics must be recorded as an M9 peek, non-gating, a candidate original result, with its tier (R-649), ensemble, measure, partition and horizon; nothing is built for it before M9 (R-679)."
+  source:
+  - file: decisions.md
+    section: "R-679 — The 3 Nov triage rulings: LL-3 takes Hénon 1974 as its independent printed source for Standish's orbit, its period agreement with Li & Liao to 2e-10 recorded, and stops waiting on Standish 1970; planetary (star-plus-planets) sources are parked with the hierarchical triples, revisited with the v2+ 3D extension, not out of scope for good; per-point FTLE maps over the batch-152 planes, from the planned FTLE field, and shape-sphere residence statistics, from a new time-weighted occupancy accumulator, are M9 peeks, non-gating, recorded as candidate original results, with no build before M9 *(closes RQ-672, RQ-673 and RQ-674; amends R-630 item 9; refines R-668 item 5)*"
+  - file: docs/design/principia_dd_replication.md
+    section: 12.5 Peeks
+  - file: docs/design/principia_dd_replication.md
+    section: 12.2 Tiers
+  verify:
+    method: unit test
+    detail: "cargo test -p validation shape_occupancy: the fractions sum to 1 within rounding on every run; the equilateral Lagrange orbit, whose shape is fixed, puts all its time in the one cell holding the Lagrange point; a run under a regularised occupant, whose physical step varies, weights its cells by physical time; the cells' areas equal within the partition's stated rounding; each set of statistics recorded as a row of docs/verification/peek_log.md whose outcome reads \"candidate original result\", with its tier, ensemble, measure, partition and horizon; controls: an accumulator weighting by step count, one binning the shape point of the wrong step, and a partition with one cell doubled, each fail. Non-gating: the statistics gate nothing; these tests block only the task's own merge"
+  rulings:
+  - R-649
+  - R-650
+  - R-679
+  milestone: M9
+  note: "R-679 (3 Nov 2026, item 3, RQ-674): the owner's \"new requirement: a time-weighted occupancy accumulator\"; an M9 peek, non-gating, a candidate original result; no build before M9. Its cell partition is REQ-VAL-346 (R-72). Closed by TASK-M9-41."
+- id: REQ-VAL-346
+  area: VAL
+  kind: definition
+  statement: "The equal-area partition of the shape sphere that REQ-VAL-345's accumulator bins into (its scheme, and its resolution or how a result chooses it), where in a step the shape point is sampled, and that the time each step adds is physical time under every occupant's time mapping, must be defined in `docs/design/principia_dd_replication.md` § 12.5 by the task that needs it and reviewed by the physics reviewer before merge (R-72)."
+  source:
+  - file: docs/design/principia_dd_replication.md
+    section: 12.5 Peeks
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  - file: decisions.md
+    section: "R-679 — The 3 Nov triage rulings: LL-3 takes Hénon 1974 as its independent printed source for Standish's orbit, its period agreement with Li & Liao to 2e-10 recorded, and stops waiting on Standish 1970; planetary (star-plus-planets) sources are parked with the hierarchical triples, revisited with the v2+ 3D extension, not out of scope for good; per-point FTLE maps over the batch-152 planes, from the planned FTLE field, and shape-sphere residence statistics, from a new time-weighted occupancy accumulator, are M9 peeks, non-gating, recorded as candidate original results, with no build before M9 *(closes RQ-672, RQ-673 and RQ-674; amends R-630 item 9; refines R-668 item 5)*"
+  verify:
+    method: review checklist
+    detail: "§ 12.5 names the partition's scheme and resolution rule, the step's sampling point and the time weight; REQ-VAL-345's unit test uses them; physics reviewer approved"
+  rulings:
+  - R-72
+  - R-679
+  milestone: M9
+  note: "R-679 (3 Nov 2026, item 3, RQ-674): the definition R-72 asks for, which RQ-674 named (\"the cell partition\"); the FTLE maps need none, reading the planned field. Closed by TASK-M9-41."
 - id: REQ-PERF-001
   area: PERF
   statement: "The per-step energy evaluation must reuse the pairwise distances from the force computation."

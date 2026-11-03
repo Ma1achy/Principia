@@ -27104,10 +27104,12 @@ no permission is asked first; RQ-579 is closed with option (a)).*
 *Amended in part by R-632 (item 12: the three corrections RQ-588 to RQ-590 queue are applied, and the documents are
 edited; RQ-577 and RQ-583 unchanged).*
 *Amended in part by R-650 (its "drafts are M3 requirements": they are M9's, scored after the core build).*
+*Amended in part by R-679 (3 Nov 2026: item 9's Standish 1970 is no longer awaited for LL-3, whose Standish half takes
+Hénon 1974 as its printed source; Standish 1970 is added if obtained).*
 *Still in force: all of it but item 6, whose "ask the authors, keeping (c) meanwhile" R-631 replaces by committing the
 data (R-631), and item 12's "Don't edit those documents", which R-632 replaces by applying the three
-corrections (R-632); items 7 and 9's fetches stand, and item 7's database is committed under R-631; its drafts are
-M9 requirements, not M3 ones (R-650).*
+corrections (R-632); items 7 and 9's fetches stand, and item 7's database is committed under R-631, but LL-3 no longer
+waits on Standish 1970 (R-679); its drafts are M9 requirements, not M3 ones (R-650).*
 *27 Oct 2026 · the human's message of that evening; applied in `REVIEW_QUEUE.md` (RQ-577 and RQ-583 noted, RQ-588 to
 RQ-590 stay open), `docs/archive/review_queue/M0.md` (the seven closed entries, moved with their ruling), REQ-VAL-042
 and REQ-VAL-043 (reqio) and `plan/rule_groups.yaml`*
@@ -29408,6 +29410,9 @@ The owner's words (31 Oct 2026), verbatim, from that day's message:
 R-666 is in the "process" group of `plan/rule_groups.yaml`.
 
 ## R-668 — The 1 Nov library triage rulings: the site-note families stay, marked "operator's own search, unreviewed", closure peeks only and never targets, `bhhsat` with them unless Davoust & Broucke's comparison matches, `suvakov_pc` closure only; a digit match is a trace, marked "inferred"; values printed in a paper, or in a public database a paper points to, are stored with credit and citation, an author emailed only as a last resort; unreviewed and AI-assisted sources are peeks only; hierarchical triples are parked with the v2+ 3D extension; RQ-666 is confirmed; the kernel stays at `G = 1`, another `G` converted at the import boundary and what can't be converted refused *(closes RQ-666 and RQ-668; corrects R-468)*
+*Refined by R-679 (3 Nov 2026: item 5's parking reaches planetary, star-plus-planets, sources, revisited with the v2+
+3D extension).*
+*Still in force: all of it, item 5's parking now reaching planetary sources too (R-679).*
 *1 Nov 2026 · the owner's two messages of that day on the library triage, the second reversing the first's item 1; ported 2 Nov 2026; applied in `docs/design/principia_dd_replication.md` § 3 (a dated paragraph), § 5.12 (a dated line) and § 5.14 (a bullet), `docs/contracts/principia_integrator_contract.md` Part 5 (a dated paragraph), `docs/incoming/2026-10-31_library_triage/SUMMARY.md` (a dated note under its open questions), R-468's forward line and E3 (a dated correction), `docs/archive/review_queue/M0.md` (RQ-666 moved; RQ-668 filed and moved with this ruling), `REVIEW_QUEUE.md`, REQ-GUI-229, REQ-VAL-330 and REQ-VAL-331 (reqio), REQ-SYS-096 (reqio, new), TASK-M3-66 (new), TASK-M6-47, TASK-M9-25 and TASK-M9-37 (notes), `plan/tasks.yaml` and `plan/rule_groups.yaml`*
 
 The owner's words, 1 Nov 2026, verbatim, the first message:
@@ -29853,3 +29858,86 @@ and about 17:30, while it was being built:
 R-677 is in the "ci" group of `plan/rule_groups.yaml`.
 
 Changes REQ-VAL-148 (source, rulings, note) and REQ-SYS-067 (source, rulings, note).
+
+## R-679 — The 3 Nov triage rulings: LL-3 takes Hénon 1974 as its independent printed source for Standish's orbit, its period agreement with Li & Liao to 2e-10 recorded, and stops waiting on Standish 1970; planetary (star-plus-planets) sources are parked with the hierarchical triples, revisited with the v2+ 3D extension, not out of scope for good; per-point FTLE maps over the batch-152 planes, from the planned FTLE field, and shape-sphere residence statistics, from a new time-weighted occupancy accumulator, are M9 peeks, non-gating, recorded as candidate original results, with no build before M9 *(closes RQ-672, RQ-673 and RQ-674; amends R-630 item 9; refines R-668 item 5)*
+*3 Nov 2026 · the owner's message of that day on the triage questions; ported 3 Nov 2026; applied in
+`docs/design/principia_dd_replication.md` § 5.3 (a dated note under the table), § 5.14 (a bullet) and § 12.5 (a dated
+paragraph), R-630's and R-668's forward lines, REQ-VAL-223 (reqio), REQ-VAL-344, REQ-VAL-345 and REQ-VAL-346 (reqio,
+new), TASK-M9-07 (notes), TASK-M9-41 (new), `plan/tasks.yaml` and `plan/rule_groups.yaml`*
+
+The owner's words, 3 Nov 2026, verbatim:
+
+> Rulings on the triage: (1) LL-3 uses Hénon 1974 (held under R-669) as its independent printed source; period agreement with Li & Liao to 2e-10 recorded; stop waiting on Standish 1970 (add it later if obtained). (2) Planetary (star-plus-planets) sources: PARKED with the hierarchical triples under R-668, revisited with the v2+ 3D extension, not permanently out of scope. (3) Plan per-point FTLE maps over the batch-152 planes, using the planned FTLE field, and shape-sphere residence statistics (new requirement: a time-weighted occupancy accumulator) as M9 peeks, non-gating, recorded as candidate original results. Write the minimum new requirements; no build before M9. Triage PR goes in after the freeze lifts, as planned.
+
+*Context.* The three items answer RQ-672, RQ-673 and RQ-674, the library triage's open questions 1 to 3, which PR #385
+(the triage of batches 81 to 153 and the papers-11 to 13 addendum) files. They are on that PR's branch, not on this
+one's base, so this port cites them and does not file, edit or move them: #385's rework marks them ruled.
+
+*What it decides:*
+
+- **Item 1 (RQ-672).** LL-3's first half, Li & Liao's F1 at (0.6, 0.8, 1) shown to be Standish's 1970 orbit, takes
+  Hénon 1974 (Celest. Mech. 10, 375), held under R-669, as its independent printed source: Table I's `A = 0` row, which
+  the triage reads as Standish's orbit. Its period agrees with Li & Liao's to 2e-10, the triage's measurement, recorded
+  as information. That half stops waiting on Standish 1970, which is added beside Hénon 1974 if it is obtained. In
+  R-630, this amends item 9 for Standish 1970 only: it is no longer awaited for LL-3. The other half, F1 and F2 at
+  (1, 1, 1) against Yasko & Orlov 2015, still waits on the owner's copy (R-630 item 9), as before.
+- **Item 2 (RQ-673).** Planetary (star-plus-planets) sources are parked with the hierarchical triples under R-668
+  item 5, revisited with the v2+ 3D extension, not out of scope for good. Their rows in the triage read PARKED.
+- **Item 3 (RQ-674).** Two outputs are planned as M9 peeks, non-gating, recorded as candidate original results, with
+  no build before M9:
+  - per-point FTLE maps over the batch-152 planes, using the planned FTLE field (REQ-VAL-344);
+  - shape-sphere residence statistics, from a new time-weighted occupancy accumulator (REQ-VAL-345).
+- **The minimum new requirements.** REQ-VAL-344, the FTLE maps; REQ-VAL-345, the accumulator and its statistics; and
+  REQ-VAL-346, the definition R-72 asks for of the accumulator's equal-area cell partition, which the corpus does not
+  give. The FTLE maps need no definition: they read the planned field, the Benettin FTLE (REQ-INT-043) as the payload
+  derives it (REQ-PAY-021, REQ-PAY-032), whose norm, renormalisation and finalisation are already defined, its horizon
+  the run's. One M9 task, TASK-M9-41, closes all three.
+- **The triage PR** goes in after the freeze lifts, as planned: PR #385, unchanged by this port.
+
+*Applied per R-369:*
+
+- **Existing FTLE requirements reused, none duplicated.** REQ-INT-043 (the Benettin FTLE), REQ-PAY-021 and REQ-PAY-032
+  (the derived `ftle` and `ftle_valid`), REQ-PAY-058 (frozen at escape) and REQ-TOOL-043 (the horizon map) are the
+  planned field; REQ-VAL-344 maps it and adds nothing to it. No existing requirement plans an FTLE map over a plane's
+  starts or a shape-sphere occupancy, so both are new.
+- **"The batch-152 planes"** are the planes the triage holds under `batches/papers-152`: the eucliss free-fall fate plane
+  (400 × 240) and its two unequal-mass velocity planes (`m₃ = 0.25` and `0.5`), the planes RQ-674's gap 2 names. They
+  are AI-authored and held locally, so under R-668 item 6 they are peeks only; the maps use their starts, never their
+  outcomes as a reference.
+- **Where a candidate original result is recorded.** It has no reference, so no PASS or divergence (R-649): each is a
+  row of `docs/verification/peek_log.md` whose outcome reads "candidate original result", with its tier (R-649 item 2),
+  its inputs and its conventions.
+- **The task.** TASK-M9-41 is new, depending on TASK-M3-14 (the CPU Benettin FTLE) and TASK-M4-13 (the GPU FTLE). It is
+  not scored, and TASK-M9-37's report does not wait on it.
+- **The data actions** (marking the planetary rows PARKED, transcribing Hénon 1974's Table I from the page) are #385's
+  and the data PRs', under R-680's standing rule.
+
+*What it amends:* **R-630**, item 9, for Standish 1970 (LL-3 no longer waits on it). It refines **R-668**, item 5, whose
+parking now reaches planetary sources. It closes **RQ-672**, **RQ-673** and **RQ-674**.
+
+R-679 is in the "design" group of `plan/rule_groups.yaml`, with R-668.
+
+Adds REQ-VAL-344, REQ-VAL-345 and REQ-VAL-346; changes REQ-VAL-223 (statement, source, rulings, note).
+
+## R-680 — Standing rule: the source page is re-read before any triage item becomes a target; the spot-check's six fixes to the library triage are PR #385's work, done after the CI fixes land
+*3 Nov 2026 · the owner's message of that day on the spot-check of the library triage; ported 3 Nov 2026; applied in
+`docs/design/principia_dd_replication.md` § 8.3 (a dated bullet), `plan/rule_groups.yaml` and
+`plan/section_notes.yaml`; changes no requirement*
+
+The owner's words (3 Nov 2026), verbatim:
+
+> From an independent spot-check of the library triage (notes in the Principia project: research-landscape.md; triage numbers held up, 11/14 confirmed, none wrong). Fix before any of these become targets: (1) Li, Li, He & Liao 2021: the paper contradicts itself (abstract 1646 new / 1658 total vs §3.2 1642 new / 1653 incl. Tanikawa's 11); the spreadsheet holds 15 digits, not "up to 90". Correct the triage row and the target's precision. (2) Tanikawa–Umehara–Abe 1995 Table IV was never read; it has misprints: row 9 x = 0.49111357 (0.4911357 fits), row 1 α printed π/2 where the rule gives π/3. Transcribe from the page with these noted. (3) Horn et al.: the t ≤ 10 horizon is unverified (provenance file only; the paper trains to t = 5, tests to t = 7). Check the HDF5 itself when it's next touched. (4) eucliss_releases.json is cited by the triage but isn't in the library: fix the citation or mark it missing. (5) Batch-152 fate plane: mirror-pair escaper agreement is 0.97 (t < 10), 0.84 (10–20), 0.63 (20–50), 0.51 (> 50); state that in its peek, not "noise past t ≈ 20". (6) Check whether Stone & Leigh 2019 and Ginat & Perets 2021 were actually fetched (they appear only as context mentions in the triage); fetch if not. Standing rule from this: re-read the source page before any triage item becomes a target. Do these after the CI fixes land.
+
+*What it decides:*
+
+- **The standing rule.** Before any triage item becomes a target, its source page is re-read: the item's numbers are
+  checked against the page it cites before a requirement or a fixture is written from it, and a contradiction the page
+  holds is recorded as rule 10 of `principia_dd_replication.md` § 8.2 has it, never resolved by choosing.
+- **The six fixes are PR #385's work, not this port's.** Each corrects a triage row, a transcription, a citation or a
+  peek's wording in the triage that PR adds, and each is done there after the CI fixes land, as the owner says. This
+  port records the rule and changes no triage data.
+
+*Applied per R-369:* the rule is § 8.3's, among how the tasks apply the rules, since it binds the step from a triage
+row to a target, whichever task takes it.
+
+R-680 is in the "process" group of `plan/rule_groups.yaml`.

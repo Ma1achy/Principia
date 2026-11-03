@@ -1464,3 +1464,7 @@
   section: "R-675 — The PR sweep is a standing duty: the orchestrator periodically checks every open PR and its CI state, and picks up any that was dropped or missed"
   reason: informative only
   note: "the owner's message of 1 Nov 2026: the periodic PR sweep; process (plan/OPERATIONS.md § Autonomy); changes no requirement"
+- file: decisions.md
+  section: "R-680 — Standing rule: the source page is re-read before any triage item becomes a target; the spot-check's six fixes to the library triage are PR #385's work, done after the CI fixes land"
+  reason: informative only
+  note: "the owner's message of 3 Nov 2026 on the spot-check of the library triage: a standing rule (principia_dd_replication.md § 8.3); the six fixes are PR #385's; changes no requirement"

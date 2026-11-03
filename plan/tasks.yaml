@@ -3799,3 +3799,11 @@
   requirements: [REQ-CHART-091]  # R-669 (1 Nov 2026), RQ-608 and RQ-618 (a)
   reviewers: [code, qa, physics]
   pitfalls: [PIT-3]
+- id: TASK-M9-41
+  milestone: M9
+  title: "Candidate original results: per-point FTLE maps over the batch-152 planes and a time-weighted shape-sphere occupancy accumulator (R-679)"
+  depends_on: [TASK-M3-14, TASK-M4-13]
+  needs: [REQ-INT-043, REQ-PAY-021, REQ-PAY-031, REQ-PAY-032, REQ-PAY-058]
+  requirements: [REQ-VAL-344, REQ-VAL-345, REQ-VAL-346]  # R-679 (3 Nov 2026), RQ-674
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-3]
