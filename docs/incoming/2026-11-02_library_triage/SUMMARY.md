@@ -23,9 +23,8 @@ G = 1), R-673, and R-669 (Hénon 1974; Heggie & Sweatman 1991), which is on the 
 
 `docs/incoming/2026-10-31_library_triage/triage-11-13.csv` is the papers-11 to 13 triage (25 rows, ranks NOW-22 to
 NOW-27 and M9-34), committed with this PR because R-669 cites its ranks. Its rows were numbered as `triage.csv` rows 295
-to 319, so "the addendum's row N" in `triage-81-153.csv` is line N − 293 of `triage-11-13.csv`. The rows here that call
-the addendum "orch/tasks/triage-11-13/triage-addendum.csv, not in the repo" mean that file, now committed; the rows are
-left as written.
+to 319, so "the addendum's row N" in `triage-81-153.csv` is line N − 293 of `triage-11-13.csv`. Each row here that
+duplicates an addendum row cites both, as "row N (docs/incoming/2026-10-31_library_triage/triage-11-13.csv:N − 293)".
 
 ## Counts
 
