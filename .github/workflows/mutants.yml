@@ -108,9 +108,14 @@ jobs:
   # tell a stall from REQ-VAL-149's 300 minutes for cargo mutants, and a stall would run to GitHub's 360 for the job.
   # The limits (applied per R-369) are about three times the longest of each step in this workflow's last 60 runs
   # (3 Nov 2026), rounded up: a checkout 10 minutes (its longest 189 s); freeing the disk 20 (359 s); the kernel's
-  # build 10 (106 s); a cache restore, the toolchain install and every other step 5 (the longest among them 34 s, the
-  # Mesa install). The job queue's tests ran in none of those runs: 10 minutes, their longest 107 s in PR #355's, the
-  # last pull request to change the queue.
+  # build 20, from its cold build, 364 s, not its warm longest, 106 s (its comment below); a cache restore, the
+  # toolchain install and every other step 5 (the longest among them 34 s, the Mesa install). The job queue's tests
+  # ran in none of those runs: 10 minutes, their longest 107 s in PR #355's, the last pull request to change the queue.
+  # The kernel's build is the one step here with a slow cold-cache path. A toolchain bump also misses the cargo
+  # registry's cache (rust-cache's key carries the rustc version), and then each cargo step first downloads its crates:
+  # the whole workspace's 248 took under 3 s in `ci.yml`'s ci job on run 36922052435, whose registry restore found
+  # nothing, well inside every limit. The toolchain, the tools, Python and Mesa are fetched afresh in every run, and
+  # the fixtures have no dependencies, so the times above already are their cold times.
   mutants:
     if: github.event_name == 'pull_request' && github.event.action == 'labeled' && github.event.label.name == 'merge-ready'
     runs-on: ubuntu-24.04
@@ -244,9 +249,14 @@ jobs:
       # The kernel's SPIR-V and WGSL, which the baseline's and each mutant's `toolchain_trivial_kernel` and xtask's
       # `build_kernel` tests read (TASK-M0-14): `cargo xtask build-kernel`, written as the cargo call the alias expands
       # to (.cargo/config.toml), since it is setup for the tests, like the Mesa install, not one of the gate's checks.
+      # Its limit, 20 minutes, is sized on the cold build, not the warm 106 s above: a toolchain bump starts a fresh
+      # rust-gpu cache (the restore's comment above), and the step then builds `rustc_codegen_spirv` from source. The
+      # cold builds on record took 364 s (`ci.yml`'s gpu-kernel, run 36922052435) and 360 s (gpu-lavapipe, run
+      # 37032439991); three times 364 s, rounded up. Sized on the warm case, a cold build past its limit would fail
+      # every shard of the toolchain bump, and the cache is saved only on `main`, so that PR could never pass.
       - name: cargo run --quiet --package xtask -- build-kernel
         if: steps.diff.outputs.rust == 'true'
-        timeout-minutes: 10
+        timeout-minutes: 20
         env:
           RUSTFLAGS: -C link-arg=-Wl,--compress-debug-sections=zlib -Zmir-enable-passes=-GVN
         run: cargo run --quiet --package xtask -- build-kernel
