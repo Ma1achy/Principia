@@ -66,10 +66,10 @@
 //!   `pr-check` and `reviews-complete` read no classification.
 //! - `ci_changes_every_required_check_reports_on_every_path`: the required checks are `plan/HUMAN_SETUP.md` §2's, and
 //!   each reports on every path the owner named (3 Nov 2026, R-678): a push of code, plan-data and docs, a label put on
-//!   and taken off, `merge-ready` and another. GitHub counts, of each workflow's runs on the head, only the latest run's
-//!   check suite, so the workflow bearing a check either runs on the event, the job bearing it unskippable and, in
-//!   `ci.yml` and `mutants.yml`, concluding as it should, or runs on every new head, its push run standing; a workflow
-//!   runs on both label changes or neither, and filters no pull request.
+//!   and taken off, `merge-ready` and another. GitHub counts, of each workflow's runs on the head, only the latest
+//!   run's check suite, so the workflow bearing a check either runs on the event, the job bearing it unskippable and,
+//!   in `ci.yml` and `mutants.yml`, concluding as it should, or runs on every new head, its push run standing; a
+//!   workflow runs on both label changes or neither, and filters no pull request.
 //! - `ci_changes_mutants_fixture_runs_on_the_gates_own_files`: `mutants.yml`'s `mutants-fixture`, the gate's self-test on
 //!   its fixtures, runs every step after its classification on a change to the gate's configuration
 //!   (`.cargo/mutants.toml`, `fixtures/mutants/untested/`, `fixtures/mutants/caps/`), which has no Rust under `crates/`,

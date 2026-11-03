@@ -4,19 +4,20 @@
 //! report correctly in both tiers (skip-as-success only where the tier logic allows it)", "cancel superseded `reviews`
 //! runs per PR").
 //!
-//! - `merge_ready_mutants_gate_waits_for_the_label`: `mutants.yml` runs on a pull request's new heads and on every label
-//!   change, put on or taken off, with no filter; its shards, fixture and verdict run only on the `merge-ready` label's
-//!   run, the verdict whatever the shards ended in; one job, `mutants-check`, `if: always()`, reports `mutants-check` in
-//!   every run (R-678: GitHub counts only the latest run's check suite, so a check posted into another run's suite is
-//!   lost). Its report step, run under bash with stand-in `gh` and `sleep`, concludes on each event: the merge-ready
-//!   run's verdict, success only when it passed; "not applicable", passed, on a change with no `.rs` file under
-//!   `crates/` (R-677; `mutants=false`, an empty classification not among them) and on a head that is not merge-ready, a
-//!   push's included; and on another label put on or taken off a merge-ready head, the verdict of its latest merge-ready
-//!   run, waited for while it runs, failing with none, or on a head a push has superseded. `merge-ready-off` runs on a
-//!   push alone and takes the label off, a 404 (the label already off) passing and any other error failing. The notice
-//!   annotation, the one text the check run carries, reads `no surviving mutant` on a passed verdict and on no other
-//!   path, as the merge watcher reads it. A run on `main`, a run of another label, put on or taken off, and a reopened
-//!   pull request's run have groups of their own, and only a pull request's runs are cancelled.
+//! - `merge_ready_mutants_gate_waits_for_the_label`: `mutants.yml` runs on a pull request's new heads and on every
+//!   label change, put on or taken off, with no filter; its shards, fixture and verdict run only on the `merge-ready`
+//!   label's run, the verdict whatever the shards ended in; one job, `mutants-check`, `if: always()`, reports
+//!   `mutants-check` in every run (R-678: GitHub counts only the latest run's check suite, so a check posted into
+//!   another run's suite is lost). Its report step, run under bash with stand-in `gh` and `sleep`, concludes on each
+//!   event: the merge-ready run's verdict, success only when it passed; "not applicable", passed, on a change with no
+//!   `.rs` file under `crates/` (R-677; `mutants=false`, an empty classification not among them) and on a head that is
+//!   not merge-ready, a push's included; and on another label put on or taken off a merge-ready head, the verdict of
+//!   its latest merge-ready run, waited for while it runs, failing with none, or on a head a push has superseded.
+//!   `merge-ready-off` runs on a push alone and takes the label off, a 404 (the label already off) passing and any
+//!   other error failing. The notice annotation, the one text the check run carries, reads `no surviving mutant` on a
+//!   passed verdict and on no other path, as the merge watcher reads it. A run on `main`, a run of another label, put
+//!   on or taken off, and a reopened pull request's run have groups of their own, and only a pull request's runs are
+//!   cancelled.
 //! - `merge_ready_reviews_runs_cancel_per_pr_and_event`: `reviews.yml` keeps one cancelling group per pull request and
 //!   event, never cancelling on `main`; `reviews-complete` still runs on every run; and the re-run of the stale
 //!   `pull_request` run (R-276), run under bash with a stand-in `gh`, re-runs it on the live head and leaves a
