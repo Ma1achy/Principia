@@ -45,12 +45,39 @@ pub struct SimConfig {
 /// Chart id and params (gui_state_contract §2). The view's window on a nonlinear chart's own parameters is chart
 /// construction among them, held here (R-69; chart_decoder_contract Part 4, "The lock's construction, defined";
 /// REQ-SYS-011), so the ViewState record restores it and one undo of a lock restores it with `z₀` and the lock group.
-/// The other chart params join with the requirements that need them (R-133).
+/// Each physical-quantity axis's mapping is a chart param too, a sim key (R-471 E2, H7; R-506; REQ-CHART-068): a change
+/// re-integrates, and the canonical serialisation, so the ViewState record and the export's sidecar, carry it. The
+/// other chart params join with the requirements that need them (R-133).
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Chart {
     /// The window on a nonlinear chart's parameters; the affine chart reads `(z₀, q₁, q₂)` and not this.
     pub window: Window,
+    /// The mapping of each axis, `[horizontal, vertical]`, `warped` by default (gui_state_contract §2); an axis that is
+    /// not a physical quantity reads none, and holds the default.
+    pub mapping: [Mapping; 2],
+}
+
+/// How a physical-quantity axis maps `[0, 1]` onto its quantity (R-471 E1, E2; R-506): chart_reference §2.1's warp,
+/// the default, or affine onto the warp's range at the slice centre. Serialised `warped` or `linear`.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Mapping {
+    /// The warp: every pixel of `[0,1]²` feasible.
+    #[default]
+    Warped,
+    /// Affine onto the warp's range at the slice centre: its infeasible pixels not a system.
+    Linear,
+}
+
+impl From<Mapping> for kernel::chart::Mapping {
+    /// The kernel's mapping, the chart parameter the dispatch builds the chart with.
+    fn from(m: Mapping) -> Self {
+        match m {
+            Mapping::Warped => kernel::chart::Mapping::Warped,
+            Mapping::Linear => kernel::chart::Mapping::Linear,
+        }
+    }
 }
 
 /// The view's window on a nonlinear chart's own parameters (chart_decoder_contract Part 4, "The lock's construction,

@@ -14,7 +14,8 @@
 //!
 //! **Kind 3.** An invariant axis sits downstream of every block it depends on, in the decoder's order mass → config →
 //! momentum; one that reads its own sector or a later one is refused. Two invariant axes solving into one sector are
-//! coupled and solve jointly ([`Solve`]), as `(L_z, E)` does.
+//! coupled and solve jointly ([`Solve`]), as `(L_z, E)` does. A `PE` axis is refused: chart_reference §2.1 writes no
+//! warp for it, so no chart offers it (R-471 H2, REQ-CHART-070).
 //!
 //! **The flags.** The declared `annotation`, `has_feasibility_boundary` (invariant charts) and `coupling` agree with the
 //! axes, and the view's energy target passes the chart's `forbids_energy_normalisation`
@@ -27,11 +28,14 @@
 
 use std::fmt;
 
+use kernel::chart::energy::{self, Quantity};
 use kernel::chart::{family_label, swept, Axis, BlockTouch};
 use kernel::decode::Decoded;
 use kernel::generated::links::{LinkParams, Selection};
 
-use super::axis::{blocks, dof, meets, names, no_blocks, union, within, AxisKind, Block};
+use super::axis::{
+    blocks, dof, meets, names, no_blocks, union, within, AxisKind, Block, InvariantQuantity,
+};
 use super::descriptor::{Authored, ChartDescriptor, ChartKind, Coupling, Frozen};
 use crate::chart_validate::{self, validate_view};
 use crate::contract::sim_config::{Latent, LATENT_DIM};
@@ -43,6 +47,9 @@ pub enum Refusal {
     View(chart_validate::Refusal),
     /// Neither axis is swept.
     NoSweptAxis,
+    /// The axis `axis` is of a quantity chart_reference §2.1 writes no warp for, `PE`: no chart offers it
+    /// (REQ-CHART-070, R-72; R-471 H2).
+    NoWarpWritten { axis: &'static str },
     /// The invariant axis `axis` solves into `sector` but reads `depends_on`, not all upstream of it.
     InvariantNotDownstream {
         axis: &'static str,
@@ -78,6 +85,10 @@ impl fmt::Display for Refusal {
         match self {
             Refusal::View(r) => write!(f, "{r}"),
             Refusal::NoSweptAxis => f.write_str("refused: neither axis is swept"),
+            Refusal::NoWarpWritten { axis } => write!(
+                f,
+                "refused: the axis {axis} is of a quantity chart_reference §2.1 writes no warp for"
+            ),
             Refusal::InvariantNotDownstream {
                 axis,
                 sector,
@@ -236,6 +247,7 @@ pub fn validate<C: Authored>(chart: C, e_star: Option<f64>) -> Result<ValidatedC
     if swept(descriptor.axes.map(|a| a.meta())) == 0 {
         return Err(Refusal::NoSweptAxis);
     }
+    warps(&descriptor)?;
     downstream(&descriptor)?;
     count(&descriptor)?;
     directions(&descriptor)?;
@@ -246,6 +258,30 @@ pub fn validate<C: Authored>(chart: C, e_star: Option<f64>) -> Result<ValidatedC
         descriptor,
         solves,
     })
+}
+
+/// Every invariant axis of a quantity chart_reference §2.1 writes a warp for (`kernel::chart::energy::written`): a `PE`
+/// axis is refused (R-471 H2).
+fn warps(d: &ChartDescriptor) -> Result<(), Refusal> {
+    for axis in &d.axes {
+        if let Some(inv) = axis.invariant_meta() {
+            if energy::written(quantity(inv.quantity())).is_err() {
+                return Err(Refusal::NoWarpWritten { axis: axis.name() });
+            }
+        }
+    }
+    Ok(())
+}
+
+/// The kernel's quantity for an invariant axis's.
+fn quantity(q: InvariantQuantity) -> Quantity {
+    match q {
+        InvariantQuantity::E => Quantity::E,
+        InvariantQuantity::Lz => Quantity::Lz,
+        InvariantQuantity::K => Quantity::K,
+        InvariantQuantity::KE => Quantity::KE,
+        InvariantQuantity::PE => Quantity::PE,
+    }
 }
 
 /// Every invariant axis downstream of each block it depends on.
