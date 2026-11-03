@@ -1071,8 +1071,8 @@ mod no_unlabeled {
 }
 
 /// The whole aggregate job, as a runner runs it: with no shard report it runs and passes when the shards passed,
-/// `mutants-check` then reporting it passed, and fails when they did not, `mutants-check` failing; on a push event, and on a pull
-/// request's run that the `merge-ready` label did not start, it never runs.
+/// `mutants-check` then reporting it passed, and fails when they did not, `mutants-check` failing; on a push event, and
+/// on a pull request's run that the `merge-ready` label did not start, it never runs.
 fn aggregate_reports(yml: &str) {
     let ok = aggregate(yml, "success", "clean", "pull_request");
     let check = reported(yml, &ok, "clean");

@@ -32,9 +32,9 @@
 //!   this test followed before; that is the change here, R-678's exception to R-290.
 //! - `qa_cta_superseded_runs_cancel_per_pull_request`: the concurrency groups, evaluated per event: in `mutants.yml` a
 //!   push shares the merge-ready run's group (so it cancels it), another label's run, put on or taken off, does not,
-//!   `merge-ready` taken off does (R-678), two pull requests never share one, and nothing on `main` is cancelled; in `reviews.yml` a review cancels the review run before it on the
-//!   same pull request, never another pull request's or the `pull_request` run it re-runs (R-276), and
-//!   `reviews-complete` runs on both events.
+//!   `merge-ready` taken off does (R-678), two pull requests never share one, and nothing on `main` is cancelled; in
+//!   `reviews.yml` a review cancels the review run before it on the same pull request, never another pull request's
+//!   or the `pull_request` run it re-runs (R-276), and `reviews-complete` runs on both events.
 //!
 //! Each test has its negative controls (R-176), each feeding the same check a workflow differing in the one respect
 //! it turns on, tripping it by its message. The workflows are parsed with PyYAML, as xtask's other workflow tests

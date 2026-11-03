@@ -28,8 +28,8 @@
 //!   request event, and a commit that is no merge, run everything.
 //! - `qa_r656_required_checks_report_under_always`: the eight required checks are present; `ci.yml`'s five gates are
 //!   `if: always()` jobs; `mutants.yml`'s `mutants-check` is, under R-678 (3 Nov 2026), one `if: always()` job of
-//!   every run, never a check run posted through the Checks API (R-656's merge-ready run had made it a posted one; R-678
-//!   changed that, its exception to R-290); neither workflow filters `pull_request` by path.
+//!   every run, never a check run posted through the Checks API (R-656's merge-ready run had made it a posted one;
+//!   R-678 changed that, its exception to R-290); neither workflow filters `pull_request` by path.
 //! - `qa_r656_push_runs_only_main_and_measure`: `ci.yml`'s `push` names exactly `main` and `measure/**`; no other
 //!   workflow's `push` names a branch other than `main`.
 //!
