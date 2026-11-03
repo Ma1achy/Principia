@@ -34,8 +34,8 @@
 //!   xtask's `src/` and `tests/`, and the workflows) reads, as a string literal starting `<field>:` or a `get("…")`
 //!   lookup shows, only fields in CODE_FIELDS, but the tests tier (b) runs on the plan's data and the classifier's own
 //!   tests. Its limit: a reader that builds the field name some other way is not seen.
-//! - `ci_changes_a_script_runs_go_through_is_code`: a script named as a workflow step's `shell:` or as nextest's wrapper
-//!   runs that step or test inside it, so a wrong edit to it must run them: each classifies as code.
+//! - `ci_changes_a_script_runs_go_through_is_code`: a script named as a workflow step's `shell:` or as nextest's
+//!   wrapper runs that step or test inside it, so a wrong edit to it must run them: each classifies as code.
 //! - `ci_changes_no_file_code_reads_is_docs_only`: a static scan, best effort, of the string literals in every crate's
 //!   `src/`, `tests/` and `build.rs`, and in `xtask/`, for a data file they name, and of their `src/` for the plan's
 //!   markdown; none may classify as docs, so a new reader cannot silently leave its data in tier (c). Prose a test
@@ -70,15 +70,15 @@
 //!   run's check suite, so the workflow bearing a check either runs on the event, the job bearing it unskippable and,
 //!   in `ci.yml` and `mutants.yml`, concluding as it should, or runs on every new head, its push run standing; a
 //!   workflow runs on both label changes or neither, and filters no pull request.
-//! - `ci_changes_mutants_fixture_runs_on_the_gates_own_files`: `mutants.yml`'s `mutants-fixture`, the gate's self-test on
-//!   its fixtures, runs every step after its classification on a change to the gate's configuration
-//!   (`.cargo/mutants.toml`, `fixtures/mutants/untested/`, `fixtures/mutants/caps/`), which has no Rust under `crates/`,
-//!   and on a crate's source and tier (b)'s data, as before R-677; on a docs change it skips them all (R-677, as applied
-//!   after PR #382's code review).
+//! - `ci_changes_mutants_fixture_runs_on_the_gates_own_files`: `mutants.yml`'s `mutants-fixture`, the gate's self-test
+//!   on its fixtures, runs every step after its classification on a change to the gate's configuration
+//!   (`.cargo/mutants.toml`, `fixtures/mutants/untested/`, `fixtures/mutants/caps/`), which has no Rust under
+//!   `crates/`, and on a crate's source and tier (b)'s data, as before R-677; on a docs change it skips them all
+//!   (R-677, as applied after PR #382's code review).
 //!
 //! Each test has its registered negative control (R-176), which feeds the same check a script or workflow differing in
-//! the one respect it turns on. The workflows are parsed with PyYAML, as `plan/check_plan.py` and the qa tests that read
-//! the workflows parse them.
+//! the one respect it turns on. The workflows are parsed with PyYAML, as `plan/check_plan.py` and the qa tests that
+//! read the workflows parse them.
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -1440,8 +1440,8 @@ mod statement_reader_dropped {
     );
 }
 
-/// The string literals in `line`: Rust's `"…"`. Best effort: an escaped quote is stepped over, a raw string's hashes are
-/// not read, and a literal spanning lines is missed.
+/// The string literals in `line`: Rust's `"…"`. Best effort: an escaped quote is stepped over, a raw string's hashes
+/// are not read, and a literal spanning lines is missed.
 fn literals(line: &str) -> Vec<String> {
     let mut out = Vec::new();
     let mut chars = line.chars();
@@ -1765,10 +1765,11 @@ const WALKERS: &[(&str, &str, &str)] = &[
 ];
 
 /// Whether `text`, a test file's source, runs the classifier: outside whole-line comments, one string literal is
-/// `scripts/ci_changes.sh` and one has `classify` or `detect`, the script's subcommands, as a whole word (`.arg("detect")`,
-/// `"bash \"$0\" classify < \"$1\""`). Such a test names plan paths and field lines to classify them, no reading: the
-/// classifier is code, so it runs with full CI whenever the classifier changes, and a new one needs no list kept here.
-/// Its limit: a test that also reads the plan's data for itself is taken for a classifier test.
+/// `scripts/ci_changes.sh` and one has `classify` or `detect`, the script's subcommands, as a whole word
+/// (`.arg("detect")`, `"bash \"$0\" classify < \"$1\""`). Such a test names plan paths and field lines to classify
+/// them, no reading: the classifier is code, so it runs with full CI whenever the classifier changes, and a new one
+/// needs no list kept here. Its limit: a test that also reads the plan's data for itself is taken for a classifier
+/// test.
 fn runs_classifier(text: &str) -> bool {
     let (mut names, mut runs) = (false, false);
     for line in text.lines() {
@@ -1785,8 +1786,8 @@ fn runs_classifier(text: &str) -> bool {
     names && runs
 }
 
-/// The test files (a `tests/` folder's) among `sources`, as (file, text), that run the classifier ([`runs_classifier`]).
-/// Not vacuous: this file, which runs it, is among them.
+/// The test files (a `tests/` folder's) among `sources`, as (file, text), that run the classifier
+/// ([`runs_classifier`]). Not vacuous: this file, which runs it, is among them.
 fn classifier_tests(sources: &[(String, String)]) -> Vec<String> {
     let out: Vec<String> = sources
         .iter()

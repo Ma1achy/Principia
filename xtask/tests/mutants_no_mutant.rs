@@ -1,7 +1,8 @@
 //! R-305: `mutants-check`, a required status check on `main`, reports on every pull request's merge-ready run (R-656)
 //! and passes when the PR's diff has no mutant. A diff that names no `.rs` file under `crates/` (a docs, rulings or
-//! xtask-only PR; R-677: mutants run only when `crates/` source changes) skips each shard's setup and run; a diff naming
-//! Rust source under `crates/` runs `cargo mutants`, and a shard of it with nothing to mutate passes (REQ-VAL-148).
+//! xtask-only PR; R-677: mutants run only when `crates/` source changes) skips each shard's setup and run; a diff
+//! naming Rust source under `crates/` runs `cargo mutants`, and a shard of it with nothing to mutate passes
+//! (REQ-VAL-148).
 //!
 //! These tests run the `mutants` and `mutants-verdict` jobs of `.github/workflows/mutants.yml` as a runner would, step
 //! by step, on the merge-ready run (the `merge-ready` label's): each step's `if:` is evaluated (the subset of GitHub's
