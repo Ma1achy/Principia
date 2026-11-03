@@ -185,6 +185,7 @@ fn constants_file(chart: &[Param], tunables: &[Tunable]) -> String {
     s.push_str(&curve_search());
     s.push_str(&scale_skip());
     s.push_str(&tilt_angles());
+    s.push_str(&hidden_indices());
     s
 }
 
@@ -269,6 +270,25 @@ fn tilt_angles() -> String {
         right = literal(TILT_RIGHT_ANGLE.number(), "f64"),
         half = literal(TILT_HALF_TURN.number(), "f64"),
         turn = literal(TILT_TURN.number(), "f64"),
+    )
+}
+
+/// The construction charts' physical hidden coordinates' indices, the register's `hidden_nu0`, `hidden_held_lz` and
+/// `hidden_held_k` (R-633; chart_reference §4.5), which `kernel::chart::construction` names its hidden coordinates by,
+/// each past the latent controls `0..8`, written as the curve search's step count is. They are not chart constants, so
+/// not [`links::CHART_CONSTANTS`] members, and not hashed.
+fn hidden_indices() -> String {
+    use crate::constants::{HIDDEN_HELD_K, HIDDEN_HELD_LZ, HIDDEN_NU0};
+    format!(
+        "\n/// The register's `hidden_nu0`: `ν₀`'s index as a hidden coordinate, past the latent controls (R-633).\n\
+         pub const HIDDEN_NU0: u32 = {nu0};\n\n\
+         /// The register's `hidden_held_lz`: the held `L_z`'s index as a hidden coordinate (R-633).\n\
+         pub const HIDDEN_HELD_LZ: u32 = {lz};\n\n\
+         /// The register's `hidden_held_k`: the held `K`'s index as a hidden coordinate (R-633).\n\
+         pub const HIDDEN_HELD_K: u32 = {k};\n",
+        nu0 = HIDDEN_NU0.number() as u32,
+        lz = HIDDEN_HELD_LZ.number() as u32,
+        k = HIDDEN_HELD_K.number() as u32,
     )
 }
 

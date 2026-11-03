@@ -121,3 +121,12 @@ pub const TILT_HALF_TURN: f64 = 180.0;
 
 /// The register's `tilt_turn`: a whole turn, in degrees, Tip as sheet's wrap in total tip (R-474 R3).
 pub const TILT_TURN: f64 = 360.0;
+
+/// The register's `hidden_nu0`: `ν₀`'s index as a hidden coordinate, past the latent controls (R-633).
+pub const HIDDEN_NU0: u32 = 8;
+
+/// The register's `hidden_held_lz`: the held `L_z`'s index as a hidden coordinate (R-633).
+pub const HIDDEN_HELD_LZ: u32 = 9;
+
+/// The register's `hidden_held_k`: the held `K`'s index as a hidden coordinate (R-633).
+pub const HIDDEN_HELD_K: u32 = 10;

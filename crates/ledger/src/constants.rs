@@ -1407,6 +1407,30 @@ pub const TILT_HALF_TURN: ConstantBuilder = chart("tilt_half_turn", 180.0, R474)
 /// K3). Admissible as expressed in canonical units: degrees, exact.
 pub const TILT_TURN: ConstantBuilder = chart("tilt_turn", 360.0, R474);
 
+/// The table of the construction charts' hidden coordinates, their physical parameters (R-633; chart_reference §4.5,
+/// "Hidden coordinates under tilt and slice"): `ν₀` on the mass simplex, the held `L_z` on `(ν, K)` and `Φ_θ,K`, the
+/// held `K` on `Φ_θ,L_z`.
+const HIDDEN_PHYSICAL: Citation = Citation::Corpus {
+    file: "docs/design/principia_chart_reference.md",
+    section: "4.5 The Burrau-family chart maps",
+};
+
+/// `ν₀`'s index as a hidden coordinate, 8: the first index past the latent `z ∈ ℝ⁸`'s controls `0..8`
+/// (chart_decoder_contract Part 2's block order), so a tilt or a slice of it moves no latent control (R-633;
+/// chart_reference §4.5's table; `kernel::chart::construction::NU0`, TASK-M2-52). Admissible as expressed in canonical
+/// units: a dimension index, no unit.
+pub const HIDDEN_NU0: ConstantBuilder = chart("hidden_nu0", 8.0, HIDDEN_PHYSICAL);
+
+/// The held `L_z`'s index as a hidden coordinate on `(ν, K)` and `Φ_θ,K`, 9: the next past `ν₀`'s (R-633;
+/// chart_reference §4.5's table; `kernel::chart::construction::HELD_LZ`, TASK-M2-52). Admissible as expressed in
+/// canonical units: a dimension index, no unit.
+pub const HIDDEN_HELD_LZ: ConstantBuilder = chart("hidden_held_lz", 9.0, HIDDEN_PHYSICAL);
+
+/// The held `K`'s index as a hidden coordinate on `Φ_θ,L_z`, 10: the next past the held `L_z`'s (R-633;
+/// chart_reference §4.5's table; `kernel::chart::construction::HELD_K`, TASK-M2-52). Admissible as expressed in
+/// canonical units: a dimension index, no unit.
+pub const HIDDEN_HELD_K: ConstantBuilder = chart("hidden_held_k", 10.0, HIDDEN_PHYSICAL);
+
 /// The register: the constants the payload ledger uses (TASK-M0-08), the word's per-substep crossing capacity
 /// (TASK-M3-15), the chart constants the link registry reads
 /// (TASK-M2-01; dd_generation_root §3.9), the invariant charts' warp defaults (TASK-M2-12), the Burrau `ν = 1/2`
@@ -1419,7 +1443,8 @@ pub const TILT_TURN: ConstantBuilder = chart("tilt_turn", 360.0, R474);
 /// REQ-VAL-191), and the substep law's defaults and its threshold table's maximum length (TASK-M3-03; R-502,
 /// REQ-INT-094), and the view window's square (TASK-M2-21), and the slice frame's default axis (TASK-M6-38), and the
 /// wrapper's loop parameters' defaults, the horizon's cap and the macro-step's floor (TASK-M3-06; R-132, R-610), and the
-/// tilt's angles in degrees (TASK-M2-36; R-474), and the custom-stop ramp's OKLab bound (TASK-M7-11), and the arctangent
+/// tilt's angles in degrees (TASK-M2-36; R-474), and the construction charts' physical hidden coordinates' indices
+/// (TASK-M2-52; R-633), and the custom-stop ramp's OKLab bound (TASK-M7-11), and the arctangent
 /// generator's working precision (TASK-M2-26; REQ-GEN-044).
 pub const REGISTER: &[ConstantBuilder] = &[
     HORIZON_STEPS_MAX,
@@ -1507,5 +1532,8 @@ pub const REGISTER: &[ConstantBuilder] = &[
     TILT_RIGHT_ANGLE,
     TILT_HALF_TURN,
     TILT_TURN,
+    HIDDEN_NU0,
+    HIDDEN_HELD_LZ,
+    HIDDEN_HELD_K,
     ARCTAN_SUM_BITS,
 ];

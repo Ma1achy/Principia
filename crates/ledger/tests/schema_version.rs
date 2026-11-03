@@ -630,6 +630,11 @@ const WRAPPER: [&str; 12] = [
 /// whole turn, which decide the view's basis, never what a stored bit means, so they are not hashed.
 const TILT: [&str; 3] = ["tilt_right_angle", "tilt_half_turn", "tilt_turn"];
 
+/// The construction charts' physical hidden coordinates' indices (TASK-M2-52; R-633, chart_reference §4.5): `ν₀`'s, the
+/// held `L_z`'s and the held `K`'s, past the latent controls, which decide which coordinate a tilt or a slice moves,
+/// never what a stored bit means, so they are not hashed.
+const HIDDEN: [&str; 3] = ["hidden_nu0", "hidden_held_lz", "hidden_held_k"];
+
 #[test]
 fn schema_version_hashes_the_registers_stored_bits_entries() {
     for name in STORED_BITS {
@@ -645,7 +650,8 @@ fn schema_version_hashes_the_registers_stored_bits_entries() {
     // invariant charts' warp defaults (TASK-M2-12), or the Burrau family's (TASK-M2-10), or the march's crossing
     // capacity (TASK-M3-15), or the steppers' coefficients (TASK-M3-02), or the curve projection's search
     // (TASK-M2-18), or the substep law's (TASK-M3-03), or the view window's square (TASK-M2-21), or the slice
-    // frame's default axis (TASK-M6-38), or the wrapper's loop parameters (TASK-M3-06), or the tilt's angles (TASK-M2-36).
+    // frame's default axis (TASK-M6-38), or the wrapper's loop parameters (TASK-M3-06), or the tilt's angles (TASK-M2-36), or the construction charts' hidden indices
+    // (TASK-M2-52).
     for k in REGISTER.iter().filter(|k| !STORED_BITS.contains(&k.name)) {
         assert!(
             ledger::links::CHART_CONSTANTS
@@ -662,7 +668,8 @@ fn schema_version_hashes_the_registers_stored_bits_entries() {
                 || WINDOW.contains(&k.name)
                 || SLICE.contains(&k.name)
                 || WRAPPER.contains(&k.name)
-                || TILT.contains(&k.name),
+                || TILT.contains(&k.name)
+                || HIDDEN.contains(&k.name),
             "`{}` is neither a stored-bits entry nor a chart constant, so it is not hashed",
             k.name
         );
@@ -737,6 +744,12 @@ fn schema_version_hashes_the_registers_stored_bits_entries() {
         assert!(
             REGISTER.iter().any(|k| k.name == name) && !STORED_BITS.contains(&name),
             "the tilt's entry `{name}` is not an unhashed register entry"
+        );
+    }
+    for name in HIDDEN {
+        assert!(
+            REGISTER.iter().any(|k| k.name == name) && !STORED_BITS.contains(&name),
+            "the hidden index `{name}` is not an unhashed register entry"
         );
     }
 }

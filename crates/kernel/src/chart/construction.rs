@@ -48,12 +48,12 @@ use crate::payload::{ICDescriptorOf, PayloadReal};
 
 use core::marker::PhantomData;
 
-/// `ν₀`'s index, the mass simplex's held shape.
-pub const NU0: u32 = 8;
-/// The held `L_z`'s index, on the `(ν, K)` chart and `Φ_θ,K`.
-pub const HELD_LZ: u32 = 9;
-/// The held `K`'s index, on `Φ_θ,L_z`.
-pub const HELD_K: u32 = 10;
+/// `ν₀`'s index, the mass simplex's held shape: the register's `hidden_nu0`.
+pub const NU0: u32 = crate::generated::constants::HIDDEN_NU0;
+/// The held `L_z`'s index, on the `(ν, K)` chart and `Φ_θ,K`: the register's `hidden_held_lz`.
+pub const HELD_LZ: u32 = crate::generated::constants::HIDDEN_HELD_LZ;
+/// The held `K`'s index, on `Φ_θ,L_z`: the register's `hidden_held_k`.
+pub const HELD_K: u32 = crate::generated::constants::HIDDEN_HELD_K;
 
 /// Whether `k` names a momentum control, `2..6`.
 #[inline]
