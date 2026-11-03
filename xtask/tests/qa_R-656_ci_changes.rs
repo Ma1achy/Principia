@@ -20,8 +20,10 @@
 //! - `qa_r656_detect_diffs_the_merge_against_its_base`: `detect` on a real merge commit, as GitHub makes a pull
 //!   request's, reads the change against the first parent (the base), not against the pull request's head; a non-pull
 //!   request event, and a commit that is no merge, run everything.
-//! - `qa_r656_required_checks_report_under_always`: the eight required checks are present; `ci.yml`'s five gates and
-//!   `mutants.yml`'s `mutants-check` are `if: always()` jobs; neither workflow filters `pull_request` by path.
+//! - `qa_r656_required_checks_report_under_always`: the eight required checks are present; `ci.yml`'s five gates are
+//!   `if: always()` jobs; `mutants.yml`'s `mutants-check`, which R-656's merge-ready run makes a posted check run (the
+//!   owner's CI plan of 2 Nov 2026), is borne by no job, which a run skipping it would report passed, and is posted by
+//!   an `if: always()` job in an `if: always()` step; neither workflow filters `pull_request` by path.
 //! - `qa_r656_push_runs_only_main_and_measure`: `ci.yml`'s `push` names exactly `main` and `measure/**`; no other
 //!   workflow's `push` names a branch other than `main`.
 //!
@@ -468,15 +470,25 @@ fn check_required(ci: &str, mutants: &str, pr_check: &str, reviews: &str) {
         );
     }
     let mutants = parse(mutants);
-    let jobs = reporting(&mutants, "mutants-check");
-    assert_eq!(
-        jobs.len(),
-        1,
-        "qa_r656: mutants.yml does not report `mutants-check` once"
-    );
     assert!(
-        s(&jobs[0].1["if"]).starts_with("always()"),
-        "qa_r656: mutants.yml's required check `mutants-check` is not `if: always()`"
+        reporting(&mutants, "mutants-check").is_empty(),
+        "qa_r656: a mutants.yml job bears the required check `mutants-check`, which a run skipping it reports passed"
+    );
+    let posts_always = mutants["jobs"]
+        .as_object()
+        .expect("qa_r656: jobs")
+        .values()
+        .filter(|job| s(&job["if"]).starts_with("always()"))
+        .flat_map(|job| job["steps"].as_array().cloned().unwrap_or_default())
+        .any(|st| {
+            let run = s(&st["run"]);
+            s(&st["if"]) == "always()"
+                && run.contains("check-runs")
+                && run.contains("name=mutants-check")
+        });
+    assert!(
+        posts_always,
+        "qa_r656: mutants.yml's required check `mutants-check` is not posted under `if: always()`"
     );
     for (wf, check) in [
         (parse(pr_check), "pr-check"),

@@ -23,8 +23,9 @@ filter = """
 """
 threads-required = "num-test-threads"
 
-# The xtask tests that run cargo, and a full golden run through it, without taking every test thread: `xtask ci --list`
-# (TASK-M0-06), which builds the workspace's tests with `--features controls`; the `ci` golden runner (TASK-M0-06);
+# The xtask tests that run cargo, and a full golden run through it, without taking every test thread (but for `xtask ci
+# --list`, which the next override also gives every one): `xtask ci --list` (TASK-M0-06), which builds the workspace's
+# tests with `--features controls`; the `ci` golden runner (TASK-M0-06);
 # `xtask ci` against the stand-in cargo, whose golden step renders every harness case through the real one (TASK-M0-22);
 # and `xtask golden m1-outcome` through a wrapper of the real cargo (the golden harness's CI check,
 # `qa_ops_golden_harness_ci`). On a cold target, as in a `ci` shard run from the archive, side by side they share the
@@ -43,6 +44,16 @@ filter = """
     | (binary_id(=xtask::qa_TASK-M0-20) & test(=qa_cli_screenshot_all_runs_selftest))
 """
 test-group = "xtask-cargo"
+
+# `xtask ci --list` in that group also takes every test thread, so it runs alone. In a `ci` shard it is a cold build of
+# nearly every test target, whose time follows the runner's speed: slow runners took 553-600 s against the 600 s limit
+# on its xtask child (R-214), with the shard's 3 other test threads running beside it. nextest takes each setting from
+# the first override that matches and sets it, so the test keeps its group from the override above, and this override
+# stays after that one, whose filter the negative controls in `qa_ops_nextest_cargo_group` edit at the binary's first
+# mention. Applied per R-369.
+[[profile.default.overrides]]
+filter = "binary_id(=xtask::qa_TASK-M0-06_list) & test(=qa_m006_ci_list_lists_golden_cases_without_a_device)"
+threads-required = "num-test-threads"
 
 # The tests that exercise TASK-M2-26's own source run first in any run that selects them, ahead of their packages'
 # slower tests. A run's result is unchanged: priority only orders the schedule. It is for the mutants gate (R-302;
