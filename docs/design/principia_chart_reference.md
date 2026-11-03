@@ -323,8 +323,10 @@ ratio `q = m_b/m_a`, with the third body's mass `m_c` held at its slice-centre v
 and `m_b = q·m_a`. The axis writes the active mass link's inputs, `z_mass = L⁻¹(m)`, and the decode reads the masses
 back through the link, `m = L(z_mass)`, so every pixel's masses are positive and sum to 1.
 
-A ratio is realised when the link's inverse followed by its forward returns it to within `ε_μ`, relative (§0.1's
-interior buffer), since the inverse saturates past what the link reaches.
+A ratio is realised when the link's inverse followed by its forward returns it to within `ε_μ`, relative, since the
+inverse saturates past what the link reaches. `ε_μ = 10⁻⁶` is the link clamp (chart_decoder_contract § "Three hard
+requirements on any registered link", item 2; inverse_encode_contract Part 3), reused here as the round trip's
+tolerance, not a new constant.
 
 Warped, `q(t) = q₀·(q₁/q₀)^t`, geometric, over `[q₀, q₁]`: the part of the asked range the link realises at `m_c` and
 at its active parameters. The axis is bounded past both of its edges.

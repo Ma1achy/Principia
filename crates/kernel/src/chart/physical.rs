@@ -27,7 +27,9 @@
 //! part of the asked range the link realises at `m_c` at its active parameters ([`MixedMassRatio::new`]); linear,
 //! `q(t) = q_lo + (q_hi − q_lo)·t` over the asked range, a pixel whose ratio the link does not realise, or at or below
 //! 0, not a system. A ratio is realised where the link's inverse followed by its forward returns it to within `ε_μ`,
-//! relative (chart_reference §0.1's interior buffer): the inverse saturates past what the link reaches.
+//! relative: the inverse saturates past what the link reaches. `ε_μ` is the register's link clamp
+//! (chart_decoder_contract § "Three hard requirements on any registered link", item 2; inverse_encode_contract Part 3),
+//! reused here as the round trip's tolerance, not a new constant.
 //!
 //! **Validation** (R-26). The other axis's own check (`super::mixed`'s), then the physical axis's: past a bounded side
 //! the point is clamped to the edge; then, on the decode under the chart's selection, the construction's exact test

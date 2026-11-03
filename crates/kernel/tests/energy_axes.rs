@@ -51,8 +51,8 @@ const N: u32 = 65;
 const TOL_K: f64 = 8.0;
 /// `|L_z(p) − L_z|` in units of `eps·(|L_z| + √(2K*))`, at most (REQ-DEC-046, proposed).
 const TOL_L: f64 = 4.0;
-/// A mass ratio's decode against its axis value, relative: the realisation's `ε_μ` (chart_reference §0.1;
-/// `MixedMassRatio::realised`).
+/// A mass ratio's decode against its axis value, relative: the realisation's `ε_μ`, the link clamp
+/// (chart_decoder_contract § "Three hard requirements on any registered link", item 2; `MixedMassRatio::realised`).
 const RATIO_TOL: f64 = 1e-6;
 
 /// The selection with `stick_breaking` on the mass block.
