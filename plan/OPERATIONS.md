@@ -236,6 +236,16 @@ or reviews" and `plan/WORKFLOW.md` § "The review loop". In addition:
     this run only; CI's caps (REQ-VAL-180, REQ-VAL-181) are unchanged. The rest of the diff, every other crate, runs
     as above, unchanged, in a run of its own that leaves gui out (`--exclude 'crates/gui/**'`). The orchestrator's
     memory guard (§ "Resources") runs throughout.
+- **The Gemini review (R-659).** `gemini-dispatch.yml` runs `scripts/gemini_review.py`, which makes one request to the
+  Gemini API, no CLI and no tools. On a quota refusal it goes down `gemini-3.8-flash`, `gemini-3-flash`,
+  `gemini-2.5-flash`, `gemini-2.5-flash-lite`; each has its own free quota of about 20 requests a day. Before the
+  request it reads the key's model list (`GET models`, not a generateContent request) and requests only models that
+  list names: the first choice, then the listed flash models, the owner's four before the rest, newest first, `-lite`
+  last, four at most. If the list can't be read, it tries the first choice alone. The review's header names the model
+  that answered, and the run's summary logs the listed model names, the request count and each model's result. A spent
+  chain posts "Gemini quota exhausted, review skipped" as a review of the head, and the merge proceeds (R-651). An
+  outage posts "Gemini unavailable, review skipped" the same way. A `pull_request` run or an `@gemini-cli /review`
+  inline comment uses the branch's files; an `@gemini-cli /review` PR comment uses `main`'s.
 
 ## qa commits
 
@@ -349,9 +359,11 @@ they can add it back.
 **What CI runs on a pull request (R-656, R-662).** `ci.yml` runs on a push to `main` (and to a `measure/` branch, R-272)
 and, for a pull request, through `pull_request` only, once per push. Each workflow that builds or tests keeps one
 `concurrency` group per pull request, so a push cancels the run on the head it supersedes; a run on `main` is never
-cancelled (`reviews.yml`, `no-atlas-params.yml` and `gemini-dispatch.yml` keep none, decisions.md R-656). `ci.yml`'s
-`changes` job, and `mutants-fixture` in a step of its own, classify the change with `scripts/ci_changes.sh` (the pull
-request's merge commit against the base it merges onto; any other run runs everything):
+cancelled (`no-atlas-params.yml` and `gemini-dispatch.yml` keep none, decisions.md R-656). `reviews.yml` keeps one group
+per pull request and event, so a burst of reviews leaves one run, and the `pull_request_review` run that re-runs the
+`pull_request` run (R-276) is not in that run's group, which would cancel it (R-676). `ci.yml`'s `changes` job,
+`mutants-pending` and `mutants-fixture` classify the change with `scripts/ci_changes.sh` (the pull request's merge
+commit against the base it merges onto; any other run runs everything):
 - **docs-only**, meaning it changes none of Principia's code (R-662; the owner, 31 Oct 2026: "Only the actual Principia
   CODE matters in ci"): every path is on the script's allowlist, `docs/`, `plan/` (its prose and Python), `scripts/`,
   `workbench/` and the root's markdown, and none is on its list of data code loads: `docs/gui/design/`,
@@ -371,14 +383,49 @@ Every required check still reports under its own name and concludes success, so 
 `merge-batch.sh`'s `gh pr checks --required` reads `pass` for each. A skipped job never bears a required name: the
 required checks `ci`, `xtask-ci`, `gpu-kernel`, `gpu-metal` and `gpu-lavapipe` are gates that run whatever their jobs
 ended in and pass a skipped one only on the classification's verdict, and matrix jobs are named `<id> (<shard>)`.
-Mutants run on every head whose diff has Rust in it, and the superseded head's run is cancelled, so the run that
-finishes is the merge-ready head's; nothing requests it at merge time. What a pull request skips runs on `main` after
+`mutants-check` is the exception: it is pending until the merge-ready run (below) posts its verdict, and is posted
+passed at once only on a docs-only head, which has no mutant. What a pull request skips runs on `main` after
 it merges, where every job runs. A superseded head's cancelled run leaves its gates failed or cancelled, as before:
 the owner kept them as they are, TASK-M0-45's checks and R-266 standing (30 Oct 2026, on #351, no ruling). A
 head that changes only prose a test reads does not run that test, which runs on `main` once it merges, so a contract's
 renamed heading can turn `main` red after a green pull request (R-662). New code that loads a data file for behaviour
 adds that file to `scripts/ci_changes.sh`'s list; `xtask/tests/ci_changes.rs` scans for a literal data path missing
 from it.
+
+**Mutants on the merge-ready head (R-656, R-676).** The mutants gate (`mutants.yml`: the shards, `mutants-fixture` and
+the verdict) runs once per approved head, not on every push:
+- **The `merge-ready` label.** The orchestrator's merge watcher puts it on a pull request once every reviewer its task
+  names has approved the current head, with the user's own token, not a workflow's (a label a workflow's
+  `GITHUB_TOKEN` puts on starts no run):
+  `gh api --method POST repos/Ma1achy/Principia/issues/<N>/labels -f 'labels[]=merge-ready'`. It puts it on only
+  where it is absent; adding it again starts nothing. That starts the merge-ready run, whose verdict completes
+  `mutants-check` on the head, success or failure; the merge then waits for it like any required check.
+- **A push takes it off.** On every push to the pull request, `mutants-pending` removes the label and posts the new
+  head's `mutants-check` as `queued`, so the gate runs again only once the new head is approved and labelled again,
+  and the push cancels a merge-ready run still going on the old head. Other labels start nothing. To re-run the gate on
+  the same head (a flaky shard), take the label off and put it back.
+- **A failed verdict.** Every approval comes before any mutant has run, so a survivor first shows after them, and it is
+  still a qa finding (R-196; `plan/reviewers/qa.md`'s mutants item). The orchestrator reads the failed
+  `mutants-check`: the verdict run's log and each shard's report of survivors (a shard that failed flakily, with no
+  survivor, is re-labelled as above). It dispatches qa to judge the survivors, a review of the head that names each
+  one, and then the implementer for a fix round: a test that kills each survivor, or an entry in
+  `.cargo/mutants-equivalent.toml` with its one-line justification, which the code and qa reviewers approve (R-202).
+  The fix round's push takes the label off, every reviewer the task names approves the new head again, and only then
+  does the watcher put the label back on, starting the new head's merge-ready run.
+- **What branch protection sees.** `mutants-check` is a check run the workflow posts through the Checks API, under the
+  GitHub Actions app, never a job: before the label it is `queued` (pending), or "expected" if nothing posted it, so
+  the merge waits; it is never a skipped job, which GitHub would count as passed. A docs-only head's is posted passed
+  at once (R-662), the verdict the shards would reach.
+
+**Fix rounds are verified locally first (R-676).** A fix round runs the tests its fixes touch, their controls, and its
+mutants run where R-388 asks for one, through the job queue (R-658) on the head it is about to push, before it pushes;
+CI then confirms that head. A push is never how a fix round finds out whether its fix compiles or passes.
+
+**Merging `main` into an open pull request, in batches (R-676).** Each push to a pull request re-runs its CI and takes
+its `merge-ready` label off, so `main` is not merged into open pull requests after every merge to `main`. It is merged
+in only when the pull request conflicts with `main`, when a merged change it depends on must be in its tree, or once,
+right before the `merge-ready` label, after the reviewers' approvals and before § "Merging" step 2's merged-tree check.
+Approvals are of a head, so the reviewers approve the merged head again before the watcher labels it.
 
 **Numbers.**
 - **An RQ's form.** A heading `## RQ-n: <question>`, a `- **File, section:**` field and a `- **Applied meanwhile:**`
