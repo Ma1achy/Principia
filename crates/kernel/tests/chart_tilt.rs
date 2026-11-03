@@ -3425,7 +3425,7 @@ impl RestChart for Flipped {
     }
 }
 
-/// A held-`L_z` chart that allows `η_E`, the opposite of the registered ones.
+/// A held-`L_z` chart that allows `η_E` and holds uniform masses, the opposite of the registered ones.
 #[derive(Clone, Copy)]
 struct Allowing(Burrau<f64>);
 
@@ -3438,6 +3438,10 @@ impl Chart for Allowing {
 
     fn name(&self) -> &str {
         "Allowing"
+    }
+
+    fn requires_per_pixel_mass(&self) -> bool {
+        false
     }
 
     fn validate(&self, u: f64, v: f64) -> ValidationResult {
@@ -3466,10 +3470,11 @@ fn check_flags(own: bool) {
     assert!(
         read(rest.forbids_energy_normalisation(), false)
             && !read(rest.requires_per_pixel_mass(), true)
-            && !read(lz.forbids_energy_normalisation(), true),
+            && !read(lz.forbids_energy_normalisation(), true)
+            && !read(lz.requires_per_pixel_mass(), true),
         "a wrapper's flags are not its chart's"
     );
-    assert!(lz.requires_per_pixel_mass() && rest.name() == "Flipped" && lz.name() == "Allowing");
+    assert!(rest.name() == "Flipped" && lz.name() == "Allowing");
 }
 
 #[test]
