@@ -21,7 +21,9 @@
 //! - `merge_ready_mutants_check_reports_a_stalled_step`: no stalled step leaves `mutants-check` unreported. Each step
 //!   before its report, and each checkout and cache step of every `mutants.yml` job, the shards included, has a limit
 //!   of its own of at most `STEP_LIMIT` minutes, so a runner stall fails the job in minutes, not at the 355 minutes the
-//!   label-change wait needs. The report runs only when each passed, so one failing (a timeout among them) or cancelled
+//!   label-change wait needs; every step of each job it waits on through `needs`, the shards included, and of
+//!   `mutants-fixture` has a limit of its own of at most `SHARD_LIMIT`, so no stall there runs to GitHub's 360 minutes.
+//!   The report runs only when each passed, so one failing (a timeout among them) or cancelled
 //!   skips it and fails the job, and the step after it runs exactly then and, run under bash, fails with an error
 //!   annotation and a summary naming each earlier step's outcome.
 //! - `merge_ready_reviews_runs_cancel_per_pr_and_event`: `reviews.yml` keeps one cancelling group per pull request and
@@ -852,8 +854,13 @@ mod notice_not_applicable {
 /// full history in 189 s, rounded up to a whole 10 minutes (`mutants.yml`'s comment on the limits).
 const STEP_LIMIT: u64 = 10;
 
+/// The longest, in minutes, any step of a job `mutants-check` waits on may run: a shard's cargo mutants step,
+/// REQ-VAL-149's 300 minutes (R-376).
+const SHARD_LIMIT: u64 = 300;
+
 /// `mutants-check` is never left unreported by a stalled step: each step before its report, and each checkout and cache
-/// step of every job, the shards included, has a limit of its own of at most `STEP_LIMIT` minutes. The report runs
+/// step of every job, the shards included, has a limit of its own of at most `STEP_LIMIT` minutes; every step of each
+/// job it waits on through `needs`, and of `mutants-fixture`, has one of at most `SHARD_LIMIT`. The report runs
 /// only when every step before it passed (no `if:`), so one failing, a timeout among them, or cancelled skips it and
 /// fails the job; the step after it runs exactly then (`always()`, on the report skipped) and, run under bash, fails
 /// with an error annotation and a summary naming each earlier step's outcome.
@@ -910,6 +917,45 @@ fn check_step_limits(yml: &str) {
                     s["timeout-minutes"]
                 );
             }
+        }
+    }
+    // Every step of every job `mutants-check` waits on, through `needs`, and of `mutants-fixture` beside them: a job
+    // limit can't tell a stall from the shards' 300-minute run (REQ-VAL-149), so only a step's own limit bounds it.
+    let mut chain: Vec<String> = Vec::new();
+    let mut next = vec!["mutants-check".to_owned()];
+    while let Some(j) = next.pop() {
+        let needs = &wf["jobs"][j.as_str()]["needs"];
+        let named: Vec<String> = match needs {
+            Value::Array(a) => a.iter().map(text).collect(),
+            Value::Null => Vec::new(),
+            other => vec![text(other)],
+        };
+        for n in named {
+            if !chain.contains(&n) {
+                chain.push(n.clone());
+                next.push(n);
+            }
+        }
+    }
+    assert!(
+        chain.iter().any(|j| j == "mutants"),
+        "merge_ready: mutants-check does not wait, through `needs`, for the shards (`mutants`): {chain:?}"
+    );
+    chain.push("mutants-fixture".to_owned());
+    for id in &chain {
+        let job_steps = wf["jobs"][id.as_str()]["steps"]
+            .as_array()
+            .unwrap_or_else(|| panic!("merge_ready: {id} has no steps"));
+        for s in job_steps {
+            assert!(
+                s["timeout-minutes"]
+                    .as_u64()
+                    .is_some_and(|m| (1..=SHARD_LIMIT).contains(&m)),
+                "merge_ready: {id}'s step `{}` has no limit of its own of at most {SHARD_LIMIT} minutes \
+                 (timeout-minutes: {})",
+                name(s),
+                s["timeout-minutes"]
+            );
         }
     }
     let report_step = &steps[at];
@@ -976,7 +1022,101 @@ fn check_step_limits(yml: &str) {
 
 #[test]
 fn merge_ready_mutants_check_reports_a_stalled_step() {
-    check_step_limits(&workflow("mutants.yml"));
+    let yml = workflow("mutants.yml");
+    check_step_limits(&yml);
+    // `needs` as a list is walked as one name is.
+    let listed = yml.replacen("    needs: mutants\n", "    needs: [mutants]\n", 1);
+    assert_ne!(
+        listed, yml,
+        "merge_ready: mutants-verdict's `needs: mutants` is gone"
+    );
+    check_step_limits(&listed);
+}
+
+mod stall_shard_step {
+    use super::*;
+    negative_control!(
+        merge_ready_mutants_check_reports_a_stalled_step,
+        "a shard's PyYAML install with no limit of its own, so a stall holds the verdict, and mutants-check, for hours",
+        expected = "mutants's step `Install PyYAML` has no limit of its own of at most 300 minutes",
+        check_step_limits(&edited(
+            "mutants.yml",
+            "        timeout-minutes: 5\n        run: python3 -m pip install pyyaml\n",
+            "        run: python3 -m pip install pyyaml\n"
+        ))
+    );
+}
+
+mod stall_shard_step_too_long {
+    use super::*;
+    negative_control!(
+        merge_ready_mutants_check_reports_a_stalled_step,
+        "a shard's disk freeing limited one minute past the shards' 300",
+        expected = "step `Free runner disk` has no limit of its own of at most 300 minutes (timeout-minutes: 301)",
+        check_step_limits(&edited(
+            "mutants.yml",
+            "        timeout-minutes: 20\n",
+            "        timeout-minutes: 301\n"
+        ))
+    );
+}
+
+mod stall_shard_step_zero {
+    use super::*;
+    negative_control!(
+        merge_ready_mutants_check_reports_a_stalled_step,
+        "a shard's Mesa install limited to no minutes at all",
+        expected = "mutants's step `Install Mesa (lavapipe)` has no limit of its own of at most 300 minutes \
+                    (timeout-minutes: 0)",
+        check_step_limits(&edited(
+            "mutants.yml",
+            "        timeout-minutes: 5\n        run: sudo apt-get update",
+            "        timeout-minutes: 0\n        run: sudo apt-get update"
+        ))
+    );
+}
+
+mod stall_verdict_step {
+    use super::*;
+    negative_control!(
+        merge_ready_mutants_check_reports_a_stalled_step,
+        "mutants-verdict's check over every shard with no limit of its own",
+        expected = "mutants-verdict's step `cargo xtask mutants-check over every shard (R-202, R-302)` has no limit",
+        check_step_limits(&edited(
+            "mutants.yml",
+            "        id: verdict\n        timeout-minutes: 5\n",
+            "        id: verdict\n"
+        ))
+    );
+}
+
+mod stall_fixture_step {
+    use super::*;
+    negative_control!(
+        merge_ready_mutants_check_reports_a_stalled_step,
+        "mutants-fixture's caps run with no limit of its own",
+        expected =
+            "mutants-fixture's step `The caps fire on their fixture (REQ-VAL-179)` has no limit",
+        check_step_limits(&edited(
+            "mutants.yml",
+            "        timeout-minutes: 5\n        run: |\n          fixture=fixtures/mutants/caps\n",
+            "        run: |\n          fixture=fixtures/mutants/caps\n"
+        ))
+    );
+}
+
+mod stall_shards_not_awaited {
+    use super::*;
+    negative_control!(
+        merge_ready_mutants_check_reports_a_stalled_step,
+        "mutants-verdict waiting for another job, so the walk through `needs` never reaches the shards",
+        expected = "mutants-check does not wait, through `needs`, for the shards",
+        check_step_limits(&edited(
+            "mutants.yml",
+            "    needs: mutants\n",
+            "    needs: [merge-ready-off]\n"
+        ))
+    );
 }
 
 negative_control!(
