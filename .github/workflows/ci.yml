@@ -149,6 +149,16 @@ jobs:
       - uses: taiki-e/install-action@v2
         with:
           tool: cargo-nextest@0.9.146
+      # The archive's test binaries carry line tables for the workspace's own crates only (the owner's CI plan, 2 Nov
+      # 2026, item 3): every dependency is built without debug info, so the ~600 test binaries, each linking its
+      # dependencies whole, stop carrying their line tables. A panic message still names file and line (from the
+      # panic's location, not debug info), and a backtrace still names every frame, with file and line for the
+      # workspace's own (R-374); a frame inside a dependency is named without them. It is this job's alone: a cargo
+      # config in the runner's CARGO_HOME, where the archive step reads it, never in the repository (R-233 governs
+      # local builds), and outside rust-cache's key, which hashes the CARGO_* environment (R-337). A package override
+      # has no environment form, and the archive step's command line is pinned (R-372), so it is a file.
+      - name: Dependencies without debug info
+        run: printf '[profile.test.package."*"]\ndebug = false\n' >> "${CARGO_HOME:-$HOME/.cargo}/config.toml"
       # The linker compresses each binary's debug sections (zlib): the same line tables (R-374), stored in fewer bytes,
       # so each shard extracts the archive in 4–8 s rather than 13–28 s (PR #126's measurements, with line tables
       # only). Test infrastructure only. RUSTFLAGS is this step's alone: rust-cache's key, computed in its own step,
