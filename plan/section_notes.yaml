@@ -1480,3 +1480,7 @@
   section: "R-683 — The CI speed-up series, after the current CI fixes land: measure first, then five tooling pull requests in order, each with before and after numbers: one test binary per crate, a quick tier on every push, mutants in-diff on the merge-ready head, a bounded dependency cache saved from `main` only, and nightly compiler flags kept only if faster; R-285's amendment approved in principle only, its wording with step (4)'s pull request"
   reason: informative only
   note: "the owner's message of 3 Nov 2026: the CI speed-up series and its order; R-285's amendment approved in principle only; ci; changes no requirement"
+- file: decisions.md
+  section: "R-684 — CI's two code tiers: full CI on every merge-candidate head, the one carrying the `merge-ready` label, and on every push to `main`; a quick tier on every other pull-request head (fmt, clippy, build, and the tests of the changed crates and their reverse dependencies), each full-only required check posted pending, never skipped-as-success; R-677's classifier first; done as R-683's step (2), and R-656's bounded target cache, without sccache, as its step (4) *(amends R-110, R-177 and R-235; rules R-676's tiers and R-683's steps (2) and (4))*"
+  reason: informative only
+  note: "the owner's message of 3 Nov 2026, part (A): full CI on the merge-candidate head and main, a quick tier elsewhere, full-only checks pending; part (B) recorded under R-683; ci; changes no requirement here, built with R-683's steps (2) and (4)"

@@ -923,12 +923,15 @@ fixtures) wait for the human. ✱ marks a design ruling the human may veto.*
 *Amended by R-186, R-656 and R-662.*
 *Amended in part by R-677 (2 Nov 2026: a head that changes only the plan's task data or the GUI's artboards and
 references, tier (b), runs the cheap checks and the tests that read what it changed in place of the suites).*
-*Still in force: the unit, property, numerical-gate and native golden suites on every commit; GUI screenshots on GUI PRs
-and at the gates; lavapipe as the second backend on every commit, meeting M4's two-backend check, and a real non-Metal
-GPU gating Paper 2 (R-58); "every commit" is every push to `main` and every pull-request head, but for R-656's skips
-as R-662 and R-677 scope them (a head that changes none of Principia's code runs only the cheap checks; one that
-changes only tier (b)'s data runs the cheap checks and the tests that read it; one that changes no GPU-path file skips
-the GPU suites);
+*Amended in part by R-684 (3 Nov 2026: "every commit" for the unit, property, numerical-gate and native golden suites
+and the GPU suites is every push to `main` and every merge-candidate head, the head carrying the `merge-ready` label;
+every other pull-request head runs the quick tier, each full-only required check posted pending; applied with R-683's
+step (2)).*
+*Still in force: the unit, property, numerical-gate and native golden suites, and lavapipe as the second backend, on
+every head of the full tier (R-684), meeting M4's two-backend check, and a real non-Metal GPU gating Paper 2 (R-58);
+R-662's and R-677's tiers applying first (a head that changes none of Principia's code runs only the cheap checks; one
+that changes only tier (b)'s data runs the cheap checks and the tests that read it), and R-656's skip of the GPU suites
+on a head that changes no GPU-path file; GUI screenshots on GUI PRs and at the gates (R-684 names no tier for them);
 Chrome stable and Safari for REQ-VAL-116; goldens rendered with native wgpu offscreen from M1, checked at M8 by the
 Playwright suite against the same baselines within tolerance, with no re-baselining without a gate decision; the
 runners and the benchmarks' schedule are R-186's.*
@@ -1486,10 +1489,14 @@ Crates without the `controls` feature are skipped, not failed.
 *Amended by R-656 and R-662.*
 *Amended in part by R-677 (2 Nov 2026: a head that changes only tier (b)'s data runs the tests that read it beside the
 cheap checks, in place of `cargo xtask ci`).*
-*Still in force: all of it, `ci.yml`'s "every push" read as R-656 reads it: every push to `main` and every pull-request
-head, a head that changes none of Principia's code (R-662) running plan-check and the vocabulary lint (in
-`ci-workspace`) in place of `cargo xtask ci`, and one that changes only the plan's task data or the GUI's artboards and
-references (R-677) running those and the tests that read what it changed.*
+*Amended in part by R-684 (3 Nov 2026: `ci.yml` runs `cargo xtask ci`, the controls job, on every push to `main` and
+every merge-candidate head, the head carrying the `merge-ready` label; every other pull-request head runs the quick
+tier, the controls job's required check posted pending; applied with R-683's step (2)).*
+*Still in force: all of it but which heads run `cargo xtask ci`: `nightly.yml`, the GUI PRs' screenshots, `gate.yml`
+and bench out of the per-commit `ci`; a head that changes none of Principia's code (R-662) running plan-check and the
+vocabulary lint (in `ci-workspace`) in place of `cargo xtask ci`, and one that changes only the plan's task data or the
+GUI's artboards and references (R-677) running those and the tests that read what it changed, R-677's classifier
+applying before R-684's tiers.*
 *25 Sep 2026 · applied in step 8*
 
 - `ci.yml` runs `cargo xtask ci` on every push, and that includes plan-check.
@@ -2240,9 +2247,12 @@ veto afterwards."
 ## R-235 — `qa_cargo_xtask_alias_runs_deps` uses the listing-only form of `cargo xtask ci`; the controls get their own CI job *(closes RQ-150)*
 *Amended by R-656.*
 *Amended in part by R-677 (2 Nov 2026: "docs-only" reads "runs no full CI", a tier (b) or tier (c) head).*
-*Still in force: all of it; CI's own job runs every control on every push to `main` and every pull-request head but a
-docs-only one, a head of R-677's tier (b) or (c), whose `xtask-ci` shards are skipped, the gate `xtask-ci` passing
-them only on that verdict (R-656).*
+*Amended in part by R-684 (3 Nov 2026: CI's own job runs every control on every push to `main` and every
+merge-candidate head, the head carrying the `merge-ready` label; on any other pull-request head of R-677's code tier,
+the quick tier, `xtask-ci` is posted pending, never skipped-as-success; applied with R-683's step (2)).*
+*Still in force: all of it but which heads run the controls: the listing-only form in `qa_cargo_xtask_alias_runs_deps`;
+the controls in a job of their own beside the tests; a head of R-677's tier (b) or (c), whose `xtask-ci` shards are
+skipped, the gate `xtask-ci` passing them only on that verdict (R-656).*
 *29 Sep 2026 · applied in TASK-M0-22*
 
 "R-235 (RQ-150): option (c). qa_cargo_xtask_alias_runs_deps uses the listing-only form of cargo xtask ci; CI's own step
@@ -29665,9 +29675,12 @@ R-675 is in the "process" group of `plan/rule_groups.yaml`.
 ## R-676 — Mutants run once per approved head, on the `merge-ready` label the merge watcher puts on, and again only when the head changes, `mutants-check` posted pending until then and never passed by a skipped job; fix rounds are checked locally through the job queue before they push; superseded `reviews` runs are cancelled per pull request; `main` is merged into open pull requests in batches; the quick and full tiers of `ci.yml` are not ruled *(amends R-656 and R-305)*
 *Amended in part by R-677 (2 Nov 2026: the one pass posted without a run is a head whose change has no `.rs` file under
 `crates/`, not a docs-only head).*
-*Still in force: all of it but which head's `mutants-check` is posted passed without a run: the `merge-ready` label's
-run, the posted check, the label taken off on a push, fix rounds checked locally, the `reviews` runs cancelled, `main`
-merged in in batches, and the quick and full tiers not ruled.*
+*Amended in part by R-684 (3 Nov 2026: the quick and full tiers of `ci.yml`, not ruled here, are ruled: full CI on
+every merge-candidate head, the one the `merge-ready` label marks, and every push to `main`; the quick tier on every
+other pull-request head; applied with R-683's step (2)).*
+*Still in force: all of it but which head's `mutants-check` is posted passed without a run, and the tiers left unruled:
+the `merge-ready` label's run, the posted check, the label taken off on a push, fix rounds checked locally, the
+`reviews` runs cancelled, and `main` merged in in batches.*
 *2 Nov 2026 · the owner's CI plan of that day; applied in `.github/workflows/mutants.yml`,
 `.github/workflows/reviews.yml`, `xtask/tests/merge_ready.rs` (new), `xtask/tests/ci_changes.rs`,
 `xtask/tests/mutants_no_mutant.rs`, qa's `xtask/tests/qa_ci_throughput_a.rs` (new) and five qa files (below),
@@ -29717,6 +29730,9 @@ for changed crates plus their dependents (target ≤10 min)." Items (3) and (5) 
   the full suite only on the merge-ready head, conflicts with R-110 (the unit, property, numerical-gate and native
   golden suites on every commit), R-177 (`ci.yml` runs `cargo xtask ci` on every push) and R-235 (every control on
   every push), as R-656 and R-662 read them. As the owner asked, the conflict is with him, and `ci.yml` is unchanged.
+  *Ruled by R-684 (3 Nov 2026):* full CI on the merge-candidate head and every push to `main`, the quick tier on every
+  other pull-request head, done as R-683's step (2); the change to R-110, R-177 and R-235 is R-684's, in their
+  forward lines.
 
 *Applied per R-369:*
 - The label is named `merge-ready`, and the merge watcher puts it on with the user's own token, since a label a
@@ -30018,6 +30034,11 @@ The owner's words (3 Nov 2026), verbatim:
 R-682 is in the "process" group of `plan/rule_groups.yaml`.
 
 ## R-683 — The CI speed-up series, after the current CI fixes land: measure first, then five tooling pull requests in order, each with before and after numbers: one test binary per crate, a quick tier on every push, mutants in-diff on the merge-ready head, a bounded dependency cache saved from `main` only, and nightly compiler flags kept only if faster; R-285's amendment approved in principle only, its wording with step (4)'s pull request
+*Amended in part by R-684 (3 Nov 2026: steps (2) and (4) are ruled, still in that order after step (1): step (2)'s
+quick and full tiers by R-684's part (A), step (4)'s cache by its part (B), R-656's approved bound applied to R-285,
+built with `actions/cache` or `rust-cache` (target only), not sccache).*
+*Still in force: all of it; the series, its order and its before and after numbers; R-285's wording still comes with
+step (4)'s pull request.*
 *3 Nov 2026 · the owner's message of that day; ported 3 Nov 2026; applied in `plan/rule_groups.yaml` and
 `plan/section_notes.yaml`; changes no requirement and no ruling in force*
 
@@ -30048,4 +30069,50 @@ fixes, the step's pull request brings the conflict to the owner, as R-676 did fo
 R-110, R-177 and R-235 as R-677 leaves them, step (4) against R-285, and, if it uses sccache, R-666's "off" for the
 job queue, which leaves CI unchanged.
 
+*3 Nov 2026, R-684:* the conflicts flagged above are settled by the owner. Step (2)'s, with R-110, R-177 and R-235 as
+R-677 leaves them, by R-684's part (A), which amends all three. Step (4)'s, with R-285 and R-666, by its part (B), which
+needs no new ruling: R-656's approved bound applied to R-285, a target-only cache by `actions/cache` or `rust-cache`,
+not sccache, so R-666 stands; applied at step (4)'s pull request, R-285 unedited until then.
+
 R-683 is in the "ci" group of `plan/rule_groups.yaml`.
+
+## R-684 — CI's two code tiers: full CI on every merge-candidate head, the one carrying the `merge-ready` label, and on every push to `main`; a quick tier on every other pull-request head (fmt, clippy, build, and the tests of the changed crates and their reverse dependencies), each full-only required check posted pending, never skipped-as-success; R-677's classifier first; done as R-683's step (2), and R-656's bounded target cache, without sccache, as its step (4) *(amends R-110, R-177 and R-235; rules R-676's tiers and R-683's steps (2) and (4))*
+*3 Nov 2026 · the owner's message of that day; ported 3 Nov 2026; applied in the forward lines of R-110, R-177, R-235,
+R-676 and R-683, `plan/rule_groups.yaml` and `plan/section_notes.yaml`; changes no requirement here; built with R-683's
+steps (2) and (4)*
+
+The owner's words (3 Nov 2026), verbatim:
+
+> Rulings to reconcile the CI speed-up conflicts. (A) Quick tier: amend R-110, R-177 and R-235 (and fill R-676's "quick and full tiers not ruled"). Full CI (unit, property, numerical-gate and native golden suites, the controls job, GPU suites where the GPU-path rule applies) runs on every merge-candidate head (the head carrying the merge-ready label, the same trigger mutants uses) and on every push to main. Every other pull-request head runs a QUICK tier: fmt, clippy, build, and tests for changed crates plus reverse dependencies. On a quick-tier run, each full-only required check is posted PENDING, never skipped-as-success, so no PR can merge until the full suite has passed on its exact head. Branch protection unchanged. The R-677 three-tier classifier still applies first (docs and plan-data heads never run either code tier). Add a test that every required check reports in every path: quick, full, label added, label removed, docs, plan-data. Rationale to record: since R-676 fix rounds are verified locally through the job queue, so full CI on intermediate heads duplicated that work; the guarantee that main only receives fully-tested heads is unchanged. (B) Cache: no new ruling needed beyond applying R-656's approved bound to R-285. Build-target cache saved from main only, keyed on Cargo.lock + toolchain, for the 2–3 slowest jobs, evicted to stay well under 10 GB; build it with actions/cache or rust-cache (target only), NOT sccache, so R-666 stands. Report the cache size after a week. Record (A) as the next R-number, quoting this message; do (A) and (B) as steps 2 and 4 of R-683's series, after the test-binary consolidation (step 1).
+
+R-684 records part (A). Part (B) is no new ruling: it applies R-656's approved bound to R-285, and is recorded under
+R-683, step (4).
+
+*What it decides (part (A)):*
+
+- **Full CI.** The unit, property, numerical-gate and native golden suites, the controls job, and the GPU suites where
+  R-656's GPU-path rule applies, run on every merge-candidate head, the head carrying the `merge-ready` label, the
+  trigger mutants uses (R-676), and on every push to `main`.
+- **The quick tier.** Every other pull-request head runs fmt, clippy, the build, and the tests of the changed crates
+  and their reverse dependencies.
+- **Full-only checks are pending on a quick run.** On a quick-tier run, each required check that only the full tier
+  reports is posted pending, never skipped-as-success, so no pull request merges until the full suite has passed on its
+  exact head.
+- **Branch protection is unchanged.**
+- **R-677's classifier applies first.** A docs or plan-data head, R-677's tier (c) or (b), runs neither code tier.
+- **A test that every required check reports in every path:** quick, full, label added, label removed, docs and
+  plan-data. It belongs to step (2)'s pull request, and is not written here.
+- **In R-110, R-177 and R-235**, "every commit" and "every push" for the full suites, the controls and the GPU suites
+  read every push to `main` and every merge-candidate head (their forward lines).
+- **R-676's "the quick and full tiers not ruled" is filled** by the two bullets above on full CI and the quick tier.
+- **R-683's steps (2) and (4) are ruled**, still in that order, after step (1), the test-binary consolidation: step
+  (2) builds part (A), and step (4) part (B).
+
+*The owner's rationale, as given:* since R-676, fix rounds are verified locally through the job queue, so full CI on
+intermediate heads duplicated that work; the guarantee that `main` only receives fully-tested heads is unchanged.
+
+*Part (B), applied at step (4)'s pull request:* a build-target cache saved from `main` only, keyed on `Cargo.lock` and
+the toolchain, for the 2–3 slowest jobs, evicted to stay well under 10 GB, built with `actions/cache` or `rust-cache`
+(target only), not sccache, so R-666 stands; the cache size reported after a week. R-285 is not edited here.
+
+R-684 is in the "ci" group of `plan/rule_groups.yaml`.
