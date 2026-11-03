@@ -1,18 +1,20 @@
-//! R-305: `mutants-check`, a required status check on `main`, reports on every pull request and passes when the PR's
-//! diff has no mutant. A diff that names no `.rs` file (a docs-only or rulings PR) skips each shard's setup and run;
+//! R-305: `mutants-check`, a required status check on `main`, reports on every pull request's merge-ready run (R-656)
+//! and passes when the PR's diff has no mutant. A diff that names no `.rs` file (a docs-only or rulings PR) skips each shard's setup and run;
 //! a diff naming Rust source runs `cargo mutants`, and a shard of it with nothing to mutate passes (REQ-VAL-148).
 //!
-//! These tests run the `mutants` and `mutants-check` jobs of `.github/workflows/mutants.yml` as a runner would, step by
-//! step: each step's `if:` is evaluated (the subset of GitHub's expressions the jobs use), a `uses:` step that runs
-//! is recorded but not executed, and each `run:` script runs in bash with its `${{ … }}` expressions substituted.
-//! The programs the scripts call are stand-ins that log each call: `git diff` prints the test's diff, `cargo`
-//! (for `cargo mutants`) writes no outcomes, as cargo-mutants does when it finds no mutant, and `sudo` and `python3`
-//! do nothing. `cargo xtask` is the built xtask. Each test's control (R-176) runs the same test on a workflow with the
+//! These tests run the `mutants` and `mutants-verdict` jobs of `.github/workflows/mutants.yml` as a runner would, step
+//! by step, on the merge-ready run (the `merge-ready` label's): each step's `if:` is evaluated (the subset of GitHub's
+//! expressions the jobs use), a `uses:` step that runs is recorded but not executed, and each `run:` script runs in
+//! bash with its `${{ … }}` expressions substituted, in its step's `env:`. The programs the scripts call are stand-ins
+//! that log each call: `git diff` prints the test's diff, `cargo` (for `cargo mutants`) writes no outcomes, as
+//! cargo-mutants does when it finds no mutant, `gh` (posting `mutants-check`) finds no check run and posts one, and
+//! `sudo` and `python3` do nothing. `cargo xtask` is the built xtask. Each test's control (R-176) runs the same test on a workflow with the
 //! one step it turns on broken, and trips it by its message.
 //!
 //! A job-level `if:` does not stop a workflow run from reporting the job: skipped, which GitHub counts as passed for a
-//! required check. So the gate is a workflow of its own that only `pull_request` runs, and no other workflow has a
-//! `mutants-check` job, which a `push` run would report skipped (R-305).
+//! required check. So the gate is a workflow of its own that only `pull_request` runs, and no workflow has a
+//! `mutants-check` job, which a `push` run, or a pull request's run without the label, would report skipped (R-305):
+//! the verdict job, `mutants-verdict`, posts `mutants-check` as a check run.
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -103,6 +105,30 @@ fn key(step: &[String], key: &str) -> Option<String> {
     })
 }
 
+/// A step's `env:`, each value's `${{ steps.<id>.outcome }}` read from `state` and any other `${{ … }}` a stand-in.
+fn step_env(step: &[String], state: &State) -> Vec<(String, String)> {
+    let Some(at) = step.iter().position(|l| l.trim_end() == "        env:") else {
+        return Vec::new();
+    };
+    step[at + 1..]
+        .iter()
+        .take_while(|l| l.starts_with("          ") && !l.starts_with("           "))
+        .filter_map(|l| l.trim().split_once(": "))
+        .map(|(k, v)| {
+            let v = v.trim();
+            let value = match v
+                .strip_prefix("${{ steps.")
+                .and_then(|r| r.strip_suffix(".outcome }}"))
+            {
+                Some(id) => state.outcome.get(id).cloned().unwrap_or_default(),
+                None if v.contains("${{") => format!("stand-in-{k}"),
+                None => v.to_owned(),
+            };
+            (k.to_owned(), value)
+        })
+        .collect()
+}
+
 /// A step's script: its `run: |` block, dedented, or its one-line `run:`.
 fn script(step: &[String]) -> Option<String> {
     let run = key(step, "run")?;
@@ -142,6 +168,13 @@ fn operand(s: &str, state: &State) -> String {
     }
     if s == "github.event_name" {
         return "pull_request".to_owned();
+    }
+    // The merge-ready run: the one the `merge-ready` label starts.
+    if s == "github.event.action" {
+        return "labeled".to_owned();
+    }
+    if s == "github.event.label.name" {
+        return "merge-ready".to_owned();
     }
     // A pull request's run is on its merge ref, never `refs/heads/main`, so a cache save (R-326) does not run.
     if s == "github.ref" {
@@ -202,7 +235,7 @@ fn stand_ins(dir: &Path) -> PathBuf {
     let log = "printf '%s\\n' \"$(basename \"$0\") $*\" >> \"$STUB_CALLS\"";
     let git = format!("#!/bin/sh\n{log}\n[ \"$1\" = diff ] && cat \"$STUB_DIFF\"\nexit 0\n");
     write_executable(&bin.join("git"), git).expect("git");
-    for name in ["cargo", "sudo", "python3"] {
+    for name in ["cargo", "sudo", "python3", "gh"] {
         write_executable(&bin.join(name), format!("#!/bin/sh\n{log}\nexit 0\n")).expect(name);
     }
     bin
@@ -282,6 +315,7 @@ fn run_job(
         std::fs::write(&output, "").expect("output");
         let out = Command::new("bash")
             .args(["--noprofile", "--norc", "-eo", "pipefail", "-c", &text])
+            .envs(step_env(step, &state))
             .current_dir(root())
             .env("PATH", &path)
             .env("RUNNER_TEMP", &temp)
@@ -466,16 +500,16 @@ mod never_rust {
 }
 
 // ---------------------------------------------------------------------------------------------------------------
-// The aggregate, `mutants-check`.
+// The aggregate, `mutants-verdict`, which posts `mutants-check`.
 
-/// R-305: `mutants-check` runs whatever the shards' result, so it always reports; with every shard passed and no
-/// shard report (no shard had a mutant, so none uploaded one) it passes, running no check, and with the shards failed,
-/// cancelled or skipped it fails.
+/// R-305: the verdict runs whatever the shards' result, so `mutants-check` always reports; with every shard passed and
+/// no shard report (no shard had a mutant, so none uploaded one) it passes, running no check, and posts
+/// `mutants-check` passed; with the shards failed, cancelled or skipped it fails, and posts it failed.
 fn aggregate_reports_with_no_mutant(yml: &str) {
     for needs in ["success", "failure", "cancelled", "skipped"] {
         let run = run_job(
             yml,
-            "mutants-check",
+            "mutants-verdict",
             &format!("agg_{needs}"),
             DOCS_DIFF,
             needs,
@@ -500,6 +534,20 @@ fn aggregate_reports_with_no_mutant(yml: &str) {
                 run.log
             );
         }
+        let want = if needs == "success" {
+            "success"
+        } else {
+            "failure"
+        };
+        assert!(
+            run.calls
+                .lines()
+                .any(|c| c.starts_with("gh api --method POST")
+                    && c.contains("name=mutants-check")
+                    && c.contains(&format!("conclusion={want}"))),
+            "mutants-check was not posted {want} with the shards {needs}: {}",
+            run.calls
+        );
     }
 }
 
@@ -531,7 +579,7 @@ mod not_always {
     // Read only by the controls.
     #[cfg(feature = "controls")]
     const ALWAYS: &str =
-        "  mutants-check:\n    if: always() && github.event_name == 'pull_request'\n";
+        "  mutants-verdict:\n    if: always() && github.event_name == 'pull_request'";
     negative_control!(
         mutants_check_reports_and_passes_a_pr_with_no_mutant,
         "an aggregate that runs only when every shard passed",
@@ -544,7 +592,7 @@ mod not_always {
             );
             aggregate_reports_with_no_mutant(&yml.replace(
                 ALWAYS,
-                "  mutants-check:\n    if: github.event_name == 'pull_request'\n",
+                "  mutants-verdict:\n    if: github.event_name == 'pull_request'",
             ))
         }
     );
@@ -564,8 +612,9 @@ fn events(yml: &str) -> Vec<String> {
         .collect()
 }
 
-/// R-305: `mutants.yml` runs on `pull_request` alone, and no other workflow has a `mutants-check` job, so the only
-/// `mutants-check` check run on a commit is the pull request's real one, never a skipped one from a `push` run.
+/// R-305: `mutants.yml` runs on `pull_request` alone, and no workflow has a `mutants-check` job, so the only
+/// `mutants-check` check run on a commit is the one `mutants.yml` posts, never a skipped job's from a `push` run or
+/// from a pull request's run without the `merge-ready` label.
 fn only_pull_requests_report(workflows: &[(String, String)]) {
     let (_, mutants) = workflows
         .iter()
@@ -578,8 +627,8 @@ fn only_pull_requests_report(workflows: &[(String, String)]) {
     );
     for (name, yml) in workflows {
         assert!(
-            name == "mutants.yml" || !yml.lines().any(|l| l.trim_end() == "  mutants-check:"),
-            "another workflow, {name}, has a mutants-check job"
+            !yml.lines().any(|l| l.trim_end() == "  mutants-check:"),
+            "a workflow, {name}, has a mutants-check job"
         );
     }
 }
@@ -628,7 +677,7 @@ mod in_ci {
     negative_control!(
         mutants_check_is_reported_by_pull_request_runs_only,
         "ci.yml, which push runs, with a mutants-check job",
-        expected = "another workflow, ci.yml, has a mutants-check job",
+        expected = "a workflow, ci.yml, has a mutants-check job",
         only_pull_requests_report(
             &workflows()
                 .into_iter()
