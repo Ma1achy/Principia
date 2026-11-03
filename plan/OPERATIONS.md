@@ -353,9 +353,15 @@ its branch at once. So if a stack is ever needed, per PR n: `gh pr edit n+1 --ba
 
 **Required checks.** Branch protection is the human's (`plan/HUMAN_SETUP.md` §2); the orchestrator never changes it,
 except for adding `mutants-check`, the one change R-305 allows. The human removed `gpu-kernel` from the required
-checks until #96 (TASK-M0-14) merged, since PRs off `main` never reported it, and required it again since. The required
-checks are `plan/HUMAN_SETUP.md` §2's list, which `xtask/tests/ci_changes.rs` checks every required check against on
-every path (R-678).
+checks until #96 (TASK-M0-14) merged, since PRs off `main` never reported it, and required it again since. The human
+removed `mutants-check` from the required checks on 3 Nov 2026 (R-678): "`mutants-check` is no longer a required check
+on main: I removed it from branch protection because it was hanging merges." His condition for requiring it again:
+"When it's merged and verified on one real PR, tell me and I'll re-add `mutants-check` as required." So once R-678's
+fix (`mutants-check` a job of every `mutants.yml` run) has merged and a real pull request's merge-ready run has
+reported `mutants-check`, the orchestrator tells the human, and he requires it again; until then the merge watcher's
+wait for the merge-ready run's `mutants-check` (§ "Mutants on the merge-ready head") is the only gate on it. The
+required checks are `plan/HUMAN_SETUP.md` §2's list, `mutants-check` among them though `main`'s protection lacks it
+until he re-adds it, which `xtask/tests/ci_changes.rs` checks every required check against on every path (R-678).
 
 **What CI runs on a pull request (R-656, R-662, R-677).** `ci.yml` runs on a push to `main` (and to a `measure/`
 branch, R-272) and, for a pull request, through `pull_request` only, once per push. Each workflow that builds or tests
