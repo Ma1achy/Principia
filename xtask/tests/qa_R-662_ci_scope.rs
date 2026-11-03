@@ -6,6 +6,11 @@
 //! `workbench/` and the root's markdown; an unknown path, a mixed change and a diff that can't be computed run full CI;
 //! the required checks still report and conclude success.
 //!
+//! R-677 (2 Nov 2026) splits R-662's lists into three tiers: the plan's task data and the GUI's artboards and
+//! references become tier (b), which runs no full CI (`docs_only=true`, no GPU suite) and runs their readers' tests
+//! instead; the field check `scripts/ci_req_fields.py` joins the scripts that are code; mutants run only on Rust under
+//! `crates/`. This file changes only where that ruling changes the behaviour it tests (R-677's exception to R-290).
+//!
 //! - `qa_r662_every_tracked_path_classifies_as_the_ruling_says`: every path `git ls-files` lists, against this file's
 //!   own reading of the ruling's lists (`ruling`).
 //! - `qa_r662_unknown_paths_run_everything`: paths the ruling names nowhere, alone and beside a cheap path.
@@ -55,6 +60,16 @@ fn swap(text: &str, from: &str, to: &str) -> String {
     text.replacen(from, to, 1)
 }
 
+/// The one value of `key=` in a classifier's output.
+fn value(text: &str, key: &str) -> String {
+    let lines: Vec<&str> = text
+        .lines()
+        .filter_map(|l| l.strip_prefix(&format!("{key}=")))
+        .collect();
+    assert_eq!(lines.len(), 1, "qa_r662: not one `{key}=` in: {text}");
+    lines[0].to_owned()
+}
+
 fn flags(text: &str) -> (bool, bool) {
     let get = |key: &str| {
         let lines: Vec<&str> = text
@@ -69,6 +84,11 @@ fn flags(text: &str) -> (bool, bool) {
 
 /// The script's `(docs_only, gpu)` on one change of `paths`.
 fn verdict(script: &str, paths: &[&str]) -> (bool, bool) {
+    flags(&verdict_text(script, paths))
+}
+
+/// The script's whole verdict on one change of `paths`.
+fn verdict_text(script: &str, paths: &[&str]) -> String {
     let dir = Scratch::new("qa_r662_classify");
     std::fs::create_dir_all(&*dir).expect("scratch");
     let file = dir.join("ci_changes.sh");
@@ -82,40 +102,55 @@ fn verdict(script: &str, paths: &[&str]) -> (bool, bool) {
         .timed_output()
         .expect("qa_r662: bash ran");
     assert!(out.status.success(), "qa_r662: classify failed");
-    flags(&String::from_utf8_lossy(&out.stdout))
+    String::from_utf8_lossy(&out.stdout).into_owned()
 }
 
 // ---- Every tracked path ------------------------------------------------------------------------------------------
 
-/// R-662's data code loads, its section "The data code loads", and the classifier ("Applied per R-369").
+/// R-662's data code loads, its section "The data code loads", and the classifier ("Applied per R-369"), as R-677
+/// leaves them in the code tier: the requirements (with no copies to compare, the field check can't clear them), the
+/// classifier, its field check and the containment.
 fn data_code_loads(path: &str) -> bool {
+    path == "plan/requirements.yaml"
+        || [
+            "scripts/ci_changes.sh",
+            "scripts/ci_req_fields.py",
+            "scripts/contain.sh",
+        ]
+        .contains(&path)
+}
+
+/// R-677's tier (b): the plan's task data and the GUI's artboards and references, R-662's other data code loads.
+fn tier_b(path: &str) -> bool {
     path.starts_with("docs/gui/design/")
         || path.starts_with("docs/gui/reference/")
         || path.starts_with("plan/tasks/")
-        || [
-            "plan/requirements.yaml",
-            "plan/tasks.yaml",
-            "plan/MILESTONES.md",
-        ]
-        .contains(&path)
-        || ["scripts/ci_changes.sh", "scripts/contain.sh"].contains(&path)
+        || ["plan/tasks.yaml", "plan/MILESTONES.md"].contains(&path)
 }
 
-/// R-662's "only the cheap checks": `docs/`, `plan/`, `scripts/`, `workbench/` and the root's markdown, but that data.
+/// R-662's "only the cheap checks" (R-677's tier c): `docs/`, `plan/`, `scripts/`, `workbench/` and the root's markdown,
+/// but that data.
 fn cheap(path: &str) -> bool {
     let listed = ["docs/", "plan/", "scripts/", "workbench/"]
         .iter()
         .any(|d| path.starts_with(d))
         || (!path.contains('/') && path.ends_with(".md"));
-    listed && !data_code_loads(path)
+    listed && !data_code_loads(path) && !tier_b(path)
 }
 
-/// The verdict the ruling gives one path: `(docs_only, gpu)`. R-656 keeps `crates/gui/` and `crates/prin/` off the GPU
-/// suites, and R-662 keeps the data code loads on them.
-fn ruling(path: &str) -> (bool, bool) {
-    let docs_only = cheap(path);
+/// The verdict the ruling gives one path: `(docs_only, gpu, tier)`. R-656 keeps `crates/gui/` and `crates/prin/` off
+/// the GPU suites, and R-662 keeps the data code loads on them; R-677's tier (b) runs neither full CI nor a GPU suite.
+fn ruling(path: &str) -> (bool, bool, String) {
+    let docs_only = cheap(path) || tier_b(path);
     let no_gpu = docs_only || path.starts_with("crates/gui/") || path.starts_with("crates/prin/");
-    (docs_only, !no_gpu)
+    let tier = if cheap(path) {
+        "docs"
+    } else if tier_b(path) {
+        "data"
+    } else {
+        "code"
+    };
+    (docs_only, !no_gpu, tier.to_owned())
 }
 
 fn tracked() -> Vec<String> {
@@ -212,10 +247,10 @@ fn check_tracked(script: &str, paths: &[String]) {
         .map(String::as_str)
         .filter(|p| cheap(p))
         .collect();
-    assert_eq!(
-        verdict(script, &cheap_paths),
-        (true, false),
-        "qa_r662: the {} paths the ruling gives only the cheap checks are not docs-only together",
+    let out = verdict_text(script, &cheap_paths);
+    assert!(
+        flags(&out) == (true, false) && value(&out, "tier") == "docs",
+        "qa_r662: the {} paths the ruling gives only the cheap checks are not docs-only together:\n{out}",
         cheap_paths.len()
     );
 
@@ -241,11 +276,13 @@ fn check_tracked(script: &str, paths: &[String]) {
     let lines: Vec<&str> = stdout.lines().collect();
     assert_eq!(lines.len(), others.len(), "qa_r662: not one verdict a path");
     for (path, line) in others.iter().zip(lines) {
-        let got = flags(&line.replace(' ', "\n"));
+        let text = line.replace(' ', "\n");
+        let (docs_only, gpu) = flags(&text);
+        let got = (docs_only, gpu, value(&text, "tier"));
         assert_eq!(
             got,
             ruling(path),
-            "qa_r662: {path}: (docs_only, gpu) is {got:?}, the ruling gives {:?}",
+            "qa_r662: {path}: (docs_only, gpu, tier) is {got:?}, the ruling gives {:?}",
             ruling(path)
         );
     }
@@ -259,7 +296,7 @@ fn qa_r662_every_tracked_path_classifies_as_the_ruling_says() {
 negative_control!(
     qa_r662_every_tracked_path_classifies_as_the_ruling_says,
     "the script with the HTML references off its list of data code loads",
-    expected = "the ruling gives (false, true)",
+    expected = "the ruling gives (true, false, \"data\")",
     check_tracked(
         &swap(&script(), "    docs/gui/reference/*) return 0 ;;\n", ""),
         &tracked()
@@ -835,7 +872,8 @@ fn shard_rust(step: &str, repo: &Path, paths: &[&str]) -> bool {
 }
 
 /// (the paths a pull request adds, whether a shard runs on them). Reference sources and the papers' code aren't
-/// Principia's (R-662); a `.rs` anywhere else, one beside them above all, still reaches the gate.
+/// Principia's (R-662); mutants run only when `crates/` source changes (R-677), so only a `.rs` under `crates/`, one
+/// beside the others above all, reaches the gate.
 const SHARD_CASES: &[(&[&str], bool)] = &[
     (&[], false),
     (&["docs/qa_note.md"], false),
@@ -847,19 +885,35 @@ const SHARD_CASES: &[(&[&str], bool)] = &[
     (&["docs/reference/qa/a.rs", "workbench/qa/b.rs"], false),
     (&["crates/kernel/src/qa.rs"], true),
     (&["crates/gui/src/qa.rs"], true),
-    (&["xtask/src/qa.rs"], true),
+    // R-677: Rust outside `crates/` has no per-PR mutants (the nightly run mutates xtask).
+    (&["xtask/src/qa.rs"], false),
     (&["crates/kernel/src/q a.rs"], true),
     (&["crates/kernel/src/\u{e9}.rs"], true),
     // A listed name that isn't the top of the path.
     (&["crates/docs/qa.rs"], true),
     (&["crates/kernel/plan/qa.rs"], true),
-    (&["docsx/qa.rs"], true),
-    (&["newtop/qa.rs"], true),
-    // Mixed, the Rust on either side of the reference source in the diff's order.
+    (&["docsx/qa.rs"], false),
+    (&["newtop/qa.rs"], false),
+    // `crates/` below another folder is not `crates/`.
+    (&["xtask/crates/qa.rs"], false),
+    // Mixed, the Rust under `crates/` on either side of the others in the diff's order.
     (&["crates/kernel/src/qa.rs", "docs/reference/qa/a.rs"], true),
-    (&["docs/reference/qa/a.rs", "zz/qa.rs"], true),
+    (&["docs/reference/qa/a.rs", "zz/crates/qa.rs"], false),
+    (
+        &["docs/reference/qa/a.rs", "zz/qa.rs", "crates/zz/qa.rs"],
+        true,
+    ),
     (
         &["workbench/qa/a.rs", "xtask/src/qa.rs", "plan/qa/a.rs"],
+        false,
+    ),
+    (
+        &[
+            "workbench/qa/a.rs",
+            "xtask/src/qa.rs",
+            "crates/render/src/qa.rs",
+            "plan/qa/a.rs",
+        ],
         true,
     ),
 ];
@@ -911,12 +965,12 @@ fn qa_r662_mutants_shard_skips_only_rust_not_principias() {
 
 negative_control!(
     qa_r662_mutants_shard_skips_only_rust_not_principias,
-    "mutants.yml with `crates/` among the folders whose Rust it ignores",
-    expected = "a shard on [\"crates/kernel/src/qa.rs\"]: rust is not true",
+    "mutants.yml running a shard on xtask's Rust as well as `crates/`'s (R-677)",
+    expected = "a shard on [\"xtask/src/qa.rs\"]: rust is not false",
     check_shard(&swap(
         &read(".github/workflows/mutants.yml"),
-        "b/(docs|plan|scripts|workbench)/",
-        "b/(docs|plan|scripts|workbench|crates)/"
+        "\"?b/crates/.*\\.rs",
+        "\"?b/(crates|xtask)/.*\\.rs"
     ))
 );
 
@@ -932,7 +986,8 @@ fn merged(repo: &Path) -> String {
     git(repo, &["rev-parse", "HEAD"])
 }
 
-fn detect(script: &Path, repo: &Path, sha: &str) -> (bool, bool) {
+/// `detect`'s verdict `(docs_only, gpu, tier)`.
+fn detect(script: &Path, repo: &Path, sha: &str) -> (bool, bool, String) {
     let output = repo.join(".github_output");
     let _ = std::fs::remove_file(&output);
     let out = Command::new("bash")
@@ -952,7 +1007,9 @@ fn detect(script: &Path, repo: &Path, sha: &str) -> (bool, bool) {
         String::from_utf8_lossy(&out.stdout),
         String::from_utf8_lossy(&out.stderr)
     );
-    flags(&std::fs::read_to_string(&output).expect("qa_r662: detect wrote no GITHUB_OUTPUT"))
+    let text = std::fs::read_to_string(&output).expect("qa_r662: detect wrote no GITHUB_OUTPUT");
+    let (docs_only, gpu) = flags(&text);
+    (docs_only, gpu, value(&text, "tier"))
 }
 
 /// What a pull request does to the tree.
@@ -963,7 +1020,8 @@ enum Pr {
     Nothing,
 }
 
-const DETECT_CASES: &[(&str, Pr, (bool, bool))] = &[
+/// (what, the pull request, `(docs_only, gpu, tier)` as the ruling gives it).
+const DETECT_CASES: &[(&str, Pr, (bool, bool, &str))] = &[
     (
         "the plan's Python, a script, the workbench and the root's markdown",
         Pr::Add(&[
@@ -973,58 +1031,62 @@ const DETECT_CASES: &[(&str, Pr, (bool, bool))] = &[
             "decisions.md",
             "docs/qa/b.pdf",
         ]),
-        (true, false),
+        (true, false, "docs"),
     ),
     (
         "a non-ASCII name in the docs",
         Pr::Add(&["docs/\u{e9}.md"]),
-        (true, false),
+        (true, false, "docs"),
     ),
     (
         "a crate's file moved into the docs",
         Pr::Move("docs/moved.rs"),
-        (false, true),
+        (false, true, "code"),
     ),
     (
         "a crate's file deleted",
         Pr::Delete("crates/kernel/src/base.rs"),
-        (false, true),
+        (false, true, "code"),
     ),
-    ("a merge that changes nothing", Pr::Nothing, (false, true)),
+    (
+        "a merge that changes nothing",
+        Pr::Nothing,
+        (false, true, "code"),
+    ),
     (
         "a non-ASCII name in a crate",
         Pr::Add(&["crates/kernel/src/\u{e9}.rs"]),
-        (false, true),
+        (false, true, "code"),
     ),
     (
         "a name git must quote",
         Pr::Add(&["docs/a\tb.md"]),
-        (false, true),
+        (false, true, "code"),
     ),
     (
         "an unknown top-level folder",
         Pr::Add(&["newtop/a.md"]),
-        (false, true),
+        (false, true, "code"),
     ),
     (
         "the classifier",
         Pr::Add(&["scripts/ci_changes.sh"]),
-        (false, true),
+        (false, true, "code"),
     ),
     (
         "a task file",
         Pr::Add(&["plan/tasks/M9/TASK-M9-98.md"]),
-        (false, true),
+        (true, false, "data"),
     ),
     (
         "the requirements beside prose",
         Pr::Add(&["plan/requirements.yaml", "plan/qa.md"]),
-        (false, true),
+        (false, true, "code"),
     ),
     (
         "a workflow",
         Pr::Add(&[".github/workflows/qa.yml"]),
-        (false, true),
+        (false, true, "code"),
     ),
 ];
 
@@ -1053,10 +1115,11 @@ fn check_detect(script_text: &str) {
         }
         commit_all(&repo);
         let sha = merged(&repo);
+        let (docs_only, gpu, tier) = want;
         assert_eq!(
             detect(&file, &repo, &sha),
-            *want,
-            "qa_r662: detect on {what} (docs_only, gpu)"
+            (*docs_only, *gpu, (*tier).to_owned()),
+            "qa_r662: detect on {what} (docs_only, gpu, tier)"
         );
     }
     // A commit that can't be read: the diff can't be computed.
@@ -1064,8 +1127,8 @@ fn check_detect(script_text: &str) {
     base_repo(&repo);
     assert_eq!(
         detect(&file, &repo, "0123456789012345678901234567890123456789"),
-        (false, true),
-        "qa_r662: detect on a commit that isn't there (docs_only, gpu)"
+        (false, true, "code".to_owned()),
+        "qa_r662: detect on a commit that isn't there (docs_only, gpu, tier)"
     );
 }
 

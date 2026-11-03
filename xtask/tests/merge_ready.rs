@@ -8,7 +8,8 @@
 //!   labels, with no filter; its shards, fixture and verdict run only on the `merge-ready` label's run, the verdict
 //!   whatever the shards ended in; no job bears the name `mutants-check`, so no skipped job reports it;
 //!   `mutants-pending` runs on every other run that is not a label's. Its scripts, run under bash with a stand-in `gh`,
-//!   post a new head's `mutants-check` queued, or passed only on a docs-only head, and leave one already there alone; a
+//!   post a new head's `mutants-check` queued, or passed only on a head the classifier finds no `.rs` file under
+//!   `crates/` in (R-677; `mutants=false`, set from the classification), and leave one already there alone; a
 //!   push takes the `merge-ready` label off, a 404 (the label already off) passing and any other error failing; the
 //!   verdict completes every `mutants-check` on the head, success only when the verdict step passed, and posts one if
 //!   there is none. A run on `main` and a run of another label have groups of their own, and only a pull request's runs
@@ -231,20 +232,26 @@ fn check_gate(yml: &str) {
         "merge_ready: mutants.yml cancels runs on `main`, or no pull request's"
     );
 
-    // The new head's `mutants-check`.
-    let post = step(&wf, "mutants-pending", "Post mutants-check on the head")["run"]
-        .as_str()
-        .expect("run");
-    for (docs, count, want) in [
-        ("false", "0", "queued"),
-        ("true", "0", "success"),
-        ("false", "1", "none"),
+    // The new head's `mutants-check`: passed at once only when the classification says the change has no mutant the
+    // gate runs (R-677), queued on any other verdict, an empty one among them.
+    let post_step = step(&wf, "mutants-pending", "Post mutants-check on the head");
+    assert_eq!(
+        text(&post_step["env"]["MUTANTS"]),
+        "${{ steps.changes.outputs.mutants }}",
+        "merge_ready: the new head's mutants-check is not posted on the classification's `mutants`"
+    );
+    let post = post_step["run"].as_str().expect("run");
+    for (mutants, count, want) in [
+        ("true", "0", "queued"),
+        ("false", "0", "success"),
+        ("", "0", "queued"),
         ("true", "1", "none"),
+        ("false", "1", "none"),
     ] {
         let ran = run(
-            &format!("pending_{docs}_{count}"),
+            &format!("pending_{mutants}_{count}"),
             post,
-            &[("DOCS_ONLY", docs), ("STUB_COUNT", count)],
+            &[("MUTANTS", mutants), ("STUB_COUNT", count)],
         );
         let posts: Vec<&str> = ran
             .calls
@@ -259,8 +266,8 @@ fn check_gate(yml: &str) {
         };
         assert!(
             ran.ok && got == want,
-            "merge_ready: posted mutants-check {got}, not {want}, on a head docs-only {docs} with {count} already \
-             there: {} {}",
+            "merge_ready: posted mutants-check {got}, not {want}, on a head with mutants `{mutants}` and {count} \
+             already there: {} {}",
             ran.calls,
             ran.log
         );
@@ -416,6 +423,34 @@ mod passed_unrun {
             "mutants.yml",
             "              -f status=queued\n",
             "              -f status=completed -f conclusion=success\n"
+        ))
+    );
+}
+
+mod passed_on_no_verdict {
+    use super::*;
+    negative_control!(
+        merge_ready_mutants_gate_waits_for_the_label,
+        "a new head's mutants-check posted passed on any verdict but `mutants=true`, an empty one among them",
+        expected = "posted mutants-check success, not queued, on a head with mutants `` and 0",
+        check_gate(&edited(
+            "mutants.yml",
+            "          if [ \"$MUTANTS\" = false ]; then\n",
+            "          if [ \"$MUTANTS\" != true ]; then\n"
+        ))
+    );
+}
+
+mod passed_on_docs_only {
+    use super::*;
+    negative_control!(
+        merge_ready_mutants_gate_waits_for_the_label,
+        "a new head's mutants-check posted on the docs-only verdict, which a plan or xtask-only change also gives",
+        expected = "not posted on the classification's `mutants`",
+        check_gate(&edited(
+            "mutants.yml",
+            "          MUTANTS: ${{ steps.changes.outputs.mutants }}\n",
+            "          MUTANTS: ${{ steps.changes.outputs.docs_only != 'true' }}\n"
         ))
     );
 }
