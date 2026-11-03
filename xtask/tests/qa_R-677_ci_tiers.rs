@@ -24,8 +24,12 @@
 //! - `qa_r677_required_checks_on_every_tier`: `ci.yml`'s jobs walked as GitHub would on each tier's verdict, each
 //!   gate's own script run under bash: every required check of `ci.yml` concludes success on every tier; a data or docs
 //!   verdict runs no shard, build or GPU suite; `ci-workspace` runs, on tier (b), the readers' tests R-677 names (each
-//!   one's test file real), and on tier (c) no test at all; a failing reader turns `ci` red; `mutants.yml`'s fixture
-//!   job skips its work only on `mutants=false`.
+//!   one's test file real), and on tier (c) no test at all; a failing reader turns `ci` red.
+//! - `qa_r677_mutants_fixture_skips_only_on_docs`: `mutants.yml`'s `mutants-fixture`, the gate's self-test, skips its
+//!   work only on a docs verdict (`tier=docs`) and runs all of it on code, with or without Rust under `crates/`, on
+//!   tier (b)'s data and on a classification that says nothing; the classifier gives each of the gate's own files
+//!   (`.cargo/mutants.toml`, `fixtures/mutants/`, `scripts/contain.sh`, `mutants.yml`, xtask's `mutants_check.rs`) a
+//!   verdict it runs on (R-677 as amended after PR #382's code review: tier (a) is "full CI as now").
 //!
 //! Every path under `docs/` these name for the classifier is a made-up one or a directory walker's, so this file is no
 //! reader of a real data file. Each test has its negative control (R-176).
@@ -170,8 +174,14 @@ const DOCS: &[(&str, &str)] = &[
     ("mutants", "false"),
 ];
 
-/// (a change's paths, what its verdict must hold, and whether its mutants run).
-const CASES: &[(&[&str], &[(&str, &str)], bool)] = &[
+/// What a verdict must hold: `(key, value)` pairs.
+type Holds = &'static [(&'static str, &'static str)];
+
+/// A change's paths, what its verdict must hold, and whether its mutants run.
+type Case = (&'static [&'static str], Holds, bool);
+
+/// The cases, each a [`Case`].
+const CASES: &[Case] = &[
     // (a) code, the owner's list. Mutants only for Rust under `crates/`.
     (&["crates/kernel/src/qa.rs"], CODE, true),
     (&["crates/kernel/src/qa.wgsl"], CODE, false),
@@ -781,9 +791,13 @@ fn detect(script: &str, repo: &Path, sha: &str) -> (BTreeMap<String, String>, St
     (parse_verdict(&text), log)
 }
 
+/// A `detect` case: what it is, the head's `plan/requirements.yaml`, the other paths it changes, what its verdict must
+/// hold.
+type DetectCase = (&'static str, String, &'static [&'static str], Holds);
+
 fn check_detect(script: &str) {
     let dir = Scratch::new("qa_r677_detect");
-    let cases: [(&str, String, &[&str], &[(&str, &str)]); 4] = [
+    let cases: [DetectCase; 4] = [
         (
             "a kind edit",
             BASE.replacen("  kind: calibration\n", "  kind: definition\n", 1),
@@ -1130,7 +1144,7 @@ fn verdicts() -> Vec<(&'static str, Vec<(&'static str, &'static str)>)> {
     ]
 }
 
-fn check_required(ci: &str, mutants: &str) {
+fn check_required(ci: &str) {
     let yml = parse(ci);
     for (what, verdict) in verdicts() {
         let w = walk(&yml, &verdict, &[]);
@@ -1244,54 +1258,11 @@ fn check_required(ci: &str, mutants: &str) {
             "qa_r677: the required check `{gate}` is not red when the classification failed"
         );
     }
-
-    // `mutants.yml`'s fixture job: on `mutants=false` it does nothing that costs; on anything else it runs in full.
-    let mutants = parse(mutants);
-    let steps = mutants["jobs"]["mutants-fixture"]["steps"]
-        .as_array()
-        .expect("qa_r677: mutants-fixture's steps");
-    let after = steps
-        .iter()
-        .position(|st| s(&st["id"]) == "changes")
-        .expect("qa_r677: mutants-fixture classifies no change");
-    assert!(
-        after + 1 < steps.len(),
-        "qa_r677: mutants-fixture has no work"
-    );
-    for (outputs, runs_all) in [("false", false), ("true", true), ("", true)] {
-        for st in &steps[after + 1..] {
-            // The artifact upload, which runs whatever happened, costs nothing.
-            if s(&st["uses"]).starts_with("actions/upload-artifact") {
-                continue;
-            }
-            let cond =
-                s(&st["if"]).replace("steps.changes.outputs.mutants", &format!("'{outputs}'"));
-            let runs = if cond.is_empty() {
-                true
-            } else {
-                let (a, b) = cond
-                    .split_once("!=")
-                    .map(|(a, b)| (a.trim().to_owned(), b.trim().to_owned()))
-                    .unwrap_or_else(|| panic!("qa_r677: mutants-fixture's `if: {cond}`"));
-                a != b
-            };
-            assert_eq!(
-                runs,
-                runs_all,
-                "qa_r677: mutants-fixture's step `{}{}` on mutants={outputs:?}",
-                s(&st["name"]),
-                s(&st["uses"])
-            );
-        }
-    }
 }
 
 #[test]
 fn qa_r677_required_checks_on_every_tier() {
-    check_required(
-        &read(".github/workflows/ci.yml"),
-        &read(".github/workflows/mutants.yml"),
-    );
+    check_required(&read(".github/workflows/ci.yml"));
 }
 
 negative_control!(
@@ -1303,9 +1274,7 @@ negative_control!(
             &read(".github/workflows/ci.yml"),
             "        if: needs.changes.outputs.tier == 'data' && needs.changes.outputs.plan_data == 'true'\n        env:\n          NEXTEST_PROFILE: ci\n        run: cargo nextest run -p xtask",
             "        if: needs.changes.outputs.tier == 'code' && needs.changes.outputs.plan_data == 'true'\n        env:\n          NEXTEST_PROFILE: ci\n        run: cargo nextest run -p xtask"
-        ),
-        &read(".github/workflows/mutants.yml")
-    )
+    ))
 );
 
 mod checks_on_data {
@@ -1314,29 +1283,207 @@ mod checks_on_data {
         qa_r677_required_checks_on_every_tier,
         "ci.yml running `ci-checks`, the build and lints, on every tier",
         expected = "the plan's task data ran other jobs",
-        check_required(
-            &swap(
-                &read(".github/workflows/ci.yml"),
-                "  ci-checks:\n    needs: changes\n    if: needs.changes.outputs.docs_only != 'true'\n",
-                "  ci-checks:\n    needs: changes\n"
-            ),
-            &read(".github/workflows/mutants.yml")
+        check_required(&swap(
+            &read(".github/workflows/ci.yml"),
+            "  ci-checks:\n    needs: changes\n    if: needs.changes.outputs.docs_only != 'true'\n",
+            "  ci-checks:\n    needs: changes\n"
+        ))
+    );
+}
+
+// ---- The mutants gate's self-test ----------------------------------------------------------------------------------
+
+/// Verdicts `mutants-fixture` must run its work on, each with what it is: every code verdict, one with no Rust under
+/// `crates/` among them (the gate's own configuration is code, "full CI as now"), tier (b)'s data (code before R-677,
+/// and still run as code was, by R-677 as amended), and a classification that says nothing (failing toward full CI).
+fn fixture_verdicts() -> Vec<(&'static str, Vec<(&'static str, &'static str)>)> {
+    let mut out = verdicts();
+    out.insert(
+        0,
+        (
+            "code with no Rust under crates/",
+            vec![
+                ("tier", "code"),
+                ("docs_only", "false"),
+                ("gpu", "true"),
+                ("plan_data", "false"),
+                ("gui_data", "false"),
+                ("mutants", "false"),
+            ],
+        ),
+    );
+    out.push((
+        "a classification that says nothing",
+        vec![
+            ("tier", ""),
+            ("docs_only", ""),
+            ("gpu", ""),
+            ("plan_data", ""),
+            ("gui_data", ""),
+            ("mutants", ""),
+        ],
+    ));
+    out
+}
+
+/// The gate's own files, each alone, as a pull request would change them: the owner's tier (a) ".cargo/, fixtures/,
+/// … contain.sh" and the workflow and xtask code that run the gate. None is Rust under `crates/`.
+const GATE_FILES: &[&str] = &[
+    ".cargo/mutants.toml",
+    "fixtures/mutants/untested/change.diff",
+    "fixtures/mutants/untested/equivalent.toml",
+    "fixtures/mutants/caps/src/lib.rs",
+    "scripts/contain.sh",
+    ".github/workflows/mutants.yml",
+    "xtask/src/mutants_check.rs",
+];
+
+/// `mutants.yml`'s `mutants-fixture` steps after its classification, on `verdict`: each step's name and whether it
+/// runs, every `steps.changes.outputs.<key>` in its `if:` read from `verdict`. The artifact upload, which runs whatever
+/// happened and costs nothing, is left out.
+fn fixture_runs(yml: &Value, verdict: &[(&str, &str)]) -> Vec<(String, bool)> {
+    let steps = yml["jobs"]["mutants-fixture"]["steps"]
+        .as_array()
+        .expect("qa_r677: mutants-fixture's steps");
+    let after = steps
+        .iter()
+        .position(|st| s(&st["id"]) == "changes")
+        .expect("qa_r677: mutants-fixture classifies no change");
+    let mut out = Vec::new();
+    for st in &steps[after + 1..] {
+        if s(&st["uses"]).starts_with("actions/upload-artifact") {
+            continue;
+        }
+        let mut cond = s(&st["if"]);
+        for (k, v) in verdict {
+            cond = cond.replace(&format!("steps.changes.outputs.{k}"), &format!("'{v}'"));
+        }
+        let runs = cond.trim().is_empty() || Walk::default().eval(&cond) == "true";
+        out.push((format!("{}{}", s(&st["name"]), s(&st["uses"])), runs));
+    }
+    assert!(
+        out.len() >= 2,
+        "qa_r677: mutants-fixture has no work after its classification"
+    );
+    out
+}
+
+/// `mutants-fixture` skips its work only on a docs verdict, and runs all of it on any other; the classifier, `script`,
+/// gives each of the gate's own files a verdict it runs on, and a docs file one it skips on.
+fn check_fixture(mutants: &str, script: &str) {
+    let yml = parse(mutants);
+    for (what, verdict) in fixture_verdicts() {
+        let docs = verdict.contains(&("tier", "docs"));
+        for (step, runs) in fixture_runs(&yml, &verdict) {
+            assert_eq!(
+                runs, !docs,
+                "qa_r677: mutants-fixture's step `{step}` on {what}: runs={runs}, R-677 gives runs={}",
+                !docs
+            );
+        }
+    }
+    for path in GATE_FILES {
+        let got = classify(script, &[path], &[]).verdict;
+        let verdict: Vec<(&str, &str)> =
+            got.iter().map(|(k, v)| (k.as_str(), v.as_str())).collect();
+        for (step, runs) in fixture_runs(&yml, &verdict) {
+            assert!(
+                runs,
+                "qa_r677: mutants-fixture skips `{step}` on a change to the gate's own `{path}` ({got:?})"
+            );
+        }
+    }
+    let got = classify(script, &["docs/qa.md"], &[]).verdict;
+    let verdict: Vec<(&str, &str)> = got.iter().map(|(k, v)| (k.as_str(), v.as_str())).collect();
+    for (step, runs) in fixture_runs(&yml, &verdict) {
+        assert!(
+            !runs,
+            "qa_r677: mutants-fixture runs `{step}` on a docs change"
+        );
+    }
+}
+
+#[test]
+fn qa_r677_mutants_fixture_skips_only_on_docs() {
+    check_fixture(&read(".github/workflows/mutants.yml"), &script());
+}
+
+/// `mutants.yml` with each `mutants-fixture` step's condition replaced by `to`; at least two such steps, so the control
+/// cannot pass vacuously.
+#[cfg(feature = "controls")]
+fn fixture_gated(to: &str) -> String {
+    let text = read(".github/workflows/mutants.yml");
+    let from = "        if: steps.changes.outputs.tier != 'docs'\n";
+    assert!(
+        text.matches(from).count() >= 2,
+        "qa_r677: the control's edit target is gone: {from}"
+    );
+    text.replace(from, &format!("        if: {to}\n"))
+}
+
+mod fixture_on_crates_rust {
+    use super::*;
+    negative_control!(
+        qa_r677_mutants_fixture_skips_only_on_docs,
+        "mutants.yml's fixture steps running only on Rust under crates/, as R-677 was first written",
+        expected = "on code with no Rust under crates/",
+        check_fixture(
+            &fixture_gated("steps.changes.outputs.mutants != 'false'"),
+            &script()
         )
     );
 }
 
-mod fixture_on_docs_only {
+mod fixture_on_code_only {
     use super::*;
     negative_control!(
-        qa_r677_required_checks_on_every_tier,
-        "mutants.yml's fixture job skipping on `docs_only`, as before R-677",
-        expected = "mutants-fixture's step",
-        check_required(
-            &read(".github/workflows/ci.yml"),
-            &read(".github/workflows/mutants.yml").replace(
-                "if: steps.changes.outputs.mutants != 'false'",
-                "if: steps.changes.outputs.docs_only != 'true'"
-            )
+        qa_r677_mutants_fixture_skips_only_on_docs,
+        "mutants.yml's fixture steps running only on tier (a)",
+        expected = "on the plan's task data",
+        check_fixture(
+            &fixture_gated("steps.changes.outputs.tier == 'code'"),
+            &script()
+        )
+    );
+}
+
+mod fixture_on_docs_too {
+    use super::*;
+    negative_control!(
+        qa_r677_mutants_fixture_skips_only_on_docs,
+        "mutants.yml's fixture steps running on every change",
+        expected = "on docs: runs=true",
+        check_fixture(
+            &fixture_gated("steps.changes.outputs.tier != 'none'"),
+            &script()
+        )
+    );
+}
+
+mod fixture_skips_unknown {
+    use super::*;
+    negative_control!(
+        qa_r677_mutants_fixture_skips_only_on_docs,
+        "mutants.yml's fixture steps skipping a classification that says nothing",
+        expected = "on a classification that says nothing",
+        check_fixture(
+            &fixture_gated(
+                "steps.changes.outputs.tier != 'docs' && steps.changes.outputs.tier != ''"
+            ),
+            &script()
+        )
+    );
+}
+
+mod contain_as_docs {
+    use super::*;
+    negative_control!(
+        qa_r677_mutants_fixture_skips_only_on_docs,
+        "the classifier taking scripts/contain.sh for docs",
+        expected = "on a change to the gate's own `scripts/contain.sh`",
+        check_fixture(
+            &read(".github/workflows/mutants.yml"),
+            &swap(&script(), "    scripts/contain.sh) return 0 ;;\n", "")
         )
     );
 }
