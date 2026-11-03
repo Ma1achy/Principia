@@ -1734,3 +1734,30 @@ words, so the task did not wait. The entry is for correcting the text.*
   quads and the `mock_tile_bounds` capture are unchanged, and `k = 4` gives two levels more. A control in
   `f3_fill_modes_quads_finer_only_in_fit` shows the divide-by-`k` rule failing. The three texts are not changed.
 - **Waits:** nothing built waits; REQ-GUI-230's real-engine Fit reads the screen floor, not this formula.
+
+## RQ-685: Which of the four axis kinds a virial-ratio axis is: R-471 H3 says it is not kind 3, the kinds are a closed set, and kind 2 is a scalar inside one block *(silence: R-471 H3; R-506 W2; chart_decoder_contract § "The four axis kinds — a closed set"; context: TASK-M2-37, TASK-M8-18)*
+
+*Queued 3 Nov 2026 by TASK-M2-37. Nothing in TASK-M2-37 waits: the kernel's virial-ratio axis
+(`kernel::chart::physical::AxisVirial`, chart_reference §2.1's new paragraph) decodes and validates, but it has no
+authoring descriptor, so the well-posedness validator cannot take a chart with one and no chart offers it.*
+
+- **File, section:**
+  - `decisions.md`:13867, § "R-471 — …", H3: "The virial ratio and the mass ratio are not kind 3, so B1 stands for
+    them."
+  - `docs/contracts/principia_chart_decoder_contract.md` § "The four axis kinds — a closed set": kind 2 is a "scalar
+    inside one block: `m₀`, `θ`, `φ`", which "inverts into its block"; kind 3 is "`E`, `L_z`, `K`, `KE`, `PE`", which
+    "*solves* into a downstream sector, upstream sectors read as fixed".
+  - `docs/design/principia_chart_reference.md` § "2.1 …", the virial ratio's paragraph: `K* = Q(t)·|U|/2`, using the
+    pixel's own `U`.
+- **The silence:** `Q = 2K/|U|` reads the configuration and the masses (through `U`) and solves into the momenta, as a
+  kind-3 axis does, but H3 says it is not kind 3. It is not inside one block, so it is not kind 2 as written. No kind
+  fits, and the set is closed, so the descriptor a builder chart needs (its kind, the blocks it reads, its downstream
+  check and its feasibility flag) is not given.
+- **The question:** what kind a virial-ratio axis is.
+- **Options seen:** (a) kind 3, with H3 read as being only about B1's extension, which R-506 has since superseded;
+  `InvariantQuantity` then gains the virial ratio, solving into the momenta and reading the configuration and the
+  masses; (b) kind 2 in the momenta, with a note that its inversion reads the upstream blocks; (c) another reading,
+  stated by the owner.
+- **Applied meanwhile:** nothing. The engine's descriptors cover the lone `K`, `KE`, `E` and `L_z` axes and the mass
+  ratio (kind 2 in the masses, its residual the third body's mass), not the virial ratio.
+- **Waits:** the builder's virial-ratio axis (TASK-M8-18).
