@@ -14,12 +14,13 @@ use crate::capture::{shoot, Step};
 use crate::mock::canvas::{CHART_BINDING, LOOK_BINDING, NO_INVALID};
 
 /// The steps that turn View › Debug view on from the keyboard: Tab to the top bar, Enter into it, → to View, Enter to
-/// open it on F3 hide, ↓ to Debug view, Enter.
-pub(super) const DEBUG_VIEW: [Step; 6] = [
+/// open it on F3 hide, ↓ to F3 fills by, ↓ to Debug view, Enter.
+pub(super) const DEBUG_VIEW: [Step; 7] = [
     Step::Tab,
     Step::Enter,
     Step::ArrowRight,
     Step::Enter,
+    Step::ArrowDown,
     Step::ArrowDown,
     Step::Enter,
 ];

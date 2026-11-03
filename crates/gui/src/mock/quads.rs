@@ -2,7 +2,9 @@
 //! applied per R-369, review 5434766412 on PR #157): a quadtree fixed in the plane's own coordinates, refined toward a
 //! fake frontier and where its quads are large on the screen, so a pan or a zoom moves and scales its bounds with the
 //! stand-in. With the overlay set's tile bounds on, the mock draws them into the figure, as the real post node does
-//! (Part II §12.1, Tier 1); the GUI draws nothing over the figure. Placeholder content throughout.
+//! (Part II §12.1, Tier 1); the GUI draws nothing over the figure. Under F3's Fit the figure's screen scale grows by
+//! `k` and the split rule reads each quad's width at that scale, so only Fit refines, about `log₂ k` levels (R-468 E3;
+//! `k = 1` elsewhere). Placeholder content throughout.
 
 use engine::contract::sim_config::{Latent, Plane};
 
@@ -90,10 +92,15 @@ pub fn touches(a: &Quad, b: &Quad) -> bool {
 /// plane is covered by copies of the root, out to [`MAX_ROOT_COPIES`] each way, split by the same rules; a copy's quads are
 /// kept only clear of the shown view, so the shown figure's quads are [`quads`]'s, the layer shown or hidden.
 pub fn quads_over(plane: &Plane, span: [f64; 4]) -> Vec<Quad> {
+    quads_at(plane, span, 1.0)
+}
+
+/// [`quads_over`] at the screen scale `k`: Fit's, 1 elsewhere (R-468 E3).
+pub fn quads_at(plane: &Plane, span: [f64; 4], k: f64) -> Vec<Quad> {
     let Some(shown) = view_of(plane, UNIT) else {
         return Vec::new();
     };
-    leaves_over(plane, span)
+    leaves_over(plane, span, k)
         .into_iter()
         .filter(|(q, copy)| !(*copy && touches(q, &shown)))
         .map(|(q, _)| q)
@@ -101,7 +108,7 @@ pub fn quads_over(plane: &Plane, span: [f64; 4]) -> Vec<Quad> {
 }
 
 /// The leaf quads over `span`, each with whether it is a copy of the root's: the root's first, in [`quads`]'s order.
-fn leaves_over(plane: &Plane, span: [f64; 4]) -> Vec<(Quad, bool)> {
+fn leaves_over(plane: &Plane, span: [f64; 4], k: f64) -> Vec<(Quad, bool)> {
     let (Some(shown), Some(view)) = (view_of(plane, UNIT), view_of(plane, span)) else {
         return Vec::new();
     };
@@ -122,7 +129,9 @@ fn leaves_over(plane: &Plane, span: [f64; 4]) -> Vec<(Quad, bool)> {
         if !overlaps(&q, &view) {
             continue;
         }
-        let frac = (q[2] - q[0]) / width;
+        // The quad's width as a fraction of the figure on the screen: the figure's screen scale grows by `k`, so the
+        // quad's does (R-468 E3: "about log₂ k levels finer").
+        let frac = (q[2] - q[0]) * k / width;
         let split = depth < MIN_DEPTH
             || (depth < MAX_DEPTH
                 && (frac > SPLIT_WIDE || (frac > SPLIT_NEAR && near_frontier(&q))));
@@ -169,11 +178,16 @@ pub fn on_shown(p: [f64; 2]) -> bool {
 /// outside it right up to its edge, and the shown figure is drawn as with the layer shown (R-406). An edge of those
 /// lying wholly on the shown figure draws nothing and is left out.
 pub fn bounds_over(plane: &Plane, span: [f64; 4]) -> Vec<([[f64; 2]; 2], bool)> {
+    bounds_at(plane, span, 1.0)
+}
+
+/// [`bounds_over`] at the screen scale `k`: Fit's, 1 elsewhere (R-468 E3).
+pub fn bounds_at(plane: &Plane, span: [f64; 4], k: f64) -> Vec<([[f64; 2]; 2], bool)> {
     let Some(shown) = view_of(plane, UNIT) else {
         return Vec::new();
     };
     let mut lines = Vec::new();
-    for (q, copy) in leaves_over(plane, span) {
+    for (q, copy) in leaves_over(plane, span, k) {
         let corners = [(q[0], q[1]), (q[2], q[1]), (q[2], q[3]), (q[0], q[3])];
         let points: Option<Vec<[f64; 2]>> = corners.iter().map(|c| on_figure(plane, *c)).collect();
         let Some(points) = points else {

@@ -21487,6 +21487,8 @@
   - R-406
   - R-468
   milestone: M6
+  rq:
+  - RQ-666
   note: "R-468 (20 Oct 2026), E1 to E6. Closed by TASK-M6-47. The real engine's Fit is REQ-GUI-230. Gui review 5585209592 of PR #253 (applied per R-369): G6, frac = quad width / (shown figure width × k), k = 1 outside Fit, so only Fit refines; G7, keyboard reach. R-472 (20 Oct 2026): X2's \"remembered\" is read as R-468 E4's \"for the session\" (flagged); present mode following the mode is now the human's words (X2c); the sidecar's f3_fill is REQ-TOOL-168."
 - id: REQ-GUI-230
   area: GUI
@@ -31143,6 +31145,8 @@
     section: "R-202 — A surviving mutant fails the per-PR job unless it is a listed, justified equivalent *(closes RQ-139)*"
   - file: decisions.md
     section: "R-302 — Per-PR mutation runs are sharded across parallel CI jobs; the nightly full run is the backstop *(closes RQ-176; amends R-196)*"
+  - file: decisions.md
+    section: "R-676 — Mutants run once per approved head, on the `merge-ready` label the merge watcher puts on, and again only when the head changes, `mutants-check` posted pending until then and never passed by a skipped job; fix rounds are checked locally through the job queue before they push; superseded `reviews` runs are cancelled per pull request; `main` is merged into open pull requests in batches; the quick and full tiers of `ci.yml` are not ruled *(amends R-656 and R-305)*"
   verify:
     detail: "code: the `mutants.yml` workflow runs `cargo mutants --in-diff` against the PR's base on pull_request events as a matrix of n shards, each `--shard k/n` with its own timeout, and a shard cut off by its timeout fails the job (R-302); each exclusion names which of R-196's three categories it falls in; code and qa: each entry in the equivalent-mutants list carries a one-line justification and both reviewers approve it (R-202); qa: the checklist line (every surviving mutant in the diff is a finding, killed or justified as equivalent); the job can fire: on a fixture crate whose diff adds an untested branch it reports a surviving mutant and fails, with the test added it reports none, and with that mutant in the equivalent-mutants list it passes"
     method: review checklist
@@ -31151,7 +31155,9 @@
   - R-198
   - R-202
   - R-302
+  - R-676
   milestone: M0
+  note: "R-676: a pull request's run is on its merge-ready head, the run the `merge-ready` label starts once every reviewer its task names has approved that head, and again only if the head changes; `mutants-check` is pending until then, and a docs-only head, with no mutant, passes at once (R-662)."
 - id: REQ-VAL-149
   area: VAL
   kind: calibration

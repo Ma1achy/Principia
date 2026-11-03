@@ -1,6 +1,7 @@
 //! The Gemini review's single request and quota chain (decisions.md R-659): `scripts/gemini_review.py`, run for real
-//! against a local stand-in for the Gemini API. Each case scripts the API's replies per model and checks which models
-//! were asked, how many requests were made, and the review that came out. Each test has a registered negative control
+//! against a local stand-in for the Gemini API. Each case scripts the API's model list and its replies per model, and
+//! checks which models were asked, how many requests were made, and the review that came out. The chain is built from
+//! the model list; unless a case says otherwise, the list names the owner's four models. Each test has a registered negative control
 //! (R-176): the same check run on a copy of the script with the behaviour under test edited out of it.
 
 use std::collections::HashMap;
@@ -95,6 +96,27 @@ fn hang() -> Reply {
     Reply(HANG, String::new())
 }
 
+/// One page of the model list: each name with the methods it supports, and the next page's token if any.
+fn models_page(models: &[(&str, &[&str])], next: Option<&str>) -> Reply {
+    let models: Vec<Value> = models
+        .iter()
+        .map(|(name, methods)| json!({"name": format!("models/{name}"), "supportedGenerationMethods": methods}))
+        .collect();
+    let mut body = json!({ "models": models });
+    if let Some(token) = next {
+        body["nextPageToken"] = json!(token);
+    }
+    Reply(200, body.to_string())
+}
+
+const GENERATE: &[&str] = &["generateContent", "countTokens"];
+
+/// The model list most cases use: the owner's four, each able to generateContent.
+fn chain_listing() -> Vec<Reply> {
+    let models: Vec<(&str, &[&str])> = CHAIN.iter().map(|m| (*m, GENERATE)).collect();
+    vec![models_page(&models, None)]
+}
+
 /// What the stand-in API saw: each request's model, and its parsed body and key header.
 #[derive(Clone)]
 struct Seen {
@@ -103,20 +125,31 @@ struct Seen {
     key: String,
 }
 
+/// A model-list request the stand-in saw: its path and query, and its key header.
+#[derive(Clone)]
+struct Listed {
+    target: String,
+    key: String,
+}
+
+/// The stand-in's script and logs.
+struct Api {
+    script: Mutex<HashMap<String, Vec<Reply>>>,
+    /// The model list's pages, served in order to each `GET .../models`; with none left, a 500.
+    listing: Mutex<Vec<Reply>>,
+    seen: Mutex<Vec<Seen>>,
+    lists: Mutex<Vec<Listed>>,
+}
+
 /// Answers each POST with the next scripted reply for its model; a model with none left answers 404.
-fn serve(listener: TcpListener, script: HashMap<String, Vec<Reply>>, seen: Arc<Mutex<Vec<Seen>>>) {
-    let script = Arc::new(Mutex::new(script));
+fn serve(listener: TcpListener, api: Arc<Api>) {
     for stream in listener.incoming() {
         let Ok(stream) = stream else { return };
-        handle(stream, &script, &seen);
+        handle(stream, &api);
     }
 }
 
-fn handle(
-    mut stream: TcpStream,
-    script: &Mutex<HashMap<String, Vec<Reply>>>,
-    seen: &Mutex<Vec<Seen>>,
-) {
+fn handle(mut stream: TcpStream, api: &Api) {
     let mut raw = Vec::new();
     let mut chunk = [0_u8; 65536];
     let split = loop {
@@ -145,19 +178,33 @@ fn handle(
         raw.extend_from_slice(&chunk[..n]);
     }
     let path = head.split_whitespace().nth(1).unwrap_or("").to_owned();
+    if head.starts_with("GET ") {
+        api.lists.lock().expect("the list log").push(Listed {
+            target: path,
+            key: header("x-goog-api-key").unwrap_or_default(),
+        });
+        let mut listing = api.listing.lock().expect("the listing");
+        let reply = if listing.is_empty() {
+            error(500, "INTERNAL")
+        } else {
+            listing.remove(0)
+        };
+        respond(&mut stream, &reply);
+        return;
+    }
     let model = path
         .split("/models/")
         .nth(1)
         .and_then(|p| p.split(':').next())
         .unwrap_or("")
         .to_owned();
-    seen.lock().expect("the log").push(Seen {
+    api.seen.lock().expect("the log").push(Seen {
         model: model.clone(),
         body: serde_json::from_slice(&raw[split..]).unwrap_or(Value::Null),
         key: header("x-goog-api-key").unwrap_or_default(),
     });
     let reply = {
-        let mut script = script.lock().expect("the script");
+        let mut script = api.script.lock().expect("the script");
         match script.get_mut(&model) {
             Some(replies) if !replies.is_empty() => replies.remove(0),
             _ => error(404, "NOT_FOUND"),
@@ -167,6 +214,10 @@ fn handle(
         while matches!(stream.read(&mut chunk), Ok(n) if n > 0) {}
         return;
     }
+    respond(&mut stream, &reply);
+}
+
+fn respond(stream: &mut TcpStream, reply: &Reply) {
     let response = format!(
         "HTTP/1.1 {} X\r\ncontent-type: application/json\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{}",
         reply.0,
@@ -180,8 +231,10 @@ fn handle(
 
 /// One full run: `review`, then `build`.
 struct Run {
-    /// The model of each request, in order.
+    /// The model of each generateContent request, in order.
     asked: Vec<String>,
+    /// Every model-list request.
+    lists: Vec<Listed>,
     /// Every request, its body and key.
     requests: Vec<Seen>,
     result: Value,
@@ -238,20 +291,26 @@ fn path(p: &Path) -> String {
     p.to_str().expect("a UTF-8 path").to_owned()
 }
 
-/// A stand-in API on a local port, serving `replies`, and its log of what it saw.
-fn start_api(replies: &[(&str, Vec<Reply>)]) -> (u16, Arc<Mutex<Vec<Seen>>>) {
+/// A stand-in API on a local port, serving `listing` and `replies`, and its log of what it saw.
+fn start_api(listing: Vec<Reply>, replies: &[(&str, Vec<Reply>)]) -> (u16, Arc<Api>) {
     let listener = TcpListener::bind("127.0.0.1:0").expect("a local port");
     let port = listener.local_addr().expect("its address").port();
-    let seen = Arc::new(Mutex::new(Vec::new()));
-    let script: HashMap<_, _> = replies
-        .iter()
-        .map(|(m, r)| ((*m).to_owned(), r.clone()))
-        .collect();
+    let api = Arc::new(Api {
+        script: Mutex::new(
+            replies
+                .iter()
+                .map(|(m, r)| ((*m).to_owned(), r.clone()))
+                .collect(),
+        ),
+        listing: Mutex::new(listing),
+        seen: Mutex::new(Vec::new()),
+        lists: Mutex::new(Vec::new()),
+    });
     {
-        let seen = Arc::clone(&seen);
-        std::thread::spawn(move || serve(listener, script, seen));
+        let api = Arc::clone(&api);
+        std::thread::spawn(move || serve(listener, api));
     }
-    (port, seen)
+    (port, api)
 }
 
 /// The script with the fake key, the stand-in's address and no real waits.
@@ -287,11 +346,21 @@ fn build_args(dir: &Path) -> Vec<String> {
     ]
 }
 
-/// Runs `script_source` with `replies` per model and a `diff` of the given bytes.
+/// Runs `script_source` with `replies` per model, the owner's four listed, and a `diff` of the given bytes.
 fn run_case(script_source: &str, replies: &[(&str, Vec<Reply>)], diff: &[u8]) -> Run {
+    run_listed(script_source, chain_listing(), replies, diff)
+}
+
+/// Runs `script_source` with the model list's pages `listing`, `replies` per model and a `diff` of the given bytes.
+fn run_listed(
+    script_source: &str,
+    listing: Vec<Reply>,
+    replies: &[(&str, Vec<Reply>)],
+    diff: &[u8],
+) -> Run {
     let dir = tempdir();
     let (script_path, review_args) = review_inputs(&dir, script_source, diff);
-    let (port, seen) = start_api(replies);
+    let (port, api) = start_api(listing, replies);
     let result_path = dir.join("result.json");
     let run = |args: &[String]| {
         let out = script_command(&script_path, port, args)
@@ -317,10 +386,12 @@ fn run_case(script_source: &str, replies: &[(&str, Vec<Reply>)], diff: &[u8]) ->
         serde_json::from_str(&text).expect("JSON")
     };
     let (result, inline, flat) = (load(&result_path), load(&inline_path), load(&flat_path));
-    let requests = seen.lock().expect("the log").clone();
+    let requests = api.seen.lock().expect("the log").clone();
+    let lists = api.lists.lock().expect("the list log").clone();
     std::fs::remove_dir_all(&dir).ok();
     Run {
         asked: requests.iter().map(|s| s.model.clone()).collect(),
+        lists,
         requests,
         result,
         inline,
@@ -436,11 +507,11 @@ fn gemini_review_a_daily_quota_moves_down_the_chain_in_order_and_stamps_who_answ
 
 negative_control!(
     gemini_review_a_daily_quota_moves_down_the_chain_in_order_and_stamps_who_answered,
-    "the chain's middle steps swapped",
+    "the chain's newest-first order taken out, so the middle steps swap",
     expected = "gemini_review: the chain is not the owner's order",
     check_daily_moves_on_in_order(&script_text().replacen(
-        "\"gemini-3-flash\", \"gemini-2.5-flash\",",
-        "\"gemini-2.5-flash\", \"gemini-3-flash\",",
+        "name not in PREFERENCE, newest_first, name)",
+        "name not in PREFERENCE, name)",
         1
     ))
 );
@@ -615,6 +686,332 @@ negative_control!(
     ))
 );
 
+// ---- The model list -------------------------------------------------------------------------------------------
+
+/// Every listed model refuses with a daily quota, so the run asks each model in the chain once, in order.
+fn all_daily(models: &[&str]) -> Vec<(String, Vec<Reply>)> {
+    models
+        .iter()
+        .map(|m| ((*m).to_owned(), vec![daily()]))
+        .collect()
+}
+
+fn borrowed(replies: &[(String, Vec<Reply>)]) -> Vec<(&str, Vec<Reply>)> {
+    replies
+        .iter()
+        .map(|(m, r)| (m.as_str(), r.clone()))
+        .collect()
+}
+
+const COUNT_ONLY: &[&str] = &["countTokens"];
+
+fn check_chain_from_list(script: &str) {
+    // Two pages. The second holds a newer flash model outside the owner's chain; the list also has a flash model that
+    // can't generateContent, a preview, a TTS variant, a dated build, a pro model and an embedding model.
+    let first: &[(&str, &[&str])] = &[
+        ("gemini-2.5-flash-lite", GENERATE),
+        ("gemini-2.5-pro", GENERATE),
+        ("gemini-3-flash", COUNT_ONLY),
+        ("gemini-3.9-flash-preview-05-2026", GENERATE),
+        ("gemini-2.5-flash-preview-tts", GENERATE),
+    ];
+    let second: &[(&str, &[&str])] = &[
+        ("gemini-3.5-flash", GENERATE),
+        ("gemini-2.0-flash-001", GENERATE),
+        ("gemini-2.5-flash", GENERATE),
+        ("gemini-3.8-flash", GENERATE),
+        ("text-embedding-004", &["embedContent"]),
+    ];
+    let listing = vec![
+        models_page(first, Some("page two")),
+        models_page(second, None),
+    ];
+    let everything = [
+        "gemini-2.5-flash-lite",
+        "gemini-2.5-pro",
+        "gemini-3-flash",
+        "gemini-3.9-flash-preview-05-2026",
+        "gemini-2.5-flash-preview-tts",
+        "gemini-3.5-flash",
+        "gemini-2.0-flash-001",
+        "gemini-2.5-flash",
+        "gemini-3.8-flash",
+    ];
+    let replies = all_daily(&everything);
+    let run = run_listed(script, listing, &borrowed(&replies), SMALL_DIFF);
+    assert_eq!(
+        run.lists.len(),
+        2,
+        "gemini_review: the model list's second page wasn't read"
+    );
+    assert!(
+        run.lists[1].target.contains("pageToken=page%20two"),
+        "gemini_review: the second page wasn't asked for by its token: {}",
+        run.lists[1].target
+    );
+    assert!(
+        run.lists
+            .iter()
+            .all(|l| l.key == KEY && !l.target.contains(KEY)),
+        "gemini_review: the list request didn't carry the key in its header alone"
+    );
+    assert_eq!(
+        run.asked,
+        [
+            "gemini-3.8-flash",
+            "gemini-2.5-flash",
+            "gemini-3.5-flash",
+            "gemini-2.5-flash-lite"
+        ],
+        "gemini_review: the chain isn't the listed models in the stated order"
+    );
+    assert!(
+        run.printed.contains(
+            "Models the key lists for generateContent (8): `gemini-2.5-flash-lite`, `gemini-2.5-pro`, \
+             `gemini-3.9-flash-preview-05-2026`, `gemini-2.5-flash-preview-tts`, `gemini-3.5-flash`, \
+             `gemini-2.0-flash-001`, `gemini-2.5-flash`, `gemini-3.8-flash`."
+        ),
+        "gemini_review: the listed model names aren't logged: {}",
+        run.printed
+    );
+    assert_eq!(
+        run.result["listed"].as_array().map(Vec::len),
+        Some(8),
+        "gemini_review: the result doesn't keep the list"
+    );
+
+    // Five usable models: the chain keeps four, the first choice first wherever its version sorts, -lite last.
+    let five: Vec<(&str, &[&str])> = [
+        "gemini-2.5-flash-lite",
+        "gemini-4-flash",
+        "gemini-3-flash",
+        "gemini-10-flash",
+        "gemini-3.8-flash",
+    ]
+    .iter()
+    .map(|m| (*m, GENERATE))
+    .collect();
+    let replies = all_daily(&five.iter().map(|(m, _)| *m).collect::<Vec<_>>());
+    let capped = run_listed(
+        script,
+        vec![models_page(&five, None)],
+        &borrowed(&replies),
+        SMALL_DIFF,
+    );
+    assert_eq!(
+        capped.asked,
+        [
+            "gemini-3.8-flash",
+            "gemini-3-flash",
+            "gemini-10-flash",
+            "gemini-4-flash"
+        ],
+        "gemini_review: five usable models don't make a chain of the stated four"
+    );
+
+    // Previews come in only when no other flash model is listed.
+    let previews: &[(&str, &[&str])] = &[
+        ("gemini-3.9-flash-lite-preview", GENERATE),
+        ("gemini-2.0-flash-exp", GENERATE),
+        ("gemini-3.9-flash-preview-05-2026", GENERATE),
+    ];
+    let replies = all_daily(&previews.iter().map(|(m, _)| *m).collect::<Vec<_>>());
+    let preview_only = run_listed(
+        script,
+        vec![models_page(previews, None)],
+        &borrowed(&replies),
+        SMALL_DIFF,
+    );
+    assert_eq!(
+        preview_only.asked,
+        [
+            "gemini-3.9-flash-preview-05-2026",
+            "gemini-2.0-flash-exp",
+            "gemini-3.9-flash-lite-preview"
+        ],
+        "gemini_review: a list of previews alone doesn't make the chain"
+    );
+}
+
+#[test]
+fn gemini_review_the_chain_is_built_from_the_key_s_model_list_in_the_stated_order() {
+    check_chain_from_list(&script_text());
+}
+
+negative_control!(
+    gemini_review_the_chain_is_built_from_the_key_s_model_list_in_the_stated_order,
+    "-lite no longer sorted last",
+    expected = "gemini_review: the chain isn't the listed models in the stated order",
+    check_chain_from_list(&script_text().replacen(
+        "(name != PREFERENCE[0], match[\"lite\"] is not None,",
+        "(name != PREFERENCE[0], False,",
+        1
+    ))
+);
+
+fn check_unlisted_never_requested(script: &str) {
+    // The first choice isn't listed, and the owner's second can't generateContent; both would answer if asked.
+    let listing = vec![models_page(
+        &[
+            ("gemini-3-flash", COUNT_ONLY),
+            ("gemini-2.5-flash", GENERATE),
+        ],
+        None,
+    )];
+    let run = run_listed(
+        script,
+        listing,
+        &[
+            (CHAIN[0], vec![answer(CLEAN, CHAIN[0])]),
+            (CHAIN[1], vec![answer(CLEAN, CHAIN[1])]),
+            (CHAIN[2], vec![daily()]),
+        ],
+        SMALL_DIFF,
+    );
+    assert_eq!(
+        run.asked,
+        [CHAIN[2]],
+        "gemini_review: a model the list doesn't offer for generateContent was requested"
+    );
+    // A list with no usable model makes no request, and the note says why.
+    let none = run_listed(
+        script,
+        vec![models_page(&[("gemini-2.5-pro", GENERATE)], None)],
+        &[(CHAIN[0], vec![answer(CLEAN, CHAIN[0])])],
+        SMALL_DIFF,
+    );
+    assert!(
+        none.asked.is_empty(),
+        "gemini_review: a list with no usable model still made a request: {:?}",
+        none.asked
+    );
+    assert!(
+        none.body()
+            .starts_with("Gemini unavailable, review skipped")
+            && none
+                .body()
+                .contains("names no flash model the review can use"),
+        "gemini_review: a list with no usable model isn't reported: {}",
+        none.body()
+    );
+}
+
+#[test]
+fn gemini_review_a_model_the_list_does_not_name_is_never_requested() {
+    check_unlisted_never_requested(&script_text());
+}
+
+negative_control!(
+    gemini_review_a_model_the_list_does_not_name_is_never_requested,
+    "the chain taken from the preference list, whatever the key lists",
+    expected = "gemini_review: a model the list doesn't offer for generateContent was requested",
+    check_unlisted_never_requested(&script_text().replacen(
+        "chain = build_chain(listed)",
+        "chain = list(PREFERENCE)",
+        1
+    ))
+);
+
+fn check_list_failure(script: &str) {
+    for (listing, why) in [
+        (vec![error(500, "INTERNAL")], "HTTP 500 INTERNAL"),
+        (vec![Reply(200, "not json".to_owned())], "HTTP 200"),
+        // A next page that fails fails the whole list.
+        (
+            vec![models_page(&[(CHAIN[1], GENERATE)], Some("t"))],
+            "HTTP 500 INTERNAL",
+        ),
+    ] {
+        let run = run_listed(
+            script,
+            listing,
+            &[(CHAIN[0], vec![daily()]), (CHAIN[1], vec![daily()])],
+            SMALL_DIFF,
+        );
+        assert_eq!(
+            run.asked,
+            [CHAIN[0]],
+            "gemini_review: a failed list doesn't fall back to the first choice alone"
+        );
+        assert!(
+            run.printed.contains(&format!(
+                "The model list failed ({why}); trying the first choice, `{}`, alone.",
+                CHAIN[0]
+            )),
+            "gemini_review: a failed list isn't stated in the summary: {}",
+            run.printed
+        );
+        assert!(
+            run.body()
+                .starts_with("Gemini quota exhausted, review skipped"),
+            "gemini_review: the fallback's outcome isn't reported as before: {}",
+            run.body()
+        );
+    }
+}
+
+#[test]
+fn gemini_review_a_failed_model_list_falls_back_to_the_first_choice_alone() {
+    check_list_failure(&script_text());
+}
+
+negative_control!(
+    gemini_review_a_failed_model_list_falls_back_to_the_first_choice_alone,
+    "a failed list falls back to the whole preference list",
+    expected = "gemini_review: a failed list doesn't fall back to the first choice alone",
+    check_list_failure(&script_text().replacen(
+        "chain = [PREFERENCE[0]]",
+        "chain = list(PREFERENCE)",
+        1
+    ))
+);
+
+fn check_list_pages(script: &str) {
+    // A list of exactly MAX_LIST_PAGES pages is read whole; one page more is a failed list.
+    let pages = |count: usize| -> Vec<Reply> {
+        (0..count)
+            .map(|i| {
+                let next = format!("p{}", i + 1);
+                let name = if i == 0 { CHAIN[2] } else { "gemini-2.5-pro" };
+                models_page(
+                    &[(name, GENERATE)],
+                    (i + 1 < count).then_some(next.as_str()),
+                )
+            })
+            .collect()
+    };
+    let replies = [(CHAIN[0], vec![daily()]), (CHAIN[2], vec![daily()])];
+    let at_cap = run_listed(script, pages(10), &replies, SMALL_DIFF);
+    assert_eq!(
+        (at_cap.lists.len(), at_cap.asked.clone()),
+        (10, vec![CHAIN[2].to_owned()]),
+        "gemini_review: a list of ten pages isn't read whole"
+    );
+    let over = run_listed(script, pages(11), &replies, SMALL_DIFF);
+    assert_eq!(
+        (over.lists.len(), over.asked.clone()),
+        (10, vec![CHAIN[0].to_owned()]),
+        "gemini_review: a list past ten pages isn't stopped and called failed"
+    );
+    assert!(
+        over.printed
+            .contains("The model list failed (more than 10 pages)"),
+        "gemini_review: a list past the page cap isn't stated"
+    );
+}
+
+#[test]
+fn gemini_review_the_model_list_is_read_to_ten_pages_and_no_further() {
+    check_list_pages(&script_text());
+}
+
+negative_control!(
+    gemini_review_the_model_list_is_read_to_ten_pages_and_no_further,
+    "the page cap moved by one",
+    expected = "gemini_review: a list past ten pages isn't stopped and called failed",
+    check_list_pages(&script_text().replacen("MAX_LIST_PAGES = 10", "MAX_LIST_PAGES = 11", 1))
+);
+
 // ---- Skipped reviews ------------------------------------------------------------------------------------------
 
 fn check_exhausted(script: &str) {
@@ -750,7 +1147,8 @@ fn killed_during(
 ) -> (Option<Value>, Value) {
     let dir = tempdir();
     let (script_path, review_args) = review_inputs(&dir, script, SMALL_DIFF);
-    let (port, seen) = start_api(replies);
+    let (port, api) = start_api(chain_listing(), replies);
+    let seen = &api.seen;
     let mut child = script_command(&script_path, port, &review_args)
         .stdout(Stdio::null())
         .stderr(Stdio::null())

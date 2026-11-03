@@ -6,8 +6,10 @@
 //! scope 1, its controls the sub-scopes Enter reaches, in the order they are drawn; Enter on one acts as its click.
 //! Each menu's entries are the menu's own sub-scopes: Enter opens it on its first entry, the arrows move between
 //! them, Enter on one acts as its click, and Esc closes the menu, back to its control. View holds F3 hide and, after
-//! it, Debug view, a check entry: one undoable `SetField` on `RenderState`'s `debug_view` per toggle, as an Overlays ▾
-//! toggle is (R-467 D5, R-69).
+//! it the row F3 fills by: Extend / Fit, two radio options, `ViewUI`'s and so never an edit (R-468 E4), then Debug view,
+//! a check entry: one undoable `SetField` on `RenderState`'s `debug_view` per toggle, as an Overlays ▾ toggle is
+//! (R-467 D5, R-69). The row is a scope of the menu, Enter going into its options, ← → moving between them and Enter on
+//! one choosing it.
 
 use eframe::egui::containers::menu::MenuButton;
 use eframe::egui::{
@@ -16,7 +18,7 @@ use eframe::egui::{
 use engine::contract::render_state::Overlays;
 use engine::contract::set_field::{Edit, RenderField, SetField};
 use engine::contract::snapshot::Snapshot;
-use engine::contract::view_ui::{KeyMode, Mode};
+use engine::contract::view_ui::{F3Fill, KeyMode, Mode};
 
 use crate::app::Actions;
 use crate::keyboard::scopes::{Scope, ScopeId, ScopeTree};
@@ -44,7 +46,13 @@ const MENUS: [ScopeId; 5] = ["file", "view", "windows", "overlays", "help"];
 pub const QUIT: (ScopeId, &str) = ("file_quit", "Quit");
 /// View's entry that hides the layer, as F3 does.
 pub const HIDE: (ScopeId, &str) = ("view_hide", "F3 hide");
-/// View's check entry that switches the figure to the debug view (R-467 D5), after F3 hide.
+/// View's row that chooses how the figure fills the window with the layer hidden (R-468 E4), after F3 hide.
+pub const FILL_ROW: (ScopeId, &str) = ("view_f3_fill", "F3 fills by:");
+/// The row's option Extend, the default.
+pub const FILL_EXTEND: (ScopeId, &str) = ("view_f3_fill_extend", "Extend");
+/// The row's option Fit.
+pub const FILL_FIT: (ScopeId, &str) = ("view_f3_fill_fit", "Fit");
+/// View's check entry that switches the figure to the debug view (R-467 D5), after the row.
 pub const DEBUG_VIEW: (ScopeId, &str) = ("view_debug", "Debug view");
 /// View's entry that returns every splitter to 01_main.png's layout, after F3 hide (R-462 J3; §G2's View menu).
 pub const RESET_LAYOUT: (ScopeId, &str) = ("view_reset_layout", "reset layout");
@@ -75,6 +83,10 @@ pub fn register(tree: &mut ScopeTree) {
     }
     tree.register(Some("file"), Scope::control(QUIT.0, QUIT.1));
     tree.register(Some("view"), Scope::control(HIDE.0, HIDE.1));
+    tree.register(Some("view"), Scope::group(FILL_ROW.0, FILL_ROW.1).row());
+    for option in [FILL_EXTEND, FILL_FIT] {
+        tree.register(Some(FILL_ROW.0), Scope::control(option.0, option.1));
+    }
     tree.register(Some("view"), Scope::control(DEBUG_VIEW.0, DEBUG_VIEW.1));
     tree.register(Some("view"), Scope::control(RESET_LAYOUT.0, RESET_LAYOUT.1));
     for (id, name) in WINDOW_ENTRIES.into_iter().zip(WINDOWS) {
@@ -92,6 +104,8 @@ pub fn activate(id: &str, actions: &mut Actions) {
         "stain" => actions.mode = Some(Mode::Stain),
         id if id == QUIT.0 => actions.quit = true,
         id if id == HIDE.0 => actions.toggle_layer = true,
+        id if id == FILL_EXTEND.0 => actions.f3_fill = Some(F3Fill::Extend),
+        id if id == FILL_FIT.0 => actions.f3_fill = Some(F3Fill::Fit),
         id if id == DEBUG_VIEW.0 => actions.debug_view = true,
         id if id == RESET_LAYOUT.0 => actions.reset_layout = true,
         id if id == KEYS.0 => actions.shortcuts = true,
@@ -164,6 +178,8 @@ pub struct TopBar<'a> {
     pub breadcrumb: &'a str,
     /// The keyboard's mode, which the breadcrumb's colour shows (R-409 A6).
     pub keys: KeyMode,
+    /// How the figure fills the window with the layer hidden, which View's row marks.
+    pub f3_fill: F3Fill,
 }
 
 /// Draws the top bar in `rect`, recording what its controls ask for in `actions` and where they are in `keyboard`.
@@ -204,6 +220,17 @@ pub fn show(
             actions.toggle_layer = true;
         }
         keyboard.place_widget(HIDE.0, &hide);
+        let row = ui.horizontal(|ui| {
+            ui.label(FILL_ROW.1);
+            for (option, this) in [(FILL_EXTEND, F3Fill::Extend), (FILL_FIT, F3Fill::Fit)] {
+                let radio = ui.radio(bar_state.f3_fill == this, option.1);
+                if radio.clicked() {
+                    actions.f3_fill = Some(this);
+                }
+                keyboard.place_widget(option.0, &radio);
+            }
+        });
+        keyboard.place_widget(FILL_ROW.0, &row.response);
         // A check entry: it shows the contract's state, and a click asks for the toggle (R-467 D5).
         let mut on = snapshot.render.debug_view;
         let debug = ui.checkbox(&mut on, DEBUG_VIEW.1);
