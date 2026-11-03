@@ -41,12 +41,14 @@ on:
 # A newer push to the same ref supersedes an older run, so the older run on that ref is cancelled: a push cancels the
 # merge-ready run on the head it supersedes. On `main` each run has a group of its own (its run id), so no run there is
 # ever cancelled or queued behind another (applied per R-369). A pull request's runs share one group, its merge ref's,
-# but for a run started by any label other than `merge-ready`, put on or taken off: that run only reports
-# `mutants-check`, and has a group of its own (its run id), so it never cancels the merge-ready run. Taking
-# `merge-ready` off cancels its run.
+# but for a run started by any label other than `merge-ready`, put on or taken off, and a run started by reopening the
+# pull request: such a run changes no head, only reports `mutants-check`, and has a group of its own (its run id), so it
+# never cancels the merge-ready run (reopening a merge-ready pull request mid-run would otherwise cancel that run, and
+# every later `mutants-check` on the head would read its cancelled verdict). Taking `merge-ready` off cancels its run.
 concurrency:
   group: >-
     mutants-${{ github.event_name }}-${{ (github.ref == 'refs/heads/main'
+    || github.event.action == 'reopened'
     || ((github.event.action == 'labeled' || github.event.action == 'unlabeled')
     && github.event.label.name != 'merge-ready'))
     && github.run_id || github.ref }}

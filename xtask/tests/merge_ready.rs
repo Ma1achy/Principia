@@ -14,8 +14,8 @@
 //!   push's included; and on another label put on or taken off a merge-ready head, the verdict of its latest merge-ready
 //!   run, waited for while it runs, failing with none, or on a head a push has superseded. `merge-ready-off` runs on a
 //!   push alone and takes the label off, a 404 (the label already off) passing and any other error failing. A run on
-//!   `main` and a run of another label, put on or taken off, have groups of their own, and only a pull request's runs
-//!   are cancelled.
+//!   `main`, a run of another label, put on or taken off, and a reopened pull request's run have groups of their own,
+//!   and only a pull request's runs are cancelled.
 //! - `merge_ready_reviews_runs_cancel_per_pr_and_event`: `reviews.yml` keeps one cancelling group per pull request and
 //!   event, never cancelling on `main`; `reviews-complete` still runs on every run; and the re-run of the stale
 //!   `pull_request` run (R-276), run under bash with a stand-in `gh`, re-runs it on the live head and leaves a
@@ -482,6 +482,11 @@ fn check_gate(yml: &str) {
             && group.contains("&& github.run_id || github.ref"),
         "merge_ready: mutants.yml's group does not keep `main`'s runs and other labels' runs apart: `{group}`"
     );
+    // A reopened pull request's run changes no head: in the ref's group it would cancel the merge-ready run.
+    assert!(
+        group.contains("(github.ref == 'refs/heads/main' || github.event.action == 'reopened' || ("),
+        "merge_ready: a reopened pull request's run shares the merge-ready run's group, so it cancels it: `{group}`"
+    );
     assert_eq!(
         text(&wf["concurrency"]["cancel-in-progress"]),
         "${{ github.ref != 'refs/heads/main' }}",
@@ -774,6 +779,20 @@ mod other_labels_cancel {
             "mutants.yml",
             "(github.event.action == 'labeled' || github.event.action == 'unlabeled')",
             "github.event.action == 'labeled'"
+        ))
+    );
+}
+
+mod reopened_cancels {
+    use super::*;
+    negative_control!(
+        merge_ready_mutants_gate_waits_for_the_label,
+        "a reopened pull request's run in the ref's group, so reopening mid-run cancels the merge-ready run",
+        expected = "a reopened pull request's run shares the merge-ready run's group",
+        check_gate(&edited(
+            "mutants.yml",
+            "    || github.event.action == 'reopened'\n",
+            ""
         ))
     );
 }
