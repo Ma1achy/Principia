@@ -278,8 +278,19 @@ where
     R: LinkReal + PayloadReal + WarpReal + From<P>,
     P: Copy,
 {
+    decode_theta_k_lz(chart, u, v, R::zero())
+}
+
+/// [`decode_theta_k`] with the construction at the held `L_z = lz` in place of 0, the chart's hidden coordinate
+/// (R-633; `super::construction`).
+#[inline]
+pub fn decode_theta_k_lz<R, P>(chart: &BurrauThetaK<P>, u: R, v: R, lz: R) -> (Decoded<R>, Outcome)
+where
+    R: LinkReal + PayloadReal + WarpReal + From<P>,
+    P: Copy,
+{
     let nu = chart.nu(u);
-    let mut blocks = BurrauBlocks::new(embed(nu), burrau::seed(nu), R::zero(), chart.kinetic(v));
+    let mut blocks = BurrauBlocks::new(embed(nu), burrau::seed(nu), lz, chart.kinetic(v));
     let decoded = decode::decode_with(&mut blocks, &unread().z);
     (decoded, blocks.outcome())
 }
@@ -466,8 +477,19 @@ where
     R: LinkReal + PayloadReal + WarpReal + From<P>,
     P: Copy,
 {
+    decode_theta_lz_k(chart, u, v, chart.kinetic())
+}
+
+/// [`decode_theta_lz`] with the construction at `K* = k`, the held `K` tilted (R-633; `super::construction`), `L_z(v)`
+/// the chart's own band, at its `K`.
+#[inline]
+pub fn decode_theta_lz_k<R, P>(chart: &BurrauThetaLz<P>, u: R, v: R, k: R) -> (Decoded<R>, Outcome)
+where
+    R: LinkReal + PayloadReal + WarpReal + From<P>,
+    P: Copy,
+{
     let nu = chart.nu(u);
-    let mut blocks = BurrauBlocks::new(embed(nu), burrau::seed(nu), chart.lz(v), chart.kinetic());
+    let mut blocks = BurrauBlocks::new(embed(nu), burrau::seed(nu), chart.lz(v), k);
     let decoded = decode::decode_with(&mut blocks, &unread().z);
     (decoded, blocks.outcome())
 }

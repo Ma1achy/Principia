@@ -1,6 +1,6 @@
-//! Tilt and slice on the charts that hold their blocks by latent controls (R-473 T1 to T6, J1 to J8; R-474 K1 to K3;
-//! R-507 U1, U2; R-554, ruling RQ-471 (a); R-633's split; chart_decoder_contract Part 4, § "Tilt (basis edit)", "Tilt
-//! on every chart").
+//! Tilt and slice on every chart (R-473 T1 to T6, J1 to J8; R-474 K1 to K3; R-507 U1, U2; R-554, ruling RQ-471 (a);
+//! R-633; chart_decoder_contract Part 4, § "Tilt (basis edit)", "Tilt on every chart"): the path, and the charts that
+//! hold their blocks by latent controls; those that hold one by a physical construction are `super::construction`'s.
 //!
 //! **The rotation** ([`TiltSpec::columns`]). The stored angles `τ₁`, `τ₂` (degrees, as set), the targets `X`, `Y` and
 //! the map give `R`'s two columns `R·e_a` and `R·e_b` in the space `(a, b, d_X, d_Y)`:
@@ -34,9 +34,10 @@
 //! added to that control, the link's pre-image, never to the physical value, so a mass tilt keeps every pixel's masses
 //! positive and summing to 1 (T3, C7). The index is the chart's to read, so a chart whose hidden coordinate is a
 //! physical value (R-633's construction charts, R-554 L5's `p_λ`) names it with an index of its own and adds `d` to that
-//! value in its own [`Tiltable::decode_shifted`]: the path is this one. Slicing sets a hidden coordinate's value at the
-//! centre ([`Hidden::sliced`], T6); on these charts every value of a latent control is a system, so no slice reaches an
-//! edge.
+//! value in its own [`Tiltable::decode_shifted`]: the path is this one. A cell whose tilted physical value leaves no
+//! system is refused ([`Tiltable::refusal`]): the view's `validate` rejects it and its area weight is 0
+//! ([`Tilted::weight`]). Slicing sets a hidden coordinate's value at the centre ([`Hidden::sliced`], T6); on these
+//! charts every value of a latent control is a system, so no slice reaches an edge.
 //!
 //! **On the latent chart** the tilt is the decoder's basis edit, with no scale (T2; R-507 U2): [`latent_basis`], the
 //! columns placed on the axes `e_a`, `e_b` and the targets, turned by `γ` and scaled by `σ` as the GUI's `View::basis`
@@ -63,7 +64,7 @@
 use spirv_std::num_traits::{Float, FloatConst};
 
 use super::shape_sphere::{PixelCount, ShapeMap, ShapeSphere};
-use super::{Chart, ChartDecode, ChartOut, SystemImage, ValidationResult};
+use super::{Chart, ChartDecode, ChartOut, Constraint, SystemImage, ValidationResult};
 use crate::decode::{self, Decoded};
 use crate::generated::links::{LinkParams, LinkReal, Selection};
 use crate::payload::PayloadReal;
@@ -550,6 +551,21 @@ pub struct Shift<R> {
     pub two: bool,
 }
 
+impl<R: Float> Shift<R> {
+    /// No offset: its targets name no coordinate (`u32::MAX`), so [`shift_controls`] and a chart's own physical
+    /// coordinates take it with no arithmetic.
+    #[inline]
+    pub fn none() -> Self {
+        Shift {
+            x: u32::MAX,
+            dx: R::zero(),
+            y: u32::MAX,
+            dy: R::zero(),
+            two: false,
+        }
+    }
+}
+
 impl<P: Copy> Tilt<P> {
     /// `(Δa, Δb, d_X, d_Y) = ũ·R·e_a + ṽ·R·e_b` for the offsets `(ũ, ṽ)` from the centre, each hidden offset scaled by
     /// its slider span (R-507 U1).
@@ -590,9 +606,9 @@ impl<P: Copy> Tilt<P> {
     }
 }
 
-/// One latent control `z`, index `k`, with `shift`'s offsets added where it is a target.
+/// One hidden coordinate's value `z`, index `k`, with `shift`'s offsets added where it is a target.
 #[inline]
-fn shifted<R: Float>(z: R, k: u32, shift: &Shift<R>) -> R {
+pub(super) fn shifted<R: Float>(z: R, k: u32, shift: &Shift<R>) -> R {
     let z = if shift.x == k { z + shift.dx } else { z };
     if shift.two && shift.y == k {
         z + shift.dy
@@ -635,6 +651,25 @@ pub trait Tiltable: Hidden {
     where
         S: Selection,
         R: LinkReal + PayloadReal + From<Self::Param>;
+
+    /// The check at the chart point `(a, b)` with `shift` added to the hidden coordinates at the slice centre, at the
+    /// tunable parameters `p`: by default the chart's own, every value of a latent control being a system; a chart
+    /// whose hidden coordinate is a physical value adds [`Tiltable::refusal`] (R-633).
+    fn validate_shifted(
+        &self,
+        a: f64,
+        b: f64,
+        _shift: &Shift<f64>,
+        p: &LinkParams<f64>,
+    ) -> ValidationResult {
+        self.validate_params(a, b, p)
+    }
+
+    /// The constraint the cell at `(a, b)` fails with `shift` added, a cell its tilted physical value leaves no system
+    /// (R-633: `K < L_z²/2I` on the Burrau charts), refused, its area weight 0; none on a latent control.
+    fn refusal(&self, _a: f64, _b: f64, _shift: &Shift<f64>) -> Option<Constraint> {
+        None
+    }
 }
 
 /// A chart and its tilt (the module's note): pixel `(u, v)` decodes at the tilted `(a, b)` with the hidden offsets.
@@ -713,8 +748,9 @@ where
         self.chart.requires_per_pixel_mass() || (self.tilt.on && tilted)
     }
 
-    /// The chart's check on the tilted `(a, b)`, where its axes' types act (X3a); a failure is reported as refused,
-    /// since a projected or clamped `(a, b)` names no point of the tilted view.
+    /// The chart's check on the tilted `(a, b)` with the hidden offsets ([`Tiltable::validate_shifted`]), where its
+    /// axes' types act (X3a); a failure is reported as refused, since a projected or clamped `(a, b)` names no point of
+    /// the tilted view.
     fn validate(&self, u: f64, v: f64) -> ValidationResult {
         self.validate_params(u, v, &LinkParams::DEFAULT)
     }
@@ -723,7 +759,7 @@ where
     fn validate_params(&self, u: f64, v: f64, p: &LinkParams<f64>) -> ValidationResult {
         match self.at(u, v) {
             (_, None) => self.chart.validate_params(u, v, p),
-            ([a, b], Some(_)) => match self.chart.validate_params(a, b, p) {
+            ([a, b], Some(shift)) => match self.chart.validate_shifted(a, b, &shift, p) {
                 ValidationResult::Valid => ValidationResult::Valid,
                 ValidationResult::Project { failed, .. }
                 | ValidationResult::Clamp { failed, .. }
@@ -757,6 +793,21 @@ where
         match self.at(u, v) {
             ([a, b], Some(shift)) => self.chart.decode_shifted::<S, R>(a, b, &shift, p),
             (_, None) => self.chart.decode_params::<S, R>(u, v, p),
+        }
+    }
+}
+
+impl<C: Tiltable<Param = P>, P: Copy> Tilted<C, P>
+where
+    f64: From<P>,
+{
+    /// The area weight of the pixel at `(u, v)`: the tilt's ([`TiltSpec::area_weight`]), or 0 where the chart refuses
+    /// the cell at its hidden offsets, no system ([`Tiltable::refusal`]; R-633).
+    pub fn weight(&self, u: f64, v: f64) -> f64 {
+        let ([a, b], shift) = self.at(u, v);
+        match self.chart.refusal(a, b, &shift.unwrap_or(Shift::none())) {
+            Some(_) => 0.0,
+            None => f64::from(self.tilt.weight),
         }
     }
 }

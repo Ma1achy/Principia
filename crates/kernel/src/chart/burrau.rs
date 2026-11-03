@@ -477,8 +477,19 @@ where
     R: LinkReal + PayloadReal + WarpReal + From<P>,
     P: Copy,
 {
+    decode_lz(chart, u, v, R::zero())
+}
+
+/// [`decode()`] with the construction at the held `L_z = lz` in place of 0, the chart's hidden coordinate (R-633;
+/// `super::construction`).
+#[inline]
+pub fn decode_lz<R, P>(chart: &Burrau<P>, u: R, v: R, lz: R) -> (Decoded<R>, Outcome)
+where
+    R: LinkReal + PayloadReal + WarpReal + From<P>,
+    P: Copy,
+{
     let nu = chart.nu(u);
-    let mut blocks = BurrauBlocks::new(embed(nu), seed(nu), R::zero(), chart.kinetic(v));
+    let mut blocks = BurrauBlocks::new(embed(nu), seed(nu), lz, chart.kinetic(v));
     let decoded = decode::decode_with(&mut blocks, &unread().z);
     (decoded, blocks.outcome())
 }
