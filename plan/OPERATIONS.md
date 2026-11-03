@@ -388,8 +388,10 @@ taking the highest (R-677):
 - **no GPU-path file** (only data and docs paths, `crates/gui/` and `crates/prin/`): the GPU suites' jobs (`gpu-kernel
   suites`, `gpu-metal suites`, `gpu-lavapipe suites`) are skipped; everything else runs;
 - **no `.rs` file under `crates/`** (`mutants=false`; the owner, 2 Nov 2026: "Mutants run only when crates/ source
-  changes, on the merge-ready head"): `mutants-check` is posted passed at once, `mutants-fixture` skips its steps and
-  `mutants`' shards find no `.rs` file under `crates/` and pass. xtask's own code is mutated by the nightly full run.
+  changes, on the merge-ready head"): `mutants-check` is posted passed at once and `mutants`' shards find no `.rs` file
+  under `crates/` and pass. xtask's own code is mutated by the nightly full run. `mutants-fixture`, the gate's
+  self-test on its fixtures, skips its steps only on a docs change, tier (c) (`tier=docs`), so a change to the gate's
+  configuration (`.cargo/mutants.toml`, `fixtures/mutants/`, `scripts/contain.sh`, `mutants.yml`) runs it.
 `docs_only`, the name R-656 gave the verdict, is true on a tier (b) or (c) change, so the skips and gates kept it.
 
 Every required check still reports under its own name and concludes success, so the merge step is unchanged:

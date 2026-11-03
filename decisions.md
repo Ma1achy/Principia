@@ -29350,9 +29350,14 @@ and about 17:30, while it was being built:
   (`principia_colour_explorer.html`), each against its reference. `xtask/tests/ci_changes.rs` checks that every reader
   its scan of the sources finds, and every directory walker it lists by hand, is among those tests.
 - **Mutants run only when `crates/` source changes.** A change with no `.rs` file under `crates/` (`mutants=false`) has
-  its `mutants-check` posted passed at once, as R-676 posted a docs-only head's; `mutants-fixture` skips its steps, and
-  each shard finds no `.rs` file under `crates/` in its diff and passes. Any other head's gate runs on the merge-ready
-  head, R-676's label gate unchanged.
+  its `mutants-check` posted passed at once, as R-676 posted a docs-only head's, and each shard finds no `.rs` file
+  under `crates/` in its diff and passes. Any other head's gate runs on the merge-ready head, R-676's label gate
+  unchanged. `mutants-fixture`, which mutates no part of the pull request but shows on its fixtures that the gate can
+  still fire, skips its steps only on a tier (c) change (`tier=docs`), as R-656 skipped it on a docs-only one: a change
+  to the gate's own configuration (`.cargo/mutants.toml`, `fixtures/mutants/`, `scripts/contain.sh`, the pinned
+  cargo-mutants in `mutants.yml`, xtask's `mutants-check`) is tier (a), "full CI as now", and runs it, and tier (b)'s
+  data, which R-662 counted as code, runs it as before (applied per R-369, after the code review of PR #382).
+  *Was (R-677 as first written):* "`mutants-fixture` skips its steps" on a change with no `.rs` file under `crates/`.
 - **The required checks still report** under their own names, each concluding success only where the tier allows: the
   gates `ci` and `xtask-ci` pass a skipped job only on a data or docs verdict, the GPU gates only on a verdict with no
   GPU-path file, and `ci` gathers `ci-workspace`, which runs tier (b)'s tests, so a failing reader turns it red.
