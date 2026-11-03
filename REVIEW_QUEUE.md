@@ -1860,19 +1860,24 @@ it is physics, the two rulings give different results on one chart.*
   validate (E3), or may cells be refused (c2)?
 - **Options seen:** (a) E3 holds: on `(ν, K)` and `Φ_θ,K` the `K` warp takes the pixel's own held `L_z` (its floor
   `L_z²/2I`); on `Φ_θ,L_z`, whose `L_z` axis is not that warp but `docs/design/principia_chart_reference.md` § 4.5's
-  linear band `L_z(v) = (2v − 1)·λ_L·L_max(K)`, `L_max(K) = √(2IK)` is taken at the pixel's own tilted held `K`. c2's
-  refusal is then reached only under the linear option if the floored warp is additive, such as
-  `K = L_z²/2I + K_max·t^γ`; a form that keeps `K ≤ K_max` still has no feasible pixel once `L_z²/2I > K_max`, so the
-  form is part of the option; (b) c2 holds: refused cells occur under tilt, warped or not, and REQ-CHART-061's
-  arm on those charts counts a refused cell as not a failure (E3 and REQ-CHART-067 read as covering masses and shape);
-  (c) another, stated by the owner.
+  linear band `L_z(v) = (2v − 1)·λ_L·L_max(K)`, `L_max(K) = √(2IK)` is taken at the pixel's own tilted held `K`. On
+  `(ν, K)` and `Φ_θ,K`, c2's refusal is then reached only under the linear option if the floored warp is additive, such
+  as `K = L_z²/2I + K_max·t^γ`; a form that keeps `K ≤ K_max` still has no feasible pixel once `L_z²/2I > K_max`, so the
+  form is part of the option. On `Φ_θ,L_z` the tilt moves the held `K` itself (`K = K_centre + d`, `d = span·d̃`,
+  `crates/kernel/src/chart/tilt.rs`:555-564), and the band gives `L_z²/2I = (2v − 1)²·λ_L²·K ≤ K` for every `K ≥ 0`
+  (`v ∈ [0, 1]`, `λ_L ∈ (0, 1]`, § 4.5); so there a tilt that drives the held `K` below 0 (`d < −K_centre`) is refused
+  under either option and whatever the floor form, as `√(2IK)` has no value and §2.2's construction has none ("`K ≥ 0`
+  always", `decisions.md`:18628). Open within (a), not chosen: whether the held `K`'s tilt on `Φ_θ,L_z` is bounded or
+  warped to stay at or above 0 (which would give E3 there too), or those cells stay refused (compare RQ-679 (a), where
+  the held `K`'s range at that `L_z` has 0 as its lower end); (b) c2 holds: refused cells occur under tilt, warped or
+  not, and REQ-CHART-061's arm on those charts counts a refused cell as not a failure (E3 and REQ-CHART-067 read as
+  covering masses and shape); (c) another, stated by the owner.
 - **Applied meanwhile:** TASK-M2-52 builds c2 now, as R-633 words it (its refused-cell arm), and is reworked under (a)
   (applied per R-369 by the orchestrator: TASK-M2-52 is not held; it proceeds on the corpus as written).
-- **Waits:** TASK-M2-38 (REQ-CHART-061's tilted Burrau `K` arm); TASK-M2-52's rework under (a) (it proceeds
-  meanwhile, above), as it builds c2's refusal, option (b): its
-  Deliverables' refused cell (`plan/tasks/M2/TASK-M2-52.md`:32, "on the three Burrau charts, a cell whose tilted value
-  leaves no momentum construction (`K < L_z²/2I`, §2.2's terminal case) is no system") and `tilt_every_chart`'s arm
-  (:37) "cells with `K < L_z²/2I` refused … and every other cell
+- **Waits:** TASK-M2-38 (REQ-CHART-061's tilted Burrau `K` arm); TASK-M2-52's rework under (a) (it proceeds meanwhile,
+  above), as it builds c2's refusal, option (b): its Deliverables' refused cell (`plan/tasks/M2/TASK-M2-52.md`:32, "on
+  the three Burrau charts, a cell whose tilted value leaves no momentum construction (`K < L_z²/2I`, §2.2's terminal
+  case) is no system") and `tilt_every_chart`'s arm (:37) "cells with `K < L_z²/2I` refused … and every other cell
   valid", with its control, on the warped `(ν, K)` and `Φ_θ,K`. Under (a) that `K` decode and that test change.
 
 ## RQ-679: The slider span of `ν₀`, the held `L_z` and the held `K`, which R-507 U1 divides a hidden offset by, while § G2's Slice centre lists only the eight latent sliders *(a definition requirement, R-72, and a value, R-71; R-507 U1; R-633; render_gui_spec § G2; context: TASK-M8-48, TASK-M2-52)*
@@ -1924,11 +1929,11 @@ it is physics, the two rulings give different results on one chart.*
   dilation rate)".
 - **The gap:** which charts are "each target chart" for the one projection: SM1's targets are the prototype's, two of
   them with an axis the app does not define.
-- **Options seen:** (a) the targets are the app's charts, through `encode_into` and `curve::nearest`, SM1's dilation rows
-  and REQ-COL-113's, -115's and -129's θ × h and ν × h read as the prototype's record. (a) leaves REQ-COL-129's
+- **Options seen:** (a) the targets are the app's charts, through `encode_into` and `curve::nearest`, SM1's dilation
+  rows and REQ-COL-113's, -115's and -129's θ × h and ν × h read as the prototype's record. (a) leaves REQ-COL-129's
   `θ × h` and `ν × h` tolerances, and TASK-M7-47's arms on them, without a target, so it drops requirement content and
-  is the owner's call; (b) define the two dilation charts
-  (their `h` axis, range and link) and build them as targets; (c) another, stated by the owner.
+  is the owner's call; (b) define the two dilation charts (their `h` axis, range and link) and build them as targets;
+  (c) another, stated by the owner.
 - **Applied meanwhile:** nothing.
 - **Waits:** TASK-M7-52 (and TASK-M7-47's `θ × h` and `ν × h` arms through it).
 
@@ -1969,6 +1974,6 @@ it is physics, the two rulings give different results on one chart.*
   (c) `ref_*`, the state RQ-660 found `L_cat` matches, or `pub_*` with the drift reported (on the 16 rows above, more
   than refinement drift: up to 2.8e-1 relative in E); and a tolerance per row from its printed digits, or one tolerance
   with the coarse rows reported apart, or an absolute tolerance on L (most `L_cat` are numerically zero, 3,107 in
-  exponent form at most 4.84e-5 in magnitude and 402 reading 0.0, where a count of printed digits means nothing).
+  exponent form at most 4.84147e-5 in magnitude and 402 reading 0.0, where a count of printed digits means nothing).
 - **Applied meanwhile:** nothing.
 - **Waits:** TASK-M9-01; TASK-M3-27 for (a).
