@@ -12,8 +12,9 @@
 //! What these tests hold to: every shard k of 0..n runs, and no other; a shard cut off by its limit, or failed, or one
 //! that tested nothing and did not say so with exit 0, fails and is named; and the aggregate verdict fails when any
 //! shard was cut off or failed, and reads every shard's report, so a survivor in any shard is named. The aggregate is
-//! the job `mutants-verdict`, which posts its verdict as the required check `mutants-check` (R-656, the merge-ready
-//! run: no job bears that name, which a run skipping it would report passed).
+//! the job `mutants-verdict`, whose result the job `mutants-check`, the required check, reports whatever it ended in
+//! (R-678, 3 Nov 2026: a job of every run of `mutants.yml`, no longer a check run the verdict posts; that is the one
+//! change here, R-678's exception to R-290).
 //!
 //! The workflow's shell steps are executed here in bash, with their `${{ … }}` expressions substituted and the
 //! programs they call stood in for (a stand-in `cargo` for `cargo mutants`; the built xtask for `cargo xtask`), so the
@@ -490,7 +491,7 @@ fn aggregate_covers_every_shard(script: &str, n: u32) {
     );
 }
 
-/// The aggregate verdict job, which posts `mutants-check`.
+/// The aggregate verdict job, whose result `mutants-check` reports.
 const AGGREGATE: &str = "mutants-verdict";
 
 fn aggregate_script() -> String {
@@ -534,8 +535,8 @@ mod first_shard_only {
 }
 
 /// R-302: the aggregate job waits for the shards (`needs: mutants`) and runs whatever they did (`always()`), on pull
-/// requests, and downloads every shard's report; and a step of it that also runs whatever happened (`always()`) posts
-/// the verdict as the required check `mutants-check` (R-305).
+/// requests, and downloads every shard's report; and the job `mutants-check`, the required check (R-305), waits for it
+/// (`needs: mutants-verdict`), runs whatever it ended in (`if: always()`) and reads its result (R-678).
 fn aggregate_runs_after_every_shard(yml: &str) {
     let lines = job(yml, AGGREGATE);
     let has = |s: &str| {
@@ -558,13 +559,21 @@ fn aggregate_runs_after_every_shard(yml: &str) {
         has("pattern: mutants-report-shard-*"),
         "qa23s: the aggregate does not download every shard's report"
     );
+    let check = job(yml, "mutants-check");
+    let at_job = |k: &str| {
+        check
+            .iter()
+            .find_map(|l| l.strip_prefix(&format!("    {k}:")))
+            .map(|v| v.trim().to_owned())
+    };
     assert!(
-        steps(&lines).iter().any(|st| {
-            key(st, "if").is_some_and(|c| c == "always()")
-                && st.iter().any(|l| l.contains("check-runs"))
-                && st.iter().any(|l| l.contains("name=mutants-check"))
-        }),
-        "qa23s: the aggregate does not post its verdict as mutants-check whatever happened"
+        at_job("if").as_deref() == Some("always()")
+            && at_job("needs").is_some_and(|n| n.contains(AGGREGATE))
+            && check
+                .iter()
+                .any(|l| !l.trim_start().starts_with('#')
+                    && l.contains("needs.mutants-verdict.result")),
+        "qa23s: mutants-check does not report the aggregate's verdict whatever happened"
     );
 }
 
@@ -582,3 +591,16 @@ negative_control!(
         "if: github.event_name == 'pull_request'"
     ))
 );
+
+mod check_skipped_on_a_failed_verdict {
+    use super::*;
+    negative_control!(
+        qa23s_the_aggregate_runs_after_every_shard,
+        "a mutants-check job skipped once the aggregate has failed",
+        expected = "qa23s: mutants-check does not report the aggregate's verdict whatever happened",
+        aggregate_runs_after_every_shard(&mutants_yml().replace(
+            "  mutants-check:\n    if: always()\n",
+            "  mutants-check:\n    if: success()\n"
+        ))
+    );
+}
