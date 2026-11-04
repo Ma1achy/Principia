@@ -3,12 +3,12 @@
 //! a restart; a double-click, and View › reset layout, return it to its default; a click on maximise, and M with the
 //! focus in the console, toggle the full height below the top bar and back to the dragged height; M while the search
 //! field is typed in types 'm'; → from Clear reaches maximise, then ×; maximised, the console covers the panels and the
-//! figure. Each check also runs on an outcome it must reject (R-176, through `rejects`; gui takes no dependency on
+//! figure; the hover label stays on the strip of figure a dragged console leaves. Each check also runs on an outcome it must reject (R-176, through `rejects`; gui takes no dependency on
 //! validation, R-187): a console of fixed height, an M that types nothing outside the field, and the others named.
 
 use std::path::{Path, PathBuf};
 
-use eframe::egui::{self, pos2, vec2, CursorIcon, Event, Key, Modifiers, Rect};
+use eframe::egui::{self, pos2, vec2, CursorIcon, Event, Key, Modifiers, Rect, Shape};
 use engine::contract::view_ui::{KeyMode, Window};
 
 use super::mock_layout_splitters::{current, drag};
@@ -16,6 +16,7 @@ use super::support::{click, click_scope, focus, headless, mock_app, press, rejec
 use crate::app::App;
 use crate::explore::breadcrumb;
 use crate::explore::footer::FOOTER;
+use crate::explore::hover_label::{BACKING, LISTEN_HINT};
 use crate::headless::{Headless, FRAME_S};
 use crate::layout::{console_handle, Layout, Splits, HANDLE, MIN_CONSOLE_H};
 use crate::mock::MockEngine;
@@ -601,6 +602,50 @@ fn mock_console_height_maximised_it_covers_the_panels_and_the_figure() {
     rejects("a hover under the console", || {
         assert_eq!(hover, Default::default())
     });
+}
+
+#[test]
+fn mock_console_height_the_hover_label_stays_on_the_strip_it_leaves() {
+    // A strip of figure shorter than the label, whose top `placed` holds at the figure's top, so its height overruns.
+    const STRIP: f32 = 20.0;
+    let (mut app, mut h) = opened();
+    let figure = current(&h, &app).figure;
+    let by = figure.min.y + STRIP - drawn(&app).min.y;
+    drag_edge(&mut h, &mut app, by);
+    let top = current(&h, &app).console.min.y;
+    near(top, figure.min.y + STRIP, "the strip");
+    // In the strip, clear of the handle on the console's edge.
+    let cursor = pos2(figure.center().x, figure.min.y + 5.0);
+    let _ = h.frame(&mut app, vec![Event::PointerMoved(cursor)]);
+    let _ = h.frame(&mut app, Vec::new());
+    let output = h.frame(&mut app, Vec::new());
+    let hint = format!(" · {LISTEN_HINT}");
+    let label: Vec<(Rect, Rect)> = output
+        .shapes
+        .iter()
+        .filter_map(|clipped| match &clipped.shape {
+            Shape::Rect(r) if r.fill == BACKING => Some((r.rect, clipped.clip_rect)),
+            Shape::Text(t) if t.galley.text().ends_with(&hint) => {
+                Some((t.galley.rect.translate(t.pos.to_vec2()), clipped.clip_rect))
+            }
+            _ => None,
+        })
+        .collect();
+    assert_eq!(label.len(), 2, "the backing and the text: {label:?}");
+    let on_strip = |rect: Rect, clip: Rect| {
+        let shows = rect.intersect(clip);
+        assert!(
+            shows.max.y <= top,
+            "{rect:?} clipped to {clip:?} is past {top}"
+        );
+    };
+    for (rect, clip) in label {
+        assert!(rect.max.y > top, "{rect:?} is shorter than the strip");
+        on_strip(rect, clip);
+        rejects("the label clipped to the whole canvas", || {
+            on_strip(rect, figure)
+        });
+    }
 }
 
 #[test]

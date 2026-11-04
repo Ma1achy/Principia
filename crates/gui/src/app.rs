@@ -924,7 +924,7 @@ impl<S: EngineSide> App<S> {
                 self.snapshot.render.playhead.t,
                 self.snapshot.sim.horizon.t,
             );
-            explore::hover_label::show(&ctx, canvas, cursor, text);
+            explore::hover_label::show(&ctx, uncovered, cursor, text);
         }
     }
 
