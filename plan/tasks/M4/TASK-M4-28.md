@@ -2,8 +2,8 @@
 
 - **Milestone:** M4
 - **Closes:** REQ-VAL-348
-- **Depends on:** TASK-M4-05, TASK-M4-02, TASK-M4-03, TASK-M4-09, TASK-M4-18, TASK-M4-27
-- **Needs (earlier milestones):** REQ-INT-026, REQ-EVT-003, REQ-EVT-005, REQ-VAL-026
+- **Depends on:** TASK-M4-05, TASK-M4-02, TASK-M4-03, TASK-M4-09, TASK-M4-18, TASK-M4-27, TASK-M3-41
+- **Needs (earlier milestones):** REQ-INT-026, REQ-EVT-003, REQ-EVT-005, REQ-VAL-026, REQ-INT-100, REQ-INT-101, REQ-INT-102, REQ-PAY-110
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** PIT-9, PIT-10
 - **Size:** ~950 lines
@@ -27,6 +27,8 @@ alone does not answer the owner's question; the bits at identical operands do, a
 - `docs/contracts/principia_parity_contract.md` § "3. The load-bearing discipline: never accumulate before comparing"
 - `docs/contracts/principia_parity_contract.md` § "1. The principle"
 - `docs/contracts/principia_integrator_contract.md` § "Part 1 — The shape: a swappable `step()` slot inside a fixed wrapper"
+- `docs/contracts/principia_integrator_contract.md` § "The sync grid is a fixed quantum of physical time (R-565)"
+- `docs/contracts/principia_integrator_contract.md` § "Part 3 — Parameter ownership (who owns what)"
 - `docs/contracts/principia_integrator_contract.md` § "Part 6 — Three boundaries stated honestly (deferred work lands here)"
 - `docs/contracts/principia_integrator_contract.md` § "Part 7 — Detectors as the `SimState` producer"
 - `docs/read_first/principia_01_pitfalls.md` § "10. GENERALISING A STATELESS RESULT TO A TRAJECTORY"

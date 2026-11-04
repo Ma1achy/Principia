@@ -2,8 +2,8 @@
 
 - **Milestone:** M4
 - **Closes:** REQ-PERF-010, REQ-PERF-081, REQ-INT-059
-- **Depends on:** TASK-M4-05, TASK-M4-02, TASK-M3-20
-- **Needs (earlier milestones):** REQ-SCHED-002, REQ-INT-007, REQ-INT-038, REQ-PERF-003, REQ-TOOL-001, REQ-EVT-010
+- **Depends on:** TASK-M4-05, TASK-M4-02, TASK-M3-20, TASK-M3-41
+- **Needs (earlier milestones):** REQ-SCHED-002, REQ-INT-007, REQ-INT-038, REQ-PERF-003, REQ-TOOL-001, REQ-EVT-010, REQ-INT-100, REQ-INT-101, REQ-INT-102, REQ-PAY-110
 - **Reviewers:** code, qa, physics, perf
 - **Pitfalls:** none
 - **Size:** ~350 lines
