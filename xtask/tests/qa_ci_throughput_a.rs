@@ -17,21 +17,24 @@
 //!   reopened, the `merge-ready` label, another label), which of `mutants.yml`'s jobs run, by evaluating each job's
 //!   `if:` as a runner does (its implicit `success()` over the jobs it needs, those skipped included): the shards, the
 //!   fixture and the verdict run on the `merge-ready` label's run alone, the verdict whatever the shards ended in;
-//!   another label's run runs nothing; and no job of any workflow bears the required name `mutants-check`, which a run
-//!   that skipped it would report passed.
+//!   another label's run, put on or taken off, runs none of that work; and, under R-678, `mutants.yml`'s job
+//!   `mutants-check` runs on every event, the one job of any workflow bearing that required name.
 //! - `qa_cta_mutants_check_through_a_pull_requests_life`: a pull request's life, event by event, against a stand-in
-//!   GitHub (check runs and labels kept in a file, served by a stand-in `gh`), each job's `gh` steps run under bash as
-//!   a runner runs them, the shards' outcome given. After each event the head's `mutants-check`, as branch protection
-//!   reads it, is: pending on a new code head; failed on a failed, cancelled or skipped merge-ready verdict; passed
-//!   only by a passing merge-ready run, or at once on a head with no `.rs` file under `crates/` (R-677, which moved
-//!   this from a docs-only head's; the one change here, R-677's exception to R-290); one check run per head, so no
-//!   stale queued one is left beside the verdict; a push takes the label off, a reopen leaves a passed head passed, and
-//!   such a head pushed while an earlier push's run already took the label off still passes at once.
+//!   GitHub (the head, the labels and `mutants.yml`'s runs with their jobs kept in a file, served by a stand-in `gh`),
+//!   each job run in its `needs:` order and its `gh` steps under bash as a runner runs them, the shards' outcome
+//!   given. After each event the head's `mutants-check`, as branch protection reads it (R-678: the job in the latest
+//!   run's suite, never a check run posted into another), is: passed "not applicable" on a head that is not
+//!   merge-ready, a new code head's and one whose `merge-ready` label was taken off; failed on a failed, cancelled or
+//!   skipped merge-ready verdict; passed by a passing merge-ready run, or at once on a head with no `.rs` file under
+//!   `crates/` (R-677); on another label put on or taken off a merge-ready head, that head's verdict, waited for while
+//!   its run is in progress, and a failure with none or on a superseded head; a push takes the label off, and a reopen
+//!   leaves a passed head passed. R-678 (3 Nov 2026) replaced the posted check run, pending on a new code head, that
+//!   this test followed before; that is the change here, R-678's exception to R-290.
 //! - `qa_cta_superseded_runs_cancel_per_pull_request`: the concurrency groups, evaluated per event: in `mutants.yml` a
-//!   push shares the merge-ready run's group (so it cancels it), another label's run does not, two pull requests never
-//!   share one, and nothing on `main` is cancelled; in `reviews.yml` a review cancels the review run before it on the
-//!   same pull request, never another pull request's or the `pull_request` run it re-runs (R-276), and
-//!   `reviews-complete` runs on both events.
+//!   push shares the merge-ready run's group (so it cancels it), another label's run, put on or taken off, does not,
+//!   `merge-ready` taken off does (R-678), two pull requests never share one, and nothing on `main` is cancelled; in
+//!   `reviews.yml` a review cancels the review run before it on the same pull request, never another pull request's
+//!   or the `pull_request` run it re-runs (R-276), and `reviews-complete` runs on both events.
 //!
 //! Each test has its negative controls (R-176), each feeding the same check a workflow differing in the one respect
 //! it turns on, tripping it by its message. The workflows are parsed with PyYAML, as xtask's other workflow tests
@@ -520,7 +523,7 @@ fn work_runs_only_when_merge_ready(mutants: &str, others: &[(String, String)]) {
         .as_array()
         .map(|a| a.iter().map(text).collect())
         .unwrap_or_default();
-    for t in ["opened", "synchronize", "reopened", "labeled"] {
+    for t in ["opened", "synchronize", "reopened", "labeled", "unlabeled"] {
         assert!(
             types.contains(&t.to_owned()),
             "qa_cta: mutants.yml does not run on a pull request's `{t}`"
@@ -542,28 +545,46 @@ fn work_runs_only_when_merge_ready(mutants: &str, others: &[(String, String)]) {
             );
         }
         assert!(
-            !ran(&r).is_empty(),
+            ran(&r).contains("mutants-check"),
             "qa_cta: nothing runs on `{}`, so nothing reports the new head's mutants-check",
             e.action
         );
     }
-    let other = ev("labeled", "design", "c", &["design"]);
-    let r = jobs_run(&wf, &other, "success");
-    assert!(
-        ran(&r).is_empty(),
-        "qa_cta: another label's run runs jobs: {:?}",
-        ran(&r)
-    );
+    // R-678: every label change runs `mutants-check`, and only the merge-ready label's run any of the mutants work.
+    for other in [
+        ev("labeled", "design", "c", &["design"]),
+        ev("labeled", "design", "c", &["design", "merge-ready"]),
+        ev("unlabeled", "design", "c", &["merge-ready"]),
+        ev("unlabeled", "merge-ready", "c", &[]),
+    ] {
+        let r = jobs_run(&wf, &other, "success");
+        let work: Vec<String> = ran(&r)
+            .into_iter()
+            .filter(|j| MUTANTS_WORK.contains(&j.as_str()))
+            .collect();
+        assert!(
+            work.is_empty(),
+            "qa_cta: another label's run runs jobs: {work:?}"
+        );
+        assert!(
+            ran(&r).contains("mutants-check"),
+            "qa_cta: `{} {}` runs no mutants-check, so the run that supersedes the head's last reports none",
+            other.action,
+            other.label
+        );
+    }
     for shards in ["success", "failure", "cancelled"] {
         let ready = ev("labeled", "merge-ready", "c", &["merge-ready"]);
         let r = jobs_run(&wf, &ready, shards);
-        for job in MUTANTS_WORK {
+        for job in MUTANTS_WORK.iter().chain(&["mutants-check"]) {
             assert!(
-                r.get(job).is_some_and(|x| x != "skipped"),
+                r.get(*job).is_some_and(|x| x != "skipped"),
                 "qa_cta: job `{job}` does not run on the merge-ready run, its shards {shards}: {r:?}"
             );
         }
     }
+    // R-678: the one job bearing the required name `mutants-check` is `mutants.yml`'s, which every run runs.
+    let mut bearers = Vec::new();
     for (file, yml) in
         std::iter::once(&("mutants.yml".to_owned(), mutants.to_owned())).chain(others)
     {
@@ -573,13 +594,16 @@ fn work_runs_only_when_merge_ready(mutants: &str, others: &[(String, String)]) {
         };
         for (id, job) in jobs {
             let name = job.get("name").map(text).unwrap_or_else(|| id.clone());
-            assert!(
-                name != "mutants-check",
-                "qa_cta: a job ({file}: {id}) bears the required name mutants-check, which a run skipping it reports \
-                 passed"
-            );
+            if name == "mutants-check" {
+                bearers.push(format!("{file}: {id}"));
+            }
         }
     }
+    assert!(
+        bearers == ["mutants.yml: mutants-check"],
+        "qa_cta: the jobs {bearers:?} bear the required name mutants-check, not mutants.yml's one job, which every \
+         run runs"
+    );
 }
 
 fn other_workflows() -> Vec<(String, String)> {
@@ -656,7 +680,7 @@ mod named_job_elsewhere {
     negative_control!(
         qa_cta_mutants_work_runs_only_on_the_merge_ready_run,
         "a job named mutants-check in another workflow",
-        expected = "bears the required name mutants-check",
+        expected = "bear the required name mutants-check, not mutants.yml's one job",
         {
             let mut others = other_workflows();
             let at = others
@@ -676,9 +700,11 @@ mod named_job_elsewhere {
 
 // ---- Test 2: a pull request's life, against a stand-in GitHub -----------------------------------------------------
 
-/// The stand-in GitHub API behind the stand-in `gh`: check runs and the pull request's labels, kept in `$FAKE_STATE`,
-/// each call logged to `$FAKE_CALLS`. It answers what GitHub's REST API answers for the calls the gate makes, and
-/// fails, as `gh api` does on an HTTP error, on a check run or label that is not there or a call it does not know.
+/// The stand-in GitHub API behind the stand-in `gh`: the pull request's head and labels, and `mutants.yml`'s runs on
+/// each head with their jobs, kept in `$FAKE_STATE`, each call logged to `$FAKE_CALLS`. It answers what GitHub's REST
+/// API answers for the calls the gate makes (the `--jq` filters it knows applied as `gh` applies them), and fails, as
+/// `gh api` does on an HTTP error, on a label that is not there or a call it does not know: a check run posted through
+/// the Checks API among them, which R-678 rules out.
 const FAKE_GH: &str = r#"
 import json, os, sys, urllib.parse
 state_path = os.environ["FAKE_STATE"]
@@ -691,17 +717,13 @@ def die(msg, code=1):
     sys.exit(code)
 if not args or args[0] != "api":
     die("stand-in: not understood: %r" % (args,), 2)
-method, jq, fields, path, i = "GET", None, {}, None, 1
+method, jq, path, i = "GET", None, None, 1
 while i < len(args):
     a = args[i]
     if a in ("--method", "-X"):
         method = args[i + 1]; i += 2
     elif a in ("--jq", "-q"):
         jq = args[i + 1]; i += 2
-    elif a == "--paginate":
-        i += 1
-    elif a in ("-f", "-F", "--raw-field", "--field"):
-        k, v = args[i + 1].split("=", 1); fields[k] = v; i += 2
     elif a.startswith("-"):
         die("stand-in: flag not understood: " + a, 2)
     elif path is None:
@@ -714,46 +736,18 @@ p = url.path.strip("/").split("/")
 if p[:3] != ["repos", "o", "r"]:
     die("stand-in: another repository: " + path, 2)
 p = p[3:]
-out = None
-if method == "GET" and len(p) == 3 and p[0] == "commits" and p[2] == "check-runs":
-    runs = [r for r in st["runs"] if r["head_sha"] == p[1]]
-    if "check_name" in q:
-        runs = [r for r in runs if r["name"] == q["check_name"]]
-    if "app_id" in q:
-        runs = [r for r in runs if str(r["app_id"]) == q["app_id"]]
-    if q.get("filter", "latest") == "latest":
-        latest = {}
-        for r in runs:
-            latest[r["name"]] = r
-        runs = list(latest.values())
-    out = {"total_count": len(runs), "check_runs": runs}
-elif method == "POST" and p == ["check-runs"]:
-    if "name" not in fields or "head_sha" not in fields:
-        die("HTTP 422: name and head_sha are required")
-    status = fields.get("status", "queued")
-    conclusion = fields.get("conclusion")
-    if conclusion is not None:
-        status = "completed"
-    if status == "completed" and conclusion is None:
-        die("HTTP 422: a completed check run needs a conclusion")
-    st["next"] += 1
-    run = {"id": st["next"], "name": fields["name"], "head_sha": fields["head_sha"], "app_id": 15368,
-           "status": status, "conclusion": conclusion}
-    st["runs"].append(run)
-    out = run
-elif method == "PATCH" and len(p) == 2 and p[0] == "check-runs":
-    found = [r for r in st["runs"] if str(r["id"]) == p[1]]
+if method == "GET" and p == ["pulls", "7"]:
+    out = {"number": 7, "head": {"sha": st["head"]}}
+elif method == "GET" and p == ["actions", "workflows", "mutants.yml", "runs"]:
+    runs = [r for r in st["runs"] if r["head_sha"] == q.get("head_sha") and q.get("event") == "pull_request"]
+    runs.sort(key=lambda r: -r["id"])
+    out = {"total_count": len(runs), "workflow_runs": [{"id": r["id"], "head_sha": r["head_sha"]} for r in runs]}
+elif method == "GET" and len(p) == 4 and p[:2] == ["actions", "runs"] and p[3] == "jobs":
+    found = [r for r in st["runs"] if str(r["id"]) == p[2]]
     if not found:
-        die("HTTP 404: no check run " + p[1])
-    run = found[0]
-    if "status" in fields:
-        run["status"] = fields["status"]
-    if "conclusion" in fields:
-        run["conclusion"] = fields["conclusion"]; run["status"] = "completed"
-    if run["status"] == "completed" and run["conclusion"] is None:
-        die("HTTP 422: a completed check run needs a conclusion")
-    out = run
-elif method == "DELETE" and len(p) == 4 and p[0] == "issues" and p[2] == "labels":
+        die("HTTP 404: no run " + p[2])
+    out = {"total_count": len(found[0]["jobs"]), "jobs": found[0]["jobs"]}
+elif method == "DELETE" and len(p) == 4 and p[:3] == ["issues", "7", "labels"]:
     if p[3] not in st["labels"]:
         die("HTTP 404: Label does not exist")
     st["labels"].remove(p[3])
@@ -761,15 +755,38 @@ elif method == "DELETE" and len(p) == 4 and p[0] == "issues" and p[2] == "labels
 else:
     die("stand-in: call not understood: %s %s" % (method, path), 2)
 json.dump(st, open(state_path, "w"))
+def show(v):
+    return "null" if v is None else str(v)
 if jq is None:
     print(json.dumps(out))
-elif jq == ".total_count":
-    print(out["total_count"])
-elif jq == ".check_runs[].id":
-    for r in out["check_runs"]:
+elif jq == ".head.sha":
+    print(out["head"]["sha"])
+elif jq == ".workflow_runs[].id":
+    for r in out["workflow_runs"]:
         print(r["id"])
+elif jq == '.jobs[] | select(.name == "mutants-verdict") | "\\(.status) \\(.conclusion)"':
+    for j in out["jobs"]:
+        if j["name"] == "mutants-verdict":
+            print(show(j["status"]) + " " + show(j["conclusion"]))
 else:
     die("stand-in: --jq not understood: " + jq, 2)
+"#;
+
+/// The stand-in `sleep`: a wait in the gate ends when a run in progress finishes, as `$FAKE_STATE`'s `on_sleep` says
+/// (`[run id, conclusion]`); with none to finish, it fails, so a wait never hangs the test.
+const FAKE_SLEEP: &str = r#"
+import json, os, sys
+state_path = os.environ["FAKE_STATE"]
+st = json.load(open(state_path))
+todo = st.pop("on_sleep", None)
+if todo is None:
+    sys.stderr.write("sleep: stand-in: nothing would finish\n")
+    sys.exit(1)
+for r in st["runs"]:
+    if r["id"] == todo[0]:
+        for j in r["jobs"]:
+            j["status"], j["conclusion"] = "completed", todo[1]
+json.dump(st, open(state_path, "w"))
 "#;
 
 /// Pull request #7 on the stand-in GitHub, with `mutants.yml` as `yml`.
@@ -789,23 +806,28 @@ fn calls_gh(script: &str) -> bool {
         })
 }
 
+/// A job's check name as GitHub shows it: its `name:`, or its id.
+fn job_name(id: &str, job: &Value) -> String {
+    job.get("name").map(text).unwrap_or_else(|| id.to_owned())
+}
+
 impl Pr {
     fn new(yml: &str, tag: &str) -> Self {
         let dir = scratch(tag);
         let bin = dir.join("bin");
         std::fs::create_dir_all(&bin).expect("qa_cta: bin");
-        std::fs::write(dir.join("fake_gh.py"), FAKE_GH).expect("qa_cta: stand-in gh");
-        write_executable(
-            &bin.join("gh"),
-            format!(
-                "#!/bin/sh\nexec python3 -I \"{}\" \"$@\"\n",
-                dir.join("fake_gh.py").display()
-            ),
-        )
-        .expect("qa_cta: gh");
+        for (name, body) in [("gh", FAKE_GH), ("sleep", FAKE_SLEEP)] {
+            let py = dir.join(format!("fake_{name}.py"));
+            std::fs::write(&py, body).expect("qa_cta: stand-in");
+            write_executable(
+                &bin.join(name),
+                format!("#!/bin/sh\nexec python3 -I \"{}\" \"$@\"\n", py.display()),
+            )
+            .expect("qa_cta: stand-in");
+        }
         std::fs::write(
             dir.join("state.json"),
-            r#"{"next": 0, "runs": [], "labels": []}"#,
+            r#"{"head": "", "next": 0, "runs": [], "labels": []}"#,
         )
         .expect("qa_cta: state");
         std::fs::write(dir.join("calls"), "").expect("qa_cta: calls");
@@ -822,10 +844,20 @@ impl Pr {
         .expect("qa_cta: state JSON")
     }
 
+    fn save(&self, st: &Value) {
+        std::fs::write(self.dir.join("state.json"), st.to_string()).expect("qa_cta: state");
+    }
+
     fn set_labels(&self, labels: &[&str]) {
         let mut st = self.state();
         st["labels"] = serde_json::json!(labels);
-        std::fs::write(self.dir.join("state.json"), st.to_string()).expect("qa_cta: state");
+        self.save(&st);
+    }
+
+    fn set_head(&self, head: &str) {
+        let mut st = self.state();
+        st["head"] = serde_json::json!(head);
+        self.save(&st);
     }
 
     fn labels(&self) -> Vec<String> {
@@ -841,123 +873,205 @@ impl Pr {
         std::fs::read_to_string(self.dir.join("calls")).unwrap_or_default()
     }
 
-    /// The head's `mutants-check` runs from the GitHub Actions app (id 15368, the source branch protection pins), each
-    /// as `status/conclusion`.
-    fn checks(&self, head: &str) -> Vec<String> {
-        self.state()["runs"]
+    /// A new run of the workflow on `head`, in progress with `jobs`: its id.
+    fn add_run(&self, head: &str, jobs: Value) -> u64 {
+        let mut st = self.state();
+        let id = st["next"].as_u64().expect("qa_cta: next") + 1;
+        st["next"] = serde_json::json!(id);
+        st["runs"]
+            .as_array_mut()
+            .expect("qa_cta: runs")
+            .push(serde_json::json!({"id": id, "head_sha": head, "jobs": jobs}));
+        self.save(&st);
+        id
+    }
+
+    /// A merge-ready run on `head` still running its shards, which the next wait finishes with `conclusion`.
+    fn merge_ready_in_progress(&self, head: &str, conclusion: &str) -> u64 {
+        let id = self.add_run(
+            head,
+            serde_json::json!([
+                {"name": "mutants-verdict", "status": "in_progress", "conclusion": null},
+                {"name": "mutants-check", "status": "in_progress", "conclusion": null},
+            ]),
+        );
+        let mut st = self.state();
+        st["on_sleep"] = serde_json::json!([id, conclusion]);
+        self.save(&st);
+        id
+    }
+
+    /// The head's required `mutants-check` as branch protection reads it (R-678): of the workflow's runs on the head,
+    /// only the latest run's suite counts, and in it the job `mutants-check`: `expected` with no run or no such job,
+    /// `pending` while it runs, `skipped`, which GitHub counts as passed and R-305 never allows, `failed` or `passed`.
+    fn gate(&self, head: &str) -> String {
+        let st = self.state();
+        let latest = st["runs"]
             .as_array()
             .expect("qa_cta: runs")
             .iter()
-            .filter(|r| {
-                r["head_sha"] == head && r["name"] == "mutants-check" && r["app_id"] == 15368
-            })
-            .map(|r| format!("{}/{}", text(&r["status"]), text(&r["conclusion"])))
-            .collect()
-    }
-
-    /// The head's required `mutants-check` as branch protection reads it, strictly: `expected` with none, `pending`
-    /// with any not completed, `failed` with any completed other than success, `passed` only with every one passed.
-    fn gate(&self, head: &str) -> &'static str {
-        let checks = self.checks(head);
-        if checks.is_empty() {
-            "expected"
-        } else if checks.iter().any(|c| !c.starts_with("completed/")) {
-            "pending"
-        } else if checks.iter().any(|c| c != "completed/success") {
-            "failed"
-        } else {
-            "passed"
+            .filter(|r| r["head_sha"] == head)
+            .max_by_key(|r| r["id"].as_u64());
+        let Some(run) = latest else {
+            return "expected".to_owned();
+        };
+        let job = run["jobs"]
+            .as_array()
+            .expect("qa_cta: jobs")
+            .iter()
+            .find(|j| j["name"] == "mutants-check");
+        match job.map(|j| (text(&j["status"]), text(&j["conclusion"]))) {
+            None => "expected".to_owned(),
+            Some((s, _)) if s != "completed" => "pending".to_owned(),
+            Some((_, c)) if c == "success" => "passed".to_owned(),
+            Some((_, c)) if c == "skipped" => "skipped".to_owned(),
+            Some(_) => "failed".to_owned(),
         }
     }
 
-    /// Event `e` on the pull request: the jobs that run, and in each the steps that call `gh`, run under bash as a
-    /// runner runs them with their `env:`. The change classification says whether the change has no mutant (R-677:
-    /// `no_mutant`, a change with no `.rs` file under `crates/`, `mutants=false`), and the verdict step's
-    /// outcome is `verdict` (the shards ending likewise); every other step that calls no `gh` stands in as passed.
-    /// Returns the jobs that ran, and each `gh` step's log.
+    /// Event `e` on the pull request, run as GitHub runs it: nothing if the workflow's `pull_request` types leave the
+    /// action out; else a new run on the head, whose jobs run in their `needs:` order, each `if:` evaluated over the
+    /// results of the jobs it needs. The shards and the verdict end in `verdict`; in every other job that runs, the
+    /// classification step reads the change (R-677: `no_mutant`, no `.rs` file under `crates/`, is `mutants=false`)
+    /// when its `if:` holds, each step calling `gh` runs under bash as a runner runs it, with its `env:` and the
+    /// stand-in `gh` and `sleep`, and any other step stands in as passed; a failed step fails the job. Every job's
+    /// result is recorded on the run, by its check name. Returns the jobs that ran, and the `gh` steps' logs and job
+    /// summaries.
     fn on(&self, e: &Ev, no_mutant: bool, verdict: &str) -> (BTreeSet<String>, String) {
-        let results = jobs_run(&self.wf, e, verdict);
-        let jobs = ran(&results);
+        let types: Vec<String> = self.wf["on"]["pull_request"]["types"]
+            .as_array()
+            .map(|a| a.iter().map(text).collect())
+            .unwrap_or_else(|| {
+                ["opened", "synchronize", "reopened"]
+                    .map(str::to_owned)
+                    .to_vec()
+            });
+        if !types.iter().any(|t| t == e.action) {
+            return (
+                BTreeSet::new(),
+                format!("mutants.yml does not run on `{}`\n", e.action),
+            );
+        }
+        let run_id = self.add_run(e.head, serde_json::json!([]));
+        let e = Ev {
+            event: e.event,
+            action: e.action,
+            label: e.label,
+            head: e.head,
+            labels: e.labels.clone(),
+            git_ref: e.git_ref,
+            run_id: u32::try_from(run_id).expect("qa_cta: run id"),
+        };
+        let jobs = self.wf["jobs"].as_object().expect("qa_cta: jobs");
+        let mut results: BTreeMap<String, String> = BTreeMap::new();
         let mut log = String::new();
-        for id in &jobs {
-            let job = &self.wf["jobs"][id];
-            let mut ctx = github(e);
-            for n in needs_of(job) {
-                ctx.needs.insert(n.clone(), results[&n].clone());
-            }
-            for (i, step) in job["steps"]
-                .as_array()
-                .expect("qa_cta: steps")
-                .iter()
-                .enumerate()
-            {
-                let sid = step.get("id").map(text).unwrap_or_else(|| format!("__{i}"));
-                if sid == "changes" {
-                    // R-677: the gate passes at once on `mutants=false`, whatever the tier. The classification here
-                    // is never `docs_only`, so a workflow still passing on `docs_only` posts nothing passed.
-                    let outputs = HashMap::from([
-                        ("docs_only".to_owned(), "false".to_owned()),
-                        ("mutants".to_owned(), (!no_mutant).to_string()),
-                    ]);
-                    ctx.steps.insert(sid, ("success".to_owned(), outputs));
+        while results.len() < jobs.len() {
+            let before = results.len();
+            for (id, job) in jobs {
+                let needs = needs_of(job);
+                if results.contains_key(id) || !needs.iter().all(|n| results.contains_key(n)) {
                     continue;
                 }
-                if sid == "verdict" {
-                    ctx.steps.insert(sid, (verdict.to_owned(), HashMap::new()));
-                    if verdict != "success" {
-                        ctx.failed = true;
-                    }
-                    continue;
+                let mut ctx = github(&e);
+                for n in &needs {
+                    ctx.needs.insert(n.clone(), results[n].clone());
                 }
-                let script = step.get("run").map(text).unwrap_or_default();
-                if !calls_gh(&script) {
-                    ctx.steps
-                        .insert(sid, ("success".to_owned(), HashMap::new()));
-                    continue;
-                }
-                if !ctx.holds(step.get("if")) {
-                    ctx.steps
-                        .insert(sid, ("skipped".to_owned(), HashMap::new()));
-                    continue;
-                }
-                let mut cmd = Command::new("bash");
-                cmd.args([
-                    "--noprofile",
-                    "--norc",
-                    "-eo",
-                    "pipefail",
-                    "-c",
-                    &ctx.interpolate(&script),
-                ])
-                .current_dir(&*self.dir)
-                .env(
-                    "PATH",
-                    format!(
-                        "{}:{}",
-                        self.dir.join("bin").display(),
-                        std::env::var("PATH").unwrap_or_default()
-                    ),
-                )
-                .env("FAKE_STATE", self.dir.join("state.json"))
-                .env("FAKE_CALLS", self.dir.join("calls"));
-                if let Some(env) = step.get("env").and_then(Value::as_object) {
-                    for (k, v) in env {
-                        cmd.env(k, ctx.interpolate(&text(v)));
-                    }
-                }
-                let out = cmd.timed_output().expect("qa_cta: bash ran");
-                log.push_str(&String::from_utf8_lossy(&out.stdout));
-                log.push_str(&String::from_utf8_lossy(&out.stderr));
-                let outcome = if out.status.success() {
-                    "success"
+                ctx.failed = needs.iter().any(|n| results[n] != "success");
+                let r = if !ctx.holds(job.get("if")) {
+                    "skipped".to_owned()
+                } else if id == "mutants" || id == "mutants-verdict" {
+                    verdict.to_owned()
                 } else {
-                    ctx.failed = true;
-                    "failure"
+                    ctx.failed = false;
+                    self.steps(job, &mut ctx, no_mutant, &mut log);
+                    if ctx.failed { "failure" } else { "success" }.to_owned()
                 };
-                ctx.steps.insert(sid, (outcome.to_owned(), HashMap::new()));
+                results.insert(id.clone(), r);
+            }
+            assert!(results.len() > before, "qa_cta: a cycle in the jobs' needs");
+        }
+        let recorded: Vec<Value> = jobs
+            .iter()
+            .map(|(id, job)| {
+                serde_json::json!({"name": job_name(id, job), "status": "completed", "conclusion": results[id]})
+            })
+            .collect();
+        let mut st = self.state();
+        for r in st["runs"].as_array_mut().expect("qa_cta: runs") {
+            if r["id"] == run_id {
+                r["jobs"] = Value::Array(recorded.clone());
             }
         }
-        (jobs, log)
+        self.save(&st);
+        (ran(&results), log)
+    }
+
+    /// A job's steps, run as `on` describes; `ctx.failed` says whether one failed.
+    fn steps(&self, job: &Value, ctx: &mut Ctx, no_mutant: bool, log: &mut String) {
+        for (i, step) in job["steps"]
+            .as_array()
+            .expect("qa_cta: steps")
+            .iter()
+            .enumerate()
+        {
+            let sid = step.get("id").map(text).unwrap_or_else(|| format!("__{i}"));
+            if !ctx.holds(step.get("if")) {
+                ctx.steps
+                    .insert(sid, ("skipped".to_owned(), HashMap::new()));
+                continue;
+            }
+            if sid == "changes" {
+                let outputs = HashMap::from([("mutants".to_owned(), (!no_mutant).to_string())]);
+                ctx.steps.insert(sid, ("success".to_owned(), outputs));
+                continue;
+            }
+            let script = step.get("run").map(text).unwrap_or_default();
+            if !calls_gh(&script) {
+                ctx.steps
+                    .insert(sid, ("success".to_owned(), HashMap::new()));
+                continue;
+            }
+            let summary = self
+                .dir
+                .join(format!("summary_{}", ctx.lookup("github.run_id").show()));
+            let mut cmd = Command::new("bash");
+            cmd.args([
+                "--noprofile",
+                "--norc",
+                "-eo",
+                "pipefail",
+                "-c",
+                &ctx.interpolate(&script),
+            ])
+            .current_dir(&*self.dir)
+            .env(
+                "PATH",
+                format!(
+                    "{}:{}",
+                    self.dir.join("bin").display(),
+                    std::env::var("PATH").unwrap_or_default()
+                ),
+            )
+            .env("GITHUB_STEP_SUMMARY", &summary)
+            .env("FAKE_STATE", self.dir.join("state.json"))
+            .env("FAKE_CALLS", self.dir.join("calls"));
+            if let Some(env) = step.get("env").and_then(Value::as_object) {
+                for (k, v) in env {
+                    cmd.env(k, ctx.interpolate(&text(v)));
+                }
+            }
+            let out = cmd.timed_output().expect("qa_cta: bash ran");
+            log.push_str(&String::from_utf8_lossy(&out.stdout));
+            log.push_str(&String::from_utf8_lossy(&out.stderr));
+            log.push_str(&std::fs::read_to_string(&summary).unwrap_or_default());
+            let outcome = if out.status.success() {
+                "success"
+            } else {
+                ctx.failed = true;
+                "failure"
+            };
+            ctx.steps.insert(sid, (outcome.to_owned(), HashMap::new()));
+        }
     }
 
     /// The watcher's label (with the user's token: GitHub adds it, then the `labeled` run starts), the shards and the
@@ -968,44 +1082,72 @@ impl Pr {
         no_mutant: bool,
         verdict: &str,
     ) -> (BTreeSet<String>, String) {
+        self.label_on("merge-ready", head, no_mutant, verdict)
+    }
+
+    /// Label `label` put on the pull request, then its `labeled` run.
+    fn label_on(
+        &self,
+        label: &str,
+        head: &str,
+        no_mutant: bool,
+        verdict: &str,
+    ) -> (BTreeSet<String>, String) {
         let mut labels = self.labels();
-        labels.retain(|l| l != "merge-ready");
-        labels.push("merge-ready".to_owned());
+        labels.retain(|l| l != label);
+        labels.push(label.to_owned());
         let refs: Vec<&str> = labels.iter().map(String::as_str).collect();
         self.set_labels(&refs);
-        self.on(
-            &ev("labeled", "merge-ready", head, &refs),
-            no_mutant,
-            verdict,
-        )
+        self.on(&ev("labeled", label, head, &refs), no_mutant, verdict)
+    }
+
+    /// Label `label` taken off the pull request, then its `unlabeled` run.
+    fn label_off(&self, label: &str, head: &str, no_mutant: bool) -> (BTreeSet<String>, String) {
+        let mut labels = self.labels();
+        labels.retain(|l| l != label);
+        let refs: Vec<&str> = labels.iter().map(String::as_str).collect();
+        self.set_labels(&refs);
+        self.on(&ev("unlabeled", label, head, &refs), no_mutant, "success")
     }
 
     /// A push of `head`: the `synchronize` event's payload lists the labels on the pull request when it fired.
     fn push(&self, head: &str, no_mutant: bool) -> (BTreeSet<String>, String) {
+        self.set_head(head);
         let labels = self.labels();
         let refs: Vec<&str> = labels.iter().map(String::as_str).collect();
         self.on(&ev("synchronize", "", head, &refs), no_mutant, "success")
     }
 }
 
+/// The reason a not-applicable pass gives, in its job summary.
+const NOT_APPLICABLE: &str = "not applicable";
+
 fn life(yml: &str) {
     let pr = Pr::new(yml, "life");
     let say = |what: &str, log: &str| format!("{what} (calls:\n{}log:\n{log})", pr.calls());
+    let gate_is = |head: &str, want: &str, what: &str, log: &str| {
+        assert_eq!(pr.gate(head), want, "qa_cta: {}", say(what, log));
+    };
 
-    // Opened on a code head: the gate is pending, not passed, until the merge-ready run.
+    // Opened on a code head: not merge-ready, so passed "not applicable" at once (R-678), never left expected.
+    pr.set_head("a");
     let (_, log) = pr.on(&ev("opened", "", "a", &[]), false, "success");
-    assert_eq!(
-        pr.gate("a"),
-        "pending",
+    gate_is(
+        "a",
+        "passed",
+        "a new code head's mutants-check is not passed, not applicable",
+        &log,
+    );
+    assert!(
+        log.contains(NOT_APPLICABLE),
         "qa_cta: {}",
-        say("a new code head's mutants-check is not pending", &log)
+        say("a new code head's pass does not say not applicable", &log)
     );
 
-    // Another label changes nothing.
-    pr.set_labels(&["design"]);
-    let (jobs, log) = pr.on(&ev("labeled", "design", "a", &["design"]), false, "success");
+    // Another label on a head that is not merge-ready: none of the mutants work, `mutants-check` passed again.
+    let (jobs, log) = pr.label_on("design", "a", false, "success");
     assert!(
-        jobs.is_empty() && pr.gate("a") == "pending",
+        jobs.iter().all(|j| !MUTANTS_WORK.contains(&j.as_str())) && pr.gate("a") == "passed",
         "qa_cta: {}",
         say(
             &format!(
@@ -1016,80 +1158,107 @@ fn life(yml: &str) {
         )
     );
 
-    // The merge-ready run: its verdict, failure then (re-labelled) success, completes the head's check.
+    // The merge-ready run: its verdict, failure, fails the head's check; another label put on then keeps it failed.
     let (_, log) = pr.merge_ready("a", false, "failure");
-    assert_eq!(
-        pr.gate("a"),
+    gate_is(
+        "a",
         "failed",
-        "qa_cta: {}",
-        say(
-            "a failed merge-ready verdict did not fail mutants-check",
-            &log
-        )
+        "a failed merge-ready verdict did not fail mutants-check",
+        &log,
     );
-    pr.set_labels(&["design"]);
-    let (_, log) = pr.merge_ready("a", false, "success");
-    assert_eq!(
-        pr.gate("a"),
-        "passed",
-        "qa_cta: {}",
-        say("a passing merge-ready run did not pass mutants-check", &log)
-    );
-    assert_eq!(
-        pr.checks("a").len(),
-        1,
-        "qa_cta: {}",
-        say("the head has more than one mutants-check", "")
+    let (_, log) = pr.label_on("urgent", "a", false, "success");
+    gate_is(
+        "a",
+        "failed",
+        "another label on a merge-ready head whose run failed did not keep it failed",
+        &log,
     );
 
-    // A push: the label comes off, and the new head waits for its own merge-ready run.
+    // Taking merge-ready off: the head is no longer merge-ready, passed "not applicable" (the owner, 3 Nov 2026).
+    let (_, log) = pr.label_off("merge-ready", "a", false);
+    gate_is(
+        "a",
+        "passed",
+        "taking merge-ready off left mutants-check other than passed, not applicable",
+        &log,
+    );
+
+    // Re-labelled, success: passed; another label put on and taken off keeps that verdict.
+    let (_, log) = pr.merge_ready("a", false, "success");
+    gate_is(
+        "a",
+        "passed",
+        "a passing merge-ready run did not pass mutants-check",
+        &log,
+    );
+    let (_, log) = pr.label_off("urgent", "a", false);
+    gate_is(
+        "a",
+        "passed",
+        "another label taken off a passed merge-ready head did not keep it passed",
+        &log,
+    );
+
+    // A push: the label comes off, and the new head, not merge-ready, passes "not applicable".
     let (_, log) = pr.push("b", false);
     assert!(
         !pr.labels().contains(&"merge-ready".to_owned()),
         "qa_cta: {}",
         say("a push left the merge-ready label on", &log)
     );
-    assert_eq!(
-        pr.gate("b"),
-        "pending",
-        "qa_cta: {}",
-        say("a pushed code head's mutants-check is not pending", &log)
+    gate_is(
+        "b",
+        "passed",
+        "a pushed code head's mutants-check is not passed, not applicable",
+        &log,
+    );
+
+    // A label run on a head a push has since superseded: failed, never the old head's verdict.
+    let labels = pr.labels();
+    let mut refs: Vec<&str> = labels.iter().map(String::as_str).collect();
+    refs.push("merge-ready");
+    let (_, log) = pr.on(&ev("labeled", "design", "a", &refs), false, "success");
+    gate_is(
+        "a",
+        "failed",
+        "a label run on a superseded head passed",
+        &log,
     );
 
     // Never passed on a skip: a cancelled or skipped verdict is a failure.
     for verdict in ["cancelled", "skipped"] {
         pr.set_labels(&[]);
         let (_, log) = pr.merge_ready("b", false, verdict);
-        assert_eq!(
-            pr.gate("b"),
+        gate_is(
+            "b",
             "failed",
-            "qa_cta: {}",
-            say(
-                &format!("a {verdict} merge-ready verdict did not fail mutants-check"),
-                &log
-            )
+            &format!("a {verdict} merge-ready verdict did not fail mutants-check"),
+            &log,
         );
     }
     pr.set_labels(&[]);
     let (_, log) = pr.merge_ready("b", false, "success");
-    assert!(
-        pr.gate("b") == "passed" && pr.checks("b").len() == 1,
-        "qa_cta: {}",
-        say(&format!("b's re-run left {:?}", pr.checks("b")), &log)
-    );
+    gate_is("b", "passed", "b's passing re-run did not pass it", &log);
 
-    // Reopened on a head that passed: it stays passed.
+    // Reopened on a merge-ready head that passed: it stays passed.
     let labels = pr.labels();
     let refs: Vec<&str> = labels.iter().map(String::as_str).collect();
     let (_, log) = pr.on(&ev("reopened", "", "b", &refs), false, "success");
-    assert_eq!(
-        pr.gate("b"),
+    gate_is(
+        "b",
         "passed",
-        "qa_cta: {}",
-        say(
-            "a reopened pull request's passed head is no longer passed",
-            &log
-        )
+        "a reopened pull request's passed head is no longer passed",
+        &log,
+    );
+
+    // Another label while the merge-ready run is still running: it waits, then reports that run's verdict.
+    pr.merge_ready_in_progress("b", "failure");
+    let (_, log) = pr.label_on("design", "b", false, "success");
+    gate_is(
+        "b",
+        "failed",
+        "another label during the merge-ready run did not wait for its verdict",
+        &log,
     );
 
     // A head with no `.rs` file under `crates/` passes at once (R-305, R-677), and the label comes off.
@@ -1105,48 +1274,61 @@ fn life(yml: &str) {
             &log
         )
     );
-
-    // A code push with no label: nothing to take off, the head pending.
-    let (_, log) = pr.push("d", false);
-    assert_eq!(
-        pr.gate("d"),
-        "pending",
-        "qa_cta: {}",
-        say("an unlabelled push's code head is not pending", &log)
+    // And it never waits for a merge-ready run, even with the label on and none on the head.
+    pr.set_labels(&["merge-ready"]);
+    let (_, log) = pr.label_on("design", "c", true, "success");
+    gate_is(
+        "c",
+        "passed",
+        "a head with no Rust under crates/ is not passed at once when another label goes on",
+        &log,
     );
 
-    // A head no earlier run posted on (its push run lost): the merge-ready run still reports.
+    // A code push with no label: nothing to take off, the head passed "not applicable".
+    pr.set_labels(&[]);
+    let (_, log) = pr.push("d", false);
+    gate_is(
+        "d",
+        "passed",
+        "an unlabelled push's code head is not passed, not applicable",
+        &log,
+    );
+
+    // The merge-ready label on, but no run of it on the head (its run lost): another label's run fails, never passes.
+    pr.set_labels(&["merge-ready"]);
+    let (_, log) = pr.label_on("design", "d", false, "success");
+    gate_is(
+        "d",
+        "failed",
+        "another label on a merge-ready head with no merge-ready run did not fail",
+        &log,
+    );
+
+    // A head no earlier run reported on (its push run lost): the merge-ready run still reports.
+    pr.set_head("e");
     pr.set_labels(&[]);
     let (_, log) = pr.merge_ready("e", false, "success");
-    assert!(
-        pr.gate("e") == "passed" && pr.checks("e").len() == 1,
-        "qa_cta: {}",
-        say(
-            &format!(
-                "a head with no earlier mutants-check got {:?}",
-                pr.checks("e")
-            ),
-            &log
-        )
+    gate_is(
+        "e",
+        "passed",
+        "a head with no earlier mutants-check did not pass on its merge-ready run",
+        &log,
     );
 
     // Two pushes close together: the second's payload still lists the label the first's run has since taken off. The
-    // head with no Rust under crates/ still passes at once, so no pull request waits on a check that never reports
-    // (R-305, R-677).
+    // head still reports, passed, so no pull request waits on a check that never reports (R-305, R-678).
     pr.set_labels(&[]);
+    pr.set_head("f");
     let (_, log) = pr.on(
         &ev("synchronize", "", "f", &["merge-ready"]),
-        true,
+        false,
         "success",
     );
-    assert_eq!(
-        pr.gate("f"),
+    gate_is(
+        "f",
         "passed",
-        "qa_cta: {}",
-        say(
-            "a head with no Rust under crates/ pushed after the label came off is not passed at once",
-            &log
-        )
+        "a head pushed after the label came off is not passed at once",
+        &log,
     );
 }
 
@@ -1157,25 +1339,25 @@ fn qa_cta_mutants_check_through_a_pull_requests_life() {
 
 negative_control!(
     qa_cta_mutants_check_through_a_pull_requests_life,
-    "a verdict posted as a new check run, leaving the head's queued one",
-    expected = "a failed merge-ready verdict did not fail mutants-check",
+    "mutants-check posted through the Checks API by a job of another name, as #379 had it",
+    expected = "a new code head's mutants-check is not passed, not applicable",
     life(&edited(
         "mutants.yml",
-        "ids=$(gh api --paginate \"$runs&per_page=100\" --jq '.check_runs[].id')",
-        "ids=\"\""
+        "  mutants-check:\n    if: always()\n",
+        "  mutants-report:\n    if: always()\n"
     ))
 );
 
-mod new_head_passed {
+mod new_head_waits {
     use super::*;
     negative_control!(
         qa_cta_mutants_check_through_a_pull_requests_life,
-        "every new head's mutants-check posted passed, with Rust under crates/ or not",
-        expected = "a new code head's mutants-check is not pending",
+        "a head that is not merge-ready waiting for a merge-ready run, as R-676's pending check did",
+        expected = "a new code head's mutants-check is not passed, not applicable",
         life(&edited(
             "mutants.yml",
-            "          if [ \"$MUTANTS\" = false ]; then\n",
-            "          if true; then\n"
+            "          if [ \"$ACTION\" = synchronize ] || [ \"$READY\" != true ]; then\n",
+            "          if false; then\n"
         ))
     );
 }
@@ -1188,8 +1370,8 @@ mod cancelled_passes {
         expected = "a cancelled merge-ready verdict did not fail mutants-check",
         life(&edited(
             "mutants.yml",
-            "          if [ \"$VERDICT\" = success ]; then\n",
-            "          if [ \"$VERDICT\" != failure ]; then\n"
+            "            if [ \"$1\" = success ]; then\n",
+            "            if [ \"$1\" != failure ]; then\n"
         ))
     );
 }
@@ -1208,16 +1390,58 @@ mod label_stays {
     );
 }
 
-mod reopen_requeues {
+mod no_unlabeled_run {
     use super::*;
     negative_control!(
         qa_cta_mutants_check_through_a_pull_requests_life,
-        "a new head's check posted queued even where the head already has one",
-        expected = "a reopened pull request's passed head is no longer passed",
+        "mutants.yml not run when a label is taken off, so the merge-ready run's failure stands",
+        expected = "taking merge-ready off left mutants-check other than passed, not applicable",
         life(&edited(
             "mutants.yml",
-            "          if [ \"$existing\" != 0 ]; then\n",
-            "          if false; then\n"
+            "    types: [opened, synchronize, reopened, labeled, unlabeled]\n",
+            "    types: [opened, synchronize, reopened, labeled]\n"
+        ))
+    );
+}
+
+mod other_label_not_applicable {
+    use super::*;
+    negative_control!(
+        qa_cta_mutants_check_through_a_pull_requests_life,
+        "another label's run passing a merge-ready head not applicable, without its verdict",
+        expected = "another label on a merge-ready head whose run failed did not keep it failed",
+        life(&edited(
+            "mutants.yml",
+            "          if [ \"$ACTION\" = synchronize ] || [ \"$READY\" != true ]; then\n",
+            "          if true; then\n"
+        ))
+    );
+}
+
+mod no_wait {
+    use super::*;
+    negative_control!(
+        qa_cta_mutants_check_through_a_pull_requests_life,
+        "a merge-ready run in progress passed over, not waited for",
+        expected = "another label during the merge-ready run did not wait for its verdict",
+        life(&edited(
+            "mutants.yml",
+            "                *) wait=\"run $id: ${state:-no jobs yet}\"; break ;;\n",
+            "                *) continue ;;\n"
+        ))
+    );
+}
+
+mod superseded_passes {
+    use super::*;
+    negative_control!(
+        qa_cta_mutants_check_through_a_pull_requests_life,
+        "a label run reading an old head's verdict after a push",
+        expected = "a label run on a superseded head passed",
+        life(&edited(
+            "mutants.yml",
+            "            if [ \"$live\" != \"$HEAD_SHA\" ]; then\n",
+            "            if false; then\n"
         ))
     );
 }
@@ -1226,9 +1450,9 @@ mod docs_only_waits {
     use super::*;
     negative_control!(
         qa_cta_mutants_check_through_a_pull_requests_life,
-        "a head with no Rust under crates/ posted queued like a code head's",
+        "a head with no Rust under crates/ waiting for a merge-ready run like a code head's",
         expected =
-            "a head with no Rust under crates/: its mutants-check is pending, not passed at once",
+            "a head with no Rust under crates/ is not passed at once when another label goes on",
         life(&edited(
             "mutants.yml",
             "          if [ \"$MUTANTS\" = false ]; then\n",
@@ -1287,6 +1511,33 @@ fn groups(mutants: &str, reviews: &str) {
     assert!(
         design.0 != ready.0,
         "qa_cta: another label's run shares the merge-ready run's group, so it cancels it: {design:?}"
+    );
+    // R-678: another label taken off runs too, in a group of its own; `merge-ready` taken off cancels its run.
+    let design_off = group(
+        &m,
+        &on_ref(
+            ev("unlabeled", "design", "a", &["merge-ready"]),
+            "refs/pull/7/merge",
+            "pull_request",
+            106,
+        ),
+    );
+    assert!(
+        design_off.0 != ready.0,
+        "qa_cta: another label taken off shares the merge-ready run's group, so it cancels it: {design_off:?}"
+    );
+    let ready_off = group(
+        &m,
+        &on_ref(
+            ev("unlabeled", "merge-ready", "a", &[]),
+            "refs/pull/7/merge",
+            "pull_request",
+            107,
+        ),
+    );
+    assert!(
+        ready_off.0 == ready.0 && ready_off.1,
+        "qa_cta: taking merge-ready off does not cancel its run: {ready:?} {ready_off:?}"
     );
     let other_pr = group(
         &m,
@@ -1392,12 +1643,29 @@ negative_control!(
     groups(
         &edited(
             "mutants.yml",
-            "(github.event.action == 'labeled' && github.event.label.name != 'merge-ready')",
-            "(github.event.action == 'labeled')"
+            "    && github.event.label.name != 'merge-ready'))\n",
+            "    ))\n"
         ),
         &workflow("reviews.yml")
     )
 );
+
+mod label_off_cancels {
+    use super::*;
+    negative_control!(
+        qa_cta_superseded_runs_cancel_per_pull_request,
+        "only a label put on in a group of its own, so taking another label off cancels the merge-ready run",
+        expected = "another label taken off shares the merge-ready run's group",
+        groups(
+            &edited(
+                "mutants.yml",
+                " || github.event.action == 'unlabeled')\n",
+                ")\n"
+            ),
+            &workflow("reviews.yml")
+        )
+    );
+}
 
 mod reviews_one_group {
     use super::*;

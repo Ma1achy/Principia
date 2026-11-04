@@ -1,0 +1,67 @@
+# Re-runs a failed run's failed jobs when, and only when, the runner failed, not the code (the owner, 4 Nov 2026: "is it
+# possible to make it auto retry if the CI fails for something outside of our control like that?"; and "put the 'is this
+# a runner fault?' classifier in a script with tests against saved logs"). `.github/scripts/ci_retry.py` holds the
+# classification; `xtask/tests/ci_retry.rs` tests it, this workflow and the saved runs under `fixtures/ci_retry/`.
+#
+# It acts on a run that concluded `failure` at an attempt under 3, on `main` and on a pull request alike, and asks for
+# `rerun-failed-jobs` only if every failed job shows a runner-level signature or is a gate of one that does. An assertion
+# failure, a timeout or anything else re-runs nothing, a head its branch has moved on from re-runs nothing, and nothing
+# here re-runs a whole run. The decision and its reasons go to this run's summary.
+#
+# `workflow_run` takes effect only from the default branch: GitHub reads this file and the script from `main`, so a pull
+# request changing them cannot exercise them, and they first run after the merge. For the same reason the job runs no
+# code from the run it reads: the checkout is `main`'s, and what it reads of the run, its jobs, annotations, logs and
+# workflow file, is data.
+name: retry
+
+on:
+  workflow_run:
+    workflows: [ci, mutants, gate]
+    types: [completed]
+
+# `actions: write` for `rerun-failed-jobs`, which also reads the logs; `checks: read` for the annotations, the only
+# trace a runner that died leaves; `contents: read` for the checkout and the run's workflow file.
+permissions:
+  actions: write
+  checks: read
+  contents: read
+
+env:
+  # R-374: every workflow sets line-tables-only at its top level. This job builds nothing; it sets them so that holds
+  # for every workflow without exception (applied per R-369).
+  CARGO_PROFILE_DEV_DEBUG: line-tables-only
+  CARGO_PROFILE_TEST_DEBUG: line-tables-only
+  # No incremental state, the owner's CI setting (PR #394), in every workflow like R-374's values. `Swatinem/rust-cache`
+  # already exports CARGO_INCREMENTAL=0 to the steps after it, and before it computes its key, so its key and every
+  # build after it are the same without this line. What the line adds: the value in the steps before rust-cache, where
+  # no cargo build runs and `ci.yml`'s `cachekey` hashes it, and in jobs without rust-cache, where only `ci.yml`'s
+  # `ci-release` runs cargo and it builds only for the release doctests, which aren't incremental by default. Local
+  # builds are unaffected (R-233).
+  CARGO_INCREMENTAL: "0"
+
+jobs:
+  retry:
+    if: github.event.workflow_run.conclusion == 'failure' && github.event.workflow_run.run_attempt < 3
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      # The script reads the run's workflow file for its gates (a job's `needs`) with PyYAML.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install PyYAML
+        run: python3 -m pip install pyyaml
+      - name: Re-run the failed jobs on runner faults only
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+          RUN_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          WORKFLOW_PATH: ${{ github.event.workflow_run.path }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+        run: python3 -I .github/scripts/ci_retry.py decide
