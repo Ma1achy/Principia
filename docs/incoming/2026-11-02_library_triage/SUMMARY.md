@@ -300,6 +300,9 @@ sources named there: eljja, RATISS, Charlie-Zhao, Anosova 1990, Pruett 2003.
    be planned as M9 peek outputs, which needs new requirements, or stay recorded here?
    Ruled by the owner, 3 Nov 2026 (RQ-674): both are planned as M9 peeks, non-gating, with no build before M9.
 
+The three entries stay in `REVIEW_QUEUE.md` on this branch. The port `rulings/2026-11-03-port3` carries the ruling's
+number and archives them.
+
 ## The owner's spot-check of 3 Nov 2026
 
 The owner spot-checked the triage on 3 Nov: of 14 items, 11 confirmed and none wrong, with six fixes asked for before
