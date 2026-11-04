@@ -905,3 +905,116 @@ negative_control!(
         )]
     )
 );
+
+/// `loader.js`'s text as it stood at 9133ef1b, each event's own `data` (code review 5772081382, F1).
+const TEXT_FROM_EACH_EVENT: [(&str, &str, &str); 2] = [
+    (
+        "loader.js",
+        r#"const typed = () => { if (ime.value) post("text", ime.value); ime.value = ""; };"#,
+        r#"const typed = (e) => { if (e.data) post("text", e.data); ime.value = ""; };"#,
+    ),
+    (
+        "loader.js",
+        "if (!e.isComposing) typed();",
+        "if (!e.isComposing) typed(e);",
+    ),
+];
+
+/// Text taken and the input left holding it.
+const INPUT_NOT_CLEARED: [(&str, &str, &str); 1] = [(
+    "loader.js",
+    r#"post("text", ime.value); ime.value = ""; };"#,
+    r#"post("text", ime.value); };"#,
+)];
+
+/// One IME commit is one `text` post, in whichever order the browser sends `compositionend` and the last `input`, and in
+/// the worker layout, where the page forwards text (the task's deliverable: "forwards what the worker cannot receive
+/// itself (pointer, keys, text, resize)"; code review 5772081382, F1).
+#[test]
+fn qa_m8_86_ime_commit_posts_once_compositionend_first() {
+    node("ime_compositionend_then_input", &[]);
+}
+
+mod ime_end_first_text_from_each_event {
+    use super::*;
+    negative_control!(
+        qa_m8_86_ime_commit_posts_once_compositionend_first,
+        "the text taken from each event's data",
+        expected = "one commit posted 2 times",
+        node("ime_compositionend_then_input", &TEXT_FROM_EACH_EVENT)
+    );
+}
+
+mod ime_end_first_not_cleared {
+    use super::*;
+    negative_control!(
+        qa_m8_86_ime_commit_posts_once_compositionend_first,
+        "the input not cleared once its text is posted",
+        expected = "one commit posted 2 times",
+        node("ime_compositionend_then_input", &INPUT_NOT_CLEARED)
+    );
+}
+
+#[test]
+fn qa_m8_86_ime_commit_posts_once_input_first() {
+    node("ime_input_then_compositionend", &[]);
+}
+
+mod ime_input_first_text_from_each_event {
+    use super::*;
+    negative_control!(
+        qa_m8_86_ime_commit_posts_once_input_first,
+        "the text taken from each event's data",
+        expected = "one commit posted 2 times",
+        node("ime_input_then_compositionend", &TEXT_FROM_EACH_EVENT)
+    );
+}
+
+mod ime_input_first_end_ignored {
+    use super::*;
+    negative_control!(
+        qa_m8_86_ime_commit_posts_once_input_first,
+        "compositionend not listened for",
+        expected = "one commit posted 0 times",
+        node(
+            "ime_input_then_compositionend",
+            &[(
+                "loader.js",
+                r#"ime.addEventListener("compositionend", typed, { signal });"#,
+                ""
+            )]
+        )
+    );
+}
+
+mod ime_input_first_composing_taken {
+    use super::*;
+    negative_control!(
+        qa_m8_86_ime_commit_posts_once_input_first,
+        "an input event taken while still composing",
+        expected = "an interim composition was posted",
+        node(
+            "ime_input_then_compositionend",
+            &[("loader.js", "if (!e.isComposing) typed();", "typed();")]
+        )
+    );
+}
+
+#[test]
+fn qa_m8_86_ime_cancel_and_delete_post_nothing() {
+    node("ime_cancel_and_delete_post_nothing", &[]);
+}
+
+negative_control!(
+    qa_m8_86_ime_cancel_and_delete_post_nothing,
+    "an empty input posted as text",
+    expected = "a cancelled composition posted",
+    node(
+        "ime_cancel_and_delete_post_nothing",
+        &[(
+            "loader.js",
+            r#"if (ime.value) post("text", ime.value);"#,
+            r#"post("text", ime.value);"#
+        )]
+    )
+);

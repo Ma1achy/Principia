@@ -23,7 +23,7 @@ if (!isMainThread) {
 
 async function main() {
   const [dir, scenario] = process.argv.slice(2);
-  const scenarios = { ...probeScenarios(dir), ...loaderScenarios(dir), ...runnerScenarios(dir) };
+  const scenarios = { ...probeScenarios(dir), ...loaderScenarios(dir), ...imeScenarios(dir), ...runnerScenarios(dir) };
   if (!scenarios[scenario]) throw new Error(`no scenario ${scenario}`);
   await scenarios[scenario]();
   process.exit(0);
@@ -97,7 +97,12 @@ async function runLoader(dir, { search, offscreen = true, gpu = true, isolated =
     title: "",
     body: { append() {} },
     getElementById: () => canvas,
-    createElement: () => ({ focus() {}, remove() {}, addEventListener() {}, style: {} }),
+    createElement: (tag) => {
+      // The worker layout's hidden input takes real listeners, for the IME replays.
+      const element = Object.assign(new EventTarget(), { value: "", focus() {}, remove() {}, style: {} });
+      if (tag === "input") seen.ime = element;
+      return element;
+    },
   });
   define("requestAnimationFrame", (tick) => setTimeout(() => tick(performance.now()), 16));
   define("ResizeObserver", class { observe() {} disconnect() {} });
@@ -133,6 +138,95 @@ async function runLoader(dir, { search, offscreen = true, gpu = true, isolated =
   }
   await new Promise((resolve) => setTimeout(resolve, 20));
   return { seen, appWorker: appWorker(), published: globalThis.__principiaMeasure };
+}
+
+// The worker layout's hidden input, as a browser drives it: `fire` sends one event, setting the input's value first when
+// the event's step changes it (a browser's commit changes it once, before the first event, and never restores what the
+// page cleared). `texts` is what was posted to the worker's `text`, which pushes one egui text event for each.
+async function imePage(dir) {
+  const { seen, appWorker } = await runLoader(dir, { search: "?layout=worker" });
+  check(appWorker, "?layout=worker started no worker");
+  check(seen.ime, "the worker layout has no hidden input");
+  const { ime } = seen;
+  const fire = (type, data, isComposing, value) => {
+    if (value !== undefined) ime.value = value;
+    ime.dispatchEvent(Object.assign(new Event(type), { data, isComposing }));
+  };
+  const texts = () => appWorker.posts.filter((m) => m.type === "call" && m.method === "text").map((m) => m.args[0]);
+  return { ime, fire, texts };
+}
+
+// A composition up to its commit: the interim text is in the input, and none of it is posted.
+function compose(page, text) {
+  const before = page.texts().length;
+  page.fire("compositionstart", "", undefined);
+  for (const interim of [...text].map((_, i) => `${text.slice(0, i + 1)}~`)) {
+    page.fire("compositionupdate", interim, undefined);
+    page.fire("input", interim, true, interim);
+  }
+  check(page.texts().length === before, `an interim composition was posted: ${JSON.stringify(page.texts().slice(before))}`);
+}
+
+// Each order of a commit's last two events, one commit after another: one post of the committed text for each, nothing
+// held over into the next, and a plain key after them still typed.
+function replayCommits(page, orders) {
+  for (const [name, send] of Object.entries(orders)) {
+    for (const text of ["\u4f60\u597d", "pin"]) {
+      compose(page, text);
+      const before = page.texts().length;
+      send(page, text);
+      const posted = page.texts().slice(before);
+      check(posted.length === 1, `${name}: one commit posted ${posted.length} times: ${JSON.stringify(posted)}`);
+      check(posted[0] === text, `${name}: the commit posted ${JSON.stringify(posted[0])}, not ${JSON.stringify(text)}`);
+      check(page.ime.value === "", `${name}: the input still holds ${JSON.stringify(page.ime.value)}`);
+    }
+    const before = page.texts().length;
+    page.fire("input", "a", false, "a");
+    const typed = page.texts().slice(before);
+    check(typed.length === 1 && typed[0] === "a", `${name}: a key after the commit posted ${JSON.stringify(typed)}`);
+  }
+}
+
+function imeScenarios(dir) {
+  return {
+    // `input` after `compositionend`, as code review 5772081382's F1 says Gecko sends it: the value is in place first.
+    async ime_compositionend_then_input() {
+      replayCommits(await imePage(dir), {
+        "compositionend, then input not composing": (page, text) => {
+          page.fire("compositionend", text, undefined, text);
+          page.fire("input", text, false);
+        },
+        "compositionend, then input still composing": (page, text) => {
+          page.fire("compositionend", text, undefined, text);
+          page.fire("input", text, true);
+        },
+      });
+    },
+    async ime_input_then_compositionend() {
+      replayCommits(await imePage(dir), {
+        // The order Chrome 155 sends, seen through CDP's Input.imeSetComposition and Input.insertText.
+        "input composing, then compositionend": (page, text) => {
+          page.fire("input", text, true, text);
+          page.fire("compositionend", text, undefined);
+        },
+        "input not composing, then compositionend": (page, text) => {
+          page.fire("input", text, false, text);
+          page.fire("compositionend", text, undefined);
+        },
+      });
+    },
+    // A cancelled composition commits nothing, and a plain deletion types nothing (each trace as Chrome 155 sent it).
+    async ime_cancel_and_delete_post_nothing() {
+      const page = await imePage(dir);
+      compose(page, "x");
+      page.fire("compositionupdate", "", undefined);
+      page.fire("input", null, true, "");
+      page.fire("compositionend", "", undefined);
+      check(page.texts().length === 0, `a cancelled composition posted ${JSON.stringify(page.texts())}`);
+      page.fire("input", null, false, "");
+      check(page.texts().length === 0, `a deletion posted ${JSON.stringify(page.texts())}`);
+    },
+  };
 }
 
 function loaderScenarios(dir) {
