@@ -95,6 +95,13 @@ env:
   # keys here too (R-337). R-233 (debug info at the default) governs local builds only.
   CARGO_PROFILE_DEV_DEBUG: line-tables-only
   CARGO_PROFILE_TEST_DEBUG: line-tables-only
+  # No incremental state, the owner's CI setting (PR #394), in every workflow like R-374's values. `Swatinem/rust-cache`
+  # already exports CARGO_INCREMENTAL=0 to the steps after it, and before it computes its key, so its key and every
+  # build after it are the same without this line. What the line adds: the value in the steps before rust-cache, where
+  # no cargo build runs and `ci.yml`'s `cachekey` hashes it, and in jobs without rust-cache, where only `ci.yml`'s
+  # `ci-release` runs cargo and it builds only for the release doctests, which aren't incremental by default. Local
+  # builds are unaffected (R-233).
+  CARGO_INCREMENTAL: "0"
 
 jobs:
   # What a pull request's change touches (R-656, R-662, R-677): its `tier`, code, data or docs; `docs_only`, true on a
@@ -172,7 +179,8 @@ jobs:
       # 2026, item 3): every dependency is built without debug info, so the ~600 test binaries, each linking its
       # dependencies whole, stop carrying their line tables. A panic message still names file and line (from the
       # panic's location, not debug info), and a backtrace still names every frame, with file and line for the
-      # workspace's own (R-374); a frame inside a dependency is named without them. It is this job's alone: a cargo
+      # workspace's own (R-374); a frame inside a dependency is named without them. As every job that runs cargo does
+      # (`.github/actions/cargo-ci-config`), for the one profile this job builds in: a cargo
       # config in the runner's CARGO_HOME, where the archive step reads it, never in the repository (R-233 governs
       # local builds), and outside rust-cache's key, which hashes the CARGO_* environment (R-337). A package override
       # has no environment form, and the archive step's command line is pinned (R-372), so it is a file.
@@ -247,7 +255,7 @@ jobs:
         id: toolchain
         run: |
           rustup toolchain install
-          echo "cachekey=$(rustc --version --verbose | sha256sum | cut -c1-20)" >> "$GITHUB_OUTPUT"
+          echo "cachekey=$({ rustc --version --verbose; env | grep -E '^CARGO_(INCREMENTAL|PROFILE)' | sort; cat .github/actions/cargo-ci-config/config.sh; } | sha256sum | cut -c1-20)" >> "$GITHUB_OUTPUT"
       - uses: Swatinem/rust-cache@v2
         with:
           prefix-key: cargo-registry
@@ -255,11 +263,17 @@ jobs:
           cache-targets: "false"
           cache-bin: "false"
           save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+      # Every dependency without debug info, as a cargo config in the runner's CARGO_HOME; the workspace's own crates
+      # keep R-374's line tables (`.github/actions/cargo-ci-config`).
+      - name: Dependencies without debug info, every profile
+        uses: ./.github/actions/cargo-ci-config
       # The fixture pool, one build directory per fixture type, kept between runs (R-270): cargo rebuilds in it only
-      # what changed. Keyed on what invalidates its builds: the runner, the toolchain, the lockfile and the fixtures'
-      # manifests; a new key starts from the latest pool of the same toolchain. Restored here in every run; saved by
-      # the step after the tests, only on a push to `main` (R-326) and only when the job passes, so a run cut short by
-      # a failing test never saves a pool half built. Its key names this job, the only one that saves it (R-285).
+      # what changed. Keyed on what invalidates its builds: the runner, the toolchain and the CI build settings, all in
+      # `cachekey`, for a pool built under other settings is rebuilt whole beside itself, and the lockfile and the
+      # fixtures' manifests; a new key starts from the latest pool of the same `cachekey`. Restored here in every run;
+      # saved by the step after the tests, only on a push to `main` (R-326) and only when the job passes, so a run cut
+      # short by a failing test never saves a pool half built. Its key names this job, the only one that saves it
+      # (R-285).
       - uses: actions/cache/restore@v4
         with:
           path: target/tmp/fixture-targets
@@ -520,6 +534,10 @@ jobs:
           cache-targets: "false"
           cache-bin: "false"
           save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+      # Every dependency without debug info, as a cargo config in the runner's CARGO_HOME; the workspace's own crates
+      # keep R-374's line tables (`.github/actions/cargo-ci-config`).
+      - name: Dependencies without debug info, every profile
+        uses: ./.github/actions/cargo-ci-config
       - name: cargo fmt --all --check
         run: cargo fmt --all --check
       - name: cargo clippy --workspace --all-targets -- -D warnings
@@ -593,6 +611,10 @@ jobs:
           cache-targets: "false"
           cache-bin: "false"
           save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+      # Every dependency without debug info, as a cargo config in the runner's CARGO_HOME; the workspace's own crates
+      # keep R-374's line tables (`.github/actions/cargo-ci-config`).
+      - name: Dependencies without debug info, every profile
+        uses: ./.github/actions/cargo-ci-config
       - uses: taiki-e/install-action@v2
         with:
           tool: cargo-nextest@0.9.146
@@ -658,6 +680,10 @@ jobs:
       # The toolchain rust-toolchain.toml pins (R-169): the tests run cargo themselves, on the fixtures.
       - name: rustup toolchain install (rust-toolchain.toml)
         run: rustup toolchain install
+      # Every dependency without debug info, as a cargo config in the runner's CARGO_HOME; the workspace's own crates
+      # keep R-374's line tables (`.github/actions/cargo-ci-config`).
+      - name: Dependencies without debug info, every profile
+        uses: ./.github/actions/cargo-ci-config
       # xtask's plan_check tests run plan/check_plan.py, which needs Python and PyYAML (TASK-M0-02).
       - uses: actions/setup-python@v5
         with:
@@ -773,6 +799,10 @@ jobs:
           cache-targets: "false"
           cache-bin: "false"
           save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+      # Every dependency without debug info, as a cargo config in the runner's CARGO_HOME; the workspace's own crates
+      # keep R-374's line tables (`.github/actions/cargo-ci-config`).
+      - name: Dependencies without debug info, every profile
+        uses: ./.github/actions/cargo-ci-config
       # The rust-gpu build, the `rustc_codegen_spirv` backend cargo-gpu's installer builds into ~/.cache/rust-gpu, kept
       # between runs (R-320): keyed on this job and the channel rust-toolchain.toml pins, so a toolchain bump starts a
       # fresh cache (REQ-SYS-075; per-job keys, R-285, REQ-SYS-073). Restored in every run, saved after the build only
@@ -878,7 +908,7 @@ jobs:
         id: toolchain
         run: |
           rustup toolchain install
-          echo "cachekey=$(rustc --version --verbose | sha256sum | cut -c1-20)" >> "$GITHUB_OUTPUT"
+          echo "cachekey=$({ rustc --version --verbose; env | grep -E '^CARGO_(INCREMENTAL|PROFILE)' | sort; cat .github/actions/cargo-ci-config/config.sh; } | sha256sum | cut -c1-20)" >> "$GITHUB_OUTPUT"
           echo "channel=$(sed -n 's/^channel = "\(.*\)"$/\1/p' rust-toolchain.toml)" >> "$GITHUB_OUTPUT"
       - uses: Swatinem/rust-cache@v2
         with:
@@ -887,6 +917,10 @@ jobs:
           cache-targets: "false"
           cache-bin: "false"
           save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+      # Every dependency without debug info, as a cargo config in the runner's CARGO_HOME; the workspace's own crates
+      # keep R-374's line tables (`.github/actions/cargo-ci-config`).
+      - name: Dependencies without debug info, every profile
+        uses: ./.github/actions/cargo-ci-config
       # The fixture pool the `ci` job saves, restored only, under its key: `cargo xtask controls` runs the fixture tests'
       # controls (R-270, R-285).
       - uses: actions/cache/restore@v4
@@ -974,6 +1008,10 @@ jobs:
           cache-targets: "false"
           cache-bin: "false"
           save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+      # Every dependency without debug info, as a cargo config in the runner's CARGO_HOME; the workspace's own crates
+      # keep R-374's line tables (`.github/actions/cargo-ci-config`).
+      - name: Dependencies without debug info, every profile
+        uses: ./.github/actions/cargo-ci-config
       # The rust-gpu build, kept between runs as in `gpu-kernel` (R-320, R-326), under this job's key, at
       # ~/.cache/rust-gpu. On macOS cargo-gpu's installer builds into ~/Library/Caches/rust-gpu, so that is linked to
       # it first.
@@ -1124,6 +1162,10 @@ jobs:
           cache-targets: "false"
           cache-bin: "false"
           save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+      # Every dependency without debug info, as a cargo config in the runner's CARGO_HOME; the workspace's own crates
+      # keep R-374's line tables (`.github/actions/cargo-ci-config`).
+      - name: Dependencies without debug info, every profile
+        uses: ./.github/actions/cargo-ci-config
       # The rust-gpu build, kept between runs as in `gpu-kernel` (R-320, R-326), under this job's key.
       - uses: actions/cache/restore@v4
         with:
