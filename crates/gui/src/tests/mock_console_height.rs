@@ -721,6 +721,9 @@ fn mock_console_height_dragged_over_it_hides_the_basis_editor() {
     settle(&mut h, &mut app);
     let clear = app.keyboard.place_of(Q1_COMPONENTS[0]);
     assert!(clear.is_some(), "the console under the editor keeps it");
+    rejects("the editor clear of the console", || {
+        editor_gone(&mut h, &mut app, field.center())
+    });
     // Over the editor's lower part only: a part over the console is as bad as the whole.
     let edge = drawn(&app).min.y;
     drag_edge(&mut h, &mut app, field.max.y + 2.0 - edge);
@@ -808,6 +811,9 @@ fn mock_console_height_maximised_on_the_stain_page_too() {
     let (mut app, mut h) = opened();
     app.view.mode = engine::contract::view_ui::Mode::Stain;
     settle(&mut h, &mut app);
+    rejects("the panels reached at the default height", || {
+        keys_left_to_the_bars(&mut h, &mut app)
+    });
     open_console_again(&mut h, &mut app);
     m(&mut h, &mut app, NONE);
     keys_left_to_the_bars(&mut h, &mut app);
