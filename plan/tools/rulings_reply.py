@@ -28,8 +28,8 @@ letters mixed with romans, "separately" or "Open within" in the options, or a fi
 question", or `Q-n`): the rest of it may still be open. The flag reads signs, and can miss one, so /rulings-apply reads
 every entry it would close. A line may hold several answers, each starting `RQ-n:`, as
 in `RQ-641: (b). RQ-642: (a).`; each is read and answered on its own. A template line left as the report wrote it, or
-`D-n: stands`, is unanswered. A line that is a section name alone (`HEADINGS`, or a report's `##` heading) is no reply line either: it is
-skipped, and listed as skipped. Any other line in capitals is refused like any other.
+`D-n: stands`, is unanswered. A line that is a section name alone (`HEADINGS`, or a report's `##` heading) is no reply
+line either: it is skipped, and listed as skipped. Any other line in capitals is refused like any other.
 
 Refused, and listed with the reason: an unknown or closed RQ, an unknown D-n, an option the entry doesn't offer, two
 options named as alternatives (any `or` between two labels, or `(a)/(b)`), a label after a negation (`not (a)`,
