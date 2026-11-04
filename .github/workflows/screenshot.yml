@@ -26,6 +26,9 @@ env:
   # keys here too (R-337). R-233 (debug info at the default) governs local builds only.
   CARGO_PROFILE_DEV_DEBUG: line-tables-only
   CARGO_PROFILE_TEST_DEBUG: line-tables-only
+  # No incremental state: no target directory is kept between runs (R-285), so it is only disk. In every workflow
+  # for rust-cache's key (R-337), as above. Local builds are unaffected (R-233).
+  CARGO_INCREMENTAL: "0"
 
 jobs:
   screenshot:
@@ -47,6 +50,10 @@ jobs:
           # Saved only in a run on a push to `main`, which this workflow never is, so it saves nothing (R-326). It
           # restores, read-only, the key `ci.yml`'s `ci` job saves on `main`, `cargo-registry-ci-…` (R-337).
           save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+      # Every dependency without debug info, as a cargo config in the runner's CARGO_HOME; the workspace's own crates
+      # keep R-374's line tables (`.github/actions/cargo-ci-config`).
+      - name: Dependencies without debug info, every profile
+        uses: ./.github/actions/cargo-ci-config
       - name: Install Mesa (lavapipe)
         run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers
       - name: cargo xtask screenshot --all
