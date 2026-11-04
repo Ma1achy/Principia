@@ -129,7 +129,9 @@ the running maximum moment of inertia `I_max`. `G = 1`. Transcribed from prin-rs
 `src/physics/energy.rs`, and how `examples/chazy_probe.rs` calls `classify`):
 
 - **`E`** is the total energy at `t = 0`, `E_0 = K_0 + V_0`, unsoftened (`energy::energy` at `eps2 = 0` on the initial
-  state). The read side already carries it.
+  state). The read side already carries it. *2 Nov 2026 (R-670, RQ-656 (3), option (a)):* at `ε ≠ 0`, `E` is the run's
+  `E_0` under the softened potential (R-654); "unsoftened" is the `ε = 0` case. The pair and outer two-body energies
+  below are not ruled for `ε ≠ 0`: they are RQ-694.
 - **`I`** is the moment of inertia about the centre of mass, `I = Σ_k m_k |r_k − R_com|²` (`energy::inertia`).
 - **`R_0`** is the initial hyperradius, `R_0 = √(I_0 / M)`, `M = Σ m_k` (`energy::hyperradius` on the initial state).
 - **A pair `(i, j)`'s two-body energies** (`pair_kup`): reduced mass `μ = m_i m_j / (m_i + m_j)`, `Δr = r_j − r_i`,

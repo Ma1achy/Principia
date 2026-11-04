@@ -56,7 +56,8 @@ enum"):
 - **Every pixel carries a label.** A decode is either tagged with one reason or untagged and goes on to integration,
   so no pixel is dropped and none is unlabelled (`principia_chart_reference.md` §0.7). A tagged decode keeps its
   outputs: its `(m, r, p)` finite, its descriptor never NaN, and infinite only at R-436's poles, `rho_ratio`'s `+∞`
-  and `V_0`'s `−∞` (the collision pole).
+  and `V_0`'s `−∞` (the collision pole). *2 Nov 2026 (R-670):* at `ε ≠ 0`, `V_0` is softened and finite at a zero
+  separation, so only `rho_ratio`'s `+∞` remains (§ 3.6).
 
 **The decoder's branch inputs** *(enumerated per R-34; REQ-VAL-017, written by TASK-M2-24)*. Every decision the
 decode makes that test 12 compares bit for bit across backends, with the value it reads and how that value is formed:
@@ -263,6 +264,12 @@ The stored `ICDescriptor` is the ledger's field list (`principia_dd_generation_r
 
 `E₀` here must agree with the kernel's `E_0` at t=0 — that agreement is a cross-check view, not an assumption.
 
+*2 Nov 2026 (R-670, RQ-656 (5)(i)): under softening.* At `ε ≠ 0`, `V₀ = − Σ_{i<j} mᵢmⱼ / √(‖rᵢ − rⱼ‖² + ε²)`, the
+dynamics' potential (R-654), and `virial_ratio = 2K₀/|V₀|` and `E₀ = K₀ + V₀` follow it, so `E₀` agrees with the
+kernel's softened `E_0`. `ε` is an input of this stage and of the fragment decode (R-116). `V₀` is finite at a zero
+separation, so at `ε ≠ 0` there is no collision pole: the `−∞` select below applies at `ε = 0` only, and a zero
+separation's `V₀` is the finite softened value, read like any other. At `ε = 0` every line of this section stands.
+
 **The six other fields** *(definition, R-72; REQ-PAY-088, written by TASK-M2-03)*. Each is read after the blocks and
 before integration, so it is the same for every chart. Each but `rho_angle` is read from the decoded `(m, r, p)` alone
 (§2: the integrator's input is `(m, r, p)` and nothing else); `rho_angle` is read from the configuration block's own
@@ -398,6 +405,10 @@ arithmetic, and the second stays finite where $(E^* - U)/K_0$ overflows or $K_0$
 `r_min_pair_0` $= 0$, each a comparison of the emitted values with no arithmetic at the decision, as $M_{01}$'s
 test reads the emitted masses (§3.1). The collision pole is tested on the separation, never by arithmetic or a
 comparison on $\infty$.
+
+**Under softening (R-670, RQ-656 (6)(iii), 2 Nov 2026).** A view refuses `ε ≠ 0` with any `Some(E*)`, `Some(0)`
+included, as a forbidding chart refuses it below: `η_E` never runs on a softened decode, so a pixel's IC does not depend
+on `ε`, and `ENERGY_INFEASIBLE` and `ENERGY_UNSCALABLE` keep their meaning.
 
 **Where it is allowed.** Only on charts that decode arbitrary momenta without enforcing an energy: the
 free-Jacobi-momentum chart and the latent chart. **It must be disabled** on the invariant-momentum charts

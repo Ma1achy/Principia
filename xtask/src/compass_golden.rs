@@ -6,9 +6,10 @@
 //!
 //! Every spec compares, against its reference record, the eight corners' projection and fit and the twelve edges'
 //! drawing order with their opacity and width. A spec may add the slice's polygon, against the reference's or the
-//! decoder's, with its place in the edge order; the labels, either wholly against the reference's (the names, the
-//! corner numbers and the readout) or as tilt mode's one label placed as the reference's bottom-right label; and
-//! whether the slice is drawn at all. Every capture with a spec is also checked for the reference's cream palette over
+//! decoder's, with its place in the edge order; the labels, either wholly against the reference's (the names, each
+//! after its R-459 letter, the corner numbers and the readout) or as tilt mode's three edges, the third axis's label
+//! placed as the reference's bottom-right label, with the readout and the badge where the spec names them (R-459);
+//! and whether the slice is drawn at all. Every capture with a spec is also checked for the reference's cream palette over
 //! the whole capture: none of it may appear (R-451, §G1).
 
 use std::fs;
@@ -42,6 +43,12 @@ pub struct Spec {
     /// The labels, if compared.
     #[serde(default)]
     pub labels: Option<LabelSpec>,
+    /// The readout's lines, if compared apart from the labels.
+    #[serde(default)]
+    pub readout: Option<Vec<String>>,
+    /// Whether the badge is shown, if compared (R-459).
+    #[serde(default)]
+    pub badge: Option<bool>,
 }
 
 /// Where the polygon's expected vertices come from.
@@ -66,10 +73,10 @@ pub enum PolygonSpec {
 pub enum LabelSpec {
     /// The reference record's labels, corner numbers and readout, wholly.
     Reference,
-    /// Tilt mode's one label: its text, placed where the reference record's label `reference_label` is (its
-    /// bottom-right edge's), and no corner numbers.
+    /// Tilt mode's three edges (R-459 G1): the third axis's label, second, its text placed where the reference record's
+    /// label `reference_label` is (its bottom-right edge's), and no corner numbers.
     Tilt {
-        /// The label's text.
+        /// The third axis's text.
         text: String,
         /// The index of the reference's label it is placed as.
         reference_label: usize,
@@ -132,6 +139,9 @@ pub struct Record {
     /// The capture's pixels per point: gui's record only.
     #[serde(default)]
     pub pixels_per_point: Option<f64>,
+    /// Whether the badge is shown: gui's record only (R-459).
+    #[serde(default)]
+    pub badge: bool,
 }
 
 /// The independent computation of the decoder's plane.
@@ -327,7 +337,7 @@ pub fn compare(golden: &Golden, ours: &Record) -> Vec<String> {
             text,
             reference_label,
         }) => match (ours.labels.as_slice(), reference.labels.get(*reference_label)) {
-            ([one], Some(want)) => {
+            ([_, one, _], Some(want)) => {
                 if one.text != *text {
                     failures.push(format!("the tilt label reads {:?}, not {text:?}", one.text));
                 }
@@ -345,9 +355,19 @@ pub fn compare(golden: &Golden, ours: &Record) -> Vec<String> {
                 }
             }
             (labels, _) => failures.push(format!(
-                "tilt mode draws one label, here {labels:?}; the reference's label {reference_label} must exist"
+                "tilt mode draws three labels, here {labels:?}; the reference's label {reference_label} must exist"
             )),
         },
+    }
+    if let Some(want) = &spec.readout {
+        if ours.readout != *want {
+            failures.push(format!("the readout is {:?}, not {want:?}", ours.readout));
+        }
+    }
+    if let Some(want) = spec.badge {
+        if ours.badge != want {
+            failures.push(format!("the badge shown is {}, not {want}", ours.badge));
+        }
     }
     failures
 }
@@ -394,7 +414,12 @@ fn check_labels(what: &str, got: &[Label], want: &[Label], tol: f64, failures: &
         ));
     }
     for (g, w) in got.iter().zip(want) {
-        if g.text != w.text || !near2(g.at, w.at, tol) {
+        // The reference names the dimension alone; the letter before it is R-459 G1's.
+        let name = g
+            .text
+            .split_once(' ')
+            .map_or(g.text.as_str(), |(_, name)| name);
+        if name != w.text || !near2(g.at, w.at, tol) {
             failures.push(format!(
                 "{what} {:?} at {:?}, the reference's {:?} at {:?}",
                 g.text, g.at, w.text, w.at

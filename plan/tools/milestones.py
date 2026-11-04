@@ -27,8 +27,8 @@ AREAS = ["DEC", "ENC", "CHART", "INT", "EVT", "PAY", "GEN", "SCHED", "REF", "REN
          "PERF", "SYS"]
 MILESTONES = [f"M{i}" for i in range(9)]  # the milestones with exit gates
 REPORTS = ["M9"]  # the milestones that exit on a report, not a gate (R-650)
-# The build tasks in a report milestone: not scored, the report not waiting on them (R-654).
-BUILD_TASKS = {"M9": ["TASK-M9-39"]}
+# The build tasks in a report milestone: not scored, the report not waiting on them (R-654, R-669).
+BUILD_TASKS = {"M9": ["TASK-M9-39", "TASK-M9-40"]}  # TASK-M9-40: the Šuvakov-plane chart (R-669)
 # The tasks in a report milestone that close no target: the report itself and a definition it precedes.
 REPORT_TASKS = {"M9": ["TASK-M9-37", "TASK-M9-38"]}
 
@@ -61,6 +61,11 @@ def area_lines(ids):
     return lines
 
 
+def listed(ids):
+    """"a", "a and b", "a, b and c"."""
+    return ids[0] if len(ids) == 1 else ", ".join(ids[:-1]) + " and " + ids[-1]
+
+
 def tier_table_rows():
     """The requirement in each row of § 12.2's table: its second cell."""
     text = open(TIERS, encoding="utf-8").read()
@@ -85,14 +90,15 @@ def gate_block(reqs, m, report=False, built=(), reporting=(), targets=()):
     other = [r["id"] for r in live if r["id"] in built and r.get("kind") == "calibration"]
     lines = [f"**Scored, never gated — {len(scored)} requirements**, the rows of `principia_dd_replication.md` § 12.2's "
              "table (R-649, R-650; each outcome PASS, EXPLAINED DIVERGENCE or UNEXPLAINED, in the report, or \"not "
-             f"scored\" with what it waits on; {' and '.join(defined)} are that table's definitions, tier (b)):", "",
+             f"scored\" with what it waits on; {listed(defined)} are that table's definitions, tier (b)):", "",
              *area_lines(scored), "", f"**The calibrations of those targets — {len(calibrations)} requirements** (R-71, "
              "R-650, § 12.3; each takes its target's tier and is put to the human in the report's list of calibrations, "
              f"with no row of its own; {', '.join(other)}, M9's other calibration, is below):", "",
              *area_lines(calibrations)]
     if unscored:
-        lines += ["", f"**Built, not scored — {len(unscored)} requirements** ({', '.join(BUILD_TASKS[m])}, R-654; no "
-                  "outcome and no row in the report, its tests blocking its own merge):", "", *area_lines(unscored)]
+        lines += ["", f"**Built, not scored — {len(unscored)} requirements** ({', '.join(BUILD_TASKS[m])}, R-654, R-669; no "
+                  "outcome and no row in the report, each task's tests blocking its own merge):", "",
+                  *area_lines(unscored)]
     notarget = [i for i in ids if i in reporting]
     if notarget:
         lines += ["", f"**The report and the definition — {len(notarget)} requirements** "

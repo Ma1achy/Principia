@@ -68,6 +68,7 @@ Units G = 1. Each fixture is an initial state in the centre-of-mass frame (posit
 The fixture files are `fixtures/escape/<name>.toml`, each holding these parameters and the expected outcome.
 
 ## Notes
+- Waits on RQ-697, what the ionisation gate's total `E > 0` reads and by what form: the corpus is silent at `ε = 0` as well as at `ε ≠ 0`, and the task starts only once it is ruled (applied per R-369; physics review 5771573790 of PR #408, F8).
 - The window of 0.4 time units is provisional (R-29).
 - R-173: this task states the provisional tau (REQ-EVT-024); the confirmed tau, inside REQ-VAL-051's re-measured gap, is REQ-EVT-025, closed by TASK-M3-34.
 - Closes, for gaps the corpus leaves open: REQ-EVT-026 (R-72 definition: the fixtures, R-182).

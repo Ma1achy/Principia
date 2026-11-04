@@ -72,3 +72,7 @@ the sequence pages (I.2.A, I.2.B) have 6.234671 and 7.003707, with the same `p1`
 agree with the thesis's scale-invariant `T|E|^{3/2}` (19.9325 and 19.9313, Table 3) and with the Three Body Orbits
 atlas's refined periods (6.23489 at E = −2.170144, 7.00370 at E = −2.008195), so the PRL's are the outliers, at about
 1e-4. Recorded, not resolved: both values are in the CSV as the pages give them.
+
+*2 Nov 2026 (R-673, closing RQ-610 at (c)):* `archive/initial-conditions.pdf` stays in the repo under the gallery's
+"Use and Copyright" terms quoted in **Terms** above, crediting the gallery as they ask: every use cites
+`http://three-body.ipb.ac.rs/` and paper [8].
