@@ -6081,6 +6081,8 @@
     section: Part 7 — Detectors as the `SimState` producer
   - file: docs/contracts/principia_integrator_contract.md
     section: The sync grid is a fixed quantum of physical time (R-565)
+  - file: decisions.md
+    section: "R-698 — The escape window's 0.4 is confirmed by measurement at M3, over a window ladder in TASK-M3-34, a calibration requirement that also proposes the range a carried window may take *(closes RQ-639; refines R-29)*"
   verify:
     method: unit test
     detail: "for an unregularised occupant (KDK/Yoshida) the detector compares n̂ at the current macro-step boundary with n̂ held from 0.4 time units earlier on the macro-step grid; for a regularised occupant (AZ, Heggie, logH) the same on the sync grid, for several Δ_sync values, the window spanning 0.4 time units at each; control: a window held as a fixed count of boundaries spans a different time at a second Δ_sync and fails"
@@ -6088,8 +6090,9 @@
   - R-29
   - R-95
   - R-565
+  - R-698
   milestone: M3
-  note: "pitfall: \"2.2 The criterion\" — the window length is marked provisional in R-29; a change must go through a ruling. R-95 fixes the sampling grid."
+  note: "pitfall: \"2.2 The criterion\" — the window length is marked provisional in R-29; a change must go through a ruling. R-95 fixes the sampling grid. R-698 (4 Nov 2026): the window is confirmed by measurement at M3, REQ-EVT-033."
 - id: REQ-EVT-018
   area: EVT
   statement: "The escaper must be the body with E_rel > 0 and the largest distance d to the centre of mass of the other two — the same d as in E_rel."
@@ -6394,6 +6397,31 @@
   - R-608
   milestone: M3
   note: "R-608 (25 Oct 2026, RQ-531 (a)): the corpus does not hold the prin-rs measurement's grid, so the offsets are a calibration, applied per R-369. Closed by TASK-M3-33."
+- id: REQ-EVT-033
+  area: EVT
+  kind: calibration
+  statement: "The escape window (R-29's 0.4 time units, provisional) and the range a carried window may take must be calibrated over a window ladder holding 0.4: proposed with its evidence by the task that re-validates escape, checked by the physics reviewer, confirmed by the human at the M3 gate and recorded in decisions.md; the register's `escape_window` is provisional until M3 under this requirement meanwhile (R-427)."
+  source:
+  - file: decisions.md
+    section: "R-698 — The escape window's 0.4 is confirmed by measurement at M3, over a window ladder in TASK-M3-34, a calibration requirement that also proposes the range a carried window may take *(closes RQ-639; refines R-29)*"
+  - file: decisions.md
+    section: "R-29 — The escape criterion's undefined parts *(IE-1, amended)*"
+  - file: docs/contracts/principia_integrator_contract.md
+    section: Part 3 — Parameter ownership (who owns what)
+  - file: docs/read_first/principia_01_pitfalls.md
+    section: 2.2 The criterion
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: numerical gate
+    detail: "cargo xtask gate escape-window-ladder: at each rung, on the sets of REQ-VAL-040 and REQ-VAL-051, precision, recall and the tau gap, recorded; the proposal states the window and the range, shows where outcomes stop changing, and says what R-610's floor does if the value moves; control: a rung far below the ladder's range visibly changes which trajectories fire; recorded in decisions.md"
+  rulings:
+  - R-29
+  - R-71
+  - R-610
+  - R-698
+  milestone: M3
+  note: "R-698 (4 Nov 2026, RQ-639 (a)). RQ-639's second question: a lower bound at or above about 2⁻⁹⁸ leaves TASK-M3-06's `dt_macro` refusal unreachable, the entry's reading. Closed by TASK-M3-34."
 - id: REQ-PAY-001
   area: PAY
   statement: "ICDescriptor must be 64 B (its 12 f32 fields plus explicit padding, with E₀ derived as K_0 + V_0 and not stored), and the sample descriptor must use bits 0–9 (bits 8–9 `last_symbol`) with bits 10–15 reserved."
@@ -9293,16 +9321,33 @@
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
   - file: decisions.md
     section: "R-427 — Veto of TASK-M1-18's floor functions: the floors are constants-register entries, marked provisional until the M1 gate and read from there, and the register holds provisional values for every gate; TASK-M1-18 states whether `d_min`'s floor at f16's smallest normal is intended; no veto on decisions 1, 2 and 4–7"
+  - file: decisions.md
+    section: "R-699 — `arctan_sum_bits` = 100 is confirmed as proposed: mid-plateau, with margin on both sides *(closes RQ-635)*"
   verify:
     method: numerical gate
     detail: "the proposal gives the value, its admissibility class, and the measured range of bits that write the same `generated/arctan.rs`, with the sum's error bound and its measured worst error; `cargo test -p ledger --test arctan` holds the emitted file and that `sum_bits()` reads the entry; physics reviewer approves; recorded in decisions.md"
   rulings:
   - R-71
   - R-427
+  - R-699
   milestone: M2
-  rq:
-  - RQ-635
-  note: "Raised by code review 5720675453 of PR #343: `sum_bits()` returned 100 as a literal past the lint (REQ-SYS-082), and the corpus gives no working precision. Proposed by TASK-M2-26. The value's question is RQ-635."
+  note: "Raised by code review 5720675453 of PR #343: `sum_bits()` returned 100 as a literal past the lint (REQ-SYS-082), and the corpus gives no working precision. Proposed by TASK-M2-26. The value's question is RQ-635. R-699 (4 Nov 2026, RQ-635 (a)): 100 is confirmed by the owner; the register's mark comes off in TASK-M2-54 (REQ-GEN-045). *Was (rq):* RQ-635."
+- id: REQ-GEN-045
+  area: GEN
+  statement: "The constants register's `arctan_sum_bits` must be a confirmed entry, value 100, citing R-699, and no longer provisional, the generated `arctan.rs` unchanged (R-699)."
+  source:
+  - file: decisions.md
+    section: "R-699 — `arctan_sum_bits` = 100 is confirmed as proposed: mid-plateau, with margin on both sides *(closes RQ-635)*"
+  - file: docs/design/principia_dd_generation_root.md
+    section: 3.8 Metadata schema (what every entry must carry)
+  verify:
+    method: unit test
+    detail: "cargo test -p ledger --test arctan: `sum_bits()` reads 100 from the register, the emitted `generated/arctan.rs` is byte-identical, and the entry cites R-699; cargo xtask gate-provisional --milestone M2 no longer lists it; control: an entry still marked provisional is listed"
+  rulings:
+  - R-427
+  - R-699
+  milestone: M2
+  note: "R-699, applied per R-369: the code change the ruling needs, as R-428's mark coming off was. TASK-M2-54."
 - id: REQ-SCHED-001
   area: SCHED
   statement: "The quadtree must be built in three layers in order, each a working system: L0 flat grid (SimState, decoder, fragment contracts), L1 quad cache with ancestor fallback (FIFO queue, CPU tracks cache membership only, no sim data GPU→CPU), L2 adaptive refinement with the linearised-decoder uniforms."
@@ -40642,6 +40687,8 @@
     section: "R-336 — #96's CI overrun is accepted; TASK-M0-45 shards nextest and splits the long single tests *(amends R-270, R-290)*"
   - file: decisions.md
     section: "R-325 — CI: the GPU kernel build and its tests run in their own parallel job; ≤ ~10.5 min per job *(amends R-301)*"
+  - file: decisions.md
+    section: "R-697 — The orchestrator's decisions of 30 Oct and 4 Nov on RQ-621, RQ-623, RQ-624, RQ-628, RQ-632 and RQ-684, and the `DECODE_SWITCHOVER` reading, are accepted; R-360 is amended to match RQ-684's move *(closes RQ-621, RQ-623, RQ-624, RQ-628, RQ-632 and RQ-684; amends R-360)*"
   verify:
     method: review checklist
     detail: "code and qa: `ci.yml` runs the `ci` job's nextest runs as parallel shards, the shards' test lists together equal to the unsharded run's, both feature sets (the R-231 listing check, `xtask/tests/nextest.rs`, still passes); `xtask-ci` runs as 4 jobs of `cargo xtask ci --partition <k>/4`, whose slices are disjoint, together hold every control and give a control the same slice on every run (`cargo nextest run -p xtask controls_partition`, with its negative control), and whose CI logs, with `ci-workspace`'s step for the controls in `controls::IN_CI_WORKSPACE`, together run each control once (R-360); the named long tests are split, each assertion and its negative control kept, and `qa_cargo_xtask_alias_runs_deps`'s listing-only form (REQ-VAL-166) kept; the PR shows each CI job's warm wall time against ~10.5 min, names any job still over it, and names the new jobs to add to branch protection's required checks (R-266) *Was:* \"… and whose CI logs together run each control once (R-360); …\" — amended per R-369 (the orchestrator's decision on PR #395, RQ-684): in a shard those three controls cost a second whole build of the workspace's tests (run 41756812074), and each still runs once per code run"
@@ -40655,8 +40702,9 @@
   - R-336
   - R-344
   - R-360
+  - R-697
   milestone: M0
-  note: "R-336 (applied per R-204, accepted by R-344): the test files are qa's with implementer commits, so qa makes the splits in TASK-M0-45's qa commit, a named exception to R-290, as R-335 is. *Was (statement):* \"… every control run exactly once across the shards (R-360); …\" — amended per R-369 (the orchestrator's decision on PR #395, RQ-684)."
+  note: "R-336 (applied per R-204, accepted by R-344): the test files are qa's with implementer commits, so qa makes the splits in TASK-M0-45's qa commit, a named exception to R-290, as R-335 is. *Was (statement):* \"… every control run exactly once across the shards (R-360); …\" — amended per R-369 (the orchestrator's decision on PR #395, RQ-684). R-697 (4 Nov 2026): the owner accepts RQ-684's move and amends R-360 to match."
 - id: REQ-SYS-078
   area: SYS
   statement: "The `ci` CI job's test binaries must be built once per feature set its shards run, as a nextest archive (`cargo nextest archive`) that every `ci` shard runs its `--partition hash:<k>/4` slice from (`--archive-file`), so no shard compiles the tests; the shards together still run every test the unsharded run did, and ~10.5 min per job stays the target (R-372, R-325)."

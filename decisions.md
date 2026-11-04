@@ -293,6 +293,7 @@ Confirmed as intended (`ic_inspector_scratchpad.md:19`, dd_decoder §3.4). Close
 
 ## R-29 — The escape criterion's undefined parts *(IE-1, amended)*
 *Amended by R-61.*
+*Refined by R-698 (4 Nov 2026: the 0.4 window is confirmed by measurement at M3, over a ladder in TASK-M3-34, REQ-EVT-033).*
 *Still in force: all of it (`E_rel` with the total mass, the provisional 0.4 window, the escaper rule and the to-do);
 R-61 defines its "largest separation".*
 *24 Sep 2026 · applied in step 5*
@@ -4981,7 +4982,8 @@ Changes REQ-VAL-178's statement and verify detail; TASK-M0-48 builds it. PR #114
 
 ## R-360 — `cargo xtask ci --partition k/n` splits the controls into n = 4 parallel jobs, by a stable hash of the control name *(closes RQ-193; amends R-336)*
 *Amended by R-366.*
-*Still in force: all of it; R-366 names the form of the `ci` job's nextest `--partition`, `hash:<k>/4`, a stable
+*Amended in part by R-697 (4 Nov 2026: each control runs exactly once on every code run, across the shards but for the three of `controls::IN_CI_WORKSPACE`, which run in `ci-workspace` under nextest).*
+*Still in force: all of it but which job runs those three controls and through what (R-697); R-366 names the form of the `ci` job's nextest `--partition`, `hash:<k>/4`, a stable
 assignment like the controls' slices, and prefers splitting the long tests to raising n.*
 *2 Oct 2026 · applied in decisions.md (R-336's lines), REQ-SYS-077 (reqio), TASK-M0-45 and REVIEW_QUEUE.md (RQ-193
 archived, RQ-196 filed)*
@@ -30272,3 +30274,79 @@ The owner's words, 4 Nov 2026, verbatim:
 R-696 is in the "physics" group of `plan/rule_groups.yaml`.
 
 Adds REQ-DEC-053 and REQ-DEC-054.
+
+## R-697 — The orchestrator's decisions of 30 Oct and 4 Nov on RQ-621, RQ-623, RQ-624, RQ-628, RQ-632 and RQ-684, and the `DECODE_SWITCHOVER` reading, are accepted; R-360 is amended to match RQ-684's move *(closes RQ-621, RQ-623, RQ-624, RQ-628, RQ-632 and RQ-684; amends R-360)*
+*4 Nov 2026 · the owner's batch of that day; applied in R-360's forward lines, `docs/archive/review_queue/M0.md` (six entries moved), `REVIEW_QUEUE.md`, REQ-SYS-077 (reqio) and `plan/rule_groups.yaml`*
+
+The owner's words, 4 Nov 2026, verbatim:
+
+> RQ-623: Your (b) stands (conditioning-aware tolerance).
+
+> RQ-684: amend R-360 to match the move. RQ-688: find the cause; timer untouched. RQ-689: you fix (test-only).
+
+> Your 30 Oct and 4 Nov decisions (621, 624, 628, 632, 684 and the DECODE_SWITCHOVER reading): accepted. TASK-M6-53 narrowing R-656: write it as a formal amendment.
+
+*Context.* Each of these entries holds a decision taken per R-369 and left for the owner: RQ-621's option (a), RQ-623's (b), RQ-624's (1a) and (2a), RQ-628's (a), RQ-632's (a) and RQ-684's move. The batch's last sentence on TASK-M6-53 is PR #407's, and so is the record of the `DECODE_SWITCHOVER` reading (its note at `docs/contracts/principia_scheduler_contract.md`:137).
+
+*What it decides:* each decision stands as its entry's dated line has it, and each entry moves to the archive with this ruling, which the owner's "accepted" gives them. What each applied is unchanged: nothing is rebuilt. **RQ-623:** the factor in colour_composition § 6's conditioning-aware scale stays REQ-COL-060's calibration, confirmed at the gate; the form is what is accepted. **RQ-628:** this is the ruling RQ-687 found missing ("No ruling in `decisions.md` names RQ-628"). **RQ-632:** the physics review's two sub-choices, the hemisphere and the outer-body order, are accepted with option (a); that review's condition stands, that REQ-VAL-043 showing the kernel's substeps too coarse for option (a) reopens the question. **RQ-684:** R-360's "every control runs exactly once across the shards" and "through `cargo xtask controls`'s own cargo invocations" now read as REQ-SYS-077 reads them.
+
+*What it amends:* **R-360**: each control runs exactly once on every code run; the three of `controls::IN_CI_WORKSPACE` run as a step of `ci-workspace`, under `cargo nextest run --features controls`, judged by libtest's `#[should_panic(expected)]`, and the rest across the `xtask-ci` shards through `cargo xtask controls`; `cargo xtask ci` without `--partition` and `cargo xtask controls` locally still run all of them. It closes **RQ-621**, **RQ-623**, **RQ-624**, **RQ-628**, **RQ-632** and **RQ-684**.
+
+R-697 is in the "process" group of `plan/rule_groups.yaml`.
+
+Changes REQ-SYS-077 (rulings, source, note).
+
+## R-698 — The escape window's 0.4 is confirmed by measurement at M3, over a window ladder in TASK-M3-34, a calibration requirement that also proposes the range a carried window may take *(closes RQ-639; refines R-29)*
+*4 Nov 2026 · the owner's batch of that day; applied in R-29's forward lines, `docs/contracts/principia_integrator_contract.md` Part 3 (a dated note), `docs/archive/review_queue/M0.md` (RQ-639), `REVIEW_QUEUE.md`, REQ-EVT-017 (reqio), REQ-EVT-033 (reqio, new), TASK-M3-34, `plan/MILESTONES.md` § M3, `plan/tasks.yaml` and `plan/rule_groups.yaml`*
+
+The owner's words, 4 Nov 2026, verbatim:
+
+> RQ-639: (a) confirm 0.4 by measurement at M3 (window ladder in TASK-M3-34).
+
+*Context.* R-29 marks the window provisional, and no requirement, task or gate ever confirmed it: the register's `escape_window` is settled, citing R-29, so `provisional_until` omits it. RQ-639's option (a): "A new calibration requirement, confirmed at the M3 gate, proposed by the task that re-validates escape (TASK-M3-34), with evidence over a window ladder. The register entry then becomes `proposed(..., <req>, "M3")`."
+
+*What it decides:* option (a). REQ-EVT-033 is that requirement, closed by TASK-M3-34, proposed from a window ladder holding 0.4, and confirmed by the human at the M3 gate. The register entry becomes provisional until M3 under it, in that task. If the window moves, R-610's floor, its refusal's reason and the line beside the field move with it, as R-610 says.
+
+*Applied per R-369, on R-71:* RQ-639's second question, what range a carried window may take, was not in the owner's line. It is a value the corpus does not give, so R-71 settles where it goes: into REQ-EVT-033's proposal, with the ladder as its evidence. The rungs are the task's to propose.
+
+*What it refines:* **R-29**, its "(provisional)", which ends at the M3 gate. It closes **RQ-639**.
+
+R-698 is in the "physics" group of `plan/rule_groups.yaml`, with R-29.
+
+Adds REQ-EVT-033; changes REQ-EVT-017 (rulings, source, note).
+
+## R-699 — `arctan_sum_bits` = 100 is confirmed as proposed: mid-plateau, with margin on both sides *(closes RQ-635)*
+*4 Nov 2026 · the owner's batch of that day; applied in `docs/design/principia_dd_generation_root.md` § 3.8 (a dated note), `docs/archive/review_queue/M0.md` (RQ-635), `REVIEW_QUEUE.md`, REQ-GEN-044 (reqio), REQ-GEN-045 (reqio, new), TASK-M2-54 (new), `plan/tasks.yaml` and `plan/rule_groups.yaml`; the register's change is TASK-M2-54's*
+
+The owner's words, 4 Nov 2026, verbatim:
+
+> RQ-635: (a) confirm 100 bits (mid-plateau, margin both sides).
+
+*Context.* RQ-635's option (a): "confirm 100 as proposed". The generator's sum writes the same table at every count from 72 to 121; 100 has 28 bits of room above the first count that writes it and 21 below the last. The entry also asked whether the class `canonical-units` stands.
+
+*What it decides:* the value is 100, confirmed ahead of the M2 gate, recorded here as REQ-GEN-044 asks. The proposal is what the owner confirms, so its class, `canonical-units`, stands with it.
+
+*Applied per R-369:* the register still reads `proposed("arctan_sum_bits", 100.0, …, "REQ-GEN-044", "M2")`, and the mark coming off is a code change, so it is TASK-M2-54, closing REQ-GEN-045: `gate-provisional --milestone M2` blocks until it merges. Not hashed into the schema version, since it decides no stored bit.
+
+*What it amends:* nothing. It closes **RQ-635**.
+
+R-699 is in the "values" group of `plan/rule_groups.yaml`.
+
+Adds REQ-GEN-045; changes REQ-GEN-044 (rq, rulings, source, note).
+
+## R-700 — RQ-631's option (a) is confirmed: it is R-655's ruling, already built in the kernel, and the follow-up the owner names is TASK-M8-56's quadtree *(closes RQ-631)*
+*4 Nov 2026 · the owner's batch of that day; applied in `docs/archive/review_queue/M0.md` (RQ-631), `REVIEW_QUEUE.md`, TASK-M8-56 (a note) and `plan/rule_groups.yaml`*
+
+The owner's words, 4 Nov 2026, verbatim:
+
+> RQ-631: (a) fold the repeats so each system counts once. Low priority; follow-up task.
+
+*Context.* A contradiction recorded, not resolved by guessing: R-655 ruled this option on 30 Oct 2026 and closed RQ-631, whose entry stayed in the queue with a dated line. `Tilted::pixel` (`crates/kernel/src/chart/tilt.rs`, `TiltSpec::strip`) has folded the lattice since TASK-M2-36, with `qa_lattice_orbits` and its control. The entry's "Applied meanwhile" and "Waits" predate that.
+
+*What it decides:* option (a) stands, as R-655 words it. No second fold is built. The part not yet built is the quadtree's canonical address, REQ-SCHED-101, TASK-M8-56, which R-655 already names; the owner's "Low priority; follow-up task" is read as that task. It gets no new id, and takes the owner's priority in a note.
+
+*Applied per R-369:* no new task, since one would close nothing a task does not already close. If the owner meant something more, it is a new question.
+
+*What it amends:* nothing. It moves **RQ-631** to the archive.
+
+R-700 is in the "physics" group of `plan/rule_groups.yaml`, with R-655.

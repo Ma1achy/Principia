@@ -895,6 +895,8 @@ citing its calibration requirement, and read from the register like any other; n
 | `literature_import_tol` | 256, `k` in `k·ε` relative at f64, the literature import's tolerance on each start's `E`, `L_z`, `R` and `L_z²·|E|/(G²·M⁵)` after multiplying back by the recorded rescale (inverse-encode contract Part 7; dd_validation_orbits §1.6 and §2; TASK-M2-20) | canonical-units | M2 | REQ-VAL-120 |
 | `arctan_sum_bits` | 100, the fraction bits of the arctangent generator's integer sum, a working precision: 72 to 121 bits write the same `generated/arctan.rs`, measured (RQ-628's option (a); RQ-635; TASK-M2-26) | canonical-units | M2 | REQ-GEN-044 |
 
+*4 Nov 2026 (R-699, closing RQ-635):* `arctan_sum_bits` above is confirmed at 100, its class `canonical-units` standing; its mark comes off in TASK-M2-54 (REQ-GEN-045).
+
 The register's entries confirmed at the M1 gate (R-428): each was provisional until M1 (R-427), is confirmed as
 proposed, and cites R-428 in place of its calibration requirement (REQ-TOOL-160 for the floors, REQ-COL-055 for the
 hatch); none is hashed. `d_min`'s floor at binary16's smallest normal is intended: a floor at 2⁻²⁰ would compress

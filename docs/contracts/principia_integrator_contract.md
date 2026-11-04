@@ -595,6 +595,8 @@ The occupant needs almost nothing — `(m,r,p)`, `dt`, `G`. Horizon, substepping
 
 ---
 
+*4 Nov 2026 (R-698, closing RQ-639):* the escape window's "provisional" ends at the M3 gate: 0.4 is confirmed by measurement over a window ladder, with the range a carried window may take (REQ-EVT-033, TASK-M3-34).
+
 ## Part 4 — Determinism, and the substep as the subtle seam
 
 Core-design axiom 1: physics defined once, compiled twice — *structurally*, one Rust source — so the f32/f64 gap is *only* precision **for continuous values** (branch decisions must match on identical inputs, below) and the CPU/GPU divergence is honest. Making the occupant swappable splits the determinism contract cleanly:

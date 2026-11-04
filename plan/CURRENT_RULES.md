@@ -38,7 +38,7 @@ as history only.
 - **R-26** — Every chart declares its domain function *(CD-6)*
 - **R-27** — Both Burrau charts are kept, each labelled with its quotient *(CD-7)*
 - **R-28** — Momentum decode has no mass unweighting *(CD-8)*
-- **R-29** — The escape criterion's undefined parts *(IE-1, amended)*. Still in force: all of it (`E_rel` with the total mass, the provisional 0.4 window, the escaper rule and the to-do); R-61 defines its "largest separation". Amended by R-61.
+- **R-29** — The escape criterion's undefined parts *(IE-1, amended)*. Still in force: all of it (`E_rel` with the total mass, the provisional 0.4 window, the escaper rule and the to-do); R-61 defines its "largest separation". Amended by R-61; refined by R-698 (4 Nov 2026: the 0.4 window is confirmed by measurement at M3, over a ladder in TASK-M3-34, REQ-EVT-033).
 - **R-30** — Event precedence is by time *(IE-2)*. Still in force: all of it; only its date line's "R-6's pin stands until then" is spent (R-339). Amended by R-339.
 - **R-31** — Escape doesn't terminate until pitfalls §2.4's three checks pass *(IE-3)*
 - **R-32** — The ionisation gate is pairwise-unbound, separating and total `E > 0`, with settling *(IE-4 (c))*
@@ -159,6 +159,8 @@ as history only.
 - **R-665** — On a tilted shape sphere the lines `N_a(½ + k) + N_b(2j − 2t) = 0`, where a pole map's image keeps `d`, are a named exception of measure zero to R-408: each pixel on them is counted, R-554 L3 standing *(closes RQ-634; amends R-408)*
 - **R-670** — Softening's reach: a softened run keeps the collision test on geometric `r`, softening offered only on the unregularised occupants, the regularised ones refusing `ε ≠ 0`, and Chazy's `E` softened; the escape test's and the ionisation gate's pair energies take the softened potential, identical at `ε = 0`; the decode's `V₀` is softened, with `virial_ratio` following and `E₀ = K₀ + V₀`, so REQ-VAL-027, REQ-COL-006 and R-436's collision pole are restated for `ε ≠ 0` and unchanged at `ε = 0`; a view refuses `ε ≠ 0` with any `Some(E*)`; the substep law stays on geometric `d²` and `r_min` *(closes RQ-656; amends R-436 and R-654)*
 - **R-696** — RQ-687's option (b) now: a sinc form at `shape_sphere.rs`:162 that never reads the backend's `sin` near 0, gated to f32 so f64 bits do not move; option (a), the kernel's own `sin` and `cos`, is deferred to M4, decided on the cross-backend check, and RQ-629 with it
+- **R-698** — The escape window's 0.4 is confirmed by measurement at M3, over a window ladder in TASK-M3-34, a calibration requirement that also proposes the range a carried window may take *(closes RQ-639; refines R-29)*
+- **R-700** — RQ-631's option (a) is confirmed: it is R-655's ruling, already built in the kernel, and the follow-up the owner names is TASK-M8-56's quadtree *(closes RQ-631)*
 
 ## Design and architecture
 
@@ -489,6 +491,7 @@ as history only.
 - **R-564** — A regularised occupant's step budget is a rate, steps per unit physical time per copy; its value starts at about 4e4 per unit time per copy, a calibration
 - **R-575** — The horizon stays 50 by default and can be raised or lowered, not floored at 50 *(amends R-132 and the Run window's `T_horizon ∈ [50, 200]`; queues RQ-555)*. Still in force: the default 50, raised or lowered, not floored at 50, within `[0.4, 200]` (R-610). Amended by R-610 (`T_horizon ∈ [0.4, 200]`; RQ-555 closed).
 - **R-610** — The horizon's floor is one closure window, 0.4, below which the escape arm cannot fire, and the settings say so; the cap stays at 200 until long horizons are measured for cost: `T_horizon ∈ [0.4, 200]`, default 50 *(closes RQ-555; amends R-575's interim range)*
+- **R-699** — `arctan_sum_bits` = 100 is confirmed as proposed: mid-plateau, with margin on both sides *(closes RQ-635)*
 
 ## Process
 
@@ -574,6 +577,7 @@ as history only.
 - **R-680** — Standing rule: the source page is re-read before any triage item becomes a target; the spot-check's six fixes to the library triage are PR #385's work, done after the CI fixes land
 - **R-681** — Standing rules: while `main` is red, or a required check is stuck, agents open and update no other pull request, and the owner is told in one message; a CI-tooling pull request shows its own `xtask-ci` passing before it merges; a stuck check is cleared by re-running only the job that reports it, never the whole pipeline *(refines R-369)*
 - **R-682** — Admin bypass on `main` is the owner's alone: agents never use it, by `gh pr merge --admin` or any API merge that skips a required check; merge scripts merge only when every required check has passed; a stuck check goes to the owner, who decides whether to bypass *(amends R-266)*
+- **R-697** — The orchestrator's decisions of 30 Oct and 4 Nov on RQ-621, RQ-623, RQ-624, RQ-628, RQ-632 and RQ-684, and the `DECODE_SWITCHOVER` reading, are accepted; R-360 is amended to match RQ-684's move *(closes RQ-621, RQ-623, RQ-624, RQ-628, RQ-632 and RQ-684; amends R-360)*
 
 ## CI
 
@@ -617,7 +621,7 @@ as history only.
 - **R-348** — Mutants runs get a per-mutant timeout and a per-process memory cap on test processes; both values are calibrated. Still in force: all of it; R-352 accepts its items applied per R-204 and settles how a local run applies the caps: on macOS a local run gets the per-mutant timeout only, and CI's Linux runners enforce both caps. R-376 confirms both values at the M0 gate: the per-mutant timeout at 2.0× the baseline's test time with a 60 s floor (REQ-VAL-180), and the memory cap at 8 GiB, set by `prlimit --as` with `--core=1` (REQ-VAL-181). Amended by R-352 and R-376.
 - **R-351** — #107's `closure_step_reserved` offsets stand; the bit-pattern unset check becomes a `cargo xtask lint` rule over fragment-stage WGSL. Still in force: all of it; R-352 widens the lint to a float compared with itself and to comparisons against finite-max stand-ins used as inf checks, and accepts its items applied per R-204. Amended by R-352.
 - **R-352** — RQ-191's thirteen items stand; the fragment-stage lint also fails on a float compared with itself and on comparisons against finite-max stand-ins *(closes RQ-191; amends R-348 and R-351)*. Still in force: all of it; R-376 confirms REQ-VAL-180's and REQ-VAL-181's values at the M0 gate, CI's Linux runners enforcing both caps and a local macOS run still getting the timeout alone. Amended by R-376.
-- **R-360** — `cargo xtask ci --partition k/n` splits the controls into n = 4 parallel jobs, by a stable hash of the control name *(closes RQ-193; amends R-336)*. Still in force: all of it; R-366 names the form of the `ci` job's nextest `--partition`, `hash:<k>/4`, a stable assignment like the controls' slices, and prefers splitting the long tests to raising n. Amended by R-366.
+- **R-360** — `cargo xtask ci --partition k/n` splits the controls into n = 4 parallel jobs, by a stable hash of the control name *(closes RQ-193; amends R-336)*. Still in force: all of it but which job runs those three controls and through what (R-697); R-366 names the form of the `ci` job's nextest `--partition`, `hash:<k>/4`, a stable assignment like the controls' slices, and prefers splitting the long tests to raising n. Amended by R-366; amended in part by R-697 (4 Nov 2026: each control runs exactly once on every code run, across the shards but for the three of `controls::IN_CI_WORKSPACE`, which run in `ci-workspace` under nextest).
 - **R-372** — #117's shard times are accepted, ~10.5 min staying the target; the shards share one test build, as a follow-up task *(amends R-336 and R-366 as they apply to #117)*
 - **R-374** — R-233 governs local builds only; every CI job uses line-tables-only debug info *(amends R-233)*
 - **R-375** — CI's Linux runners are pinned to `ubuntu-24.04`, not `ubuntu-latest`; moving to Ubuntu 26 is a deliberate later step *(amends R-186)*

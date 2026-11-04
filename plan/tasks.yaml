@@ -853,6 +853,14 @@
   requirements: [REQ-DEC-053, REQ-DEC-054]
   reviewers: [code, qa, physics]
   pitfalls: []
+- id: TASK-M2-54
+  milestone: M2
+  title: "`arctan_sum_bits` confirmed in the constants register (R-699)"
+  depends_on: [TASK-M2-26]
+  needs: []
+  requirements: [REQ-GEN-045]
+  reviewers: [code, qa]
+  pitfalls: []
 - id: TASK-M3-02
   milestone: M3
   title: Stepper occupants and the capability profile
@@ -1114,7 +1122,7 @@
   title: "Escape re-validation: precision, recall and the tau gap"
   depends_on: [TASK-M3-33]
   needs: [REQ-VAL-004, REQ-VAL-006]
-  requirements: [REQ-VAL-040, REQ-VAL-051, REQ-EVT-019, REQ-VAL-135, REQ-EVT-025, REQ-VAL-168]
+  requirements: [REQ-VAL-040, REQ-VAL-051, REQ-EVT-019, REQ-VAL-135, REQ-EVT-025, REQ-VAL-168, REQ-EVT-033]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-2.2, PIT-2.3, PIT-3]
 - id: TASK-M3-35

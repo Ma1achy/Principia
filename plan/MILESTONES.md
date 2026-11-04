@@ -202,14 +202,14 @@ debug_tooling_plan 0c: the DECODE preset "once the WGSL decode port lands", ROUN
   so in their header or schema.
 
 <!-- gate:M2 -->
-**Exit gate — 221 requirements** (and every earlier gate still green):
+**Exit gate — 222 requirements** (and every earlier gate still green):
 
 - DEC (43): REQ-DEC-001…030, REQ-DEC-038…041, REQ-DEC-043…048, REQ-DEC-050, REQ-DEC-053…054
 - ENC (34): REQ-ENC-001…020, REQ-ENC-022…027, REQ-ENC-029…031, REQ-ENC-034…038
 - CHART (68): REQ-CHART-001…036, REQ-CHART-043…051, REQ-CHART-053, REQ-CHART-055, REQ-CHART-058, REQ-CHART-060…070, REQ-CHART-073, REQ-CHART-075…078, REQ-CHART-081…082, REQ-CHART-089…090
 - INT (2): REQ-INT-002…003
 - PAY (5): REQ-PAY-034…035, REQ-PAY-088, REQ-PAY-095, REQ-PAY-097
-- GEN (14): REQ-GEN-013…015, REQ-GEN-025…026, REQ-GEN-034, REQ-GEN-036…042, REQ-GEN-044
+- GEN (15): REQ-GEN-013…015, REQ-GEN-025…026, REQ-GEN-034, REQ-GEN-036…042, REQ-GEN-044…045
 - RENDER (3): REQ-RENDER-025…027
 - COL (12): REQ-COL-006, REQ-COL-057, REQ-COL-060, REQ-COL-070, REQ-COL-101…105, REQ-COL-108…110
 - GUI (7): REQ-GUI-002…007, REQ-GUI-188
@@ -238,16 +238,17 @@ canonical_spec §1 item 6 and §11: "validate physics numerically", natively, be
   - the logH falsification check of the re-registration mechanism (R-74);
   - δ_dep;
   - the tau gap;
+  - the escape window, over a ladder (R-698, REQ-EVT-033);
   - the Yoshida-6 coefficient check before Yoshida-6 enters the shared source.
 - The CPU-side parity suite (`computeIC`).
 
 <!-- gate:M3 -->
-**Exit gate — 232 requirements** (and every earlier gate still green):
+**Exit gate — 233 requirements** (and every earlier gate still green):
 
 - ENC (1): REQ-ENC-033
 - CHART (4): REQ-CHART-059, REQ-CHART-072, REQ-CHART-085…086
 - INT (83): REQ-INT-004…032, REQ-INT-034…056, REQ-INT-073…074, REQ-INT-076…082, REQ-INT-084…085, REQ-INT-087…092, REQ-INT-094…095, REQ-INT-097…106, REQ-INT-108…109
-- EVT (25): REQ-EVT-001…020, REQ-EVT-023…026, REQ-EVT-032
+- EVT (26): REQ-EVT-001…020, REQ-EVT-023…026, REQ-EVT-032…033
 - PAY (33): REQ-PAY-036…059, REQ-PAY-070, REQ-PAY-073, REQ-PAY-083, REQ-PAY-086, REQ-PAY-098, REQ-PAY-110…113
 - GEN (1): REQ-GEN-016
 - SCHED (2): REQ-SCHED-002…003
