@@ -29969,7 +29969,8 @@ Changes REQ-VAL-148 (source, rulings, note).
 *3 Nov 2026 · the owner's message of that day on the triage questions; ported 3 Nov 2026; applied in
 `docs/design/principia_dd_replication.md` § 5.3 (a dated note under the table), § 5.14 (a bullet) and § 12.5 (a dated
 paragraph), R-630's and R-668's forward lines, REQ-VAL-223 (reqio), REQ-VAL-344, REQ-VAL-345 and REQ-VAL-346 (reqio,
-new), TASK-M9-07 (notes), TASK-M9-41 (new), `plan/tasks.yaml` and `plan/rule_groups.yaml`*
+new), TASK-M9-07 (notes), TASK-M9-41 (new), `docs/archive/review_queue/M0.md` (RQ-672, RQ-673 and RQ-674, taken from
+PR #385's branch with their rulings), `plan/tasks.yaml` and `plan/rule_groups.yaml`*
 
 The owner's words, 3 Nov 2026, verbatim:
 
@@ -29977,7 +29978,8 @@ The owner's words, 3 Nov 2026, verbatim:
 
 *Context.* The three items answer RQ-672, RQ-673 and RQ-674, the library triage's open questions 1 to 3, which PR #385
 (the triage of batches 81 to 153 and the papers-11 to 13 addendum) files. They are on that PR's branch, not on this
-one's base, so this port cites them and does not file, edit or move them: #385's rework marks them ruled.
+one's base, so this port takes them from that branch unchanged and archives them, each with a Ruling line quoting the
+owner's words (`plan/OPERATIONS.md` § "Numbers", "An RQ open only on a PR branch"); #385 no longer touches them.
 
 *What it decides:*
 
