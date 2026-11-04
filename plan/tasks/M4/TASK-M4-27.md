@@ -34,7 +34,7 @@ that.
   `crates/engine/tests/canon_gpu.rs` and `crates/engine/tests/decode_cross_backend.rs` build, seeds fixed. The outcomes are
   canon's branches (skip, coincidence, `ρ = 0`, mirror, `ρ_x` and `ρ_y` zero) and decode's tags (`M01_TINY`,
   `INVARIANT_INFEASIBLE`, the energy tags). The report's header states its domain and that it does not answer the trajectory
-  question.
+  question. The comparison is written into the gate report.
 - Negative controls for this task's tests (R-176).
 
 ## Acceptance tests
@@ -51,7 +51,8 @@ that.
   peek. It blocks nothing, and no tolerance or threshold enters it. Each pair's outcome: PASS is 0 disagreements;
   anything else is EXPLAINED DIVERGENCE, with a measurement showing the mechanism, or UNEXPLAINED.
 - **The NVIDIA record** is a Windows session's run at the PR's head, `--record` with `PRIN_GPU_BACKEND=vulkan`, the file posted to
-  #390. It is not a CI job (R-186). Nothing waits on it.
+  #390. It is not a CI job (R-186). Nothing waits on it, and the task closes without it: M4's gate report lists the row as "not
+  run" until it is posted, so the run stays visible (`plan/MILESTONES.md` § M4).
 - **What is already known:** on this card `decode_` passes 36 of 36 and `canonicaliser_` 28 of 28 (RQ-685). Those are pass
   counts of assertions, the CPU against one backend; this task gives every pair's rate over one input set. The tests in
   `canon_gpu.rs` and `decode_cross_backend.rs` stay as they are and go on asserting.

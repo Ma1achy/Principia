@@ -37124,7 +37124,7 @@
   note: "R-649 item 6: verification deepening is post-build work; closed by TASK-M9-38."
 - id: REQ-VAL-347
   area: VAL
-  statement: "Decode's and canon's branch outcomes must be measured and reported, not asserted equal, on NVIDIA Vulkan, Metal, lavapipe and CPU f32 on identical inputs: the disagreement rate per backend pair, with no tolerance chosen to make it pass (R-649), and the report must state that fixed inputs cannot answer the trajectory question."
+  statement: "Decode's and canon's branch outcomes must be measured and reported, not asserted equal, on identical inputs: on Metal, lavapipe and CPU f32 by the closing task, and on NVIDIA Vulkan by a Windows run that blocks nothing (R-649), listed as not run in the report and in the M4 gate report until it is posted. The report must give the disagreement rate per backend pair, with no tolerance chosen to make it pass, and must state that fixed inputs cannot answer the trajectory question."
   source:
   - file: decisions.md
     section: "R-686 — The kernel cross-backend check is a measurement (R-649): the same IC set on NVIDIA Vulkan, Metal, lavapipe and CPU f32, outcome labels and per-trajectory branch-sensitive results compared, not pixels, the disagreement rate reported per backend pair, no tolerance chosen to make it pass; pixel comparisons across backends go on raw pre-colour values with the outlier tail reported, never 8-bit frame equality, Metal against lavapipe's 161,394 / 221 recorded as the clean-backend baseline; `DECODE_SWITCHOVER`'s spec notes that bitwise agreement must be tested on NVIDIA specifically"
@@ -37140,7 +37140,7 @@
   note: "The arm of R-686's check that runs on what the GPU runs now. It cannot answer the trajectory question: REQ-VAL-348 does. The gate asks that the report exists, never for a rate (R-649)."
 - id: REQ-VAL-348
   area: VAL
-  statement: "The kernel's march must be measured across backends, not asserted equal: the same IC set on NVIDIA Vulkan, Metal, lavapipe and CPU f32, comparing outcome labels and each trajectory's branch-sensitive results (collision and escape decisions, step counts), not pixels; the disagreement rate must be reported per backend pair, with no tolerance chosen to make it pass (R-649)."
+  statement: "The kernel's march must be measured across backends, not asserted equal, over the same IC set: on Metal, lavapipe and CPU f32 by the closing task, and on NVIDIA Vulkan by a Windows run that blocks nothing (R-649), listed as not run in the report and in the M4 gate report until it is posted. It must compare outcome labels and each trajectory's branch-sensitive results (collision and escape decisions, step counts), not pixels, and report the disagreement rate per backend pair, with no tolerance chosen to make it pass."
   source:
   - file: decisions.md
     section: "R-686 — The kernel cross-backend check is a measurement (R-649): the same IC set on NVIDIA Vulkan, Metal, lavapipe and CPU f32, outcome labels and per-trajectory branch-sensitive results compared, not pixels, the disagreement rate reported per backend pair, no tolerance chosen to make it pass; pixel comparisons across backends go on raw pre-colour values with the outlier tail reported, never 8-bit frame equality, Metal against lavapipe's 161,394 / 221 recorded as the clean-backend baseline; `DECODE_SWITCHOVER`'s spec notes that bitwise agreement must be tested on NVIDIA specifically"

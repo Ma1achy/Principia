@@ -34,7 +34,7 @@ alone does not answer the owner's question; the forks on identical inputs do (No
 - One row per trajectory: the outcome label, `state`, the collision decision and pair, the escape decision and escaper, the
   terminal step and the total substeps, with the decoded start state's bits, so a disagreement already present at `t = 0` is
   counted apart.
-- The report: each pair's disagreement count and rate, for each of those results and for any of them, non-chaotic and chaotic
+- The report, written into the gate report: each pair's disagreement count and rate, for each of those results and for any of them, non-chaotic and chaotic
   apart; for each disagreement, the first step that differs and whether the branch operation there agrees on identical
   inputs, as REQ-VAL-079's report does, and which kind of branch input forked: `+` and `×` only, or holding a division or `√`.
   The header states the domain, the commit, each adapter line and the compute setting.
@@ -63,8 +63,9 @@ alone does not answer the owner's question; the forks on identical inputs do (No
   points at contraction or reassociation. A fork in a branch input holding a division, `E_rel` or `|Δn̂|`, is not attributable
   that way. The report says which kind each fork is, from TASK-M4-03's `branch_inputs.rs`. RQ-690 holds the mechanism.
 - **The NVIDIA record** is a Windows session's run at the PR's head, `--record` with `PRIN_GPU_BACKEND=vulkan`, the file posted to
-  #390, under the same hardware label as that card's other runs. It is not a CI job (R-186). Nothing waits on it. It doesn't
-  stand in for R-58's parity run, REQ-VAL-099, which gates Paper 2.
+  #390, under the same hardware label as that card's other runs. It is not a CI job (R-186). Nothing waits on it, and the task
+  closes without it: M4's gate report lists the row as "not run" until it is posted, though the owner's question rests on that
+  row (`plan/MILESTONES.md` § M4). It doesn't stand in for R-58's parity run, REQ-VAL-099, which gates Paper 2.
 - **Why TASK-M4-18 is a dependency:** it owns the fixture set and the label-flip report on Metal and lavapipe. This task adds the
   other two backends, the per-pair table and the per-trajectory results, and does not change that report.
 - Applied per R-369 (R-686): its own task, not a part of the fix task, TASK-M6-53, since the mock's fix needs no march.
