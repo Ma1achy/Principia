@@ -71,8 +71,8 @@ flagged `deferred:`, say so.
 
 Say in the item what the reply needs where it applies:
 
-- `several-questions`: one option leaves the rest open, so the reply should say what it answers. An entry asking several
-  questions in prose that the flag missed is the same: say so.
+- `several-questions`: one option leaves the rest open, so the reply should say what it answers. An entry asking
+  several questions that the flag missed is the same: say so.
 - `no-labelled-options`: the owner answers in their own words, which are taken verbatim.
 - Under Ruled-or-moot, the option is `close`: say what closes it.
 

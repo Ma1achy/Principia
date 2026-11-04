@@ -60,7 +60,11 @@ it says:
 | `rider` | Words round the option. They bind as the option does: a condition, a task to file, a value, another entry named ("RQ-629 deferred with it"), or "keep, defer", which keeps the entry open, deferred, whatever the option. |
 | `combined` | Several options taken together. Say in the ruling what each contributes; one may be for now and one for later. |
 | `free-text` | The entry offers no label, so the words are the answer. |
-| `several` | The entry holds several questions: close it only if the answer settles them all. Otherwise the ruling records what it settles, and the entry stays open with a dated line saying what is left. |
+| `several` | The entry shows several questions. See below. |
+
+**Before closing any entry, flagged or not, read it for what the answer leaves undecided.** The `several` flag reads
+signs and can miss one. Close the entry only if the answer settles all of it. Otherwise the ruling records what it
+settles, and the entry stays open with a dated line saying what is left.
 
 Take an accepted answer out, list it with the refused ones and say why, if you can't apply it without choosing: options
 that exclude each other, a rider that leaves the meaning open, or one that contradicts a ruling or the corpus

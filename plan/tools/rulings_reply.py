@@ -23,8 +23,10 @@ refused. What is accepted, with the flags /rulings-apply reads, each a call to r
                              a deferral; words past the milestone, or an event in place of one, are a `rider`
     `ask:<question>`
 
-Flagged `several` too is an option on an entry holding several questions (numbered labels, a label listed twice, a
-"Second question" field): the rest of it may still be open. A line may hold several answers, each starting `RQ-n:`, as
+Flagged `several` too is an option on an entry that shows several questions (numbered labels, a label listed twice,
+letters mixed with romans, "separately" or "Open within" in the options, or a field named "The questions", "Second
+question", or `Q-n`): the rest of it may still be open. The flag reads signs, and can miss one, so /rulings-apply reads
+every entry it would close. A line may hold several answers, each starting `RQ-n:`, as
 in `RQ-641: (b). RQ-642: (a).`; each is read and answered on its own. A template line left as the report wrote it is
 unanswered. A line that is a section name alone (`HEADINGS`, or a report's `##` heading) is no reply line either: it is
 skipped, and listed as skipped. Any other line in capitals is refused like any other.
@@ -101,6 +103,9 @@ DEFER_TO = re.compile(r"^defer\s+(?:until|to|when)\b\s*(.+)$", re.S)
 DEFER_MILESTONE = re.compile(r"^defer:\s*(M\d)\b(.*)$", re.S)
 NOTHING = re.compile(r"(?i)^\s*(?:none|nothing)\b")
 RULED = re.compile(r"^(?:- \*\*Ruling:\*\*|- \*Ruled by|\*Ruled by)", re.M)
+ROMANS = {"i", "ii", "iii", "iv", "vi", "vii"}  # `v` and `x` are read as letters, the rarer reading of an option list
+MORE_IN_OPTIONS = re.compile(r"(?i)\bseparately\b|\bOpen within\b")
+MORE_FIELDS = re.compile(r"^- \*\*(?:The questions|Second question|Q-\d)", re.M)
 LONE = re.compile(r"^(?:\(\s*\w+\s*\)|\w{1,3})\.?$")  # a reply that is a label and nothing else
 HEADING_ID = re.compile(r"^## R-(\d+)\b", re.M)
 DATE = re.compile(r"^\d{1,2} [A-Z][a-z]{2} \d{4}$")
@@ -133,6 +138,14 @@ def field(block, name):
     return out
 
 
+def several(block, labels):
+    """Whether the entry shows more than one question: see the module's docstring."""
+    letters = [x for x in labels if x not in ROMANS]
+    romans = [x for x in labels if x in ROMANS]
+    return (len(labels) != len(set(labels)) or any(c.isdigit() for c in "".join(labels)) or bool(letters and romans)
+            or any(MORE_IN_OPTIONS.search(t) for t in field(block, "Options")) or bool(MORE_FIELDS.search(block)))
+
+
 def entry(rq, block):
     """What the report and the parser read off an entry."""
     m = TITLE.match(block.split("\n", 1)[0])
@@ -145,8 +158,7 @@ def entry(rq, block):
     applied = field(block, "Applied meanwhile")
     return {"id": rq, "title": m.group(2) if m else block.split("\n", 1)[0], "labels": list(dict.fromkeys(labels)),
             "free": free,
-            "several": len(labels) != len(set(labels)) or any(c.isdigit() for c in "".join(labels))
-            or bool(field(block, "Second question")),
+            "several": several(block, labels),
             "ruled": bool(RULED.search(block)),
             "applies": bool(applied) and not NOTHING.match(applied[0].split(":**", 1)[-1]),
             "deferred": re.findall(r"deferred to (.+?) by owner (\d{1,2} [A-Z][a-z]{2} \d{4})", block),
@@ -438,6 +450,23 @@ def self_test():
              "## RQ-8: Eighth?\n\n- **File, section:** x.\n- **Options seen:** (a) p; (b) q.\n"
              "- **Second question:** and r?\n"
              "- **Applied meanwhile:** none; none waits.\n")
+    signs = [("letters and romans", "- **Options seen:** (a) p; (b) q; and for MK, (i) r; (ii) s.\n"),
+             ("separately in the options", "- **Options seen:** (a) p; separately, (b) q.\n"),
+             ("Open within", "- **Options seen:** (a) p. Open within (a): a cap.\n"),
+             ("a questions field", "- **The questions:** two.\n- **Options seen:** (a) p; (b) q.\n"),
+             ("a Q-n field", "- **Options seen:** (i) p; (ii) q.\n- **Q-4 (ii), separately:** r.\n"),
+             ("a second question", "- **Options seen:** (a) p; (b) q.\n- **Second question:** r.\n"),
+             ("a repeated label", "- **Options seen:** for 8, (a) p, (b) q; for 9, (a) r.\n"),
+             ("a numbered label", "- **Options seen:** (1a) p; (1b) q.\n")]
+    for name, text in signs:
+        if not entry("RQ-1", f"## RQ-1: x?\n\n{text}")["several"]:
+            fails.append(f"reply self-test: {name} must flag several questions")
+    for name, text in [("one list", "- **Options seen:** (a) p; (b) q.\n"),
+                       ("romans alone", "- **Options:** (i) p; (ii) q.\n"),
+                       ("one question", "- **The question:** one.\n- **Options seen:** (a) p; (b) q.\n"),
+                       ("separately elsewhere", "- **Options seen:** (a) p.\n- **Waits:** q, separately.\n")]:
+        if entry("RQ-1", f"## RQ-1: x?\n\n{text}")["several"]:
+            fails.append(f"reply self-test: {name} must not flag several questions")
     report = ("# Report\n\n## Physics\n\n### RQ-1: First\n\n## Ruled-or-moot (to close)\n\n### RQ-5: Fifth\n\n"
               "## R-369 decisions since the last report (veto list)\n\n### D-1: A choice\n\n"
               "## State\n\n### D-2: not one\n")
