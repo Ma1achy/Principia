@@ -37298,7 +37298,7 @@
 - id: REQ-VAL-346
   area: VAL
   kind: definition
-  statement: "The equal-area partition of the shape sphere that REQ-VAL-345's accumulator bins into (its scheme, its resolution or how a result chooses it, and what it does with a point on a cell edge or vertex, the poles included), which step the accumulator adds over (macro-step, sync interval or occupant step), where in that step the shape point is sampled, and that the time each step adds is physical time under every occupant's time mapping, must be defined in `docs/design/principia_dd_replication.md` § 12.5 by the task that needs it and reviewed by the physics reviewer before merge (R-72)."
+  statement: "The equal-area partition of the shape sphere that REQ-VAL-345's accumulator bins into (its scheme, its resolution or how a result chooses it, and what it does with a point on a cell edge or vertex, the poles included), which step the accumulator adds over (macro-step, sync interval or occupant step), where in that step the shape point is sampled, that the time each step adds is physical time under every occupant's time mapping, and, on a fixed-time grid, how an encounter shorter than the grid is resolved and which control replaces REQ-VAL-345's step-count one, must be defined in `docs/design/principia_dd_replication.md` § 12.5 by the task that needs it and reviewed by the physics reviewer before merge (R-72)."
   source:
   - file: docs/design/principia_dd_replication.md
     section: 12.5 Peeks
