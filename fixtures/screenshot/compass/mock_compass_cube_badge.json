@@ -1,0 +1,21 @@
+{
+ "made": "Compared in geometry and labelling, not colour (R-459). The corners and the edges against the reference's tilt mode at 0 (../01_main/compass/reference/tilt_0.json), which neither angle moves; the polygon and its place in the edge order against the independent computation of the gesture's plane in the frame (e_a, e_b, e_T) (../01_main/compass/decoder/, make_reference.py). τ₁ = 20°, τ₂ = 15°, γ = 0, X = z_q3, Y = z_μ1, z₀ = 0 on the frame: the third axis reads X z_q3, the plane View::basis at (20°, 0°) in (e_a, e_b, e_q3), the readout naming both targets, and the badge shown.",
+ "tolerance": 0.01,
+ "opacity_tolerance": 0.003,
+ "reference": "../01_main/compass/reference/tilt_0.json",
+ "polygon": {
+  "from": "decoder",
+  "record": "../01_main/compass/decoder/mock_compass_cube_badge.json"
+ },
+ "labels": {
+  "from": "tilt",
+  "text": "X z_q3",
+  "reference_label": 1
+ },
+ "readout": [
+  "mode tilt",
+  "τ₁ → z_q3 +20.0° · τ₂ → z_μ1 +15.0°",
+  "γ +0.0°"
+ ],
+ "badge": true
+}
