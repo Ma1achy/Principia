@@ -907,6 +907,7 @@ negative_control!(
 );
 
 /// `loader.js`'s text as it stood at 9133ef1b, each event's own `data` (code review 5772081382, F1).
+#[cfg(feature = "controls")]
 const TEXT_FROM_EACH_EVENT: [(&str, &str, &str); 2] = [
     (
         "loader.js",
@@ -921,6 +922,7 @@ const TEXT_FROM_EACH_EVENT: [(&str, &str, &str); 2] = [
 ];
 
 /// Text taken and the input left holding it.
+#[cfg(feature = "controls")]
 const INPUT_NOT_CLEARED: [(&str, &str, &str); 1] = [(
     "loader.js",
     r#"post("text", ime.value); ime.value = ""; };"#,
