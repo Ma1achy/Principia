@@ -47,9 +47,9 @@
 #   markdown: `ci-workspace` runs only the cheap checks, the plan checks and the vocabulary lint
 #   (`no-atlas-params.yml`, the atlas guard, runs on every pull request).
 # A data or docs change (`docs_only`, its name R-656's) skips `ci-archive` and the `ci` shards, `ci-checks`,
-# `ci-release-archive` and its shards, and `xtask-ci`'s shards; it and a code change to no GPU-path file (only
-# `crates/gui/` and `crates/prin/` beside data and docs) skip the GPU suites' jobs, `gpu-kernel`, `gpu-metal` and
-# `gpu-lavapipe`.
+# `web-skeleton`, `ci-release-archive` and its shards, and `xtask-ci`'s shards; it and a code change to no GPU-path
+# file (only `crates/gui/` and `crates/prin/` beside data and docs) skip the GPU suites' jobs, `gpu-kernel`,
+# `gpu-metal` and `gpu-lavapipe`.
 # The required checks still report, under their own names, and conclude success: each is a gate that runs whatever
 # the jobs it gathers ended in (`ci`, `xtask-ci`, and the GPU suites' gates, which carry the names `gpu-kernel`,
 # `gpu-metal` and `gpu-lavapipe`, the suites' jobs being named `<id> suites`), and passes a gathered job that was
@@ -536,7 +536,7 @@ jobs:
   # The v1 web skeleton's wasm build, build only, so a later change that breaks it is seen (TASK-M8-86, applied per
   # R-369): the command `cargo xtask web-skeleton` builds with, in its debug profile; the wasm-bindgen step and the deploy
   # are pages.yml's, by hand (R-627). Not gathered by the required check `ci`, as `gpu-kernel` is not. Skipped on a
-  # docs-only pull request (R-656).
+  # data or docs pull request (R-656, R-677).
   web-skeleton:
     needs: changes
     if: needs.changes.outputs.docs_only != 'true'
