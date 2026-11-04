@@ -9,9 +9,11 @@
 //! now. (b) PLAN-DATA: the reads_code files … → only the checks that read them … (c) DOCS: as now, cheap checks only.
 //! Mutants run only when crates/ source changes, on the merge-ready head."
 //!
+//! R-790, the owner's words of 4 Nov 2026: "R-677 amendment: .claude/ (commands, agents, settings) is docs tier."
+//!
 //! - `ci_changes_classifies_conservatively`: `scripts/ci_changes.sh classify` gives each change its tier, the highest
-//!   of its paths': docs only when every path is on its allowlist, the corpus, the plan's prose and Python, the scripts
-//!   and the workbench; data when the plan's task data or the GUI's artboards and references are among them; code
+//!   of its paths': docs only when every path is on its allowlist, the corpus, the plan's prose and Python, the
+//!   scripts, the workbench and `.claude/`; data when the plan's task data or the GUI's artboards and references are among them; code
 //!   otherwise. It skips the GPU suites only when no path is a GPU path, and runs mutants only when a `.rs` file under
 //!   `crates/` changes. An empty change, a workflow, an unknown top-level path and a path that merely starts like an
 //!   allowed one run everything, and so does a mixed change; `docs_only` is true exactly on a data or docs change.
@@ -289,6 +291,10 @@ const CASES: &[(&[&str], &str, bool, bool)] = &[
         false,
         false,
     ),
+    // `.claude/`, the whole directory (R-790).
+    (&[".claude/commands/x.md"], "docs", false, false),
+    (&[".claude/agents/x.md"], "docs", false, false),
+    (&[".claude/settings.json"], "docs", false, false),
     // Tier (b), the data only the cheap checks and its readers' tests read (R-677): no GPU suite, no mutants.
     (&["docs/gui/design/a.png"], "data", false, false),
     (&["docs/gui/reference/a/b.json"], "data", false, false),
@@ -338,7 +344,6 @@ const CASES: &[(&[&str], &str, bool, bool)] = &[
     (&["notes.md"], "code", true, false),
     (&[".cargo/config.toml"], "code", true, false),
     (&[".config/nextest.toml"], "code", true, false),
-    (&[".claude/agents/implementer.md"], "code", true, false),
     (&[".gitignore"], "code", true, false),
     // One code path among docs or data makes the change code.
     (
@@ -377,6 +382,8 @@ const CASES: &[(&[&str], &str, bool, bool)] = &[
     (&["planx/a.md"], "code", true, false),
     (&["scriptsx/a.sh"], "code", true, false),
     (&["workbenchx/a"], "code", true, false),
+    (&[".clauderc"], "code", true, false),
+    (&[".claude"], "code", true, false),
     (&["decisions.md.bak"], "code", true, false),
     (&["plan"], "code", true, false),
     (&["docs"], "code", true, false),
@@ -478,10 +485,38 @@ negative_control!(
     expected = "\".github/workflows/ci.yml\"] classified wrongly",
     check_classifier(&edited(
         "scripts/ci_changes.sh",
-        "    docs/* | plan/* | scripts/* | workbench/*) return 0 ;;",
-        "    docs/* | plan/* | scripts/* | workbench/* | .github/*) return 0 ;;"
+        "    docs/* | plan/* | scripts/* | workbench/* | .claude/*) return 0 ;;",
+        "    docs/* | plan/* | scripts/* | workbench/* | .claude/* | .github/*) return 0 ;;"
     ))
 );
+
+mod claude_not_on_the_allowlist {
+    use super::*;
+    negative_control!(
+        ci_changes_classifies_conservatively,
+        "the script without `.claude/` on its allowlist (R-790)",
+        expected = "\".claude/commands/x.md\"] classified wrongly",
+        check_classifier(&edited(
+            "scripts/ci_changes.sh",
+            " | workbench/* | .claude/*) return 0 ;;",
+            " | workbench/*) return 0 ;;"
+        ))
+    );
+}
+
+mod claude_prefix_on_the_allowlist {
+    use super::*;
+    negative_control!(
+        ci_changes_classifies_conservatively,
+        "the script's allowlist taking every path that only starts like `.claude/` (R-790)",
+        expected = "\".clauderc\"] classified wrongly",
+        check_classifier(&edited(
+            "scripts/ci_changes.sh",
+            " | workbench/* | .claude/*) return 0 ;;",
+            " | workbench/* | .claude*) return 0 ;;"
+        ))
+    );
+}
 
 mod data_below_docs {
     use super::*;
