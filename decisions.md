@@ -29794,7 +29794,8 @@ the driver whose outcome differs from CPU f32's. Operands that match neither are
 on one driver. A report has three words: "unverified, not supported" for a driver measured and failing;
 "no failure in N", N shown, never "verified" or "supported", for a driver measured with none; "not run" for no record. N counts only
 evaluations of the first kind with operands bit-identical to CPU f32's, so a driver whose rows are all level 1 reads "no failure in
-0", and each driver's line shows its level 1 count and its `other operation` count beside N. RQ-685's
+0", and each driver's line shows, per branch input and entry, N and its level 1 count, with its `other operation` count beside them, so a site
+that never reached the test shows as 0 under its own name. RQ-685's
 ruling, in the same batch and ported elsewhere, says "driver unverified" of a driver not measured: that is this "not run", in a run
 header, and not this ruling's words, which only a measured failure earns. A standing holds for the compute stage with the setting
 off, on that adapter and driver version, through the compiled entry each row names, and for NVIDIA under its hardware label, since

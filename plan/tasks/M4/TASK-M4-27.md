@@ -108,7 +108,7 @@ that. It is the first test of R-690's driver condition, on fixed inputs.
   neither are level 1. Each driver's standing reads one of "unverified, not supported", "no failure in N", N shown, never
   "verified" or "supported", or "not run". N counts evaluations, one input's one branch on one driver, of the first kind with operands
   bit-identical to CPU f32's; the rate's denominator is inputs, a different count. Level 1 rows and `other operation` rows never reached the test,
-  so each is counted apart and each driver's line shows all three. "Driver unverified" (RQ-685's ruling) is a run header's word for a driver not measured,
+  so each is counted apart, and each driver's line shows, per branch input and entry, N and the level 1 count, with the `other operation` count beside them. "Driver unverified" (RQ-685's ruling) is a run header's word for a driver not measured,
   not one of these. A standing's domain is stated with it: the compute stage, setting off, the adapter line and driver version,
   the compiled entry read, and for NVIDIA its hardware label ("possibly faulty hardware"), so the words attach to that driver on that card.
   A read-back entry is a different shader from the one that gave the row's outcome, and a rewrite depends on the code around the expression:
