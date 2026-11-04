@@ -349,7 +349,7 @@ the nominal copy, as the f32 run must be to equal the atlas pixel's.
   tolerance on the median's distance from 1 is a calibration for the gate (REQ-VAL-199). It tests the parting ratio, not
   outcome statistics. Its median's 95% rank interval over 256 is ranks 112 to 145, the quantiles 0.44 to 0.57, and c bounds
   of one direction move the affected end out by c ranks, unbounded at 112 or more; for scale, a KS at 5% over 256 has critical
-  distance 0.12, so differences of a few percent are out of its sight (R-661; re-sizing is RQ-647). *Was (R-600):* "the
+  distance 0.12, so differences of a few percent are out of its sight (R-661; re-sizing was RQ-647, and R-669 keeps 256). *Was (R-600):* "the
   median measured `t_part(f32)/t_part(f64)` compared with the predicted one, never with `ln eps₃₂ / ln eps₆₄ ≈ 0.44`.
   Never read off one trajectory. The tolerance is a calibration for the gate (REQ-VAL-199). How a start whose pair
   has not parted by the horizon enters the median, and which statistic compares the measured with the predicted

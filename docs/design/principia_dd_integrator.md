@@ -205,6 +205,8 @@ Part 7; `principia_01_pitfalls.md` §2); the gap is to re-measure with R-29's `E
 - `E_rel = ½|Δv|² − (M_pair + m_b)/d` is the relative two-body energy of the candidate escaper `b` about the centre of
   mass of the other two: `Δv` and `d` are `b`'s velocity and distance relative to that centre of mass, and `M_pair` is the
   pair's mass (`G = 1`). It uses the **total** mass. An `M_pair`-only form (prin-rs) biases toward escape.
+  *4 Nov 2026 (R-670):* at `ε ≠ 0`, `d` reads `√(d² + ε²)` in the potential term only, as it does in the ionisation
+  gate's pairwise energies, and the term is never formed with a `sqrt` at the decision (integrator contract Part 4).
 - **The window:** `|Δn̂|` is taken over 0.4 time units (**provisional**), sampled at macro-step boundaries for
   unregularised occupants and at sync boundaries for regularised ones (R-95), on the fixed grid `Δ_sync`, the window
   stated in physical time and never as a count of boundaries (R-565).

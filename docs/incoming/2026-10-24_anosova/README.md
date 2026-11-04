@@ -5,8 +5,8 @@ except this README is byte-for-byte as delivered.
 
 | Path | sha256 | What it is |
 |---|---|---|
-| `papers/agekyan_anosova_1968_SvA_11_1006.pdf` | `5bb197a9257a2056a479af67306adc83337dda150a1a69170ac6f8e16d2574f8` | T. A. Agekyan and Zh. P. Anosova, "A study of the dynamics of triple systems by means of statistical sampling", *Soviet Astronomy* 11(6), 1006–1014 (1968), translated from *Astron. Zh.* 44(6), 1261–1273 (1967). ADS scan, bibcode `1968SvA....11.1006A`. Primary source: region D (Fig. 1, eq. 8), the initial velocities (eq. 3), the energy (eq. 4) and Table 1 |
-| `papers/agekyan_anosova_1968_Ap_4_11_part2.pdf` | `7d160dafb6c2af17866e36d736007cc3155be3704481932c4e398f921e9c1368` | T. A. Agekyan and Zh. P. Anosova, "Investigation of the dynamics of triple systems by the method of statistical tests. II", *Astrophysics* 4(1), 11–16 (1968), doi:10.1007/BF01013153; Russian original *Astrofizika* 4(1), 31–40 |
+| `papers/agekyan_anosova_1968_SvA_11_1006.pdf` (held locally since 2 Nov 2026 at `docs/incoming/_local/agekyan_anosova_1968_SvA_11_1006.pdf`, gitignored, not in the repo; R-673) | `5bb197a9257a2056a479af67306adc83337dda150a1a69170ac6f8e16d2574f8` | T. A. Agekyan and Zh. P. Anosova, "A study of the dynamics of triple systems by means of statistical sampling", *Soviet Astronomy* 11(6), 1006–1014 (1968), translated from *Astron. Zh.* 44(6), 1261–1273 (1967). ADS scan, bibcode `1968SvA....11.1006A`. Primary source: region D (Fig. 1, eq. 8), the initial velocities (eq. 3), the energy (eq. 4) and Table 1 |
+| `papers/agekyan_anosova_1968_Ap_4_11_part2.pdf` (held locally since 2 Nov 2026 at `docs/incoming/_local/agekyan_anosova_1968_Ap_4_11_part2.pdf`, gitignored, not in the repo; R-673) | `7d160dafb6c2af17866e36d736007cc3155be3704481932c4e398f921e9c1368` | T. A. Agekyan and Zh. P. Anosova, "Investigation of the dynamics of triple systems by the method of statistical tests. II", *Astrophysics* 4(1), 11–16 (1968), doi:10.1007/BF01013153; Russian original *Astrofizika* 4(1), 31–40 |
 | `papers/li_liao_2018_arXiv_1805.07980.pdf` | `cce9e0002cb3f34fb1d3f3ce6c044fd032f483d2f48e86c58b765e3c89702d4e` | X. Li and S. Liao, "Collisionless periodic orbits in the free-fall three-body problem", arXiv:1805.07980 (2018). §2 restates region D at exact rest with G = 1 and cites the first paper for it |
 
 **Notes added 27 Oct 2026** (`../2026-10-27_papers/README.md` §3). These correct the table above without changing its
@@ -18,3 +18,12 @@ rows.
 - **Li & Liao.** arXiv:1805.07980 was published as *New Astron.* 70, 22–26 (2019), doi:10.1016/j.newast.2019.01.003.
 - **Paper II's tables.** Its Table 1 (exact rest) and Table 3 (the 38 near-rest runs paper I left unfinished) are
   transcribed in `../2026-10-27_papers/`. So are paper I's columns 5–8, which hold its decay times.
+
+## Held locally, not in the repo (RQ-610, 2 Nov 2026)
+
+The licence audit of 28 Oct 2026 (PR #327) found no rights statement in the two Agekyan & Anosova translations,
+`papers/agekyan_anosova_1968_SvA_11_1006.pdf` and `papers/agekyan_anosova_1968_Ap_4_11_part2.pdf`. The owner ruled on
+RQ-610 on 2 Nov 2026 (R-673, option (c)) to move them to `docs/incoming/_local/`, as the ten were by R-643; they were
+removed from the tree in one ordinary commit, with no history rewrite (R-644). Each is held locally, gitignored, under
+the **same filename** at `../_local/`. Their rows above keep their sha256 values, which still identify them, and a path
+to either cited anywhere in the docs now resolves there. The citations are left as written, since they are records.

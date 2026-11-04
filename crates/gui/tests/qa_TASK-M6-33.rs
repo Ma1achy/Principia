@@ -5,8 +5,8 @@
 //!   depth-sorted by `x + z`, opacity `0.28 + 0.55·near` and width `0.8 + 1.0·near` px, `near = (x + z + 2)/4` at the
 //!   edge's middle; the slice the true cross-section, sorted among the edges by its own mean `x + z`; the labels (slice
 //!   mode Width, Depth, Height on the bottom-left, bottom-right and left vertical edges, pushed 20 px outward, with
-//!   −1.0 / 1.0 at the corners, one number per corner, 12 px outward; tilt mode the one label "q₁, q₂ → <axis>" on the
-//!   bottom-right edge). The cases are B8's four (render_gui_spec § "The compass: look and views (R-451, R-452)").
+//!   −1.0 / 1.0 at the corners, one number per corner, 12 px outward; R-459 G1, G11: in both modes each edge's button
+//!   reads its letter and its dimension, the third axis what the gesture tilts into). The cases are B8's four (render_gui_spec § "The compass: look and views (R-451, R-452)").
 //! - REQ-GUI-192: the cross-section of the decoder's plane (View::basis's `(q₁, q₂)` in the frame `(e_a, e_b, e_d)`,
 //!   through `z₀`'s point over the half-range, unclamped, the offset alone clamped to `±|n|₁`) is a convex ordered
 //!   polygon of 3 to 6 vertices, 4 to 6 through the central axis, wherever `s = 2|q₁ × q₂| / (|q₁|² + |q₂|²) ≥ 10⁻³`;
@@ -623,12 +623,8 @@ fn qa_compass_cross_section_at_the_four_corners_no_slice_and_the_readout_says_so
                         "{what}: the readout {:?}",
                         d.readout
                     );
-                    // The labels stay as in the mode.
-                    assert_eq!(
-                        d.labels.len(),
-                        if mode == Touch::Slice { 3 } else { 1 },
-                        "{what}: the labels"
-                    );
+                    // The three edges' labels, in both modes (R-459 G1).
+                    assert_eq!(d.labels.len(), 3, "{what}: the labels");
                 }
             }
         }
@@ -1151,9 +1147,9 @@ fn qa_mock_compass_cube_cases_are_painted_as_the_reference_draws_its_cube() {
         let texts = painted_texts(&shapes);
         match case.mode {
             Touch::Slice => {
-                check_label_on(&texts, &iso, WIDTH_NAME, WIDTH_EDGE);
-                check_label_on(&texts, &iso, DEPTH_NAME, DEPTH_EDGE);
-                check_label_on(&texts, &iso, HEIGHT_NAME, HEIGHT_EDGE);
+                check_label_on(&texts, &iso, &format!("H {WIDTH_NAME}"), WIDTH_EDGE);
+                check_label_on(&texts, &iso, &format!("D {DEPTH_NAME}"), DEPTH_EDGE);
+                check_label_on(&texts, &iso, &format!("V {HEIGHT_NAME}"), HEIGHT_EDGE);
                 // One number per corner: −1.0 and 1.0 at the ends of Width, Depth and Height.
                 let numbers: Vec<&(String, Pos2)> = texts
                     .iter()
@@ -1210,15 +1206,18 @@ fn qa_mock_compass_cube_cases_are_painted_as_the_reference_draws_its_cube() {
                 );
             }
             Touch::Tilt => {
-                let label = format!("q₁, q₂ → {DEPTH_NAME}");
+                // R-459 G1, G11: the third axis's letter by the rule at rest, H and V on their edges.
+                let letter = if case.t.0 != 0.0 {
+                    "X"
+                } else if case.t.1 != 0.0 {
+                    "Y"
+                } else {
+                    "D"
+                };
+                let label = format!("{letter} {DEPTH_NAME}");
                 check_label_on(&texts, &iso, &label, DEPTH_EDGE);
-                for name in [WIDTH_NAME, HEIGHT_NAME] {
-                    assert!(
-                        !texts.iter().any(|(t, _)| t == name),
-                        "{}: tilt mode names {name}",
-                        case.name
-                    );
-                }
+                check_label_on(&texts, &iso, &format!("H {WIDTH_NAME}"), WIDTH_EDGE);
+                check_label_on(&texts, &iso, &format!("V {HEIGHT_NAME}"), HEIGHT_EDGE);
                 assert!(
                     !texts.iter().any(|(t, _)| t == "1.0" || t == "−1.0"),
                     "{}: tilt mode has corner numbers",
@@ -1248,9 +1247,9 @@ fn qa_mock_compass_cube_cases_are_painted_as_the_reference_draws_its_cube() {
     });
     let texts = painted_texts(&shapes);
     for (name, right) in [
-        (WIDTH_NAME, WIDTH_EDGE),
-        (DEPTH_NAME, DEPTH_EDGE),
-        (HEIGHT_NAME, HEIGHT_EDGE),
+        (format!("H {WIDTH_NAME}"), WIDTH_EDGE),
+        (format!("D {DEPTH_NAME}"), DEPTH_EDGE),
+        (format!("V {HEIGHT_NAME}"), HEIGHT_EDGE),
     ] {
         for edge in cube_edges() {
             if (edge.0 == right.0 && edge.1 == right.1) || (edge.0 == right.1 && edge.1 == right.0)
@@ -1258,7 +1257,7 @@ fn qa_mock_compass_cube_cases_are_painted_as_the_reference_draws_its_cube() {
                 continue;
             }
             rejects("a slice-mode label on a wrong edge", || {
-                check_label_on(&texts, &iso, name, edge)
+                check_label_on(&texts, &iso, &name, edge)
             });
         }
     }
@@ -1406,7 +1405,7 @@ fn qa_mock_compass_cube_no_slice_painted_at_a_corner_and_the_pin_kept_when_locke
     });
     assert!(gold, "no gold pin at the anchor's {pin:?}");
     let texts = painted_texts(&shapes);
-    check_label_on(&texts, &iso, &format!("q₁, q₂ → {DEPTH_NAME}"), DEPTH_EDGE);
+    check_label_on(&texts, &iso, &format!("X {DEPTH_NAME}"), DEPTH_EDGE);
     assert!(
         texts
             .iter()

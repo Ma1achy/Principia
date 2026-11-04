@@ -531,6 +531,14 @@ TASK-M7-05 merges early only if it passes the same test, and only once R-411's p
 
 Merge under the conditions above, and file every question for the human in `REVIEW_QUEUE.md` (R-369).
 
+**The PR sweep** (R-675, 1 Nov 2026): a standing duty. Periodically check every open PR and its CI state, find any
+that has been dropped or missed by accident, and pick it up again: dispatch what it needs next (the fix, the
+reviewers, a re-run, the merge), as § "Merging" and `plan/WORKFLOW.md` § "The review loop" say. A PR whose work is
+under way is not dropped. The current mechanism is `orch/pr-sweep.sh` in the orchestrator's notes directory, outside
+the repo: it lists each open PR as ok, active or DROPPED (a failed or cancelled check, a conflict, a CHANGES verdict on
+the head, an approved head with no merge watcher, or a settled head with no verdict), and `--watch` repeats it and
+exits when a newly dropped PR appears. The duty stands whatever runs it.
+
 **Never, without the human** (R-369's list; R-349):
 - make or record a new ruling (applying an existing one is fine);
 - confirm a calibration value;
