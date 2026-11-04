@@ -24,9 +24,9 @@ applied mechanically: /rulings-apply has the session read it and decide what it 
 provisional.
 
 Refused, and listed with the reason, is what can be stated simply: an unknown or closed RQ, an unknown D-n, an item
-answered twice, a line naming no item, an empty answer, and a plain form that can't stand: a label the entry doesn't
-offer, an "another, stated by the owner" option with no statement, `close` on an entry with no ruling that the report
-doesn't group under "Ruled-or-moot", and a veto of an entry that applies nothing.
+answered twice, a line naming no item, an empty answer, and a plain form that can't stand: a label the entry, showing
+one question, doesn't offer, an "another, stated by the owner" option with no statement, `close` on an entry with no
+ruling that the report doesn't group under "Ruled-or-moot", and a veto of an entry that applies nothing.
 
 A line continues the answer above it unless it starts a new item with `RQ-n:` or `D-n:` and the line above is complete:
 a plain form, or ended with a sentence. A blank line or a section name ends an answer. A line splits only after a
@@ -242,16 +242,15 @@ def read_answer(item, body, e, moot, shared=False):
         raise Refused(f"{item} applies nothing meanwhile: there is nothing to veto")
     elif kind == "close" and not e["ruled"] and item not in moot:
         raise Refused(f"{item} carries no ruling and the report doesn't group it Ruled-or-moot: it can't be closed")
+    elif kind == "option" and e["several"]:  # its other questions' labels may lie outside its "Options" field
+        form, kind = None, "read"
     elif kind == "option":
-        labels = value.split("+")
-        for label in labels:
+        for label in value.split("+"):
             if label not in e["labels"]:
                 offers = ", ".join(e["labels"]) or "no labelled option"
                 raise Refused(f"{item} offers no option {label!r}: it offers {offers}")
             if label in e["free"]:
                 raise Refused(f"option {label} is \"another, stated by the owner\": the statement is missing")
-        if e["several"]:
-            form, kind = None, "read"
     if form and kind != "read" and not shared:
         return kind, value
     hints = list(dict.fromkeys(m.group(1).lower() for m in BRACKETED.finditer(body)))
@@ -618,6 +617,9 @@ def self_test():
     expect("a label repeated", "RQ-7: (a)", "read", f"a, {several_hint}")
     expect("a second question", "RQ-8: (a)", "read", f"a, {several_hint}")
     expect("a list per question", "RQ-4: (a)", "read", f"a, {several_hint}")
+    expect("a label outside the Options field, as RQ-669's", "RQ-8: (x)", "read", f"x, {several_hint}")
+    expect("one in and one out of the field", "RQ-8: (a) + (x)", "read", f"a, x, {several_hint}")
+    expect("a bare label outside the field", "RQ-8: x", "read", several_hint)
 
     # refused: what can be stated simply
     expect("an option not offered", "RQ-1: (z)", reason="offers no option 'z'")
@@ -626,7 +628,8 @@ def self_test():
     capital = "## RQ-1: x?\n\n- **File, section:** x.\n- **Options seen:** (a) p; (d) Another, stated by the owner.\n"
     if entry("RQ-1", capital)["free"] != {"d"}:
         fails.append("reply self-test: a capital Another is a free option")
-    if parse_reply("RQ-1: (d)", capital)[0] or "the statement is missing" not in parse_reply("RQ-1: (d)", capital)[1][0][2]:
+    ok, no = parse_reply("RQ-1: (d)", capital)[:2]
+    if ok or "the statement is missing" not in no[0][2]:
         fails.append("reply self-test: a capital Another, bare, must be refused")
     if [a["kind"] for a in parse_reply("RQ-1: (d) a third way.", capital)[0]] != ["read"]:
         fails.append("reply self-test: a capital Another with its statement is read")
