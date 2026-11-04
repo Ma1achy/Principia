@@ -13847,6 +13847,7 @@ ratio included, is warped to its feasible range by default, the mass ratio throu
 axis bounded; RQ-376 closed).*
 *Amended in part by R-512 (20 Oct 2026; E3 and H9, RQ-402 closed: E3 reads over the chart's square, a window
 pixel whose own `(a, b)` leave it past the edge, blank past a bounded one).*
+*Refined by R-708 (4 Nov 2026: on the tilted Burrau charts E3 holds in warped mode through the floor at the pixel's own held `L_z`, and E2's infeasible cells are the linear arm).*
 *Still in force: all of it; R-506 carries E1 and E2 to every physical-quantity axis, R-508 declares the `t > 1`
 side and R-512 reads E3 over the chart's square, H9's meanwhile becoming the rule.*
 *20 Oct 2026 · applied in `docs/contracts/principia_chart_decoder_contract.md` § "The four axis kinds — a closed set"
@@ -16577,6 +16578,8 @@ R-507 is in the "physics" group of `plan/rule_groups.yaml`, with R-473.
 Changes REQ-CHART-064 (statement, verify, rulings, note).
 
 ## R-508 — An energy chart's `t > 1` side continues: past `t = 1` the warp's `K > K_max` is drawn and counted as an affine side, while past `t < 0`, and the `s` axis past either edge, the warp stays bounded *(closes RQ-376; amends R-471)*
+*Refined by R-708 (4 Nov 2026: a `K` axis floored at a held `L_z` runs past `K_max` at its top, `K_max` being a range).*
+*Still in force: all of it.*
 *20 Oct 2026 · applied in `docs/design/principia_chart_reference.md` § "2.1 Feasibility, and the warp that makes every
 pixel valid" (RQ-376's sentences reworded, with their earlier words kept) and § "5.4 Past the unit square — each axis's
 extension type (R-407)" (the invariant and Burrau `K` rows and the `K` bullet, with their earlier words kept), R-471's
@@ -27455,7 +27458,8 @@ REQ-VAL-042 (statement); adds REQ-DEC-051, REQ-DEC-052 and REQ-PAY-112.
 *Refined by R-636 (28 Oct 2026: its two readings written into its text, the paragraphs marked "Added on the owner's
 update of 28 Oct 2026" in its RQ-601 and RQ-603 bullets: `J⁺` where the steer's text says `J⁻¹`, with what it does
 when `J` is singular, and "ray-degenerate" read per cell).*
-*Still in force: all of it, those two readings now part of its text (R-636).*
+*Amended in part by R-708 (4 Nov 2026: in warped mode a held energy-type coordinate tilts in its warp coordinate and no cell is refused; "by value" and the refusal stand in linear mode; RQ-678 closed).*
+*Still in force: all of it, those two readings now part of its text (R-636), but "by value" and the refused cell on the Burrau charts in warped mode, which R-708 replaces.*
 *28 Oct 2026 · the owner's ruling batch of that morning, with the revised RQ-603 text sent after it; applied in
 `docs/design/principia_deep_zoom.md` § 2 ("`J_D`'s step rule", a paragraph added, and the latent Jacobian's step),
 `docs/design/principia_lines.md` § 8 (the trace fade's step), `docs/gui/principia_render_gui_spec.md` § "The compass:
@@ -30552,3 +30556,74 @@ The owner's words, 4 Nov 2026, verbatim:
 R-707 is in the "process" group of `plan/rule_groups.yaml`.
 
 Changes REQ-VAL-319 (statement, verify, rulings, source, note).
+
+## R-708 — The tilted Burrau `K` charts follow R-471's two modes: warped, the default, every pixel a system under every tilt, the `K` axis floored at the pixel's own held `L_z` in the additive form and the bottom row never blanked; linear, rows at fixed values, an infeasible cell blank, held coordinates by value; held energy-type coordinates tilt in their warp coordinate in warped mode *(closes RQ-678; amends R-633; refines R-471 and R-508)*
+*Refined by R-709 (4 Nov 2026: a held energy's warp coordinate past `t < 0`, if the implementer confirms it arises, clamps at `t = 0`).*
+*Still in force: all of it.*
+*4 Nov 2026 · the owner's ruling of that day; applied in `docs/contracts/principia_chart_decoder_contract.md` § "Tilt (basis edit)", `docs/design/principia_chart_reference.md` § "2.1 Feasibility, and the warp that makes every pixel valid" and § "4.5 The Burrau-family chart maps", R-471's, R-508's and R-633's forward lines, `docs/archive/review_queue/M0.md` (RQ-678, moved with its ruling), `REVIEW_QUEUE.md` (RQ-698, new), REQ-CHART-061, REQ-CHART-062 and REQ-CHART-067 (reqio), TASK-M2-38 and TASK-M2-52, `plan/tasks.yaml` and `plan/rule_groups.yaml`; built by TASK-M2-52, and by TASK-M2-37 for the single energy axis*
+
+The owner's words, 4 Nov 2026, verbatim:
+
+> RQ-678, owner ruling, 4 Nov 2026: not (a) or (b) — mode-dependent, per R-471's two modes.
+> - Warped mode (E1, the default): option (a). Every pixel is a system under every tilt. The floor uses the pixel's own held L_z, additive form K = L_z²/2I + K_max·t^γ (exceeding K_max at the top is fine; K_max is a range, per R-508's t>1 continuation). Held energy-type hidden coordinates (R-633 c2) are tilted in their warp coordinate in this mode, so held K stays ≥ 0. This amends R-633's "by value" for warped mode only.
+> - Linear mode (E2, per-axis option): option (b). Rows keep fixed physical values; infeasible cells are "not a system", blank per R-470; held coordinates tilt by value.
+> - #388: keep its refused-cell code and tests as the linear-mode arm; add the warped-mode path and its "no refused cells under tilt" test as the default. Not merged until both arms are in.
+> - RQ-683 (#387): same rule for a single energy axis at held spin.
+> - Rounding at the floor: the warped mode must not blank the bottom row; handle it and test it.
+> If the warped-coordinate tilt of held K turns out not to be well-defined somewhere, come back with the case.
+
+*What it decides:*
+
+- **Warped mode (R-471 E1, the default): RQ-678's option (a).** Every pixel inside the chart's square is a system under every tilt, on `(ν, K)`, `Φ_θ,K` and `Φ_θ,L_z`. The `K` axis of `(ν, K)` and `Φ_θ,K` is `K = L_z²/2I + K_max·t^γ_K` at the pixel's own held `L_z`. It may exceed `K_max` at the top: `K_max` is a range, as R-508's `t > 1` side continues. No cell is refused under tilt in this mode.
+- **Held energy-type hidden coordinates are tilted in their warp coordinate in this mode,** so held `K` stays ≥ 0. That amends R-633's "by value" for warped mode only.
+- **Linear mode (R-471 E2, the per-axis option): RQ-678's option (b).** Rows keep fixed physical values, an infeasible cell (`K < L_z²/2I`) is not a system and draws blank per R-470, and held coordinates tilt by value. R-633's refusal stands in this mode.
+- **PR #388** keeps its refused-cell code and tests as the linear arm, and adds the warped path and its "no refused cells under tilt" test as the default. It does not merge until both arms are in.
+- **The rounding at the floor.** Warped mode must not blank the bottom row: `K ≥ L_z²/2I` at `t = 0` is tested in floating point, so it is handled, as §2.1's warp holds `L_max² ≤ 2K`, and tested.
+- **A single energy axis at held spin takes the same rule.** Its queue entry lives on PR #387's branch, which closes it.
+- **If the warped-coordinate tilt of a held `K` is not well-defined somewhere,** the case comes back to the owner.
+
+*Applied per R-369 (physics-reviewed on TASK-M2-52):*
+
+- `Φ_θ,L_z`'s held `K` takes the warp's own line, `K = K_max·t^γ_K`, with `t = t₀ + d`, `t₀ = (K₀/K_max)^(1/γ_K)` at the chart's held `K₀`. It takes no additive floor: that chart's `L_z` axis is §4.5's band at the pixel's own `K`, so `L_z²/2I = (2v − 1)²·λ_L²·K ≤ K` for every `K ≥ 0`, and a floor would make `K` depend on itself. This answers the choice RQ-678 left open within (a), held `K` warped to stay at or above 0.
+- `d` on that chart is in units of the warp coordinate: the slider reads `t` and its span is the warp's `[0, 1]`, as R-507 measures a hidden coordinate by its own slider span.
+- A chart's mode is its energy axis's mapping: the `K` axis on `(ν, K)`, `Φ_θ,K` and `Φ_strip,K` (the same map), and the `L_z` axis on `Φ_θ,L_z`, whose band is its line of the warp (§2.1).
+- "Every pixel" reads over the chart's square, as R-512 reads R-471 E3. A pixel whose `(a, b)` leave it is past the edge.
+- "Blank per R-470" keeps R-633's reading in linear mode: no system, area weight 0.
+- TASK-M2-52 depends on TASK-M2-37, whose per-axis linear option its linear arm needs.
+- The linear arm's refusal covers the three charts as R-633 wrote it. In warped mode the corner arm, REQ-CHART-062's, is unchanged.
+
+*The case that came back, in the sense of the ruling's last line:* the ruling names a warp coordinate for held `K`, but the held `L_z` of `(ν, K)` and `Φ_θ,K` is an energy-type hidden coordinate too (R-471 E1, R-633 c2), and §2.1's `L_z` line needs a held `K` those charts do not have. The port doesn't choose. RQ-698 asks. The `K` axis's floor is the same in every answer.
+
+*What it amends:* **R-633**, "tilted and sliced by value", on a held energy-type coordinate in warped mode only, and its refusal, which becomes the linear arm. *What it refines:* **R-471**, E2 and E3 on these charts, and **R-508**, the top of the floored axis. It closes **RQ-678**.
+
+R-708 is in the "physics" group of `plan/rule_groups.yaml`.
+
+Changes REQ-CHART-061 (rulings, source, note), REQ-CHART-062 (statement, verify, rulings, source, note, rq) and REQ-CHART-067 (statement, rulings, source, note).
+
+## R-709 — Pre-ruling for RQ-678's `t < 0` case, if the implementer confirms it arises: in warped mode the held energy's warp coordinate clamps at `t = 0`, each clamped pixel a real system flagged "held at floor" in the Inspector and the sidecar, the clamped-pixel share in the test output, no mirror; linear mode unchanged *(refines R-708)*
+*4 Nov 2026 · the owner's words of that day; applied, conditionally as ruled, in `docs/contracts/principia_chart_decoder_contract.md` § "Tilt (basis edit)", `docs/design/principia_chart_reference.md` § "4.5 The Burrau-family chart maps", `docs/gui/principia_render_gui_spec.md` § "G8" and § "Export & share", REQ-CHART-062, REQ-GUI-241 and REQ-TOOL-169 (reqio), TASK-M2-52, TASK-M8-32 and TASK-M8-48, R-708's forward line and `plan/rule_groups.yaml`; built, if it arises, by TASK-M2-52, TASK-M8-48 and TASK-M8-32*
+
+The owner's words, 4 Nov 2026, verbatim:
+
+> Pre-ruling for the RQ-678 t<0 case, if the implementer confirms it arises: in warped mode, clamp the held energy's warp coordinate at t = 0 (held K = its floor, L_z²/2I). Each clamped pixel is a real system. Flag it as "held at floor" in the Inspector and the sidecar, and report the clamped-pixel share in the test output. No mirror. Linear mode is unchanged (by value, blank where infeasible).
+
+*What it decides, on the condition the owner states.* Whether the case arises is the implementer's to confirm, on TASK-M2-52, and to state in the PR. If it does:
+
+- In warped mode the held energy's warp coordinate clamps at `t = 0`, held `K` at its floor, `L_z²/2I`.
+- Each clamped pixel is a real system, flagged "held at floor" in the Inspector and the sidecar.
+- The test output reports the clamped-pixel share.
+- There is no mirror: `t < 0` doesn't fold onto `t > 0`.
+- Linear mode is unchanged: by value, blank where infeasible.
+
+If it doesn't arise, none of these is built, and the PR says why.
+
+*Applied per R-369 (physics-reviewed on TASK-M2-52):*
+
+- On `Φ_θ,L_z`, the chart with a held `K` (R-708), §4.5's band reads `L_z` off `K`, so at the clamp `K = 0`, `L_z = 0` and the floor is 0: the owner's `L_z²/2I` holds. Such pixels are the rest start at their own shape, and a clamped column reads one system down its rows.
+- The clamp concerns the held coordinate only. R-508's "`t < 0` stays bounded" still governs a screen axis.
+
+*What it refines:* **R-708**, the case its "so held `K` stays ≥ 0" leaves. It closes nothing.
+
+R-709 is in the "physics" group of `plan/rule_groups.yaml`.
+
+Changes REQ-CHART-062, REQ-GUI-241 and REQ-TOOL-169 (statement, verify, rulings, source, note).

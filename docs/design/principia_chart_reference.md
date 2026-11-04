@@ -281,7 +281,8 @@ axis takes its own line of the warp: `K` (`KE`) `= K_max·t^γ_K`, `E = U + K_ma
 yet: REQ-CHART-070 (R-72), and no chart offers one until it is. **The warp is evaluated per pixel,** with that pixel's
 own `U`, `I` and masses: a tilt or slice that moves a hidden coordinate (masses, shape) changes `U` and `I` across the
 window, and a warp computed once at the centre would put some pixels outside the feasible region; evaluated per pixel,
-every pixel stays feasible under every tilt (R-471, E3; R-473, T5), each pixel whose own chart parameters lie in
+every pixel stays feasible under every tilt (R-471, E3; R-473, T5; at a held `L_z` on a Burrau `K` axis through the floor
+of R-708, §4.5), each pixel whose own chart parameters lie in
 `[0,1]²`: under Tip as sheet with one target and both angles set a window pixel's `(a, b)` can leave the square, the
 axes' types then acting on it (§5.4), and such a pixel is past the edge, blank past a bounded one (R-512, ruling
 RQ-402; R-471, H9). *Was:* "and what such a pixel draws is RQ-402 (R-471, H9)." Untilted, they are `z₀`'s at every pixel (§2, the
@@ -805,7 +806,8 @@ the twins side decides it.
 
 **Hidden coordinates under tilt and slice (R-633, ruling RQ-603).** These charts hold their blocks by a construction,
 not by latent controls, so their hidden coordinates are the construction's physical parameters, tilted and sliced by
-value as R-554 L5's `p_λ` (`principia_chart_decoder_contract.md` § "Tilt (basis edit)", "Tilt on every chart"):
+value as R-554 L5's `p_λ` (`principia_chart_decoder_contract.md` § "Tilt (basis edit)", "Tilt on every chart"), but a
+held energy-type coordinate in warped mode, which R-708 tilts in its warp coordinate, below the table:
 
 | Chart | Hidden coordinates | At `d = 0` |
 |---|---|---|
@@ -816,8 +818,23 @@ value as R-554 L5's `p_λ` (`principia_chart_decoder_contract.md` § "Tilt (basi
 
 A momentum control is tilted from 0 and its momenta are `D_mom` of it under the pixel's masses, every registered
 momentum link mapping 0 to 0. With a held `L_z` or `K` tilted, the momenta are §2.2's construction at the tilted value
-(§2.2 takes any `L_z` with `K ≥ L_z²/2I`), and a cell with no construction there (`K < L_z²/2I`) reads as refused:
-no system, area weight 0. Built by TASK-M2-52 on TASK-M2-36's tilt path.
+(§2.2 takes any `L_z` with `K ≥ L_z²/2I`). The rest follows R-471's two modes (R-708, ruling RQ-678; *was:* "and a cell
+with no construction there (`K < L_z²/2I`) reads as refused: no system, area weight 0", in every mode).
+
+- **Warped mode, the default.** Every pixel inside the chart's square is a system under every tilt, no cell refused.
+  `(ν, K)`, `Φ_θ,K` and `Φ_strip,K` floor the axis at the pixel's own held `L_z`, $K = L_z^2/2I + K_{\max} t^{\gamma_K}$,
+  which may pass `K_max` at the top, a range as R-508's side continues. `Φ_θ,L_z`'s held `K` is tilted in its warp
+  coordinate, `K = K_max·t^γ_K`, `t = t₀ + d`, `t₀ = (K₀/K_max)^(1/γ_K)`, `d` in units of `t`, so it stays ≥ 0; it takes
+  no floor, the band above giving `L_z²/2I ≤ K` at every `K ≥ 0`. Rounding at the floor must not blank the bottom row,
+  as §2.1 holds `L_max² ≤ 2K`. How the held `L_z` itself moves is RQ-698.
+- **If the implementer confirms it arises (R-709).** A held energy's warp coordinate past `t < 0` clamps at `t = 0`, held
+  `K` at its floor, `L_z²/2I` (on `Φ_θ,L_z`, where `L_z` is read off `K`, both are 0: the rest start at the pixel's own
+  shape). Each clamped pixel is a real system, flagged "held at floor" in the Inspector and the sidecar, and the test
+  output reports the clamped-pixel share. There is no mirror.
+- **Linear mode, the option per axis (R-471 E2).** Rows keep fixed physical values, a held coordinate tilts by value,
+  and a cell with no construction there (`K < L_z²/2I`) is no system, area weight 0, blank (R-470).
+
+Built by TASK-M2-52 on TASK-M2-36's tilt path, the linear option on TASK-M2-37's.
 
 ### 4.6 The central hypothesis
 

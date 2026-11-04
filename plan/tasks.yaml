@@ -840,7 +840,7 @@
 - id: TASK-M2-52
   milestone: M2
   title: "Tilt and slice on the six charts that hold a block by a construction: the mass simplex's `ν₀`, a rest start's momentum controls from 0, and the held `L_z` or `K` of the Burrau charts, as physical hidden coordinates (R-633, R-473) ⚑"
-  depends_on: [TASK-M2-36]  # R-633 (RQ-603): split from TASK-M2-36, on its tilt path
+  depends_on: [TASK-M2-36, TASK-M2-37]  # R-633 (RQ-603): split from TASK-M2-36, on its tilt path
   needs: []
   requirements: [REQ-CHART-062, REQ-CHART-065]  # R-633: only this task can close them, once every chart tilts
   reviewers: [code, qa, physics]  # ⚑ physics review required; not merged on the code reviewer's word alone
@@ -2865,7 +2865,7 @@
 - id: TASK-M8-32
   milestone: M8
   title: "Export & share window: image with pxpack, state snapshot and share link, present mode (04_windows.png)"
-  depends_on: [TASK-M8-30, TASK-M8-31, TASK-M8-87, TASK-M7-32, TASK-M6-28, TASK-M2-34, TASK-M6-47, TASK-M8-46, TASK-M6-48, TASK-M2-37, TASK-M2-40, TASK-M7-45, TASK-M3-39]  # R-467 D13: the background and Fit (code review F4 on PR #253); TASK-M6-48, TASK-M2-37 and TASK-M2-40 for the sidecar's tilt_map, mappings and saved charts (R-471 to R-475); TASK-M7-45 generates the entry hashes (R-521 H5; code review F9 of PR #265, applied per R-369); TASK-M3-39 the pair table whose warning the sidecar carries (R-561)
+  depends_on: [TASK-M8-30, TASK-M8-31, TASK-M8-87, TASK-M7-32, TASK-M6-28, TASK-M2-34, TASK-M6-47, TASK-M8-46, TASK-M6-48, TASK-M2-37, TASK-M2-40, TASK-M7-45, TASK-M3-39, TASK-M2-52]  # R-467 D13: the background and Fit (code review F4 on PR #253); TASK-M6-48, TASK-M2-37 and TASK-M2-40 for the sidecar's tilt_map, mappings and saved charts (R-471 to R-475); TASK-M7-45 generates the entry hashes (R-521 H5; code review F9 of PR #265, applied per R-369); TASK-M3-39 the pair table whose warning the sidecar carries (R-561)
   needs: [REQ-TOOL-059, REQ-TOOL-065, REQ-TOOL-067, REQ-TOOL-070, REQ-TOOL-071, REQ-TOOL-072, REQ-INT-098]
   requirements: [REQ-TOOL-102, REQ-TOOL-103, REQ-GUI-100, REQ-TOOL-146, REQ-TOOL-167, REQ-TOOL-168, REQ-TOOL-169, REQ-GUI-353]
   reviewers: [code, qa, gui, physics]  # physics for present mode's fill past [0,1]² (R-407)

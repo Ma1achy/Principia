@@ -376,52 +376,6 @@ builds.*
 - **Waits:** TASK-M7-13.
 - **4 Nov 2026 (R-706):** deferred to the start of TASK-M7-12 or TASK-M7-13 by owner 4 Nov 2026. Options with a recommendation are proposed then. The entry stays open.
 
-## RQ-678: On the tilted Burrau `K` charts, R-471 E3's "every pixel feasible under every tilt" against R-633 c2's refused cells *(physics; R-471 E3; R-633 c2; REQ-CHART-061, REQ-CHART-067; context: TASK-M2-38, TASK-M2-52)*
-
-*Queued 3 Nov 2026 by the orchestrator's filing task, from the read-only pre-flight of TASK-M2-38. For the owner: yes,
-it is physics, the two rulings give different results on one chart.*
-
-- **File, section:**
-  - `decisions.md`:13831, § "R-471 — …", E3: "Per-pixel evaluation keeps every pixel feasible under every tilt." Its port,
-    :13846-13847: "so a tilt or slice that moves a hidden coordinate (masses, shape) keeps every pixel feasible under
-    every tilt."
-  - `plan/requirements.yaml`, REQ-CHART-067: kind-3 axes warped by default "wherever they appear (the invariant charts,
-    the Burrau family's K axes, …) … so every pixel inside [0,1]² is feasible by construction".
-  - `decisions.md`:27436-27438, § "R-633 — …", the owner's (c) c2: "the (ν, K) chart and Φ_θ,K gain the held L_z, and
-    Φ_θ,L_z gains the held K, as physical hidden coordinates. Cells with no momentum construction at the tilted value
-    (K < L_z²/2I) read as refused, through the tilt's existing ray-degenerate path."
-  - `plan/requirements.yaml`:2950, REQ-CHART-061's verify: "on the invariant and Burrau K charts, warped, every grid
-    pixel whose (a, b) lie in the square validates at every tilt".
-  - `decisions.md`:27541-27543, R-633's note: TASK-M2-38 runs "REQ-CHART-061's fuzz over every gallery chart, the Burrau
-    `K` charts tilted".
-- **The conflict:** with the held `L_z` tilted in, a warped `K` axis that does not read `L_z` reaches pixels with
-  `K < L_z²/2I`, which c2 refuses; REQ-CHART-061 requires every in-square pixel there to validate. E3 names masses and
-  shape as the hidden coordinates it covers; c2 adds a momentum one.
-- **The question:** on the tilted `(ν, K)` and `Φ_θ,K` charts (and `Φ_θ,L_z` tilted into `K`), does every in-square pixel
-  validate (E3), or may cells be refused (c2)?
-- **Options seen:** (a) E3 holds: on `(ν, K)` and `Φ_θ,K` the `K` warp takes the pixel's own held `L_z` (its floor
-  `L_z²/2I`); on `Φ_θ,L_z`, whose `L_z` axis is not that warp but `docs/design/principia_chart_reference.md` § 4.5's
-  linear band `L_z(v) = (2v − 1)·λ_L·L_max(K)`, `L_max(K) = √(2IK)` is taken at the pixel's own tilted held `K`. On
-  `(ν, K)` and `Φ_θ,K`, c2's refusal is then reached only under the linear option if the floored warp is additive, such
-  as `K = L_z²/2I + K_max·t^γ`; a form that keeps `K ≤ K_max` still has no feasible pixel once `L_z²/2I > K_max`, so the
-  form is part of the option. On `Φ_θ,L_z` the tilt moves the held `K` itself (`K = K_centre + d`, `d = span·d̃`,
-  `crates/kernel/src/chart/tilt.rs`:555-564; the offset is added to its target at :596, on `main` so far only for the
-  latent controls; TASK-M2-52 adds the held `K` as a target), and the band gives `L_z²/2I = (2v − 1)²·λ_L²·K ≤ K` for
-  every `K ≥ 0` (`v ∈ [0, 1]`, `λ_L ∈ (0, 1]`, § 4.5); so there a tilt that drives the held `K` below 0
-  (`d < −K_centre`) is refused under either option and whatever the floor form, as `√(2IK)` has no value and §2.2's
-  construction has none ("`K ≥ 0` always", `decisions.md`:18628). Open within (a), not chosen: whether the held `K`'s
-  tilt on `Φ_θ,L_z` is bounded or warped to stay at or above 0 (which would give E3 there too), or those cells stay
-  refused; (b) c2 holds: refused cells occur under tilt, warped or not, and REQ-CHART-061's arm on those charts counts a
-  refused cell as not a failure (E3 and REQ-CHART-067 read as covering masses and shape); (c) another, stated by the
-  owner.
-- **Applied meanwhile:** TASK-M2-52 builds c2 now, as R-633 words it (its refused-cell arm), and is reworked under (a)
-  (applied per R-369 by the orchestrator: TASK-M2-52 is not held; it proceeds on the corpus as written).
-- **Waits:** TASK-M2-38 (REQ-CHART-061's tilted Burrau `K` arm); TASK-M2-52's rework under (a) (it proceeds meanwhile,
-  above), as it builds c2's refusal, option (b): its Deliverables' refused cell (`plan/tasks/M2/TASK-M2-52.md`:32, "on
-  the three Burrau charts, a cell whose tilted value leaves no momentum construction (`K < L_z²/2I`, §2.2's terminal
-  case) is no system") and `tilt_every_chart`'s arm (:37) "cells with `K < L_z²/2I` refused … and every other cell
-  valid", with its control, on the warped `(ν, K)` and `Φ_θ,K`. Under (a) that `K` decode and that test change.
-
 ## RQ-679: The slider span of `ν₀`, the held `L_z` and the held `K`, which R-507 U1 divides a hidden offset by, while § G2's Slice centre lists only the eight latent sliders *(a definition requirement, R-72, and a value, R-71; R-507 U1; R-633; render_gui_spec § G2; context: TASK-M8-48, TASK-M2-52)*
 
 *Queued 3 Nov 2026 by the orchestrator's filing task, from the read-only pre-flights. Nothing is chosen.*
@@ -740,3 +694,31 @@ change: no timer was touched (R-649). Nothing is chosen.*
 - **Options seen:** (a) runs from the authors' starts stand in, for the 180 they cover; (b) R-638's seeded draw stays required, and the pilot stays a pilot; (c) both, each labelled.
 - **Applied meanwhile:** R-638 stands, and the seeded draw is not run.
 - **Waits:** a BR-1 ensemble beyond the 12-run pilot.
+
+## RQ-698: What "tilted in their warp coordinate" means for the held `L_z` of `(ν, K)`, `Φ_θ,K` and `Φ_strip,K` *(physics; silence: R-708; R-471 E1; R-633 c2; REQ-CHART-062; context: TASK-M2-52, PR #388)*
+
+*Queued 4 Nov 2026 by R-708's port. For the owner: yes, it is physics; the answer changes which systems a tilt into the
+held `L_z` shows. R-708's last line says to come back with such a case. Nothing is chosen.*
+
+- **File, section:**
+  - `decisions.md` § "R-708 — …", the owner's words: "Held energy-type hidden coordinates (R-633 c2) are tilted in their
+    warp coordinate in this mode, so held K stays ≥ 0."
+  - `decisions.md` § "R-633 — …", the owner's (c) c2: "the (ν, K) chart and Φ_θ,K gain the held L_z, and Φ_θ,L_z gains
+    the held K, as physical hidden coordinates."
+  - `decisions.md` § "R-471 — …", the heading: "Energy-type axes (`E`, `L_z`, `K`, `KE`, `PE`)".
+  - `docs/design/principia_chart_reference.md` § 2.1: "`L_z = (2s − 1)·L_max` with `L_max = √(2·I·K)` at the kinetic
+    energy the chart holds fixed (as §4.5's `Φ_θ,L_z`)."
+- **The silence:** `L_z` is energy-type, and the held `L_z` is one of R-633 c2's two held coordinates, so the sentence
+  reaches it. Its reason, "so held K stays ≥ 0", speaks only of `K`. `L_z`'s warp coordinate is `s`, but §2.1's line
+  needs a `K` the chart holds fixed, and these charts hold none: `K` is the pixel's axis, and its floor reads the held
+  `L_z`. So on these charts `s` has no `L_max` to scale by.
+- **The question:** in warped mode, how does a tilt move the held `L_z` on these charts?
+- **Options seen:** (a) by value, as R-633 wrote it: `L_z = L_z₀ + d`, the sentence reaching held `K` only. R-708's
+  additive floor takes any real `L_z`, so every pixel stays a system; `|L_z|` has no bound but the slider's span. (b) In
+  a warp coordinate on a fixed scale, such as `L_z = (2s − 1)·√(2·I·K_max)`, `s` bounded: `|L_z|` is then bounded, at the
+  cost of a scale that §2.1 doesn't write for these charts, and `s` needs a rule past its edges. (c) Another, stated by
+  the owner.
+- **Applied meanwhile:** nothing. R-708's `K` floor, the "no refused cells" test and the linear arm are the same in
+  every option; `d = 0` reproduces the untilted chart in every option.
+- **Waits:** TASK-M2-52's warped tilt into the held `L_z`, and so PR #388, which R-708 holds until both arms are in.
+
