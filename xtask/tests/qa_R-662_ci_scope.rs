@@ -11,6 +11,10 @@
 //! instead; the field check `scripts/ci_req_fields.py` joins the scripts that are code; mutants run only on Rust under
 //! `crates/`. This file changes only where that ruling changes the behaviour it tests (R-677's exception to R-290).
 //!
+//! R-790 (4 Nov 2026) adds `.claude/`, its commands, agents and settings, to tier (c), the owner: "R-677 amendment:
+//! .claude/ (commands, agents, settings) is docs tier." `cheap`, the model below, gains it, and the near neighbours a
+//! prefix would catch join the unknown paths (R-790's exception to R-290).
+//!
 //! - `qa_r662_every_tracked_path_classifies_as_the_ruling_says`: every path `git ls-files` lists, against this file's
 //!   own reading of the ruling's lists (`ruling`).
 //! - `qa_r662_unknown_paths_run_everything`: paths the ruling names nowhere, alone and beside a cheap path.
@@ -128,10 +132,10 @@ fn tier_b(path: &str) -> bool {
         || ["plan/tasks.yaml", "plan/MILESTONES.md"].contains(&path)
 }
 
-/// R-662's "only the cheap checks" (R-677's tier c): `docs/`, `plan/`, `scripts/`, `workbench/` and the root's markdown,
-/// but that data.
+/// R-662's "only the cheap checks" (R-677's tier c): `docs/`, `plan/`, `scripts/`, `workbench/`, `.claude/` (R-790) and
+/// the root's markdown, but that data.
 fn cheap(path: &str) -> bool {
-    let listed = ["docs/", "plan/", "scripts/", "workbench/"]
+    let listed = ["docs/", "plan/", "scripts/", "workbench/", ".claude/"]
         .iter()
         .any(|d| path.starts_with(d))
         || (!path.contains('/') && path.ends_with(".md"));
@@ -219,6 +223,10 @@ fn check_tracked(script: &str, paths: &[String]) {
                 .any(|p| cheap(p) && p.starts_with("workbench/")),
         ),
         (
+            ".claude/",
+            paths.iter().any(|p| cheap(p) && p.starts_with(".claude/")),
+        ),
+        (
             "the artboards",
             paths.iter().any(|p| p.starts_with("docs/gui/design/")),
         ),
@@ -303,6 +311,19 @@ negative_control!(
     )
 );
 
+mod claude_runs_full_ci {
+    use super::*;
+    negative_control!(
+        qa_r662_every_tracked_path_classifies_as_the_ruling_says,
+        "the script with `.claude/` off its allowlist (R-790)",
+        expected = "paths the ruling gives only the cheap checks are not docs-only together",
+        check_tracked(
+            &swap(&script(), " | .claude/*) return 0 ;;", ") return 0 ;;"),
+            &tracked()
+        )
+    );
+}
+
 // ---- Unknown paths -----------------------------------------------------------------------------------------------
 
 /// Paths R-662 names nowhere, or that only look like a listed one.
@@ -328,6 +349,10 @@ const UNKNOWN: &[&str] = &[
     "Docs/a.md",
     "DOCS/a.md",
     "PLAN/a.md",
+    ".claude",
+    ".clauderc",
+    ".claude2/a.md",
+    ".CLAUDE/a.md",
     "Decisions.md",
     "decisions.MD",
     "decisions.md.orig",
@@ -340,11 +365,15 @@ const UNKNOWN: &[&str] = &[
     "fixtures/docs/a.md",
     "fixtures/plan/a.yaml",
     ".github/docs/a.md",
+    "a/.claude/b.md",
+    "crates/.claude/a.md",
+    ".github/.claude/a.md",
     // Paths written differently from how git prints a plain one, as git prints an odd one.
     "./docs/a.md",
     "/docs/a.md",
     " docs/a.md",
     "\"docs/a\\tb.md\"",
+    "./.claude/a.md",
     "   ",
 ];
 
@@ -376,6 +405,7 @@ fn check_unknown(script: &str) {
                 "plan/qa.py",
                 "scripts/qa.py",
                 "workbench/qa",
+                ".claude/qa.md",
                 "decisions.md"
             ]
         ),
@@ -932,6 +962,7 @@ const SHARD_CASES: &[(&[&str], bool)] = &[
     (&["plan/qa/a.rs"], false),
     (&["scripts/qa/a.rs"], false),
     (&["workbench/qa a.rs"], false),
+    (&[".claude/qa/a.rs"], false),
     (&["docs/reference/qa/a.rs", "workbench/qa/b.rs"], false),
     (&["crates/kernel/src/qa.rs"], true),
     (&["crates/gui/src/qa.rs"], true),
@@ -948,6 +979,7 @@ const SHARD_CASES: &[(&[&str], bool)] = &[
     (&["xtask/crates/qa.rs"], false),
     // Mixed, the Rust under `crates/` on either side of the others in the diff's order.
     (&["crates/kernel/src/qa.rs", "docs/reference/qa/a.rs"], true),
+    (&[".claude/qa/a.rs", "crates/kernel/src/qa.rs"], true),
     (&["docs/reference/qa/a.rs", "zz/crates/qa.rs"], false),
     (
         &["docs/reference/qa/a.rs", "zz/qa.rs", "crates/zz/qa.rs"],
@@ -1082,6 +1114,25 @@ const DETECT_CASES: &[(&str, Pr, (bool, bool, &str))] = &[
             "docs/qa/b.pdf",
         ]),
         (true, false, "docs"),
+    ),
+    (
+        "`.claude/`'s agents, commands and settings",
+        Pr::Add(&[
+            ".claude/agents/qa.md",
+            ".claude/commands/qa.md",
+            ".claude/settings.json",
+        ]),
+        (true, false, "docs"),
+    ),
+    (
+        "`.claude/` beside a crate's file",
+        Pr::Add(&[".claude/agents/qa.md", "crates/kernel/src/qa.rs"]),
+        (false, true, "code"),
+    ),
+    (
+        "a name that only starts like `.claude/`",
+        Pr::Add(&[".clauderc"]),
+        (false, true, "code"),
     ),
     (
         "a non-ASCII name in the docs",
