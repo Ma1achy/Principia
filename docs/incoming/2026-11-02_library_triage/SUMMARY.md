@@ -232,8 +232,8 @@ Every row with a conflict carries it in the `conflict` column:
 - **Zadunaisky 1979 (row 167):** Table I's and Table III's time units are inconsistent, so any comparison is unit-free.
 - **Kandel 2026 (row 190):** the shortlist's digits (above); chunk 10's "papers-12 was never triaged" is wrong (the
   addendum covers it).
-- **Liu 2026, Julia Atlas (row 197):** its figure-eight differs from the held 100-digit value by about 1e-13 in v and
-  4e-12 in T (ours).
+- **Liu 2026, Julia Atlas (row 197):** its figure-eight differs from the held 100-digit value by [value] in v and
+  [value] in T (ours).
 - **De Cesare 2021 (row 215):** 2,048 CSVs against the guide's 2,074.
 - **BPZ (row 219) and CFT (row 221):** the shortlist and guide errors above.
 
