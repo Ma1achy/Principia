@@ -274,11 +274,11 @@ Never targets; scored, if at all, as a peek (`docs/verification/peek_log.md`).
 ## The precision-gap answer
 
 No source in the library compares f32, f64 and a converged reference across an ensemble of planar three-body runs, and
-none compares CPU with GPU. R-661 stands as a hypothesis Principia must measure. Closest: cft-rebound (f64 vs fp128/fp256,
-one Burrau trajectory); Portegies Zwart 2026 Table 4 (single-run 32-bit energy errors); mikha08-rgb/Nbody (f32 GPU vs
-f64 CPU, figure-eight only); eucliss free-fall plane mirror pairs (f64 round-off alone: the mirrored escaper agrees
-0.97 of the time for t < 10, 0.84 for 10–20, 0.63 for 20–50 and 0.51 past 50, chance about 1/3, on the
-convention in the spot-check's item 5; `gaps-precision.csv` gap 5); Tomihisa 2011 (a CPU-GPU parity check must state whether FMA contraction is on).
+none compares CPU with GPU. R-661 stands as a hypothesis Principia must measure. Closest: cft-rebound (f64 vs
+fp128/fp256, one Burrau trajectory); Portegies Zwart 2026 Table 4 (single-run 32-bit energy errors); mikha08-rgb/Nbody
+(f32 GPU vs f64 CPU, figure-eight only); eucliss free-fall plane mirror pairs (f64 round-off alone: the mirrored escaper
+agrees 0.97 of the time for t < 10, 0.84 for 10–20, 0.63 for 20–50 and 0.51 past 50, chance about 1/3, spot-check item
+5; `gaps-precision.csv` gap 5); Tomihisa 2011 (a CPU-GPU parity check must state whether FMA contraction is on).
 
 `gaps-precision.csv` holds seven gaps, the owner's three first (matched f32/f64/mixed/converged ensembles; per-point FTLE
 maps; shape-sphere residence statistics), each framed as something Principia could produce and publish. The other four:
@@ -291,14 +291,14 @@ sources named there: eljja, RATISS, Charlie-Zhao, Anosova 1990, Pruett 2003.
 1. LL-3 and Hénon 1974. LL-3 (REQ-VAL-223) waits on a paywalled Standish 1970 (R-630 item 9). Hénon 1974's Table I A = 0
    row is Standish's orbit and matches Li & Liao's F1(0.6, 0.8, 1) period to 2e-10 (ours). Should LL-3 take Hénon 1974,
    already held under R-669, as its independent printed source, so it stops waiting on Standish? Or keep waiting?
-   Queued as RQ-672 in `REVIEW_QUEUE.md`.
+   Ruled by the owner, 3 Nov 2026 (RQ-672): LL-3 takes Hénon 1974, and Standish 1970 is added if obtained.
 2. Planetary systems. Star-plus-planets papers are read here as parked with the hierarchical triples (R-668), so they would
    return with the v2+ 3D extension. Are they parked, or out of scope for good?
-   Queued as RQ-673 in `REVIEW_QUEUE.md`.
+   Ruled by the owner, 3 Nov 2026 (RQ-673): parked, revisited with the v2+ 3D extension, not out of scope for good.
 3. The precision gaps as Principia's own output. Gap 1 already has BZ-1C (R-661). Should per-point FTLE maps (gap 2, over
    the eucliss free-fall plane and the two unequal-mass planes) and time-weighted shape-sphere residence statistics (gap 3)
    be planned as M9 peek outputs, which needs new requirements, or stay recorded here?
-   Queued as RQ-674 in `REVIEW_QUEUE.md`.
+   Ruled by the owner, 3 Nov 2026 (RQ-674): both are planned as M9 peeks, non-gating, with no build before M9.
 
 ## The owner's spot-check of 3 Nov 2026
 
