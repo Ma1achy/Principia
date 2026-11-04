@@ -560,6 +560,7 @@ as history only.
 - **R-658** — Heavy commands run only through a local job queue the orchestrator owns, `cargo xtask job`: agents submit them and wait, never run them directly; classes merge, fix, build and peek, first in, first out within each; one runner at a fixed concurrency, each job with cargo's jobs and test threads at the core count; jobs time out, stale locks expire and a new runner recovers a dead one's jobs; heavy processes outside the queue are logged; sccache measured again; mutants scoped to the diff and run through the queue *(supersedes R-228)*. Still in force: all of it; R-666 takes the sccache decision that item 4's measurement left pending. Refined by R-666 (31 Oct 2026: the decision item 4's measurement left pending is taken: sccache stays off).
 - **R-659** — Gemini reviews make one request and name the model that answered; on a quota refusal they fall back down a chain of four models; a spent chain posts "Gemini quota exhausted, review skipped" and the merge proceeds *(an R-369 note; amends R-635's Gemini workflow)*
 - **R-666** — sccache stays off: the job queue's builds do not use it
+- **R-693** — Every R-, RQ-, REQ- or TASK- number shown to the owner comes with a plain-English gloss
 
 ## CI
 

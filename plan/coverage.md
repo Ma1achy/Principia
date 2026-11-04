@@ -43,14 +43,14 @@ Of these: 232 calibration, 175 definition, 1658 obligation. Retired (kept for th
 
 ## Sections
 
-1674 sections in 61 files: 1334 yield at least one requirement; 340 yield none and are listed below with the reason.
+1677 sections in 61 files: 1336 yield at least one requirement; 341 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | gap (RQ-378) | 1 |
 | gap (RQ-391) | 2 |
 | gap (RQ-577) | 2 |
 | gap (RQ-618) | 1 |
-| informative only | 232 |
+| informative only | 233 |
 | out of v1 (R-125) | 1 |
 | out of v1 (R-420) | 1 |
 | parent heading (obligations are in its subsections) | 55 |
@@ -201,6 +201,7 @@ Of these: 232 calibration, 175 definition, 1658 obligation. Retired (kept for th
 | R-659 — Gemini reviews make one request and name the model that answered; on a quota refusal they fall back down a chain of four models; a spent chain posts "Gemini quota exhausted, review skipped" and the merge proceeds *(an R-369 note; amends R-635's Gemini workflow)* | informative only | the owner's message of 30 Oct 2026: one Gemini request per review, a four-model fallback chain on quota errors, the model stamped, a note when the chain is spent; process, carried by the gemini-dispatch workflow and scripts/gemini_review.py; changes no requirement |
 | R-664 — `generation_root` §3.5 no longer claims R² from the Welford accumulators: it cannot be derived from what is stored and nothing reads it; no per-sample field is added *(closes RQ-633)* | informative only | the owner's ruling of 31 Oct 2026 closing RQ-633: "+ R²" struck from generation_root §3.5, no new per-sample field; no requirement read it |
 | R-666 — sccache stays off: the job queue's builds do not use it | informative only | the owner's word of 31 Oct 2026: sccache stays off; process; changes no requirement |
+| R-693 — Every R-, RQ-, REQ- or TASK- number shown to the owner comes with a plain-English gloss | informative only | the owner's standing rule of 4 Nov 2026 on numbers shown to them; process; changes no requirement |
 
 ### `docs/contracts/principia_canonical_spec.md`
 

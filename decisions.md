@@ -29656,3 +29656,29 @@ one of `pull_request`'s kind; the rule above is what those runs show.
 R-678 is in the "ci" group of `plan/rule_groups.yaml`.
 
 Changes REQ-VAL-148 (source, rulings, note).
+
+## R-693 — Every R-, RQ-, REQ- or TASK- number shown to the owner comes with a plain-English gloss
+*4 Nov 2026 · the owner's message of that day ordering the `/rulings-report` and `/rulings-apply` commands; applied in
+`CLAUDE.md` § "When to ask the human", `AGENTS.md` § "Numbers shown to the owner", `plan/rule_groups.yaml` and
+`plan/section_notes.yaml`; changes no requirement*
+
+The owner's words (4 Nov 2026), verbatim, the message's last line:
+
+> Standing rule, add to CLAUDE.md/AGENTS.md: every R-, RQ-, REQ- or TASK- number shown to the owner comes with a plain-English gloss.
+
+*What it decides:* wherever an agent shows the owner one of these numbers, in a summary, a report, a question or a pull
+request, a few plain words saying what it is come with it. An id alone is not enough.
+
+*Applied per R-369:*
+- The rule is in `AGENTS.md` under a section of its own, before § "Code Review Rules", so that section, which
+  `GEMINI.md` and `.github/copilot-instructions.md` copy byte for byte (`xtask/tests/ai_review_rules.rs`), is unchanged:
+  the rule binds agents reporting to the owner, and is no review finding.
+- The rest of the message orders the two commands, which are tooling and not a ruling:
+  `.claude/commands/rulings-report.md`, `.claude/commands/rulings-apply.md` and `plan/tools/rulings_reply.py`. The
+  message's "Closed section" is the review
+  queue's archive, `docs/archive/review_queue/`, where R-292 and `plan/check_plan.py` already put a closed entry, which
+  gains a "Ruling" line with date, ruling and outcome and is never deleted. A veto of an R-369 decision that has no RQ
+  is answered on the report's `D-n` line, the message's grammar having no line for it; a deferral takes an R number as
+  an answer does (`CLAUDE.md` § "Never guess, never defer"), and `ask`, a question, takes none.
+
+R-693 is in the "process" group of `plan/rule_groups.yaml`.

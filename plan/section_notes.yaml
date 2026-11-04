@@ -1456,3 +1456,7 @@
   section: "R-666 — sccache stays off: the job queue's builds do not use it"
   reason: informative only
   note: "the owner's word of 31 Oct 2026: sccache stays off; process; changes no requirement"
+- file: decisions.md
+  section: "R-693 — Every R-, RQ-, REQ- or TASK- number shown to the owner comes with a plain-English gloss"
+  reason: informative only
+  note: "the owner's standing rule of 4 Nov 2026 on numbers shown to them; process; changes no requirement"
