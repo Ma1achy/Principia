@@ -29780,8 +29780,11 @@ For the first kind, the test has three levels:
 
 An input of the second kind is reported as that kind and does not by itself fail this condition. The recording is a report's words and blocks nothing (R-649). It adds no claim on continuous bits.
 
-A disagreement belongs to a pair and a standing to a driver. The arbiter is CPU f32's correctly rounded result on the same operands:
-the driver whose bits differ from it fails. A report has three words: "unverified, not supported" for a driver measured and failing;
+A disagreement belongs to a pair and a standing to a driver. The arbiter is the written form evaluated on the CPU at f32, each
+operation correctly rounded, not the exact expression's correctly rounded value. It runs at CPU f32's operands: those of its own
+run's row or, where two GPUs share operands that run didn't produce, those shared operands, which the host evaluates (applied per
+R-369: this names a driver where the record otherwise has none). At level 2 the driver whose bits differ from it fails; at level 3,
+the driver whose outcome differs from CPU f32's. Operands that match neither are level 1. A report has three words: "unverified, not supported" for a driver measured and failing;
 "no failure in N", N shown, never "verified" or "supported", for a driver measured with none; "not run" for no record. RQ-685's
 ruling, in the same batch and ported elsewhere, says "driver unverified" of a driver not measured: that is this "not run", in a run
 header, and not this ruling's words, which only a measured failure earns. A standing holds for the compute stage with the setting

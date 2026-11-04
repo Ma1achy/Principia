@@ -63,7 +63,7 @@ alone does not answer the owner's question; the bits at identical operands do, a
 - `cargo test -p validation cross_backend_replay` (no GPU) — over synthetic digests, the first differing step is found at its
   step, and the state handed to `--replay` is the same bits for every backend; the control is a digest that drops `N_sub`, which
   a planted `N_sub` difference rejects. The standing, on the march's kinds, as `cross_backend_compare`'s: equal operands and differing
-  input bits, no fork, reads "unverified, not supported", on a `Wide`'s exponent alone too; differing operands do not; `other operation` does not. The control is a
+  input bits, no fork, reads "unverified, not supported", on a `Wide`'s exponent alone too; differing operands do not; `other operation` does not; two GPUs sharing operands CPU f32's run didn't produce are arbitrated by the host's evaluation at those operands, and the one differing is named. The control is a
   compare that reads only outcomes, which misses the first. A replayed collision fork whose positions differ reads as an upstream
   difference (REQ-VAL-348).
 - `cargo xtask gate cross-backend-march` — both arms' records on lavapipe, on Metal and on CPU f32, their comparison and the
@@ -87,7 +87,7 @@ alone does not answer the owner's question; the bits at identical operands do, a
   positions, which have been through the force loop's divisions. A collision fork in `--replay` has identical inputs at the
   replay's level, and `d²` is `+` and `×`, but if its positions differ it is an upstream difference and convicts no driver.
 - **R-690's driver condition** is about bits, not forks, on TASK-M4-27's three levels, at the expression's own operands, with its
-  arbiter, CPU f32's correctly rounded result, its three words and its domain (TASK-M4-27's Notes). A failing driver is recorded **unverified,
+  arbiter, the written form on CPU f32, each operation correctly rounded, its three words and its domain (TASK-M4-27's Notes). A failing driver is recorded **unverified,
   not supported**, in those words. Nothing enforces the condition, and the recording blocks nothing.
 - **The NVIDIA record** is a Windows session's run at the PR's head, `--record` with `PRIN_GPU_BACKEND=vulkan`, the file posted to
   #390, under the same hardware label as that card's other runs. It is not a CI job (R-186). Nothing waits on it, and the task

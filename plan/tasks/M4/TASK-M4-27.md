@@ -56,7 +56,8 @@ that. It is the first test of R-690's driver condition, on fixed inputs.
   compared; the control is a compare that ignores one outcome column, which the flipped case rejects. The standing: a synthetic pair of kind `+ and ×`
   with equal operands and differing input bits, no fork, reads "unverified, not supported"; with equal operands and bits and a
   different outcome it reads the same, as a comparison fork; with differing operands it does not; a `Wide` input with equal operands and only its exponent differing reads "unverified, not
-  supported"; of kind `other operation`, an `fma` form included, it does not; the driver differing from CPU f32 is the one named; a clean driver reads "no failure in N"; no record reads "not run".
+  supported"; of kind `other operation`, an `fma` form included, it does not; at level 2 the driver whose bits differ from the written form on CPU f32 is the one named, and at level 3 the one whose outcome
+  differs; two GPUs sharing operands CPU f32's run didn't produce are arbitrated by the host's evaluation at those operands, and the one differing is named; a clean driver reads "no failure in N"; no record reads "not run".
   The control is a compare that reads only outcomes, which misses the first case; the kinds' control is a list that files a `Wide` input under
   `other operation`, which the `Wide` case rejects (REQ-VAL-347).
 - `cargo xtask gate cross-backend-branches` — records on lavapipe, on Metal and on CPU f32 and their comparison, in the PR,
@@ -74,8 +75,12 @@ that. It is the first test of R-690's driver condition, on fixed inputs.
 
   A failing driver is recorded **unverified, not supported**, in those words. A row of kind `other operation` is reported as that
   kind. Nothing enforces the condition, and the recording blocks nothing.
-- **From a pair to a driver.** The arbiter is CPU f32's correctly rounded result on the same operands: the driver whose bits differ
-  from it is the one that fails. Each driver's standing reads one of "unverified, not supported", "no failure in N", N shown, never
+- **From a pair to a driver.** The arbiter is the written form evaluated on the CPU at f32, each operation correctly rounded, not
+  the exact expression's correctly rounded value, which the kernel's form isn't (`crates/kernel/src/real.rs`:134). It runs at CPU f32's operands:
+  those of its own run's row or, where two GPUs share operands that run didn't produce, those shared operands, which the host evaluates
+  with the kernel's form at f32, no second copy (applied per R-369: this names a driver where the record otherwise has none). At level 2
+  the driver whose bits differ from it fails; at level 3, the driver whose outcome differs from CPU f32's. Operands that match
+  neither are level 1. Each driver's standing reads one of "unverified, not supported", "no failure in N", N shown, never
   "verified" or "supported", or "not run". "Driver unverified" (RQ-685's ruling) is a run header's word for a driver not measured,
   not one of these. A standing's domain is stated with it: the compute stage, setting off, the adapter line and driver version,
   and for NVIDIA its hardware label ("possibly faulty hardware"), so the words attach to that driver on that card.
