@@ -2034,6 +2034,11 @@ record, which RQ-686 and RQ-687 share.*
 - **File, section:**
   - `decisions.md` § "R-297 — …", the human's words: "Off: bit-identity and identical branch decisions hold (R-84,
     REQ-INT-057)."
+  - `decisions.md` § "R-84 — …", which R-297 cites for that claim: "`parity_contract` governs. Branch decisions are
+    identical on identical inputs, per step."
+  - `decisions.md`:3213-3216, R-297's Still in force line: "In the browser build: … bit-identity with the setting off no
+    longer holds there, each stage's compiled mode is recorded as "unknown", and runs are held to R-85's Tier-N tolerances
+    (R-303)." § "R-303 — …", Applied: "Browser runs are held to R-85's Tier-N tolerances, measured, not bit-exact".
   - `docs/contracts/principia_parity_contract.md`:154, § 4: "**Off:** bit-identity and identical branch decisions hold
     as this contract states them (R-84; Tier B)".
   - The same file, :97, § 2, Tier B: "a GPU's `pow`/`sqrt`/`div` and libm's differ by 1–3 ulp *in every math mode*".
@@ -2091,10 +2096,18 @@ record, which RQ-686 and RQ-687 share.*
     input is on any GPU at this commit.
   - **Trajectories:** not measurable, as above. The divisions M4 will put on the GPU include
     `crates/kernel/src/physics/force.rs`:19-21, `occupant/kdk.rs`:65-74 and `driver/advance.rs`:125.
-- **The conflict:** R-297's "bit-identity" read with REQ-INT-057 limits the claim to branch decisions and leaves
-  continuous values free; read with REQ-SYS-074's verify and the two test comments, it is a claim about every division's
-  bits. The card fails the second. On the first, only canon's and decode's branches are measured, on this card, and
-  REQ-INT-057's are unmeasured on every GPU. "Compiled Off" on Vulkan records wgpu's path, not what the driver did.
+- **The conflict, which stays open:**
+  - **That it means branch decisions:** R-84, which R-297 cites for this claim, says "`parity_contract` governs" and
+    speaks only of branch decisions; parity § 4 says "as this contract states them"; REQ-INT-057 leaves continuous values
+    free. Read so, the corpus comes close to settling question (1).
+  - **That it means more:** the human's "bit-identity and identical branch decisions" names two things, and R-297's
+    Still in force line sets bit-identity against tolerances: in the browser it "no longer holds", and runs are "measured,
+    not bit-exact", which says little if native bit-identity were only about branch decisions. REQ-SYS-074's verify
+    asks for every division's bits on its two named jobs; the two test comments widen that, and have no authority beyond
+    the requirement.
+  - Neither side settles it, so question (1) is the owner's. The card fails the second reading. On the first, only
+    canon's and decode's branches are measured, on this card, and REQ-INT-057's are unmeasured on every GPU. "Compiled
+    Off" on Vulkan records wgpu's path, not what the driver did.
 - **The questions:** (1) is "bit-identity" with the setting off a claim about branch decisions, or about every Vulkan
   driver's division results? (2) what should the header record where a driver rewrites division with no switch?
 - **Options seen:** (a) branch decisions and the Tier B fields only, which holds only if `E_rel` and `|Δn̂|` get
