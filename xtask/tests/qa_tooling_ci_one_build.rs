@@ -6,6 +6,9 @@
 //!   in the gate and nightly workflows' unpartitioned `cargo xtask ci`.
 //! - (g) "move qa_TASK-M0-24 from the `ci` profile to `ci-workspace` (still run, not dropped)": out of the `ci` shards,
 //!   in one job's step that names it in every workflow that ran it, alone on the target (REQ-VAL-164).
+//! - (h), the same mechanism as (g), for `xtask ci --list`'s test in `qa_TASK-M0-06_list`: nightly, which has no
+//!   `ci-workspace` job, still runs it, in a step that no condition can skip and no failure can pass, after the step
+//!   that builds what its listing reuses. `qa_ops_nextest_cargo_group` reads the config's side.
 //! - "Every PR: lowest free disk per job": what the job gains stays under the disk sampler.
 //!
 //! The workflows and `.config/nextest.toml` are read as text, and no test here runs a workflow's step or a cargo build:
@@ -484,4 +487,86 @@ negative_control!(
     "a control no job leaves: some shard lists it",
     expected = "lists `plain_control::negative_control` as its own",
     check_listing_leaves("kept", &["plain_control::negative_control"])
+);
+
+const CI_LIST_STEP: &str = "cargo nextest run -p xtask --test qa_TASK-M0-06_list";
+const M0_24_STEP: &str = "cargo nextest run -p validation --test qa_TASK-M0-24";
+
+/// In nightly's job that runs the `ci` profile, `xtask ci --list`'s step runs under `ci-workspace` with nothing to skip
+/// it or to pass its failure, and comes after `qa_TASK-M0-24`'s, whose `cargo xtask controls --list` makes the
+/// `--features controls` build the listing reuses: first, it would be that build, cold, inside the 600 s limit on its
+/// xtask child (R-214), and nothing else before it builds those features.
+fn check_nightly_runs_the_ci_listing(nightly: &str) {
+    let job = job_lines(nightly, "cpu");
+    let steps = steps(&job);
+    let at = |run: &str| steps.iter().position(|step| step.run == run);
+    let workspace = at("cargo nextest run --workspace");
+    assert!(
+        workspace.is_some(),
+        "nightly's `cpu` job runs no `ci` profile"
+    );
+    let listing = at(CI_LIST_STEP).expect("nightly's `cpu` job has no `xtask ci --list` step");
+    let step = &steps[listing];
+    assert_eq!(
+        step.profile, "ci-workspace",
+        "the `xtask ci --list` step does not run under `ci-workspace`"
+    );
+    assert!(
+        step.condition.is_empty(),
+        "the `xtask ci --list` step can be skipped: {}",
+        step.condition
+    );
+    assert!(
+        !job.iter().any(|line| line.contains("continue-on-error")),
+        "a failure in nightly's `cpu` job passes"
+    );
+    assert!(
+        at(M0_24_STEP).is_some_and(|m0_24| m0_24 < listing),
+        "the `xtask ci --list` step comes before the step that makes its build"
+    );
+}
+
+#[test]
+fn qa_one_build_nightly_runs_the_ci_listing() {
+    check_nightly_runs_the_ci_listing(&workflow("nightly"));
+}
+
+negative_control!(
+    qa_one_build_nightly_runs_the_ci_listing,
+    "the two steps swapped: the listing's build is cold, inside its child's 600 s limit",
+    expected = "comes before the step that makes its build",
+    check_nightly_runs_the_ci_listing(
+        &workflow("nightly")
+            .replace(M0_24_STEP, "SWAPPED")
+            .replace(CI_LIST_STEP, M0_24_STEP)
+            .replace("SWAPPED", CI_LIST_STEP)
+    )
+);
+
+/// The test (h) moved exists under the name both profiles select it by: a rename would leave `ci-workspace` selecting
+/// nothing of it, and the check of that lists it only in `ci-workspace`, not in a shard.
+fn check_the_moved_test_exists(source: &str) {
+    assert!(
+        source.contains("fn qa_m006_ci_list_lists_golden_cases_without_a_device()"),
+        "`qa_TASK-M0-06_list` has no test by the name the nextest profiles select"
+    );
+    assert!(
+        source.contains("xtask_without_device(&[\"ci\", \"--list\"])"),
+        "`qa_TASK-M0-06_list`'s moved test no longer runs the real `xtask ci --list`"
+    );
+}
+
+#[test]
+fn qa_one_build_the_moved_test_exists() {
+    check_the_moved_test_exists(&read("xtask/tests/qa_TASK-M0-06_list.rs"));
+}
+
+negative_control!(
+    qa_one_build_the_moved_test_exists,
+    "the test renamed, so the profiles' filters match nothing",
+    expected = "has no test by the name the nextest profiles select",
+    check_the_moved_test_exists(&read("xtask/tests/qa_TASK-M0-06_list.rs").replace(
+        "fn qa_m006_ci_list_lists_golden_cases_without_a_device()",
+        "fn qa_m006_renamed()"
+    ))
 );
