@@ -35,26 +35,29 @@ them, and never put their name or email address in anything you write.
 Create a worktree on a new branch `rulings/<date>-apply` from `origin/main`, after `git fetch --prune origin`. Save the
 reply byte for byte to `$R/<date>-reply.md`, then, in the worktree:
 
+The reply's `Report: <date> <hash>` line, copied from the report's template, says which report it answers. `D-n` is
+numbered per report, so a reply must never be read against another. Name that date's report:
+
 ```
-python3 plan/tools/rulings_reply.py last-report "$R"
-python3 plan/tools/rulings_reply.py parse "$R/<date>-reply.md" --report <that report> \
+python3 plan/tools/rulings_reply.py parse "$R/<date>-reply.md" --report "$R/<the Report line's date>-report.md" \
   --reserved-file "$R/reserved-ids.txt" --answers-dir "$R/<date>-answers"
 ```
 
-If `last-report` prints `none`, there is no report: leave `--report` out. Then every `D-n` line is refused, as there is
-no decision for it to name, and bare `close` works only on an entry that carries a ruling.
+If the reply has no such line, leave `--report` out. Then `parse` refuses every `D-n` line, and bare `close` works only
+on an entry that carries a ruling. If the line doesn't match the report, because a newer report replaced it that day,
+`parse` refuses the same and says so: ask the owner to send those lines again, against the report now standing.
 
 Create `reserved-ids.txt`, empty, if it isn't there; it holds lines starting `R-n`, for numbers promised and on no
-branch yet. The ids are one past the highest `## R-n` heading of `decisions.md` on every local and origin branch. `parse`
-exits 1 if it refused anything: that is expected, and the rest still go ahead. It prints:
+branch yet. The ids are one past the highest `## R-n` heading of `decisions.md` on every local and origin branch.
+`parse` exits 1 if it refused anything: that is expected, and the rest still go ahead. It prints:
 
 - **PLAIN:** answers that are, whole, a form of the narrow grammar: `(a)`, `(a) + (c)`, `close`, `veto`, `defer:Mn`,
   `ask:<question>`. Apply these as they read.
 - **READ:** everything else that names a known item. Riders, reasons, negations, words of any kind, and any option on an
   entry showing several questions. The parser has not understood these: it keeps them verbatim, and any labels it
   found are a hint and nothing more.
-- **REFUSED:** with the reason. Don't repair a refused line or infer what it meant: it goes to the owner in step 8 as they
-  typed it.
+- **REFUSED:** with the reason. Don't repair a refused line or infer what it meant: it goes to the owner in step 8 as
+  they typed it.
 - **UNANSWERED** and **SKIPPED:** items left as the template had them, and section names.
 
 **Every READ answer is yours to read.** Take each in turn, read the whole answer against the whole entry, and decide
@@ -70,8 +73,9 @@ beside the owner's text. Then treat it as the kind it turned out to be, in step 
   question, and do nothing on it. That goes for options that exclude each other, a rider that leaves the meaning open,
   and anything that contradicts a ruling or the corpus (`CLAUDE.md` § "Rulings", § "Never guess, never defer").
 
-A line continues the answer above it unless it starts `RQ-n:` and the line above is complete, so one READ answer can run
-over several lines, and hold other items' ids. Read all of it: an entry it names beyond its first is yours to work out.
+A line continues the answer above it unless it starts `RQ-n:` and the line above is complete, so one READ answer can
+run over several lines, and hold other items' ids. Read all of it: an entry it names beyond its first is yours to work
+out.
 
 A prose ruling outside the template is ported as any ruling is, not through this command.
 
@@ -83,7 +87,8 @@ If nothing is left to apply, stop there.
 
 ## 3. Each answer becomes a ruling
 
-For every answer but `ask`, plain or read, in reply order, add to `decisions.md`, at its end, under the R id `parse` gave:
+For every answer but `ask`, plain or read, in reply order, add to `decisions.md`, at its end, under the R id `parse`
+gave:
 
 ```
 ## R-n — <the decision, in a plain sentence> <its suffix, from the table below>

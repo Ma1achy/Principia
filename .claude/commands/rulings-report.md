@@ -7,7 +7,9 @@ these steps exactly. Commit nothing and change no file in the repo: the report i
 
 `orch/` is not in the repo. It lives at `/Volumes/X10 Pro/Principia/orch/`, so the report's path is
 `/Volumes/X10 Pro/Principia/orch/rulings/<date>-report.md`, `<date>` being today's in ISO form (`date +%F`). Create the
-folder if it isn't there. A second report on one day replaces the first.
+folder if it isn't there. A second report on one day replaces the first, and its `D-n` numbers may differ; the
+`Report:` line in step 4's template keeps a reply from being read against the wrong one, so a reply to the first is
+refused on its `D-n` lines.
 
 The standing rule binds every line of the report (R-693): "every R-, RQ-, REQ- or TASK- number shown to the owner comes
 with a plain-English gloss." Write it as a few plain words beside the number, each time it appears: "R-554 (the rule for
@@ -49,8 +51,9 @@ Put each open RQ in exactly one group. Print the groups under these headings, sp
 6. `## Record corrections`: a wording, citation or record to correct, with no effect on what is built.
 7. `## Ruled-or-moot (to close)`: the entry carries a ruling (flag `ruled`), or what it asks is overtaken: say by what.
 
-Test an entry against group 7 first, then 1 to 6 in order; it goes in the first that fits. An RQ open only on an
-unmerged branch is not an item, as `/rulings-apply` couldn't read it: list it under "Rulings ported or pending".
+A group with no item says "None." Test an entry against group 7 first, then 1 to 6 in order; it goes in the first that
+fits. An RQ open only on an unmerged branch is not an item, as `/rulings-apply` couldn't read it: list it under
+"Rulings ported or pending".
 
 ## 3. The item
 
@@ -105,24 +108,30 @@ list`), what is running, and the next milestone gate. Plain sentences; no table 
 An RQ's line is the owner's form with its own number, and a decision's the same, for example:
 
 ```
+Report: 2026-11-04 1a2b3c4d
 RQ-378: <option> | defer:<milestone> | ask:<question> | veto
 D-1: <stands> | veto
 ```
+
+Write the block without the `Report:` line: step 5's `stamp-report` puts it in.
 
 Keep `<option>`, `<milestone>`, `<question>` and `<stands>` exactly so: the parser reads a line left as written as
 unanswered. Above the block, say: replace a line's right-hand side with your answer. `(a)`, `(a) + (c)`, `close` (for a
 Ruled-or-moot item), `veto`, `defer:M0` to `defer:M9` or `ask:` and your question are applied as they read. Anything
 else, reasons and riders included, is welcome, and kept word for word: it is read, not parsed, and if it isn't clear you
-will be asked. On a decision line, `veto` or `stands`. A line left alone leaves its item as it is.
+will be asked. On a decision line, `veto` or `stands`. Keep the `Report:` line: it says which report you are answering.
+A line left alone leaves its item as it is.
 
 ## 5. Check, then print
 
 ```
+python3 plan/tools/rulings_reply.py stamp-report "$R/<date>-report.md"
 python3 plan/tools/rulings_reply.py check-report "$R/<date>-report.md" --queue "$S/queue.md"
 ```
 
-It must print 0 failures: every section there, spelled and placed as above, a group with no item saying "None."; every
-open RQ one item of a group, with every field and a reply line; no closed RQ an item. Fix the report until it does.
+It must print 0 failures: every section there, spelled and placed as above; every open RQ one item of a group, with
+every field and a line in the reply template; no closed RQ an item; the `Report:` line matching the text. Fix the report
+until it does, and run `stamp-report` again after any change.
 Then read the report through once for a bare number, and gloss any you find.
 
 Print the whole report in your reply, unabridged, and give its path. Then carry on with the build: the report asks the

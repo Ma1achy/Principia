@@ -31,10 +31,16 @@ A line continues the answer above it unless it starts a new item with `RQ-n:` or
 a plain form, or ended with a sentence. A blank line or a section name ends an answer. A line splits only after a
 sentence end, before such an item, as in `RQ-641: (b). RQ-642: (a).`, and each part is answered on its own. If unsure,
 the whole thing is one `read` answer, under its first item, so a wrapped answer is never cut short and an entry the
-owner only cited is never answered. A template line left as the report wrote it, or `D-n: stands`, is unanswered. A
-line that is a section name alone (`HEADINGS`, or a report's `##` heading) is no reply line either: it is skipped, and
-listed as skipped. A refused line changes nothing else; the rest of the reply stands. An answer takes the next R id, in reply order: CLAUDE.md has a
-deferral made by a ruling. `ask` takes none: it is a question, not an answer.
+owner only cited is never answered. A template line left as the report wrote it, or `D-n: stands`, is unanswered. A line
+that is a section name alone (`HEADINGS`, or a report's `##` heading) is no reply line either: it is skipped, and listed
+as skipped.
+
+A reply carries its report's `Report: <date> <hash>` line from the template, the hash being of the report's text. `D-n`
+is numbered per report, and the Ruled-or-moot set is the report's, so a `D-n` line and a report-only `close` are refused
+unless that line matches the report named.
+
+A refused line changes nothing else; the rest of the reply stands. An answer takes the next R id, in reply order:
+CLAUDE.md has a deferral made by a ruling. `ask` takes none: it is a question, not an answer.
 
     open [--queue PATH]            the open RQs: id, title, the options offered, and the flags the report needs
     parse REPLY [--queue PATH] [--archive DIR] [--report PATH] [--reserved-file PATH] [--answers-dir DIR]
@@ -51,10 +57,11 @@ deferral made by a ruling. `ask` takes none: it is a question, not an answer.
                                    it
     last-report DIR [--before DATE]
                                    the latest <date>-report.md in DIR, before ISO DATE if given, or `none`
+    stamp-report REPORT            writes REPORT's `Report:` line into its reply template, from its file name and text
     check-report REPORT [--queue PATH]
                                    REPORT has the order's sections, spelled and placed as the command gives them; every
-                                   open RQ is one item of a group, with every field the order sets and a reply line; and
-                                   no RQ item is a closed one
+                                   open RQ is one item of a group, with every field the order sets and a line in the
+                                   reply template; no RQ item is a closed one; and its `Report:` line matches its text
     close RQ-n --ruling R-m --date "4 Nov 2026" --text-file PATH --outcome TEXT [--queue PATH] [--archive-file PATH]
                                    moves the entry, with a "Ruling" line giving date, ruling and outcome, to the review
                                    queue's archive (R-292: the closed section), never deleting it
@@ -66,7 +73,7 @@ deferral made by a ruling. `ask` takes none: it is a question, not an answer.
 
 Usage: python3 plan/tools/rulings_reply.py <command> …   |   python3 plan/tools/rulings_reply.py --self-test
 """
-import argparse, os, re, subprocess, sys, tempfile
+import argparse, hashlib, os, re, subprocess, sys, tempfile
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from rulings import QUEUE, QUEUE_ARCHIVE, RULINGS, queue_files, rq_ids  # noqa: E402
@@ -112,6 +119,7 @@ HEADING_ID = re.compile(r"^## R-(\d+)\b", re.M)
 RQ_HEADING_ID = re.compile(r"^## RQ-(\d+)\b", re.M)
 DATE = re.compile(r"^\d{1,2} [A-Z][a-z]{2} \d{4}$")
 REPORT_NAME = re.compile(r"^(\d{4}-\d{2}-\d{2})-report\.md$")
+REPORT_TAG = re.compile(r"^Report: (\d{4}-\d{2}-\d{2}) ([0-9a-f]{8})[ \t]*$", re.M)
 
 
 class Refused(Exception):
@@ -259,7 +267,7 @@ def split_reply(lines):
     out, skipped, answering = [], [], False
     for n, raw in enumerate(lines, 1):
         line = raw.strip()
-        if not line or line.lstrip("# ").upper() in HEADINGS:
+        if not line or line.lstrip("# ").upper() in HEADINGS or REPORT_TAG.match(line):
             answering = False
             if line:
                 skipped.append((n, line))
@@ -272,10 +280,12 @@ def split_reply(lines):
     return out, skipped
 
 
-def parse_reply(text, queue_text, closed=(), decisions=(), moot=()):
+def parse_reply(text, queue_text, closed=(), decisions=(), moot=(), report_fault=None):
     """(accepted, refused, unanswered, skipped). accepted: dicts of line number, line (the answer as typed, less its
     line end), item, kind and value. refused: (line number, answer, reason). unanswered: item ids whose template
-    line was left as written. skipped: (line number, line) of each section name."""
+    line was left as written. skipped: (line number, line) of each section name and `Report:`
+    line. `report_fault` refuses every D-n line, its reason being why the reply isn't tied to the report that gave
+    `decisions` and `moot`."""
     entries, accepted, refused, unanswered = entries_of(queue_text), [], [], []
     answers, skipped = split_reply(text.splitlines())
     for n, part in answers:
@@ -287,6 +297,8 @@ def parse_reply(text, queue_text, closed=(), decisions=(), moot=()):
             if body in UNFILLED or (item.startswith("D-") and body == "stands"):
                 unanswered.append(item)
                 continue
+            if item.startswith("D-") and report_fault:
+                raise Refused(report_fault)
             if item.startswith("D-") and item not in decisions:
                 raise Refused(f"{item} is no decision of the report")
             if item.startswith("RQ-") and item not in entries:
@@ -358,12 +370,41 @@ def last_report(names, before=None):
     return max(dated)[1] if dated else None
 
 
+def report_hash(text):
+    """A short hash of a report's text, less its own `Report:` line."""
+    return hashlib.sha256(re.sub(REPORT_TAG.pattern + r"\n?", "", text, flags=re.M).encode("utf-8")).hexdigest()[:8]
+
+
+def stamp(report, date):
+    """The report with its `Report:` line in its reply template, as the template's first line."""
+    tag = f"Report: {date} {report_hash(report)}"
+    if REPORT_TAG.search(report):
+        return REPORT_TAG.sub(tag, report)
+    template = report.find("## Reply template")
+    fence = report.find("```\n", template)
+    if template < 0 or fence < 0:
+        raise ValueError("the report has no fenced reply template")
+    return f"{report[:fence + 4]}{tag}\n{report[fence + 4:]}"
+
+
+def tag_fault(reply, report, name):
+    """Why `reply`'s `Report:` line doesn't tie it to the report at file `name`, or None."""
+    tags = REPORT_TAG.findall(reply)
+    named = REPORT_NAME.match(os.path.basename(name))
+    if len(tags) != 1:
+        return f"the reply has {len(tags)} `Report:` lines, not one, so it can't say which report its D-n lines answer"
+    if not named or (named.group(1), report_hash(report)) != tags[0]:
+        return f"the reply answers report {' '.join(tags[0])}, not {name}, whose D-n numbers may differ"
+    return None
+
+
 def report_errors(report, queue_text):
     """What keeps a report from being the order's: a section misspelt, missing or out of place; an open RQ with no item,
     or two; an item in the wrong section, or of an RQ not open; a field or a reply line missing."""
     _, _, items, where = report_items(report)
     open_rqs = entries_of(queue_text)
     heads = re.findall(r"^## (.*)$", report, re.M)
+    template = report[report.find("## Reply template"):] if "## Reply template" in report else ""
     errors = [f"no \"## {h}\" section" for h in REPORT_SECTIONS if h not in heads]
     errors += [f"\"## {h}\" is no section of the report" for h in heads if h not in REPORT_SECTIONS]
     if not errors and heads != list(REPORT_SECTIONS):
@@ -382,8 +423,13 @@ def report_errors(report, queue_text):
             errors.append(f"{item}: under \"{where[item]}\", not the decisions")
         if item.startswith("RQ-"):
             errors += [f"{item}: no \"**{f}:**\" line" for f in REPORT_FIELDS if f"**{f}:**" not in texts[0]]
-        if not re.search(rf"^{item}: ", report, re.M):
+        if not re.search(rf"^{item}: ", template, re.M):
             errors.append(f"{item}: no line in the reply template")
+    tag = REPORT_TAG.search(template)
+    if not tag:
+        errors.append("no `Report:` line in the reply template: run stamp-report")
+    elif tag.group(2) != report_hash(report):
+        errors.append("the `Report:` line doesn't match the report's text: run stamp-report again")
     return errors
 
 
@@ -686,12 +732,18 @@ def self_test():
     whole = "".join(f"## {h}\n\n" + (f"### RQ-1: t\n{item}\n" if h == "GUI" else "")
                     + (f"### RQ-2: t\n{item}\n" if h == "Physics" else "")
                     + ("### D-1: t\n\n" if h.startswith(DECISIONS_HEAD) else "")
-                    + ("RQ-1: x\nRQ-2: x\nD-1: x\n" if h == "Reply template" else "") for h in REPORT_SECTIONS)
+                    + ("```\nRQ-1: x\nRQ-2: x\nD-1: x\n```\n" if h == "Reply template" else "")
+                    for h in REPORT_SECTIONS)
+    bare, whole = whole, stamp(whole, "2026-11-04")
     cases = [("a whole report", whole, None),
              ("an RQ missing", whole.replace("### RQ-2", "### X"), "RQ-2: open, and no item"),
              ("an RQ twice", whole.replace("### RQ-2: t", "### RQ-1: t"), "RQ-1: 2 items"),
              ("a field missing", whole.replace("**Deferrable:** x\n", "", 1), "RQ-2: no \"**Deferrable:**\""),
              ("a reply line missing", whole.replace("RQ-2: x\n", ""), "RQ-2: no line in the reply template"),
+             ("a reply line only in an item's text", whole.replace("\nRQ-1: x\n", "\n")
+              .replace("### RQ-1: t\n", "### RQ-1: t\nRQ-1: x\n"), "RQ-1: no line in the reply template"),
+             ("no Report line", bare, "no `Report:` line"),
+             ("a Report line out of date", whole.replace("### D-1: t", "### D-1: another"), "doesn't match the report"),
              ("a group misspelt", whole.replace("## GUI", "## Gui"), "\"## Gui\" is no section"),
              ("a group missing", whole.replace("## GUI\n\n", ""), "no \"## GUI\" section"),
              ("a section missing", whole.replace("## Blockers\n\n", ""), "no \"## Blockers\" section"),
@@ -709,6 +761,29 @@ def self_test():
         if (fault is None and got) or (fault is not None and not any(fault in g for g in got)):
             fails.append(f"reply self-test {name!r}: expected {fault!r}, got {got}")
 
+    if REPORT_TAG.findall(stamp(whole, "2026-11-04")) != REPORT_TAG.findall(whole):
+        fails.append("reply self-test: stamping a stamped report must change nothing")
+    try:
+        stamp("# No template\n", "2026-11-04")
+        fails.append("reply self-test: a report with no template can't be stamped")
+    except ValueError:
+        pass
+    name, tag = "/x/2026-11-04-report.md", REPORT_TAG.search(whole).group(0)
+    changed = whole.replace("### D-1: t", "### D-1: a different decision")
+    for label, reply, text, path, fault in [
+            ("its report", f"{tag}\nD-1: veto\n", whole, name, None),
+            ("no line", "D-1: veto\n", whole, name, "0 `Report:` lines"),
+            ("two lines", f"{tag}\n{tag}\n", whole, name, "2 `Report:` lines"),
+            ("a replaced report", f"{tag}\n", changed, name, "the reply answers report"),
+            ("another date's report", f"{tag}\n", whole, "/x/2026-11-05-report.md", "the reply answers report")]:
+        got = tag_fault(reply, text, path)
+        if (fault is None and got) or (fault is not None and (not got or fault not in got)):
+            fails.append(f"reply self-test: {label}: expected {fault!r}, got {got!r}")
+    ok, no, _, skipped = parse_reply(f"{tag}\nD-1: veto\n", queue, (), decisions, moot, "a fault")
+    if ok or [r for _, _, r in no] != ["a fault"] or [p for _, p in skipped] != [tag]:
+        fails.append(f"reply self-test: a report fault refuses D-n, and the tag is skipped: {ok} {no} {skipped}")
+    if not parse_reply(f"{tag}\nRQ-1: (a)\n", queue, (), decisions, moot, "a fault")[0]:
+        fails.append("reply self-test: a report fault touches only D-n lines")
     sys.path.insert(0, os.path.join(ROOT, "plan"))
     from check_plan import queue_text_errors  # here, not at the top: check_plan.py imports this file
     rest, archive = close(queue, "# Archive\n\n## RQ-6: Old?\n", "RQ-1", "R-700", "4 Nov 2026", "RQ-1: (a)",
@@ -800,8 +875,13 @@ def show_parse(a, queue_text):
               file=sys.stderr)
         return 2
     closed = set(rq_ids(a.queue, a.archive)[0]) - set(entries_of(queue_text))
-    decisions, moot = (report_items(read(a.report))[:2]) if a.report else (set(), set())
-    ok, no, blank, skipped = parse_reply(read(a.reply), queue_text, closed, decisions, moot)
+    reply, decisions, moot, fault = read(a.reply), set(), set(), "no report was named, so a D-n line names nothing"
+    if a.report:
+        report = read(a.report)
+        fault = tag_fault(reply, report, a.report)
+        if not fault:
+            decisions, moot = report_items(report)[:2]
+    ok, no, blank, skipped = parse_reply(reply, queue_text, closed, decisions, moot, fault)
     first = next_free(branch_decisions(), read_reserved(a.reserved_file))
     if a.answers_dir:
         write_answers(a.answers_dir, ok)
@@ -854,6 +934,7 @@ def main():
     s.add_argument("--rq", action="store_true")
     cmd("last-report", "dir", queue=False).add_argument("--before")
     cmd("check-report", "report")
+    cmd("stamp-report", "report", queue=False)
     s = cmd("close", "rq")
     for o in ("--ruling", "--date", "--text-file", "--outcome"):
         s.add_argument(o, required=True)
@@ -875,6 +956,17 @@ def main():
     if a.cmd == "last-report":
         found = last_report(os.listdir(a.dir) if os.path.isdir(a.dir) else [], a.before)
         print(os.path.join(a.dir, found) if found else "none")
+        return 0
+    if a.cmd == "stamp-report":
+        named = REPORT_NAME.match(os.path.basename(a.report))
+        if not named:
+            print(f"REFUSED: {a.report!r} is not a <date>-report.md", file=sys.stderr)
+            return 2
+        try:
+            write(a.report, stamp(read(a.report), named.group(1)))
+        except ValueError as e:
+            print("REFUSED:", e, file=sys.stderr)
+            return 2
         return 0
     queue_text = read(a.queue)
     if a.cmd == "open":
