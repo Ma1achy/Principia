@@ -9,6 +9,15 @@
 # Each sample goes to $RUNNER_TEMP/runner-disk.log, which `xtask-ci` uploads. A runner that dies uploads nothing, so a
 # coarse part also goes to the step's log: the first sample, every fifth, and every sample once under 2 GiB is free.
 # Bounded: at most 480 samples of at most 40 `du` lines, more than the runner's 6 h job limit at the 60 s interval.
+#
+# Beside it, `watch` names a stall of the whole runner, which froze the sampler itself in `ci-workspace` (job
+# 126417229272): the sampler's `df`, `du` and its log depend on the disk, so what it reads from /proc stops when the
+# disk does. `watch` is a process of its own that writes $RUNNER_DISK_TMPFS/runner-pressure.log, on a tmpfs, and after
+# its first sample it reads and naps with shell builtins, so it starts nothing and depends on neither the disk nor a
+# fork. `device_watch`, which has to run a command, is a process apart, so a stuck `dmsetup` stops only itself. The job
+# sets RUNNER_DISK_TMPFS; the variable goes no further than this script, so that the tests the step runs, which run
+# this script on scratch folders, stay off the real tmpfs and never ask for sudo. Without a usable folder there, `watch`
+# writes beside $out, and without the variable `device_watch` doesn't run.
 set -u
 
 script=$1
@@ -17,6 +26,62 @@ seconds="${RUNNER_DISK_SAMPLE_SECONDS:-60}"
 log_every=5
 low_kb=$((2 * 1024 * 1024))
 max_samples=480
+proc=/proc
+watch_seconds="${RUNNER_PRESSURE_SAMPLE_SECONDS:-5}"
+# The runner's 6 h job limit at the 5 s interval: about 2 MiB of tmpfs.
+max_watch_samples=4320
+tmpfs="${RUNNER_DISK_TMPFS:-}"
+unset RUNNER_DISK_TMPFS
+watch_dir=$tmpfs
+if ! [ -d "$watch_dir" ] || ! [ -w "$watch_dir" ]; then
+  watch_dir="${RUNNER_TEMP:-/tmp}"
+fi
+watch_out="$watch_dir/runner-pressure.log"
+
+# Sets `proc_lines` to the runner's load: no subshell, and past the first call no command, only builtins.
+read_proc() {
+  local kind line=
+  : "${cpus:=$(nproc)}"
+  read -r line < "$proc/loadavg"
+  proc_lines="nproc ${cpus:-none}
+loadavg ${line:-none}"
+  for kind in cpu memory io; do
+    while IFS= read -r line; do
+      proc_lines+=$'\n'"$kind $line"
+    done < "$proc/pressure/$kind"
+  done
+  while IFS= read -r line; do
+    case $line in
+      Dirty:* | Writeback:*) proc_lines+=$'\n'"$line" ;;
+    esac
+  done < "$proc/meminfo"
+}
+
+# The device-mapper's state, the copy-on-write root's fill among it, where sudo allows it.
+device_watch() {
+  local n text
+  for ((n = 1; n <= max_samples; n++)); do
+    text=$(timeout 10 sudo -n dmsetup status 2>&1)
+    printf '== device %d, +%d s\n%s\n' "$n" "$SECONDS" "$text" >> "$watch_out"
+    sleep "$seconds"
+  done
+}
+
+watch() {
+  exec > /dev/null 2>&1 < /dev/null
+  [ -z "$tmpfs" ] || device_watch &
+  local n fifo="$watch_dir/runner-pressure.$$.fifo"
+  mkfifo "$fifo" && exec 9<> "$fifo"
+  rm -f "$fifo"
+  for ((n = 1; n <= max_watch_samples; n++)); do
+    read_proc
+    printf '== watch %d, +%d s, epoch %s\n%s\n' "$n" "$SECONDS" "${EPOCHSECONDS:-}" "$proc_lines" >> "$watch_out"
+    # A timed read of a pipe nothing writes to: a nap with no fork. Its status tops 128 on the timeout (bash 3.2's
+    # doesn't, so there the nap is longer); anything else means there is no pipe, and `sleep` keeps this from spinning.
+    read -r -t "$watch_seconds" <&9
+    (($? > 128)) || sleep "$watch_seconds"
+  done
+}
 
 sampler() {
   exec 2> /dev/null
@@ -27,8 +92,10 @@ sampler() {
   local n avail text
   for ((n = 1; n <= max_samples; n++)); do
     avail=$(df -Pk / | awk 'NR == 2 { print $4 }')
+    read_proc
     text="== sample $n, +$SECONDS s, avail_kb=$avail, $(date -u +%H:%M:%S)
 $(df -h /)
+$proc_lines
 $(du -sh target/debug/deps target/release/deps target/tmp/* /tmp | head -n 40)
 $(free -m)"
     printf '%s\n' "$text" >> "$out"
@@ -48,8 +115,18 @@ sampler &
 sampler_pid=$!
 set +m
 
+# In a group of its own too, with `device_watch` and whatever that has in hand.
+set -m
+watch &
+watch_pid=$!
+set +m
+
 bash -e "$script"
 status=$?
+
+# `watch` writes one sample at a time and has nothing to finish.
+kill -KILL -- "-$watch_pid" 2> /dev/null
+wait "$watch_pid" 2> /dev/null
 
 # Bounded here, not by the sampler: its trap runs only once the command in hand is done (a `df` or `du`, or the shell
 # retrying a fork), so a sampler still there after at most 2 s gets a KILL to its whole group, that command and the
