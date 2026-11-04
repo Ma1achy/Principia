@@ -6,7 +6,7 @@
 - **Needs (earlier milestones):** REQ-DEC-017, REQ-DEC-008
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** PIT-9, PIT-10
-- **Size:** ~450 lines
+- **Size:** ~650 lines
 
 ## Goal
 The part of R-686's check that can run at this commit, on what the GPU runs: decode's and canon's branch outcomes, on
@@ -30,13 +30,19 @@ that. It is the first test of R-690's driver condition, on fixed inputs.
 
 ## Deliverables
 - `crates/validation/src/cross_backend.rs`: a record, one file per backend, keyed by the commit, the adapter line, the driver
-  version, the compute fast-math setting, the hardware label if any, and a hash of the inputs, with one row per input and branch; and the comparison of any
+  version, the compute fast-math setting, the hardware label if any, given by `--hardware-label`, and a hash of the inputs, with one row per input and branch; and the comparison of any
   set of records, every pair: disagreements, inputs compared, the rate, and the inputs that disagreed. The rate counts inputs: an input
-  disagrees if any of its rows' outcomes does, and the denominator is the inputs compared.
+  disagrees if any of its rows' outcomes does, and the denominator is the inputs compared. A row's outcome in the rate is the stage's
+  where the stage emits it, otherwise the read-back's, and the row names which.
 - `cargo xtask gate cross-backend-branches`: `--record` on the job's backend, `--compare` over records. The inputs are those
   `crates/engine/tests/canon_gpu.rs` and `crates/engine/tests/decode_cross_backend.rs` build, seeds fixed, with #393's from
-  `crates/validation/tests/qa_TASK-M2-25_gpu.rs`. The outcomes are canon's branches (skip, coincidence, `ρ = 0`, mirror, `ρ_x` and
+  `crates/validation/tests/qa_TASK-M2-25_gpu.rs`, written once to `fixtures/gates/cross_backend_branches` by a generator this task adds,
+  and read from there by every backend's `--record`, since those builders call the platform's `sin_cos` and `powf`, whose bits need not match on Windows,
+  and a pair over different inputs is refused. Sweeps built on a GPU's own decodes (`canonicaliser_noop_gpu`) take CPU f32's decodes
+  here, for the same reason. The outcomes are canon's branches (skip, coincidence, `ρ = 0`, mirror, `ρ_x` and
   `ρ_y` zero), decode's tags (`M01_TINY`, `INVARIANT_INFEASIBLE`, the energy tags) and decode's pole selects (R-436, R-437, R-438).
+  `stage_canon_canonicalise` emits only the skip (`rescaled`), `ρ = 0` (`clamped`) and the mirror, and the decode entries only the tags,
+  so the coincidence, `ρ_x` and `ρ_y` zero and the pole selects reach a record only through the read-back below.
   The report's header states its domain and that it does not answer the trajectory
   question. The comparison is written into the gate report.
 - The test of R-690's condition, in `cross_backend.rs`. Each row has a **kind** column, from a list this task enumerates from the
@@ -46,9 +52,16 @@ that. It is the first test of R-690's driver condition, on fixed inputs.
   inputs and `decode/invariant.rs`'s sign reads are this kind. `other operation` holds an operation with an ulp bound rather than
   correct rounding (division, `√`, `sin`, `cos`, `atan2`, a rounding builtin; #393's select, reached through `sin`, is this kind),
   or `fma`, which one driver fuses and another rounds as two operations (R-547, RQ-298). TASK-M4-03's
-  `branch_inputs.rs` isn't used: it lists the march's inputs and this task must not wait for it. A row of the first kind carries
-  the bits of the expression's own operands and of the input, a `Wide`'s mantissa and exponent both, read back at the evaluation. Where the stage emits neither, a
-  read-back entry from the same source, no parity-only physics. Each row names the compiled entry its bits came from. The comparison gives each such row its level (Notes).
+  `branch_inputs.rs` isn't used: it lists the march's inputs and this task must not wait for it. The list gives each input of the first kind
+  the kernel function the arbiter evaluates, called at f32 with no second copy. The comparison gives each such row its level (Notes).
+- The read-back, `crates/kernel/src/stage/branch_read.rs`, the source of a row's bits: one compute entry for canon and one for each decode variant the
+  inputs run, built into `target/spirv/kernel.wgsl` as `stage_branch_read_*`, with a dispatcher beside `canonicalise_gpu` in
+  `crates/engine/src/decode_dispatch.rs`. It is a module of its own because `decode_cross_backend_registry` takes every `stage_decode_` entry for a decode
+  variant it must run. No parity-only physics: each branch's input and decision move into a function that its production site and the
+  entry both call, with no change of behaviour, and CPU f32's record calls the same functions at f32. For each branch the entry emits
+  the outcome, and for kind `+ and ×` the expression's own operands and the input's bits, both sides of a comparison, a `Wide`'s
+  mantissa and exponent both. Canon's operands are the sample's `(m, r)` words, and `decode/mass.rs`'s are the masses that entry emitted. Each row
+  names the compiled entry its bits and outcome came from.
 - Negative controls for this task's tests (R-176).
 
 ## Acceptance tests
@@ -65,6 +78,9 @@ that. It is the first test of R-690's driver condition, on fixed inputs.
   The control is a compare that reads only outcomes, which misses the first case; the kinds' control is a list that files a `Wide` input under
   `other operation`, which the `Wide` case rejects; N's control is a compare whose N counts all rows, which the "no failure in 0" case
   rejects (REQ-VAL-347).
+- `cargo test -p validation cross_backend_read_back` (no GPU) — at f32, on every input of the fixture, each branch's outcome through the read-back's functions is what
+  `canonicalise` and the decode give where they emit it, and each kind `+ and ×` input re-evaluated from its emitted operands gives its emitted bits; the
+  control is a read-back that emits one operand from the wrong body, which the re-evaluation rejects (REQ-VAL-347).
 - `cargo xtask gate cross-backend-branches` — records on lavapipe, on Metal and on CPU f32 and their comparison, in the PR,
   each pair's rate, the adapter lines and each driver's standing under R-690's condition; the header states the domain; every backend pair is listed, NVIDIA's as "not run"
   until its record is posted (REQ-VAL-347).
