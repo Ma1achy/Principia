@@ -1165,6 +1165,14 @@
   requirements: [REQ-INT-101, REQ-INT-102, REQ-INT-103, REQ-VAL-195, REQ-INT-106, REQ-PAY-110, REQ-INT-108, REQ-PAY-111, REQ-INT-109, REQ-TOOL-219, REQ-PAY-112]  # R-603 to R-605 (25 Oct 2026); R-632: REQ-PAY-112 (RQ-581)
   reviewers: [code, qa, physics, gui, perf]  # gui: REQ-TOOL-219's readout arm (qa review 5644656634 of PR #293, Q1); perf: the SimState widths (perf review 5661999637 of PR #293, P1)
   pitfalls: [PIT-3]
+- id: TASK-M3-66
+  milestone: M3
+  title: "Dispatch refuses `g` and `m_total` other than 1 (R-668)"
+  depends_on: [TASK-M3-06]
+  needs: []
+  requirements: [REQ-SYS-096]  # R-668 (1 Nov 2026), RQ-668
+  reviewers: [code, qa, physics]
+  pitfalls: []
 - id: TASK-M4-01
   milestone: M4
   title: The shared kernel compiled to f32 SPIR-V and WGSL, under the compile-discipline lint
@@ -3660,7 +3668,7 @@
   title: "Parischewsky et al.'s equilateral-triangle experiment around Lagrange (PA-1)"
   depends_on: [TASK-M3-34]
   needs: []
-  requirements: [REQ-VAL-323, REQ-VAL-324]  # R-594, R-629 (27 Oct 2026)
+  requirements: [REQ-VAL-323, REQ-VAL-324, REQ-VAL-343]  # R-594, R-629 (27 Oct 2026); R-669: REQ-VAL-343
   reviewers: [code, qa, physics]
   pitfalls: [PIT-2, PIT-3]
 - id: TASK-M9-25
@@ -3682,7 +3690,7 @@
 - id: TASK-M9-27
   milestone: M9
   title: "Hudomal's return-proximity map over the Šuvakov plane and the butterfly III zoom (HU-1, HU-2)"
-  depends_on: [TASK-M9-13, TASK-M4-17, TASK-M3-11]
+  depends_on: [TASK-M9-13, TASK-M4-17, TASK-M3-11, TASK-M9-40]  # TASK-M9-40: the Šuvakov-plane chart (R-669)
   needs: []
   requirements: [REQ-VAL-314, REQ-VAL-315, REQ-VAL-316, REQ-VAL-317]  # R-594, R-629 (27 Oct 2026)
   reviewers: [code, qa, physics]
@@ -3692,7 +3700,7 @@
   title: "Symbol-sequence maps: Tanikawa & Mikkola's free-fall and non-zero-L maps, and Valtonen et al.'s L/M/A/H partition (TS-1, TS-2, V-1/V-3/V-7)"
   depends_on: [TASK-M4-17, TASK-M3-16]
   needs: []
-  requirements: [REQ-VAL-325, REQ-VAL-326, REQ-VAL-327, REQ-VAL-328]  # R-594, R-629 (27 Oct 2026)
+  requirements: [REQ-VAL-325, REQ-VAL-326, REQ-VAL-327, REQ-VAL-328, REQ-VAL-342]  # R-594, R-629 (27 Oct 2026); R-669: REQ-VAL-342
   reviewers: [code, qa, physics]
   pitfalls: [PIT-3]
 - id: TASK-M9-29
@@ -3746,7 +3754,7 @@
 - id: TASK-M9-35
   milestone: M9
   title: "The Šuvakov plane rendered, at equal masses and at the eight values of m₃, and OC-4 there (AT-D1, AT-D3, OC-4 on the Šuvakov plane)"
-  depends_on: [TASK-M9-33]
+  depends_on: [TASK-M9-33, TASK-M9-40]  # TASK-M9-40: the Šuvakov-plane chart (R-669)
   needs: []
   requirements: [REQ-VAL-311, REQ-VAL-312, REQ-VAL-313]  # R-594, R-629 (27 Oct 2026)
   reviewers: [code, qa, physics]
@@ -3762,7 +3770,7 @@
 - id: TASK-M9-37
   milestone: M9
   title: "M9's report: every external target with its tier, outcome and like-for-like checks"
-  depends_on: [TASK-M9-01, TASK-M9-02, TASK-M9-03, TASK-M9-04, TASK-M9-05, TASK-M9-06, TASK-M9-08, TASK-M9-10, TASK-M9-11, TASK-M9-12, TASK-M9-13, TASK-M9-14, TASK-M9-15, TASK-M9-16, TASK-M9-17, TASK-M9-18, TASK-M9-19, TASK-M9-20, TASK-M9-21, TASK-M9-26, TASK-M9-30, TASK-M9-31, TASK-M9-32, TASK-M9-33, TASK-M9-34, TASK-M9-36]
+  depends_on: [TASK-M9-01, TASK-M9-02, TASK-M9-03, TASK-M9-04, TASK-M9-05, TASK-M9-06, TASK-M9-08, TASK-M9-10, TASK-M9-11, TASK-M9-12, TASK-M9-13, TASK-M9-14, TASK-M9-15, TASK-M9-16, TASK-M9-17, TASK-M9-18, TASK-M9-19, TASK-M9-20, TASK-M9-21, TASK-M9-26, TASK-M9-28, TASK-M9-30, TASK-M9-31, TASK-M9-32, TASK-M9-33, TASK-M9-34, TASK-M9-36]
   needs: []
   requirements: [REQ-VAL-340]  # R-650 (30 Oct 2026)
   reviewers: [code, qa, physics]
@@ -3778,8 +3786,16 @@
 - id: TASK-M9-39
   milestone: M9
   title: "The softened force law: Plummer softening, built after the core build, and the refusal of ε ≠ 0 lifted"
-  depends_on: [TASK-M3-01, TASK-M3-05, TASK-M3-06, TASK-M4-06, TASK-M4-04, TASK-M4-13]
+  depends_on: [TASK-M3-01, TASK-M3-05, TASK-M3-06, TASK-M4-03, TASK-M4-06, TASK-M4-04, TASK-M4-13, TASK-M2-12, TASK-M2-25, TASK-M3-12, TASK-M3-22, TASK-M7-35]  # R-670: what softening reaches
   needs: []
   requirements: [REQ-INT-111, REQ-SYS-094, REQ-SYS-095]  # R-654 (30 Oct 2026)
   reviewers: [code, qa, physics, perf]
   pitfalls: [PIT-9]
+- id: TASK-M9-40
+  milestone: M9
+  title: "The Šuvakov-plane chart, at equal masses and at fixed m₃, defined and built (R-669)"
+  depends_on: [TASK-M2-14, TASK-M4-06, TASK-M4-17]
+  needs: []
+  requirements: [REQ-CHART-091]  # R-669 (1 Nov 2026), RQ-608 and RQ-618 (a)
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-3]

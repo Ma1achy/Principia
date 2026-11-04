@@ -179,6 +179,8 @@ sample is inside the hold is not stored; a resumed march recomputes it from the 
 gravitational potential energy, `(−∞, 0]` (dd_decoder §3.6: `K₀ = Σᵢ ‖pᵢ‖²/2mᵢ`, `V₀ = −Σ_{i<j} mᵢmⱼ/‖rᵢ − rⱼ‖`).
 Neither range spans zero, so neither carries the `diverging` scale (§3.8): both are `lin`, on viridis, mapped
 monotonically, `V_0`'s most negative value at the dark end. `E₀ = K_0 + V_0` keeps its `diverging` scale (§3.4).
+*4 Nov 2026 (R-670):* at `ε ≠ 0`, `V₀ = −Σ_{i<j} mᵢmⱼ/√(‖rᵢ − rⱼ‖² + ε²)` (dd_decoder §3.6), still one-signed and now
+finite at a zero separation.
 
 **64 B with explicit padding** (R-86): the 12 × f32 fields are 48 B, and the remaining 16 B are declared padding, never
 implicit. `E₀` is **derived** (`K_0 + V_0`), not stored.
@@ -623,7 +625,7 @@ fixed at `t = 0`, never co-moving, recorded in every output header like `r_coll`
 sim-key value is the fraction and the length, read as given and never recomputed from the state. Energy and drift are
 defined under the softened potential. Built by a task after the core build (TASK-M9-39); until it lands, runs with `ε ≠ 0` are refused.
 What the collision branch, the regularised occupants, the Chazy classifier, the escape test, the decode's `V₀`, `η_E` and
-the substep law read under it is RQ-656.
+the substep law read under it is R-670's (2 Nov 2026, closing RQ-656; integrator contract Part 7). *Was:* "… is RQ-656".
 
 **Long-horizon behaviour is now a reporting property rather than a limit.** With nothing discarded
 and `error_ratio` read as the trust flag (R-87), a pixel whose copies cannot be integrated reads

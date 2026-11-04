@@ -26,7 +26,7 @@ On the mock engine, View gains the row **F3 fills by: Extend / Fit**, two radio 
 ## Deliverables
 - The row in `crates/gui/src/explore/top_bar.rs`, after F3 hide and before Debug view; `ViewUI`'s `F3Fill { Extend, Fit }`, the GUI's own state.
 - Keyboard reach (§G3; gui review 5585209592 of PR #253, G7): the row and its two options registered as scopes of the View menu's scope tree, as `HIDE` is, Enter on an option choosing it.
-- Fit's placement in the mock canvas (`crates/gui/src/mock/canvas.rs`, `Placement`): the scale `k = min(W, H) / w`, centred, the window outside the square the clear colour; the fake quads (`crates/gui/src/mock/quads.rs`) split on `frac = quad width / (shown figure width × k)`, `k = 1` outside Fit, so the shown layout's and Extend's quads, and the `mock_tile_bounds` capture, stay unchanged and only Fit refines (R-468 E3; gui review 5585209592 of PR #253, G6). *Was: "split by screen points, not figure fractions, so they refine at `k`".*
+- Fit's placement in the mock canvas (`crates/gui/src/mock/canvas.rs`, `Placement`): the scale `k = min(W, H) / w`, centred, the window outside the square the clear colour; the fake quads (`crates/gui/src/mock/quads.rs`) split on `frac = quad width × k / shown figure width`, `k = 1` outside Fit, so the shown layout's and Extend's quads, and the `mock_tile_bounds` capture, stay unchanged and only Fit refines (R-468 E3, as R-668 corrects it, RQ-666 (a); gui review 5585209592 of PR #253, G6). *Was: "split by screen points, not figure fractions, so they refine at `k`".* *Was (until R-668):* "`frac = quad width / (shown figure width × k)`".
 - Present mode in Fit.
 - Tests `f3_fill_modes`; a capture case `mock_f3_fit`.
 
