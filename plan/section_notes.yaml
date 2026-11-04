@@ -1457,6 +1457,14 @@
   reason: informative only
   note: "the owner's word of 31 Oct 2026: sccache stays off; process; changes no requirement"
 - file: decisions.md
+  section: "R-674 — #368's Safari check runs once Safari is free, in both layouts, not deferred; a Safari run starts with Safari quit, by the human"
+  reason: informative only
+  note: "the owner's two messages of 1 Nov 2026 on #368's Safari check, the deferral superseded; process (plan/HUMAN_SETUP.md § 6); changes no requirement"
+- file: decisions.md
+  section: "R-675 — The PR sweep is a standing duty: the orchestrator periodically checks every open PR and its CI state, and picks up any that was dropped or missed"
+  reason: informative only
+  note: "the owner's message of 1 Nov 2026: the periodic PR sweep; process (plan/OPERATIONS.md § Autonomy); changes no requirement"
+- file: decisions.md
   section: "R-790 — `.claude/`, its commands, agents and settings, is docs tier: a change only to it runs only the cheap checks *(amends R-677 and R-662)*"
   reason: informative only
   note: "the owner's word of 4 Nov 2026: `.claude/` is on the classifier's allowlist; process; changes no requirement"
