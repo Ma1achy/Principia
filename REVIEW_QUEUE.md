@@ -2199,19 +2199,28 @@ hardware-health arm are in RQ-685.*
     byte-identical on all three backends.
   - `quantise/halfway`: the card renders Metal's bytes. `24064 = 94 × 256`, R-296's 94 columns. A CPU run of
     `(x + 0.5) × f32(1/255)` reproduces the 94 columns and the 66 tie columns, and correct rounding gives lavapipe's 255.
-    So the cause is RQ-685's division, in the fragment stage, with no fast-math flag set by anything we control.
+    So the cause reads as RQ-685's division, in the fragment stage, with no fast-math flag set by anything we control.
+    That is inferred, as in RQ-685: what is measured is the hash equal to Metal's, and the reproduction is on the CPU.
     `golden_halfway_quantise_rounds_half_to_even` passed, so the rounding is correct.
   - `quantise/halfway_automatic`, the control case: against `vulkan.png` 35396 px (R 32512, G 3072, B 2779); against
     `metal.png` 65302 px (R 65280, G 3072, B 2779). Every difference is one step, the render lower than the reference.
-    Inferred, not measured: not the division; `floor(v × 255 + o)` at `o ≈ 0.4556` gives 35355 and 57287 px against 35396
-    and 57328, a conversion biased by about 0.044 of a level. The golden path doesn't use this output.
+    Inferred, not measured: not the division. `floor(v × 255 + o)` with one fitted parameter, `o ≈ 0.4556`, gives 35355 and
+    57287 px against 35396 and 57328, which #399 reads as a conversion biased by about 0.044 of a level. The golden path
+    doesn't use this output.
+  - **A qualification of #399's fit.** #399's fit was made before the per-channel counts were posted, and the channels
+    don't bear it out. Recomputed on `halfway.wgsl`'s formula with CPU `exp` and `pow`, at `o = 0.4556`: R 32512, exact, but
+    G 2560 and B 3214 against the measured 3072 and 2779. G alone needs `o ≈ 0.445`, and B about 0.465. So the totals fit
+    better than the channels do. One offset doesn't describe the conversion, the card's `exp` and `pow` may differ from
+    the CPU's, and these numbers can't separate those. "Biased by about 0.044 of a level" stays inferred, for R at most.
 - **The gap:** the corpus keys a near-tie reference by "backend", the runner keys it by API, and the corpus gives Metal's
   fast-math as the reason a case differs. `vulkan.png` was made on lavapipe, and on this card the same API gives Metal's
   bytes for the quantised case and bytes of its own for the control. No document says what a near-tie case is compared
   with on a Vulkan driver that isn't lavapipe, and R-376's value is stated for the backends CI renders on.
 - **The question:** what reference applies on a Vulkan driver other than lavapipe?
 - **Options seen:** (a) references keyed by driver, not API: the `vulkan` references are lavapipe's alone, and another
-  driver gets its own, blessed under a ruling; (b) near-tie cases are held only on the backends CI renders on (R-376's
+  driver gets its own, under a gate decision (R-110's "no re-baselining without a gate decision"). It must say what
+  "driver" keys on, the name or the version too, since the rewrite would be a driver compiler's, and no CI job could hold
+  such a reference, so it couldn't be checked per commit; (b) near-tie cases are held only on the backends CI renders on (R-376's
   scope), and on any other driver their result is reported, not compared to pass; (c) a driver may match any of the
   existing references, which passes `quantise/halfway` here and not `quantise/halfway_automatic`; (d) another, stated by
   the owner. Each of (a) to (c) leaves REQ-VAL-176's text to be reworded.
