@@ -413,8 +413,24 @@ pub fn as_tripped(listed: &[String]) -> BTreeMap<String, Vec<bool>> {
     results
 }
 
+/// The controls no `--partition` shard runs: `ci.yml`'s `ci-workspace` job runs them, in a step of their own, under
+/// `cargo nextest run --features controls`, as the test each one faults does. A control is `#[should_panic]`, so one
+/// that does not make its test fail, or panics without its expected message (R-212), fails that step.
+///
+/// These are the controls in `xtask/tests/nextest.rs` that list the workspace in its default feature set, which is the
+/// build `ci-workspace` has for their tests. A shard builds only `--features controls`, per package, so in `xtask-ci
+/// (2)` and `(4)` these three cost a second whole build of the workspace's tests, 48 GB of the 92 GB in
+/// `target/debug/deps` (run 41756812074). The unpartitioned run, which the gate and nightly workflows use, runs them
+/// with every other control. `xtask/tests/nextest.rs` checks this list against `ci.yml`'s step. Applied per R-369.
+pub const IN_CI_WORKSPACE: [&str; 3] = [
+    "nextest_ci_steps_list_every_test_cargo_test_listed_without_features::negative_control",
+    "nextest_ci_shards_together_list_every_test::negative_control",
+    "nextest_ci_steps_list_every_test_under_their_profiles::negative_control",
+];
+
 /// The k-th of n slices of the controls, `--partition k/n` (R-360): a control is in the slice its name's
-/// [`shard_of`] gives, so the n slices together hold every control exactly once.
+/// [`shard_of`] gives, so the n slices together hold every control exactly once. A shard runs its slice but for
+/// [`IN_CI_WORKSPACE`] ([`Partition::runs`]).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Partition {
     /// The slice, 1 to `n`.
@@ -444,6 +460,12 @@ impl Partition {
     pub fn holds(&self, control: &str) -> bool {
         shard_of(control, self.n) == self.k
     }
+
+    /// Whether a run of this slice runs the control named `control`: it is in the slice, and either the run is the
+    /// unpartitioned one or `ci-workspace` does not run the control ([`IN_CI_WORKSPACE`]).
+    pub fn runs(&self, control: &str) -> bool {
+        self.holds(control) && (*self == Partition::ALL || !IN_CI_WORKSPACE.contains(&control))
+    }
 }
 
 impl fmt::Display for Partition {
@@ -469,7 +491,7 @@ pub fn run(manifest: &Path, mode: Mode) -> Result<(), String> {
 }
 
 /// [`run`] on the controls in `partition` (R-360). Every shard lists every test, and runs, or in `--list` lists, only
-/// its own slice's controls. Each finding is reported by one shard: a control's run by the shard that ran it, and what
+/// its own slice's controls, less those `ci-workspace` runs ([`Partition::runs`]). Each finding is reported by one shard: a control's run by the shard that ran it, and what
 /// the listing shows (a test with no control, a shared name, a doctest) by shard 1, which also runs `cargo xtask ci`'s
 /// other runners.
 pub fn run_partition(manifest: &Path, mode: Mode, partition: Partition) -> Result<(), String> {
@@ -510,11 +532,11 @@ pub fn run_partition(manifest: &Path, mode: Mode, partition: Partition) -> Resul
         };
         let tests = listed.iter().filter(|t| control_of(t).is_none()).count();
         let mut outputs = BTreeMap::new();
-        // This shard's controls, once each, and every other shard's, which that shard runs and judges.
+        // This shard's controls, once each, and every other's, which that shard, or `ci-workspace`, runs and judges.
         let (mine, others): (BTreeSet<&String>, BTreeSet<&String>) = listed
             .iter()
             .filter(|t| control_of(t).is_some())
-            .partition(|t| partition.holds(t));
+            .partition(|t| partition.runs(t));
         if partition != Partition::ALL {
             println!(
                 "xtask controls: {name}: shard {partition}: {} of {} control(s)",
@@ -552,7 +574,7 @@ pub fn run_partition(manifest: &Path, mode: Mode, partition: Partition) -> Resul
             }
             Mode::List => {
                 for (test, control) in pairs(&listed) {
-                    if partition.holds(control) {
+                    if partition.runs(control) {
                         println!("xtask controls: {name}: test `{test}`: control `{control}`");
                     }
                 }

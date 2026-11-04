@@ -4,15 +4,28 @@
 //! report correctly in both tiers (skip-as-success only where the tier logic allows it)", "cancel superseded `reviews`
 //! runs per PR").
 //!
-//! - `merge_ready_mutants_gate_waits_for_the_label`: `mutants.yml` runs on a pull request's new heads and on its
-//!   labels, with no filter; its shards, fixture and verdict run only on the `merge-ready` label's run, the verdict
-//!   whatever the shards ended in; no job bears the name `mutants-check`, so no skipped job reports it;
-//!   `mutants-pending` runs on every other run that is not a label's. Its scripts, run under bash with a stand-in `gh`,
-//!   post a new head's `mutants-check` queued, or passed only on a docs-only head, and leave one already there alone; a
-//!   push takes the `merge-ready` label off, a 404 (the label already off) passing and any other error failing; the
-//!   verdict completes every `mutants-check` on the head, success only when the verdict step passed, and posts one if
-//!   there is none. A run on `main` and a run of another label have groups of their own, and only a pull request's runs
-//!   are cancelled.
+//! - `merge_ready_mutants_gate_waits_for_the_label`: `mutants.yml` runs on a pull request's new heads and on every
+//!   label change, put on or taken off, with no filter; its shards, fixture and verdict run only on the `merge-ready`
+//!   label's run, the verdict whatever the shards ended in; one job, `mutants-check`, `if: always()`, reports
+//!   `mutants-check` in every run (R-678: GitHub counts only the latest run's check suite, so a check posted into
+//!   another run's suite is lost). Its report step, run under bash with stand-in `gh` and `sleep`, concludes on each
+//!   event: the merge-ready run's verdict, success only when it passed; "not applicable", passed, on a change with no
+//!   `.rs` file under `crates/` (R-677; `mutants=false`, an empty classification not among them) and on a head that is
+//!   not merge-ready, a push's included; and on another label put on or taken off a merge-ready head, the verdict of
+//!   its latest merge-ready run, waited for while it runs, failing with none, or on a head a push has superseded.
+//!   `merge-ready-off` runs on a push alone and takes the label off, a 404 (the label already off) passing and any
+//!   other error failing. The notice annotation, the one text the check run carries, reads `no surviving mutant` on a
+//!   passed verdict and on no other path, as the merge watcher reads it. A run on `main`, a run of another label, put
+//!   on or taken off, and a reopened pull request's run have groups of their own, and only a pull request's runs are
+//!   cancelled.
+//! - `merge_ready_mutants_check_reports_a_stalled_step`: no stalled step leaves `mutants-check` unreported. Each step
+//!   before its report, and each checkout and cache step of every `mutants.yml` job, the shards included, has a limit
+//!   of its own of at most `STEP_LIMIT` minutes, so a runner stall fails the job in minutes, not at the 355 minutes the
+//!   label-change wait needs; every step of each job it waits on through `needs`, the shards included, and of
+//!   `mutants-fixture` has a limit of its own of at most `SHARD_LIMIT`, so no stall there runs to GitHub's 360 minutes.
+//!   The report runs only when each passed, so one failing (a timeout among them) or cancelled
+//!   skips it and fails the job, and the step after it runs exactly then and, run under bash, fails with an error
+//!   annotation and a summary naming each earlier step's outcome.
 //! - `merge_ready_reviews_runs_cancel_per_pr_and_event`: `reviews.yml` keeps one cancelling group per pull request and
 //!   event, never cancelling on `main`; `reviews-complete` still runs on every run; and the re-run of the stale
 //!   `pull_request` run (R-276), run under bash with a stand-in `gh`, re-runs it on the live head and leaves a
@@ -106,9 +119,9 @@ struct Ran {
 }
 
 /// Runs `script` under bash as a workflow step runs, with `env`, and a stand-in `gh` on the `PATH` that logs each call
-/// and answers: a check-run count `$STUB_COUNT`, check-run ids `$STUB_IDS`, a pull request's head `$STUB_LIVE` (from
-/// its second read on, `$STUB_LIVE_LATER` if set: a push between the reads), and, for `gh run list`, run 42, completed,
-/// concluded `$STUB_CONCLUSION`; a DELETE fails with `gh: $STUB_DELETE_ERR` if that is set.
+/// and answers: a pull request's head `$STUB_LIVE` (from its second read on, `$STUB_LIVE_LATER` if set: a push between
+/// the reads), and, for `gh run list`, run 42, completed, concluded `$STUB_CONCLUSION`; a DELETE fails with
+/// `gh: $STUB_DELETE_ERR` if that is set.
 fn run(tag: &str, script: &str, env: &[(&str, &str)]) -> Ran {
     let dir = Scratch::new(&format!("merge_ready_{tag}"));
     let bin = dir.join("bin");
@@ -121,8 +134,6 @@ fn run(tag: &str, script: &str, env: &[(&str, &str)]) -> Ran {
          printf '%s\\n' \"gh $*\" >> \"$STUB_CALLS\"\n\
          case \"$*\" in\n\
            *'--method DELETE'*) [ -z \"$STUB_DELETE_ERR\" ] || { echo \"gh: $STUB_DELETE_ERR\" >&2; exit 1; } ;;\n\
-           *total_count*) echo \"$STUB_COUNT\" ;;\n\
-           *'check_runs[].id'*) [ -z \"$STUB_IDS\" ] || printf '%s\\n' $STUB_IDS ;;\n\
            *'/pulls/'*)\n\
              if [ \"$(grep -c /pulls/ \"$STUB_CALLS\")\" -gt 1 ] && [ -n \"$STUB_LIVE_LATER\" ]; then\n\
                echo \"$STUB_LIVE_LATER\"\n\
@@ -173,6 +184,247 @@ const MERGE_READY: [&str; 2] = [
     "github.event.label.name == 'merge-ready'",
 ];
 
+/// What `mutants-check`'s report step did on one event: whether it passed, its job summary and its log.
+struct Reported {
+    ok: bool,
+    summary: String,
+    log: String,
+    calls: String,
+}
+
+/// Runs `mutants-check`'s report step under bash with `env`, as the runner does, and stand-ins: `gh` answers the pull
+/// request's head `$STUB_LIVE`, this workflow's runs on it `$STUB_RUNS` (newest first), and run n's `mutants-verdict`
+/// `$STUB_JOB_<n>`, or, once the step has waited, `$STUB_JOB_<n>_LATER` if set; `sleep` logs the wait and fails on
+/// the fourth, so a wait that never ends fails the step.
+fn report(tag: &str, script: &str, env: &[(&str, &str)]) -> Reported {
+    let dir = Scratch::new(&format!("merge_ready_report_{tag}"));
+    let bin = dir.join("bin");
+    std::fs::create_dir_all(&bin).expect("bin");
+    let calls = dir.join("calls");
+    std::fs::write(&calls, "").expect("calls");
+    write_executable(
+        &bin.join("gh"),
+        "#!/usr/bin/env bash\n\
+         printf '%s\\n' \"gh $*\" >> \"$STUB_CALLS\"\n\
+         case \"$*\" in\n\
+           *'/pulls/'*) echo \"$STUB_LIVE\" ;;\n\
+           *'/actions/runs/'*'/jobs'*)\n\
+             all=\"$*\"; id=${all#*actions/runs/}; id=${id%%/*}\n\
+             var=STUB_JOB_$id; later=STUB_JOB_${id}_LATER\n\
+             if grep -q '^sleep' \"$STUB_CALLS\" && [ -n \"${!later:-}\" ]; then echo \"${!later}\"; else echo \"${!var:-}\"; fi ;;\n\
+           *'/actions/workflows/mutants.yml/runs'*) [ -z \"$STUB_RUNS\" ] || printf '%s\\n' $STUB_RUNS ;;\n\
+           *) echo \"gh stand-in: unexpected call: $*\" >&2; exit 1 ;;\n\
+         esac\n",
+    )
+    .expect("gh stand-in");
+    write_executable(
+        &bin.join("sleep"),
+        "#!/bin/sh\n\
+         printf '%s\\n' \"sleep $*\" >> \"$STUB_CALLS\"\n\
+         [ \"$(grep -c '^sleep' \"$STUB_CALLS\")\" -lt 4 ]\n",
+    )
+    .expect("sleep stand-in");
+    let summary = dir.join("summary.md");
+    let mut cmd = Command::new("bash");
+    cmd.args(["--noprofile", "--norc", "-e", "-c", script])
+        .env(
+            "PATH",
+            format!(
+                "{}:{}",
+                bin.display(),
+                std::env::var("PATH").unwrap_or_default()
+            ),
+        )
+        .env("STUB_CALLS", &calls)
+        .env("GITHUB_STEP_SUMMARY", &summary)
+        .env("GH_REPO", "o/r")
+        .env("HEAD_SHA", "abc")
+        .env("STUB_LIVE", "abc")
+        .env("STUB_RUNS", "")
+        .env("PR", "7")
+        .env("RUN_ID", "9")
+        .env("LABEL", "")
+        .env("MUTANTS", "true")
+        .env("VERDICT", "skipped");
+    for (k, v) in env {
+        cmd.env(k, v);
+    }
+    let out = cmd.timed_output().expect("merge_ready: bash ran");
+    Reported {
+        ok: out.status.success(),
+        summary: std::fs::read_to_string(&summary).unwrap_or_default(),
+        log: format!(
+            "{}{}",
+            String::from_utf8_lossy(&out.stdout),
+            String::from_utf8_lossy(&out.stderr)
+        ),
+        calls: std::fs::read_to_string(&calls).unwrap_or_default(),
+    }
+}
+
+/// An event's context and the stand-ins' answers, as `(variable, value)`.
+type Env = &'static [(&'static str, &'static str)];
+
+/// `mutants-check` on each event: (what, its env, whether it passes, what its summary says).
+const REPORTS: &[(&str, Env, bool, &str)] = &[
+    (
+        "the merge-ready run, its verdict passed",
+        &[("ACTION", "labeled"), ("LABEL", "merge-ready"), ("READY", "true"), ("MUTANTS", ""), ("VERDICT", "success")],
+        true,
+        "no surviving mutant",
+    ),
+    (
+        "the merge-ready run, its verdict failed",
+        &[("ACTION", "labeled"), ("LABEL", "merge-ready"), ("READY", "true"), ("MUTANTS", ""), ("VERDICT", "failure")],
+        false,
+        "a survivor, or a shard that did not finish (failure)",
+    ),
+    (
+        "the merge-ready run, its verdict skipped",
+        &[("ACTION", "labeled"), ("LABEL", "merge-ready"), ("READY", "true"), ("MUTANTS", "false"), ("VERDICT", "skipped")],
+        false,
+        "(skipped)",
+    ),
+    (
+        "the merge-ready run, cancelled",
+        &[("ACTION", "labeled"), ("LABEL", "merge-ready"), ("READY", "true"), ("VERDICT", "cancelled")],
+        false,
+        "(cancelled)",
+    ),
+    (
+        "a push with no Rust under crates/",
+        &[("ACTION", "synchronize"), ("READY", "false"), ("MUTANTS", "false")],
+        true,
+        "touches no Rust source under crates/",
+    ),
+    (
+        "a push of code",
+        &[("ACTION", "synchronize"), ("READY", "false")],
+        true,
+        "The head is not merge-ready",
+    ),
+    (
+        "a push of code to a merge-ready head, which takes the label off",
+        &[("ACTION", "synchronize"), ("READY", "true"), ("STUB_RUNS", "5"), ("STUB_JOB_5", "completed failure")],
+        true,
+        "The head is not merge-ready",
+    ),
+    (
+        "a push the classifier said nothing of",
+        &[("ACTION", "synchronize"), ("READY", "false"), ("MUTANTS", "")],
+        true,
+        "The head is not merge-ready",
+    ),
+    (
+        "code, opened",
+        &[("ACTION", "opened"), ("READY", "false")],
+        true,
+        "The head is not merge-ready",
+    ),
+    (
+        "merge-ready taken off",
+        &[("ACTION", "unlabeled"), ("LABEL", "merge-ready"), ("READY", "false"), ("VERDICT", "skipped")],
+        true,
+        "The head is not merge-ready",
+    ),
+    (
+        "another label on a code head that is not merge-ready",
+        &[("ACTION", "labeled"), ("LABEL", "design"), ("READY", "false")],
+        true,
+        "The head is not merge-ready",
+    ),
+    (
+        "another label on a merge-ready head with no Rust under crates/",
+        &[("ACTION", "labeled"), ("LABEL", "design"), ("READY", "true"), ("MUTANTS", "false")],
+        true,
+        "touches no Rust source under crates/",
+    ),
+    (
+        "another label on a merge-ready head, its merge-ready run passed",
+        &[
+            ("ACTION", "labeled"), ("LABEL", "design"), ("READY", "true"),
+            ("STUB_RUNS", "9 8 7 6"), ("STUB_JOB_8", "completed skipped"), ("STUB_JOB_7", "completed success"),
+            ("STUB_JOB_6", "completed failure"),
+        ],
+        true,
+        "no surviving mutant",
+    ),
+    (
+        "another label taken off a merge-ready head, its merge-ready run failed",
+        &[
+            ("ACTION", "unlabeled"), ("LABEL", "design"), ("READY", "true"),
+            ("STUB_RUNS", "9 8 7 6"), ("STUB_JOB_8", "completed skipped"), ("STUB_JOB_7", "completed failure"),
+            ("STUB_JOB_6", "completed success"),
+        ],
+        false,
+        "a survivor, or a shard that did not finish (failure)",
+    ),
+    (
+        "another label on a merge-ready head the classifier said nothing of, its merge-ready run failed",
+        &[
+            ("ACTION", "labeled"), ("LABEL", "design"), ("READY", "true"), ("MUTANTS", ""),
+            ("STUB_RUNS", "7"), ("STUB_JOB_7", "completed failure"),
+        ],
+        false,
+        "(failure)",
+    ),
+    (
+        "another label on a merge-ready head, its merge-ready run cancelled",
+        &[
+            ("ACTION", "labeled"), ("LABEL", "design"), ("READY", "true"),
+            ("STUB_RUNS", "7"), ("STUB_JOB_7", "completed cancelled"),
+        ],
+        false,
+        "(cancelled)",
+    ),
+    (
+        "another label on a merge-ready head, its merge-ready run still going, then passed",
+        &[
+            ("ACTION", "labeled"), ("LABEL", "design"), ("READY", "true"),
+            ("STUB_RUNS", "7"), ("STUB_JOB_7", "in_progress null"), ("STUB_JOB_7_LATER", "completed success"),
+        ],
+        true,
+        "no surviving mutant",
+    ),
+    (
+        "another label on a merge-ready head, a newer run not started yet, then skipped",
+        &[
+            ("ACTION", "labeled"), ("LABEL", "design"), ("READY", "true"),
+            ("STUB_RUNS", "10 7"), ("STUB_JOB_10", ""), ("STUB_JOB_10_LATER", "completed skipped"),
+            ("STUB_JOB_7", "completed success"),
+        ],
+        true,
+        "no surviving mutant",
+    ),
+    (
+        "another label on a merge-ready head, its merge-ready run never ending",
+        &[
+            ("ACTION", "labeled"), ("LABEL", "design"), ("READY", "true"),
+            ("STUB_RUNS", "7"), ("STUB_JOB_7", "queued null"),
+        ],
+        false,
+        "",
+    ),
+    (
+        "another label on a merge-ready head with no merge-ready run",
+        &[
+            ("ACTION", "labeled"), ("LABEL", "design"), ("READY", "true"),
+            ("STUB_RUNS", "9 8"), ("STUB_JOB_8", "completed skipped"),
+        ],
+        false,
+        "no merge-ready run",
+    ),
+    (
+        "another label on a merge-ready head a push has superseded",
+        &[
+            ("ACTION", "labeled"), ("LABEL", "design"), ("READY", "true"), ("STUB_LIVE", "def"),
+            ("STUB_RUNS", "7"), ("STUB_JOB_7", "completed success"),
+        ],
+        false,
+        "superseded",
+    ),
+];
+
 fn check_gate(yml: &str) {
     let wf = parse(yml);
     let pr = &wf["on"]["pull_request"];
@@ -180,7 +432,7 @@ fn check_gate(yml: &str) {
         .as_array()
         .map(|a| a.iter().map(text).collect())
         .unwrap_or_default();
-    for t in ["opened", "synchronize", "reopened", "labeled"] {
+    for t in ["opened", "synchronize", "reopened", "labeled", "unlabeled"] {
         assert!(
             types.iter().any(|x| x == t),
             "merge_ready: mutants.yml does not run on `{t}`: {types:?}"
@@ -193,14 +445,26 @@ fn check_gate(yml: &str) {
         );
     }
 
+    // `mutants-check` is a job of every run, never skipped (R-678): GitHub counts only the latest run's check suite.
     let jobs = wf["jobs"].as_object().expect("merge_ready: jobs");
-    for (id, job) in jobs {
-        let name = job.get("name").map(text).unwrap_or_else(|| id.clone());
-        assert!(
-            name != "mutants-check",
-            "merge_ready: a job reports mutants-check ({id}), which a run it skips reports passed"
-        );
-    }
+    let bearing: Vec<&String> = jobs
+        .iter()
+        .filter(|(id, job)| {
+            job.get("name").map(text).unwrap_or_else(|| (*id).clone()) == "mutants-check"
+        })
+        .map(|(id, _)| id)
+        .collect();
+    assert!(
+        bearing == ["mutants-check"],
+        "merge_ready: not one job `mutants-check` reports mutants-check: {bearing:?}"
+    );
+    let check = &jobs["mutants-check"];
+    assert!(
+        text(&check["if"]) == "always()" && text(&check["needs"]) == "mutants-verdict",
+        "merge_ready: mutants-check can be skipped, or does not wait for the verdict: if `{}`, needs `{}`",
+        text(&check["if"]),
+        text(&check["needs"])
+    );
     for id in ["mutants", "mutants-fixture", "mutants-verdict"] {
         let cond = text(&jobs[id]["if"]);
         assert!(
@@ -212,18 +476,26 @@ fn check_gate(yml: &str) {
         text(&jobs["mutants-verdict"]["if"]).starts_with("always()"),
         "merge_ready: the verdict does not run whatever the shards ended in"
     );
-    let pending = text(&jobs["mutants-pending"]["if"]);
-    assert!(
-        pending.contains("github.event.action != 'labeled'") && !pending.contains("||"),
-        "merge_ready: mutants-pending does not run on exactly the runs that are not a label's: `{pending}`"
+    assert_eq!(
+        text(&jobs["merge-ready-off"]["if"]),
+        "github.event_name == 'pull_request' && github.event.action == 'synchronize'",
+        "merge_ready: merge-ready-off does not run on exactly a push's run"
     );
 
     let group = text(&wf["concurrency"]["group"]);
     assert!(
         group.contains("github.ref == 'refs/heads/main'")
-            && group.contains("github.event.label.name != 'merge-ready'")
+            && group.contains(
+                "((github.event.action == 'labeled' || github.event.action == 'unlabeled') && \
+                 github.event.label.name != 'merge-ready'))"
+            )
             && group.contains("&& github.run_id || github.ref"),
         "merge_ready: mutants.yml's group does not keep `main`'s runs and other labels' runs apart: `{group}`"
+    );
+    // A reopened pull request's run changes no head: in the ref's group it would cancel the merge-ready run.
+    assert!(
+        group.contains("(github.ref == 'refs/heads/main' || github.event.action == 'reopened' || ("),
+        "merge_ready: a reopened pull request's run shares the merge-ready run's group, so it cancels it: `{group}`"
     );
     assert_eq!(
         text(&wf["concurrency"]["cancel-in-progress"]),
@@ -231,51 +503,63 @@ fn check_gate(yml: &str) {
         "merge_ready: mutants.yml cancels runs on `main`, or no pull request's"
     );
 
-    // The new head's `mutants-check`.
-    let post = step(&wf, "mutants-pending", "Post mutants-check on the head")["run"]
-        .as_str()
-        .expect("run");
-    for (docs, count, want) in [
-        ("false", "0", "queued"),
-        ("true", "0", "success"),
-        ("false", "1", "none"),
-        ("true", "1", "none"),
+    // What `mutants-check` concludes on each event.
+    let report_step = step(&wf, "mutants-check", "Report mutants-check");
+    for (key, want) in [
+        ("ACTION", "${{ github.event.action }}"),
+        ("LABEL", "${{ github.event.label.name }}"),
+        (
+            "READY",
+            "${{ contains(github.event.pull_request.labels.*.name, 'merge-ready') }}",
+        ),
+        ("MUTANTS", "${{ steps.changes.outputs.mutants }}"),
+        ("VERDICT", "${{ needs.mutants-verdict.result }}"),
+        ("HEAD_SHA", "${{ github.event.pull_request.head.sha }}"),
+        ("RUN_ID", "${{ github.run_id }}"),
     ] {
-        let ran = run(
-            &format!("pending_{docs}_{count}"),
-            post,
-            &[("DOCS_ONLY", docs), ("STUB_COUNT", count)],
+        assert_eq!(
+            text(&report_step["env"][key]),
+            want,
+            "merge_ready: mutants-check's report does not read `{key}` from the event"
         );
-        let posts: Vec<&str> = ran
-            .calls
+    }
+    let script = report_step["run"].as_str().expect("run");
+    for (i, (what, env, ok, says)) in REPORTS.iter().enumerate() {
+        let got = report(&format!("{i}"), script, env);
+        assert!(
+            got.ok == *ok && got.summary.contains(says),
+            "merge_ready: mutants-check {} on {what}, summary `{}`, not {} with `{says}`: {} {}",
+            if got.ok { "passed" } else { "failed" },
+            got.summary.trim(),
+            if *ok { "passed" } else { "failed" },
+            got.log,
+            got.calls
+        );
+        // The merge watcher reads the notice annotation (a step summary never reaches the check run): it names a
+        // passed verdict, `no surviving mutant`, and nothing else does.
+        let notice = got
+            .log
             .lines()
-            .filter(|c| c.contains("--method POST"))
-            .collect();
-        let got = match posts.as_slice() {
-            [] => "none",
-            [one] if one.contains("conclusion=success") => "success",
-            [one] if one.contains("status=queued") && !one.contains("conclusion") => "queued",
-            _ => "other",
-        };
+            .find_map(|l| l.strip_prefix("::notice title=mutants-check::"));
+        let passed = *ok && *says == "no surviving mutant";
         assert!(
-            ran.ok && got == want,
-            "merge_ready: posted mutants-check {got}, not {want}, on a head docs-only {docs} with {count} already \
-             there: {} {}",
-            ran.calls,
-            ran.log
+            notice.is_some() == got.ok
+                && notice.is_some_and(|n| n.contains("no surviving mutant")) == passed,
+            "merge_ready: mutants-check's notice on {what} is {notice:?}, not one that says `no surviving mutant` \
+             exactly when the verdict passed: {}",
+            got.log
         );
         assert!(
-            posts
-                .iter()
-                .all(|p| p.contains("name=mutants-check") && p.contains("head_sha=abc")),
-            "merge_ready: posted a check other than the head's mutants-check: {posts:?}"
+            !got.summary.is_empty() || what.contains("never ending"),
+            "merge_ready: mutants-check on {what} wrote no summary: {}",
+            got.log
         );
     }
 
     // A push takes the label off.
     let drop = step(
         &wf,
-        "mutants-pending",
+        "merge-ready-off",
         "Take the merge-ready label off the pushed pull request",
     );
     let cond = text(&drop["if"]);
@@ -286,7 +570,7 @@ fn check_gate(yml: &str) {
         "merge_ready: the label is not taken off on a push: `{cond}`"
     );
     // GitHub's answer to the DELETE: none (the label came off), a 404 (an earlier push's run took it off: the label is
-    // off, so the step passes and the head's check is still posted), or any other error, which fails the step.
+    // off, so the step passes), or any other error, which fails the step.
     let drop = drop["run"].as_str().expect("run");
     for (err, ok, case) in [
         ("", true, "the label taken off"),
@@ -320,59 +604,6 @@ fn check_gate(yml: &str) {
             ran.log
         );
     }
-
-    // The verdict, on every `mutants-check` of the head.
-    let verdict = step(
-        &wf,
-        "mutants-verdict",
-        "Post mutants-check's verdict on the head",
-    );
-    assert_eq!(
-        text(&verdict["if"]),
-        "always()",
-        "merge_ready: the verdict is not posted whatever the run ended in"
-    );
-    let verdict = verdict["run"].as_str().expect("run");
-    for (outcome, ids, want) in [
-        ("success", "11 12", "success"),
-        ("failure", "11 12", "failure"),
-        ("skipped", "11 12", "failure"),
-        ("cancelled", "11", "failure"),
-        ("success", "", "success"),
-        ("failure", "", "failure"),
-    ] {
-        let ran = run(
-            &format!("verdict_{outcome}"),
-            verdict,
-            &[
-                ("VERDICT", outcome),
-                ("STUB_IDS", ids),
-                ("RUN_URL", "https://example/run"),
-            ],
-        );
-        let writes: Vec<&str> = ran
-            .calls
-            .lines()
-            .filter(|c| c.contains("--method"))
-            .collect();
-        let expect: Vec<String> = if ids.is_empty() {
-            vec!["--method POST repos/o/r/check-runs".to_owned()]
-        } else {
-            ids.split(' ')
-                .map(|id| format!("--method PATCH repos/o/r/check-runs/{id}"))
-                .collect()
-        };
-        assert!(
-            ran.ok
-                && writes.len() == expect.len()
-                && writes.iter().zip(&expect).all(|(w, e)| w.contains(e.as_str())
-                    && w.contains("status=completed")
-                    && w.contains(&format!("conclusion={want}"))),
-            "merge_ready: the verdict step, its step {outcome}, did not complete each mutants-check {want}: {} {}",
-            ran.calls,
-            ran.log
-        );
-    }
 }
 
 #[test]
@@ -382,14 +613,42 @@ fn merge_ready_mutants_gate_waits_for_the_label() {
 
 negative_control!(
     merge_ready_mutants_gate_waits_for_the_label,
-    "the verdict job named mutants-check again, so a run that skips it reports it passed",
-    expected = "a job reports mutants-check (mutants-check)",
+    "mutants-check posted through the Checks API again, no job bearing it, which a later run's suite supersedes (#384)",
+    expected = "not one job `mutants-check` reports mutants-check",
     check_gate(&edited(
         "mutants.yml",
-        "  mutants-verdict:\n",
-        "  mutants-check:\n"
+        "  mutants-check:\n",
+        "  mutants-report:\n"
     ))
 );
+
+mod check_skippable {
+    use super::*;
+    negative_control!(
+        merge_ready_mutants_gate_waits_for_the_label,
+        "mutants-check run only on the merge-ready run, so every other run reports it skipped",
+        expected = "mutants-check can be skipped, or does not wait for the verdict",
+        check_gate(&edited(
+            "mutants.yml",
+            "  mutants-check:\n    if: always()\n",
+            "  mutants-check:\n    if: always() && github.event.label.name == 'merge-ready'\n"
+        ))
+    );
+}
+
+mod no_unlabeled {
+    use super::*;
+    negative_control!(
+        merge_ready_mutants_gate_waits_for_the_label,
+        "a workflow not run when a label is taken off",
+        expected = "mutants.yml does not run on `unlabeled`",
+        check_gate(&edited(
+            "mutants.yml",
+            "    types: [opened, synchronize, reopened, labeled, unlabeled]\n",
+            "    types: [opened, synchronize, reopened, labeled]\n"
+        ))
+    );
+}
 
 mod shards_every_push {
     use super::*;
@@ -406,30 +665,87 @@ mod shards_every_push {
     );
 }
 
-mod passed_unrun {
-    use super::*;
-    negative_control!(
-        merge_ready_mutants_gate_waits_for_the_label,
-        "a new head's mutants-check posted passed before any mutant ran",
-        expected = "posted mutants-check success, not queued",
-        check_gate(&edited(
-            "mutants.yml",
-            "              -f status=queued\n",
-            "              -f status=completed -f conclusion=success\n"
-        ))
-    );
-}
-
 mod verdict_always_passes {
     use super::*;
     negative_control!(
         merge_ready_mutants_gate_waits_for_the_label,
-        "a verdict posted passed whatever its step ended in",
-        expected = "its step failure, did not complete each mutants-check failure",
+        "a mutants-check passed whatever the verdict",
+        expected = "mutants-check passed on the merge-ready run, its verdict failed",
         check_gate(&edited(
             "mutants.yml",
-            "          if [ \"$VERDICT\" = success ]; then\n",
-            "          if true; then\n"
+            "            if [ \"$1\" = success ]; then\n",
+            "            if true; then\n"
+        ))
+    );
+}
+
+mod verdict_unread {
+    use super::*;
+    negative_control!(
+        merge_ready_mutants_gate_waits_for_the_label,
+        "another label's run passing a merge-ready head whatever its merge-ready run's verdict",
+        expected = "mutants-check passed on another label taken off a merge-ready head, its merge-ready run failed",
+        check_gate(&edited(
+            "mutants.yml",
+            "                \"completed \"*) verdict \"${state#completed }\" \"run $id\" ;;\n",
+            "                \"completed \"*) verdict success \"run $id\" ;;\n"
+        ))
+    );
+}
+
+mod no_wait {
+    use super::*;
+    negative_control!(
+        merge_ready_mutants_gate_waits_for_the_label,
+        "another label's run that passes over a merge-ready run still going, as if it had none",
+        expected = "mutants-check failed on another label on a merge-ready head, its merge-ready run still going",
+        check_gate(&edited(
+            "mutants.yml",
+            "                *) wait=\"run $id: ${state:-no jobs yet}\"; break ;;\n",
+            "                *) continue ;;\n"
+        ))
+    );
+}
+
+mod superseded_unseen {
+    use super::*;
+    negative_control!(
+        merge_ready_mutants_gate_waits_for_the_label,
+        "another label's run that reports a merge-ready verdict on a head a push has superseded",
+        expected =
+            "mutants-check passed on another label on a merge-ready head a push has superseded",
+        check_gate(&edited(
+            "mutants.yml",
+            "            if [ \"$live\" != \"$HEAD_SHA\" ]; then\n",
+            "            if false; then\n"
+        ))
+    );
+}
+
+mod push_follows {
+    use super::*;
+    negative_control!(
+        merge_ready_mutants_gate_waits_for_the_label,
+        "a push's run that takes the head for merge-ready because the push's payload still lists the label",
+        expected = "mutants-check failed on a push of code to a merge-ready head, which takes the label off",
+        check_gate(&edited(
+            "mutants.yml",
+            "          if [ \"$ACTION\" = synchronize ] || [ \"$READY\" != true ]; then\n",
+            "          if [ \"$READY\" != true ]; then\n"
+        ))
+    );
+}
+
+mod empty_classification {
+    use super::*;
+    negative_control!(
+        merge_ready_mutants_gate_waits_for_the_label,
+        "a classification that said nothing taken for one with no Rust under crates/",
+        expected = "mutants-check passed on a push the classifier said nothing of",
+        check_gate(&edited(
+            "mutants.yml",
+            "          if [ \"$MUTANTS\" = false ]; then\n",
+            "          if [ \"$MUTANTS\" != true ]; then\n"
         ))
     );
 }
@@ -453,7 +769,7 @@ mod label_404_fails {
     use super::*;
     negative_control!(
         merge_ready_mutants_gate_waits_for_the_label,
-        "a label step that fails on a 404, so a second quick push's head gets no mutants-check",
+        "a label step that fails on a 404, so a second quick push's run fails",
         expected = "the label step failed on a 404, the label already off",
         check_gate(&edited(
             "mutants.yml",
@@ -481,12 +797,475 @@ mod other_labels_cancel {
     use super::*;
     negative_control!(
         merge_ready_mutants_gate_waits_for_the_label,
-        "every label's run in the pull request's group, so a `design` label cancels the merge-ready run",
+        "another label taken off in the pull request's group, so it cancels the merge-ready run",
         expected = "group does not keep `main`'s runs and other labels' runs apart",
         check_gate(&edited(
             "mutants.yml",
-            "\n    || (github.event.action == 'labeled' && github.event.label.name != 'merge-ready'))\n",
-            ")\n"
+            "(github.event.action == 'labeled' || github.event.action == 'unlabeled')",
+            "github.event.action == 'labeled'"
+        ))
+    );
+}
+
+mod reopened_cancels {
+    use super::*;
+    negative_control!(
+        merge_ready_mutants_gate_waits_for_the_label,
+        "a reopened pull request's run in the ref's group, so reopening mid-run cancels the merge-ready run",
+        expected = "a reopened pull request's run shares the merge-ready run's group",
+        check_gate(&edited(
+            "mutants.yml",
+            "    || github.event.action == 'reopened'\n",
+            ""
+        ))
+    );
+}
+
+mod notice_unnamed {
+    use super::*;
+    negative_control!(
+        merge_ready_mutants_gate_waits_for_the_label,
+        "a success notice that does not name the verdict, so the merge watcher never reads `no surviving mutant`",
+        expected = "not one that says `no surviving mutant` exactly when the verdict passed",
+        check_gate(&edited(
+            "mutants.yml",
+            "              echo \"::notice title=mutants-check::$2\"\n",
+            "              echo \"::notice title=mutants-check::passed\"\n"
+        ))
+    );
+}
+
+mod notice_not_applicable {
+    use super::*;
+    negative_control!(
+        merge_ready_mutants_gate_waits_for_the_label,
+        "a not-applicable notice that says `no surviving mutant`, so the watcher passes a head mutants never ran on",
+        expected = "not one that says `no surviving mutant` exactly when the verdict passed",
+        check_gate(&edited(
+            "mutants.yml",
+            "            report 0 \"not applicable\" \\\n",
+            "            report 0 \"not applicable: no surviving mutant\" \\\n"
+        ))
+    );
+}
+
+/// The longest, in minutes, a step before `mutants-check`'s report, or a checkout or cache step of a `mutants.yml`
+/// job, may run before its own limit fails it: about three times the longest checkout these jobs logged, a shard's
+/// full history in 189 s, rounded up to a whole 10 minutes (`mutants.yml`'s comment on the limits).
+const STEP_LIMIT: u64 = 10;
+
+/// The longest, in minutes, any step of a job `mutants-check` waits on may run: a shard's cargo mutants step,
+/// REQ-VAL-149's 300 minutes (R-376).
+const SHARD_LIMIT: u64 = 300;
+
+/// `mutants-check` is never left unreported by a stalled step: each step before its report, and each checkout and cache
+/// step of every job, the shards included, has a limit of its own of at most `STEP_LIMIT` minutes; every step of each
+/// job it waits on through `needs`, and of `mutants-fixture`, has one of at most `SHARD_LIMIT`. The report runs
+/// only when every step before it passed (no `if:`), so one failing, a timeout among them, or cancelled skips it and
+/// fails the job; the step after it runs exactly then (`always()`, on the report skipped) and, run under bash, fails
+/// with an error annotation and a summary naming each earlier step's outcome.
+fn check_step_limits(yml: &str) {
+    let wf = parse(yml);
+    let within = |s: &Value| {
+        s["timeout-minutes"]
+            .as_u64()
+            .is_some_and(|m| (1..=STEP_LIMIT).contains(&m))
+    };
+    let name = |s: &Value| {
+        let n = text(&s["name"]);
+        if n.is_empty() {
+            text(&s["uses"])
+        } else {
+            n
+        }
+    };
+    let steps = wf["jobs"]["mutants-check"]["steps"]
+        .as_array()
+        .expect("merge_ready: mutants-check's steps");
+    let at = steps
+        .iter()
+        .position(|s| s["name"].as_str() == Some("Report mutants-check"))
+        .expect("merge_ready: mutants-check has no report step");
+    assert!(
+        at > 0,
+        "merge_ready: mutants-check's report has no step before it"
+    );
+    for s in &steps[..at] {
+        assert!(
+            within(s),
+            "merge_ready: mutants-check's step `{}` has no limit of its own of at most {STEP_LIMIT} minutes \
+             (timeout-minutes: {})",
+            name(s),
+            s["timeout-minutes"]
+        );
+    }
+    let jobs = wf["jobs"]
+        .as_object()
+        .expect("merge_ready: mutants.yml's jobs");
+    // The shards included: `mutants-verdict` waits for them, and `mutants-check` for it.
+    for (id, job) in jobs {
+        for s in job["steps"].as_array().into_iter().flatten() {
+            let uses = text(&s["uses"]);
+            if ["actions/checkout@", "Swatinem/rust-cache@", "actions/cache"]
+                .iter()
+                .any(|p| uses.starts_with(p))
+            {
+                assert!(
+                    within(s),
+                    "merge_ready: {id}'s step `{uses}` has no limit of its own of at most {STEP_LIMIT} minutes \
+                     (timeout-minutes: {})",
+                    s["timeout-minutes"]
+                );
+            }
+        }
+    }
+    // Every step of every job `mutants-check` waits on, through `needs`, and of `mutants-fixture` beside them: a job
+    // limit can't tell a stall from the shards' 300-minute run (REQ-VAL-149), so only a step's own limit bounds it.
+    let mut chain: Vec<String> = Vec::new();
+    let mut next = vec!["mutants-check".to_owned()];
+    while let Some(j) = next.pop() {
+        let needs = &wf["jobs"][j.as_str()]["needs"];
+        let named: Vec<String> = match needs {
+            Value::Array(a) => a.iter().map(text).collect(),
+            Value::Null => Vec::new(),
+            other => vec![text(other)],
+        };
+        for n in named {
+            if !chain.contains(&n) {
+                chain.push(n.clone());
+                next.push(n);
+            }
+        }
+    }
+    assert!(
+        chain.iter().any(|j| j == "mutants"),
+        "merge_ready: mutants-check does not wait, through `needs`, for the shards (`mutants`): {chain:?}"
+    );
+    chain.push("mutants-fixture".to_owned());
+    for id in &chain {
+        let job_steps = wf["jobs"][id.as_str()]["steps"]
+            .as_array()
+            .unwrap_or_else(|| panic!("merge_ready: {id} has no steps"));
+        for s in job_steps {
+            assert!(
+                s["timeout-minutes"]
+                    .as_u64()
+                    .is_some_and(|m| (1..=SHARD_LIMIT).contains(&m)),
+                "merge_ready: {id}'s step `{}` has no limit of its own of at most {SHARD_LIMIT} minutes \
+                 (timeout-minutes: {})",
+                name(s),
+                s["timeout-minutes"]
+            );
+        }
+    }
+    let report_step = &steps[at];
+    assert!(
+        text(&report_step["id"]) == "report" && report_step.get("if").is_none(),
+        "merge_ready: mutants-check's report is not `report`, run only when every step before it passed (if: {})",
+        report_step["if"]
+    );
+    let stalled = steps[at + 1..]
+        .iter()
+        .find(|s| s["name"].as_str() == Some("A step before the report did not finish"))
+        .expect(
+            "merge_ready: mutants-check has no step saying a step before the report did not finish",
+        );
+    assert_eq!(
+        text(&stalled["if"]),
+        "always() && steps.report.outcome == 'skipped'",
+        "merge_ready: mutants-check's step after a stall does not run when the report is skipped, and only then"
+    );
+    for (key, want) in [
+        ("CHECKOUT", "${{ steps.checkout.outcome }}"),
+        ("CLASSIFY", "${{ steps.changes.outcome }}"),
+    ] {
+        assert_eq!(
+            text(&stalled["env"][key]),
+            want,
+            "merge_ready: mutants-check's step after a stall does not read `{key}`, an earlier step's outcome"
+        );
+    }
+    assert!(
+        steps[..at].iter().any(|s| text(&s["id"]) == "checkout")
+            && steps[..at].iter().any(|s| text(&s["id"]) == "changes"),
+        "merge_ready: mutants-check's step after a stall reads the outcome of a step that is not before the report"
+    );
+    let script = stalled["run"].as_str().expect("run");
+    for (i, (checkout, classify)) in [
+        ("failure", "skipped"),
+        ("cancelled", "skipped"),
+        ("success", "failure"),
+        ("success", "cancelled"),
+    ]
+    .iter()
+    .enumerate()
+    {
+        let got = report(
+            &format!("stall_{i}"),
+            script,
+            &[("CHECKOUT", checkout), ("CLASSIFY", classify)],
+        );
+        let says = format!("The checkout: {checkout}; the classification: {classify}.");
+        assert!(
+            !got.ok
+                && got.summary.contains("a step before the report did not finish")
+                && got.summary.contains(&says)
+                && got.log.contains("::error title=mutants-check::"),
+            "merge_ready: mutants-check {} after the checkout {checkout} and the classification {classify}, \
+             summary `{}`, not failed with an error annotation and `{says}`: {}",
+            if got.ok { "passed" } else { "failed" },
+            got.summary.trim(),
+            got.log
+        );
+    }
+}
+
+#[test]
+fn merge_ready_mutants_check_reports_a_stalled_step() {
+    let yml = workflow("mutants.yml");
+    check_step_limits(&yml);
+    // `needs` as a list is walked as one name is.
+    let listed = yml.replacen("    needs: mutants\n", "    needs: [mutants]\n", 1);
+    assert_ne!(
+        listed, yml,
+        "merge_ready: mutants-verdict's `needs: mutants` is gone"
+    );
+    check_step_limits(&listed);
+}
+
+mod stall_shard_step {
+    use super::*;
+    negative_control!(
+        merge_ready_mutants_check_reports_a_stalled_step,
+        "a shard's PyYAML install with no limit of its own, so a stall holds the verdict, and mutants-check, for hours",
+        expected = "mutants's step `Install PyYAML` has no limit of its own of at most 300 minutes",
+        check_step_limits(&edited(
+            "mutants.yml",
+            "        timeout-minutes: 5\n        run: python3 -m pip install pyyaml\n",
+            "        run: python3 -m pip install pyyaml\n"
+        ))
+    );
+}
+
+mod stall_shard_step_too_long {
+    use super::*;
+    negative_control!(
+        merge_ready_mutants_check_reports_a_stalled_step,
+        "a shard's disk freeing limited one minute past the shards' 300",
+        expected = "step `Free runner disk` has no limit of its own of at most 300 minutes (timeout-minutes: 301)",
+        check_step_limits(&edited(
+            "mutants.yml",
+            "        timeout-minutes: 20\n",
+            "        timeout-minutes: 301\n"
+        ))
+    );
+}
+
+mod stall_shard_step_zero {
+    use super::*;
+    negative_control!(
+        merge_ready_mutants_check_reports_a_stalled_step,
+        "a shard's Mesa install limited to no minutes at all",
+        expected = "mutants's step `Install Mesa (lavapipe)` has no limit of its own of at most 300 minutes \
+                    (timeout-minutes: 0)",
+        check_step_limits(&edited(
+            "mutants.yml",
+            "        timeout-minutes: 5\n        run: sudo apt-get update",
+            "        timeout-minutes: 0\n        run: sudo apt-get update"
+        ))
+    );
+}
+
+mod stall_verdict_step {
+    use super::*;
+    negative_control!(
+        merge_ready_mutants_check_reports_a_stalled_step,
+        "mutants-verdict's check over every shard with no limit of its own",
+        expected = "mutants-verdict's step `cargo xtask mutants-check over every shard (R-202, R-302)` has no limit",
+        check_step_limits(&edited(
+            "mutants.yml",
+            "        id: verdict\n        timeout-minutes: 5\n",
+            "        id: verdict\n"
+        ))
+    );
+}
+
+mod stall_fixture_step {
+    use super::*;
+    negative_control!(
+        merge_ready_mutants_check_reports_a_stalled_step,
+        "mutants-fixture's caps run with no limit of its own",
+        expected =
+            "mutants-fixture's step `The caps fire on their fixture (REQ-VAL-179)` has no limit",
+        check_step_limits(&edited(
+            "mutants.yml",
+            "        timeout-minutes: 5\n        run: |\n          fixture=fixtures/mutants/caps\n",
+            "        run: |\n          fixture=fixtures/mutants/caps\n"
+        ))
+    );
+}
+
+mod stall_shards_not_awaited {
+    use super::*;
+    negative_control!(
+        merge_ready_mutants_check_reports_a_stalled_step,
+        "mutants-verdict waiting for another job, so the walk through `needs` never reaches the shards",
+        expected = "mutants-check does not wait, through `needs`, for the shards",
+        check_step_limits(&edited(
+            "mutants.yml",
+            "    needs: mutants\n",
+            "    needs: [merge-ready-off]\n"
+        ))
+    );
+}
+
+negative_control!(
+    merge_ready_mutants_check_reports_a_stalled_step,
+    "mutants-check's checkout with no limit of its own, so a stall runs to the job's 355 minutes",
+    expected = "mutants-check's step `actions/checkout@v4` has no limit of its own",
+    check_step_limits(&edited(
+        "mutants.yml",
+        "        id: checkout\n        timeout-minutes: 10\n",
+        "        id: checkout\n"
+    ))
+);
+
+mod stall_limit_too_long {
+    use super::*;
+    negative_control!(
+        merge_ready_mutants_check_reports_a_stalled_step,
+        "mutants-check's classification limited one minute past the bound",
+        expected = "mutants-check's step `scripts/ci_changes.sh detect` has no limit of its own of at most 10 minutes",
+        check_step_limits(&edited(
+            "mutants.yml",
+            "merge-ready'\n        timeout-minutes: 5\n",
+            "merge-ready'\n        timeout-minutes: 11\n"
+        ))
+    );
+}
+
+mod stall_fixture_cache {
+    use super::*;
+    negative_control!(
+        merge_ready_mutants_check_reports_a_stalled_step,
+        "mutants-fixture's cargo registry restore with no limit of its own",
+        expected = "mutants-fixture's step `Swatinem/rust-cache@v2` has no limit of its own",
+        check_step_limits(&edited(
+            "mutants.yml",
+            "        if: steps.changes.outputs.tier != 'docs'\n        timeout-minutes: 5\n",
+            "        if: steps.changes.outputs.tier != 'docs'\n"
+        ))
+    );
+}
+
+mod stall_verdict_checkout {
+    use super::*;
+    negative_control!(
+        merge_ready_mutants_check_reports_a_stalled_step,
+        "mutants-verdict's checkout with no limit of its own",
+        expected = "mutants-verdict's step `actions/checkout@v4` has no limit of its own",
+        check_step_limits(&edited(
+            "mutants.yml",
+            "      contents: read\n    steps:\n      - uses: actions/checkout@v4\n        timeout-minutes: 10\n",
+            "      contents: read\n    steps:\n      - uses: actions/checkout@v4\n"
+        ))
+    );
+}
+
+mod stall_shard_checkout {
+    use super::*;
+    negative_control!(
+        merge_ready_mutants_check_reports_a_stalled_step,
+        "a shard's checkout with no limit of its own, so a stall holds the verdict, and mutants-check, for hours",
+        expected = "mutants's step `actions/checkout@v4` has no limit of its own",
+        check_step_limits(&edited(
+            "mutants.yml",
+            "      - uses: actions/checkout@v4\n        timeout-minutes: 10\n        with:\n          fetch-depth: 0\n",
+            "      - uses: actions/checkout@v4\n        with:\n          fetch-depth: 0\n"
+        ))
+    );
+}
+
+mod stall_shard_rust_gpu {
+    use super::*;
+    negative_control!(
+        merge_ready_mutants_check_reports_a_stalled_step,
+        "a shard's rust-gpu restore with no limit of its own",
+        expected = "mutants's step `actions/cache/restore@v4` has no limit of its own",
+        check_step_limits(&edited(
+            "mutants.yml",
+            "steps.toolchain.outputs.channel }}\n        timeout-minutes: 5\n",
+            "steps.toolchain.outputs.channel }}\n"
+        ))
+    );
+}
+
+mod stall_unsaid {
+    use super::*;
+    negative_control!(
+        merge_ready_mutants_check_reports_a_stalled_step,
+        "no step after the report, so a stalled checkout fails mutants-check with nothing saying why",
+        expected = "mutants-check has no step saying a step before the report did not finish",
+        check_step_limits(&edited(
+            "mutants.yml",
+            "      - name: A step before the report did not finish\n",
+            "      - name: After the report\n"
+        ))
+    );
+}
+
+mod stall_step_skipped {
+    use super::*;
+    negative_control!(
+        merge_ready_mutants_check_reports_a_stalled_step,
+        "the step after a stall run only on success, so it is skipped exactly when it is needed",
+        expected = "does not run when the report is skipped",
+        check_step_limits(&edited(
+            "mutants.yml",
+            "        if: always() && steps.report.outcome == 'skipped'\n",
+            "        if: steps.report.outcome == 'skipped'\n"
+        ))
+    );
+}
+
+mod stall_unread {
+    use super::*;
+    negative_control!(
+        merge_ready_mutants_check_reports_a_stalled_step,
+        "the step after a stall not reading the checkout's outcome",
+        expected = "does not read `CHECKOUT`",
+        check_step_limits(&edited(
+            "mutants.yml",
+            "          CHECKOUT: ${{ steps.checkout.outcome }}\n",
+            ""
+        ))
+    );
+}
+
+mod stall_passed {
+    use super::*;
+    negative_control!(
+        merge_ready_mutants_check_reports_a_stalled_step,
+        "the step after a stall passing, so the job's failure carries no error annotation",
+        expected = "after the checkout failure and the classification skipped",
+        check_step_limits(&edited(
+            "mutants.yml",
+            "          echo \"::error title=mutants-check::$title. $why\"\n          exit 1\n",
+            "          exit 0\n"
+        ))
+    );
+}
+
+mod stall_report_guarded {
+    use super::*;
+    negative_control!(
+        merge_ready_mutants_check_reports_a_stalled_step,
+        "the report run always, so the step after a stall never runs",
+        expected = "run only when every step before it passed",
+        check_step_limits(&edited(
+            "mutants.yml",
+            "        id: report\n",
+            "        id: report\n        if: always()\n"
         ))
     );
 }
