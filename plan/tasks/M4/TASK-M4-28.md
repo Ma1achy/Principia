@@ -2,7 +2,7 @@
 
 - **Milestone:** M4
 - **Closes:** REQ-VAL-348
-- **Depends on:** TASK-M4-05, TASK-M4-02, TASK-M4-18, TASK-M4-27
+- **Depends on:** TASK-M4-05, TASK-M4-02, TASK-M4-03, TASK-M4-18, TASK-M4-27
 - **Needs (earlier milestones):** REQ-INT-026, REQ-EVT-003, REQ-EVT-005, REQ-VAL-026
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** PIT-9, PIT-10
@@ -34,8 +34,13 @@ alone does not answer the owner's question; the forks on identical inputs do (No
 - Two arms, each on all four backends (parity contract §3). **Decoded:** the march from the same chart uniforms, each backend
   decoding its own start state, since TASK-M4-05's march takes no IC buffer. **Shared:** one decoded state's bits as every
   backend's start, stepped by TASK-M4-02's `gpu_step_once`, iterated by this task, and on CPU f32 by the wrapper at f32.
-- The IC set is `fixtures/gates/parity_fixtures` (TASK-M4-18), with its non-chaotic and chaotic marking, fixed before the first
-  run. The ICs are the same bits on all four.
+- The IC set, fixed before the first run and the same bits on all four: `fixtures/gates/parity_fixtures` (TASK-M4-18), with its
+  non-chaotic and chaotic marking, and a near-decision stratum, `fixtures/gates/cross_backend_near_decision`, of ICs chosen to
+  straddle collision, escape and `N_sub` decisions and a uniform grid across a basin boundary. The header states each
+  stratum's N, so 0 of N carries its resolution.
+- A fixed-input arm: `fixtures/gates/tier_l_boundary_states` (TASK-M4-03) and TASK-M4-02's `synth.rs` generators, on all four
+  backends, reported per pair as a measurement, so a comparison exists where chaos can't reach it. TASK-M4-03 names `macos-15`
+  and lavapipe; this arm is what brings REQ-INT-057's decisions to NVIDIA at identical inputs before TASK-M8-41.
 - One row per trajectory: the outcome label, `state`, the collision decision and pair, the escape decision and escaper, the
   terminal step and the total substeps, with the decoded start state's bits, so a disagreement already present at `t = 0` is
   counted apart; a digest of each step's branch words (`N_sub`, `state`, the collision and escape decisions) and checkpoint
@@ -51,8 +56,7 @@ alone does not answer the owner's question; the forks on identical inputs do (No
 
 ## Acceptance tests
 - `cargo test -p validation cross_backend_march` (no GPU) — over synthetic records: a record against itself reads 0, one flipped
-  label reads 1 of N, one changed step count reads 1 of N under that result alone, and the chaotic and non-chaotic strata
-  sum to the whole; the control is a compare that ignores step counts, which the changed step count rejects (REQ-VAL-348).
+  label reads 1 of N, one changed step count reads 1 of N under that result alone, and the strata sum to the whole; the control is a compare that ignores step counts, which the changed step count rejects (REQ-VAL-348).
 - `cargo test -p validation cross_backend_replay` (no GPU) — over synthetic digests, the first differing step is found at its
   step, and the state handed to `--replay` is the same bits for every backend; the control is a digest that drops `N_sub`, which
   a planted `N_sub` difference rejects (REQ-VAL-348).
@@ -78,6 +82,10 @@ alone does not answer the owner's question; the forks on identical inputs do (No
   #390, under the same hardware label as that card's other runs. It is not a CI job (R-186). Nothing waits on it, and the task
   closes without it: M4's gate report lists the row as "not run" until it is posted, though the owner's question rests on that
   row (`plan/MILESTONES.md` § M4). It doesn't stand in for R-58's parity run, REQ-VAL-099, which gates Paper 2.
+- **Why generic ICs are not enough.** A 1-ulp difference flips a branch only within about an ulp of its threshold, so a small
+  non-chaotic set reads 0 of N with a defect present (order of magnitude, assuming 10³ crossings per trajectory: 2.4e-4 per
+  trajectory), and the chaotic stratum reads high with none. Hence the near-decision stratum and the fixed-input arm, which add
+  to R-686's "same IC set" and change none of it.
 - **Why TASK-M4-18 is a dependency:** it owns the fixture set and the label-flip report on Metal and lavapipe. This task adds the
   other two backends, the per-pair table and the per-trajectory results, and does not change that report.
 - Applied per R-369 (R-686): its own task, not a part of the fix task, TASK-M6-53, since the mock's fix needs no march.
