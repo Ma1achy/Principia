@@ -541,6 +541,13 @@ dpi renders.
   0.4911357 fits α and the circle; Table IV row 1 prints α = π/2 at (0, √3/2), where the angle PAB is π/3. Table IV's
   points lie on the circle (x + 0.5)² + y² = 1 to about 10⁻⁶ (`table4_consistency.txt`), and α equals the angle PAB to
   about 10⁻⁷.
+- *Table IV re-read from the page, 3 Nov 2026 (the owner's spot-check, item 2).* p. 360, read again from the page
+  image of `docs/incoming/_local/external_sources_2026-10-28/springer/Tanikawa_Umehara_Abe_1995_Collision_orbits_I.pdf`
+  (PDF page 26): `tanikawa_umehara_abe_1995/table4_reconciled.csv` matches it in all 80 cells (20 rows of n_min, x, y,
+  α). The two misprints stay in the transcription as printed, not corrected: row 9's x is printed 0.49111357, and
+  0.4911357 fits (circle residual −1.9×10⁻⁶ and angle PAB 0.13324041 against the printed α 0.1332404, where the printed
+  x gives −4.6×10⁻⁵ and 0.13324335); row 1's α is printed 1.5707963 (π/2), and the rule, α the angle PAB as rows 2 to 20
+  have it, gives π/3 (1.0471976) at (0, √3/2).
 - **How Table IV was made**, p. 353, quoted: "We have obtained the coordinates of these points by interpolation.
   That is, we obtained binary collision points of types 1 and 3 inside and outside region D and interpolated the
   crossing points of the expected collision curves of types 1 and 3 with Γ₃." α's accuracy is therefore the
