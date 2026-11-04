@@ -24,10 +24,10 @@ The replication suite's targets TM-1 run as engine tests (`principia_dd_replicat
 
 ## Deliverables
 - Tables 1, 2 and 4 transcribed twice once the paper is in the repo (RQ-586).
-- The D11 mirror remap as a tested function; `crates/validation/src/gates/triple_collision.rs`; the calibration proposal.
+- A tested check that the table's points are in Anosova's region, no mirror of positions (R-702: Tanikawa & Mikkola 2021, p. 2, eq. (2); *was:* "The D11 mirror remap as a tested function"); `crates/validation/src/gates/triple_collision.rs`; the calibration proposal.
 
 ## Acceptance tests
-- `cargo xtask gate replication --target TM-1` — Tables 1, 2 and 4 transcribed twice once the paper is in the repo (rule 1, 2); the D11 remap a tested function; the measured d_min slope per point within REQ-VAL-241; control: an approach line through a point off the table must not converge; the outcome recorded with its tier: PASS where the comparison above holds, otherwise EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED, never a merge condition (R-649); the control still has to fire (REQ-VAL-240).
+- `cargo xtask gate replication --target TM-1` — Tables 1, 2 and 4 transcribed twice once the paper is in the repo (rule 1, 2); no remap: the frame check a tested function (R-702; *was:* "the D11 remap a tested function"); the measured d_min slope per point within REQ-VAL-241; control: an approach line through a point off the table must not converge; the outcome recorded with its tier: PASS where the comparison above holds, otherwise EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED, never a merge condition (R-649); the control still has to fire (REQ-VAL-240).
 - `cargo xtask gate replication --target TM-1 --propose` — the proposal measures what sets the tolerance and states it, with its evidence; reviewer-checked, confirmed by the human with the M9 report and recorded in `decisions.md` (REQ-VAL-241).
 - `git diff --no-index` of each fixture table's two transcriptions — empty, or each difference settled against the page and recorded beside the fixture, before the fixture is committed (R-594 item 4).
 

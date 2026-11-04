@@ -3847,3 +3847,27 @@
   requirements: [REQ-VAL-344, REQ-VAL-345, REQ-VAL-346]  # R-679 (3 Nov 2026), RQ-674
   reviewers: [code, qa, physics]
   pitfalls: [PIT-3]
+- id: TASK-M9-42
+  milestone: M9
+  title: "GG-1: the eight neighbours of (3, 43), a peek (R-701)"
+  depends_on: []
+  needs: []
+  requirements: [REQ-VAL-350]
+  reviewers: [code, qa, physics]
+  pitfalls: []
+- id: TASK-M9-43
+  milestone: M9
+  title: "Read Paper I's normalisation for Tanikawa 2000's time columns (R-702)"
+  depends_on: []
+  needs: []
+  requirements: [REQ-VAL-351]
+  reviewers: [code, qa, physics]
+  pitfalls: []
+- id: TASK-M9-44
+  milestone: M9
+  title: "LL-6: all 316 free-fall orbits against the authors' table, a peek target (R-704)"
+  depends_on: [TASK-M9-06]
+  needs: []
+  requirements: [REQ-VAL-352, REQ-VAL-353]
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-3]

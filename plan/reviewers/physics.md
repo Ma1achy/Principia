@@ -325,7 +325,7 @@ The M9 targets scored by a numerical comparison (`verify.method: numerical gate`
 (never § 1's gate rule):
 
 <!-- list:m9-targets -->
-*62 requirements, generated from `plan/requirements.yaml` — do not edit by hand.*
+*63 requirements, generated from `plan/requirements.yaml` — do not edit by hand.*
 
 **M9**
 - [ ] REQ-VAL-042 — each orbit returns to rest in the same configuration after one period; order reported
@@ -390,4 +390,5 @@ The M9 targets scored by a numerical comparison (`verify.method: numerical gate`
 - [ ] REQ-VAL-330 — the primaries once in the repo (rule 1; RQ-598); their tables transcribed twice; the limits at REQ-VAL-331's level; control: the prograde limit applied to retrograde runs must fail
 - [ ] REQ-VAL-333 — the figure-eight shape-sphere curve against the published one (REQ-VAL-047's verify, split out); outcome PASS, EXPLAINED DIVERGENCE or UNEXPLAINED, never a gate; control: a Lagrange-triangle run's curve must not match
 - [ ] REQ-VAL-335 — each feature of REQ-VAL-127 beside Szebehely & Peters's; outcome PASS, EXPLAINED DIVERGENCE or UNEXPLAINED, never a gate; control: a run from a start perturbed until its escaper changes must disagree
+- [ ] REQ-VAL-352 — cargo xtask gate replication --target LL-6: 316 rows parsed from the committed file; each row's closure at its T on the CPU IC inspector at f64, against REQ-VAL-353; the table against the atlas's pub_* for the rows it holds; recorded as a row of docs/verification/peek_log.md with its outcome (R-649); control: a row with its T perturbed fails closure; the frame conversion a tested function (rule 6)
 <!-- /list:m9-targets -->

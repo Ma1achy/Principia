@@ -158,6 +158,8 @@ family `freefall`) while the paper reports 234, and left the extra 77 unresolved
   website), and for this plan they are closure tests only until their initial conditions are traced to a source the
   authors publish (the website's word page has none). §9 asks how to cite them.
 
+  *4 Nov 2026 (R-704, closing RQ-661):* that table exists: `docs/incoming/2026-10-27_hp_ics_freefall/data/liliao_github/free-fall-3b-pictures.md` gives x, y and T at 10 decimals for all 316, the 82 website-only orbits included. LL-5 stays closure only, as ruled, and a new peek target, LL-6, compares all 316 against it.
+
 ### 2.2 The precision ladder's test 6 counts: corrected
 
 `PL26` §5 test 6 says `atlas-params.json` carries high-precision fields "on 1,260 rows traced to their source paper".
@@ -290,7 +292,7 @@ Merged rows list every source. Where one target arises from several records, it 
 | Id | L | T | Source | Asserted | Ref. data | Chart | Needs | Compare | Status |
 |---|---|---|---|---|---|---|---|---|---|
 | SP-1 = REQ-VAL-034 (+ -127, -132; V-4) | R | A | `R25` tier A "Burrau"; `R25/catalogue.md` §3.1; `VO` §1.5; `P27` V-4; `LR` §14 | Burrau: masses 4 and 5 bind and mass 3 escapes; the close-approach sequence; breakup near t ≈ 59.4. Past f64's ~52 horizon (`VO` §1.5), so structural, never pointwise | Szebehely & Peters 1967 (`R25/papers/`), features not transcribed (REQ-VAL-127 defines them) | BodyPlane Burrau pixel | M3 + outcome classifier; a horizon past 59.4 (R-610 allows 200; the default is 50) | structural + timing window (REQ-VAL-132) | data in repo · ruled, M3 |
-| TM-1 | R | A | `R25` tier A "Triple-collision points"; `R25/catalogue.md` §1.5; `LR` §14 | Binary-collision curves converge on each of the 11 triple-collision points of Table 2; `d_min` scales along Table 4's approach ICs (radii 1e-3 to 1e-5) | Tanikawa & Mikkola 2021, Tables 1, 2, 4 | Anosova entry, after the D11 mirror remap | regularisation | exact (scaling) | blocked: the paper is not in the repo (rule 1) |
+| TM-1 | R | A | `R25` tier A "Triple-collision points"; `R25/catalogue.md` §1.5; `LR` §14 | Binary-collision curves converge on each of the 11 triple-collision points of Table 2; `d_min` scales along Table 4's approach ICs (radii 1e-3 to 1e-5) | Tanikawa & Mikkola 2021, Tables 1, 2, 4 | Anosova entry, no remap: the 2021 paper's eq. (2) is Anosova's region (R-702; *was:* "after the D11 mirror remap") | regularisation | exact (scaling) | blocked: the paper is not in the repo (rule 1) |
 | CH-1 | R | A | `R25` tier A "The Pythagorean family"; `R25/catalogue.md` §3.4 | Newtonian lifetimes and two-body encounter counts for the 16 Pythagorean triangles with hypotenuse < 100 | Chitan, Mylläri & Haque 2022 (`R25/papers/`), not transcribed | Burrau family; MassSimplex points | M3; outcome classifier | per triangle, structural (rule 8: not a converged code) | data in repo · proposed |
 | B-1 (+ `R25` tier A "Burrau Lyapunov time", lifetime) | R | A | `P27` B-1 | The Newtonian lifetime of Burrau: the plot's plateau at log₁₀ T_l ≈ 1.8 (56–71); the paper prints no value | `P27/TARGETS.md` B-1 (a figure reading) | BodyPlane Burrau pixel | outcome classifier | exact to the figure's resolution | data in repo · proposed |
 | B-2 (+ `R25` tier A "Burrau Lyapunov time", τ_L) | R | B | `P27` B-2 | λ₁₀ = 0.101 ± 0.005, τ_L = 4.3 ± 0.2, fitted over all ζ, relativistic included | `P27/TARGETS.md` B-2 | BodyPlane Burrau pixel | FTLE (TASK-M3-14) | distribution (loose) | data in repo · proposed |
@@ -361,6 +363,8 @@ binaries" there. So an uncut difference between the arms is a live possibility h
 *1 Nov 2026 (R-669, RQ-654 (a), (b) the fallback):* BZ-1C's starts reach the f32 GPU kernel as a Path B batch, each f64
 start rounded once to f32, that rounding part of what f32 runs; if a batch of injected starts can't be dispatched, by a
 list-of-starts chart (R-594 item 6), built when BZ-1C is adopted.
+
+*4 Nov 2026 (R-703, closing RQ-652 and RQ-653):* the two arms are read on both criteria, BPZ's and R-29's, so their own difference is measured on the same runs; the records are read on BPZ's. Any energy cut is shown with both energies, regularised and Cartesian, each with its removed count, beside the uncut ensemble. Whether an escape stop is an "event" for R-566 stays with the definitions below, if BZ-1C is adopted.
 
 *What BZ-1C compares, named; what is not settled goes to a requirement or the queue, and nothing is invented here:*
 
@@ -485,7 +489,7 @@ asks a task to start early; it says what can run on the day a milestone's gate p
 - Fetch, or decide not to: Tanikawa & Mikkola 2021 (TM-1), Hristov et al. 2024's free-fall database (FF-H), Li & Liao's
   website pages (LL-5), Standish 1970 and Yasko & Orlov 2015 (LL-3) (§9).
 - Write the remaps as tested functions (rule 6): Agekyan–Anosova's τ per row and G = 6.67×10⁻⁸; Lehto's lens; Tanikawa's
-  D11 mirror; the book's ×2; Hudomal's two labellings; Breen's frame.
+  frames, as named in rule 6 of § 8 (R-702; *was:* "D11 mirror"); the book's ×2; Hudomal's two labellings; Breen's frame.
 - Run the two no-integration controls, Q-2's Theory row and Q-4 (DRAFT-VAL-06).
 - Port the §6 drafts through `plan/tools/reqio.py`, if the owner rules so.
 
@@ -783,7 +787,7 @@ The 25 Oct instruction's rules 1–8, "the ones that worked for Anosova, RQ-566 
    theirs, but it must be shown, not assumed. Agekyan & Anosova lost 21 of their 100 runs to energy error, and they
    say so themselves.
 6. **Remap before comparing.** Coordinate conventions differ between papers. Agekyan–Anosova put two bodies at
-   (∓½, 0). Lehto et al. use (0, 0) and (1, 0). Tanikawa uses the mirror labelling D11. Each map is converted into one of
+   (∓½, 0). Lehto et al. use (0, 0) and (1, 0). Tanikawa, Umehara & Abe 1995, Tanikawa & Mikkola 2015 and 2021 and Tanikawa, Saito & Mikkola 2019 use Agekyan–Anosova's own region, (x + 0.5)²; Tanikawa & Mikkola 2008, p. 3, prints (x − 0.5)², recorded as printed (R-702; *was:* "Tanikawa uses the mirror labelling D11."). Each map is converted into one of
    our charts, and the conversion is a tested function, not a figure overlay.
 7. **State the escape criterion.** Published lifetimes depend on the criterion used (50a or 100a plus hyperbolic;
    r > 10, receding, E > 0; Fewbody's tidal tolerance). Outcome identity is robust once an escape is real; a lifetime is

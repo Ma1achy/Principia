@@ -24437,6 +24437,7 @@ R-573 is in the "one_off" group of `plan/rule_groups.yaml`.
 
 ## R-574 — Honesty as a measurement: the click inspector runs the clicked point four ways, f32, f64 and each nudged by one ulp, and marks "faithful until" at a shape-sphere chord of 10⁻³ and "parted at" at 0.1, both measured, shown and editable; the trust line shows in the trajectory inspector panel when a trajectory is clicked; nothing changes in the atlas; the README's Honesty line is reworded
 *Refined by R-621 (the header strip states `T` and the f32 trust time measured for the current view).*
+*Refined by R-702 (4 Nov 2026: a dated line says the marks' values are chosen by analogy with Boekholt & Portegies Zwart's, not transferred; the marks are unchanged).*
 *Still in force: all of it; nothing changes in the atlas's colours, and the header strip states `T` and the f32 trust
 time measured for the current view (R-621).*
 *21 Oct 2026 · applied in `docs/design/principia_honesty_precision.md` (new), `docs/design/principia_trajectory_viewing.md`
@@ -27318,6 +27319,8 @@ R-631 is in the "process" group of `plan/rule_groups.yaml`, with R-630.
 Changes REQ-VAL-042 (note) and REQ-VAL-227 (verify, rulings, note).
 
 ## R-632 — On the f32 GPU path the linearised decoder's floor is the measured value, quoted with `|x₀|`, measured by a gate and taken as a calibration; the ensemble ratio censors an unparted start at `T` and compares the median of measured over predicted with 1; column 8 is never asserted; the Cartesian drift latches take `dE_reg`'s encoding; the plan's three corrections are applied *(closes RQ-570, RQ-575, RQ-578, RQ-581, RQ-588, RQ-589 and RQ-590)*
+*Refined by R-703 (4 Nov 2026: a start with neither pair parted by `T` is called "unresolved", counted apart from the one-sided bounds, and stays in the median).*
+*Still in force: all of it, with "a bound" read as R-703 reads it for a start with neither pair parted.*
 *27 Oct 2026 · the human's ruling batch of that evening; applied in `docs/design/principia_deep_zoom.md` § 2 and § 4
 (iv), `docs/contracts/principia_scheduler_contract.md` Part 3 ("The absolute floor is emergent") and Part 4,
 `docs/design/principia_dd_refinement_policy.md` § 0 item 2, `docs/design/principia_honesty_precision.md` § 6
@@ -28474,6 +28477,7 @@ finding F1).*
 or CPU FTLE run beside it as information).*
 *Refined by R-671 (2 Nov 2026; RQ-669 (ii): in a task with no GPU run, the f64 statistic is recorded at (b), its
 instrument stated, and the (a) part stays "not scored yet: needs a GPU run"; Q-4's no-integration part has no tier).*
+*Refined by R-703 (4 Nov 2026: a statistical target scored on tier (a) alone is labelled "f32; f64 agreement not yet measured" until BZ-1C).*
 *Still in force: all of it, with the owner's two clarifications of 29 Oct 2026 recorded below and the owner's confirmation of
 30 Oct 2026 above; R-650 says where and when each external target is scored, and R-653 how the five map targets and B-2
 square with the tier rule; R-661 reads "expected to agree statistically" as a hypothesis to measure; R-671 how a task with
@@ -30350,3 +30354,119 @@ The owner's words, 4 Nov 2026, verbatim:
 *What it amends:* nothing. It moves **RQ-631** to the archive.
 
 R-700 is in the "physics" group of `plan/rule_groups.yaml`, with R-655.
+
+## R-701 — GG-1 and BR-1: the eight neighbours of (3, 43) are run, ours stays labelled ours meanwhile, `p_max` is 4, no ε = 10⁻⁷⁰ cost is quoted, the authors' trajectories stay local, both BR-1 readings stay reported, and the open questions go to the authors in the owner's pending emails *(closes RQ-612, RQ-613, RQ-615 and RQ-616)*
+*4 Nov 2026 · the owner's batch of that day; applied in `docs/design/principia_dd_replication.md` § 5.10 (a dated note), `docs/incoming/2026-10-28_rq598_data/QUESTIONS_for_authors.md` (new), that directory's README (a dated line), `docs/archive/review_queue/M0.md` (four entries moved), `REVIEW_QUEUE.md`, REQ-VAL-350 (reqio, new), TASK-M9-42 (new), TASK-M9-22 and TASK-M9-37 (notes), `plan/tools/milestones.py`, `plan/tasks.yaml` and `plan/rule_groups.yaml`*
+
+The owner's words, 4 Nov 2026, verbatim:
+
+> RQ-612: (a) run the eight neighbours, plus (c) add the questions to the pending Boekholt email. (b) meanwhile.
+
+> RQ-613: (a) p_max 4, (c) ask in the pending emails, (e) quote no 1e-70 cost.
+
+> RQ-615: (a) local only, plus (c) ask Breen when he replies.
+
+> RQ-616: (d) ask Breen; keep reporting both.
+
+*Context.* All four came from the Brutus pilot (`docs/incoming/2026-10-28_rq598_data/brutus_run_here/REPORT.md`), and each option is its entry's.
+
+*What it decides:*
+
+- **RQ-612: (a), (c), and (b) meanwhile.** All eight neighbours of (3, 43) are run at ε = 10⁻⁶ with the escape radius and cap in Heggie–Mathieu units, before any definition ruling: REQ-VAL-350, TASK-M9-42, a peek. The retrace rule, the grid convention and whether Fig. 1's times are in HM units go to Boekholt. Ours stays labelled ours, and the remaining disagreement a finding, meanwhile.
+- **RQ-613: (a), (c), (e).** `p_max` = 4, the repo's sample inputs, with our own driver setting `L_w` explicitly. Which `p_max` the runs used, and whether their `main.cpp` applied `L_w`, go to Boekholt and Breen. No ε = 10⁻⁷⁰ cost is quoted. Option (d) is not taken, and R-669's "RQ-613 probe as a peek: fine" is not withdrawn: the probe may still run as a peek, and whatever it measures, no cost is quoted from it until the authors answer.
+- **RQ-615: (a), (c).** The authors' trajectories stay local, the repo says where to fetch them, and nothing derived is committed, as R-641 and R-642 already have it. A licence or written permission goes to Breen when he replies.
+- **RQ-616: (d).** The < 0.1 threshold's quantity goes to Breen, and both (a) and (b), √ of the time-mean of δ² and the time-mean of δ², stay reported side by side. No definition is ruled yet, so no requirement is added. BR-1's converged-fraction comparison reports both.
+
+*Applied per R-369:*
+
+- **The questions are collected** in `docs/incoming/2026-10-28_rq598_data/QUESTIONS_for_authors.md`, by author. The owner sends the emails; no agent does, and the file holds no address.
+- **`p_max` = 4** is a setting of the Brutus runs, ruled here, not a Principia value, so it is recorded in § 5.10 and TASK-M9-22 and takes no calibration requirement.
+- **A gap, queued.** RQ-615's still-open question, whether runs from the authors' initial conditions stand in for R-638's seeded draw, is not in the owner's line: option (a) is about the files. R-638 stands, and the seeded draw is still not run. The question is filed as RQ-693, so the closed entry takes it nowhere.
+
+*What it amends:* nothing. It closes **RQ-612**, **RQ-613**, **RQ-615** and **RQ-616**.
+
+R-701 is in the "design" group of `plan/rule_groups.yaml`, with R-642.
+
+Adds REQ-VAL-350.
+
+## R-702 — The library's open readings: Paper I's normalisation is read for Tanikawa 2000's times; Broucke 2006 stays context; Martynova & Orlov's fractions are compared with the 56 stated; the two unverified citations drop; the trust line's marks gain a dated "chosen by analogy" line; Tanikawa's free-fall papers are named by the frame each uses, no mirror for the ones read; AN-2 is shape-only *(closes RQ-640, RQ-641, RQ-642, RQ-645, RQ-648, RQ-650 and RQ-651; refines R-574)*
+*4 Nov 2026 · the owner's batch of that day; applied in `docs/design/principia_dd_replication.md` (TM-1's and TS-1's rows and rule 6 of § 8.1, corrected with a *Was*), `docs/design/principia_honesty_precision.md` § 3.2 (a dated line), `docs/incoming/2026-10-25_replication/catalogue.md` line 13 and `docs/incoming/2026-10-27_validation_plan/PLAN.md` (TM-1's row, TS-1's row and § 8, corrected with a *Was*), `docs/incoming/2026-10-29_research_batches/README.md`, `docs/incoming/2026-10-28_external_sources/README.md` and `docs/incoming/2026-10-31_fetch_list/README.md` (dated notes), R-574's forward lines, `docs/archive/review_queue/M0.md` (seven entries moved), `REVIEW_QUEUE.md`, REQ-VAL-351 (reqio, new), TASK-M9-43 (new), TASK-M9-09 and TASK-M9-28, `plan/tools/milestones.py`, `plan/tasks.yaml` and `plan/rule_groups.yaml`*
+
+The owner's words, 4 Nov 2026, verbatim:
+
+> RQ-640: (a) Paper I (Tanikawa, Umehara & Abe 1995) is in the library; read its normalisation.
+
+> RQ-641: (b). RQ-642: (a). RQ-645: (b) drop both, arXiv stands. RQ-648: (b) add the dated "chosen by analogy" line.
+
+> RQ-650: (a). RQ-651: (b) shape-only. RQ-652: (c) both criteria. RQ-653: (c) both cuts with counts. RQ-655: (a) "unresolved", counted apart.
+
+*(The last line's RQ-652, RQ-653 and RQ-655 are R-703's.)*
+
+*What it decides:*
+
+- **RQ-640 (a).** Tanikawa, Umehara & Abe 1995 is held locally, and its normalisation is read, and whether Tanikawa 2000 keeps it: REQ-VAL-351, TASK-M9-43, a reading task. Under R-680 the page is re-read before any time column becomes a target. T2000-1 compares positions only meanwhile.
+- **RQ-641 (b).** Broucke, Elipe & Riaguas 2006 stays context, and no target is proposed from it. The fetch of its refs. [7] and [10] is not asked for.
+- **RQ-642 (a).** MO14-1 compares fractions, 26/306,346 against ours over 306,402, the 56 recorded as a stated difference beside the score.
+- **RQ-645 (b).** "Barrio et al. 2009, PRE 79, 036208" and "Tanikawa & Mikkola 2008, PASJ 60, 883" drop off the list. arXiv:0802.2465 stands for Tanikawa & Mikkola 2008.
+- **RQ-648 (b).** A dated line in `principia_honesty_precision.md` § 3.2 says the marks' values are chosen by analogy with Boekholt & Portegies Zwart's, not transferred. The marks, 10⁻³ and 0.1, are unchanged, measured, shown and editable; § 5's quoted words stay as the owner wrote them.
+- **RQ-650 (a).** The porter read Tanikawa & Mikkola 2021's set-up section on the page, as R-680 asks. CeMDA 133:52, p. 2: "We put bodies m₂ and m₃, respectively, at A(−0.5, 0) and B(0.5, 0) in the (x, y) plane, and put body m₁ at any place P in the region", eq. (2) D = {(x, y) : (x + 0.5)² + y² ≤ 1, x ≥ 0, y ≥ 0}, and "We assume m₁ = m₂ = m₃ = 1". So the 2021 paper, TM-1's source, uses Agekyan–Anosova's region itself, and no mirror of positions. The repo's sentence is corrected to name the frames: Tanikawa, Umehara & Abe 1995, Tanikawa & Mikkola 2015, Tanikawa, Saito & Mikkola 2019 and Tanikawa & Mikkola 2021 print (x + 0.5)²; Tanikawa & Mikkola 2008, p. 3, prints (x − 0.5)², recorded as printed. TM-1's chart cell loses "after the D11 mirror remap", which answers `docs/incoming/2026-10-29_research_batches/README.md` § 10.4.
+- **RQ-651 (b).** AN-2 is shape-only: the normalised distribution is compared up to a free time scale, so Anosova 1986's τ is not needed. AN-2 stays a proposal, as it was.
+
+*Applied per R-369:*
+
+- **What a closed RQ-650 leaves.** Whether TM2008's (x − 0.5)² is a typo or the frame its runs used is not decided by a reading of the 2021 paper. TS-1 reproduces 2008's maps as well as 2015's, so its "D11 mirror remap" stays conditional: no remap for 2015's maps, and for 2008's the figures decide, read beside the unremapped map by the physics reviewer. R-649's rule holds: nothing is tuned to a figure.
+- **The Tanikawa & Mikkola 2021 PDF is held locally,** cited at `docs/incoming/2026-10-29_research_batches/README.md`'s `sources.tsv`; only the set-up quotes above enter the repo.
+
+*What it refines:* **R-574**, the citation of its marks, by the dated line. It closes **RQ-640**, **RQ-641**, **RQ-642**, **RQ-645**, **RQ-648**, **RQ-650** and **RQ-651**.
+
+R-702 is in the "design" group of `plan/rule_groups.yaml`.
+
+Adds REQ-VAL-351.
+
+## R-703 — A statistical target scored on tier (a) alone is labelled "f32; f64 agreement not yet measured" until BZ-1C; BZ-1C's third side uses both escape criteria, and any energy cut is shown both ways with its counts; a start with neither pair parted reads "unresolved", counted apart *(closes RQ-649, RQ-652, RQ-653 and RQ-655; refines R-632 and R-649)*
+*4 Nov 2026 · the owner's batch of that day; applied in `docs/design/principia_dd_replication.md` § 12.2 (a dated paragraph), `docs/design/principia_honesty_precision.md` § 6 (a dated line), `docs/incoming/2026-10-27_validation_plan/PLAN.md` (a dated note under BZ-1C), the forward lines of R-632 and R-649, `docs/archive/review_queue/M0.md` (four entries moved), `REVIEW_QUEUE.md`, REQ-VAL-199 and REQ-VAL-340 (reqio), TASK-M8-76 and TASK-M9-37 (notes) and `plan/rule_groups.yaml`*
+
+The owner's words, 4 Nov 2026, verbatim:
+
+> RQ-649: (a) score tier (a), labelled "f32; f64 agreement not yet measured", until BZ-1C.
+
+> RQ-650: (a). RQ-651: (b) shape-only. RQ-652: (c) both criteria. RQ-653: (c) both cuts with counts. RQ-655: (a) "unresolved", counted apart.
+
+*(The first line is RQ-649's; the second's RQ-650 and RQ-651 are R-702's.)*
+
+*What it decides:*
+
+- **RQ-649 (a).** A statistical target is scored on tier (a) as ruled, each result labelled, in the owner's words, "f32; f64 agreement not yet measured", until BZ-1C reports. The tiers do not change. Option (b)'s f64 sample is not taken here; R-671's (b) record, in a task with no GPU run, stands.
+- **RQ-652 (c).** BZ-1C's two arms are read on both criteria, BPZ's and R-29's, so the criteria's own difference is measured on the same runs; the records are read on BPZ's, the only one they allow. A difference between criteria never reads as a difference between precisions.
+- **RQ-653 (c).** Any energy cut in BZ-1C is shown with both energies, regularised and Cartesian, each with its removed count, beside the uncut ensemble (R-661).
+- **RQ-655 (a).** A start where neither pair has parted by `T` is called "unresolved" in the report, counted apart from the one-sided bounds, and stays in the median over 256. The rule, the statistic and the gate do not change.
+
+*Applied per R-369:* RQ-653's option (a) carried an open point, whether R-566's "event" reaches an escape stop, and a collision stop has no Cartesian reading. Option (c) shows the Cartesian cut, so the point stays in it: BZ-1C is a proposal, and PLAN.md already makes its definitions a definition requirement (R-72) if it is adopted, so this goes there, each count saying which stops it could read. Nothing is built.
+
+*What it refines:* **R-649**, what a tier (a) statistical result says while f32's statistics are unmeasured; **R-632**, "a bound" for a start with neither pair parted. It closes **RQ-649**, **RQ-652**, **RQ-653** and **RQ-655**.
+
+R-703 is in the "design" group of `plan/rule_groups.yaml`, with R-649.
+
+Changes REQ-VAL-199 (statement, rulings, source, note) and REQ-VAL-340 (verify, rulings, source, note).
+
+## R-704 — PLAN.md § 2.1 gains a dated note pointing at the authors' GitHub table, LL-5 staying closure only, and a new peek target, LL-6, compares all 316 orbits with that table *(closes RQ-661)*
+*4 Nov 2026 · the owner's batch of that day; applied in `docs/incoming/2026-10-27_validation_plan/PLAN.md` § 2.1 (a dated note), `docs/design/principia_dd_replication.md` § 5.3 and § 12.2 (LL-6's rows), `docs/archive/review_queue/M0.md` (RQ-661), `REVIEW_QUEUE.md`, REQ-VAL-352 and REQ-VAL-353 (reqio, new), TASK-M9-44 (new), `plan/tasks.yaml` and `plan/rule_groups.yaml`*
+
+The owner's words, 4 Nov 2026, verbatim:
+
+> RQ-661: (a), and (b) yes: add the 316-orbit comparison as a peek target.
+
+*Context.* PLAN.md § 2.1 says the 82 website-only free-fall orbits have no traced initial conditions, and `docs/incoming/2026-10-27_hp_ics_freefall/data/liliao_github/free-fall-3b-pictures.md` gives x, y and T at 10 decimals for all 316. R-630 item 8 and REQ-VAL-227 carry no condition.
+
+*What it decides:*
+
+- **Option (a).** A dated note in § 2.1. LL-5 stays as ruled: closure on the atlas's rows, never cited as Li & Liao 2019's published results (rule 13). REQ-VAL-227 is unchanged.
+- **Option (b), yes.** A new target, LL-6, compares all 316 orbits against the authors' table, scored as a peek: REQ-VAL-352, TASK-M9-44. It cites the table, not the paper, for the 82 the paper does not hold.
+
+*Applied per R-369:* LL-6 runs each row's own x, y and masses at rest to its T on the CPU IC inspector at f64, so tier (b), and also compares the row with the atlas's `pub_*` where the atlas holds it. Closure from a 10-decimal start is limited by the start's amplification, as the triage notes, so the tolerance is a calibration, REQ-VAL-353, proposed from the measured closure and put with M9's report. Before a triage item is used its page is re-read (R-680): the table is read from the committed file.
+
+*What it amends:* nothing. It closes **RQ-661**.
+
+R-704 is in the "design" group of `plan/rule_groups.yaml`, with R-630.
+
+Adds REQ-VAL-352 and REQ-VAL-353.
