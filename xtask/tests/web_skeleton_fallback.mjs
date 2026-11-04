@@ -203,6 +203,7 @@ function checkUndone({ canvas, calls, ime }) {
     check(!e.defaultPrevented, `the canvas's ${e.type} is still cancelled`);
   }
   for (const type of ["input", "compositionend"]) {
+    ime.value = "a";
     ime.dispatchEvent(event(type, { data: "a" }));
     check(calls().length === before, `the input's ${type} is still forwarded`);
   }

@@ -156,9 +156,11 @@ function forward(worker, canvas) {
   ime.autocomplete = "off";
   document.body.append(ime);
   ime.focus();
-  const typed = (text) => { if (text) post("text", text); ime.value = ""; };
-  ime.addEventListener("input", (e) => { if (!e.isComposing) typed(e.data); }, { signal });
-  ime.addEventListener("compositionend", (e) => typed(e.data), { signal });
+  // One source of text, the input's value, taken by whichever event comes first: a browser may send a commit's
+  // `compositionend` and final `input` in either order, and each carries the text in its own `data`.
+  const typed = () => { if (ime.value) post("text", ime.value); ime.value = ""; };
+  ime.addEventListener("input", (e) => { if (!e.isComposing) typed(); }, { signal });
+  ime.addEventListener("compositionend", typed, { signal });
   const key = (pressed) => (e) => {
     if (e.isComposing) return;
     post("key", e.key, e.code, pressed, e.repeat, ...mods(e));
