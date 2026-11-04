@@ -71,31 +71,36 @@ fn jobs(workflow: &str) -> Vec<Vec<&str>> {
 }
 
 /// The shell commands of a `run:` step, from its value and, for a block scalar, the scalar's lines. A one-line value is
-/// one command, and so is a folded scalar (`>`), whose lines the shell gets as one. A literal scalar (`|`) has a
-/// command a line, without blank lines and comments, and a line ending in `\` continued on the next, with a space
-/// between the two, the indented form every workflow writes.
+/// one command. A folded scalar (`>`) has one command to each run of lines between blank lines: YAML folds a line break
+/// to a space, and keeps the one a blank line stands for. A literal scalar (`|`) has a command a line, without blank
+/// lines and comments, and a line ending in `\` continued on the next, with a space between the two, the indented form
+/// every workflow writes. As in the shell, a blank line or a comment after the `\`, or the end of the block, ends the
+/// command.
 fn commands(value: &str, block: &[&str]) -> Vec<String> {
     if value.starts_with('>') {
-        return vec![block
-            .iter()
-            .map(|line| line.trim())
-            .collect::<Vec<_>>()
-            .join(" ")];
+        return block
+            .split(|line| line.trim().is_empty())
+            .filter(|lines| !lines.is_empty())
+            .map(|lines| {
+                let lines: Vec<&str> = lines.iter().map(|line| line.trim()).collect();
+                lines.join(" ")
+            })
+            .collect();
     }
     if !value.starts_with('|') {
         return vec![value.to_owned()];
     }
     let mut out = Vec::new();
     let mut command = String::new();
-    for line in block.iter().map(|line| line.trim()) {
-        if line.is_empty() || line.starts_with('#') {
-            continue;
-        }
-        command.push_str(line.trim_end_matches('\\').trim_end());
-        if line.ends_with('\\') {
+    // The blank line at the end ends a command the block's last line continues.
+    for line in block.iter().map(|line| line.trim()).chain([""]) {
+        let none = line.is_empty() || line.starts_with('#');
+        if !none {
+            command.push_str(line.trim_end_matches('\\').trim_end());
             command.push(' ');
-        } else {
-            out.push(std::mem::take(&mut command));
+        }
+        if (none || !line.ends_with('\\')) && !command.is_empty() {
+            out.push(std::mem::take(&mut command).trim_end().to_owned());
         }
     }
     out
@@ -268,12 +273,15 @@ fn is_libtest_soak(workflow: &str, job: &[&str], run: &str) -> bool {
     (name, job[0].trim(), run) == (Some(LIBTEST_SOAK.0), LIBTEST_SOAK.1, LIBTEST_SOAK.2)
 }
 
-/// `rest`, the arguments of a `cargo test`, ask cargo only to build: `--no-run` among cargo's own arguments, before any
-/// `--`, past which it goes to the test binary and every test still runs.
+/// `rest`, what follows a `cargo test`, asks cargo only to build: `--no-run` among cargo's own arguments, before any
+/// `--`, past which it goes to the test binary and every test still runs; and a single command, for a shell separator
+/// (`&&`, `||`, `;`, `|`) leaves a `--no-run` governing one command of the line and tests to run in another.
 fn only_builds(rest: &str) -> bool {
-    rest.split_whitespace()
-        .take_while(|word| *word != "--")
-        .any(|word| word == "--no-run")
+    !rest.contains(['&', '|', ';'])
+        && rest
+            .split_whitespace()
+            .take_while(|word| *word != "--")
+            .any(|word| word == "--no-run")
 }
 
 /// The test steps of `workflows`, and the pinned cargo-nextest version they install. Every job with a nextest step
@@ -499,6 +507,107 @@ validation::negative_control!(
         "w",
         "j",
         "      - run: cargo test -p a --test b -- --no-run\n"
+    )))
+);
+
+#[test]
+fn nextest_a_no_run_excuses_no_other_command_on_its_line() {
+    assert!(only_builds(" -p a --no-run --test b"));
+    for rest in [
+        " --no-run && cargo test -p b",
+        " -p b && cargo test --no-run",
+        " --no-run || cargo test -p b",
+        " --no-run; cargo test -p b",
+        " -p b; cargo test --no-run",
+        " --no-run | tee log",
+    ] {
+        assert!(!only_builds(rest), "`cargo test{rest}` runs tests");
+    }
+}
+
+validation::negative_control!(
+    nextest_a_no_run_excuses_no_other_command_on_its_line,
+    "a `--no-run` beside a second `cargo test` on its line, which runs tests",
+    expected = "a CI step runs tests through `cargo test`",
+    drop(step_args(&workflow_with(
+        "w",
+        "j",
+        "      - run: cargo test --no-run && cargo test -p b\n"
+    )))
+);
+
+/// A block whose last line ends in `\\`, which the shell runs, with nothing to continue on.
+const LAST_LINE_CONTINUED: &str =
+    "      - run: |\n          echo a\n          cargo nextest run -p a \\\n";
+
+#[test]
+fn nextest_the_guard_reads_a_blocks_continued_last_line() {
+    assert_eq!(
+        step_args(&workflow_with("w", "j", LAST_LINE_CONTINUED)),
+        ["-p a"]
+    );
+}
+
+validation::negative_control!(
+    nextest_the_guard_reads_a_blocks_continued_last_line,
+    "a `cargo test` on a block's last line, ending in `\\`",
+    expected = "a CI step runs tests through `cargo test`",
+    drop(step_args(&workflow_with(
+        "w",
+        "j",
+        &LAST_LINE_CONTINUED.replace("cargo nextest run", "cargo test")
+    )))
+);
+
+/// A folded step with a blank line between two commands, which YAML keeps as a line break.
+const FOLDED_TWO_COMMANDS: &str =
+    "      - run: >-\n          cargo nextest run -p a\n\n          cargo nextest run -p b\n";
+
+#[test]
+fn nextest_a_blank_line_parts_a_folded_steps_commands() {
+    assert_eq!(
+        step_args(&workflow_with("w", "j", FOLDED_TWO_COMMANDS)),
+        ["-p a", "-p b"]
+    );
+}
+
+validation::negative_control!(
+    nextest_a_blank_line_parts_a_folded_steps_commands,
+    "a `cargo test` after a blank line in a folded step, beside a doctest whose `--doc` would excuse it on one line",
+    expected = "a CI step runs tests through `cargo test`",
+    drop(step_args(&workflow_with(
+        "w",
+        "j",
+        &FOLDED_TWO_COMMANDS
+            .replace("cargo nextest run -p a", "cargo test --doc")
+            .replace("cargo nextest run -p b", "cargo test -p b")
+    )))
+);
+
+/// A `\\` followed by a blank line, where the shell ends the command, and the next line is a command of its own.
+const CONTINUED_INTO_A_BLANK: &str =
+    "      - run: |\n          echo a \\\n\n          cargo nextest run -p b\n";
+
+#[test]
+fn nextest_a_blank_line_or_comment_ends_a_continued_command() {
+    assert_eq!(
+        step_args(&workflow_with("w", "j", CONTINUED_INTO_A_BLANK)),
+        ["-p b"]
+    );
+    assert_eq!(
+        commands("|", &["echo a \\", "# a comment", "cargo nextest run"]),
+        ["echo a", "cargo nextest run"]
+    );
+}
+
+validation::negative_control!(
+    nextest_a_blank_line_or_comment_ends_a_continued_command,
+    "a `cargo test` after a blank line that ends the command before it",
+    expected = "a CI step runs tests through `cargo test`",
+    drop(step_args(&workflow_with(
+        "w",
+        "j",
+        &CONTINUED_INTO_A_BLANK.replace("cargo nextest run", "cargo test")
     )))
 );
 
