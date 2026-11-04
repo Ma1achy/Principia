@@ -146,12 +146,15 @@ pub fn l_max<R: WarpReal>(k: R) -> R {
 /// it, and the sum on it, and no subnormal reaches the exact test. Unlike [`l_max`], the floor is
 /// on `K*`, the operand a warped `t` axis adds to (chart_reference §2.1), and adding a non-negative term cannot take a
 /// rounded sum below it, so a pixel above the floor stays feasible. Multiplication alone: a backend may round a quotient
-/// by more than half a float, and this result decides a branch. An `l` whose `l²` has no finite float has none, and is
-/// `+∞`.
+/// by more than half a float, and this result decides a branch. An `l` whose `l²` has no finite float has no floor:
+/// its value saturates at half the greatest finite float, so `K*` stays finite, the construction's `2K*` too, and the
+/// exact test finds the pixel infeasible, `2K* < l²`, with finite momenta at every precision.
 #[inline]
 pub fn k_floor<R: WarpReal>(l: R) -> R {
+    let most = R::max_value() * R::two_to(-1);
     let k = Float::max(l * l * R::two_to(-1), R::min_positive_value());
-    let k = select(infeasible(R::one(), k, l), k.above(), k);
+    let k = Float::min(k, most);
+    let k = select(infeasible(R::one(), k, l), Float::min(k.above(), most), k);
     select(l.binade().zero, R::zero(), k)
 }
 

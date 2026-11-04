@@ -16,7 +16,9 @@
 //! Every pixel of `[0,1]²` is feasible on a warped `t` axis at every held `L_z` (the owner's ruling of 4 Nov 2026 on
 //! RQ-683; chart_reference §2.1): the floor `L_z²/2I` ([`invariant::k_floor`], 0 at the held `L_z = 0`, `Φ_θ,K`'s) sits
 //! under the line, so `K*` is at or above it, the bottom row `t = 0` exactly on it. `I = 1` on every pixel, so the floor
-//! does not vary across the window. An `L_z` axis is feasible at every held `K ≥ 0`.
+//! does not vary across the window. A held `L_z` whose `L_z²` has no finite float at the chart's own precision has no
+//! floor, §2.1's one exception: `validate` refuses it there as the decode at that precision labels it. An `L_z` axis is
+//! feasible at every held `K ≥ 0`.
 //! Under the linear option (`super::energy::Mapping::Linear`) `K` and `KE` are `K_max·t`, `E` is `U₀ + K_max·t` with
 //! `U₀` the slice centre's potential, so `K* = E − U` at the pixel, the virial ratio `Q_lo + (Q_hi − Q_lo)·t`, their
 //! pixels with `K* < L_z²/2I` (or, virial, `Q < 0`) not a system, and `L_z`'s line is already linear at its held `K`
@@ -54,7 +56,7 @@ use super::invariant::{self, WarpReal};
 use super::mixed::{axis_check, lerp, place, Quantity as Coordinate};
 use super::tilt::{shift_controls, Hidden, Shift, Tiltable};
 use super::{Chart, ChartDecode, ChartOut, Constraint, ValidationResult};
-use crate::decode::invariant::Outcome;
+use crate::decode::invariant::{infeasible, Outcome};
 use crate::decode::{self, mass, Decoded, Latent};
 use crate::generated::constants::ChartConstants;
 use crate::generated::links::{Link, LinkParams, LinkReal, Selection};
@@ -312,7 +314,7 @@ impl<A: Coordinate, S: Selection, P: Float> MixedEnergy<A, AxisVirial, S, P> {
     }
 }
 
-impl<A: Coordinate, Q: EnergyAxis, S: Selection, P: Copy> MixedEnergy<A, Q, S, P> {
+impl<A: Coordinate, Q: EnergyAxis, S: Selection, P: WarpReal> MixedEnergy<A, Q, S, P> {
     /// The horizontal axis sits upstream of the momentum block the energy axis solves into (kind 3), checked where the
     /// chart is built.
     const UPSTREAM: () = assert!(
@@ -388,6 +390,15 @@ impl<A: Coordinate, Q: EnergyAxis, S: Selection, P: Copy> MixedEnergy<A, Q, S, P
         )
     }
 
+    /// Whether the chart's own precision `P` holds the floor (the module's note): `check` decodes at f64, and an f32
+    /// chart's held `L_z` can have a floor at f64 and none at f32.
+    #[inline]
+    fn floor_held(&self) -> bool {
+        self.mapping == Mapping::Linear
+            || Q::QUANTITY == Quantity::Lz
+            || !infeasible(P::one(), invariant::k_floor(self.held), self.held)
+    }
+
     /// The check at `(u, v)` on the frozen controls `z` (the module's note).
     fn check(&self, z: [f64; 8], u: f64, v: f64, p: &LinkParams<f64>) -> ValidationResult
     where
@@ -412,7 +423,7 @@ impl<A: Coordinate, Q: EnergyAxis, S: Selection, P: Copy> MixedEnergy<A, Q, S, P
         let cv = self.clamp_vertical(v);
         let (decoded, outcome) = self.decode_from(z, cu, cv, p);
         let finite = decoded.ic.p.iter().flatten().all(|x| x.is_finite());
-        if outcome == Outcome::Infeasible || !finite {
+        if outcome == Outcome::Infeasible || !finite || !self.floor_held() {
             return ValidationResult::Reject {
                 failed: Constraint::KAboveLzBound,
             };
@@ -430,7 +441,7 @@ impl<A: Coordinate, Q: EnergyAxis, S: Selection, P: Copy> MixedEnergy<A, Q, S, P
     }
 }
 
-impl<A: Coordinate, Q: EnergyAxis, S: Selection, P: Copy> Chart for MixedEnergy<A, Q, S, P>
+impl<A: Coordinate, Q: EnergyAxis, S: Selection, P: WarpReal> Chart for MixedEnergy<A, Q, S, P>
 where
     f64: From<P>,
 {
@@ -499,7 +510,8 @@ where
     }
 }
 
-impl<A: Coordinate, Q: EnergyAxis, S: Selection, P: Copy> ChartDecode for MixedEnergy<A, Q, S, P>
+impl<A: Coordinate, Q: EnergyAxis, S: Selection, P: WarpReal> ChartDecode
+    for MixedEnergy<A, Q, S, P>
 where
     f64: From<P>,
 {
@@ -522,7 +534,7 @@ where
     }
 }
 
-impl<A: Coordinate, Q: EnergyAxis, S: Selection, P: Copy> Hidden for MixedEnergy<A, Q, S, P>
+impl<A: Coordinate, Q: EnergyAxis, S: Selection, P: WarpReal> Hidden for MixedEnergy<A, Q, S, P>
 where
     f64: From<P>,
 {
@@ -541,7 +553,7 @@ where
     }
 }
 
-impl<A: Coordinate, Q: EnergyAxis, S: Selection, P: Copy> Tiltable for MixedEnergy<A, Q, S, P>
+impl<A: Coordinate, Q: EnergyAxis, S: Selection, P: WarpReal> Tiltable for MixedEnergy<A, Q, S, P>
 where
     f64: From<P>,
 {

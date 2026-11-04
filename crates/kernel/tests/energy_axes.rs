@@ -2213,6 +2213,139 @@ negative_control!(
     check_held_tilted(Mapping::Linear)
 );
 
+/// The saturation across the overflow band, `l²` past the greatest float, `l²/2` finite up to `√2` above it, and past
+/// it, at f64: `floor` leaves the construction finite and §2.2's exact test labels the pixel.
+fn check_floor_saturates(floor: fn(f64) -> f64) {
+    for l in [
+        1.35e154, 1.6e154, 1.89e154, -1.6e154, 2.0e154, 1.0e200, 1.0e308,
+    ] {
+        let rule = Rule {
+            k0: floor(l),
+            weight: 0.0,
+            u_ref: 0.0,
+            s2: 0.0,
+            lz: l,
+            lz_on_warp: false,
+        };
+        let (d, outcome) =
+            decode_rule::<Defaults, f64>(rule, &Latent::new(Z0), &LinkParams::DEFAULT);
+        assert!(
+            d.ic.p.iter().flatten().all(|x| x.is_finite()),
+            "L_z = {l} decodes momenta that are not finite: {:?}",
+            d.ic.p
+        );
+        assert!(
+            outcome == Outcome::Infeasible,
+            "L_z = {l} is labelled {outcome:?}"
+        );
+    }
+}
+
+#[test]
+fn energy_axes_warped_floor_saturates() {
+    check_floor_saturates(invariant::k_floor);
+}
+
+negative_control!(
+    energy_axes_warped_floor_saturates,
+    "the greatest float as the floor doubles to +inf in the construction, inside the band where 2K >= l²",
+    expected = "decodes momenta that are not finite",
+    check_floor_saturates(|_| f64::MAX)
+);
+
+/// The same band at f32, on each warped axis: finite momenta, the label, and `validate` agreeing at the chart's own
+/// precision, the band below it a system.
+fn check_floor_saturates_f32(held: fn(f32) -> f32) {
+    fn axis<Q: EnergyAxis>(held: f32) {
+        let frozen = Z0.map(|z| z as f32);
+        let chart: MixedEnergy<Alpha, Q, Defaults, f32> = MixedEnergy::new(
+            frozen,
+            [0.2, 1.3],
+            k_max() as f32,
+            gamma_k() as f32,
+            held,
+            Mapping::Warped,
+        );
+        let (d, outcome) = chart.decode_from(frozen, 0.5, 0.0, &LinkParams::DEFAULT);
+        assert!(
+            d.ic.p.iter().flatten().all(|x| x.is_finite()) && outcome == Outcome::Infeasible,
+            "{:?} at the f32 L_z = {held}: {outcome:?}, {:?}",
+            Q::QUANTITY,
+            d.ic.p
+        );
+        assert_eq!(
+            chart.validate(0.5, 0.0),
+            ValidationResult::Reject {
+                failed: Constraint::KAboveLzBound
+            },
+            "{:?} at the f32 L_z = {held}: validate disagrees with the decode",
+            Q::QUANTITY
+        );
+    }
+    for l in [1.9e19_f32, 2.0e19, 2.6e19, -2.0e19, 1.0e30] {
+        axis::<AxisK>(held(l));
+        axis::<AxisKE>(held(l));
+        axis::<AxisE>(held(l));
+        axis::<AxisVirial>(held(l));
+    }
+}
+
+#[test]
+fn energy_axes_warped_floor_saturates_f32() {
+    check_floor_saturates_f32(|l| l);
+}
+
+negative_control!(
+    energy_axes_warped_floor_saturates_f32,
+    "a held L_z inside f32's range has its floor, feasible, so it must fail",
+    expected = "at the f32 L_z",
+    check_floor_saturates_f32(|l| l * 1.0e-3)
+);
+
+/// An f32 chart just inside the band is a system at f32, and `validate` agrees; an `L_z` axis's held `K` reads no floor,
+/// and the linear option's `K*` alone decides, each at the same held value.
+fn check_floor_fits(held: f32) {
+    fn chart<Q: EnergyAxis>(held: f32, mapping: Mapping) -> MixedEnergy<Alpha, Q, Defaults, f32> {
+        MixedEnergy::new(
+            Z0.map(|z| z as f32),
+            [0.2, 1.3],
+            k_max() as f32,
+            gamma_k() as f32,
+            held,
+            mapping,
+        )
+    }
+    assert_eq!(
+        chart::<AxisK>(held, Mapping::Warped).validate(0.5, 0.0),
+        ValidationResult::Valid,
+        "the warped axis at the f32 L_z = {held} is not a system"
+    );
+    assert_eq!(
+        chart::<AxisLz>(2.0e19, Mapping::Warped).validate(0.5, 0.5),
+        ValidationResult::Valid,
+        "an L_z axis's held K reads no floor"
+    );
+    assert_eq!(
+        chart::<AxisK>(1.0e10, Mapping::Linear).validate(0.5, 1.0),
+        ValidationResult::Reject {
+            failed: Constraint::KAboveLzBound
+        },
+        "the linear option's K* decides"
+    );
+}
+
+#[test]
+fn energy_axes_warped_floor_fits_f32() {
+    check_floor_fits(1.8e19);
+}
+
+negative_control!(
+    energy_axes_warped_floor_fits_f32,
+    "a held value past f32's band has no floor at f32, so its validate must refuse it",
+    expected = "is not a system",
+    check_floor_fits(2.0e19)
+);
+
 /// A held value with no floor, or none at all, is refused at every point: never a system, never a panic.
 fn check_unrepresentable(held: f64) {
     for [u, v] in grid(0.0, 1.0) {
