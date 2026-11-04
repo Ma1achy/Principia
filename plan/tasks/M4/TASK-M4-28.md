@@ -56,10 +56,10 @@ alone does not answer the owner's question; the bits at identical operands do, a
 - A digest of each pass's branch words and carried-state checkpoints at a stride stated in the header, so `--compare` can find the first pass that differs. They come from
   `gpu_macro_pass` on both arms, since the survey entry emits neither: on the decoded arm each backend re-marches from its own decoded start state. Where a pair's survey rows differ and its passes' rows don't, that is TASK-M4-27's production-only difference; where one backend's survey row and passes' row
   differ, the report says so.
-- `--replay`: for each disagreement, `--compare` names the first macro-step `k` that differs and a source, the pair's first backend in the order CPU f32, lavapipe, Metal, NVIDIA, so NVIDIA is
-  never a source and the file is complete before its session. `--replay-state`, on the source's backend, re-runs from its last checkpoint before `k` and writes the carried state at `k − 1`. Those same bits then go through the
-  after-the-STEP read on every backend, NVIDIA's included, reported per pair. So the NVIDIA session runs `--record`, then
-  `--replay` on that file. The per-macro-step digests stay branch words.
+- `--replay`: for each disagreement, `--compare` names the first pass `k` that differs and a source, the pair's first backend in the order CPU f32, lavapipe, Metal, NVIDIA, so NVIDIA is
+  never a source. `--replay-state`, on the source's backend, re-runs from its last checkpoint before `k` and writes the carried state at `k − 1`. Those same bits then go through the
+  after-the-STEP read on every backend, NVIDIA's included, reported per pair. For an NVIDIA pair the order is a round trip: Windows `--record`, posted; `--compare` and `--replay-state` on the source's machine; then a second Windows run, `--replay` on that file.
+  The per-pass digests stay branch words.
 - The read-back, two more entries in TASK-M4-27's module, dispatched from `crates/validation/src/harness/`, no parity-only physics, each with a fixed slot per evaluation up to a bound per occupant: `N_max` under Yoshida-4, the pass's step budget under Heggie (`step_budget_rate`, `N_min`). An evaluation past the last slot is counted and reported on the driver's line, never dropped. For every branch input in `branch_inputs.rs`, each
   emits the outcome, and for kind `+ and ×` the expression's own operands and the input's bits, a `Wide`'s mantissa and exponent both. Each row names its entry, as TASK-M4-27's record does, and a standing's domain carries it. Which read is which:
   - **At the given state**, for the fixed-input arm: `substep_bucket`'s `d²` and `detect_terminal`'s branch inputs evaluated on the given state, through the kernel's own code, with no STEP, projection or invariant
@@ -68,7 +68,7 @@ alone does not answer the owner's question; the bits at identical operands do, a
 - The report, written into the gate report: each pair's disagreement count and rate, for each of those results and for any of them, non-chaotic and chaotic
   apart; for each disagreement, the first step that differs and whether the branch operation there agrees on identical
   inputs, as REQ-VAL-079's report does, the kind column of TASK-M4-27, extended to the march's branch inputs from TASK-M4-03's `branch_inputs.rs`.
-  The header states the domain, the commit, each adapter line and the compute setting, and that N comes from the fixed-input arm and the replays. Each driver's line shows, per branch input and entry, N and the level 1 count.
+  The header states the domain, the commit, each adapter line and the compute setting, NVIDIA's replay as its own row, "not run" until posted, so a record posted with its replay outstanding reads as that, and that N comes from the fixed-input arm and the replays. Each driver's line shows, per branch input and entry, N and the level 1 count.
 - Negative controls for this task's tests (R-176).
 
 ## Acceptance tests
@@ -107,7 +107,7 @@ alone does not answer the owner's question; the bits at identical operands do, a
   that, and under Heggie no site is: `detect_terminal`'s inputs are expected at level 1, and the per-input counts show it. Levels are judged within one entry, with TASK-M4-27's production-only difference. A failing driver is recorded **unverified,
   not supported**, in those words. Nothing enforces the condition, and the recording blocks nothing.
 - **The NVIDIA record** is a Windows session's run at the PR's head, `--record` with `PRIN_GPU_BACKEND=vulkan`, the file posted to
-  #390, under the same hardware label as that card's other runs. A record too big to attach goes as a committed file on a branch named on the issue. It is not a CI job (R-186). Nothing waits on it, and the task
+  #390, under the same hardware label as that card's other runs. A record too big to attach goes as a committed file on a branch named on the issue. Its replay is a second run, in the order the `--replay` bullet gives, and blocks nothing either. It is not a CI job (R-186). Nothing waits on it, and the task
   closes without it: M4's gate report lists the row as "not run" until it is posted, though the owner's question rests on that
   row (`plan/MILESTONES.md` § M4). It doesn't stand in for R-58's parity run, REQ-VAL-099, which gates Paper 2; whether a driver recorded unverified,
   not supported can serve that gate is RQ-695.
