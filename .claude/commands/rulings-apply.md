@@ -75,7 +75,7 @@ that exclude each other, a rider that leaves the meaning open, or one that contr
 For every accepted answer but `ask`, in reply order, add to `decisions.md`, at its end, under the R id `parse` gave:
 
 ```
-## R-n — <the decision, in a plain sentence> *(closes RQ-m)*
+## R-n — <the decision, in a plain sentence> <its suffix, from the table below>
 *<date> · the owner's reply to the report of <report's date>; applied in <every file it touches>;
 <changes REQ-… | changes no requirement>*
 
@@ -97,15 +97,15 @@ Then, in the same way as any ruling:
 
 What each kind does, past that:
 
-| Kind | Reply line | Ruling | The entry |
-| --- | --- | --- | --- |
-| option | `RQ-n: (a) …` | yes | closed: the outcome, riders included, unless step 2's table keeps it open |
-| free-text | `RQ-n: <words>` | yes | as its words say: closed, or open with a dated line |
-| close | `RQ-n: close`, or words ending `close` | yes | closed: why it was ruled or moot |
-| veto | `RQ-n: veto` | yes: what the entry applied is vetoed | closed; if the question itself is still undecided, file a new RQ for it in this PR, naming the closed one, so it isn't lost |
-| veto | `D-n: veto` | yes: the report's decision D-n, named in full, is vetoed | none |
-| defer | `RQ-n: defer:Mn`, `defer until <event>` | yes (`CLAUDE.md`: only the owner defers, by a ruling) | stays open, "deferred to <x> by owner <date>" |
-| ask | `RQ-n: ask:…` | no: a question isn't an answer | stays open, the question appended and flagged for the next report |
+| Kind | Reply line | Ruling | The entry | Heading suffix |
+| --- | --- | --- | --- | --- |
+| option | `RQ-n: (a) …` | yes | closed: the outcome, riders included, unless step 2 keeps it open | `*(closes RQ-m)*`, or `*(on RQ-m, which stays open)*` if it stays open |
+| free-text | `RQ-n: <words>` | yes | as its words say: closed, or open with a dated line | as for an option |
+| close | `RQ-n: close`, or words ending `close` | yes | closed: why it was ruled or moot | `*(closes RQ-m)*` |
+| veto | `RQ-n: veto` | yes: what the entry applied is vetoed | closed; if the question itself is still undecided, file a new RQ for it in this PR, naming the closed one, so it isn't lost | `*(closes RQ-m)*` |
+| veto | `D-n: veto` | yes: the report's decision D-n, named in full, is vetoed | none | `*(vetoes D-n of the report of <date>)*` |
+| defer | `RQ-n: defer:Mn`, `defer until <event>` | yes (`CLAUDE.md`: only the owner defers, by a ruling) | stays open, "deferred to <x> by owner <date>" | `*(defers RQ-m)*` |
+| ask | `RQ-n: ask:…` | no: a question isn't an answer | stays open, the question appended and flagged for the next report | no ruling |
 
 ## 4. The queue
 
