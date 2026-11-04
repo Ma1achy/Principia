@@ -9,7 +9,7 @@ verdict unless it corrects it (see "Corrections to the earlier triage"). `gaps-p
 
 **Proposals only.** Nothing here is a target until the owner rules. No requirement or plan changes. Tables are
 transcribed later, twice, for approved items only. No PDF and no library file is committed; values from repositories
-with no licence for their data are masked as `[value]`.
+with no licence for their data are masked in the tree as `[value]`.
 
 Words are as in `docs/incoming/2026-10-31_library_triage/SUMMARY.md` § "Words used" and its papers-14 to 80 section:
 OFF-FILTER for the readers' EXCLUDE; PEEK-ONLY for unreviewed or AI-assisted sources; PARKED for hierarchical and
@@ -54,14 +54,14 @@ existing ones (NOW-28 to NOW-34, M9-35 to M9-46); the earlier ranks are not re-r
 
 | # | Rank | Item | What it tests | Effort | Watch for | Row |
 |---|---|---|---|---|---|---|
-| 1 | NOW-28 | eucliss free-fall fate plane (papers-152), 400 × 240, t ≤ 200 | Free-fall escapes at equal masses: escaper fractions, escape-time histogram, survivors; the mirror-pair floor (gap 5) | S | AI-authored, unlicensed: peek, `_local`. Copy its escape predicate. Mirror-pair escaper agreement 0.97 (t < 10), 0.84 (10–20), 0.63 (20–50), 0.51 (> 50), on the convention in the spot-check's item 5 | 204 |
+| 1 | NOW-28 | eucliss free-fall fate plane (papers-152) | Free-fall escapes at equal masses: escaper fractions, escape-time histogram, survivors; the mirror-pair floor (gap 5) | S | AI-authored, unlicensed: peek, `_local`, values masked. Copy its escape predicate. Mirror-pair escaper agreement 0.97 (t < 10), 0.84 (10–20), 0.63 (20–50), 0.51 (> 50), on the convention in the spot-check's item 5 | 204 |
 | 2 | NOW-29 | cft-rebound Burrau divergence (papers-72) | f64 against fp128 and fp256 on Burrau to t = [value]; an [value]-member ulp ensemble | S | GPL-3.0-or-later: never committed, values masked. Unreviewed, AI-assisted. Raised from RECORD-ONLY | 221 |
 | 3 | NOW-25 (standing) | Maissouradze 2026, 7 stable free-fall orbits | Free-fall closure at unequal masses, a 7.7e-5 passage | S | AI-assisted; data path is papers-12, not papers-128 | 90 |
 | 4 | NOW-24 (standing) | Kandel 2026, 86 refined starts | L≠0 closure, equal masses | S | Ours: 7 are atlas rows and 1 nearly; peek on the other 78 | 190 |
 | 5 | NOW-30 | Agekyan, Anosova & Orlov 1983, Tables 2-4 | Decay-time and escape statistics at rest in region D, 1000 runs, to 1000 crossing times. Peer-reviewed | M | Table 5 needs Tevzadze 1962's escape criterion (not held): its M9 part. Table 4 bin misprint | 4 |
-| 6 | NOW-31 | eucliss unequal-mass velocity planes, m3 = 0.25 and 0.5 | Escape-by-60 fraction at unequal masses, L = 0 | S-M | `fate = 0` lumps survivors, step cap and skipped E ≥ 0 pixels. AI-authored | 205 |
+| 6 | NOW-31 | eucliss unequal-mass velocity planes | Escape fraction at unequal masses and zero L, by the source's horizon | S-M | One fate code lumps survivors, step cap and skipped E ≥ 0 pixels. AI-authored, values masked | 205 |
 | 7 | NOW-23 (standing) | Jeomseon 2026, Burrau interval boxes | Top tiers on Burrau, t = 59.5 to 61 | S-M | AI-assisted; parse as rationals | 78 |
-| 8 | NOW-32 | mikha08-rgb/Nbody, figure-eight test | f32 on a GPU against f64 on the CPU, split growth over 40 periods | S | No licence: values masked. Conflates device and precision; needs KDK at fixed step | 188 |
+| 8 | NOW-32 | mikha08-rgb/Nbody, figure-eight test | f32 on a GPU against f64 on the CPU, split growth | S | No licence: values masked. Conflates device and precision; needs KDK at fixed step | 188 |
 | 9 | NOW-33 | Pickett 2026, close-approach start | One 3:4:5 start with a 0.0118 pair passage, three pair distances at t = 16.77 | S | AI-assisted; the author's own float check, not interval. Raised from RECORD-ONLY | 41 |
 | 10 | NOW-34 | eljja threebody-engine certificate | FTLE convention at one start (norm, horizon, definition) | S | One period of a stable orbit; low physics value | 210 |
 
@@ -277,7 +277,7 @@ No source in the library compares f32, f64 and a converged reference across an e
 none compares CPU with GPU. R-661 stands as a hypothesis Principia must measure. Closest: cft-rebound (f64 vs
 fp128/fp256, one Burrau trajectory); Portegies Zwart 2026 Table 4 (single-run 32-bit energy errors); mikha08-rgb/Nbody
 (f32 GPU vs f64 CPU, figure-eight only); eucliss free-fall plane mirror pairs (f64 round-off alone: the mirrored escaper
-agrees 0.97 of the time for t < 10, 0.84 for 10–20, 0.63 for 20–50 and 0.51 past 50, chance about 1/3, spot-check item
+agrees 0.97 of the time for t < 10, 0.84 for 10–20, 0.63 for 20–50 and 0.51 past 50, against chance, spot-check item
 5; `gaps-precision.csv` gap 5); Tomihisa 2011 (a CPU-GPU parity check must state whether FMA contraction is on).
 
 `gaps-precision.csv` holds seven gaps, the owner's three first (matched f32/f64/mixed/converged ensembles; per-point FTLE
@@ -325,13 +325,17 @@ fix below was made from the source itself, re-read on 3 Nov.
    shortlist and final guide: what was wrong"; row 214).
 5. **The batch-152 fate plane (NOW-28).** Mirror-pair escaper agreement is 0.97 (t < 10), 0.84 (10–20), 0.63 (20–50)
    and 0.51 (> 50), the owner's figures. It replaces "noise past t ≈ 20" (Top 10 NOW row 1; § "The precision-gap
-   answer"; row 204; gap 5). The convention behind them is this one, settled on 4 Nov: the 42,413 pairs where both
-   members escape, each binned by the earlier of its two times, each time being its level's own value, t = 2 ×
-   100^(q/63). That is the inverse of the encoder, which rounds q (`build_fatemap.js`:24, `source_context/eucliss/web/`
-   in papers-152), so it reads each level at its centre. A recount from `fatemap.json` on this convention gives 0.974
-   (15,316 pairs), 0.842 (7,778), 0.626 (12,704) and 0.512 (6,615), which round to the owner's figures. A stored time
-   is good to about 3.7%, so a pair near a bin edge can fall either side. Any other binning gives other numbers, and a
-   figure quoted beside these must state its own. Agreement falls towards chance on every count.
+   answer"; row 204; gap 5). The convention behind them is this one, settled on 4 Nov: every pair where both members
+   escape, binned by the earlier of its two times, each time being its level's own value. That is the exact inverse of
+   the encoder, which rounds (`build_fatemap.js`, `source_context/eucliss/web/` in papers-152), so it reads each level
+   at its centre. A recount from `fatemap.json` on this convention rounds to the owner's figures. Stored times are
+   quantised, so a pair near a bin edge can fall either side. Any other binning gives other numbers, and a figure
+   quoted beside these must state its own. The figures pool two populations. Some column pairs are bit-exact mirrors,
+   with no initial perturbation, so only the solver's order of summation can seed a difference, and they diverge later;
+   the rest differ by ulps and agree less in every bin. Those ulp-differing pairs stand for the floor (gap 5), and the
+   pooled figures sit above it. Round-off is the cause in both. Across the four bins agreement falls towards chance.
+   In the late bins the excess over chance is all in pairs whose two times have not parted; pairs that have parted sit
+   at chance, so the last figure is a mixture, not memory.
 6. **Stone & Leigh 2019 and Ginat & Perets 2021.** Both were fetched and both are committed, though neither is in the
    research library. Stone & Leigh 2019 is
    `docs/incoming/2026-10-25_replication/papers/stone_leigh_2019_Nature_576_406_arXiv1909.05272.pdf` (arXiv:1909.05272,
@@ -353,9 +357,13 @@ fix below was made from the source itself, re-read on 3 Nov.
 - Hénon 1974 (row 68) and Heggie & Sweatman 1991 (row 67) are cited as ruled (R-669), not re-proposed; the collinear fit
   printed on p.564 settles the Sweatman thesis row.
 - BKM (Doumbouya 2026) is kept `_local` until a peek needs it.
-- Values from repositories with no licence for their data are masked as `[value]` (mikha08-rgb/Nbody, eucliss, and
-  cft-rebound with its set-up values and counts, and others); values from published papers stay, with citation, under
-  R-668 (items 3 and 9, the owner's data-reuse rule).
+- Everything from a repository with no licence for its data is masked in the tree as `[value]`: raw counts, set-up
+  values and statistics we derived from those files, including the mirror-pair counts, the per-pixel values and the
+  recount (mikha08-rgb/Nbody, eucliss, ThreeBodyFractal, cft-rebound and others, and the addendum's row for the ETH
+  data). The only such numbers that stay are the owner's four figures, 0.97, 0.84, 0.63 and 0.51, as the owner's. Git
+  history keeps earlier values, cft-rebound's among them; history is not rewritten. File names, byte sizes and commit
+  ids stay as provenance, so a name can still show a masked value (`ens8_*`, `map_m025_N400`). Values from published
+  papers stay, with citation, under R-668 (items 3 and 9, the owner's data-reuse rule).
 - The mirror-pair convention (spot-check item 5) is the one that gives the owner's figures, read from the encoder's own
   rounding; the figures don't change. Gap 5's Principia curve will have exact times, so no level arises there.
 - Tomihisa 2011 (row 151) takes the guide verifier's reading over chunk 07's one-liner, since the owner put it in the
@@ -366,8 +374,9 @@ fix below was made from the source itself, re-read on 3 Nov.
   2026 moves from NOW-27 to M9-43. New ranks run on after the existing ones without re-ranking them.
 - Duplicates cite `<file:row>` and keep the earlier verdict unless corrected; corrections are recorded here, and the
   earlier files are left unchanged, but for the three `triage.csv` rows the owner's spot-check of 3 Nov corrected.
-- The papers-11 to 13 addendum is committed unchanged as `docs/incoming/2026-10-31_library_triage/triage-11-13.csv`,
-  because R-669 cites its ranks and these rows cite it. It adds a file and changes nothing existing.
+- The papers-11 to 13 addendum is committed, unchanged but for line 6's masked values, as
+  `docs/incoming/2026-10-31_library_triage/triage-11-13.csv`, because R-669 cites its ranks and these rows cite it. It
+  adds a file and changes nothing existing.
 
 Removed lines in this PR's commits: none in the first two; later commits reword the 17 stale addendum citations, this
 file's addendum paragraph and this line, and the 3 Nov commits the R-668 and R-669 citations and the values the owner's

@@ -59,7 +59,7 @@ Format: batch: claims. [UNVERIFIED] on all.
 - 69: APSIS native f64 IAS15 vs REBOUND paired states (not peer reviewed); cites BPZ2015. [UNVERIFIED]
 - 70: Vaes f16/f32/f64/256-bit Burrau recipe (no outputs), Antonana 2017, roholazandie lifetime source with 794 derived rows (anonymous/unreviewed). [UNVERIFIED]
 - 71: Neagu ML dataset (native f64 states, equal mass, float32 loader), Yang 2026; provisional ML comparison only. [UNVERIFIED]
-- 72: cft-rebound binary64/128/256 Cartesian replays and an eight-member 64/256 perturbation experiment on Burrau ("materially adds" precision comparison; no refereed publication, no f32). [UNVERIFIED]
+- 72: cft-rebound binary64/128/256 Cartesian replays and an [value]-member 64/256 perturbation experiment on Burrau ("materially adds" precision comparison; no refereed publication, no f32). [UNVERIFIED]
 - 73: Chandra I equal-mass G=1 velocity/angle family, Table V per-case binary a,e, classification/event tables (paper-only). [UNVERIFIED]
 - 74: 2014 Table II 37 controlled angle cases with Eb, Es, e, a; Chandra 2000 Table III times/escapers (Chandra papers). [UNVERIFIED]
 - 75: NBotox v1; Bhattacharjee native 200-trial equal-mass outcomes (escape_statistics.npz, no ICs), 266 survivor records; shape_sphere_scan.npz holds return scores. [UNVERIFIED]
