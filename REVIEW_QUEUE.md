@@ -2122,7 +2122,7 @@ record, which RQ-686 and RQ-687 share.*
     trajectory's start. The measured decode reach is #400's `shape_sphere` fuzz, 52.05, 28.55 and 17.12 eps on the RTX,
     Metal and lavapipe against 256, cause unsettled (RQ-687). The divisions M4 will add include `physics/force.rs`:19-21,
     `occupant/kdk.rs`:65-74, `occupant/rk4.rs`, `driver/advance.rs`:125 and `driver/welford.rs`; the default occupant is
-    Heggie × RK4 (REQ-INT-051; integrator contract :90).
+    Heggie × RK4 (`docs/contracts/principia_integrator_contract.md`:116, R-560).
 - **The conflict, which stays open:**
   - **That it means branch decisions:** R-84, which R-297 cites for this claim, says "`parity_contract` governs" and
     speaks only of branch decisions; parity § 4 says "as this contract states them"; REQ-INT-057 leaves continuous values
