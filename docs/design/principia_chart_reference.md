@@ -326,8 +326,13 @@ system.
 `K`, `KE`, `E` or virial axis holds `L_z` at the chart's value. Warped, its line adds the floor `L_z²/2I`, the least
 kinetic energy that spin allows: `K* = L_z²/2I + K_max·t^γ_K` on `K` and `KE`, `E = U + K*` with that `K*` on `E`, and
 `K* = L_z²/2I + Q(t)·|U|/2` on the virial ratio, the pixel's own `U` and `I`. So every pixel of `[0,1]²` is a system.
-The bottom row `t = 0` is the floor itself, §2.2's rigid rotation with `a = 0`, and the top row exceeds `K_max`, which
-is a range, as past `t = 1` (R-508). The pixel's own virial ratio `2K*/|U|` is `Q(t) + L_z²/(I·|U|)`. At a held
+On `K`, `KE` and `E`, and on the virial ratio with `Q₀ = 0`, the bottom row `t = 0` is the floor itself, §2.2's rigid
+rotation with `a = 0`. The top row exceeds `K_max` on `K`, `KE` and `E`, and `Q_hi` on the virial ratio: each is a
+range, and `K_max` is passed past `t = 1` too (R-508). The pixel's own virial ratio `2K*/|U|` is
+`Q(t) + L_z²/(I·|U|)`. On `K`, at `I = 1`, the floor is constant, so a row is a level set of `K`. On the virial ratio
+the offset varies with `U`, so a row is no level set of `2K/|U|`, and a readout of the axis shows the pixel's own
+ratio. With `Q₀ > 0` the additive form is applied until the owner answers RQ-700: the asked bottom `Q₀` is not drawn
+even where it is feasible, and `a ≠ 0` on the bottom row. At a held
 `L_z = 0` the floor is 0 and the lines above stand unchanged. The bottom row must not blank on rounding: the floor is
 the least normal float §2.2's exact test finds feasible at the held `L_z`, `L_z²/2` at `I = 1` rounded, raised one
 float where it rounded below, and never subnormal, so a backend that flushes subnormals keeps it; adding a non-negative
