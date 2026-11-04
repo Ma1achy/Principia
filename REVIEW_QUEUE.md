@@ -1958,7 +1958,7 @@ tilted `(ν, K)`, `Φ_θ,K` and `Φ_θ,L_z` charts.*
   floored form is chosen.
 - **Waits:** nothing in TASK-M2-37; a Chart-builder lone `t` axis at a held `L_z ≠ 0` (TASK-M8-18) stays refused,
   warped, until the ruling.
-- **4 Nov 2026:** ruled by the owner 4 Nov; R-708's port closes it. The owner's words: "RQ-683 (#387): same rule for a
+- **4 Nov 2026:** ruled by the owner 4 Nov; the ruling's port closes it. The owner's words: "RQ-683 (#387): same rule for a
   single energy axis at held spin." PR #387 applies it: the warped axis exists, on the floor
   `K* = L_z²/2I + K_max·t^γ_K`, and the linear option keeps its fixed values and blanks its infeasible pixels.
 
