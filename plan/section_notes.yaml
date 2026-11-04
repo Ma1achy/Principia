@@ -1457,6 +1457,6 @@
   reason: informative only
   note: "the owner's word of 31 Oct 2026: sccache stays off; process; changes no requirement"
 - file: decisions.md
-  section: "R-790 — `.claude/`, its commands, agents and settings, is docs tier: a change only to it runs only the cheap checks *(amends R-677)*"
+  section: "R-790 — `.claude/`, its commands, agents and settings, is docs tier: a change only to it runs only the cheap checks *(amends R-677 and R-662)*"
   reason: informative only
   note: "the owner's word of 4 Nov 2026: `.claude/` is on the classifier's allowlist; process; changes no requirement"

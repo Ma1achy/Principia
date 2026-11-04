@@ -29245,9 +29245,13 @@ Changes REQ-VAL-199 (statement, rulings, source, note).
 *Amended in part by R-677 (2 Nov 2026: the plan's task data and the GUI's artboards and references leave the data code
 loads that run full CI for tier (b), which runs the cheap checks and the tests that read them, and so does a change to
 `plan/requirements.yaml` that changes only fields no code reads).*
-*Still in force: all of it but which of the data code loads runs full CI: the allowlist, the cheap checks, failing
-towards full CI, the required checks reporting, `plan/requirements.yaml` (but a change to fields no code reads alone,
-R-677's), the classifier and `scripts/contain.sh` as full CI, and what a head that changes only prose costs.*
+*Amended in part by R-790 (4 Nov 2026: `.claude/` leaves the paths this ruling's "Applied per R-369" runs full CI, for
+tier (c), docs).*
+*Still in force: all of it but which of the data code loads runs full CI and `.claude/`'s tier: the allowlist, which
+holds `.claude/` (R-790), the cheap checks, failing towards full CI, the required checks reporting,
+`plan/requirements.yaml` (but a change to fields no code reads alone, R-677's), the classifier and
+`scripts/contain.sh` as full CI, the other dot-files as paths it doesn't name, and what a head that changes only prose
+costs.*
 *31 Oct 2026 · the owner's message of that day; applied in `scripts/ci_changes.sh`, `.github/workflows/ci.yml`,
 `.github/workflows/mutants.yml`, `xtask/tests/ci_changes.rs`, `xtask/tests/mutants_no_mutant.rs`,
 `xtask/tests/qa_R-656_ci_changes.rs`, `plan/OPERATIONS.md`, `plan/WORKFLOW.md`,
@@ -29659,7 +29663,7 @@ R-678 is in the "ci" group of `plan/rule_groups.yaml`.
 
 Changes REQ-VAL-148 (source, rulings, note).
 
-## R-790 — `.claude/`, its commands, agents and settings, is docs tier: a change only to it runs only the cheap checks *(amends R-677)*
+## R-790 — `.claude/`, its commands, agents and settings, is docs tier: a change only to it runs only the cheap checks *(amends R-677 and R-662)*
 *4 Nov 2026 · the owner's message of that day; applied in `scripts/ci_changes.sh`, `.github/workflows/ci.yml`'s
 comment, `xtask/tests/ci_changes.rs`, `plan/OPERATIONS.md` and `plan/rule_groups.yaml`*
 
@@ -29671,6 +29675,10 @@ The owner's words, 4 Nov 2026, verbatim:
 - **`.claude/` is on the classifier's allowlist.** The whole directory, `.claude/*` in `scripts/ci_changes.sh`'s
   `on_allowlist`: a change only to it is tier (c), docs, and a change beside code or data takes the highest tier, as
   R-677 has it. R-677's tier (c), "the rest of R-662's allowlist", now holds it.
+- **It reaches R-662's sentence too.** The owner's words call this an R-677 amendment, and that stands. But the one
+  place the corpus gave `.claude/`'s tier is R-662's "Applied per R-369": "`.claude/`, `.cargo/`, `.config/`,
+  `.gitignore` and the other dot-files run full CI as paths it doesn't name." So this ruling amends that sentence as
+  well: `.claude/` leaves it, and `.cargo/`, `.config/`, `.gitignore` and the other dot-files stay.
 - **No carve-out.** `.claude/` has no entry in `reads_code`: a test reading a file of it would not run on a head that
   changes only that file, as with any prose a test reads (R-662).
 - **The rest of the message is no rule.** The re-run of #409, and its parser fix tested on the day's real batch before

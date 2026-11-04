@@ -201,7 +201,7 @@ Of these: 232 calibration, 175 definition, 1658 obligation. Retired (kept for th
 | R-659 — Gemini reviews make one request and name the model that answered; on a quota refusal they fall back down a chain of four models; a spent chain posts "Gemini quota exhausted, review skipped" and the merge proceeds *(an R-369 note; amends R-635's Gemini workflow)* | informative only | the owner's message of 30 Oct 2026: one Gemini request per review, a four-model fallback chain on quota errors, the model stamped, a note when the chain is spent; process, carried by the gemini-dispatch workflow and scripts/gemini_review.py; changes no requirement |
 | R-664 — `generation_root` §3.5 no longer claims R² from the Welford accumulators: it cannot be derived from what is stored and nothing reads it; no per-sample field is added *(closes RQ-633)* | informative only | the owner's ruling of 31 Oct 2026 closing RQ-633: "+ R²" struck from generation_root §3.5, no new per-sample field; no requirement read it |
 | R-666 — sccache stays off: the job queue's builds do not use it | informative only | the owner's word of 31 Oct 2026: sccache stays off; process; changes no requirement |
-| R-790 — `.claude/`, its commands, agents and settings, is docs tier: a change only to it runs only the cheap checks *(amends R-677)* | informative only | the owner's word of 4 Nov 2026: `.claude/` is on the classifier's allowlist; process; changes no requirement |
+| R-790 — `.claude/`, its commands, agents and settings, is docs tier: a change only to it runs only the cheap checks *(amends R-677 and R-662)* | informative only | the owner's word of 4 Nov 2026: `.claude/` is on the classifier's allowlist; process; changes no requirement |
 
 ### `docs/contracts/principia_canonical_spec.md`
 
