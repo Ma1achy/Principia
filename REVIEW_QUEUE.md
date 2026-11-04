@@ -2002,7 +2002,7 @@ it is physics, the two rulings give different results on one chart.*
   through `ci-workspace`. REQ-SYS-077's statement and verify detail are amended to say so (PR #395, its `*Was:*` kept in
   the requirement). R-360's text in `decisions.md`, and `plan/CURRENT_RULES.md`, are unchanged: R-360 stays for the owner.
 
-## RQ-685: What R-297's "bit-identity" covers with the compute setting off: branch decisions only, or every Vulkan driver's division results *(physics; conflict: R-297, REQ-SYS-074's verify and the probe tests against REQ-INT-057 and parity contract § 2; R-84, R-649; issues #390, #396; context: the Windows RTX 2080 Super run at `e1df88fa`)*
+## RQ-685: What R-297's "bit-identity" covers with the compute setting off: branch decisions only, or every Vulkan driver's continuous results, division the one operation measured *(physics; conflict: R-297, REQ-SYS-074's verify and the probe tests against REQ-INT-057 and parity contract § 2; R-84, R-649; issues #390, #396; context: the Windows RTX 2080 Super run at `e1df88fa`)*
 
 *Queued 4 Nov 2026 by the orchestrator's filing task, from the Windows GPU run (#390), the entry REQ-SYS-074's verify
 asks for ("a mismatch with the setting off is a REVIEW_QUEUE entry"). For the owner: yes, it changes what the corpus
@@ -2109,7 +2109,7 @@ record, which RQ-686 and RQ-687 share.*
   - **So the risk is open, not absent.** A driver whose quotients are one ulp off is the case where
     `(M_pair + m_b)/d` could flip `E_rel > 0` near zero, or `n̂` could flip `|Δn̂| < tau`. Neither is measured: neither
     input is on any GPU at this commit.
-  - **One same-input difference this question doesn't cover.** RQ-687's failure: on identical inputs, setting off, in the
+  - **One same-input difference the division measurement doesn't cover; reading (b) does.** RQ-687's failure: on identical inputs, setting off, in the
     compute decode stage, the card and not Metal or lavapipe gives `rho_angle` 0 where f64 gives π/2. The cause is `sin`,
     isolated on the card, not division. By #393's diagnosis (inferred) the card takes R-437's `p = q = 0` select where
     the others don't. This entry uses "branch decision" for the wrapper's, REQ-INT-057's, and
@@ -2156,6 +2156,8 @@ record, which RQ-686 and RQ-687 share.*
 - **What (a) and (c) leave:** the payload compatibility signature and the sim key carry the compute setting and no driver
   (`docs/contracts/principia_caching_contract.md`:14, :36). So the same sim key gives different continuous bits per
   driver, and `SimState = f(IC, sim key)` (`docs/contracts/principia_canonical_spec.md`:82, :116) then holds per driver.
+- **How this ruling and RQ-687's depend on each other:** under option (b), RQ-687's `sin` failure is also a failure of
+  R-297, so RQ-687's option (c), neither, stands only with (b)'s list of supported drivers.
 - **Measurements that would settle more:** both fuzzed sets' result words on the card (worst ulp, and whether the result
   is a function of `d` times `n`); the halfway probe with 255.0 read from a buffer, beside the literal; the setting on;
   the same probe on another Vulkan driver.
@@ -2253,7 +2255,8 @@ run's record, the 13 failures and the hardware-health arm are in RQ-685.*
     `cos α` near `π/2` RQ-629 is about.
 - **The note's claim fails for `rho_angle`:** the failure below is a move of π/2, not rounding. By #393's diagnosis
   (inferred) it is R-437's `p = q = 0` select, taken on the card and not on Metal or lavapipe, on identical inputs with
-  the setting off. The cause is `sin`, not RQ-685's division, so RQ-685's question doesn't cover it; RQ-685 discloses it.
+  the setting off. The cause is `sin`, so RQ-685's division measurement doesn't cover it; its reading (b) does. How the two
+  rulings depend on each other is stated once, in RQ-685.
 - **Measured (#393):**
   - `qa_m225_kernel_rho_angle_at_the_lambda_pole` on the card: "n₀ = [1.0, 0.0, 0.0], φ_f = 0 at [0.5, 0.5005]: the kernel
     decode stage's rho_angle 0e0 is 8388608 eps from Φ's f64 angle 1.5707963267948966e0, over REQ-DEC-043's 256". The line
