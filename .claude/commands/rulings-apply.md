@@ -105,7 +105,7 @@ What each kind does, past that:
 | option | `RQ-n: (a) …` | yes | closed: the outcome, riders included, unless step 2 keeps it open | `*(closes RQ-m)*`, or `*(on RQ-m, which stays open)*` if it stays open |
 | free-text | `RQ-n: <words>` | yes | as its words say: closed, or open with a dated line | as for an option |
 | close | `RQ-n: close`, or words ending `close` | yes | closed: why it was ruled or moot | `*(closes RQ-m)*` |
-| veto | `RQ-n: veto` | yes: what the entry applied is vetoed | closed; if the question itself is still undecided, file a new RQ for it in this PR, naming the closed one, so it isn't lost | `*(closes RQ-m)*` |
+| veto | `RQ-n: veto` | yes: what the entry applied is vetoed | closed; if the question itself is still undecided, file a new RQ for it in this PR, naming the closed one, so it isn't lost, numbered by `next-id --rq` | `*(closes RQ-m)*` |
 | veto | `D-n: veto` | yes: the report's decision D-n, named in full, is vetoed | none | `*(vetoes D-n of the report of <date>)*` |
 | defer | `RQ-n: defer:Mn`, `defer until <event>` | yes (`CLAUDE.md`: only the owner defers, by a ruling) | stays open, "deferred to <x> by owner <date>" | `*(defers RQ-m)*` |
 | ask | `RQ-n: ask:…` | no: a question isn't an answer | stays open, the question appended and flagged for the next report | no ruling |
@@ -132,6 +132,14 @@ without a word, and act on a `$` or a backtick. Quote the outcome with single qu
 `close` appends `- **Ruling:** R-n (<date>, the owner: "<text>"): <outcome>` and moves the entry otherwise unchanged. An
 entry closed that `open-questions.md` names in a "Carried by" note, or that holds a `**Mark:**` line, needs that note or
 that mark settled in this PR: `check_plan.py` fails otherwise.
+
+A new RQ takes its number from the finder, never by eye:
+
+```
+python3 plan/tools/rulings_reply.py next-id --rq --reserved-file "$R/reserved-ids.txt"
+```
+
+It reads every branch's queue and archive, and the file's `RQ-n` lines.
 
 ## 5. What each ruling changes
 

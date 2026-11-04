@@ -48,10 +48,13 @@ has a deferral made by a ruling. `ask` takes none: it is a question, not an answ
                                    refused. REPLY may be `-`, for stdin. --answers-dir writes each accepted answer to
                                    DIR/<item>.txt as typed (an `ask`, its question), for the commands below, so that
                                    no shell ever reads the owner's quotes, `$` or backticks
-    next-id [--reserved-file PATH] the next free R id: one past the highest `## R-n` heading of decisions.md on every
+    next-id [--rq] [--reserved-file PATH]
+                                   the next free R id: one past the highest `## R-n` heading of decisions.md on every
                                    local branch, every origin branch and this tree, and past any reserved id (a file of
                                    lines starting `R-n`, for ids the orchestrator has promised and no branch holds yet).
-                                   A gap below the highest is never reused: another branch may hold it
+                                   With --rq, the next free RQ id, the same way, over the queue and its archive and the
+                                   file's `RQ-n` lines. A gap below the highest is never reused: another branch may hold
+                                   it
     last-report DIR [--before DATE]
                                    the latest <date>-report.md in DIR, before ISO DATE if given, or `none`
     check-report REPORT [--queue PATH]
@@ -70,7 +73,7 @@ Usage: python3 plan/tools/rulings_reply.py <command> …   |   python3 plan/tool
 import argparse, os, re, subprocess, sys, tempfile
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from rulings import QUEUE, QUEUE_ARCHIVE, RULINGS, rq_ids  # noqa: E402
+from rulings import QUEUE, QUEUE_ARCHIVE, RULINGS, queue_files, rq_ids  # noqa: E402
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 # RQ-129 onward; a later milestone's file starts after its gate (the queue's preamble).
@@ -110,6 +113,7 @@ MORE_IN_OPTIONS = re.compile(r"(?i)\bseparately\b|\bOpen within\b")
 MORE_FIELDS = re.compile(r"^- \*\*(?:The questions|Second question|Q-\d)", re.M)
 LONE = re.compile(r"^(?:\(\s*\w+\s*\)|\w{1,3})\.?$")  # a reply that is a label and nothing else
 HEADING_ID = re.compile(r"^## R-(\d+)\b", re.M)
+RQ_HEADING_ID = re.compile(r"^## RQ-(\d+)\b", re.M)
 DATE = re.compile(r"^\d{1,2} [A-Z][a-z]{2} \d{4}$")
 REPORT_NAME = re.compile(r"^(\d{4}-\d{2}-\d{2})-report\.md$")
 
@@ -330,16 +334,20 @@ def assign(accepted, first):
     return out
 
 
-def next_free(texts, reserved=()):
-    """One past the highest heading id in the decisions.md `texts` and the `reserved` ids."""
-    ids = [int(i) for t in texts for i in HEADING_ID.findall(t)] + [int(r.split("-")[1]) for r in reserved]
+def next_free(texts, reserved=(), heading=HEADING_ID):
+    """One past the highest `heading` id in `texts` and the `reserved` ids."""
+    ids = [int(i) for t in texts for i in heading.findall(t)] + [int(r.split("-")[1]) for r in reserved]
     return max(ids, default=0) + 1
+
+
+def branches():
+    return subprocess.run(["git", "-C", ROOT, "for-each-ref", "--format=%(refname)", "refs/heads",
+                           "refs/remotes/origin"], capture_output=True, text=True, check=True).stdout.split()
 
 
 def branch_decisions():
     """decisions.md on every local and origin branch, and in this tree."""
-    refs = subprocess.run(["git", "-C", ROOT, "for-each-ref", "--format=%(refname)", "refs/heads",
-                           "refs/remotes/origin"], capture_output=True, text=True, check=True).stdout.split()
+    refs = branches()
     out = [open(os.path.join(ROOT, RULINGS), encoding="utf-8").read()]
     for ref in refs:
         r = subprocess.run(["git", "-C", ROOT, "show", f"{ref}:{RULINGS}"], capture_output=True)
@@ -348,10 +356,22 @@ def branch_decisions():
     return out
 
 
-def read_reserved(path):
+def branch_queues():
+    """The `## RQ-n` headings of the review queue and its archive on every local and origin branch, and in this tree."""
+    out = [open(p, encoding="utf-8").read() for p in queue_files(os.path.join(ROOT, QUEUE),
+                                                                 os.path.join(ROOT, QUEUE_ARCHIVE))]
+    for ref in branches():
+        r = subprocess.run(["git", "-C", ROOT, "grep", "-h", "-E", r"^## RQ-[0-9]+", ref, "--", QUEUE, QUEUE_ARCHIVE],
+                           capture_output=True)
+        out.append(r.stdout.decode("utf-8", "replace"))
+    return out
+
+
+def read_reserved(path, prefix="R"):
+    """The ids of `prefix` a reserved-ids file holds: `R-5` lines for R, `RQ-5` lines for RQ."""
     if not path:
         return []
-    return [m.group(0) for line in open(path, encoding="utf-8") for m in [re.match(r"R-\d+\b", line)] if m]
+    return [m.group(0) for line in open(path, encoding="utf-8") for m in [re.match(rf"{prefix}-\d+\b", line)] if m]
 
 
 def last_report(names, before=None):
@@ -630,6 +650,13 @@ def self_test():
     if (next_free(["## R-5 — a\n"], ["R-9"]) != 10 or next_free(["## R-9 — a\n"], ["R-5"]) != 10
             or next_free([]) != 1):
         fails.append("reply self-test: next_free must pass the reserved ids")
+    if next_free(["## RQ-5: a\n## R-99 — b\n"], ["RQ-7"], RQ_HEADING_ID) != 8 or next_free(["## RQ-5: a\n"]) != 1:
+        fails.append("reply self-test: next_free's RQ headings and R headings must stay apart")
+    with tempfile.TemporaryDirectory() as d:
+        path = os.path.join(d, "reserved")
+        write(path, "R-7\nRQ-9 a reason\nR-8 a reason\nsee R-99\n")
+        if read_reserved(path) != ["R-7", "R-8"] or read_reserved(path, "RQ") != ["RQ-9"] or read_reserved(None):
+            fails.append(f"reply self-test: reserved ids: {read_reserved(path)} {read_reserved(path, 'RQ')}")
     names = ["2026-11-04-report.md", "2026-11-05-report.md", "2026-11-05-reply.md", "report.md"]
     if last_report(names) != names[1] or last_report(names, "2026-11-05") != names[0]:
         fails.append("reply self-test: last_report")
@@ -788,7 +815,9 @@ def main():
     s.add_argument("--report")
     s.add_argument("--reserved-file")
     s.add_argument("--answers-dir")
-    cmd("next-id", queue=False).add_argument("--reserved-file")
+    s = cmd("next-id", queue=False)
+    s.add_argument("--reserved-file")
+    s.add_argument("--rq", action="store_true")
     cmd("last-report", "dir", queue=False).add_argument("--before")
     cmd("check-report", "report")
     s = cmd("close", "rq")
@@ -804,7 +833,10 @@ def main():
     a = p.parse_args()
 
     if a.cmd == "next-id":
-        print(f"R-{next_free(branch_decisions(), read_reserved(a.reserved_file))}")
+        if a.rq:
+            print(f"RQ-{next_free(branch_queues(), read_reserved(a.reserved_file, 'RQ'), RQ_HEADING_ID)}")
+        else:
+            print(f"R-{next_free(branch_decisions(), read_reserved(a.reserved_file))}")
         return 0
     if a.cmd == "last-report":
         found = last_report(os.listdir(a.dir) if os.path.isdir(a.dir) else [], a.before)
