@@ -6,17 +6,17 @@
 //! **An energy-type axis alone** ([`MixedEnergy`]; R-471 H1). The axis takes its own line of chart_reference §2.1's
 //! warp and solves into the momentum block by §2.2's construction, its seed R-82's on the decoded `z_α`, the masses and
 //! configuration read as fixed (kind 3: the other axis sits upstream, in the mass or configuration block):
-//! - `K` and `KE` ([`AxisK`], [`AxisKE`]): `K* = K_max·t^γ_K`, at the chart's held `L_z`.
-//! - `E` ([`AxisE`]): `E = U + K_max·t^γ_K`, `U` the pixel's own potential, so `K* = K_max·t^γ_K` (E3).
+//! - `K` and `KE` ([`AxisK`], [`AxisKE`]): `K* = L_z²/2I + K_max·t^γ_K`, at the chart's held `L_z`.
+//! - `E` ([`AxisE`]): `E = U + K*`, that `K*`, `U` the pixel's own potential (E3).
 //! - `L_z` ([`AxisLz`]): `L_z = (2t − 1)·L_max`, `L_max = √(2·I·K)` at the chart's held `K`, `I = 1`.
 //! - The virial ratio ([`AxisVirial`]; chart_reference §2.1's paragraph) over the asked range `[Q_lo, Q_hi]`
 //!   ([`MixedEnergy::virial`]; [`MixedEnergy::new`]'s is `[0, Q_max]`): `Q = Q₀ + (Q_hi − Q₀)·t^γ_K`,
-//!   `Q₀ = max(Q_lo, 0)`, `K* = Q·|U|/2` on the pixel's own `U`, at the held `L_z`.
+//!   `Q₀ = max(Q_lo, 0)`, `K* = L_z²/2I + Q·|U|/2` on the pixel's own `U`, at the held `L_z`.
 //!
-//! At the held `L_z = 0` (`Φ_θ,K`'s), every pixel of `[0,1]²` is feasible on a `t` axis, `K* ≥ 0 = K_min`; an `L_z`
-//! axis is feasible at every held `K ≥ 0`. A warped `K`, `KE`, `E` or virial axis at a held `L_z ≠ 0` is not offered:
-//! its pixels with `K* < L_z²/2I` would be non-systems inside the square, which no warp written here makes feasible
-//! (R-471 E1, R-506), so `validate` refuses every point of it ([`MixedEnergy::offered`]; applied per R-369, RQ-683).
+//! Every pixel of `[0,1]²` is feasible on a warped `t` axis at every held `L_z` (the owner's ruling of 4 Nov 2026 on
+//! RQ-683; chart_reference §2.1): the floor `L_z²/2I` ([`invariant::k_floor`], 0 at the held `L_z = 0`, `Φ_θ,K`'s) sits
+//! under the line, so `K*` is at or above it, the bottom row `t = 0` exactly on it. `I = 1` on every pixel, so the floor
+//! does not vary across the window. An `L_z` axis is feasible at every held `K ≥ 0`.
 //! Under the linear option (`super::energy::Mapping::Linear`) `K` and `KE` are `K_max·t`, `E` is `U₀ + K_max·t` with
 //! `U₀` the slice centre's potential, so `K* = E − U` at the pixel, the virial ratio `Q_lo + (Q_hi − Q_lo)·t`, their
 //! pixels with `K* < L_z²/2I` (or, virial, `Q < 0`) not a system, and `L_z`'s line is already linear at its held `K`
@@ -326,19 +326,6 @@ impl<A: Coordinate, Q: EnergyAxis, S: Selection, P: Copy> MixedEnergy<A, Q, S, P
         sides(Q::QUANTITY, self.mapping)
     }
 
-    /// Whether the chart is offered (the module's note): not a warped `K`, `KE`, `E` or virial axis at a held
-    /// `L_z ≠ 0`, whose pixels with `K* < L_z²/2I` would be non-systems inside the square. `validate` refuses every
-    /// point of a chart that is not.
-    #[inline]
-    pub fn offered(&self) -> bool
-    where
-        f64: From<P>,
-    {
-        self.mapping == Mapping::Linear
-            || Q::QUANTITY == Quantity::Lz
-            || f64::from(self.held) == 0.0
-    }
-
     /// The vertical axis's value scale at `t`: on `K`, `KE` and `E` warped `top·t^γ_K`, linear `top·t`; on the virial
     /// ratio warped `Q₀ + (top − Q₀)·t^γ_K`, `Q₀ = max(bottom, 0)`, linear `bottom + (top − bottom)·t`; on `L_z`,
     /// `2t − 1`.
@@ -374,7 +361,13 @@ impl<A: Coordinate, Q: EnergyAxis, S: Selection, P: Copy> MixedEnergy<A, Q, S, P
         } else {
             R::zero()
         };
-        let rule = Q::rule(self.scale(v), w(self.held), linear, u_ref);
+        let held = w(self.held);
+        let rule = Q::rule(self.scale(v), held, linear, u_ref);
+        let floored = !linear & (Q::QUANTITY != Quantity::Lz);
+        let rule = Rule {
+            k0: select(floored, invariant::k_floor(held) + rule.k0, rule.k0),
+            ..rule
+        };
         decode_rule::<S, R>(rule, &Latent::new(z), p)
     }
 
@@ -395,8 +388,7 @@ impl<A: Coordinate, Q: EnergyAxis, S: Selection, P: Copy> MixedEnergy<A, Q, S, P
         )
     }
 
-    /// The check at `(u, v)` on the frozen controls `z` (the module's note): every point refused, naming
-    /// `K ≥ L_z²/2I`, where the chart is not [`MixedEnergy::offered`].
+    /// The check at `(u, v)` on the frozen controls `z` (the module's note).
     fn check(&self, z: [f64; 8], u: f64, v: f64, p: &LinkParams<f64>) -> ValidationResult
     where
         f64: From<P>,
@@ -406,11 +398,6 @@ impl<A: Coordinate, Q: EnergyAxis, S: Selection, P: Copy> MixedEnergy<A, Q, S, P
             Constraint::KAboveLzBound,
             Constraint::KNonNegative,
         );
-        if !self.offered() {
-            return ValidationResult::Reject {
-                failed: Constraint::KAboveLzBound,
-            };
-        }
         if !(u.is_finite() && v.is_finite()) {
             return ValidationResult::Reject {
                 failed: select(u.is_finite(), vertical, Constraint::AxisDomain),

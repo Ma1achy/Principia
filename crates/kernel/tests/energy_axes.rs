@@ -1876,70 +1876,370 @@ negative_control!(
     check_virial_range(|[_, hi], mapping, t| virial_want([0.0, hi], mapping, t))
 );
 
-/// A warped lone `K`, `KE`, `E` or virial axis at a held `L_z ≠ 0` is not offered (chart_reference §2.1; R-471 E1,
-/// R-506; RQ-683): `validate` refuses every point of `[−¼, 1¼]²` and every non-finite one, naming `K ≥ L_z²/2I`. At
-/// the held `held`, so `held = 0` (the control) is offered and fails it. The cases that stay offered: a held 0 or −0,
-/// the linear option at the same held value, and a warped `L_z` axis at a held `K ≠ 0`.
-fn check_unoffered(held: f64) {
-    fn refused<Q: EnergyAxis>(held: f64) {
-        let chart = lone::<Q>(held, Mapping::Warped);
+// ── A warped `t` axis at a held `L_z ≠ 0`: the floor (the owner's ruling of 4 Nov 2026 on RQ-683) ───────────────────
+
+/// The held values of the floor's tests, either sign, a tiny one and one past `K_max`'s own `L_max`.
+const HELD_LZ: [f64; 6] = [0.3, -0.3, 1.0e-300, 0.1, 1.7, 40.0];
+
+/// `n` values of `|L_z|` across `10^−12` to `10^4`, from a fixed generator, for the floor's rounding: `l²/2` lands on
+/// both sides of its float.
+fn held_values(n: u32) -> Vec<f64> {
+    let mut state = 0x9E37_79B9_7F4A_7C15_u64;
+    (0..n)
+        .map(|_| {
+            state ^= state << 13;
+            state ^= state >> 7;
+            state ^= state << 17;
+            let unit = (state >> 11) as f64 / (1u64 << 53) as f64;
+            10f64.powf(-12.0 + 16.0 * unit)
+        })
+        .collect()
+}
+
+/// `floor` is the least float the exact test finds feasible at each `L_z`, whichever way `l²/2` rounded, and some of
+/// them rounded below.
+fn check_floor_least(floor: fn(f64) -> f64) {
+    let mut raised = 0;
+    for l in held_values(4096) {
+        let k = floor(l);
         assert!(
-            !chart.offered(),
-            "{:?} warped at L_z = {held} is offered",
+            !infeasible(1.0, k, l),
+            "the floor at L_z = {l} rounds below L_z²/2"
+        );
+        assert!(
+            infeasible(1.0, invariant::WarpReal::below(k), l),
+            "the floor at L_z = {l} is not the least feasible float"
+        );
+        raised += usize::from(k != l * l / 2.0);
+    }
+    assert!(raised > 0, "no L_z rounded below: the sweep tests nothing");
+}
+
+#[test]
+fn energy_axes_warped_floor_rounding() {
+    check_floor_least(invariant::k_floor);
+}
+
+negative_control!(
+    energy_axes_warped_floor_rounding,
+    "the rounded L_z²/2 alone, not raised, falls below the exact bound on about half the sweep",
+    expected = "rounds below L_z²/2",
+    check_floor_least(|l| l * l / 2.0)
+);
+
+/// `floor`'s edges at f64: 0 at `±0`, the smallest float where `l²` underflows, either sign alike, and `+∞` and NaN
+/// where `l²/2` has no float.
+fn check_floor_edges(floor: fn(f64) -> f64) {
+    assert_eq!(floor(0.0).to_bits(), 0, "the floor at +0");
+    assert_eq!(floor(-0.0).to_bits(), 0, "the floor at −0");
+    assert_eq!(
+        floor(1.0e-300).to_bits(),
+        1,
+        "the floor where l² underflows"
+    );
+    assert_eq!(
+        floor(-1.0e-300).to_bits(),
+        1,
+        "the floor where l² underflows"
+    );
+    assert_eq!(floor(1.0e200), f64::INFINITY, "the floor past f64");
+    assert!(floor(f64::NAN).is_nan(), "the floor of NaN");
+}
+
+/// The floor's edges at both precisions, and the step up's own, which leaves `+∞` and NaN where they are.
+#[test]
+fn energy_axes_warped_floor_edges() {
+    use invariant::{k_floor, WarpReal};
+    check_floor_edges(k_floor);
+    assert_eq!(k_floor(0.0_f32).to_bits(), 0);
+    assert_eq!(k_floor(1.0e-30_f32).to_bits(), 1);
+    assert_eq!(k_floor(1.0e30_f32), f32::INFINITY);
+    assert!(k_floor(f32::NAN).is_nan());
+    assert_eq!(0.0_f64.above().to_bits(), 1);
+    assert_eq!(0.0_f32.above().to_bits(), 1);
+    assert_eq!(1.0_f64.above(), 1.0 + f64::EPSILON);
+    assert_eq!(1.0_f32.above(), 1.0 + f32::EPSILON);
+    assert_eq!(f64::MAX.above(), f64::INFINITY);
+    assert_eq!(f32::MAX.above(), f32::INFINITY);
+    assert_eq!(f64::INFINITY.above(), f64::INFINITY);
+    assert_eq!(f32::INFINITY.above(), f32::INFINITY);
+    assert!(f64::NAN.above().is_nan() && f32::NAN.above().is_nan());
+}
+
+negative_control!(
+    energy_axes_warped_floor_edges,
+    "the rounded l²/2 alone leaves an underflowed spin's bottom row at K* = 0, below any spin",
+    expected = "the floor where l² underflows",
+    check_floor_edges(|l| l * l / 2.0)
+);
+
+/// Every pixel of a warped lone `Q` axis at every held `L_z` is a system at that `L_z`, under `mapping`: the bottom row
+/// included, with the rounding at the floor (the sweep's values at `u = ½`, `t = 0`, on the whole grid for
+/// [`HELD_LZ`]).
+fn check_held_axis<Q: EnergyAxis>(mapping: Mapping) {
+    for held in HELD_LZ {
+        check_every_pixel(
+            &format!("{:?} at L_z = {held}", Q::QUANTITY),
+            system(&lone::<Q>(held, mapping)),
+        );
+    }
+    for held in held_values(256) {
+        let chart = lone::<Q>(held, mapping);
+        assert!(
+            chart.validate(0.5, 0.0) == ValidationResult::Valid,
+            "the bottom row of {:?} at L_z = {held} is not a system",
             Q::QUANTITY
         );
-        let all = grid(-0.25, 1.25)
-            .into_iter()
-            .chain([[f64::NAN, 0.5], [0.5, f64::INFINITY]]);
-        for [u, v] in all {
-            assert_eq!(
-                chart.validate(u, v),
-                ValidationResult::Reject {
-                    failed: Constraint::KAboveLzBound
-                },
-                "{:?} warped at L_z = {held}: ({u}, {v}) is not refused",
+    }
+}
+
+fn check_held_axes(mapping: Mapping) {
+    check_held_axis::<AxisK>(mapping);
+    check_held_axis::<AxisKE>(mapping);
+    check_held_axis::<AxisE>(mapping);
+    check_held_axis::<AxisVirial>(mapping);
+}
+
+#[test]
+fn energy_axes_warped_held_lz_every_pixel() {
+    check_held_axes(Mapping::Warped);
+}
+
+negative_control!(
+    energy_axes_warped_held_lz_every_pixel,
+    "the linear option at the same held L_z adds no floor, so its low pixels are not systems",
+    expected = "is not a system",
+    check_held_axes(Mapping::Linear)
+);
+
+/// Each warped lone axis decodes `K* = floor(held) + line` and the held `L_z`; `E` reads `U + K*` at the pixel's own `U`
+/// and the virial ratio `Q(t)·|U|/2` above the floor; past the top row `K*` goes on and exceeds `K_max`. `floor` is the
+/// floor the test expects.
+fn check_held_targets(floor: fn(f64) -> f64) {
+    fn axis<Q: EnergyAxis>(held: f64, floor: f64, line: &dyn Fn(f64, f64) -> f64) {
+        let chart = lone::<Q>(held, Mapping::Warped);
+        for [u, t] in grid(0.0, 1.0) {
+            let d = chart.decode::<Defaults, f64>(u, t);
+            let (lz, k) = lz_k(&d);
+            let u_pot = kernel::decode::descriptor::potential(&d.ic);
+            let want = floor + line(t, u_pot);
+            let eps = f64::EPSILON;
+            assert!(
+                (k - want).abs() <= TOL_K * eps * want.max(f64::MIN_POSITIVE)
+                    && (lz - held).abs() <= TOL_L * eps * (held.abs() + (2.0 * want).sqrt()),
+                "{:?} at L_z = {held}, ({u}, {t}): K = {k}, L_z = {lz}, not K* = {want}",
                 Q::QUANTITY
             );
         }
     }
-    refused::<AxisK>(held);
-    refused::<AxisKE>(held);
-    refused::<AxisE>(held);
-    refused::<AxisVirial>(held);
-    for zero in [0.0, -0.0] {
-        assert!(
-            lone::<AxisK>(zero, Mapping::Warped).offered()
-                && lone::<AxisVirial>(zero, Mapping::Warped).offered(),
-            "a warped axis at L_z = {zero} is not offered"
-        );
+    let (top, g) = (k_max(), gamma_k());
+    for held in [0.3, -0.3, 1.7] {
+        let f = floor(held);
+        let kinetic = move |t: f64, _: f64| top * t.powf(g);
+        axis::<AxisK>(held, f, &kinetic);
+        axis::<AxisKE>(held, f, &kinetic);
+        axis::<AxisE>(held, f, &kinetic);
+        axis::<AxisVirial>(held, f, &move |t, u| top * t.powf(g) * u.abs() / 2.0);
     }
+}
+
+#[test]
+fn energy_axes_warped_held_lz_targets() {
+    check_held_targets(|l| l * l / 2.0);
+}
+
+negative_control!(
+    energy_axes_warped_held_lz_targets,
+    "the unfloored line K_max·t^γ is the warp of a held L_z = 0 only",
+    expected = "not K* =",
+    check_held_targets(|_| 0.0)
+);
+
+/// The bottom row under `mapping`, at the precision `$r`, across the sweep's held values: the construction feasible on
+/// every axis's pixel, the chart built at that precision.
+macro_rules! check_bottom_row {
+    ($r:ty, $axis:ty, $mapping:expr) => {
+        for l in held_values(1024) {
+            let frozen = Z0.map(|z| z as $r);
+            let chart: MixedEnergy<Alpha, $axis, Defaults, $r> = MixedEnergy::new(
+                frozen,
+                [0.2, 1.3],
+                k_max() as $r,
+                gamma_k() as $r,
+                l as $r,
+                $mapping,
+            );
+            let (_, outcome) = chart.decode_from(frozen, 0.5, 0.0, &LinkParams::DEFAULT);
+            assert!(
+                outcome == Outcome::Feasible,
+                "the bottom row at L_z = {l} is {outcome:?}"
+            );
+        }
+    };
+}
+
+/// The bottom row, `t = 0`, is a system at both precisions on every warped axis.
+fn check_bottom_rows(mapping: Mapping) {
+    check_bottom_row!(f64, AxisK, mapping);
+    check_bottom_row!(f64, AxisKE, mapping);
+    check_bottom_row!(f64, AxisE, mapping);
+    check_bottom_row!(f64, AxisVirial, mapping);
+    check_bottom_row!(f32, AxisK, mapping);
+    check_bottom_row!(f32, AxisKE, mapping);
+    check_bottom_row!(f32, AxisE, mapping);
+    check_bottom_row!(f32, AxisVirial, mapping);
+}
+
+#[test]
+fn energy_axes_warped_bottom_row() {
+    check_bottom_rows(Mapping::Warped);
+}
+
+negative_control!(
+    energy_axes_warped_bottom_row,
+    "the linear option's row t = 0 is K* = 0, below any spin, so it must fail",
+    expected = "the bottom row at L_z",
+    check_bottom_rows(Mapping::Linear)
+);
+
+/// Past the square: below `t = 0` a warped `t` axis clamps to the floor, past `t = 1` it continues on `K`, `KE` and `E`
+/// (R-508), and the virial ratio is bounded past both edges.
+fn check_held_sides(held: f64, want: fn(f64) -> f64) {
+    let moved = |v: f64| ValidationResult::Clamp {
+        u: 0.5,
+        v,
+        moved: [false, true],
+        failed: Constraint::KNonNegative,
+    };
+    let k = lone::<AxisK>(held, Mapping::Warped);
+    assert_eq!(k.validate(0.5, -0.25), moved(0.0), "t < 0, K");
+    assert_eq!(k.validate(0.5, 1.25), ValidationResult::Valid, "t > 1, K");
+    let q = lone::<AxisVirial>(held, Mapping::Warped);
+    assert_eq!(q.validate(0.5, -0.25), moved(0.0), "t < 0, virial");
+    assert_eq!(q.validate(0.5, 1.25), moved(1.0), "t > 1, virial");
+    let floor = lz_k(&k.decode::<Defaults, f64>(0.5, 0.0)).1;
     assert!(
-        !lone::<AxisK>(f64::NAN, Mapping::Warped).offered(),
-        "a warped axis at a NaN L_z is offered"
-    );
-    let linear = lone::<AxisK>(0.3, Mapping::Linear);
-    assert!(
-        linear.offered() && linear.validate(0.5, 1.0) == ValidationResult::Valid,
-        "the linear option at L_z = 0.3 is not offered"
-    );
-    let lz = lone::<AxisLz>(0.3, Mapping::Warped);
-    assert!(
-        lz.offered() && lz.validate(0.5, 0.5) == ValidationResult::Valid,
-        "a warped L_z axis at K = 0.3 is not offered"
+        (floor - want(held)).abs() <= TOL_K * f64::EPSILON * floor,
+        "the clamp's t = 0 reads K = {floor}, not the floor"
     );
 }
 
 #[test]
-fn energy_axes_warped_held_lz_unoffered() {
-    check_unoffered(0.3);
-    check_unoffered(-1e-300);
+fn energy_axes_warped_held_lz_sides() {
+    check_held_sides(0.3, |l| l * l / 2.0);
+    check_held_sides(-1.7, |l| l * l / 2.0);
 }
 
 negative_control!(
-    energy_axes_warped_held_lz_unoffered,
-    "a held L_z = 0 is offered and its pixels are systems, so it must fail",
-    expected = "is offered",
-    check_unoffered(0.0)
+    energy_axes_warped_held_lz_sides,
+    "a clamp read at K = 0 is the unfloored warp's, so it must fail",
+    expected = "not the floor",
+    check_held_sides(0.3, |_| 0.0)
+);
+
+/// A warped axis at a held `L_z ≠ 0` stays a system under a tilt into a mass logit and `z_β`: the pixel's own
+/// `U` and masses move, the floor, at `I = 1`, does not.
+fn check_held_tilted(mapping: Mapping) {
+    let chart = lone::<AxisE>(0.3, mapping);
+    let shift = Shift {
+        x: 6,
+        dx: 0.4,
+        y: 1,
+        dy: 0.3,
+        two: true,
+    };
+    for [u, t] in grid(0.0, 1.0) {
+        let valid = chart.validate_shifted(u, t, &shift, &LinkParams::DEFAULT);
+        assert!(
+            valid == ValidationResult::Valid,
+            "({u}, {t}) tilted is not a system: {valid:?}"
+        );
+    }
+}
+
+#[test]
+fn energy_axes_warped_held_lz_tilted() {
+    check_held_tilted(Mapping::Warped);
+}
+
+negative_control!(
+    energy_axes_warped_held_lz_tilted,
+    "the linear option under the same tilt keeps its fixed values, so its low pixels are not systems",
+    expected = "tilted is not a system",
+    check_held_tilted(Mapping::Linear)
+);
+
+/// A held value with no floor, or none at all, is refused at every point: never a system, never a panic.
+fn check_unrepresentable(held: f64) {
+    for [u, v] in grid(0.0, 1.0) {
+        assert_eq!(
+            lone::<AxisK>(held, Mapping::Warped).validate(u, v),
+            ValidationResult::Reject {
+                failed: Constraint::KAboveLzBound
+            },
+            "the warped axis at L_z = {held}: ({u}, {v}) is not refused"
+        );
+    }
+}
+
+#[test]
+fn energy_axes_warped_held_lz_unrepresentable() {
+    check_unrepresentable(f64::NAN);
+    check_unrepresentable(f64::INFINITY);
+    check_unrepresentable(1.0e200);
+    check_unrepresentable(-1.0e200);
+}
+
+negative_control!(
+    energy_axes_warped_held_lz_unrepresentable,
+    "a finite spin with a representable floor is a system at every pixel",
+    expected = "is not refused",
+    check_unrepresentable(0.3)
+);
+
+/// The linear option at a held `L_z ≠ 0` keeps its fixed values (the owner's ruling, E2): `K* = K_max·t`, no floor, the
+/// row `t = 0` not a system (blank, R-470) and the top row one, on `K`, `KE`, `E` and, at a held `L_z` its top row
+/// clears, the virial ratio; `mapping` is the chart's. A warped `L_z` axis is as it was: `K` the held value, no floor added.
+fn check_linear_held(mapping: Mapping) {
+    fn axis<Q: EnergyAxis>(held: f64, mapping: Mapping) {
+        let chart = lone::<Q>(held, mapping);
+        assert_eq!(
+            chart.validate(0.5, 0.0),
+            ValidationResult::Reject {
+                failed: Constraint::KAboveLzBound
+            },
+            "{:?} linear: the row t = 0 is a system",
+            Q::QUANTITY
+        );
+        assert_eq!(
+            chart.validate(0.5, 1.0),
+            ValidationResult::Valid,
+            "{:?} linear: the top row is not a system",
+            Q::QUANTITY
+        );
+    }
+    axis::<AxisK>(0.3, mapping);
+    axis::<AxisKE>(0.3, mapping);
+    axis::<AxisE>(0.3, mapping);
+    axis::<AxisVirial>(0.05, mapping);
+    let lz = lone::<AxisLz>(0.3, Mapping::Warped);
+    let (_, k) = lz_k(&lz.decode::<Defaults, f64>(0.5, 0.75));
+    assert!(
+        (k - 0.3).abs() <= TOL_K * f64::EPSILON * 0.3,
+        "a warped L_z axis's K = {k} is not the held 0.3"
+    );
+}
+
+#[test]
+fn energy_axis_linear_option_held_lz_blanks() {
+    check_linear_held(Mapping::Linear);
+}
+
+negative_control!(
+    energy_axis_linear_option_held_lz_blanks,
+    "the warped axis at the same held L_z has the floor, so its row t = 0 is a system",
+    expected = "the row t = 0 is a system",
+    check_linear_held(Mapping::Warped)
 );
 
 /// How a mass-ratio arm forms its mass controls: the chart's own (its link's inverse at the ratio's masses), or the

@@ -87,10 +87,13 @@ fn select<T: Copy>(c: bool, t: T, f: T) -> T {
     }
 }
 
-/// The float below a non-negative float, for [`l_max`]'s steps down.
+/// The floats beside a non-negative float, for [`l_max`]'s steps down and [`k_floor`]'s step up.
 pub trait WarpReal: ExactSign {
     /// The next float toward 0 from a positive finite `self`; `self` itself at `±0`.
     fn below(self) -> Self;
+
+    /// The next float up from a non-negative finite `self`; `self` itself at `+∞` and NaN.
+    fn above(self) -> Self;
 }
 
 impl WarpReal for f32 {
@@ -99,6 +102,11 @@ impl WarpReal for f32 {
         let bits = self.to_bits();
         f32::from_bits(bits - select(bits & 0x7FFF_FFFF == 0, 0, 1))
     }
+
+    #[inline]
+    fn above(self) -> f32 {
+        f32::from_bits(self.to_bits() + select(self < f32::INFINITY, 1, 0))
+    }
 }
 
 impl WarpReal for f64 {
@@ -106,6 +114,11 @@ impl WarpReal for f64 {
     fn below(self) -> f64 {
         let bits = self.to_bits();
         f64::from_bits(bits - select(bits & 0x7FFF_FFFF_FFFF_FFFF == 0, 0, 1))
+    }
+
+    #[inline]
+    fn above(self) -> f64 {
+        f64::from_bits(self.to_bits() + select(self < f64::INFINITY, 1, 0))
     }
 }
 
@@ -122,6 +135,17 @@ fn lower<R: WarpReal>(k: R, l: R) -> R {
 pub fn l_max<R: WarpReal>(k: R) -> R {
     let root = Float::sqrt(k + k);
     lower(k, lower(k, lower(k, lower(k, root))))
+}
+
+/// The floor `L_z²/2I` at `I = 1`, the least float the exact test finds feasible at `L_z = l`: the rounded `l²/2`, one
+/// float up where it rounded below, as it can by at most one float, subnormals included. Unlike [`l_max`], the floor is
+/// on `K*`, the operand a warped `t` axis adds to (chart_reference §2.1), and adding a non-negative term cannot take a
+/// rounded sum below it, so a pixel above the floor stays feasible. It is 0 at `l = ±0`. An `l` whose `l²/2` has no
+/// finite float has none, and is `+∞`.
+#[inline]
+pub fn k_floor<R: WarpReal>(l: R) -> R {
+    let k = l * l / (R::one() + R::one());
+    select(infeasible(R::one(), k, l), k.above(), k)
 }
 
 /// A chart point's targets under the warp: the kinetic energy `K* = K(t)`, `L_max(t)` and `L_z(s, t)`.
