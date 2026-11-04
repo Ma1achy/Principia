@@ -58,7 +58,7 @@ existing ones (NOW-28 to NOW-34, M9-35 to M9-46); the earlier ranks are not re-r
 | 2 | NOW-29 | cft-rebound Burrau divergence (papers-72) | f64 against fp128 and fp256 on Burrau to t = [value]; an [value]-member ulp ensemble | S | GPL-3.0-or-later: never committed, values masked. Unreviewed, AI-assisted. Raised from RECORD-ONLY | 221 |
 | 3 | NOW-25 (standing) | Maissouradze 2026, 7 stable free-fall orbits | Free-fall closure at unequal masses, passages down to 1.8e-6 (S4) | S | AI-assisted; data path is papers-12, not papers-128 | 90 |
 | 4 | NOW-24 (standing) | Kandel 2026, 86 refined starts | L≠0 closure, equal masses | S | Ours: 7 are atlas rows and 1 nearly, counted as held; peek on the other 78 | 190 |
-| 5 | NOW-30 | Agekyan, Anosova & Orlov 1983, Tables 2-5 | Decay-time and escape statistics at rest in region D, 1000 runs, to 1000 crossing times. Peer-reviewed | M | Only Table 3 is criterion-free. The rest read Tevzadze's criterion, printed in Agekyan & Anosova 1968, eq. (10), R-592's source; no uniform sampler yet. Table 4 bin misprint | 4 |
+| 5 | NOW-30 | Agekyan, Anosova & Orlov 1983, Tables 2-5 | Decay-time and escape statistics at rest in region D, 1000 runs, to 1000 crossing times. Peer-reviewed | M | Only Table 3 is criterion-free. The rest read Tevzadze's criterion, printed in Agekyan & Anosova 1968, eq. (10), R-592's source; no uniform sampler yet. Table 4's 30-40 fraction disagrees with its count | 4 |
 | 6 | NOW-31 | eucliss unequal-mass velocity planes | Escape fraction at unequal masses and zero L, by the source's horizon | S-M | One fate code lumps survivors, step cap and skipped E ≥ 0 pixels. AI-authored, values masked | 205 |
 | 7 | NOW-23 (standing) | Jeomseon 2026, Burrau interval boxes | Top tiers on Burrau, t = 59.5 to 61 | S-M | AI-assisted; parse as rationals | 78 |
 | 8 | NOW-32 | mikha08-rgb/Nbody, figure-eight test | f32 on a GPU against f64 on the CPU, split growth | S | No licence: values masked. Conflates device and precision; needs KDK at fixed step | 188 |
@@ -205,7 +205,7 @@ Both are readings, not authority; every claim was checked against the native fil
 
 Every row with a conflict carries it in the `conflict` column:
 
-- **Agekyan, Anosova & Orlov 1983 (row 4):** Table 4 prints a bin "30-30" (should read 20-30).
+- **Agekyan, Anosova & Orlov 1983 (row 4):** Table 4's 30-40 row prints 24 of 2,150 as 0.010; the 16-18 row prints 0.011.
 - **Alves Silva 2021 (row 5):** batch papers-136 called it a conditional HIT; it is a star and two planets (HD 181433).
 - **Anosova et al. 1990 (row 8):** rights: NTRS says public use permitted, Cambridge says copyright NASA 1990 (batch
   reading, not verified). Stays `_local`.
