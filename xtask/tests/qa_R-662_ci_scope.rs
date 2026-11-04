@@ -466,6 +466,9 @@ impl Walk {
                 .and_then(|o| o.get(*key))
                 .cloned()
                 .unwrap_or_default(),
+            // A step's status functions, in a run with no failed step, which is the run this walk is of.
+            ["always()"] => "true".to_owned(),
+            ["failure()"] => "false".to_owned(),
             _ => panic!("qa_r662: the walk does not know the expression `{t}`"),
         }
     }
@@ -580,6 +583,43 @@ fn check_result(yml: &Value, w: &Walk, name: &str) -> String {
 }
 
 const GATES: [&str; 5] = ["ci", "xtask-ci", "gpu-kernel", "gpu-metal", "gpu-lavapipe"];
+
+/// The status functions a step's `if` holds read as a run with no failed step, and any other expression still stops
+/// the walk: it must not read as a false that hides a step.
+fn check_walk_reads_status(walk: &Walk, unknown: &[&str]) {
+    assert_eq!(walk.eval("always()"), "true", "qa_r662: `always()`");
+    assert_eq!(walk.eval("failure()"), "false", "qa_r662: `failure()`");
+    let mut outputs = BTreeMap::new();
+    outputs.insert("docs_only".to_owned(), "false".to_owned());
+    let mut seen = Walk::default();
+    seen.outputs.insert("changes".to_owned(), outputs);
+    let upload = "always() && needs.changes.outputs.docs_only != 'true'";
+    assert_eq!(seen.eval(upload), "true", "qa_r662: `{upload}`");
+    for expr in unknown {
+        let read = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| walk.eval(expr)));
+        assert!(read.is_err(), "qa_r662: the walk read `{expr}`");
+    }
+}
+
+#[test]
+fn qa_r662_walk_reads_status_and_refuses_the_rest() {
+    check_walk_reads_status(
+        &Walk::default(),
+        &[
+            "success()",
+            "cancelled()",
+            "hashFiles('x')",
+            "always() && cancelled()",
+        ],
+    );
+}
+
+negative_control!(
+    qa_r662_walk_reads_status_and_refuses_the_rest,
+    "a walk taken to refuse what it knows",
+    expected = "qa_r662: the walk read `failure()`",
+    check_walk_reads_status(&Walk::default(), &["failure()"])
+);
 
 /// The commands `ci-workspace` runs when `changes` said `docs_only`.
 fn workspace_runs(yml: &Value, docs_only: bool) -> String {
