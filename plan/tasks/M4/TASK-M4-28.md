@@ -51,6 +51,11 @@ alone does not answer the owner's question; the bits at identical operands do, a
   common checkpoint, go through `gpu_step_once` on every backend, NVIDIA's included, reported per pair. Each backend reads back,
   at the evaluation that forked, the expression's own operands and the input's bits. So the NVIDIA session runs `--record`, then
   `--replay` on the file `--compare` writes. The per-step digests stay branch words.
+- The operand read-back, which `--replay` and the fixed-input arm read through. `gpu_step_once` returns states and the digests stay
+  branch words, so nothing else emits these bits. A harness entry point in `crates/validation/src/harness/`, compiled from `crates/kernel` as
+  TASK-M4-02's are, no parity-only physics, runs the kernel's own step on a given state and emits, at each evaluation of a branch input of kind `+ and ×`
+  in `branch_inputs.rs`, the expression's own operands and the input's bits, a `Wide`'s mantissa and exponent both; `d²`'s come
+  from inside `detect_terminal`, after the STEP. Each row names this entry, as TASK-M4-27's record does, and a standing's domain carries it.
 - The report, written into the gate report: each pair's disagreement count and rate, for each of those results and for any of them, non-chaotic and chaotic
   apart; for each disagreement, the first step that differs and whether the branch operation there agrees on identical
   inputs, as REQ-VAL-079's report does, the kind column of TASK-M4-27, extended to the march's branch inputs from TASK-M4-03's `branch_inputs.rs`.
@@ -87,7 +92,7 @@ alone does not answer the owner's question; the bits at identical operands do, a
   positions, which have been through the force loop's divisions. A collision fork in `--replay` has identical inputs at the
   replay's level, and `d²` is `+` and `×`, but if its positions differ it is an upstream difference and convicts no driver.
 - **R-690's driver condition** is about bits, not forks, on TASK-M4-27's three levels, at the expression's own operands, with its
-  arbiter, the written form on CPU f32, each operation correctly rounded, its three words, its N and its domain (TASK-M4-27's Notes). N here comes from the fixed-input arm and the
+  arbiter, the written form on CPU f32, each operation correctly rounded, its three words, its N and its domain, the compiled entry read included (TASK-M4-27's Notes). N here comes from the fixed-input arm and the
   replays, the rows that read operands; a trajectory's row and digests count in the rate, not in N. The fixed-input
   arm gives most of it, since it holds operands identical where a march's divisions don't. A failing driver is recorded **unverified,
   not supported**, in those words. Nothing enforces the condition, and the recording blocks nothing.

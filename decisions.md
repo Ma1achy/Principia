@@ -29791,8 +29791,9 @@ evaluations of the first kind with operands bit-identical to CPU f32's, so a dri
 0", and each driver's line shows its level 1 count and its `other operation` count beside N. RQ-685's
 ruling, in the same batch and ported elsewhere, says "driver unverified" of a driver not measured: that is this "not run", in a run
 header, and not this ruling's words, which only a measured failure earns. A standing holds for the compute stage with the setting
-off, on that adapter and driver version, and for NVIDIA under its hardware label, since repeating on one card can't rule out a
-fixed fault (RQ-685).
+off, on that adapter and driver version, through the compiled entry each row names, and for NVIDIA under its hardware label, since
+repeating on one card can't rule out a fixed fault (RQ-685). A rewrite depends on the code around the expression: differing bits
+through a read-back entry fail the driver in that entry, and no failure through one says nothing of the production pipeline's compile.
 
 ## R-691 — The raw-value rule for pixel comparisons is for cross-backend investigation only; goldens stay as they are on CI backends *(closes RQ-692; amends R-686)*
 *4 Nov 2026 · the owner's batch of that day; applied in `docs/contracts/principia_parity_contract.md` § 4, TASK-M6-53,

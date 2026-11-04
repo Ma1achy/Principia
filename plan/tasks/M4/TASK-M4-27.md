@@ -48,7 +48,7 @@ that. It is the first test of R-690's driver condition, on fixed inputs.
   or `fma`, which one driver fuses and another rounds as two operations (R-547, RQ-298). TASK-M4-03's
   `branch_inputs.rs` isn't used: it lists the march's inputs and this task must not wait for it. A row of the first kind carries
   the bits of the expression's own operands and of the input, a `Wide`'s mantissa and exponent both, read back at the evaluation. Where the stage emits neither, a
-  read-back entry from the same source, no parity-only physics. The comparison gives each such row its level (Notes).
+  read-back entry from the same source, no parity-only physics. Each row names the compiled entry its bits came from. The comparison gives each such row its level (Notes).
 - Negative controls for this task's tests (R-176).
 
 ## Acceptance tests
@@ -59,7 +59,7 @@ that. It is the first test of R-690's driver condition, on fixed inputs.
   different outcome it reads the same, as a comparison fork; with differing operands it does not; a `Wide` input with equal operands and only its exponent differing reads "unverified, not
   supported"; of kind `other operation`, an `fma` form included, it does not; at level 2 the driver whose bits differ from the written form on CPU f32 is the one named, and at level 3 the one whose outcome
   differs; two GPUs sharing operands CPU f32's run didn't produce are arbitrated by the host's evaluation at those operands, and the one differing is named; a clean driver reads "no failure in N", with its level 1 and `other operation` counts beside it; a
-  driver whose rows are all level 1 reads "no failure in 0"; no record reads "not run".
+  driver whose rows are all level 1 reads "no failure in 0"; no record reads "not run"; each standing's domain names the entry its rows were read through.
   The control is a compare that reads only outcomes, which misses the first case; the kinds' control is a list that files a `Wide` input under
   `other operation`, which the `Wide` case rejects; N's control is a compare whose N counts all rows, which the "no failure in 0" case
   rejects (REQ-VAL-347).
@@ -88,7 +88,9 @@ that. It is the first test of R-690's driver condition, on fixed inputs.
   bit-identical to CPU f32's; the rate's denominator is inputs, a different count. Level 1 rows and `other operation` rows never reached the test,
   so each is counted apart and each driver's line shows all three. "Driver unverified" (RQ-685's ruling) is a run header's word for a driver not measured,
   not one of these. A standing's domain is stated with it: the compute stage, setting off, the adapter line and driver version,
-  and for NVIDIA its hardware label ("possibly faulty hardware"), so the words attach to that driver on that card.
+  the compiled entry read, and for NVIDIA its hardware label ("possibly faulty hardware"), so the words attach to that driver on that card.
+  A read-back entry is a different shader from the one that gave the row's outcome, and a rewrite depends on the code around the expression:
+  differing bits there fail the driver in that entry, and no failure there says nothing of the production pipeline's compile.
 - **A measurement under R-649, on tier (a), the GPU explorer.** It has no outside number, so it is neither an M9 target nor a
   peek. It blocks nothing, and no tolerance or threshold enters it. Each pair's outcome: PASS is 0 disagreements;
   anything else is EXPLAINED DIVERGENCE, with a measurement showing the mechanism, or UNEXPLAINED.
