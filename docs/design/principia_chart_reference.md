@@ -317,15 +317,26 @@ over the range's feasible part `[Q₀, Q_hi]`, `Q₀ = max(Q_lo, 0)`: `Q(t) = Q�
 section's exponent, so the range `[0, Q_max]` gives `Q_max·t^γ_K`; a range with `Q_hi ≤ 0` has no feasible part, and
 no chart offers it. The kinetic energy at the pixel is `K* = Q(t)·|U|/2`, using the pixel's own `U` (E3). `K*` is
 built by §2.2's construction at the chart's held `L_z`. At a held `L_z = 0` every pixel of `[0,1]²` is feasible,
-since `K* ≥ 0`. The axis is bounded past both of its edges. Under the linear option the axis is
+since `K* ≥ 0`; at a held `L_z ≠ 0` the next paragraph adds the floor. The axis is bounded past both of its edges. Under the linear option the axis is
 `Q(t) = Q_lo + (Q_hi − Q_lo)·t`, affine, over the asked range, and its pixels with `Q < 0` or `K* < L_z²/2I` are not a
 system.
 
-**A warped `t` axis at a held `L_z ≠ 0` is not offered (R-471 E1, R-506; RQ-683).** A lone `K`, `KE`, `E` or virial
-axis holds `L_z` at the chart's value. At a held `L_z ≠ 0` its pixels with `K* < L_z²/2I`, near `t = 0`, would be
-non-systems inside the square, and no warp written here makes them feasible. So no chart offers that axis warped at a
-held `L_z ≠ 0`: `validate` refuses every point of it (applied per R-369, TASK-M2-37). Whether such an axis should exist,
-and under what warp, is RQ-683's. Under the linear option it is offered, its pixels with `K* < L_z²/2I` not a system.
+**A warped `t` axis at a held `L_z ≠ 0` stands on the floor (the owner's ruling of 4 Nov 2026 on RQ-683).** A lone
+`K`, `KE`, `E` or virial axis holds `L_z` at the chart's value. Warped, its line adds the floor `L_z²/2I`, the least
+kinetic energy that spin allows: `K* = L_z²/2I + K_max·t^γ_K` on `K` and `KE`, `E = U + K*` with that `K*` on `E`, and
+`K* = L_z²/2I + Q(t)·|U|/2` on the virial ratio, the pixel's own `U` and `I`. So every pixel of `[0,1]²` is a system,
+the bottom row `t = 0` is the floor itself, §2.2's rigid rotation with `a = 0`, and the top row exceeds `K_max`, which
+is a range, as past `t = 1` (R-508). The pixel's own virial ratio `2K*/|U|` is `Q(t) + L_z²/(I·|U|)`. At a held
+`L_z = 0` the floor is 0 and the lines above stand unchanged. The bottom row must not blank on rounding: the floor is
+the least float §2.2's exact test finds feasible at the held `L_z`, `L_z²/2` at `I = 1` rounded and raised one float
+where it rounded below, and adding a non-negative term to it cannot fall below it. Under the linear option the axis
+keeps its fixed values and no floor is added: its pixels with `K* < L_z²/2I` are not a system and draw blank (R-470).
+*Was:* "**A warped `t` axis at a held `L_z ≠ 0` is not offered (R-471 E1, R-506; RQ-683).** A lone `K`, `KE`, `E` or
+virial axis holds `L_z` at the chart's value. At a held `L_z ≠ 0` its pixels with `K* < L_z²/2I`, near `t = 0`, would
+be non-systems inside the square, and no warp written here makes them feasible. So no chart offers that axis warped at
+a held `L_z ≠ 0`: `validate` refuses every point of it (applied per R-369, TASK-M2-37). Whether such an axis should
+exist, and under what warp, is RQ-683's. Under the linear option it is offered, its pixels with `K* < L_z²/2I` not a
+system."
 
 **The mass ratio's range in the link's inputs (REQ-CHART-070, R-506 W3).** For two bodies `a` and `b`, the axis is the
 ratio `q = m_b/m_a`, with the third body's mass `m_c` held at its slice-centre value. Then `m_a = (1 − m_c)/(1 + q)`
