@@ -76,6 +76,7 @@ device_watch() {
 }
 
 watch() {
+  exec 8>&-
   exec > /dev/null 2>&1 < /dev/null
   [ -z "$tmpfs" ] || device_watch &
   local n fifo="$watch_dir/runner-pressure.$$.fifo"
@@ -92,6 +93,7 @@ watch() {
 }
 
 sampler() {
+  exec 8>&-
   exec 2> /dev/null
   # The trap runs between two commands, never during one, so it waits for a command in hand to end; the main shell's
   # KILL of the group is what bounds that. `$!`, not a variable set after the `sleep` starts: a TERM can fall between
@@ -129,6 +131,13 @@ wait_gone() {
 # process here leaves the jobs table at once: bash reports a job killed by a signal on its own stderr, the job's stderr,
 # whenever it next looks, which can fall outside any redirection on the `kill` or a `wait` (`notify_of_job_status`, bash
 # 5.2's jobs.c), so only a job not in the table can never be reported.
+#
+# Both start with the shell's stderr silent, because bash prints a failed start from the forked child, on the fd 2 it
+# inherits (`child setpgid (N to N): Operation not permitted`, seen on bash 3.2 on macOS), before either process reaches
+# its own `exec`. An `exec` and fd 8, each process's first act being to close that, not `{ sampler & } 2> /dev/null`:
+# there bash keeps the step's stderr in a saved fd that the forked shell holds, and with it the step's end, for as long
+# as the process lives. Nothing else writes here, and the step starts after the stderr is back.
+exec 8>&2 2> /dev/null
 set -m
 sampler &
 sampler_pid=$!
@@ -141,6 +150,7 @@ watch &
 watch_pid=$!
 set +m
 disown "$watch_pid"
+exec 2>&8 8>&-
 
 bash -e "$script"
 status=$?

@@ -598,6 +598,103 @@ mod sampler_left_in_the_jobs_table {
     );
 }
 
+/// Whatever a process writes before its own `exec`, as bash does for a start that failed in the forked child, doesn't
+/// reach the job's stderr. That start can't be forced, so an `echo` stands where it would print.
+fn check_start_silent(script: &str) {
+    let bed = Bed::new("ci_watch_start_silent");
+    let spoken = edit(
+        &edit(
+            script,
+            "sampler() {\n",
+            "sampler() {\n  echo sampler start >&2\n",
+        ),
+        "watch() {\n",
+        "watch() {\n  echo watch start >&2\n",
+    );
+    let output = bed.run(
+        &spoken,
+        "echo step err >&2\nsleep 0.5\n",
+        Some(&bed.shm()),
+        bed.path(),
+        LIMIT,
+    );
+    assert_eq!(
+        String::from_utf8_lossy(&output.stderr).trim(),
+        "step err",
+        "a start reached the step's stderr"
+    );
+}
+
+#[test]
+fn ci_watch_starts_off_the_steps_stderr() {
+    check_start_silent(&sampler());
+}
+
+negative_control!(
+    ci_watch_starts_off_the_steps_stderr,
+    "the starts on the step's stderr",
+    expected = "a start reached the step's stderr",
+    check_start_silent(&edit(&sampler(), "exec 8>&2 2> /dev/null\n", "exec 8>&2\n"))
+);
+
+/// A sampler left running holds no copy of the step's stderr. Its stdout it keeps, by design, so only the stderr is
+/// piped, and read to its end: that end falling before the sampler ended is what's asked of it.
+fn check_sampler_stderr(script: &str) {
+    let bed = Bed::new("ci_watch_sampler_stderr");
+    let left = edit(
+        &edit(
+            &edit(
+                script,
+                "kill -TERM \"$sampler_pid\" 2> /dev/null\nwait_gone \"$sampler_pid\"\n\
+                 kill -0 \"$sampler_pid\" 2> /dev/null && kill -KILL -- \"-$sampler_pid\" 2> /dev/null\n\
+                 wait_gone \"$sampler_pid\"\n",
+                "",
+            ),
+            "max_samples=480",
+            "max_samples=4",
+        ),
+        "    wait \"$!\"\n  done\n}\n",
+        "    wait \"$!\"\n  done\n  touch \"$BED/sampler-ended\"\n}\n",
+    );
+    std::fs::write(bed.dir.join("sampler.sh"), left).expect("sampler written");
+    std::fs::write(bed.dir.join("step.sh"), "exit 0\n").expect("step written");
+    let output = bed
+        .command(bed.path())
+        .args([
+            "-c",
+            "bash sampler.sh step.sh 2>&1 > /dev/null | cat\n\
+             [ -e \"$BED/sampler-ended\" ] && echo held\n\
+             exit 0\n",
+        ])
+        .output_within(Duration::from_secs(LIMIT))
+        .expect("the sampler ran");
+    // The stand-in leaves nothing running behind the test.
+    let end = Instant::now() + Duration::from_secs(20);
+    while !bed.dir.join("sampler-ended").exists() && Instant::now() < end {
+        std::thread::sleep(Duration::from_millis(100));
+    }
+    assert!(
+        !String::from_utf8_lossy(&output.stdout).contains("held"),
+        "the sampler held the step's stderr open"
+    );
+}
+
+#[test]
+fn ci_watch_sampler_holds_no_copy_of_the_steps_stderr() {
+    check_sampler_stderr(&sampler());
+}
+
+negative_control!(
+    ci_watch_sampler_holds_no_copy_of_the_steps_stderr,
+    "the sampler that keeps fd 8",
+    expected = "the sampler held the step's stderr open",
+    check_sampler_stderr(&edit(
+        &sampler(),
+        "  exec 8>&-\n  exec 2> /dev/null\n",
+        "  exec 2> /dev/null\n"
+    ))
+);
+
 /// Left running, `watch` holds none of the step's streams, which in Actions can hold the step open.
 fn check_streams(script: &str) {
     let bed = Bed::new("ci_watch_streams");
@@ -616,6 +713,20 @@ fn check_streams(script: &str) {
 #[test]
 fn ci_watch_holds_none_of_the_steps_streams() {
     check_streams(&sampler());
+}
+
+mod watch_keeps_fd_8 {
+    use super::*;
+    negative_control!(
+        ci_watch_holds_none_of_the_steps_streams,
+        "`watch` that keeps fd 8, the step's stderr",
+        expected = "exited, but its output stayed open",
+        check_streams(&edit(
+            &sampler(),
+            "  exec 8>&-\n  exec > /dev/null",
+            "  exec > /dev/null"
+        ))
+    );
 }
 
 negative_control!(
