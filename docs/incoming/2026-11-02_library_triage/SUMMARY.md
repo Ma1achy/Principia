@@ -46,8 +46,8 @@ duplicates an addendum row cites both, as "row N (docs/incoming/2026-10-31_libra
 | already-have | 4 |
 | Total | 221 |
 
-Of the 16 NOW rows, 10 carry standing ranks from earlier triage (NOW-9, NOW-10, NOW-20, NOW-22 to NOW-25, Bengochea
-2011 and 2013); of the 19 M9 rows, 7 do (M9-33, M9-34 and the papers-14 to 80 M9 rows). New ranks run on after the
+Of the 16 NOW rows, 9 carry standing ranks from earlier triage (NOW-9, NOW-10, NOW-20, NOW-22 to NOW-25, Bengochea
+2011 and 2013); of the 19 M9 rows, 6 do (M9-33, M9-34 and the papers-14 to 80 M9 rows). New ranks run on after the
 existing ones (NOW-28 to NOW-34, M9-35 to M9-46); the earlier ranks are not re-ranked against them.
 
 ## Top 10 NOW, by value ÷ effort
