@@ -617,6 +617,20 @@ change: no timer was touched (R-649). Nothing is chosen.*
 - **Applied meanwhile:** nothing. No timer is touched.
 - **Waits:** REQ-SYS-070's verify on `main`. A PR that changes the workflow's paths meets this run; no build task waits.
 - **4 Nov 2026 (R-707):** ruled: "find the cause; timer untouched". The entry stays open until that work is done; it is in hand on another branch.
+- **4 Nov 2026, diagnosis (the-locksmith agent), not yet proven:** not a code, build-profile or disk regression. Run 1 is
+  the cold run, and it fails on the slowest runner band (step "List" at 85 s or more). 5 of 6 soak runs on 4 Nov were red.
+  - **Results:** run 41808766194 (`b5bf2f67` on `99881a7b`) succeeded 50 of 50, run 1 451.04 s, warm median 260.2 s. Run
+    41821036802 (`ci` at `437d281d`) succeeded. New red run 41845250868 (job 126626947510, `9133ef1b` on `5ef0124a`):
+    three tests at 600.08 s on run 1. Correction: `ci` at `5ef0124a`, run 41830399926, succeeded.
+  - **Read from the runs:** three parallel `xtask ci` children under plain `cargo test`, each 600 s; nextest's `xtask-cargo`
+    group does not apply. The workload grew: warm M0-22 187, then 250, then 260 s.
+  - **Hypotheses, none proven:** H1, the cargo build lock on the cold `golden_harness`; H2, llvmpipe's shader compile, cold;
+    H3, the bands are different hardware. The slow band's growth past 600 s is not explained by the logged phases.
+  - **Fix proposed:** a serial warm-up after the build in `stand-in-soak.yml` (`xtask golden --all`), with the same
+    environment so the fingerprint holds; the timer and the 50 parallel runs unchanged. `qa_TASK-M0-42` and
+    `qa_TASK-M0-14_rust_gpu_cache` read the workflow.
+  - **The entry stays open:** the ruling was "find the cause; timer untouched", and the cause is proven only when a run
+    with List at 85 s or more passes 50 of 50.
 
 ## RQ-689: `jobq_a_finished_jobs_group_is_killed`'s control races perl's `setpgrp` against the runner's group kill *(a flaky control; REQ-VAL-147; R-658; context: `xtask/tests/jobq.rs` `finished_group_case`, run 41785718756, PR #394)*
 
@@ -721,4 +735,3 @@ held `L_z` shows. R-708's last line says to come back with such a case. Nothing 
 - **Applied meanwhile:** nothing. R-708's `K` floor, the "no refused cells" test and the linear arm are the same in
   every option; `d = 0` reproduces the untilted chart in every option.
 - **Waits:** TASK-M2-52's warped tilt into the held `L_z`, and so PR #388, which R-708 holds until both arms are in.
-
