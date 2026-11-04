@@ -1088,6 +1088,46 @@ fn mock_console_height_only_an_auto_open_lowers_it() {
 }
 
 #[test]
+fn mock_console_height_reopened_no_frame_paints_the_editor_over_it() {
+    let (mut app, mut h, field) = editing();
+    let _ = field;
+    click_scope(&mut h, &mut app, MAXIMISE);
+    settle(&mut h, &mut app);
+    at_scope(&mut h, &mut app, HEADER);
+    press(&mut h, &mut app, Key::Escape, NONE);
+    settle(&mut h, &mut app);
+    assert!(!app.is_open(Window::Console));
+    assert!(app.keyboard.place_of(Q1_COMPONENTS[0]).is_some(), "shown");
+    let footer = app.keyboard.place_of(FOOTER).expect("drawn").rect;
+    let mut painted = Vec::new();
+    for events in crate::capture::click(footer.center()) {
+        let output = h.frame(&mut app, events);
+        let text = |s: &Shape| match s {
+            Shape::Text(t) => Some(t.galley.text().to_owned()),
+            _ => None,
+        };
+        let drawn: Vec<_> = output.shapes.iter().map(|c| text(&c.shape)).collect();
+        let console = drawn
+            .iter()
+            .position(|t| t.as_deref() == Some(MAXIMISE_TEXT));
+        if let Some(console) = console {
+            painted.push(
+                drawn[console..]
+                    .iter()
+                    .flatten()
+                    .any(|t| AXES.contains(&t.as_str())),
+            );
+        }
+    }
+    assert!(app.is_open(Window::Console), "the click opened it");
+    assert!(!painted.is_empty(), "the console painted");
+    assert!(!painted.contains(&true), "the frames: {painted:?}");
+    rejects("a frame with the editor over it", || {
+        assert!(!painted.contains(&false))
+    });
+}
+
+#[test]
 fn mock_console_height_the_drag_is_held_in_any_window() {
     // A window off the screen's origin, so each edge's offset counts.
     let screen = Rect::from_min_size(pos2(0.0, 100.0), vec2(1000.0, 1000.0));

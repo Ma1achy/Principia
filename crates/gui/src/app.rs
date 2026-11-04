@@ -978,6 +978,10 @@ impl<S: EngineSide> App<S> {
             .partition(|id| windows::opened_by(id) == Some(Window::Console));
         actions.open = others;
         for opener in console {
+            // The page is drawn by now: a basis editor it asked for would paint over the console for this frame.
+            if !self.console_open && self.manifold.editing.contains(&true) {
+                ctx.request_discard("the console opened over a basis editor");
+            }
             self.open_window(ctx, Window::Console, Some(opener));
         }
     }
