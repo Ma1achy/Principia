@@ -92,7 +92,8 @@ pub trait WarpReal: ExactSign {
     /// The next float toward 0 from a positive finite `self`; `self` itself at `±0`.
     fn below(self) -> Self;
 
-    /// The next float up from a non-negative finite `self`; `self` itself at `+∞` and NaN.
+    /// The next float up from a non-negative finite `self`; `self` itself at `+∞` and NaN, read on the bits (the
+    /// determinism note's rule 4: no non-finite literal).
     fn above(self) -> Self;
 }
 
@@ -105,7 +106,8 @@ impl WarpReal for f32 {
 
     #[inline]
     fn above(self) -> f32 {
-        f32::from_bits(self.to_bits() + select(self < f32::INFINITY, 1, 0))
+        let bits = self.to_bits();
+        f32::from_bits(bits + select(bits < 0x7F80_0000, 1, 0))
     }
 }
 
@@ -118,7 +120,8 @@ impl WarpReal for f64 {
 
     #[inline]
     fn above(self) -> f64 {
-        f64::from_bits(self.to_bits() + select(self < f64::INFINITY, 1, 0))
+        let bits = self.to_bits();
+        f64::from_bits(bits + select(bits < 0x7FF0_0000_0000_0000, 1, 0))
     }
 }
 
