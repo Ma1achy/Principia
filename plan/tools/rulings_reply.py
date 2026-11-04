@@ -99,7 +99,7 @@ TITLE = re.compile(r"^## (RQ-\d+): (.*?)(?: \*\(.*)?$")
 # A label at an option's place: the field's start, a list item's or a line's start, or after ";", ":" or ",", with "or"
 # or "and". Elsewhere "(a)" is an option's prose citing one, and "(x)" or "(v)" a symbol.
 OPTION = re.compile(r"(?:^\s*(?:- )?|\*\*\s*|[;:,]\s+(?:(?:or|and)\s+)?)"
-                    r"\((\d?[a-z]\d?|[ivx]+|\d)\)(\s+another\b)?", re.M)
+                    r"\((\d?[a-z]\d?|[ivx]+|\d)\)(\s+(?i:another)\b)?", re.M)
 ITEM_AFTER_SENTENCE = re.compile(r"(?<=[.!?])\s+(?=(?:RQ|D)-\d+:)")
 SENTENCE_END = re.compile(r"[.!?][\"')\]]*\s*$")
 LINE = re.compile(r"^(RQ-\d+|D-\d+):[ \t]*(.*)$", re.S)
@@ -623,6 +623,13 @@ def self_test():
     expect("an option not offered", "RQ-1: (z)", reason="offers no option 'z'")
     expect("one of two not offered", "RQ-1: (a) + (z)", reason="offers no option 'z'")
     expect("a label cited only in prose", "RQ-1: (v)", reason="offers no option 'v'")
+    capital = "## RQ-1: x?\n\n- **File, section:** x.\n- **Options seen:** (a) p; (d) Another, stated by the owner.\n"
+    if entry("RQ-1", capital)["free"] != {"d"}:
+        fails.append("reply self-test: a capital Another is a free option")
+    if parse_reply("RQ-1: (d)", capital)[0] or "the statement is missing" not in parse_reply("RQ-1: (d)", capital)[1][0][2]:
+        fails.append("reply self-test: a capital Another, bare, must be refused")
+    if [a["kind"] for a in parse_reply("RQ-1: (d) a third way.", capital)[0]] != ["read"]:
+        fails.append("reply self-test: a capital Another with its statement is read")
     expect("a label on an entry with none", "RQ-2: (a)", reason="it offers no labelled option")
     expect("the free option bare", "RQ-1: (c)", reason="the statement is missing")
     expect("the free option taken together", "RQ-1: (a) + (c)", reason="the statement is missing")
