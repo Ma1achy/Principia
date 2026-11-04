@@ -1213,7 +1213,7 @@ waits on it before the gate.*
 papers-11 to 13 addendum"). The question went to the owner on 2 Nov and is unanswered; it changes what LL-3 waits on.*
 
 - **File, section:**
-  - `decisions.md`:27137, § "R-630 — …", item 9: "Fetch Tanikawa & Mikkola 2021, Standish 1970 and Yasko & Orlov 2015
+  - `decisions.md`:27142, § "R-630 — …", item 9: "Fetch Tanikawa & Mikkola 2021, Standish 1970 and Yasko & Orlov 2015
     (TM-1, LL-3). If any is paywalled, list it for the owner to fetch instead."
   - `docs/design/principia_dd_replication.md`:295, the LL-3 row: "REQ-VAL-223 (waits: the owner's copies of the two
     papers, paywalled, R-630 item 9; …)"; "Li & Liao 2019 p. 3: F1 at (0.6, 0.8, 1) is Standish's 1970 orbit".
@@ -1221,7 +1221,7 @@ papers-11 to 13 addendum"). The question went to the owner on 2 Nov and is unans
     I A = 0 row is Standish's orbit and matches Li & Liao's F1(0.6, 0.8, 1) period to 2e-10 (ours). Should LL-3 take
     Hénon 1974, already held under R-669, as its independent printed source, so it stops
     waiting on Standish? Or keep waiting?"
-  - `decisions.md`:29469, § "R-669 — …", question 14: "Hénon 1974 (Celest. Mech. 10, 375) joins the rotating-frame
+  - `decisions.md`:29474, § "R-669 — …", question 14: "Hénon 1974 (Celest. Mech. 10, 375) joins the rotating-frame
     closure set beside R-668 item 4's: its values stored with citation, its PDF held locally (all rights reserved),
     transcribed from the page".
   - `docs/incoming/2026-11-02_library_triage/triage-81-153.csv`:68, the Hénon 1974 row.
@@ -1241,7 +1241,7 @@ papers-11 to 13 addendum"). The question went to the owner on 2 Nov and is unans
 come back with the 3D extension.*
 
 - **File, section:**
-  - `decisions.md`:29429, § "R-668 — …", item 5: "Hierarchical triples are out of scope for now, parked with the v2+ 3D
+  - `decisions.md`:29434, § "R-668 — …", item 5: "Hierarchical triples are out of scope for now, parked with the v2+ 3D
     extension, and the triage's M9 list shrinks by them." It names hierarchical triples, not planetary systems.
   - `docs/incoming/2026-11-02_library_triage/SUMMARY.md`:15-16, "PARKED for hierarchical and planetary systems, parked
     with the v2+ 3D extension (R-668)", and :93-94, "star-plus-planets, star-planet-moon,
