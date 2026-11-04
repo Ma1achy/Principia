@@ -2270,28 +2270,45 @@ run's record, the 13 failures and the hardware-health arm are in RQ-685.*
     card's exact message. Unedited, `decode_preset_shape_poles` passes on the card.
   - Not verified: the card's `sin` near 0 itself; whether the final SPIR-V keeps `Sin`. The diagnosis's reading is that
     `sin(1.00005e-7)` returning 0 conforms to the absolute bound; the isolation is by the edit, and the edit is not a fix.
-  - **Past `[−π, π]` (#401).** `spherical` has `θ = 2π·s` (:144-145), up to 2π̂, on the user-reachable map, outside the
-    range RQ-629's bound covers; from memory, unchecked, the specs set no bound there. `decode_cross_backend`,
-    `stage_decode_shape_sphere_defaults n₀ = ±1 poles`, η_E on: worst 28408617.97 eps against f64, `rho_angle`, at sample 2
-    (1, 0.5), identical on 3 of 3 runs. The row is outside REQ-DEC-043's domain, reported, not held. The same domain is
-    large elsewhere: Metal 1.400e8 eps (`rho_ratio`), the same sample; lavapipe 7.239e5 (`K_0`), at (0.5, 0.5).
+  - **Past `[−π, π]` (#401).** `spherical` has `θ = 2π·s` (:144-145), up to 6.2831855 (`2·P::PI()`), on the user-reachable
+    map, outside the range RQ-629's bound covers; from memory, unchecked, the specs set no bound there.
+    `decode_cross_backend`, `stage_decode_shape_sphere_defaults n₀ = ±1 poles`, η_E on: worst 28408617.97 eps against f64
+    and 28408618.00 against native f32, `rho_angle`, at sample 2 (1, 0.5), identical on 3 of 3 runs. The row is outside
+    REQ-DEC-043's domain, reported, not held.
+  - **That sample is a pole.** `crates/engine/tests/decode_cross_backend.rs`:928-931: "`n₀ = +1` and `λ̃ = 0`", reached
+    only to each precision's rounding, "and `1/ρ` or the angle of a rounding-sized `λ̃` amplifies it". True `‖λ̃‖` there is
+    about 9.0e-8 (computed), so these eps are the direction of a vector of that length, not a measure of how far the
+    trig is off. Metal's worst in the same domain is at the same sample: 139986730.45 eps against f64, `rho_ratio`.
+    Inferred from that ratio: Metal's `‖λ̃‖` is about 18 times shorter than true, so `sin` and `cos` aren't relatively
+    accurate there on Metal either. Lavapipe's worst is 723878.23 eps (`K_0`), at (0.5, 0.5).
   - **A correction to #393's diagnosis (comment 6622072753).** #393 reads that line as: the card "returned π̂ for
     `rho_angle`, forcing `sin(6.2831855) < 0` and `cos(1.5707964)` near 0", and says "the card's trig is near-flat there".
-    Computed in f64 on those f32 arguments, the true values are `sin(6.2831855)` = +1.7484556e-7 and `cos(1.5707964)` =
-    −4.371139e-8. So the negative sign isn't the true sign, and #393 doesn't say so: if #393's inference holds, the card's
-    `sin` has the wrong sign there, which is more than "near-flat", and flatness isn't shown (`sin` has slope 1 at 2π̂).
-    The inference itself checks: π is taken at the parameters' f32 type (`shape_sphere.rs`:75, :292), so true trig gives
-    `rho_angle` = −0.24498 at f64 and native f32 alike, as the two lines' near-equal eps say; `error` scales by
-    `max(|x64|, 1)`, so 28408617.97 eps is 3.38657, and the card's value is 3.14159, near π̂; and through `inverse` that
-    takes `p < 0`, so a negative `sin(θ)`, with `q` near 0. It stays inferred: the card's `sin` was not read. This
-    corrects #393's wording, not its conclusion that the card's trig is off outside `[−π, π]`.
+    - **The true values,** computed in f64 on those f32 arguments: `sin(6.2831855)` = +1.7484556e-7 and `cos(1.5707964)` =
+      −4.371139e-8. The argument is `2·P::PI()`, from π's nearest f32, and lies above 2π. It isn't twice the corpus's π̂,
+      rounded toward zero (R-417), where `sin` is about −3.0e-7. π is taken at the parameters' f32 type
+      (`shape_sphere.rs`:75, :292), so true trig gives `rho_angle` −0.2449786631 at f64 and −0.24497867 at f32.
+    - **"Returned π̂" checks.** `error` scales by `max(|x64|, 1)`, and π̂ = 3.1415925 (`pi_image`,
+      `crates/kernel/src/decode/descriptor.rs`:116-121, `angle`'s upper limit) reproduces both figures, 28408617.97 and
+      28408618.00.
+    - **The path to `sin < 0`, inferred.** `rho_angle` isn't `β`. `inverse` forms `p` from `sin θ` and `q` from `cos φ`,
+      takes `β` from the kernel's integer `atan2(q, p)`, then the backend's `sin ψ` and `cos ψ` (:226), and `angle` takes
+      the backend's `Float::atan2` (`descriptor.rs`:144). π̂ needs `cos ψ < 0`, so `|β| > π/2`, so `p < 0`: a negative `sin`
+      where the true one is positive. #393 doesn't say that sign is wrong.
+    - **It also needs `|q| ≪ |p|,** about 1e-7 relative, up to the card's own `sin ψ`. The true `cos` won't do: at `sin` =
+      −1e-7 it gives `rho_angle` −2.7295. So either the card's `cos(1.5707964)`, an in-range argument, is far smaller than
+      the true value, or its `sin(6.2831855)` is far larger in magnitude. The line can't tell which.
+    - All of this stays inferred: the card's `sin`, `cos` and `atan2` were not read.
+    - **What is left of #393's reading.** This corrects its wording. Its conclusion stands only as: the card's values
+      there differ from the true ones by at least the sign of a 1.75e-7 `sin`. The size of the error isn't bounded by this
+      line, and "near-flat" isn't shown. Whether the range is the cause isn't shown either: the wrong sign takes an
+      absolute error of only 1.75e-7 or more, about 0.04% of the in-range bound `2⁻¹¹`, and the `sin` here is near 0 as well.
   - Related and unsettled (#400): `shape_sphere` fuzz, worst 52.05 eps vs f64 on the RTX, 28.55 on Metal, 17.12 on
     lavapipe, against a tolerance of 256. This `sin` is one candidate cause and RQ-685's division another; the logs can't
     separate them.
 - **Reach:** `ShapeMap::Exponential`, the map that failed, is built only in `validation` and tests, so that failure is not
   reachable by a user, as traced in #393. The spherical map has the same exposure at :149-151 and is reachable, but its
-  exact poles aren't pixel centres; that stays open, as does how far deep zoom reaches it. #401's line widens the class
-  past "`sin` near 0": on that map `θ` runs outside the bounded range. Beyond the decode, the physics reach is
+  exact poles aren't pixel centres; that stays open, as does how far deep zoom reaches it. On that map `θ` runs outside the
+  bounded range; what #401's line shows at its sample is stated above. Beyond the decode, the physics reach is
   unmeasured, as RQ-685 says.
 - **What each option would change:**
   - (a), built as `arctan.rs` is: at f32, on every backend, the decode's `sin` and `cos`; f64 keeps libm's bits, and the
