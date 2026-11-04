@@ -126,6 +126,9 @@ A line left alone leaves its item as it is.
 
 ## 5. Check, then print
 
+First read the report through once for a bare number, and gloss any you find. Then stamp it: the hash covers the text,
+so a change after stamping refuses every `D-n` line of the reply.
+
 ```
 python3 plan/tools/rulings_reply.py stamp-report "$R/<date>-report.md"
 python3 plan/tools/rulings_reply.py check-report "$R/<date>-report.md" --queue "$S/queue.md"
@@ -134,7 +137,6 @@ python3 plan/tools/rulings_reply.py check-report "$R/<date>-report.md" --queue "
 It must print 0 failures: every section there, spelled and placed as above; every open RQ one item of a group, with
 every field and a line in the reply template; no closed RQ an item; the `Report:` line matching the text. Fix the report
 until it does, and run `stamp-report` again after any change.
-Then read the report through once for a bare number, and gloss any you find.
 
 Print the whole report in your reply, unabridged, and give its path. Then carry on with the build: the report asks the
 owner for nothing that holds up work elsewhere.
