@@ -11,13 +11,16 @@
 ## Goal
 `noise.wgsl`'s corners are computed from integer lattice coordinates by an integer hash and an exact conversion, so a
 corner two cells share is bitwise equal on every backend, and CI proves it on Metal and lavapipe with controls that fail
-there. The RTX is a measurement (R-649). The mock's pattern changes; nothing about the real kernel is claimed.
-**This task does not start until the owner has ruled on the pattern (RQ-691); see Notes.** What follows is option A.
+there. The RTX is a measurement (R-649). The mock's pattern changes, option A (R-689); nothing about the real kernel is
+claimed.
 
 ## References
 - `decisions.md` § "R-390 — The GUI track starts now, on a mock engine, in parallel with the physics and renderer chain, which keeps priority for agent slots"
 - `decisions.md` § "R-685 — The real kernel and the other WGSL and rust-gpu shaders are audited for the mock noise's pattern, hashes or lattice lookups where neighbouring invocations must agree bitwise and compile-time offsets feeding them; the fix is proposed as a task with its own ADR, plus a regression test that asserts shared lattice corners bitwise equal on every backend; no fix until lavapipe and the audit are in"
 - `decisions.md` § "R-686 — The kernel cross-backend check is a measurement (R-649): the same IC set on NVIDIA Vulkan, Metal, lavapipe and CPU f32, outcome labels and per-trajectory branch-sensitive results compared, not pixels, the disagreement rate reported per backend pair, no tolerance chosen to make it pass; pixel comparisons across backends go on raw pre-colour values with the outlier tail reported, never 8-bit frame equality, Metal against lavapipe's 161,394 / 221 recorded as the clean-backend baseline; `DECODE_SWITCHOVER`'s spec notes that bitwise agreement must be tested on NVIDIA specifically"
+- `decisions.md` § "R-689 — The mock's noise is option A: an integer u32 hash on integer lattice coordinates, and the mock's noise look may change *(closes RQ-691)*"
+- `decisions.md` § "R-691 — The raw-value rule for pixel comparisons is for cross-backend investigation only; goldens stay as they are on CI backends *(closes RQ-692; amends R-686)*"
+- `decisions.md` § "R-692 — R-656 is amended for TASK-M6-53: of `crates/gui/`, the paths the new `gpu-metal` step reads are GPU paths, and the rest of the crate is not *(amends R-656)*"
 - `decisions.md` § "R-649 — Replication and verification targets are measurements, not gates: failing one never blocks building; each declares the tier it binds, (a) the GPU explorer, agreeing statistically or qualitatively only, or (b) the CPU IC inspector, where exact targets bind; three outcomes, PASS, EXPLAINED DIVERGENCE (shown by a measurement) and UNEXPLAINED (open, labelled, non-blocking); no default, physics, criterion, architecture or tolerance is changed and nothing is tuned per target in pursuit of a pass; a comparison is checked like-for-like before anything is called a failure; verification deepening comes after the core build *(amends R-594, R-636, R-637 and R-639 for external targets; applies to RQ-598's targets and every target in force)*"
 - `decisions.md` § "R-176 — Controls come before the tests that need them *(closes G3, S2)*"
 - `decisions.md` § "R-110 — What CI runs, where, and against which goldens *(closes RQ-79)*"
@@ -41,7 +44,6 @@ Also read `plan/adr/ADR-0001-mock-noise-integer-lattice.md` § "Decision" and §
   (`noise_source()`), `crates/gui/src/tests/mock_lattice.rs`, `crates/gui/src/tests/lattice_controls.wgsl` and
   `crates/gui/Cargo.toml`. `is_not_gpu`'s comment is made true, and `xtask/tests/ci_changes.rs` gains these cases.
 - `plan/OPERATIONS.md` § "Merging"'s "no GPU-path file" bullet (:395), made true the same way.
-- `plan/adr/ADR-0001-mock-noise-integer-lattice.md`, its Status citing the ruling on RQ-691.
 
 ## Acceptance tests
 - `cargo test -p gui lattice_` on lavapipe and on Metal, both in the PR with the adapter line — the checks below (REQ-GUI-412).
@@ -65,19 +67,16 @@ Also read `plan/adr/ADR-0001-mock-noise-integer-lattice.md` § "Decision" and §
 - `python3 plan/check_plan.py`.
 
 ## Notes
-- **The fix starts only after the owner rules on the pattern, option A or option D (RQ-691; ADR-0001 § "Alternatives").** Until
-  that ruling is in `decisions.md`, no branch is opened and `noise.wgsl` is not touched. A or D, no golden changes: no
-  fixture holds mock pixels, so nothing is re-baselined. With option D this file is re-cut at that ruling: `lattice_source_is_integer`
-  and the twin as written assume the integer hash, and the raw baseline is still measured. The ruling's heading joins
-  References then; no reference can name it before it exists.
+- **The pattern is option A (R-689; ADR-0001 § "Alternatives").** No golden changes: no fixture holds mock pixels, so nothing is
+  re-baselined. *Was:* the fix started only after the owner ruled on the pattern, option A or option D.
 - **Measurement, not a gate (R-649):** `lattice_old_hash_measurement` (`#[ignore]`) prints the old hash's unequal crossings on
   the adapter. On the RTX: a Windows session at the PR head, `PRIN_GPU_BACKEND=vulkan`, `cargo nextest run -p gui lattice_
   --run-ignored all --no-capture`, the adapter line posted to #390, and the owner looks at centre 0/0 ×0.77 and 0.18/0.41
   ×1.00. Modelled, not measured: old hash unequal 1031 of 7217, new 0. The outcome is PASS, EXPLAINED DIVERGENCE or
   UNEXPLAINED, and it blocks nothing. It is the one place the real defect meets the real test, which is why the arm stays
   in the repo, ignored.
-- **Pixel comparisons across backends (R-686):** on raw pre-colour values, with the outlier tail reported as a count beyond a
-  stated threshold; never 8-bit frame equality. The recorded 8-bit baseline, Metal against lavapipe, is 161,394 of 1,274,316
+- **Pixel comparisons across backends (R-686, R-691):** for cross-backend investigation, on raw pre-colour values, with the outlier
+  tail reported as a count beyond a stated threshold; never 8-bit frame equality. Goldens stay as they are on CI backends. The recorded 8-bit baseline, Metal against lavapipe, is 161,394 of 1,274,316
   pixels differing, 221 by more than 32 of 255, on the old pattern (`docs/contracts/principia_parity_contract.md` § 4).
   `qa_TASK-M6-30`'s and `mock_figure_navigation`'s `TOL` and `TOLERANCE` compare frames on one backend, so the rule doesn't
   touch them.
@@ -89,13 +88,13 @@ Also read `plan/adr/ADR-0001-mock-noise-integer-lattice.md` § "Decision" and §
   gui has no `negative_control!`, which is `validation`'s, and `gui` → `validation` is forbidden (R-176).
 - **The ci wiring stays here, and it meets R-656.** R-656 names `gui` among "the crates no GPU job builds", and this task's
   `gpu-metal` step builds it. R-685's "on every backend" is what forces the change: no gui test runs on Metal in CI today, and
-  a gui-only PR skips `gpu-metal`. Applied per R-369, narrowly: only the five paths in Deliverables, what the step reads, become
+  a gui-only PR skips `gpu-metal`. R-692 amends R-656 for this: only the five paths in Deliverables, what the step reads, become
   GPU paths. `ci_changes.sh` has one `gpu` flag, so such a PR runs all three GPU suites, not `gpu-metal` alone. Any other gui
   change still skips them; that gap is accepted, and it is listed below.
 - **Two xtask tests.** `qa_r662_every_tracked_path_classifies_as_the_ruling_says` in `xtask/tests/qa_R-662_ci_scope.rs` fails:
   `ruling()` (:145) marks all of `crates/gui/` no-GPU, and it walks every tracked path. The ruling that changes that behaviour
-  is R-685. Every commit of that file is a qa commit, so this is qa's ordinary `M` (R-290), for the code reviewer to confirm
-  against R-685. The implementer's `ci_changes.sh` commit leaves xtask's tests red until qa's commit lands.
+  is R-692. Every commit of that file is a qa commit, so this is qa's ordinary `M` (R-290), for the code reviewer to confirm
+  against R-692. The implementer's `ci_changes.sh` commit leaves xtask's tests red until qa's commit lands.
   `xtask/tests/qa_R-677_ci_tiers.rs` is untouched: its one gui case, `crates/gui/src/qa.rs`, stays true.
 - The cost of building eframe on `macos-15` is unmeasured; the PR gives it.
 - **What CI cannot catch:** NVIDIA itself, on which no job runs; a float hash coming back, which only `lattice_source_is_integer`

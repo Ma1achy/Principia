@@ -43,7 +43,7 @@ Of these: 232 calibration, 175 definition, 1661 obligation. Retired (kept for th
 
 ## Sections
 
-1682 sections in 61 files: 1338 yield at least one requirement; 344 yield none and are listed below with the reason.
+1682 sections in 61 files: 1342 yield at least one requirement; 340 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | gap (RQ-378) | 1 |
@@ -201,10 +201,6 @@ Of these: 232 calibration, 175 definition, 1661 obligation. Retired (kept for th
 | R-659 — Gemini reviews make one request and name the model that answered; on a quota refusal they fall back down a chain of four models; a spent chain posts "Gemini quota exhausted, review skipped" and the merge proceeds *(an R-369 note; amends R-635's Gemini workflow)* | informative only | the owner's message of 30 Oct 2026: one Gemini request per review, a four-model fallback chain on quota errors, the model stamped, a note when the chain is spent; process, carried by the gemini-dispatch workflow and scripts/gemini_review.py; changes no requirement |
 | R-664 — `generation_root` §3.5 no longer claims R² from the Welford accumulators: it cannot be derived from what is stored and nothing reads it; no per-sample field is added *(closes RQ-633)* | informative only | the owner's ruling of 31 Oct 2026 closing RQ-633: "+ R²" struck from generation_root §3.5, no new per-sample field; no requirement read it |
 | R-666 — sccache stays off: the job queue's builds do not use it | informative only | the owner's word of 31 Oct 2026: sccache stays off; process; changes no requirement |
-| R-689 — The mock's noise is option A: an integer u32 hash on integer lattice coordinates, and the mock's noise look may change *(closes RQ-691)* | **MISSING REASON** | |
-| R-690 — R-547's "operations every IEEE backend rounds alike" is stated as a condition on the driver and tested by TASK-M4-27 and TASK-M4-28; it is not enforceable, and a driver that fails is recorded unverified, not supported *(closes RQ-690; amends R-547)* | **MISSING REASON** | |
-| R-691 — The raw-value rule for pixel comparisons is for cross-backend investigation only; goldens stay as they are on CI backends *(closes RQ-692; amends R-686)* | **MISSING REASON** | |
-| R-692 — R-656 is amended for TASK-M6-53: of `crates/gui/`, the paths the new `gpu-metal` step reads are GPU paths, and the rest of the crate is not *(amends R-656)* | **MISSING REASON** | |
 
 ### `docs/contracts/principia_canonical_spec.md`
 
@@ -677,10 +673,3 @@ Of these: 232 calibration, 175 definition, 1661 obligation. Retired (kept for th
 | Notes — working notes | informative only | file map |
 | GUI | informative only | file map; precedence (notes over pictures, rulings over both) is carried by R-68 |
 | Experiments — briefs and results | informative only | file map; not sources |
-
-## Errors
-
-- uncovered section with no reason: decisions.md § R-689 — The mock's noise is option A: an integer u32 hash on integer lattice coordinates, and the mock's noise look may change *(closes RQ-691)*
-- uncovered section with no reason: decisions.md § R-690 — R-547's "operations every IEEE backend rounds alike" is stated as a condition on the driver and tested by TASK-M4-27 and TASK-M4-28; it is not enforceable, and a driver that fails is recorded unverified, not supported *(closes RQ-690; amends R-547)*
-- uncovered section with no reason: decisions.md § R-691 — The raw-value rule for pixel comparisons is for cross-backend investigation only; goldens stay as they are on CI backends *(closes RQ-692; amends R-686)*
-- uncovered section with no reason: decisions.md § R-692 — R-656 is amended for TASK-M6-53: of `crates/gui/`, the paths the new `gpu-metal` step reads are GPU paths, and the rest of the crate is not *(amends R-656)*

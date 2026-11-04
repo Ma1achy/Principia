@@ -2008,7 +2008,7 @@
 - id: TASK-M6-53  # past TASK-M6-52, moved to M9 by R-650 and not reused (applied per R-369)
   milestone: M6
   title: "The GUI track (R-390): the mock's value noise hashes its lattice in integers, so shared corners agree bitwise"
-  depends_on: [TASK-M6-24]  # R-685; starts only after the owner rules on the pattern (RQ-691)
+  depends_on: [TASK-M6-24]  # R-685; the pattern is option A (R-689)
   needs: []
   requirements: [REQ-GUI-412]
   reviewers: [code, qa, gui]
