@@ -29513,7 +29513,7 @@ The owner's words, verbatim. 1 Nov 2026, his second message, item (2), of RQ-656
 
 - **The refusals' place.** The regularised occupants' refusal of `ε ≠ 0` and the view's refusal of `ε ≠ 0` with `Some(E*)` are TASK-M9-39's, built when it lifts the refusal of `ε ≠ 0`; until then dispatch refuses every `ε ≠ 0` (R-654), so neither can be reached.
 - **The restatements.** REQ-VAL-027 and REQ-COL-006 gain an `ε ≠ 0` sentence, their `ε = 0` statements and verifies unchanged; the `ε ≠ 0` clause is verified by TASK-M9-39, since no softened run exists before it.
-- **Chazy's pair energies.** RQ-656 (3) asked of `E` only, and this ruling softens `E`. The classifier's pair and outer two-body energies (§ 3.1's `pair_kup`, `out_kup`) are not ruled here; TASK-M9-39 reaches the classifier only if its tests need it, and any such reading goes to the queue first.
+- **Chazy's pair energies.** RQ-656 (3) asked of `E` only, and this ruling softens `E`. The classifier's pair and outer two-body energies (§ 3.1's `pair_kup`, `out_kup`) are not ruled here. They are RQ-694, and TASK-M9-39 waits on it (physics review 5771183527 of PR #408, F2; code review 5771184172, C2). *Was:* "TASK-M9-39 reaches the classifier only if its tests need it, and any such reading goes to the queue first."
 
 *What it amends:* **R-654**, softening's reach (its "energy and drift are defined under the softened potential" now reaches Chazy's `E`, the escape test's and the ionisation gate's pair energies and the decode's `V₀`); **R-436**, its collision pole at `ε ≠ 0`. It closes **RQ-656**.
 

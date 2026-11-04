@@ -1889,3 +1889,19 @@ change: no timer was touched (R-649). Nothing is chosen.*
 - **Options seen:** (a) `U` softened: the axis is the run's softened `E₀`, and REQ-VAL-015 holds as written, but the IC and the feasible set then depend on `ε`, against R-670's stated reason; (b) `U` Newtonian: the IC does not depend on `ε`, but the run's softened `E₀` is not the axis value, the region under the parabola no longer means what § 2.1 says, and REQ-VAL-015 needs restating; (c) the chart refuses `ε ≠ 0`, at the view level, as with `Some(E*)`, which nothing says; (d) another, stated by the owner.
 - **Applied meanwhile:** none needed: dispatch refuses `ε ≠ 0` (R-654; TASK-M3-06), so no softened run exists.
 - **Waits:** TASK-M9-39 (REQ-INT-111, REQ-SYS-094, REQ-SYS-095). Nothing in M0 to M8 waits.
+
+## RQ-694: What Chazy's `pair_kup` and `out_kup` read at `ε ≠ 0`: R-670 softens the classifier's `E` and leaves the `K/U` its labels read *(physics; silence; R-670, RQ-656 (3); `docs/design/principia_dd_chazy_final_motion.md` § 3.1, § 3.2; context: TASK-M9-39, TASK-M7-35)*
+
+*Queued 4 Nov 2026 from physics review 5771183527 of PR #408, F2, and code review 5771184172, C2. For the owner: yes, it changes results: which label a softened run commits. Nothing is chosen.*
+
+- **File, section, quoted:**
+  - `decisions.md` § "R-670 — …", the owner's words: "656 (a)", option (a) of RQ-656 (1) to (3): "Chazy's `E` softened as the ruling's energy."
+  - `docs/design/principia_dd_chazy_final_motion.md` § 3.1: "*2 Nov 2026 (R-670, RQ-656 (3), option (a)):* at `ε ≠ 0`, `E` is the run's `E_0` under the softened potential (R-654); "unsoftened" is the `ε = 0` case."
+  - `docs/design/principia_dd_chazy_final_motion.md` § 3.1: "**A pair `(i, j)`'s two-body energies** (`pair_kup`): reduced mass `μ = m_i m_j / (m_i + m_j)`, `Δr = r_j − r_i`, `Δv = v_j − v_i`, `d = |Δr|`; kinetic `K = ½ μ |Δv|²`, potential magnitude `U = m_i m_j / d` (positive)".
+  - `docs/design/principia_dd_chazy_final_motion.md` § 3.1: "**The outer body `b`'s two-body energies** (`out_kup`), against the centre of mass of the other two, `(i, j)`: … `μ = m_b M_p / (m_b + M_p)`, `K = ½ μ |Δv|²`, `U = m_b M_p / d`, `v_r = Δr·Δv / d`."
+  - `docs/design/principia_dd_chazy_final_motion.md` § 3.2: "**H** | every pair separation > `h_far · R_0`, every pair receding, every pair `K/U > 1 + ε`", with HP, P, HE and PE reading `K/U` too, and all five committed. That table's `ε` is the parabolic band's (§ 3.1), not softening's.
+- **The silence:** RQ-656 (3) asked of `E` only, and R-670 softens `E`. Nothing rules the pair and outer two-body energies. Once the refusal is lifted the classifier runs on every softened run, with a softened `E` beside a Newtonian `U`, unless a ruling says otherwise, and the committed labels can change. A softened `out_kup` is not a term of the dynamics' `V`, since `b`'s potential there is pairwise, about each body and not about the pair's centre of mass; R-670 (4) reads `E_rel`, which has the same shape, as `d` read as `√(d² + ε²)` in the potential term.
+- **The question:** at `ε ≠ 0`, what do `pair_kup`'s and `out_kup`'s `U` read, and do the committed labels stand on a softened run?
+- **Options seen:** (a) both soften, `U = m_i m_j / √(d² + ε²)` and `U = m_b M_p / √(d² + ε²)`, as R-670 (4) reads `E_rel`, the separations, `v_r` and the kinetic terms geometric; (b) both stay Newtonian as written, `E` alone softened; (c) the classifier's two-body labels do not run at `ε ≠ 0`, the run reading only the labels that take `E`; (d) another, stated by the owner.
+- **Applied meanwhile:** none needed: dispatch refuses `ε ≠ 0` (R-654; TASK-M3-06), so no softened run exists.
+- **Waits:** TASK-M9-39 (REQ-INT-111, REQ-SYS-094, REQ-SYS-095). Nothing in M0 to M8 waits.
