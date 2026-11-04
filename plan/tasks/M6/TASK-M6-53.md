@@ -26,6 +26,8 @@ there. The RTX is a measurement (R-649). The mock's pattern changes; nothing abo
 - `docs/contracts/principia_parity_contract.md` § "4. Tolerance — and the cross-backend reality"
 - `docs/notes/principia_gpu_determinism_note.md` § "The parity consequence (what shared source does and does not buy)"
 
+Also read `plan/adr/ADR-0001-mock-noise-integer-lattice.md` § "Decision" and § "Must not claim": the design this task builds.
+
 ## Deliverables
 - `crates/gui/src/mock/noise.wgsl`: `pcg`, `lattice_hash`, `corner`, `cell_corners`; `value_noise` as ADR-0001 states; the
   float `hash` gone; the header comment true.
