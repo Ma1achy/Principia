@@ -32,7 +32,7 @@ Sources: issue #390, comment 6632801932 (the RTX) and comment 6633374835 (Metal,
   faulty hardware"; this result is deterministic, and it is one card.
 
 **Read from source:**
-- naga 30.0.1 has no `NoContraction`, so the WGSL path cannot forbid this.
+- naga 30.0.1 has no `NoContraction` in its source. Whether that decoration would forbid this rewrite was not read.
 - `hash` assumes four inlined copies round alike. Nothing promises that.
 
 **Modelled here, not measured.** The model is strict f32 in NumPy, at the same views and field points. It makes one

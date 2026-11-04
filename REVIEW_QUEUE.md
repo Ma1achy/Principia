@@ -2321,7 +2321,7 @@ change: no timer was touched (R-649). Nothing is chosen.*
 - **Applied meanwhile:** nothing.
 - **Waits:** nothing.
 
-## RQ-690: Whether R-547's "operations every IEEE backend rounds alike" holds on a Vulkan driver that distributes or reassociates, which the toolchain can't forbid *(physics; silence: R-547, R-84, R-297, REQ-INT-064; R-649; issue #390; context: the mock's noise finding, R-685, R-686)*
+## RQ-690: Whether R-547's "operations every IEEE backend rounds alike" holds on a Vulkan driver that distributes or reassociates, with no `NoContraction` in the toolchain *(physics; silence: R-547, R-84, R-297, REQ-INT-064; R-649; issue #390; context: the mock's noise finding, R-685, R-686)*
 
 *Queued 4 Nov 2026 by the lattice proposal's port. For the owner: it may change what the corpus claims of the branch
 inputs. Nothing is chosen. RQ-685 covers division, `√`, contraction of `a·b + c` and builtins, RQ-686 near-tie
