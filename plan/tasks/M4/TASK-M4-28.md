@@ -40,15 +40,17 @@ alone does not answer the owner's question; the bits at identical operands do, a
   straddle collision, escape and `N_sub` decisions and a uniform grid across a basin boundary. The header states each
   stratum's N, so 0 of N carries its resolution.
 - A fixed-input arm: `fixtures/gates/tier_l_boundary_states` (TASK-M4-03) and TASK-M4-02's `synth.rs` generators, on all four
-  backends, reported per pair as a measurement, so a comparison exists where chaos can't reach it. TASK-M4-03 names `macos-15`
+  backends, each row with the same operands' and input's bits as `--replay`, reported per pair as a measurement, so a comparison
+  exists where chaos can't reach it. TASK-M4-03 names `macos-15`
   and lavapipe; this arm is what brings REQ-INT-057's decisions to NVIDIA at identical inputs before TASK-M8-41.
 - One row per trajectory: the outcome label, `state`, the collision decision and pair, the escape decision and escaper, the
   terminal step and the total substeps, with the decoded start state's bits, so a disagreement already present at `t = 0` is
   counted apart; a digest of each step's branch words (`N_sub`, `state`, the collision and escape decisions) and checkpoint
   states at a stride stated in the header, so `--compare` can find the first step that differs.
 - `--replay`: for each disagreement, one backend's state bits at the step before the first difference, re-run from the last
-  common checkpoint, go through `gpu_step_once` on every backend, NVIDIA's included, reported per pair. So the NVIDIA session
-  runs `--record`, then `--replay` on the file `--compare` writes.
+  common checkpoint, go through `gpu_step_once` on every backend, NVIDIA's included, reported per pair. Each backend reads back,
+  at the evaluation that forked, the expression's own operands and the input's bits. So the NVIDIA session runs `--record`, then
+  `--replay` on the file `--compare` writes. The per-step digests stay branch words.
 - The report, written into the gate report: each pair's disagreement count and rate, for each of those results and for any of them, non-chaotic and chaotic
   apart; for each disagreement, the first step that differs and whether the branch operation there agrees on identical
   inputs, as REQ-VAL-079's report does, the kind column of TASK-M4-27, extended to the march's branch inputs from TASK-M4-03's `branch_inputs.rs`.
@@ -62,7 +64,8 @@ alone does not answer the owner's question; the bits at identical operands do, a
   step, and the state handed to `--replay` is the same bits for every backend; the control is a digest that drops `N_sub`, which
   a planted `N_sub` difference rejects. The standing, on the march's kinds, as `cross_backend_compare`'s: equal operands and differing
   input bits, no fork, reads "unverified, not supported"; differing operands do not; `other operation` does not. The control is a
-  compare that reads only outcomes, which misses the first (REQ-VAL-348).
+  compare that reads only outcomes, which misses the first. A replayed collision fork whose positions differ reads as an upstream
+  difference (REQ-VAL-348).
 - `cargo xtask gate cross-backend-march` — both arms' records on lavapipe, on Metal and on CPU f32, their comparison and the
   replay, in the PR, with each driver's standing under R-690's condition, every backend pair listed, NVIDIA's as "not run" until its record is posted (REQ-VAL-348).
 - `python3 plan/check_plan.py`.
@@ -80,7 +83,10 @@ alone does not answer the owner's question; the bits at identical operands do, a
   a march on the card should differ from the first such step whatever contraction does. The discriminating result is differing
   bits at bit-identical operands, in a branch input built only of `+` and `×` (R-547). That points at contraction, reassociation or
   distribution. A difference in a branch input holding a division, `E_rel` or `|Δn̂|`, is not attributable that way.
-- **R-690's driver condition** is about bits, not forks, on TASK-M4-27's three levels. A failing driver is recorded **unverified,
+- **A shared state is not shared operands.** `detect_terminal` runs after the STEP, so the collision test reads `d²` of post-STEP
+  positions, which have been through the force loop's divisions. A collision fork in `--replay` has identical inputs at the
+  replay's level, and `d²` is `+` and `×`, but if its positions differ it is an upstream difference and convicts no driver.
+- **R-690's driver condition** is about bits, not forks, on TASK-M4-27's three levels, at the expression's own operands. A failing driver is recorded **unverified,
   not supported**, in those words. Nothing enforces the condition, and the recording blocks nothing.
 - **The NVIDIA record** is a Windows session's run at the PR's head, `--record` with `PRIN_GPU_BACKEND=vulkan`, the file posted to
   #390, under the same hardware label as that card's other runs. It is not a CI job (R-186). Nothing waits on it, and the task
