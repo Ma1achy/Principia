@@ -663,7 +663,7 @@ Consequence, worth stating so an agent doesn't add a per-IC time rescale: becaus
     are multiplied once (a correctly rounded multiply, in `[1, 4)`), and the product is the pair (the exponents' sum
     plus that multiply's own exponent; the multiply's significand), compared exponent first. Bit and integer operations,
     comparisons and one correctly rounded multiply of normal values: given identical `d`, the decision is identical on
-    every IEEE backend at one `Real` (parity contract, Tier B). The two `Real`s can decide a near-tie differently, even
+    every IEEE backend (a condition on the driver, R-690) at one `Real` (parity contract, Tier B). The two `Real`s can decide a near-tie differently, even
     on the same `d`, since the tolerance below is the working precision's rounding. *Given identical `d`*: along a
     trajectory the `d` differ by precision, and so may the word (pitfalls §10).
   - **The tie tolerance.** Two `τ` are equal iff their two products compare equal: the tolerance is the working

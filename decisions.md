@@ -29741,8 +29741,10 @@ No golden holds mock pixels, so nothing is re-baselined.
 *What it amends:* nothing.
 
 ## R-690 — R-547's "operations every IEEE backend rounds alike" is stated as a condition on the driver and tested by TASK-M4-27 and TASK-M4-28; it is not enforceable, and a driver that fails is recorded unverified, not supported *(closes RQ-690; amends R-547)*
-*4 Nov 2026 · the owner's batch of that day; applied in `docs/contracts/principia_parity_contract.md` § 4, TASK-M4-27, TASK-M4-28,
-REQ-VAL-347 and REQ-VAL-348 (reqio), ADR-0001 § "Must not claim", `docs/archive/review_queue/M0.md` (RQ-690), R-547's forward lines
+*4 Nov 2026 · the owner's batch of that day; applied in `docs/contracts/principia_parity_contract.md` § 4,
+`docs/notes/principia_gpu_determinism_note.md` (rule 6), `docs/design/principia_dd_decoder.md`, `docs/design/principia_dd_encode.md`,
+`docs/contracts/principia_symbolic_dynamics_contract.md`, `docs/contracts/principia_integrator_contract.md` (a clause each), TASK-M4-27,
+TASK-M4-28, REQ-VAL-347 and REQ-VAL-348 (reqio), ADR-0001 § "Must not claim", `docs/archive/review_queue/M0.md` (RQ-690), R-547's forward lines
 and `plan/rule_groups.yaml`*
 
 The owner's words, verbatim:
