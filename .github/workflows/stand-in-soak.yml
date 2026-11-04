@@ -84,8 +84,7 @@ jobs:
       - name: Install Mesa (lavapipe)
         run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers
       - name: Build the stand-in tests
-        run: >-
-          cargo test -p xtask --no-run --test ${{ matrix.test }}
+        run: cargo test -p xtask --no-run --test ${{ matrix.test }}
       # RQ-688: on run 1, `xtask ci` children side by side under `cargo test`, each with the 600 s timer, share what the
       # build step leaves cold: the build of `golden_harness`, which only the golden runner asks for, and lavapipe's
       # first compile of every shader. One golden run first, alone, with no timer on the build, in the job's env, leaves
