@@ -2214,10 +2214,12 @@ negative_control!(
 );
 
 /// The saturation across the overflow band, `l²` past the greatest float, `l²/2` finite up to `√2` above it, and past
-/// it, at f64: `floor` leaves the construction finite and §2.2's exact test labels the pixel.
+/// it, at f64: `floor` leaves the construction finite and §2.2's exact test labels the pixel. Beside the greatest float
+/// itself the rigid rotation's own momenta overflow, floor or none, and `validate` refuses the chart
+/// ([`check_unrepresentable`]).
 fn check_floor_saturates(floor: fn(f64) -> f64) {
     for l in [
-        1.35e154, 1.6e154, 1.89e154, -1.6e154, 2.0e154, 1.0e200, 1.0e308,
+        1.35e154, 1.6e154, 1.89e154, -1.6e154, 2.0e154, 1.0e200, 1.0e300,
     ] {
         let rule = Rule {
             k0: floor(l),
@@ -2365,6 +2367,7 @@ fn energy_axes_warped_held_lz_unrepresentable() {
     check_unrepresentable(f64::INFINITY);
     check_unrepresentable(1.0e200);
     check_unrepresentable(-1.0e200);
+    check_unrepresentable(1.0e308);
 }
 
 negative_control!(

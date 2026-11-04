@@ -341,7 +341,7 @@ keeps its fixed values and no floor is added: its pixels with `K* < L_z²/2I` ar
 The held `L_z`, and the held `K` on an `L_z` axis, is this chart's hidden coordinate under R-633, as the physical
 parameter of the construction that holds its momentum block. Its tilt is not built here: TASK-M2-52 builds it, on the
 owner's mode-dependent rule, held `L_z`'s under the question now with the owner. The one exception to every pixel being a system: a held `L_z` whose `L_z²` has no finite float at the chart's own precision has no floor, and every pixel
-of that chart is not a system, §2.2's exact test labelling it, with finite momenta, and `validate` agreeing at that
+of that chart is not a system, §2.2's exact test labelling it and `validate` agreeing at that
 precision. *Was:* "**A warped `t` axis at a held `L_z ≠ 0` is not offered (R-471 E1, R-506; RQ-683).** A lone `K`, `KE`, `E` or
 virial axis holds `L_z` at the chart's value. At a held `L_z ≠ 0` its pixels with `K* < L_z²/2I`, near `t = 0`, would
 be non-systems inside the square, and no warp written here makes them feasible. So no chart offers that axis warped at

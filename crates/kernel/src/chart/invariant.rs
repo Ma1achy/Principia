@@ -148,7 +148,7 @@ pub fn l_max<R: WarpReal>(k: R) -> R {
 /// rounded sum below it, so a pixel above the floor stays feasible. Multiplication alone: a backend may round a quotient
 /// by more than half a float, and this result decides a branch. An `l` whose `l²` has no finite float has no floor:
 /// its value saturates at half the greatest finite float, so `K*` stays finite, the construction's `2K*` too, and the
-/// exact test finds the pixel infeasible, `2K* < l²`, with finite momenta at every precision.
+/// exact test finds the pixel infeasible, `2K* < l²`, at every precision.
 #[inline]
 pub fn k_floor<R: WarpReal>(l: R) -> R {
     let most = R::max_value() * R::two_to(-1);
