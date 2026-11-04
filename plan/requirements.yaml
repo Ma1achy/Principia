@@ -37387,7 +37387,7 @@
 - id: REQ-VAL-342
   area: VAL
   kind: definition
-  statement: "The per-pixel syzygy-symbol field that TS-1 reads, and V-7 with Chernin et al.'s definitions, must be defined (R-72): the symbols recorded (the first two to four syzygies, in Tanikawa & Mikkola's convention, in the frame RQ-650 rules), how a syzygy is detected and counted, and where the field is stored (R-669)."
+  statement: "The per-pixel syzygy-symbol field that TS-1 reads, and V-7 with Chernin et al.'s definitions, must be defined (R-72): the symbols recorded (the first two to four syzygies, in Tanikawa & Mikkola's convention, in Anosova's physical frame, with no remap for 2015's maps and, for 2008's, a mirror remap only if the figures show one (R-702; *was:* \"in the frame RQ-650 rules\")), how a syzygy is detected and counted, and where the field is stored (R-669)."
   source:
   - file: docs/design/principia_dd_replication.md
     section: 5.12 Targets that wait for a chart, a diagnostic or data
@@ -37402,8 +37402,9 @@
   - R-72
   - R-669
   - R-672
+  - R-702
   milestone: M9
-  note: "R-669 (1 Nov 2026, RQ-595 (b)): the symbol field only; TS-2's fixed-k velocity chart is not built. Closed by TASK-M9-28. R-672 (2 Nov 2026): its row in M9's report reads the outcomes of TS-1 (REQ-VAL-325) and V-7 (REQ-VAL-327), each counted once in its own row, with this definition's approval. RQ-650 asks whether the rows' \"D11 mirror remap\" stands, so the frame is worded by that entry and this requirement states none (physics review 5771183527 of PR #408, F6; applied per R-369, in place of an rq)."
+  note: "R-669 (1 Nov 2026, RQ-595 (b)): the symbol field only; TS-2's fixed-k velocity chart is not built. Closed by TASK-M9-28. R-672 (2 Nov 2026): its row in M9's report reads the outcomes of TS-1 (REQ-VAL-325) and V-7 (REQ-VAL-327), each counted once in its own row, with this definition's approval. RQ-650 asks whether the rows' \"D11 mirror remap\" stands, so the frame is worded by that entry and this requirement states none (physics review 5771183527 of PR #408, F6; applied per R-369, in place of an rq). R-702 (4 Nov 2026, RQ-650 (a)): the frame is ruled, so the statement now names it, as TS-1's row of § 5.12 does."
 - id: REQ-VAL-343
   area: VAL
   kind: definition
