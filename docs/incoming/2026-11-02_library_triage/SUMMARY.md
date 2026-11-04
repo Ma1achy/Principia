@@ -54,7 +54,7 @@ existing ones (NOW-28 to NOW-34, M9-35 to M9-46); the earlier ranks are not re-r
 
 | # | Rank | Item | What it tests | Effort | Watch for | Row |
 |---|---|---|---|---|---|---|
-| 1 | NOW-28 | eucliss free-fall fate plane (papers-152), 400 × 240, t ≤ 200 | Free-fall escapes at equal masses: escaper fractions, escape-time histogram, survivors; the mirror-pair floor (gap 5) | S | AI-authored, unlicensed: peek, `_local`. Copy its escape predicate. Mirror-pair escaper agreement 0.97 (t < 10), 0.84 (10–20), 0.63 (20–50), 0.51 (> 50) | 204 |
+| 1 | NOW-28 | eucliss free-fall fate plane (papers-152), 400 × 240, t ≤ 200 | Free-fall escapes at equal masses: escaper fractions, escape-time histogram, survivors; the mirror-pair floor (gap 5) | S | AI-authored, unlicensed: peek, `_local`. Copy its escape predicate. Mirror-pair escaper agreement 0.97 (t < 10), 0.84 (10–20), 0.63 (20–50), 0.51 (> 50); binning convention unresolved | 204 |
 | 2 | NOW-29 | cft-rebound Burrau divergence (papers-72) | f64 against fp128 and fp256 on Burrau to t = 73.4; an 8-member ulp ensemble | S | GPL-3.0-or-later: never committed. Unreviewed, AI-assisted. Raised from RECORD-ONLY | 221 |
 | 3 | NOW-25 (standing) | Maissouradze 2026, 7 stable free-fall orbits | Free-fall closure at unequal masses, a 7.7e-5 passage | S | AI-assisted; data path is papers-12, not papers-128 | 90 |
 | 4 | NOW-24 (standing) | Kandel 2026, 86 refined starts | L≠0 closure, equal masses | S | Ours: 7 are atlas rows and 1 nearly; peek on the other 78 | 190 |
@@ -277,8 +277,8 @@ No source in the library compares f32, f64 and a converged reference across an e
 none compares CPU with GPU. R-661 stands as a hypothesis Principia must measure. Closest: cft-rebound (f64 vs fp128/fp256,
 one Burrau trajectory); Portegies Zwart 2026 Table 4 (single-run 32-bit energy errors); mikha08-rgb/Nbody (f32 GPU vs
 f64 CPU, figure-eight only); eucliss free-fall plane mirror pairs (f64 round-off alone: the mirrored escaper agrees
-0.97 of the time for t < 10, 0.84 for 10–20, 0.63 for 20–50 and 0.51 past 50, chance about 1/3; `gaps-precision.csv`
-gap 5); Tomihisa 2011 (a CPU-GPU parity check must state whether FMA contraction is on).
+0.97 of the time for t < 10, 0.84 for 10–20, 0.63 for 20–50 and 0.51 past 50, chance about 1/3, the binning
+convention unresolved; `gaps-precision.csv` gap 5); Tomihisa 2011 (a CPU-GPU parity check must state whether FMA contraction is on).
 
 `gaps-precision.csv` holds seven gaps, the owner's three first (matched f32/f64/mixed/converged ensembles; per-point FTLE
 maps; shape-sphere residence statistics), each framed as something Principia could produce and publish. The other four:
@@ -321,8 +321,15 @@ fix below was made from the source itself, re-read on 3 Nov.
 4. **`eucliss_releases.json`.** Missing from the library; the held file with the same bytes is cited (§ "ChatGPT's
    shortlist and final guide: what was wrong"; row 214).
 5. **The batch-152 fate plane (NOW-28).** Mirror-pair escaper agreement is 0.97 (t < 10), 0.84 (10–20), 0.63 (20–50)
-   and 0.51 (> 50), which our recount from `fatemap.json` reproduces. It replaces "noise past t ≈ 20" (Top 10 NOW row 1;
-   § "The precision-gap answer"; row 204; gap 5).
+   and 0.51 (> 50), the owner's figures. It replaces "noise past t ≈ 20" (Top 10 NOW row 1; § "The precision-gap
+   answer"; row 204; gap 5). The binning convention is unresolved, so the figures must not become a floor until it is
+   stated. A recount from `fatemap.json` reaches all four only on one set of choices: the 42,413 pairs where both
+   members escape, binned by the earlier time, each quantised time read at its level's lower edge, t = 2 × 100^(q/63),
+   which gives 0.974, 0.842, 0.626, 0.512. The file's note gives q = 63 ln(t/2)/ln(100) and doesn't say how q was
+   rounded; read at the level's centre, the same pairs give 0.977, 0.859, 0.645, 0.511. The deep pass of 4 Nov (not on
+   this branch) binned by each pixel's own time, the later or mean of the pair, or both in one bin, and none of those
+   gives all four; for the earlier of the pair it has 0.973, 0.834, 0.603, 0.433, on a pair set it doesn't state. Every
+   count shows the trend: agreement falls towards chance.
 6. **Stone & Leigh 2019 and Ginat & Perets 2021.** Both were fetched and both are committed, though neither is in the
    research library. Stone & Leigh 2019 is
    `docs/incoming/2026-10-25_replication/papers/stone_leigh_2019_Nature_576_406_arXiv1909.05272.pdf` (arXiv:1909.05272,
