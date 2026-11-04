@@ -37,6 +37,7 @@ that. It is the first test of R-690's driver condition, on fixed inputs.
 - `cargo xtask gate cross-backend-branches`: `--record` on the backend the session selects, `--compare` over records. The inputs are those
   `crates/engine/tests/canon_gpu.rs` and `crates/engine/tests/decode_cross_backend.rs` build, seeds fixed, with #393's from
   `crates/validation/tests/qa_TASK-M2-25_gpu.rs`, written once to `fixtures/gates/cross-backend-branches/inputs/` by `--write-inputs`, no GPU, committed,
+  whose own copy of those builders sits in `cross_backend.rs`, same seeds, since a binary can't call a test file and those files stay as they are, the qa file above all (R-290),
   and read from there by every backend's `--record`, since those builders call the platform's `sin_cos` and `powf`, whose bits need not match on Windows,
   and a pair over different inputs is refused. Sweeps built on a GPU's own decodes (`canonicaliser_noop_gpu`) take CPU f32's decodes
   here, for the same reason. The outcomes are canon's branches (skip, coincidence, `ρ = 0`, mirror, `ρ_x` and
