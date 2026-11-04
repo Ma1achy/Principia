@@ -3794,7 +3794,7 @@
 - id: TASK-M9-40
   milestone: M9
   title: "The Šuvakov-plane chart, at equal masses and at fixed m₃, defined and built (R-669)"
-  depends_on: [TASK-M2-14, TASK-M4-17]
+  depends_on: [TASK-M2-14, TASK-M4-06, TASK-M4-17]
   needs: []
   requirements: [REQ-CHART-091]  # R-669 (1 Nov 2026), RQ-608 and RQ-618 (a)
   reviewers: [code, qa, physics]

@@ -3586,7 +3586,7 @@
 - id: REQ-CHART-091
   area: CHART
   kind: definition
-  statement: "The Šuvakov-plane chart, `SuvakovPlane`, over the plane of Šuvakov & Dmitrašinović's initial conditions at equal masses and at fixed m₃, in RQ-582's labelling (R-630 item 3: the middle body is body 1, at β = 0, Hudomal eq. (18)'s), must be defined (R-72) in the chart reference, its axes, ranges, decode to the shared decoder `D` and what it holds fixed stated, and built as one chart, its decode a tested function (R-669)."
+  statement: "The Šuvakov-plane chart, `SuvakovPlane`, over the plane of Šuvakov & Dmitrašinović's initial conditions at equal masses and at fixed m₃, in RQ-582's labelling (R-630 item 3: the middle body is body 1, at β = 0, Hudomal eq. (18)'s), must be defined (R-72) in the chart reference, its axes, ranges, decode to the shared decoder `D` and what it holds fixed stated, and built as one chart, its decode a tested function, with its row in the lowering appendix and its baked compute variant (R-669)."
   source:
   - file: docs/design/principia_dd_replication.md
     section: 5.12 Targets that wait for a chart, a diagnostic or data
@@ -3598,12 +3598,12 @@
     section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
   verify:
     method: review checklist
-    detail: "DEFINITION (R-72): the chart reference gains the chart's section, approved by the physics reviewer; cargo test -p kernel suvakov_plane: each atlas orbit on the plane at equal masses and at each m₃ decodes from its marked pixel to its catalogue initial conditions within the decode's tolerance; control: a decode with bodies 0 and 1 swapped misses the markers"
+    detail: "DEFINITION (R-72): the chart reference gains the chart's section, approved by the physics reviewer; cargo test -p kernel suvakov_plane: each atlas orbit on the plane at equal masses and at each m₃ decodes from its marked pixel to its catalogue initial conditions within the decode's tolerance; at random (u,v), Σpᵢ = 0 to machine precision, I = 1 after the canonical-frame decode, and shape_vec(decode(u,v)) equals the shape the chart's section states for that pixel to ~1e−14; control: a decode with bodies 0 and 1 swapped misses the markers; cargo test -p engine suvakov_plane_variant: the chart selects its own baked variant from the pipeline table, and a pan on it changes only uniform buffers; control: a key with the chart left out selects no pipeline; the chart's row of the lowering appendix checked against the chart registry and the kernel variants"
   rulings:
   - R-72
   - R-669
   milestone: M9
-  note: "R-669 (1 Nov 2026, RQ-608 and RQ-618 (a)): one M9 chart task, TASK-M9-40; OC-4 on the plane, AT-D1, AT-D3, HU-1 and HU-2 (REQ-VAL-311 to REQ-VAL-314, REQ-VAL-316) wait on it whole. A build task, not a target: not scored."
+  note: "R-669 (1 Nov 2026, RQ-608 and RQ-618 (a)): one M9 chart task, TASK-M9-40; OC-4 on the plane, AT-D1, AT-D3, HU-1 and HU-2 (REQ-VAL-311 to REQ-VAL-314, REQ-VAL-316) wait on it whole. A build task, not a target: not scored. The GPU variant and the chart reference § 5.2's general tests: code review 5771184172 of PR #408, C6."
 - id: REQ-INT-001
   area: INT
   statement: "The unwrapped phase `θ̃` must be a running SimState accumulator that adds the principal-value delta of `atan2(n_v, n_u)` each step, with `orbit_count = ⌊|θ̃|/2π⌋` and `retrograde = sign(θ̃) < 0` derived at read."
