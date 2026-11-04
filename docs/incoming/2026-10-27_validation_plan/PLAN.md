@@ -358,6 +358,10 @@ replication: 3D Plummer ICs. Its method is what REQ-VAL-199 and "never discard a
 ensemble differs: Fig. 14's bias "only happens for the cold collapse simulations", and § 5.4.2 has Hermite making "fewer tight
 binaries" there. So an uncut difference between the arms is a live possibility here, not a surprise.
 
+*1 Nov 2026 (R-669, RQ-654 (a), (b) the fallback):* BZ-1C's starts reach the f32 GPU kernel as a Path B batch, each f64
+start rounded once to f32, that rounding part of what f32 runs; if a batch of injected starts can't be dispatched, by a
+list-of-starts chart (R-594 item 6), built when BZ-1C is adopted.
+
 *What BZ-1C compares, named; what is not settled goes to a requirement or the queue, and nothing is invented here:*
 
 - **Event.** BPZ § 4 stops on an escaper with "E > 0", "r > 2 r_virial" and "r · v > 0". Principia's classifier is R-29's. f32
