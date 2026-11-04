@@ -2082,7 +2082,7 @@ record, which RQ-686 and RQ-687 share.*
   R-297, so RQ-687's option (c), neither, stands only with (b)'s list of supported drivers.
 - **Measurements that would settle more:** both fuzzed sets' result words on the card (worst ulp, and whether the result
   is a function of `d` times `n`); the halfway probe with 255.0 read from a buffer, beside the literal; the setting on;
-  the same probe on another Vulkan driver.
+  the same probe on another Vulkan driver. RQ-690's probe, `(a + K) * k` in the compute stage, is one more.
 - **Applied meanwhile:** nothing. No test, tolerance or comment changed.
 - **Waits:** nothing in the build loop: CI's Metal and lavapipe jobs are green at this commit, and no Windows job gates
   anything. The ruling bears on M4's GPU march and on REQ-VAL-099's parity gate, which a real non-Metal GPU serves and
@@ -2319,4 +2319,73 @@ change: no timer was touched (R-649). Nothing is chosen.*
   perl writes after `setpgrp`, or the child's `pgid` read back), then exits, so the kill always finds the case; a test-only
   change; (b) another, stated by a reviewer or the owner.
 - **Applied meanwhile:** nothing.
+- **Waits:** nothing.
+
+## RQ-690: Whether R-547's "operations every IEEE backend rounds alike" holds on a Vulkan driver that distributes or reassociates, which the toolchain can't forbid *(physics; silence: R-547, R-84, R-297, REQ-INT-064; R-649; issue #390; context: the mock's noise finding, R-685, R-686)*
+
+*Queued 4 Nov 2026 by the lattice proposal's port. For the owner: it may change what the corpus claims of the branch
+inputs. Nothing is chosen. RQ-685 covers division, `√`, contraction of `a·b + c` and builtins, RQ-686 near-tie
+references and RQ-687 `sin` and `cos`. None asks whether `+` and `×` themselves are safe, the base those written forms
+stand on; "reassoc" appeared 0 times in this file at origin/main before this entry.*
+
+- **File, section:** `crates/kernel/src/canon.rs`:90-91: "one input takes one branch on every IEEE backend that keeps
+  its additions and multiplications correctly rounded and unreassociated (fast-math off, R-84)". `decisions.md` § R-547's
+  heading: "a branch input that must agree across backends is built only from operations every IEEE backend rounds
+  alike". RQ-685's option (a), which rests on "written forms that take no driver's division or `√`".
+- **Observed, on the RTX 2080 SUPER (Vulkan, driver 621.01), in a fragment stage:** `hash(i + vec2(1.0, 0.0))` in one
+  cell and `hash(i)` in the next, with equal inputs, differ when the `1.0` is a compile-time constant and agree, in all 20
+  cases, when it is read from a uniform (issue #390, comment 6632801932). Metal and lavapipe show 0 unequal in the 20 cases.
+- **Modelled, not measured:** a strict-f32 model on the CPU of the rewrite `(a + c) * k` → `a*k + c*k` reproduces all
+  twelve numbers of the finding (`plan/adr/ADR-0001-mock-noise-integer-lattice.md` § "Context").
+- **Inferred:** the card distributes the sum over a compile-time constant. No compiler output exists, the stage is
+  unknown, and the compute stage is unmeasured.
+- **Read:** naga 30.0.1 has no `NoContraction`; `kernel.spv` (the m252 build, not the current head) has 0 such
+  decorations; `crates/engine/src/compute.rs` records Vulkan as `Off` with no driver observed; `crates/kernel/tests/canon.rs`
+  proves agreement across fusion, not reassociation. `IeeeBits::product` has no compile-time constant operand; the `Wide`
+  code around it takes `1`, `δ_λ` and `τ_I` as constants.
+- **The question:** does the premise need enforcing, testing, or stating as a condition on drivers?
+- **Measurement that would settle more:** a compute-stage probe on the RTX of `(a + K) * k` against the strict result,
+  beside a runtime `K`. TASK-M4-27 and TASK-M4-28 report the disagreement rates per backend pair (R-686), which show
+  whether it matters for the real kernel, not the mechanism.
+- **Applied meanwhile:** nothing.
+- **Waits:** nothing in the build loop. It bears on M4's march and on REQ-VAL-099.
+
+## RQ-691: The mock's value-noise pattern: option A, a new pattern with the cause removed by construction, or option D, the pattern kept and the `fract` amplifier remaining *(the owner's call; R-685, R-390, R-110, R-649; context: TASK-M6-53, ADR-0001, issue #390)*
+
+*Queued 4 Nov 2026 by the lattice proposal's port. For the owner: it decides what TASK-M6-53 builds, and that task does
+not start until this is ruled. The ruling goes in `decisions.md`, not in the ADR.*
+
+- **File, section:** `plan/adr/ADR-0001-mock-noise-integer-lattice.md` § "Alternatives", rows A and D;
+  `crates/gui/src/mock/noise.wgsl`:48-52 (`hash`) and :58-61 (its four corners); `decisions.md` § R-390's "smooth noise".
+- **Options seen:**
+  - **(A) Integer `+1`, integer hash, exact conversion.** The corner path holds no float arithmetic that can round, so the
+    cause is removed by construction. The pattern changes on every noise pixel of `fs_main`, `fs_debug` and `fs_stain`:
+    same family, different pattern (modelled: `n` mean about 0.49 to 0.50, std 0.117 to 0.126). Adds `pcg`, no new binding.
+  - **(D) Integer `+1`, then the old float `hash(vec2<f32>(c + o))`.** The only way to keep the look. It removes the float
+    add a driver could distribute, but the `fract` amplifier remains, and whether a compiler sees through `f32(c + 1)` is
+    unexamined. Untested on the RTX.
+- **Recommended:** (A). It removes the cause rather than one route to it, and the look it changes is placeholder
+  content (R-390).
+- **What neither touches:** no golden holds mock pixels, so nothing is re-baselined under either: `fixtures/golden/BASELINES.md`
+  has no mock row, the 50 mock cases of `fixtures/screenshot/*/cases.json` are layout cases, and `xtask/src/screenshot.rs`
+  compares no pixels. R-110's "no re-baselining without a gate decision" is not reached.
+- **Applied meanwhile:** nothing. `noise.wgsl` is unchanged and the blocks stay on the RTX.
+- **Waits:** TASK-M6-53 (`rq: RQ-691` on REQ-GUI-412).
+
+## RQ-692: Whether R-686's rule for pixel comparisons across backends reaches the golden suites, whose shared references are byte-equal across backends *(conflict: R-686, R-287, R-296, R-269; context: the parity contract § 4, TASK-M6-53)*
+
+*Queued 4 Nov 2026 by the lattice proposal's port. For the owner: if it reaches them, it changes what the golden suites
+build. Nothing is chosen.*
+
+- **File, section:**
+  - `decisions.md` § R-686, the owner's words: "Pixel comparisons across backends go on raw pre-colour values with the
+    outlier tail reported (count beyond a stated threshold), never 8-bit frame equality".
+  - `docs/contracts/principia_parity_contract.md` § "4. Tolerance — and the cross-backend reality": "a golden case keeps
+    one reference across backends; a case whose bytes still differ keeps one reference per backend (R-269)".
+- **The gap:** a golden with one reference across backends is 8-bit frame equality across backends, by R-287's
+  construction. The owner's message was about comparing the mock's frames, and names no golden.
+- **Options seen:** (a) the rule governs comparisons made to learn how backends differ, and the golden suites stay
+  regression pins under R-287 and R-296; (b) the rule reaches them too, and golden suites move to raw values and a
+  stated tail; (c) another, stated by the owner.
+- **Applied meanwhile:** (a): the parity contract leaves the goldens as they stand.
 - **Waits:** nothing.
