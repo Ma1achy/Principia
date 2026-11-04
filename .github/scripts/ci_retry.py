@@ -28,8 +28,11 @@ The verdict, one `key=value` line, then a line per failed job:
 
 A runner-level signature in a failed job, and nothing else:
   - one of SIGNATURES in a failure annotation of its check run, or in a step of its log that reported an error;
-  - the disk sampler's notice (`.github/scripts/disk_sampler.sh`: `lowest free <n> MiB over <m> samples`) under
-    LOW_MIB in a step of its log that reported an error: the disk the step failed on ran out.
+  - a disk sample of the step itself (`.github/scripts/disk_sampler.sh`: `== sample <n>, +<s> s, avail_kb=<k>, …`)
+    under LOW_MIB, in a step of its log that reported an error. The sampler writes every sample under 2 GiB to the
+    step's log, so the step's own samples show whether it ran out. Not its `lowest free` notice: that covers every
+    step of the job so far, so after one low step it would call any later failure a runner fault. A step that dipped
+    and recovered before a real failure still reads as a fault: the log does not say which sample was the last.
 A timeout (a `timed_out` job, or TIMEOUT in an annotation or the log) is never one, whatever else the job shows, and a
 job that timed out is no gate either; nor is an assertion failure, a cancelled job or anything else one. Fails towards
 no retry: a job with neither annotations nor log, a workflow that cannot be read, or an unknown job state gets none.
@@ -56,8 +59,8 @@ SIGNATURES = (
     ("The runner has received a shutdown signal", re.compile(r"The runner has received a shutdown signal")),
 )
 TIMEOUT = re.compile(r"has timed out after \d+ minutes|has exceeded the maximum execution time")
-# How the runner writes the sampler's `::notice title=Runner disk::…` into the job's log.
-LOWEST = re.compile(r"^##\[notice\]lowest free (\d+) MiB over \d+ samples")
+# A disk sample in a step's log, at the line's start: a test's own output, which nextest indents, is none.
+SAMPLE = re.compile(r"^== sample \d+, \+\d+ s, avail_kb=(\d+),")
 # A log line's timestamp, and the byte-order mark GitHub puts before the first.
 STAMP = re.compile(r"^\ufeff?\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?Z ?")
 # A step's start in the job's log.
@@ -105,9 +108,10 @@ def signature(annotations, log):
             if pattern.search(step):
                 return f"{name} (log)"
         for line in step.splitlines():
-            m = LOWEST.match(line)
-            if m and int(m.group(1)) < LOW_MIB:
-                return f"lowest free {m.group(1)} MiB, under {LOW_MIB} MiB, in the failed step (disk sampler)"
+            m = SAMPLE.match(line)
+            if m and int(m.group(1)) < LOW_MIB * 1024:
+                mib = int(m.group(1)) // 1024
+                return f"lowest free {mib} MiB, under {LOW_MIB} MiB, in the failed step (disk sampler)"
     return None
 
 

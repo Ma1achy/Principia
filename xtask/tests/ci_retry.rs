@@ -310,13 +310,12 @@ negative_control!(
 
 /// The signature in the log of a failed step, as a compiler or test run writes it: no annotation carries it.
 fn check_no_space_in_a_log(script: &str) {
-    let run = low_disk()
+    let run = at(40960)
         .log(CI_4, |l| {
-            l.replace("lowest free 1910 MiB", "lowest free 40000 MiB")
-                .replace(
-                    "##[notice]",
-                    "error: failed to write: No space left on device (os error 28)\n##[notice]",
-                )
+            l.replace(
+                "##[notice]",
+                "error: failed to write: No space left on device (os error 28)\n##[notice]",
+            )
         })
         .annotated(CI_4, "Process completed with exit code 100.");
     check_retried(
@@ -423,11 +422,15 @@ negative_control!(
     ))
 );
 
-/// The sampler's notice at `mib`.
-fn at(mib: u32) -> Run {
+/// The failed step's lowest sample at `kb`. Its notice still says 1910 MiB, as a low earlier step would leave it.
+fn at_kb(kb: u32) -> Run {
     low_disk().log(CI_4, |l| {
-        l.replace("lowest free 1910 MiB", &format!("lowest free {mib} MiB"))
+        l.replace("avail_kb=1956588", &format!("avail_kb={kb}"))
     })
+}
+
+fn at(mib: u32) -> Run {
+    at_kb(mib * 1024)
 }
 
 fn check_low_disk(script: &str) {
@@ -440,12 +443,12 @@ fn check_low_disk(script: &str) {
     );
     check_retried(
         script,
-        "2047 MiB, the last under 2 GiB",
-        &at(2047),
+        "a KiB under 2 GiB",
+        &at_kb(2 * 1024 * 1024 - 1),
         "ci (4)",
         "lowest free 2047 MiB",
     );
-    check_kept(script, "2048 MiB, the first at 2 GiB", &at(2048));
+    check_kept(script, "2 GiB exactly", &at_kb(2 * 1024 * 1024));
     check_kept(script, "the same failure on 40 GiB", &at(40960));
 }
 
@@ -457,11 +460,11 @@ fn ci_retry_retries_under_2_gib_free_in_the_failed_step() {
 negative_control!(
     ci_retry_retries_under_2_gib_free_in_the_failed_step,
     "a limit that takes 2 GiB in",
-    expected = "2048 MiB, the first at 2 GiB: re-run",
+    expected = "2 GiB exactly: re-run",
     check_low_disk(&edit(
         &script(),
-        "int(m.group(1)) < LOW_MIB",
-        "int(m.group(1)) <= LOW_MIB"
+        "int(m.group(1)) < LOW_MIB * 1024",
+        "int(m.group(1)) <= LOW_MIB * 1024"
     ))
 );
 
@@ -827,8 +830,9 @@ mod no_matrix {
     );
 }
 
-/// The sampler's low notice in a step that passed, then a step that fails on plenty of disk: the disk it failed on did
-/// not run out. And a signature in a warning, or a step that passed, or a job with no trace at all.
+/// A low sample in a step that passed, then a step that fails with no reading of its own. And a signature in a warning
+/// or a step that passed, a sample in a test's own output, or a job with no trace at all. The real sampler, whose later
+/// steps do read, is `ci_retry_keeps_a_failure_after_an_earlier_steps_dip`.
 fn check_wrong_place(script: &str) {
     let earlier = low_disk().log(CI_4, |l| {
         l.replace(
@@ -836,7 +840,7 @@ fn check_wrong_place(script: &str) {
             "##[group]Run cargo test --workspace --doc\n##[error]Process completed with exit code 101.",
         )
     });
-    check_kept(script, "a low notice in a step that passed", &earlier);
+    check_kept(script, "a low sample in a step that passed", &earlier);
     let passed = at(40960).log(CI_4, |l| {
         l.replace(
             "##[group]Run cargo nextest run",
@@ -850,6 +854,13 @@ fn check_wrong_place(script: &str) {
         json!([{"annotation_level": "warning", "message": "No space left on device"}]).to_string(),
     );
     check_kept(script, "the signature in a warning", &warned);
+    let output = at(40960).log(CI_4, |l| {
+        l.replace(
+            "##[notice]",
+            "    == sample 1, +0 s, avail_kb=100, 00:00:00\n##[notice]",
+        )
+    });
+    check_kept(script, "a sample in a test's output", &output);
     let silent = no_space().annotated(CI_3, "").no_log(CI_3);
     check_kept(script, "a job with no trace", &silent);
 }
@@ -862,7 +873,7 @@ fn ci_retry_keeps_a_signature_in_the_wrong_place() {
 negative_control!(
     ci_retry_keeps_a_signature_in_the_wrong_place,
     "a classifier that reads every step of the log",
-    expected = "a low notice in a step that passed: re-run",
+    expected = "a low sample in a step that passed: re-run",
     check_wrong_place(&edit(
         &script(),
         "        if line.startswith(STEP):\n            if failed:\n",
@@ -883,6 +894,115 @@ mod warnings {
         ))
     );
 }
+
+mod indented {
+    use super::*;
+    negative_control!(
+        ci_retry_keeps_a_signature_in_the_wrong_place,
+        "a classifier that takes a test's output for a sample",
+        expected = "a sample in a test's output: re-run",
+        check_wrong_place(&edit(
+            &script(),
+            "SAMPLE.match(line)",
+            "SAMPLE.match(line.strip())"
+        ))
+    );
+}
+
+/// What the real `.github/scripts/disk_sampler.sh` writes to a job's log, its notice as the runner writes it: a sampled
+/// step for each `(free KiB, fails)`, one after the other, with `df` standing in for the disk.
+fn sampled_log(tag: &str, steps: &[(u64, bool)]) -> String {
+    let dir = Scratch::new(tag);
+    let bin = dir.join("bin");
+    std::fs::create_dir_all(&bin).expect("bin");
+    write_executable(
+        &bin.join("df"),
+        "#!/bin/sh\necho 'Filesystem 1024-blocks Used Available Capacity Mounted'\n\
+         echo \"/dev/x 100 50 $STUB_AVAIL_KB 50% /\"\n",
+    )
+    .expect("df stand-in");
+    let mut log = String::new();
+    for (n, (kb, fails)) in steps.iter().enumerate() {
+        // Ends once this step's first sample is written and the sampler has had a second to print it.
+        let script = format!(
+            "for _ in {{1..250}}; do\n  \
+             [ \"$(grep -c avail_kb \"$RUNNER_TEMP/runner-disk.log\")\" -gt {n} ] && break\n  \
+             sleep 0.1\ndone\nsleep 1\nexit {}\n",
+            if *fails { 3 } else { 0 }
+        );
+        std::fs::write(dir.join("step.sh"), script).expect("step written");
+        let out = Command::new("bash")
+            .arg(root().join(".github/scripts/disk_sampler.sh"))
+            .arg("step.sh")
+            .current_dir(&*dir)
+            .env("RUNNER_TEMP", &*dir)
+            .env("RUNNER_DISK_SAMPLE_SECONDS", "600")
+            .env("STUB_AVAIL_KB", kb.to_string())
+            .env(
+                "PATH",
+                format!(
+                    "{}:{}",
+                    bin.display(),
+                    std::env::var("PATH").unwrap_or_default()
+                ),
+            )
+            .timed_output()
+            .expect("the sampler ran");
+        log.push_str("##[group]Run the step\n##[endgroup]\n");
+        log.push_str(
+            &String::from_utf8_lossy(&out.stdout)
+                .replace("::notice title=Runner disk::", "##[notice]"),
+        );
+        if *fails {
+            log.push_str("##[error]Process completed with exit code 3.\n");
+        }
+    }
+    log
+}
+
+/// `ci (4)` with the log the sampler writes for `steps`.
+fn sampled(tag: &str, steps: &[(u64, bool)]) -> Run {
+    let log = sampled_log(tag, steps);
+    low_disk()
+        .log(CI_4, |_| log.clone())
+        .annotated(CI_4, "Process completed with exit code 3.")
+}
+
+/// 100 MiB, and 40 GiB, free.
+const LOW: u64 = 100 * 1024;
+const PLENTY: u64 = 40 * 1024 * 1024;
+
+/// The sampler's notice covers the job so far, so a step after a low one repeats it: only the step's own samples say
+/// what that step had.
+fn check_dip(script: &str) {
+    let dip = sampled("ci_retry_dip", &[(LOW, false), (PLENTY, true)]);
+    assert!(
+        dip.logs[CI_4].contains("##[notice]lowest free 100 MiB over 2 samples"),
+        "the sampler's notice is not the job's: this test no longer tests that"
+    );
+    check_kept(script, "a failure after an earlier step's dip", &dip);
+    let own = sampled("ci_retry_own", &[(PLENTY, false), (LOW, true)]);
+    assert!(
+        retried(script, &own),
+        "a failure on the step's own low disk: not re-run"
+    );
+}
+
+#[test]
+fn ci_retry_keeps_a_failure_after_an_earlier_steps_dip() {
+    check_dip(&script());
+}
+
+negative_control!(
+    ci_retry_keeps_a_failure_after_an_earlier_steps_dip,
+    "a classifier that reads the sampler's notice, the job's lowest so far",
+    expected = "a failure after an earlier step's dip: re-run",
+    check_dip(&edit(
+        &script(),
+        "re.compile(r\"^== sample \\d+, \\+\\d+ s, avail_kb=(\\d+),\")",
+        "re.compile(r\"^##\\[notice\\]lowest free (\\d+) MiB\")"
+    ))
+);
 
 // ---- Main and pull requests alike -----------------------------------------------------------------------------------
 
