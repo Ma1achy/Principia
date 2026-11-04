@@ -2096,17 +2096,18 @@ record, which RQ-686 and RQ-687 share.*
     wrapper has no compute entry point at this commit, and `detect` (`crates/kernel/src/driver/cadence.rs`:71) is a stub
     until TASK-M3-09 and TASK-M3-12. What is measured on this card is canon's and decode's branches (R-547), on identical
     inputs: `decode_` 36 of 36 and `canonicaliser_` 28 of 28.
-  - **Division in a branch input is excluded by rule, and the rule isn't met in writing yet.** Rule 1 of
+  - **Division and `√` in a branch input are excluded by rule, and the rule isn't met in writing yet.** Rule 1 of
     `docs/notes/principia_gpu_determinism_note.md`: "No runtime `pow`/`sqrt`/`div` decides control flow". REQ-INT-064 and
     R-34 (corrected by R-547) require `|Δn̂|` and `E_rel` to be "built only from operations every IEEE backend rounds
     alike", in a fixed written form, and `plan/tasks/M4/TASK-M4-03.md`:45 asks for "no runtime `pow`/`sqrt`/`div` feeding
     a decision". But escape is on REQ-INT-057's list, and its `E_rel` has a division: `E_rel = ½|Δv|² − (M_pair + m_b)/d`
     (R-29; `docs/contracts/principia_integrator_contract.md`:737). So has `|Δn̂|`: `n̂(r, m) = (u, v, w)/I`
     (`docs/design/principia_dd_simstate_payload.md`:529), and `crates/kernel/src/shape.rs`:51-69 divides by `m01` and `i`;
-    its magnitude is also a `√` unless it is compared squared. The integrator contract, :608, calls both "shared branches
+    its magnitude is also a `√` unless it is compared squared, and `shape.rs`:64 has a `√` in `s`, feeding `p` and `q`.
+    `E_rel`'s `d` is itself a `√`. The integrator contract, :608, calls both "shared branches
     whose inputs are multi-op arithmetic". Neither written form exists, and nothing read here reconciles the two
     formulas with the rule.
-  - **So the risk is open, not absent.** A driver whose quotients are one ulp off is the case where
+  - **So the risk is open, not absent.** A driver whose quotients or roots are one ulp off is the case where
     `(M_pair + m_b)/d` could flip `E_rel > 0` near zero, or `n̂` could flip `|Δn̂| < tau`. Neither is measured: neither
     input is on any GPU at this commit.
   - **One same-input difference the division measurement doesn't cover; reading (b) does.** RQ-687's failure: on identical inputs, setting off, in the
@@ -2140,7 +2141,7 @@ record, which RQ-686 and RQ-687 share.*
 - **The questions:** (1) is "bit-identity" with the setting off a claim about branch decisions, or about every Vulkan
   driver's continuous results, division the one operation measured? (2) what should the header record where a driver rewrites division with no switch?
 - **Options seen:** (a) branch decisions and the Tier B fields only, which holds only if `E_rel` and `|Δn̂|` get
-  written forms that take no driver's division, a gap still open and untested on any GPU; the probe then stays a
+  written forms that take no driver's division or `√`, a gap still open and untested on any GPU; the probe then stays a
   measurement on its two named jobs, the "every backend" comments narrow, and the header keeps `StageMode::Off` with its
   doc saying what it records, wgpu's path, no driver observed; (b) every continuous result on every driver, division the
   one operation measured: this card fails R-297. The reading reaches past division: `√` (`physics/pairs.rs`'s `norm` and
