@@ -2042,7 +2042,7 @@ record, which RQ-686 and RQ-687 share.*
   - `docs/contracts/principia_parity_contract.md`:154, § 4: "**Off:** bit-identity and identical branch decisions hold
     as this contract states them (R-84; Tier B)".
   - The same file, :97, § 2, Tier B: "a GPU's `pow`/`sqrt`/`div` and libm's differ by 1–3 ulp *in every math mode*".
-  - The same section, :145, source 2 of the tolerance: "**cross-backend f32 variance** — the kernel run through native
+  - The same file, :145, § 4, source 2 of the tolerance: "**cross-backend f32 variance** — the kernel run through native
     `wgpu` vs the user's browser/driver can produce slightly different f32 results for the same kernel; shader translation
     and driver math differ across backends."
   - `docs/notes/principia_gpu_determinism_note.md`:62, § "The parity consequence", the Standing caveat: "The spike's
