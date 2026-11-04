@@ -539,12 +539,16 @@ mod noisy_watch {
     use super::*;
     negative_control!(
         qa_sampler_step_status_and_streams_are_the_steps,
-        "`watch` with the step's stderr",
+        "`watch` on the step's stderr: its own `exec` and the silent start both gone",
         expected = "more than the step on stderr",
         check_status_and_streams(&swap(
-            &sampler(),
-            "  exec > /dev/null 2>&1 < /dev/null\n  [ -z",
-            "  [ -z"
+            &swap(
+                &sampler(),
+                "  exec > /dev/null 2>&1 < /dev/null\n  [ -z",
+                "  [ -z"
+            ),
+            "exec 8>&2 2> /dev/null\n",
+            "exec 8>&2\n"
         ))
     );
 }
