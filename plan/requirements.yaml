@@ -31122,6 +31122,8 @@
     section: "R-676 — Mutants run once per approved head, on the `merge-ready` label the merge watcher puts on, and again only when the head changes, `mutants-check` posted pending until then and never passed by a skipped job; fix rounds are checked locally through the job queue before they push; superseded `reviews` runs are cancelled per pull request; `main` is merged into open pull requests in batches; the quick and full tiers of `ci.yml` are not ruled *(amends R-656 and R-305)*"
   - file: decisions.md
     section: "R-677 — CI runs in three tiers: a change to Principia's code runs full CI as before; one to the plan's task data or the GUI's artboards and references runs only the cheap checks and the tests that read what it changed, with no build, test shard, GPU suite or mutants; one to the docs runs only the cheap checks; a change takes its highest tier, and an unknown path runs full CI; mutants run only when `crates/` source changes, on the merge-ready head; every required check still reports under its own name *(amends R-656, R-662, R-110, R-177, R-235, R-305 and R-676)*"
+  - file: decisions.md
+    section: "R-678 — `mutants-check` is a job of every run of `mutants.yml`, never a check run posted through the Checks API: every pull-request event and label change reports it, the merge-ready run with its verdict, a head with no `.rs` file under `crates/` or not merge-ready passed as \"not applicable\", and another label's change on a merge-ready head with that head's merge-ready verdict; a test checks that every required check reports on every path *(amends R-676, R-677 and R-305)*"
   verify:
     detail: "code: the `mutants.yml` workflow runs `cargo mutants --in-diff` against the PR's base on pull_request events as a matrix of n shards, each `--shard k/n` with its own timeout, and a shard cut off by its timeout fails the job (R-302); each exclusion names which of R-196's three categories it falls in; code and qa: each entry in the equivalent-mutants list carries a one-line justification and both reviewers approve it (R-202); qa: the checklist line (every surviving mutant in the diff is a finding, killed or justified as equivalent); the job can fire: on a fixture crate whose diff adds an untested branch it reports a surviving mutant and fails, with the test added it reports none, and with that mutant in the equivalent-mutants list it passes"
     method: review checklist
@@ -31132,8 +31134,9 @@
   - R-302
   - R-676
   - R-677
+  - R-678
   milestone: M0
-  note: "R-676: a pull request's run is on its merge-ready head, the run the `merge-ready` label starts once every reviewer its task names has approved that head, and again only if the head changes; `mutants-check` is pending until then, and a head whose change has no `.rs` file under `crates/`, with no mutant the gate runs, passes at once (R-677)."
+  note: "R-676: a pull request's run is on its merge-ready head, the run the `merge-ready` label starts once every reviewer its task names has approved that head, and again only if the head changes. R-678: `mutants-check` is a job of every run of `mutants.yml`, never a posted check run: the merge-ready run reports the verdict; a head whose change has no `.rs` file under `crates/` (R-677), with no mutant the gate runs, or that is not merge-ready passes, \"not applicable\"; another label's change on a merge-ready head reports that head's merge-ready verdict."
 - id: REQ-VAL-149
   area: VAL
   kind: calibration
