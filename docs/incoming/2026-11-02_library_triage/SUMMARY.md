@@ -58,7 +58,7 @@ existing ones (NOW-28 to NOW-34, M9-35 to M9-46); the earlier ranks are not re-r
 | 2 | NOW-29 | cft-rebound Burrau divergence (papers-72) | f64 against fp128 and fp256 on Burrau to t = [value]; an [value]-member ulp ensemble | S | GPL-3.0-or-later: never committed, values masked. Unreviewed, AI-assisted. Raised from RECORD-ONLY | 221 |
 | 3 | NOW-25 (standing) | Maissouradze 2026, 7 stable free-fall orbits | Free-fall closure at unequal masses, a 7.7e-5 passage | S | AI-assisted; data path is papers-12, not papers-128 | 90 |
 | 4 | NOW-24 (standing) | Kandel 2026, 86 refined starts | L≠0 closure, equal masses | S | Ours: 7 are atlas rows and 1 nearly; peek on the other 78 | 190 |
-| 5 | NOW-30 | Agekyan, Anosova & Orlov 1983, Tables 2-4 | Decay-time and escape statistics at rest in region D, 1000 runs, to 1000 crossing times. Peer-reviewed | M | Table 5 needs Tevzadze 1962's escape criterion (not held): its M9 part. Table 4 bin misprint | 4 |
+| 5 | NOW-30 | Agekyan, Anosova & Orlov 1983, Tables 2-5 | Decay-time and escape statistics at rest in region D, 1000 runs, to 1000 crossing times. Peer-reviewed | M | Only Table 3 is criterion-free. The rest read Tevzadze's criterion, printed in Agekyan & Anosova 1968, eq. (10), R-592's source; no uniform sampler yet. Table 4 bin misprint | 4 |
 | 6 | NOW-31 | eucliss unequal-mass velocity planes | Escape fraction at unequal masses and zero L, by the source's horizon | S-M | One fate code lumps survivors, step cap and skipped E ≥ 0 pixels. AI-authored, values masked | 205 |
 | 7 | NOW-23 (standing) | Jeomseon 2026, Burrau interval boxes | Top tiers on Burrau, t = 59.5 to 61 | S-M | AI-assisted; parse as rationals | 78 |
 | 8 | NOW-32 | mikha08-rgb/Nbody, figure-eight test | f32 on a GPU against f64 on the CPU, split growth | S | No licence: values masked. Conflates device and precision; needs KDK at fixed step | 188 |
@@ -83,8 +83,8 @@ Bengochea 2011 and 2013.
 | 9 | M9-43 | Doumbouya 2026, BKM reproduction | E = 0, L = 0 escape and final-binary statistics, 4,933 seeds | L | Peek only: failed its own gates, AI-assisted ("Grok audit"). Was NOW-27 | 189 |
 | 10 | M9-44 | Tian & Zhou 2003, Chin. Astron. Astrophys. 27, 209 | L≠0 equal-mass lifetimes by homology-map region | L | Table 1 fails its own arithmetic; sampling and root choice undefined | 148 |
 
-Then: M9-45 Puodzius 2026 (peek; multipliers on held Belgrade orbits, raised from RECORD-ONLY), M9-46 ThreeBodyFractal
-Image02 (peek; finite-radius stop in SI units, a new stop predicate needed), and Agekyan 1983's Table 5 (row 4).
+Then: M9-45 Puodzius 2026 (peek; multipliers on held Belgrade orbits, raised from RECORD-ONLY) and M9-46 ThreeBodyFractal
+Image02 (peek; finite-radius stop in SI units, a new stop predicate needed).
 
 ## SKIP list
 
