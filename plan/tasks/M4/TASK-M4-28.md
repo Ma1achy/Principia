@@ -84,7 +84,8 @@ alone does not answer the owner's question; the forks on identical inputs do, an
 - **The NVIDIA record** is a Windows session's run at the PR's head, `--record` with `PRIN_GPU_BACKEND=vulkan`, the file posted to
   #390, under the same hardware label as that card's other runs. It is not a CI job (R-186). Nothing waits on it, and the task
   closes without it: M4's gate report lists the row as "not run" until it is posted, though the owner's question rests on that
-  row (`plan/MILESTONES.md` § M4). It doesn't stand in for R-58's parity run, REQ-VAL-099, which gates Paper 2.
+  row (`plan/MILESTONES.md` § M4). It doesn't stand in for R-58's parity run, REQ-VAL-099, which gates Paper 2; whether a driver recorded unverified,
+  not supported can serve that gate is RQ-695.
 - **Why generic ICs are not enough.** A 1-ulp difference flips a branch only within about an ulp of its threshold, so a small
   non-chaotic set reads 0 of N with a defect present (order of magnitude, assuming 10³ crossings per trajectory: 2.4e-4 per
   trajectory), and the chaotic stratum reads high with none. Hence the near-decision stratum and the fixed-input arm, which add
