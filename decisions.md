@@ -29756,13 +29756,20 @@ that distributes over a constant (modelled; no compiler output exists).
 *What it decides:* the premise is a condition on a driver, not a property of IEEE backends in general. TASK-M4-27 and TASK-M4-28
 test it per driver. Nothing can enforce it. A driver that fails is recorded unverified, not supported.
 
-*What it amends:* R-547, whose "every IEEE backend" now reads as every backend whose driver meets that condition. How a branch
-input is built does not change.
+*What it amends:* R-547, whose "every IEEE backend" now reads as every backend whose driver meets that condition: it keeps the
+additions and multiplications of a branch input as written, correctly rounded, not reassociated and not distributed.
+`crates/kernel/src/canon.rs`:91 says "unreassociated", and the rewrite behind this ruling, `(a + c)·k` to `a·k + c·k`, is
+distribution; the contract is the authority. How a branch input is built does not change.
 
-*Applied per R-369:* a driver fails the condition on a fork on identical inputs in a branch input built only of `+` and `×`, the
-result those tasks' reports already separate (R-686's tasks, physics review of PR #407). A fork in an input holding a division
-or `√` is reported as that kind and does not by itself fail this condition. The recording is a report's words and blocks nothing
-(R-649).
+*Applied per R-369:* the condition is about bits, not forks, as parity § 4's sentence, rule 2 of the determinism note and
+REQ-INT-066 settle it (physics review of PR #407). For a branch input built only of `+` and `×`, the test reads the expression's own
+operands:
+- its operands differ across the backends compared: an upstream difference, no evidence on the driver;
+- its operands are bit-identical and its bits differ: the driver fails, with or without a fork;
+- its operands and bits are identical and the outcome differs: a comparison fork, reported as that, and it fails too.
+
+An input holding any other operation (division, `√`, `sin`, `cos`, a builtin) is reported as that kind and does not by itself fail
+this condition. The recording is a report's words and blocks nothing (R-649). It adds no claim on continuous bits.
 
 ## R-691 — The raw-value rule for pixel comparisons is for cross-backend investigation only; goldens stay as they are on CI backends *(closes RQ-692; amends R-686)*
 *4 Nov 2026 · the owner's batch of that day; applied in `docs/contracts/principia_parity_contract.md` § 4, TASK-M6-53,
