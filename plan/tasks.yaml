@@ -3826,7 +3826,7 @@
 - id: TASK-M9-37
   milestone: M9
   title: "M9's report: every external target with its tier, outcome and like-for-like checks"
-  depends_on: [TASK-M9-01, TASK-M9-02, TASK-M9-03, TASK-M9-04, TASK-M9-05, TASK-M9-06, TASK-M9-08, TASK-M9-10, TASK-M9-11, TASK-M9-12, TASK-M9-13, TASK-M9-14, TASK-M9-15, TASK-M9-16, TASK-M9-17, TASK-M9-18, TASK-M9-19, TASK-M9-20, TASK-M9-21, TASK-M9-26, TASK-M9-30, TASK-M9-31, TASK-M9-32, TASK-M9-33, TASK-M9-34, TASK-M9-36]
+  depends_on: [TASK-M9-01, TASK-M9-02, TASK-M9-03, TASK-M9-04, TASK-M9-05, TASK-M9-06, TASK-M9-08, TASK-M9-10, TASK-M9-11, TASK-M9-12, TASK-M9-13, TASK-M9-14, TASK-M9-15, TASK-M9-16, TASK-M9-17, TASK-M9-18, TASK-M9-19, TASK-M9-20, TASK-M9-21, TASK-M9-26, TASK-M9-28, TASK-M9-30, TASK-M9-31, TASK-M9-32, TASK-M9-33, TASK-M9-34, TASK-M9-36]
   needs: []
   requirements: [REQ-VAL-340]  # R-650 (30 Oct 2026)
   reviewers: [code, qa, physics]
@@ -3842,7 +3842,7 @@
 - id: TASK-M9-39
   milestone: M9
   title: "The softened force law: Plummer softening, built after the core build, and the refusal of ε ≠ 0 lifted"
-  depends_on: [TASK-M3-01, TASK-M3-05, TASK-M3-06, TASK-M4-06, TASK-M4-04, TASK-M4-13, TASK-M2-12, TASK-M2-25, TASK-M3-12, TASK-M3-22, TASK-M7-35]  # R-670: what softening reaches
+  depends_on: [TASK-M3-01, TASK-M3-05, TASK-M3-06, TASK-M4-03, TASK-M4-06, TASK-M4-04, TASK-M4-13, TASK-M2-12, TASK-M2-25, TASK-M3-12, TASK-M3-22, TASK-M7-35]  # R-670: what softening reaches
   needs: []
   requirements: [REQ-INT-111, REQ-SYS-094, REQ-SYS-095]  # R-654 (30 Oct 2026)
   reviewers: [code, qa, physics, perf]
@@ -3850,7 +3850,7 @@
 - id: TASK-M9-40
   milestone: M9
   title: "The Šuvakov-plane chart, at equal masses and at fixed m₃, defined and built (R-669)"
-  depends_on: [TASK-M2-14, TASK-M4-17]
+  depends_on: [TASK-M2-14, TASK-M4-06, TASK-M4-17]
   needs: []
   requirements: [REQ-CHART-091]  # R-669 (1 Nov 2026), RQ-608 and RQ-618 (a)
   reviewers: [code, qa, physics]

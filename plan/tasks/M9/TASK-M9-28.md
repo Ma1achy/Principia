@@ -25,7 +25,7 @@ The replication suite's targets TS-1, TS-2, V-1/V-3/V-7 run as engine tests (`pr
 - `docs/notes/principia_validation_ground_truth_note.md` § "Chaos forbids pointwise comparison (exact vs structural)"
 
 ## Deliverables
-- The per-pixel syzygy-symbol field, defined first (R-72; REQ-VAL-342) beside TS-1's row of `principia_dd_replication.md` § 5.12, approved by the physics reviewer, then built; the maps on it (R-669, RQ-595 (b)); no fixed-k velocity chart. The frame conversion and the book's ×2 scale as tested functions: no remap for 2015's maps; for 2008's, whose (x − 0.5)² is recorded as printed, a mirror remap only if the figures show one (R-702; *was:* "The D11 mirror remap and the book's ×2 scale as tested functions."). *Was:* "The maps on the field and chart RQ-595 rules; …"
+- The per-pixel syzygy-symbol field, defined first (R-72; REQ-VAL-342) beside TS-1's row of `principia_dd_replication.md` § 5.12, in the frame RQ-650 rules, approved by the physics reviewer, then built; the maps on it (R-669, RQ-595 (b)); no fixed-k velocity chart. The frame conversion and the book's ×2 scale as tested functions: no remap for 2015's maps; for 2008's, whose (x − 0.5)² is recorded as printed, a mirror remap only if the figures show one (R-702; *was:* "The D11 mirror remap and the book's ×2 scale as tested functions."). *Was:* "The maps on the field and chart RQ-595 rules; …"
 - The calibration proposal.
 
 ## Acceptance tests

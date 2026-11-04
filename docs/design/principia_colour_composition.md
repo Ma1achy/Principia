@@ -871,7 +871,8 @@ and the decode/encode translated to WGSL from the one Rust source (R-116):
   scale (REQ-COL-060).
   **A non-finite operand is invalid (R-436).** `E₀ = K₀ + V₀` reads `−∞` at the f64 collision pole, as computed
   and stored (`principia_dd_decoder.md` §3.6), where the difference would be `(−∞) − (−∞)`, NaN on the CPU and
-  unpinned on the GPU. An agreement preset tests each stored operand (`K_0`, `V_0`, and any other it reads) on its
+  unpinned on the GPU. *4 Nov 2026 (R-670):* at `ε ≠ 0`, `V₀` is softened and finite at a zero separation, so there is
+  no collision pole, and the `−∞` here applies at `ε = 0` only. An agreement preset tests each stored operand (`K_0`, `V_0`, and any other it reads) on its
   bits before any arithmetic, `K₀ + V₀` included, and draws a pixel with a non-finite operand in the invalid colour,
   on the CPU and the GPU alike; it never does arithmetic on `±∞`, since WGSL lets an implementation assume there are
   no infinities. The fragment decode's own `V`, whose pole value it selects as the decode stage does

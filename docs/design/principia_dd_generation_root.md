@@ -179,6 +179,8 @@ sample is inside the hold is not stored; a resumed march recomputes it from the 
 gravitational potential energy, `(−∞, 0]` (dd_decoder §3.6: `K₀ = Σᵢ ‖pᵢ‖²/2mᵢ`, `V₀ = −Σ_{i<j} mᵢmⱼ/‖rᵢ − rⱼ‖`).
 Neither range spans zero, so neither carries the `diverging` scale (§3.8): both are `lin`, on viridis, mapped
 monotonically, `V_0`'s most negative value at the dark end. `E₀ = K_0 + V_0` keeps its `diverging` scale (§3.4).
+*4 Nov 2026 (R-670):* at `ε ≠ 0`, `V₀ = −Σ_{i<j} mᵢmⱼ/√(‖rᵢ − rⱼ‖² + ε²)` (dd_decoder §3.6), still one-signed and now
+finite at a zero separation.
 
 **64 B with explicit padding** (R-86): the 12 × f32 fields are 48 B, and the remaining 16 B are declared padding, never
 implicit. `E₀` is **derived** (`K_0 + V_0`), not stored.
