@@ -29977,9 +29977,8 @@ The owner's words, 3 Nov 2026, verbatim:
 > Rulings on the triage: (1) LL-3 uses Hénon 1974 (held under R-669) as its independent printed source; period agreement with Li & Liao to 2e-10 recorded; stop waiting on Standish 1970 (add it later if obtained). (2) Planetary (star-plus-planets) sources: PARKED with the hierarchical triples under R-668, revisited with the v2+ 3D extension, not permanently out of scope. (3) Plan per-point FTLE maps over the batch-152 planes, using the planned FTLE field, and shape-sphere residence statistics (new requirement: a time-weighted occupancy accumulator) as M9 peeks, non-gating, recorded as candidate original results. Write the minimum new requirements; no build before M9. Triage PR goes in after the freeze lifts, as planned.
 
 *Context.* The three items answer RQ-672, RQ-673 and RQ-674, the library triage's open questions 1 to 3, which PR #385
-(the triage of batches 81 to 153 and the papers-11 to 13 addendum) files. They are on that PR's branch, not on this
-one's base, so this port takes them from that branch unchanged and archives them, each with a Ruling line quoting the
-owner's words (`plan/OPERATIONS.md` § "Numbers", "An RQ open only on a PR branch"); #385 no longer touches them.
+(the triage of batches 81 to 153 and the papers-11 to 13 addendum) files, open. This port lands after that PR and
+archives them, unchanged, each with a Ruling line quoting the owner's words.
 
 *What it decides:*
 
