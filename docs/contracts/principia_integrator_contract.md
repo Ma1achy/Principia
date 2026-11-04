@@ -615,7 +615,7 @@ State the boundary explicitly in code: values may diverge by precision; **branch
 
 ---
 
-*4 Nov 2026 (R-694, closing RQ-685):* `E_rel` (R-29) holds a division and a `√` through `d`, and `|Δn̂|` a division through `n̂` and a `√` in its magnitude. Each decision takes a written form that uses no driver division or `√`, for example a squared or multiplied-through comparison: REQ-INT-112, TASK-M4-29. The quantities are unchanged.
+*4 Nov 2026 (R-694, closing RQ-685):* `E_rel` (R-29) holds a division and a `√` through `d`, and `|Δn̂|` a division through `n̂` and a `√` in its magnitude. Each decision takes a written form that uses no driver division or `√`, for example a squared or multiplied-through comparison: REQ-INT-112, TASK-M4-29. The quantities are unchanged. R-670's softened form above is this form at `ε ≠ 0`. The ionisation gate's total `E > 0` is not among these two: RQ-697.
 
 ## Part 5 — Units and the horizon (inherited scale gauge)
 

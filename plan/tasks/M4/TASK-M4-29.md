@@ -33,3 +33,4 @@ R-694 reads R-297's bit-identity as branch decisions, and that holds only if the
 - Added by R-694 (4 Nov 2026, RQ-685 (a)).
 - The quantities are R-29's and do not change. A decision may differ from the old form's only at rounding, near a tie; any label fixture that moves is named in the PR.
 - If a form cannot avoid a driver operation for an input, stop and queue it: R-694 rests on these forms.
+- *4 Nov 2026 (RQ-697, from PR #408):* this task covers `E_rel` and `|Δn̂|` only, as R-694 names them; the gate's total `E > 0` is RQ-697's. It depends on TASK-M3-12, which waits on RQ-697, so it waits through that task. The form here at `ε = 0` must agree with R-670's at `ε ≠ 0`, `|Δv|⁴·(d² + ε²) > 4·(M_pair + m_b)²` (integrator contract Part 4; TASK-M9-39).

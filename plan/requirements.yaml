@@ -5775,7 +5775,7 @@
   - R-547
   - R-694
   milestone: M4
-  note: "R-694 (4 Nov 2026, RQ-685 (a), \"as a task\"): TASK-M4-29. Neither input is on any GPU at the ruling's date, and REQ-INT-057's decisions are unmeasured on every GPU."
+  note: "R-694 (4 Nov 2026, RQ-685 (a), \"as a task\"): TASK-M4-29. Neither input is on any GPU at the ruling's date, and REQ-INT-057's decisions are unmeasured on every GPU. RQ-697 (PR #408) holds the ionisation gate's total E > 0, which is not this requirement's; TASK-M4-29 waits on it through TASK-M3-12."
 - id: REQ-EVT-001
   area: EVT
   statement: "Every pixel must get a labelled output — escape, collision or bounded (reaching the horizon is bounded), sim_failed or decode_failed, or RUNNING while in flight — with no timeout state, and substep-cap saturation a confidence flag, never a terminal."
