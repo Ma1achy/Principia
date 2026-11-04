@@ -19,11 +19,11 @@
 
 use eframe::egui::{self, pos2, vec2, Color32, Painter, Pos2, Rect, Stroke};
 use engine::contract::set_field::SetField;
-use engine::contract::sim_config::{Latent, Plane, LATENT_DIM};
+use engine::contract::sim_config::{Latent, Plane, SimConfig, LATENT_DIM};
 
 use super::physical::Set;
 use crate::explore::manifold_view::{
-    axis, basis_edit, dot, norm, spans_no_plane, View, AXES, Z0_HALF_RANGE,
+    axis, basis_edit, dot, norm, plane_edit, spans_no_plane, View, AXES, Z0_HALF_RANGE,
 };
 use crate::explore::{COMPASS_CUBE, COMPASS_JACOBI, COMPASS_PLUCKER, COMPASS_SHAPE};
 use crate::keyboard::keymap::Direction;
@@ -176,6 +176,16 @@ pub fn steer(scale: f64, i: usize, j: usize) -> Option<SetField> {
         return None;
     }
     Some(basis_edit((axis(i, scale), axis(j, scale))))
+}
+
+/// [`steer`] on `sim`'s chart: a plane that takes the slice normal or a target moves it by the slice-axis rule in the same
+/// edit ([`plane_edit`]; R-459 G4).
+pub fn steer_on(sim: &SimConfig, i: usize, j: usize) -> Option<SetField> {
+    if i >= j || j >= LATENT_DIM {
+        return None;
+    }
+    let scale = View::read(sim).scale;
+    Some(plane_edit(sim, (axis(i, scale), axis(j, scale))))
 }
 
 // --- the keyboard's cell cursor (R-452 C6) -----------------------------------------------------------------------------

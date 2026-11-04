@@ -638,34 +638,6 @@ peek log's first row (`docs/verification/peek_log.md`), UNEXPLAINED, with this q
   `principia_dd_replication.md` § 5.10, the RQ-598 README § 6 and TASK-M3-62's note point here.
 - **Waits:** GG-1's per-point scoring against the Fig. 1 extraction (TASK-M3-62). BR-1 does not wait on it.
 
-## RQ-627: The softened force law: `epsilon` is a carried, tagged sim-key value, but no document defines softened gravity and no task builds it *(a definition requirement, R-72; physics; `docs/design/principia_dd_generation_root.md` § "Open"; REQ-SYS-018; the physics review of PR #348, F1; context: TASK-M3-06)*
-
-*Queued 30 Oct 2026 by TASK-M3-06's fix round, on the physics review of PR #348 (F1), the code review (C1) and the qa
-review (F1). For the owner: yes, it is physics where the choice changes the result and the corpus does not settle it
-(R-369).*
-
-- **File, section:**
-  - `docs/design/principia_dd_generation_root.md` § "Open": "softened gravity is a different force law at any
-    `epsilon`, and ε>0 runs must be tagged and never pooled with ε=0 runs; and **`r_coll` is the better default
-    mechanism**, since softening makes the dynamics wrong everywhere … **Adopted: `r_coll` nonzero by default,
-    `epsilon` default 0 and optional.**"
-  - `plan/requirements.yaml`, REQ-SYS-018: "`r_coll` must be nonzero by default and `epsilon` 0 by default and
-    optional, both expressed in canonical units and fixed at t = 0 (never co-moving), and ε > 0 runs must be tagged
-    and never pooled with ε = 0 runs."
-- **The gap:** the corpus makes `epsilon` optional and says a run with ε > 0 is a different force law, but never says
-  which one: not its form (Plummer, `1/(r² + ε²)`, or another), nor `V`'s dependence on ε, and so nor `E₀` or the
-  drift meters under it. No force law in `crates/kernel` reads a softening length, and no task in `plan/tasks` builds
-  one. A run dispatched with ε > 0 would come back Newtonian under the `softened` tag, against canonical_spec §9 W13.
-- **The question:** the softened force law's definition (its potential and force as functions of `r` and ε, and what
-  `E₀`, the drift meters and the collision branch read under it), and the task that builds it.
-- **Options seen:** (a) Plummer softening, `V = −Σ m_i m_j / √(r_ij² + ε²)`, built by a new task; (b) another kernel,
-  named by the owner; (c) drop the option: `epsilon` stays 0 and the field is retired, by ruling.
-- **Applied meanwhile:** dispatch refuses any `epsilon` other than 0, NaN and ±∞ included, with a typed reason
-  (`engine::dispatch::validate`, TASK-M3-06). The field, its default 0, the `softened` provenance tag and its sim-key
-  byte stay, so REQ-SYS-018's "optional" stays true of `SimUniforms`. The refusal is lifted by the task that builds
-  the force law.
-- **Waits:** any run with ε ≠ 0. Nothing else waits.
-
 ## RQ-621: The control REQ-DEC-011 and REQ-VAL-017 ask of `M₀₁` cannot fail: an unfused or flushed `fma(m₁, 1, m₀)` rounds exactly as the fused one *(conflict: a requirement's control against arithmetic; R-547, RQ-298; REQ-DEC-011, REQ-VAL-017; context: TASK-M2-48)*
 
 *Found by TASK-M2-48's implementer, before building, 30 Oct 2026. For the orchestrator (R-369: tests), except option
@@ -789,94 +761,6 @@ choice changes what the agreement preset shows and what its gate certifies, and 
   Applied: colour_composition § 6's conditioning-aware scale (R-72), the factor proposed in it (R-71), the
   `collision` windows and the per-operand control in the `decode-agreement` gate (TASK-M2-29).
 
-## RQ-622: Five statistical or qualitative map targets whose verify names a Result at f64: are they scored on tier (a), the f32 GPU explorer, as R-649's confirmed reading says, or on the f64 Result their verify names *(physics; R-649 item 2 and the owner's confirmation of 30 Oct 2026; `docs/design/principia_dd_replication.md` § 12.2; REQ-VAL-308, REQ-VAL-309, REQ-VAL-311, REQ-VAL-312, REQ-VAL-313; and B-2, REQ-VAL-246, added below; context: TASK-M9-33, TASK-M9-34, TASK-M9-35, TASK-M9-16)*
-
-*Queued 30 Oct 2026 by the fix round of R-649's port (PR #342), applying the owner's confirmation of the tier reading.
-For the owner: yes, it is physics where the choice changes which instrument a target is scored on, and the corpus
-does not settle it (R-369). Numbered RQ-622: the number before it is already held by the branch
-`task/TASK-M2-48` (`plan/OPERATIONS.md` § "Merging", **Numbers**).*
-
-- **File, section:**
-  - `decisions.md` § "R-649 — …", the owner's words, item 2: "(a) GPU explorer: fast, f32, interactive; expected to
-    agree statistically or qualitatively only, with error_ratio flagging what it can't resolve; (b) CPU IC inspector:
-    f64/high precision; exact targets (collision points, periods, converged states) bind here."
-  - The same entry, his confirmation of 30 Oct 2026: "Tier reading confirmed: statistical targets are scored on tier
-    (a), exact targets on tier (b)."
-  - `decisions.md` § "R-572 — Result: a view's region run at full precision, f32 or f64 only, on a uniform grid, as a
-    batch job in the app or by `prin batch` …".
-  - `plan/requirements.yaml`, REQ-VAL-308 (AT-D2), verify: "one Result per mass set (R-572), f64, uniform; each orbit's
-    pixel against REQ-VAL-137's threshold"; REQ-VAL-309 (OC-4 off the Šuvakov plane), verify: "Result runs (R-572) at
-    f64; the island criterion read from the payload; agreement at REQ-VAL-310's level"; REQ-VAL-311 (OC-4 on the
-    plane), verify: "as OC-4"; REQ-VAL-312 (AT-D1), verify: "a Result (R-572) at f64; reviewed by the physics
-    reviewer"; REQ-VAL-313 (AT-D3), verify: "as AT-D1, per value of m₃".
-- **The gap:** the five are statistical (OC-4 on and off the plane) or qualitative over a map (AT-D1, AT-D2, AT-D3), so
-  the confirmed reading scores them on tier (a), the f32 interactive GPU explorer. Their verify, written before R-649,
-  scores them on a Result at f64, a batch run that is neither the interactive f32 explorer nor the CPU IC inspector.
-  Changing the verify to f32 changes what is scored; keeping it scores a statistical target off tier (a).
-- **The question:** on what are these five scored.
-- **Options seen:** (a) on tier (a): the verify's run becomes the GPU explorer's f32 output, and the f64 Result is
-  dropped from the scoring; (b) the verify as written: the f64 Result is the scoring run, recorded as a stated
-  exception to the tier rule; (c) both: scored on tier (a), with the f64 Result run beside it and recorded as
-  information (an explained divergence between the two would be a precision-tier finding); (d) another, stated by the
-  owner.
-- **Applied meanwhile:** the five are listed as tier (a) by the rule, "its f64 Result: RQ-622", in § 12.2 and in their
-  notes; their verify is unchanged. Nothing in M0 to M8 depends on it.
-- **Added (30 Oct 2026, fix round of PR #342, Codex thread on § 12.2's B-2 row): B-2, REQ-VAL-246.** The same
-  question for one statistical target whose statement names the CPU:
-  - `plan/requirements.yaml`, REQ-VAL-246 (B-2), statement: "The Lyapunov exponent of Burrau's problem, measured with
-    the CPU FTLE, must be compared loosely with λ₁₀ = 0.101 ± 0.005 (τ_L = 4.3 ± 0.2), recorded as a fit over every ζ,
-    relativistic runs included, and not a Newtonian-only number (B-2)." Its compare is "statistical (loose)", so the
-    confirmed reading puts it on (a), and § 12.2's table row reads "(a)".
-  - `docs/design/principia_dd_replication.md` § "12.2 Tiers": "A single chaotic trajectory set beside a figure (AA-4,
-    V-6, SP-1's structural comparison) is (b)." B-2's published λ₁₀ is "fitted over all ζ, relativistic runs
-    included" (REQ-VAL-246's note): an FTLE fit over many runs from one start, the Burrau pixel, with a statistical
-    compare. Whether the clause reaches B-2 is part of the question, not a given.
-  - The gap: by its compare B-2 is (a), the f32 GPU explorer, by the owner's confirmed reading; its statement names the
-    CPU FTLE. Which instrument measures the exponent changes the number scored.
-  - The question: does § 12.2's single-trajectory clause reach B-2, a fit over many runs from one start; and is B-2
-    scored on (a), on the CPU FTLE its statement names, or on both.
-  - Options seen: (a) on tier (a), the GPU explorer's FTLE, with the statement's "measured with the CPU FTLE" changed
-    to match; (b) on the CPU FTLE, as the statement says, recorded as a stated exception to the tier rule or as the
-    single-trajectory clause's reach; (c) both: scored on tier (a), with the CPU FTLE run beside it and recorded as
-    information (an explained divergence between the two would be a precision-tier finding); (d) another, stated by
-    the owner.
-  - Applied meanwhile: § 12.2's row reads "(a); its CPU FTLE: RQ-622"; REQ-VAL-246's statement is unchanged and it is
-    held on this entry; TASK-M9-16's note and TASK-M9-37's "not scored" list name the hold. TASK-M9-16 still scores
-    CH-1, B-1 and V-6.
-- **Waits:** the scoring of REQ-VAL-308, REQ-VAL-309, REQ-VAL-311, REQ-VAL-312 and REQ-VAL-313 in M9 (TASK-M9-33,
-  TASK-M9-34, TASK-M9-35), and any peek of them; and B-2's (REQ-VAL-246, TASK-M9-16), and any peek of it.
-- *31 Oct 2026, R-661:* the quoted "expected to agree statistically" is a hypothesis Principia will measure, and no paper establishes it. RQ-649 asks what a score on tier (a) says meanwhile; this entry's question stands.
-
-## RQ-630: R-554 L3's and the chart contract's summary sentences on Lean each axis say `N_a` and `N_b` vanish together on a tilted view only at the corner, where L3's own closed form also gives both zero at Lean `(±180, 0)`, `(0, ±180)` and `(±180, ±180)` *(conflict: a ruling's summary against its own formula; R-554 L3, R-474 R2; `docs/contracts/principia_chart_decoder_contract.md` § "Repeats and the canonical point"; the physics review of PR #349 (5710611197), P2; REQ-SCHED-101; context: TASK-M2-36, TASK-M8-56)*
-
-*Queued 30 Oct 2026 by TASK-M2-36's fix round 2, on the physics review of PR #349. A wording conflict, not a physics
-question: the code follows the formula, and the physics reviewer agrees it is the physically consistent reading.*
-
-- **File, section:**
-  - `decisions.md` § "R-554 — …", L3: "under Lean each axis `N ∝ (−sin τ₁ cos τ₂, −cos τ₁ sin τ₂, cos τ₁ cos τ₂)`,
-    so on a tilted view they vanish together only at the corner `|τ₁| = |τ₂| = 90°`, where there is no normal and
-    RQ-471 applies no fold, so no pole map either".
-  - The same L3, before it: "the pole maps' condition `N_a = 0` and `N_b = 0` is decided exactly on the stored angles
-    from each map's closed form".
-  - `docs/contracts/principia_chart_decoder_contract.md` § "Repeats and the canonical point": "decided exactly on the
-    stored angles (Tip as sheet `m == 180`; Lean each axis only untilted, its one-target corner ray-degenerate with no
-    fold; two targets iff `τ₁, τ₂ ∈ {0, ±180}`)".
-  - `decisions.md` § "R-474 — …", R2: "A single tilt is identical under both maps."
-- **The conflict:** L3's formula gives `N_a = −sin τ₁ cos τ₂ = 0` and `N_b = −cos τ₁ sin τ₂ = 0` whenever
-  `sin τ₁ = sin τ₂ = 0`, i.e. at Lean `(±180, 0)`, `(0, ±180)` and `(±180, ±180)`, all tilted views, with
-  `N = (0, 0, cos τ₁ cos τ₂) ≠ 0`. There the plane is mirrored and `d ≡ 0`, so the pole maps keep `d`. Lean with one
-  angle at ±180 is the same rotation as Tip as sheet at `m = 180` (R-474 R2), where the contract applies the pole
-  maps. The summary sentences ("only at the corner", "only untilted") say otherwise.
-- **The question:** whether the summary sentences are reworded to match the formula ("Lean each axis iff
-  `sin τ₁ = sin τ₂ = 0`, its one-target corner ray-degenerate with no fold"), or the formula's other zeros are excluded.
-- **Options seen:** (a) reword L3's and the contract's summaries to the formula's zeros (the code's reading);
-  (b) keep the summaries and exclude Lean's ±180 zeros from the pole maps, so that Lean `(180, 0)` and Tip as sheet
-  `(180, 0)`, the same rotation, count differently; (c) another, stated by the owner.
-- **Applied meanwhile:** the formula, as L3's "decided exactly on the stored angles from each map's closed form" says:
-  `TiltSpec::normal_zero` (`crates/kernel/src/chart/tilt.rs`) gives `[true, true]` at Lean `(±180, 0)` and
-  `(0, ±180)` (TASK-M2-36, PR #349).
-- **Waits:** nothing; the summaries' rewording only.
-
 ## RQ-631: On a tilted shape sphere, the spherical map's period 2 in `t` makes `(s + k, t + 2j)` the same system as `(s, t)` wherever `N_a·k + 2·N_b·j = 0` for whole `(k, j) ≠ 0`, which R-554 L3's rule counts twice *(physics; silence; R-554 L3, RQ-472 (a), R-408; `docs/contracts/principia_chart_decoder_contract.md` § "Repeats and the canonical point"; the physics review of PR #349 (5710611197), P3; REQ-CHART-062, REQ-SCHED-101; context: TASK-M2-36, TASK-M8-56)*
 
 *Queued 30 Oct 2026 by TASK-M2-36's fix round 2, on the physics review of PR #349. For the owner: yes, it is physics
@@ -984,34 +868,29 @@ the choice changes the result (the word every sample stores) and the corpus does
   throwaway script of 30 Oct, never in the repo. What stands in for it is `fixtures/crossings/prl_orbits.py`, adapted
   from it; `crossing_body_relabelling` and `qa_m316_prl_fixture_against_appendix_c`, which check the outer-body claim.
 
-## RQ-634: On a tilted shape sphere a pole map's image also keeps `d` on lines of measure zero, `N_a(½ + k) + N_b(2j − 2t) = 0`, which no ruling names: R-554 L3 counts such a pixel and its image as two systems, and R-408 counts each system once *(physics; silence; R-554 L3, R-655, R-408; `docs/contracts/principia_chart_decoder_contract.md` § "Repeats and the canonical point"; the physics review of PR #349 (5719740344), P2; context: TASK-M2-36, TASK-M8-56)*
+## RQ-656: What the collision branch, the regularised occupants, the Chazy classifier, the escape test, the decode's `V₀`, `η_E` and the substep law read under softening *(physics; silence; R-654, RQ-627; `docs/contracts/principia_integrator_contract.md` Part 2, Part 2b, Part 7; `docs/design/principia_dd_chazy_final_motion.md`; `docs/design/principia_dd_decoder.md` §§ 3.6, 3.7; `docs/design/principia_chart_reference.md` § 0.6; context: TASK-M9-39)*
 
-*Queued 30 Oct 2026 by TASK-M2-36's fix round, on the physics review of PR #349. For the owner: yes, it is physics
-where the choice changes the result (which pixels count) and the corpus does not settle it (R-369).*
+*Queued 1 Nov 2026 by the port of R-654. For the owner: yes, it is physics where the choice changes the result (which runs collide, and which occupants a softened run may use), and the corpus does not settle it (R-369).*
 
 - **File, section:**
-  - `decisions.md` § "R-554 — …", L3: "the pole maps' condition `N_a = 0` and `N_b = 0` is decided exactly on the
-    stored angles from each map's closed form".
-  - `docs/contracts/principia_chart_decoder_contract.md` § "Repeats and the canonical point": "the pole maps apply on a
-    tilted view iff `N_a = 0` and `N_b = 0` for chart_reference §3.3's `N`, decided exactly on the stored angles", and
-    "On a tilted view a repeat is the same system only where the type group's map leaves the tilt's hidden offset `d`
-    unchanged".
-  - `decisions.md` § "R-408 — Area statistics count each system once, …".
-  - `decisions.md` § "R-655 — …": "a pixel `(s + k, t + 2j)` with `N_a·k + 2·N_b·j = 0` for integers `(k, j) ≠ 0` is the
-    same system as `(s, t)`", which covers the type group's translations and not its pole maps.
-- **The silence:** a pole map's image `(s + ½ + k, −t + 2j)` has the same `n̂` as `(s, t)`. On a tilted view it also
-  keeps `d` on the line `N_a(½ + k) + N_b(2j − 2t) = 0`. Under Lean `45°/45°`, `(a, ¼)` and `(a + ½, −¼)` have one shape
-  and one `d`; with `N_a = 0`, `N_b ≠ 0`, the pole rows `t = j` are one system at each `d`. So the contract's "same
-  system only where the map leaves `d` unchanged" holds on these lines, while its "iff `N_a = 0` and `N_b = 0`" and
-  R-554 L3 make the view affine there and count both. No ruling names these lines.
-- **The question:** whether these lines are identified, or R-554 L3 stands with the exception stated.
-- **Options seen:** (a) keep L3 and state these lines as a named exception of measure zero, each pixel counted, as
-  § 3.3 states the circle's identification; (b) fold them as R-655 folds its lattice, one count per system, decided
-  exactly on the stored angles (the line's `t` is a computed coordinate, so what "exactly" means on it needs stating);
-  (c) another, stated by the owner.
-- **Applied meanwhile:** the ruled text, R-554 L3: `Tilted::pixel` (`crates/kernel/src/chart/tilt.rs`) applies no pole
-  map unless `N_a = N_b = 0`, so such pixels count as distinct (TASK-M2-36, PR #349). No code changes for this entry.
-- **Waits:** nothing built waits; a fold, if ruled, is a follow-up to TASK-M2-36's `Tilted::pixel` and TASK-M8-56.
+  - `decisions.md` § "R-654 — …", the owner's words: "Energy and drift are defined under the softened potential."
+  - RQ-627 (archived), the question: "the softened force law's definition (its potential and force as functions of `r` and ε, and what `E₀`, the drift meters and the collision branch read under it), and the task that builds it."
+  - `docs/contracts/principia_integrator_contract.md` Part 7: "**Collision:** `min_{i<j} ‖r_i − r_j‖ < r_coll`."
+  - `docs/contracts/principia_integrator_contract.md` Part 1: "**Under a regularised occupant, two energies, named (R-566).**"; Part 2b holds the regularised occupants, and no line of the contract gives them a softened form.
+  - `docs/design/principia_dd_chazy_final_motion.md`: "**`E`** is the total energy at `t = 0`, `E_0 = K_0 + V_0`, unsoftened (`energy::energy` at `eps2 = 0` on the initial".
+  - `docs/contracts/principia_integrator_contract.md` Part 7: "`E_rel = ½|Δv|² − (M_pair + m_b)/d` is the relative two-body energy of the candidate escaper `b`" (R-29); "The proposed gate is all three pairwise relative energies positive and all three separations growing." (R-32).
+  - `docs/design/principia_dd_decoder.md` § 3.6: "`V₀ = − Σ_{i<j} mᵢmⱼ / ‖rᵢ − rⱼ‖`", "`E₀ = K₀ + V₀ ;   virial_ratio = 2K₀ / |V₀|`", "`E₀` is **derived** from it (`K₀ + V₀`), not stored (R-86)." and "`E₀` here must agree with the kernel's `E_0` at t=0"; its § 2: "infinite only at R-436's poles, `rho_ratio`'s `+∞` and `V_0`'s `−∞` (the collision pole)". REQ-VAL-027 and REQ-COL-006 read those operands, on the fragment decode too.
+  - `docs/design/principia_dd_decoder.md` § 3.7: "$U = V_0$ and $K_0$ are §3.6's", "**$E^* < U$:** $\eta_E$ is not real"; "The one refusal is the view-level one below, a forbidding chart with any `Some(E*)`."; `docs/design/principia_chart_reference.md` § 0.6: "η_E = √((E* − U)/K0)          pᵢ ← η_E·pᵢ          feasibility: E* ≥ U".
+  - `docs/contracts/principia_integrator_contract.md` Part 1: "`N_sub ← substep_bucket(d²(state), params)`"; Part 2: "wrapper's substep law (`N_sub` from `r_min`, Part 4)", "`N_sub = ⌈(r_sub/r_min)^{γ_sub}⌉`" (R-502).
+- **The silence:** the ruling settles the law, `ε`, energy and drift. It does not say (1) whether a softened run keeps the collision test on the geometric `r < r_coll`, softening having removed the singularity it guards; (2) whether the regularised occupants take softening, and how, or a softened run is limited to the unregularised ones; (3) whether the Chazy classifier's `E` follows "energy … under the softened potential" or stays unsoftened as written. Nor does it say (4) whether "energy" reaches the escape test's `E_rel` and the ionisation gate's pairwise energies, a choice that can change when escape fires, and so `t_end`; (5) what the decode stage's `V₀` holds under `ε ≠ 0`, with `virial_ratio` and the collision pole beside it: R-654 and REQ-INT-111 put `E₀` under the softened `V`, § 3.6 derives `E₀` as `K₀ + V₀` and writes `V₀` as Newtonian, and a softened `V₀` is finite at that pole, which REQ-VAL-027 and REQ-COL-006 test; (6) whether `η_E`'s `U` is the softened `V₀`, in which case the feasible set, its `ENERGY_INFEASIBLE` and `ENERGY_UNSCALABLE` outcomes and so which IC a pixel means could depend on `ε`; (7) whether the substep law stays on the geometric `d²` and `r_min` once the singularity is gone, as (1) asks of the collision test.
+- **The question:** those seven.
+- **Options seen:** (a) the collision test unchanged on geometric `r`; softening offered only on the unregularised occupants, the others refusing `ε ≠ 0`; Chazy's `E` softened as the ruling's energy; (b) as (a), but the regularised occupants given a softened form, defined by TASK-M9-39 with the physics reviewer (R-72); (c) as (a), with Chazy's `E` unsoftened and the classifier refusing, or flagged on, a softened run; (d) another, stated by the owner. Those four answer (1) to (3). For the others, none recommended here:
+  - **(4), the escape test:** (i) `E_rel` and the ionisation gate as written, Newtonian in `d`; (ii) each softened as R-654's `V` is, `d` read as `√(d² + ε²)` in the potential term; (iii) another, stated by the owner. `tau`'s measured gap and `E_rel`'s to-re-measure note (Part 7) were not taken under softening under any of them.
+  - **(5), the decode's `V₀`:** (i) `V₀` softened, `virial_ratio` following, so `E₀ = K₀ + V₀` holds as § 3.6 writes it, with `ε` an input of the decode and of the fragment decode, and `V₀` finite at a zero separation under `ε ≠ 0`, so what REQ-VAL-027, REQ-COL-006 and R-436's pole read there needs stating; (ii) `V₀` Newtonian as written, with `E₀` at `ε ≠ 0` formed otherwise than `K₀ + V₀`, which needs R-86's derivation and § 3.6's cross-check restated; (iii) another, stated by the owner.
+  - **(6), `η_E`:** (i) `U` the softened `V₀`, `ε` then a part of what a pixel's IC means; (ii) `U` Newtonian as written, the IC independent of `ε`, and the run's softened `E₀` then not `E*`; (iii) a view-level refusal of `ε ≠ 0` with any `Some(E*)`, as a forbidding chart refuses it (§ 3.7, R-25); (iv) another, stated by the owner.
+  - **(7), the substep law:** (i) geometric `d²` and `r_min` as written; (ii) the softened distance `√(r_min² + ε²)` in the law; (iii) another, stated by the owner.
+- **Applied meanwhile:** none needed: dispatch refuses `ε ≠ 0` (R-654; TASK-M3-06), so no softened run exists.
+- **Waits:** TASK-M9-39 (REQ-INT-111, REQ-SYS-094, REQ-SYS-095). Nothing in M0 to M8 waits.
 
 ## RQ-640: Tanikawa 2000's time unit, for the time columns of its eight tables (proposed T2000-1) *(the owner's request of 29 Oct 2026, "Tanikawa 2000 Collision orbits II (8 tables)"; `docs/incoming/2026-10-29_research_batches/README.md` § 5.6, § 10.5; context: none built)*
 
@@ -1784,6 +1663,48 @@ words, so the task did not wait. The entry is for correcting the text.*
   `f3_fill_modes_quads_finer_only_in_fit` shows the divide-by-`k` rule failing. The three texts are not changed.
 - **Waits:** nothing built waits; REQ-GUI-230's real-engine Fit reads the screen floor, not this formula.
 
+## RQ-669: What scores a statistical or qualitative part on tier (a) in a task with no GPU run *(physics; silence; R-649 item 2, R-653; `docs/design/principia_dd_replication.md` § 12.2; context: TASK-M9-37)*
+
+*Queued 1 Nov 2026 by R-663 to R-666's port, on physics review 5730823192 of PR #375, M3. It settles nothing. No dependency, tier or row changes for it.*
+
+- **File, section:**
+  - `docs/design/principia_dd_replication.md` § "12.2 Tiers": "(a) the GPU explorer, f32 and interactive, expected to agree statistically or qualitatively only"; "a statistical target is scored on (a), statistically only"; "a mixed target is scored on (b) for its exact part and on (a) for its statistical or qualitative part".
+  - The same section's table, Q-4's row (REQ-VAL-211): "(i) exact; (ii) statistical; no integration | (b) for (i); (a) for (ii)".
+  - `plan/tasks/M9/TASK-M9-14.md`, acceptance, LL-4: "the fit recomputed and compared as a distribution"; HU-4: "each fit's slope and intercept recomputed and compared as a distribution". Both from the (b) orbit runs.
+  - `plan/tasks/M9/TASK-M9-10.md`, acceptance, AA-6: "the other 87 rows are compared as a distribution, not per row". `plan/tasks/M9/TASK-M9-19.md`, AA-2: "the rest by a statistic at its level". `plan/tasks/M9/TASK-M9-22.md`, GG-1: "agreement scored against REQ-VAL-296". `plan/tasks/M9/TASK-M9-32.md`, D-3: "the medians within REQ-VAL-307 or explained". None describes an f32 run.
+  - `plan/requirements.yaml`, REQ-VAL-211's note: "Chart: none (no integration)"; its statement: "2,500 triangles drawn uniformly in the unit disc, with Z computed by the validation crate's own Z".
+  - `plan/tasks/M9/TASK-M9-37.md` and REQ-VAL-340's verify: "a mixed target's exact part and its statistical or qualitative part each carrying their own tier and outcome".
+- **The silence:** by `plan/tasks.yaml`'s transitive `depends_on`, these tasks reach no M4 or M5 task, so neither TASK-M4-05, TASK-M4-06 nor TASK-M4-17 (the GPU survey path), nor TASK-M4-04, TASK-M4-13 or TASK-M8-74:
+  - Seven of the nine mixed targets' (a) parts: TASK-M9-10 (AA-6), TASK-M9-11 (Q-4), TASK-M9-14 (LL-4, HU-4), TASK-M9-19 (AA-2), TASK-M9-22 (GG-1), TASK-M9-32 (D-3). The other two, HU-1 and HU-2, are TASK-M9-27's, which reaches the GPU.
+  - 24 rows that are (a) throughout: TASK-M9-17 (P-1 to P-6), TASK-M9-18 (Q-1 to Q-3), TASK-M9-19 (AA-3, AA-5, AA-7, AA-8, AN-1), TASK-M9-20 (L-3 to L-5), TASK-M9-21 (V-9, MT-1), TASK-M9-23 (TR-1, MK-1, SL-1), TASK-M9-24 (PA-1), TASK-M9-25 (V-11).
+  R-653 and RQ-622 settled the instrument only for the five map targets and B-2. RQ-649 asks what a score on (a) says, given an f32 run. RQ-654 is BZ-1C's only. None says what scores these parts.
+- **The question:** what scores a statistical or qualitative (a) part in a task with no GPU run? The answer changes what the report's outcomes mean: which instrument agreed, at which precision.
+- **Options seen:**
+  - (i) The task gains an f32 run on the GPU path, and the dependencies that needs. § 12.2 stands as written. The work and the dependency edges grow, and RQ-649's question then applies to each of them.
+  - (ii) The statistic is computed from the f64 runs and recorded at (b), or under a stated reading. This needs no new run, and it changes § 12.2 for these rows. A ruling would say which.
+  - (iii) The part reads "not scored", with what it waits on, until a run exists. § 12.2 stands, and M9's report leaves these parts unscored until then. R-650 lists a target not yet scored as such, never as a failure, and the report's verify holds that of a part.
+- **Q-4 (ii), separately:** it has no integration under any option, so no GPU explorer run exists to bind, and option (i) gives it nothing to run. Reporting "(a)" there would misstate the instrument, and § 12.2's own row says both "(a)" and "no integration". Seen: (x) a stated reading of the row, for instance the tier naming the comparison's kind where there is no instrument; (y) it is recorded with no tier, which changes § 12.2's row; (z) it follows whichever option the rest take, with the row's text corrected to match.
+- **Applied meanwhile:** nothing. Nothing is scored yet. § 12.2's tiers, the tasks' dependencies and their comparisons are unchanged; the mixed targets' acceptance lines record each part with its own tier and name this entry.
+- **Waits:** nothing built, and nothing before M9. TASK-M9-37's rows for these targets take their meaning from the ruling.
+
+## RQ-670: REQ-VAL-127 and REQ-VAL-221 are definitions with an outcome in § 12.2 and their notes, while their verify lines and tasks ask only for physics approval *(conflict; `docs/design/principia_dd_replication.md` § 12.2; R-649, R-650, R-72; context: TASK-M9-04, TASK-M9-36, TASK-M9-37)*
+
+*Queued 1 Nov 2026 by R-663 to R-666's port, on physics review 5730823192 of PR #375, which keeps both rows. It settles nothing, and both rows stay.*
+
+- **File, section:**
+  - `docs/design/principia_dd_replication.md` § "12.2 Tiers": "an exact target, a measurement, a count, a report or a definition is scored on (b)"; its table: "| OC-5's counting convention | REQ-VAL-221 | a definition | (b) |", "| SP-1's feature set | REQ-VAL-127 | a definition | (b) |".
+  - `plan/requirements.yaml`, the notes of REQ-VAL-127 and REQ-VAL-221: "a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED".
+  - The same requirements' verify. REQ-VAL-127: "the note lists each feature and how it is compared structurally; physics reviewer approved". REQ-VAL-221: "§ 5.2 states which crossings count, how an endpoint syzygy is counted, and how the count is read from the crossing counter; checked against a sample of rows' `syz` before the full comparison; physics reviewer approved".
+  - `plan/tasks/M9/TASK-M9-04.md`, acceptance: "Doc review (physics): … the physics reviewer approved (REQ-VAL-221)." `plan/tasks/M9/TASK-M9-36.md`, acceptance: "The note lists each feature and how it is compared structurally; physics reviewer approved (REQ-VAL-127)."
+  - `plan/tasks/M9/TASK-M9-37.md`, acceptance: "one row for each row of `principia_dd_replication.md` § 12.2's table", and "each scored row has its tier, its outcome, its like-for-like checks".
+- **The conflict:** the table and the notes give each definition an outcome, and TASK-M9-37 needs one in its row. Neither task's acceptance produces an outcome: a definition is written and approved, with no comparison that could read PASS, EXPLAINED DIVERGENCE or UNEXPLAINED. The comparisons that use them are other targets' rows: OC-5 (REQ-VAL-220) and SP-1's structural comparison (REQ-VAL-335).
+- **The question:** what does a definition's row in the report carry as its outcome?
+- **Options seen:**
+  - (a) The verify lines and the two tasks' acceptance gain an outcome, with what is compared stated. REQ-VAL-221's sample check against `syz` is a candidate comparison; REQ-VAL-127 would need one named.
+  - (b) The row reads the outcome of the target the definition serves (OC-5, SP-1's structural comparison), and otherwise records the approval. The notes and § 12.2 say so; the outcome is counted once.
+  - (c) A definition has no outcome: its row records "defined, physics reviewer approved", or the two leave the table. This changes § 12.2, the notes, and TASK-M9-37's count of 79 rows.
+- **Applied meanwhile:** nothing. Nothing is scored yet. Both rows, their notes, their verify lines and the two tasks' acceptance are unchanged.
+- **Waits:** nothing built, and nothing before M9. TASK-M9-37's two rows take their content from the ruling.
 ## RQ-675: A margin node's two field ins: render_gui_spec § 5 puts them on a derived source, § 3.1 gives a source no input and a brightness one *(a conflict inside the spec; REQ-GUI-024; render_gui_spec § 3.1, § 5, § 15 item 6; context: TASK-M7-12)*
 
 *Queued 3 Nov 2026 by the orchestrator's filing task, from the read-only pre-flight of TASK-M7-12. Nothing is chosen.*
@@ -2050,3 +1971,401 @@ it is physics, the two rulings give different results on one chart.*
   control still runs exactly once per code run, and a control that stops failing its test reds the required `ci`
   through `ci-workspace`. REQ-SYS-077's statement and verify detail are amended to say so (PR #395, its `*Was:*` kept in
   the requirement). R-360's text in `decisions.md`, and `plan/CURRENT_RULES.md`, are unchanged: R-360 stays for the owner.
+
+## RQ-685: What R-297's "bit-identity" covers with the compute setting off: branch decisions only, or every Vulkan driver's continuous results, division the one operation measured *(physics; conflict: R-297, REQ-SYS-074's verify and the probe tests against REQ-INT-057 and parity contract § 2; R-84, R-649; issues #390, #396; context: the Windows RTX 2080 Super run at `e1df88fa`)*
+
+*Queued 4 Nov 2026 by the orchestrator's filing task, from the Windows GPU run (#390), the entry REQ-SYS-074's verify
+asks for ("a mismatch with the setting off is a REVIEW_QUEUE entry"). For the owner: yes, it changes what the corpus
+claims, what the probe tests assert and what the header records. Nothing is chosen. This entry also holds the run's
+record, which RQ-686 and RQ-687 share.*
+
+- **The run:**
+  - Commit `e1df88fa`, NVIDIA GeForce RTX 2080 SUPER, Vulkan, driver 621.01, Windows 26200.9711. Metal (Apple Paravirtual
+    device) and lavapipe (llvmpipe, LLVM 20.1.2, Mesa 25.2.8) are CI run 41744485022, the same commit;
+    `qa_m225_kernel_rho_angle_at_the_lambda_pole` on Metal is a local job (1380), since CI's `gpu-metal` doesn't select
+    it. Classification: #390, comment 6629109407.
+  - Windows GPU results are measurements (R-649), never gates. Nothing was re-baselined, and no fixture, tolerance or
+    test was changed.
+  - **13 Windows test failures. None fails on Metal, lavapipe and the RTX together.** 10 are NVIDIA-Vulkan-specific
+    (#396 six, #397 two, #399 one, #393 one); 2 are our refusal of a discrete adapter (#398:
+    `compute_fast_math_defaults_off`, `qa_compute_fast_math_header_is_the_dispatch`); 1 is both (#398 and #396:
+    `compute_fast_math_switch_acts`). Three `build_kernel` failures, Windows process failures (os error 193), are not
+    among the 13 and are not GPU results.
+  - **The hardware-health arm is clean.** The owner reported that the card may have faulty shader cores, and held these
+    findings until a determinism control ran. `cargo xtask golden --all`, 6 runs: all 453 output files identical. The 13
+    failing tests, 5 reruns each: 65 of 65 failed, one distinct output per test. `decode_` and
+    `cargo xtask gate decode-agreement`, 3 runs: 0 differing lines. No `nvlddmkm` event in any run window. The owner
+    released the findings. The Windows session's caveat stands: repeating on one card rules out an intermittent fault,
+    not a fixed one, and only agreement with another GPU or backend separates those. DX12 on this card is the planned
+    second discriminator (#390, Phase 2) and has not run.
+  - **The physics reach is unmeasured.** No GPU march was run at this commit: `spirv(compute` appears only in
+    `crates/kernel/src/` `bringup.rs`, `toolchain.rs`, `decode/invariant.rs` and `stage/{canon,decode,encode,fragment}.rs`,
+    so nothing here integrates a trajectory on a GPU, and nothing here shows how far these differences reach.
+- **File, section:**
+  - `decisions.md` § "R-297 — …", the human's words: "Off: bit-identity and identical branch decisions hold (R-84,
+    REQ-INT-057)."
+  - `decisions.md` § "R-84 — …", which R-297 cites for that claim: "`parity_contract` governs. Branch decisions are
+    identical on identical inputs, per step."
+  - `decisions.md`:3213-3216, R-297's Still in force line: "In the browser build: … bit-identity with the setting off no
+    longer holds there, each stage's compiled mode is recorded as "unknown", and runs are held to R-85's Tier-N tolerances
+    (R-303)." § "R-303 — …", Applied: "Browser runs are held to R-85's Tier-N tolerances, measured, not bit-exact".
+  - `docs/contracts/principia_parity_contract.md`:154, § 4: "**Off:** bit-identity and identical branch decisions hold
+    as this contract states them (R-84; Tier B)".
+  - The same file, :97, § 2, Tier B: "a GPU's `pow`/`sqrt`/`div` and libm's differ by 1–3 ulp *in every math mode*".
+  - The same file, :145, § 4, source 2 of the tolerance: "**cross-backend f32 variance** — the kernel run through native
+    `wgpu` vs the user's browser/driver can produce slightly different f32 results for the same kernel; shader translation
+    and driver math differ across backends."
+  - `docs/notes/principia_gpu_determinism_note.md`:62, § "The parity consequence", the Standing caveat: "The spike's
+    bit-identity evidence is **Metal-only**: on the test machine both the native and the browser legs funnelled to the
+    same MSL compiler, which is *why* even continuous words matched. Branch-word bit-identity across a **different naga
+    backend + driver** (Vulkan / D3D12) is the one thing the spike could not witness".
+  - `plan/requirements.yaml`, REQ-VAL-099 (R-58): "The parity gate must be run on a non-Metal backend (Vulkan or D3D12)
+    before any Paper-2 numbers are produced; it gates Paper 2, not the build." R-110's Still in force line: "lavapipe as
+    the second backend on every commit, meeting M4's two-backend check, and a real non-Metal GPU gating Paper 2 (R-58)".
+  - `plan/requirements.yaml`, REQ-INT-057: "the wrapper's branch decisions made from the current state (substep bucket
+    N_sub, cap decision, collision, escape, horizon, SIM_FAILED and terminal) must be bit-identical across the CPU and
+    every GPU backend on identical inputs, per step, while continuous values (positions, momenta, energy, trajectory,
+    and the outcome class they decide near a chaotic boundary) are left free to diverge and are never reconciled".
+  - `plan/requirements.yaml`, REQ-SYS-074's verify: "in the gpu-metal and gpu-lavapipe jobs … compares each bit for bit
+    with the CPU's correctly rounded f32 division and reports the mismatches per backend; it must show none on either
+    backend … a mismatch with the setting off is a REVIEW_QUEUE entry".
+  - `crates/validation/src/gpu.rs`:978-979: "bit for bit, on every backend"; `crates/validation/tests/qa_TASK-M0-44.rs`:3-4
+    the same, wider than the requirement's two jobs.
+  - `crates/kernel/src/canon.rs`:67-69: "`√`, `/` and `atan2` carry ulp bounds in WGSL, not correct rounding; `fma` is
+    not fused on every backend (CI's lavapipe evaluates it as a rounded product and an add, RQ-298), nor is `a·b + c`
+    left uncontracted on every one".
+  - `decisions.md`:3282, R-297's Applied note: "Where wgpu's own path compiles without fast-math and offers no switch
+    (Vulkan, on lavapipe in CI), off is that path". `crates/engine/src/compute.rs`:58: `Api::Vulkan =>
+    Some(all(StageMode::Off))`, a table entry; `crates/engine/src/contract/fast_math.rs`:24: "Compiled with fast-math
+    off." REQ-TOOL-141: each stage's mode "as compiled on the running backend". Nothing observes the driver.
+- **Measured (#396), bit-for-bit differences, the setting off but for the "Metal on" column:**
+
+  | Probe | Against | RTX | Metal off | Metal on | lavapipe | CPU reciprocal |
+  |---|---|--:|--:|--:|--:|--:|
+  | `(x + 0.5) / 255.0`, 256 | correct rounding | **191** | 0 | 191 | 0 | 191 |
+  | Harness fuzz, 65536 | correct rounding | **19407** | 0 | 20646 | 0 | 17762 |
+  | QA fuzz, 163840 | correct rounding | **50411** | 0 | not run | 0 | 44457 |
+  | `(x + 0.5) / 255.0`, 256 | `n * (1.0 / d)` | **0** | 191 | not run | 191 | 0 |
+  | QA fuzz, 163840 | `n * (1.0 / d)` | **22519** | 44457 | not run | 44457 | 0 |
+
+  The CPU column is a reproduction of the same inputs. With the constant divisor, the card's 191 values of x are exactly
+  the CPU reciprocal's set, by list comparison, with the same hash on all 12 occurrences across the runs. With a runtime
+  divisor it matches neither: the first eight mismatches are `0.5 / d` for d = 33, 37, 61, 67, 75, 83, 97, 123, each one
+  ulp from correct. With the setting on, the card has no measurement: each test that loops over the settings stopped at
+  off.
+- **Read from the code:** naga 30.0.1 writes a plain `OpFDiv`, and its SPIR-V backend has no `NoContraction`.
+- **Inferred, not measured:** the driver folds a constant divisor into a multiply; the card's runtime arithmetic is not
+  identified.
+- **From memory, unchecked:** Vulkan and WGSL bound `x / y` at 2.5 ULP, neither promises correct rounding, and no Vulkan
+  switch asks for it. The eight posted quotients are within that bound; no worst case over the fuzzed sets was printed.
+  Also unchecked, from the physics reviewer's memory: SPV_KHR_float_controls2's `FPFastMathMode` has an `AllowRecip` bit,
+  which could forbid the reciprocal rewrite without giving correct rounding, and naga doesn't emit it. If so, the
+  constant and runtime cases differ here.
+- **Reach:**
+  - **Branch decisions: a gap, not a clean result.** REQ-INT-057's are the wrapper's, and no GPU has run any of them: the
+    wrapper has no compute entry point at this commit, and `detect` (`crates/kernel/src/driver/cadence.rs`:71) is a stub
+    until TASK-M3-09 and TASK-M3-12. What is measured on this card is canon's and decode's branches (R-547), on identical
+    inputs: `decode_` 36 of 36 and `canonicaliser_` 28 of 28.
+  - **Division and `√` in a branch input are excluded by rule, and the rule isn't met in writing yet.** Rule 1 of
+    `docs/notes/principia_gpu_determinism_note.md`: "No runtime `pow`/`sqrt`/`div` decides control flow". REQ-INT-064 and
+    R-34 (corrected by R-547) require `|Δn̂|` and `E_rel` to be "built only from operations every IEEE backend rounds
+    alike", in a fixed written form, and `plan/tasks/M4/TASK-M4-03.md`:45 asks for "no runtime `pow`/`sqrt`/`div` feeding
+    a decision". But escape is on REQ-INT-057's list, and its `E_rel` has a division: `E_rel = ½|Δv|² − (M_pair + m_b)/d`
+    (R-29; `docs/contracts/principia_integrator_contract.md`:737). So has `|Δn̂|`: `n̂(r, m) = (u, v, w)/I`
+    (`docs/design/principia_dd_simstate_payload.md`:529), and `crates/kernel/src/shape.rs`:51-69 divides by `m01` and `i`;
+    its magnitude is also a `√` unless it is compared squared, and `shape.rs`:64 has a `√` in `s`, feeding `p` and `q`.
+    `E_rel`'s `d` is itself a `√`. The integrator contract, :608, calls both "shared branches
+    whose inputs are multi-op arithmetic". Neither written form exists, and nothing read here reconciles the two
+    formulas with the rule.
+  - **So the risk is open, not absent.** A driver whose quotients or roots are one ulp off is the case where
+    `(M_pair + m_b)/d` could flip `E_rel > 0` near zero, or `n̂` could flip `|Δn̂| < tau`. Neither is measured: neither
+    input is on any GPU at this commit.
+  - **One same-input difference the division measurement doesn't cover; reading (b) does.** RQ-687's failure: on identical inputs, setting off, in the
+    compute decode stage, the card and not Metal or lavapipe gives `rho_angle` 0 where f64 gives π/2. The cause is `sin`,
+    isolated on the card, not division. By #393's diagnosis (inferred) the card takes R-437's `p = q = 0` select where
+    the others don't. This entry uses "branch decision" for the wrapper's, REQ-INT-057's, and
+    `docs/design/principia_dd_decoder.md`:76-77 and :313 treat such selects as choosing a value ("no branch"), so by the
+    letter this isn't one. `crates/kernel/src/chart/shape_sphere.rs`:52-55 does call it "a backend fork", so it is
+    disclosed here.
+  - **Trajectories:** not measurable, as above. But division is already on the GPU in the continuous decode, canon and
+    encode outputs (for example `crates/kernel/src/decode/config.rs`:78-84 and `canon.rs`:405), and these set every GPU
+    trajectory's start. The measured decode reach is #400's `shape_sphere` fuzz, 52.05, 28.55 and 17.12 eps on the RTX,
+    Metal and lavapipe against 256, cause unsettled (RQ-687). The divisions M4 will add include `physics/force.rs`:19-21,
+    `occupant/kdk.rs`:65-74, `occupant/rk4.rs`, `driver/advance.rs`:125 and `driver/welford.rs`; the default occupant is
+    Heggie × RK4 (`docs/contracts/principia_integrator_contract.md`:116, R-560).
+- **The conflict, which stays open:**
+  - **That it means branch decisions:** R-84, which R-297 cites for this claim, says "`parity_contract` governs" and
+    speaks only of branch decisions; parity § 4 says "as this contract states them"; REQ-INT-057 leaves continuous values
+    free. Read so, the corpus comes close to settling question (1).
+  - **That it means more:** the human's "bit-identity and identical branch decisions" names two things, and R-297's
+    Still in force line sets bit-identity against tolerances: in the browser it "no longer holds", and runs are "measured,
+    not bit-exact", which says little if native bit-identity were only about branch decisions. REQ-SYS-074's verify
+    asks for every division's bits on its two named jobs; the two test comments widen that, and have no authority beyond
+    the requirement.
+  - **What weighs on the first side for continuous words:** parity § 4 expects "driver math" to differ, and the Standing
+    caveat explains the spike's matching continuous words by one shared compiler. So the two sides aren't even: nothing
+    in the corpus's design text promises continuous bits across drivers.
+  - Neither side settles it, so question (1) is the owner's. The card fails the second reading. On the first, only
+    canon's and decode's branches are measured, on this card, and REQ-INT-057's are unmeasured on every GPU. "Compiled
+    Off" on Vulkan records wgpu's path, not what the driver did.
+- **The questions:** (1) is "bit-identity" with the setting off a claim about branch decisions, or about every Vulkan
+  driver's continuous results, division the one operation measured? (2) what should the header record where a driver rewrites division with no switch?
+- **Options seen:** (a) branch decisions and the Tier B fields only, which holds only if `E_rel` and `|Δn̂|` get
+  written forms that take no driver's division or `√`, a gap still open and untested on any GPU; the probe then stays a
+  measurement on its two named jobs, the "every backend" comments narrow, and the header keeps `StageMode::Off` with its
+  doc saying what it records, wgpu's path, no driver observed; (b) every continuous result on every driver, division the
+  one operation measured: this card fails R-297. The reading reaches past division: `√` (`physics/pairs.rs`'s `norm` and
+  `cube`, which feed `force.rs`:19-21), contraction of `a·b + c`, and the builtins (`canon.rs`:67-69; parity :97). So the
+  project's own division wouldn't deliver it, and the probe passing on Metal and lavapipe doesn't show continuous
+  bit-identity there either. It needs the project's own arithmetic for each, or a list of supported drivers, and no
+  switch is known to give correct rounding (from memory, as above). The cost of a software division in the force loop
+  is unmeasured. The header records `Off` only where that is shown, and `Unknown` elsewhere;
+  (c) bit-identity is claimed only on the drivers measured to give it, and any other Vulkan driver records
+  `StageMode::Unknown`, as `Api::Dx12` and `Api::Webgpu` do at `compute.rs`:59 and as R-303 does for the browser. R-303
+  also disables the Run window's control and holds runs to Tier-N only, and whether that carries over to every native
+  Vulkan driver but lavapipe is part of this option; (d) another, stated by the owner.
+- **What (a) and (c) leave:** the payload compatibility signature and the sim key carry the compute setting and no driver
+  (`docs/contracts/principia_caching_contract.md`:14, :36). So the same sim key gives different continuous bits per
+  driver, and `SimState = f(IC, sim key)` (`docs/contracts/principia_canonical_spec.md`:82, :116) then holds per driver.
+- **How this ruling and RQ-687's depend on each other:** under option (b), RQ-687's `sin` failure is also a failure of
+  R-297, so RQ-687's option (c), neither, stands only with (b)'s list of supported drivers.
+- **Measurements that would settle more:** both fuzzed sets' result words on the card (worst ulp, and whether the result
+  is a function of `d` times `n`); the halfway probe with 255.0 read from a buffer, beside the literal; the setting on;
+  the same probe on another Vulkan driver.
+- **Applied meanwhile:** nothing. No test, tolerance or comment changed.
+- **Waits:** nothing in the build loop: CI's Metal and lavapipe jobs are green at this commit, and no Windows job gates
+  anything. The ruling bears on M4's GPU march and on REQ-VAL-099's parity gate, which a real non-Metal GPU serves and
+  lavapipe doesn't (R-110).
+
+## RQ-686: The near-tie reference on a Vulkan driver other than lavapipe: one reference per backend means per API, and the RTX shares lavapipe's API but not its arithmetic *(physics; silence: R-296, R-376, REQ-VAL-176 and REQ-VAL-138 name no Vulkan driver but lavapipe; R-649; issues #390, #397, #399; context: the Windows RTX 2080 Super run, RQ-685)*
+
+*Queued 4 Nov 2026 by the orchestrator's filing task, from the Windows GPU run (#390). For the owner: yes, it changes
+what a golden near a tie is compared with. Nothing is chosen. The run's record, the 13 failures and the
+hardware-health arm are in RQ-685.*
+
+- **File, section:**
+  - `plan/requirements.yaml`, REQ-VAL-176: "must keep one reference per backend, and the runner must compare it only with
+    the reference for the backend it rendered on, naming that backend (R-269, R-287, R-296)"; its parenthesis names the
+    cause: "a value within an ulp of a tie can differ where the display shaders compile with fast-math, Metal via wgpu".
+  - `decisions.md` § "R-296 — …": "goldens near a tie use per-backend references", and its Result: "on lavapipe, R =
+    `(x + 0.5) / 255.0` matches correctly rounded f32 division; on Metal, it matches `(x + 0.5) × f32(1/255)`, because
+    wgpu 30 compiles MSL with the default `MTLCompileOptions`, which has fast-math on".
+  - `decisions.md`:5654, § "R-376 — …": REQ-VAL-138 is "0 steps, on every native backend CI renders on (lavapipe, Metal)",
+    and "a golden near a tie keeps one reference per backend"; R-296's Still in force line: "the half-way fixture's
+    references are confirmed, no longer proposed".
+  - `docs/contracts/principia_parity_contract.md`:151, § 4: "a value within an ulp of a tie can differ on a backend whose
+    display shaders compile with fast-math (Metal via wgpu), so goldens near a tie use per-backend references (R-296)".
+  - `xtask/src/golden.rs`:50-52: per-backend references are "named by the backend (`metal`, `vulkan`)".
+    `fixtures/golden/BASELINES.md`:28: `quantise/halfway@vulkan`, "on lavapipe".
+- **Measured (#397, #399):**
+
+  | | RTX 2080 Super (Vulkan) | Metal | lavapipe (Vulkan) |
+  |---|---:|---:|---:|
+  | `quantise/halfway` RGB sha256, first 16 hex | `db057b4b817dd461` | `db057b4b817dd461` | `4a66e83dbb876baa` |
+  | against its own API's reference | **FAIL**, step 1, 24064 of 65536 px | step 0 | step 0 |
+  | Exact f32 ties in R | 16896 px, 66 columns | 16896 px, 66 columns | 65280 px, 255 columns |
+  | `quantise/halfway_automatic` RGB sha256, first 16 hex | `d30f56643f06a081` | `7c0760e5a4b04ec7` | `4a66e83dbb876baa` |
+  | against its own API's reference | **FAIL**, step 1, 35396 px | step 0 | step 0 |
+  | Quantised against automatic | 57328 px, step 1 | 8704 px, step 1 | 0 px |
+
+  - Both hashes are the same on all 6 golden runs. The tolerance is REQ-VAL-138's 0. The other 149 golden cases are
+    byte-identical on all three backends.
+  - `quantise/halfway`: the card renders Metal's bytes. `24064 = 94 × 256`, R-296's 94 columns. A CPU run of
+    `(x + 0.5) × f32(1/255)` reproduces the 94 columns and the 66 tie columns, and correct rounding gives lavapipe's 255.
+    So the cause reads as RQ-685's division, in the fragment stage, with no fast-math flag set by anything we control.
+    That is inferred, as in RQ-685: what is measured is the hash equal to Metal's, and the reproduction is on the CPU.
+    `golden_halfway_quantise_rounds_half_to_even` passed, so the rounding is correct.
+  - `quantise/halfway_automatic`, the control case: against `vulkan.png` 35396 px (R 32512, G 3072, B 2779); against
+    `metal.png` 65302 px (R 65280, G 3072, B 2779). Every difference is one step, the render lower than the reference.
+    Inferred, not measured: not the division. `floor(v × 255 + o)` with one fitted parameter, `o ≈ 0.4556`, gives 35355 and
+    57287 px against 35396 and 57328, which #399 reads as a conversion biased by about 0.044 of a level. The golden path
+    doesn't use this output.
+  - **A qualification of #399's fit.** #399's fit was made before the per-channel counts were posted, and the channels
+    don't bear it out. Recomputed on `halfway.wgsl`'s formula with CPU `exp` and `pow`, at `o = 0.4556`: G 2560 and B 3214
+    against the measured 3072 and 2779. R gives 32512 at each of the eleven offsets tried from 0.001 to 0.499, so R carries
+    no information on the bias and shows only that its ties round down. The size rests on G and B, and they disagree: G
+    gives 3072 at `o ≈ 0.445`, a bias of about 0.055, and B comes nearest at about 0.465, a bias of about 0.035. So the
+    totals fit better than the channels do, and no single bias is supported. The card's `exp` and `pow` may differ from
+    the CPU's, and these numbers can't separate those.
+- **The gap:** the corpus keys a near-tie reference by "backend", the runner keys it by API, and the corpus gives Metal's
+  fast-math as the reason a case differs. `vulkan.png` was made on lavapipe, and on this card the same API gives Metal's
+  bytes for the quantised case and bytes of its own for the control. No document says what a near-tie case is compared
+  with on a Vulkan driver that isn't lavapipe, and R-376's value is stated for the backends CI renders on.
+- **The question:** what reference applies on a Vulkan driver other than lavapipe?
+- **Options seen:** (a) references keyed by driver, not API: the `vulkan` references are lavapipe's alone, and another
+  driver gets its own, under a gate decision (R-110's "no re-baselining without a gate decision"). It must say what
+  "driver" keys on, the name or the version too, since the rewrite would be a driver compiler's, and no CI job could hold
+  such a reference, so it couldn't be checked per commit; (b) near-tie cases are held only on the backends CI renders on (R-376's
+  scope), and on any other driver their result is reported, not compared to pass; (c) a driver may match any of the
+  existing references, which passes `quantise/halfway` here and not `quantise/halfway_automatic`; (d) another, stated by
+  the owner. Each of (a) to (c) leaves REQ-VAL-176's text to be reworded.
+- **Applied meanwhile:** nothing. Nothing is re-baselined.
+- **Waits:** nothing in the build loop: every golden case passes on CI's Metal and lavapipe jobs.
+
+## RQ-687: Whether the kernel takes its own f32 `sin` and `cos`, as `arctan.rs` does for `atan2` (RQ-628), given that it can change CPU bits *(physics; a decision that changes what is built; R-297, R-649; REQ-DEC-043; RQ-628, RQ-629; issues #390, #393, #401; context: the Windows RTX 2080 Super run, RQ-685)*
+
+*Queued 4 Nov 2026 by the orchestrator's filing task, from the Windows GPU run (#390), as #393 says it must be: "That
+can change CPU bits, so it goes to `REVIEW_QUEUE.md` for the owner's decision." For the owner. Nothing is chosen. The
+run's record, the 13 failures and the hardware-health arm are in RQ-685.*
+
+- **File, section:**
+  - `crates/kernel/src/chart/shape_sphere.rs`:162: `let k = select(r == F::zero(), F::one(), Float::sin(r) / r);`. The note
+    at :52-55 claims each select "moves the output by rounding only". `crates/render/wgsl/decode.wgsl`:745 is the same
+    line in the fragment, generated from `crates/kernel/src/stage/fragment.rs` (its header), so it follows the source.
+  - Every f32 `sin` and `cos` that reaches the GPU, through `stage/decode.rs` and `stage/fragment.rs`:
+    `shape_sphere.rs`:147 and :149-151 (`spherical`), :161-162 (`exponential`; `cos(r)` at :161 is under the same
+    absolute bound), :225-226 (`inverse`); `chart/burrau_acute.rs`:72 (`nu_of`, which the Burrau θ charts' decodes call);
+    `decode/config.rs`:62-65. Only :162 is measured to fail.
+  - Not on the GPU: `chart/tilt.rs`:356-357, :376 and :479, f64 at this commit, which no stage takes; `shape_sphere.rs`:589-592,
+    `hammer_forward`, f64.
+  - `crates/kernel/src/arctan.rs`:1-3: "at f64, the CPU's alone, libm's `atan2`, unchanged bit for bit; at f32, the GPU's
+    precision, [`atan2_f32`], the kernel's own, in integer arithmetic."
+  - `REVIEW_QUEUE.md` RQ-628, the 30 Oct note: decided by the orchestrator per R-369, option (a), which replaced `atan2` at
+    f32. No ruling in `decisions.md` names RQ-628.
+  - `REVIEW_QUEUE.md` RQ-629, still open: "WGSL, and Vulkan for GLSL.std.450, bound `sin` and `cos` only by an absolute
+    error of `2⁻¹¹` on `[−π, π]`", and its option "(c) the kernel's own `sin` and `cos` at f32, as `atan2` (a larger
+    change, beyond RQ-628's scope)". Its "No failure today" no longer holds, though this failure is `sin` near 0, not the
+    `cos α` near `π/2` RQ-629 is about.
+- **The note's claim fails for `rho_angle`:** the failure below is a move of π/2, not rounding. By #393's diagnosis
+  (inferred) it is R-437's `p = q = 0` select, taken on the card and not on Metal or lavapipe, on identical inputs with
+  the setting off. The cause is `sin`, so RQ-685's division measurement doesn't cover it; its reading (b) does. How the two
+  rulings depend on each other is stated once, in RQ-685.
+- **Measured (#393):**
+  - `qa_m225_kernel_rho_angle_at_the_lambda_pole` on the card: "n₀ = [1.0, 0.0, 0.0], φ_f = 0 at [0.5, 0.5005]: the kernel
+    decode stage's rho_angle 0e0 is 8388608 eps from Φ's f64 angle 1.5707963267948966e0, over REQ-DEC-043's 256". The line
+    is identical on 6 of 6 runs.
+  - Passes on lavapipe (main runs 41692855335, 41683257838) and on Metal (local job 1380).
+  - With the sinc in the built `kernel.wgsl` replaced by `1f` at its two sites, a temporary edit to the gitignored
+    build output, restored and hash-checked, the test passes on the card. On Metal, forcing that one `sin` to 0 gives the
+    card's exact message. Unedited, `decode_preset_shape_poles` passes on the card.
+  - Not verified: the card's `sin` near 0 itself; whether the final SPIR-V keeps `Sin`. The diagnosis's reading is that
+    `sin(1.00005e-7)` returning 0 conforms to the absolute bound; the isolation is by the edit, and the edit is not a fix.
+  - **Past `[−π, π]` (#401).** `spherical` has `θ = 2π·s` (:144-145), up to 6.2831855 (`2·P::PI()`), on the user-reachable
+    map, outside the range RQ-629's bound covers; from memory, unchecked, the specs set no bound there.
+    `decode_cross_backend`, `stage_decode_shape_sphere_defaults n₀ = ±1 poles`, η_E on: worst 28408617.97 eps against f64
+    and 28408618.00 against native f32, `rho_angle`, at sample 2 (1, 0.5), identical on 3 of 3 runs. The row is outside
+    REQ-DEC-043's domain, reported, not held.
+  - **That sample is a pole.** `crates/engine/tests/decode_cross_backend.rs`:928-932: "`n₀ = +1` and `λ̃ = 0`", reached
+    only to each precision's rounding, "and `1/ρ` or the angle of a rounding-sized `λ̃` amplifies it". True `‖λ̃‖` there is
+    about 9.0e-8 (computed), so these eps are the direction of a vector of that length, not a measure of how far the
+    trig is off. Metal's worst in the same domain is at the same sample: 139986730.45 eps against f64, `rho_ratio`.
+    Inferred from that ratio: Metal's `‖λ̃‖` is about 18 times shorter than true, so `sin` and `cos` aren't relatively
+    accurate there on Metal either. Lavapipe's worst is 723878.23 eps (`K_0`), at (0.5, 0.5).
+  - **A correction to #393's diagnosis (comment 6622072753).** #393 reads that line as: the card "returned π̂ for
+    `rho_angle`, forcing `sin(6.2831855) < 0` and `cos(1.5707964)` near 0", and says "the card's trig is near-flat there".
+    - **The true values,** computed in f64 on those f32 arguments: `sin(6.2831855)` = +1.7484556e-7 and `cos(1.5707964)` =
+      −4.371139e-8. The argument is `2·P::PI()`, from π's nearest f32, and lies above 2π. It isn't twice the corpus's π̂,
+      rounded toward zero (R-417), where `sin` is about −3.0e-7. π is taken at the parameters' f32 type
+      (`shape_sphere.rs`:75, :292), so true trig gives `rho_angle` −0.2449786631 at f64 and −0.24497867 at f32.
+    - **"Returned π̂" checks.** `error` scales by `max(|x64|, 1)`, and π̂ = 3.1415925 (`pi_image`,
+      `crates/kernel/src/decode/descriptor.rs`:116-121, `angle`'s upper limit) reproduces both figures, 28408617.97 and
+      28408618.00.
+    - **The path to `sin < 0`, inferred.** `rho_angle` isn't `β`. `inverse` forms `p` from `sin θ` and `q` from `cos φ`,
+      takes `β` from the kernel's integer `atan2(q, p)`, then the backend's `sin ψ` and `cos ψ` (:226), and `angle` takes
+      the backend's `Float::atan2` (`descriptor.rs`:144). π̂ needs `cos ψ < 0`, so `|β| > π/2`, so `p < 0`: a negative `sin`
+      where the true one is positive. #393 doesn't say that sign is wrong.
+    - **It also needs `|q| ≪ |p|,** about 1e-7 relative, up to the card's own `sin ψ`. The true `cos` won't do: at `sin` =
+      −1e-7 it gives `rho_angle` −2.7295. So either the card's `cos(1.5707964)`, an in-range argument, is far smaller than
+      the true value, or its `sin(6.2831855)` is far larger in magnitude. The line can't tell which.
+    - All of this stays inferred: the card's `sin`, `cos` and `atan2` were not read.
+    - **What is left of #393's reading.** This corrects its wording. Its conclusion stands only as: the card's values
+      there differ from the true ones by at least the sign of a 1.75e-7 `sin`. The size of the error isn't bounded by this
+      line, and "near-flat" isn't shown. Whether the range is the cause isn't shown either: the wrong sign takes an
+      absolute error of only 1.75e-7 or more, about 0.04% of the in-range bound `2⁻¹¹`, and the `sin` here is near 0 as well.
+  - Related and unsettled (#400): `shape_sphere` fuzz, worst 52.05 eps vs f64 on the RTX, 28.55 on Metal, 17.12 on
+    lavapipe, against a tolerance of 256. This `sin` is one candidate cause and RQ-685's division another; the logs can't
+    separate them.
+- **Reach:** `ShapeMap::Exponential`, the map that failed, is built only in `validation` and tests, so that failure is not
+  reachable by a user, as traced in #393. The spherical map has the same exposure at :149-151 and is reachable, but its
+  exact poles aren't pixel centres; that stays open, as does how far deep zoom reaches it. On that map `θ` runs outside the
+  bounded range; what #401's line shows at its sample is stated above. Beyond the decode, the physics reach is
+  unmeasured, as RQ-685 says.
+- **What each option would change:**
+  - (a), built as `arctan.rs` is: at f32, on every backend, the decode's `sin` and `cos`; f64 keeps libm's bits, and the
+    CPU's f32 bits change to the kernel's. Its per-pixel cost in compute and fragment is unmeasured. A generated table
+    would bring a calibration of its own, as REQ-GEN-044 did for `atan2`.
+  - (b): `exponential` is shared generic `F` code, so a new form changes f64 and f32 CPU bits near 0 unless it is gated
+    by precision. `cos(r)` at :161 stays under the same bound.
+  - (c): no bits change.
+  - Which fixtures and tolerances record those bits has not been checked.
+- **The question:** does the kernel take its own f32 `sin` and `cos`, given that this can change CPU bits?
+- **Options seen:** (a) yes, both, in integer arithmetic as `arctan.rs`, for every GPU site above; (b) only the sinc: a form
+  of `sin r / r` at `shape_sphere.rs`:162 that doesn't read the backend's `sin` near 0, `decode.wgsl` following from its
+  source, leaving the same class at the other sites; (c) neither: #393 stays a platform finding, and RQ-629's option (a) or (b) stands; (d)
+  another, stated by the owner.
+- **Applied meanwhile:** nothing. Every assertion stays, and nothing is tuned or loosened (R-649).
+- **Waits:** nothing in the build loop: the test passes on CI's lavapipe. RQ-629's options wait with this one.
+
+## RQ-688: `stand-in-soak` is red on `main`: three `qa_m022_*` tests reach the 600 s timer on run 1 of 50, and the cause is not known *(silence: a failed verify with no cause; REQ-SYS-070, R-267; REQ-VAL-156, R-376; R-649; context: run 41781905241, PR #394)*
+
+*Queued 4 Nov 2026 by the orchestrator's filing task, from run 41781905241. This entry asks for the cause, not a timer
+change: no timer was touched (R-649). Nothing is chosen.*
+
+- **File, section:**
+  - `plan/requirements.yaml`, REQ-SYS-070's verify: "qa_TASK-M0-22.rs's stand-in-cargo tests pass in 50 consecutive
+    parallel runs on ubuntu-latest, with the run log kept on the PR".
+  - `.github/workflows/stand-in-soak.yml`: 50 runs of `cargo test -p xtask --test qa_TASK-M0-22 --test qa_TASK-M0-22_r235
+    --test ci --test qa_TASK-M0-36 --test qa_TASK-M0-37`, stopping at the first failure, on a pull request that changes
+    the listed paths and on `workflow_dispatch`, never on a push.
+  - `crates/validation/src/spawn.rs`:20-22: `SPAWN_TIMEOUT`, 600 s, REQ-VAL-156, confirmed by R-376.
+- **Measured:**
+  - Run 41781905241, `workflow_dispatch` on `main` at `e1df88fa`, job 126415145558, step "50 consecutive parallel runs":
+    `run 1 of 50 failed`. In `qa_TASK-M0-22`, 1 passed and 3 failed, finished in 600.09 s. The three:
+    `qa_m022_ci_fails_on_a_control_that_leaves_its_test_passing`, `qa_m022_ci_fails_on_a_test_without_control` and
+    `qa_m022_ci_passes_when_every_control_trips`. Each panics at `xtask/tests/qa_TASK-M0-22.rs`:67: "child
+    `…/target/debug/xtask ci` (pid 6193) was killed: it outlived the 600 s timeout" (pids 6193, 6200, 6196).
+  - The failure is a timeout. "Text file busy", REQ-SYS-070's own subject, is nowhere in the log. The `ci` test binary in
+    the same run passed, 5 of 5 in 88.03 s.
+  - The same three tests fail the same way, on run 1, at 600.08 to 600.09 s, on PR #394's heads: runs 41769443878
+    (`5e867800`), 41781911548 (`bd2b4c12`) and 41794663752 (`ef6ad489`). `e1df88fa`'s workflow has no step
+    "Dependencies without debug info", which those heads add, so that step is not the cause.
+  - The last green run, 41101800019 at `ffbd3f28`, 30 Oct: 50 of 50, on the same four tests 544.52 s on run 1 and 249.00
+    to 253.57 s on the other 49 (median 250.53 s). So run 1 was already within 56 s of the timer.
+  - Under nextest, one at a time, the three pass on `main` at `e1df88fa` (run 41744485022): 95.051 s, 95.446 s and 163.929 s.
+- **Later runs:** there is no later `stand-in-soak` run on `main`, because the workflow doesn't run on a push. `ci` on
+  `main` is green at `e1df88fa`, `39a766c9`, `d0062a5c` and `99881a7b`. Run 41821036802 at `437d281d` hadn't finished at 12:12 UTC on 4 Nov: 12 jobs passed, none failed, 7 not finished. PR
+  #394's last run, 41808766194 at `b5bf2f67` (`main` merged in, with #395 and #403), started at 09:35 and was still in
+  progress at 12:12 UTC, in step "50 consecutive parallel runs" since 09:37:32, 2 h 34 min on, where the failed runs took
+  14 to 17 minutes (13 min 32 s to 17 min 07 s by the runs API). That suggests it passed run 1. Its log can't be read until
+  it ends, so this isn't known. PR #394 merged meanwhile.
+- **Read from the code, not measured:** of `xtask ci`'s runners, those that call `cargo` go to the test's stand-in, which
+  answers from canned text; only a call naming `golden_harness` reaches the real cargo
+  (`xtask/tests/qa_TASK-M0-22.rs`:45-47; `xtask/src/golden.rs`:1226-1234), and the golden runner renders on lavapipe. The
+  soak's build step doesn't build that binary, so on run 1 the three `xtask ci` children, side by side under libtest,
+  would share its cold build. `.config/nextest.toml`:31-33 records the same contention in `ci` shards, and the group
+  `xtask-cargo` that takes them one at a time there; the soak runs without it. This fits run 1's cost but doesn't explain
+  what moved it past 600 s between 30 Oct and 4 Nov.
+- **The question:** what made these tests go from 544.52 s to past 600 s on run 1, and is it still so on `437d281d`?
+- **Would settle it:** run 41808766194's log when it ends; a `workflow_dispatch` of the soak on current `main`; the time of
+  each `xtask ci` runner on a cold target, with the harness build apart.
+- **Applied meanwhile:** nothing. No timer is touched.
+- **Waits:** REQ-SYS-070's verify on `main`. A PR that changes the workflow's paths meets this run; no build task waits.
+
+## RQ-689: `jobq_a_finished_jobs_group_is_killed`'s control races perl's `setpgrp` against the runner's group kill *(a flaky control; REQ-VAL-147; R-658; context: `xtask/tests/jobq.rs` `finished_group_case`, run 41785718756, PR #394)*
+
+*Queued 4 Nov 2026 by the orchestrator's filing task. Nothing is chosen.*
+
+- **File, section:** `xtask/tests/jobq.rs`:572-591, `finished_group_case`, with `escape = true`:
+  `perl -e 'setpgrp(0,0); exec @ARGV' sleep 60 & echo $! > child.pid; exit 0`. The control at :599-604 expects "a
+  finished job's group outlived it". The test's queue sets `tick_ms = 50` (:45). `xtask/src/jobq.rs`:1258-1260, in
+  `Runner::pass`: `if running.reaped.is_none() && leader_exited(running.child.id()) { … signal_group(pgid,
+  rustix::process::Signal::KILL);`.
+- **What is racy, from the code:** the script writes the pid and exits at once, and nothing makes it wait for perl. The
+  background perl is in the job's process group until it reaches `setpgrp(0,0)`, so that call races perl's own start-up
+  against the next pass, at most about 50 ms after the leader exits. If the pass wins, the SIGKILL reaches perl in the
+  group, `alive(child)` is false, the assertion holds, and the control doesn't panic, so the case it means to show never
+  arises. `xtask controls` then reports that the test has no working control. The race is in the control only: without
+  `escape`, `sleep 60` never leaves the group and dies either way.
+- **Evidence it fails:** one failure found. Run 41785718756 (`ci`, PR #394, `4e6e455c`, attempt 1), `xtask-ci (2)`, job
+  126429139482: "xtask: test `jobq_a_finished_jobs_group_is_killed`: its control did not make it fail, so the test may not
+  be able to (philosophy §4.4)"; "test did not panic as expected at crates/validation/src/control.rs:94:16"; "xtask ci:
+  [3/10] controls FAILED: 1 test(s) without a control that makes them fail (REQ-VAL-147)". PR #394 didn't touch this
+  code. That the race is what fired there is read from the code: the log doesn't show perl's timing.
+- **Searched:** the last 25 failed `ci` runs, back to 1 Nov 21:22 UTC, show that one run only, and the 1431 local queue
+  logs show none. So the rate is low, and it is not measured.
+- **The gap:** the control can fail with nothing wrong, on any PR whose `xtask-ci` shard holds it.
+- **Options seen:** (a) the job's script waits, with a bound like `GATE`'s, until the child has left the group (a file
+  perl writes after `setpgrp`, or the child's `pgid` read back), then exits, so the kill always finds the case; a test-only
+  change; (b) another, stated by a reviewer or the owner.
+- **Applied meanwhile:** nothing.
+- **Waits:** nothing.

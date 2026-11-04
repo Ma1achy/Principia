@@ -277,7 +277,7 @@ fn mock_reachability_every_big_scope_reaches_every_drawn_control() {
 
 /// The keys that open `menu` from nothing focused, and the big scope it is under: a top bar control by Tab, Enter, →
 /// to it and Enter; a Manifold view control (the Tilt section's targets, R-457 E5) by Tab, Tab, Enter, ↓ to its
-/// section, Enter, ↓ to it and Enter.
+/// section, Enter, ↓ to it and Enter; a compass axis button (R-459 G9) by Tab five times, Enter, → to it and Enter.
 fn opening(tree: &ScopeTree, menu: &str) -> (Vec<Key>, &'static str) {
     let index = |list: Vec<&str>, id: &str| list.iter().position(|c| *c == id);
     if let Some(k) = index(tree.children(Some("top_bar")), menu) {
@@ -285,6 +285,13 @@ fn opening(tree: &ScopeTree, menu: &str) -> (Vec<Key>, &'static str) {
         keys.extend(std::iter::repeat_n(Key::ArrowRight, k));
         keys.push(Key::Enter);
         return (keys, "top_bar");
+    }
+    if let Some(k) = index(tree.children(Some("compass")), menu) {
+        let mut keys = vec![Key::Tab; 5];
+        keys.push(Key::Enter);
+        keys.extend(std::iter::repeat_n(Key::ArrowRight, k));
+        keys.push(Key::Enter);
+        return (keys, "compass");
     }
     let sections = tree.children(Some("manifold_view"));
     let (s, k) = sections

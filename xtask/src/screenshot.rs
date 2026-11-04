@@ -171,6 +171,10 @@ pub enum GuiStep {
     CompassCaseTiltRect,
     /// Set the plane to R-451 B8's `mock_compass_cube_tilt_hex` case, the compass in Tilt.
     CompassCaseTiltHex,
+    /// Set the plane to R-459's `mock_compass_cube_third_axis` case, the compass in Tilt.
+    CompassCaseThirdAxis,
+    /// Set the plane to R-459's `mock_compass_cube_badge` case, the compass in Tilt.
+    CompassCaseBadge,
 }
 
 impl GuiStep {
@@ -201,6 +205,8 @@ impl GuiStep {
             GuiStep::CompassCaseTilt0 => "compass_case_tilt_0",
             GuiStep::CompassCaseTiltRect => "compass_case_tilt_rect",
             GuiStep::CompassCaseTiltHex => "compass_case_tilt_hex",
+            GuiStep::CompassCaseThirdAxis => "compass_case_third_axis",
+            GuiStep::CompassCaseBadge => "compass_case_badge",
         }
     }
 }
