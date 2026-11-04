@@ -55,8 +55,8 @@ branch yet. The ids are one past the highest `## R-n` heading of `decisions.md` 
   `ask:<question>`. Apply these as they read.
 - **READ:** everything else that names a known item. Riders, reasons, negations, words of any kind, any option on an
   entry showing several questions, and every answer sharing its line with another, since a stop before it may not end
-  a sentence: read those with the whole line, and an answer that only cites an entry answers nothing for it. The parser has not understood these: it keeps them verbatim, and any labels it
-  found are a hint and nothing more.
+  a sentence: read those with the whole line, and an answer that only cites an entry answers nothing for it. The parser
+  has not understood these: it keeps them verbatim, and any labels it found are a hint and nothing more.
 - **REFUSED:** with the reason. Don't repair a refused line or infer what it meant: it goes to the owner in step 8 as
   they typed it.
 - **UNANSWERED** and **SKIPPED:** items left as the template had them, and section names.
@@ -83,8 +83,8 @@ run over several lines, and hold other items' ids. Read all of it.
 **An entry named inside an answer, beyond its first item, has no file and no R id of its own.** `parse` wrote one file,
 and gave one id, under the first item. That one ruling covers every entry the answer settles: it names each in its
 heading and body, each with its suffix from step 3's table (`*(closes RQ-a, defers RQ-b)*`), and step 4 runs for each
-entry with the answer's own file and id. So `RQ-594`, deferred inside the answer under `RQ-661`, is
-`defer RQ-594 --ruling <RQ-661's id> --text-file "$A/RQ-661.txt"`.
+entry with the answer's own file and id. So `RQ-594`, deferred inside the answer under `RQ-661`, is step 4's `defer`
+with `--ruling <RQ-661's id> --text-file "$A/RQ-661.txt"`.
 
 A prose ruling outside the template is ported as any ruling is, not through this command.
 
