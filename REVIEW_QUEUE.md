@@ -2068,7 +2068,7 @@ record, which RQ-686 and RQ-687 share.*
     (Vulkan, on lavapipe in CI), off is that path". `crates/engine/src/compute.rs`:58: `Api::Vulkan =>
     Some(all(StageMode::Off))`, a table entry; `crates/engine/src/contract/fast_math.rs`:24: "Compiled with fast-math
     off." REQ-TOOL-141: each stage's mode "as compiled on the running backend". Nothing observes the driver.
-- **Measured (#396), bit-for-bit differences with the setting off:**
+- **Measured (#396), bit-for-bit differences, the setting off but for the "Metal on" column:**
 
   | Probe | Against | RTX | Metal off | Metal on | lavapipe | CPU reciprocal |
   |---|---|--:|--:|--:|--:|--:|
