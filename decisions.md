@@ -29967,9 +29967,9 @@ Changes REQ-VAL-148 (source, rulings, note).
 
 ## R-679 — The 3 Nov triage rulings: LL-3 takes Hénon 1974 as its independent printed source for Standish's orbit, its period agreement with Li & Liao to 2e-10 recorded, and stops waiting on Standish 1970; planetary (star-plus-planets) sources are parked with the hierarchical triples, revisited with the v2+ 3D extension, not out of scope for good; per-point FTLE maps over the batch-152 planes, from the planned FTLE field, and shape-sphere residence statistics, from a new time-weighted occupancy accumulator, are M9 peeks, non-gating, recorded as candidate original results, with no build before M9 *(closes RQ-672, RQ-673 and RQ-674; amends R-630 item 9; refines R-668 item 5)*
 *3 Nov 2026 · the owner's message of that day on the triage questions; ported 3 Nov 2026; applied in
-`docs/design/principia_dd_replication.md` § 5.3 (a dated note under the table), § 5.14 (a bullet) and § 12.5 (a dated
+`docs/design/principia_dd_replication.md` § 5.3 (a dated note under the table and LL-3's cell), § 5.14 (a bullet), § 7 (TASK-M3-47's line) and § 12.5 (a dated
 paragraph), R-630's and R-668's forward lines, REQ-VAL-223 (reqio), REQ-VAL-344, REQ-VAL-345 and REQ-VAL-346 (reqio,
-new), TASK-M9-07 (Goal and notes), TASK-M9-41 (new), `plan/tools/milestones.py`, `docs/archive/review_queue/M0.md` (RQ-672, RQ-673 and RQ-674, taken from
+new), TASK-M9-07 (Goal, Deliverables, acceptance and notes), TASK-M9-37, TASK-M9-41 (new), `plan/tools/milestones.py`, `docs/archive/review_queue/M0.md` (RQ-672, RQ-673 and RQ-674, taken from
 PR #385's branch with their rulings), `plan/tasks.yaml` and `plan/rule_groups.yaml`*
 
 The owner's words, 3 Nov 2026, verbatim:
@@ -30014,6 +30014,7 @@ archives them, unchanged, each with a Ruling line quoting the owner's words.
 - **Where a candidate original result is recorded.** It has no reference, so no PASS or divergence (R-649): each is a
   row of `docs/verification/peek_log.md` whose outcome reads "candidate original result", with its tier (R-649 item 2),
   its inputs and its conventions.
+- **LL-3 while one half waits (PR #413, code F2, physics F1).** The owner's "stop waiting" would mean nothing if the task still waited whole, so TASK-M9-07 starts on the Standish half and the one-orbit check at (1, 1, 1), and the Yasko & Orlov half reads "not scored" in the same row until it runs. That half's control needs the paper still awaited, so the Standish half gets its own from held data: Hénon's `A = 0` orbit against Li & Liao's F2 at (0.6, 0.8, 1). The orbit list holds it, and Hénon's family 2, the other candidate, needs collision handling. A test's choice, which changes no result.
 - **The task.** TASK-M9-41 is new, depending on TASK-M3-14 (the CPU Benettin FTLE) and TASK-M4-13 (the GPU FTLE). It is
   not scored, and TASK-M9-37's report does not wait on it.
 - **The data actions** (marking the planetary rows PARKED, transcribing Hénon 1974's Table I from the page) are #385's
