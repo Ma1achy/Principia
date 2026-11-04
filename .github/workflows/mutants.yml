@@ -8,21 +8,50 @@
 # builds the kernel, the rust-gpu build under the `gpu-kernel` job's key, `rust-gpu-gpu-kernel-<os>-<channel>` (R-320).
 # None saves: rust-cache's `save-if` holds only on a push to `main`, and there is no save step. rust-cache hashes the
 # environment's CARGO_* variables into its key, so CARGO_TERM_COLOR below is set as in `ci.yml`.
-# R-656: the gate runs on every head of a pull request and a push cancels the run on the head it supersedes
-# (`concurrency` below), so it always runs on the merge-ready head, the last; a shard whose diff names no `.rs` file
-# skips its run (below), and `mutants-fixture` skips its steps on a docs-only pull request (`scripts/ci_changes.sh`,
-# R-662).
+#
+# Mutants run on the merge-ready head (R-656, R-676): the shards, the fixture and the verdict run only when the
+# `merge-ready` label is put on the pull request, which the orchestrator's merge watcher does once every reviewer the
+# task names has approved the head (`plan/OPERATIONS.md` § "The merge-ready label"). A push to the pull request takes
+# the label off (`mutants-pending`), so the gate runs again only on a head approved again, and cancels a run on the head
+# it supersedes (`concurrency` below).
+#
+# `mutants-check` is a job of every run of this workflow, `if: always()`, so it is never skipped (R-678). Branch
+# protection counts, of each workflow's runs on a head, only the latest run's check suite, as #384 and #386 showed: a
+# later run of the same workflow (a label's) supersedes an earlier run's suite and every check in it. A check run
+# posted through the Checks API with a run's token joins a suite GitHub picks, not the posting run's, and counts only
+# while that suite is still its workflow's latest (#384: two `mutants-check` runs passed in the push run's suite, which
+# the merge-ready run's had superseded, and the merge read "expected"; #386: the one posted joined `reviews`'s suite,
+# the latest of that workflow, and counted). So each run reports `mutants-check` itself, as a job:
+# - the merge-ready run (the `merge-ready` label's): the verdict over every shard, success or failure;
+# - a change with no `.rs` file under `crates/` (R-677: `scripts/ci_changes.sh`'s `mutants`), whose diff has no mutant
+#   the gate runs: success, "not applicable", exactly the verdict the shards would reach;
+# - a head that is not merge-ready (a push, which takes the label off, or a label event with the label absent): success,
+#   "not applicable" (the owner, 3 Nov 2026); its merge-ready run reports the real verdict once the label goes on;
+# - another label put on or taken off a merge-ready head: the verdict of that head's merge-ready run, waited for.
+# Mutants run only when `crates/` source changes (R-677); xtask's own code is mutated by the nightly full run.
 name: mutants
 
+# `labeled` starts the merge-ready run; `opened`, `synchronize` and `reopened`, GitHub's defaults, run on each new head;
+# `labeled` and `unlabeled` on every label change, so every run that supersedes this workflow's last one on the head
+# reports `mutants-check` again (R-678). No `paths:` or `branches:` filter: every pull request reaches the gate.
 on:
   pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
 
-# A newer push to the same ref supersedes an older run, so the older run on that ref is cancelled. On `main` each
-# run has a group of its own (its run id), so no run there is ever cancelled or queued behind another (applied per
-# R-369). A pull request's runs share one group, its merge ref's, so the gate runs to its end only on the latest head:
-# the merge-ready head is the one whose `mutants-check` the merge waits for (R-656).
+# A newer push to the same ref supersedes an older run, so the older run on that ref is cancelled: a push cancels the
+# merge-ready run on the head it supersedes. On `main` each run has a group of its own (its run id), so no run there is
+# ever cancelled or queued behind another (applied per R-369). A pull request's runs share one group, its merge ref's,
+# but for a run started by any label other than `merge-ready`, put on or taken off, and a run started by reopening the
+# pull request: such a run changes no head, only reports `mutants-check`, and has a group of its own (its run id), so it
+# never cancels the merge-ready run (reopening a merge-ready pull request mid-run would otherwise cancel that run, and
+# every later `mutants-check` on the head would read its cancelled verdict). Taking `merge-ready` off cancels its run.
 concurrency:
-  group: mutants-${{ github.event_name }}-${{ github.ref == 'refs/heads/main' && github.run_id || github.ref }}
+  group: >-
+    mutants-${{ github.event_name }}-${{ (github.ref == 'refs/heads/main'
+    || github.event.action == 'reopened'
+    || ((github.event.action == 'labeled' || github.event.action == 'unlabeled')
+    && github.event.label.name != 'merge-ready'))
+    && github.run_id || github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 permissions:
@@ -36,8 +65,45 @@ env:
   # keys here too (R-337). R-233 (debug info at the default) governs local builds only.
   CARGO_PROFILE_DEV_DEBUG: line-tables-only
   CARGO_PROFILE_TEST_DEBUG: line-tables-only
+  # No incremental state, the owner's CI setting (PR #394), in every workflow like R-374's values. `Swatinem/rust-cache`
+  # already exports CARGO_INCREMENTAL=0 to the steps after it, and before it computes its key, so its key and every
+  # build after it are the same without this line. What the line adds: the value in the steps before rust-cache, where
+  # no cargo build runs and `ci.yml`'s `cachekey` hashes it, and in jobs without rust-cache, where only `ci.yml`'s
+  # `ci-release` runs cargo and it builds only for the release doctests, which aren't incremental by default. Local
+  # builds are unaffected (R-233).
+  CARGO_INCREMENTAL: "0"
 
 jobs:
+  # A push takes the `merge-ready` label off, since the reviewers approved the head it supersedes: the gate runs again
+  # only once the new head is approved and labelled again.
+  merge-ready-off:
+    if: github.event_name == 'pull_request' && github.event.action == 'synchronize'
+    runs-on: ubuntu-24.04
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Take the merge-ready label off the pushed pull request
+        if: >-
+          github.event.action == 'synchronize'
+          && contains(github.event.pull_request.labels.*.name, 'merge-ready')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+        # The payload lists the labels as they were when the push fired: after two quick pushes, the second's still
+        # lists the label the first's run took off, and GitHub answers 404 (`gh` prints "HTTP 404"). The label is off
+        # then, which is what this step is for, so a 404 passes; any other error fails the step. This run's
+        # `mutants-check` reports whatever this step ends in.
+        run: |
+          set -uo pipefail
+          if err=$(gh api --method DELETE "repos/$GH_REPO/issues/$PR/labels/merge-ready" 2>&1 > /dev/null); then
+            echo "#$PR: merge-ready taken off; the gate runs again once the new head is approved and labelled"
+          elif grep -q 'HTTP 404' <<< "$err"; then
+            echo "#$PR: merge-ready already off, taken off by an earlier push's run ($err)"
+          else
+            echo "$err" >&2
+            exit 1
+          fi
   # The per-PR mutation gate (R-196, R-202; TASK-M0-23): `cargo mutants --in-diff` on the PR's diff against its base,
   # on pull requests only, since `--in-diff` needs a base. The run is sharded across n parallel jobs, shard k of n each
   # (`--shard k/n`), each under its own time limit (R-302); the nightly full run (TASK-M0-19) is the backstop. Every
@@ -45,8 +111,20 @@ jobs:
   # Each shard lists its surviving mutants and fails on any not in `.cargo/mutants-equivalent.toml`; `mutants-check`
   # below then checks every shard's report together, and fails if any shard failed or was cut off by its limit.
   # `mutants-fixture` shows, on `fixtures/mutants/untested/`, that the gate can fire.
+  # Every step has a limit of its own, so a stalled one fails the shard in minutes. The job has none: a job limit can't
+  # tell a stall from REQ-VAL-149's 300 minutes for cargo mutants, and a stall would run to GitHub's 360 for the job.
+  # The limits (applied per R-369) are about three times the longest of each step in this workflow's last 60 runs
+  # (3 Nov 2026), rounded up: a checkout 10 minutes (its longest 189 s); freeing the disk 20 (359 s); the kernel's
+  # build 20, from its cold build, 364 s, not its warm longest, 106 s (its comment below); a cache restore, the
+  # toolchain install and every other step 5 (the longest among them 34 s, the Mesa install). The job queue's tests
+  # ran in none of those runs: 10 minutes, their longest 107 s in PR #355's, the last pull request to change the queue.
+  # The kernel's build is the one step here with a slow cold-cache path. A toolchain bump also misses the cargo
+  # registry's cache (rust-cache's key carries the rustc version), and then each cargo step first downloads its crates:
+  # the whole workspace's 248 took under 3 s in `ci.yml`'s ci job on run 36922052435, whose registry restore found
+  # nothing, well inside every limit. The toolchain, the tools, Python and Mesa are fetched afresh in every run, and
+  # the fixtures have no dependencies, so the times above already are their cold times.
   mutants:
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' && github.event.action == 'labeled' && github.event.label.name == 'merge-ready'
     runs-on: ubuntu-24.04
     # statuses: the heartbeat of a shard's run (`scripts/contain.sh`).
     permissions:
@@ -63,23 +141,25 @@ jobs:
         shard: [0, 1, 2, 3, 4, 5, 6, 7]
     steps:
       - uses: actions/checkout@v4
+        timeout-minutes: 10
         with:
           fetch-depth: 0
       # cargo-mutants mutates only Rust source, so a diff that names no `.rs` file has no mutant (cargo-mutants itself
-      # then stops at once: "Diff changes no Rust source files", exit 0). Such a shard, a docs-only or rulings PR's,
-      # skips its setup and its run and passes, so `mutants-check` reports on it at once (R-305). A diff naming any
-      # `.rs` file, even one cargo-mutants won't mutate, runs the shard in full, but for one under `docs/`, `plan/`,
-      # `scripts/` or `workbench/`, the reference sources and the papers' code, which is not Principia's (R-662).
+      # then stops at once: "Diff changes no Rust source files", exit 0). Mutants run only when `crates/` source changes
+      # (R-677), so a shard whose diff names no `.rs` file under `crates/`, a docs, plan or xtask-only PR's, skips its
+      # setup and its run and passes, so `mutants-check` reports on it at once (R-305). A diff naming any `.rs` file
+      # under `crates/`, even one cargo-mutants won't mutate, runs the shard in full, on the whole diff.
       - name: git diff origin/${{ github.base_ref }}...HEAD
         id: diff
+        timeout-minutes: 5
         run: |
           git diff "origin/${{ github.base_ref }}...HEAD" > "$RUNNER_TEMP/pr.diff"
           echo "PR diff: $(wc -l < "$RUNNER_TEMP/pr.diff") lines"
-          if grep -E '^\+\+\+ .*\.rs"?[[:space:]]*$' "$RUNNER_TEMP/pr.diff" | grep -Ev '^\+\+\+ "?b/(docs|plan|scripts|workbench)/' > /dev/null; then
+          if grep -E '^\+\+\+ "?b/crates/.*\.rs"?[[:space:]]*$' "$RUNNER_TEMP/pr.diff" > /dev/null; then
             echo "rust=true" >> "$GITHUB_OUTPUT"
           else
             echo "rust=false" >> "$GITHUB_OUTPUT"
-            echo "cargo mutants: no mutant in this shard of the PR's diff: it changes no Rust source (.rs)"
+            echo "cargo mutants: no mutant in this shard of the PR's diff: it changes no Rust source (.rs) under crates/"
           fi
       # Runner disk: the pinned nightly with rustc-dev and llvm-tools (R-169), the rust-gpu build, the workspace's
       # build and, when the diff mutates xtask, the baseline's fixture targets (each a wgpu build of its own under
@@ -96,6 +176,7 @@ jobs:
       # the job does not need with 16G of memory: 129G free after it, about 17 s more (measured on the image of 25 Oct).
       - name: Free runner disk
         if: steps.diff.outputs.rust == 'true'
+        timeout-minutes: 20
         run: |
           df -h /
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache
@@ -112,18 +193,26 @@ jobs:
       - name: rustup toolchain install (rust-toolchain.toml)
         id: toolchain
         if: steps.diff.outputs.rust == 'true'
+        timeout-minutes: 5
         run: |
           rustup toolchain install
           echo "channel=$(sed -n 's/^channel = "\(.*\)"$/\1/p' rust-toolchain.toml)" >> "$GITHUB_OUTPUT"
       # The cargo registry `ci.yml`'s `ci` job saves on a push to `main`, restored read-only under its key (R-337).
       - uses: Swatinem/rust-cache@v2
         if: steps.diff.outputs.rust == 'true'
+        timeout-minutes: 5
         with:
           prefix-key: cargo-registry
           shared-key: ci
           cache-targets: "false"
           cache-bin: "false"
           save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+      # Every dependency without debug info, as a cargo config in the runner's CARGO_HOME; the workspace's own crates
+      # keep R-374's line tables (`.github/actions/cargo-ci-config`).
+      - name: Dependencies without debug info, every profile
+        if: steps.diff.outputs.rust == 'true'
+        timeout-minutes: 1
+        uses: ./.github/actions/cargo-ci-config
       # The rust-gpu build, the `rustc_codegen_spirv` backend cargo-gpu's installer builds into ~/.cache/rust-gpu,
       # restored read-only under the key `ci.yml`'s `gpu-kernel` job saves it under on a push to `main`: that job and the
       # channel rust-toolchain.toml pins, so a toolchain bump starts a fresh cache (R-320, R-337; REQ-SYS-075). Restored
@@ -133,8 +222,10 @@ jobs:
         with:
           path: ~/.cache/rust-gpu
           key: rust-gpu-gpu-kernel-${{ runner.os }}-${{ steps.toolchain.outputs.channel }}
+        timeout-minutes: 5
       - uses: taiki-e/install-action@v2
         if: steps.diff.outputs.rust == 'true'
+        timeout-minutes: 5
         with:
           tool: cargo-mutants@27.1.0,cargo-nextest@0.9.146
       # cargo-nextest runs every mutant's tests (`test_tool` in `.cargo/mutants.toml`, R-388 item 4), and
@@ -143,13 +234,16 @@ jobs:
       # tests (TASK-M0-02), lavapipe for the GPU harness (R-169).
       - uses: actions/setup-python@v5
         if: steps.diff.outputs.rust == 'true'
+        timeout-minutes: 5
         with:
           python-version: "3.12"
       - name: Install PyYAML
         if: steps.diff.outputs.rust == 'true'
+        timeout-minutes: 5
         run: python3 -m pip install pyyaml
       - name: Install Mesa (lavapipe)
         if: steps.diff.outputs.rust == 'true'
+        timeout-minutes: 5
         run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers
       # Debug info: line tables only, set for the whole workflow (R-374). The baseline's full debug info filled the
       # runner: `target/` reached 110G, 75G of it the test binaries, each linking wgpu, and 22G the alias test's own
@@ -168,8 +262,14 @@ jobs:
       # The kernel's SPIR-V and WGSL, which the baseline's and each mutant's `toolchain_trivial_kernel` and xtask's
       # `build_kernel` tests read (TASK-M0-14): `cargo xtask build-kernel`, written as the cargo call the alias expands
       # to (.cargo/config.toml), since it is setup for the tests, like the Mesa install, not one of the gate's checks.
+      # Its limit, 20 minutes, is sized on the cold build, not the warm 106 s above: a toolchain bump starts a fresh
+      # rust-gpu cache (the restore's comment above), and the step then builds `rustc_codegen_spirv` from source. The
+      # cold builds on record took 364 s (`ci.yml`'s gpu-kernel, run 36922052435) and 360 s (gpu-lavapipe, run
+      # 37032439991); three times 364 s, rounded up. Sized on the warm case, a cold build past its limit would fail
+      # every shard of the toolchain bump, and the cache is saved only on `main`, so that PR could never pass.
       - name: cargo run --quiet --package xtask -- build-kernel
         if: steps.diff.outputs.rust == 'true'
+        timeout-minutes: 20
         env:
           RUSTFLAGS: -C link-arg=-Wl,--compress-debug-sections=zlib -Zmir-enable-passes=-GVN
         run: cargo run --quiet --package xtask -- build-kernel
@@ -194,12 +294,14 @@ jobs:
       # `mutants-heartbeat (<shard>)` keeps its last memory, disk, task count and mutant under test.
       - name: scripts/contain.sh check
         if: steps.diff.outputs.rust == 'true'
+        timeout-minutes: 5
         env:
           PRIN_CONTAIN: required
         shell: bash scripts/contain.sh check {0}
         run: echo "the containment holds"
       - name: The job queue's tests in their PID namespaces, when the diff changes the queue
         if: steps.diff.outputs.rust == 'true'
+        timeout-minutes: 10
         env:
           PRIN_CONTAIN: required
           RUSTFLAGS: -C link-arg=-Wl,--compress-debug-sections=zlib -Zmir-enable-passes=-GVN
@@ -244,17 +346,20 @@ jobs:
       # A shard cut off by its limit fails, named, with its mutants untested: never a pass.
       - name: Shard cut off or failed
         if: always() && steps.run.outcome != 'success' && steps.run.outcome != 'skipped'
+        timeout-minutes: 5
         run: |
           echo "::error::mutants shard ${{ matrix.shard }}/8 did not finish: cut off by its REQ-VAL-149 limit" \
             "(300 min) or failed; its untested mutants are not a pass (R-302)"
           exit 1
       - name: cargo xtask mutants-check (R-202)
         if: steps.run.outputs.tested == 'true'
+        timeout-minutes: 5
         env:
           RUSTFLAGS: -C link-arg=-Wl,--compress-debug-sections=zlib -Zmir-enable-passes=-GVN
         run: cargo xtask mutants-check "$RUNNER_TEMP/mutants.out"
       - uses: actions/upload-artifact@v4
         if: always()
+        timeout-minutes: 5
         with:
           name: mutants-report-shard-${{ matrix.shard }}
           path: ${{ runner.temp }}/mutants.out
@@ -262,21 +367,29 @@ jobs:
 
   # The gate fires on the fixture (REQ-VAL-148): without its killing test the untested branch's mutants survive and
   # mutants-check fails naming them; listed, it passes; with the killing test none survives. Beside the shards. Then the
-  # caps (R-348) fire on `fixtures/mutants/caps/` (REQ-VAL-179).
+  # caps (R-348) fire on `fixtures/mutants/caps/` (REQ-VAL-179). Every step has a limit of its own, sized as the shards'
+  # (applied per R-369): a checkout 10 minutes (its longest 51 s); every other step 5 (the caps' fixture 91 s, the
+  # gate's 71 s, every other step under 25 s).
   mutants-fixture:
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' && github.event.action == 'labeled' && github.event.label.name == 'merge-ready'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      # What this change touches (R-656): on a docs-only pull request every later step is skipped and the job passes;
-      # the fixture shows the gate can fire, and no docs-only path reaches the gate. `scripts/ci_changes.sh` holds the
-      # allowlist; any other change runs it in full.
+        timeout-minutes: 10
+      # What this change touches (R-656, R-677): on a pull request of tier (c), docs only, every later step is skipped
+      # and the job passes; the fixture shows the gate can fire, and no such change reaches the gate. Unlike the
+      # shards, it does not wait for Rust under `crates/`: a change to the gate's own configuration (`.cargo/`,
+      # `fixtures/mutants/`, `scripts/contain.sh`, this workflow's pins, xtask's mutants-check) is tier (a) and runs
+      # it, as do the data of tier (b), as before R-677. `scripts/ci_changes.sh` decides (`tier`); any other change,
+      # and a classification that says nothing, runs it in full.
       - name: scripts/ci_changes.sh detect
         id: changes
+        timeout-minutes: 5
         run: scripts/ci_changes.sh detect
       # The shards' containment holds on a runner (`scripts/contain.sh`), seen in a second, not after a shard's baseline.
       - name: scripts/contain.sh check
-        if: steps.changes.outputs.docs_only != 'true'
+        if: steps.changes.outputs.tier != 'docs'
+        timeout-minutes: 5
         env:
           PRIN_CONTAIN: required
         shell: bash scripts/contain.sh check {0}
@@ -284,28 +397,38 @@ jobs:
       # The toolchain rust-toolchain.toml pins, with its components: rust-gpu's nightly, on which the whole workspace
       # builds (R-169).
       - name: rustup toolchain install (rust-toolchain.toml)
-        if: steps.changes.outputs.docs_only != 'true'
+        if: steps.changes.outputs.tier != 'docs'
+        timeout-minutes: 5
         run: rustup toolchain install
       # The cargo registry `ci.yml`'s `ci` job saves on a push to `main`, restored read-only under its key (R-337).
       - uses: Swatinem/rust-cache@v2
-        if: steps.changes.outputs.docs_only != 'true'
+        if: steps.changes.outputs.tier != 'docs'
+        timeout-minutes: 5
         with:
           prefix-key: cargo-registry
           shared-key: ci
           cache-targets: "false"
           cache-bin: "false"
           save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+      # Every dependency without debug info, as a cargo config in the runner's CARGO_HOME; the workspace's own crates
+      # keep R-374's line tables (`.github/actions/cargo-ci-config`).
+      - name: Dependencies without debug info, every profile
+        if: steps.changes.outputs.tier != 'docs'
+        timeout-minutes: 1
+        uses: ./.github/actions/cargo-ci-config
       # cargo-nextest: the fixtures' tests run through it, as the shards' do (`test_tool` in `.cargo/mutants.toml`,
       # R-388 item 4).
       - uses: taiki-e/install-action@v2
-        if: steps.changes.outputs.docs_only != 'true'
+        if: steps.changes.outputs.tier != 'docs'
+        timeout-minutes: 5
         with:
           tool: cargo-mutants@27.1.0,cargo-nextest@0.9.146
       # Both runs read the caps and the test tool from `.cargo/mutants.toml` (REQ-VAL-179), as every `cargo mutants`
       # run does: with `--dir`, cargo-mutants would otherwise read the fixture's own `.cargo/mutants.toml`, which does
       # not exist.
       - name: The gate fires on the fixture (REQ-VAL-148)
-        if: steps.changes.outputs.docs_only != 'true'
+        if: steps.changes.outputs.tier != 'docs'
+        timeout-minutes: 5
         run: |
           fixture=fixtures/mutants/untested
           if cargo mutants --dir "$fixture" --in-diff "$fixture/change.diff" --config .cargo/mutants.toml \
@@ -324,7 +447,8 @@ jobs:
       # process, whose allocation fails, so it is caught. The controls (R-176) bound each under its cap: a 5 s hang under
       # the 60 s floor is no timeout, and a 256 MiB allocation under the cap is caught by its assertion, not the cap.
       - name: The caps fire on their fixture (REQ-VAL-179)
-        if: steps.changes.outputs.docs_only != 'true'
+        if: steps.changes.outputs.tier != 'docs'
+        timeout-minutes: 5
         run: |
           fixture=fixtures/mutants/caps
           caps() {
@@ -355,6 +479,7 @@ jobs:
           expect controls provisioned CaughtMutant no
       - uses: actions/upload-artifact@v4
         if: always()
+        timeout-minutes: 5
         with:
           name: mutants-report-fixture
           path: |
@@ -365,31 +490,50 @@ jobs:
 
   # The sharded run's verdict (R-202, R-302): runs after every shard, whatever their result. It fails if any shard
   # failed or was cut off by its limit, and checks every shard's report together against the equivalent-mutants list,
-  # listing each survivor of the whole run. A required status check on `main` (R-305): `always()` makes it report on
-  # every pull request, a cancelled or skipped shard included (then it fails), and it passes when no shard has a mutant.
-  mutants-check:
-    if: always() && github.event_name == 'pull_request'
+  # listing each survivor of the whole run. `always()` makes it run on every merge-ready run, a cancelled or skipped
+  # shard included (then it fails), and it passes when no shard has a mutant. `mutants-check`, below, reports its
+  # result. It runs only on the merge-ready run, so it is not named `mutants-check`, which every run reports.
+  # `mutants-check` waits for it, so it is bounded, a stall failing it in minutes (applied per R-369; the limits on
+  # `mutants-check` below): the job 30 minutes, its longest run on 3 Nov 2026 under 2 minutes; the toolchain install 5,
+  # its longest 24 s in any job here; the download of the shards' reports 5, its longest 2 s; the check over every
+  # shard 5, its longest 66 s.
+  mutants-verdict:
+    if: always() && github.event_name == 'pull_request' && github.event.action == 'labeled' && github.event.label.name == 'merge-ready'
     needs: mutants
     runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
+        timeout-minutes: 10
       # The toolchain rust-toolchain.toml pins, with its components: rust-gpu's nightly, on which the whole workspace
       # builds (R-169).
       - name: rustup toolchain install (rust-toolchain.toml)
+        timeout-minutes: 5
         run: rustup toolchain install
       # The cargo registry `ci.yml`'s `ci` job saves on a push to `main`, restored read-only under its key (R-337).
       - uses: Swatinem/rust-cache@v2
+        timeout-minutes: 5
         with:
           prefix-key: cargo-registry
           shared-key: ci
           cache-targets: "false"
           cache-bin: "false"
           save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+      # Every dependency without debug info, as a cargo config in the runner's CARGO_HOME; the workspace's own crates
+      # keep R-374's line tables (`.github/actions/cargo-ci-config`).
+      - name: Dependencies without debug info, every profile
+        timeout-minutes: 1
+        uses: ./.github/actions/cargo-ci-config
       - uses: actions/download-artifact@v4
+        timeout-minutes: 5
         with:
           pattern: mutants-report-shard-*
           path: ${{ runner.temp }}/shards
       - name: cargo xtask mutants-check over every shard (R-202, R-302)
+        id: verdict
+        timeout-minutes: 5
         run: |
           # No report at all is a PR whose diff has no mutant (R-305): no shard uploaded one, and this passes.
           shopt -s nullglob
@@ -410,3 +554,132 @@ jobs:
             echo "mutants-check: no shard tested a mutant of this PR's diff"
           fi
           exit "$fail"
+
+  # `mutants-check`, the required status check on `main` (R-305), reported by every run of this workflow as a job of its
+  # own run (R-678; the header above). `always()`: it runs whatever the verdict ended in, skipped included, so it is
+  # never itself skipped, which GitHub counts as passed. Its report step concludes it:
+  # - the merge-ready run: the verdict's result, success only if `mutants-verdict` passed;
+  # - a change with no `.rs` file under `crates/` (`mutants=false`), or a head that is not merge-ready (a push, which
+  #   takes the label off, or the label absent): success, "not applicable", with its reason in the job's summary;
+  # - another label put on or taken off a merge-ready head: the result of `mutants-verdict` in that head's latest
+  #   merge-ready run, waited for while it runs; with no such run on the head, or the head superseded, failure.
+  # A classification that fails fails it; an empty one is not `mutants=false`.
+  # A step before the report that fails, or stalls past its own limit, fails `mutants-check`, reported: the report is
+  # then skipped and the job fails, and the step after it, which runs only then and needs nothing of the tree, says
+  # which step did not finish, in the check run's error annotation and the job's summary.
+  # The limits (applied per R-369), sized from this workflow's runs on 3 Nov 2026 (140 shard, 17 fixture, 16 verdict
+  # and 32 report and pending checkouts): a checkout 10 minutes, its longest 189 s (a shard's full history) against a
+  # median of 17 s; the classification 5 minutes, its longest 21 s; a cache restore 5 minutes, its longest 19 s. On
+  # ad883784 a checkout stalled past 11 minutes (run 41702550011), which the 355 minutes below would have left
+  # unreported for hours.
+  mutants-check:
+    if: always()
+    needs: mutants-verdict
+    runs-on: ubuntu-24.04
+    # The wait for a merge-ready run in progress: its shards' 300 minutes (REQ-VAL-149) and their setup, under GitHub's
+    # 360-minute limit for a hosted job.
+    timeout-minutes: 355
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v4
+        id: checkout
+        timeout-minutes: 10
+      # What this change touches (R-677): a change with no `.rs` file under `crates/` has no mutant the gate runs. The
+      # merge-ready run reports its verdict whatever the change, and does not classify it.
+      - name: scripts/ci_changes.sh detect
+        id: changes
+        if: github.event.action != 'labeled' || github.event.label.name != 'merge-ready'
+        timeout-minutes: 5
+        run: scripts/ci_changes.sh detect
+      - name: Report mutants-check
+        id: report
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          RUN_ID: ${{ github.run_id }}
+          ACTION: ${{ github.event.action }}
+          LABEL: ${{ github.event.label.name }}
+          READY: ${{ contains(github.event.pull_request.labels.*.name, 'merge-ready') }}
+          MUTANTS: ${{ steps.changes.outputs.mutants }}
+          VERDICT: ${{ needs.mutants-verdict.result }}
+        run: |
+          set -euo pipefail
+          summary="${GITHUB_STEP_SUMMARY:-/dev/null}"
+          # The notice's message is the one text the check run carries (a step summary never reaches it): the merge
+          # watcher reads it among the check run's annotations, and a passed verdict's reads `no surviving mutant`.
+          report() { # report <exit> <title> <why>
+            echo "mutants-check on $HEAD_SHA: $2. $3"
+            printf '## mutants-check: %s\n\n%s\n' "$2" "$3" >> "$summary"
+            if [ "$1" = 0 ]; then
+              echo "::notice title=mutants-check::$2"
+            else
+              echo "::error title=mutants-check::$2. $3"
+            fi
+            exit "$1"
+          }
+          verdict() { # verdict <result of mutants-verdict> <where>
+            if [ "$1" = success ]; then
+              report 0 "no surviving mutant" "The merge-ready run's verdict over every shard ($2)."
+            fi
+            report 1 "a survivor, or a shard that did not finish ($1)" "The merge-ready run's verdict ($2)."
+          }
+          if [ "$ACTION" = labeled ] && [ "$LABEL" = merge-ready ]; then
+            verdict "$VERDICT" "this run, $RUN_ID"
+          fi
+          if [ "$MUTANTS" = false ]; then
+            report 0 "not applicable" \
+              "The change touches no Rust source under crates/: mutants run only when crates/ source changes (R-677)."
+          fi
+          if [ "$ACTION" = synchronize ] || [ "$READY" != true ]; then
+            report 0 "not applicable" \
+              "The head is not merge-ready: the gate runs once every named reviewer has approved it (R-656, R-676)."
+          fi
+          # A label put on or taken off a merge-ready head: the verdict of its latest merge-ready run, the one whose
+          # `mutants-verdict` is not skipped, waited for while it runs.
+          runs="repos/$GH_REPO/actions/workflows/mutants.yml/runs?head_sha=$HEAD_SHA&event=pull_request&per_page=100"
+          while :; do
+            live=$(gh api "repos/$GH_REPO/pulls/$PR" --jq '.head.sha')
+            if [ "$live" != "$HEAD_SHA" ]; then
+              report 1 "superseded" "The pull request's head is now $live."
+            fi
+            wait=""
+            ids=$(gh api "$runs" --jq '.workflow_runs[].id')
+            for id in $ids; do
+              [ "$id" != "$RUN_ID" ] || continue
+              state=$(gh api "repos/$GH_REPO/actions/runs/$id/jobs?per_page=100" \
+                --jq '.jobs[] | select(.name == "mutants-verdict") | "\(.status) \(.conclusion)"')
+              case "$state" in
+                "completed skipped") continue ;;
+                "completed "*) verdict "${state#completed }" "run $id" ;;
+                *) wait="run $id: ${state:-no jobs yet}"; break ;;
+              esac
+            done
+            if [ -z "$wait" ]; then
+              report 1 "no merge-ready run" \
+                "The merge-ready label is on, but no run of it is on this head: take the label off and put it back."
+            fi
+            echo "waiting for the merge-ready run ($wait)"
+            sleep 30
+          done
+      # The report skipped: a step before it failed, stalled past its own limit or was cancelled, and the job fails.
+      # This says so where the report would have, its script here and needing nothing of the tree.
+      - name: A step before the report did not finish
+        if: always() && steps.report.outcome == 'skipped'
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          CHECKOUT: ${{ steps.checkout.outcome }}
+          CLASSIFY: ${{ steps.changes.outcome }}
+        run: |
+          set -uo pipefail
+          title="a step before the report did not finish"
+          why="The checkout: ${CHECKOUT:-not run}; the classification: ${CLASSIFY:-not run}. A step failed, or stalled"
+          why="$why past its own limit; re-run the job."
+          echo "mutants-check on $HEAD_SHA: $title. $why"
+          printf '## mutants-check: %s\n\n%s\n' "$title" "$why" >> "${GITHUB_STEP_SUMMARY:-/dev/null}"
+          echo "::error title=mutants-check::$title. $why"
+          exit 1

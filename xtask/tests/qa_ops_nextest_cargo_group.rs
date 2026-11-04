@@ -18,6 +18,15 @@
 //! Ops PR #209 (branch `ops/nextest-alias-group`) adds, by the same rule, `xtask screenshot --all`
 //! (`qa_TASK-M0-20`), whose `gui` suites run `cargo run -p gui --features mock` on the workspace's target, which the
 //! survey above missed.
+//!
+//! Tooling PR #376 gives `xtask ci --list`'s test every test thread as well, so it now runs alone, still in the group:
+//! the "without taking every test thread" above and on [`ON_THE_WORKSPACE_TARGET`] holds for the group's other tests.
+//! The last section of this file checks that.
+//!
+//! Tooling PR #395's item (h) moves that one test from the `ci` profile to `ci-workspace`, as the same listing in a `ci`
+//! shard rebuilt the workspace there (run 41775231980), so [`PROFILES`] gains `ci-workspace`, and the last section's
+//! `qa_ops_ncg_ci_list_stays_in_the_ci_profile`, which the move makes false, gives way to three tests that keep what it
+//! guarded, that moving the test never drops it from CI, and add the move.
 
 use std::path::{Path, PathBuf};
 
@@ -62,8 +71,9 @@ const ON_THE_WORKSPACE_TARGET: &[(&str, &str)] = &[
     ),
 ];
 
-/// The profiles that run those tests: the local run's and the `ci` shards'.
-const PROFILES: &[&str] = &["default", "ci"];
+/// The profiles that run those tests: the local run's, the `ci` shards', and `ci-workspace`, which runs `xtask ci
+/// --list`'s test.
+const PROFILES: &[&str] = &["default", "ci", "ci-workspace"];
 
 fn repo() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -776,4 +786,178 @@ negative_control!(
         &workflow("gate.yml").replacen(" && needs.cpu-workspace.result == 'success'", "", 1),
         &the_config(),
     )
+);
+
+// --- Tooling PR #376: `xtask ci --list` runs alone, and only it ------------------------------------------------------
+//
+// On a cold target the test is a build of nearly every test target against the 600 s limit on its xtask child (R-214,
+// R-376). The change is that nothing runs beside it; the limit stays. PR #376 left the test in the `ci` profile the
+// `ci` and `ci-release` shards run; PR #395's item (h) moves that one test to `ci-workspace` (applied per R-369), on
+// that job's own build, so a shard no longer rebuilds the workspace for it. It still runs in CI, once.
+
+/// `xtask ci --list`'s test: `(binary id, test name)`.
+const THE_CI_LIST_TEST: (&str, &str) = ON_THE_WORKSPACE_TARGET[0];
+
+/// The text of the override that gives that test every thread, which the controls below edit.
+#[cfg(feature = "controls")]
+const THE_CI_LIST_OVERRIDE: &str = "filter = \"binary_id(=xtask::qa_TASK-M0-06_list) & test(=qa_m006_ci_list_lists_golden_cases_without_a_device)\"";
+
+/// Under each profile that runs it, the test takes every test thread.
+fn check_ci_list_takes_every_thread(text: &str) {
+    let (binary, test) = THE_CI_LIST_TEST;
+    for profile in PROFILES {
+        let threads = threads_required_of(text, profile, binary, test);
+        assert!(
+            threads.as_deref() == Some("num-test-threads"),
+            "qa-ops-ncg: under profile `{profile}`, `xtask ci --list`'s test runs beside others: threads-required {threads:?}"
+        );
+    }
+}
+
+#[test]
+fn qa_ops_ncg_ci_list_takes_every_thread() {
+    check_ci_list_takes_every_thread(&the_config());
+}
+
+negative_control!(
+    qa_ops_ncg_ci_list_takes_every_thread,
+    "the config with the every-thread override matching another test",
+    expected = "under profile `default`, `xtask ci --list`'s test runs beside others: threads-required None",
+    check_ci_list_takes_every_thread(&the_config().replacen(
+        THE_CI_LIST_OVERRIDE,
+        "filter = \"binary_id(=xtask::qa_TASK-M0-06_list) & test(=qa_nothing)\"",
+        1
+    ))
+);
+
+/// Only that test does: the group's other tests, and that test's neighbours in its binary, keep one thread, so the
+/// shard's other tests still run beside them.
+fn check_only_ci_list_takes_every_thread(text: &str) {
+    let neighbour = (
+        "xtask::qa_TASK-M0-06_list",
+        "qa_m006_list_refuses_a_rebaseline_without_row",
+    );
+    let others = ON_THE_WORKSPACE_TARGET[1..]
+        .iter()
+        .copied()
+        .chain(std::iter::once(neighbour));
+    for (binary, test) in others {
+        for profile in PROFILES {
+            let threads = threads_required_of(text, profile, binary, test);
+            assert!(
+                threads.is_none(),
+                "qa-ops-ncg: under profile `{profile}`, {binary} {test} holds back the rest of the shard: threads-required {threads:?}"
+            );
+        }
+    }
+}
+
+#[test]
+fn qa_ops_ncg_only_ci_list_takes_every_thread() {
+    check_only_ci_list_takes_every_thread(&the_config());
+}
+
+negative_control!(
+    qa_ops_ncg_only_ci_list_takes_every_thread,
+    "the config with the every-thread override widened to the test's whole binary",
+    expected = "xtask::qa_TASK-M0-06_list qa_m006_list_refuses_a_rebaseline_without_row holds back the rest of the shard",
+    check_only_ci_list_takes_every_thread(&the_config().replacen(
+        THE_CI_LIST_OVERRIDE,
+        "filter = \"binary_id(=xtask::qa_TASK-M0-06_list)\"",
+        1
+    ))
+);
+
+/// A neighbour of the test in its binary, which builds nothing.
+const THE_CI_LIST_NEIGHBOUR: (&str, &str) = (
+    "xtask::qa_TASK-M0-06_list",
+    "qa_m006_list_refuses_a_rebaseline_without_row",
+);
+
+/// The clause of the test in the `ci` profile's `not (...)` list, which the controls below remove.
+#[cfg(feature = "controls")]
+const IN_THE_CI_PROFILE: &str = "\n        | (binary_id(=xtask::qa_TASK-M0-06_list) & test(=qa_m006_ci_list_lists_golden_cases_without_a_device))";
+
+/// The clause of the test in the `ci-workspace` profile's filter, which the controls below remove.
+#[cfg(feature = "controls")]
+const IN_THE_CI_WORKSPACE_PROFILE: &str = "\n    | (binary_id(=xtask::qa_TASK-M0-06_list) & test(=qa_m006_ci_list_lists_golden_cases_without_a_device))";
+
+/// (h): the profile the `ci` and `ci-release` shards run leaves the test out.
+fn check_ci_list_left_the_ci_profile(text: &str) {
+    let (binary, test) = THE_CI_LIST_TEST;
+    assert!(
+        !selected_by(text, "ci", binary, test),
+        "qa-ops-ncg: the `ci` profile selects `xtask ci --list`'s test, so a shard rebuilds the workspace for it"
+    );
+}
+
+#[test]
+fn qa_ops_ncg_ci_list_left_the_ci_profile() {
+    check_ci_list_left_the_ci_profile(&the_config());
+}
+
+negative_control!(
+    qa_ops_ncg_ci_list_left_the_ci_profile,
+    "the config without the test's clause in the `ci` profile's exclusions",
+    expected = "the `ci` profile selects `xtask ci --list`'s test",
+    check_ci_list_left_the_ci_profile(&the_config().replacen(IN_THE_CI_PROFILE, "", 1))
+);
+
+/// Moving the test did not drop it: the local run and `ci-workspace` select it, and `gpu-kernel` does not, so CI runs it
+/// in the one job, where [`check_ci_list_takes_every_thread`] has it alone.
+fn check_ci_list_stays_in_ci(text: &str) {
+    let (binary, test) = THE_CI_LIST_TEST;
+    assert!(
+        selected_by(text, "ci-workspace", binary, test),
+        "qa-ops-ncg: no CI job runs `xtask ci --list`'s test: the `ci-workspace` profile does not select it"
+    );
+    assert!(
+        selected_by(text, "default", binary, test),
+        "qa-ops-ncg: the local run does not select `xtask ci --list`'s test"
+    );
+    assert!(
+        !selected_by(text, "gpu-kernel", binary, test),
+        "qa-ops-ncg: the `gpu-kernel` profile selects `xtask ci --list`'s test as well"
+    );
+}
+
+#[test]
+fn qa_ops_ncg_ci_list_stays_in_ci() {
+    check_ci_list_stays_in_ci(&the_config());
+}
+
+negative_control!(
+    qa_ops_ncg_ci_list_stays_in_ci,
+    "the config without the test's clause in the `ci-workspace` profile",
+    expected = "no CI job runs `xtask ci --list`'s test",
+    check_ci_list_stays_in_ci(&the_config().replacen(IN_THE_CI_WORKSPACE_PROFILE, "", 1))
+);
+
+/// Only that test moved: its binary's others build nothing, so they stay in the shards and out of `ci-workspace`.
+fn check_ci_list_neighbours_stay_in_the_ci_profile(text: &str) {
+    let (binary, test) = THE_CI_LIST_NEIGHBOUR;
+    assert!(
+        selected_by(text, "ci", binary, test),
+        "qa-ops-ncg: the `ci` profile does not select {binary} {test}"
+    );
+    assert!(
+        !selected_by(text, "ci-workspace", binary, test),
+        "qa-ops-ncg: the `ci-workspace` profile selects {binary} {test} as well"
+    );
+}
+
+#[test]
+fn qa_ops_ncg_ci_list_neighbours_stay_in_the_ci_profile() {
+    check_ci_list_neighbours_stay_in_the_ci_profile(&the_config());
+}
+
+negative_control!(
+    qa_ops_ncg_ci_list_neighbours_stay_in_the_ci_profile,
+    "the config with the test's binary added to what the `ci` profile leaves out",
+    expected = "the `ci` profile does not select xtask::qa_TASK-M0-06_list",
+    check_ci_list_neighbours_stay_in_the_ci_profile(&the_config().replacen(
+        "binary_id(=validation::toolchain)",
+        "binary_id(=xtask::qa_TASK-M0-06_list) | binary_id(=validation::toolchain)",
+        1
+    ))
 );

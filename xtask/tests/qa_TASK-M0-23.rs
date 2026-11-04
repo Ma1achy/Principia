@@ -61,8 +61,9 @@ fn job<'a>(yml: &'a str, name: &str) -> Vec<&'a str> {
         .collect()
 }
 
-/// REQ-VAL-148: on pull_request events, on ubuntu-24.04 (R-186, pinned by R-375), `cargo mutants --in-diff` reads the
-/// diff written by `git diff origin/<base>...HEAD`, the checked-in list decides, and the report is uploaded.
+/// REQ-VAL-148: on pull_request events (the merge-ready run, R-656), on ubuntu-24.04 (R-186, pinned by R-375), `cargo
+/// mutants --in-diff` reads the diff written by `git diff origin/<base>...HEAD`, the checked-in list decides, and the
+/// report is uploaded.
 fn checks_job(yml: &str) {
     assert!(
         yml.lines().any(|l| l.trim_end() == "  pull_request:"),
@@ -73,6 +74,12 @@ fn checks_job(yml: &str) {
     assert!(
         has("if: github.event_name == 'pull_request'"),
         "qa23: the mutants job is not limited to pull_request events"
+    );
+    // R-656: the merge-ready run, the one the `merge-ready` label starts, runs the shards (the owner's CI plan of
+    // 2 Nov 2026).
+    assert!(
+        has("github.event.action == 'labeled'") && has("github.event.label.name == 'merge-ready'"),
+        "qa23: the mutants job is not limited to the merge-ready run (R-656)"
     );
     assert!(
         lines.iter().any(|l| l.trim() == "runs-on: ubuntu-24.04"),
@@ -120,24 +127,68 @@ negative_control!(
     ))
 );
 
-/// REQ-VAL-149 / R-182 / R-376: the job (or its `cargo mutants` step) runs under a `timeout-minutes` limit of 300,
-/// with a comment just above it naming REQ-VAL-149 and marking the value confirmed by R-376 (no longer provisional).
+/// The minutes of a `timeout-minutes:` line, when it is one with a positive whole number.
+fn limit_of(line: &str) -> Option<u32> {
+    line.trim()
+        .strip_prefix("timeout-minutes:")
+        .and_then(|v| v.trim().parse::<u32>().ok())
+        .filter(|&m| m > 0)
+}
+
+/// REQ-VAL-149 / R-182 / R-376: each shard's `cargo mutants` runs under a `timeout-minutes` limit of 300, with a
+/// comment just above it naming REQ-VAL-149 and marking the value confirmed by R-376 (no longer provisional). The limit
+/// that governs the run is the tighter of the `cargo mutants` step's own and the job's: a limit on another step (a
+/// checkout's, a cache restore's) bounds that step only, never the shard's run.
 fn under_limit(yml: &str) {
     let lines = job(yml, "mutants");
-    let at = lines.iter().position(|l| {
-        l.trim()
-            .strip_prefix("timeout-minutes:")
-            .is_some_and(|v| v.trim().parse::<u32>().is_ok_and(|m| m > 0))
-    });
-    let Some(at) = at else {
-        panic!("qa23: the mutants job runs under no time limit (no timeout-minutes)");
+    // The job's own keys sit at four spaces, before `    steps:`; each step starts at `      - `, its keys at eight.
+    let steps_at = lines
+        .iter()
+        .position(|l| l.trim_end() == "    steps:")
+        .unwrap_or(lines.len());
+    let job_limit = lines[..steps_at]
+        .iter()
+        .position(|l| l.starts_with("    timeout-minutes:") && limit_of(l).is_some());
+    let starts: Vec<usize> = (steps_at..lines.len())
+        .filter(|&i| lines[i].starts_with("      - "))
+        .collect();
+    let runs_mutants = |l: &str| {
+        let l = l
+            .trim()
+            .trim_start_matches("- ")
+            .trim_start_matches("run:")
+            .trim();
+        l == "cargo mutants" || l.starts_with("cargo mutants ")
     };
-    let minutes = lines[at]
-        .trim()
-        .strip_prefix("timeout-minutes:")
-        .and_then(|v| v.trim().parse::<u32>().ok());
+    let step = starts.iter().enumerate().find_map(|(n, &from)| {
+        let to = starts.get(n + 1).copied().unwrap_or(lines.len());
+        lines[from..to]
+            .iter()
+            .any(|l| runs_mutants(l))
+            .then_some(from..to)
+    });
+    let Some(step) = step else {
+        panic!("qa23: the mutants job has no step that runs cargo mutants");
+    };
+    let step_limit = step.clone().find(|&i| {
+        lines[i].starts_with("        timeout-minutes:") && limit_of(lines[i]).is_some()
+    });
+    let at = match (step_limit, job_limit) {
+        (Some(s), Some(j)) => {
+            if limit_of(lines[j]) < limit_of(lines[s]) {
+                j
+            } else {
+                s
+            }
+        }
+        (Some(s), None) => s,
+        (None, Some(j)) => j,
+        (None, None) => {
+            panic!("qa23: the mutants job runs under no time limit (none on the job or its cargo mutants step)")
+        }
+    };
     assert_eq!(
-        minutes,
+        limit_of(lines[at]),
         Some(300),
         "qa23: the per-shard limit is not R-376's confirmed 300 minutes"
     );
@@ -193,6 +244,34 @@ mod old_limit {
     );
 }
 
+mod only_other_steps_limited {
+    use super::*;
+    negative_control!(
+        qa23_mutants_job_runs_under_the_confirmed_300_minute_limit,
+        "the checked-in shard with its cargo mutants step's limit removed, the checkout's and caches' left",
+        expected = "qa23: the mutants job runs under no time limit",
+        under_limit(&edit(
+            &read(".github/workflows/mutants.yml"),
+            "        timeout-minutes: 300\n",
+            ""
+        ))
+    );
+}
+
+mod tighter_job_limit {
+    use super::*;
+    negative_control!(
+        qa23_mutants_job_runs_under_the_confirmed_300_minute_limit,
+        "the checked-in shard job given a limit of its own of 120 minutes, under its step's 300",
+        expected = "qa23: the per-shard limit is not R-376's confirmed 300 minutes",
+        under_limit(&edit(
+            &read(".github/workflows/mutants.yml"),
+            "    strategy:\n      # Every shard runs to its end",
+            "    timeout-minutes: 120\n    strategy:\n      # Every shard runs to its end"
+        ))
+    );
+}
+
 mod still_provisional {
     use super::*;
     negative_control!(
@@ -215,8 +294,10 @@ mod latest_runner {
         expected = "qa23: the mutants job is not on ubuntu-24.04 (R-375)",
         checks_job(&edit(
             &read(".github/workflows/mutants.yml"),
-            "  mutants:\n    if: github.event_name == 'pull_request'\n    runs-on: ubuntu-24.04\n",
-            "  mutants:\n    if: github.event_name == 'pull_request'\n    runs-on: ubuntu-latest\n"
+            "  mutants:\n    if: github.event_name == 'pull_request' && github.event.action == 'labeled' && \
+             github.event.label.name == 'merge-ready'\n    runs-on: ubuntu-24.04\n",
+            "  mutants:\n    if: github.event_name == 'pull_request' && github.event.action == 'labeled' && \
+             github.event.label.name == 'merge-ready'\n    runs-on: ubuntu-latest\n"
         ))
     );
 }

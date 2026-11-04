@@ -48,6 +48,13 @@ env:
   # keys here too (R-337). R-233 (debug info at the default) governs local builds only.
   CARGO_PROFILE_DEV_DEBUG: line-tables-only
   CARGO_PROFILE_TEST_DEBUG: line-tables-only
+  # No incremental state, the owner's CI setting (PR #394), in every workflow like R-374's values. `Swatinem/rust-cache`
+  # already exports CARGO_INCREMENTAL=0 to the steps after it, and before it computes its key, so its key and every
+  # build after it are the same without this line. What the line adds: the value in the steps before rust-cache, where
+  # no cargo build runs and `ci.yml`'s `cachekey` hashes it, and in jobs without rust-cache, where only `ci.yml`'s
+  # `ci-release` runs cargo and it builds only for the release doctests, which aren't incremental by default. Local
+  # builds are unaffected (R-233).
+  CARGO_INCREMENTAL: "0"
 
 jobs:
   # The CPU suites, as `ci.yml`'s `ci` job runs them.
@@ -73,6 +80,10 @@ jobs:
           cache-targets: "false"
           cache-bin: "false"
           save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+      # Every dependency without debug info, as a cargo config in the runner's CARGO_HOME; the workspace's own crates
+      # keep R-374's line tables (`.github/actions/cargo-ci-config`).
+      - name: Dependencies without debug info, every profile
+        uses: ./.github/actions/cargo-ci-config
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -107,7 +118,7 @@ jobs:
           path: target/gate-test-list/
           if-no-files-found: ignore
 
-  # The xtask tests that run cargo on the workspace's own target directory, each alone, as `ci.yml`'s `ci-workspace` job
+  # The tests that run cargo on the workspace's own target directory, each alone, as `ci.yml`'s `ci-workspace` job
   # runs them (`.config/nextest.toml`'s `ci-workspace` profile; R-372, REQ-SYS-078): the `cpu` job's `ci` profile
   # selects none of them, so without this job the gate would not run them (REQ-SYS-067). Their packages' doctests run in
   # the `cpu` job's `cargo test --workspace --doc`. Applied per R-369.
@@ -135,6 +146,10 @@ jobs:
           cache-targets: "false"
           cache-bin: "false"
           save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+      # Every dependency without debug info, as a cargo config in the runner's CARGO_HOME; the workspace's own crates
+      # keep R-374's line tables (`.github/actions/cargo-ci-config`).
+      - name: Dependencies without debug info, every profile
+        uses: ./.github/actions/cargo-ci-config
       # qa02's `cargo xtask ci` runs `cargo xtask plan-check`, which needs Python and PyYAML (REQ-SYS-007).
       - uses: actions/setup-python@v5
         with:
@@ -146,10 +161,11 @@ jobs:
       - uses: taiki-e/install-action@v2
         with:
           tool: cargo-nextest@0.9.146
-      - name: cargo nextest run -p xtask
+      # Validation is here for `qa_TASK-M0-24`, the one test of it the profile selects.
+      - name: cargo nextest run -p validation -p xtask
         env:
           NEXTEST_PROFILE: ci-workspace
-        run: cargo nextest run -p xtask
+        run: cargo nextest run -p validation -p xtask
 
   # `cargo xtask ci`, every registered per-push runner (R-177).
   xtask-ci:
@@ -179,6 +195,10 @@ jobs:
           cache-targets: "false"
           cache-bin: "false"
           save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+      # Every dependency without debug info, as a cargo config in the runner's CARGO_HOME; the workspace's own crates
+      # keep R-374's line tables (`.github/actions/cargo-ci-config`).
+      - name: Dependencies without debug info, every profile
+        uses: ./.github/actions/cargo-ci-config
       # The rust-gpu build, restored read-only under the key `ci.yml`'s `gpu-kernel` job saves it under on a push to
       # `main` (R-320, R-337; REQ-SYS-075); never saved here.
       - uses: actions/cache/restore@v4
@@ -217,6 +237,10 @@ jobs:
           cache-targets: "false"
           cache-bin: "false"
           save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+      # Every dependency without debug info, as a cargo config in the runner's CARGO_HOME; the workspace's own crates
+      # keep R-374's line tables (`.github/actions/cargo-ci-config`).
+      - name: Dependencies without debug info, every profile
+        uses: ./.github/actions/cargo-ci-config
       - uses: taiki-e/install-action@v2
         with:
           tool: cargo-nextest@0.9.146
@@ -263,6 +287,10 @@ jobs:
           cache-targets: "false"
           cache-bin: "false"
           save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+      # Every dependency without debug info, as a cargo config in the runner's CARGO_HOME; the workspace's own crates
+      # keep R-374's line tables (`.github/actions/cargo-ci-config`).
+      - name: Dependencies without debug info, every profile
+        uses: ./.github/actions/cargo-ci-config
       # The rust-gpu build, restored read-only under the key `ci.yml`'s `gpu-kernel` job saves it under on a push to
       # `main` (R-320, R-337; REQ-SYS-075); never saved here.
       - uses: actions/cache/restore@v4
@@ -312,6 +340,10 @@ jobs:
           cache-targets: "false"
           cache-bin: "false"
           save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+      # Every dependency without debug info, as a cargo config in the runner's CARGO_HOME; the workspace's own crates
+      # keep R-374's line tables (`.github/actions/cargo-ci-config`).
+      - name: Dependencies without debug info, every profile
+        uses: ./.github/actions/cargo-ci-config
       - name: Install Mesa (lavapipe)
         run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers
       - name: cargo xtask screenshot --all
@@ -348,6 +380,10 @@ jobs:
           cache-targets: "false"
           cache-bin: "false"
           save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+      # Every dependency without debug info, as a cargo config in the runner's CARGO_HOME; the workspace's own crates
+      # keep R-374's line tables (`.github/actions/cargo-ci-config`).
+      - name: Dependencies without debug info, every profile
+        uses: ./.github/actions/cargo-ci-config
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"

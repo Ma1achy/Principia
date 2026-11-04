@@ -164,7 +164,8 @@ pub fn list(runners: &[Runner]) -> Result<(), String> {
 }
 
 /// Shard `partition` of [`run`] (`--partition k/n`, R-360): `controls` runs its own slice of the controls, by
-/// [`crate::controls::Partition`]; `build-kernel` runs in every shard, since controls in any slice read the kernel it
+/// [`crate::controls::Partition`], less the few CI's `ci-workspace` job runs ([`crate::controls::IN_CI_WORKSPACE`]);
+/// `build-kernel` runs in every shard, since controls in any slice read the kernel it
 /// writes; every other runner runs in shard 1 only, so the n shards together run each runner's check once.
 pub fn run_partition(
     runners: &[Runner],

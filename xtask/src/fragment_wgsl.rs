@@ -14,7 +14,8 @@
 //! the shader around them, share no name.
 //!
 //! **The files** ([`snippets`]): `crates/render/wgsl/decode.wgsl` (one section per chart the DECODE preset draws, each
-//! defining `frag_decode(uv)`, and the descriptor's section, `frag_describe`), `crates/render/wgsl/encode.wgsl`
+//! defining `frag_decode(uv)`, the descriptor's section, `frag_describe`, and the free decode's, `frag_decode_free(z)`,
+//! the ROUNDTRIP preset's second `D`), `crates/render/wgsl/encode.wgsl`
 //! (`frag_encode`) and `crates/ledger/wgsl/shape.wgsl` (`shape(r, m)`, the read side's shape map). They are checked in,
 //! so the render and ledger crates build without rust-gpu, and [`check`] fails the build when one differs from its
 //! translation: a hand edit, or a kernel change not re-emitted (`cargo xtask build-kernel --bless` writes them).
@@ -391,7 +392,8 @@ struct FragDescriptor {
 
 // One sample's fragment decode (colour_composition §3, \"Fragment-side recompute\"; REQ-COL-057): `z`, the chart's Φ
 // output, the 8-D latent where `z_latent` (the latent chart) and the latent blocks the chart carries otherwise; the
-// canonical (m, r, p); the descriptor; and the DEGENERATE tag word (0 none).
+// canonical (m, r, p); the descriptor; the DEGENERATE tag word (0 none); and whether the chart's decode lands on C's
+// section (every chart's but the shape sphere's, R-544).
 struct FragDecode {
     z: array<f32, 8>,
     z_latent: bool,
@@ -400,6 +402,7 @@ struct FragDecode {
     p: array<vec2<f32>, 3>,
     d: FragDescriptor,
     tag: u32,
+    on_section: bool,
 }
 ";
 
@@ -426,8 +429,9 @@ fn decode_glue(prefix: &str) -> String {
     read_descriptor(&mut out, "o.d", "wo", l.at("DESCRIPTOR"));
     let _ = write!(
         out,
-        "    o.tag = wo.w[{}];\n    return o;\n}}\n",
-        l.at("TAG")
+        "    o.tag = wo.w[{}];\n    o.on_section = wo.w[{}] != 0u;\n    return o;\n}}\n",
+        l.at("TAG"),
+        l.at("ON_SECTION")
     );
     out
 }
@@ -453,12 +457,15 @@ fn describe_glue(prefix: &str) -> String {
     out
 }
 
-/// The encode's glue: `FragEncoded` and `frag_encode(m, r, p)`.
+/// The encode's glue: `FragCanonical`, `FragEncoded` and `frag_encode(m, r, p)`.
 fn encode_glue(prefix: &str) -> String {
     let mut out = String::from(
-        "\n// One state's encode under the default links (kernel stage::encode's words): z, α, β, λ and the notices word\n\
-         // (bit 0 the coincident inner pair, bit 1 lookup_mirrored, bits 8 to 15 the clamped controls).\n\
-         struct FragEncoded {\n    z: array<f32, 8>,\n    alpha: f32,\n    beta: f32,\n    lambda: f32,\n    notices: u32,\n}\n\n\
+        "\n// C's canonical (m, r, p), the state the encode's z decodes to (inverse-encode Part 1, T3).\n\
+         struct FragCanonical {\n    m: vec3<f32>,\n    r: array<vec2<f32>, 3>,\n    p: array<vec2<f32>, 3>,\n}\n\n\
+         // One state's encode under the default links (kernel stage::encode's words): z, α, β, λ and the notices word\n\
+         // (bit 0 the coincident inner pair, bit 1 lookup_mirrored, bits 8 to 15 the clamped controls); and C's\n\
+         // canonical state.\n\
+         struct FragEncoded {\n    z: array<f32, 8>,\n    alpha: f32,\n    beta: f32,\n    lambda: f32,\n    notices: u32,\n    canonical: FragCanonical,\n}\n\n\
          // The fragment encode of the state (m, r, p).\n\
          fn frag_encode(m: vec3<f32>, r: array<vec2<f32>, 3>, p: array<vec2<f32>, 3>) -> FragEncoded {\n",
     );
@@ -471,12 +478,14 @@ fn encode_glue(prefix: &str) -> String {
     }
     let _ = writeln!(
         out,
-        "    o.alpha = {};\n    o.beta = {};\n    o.lambda = {};\n    o.notices = wo.w[{}];\n    return o;\n}}",
+        "    o.alpha = {};\n    o.beta = {};\n    o.lambda = {};\n    o.notices = wo.w[{}];",
         f("wo", at + 8),
         f("wo", at + 9),
         f("wo", at + 10),
         at + 11
     );
+    read_ic(&mut out, "o.canonical", "wo", l.at("CANON"));
+    out.push_str("    return o;\n}\n");
     out
 }
 
@@ -505,6 +514,29 @@ fn shape_glue(prefix: &str) -> String {
         f("wo", n_at),
         f("wo", n_at + 1),
         f("wo", n_at + 2)
+    );
+    out
+}
+
+/// The free decode's glue: `FragFree` and `frag_decode_free(z)`, the shared decoder on a latent `z`.
+fn free_glue(prefix: &str) -> String {
+    let mut out = format!(
+        "\n// One free decode (kernel stage::fragment::decode_free): the canonical (m, r, p) of a latent z and the\n\
+         // DEGENERATE tag word (0 none).\n\
+         struct FragFree {{\n    m: vec3<f32>,\n    r: array<vec2<f32>, 3>,\n    p: array<vec2<f32>, 3>,\n    tag: u32,\n}}\n\n\
+         // The free decode of the latent z under the default links: the ROUNDTRIP preset's second D, of the encode's z.\n\
+         fn frag_decode_free(z: array<f32, 8>) -> FragFree {{\n    var wi: {prefix}_words;\n"
+    );
+    let l = fragment::free();
+    for k in 0..8 {
+        let _ = writeln!(out, "    wi.w[{}] = bitcast<u32>(z[{k}]);", l.at("Z") + k);
+    }
+    let _ = writeln!(out, "    let wo = {prefix}_body(wi);\n    var o: FragFree;");
+    read_ic(&mut out, "o", "wo", l.at("IC"));
+    let _ = write!(
+        out,
+        "    o.tag = wo.w[{}];\n    return o;\n}}\n",
+        l.at("TAG")
     );
     out
 }
@@ -547,6 +579,14 @@ pub fn snippets(spv: &[u8]) -> Result<Vec<(&'static str, String)>, String> {
         lift(&module, "stage_fragment_describe", "fd_describe")?,
         describe_glue("fd_describe"),
         section_end("describe")
+    );
+    let _ = write!(
+        decode,
+        "\n{}\n{}{}{}\n",
+        section_start("free"),
+        lift(&module, "stage_fragment_decode_free", "fd_free")?,
+        free_glue("fd_free"),
+        section_end("free")
     );
     let encode = format!(
         "{}\n{}{}",

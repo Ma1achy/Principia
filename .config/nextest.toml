@@ -23,14 +23,16 @@ filter = """
 """
 threads-required = "num-test-threads"
 
-# The xtask tests that run cargo, and a full golden run through it, without taking every test thread: `xtask ci --list`
-# (TASK-M0-06), which builds the workspace's tests with `--features controls`; the `ci` golden runner (TASK-M0-06);
+# The xtask tests that run cargo, and a full golden run through it, without taking every test thread (but for `xtask ci
+# --list`, which the next override also gives every one): `xtask ci --list` (TASK-M0-06), which builds the workspace's
+# tests with `--features controls`; the `ci` golden runner (TASK-M0-06);
 # `xtask ci` against the stand-in cargo, whose golden step renders every harness case through the real one (TASK-M0-22);
 # and `xtask golden m1-outcome` through a wrapper of the real cargo (the golden harness's CI check,
 # `qa_ops_golden_harness_ci`). On a cold target, as in a `ci` shard run from the archive, side by side they share the
 # test threads' CPUs and cargo's build lock, and the listing's build outlasts the test's 600 s timer on its xtask child
 # (PR #179). In the group `xtask-cargo` they run one at a time, beside the other tests. The `ci` profile inherits this
-# override; the `ci-workspace` and `gpu-kernel` profiles select none of them. Applied per R-369.
+# override; the `ci-workspace` profile, which inherits it too, selects only `xtask ci --list`'s test, and `gpu-kernel`
+# none of them. Applied per R-369.
 # `xtask screenshot --all` (TASK-M0-20) joins them: its `gui` suites run gui's capture mode through `cargo run -p gui
 # --features mock` on the workspace's target, building there and taking its build lock, with no timer of its own.
 # Applied per R-369.
@@ -43,6 +45,34 @@ filter = """
     | (binary_id(=xtask::qa_TASK-M0-20) & test(=qa_cli_screenshot_all_runs_selftest))
 """
 test-group = "xtask-cargo"
+
+# `xtask ci --list` in that group also takes every test thread, so it runs alone. In a `ci` shard, where it no longer
+# runs (`ci-workspace`, below), it was a cold build of nearly every test target, whose time follows the runner's speed:
+# slow runners took 553-600 s against the 600 s limit on its xtask child (R-214), with the shard's 3 other test threads
+# running beside it. On any other cold target it still is. nextest takes each setting from
+# the first override that matches and sets it, so the test keeps its group from the override above, and this override
+# stays after that one, whose filter the negative controls in `qa_ops_nextest_cargo_group` edit at the binary's first
+# mention. Applied per R-369.
+[[profile.default.overrides]]
+filter = "binary_id(=xtask::qa_TASK-M0-06_list) & test(=qa_m006_ci_list_lists_golden_cases_without_a_device)"
+threads-required = "num-test-threads"
+
+# The tests that exercise TASK-M2-26's own source run first in any run that selects them, ahead of their packages'
+# slower tests. A run's result is unchanged: priority only orders the schedule. It is for the mutants gate (R-302;
+# REQ-VAL-149, R-376): a mutant runs its package's tests in the name order until one fails (`.cargo/mutants.toml`), so a
+# mutant only `roundtrip_preset` catches sat behind about 500 s of render's tests and 1300 s of validation's, for each
+# of 142 mutants, and 8 shards of 300 min could not hold them (run 41098815668: 103 of 714 never ran). These tests
+# themselves take under a minute. Applied per R-369.
+[[profile.default.overrides]]
+filter = """
+    binary_id(=render::roundtrip_preset)
+    | binary_id(=validation::roundtrip_preset)
+    | binary_id(=validation::roundtrip_preset_golden)
+    | binary_id(=validation::qa_TASK-M2-26)
+    | binary_id(=validation::qa_TASK-M2-26_fragment)
+    | binary_id(=xtask::fragment_wgsl)
+"""
+priority = 50
 
 # The job queue's live tests (R-658) start runners and jobs in process groups of their own. A hung one is ended by this
 # timer rather than holding a test thread: `slow-timeout` 120 s, ended at the third period, past their 45 s per xtask
@@ -82,10 +112,11 @@ xtask-cargo = { max-threads = 1 }
 # `invariant_gradient_gpu`, TASK-M2-12) and encode's (`engine`'s `encode_gpu` and `qa_TASK-M2-15_gpu`, TASK-M2-15) among
 # them, the per-pixel mass decode's (`engine`'s `per_pixel_mass_gpu`, TASK-M2-13) and decoder test 12 across backends
 # (`engine`'s `decode_cross_backend` and `qa_TASK-M2-24_gpu`, TASK-M2-24), the lock's locked-against-free render
-# (`engine`'s `lock_gpu`, TASK-M2-23), and the agreement preset's against the decode stage (validation's
+# (`engine`'s `lock_gpu`, TASK-M2-23), the kernel's own f32 `atan2` as the backend compiles it (`engine`'s `arctan_gpu`,
+# RQ-628), and the agreement preset's against the decode stage (validation's
 # `agreement_preset_gpu` and `qa_TASK-M2-25_gpu`) and the fragment snippets' check against the kernel's translation
 # (xtask's `fragment_wgsl`, TASK-M2-25); the xtask tests that run cargo on
-# the workspace's own target directory run in the `ci-workspace` job under the `ci-workspace` profile (R-372,
+# the workspace's own target directory, and validation's `qa_TASK-M0-24`, run in the `ci-workspace` job under the `ci-workspace` profile (R-372,
 # REQ-SYS-078; below); every other test runs in the `ci` job under the `ci` profile. Each CI step names its profile in
 # NEXTEST_PROFILE. The three filters are disjoint and together select every test, so the jobs run every test once, as
 # `xtask/tests/nextest.rs` checks. Locally, the default profile runs them all. The `ci` job runs its profile as 4
@@ -110,6 +141,7 @@ default-filter = """
         | binary_id(=engine::decode_cross_backend)
         | binary_id(=engine::qa_TASK-M2-24_gpu)
         | binary_id(=engine::lock_gpu)
+        | binary_id(=engine::arctan_gpu)
         | binary_id(=validation::decode_f32_eps_gpu)
         | binary_id(=validation::invariant_gradient_gpu)
         | binary_id(=validation::agreement_preset_gpu)
@@ -118,9 +150,11 @@ default-filter = """
         | binary_id(=xtask::qa_TASK-M0-14)
         | binary_id(=xtask::fragment_wgsl)
         | binary_id(=xtask::nextest)
+        | binary_id(=validation::qa_TASK-M0-24)
         | (binary_id(=xtask::controls) & test(/^controls_on_this_workspace_skips_gui/))
         | (binary_id(=xtask::qa_TASK-M0-01) & test(=qa_cargo_xtask_alias_runs_deps))
         | (binary_id(=xtask::qa_TASK-M0-02) & test(/^qa02_a_failing_plan_check_turns_xtask_ci_red/))
+        | (binary_id(=xtask::qa_TASK-M0-06_list) & test(=qa_m006_ci_list_lists_golden_cases_without_a_device))
         | (binary_id(=xtask::screenshot) & test(/^screenshot_gui_surface/))
     )
 """
@@ -129,13 +163,20 @@ default-filter = """
 # screenshot runner's `gui` surface tests, which run gui's capture mode through `cargo run` (RQ-252), which CI's
 # `ci-workspace` job runs on a build of its own, beside the `ci` shards (R-372, REQ-SYS-078): the shards run from an
 # archive, which carries no cargo build state, so in a shard each would rebuild the workspace while holding every
-# test thread.
+# test thread. Validation's `qa_TASK-M0-24` joins them: it runs `cargo test` on the workspace and `cargo xtask controls
+# --list`, the same `--features controls` build the alias test's `cargo xtask ci --list` makes here; in a `ci` shard
+# that rebuild left `ci (4)` 13 MiB free on a 72 GB runner (run 41756812074). It is not in xtask, so each job that runs
+# this profile has a step that names validation. `xtask ci --list`'s test in `qa_TASK-M0-06_list` joins them, that one
+# test, as its binary's others build nothing: the same listing in a `ci` shard took `ci (3)`'s `target/debug/deps` from
+# 17 GB to 42 GB (run 41775231980). Applied per R-369.
 [profile.ci-workspace]
 default-filter = """
     binary_id(=xtask::nextest)
+    | binary_id(=validation::qa_TASK-M0-24)
     | (binary_id(=xtask::controls) & test(/^controls_on_this_workspace_skips_gui/))
     | (binary_id(=xtask::qa_TASK-M0-01) & test(=qa_cargo_xtask_alias_runs_deps))
     | (binary_id(=xtask::qa_TASK-M0-02) & test(/^qa02_a_failing_plan_check_turns_xtask_ci_red/))
+    | (binary_id(=xtask::qa_TASK-M0-06_list) & test(=qa_m006_ci_list_lists_golden_cases_without_a_device))
     | (binary_id(=xtask::screenshot) & test(/^screenshot_gui_surface/))
 """
 
@@ -157,6 +198,7 @@ default-filter = """
     | binary_id(=engine::decode_cross_backend)
     | binary_id(=engine::qa_TASK-M2-24_gpu)
     | binary_id(=engine::lock_gpu)
+    | binary_id(=engine::arctan_gpu)
     | binary_id(=validation::decode_f32_eps_gpu)
     | binary_id(=validation::invariant_gradient_gpu)
     | binary_id(=validation::agreement_preset_gpu)
@@ -179,4 +221,11 @@ success-output = "immediate"
 # It changes only what is shown; the test and its filter are as before. Applied per R-369.
 [[profile.gpu-kernel.overrides]]
 filter = "binary_id(=engine::qa_TASK-M2-24_gpu) & test(=qa_m224_gpu_canon_turn)"
+success-output = "immediate"
+
+# The kernel's own f32 `atan2` on the job's backend (RQ-628): `arctan_gpu_is_cpu` prints the GPU's accuracy against f64
+# `atan2` on each sweep, shown on success, so lavapipe's run records it. It changes only what is shown. Applied per
+# R-369.
+[[profile.gpu-kernel.overrides]]
+filter = "binary_id(=engine::arctan_gpu) & test(=arctan_gpu_is_cpu)"
 success-output = "immediate"

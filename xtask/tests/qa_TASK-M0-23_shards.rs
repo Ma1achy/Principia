@@ -11,7 +11,10 @@
 //!
 //! What these tests hold to: every shard k of 0..n runs, and no other; a shard cut off by its limit, or failed, or one
 //! that tested nothing and did not say so with exit 0, fails and is named; and the aggregate verdict fails when any
-//! shard was cut off or failed, and reads every shard's report, so a survivor in any shard is named.
+//! shard was cut off or failed, and reads every shard's report, so a survivor in any shard is named. The aggregate is
+//! the job `mutants-verdict`, whose result the job `mutants-check`, the required check, reports whatever it ended in
+//! (R-678, 3 Nov 2026: a job of every run of `mutants.yml`, no longer a check run the verdict posts; that is the one
+//! change here, R-678's exception to R-290).
 //!
 //! The workflow's shell steps are executed here in bash, with their `${{ … }}` expressions substituted and the
 //! programs they call stood in for (a stand-in `cargo` for `cargo mutants`; the built xtask for `cargo xtask`), so the
@@ -417,7 +420,7 @@ negative_control!(
 
 const CAUGHT: &str = "src/a.rs:1:1: replace f -> u32 with 0";
 
-/// One shard's uploaded report, as `mutants-check` downloads it: `shards/mutants-report-shard-<k>/outcomes.json`.
+/// One shard's uploaded report, as the aggregate downloads it: `shards/mutants-report-shard-<k>/outcomes.json`.
 fn report(temp: &Path, k: u32, missed: &[&str]) {
     let dir = temp.join(format!("shards/mutants-report-shard-{k}"));
     std::fs::create_dir_all(&dir).expect("shard dir");
@@ -488,12 +491,15 @@ fn aggregate_covers_every_shard(script: &str, n: u32) {
     );
 }
 
+/// The aggregate verdict job, whose result `mutants-check` reports.
+const AGGREGATE: &str = "mutants-verdict";
+
 fn aggregate_script() -> String {
-    let lines = job(&mutants_yml(), "mutants-check");
+    let lines = job(&mutants_yml(), AGGREGATE);
     let step = steps(&lines)
         .into_iter()
         .find(|s| s.iter().any(|l| l.contains("cargo xtask mutants-check")))
-        .expect("qa23s: the mutants-check job runs no mutants-check");
+        .expect("qa23s: the aggregate job runs no mutants-check");
     script(&step)
 }
 
@@ -529,9 +535,10 @@ mod first_shard_only {
 }
 
 /// R-302: the aggregate job waits for the shards (`needs: mutants`) and runs whatever they did (`always()`), on pull
-/// requests, and downloads every shard's report.
+/// requests, and downloads every shard's report; and the job `mutants-check`, the required check (R-305), waits for it
+/// (`needs: mutants-verdict`), runs whatever it ended in (`if: always()`) and reads its result (R-678).
 fn aggregate_runs_after_every_shard(yml: &str) {
-    let lines = job(yml, "mutants-check");
+    let lines = job(yml, AGGREGATE);
     let has = |s: &str| {
         lines
             .iter()
@@ -552,6 +559,22 @@ fn aggregate_runs_after_every_shard(yml: &str) {
         has("pattern: mutants-report-shard-*"),
         "qa23s: the aggregate does not download every shard's report"
     );
+    let check = job(yml, "mutants-check");
+    let at_job = |k: &str| {
+        check
+            .iter()
+            .find_map(|l| l.strip_prefix(&format!("    {k}:")))
+            .map(|v| v.trim().to_owned())
+    };
+    assert!(
+        at_job("if").as_deref() == Some("always()")
+            && at_job("needs").is_some_and(|n| n.contains(AGGREGATE))
+            && check
+                .iter()
+                .any(|l| !l.trim_start().starts_with('#')
+                    && l.contains("needs.mutants-verdict.result")),
+        "qa23s: mutants-check does not report the aggregate's verdict whatever happened"
+    );
 }
 
 #[test]
@@ -568,3 +591,16 @@ negative_control!(
         "if: github.event_name == 'pull_request'"
     ))
 );
+
+mod check_skipped_on_a_failed_verdict {
+    use super::*;
+    negative_control!(
+        qa23s_the_aggregate_runs_after_every_shard,
+        "a mutants-check job skipped once the aggregate has failed",
+        expected = "qa23s: mutants-check does not report the aggregate's verdict whatever happened",
+        aggregate_runs_after_every_shard(&mutants_yml().replace(
+            "  mutants-check:\n    if: always()\n",
+            "  mutants-check:\n    if: success()\n"
+        ))
+    );
+}

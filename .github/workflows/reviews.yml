@@ -12,6 +12,16 @@ on:
   pull_request:
   pull_request_review:
 
+# A burst of review events leaves one run (R-676): each pull request has one group per event, its merge ref's, with
+# cancel-in-progress, so a newer review cancels the review run before it, and a push cancels the `pull_request` run on
+# the head it supersedes. The events keep groups of their own because a `pull_request_review` run re-runs the
+# `pull_request` run (R-276): in one group, the re-run would cancel the run that started it (R-656). A cancelled run's
+# `reviews-complete` gives way to the newer run's of the same event, which checks the same reviews afresh. A run on
+# `main`, which this workflow never has, would have a group of its own, its run id, and never be cancelled.
+concurrency:
+  group: reviews-${{ github.event_name }}-${{ github.ref == 'refs/heads/main' && github.run_id || github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
 permissions:
   contents: read
   pull-requests: read
@@ -26,6 +36,13 @@ env:
   # keys here too (R-337). R-233 (debug info at the default) governs local builds only.
   CARGO_PROFILE_DEV_DEBUG: line-tables-only
   CARGO_PROFILE_TEST_DEBUG: line-tables-only
+  # No incremental state, the owner's CI setting (PR #394), in every workflow like R-374's values. `Swatinem/rust-cache`
+  # already exports CARGO_INCREMENTAL=0 to the steps after it, and before it computes its key, so its key and every
+  # build after it are the same without this line. What the line adds: the value in the steps before rust-cache, where
+  # no cargo build runs and `ci.yml`'s `cachekey` hashes it, and in jobs without rust-cache, where only `ci.yml`'s
+  # `ci-release` runs cargo and it builds only for the release doctests, which aren't incremental by default. Local
+  # builds are unaffected (R-233).
+  CARGO_INCREMENTAL: "0"
 
 jobs:
   reviews-complete:
@@ -50,6 +67,10 @@ jobs:
           # Saved only in a run on a push to `main`, which this workflow never is, so it saves nothing (R-326). It
           # restores, read-only, the key `ci.yml`'s `ci` job saves on `main`, `cargo-registry-ci-…` (R-337).
           save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+      # Every dependency without debug info, as a cargo config in the runner's CARGO_HOME; the workspace's own crates
+      # keep R-374's line tables (`.github/actions/cargo-ci-config`).
+      - name: Dependencies without debug info, every profile
+        uses: ./.github/actions/cargo-ci-config
       - name: cargo xtask reviews-check
         env:
           GH_TOKEN: ${{ github.token }}
@@ -62,8 +83,19 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR: ${{ github.event.pull_request.number }}
         run: |
           set -euo pipefail
+          # A push since this review supersedes its head: the new head's runs check it, and re-running the old head's
+          # run, in the `pull_request` group, would cancel the new head's. The head is read here and again right
+          # before the re-run, after any wait: a push during the wait cancels the watched run, which then reads
+          # `cancelled`.
+          live_head() { gh api "repos/$GH_REPO/pulls/$PR" --jq .head.sha; }
+          live=$(live_head)
+          if [ "$live" != "$HEAD_SHA" ]; then
+            echo "$HEAD_SHA is no longer the head ($live): nothing to re-run"
+            exit 0
+          fi
           # The latest `pull_request`-event run of this workflow for the head: its field `$1`, empty if there is none.
           latest() {
             gh run list --workflow reviews.yml --event pull_request --commit "$HEAD_SHA" --limit 1 \
@@ -81,6 +113,12 @@ jobs:
           conclusion=$(latest conclusion)
           if [ "$conclusion" = success ]; then
             echo "pull_request run $id for $HEAD_SHA already passed"
+            exit 0
+          fi
+          # The head again, now, after the wait.
+          live=$(live_head)
+          if [ "$live" != "$HEAD_SHA" ]; then
+            echo "$HEAD_SHA was superseded ($live) while its run was waited on: nothing to re-run"
             exit 0
           fi
           echo "pull_request run $id for $HEAD_SHA concluded $conclusion: re-running it"

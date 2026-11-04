@@ -1734,3 +1734,270 @@ words, so the task did not wait. The entry is for correcting the text.*
   quads and the `mock_tile_bounds` capture are unchanged, and `k = 4` gives two levels more. A control in
   `f3_fill_modes_quads_finer_only_in_fit` shows the divide-by-`k` rule failing. The three texts are not changed.
 - **Waits:** nothing built waits; REQ-GUI-230's real-engine Fit reads the screen floor, not this formula.
+
+## RQ-675: A margin node's two field ins: render_gui_spec § 5 puts them on a derived source, § 3.1 gives a source no input and a brightness one *(a conflict inside the spec; REQ-GUI-024; render_gui_spec § 3.1, § 5, § 15 item 6; context: TASK-M7-12)*
+
+*Queued 3 Nov 2026 by the orchestrator's filing task, from the read-only pre-flight of TASK-M7-12. Nothing is chosen.*
+
+- **File, section:**
+  - `plan/requirements.yaml`:17743, REQ-GUI-024's verify: "a margin node has two field ins". `plan/tasks/M7/TASK-M7-12.md`:42
+    names the same in `stain_fanout`.
+  - `docs/gui/principia_render_gui_spec.md`:2050-2052, § "5. Sources & multi-source": "**Multi-source mappings expose
+    multiple input ports** on the consuming node (e.g. a derived source taking two `field` ins for a `top1 − top2`
+    margin, or a `gradient-magnitude` node)."
+  - The same file, § "3.1 Node kinds", :2006 and :2008: `source` has inputs "—"; `brightness` has "one `field`". A
+    `colour` takes "one or more `field`" (:2007) and a `post` "`vec3` (+ optional `field` ins)" (:2010).
+  - The same file, § "15. Settled decisions (record)", item 6 (:2474-2475): "**multi-source = multiple input ports**, not
+    multi-wire-per-port."
+  - `plan/requirements.yaml`:14247, REQ-COL-015: "the derived operators gradient_magnitude via three evaluations at ±ε
+    and topk_margin = d_1 − d_2".
+- **Checked on `main`'s code:** `crates/render/src/assemble.rs` follows § 3.1: `declaration` (:557-585) gives a source
+  and a combiner no input, a brightness at most one, a colour and a post up to `MAX_INPUTS` (4); `in_ports` (:596-605)
+  gives `Kind::Source` none. No occupant under `crates/render/shaders/wgsl/frag/` is a margin (its files are `colour/`'s
+  `outcome_state.wgsl`, the three combiners, `debug/` and `post/`'s `edge_line`, `fallback_tint`, `pending_hatch`).
+- **The question:** where the margin's two field ins sit, so that `stain_fanout`'s "a margin node has two field ins" has
+  a node to test.
+- **Options seen:** (a) the margin is a `colour` (or `post`) occupant declaring two `// @input`s, as § 3.1 and § 15
+  item 6 allow, and § 5's example is reworded; (b) a derived `source` takes two `field` ins, as § 5 says, and § 3.1's
+  `source` row and the assembler change; (c) the margin is REQ-COL-015's `topk_margin`, a derived scalar field read as
+  one `field`, and REQ-GUI-024's verify names another multi-input node.
+- **Applied meanwhile:** nothing; `main`'s assembler stands.
+- **Waits:** TASK-M7-12's `stain_fanout` arm (REQ-GUI-024).
+
+## RQ-676: TASK-M7-12's deliverables against the built assembler: a second walk, an edit-sequence proptest that cannot live in `render`, and a fallback distinct from `#141418` *(a task file against `main`'s code and the corpus; REQ-RENDER-010, REQ-RENDER-072, REQ-RENDER-081; render_gui_spec § 13; R-467; systems_architecture § 7.1; context: TASK-M7-12)*
+
+*Queued 3 Nov 2026 by the orchestrator's filing task, from the read-only pre-flight of TASK-M7-12. Nothing is chosen.*
+
+- **File, section:**
+  - `plan/tasks/M7/TASK-M7-12.md`:33-34, Deliverables: "`crates/render/src/codegen/walk.rs` — graph → `shade()` in
+    backbone order, the post chain in declaration order with insert and reorder, the 8-node bound." and
+    "`crates/render/src/codegen/fallback.rs` — identity for dangling / absent inputs, the defined fallback shader for an
+    invalid graph."
+  - The same, :40: "`cargo test -p render stain_always_renderable` (proptest) — fuzz random graph edit sequences: every
+    state renders; forced-invalid graphs render the fallback (REQ-RENDER-072)."
+  - The same, :44: "Proposal: the invalid-graph fallback (flat grey or error tint) and its sRGB value, distinguishable
+    from both-None mid-grey and from the invalid-pixel pattern (REQ-COL-055's hatch, R-132)". REQ-RENDER-081's verify
+    (`plan/requirements.yaml`) names the same two.
+  - `plan/requirements.yaml`, REQ-RENDER-010's verify: "built-in occupants are loaded through the same assembler entry
+    point as a user custom; no second compile path exists".
+  - `crates/engine/src/contract/stain/graph.rs`:15-16: "The port rules, the occupants' declarations and the lowering
+    are the render crate's, the fragment side's (systems_architecture §7.1: `engine` depends on `render`, never the
+    reverse)." `StainGraph` and its edits are `engine`'s (`crates/engine/src/contract/stain/`); `crates/render/Cargo.toml`
+    has no `engine` dependency.
+  - `docs/gui/principia_render_gui_spec.md`:2449-2451, § "13. Invariants": "by default the hatched invalid pattern
+    (R-132) in a debug view and `#141418` in a presentation view, which draws no hatch (R-467)".
+- **Checked on `main`'s code:** `crates/render/src/assemble.rs` already walks the graph in backbone order (`shade(ctx)`,
+  :1154ff), bounds the live post chain at `MAX_POSTS` = 8 (:120, :697-699) and builds the post chain (:733ff), its git
+  history TASK-M1-04's, M1-07's, M1-08's, M1-09's, M1-10's, M1-13's, M2-32's, M2-34's, M7-02's, M7-04's, M7-05's and
+  M7-08's; `crates/render/src/codegen/combine.rs` gives None's identity, both-None the
+  flat mid-grey (TASK-M7-04). A `codegen/walk.rs` beside them would be a second path to `shade()`.
+- **The gaps:** (1) the deliverables name new files for what `assemble.rs` and `combine.rs` hold; (2) a proptest over
+  `StainGraph` edit sequences cannot be a `-p render` test, `render` not depending on `engine`; (3) the fallback's
+  distinctness list omits the presentation view's `#141418`.
+- **Options seen:** (a) re-scope the deliverables to extend `assemble.rs` and `codegen/` (fallback and the remaining
+  wiring), no second walk; (b) move the edit-sequence proptest to `cargo test -p engine`, a plan edit of the acceptance
+  line and REQ-RENDER-072's crate, or keep it in `render` over `assemble::Stain` values rather than `StainGraph` edits;
+  (c) add `#141418` to the fallback's distinctness list in TASK-M7-12 and REQ-RENDER-081's verify. Each may be taken
+  alone.
+- **Applied meanwhile:** nothing; the task file stands as written.
+- **Waits:** TASK-M7-12.
+
+## RQ-677: A slot occupant's default `inputDomains` when no field is wired, and for an unbounded field; and TASK-M7-13's deliverables against the built registry *(a definition requirement, R-72; R-53; REQ-GEN-019; gui_state_contract § 3; context: TASK-M7-13)*
+
+*Queued 3 Nov 2026 by the orchestrator's filing task, from the read-only pre-flight of TASK-M7-13. Nothing is chosen.*
+
+- **File, section:**
+  - `docs/contracts/principia_gui_state_contract.md`:243, § "3. The registry is the scanned filesystem …": "**`inputDomains`
+    (R-53):** each node declares the domain of each input it maps from; by default it inherits the manifest's per-field
+    domain (the fixed `[lo, hi]` of `range_norm`, render_gui_spec §10.1), and a node that transforms its field declares
+    its own."
+  - `plan/requirements.yaml`, REQ-GEN-019's verify: "scan the registry: every entry has inputDomains; an untransformed
+    node's domain equals the manifest [lo, hi] of its field". `plan/tasks/M7/TASK-M7-13.md`:29 repeats it.
+  - `crates/ledger/src/schema.rs`:100-102: "(−∞, ∞): the bounds an entry writes where its range is a gap or provisional
+    (dd_generation_root §3.8; R-426) …", `pub const UNBOUNDED: Range`.
+  - `crates/ledger/src/gen/numeric.rs`:318-324: "`u_range`'s default: the fixed `(lo, hi)` where both are finite, else
+    `(0, 1)`, `range_norm`'s unit interval".
+  - `plan/tasks/M7/TASK-M7-13.md`:22-23, Deliverables: "`crates/render/src/registry/scan.rs` — build-time scan (build.rs)
+    plus runtime registration for customs …" and "`crates/render/src/registry/entry.rs` — the six-field entry, slot
+    validation, inputDomains defaulting from the manifest `[lo, hi]` of `range_norm`."
+- **Checked on `main`'s code:** `crates/render/src/registry.rs` (TASK-M1-08, TASK-M1-12) already scans `frag/`, keeps
+  the six fields and reads `inputDomains` from each file's `// @input` lines; `registry()` (:146-148) scans at run time
+  from `env!("CARGO_MANIFEST_DIR")`. There is no `crates/render/build.rs`. A colour or brightness that declares no input
+  gets the default `field` with `domain: None` (`crates/render/src/assemble.rs`, `default_input`).
+- **The gap:** an occupant in the registry is not yet wired, so it has no field whose `[lo, hi]` it could inherit at
+  scan time; and a field whose range is `Range::UNBOUNDED` has no finite `[lo, hi]` (the generator falls back to
+  `(0, 1)`). The corpus defines neither case.
+- **Options seen:** (a) the registry records "inherits" for an untransformed input, the domain resolved per wire at
+  assembly from the wired field's manifest range, REQ-GEN-019's verify read on a wired node; (b) as (a), with an
+  unbounded field's domain `range_norm`'s `(0, 1)`, as the generator's fallback; (c) another definition, stated by the
+  owner. On the deliverables: (d) re-scope TASK-M7-13 to extend `registry.rs` and its runtime scan, or (e) keep the
+  build-time scan and `build.rs` as written.
+- **Applied meanwhile:** nothing; `main`'s registry stands.
+- **Waits:** TASK-M7-13.
+
+## RQ-678: On the tilted Burrau `K` charts, R-471 E3's "every pixel feasible under every tilt" against R-633 c2's refused cells *(physics; R-471 E3; R-633 c2; REQ-CHART-061, REQ-CHART-067; context: TASK-M2-38, TASK-M2-52)*
+
+*Queued 3 Nov 2026 by the orchestrator's filing task, from the read-only pre-flight of TASK-M2-38. For the owner: yes,
+it is physics, the two rulings give different results on one chart.*
+
+- **File, section:**
+  - `decisions.md`:13831, § "R-471 — …", E3: "Per-pixel evaluation keeps every pixel feasible under every tilt." Its port,
+    :13846-13847: "so a tilt or slice that moves a hidden coordinate (masses, shape) keeps every pixel feasible under
+    every tilt."
+  - `plan/requirements.yaml`, REQ-CHART-067: kind-3 axes warped by default "wherever they appear (the invariant charts,
+    the Burrau family's K axes, …) … so every pixel inside [0,1]² is feasible by construction".
+  - `decisions.md`:27436-27438, § "R-633 — …", the owner's (c) c2: "the (ν, K) chart and Φ_θ,K gain the held L_z, and
+    Φ_θ,L_z gains the held K, as physical hidden coordinates. Cells with no momentum construction at the tilted value
+    (K < L_z²/2I) read as refused, through the tilt's existing ray-degenerate path."
+  - `plan/requirements.yaml`:2950, REQ-CHART-061's verify: "on the invariant and Burrau K charts, warped, every grid
+    pixel whose (a, b) lie in the square validates at every tilt".
+  - `decisions.md`:27541-27543, R-633's note: TASK-M2-38 runs "REQ-CHART-061's fuzz over every gallery chart, the Burrau
+    `K` charts tilted".
+- **The conflict:** with the held `L_z` tilted in, a warped `K` axis that does not read `L_z` reaches pixels with
+  `K < L_z²/2I`, which c2 refuses; REQ-CHART-061 requires every in-square pixel there to validate. E3 names masses and
+  shape as the hidden coordinates it covers; c2 adds a momentum one.
+- **The question:** on the tilted `(ν, K)` and `Φ_θ,K` charts (and `Φ_θ,L_z` tilted into `K`), does every in-square pixel
+  validate (E3), or may cells be refused (c2)?
+- **Options seen:** (a) E3 holds: on `(ν, K)` and `Φ_θ,K` the `K` warp takes the pixel's own held `L_z` (its floor
+  `L_z²/2I`); on `Φ_θ,L_z`, whose `L_z` axis is not that warp but `docs/design/principia_chart_reference.md` § 4.5's
+  linear band `L_z(v) = (2v − 1)·λ_L·L_max(K)`, `L_max(K) = √(2IK)` is taken at the pixel's own tilted held `K`. On
+  `(ν, K)` and `Φ_θ,K`, c2's refusal is then reached only under the linear option if the floored warp is additive, such
+  as `K = L_z²/2I + K_max·t^γ`; a form that keeps `K ≤ K_max` still has no feasible pixel once `L_z²/2I > K_max`, so the
+  form is part of the option. On `Φ_θ,L_z` the tilt moves the held `K` itself (`K = K_centre + d`, `d = span·d̃`,
+  `crates/kernel/src/chart/tilt.rs`:555-564; the offset is added to its target at :596, on `main` so far only for the
+  latent controls; TASK-M2-52 adds the held `K` as a target), and the band gives `L_z²/2I = (2v − 1)²·λ_L²·K ≤ K` for
+  every `K ≥ 0` (`v ∈ [0, 1]`, `λ_L ∈ (0, 1]`, § 4.5); so there a tilt that drives the held `K` below 0
+  (`d < −K_centre`) is refused under either option and whatever the floor form, as `√(2IK)` has no value and §2.2's
+  construction has none ("`K ≥ 0` always", `decisions.md`:18628). Open within (a), not chosen: whether the held `K`'s
+  tilt on `Φ_θ,L_z` is bounded or warped to stay at or above 0 (which would give E3 there too), or those cells stay
+  refused; (b) c2 holds: refused cells occur under tilt, warped or not, and REQ-CHART-061's arm on those charts counts a
+  refused cell as not a failure (E3 and REQ-CHART-067 read as covering masses and shape); (c) another, stated by the
+  owner.
+- **Applied meanwhile:** TASK-M2-52 builds c2 now, as R-633 words it (its refused-cell arm), and is reworked under (a)
+  (applied per R-369 by the orchestrator: TASK-M2-52 is not held; it proceeds on the corpus as written).
+- **Waits:** TASK-M2-38 (REQ-CHART-061's tilted Burrau `K` arm); TASK-M2-52's rework under (a) (it proceeds meanwhile,
+  above), as it builds c2's refusal, option (b): its Deliverables' refused cell (`plan/tasks/M2/TASK-M2-52.md`:32, "on
+  the three Burrau charts, a cell whose tilted value leaves no momentum construction (`K < L_z²/2I`, §2.2's terminal
+  case) is no system") and `tilt_every_chart`'s arm (:37) "cells with `K < L_z²/2I` refused … and every other cell
+  valid", with its control, on the warped `(ν, K)` and `Φ_θ,K`. Under (a) that `K` decode and that test change.
+
+## RQ-679: The slider span of `ν₀`, the held `L_z` and the held `K`, which R-507 U1 divides a hidden offset by, while § G2's Slice centre lists only the eight latent sliders *(a definition requirement, R-72, and a value, R-71; R-507 U1; R-633; render_gui_spec § G2; context: TASK-M8-48, TASK-M2-52)*
+
+*Queued 3 Nov 2026 by the orchestrator's filing task, from the read-only pre-flights. Nothing is chosen.*
+
+- **File, section:**
+  - `decisions.md`:16508-16510, § "R-507 — …", U1: "`d̃` the hidden coordinate's offset divided by that coordinate's
+    slider span, the Slice centre slider's range (§G2). After the rotation `ã`, `b̃` are multiplied back by their full
+    ranges and `d̃` by its span."
+  - `docs/gui/principia_render_gui_spec.md`:317, § "G2. Explore — the everyday view", Slice centre: "eight sliders,
+    `z_α, z_β, z_q0…z_q3, z_μ1, z_μ2`, each with its number box beside it."
+  - `decisions.md`:27434-27437, § "R-633 — …": "coordinate is ν₀ (the held Burrau-family shape)" and "the (ν, K) chart and
+    Φ_θ,K gain the held L_z, and Φ_θ,L_z gains the held K, as physical hidden coordinates".
+  - `plan/tasks/M2/TASK-M2-52.md`:30: "the held `L_z` of `(ν, K)` and `Φ_θ,K`; the held `K` of `Φ_θ,L_z`. Each is offered
+    as a tilt target and a Slice centre slider, a physical value shown as itself".
+- **The gap:** `ν₀`, the held `L_z` and the held `K` are physical hidden coordinates with no latent slider, so § G2 gives
+  them no slider and no range, and U1's `d̃` has no span to divide by.
+- **Options seen:** (a) each span is the coordinate's feasible range at the view's centre, a definition (R-72) written
+  into § G2. Open within (a): the held `K`'s feasible range at the centre is `[L_z²/2I, ∞)`, with no upper end, so (a)
+  needs a cap, for example (a1) the invariant warp's `K_max` (REQ-CHART-044) or (a2) `Φ_θ,L_z`'s calibrated `K`
+  (REQ-CHART-046); and `ν₀`'s range is either `(0, 1)` or `docs/design/principia_chart_reference.md` § 4.5's
+  `[ν_min, ν_max]`, not yet chosen; (b) a fixed span per coordinate, a calibration (R-71); (c) another, stated by the
+  owner.
+- **Applied meanwhile:** nothing.
+- **Waits:** only the span a view supplies, through TASK-M8-48's sliders. TASK-M2-52's kernel work does not wait: the
+  span is the caller's input to `Tilt::new(spec, centre, span)` (`crates/kernel/src/chart/tilt.rs`:509-530), used only
+  as `d = span·d̃` (`Tilt::offsets`, :555-564), and no TASK-M2-52 acceptance arm depends on its value.
+
+## RQ-680: TASK-M7-52's target charts: SM1's table has `θ × dilation` and `ν × dilation`, which no app chart has *(a definition requirement, R-72; R-542; state_map SM1; REQ-COL-113, REQ-COL-115, REQ-COL-129, REQ-COL-134; context: TASK-M7-52, TASK-M7-47)*
+
+*Queued 3 Nov 2026 by the orchestrator's filing task, from the read-only pre-flight of TASK-M7-52. Nothing is chosen.*
+
+- **File, section:**
+  - `docs/design/principia_state_map.md`:147-148, § "SM1. Definition", the target table: "| `θ × dilation` | `(θ, h)`, `h`
+    the scale-free homologous rate `(Σ m r·v)/I · I^¾` | — (never left) |" and "| `ν × dilation` | `(ν, h)`, `ν` the
+    nearest point of the right-triangle curve (mirror folded) | past a bounded edge when `ν ∉ [1/32, 31/32]` …".
+    The same section, :133-135: "*Transcribed from the prototype (R-542; `smWhere`, `smTarget`).* The prototype's targets
+    are its charts".
+  - `plan/requirements.yaml`:16609, REQ-COL-129: "θ × h 7e-8 … ν × h 4.9e-4"; REQ-COL-115's verify (:16366) and
+    REQ-COL-113's (:16330), TASK-M7-47's `chart_position_identity` and `chart_position_status`, name the same targets.
+  - `plan/requirements.yaml`, REQ-COL-134's verify: "over seeded states per target", naming no targets.
+- **Checked:** "dilation" appears in neither `docs/design/principia_chart_reference.md` nor
+  `docs/gui/principia_render_gui_spec.md` (§ G7, the Chart builder, included), nor under `crates/kernel/src`. The app's
+  charts encode through `crates/kernel/src/encode/by_kind.rs`'s `encode_into` (:210), and a curve axis's nearest point is
+  `crates/kernel/src/encode/curve.rs`'s `nearest` (:242). The corpus does name the dilation rate as an axis quantity:
+  `decisions.md`:18628, the traces' leave table, "A physical quantity (`E`, `L_z`, `K`, a momentum, the dilation rate)",
+  and `docs/design/principia_lines.md`:333, § "8. Traces", "a physical quantity (`E`, `L_z`, `K`, a momentum, the
+  dilation rate)".
+- **The gap:** which charts are "each target chart" for the one projection: SM1's targets are the prototype's, two of
+  them with an axis the app does not define.
+- **Options seen:** (a) the targets are the app's charts, through `encode_into` and `curve::nearest`, SM1's dilation
+  rows and REQ-COL-113's, -115's and -129's θ × h and ν × h read as the prototype's record. (a) leaves REQ-COL-129's
+  `θ × h` and `ν × h` tolerances, and TASK-M7-47's arms on them, without a target, so it drops requirement content and
+  is the owner's call; (b) define the two dilation charts (their `h` axis, range and link) and build them as targets;
+  (c) another, stated by the owner.
+- **Applied meanwhile:** nothing.
+- **Waits:** TASK-M7-52 (and TASK-M7-47's `θ × h` and `ν × h` arms through it).
+
+## RQ-681: TASK-M9-01: no task builds the scoring runner it calls, AT-D6's twins and slice planes are undefined, and OC-2's state and precision are unsettled *(silence, R-72; R-71; R-649, R-650; REQ-VAL-214 to REQ-VAL-217; dd_replication § 4.3, § 8; context: TASK-M9-01, TASK-M3-27, RQ-660)*
+
+*Queued 3 Nov 2026 by the orchestrator's filing task, from the read-only pre-flight of TASK-M9-01. Nothing is chosen.*
+
+- **File, section:**
+  - (a) `plan/tasks/M9/TASK-M9-01.md`:35-38 call `cargo xtask gate replication --target OC-2` (and `AT-D6`, each with
+    `--propose`); `plan/tasks/M3/TASK-M3-27.md`:38-39 call `--target PL-8a`. `docs/design/principia_dd_replication.md`
+    :712-713: "**The gate** is one command, `cargo xtask gate replication --target <id>`, with `--propose` for a
+    calibration's proposal and `--render` …", and :714-716 (R-649, R-650): "it reports the outcome (§ 12.3) and blocks
+    nothing". `xtask/src/main.rs`:45-48: "gate (<gate> | --all | --list) … fails naming each input whose outcome is not
+    its expected one"; `xtask/src/gate.rs` takes no `--target` or `--propose`.
+  - (b) `plan/requirements.yaml`, REQ-VAL-216: "with scaled twins (rows equal up to a rescaling) landing on one point …
+    each slice family's residual off its fitted plane printed". `docs/incoming/2026-10-27_validation_plan/PLAN.md`:249
+    cites "`ATP` D6, §5 steps 2–3", and :50 gives `ATP` as "`/mnt/user-data/outputs/atlas_into_principia_plan.md`
+    (**outside the repo**)".
+  - (c) `plan/requirements.yaml`, REQ-VAL-214: "recomputed from its initial conditions … must match the row's catalogued
+    `E_cat` and `L_cat` to their printed precision"; REQ-VAL-215: one tolerance on E and L.
+    `docs/incoming/2026-10-26_orbit_catalogues/INSTRUCTION_orbit_catalogues_2026-10-26.md`:24-25: "`pub_*` as the source
+    paper published them and `ref_*` as the site re-converged them. E and L are recomputed from `ref_*` as a check on
+    the layout." RQ-660 measured on two Rose rows that `L_cat` is the refined state's (Σ m(x·vy − y·vx)
+    4.841466815563855e-05 and −3.7699259047840883e-06 from `ref_*`, 0.0 on both from `pub_*`).
+- **Measured, 3 Nov 2026,** on `threebodyorbits_ics.csv` (3,943 rows): `E_cat` is printed with 1 to 8 decimals (1 on
+  343 rows, all −4.5 or −1.0; 6 on 2,872). `L_cat` is "0.0" on 402 rows, a plain decimal of 3 to 8 places on 434, and in
+  exponent form on 3,107 (magnitudes 8.2e-35 to 4.8e-5, up to 17 significant digits). E and L recomputed (G = 1, the
+  masses as given) on all 3,943 rows: from `ref_*`, E matches `E_cat` to at most 4.9e-7 relative on every row, and the
+  worst |L − `L_cat`| is 5.0e-6; from `pub_*`, typical rows are off by about 1e-7 relative in E, but the worst is off by
+  2.8e-1, 16 rows by more than 1e-3 (family V 2, li_IIC 2, III 2, IVa 3, IVb 2, IVc 2, simo 1, II 1, sheen 1), and the
+  worst |L − `L_cat`| is 2.3e-2.
+- **The gaps:** (a) no task's deliverables build the replication scoring command, with `--target`, `--propose` and the
+  three outcomes; (b) which rows are scaled twins (which rescaling, found how), and the fitted plane's coordinates and
+  fit, are undefined, and their source is outside the repo; (c) whether OC-2 recomputes from `pub_*` or `ref_*`, and what
+  "printed precision" means for a value printed to one decimal or in exponent form, against one tolerance.
+- **Options seen:** (a) a deliverable in TASK-M3-27 (the earlier milestone that calls it) or TASK-M9-01, or a new owning task;
+  (b) definitions written by TASK-M9-01 (R-72), physics-reviewed, or the ATP draft brought into the repo as a record;
+  (c) `ref_*`, the state RQ-660 found `L_cat` matches, or `pub_*` with the drift reported (on the 16 rows above, more
+  than refinement drift: up to 2.8e-1 relative in E); and a tolerance per row from its printed digits, or one tolerance
+  with the coarse rows reported apart, or an absolute tolerance on L (most `L_cat` are numerically zero, 3,107 in
+  exponent form at most 4.84147e-5 in magnitude and 402 reading 0.0, where a count of printed digits means nothing).
+- **Applied meanwhile:** nothing.
+- **Waits:** TASK-M9-01; TASK-M3-27 for (a).
+
+## RQ-684: R-360 has every control run across the `xtask-ci` shards, through `cargo xtask controls`; three now run in `ci-workspace` under nextest *(conflict: R-360 and REQ-SYS-077 against PR #395's item (f), decided per R-369; the code review (5763833425, F3) and qa review (5763914449, Q1) of PR #395; context: `tooling/ci-one-build`)*
+
+*Queued by the implementer of PR #395, on the orchestrator's decision; recorded for the owner. Nothing waits.*
+
+- **File, section:**
+  - `decisions.md` § "R-360 — `cargo xtask ci --partition k/n` splits the controls into n = 4 parallel jobs, by a stable
+    hash of the control name", Applied: "The n slices are disjoint and together hold every control, so every control
+    runs exactly once across the shards", and "The controls still run through `cargo xtask controls`'s own cargo
+    invocations (R-231), inside `cargo xtask ci` (R-235, REQ-VAL-007)."
+  - `plan/requirements.yaml` REQ-SYS-077, statement before PR #395: "every control run exactly once across the shards
+    (R-360)"; verify detail before PR #395: "whose CI logs together run each control once (R-360)".
+- **The conflict:** PR #395's item (f) takes the three controls in `xtask/tests/nextest.rs` that list the workspace in
+  its default feature set out of the `xtask-ci` shards (`controls::IN_CI_WORKSPACE`, `Partition::runs`), since in a shard
+  they cost a second whole build of the workspace's tests (run 41756812074: 48 GB of `target/debug/deps`, shards 2 and
+  4). They run as a step of `ci-workspace`, through `cargo nextest run --features controls`, not through
+  `cargo xtask controls`. So each control still runs once on every code run, but not every one across the shards, and
+  those three are judged by libtest's `#[should_panic(expected)]`, not by `cargo xtask controls`. `cargo xtask ci`
+  without `--partition`, as in `gate.yml` and `nightly.yml`, and `cargo xtask controls` locally still run all of them.
+- **Applied meanwhile:** the move stands, decided per R-369 as a CI decision by the orchestrator on PR #395, since each
+  control still runs exactly once per code run, and a control that stops failing its test reds the required `ci`
+  through `ci-workspace`. REQ-SYS-077's statement and verify detail are amended to say so (PR #395, its `*Was:*` kept in
+  the requirement). R-360's text in `decisions.md`, and `plan/CURRENT_RULES.md`, are unchanged: R-360 stays for the owner.

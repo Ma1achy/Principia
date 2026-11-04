@@ -100,6 +100,7 @@ use crate::decode::momentum::{self, Momentum};
 use crate::decode::{self, descriptor, Decoded, Ic};
 use crate::generated::links::{LinkParams, LinkReal, Selection};
 use crate::payload::PayloadReal;
+use crate::Real;
 
 /// The chart's name, [`Chart::name`]'s and its label's.
 const NAME: &str = "ShapeSphere";
@@ -199,9 +200,9 @@ pub struct Inverse<R> {
 
 /// The closed-form inverse of chart_reference §3.2 at the point `n` (a unit vector), the moment of inertia `inertia`
 /// and the fibre phase `phase`, the smaller of `a` and `b` through `n₁² + n₂²` (the module's notes; R-437 at the
-/// poles).
+/// poles). `β`'s `atan2(q, p)` is [`crate::arctan`]'s (RQ-628); `α`'s is `Float`'s.
 #[inline]
-pub fn inverse<R: Float>(n: [R; 3], inertia: R, phase: R) -> Inverse<R> {
+pub fn inverse<R: Real + Float>(n: [R; 3], inertia: R, phase: R) -> Inverse<R> {
     let one = R::one();
     let two = one + one;
     let pole = one + Float::abs(n[0]);
@@ -216,7 +217,7 @@ pub fn inverse<R: Float>(n: [R; 3], inertia: R, phase: R) -> Inverse<R> {
     let beta = select(
         (p == R::zero()) & (q == R::zero()),
         R::zero(),
-        Float::atan2(q, p),
+        Real::arctan2(q, p),
     );
     let psi = phase + beta;
     let (root_a, root_b) = (Float::sqrt(a), Float::sqrt(b));

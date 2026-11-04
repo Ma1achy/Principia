@@ -7,6 +7,12 @@
 //! file checks the steps themselves. Each nextest step has, in its job, a `cargo test --doc` step over the same
 //! packages, features and filter; no step runs tests through bare `cargo test`; the workspace suite runs through
 //! nextest. Each test registers a negative control (R-176, R-212).
+//!
+//! R-677: a step selecting its test binaries with `--test` (tier (b)'s readers) has no doctest step beside it, since
+//! `cargo test --doc` refuses `--test` and a `--test` selection runs no doctest; so such a step pairs with no doctest
+//! step of its own, and instead each package it names must have its doctests run by some `cargo test --doc` step of the
+//! workflow (that package's, or the workspace's), so none is dropped (R-231). That is the one change here, R-677's
+//! exception to R-290.
 
 use std::path::Path;
 
@@ -171,6 +177,34 @@ fn check_nextest_and_doctest_steps(workflow: &str) {
                 args.sort();
             }
             nextest_steps += 1;
+            if args.iter().any(|a| a == "--test") {
+                // R-677: a `--test` selection runs no doctest; its packages' doctests run in a `--doc` step elsewhere.
+                let packages: Vec<&String> = words
+                    .windows(2)
+                    .filter(|w| w[0] == "-p" || w[0] == "--package")
+                    .map(|w| &w[1])
+                    .collect();
+                assert!(
+                    !packages.is_empty(),
+                    "job {job} runs `{run}`, a `--test` selection naming no package"
+                );
+                for pkg in packages {
+                    let covered = jobs.iter().flat_map(|(_, rs)| rs).any(|r| {
+                        words_after(r, "cargo test").is_some_and(|w| {
+                            w.iter().any(|a| a == "--doc")
+                                && (w.iter().any(|a| a == "--workspace")
+                                    || w.windows(2).any(|p| {
+                                        (p[0] == "-p" || p[0] == "--package") && p[1] == *pkg
+                                    }))
+                        })
+                    });
+                    assert!(
+                        covered,
+                        "job {job} runs `{run}`, whose package {pkg}'s doctests no `cargo test --doc` step runs"
+                    );
+                }
+                continue;
+            }
             let mut doc = args.clone();
             doc.push("--doc".to_owned());
             doc.sort();
@@ -226,6 +260,29 @@ negative_control!(
             .join("\n")
     )
 );
+
+mod test_selection_doctests {
+    use super::*;
+    negative_control!(
+        qa_m0_33_each_nextest_step_has_its_doctest_step,
+        "CI's workflow with the workspace's doctest steps gone and, first among its jobs, a `--test` selection (R-677) \
+         in a package no other `cargo test --doc` step covers",
+        expected = "whose package qa_nodoc's doctests no `cargo test --doc` step runs",
+        check_nextest_and_doctest_steps(&{
+            let ci = ci_workflow();
+            assert!(ci.contains("\njobs:\n"));
+            ci.replacen(
+                "\njobs:\n",
+                "\njobs:\n  qa_first:\n    steps:\n      - run: cargo nextest run -p qa_nodoc --test qa\n",
+                1,
+            )
+            .lines()
+            .filter(|l| !(l.trim_start().starts_with("run: cargo test --workspace") && l.contains("--doc")))
+            .collect::<Vec<_>>()
+            .join("\n")
+        })
+    );
+}
 
 /// The control of the bare-`cargo test` assertion: the doctest steps kept, and a workspace `cargo test` step added.
 #[cfg(feature = "controls")]

@@ -158,6 +158,7 @@ const NO_INSTALL: &[&str] = &[
     "actions/upload-pages-artifact@",
     "actions/deploy-pages@",
     "Swatinem/rust-cache@",
+    "./.github/actions/cargo-ci-config",
 ];
 
 /// The kind of a target a `rustup toolchain install && rustup target add` step adds, until `ci_plan` has the channel.
