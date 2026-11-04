@@ -30384,7 +30384,7 @@ The owner's words, 4 Nov 2026, verbatim:
 
 - **The questions are collected** in `docs/incoming/2026-10-28_rq598_data/QUESTIONS_for_authors.md`, by author. The owner sends the emails; no agent does, and the file holds no address.
 - **`p_max` = 4** is a setting of the Brutus runs, ruled here, not a Principia value, so it is recorded in § 5.10 and TASK-M9-22 and takes no calibration requirement.
-- **A gap, queued.** RQ-615's still-open question, whether runs from the authors' initial conditions stand in for R-638's seeded draw, is not in the owner's line: option (a) is about the files. R-638 stands, and the seeded draw is still not run. The question is filed as RQ-693, so the closed entry takes it nowhere.
+- **A gap, queued.** RQ-615's still-open question, whether runs from the authors' initial conditions stand in for R-638's seeded draw, is not in the owner's line: option (a) is about the files. R-638 stands, and the seeded draw is still not run. The question is filed as RQ-696, so the closed entry takes it nowhere.
 
 *What it amends:* nothing. It closes **RQ-612**, **RQ-613**, **RQ-615** and **RQ-616**.
 

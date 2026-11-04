@@ -694,19 +694,6 @@ change: no timer was touched (R-649). Nothing is chosen.*
 - **Waits:** nothing.
 - **4 Nov 2026 (R-707):** ruled: option (a), "you fix (test-only)". The entry stays open until that work is done; it is in hand on another branch.
 
-## RQ-693: Whether BR-1 runs from the authors' own initial conditions stand in for R-638's seeded draw *(the part of RQ-615 R-701 does not reach; R-638; `docs/incoming/2026-10-28_rq598_data/README.md` § 4 task 4; context: TASK-M9-22)*
-
-*Queued 4 Nov 2026 by R-701's port. For the owner: yes, it changes which ensemble BR-1 is scored on, and the corpus does not settle it (R-369).*
-
-- **File, section:**
-  - `docs/archive/review_queue/M0.md`, RQ-615's note of 28 Oct 2026: "**Still open:** whether runs from the authors' initial conditions stand in for the seeded draw, which R-638 asks for ("BR-1 Brutus ensemble on Breen's stated set-up now, fixed recorded seed")".
-  - `docs/incoming/2026-10-28_rq598_data/README.md` § 4 task 4: "Draw the initial positions from a **fixed, recorded seed**."
-  - `decisions.md` § R-701, the owner's words: "RQ-615: (a) local only, plus (c) ask Breen when he replies."
-- **The silence:** RQ-615's options (a) and (c) are about the files: how they are held, and asking for a licence. Neither says whether an ensemble run from their starting points replaces the seeded draw.
-- **Options seen:** (a) runs from the authors' starts stand in, for the 180 they cover; (b) R-638's seeded draw stays required, and the pilot stays a pilot; (c) both, each labelled.
-- **Applied meanwhile:** R-638 stands, and the seeded draw is not run.
-- **Waits:** a BR-1 ensemble beyond the 12-run pilot.
-
 ## RQ-693: What the `(L_z, E)` chart's `E` axis means at `ε ≠ 0`: R-670's refusal covers `Some(E*)`, and this chart has no `E*` *(physics; silence; R-670, RQ-656 (6); `docs/design/principia_chart_reference.md` § 2.1, § 2.2; `docs/design/principia_dd_decoder.md` § 3.6, § 3.7; context: TASK-M9-39, REQ-VAL-015)*
 
 *Queued 4 Nov 2026 from physics review 5771183527 of PR #408, F1. For the owner: yes, it changes results: which ICs such a chart's pixels decode to, or whether the chart runs softened at all. Nothing is chosen.*
@@ -740,3 +727,16 @@ change: no timer was touched (R-649). Nothing is chosen.*
 - **Options seen:** (a) both soften, `U = m_i m_j / √(d² + ε²)` and `U = m_b M_p / √(d² + ε²)`, as R-670 (4) reads `E_rel`, the separations, `v_r` and the kinetic terms geometric; (b) both stay Newtonian as written, `E` alone softened; (c) the classifier's two-body labels do not run at `ε ≠ 0`, the run reading only the labels that take `E`; (d) another, stated by the owner.
 - **Applied meanwhile:** none needed: dispatch refuses `ε ≠ 0` (R-654; TASK-M3-06), so no softened run exists.
 - **Waits:** TASK-M9-39 (REQ-INT-111, REQ-SYS-094, REQ-SYS-095). Nothing in M0 to M8 waits.
+
+## RQ-696: Whether BR-1 runs from the authors' own initial conditions stand in for R-638's seeded draw *(the part of RQ-615 R-701 does not reach; R-638; `docs/incoming/2026-10-28_rq598_data/README.md` § 4 task 4; context: TASK-M9-22)*
+
+*Queued 4 Nov 2026 by R-701's port. For the owner: yes, it changes which ensemble BR-1 is scored on, and the corpus does not settle it (R-369).*
+
+- **File, section:**
+  - `docs/archive/review_queue/M0.md`, RQ-615's note of 28 Oct 2026: "**Still open:** whether runs from the authors' initial conditions stand in for the seeded draw, which R-638 asks for ("BR-1 Brutus ensemble on Breen's stated set-up now, fixed recorded seed")".
+  - `docs/incoming/2026-10-28_rq598_data/README.md` § 4 task 4: "Draw the initial positions from a **fixed, recorded seed**."
+  - `decisions.md` § R-701, the owner's words: "RQ-615: (a) local only, plus (c) ask Breen when he replies."
+- **The silence:** RQ-615's options (a) and (c) are about the files: how they are held, and asking for a licence. Neither says whether an ensemble run from their starting points replaces the seeded draw.
+- **Options seen:** (a) runs from the authors' starts stand in, for the 180 they cover; (b) R-638's seeded draw stays required, and the pilot stays a pilot; (c) both, each labelled.
+- **Applied meanwhile:** R-638 stands, and the seeded draw is not run.
+- **Waits:** a BR-1 ensemble beyond the 12-run pilot.

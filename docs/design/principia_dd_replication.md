@@ -446,7 +446,7 @@ part (§ 12.2; *was:* "GG-1 (b) per point, its KS part (b) with (a) expected to 
 owner's confirmation of 30 Oct 2026, R-649). The first peek, GG-1 at three points from PR #335 ("Brutus, run here"
 against Fig. 1), is UNEXPLAINED (`docs/verification/peek_log.md`; RQ-612 holds its like-for-like questions).
 
-*4 Nov 2026 (R-701):* GG-1's eight neighbours of (3, 43) run as a peek, TASK-M9-42, ours staying labelled ours meanwhile. Brutus runs at `p_max` = 4, `L_w` set explicitly. No ε = 10⁻⁷⁰ cost is quoted until the authors answer. The NVM trajectories stay local, and BR-1's converged fraction reports both readings of "< 0.1" until Breen answers. The questions are in `docs/incoming/2026-10-28_rq598_data/QUESTIONS_for_authors.md`; RQ-693 holds the seeded draw.
+*4 Nov 2026 (R-701):* GG-1's eight neighbours of (3, 43) run as a peek, TASK-M9-42, ours staying labelled ours meanwhile. Brutus runs at `p_max` = 4, `L_w` set explicitly. No ε = 10⁻⁷⁰ cost is quoted until the authors answer. The NVM trajectories stay local, and BR-1's converged fraction reports both readings of "< 0.1" until Breen answers. The questions are in `docs/incoming/2026-10-28_rq598_data/QUESTIONS_for_authors.md`; RQ-696 holds the seeded draw.
 
 | Target | Requirement | L / T | Reproduces | Chart | Milestone | Compare | Tolerance | Task |
 |---|---|---|---|---|---|---|---|---|
