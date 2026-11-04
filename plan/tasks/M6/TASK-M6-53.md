@@ -54,8 +54,8 @@ Also read `plan/adr/ADR-0001-mock-noise-integer-lattice.md` § "Decision" and §
   `stand_in_at`. Control, through `rejects`: the same field on the distributed-offset noise (REQ-GUI-412).
 - `lattice_source_is_integer` (no GPU): naga's IR of `noise_source()` holds no float binary operation in `lattice_hash`, and
   in `corner` only the one multiply by a power of two. Control, through `rejects`: the old `hash` (REQ-GUI-412).
-- `lattice_raw_precolour_dump` (`#[ignore]`) on Metal and on lavapipe, and `lattice_raw_precolour_compare` on the two dumps,
-  in the PR: raw f32 `n`, `warp.x` and `warp.y`, at centre 0/0, ×0.77, tilts 0, the count of pixels differing and the count
+- `lattice_raw_precolour_dump` on Metal and on lavapipe, and `lattice_raw_precolour_compare` on the two dumps, both `#[ignore]`
+  so CI's `lattice_` filter doesn't run them, in the PR: raw f32 `n`, `warp.x` and `warp.y`, at centre 0/0, ×0.77, tilts 0, the count of pixels differing and the count
   beyond a threshold stated in the PR before the run. This is the raw pre-colour baseline R-686 leaves to be measured. It
   is a report and asserts nothing; never 8-bit frame equality (`docs/contracts/principia_parity_contract.md` § 4).
 - `cargo test -p gui mock_figure_navigation`, `cargo test -p gui --test qa_TASK-M6-30`, `cargo test -p gui --test
