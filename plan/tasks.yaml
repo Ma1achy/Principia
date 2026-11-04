@@ -1333,6 +1333,22 @@
   requirements: [REQ-RENDER-099, REQ-CHART-074]
   reviewers: [code, qa, physics, perf]  # ⚑ physics review required; not merged on the code reviewer's word alone
   pitfalls: []
+- id: TASK-M4-27  # past TASK-M4-22 to TASK-M4-26, moved to M9 by R-650 and not reused (applied per R-369)
+  milestone: M4
+  title: "The kernel cross-backend check, the arm for now: decode's and canon's branch outcomes on NVIDIA Vulkan, Metal, lavapipe and CPU f32, per backend pair (R-686)"
+  depends_on: [TASK-M2-07, TASK-M2-24]
+  needs: [REQ-DEC-017, REQ-DEC-008]
+  requirements: [REQ-VAL-347]
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-9, PIT-10]
+- id: TASK-M4-28
+  milestone: M4
+  title: "The kernel cross-backend check: the same IC set marched on NVIDIA Vulkan, Metal, lavapipe and CPU f32, labels and branch-sensitive results compared per backend pair (R-686)"
+  depends_on: [TASK-M4-05, TASK-M4-02, TASK-M4-18, TASK-M4-27]
+  needs: [REQ-INT-026, REQ-EVT-003, REQ-EVT-005, REQ-VAL-026]
+  requirements: [REQ-VAL-348]
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-9, PIT-10]
 - id: TASK-M5-01
   milestone: M5
   title: "QuadReduction ledger: member order, packing, histogram and impurity grain"
@@ -1988,6 +2004,14 @@
   needs: []
   requirements: [REQ-GUI-265]
   reviewers: [code, qa, gui, physics]  # ⚑ tilt maths
+  pitfalls: []
+- id: TASK-M6-53  # past TASK-M6-52, moved to M9 by R-650 and not reused (applied per R-369)
+  milestone: M6
+  title: "The GUI track (R-390): the mock's value noise hashes its lattice in integers, so shared corners agree bitwise"
+  depends_on: [TASK-M6-24]  # R-685; starts only after the owner rules on the pattern (RQ-691)
+  needs: []
+  requirements: [REQ-GUI-412]
+  reviewers: [code, qa, gui]
   pitfalls: []
 - id: TASK-M7-01
   milestone: M7

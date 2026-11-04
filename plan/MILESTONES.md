@@ -272,7 +272,7 @@ render_contract "→ flat compute"; deep_zoom §3 layer 0: "defines the three co
 - The first kernel benchmarks.
 
 <!-- gate:M4 -->
-**Exit gate — 106 requirements** (and every earlier gate still green):
+**Exit gate — 108 requirements** (and every earlier gate still green):
 
 - CHART (3): REQ-CHART-037, REQ-CHART-052, REQ-CHART-074
 - INT (16): REQ-INT-057…071, REQ-INT-083
@@ -281,7 +281,7 @@ render_contract "→ flat compute"; deep_zoom §3 layer 0: "defines the three co
 - SCHED (12): REQ-SCHED-004…013, REQ-SCHED-084, REQ-SCHED-097
 - RENDER (11): REQ-RENDER-029…036, REQ-RENDER-078, REQ-RENDER-082, REQ-RENDER-099
 - TOOL (8): REQ-TOOL-040…045, REQ-TOOL-126…127
-- VAL (30): REQ-VAL-056…079, REQ-VAL-112, REQ-VAL-125, REQ-VAL-137, REQ-VAL-140…141, REQ-VAL-177
+- VAL (32): REQ-VAL-056…079, REQ-VAL-112, REQ-VAL-125, REQ-VAL-137, REQ-VAL-140…141, REQ-VAL-177, REQ-VAL-347…348
 - PERF (13): REQ-PERF-005…013, REQ-PERF-077, REQ-PERF-081, REQ-PERF-086, REQ-PERF-094
 - SYS (10): REQ-SYS-020…029
 <!-- /gate:M4 -->
@@ -336,14 +336,14 @@ render_contract "→ adaptive"; deep_zoom §3 layer 2 and §4.
   slots, merges without waiting for the gates of M1 to M5, and never holds up M1 or M2.
 
 <!-- gate:M6 -->
-**Exit gate — 225 requirements** (and every earlier gate still green):
+**Exit gate — 226 requirements** (and every earlier gate still green):
 
 - DEC (6): REQ-DEC-033…035, REQ-DEC-037, REQ-DEC-042, REQ-DEC-049
 - PAY (5): REQ-PAY-069, REQ-PAY-080…082, REQ-PAY-084
 - GEN (1): REQ-GEN-018
 - SCHED (29): REQ-SCHED-056…071, REQ-SCHED-077…078, REQ-SCHED-080…082, REQ-SCHED-089…096
 - REF (38): REQ-REF-011…037, REQ-REF-039…040, REQ-REF-042…044, REQ-REF-046…051
-- GUI (89): REQ-GUI-010…015, REQ-GUI-162, REQ-GUI-165…179, REQ-GUI-181…183, REQ-GUI-189…226, REQ-GUI-229, REQ-GUI-231…240, REQ-GUI-251…252, REQ-GUI-254…260, REQ-GUI-262, REQ-GUI-265, REQ-GUI-346…347, REQ-GUI-410…411
+- GUI (90): REQ-GUI-010…015, REQ-GUI-162, REQ-GUI-165…179, REQ-GUI-181…183, REQ-GUI-189…226, REQ-GUI-229, REQ-GUI-231…240, REQ-GUI-251…252, REQ-GUI-254…260, REQ-GUI-262, REQ-GUI-265, REQ-GUI-346…347, REQ-GUI-410…412
 - TOOL (5): REQ-TOOL-055…058, REQ-TOOL-159
 - VAL (13): REQ-VAL-084…095, REQ-VAL-142
 - PERF (38): REQ-PERF-034…067, REQ-PERF-084, REQ-PERF-088…090

@@ -19,7 +19,7 @@ to M8, the physics review of PR #342, F2).
 - [ ] Each gate is shown able to fail — a control (sign-flipped variant, known-answer field, a comparison that must differ) is run and fails. `docs/read_first/principia_00_philosophy.md` § "4.4 A test that cannot fail is not a test"; `docs/read_first/principia_01_pitfalls.md` § "9. A PARITY CHECK THAT MASKS THE BITS THE FORK LANDS IN"
 
 <!-- list:numerical-gates -->
-*124 requirements, generated from `plan/requirements.yaml` — do not edit by hand.*
+*126 requirements, generated from `plan/requirements.yaml` — do not edit by hand.*
 
 **M0**
 - [ ] REQ-VAL-004 — R-171: order samples coarse → fine (strides 32, 4, 1, 0; stride 0 unstrided, the finest); r_k = |x_k − x_{k−1}| / |x_{k−1}|; pass iff r_k strictly decreasing and the finest r_k below the threshold (provisional 0.1 against REQ-VAL-135 until M3). The recorded sequence 0.2153 → 0.4423 → 0.5494 → 0.0947 (r = 1.054, 0.242, 0.828) must fail; a strictly shrinking fixture must pass.
@@ -102,6 +102,8 @@ to M8, the physics review of PR #342, F2).
 - [ ] REQ-VAL-125 — the proposal names the statistic and sets the threshold from the measured sampling noise on uniform grids; recorded in decisions.md
 - [ ] REQ-VAL-137 — the proposal renders the plane, reads closure at the known orbit locations against the background and states the threshold; recorded in decisions.md
 - [ ] REQ-VAL-177 — cargo xtask gate fast-math-diff in the gpu-metal job: the report lists, on against off, the branch-word forks per step (N_sub, state, terminals), the largest difference per continuous word and the outcome-class fractions, and is written into the gate report; off against off reports zero forks and zero differences (the control)
+- [ ] REQ-VAL-347 — cargo xtask gate cross-backend-branches: a record per backend and the comparison of every pair, each pair's disagreement count and rate over the same inputs, the header stating its domain; the control, a record compared with itself, reads 0, and one flipped outcome reads 1. Only the control asserts. NVIDIA's record is a Windows run posted to issue #390; a backend not yet run is listed as not run.
+- [ ] REQ-VAL-348 — cargo xtask gate cross-backend-march: over fixtures/gates/parity_fixtures, a record per backend and the comparison of every pair, each pair's disagreement count and rate, per branch-sensitive result, the non-chaotic and chaotic fixtures apart; the control, a record compared with itself, reads 0, and one flipped label reads 1. Only the control asserts. NVIDIA's record is a Windows run posted to issue #390; a backend not yet run is listed as not run.
 
 **M5**
 - [ ] REQ-DEC-031 — at depth 30, the N samples of a quad decode to N distinct f32 positions matching the f64 reference within one f32 ulp of h; min/max bounds are not read by the kernel

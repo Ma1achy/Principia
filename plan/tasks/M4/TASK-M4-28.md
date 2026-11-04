@@ -1,0 +1,63 @@
+# TASK-M4-28 — The kernel cross-backend check: the same IC set marched on NVIDIA Vulkan, Metal, lavapipe and CPU f32, labels and branch-sensitive results compared per backend pair (R-686)
+
+- **Milestone:** M4
+- **Closes:** REQ-VAL-348
+- **Depends on:** TASK-M4-05, TASK-M4-02, TASK-M4-18, TASK-M4-27
+- **Needs (earlier milestones):** REQ-INT-026, REQ-EVT-003, REQ-EVT-005, REQ-VAL-026
+- **Reviewers:** code, qa, physics
+- **Pitfalls:** PIT-9, PIT-10
+- **Size:** ~350 lines
+
+## Goal
+The owner's evidence for whether the missing `NoContraction` matters for the real kernel (R-686). The same IC set runs on
+NVIDIA Vulkan, Metal, lavapipe and CPU f32, and the check compares outcome labels and each trajectory's branch-sensitive
+results, collision and escape decisions and step counts, not pixels. It reports the disagreement rate per backend pair,
+with no tolerance chosen to make it pass. It is a measurement under R-649. TASK-M4-05 delivers the march it runs.
+
+## References
+- `decisions.md` § "R-686 — The kernel cross-backend check is a measurement (R-649): the same IC set on NVIDIA Vulkan, Metal, lavapipe and CPU f32, outcome labels and per-trajectory branch-sensitive results compared, not pixels, the disagreement rate reported per backend pair, no tolerance chosen to make it pass; pixel comparisons across backends go on raw pre-colour values with the outlier tail reported, never 8-bit frame equality, Metal against lavapipe's 161,394 / 221 recorded as the clean-backend baseline; `DECODE_SWITCHOVER`'s spec notes that bitwise agreement must be tested on NVIDIA specifically"
+- `decisions.md` § "R-649 — Replication and verification targets are measurements, not gates: failing one never blocks building; each declares the tier it binds, (a) the GPU explorer, agreeing statistically or qualitatively only, or (b) the CPU IC inspector, where exact targets bind; three outcomes, PASS, EXPLAINED DIVERGENCE (shown by a measurement) and UNEXPLAINED (open, labelled, non-blocking); no default, physics, criterion, architecture or tolerance is changed and nothing is tuned per target in pursuit of a pass; a comparison is checked like-for-like before anything is called a failure; verification deepening comes after the core build *(amends R-594, R-636, R-637 and R-639 for external targets; applies to RQ-598's targets and every target in force)*"
+- `decisions.md` § "R-547 — Decode and encode numerics: the swap test is the conjugacy; step 0 is skipped within a calibrated `τ_I` and rescales in two steps; a branch input that must agree across backends is built only from operations every IEEE backend rounds alike, with no subnormal intermediate; the native build runs without MIR GVN and CI runs it at the release profile; T1 holds off the mirror band; REQ-SYS-015 is split *(closes RQ-283, RQ-295, RQ-296, RQ-298, RQ-299, RQ-360 and RQ-365; corrects R-34)*"
+- `decisions.md` § "R-297 — Fast-math per shader stage: off for compute by default, an explicit and recorded opt-in; display may keep it *(amends R-84, R-116)*"
+- `decisions.md` § "R-58 — The non-Metal parity run gates Paper 2, not the build *(TO-2)*"
+- `docs/contracts/principia_parity_contract.md` § "4. Tolerance — and the cross-backend reality"
+- `docs/contracts/principia_parity_contract.md` § "Tier S — structural only (asserting the pointwise gap would assert a falsehood)"
+- `docs/read_first/principia_01_pitfalls.md` § "10. GENERALISING A STATELESS RESULT TO A TRAJECTORY"
+- `docs/notes/principia_gpu_determinism_note.md` § "The parity consequence (what shared source does and does not buy)"
+
+## Deliverables
+- `cargo xtask gate cross-backend-march`, on TASK-M4-27's record and comparison: `--record` marches the IC set on the job's
+  backend, `--compare` over records. CPU f32 is TASK-M4-02's harness at f32.
+- The IC set is `fixtures/gates/parity_fixtures` (TASK-M4-18), with its non-chaotic and chaotic marking, fixed before the first
+  run. The ICs are the same bits on all four.
+- One row per trajectory: the outcome label, `state`, the collision decision and pair, the escape decision and escaper, the
+  terminal step and the total substeps, with the decoded start state's bits, so a disagreement already present at `t = 0` is
+  counted apart.
+- The report: each pair's disagreement count and rate, for each of those results and for any of them, non-chaotic and chaotic
+  apart; for each disagreement, the first step that differs and whether the branch operation there agrees on identical
+  inputs, as REQ-VAL-079's report does. The header states the domain, the commit, each adapter line and the compute setting.
+- Negative controls for this task's tests (R-176).
+
+## Acceptance tests
+- `cargo test -p validation cross_backend_march` (no GPU) — over synthetic records: a record against itself reads 0, one flipped
+  label reads 1 of N, one changed step count reads 1 of N under that result alone, and the chaotic and non-chaotic strata
+  sum to the whole; the control is a compare that ignores step counts, which the changed step count rejects (REQ-VAL-348).
+- `cargo xtask gate cross-backend-march` — records on lavapipe, on Metal and on CPU f32 and their comparison, in the PR, every
+  backend pair listed, NVIDIA's as "not run" until its record is posted (REQ-VAL-348).
+- `python3 plan/check_plan.py`.
+
+## Notes
+- **A measurement under R-649, on tier (a), the GPU explorer.** It has no outside number, so it is neither an M9 target nor a
+  peek. It blocks nothing. **No tolerance chosen to make it pass:** the report holds no threshold. Each pair's outcome: PASS is 0
+  disagreements; anything else is EXPLAINED DIVERGENCE, with a measurement showing the mechanism, or UNEXPLAINED. Only the
+  controls assert.
+- **Reading the rate.** Metal against lavapipe is the clean-backend pair, and the NVIDIA pairs are read against it. On a chaotic
+  trajectory a rounding difference can change a label with no defect in any branch (pitfalls §10), so a chaotic rate alone
+  shows no miscompile; the first-difference replay is what separates the two. A rate does not name a mechanism: RQ-690's
+  compute-stage probe does that, and this task does not claim it.
+- **The NVIDIA record** is a Windows session's run at the PR's head, `--record` with `PRIN_GPU_BACKEND=vulkan`, the file posted to
+  #390, under the same hardware label as that card's other runs. It is not a CI job (R-186). Nothing waits on it. It doesn't
+  stand in for R-58's parity run, REQ-VAL-099, which gates Paper 2.
+- **Why TASK-M4-18 is a dependency:** it owns the fixture set and the label-flip report on Metal and lavapipe. This task adds the
+  other two backends, the per-pair table and the per-trajectory results, and does not change that report.
+- Applied per R-369 (R-686): its own task, not a part of the fix task, TASK-M6-53, since the mock's fix needs no march.
