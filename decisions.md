@@ -27448,6 +27448,7 @@ REQ-VAL-042 (statement); adds REQ-DEC-051, REQ-DEC-052 and REQ-PAY-112.
 *Refined by R-636 (28 Oct 2026: its two readings written into its text, the paragraphs marked "Added on the owner's
 update of 28 Oct 2026" in its RQ-601 and RQ-603 bullets: `J⁺` where the steer's text says `J⁻¹`, with what it does
 when `J` is singular, and "ray-degenerate" read per cell).*
+*Refined by R-681 (3 Nov 2026: for a stuck check, its note on re-running CI tightens to re-running only the job that reports it).*
 *Still in force: all of it, those two readings now part of its text (R-636).*
 *28 Oct 2026 · the owner's ruling batch of that morning, with the revised RQ-603 text sent after it; applied in
 `docs/design/principia_deep_zoom.md` § 2 ("`J_D`'s step rule", a paragraph added, and the latent Jacobian's step),
@@ -29760,8 +29761,9 @@ Changes REQ-VAL-148 (source, rulings, note).
 ## R-677 — CI runs in three tiers: a change to Principia's code runs full CI as before; one to the plan's task data or the GUI's artboards and references runs only the cheap checks and the tests that read what it changed, with no build, test shard, GPU suite or mutants; one to the docs runs only the cheap checks; a change takes its highest tier, and an unknown path runs full CI; mutants run only when `crates/` source changes, on the merge-ready head; every required check still reports under its own name *(amends R-656, R-662, R-110, R-177, R-235, R-305 and R-676)*
 *Amended in part by R-678 (3 Nov 2026: a head with no `.rs` file under `crates/` has its `mutants-check` reported
 passed by its job, not posted).*
+*Refined by R-684 (3 Nov 2026: tier (a)'s "full CI" on a code head reads R-684's two tiers, full on a merge candidate and `main`, quick on any other head; the classifier is unchanged).*
 *Still in force: all of it, the `mutants-check` of a head with no `.rs` file under `crates/` reported passed at once,
-"not applicable", by `mutants.yml`'s job (R-678) rather than posted.*
+"not applicable", by `mutants.yml`'s job (R-678) rather than posted, and tier (a) reading R-684's two code tiers.*
 *2 Nov 2026 · the owner's message of that day, item 3, and his two replies on `plan/requirements.yaml` later that day;
 applied in `scripts/ci_changes.sh`, `scripts/ci_req_fields.py`, `.github/workflows/ci.yml`,
 `.github/workflows/mutants.yml`, `xtask/tests/ci_changes.rs`, `xtask/tests/merge_ready.rs`,
@@ -30052,8 +30054,8 @@ R-680 is in the "process" group of `plan/rule_groups.yaml`.
 
 ## R-681 — Standing rules: while `main` is red, or a required check is stuck, agents open and update no other pull request, and the owner is told in one message; a CI-tooling pull request shows its own `xtask-ci` passing before it merges; a stuck check is cleared by re-running only the job that reports it, never the whole pipeline *(refines R-369)*
 *3 Nov 2026 · the owner's three messages of that day on `main`'s red `xtask-ci` and the stuck `mutants-check`; ported
-3 Nov 2026; applied in `plan/OPERATIONS.md` § "Merging" (a paragraph) and § "Autonomy (R-369)" (a line), R-369's
-forward line and `plan/rule_groups.yaml`; changes no requirement*
+3 Nov 2026; applied in `plan/OPERATIONS.md` § "Merging" (a paragraph and step 6's pointer) and § "Autonomy (R-369)" (a
+line), R-369's and R-633's forward lines and `plan/rule_groups.yaml`; changes no requirement*
 
 The owner's words (3 Nov 2026), verbatim: item (3) of the message that opens "Top priority, nothing else until done:
 main's xtask-ci fails on every PR since #381":
@@ -30199,5 +30201,7 @@ intermediate heads duplicated that work; the guarantee that `main` only receives
 *Part (B), applied at step (4)'s pull request:* a build-target cache saved from `main` only, keyed on `Cargo.lock` and
 the toolchain, for the 2–3 slowest jobs, evicted to stay well under 10 GB, built with `actions/cache` or `rust-cache`
 (target only), not sccache, so R-666 stands; the cache size reported after a week. R-285 is not edited here.
+
+*Applied per R-369 (PR #413, code F5), a mechanical consequence, flagged since the owner listed only R-110, R-177 and R-235:* R-677's tier (a), "full CI as before", now reads the two tiers above, and it carries the forward line. R-662's "Full CI runs only when a pull request changes Principia's code" is unaffected: it says when full CI may run, and that still holds.
 
 R-684 is in the "ci" group of `plan/rule_groups.yaml`.

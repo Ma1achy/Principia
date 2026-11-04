@@ -323,7 +323,7 @@ merge:
 5. If `reviews-complete` stays red only from the `pull_request`-event run, which fails before any review and stays a
    separate check suite, re-run it: `gh run rerun <id>` (R-266, R-276).
 6. To re-run CI, prefer re-running the failed jobs (`gh run rerun <id> --failed`) over closing and reopening the PR
-   (the owner's note, R-633).
+   (the owner's note, R-633). A stuck required check: the paragraph below (R-681).
 
 **`main` red, or a required check stuck (R-681, 3 Nov 2026, a standing rule).** While `main`'s CI is red, or a
 required check on a pull request is stuck, no agent opens or updates any other pull request, and no other pull request
