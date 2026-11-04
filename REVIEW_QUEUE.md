@@ -2383,9 +2383,11 @@ build. Nothing is chosen.*
   - `docs/contracts/principia_parity_contract.md` § "4. Tolerance — and the cross-backend reality": "a golden case keeps
     one reference across backends; a case whose bytes still differ keeps one reference per backend (R-269)".
 - **The gap:** a golden with one reference across backends is 8-bit frame equality across backends, by R-287's
-  construction. The owner's message was about comparing the mock's frames, and names no golden.
+  construction (`xtask/src/golden.rs`:1480, `cross_backend`, also reports how far apart per-backend references' bytes are). The owner's message names neither the
+  mock nor a golden. The one figure it cites comes from the mock's frames, so it may be about frames like those (inferred).
 - **Options seen:** (a) the rule governs comparisons made to learn how backends differ, and the golden suites stay
   regression pins under R-287 and R-296; (b) the rule reaches them too, and golden suites move to raw values and a
   stated tail; (c) another, stated by the owner.
-- **Applied meanwhile:** (a): the parity contract leaves the goldens as they stand.
+- **Applied meanwhile:** the status quo: the parity contract and the golden suites stay as they are. That is no choice among
+  the options.
 - **Waits:** nothing.
