@@ -29779,7 +29779,12 @@ For the first kind, the test has three levels:
 - level 2, its operands are bit-identical and its bits differ: the driver fails, with or without a fork;
 - level 3, its operands and bits are identical and the outcome differs: a comparison fork, reported as that, and it fails too.
 
-An input of the second kind is reported as that kind and does not by itself fail this condition. The recording is a report's words and blocks nothing (R-649). It adds no claim on continuous bits.
+An input of the second kind is reported as that kind and does not by itself fail this condition.
+
+Levels are judged on operands, bits and outcome from one named compiled entry, so the read-back emits the outcome as well. A difference
+seen in a production entry that doesn't show in the read-back is reported under its own name, a production-only difference: it is no
+level and earns no word (applied per R-369: a rewrite in the production compile alone would otherwise read as a comparison fork, the
+very contraction this ruling is about under another name, and an upstream difference there would convict a driver). The recording is a report's words and blocks nothing (R-649). It adds no claim on continuous bits.
 
 A disagreement belongs to a pair and a standing to a driver. The arbiter is the written form evaluated on the CPU at f32, each
 operation correctly rounded, not the exact expression's correctly rounded value. It runs at CPU f32's operands: those of its own

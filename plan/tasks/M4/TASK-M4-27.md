@@ -59,7 +59,9 @@ that. It is the first test of R-690's driver condition, on fixed inputs.
   different outcome it reads the same, as a comparison fork; with differing operands it does not; a `Wide` input with equal operands and only its exponent differing reads "unverified, not
   supported"; of kind `other operation`, an `fma` form included, it does not; at level 2 the driver whose bits differ from the written form on CPU f32 is the one named, and at level 3 the one whose outcome
   differs; two GPUs sharing operands CPU f32's run didn't produce are arbitrated by the host's evaluation at those operands, and the one differing is named; a clean driver reads "no failure in N", with its level 1 and `other operation` counts beside it; a
-  driver whose rows are all level 1 reads "no failure in 0"; no record reads "not run"; each standing's domain names the entry its rows were read through.
+  driver whose rows are all level 1 reads "no failure in 0"; no record reads "not run"; each standing's domain names the entry its rows were read through. A row whose stage outcome differs while the read-back's
+  operands, bits and outcome are equal reads "production-only difference", counts in the rate, takes no level and earns no word; the control is a compare that
+  takes the outcome from the stage and the bits from the read-back, which calls that row a comparison fork.
   The control is a compare that reads only outcomes, which misses the first case; the kinds' control is a list that files a `Wide` input under
   `other operation`, which the `Wide` case rejects; N's control is a compare whose N counts all rows, which the "no failure in 0" case
   rejects (REQ-VAL-347).
@@ -78,6 +80,10 @@ that. It is the first test of R-690's driver condition, on fixed inputs.
 
   A failing driver is recorded **unverified, not supported**, in those words. A row of kind `other operation` is reported as that
   kind. Nothing enforces the condition, and the recording blocks nothing.
+- **Levels are judged within one named entry** (applied per R-369). Operands, bits and outcome all come from the read-back entry, never bits from
+  one shader and an outcome from another. A stage outcome that differs where the read-back's operands, bits and outcome don't is a
+  **production-only difference**, under that name: it counts in the rate, it is no level and it earns no word. A rewrite in the
+  production compile alone would otherwise read as a comparison fork, and an upstream difference there would convict a driver.
 - **From a pair to a driver.** The arbiter is the written form evaluated on the CPU at f32, each operation correctly rounded, not
   the exact expression's correctly rounded value, which the kernel's form isn't (`crates/kernel/src/real.rs`:134). It runs at CPU f32's operands:
   those of its own run's row or, where two GPUs share operands that run didn't produce, those shared operands, which the host evaluates
