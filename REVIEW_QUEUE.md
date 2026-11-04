@@ -2329,7 +2329,9 @@ references and RQ-687 `sin` and `cos`. None asks whether `+` and `×` themselves
 stand on; "reassoc" appeared 0 times in this file at origin/main before this entry.*
 
 - **File, section:** `crates/kernel/src/canon.rs`:90-91: "one input takes one branch on every IEEE backend that keeps
-  its additions and multiplications correctly rounded and unreassociated (fast-math off, R-84)". `decisions.md` § R-547's
+  its additions and multiplications correctly rounded and unreassociated (fast-math off, R-84)". The same premise is at
+  `crates/kernel/src/decode/mass.rs`:56 (`M01_TINY`), `crates/kernel/src/decode/invariant.rs`:81 (`INVARIANT_INFEASIBLE`)
+  and `crates/kernel/src/chart/burrau.rs`:36. `decisions.md` § R-547's
   heading: "a branch input that must agree across backends is built only from operations every IEEE backend rounds
   alike". RQ-685's option (a), which rests on "written forms that take no driver's division or `√`".
 - **Observed, on the RTX 2080 SUPER (Vulkan, driver 621.01), in a fragment stage:** `hash(i + vec2(1.0, 0.0))` in one
@@ -2341,8 +2343,12 @@ stand on; "reassoc" appeared 0 times in this file at origin/main before this ent
   unknown, and the compute stage is unmeasured.
 - **Read:** naga 30.0.1 has no `NoContraction`; `kernel.spv` (the m252 build, not the current head) has 0 such
   decorations; `crates/engine/src/compute.rs` records Vulkan as `Off` with no driver observed; `crates/kernel/tests/canon.rs`
-  proves agreement across fusion, not reassociation. `IeeeBits::product` has no compile-time constant operand; the `Wide`
-  code around it takes `1`, `δ_λ` and `τ_I` as constants.
+  proves agreement across fusion, not reassociation. `IeeeBits::product` (`crates/kernel/src/real.rs`:188-193) has no
+  compile-time addend, but it has a compile-time multiplier: `crates/kernel/src/canon.rs`:630-633 passes `δ_λ` through
+  `wide_mul` into it, and each partial product is literally `(x − x_h)·y`, the shape the finding's rewrite distributes. If
+  distributed, the "exact" claim for the partial products no longer holds. The form differs from the mock's, where the
+  constant is the addend and here a runtime value is, so nothing is shown here either way: whether the driver distributes
+  non-constant forms is unknown.
 - **The question:** does the premise need enforcing, testing, or stating as a condition on drivers?
 - **Measurement that would settle more:** a compute-stage probe on the RTX of `(a + K) * k` against the strict result,
   beside a runtime `K`. TASK-M4-27 and TASK-M4-28 report the disagreement rates per backend pair (R-686), which show
