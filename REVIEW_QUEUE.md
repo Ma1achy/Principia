@@ -1989,3 +1989,25 @@ change: no timer was touched (R-649). Nothing is chosen.*
 - **Applied meanwhile:** nothing: the gate is not built (no `crates/` file names it), and dispatch refuses `ε ≠ 0` (R-654; TASK-M3-06), so no softened run exists.
 - **Waits:** TASK-M9-39 (REQ-INT-111, REQ-SYS-094, REQ-SYS-095); TASK-M3-12 (REQ-EVT-006), which builds the gate and cannot write its third condition at `ε = 0` without this ruling; and TASK-M4-03 (REQ-INT-061), which writes every kernel branch input's form into `branch_inputs.rs`, what it and REQ-INT-061 hold of this input following the ruling. REQ-EVT-006 is not the whole of the reach: those two tasks are it at `ε = 0`, and what depends on them waits through them. *Was:* "their waiting is for the ruling to say" (applied per R-369).
 - **Notes** (physics review 5771861276 of PR #408, for the port of the ruling): (1) `softened_tier_l`, REQ-INT-111's verify and TASK-M4-03's note and REQ-INT-061 now defer to this entry, and under option (a) or (b) those lines are re-read and take the ruling's exception, since the decision can then fork; all three tasks wait here, so nothing is built against them first. (2) TASK-M3-12's `ionisation_gate`, with its fixtures `three_way_unbound` and `one_bound_pair`, has no state with all pairs unbound, all separating and `E < 0`, so dropping the `E > 0` test passes it. The port adds that state as a control, if the condition stands: unit masses on an equilateral triangle of side `r`, each moving radially outward at speed `u` with `u²` just above `4/(3r)`, giving all pairs unbound and `E ≈ −1/r`. (3) REQ-INT-057 and REQ-VAL-059 require escape decisions and the terminal label bit-identical across backends, and ionisation is `escape` with `detail = 3`, so under option (a) or (b) they need the ruling's exception too.
+
+## RQ-700: A warped virial axis with a range off 0 at a held `L_z ≠ 0`: where its bottom row sits *(physics; silence: the owner's ruling of 4 Nov 2026 on RQ-683; R-506 W2; context: TASK-M2-37)*
+
+*Queued 4 Nov 2026 from the physics review (5775188369, E1) of PR #387, by the orchestrator's decision. For the owner:
+it is physics; the two options draw different systems.*
+
+- **File, section:**
+  - the owner's ruling of 4 Nov 2026 on RQ-678 and RQ-683: "The floor uses the pixel's own held L_z, additive form K =
+    L_z²/2I + K_max·t^γ", and "RQ-683 (#387): same rule for a single energy axis at held spin."
+  - `docs/design/principia_chart_reference.md` § "2.1 Feasibility, and the warp that makes every pixel valid", the
+    virial ratio's paragraph: "Warped, it runs over the range's feasible part `[Q₀, Q_hi]`, `Q₀ = max(Q_lo, 0)`:
+    `Q(t) = Q₀ + (Q_hi − Q₀)·t^γ_K`".
+- **The silence:** the ruling's line starts at 0, but a virial axis keeps its asked range, so `Q₀ > 0` is possible. The
+  ruling and the corpus do not say how the floor sits under a range off 0. At `Q₀ = 0` both options below agree, and
+  both keep every pixel a system.
+- **The question:** on a warped virial axis with `Q₀ > 0` at a held `L_z ≠ 0`, what is the pixel's ratio?
+- **Options seen:** with `Q_min(U) = L_z²/(I·|U|)`, (a) as built, `K* = L_z²/2I + Q(t)·|U|/2`, the pixel's ratio
+  `Q(t) + Q_min(U)`, so the asked bottom `Q₀` is never drawn, even where it is feasible; (b) the floor under the rise
+  only, the ratio `max(Q₀, Q_min(U)) + (Q_hi − Q₀)·t^γ_K`, the bottom row at `Q₀` where `Q₀` is feasible and on the
+  floor elsewhere.
+- **Applied meanwhile:** (a), the ruling's literal form, recorded in chart_reference §2.1 (PR #387).
+- **Waits:** nothing: RQ-682 keeps the virial axis off every builder chart.
