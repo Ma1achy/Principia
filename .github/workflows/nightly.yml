@@ -40,7 +40,8 @@ env:
 
 jobs:
   # The CPU suites, as `ci.yml`'s `ci` job runs them: every workspace test but the kernel's (the `ci` nextest profile),
-  # validation's `qa_TASK-M0-24` (the `ci-workspace` profile, as in `ci.yml`), the doctests, and the crate-graph check. The GPU harness's self-tests among them run on lavapipe (R-169).
+  # validation's `qa_TASK-M0-24` and xtask's `xtask ci --list` test (the `ci-workspace` profile, as in `ci.yml`), the
+  # doctests, and the crate-graph check. The GPU harness's self-tests among them run on lavapipe (R-169).
   cpu:
     runs-on: ubuntu-24.04
     steps:
@@ -84,6 +85,11 @@ jobs:
           PRIN_GPU_BACKEND: vulkan
           NEXTEST_PROFILE: ci-workspace
         run: cargo nextest run -p validation --test qa_TASK-M0-24
+      - name: cargo nextest run -p xtask --test qa_TASK-M0-06_list
+        env:
+          PRIN_GPU_BACKEND: vulkan
+          NEXTEST_PROFILE: ci-workspace
+        run: cargo nextest run -p xtask --test qa_TASK-M0-06_list
       - name: cargo test --workspace --doc
         run: cargo test --workspace --doc
       - name: cargo xtask deps

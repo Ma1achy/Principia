@@ -687,3 +687,91 @@ validation::negative_control!(
             .collect::<Vec<_>>()
     )
 );
+
+/// The test binary of `xtask ci --list`'s test.
+const CI_LISTING_BINARY: &str = "qa_TASK-M0-06_list";
+
+/// That test: its child's real `controls --list` rebuilt the `--features controls` workspace inside a `ci` shard, from
+/// the archive, which carries no cargo build state (run 41775231980, `ci (3)`).
+const CI_LISTING_TEST: &str = "qa_m006_ci_list_lists_golden_cases_without_a_device";
+
+/// Given the tests of the binary that nextest lists under the `ci` and the `ci-workspace` profile: the one test moved,
+/// and only it, so the binary's others stay in the shards.
+fn check_the_ci_listing_left_the_shards(in_ci: &[String], in_ci_workspace: &[String]) {
+    assert!(
+        !in_ci.iter().any(|name| name == CI_LISTING_TEST),
+        "the `ci` profile selects `xtask ci --list`'s test, which rebuilds the workspace in its shard"
+    );
+    assert!(
+        !in_ci.is_empty(),
+        "the `ci` profile left the rest of `xtask ci --list`'s test's binary out too"
+    );
+    assert_eq!(
+        in_ci_workspace,
+        [CI_LISTING_TEST],
+        "the `ci-workspace` profile does not select exactly `xtask ci --list`'s test of its binary"
+    );
+}
+
+#[test]
+fn nextest_the_ci_listing_left_the_shards() {
+    let args: Vec<String> = ["-p", "xtask", "--test", CI_LISTING_BINARY]
+        .map(str::to_owned)
+        .to_vec();
+    check_the_ci_listing_left_the_shards(
+        &nextest_list(&args, Some("ci")),
+        &nextest_list(&args, Some("ci-workspace")),
+    );
+}
+
+validation::negative_control!(
+    nextest_the_ci_listing_left_the_shards,
+    "`xtask ci --list`'s test still listed under the `ci` profile",
+    expected = "the `ci` profile selects `xtask ci --list`'s test",
+    check_the_ci_listing_left_the_shards(
+        &[CI_LISTING_TEST.to_owned()],
+        &[CI_LISTING_TEST.to_owned()]
+    )
+);
+
+/// Each of `workflows` runs that test once, in the one step under `ci-workspace` that selects it: `-p xtask` whole, or
+/// its binary by name, and in the default feature set, for the profile selects it there.
+fn check_the_ci_listing_runs_in_each_workflow(workflows: &[String]) {
+    let by_name = format!("--test {CI_LISTING_BINARY}");
+    for workflow in workflows {
+        let steps = jobs(workflow)
+            .iter()
+            .flat_map(|job| runs(job))
+            .filter(|(run, profile)| {
+                *profile == Some("ci-workspace")
+                    && run.contains("-p xtask")
+                    && !run.contains("--features")
+                    && (!run.contains("--test ") || run.contains(&by_name))
+            })
+            .count();
+        assert_eq!(
+            steps, 1,
+            "a workflow does not run `xtask ci --list`'s test once, under the `ci-workspace` profile"
+        );
+    }
+}
+
+#[test]
+fn nextest_the_ci_listing_runs_in_each_workflow() {
+    check_the_ci_listing_runs_in_each_workflow(&workflows_running_the_ci_profile());
+}
+
+validation::negative_control!(
+    nextest_the_ci_listing_runs_in_each_workflow,
+    "a nightly run of `xtask ci --list`'s test under the `ci` profile, which leaves it out",
+    expected = "does not run `xtask ci --list`'s test once, under the `ci-workspace` profile",
+    check_the_ci_listing_runs_in_each_workflow(
+        &workflows_running_the_ci_profile()
+            .into_iter()
+            .map(|w| w.replace(
+                "NEXTEST_PROFILE: ci-workspace\n        run: cargo nextest run -p xtask --test",
+                "NEXTEST_PROFILE: ci\n        run: cargo nextest run -p xtask --test"
+            ))
+            .collect::<Vec<_>>()
+    )
+);
