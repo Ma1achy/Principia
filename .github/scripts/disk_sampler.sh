@@ -117,35 +117,45 @@ $(free -m)"
   done
 }
 
-# In its own process group (`set -m` only for this start), so the KILL below reaches whatever it has in hand.
+# Waits for a process to go, at most 2 s. Not `wait`, which only knows the jobs table, and `disown` empties that below.
+wait_gone() {
+  local end=$((SECONDS + 2))
+  while kill -0 "$1" 2> /dev/null && ((SECONDS < end)); do
+    sleep 0.1
+  done
+}
+
+# In its own process group (`set -m` only for this start), so the KILL below reaches whatever it has in hand. Each
+# process here leaves the jobs table at once: bash reports a job killed by a signal on its own stderr, the job's stderr,
+# whenever it next looks, which can fall outside any redirection on the `kill` or a `wait` (`notify_of_job_status`, bash
+# 5.2's jobs.c), so only a job not in the table can never be reported.
 set -m
 sampler &
 sampler_pid=$!
 set +m
+disown "$sampler_pid"
 
 # In a group of its own too, with `device_watch`: the KILL below stops that loop, not the root processes of its read.
 set -m
 watch &
 watch_pid=$!
 set +m
+disown "$watch_pid"
 
 bash -e "$script"
 status=$?
 
 # `watch` writes one sample at a time and has nothing to finish.
 kill -KILL -- "-$watch_pid" 2> /dev/null
-wait "$watch_pid" 2> /dev/null
+wait_gone "$watch_pid"
 
 # Bounded here, not by the sampler: its trap runs only once the command in hand is done (a `df` or `du`, or the shell
 # retrying a fork), so a sampler still there after at most 2 s gets a KILL to its whole group, that command and the
 # nap among them. A sampler gone by then went at its trap, between two commands, which ended the nap and left nothing.
 kill -TERM "$sampler_pid" 2> /dev/null
-end=$((SECONDS + 2))
-while kill -0 "$sampler_pid" 2> /dev/null && ((SECONDS < end)); do
-  sleep 0.1
-done
+wait_gone "$sampler_pid"
 kill -0 "$sampler_pid" 2> /dev/null && kill -KILL -- "-$sampler_pid" 2> /dev/null
-wait "$sampler_pid" 2> /dev/null
+wait_gone "$sampler_pid"
 
 awk 'match($0, /avail_kb=[0-9]+/) {
        kb = substr($0, RSTART + 9, RLENGTH - 9) + 0; n++

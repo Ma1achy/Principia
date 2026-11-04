@@ -535,7 +535,7 @@ negative_control!(
     check_ends(&edit(
         &edit(
             &sampler(),
-            "kill -KILL -- \"-$watch_pid\" 2> /dev/null\nwait \"$watch_pid\" 2> /dev/null\n",
+            "kill -KILL -- \"-$watch_pid\" 2> /dev/null\nwait_gone \"$watch_pid\"\n",
             ""
         ),
         "max_watch_samples=4320",
@@ -543,13 +543,68 @@ negative_control!(
     ))
 );
 
+/// bash reports a job killed by a signal on the job's stderr, whenever it next looks. Nothing but the step reaches
+/// that stderr, here with each KILL's report given all the time it wants; the sampler ignores the TERM, so it needs
+/// its KILL.
+fn check_no_job_report(script: &str) {
+    let bed = Bed::new("ci_watch_no_report");
+    let after = |text: &str, line: &str| edit(text, line, &format!("{line}sleep 0.5\n"));
+    let forced = after(script, "kill -KILL -- \"-$watch_pid\" 2> /dev/null\n");
+    let forced = after(
+        &forced,
+        "kill -0 \"$sampler_pid\" 2> /dev/null && kill -KILL -- \"-$sampler_pid\" 2> /dev/null\n",
+    );
+    let forced = edit(
+        &forced,
+        "trap 'kill \"${!:-}\"; exit 0' TERM",
+        "trap '' TERM",
+    );
+    let output = bed.run(
+        &forced,
+        "echo step err >&2\nsleep 1.5\n",
+        Some(&bed.shm()),
+        bed.path(),
+        LIMIT,
+    );
+    assert_eq!(
+        String::from_utf8_lossy(&output.stderr).trim(),
+        "step err",
+        "bash reported a job on the step's stderr"
+    );
+}
+
+#[test]
+fn ci_watch_leaves_no_job_report_on_the_steps_stderr() {
+    check_no_job_report(&sampler());
+}
+
+mod watch_left_in_the_jobs_table {
+    use super::*;
+    negative_control!(
+        ci_watch_leaves_no_job_report_on_the_steps_stderr,
+        "`watch` left in the jobs table",
+        expected = "bash reported a job on the step's stderr",
+        check_no_job_report(&edit(&sampler(), "disown \"$watch_pid\"\n", ""))
+    );
+}
+
+mod sampler_left_in_the_jobs_table {
+    use super::*;
+    negative_control!(
+        ci_watch_leaves_no_job_report_on_the_steps_stderr,
+        "the sampler left in the jobs table",
+        expected = "bash reported a job on the step's stderr",
+        check_no_job_report(&edit(&sampler(), "disown \"$sampler_pid\"\n", ""))
+    );
+}
+
 /// Left running, `watch` holds none of the step's streams, which in Actions can hold the step open.
 fn check_streams(script: &str) {
     let bed = Bed::new("ci_watch_streams");
     let left = edit(
         &edit(
             script,
-            "kill -KILL -- \"-$watch_pid\" 2> /dev/null\nwait \"$watch_pid\" 2> /dev/null\n",
+            "kill -KILL -- \"-$watch_pid\" 2> /dev/null\nwait_gone \"$watch_pid\"\n",
             "",
         ),
         "max_watch_samples=4320",
@@ -623,8 +678,8 @@ negative_control!(
     expected = "the step's status, with",
     check_faults(&edit(
         &sampler(),
-        "wait \"$watch_pid\" 2> /dev/null\n",
-        "wait \"$watch_pid\" 2> /dev/null\nstatus=$?\n"
+        "wait_gone \"$watch_pid\"\n",
+        "wait_gone \"$watch_pid\"\nstatus=$?\n"
     ))
 );
 
