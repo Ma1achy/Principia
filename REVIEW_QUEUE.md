@@ -2042,6 +2042,16 @@ record, which RQ-686 and RQ-687 share.*
   - `docs/contracts/principia_parity_contract.md`:154, § 4: "**Off:** bit-identity and identical branch decisions hold
     as this contract states them (R-84; Tier B)".
   - The same file, :97, § 2, Tier B: "a GPU's `pow`/`sqrt`/`div` and libm's differ by 1–3 ulp *in every math mode*".
+  - The same section, :145, source 2 of the tolerance: "**cross-backend f32 variance** — the kernel run through native
+    `wgpu` vs the user's browser/driver can produce slightly different f32 results for the same kernel; shader translation
+    and driver math differ across backends."
+  - `docs/notes/principia_gpu_determinism_note.md`:62, § "The parity consequence", the Standing caveat: "The spike's
+    bit-identity evidence is **Metal-only**: on the test machine both the native and the browser legs funnelled to the
+    same MSL compiler, which is *why* even continuous words matched. Branch-word bit-identity across a **different naga
+    backend + driver** (Vulkan / D3D12) is the one thing the spike could not witness".
+  - `plan/requirements.yaml`, REQ-VAL-099 (R-58): "The parity gate must be run on a non-Metal backend (Vulkan or D3D12)
+    before any Paper-2 numbers are produced; it gates Paper 2, not the build." R-110's Still in force line: "lavapipe as
+    the second backend on every commit, meeting M4's two-backend check, and a real non-Metal GPU gating Paper 2 (R-58)".
   - `plan/requirements.yaml`, REQ-INT-057: "the wrapper's branch decisions made from the current state (substep bucket
     N_sub, cap decision, collision, escape, horizon, SIM_FAILED and terminal) must be bit-identical across the CPU and
     every GPU backend on identical inputs, per step, while continuous values (positions, momenta, energy, trajectory,
@@ -2105,6 +2115,9 @@ record, which RQ-686 and RQ-687 share.*
     not bit-exact", which says little if native bit-identity were only about branch decisions. REQ-SYS-074's verify
     asks for every division's bits on its two named jobs; the two test comments widen that, and have no authority beyond
     the requirement.
+  - **What weighs on the first side for continuous words:** parity § 4 expects "driver math" to differ, and the Standing
+    caveat explains the spike's matching continuous words by one shared compiler. So the two sides aren't even: nothing
+    in the corpus's design text promises continuous bits across drivers.
   - Neither side settles it, so question (1) is the owner's. The card fails the second reading. On the first, only
     canon's and decode's branches are measured, on this card, and REQ-INT-057's are unmeasured on every GPU. "Compiled
     Off" on Vulkan records wgpu's path, not what the driver did.
@@ -2122,7 +2135,8 @@ record, which RQ-686 and RQ-687 share.*
   the same probe on another Vulkan driver.
 - **Applied meanwhile:** nothing. No test, tolerance or comment changed.
 - **Waits:** nothing in the build loop: CI's Metal and lavapipe jobs are green at this commit, and no Windows job gates
-  anything. The ruling bears on M4's GPU march.
+  anything. The ruling bears on M4's GPU march and on REQ-VAL-099's parity gate, which a real non-Metal GPU serves and
+  lavapipe doesn't (R-110).
 
 ## RQ-686: The near-tie reference on a Vulkan driver other than lavapipe: one reference per backend means per API, and the RTX shares lavapipe's API but not its arithmetic *(physics; silence: R-296, R-376, REQ-VAL-176 and REQ-VAL-138 name no driver; R-649; issues #390, #397, #399; context: the Windows RTX 2080 Super run, RQ-685)*
 
