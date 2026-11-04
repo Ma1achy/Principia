@@ -732,6 +732,14 @@ def self_test():
     try:
         if show_parse(no_report, queue) != 2:
             fails.append("reply self-test: parse must refuse a report that isn't there, cleanly")
+        gone = os.path.join(ROOT, "no-such-answer.txt")
+        for bad in [argparse.Namespace(cmd="ask", rq="RQ-1", date="4 Nov 2026", question_file=gone, queue=gone),
+                    argparse.Namespace(cmd="defer", rq="RQ-1", date="4 Nov 2026", to="M8", ruling="R-1", text_file=gone,
+                                       queue=gone),
+                    argparse.Namespace(cmd="close", rq="RQ-1", date="4 Nov 2026", ruling="R-1", outcome="x",
+                                       text_file=gone, archive_file=gone, queue=gone)]:
+            if edit_queue(bad, queue) != 2 or os.path.exists(gone):
+                fails.append(f"reply self-test: {bad.cmd} must refuse a wrong path, cleanly, and write nothing")
     finally:
         sys.stderr.close()
         sys.stderr = stderr
@@ -917,6 +925,25 @@ def show_parse(a, queue_text):
     return 1 if no else 0
 
 
+def edit_queue(a, queue_text):
+    """`close`, `defer` or `ask` on the queue at a.queue; 2, with the reason, if it can't be done, a wrong path among
+    them, and nothing is written."""
+    try:
+        if a.cmd == "close":
+            text = read_answer_file(a.text_file)
+            rest, archive = close(queue_text, read(a.archive_file), a.rq, a.ruling, a.date, text, a.outcome)
+            write(a.archive_file, archive)
+        elif a.cmd == "defer":
+            rest = defer(queue_text, a.rq, a.to, a.date, a.ruling, read_answer_file(a.text_file))
+        else:
+            rest = ask(queue_text, a.rq, a.date, read_answer_file(a.question_file))
+    except (ValueError, OSError) as e:
+        print("REFUSED:", e, file=sys.stderr)
+        return 2
+    write(a.queue, rest)
+    return 0
+
+
 def main():
     if "--self-test" in sys.argv[1:]:
         fails = self_test()
@@ -993,20 +1020,7 @@ def main():
             print("FAIL:", e)
         print(f"{a.report}: {len(errors)} failures")
         return 1 if errors else 0
-    try:
-        if a.cmd == "close":
-            text = read_answer_file(a.text_file)
-            rest, archive = close(queue_text, read(a.archive_file), a.rq, a.ruling, a.date, text, a.outcome)
-            write(a.archive_file, archive)
-        elif a.cmd == "defer":
-            rest = defer(queue_text, a.rq, a.to, a.date, a.ruling, read_answer_file(a.text_file))
-        else:
-            rest = ask(queue_text, a.rq, a.date, read_answer_file(a.question_file))
-    except ValueError as e:
-        print("REFUSED:", e, file=sys.stderr)
-        return 2
-    write(a.queue, rest)
-    return 0
+    return edit_queue(a, queue_text)
 
 
 if __name__ == "__main__":

@@ -74,8 +74,13 @@ beside the owner's text. Then treat it as the kind it turned out to be, in step 
   and anything that contradicts a ruling or the corpus (`CLAUDE.md` § "Rulings", § "Never guess, never defer").
 
 A line continues the answer above it unless it starts `RQ-n:` and the line above is complete, so one READ answer can
-run over several lines, and hold other items' ids. Read all of it: an entry it names beyond its first is yours to work
-out.
+run over several lines, and hold other items' ids. Read all of it.
+
+**An entry named inside an answer, beyond its first item, has no file and no R id of its own.** `parse` wrote one file,
+and gave one id, under the first item. That one ruling covers every entry the answer settles: it names each in its
+heading and body, each with its suffix from step 3's table (`*(closes RQ-a, defers RQ-b)*`), and step 4 runs for each
+entry with the answer's own file and id. So `RQ-594`, deferred inside the answer under `RQ-661`, is
+`defer RQ-594 --ruling <RQ-661's id> --text-file "$A/RQ-661.txt"`.
 
 A prose ruling outside the template is ported as any ruling is, not through this command.
 
