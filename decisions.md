@@ -29488,7 +29488,7 @@ The owner's words, 1 Nov 2026, verbatim, the second message's item (2) and what 
 
 R-669 is in the "design" group of `plan/rule_groups.yaml`, with R-639 and R-661.
 
-Adds REQ-CHART-091, REQ-VAL-342 and REQ-VAL-343; changes REQ-INT-045 and REQ-PAY-112 (statement, verify, note), REQ-VAL-199, REQ-VAL-295, REQ-VAL-311 to REQ-VAL-314, REQ-VAL-316, REQ-VAL-318, REQ-VAL-319, REQ-VAL-321, REQ-VAL-323, REQ-VAL-325 to REQ-VAL-327 and REQ-VAL-329 (rulings, rq, notes).
+Adds REQ-CHART-091, REQ-VAL-342 and REQ-VAL-343; changes REQ-INT-045 (statement, note), REQ-PAY-112 (statement, verify, note), REQ-VAL-199, REQ-VAL-295, REQ-VAL-311 to REQ-VAL-314, REQ-VAL-316, REQ-VAL-318, REQ-VAL-319, REQ-VAL-321, REQ-VAL-323, REQ-VAL-325 to REQ-VAL-327 and REQ-VAL-329 (rulings, rq, notes).
 
 ## R-670 — Softening's reach: a softened run keeps the collision test on geometric `r`, softening offered only on the unregularised occupants, the regularised ones refusing `ε ≠ 0`, and Chazy's `E` softened; the escape test's and the ionisation gate's pair energies take the softened potential, identical at `ε = 0`; the decode's `V₀` is softened, with `virial_ratio` following and `E₀ = K₀ + V₀`, so REQ-VAL-027, REQ-COL-006 and R-436's collision pole are restated for `ε ≠ 0` and unchanged at `ε = 0`; a view refuses `ε ≠ 0` with any `Some(E*)`; the substep law stays on geometric `d²` and `r_min` *(closes RQ-656; amends R-436 and R-654)*
 *1 and 2 Nov 2026 · the owner's second message of 1 Nov (questions (1) to (3)) and his message of 2 Nov (questions (4) to (7)); ported 2 Nov 2026; applied in `docs/contracts/principia_integrator_contract.md` Part 7 (the softening paragraph, a dated restatement), `docs/design/principia_dd_decoder.md` § 2, § 3.6 and § 3.7 (dated lines), `docs/design/principia_chart_reference.md` § 0.6 (a dated line), `docs/design/principia_dd_chazy_final_motion.md` § 3.1 (a dated line), `docs/design/principia_dd_generation_root.md` § "Open" (a dated line), the forward lines of R-436 and R-654, `docs/archive/review_queue/M0.md` (RQ-656 moved), `REVIEW_QUEUE.md`, REQ-VAL-027, REQ-COL-006, REQ-INT-111, REQ-SYS-094 and REQ-SYS-095 (reqio), TASK-M9-39 and `plan/rule_groups.yaml`*
@@ -29512,14 +29512,14 @@ The owner's words, verbatim. 1 Nov 2026, his second message, item (2), of RQ-656
 *Applied per R-369:*
 
 - **The refusals' place.** The regularised occupants' refusal of `ε ≠ 0` and the view's refusal of `ε ≠ 0` with `Some(E*)` are TASK-M9-39's, built when it lifts the refusal of `ε ≠ 0`; until then dispatch refuses every `ε ≠ 0` (R-654), so neither can be reached.
-- **The restatements.** REQ-VAL-027 and REQ-COL-006 gain an `ε ≠ 0` sentence, their `ε = 0` statements and verifies unchanged; the `ε ≠ 0` clause is verified by TASK-M9-39, since no softened run exists before it.
+- **The restatements.** REQ-VAL-027 and REQ-COL-006 gain an `ε ≠ 0` sentence, their `ε = 0` statements and verifies unchanged; the `ε ≠ 0` clause is verified by TASK-M9-39, since no softened run exists before it. REQ-INT-111 and REQ-SYS-094, which TASK-M9-39 closes, carry the same in their statements and verifies (code review 5771184172 of PR #408, C1).
 - **Chazy's pair energies.** RQ-656 (3) asked of `E` only, and this ruling softens `E`. The classifier's pair and outer two-body energies (§ 3.1's `pair_kup`, `out_kup`) are not ruled here. They are RQ-694, and TASK-M9-39 waits on it (physics review 5771183527 of PR #408, F2; code review 5771184172, C2). *Was:* "TASK-M9-39 reaches the classifier only if its tests need it, and any such reading goes to the queue first."
 
 *What it amends:* **R-654**, softening's reach (its "energy and drift are defined under the softened potential" now reaches Chazy's `E`, the escape test's and the ionisation gate's pair energies and the decode's `V₀`); **R-436**, its collision pole at `ε ≠ 0`. It closes **RQ-656**.
 
 R-670 is in the "physics" group of `plan/rule_groups.yaml`, with R-654.
 
-Changes REQ-VAL-027 and REQ-COL-006 (statement, rulings, note), REQ-INT-111, REQ-SYS-094 and REQ-SYS-095 (rq, rulings, note).
+Changes REQ-VAL-027 and REQ-COL-006 (statement, rulings, note), REQ-INT-111 and REQ-SYS-094 (statement, verify, rq, rulings, note) and REQ-SYS-095 (rq, rulings, note).
 
 ## R-671 — In a task with no GPU run, a statistical or qualitative target's statistic from the f64 runs is recorded at tier (b), its instrument stated, and its (a) part stays listed "not scored yet: needs a GPU run", the tier not relabelled; Q-4's no-integration part is recorded with no tier *(closes RQ-669; refines R-649)*
 *2 Nov 2026 · the owner's message of that day; applied in `docs/design/principia_dd_replication.md` § 12.2 (a dated paragraph and Q-4's row), the forward line of R-649, `docs/archive/review_queue/M0.md` (RQ-669 moved), `REVIEW_QUEUE.md`, the 31 requirements besides REQ-VAL-340 that carried `rq: RQ-669`, and REQ-VAL-340 (reqio), TASK-M9-10, TASK-M9-11, TASK-M9-14, TASK-M9-17 to TASK-M9-25, TASK-M9-32 and TASK-M9-37, and `plan/rule_groups.yaml`*
