@@ -55,7 +55,7 @@ The determinism pin, held and tested. Every branch input of the kernel is enumer
 - `cargo test -p validation descriptor_input_forks` — the parity audit enumerates the branch inputs feeding each descriptor field (per R-34's list) and fork-tests those; the packing-level control reads 0 forks against the input-level 83 (REQ-VAL-078).
 
 ## Notes
-- Waits on RQ-697: the ionisation gate's total `E > 0` is a branch input, so `branch_inputs.rs` needs its written form, and REQ-INT-061 needs it fed by no runtime `sqrt` or `div`; the task starts only once it is ruled (applied per R-369; physics review 5771573790 of PR #408, F8).
+- Waits on RQ-697: what `branch_inputs.rs` and REQ-INT-061 hold of the ionisation gate's total `E > 0` follows that ruling, and the task starts only once it is ruled (applied per R-369; physics review 5771573790 of PR #408, F8).
 - Domain statement required in the test output: fixed inputs, per step (pitfalls §10).
 - RQ-97 ruled: R-113 — REQ-VAL-059 is the native half (Metal and lavapipe); its browser-GPU leg is REQ-VAL-144, closed with REQ-VAL-116 at M8 (TASK-M8-40). This task also carries the native-GPU legs dropped from M3: REQ-INT-028's `N_sub` and REQ-INT-029's capped step.
 - R-297: REQ-INT-057's bit-identity holds with the compute shaders' fast-math off, the default; with it on, parity is measured, not exact, and TASK-M4-20 reports the differences.
