@@ -1336,7 +1336,7 @@
 - id: TASK-M4-27  # past TASK-M4-22 to TASK-M4-26, moved to M9 by R-650 and not reused (applied per R-369)
   milestone: M4
   title: "The kernel cross-backend check, the arm for now: decode's and canon's branch outcomes on NVIDIA Vulkan, Metal, lavapipe and CPU f32, per backend pair (R-686)"
-  depends_on: [TASK-M2-07, TASK-M2-24]
+  depends_on: [TASK-M2-07, TASK-M2-24, TASK-M2-25]
   needs: [REQ-DEC-017, REQ-DEC-008]
   requirements: [REQ-VAL-347]
   reviewers: [code, qa, physics]

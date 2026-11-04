@@ -2,7 +2,7 @@
 
 - **Milestone:** M4
 - **Closes:** REQ-VAL-347
-- **Depends on:** TASK-M2-07, TASK-M2-24
+- **Depends on:** TASK-M2-07, TASK-M2-24, TASK-M2-25
 - **Needs (earlier milestones):** REQ-DEC-017, REQ-DEC-008
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** PIT-9, PIT-10
@@ -25,21 +25,25 @@ that.
 - `docs/contracts/principia_parity_contract.md` § "4. Tolerance — and the cross-backend reality"
 - `docs/read_first/principia_01_pitfalls.md` § "10. GENERALISING A STATELESS RESULT TO A TRAJECTORY"
 - `docs/notes/principia_gpu_determinism_note.md` § "Why branches are special (continuous divergence is fine; branch divergence is not)"
+- `decisions.md` § "R-437 — The value of every `atan2` at a possible pole of the decode, encode and canonicalisation is defined: 0, for every sign of the zeros, chosen branch-free by a select on the operands against 0, so CPU and GPU agree *(closes RQ-285)*"
 
 ## Deliverables
 - `crates/validation/src/cross_backend.rs`: a record, one file per backend, keyed by the commit, the adapter line, the compute
   fast-math setting and a hash of the inputs, with one row per input and its branch outcomes; and the comparison of any
   set of records, every pair: disagreements, inputs compared, the rate, and the inputs that disagreed.
 - `cargo xtask gate cross-backend-branches`: `--record` on the job's backend, `--compare` over records. The inputs are those
-  `crates/engine/tests/canon_gpu.rs` and `crates/engine/tests/decode_cross_backend.rs` build, seeds fixed. The outcomes are
-  canon's branches (skip, coincidence, `ρ = 0`, mirror, `ρ_x` and `ρ_y` zero) and decode's tags (`M01_TINY`,
-  `INVARIANT_INFEASIBLE`, the energy tags). The report's header states its domain and that it does not answer the trajectory
+  `crates/engine/tests/canon_gpu.rs` and `crates/engine/tests/decode_cross_backend.rs` build, seeds fixed, with #393's from
+  `crates/validation/tests/qa_TASK-M2-25_gpu.rs`. The outcomes are canon's branches (skip, coincidence, `ρ = 0`, mirror, `ρ_x` and
+  `ρ_y` zero), decode's tags (`M01_TINY`, `INVARIANT_INFEASIBLE`, the energy tags) and decode's pole selects (R-436, R-437, R-438).
+  Each row carries the bits of its outcome's branch inputs as that backend computed them, so a disagreement sorts into a fork
+  on identical inputs or a difference already in the inputs (PIT-9, PIT-10). The report's header states its domain and that it does not answer the trajectory
   question. The comparison is written into the gate report.
 - Negative controls for this task's tests (R-176).
 
 ## Acceptance tests
 - `cargo test -p validation cross_backend_compare` (no GPU) — the comparison over synthetic records: a record against itself
-  reads 0 of N, and one flipped outcome reads 1 of N and names the input; a pair over different inputs is refused, not
+  reads 0 of N, one flipped outcome reads 1 of N and names the input, and one with different branch-input bits is sorted apart
+  from one with equal bits; a pair over different inputs is refused, not
   compared; the control is a compare that ignores one outcome column, which the flipped case rejects (REQ-VAL-347).
 - `cargo xtask gate cross-backend-branches` — records on lavapipe, on Metal and on CPU f32 and their comparison, in the PR,
   each pair's rate and the adapter lines; the header states the domain; every backend pair is listed, NVIDIA's as "not run"
@@ -53,7 +57,10 @@ that.
 - **The NVIDIA record** is a Windows session's run at the PR's head, `--record` with `PRIN_GPU_BACKEND=vulkan`, the file posted to
   #390. It is not a CI job (R-186). Nothing waits on it, and the task closes without it: M4's gate report lists the row as "not
   run" until it is posted, so the run stays visible (`plan/MILESTONES.md` § M4).
-- **What is already known:** on this card `decode_` passes 36 of 36 and `canonicaliser_` 28 of 28 (RQ-685). Those are pass
+- **What is already known:** on this card `decode_` passes 36 of 36 and `canonicaliser_` 28 of 28 (RQ-685). And #393: on identical
+  inputs, setting off, the compute decode stage gives `rho_angle` 0 where f64 gives π/2, inferred to be R-437's `p = q = 0`
+  select (RQ-685, RQ-687). The corpus treats such selects as "no branch", so a table of tags alone would read 0 past it; hence
+  the select columns. Those are pass
   counts of assertions, the CPU against one backend; this task gives every pair's rate over one input set. The tests in
   `canon_gpu.rs` and `decode_cross_backend.rs` stay as they are and go on asserting.
 - A separate task from TASK-M4-28 because a task starts only when its Depends on has merged, and this one must not wait for
