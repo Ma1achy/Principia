@@ -55,7 +55,7 @@ existing ones (NOW-28 to NOW-34, M9-35 to M9-46); the earlier ranks are not re-r
 | # | Rank | Item | What it tests | Effort | Watch for | Row |
 |---|---|---|---|---|---|---|
 | 1 | NOW-28 | eucliss free-fall fate plane (papers-152), 400 × 240, t ≤ 200 | Free-fall escapes at equal masses: escaper fractions, escape-time histogram, survivors; the mirror-pair floor (gap 5) | S | AI-authored, unlicensed: peek, `_local`. Copy its escape predicate. Mirror-pair escaper agreement 0.97 (t < 10), 0.84 (10–20), 0.63 (20–50), 0.51 (> 50); binning convention unresolved | 204 |
-| 2 | NOW-29 | cft-rebound Burrau divergence (papers-72) | f64 against fp128 and fp256 on Burrau to t = 73.4; an 8-member ulp ensemble | S | GPL-3.0-or-later: never committed. Unreviewed, AI-assisted. Raised from RECORD-ONLY | 221 |
+| 2 | NOW-29 | cft-rebound Burrau divergence (papers-72) | f64 against fp128 and fp256 on Burrau to t = [value]; an [value]-member ulp ensemble | S | GPL-3.0-or-later: never committed, values masked. Unreviewed, AI-assisted. Raised from RECORD-ONLY | 221 |
 | 3 | NOW-25 (standing) | Maissouradze 2026, 7 stable free-fall orbits | Free-fall closure at unequal masses, a 7.7e-5 passage | S | AI-assisted; data path is papers-12, not papers-128 | 90 |
 | 4 | NOW-24 (standing) | Kandel 2026, 86 refined starts | L≠0 closure, equal masses | S | Ours: 7 are atlas rows and 1 nearly; peek on the other 78 | 190 |
 | 5 | NOW-30 | Agekyan, Anosova & Orlov 1983, Tables 2-4 | Decay-time and escape statistics at rest in region D, 1000 runs, to 1000 crossing times. Peer-reviewed | M | Table 5 needs Tevzadze 1962's escape criterion (not held): its M9 part. Table 4 bin misprint | 4 |
@@ -166,7 +166,7 @@ Both are readings, not authority; every claim was checked against the native fil
 - BPZ masses: "positive unequal masses" is wrong. MOESM3 has equal masses (1/3 each); MOESM4 has 4/7, 2/7, 1/7.
 - BPZ is not new: it is committed in `docs/incoming/2026-10-31_precision_set/`, covered by R-661 and BZ-1C (row 219).
 - Kandel digits: "approximately 30-40-digit" is wrong. All 86 files store 30 digits; 40 is the working precision.
-- CFT: the 8-member ulp ensemble (`ens8_*.rec`) is omitted, and so is the GPL-3.0-or-later licence.
+- CFT: the [value]-member ulp ensemble (`ens8_*.rec`) is omitted, and so is the GPL-3.0-or-later licence.
 - Maissouradze: the AI assistance is not stated (`main.tex` credits Claude).
 - BKM (Doumbouya 2026): the package's "Grok audit" (AI assistance) is not stated; it failed its own gates.
 - HD127195 (Öz 2026) and Quarles 2018 are shortlisted but fail the filter: a star plus two planets, and test-particle
@@ -351,8 +351,8 @@ fix below was made from the source itself, re-read on 3 Nov.
 - Hénon 1974 (row 68) and Heggie & Sweatman 1991 (row 67) are cited as ruled (R-669), not re-proposed; the collinear fit
   printed on p.564 settles the Sweatman thesis row.
 - BKM (Doumbouya 2026) is kept `_local` until a peek needs it.
-- Values from repositories with no licence for their data are masked as `[value]` (mikha08-rgb/Nbody, eucliss and
-  others); values from published papers stay, with citation, under R-668 (items 3 and 9, the owner's data-reuse rule).
+- Values from repositories with no licence for their data are masked as `[value]` (mikha08-rgb/Nbody, eucliss, and
+  cft-rebound with its set-up values and counts, and others); values from published papers stay, with citation, under R-668 (items 3 and 9, the owner's data-reuse rule).
 - Tomihisa 2011 (row 151) takes the guide verifier's reading over chunk 07's one-liner, since the owner put it in the
   precision-gap check.
 - Anosova, Bertov & Orlov 1984's velocity recipe is Anosova 1969, Trudy AO LGU 26, 88, not held; R-673's Anosova 1969 is
