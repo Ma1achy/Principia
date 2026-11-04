@@ -53,8 +53,9 @@ branch yet. The ids are one past the highest `## R-n` heading of `decisions.md` 
 
 - **PLAIN:** answers that are, whole, a form of the narrow grammar: `(a)`, `(a) + (c)`, `close`, `veto`, `defer:Mn`,
   `ask:<question>`. Apply these as they read.
-- **READ:** everything else that names a known item. Riders, reasons, negations, words of any kind, and any option on an
-  entry showing several questions. The parser has not understood these: it keeps them verbatim, and any labels it
+- **READ:** everything else that names a known item. Riders, reasons, negations, words of any kind, any option on an
+  entry showing several questions, and every answer sharing its line with another, since a stop before it may not end
+  a sentence: read those with the whole line, and an answer that only cites an entry answers nothing for it. The parser has not understood these: it keeps them verbatim, and any labels it
   found are a hint and nothing more.
 - **REFUSED:** with the reason. Don't repair a refused line or infer what it meant: it goes to the owner in step 8 as
   they typed it.
@@ -72,6 +73,9 @@ beside the owner's text. Then treat it as the kind it turned out to be, in step 
 - **If you can't say what it means without choosing, ask the owner.** Take the answer out, list it in step 8 with the
   question, and do nothing on it. That goes for options that exclude each other, a rider that leaves the meaning open,
   and anything that contradicts a ruling or the corpus (`CLAUDE.md` § "Rulings", § "Never guess, never defer").
+
+A PLAIN answer stands alone on its line, but the line above it may still carry on into it, if that line's stop only
+ended an abbreviation. Read the READ answer above any PLAIN one for that.
 
 A line continues the answer above it unless it starts `RQ-n:` and the line above is complete, so one READ answer can
 run over several lines, and hold other items' ids. Read all of it.

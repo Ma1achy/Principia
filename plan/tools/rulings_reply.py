@@ -16,11 +16,12 @@ it doesn't try to read words at all:
     `close`  `veto`  `defer:Mn`  `ask:<question>`    with or without a last stop, on `close`, `veto` and `defer:`
     `D-n: veto`                                      vetoes the report's R-369 decision D-n, which has no RQ
 
-`read`, everything else that names a known item: riders, reasons, negations, combined forms in words, free text, any
-option on an entry that shows several questions (numbered labels, a label listed twice, letters mixed with romans,
-"separately" or "Open within" in the options, or a field named "The questions", "Second question", or `Q-n`). It is
-kept verbatim, with any labels found in it given only as a hint, and is never applied mechanically: /rulings-apply has
-the session read it and decide what it says, or ask the owner. Its R id is provisional.
+`read`, everything else that names a known item: an answer sharing its line with another, riders, reasons, negations,
+combined forms in words, free text, any option on an entry that shows several questions (numbered labels, a label listed
+twice, letters mixed with romans, "separately" or "Open within" in the options, or a field named "The questions",
+"Second question", or `Q-n`). It is kept verbatim, with any labels found in it given only as a hint, and is never
+applied mechanically: /rulings-apply has the session read it and decide what it says, or ask the owner. Its R id is
+provisional.
 
 Refused, and listed with the reason, is what can be stated simply: an unknown or closed RQ, an unknown D-n, an item
 answered twice, a line naming no item, an empty answer, and a plain form that can't stand: a label the entry doesn't
@@ -29,11 +30,12 @@ doesn't group under "Ruled-or-moot", and a veto of an entry that applies nothing
 
 A line continues the answer above it unless it starts a new item with `RQ-n:` or `D-n:` and the line above is complete:
 a plain form, or ended with a sentence. A blank line or a section name ends an answer. A line splits only after a
-sentence end, before such an item, as in `RQ-641: (b). RQ-642: (a).`, and each part is answered on its own. If unsure,
-the whole thing is one `read` answer, under its first item, so a wrapped answer is never cut short and an entry the
-owner only cited is never answered. A template line left as the report wrote it, or `D-n: stands`, is unanswered. A line
-that is a section name alone (`HEADINGS`, or a report's `##` heading) is no reply line either: it is skipped, and listed
-as skipped.
+sentence end, before such an item, as in `RQ-641: (b). RQ-642: (a).`, and each part is answered on its own, always as
+`read`: a stop can be an abbreviation's, as in `cf. RQ-5: (a)`, so a split may be wrong, and nothing on such a line is
+applied unread. A wrapped answer is one `read` answer under its first item, never plain, and no line of it is dropped. A
+stop that ends an abbreviation also lets the next line start its own item, which reads as that item's answer. A template
+line left as the report wrote it, or `D-n: stands`, is unanswered. A line that is a section name alone (`HEADINGS`, or a
+report's `##` heading) is no reply line either: it is skipped, and listed as skipped.
 
 A reply carries its report's `Report: <date> <hash>` line from the template, the hash being of the report's text. `D-n`
 is numbered per report, and the Ruled-or-moot set is the report's, so a `D-n` line and a report-only `close` are refused
@@ -227,9 +229,9 @@ def plain_form(body):
     return None
 
 
-def read_answer(item, body, e, moot):
-    """(kind, value) for a reply's `body` on `item`, or Refused with the reason. Only a plain form that can stand takes
-    its own kind; everything else is `read`, its value the hint."""
+def read_answer(item, body, e, moot, shared=False):
+    """(kind, value) for a reply's `body` on `item`, or Refused with the reason. Only a plain form that can stand, and
+    isn't `shared`, on a line with another answer, takes its own kind; everything else is `read`, its value the hint."""
     if not body:
         raise Refused("an empty answer")
     form = plain_form(body)
@@ -250,11 +252,13 @@ def read_answer(item, body, e, moot):
                 raise Refused(f"option {label} is \"another, stated by the owner\": the statement is missing")
         if e["several"]:
             form, kind = None, "read"
-    if form and kind != "read":
+    if form and kind != "read" and not shared:
         return kind, value
     hints = list(dict.fromkeys(m.group(1).lower() for m in BRACKETED.finditer(body)))
     if e and e["several"]:
         hints.append("entry shows several questions")
+    if shared:
+        hints.append("shares its line")
     return "read", ", ".join(hints)
 
 
@@ -291,6 +295,7 @@ def parse_reply(text, queue_text, closed=(), decisions=(), moot=(), report_fault
     `decisions` and `moot`."""
     entries, accepted, refused, unanswered = entries_of(queue_text), [], [], []
     answers, skipped = split_reply(text.splitlines())
+    numbers = [n for n, _ in answers]
     for n, part in answers:
         m = LINE.match(part.strip())
         try:
@@ -307,7 +312,7 @@ def parse_reply(text, queue_text, closed=(), decisions=(), moot=(), report_fault
             if item.startswith("RQ-") and item not in entries:
                 raise Refused(f"{item} is closed, in the archive" if item in closed
                               else f"{item} is no entry in the queue")
-            kind, value = read_answer(item, body, entries.get(item), moot)
+            kind, value = read_answer(item, body, entries.get(item), moot, numbers.count(n) > 1)
             accepted.append({"n": n, "line": part, "item": item, "kind": kind, "value": value})
         except Refused as r:
             refused.append((n, part, str(r)))
@@ -648,7 +653,7 @@ def self_test():
         fails.append(f"reply self-test: twice must be named: {no}")
     ok, no = parse_reply("RQ-1: (b). RQ-5: (a) one, as said. RQ-8: (a).  RQ-9: (a).\n", queue)[:2]
     if ([(a["item"], a["kind"], a["line"]) for a in ok]
-            != [("RQ-1", "option", "RQ-1: (b)."), ("RQ-5", "read", "RQ-5: (a) one, as said."),
+            != [("RQ-1", "read", "RQ-1: (b)."), ("RQ-5", "read", "RQ-5: (a) one, as said."),
                 ("RQ-8", "read", "RQ-8: (a).")]
             or [p for _, p, _ in no] != ["RQ-9: (a)."] or any(a["line"] != a["line"].strip() for a in ok)):
         fails.append(f"reply self-test: several on one line must each stand or fall alone: {ok} {no}")
@@ -687,8 +692,17 @@ def self_test():
     answers("a blank line ends an answer", "RQ-1: (a) but\n\nRQ-5: (b)\nstray\n", [("RQ-1", "read"), ("RQ-5", "read")])
     answers("a section name ends an answer", "RQ-1: (a) but\nPHYSICS\nstray\n", [("RQ-1", "read")], ["stray"])
     answers("the wrapped part is the last on its line", "RQ-5: (a). RQ-1: (b) but\nonly on Vulkan\n",
-            [("RQ-5", "option"), ("RQ-1", "read")])
-    answers("a split after a sentence", "RQ-1: (b). RQ-5: (a) there.", [("RQ-1", "option"), ("RQ-5", "read")])
+            [("RQ-5", "read"), ("RQ-1", "read")])
+    answers("a split after a sentence", "RQ-1: (b). RQ-5: (a) there.", [("RQ-1", "read"), ("RQ-5", "read")])
+    answers("two plain forms on a line are read", "RQ-1: (b). RQ-5: (a).", [("RQ-1", "read"), ("RQ-5", "read")])
+    answers("a split after an abbreviation applies nothing", "RQ-1: (a) cf. RQ-5: (b).",
+            [("RQ-1", "read"), ("RQ-5", "read")])
+    answers("a veto sharing its line", "RQ-1: veto. RQ-2: close.", [("RQ-1", "read"), ("RQ-2", "read")])
+    hint = parse_reply("RQ-1: (b). RQ-5: (a).", queue)[0][0]["value"]
+    if hint != "b, shares its line":
+        fails.append(f"reply self-test: a shared line must say so in the hint: {hint!r}")
+    answers("a line alone after an abbreviation is its own", "RQ-1: (a), e.g.\nRQ-5: (a)\n",
+            [("RQ-1", "read"), ("RQ-5", "option")])
     answers("no split mid-sentence", "RQ-1: (b) as in RQ-5: (a) there.", [("RQ-1", "read")])
     answers("no split with no sentence end", "RQ-1: (a) RQ-5: (b)", [("RQ-1", "read")])
     answers("no split on an id with no colon", "RQ-1: (b). RQ-5 is deferred.", [("RQ-1", "read")])
