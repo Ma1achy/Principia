@@ -1,7 +1,7 @@
 # ADR-0001: The mock's value noise addresses and hashes its lattice in integers
 
-**Status: Proposed.** Authority: none until a ruling or an "applied per R-369" record is cited here. Asked for by R-685.
-The owner's choice of pattern is RQ-691.
+**Status: Accepted, option A (R-689).** Asked for by R-685. The owner chose the pattern in R-689, which closes RQ-691. *Was:*
+"Proposed".
 
 **Relation to `decisions.md`:**
 - An ADR carries reasoning and evidence, never a rule.
@@ -162,7 +162,7 @@ be pinned, without images.
 ## Must not claim
 
 - That any real shader or kernel path is safe on NVIDIA. The audit's "No real shader has a float lattice hash" (issue #390,
-  comment 6633374835) is not "safe": `canon.rs`'s premise stays unenforced on Vulkan (RQ-690).
+  comment 6633374835) is not "safe": `canon.rs`'s premise is a driver condition that nothing enforces (R-690).
 - Anything on RQ-685, RQ-686 or RQ-687, or on R-297's meaning. No change to `StageMode::Off`, tolerances or probes.
 - A link to #393 or #396. Nothing here connects them. "Same driver" is a hypothesis.
 - That the driver's rewrite is proven. It is reproduced by a model; no compiler output exists.
