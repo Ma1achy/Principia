@@ -4,7 +4,8 @@
 //! focus in the console, toggle the full height below the top bar and back to the dragged height; M while the search
 //! field is typed in types 'm'; → from Clear reaches maximise, then ×; maximised, the console covers the panels and the
 //! figure; the hover label stays on the strip of figure a dragged console leaves; a basis editor it covers is hidden and takes
-//! no input; over the whole page, it leaves only the top bar and the footer to the keys. Each check also runs on an outcome it must reject (R-176, through `rejects`; gui takes no dependency on
+//! no input, and a panel's popup it reaches closes; over the whole page, it leaves only the top bar and the footer to the
+//! keys, and opening by itself it does not go over the page, as it takes no focus. Each check also runs on an outcome it must reject (R-176, through `rejects`; gui takes no dependency on
 //! validation, R-187): a console of fixed height, an M that types nothing outside the field, and the others named.
 
 use std::path::{Path, PathBuf};
@@ -874,6 +875,70 @@ fn mock_console_height_closed_the_panels_are_reached_again() {
     let last = focus(&app);
     assert_ne!(last, [TOP_BAR], "the panels are in the order again");
     rejects("the order left at the bars", || assert_eq!(last, [TOP_BAR]));
+}
+
+/// `app` with the console closed from `covering`: maximised, or dragged to the top.
+fn closed_from(maximised: bool) -> (App<MockSide>, Headless) {
+    let (mut app, mut h) = opened();
+    if maximised {
+        m(&mut h, &mut app, NONE);
+    } else {
+        drag_edge(&mut h, &mut app, -5000.0);
+        settle(&mut h, &mut app);
+        at_scope(&mut h, &mut app, HEADER);
+    }
+    same(drawn(&app), full(&h, &app));
+    press(&mut h, &mut app, Key::Escape, NONE);
+    let _ = h.frame(&mut app, Vec::new());
+    assert!(!app.is_open(Window::Console));
+    (app, h)
+}
+
+#[test]
+fn mock_console_height_opening_by_itself_it_takes_no_focus_at_any_height() {
+    for maximised in [true, false] {
+        let (mut app, mut h) = closed_from(maximised);
+        at_scope(&mut h, &mut app, FIGURE);
+        app.side().engine().raise_error();
+        settle(&mut h, &mut app);
+        assert!(app.is_open(Window::Console));
+        assert_eq!(focus(&app), [FIGURE], "the focus not taken");
+        let page = full(&h, &app);
+        let got = drawn(&app);
+        assert!(got.min.y > page.min.y, "not over the page: {got:?}");
+        assert!(!app.windows.console.maximised);
+        rejects("a console over the page", || same(got, page));
+    }
+    // The control: at the default height, the same.
+    let mut app = mock_app();
+    let mut h = headless();
+    settle(&mut h, &mut app);
+    at_scope(&mut h, &mut app, FIGURE);
+    app.side().engine().raise_error();
+    settle(&mut h, &mut app);
+    assert_eq!(focus(&app), [FIGURE]);
+}
+
+#[test]
+fn mock_console_height_only_an_auto_open_lowers_it() {
+    // Opened by the keys, a console closed maximised opens maximised, and takes the focus.
+    let (mut app, mut h) = closed_from(true);
+    at_scope(&mut h, &mut app, FOOTER);
+    press(&mut h, &mut app, Key::Enter, NONE);
+    settle(&mut h, &mut app);
+    assert!(app.is_open(Window::Console));
+    assert!(app.windows.console.maximised, "still maximised");
+    same(drawn(&app), full(&h, &app));
+    assert_eq!(focus(&app), [WINDOW, HEADER]);
+    // Already open, an error changes nothing.
+    app.side().engine().raise_error();
+    settle(&mut h, &mut app);
+    assert!(app.windows.console.maximised, "an error while it is open");
+    let (got, page) = (drawn(&app), full(&h, &app));
+    same(got, page);
+    rejects("a console lowered by an error", || {
+        assert!(got.min.y > page.min.y)
+    });
 }
 
 #[test]

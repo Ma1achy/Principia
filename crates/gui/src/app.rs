@@ -127,6 +127,8 @@ pub struct App<S: EngineSide> {
     /// While a drag holds the console's top edge: the edge when it began, in points, and the place and maximised state
     /// the drag started from, for a drag back to where it began (R-463 K1).
     console_drag: Option<(f32, Option<f32>, bool)>,
+    /// Whether the console opened by itself since the last frame.
+    console_auto_opened: bool,
     /// Where the GUI's settings are kept (R-461 I4).
     store: Store,
     /// Whether a save of the settings has failed this session: it is logged once.
@@ -207,6 +209,7 @@ impl<S: EngineSide> App<S> {
             splits: Splits::default(),
             splitting: None,
             console_drag: None,
+            console_auto_opened: false,
             store: Store::default(),
             save_failed: false,
             present: false,
@@ -348,10 +351,11 @@ impl<S: EngineSide> App<S> {
     }
 
     /// Reads a snapshot: its entries join the console and the counts; an error among them opens the console, taking
-    /// no focus (§G12; R-405).
+    /// no focus (§G3; §G12; R-405).
     fn read(&mut self) {
         self.snapshot = self.side.engine().snapshot();
         if absorb(&self.snapshot, &mut self.console, &mut self.counts) {
+            self.console_auto_opened |= !self.console_open;
             self.console_open = true;
         }
     }
@@ -530,6 +534,7 @@ impl<S: EngineSide> App<S> {
         let held = Layout::with_splits(ui.max_rect(), ctx.pixels_per_point(), &self.splits);
         self.follow_splitter(&ctx, &held);
         self.follow_console_edge(&ctx, &held);
+        self.lower_auto_opened_console(&held);
         let layout = Layout::with_splits(ui.max_rect(), ctx.pixels_per_point(), &self.splits);
         if self.present {
             self.presenting(&ctx, &layout);
@@ -997,11 +1002,24 @@ impl<S: EngineSide> App<S> {
         }
     }
 
+    /// A console that opened by itself takes no focus (§G3), so it does not open over the page: a maximised one opens
+    /// at its docked height, and one dragged to the top at the default height (applied per R-369).
+    fn lower_auto_opened_console(&mut self, layout: &Layout) {
+        if std::mem::take(&mut self.console_auto_opened) {
+            self.windows.console.maximised = false;
+            if layout.console.min.y <= layout.page.min.y {
+                self.splits.set_console_top(None);
+            }
+        }
+    }
+
     /// The console over the whole page, maximised or dragged to the top, leaves the top bar and the footer: the panels
     /// under it cannot be reached, by Tab or the arrows, and a focus on one moves to the console, so no ring or key
     /// lands on a panel it covers (R-463 K2; applied per R-369). The focus is not put back when it lowers or closes.
     fn follow_console_cover(&mut self, layout: &Layout) {
-        let covering = self.console_open && self.console_rect(layout).min.y <= layout.page.min.y;
+        let covering = self.console_open
+            && !self.console_auto_opened
+            && self.console_rect(layout).min.y <= layout.page.min.y;
         let left = covering.then_some(&UNCOVERED_BIGS[..]);
         self.keyboard.tree_mut(Mode::Explore).leave_uncovered(left);
         self.keyboard.tree_mut(Mode::Stain).leave_uncovered(left);
