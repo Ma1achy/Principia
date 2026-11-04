@@ -116,7 +116,7 @@ jobs:
           path: target/gate-test-list/
           if-no-files-found: ignore
 
-  # The xtask tests that run cargo on the workspace's own target directory, each alone, as `ci.yml`'s `ci-workspace` job
+  # The tests that run cargo on the workspace's own target directory, each alone, as `ci.yml`'s `ci-workspace` job
   # runs them (`.config/nextest.toml`'s `ci-workspace` profile; R-372, REQ-SYS-078): the `cpu` job's `ci` profile
   # selects none of them, so without this job the gate would not run them (REQ-SYS-067). Their packages' doctests run in
   # the `cpu` job's `cargo test --workspace --doc`. Applied per R-369.
@@ -159,10 +159,11 @@ jobs:
       - uses: taiki-e/install-action@v2
         with:
           tool: cargo-nextest@0.9.146
-      - name: cargo nextest run -p xtask
+      # Validation is here for `qa_TASK-M0-24`, the one test of it the profile selects.
+      - name: cargo nextest run -p validation -p xtask
         env:
           NEXTEST_PROFILE: ci-workspace
-        run: cargo nextest run -p xtask
+        run: cargo nextest run -p validation -p xtask
 
   # `cargo xtask ci`, every registered per-push runner (R-177).
   xtask-ci:

@@ -6,14 +6,16 @@
 # not run, through `cargo test --doc` (R-231); `xtask/tests/nextest.rs` checks that together they list every test
 # `cargo test` did. `ci`, `ci-workspace` and `gpu-kernel` split the workspace's tests between them by nextest profile
 # (`.config/nextest.toml`), each step's NEXTEST_PROFILE: `gpu-kernel` runs the kernel's, `ci-workspace` the xtask
-# tests that run cargo on the workspace's own target directory, and `ci` every other test. `ci-release` runs the `ci`
+# tests that run cargo on the workspace's own target directory and validation's `qa_TASK-M0-24`, and `ci` every other
+# test. `ci-release` runs the `ci`
 # profile's tests again, at the release profile, as 2 shards from a release archive `ci-release-archive` builds once
 # (R-547, REQ-TOOL-189; R-325, REQ-SYS-078).
 # Sharding (R-336, R-360, R-366, REQ-SYS-077): `ci` runs its nextest run as 4 parallel shards, a matrix, each running
 # nextest's `--partition hash:<k>/4`, which together run every test the unsharded run did; formatting, lints, the
 # docs (R-387), the build and the crate-graph check run once, beside them, in `ci-checks`. `xtask-ci` runs
 # `cargo xtask ci --partition <k>/4` as 4 parallel shards, which together run every control exactly once
-# (`xtask/src/controls.rs`).
+# (`xtask/src/controls.rs`), but for the three that list the workspace in its default feature set: `ci-workspace`, which
+# has that build, runs those once, in a step of their own (`controls::IN_CI_WORKSPACE`).
 # The shards share one test build (R-372, REQ-SYS-078): `ci-archive` builds the workspace's tests once, as a nextest
 # archive, and every `ci` shard runs its slice from that archive (`--archive-file`); no step of a shard builds the
 # workspace or compiles a test binary, but shard 1's doctests, which nextest does not run. The xtask tests that run
@@ -341,7 +343,7 @@ jobs:
           path: target/tmp/fixture-targets
           key: fixture-pool-ci-${{ runner.os }}-${{ steps.toolchain.outputs.cachekey }}-${{ hashFiles('Cargo.lock', 'fixtures/**/Cargo.toml', 'xtask/tests/fixtures/**/Cargo.toml') }}
 
-  # The xtask tests that run cargo on the workspace's own target directory (`.config/nextest.toml`'s `ci-workspace`
+  # The tests that run cargo on the workspace's own target directory (`.config/nextest.toml`'s `ci-workspace`
   # profile), beside the `ci` shards and on a build of their own (R-372, REQ-SYS-078): run from the shards' archive,
   # which carries no cargo build state, each would rebuild the workspace in its shard while holding every test thread.
   # On a data or docs pull request (R-656, R-662, R-677) it runs the cheap checks in their place, the one test job such
@@ -408,6 +410,25 @@ jobs:
         env:
           NEXTEST_PROFILE: ci-workspace
         run: cargo nextest run -p xtask
+        shell: bash .github/scripts/disk_sampler.sh {0}
+      # Validation's `qa_TASK-M0-24`: it runs `cargo xtask controls --list`, whose build the step above has made, and from
+      # the shards' archive it rebuilt that in its shard (`.config/nextest.toml`'s `ci-workspace` profile).
+      - name: cargo nextest run -p validation --test qa_TASK-M0-24
+        if: needs.changes.outputs.docs_only != 'true'
+        env:
+          NEXTEST_PROFILE: ci-workspace
+        run: cargo nextest run -p validation --test qa_TASK-M0-24
+        shell: bash .github/scripts/disk_sampler.sh {0}
+      # The three controls of `xtask/tests/nextest.rs` that list the workspace in its default feature set, which the
+      # `xtask-ci` shards leave here (`controls::IN_CI_WORKSPACE`, which `tests/nextest.rs` checks against this line).
+      # `cargo nextest run -p xtask`, two steps up, has just built everything they list, for the tests they fault; in a
+      # shard they cost a second whole build of the workspace's tests (run 41756812074: 48 GB, shards 2 and 4). A control
+      # that does not make its test fail fails this step, as it fails `cargo xtask controls`. Applied per R-369.
+      - name: cargo nextest run --features controls (the default-feature listing's controls)
+        if: needs.changes.outputs.docs_only != 'true'
+        env:
+          NEXTEST_PROFILE: ci-workspace
+        run: cargo nextest run -p xtask --features controls --test nextest nextest_ci_steps_list_every_test_cargo_test_listed_without_features::negative_control nextest_ci_shards_together_list_every_test::negative_control nextest_ci_steps_list_every_test_under_their_profiles::negative_control
         shell: bash .github/scripts/disk_sampler.sh {0}
       - name: Runner disk after the tests
         if: needs.changes.outputs.docs_only != 'true'
@@ -768,9 +789,9 @@ jobs:
   # `cargo xtask ci --partition <k>/4` runs `cargo xtask build-kernel`, whose WGSL the kernel tests' controls dispatch,
   # in every shard; then `cargo xtask controls` on the controls whose names fall in slice k of 4, failing on any finding
   # (R-198, R-226); and, in shard 1 only, the other runners, among them `cargo xtask plan-check`, which needs Python
-  # and PyYAML (REQ-SYS-007). Together the 4 shards run every control exactly once. The GPU harness's controls run on
-  # lavapipe, as its tests do. `xtask/tests/nextest.rs`'s control lists tests through the pinned cargo-nextest
-  # (R-231). The kernel build stays here, as a runner `cargo xtask ci` registers: the kernel tests' controls read its
+  # and PyYAML (REQ-SYS-007). Together the 4 shards run every control exactly once, but for the three `ci-workspace`
+  # runs (`controls::IN_CI_WORKSPACE`). The GPU harness's controls run on lavapipe, as its tests do.
+  # `xtask/tests/nextest.rs`'s other controls list tests through the pinned cargo-nextest (R-231). The kernel build stays here, as a runner `cargo xtask ci` registers: the kernel tests' controls read its
   # output (R-325 moves it out of `ci`, not out of this job).
   xtask-ci:
     runs-on: ubuntu-24.04

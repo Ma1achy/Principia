@@ -79,6 +79,11 @@
 //! Each test has its registered negative control (R-176), which feeds the same check a script or workflow differing in
 //! the one respect it turns on. The workflows are parsed with PyYAML, as `plan/check_plan.py` and the qa tests that
 //! read the workflows parse them.
+//!
+//! The two `ci_changes_every_required_check_reports_on_*` tests' `mutants-check` run needs Unix to compile: its
+//! stand-ins are executable scripts found through `PATH`, marked executable with `PermissionsExt`. Those two tests,
+//! their controls and what only they use are `#[cfg(unix)]` (#391), so the rest of this target compiles on Windows.
+//! Whether the rest passes there is not established: none of this target's tests has run on Windows.
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -2676,6 +2681,7 @@ mod skippable_mutants_check {
 // ---- Every required check reports on every tier ------------------------------------------------------------------
 
 /// A change of each tier, as a pull request makes it: what it is and its paths.
+#[cfg(unix)]
 const TIER_CHANGES: [(&str, &[&str]); 4] = [
     ("a code change", &["crates/kernel/src/lib.rs"]),
     ("a data change (the plan's task data)", &["plan/tasks.yaml"]),
@@ -2759,6 +2765,7 @@ fn evaluate(expr: &str, ctx: &Ctx) -> String {
     terms.iter().all(|t| value(t) == "true").to_string()
 }
 
+#[cfg(unix)]
 fn needs_of(job: &Value) -> Vec<String> {
     match job.get("needs") {
         None => Vec::new(),
@@ -2769,6 +2776,7 @@ fn needs_of(job: &Value) -> Vec<String> {
 
 /// `ci.yml`'s run on a pull request whose classification is `verdict`: every job's result, each job that runs
 /// succeeding, and each required check it reports with whether its gate's script passes.
+#[cfg(unix)]
 fn ci_run(yml: &str, verdict: &[(&str, String)]) -> Vec<(String, bool)> {
     use std::collections::BTreeMap;
     let wf = parse(yml);
@@ -2860,6 +2868,7 @@ fn ci_run(yml: &str, verdict: &[(&str, String)]) -> Vec<(String, bool)> {
 }
 
 /// What `mutants.yml`'s `mutants-check` job reported: whether its report step passed, its log and its job summary.
+#[cfg(unix)]
 struct Reported {
     ok: bool,
     log: String,
@@ -2870,6 +2879,7 @@ struct Reported {
 /// `READY`, `MUTANTS`, `VERDICT`): its classification step reads the classifier, and its report step runs under bash
 /// with a stand-in `gh` that answers the pull request's head `0123abcd`, one earlier run of the workflow on it, run 5,
 /// and that run's `mutants-verdict` as `$STUB_JOB`; a stand-in `sleep` fails, so a wait ends the step at once.
+#[cfg(unix)]
 fn mutants_report(yml: &str, env: &[(&str, &str)]) -> Reported {
     let wf = parse(yml);
     let job = &wf["jobs"]["mutants-check"];
@@ -2944,9 +2954,12 @@ fn mutants_report(yml: &str, env: &[(&str, &str)]) -> Reported {
 
 /// The reason `mutants-check` gives for "not applicable" on a change with no `.rs` file under `crates/`, and on a head
 /// that is not merge-ready.
+#[cfg(unix)]
 const NO_CRATES: &str = "touches no Rust source under crates/";
+#[cfg(unix)]
 const NOT_READY: &str = "The head is not merge-ready";
 
+#[cfg(unix)]
 fn check_every_tier_reports(ci: &str, mutants: &str) {
     let script = read("scripts/ci_changes.sh");
     for (what, paths) in TIER_CHANGES {
@@ -3020,6 +3033,7 @@ fn check_every_tier_reports(ci: &str, mutants: &str) {
     }
 }
 
+#[cfg(unix)]
 #[test]
 fn ci_changes_every_required_check_reports_on_every_tier() {
     check_every_tier_reports(
@@ -3028,6 +3042,7 @@ fn ci_changes_every_required_check_reports_on_every_tier() {
     );
 }
 
+#[cfg(unix)]
 mod workspace_skipped_on_docs {
     use super::*;
     negative_control!(
@@ -3045,6 +3060,7 @@ mod workspace_skipped_on_docs {
     );
 }
 
+#[cfg(unix)]
 mod xtask_ci_docs_tier_only {
     use super::*;
     negative_control!(
@@ -3062,6 +3078,7 @@ mod xtask_ci_docs_tier_only {
     );
 }
 
+#[cfg(unix)]
 mod mutants_pending_on_data {
     use super::*;
     negative_control!(
@@ -3079,6 +3096,7 @@ mod mutants_pending_on_data {
     );
 }
 
+#[cfg(unix)]
 mod gpu_gate_on_docs_only {
     use super::*;
     negative_control!(
@@ -3100,6 +3118,7 @@ mod gpu_gate_on_docs_only {
 
 /// The checks `plan/HUMAN_SETUP.md` §2 records branch protection as requiring on `main`: the names in its bullet
 /// "require status checks to pass: …" before its first parenthesis, and the one in "require `…` too".
+#[cfg(unix)]
 fn recorded_required(setup: &str) -> Vec<String> {
     let section: Vec<&str> = setup
         .lines()
@@ -3135,6 +3154,7 @@ fn recorded_required(setup: &str) -> Vec<String> {
 /// A pull request's event on its head, as GitHub starts runs on it: what it is, the event's action, the label it
 /// names, whether the head carries `merge-ready` (the event's labels), the change's paths, and what `mutants-check`
 /// reports in `mutants.yml`'s run of it, the merge-ready run's verdict and that head's earlier merge-ready run passing.
+#[cfg(unix)]
 struct EventPath {
     what: &'static str,
     action: &'static str,
@@ -3144,11 +3164,15 @@ struct EventPath {
     mutants_check: &'static str,
 }
 
+#[cfg(unix)]
 const CODE_PATHS: &[&str] = &["crates/kernel/src/lib.rs"];
+#[cfg(unix)]
 const PLAN_PATHS: &[&str] = &["plan/tasks.yaml"];
+#[cfg(unix)]
 const DOCS_PATHS: &[&str] = &["docs/design/principia_dd_replication.md"];
 
 /// The paths the owner named (3 Nov 2026, R-678): label added, label removed, docs-only, plan-data and code.
+#[cfg(unix)]
 const EVENT_PATHS: &[EventPath] = &[
     EventPath {
         what: "code, a push",
@@ -3257,6 +3281,7 @@ const EVENT_PATHS: &[EventPath] = &[
 ];
 
 /// The `pull_request` activity types a workflow runs on: its `types:`, or GitHub's defaults.
+#[cfg(unix)]
 fn pr_types(wf: &Value) -> Vec<String> {
     wf["on"]["pull_request"]["types"]
         .as_array()
@@ -3275,6 +3300,7 @@ fn pr_types(wf: &Value) -> Vec<String> {
 /// event, and then its run on the head's push stands, which it must have. A workflow that runs on one label change runs
 /// on both, so a label taken off never leaves the run of its putting on standing; no workflow bearing a check filters
 /// its pull requests.
+#[cfg(unix)]
 fn check_every_path_reports(workflows: &[(String, String)], setup: &str) {
     let mut recorded = recorded_required(setup);
     recorded.sort();
@@ -3421,13 +3447,14 @@ fn check_every_path_reports(workflows: &[(String, String)], setup: &str) {
     }
 }
 
+#[cfg(unix)]
 #[test]
 fn ci_changes_every_required_check_reports_on_every_path() {
     check_every_path_reports(&pull_request_workflows(), &read("plan/HUMAN_SETUP.md"));
 }
 
 /// The pull-request workflows with `file`'s text edited once, `from` to `to`.
-#[cfg(feature = "controls")]
+#[cfg(all(unix, feature = "controls"))]
 fn workflows_edited(file: &str, from: &str, to: &str) -> Vec<(String, String)> {
     let mut workflows = pull_request_workflows();
     let at = workflows
@@ -3438,6 +3465,7 @@ fn workflows_edited(file: &str, from: &str, to: &str) -> Vec<(String, String)> {
     workflows
 }
 
+#[cfg(unix)]
 negative_control!(
     ci_changes_every_required_check_reports_on_every_path,
     "mutants.yml's mutants-check skipped on a label taken off",
@@ -3452,6 +3480,7 @@ negative_control!(
     )
 );
 
+#[cfg(unix)]
 mod path_no_unlabeled {
     use super::*;
     negative_control!(
@@ -3469,6 +3498,7 @@ mod path_no_unlabeled {
     );
 }
 
+#[cfg(unix)]
 mod path_posted {
     use super::*;
     negative_control!(
@@ -3482,6 +3512,7 @@ mod path_posted {
     );
 }
 
+#[cfg(unix)]
 mod path_filtered {
     use super::*;
     negative_control!(
@@ -3499,6 +3530,7 @@ mod path_filtered {
     );
 }
 
+#[cfg(unix)]
 mod path_plan_data {
     use super::*;
     negative_control!(
@@ -3516,6 +3548,7 @@ mod path_plan_data {
     );
 }
 
+#[cfg(unix)]
 mod path_docs_only {
     use super::*;
     negative_control!(
@@ -3533,6 +3566,7 @@ mod path_docs_only {
     );
 }
 
+#[cfg(unix)]
 mod path_label_added {
     use super::*;
     negative_control!(
@@ -3551,6 +3585,7 @@ mod path_label_added {
     );
 }
 
+#[cfg(unix)]
 mod path_recorded {
     use super::*;
     negative_control!(
