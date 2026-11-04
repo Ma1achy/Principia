@@ -31,6 +31,7 @@ The scheduler switches a quad to the linearised decoder (`QuadRequest` `DECODE_M
 - `crates/kernel`: a workgroup-uniform branch on `DECODE_MODE` between full and linear decode.
 - Events `DECODE_SWITCHOVER` and `AT_F32_FLOOR` emitted to the scheduler's event stream (consumed by TASK-M6-21).
 - `cargo xtask bench decode-mode-occupancy` (two-path branch vs baked linear variant).
+- `collapse_flags_dump` (`#[ignore]`, `crates/engine`): `quad.collapsed` over the same quads of one real zoom through the switchover, written per backend, for the NVIDIA run in Notes.
 
 ## Acceptance tests
 - `cargo test -p engine collapse_triggers_switchover` — force bitwise-identical adjacent ICs on the full decoder (depth ~22, and at shallow depth with tiny q₁,q₂); assert DECODE_MODE flips to the linearised path and the quad keeps splitting (REQ-DEC-033).
