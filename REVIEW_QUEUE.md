@@ -2109,6 +2109,13 @@ record, which RQ-686 and RQ-687 share.*
   - **So the risk is open, not absent.** A driver whose quotients are one ulp off is the case where
     `(M_pair + m_b)/d` could flip `E_rel > 0` near zero, or `n̂` could flip `|Δn̂| < tau`. Neither is measured: neither
     input is on any GPU at this commit.
+  - **One same-input difference this question doesn't cover.** RQ-687's failure: on identical inputs, setting off, in the
+    compute decode stage, the card and not Metal or lavapipe gives `rho_angle` 0 where f64 gives π/2. The cause is `sin`,
+    isolated on the card, not division. By #393's diagnosis (inferred) the card takes R-437's `p = q = 0` select where
+    the others don't. This entry uses "branch decision" for the wrapper's, REQ-INT-057's, and
+    `docs/design/principia_dd_decoder.md`:76-77 and :313 treat such selects as choosing a value ("no branch"), so by the
+    letter this isn't one. `crates/kernel/src/chart/shape_sphere.rs`:52-55 does call it "a backend fork", so it is
+    disclosed here.
   - **Trajectories:** not measurable, as above. But division is already on the GPU in the continuous decode, canon and
     encode outputs (for example `crates/kernel/src/decode/config.rs`:78-84 and `canon.rs`:405), and these set every GPU
     trajectory's start. The measured decode reach is #400's `shape_sphere` fuzz, 52.05, 28.55 and 17.12 eps on the RTX,
@@ -2230,6 +2237,9 @@ run's record, the 13 failures and the hardware-health arm are in RQ-685.*
     error of `2⁻¹¹` on `[−π, π]`", and its option "(c) the kernel's own `sin` and `cos` at f32, as `atan2` (a larger
     change, beyond RQ-628's scope)". Its "No failure today" no longer holds, though this failure is `sin` near 0, not the
     `cos α` near `π/2` RQ-629 is about.
+- **The note's claim fails for `rho_angle`:** the failure below is a move of π/2, not rounding. By #393's diagnosis
+  (inferred) it is R-437's `p = q = 0` select, taken on the card and not on Metal or lavapipe, on identical inputs with
+  the setting off. The cause is `sin`, not RQ-685's division, so RQ-685's question doesn't cover it; RQ-685 discloses it.
 - **Measured (#393):**
   - `qa_m225_kernel_rho_angle_at_the_lambda_pole` on the card: "n₀ = [1.0, 0.0, 0.0], φ_f = 0 at [0.5, 0.5005]: the kernel
     decode stage's rho_angle 0e0 is 8388608 eps from Φ's f64 angle 1.5707963267948966e0, over REQ-DEC-043's 256". The line
