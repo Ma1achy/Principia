@@ -1207,7 +1207,7 @@ waits on it before the gate.*
 - **Applied meanwhile:** applied per R-369, the measured native row uses `--release`. The report and the panel name the build (`build`, "debug" or "release"), and PR #368's "What to try" gives the command. No requirement or task text changes for this entry.
 - **Waits:** nothing built waits. TASK-M8-96's perf reader measures with `--release` and checks the `build` field.
 
-## RQ-672: Whether LL-3 (REQ-VAL-223) takes Hénon 1974, held under R-669, as its independent printed source for Standish's orbit, instead of waiting for Standish 1970 *(the owner's; asked 2 Nov 2026, unanswered; R-630 item 9; R-669, question 14; REQ-VAL-223; `docs/incoming/2026-11-02_library_triage/SUMMARY.md` § "Open questions for the owner" 1; context: LL-3, TASK-M3-47)*
+## RQ-672: Whether LL-3 (REQ-VAL-223) takes Hénon 1974, held under R-669, as its independent printed source for Standish's orbit, instead of waiting for Standish 1970 *(the owner's; asked 2 Nov 2026, unanswered; R-630 item 9; R-669, question 14; REQ-VAL-223; `docs/incoming/2026-11-02_library_triage/SUMMARY.md` § "Open questions for the owner" 1; context: LL-3, TASK-M9-07)*
 
 *Queued 3 Nov 2026 by the library triage of batches 81 to 153 (PR "data: library triage, batches 81-153, and the
 papers-11 to 13 addendum"). The question went to the owner on 2 Nov and is unanswered; it changes what LL-3 waits on.*
@@ -1232,7 +1232,7 @@ papers-11 to 13 addendum"). The question went to the owner on 2 Nov and is unans
   owner's copy of Standish 1970 (R-630 item 9), and Hénon 1974 serves only the rotating-frame set; (c) both: Hénon 1974
   scores the half now, and Standish 1970 is checked against it once held.
 - **Applied meanwhile:** nothing; LL-3 waits as R-630 item 9 has it.
-- **Waits:** LL-3's Standish half (REQ-VAL-223, TASK-M3-47).
+- **Waits:** LL-3's Standish half (REQ-VAL-223, TASK-M9-07).
 
 ## RQ-673: Whether planetary (star-plus-planets) three-body systems are parked with the hierarchical triples under R-668, to return with the v2+ 3D extension, or out of scope for good *(the owner's; asked 2 Nov 2026, unanswered; R-668, item 5; `docs/incoming/2026-11-02_library_triage/SUMMARY.md` § "Open questions for the owner" 2; context: the triage filter, no target built)*
 
