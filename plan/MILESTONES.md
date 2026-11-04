@@ -476,10 +476,11 @@ and tightens the GPU path (`docs/design/principia_dd_replication.md` § 12).
   the ruled targets scored (FF-H, the figure-eight's published shape-sphere curve, SP-1's structural comparison with
   Szebehely & Peters); TASK-M9-37, the report; TASK-M9-38, the GPU-path tightening defined (REQ-VAL-341, a definition,
   R-72), each change it proposes with its own ruling.
-- **One build task:** TASK-M9-39, the softened force law, scheduled after the core build at the owner's word (R-654;
-  REQ-INT-111, REQ-SYS-094, REQ-SYS-095). It is not a target and is not scored: its tests block its own merge, and the
-  report does not wait on it. The block below lists its three requirements apart from what M9 scores, and the report
-  has no row for them. It lists apart too REQ-VAL-340, the report, and REQ-VAL-341, the definition that follows it,
+- **Three build tasks:** TASK-M9-39, the softened force law, scheduled after the core build at the owner's word
+  (R-654; REQ-INT-111, REQ-SYS-094, REQ-SYS-095); TASK-M9-40, the Šuvakov-plane chart (R-669; REQ-CHART-091); and
+  TASK-M9-41, the candidate original results (R-679; REQ-VAL-344 to REQ-VAL-346). None is a target or is scored: each
+  one's tests block its own merge, and the report waits on none of them. The block below lists their seven
+  requirements apart from what M9 scores, and the report has no row for them. It lists apart too REQ-VAL-340, the report, and REQ-VAL-341, the definition that follows it,
   which are not targets either, and the calibrations of the targets, which have the report's list of calibrations,
   not rows. What M9 scores is the rows of `principia_dd_replication.md` § 12.2's table, which the generator checks.
 - **When:** scoring waits for M9, and R-415's early-merge test does not bring an M9 task forward. Source ingest and

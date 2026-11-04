@@ -30050,7 +30050,7 @@ R-790 is in the "ci" group of `plan/rule_groups.yaml`.
 *3 Nov 2026 · the owner's message of that day on the triage questions; ported 3 Nov 2026; applied in
 `docs/design/principia_dd_replication.md` § 5.3 (a dated note under the table and LL-3's cell), § 5.14 (a bullet), § 7 (TASK-M3-47's line) and § 12.5 (a dated
 paragraph), R-630's and R-668's forward lines, REQ-VAL-223 (reqio), REQ-VAL-344, REQ-VAL-345 and REQ-VAL-346 (reqio,
-new), TASK-M9-07 (Goal, Deliverables, acceptance and notes), TASK-M9-37, TASK-M9-41 (new), `docs/verification/peek_log.md` (a dated line), `plan/tools/milestones.py`, `docs/archive/review_queue/M0.md` (RQ-672, RQ-673 and RQ-674, taken from
+new), TASK-M9-07 (Goal, Deliverables, acceptance and notes), TASK-M9-37, TASK-M9-41 (new), `docs/verification/peek_log.md` (a dated line), `plan/tools/milestones.py`, `plan/MILESTONES.md` (M9's build-task bullet), `docs/archive/review_queue/M0.md` (RQ-672, RQ-673 and RQ-674, taken from
 PR #385's branch with their rulings), `plan/tasks.yaml` and `plan/rule_groups.yaml`*
 
 The owner's words, 3 Nov 2026, verbatim:
