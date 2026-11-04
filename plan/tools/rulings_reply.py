@@ -27,8 +27,8 @@ Flagged `several` too is an option on an entry that shows several questions (num
 letters mixed with romans, "separately" or "Open within" in the options, or a field named "The questions", "Second
 question", or `Q-n`): the rest of it may still be open. The flag reads signs, and can miss one, so /rulings-apply reads
 every entry it would close. A line may hold several answers, each starting `RQ-n:`, as
-in `RQ-641: (b). RQ-642: (a).`; each is read and answered on its own. A template line left as the report wrote it is
-unanswered. A line that is a section name alone (`HEADINGS`, or a report's `##` heading) is no reply line either: it is
+in `RQ-641: (b). RQ-642: (a).`; each is read and answered on its own. A template line left as the report wrote it, or
+`D-n: stands`, is unanswered. A line that is a section name alone (`HEADINGS`, or a report's `##` heading) is no reply line either: it is
 skipped, and listed as skipped. Any other line in capitals is refused like any other.
 
 Refused, and listed with the reason: an unknown or closed RQ, an unknown D-n, an option the entry doesn't offer, two
@@ -299,7 +299,7 @@ def parse_reply(text, queue_text, closed=(), decisions=(), moot=()):
                 if not m:
                     raise Refused("not a reply line `RQ-n: …` or `D-n: veto`")
                 item, body = m.group(1), m.group(2).strip()
-                if body in (ANSWER_TEMPLATE, DECISION_TEMPLATE):
+                if body in (ANSWER_TEMPLATE, DECISION_TEMPLATE) or (item.startswith("D-") and body == "stands"):
                     unanswered.append(item)
                     continue
                 if item.startswith("D-") and item not in decisions:
@@ -567,6 +567,7 @@ def self_test():
     expect("a word starting veto", "RQ-1: vetoed", reason="names none of")
     expect("a decision's veto", "D-1: veto", "veto", "")
     expect("a decision answered otherwise", "D-1: (a)", reason="the only answer")
+    expect("stands, on an RQ", "RQ-1: stands", reason="names none of")
     expect("a decision the report has not", "D-7: veto", reason="D-7 is no decision")
     expect("an id outside the decisions section", "D-2: veto", reason="D-2 is no decision")
     expect("close of a ruled entry", "RQ-2: close", "close", "")
@@ -587,8 +588,8 @@ def self_test():
     ok, no = parse_reply("RQ-1: (b) with RQ-5 deferred alongside.\n", queue)[:2]
     if len(ok) != 1 or no:
         fails.append(f"reply self-test: an id without its colon is the rider's: {ok} {no}")
-    ok, no, blank, _ = parse_reply(f"RQ-1: {ANSWER_TEMPLATE}\nD-1: {DECISION_TEMPLATE}\n", queue)
-    if ok or no or blank != ["RQ-1", "D-1"]:
+    ok, no, blank, _ = parse_reply(f"RQ-1: {ANSWER_TEMPLATE}\nD-1: {DECISION_TEMPLATE}\nD-2: stands\n", queue)
+    if ok or no or blank != ["RQ-1", "D-1", "D-2"]:
         fails.append(f"reply self-test: template lines left alone are unanswered: {ok} {no} {blank}")
     reply = "PHYSICS\nCI AND RECORD\n## Physics\n\nDEFER ALL\nVETO EVERYTHING\nOK\nTopics\n"
     ok, no, blank, skipped = parse_reply(reply, queue)

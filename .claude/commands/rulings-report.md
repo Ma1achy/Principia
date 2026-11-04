@@ -113,7 +113,8 @@ Keep `<option>`, `<milestone>`, `<question>` and `<stands>` exactly so: the pars
 unanswered. Above the block, say: replace a line's right-hand side with your answer; `(a)` for an option, with any
 reason or rider after it, kept word for word; `(a) + (c)` or `(a), and (c) …` to take options together, never `(a) or
 (c)`; your own words on an entry with no lettered options; `defer:M0` to `defer:M9`, or `defer until <event>`; `close`
-for a Ruled-or-moot item; `ask:` and your question; or `veto`. A line left alone leaves its item as it is.
+for a Ruled-or-moot item; `ask:` and your question; or `veto`. On a decision line, `veto` or `stands`. A line left alone
+leaves its item as it is.
 
 ## 5. Check, then print
 
