@@ -5,7 +5,7 @@ argument-hint: <file or pasted reply>
 
 You are the orchestrating session. Apply the owner's reply, the file or pasted text below, to the record, as one rulings
 PR. Follow these steps exactly. Never guess: a line the parser refuses is listed back to the owner, and nothing is done
-on it.
+on it. The owner's text goes into each ruling verbatim, and what it says is applied, not just the option it names.
 
 The reply:
 
@@ -42,20 +42,32 @@ python3 plan/tools/rulings_reply.py parse "$R/<date>-reply.md" --report <that re
 ```
 
 Create `reserved-ids.txt`, empty, if it isn't there; it holds lines starting `R-n`, for numbers promised and on no
-branch yet. `parse` prints each ACCEPTED line with its kind and R id, each REFUSED line with its reason, and the
-UNANSWERED items. The ids are one past the highest `## R-n` heading of `decisions.md` on every local and origin branch.
-It exits 1 if it refused anything: that is expected, and the accepted lines still go ahead.
+branch yet. `parse` prints each ACCEPTED answer with its kind, its flags and its R id, each REFUSED one with its reason,
+and the UNANSWERED items. A line may hold several answers, each read alone; a line in capitals only is a heading. The
+ids are one past the highest `## R-n` heading of `decisions.md` on every local and origin branch. It exits 1 if it
+refused anything: that is expected, and the accepted answers still go ahead.
 
-A refused line stays refused. Don't reread it, repair it or infer what it meant: it goes to the owner in step 8 as they
-typed it, with the reason. If nothing was accepted, stop there.
+A refused line stays refused by this command. Don't repair it or infer what it meant: it goes to the owner in step 8
+as they typed it, with the reason. A prose ruling outside the template (several sentences, a list of ids) is ported
+as any ruling is, not through this command. If nothing was accepted, stop there.
 
-The same goes for an accepted line you can't apply without choosing: an option that contradicts a ruling or the corpus,
-or an entry asking more questions in prose than the answer settles. Take it out, list it with the refused lines and say
-why (`CLAUDE.md` § "Rulings", § "Never guess, never defer").
+**A flag means read it.** For every answer flagged below, read the whole answer against the whole entry, and apply what
+it says:
+
+| Flag | What to read for |
+| --- | --- |
+| `rider` | Words round the option. They bind as the option does: a condition, a task to file, a value, another entry named ("RQ-629 deferred with it"), or "keep, defer", which keeps the entry open, deferred, whatever the option. |
+| `combined` | Several options taken together. Say in the ruling what each contributes; one may be for now and one for later. |
+| `free-text` | The entry offers no label, so the words are the answer. |
+| `several` | The entry holds several questions: close it only if the answer settles them all. Otherwise the ruling records what it settles, and the entry stays open with a dated line saying what is left. |
+
+Take an accepted answer out, list it with the refused ones and say why, if you can't apply it without choosing: options
+that exclude each other, a rider that leaves the meaning open, or one that contradicts a ruling or the corpus
+(`CLAUDE.md` § "Rulings", § "Never guess, never defer").
 
 ## 3. Each answer becomes a ruling
 
-For every accepted line but `ask`, in reply order, add to `decisions.md`, at its end, under the R id `parse` gave:
+For every accepted answer but `ask`, in reply order, add to `decisions.md`, at its end, under the R id `parse` gave:
 
 ```
 ## R-n — <the decision, in a plain sentence> *(closes RQ-m)*
@@ -64,7 +76,7 @@ For every accepted line but `ask`, in reply order, add to `decisions.md`, at its
 
 The owner's words (<date>), verbatim:
 
-> <the reply line, byte for byte>
+> <the answer, byte for byte>
 
 *What it decides:* <the option's text from the entry, and what follows from it>.
 
@@ -82,11 +94,12 @@ What each kind does, past that:
 
 | Kind | Reply line | Ruling | The entry |
 | --- | --- | --- | --- |
-| option | `RQ-n: (a)` | yes | closed: the option's outcome |
-| close | `RQ-n: close` | yes | closed: why it was ruled or moot |
+| option | `RQ-n: (a) …` | yes | closed: the outcome, riders included, unless step 2's table keeps it open |
+| free-text | `RQ-n: <words>` | yes | as its words say: closed, or open with a dated line |
+| close | `RQ-n: close`, or words ending `close` | yes | closed: why it was ruled or moot |
 | veto | `RQ-n: veto` | yes: what the entry applied is vetoed | closed; if the question itself is still undecided, file a new RQ for it in this PR, naming the closed one, so it isn't lost |
 | veto | `D-n: veto` | yes: the report's decision D-n, named in full, is vetoed | none |
-| defer | `RQ-n: defer:Mn` | yes (`CLAUDE.md`: only the owner defers, by a ruling) | stays open, "deferred to Mn by owner <date>" |
+| defer | `RQ-n: defer:Mn`, `defer until <event>` | yes (`CLAUDE.md`: only the owner defers, by a ruling) | stays open, "deferred to <x> by owner <date>" |
 | ask | `RQ-n: ask:…` | no: a question isn't an answer | stays open, the question appended and flagged for the next report |
 
 ## 4. The queue
@@ -97,9 +110,10 @@ milestone gets its own file after its gate. An entry is never deleted. Move, def
 nothing is hand-edited:
 
 ```
-python3 plan/tools/rulings_reply.py close RQ-m --ruling R-n --date "4 Nov 2026" --text "<the reply line>" \
+python3 plan/tools/rulings_reply.py close RQ-m --ruling R-n --date "4 Nov 2026" --text "<the answer>" \
   --outcome "<outcome, one line>"
-python3 plan/tools/rulings_reply.py defer RQ-m --to Mn --date "4 Nov 2026" --ruling R-n --text "<the reply line>"
+python3 plan/tools/rulings_reply.py defer RQ-m --to "<milestone or event>" --date "4 Nov 2026" --ruling R-n \
+  --text "<the answer>"
 python3 plan/tools/rulings_reply.py ask RQ-m --date "4 Nov 2026" --question "<the question, as typed>"
 ```
 
@@ -143,8 +157,8 @@ lines the session gives. Run `check_plan.py` before each plan commit.
 Check `main` again as in step 1, and push only if it isn't red. Open one PR, from `.github/pull_request_template.md`,
 titled `rulings: the owner's reply of <date> (R-n to R-m)`. Its body has:
 
-- a table, one row per reply line: the line as typed, its gloss, the R id and its gloss, what happened to the entry;
-- every line refused, as typed, with the reason;
+- a table, one row per answer: the answer as typed, its gloss, the R id and its gloss, what happened to the entry;
+- every line refused or taken out, as typed, with the reason;
 - **every file touched**, from `git diff --name-only origin/main...HEAD`;
 - each check's output, and each "applied per R-369" decision made on the way.
 

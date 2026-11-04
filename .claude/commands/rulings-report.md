@@ -30,8 +30,8 @@ python3 plan/tools/rulings_reply.py last-report "$R" --before "$(date +%F)"
 prints the latest earlier report, or `none`; the date in its name is "the last report's date". If it prints `none`,
 "since the last report" means the last 14 days, and the report says so.
 
-The flags: `ruled` (the entry carries a ruling), `parked`, `deferred:<milestone>`, `asked:<date>` (the owner's question,
-on the entry's `Asked` line), `several-questions` and `no-labelled-options` (see "The item" below).
+The flags: `ruled` (the entry carries a ruling), `parked`, `deferred:<when>`, `asked:<date>` (the owner's question, on
+the entry's `Asked` line), `several-questions` and `no-labelled-options` (see "The item" below).
 
 Read every open entry in full, and what its `File, section` field cites. Don't write an item from its title.
 
@@ -69,12 +69,11 @@ Use the entry's own labels: a reply can name only those. Never invent an option 
 `asked:<date>`, with that date on or after the last report's, answer the owner's question in the Background. If it is
 flagged `deferred:`, say so.
 
-Say in the item what the reply can't do where it applies:
+Say in the item what the reply needs where it applies:
 
-- `several-questions`: one option can't answer it, so the parser refuses one. The owner answers such an entry in their
-  own words, outside the reply, or by `ask:` or `defer:`. An entry asking several questions in prose that the flag
-  missed is the same: say so.
-- `no-labelled-options`: the same, as there is no label to name.
+- `several-questions`: one option leaves the rest open, so the reply should say what it answers. An entry asking several
+  questions in prose that the flag missed is the same: say so.
+- `no-labelled-options`: the owner answers in their own words, which are taken verbatim.
 - Under Ruled-or-moot, the option is `close`: say what closes it.
 
 ## 4. The rest of the report
@@ -111,10 +110,10 @@ D-1: <stands> | veto
 ```
 
 Keep `<option>`, `<milestone>`, `<question>` and `<stands>` exactly so: the parser reads a line left as written as
-unanswered. Above the block, say: replace a line's right-hand side with one answer; `(a)` or `a` for an option,
-`defer:M0` to `defer:M9`, `close` for a Ruled-or-moot item, `ask:` and your question, or `veto`; words after an option
-are refused, save an "another, stated by the owner" option, which takes them; a line left alone leaves its item as it
-is.
+unanswered. Above the block, say: replace a line's right-hand side with your answer; `(a)` for an option, with any
+reason or rider after it, kept word for word; `(a) + (c)` or `(a), and (c) …` to take options together, never `(a) or
+(c)`; your own words on an entry with no lettered options; `defer:M0` to `defer:M9`, or `defer until <event>`; `close`
+for a Ruled-or-moot item; `ask:` and your question; or `veto`. A line left alone leaves its item as it is.
 
 ## 5. Check, then print
 
