@@ -109,7 +109,7 @@ alone does not answer the owner's question; the bits at identical operands do, a
   that: `detect_terminal`'s inputs are expected at level 1, and the per-input counts show it. Levels are judged within one entry, with TASK-M4-27's production-only difference. A failing driver is recorded **unverified,
   not supported**, in those words. Nothing enforces the condition, and the recording blocks nothing.
 - **The NVIDIA record** is a Windows session's run at the PR's head, `--record` with `PRIN_GPU_BACKEND=vulkan`, the file posted to
-  #390, under the same hardware label as that card's other runs. It is not a CI job (R-186). Nothing waits on it, and the task
+  #390, under the same hardware label as that card's other runs. A record too big to attach goes as a committed file on a branch named on the issue. It is not a CI job (R-186). Nothing waits on it, and the task
   closes without it: M4's gate report lists the row as "not run" until it is posted, though the owner's question rests on that
   row (`plan/MILESTONES.md` § M4). It doesn't stand in for R-58's parity run, REQ-VAL-099, which gates Paper 2; whether a driver recorded unverified,
   not supported can serve that gate is RQ-695.
