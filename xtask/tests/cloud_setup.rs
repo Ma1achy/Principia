@@ -156,6 +156,7 @@ const NO_INSTALL: &[&str] = &[
     "actions/upload-artifact@",
     "actions/download-artifact@",
     "Swatinem/rust-cache@",
+    "./.github/actions/cargo-ci-config",
 ];
 
 /// What a shell command in a Linux job installs, into `plan`. A command that installs by a means the check doesn't
