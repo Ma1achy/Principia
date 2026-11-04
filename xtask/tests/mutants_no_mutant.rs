@@ -1,20 +1,22 @@
 //! R-305: `mutants-check`, a required status check on `main`, reports on every pull request's merge-ready run (R-656)
-//! and passes when the PR's diff has no mutant. A diff that names no `.rs` file (a docs-only or rulings PR) skips each shard's setup and run;
-//! a diff naming Rust source runs `cargo mutants`, and a shard of it with nothing to mutate passes (REQ-VAL-148).
+//! and passes when the PR's diff has no mutant. A diff that names no `.rs` file under `crates/` (a docs, rulings or
+//! xtask-only PR; R-677: mutants run only when `crates/` source changes) skips each shard's setup and run; a diff
+//! naming Rust source under `crates/` runs `cargo mutants`, and a shard of it with nothing to mutate passes
+//! (REQ-VAL-148).
 //!
 //! These tests run the `mutants` and `mutants-verdict` jobs of `.github/workflows/mutants.yml` as a runner would, step
 //! by step, on the merge-ready run (the `merge-ready` label's): each step's `if:` is evaluated (the subset of GitHub's
 //! expressions the jobs use), a `uses:` step that runs is recorded but not executed, and each `run:` script runs in
 //! bash with its `${{ … }}` expressions substituted, in its step's `env:`. The programs the scripts call are stand-ins
 //! that log each call: `git diff` prints the test's diff, `cargo` (for `cargo mutants`) writes no outcomes, as
-//! cargo-mutants does when it finds no mutant, `gh` (posting `mutants-check`) finds no check run and posts one, and
-//! `sudo` and `python3` do nothing. `cargo xtask` is the built xtask. Each test's control (R-176) runs the same test on a workflow with the
-//! one step it turns on broken, and trips it by its message.
+//! cargo-mutants does when it finds no mutant, and `gh`, `sudo` and `python3` do nothing. `cargo xtask` is the built
+//! xtask. Each test's control (R-176) runs the same test on a workflow with the one step it turns on broken, and trips
+//! it by its message.
 //!
 //! A job-level `if:` does not stop a workflow run from reporting the job: skipped, which GitHub counts as passed for a
-//! required check. So the gate is a workflow of its own that only `pull_request` runs, and no workflow has a
-//! `mutants-check` job, which a `push` run, or a pull request's run without the label, would report skipped (R-305):
-//! the verdict job, `mutants-verdict`, posts `mutants-check` as a check run.
+//! required check. So the gate is a workflow of its own that only `pull_request` runs, and the one workflow with a
+//! `mutants-check` job, which a `push` run would report skipped (R-305). That job, `if: always()`, reports the verdict
+//! job's result, `mutants-verdict`'s, in the merge-ready run (R-678; `xtask/tests/merge_ready.rs`).
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -395,6 +397,26 @@ diff --git \"a/workbench/a b.rs\" \"b/workbench/a b.rs\"
 +// A comment.
 ";
 
+/// Rust source outside `crates/`: xtask's, which the merge-ready head's mutants do not run on (R-677).
+const XTASK_DIFF: &str = "\
+diff --git a/xtask/src/ci.rs b/xtask/src/ci.rs
+--- a/xtask/src/ci.rs
++++ b/xtask/src/ci.rs
+@@ -1 +1,2 @@
+ //! The ci runner.
++// A comment.
+";
+
+/// Rust source under `crates/`, the path quoted as git quotes one with a space in it.
+const QUOTED_CRATES_DIFF: &str = "\
+diff --git \"a/crates/kernel/src/a b.rs\" \"b/crates/kernel/src/a b.rs\"
+--- \"a/crates/kernel/src/a b.rs\"
++++ \"b/crates/kernel/src/a b.rs\"
+@@ -1 +1,2 @@
+ //! A module.
++// A comment.
+";
+
 /// The setup a shard with no mutant must not pay: every `uses:` but the checkout and the report's upload.
 fn setup(used: &[String]) -> Vec<&String> {
     used.iter()
@@ -415,15 +437,17 @@ fn shard(yml: &str, tag: &str, diff: &str) -> Run {
     )
 }
 
-/// R-305: on a diff naming no `.rs` file, or on no diff at all, a shard passes saying it has no mutant, having set
-/// up nothing and called neither cargo nor the installers; on a diff naming Rust source it sets up and runs
-/// `cargo mutants --in-diff` on the diff, and passes when cargo-mutants finds nothing to mutate.
+/// R-305: on a diff naming no `.rs` file under `crates/` (R-677), or on no diff at all, a shard passes saying it has no
+/// mutant, having set up nothing and called neither cargo nor the installers; on a diff naming Rust source under
+/// `crates/`, its path quoted or not, it sets up and runs `cargo mutants --in-diff` on the diff, and passes when
+/// cargo-mutants finds nothing to mutate.
 fn shard_passes_with_no_mutant(yml: &str) {
     for (tag, diff) in [
         ("docs", DOCS_DIFF),
         ("empty", ""),
         ("reference", REFERENCE_DIFF),
         ("workbench", WORKBENCH_DIFF),
+        ("xtask", XTASK_DIFF),
     ] {
         let run = shard(yml, tag, diff);
         println!("mutants shard 3/8, {tag} diff:\n{}", run.log);
@@ -437,25 +461,27 @@ fn shard_passes_with_no_mutant(yml: &str) {
             run.log
         );
     }
-    let run = shard(yml, "comment", COMMENT_DIFF);
-    println!(
-        "mutants shard 3/8, Rust comment diff:\n{}calls:\n{}",
-        run.log, run.calls
-    );
-    assert!(
-        run.calls.lines().any(|c| c.starts_with("cargo mutants")
-            && c.contains("--in-diff")
-            && c.contains("--shard 3/8"))
-            && !setup(&run.used).is_empty(),
-        "a shard of a diff naming Rust source skipped cargo mutants: calls {:?}, log {}",
-        run.calls,
-        run.log
-    );
-    assert!(
-        run.ok && run.log.contains("no mutant in this shard"),
-        "a shard of a Rust diff with nothing to mutate failed: {}",
-        run.log
-    );
+    for (tag, diff) in [("comment", COMMENT_DIFF), ("quoted", QUOTED_CRATES_DIFF)] {
+        let run = shard(yml, tag, diff);
+        println!(
+            "mutants shard 3/8, Rust {tag} diff:\n{}calls:\n{}",
+            run.log, run.calls
+        );
+        assert!(
+            run.calls.lines().any(|c| c.starts_with("cargo mutants")
+                && c.contains("--in-diff")
+                && c.contains("--shard 3/8"))
+                && !setup(&run.used).is_empty(),
+            "a shard of a diff naming Rust source skipped cargo mutants ({tag}): calls {:?}, log {}",
+            run.calls,
+            run.log
+        );
+        assert!(
+            run.ok && run.log.contains("no mutant in this shard"),
+            "a shard of a Rust diff with nothing to mutate failed ({tag}): {}",
+            run.log
+        );
+    }
 }
 
 #[test]
@@ -466,7 +492,7 @@ fn mutants_shard_passes_a_diff_with_no_mutant() {
 // Read only by the controls.
 #[cfg(feature = "controls")]
 const GATE: &str =
-    "if grep -E '^\\+\\+\\+ .*\\.rs\"?[[:space:]]*$' \"$RUNNER_TEMP/pr.diff\" | grep -Ev '^\\+\\+\\+ \"?b/(docs|plan|scripts|workbench)/' > /dev/null; then";
+    "if grep -E '^\\+\\+\\+ \"?b/crates/.*\\.rs\"?[[:space:]]*$' \"$RUNNER_TEMP/pr.diff\" > /dev/null; then";
 
 negative_control!(
     mutants_shard_passes_a_diff_with_no_mutant,
@@ -499,12 +525,53 @@ mod never_rust {
     );
 }
 
-// ---------------------------------------------------------------------------------------------------------------
-// The aggregate, `mutants-verdict`, which posts `mutants-check`.
+mod any_rust {
+    use super::*;
+    negative_control!(
+        mutants_shard_passes_a_diff_with_no_mutant,
+        "a shard that takes Rust source anywhere but crates/ for a mutant, as before R-677",
+        expected = "set up or ran more than the diff, or failed (xtask)",
+        {
+            let yml = mutants_yml();
+            assert!(
+                yml.contains(GATE),
+                "the control's gate text is not in mutants.yml"
+            );
+            shard_passes_with_no_mutant(&yml.replace(
+                GATE,
+                "if grep -E '^\\+\\+\\+ .*\\.rs\"?[[:space:]]*$' \"$RUNNER_TEMP/pr.diff\" \
+                 | grep -Ev '^\\+\\+\\+ \"?b/(docs|plan|scripts|workbench)/' > /dev/null; then",
+            ))
+        }
+    );
+}
 
-/// R-305: the verdict runs whatever the shards' result, so `mutants-check` always reports; with every shard passed and
-/// no shard report (no shard had a mutant, so none uploaded one) it passes, running no check, and posts
-/// `mutants-check` passed; with the shards failed, cancelled or skipped it fails, and posts it failed.
+mod crates_unquoted {
+    use super::*;
+    negative_control!(
+        mutants_shard_passes_a_diff_with_no_mutant,
+        "a shard that reads only an unquoted crates/ path as Rust source",
+        expected = "a shard of a diff naming Rust source skipped cargo mutants (quoted)",
+        {
+            let yml = mutants_yml();
+            assert!(
+                yml.contains(GATE),
+                "the control's gate text is not in mutants.yml"
+            );
+            shard_passes_with_no_mutant(&yml.replace(
+                GATE,
+                "if grep -E '^\\+\\+\\+ b/crates/.*\\.rs[[:space:]]*$' \"$RUNNER_TEMP/pr.diff\" > /dev/null; then",
+            ))
+        }
+    );
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// The aggregate, `mutants-verdict`, whose result `mutants-check` reports.
+
+/// R-305: the verdict runs whatever the shards' result, so `mutants-check` always has a verdict to report; with every
+/// shard passed and no shard report (no shard had a mutant, so none uploaded one) it passes, running no check; with
+/// the shards failed, cancelled or skipped it fails.
 fn aggregate_reports_with_no_mutant(yml: &str) {
     for needs in ["success", "failure", "cancelled", "skipped"] {
         let run = run_job(
@@ -534,20 +601,6 @@ fn aggregate_reports_with_no_mutant(yml: &str) {
                 run.log
             );
         }
-        let want = if needs == "success" {
-            "success"
-        } else {
-            "failure"
-        };
-        assert!(
-            run.calls
-                .lines()
-                .any(|c| c.starts_with("gh api --method POST")
-                    && c.contains("name=mutants-check")
-                    && c.contains(&format!("conclusion={want}"))),
-            "mutants-check was not posted {want} with the shards {needs}: {}",
-            run.calls
-        );
     }
 }
 
@@ -612,9 +665,8 @@ fn events(yml: &str) -> Vec<String> {
         .collect()
 }
 
-/// R-305: `mutants.yml` runs on `pull_request` alone, and no workflow has a `mutants-check` job, so the only
-/// `mutants-check` check run on a commit is the one `mutants.yml` posts, never a skipped job's from a `push` run or
-/// from a pull request's run without the `merge-ready` label.
+/// R-305: `mutants.yml` runs on `pull_request` alone, and no other workflow has a `mutants-check` job, so the only
+/// `mutants-check` on a commit is a pull request's run's, never a skipped job's from a `push` run.
 fn only_pull_requests_report(workflows: &[(String, String)]) {
     let (_, mutants) = workflows
         .iter()
@@ -627,7 +679,7 @@ fn only_pull_requests_report(workflows: &[(String, String)]) {
     );
     for (name, yml) in workflows {
         assert!(
-            !yml.lines().any(|l| l.trim_end() == "  mutants-check:"),
+            name == "mutants.yml" || !yml.lines().any(|l| l.trim_end() == "  mutants-check:"),
             "a workflow, {name}, has a mutants-check job"
         );
     }

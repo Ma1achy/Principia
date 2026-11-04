@@ -9,19 +9,24 @@
 //!   trigger other than `pull_request` starts may carry a check named `mutants-check`.
 //! - R-656 and the owner's CI plan of 2 Nov 2026: mutants run on the merge-ready head, the run the `merge-ready` label
 //!   starts; "required check names must report correctly in both tiers (skip-as-success only where the tier logic
-//!   allows it)". A run without the label skips the mutants jobs, so no job may bear the name `mutants-check` (a
-//!   skipped job reports passed): the check is posted through the Checks API, and these tests follow it there.
+//!   allows it)". A run without the label skips the mutants jobs.
+//! - R-678 (the owner, 3 Nov 2026): "`mutants-check` must report on EVERY pull_request event and label change": it is
+//!   a job of every run of `mutants.yml`, `if: always()`, never a check run posted through the Checks API, which a
+//!   later run's check suite supersedes (#384). The tests below follow the job; that, and the triggers it adds
+//!   (`unlabeled`), are the one change here, R-678's exception to R-290.
 //!
 //! What these tests hold to:
 //! - a PR whose diff changes no Rust source (docs-only, rulings-only) passes every shard without running
-//!   cargo-mutants, and says so ("no mutant"); the aggregate verdict then runs, passes and posts `mutants-check`
-//!   passed;
-//! - a PR whose diff changes Rust source (an edit, a rename with an edit, a path with spaces, a quoted non-ASCII
-//!   path, Rust among docs) runs `cargo mutants --in-diff <the PR's diff> --shard k/n` on every shard;
+//!   cargo-mutants, and says so ("no mutant"); the aggregate verdict then runs and passes, and the job
+//!   `mutants-check` reports it passed;
+//! - a PR whose diff changes Rust source under `crates/` (an edit, a rename with an edit, a path with spaces, a quoted
+//!   non-ASCII path, Rust among docs) runs `cargo mutants --in-diff <the PR's diff> --shard k/n` on every shard. R-677
+//!   runs mutants only when `crates/` source changes, so the fixture's Rust sits under `crates/k/` (R-677's exception
+//!   to R-290: that move, and the control's pattern with it, are the only change here);
 //! - a diff that cannot be computed fails the shard, never passes it as "no mutant";
-//! - `mutants-check` is posted only by `pull_request` runs, on every pull request (no path filter) and every new head,
-//!   never by a job bearing its name; the verdict that posts it on the merge-ready run holds whatever the shards'
-//!   result, and posts a failure on a failed or cancelled shard.
+//! - `mutants-check` is reported only by `pull_request` runs, on every pull request (no path filter), every new head
+//!   and every label change, by one job bearing its name that no run skips and none posting it; the verdict it
+//!   reports on the merge-ready run holds whatever the shards' result, and fails on a failed or cancelled shard.
 //!
 //! The workflows are parsed as YAML (PyYAML, as xtask's plan_check tests use), and each job is run here step by step
 //! as a runner would: `if:` conditions evaluated (with the implicit `success()`), `${{ … }}` substituted, `run:`
@@ -112,6 +117,8 @@ struct Ctx {
     action: String,
     label: String,
     shard: Option<String>,
+    /// Whether the event's labels hold `merge-ready`.
+    ready: bool,
     needs: HashMap<String, String>,
     steps: HashMap<String, (String, HashMap<String, String>)>,
     failed: bool,
@@ -125,6 +132,7 @@ impl Ctx {
             action: if merge_ready { "labeled" } else { "" }.to_owned(),
             label: if merge_ready { "merge-ready" } else { "" }.to_owned(),
             shard: None,
+            ready: merge_ready,
             needs: HashMap::new(),
             steps: HashMap::new(),
             failed: false,
@@ -136,6 +144,7 @@ impl Ctx {
         let mut ctx = Ctx::new(event);
         ctx.action = action.to_owned();
         ctx.label = String::new();
+        ctx.ready = false;
         ctx
     }
 
@@ -157,6 +166,9 @@ impl Ctx {
             "github.run_id" => return "100".to_owned(),
             "github.event.pull_request.number" => return "1".to_owned(),
             "github.event.pull_request.head.sha" => return "abc".to_owned(),
+            "contains(github.event.pull_request.labels.*.name, 'merge-ready')" => {
+                return self.ready.to_string()
+            }
             _ => {}
         }
         if let Some(var) = o.strip_prefix("matrix.") {
@@ -278,7 +290,7 @@ fn env(tag: &str, cwd: &Path) -> Env {
         ),
     )
     .expect("stand-in cargo");
-    // The setup steps' installers, and `gh` (the posted `mutants-check`), stood in: recorded, never run on the machine
+    // The setup steps' installers, and `gh` (`mutants-check`'s calls), stood in: recorded, never run on the machine
     // running the tests.
     for tool in [
         "sudo", "apt-get", "python3", "pip", "pip3", "rustup", "curl", "gh",
@@ -452,8 +464,8 @@ fn pr(tag: &str, ops: &[Op], with_base: bool) -> Scratch {
         "plan/requirements.yaml",
         "- id: REQ-X-001\n  statement: x\n",
     );
-    put("src/lib.rs", LIB);
-    put("src/old.rs", LIB);
+    put("crates/k/src/lib.rs", LIB);
+    put("crates/k/src/old.rs", LIB);
     git(&dir, &["init", "-q"]);
     git(&dir, &["add", "-A"]);
     git(&dir, &["commit", "-q", "-m", "base"]);
@@ -515,8 +527,8 @@ fn mutants_calls(run: &JobRun) -> Vec<&Vec<String>> {
 // ---------------------------------------------------------------------------------------------------------------
 // R-305: a PR with no mutant passes every shard, without cargo-mutants, and mutants-check reports and passes.
 
-/// The verdict job, `mutants-verdict`, which posts `mutants-check`, on a run `ctx`, run from the workspace root after
-/// the shards whose job result is `result`, with no shard report downloaded.
+/// The verdict job, `mutants-verdict`, whose result `mutants-check` reports, on a run `ctx`, run from the workspace
+/// root after the shards whose job result is `result`, with no shard report downloaded.
 fn aggregate_on(yml: &str, result: &str, tag: &str, mut ctx: Ctx) -> JobRun {
     let wf = parse(yml);
     ctx.needs.insert("mutants".to_owned(), result.to_owned());
@@ -528,15 +540,21 @@ fn aggregate(yml: &str, result: &str, tag: &str, event: &str) -> JobRun {
     aggregate_on(yml, result, tag, Ctx::new(event))
 }
 
-/// Whether the run posted the head's `mutants-check` completed with `conclusion`, through the stand-in `gh`.
-fn posted(run: &JobRun, conclusion: &str) -> bool {
-    run.calls.iter().any(|c| {
-        c.first().map(String::as_str) == Some("gh")
-            && c.iter().any(|a| a == "name=mutants-check")
-            && c.iter()
-                .any(|a| a == "head_sha=abc" || a.starts_with("repos/o/r/check-runs/"))
-            && c.iter().any(|a| *a == format!("conclusion={conclusion}"))
-    })
+/// The job `mutants-check` on the merge-ready run (R-678), after the verdict job `agg`: its result is that job's.
+fn reported(yml: &str, agg: &JobRun, tag: &str) -> JobRun {
+    let wf = parse(yml);
+    let mut ctx = Ctx::new("pull_request");
+    let result = if !agg.ran {
+        "skipped"
+    } else if agg.success {
+        "success"
+    } else {
+        "failure"
+    };
+    ctx.needs
+        .insert("mutants-verdict".to_owned(), result.to_owned());
+    let e = env(&format!("check_{tag}"), &root());
+    run_job(&wf, "mutants-check", ctx, e)
 }
 
 fn no_mutant_passes(yml: &str, tag: &str, ops: &[Op]) {
@@ -565,12 +583,13 @@ fn no_mutant_passes(yml: &str, tag: &str, ops: &[Op]) {
         "failure"
     };
     let agg = aggregate(yml, result, tag, "pull_request");
+    let check = reported(yml, &agg, tag);
     assert!(
-        agg.ran && agg.success && posted(&agg, "success"),
-        "qa23r: mutants-check did not report a pass on a PR with no mutant (ran: {}): {} {:?}",
+        agg.ran && agg.success && check.ran && check.success,
+        "qa23r: mutants-check did not report a pass on a PR with no mutant (ran: {}): {} {}",
         agg.ran,
         agg.log,
-        agg.calls
+        check.log
     );
 }
 
@@ -677,23 +696,29 @@ fn qa23r_a_rust_change_runs_every_shard() {
     rust_change_runs(
         &yml,
         "edit",
-        &[Op::Write("src/lib.rs", "\npub fn d() -> u32 {\n    4\n}\n")],
-        "src/lib.rs",
+        &[Op::Write(
+            "crates/k/src/lib.rs",
+            "\npub fn d() -> u32 {\n    4\n}\n",
+        )],
+        "crates/k/src/lib.rs",
     );
     rust_change_runs(
         &yml,
         "rename",
         &[
-            Op::Rename("src/old.rs", "src/renamed.rs"),
-            Op::Write("src/renamed.rs", "\npub fn e() -> bool {\n    true\n}\n"),
+            Op::Rename("crates/k/src/old.rs", "crates/k/src/renamed.rs"),
+            Op::Write(
+                "crates/k/src/renamed.rs",
+                "\npub fn e() -> bool {\n    true\n}\n",
+            ),
         ],
-        "src/renamed.rs",
+        "crates/k/src/renamed.rs",
     );
     rust_change_runs(
         &yml,
         "spaces",
         &[Op::Write(
-            "src/my dir/a b.rs",
+            "crates/k/src/my dir/a b.rs",
             "pub fn f() -> u32 {\n    5\n}\n",
         )],
         "my dir/a b.rs",
@@ -702,7 +727,7 @@ fn qa23r_a_rust_change_runs_every_shard() {
         &yml,
         "non_ascii",
         &[Op::Write(
-            "src/donn\u{e9}es.rs",
+            "crates/k/src/donn\u{e9}es.rs",
             "pub fn g() -> u32 {\n    6\n}\n",
         )],
         "donn",
@@ -712,10 +737,10 @@ fn qa23r_a_rust_change_runs_every_shard() {
         "mixed",
         &[
             Op::Write("docs/guide.md", "More.\n"),
-            Op::Write("src/lib.rs", "\npub fn h() -> u32 {\n    7\n}\n"),
+            Op::Write("crates/k/src/lib.rs", "\npub fn h() -> u32 {\n    7\n}\n"),
             Op::Write("decisions.md", "\n## R-3\nA third.\n"),
         ],
-        "src/lib.rs",
+        "crates/k/src/lib.rs",
     );
 }
 
@@ -725,12 +750,12 @@ negative_control!(
     expected = "qa23r: a Rust change did not run cargo mutants once on shard 0",
     rust_change_runs(
         &mutants_yml().replace(
-            r#"'^\+\+\+ .*\.rs"?[[:space:]]*$'"#,
-            r#"'^\+\+\+ b/[^ "]*\.rs$'"#
+            r#"'^\+\+\+ "?b/crates/.*\.rs"?[[:space:]]*$'"#,
+            r#"'^\+\+\+ b/crates/[^ "]*\.rs$'"#
         ),
         "spaces_ctl",
         &[Op::Write(
-            "src/my dir/a b.rs",
+            "crates/k/src/my dir/a b.rs",
             "pub fn f() -> u32 {\n    5\n}\n"
         )],
         "my dir/a b.rs",
@@ -746,8 +771,11 @@ mod skips_everything {
         rust_change_runs(
             &mutants_yml().replace("echo \"rust=true\"", "echo \"rust=false\""),
             "edit_ctl",
-            &[Op::Write("src/lib.rs", "\npub fn d() -> u32 {\n    4\n}\n")],
-            "src/lib.rs",
+            &[Op::Write(
+                "crates/k/src/lib.rs",
+                "\npub fn d() -> u32 {\n    4\n}\n"
+            )],
+            "crates/k/src/lib.rs",
         )
     );
 }
@@ -756,7 +784,10 @@ mod skips_everything {
 fn no_diff_fails(yml: &str) {
     let repo = pr(
         "nobase",
-        &[Op::Write("src/lib.rs", "\npub fn d() -> u32 {\n    4\n}\n")],
+        &[Op::Write(
+            "crates/k/src/lib.rs",
+            "\npub fn d() -> u32 {\n    4\n}\n",
+        )],
         false,
     );
     for (k, run) in shards_on(yml, &repo, "nobase") {
@@ -784,7 +815,8 @@ negative_control!(
 );
 
 // ---------------------------------------------------------------------------------------------------------------
-// R-305: mutants-check is posted only by pull_request runs, on every pull request and every new head; no job bears it.
+// R-305: mutants-check is reported only by pull_request runs, on every pull request, every new head and every label
+// change (R-678), by one job bearing its name that no run skips; none posts it through the Checks API.
 
 /// The triggers of a workflow's `on:` (a string, a list or a map).
 fn triggers(wf: &Value) -> Vec<(String, Value)> {
@@ -807,33 +839,70 @@ fn posts_it(job: &Value) -> bool {
     })
 }
 
-/// Over every workflow `(file, text)`: no job bears the name `mutants-check` (a run that skips such a job, as a push's
-/// run or a run without the `merge-ready` label does, reports it passed); each job posting `mutants-check` is in a
-/// workflow only `pull_request` starts, with no filter that skips some pull requests or some new head; there is at
-/// least one; on each new head (`opened`, `synchronize`, `reopened`) a posting job runs; and on the merge-ready run a
-/// posting job runs whatever the jobs it needs ended in.
+/// A pull request's events (R-678: every one and every label change): its action, and the label it names.
+const PR_ACTIONS: [(&str, &str); 7] = [
+    ("opened", ""),
+    ("synchronize", ""),
+    ("reopened", ""),
+    ("labeled", "merge-ready"),
+    ("labeled", "design"),
+    ("unlabeled", "merge-ready"),
+    ("unlabeled", "design"),
+];
+
+/// Over every workflow `(file, text)`: no job posts `mutants-check` through the Checks API (R-678); each job bearing
+/// the name runs on every event its workflow's triggers start, whatever the jobs it needs ended in (a run that skips
+/// it reports it passed), in a workflow only `pull_request` starts, with no filter that skips some pull requests, some
+/// new head or some label change; and there is exactly one.
 fn only_pull_requests_create_it(workflows: &[(String, String)]) {
-    let mut posters: Vec<Value> = Vec::new();
+    let mut bearers: Vec<Value> = Vec::new();
     for (file, yml) in workflows {
         let wf = parse(yml);
         let Some(jobs) = wf["jobs"].as_object() else {
             continue;
         };
+        let on = triggers(&wf);
         for (id, job) in jobs {
-            let check = job.get("name").map(text).unwrap_or_else(|| id.clone());
             assert!(
-                check != "mutants-check",
-                "qa23r: a mutants-check job ({file}: {id}) is reported by a run that can skip it"
+                !posts_it(job),
+                "qa23r: mutants-check is posted through the Checks API ({file}: {id}), which a later run's check \
+                 suite supersedes (R-678)"
             );
-            if !posts_it(job) {
+            let check = job.get("name").map(text).unwrap_or_else(|| id.clone());
+            if check != "mutants-check" {
                 continue;
             }
-            posters.push(job.clone());
-            let on = triggers(&wf);
+            let needs = match job.get("needs") {
+                Some(Value::Array(a)) => a.iter().map(text).collect(),
+                Some(v) => vec![text(v)],
+                None => Vec::new(),
+            };
+            for (event, _) in &on {
+                let actions: &[(&str, &str)] = if event == "pull_request" {
+                    &PR_ACTIONS
+                } else {
+                    &[("", "")]
+                };
+                for (action, label) in actions {
+                    for result in ["success", "failure", "cancelled", "skipped"] {
+                        let mut ctx = Ctx::without_label(event, action);
+                        ctx.label = (*label).to_owned();
+                        for n in &needs {
+                            ctx.needs.insert(n.clone(), result.to_owned());
+                        }
+                        assert!(
+                            ctx.job_holds(job.get("if")),
+                            "qa23r: a mutants-check job ({file}: {id}) is reported by a run that can skip it \
+                             ({event} {action} {label}, its needs {result})"
+                        );
+                    }
+                }
+            }
+            bearers.push(job.clone());
             let names: Vec<&str> = on.iter().map(|(k, _)| k.as_str()).collect();
             assert!(
                 names == ["pull_request"],
-                "qa23r: mutants-check is posted ({file}: {id}) by a run a trigger other than pull_request starts: \
+                "qa23r: mutants-check is reported ({file}: {id}) by a run a trigger other than pull_request starts: \
                  {names:?}"
             );
             let filters = &on[0].1;
@@ -851,47 +920,25 @@ fn only_pull_requests_create_it(workflows: &[(String, String)]) {
                     "qa23r: {file}'s pull_request trigger does not run on every pull request to main"
                 );
             }
-            if let Some(types) = filters.get("types").and_then(Value::as_array) {
-                for t in ["opened", "synchronize", "reopened", "labeled"] {
-                    assert!(
-                        types.iter().any(|x| x == t),
-                        "qa23r: {file}'s pull_request trigger does not run on every pull request ({t})"
-                    );
-                }
+            let types = filters
+                .get("types")
+                .and_then(Value::as_array)
+                .cloned()
+                .unwrap_or_default();
+            for t in ["opened", "synchronize", "reopened", "labeled", "unlabeled"] {
+                assert!(
+                    types.iter().any(|x| x == t),
+                    "qa23r: {file}'s pull_request trigger does not run on every pull request event ({t})"
+                );
             }
         }
     }
-    assert!(
-        !posters.is_empty(),
-        "qa23r: no workflow posts mutants-check"
+    assert_eq!(
+        bearers.len(),
+        1,
+        "qa23r: {} jobs bear mutants-check, not one",
+        bearers.len()
     );
-    let needs = |job: &Value| -> Vec<String> {
-        match job.get("needs") {
-            Some(Value::Array(a)) => a.iter().map(text).collect(),
-            Some(v) => vec![text(v)],
-            None => Vec::new(),
-        }
-    };
-    for action in ["opened", "synchronize", "reopened"] {
-        let ctx = Ctx::without_label("pull_request", action);
-        assert!(
-            posters.iter().any(|j| ctx.job_holds(j.get("if"))),
-            "qa23r: no job posts mutants-check on a pull request's `{action}`"
-        );
-    }
-    for result in ["success", "failure", "cancelled", "skipped"] {
-        let holds = posters.iter().any(|job| {
-            let mut ctx = Ctx::new("pull_request");
-            for n in needs(job) {
-                ctx.needs.insert(n, result.to_owned());
-            }
-            !needs(job).is_empty() && ctx.job_holds(job.get("if"))
-        });
-        assert!(
-            holds,
-            "qa23r: mutants-check does not report when the shards' result is {result}"
-        );
-    }
 }
 
 fn workflows() -> Vec<(String, String)> {
@@ -925,7 +972,7 @@ negative_control!(
     qa23r_mutants_check_is_created_only_by_pull_request_runs,
     "mutants.yml also started by push",
     expected =
-        "qa23r: mutants-check is posted (mutants.yml: mutants-pending) by a run a trigger other",
+        "qa23r: mutants-check is reported (mutants.yml: mutants-check) by a run a trigger other",
     only_pull_requests_create_it(&with("mutants.yml", |t| t.replacen(
         "on:\n  pull_request:\n",
         "on:\n  push:\n  pull_request:\n",
@@ -967,32 +1014,82 @@ mod skipped_after_a_failed_shard {
     negative_control!(
         qa23r_mutants_check_is_created_only_by_pull_request_runs,
         "mutants-check without always()",
-        expected = "qa23r: mutants-check does not report when the shards' result is failure",
+        expected = "qa23r: a mutants-check job (mutants.yml: mutants-check) is reported by a run that can skip it",
         only_pull_requests_create_it(&with("mutants.yml", |t| t.replace(
-            "if: always() && github.event_name == 'pull_request'",
-            "if: github.event_name == 'pull_request'"
+            "  mutants-check:\n    if: always()\n",
+            "  mutants-check:\n    if: github.event_name == 'pull_request'\n"
+        )))
+    );
+}
+
+mod posted_again {
+    use super::*;
+    negative_control!(
+        qa23r_mutants_check_is_created_only_by_pull_request_runs,
+        "mutants-check posted through the Checks API by a renamed job, as #379 had it",
+        expected =
+            "qa23r: mutants-check is posted through the Checks API (mutants.yml: mutants-report)",
+        only_pull_requests_create_it(&with("mutants.yml", |t| {
+            t.replacen(
+            "  mutants-check:\n    if: always()\n    needs: mutants-verdict\n    runs-on: ubuntu-24.04\n",
+            "  mutants-report:\n    if: always()\n    needs: mutants-verdict\n    runs-on: ubuntu-24.04\n    \
+             steps:\n      - run: gh api repos/o/r/check-runs -f name=mutants-check -f head_sha=abc\n  \
+             mutants-check-unused:\n    if: always()\n    needs: mutants-verdict\n    runs-on: ubuntu-24.04\n",
+            1
+        )
+        }))
+    );
+}
+
+mod skipped_on_a_label_taken_off {
+    use super::*;
+    negative_control!(
+        qa23r_mutants_check_is_created_only_by_pull_request_runs,
+        "mutants-check skipped when a label is taken off",
+        expected = "qa23r: a mutants-check job (mutants.yml: mutants-check) is reported by a run that can skip it \
+                    (pull_request unlabeled merge-ready",
+        only_pull_requests_create_it(&with("mutants.yml", |t| t.replacen(
+            "  mutants-check:\n    if: always()\n",
+            "  mutants-check:\n    if: always() && github.event.action != 'unlabeled'\n",
+            1
+        )))
+    );
+}
+
+mod no_unlabeled {
+    use super::*;
+    negative_control!(
+        qa23r_mutants_check_is_created_only_by_pull_request_runs,
+        "mutants.yml not run when a label is taken off",
+        expected = "qa23r: mutants.yml's pull_request trigger does not run on every pull request event (unlabeled)",
+        only_pull_requests_create_it(&with("mutants.yml", |t| t.replacen(
+            "types: [opened, synchronize, reopened, labeled, unlabeled]",
+            "types: [opened, synchronize, reopened, labeled]",
+            1
         )))
     );
 }
 
 /// The whole aggregate job, as a runner runs it: with no shard report it runs and passes when the shards passed,
-/// posting `mutants-check` passed, and fails when they did not, posting it failed; on a push event, and on a pull
-/// request's run that the `merge-ready` label did not start, it never runs.
+/// `mutants-check` then reporting it passed, and fails when they did not, `mutants-check` failing; on a push event, and
+/// on a pull request's run that the `merge-ready` label did not start, it never runs.
 fn aggregate_reports(yml: &str) {
     let ok = aggregate(yml, "success", "clean", "pull_request");
+    let check = reported(yml, &ok, "clean");
     assert!(
-        ok.ran && ok.success && posted(&ok, "success"),
-        "qa23r: mutants-check did not pass with no report and every shard passed: {} {:?}",
+        ok.ran && ok.success && check.ran && check.success,
+        "qa23r: mutants-check did not pass with no report and every shard passed: {} {}",
         ok.log,
-        ok.calls
+        check.log
     );
     for result in ["failure", "cancelled"] {
         let bad = aggregate(yml, result, result, "pull_request");
+        let check = reported(yml, &bad, result);
         assert!(
-            bad.ran && !bad.success && posted(&bad, "failure") && !posted(&bad, "success"),
-            "qa23r: mutants-check passed though the shards' result is {result}: {} {:?}",
+            bad.ran && !bad.success && check.ran && !check.success,
+            "qa23r: mutants-check passed though the shards' result is {result}: {} {}",
             bad.log,
-            bad.calls
+            check.log
         );
     }
     let push = aggregate(yml, "", "push", "push");

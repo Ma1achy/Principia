@@ -31147,6 +31147,10 @@
     section: "R-302 — Per-PR mutation runs are sharded across parallel CI jobs; the nightly full run is the backstop *(closes RQ-176; amends R-196)*"
   - file: decisions.md
     section: "R-676 — Mutants run once per approved head, on the `merge-ready` label the merge watcher puts on, and again only when the head changes, `mutants-check` posted pending until then and never passed by a skipped job; fix rounds are checked locally through the job queue before they push; superseded `reviews` runs are cancelled per pull request; `main` is merged into open pull requests in batches; the quick and full tiers of `ci.yml` are not ruled *(amends R-656 and R-305)*"
+  - file: decisions.md
+    section: "R-677 — CI runs in three tiers: a change to Principia's code runs full CI as before; one to the plan's task data or the GUI's artboards and references runs only the cheap checks and the tests that read what it changed, with no build, test shard, GPU suite or mutants; one to the docs runs only the cheap checks; a change takes its highest tier, and an unknown path runs full CI; mutants run only when `crates/` source changes, on the merge-ready head; every required check still reports under its own name *(amends R-656, R-662, R-110, R-177, R-235, R-305 and R-676)*"
+  - file: decisions.md
+    section: "R-678 — `mutants-check` is a job of every run of `mutants.yml`, never a check run posted through the Checks API: every pull-request event and label change reports it, the merge-ready run with its verdict, a head with no `.rs` file under `crates/` or not merge-ready passed as \"not applicable\", and another label's change on a merge-ready head with that head's merge-ready verdict; a test checks that every required check reports on every path *(amends R-676, R-677 and R-305)*"
   verify:
     detail: "code: the `mutants.yml` workflow runs `cargo mutants --in-diff` against the PR's base on pull_request events as a matrix of n shards, each `--shard k/n` with its own timeout, and a shard cut off by its timeout fails the job (R-302); each exclusion names which of R-196's three categories it falls in; code and qa: each entry in the equivalent-mutants list carries a one-line justification and both reviewers approve it (R-202); qa: the checklist line (every surviving mutant in the diff is a finding, killed or justified as equivalent); the job can fire: on a fixture crate whose diff adds an untested branch it reports a surviving mutant and fails, with the test added it reports none, and with that mutant in the equivalent-mutants list it passes"
     method: review checklist
@@ -31156,8 +31160,10 @@
   - R-202
   - R-302
   - R-676
+  - R-677
+  - R-678
   milestone: M0
-  note: "R-676: a pull request's run is on its merge-ready head, the run the `merge-ready` label starts once every reviewer its task names has approved that head, and again only if the head changes; `mutants-check` is pending until then, and a docs-only head, with no mutant, passes at once (R-662)."
+  note: "R-676: a pull request's run is on its merge-ready head, the run the `merge-ready` label starts once every reviewer its task names has approved that head, and again only if the head changes. R-678: `mutants-check` is a job of every run of `mutants.yml`, never a posted check run: the merge-ready run reports the verdict; a head whose change has no `.rs` file under `crates/` (R-677), with no mutant the gate runs, or that is not merge-ready passes, \"not applicable\"; another label's change on a merge-ready head reports that head's merge-ready verdict."
 - id: REQ-VAL-149
   area: VAL
   kind: calibration
@@ -40058,6 +40064,8 @@
     section: "R-656 — CI throughput: a push runs `ci.yml` only on `main` (and on R-272's `measure/` branches, which have no pull request), a pull request running it through `pull_request`; a pull request's superseded runs are cancelled, never a run on `main`; a docs-only pull request skips the build, test, GPU and mutants work, and one that changes no GPU-path file skips the GPU suites, inside the jobs, every required check still reporting success under its own name; mutants run on the merge-ready head; a bounded target cache is approved in principle, built in a later PR; no paid or self-hosted runner *(amends R-110, R-177, R-186, R-195, R-235, R-285 and R-335)*"
   - file: decisions.md
     section: "R-662 — Full CI runs only when a pull request changes Principia's code: docs, plan prose, papers, Python and other scripts get only plan-check, the vocabulary lint and the atlas guard; a mixed change and an unknown path run full CI; every required check still reports *(amends R-656's docs-only list and docs checks, R-110 and R-177)*"
+  - file: decisions.md
+    section: "R-677 — CI runs in three tiers: a change to Principia's code runs full CI as before; one to the plan's task data or the GUI's artboards and references runs only the cheap checks and the tests that read what it changed, with no build, test shard, GPU suite or mutants; one to the docs runs only the cheap checks; a change takes its highest tier, and an unknown path runs full CI; mutants run only when `crates/` source changes, on the merge-ready head; every required check still reports under its own name *(amends R-656, R-662, R-110, R-177, R-235, R-305 and R-676)*"
   verify:
     method: unit test
     detail: "the gate-report fixture lists every requirement of the milestone's and earlier gate blocks, fails on a missing one, and marks benchmark requirements awaiting the human's run until their prin profile files are supplied; review: no workflow runs bench, nightly.yml is scheduled, gate.yml takes a milestone input"
@@ -40069,8 +40077,9 @@
   - R-195
   - R-656
   - R-662
+  - R-677
   milestone: M0
-  note: "R-656: ci.yml runs on a push to main (and to a measure/ branch, R-272) and on every pull-request head; R-662: a head that changes none of Principia's code runs plan-check and the vocabulary lint (in ci-workspace) in place of the build, fmt, clippy, the tests and cargo xtask ci, which run again on main once it merges."
+  note: "R-656: ci.yml runs on a push to main (and to a measure/ branch, R-272) and on every pull-request head; R-662: a head that changes none of Principia's code runs plan-check and the vocabulary lint (in ci-workspace) in place of the build, fmt, clippy, the tests and cargo xtask ci, which run again on main once it merges; R-677: a head that changes only the plan's task data or the GUI's artboards and references runs those and the tests that read what it changed."
 - id: REQ-SYS-068
   area: SYS
   statement: "`reviews-check` must count a role's APPROVE on an earlier commit when every later commit is qa's own `qa: tests for <TASK-id>` commit adding files only under `crates/*/tests/`, `xtask/tests/` or `fixtures/` (R-260), and must pass a PR whose title names no task, printing \"no task, no named reviewers\" (R-261)."
@@ -40227,7 +40236,7 @@
   note: "R-336: PR #96's warm wall times (`ci` about 16.5 min, `xtask-ci` 11.7–13.3 min) were reported and are accepted for #96; TASK-M0-45 (REQ-SYS-077) shards the tests to bring each job back under ~10.5 min."
 - id: REQ-SYS-077
   area: SYS
-  statement: "The `ci` CI job's nextest runs must be sharded across parallel jobs, the shards together running every test the unsharded run did, and the `xtask-ci` job, which runs no nextest, must run as 4 parallel jobs of `cargo xtask ci --partition <k>/4`, the controls assigned to a shard by a stable hash of the control name, every control run exactly once across the shards (R-360); the long single tests that bound a job must be split so no one test holds a shard over its target: `qa_cargo_xtask_alias_runs_deps` and the `qa_TASK-M0-24`, `qa_TASK-M0-25` and `qa_TASK-M0-26` suites; each CI job's warm wall-clock time is ~10.5 min or less (R-270, R-325, R-336)."
+  statement: "The `ci` CI job's nextest runs must be sharded across parallel jobs, the shards together running every test the unsharded run did, and the `xtask-ci` job, which runs no nextest, must run as 4 parallel jobs of `cargo xtask ci --partition <k>/4`, the controls assigned to a shard by a stable hash of the control name, every control run exactly once on every code run: across the shards, but for the three of `xtask/tests/nextest.rs` that list the workspace in its default feature set (`controls::IN_CI_WORKSPACE`), which run in `ci-workspace` (R-360; amended per R-369, RQ-684); the long single tests that bound a job must be split so no one test holds a shard over its target: `qa_cargo_xtask_alias_runs_deps` and the `qa_TASK-M0-24`, `qa_TASK-M0-25` and `qa_TASK-M0-26` suites; each CI job's warm wall-clock time is ~10.5 min or less (R-270, R-325, R-336)."
   source:
   - file: decisions.md
     section: "R-336 — #96's CI overrun is accepted; TASK-M0-45 shards nextest and splits the long single tests *(amends R-270, R-290)*"
@@ -40235,7 +40244,7 @@
     section: "R-325 — CI: the GPU kernel build and its tests run in their own parallel job; ≤ ~10.5 min per job *(amends R-301)*"
   verify:
     method: review checklist
-    detail: "code and qa: `ci.yml` runs the `ci` job's nextest runs as parallel shards, the shards' test lists together equal to the unsharded run's, both feature sets (the R-231 listing check, `xtask/tests/nextest.rs`, still passes); `xtask-ci` runs as 4 jobs of `cargo xtask ci --partition <k>/4`, whose slices are disjoint, together hold every control and give a control the same slice on every run (`cargo nextest run -p xtask controls_partition`, with its negative control), and whose CI logs together run each control once (R-360); the named long tests are split, each assertion and its negative control kept, and `qa_cargo_xtask_alias_runs_deps`'s listing-only form (REQ-VAL-166) kept; the PR shows each CI job's warm wall time against ~10.5 min, names any job still over it, and names the new jobs to add to branch protection's required checks (R-266)"
+    detail: "code and qa: `ci.yml` runs the `ci` job's nextest runs as parallel shards, the shards' test lists together equal to the unsharded run's, both feature sets (the R-231 listing check, `xtask/tests/nextest.rs`, still passes); `xtask-ci` runs as 4 jobs of `cargo xtask ci --partition <k>/4`, whose slices are disjoint, together hold every control and give a control the same slice on every run (`cargo nextest run -p xtask controls_partition`, with its negative control), and whose CI logs, with `ci-workspace`'s step for the controls in `controls::IN_CI_WORKSPACE`, together run each control once (R-360); the named long tests are split, each assertion and its negative control kept, and `qa_cargo_xtask_alias_runs_deps`'s listing-only form (REQ-VAL-166) kept; the PR shows each CI job's warm wall time against ~10.5 min, names any job still over it, and names the new jobs to add to branch protection's required checks (R-266) *Was:* \"… and whose CI logs together run each control once (R-360); …\" — amended per R-369 (the orchestrator's decision on PR #395, RQ-684): in a shard those three controls cost a second whole build of the workspace's tests (run 41756812074), and each still runs once per code run"
   rulings:
   - R-231
   - R-235
@@ -40247,7 +40256,7 @@
   - R-344
   - R-360
   milestone: M0
-  note: "R-336 (applied per R-204, accepted by R-344): the test files are qa's with implementer commits, so qa makes the splits in TASK-M0-45's qa commit, a named exception to R-290, as R-335 is."
+  note: "R-336 (applied per R-204, accepted by R-344): the test files are qa's with implementer commits, so qa makes the splits in TASK-M0-45's qa commit, a named exception to R-290, as R-335 is. *Was (statement):* \"… every control run exactly once across the shards (R-360); …\" — amended per R-369 (the orchestrator's decision on PR #395, RQ-684)."
 - id: REQ-SYS-078
   area: SYS
   statement: "The `ci` CI job's test binaries must be built once per feature set its shards run, as a nextest archive (`cargo nextest archive`) that every `ci` shard runs its `--partition hash:<k>/4` slice from (`--archive-file`), so no shard compiles the tests; the shards together still run every test the unsharded run did, and ~10.5 min per job stays the target (R-372, R-325)."
