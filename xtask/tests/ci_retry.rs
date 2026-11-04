@@ -71,7 +71,7 @@ fn script() -> String {
 /// `text` with `from` replaced by `to`, which must be in it: a control's one edit.
 #[cfg(feature = "controls")]
 fn edit(text: &str, from: &str, to: &str) -> String {
-    assert!(text.contains(from), "ci_retry: no {from:?} to edit");
+    assert!(text.contains(from), "ci_retry: a control's edit is gone");
     text.replace(from, to)
 }
 
