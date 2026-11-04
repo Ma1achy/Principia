@@ -48,7 +48,8 @@ ids are one past the highest `## R-n` heading of `decisions.md` on every local a
 refused anything: that is expected, and the accepted answers still go ahead.
 
 A refused line stays refused by this command. Don't repair it or infer what it meant: it goes to the owner in step 8
-as they typed it, with the reason. A prose ruling outside the template (several sentences, a list of ids) is ported
+as they typed it, with the reason. An answer with a line under it that starts no item is refused with that line, as the
+line may bind it. A prose ruling outside the template (several sentences, a list of ids) is ported
 as any ruling is, not through this command. If nothing was accepted, stop there.
 
 **A flag means read it.** For every answer flagged below, read the whole answer against the whole entry, and apply what
