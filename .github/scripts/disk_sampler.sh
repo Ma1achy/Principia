@@ -59,17 +59,17 @@ loadavg ${line:-none}"
   done < "$proc/meminfo"
 }
 
-# The device-mapper's state, the copy-on-write root's fill among it, where sudo allows it. `--foreground` keeps
-# `timeout` and `sudo` in this group, which plain `timeout` leaves (`setpgid (0, 0)`, coreutils' timeout.c), so the KILL
-# of the group at the step's end reaches `timeout`. What that KILL can't do: `dmsetup` runs as root, which this user
-# can't signal, and a process stuck in the kernel in D state survives a KILL from anyone. With `timeout` gone, nothing
-# then times the read out, so a stuck one can outlive the step, holding none of its streams. Nor may a KILL reach `sudo`
-# itself: whether it does depends on the real uid it keeps, not settled here. With `--foreground` the 10 s limit signals
-# `sudo` alone, for it to relay to `dmsetup`; if it can't be signalled, the read stays stuck and stops only this loop.
+# The device-mapper's state, the copy-on-write root's fill among it, where sudo allows it. `timeout` runs under `sudo`,
+# as root, because `dmsetup` runs as root and this user's `timeout` could not signal it. The read holds none of the
+# step's streams. The KILL of the group at the step's end stops this loop, so no read starts after the step, but it
+# doesn't reach root processes, so `sudo`, `timeout` and `dmsetup` may outlive the step by up to the limit. `sudo` itself
+# runs before any timer starts, so a stall there is unbounded, but it costs only these samples, and shows as a gap in
+# them. A process stuck in the kernel in D state survives everything, the limit included. What root and `timeout` do
+# here comes from sudo's and coreutils' master sources, not `ubuntu-24.04`'s; CI is the first real run.
 device_watch() {
   local n text
   for ((n = 1; n <= max_samples; n++)); do
-    text=$(timeout --foreground 10 sudo -n dmsetup status 2>&1)
+    text=$(sudo -n timeout 10 dmsetup status 2>&1)
     printf '== device %d, +%d s\n%s\n' "$n" "$SECONDS" "$text" >> "$watch_out"
     sleep "$seconds"
   done
@@ -123,7 +123,7 @@ sampler &
 sampler_pid=$!
 set +m
 
-# In a group of its own too, with `device_watch` and what that has in hand, less what its comment says a KILL can't do.
+# In a group of its own too, with `device_watch`: the KILL below stops that loop, not the root processes of its read.
 set -m
 watch &
 watch_pid=$!

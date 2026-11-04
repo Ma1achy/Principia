@@ -15,7 +15,7 @@ mod scratch;
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use scratch::Scratch;
 use validation::negative_control;
@@ -59,14 +59,10 @@ struct Bed {
 const SUDO_ANSWERS: &str =
     "#!/bin/sh\necho \"$*\" >> \"$BED/sudo-calls\"\necho 'cow-root: 0 100 snapshot 7/100 16'\n";
 
-/// GNU `timeout`'s handling of its process group, the one thing these tests need of it: `--foreground` stays in the
-/// caller's group, and the plain call leaves it (`setpgid (0, 0)` in coreutils' timeout.c; here a job of its own, the
-/// command in the new group and the fake's own process outside it, so a KILL of the caller's group misses the command).
-/// Left out: the time limit, and the real one's users. `sudo` here runs as this user, so a KILL takes all of it, which
-/// on a runner it can't: `dmsetup` runs as root. The Mac has no `timeout`, so only CI runs the real one.
-const FAKE_TIMEOUT: &str = "#!/usr/bin/env bash\n\
-    if [ \"$1\" = --foreground ]; then\n  shift 2\n  exec \"$@\"\nfi\n\
-    shift\nset -m\n\"$@\" &\nset +m\nwait \"$!\"\n";
+/// Only ever runs if the sampler's `timeout` is put back outside `sudo`: it hands on to the fake `sudo`, so that a Mac,
+/// which has no `timeout`, reads that the same way as a runner. Under `sudo`, the fake `sudo` runs nothing it is given, so
+/// the real `timeout`, the limit and root are in no test here: CI is the first real run.
+const FAKE_TIMEOUT: &str = "#!/bin/sh\nshift\nexec \"$@\"\n";
 
 impl Bed {
     fn new(tag: &str) -> Bed {
@@ -326,7 +322,8 @@ negative_control!(
     ))
 );
 
-/// `dmsetup status` is asked for once a tmpfs is named, without a password prompt, and logged.
+/// `dmsetup status` is asked for once a tmpfs is named, without a password prompt, under a `timeout` that runs as root,
+/// and logged.
 fn check_device(script: &str) {
     let bed = Bed::new("ci_watch_device");
     bed.run(
@@ -340,7 +337,7 @@ fn check_device(script: &str) {
     let calls = std::fs::read_to_string(bed.dir.join("sudo-calls")).unwrap_or_default();
     assert_eq!(
         calls.lines().next(),
-        Some("-n dmsetup status"),
+        Some("-n timeout 10 dmsetup status"),
         "sudo was asked: {calls}"
     );
     assert!(
@@ -357,9 +354,37 @@ fn ci_watch_logs_the_device_status() {
 negative_control!(
     ci_watch_logs_the_device_status,
     "a sudo that could wait for a password",
-    expected = "sudo was asked: dmsetup status",
-    check_device(&edit(&sampler(), "sudo -n dmsetup", "sudo dmsetup"))
+    expected = "sudo was asked: timeout 10 dmsetup status",
+    check_device(&edit(&sampler(), "sudo -n timeout", "sudo timeout"))
 );
+
+mod device_timeout_outside_sudo {
+    use super::*;
+    negative_control!(
+        ci_watch_logs_the_device_status,
+        "`timeout` back outside `sudo`, where this user can't signal a root `dmsetup`",
+        expected = "sudo was asked: -n dmsetup status",
+        check_device(&edit(
+            &sampler(),
+            "sudo -n timeout 10 dmsetup",
+            "timeout 10 sudo -n dmsetup"
+        ))
+    );
+}
+
+mod device_timeout_dropped {
+    use super::*;
+    negative_control!(
+        ci_watch_logs_the_device_status,
+        "a device read with no limit",
+        expected = "sudo was asked: -n dmsetup status",
+        check_device(&edit(
+            &sampler(),
+            "sudo -n timeout 10 dmsetup",
+            "sudo -n dmsetup"
+        ))
+    );
+}
 
 /// With no tmpfs named, as in the tests a step runs, nothing asks for sudo.
 fn check_no_sudo_unasked(script: &str) {
@@ -391,10 +416,11 @@ negative_control!(
     ))
 );
 
-const STUCK_SUDO: &str = "#!/bin/sh\nsleep 6\ntouch \"$BED/sudo-finished\"\n";
+/// A device read that the step's KILL doesn't reach, as it doesn't reach a root process on a runner: the read is a job
+/// of its own, in a group outside the one the KILL takes, and takes longer than any step here.
+const STUCK_SUDO: &str = "#!/usr/bin/env bash\nset -m\n(sleep 12; touch \"$BED/sudo-finished\") &\nset +m\nwait \"$!\"\n";
 
-/// A stuck device read holds up no reading, and the step's end takes all of it that the stand-ins run: as this user, in
-/// the group `--foreground` keeps it in. What a KILL can't do on a runner, these can't show ([`FAKE_TIMEOUT`]).
+/// A stuck device read holds up no reading, and one that outlives the step doesn't hold the step open by its streams.
 fn check_stuck_device(script: &str) {
     let bed = Bed::new("ci_watch_stuck_device");
     bed.fake("sudo", STUCK_SUDO);
@@ -405,16 +431,18 @@ fn check_stuck_device(script: &str) {
         bed.path(),
         45,
     );
+    let finished = bed.dir.join("sudo-finished");
+    assert!(!finished.exists(), "the device read held the step open");
     let log = bed.watch_log("shm").unwrap_or_default();
     assert!(
         samples(&log) >= 2,
         "a stuck `dmsetup` stopped `watch`:\n{log}"
     );
-    std::thread::sleep(Duration::from_secs(7));
-    assert!(
-        !bed.dir.join("sudo-finished").exists(),
-        "the device read outlived the step"
-    );
+    // The stand-in leaves nothing running behind the test.
+    let end = Instant::now() + Duration::from_secs(20);
+    while !finished.exists() && Instant::now() < end {
+        std::thread::sleep(Duration::from_millis(100));
+    }
 }
 
 #[test]
@@ -433,33 +461,55 @@ negative_control!(
     ))
 );
 
-mod device_left_running {
+mod device_read_on_the_steps_streams {
     use super::*;
     negative_control!(
         ci_watch_goes_on_beside_a_stuck_device_read,
-        "a KILL of `watch` alone, which leaves the device read running",
-        expected = "the device read outlived the step",
+        "a device read that keeps the step's streams",
+        expected = "the device read held the step open",
         check_stuck_device(&edit(
-            &edit(
-                &sampler(),
-                "kill -KILL -- \"-$watch_pid\"",
-                "kill -KILL \"$watch_pid\""
-            ),
-            "max_samples=480",
-            "max_samples=1"
+            &edit(&sampler(), "  exec > /dev/null 2>&1 < /dev/null\n", ""),
+            "text=$(sudo -n timeout 10 dmsetup status 2>&1)",
+            "text=; sudo -n timeout 10 dmsetup status"
         ))
     );
 }
 
-mod device_read_out_of_the_group {
-    use super::*;
-    negative_control!(
-        ci_watch_goes_on_beside_a_stuck_device_read,
-        "`timeout` without `--foreground`, which leaves the group the step's end KILLs",
-        expected = "the device read outlived the step",
-        check_stuck_device(&edit(&sampler(), "timeout --foreground 10", "timeout 10"))
+/// The step's end stops `device_watch`'s loop, which runs as this user: no read starts after the step.
+fn check_device_stops(script: &str) {
+    let bed = Bed::new("ci_watch_device_stops");
+    bed.run(
+        script,
+        STEP_TO_TWO_SAMPLES,
+        Some(&bed.shm()),
+        bed.path(),
+        LIMIT,
     );
+    let calls = || std::fs::read_to_string(bed.dir.join("sudo-calls")).unwrap_or_default();
+    let at_the_end = calls();
+    std::thread::sleep(Duration::from_secs(5));
+    assert_eq!(calls(), at_the_end, "a device read started after the step");
 }
+
+#[test]
+fn ci_watch_starts_no_device_read_after_the_step() {
+    check_device_stops(&sampler());
+}
+
+negative_control!(
+    ci_watch_starts_no_device_read_after_the_step,
+    "a KILL of `watch` alone, which leaves `device_watch` running",
+    expected = "a device read started after the step",
+    check_device_stops(&edit(
+        &edit(
+            &sampler(),
+            "kill -KILL -- \"-$watch_pid\"",
+            "kill -KILL \"$watch_pid\""
+        ),
+        "max_samples=480",
+        "max_samples=4"
+    ))
+);
 
 /// No sample is written after the step.
 fn check_ends(script: &str) {
