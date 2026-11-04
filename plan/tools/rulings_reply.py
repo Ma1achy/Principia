@@ -32,8 +32,8 @@ in `RQ-641: (b). RQ-642: (a).`; each is read and answered on its own. A template
 skipped, and listed as skipped. Any other line in capitals is refused like any other.
 
 Refused, and listed with the reason: an unknown or closed RQ, an unknown D-n, an option the entry doesn't offer, two
-options named as alternatives (any `or` between two labels, or `(a)/(b)`), a label after a negation (`not (a)`, `neither
-(a) nor (b)`), a negated `close`, two answers (a spaced `|`, or two lines for one item), a
+options named as alternatives (any `or` between two labels, or `(a)/(b)`), a label after a negation (`not (a)`,
+`neither (a) nor (b)`), a negated `close`, two answers (a spaced `|`, or two lines for one item), a
 `defer:` naming no milestone, a veto of an entry that applies nothing, a bare label on an entry with none, words naming
 no option on an entry that offers them, and any line that doesn't start with an item.
 
@@ -58,7 +58,9 @@ has a deferral made by a ruling. `ask` takes none: it is a question, not an answ
     last-report DIR [--before DATE]
                                    the latest <date>-report.md in DIR, before ISO DATE if given, or `none`
     check-report REPORT [--queue PATH]
-                                   every open RQ is one item of REPORT, with every field the order sets and a reply line
+                                   REPORT has the order's sections, spelled and placed as the command gives them; every
+                                   open RQ is one item of a group, with every field the order sets and a reply line; and
+                                   no RQ item is a closed one
     close RQ-n --ruling R-m --date "4 Nov 2026" --text-file PATH --outcome TEXT [--queue PATH] [--archive-file PATH]
                                    moves the entry, with a "Ruling" line giving date, ruling and outcome, to the review
                                    queue's archive (R-292: the closed section), never deleting it
@@ -83,6 +85,10 @@ DECISION_TEMPLATE = "<stands> | veto"
 REPORT_FIELDS = ("Background", "Options", "Applied meanwhile", "What waits", "Recommendation", "Deferrable")
 DECISIONS_HEAD = "R-369 decisions"  # the report's sections these two lines read, by the start of their headings
 MOOT_HEAD = "Ruled-or-moot"
+REPORT_GROUPS = ("Needs owner now", "Physics", "Validation", "GUI", "CI", "Record corrections",
+                 "Ruled-or-moot (to close)")
+REPORT_SECTIONS = REPORT_GROUPS + ("R-369 decisions since the last report (veto list)", "Rulings ported or pending",
+                                   "Blockers", "State", "Reply template")
 
 ENTRY_START = re.compile(r"^## ", re.M)
 TITLE = re.compile(r"^## (RQ-\d+): (.*?)(?: \*\(.*)?$")
@@ -185,8 +191,9 @@ def flags(e):
 
 
 def report_items(text):
-    """{D-n}, {RQ-n grouped Ruled-or-moot} and {item id: its text} of a report, by its `##` and `###` headings."""
-    decisions, moot, items, section, cur = set(), set(), {}, "", None
+    """{D-n}, {RQ-n grouped Ruled-or-moot}, {item id: its texts}, and {item id: its section}, of a report, by its `##`
+    and `###` headings."""
+    decisions, moot, items, where, section, cur = set(), set(), {}, {}, "", None
     for line in text.split("\n"):
         if line.startswith("## "):
             section, cur = line[3:], None
@@ -195,11 +202,12 @@ def report_items(text):
             cur = cur.group(0) if cur else None
             if cur:
                 items.setdefault(cur, []).append("")
+                where[cur] = section
                 (decisions if section.startswith(DECISIONS_HEAD) else moot if section.startswith(MOOT_HEAD)
                  else set()).add(cur)
         elif cur:
             items[cur][-1] += line + "\n"
-    return decisions, moot, items
+    return decisions, moot, items, where
 
 
 def named(body, e):
@@ -382,15 +390,27 @@ def last_report(names, before=None):
 
 
 def report_errors(report, queue_text):
-    """What keeps a report from being the order's: an open RQ with no item, or two; a field or a reply line missing."""
-    _, _, items = report_items(report)
-    errors = []
-    for rq in entries_of(queue_text):
+    """What keeps a report from being the order's: a section misspelt, missing or out of place; an open RQ with no item,
+    or two; an item in the wrong section, or of an RQ not open; a field or a reply line missing."""
+    _, _, items, where = report_items(report)
+    open_rqs = entries_of(queue_text)
+    heads = re.findall(r"^## (.*)$", report, re.M)
+    errors = [f"no \"## {h}\" section" for h in REPORT_SECTIONS if h not in heads]
+    errors += [f"\"## {h}\" is no section of the report" for h in heads if h not in REPORT_SECTIONS]
+    if not errors and heads != list(REPORT_SECTIONS):
+        errors.append(f"the sections must run, once each, in this order: {', '.join(REPORT_SECTIONS)}")
+    for rq in open_rqs:
         if rq not in items:
             errors.append(f"{rq}: open, and no item of the report")
     for item, texts in items.items():
         if len(texts) > 1:
             errors.append(f"{item}: {len(texts)} items of the report")
+        if item.startswith("RQ-") and item not in open_rqs:
+            errors.append(f"{item}: an item, and not open in the queue")
+        if item.startswith("RQ-") and where[item] not in REPORT_GROUPS:
+            errors.append(f"{item}: under \"{where[item]}\", which is no group")
+        if item.startswith("D-") and not where[item].startswith(DECISIONS_HEAD):
+            errors.append(f"{item}: under \"{where[item]}\", not the decisions")
         if item.startswith("RQ-"):
             errors += [f"{item}: no \"**{f}:**\" line" for f in REPORT_FIELDS if f"**{f}:**" not in texts[0]]
         if not re.search(rf"^{item}: ", report, re.M):
@@ -492,7 +512,7 @@ def self_test():
     report = ("# Report\n\n## Physics\n\n### RQ-1: First\n\n## Ruled-or-moot (to close)\n\n### RQ-5: Fifth\n\n"
               "## R-369 decisions since the last report (veto list)\n\n### D-1: A choice\n\n"
               "## State\n\n### D-2: not one\n")
-    decisions, moot, _ = report_items(report)
+    decisions, moot = report_items(report)[:2]
 
     def expect(name, line, kind=None, value=None, reason=None, marks=()):
         ok, no = parse_reply(line, queue, ("RQ-6",), decisions, moot)[:2]
@@ -673,12 +693,27 @@ def self_test():
 
     item = "".join(f"**{f}:** x\n" for f in REPORT_FIELDS)
     small = ("## RQ-1: One?\n\n- **Applied meanwhile:** x.\n\n## RQ-2: Two?\n\n- **Applied meanwhile:** x.\n")
-    whole = f"## Physics\n\n### RQ-1: t\n{item}\n### RQ-2: t\n{item}\n## Reply template\n\nRQ-1: x\nRQ-2: x\n"
+    whole = "".join(f"## {h}\n\n" + (f"### RQ-1: t\n{item}\n" if h == "GUI" else "")
+                    + (f"### RQ-2: t\n{item}\n" if h == "Physics" else "")
+                    + ("### D-1: t\n\n" if h.startswith(DECISIONS_HEAD) else "")
+                    + ("RQ-1: x\nRQ-2: x\nD-1: x\n" if h == "Reply template" else "") for h in REPORT_SECTIONS)
     cases = [("a whole report", whole, None),
              ("an RQ missing", whole.replace("### RQ-2", "### X"), "RQ-2: open, and no item"),
              ("an RQ twice", whole.replace("### RQ-2: t", "### RQ-1: t"), "RQ-1: 2 items"),
-             ("a field missing", whole.replace("**Deferrable:** x\n", "", 1), "RQ-1: no \"**Deferrable:**\""),
-             ("a reply line missing", whole.replace("RQ-2: x\n", ""), "RQ-2: no line in the reply template")]
+             ("a field missing", whole.replace("**Deferrable:** x\n", "", 1), "RQ-2: no \"**Deferrable:**\""),
+             ("a reply line missing", whole.replace("RQ-2: x\n", ""), "RQ-2: no line in the reply template"),
+             ("a group misspelt", whole.replace("## GUI", "## Gui"), "\"## Gui\" is no section"),
+             ("a group missing", whole.replace("## GUI\n\n", ""), "no \"## GUI\" section"),
+             ("a section missing", whole.replace("## Blockers\n\n", ""), "no \"## Blockers\" section"),
+             ("two groups swapped", whole.replace("## GUI", "## TMP").replace("## CI\n", "## GUI\n")
+              .replace("## TMP", "## CI"), "the sections must run"),
+             ("a group twice", whole.replace("## CI\n", "## GUI\n## CI\n"), "the sections must run"),
+             ("an RQ under no group", whole.replace("## Blockers\n\n", "## Blockers\n\n### RQ-3: x\n"
+                                                    ).replace("### RQ-2: t", "### X: t"), "RQ-3: under \"Blockers\""),
+             ("an RQ under the decisions", whole.replace("### D-1: t", "### RQ-2: t\n### D-1: t"), "RQ-2: 2 items"),
+             ("a closed RQ", whole.replace("### RQ-2: t", "### RQ-9: t"), "RQ-9: an item, and not open"),
+             ("a decision among the groups", whole.replace("## CI\n", "## CI\n\n### D-2: t\n"),
+              "D-2: under \"CI\"")]
     for name, text, fault in cases:
         got = report_errors(text, small)
         if (fault is None and got) or (fault is not None and not any(fault in g for g in got)):

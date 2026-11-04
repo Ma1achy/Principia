@@ -122,7 +122,8 @@ leaves its item as it is.
 python3 plan/tools/rulings_reply.py check-report "$R/<date>-report.md" --queue "$S/queue.md"
 ```
 
-It must print 0 failures: every open RQ is one item, with every field and a reply line. Fix the report until it does.
+It must print 0 failures: every section there, spelled and placed as above, a group with no item saying "None."; every
+open RQ one item of a group, with every field and a reply line; no closed RQ an item. Fix the report until it does.
 Then read the report through once for a bare number, and gloss any you find.
 
 Print the whole report in your reply, unabridged, and give its path. Then carry on with the build: the report asks the
