@@ -72,6 +72,22 @@ jobs:
         run: >-
           cargo test -p xtask --no-run --test qa_TASK-M0-22 --test qa_TASK-M0-22_r235 --test ci
           --test qa_TASK-M0-36 --test qa_TASK-M0-37
+      # RQ-688: run 1's three `xtask ci` children, side by side under `cargo test` and each with the 600 s timer, share
+      # what the build step leaves cold: the build of `golden_harness`, which only the golden runner asks for, and
+      # lavapipe's first compile of every shader. One golden run first, alone, with no timer on the build, in the job's
+      # env, leaves both warm, and it is the very work the children's golden step does: this `target/debug/xtask` is the
+      # binary they spawn, where `cargo xtask` would resolve xtask's features without its dev-dependencies and could
+      # rebuild it. The 600 s timer and the 50 parallel runs stay as they are (R-649; REQ-SYS-070); applied per R-369.
+      # The log gives what RQ-688's open hypotheses need: the runner's hardware, this step's time, and what the shader
+      # cache holds on each side of it.
+      - name: Warm up the golden harness and Mesa's shader cache, one run alone
+        run: |
+          lscpu
+          nproc
+          cache="${XDG_CACHE_HOME:-$HOME/.cache}"
+          du -sh "$cache"/mesa_shader_cache* 2>/dev/null || echo "no Mesa shader cache before the warm-up"
+          time target/debug/xtask golden --all
+          du -sh "$cache"/mesa_shader_cache* 2>/dev/null || echo "no Mesa shader cache after the warm-up"
       - name: 50 consecutive parallel runs
         run: |
           for run in $(seq 1 50); do
