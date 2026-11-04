@@ -23,6 +23,8 @@ pub const KIND: &str = "affine chart";
 pub const LABEL_W: f32 = 92.0;
 /// The width of a basis editor's field, in points (a look choice, R-390): four to a row fit the panel.
 pub const EDITOR_FIELD_W: f32 = 44.0;
+/// The height of a component's field in the basis editor, in points (a look choice, R-390).
+pub const EDITOR_FIELD_H: f32 = 18.0;
 
 /// The basis of preset `preset` at `view`'s scale: `q₁ = σ e_a`, `q₂ = σ e_b`.
 pub fn preset_basis(view: View, preset: usize) -> (Latent, Latent) {
@@ -102,7 +104,12 @@ pub fn show(ui: &mut Ui, section: Rect, h: f32, clip: Rect, panel: &mut Panel<'_
         panel.place(edit, &button, clip);
         if open {
             let at = egui::pos2(section.min.x, button.rect.max.y);
-            editor(ui, at, i, components, panel);
+            if editor_clear(ui, at, i, panel.console_top) {
+                editor(ui, at, i, components, panel);
+            } else if panel.focus.last().is_some_and(|f| f != edit) && panel.focus_in(edit) {
+                // Its fields are not drawn, so the keys must not reach them.
+                panel.out.focus = Some(edit);
+            }
         }
     }
     let mut last = row_ui(ui, row(section, h, 4));
@@ -118,6 +125,21 @@ pub fn show(ui: &mut Ui, section: Rect, h: f32, clip: Rect, panel: &mut Panel<'_
     last.label(RichText::new(KIND).monospace().weak());
 }
 
+/// The id of the area of basis vector `which`'s editor.
+fn editor_id(which: usize) -> Id {
+    Id::new(("basis editor", which))
+}
+
+/// Whether basis vector `which`'s editor, at `at`, ends above the console's top edge `console_top`: its layer is above
+/// the console's, so an editor the console would cover, in part or whole, is not drawn and takes no input, and comes
+/// back when uncovered (R-463 K2). Its height is the last one drawn; never drawn, its two rows.
+fn editor_clear(ui: &Ui, at: egui::Pos2, which: usize, console_top: Option<f32>) -> bool {
+    console_top.is_none_or(|top| {
+        let drawn = ui.ctx().memory(|m| m.area_rect(editor_id(which)));
+        at.y + drawn.map_or(2.0 * EDITOR_FIELD_H, |r| r.height()) <= top
+    })
+}
+
 /// The editor of basis vector `which` (0 for `q₁`), at `at`, under its row, over the panel and never the figure: eight
 /// fields in two rows, each a `SetField` on the basis.
 fn editor(
@@ -130,7 +152,7 @@ fn editor(
     let plane = panel.snapshot.sim.plane.clone();
     let mut basis = [plane.q1, plane.q2];
     let mut changed = false;
-    let area = Area::new(Id::new(("basis editor", which)))
+    let area = Area::new(editor_id(which))
         .order(Order::Foreground)
         .fixed_pos(at)
         .show(ui.ctx(), |ui| {
@@ -141,7 +163,7 @@ fn editor(
                         for (i, name) in AXES.iter().enumerate() {
                             ui.label(*name);
                             let field = ui.add_sized(
-                                [EDITOR_FIELD_W, 18.0],
+                                [EDITOR_FIELD_W, EDITOR_FIELD_H],
                                 DragValue::new(&mut basis[which][i])
                                     .speed(0.005)
                                     .max_decimals(3),

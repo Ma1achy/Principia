@@ -859,14 +859,21 @@ impl<S: EngineSide> App<S> {
             targeted = snapshot;
             &targeted
         };
+        let console_top = self.console_open.then(|| self.console_rect(layout).min.y);
         let mut panel = explore::manifold_view::Panel {
             snapshot: shown,
             scratch: &mut self.manifold,
             keyboard: &mut self.keyboard,
             focus: &self.view.focus.path,
+            console_top,
             out,
         };
         explore::manifold_view::show(ui, layout.manifold_view, &mut panel);
+        if let Some(id) = out.focus.take() {
+            let tree = self.keyboard.tree(self.view.mode);
+            self.view.focus.path = tree.path_to(id);
+            self.view.focus.mode = KeyMode::Navigation;
+        }
         self.manifold.compass.hover = self.hover_sent;
         let sim = &self.snapshot.sim;
         explore::compass::show(

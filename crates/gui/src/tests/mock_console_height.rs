@@ -3,7 +3,8 @@
 //! a restart; a double-click, and View › reset layout, return it to its default; a click on maximise, and M with the
 //! focus in the console, toggle the full height below the top bar and back to the dragged height; M while the search
 //! field is typed in types 'm'; → from Clear reaches maximise, then ×; maximised, the console covers the panels and the
-//! figure; the hover label stays on the strip of figure a dragged console leaves. Each check also runs on an outcome it must reject (R-176, through `rejects`; gui takes no dependency on
+//! figure; the hover label stays on the strip of figure a dragged console leaves; a basis editor it covers is hidden and takes
+//! no input. Each check also runs on an outcome it must reject (R-176, through `rejects`; gui takes no dependency on
 //! validation, R-187): a console of fixed height, an M that types nothing outside the field, and the others named.
 
 use std::path::{Path, PathBuf};
@@ -12,17 +13,22 @@ use eframe::egui::{self, pos2, vec2, CursorIcon, Event, Key, Modifiers, Rect, Sh
 use engine::contract::view_ui::{KeyMode, Window};
 
 use super::mock_layout_splitters::{current, drag};
-use super::support::{click, click_scope, focus, headless, mock_app, press, rejects, FORMAT};
+use super::support::{
+    click, click_scope, focus, headless, mock_app, press, rejects, shapes, FORMAT,
+};
 use crate::app::App;
 use crate::explore::breadcrumb;
 use crate::explore::footer::FOOTER;
 use crate::explore::hover_label::{BACKING, LISTEN_HINT};
+use crate::explore::manifold_view::{AXES, Q1_COMPONENTS, Q1_EDIT};
 use crate::headless::{Headless, FRAME_S};
 use crate::layout::{console_handle, Layout, Splits, HANDLE, MIN_CONSOLE_H};
 use crate::mock::MockEngine;
 use crate::settings::{Settings, Store, CONSOLE_TOP, FILE};
 use crate::side::{EngineSide, MockSide};
-use crate::windows::console::{CLEAR, CLOSE, COPY, HEADER, LOG, MAXIMISE, SEARCH, WINDOW};
+use crate::windows::console::{
+    CLEAR, CLOSE, COPY, HEADER, LOG, MAXIMISE, MAXIMISE_TEXT, SEARCH, WINDOW,
+};
 
 const NONE: Modifiers = Modifiers::NONE;
 const NAV: KeyMode = KeyMode::Navigation;
@@ -646,6 +652,110 @@ fn mock_console_height_the_hover_label_stays_on_the_strip_it_leaves() {
             on_strip(rect, figure)
         });
     }
+}
+
+/// A GUI with its console open and `q₁`'s basis editor open, and where its first field is.
+fn editing() -> (App<MockSide>, Headless, Rect) {
+    let (mut app, mut h) = opened();
+    click_scope(&mut h, &mut app, Q1_EDIT);
+    settle(&mut h, &mut app);
+    let field = app.keyboard.place_of(Q1_COMPONENTS[0]).expect("drawn").rect;
+    (app, h, field)
+}
+
+/// That the basis editor is neither drawn nor over the console at `at`, a point the console covers: no field placed, no
+/// field's label painted after the console's, and the pointer on the console's layer.
+fn editor_gone(h: &mut Headless, app: &mut App<MockSide>, at: egui::Pos2) {
+    let drawn = shapes(h, app);
+    let text = |s: &Shape| match s {
+        Shape::Text(t) => Some(t.galley.text().to_owned()),
+        _ => None,
+    };
+    let console = drawn
+        .iter()
+        .position(|s| text(s).as_deref() == Some(MAXIMISE_TEXT))
+        .expect("the console drawn");
+    let after = drawn[console..].iter().filter_map(text);
+    assert!(!after.into_iter().any(|t| AXES.contains(&t.as_str())));
+    assert!(app.keyboard.place_of(Q1_COMPONENTS[0]).is_none());
+    let layer = h.ctx.layer_id_at(at).expect("a layer");
+    assert_eq!(layer.order, egui::Order::Middle, "{layer:?}");
+}
+
+/// The pointer's drag on `at` moved the basis.
+fn dragging_edits(h: &mut Headless, app: &mut App<MockSide>, at: egui::Pos2) -> bool {
+    let before = app.snapshot().sim.plane.q1;
+    drag(h, app, at, at + vec2(40.0, 0.0));
+    app.snapshot().sim.plane.q1 != before
+}
+
+#[test]
+fn mock_console_height_maximised_it_hides_the_basis_editor() {
+    let (mut app, mut h, field) = editing();
+    let at = field.center();
+    rejects("the editor at the default height", || {
+        editor_gone(&mut h, &mut app, at)
+    });
+    click_scope(&mut h, &mut app, MAXIMISE);
+    settle(&mut h, &mut app);
+    editor_gone(&mut h, &mut app, at);
+    assert!(app.manifold.editing[0], "it stays asked for");
+    assert!(!dragging_edits(&mut h, &mut app, at), "no input through it");
+    click_scope(&mut h, &mut app, MAXIMISE);
+    settle(&mut h, &mut app);
+    assert!(
+        app.keyboard.place_of(Q1_COMPONENTS[0]).is_some(),
+        "it comes back"
+    );
+    assert!(dragging_edits(&mut h, &mut app, at), "and takes the drag");
+}
+
+#[test]
+fn mock_console_height_dragged_over_it_hides_the_basis_editor() {
+    let (mut app, mut h, field) = editing();
+    // The editor's bottom edge: its field's, with the frame's margin; a little under, the whole editor shows.
+    let edge = drawn(&app).min.y;
+    drag_edge(&mut h, &mut app, field.max.y + 30.0 - edge);
+    settle(&mut h, &mut app);
+    let clear = app.keyboard.place_of(Q1_COMPONENTS[0]);
+    assert!(clear.is_some(), "the console under the editor keeps it");
+    // Over the editor's lower part only: a part over the console is as bad as the whole.
+    let edge = drawn(&app).min.y;
+    drag_edge(&mut h, &mut app, field.max.y + 2.0 - edge);
+    settle(&mut h, &mut app);
+    let top = drawn(&app).min.y;
+    let at = pos2(field.center().x, top + 20.0);
+    editor_gone(&mut h, &mut app, at);
+    assert!(app.manifold.editing[0], "it stays asked for");
+    // Up past it.
+    drag_edge(&mut h, &mut app, field.min.y - 30.0 - top);
+    settle(&mut h, &mut app);
+    editor_gone(&mut h, &mut app, field.center());
+    assert!(!dragging_edits(&mut h, &mut app, field.center()));
+}
+
+#[test]
+fn mock_console_height_the_focus_leaves_an_editor_it_hides() {
+    let path = |app: &App<MockSide>, id| app.keyboard.tree(app.view.mode).path_to(id);
+    let (mut app, mut h, field) = editing();
+    let on_field = |h: &mut Headless, app: &mut App<MockSide>| {
+        app.view.focus.path = path(app, Q1_COMPONENTS[0]);
+        app.view.focus.mode = INTERACT;
+        let _ = h.frame(app, Vec::new());
+    };
+    on_field(&mut h, &mut app);
+    let kept = app.view.focus.clone();
+    assert_eq!(kept.path, path(&app, Q1_COMPONENTS[0]), "the editor shows");
+    let edge = drawn(&app).min.y;
+    drag_edge(&mut h, &mut app, field.min.y - 30.0 - edge);
+    settle(&mut h, &mut app);
+    on_field(&mut h, &mut app);
+    assert_eq!(app.view.focus.path, path(&app, Q1_EDIT));
+    assert_eq!(app.view.focus.mode, NAV);
+    let moved = app.view.focus.clone();
+    rejects("a focus left on a hidden field", || {
+        assert_eq!(moved.path, kept.path)
+    });
 }
 
 #[test]

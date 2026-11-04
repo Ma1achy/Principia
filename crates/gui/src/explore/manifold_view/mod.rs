@@ -872,6 +872,8 @@ pub struct Out {
     pub windows: Vec<Window>,
     /// The console's lines for the physical steers refused (R-550).
     pub refusals: Vec<String>,
+    /// The scope the focus goes back to, off a basis editor the console has hidden.
+    pub focus: Option<ScopeId>,
 }
 
 impl Out {
@@ -987,6 +989,8 @@ pub struct Panel<'a> {
     pub keyboard: &'a mut Keyboard,
     /// The focus path.
     pub focus: &'a [String],
+    /// The open console's top edge: the panel's popups stay above it, as their layer is above its (R-463 K2).
+    pub console_top: Option<f32>,
     /// What the controls ask for.
     pub out: &'a mut Out,
 }
