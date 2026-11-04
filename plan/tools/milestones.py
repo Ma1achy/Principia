@@ -97,7 +97,7 @@ def gate_block(reqs, m, report=False, built=(), reporting=(), targets=()):
              f"with no row of its own; {', '.join(other)}, M9's other calibration, is below):", "",
              *area_lines(calibrations)]
     if unscored:
-        lines += ["", f"**Built, not scored — {len(unscored)} requirements** ({', '.join(BUILD_TASKS[m])}, R-654, R-669; no "
+        lines += ["", f"**Built, not scored — {len(unscored)} requirements** ({', '.join(BUILD_TASKS[m])}, R-654, R-669, R-679; no "
                   "outcome and no row in the report, each task's tests blocking its own merge):", "",
                   *area_lines(unscored)]
     notarget = [i for i in ids if i in reporting]
