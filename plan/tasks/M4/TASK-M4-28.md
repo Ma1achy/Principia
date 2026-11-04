@@ -6,7 +6,7 @@
 - **Needs (earlier milestones):** REQ-INT-026, REQ-EVT-003, REQ-EVT-005, REQ-VAL-026, REQ-INT-100, REQ-INT-101, REQ-INT-102, REQ-PAY-110
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** PIT-9, PIT-10
-- **Size:** ~950 lines
+- **Size:** ~1000 lines
 
 ## Goal
 The owner's evidence for whether the missing `NoContraction` matters for the real kernel (R-686). The same IC set runs on
@@ -35,11 +35,11 @@ alone does not answer the owner's question; the bits at identical operands do, a
 - `docs/notes/principia_gpu_determinism_note.md` § "The parity consequence (what shared source does and does not buy)"
 
 ## Deliverables
-- `cargo xtask gate cross-backend-march`, on TASK-M4-27's record and comparison: `--record` marches the IC set on the job's
-  backend, `--compare` over records. The CPU-f32 march is the kernel's own wrapper at f32, which this task drives inside TASK-M4-02's
+- `cargo xtask gate cross-backend-march`, on TASK-M4-27's record and comparison: `--record` marches the IC set on the
+  backend the session selects, `--compare` over records. The CPU-f32 march is the kernel's own wrapper at f32, which this task drives inside TASK-M4-02's
   harness; that harness alone is `stepOnce` and `decodeOnly` on shared states, fixed inputs that say nothing of a trajectory.
 - Two arms, each on all four backends (parity contract §3). **Decoded:** the march from the same chart uniforms, each backend
-  decoding its own start state, through TASK-M4-05's survey entry, each IC one texel of its own quad, since that march takes no IC buffer. **Shared:** CPU f32's decoded state's bits as every
+  decoding its own start state, through TASK-M4-05's survey entry, each IC one texel of its own quad, since that march takes no IC buffer. **Shared:** CPU f32's decoded state's bits, written once to `fixtures/gates/cross-backend-march/shared_starts/` by `--write-inputs` and committed, since every other record needs them first, as every
   backend's start, marched by the pass entry below, and on CPU f32 by the same body at f32. An IC held as `(m, r, p)` with no chart point runs on the shared arm alone, and the report says so.
 - Two occupants, each through both arms, applied per R-369: the default, Heggie × RK4 (R-560), since that is the real kernel; and Yoshida-4, named in the header, since `N_sub`, `N_max` and the bucket exist only without regularisation (integrator contract § "Part 6 — Three boundaries stated honestly (deferred work lands here)"). The record's key gains the occupant and the sim key (`dt_macro`, the horizon, `r_coll`, `N_max` or the step budget), and a pair over different ones is refused, as a pair over different inputs is. Below, a **pass** is one macro-step, or under Heggie one sync interval (R-565).
 - The pass entry. `gpu_step_once` is one STEP (parity contract § "1. The principle"): no `N_sub`, projection or detection, so iterating it isn't a march, and choosing `N_sub`
@@ -49,7 +49,7 @@ alone does not answer the owner's question; the bits at identical operands do, a
   straddle collision and escape decisions on both occupants and `N_sub` decisions on Yoshida-4, and a uniform grid across a basin boundary, each a chart and a point, all the survey entry takes. The header states each
   stratum's N, so 0 of N carries its resolution.
 - A fixed-input arm: `fixtures/gates/tier_l_boundary_states` (TASK-M4-03) and TASK-M4-02's `synth.rs` generators, their output written once to
-  `fixtures/gates/cross-backend-march/fixed_inputs/` so every backend reads the same bits, each state with the registers `detect_terminal` reads, on all four
+  `fixtures/gates/cross-backend-march/fixed_inputs/` by `--write-inputs`, so every backend reads the same bits, each state with the registers `detect_terminal` reads, on all four
   backends, read at the given state (below), reported per pair as a measurement, so a comparison
   exists where chaos can't reach it. `synth.rs`'s feasibility-edge states are decode's, and go through TASK-M4-27's decode read-back entries. TASK-M4-03 names `macos-15`
   and lavapipe; this arm is what brings REQ-INT-057's decisions to NVIDIA at identical inputs before TASK-M8-41.
@@ -59,7 +59,7 @@ alone does not answer the owner's question; the bits at identical operands do, a
 - A digest of each pass's branch words and carried-state checkpoints at a stride stated in the header, so `--compare` can find the first pass that differs. They come from
   `gpu_macro_pass` on both arms, since the survey entry emits neither: on the decoded arm each backend re-marches from its own decoded start state. Where a pair's survey rows differ and its passes' rows don't, that is TASK-M4-27's production-only difference; where one backend's survey row and passes' row
   differ, the report says so.
-- `--replay`: for each disagreement, `--compare` names the first pass `k` that differs and a source, the pair's first backend in the order CPU f32, lavapipe, Metal, NVIDIA, so NVIDIA is
+- `--replay`: for each disagreement, `--compare` names, in a committed `replays.json`, the first pass `k` that differs and a source, the pair's first backend in the order CPU f32, lavapipe, Metal, NVIDIA, so NVIDIA is
   never a source. `--replay-state`, on the source's backend, re-runs from its last checkpoint before `k` and writes the carried state at `k − 1`. Those same bits then go through the
   after-the-STEP read on every backend, NVIDIA's included, reported per pair. For an NVIDIA pair the order is a round trip: Windows `--record`, posted; `--compare` and `--replay-state` on the source's machine; then a second Windows run, `--replay` on that file.
   The per-pass digests stay branch words.
@@ -72,7 +72,7 @@ alone does not answer the owner's question; the bits at identical operands do, a
   apart; for each disagreement, the first step that differs and whether the branch operation there agrees on identical
   inputs, as REQ-VAL-079's report does, the kind column of TASK-M4-27, extended to the march's branch inputs from TASK-M4-03's `branch_inputs.rs`.
   The header states the domain, the commit, each adapter line and the compute setting, NVIDIA's replay as its own row, "not run" until posted, so a record posted with its replay outstanding reads as that, and that N comes from the fixed-input arm and the replays. Each driver's line shows, per branch input and entry, N and the level 1 count.
-- The runner as TASK-M4-27 delivers it, for `fixtures/gates/cross-backend-march/`: a measurement gate whose controls are synthetic records, with `--replay` and `--replay-state` forwarded, and an `outstanding.json` listing NVIDIA's record and its replay as separate rows.
+- The runner as TASK-M4-27 delivers it, for `fixtures/gates/cross-backend-march/`: a measurement gate whose controls are synthetic records, with `--replay-state <replays>` and `--replay <replays> <file>` forwarded, an `outstanding.json` listing NVIDIA's record and its replay as separate rows, its `comparison.md` in M4's report, and the `gate.yml` step recording this gate too. With a committed `replays.json`, that step runs instead `--replay-state` for lavapipe's sources and `--replay` on lavapipe.
 - Negative controls for this task's tests (R-176).
 
 ## Acceptance tests
@@ -84,8 +84,8 @@ alone does not answer the owner's question; the bits at identical operands do, a
   compare that reads only outcomes, which misses the first. A replayed collision fork whose positions differ reads as an upstream
   difference (REQ-VAL-348).
 - `cargo test -p validation cross_backend_passes` (no GPU) — at f32, on Yoshida-4 and on Heggie × RK4, iterated from an IC, the loop body gives `integrate`'s `SimState` bit for bit, and from a checkpoint's carried state it gives the same digests as a run through it; a near-collision state read at the given state has the fixture's bits as its operands and stays straddling `r_coll²`; the control is that state read after the STEP, whose operands the case rejects (REQ-VAL-348).
-- `cargo xtask gate cross-backend-march` — both arms' records on lavapipe, on Metal and on CPU f32, their comparison and the
-  replay, in the PR, with each driver's standing under R-690's condition, every backend pair listed, NVIDIA's as "not run" until its record is posted (REQ-VAL-348).
+- `cargo xtask gate cross-backend-march` (no GPU) — the control records alone, as `gate --all` runs them (REQ-VAL-348).
+- The run, on the task's head, `--write-inputs`' files committed. `cargo xtask build-kernel`, then `PRIN_GPU_BACKEND=metal cargo xtask gate cross-backend-march --record metal.json`, on the Mac through the job queue; `gh workflow run gate.yml --ref <branch> -f milestone=M4`, its step giving `lavapipe.json` and `cpu-f32.json`, fetched with `gh run download`; `--compare metal.json lavapipe.json cpu-f32.json` on the Mac, `comparison.md` and `replays.json` committed. The replay, where there is a disagreement: `--replay-state replays.json` on the Mac for the sources CPU f32 and Metal, committed; `gate.yml` dispatched again, its step taking lavapipe's sources and replay; `--replay replays.json metal-replay.json` on the Mac, and with `--cpu-f32` for CPU f32's; then `--compare` over the records and the replays, `comparison.md` committed. In the PR: both arms under both occupants, with each driver's standing under R-690's condition, every backend pair listed, NVIDIA's record and replay each "not run" until posted (REQ-VAL-348).
 - `python3 plan/check_plan.py`.
 
 ## Notes
@@ -110,8 +110,8 @@ alone does not answer the owner's question; the bits at identical operands do, a
   The fixed-input arm gives most of it, since its read at the given state holds operands identical at every site. In a replay on a card whose division differs, only Yoshida-4's bucket `d²` is sure of
   that, and under Heggie no site is: `detect_terminal`'s inputs are expected at level 1, and the per-input counts show it. Levels are judged within one entry, with TASK-M4-27's production-only difference. A failing driver is recorded **unverified,
   not supported**, in those words. Nothing enforces the condition, and the recording blocks nothing.
-- **The NVIDIA record** is a Windows session's run at the PR's head, `--record` with `PRIN_GPU_BACKEND=vulkan`, the file posted to
-  #390, under the same hardware label as that card's other runs. A record too big to attach goes as a committed file on a branch named on the issue. Its replay is a second run, in the order the `--replay` bullet gives, and blocks nothing either. It is not a CI job (R-186). Nothing waits on it, and the task
+- **The NVIDIA record** is a Windows session's run at the PR's head, from a clean checkout: `cargo xtask build-kernel`, then `--record nvidia.json --hardware-label <label>` with `PRIN_GPU_BACKEND=vulkan`, the file posted to
+  #390, under the same hardware label as that card's other runs. A record too big to attach goes as a committed file on a branch named on the issue. Its replay is a second run, in the order the `--replay` bullet gives, `--replay replays.json nvidia-replay.json` on `replays.json` committed to a branch named on the issue, and blocks nothing either; each `--compare` after it rewrites `comparison.md`, and a commit turns the row in `outstanding.json` to posted. It is not a CI job (R-186). Nothing waits on it, and the task
   closes without it: M4's gate report lists the row as "not run" until it is posted, though the owner's question rests on that
   row (`plan/MILESTONES.md` § M4). It doesn't stand in for R-58's parity run, REQ-VAL-099, which gates Paper 2; whether a driver recorded unverified,
   not supported can serve that gate is RQ-695.

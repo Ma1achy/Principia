@@ -6,7 +6,7 @@
 - **Needs (earlier milestones):** REQ-DEC-017, REQ-DEC-008
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** PIT-9, PIT-10
-- **Size:** ~750 lines
+- **Size:** ~800 lines
 
 ## Goal
 The part of R-686's check that can run at this commit, on what the GPU runs: decode's and canon's branch outcomes, on
@@ -34,9 +34,9 @@ that. It is the first test of R-690's driver condition, on fixed inputs.
   set of records, every pair: disagreements, inputs compared, the rate, and the inputs that disagreed. The rate counts inputs: an input
   disagrees if any of its rows' outcomes does, and the denominator is the inputs compared. A row's outcome in the rate is the stage's
   where the stage emits it, otherwise the read-back's, and the row names which.
-- `cargo xtask gate cross-backend-branches`: `--record` on the job's backend, `--compare` over records. The inputs are those
+- `cargo xtask gate cross-backend-branches`: `--record` on the backend the session selects, `--compare` over records. The inputs are those
   `crates/engine/tests/canon_gpu.rs` and `crates/engine/tests/decode_cross_backend.rs` build, seeds fixed, with #393's from
-  `crates/validation/tests/qa_TASK-M2-25_gpu.rs`, written once to `fixtures/gates/cross-backend-branches/inputs/` by a generator this task adds,
+  `crates/validation/tests/qa_TASK-M2-25_gpu.rs`, written once to `fixtures/gates/cross-backend-branches/inputs/` by `--write-inputs`, no GPU, committed,
   and read from there by every backend's `--record`, since those builders call the platform's `sin_cos` and `powf`, whose bits need not match on Windows,
   and a pair over different inputs is refused. Sweeps built on a GPU's own decodes (`canonicaliser_noop_gpu`) take CPU f32's decodes
   here, for the same reason. The outcomes are canon's branches (skip, coincidence, `ρ = 0`, mirror, `ρ_x` and
@@ -63,10 +63,12 @@ that. It is the first test of R-690's driver condition, on fixed inputs.
   mantissa and exponent both. Canon's operands are the sample's `(m, r)` words, and `decode/mass.rs`'s are the masses that entry emitted. Each row
   names the compiled entry its bits and outcome came from.
 - What the commands need from the runner, decided per R-369; TASK-M4-28 reuses it. No threshold enters (R-649).
-  - **The flags.** `xtask/src/main.rs` and `xtask/src/gate.rs`'s `Which::One` forward what follows the gate's name to validation's `gate` binary: `--record`, `--compare <records>` and `--hardware-label`, and TASK-M4-28's `--replay` and `--replay-state`.
+  - **The flags.** `xtask/src/main.rs` and `xtask/src/gate.rs`'s `Which::One` forward what follows the gate's name to validation's `gate` binary: `--write-inputs`, `--record <file>`, on `PRIN_GPU_BACKEND`'s adapter or with `--cpu-f32` on the CPU, `--compare <records>` and `--hardware-label`, and TASK-M4-28's `--replay` and `--replay-state`.
   - **A measurement gate.** `fixtures/gates/cross-backend-branches/gate.json` carries `"measurement": { "requirement": "REQ-VAL-347", "ruling": "R-649" }` in place of `threshold` and `min_regions`, which `GateFile` in `crates/validation/src/gate/mod.rs` then leaves out, and a file with both is refused. Its `inputs` are the control records alone, the only ones with `"expected"`. A record under `--compare` has none and can't fail the gate. `gate <name>` with no flag and `gate --all` run those controls, no GPU; `--list` shows the gate as a measurement.
   - **The directory.** The gate's directory is its name, so the inputs are `fixtures/gates/cross-backend-branches/inputs/`.
   - **The "not run" row.** `fixtures/gates/cross-backend-branches/outstanding.json` lists each outstanding run with its state, and a commit changes it when a run is posted. `xtask/src/gate_report.rs`'s `render` prints a section of those lines for the milestone. They are not `Outcome`s, so they count neither as a pass nor as a failure, and the requirement's own line stays on its controls, as `gate.yml` marks it.
+  - **Where the records run.** Metal's on the Mac, through the job queue. Lavapipe's and CPU f32's in a step `cross-backend records` of `.github/workflows/gate.yml`'s `gpu-lavapipe` job, right after `cargo xtask build-kernel`, which uploads them as the artifact `cross-backend-records`. `--record` asserts nothing, so that step can't fail on a rate (R-649). Each record is posted to #390, since an artifact expires before NVIDIA's record may arrive.
+  - **The comparison in M4's report.** `--compare` writes `comparison.md` in the gate's directory, committed with the run, and `render` prints it beside the outstanding lines. It is no `Outcome` either.
 - Negative controls for this task's tests (R-176).
 
 ## Acceptance tests
@@ -87,8 +89,9 @@ that. It is the first test of R-690's driver condition, on fixed inputs.
   `canonicalise` and the decode give where they emit it, and each kind `+ and ×` input re-evaluated from its emitted operands gives its emitted bits; the
   control is a read-back that emits one operand from the wrong body, which the re-evaluation rejects (REQ-VAL-347).
 - `cargo test -p validation measurement_gate` (no GPU) — a `gate.json` with `measurement` and no `threshold` loads and lists; one with both is refused; a control input off its `expected` fails the gate, and a record with no `expected` under `--compare` can't, at any rate; the control is a compare that judges a record against 0, which that case rejects (REQ-VAL-347).
-- `cargo test -p xtask gate_report_outstanding` (no GPU) — an outstanding row prints "not run", a posted one what was posted, and the report's pass, fail and exit are the same with or without them; the control is a `render` that makes the row an `Outcome`, which that case rejects (REQ-VAL-347).
-- `cargo xtask gate cross-backend-branches` — records on lavapipe, on Metal and on CPU f32 and their comparison, in the PR,
+- `cargo test -p xtask gate_report_outstanding` (no GPU) — an outstanding row prints "not run", a posted one what was posted, `comparison.md` prints as written, and the report's pass, fail and exit are the same with or without them; the control is a `render` that makes the row an `Outcome`, which that case rejects (REQ-VAL-347).
+- `cargo xtask gate cross-backend-branches` (no GPU) — the control records alone, as `gate --all` runs them (REQ-VAL-347).
+- `cargo xtask build-kernel`, then `PRIN_GPU_BACKEND=metal cargo xtask gate cross-backend-branches --record metal.json`, on the Mac through the job queue; `gh workflow run gate.yml --ref <branch> -f milestone=M4`, its `cross-backend records` step giving `lavapipe.json` and `cpu-f32.json`, fetched with `gh run download`; then `cargo xtask gate cross-backend-branches --compare metal.json lavapipe.json cpu-f32.json` on the Mac through the job queue, `comparison.md` committed. In the PR:
   each pair's rate, the adapter lines and each driver's standing under R-690's condition; the header states the domain; every backend pair is listed, NVIDIA's as "not run"
   until its record is posted (REQ-VAL-347).
 - `python3 plan/check_plan.py`.
@@ -123,8 +126,8 @@ that. It is the first test of R-690's driver condition, on fixed inputs.
 - **A measurement under R-649, on tier (a), the GPU explorer.** It has no outside number, so it is neither an M9 target nor a
   peek. It blocks nothing, and no tolerance or threshold enters it. Each pair's outcome: PASS is 0 disagreements with neither driver of the pair recorded unverified, not supported: the rate
   counts outcomes, so bits differing at bit-identical operands of kind `+ and ×` leave it at 0 and are not PASS. Anything else is EXPLAINED DIVERGENCE, with a measurement showing the mechanism, or UNEXPLAINED.
-- **The NVIDIA record** is a Windows session's run at the PR's head, `--record` with `PRIN_GPU_BACKEND=vulkan`, the file posted to
-  #390. It is not a CI job (R-186). Nothing waits on it, and the task closes without it: M4's gate report lists the row as "not
+- **The NVIDIA record** is a Windows session's run at the PR's head, from a clean checkout: `cargo xtask build-kernel`, then `--record nvidia.json --hardware-label <label>` with `PRIN_GPU_BACKEND=vulkan`, the file posted to
+  #390. `--compare` over all four on the Mac then rewrites `comparison.md`, and a commit turns its row in `outstanding.json` to posted. It is not a CI job (R-186). Nothing waits on it, and the task closes without it: M4's gate report lists the row as "not
   run" until it is posted, so the run stays visible (`plan/MILESTONES.md` § M4).
 - **What is already known:** on this card `decode_` passes 36 of 36 and `canonicaliser_` 28 of 28 (RQ-685). And #393: on identical
   inputs, setting off, the compute decode stage gives `rho_angle` 0 where f64 gives π/2, inferred to be R-437's `p = q = 0`
