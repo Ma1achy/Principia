@@ -26,7 +26,8 @@ refused. What is accepted, with the flags /rulings-apply reads, each a call to r
 Flagged `several` too is an option on an entry holding several questions (numbered labels, a label listed twice, a
 "Second question" field): the rest of it may still be open. A line may hold several answers, each starting `RQ-n:`, as
 in `RQ-641: (b). RQ-642: (a).`; each is read and answered on its own. A template line left as the report wrote it is
-unanswered, and a line in capitals only is a section heading; neither is a reply line.
+unanswered. A line that is a section name alone (`HEADINGS`, or a report's `##` heading) is no reply line either: it is
+skipped, and listed as skipped. Any other line in capitals is refused like any other.
 
 Refused, and listed with the reason: an unknown or closed RQ, an unknown D-n, an option the entry doesn't offer, two
 options named as alternatives (`(a) or (b)`, `(a)/(b)`), two answers (a spaced `|`, or two lines for one item), a
@@ -81,7 +82,10 @@ OPTION = re.compile(r"(?:^\s*(?:- )?|\*\*\s*|[;:,]\s+(?:(?:or|and)\s+)?)"
                     r"\((\d?[a-z]\d?|[ivx]+|\d)\)(\s+another\b)?", re.M)
 ITEM_AT = re.compile(r"(?<=\s)(?=(?:RQ|D)-\d+:)")
 LINE = re.compile(r"^(RQ-\d+|D-\d+):\s*(.*)$", re.S)
-HEADING = re.compile(r"^[A-Z][A-Z ]*$")
+# The section names a reply may keep, in capitals or as the report spells them. Only these are skipped: `DEFER ALL` is
+# not one, and a line that might be an answer is never dropped.
+HEADINGS = {"TOP", "PHYSICS", "VALIDATION", "GUI", "CI", "CI AND RECORD", "RECORD", "RECORD CORRECTIONS",
+            "NEEDS OWNER NOW", "RULED-OR-MOOT", "RULED-OR-MOOT (TO CLOSE)", "REPLY TEMPLATE"}
 BRACKETED = re.compile(r"(?<!\w)\((\d?[a-zA-Z]\d?|[ivxIVX]+|\d)\)")  # a label named in a reply
 BARE = re.compile(r"^(\d?[a-zA-Z]\d?|[ivx]+)(?:[.,:;](?:\s|$)|$)")
 ALTERNATIVE = re.compile(r"(?i)^\s*,?\s*(?:or|/|\|)\s*$")  # all that stands between two labels offered as alternatives
@@ -244,12 +248,15 @@ def parts_of(line):
 
 
 def parse_reply(text, queue_text, closed=(), decisions=(), moot=()):
-    """(accepted, refused, unanswered). accepted: dicts of line number, line (the answer as typed, less its line end),
-    item, kind, value and flags. refused: (line number, answer, reason). unanswered: item ids whose template line was
-    left as written. A line in capitals only is a section heading, and skipped."""
-    entries, accepted, refused, unanswered = entries_of(queue_text), [], [], []
+    """(accepted, refused, unanswered, skipped). accepted: dicts of line number, line (the answer as typed, less its
+    line end), item, kind, value and flags. refused: (line number, answer, reason). unanswered: item ids whose template
+    line was left as written. skipped: (line number, line) of each section name."""
+    entries, accepted, refused, unanswered, skipped = entries_of(queue_text), [], [], [], []
     for n, raw in enumerate(text.splitlines(), 1):
-        if not raw.strip() or HEADING.match(raw.strip()):
+        if not raw.strip():
+            continue
+        if raw.strip().lstrip("# ").upper() in HEADINGS:
+            skipped.append((n, raw.strip()))
             continue
         parts = parts_of(raw.strip())
         for part in [raw] if len(parts) == 1 else parts:
@@ -273,7 +280,7 @@ def parse_reply(text, queue_text, closed=(), decisions=(), moot=()):
     seen = [a["item"] for a in accepted] + [m.group(1) for _, r, _ in refused for m in [LINE.match(r.strip())] if m]
     twice = {i for i in seen if seen.count(i) > 1}
     refused += [(a["n"], a["line"], f"{a['item']} is answered twice") for a in accepted if a["item"] in twice]
-    return [a for a in accepted if a["item"] not in twice], sorted(refused), unanswered
+    return [a for a in accepted if a["item"] not in twice], sorted(refused), unanswered, skipped
 
 
 def assign(accepted, first):
@@ -413,7 +420,7 @@ def self_test():
     decisions, moot, _ = report_items(report)
 
     def expect(name, line, kind=None, value=None, reason=None, marks=()):
-        ok, no, _ = parse_reply(line, queue, ("RQ-6",), decisions, moot)
+        ok, no = parse_reply(line, queue, ("RQ-6",), decisions, moot)[:2]
         if reason is None and (len(ok) != 1 or (ok[0]["kind"], ok[0]["value"]) != (kind, value)
                                or ok[0]["flags"] != list(marks) or no):
             fails.append(f"reply self-test {name!r}: expected {kind} {value!r} {marks}, got {ok} {no}")
@@ -495,25 +502,28 @@ def self_test():
     expect("close of an open question", "RQ-1: close", reason="can't be closed")
     expect("close with its reason", "RQ-1: moot under R-9; close.", "close", "", marks=["rider"])
 
-    ok, no, _ = parse_reply("RQ-1: (a)\n\nRQ-1: (b)\nRQ-5: (a)\nRQ-5: nonsense\nRQ-3: defer:M3\n", queue)
+    ok, no = parse_reply("RQ-1: (a)\n\nRQ-1: (b)\nRQ-5: (a)\nRQ-5: nonsense\nRQ-3: defer:M3\n", queue)[:2]
     if [a["item"] for a in ok] != ["RQ-3"] or [n for n, _, _ in no] != [1, 3, 4, 5]:
         fails.append(f"reply self-test: an item answered twice must lose both, and the rest stand: {ok} {no}")
     if not any("answered twice" in r for _, _, r in no):
         fails.append(f"reply self-test: twice must be named: {no}")
-    ok, no, _ = parse_reply("RQ-1: (b). RQ-5: (a) one, as said. RQ-8: (a).  RQ-9: (a).\n", queue)
+    ok, no = parse_reply("RQ-1: (b). RQ-5: (a) one, as said. RQ-8: (a).  RQ-9: (a).\n", queue)[:2]
     if ([(a["item"], a["value"], a["line"]) for a in ok]
             != [("RQ-1", "b", "RQ-1: (b)."), ("RQ-5", "a", "RQ-5: (a) one, as said."), ("RQ-8", "a", "RQ-8: (a).")]
             or [p for _, p, _ in no] != ["RQ-9: (a)."] or any(a["line"] != a["line"].strip() for a in ok)):
         fails.append(f"reply self-test: several on one line must each stand or fall alone: {ok} {no}")
-    ok, no, _ = parse_reply("RQ-1: (b) with RQ-5 deferred alongside.\n", queue)
+    ok, no = parse_reply("RQ-1: (b) with RQ-5 deferred alongside.\n", queue)[:2]
     if len(ok) != 1 or no:
         fails.append(f"reply self-test: an id without its colon is the rider's: {ok} {no}")
-    ok, no, blank = parse_reply(f"RQ-1: {ANSWER_TEMPLATE}\nD-1: {DECISION_TEMPLATE}\n", queue)
+    ok, no, blank, _ = parse_reply(f"RQ-1: {ANSWER_TEMPLATE}\nD-1: {DECISION_TEMPLATE}\n", queue)
     if ok or no or blank != ["RQ-1", "D-1"]:
         fails.append(f"reply self-test: template lines left alone are unanswered: {ok} {no} {blank}")
-    ok, no, blank = parse_reply("PHYSICS\nCI AND RECORD\nTop\n", queue)
-    if ok or blank or [p for _, p, _ in no] != ["Top"]:
-        fails.append(f"reply self-test: only a line in capitals is a heading: {ok} {no}")
+    ok, no, blank, skipped = parse_reply("PHYSICS\nCI AND RECORD\n## Physics\n\nDEFER ALL\nVETO EVERYTHING\nOK\nTopics\n",
+                                         queue)
+    if ok or blank or [n for n, _ in skipped] != [1, 2, 3]:
+        fails.append(f"reply self-test: only a section name is skipped, and it is listed: {ok} {skipped}")
+    if [p for _, p, _ in no] != ["DEFER ALL", "VETO EVERYTHING", "OK", "Topics"]:
+        fails.append(f"reply self-test: a line in capitals that is no section name is refused: {no}")
     verbatim = "RQ-1:   (a)  "
     if parse_reply(verbatim, queue)[0][0]["line"] != verbatim:
         fails.append("reply self-test: the line must be kept as typed, for the ruling's quotation")
@@ -618,7 +628,7 @@ def write(path, text):
 def show_parse(a, queue_text):
     closed = set(rq_ids(a.queue, a.archive)[0]) - set(entries_of(queue_text))
     decisions, moot = (report_items(read(a.report))[:2]) if a.report else (set(), set())
-    ok, no, blank = parse_reply(read(a.reply), queue_text, closed, decisions, moot)
+    ok, no, blank, skipped = parse_reply(read(a.reply), queue_text, closed, decisions, moot)
     first = next_free(branch_decisions(), read_reserved(a.reserved_file))
     print(f"ACCEPTED {len(ok)}")
     for x, rid in zip(ok, assign(ok, first)):
@@ -628,6 +638,9 @@ def show_parse(a, queue_text):
     for n, line, reason in no:
         print(f"  line {n}: |{line}|  {reason}")
     print(f"UNANSWERED {len(blank)}" + (": " + " ".join(blank) if blank else ""))
+    print(f"SKIPPED {len(skipped)}")
+    for n, line in skipped:
+        print(f"  line {n}: |{line}|")
     return 1 if no else 0
 
 

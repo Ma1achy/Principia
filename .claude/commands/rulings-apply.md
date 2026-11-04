@@ -43,7 +43,7 @@ python3 plan/tools/rulings_reply.py parse "$R/<date>-reply.md" --report <that re
 
 Create `reserved-ids.txt`, empty, if it isn't there; it holds lines starting `R-n`, for numbers promised and on no
 branch yet. `parse` prints each ACCEPTED answer with its kind, its flags and its R id, each REFUSED one with its reason,
-and the UNANSWERED items. A line may hold several answers, each read alone; a line in capitals only is a heading. The
+the UNANSWERED items, and the SKIPPED section names. A line may hold several answers, each read alone. The
 ids are one past the highest `## R-n` heading of `decisions.md` on every local and origin branch. It exits 1 if it
 refused anything: that is expected, and the accepted answers still go ahead.
 
