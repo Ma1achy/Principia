@@ -30,8 +30,9 @@ that. It is the first test of R-690's driver condition, on fixed inputs.
 
 ## Deliverables
 - `crates/validation/src/cross_backend.rs`: a record, one file per backend, keyed by the commit, the adapter line, the driver
-  version, the compute fast-math setting, the hardware label if any, and a hash of the inputs, with one row per input and its branch outcomes; and the comparison of any
-  set of records, every pair: disagreements, inputs compared, the rate, and the inputs that disagreed.
+  version, the compute fast-math setting, the hardware label if any, and a hash of the inputs, with one row per input and branch; and the comparison of any
+  set of records, every pair: disagreements, inputs compared, the rate, and the inputs that disagreed. The rate counts inputs: an input
+  disagrees if any of its rows' outcomes does, and the denominator is the inputs compared.
 - `cargo xtask gate cross-backend-branches`: `--record` on the job's backend, `--compare` over records. The inputs are those
   `crates/engine/tests/canon_gpu.rs` and `crates/engine/tests/decode_cross_backend.rs` build, seeds fixed, with #393's from
   `crates/validation/tests/qa_TASK-M2-25_gpu.rs`. The outcomes are canon's branches (skip, coincidence, `ρ = 0`, mirror, `ρ_x` and
@@ -57,9 +58,11 @@ that. It is the first test of R-690's driver condition, on fixed inputs.
   with equal operands and differing input bits, no fork, reads "unverified, not supported"; with equal operands and bits and a
   different outcome it reads the same, as a comparison fork; with differing operands it does not; a `Wide` input with equal operands and only its exponent differing reads "unverified, not
   supported"; of kind `other operation`, an `fma` form included, it does not; at level 2 the driver whose bits differ from the written form on CPU f32 is the one named, and at level 3 the one whose outcome
-  differs; two GPUs sharing operands CPU f32's run didn't produce are arbitrated by the host's evaluation at those operands, and the one differing is named; a clean driver reads "no failure in N"; no record reads "not run".
+  differs; two GPUs sharing operands CPU f32's run didn't produce are arbitrated by the host's evaluation at those operands, and the one differing is named; a clean driver reads "no failure in N", with its level 1 and `other operation` counts beside it; a
+  driver whose rows are all level 1 reads "no failure in 0"; no record reads "not run".
   The control is a compare that reads only outcomes, which misses the first case; the kinds' control is a list that files a `Wide` input under
-  `other operation`, which the `Wide` case rejects (REQ-VAL-347).
+  `other operation`, which the `Wide` case rejects; N's control is a compare whose N counts all rows, which the "no failure in 0" case
+  rejects (REQ-VAL-347).
 - `cargo xtask gate cross-backend-branches` — records on lavapipe, on Metal and on CPU f32 and their comparison, in the PR,
   each pair's rate, the adapter lines and each driver's standing under R-690's condition; the header states the domain; every backend pair is listed, NVIDIA's as "not run"
   until its record is posted (REQ-VAL-347).
@@ -81,7 +84,9 @@ that. It is the first test of R-690's driver condition, on fixed inputs.
   with the kernel's form at f32, no second copy (applied per R-369: this names a driver where the record otherwise has none). At level 2
   the driver whose bits differ from it fails; at level 3, the driver whose outcome differs from CPU f32's. Operands that match
   neither are level 1. Each driver's standing reads one of "unverified, not supported", "no failure in N", N shown, never
-  "verified" or "supported", or "not run". "Driver unverified" (RQ-685's ruling) is a run header's word for a driver not measured,
+  "verified" or "supported", or "not run". N counts evaluations, one input's one branch on one driver, of the first kind with operands
+  bit-identical to CPU f32's; the rate's denominator is inputs, a different count. Level 1 rows and `other operation` rows never reached the test,
+  so each is counted apart and each driver's line shows all three. "Driver unverified" (RQ-685's ruling) is a run header's word for a driver not measured,
   not one of these. A standing's domain is stated with it: the compute stage, setting off, the adapter line and driver version,
   and for NVIDIA its hardware label ("possibly faulty hardware"), so the words attach to that driver on that card.
 - **A measurement under R-649, on tier (a), the GPU explorer.** It has no outside number, so it is neither an M9 target nor a

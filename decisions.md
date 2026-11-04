@@ -29784,8 +29784,11 @@ A disagreement belongs to a pair and a standing to a driver. The arbiter is the 
 operation correctly rounded, not the exact expression's correctly rounded value. It runs at CPU f32's operands: those of its own
 run's row or, where two GPUs share operands that run didn't produce, those shared operands, which the host evaluates (applied per
 R-369: this names a driver where the record otherwise has none). At level 2 the driver whose bits differ from it fails; at level 3,
-the driver whose outcome differs from CPU f32's. Operands that match neither are level 1. A report has three words: "unverified, not supported" for a driver measured and failing;
-"no failure in N", N shown, never "verified" or "supported", for a driver measured with none; "not run" for no record. RQ-685's
+the driver whose outcome differs from CPU f32's. Operands that match neither are level 1. An evaluation is one input's one branch
+on one driver. A report has three words: "unverified, not supported" for a driver measured and failing;
+"no failure in N", N shown, never "verified" or "supported", for a driver measured with none; "not run" for no record. N counts only
+evaluations of the first kind with operands bit-identical to CPU f32's, so a driver whose rows are all level 1 reads "no failure in
+0", and each driver's line shows its level 1 count and its `other operation` count beside N. RQ-685's
 ruling, in the same batch and ported elsewhere, says "driver unverified" of a driver not measured: that is this "not run", in a run
 header, and not this ruling's words, which only a measured failure earns. A standing holds for the compute stage with the setting
 off, on that adapter and driver version, and for NVIDIA under its hardware label, since repeating on one card can't rule out a
