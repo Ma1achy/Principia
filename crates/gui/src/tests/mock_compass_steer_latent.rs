@@ -15,6 +15,7 @@ use crate::app::App;
 use crate::explore::compass;
 use crate::explore::compass::views::{plucker, steer, upper, GridPlace};
 use crate::explore::manifold_view::tilt::Angles;
+use crate::explore::manifold_view::SLICE_AXIS;
 use crate::explore::manifold_view::{about_the_pin, lock_edit, point, View, AXES};
 use crate::headless::Headless;
 use crate::side::MockSide;
@@ -79,12 +80,12 @@ fn mock_compass_steer_latent_every_cell_steers_to_its_coordinate_plane() {
         let (rows, depth) = (app.console().len(), app.snapshot().history.undo_depth);
         click_cell(&mut h, &mut app, i, j);
         let after = app.snapshot().sim.plane.clone();
-        check_one_basis(&setfields(&app, rows));
+        check_steer_fields(&setfields(&app, rows), (i, j));
         assert_eq!(app.snapshot().history.undo_depth, depth + 1);
         assert!(
             app.console()[rows..]
                 .iter()
-                .any(|e| e.message.starts_with("SetField Plane.q1 Plane.q2 ")),
+                .any(|e| e.message.starts_with("SetField ") && e.message.contains("Plane.q1")),
             "the steer logged in the console"
         );
         check_steered(&before, &after, (i, j));
@@ -109,6 +110,25 @@ fn mock_compass_steer_latent_every_cell_steers_to_its_coordinate_plane() {
     rejects("a steer of two SetFields", || {
         check_one_basis(&["z0", "basis"])
     });
+    rejects("a steer taking the slice normal on the basis alone", || {
+        check_steer_fields(&["basis"], (0, SLICE_AXIS))
+    });
+    rejects("a steer clear of the slice normal as a frame edit", || {
+        check_steer_fields(&["other"], (0, 1))
+    });
+    rejects("a steer taking the slice normal in two SetFields", || {
+        check_steer_fields(&["other", "basis"], (SLICE_AXIS, 7))
+    });
+}
+
+/// Asserts the `SetField`s a steer onto `(i, j)` logged: a plane that takes the slice normal moves it in the same edit,
+/// one frame edit carrying the basis (R-459 G4); any other is one SetField on the basis.
+fn check_steer_fields(fields: &[&str], (i, j): (usize, usize)) {
+    if i == SLICE_AXIS || j == SLICE_AXIS {
+        assert_eq!(fields, ["other"], "one SetField");
+    } else {
+        check_one_basis(fields);
+    }
 }
 
 /// Asserts the `SetField`s logged are one, on the basis.

@@ -8,7 +8,7 @@ use eframe::egui::{
     pos2, vec2, Event, FullOutput, Key, Modifiers, MouseWheelUnit, Rect, Shape, TouchPhase,
 };
 use engine::contract::set_field::{Edit, SimField};
-use engine::contract::sim_config::{Latent, Links, Lock, Plane, SimConfig, LATENT_DIM};
+use engine::contract::sim_config::{Latent, Links, Lock, Plane, SimConfig, SliceFrame, LATENT_DIM};
 
 use super::compass_physical_views::{leaked, linear_a, missing};
 use super::compass_support::{app_at, compass_rect, plane, setfields, square, view};
@@ -16,12 +16,12 @@ use super::support::{click_scope, press, rejects};
 use crate::app::App;
 use crate::capture::{PIXELS_PER_POINT, SIZE};
 use crate::explore::compass::physical::{
-    self, latent_jacobian, pushforward, refusal_line, smaller_singular, steer, Decoder, Inverse,
-    Matrix, Refusal, Set, CUT, TOLERANCE,
+    self, latent_jacobian, pushforward, refusal_line, smaller_singular, steer, steer_on, Decoder,
+    Inverse, Matrix, Refusal, Set, CUT, TOLERANCE,
 };
 use crate::explore::compass::views::{orthonormal, upper, CompassView, GridPlace};
 use crate::explore::compass::{COLUMN_BAR, MARGIN, SLICE_BUTTON, TILT_BUTTON, TITLE};
-use crate::explore::manifold_view::{dot, lock_edit, norm, point, View};
+use crate::explore::manifold_view::{dot, frame_edit, lock_edit, norm, point, View};
 use crate::explore::{COMPASS, COMPASS_JACOBI, COMPASS_SHAPE, COMPASS_TILT};
 use crate::headless::Headless;
 use crate::layout::{Layout, Splitter, MIN_BOTTOM_H, MIN_COMPASS_W};
@@ -93,22 +93,31 @@ fn mock_compass_steer_physical_every_cell_on_the_fixture_lights() {
     let p = start();
     let (mut app, mut h) = app_with(&p, d, COMPASS_JACOBI);
     let before = app.snapshot().sim.plane.clone();
+    let start_frame = app.snapshot().sim.slice.frame;
+    let mut moved = None;
+    // A steer's log, `(SetField kinds, console lines)`, on the basis alone and on the frame too.
+    let (mut basis_log, mut frame_log) = (None, None);
     for (i, j) in upper() {
         let (rows, depth) = (app.console().len(), app.snapshot().history.undo_depth);
         click_cell(&mut h, &mut app, i, j);
         let after = app.snapshot().sim.plane.clone();
-        assert_eq!(
+        // One SetField carrying the basis: on the slice frame too where the plane takes it (R-459 G4).
+        let frame = app.snapshot().sim.slice.frame;
+        let log = (
             setfields(&app, rows),
-            ["basis"],
-            "one SetField on the basis"
-        );
-        assert_eq!(app.snapshot().history.undo_depth, depth + 1);
-        assert!(
             app.console()[rows..]
                 .iter()
-                .any(|e| e.message.starts_with("SetField Plane.q1 Plane.q2 ")),
-            "the steer logged in the console"
+                .map(|e| e.message.clone())
+                .collect::<Vec<_>>(),
         );
+        check_steer_logged(&log, frame != start_frame);
+        if frame == start_frame {
+            basis_log.get_or_insert(log);
+        } else {
+            moved = Some(frame);
+            frame_log.get_or_insert(log);
+        }
+        assert_eq!(app.snapshot().history.undo_depth, depth + 1);
         check_lit(&d, Set::Jacobi, &after, (i, j), 1e-9);
         check_apply_form(&before, &after);
         // The Manifold view's sliders read the plane, as after Apply.
@@ -118,8 +127,49 @@ fn mock_compass_steer_physical_every_cell_on_the_fixture_lights() {
         );
         ctrl_z(&mut h, &mut app);
         assert_eq!(app.snapshot().sim.plane, before, "undone by one Ctrl+Z");
+        check_frame_undone(app.snapshot().sim.slice.frame, start_frame);
         assert_eq!(app.snapshot().history.undo_depth, depth);
     }
+    let moved = moved.expect("a steer that took the slice normal");
+    rejects("an undo that leaves the steer's frame", || {
+        check_frame_undone(moved, start_frame)
+    });
+    let basis_log = basis_log.expect("a steer that kept the frame");
+    let frame_log = frame_log.expect("a steer that moved the frame");
+    rejects("a frame steer logged as a basis edit", || {
+        check_steer_logged(&basis_log, true)
+    });
+    rejects("a basis steer logged as a frame edit", || {
+        check_steer_logged(&frame_log, false)
+    });
+    rejects(
+        "a frame steer's SetField with a basis edit's console line",
+        || check_steer_logged(&(frame_log.0.clone(), basis_log.1.clone()), true),
+    );
+    rejects(
+        "a basis steer's SetField with a frame edit's console line",
+        || check_steer_logged(&(basis_log.0.clone(), frame_log.1.clone()), false),
+    );
+}
+
+/// Asserts a steer logged `(kinds, lines)`: one SetField, on the frame too where it `moved` the frame and on the
+/// basis alone where not, with its console line.
+fn check_steer_logged((kinds, lines): &(Vec<&'static str>, Vec<String>), moved: bool) {
+    let (kind, prefix) = if moved {
+        ("other", "SetField Slice.frame Plane.q1 Plane.q2 ")
+    } else {
+        ("basis", "SetField Plane.q1 Plane.q2 ")
+    };
+    assert_eq!(kinds, &[kind], "one SetField on the basis");
+    assert!(
+        lines.iter().any(|m| m.starts_with(prefix)),
+        "the steer logged in the console"
+    );
+}
+
+/// Asserts one Ctrl+Z after a steer left the slice frame `got` the frame it started on.
+fn check_frame_undone(got: SliceFrame, start: SliceFrame) {
+    assert_eq!(got, start, "the frame too");
 }
 
 /// `sim` from the mock at the plane `p`.
@@ -704,7 +754,7 @@ fn mock_compass_steer_physical_from_the_keyboard() {
     assert_eq!(out.edits.len(), 1, "one SetField");
     assert_eq!(
         Ok(out.edits[0].clone()),
-        steer(&d, Set::Jacobi, &sim, 1, 2).expect("a cell")
+        steer_on(&d, Set::Jacobi, &sim, 1, 2).expect("a cell")
     );
     // No cursor, or the Cube view: nothing more.
     scratch.compass.cursor = None;
@@ -755,4 +805,322 @@ fn mock_compass_steer_physical_from_the_keyboard() {
     rejects("a cursor that does not move", || {
         assert_eq!(moved, Some((0, 1)))
     });
+}
+
+/// The identity decoder: a cell's preimage is its two axes, so a steer's plane reads on them.
+fn identity() -> Decoder {
+    Decoder::Linear {
+        a: leaked(std::array::from_fn(|r| {
+            std::array::from_fn(|c| f64::from(r == c))
+        })),
+        shell: false,
+    }
+}
+
+const fn slice_frame(normal: u32, tilt_x: u32, tilt_y: u32) -> SliceFrame {
+    SliceFrame {
+        normal,
+        tilt_x,
+        tilt_y,
+    }
+}
+
+/// The app in the grid view `id` at `start()`, on the identity decoder, with the slice frame `frame`.
+fn framed_app(id: &'static str, frame: SliceFrame) -> (App<MockSide>, Headless) {
+    let (mut app, mut h) = app_with(&start(), identity(), id);
+    app.set_field(frame_edit(frame, None));
+    let _ = h.frame(&mut app, Vec::new());
+    (app, h)
+}
+
+/// Space on cell `(i, j)` through the app, in the compass's interaction mode.
+fn space_cell(h: &mut Headless, app: &mut App<MockSide>, i: usize, j: usize) {
+    app.view.focus.path = vec![COMPASS.to_owned(), crate::explore::COMPASS_VIEW.to_owned()];
+    app.view.focus.mode = engine::contract::view_ui::KeyMode::Interaction;
+    let _ = h.frame(app, Vec::new());
+    app.manifold.compass.cursor = Some((i, j));
+    press(h, app, Key::Space, Modifiers::NONE);
+    let _ = h.frame(app, Vec::new());
+}
+
+/// REQ-GUI-208 (R-459 G4): a physical steer whose plane takes the slice normal or a target moves it by the slice-axis
+/// rule in the same entry, by a click and by Space, in both views; one that takes neither keeps the frame.
+#[test]
+fn mock_compass_steer_physical_moves_the_frame_by_the_slice_axis_rule() {
+    let (alpha, q0, q1, q3, mu0, mu1) = (0, 2, 3, 5, 6, 7);
+    let cases = [
+        // Takes D: the normal moves to the first axis off the plane, a target on it follows.
+        (
+            (2, 5),
+            slice_frame(q3, q3, q3),
+            slice_frame(alpha, alpha, alpha),
+        ),
+        // Takes D and a target of its own: X keeps its own, Y resets to the moved normal.
+        (
+            (2, 5),
+            slice_frame(q3, mu0, q0),
+            slice_frame(alpha, mu0, alpha),
+        ),
+        // Takes a target alone: the normal stays, and the target resets to it.
+        ((2, 3), slice_frame(q3, q0, mu1), slice_frame(q3, q3, mu1)),
+        ((2, 3), slice_frame(q3, mu1, q1), slice_frame(q3, mu1, q3)),
+        // Takes neither: the frame stays, and the edit is on the basis alone.
+        ((2, 3), slice_frame(q3, q3, q3), slice_frame(q3, q3, q3)),
+        ((0, 1), slice_frame(q3, mu0, mu1), slice_frame(q3, mu0, mu1)),
+    ];
+    for id in [COMPASS_JACOBI, COMPASS_SHAPE] {
+        for by_space in [false, true] {
+            for ((i, j), frame, want) in cases {
+                let (mut app, mut h) = framed_app(id, frame);
+                let before = app.snapshot().sim.plane.clone();
+                let (rows, depth) = (app.console().len(), app.snapshot().history.undo_depth);
+                if by_space {
+                    space_cell(&mut h, &mut app, i, j);
+                } else {
+                    click_cell(&mut h, &mut app, i, j);
+                }
+                let at = format!("({i}, {j}), {frame:?}, Space {by_space}");
+                let snapshot = app.snapshot();
+                let steered = Steered {
+                    frame: snapshot.sim.slice.frame,
+                    fields: setfields(&app, rows),
+                    depth: snapshot.history.undo_depth,
+                    plane: snapshot.sim.plane.clone(),
+                };
+                let start = Steered {
+                    frame,
+                    fields: Vec::new(),
+                    depth,
+                    plane: before.clone(),
+                };
+                check_frame_steer(&steered, &start, want, (i, j), &at);
+                ctrl_z(&mut h, &mut app);
+                let snapshot = app.snapshot();
+                let undone = Steered {
+                    frame: snapshot.sim.slice.frame,
+                    fields: Vec::new(),
+                    depth: snapshot.history.undo_depth,
+                    plane: snapshot.sim.plane.clone(),
+                };
+                check_undone_steer(&undone, &start, &at);
+                if (i, j) == (2, 5) && frame == slice_frame(q3, q3, q3) {
+                    rejects("a steer that moved nothing", || {
+                        check_frame_steer(&start, &start, want, (i, j), &at)
+                    });
+                    rejects("a frame steer logged as a basis edit", || {
+                        check_frame_steer(
+                            &Steered {
+                                fields: vec!["basis"],
+                                ..steered.clone()
+                            },
+                            &start,
+                            want,
+                            (i, j),
+                            &at,
+                        )
+                    });
+                    rejects("a steer in two entries", || {
+                        check_frame_steer(
+                            &Steered {
+                                depth: depth + 2,
+                                ..steered.clone()
+                            },
+                            &start,
+                            want,
+                            (i, j),
+                            &at,
+                        )
+                    });
+                    rejects("a steer that moved z₀", || {
+                        let mut moved = steered.clone();
+                        moved.plane.z0[0] += 0.1;
+                        check_frame_steer(&moved, &start, want, (i, j), &at)
+                    });
+                    rejects("a steer onto the cell's axes the other way round", || {
+                        let mut swapped = steered.clone();
+                        std::mem::swap(&mut swapped.plane.q1, &mut swapped.plane.q2);
+                        check_frame_steer(&swapped, &start, want, (i, j), &at)
+                    });
+                    rejects("an undo that leaves the frame", || {
+                        check_undone_steer(
+                            &Steered {
+                                frame: want,
+                                ..undone.clone()
+                            },
+                            &start,
+                            &at,
+                        )
+                    });
+                    rejects("an undo that leaves the plane", || {
+                        check_undone_steer(
+                            &Steered {
+                                plane: steered.plane.clone(),
+                                ..undone.clone()
+                            },
+                            &start,
+                            &at,
+                        )
+                    });
+                }
+                if (i, j) == (2, 3) && frame == slice_frame(q3, q3, q3) {
+                    rejects("a frame left alone, logged as a frame edit", || {
+                        check_frame_steer(
+                            &Steered {
+                                fields: vec!["other"],
+                                ..steered.clone()
+                            },
+                            &start,
+                            want,
+                            (i, j),
+                            &at,
+                        )
+                    });
+                }
+            }
+        }
+    }
+    // Control: the steer's edit on the basis alone leaves z_q3 in the plane.
+    let (mut app, mut h) = framed_app(COMPASS_JACOBI, slice_frame(q3, q3, q3));
+    let sim = app.snapshot().sim.clone();
+    app.set_field(
+        steer(&identity(), Set::Jacobi, &sim, 2, 5)
+            .expect("a cell")
+            .expect("accepted"),
+    );
+    let _ = h.frame(&mut app, Vec::new());
+    let left = app.snapshot().sim.slice.frame;
+    rejects("a basis-only steer, D left in the plane", || {
+        assert_eq!(left, slice_frame(alpha, alpha, alpha))
+    });
+}
+
+/// The state a steer edits: the slice frame, the SetFields it logged, the undo depth and the plane.
+#[derive(Clone, Debug)]
+struct Steered {
+    frame: SliceFrame,
+    fields: Vec<&'static str>,
+    depth: u32,
+    plane: Plane,
+}
+
+/// Asserts the steer onto cell `(i, j)` from `start` left `got`: the frame `want`, one SetField, on the frame where it
+/// moved and on the basis alone where not, one entry, `z₀` kept, the plane on the cell's axes.
+fn check_frame_steer(
+    got: &Steered,
+    start: &Steered,
+    want: SliceFrame,
+    (i, j): (usize, usize),
+    at: &str,
+) {
+    assert_eq!(got.frame, want, "{at}");
+    let kind = if want == start.frame {
+        "basis"
+    } else {
+        "other"
+    };
+    assert_eq!(got.fields, [kind], "one SetField: {at}");
+    assert_eq!(got.depth, start.depth + 1, "one entry: {at}");
+    assert_eq!(got.plane.z0, start.plane.z0, "{at}");
+    let cut = |q: &Latent, k: usize| q[k].abs() > 0.5 * norm(q);
+    assert!(
+        cut(&got.plane.q1, i) && cut(&got.plane.q2, j),
+        "the plane: {at}"
+    );
+}
+
+/// Asserts one Ctrl+Z after a steer left `got` the state `start`: its plane, its frame and its depth.
+fn check_undone_steer(got: &Steered, start: &Steered, at: &str) {
+    assert_eq!(got.plane, start.plane, "one Ctrl+Z: {at}");
+    assert_eq!(got.frame, start.frame, "one Ctrl+Z: {at}");
+    assert_eq!(got.depth, start.depth, "{at}");
+}
+
+/// The refusals and empty cells are as they were: a refused steer leaves the frame and logs, whatever the plane would
+/// have taken, and `steer_on` answers as `steer` does.
+#[test]
+fn mock_compass_steer_physical_a_refused_steer_keeps_the_frame() {
+    let d = shell_fixture(5);
+    let frame = slice_frame(5, 5, 5);
+    let (mut app, mut h) = app_with(&start(), d, COMPASS_JACOBI);
+    app.set_field(frame_edit(frame, None));
+    let _ = h.frame(&mut app, Vec::new());
+    let before = app.snapshot().sim.plane.clone();
+    let (rows, depth) = (app.console().len(), app.snapshot().history.undo_depth);
+    let start = Steered {
+        frame,
+        fields: Vec::new(),
+        depth,
+        plane: before.clone(),
+    };
+    click_cell(&mut h, &mut app, 2, 5);
+    let line = refusal_line(Set::Jacobi, 2, 5, Refusal::EnergyShell);
+    let logged: Vec<String> = app.console()[rows..]
+        .iter()
+        .map(|e| e.message.clone())
+        .collect();
+    let refused = Steered {
+        frame: app.snapshot().sim.slice.frame,
+        fields: setfields(&app, rows),
+        depth: app.snapshot().history.undo_depth,
+        plane: app.snapshot().sim.plane.clone(),
+    };
+    check_refused(&logged, &line, &refused, &start);
+    rejects("a refusal not logged", || {
+        check_refused(&logged[..0], &line, &refused, &start)
+    });
+    rejects("a refused steer that moved the frame", || {
+        check_refused(
+            &logged,
+            &line,
+            &Steered {
+                frame: slice_frame(0, 0, 0),
+                ..refused.clone()
+            },
+            &start,
+        )
+    });
+    rejects("a refused steer that made an edit", || {
+        check_refused(
+            &logged,
+            &line,
+            &Steered {
+                fields: vec!["other"],
+                depth: depth + 1,
+                ..refused.clone()
+            },
+            &start,
+        )
+    });
+    let sim = app.snapshot().sim.clone();
+    assert_eq!(
+        steer_on(&d, Set::Jacobi, &sim, 2, 5),
+        Some(Err(Refusal::EnergyShell))
+    );
+    for (i, j) in [(0, 0), (5, 2), (7, 7), (0, LATENT_DIM)] {
+        check_empty_cell(steer_on(&d, Set::Jacobi, &sim, i, j), (i, j));
+    }
+    let cell = steer_on(&identity(), Set::Jacobi, &sim, 6, 7);
+    assert!(cell.is_some());
+    rejects("a cell of the upper triangle read as empty", || {
+        check_empty_cell(cell, (6, 7))
+    });
+    // Control: an accepted steer is no refusal.
+    let accepted = steer_on(&identity(), Set::Jacobi, &sim, 2, 5);
+    rejects("a steer accepted on a refused case", || {
+        assert_eq!(accepted, Some(Err(Refusal::EnergyShell)))
+    });
+}
+
+/// Asserts a refused steer logged `line` among `logged` and left `got` the state `start`, with no SetField.
+fn check_refused(logged: &[String], line: &str, got: &Steered, start: &Steered) {
+    assert!(logged.iter().any(|m| m == line));
+    assert!(got.fields.is_empty(), "no SetField");
+    assert_eq!(got.frame, start.frame);
+    assert_eq!(got.plane, start.plane);
+    assert_eq!(got.depth, start.depth);
+}
+
+/// Asserts the cell `(i, j)` steers nothing: `got` is `None`.
+fn check_empty_cell<T: std::fmt::Debug>(got: Option<T>, (i, j): (usize, usize)) {
+    assert!(got.is_none(), "({i}, {j}): {got:?}");
 }

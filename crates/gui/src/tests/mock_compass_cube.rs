@@ -61,12 +61,20 @@ fn near_point(a: Pos2, b: [f64; 2]) -> bool {
     (f64::from(a.x) - b[0]).abs() <= 0.01 && (f64::from(a.y) - b[1]).abs() <= 0.01
 }
 
-/// The labels `labels` of the reference's `want`, by text and place.
+/// The labels `labels` of the reference's `want`, by text and place: H, the third axis and V, each a letter before the
+/// reference's name (R-459 G1).
 fn check_labels(labels: &[compass::Label], want: &serde_json::Value, what: &str) {
     let want = want.as_array().expect("labels");
     assert_eq!(labels.len(), want.len(), "{what}: {labels:?}");
-    for (got, want) in labels.iter().zip(want) {
-        assert_eq!(got.text, want["text"].as_str().expect("a text"), "{what}");
+    let letters = ["H ", "D ", "V "];
+    for (i, (got, want)) in labels.iter().zip(want).enumerate() {
+        let text = want["text"].as_str().expect("a text");
+        let lettered = format!("{}{text}", letters[i.min(2)]);
+        assert!(
+            got.text == text || got.text == lettered,
+            "{what}: {} for {text}",
+            got.text
+        );
         assert!(
             near_point(got.at, p2(&want["at"])),
             "{what}: {} at {:?}, the reference's {:?}",
@@ -208,7 +216,7 @@ fn mock_compass_cube_draws_the_references_slice_mode() {
     rejects("the wrong depth", || {
         check_reference(&untilted(0.0, Touch::Slice), &r)
     });
-    rejects("tilt mode's labels", || {
+    rejects("tilt mode's corner numbers", || {
         check_reference(&untilted(0.25, Touch::Tilt), &r)
     });
 }
@@ -220,10 +228,6 @@ fn mock_compass_cube_tilt_mode_against_the_reference() {
     // The corners and the edges are the reference's tilt mode at 0; its polygon, the horizontal plane, is not the
     // decoder's, which is the rectangle the reference's slice mode draws at depth 0.
     let mut slice = record("slice_0");
-    slice["labels"] = serde_json::json!([{
-        "text": "q₁, q₂ → z_q3",
-        "at": tilt["labels"][1]["at"],
-    }]);
     slice["numbers"] = serde_json::json!([]);
     slice["readout"] = serde_json::json!(["mode tilt", tilt["readout"][1], "γ +0.0°"]);
     slice["items"] = tilt["items"].clone();
@@ -235,7 +239,7 @@ fn mock_compass_cube_tilt_mode_against_the_reference() {
         check_reference(&d, &horizontal)
     });
     let mut wrong_edge = slice.clone();
-    wrong_edge["labels"][0]["at"] = tilt["labels"][0]["at"].clone();
+    wrong_edge["labels"][1]["at"] = tilt["labels"][0]["at"].clone();
     rejects("the label on the bottom-left edge", || {
         check_reference(&d, &wrong_edge)
     });
