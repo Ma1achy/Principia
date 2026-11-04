@@ -37147,8 +37147,8 @@
   - file: docs/contracts/principia_parity_contract.md
     section: 4. Tolerance — and the cross-backend reality
   verify:
+    detail: "cargo xtask gate cross-backend-march: a decoded arm and a shared-start arm, a record per backend with per-step branch digests, a replay of each first difference on every backend, and the comparison of every pair, each pair's disagreement count and rate, per branch-sensitive result, the non-chaotic and chaotic fixtures apart; the control, a record compared with itself, reads 0, and one flipped label reads 1. Only the control asserts. NVIDIA's record is a Windows run posted to issue #390; a backend not yet run is listed as not run."
     method: numerical gate
-    detail: "cargo xtask gate cross-backend-march: over fixtures/gates/parity_fixtures, a record per backend and the comparison of every pair, each pair's disagreement count and rate, per branch-sensitive result, the non-chaotic and chaotic fixtures apart; the control, a record compared with itself, reads 0, and one flipped label reads 1. Only the control asserts. NVIDIA's record is a Windows run posted to issue #390; a backend not yet run is listed as not run."
   rulings:
   - R-649
   - R-686

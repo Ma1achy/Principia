@@ -6,7 +6,7 @@
 - **Needs (earlier milestones):** REQ-INT-026, REQ-EVT-003, REQ-EVT-005, REQ-VAL-026
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** PIT-9, PIT-10
-- **Size:** ~350 lines
+- **Size:** ~500 lines
 
 ## Goal
 The owner's evidence for whether the missing `NoContraction` matters for the real kernel (R-686). The same IC set runs on
@@ -23,6 +23,7 @@ alone does not answer the owner's question; the forks on identical inputs do (No
 - `decisions.md` § "R-58 — The non-Metal parity run gates Paper 2, not the build *(TO-2)*"
 - `docs/contracts/principia_parity_contract.md` § "4. Tolerance — and the cross-backend reality"
 - `docs/contracts/principia_parity_contract.md` § "Tier S — structural only (asserting the pointwise gap would assert a falsehood)"
+- `docs/contracts/principia_parity_contract.md` § "3. The load-bearing discipline: never accumulate before comparing"
 - `docs/read_first/principia_01_pitfalls.md` § "10. GENERALISING A STATELESS RESULT TO A TRAJECTORY"
 - `docs/notes/principia_gpu_determinism_note.md` § "The parity consequence (what shared source does and does not buy)"
 
@@ -30,11 +31,18 @@ alone does not answer the owner's question; the forks on identical inputs do (No
 - `cargo xtask gate cross-backend-march`, on TASK-M4-27's record and comparison: `--record` marches the IC set on the job's
   backend, `--compare` over records. The CPU-f32 march is the kernel's own wrapper at f32, which this task drives inside TASK-M4-02's
   harness; that harness alone is `stepOnce` and `decodeOnly` on shared states, fixed inputs that say nothing of a trajectory.
+- Two arms, each on all four backends (parity contract §3). **Decoded:** the march from the same chart uniforms, each backend
+  decoding its own start state, since TASK-M4-05's march takes no IC buffer. **Shared:** one decoded state's bits as every
+  backend's start, stepped by TASK-M4-02's `gpu_step_once`, iterated by this task, and on CPU f32 by the wrapper at f32.
 - The IC set is `fixtures/gates/parity_fixtures` (TASK-M4-18), with its non-chaotic and chaotic marking, fixed before the first
   run. The ICs are the same bits on all four.
 - One row per trajectory: the outcome label, `state`, the collision decision and pair, the escape decision and escaper, the
   terminal step and the total substeps, with the decoded start state's bits, so a disagreement already present at `t = 0` is
-  counted apart.
+  counted apart; a digest of each step's branch words (`N_sub`, `state`, the collision and escape decisions) and checkpoint
+  states at a stride stated in the header, so `--compare` can find the first step that differs.
+- `--replay`: for each disagreement, one backend's state bits at the step before the first difference, re-run from the last
+  common checkpoint, go through `gpu_step_once` on every backend, NVIDIA's included, reported per pair. So the NVIDIA session
+  runs `--record`, then `--replay` on the file `--compare` writes.
 - The report, written into the gate report: each pair's disagreement count and rate, for each of those results and for any of them, non-chaotic and chaotic
   apart; for each disagreement, the first step that differs and whether the branch operation there agrees on identical
   inputs, as REQ-VAL-079's report does, and which kind of branch input forked: `+` and `×` only, or holding a division or `√`.
@@ -45,8 +53,11 @@ alone does not answer the owner's question; the forks on identical inputs do (No
 - `cargo test -p validation cross_backend_march` (no GPU) — over synthetic records: a record against itself reads 0, one flipped
   label reads 1 of N, one changed step count reads 1 of N under that result alone, and the chaotic and non-chaotic strata
   sum to the whole; the control is a compare that ignores step counts, which the changed step count rejects (REQ-VAL-348).
-- `cargo xtask gate cross-backend-march` — records on lavapipe, on Metal and on CPU f32 and their comparison, in the PR, every
-  backend pair listed, NVIDIA's as "not run" until its record is posted (REQ-VAL-348).
+- `cargo test -p validation cross_backend_replay` (no GPU) — over synthetic digests, the first differing step is found at its
+  step, and the state handed to `--replay` is the same bits for every backend; the control is a digest that drops `N_sub`, which
+  a planted `N_sub` difference rejects (REQ-VAL-348).
+- `cargo xtask gate cross-backend-march` — both arms' records on lavapipe, on Metal and on CPU f32, their comparison and the
+  replay, in the PR, every backend pair listed, NVIDIA's as "not run" until its record is posted (REQ-VAL-348).
 - `python3 plan/check_plan.py`.
 
 ## Notes
