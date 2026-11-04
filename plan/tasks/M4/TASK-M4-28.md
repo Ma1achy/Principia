@@ -27,6 +27,7 @@ alone does not answer the owner's question; the bits at identical operands do, a
 - `docs/contracts/principia_parity_contract.md` § "3. The load-bearing discipline: never accumulate before comparing"
 - `docs/contracts/principia_parity_contract.md` § "1. The principle"
 - `docs/contracts/principia_integrator_contract.md` § "Part 1 — The shape: a swappable `step()` slot inside a fixed wrapper"
+- `docs/contracts/principia_integrator_contract.md` § "Part 6 — Three boundaries stated honestly (deferred work lands here)"
 - `docs/contracts/principia_integrator_contract.md` § "Part 7 — Detectors as the `SimState` producer"
 - `docs/read_first/principia_01_pitfalls.md` § "10. GENERALISING A STATELESS RESULT TO A TRAJECTORY"
 - `docs/notes/principia_gpu_determinism_note.md` § "The parity consequence (what shared source does and does not buy)"
