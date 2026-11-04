@@ -28,7 +28,8 @@ alone does not answer the owner's question; the forks on identical inputs do (No
 
 ## Deliverables
 - `cargo xtask gate cross-backend-march`, on TASK-M4-27's record and comparison: `--record` marches the IC set on the job's
-  backend, `--compare` over records. CPU f32 is TASK-M4-02's harness at f32.
+  backend, `--compare` over records. The CPU-f32 march is the kernel's own wrapper at f32, which this task drives inside TASK-M4-02's
+  harness; that harness alone is `stepOnce` and `decodeOnly` on shared states, fixed inputs that say nothing of a trajectory.
 - The IC set is `fixtures/gates/parity_fixtures` (TASK-M4-18), with its non-chaotic and chaotic marking, fixed before the first
   run. The ICs are the same bits on all four.
 - One row per trajectory: the outcome label, `state`, the collision decision and pair, the escape decision and escaper, the
