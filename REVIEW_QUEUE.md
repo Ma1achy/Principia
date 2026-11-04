@@ -2211,10 +2211,12 @@ hardware-health arm are in RQ-685.*
     57287 px against 35396 and 57328, which #399 reads as a conversion biased by about 0.044 of a level. The golden path
     doesn't use this output.
   - **A qualification of #399's fit.** #399's fit was made before the per-channel counts were posted, and the channels
-    don't bear it out. Recomputed on `halfway.wgsl`'s formula with CPU `exp` and `pow`, at `o = 0.4556`: R 32512, exact, but
-    G 2560 and B 3214 against the measured 3072 and 2779. G alone needs `o ≈ 0.445`, and B about 0.465. So the totals fit
-    better than the channels do. One offset doesn't describe the conversion, the card's `exp` and `pow` may differ from
-    the CPU's, and these numbers can't separate those. "Biased by about 0.044 of a level" stays inferred, for R at most.
+    don't bear it out. Recomputed on `halfway.wgsl`'s formula with CPU `exp` and `pow`, at `o = 0.4556`: G 2560 and B 3214
+    against the measured 3072 and 2779. R gives 32512 at each of the eleven offsets tried from 0.001 to 0.499, so R carries
+    no information on the bias and shows only that its ties round down. The size rests on G and B, and they disagree: G
+    gives 3072 at `o ≈ 0.445`, a bias of about 0.055, and B comes nearest at about 0.465, a bias of about 0.035. So the
+    totals fit better than the channels do, and no single bias is supported. The card's `exp` and `pow` may differ from
+    the CPU's, and these numbers can't separate those.
 - **The gap:** the corpus keys a near-tie reference by "backend", the runner keys it by API, and the corpus gives Metal's
   fast-math as the reason a case differs. `vulkan.png` was made on lavapipe, and on this card the same API gives Metal's
   bytes for the quantised case and bytes of its own for the control. No document says what a near-tie case is compared
