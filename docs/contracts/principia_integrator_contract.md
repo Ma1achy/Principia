@@ -613,6 +613,8 @@ State the boundary explicitly in code: values may diverge by precision; **branch
 
 ---
 
+*4 Nov 2026 (R-694, closing RQ-685):* `E_rel` (R-29) holds a division and a `√` through `d`, and `|Δn̂|` a division through `n̂` and a `√` in its magnitude. Each decision takes a written form that uses no driver division or `√`, for example a squared or multiplied-through comparison: REQ-INT-112, TASK-M4-29. The quantities are unchanged.
+
 ## Part 5 — Units and the horizon (inherited scale gauge)
 
 **Everything runs in one fixed dimensionless N-body unit system: `M = Σmᵢ = 1`, `G = 1`, `I = 1`.** This is not a new choice — `I = 1` is the *same* scale gauge as the config decoder's `R̃ = 1` (chart contract Part 1). The integrator **inherits** the scale gauge; it does not impose one.

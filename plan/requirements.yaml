@@ -1022,6 +1022,38 @@
   - R-632
   milestone: M5
   note: "R-632 (27 Oct 2026, RQ-578 (c)). Closed by TASK-M5-04, which builds the linear path and linear-decode-depth (applied per R-369). The coordinate magnitudes are the task's, checked by the physics reviewer (applied per R-369)."
+- id: REQ-DEC-053
+  area: DEC
+  statement: "At f32 the shape sphere's exponential sinc (`crates/kernel/src/chart/shape_sphere.rs`:162) must never read the backend's `sin` near 0, the fragment's `decode.wgsl` following from the same source, and at f64 the line's bits must not move (R-696)."
+  source:
+  - file: decisions.md
+    section: "R-696 — RQ-687's option (b) now: a sinc form at `shape_sphere.rs`:162 that never reads the backend's `sin` near 0, gated to f32 so f64 bits do not move; option (a), the kernel's own `sin` and `cos`, is deferred to M4, decided on the cross-backend check, and RQ-629 with it"
+  - file: docs/design/principia_dd_decoder.md
+    section: 3.2 Configuration — hyperspherical mass-weighted Jacobi
+  verify:
+    method: unit test
+    detail: "cargo test -p kernel exponential_sinc: at f64, bit-identical with `sin(r)/r` on fuzzed r and at 0; at f32, within REQ-DEC-054's stated bound of the f64 value on fuzzed r and across the cut; `decode.wgsl` regenerates from the source; control: with the backend's `sin` emulated as 0 near 0, RQ-687's measured case, the old form gives `k` = 0 and the new one does not, and an ungated form moves an f64 bit"
+  rulings:
+  - R-696
+  milestone: M2
+  note: "R-696 (4 Nov 2026, RQ-687 (b)): TASK-M2-53. `ShapeMap::Exponential` is built only in `validation` and tests. `cos(r)` at :161 and RQ-687's other sites are not changed; RQ-687's option (a) is deferred to M4."
+- id: REQ-DEC-054
+  area: DEC
+  kind: calibration
+  statement: "The cut in `r` below which REQ-DEC-053's f32 sinc takes its form that reads no backend `sin`, and that form's stated bound, which the corpus does not give, must be calibrated (R-71) unless the form needs no cut: proposed with its evidence by the task that needs it, held in the constants register provisional until the M2 gate (R-427), checked by the physics reviewer, confirmed by the human at the M2 gate and recorded in decisions.md."
+  source:
+  - file: decisions.md
+    section: "R-696 — RQ-687's option (b) now: a sinc form at `shape_sphere.rs`:162 that never reads the backend's `sin` near 0, gated to f32 so f64 bits do not move; option (a), the kernel's own `sin` and `cos`, is deferred to M4, decided on the cross-backend check, and RQ-629 with it"
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: review checklist
+    detail: "the proposal gives the cut, its evidence against the f64 value on both sides of it, and the bound; or shows a form with no cut, and says so; recorded in decisions.md"
+  rulings:
+  - R-71
+  - R-696
+  milestone: M2
+  note: R-696, applied per R-369. TASK-M2-53.
 - id: REQ-ENC-001
   area: ENC
   statement: "Encode's invariant fibre point must be the chart's own forward construction (encode reuses decode), and its tolerances must be stated in physical units."
@@ -4665,6 +4697,8 @@
     section: 4. Tolerance — and the cross-backend reality
   - file: decisions.md
     section: "R-297 — Fast-math per shader stage: off for compute by default, an explicit and recorded opt-in; display may keep it *(amends R-84, R-116)*"
+  - file: decisions.md
+    section: "R-694 — With the compute setting off, R-297's bit-identity means the branch decisions of REQ-INT-057 and the Tier B fields only, continuous values free across drivers; `E_rel` and `|Δn̂|` take written forms with no driver division or `√` in the decision; the header records \"Off\" only for drivers measured, otherwise wgpu's path with \"driver unverified\" *(closes RQ-685; refines R-297)*"
   verify:
     method: property test
     detail: "identical per-step inputs (fuzzed states) dispatched on GPU-f32 and CPU-f64: branch decisions bit-exact; no code adjusts continuous values toward agreement; no test asserts label equality along a chaotic trajectory"
@@ -4672,8 +4706,9 @@
   - R-34
   - R-84
   - R-297
+  - R-694
   milestone: M4
-  note: "R-84: parity_contract governs — branch decisions are identical on identical inputs, per step; labels on chaotic trajectories may differ across precisions (Tier L / Tier B)."
+  note: "R-84: parity_contract governs — branch decisions are identical on identical inputs, per step; labels on chaotic trajectories may differ across precisions (Tier L / Tier B). R-694 (4 Nov 2026, RQ-685 (a)): these decisions and the Tier B fields are what R-297's \"bit-identity\" means with the setting off; a driver's continuous arithmetic is no failure of it."
 - id: REQ-INT-058
   area: INT
   statement: "Kernel code must follow the GPU compile-discipline checklist: comparison-only branches, no non-finite literals, constant/unrolled indices, flag-in-while-condition loops with zero breaks, clamp in f32 before any float→int cast, and every branch input that must agree across backends built only from operations every IEEE backend rounds alike, with no intermediate that can be subnormal (R-547)."
@@ -4794,14 +4829,17 @@
     section: Known open items
   - file: decisions.md
     section: "R-547 — Decode and encode numerics: the swap test is the conjugacy; step 0 is skipped within a calibrated `τ_I` and rescales in two steps; a branch input that must agree across backends is built only from operations every IEEE backend rounds alike, with no subnormal intermediate; the native build runs without MIR GVN and CI runs it at the release profile; T1 holds off the mirror band; REQ-SYS-015 is split *(closes RQ-283, RQ-295, RQ-296, RQ-298, RQ-299, RQ-360 and RQ-365; corrects R-34)*"
+  - file: decisions.md
+    section: "R-694 — With the compute setting off, R-297's bit-identity means the branch decisions of REQ-INT-057 and the Tier B fields only, continuous values free across drivers; `E_rel` and `|Δn̂|` take written forms with no driver division or `√` in the decision; the header records \"Off\" only for drivers measured, otherwise wgpu's path with \"driver unverified\" *(closes RQ-685; refines R-297)*"
   verify:
     method: review checklist
     detail: "an enumerated list of branch inputs exists; each multi-op input's form is written and proved by its task to round alike on every IEEE backend, fused or not, flushing subnormals or not; no reliance on per-backend FP-contraction settings or on fma fusion"
   rulings:
   - R-34
   - R-547
+  - R-694
   milestone: M4
-  note: "R-34, corrected by R-547 (RQ-298 (a), 21 Oct 2026): rules 2 and 6 of the determinism note, R-34 and this requirement are corrected; each held requirement is rewritten and re-proved in its own task. *Was:* \"must use explicit `fma` in a fixed written form\" and the note \"R-34 (recorded; applied before the parity gate on a second backend) settles Part 2c's open 'check whether contraction is controllable per backend' in favour of explicit fma everywhere. Recorded; applied before the parity gate on a second backend.\" (stale value, replaced by R-547)."
+  note: "R-34, corrected by R-547 (RQ-298 (a), 21 Oct 2026): rules 2 and 6 of the determinism note, R-34 and this requirement are corrected; each held requirement is rewritten and re-proved in its own task. *Was:* \"must use explicit `fma` in a fixed written form\" and the note \"R-34 (recorded; applied before the parity gate on a second backend) settles Part 2c's open 'check whether contraction is controllable per backend' in favour of explicit fma everywhere. Recorded; applied before the parity gate on a second backend.\" (stale value, replaced by R-547). R-694 (4 Nov 2026, RQ-685): `E_rel` and `|Δn̂|` as R-29 and the payload doc write them hold a division and a `√`; their written forms are REQ-INT-112 (TASK-M4-29)."
 - id: REQ-INT-065
   area: INT
   statement: "Occupant selection and the `FTLE_ENABLED` co-computation selection must select baked kernel variants, never runtime uniforms, and be on the sim key, while the ensemble must not be a baked variant: `copy_index` must be a uniform and each copy the same kernel dispatched again."
@@ -5694,6 +5732,28 @@
   - R-670
   milestone: M9
   note: "R-654. Closed by TASK-M9-39, a build task after the core build, not a target: it is not scored, and its tests block its own merge. It waits on RQ-656 for the collision branch, the regularised occupants, the Chazy classifier, the escape test, the decode's V₀, η_E and the substep law. The E₀ agreement in its verify: physics review 5730650164 of PR #375, P1; what V₀ holds is RQ-656's, question (5), so the test holds E₀ to the softened V, as ruled, and V₀ to that ruling. Verify *was:* \"ε scales with the initial R and does not change as R does along a run\", which cannot fail on a canonical run, R₀ being 1 on all of them (physics review 5730650164 of PR #375, P3; applied per R-369). The GPU clause of its verify: physics review 5730650164 of PR #375, P2; applied per R-369. R-670 (2 Nov 2026, closing RQ-656): the collision test stays geometric; the regularised occupants refuse ε ≠ 0; Chazy's E, E_rel and the ionisation gate's pair energies and the decode's V₀ take the softened potential; a view refuses ε ≠ 0 with any Some(E*); the substep law stays geometric. *Was (verify):* \"…the descriptor's V₀ being in the form RQ-656's ruling gives…\"; *was (rq):* RQ-656."
+- id: REQ-INT-112
+  area: INT
+  kind: definition
+  statement: "`E_rel` (R-29) and the windowed `|Δn̂|` must each have a written form, defined in `docs/contracts/principia_integrator_contract.md` Part 4 and built in the kernel, in which the decision reads no driver division or `√` (for example a squared or multiplied-through comparison), holding REQ-INT-064's other conditions, with the quantities unchanged (R-694, R-72)."
+  source:
+  - file: decisions.md
+    section: "R-694 — With the compute setting off, R-297's bit-identity means the branch decisions of REQ-INT-057 and the Tier B fields only, continuous values free across drivers; `E_rel` and `|Δn̂|` take written forms with no driver division or `√` in the decision; the header records \"Off\" only for drivers measured, otherwise wgpu's path with \"driver unverified\" *(closes RQ-685; refines R-297)*"
+  - file: docs/contracts/principia_integrator_contract.md
+    section: Part 4 — Determinism, and the substep as the subtle seam
+  - file: docs/notes/principia_gpu_determinism_note.md
+    section: The discipline (each rule = one measured failure)
+  verify:
+    method: unit test
+    detail: "cargo test -p kernel branch_forms: the written form decides as the exact comparison does, evaluated in exact rational arithmetic, on fuzzed states and at constructed near-ties of `E_rel = 0` and `|Δn̂| = tau`, at f32 and f64; control: with `/` and `√` emulated one ulp off (a CPU reciprocal division and a one-ulp root), the formula as R-29 writes it flips at least one decision and the written form flips none; physics reviewer approved the forms and their range"
+  rulings:
+  - R-29
+  - R-34
+  - R-72
+  - R-547
+  - R-694
+  milestone: M4
+  note: "R-694 (4 Nov 2026, RQ-685 (a), \"as a task\"): TASK-M4-29. Neither input is on any GPU at the ruling's date, and REQ-INT-057's decisions are unmeasured on every GPU."
 - id: REQ-EVT-001
   area: EVT
   statement: "Every pixel must get a labelled output — escape, collision or bounded (reaching the horizon is bounded), sim_failed or decode_failed, or RUNNING while in flight — with no timeout state, and substep-cap saturation a confidence flag, never a terminal."
@@ -26941,14 +27001,17 @@
     section: "R-297 — Fast-math per shader stage: off for compute by default, an explicit and recorded opt-in; display may keep it *(amends R-84, R-116)*"
   - file: docs/design/principia_dd_telemetry_and_tiers.md
     section: "5. The artefact: one file, plain text, readable by the sender"
+  - file: decisions.md
+    section: "R-694 — With the compute setting off, R-297's bit-identity means the branch decisions of REQ-INT-057 and the Tier B fields only, continuous values free across drivers; `E_rel` and `|Δn̂|` take written forms with no driver division or `√` in the decision; the header records \"Off\" only for drivers measured, otherwise wgpu's path with \"driver unverified\" *(closes RQ-685; refines R-297)*"
   verify:
     method: unit test
     detail: "cargo test -p engine session_header_fast_math: the header carries the compute setting and the compute, vertex and fragment modes as compiled; on Metal with the default setting it reads setting off, compute off, and vertex and fragment on; with the setting on it reads setting on and compute on; on lavapipe with the setting on it reads setting on and compute off (compiled as off); a header missing the setting or a stage fails to parse"
   rulings:
   - R-297
   - R-303
+  - R-694
   milestone: M0
-  note: "Native backends only. The browser build's header, where each stage's compiled mode is \"unknown\", is REQ-TOOL-143 (R-303)."
+  note: "Native backends only. The browser build's header, where each stage's compiled mode is \"unknown\", is REQ-TOOL-143 (R-303). R-694 (4 Nov 2026): the compute stage's \"Off\" is limited to drivers measured by REQ-TOOL-221 (TASK-M4-30)."
 - id: REQ-TOOL-142
   area: TOOL
   statement: "The embedded record (pxpack) must carry the compute shaders' fast-math setting among its sim fields, and recreating a view from it must restore that setting (R-297)."
@@ -28545,6 +28608,25 @@
   - R-627
   milestone: M8
   note: "R-627 (27 Oct 2026): closed by TASK-M8-86, the v1 web skeleton, on the mock engine. It measures for RQ-550 and RQ-551 and settles neither, so it carries no `rq` and waits on neither. qa review 5665189777 of R-627's port, F1 (applied per R-369): the `environment:` control added. *Was (verify):* \"controls: the file with a `push` trigger added, and with the ref condition removed, each fail\"."
+- id: REQ-TOOL-221
+  area: TOOL
+  statement: "On a native backend the session header must record a compute stage as compiled \"Off\" only for a driver on the measured list, and for any other driver must record wgpu's path with \"driver unverified\" beside it; what puts a driver on the list must be defined beside it (R-72) and each entry must name the run that shows it (R-694)."
+  source:
+  - file: decisions.md
+    section: "R-694 — With the compute setting off, R-297's bit-identity means the branch decisions of REQ-INT-057 and the Tier B fields only, continuous values free across drivers; `E_rel` and `|Δn̂|` take written forms with no driver division or `√` in the decision; the header records \"Off\" only for drivers measured, otherwise wgpu's path with \"driver unverified\" *(closes RQ-685; refines R-297)*"
+  - file: docs/design/principia_dd_telemetry_and_tiers.md
+    section: "5. The artefact: one file, plain text, readable by the sender"
+  - file: docs/contracts/principia_parity_contract.md
+    section: 4. Tolerance — and the cross-backend reality
+  verify:
+    method: unit test
+    detail: "cargo test -p engine session_header_driver: a listed driver reads \"Off\"; an unlisted adapter identity, injected, reads wgpu's path with \"driver unverified\", the setting as asked for unchanged; a header missing the word fails to parse; the browser build's \"unknown\" (REQ-TOOL-143) is unchanged; control: a header that writes \"Off\" for an unlisted driver fails; physics reviewer approved the list's definition"
+  rulings:
+  - R-72
+  - R-297
+  - R-694
+  milestone: M4
+  note: "R-694 (4 Nov 2026), the honesty part of RQ-685's option (c), not its `StageMode::Unknown`. A driver recorded so is unverified, not supported. TASK-M4-30."
 - id: REQ-VAL-001
   area: VAL
   statement: "Error meters and verification claims must be checked against the formulation, not only the data (e.g. COM drift must not be used as an error meter for an integrator that integrates relative coordinates)."
@@ -31007,6 +31089,8 @@
     section: "R-375 — CI's Linux runners are pinned to `ubuntu-24.04`, not `ubuntu-latest`; moving to Ubuntu 26 is a deliberate later step *(amends R-186)*"
   - file: decisions.md
     section: "R-376 — The six M0 calibrations are confirmed: REQ-VAL-138, REQ-VAL-149 (8 shards × 300 min, a ceiling, not a target), REQ-VAL-151, REQ-VAL-156 (600 s), REQ-VAL-180 and REQ-VAL-181 *(closes RQ-202; amends R-71, R-203, R-214, R-217, R-233, R-269, R-287, R-296, R-302, R-305, R-348 and R-352 as they apply to these values)*"
+  - file: decisions.md
+    section: "R-695 — Near-tie golden cases are held only on the backends CI renders on; on any other driver their result is reported, not compared to pass *(closes RQ-686; amends R-296)*"
   verify:
     method: review checklist
     detail: "the proposal states the metric (e.g. per-channel or per-pixel difference) and the default tolerance, shown to pass a re-render on the same backend (native wgpu offscreen, the golden renderer from M1, R-110) and to fail a one-variable change (REQ-VAL-003); lavapipe's max step against Metal on values between 8-bit levels is measured on a measure/ branch (R-269, R-272): at 0, zero steps hold across backends against one reference; otherwise each case keeps one reference per backend; recorded in decisions.md"
@@ -31016,8 +31100,9 @@
   - R-269
   - R-375
   - R-376
+  - R-695
   milestone: M0
-  note: "R-269 result (30 Sep 2026, run 36719287172): lavapipe vs Metal max step 1 on exact half-way values (Metal rounds ties up, lavapipe to even), 0 on each backend against itself; each golden case keeps one reference per backend (REQ-VAL-176). Confirmed by R-376 (3 Oct 2026, at the M0 gate): the largest per-channel absolute difference over all pixels, in 8-bit steps, 0 steps, on every native backend CI renders on; one reference per case across backends, one per backend for a golden near a tie (R-287, R-296). CI's lavapipe runs on ubuntu-24.04, pinned (R-375); moving to Ubuntu 26 re-measures the lavapipe goldens."
+  note: "R-269 result (30 Sep 2026, run 36719287172): lavapipe vs Metal max step 1 on exact half-way values (Metal rounds ties up, lavapipe to even), 0 on each backend against itself; each golden case keeps one reference per backend (REQ-VAL-176). Confirmed by R-376 (3 Oct 2026, at the M0 gate): the largest per-channel absolute difference over all pixels, in 8-bit steps, 0 steps, on every native backend CI renders on; one reference per case across backends, one per backend for a golden near a tie (R-287, R-296). CI's lavapipe runs on ubuntu-24.04, pinned (R-375); moving to Ubuntu 26 re-measures the lavapipe goldens. R-695 (4 Nov 2026): a near-tie case on a driver CI does not render on is reported, not compared to pass."
 - id: REQ-VAL-139
   area: VAL
   kind: calibration
@@ -31656,7 +31741,7 @@
   milestone: M0
 - id: REQ-VAL-176
   area: VAL
-  statement: "Fragment output on the golden path must quantise explicitly in the shader (round half to even, then store), not through the backend's automatic float-to-unorm conversion, so every backend writes identical bytes at exact ties and each golden-image case whose bytes agree keeps one reference across backends; a case whose bytes still differ between backends, a golden near a tie among them (a value within an ulp of a tie can differ where the display shaders compile with fast-math, Metal via wgpu), must keep one reference per backend, and the runner must compare it only with the reference for the backend it rendered on, naming that backend (R-269, R-287, R-296)."
+  statement: "Fragment output on the golden path must quantise explicitly in the shader (round half to even, then store), not through the backend's automatic float-to-unorm conversion, so every backend writes identical bytes at exact ties and each golden-image case whose bytes agree keeps one reference across backends; a case whose bytes still differ between backends, a golden near a tie among them (a value within an ulp of a tie can differ where the display shaders compile with fast-math, Metal via wgpu), must keep one reference per backend, and the runner must compare it only with the reference for the backend it rendered on, naming that backend, on the backends CI renders on; on any other driver such a case's result is reported, not compared to pass (R-269, R-287, R-296, R-695)."
   source:
   - file: decisions.md
     section: "R-269 — REQ-VAL-138 across backends: measure lavapipe, then zero steps or one reference per backend"
@@ -31668,6 +31753,8 @@
     section: "R-287 — Fragment output quantises in the shader, so goldens share one reference across backends *(amends R-269)*"
   - file: decisions.md
     section: "R-296 — R-269's half-way fixture keeps one reference per backend; explicit quantisation makes exact ties identical, not values near one *(closes RQ-175; amends R-287)*"
+  - file: decisions.md
+    section: "R-695 — Near-tie golden cases are held only on the backends CI renders on; on any other driver their result is reported, not compared to pass *(closes RQ-686; amends R-296)*"
   verify:
     method: golden image
     detail: "CI on the PR head: R-269's half-way fixture, quantised in the shader, renders max step 0 in gpu-metal and in gpu-lavapipe, each against its own backend's reference, and its control (the backend's automatic conversion) shows max step 1 between the backends; the evidence that the quantisation works: lavapipe's quantised bytes equal its automatic ones, and at the fixture's exact f32 ties (R × 255 exactly x + 0.5) both backends round to even; cargo test -p xtask golden: the per-backend fallback passes against its own backend's reference and fails against the other's, and a missing reference fails naming the backend"
@@ -31675,7 +31762,9 @@
   - R-269
   - R-287
   - R-296
+  - R-695
   milestone: M0
+  note: "R-695 (4 Nov 2026, RQ-686 (b)): the runner's change is REQ-VAL-349, TASK-M4-31. *Was (statement):* \"… naming that backend (R-269, R-287, R-296).\""
 - id: REQ-VAL-177
   area: VAL
   statement: "The differences between the compute shaders' fast-math on and off must be measured and reported, not asserted to be zero: over a fixture survey, the per-step branch-word forks, the largest continuous-word differences and the outcome-class fractions, on against off, by a report whose control, off against off, reports exactly zero (R-297)."
@@ -37303,6 +37392,25 @@
   - R-679
   milestone: M9
   note: "R-679 (3 Nov 2026, item 3, RQ-674): the definition R-72 asks for, which RQ-674 named (\"the cell partition\"); the FTLE maps need none, reading the planned field. Closed by TASK-M9-41."
+- id: REQ-VAL-349
+  area: VAL
+  statement: "The golden runner must compare a case that keeps one reference per backend only on the backends CI renders on (Metal, and Vulkan on lavapipe), and on any other driver must render it and report its result with the driver's name, neither passing nor failing it; a case with one reference across backends must be compared on every driver (R-695)."
+  source:
+  - file: decisions.md
+    section: "R-695 — Near-tie golden cases are held only on the backends CI renders on; on any other driver their result is reported, not compared to pass *(closes RQ-686; amends R-296)*"
+  - file: docs/contracts/principia_parity_contract.md
+    section: 4. Tolerance — and the cross-backend reality
+  - file: docs/contracts/principia_parity_contract.md
+    section: 6. The harness
+  verify:
+    method: unit test
+    detail: "cargo test -p xtask golden_near_tie: with the render's driver identity injected, a per-backend case compares at 0 steps on Metal and on lavapipe and fails there when one byte differs; on another Vulkan driver it reports the driver and the max step and exits clean; a one-reference case still fails on that driver when a byte differs; control: a runner that compares the per-backend case on the other driver fails it"
+  rulings:
+  - R-296
+  - R-376
+  - R-695
+  milestone: M4
+  note: "R-695 (4 Nov 2026, RQ-686 (b)): TASK-M4-31. The tolerance on CI's backends stays REQ-VAL-138's 0 steps."
 - id: REQ-PERF-001
   area: PERF
   statement: "The per-step energy evaluation must reuse the pairwise distances from the force computation."
@@ -40478,13 +40586,17 @@
     section: 4. Tolerance — and the cross-backend reality
   - file: decisions.md
     section: "R-296 — R-269's half-way fixture keeps one reference per backend; explicit quantisation makes exact ties identical, not values near one *(closes RQ-175; amends R-287)*"
+  - file: decisions.md
+    section: "R-694 — With the compute setting off, R-297's bit-identity means the branch decisions of REQ-INT-057 and the Tier B fields only, continuous values free across drivers; `E_rel` and `|Δn̂|` take written forms with no driver division or `√` in the decision; the header records \"Off\" only for drivers measured, otherwise wgpu's path with \"driver unverified\" *(closes RQ-685; refines R-297)*"
   verify:
     method: unit test
     detail: "cargo test -p validation compute_fast_math in the gpu-metal and gpu-lavapipe jobs, the task's own measurement: with the setting off, a probe compute shader computes (x + 0.5) / 255.0 for every x in 0..256 and a fuzzed set of f32 divisions, compares each bit for bit with the CPU's correctly rounded f32 division and reports the mismatches per backend; it must show none on either backend (only the 256 inputs of (x + 0.5) / 255.0 have been measured, and on Metal only under wgpu's fast-math compile, R-296's Result; a mismatch with the setting off is a REVIEW_QUEUE entry); on Metal with the setting on it differs on at least one input (R-296's Result's 94 columns), so the switch is shown to act; the setting defaults to off; a lint finds no compute pipeline created outside the entry point and no vertex or fragment pipeline created through the passthrough"
   rulings:
   - R-296
   - R-297
+  - R-694
   milestone: M0
+  note: "R-694 (4 Nov 2026, RQ-685 (a)): the probe is a measurement on its two named jobs. On any other driver it is reported: the RTX 2080 SUPER's 19407 of 65536 is a driver's continuous arithmetic, not a failure of R-297. \"A mismatch with the setting off is a REVIEW_QUEUE entry\" stands for the two named jobs."
 - id: REQ-SYS-075
   area: SYS
   statement: "Every CI job that builds the kernel must restore the rust-gpu build cache (`~/.cache/rust-gpu`), and save it only in a run on a push to `main` (R-326), under a key naming its job (R-285, REQ-SYS-073) and the pinned toolchain version from `rust-toolchain.toml`, so a toolchain bump starts a fresh cache (R-320); a job in a workflow that never runs on a push to `main` (mutants.yml's shards, say) restores, read-only, the key `ci.yml`'s `gpu-kernel` job saves, and saves none (R-337)."

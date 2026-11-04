@@ -236,6 +236,7 @@ A tier that lowers `N` on a bandwidth-bound device is optimising the wrong axis.
   offers no switch (Vulkan, on lavapipe), the setting on compiles the compute stage off, and the header shows both. The
   display stages may keep fast-math on (`principia_parity_contract.md` §4). In the browser build, where WebGPU offers
   no fast-math control, the header records the setting asked for and each stage's compiled mode as "unknown" (R-303).
+  *4 Nov 2026 (R-694):* on a native backend the compute stage records "Off" only for a driver measured; any other records wgpu's path with "driver unverified" (REQ-TOOL-221).
 - **Format: JSON Lines, profiler schema v1 (R-56, R-286).** At the top level, §2's frame record and its five stages;
   beneath them, nested scopes, GPU passes, allocations and events. The dev GUI's profiler and `prin profile` read and
   write it (`principia_render_gui_spec.md` §G5). JSON Lines is plain text, so the file stays readable by the sender:

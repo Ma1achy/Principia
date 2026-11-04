@@ -199,6 +199,8 @@ r₀  = r₀₁ − (m₁/M₀₁) ρ      r₁ = r₀₁ + (m₀/M₀₁) ρ
 
 (Identities: `r₁ − r₀ = ρ`; inner CoM `= r₀₁`; total CoM `= M₀₁ r₀₁ + m₂ r₂ = 0`; `r₂ − r₀₁ = (M₀₁+m₂)λ = λ` since ΣM = 1.)
 
+*4 Nov 2026 (R-696, RQ-687 (b)):* at f32, the shape sphere's exponential sinc (`crates/kernel/src/chart/shape_sphere.rs`:162) never reads the backend's `sin` near 0; f64's bits do not move (REQ-DEC-053). Whether the kernel takes its own `sin` and `cos` at f32 is deferred to M4, with RQ-629.
+
 ### 3.3 Canonicalise
 
 Only needed when the input did **not** come through the canonical frame (physical-frame charts, encode):

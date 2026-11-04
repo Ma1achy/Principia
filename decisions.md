@@ -3180,7 +3180,8 @@ items 12 and 15 before ruling on them; they stay open.
 
 ## R-296 — R-269's half-way fixture keeps one reference per backend; explicit quantisation makes exact ties identical, not values near one *(closes RQ-175; amends R-287)*
 *Amended by R-376.*
-*Still in force: all of it; R-376 confirms at the M0 gate that a golden near a tie keeps one reference per backend
+*Amended in part by R-695 (4 Nov 2026: near-tie cases are held only on the backends CI renders on; on any other driver their result is reported, not compared to pass).*
+*Still in force: all of it, on the backends CI renders on (R-695); R-376 confirms at the M0 gate that a golden near a tie keeps one reference per backend
 under REQ-VAL-138's 0-step tolerance, and the half-way fixture's references are confirmed, no longer proposed.*
 *30 Sep 2026 · applied in parity contract §4, REQ-VAL-176 and TASK-M0-43*
 
@@ -3224,7 +3225,8 @@ one.
 
 ## R-297 — Fast-math per shader stage: off for compute by default, an explicit and recorded opt-in; display may keep it *(amends R-84, R-116)*
 *Amended by R-303.*
-*Still in force: all of it on native backends. In the browser build: the compute setting stays explicit, off by default,
+*Refined by R-694 (4 Nov 2026: with the setting off, "bit-identity" means the branch decisions of REQ-INT-057 and the Tier B fields; continuous values are free across drivers, and the header records "Off" only for drivers measured).*
+*Still in force: all of it on native backends, its bit-identity read as R-694 reads it. In the browser build: the compute setting stays explicit, off by default,
 on the sim key, in pxpack and recorded in the header as asked for, and display stages may keep fast-math on; bit-identity
 with the setting off no longer holds there, each stage's compiled mode is recorded as "unknown", and runs are held to
 R-85's Tier-N tolerances (R-303).*
@@ -30196,3 +30198,77 @@ the toolchain, for the 2–3 slowest jobs, evicted to stay well under 10 GB, bui
 (target only), not sccache, so R-666 stands; the cache size reported after a week. R-285 is not edited here.
 
 R-684 is in the "ci" group of `plan/rule_groups.yaml`.
+
+## R-694 — With the compute setting off, R-297's bit-identity means the branch decisions of REQ-INT-057 and the Tier B fields only, continuous values free across drivers; `E_rel` and `|Δn̂|` take written forms with no driver division or `√` in the decision; the header records "Off" only for drivers measured, otherwise wgpu's path with "driver unverified" *(closes RQ-685; refines R-297)*
+*4 Nov 2026 · the owner's batch of that day; applied in `docs/contracts/principia_parity_contract.md` § 4, `docs/design/principia_dd_telemetry_and_tiers.md` § 5, `docs/contracts/principia_integrator_contract.md` Part 4 (dated notes), R-297's forward lines, `docs/archive/review_queue/M0.md` (RQ-685), `REVIEW_QUEUE.md`, REQ-INT-057, REQ-INT-064, REQ-SYS-074 and REQ-TOOL-141 (reqio), REQ-INT-112 and REQ-TOOL-221 (reqio, new), TASK-M4-29 and TASK-M4-30 (new), TASK-M4-03, `plan/tasks.yaml` and `plan/rule_groups.yaml`*
+
+The owner's words, 4 Nov 2026, verbatim:
+
+> RQ-685: (a) bit-identity = branch decisions (REQ-INT-057) and Tier B fields only; continuous values free across drivers. Add written forms for E_rel and |Δn̂| that use no driver division or sqrt in the decision (e.g. squared/multiplied-through comparisons), as a task. Header: "Off" only for drivers measured; otherwise record wgpu's path with "driver unverified" (c's honesty part).
+
+*Context.* RQ-685 came from the Windows RTX 2080 SUPER run at `e1df88fa` (issues #390, #396). With the setting off the card's division differs from correct rounding, where Metal's and lavapipe's do not, and R-297 says "Off: bit-identity and identical branch decisions hold". The entry asked whether that is a claim about branch decisions or about every Vulkan driver's continuous results, and what the header records. Its option (a) held "only if `E_rel` and `|Δn̂|` get written forms that take no driver's division or `√`, a gap still open and untested on any GPU"; its option (c) recorded `StageMode::Unknown` for any driver not measured.
+
+*What it decides:*
+
+- **The reading, option (a).** With the compute setting off, bit-identity is the branch decisions of REQ-INT-057 and the Tier B fields of parity contract § 2. Continuous values are free across drivers, as REQ-INT-057 and parity § 4 already have them. The RTX's division is therefore no failure of R-297: it is a driver's continuous arithmetic.
+- **The written forms, as a task.** R-29's `E_rel` holds a division and a root through `d`, and `|Δn̂|` a division through `n̂` and a root in its magnitude, so neither meets REQ-INT-064 as the formulas stand. Each gets a written form in which the decision reads no driver division or `√`, the owner's example being "squared/multiplied-through comparisons": REQ-INT-112, TASK-M4-29. The quantities are R-29's and unchanged; the form is the decision's.
+- **The header, the honesty part of option (c).** A compute stage records "Off" only for a driver measured. Any other records wgpu's path with "driver unverified": REQ-TOOL-221, TASK-M4-30. It does not take option (c)'s `StageMode::Unknown` or R-303's disabled control: the owner takes "c's honesty part", so the setting stays usable and the mode stays what wgpu's path compiled, and only the claim about the driver is withheld.
+- **The probe.** `compute_fast_math` stays what REQ-SYS-074 makes it, a measurement on its two named jobs, `gpu-metal` and `gpu-lavapipe`. On any other driver it is reported. The two comments that widen it to "every backend" narrow, with TASK-M4-30.
+
+*What it leaves, as RQ-685 stated:* the sim key carries the setting and no driver, so `SimState = f(IC, sim key)` holds per driver for continuous values, and the same key can give different continuous bits on two drivers. This is the reading's consequence, recorded in parity § 4; no sim key field is added. REQ-VAL-099's parity gate on a real non-Metal GPU is unchanged.
+
+*Applied per R-369:*
+
+- **One vocabulary.** A driver recorded "driver unverified" is unverified, not supported, the words PR #407's driver-condition ruling uses of a driver that fails its test. A header line and a report read the same.
+- **Measured** means measured to give R-297's claim as this ruling reads it: the driver is on a list held with the header code, each entry naming the run that shows it, and which runs qualify and what keys an entry are a definition (R-72), written by TASK-M4-30 and approved by the physics reviewer. A driver that was measured and failed is not on the list.
+- **M4.** Both tasks are M4's: REQ-INT-064 and REQ-INT-057 are, the escape detector is TASK-M3-12's, and the list rests on the branch tests TASK-M4-03 runs. TASK-M4-03 depends on TASK-M4-29, since its `|Δn̂|` and `E_rel` forms are those.
+- **REQ-SYS-074's "a mismatch with the setting off is a REVIEW_QUEUE entry"** stays for the two named jobs.
+
+*What it refines:* **R-297**, its "bit-identity" with the setting off, read as above. It closes **RQ-685**. RQ-686 and RQ-687, on the same run, are R-695 and R-696.
+
+R-694 is in the "design" group of `plan/rule_groups.yaml`, with R-297.
+
+Adds REQ-INT-112 and REQ-TOOL-221; changes REQ-INT-057, REQ-INT-064, REQ-SYS-074 and REQ-TOOL-141 (rulings, source, notes).
+
+## R-695 — Near-tie golden cases are held only on the backends CI renders on; on any other driver their result is reported, not compared to pass *(closes RQ-686; amends R-296)*
+*4 Nov 2026 · the owner's batch of that day; applied in `docs/contracts/principia_parity_contract.md` § 4 (a dated note), R-296's forward lines, `docs/archive/review_queue/M0.md` (RQ-686), `REVIEW_QUEUE.md`, REQ-VAL-176 and REQ-VAL-138 (reqio), REQ-VAL-349 (reqio, new), TASK-M4-31 (new), `plan/tasks.yaml` and `plan/rule_groups.yaml`*
+
+The owner's words, 4 Nov 2026, verbatim:
+
+> RQ-686: (b). Near-tie cases held only on CI's backends; elsewhere reported, not compared to pass.
+
+*Context.* R-296 and R-376 key a near-tie reference by "backend", and the runner keys it by API, so `vulkan.png`, made on lavapipe, was compared with the RTX and failed: `quantise/halfway` at step 1 over 24064 px, where the card renders Metal's bytes, and `quantise/halfway_automatic` at step 1 over 35396 px. RQ-686's option (b): "near-tie cases are held only on the backends CI renders on (R-376's scope), and on any other driver their result is reported, not compared to pass".
+
+*What it decides:* a golden case with one reference per backend is compared, at REQ-VAL-138's 0 steps, only where CI renders it: Metal, and Vulkan on lavapipe. On any other driver the runner renders it, reports the result with the driver's name, and neither passes nor fails it. Nothing is re-baselined and no reference is added for any driver. A case with one reference across backends is compared on every driver, as before.
+
+*Applied per R-369:* "near-tie cases" reads as the cases that keep one reference per backend, which is how the runner knows them; today those are R-269's `quantise/halfway` and its control `quantise/halfway_automatic`. The runner's change is TASK-M4-31, in M4 with the other cross-driver work, since CI's two jobs are green and nothing in the build loop waits on it.
+
+*What it amends:* **R-296**, its "goldens near a tie use per-backend references", scoped to the backends CI renders on; R-376's value is stated for those already. It closes **RQ-686**.
+
+R-695 is in the "ci" group of `plan/rule_groups.yaml`, with R-296.
+
+Adds REQ-VAL-349; changes REQ-VAL-176 and REQ-VAL-138 (rulings, source, notes).
+
+## R-696 — RQ-687's option (b) now: a sinc form at `shape_sphere.rs`:162 that never reads the backend's `sin` near 0, gated to f32 so f64 bits do not move; option (a), the kernel's own `sin` and `cos`, is deferred to M4, decided on the cross-backend check, and RQ-629 with it
+*4 Nov 2026 · the owner's batch of that day; applied in `REVIEW_QUEUE.md` (RQ-687 and RQ-629, each stays open with a dated line), `docs/design/principia_dd_decoder.md` § 3.2 (a dated note), REQ-DEC-053 and REQ-DEC-054 (reqio, new), TASK-M2-53 (new), `plan/tasks.yaml` and `plan/rule_groups.yaml`*
+
+The owner's words, 4 Nov 2026, verbatim:
+
+> RQ-687: (b) now: a sinc form at shape_sphere.rs:162 that never reads the backend's sin near 0, gated to f32 so f64 bits don't move. (a) deferred to M4, decided on the cross-backend check. RQ-629 deferred with it.
+
+*Context.* On the RTX, setting off, `qa_m225_kernel_rho_angle_at_the_lambda_pole` reads `rho_angle` 0 where f64 gives π/2, isolated to the `sin` in `let k = select(r == F::zero(), F::one(), Float::sin(r) / r);` (`crates/kernel/src/chart/shape_sphere.rs`:162). `exponential` is shared generic code, so RQ-687 noted that a new form changes f64 and f32 CPU bits near 0 "unless it is gated by precision". The owner gates it. `ShapeMap::Exponential` is built only in `validation` and tests.
+
+*What it decides:*
+
+- **Option (b), now.** At f32, the sinc at that line takes a form that does not read the backend's `sin` near 0, `decode.wgsl` following from its source. At f64 the line's bits do not move. REQ-DEC-053, TASK-M2-53.
+- **Option (a), deferred to M4,** decided on the cross-backend check. RQ-687 stays open for it.
+- **RQ-629, deferred with it.** It stays open.
+- `cos(r)` at :161 and the other sites RQ-687 lists are unchanged.
+
+*Applied per R-369:* near 0 needs a cut, a value the corpus does not give, unless the task finds a form with none: it is REQ-DEC-054's calibration (R-71), proposed by TASK-M2-53 and confirmed at the M2 gate. If the form moves a fixture's or golden's bits at f32, that is a gate decision (R-110), named by the task; nothing is re-baselined here.
+
+*What it amends:* nothing. It closes no entry: RQ-687's (a) and RQ-629 stay open, deferred.
+
+R-696 is in the "physics" group of `plan/rule_groups.yaml`.
+
+Adds REQ-DEC-053 and REQ-DEC-054.

@@ -202,9 +202,9 @@ debug_tooling_plan 0c: the DECODE preset "once the WGSL decode port lands", ROUN
   so in their header or schema.
 
 <!-- gate:M2 -->
-**Exit gate — 219 requirements** (and every earlier gate still green):
+**Exit gate — 221 requirements** (and every earlier gate still green):
 
-- DEC (41): REQ-DEC-001…030, REQ-DEC-038…041, REQ-DEC-043…048, REQ-DEC-050
+- DEC (43): REQ-DEC-001…030, REQ-DEC-038…041, REQ-DEC-043…048, REQ-DEC-050, REQ-DEC-053…054
 - ENC (34): REQ-ENC-001…020, REQ-ENC-022…027, REQ-ENC-029…031, REQ-ENC-034…038
 - CHART (68): REQ-CHART-001…036, REQ-CHART-043…051, REQ-CHART-053, REQ-CHART-055, REQ-CHART-058, REQ-CHART-060…070, REQ-CHART-073, REQ-CHART-075…078, REQ-CHART-081…082, REQ-CHART-089…090
 - INT (2): REQ-INT-002…003
@@ -272,16 +272,16 @@ render_contract "→ flat compute"; deep_zoom §3 layer 0: "defines the three co
 - The first kernel benchmarks.
 
 <!-- gate:M4 -->
-**Exit gate — 106 requirements** (and every earlier gate still green):
+**Exit gate — 109 requirements** (and every earlier gate still green):
 
 - CHART (3): REQ-CHART-037, REQ-CHART-052, REQ-CHART-074
-- INT (16): REQ-INT-057…071, REQ-INT-083
+- INT (17): REQ-INT-057…071, REQ-INT-083, REQ-INT-112
 - EVT (1): REQ-EVT-021
 - PAY (2): REQ-PAY-074, REQ-PAY-085
 - SCHED (12): REQ-SCHED-004…013, REQ-SCHED-084, REQ-SCHED-097
 - RENDER (11): REQ-RENDER-029…036, REQ-RENDER-078, REQ-RENDER-082, REQ-RENDER-099
-- TOOL (8): REQ-TOOL-040…045, REQ-TOOL-126…127
-- VAL (30): REQ-VAL-056…079, REQ-VAL-112, REQ-VAL-125, REQ-VAL-137, REQ-VAL-140…141, REQ-VAL-177
+- TOOL (9): REQ-TOOL-040…045, REQ-TOOL-126…127, REQ-TOOL-221
+- VAL (31): REQ-VAL-056…079, REQ-VAL-112, REQ-VAL-125, REQ-VAL-137, REQ-VAL-140…141, REQ-VAL-177, REQ-VAL-349
 - PERF (13): REQ-PERF-005…013, REQ-PERF-077, REQ-PERF-081, REQ-PERF-086, REQ-PERF-094
 - SYS (10): REQ-SYS-020…029
 <!-- /gate:M4 -->

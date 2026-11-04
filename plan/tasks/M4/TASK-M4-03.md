@@ -2,7 +2,7 @@
 
 - **Milestone:** M4
 - **Closes:** REQ-INT-057, REQ-INT-061, REQ-INT-064, REQ-INT-066, REQ-EVT-021, REQ-VAL-059, REQ-VAL-078
-- **Depends on:** TASK-M4-02
+- **Depends on:** TASK-M4-02, TASK-M4-29
 - **Needs (earlier milestones):** REQ-INT-028, REQ-INT-029, REQ-EVT-003, REQ-EVT-004, REQ-EVT-005, REQ-EVT-020, REQ-DEC-017, REQ-ENC-016, REQ-DEC-022, REQ-DEC-008, REQ-DEC-007, REQ-PAY-018
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** PIT-9, PIT-10
@@ -58,3 +58,4 @@ The determinism pin, held and tested. Every branch input of the kernel is enumer
 - Domain statement required in the test output: fixed inputs, per step (pitfalls §10).
 - RQ-97 ruled: R-113 — REQ-VAL-059 is the native half (Metal and lavapipe); its browser-GPU leg is REQ-VAL-144, closed with REQ-VAL-116 at M8 (TASK-M8-40). This task also carries the native-GPU legs dropped from M3: REQ-INT-028's `N_sub` and REQ-INT-029's capped step.
 - R-297: REQ-INT-057's bit-identity holds with the compute shaders' fast-math off, the default; with it on, parity is measured, not exact, and TASK-M4-20 reports the differences.
+- *4 Nov 2026 (R-694, RQ-685):* `|Δn̂|`'s and `E_rel`'s fixed forms are TASK-M4-29's (REQ-INT-112), so this task depends on it; REQ-INT-057's decisions and the Tier B fields are what R-297's bit-identity means with the setting off.
