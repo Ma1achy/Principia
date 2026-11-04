@@ -259,7 +259,7 @@ def complete(answer):
     """Whether an answer's text can end there: it ended a sentence, or it is a plain form or a template line."""
     m = LINE.match(answer.strip())
     body = m.group(2).strip() if m else ""
-    return bool(SENTENCE_END.search(answer)) or plain_form(body) is not None or body in UNFILLED
+    return bool(SENTENCE_END.search(answer)) or plain_form(body) is not None or body in UNFILLED + ("stands",)
 
 
 def split_reply(lines):
@@ -686,6 +686,7 @@ def self_test():
     answers("no split on an id with no colon", "RQ-1: (b). RQ-5 is deferred.", [("RQ-1", "read")])
     answers("the template, then an item", f"RQ-1: {ANSWER_TEMPLATE}\nRQ-5: (a)\n", [("RQ-5", "option")])
     answers("a stray line, then an item", "stray\nRQ-5: (a)\n", [("RQ-5", "option")], ["stray"])
+    answers("a decision standing, then an item", "D-2: stands\nRQ-5: (a)\n", [("RQ-5", "option")])
     verbatim = "RQ-1:   (a)  "
     if parse_reply(verbatim, queue)[0][0]["line"] != verbatim:
         fails.append("reply self-test: the line must be kept as typed, for the ruling's quotation")

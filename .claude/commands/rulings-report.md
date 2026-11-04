@@ -120,6 +120,8 @@ unanswered. Above the block, say: replace a line's right-hand side with your ans
 Ruled-or-moot item), `veto`, `defer:M0` to `defer:M9` or `ask:` and your question are applied as they read. Anything
 else, reasons and riders included, is welcome, and kept word for word: it is read, not parsed, and if it isn't clear you
 will be asked. On a decision line, `veto` or `stands`. Keep the `Report:` line: it says which report you are answering.
+End each answer that has words with a full stop, or leave a blank line after it: a line under an unfinished answer is
+read as part of it.
 A line left alone leaves its item as it is.
 
 ## 5. Check, then print
