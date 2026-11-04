@@ -30042,7 +30042,7 @@ parking now reaches planetary sources. It closes **RQ-672**, **RQ-673** and **RQ
 
 R-679 is in the "design" group of `plan/rule_groups.yaml`, with R-668.
 
-Adds REQ-VAL-344, REQ-VAL-345 and REQ-VAL-346; changes REQ-VAL-223 (statement, source, rulings, note).
+Adds REQ-VAL-344, REQ-VAL-345 and REQ-VAL-346; changes REQ-VAL-223 (statement, verify, source, rulings, note) and REQ-VAL-340 (verify, rulings, source, note).
 
 ## R-680 — Standing rule: the source page is re-read before any triage item becomes a target; the spot-check's six fixes to the library triage are PR #385's work, done after the CI fixes land
 *3 Nov 2026 · the owner's message of that day on the spot-check of the library triage; ported 3 Nov 2026; applied in
@@ -30070,7 +30070,7 @@ R-680 is in the "process" group of `plan/rule_groups.yaml`.
 ## R-681 — Standing rules: while `main` is red, or a required check is stuck, agents open and update no other pull request, and the owner is told in one message; a CI-tooling pull request shows its own `xtask-ci` passing before it merges; a stuck check is cleared by re-running only the job that reports it, never the whole pipeline *(refines R-369)*
 *3 Nov 2026 · the owner's three messages of that day on `main`'s red `xtask-ci` and the stuck `mutants-check`; ported
 3 Nov 2026; applied in `plan/OPERATIONS.md` § "Merging" (a paragraph and step 6's pointer) and § "Autonomy (R-369)" (a
-line), R-369's and R-633's forward lines and `plan/rule_groups.yaml`; changes no requirement*
+line), R-369's and R-633's forward lines, `plan/rule_groups.yaml` and `plan/section_notes.yaml`; changes no requirement*
 
 The owner's words (3 Nov 2026), verbatim: item (3) of the message that opens "Top priority, nothing else until done:
 main's xtask-ci fails on every PR since #381":
@@ -30117,7 +30117,8 @@ R-681 is in the "process" group of `plan/rule_groups.yaml`.
 
 ## R-682 — Admin bypass on `main` is the owner's alone: agents never use it, by `gh pr merge --admin` or any API merge that skips a required check; merge scripts merge only when every required check has passed; a stuck check goes to the owner, who decides whether to bypass *(amends R-266)*
 *3 Nov 2026 · the owner's message of that day; ported 3 Nov 2026; applied in `plan/HUMAN_SETUP.md` § 2 (a dated note),
-`plan/OPERATIONS.md` § "Merging" (step 3), R-266's forward lines and `plan/rule_groups.yaml`; changes no requirement*
+`plan/OPERATIONS.md` § "Merging" (step 3), R-266's forward lines, `plan/rule_groups.yaml` and `plan/section_notes.yaml`;
+changes no requirement*
 
 The owner's words (3 Nov 2026), verbatim:
 
@@ -30180,7 +30181,7 @@ R-683 is in the "ci" group of `plan/rule_groups.yaml`.
 
 ## R-684 — CI's two code tiers: full CI on every merge-candidate head, the one carrying the `merge-ready` label, and on every push to `main`; a quick tier on every other pull-request head (fmt, clippy, build, and the tests of the changed crates and their reverse dependencies), each full-only required check posted pending, never skipped-as-success; R-677's classifier first; done as R-683's step (2), and R-656's bounded target cache, without sccache, as its step (4) *(amends R-110, R-177 and R-235; rules R-676's tiers and R-683's steps (2) and (4))*
 *3 Nov 2026 · the owner's message of that day; ported 3 Nov 2026; applied in the forward lines of R-110, R-177, R-235,
-R-676 and R-683, `plan/rule_groups.yaml` and `plan/section_notes.yaml`; changes no requirement here; built with R-683's
+R-676, R-677 and R-683, `plan/rule_groups.yaml` and `plan/section_notes.yaml`; changes no requirement here; built with R-683's
 steps (2) and (4)*
 
 The owner's words (3 Nov 2026), verbatim:
