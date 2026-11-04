@@ -21,6 +21,7 @@ use crate::app::App;
 use crate::explore::breadcrumb;
 use crate::explore::footer::FOOTER;
 use crate::explore::hover_label::{BACKING, LISTEN_HINT};
+use crate::explore::manifold_view::chart::editor_ends_above;
 use crate::explore::manifold_view::{
     control_reached, AXES, PRESET, Q1_COMPONENTS, Q1_EDIT, TILT_X,
 };
@@ -877,6 +878,46 @@ fn mock_console_height_closed_the_panels_are_reached_again() {
     let last = focus(&app);
     assert_ne!(last, [TOP_BAR], "the panels are in the order again");
     rejects("the order left at the bars", || assert_eq!(last, [TOP_BAR]));
+}
+
+#[test]
+fn mock_console_height_an_editor_ends_above_it_by_its_last_height() {
+    assert!(
+        editor_ends_above(100.0, None, 136.0),
+        "two rows, to the point"
+    );
+    assert!(editor_ends_above(100.0, Some(60.0), 160.0));
+    rejects("a never-drawn editor a point past it", || {
+        assert!(editor_ends_above(100.0, None, 135.9))
+    });
+    rejects("a drawn editor a point past it", || {
+        assert!(editor_ends_above(100.0, Some(60.0), 159.9))
+    });
+}
+
+#[test]
+fn mock_console_height_a_never_drawn_editor_is_held_by_its_two_rows() {
+    let (mut app, mut h) = opened();
+    let button = app.keyboard.place_of(Q1_EDIT).expect("drawn").rect;
+    // Its top is 20 points under the button, inside the two rows a never-drawn editor is taken to have.
+    let edge = drawn(&app).min.y;
+    drag_edge(&mut h, &mut app, button.max.y + 20.0 - edge);
+    settle(&mut h, &mut app);
+    // The frames after the click too: the editor's first would be the one after it.
+    let mut frames = crate::capture::click(button.center());
+    frames.extend([Vec::new(), Vec::new(), Vec::new()]);
+    let mut placed = Vec::new();
+    for events in frames {
+        let _ = h.frame(&mut app, events);
+        placed.push(app.keyboard.place_of(Q1_COMPONENTS[0]).is_some());
+    }
+    assert!(app.manifold.editing[0], "the click asked for it");
+    assert!(!placed.contains(&true), "never drawn: {placed:?}");
+    // The control: the console lowered, the same editor is drawn.
+    drag_edge(&mut h, &mut app, 300.0);
+    settle(&mut h, &mut app);
+    let back = app.keyboard.place_of(Q1_COMPONENTS[0]).is_some();
+    rejects("an editor drawn clear of the console", || assert!(!back));
 }
 
 /// Whether a popup is open, and which layer has `at`.

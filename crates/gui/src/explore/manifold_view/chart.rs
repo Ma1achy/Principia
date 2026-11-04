@@ -133,12 +133,17 @@ fn editor_id(which: usize) -> Id {
 
 /// Whether basis vector `which`'s editor, at `at`, ends above the console's top edge `console_top`: its layer is above
 /// the console's, so an editor the console would cover, in part or whole, is not drawn and takes no input, and comes
-/// back when uncovered (R-463 K2). Its height is the last one drawn; never drawn, its two rows.
+/// back when uncovered (R-463 K2).
 fn editor_clear(ui: &Ui, at: egui::Pos2, which: usize, console_top: Option<f32>) -> bool {
     console_top.is_none_or(|top| {
         let drawn = ui.ctx().memory(|m| m.area_rect(editor_id(which)));
-        at.y + drawn.map_or(2.0 * EDITOR_FIELD_H, |r| r.height()) <= top
+        editor_ends_above(at.y, drawn.map(|r| r.height()), top)
     })
+}
+
+/// Whether an editor at `y`, `drawn` tall when last drawn, ends at or above `top`; never drawn, it takes its two rows.
+pub fn editor_ends_above(y: f32, drawn: Option<f32>, top: f32) -> bool {
+    y + drawn.unwrap_or(2.0 * EDITOR_FIELD_H) <= top
 }
 
 /// The editor of basis vector `which` (0 for `q₁`), at `at`, under its row, over the panel and never the figure: eight
