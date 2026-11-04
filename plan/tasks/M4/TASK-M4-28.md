@@ -25,6 +25,9 @@ alone does not answer the owner's question; the bits at identical operands do, a
 - `docs/contracts/principia_parity_contract.md` § "4. Tolerance — and the cross-backend reality"
 - `docs/contracts/principia_parity_contract.md` § "Tier S — structural only (asserting the pointwise gap would assert a falsehood)"
 - `docs/contracts/principia_parity_contract.md` § "3. The load-bearing discipline: never accumulate before comparing"
+- `docs/contracts/principia_parity_contract.md` § "1. The principle"
+- `docs/contracts/principia_integrator_contract.md` § "Part 1 — The shape: a swappable `step()` slot inside a fixed wrapper"
+- `docs/contracts/principia_integrator_contract.md` § "Part 7 — Detectors as the `SimState` producer"
 - `docs/read_first/principia_01_pitfalls.md` § "10. GENERALISING A STATELESS RESULT TO A TRAJECTORY"
 - `docs/notes/principia_gpu_determinism_note.md` § "The parity consequence (what shared source does and does not buy)"
 
@@ -33,7 +36,7 @@ alone does not answer the owner's question; the bits at identical operands do, a
   backend, `--compare` over records. The CPU-f32 march is the kernel's own wrapper at f32, which this task drives inside TASK-M4-02's
   harness; that harness alone is `stepOnce` and `decodeOnly` on shared states, fixed inputs that say nothing of a trajectory.
 - Two arms, each on all four backends (parity contract §3). **Decoded:** the march from the same chart uniforms, each backend
-  decoding its own start state, through TASK-M4-05's survey entry, each IC a quad's `c` read at one texel, since that march takes no IC buffer. **Shared:** CPU f32's decoded state's bits as every
+  decoding its own start state, through TASK-M4-05's survey entry, each IC one texel of its own quad, since that march takes no IC buffer. **Shared:** CPU f32's decoded state's bits as every
   backend's start, marched by the pass entry below, and on CPU f32 by the same body at f32. An IC held as `(m, r, p)` with no chart point runs on the shared arm alone, and the report says so.
 - The pass entry. `gpu_step_once` is one STEP (parity contract § "1. The principle"): no `N_sub`, projection or detection, so iterating it isn't a march, and choosing `N_sub`
   on the host would put the CPU's branch in the GPU's record. So the body of `integrate_with`'s loop moves into one function that loop and a compute entry in `crates/kernel/src/stage/branch_read.rs`
@@ -52,8 +55,8 @@ alone does not answer the owner's question; the bits at identical operands do, a
   terminal step and the total substeps, from the final `SimState`, with the decoded start state's bits, read through `gpu_decode_only` since the survey entry overwrites them
   in place, so a disagreement already present at `t = 0` is counted apart.
 - A digest of each macro-step's branch words and carried-state checkpoints at a stride stated in the header, so `--compare` can find the first macro-step that differs. They come from
-  `gpu_macro_pass` on both arms, since the survey entry emits neither: on the decoded arm each backend re-marches from its own decoded start state. Where a backend's survey row and its passes' row
-  differ, the report says so, as a production-only difference of that backend.
+  `gpu_macro_pass` on both arms, since the survey entry emits neither: on the decoded arm each backend re-marches from its own decoded start state. Where a pair's survey rows differ and its passes' rows don't, that is TASK-M4-27's production-only difference; where one backend's survey row and passes' row
+  differ, the report says so.
 - `--replay`: for each disagreement, `--compare` names the first macro-step `k` that differs and a source, the pair's first backend in the order CPU f32, lavapipe, Metal, NVIDIA, so NVIDIA is
   never a source and the file is complete before its session. `--replay-state`, on the source's backend, re-runs from its last checkpoint before `k` and writes the carried state at `k − 1`. Those same bits then go through the
   after-the-STEP read on every backend, NVIDIA's included, reported per pair. So the NVIDIA session runs `--record`, then
