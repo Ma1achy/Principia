@@ -9,7 +9,7 @@ verdict unless it corrects it (see "Corrections to the earlier triage"). `gaps-p
 
 **Proposals only.** Nothing here is a target until the owner rules. No requirement or plan changes. Tables are
 transcribed later, twice, for approved items only. No PDF and no library file is committed; values from repositories
-with no licence for their data are masked in the tree as `[value]`.
+with no licence for their data, or under the GPL, are masked as `[value]` in this triage's own new files.
 
 Words are as in `docs/incoming/2026-10-31_library_triage/SUMMARY.md` § "Words used" and its papers-14 to 80 section:
 OFF-FILTER for the readers' EXCLUDE; PEEK-ONLY for unreviewed or AI-assisted sources; PARKED for hierarchical and
@@ -240,7 +240,7 @@ Every row with a conflict carries it in the `conflict` column:
 ## Corrections to the earlier triage
 
 Recorded here; the earlier files are left unchanged, but for `triage.csv` rows 25, 79 and 220, which take the owner's
-spot-check of 3 Nov (§ "The owner's spot-check of 3 Nov 2026"), and `batch-notes-14-79.md`:62, masked.
+spot-check of 3 Nov (§ "The owner's spot-check of 3 Nov 2026").
 
 - **Dey 2026** (`triage-14-80.csv:173`, CONTEXT, RECORD-ONLY, unread): now read. A two-body flyby with a near-massless
   perturber, so OFF-FILTER, SKIP (row 37).
@@ -357,12 +357,17 @@ fix below was made from the source itself, re-read on 3 Nov.
 - Hénon 1974 (row 68) and Heggie & Sweatman 1991 (row 67) are cited as ruled (R-669), not re-proposed; the collinear fit
   printed on p.564 settles the Sweatman thesis row.
 - BKM (Doumbouya 2026) is kept `_local` until a peek needs it.
-- Everything from a repository with no licence for its data is masked in the tree as `[value]`: raw counts, set-up
-  values and statistics we derived from those files, including the mirror-pair counts, the per-pixel values and the
-  recount (mikha08-rgb/Nbody, eucliss, ThreeBodyFractal, cft-rebound and others, and the addendum's row for the ETH
-  data). The only such numbers that stay are the owner's four figures, 0.97, 0.84, 0.63 and 0.51, as the owner's. Git
-  history keeps earlier values, cft-rebound's among them; history is not rewritten. File names, byte sizes and commit
-  ids stay as provenance, so a name can still show a masked value (`ens8_*`, `map_m025_N400`). Values from published
+- Everything from a repository with no licence for its data, or under the GPL, is masked as `[value]` in this PR's new
+  files (`triage-81-153.csv`, `gaps-precision.csv`, this file, and `triage-11-13.csv`:6): raw counts, set-up values and
+  statistics we derived from those files, including the mirror-pair counts, the per-pixel values and the recount
+  (mikha08-rgb/Nbody, eucliss, ThreeBodyFractal, cft-rebound and others, and the addendum's row for the ETH data). The
+  licence boundary: a repository-wide open licence with no code-only limit counts (rows 179, 222 keep their values); a
+  code-only grant, a personal licence or the GPL does not (rows 185, 197, 202, 210, 212, 221). The only such numbers
+  that stay are the owner's four figures, 0.97, 0.84, 0.63 and 0.51, as the owner's. Git history keeps earlier values,
+  cft-rebound's among them; history is not rewritten. File names, byte sizes and commit ids stay as provenance, so a
+  name can still show a masked value (`ens8_*`, `map_m025_N400`). This is stricter than the earlier triage's rule
+  (`docs/incoming/2026-10-31_library_triage/SUMMARY.md`:457-459), which keeps sizes, counts, set-up values and our own
+  statistics. That rule stands for the earlier triage's files, and this PR doesn't touch them. Values from published
   papers stay, with citation, under R-668 (items 3 and 9, the owner's data-reuse rule).
 - The mirror-pair convention (spot-check item 5) is the one that gives the owner's figures, read from the encoder's own
   rounding; the figures don't change. Gap 5's Principia curve will have exact times, so no level arises there.
@@ -373,8 +378,7 @@ fix below was made from the source itself, re-read on 3 Nov.
 - cft-rebound and Pickett 2026 are raised from RECORD-ONLY to NOW peeks, and Puodzius 2026 to an M9 peek; Doumbouya
   2026 moves from NOW-27 to M9-43. New ranks run on after the existing ones without re-ranking them.
 - Duplicates cite `<file:row>` and keep the earlier verdict unless corrected; corrections are recorded here, and the
-  earlier files are left unchanged, but for the three `triage.csv` rows the owner's spot-check of 3 Nov corrected
-  and one masked word in `batch-notes-14-79.md`:62.
+  earlier files are left unchanged, but for the three `triage.csv` rows the owner's spot-check of 3 Nov corrected.
 - The papers-11 to 13 addendum is committed, unchanged but for line 6's masked values, as
   `docs/incoming/2026-10-31_library_triage/triage-11-13.csv`, because R-669 cites its ranks and these rows cite it. It
   adds a file and changes nothing existing.
