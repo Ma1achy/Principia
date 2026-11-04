@@ -38,7 +38,7 @@ reply byte for byte to `$R/<date>-reply.md`, then, in the worktree:
 ```
 python3 plan/tools/rulings_reply.py last-report "$R"
 python3 plan/tools/rulings_reply.py parse "$R/<date>-reply.md" --report <that report> \
-  --reserved-file "$R/reserved-ids.txt"
+  --reserved-file "$R/reserved-ids.txt" --answers-dir "$R/<date>-answers"
 ```
 
 Create `reserved-ids.txt`, empty, if it isn't there; it holds lines starting `R-n`, for numbers promised and on no
@@ -115,12 +115,16 @@ milestone gets its own file after its gate. An entry is never deleted. Move, def
 nothing is hand-edited:
 
 ```
-python3 plan/tools/rulings_reply.py close RQ-m --ruling R-n --date "4 Nov 2026" --text "<the answer>" \
-  --outcome "<outcome, one line>"
+A="$R/<date>-answers"
+python3 plan/tools/rulings_reply.py close RQ-m --ruling R-n --date "4 Nov 2026" --text-file "$A/RQ-m.txt" \
+  --outcome '<outcome, one line>'
 python3 plan/tools/rulings_reply.py defer RQ-m --to "<milestone or event>" --date "4 Nov 2026" --ruling R-n \
-  --text "<the answer>"
-python3 plan/tools/rulings_reply.py ask RQ-m --date "4 Nov 2026" --question "<the question, as typed>"
+  --text-file "$A/RQ-m.txt"
+python3 plan/tools/rulings_reply.py ask RQ-m --date "4 Nov 2026" --question-file "$A/RQ-m.txt"
 ```
+
+The answers come from the files `parse` wrote, never retyped on a command line: a shell would strip the owner's quotes
+without a word, and act on a `$` or a backtick. Quote the outcome with single quotes, and write it without one.
 
 `close` appends `- **Ruling:** R-n (<date>, the owner: "<text>"): <outcome>` and moves the entry otherwise unchanged. An
 entry closed that `open-questions.md` names in a "Carried by" note, or that holds a `**Mark:**` line, needs that note or

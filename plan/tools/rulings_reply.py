@@ -43,9 +43,11 @@ the reply stands. An answer takes the next R id, in reply order: CLAUDE.md
 has a deferral made by a ruling. `ask` takes none: it is a question, not an answer.
 
     open [--queue PATH]            the open RQs: id, title, the options offered, and the flags the report needs
-    parse REPLY [--queue PATH] [--archive DIR] [--report PATH] [--reserved-file PATH]
+    parse REPLY [--queue PATH] [--archive DIR] [--report PATH] [--reserved-file PATH] [--answers-dir DIR]
                                    the accepted lines, each with its R id, and the refused ones; exit 1 if any is
-                                   refused. REPLY may be `-`, for stdin
+                                   refused. REPLY may be `-`, for stdin. --answers-dir writes each accepted answer to
+                                   DIR/<item>.txt as typed (an `ask`, its question), for the commands below, so that
+                                   no shell ever reads the owner's quotes, `$` or backticks
     next-id [--reserved-file PATH] the next free R id: one past the highest `## R-n` heading of decisions.md on every
                                    local branch, every origin branch and this tree, and past any reserved id (a file of
                                    lines starting `R-n`, for ids the orchestrator has promised and no branch holds yet).
@@ -54,11 +56,11 @@ has a deferral made by a ruling. `ask` takes none: it is a question, not an answ
                                    the latest <date>-report.md in DIR, before ISO DATE if given, or `none`
     check-report REPORT [--queue PATH]
                                    every open RQ is one item of REPORT, with every field the order sets and a reply line
-    close RQ-n --ruling R-m --date "4 Nov 2026" --text TEXT --outcome TEXT [--queue PATH] [--archive-file PATH]
+    close RQ-n --ruling R-m --date "4 Nov 2026" --text-file PATH --outcome TEXT [--queue PATH] [--archive-file PATH]
                                    moves the entry, with a "Ruling" line giving date, ruling and outcome, to the review
                                    queue's archive (R-292: the closed section), never deleting it
-    defer RQ-n --to WHEN --date DATE --ruling R-m --text TEXT [--queue PATH]
-    ask RQ-n --date DATE --question TEXT [--queue PATH]
+    defer RQ-n --to WHEN --date DATE --ruling R-m --text-file PATH [--queue PATH]
+    ask RQ-n --date DATE --question-file PATH [--queue PATH]
                                    append a dated line to the open entry, which stays open
 
 `--self-test` runs the built-in cases, the negative controls; check_plan.py runs them too.
@@ -656,6 +658,13 @@ def self_test():
     if not archive.endswith("- **Ruling:** R-700 (4 Nov 2026, the owner: \"RQ-1: (a)\"): option (a).\n"):
         fails.append(f"reply self-test: close's Ruling line: {archive[-120:]!r}")
     with tempfile.TemporaryDirectory() as d:
+        typed = 'RQ-1: (a) "unresolved", at $HOME and `x`, counted apart.'
+        got = parse_reply(f"RQ-5: ask: is it \"so\"?\n\n{typed}  \n", queue)[0]
+        write_answers(os.path.join(d, "answers"), got)
+        kept = (read_answer_file(os.path.join(d, "answers", "RQ-1.txt")),
+                read_answer_file(os.path.join(d, "answers", "RQ-5.txt")))
+        if kept != (typed, 'is it "so"?'):
+            fails.append(f"reply self-test: an answer file must hold the answer as typed: {kept}")
         q, a = os.path.join(d, "q.md"), os.path.join(d, "a")
         os.mkdir(a)
         open(q, "w", encoding="utf-8").write(rest)
@@ -708,11 +717,25 @@ def write(path, text):
         fh.write(text)
 
 
+def write_answers(directory, accepted):
+    """Each accepted answer to <directory>/<item>.txt: what the queue's lines quote, byte for byte."""
+    os.makedirs(directory, exist_ok=True)
+    for x in accepted:
+        write(os.path.join(directory, f"{x['item']}.txt"), (x["value"] if x["kind"] == "ask" else x["line"].strip()) + "\n")
+
+
+def read_answer_file(path):
+    """An answer file's text, less the line end `write_answers` gave it."""
+    return read(path).rstrip("\n")
+
+
 def show_parse(a, queue_text):
     closed = set(rq_ids(a.queue, a.archive)[0]) - set(entries_of(queue_text))
     decisions, moot = (report_items(read(a.report))[:2]) if a.report else (set(), set())
     ok, no, blank, skipped = parse_reply(read(a.reply), queue_text, closed, decisions, moot)
     first = next_free(branch_decisions(), read_reserved(a.reserved_file))
+    if a.answers_dir:
+        write_answers(a.answers_dir, ok)
     print(f"ACCEPTED {len(ok)}")
     for x, rid in zip(ok, assign(ok, first)):
         what = f"{x['kind']} {x['value']}".rstrip() + (f" [{','.join(x['flags'])}]" if x["flags"] else "")
@@ -750,18 +773,19 @@ def main():
     s.add_argument("--archive", default=os.path.join(ROOT, QUEUE_ARCHIVE))
     s.add_argument("--report")
     s.add_argument("--reserved-file")
+    s.add_argument("--answers-dir")
     cmd("next-id", queue=False).add_argument("--reserved-file")
     cmd("last-report", "dir", queue=False).add_argument("--before")
     cmd("check-report", "report")
     s = cmd("close", "rq")
-    for o in ("--ruling", "--date", "--text", "--outcome"):
+    for o in ("--ruling", "--date", "--text-file", "--outcome"):
         s.add_argument(o, required=True)
     s.add_argument("--archive-file", default=os.path.join(ROOT, ARCHIVE_FILE))
     s = cmd("defer", "rq")
-    for o in ("--to", "--date", "--ruling", "--text"):
+    for o in ("--to", "--date", "--ruling", "--text-file"):
         s.add_argument(o, required=True)
     s = cmd("ask", "rq")
-    for o in ("--date", "--question"):
+    for o in ("--date", "--question-file"):
         s.add_argument(o, required=True)
     a = p.parse_args()
 
@@ -787,12 +811,13 @@ def main():
         return 1 if errors else 0
     try:
         if a.cmd == "close":
-            rest, archive = close(queue_text, read(a.archive_file), a.rq, a.ruling, a.date, a.text, a.outcome)
+            text = read_answer_file(a.text_file)
+            rest, archive = close(queue_text, read(a.archive_file), a.rq, a.ruling, a.date, text, a.outcome)
             write(a.archive_file, archive)
         elif a.cmd == "defer":
-            rest = defer(queue_text, a.rq, a.to, a.date, a.ruling, a.text)
+            rest = defer(queue_text, a.rq, a.to, a.date, a.ruling, read_answer_file(a.text_file))
         else:
-            rest = ask(queue_text, a.rq, a.date, a.question)
+            rest = ask(queue_text, a.rq, a.date, read_answer_file(a.question_file))
     except ValueError as e:
         print("REFUSED:", e, file=sys.stderr)
         return 2
