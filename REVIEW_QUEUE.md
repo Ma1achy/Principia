@@ -1978,3 +1978,26 @@ it is physics, the two rulings give different results on one chart.*
   exponent form at most 4.84147e-5 in magnitude and 402 reading 0.0, where a count of printed digits means nothing).
 - **Applied meanwhile:** nothing.
 - **Waits:** TASK-M9-01; TASK-M3-27 for (a).
+
+## RQ-684: R-360 has every control run across the `xtask-ci` shards, through `cargo xtask controls`; three now run in `ci-workspace` under nextest *(conflict: R-360 and REQ-SYS-077 against PR #395's item (f), decided per R-369; the code review (5763833425, F3) and qa review (5763914449, Q1) of PR #395; context: `tooling/ci-one-build`)*
+
+*Queued by the implementer of PR #395, on the orchestrator's decision; recorded for the owner. Nothing waits.*
+
+- **File, section:**
+  - `decisions.md` § "R-360 — `cargo xtask ci --partition k/n` splits the controls into n = 4 parallel jobs, by a stable
+    hash of the control name", Applied: "The n slices are disjoint and together hold every control, so every control
+    runs exactly once across the shards", and "The controls still run through `cargo xtask controls`'s own cargo
+    invocations (R-231), inside `cargo xtask ci` (R-235, REQ-VAL-007)."
+  - `plan/requirements.yaml` REQ-SYS-077, statement before PR #395: "every control run exactly once across the shards
+    (R-360)"; verify detail before PR #395: "whose CI logs together run each control once (R-360)".
+- **The conflict:** PR #395's item (f) takes the three controls in `xtask/tests/nextest.rs` that list the workspace in
+  its default feature set out of the `xtask-ci` shards (`controls::IN_CI_WORKSPACE`, `Partition::runs`), since in a shard
+  they cost a second whole build of the workspace's tests (run 41756812074: 48 GB of `target/debug/deps`, shards 2 and
+  4). They run as a step of `ci-workspace`, through `cargo nextest run --features controls`, not through
+  `cargo xtask controls`. So each control still runs once on every code run, but not every one across the shards, and
+  those three are judged by libtest's `#[should_panic(expected)]`, not by `cargo xtask controls`. `cargo xtask ci`
+  without `--partition`, as in `gate.yml` and `nightly.yml`, and `cargo xtask controls` locally still run all of them.
+- **Applied meanwhile:** the move stands, decided per R-369 as a CI decision by the orchestrator on PR #395, since each
+  control still runs exactly once per code run, and a control that stops failing its test reds the required `ci`
+  through `ci-workspace`. REQ-SYS-077's statement and verify detail are amended to say so (PR #395, its `*Was:*` kept in
+  the requirement). R-360's text in `decisions.md`, and `plan/CURRENT_RULES.md`, are unchanged: R-360 stays for the owner.
