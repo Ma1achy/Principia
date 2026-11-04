@@ -367,8 +367,9 @@ fix below was made from the source itself, re-read on 3 Nov.
   cft-rebound's among them; history is not rewritten. File names, byte sizes and commit ids stay as provenance, so a
   name can still show a masked value (`ens8_*`, `map_m025_N400`). This is stricter than the earlier triage's rule
   (`docs/incoming/2026-10-31_library_triage/SUMMARY.md`:457-459), which keeps sizes, counts, set-up values and our own
-  statistics. That rule stands for the earlier triage's files, and this PR doesn't touch them. Values from published
-  papers stay, with citation, under R-668 (items 3 and 9, the owner's data-reuse rule).
+  statistics. That rule stands for the earlier triage's files; this PR masks nothing in them, and its only edit there is
+  the three `triage.csv` rows of the spot-check. Values from published papers stay, with citation, under R-668 (items 3
+  and 9, the owner's data-reuse rule).
 - The mirror-pair convention (spot-check item 5) is the one that gives the owner's figures, read from the encoder's own
   rounding; the figures don't change. Gap 5's Principia curve will have exact times, so no level arises there.
 - Tomihisa 2011 (row 151) takes the guide verifier's reading over chunk 07's one-liner, since the owner put it in the
