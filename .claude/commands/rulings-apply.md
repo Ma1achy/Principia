@@ -41,6 +41,9 @@ python3 plan/tools/rulings_reply.py parse "$R/<date>-reply.md" --report <that re
   --reserved-file "$R/reserved-ids.txt" --answers-dir "$R/<date>-answers"
 ```
 
+If `last-report` prints `none`, there is no report: leave `--report` out. Then every `D-n` line is refused, as there is
+no decision for it to name, and bare `close` works only on an entry that carries a ruling.
+
 Create `reserved-ids.txt`, empty, if it isn't there; it holds lines starting `R-n`, for numbers promised and on no
 branch yet. `parse` prints each ACCEPTED answer with its kind, its flags and its R id, each REFUSED one with its reason,
 the UNANSWERED items, and the SKIPPED section names. A line may hold several answers, each read alone. The

@@ -635,6 +635,14 @@ def self_test():
         fails.append("reply self-test: last_report")
     if last_report(names, "2026-11-04") is not None or last_report([]) is not None:
         fails.append("reply self-test: last_report must find none strictly before the date")
+    no_report = argparse.Namespace(report=os.path.join(ROOT, "no-such-report.md"))
+    stderr, sys.stderr = sys.stderr, open(os.devnull, "w", encoding="utf-8")
+    try:
+        if show_parse(no_report, queue) != 2:
+            fails.append("reply self-test: parse must refuse a report that isn't there, cleanly")
+    finally:
+        sys.stderr.close()
+        sys.stderr = stderr
 
     item = "".join(f"**{f}:** x\n" for f in REPORT_FIELDS)
     small = ("## RQ-1: One?\n\n- **Applied meanwhile:** x.\n\n## RQ-2: Two?\n\n- **Applied meanwhile:** x.\n")
@@ -722,7 +730,8 @@ def write_answers(directory, accepted):
     """Each accepted answer to <directory>/<item>.txt: what the queue's lines quote, byte for byte."""
     os.makedirs(directory, exist_ok=True)
     for x in accepted:
-        write(os.path.join(directory, f"{x['item']}.txt"), (x["value"] if x["kind"] == "ask" else x["line"].strip()) + "\n")
+        text = x["value"] if x["kind"] == "ask" else x["line"].strip()
+        write(os.path.join(directory, f"{x['item']}.txt"), text + "\n")
 
 
 def read_answer_file(path):
@@ -731,6 +740,10 @@ def read_answer_file(path):
 
 
 def show_parse(a, queue_text):
+    if a.report and not os.path.isfile(a.report):
+        print(f"REFUSED: no report at {a.report!r}: leave --report out if there is none, as D-n lines then refuse",
+              file=sys.stderr)
+        return 2
     closed = set(rq_ids(a.queue, a.archive)[0]) - set(entries_of(queue_text))
     decisions, moot = (report_items(read(a.report))[:2]) if a.report else (set(), set())
     ok, no, blank, skipped = parse_reply(read(a.reply), queue_text, closed, decisions, moot)
