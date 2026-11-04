@@ -29764,14 +29764,21 @@ additions and multiplications of a branch input as written, correctly rounded, n
 distribution; the contract is the authority. How a branch input is built does not change.
 
 *Applied per R-369:* the condition is about bits, not forks, as parity § 4's sentence, rule 2 of the determinism note and
-REQ-INT-066 settle it (physics review of PR #407). For a branch input built only of `+` and `×`, the test reads the expression's own
-operands:
-- its operands differ across the backends compared: an upstream difference, no evidence on the driver;
-- its operands are bit-identical and its bits differ: the driver fails, with or without a fork;
-- its operands and bits are identical and the outcome differs: a comparison fork, reported as that, and it fails too.
+REQ-INT-066 settle it (physics review of PR #407). A branch input is read at the expression's own operands, and its kind is read on
+what a driver can round, as R-547's words and `crates/kernel/src/canon.rs`:71-86 settle it:
+- `+ and ×`: floating `+`, `−` and `×`, with what rounds nothing and a rewrite can't move: negation and `abs`, exact power-of-two
+  scalings, bit reads and masks, integer operations, selects and comparisons. The kernel's `Wide` forms are this kind, and a `Wide`'s
+  bits are its mantissa and its exponent, both.
+- `other operation`: an input holding an operation with an ulp bound rather than correct rounding (division, `√`, `sin`, `cos`,
+  `atan2`, a rounding builtin), or `fma`, which one driver fuses and another, lavapipe, rounds as two operations (RQ-298), so it has
+  no one result to hold a driver to.
 
-An input holding any other operation (division, `√`, `sin`, `cos`, a builtin) is reported as that kind and does not by itself fail
-this condition. The recording is a report's words and blocks nothing (R-649). It adds no claim on continuous bits.
+For the first kind, the test has three levels:
+- level 1, its operands differ across the backends compared: an upstream difference, no evidence on the driver;
+- level 2, its operands are bit-identical and its bits differ: the driver fails, with or without a fork;
+- level 3, its operands and bits are identical and the outcome differs: a comparison fork, reported as that, and it fails too.
+
+An input of the second kind is reported as that kind and does not by itself fail this condition. The recording is a report's words and blocks nothing (R-649). It adds no claim on continuous bits.
 
 A disagreement belongs to a pair and a standing to a driver. The arbiter is CPU f32's correctly rounded result on the same operands:
 the driver whose bits differ from it fails. A report has three words: "unverified, not supported" for a driver measured and failing;

@@ -37166,7 +37166,7 @@
   - R-686
   - R-690
   milestone: M4
-  note: "R-686 asks for the evidence on whether the missing NoContraction matters for the real kernel. The rate alone is not that evidence, since division and √ are confounders (RQ-685): the discriminating result is differing bits at bit-identical operands in a branch input built only of + and × (R-547; R-690). The gate asks that the report exists, never for a rate (R-649)."
+  note: "R-686 asks for the evidence on whether the missing NoContraction matters for the real kernel. The rate alone is not that evidence, since division and √ are confounders (RQ-685): the discriminating result is differing bits at bit-identical operands in a branch input of kind + and × (R-547; R-690). The gate asks that the report exists, never for a rate (R-649)."
 - id: REQ-PERF-001
   area: PERF
   statement: "The per-step energy evaluation must reuse the pairwise distances from the force computation."

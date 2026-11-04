@@ -63,7 +63,7 @@ alone does not answer the owner's question; the bits at identical operands do, a
 - `cargo test -p validation cross_backend_replay` (no GPU) — over synthetic digests, the first differing step is found at its
   step, and the state handed to `--replay` is the same bits for every backend; the control is a digest that drops `N_sub`, which
   a planted `N_sub` difference rejects. The standing, on the march's kinds, as `cross_backend_compare`'s: equal operands and differing
-  input bits, no fork, reads "unverified, not supported"; differing operands do not; `other operation` does not. The control is a
+  input bits, no fork, reads "unverified, not supported", on a `Wide`'s exponent alone too; differing operands do not; `other operation` does not. The control is a
   compare that reads only outcomes, which misses the first. A replayed collision fork whose positions differ reads as an upstream
   difference (REQ-VAL-348).
 - `cargo xtask gate cross-backend-march` — both arms' records on lavapipe, on Metal and on CPU f32, their comparison and the
@@ -81,8 +81,8 @@ alone does not answer the owner's question; the bits at identical operands do, a
 - **A nonzero NVIDIA rate alone is not evidence on `NoContraction`.** The RTX's runtime division differs from correct rounding
   on 19407 of 65536 where Metal off and lavapipe read 0 (RQ-685), and M4 adds divisions to the force loop and the steppers, so
   a march on the card should differ from the first such step whatever contraction does. The discriminating result is differing
-  bits at bit-identical operands, in a branch input built only of `+` and `×` (R-547). That points at contraction, reassociation or
-  distribution. A difference in a branch input holding a division, `E_rel` or `|Δn̂|`, is not attributable that way.
+  bits at bit-identical operands, in a branch input of kind `+ and ×` (R-547; R-690). That points at contraction, reassociation or
+  distribution. A difference in a branch input holding a division or `fma`, `E_rel` or `|Δn̂|`, kind `other operation`, is not attributable that way.
 - **A shared state is not shared operands.** `detect_terminal` runs after the STEP, so the collision test reads `d²` of post-STEP
   positions, which have been through the force loop's divisions. A collision fork in `--replay` has identical inputs at the
   replay's level, and `d²` is `+` and `×`, but if its positions differ it is an upstream difference and convicts no driver.

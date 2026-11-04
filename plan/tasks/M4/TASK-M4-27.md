@@ -39,10 +39,14 @@ that. It is the first test of R-690's driver condition, on fixed inputs.
   The report's header states its domain and that it does not answer the trajectory
   question. The comparison is written into the gate report.
 - The test of R-690's condition, in `cross_backend.rs`. Each row has a **kind** column, from a list this task enumerates from the
-  written forms at `crates/kernel/src/canon.rs`, `decode/mass.rs`, `decode/invariant.rs` and `chart/burrau.rs`: `+ and ×`, or `other
-  operation` (division, `√`, `sin`, `cos`, a builtin; #393's select, reached through `sin`, is this kind). TASK-M4-03's
+  written forms at `crates/kernel/src/canon.rs`, `decode/mass.rs`, `decode/invariant.rs` and `chart/burrau.rs`, and read on what a driver
+  can round (R-690). `+ and ×` is floating `+`, `−` and `×`, with what rounds nothing and a rewrite can't move: negation and `abs`,
+  exact power-of-two scalings, bit reads and masks, integer operations, selects and comparisons. So canon's and decode's `Wide`
+  inputs and `decode/invariant.rs`'s sign reads are this kind. `other operation` holds an operation with an ulp bound rather than
+  correct rounding (division, `√`, `sin`, `cos`, `atan2`, a rounding builtin; #393's select, reached through `sin`, is this kind),
+  or `fma`, which one driver fuses and another rounds as two operations (R-547, RQ-298). TASK-M4-03's
   `branch_inputs.rs` isn't used: it lists the march's inputs and this task must not wait for it. A row of the first kind carries
-  the bits of the expression's own operands and of the input, read back at the evaluation. Where the stage emits neither, a
+  the bits of the expression's own operands and of the input, a `Wide`'s mantissa and exponent both, read back at the evaluation. Where the stage emits neither, a
   read-back entry from the same source, no parity-only physics. The comparison gives each such row its level (Notes).
 - Negative controls for this task's tests (R-176).
 
@@ -51,9 +55,10 @@ that. It is the first test of R-690's driver condition, on fixed inputs.
   reads 0 of N, and one flipped outcome reads 1 of N and names the input; a pair over different inputs is refused, not
   compared; the control is a compare that ignores one outcome column, which the flipped case rejects. The standing: a synthetic pair of kind `+ and ×`
   with equal operands and differing input bits, no fork, reads "unverified, not supported"; with equal operands and bits and a
-  different outcome it reads the same, as a comparison fork; with differing operands it does not; of kind `other operation` it
-  does not; the driver differing from CPU f32 is the one named; a clean driver reads "no failure in N"; no record reads "not run".
-  The control is a compare that reads only outcomes, which misses the first case (REQ-VAL-347).
+  different outcome it reads the same, as a comparison fork; with differing operands it does not; a `Wide` input with equal operands and only its exponent differing reads "unverified, not
+  supported"; of kind `other operation`, an `fma` form included, it does not; the driver differing from CPU f32 is the one named; a clean driver reads "no failure in N"; no record reads "not run".
+  The control is a compare that reads only outcomes, which misses the first case; the kinds' control is a list that files a `Wide` input under
+  `other operation`, which the `Wide` case rejects (REQ-VAL-347).
 - `cargo xtask gate cross-backend-branches` — records on lavapipe, on Metal and on CPU f32 and their comparison, in the PR,
   each pair's rate, the adapter lines and each driver's standing under R-690's condition; the header states the domain; every backend pair is listed, NVIDIA's as "not run"
   until its record is posted (REQ-VAL-347).
@@ -61,11 +66,11 @@ that. It is the first test of R-690's driver condition, on fixed inputs.
 
 ## Notes
 - **R-690's driver condition is about bits, not forks.** An ulp moved in a branch input forks only within about an ulp of a threshold,
-  so a test of outcomes alone would read a failing driver as clean. Every row has identical stage inputs, but "built only of `+` and
-  `×`" is read at the expression's own operands (`decode/mass.rs`'s block is built on the emitted masses, not on `z`). Three levels:
-  - operands differ across the backends compared: an upstream difference, no evidence on the driver;
-  - operands bit-identical, input's bits differ: the driver fails, with or without a fork;
-  - operands and bits identical, outcome differs: a comparison fork, reported as that, and it fails too.
+  so a test of outcomes alone would read a failing driver as clean. Every row has identical stage inputs, but the kind is the
+  expression's own, read at its own operands (`decode/mass.rs`'s block is built on the emitted masses, not on `z`). Three levels, on a row of kind `+ and ×`:
+  - level 1, operands differ across the backends compared: an upstream difference, no evidence on the driver;
+  - level 2, operands bit-identical, input's bits differ: the driver fails, with or without a fork;
+  - level 3, operands and bits identical, outcome differs: a comparison fork, reported as that, and it fails too.
 
   A failing driver is recorded **unverified, not supported**, in those words. A row of kind `other operation` is reported as that
   kind. Nothing enforces the condition, and the recording blocks nothing.
