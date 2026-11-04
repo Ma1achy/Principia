@@ -239,6 +239,12 @@ jobs:
             /usr/lib/google-cloud-sdk /usr/local/aws-cli /usr/local/aws-sam-cli /opt/az /usr/share/az_*
           sudo docker image prune --all --force > /dev/null
           df -h /
+      # What the two disks hold, for moving the build to `/mnt` (the owner's candidate 1, 4 Nov 2026). It only measures,
+      # and nothing it finds can fail the job.
+      - name: Runner disks
+        run: |
+          df -h / /mnt || true
+          lsblk || true
       # The toolchain rust-toolchain.toml pins, with its components: rust-gpu's nightly (R-169). The tests run cargo
       # themselves, on the fixtures and on the workspace.
       - name: rustup toolchain install (rust-toolchain.toml)
@@ -602,6 +608,12 @@ jobs:
         shard: [1, 2]
     steps:
       - uses: actions/checkout@v4
+      # What the two disks hold, for moving the build to `/mnt` (the owner's candidate 1, 4 Nov 2026). It only measures,
+      # and nothing it finds can fail the job.
+      - name: Runner disks
+        run: |
+          df -h / /mnt || true
+          lsblk || true
       # The toolchain rust-toolchain.toml pins (R-169): the tests run cargo themselves, on the fixtures.
       - name: rustup toolchain install (rust-toolchain.toml)
         run: rustup toolchain install
@@ -679,6 +691,12 @@ jobs:
             /usr/lib/google-cloud-sdk /usr/local/aws-cli /usr/local/aws-sam-cli /opt/az /usr/share/az_*
           sudo docker image prune --all --force > /dev/null
           df -h /
+      # What the two disks hold, for moving the build to `/mnt` (the owner's candidate 1, 4 Nov 2026). It only measures,
+      # and nothing it finds can fail the job.
+      - name: Runner disks
+        run: |
+          df -h / /mnt || true
+          lsblk || true
       # The toolchain rust-toolchain.toml pins, with its components: rust-gpu's nightly, on which the whole workspace
       # builds (R-169).
       - name: rustup toolchain install (rust-toolchain.toml)
@@ -790,6 +808,12 @@ jobs:
             /usr/lib/google-cloud-sdk /usr/local/aws-cli /usr/local/aws-sam-cli /opt/az /usr/share/az_*
           sudo docker image prune --all --force > /dev/null
           df -h /
+      # What the two disks hold, for moving the build to `/mnt` (the owner's candidate 1, 4 Nov 2026). It only measures,
+      # and nothing it finds can fail the job.
+      - name: Runner disks
+        run: |
+          df -h / /mnt || true
+          lsblk || true
       # The toolchain rust-toolchain.toml pins, with its components: rust-gpu's nightly, on which the whole workspace
       # builds (R-169).
       - name: rustup toolchain install (rust-toolchain.toml)
@@ -1030,6 +1054,12 @@ jobs:
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache/CodeQL
           sudo docker image prune --all --force > /dev/null
           df -h /
+      # What the two disks hold, for moving the build to `/mnt` (the owner's candidate 1, 4 Nov 2026). It only measures,
+      # and nothing it finds can fail the job.
+      - name: Runner disks
+        run: |
+          df -h / /mnt || true
+          lsblk || true
       # The toolchain rust-toolchain.toml pins, with its components: rust-gpu's nightly, on which the whole workspace
       # builds (R-169).
       - name: rustup toolchain install (rust-toolchain.toml)
