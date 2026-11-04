@@ -29672,6 +29672,10 @@ comment 6633374835). The proposal is
 the ADR and the task above. The ADR's Status stays Proposed and the task waits: the owner has not yet ruled on the
 pattern (RQ-691).
 
+*Applied per R-369:* "on every backend" puts gui's lattice test in `gpu-metal`, which R-656's "the crates no GPU job builds
+(`gui`, `prin`)" didn't foresee. TASK-M6-53 makes only the paths that step reads GPU paths; the rest of `crates/gui/` stays
+off the GPU path. It is the ruling `xtask/tests/qa_R-662_ci_scope.rs`'s change answers to (R-290).
+
 ## R-686 — The kernel cross-backend check is a measurement (R-649): the same IC set on NVIDIA Vulkan, Metal, lavapipe and CPU f32, outcome labels and per-trajectory branch-sensitive results compared, not pixels, the disagreement rate reported per backend pair, no tolerance chosen to make it pass; pixel comparisons across backends go on raw pre-colour values with the outlier tail reported, never 8-bit frame equality, Metal against lavapipe's 161,394 / 221 recorded as the clean-backend baseline; `DECODE_SWITCHOVER`'s spec notes that bitwise agreement must be tested on NVIDIA specifically
 *4 Nov 2026 · the owner's message of that day; applied in `docs/contracts/principia_parity_contract.md` § 4,
 `docs/contracts/principia_scheduler_contract.md` Part 4, TASK-M6-53, TASK-M6-08's notes, TASK-M4-27 and TASK-M4-28, REQ-VAL-347

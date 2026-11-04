@@ -33,8 +33,12 @@ there. The RTX is a measurement (R-649). The mock's pattern changes; nothing abo
   entry points to `noise_source()`, so the shipped functions run rather than a copy, and read corners back as bits
   (`bitcast<u32>` to `Rgba32Uint`), so no float is canonicalised on the way.
 - `crates/gui/Cargo.toml`: `naga` as a dev-dependency at wgpu 30's version, `wgsl-in`.
-- `.github/workflows/ci.yml`: a `gpu-metal` step, `cargo nextest run -p gui lattice_ --no-capture`.
-- `scripts/ci_changes.sh`: `crates/gui/src/mock/*.wgsl` is a GPU path; the classifier's tests follow.
+- `.github/workflows/ci.yml`: a `gpu-metal` step, `cargo nextest run -p gui lattice_ --no-capture`, and its header comment
+  (:51), which says a change to `crates/gui/` alone skips the GPU suites.
+- `scripts/ci_changes.sh`: what the step reads is a GPU path: `crates/gui/src/mock/*.wgsl`, `crates/gui/src/mock/canvas.rs`
+  (`noise_source()`), `crates/gui/src/tests/mock_lattice.rs`, `crates/gui/src/tests/lattice_controls.wgsl` and
+  `crates/gui/Cargo.toml`. `is_not_gpu`'s comment is made true, and `xtask/tests/ci_changes.rs` gains these cases.
+- `plan/OPERATIONS.md` § "Merging"'s "no GPU-path file" bullet (:395), made true the same way.
 - `plan/adr/ADR-0001-mock-noise-integer-lattice.md`, its Status citing the ruling on RQ-691.
 
 ## Acceptance tests
@@ -82,14 +86,20 @@ there. The RTX is a measurement (R-649). The mock's pattern changes; nothing abo
   fails everywhere by construction, keeps the control. All controls use `rejects` from `crates/gui/src/tests/support.rs`:
   gui has no `negative_control!`, which is `validation`'s, and `gui` → `validation` is forbidden (R-176).
 - **The ci wiring stays here, and it meets R-656.** R-656 names `gui` among "the crates no GPU job builds", and this task's
-  `gpu-metal` step builds it. Applied per R-369, narrowly: only `crates/gui/src/mock/*.wgsl` becomes a GPU path, so a gui-only
-  PR that changes the mock's shaders runs `gpu-metal`, and any other gui change still skips it. Today no gui test runs on
-  Metal in CI, and a gui-only PR skips `gpu-metal` altogether. `xtask/tests/qa_R-662_ci_scope.rs` and
-  `xtask/tests/qa_R-677_ci_tiers.rs` assert the old classification; they are qa's files, for qa to change, an exception the PR
-  names (R-290, R-369). The cost of building eframe on `macos-15` is unmeasured; the PR gives it.
+  `gpu-metal` step builds it. R-685's "on every backend" is what forces the change: no gui test runs on Metal in CI today, and
+  a gui-only PR skips `gpu-metal`. Applied per R-369, narrowly: only the five paths in Deliverables, what the step reads, become
+  GPU paths. `ci_changes.sh` has one `gpu` flag, so such a PR runs all three GPU suites, not `gpu-metal` alone. Any other gui
+  change still skips them; that gap is accepted, and it is listed below.
+- **Two xtask tests.** `qa_r662_every_tracked_path_classifies_as_the_ruling_says` in `xtask/tests/qa_R-662_ci_scope.rs` fails:
+  `ruling()` (:145) marks all of `crates/gui/` no-GPU, and it walks every tracked path. The ruling that changes that behaviour
+  is R-685. Every commit of that file is a qa commit, so this is qa's ordinary `M` (R-290), for the code reviewer to confirm
+  against R-685. The implementer's `ci_changes.sh` commit leaves xtask's tests red until qa's commit lands.
+  `xtask/tests/qa_R-677_ci_tiers.rs` is untouched: its one gui case, `crates/gui/src/qa.rs`, stays true.
+- The cost of building eframe on `macos-15` is unmeasured; the PR gives it.
 - **What CI cannot catch:** NVIDIA itself, on which no job runs; a float hash coming back, which only `lattice_source_is_integer`
   stops, and only in `lattice_hash` and `corner`; a driver rewrite that depends on compilation context, since a test's entry
-  point is not `fs_main`; the float path before `floor` and after the corners, not checked bitwise; other GPUs, on which
+  point is not `fs_main`; the float path before `floor` and after the corners, not checked bitwise; a gui change outside the
+  five GPU paths that breaks the step, which skips `gpu-metal` on its PR and first shows on `main`; other GPUs, on which
   nothing is measured. "Every backend" here means gui's two, since gui's wgpu has no `dx12` feature.
 - **Claims nothing about the real paths.** ADR-0001 § "Must not claim".
 - The PR has a "What to try" section (R-390).
