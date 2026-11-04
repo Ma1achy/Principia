@@ -826,7 +826,7 @@ with no construction there (`K < L_z²/2I`) reads as refused: no system, area we
   which may pass `K_max` at the top, a range as R-508's side continues. `Φ_θ,L_z`'s held `K` is tilted in its warp
   coordinate, `K = K_max·t^γ_K`, `t = t₀ + d`, `t₀ = (K₀/K_max)^(1/γ_K)`, `d` in units of `t`, so it stays ≥ 0; it takes
   no floor, the band above giving `L_z²/2I ≤ K` at every `K ≥ 0`. Rounding at the floor must not blank the bottom row,
-  as §2.1 holds `L_max² ≤ 2K`. How the held `L_z` itself moves is RQ-698.
+  as §2.1 holds `L_max² ≤ 2K`. How the held `L_z` itself moves is RQ-699.
 - **If the implementer confirms it arises (R-709).** A held energy's warp coordinate past `t < 0` clamps at `t = 0`, held
   `K` at its floor, `L_z²/2I` (on `Φ_θ,L_z`, where `L_z` is read off `K`, both are 0: the rest start at the pixel's own
   shape). Each clamped pixel is a real system, flagged "held at floor" in the Inspector and the sidecar, and the test

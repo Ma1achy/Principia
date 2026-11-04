@@ -30560,7 +30560,7 @@ Changes REQ-VAL-319 (statement, verify, rulings, source, note).
 ## R-708 — The tilted Burrau `K` charts follow R-471's two modes: warped, the default, every pixel a system under every tilt, the `K` axis floored at the pixel's own held `L_z` in the additive form and the bottom row never blanked; linear, rows at fixed values, an infeasible cell blank, held coordinates by value; held energy-type coordinates tilt in their warp coordinate in warped mode *(closes RQ-678; amends R-633; refines R-471 and R-508)*
 *Refined by R-709 (4 Nov 2026: a held energy's warp coordinate past `t < 0`, if the implementer confirms it arises, clamps at `t = 0`).*
 *Still in force: all of it.*
-*4 Nov 2026 · the owner's ruling of that day; applied in `docs/contracts/principia_chart_decoder_contract.md` § "Tilt (basis edit)", `docs/design/principia_chart_reference.md` § "2.1 Feasibility, and the warp that makes every pixel valid" and § "4.5 The Burrau-family chart maps", R-471's, R-508's and R-633's forward lines, `docs/archive/review_queue/M0.md` (RQ-678, moved with its ruling), `REVIEW_QUEUE.md` (RQ-698, new), REQ-CHART-061, REQ-CHART-062 and REQ-CHART-067 (reqio), TASK-M2-38 and TASK-M2-52, `plan/tasks.yaml` and `plan/rule_groups.yaml`; built by TASK-M2-52, and by TASK-M2-37 for the single energy axis*
+*4 Nov 2026 · the owner's ruling of that day; applied in `docs/contracts/principia_chart_decoder_contract.md` § "Tilt (basis edit)", `docs/design/principia_chart_reference.md` § "2.1 Feasibility, and the warp that makes every pixel valid" and § "4.5 The Burrau-family chart maps", R-471's, R-508's and R-633's forward lines, `docs/archive/review_queue/M0.md` (RQ-678, moved with its ruling), `REVIEW_QUEUE.md` (RQ-699, new), REQ-CHART-061, REQ-CHART-062 and REQ-CHART-067 (reqio), TASK-M2-38 and TASK-M2-52, `plan/tasks.yaml` and `plan/rule_groups.yaml`; built by TASK-M2-52, and by TASK-M2-37 for the single energy axis*
 
 The owner's words, 4 Nov 2026, verbatim:
 
@@ -30592,7 +30592,7 @@ The owner's words, 4 Nov 2026, verbatim:
 - TASK-M2-52 depends on TASK-M2-37, whose per-axis linear option its linear arm needs.
 - The linear arm's refusal covers the three charts as R-633 wrote it. In warped mode the corner arm, REQ-CHART-062's, is unchanged.
 
-*The case that came back, in the sense of the ruling's last line:* the ruling names a warp coordinate for held `K`, but the held `L_z` of `(ν, K)` and `Φ_θ,K` is an energy-type hidden coordinate too (R-471 E1, R-633 c2), and §2.1's `L_z` line needs a held `K` those charts do not have. The port doesn't choose. RQ-698 asks. The `K` axis's floor is the same in every answer.
+*The case that came back, in the sense of the ruling's last line:* the ruling names a warp coordinate for held `K`, but the held `L_z` of `(ν, K)` and `Φ_θ,K` is an energy-type hidden coordinate too (R-471 E1, R-633 c2), and §2.1's `L_z` line needs a held `K` those charts do not have. The port doesn't choose. RQ-699 asks. The `K` axis's floor is the same in every answer.
 
 *What it amends:* **R-633**, "tilted and sliced by value", on a held energy-type coordinate in warped mode only, and its refusal, which becomes the linear arm. *What it refines:* **R-471**, E2 and E3 on these charts, and **R-508**, the top of the floored axis. It closes **RQ-678**.
 

@@ -709,7 +709,7 @@ change: no timer was touched (R-649). Nothing is chosen.*
 - **Applied meanwhile:** R-638 stands, and the seeded draw is not run.
 - **Waits:** a BR-1 ensemble beyond the 12-run pilot.
 
-## RQ-698: What "tilted in their warp coordinate" means for the held `L_z` of `(ν, K)`, `Φ_θ,K` and `Φ_strip,K` *(physics; silence: R-708; R-471 E1; R-633 c2; REQ-CHART-062; context: TASK-M2-52, PR #388)*
+## RQ-699: What "tilted in their warp coordinate" means for the held `L_z` of `(ν, K)`, `Φ_θ,K` and `Φ_strip,K` *(physics; silence: R-708; R-471 E1; R-633 c2; REQ-CHART-062; context: TASK-M2-52, PR #388)*
 
 *Queued 4 Nov 2026 by R-708's port. For the owner: yes, it is physics; the answer changes which systems a tilt into the
 held `L_z` shows. R-708's last line says to come back with such a case. Nothing is chosen.*
