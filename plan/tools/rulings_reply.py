@@ -30,7 +30,8 @@ unanswered. A line that is a section name alone (`HEADINGS`, or a report's `##` 
 skipped, and listed as skipped. Any other line in capitals is refused like any other.
 
 Refused, and listed with the reason: an unknown or closed RQ, an unknown D-n, an option the entry doesn't offer, two
-options named as alternatives (`(a) or (b)`, `(a)/(b)`), two answers (a spaced `|`, or two lines for one item), a
+options named as alternatives (any `or` between two labels, or `(a)/(b)`), a label after a negation (`not (a)`, `neither
+(a) nor (b)`), a negated `close`, two answers (a spaced `|`, or two lines for one item), a
 `defer:` naming no milestone, a veto of an entry that applies nothing, a bare label on an entry with none, words naming
 no option on an entry that offers them, and any line that doesn't start with an item.
 
@@ -91,7 +92,10 @@ HEADINGS = {"TOP", "PHYSICS", "VALIDATION", "GUI", "CI", "CI AND RECORD", "RECOR
             "NEEDS OWNER NOW", "RULED-OR-MOOT", "RULED-OR-MOOT (TO CLOSE)", "REPLY TEMPLATE"}
 BRACKETED = re.compile(r"(?<!\w)\((\d?[a-zA-Z]\d?|[ivxIVX]+|\d)\)")  # a label named in a reply
 BARE = re.compile(r"^(\d?[a-zA-Z]\d?|[ivx]+)(?:[.,:;](?:\s|$)|$)")
-ALTERNATIVE = re.compile(r"(?i)^\s*,?\s*(?:or|/|\|)\s*$")  # all that stands between two labels offered as alternatives
+ALTERNATIVE = re.compile(r"(?i)\bor\b|^\s*[/|]\s*$")  # what, between two labels, offers them as alternatives
+NEGATION = r"(?:not|cannot|neither|nor|never|without|except|excluding|\w+n't|rather than|instead of)"
+NEGATED = re.compile(rf"(?i)\b{NEGATION}\s+(?:(?:option|either)\s+)?$")  # what may not stand just before a label
+NEGATED_CLOSE = re.compile(rf"(?i)\b{NEGATION}\b")
 SEPARATOR = re.compile(r"\s\|\s")  # the template's; `|w|` in a formula is none
 DEFER_TO = re.compile(r"^defer\s+(?:until|to|when)\b\s*(.+)$", re.S)
 DEFER_MILESTONE = re.compile(r"^defer:\s*(M\d)\b(.*)$", re.S)
@@ -191,8 +195,11 @@ def named(body, e):
             raise Refused(f"{e['id']} offers no option {token!r}: it offers {', '.join(e['labels'])}")
         out.append(label)
     pairs = list(BRACKETED.finditer(body))
+    for x in pairs:
+        if NEGATED.search(body[:x.start()]):
+            raise Refused(f"{x.group(0)} is negated: say which option is meant")
     for x, y in zip(pairs, pairs[1:]):
-        if ALTERNATIVE.match(body[x.end():y.start()]):
+        if ALTERNATIVE.search(body[x.end():y.start()]):
             raise Refused(f"options named as alternatives ({x.group(0)}, {y.group(0)}), with nothing saying which")
     return list(dict.fromkeys(out))
 
@@ -233,6 +240,8 @@ def read_answer(item, body, e, moot):
     labels = named(body, e)
     if not labels:
         if re.search(r"\bclose\.?$", body):
+            if NEGATED_CLOSE.search(re.split(r"[;:,.]", body.rstrip("."))[-1]):
+                raise Refused(f"a negated close: {item} stays as it is until the owner says what they want")
             return "close", "", ["rider"]
         raise Refused(f"names none of {item}'s options ({', '.join(e['labels'])}), and it offers them")
     bare_only = LONE.match(body)
@@ -291,7 +300,7 @@ def parse_reply(text, queue_text, closed=(), decisions=(), moot=()):
     for a in [a for a in accepted if continued(lines, a["n"])]:
         if a is [b for b in accepted if b["n"] == a["n"]][-1]:  # a wrapped line continues the last answer on its line
             accepted.remove(a)
-            refused.append((a["n"], a["line"], f"line {a['n'] + 1} under it may continue it: it must not apply cut short"))
+            refused.append((a["n"], a["line"], f"line {a['n'] + 1} under it may continue it: it can't apply cut short"))
     seen = [a["item"] for a in accepted] + [m.group(1) for _, r, _ in refused for m in [LINE.match(r.strip())] if m]
     twice = {i for i in seen if seen.count(i) > 1}
     refused += [(a["n"], a["line"], f"{a['item']} is answered twice") for a in accepted if a["item"] in twice]
@@ -466,8 +475,25 @@ def self_test():
     expect("alternatives, with a comma", "RQ-1: (a), or (b)", reason="named as alternatives")
     expect("alternatives by a slash", "RQ-1: (a)/(b)", reason="named as alternatives")
     expect("alternatives by a bar", "RQ-1: (a)|(b)", reason="named as alternatives")
-    expect("or inside a rider is no alternative", "RQ-1: (a) run this or that, plus (b)", "option", "a+b",
-           marks=["rider", "combined"])
+    expect("an or anywhere between two labels", "RQ-1: (a) run this or that, plus (b)", reason="named as alternatives")
+    expect("or perhaps", "RQ-1: (a) or perhaps (b)", reason="named as alternatives")
+    expect("a semicolon and or", "RQ-1: (a); or (b)", reason="named as alternatives")
+    expect("an or after the last label", "RQ-1: (a), this or that", "option", "a", marks=["rider"])
+    expect("an or inside a word", "RQ-1: (a) for f32, plus (b)", "option", "a+b", marks=["rider", "combined"])
+    expect("not", "RQ-1: not (a)", reason="(a) is negated")
+    expect("not, with a name", "RQ-1: not option (a)", reason="(a) is negated")
+    expect("not, after an answer", "RQ-1: (a), not (b)", reason="(b) is negated")
+    expect("not either", "RQ-1: not either (b)", reason="(b) is negated")
+    expect("neither nor", "RQ-1: neither (a) nor (b)", reason="(a) is negated")
+    expect("nor alone", "RQ-1: (a) nor (b)", reason="(b) is negated")
+    expect("don't", "RQ-1: don't (a)", reason="(a) is negated")
+    expect("the owner's own shape", "RQ-1: not (a) or (b)", reason="(a) is negated")
+    expect("a negation further back", "RQ-1: not now: (a)", "option", "a", marks=["rider"])
+    expect("cannot", "RQ-1: cannot (a)", reason="(a) is negated")
+    expect("don't close", "RQ-1: don't close", reason="a negated close")
+    expect("do not close", "RQ-1: keep open, do not close", reason="a negated close")
+    expect("never close", "RQ-1: never close.", reason="a negated close")
+    expect("a negation in another clause", "RQ-1: not needed now; close.", "close", "", marks=["rider"])
     expect("an option not offered", "RQ-1: (z)", reason="offers no option 'z'")
     expect("an option not offered, in a rider", "RQ-1: (a) plus (d) too", reason="offers no option 'd'")
     expect("a label only cited in prose", "RQ-1: (v)", reason="offers no option 'v'")
@@ -533,8 +559,8 @@ def self_test():
     ok, no, blank, _ = parse_reply(f"RQ-1: {ANSWER_TEMPLATE}\nD-1: {DECISION_TEMPLATE}\n", queue)
     if ok or no or blank != ["RQ-1", "D-1"]:
         fails.append(f"reply self-test: template lines left alone are unanswered: {ok} {no} {blank}")
-    ok, no, blank, skipped = parse_reply("PHYSICS\nCI AND RECORD\n## Physics\n\nDEFER ALL\nVETO EVERYTHING\nOK\nTopics\n",
-                                         queue)
+    reply = "PHYSICS\nCI AND RECORD\n## Physics\n\nDEFER ALL\nVETO EVERYTHING\nOK\nTopics\n"
+    ok, no, blank, skipped = parse_reply(reply, queue)
     if ok or blank or [n for n, _ in skipped] != [1, 2, 3]:
         fails.append(f"reply self-test: only a section name is skipped, and it is listed: {ok} {skipped}")
     if [p for _, p, _ in no] != ["DEFER ALL", "VETO EVERYTHING", "OK", "Topics"]:
