@@ -491,6 +491,7 @@ negative_control!(
     check_ram(|s, m| session::ram_from(s, m).map(|b| if s.is_none() { b / 1024 } else { b }))
 );
 
+#[cfg(any(target_os = "macos", target_os = "linux"))]
 /// The live host: on the machines CI and the human run, the probe names a CPU, a core count, and the RAM.
 fn check_live_host(probe: fn() -> Result<Host, String>) {
     let h = probe().expect("the host probe failed");

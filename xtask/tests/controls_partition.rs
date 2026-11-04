@@ -15,7 +15,7 @@ use std::sync::Mutex;
 
 use validation::spawn::Spawn;
 use xtask::ci::{run_partition, Runner};
-use xtask::controls::{shard_of, Partition};
+use xtask::controls::{shard_of, Partition, IN_CI_WORKSPACE};
 
 /// The canned listing: 40 tests in two targets' modules, each with its control.
 fn listing() -> String {
@@ -223,6 +223,80 @@ validation::negative_control!(
     "a listing in which every test has its control, where shard 1 must find one without",
     expected = "shard 1/4 did not report the test with no control",
     check_listing_finding_in_shard_1_only("ctl_alone", &listing())
+);
+
+/// By `runs`, no slice of any partition runs a control `ci-workspace` runs, the unpartitioned run (`1/1`) runs it, and
+/// every other control is run by the slice that holds it.
+fn check_runs_leaves_ci_workspace_its_controls(runs: fn(Partition, &str) -> bool) {
+    let all = Partition { k: 1, n: 1 };
+    for control in IN_CI_WORKSPACE {
+        for n in 2..=4 {
+            for k in 1..=n {
+                assert!(
+                    !runs(Partition { k, n }, control),
+                    "slice {k}/{n} runs `{control}`, which `ci-workspace` runs"
+                );
+            }
+        }
+        assert!(
+            runs(all, control),
+            "the unpartitioned run does not run `{control}`"
+        );
+    }
+    for control in controls() {
+        for k in 1..=4 {
+            let slice = Partition { k, n: 4 };
+            assert_eq!(runs(slice, &control), slice.holds(&control), "{control}");
+        }
+    }
+}
+
+#[test]
+fn controls_partition_leaves_ci_workspace_its_controls() {
+    check_runs_leaves_ci_workspace_its_controls(|slice, control| slice.runs(control));
+}
+
+validation::negative_control!(
+    controls_partition_leaves_ci_workspace_its_controls,
+    "shards that run every control of their slice, the ones `ci-workspace` runs among them",
+    expected = "which `ci-workspace` runs",
+    check_runs_leaves_ci_workspace_its_controls(|slice, control| slice.holds(control))
+);
+
+/// With `left` listed beside the usual controls, each with its test, every shard of 4 passes without running one of
+/// `left`: a control left to another job counts as run there, as another shard's does, and fails no shard.
+fn check_shards_pass_without_running(case: &str, left: &[&str]) {
+    let extra: String = left
+        .iter()
+        .map(|control| {
+            let test = control.strip_suffix("::negative_control").unwrap();
+            format!("{test}: test\n{control}: test\n")
+        })
+        .collect();
+    let listed = format!("{}{extra}", listing());
+    for k in 1..=4 {
+        let slice = format!("{k}/4");
+        let (ok, out, ran) = run_shard_on(&format!("{case}_{k}of4"), &slice, &listed);
+        assert!(ok, "shard {slice} failed:\n{out}");
+        for control in left {
+            assert!(
+                !ran.iter().any(|c| c == control),
+                "shard {slice} ran `{control}`"
+            );
+        }
+    }
+}
+
+#[test]
+fn controls_partition_shards_pass_without_the_ci_workspace_controls() {
+    check_shards_pass_without_running("left", &IN_CI_WORKSPACE);
+}
+
+validation::negative_control!(
+    controls_partition_shards_pass_without_the_ci_workspace_controls,
+    "a control no job leaves to another: its own shard runs it",
+    expected = "ran `alpha_only::negative_control`",
+    check_shards_pass_without_running("ctl_left", &["alpha_only::negative_control"])
 );
 
 /// Whether a control, of a crate, is in a slice: the real one reads only the control's name.

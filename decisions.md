@@ -3451,11 +3451,13 @@ PR merges once its named reviewers approve its head and CI is green.
 for its merge-ready run).*
 *Amended in part by R-677 (2 Nov 2026: the head whose `mutants-check` passes at once is one whose change has no `.rs`
 file under `crates/`).*
+*Amended in part by R-678 (3 Nov 2026: a head that is not merge-ready passes "not applicable"; a merge-ready head once
+its run finds no mutant).*
 *Still in force: all of it but the per-shard value and when `mutants-check` passes: n = 8 shards stands, confirmed, and
 R-376 replaces 120 minutes per shard with 300, a ceiling for unusually large diffs, not a target; items 10–13, the
-required `mutants-check` and the comment-width nit stand; `mutants-check` reports on every pull request, passing at
-once on a head whose change has no `.rs` file under `crates/` (R-677) and on any other once its merge-ready run finds
-no mutant (R-676).*
+required `mutants-check` and the comment-width nit stand; `mutants-check` reports on every pull request event (R-678),
+passing at once, "not applicable", on a head whose change has no `.rs` file under `crates/` (R-677) or that is not
+merge-ready, and on a merge-ready head once its merge-ready run finds no mutant (R-676, R-678).*
 *30 Sep 2026 · applied in PR #65 (TASK-M0-23): `.github/workflows/mutants.yml` and `plan/HUMAN_SETUP.md` §2*
 
 "#65 (R-305):
@@ -29376,9 +29378,11 @@ R-666 is in the "process" group of `plan/rule_groups.yaml`.
 ## R-676 — Mutants run once per approved head, on the `merge-ready` label the merge watcher puts on, and again only when the head changes, `mutants-check` posted pending until then and never passed by a skipped job; fix rounds are checked locally through the job queue before they push; superseded `reviews` runs are cancelled per pull request; `main` is merged into open pull requests in batches; the quick and full tiers of `ci.yml` are not ruled *(amends R-656 and R-305)*
 *Amended in part by R-677 (2 Nov 2026: the one pass posted without a run is a head whose change has no `.rs` file under
 `crates/`, not a docs-only head).*
-*Still in force: all of it but which head's `mutants-check` is posted passed without a run: the `merge-ready` label's
-run, the posted check, the label taken off on a push, fix rounds checked locally, the `reviews` runs cancelled, `main`
-merged in in batches, and the quick and full tiers not ruled.*
+*Amended in part by R-678 (3 Nov 2026: `mutants-check` is a job of every run, not a posted check run; a head that is not
+merge-ready passes "not applicable").*
+*Still in force: all of it but how `mutants-check` is reported and which heads pass without a run: the `merge-ready`
+label's run, the label taken off on a push, fix rounds checked locally, the `reviews` runs cancelled, `main` merged in
+in batches, and the quick and full tiers not ruled.*
 *2 Nov 2026 · the owner's CI plan of that day; applied in `.github/workflows/mutants.yml`,
 `.github/workflows/reviews.yml`, `xtask/tests/merge_ready.rs` (new), `xtask/tests/ci_changes.rs`,
 `xtask/tests/mutants_no_mutant.rs`, qa's `xtask/tests/qa_ci_throughput_a.rs` (new) and five qa files (below),
@@ -29446,6 +29450,10 @@ R-676 is in the "ci" group of `plan/rule_groups.yaml`.
 Changes REQ-VAL-148 (source, rulings, note).
 
 ## R-677 — CI runs in three tiers: a change to Principia's code runs full CI as before; one to the plan's task data or the GUI's artboards and references runs only the cheap checks and the tests that read what it changed, with no build, test shard, GPU suite or mutants; one to the docs runs only the cheap checks; a change takes its highest tier, and an unknown path runs full CI; mutants run only when `crates/` source changes, on the merge-ready head; every required check still reports under its own name *(amends R-656, R-662, R-110, R-177, R-235, R-305 and R-676)*
+*Amended in part by R-678 (3 Nov 2026: a head with no `.rs` file under `crates/` has its `mutants-check` reported
+passed by its job, not posted).*
+*Still in force: all of it, the `mutants-check` of a head with no `.rs` file under `crates/` reported passed at once,
+"not applicable", by `mutants.yml`'s job (R-678) rather than posted.*
 *2 Nov 2026 · the owner's message of that day, item 3, and his two replies on `plan/requirements.yaml` later that day;
 applied in `scripts/ci_changes.sh`, `scripts/ci_req_fields.py`, `.github/workflows/ci.yml`,
 `.github/workflows/mutants.yml`, `xtask/tests/ci_changes.rs`, `xtask/tests/merge_ready.rs`,
@@ -29576,3 +29584,75 @@ and about 17:30, while it was being built:
 R-677 is in the "ci" group of `plan/rule_groups.yaml`.
 
 Changes REQ-VAL-148 (source, rulings, note) and REQ-SYS-067 (source, rulings, note).
+
+## R-678 — `mutants-check` is a job of every run of `mutants.yml`, never a check run posted through the Checks API: every pull-request event and label change reports it, the merge-ready run with its verdict, a head with no `.rs` file under `crates/` or not merge-ready passed as "not applicable", and another label's change on a merge-ready head with that head's merge-ready verdict; a test checks that every required check reports on every path *(amends R-676, R-677 and R-305)*
+*3 Nov 2026 · the owner's two messages of that day; applied in `.github/workflows/mutants.yml`,
+`xtask/tests/ci_changes.rs`, `xtask/tests/merge_ready.rs`, `xtask/tests/mutants_no_mutant.rs`, `plan/OPERATIONS.md`,
+`plan/HUMAN_SETUP.md` §2, REQ-VAL-148's note and `plan/rule_groups.yaml`*
+
+The owner's words, 3 Nov 2026, verbatim: item (2) of the message that opens "#384 is blocked only by the required
+`mutants-check` showing "Expected — waiting for status": a regression from #379."
+
+> (2) Fix #379's design on its own PR immediately: the mutants workflow must ALWAYS report `mutants-check` on every pull_request event and every label change: success with a "not applicable" summary when no crates/ code changed; success-pending semantics must never leave it unreported; the real gate result once mutants ran on the merge-ready head. Add a test or workflow assertion that each required check name is reported in every path (label added, label removed, docs-only, code).
+
+And item 3 of his later message, which opens "`mutants-check` is no longer a required check on main: I removed it from
+branch protection because it was hanging merges.", which governs where the two differ:
+
+> 3. Fix the mutants workflow on its own PR: `mutants-check` must report on EVERY pull_request event and label change. Success with a "not applicable" summary when no crates/ code changed or the PR isn't merge-ready; the real result once mutants ran on the merge-ready head; never left unreported. Add a check that every required check name reports in all paths (label added, removed, docs-only, plan-data, code). When it's merged and verified on one real PR, tell me and I'll re-add `mutants-check` as required.
+
+The rest of both messages (merging #384, landing #382 and #383, re-running only the job that reports a stuck check,
+stopping other work when `main` is red, the push-to-green report) is outside this ruling.
+
+*Why #379's `mutants-check` went unreported, applied per R-369 from the runs of #384 and #386:* branch protection
+counts, of each workflow's runs on a head, only the latest run's check suite, so a later run of a workflow supersedes
+every check in an earlier run's suite. A check run posted through the Checks API with a run's `GITHUB_TOKEN` joins a
+check suite GitHub picks, not the posting run's. On #384's head both `mutants-check` runs, passed, sat in the suite of
+the push's `mutants.yml` run (41627781373), and the merge-ready run (41628162578), a later run of the same workflow,
+had superseded it: the merge read "Required status check "mutants-check" is expected", and re-running a job of the
+earlier run did not change it. On #386's head the one posted joined the suite of the `reviews.yml` run, the latest of
+that workflow, and counted. GitHub's documentation says only that a workflow job's checks count when its run's event is
+one of `pull_request`'s kind; the rule above is what those runs show.
+
+*What it decides:*
+- **`mutants-check` is a job.** `mutants.yml`'s job `mutants-check`, `if: always()`, `needs: mutants-verdict`, runs in
+  every run, so it is never skipped, and the run that is its workflow's latest always carries it. Nothing posts or
+  completes it through the Checks API. In R-676, this replaces "a check run the workflow posts through the Checks API,
+  under the GitHub Actions app branch protection pins, never a job" and "Each new head's is posted `queued`, and the
+  merge-ready run's verdict completes it".
+- **Every event and label change runs it.** `mutants.yml` runs on `opened`, `synchronize`, `reopened`, `labeled` and
+  `unlabeled`. What `mutants-check` concludes:
+  - the merge-ready run (the `merge-ready` label put on): the verdict, success only if `mutants-verdict` passed;
+  - a change with no `.rs` file under `crates/` (R-677): success, "not applicable";
+  - a head that is not merge-ready: a push, which takes the label off, or a label event with the label absent: success,
+    "not applicable", the owner's later words;
+  - another label put on or taken off a merge-ready head: the result of `mutants-verdict` in that head's latest
+    merge-ready run, waited for while it runs; with none on the head, or the head superseded by a push, failure.
+  Each states its reason in the job's summary. In R-305, as R-676 and R-677 left it, "on any other once its
+  merge-ready run finds no mutant" now reads: on a merge-ready head once its run finds no mutant, any other head's
+  passing "not applicable".
+- **The required checks report on every path.** `xtask/tests/ci_changes.rs` checks each required check, as
+  `plan/HUMAN_SETUP.md` §2 lists them, on the owner's paths: a label put on and taken off, a docs-only, a plan-data and
+  a code push.
+- **R-677, amended.** "has its `mutants-check` posted passed at once" reads "reported passed at once, not applicable,
+  by its job".
+
+*Applied per R-369:*
+- A run of another label, put on or taken off, has a concurrency group of its own, as a run of another label put on had
+  (R-676), so it never cancels the merge-ready run; taking `merge-ready` off cancels the merge-ready run, the label no
+  longer on.
+- `mutants-check` waits for a merge-ready run in progress for at most 355 minutes, under GitHub's 360 for a hosted job.
+  A wait cut off fails it.
+- An empty classification is not "no `.rs` file under `crates/`": it passes "not applicable" only on a head that is
+  not merge-ready.
+- `mutants-pending` is `merge-ready-off`: it only takes the label off on a push.
+- `gpu-kernel` is listed again among `plan/HUMAN_SETUP.md` §2's required checks, as branch protection requires it
+  since TASK-M0-14 merged.
+- Five qa files assert #379's design, the posted check run and no job bearing `mutants-check`, and fail on it:
+  `xtask/tests/qa_R-656_ci_changes.rs`, `xtask/tests/qa_R-662_ci_scope.rs`, `xtask/tests/qa_TASK-M0-23_r305.rs`,
+  `xtask/tests/qa_TASK-M0-23_shards.rs` and `xtask/tests/qa_ci_throughput_a.rs`. They are exceptions to R-290 forced
+  by this ruling, for qa to change and the reviewers to confirm.
+- This ruling follows R-677 in the file.
+
+R-678 is in the "ci" group of `plan/rule_groups.yaml`.
+
+Changes REQ-VAL-148 (source, rulings, note).

@@ -703,24 +703,40 @@ fn check_required(ci: &str, mutants: &str) {
         "qa_r662: `ci` passes when its archive job failed"
     );
 
-    // `mutants-check`: its verdict job (`mutants-verdict`, which posts the check, R-656's merge-ready run) always runs
-    // once started, posts the check whatever happened, and its own script passes a run with no report and fails a
-    // failed shard.
+    // `mutants-check`: its verdict job (`mutants-verdict`, R-656's merge-ready run) always runs once started, and the
+    // job `mutants-check`, in every run (R-678, which replaced the check run the verdict job posted: R-678's exception
+    // to R-290, the one change here), runs whatever the verdict ended in and reports its result; the verdict's own
+    // script passes a run with no report and fails a failed shard.
     let mutants = parse(mutants);
     let job = &mutants["jobs"]["mutants-verdict"];
     assert!(
         s(&job["if"]).starts_with("always()"),
-        "qa_r662: `mutants-check` can be skipped"
+        "qa_r662: `mutants-check`'s verdict can be skipped"
+    );
+    let check = &mutants["jobs"]["mutants-check"];
+    let needs = match &check["needs"] {
+        Value::Array(a) => a.iter().map(s).collect::<Vec<_>>(),
+        other => vec![s(other)],
+    };
+    assert!(
+        s(&check["if"]) == "always()" && needs.iter().any(|n| n == "mutants-verdict"),
+        "qa_r662: `mutants-check` is not a job run whatever its verdict ended in (if: `{}`, needs: {needs:?})",
+        s(&check["if"])
+    );
+    assert!(
+        check["steps"]
+            .as_array()
+            .expect("qa_r662: mutants-check's steps")
+            .iter()
+            .any(|st| st.get("if").is_none()
+                && st["env"].as_object().is_some_and(|e| e
+                    .values()
+                    .any(|v| s(v) == "${{ needs.mutants-verdict.result }}"))),
+        "qa_r662: `mutants-check` does not report the verdict's result in a step that always runs"
     );
     let steps = job["steps"]
         .as_array()
-        .expect("qa_r662: mutants-check's steps");
-    assert!(
-        steps.iter().any(|st| s(&st["if"]) == "always()"
-            && s(&st["run"]).contains("check-runs")
-            && s(&st["run"]).contains("name=mutants-check")),
-        "qa_r662: the verdict is not posted as `mutants-check` whatever happened"
-    );
+        .expect("qa_r662: mutants-verdict's steps");
     let step = steps
         .iter()
         .find(|st| s(&st["run"]).contains("cargo xtask mutants-check"))
@@ -780,6 +796,40 @@ negative_control!(
         &read(".github/workflows/mutants.yml")
     )
 );
+
+mod mutants_check_skipped_with_its_verdict {
+    use super::*;
+    negative_control!(
+        qa_r662_required_checks_report_on_the_cheap_path,
+        "mutants.yml's `mutants-check` job run only when its verdict passed",
+        expected = "`mutants-check` is not a job run whatever its verdict ended in",
+        check_required(
+            &read(".github/workflows/ci.yml"),
+            &swap(
+                &read(".github/workflows/mutants.yml"),
+                "  mutants-check:\n    if: always()\n",
+                "  mutants-check:\n"
+            )
+        )
+    );
+}
+
+mod mutants_check_ignores_its_verdict {
+    use super::*;
+    negative_control!(
+        qa_r662_required_checks_report_on_the_cheap_path,
+        "mutants.yml's `mutants-check` reading no verdict",
+        expected = "`mutants-check` does not report the verdict's result",
+        check_required(
+            &read(".github/workflows/ci.yml"),
+            &swap(
+                &read(".github/workflows/mutants.yml"),
+                "          VERDICT: ${{ needs.mutants-verdict.result }}\n",
+                "          VERDICT: success\n"
+            )
+        )
+    );
+}
 
 // ---- Git, on real commits -------------------------------------------------------------------------------------------
 

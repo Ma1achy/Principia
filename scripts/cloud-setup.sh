@@ -130,6 +130,7 @@ ci_records() {
         v = unquote(substr(t, 6))
         if (v ~ /^dtolnay\/rust-toolchain@/) { tc = substr(v, index(v, "@") + 1); emit("R " tc) }
         else if (v ~ /^(actions\/checkout|actions\/cache|actions\/cache\/restore|actions\/cache\/save|actions\/upload-artifact|actions\/download-artifact|Swatinem\/rust-cache|taiki-e\/install-action|actions\/setup-python)@/) { }
+        else if (v == "./.github/actions/cargo-ci-config") { }
         else emit("U " FILENAME ":" FNR ": " t)
         next
       }
