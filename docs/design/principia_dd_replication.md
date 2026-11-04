@@ -1015,7 +1015,8 @@ first, and (a) is expected to agree with the second statistically"; every (a) an
 
 *1 Nov 2026 (R-669):* the last two rows are the definitions RQ-595 (b) and RQ-596 (b) call for, each written by the task
 that first needs it, as OC-5's counting convention is. The Šuvakov-plane chart (REQ-CHART-091, TASK-M9-40) is a build
-task's, not a target, and has no row, as TASK-M9-39's softening has none.
+task's, not a target, and has no row, as TASK-M9-39's softening has none. *3 Nov 2026 (R-679):* nor have REQ-VAL-344 to
+REQ-VAL-346 (TASK-M9-41, a build task, not scored), though REQ-VAL-346 is a definition.
 *2 Nov 2026 (R-671, closing RQ-669):* in a task that has no GPU run, a target's (a) part, or a row that is (a)
 throughout, keeps its tier and is listed "not scored yet: needs a GPU run" until an f32 GPU run scores it; beside it,
 the same statistic computed from the task's f64 runs is recorded at (b), with its outcome and its instrument stated (the
