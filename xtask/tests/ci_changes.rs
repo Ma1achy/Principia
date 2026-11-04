@@ -80,9 +80,10 @@
 //! the one respect it turns on. The workflows are parsed with PyYAML, as `plan/check_plan.py` and the qa tests that
 //! read the workflows parse them.
 //!
-//! Only the two `ci_changes_every_required_check_reports_on_*` tests' `mutants-check` run needs Unix: its stand-ins are
-//! executable scripts found through `PATH`. Those two tests, their controls and what only they use are `#[cfg(unix)]`
-//! (#391), so the rest of this target compiles on Windows.
+//! The two `ci_changes_every_required_check_reports_on_*` tests' `mutants-check` run needs Unix to compile: its
+//! stand-ins are executable scripts found through `PATH`, marked executable with `PermissionsExt`. Those two tests,
+//! their controls and what only they use are `#[cfg(unix)]` (#391), so the rest of this target compiles on Windows.
+//! Whether the rest passes there is not established: none of this target's tests has run on Windows.
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
