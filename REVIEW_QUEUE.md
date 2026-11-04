@@ -2351,8 +2351,11 @@ stand on; "reassoc" appeared 0 times in this file at origin/main before this ent
   non-constant forms is unknown.
 - **The question:** does the premise need enforcing, testing, or stating as a condition on drivers?
 - **Measurement that would settle more:** a compute-stage probe on the RTX of `(a + K) * k` against the strict result,
-  beside a runtime `K`. TASK-M4-27 and TASK-M4-28 report the disagreement rates per backend pair (R-686), which show
-  whether it matters for the real kernel, not the mechanism.
+  beside a runtime `K`. TASK-M4-27 and TASK-M4-28 report the disagreement rates per backend pair (R-686). A nonzero NVIDIA
+  rate alone is no evidence on `NoContraction`: the RTX's runtime division differs from correct rounding on 19407 of 65536
+  (RQ-685), so division and `√` are confounders, and the clean pair can read near 0 on that account too. The
+  discriminating result is a fork on identical inputs, in a branch input built only of `+` and `×` (R-547), which points at
+  contraction or reassociation. A fork in a branch input holding a division, `E_rel` or `|Δn̂|`, is not attributable that way.
 - **Applied meanwhile:** nothing.
 - **Waits:** nothing in the build loop. It bears on M4's march and on REQ-VAL-099.
 

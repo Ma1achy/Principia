@@ -12,7 +12,8 @@
 The owner's evidence for whether the missing `NoContraction` matters for the real kernel (R-686). The same IC set runs on
 NVIDIA Vulkan, Metal, lavapipe and CPU f32, and the check compares outcome labels and each trajectory's branch-sensitive
 results, collision and escape decisions and step counts, not pixels. It reports the disagreement rate per backend pair,
-with no tolerance chosen to make it pass. It is a measurement under R-649. TASK-M4-05 delivers the march it runs.
+with no tolerance chosen to make it pass. It is a measurement under R-649. TASK-M4-05 delivers the march it runs. The rate
+alone does not answer the owner's question; the forks on identical inputs do (Notes).
 
 ## References
 - `decisions.md` § "R-686 — The kernel cross-backend check is a measurement (R-649): the same IC set on NVIDIA Vulkan, Metal, lavapipe and CPU f32, outcome labels and per-trajectory branch-sensitive results compared, not pixels, the disagreement rate reported per backend pair, no tolerance chosen to make it pass; pixel comparisons across backends go on raw pre-colour values with the outlier tail reported, never 8-bit frame equality, Metal against lavapipe's 161,394 / 221 recorded as the clean-backend baseline; `DECODE_SWITCHOVER`'s spec notes that bitwise agreement must be tested on NVIDIA specifically"
@@ -35,7 +36,8 @@ with no tolerance chosen to make it pass. It is a measurement under R-649. TASK-
   counted apart.
 - The report: each pair's disagreement count and rate, for each of those results and for any of them, non-chaotic and chaotic
   apart; for each disagreement, the first step that differs and whether the branch operation there agrees on identical
-  inputs, as REQ-VAL-079's report does. The header states the domain, the commit, each adapter line and the compute setting.
+  inputs, as REQ-VAL-079's report does, and which kind of branch input forked: `+` and `×` only, or holding a division or `√`.
+  The header states the domain, the commit, each adapter line and the compute setting.
 - Negative controls for this task's tests (R-176).
 
 ## Acceptance tests
@@ -53,8 +55,13 @@ with no tolerance chosen to make it pass. It is a measurement under R-649. TASK-
   controls assert.
 - **Reading the rate.** Metal against lavapipe is the clean-backend pair, and the NVIDIA pairs are read against it. On a chaotic
   trajectory a rounding difference can change a label with no defect in any branch (pitfalls §10), so a chaotic rate alone
-  shows no miscompile; the first-difference replay is what separates the two. A rate does not name a mechanism: RQ-690's
-  compute-stage probe does that, and this task does not claim it.
+  shows no miscompile; the first-difference replay is what separates the two.
+- **A nonzero NVIDIA rate alone is not evidence on `NoContraction`.** The RTX's runtime division differs from correct rounding
+  on 19407 of 65536 where Metal off and lavapipe read 0 (RQ-685), and M4 adds divisions to the force loop and the steppers, so
+  a march on the card should differ from the first such step whatever contraction does. The discriminating result is a fork on
+  identical inputs, from the replay or the fixed-input arm, in a branch input built only of `+` and `×` (R-547). A fork there
+  points at contraction or reassociation. A fork in a branch input holding a division, `E_rel` or `|Δn̂|`, is not attributable
+  that way. The report says which kind each fork is, from TASK-M4-03's `branch_inputs.rs`. RQ-690 holds the mechanism.
 - **The NVIDIA record** is a Windows session's run at the PR's head, `--record` with `PRIN_GPU_BACKEND=vulkan`, the file posted to
   #390, under the same hardware label as that card's other runs. It is not a CI job (R-186). Nothing waits on it. It doesn't
   stand in for R-58's parity run, REQ-VAL-099, which gates Paper 2.
