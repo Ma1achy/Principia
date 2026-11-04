@@ -904,10 +904,12 @@ fn mock_console_height_a_never_drawn_editor_is_held_by_its_two_rows() {
     drag_edge(&mut h, &mut app, button.max.y + 20.0 - edge);
     settle(&mut h, &mut app);
     // The frames after the click too: the editor's first would be the one after it.
-    let mut frames = crate::capture::click(button.center());
-    frames.extend([Vec::new(), Vec::new(), Vec::new()]);
+    let after = [Vec::new(), Vec::new(), Vec::new()];
     let mut placed = Vec::new();
-    for events in frames {
+    for events in crate::capture::click(button.center())
+        .into_iter()
+        .chain(after)
+    {
         let _ = h.frame(&mut app, events);
         placed.push(app.keyboard.place_of(Q1_COMPONENTS[0]).is_some());
     }
