@@ -475,6 +475,63 @@ mod limit_low {
     );
 }
 
+/// The saved `ci-archive` run: the shards skipped, the gate red through the skip, and nothing else wrong.
+fn check_upstream(script: &str) {
+    let run = Run::saved(ARCHIVE_RUN);
+    check_retried(
+        script,
+        "a fault behind skipped shards",
+        &run,
+        "ci-archive",
+        "No space left on device (annotation)",
+    );
+    assert!(
+        classified_on(script, &run, "ci.yml")
+            .lines()
+            .any(|l| l == "job=ci: gate of a re-run job (ci-archive)"),
+        "the verdict does not name the fault behind the gate"
+    );
+    // One shard listed as passed beside the skip: the walk is by job, and the job did not pass.
+    let mut shard = run.clone();
+    shard
+        .jobs
+        .push(json!({"id": 1, "name": "ci (1)", "conclusion": "success"}));
+    assert!(
+        retried(script, &shard),
+        "a fault behind shards, one of them passed: not re-run"
+    );
+}
+
+#[test]
+fn ci_retry_retries_a_fault_behind_skipped_jobs() {
+    check_upstream(&script());
+}
+
+negative_control!(
+    ci_retry_retries_a_fault_behind_skipped_jobs,
+    "a walk that stops at the jobs a gate gathers",
+    expected = "a fault behind skipped shards: not re-run",
+    check_upstream(&edit(
+        &script(),
+        "            stack.extend(needs.get(n, ()))\n",
+        "            pass\n"
+    ))
+);
+
+mod any_shard {
+    use super::*;
+    negative_control!(
+        ci_retry_retries_a_fault_behind_skipped_jobs,
+        "a job taken as passed when any of its shards did",
+        expected = "a fault behind shards, one of them passed: not re-run",
+        check_upstream(&edit(
+            &script(),
+            "if all(c in (\"success\", \"neutral\") for c in seen)",
+            "if any(c in (\"success\", \"neutral\") for c in seen)"
+        ))
+    );
+}
+
 // ---- What is not re-run ---------------------------------------------------------------------------------------------
 
 fn check_test_failure(script: &str) {
@@ -657,8 +714,8 @@ mod timed_out_gate {
         expected = "a gate that timed out: re-run",
         check_timeouts(&edit(
             &script(),
-            "if n in faulted or n in gates or n in timeouts:",
-            "if n in faulted or n in gates:"
+            "if n in faulted or n in timeouts or jid is None:",
+            "if n in faulted or jid is None:"
         ))
     );
 }
@@ -699,6 +756,17 @@ fn check_gates(script: &str) {
         ),
         "gates of a real failure: re-run"
     );
+    // The fault is no reason for a gate behind a job that passed: that gate failed for itself.
+    let mut behind = mutants("No space left on device");
+    for job in &mut behind.jobs {
+        if job["name"] == "mutants-verdict" {
+            job["conclusion"] = json!("success");
+        }
+    }
+    assert!(
+        !retried_on(script, &behind, "mutants.yml"),
+        "a gate behind a job that passed: re-run"
+    );
 }
 
 #[test]
@@ -712,8 +780,8 @@ negative_control!(
     expected = "a gate of no re-run job: re-run",
     check_gates(&edit(
         &script(),
-        "            if jid is not None and hit:\n",
-        "            if jid is not None and needs.get(jid):\n"
+        "        if hit:\n            gates[n] = hit\n",
+        "        if needs.get(jid):\n            gates[n] = hit\n"
     ))
 );
 
@@ -725,8 +793,22 @@ mod one_level {
         expected = "a gate of a gate: not re-run",
         check_gates(&edit(
             &script(),
-            "                faulted_ids.add(jid)\n",
-            ""
+            "            stack.extend(needs.get(n, ()))\n",
+            "            pass\n"
+        ))
+    );
+}
+
+mod through_passed {
+    use super::*;
+    negative_control!(
+        ci_retry_keeps_a_gate_of_nothing_re_run,
+        "a walk that goes on through a job that passed",
+        expected = "a gate behind a job that passed: re-run",
+        check_gates(&edit(
+            &script(),
+            "        elif n not in passed_ids:\n",
+            "        else:\n"
         ))
     );
 }

@@ -21,7 +21,8 @@ here and not in `scripts/` because `.github/` is full CI whole (R-662), as `disk
 The verdict, one `key=value` line, then a line per failed job:
   retry=true|false   true only when the run concluded `failure`, its attempt is under MAX_ATTEMPTS, at least one
                      failed job shows a runner-level signature, and every other failed job either shows one too or is
-                     a gate of one that does (a job whose `needs` names it: `ci`, which gathers the `ci` shards);
+                     a gate of one that does: a job whose `needs`, walked through every job that did not pass, reach
+                     it (`ci`, which gathers the `ci` shards, and through them, skipped, `ci-archive`);
   reason=<text>      why;
   job=<name>: <verdict>.
 
@@ -140,6 +141,22 @@ def id_of(name, ids):
     return None
 
 
+def faults_upstream(jid, needs, faulted_ids, passed_ids):
+    """The faulted jobs `jid`'s `needs` reach, walked through every job that did not pass: failed and skipped jobs carry
+    a fault down to a gate, and a job that passed does not."""
+    hits, seen, stack = set(), set(), list(needs.get(jid, ()))
+    while stack:
+        n = stack.pop()
+        if n in seen:
+            continue
+        seen.add(n)
+        if n in faulted_ids:
+            hits.add(n)
+        elif n not in passed_ids:
+            stack.extend(needs.get(n, ()))
+    return sorted(hits)
+
+
 def classify(run, jobs, annotations, logs, workflow_text):
     """(retry, reason, [(job name, verdict)])."""
     conclusion = run.get("conclusion")
@@ -163,21 +180,20 @@ def classify(run, jobs, annotations, logs, workflow_text):
     ids = job_ids(workflow_text) or []
     faulted_ids = {id_of(n, ids) for n in faulted} - {None}
     needs = {jid: set(n) for jid, _, n in ids}
-    # A gate of a re-run job, or of a gate of one: its `needs` names a job retried. Grown to a fixed point.
+    # By job id, a matrix's shards together: an id passed when every listed job of it did.
+    states = {}
+    for j in jobs:
+        states.setdefault(id_of(j["name"], ids), []).append(j.get("conclusion"))
+    passed_ids = {jid for jid, seen in states.items() if all(c in ("success", "neutral") for c in seen)}
     gates = {}
-    grew = True
-    while grew:
-        grew = False
-        for j in failed:
-            n = j["name"]
-            if n in faulted or n in gates or n in timeouts:
-                continue
-            jid = id_of(n, ids)
-            hit = sorted(needs.get(jid, set()) & faulted_ids)
-            if jid is not None and hit:
-                gates[n] = hit
-                faulted_ids.add(jid)
-                grew = True
+    for j in failed:
+        n = j["name"]
+        jid = id_of(n, ids)
+        if n in faulted or n in timeouts or jid is None:
+            continue
+        hit = faults_upstream(jid, needs, faulted_ids, passed_ids)
+        if hit:
+            gates[n] = hit
     verdicts, blocking = [], []
     for j in failed:
         n = j["name"]
