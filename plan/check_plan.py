@@ -30,6 +30,7 @@ Fails if:
     docs/reference/) is still open, reading "veto?", and no open REVIEW_QUEUE.md entry names it on a "**Mark:**" line,
     or such a line names no open mark; or the check misses one of its built-in bad cases (R-354;
     plan/tools/veto_marks.py);
+  - plan/tools/rulings_reply.py misses one of its built-in bad cases;
   - a value in plan/section_notes.yaml doesn't load in full: an unquoted value whose " #" YAML reads as the start of a
     comment, so the text after it is silently dropped (PR #110's code review);
 and also runs plan/tools/coverage.py, milestones.py, reviewer_lists.py and current_rules.py with --check (the last
@@ -52,6 +53,7 @@ from rulings import QUEUE, QUEUE_ARCHIVE, RQ_HEAD, missing_forward_lines, rq_ids
 from rulings import superseded_listed, unresolved_refs  # noqa: E402
 from rulings import self_test as rulings_self_test  # noqa: E402
 from veto_marks import errors as veto_mark_errors, self_test as veto_self_test  # noqa: E402
+from rulings_reply import self_test as reply_self_test  # noqa: E402
 
 REQS = "plan/requirements.yaml"
 TASKS = "plan/tasks.yaml"
@@ -554,6 +556,9 @@ def main():
 
     # every "applied per R-n — veto?" mark is closed or named by an open REVIEW_QUEUE entry; its negative controls first
     errors += veto_self_test() + veto_mark_errors()
+
+    # the reply parser and queue edits of /rulings-apply (R-693's order): its negative controls
+    errors += reply_self_test()
 
     # section_notes.yaml: every value loads in full, with no " #…" dropped as a comment
     errors += truncated_scalars("plan/section_notes.yaml")

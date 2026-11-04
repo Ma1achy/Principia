@@ -1207,6 +1207,80 @@ waits on it before the gate.*
 - **Applied meanwhile:** applied per R-369, the measured native row uses `--release`. The report and the panel name the build (`build`, "debug" or "release"), and PR #368's "What to try" gives the command. No requirement or task text changes for this entry.
 - **Waits:** nothing built waits. TASK-M8-96's perf reader measures with `--release` and checks the `build` field.
 
+## RQ-672: Whether LL-3 (REQ-VAL-223) takes Hénon 1974, held under R-669, as its independent printed source for Standish's orbit, instead of waiting for Standish 1970 *(the owner's; asked 2 Nov 2026, unanswered; R-630 item 9; R-669, question 14; REQ-VAL-223; `docs/incoming/2026-11-02_library_triage/SUMMARY.md` § "Open questions for the owner" 1; context: LL-3, TASK-M9-07)*
+
+*Queued 3 Nov 2026 by the library triage of batches 81 to 153 (PR "data: library triage, batches 81-153, and the
+papers-11 to 13 addendum"). The question went to the owner on 2 Nov and is unanswered; it changes what LL-3 waits on.*
+
+- **File, section:**
+  - `decisions.md`:27142, § "R-630 — …", item 9: "Fetch Tanikawa & Mikkola 2021, Standish 1970 and Yasko & Orlov 2015
+    (TM-1, LL-3). If any is paywalled, list it for the owner to fetch instead."
+  - `docs/design/principia_dd_replication.md`:295, the LL-3 row: "REQ-VAL-223 (waits: the owner's copies of the two
+    papers, paywalled, R-630 item 9; …)"; "Li & Liao 2019 p. 3: F1 at (0.6, 0.8, 1) is Standish's 1970 orbit".
+  - `docs/incoming/2026-11-02_library_triage/SUMMARY.md`:291-293, "Open questions for the owner" 1: "Hénon 1974's Table
+    I A = 0 row is Standish's orbit and matches Li & Liao's F1(0.6, 0.8, 1) period to 2e-10 (ours). Should LL-3 take
+    Hénon 1974, already held under R-669, as its independent printed source, so it stops
+    waiting on Standish? Or keep waiting?"
+  - `decisions.md`:29474, § "R-669 — …", question 14: "Hénon 1974 (Celest. Mech. 10, 375) joins the rotating-frame
+    closure set beside R-668 item 4's: its values stored with citation, its PDF held locally (all rights reserved),
+    transcribed from the page".
+  - `docs/incoming/2026-11-02_library_triage/triage-81-153.csv`:68, the Hénon 1974 row.
+- **The question:** whether Hénon 1974 stands in for Standish 1970 as the printed source for LL-3's first half (F1 at
+  (0.6, 0.8, 1) is Standish's orbit), so that half no longer waits on a paywalled paper.
+- **Options seen:** (a) yes: LL-3's Standish half takes Hénon 1974's Table I A = 0 row as its source, transcribed from
+  the page under R-669, and Yasko & Orlov 2015 still gates the other half; (b) no: LL-3 keeps waiting on the
+  owner's copy of Standish 1970 (R-630 item 9), and Hénon 1974 serves only the rotating-frame set; (c) both: Hénon 1974
+  scores the half now, and Standish 1970 is checked against it once held.
+- **Applied meanwhile:** nothing; LL-3 waits as R-630 item 9 has it.
+- **Waits:** LL-3's Standish half (REQ-VAL-223, TASK-M9-07).
+
+## RQ-673: Whether planetary (star-plus-planets) three-body systems are parked with the hierarchical triples under R-668, to return with the v2+ 3D extension, or out of scope for good *(the owner's; asked 2 Nov 2026, unanswered; R-668, item 5; `docs/incoming/2026-11-02_library_triage/SUMMARY.md` § "Open questions for the owner" 2; context: the triage filter, no target built)*
+
+*Queued 3 Nov 2026 by the library triage of batches 81 to 153 (PR "data: library triage, batches 81-153, and the
+papers-11 to 13 addendum"). The question went to the owner on 2 Nov and is unanswered; it decides whether these rows
+come back with the 3D extension.*
+
+- **File, section:**
+  - `decisions.md`:29434, § "R-668 — …", item 5: "Hierarchical triples are out of scope for now, parked with the v2+ 3D
+    extension, and the triage's M9 list shrinks by them." It names hierarchical triples, not planetary systems.
+  - `docs/incoming/2026-11-02_library_triage/SUMMARY.md`:15-16, "PARKED for hierarchical and planetary systems, parked
+    with the v2+ 3D extension (R-668)", and :93-94, "star-plus-planets, star-planet-moon,
+    circumbinary-planet, co-orbital, free-floating-planet and test-particle problems fail "three massive bodies" or the
+    planar subset".
+  - `docs/incoming/2026-11-02_library_triage/SUMMARY.md`:295-296, "Open questions for the owner" 2: "Star-plus-planets
+    papers are read here as parked with the hierarchical triples (R-668), so they would return
+    with the v2+ 3D extension. Are they parked, or out of scope for good?"
+- **The question:** whether R-668's parking reaches planetary systems, or they are out of scope for good.
+- **Options seen:** (a) parked: star-plus-planets rows read PARKED, as the triage writes them, and return with the v2+
+  3D extension; (b) out of scope for good: they read OFF-FILTER and do not return; (c) parked only where every body is
+  massive (no test particles), the rest OFF-FILTER, as the test-particle case Quarles 2018 already is.
+- **Applied meanwhile:** (a), the triage's reading. Every option leaves the rows SKIP now, so nothing built changes.
+- **Waits:** nothing built; only the rows' verdict word, PARKED or OFF-FILTER.
+
+## RQ-674: Whether per-point FTLE maps and time-weighted shape-sphere residence statistics become planned M9 peek outputs, with new requirements, or stay recorded in the triage *(the owner's; asked 2 Nov 2026, unanswered; R-661; R-650; `docs/incoming/2026-11-02_library_triage/SUMMARY.md` § "Open questions for the owner" 3; `gaps-precision.csv` gaps 2 and 3; context: M9, no requirement)*
+
+*Queued 3 Nov 2026 by the library triage of batches 81 to 153 (PR "data: library triage, batches 81-153, and the
+papers-11 to 13 addendum"). The question went to the owner on 2 Nov and is unanswered; option (a) adds requirements,
+which only the owner may.*
+
+- **File, section:**
+  - `docs/incoming/2026-11-02_library_triage/SUMMARY.md`:298-300, "Open questions for the owner" 3: "Gap 1 already has
+    BZ-1C (R-661). Should per-point FTLE maps (gap 2, over the eucliss free-fall plane and the two unequal-mass planes)
+    and time-weighted shape-sphere residence statistics (gap 3) be planned as M9 peek outputs, which needs new
+    requirements, or stay recorded here?"
+  - `docs/incoming/2026-11-02_library_triage/gaps-precision.csv`:3, gap 2, "A finite-time Lyapunov exponent per start
+    over a planar three-massive-body initial-condition plane, at stated horizons"; :4, gap 3, "Time-weighted occupation
+    of the shape sphere (fraction of physical time per equal-area cell)".
+  - SUMMARY.md § "ChatGPT's shortlist and final guide: what was wrong", the guide's status confirmed: "open for native
+    FTLE", "open for time-weighted occupation".
+- **The question:** whether gaps 2 and 3 become Principia outputs planned for M9 at peek priority, which needs new
+  requirements (and definition requirements, R-72, for the FTLE horizon and norm and the cell partition), or stay
+  recorded as gaps only.
+- **Options seen:** (a) plan both as M9 peek outputs, with new requirements; (b) plan one of them only; (c) record only:
+  they stay in `gaps-precision.csv`, and no requirement is added.
+- **Applied meanwhile:** (c); no requirement is added.
+- **Waits:** nothing built.
+
 ## RQ-675: A margin node's two field ins: render_gui_spec § 5 puts them on a derived source, § 3.1 gives a source no input and a brightness one *(a conflict inside the spec; REQ-GUI-024; render_gui_spec § 3.1, § 5, § 15 item 6; context: TASK-M7-12)*
 
 *Queued 3 Nov 2026 by the orchestrator's filing task, from the read-only pre-flight of TASK-M7-12. Nothing is chosen.*
@@ -1891,6 +1965,15 @@ chosen.*
 - **Applied meanwhile:** nothing.
 - **Waits:** nothing in the build. It bears on TASK-M8-41 (REQ-VAL-099) and on Paper 2.
 
+## RQ-698: `.claude/commands/*.md` joins `plan/tools/rulings.py`'s scanned files once the ruling those commands cite is on `main` *(a follow-up of PR #409, the rulings commands' tooling; code review 5771543937)*
+
+*Filed 4 Nov 2026 by PR #409's fix round, so the follow-up outlasts the PR. Nothing here is for the owner: a mechanical step, decided per R-369, which waits only on a merge.*
+
+- **File, section:** `plan/tools/rulings.py`, `REF_GLOBS`: "The files whose R-n and RQ-n references must resolve", which names `.claude/agents/*.md` and not `.claude/commands/*.md`; `.claude/commands/rulings-apply.md` § "1. Whose words, and may this run" cites the standing rule on `main` being red, which is on `rulings/2026-11-03-port3` and not yet on `main`.
+- **The gap:** an R-n or RQ-n reference in the two commands is checked by nothing, so one can go stale. Added now, the glob fails `plan/check_plan.py` on that citation.
+- **Options seen:** (a) add `.claude/commands/*.md` to `REF_GLOBS` in the first PR after `rulings/2026-11-03-port3` merges, and drop this entry's note from `.claude/commands/rulings-apply.md` that the rule is on that branch.
+- **Applied meanwhile:** none: the commands' references are read by review only.
+- **Waits:** `rulings/2026-11-03-port3`'s merge.
 ## RQ-693: What the `(L_z, E)` chart's `E` axis means at `ε ≠ 0`: R-670's refusal covers `Some(E*)`, and this chart has no `E*` *(physics; silence; R-670, RQ-656 (6); `docs/design/principia_chart_reference.md` § 2.1, § 2.2; `docs/design/principia_dd_decoder.md` § 3.6, § 3.7; context: TASK-M9-39, REQ-VAL-015)*
 
 *Queued 4 Nov 2026 from physics review 5771183527 of PR #408, F1. For the owner: yes, it changes results: which ICs such a chart's pixels decode to, or whether the chart runs softened at all. Nothing is chosen.*
