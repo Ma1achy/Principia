@@ -197,6 +197,11 @@ fn check_full(h: &Headless, app: &App<MockSide>, what: &str) {
     check_docked(h, app, layout(h, app).top_bar.max.y, what);
 }
 
+/// The figure took no hover.
+fn check_unhovered(at: Option<[f64; 2]>, what: &str) {
+    assert_eq!(at, None, "{what}");
+}
+
 fn labels(app: &App<MockSide>) -> Vec<String> {
     app.keyboard
         .tree(app.view.mode)
@@ -398,13 +403,25 @@ fn qa_m6_44_the_height_is_its_own_not_the_top_and_bottom_rows_splitter() {
     let bottom = layout(&h, &app).bottom_row.min.y;
     let x = h.screen().center().x;
     drag(&mut h, &mut app, pos2(x, bottom), pos2(x, bottom - 50.0));
-    assert_ne!(app.splits.get(Splitter::TopBottom), rows, "the splitter");
+    let split = app.splits.get(Splitter::TopBottom);
+    assert_ne!(split, rows, "the splitter");
+    rejects("a drag on the edge that moves the rows", || {
+        assert_eq!(split, rows, "the rows moved")
+    });
     open(&mut h, &mut app);
     near(
         console_rect(&app).min.y,
         dragged.min.y,
         "the rows' splitter moved it",
     );
+    // Control: a console that followed the rows, or a double-click not yet made, fails the check of the reset below.
+    rejects("a console at the rows' boundary before the reset", || {
+        near(
+            console_rect(&app).min.y,
+            layout(&h, &app).bottom_row.min.y,
+            "control",
+        )
+    });
     // A double-click on its edge resets it, and only it.
     let moved = app.splits.get(Splitter::TopBottom);
     let at = pos2(x, console_rect(&app).min.y);
@@ -425,6 +442,9 @@ fn qa_m6_44_the_height_is_its_own_not_the_top_and_bottom_rows_splitter() {
         moved,
         "another splitter reset"
     );
+    rejects("a reset that resets the rows too", || {
+        assert_eq!(rows, moved, "another splitter reset")
+    });
 }
 
 #[test]
@@ -466,12 +486,27 @@ fn qa_m6_44_a_remembered_height_out_of_its_range_is_held_or_refused() {
         .unwrap();
         let (mut app, mut h) = stored(&path);
         open(&mut h, &mut app);
+        // Control: a height the file set, the check on 1.5 below fails it, so that check tells ignored from held.
+        rejects("a console the file moved", || {
+            near(
+                console_rect(&app).min.y,
+                layout(&h, &app).bottom_row.min.y,
+                "control",
+            )
+        });
         if full {
             check_full(&h, &app, "console_top 0");
         } else {
             let rect = console_rect(&app);
-            assert!(rect.height() > 60.0, "console_top 1 closes it: {rect:?}");
+            let open_at = |r: Rect| assert!(r.height() > 60.0, "console_top 1 closes it: {r:?}");
+            open_at(rect);
+            rejects("a file that closes it", || {
+                open_at(Rect::from_min_size(rect.max, egui::Vec2::ZERO))
+            });
             check_docked(&h, &app, rect.min.y, "console_top 1");
+            rejects("a low edge taken for the full height", || {
+                check_full(&h, &app, "control")
+            });
         }
     }
     // Out of [0, 1]: not a height; the file is ignored, the console at its default.
@@ -492,9 +527,17 @@ fn qa_m6_44_view_reset_layout_restores_the_height_from_under_a_maximised_console
     {
         let (mut app, mut h) = stored(&path);
         open(&mut h, &mut app);
+        let first = layout(&h, &app).bottom_row.min.y;
         drag_edge(&mut h, &mut app, -100.0);
+        // Controls: a reset that leaves the drag, or leaves it maximised, fails the check of the reset below.
+        rejects("a reset that keeps the drag", || {
+            check_docked(&h, &app, first, "control")
+        });
         m(&mut h, &mut app);
         check_full(&h, &app, "maximised");
+        rejects("a reset that keeps it maximised", || {
+            check_docked(&h, &app, first, "control")
+        });
         // The top bar stays usable above it: K1's full height is below the top bar.
         click_named(&mut h, &mut app, "View");
         click_named(&mut h, &mut app, "reset layout");
@@ -503,8 +546,14 @@ fn qa_m6_44_view_reset_layout_restores_the_height_from_under_a_maximised_console
         // No drag is left to restore: M, the focus back in the console, goes to the full height and back to the default.
         let copy = place(&app, console::COPY).center();
         clicked(&mut h, &mut app, copy);
+        rejects("an M that has not acted", || {
+            check_full(&h, &app, "control")
+        });
         m(&mut h, &mut app);
         check_full(&h, &app, "M after the reset");
+        rejects("a console left at the full height", || {
+            check_docked(&h, &app, default, "control")
+        });
         m(&mut h, &mut app);
         check_docked(&h, &app, default, "back after the reset");
     }
@@ -512,6 +561,18 @@ fn qa_m6_44_view_reset_layout_restores_the_height_from_under_a_maximised_console
     open(&mut h, &mut app);
     let default = layout(&h, &app).bottom_row.min.y;
     check_docked(&h, &app, default, "a new GUI after reset layout");
+    // Control: a file that kept the drag, the same script with no reset, is not at the default.
+    let kept = scratch("reset-control");
+    {
+        let (mut other, mut oh) = stored(&kept);
+        open(&mut oh, &mut other);
+        drag_edge(&mut oh, &mut other, -100.0);
+    }
+    let (mut other, mut oh) = stored(&kept);
+    open(&mut oh, &mut other);
+    rejects("a file that keeps the drag", || {
+        check_docked(&oh, &other, default, "control")
+    });
 }
 
 // --- REQ-GUI-215: the toggle -------------------------------------------------------------------------------------------
@@ -622,13 +683,25 @@ fn qa_m6_44_m_toggles_wherever_the_focus_is_in_the_console_in_either_mode_typing
         let docked = console_rect(&app).min.y;
         go(&mut h, &mut app);
         check_at(&app, path, mode, what);
+        // Controls: the docked console fails the first check, the full one the second, another mode the third, an 'm'
+        // the fourth.
+        rejects("an M that does nothing", || check_full(&h, &app, what));
         m(&mut h, &mut app);
         check_full(&h, &app, what);
+        rejects("an M that does not come back", || {
+            check_docked(&h, &app, docked, what)
+        });
         check_at(&app, path, mode, what);
+        let other = if mode == NAV { INTERACT } else { NAV };
+        rejects("an M that changes the mode", || {
+            check_at(&app, path, other, what)
+        });
         m(&mut h, &mut app);
         check_docked(&h, &app, docked, what);
         check_at(&app, path, mode, what);
-        assert_eq!(app.windows.console.text, "", "{what}: M typed");
+        let typed = format!("{what}: M typed");
+        check_typed(&app.windows.console.text, "", &typed);
+        rejects("an M that types", || check_typed("m", "", &typed));
     }
 }
 
@@ -806,7 +879,8 @@ fn qa_m6_44_the_controls_are_drawn_in_that_order_at_each_height() {
 
 #[test]
 fn qa_m6_44_maximised_nothing_under_the_console_takes_the_pointer() {
-    let (mut app, mut h) = fresh();
+    // A log long enough to scroll, so that the last check below can fail.
+    let (mut app, mut h) = logged(200);
     let figure = place(&app, FIGURE).center();
     let boundary = {
         let l = layout(&h, &app);
@@ -818,10 +892,8 @@ fn qa_m6_44_maximised_nothing_under_the_console_takes_the_pointer() {
         app.snapshot().render.hover.at
     };
     // Control: with the console closed, the pointer hovers the figure and the boundary drags.
-    assert!(
-        hover(&mut h, &mut app).is_some(),
-        "the figure takes no hover"
-    );
+    let hovered = hover(&mut h, &mut app);
+    assert!(hovered.is_some(), "the figure takes no hover");
     let before = app.splits;
     drag(
         &mut h,
@@ -829,7 +901,8 @@ fn qa_m6_44_maximised_nothing_under_the_console_takes_the_pointer() {
         boundary,
         boundary + egui::vec2(-30.0, 0.0),
     );
-    assert_ne!(app.splits, before, "the boundary is not a splitter");
+    let dragged = app.splits;
+    assert_ne!(dragged, before, "the boundary is not a splitter");
     app.splits = before;
     settle(&mut h, &mut app);
     open(&mut h, &mut app);
@@ -837,19 +910,31 @@ fn qa_m6_44_maximised_nothing_under_the_console_takes_the_pointer() {
     check_full(&h, &app, "M");
     let _ = h.frame(&mut app, vec![Event::PointerGone]);
     settle(&mut h, &mut app);
-    assert_eq!(
-        hover(&mut h, &mut app),
-        None,
-        "the figure hovered through it"
-    );
+    check_unhovered(hover(&mut h, &mut app), "the figure hovered through it");
+    rejects("the closed console's hover", || {
+        check_unhovered(hovered, "control")
+    });
+    let held = |splits: gui::layout::Splits| {
+        assert_eq!(splits, before, "a splitter dragged through it");
+    };
     drag(
         &mut h,
         &mut app,
         boundary,
         boundary + egui::vec2(-30.0, 0.0),
     );
-    assert_eq!(app.splits, before, "a splitter dragged through it");
-    assert_eq!(app.windows.console.top_row, 0, "the drag scrolled nothing");
+    held(app.splits);
+    rejects("the closed console's drag", || held(dragged));
+    let unscrolled = |top_row: usize| assert_eq!(top_row, 0, "the drag scrolled nothing");
+    unscrolled(app.windows.console.top_row);
+    // Control: the log scrolled, by the keys, fails that check.
+    press(&mut h, &mut app, Key::ArrowDown);
+    press(&mut h, &mut app, Key::Enter);
+    press(&mut h, &mut app, Key::PageDown);
+    settle(&mut h, &mut app);
+    rejects("a log the drag scrolled", || {
+        unscrolled(app.windows.console.top_row)
+    });
 }
 
 #[test]
@@ -868,15 +953,16 @@ fn qa_m6_44_dragged_tall_the_part_of_the_figure_it_covers_takes_no_pointer_and_t
         app.snapshot().render.hover.at
     };
     let x = figure.center().x;
-    assert_eq!(
-        hover(pos2(x, rect.min.y + 20.0)),
-        None,
-        "hovered through it"
-    );
-    assert!(
-        hover(pos2(x, rect.min.y - 20.0)).is_some(),
-        "the figure above it"
-    );
+    let covered = hover(pos2(x, rect.min.y + 20.0));
+    check_unhovered(covered, "hovered through it");
+    let above = hover(pos2(x, rect.min.y - 20.0));
+    let live = |at: Option<[f64; 2]>| assert!(at.is_some(), "the figure above it");
+    live(above);
+    // Controls: each side's reading fails the other side's check.
+    rejects("a hover through the console", || {
+        check_unhovered(above, "control")
+    });
+    rejects("a figure dead above the console", || live(covered));
 }
 
 /// Whether `output` paints the lock's gold reticle over `figure`: its ring, the gold circle of its radius.
@@ -908,20 +994,19 @@ fn qa_m6_44_maximised_the_figures_own_marks_do_not_show_through_and_a_resting_po
     settle(&mut h, &mut app);
     assert!(app.snapshot().sim.lock.locked, "K locks");
     // Control: unmaximised and closed, the marks show and the pointer hovers.
-    let out = h.frame(&mut app, Vec::new());
-    assert!(paints_reticle(&out, figure), "no reticle to cover");
-    assert!(app.snapshot().render.hover.at.is_some(), "no hover to lose");
+    let shown = h.frame(&mut app, Vec::new());
+    assert!(paints_reticle(&shown, figure), "no reticle to cover");
+    let hovered = app.snapshot().render.hover.at;
+    assert!(hovered.is_some(), "no hover to lose");
     // The console opened and maximised, by the keys, the pointer resting where it was.
     open(&mut h, &mut app);
     m(&mut h, &mut app);
     check_full(&h, &app, "M");
-    let out = h.frame(&mut app, Vec::new());
-    assert!(!paints_reticle(&out, figure), "the reticle shows through");
-    assert_eq!(
-        app.snapshot().render.hover.at,
-        None,
-        "the hover stays through it"
-    );
+    let covered = h.frame(&mut app, Vec::new());
+    let hidden =
+        |out: &FullOutput| assert!(!paints_reticle(out, figure), "the reticle shows through");
+    hidden(&covered);
+    check_unhovered(app.snapshot().render.hover.at, "the hover stays through it");
     m(&mut h, &mut app);
     settle(&mut h, &mut app);
     let out = h.frame(&mut app, Vec::new());
@@ -929,10 +1014,13 @@ fn qa_m6_44_maximised_the_figures_own_marks_do_not_show_through_and_a_resting_po
         console_rect(&app).min.y > figure.center().y,
         "docked below the mark"
     );
-    assert!(
-        paints_reticle(&out, figure),
-        "the reticle did not come back"
-    );
+    let back =
+        |out: &FullOutput| assert!(paints_reticle(out, figure), "the reticle did not come back");
+    back(&out);
+    // Controls: the uncovered frame fails the first two checks, the covered frame the last.
+    rejects("a reticle that shows through", || hidden(&shown));
+    rejects("a hover that stays", || check_unhovered(hovered, "control"));
+    rejects("a reticle that stays hidden", || back(&covered));
 }
 
 #[test]
@@ -950,6 +1038,7 @@ fn qa_m6_44_maximised_the_keys_page_by_the_taller_log() {
         app.windows.console.top_row - at
     };
     let docked = page_step(&mut h, &mut app);
+    let docked_rows = whole_rows(&mut h, &mut app).len();
     m(&mut h, &mut app);
     let maximised = page_step(&mut h, &mut app);
     check_at(
@@ -958,18 +1047,24 @@ fn qa_m6_44_maximised_the_keys_page_by_the_taller_log() {
         INTERACT,
         "M kept the interaction",
     );
-    assert!(docked >= 1, "a page moved {docked}");
-    assert!(
-        maximised > 2 * docked,
-        "a page moved {maximised}, docked {docked}"
-    );
+    rejects("an M that leaves the interaction", || {
+        check_at(&app, &["Console", "Log"], NAV, "control")
+    });
+    let taller = |page: usize, docked: usize| {
+        assert!(docked >= 1, "a page moved {docked}");
+        assert!(page > 2 * docked, "a page moved {page}, docked {docked}");
+    };
+    taller(maximised, docked);
+    // Controls: a page still the docked log's, and a page that moves nothing.
+    rejects("a page unchanged by the taller log", || {
+        taller(docked, docked)
+    });
+    rejects("a page that moves nothing", || taller(maximised, 0));
     // What was the top is on screen after the toggle: the top row is what is drawn first.
-    let rows = whole_rows(&mut h, &mut app);
-    assert!(
-        rows.len() >= maximised,
-        "{} rows for a page of {maximised}",
-        rows.len()
-    );
+    let drawn = |rows: usize| assert!(rows >= maximised, "{rows} rows for a page of {maximised}");
+    drawn(whole_rows(&mut h, &mut app).len());
+    // Control: the docked log's rows do not hold that page.
+    rejects("a page longer than the rows drawn", || drawn(docked_rows));
 }
 
 // --- REQ-GUI-216: within one frame, at every log size -------------------------------------------------------------------
@@ -1115,9 +1210,9 @@ fn qa_m6_44_a_first_opening_by_the_windows_menu_completes_in_its_frame() {
     let settled = settled_alpha();
     let (mut app, mut h) = fresh();
     click_named(&mut h, &mut app, "Windows");
-    let out = h.frame(&mut app, Vec::new());
+    let menu = h.frame(&mut app, Vec::new());
     let top = layout(&h, &app).top_bar;
-    let entry = named(&h, &out)
+    let entry = named(&h, &menu)
         .into_iter()
         .find(|(n, r)| n == "Console" && r.min.y >= top.max.y - 1.0)
         .expect("Windows › Console drawn")
@@ -1125,6 +1220,13 @@ fn qa_m6_44_a_first_opening_by_the_windows_menu_completes_in_its_frame() {
         .center();
     let out = click(&mut h, &mut app, entry);
     check_drawn(&h, &app, &out, settled, "Windows › Console");
+    // Controls: the frame before its input, and that frame's console at half strength.
+    rejects("a frame that has not drawn it", || {
+        check_drawn(&h, &app, &menu, settled, "control")
+    });
+    rejects("a frame at half strength", || {
+        check_drawn(&h, &app, &out, settled / 2, "control")
+    });
 }
 
 // --- REQ-GUI-216: what the fix must hold ------------------------------------------------------------------------------
@@ -1134,7 +1236,7 @@ fn qa_m6_44_the_rows_laid_out_do_not_grow_with_the_log() {
     // At each height, the rows drawn are what the log's rect shows, whatever the log's length. An AccessKit node per row
     // laid out: the whole grid of R-463's pointer would show here as thousands.
     let mut counts = Vec::new();
-    for lines in [100, CONSOLE_ROWS] {
+    for lines in [3, 100, CONSOLE_ROWS] {
         let (mut app, mut h) = logged(lines);
         open(&mut h, &mut app);
         for maximised in [false, true] {
@@ -1159,15 +1261,30 @@ fn qa_m6_44_the_rows_laid_out_do_not_grow_with_the_log() {
             .expect("measured")
             .2
     };
-    for maximised in [false, true] {
-        let (few, many) = (at(100, maximised), at(CONSOLE_ROWS, maximised));
+    let bounded = |few: usize, many: usize, maximised: bool| {
         assert!(few > 0, "no row drawn");
         assert_eq!(
             few, many,
             "rows laid out, maximised {maximised}: {counts:?}"
         );
+        assert!(many < 200, "{counts:?}");
+    };
+    for maximised in [false, true] {
+        bounded(at(100, maximised), at(CONSOLE_ROWS, maximised), maximised);
+        // Control: below a page, the measured count does follow the log, and that fails the check, so it can see a grid
+        // that grows.
+        rejects("a count that follows the log", || {
+            bounded(at(3, maximised), at(100, maximised), maximised)
+        });
     }
-    assert!(at(CONSOLE_ROWS, true) < 200, "{counts:?}");
+    // Controls: the whole log laid out, a row per entry; nothing laid out; a constant count over the bound.
+    rejects("a grid of the whole log", || {
+        bounded(100, CONSOLE_ROWS, false)
+    });
+    rejects("a log with no rows", || bounded(0, 0, false));
+    rejects("a bound exceeded alike at both sizes", || {
+        bounded(200, 200, true)
+    });
 }
 
 #[test]
@@ -1183,6 +1300,7 @@ fn qa_m6_44_the_whole_log_stays_reachable_at_console_rows_docked_and_maximised()
         vec![rows[0].clone(), rows[rows.len() - 1].clone()]
     };
     assert_ne!(shown[0], shown[1], "the log's ends differ");
+    let at_end = |row: &String, what: &str| assert!(shown.contains(row), "{what} shows {row}");
     for maximised in [false, true] {
         if maximised {
             m(&mut h, &mut app);
@@ -1191,28 +1309,36 @@ fn qa_m6_44_the_whole_log_stays_reachable_at_console_rows_docked_and_maximised()
         settle(&mut h, &mut app);
         let first = whole_rows(&mut h, &mut app);
         let top = first.first().cloned().expect("a row at Home");
-        assert!(
-            shown.contains(&top),
-            "maximised {maximised}: Home shows {top}"
-        );
+        at_end(&top, &format!("maximised {maximised}: Home"));
+        // Control: the last row of the page at Home is no end of the log.
+        rejects("a Home short of the log's end", || {
+            at_end(first.last().expect("a row at Home"), "control")
+        });
         press(&mut h, &mut app, Key::End);
         settle(&mut h, &mut app);
         let last = whole_rows(&mut h, &mut app);
         let bottom = last.last().cloned().expect("a row at End");
-        assert!(
-            shown.contains(&bottom),
-            "maximised {maximised}: End shows {bottom}"
-        );
-        assert_ne!(top, bottom, "maximised {maximised}: End did not move");
+        at_end(&bottom, &format!("maximised {maximised}: End"));
+        rejects("an End short of the log's end", || {
+            at_end(last.first().expect("a row at End"), "control")
+        });
+        let moved =
+            |a: &String, b: &String| assert_ne!(a, b, "maximised {maximised}: End did not move");
+        moved(&top, &bottom);
+        rejects("an End that stays", || moved(&top, &top));
         // A row in the middle: an entry's step lands on a row drawn at the log's top.
         presses(&mut h, &mut app, Key::ArrowUp, 3);
         settle(&mut h, &mut app);
         let up = whole_rows(&mut h, &mut app);
-        assert_ne!(
-            up.last(),
-            last.last(),
-            "maximised {maximised}: ↑ did not scroll"
-        );
+        let scrolled = |rows: &[String]| {
+            assert_ne!(
+                rows.last(),
+                last.last(),
+                "maximised {maximised}: ↑ did not scroll"
+            )
+        };
+        scrolled(&up);
+        rejects("an ↑ that stays", || scrolled(&last));
     }
 }
 
