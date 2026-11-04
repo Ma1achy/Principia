@@ -267,7 +267,7 @@ impl<A: Coordinate, Q: EnergyAxis, S, P: fmt::Debug> fmt::Debug for MixedEnergy<
     }
 }
 
-impl<A: Coordinate, Q: EnergyAxis, S: Selection, P: Float> MixedEnergy<A, Q, S, P> {
+impl<A: Coordinate, Q: EnergyAxis, S: Selection, P: WarpReal> MixedEnergy<A, Q, S, P> {
     /// The chart (the module's note); on the virial ratio, over the asked range `[0, top]`.
     #[inline]
     pub fn new(
@@ -292,7 +292,7 @@ impl<A: Coordinate, Q: EnergyAxis, S: Selection, P: Float> MixedEnergy<A, Q, S, 
     }
 }
 
-impl<A: Coordinate, S: Selection, P: Float> MixedEnergy<A, AxisVirial, S, P> {
+impl<A: Coordinate, S: Selection, P: WarpReal> MixedEnergy<A, AxisVirial, S, P> {
     /// The virial-ratio chart over the asked range `asked = [Q_lo, Q_hi]`, a Chart-builder axis's own range (R-471 H4;
     /// chart_reference §2.1's paragraph): warped over its feasible part `[max(Q_lo, 0), Q_hi]`, linear over `asked`.
     /// `None` where `asked` is not an increasing finite range or, warped, its feasible part is empty or one point
