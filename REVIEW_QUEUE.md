@@ -1871,3 +1871,37 @@ change: no timer was touched (R-649). Nothing is chosen.*
   change; (b) another, stated by a reviewer or the owner.
 - **Applied meanwhile:** nothing.
 - **Waits:** nothing.
+
+## RQ-693: What the `(L_z, E)` chart's `E` axis means at `ε ≠ 0`: R-670's refusal covers `Some(E*)`, and this chart has no `E*` *(physics; silence; R-670, RQ-656 (6); `docs/design/principia_chart_reference.md` § 2.1, § 2.2; `docs/design/principia_dd_decoder.md` § 3.6, § 3.7; context: TASK-M9-39, REQ-VAL-015)*
+
+*Queued 4 Nov 2026 from physics review 5771183527 of PR #408, F1. For the owner: yes, it changes results: which ICs such a chart's pixels decode to, or whether the chart runs softened at all. Nothing is chosen.*
+
+- **File, section, quoted:**
+  - `decisions.md` § "R-670 — …", the owner's words: "(6)(iii)"; its reading: "A view refuses `ε ≠ 0` with any `Some(E*)`, as a forbidding chart refuses any `Some(E*)` (dd_decoder § 3.7, R-25): `η_E` never runs on a softened decode, so a pixel's IC never depends on `ε`".
+  - `docs/design/principia_dd_decoder.md` § 3.7: "**Under softening (R-670, RQ-656 (6)(iii), 2 Nov 2026).** A view refuses `ε ≠ 0` with any `Some(E*)`, `Some(0)` included, as a forbidding chart refuses it below: `η_E` never runs on a softened decode, so a pixel's IC does not depend on `ε`".
+  - `docs/design/principia_dd_decoder.md` § 3.7: "**It must be disabled** on the invariant-momentum charts $(L_z, E)$ and $(L_z, K)$, where energy is a chart coordinate or is fixed by the momentum construction."
+  - `docs/design/principia_chart_reference.md` § 2.1: "`E = U + K` with `K ≥ 0`, so `E ≥ U`", "`|Lz| ≤ √(2·I·K) = √(2·I·(E − U))`", "The feasible region is the interior of a parabola with apex at `(Lz, E) = (0, U)` — the rest start.", and the warp's "`E(t)     = U + K(t)`".
+  - `docs/design/principia_chart_reference.md` § 2.2, "(iii) Mix to the target kinetic energy": "`K* = E − U          (or K(t) directly on the (Lz,K) chart)`".
+  - `docs/design/principia_dd_decoder.md` § 3.7: "$U = V_0$ and $K_0$ are §3.6's, of the decoded $(m, r, p)$"; § 3.6, dated 2 Nov 2026: "At `ε ≠ 0`, `V₀ = − Σ_{i<j} mᵢmⱼ / √(‖rᵢ − rⱼ‖² + ε²)`".
+  - `plan/requirements.yaml`, REQ-VAL-015, verify: "on an (L_z,E) chart, E_0 is constant along the L_z axis and monotone along E to within f32 rounding of the target".
+- **The silence:** RQ-656 (6) asked about `η_E`, and R-670 rules that. A `(L_z, E)` chart forbids `Some(E*)`, so no energy target reaches it; its energy is the axis, and its `U` is the fixed configuration's potential. § 3.7 reads `U` as `V₀`, and R-670 softens `V₀` at `ε ≠ 0`. Nothing says which `U` the chart's axis, feasible set and `K*` read at `ε ≠ 0`, and R-670's "a pixel's IC never depends on `ε`" is stated of the refusal, which does not cover this chart. The `(L_z, K)` chart has `K* = K(t)` and reads no `U` in its `K*`.
+- **The question:** at `ε ≠ 0`, what does the `(L_z, E)` chart's `E` axis read, and does the chart run?
+- **Options seen:** (a) `U` softened: the axis is the run's softened `E₀`, and REQ-VAL-015 holds as written, but the IC and the feasible set then depend on `ε`, against R-670's stated reason; (b) `U` Newtonian: the IC does not depend on `ε`, but the run's softened `E₀` is not the axis value, the region under the parabola no longer means what § 2.1 says, and REQ-VAL-015 needs restating; (c) the chart refuses `ε ≠ 0`, at the view level, as with `Some(E*)`, which nothing says; (d) another, stated by the owner.
+- **Applied meanwhile:** none needed: dispatch refuses `ε ≠ 0` (R-654; TASK-M3-06), so no softened run exists.
+- **Waits:** TASK-M9-39 (REQ-INT-111, REQ-SYS-094, REQ-SYS-095). Nothing in M0 to M8 waits.
+
+## RQ-694: What Chazy's `pair_kup` and `out_kup` read at `ε ≠ 0`: R-670 softens the classifier's `E` and leaves the `K/U` its labels read *(physics; silence; R-670, RQ-656 (3); `docs/design/principia_dd_chazy_final_motion.md` § 3.1, § 3.2; context: TASK-M9-39, TASK-M7-35)*
+
+*Queued 4 Nov 2026 from physics review 5771183527 of PR #408, F2, and code review 5771184172, C2. For the owner: yes, it changes results: which label a softened run commits. Nothing is chosen.*
+
+- **File, section, quoted:**
+  - `decisions.md` § "R-670 — …", the owner's words: "656 (a)", option (a) of RQ-656 (1) to (3): "Chazy's `E` softened as the ruling's energy."
+  - `docs/design/principia_dd_chazy_final_motion.md` § 3.1: "*2 Nov 2026 (R-670, RQ-656 (3), option (a)):* at `ε ≠ 0`, `E` is the run's `E_0` under the softened potential (R-654); "unsoftened" is the `ε = 0` case."
+  - `docs/design/principia_dd_chazy_final_motion.md` § 3.1: "**A pair `(i, j)`'s two-body energies** (`pair_kup`): reduced mass `μ = m_i m_j / (m_i + m_j)`, `Δr = r_j − r_i`, `Δv = v_j − v_i`, `d = |Δr|`; kinetic `K = ½ μ |Δv|²`, potential magnitude `U = m_i m_j / d` (positive)".
+  - `docs/design/principia_dd_chazy_final_motion.md` § 3.1: "**The outer body `b`'s two-body energies** (`out_kup`), against the centre of mass of the other two, `(i, j)`: … `μ = m_b M_p / (m_b + M_p)`, `K = ½ μ |Δv|²`, `U = m_b M_p / d`, `v_r = Δr·Δv / d`."
+  - `docs/design/principia_dd_chazy_final_motion.md` § 3.2: "**H** | every pair separation > `h_far · R_0`, every pair receding, every pair `K/U > 1 + ε`", with HP, P, HE and PE reading `K/U` too, and all five committed. That table's `ε` is the parabolic band's (§ 3.1), not softening's.
+- **The silence:** RQ-656 (3) asked of `E` only, and R-670 softens `E`. Nothing rules the pair and outer two-body energies. Once the refusal is lifted the classifier runs on every softened run, with a softened `E` beside a Newtonian `U`, unless a ruling says otherwise, and the committed labels can change. A softened `out_kup` is not a term of the dynamics' `V`, since `b`'s potential there is pairwise, about each body and not about the pair's centre of mass; R-670 (4) reads `E_rel`, which has the same shape, as `d` read as `√(d² + ε²)` in the potential term.
+- **The question:** at `ε ≠ 0`, what do `pair_kup`'s and `out_kup`'s `U` read, and do the committed labels stand on a softened run?
+- **Options seen:** (a) both soften, `U = m_i m_j / √(d² + ε²)` and `U = m_b M_p / √(d² + ε²)`, as R-670 (4) reads `E_rel`, the separations, `v_r` and the kinetic terms geometric; (b) both stay Newtonian as written, `E` alone softened; (c) the classifier's two-body labels do not run at `ε ≠ 0`, the run reading only the labels that take `E`; (d) another, stated by the owner.
+- **Applied meanwhile:** none needed: dispatch refuses `ε ≠ 0` (R-654; TASK-M3-06), so no softened run exists.
+- **Waits:** TASK-M9-39 (REQ-INT-111, REQ-SYS-094, REQ-SYS-095). Nothing in M0 to M8 waits.

@@ -2,11 +2,11 @@
 
 - **Milestone:** M9
 - **Closes:** REQ-CHART-091
-- **Depends on:** TASK-M2-14, TASK-M4-17
+- **Depends on:** TASK-M2-14, TASK-M4-06, TASK-M4-17
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** PIT-3
-- **Size:** ~350 lines
+- **Size:** ~400 lines
 
 ## Goal
 One M9 task builds the chart five targets wait on (R-669, RQ-608 and RQ-618 (a)): `SuvakovPlane`, over the plane of Šuvakov & Dmitrašinović's initial conditions, at equal masses and at fixed m₃, in RQ-582's labelling (R-630 item 3: the middle body is body 1, at β = 0, Hudomal eq. (18)'s). The chart reference has no section for it, so the task defines it first (R-72), then builds it as a chart of the one chart trait, its decode a tested function. OC-4 on the plane, AT-D1, AT-D3 (TASK-M9-35), HU-1 and HU-2 (TASK-M9-27) run on it.
@@ -20,15 +20,21 @@ One M9 task builds the chart five targets wait on (R-669, RQ-608 and RQ-618 (a))
 - `docs/design/principia_dd_replication.md` § "4.3 The atlas's slice families"
 - `docs/design/principia_chart_reference.md` § "5.1 One trait, one dispatch"
 - `docs/design/principia_chart_reference.md` § "5.2 Tests that can fail"
+- `docs/contracts/principia_lowering_contract.md` § "Compute side"
+- `docs/contracts/principia_lowering_contract.md` § "Appendix — worked enumeration of the current chart set"
 
 ## Deliverables
 - The chart's section in `docs/design/principia_chart_reference.md`: its axes and ranges, at equal masses and at fixed m₃, what it holds fixed, its labelling, and its decode to the shared decoder `D`; approved by the physics reviewer before any code (R-72).
 - The chart in `crates/kernel`, behind the one chart trait, with its descriptor and well-posedness entry (TASK-M2-14).
+- Its row in `docs/contracts/principia_lowering_contract.md` § "Appendix — worked enumeration of the current chart set", and its baked compute variant: its entry in the variant key and pipeline table of `crates/engine/src/variants.rs` (TASK-M4-06), since TASK-M9-35 scores on the GPU explorer's f32 output and builds no chart.
 
 ## Acceptance tests
 - Review checklist (physics reviewer) — the chart's section is approved, its axes, ranges and labelling stated (REQ-CHART-091).
-- `cargo test -p kernel suvakov_plane` — each atlas orbit on the plane at equal masses and at each m₃ decodes from its marked pixel to its catalogue initial conditions within the decode's tolerance; control: a decode with bodies 0 and 1 swapped misses the markers (REQ-CHART-091).
+- `cargo test -p kernel suvakov_plane` — each atlas orbit on the plane at equal masses and at each m₃ decodes from its marked pixel to its catalogue initial conditions within the decode's tolerance; at random (u,v), Σpᵢ = 0 to machine precision, I = 1 after the canonical-frame decode, and shape_vec(decode(u,v)) equals the shape the chart's section states for that pixel to ~1e−14; control: a decode with bodies 0 and 1 swapped misses the markers (REQ-CHART-091).
+- `cargo test -p engine suvakov_plane_variant` — the chart selects its own baked variant from the pipeline table, and a pan on it changes only uniform buffers; control: a key with the chart left out selects no pipeline (REQ-CHART-091).
+- Physics + code reviewers: the chart's row of the lowering appendix checked against the chart registry and the kernel variants (REQ-CHART-091).
 
 ## Notes
 - Added by R-669 (1 Nov 2026, RQ-608 and RQ-618 (a); the port, 2 Nov 2026). A build task, not a target: it is not scored, its tests block its own merge, and TASK-M9-37 does not wait on it; TASK-M9-27 and TASK-M9-35 do.
+- The GPU variant and § 5.2's general tests: code review 5771184172 of PR #408, C6. § 5.2's other tests name other charts. *Was:* Depends on TASK-M2-14 and TASK-M4-17, ~350 lines, the chart in `crates/kernel` only, `suvakov_plane` the one test.
 - R-636's "no chart build yet" gives way to this one task (R-669). The atlas data are used under CC BY 4.0, credited to https://www.threebodyorbits.com; `atlas-params.json` never enters the repo.
