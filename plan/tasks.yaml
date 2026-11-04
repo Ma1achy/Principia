@@ -1341,7 +1341,8 @@
   requirements: [REQ-RENDER-099, REQ-CHART-074]
   reviewers: [code, qa, physics, perf]  # ⚑ physics review required; not merged on the code reviewer's word alone
   pitfalls: []
-- id: TASK-M4-27  # past TASK-M4-22 to TASK-M4-26, moved to M9 by R-650 and not reused (applied per R-369)
+# TASK-M4-27: past TASK-M4-22 to TASK-M4-26, moved to M9 by R-650 and not reused (applied per R-369)
+- id: TASK-M4-27
   milestone: M4
   title: "The kernel cross-backend check, the arm for now: decode's and canon's branch outcomes on NVIDIA Vulkan, Metal, lavapipe and CPU f32, per backend pair (R-686)"
   depends_on: [TASK-M2-07, TASK-M2-24, TASK-M2-25]
@@ -2013,7 +2014,8 @@
   requirements: [REQ-GUI-265]
   reviewers: [code, qa, gui, physics]  # ⚑ tilt maths
   pitfalls: []
-- id: TASK-M6-53  # past TASK-M6-52, moved to M9 by R-650 and not reused (applied per R-369)
+# TASK-M6-53: past TASK-M6-52, moved to M9 by R-650 and not reused (applied per R-369)
+- id: TASK-M6-53
   milestone: M6
   title: "The GUI track (R-390): the mock's value noise hashes its lattice in integers, so shared corners agree bitwise"
   depends_on: [TASK-M6-24]  # R-685; the pattern is option A (R-689)
