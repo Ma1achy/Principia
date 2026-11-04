@@ -29656,3 +29656,42 @@ one of `pull_request`'s kind; the rule above is what those runs show.
 R-678 is in the "ci" group of `plan/rule_groups.yaml`.
 
 Changes REQ-VAL-148 (source, rulings, note).
+
+## R-685 — The real kernel and the other WGSL and rust-gpu shaders are audited for the mock noise's pattern, hashes or lattice lookups where neighbouring invocations must agree bitwise and compile-time offsets feeding them; the fix is proposed as a task with its own ADR, plus a regression test that asserts shared lattice corners bitwise equal on every backend; no fix until lavapipe and the audit are in
+*4 Nov 2026 · the owner's instruction of that day, relayed verbatim to the Mac by the Windows session (issue #390, comment
+6632953769), following its finding of the block artefacts on the RTX 2080 SUPER (comment 6632801932); applied in
+`plan/adr/ADR-0001-mock-noise-integer-lattice.md` (new, Status Proposed), TASK-M6-53 and REQ-GUI-412 (new, the requirement
+reqio's), `REVIEW_QUEUE.md` (RQ-690, RQ-691) and `plan/rule_groups.yaml`*
+
+The owner's words, verbatim, as relayed:
+
+> Agreed; my per-tile hypotheses are withdrawn. For the Mac (via #390): after lavapipe, (1) audit the real kernel and other WGSL/rust-gpu shaders for the same pattern: hashes or lattice lookups where neighbouring invocations must agree bitwise, and compile-time offsets feeding them; (2) propose the fix (e.g. integer u32 hash on integer lattice coordinates, corners computed once per cell) as a task with its own ADR, plus a regression test that evaluates shared lattice corners from adjacent cells and asserts bitwise equality on every backend. No fix until lavapipe and the audit are in.
+
+*Where its parts stand at this port (a record, not more of the ruling):* lavapipe and the audit are in. The proposal is
+the ADR and the task above. The ADR's Status stays Proposed and the task waits: the owner has not yet ruled on the
+pattern (RQ-691).
+
+## R-686 — The kernel cross-backend check is a measurement (R-649): the same IC set on NVIDIA Vulkan, Metal, lavapipe and CPU f32, outcome labels and per-trajectory branch-sensitive results compared, not pixels, the disagreement rate reported per backend pair, no tolerance chosen to make it pass; pixel comparisons across backends go on raw pre-colour values with the outlier tail reported, never 8-bit frame equality, Metal against lavapipe's 161,394 / 221 recorded as the clean-backend baseline; `DECODE_SWITCHOVER`'s spec notes that bitwise agreement must be tested on NVIDIA specifically
+*4 Nov 2026 · the owner's message of that day; applied in `docs/contracts/principia_parity_contract.md` § 4,
+`docs/contracts/principia_scheduler_contract.md` Part 4, TASK-M6-53, TASK-M6-08's notes, TASK-M4-27 and TASK-M4-28, REQ-VAL-347
+and REQ-VAL-348 (new, the requirements reqio's), REQ-SCHED-062's note, `REVIEW_QUEUE.md` (RQ-692) and
+`plan/rule_groups.yaml`*
+
+The owner's words, verbatim:
+
+> Good. Two additions to the fix task:
+> 1. Kernel cross-backend check (measurement, R-649): same IC set on NVIDIA Vulkan, Metal, lavapipe and CPU f32; compare outcome labels and per-trajectory branch-sensitive results (collision/escape decisions, step counts), not pixels. Report the disagreement rate per backend pair; no tolerance chosen to make it pass. This is the evidence for whether the missing NoContraction matters for the real kernel.
+> 2. Pixel comparisons across backends go on raw pre-colour values with the outlier tail reported (count beyond a stated threshold), never 8-bit frame equality; record Metal-vs-lavapipe's 161,394 / 221 as the clean-backend baseline.
+> DECODE_SWITCHOVER: note in its spec that bitwise agreement must be tested on NVIDIA specifically.
+
+"The fix task" is R-685's, TASK-M6-53.
+
+*Applied per R-369:*
+- **Addition 1 is its own tasks, not a part of the fix task.** The mock's fix needs no kernel march, and the check does,
+  so one task would hold the fix until M4. TASK-M4-28 is the trajectory check, on TASK-M4-05's march. TASK-M4-27 is the
+  arm that can run now, on what the GPU runs at this commit, decode's and canon's branch outcomes on all four backends;
+  it is a task of its own because a task starts only when its Depends on has merged (`plan/WORKFLOW.md` § "The unit: one
+  task, one branch, one PR"). It cannot answer the trajectory question, and says so.
+- **Addition 2's rule is in the parity contract's § 4 and in the fix task.** The owner's words do not say whether it
+  reaches the golden suites, whose shared references are byte-equal across backends (R-287, R-296); the contract leaves
+  them as they stand, and the question is RQ-692.
