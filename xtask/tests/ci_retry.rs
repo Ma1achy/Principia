@@ -6,7 +6,8 @@
 //!
 //! The runs are real, trimmed, under `fixtures/ci_retry/` (`fixtures/README.md`): the classifier reads each as it reads
 //! a run online, and a case that needs what no saved run shows edits one saved run in the one respect it turns on. The
-//! shutdown signal and the timeouts have no saved run; their texts are GitHub's, written here, and marked.
+//! timeouts have no saved run; their texts are real annotations of runs named here. The shutdown signal has no real
+//! trace in this repository; its text rests on the source of `actions/runner`.
 //!
 //! - `ci_retry_retries_*`: each signature is re-run, the gate that gathers the job beside it;
 //! - `ci_retry_keeps_*`: a real test failure, a mixed run, attempt 3 and on, a timeout, a run that did not fail, a
@@ -44,14 +45,18 @@ const LOST_JOB: &str = "126168286028";
 const TEST_RUN: &str = "41431397009";
 const RELEASE_1: &str = "125269262008";
 const WORKSPACE: &str = "125245906416";
-/// GitHub's text, not a saved run's: no run here has hit it.
+/// `ci-archive` out of disk on a pull request, the `ci` shards skipped, the gate `ci` red through the skip.
+const ARCHIVE_RUN: &str = "41211489245";
+/// No run here has hit it: no saved or real annotation, the text as `actions/runner` has it, in
+/// `src/Runner.Worker/JobRunner.cs`.
 const SHUTDOWN: &str = "The runner has received a shutdown signal. This can happen when the runner service is stopped, \
                         or a manually started runner is canceled.";
-/// GitHub's texts, likewise.
-const STEP_TIMEOUT: &str = "The action 'cargo nextest run' has timed out after 30 minutes.";
-const JOB_TIMEOUT: &str =
-    "The job running on runner GitHub Actions 1 has exceeded the maximum execution time of 360 \
-                           minutes.";
+/// A real annotation: `mutants` run 41566550367, `mutants (4)`.
+const STEP_TIMEOUT: &str =
+    "The action 'cargo mutants --in-diff --shard 4/8 (REQ-VAL-149 per-shard limit, R-376)' has \
+                            timed out after 300 minutes.";
+/// A real annotation: `ci` run 40558523181, `ci (3)`, which ended `cancelled`.
+const JOB_TIMEOUT: &str = "The job has exceeded the maximum execution time of 6h0m0s";
 
 fn root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
