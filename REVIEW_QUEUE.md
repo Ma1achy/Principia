@@ -2130,16 +2130,21 @@ record, which RQ-686 and RQ-687 share.*
   driver's continuous results, division the one operation measured? (2) what should the header record where a driver rewrites division with no switch?
 - **Options seen:** (a) branch decisions and the Tier B fields only, which holds only if `E_rel` and `|Δn̂|` get
   written forms that take no driver's division, a gap still open and untested on any GPU; the probe then stays a
-  measurement on its two named jobs, and the "every backend" comments narrow; (b) every continuous result on every driver, division the
+  measurement on its two named jobs, the "every backend" comments narrow, and the header keeps `StageMode::Off` with its
+  doc saying what it records, wgpu's path, no driver observed; (b) every continuous result on every driver, division the
   one operation measured: this card fails R-297. The reading reaches past division: `√` (`physics/pairs.rs`'s `norm` and
   `cube`, which feed `force.rs`:19-21), contraction of `a·b + c`, and the builtins (`canon.rs`:67-69; parity :97). So the
   project's own division wouldn't deliver it, and the probe passing on Metal and lavapipe doesn't show continuous
   bit-identity there either. It needs the project's own arithmetic for each, or a list of supported drivers, and no
   switch is known to give correct rounding (from memory, as above). The cost of a software division in the force loop
-  is unmeasured;
+  is unmeasured. The header records `Off` only where that is shown, and `Unknown` elsewhere;
   (c) bit-identity is claimed only on the drivers measured to give it, and any other Vulkan driver records
-  `StageMode::Unknown`, as `Api::Dx12` and `Api::Webgpu` do at `compute.rs`:59 and as R-303 does for the browser;
-  (d) another, stated by the owner.
+  `StageMode::Unknown`, as `Api::Dx12` and `Api::Webgpu` do at `compute.rs`:59 and as R-303 does for the browser. R-303
+  also disables the Run window's control and holds runs to Tier-N only, and whether that carries over to every native
+  Vulkan driver but lavapipe is part of this option; (d) another, stated by the owner.
+- **What (a) and (c) leave:** the payload compatibility signature and the sim key carry the compute setting and no driver
+  (`docs/contracts/principia_caching_contract.md`:14, :36). So the same sim key gives different continuous bits per
+  driver, and `SimState = f(IC, sim key)` (`docs/contracts/principia_canonical_spec.md`:82, :116) then holds per driver.
 - **Measurements that would settle more:** both fuzzed sets' result words on the card (worst ulp, and whether the result
   is a function of `d` times `n`); the halfway probe with 255.0 read from a buffer, beside the literal; the setting on;
   the same probe on another Vulkan driver.
