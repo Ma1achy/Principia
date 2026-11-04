@@ -162,7 +162,7 @@ default-filter = """
 # archive, which carries no cargo build state, so in a shard each would rebuild the workspace while holding every
 # test thread. Validation's `qa_TASK-M0-24` joins them: it runs `cargo test` on the workspace and `cargo xtask controls
 # --list`, the same `--features controls` build the alias test's `cargo xtask ci --list` makes here; in a `ci` shard
-# that rebuild left `ci (4)` 13 MiB free on a 72 GB runner (run 41744485022). It is not in xtask, so each job that runs
+# that rebuild left `ci (4)` 13 MiB free on a 72 GB runner (run 41756812074). It is not in xtask, so each job that runs
 # this profile has a step that names validation. Applied per R-369.
 [profile.ci-workspace]
 default-filter = """

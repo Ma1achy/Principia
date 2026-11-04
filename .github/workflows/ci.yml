@@ -402,10 +402,10 @@ jobs:
         run: cargo nextest run -p validation --test qa_TASK-M0-24
         shell: bash .github/scripts/disk_sampler.sh {0}
       # The three controls of `xtask/tests/nextest.rs` that list the workspace in its default feature set, which the
-      # `xtask-ci` shards leave here (`controls::IN_CI_WORKSPACE`, which `tests/nextest.rs` checks against this line). The
-      # step above has just built everything they list, for the tests they fault; in a shard they cost a second whole
-      # build of the workspace's tests (run 41756812074: 48 GB, shards 2 and 4). A control that does not make its test
-      # fail fails this step, as it fails `cargo xtask controls`. Applied per R-369.
+      # `xtask-ci` shards leave here (`controls::IN_CI_WORKSPACE`, which `tests/nextest.rs` checks against this line).
+      # `cargo nextest run -p xtask`, two steps up, has just built everything they list, for the tests they fault; in a
+      # shard they cost a second whole build of the workspace's tests (run 41756812074: 48 GB, shards 2 and 4). A control
+      # that does not make its test fail fails this step, as it fails `cargo xtask controls`. Applied per R-369.
       - name: cargo nextest run --features controls (the default-feature listing's controls)
         if: needs.changes.outputs.docs_only != 'true'
         env:
