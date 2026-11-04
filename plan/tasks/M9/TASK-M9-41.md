@@ -32,4 +32,4 @@ Two outputs no paper gives, planned by R-679 (RQ-674) as M9 peeks, non-gating, r
 
 ## Notes
 - Added by R-679 (3 Nov 2026, item 3, RQ-674; ported 3 Nov 2026). A build task for candidate original results, not a target: it is not scored, the results gate nothing, its tests block only its own merge, and TASK-M9-37's report does not wait on it.
-- The batch-152 planes are the eucliss free-fall fate plane (400 × 240) and its two unequal-mass velocity planes (m₃ = 0.25 and 0.5), held locally and AI-authored, so peeks only (R-668 item 6): their starts are used, never their outcomes as a reference. Before a triage item is used, its source page is re-read (R-680).
+- The batch-152 planes are the eucliss free-fall fate plane (`[value]`) and its two unequal-mass velocity planes (`[value]`), held locally and AI-authored, so peeks only (R-668 item 6): their starts are used, never their outcomes as a reference. Before a triage item is used, its source page is re-read (R-680).
