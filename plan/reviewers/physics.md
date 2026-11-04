@@ -383,7 +383,7 @@ The M9 targets scored by a numerical comparison (`verify.method: numerical gate`
 - [ ] REQ-VAL-311 — as OC-4 (tier (a), the f64 Result beside it as information, R-653), on the Šuvakov-plane chart once RQ-583 (and its labelling, RQ-582) is ruled; agreement at OC-4's calibrated level; control as OC-4's
 - [ ] REQ-VAL-314 — the closure field on the Šuvakov-plane chart once RQ-583 is ruled; each Table 23 minimum within REQ-VAL-315; the map reviewed by the physics reviewer; control: a map at m₃ = 2 must not show the equal-mass minima
 - [ ] REQ-VAL-316 — as HU-1, zoomed; the middle candidate's position and period within REQ-VAL-317
-- [ ] REQ-VAL-319 — Table 1 transcribed twice (rule 2); a statistic at REQ-VAL-320's level; their runs are 3D, so the comparison is of a different experiment, which the report states (RQ-593); control: masses relabelled must move the probabilities
+- [ ] REQ-VAL-319 — Table 2 and Table 1's mass sets transcribed twice (rule 2); a statistic at REQ-VAL-320's level; their runs are 3D, so the comparison is of a different experiment, which the report states (RQ-593); control: masses relabelled must move the probabilities
 - [ ] REQ-VAL-321 — the closed forms transcribed (rule 2); N_scramble once RQ-596 is ruled; a statistic at REQ-VAL-322's level; control: the 3D forms must fail
 - [ ] REQ-VAL-323 — the chart RQ-594 rules, the split once RQ-596 is; the maps reviewed by the physics reviewer; the split at REQ-VAL-324's level; control: a map at the wrong side ratio range must misplace the regular region
 - [ ] REQ-VAL-327 — the symbol-sequence field and Chernin et al.'s definitions once RQ-595 is ruled; the share at REQ-VAL-328's level; control: a partition at the wrong scale must misplace the boundaries

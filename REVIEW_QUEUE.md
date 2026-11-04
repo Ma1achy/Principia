@@ -31,6 +31,7 @@ oblique-latent version, where one exists locally."). For the human: yes, it chan
   ok we can park that for now then". The entry stays open, (a) stays applied, nothing waits, and it returns when he
   raises it. *Was:* "RQ-341 is ruled (the 21 Oct batch, PR #274)", before R-550 was on main.
 - **25 Oct 2026 (R-625):** the human: "Parked (RQ-378, RQ-386, RQ-391): stay parked." The entry stays open and parked (R-510, R-568); what it applies stays applied, and nothing waits.
+- **4 Nov 2026 (R-706):** option (a) applied, and deferred by owner 4 Nov 2026, with no target. The entry stays open.
 
 ## RQ-386: Whether tier 2 of the embedding should split further, the ramp window and colour mode above the overlays and lines, if measurement shows tier 2 itself often does not fit at small sizes *(the human's queued question, R-484 RT2; context: TASK-M7-44)*
 
@@ -55,6 +56,7 @@ carries.*
   64² and 128², whether tiers 1 and 2 fit; it then returns to the human with those numbers. Meanwhile (a), tier 2
   whole, stands, and nothing else waits.
 - **25 Oct 2026 (R-625):** the human: "Parked (RQ-378, RQ-386, RQ-391): stay parked." The entry stays open and parked (R-522); what it applies stays applied, and nothing waits.
+- **4 Nov 2026 (R-706):** deferred to TASK-M7-44's measurement by owner 4 Nov 2026. Option (c): split only if that measurement says so; (a) stands until then. The entry stays open.
 
 ## RQ-391: Whether the Export Styles' frames (Polaroid border, banknote, poster) become a later "Frame" stage after the Print graph *(the human's queued question, R-485, §0 "separate, later", the message's point 6; context: none until ruled)*
 
@@ -72,6 +74,7 @@ later." For the human: yes, whether there is a Frame stage at all.*
   stays open and returns to the human when the human raises it. Nothing is built; the lab's Polaroid medium stays a
   medium (R-486).
 - **25 Oct 2026 (R-625):** the human: "Parked (RQ-378, RQ-386, RQ-391): stay parked." The entry stays open and parked (R-527); what it applies stays applied, and nothing waits.
+- **4 Nov 2026 (R-706):** deferred until the exporter is designed, by owner 4 Nov 2026. The entry stays open.
 
 ## RQ-577: The precision-ladder proposal's seven open questions (§6), and the amendments it proposes to R-265, R-572, R-90, canonical spec §1 item 3, deep zoom §2 and its layer table, and integrator contract Part 2 and Part 2b *(the human's queued questions on the 26 Oct incoming proposal; R-265, R-572, R-90, R-561, R-547, R-33; context: none built)*
 
@@ -151,6 +154,7 @@ here.*
   later, after R-547 covers it, uniform per Result first." Recorded here as the owner's leanings on the seven questions,
   in their order, **not rulings**: nothing is applied and nothing is built. The census's stage-1 results attach to this
   entry as evidence only (R-637, closing RQ-599). Stays open until M3 closes (R-630).
+- **4 Nov 2026 (R-706):** deferred to its own session by owner 4 Nov 2026. The entry stays open.
 
 ## RQ-594: A side-ratio chart for Parischewsky et al.'s equilateral-triangle experiment, or a tested remap onto ShapeSphere at rest *(the human's queued question, R-594 item 6; `docs/design/principia_dd_replication.md` § 5.12; REQ-VAL-323; context: TASK-M3-64)*
 
@@ -178,6 +182,7 @@ still decides what is built for them, never whether a milestone passes; it stays
 - **28 Oct 2026 (R-637):** the owner: "Five-chart build: yes, I meant only the replication charts. This morning's
   five-chart split may go ahead." R-636's hold is lifted for TASK-M2-36 and TASK-M2-52. This entry's chart is a replication chart and is not built ahead of
   its ruling (R-594 item 5). Stays open.
+- **4 Nov 2026 (R-706):** deferred to M9 by owner 4 Nov 2026. The entry stays open.
 
 ## RQ-619: The census's code questions the integrator contract doesn't settle: IAS15 as a drift reference, and the step-limit axis beyond the predictive limit *(R-637: "where the contract is silent, queue the question, don't infer from the prototype"; RQ-599's questions 8 and 9; `docs/incoming/2026-10-27_validation_plan/PROPOSAL_occupant_matrix_census_2026-10-27.md` § 3.1, § 3.2; `docs/contracts/principia_integrator_contract.md` Part 2b; context: none built)*
 
@@ -205,6 +210,7 @@ builds.*
   stated by the owner.
 - **Applied meanwhile:** none. Nothing of the census is built.
 - **Waits:** the census harness (with RQ-617).
+- **4 Nov 2026 (R-706):** deferred to M9 by owner 4 Nov 2026. The entry stays open.
 
 ## RQ-643: The collinear statistical targets' stops lie past R-610's horizon cap in the integrator's units (proposed OR02-1, OR03-1, MH89-1) *(physics review of the 29 Oct research-batches ingest, finding F4; `docs/incoming/2026-10-29_research_batches/README.md` § 10.3, § 10.5, `horizons_integrator_units.txt`; context: none built)*
 
@@ -229,164 +235,7 @@ builds.*
   t1–t4 at the starts where they fall inside 200; (c) leave the past-cap parts blocked by the horizon, as MO14-1's
   long-time part is.
 - **Applied meanwhile:** (c). The rows state the conversion and which parts the cap blocks; no new cap is chosen.
-
-## RQ-644: Whether the record should stop calling Boekholt & Portegies Zwart 2015's method an analogue of "never discard", given that its unbiased result is stated with the worst runs removed *(a conflict between a paper and two lines of our record; context: task 15e, BZ-1)*
-
-*Queued 31 Oct 2026 by task 15e. Wording of a record; no target or code depends on it.*
-
-- **File, section:**
-  - `docs/incoming/2026-10-25_replication/catalogue.md` § 6.1: "A direct analogue of the project's "never discard a copy" and `error_ratio` rules".
-  - `docs/incoming/2026-10-27_validation_plan/PLAN.md` § 3.2, BZ-1: "Its method is what REQ-VAL-199 and "never discard a copy" already apply".
-  - `docs/design/principia_honesty_precision.md` line 278: "**Never discard:** a failed or budget-exhausted run is shown as such, with its end time (R-563)."
-  - The paper, abstract: "unbiased, as long as the time-step parameter, η ≤ 2⁻⁵ and when simulations which violate energy conservation by more than 10% are excluded"; passages in `docs/incoming/2026-10-31_fetch_list/README.md`.
-- **The question:** whether to add a dated note to those two lines saying the analogue is the paper's ensemble comparison and not its energy cut.
-- **Options seen:** (a) add the note, and if BZ-1's method is ever run, report the whole ensemble and the cut side by side, as the paper's Fig. 14 does; (b) leave the lines as they are.
-- **Applied meanwhile:** the lines are unchanged; the conflict is stated in the fetch list's README. BZ-1 stays out of scope as a replication.
-- **Waits:** nothing.
-- *31 Oct 2026: Ruled by the owner, R-661: "Fix the three overstatements you found (PLAN's BZ-1 row, catalogue.md §6.1, the
-  replication instruction) via the queue, with Removed-lines notes." Those lines are reworded (RQ-646), and BZ-1 is reopened
-  on the cold sets, any cut shown beside the uncut ensemble with the count removed.*
-
-## RQ-646: Three lines of our record overstate Boekholt & Portegies Zwart 2015 *(a conflict between a paper and our record; R-661; `docs/incoming/2026-10-31_precision_set/README.md`; context: BZ-1, REQ-VAL-199)*
-
-*Queued and closed 31 Oct 2026, by R-661.*
-
-- **File, section:**
-  - `docs/incoming/2026-10-27_validation_plan/PLAN.md` § 3.2, BZ-1: "Its method is what REQ-VAL-199 and "never discard a copy" already apply"; "out of scope as a replication: 3D Plummer ICs".
-  - `docs/incoming/2026-10-25_replication/catalogue.md` § 6.1: "the ensemble statistics agree (KS tests) if the step parameter is ≤ 2⁻⁵ and runs with |dE/E| > 0.1 are rejected".
-  - `docs/incoming/2026-10-25_replication/INSTRUCTION_replication_suite_2026-10-25.md` § C: "This is the empirical basis of the f32/f64 honesty story, and of "never discard a copy"".
-  - The paper, abstract: "unbiased, as long as the time-step parameter, η ≤ 2⁻⁵ and when simulations which violate energy conservation by more than 10% are excluded"; Fig. 6's caption: "For η < 2⁻⁵, the distributions are not significantly different."
-- **The conflict:** the first line reads a cut as never discarding; Fig. 14's side-by-side is compatible, and the "unbiased" claim holds only after the cut. "3D Plummer" does not hold of the cold sets. The second merges the KS claim with the error-distribution claim. The third cites a paper with no f32 run as the basis for f32.
-- **Options seen:** reword, with the old text kept; or leave them.
-- **Applied meanwhile:** the lines stand until the ruling below.
-- *Ruled by the owner, R-661: reworded in PLAN.md and `catalogue.md`, each with a "Was"; the 25 Oct instruction is a dated record, not restated in force elsewhere, so its text stays and a bracketed correction follows it.*
-
-## RQ-658: PLAN.md's BR-1 row still says the data is not available, against R-641 and R-642 *(a stale record against a ruling; R-641, R-642; `docs/incoming/2026-10-27_validation_plan/PLAN.md` § 3.2; `docs/design/principia_dd_replication.md` § 5.10; REQ-VAL-297; context: TASK-M3-62, TASK-M9-22)*
-
-*Queued 1 Nov 2026 by the orchestrator's filing task, from the library triage's follow-ups.*
-
-- **File, section:**
-  - `docs/incoming/2026-10-27_validation_plan/PLAN.md` § 3.2, the BR-1 row: Ref. data "not released"; Status "blocked:
-    the data is not available".
-  - `decisions.md` § "R-641 — …": "**BR-1** (REQ-VAL-297) may be scored against those 180 directly, as the paper's own
-    data, not provisionally."; `decisions.md` § "R-642 — …": "BR-1 against the 180 NVM trajectories (pgbreen/NVM @
-    a35c378; kept in docs/incoming/_local/, never committed, no licence)".
-  - `docs/design/principia_dd_replication.md` § 5.10 already carries this, in its note of 28 Oct 2026: "BR-1 against
-    the 180 trajectories of `github.com/pgbreen/NVM` at `a35c378`, never committed".
-- **The conflict:** the plan's row predates the rulings and was never given a dated note; its R-631 note in § 3.1 is
-  the form such a note has taken. Nothing in the row says that 180 of the paper's ~10⁴ now score directly, or that the
-  scoring is in M9 (R-650). The ruled text governs; only the plan's record is stale.
-- **Options seen:** (a) a dated note beside the row, leaving it as written, as § 3.1 does for R-631; (b) correct the
-  row's Ref. data and Status cells; (c) leave it, the design doc being the current text.
-- **Applied meanwhile:** the rulings. No code or target waits.
-
-## RQ-659: REQ-VAL-319 names Manwadkar et al. 2021's Table 1 for the escape probabilities, which are in its Table 2 *(a conflict between a requirement and its source; REQ-VAL-319; `docs/design/principia_dd_replication.md` § 5.12; `docs/incoming/2026-10-27_validation_plan/PLAN.md` § 3.2; context: MK-1, TASK-M9-23)*
-
-*Queued 1 Nov 2026 by the orchestrator's filing task, from the library triage's follow-ups.*
-
-- **File, section:**
-  - `plan/requirements.yaml`, REQ-VAL-319: "Per-body escape probabilities over Manwadkar et al. 2021's eight mass sets
-    must be measured in a planar re-run and compared as distributions with their Table 1 (MK-1)."; its verify detail:
-    "Table 1 transcribed twice (rule 2)"; its note: "per-body escape probabilities over eight mass sets (Table 1)".
-  - `docs/design/principia_dd_replication.md` § 5.12, the MK-1 row: "per-body escape probabilities over eight mass sets
-    (Table 1)".
-  - `docs/incoming/2026-10-27_validation_plan/PLAN.md` § 3.2, the MK-1 row: Ref. data "Table 1 (not transcribed)".
-  - `docs/incoming/2026-10-25_replication/papers/manwadkar_kol_trani_leigh_2021_MNRAS_arXiv2101.03661.pdf`, Table 1:
-    "Summary of the three-body simulations sets."; Table 2: "The escape probabilities 𝑃𝑠 and total number of
-    realizations 𝑁𝑠 by escaper mass in different three-body systems."
-  - `docs/incoming/2026-10-25_replication/catalogue.md` § 5.2: "**Table 1:** Eight mass sets", right of Table 1; it
-    gives the probabilities no table.
-- **What is settled:** the paper's Table 1 is the mass sets and set-up, and its Table 2 is the probabilities.
-- **What is not:** Table 2 prints three cuts: "[1] The entire set, [2] Removing prompt ejections (𝜏 D > 30yrs), [3]
-  ergodic subset (𝜏 gap > 10yrs and 𝜏 D > 80yrs)". REQ-VAL-319 names no cut. The paper compares cut 3 with the theories
-  ("The probabilities of the ergodic subset are being compared to theoretical formalisms").
-- **Options seen:** (a) correct the reference to Table 2, with Table 1 for the mass sets, in the requirement and both
-  rows; (b) as (a), and also name the cut; (c) as (a), comparing all three cuts.
-- **Applied meanwhile:** nothing. Nothing built waits: MK-1 also waits on RQ-593 and scores in M9.
-
-## RQ-660: PLAN.md's 437 non-zero angular momentum rows count two Rose rows its own list doesn't name, whose L is refinement drift: the named families sum to 435 *(a count against its breakdown; `docs/incoming/2026-10-27_validation_plan/PLAN.md` § 2.3, § 7; `docs/design/principia_dd_replication.md` lines 176, 726; `docs/incoming/2026-10-26_orbit_catalogues/threebodyorbits_ics.csv`; `docs/incoming/2026-10-31_library_triage/SUMMARY.md`; context: OC-1)*
-
-*Queued 1 Nov 2026 by the orchestrator's filing task, from the library triage's follow-ups.*
-
-- **File, section:**
-  - `docs/incoming/2026-10-27_validation_plan/PLAN.md` § 2.3: "437 with \|L\| > 1e-6".
-  - The same, § 7: "OC-1 (437 rows: Simó 344, Broucke, BHH, Sheen, Šuvakov's other orbits)".
-  - `docs/design/principia_dd_replication.md` line 176: "437 with |L| > 1e-6; 86 other."; line 726: "OC-1 (437 rows)".
-  - `docs/incoming/2026-10-31_library_triage/SUMMARY.md` lines 223-224: "PLAN's 437 L≠0 rows list families summing to
-    435; the other 2 are `rose` rows with refinement drift."
-  - `docs/incoming/2026-10-31_library_triage/triage.csv`, the `threebodyorbits_ics.csv, family rose` row: "Rose (2016),
-    'Geometric phase and periodic orbits of the equal-mass, planar three-body problem with vanishing angular
-    momentum'" and "These are general L=0 orbits"; the `atlas-params.json, family rose` row: "The 2 rows with L over
-    1e-6 are refinement drift in ref_*, not real nonzero L".
-- **Measured, 1 Nov 2026,** on `threebodyorbits_ics.csv`'s `L_cat` (`L_recomp` gives the same): |L| > 1e-6 on 437 rows:
-  `simo` 344, `brouckeS` 23, `brouckeA` 16, `brouckeR` 13, `bhhsat` 15, `suvakov_pc` 13, `sheen` 11, and `rose` 2. The
-  families § 7 names sum to 435. The two others are `rose2016_t0k4i2_1_1_1` (L = 4.84147e-05) and
-  `rose2016_t0k2i4_1_1_1` (L = −3.76993e-06), from a source whose title says vanishing angular momentum. The 413 in
-  § 0 holds on the same rows (`closure_refined` < 1e-9). Σ m(x·vy − y·vx) on those two rows' `pub_*` gives 0.0 on both;
-  on their `ref_*` it gives 4.841466815563855e-05 and −3.7699259047840883e-06, so `L_cat` and `L_recomp` are the refined
-  state's values.
-- **What is settled:** the two are L = 0 orbits whose refined state drifted over § 2.3's threshold: the CSV's published
-  starts have L = 0 exactly, and the triage reads them the same way. Rose's thesis is not held, so `pub_*` is not
-  checked against it here.
-- **What is not:** how the plan and the design doc word the count: 437 as the cut measures it, or 435 orbits with
-  L ≠ 0.
-- **Options seen:** (a) keep 437 as what the cut measures, and add Rose's 2 to § 7's list, named as refinement drift;
-  (b) state 435, with the two recorded as L = 0 rows whose refined state is above the cut; (c) a dated note beside
-  each, the rows left as written.
-- **Applied meanwhile:** nothing. No test depends on the count.
-
-## RQ-662: The layout at sizes it allows: the default split puts the bottom row under its minimum at 1280×720, and at the compass's least size the Plücker readout passes the panel *(a conflict between code and its doc; R-462 J2; `crates/gui/src/layout.rs`; found by the gui review of PR #365 (5726156060); context: found beside TASK-M6-35, outside its diff)*
-
-*Queued 1 Nov 2026 by the orchestrator's filing task, on that review's "Outside this PR, for the orchestrator".*
-
-- **File, section:**
-  - `crates/gui/src/layout.rs:44-46`: "The bottom row's least height, in points: the compass's cube, buttons and readout,
-    and Time's transport, whole (J2; measured: the compass's readout passes the footer below 154.7).", `MIN_BOTTOM_H:
-    f32 = 160.0`.
-  - The same, `:47-49`: "The compass's least width, in points: its cube and its buttons beside it, and its readout (J2;
-    measured: the readout passes the edge below 224, a tilted readout a few characters longer).", `MIN_COMPASS_W: f32 =
-    240.0`.
-  - `Layout::with_splits`'s doc: "the minimums hold the splitters' drags ([`Layout::range`])", so they hold drags only.
-  - `decisions.md` § "R-462 — …", J2: "Each panel's minimum keeps its controls usable (the Manifold view its widest row,
-    the compass its cube and buttons, Time its transport)".
-  - The gui review of PR #365 (5726156060): "at 1280×720 the default row is 157.3 high, below `MIN_BOTTOM_H`. A default
-    split is therefore not held to the minimum in `Layout::with_splits`. At 240 × 160 the Plücker readout also passes
-    the panel (883.3 against 876.7), contrary to the doc at `layout.rs:44-48`. Both predate this diff."
-- **Checked:** the first by the constants: the default row is `(FOOTER_TOP − BOTTOM_TOP) / ARTBOARD[1]` = 295/1350 of the
-  height, so 157.3 at 720, and under 160 for any window under about 732 high. No minimum window size is set
-  (`crates/gui/src/cli.rs`'s only size is `with_inner_size`, 1440×900, where the row is 196.7). The second is the
-  review's measurement, not repeated here: a docs-only filing runs no build.
-- **The question:** what a size below the minimum does. Neither J2 nor the spec says what holds at small windows.
-- **Options seen:** (a) hold every split, the default included, to the minimums in `Layout::with_splits`, where the
-  window has room; (b) set a least window size at which the default layout meets them; (c) re-measure `MIN_COMPASS_W` and
-  `MIN_BOTTOM_H` against the widest readout, for the second part; (d) correct the doc to say they bind drags only.
-- **Applied meanwhile:** nothing; the code stands as on `main`. Nothing waits. PR #365's own help text is its own finding,
-  apart from this entry.
-
-## RQ-663: With X ≠ Y, a typed basis with Y on q₁ or X on q₂ reads with that component ignored: q₁ = 0.8 e_μ1, q₂ = e_β reads σ = 0, and the next zoom edit rewrites the plane *(a defect in the reading; R-457 E1, R-459 G3, G4; `crates/gui/src/explore/manifold_view/mod.rs`; found by the code review of PR #366 (5726096107); context: found beside TASK-M6-40, outside its diff)*
-
-*Queued 1 Nov 2026 by the orchestrator's filing task, on that review's "Not this PR's: for the orchestrator to file".*
-
-- **File, section:**
-  - The code review of PR #366 (5726096107): "With X != Y, a typed basis with Y on q₁ (or X on q₂) has that component
-    ignored. σ is then the α part alone: q₁ = 0.6 e_α + 0.8 e_μ1, q₂ = e_β reads σ = 0.6 and off by 0.8. q₁ = 0.8 e_μ1,
-    q₂ = e_β reads σ = 0, so the zoom is infinite. The next zoom edit (`navigate.rs`,
-    `basis_edit(view.with_zoom(zoom).basis())`) then rewrites the plane."
-  - `crates/gui/src/explore/manifold_view/mod.rs`, `View::in_frame`: `let sin1 = cos_g * q1[x] - sin_g * q2[x];`, `let
-    sin2 = sin_g * q1[y] + cos_g * q2[y];`, and `scale: cos1.hypot(sin1)`; `View::framed`'s preset test `outside(a, b)`
-    leaves out `a`, `b`, `x` and `y` alike, whichever vector carries them; `View::zoom`: `-self.scale.log2()`.
-  - `crates/gui/src/explore/manifold_view/navigate.rs`, the zoom row: `basis_edit(view.with_zoom(zoom).basis())`.
-  - `decisions.md` § "R-459 — …", G3: "an edit in Chart (the preset, a basis editor) moves H and V with it".
-- **Traced on `main`'s code, by reading (no build; X = z_q3, Y = z_μ1):** q₁ = 0.8 e_μ1, q₂ = e_β is not an `axis_pair`
-  (6 > 1), and preset (α, β) holds it, as `outside` ignores μ1. So `a` = α, `b` = β; `cos1` = 0, `cos2` = 1, γ = 0; `sin1`
-  = q₁[q3] = 0 and `sin2` = q₂[μ1] = 0; σ = `cos1.hypot(sin1)` = 0, and the zoom is +∞. `with_zoom(z).basis()` then gives
-  q₁ along e_α, q₂ along e_β, so a zoom edit replaces the typed μ1 direction with α. The plane moves on an edit that names
-  only the scale.
-- **The question:** how a basis whose X and Y components sit on the wrong vector is read, so that a zoom keeps the plane.
-- **Options seen:** (a) make the preset's test count those components, so the basis reads in the dominant axes' frame;
-  (b) have zoom scale the stored basis rather than rebuild it; (c) both.
-- **Applied meanwhile:** nothing; `main`'s reading stands. PR #366 leaves this reading as it is, its review not blocking
-  on it and not waiving it. Nothing built waits.
+- **4 Nov 2026 (R-706):** deferred to M9 by owner 4 Nov 2026. The entry stays open.
 
 ## RQ-629: WGSL and Vulkan bound `sin` and `cos` only by an absolute error, where the decode's `cos α` near `π/2` needs a relative one *(a note for future backends; REQ-ENC-024, REQ-RENDER-025; R-297; inverse-encode contract Part 4; dd_decoder §3.2; context: RQ-628, TASK-M2-26, PR #343)*
 
@@ -424,20 +273,6 @@ builds.*
 - **Waits:** nothing.
 - **4 Nov 2026 (R-696):** deferred to M4 by owner 4 Nov 2026, with RQ-687's option (a), decided on the cross-backend check. The entry stays open.
 
-## RQ-657: REQ-PERF-115 and TASK-M8-96 name the native comparison as `cargo run -p gui --features mock`, which is opt-level 0, while the site they compare it with is built `--release` *(silence: the requirement names no build; R-627; REQ-PERF-115; the perf review of PR #368 (5726255918), F1; context: TASK-M8-86, TASK-M8-96)*
-
-*Queued from the perf review of PR #368. Wording only: what was measured is settled under R-369 below, and the requirement is not changed here.*
-
-- **File, section:**
-  - `plan/requirements.yaml`, REQ-PERF-115, `verify.detail`: "beside `cargo run -p gui --features mock` on the same Mac by the same method (TASK-M8-86's frame statistics)".
-  - `plan/tasks/M8/TASK-M8-96.md` § "Acceptance tests", the REQ-PERF-115 line: "beside `cargo run -p gui --features mock` on the same Mac by the same method".
-  - `plan/tasks/M8/TASK-M8-86.md` § "Deliverables": "The same scripted pan and frame-rate window in the native mock app (`cargo run -p gui --features mock`)".
-- **The silence:** the root `Cargo.toml` has no `[profile.*]`, so that command runs unoptimised, and `xtask/src/web_skeleton.rs` builds the site with `--release`. On one head and window, native idle, the perf review read unoptimised work at about 3 to 7 times release's (work less wait p95, 4.75 to 4.91 ms against 0.72 to 1.41 ms; load-affected, size and direction only). The frame rate on these runs moved between about 60 and 120 in either build, so fps alone does not show the build; this is perf review 5726291237, F3, the correction of 5726255918, F1, whose halved-rate reading it withdraws.
-- **The question:** whether the three lines should name `--release`, for example `cargo run -p gui --features mock --release`.
-- **Options seen:** (a) add `--release` to the measured native row in the REQ-PERF-115 and TASK-M8-96 lines, leaving TASK-M8-86's line, which names the app, as it is; (b) leave the wording, the report's `build` field and this entry being the record.
-- **Applied meanwhile:** applied per R-369, the measured native row uses `--release`. The report and the panel name the build (`build`, "debug" or "release"), and PR #368's "What to try" gives the command. No requirement or task text changes for this entry.
-- **Waits:** nothing built waits. TASK-M8-96's perf reader measures with `--release` and checks the `build` field.
-
 ## RQ-675: A margin node's two field ins: render_gui_spec § 5 puts them on a derived source, § 3.1 gives a source no input and a brightness one *(a conflict inside the spec; REQ-GUI-024; render_gui_spec § 3.1, § 5, § 15 item 6; context: TASK-M7-12)*
 
 *Queued 3 Nov 2026 by the orchestrator's filing task, from the read-only pre-flight of TASK-M7-12. Nothing is chosen.*
@@ -466,6 +301,7 @@ builds.*
   one `field`, and REQ-GUI-024's verify names another multi-input node.
 - **Applied meanwhile:** nothing; `main`'s assembler stands.
 - **Waits:** TASK-M7-12's `stain_fanout` arm (REQ-GUI-024).
+- **4 Nov 2026 (R-706):** deferred to the start of TASK-M7-12 or TASK-M7-13 by owner 4 Nov 2026. Options with a recommendation are proposed then. The entry stays open.
 
 ## RQ-676: TASK-M7-12's deliverables against the built assembler: a second walk, an edit-sequence proptest that cannot live in `render`, and a fallback distinct from `#141418` *(a task file against `main`'s code and the corpus; REQ-RENDER-010, REQ-RENDER-072, REQ-RENDER-081; render_gui_spec § 13; R-467; systems_architecture § 7.1; context: TASK-M7-12)*
 
@@ -504,6 +340,7 @@ builds.*
   alone.
 - **Applied meanwhile:** nothing; the task file stands as written.
 - **Waits:** TASK-M7-12.
+- **4 Nov 2026 (R-706):** deferred to the start of TASK-M7-12 or TASK-M7-13 by owner 4 Nov 2026. Options with a recommendation are proposed then. The entry stays open.
 
 ## RQ-677: A slot occupant's default `inputDomains` when no field is wired, and for an unbounded field; and TASK-M7-13's deliverables against the built registry *(a definition requirement, R-72; R-53; REQ-GEN-019; gui_state_contract § 3; context: TASK-M7-13)*
 
@@ -537,6 +374,7 @@ builds.*
   build-time scan and `build.rs` as written.
 - **Applied meanwhile:** nothing; `main`'s registry stands.
 - **Waits:** TASK-M7-13.
+- **4 Nov 2026 (R-706):** deferred to the start of TASK-M7-12 or TASK-M7-13 by owner 4 Nov 2026. Options with a recommendation are proposed then. The entry stays open.
 
 ## RQ-678: On the tilted Burrau `K` charts, R-471 E3's "every pixel feasible under every tilt" against R-633 c2's refused cells *(physics; R-471 E3; R-633 c2; REQ-CHART-061, REQ-CHART-067; context: TASK-M2-38, TASK-M2-52)*
 
@@ -610,6 +448,7 @@ it is physics, the two rulings give different results on one chart.*
 - **Waits:** only the span a view supplies, through TASK-M8-48's sliders. TASK-M2-52's kernel work does not wait: the
   span is the caller's input to `Tilt::new(spec, centre, span)` (`crates/kernel/src/chart/tilt.rs`:509-530), used only
   as `d = span·d̃` (`Tilt::offsets`, :555-564), and no TASK-M2-52 acceptance arm depends on its value.
+- **4 Nov 2026 (R-706):** deferred to the start of TASK-M8-48 by owner 4 Nov 2026. Options with a recommendation are proposed then. The entry stays open.
 
 ## RQ-680: TASK-M7-52's target charts: SM1's table has `θ × dilation` and `ν × dilation`, which no app chart has *(a definition requirement, R-72; R-542; state_map SM1; REQ-COL-113, REQ-COL-115, REQ-COL-129, REQ-COL-134; context: TASK-M7-52, TASK-M7-47)*
 
@@ -640,6 +479,7 @@ it is physics, the two rulings give different results on one chart.*
   (c) another, stated by the owner.
 - **Applied meanwhile:** nothing.
 - **Waits:** TASK-M7-52 (and TASK-M7-47's `θ × h` and `ν × h` arms through it).
+- **4 Nov 2026 (R-706):** deferred to M9 by owner 4 Nov 2026. The entry stays open.
 
 ## RQ-681: TASK-M9-01: no task builds the scoring runner it calls, AT-D6's twins and slice planes are undefined, and OC-2's state and precision are unsettled *(silence, R-72; R-71; R-649, R-650; REQ-VAL-214 to REQ-VAL-217; dd_replication § 4.3, § 8; context: TASK-M9-01, TASK-M3-27, RQ-660)*
 
@@ -681,6 +521,7 @@ it is physics, the two rulings give different results on one chart.*
   exponent form at most 4.84147e-5 in magnitude and 402 reading 0.0, where a count of printed digits means nothing).
 - **Applied meanwhile:** nothing.
 - **Waits:** TASK-M9-01; TASK-M3-27 for (a).
+- **4 Nov 2026 (R-706):** deferred to M9 by owner 4 Nov 2026. The entry stays open.
 
 ## RQ-687: Whether the kernel takes its own f32 `sin` and `cos`, as `arctan.rs` does for `atan2` (RQ-628), given that it can change CPU bits *(physics; a decision that changes what is built; R-297, R-649; REQ-DEC-043; RQ-628, RQ-629; issues #390, #393, #401; context: the Windows RTX 2080 Super run, RQ-685)*
 
@@ -821,6 +662,7 @@ change: no timer was touched (R-649). Nothing is chosen.*
   each `xtask ci` runner on a cold target, with the harness build apart.
 - **Applied meanwhile:** nothing. No timer is touched.
 - **Waits:** REQ-SYS-070's verify on `main`. A PR that changes the workflow's paths meets this run; no build task waits.
+- **4 Nov 2026 (R-707):** ruled: "find the cause; timer untouched". The entry stays open until that work is done; it is in hand on another branch.
 
 ## RQ-689: `jobq_a_finished_jobs_group_is_killed`'s control races perl's `setpgrp` against the runner's group kill *(a flaky control; REQ-VAL-147; R-658; context: `xtask/tests/jobq.rs` `finished_group_case`, run 41785718756, PR #394)*
 
@@ -850,6 +692,7 @@ change: no timer was touched (R-649). Nothing is chosen.*
   change; (b) another, stated by a reviewer or the owner.
 - **Applied meanwhile:** nothing.
 - **Waits:** nothing.
+- **4 Nov 2026 (R-707):** ruled: option (a), "you fix (test-only)". The entry stays open until that work is done; it is in hand on another branch.
 
 ## RQ-693: Whether BR-1 runs from the authors' own initial conditions stand in for R-638's seeded draw *(the part of RQ-615 R-701 does not reach; R-638; `docs/incoming/2026-10-28_rq598_data/README.md` § 4 task 4; context: TASK-M9-22)*
 

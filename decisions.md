@@ -30470,3 +30470,82 @@ The owner's words, 4 Nov 2026, verbatim:
 R-704 is in the "design" group of `plan/rule_groups.yaml`, with R-630.
 
 Adds REQ-VAL-352 and REQ-VAL-353.
+
+## R-705 — REQ-PERF-115 and TASK-M8-96 name `--release`; a least window size is set, and the layout's minimums are re-measured; a typed basis's off-frame components are counted and zoom scales the stored basis *(closes RQ-657, RQ-662 and RQ-663)*
+*4 Nov 2026 · the owner's batch of that day; applied in `docs/archive/review_queue/M0.md` (three entries moved), `REVIEW_QUEUE.md`, REQ-PERF-115 (reqio), REQ-GUI-414 and REQ-GUI-415 (reqio, new), TASK-M6-55 and TASK-M6-56 (new), TASK-M8-96, `plan/tasks.yaml` and `plan/rule_groups.yaml`*
+
+The owner's words, 4 Nov 2026, verbatim:
+
+> RQ-657: (a) add --release to the wording. RQ-662: (b) a least window size, plus (c) re-measure. RQ-663: (c) both; it's a real bug, task it.
+
+*What it decides:*
+
+- **RQ-657 (a).** `--release` joins the measured native row in REQ-PERF-115's verify and TASK-M8-96's line. TASK-M8-86's line, which names the app, stays as written.
+- **RQ-662 (b) and (c).** A least window size is set, at which the default layout meets the minimums, and `MIN_COMPASS_W` and `MIN_BOTTOM_H` are re-measured: REQ-GUI-414, TASK-M6-55. Options (a), holding every split in `Layout::with_splits`, and (d), rewording the doc, are not taken.
+- **RQ-663 (c).** Both: the preset's test counts the X and Y components on the wrong vector, so a basis reads in its dominant axes' frame, and zoom scales the stored basis rather than rebuilding it, so an edit that names only the scale keeps the plane. It is a real bug: REQ-GUI-415, TASK-M6-56.
+
+*Applied per R-369:* `crates/gui/src/layout.rs`'s doc comments have moved since RQ-662 quoted them; the compass's column now scrolls inside the panel, and the constants are 160 and 240 as quoted. TASK-M6-55 measures on the code as it then stands. TASK-M6-56 depends on TASK-M6-40, whose PR #366 found the defect and touches the same reading.
+
+*What it amends:* nothing. R-462 J2 is silent on a window below the minimums, and this fills the silence. It closes **RQ-657**, **RQ-662** and **RQ-663**.
+
+R-705 is in the "design" group of `plan/rule_groups.yaml`, with R-459 and R-462.
+
+Adds REQ-GUI-414 and REQ-GUI-415; changes REQ-PERF-115 (verify, rulings, source, note).
+
+## R-706 — The owner's deferrals of 4 Nov: each entry stays open with its target, and RQ-654's place on the list changes nothing, R-669 having closed it, with BZ-1C's work in M9; RQ-647 is moot under R-669
+*4 Nov 2026 · the owner's batch of that day; applied in `REVIEW_QUEUE.md` (a dated line on each deferred entry), `docs/archive/review_queue/M0.md` (a dated note on RQ-647 and RQ-654) and `plan/rule_groups.yaml`*
+
+The owner's words, 4 Nov 2026, verbatim:
+
+> RQ-647: moot under R-669 (256 kept); close.
+
+> DEFER to their tasks/milestones: RQ-594, 619, 643, 654, 680, 681 (M9); RQ-577 (own session).
+
+> RQ-378: (a) keep, defer. RQ-386: (c) decide by measurement. RQ-391: defer until the exporter is designed.
+
+> RQ-675, 676, 677, 679: defer to when TASK-M7-12/13 and M8-48 start; propose options with a recommendation then.
+
+*What it decides:* each entry stays open, with a dated line.
+
+- **To M9:** RQ-594, RQ-619, RQ-643, RQ-680 and RQ-681.
+- **To its own session:** RQ-577.
+- **RQ-378:** option (a) stays applied, and the entry is deferred, with no target.
+- **RQ-386:** option (c), decided by TASK-M7-44's measurement. Option (a) stands until then.
+- **RQ-391:** deferred until the exporter is designed.
+- **RQ-675, RQ-676 and RQ-677:** to the start of TASK-M7-12 or TASK-M7-13, and **RQ-679** to the start of TASK-M8-48, options with a recommendation proposed then.
+
+*A contradiction recorded, not resolved by guessing.* The DEFER line lists RQ-654, but R-669 already closed it: "654 (a)→(b) fallback". Applied: it stays closed. BZ-1C's starts remain Path B, with the list-of-starts chart as the fallback, and that work sits in M9. The deferral changes nothing but a note on the archived entry. If the owner meant to reopen it, it is a new question.
+
+*RQ-647.* The owner calls it moot under R-669, which keeps 256 and closed the entry, so "close" changes nothing but a note.
+
+*What it amends:* nothing.
+
+R-706 is in the "process" group of `plan/rule_groups.yaml`.
+
+## R-707 — The batch's CI and record items: the cause of `stand-in-soak`'s failure is found with the timer untouched; `jobq_a_finished_jobs_group_is_killed`'s control is fixed, test-only; RQ-658, RQ-659 and RQ-660 are the orchestrator's to decide, each option (a); RQ-644 and RQ-646 are cleared with their history *(closes RQ-644, RQ-646, RQ-658, RQ-659 and RQ-660)*
+*4 Nov 2026 · the owner's batch of that day; applied in `docs/incoming/2026-10-27_validation_plan/PLAN.md` § 3.2 and § 7, `docs/design/principia_dd_replication.md` § 5.12, `docs/archive/review_queue/M0.md` (five entries moved), `REVIEW_QUEUE.md` (RQ-688 and RQ-689, a dated line), REQ-VAL-319 (reqio), TASK-M9-23 and `plan/rule_groups.yaml`*
+
+The owner's words, 4 Nov 2026, verbatim:
+
+> RQ-684: amend R-360 to match the move. RQ-688: find the cause; timer untouched. RQ-689: you fix (test-only).
+
+> RQ-658, 659, 660: you decide. Clear the ruled or moot entries (644, 646, 672-674) with history.
+
+*(Line 39's RQ-684 is R-697's. "672-674" are PR #385's to clear, R-679 having ruled them.)*
+
+*What it decides:*
+
+- **RQ-688:** "find the cause; timer untouched". **RQ-689:** option (a), "you fix (test-only)". Both rulings are recorded here, and both entries stay open until that work is done; both are in hand on other branches.
+- **RQ-644 and RQ-646:** R-661 ruled them on 31 Oct 2026, and each entry already says so. They move to the archive with that history.
+
+*The orchestrator's decisions, applied per R-369, as the owner's "you decide" gives them:*
+
+- **RQ-658, option (a).** A dated note beside BR-1's row in PLAN.md § 3.2, leaving the row as written, as § 3.1 does for R-631.
+- **RQ-659, option (a).** REQ-VAL-319 and both rows read Table 2 for the escape probabilities and Table 1 for the mass sets, each with a *Was*. No cut is named, options (b) and (c) not being taken; MK-1 stays "not scored: no chart" (R-669), and a cut would be its scoring's question.
+- **RQ-660, option (a).** 437 stays what the cut measures, and § 7's list gains Rose's 2, named as refinement drift.
+
+*What it amends:* nothing. It closes **RQ-644**, **RQ-646**, **RQ-658**, **RQ-659** and **RQ-660**.
+
+R-707 is in the "process" group of `plan/rule_groups.yaml`.
+
+Changes REQ-VAL-319 (statement, verify, rulings, source, note).

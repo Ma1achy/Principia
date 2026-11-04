@@ -460,6 +460,7 @@ as history only.
 - **R-702** — The library's open readings: Paper I's normalisation is read for Tanikawa 2000's times; Broucke 2006 stays context; Martynova & Orlov's fractions are compared with the 56 stated; the two unverified citations drop; the trust line's marks gain a dated "chosen by analogy" line; Tanikawa's free-fall papers are named by the frame each uses, no mirror for the ones read; AN-2 is shape-only *(closes RQ-640, RQ-641, RQ-642, RQ-645, RQ-648, RQ-650 and RQ-651; refines R-574)*
 - **R-703** — A statistical target scored on tier (a) alone is labelled "f32; f64 agreement not yet measured" until BZ-1C; BZ-1C's third side uses both escape criteria, and any energy cut is shown both ways with its counts; a start with neither pair parted reads "unresolved", counted apart *(closes RQ-649, RQ-652, RQ-653 and RQ-655; refines R-632 and R-649)*
 - **R-704** — PLAN.md § 2.1 gains a dated note pointing at the authors' GitHub table, LL-5 staying closure only, and a new peek target, LL-6, compares all 316 orbits with that table *(closes RQ-661)*
+- **R-705** — REQ-PERF-115 and TASK-M8-96 name `--release`; a least window size is set, and the layout's minimums are re-measured; a typed basis's off-frame components are counted and zoom scales the stored basis *(closes RQ-657, RQ-662 and RQ-663)*
 
 ## Values
 
@@ -582,6 +583,8 @@ as history only.
 - **R-681** — Standing rules: while `main` is red, or a required check is stuck, agents open and update no other pull request, and the owner is told in one message; a CI-tooling pull request shows its own `xtask-ci` passing before it merges; a stuck check is cleared by re-running only the job that reports it, never the whole pipeline *(refines R-369)*
 - **R-682** — Admin bypass on `main` is the owner's alone: agents never use it, by `gh pr merge --admin` or any API merge that skips a required check; merge scripts merge only when every required check has passed; a stuck check goes to the owner, who decides whether to bypass *(amends R-266)*
 - **R-697** — The orchestrator's decisions of 30 Oct and 4 Nov on RQ-621, RQ-623, RQ-624, RQ-628, RQ-632 and RQ-684, and the `DECODE_SWITCHOVER` reading, are accepted; R-360 is amended to match RQ-684's move *(closes RQ-621, RQ-623, RQ-624, RQ-628, RQ-632 and RQ-684; amends R-360)*
+- **R-706** — The owner's deferrals of 4 Nov: each entry stays open with its target, and RQ-654's place on the list changes nothing, R-669 having closed it, with BZ-1C's work in M9; RQ-647 is moot under R-669
+- **R-707** — The batch's CI and record items: the cause of `stand-in-soak`'s failure is found with the timer untouched; `jobq_a_finished_jobs_group_is_killed`'s control is fixed, test-only; RQ-658, RQ-659 and RQ-660 are the orchestrator's to decide, each option (a); RQ-644 and RQ-646 are cleared with their history *(closes RQ-644, RQ-646, RQ-658, RQ-659 and RQ-660)*
 
 ## CI
 

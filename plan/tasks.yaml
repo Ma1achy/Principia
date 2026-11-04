@@ -2037,6 +2037,22 @@
   requirements: [REQ-GUI-265]
   reviewers: [code, qa, gui, physics]  # ⚑ tilt maths
   pitfalls: []
+- id: TASK-M6-55
+  milestone: M6
+  title: "A least window size, and the layout's minimums re-measured (R-705)"
+  depends_on: [TASK-M6-35]
+  needs: []
+  requirements: [REQ-GUI-414]
+  reviewers: [code, qa, gui]
+  pitfalls: []
+- id: TASK-M6-56
+  milestone: M6
+  title: "A typed basis read whole, and zoom scaling the stored basis (R-705)"
+  depends_on: [TASK-M6-40]
+  needs: []
+  requirements: [REQ-GUI-415]
+  reviewers: [code, qa, gui]
+  pitfalls: []
 - id: TASK-M7-01
   milestone: M7
   title: "Composition-spec gaps: the resolutions the stain editor assumes, written into colour_composition"
