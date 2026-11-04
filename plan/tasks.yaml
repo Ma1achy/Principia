@@ -1344,7 +1344,7 @@
 - id: TASK-M4-28
   milestone: M4
   title: "The kernel cross-backend check: the same IC set marched on NVIDIA Vulkan, Metal, lavapipe and CPU f32, labels and branch-sensitive results compared per backend pair (R-686)"
-  depends_on: [TASK-M4-05, TASK-M4-02, TASK-M4-03, TASK-M4-18, TASK-M4-27]
+  depends_on: [TASK-M4-05, TASK-M4-02, TASK-M4-03, TASK-M4-09, TASK-M4-18, TASK-M4-27]
   needs: [REQ-INT-026, REQ-EVT-003, REQ-EVT-005, REQ-VAL-026]
   requirements: [REQ-VAL-348]
   reviewers: [code, qa, physics]

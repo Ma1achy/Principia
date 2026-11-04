@@ -2,7 +2,7 @@
 
 - **Milestone:** M4
 - **Closes:** REQ-VAL-348
-- **Depends on:** TASK-M4-05, TASK-M4-02, TASK-M4-03, TASK-M4-18, TASK-M4-27
+- **Depends on:** TASK-M4-05, TASK-M4-02, TASK-M4-03, TASK-M4-09, TASK-M4-18, TASK-M4-27
 - **Needs (earlier milestones):** REQ-INT-026, REQ-EVT-003, REQ-EVT-005, REQ-VAL-026
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** PIT-9, PIT-10
@@ -39,9 +39,7 @@ alone does not answer the owner's question; the bits at identical operands do, a
   decoding its own start state, through TASK-M4-05's survey entry, each IC one texel of its own quad, since that march takes no IC buffer. **Shared:** CPU f32's decoded state's bits as every
   backend's start, marched by the pass entry below, and on CPU f32 by the same body at f32. An IC held as `(m, r, p)` with no chart point runs on the shared arm alone, and the report says so.
 - The pass entry. `gpu_step_once` is one STEP (parity contract § "1. The principle"): no `N_sub`, projection or detection, so iterating it isn't a march, and choosing `N_sub`
-  on the host would put the CPU's branch in the GPU's record. So the body of `integrate_with`'s loop moves into one function that loop and a compute entry in `crates/kernel/src/stage/branch_read.rs`
-  both call, with no change of behaviour; `gpu_macro_pass` in `crates/validation/src/harness/` dispatches it. It takes and returns the carried state: `(m, r, p)`, the macro index and every register the loop reads
-  between macro-steps (`Geom`, `SubstepState`, the cadence's and detectors' registers, REQ-PAY-059's lagged `n̂` wherever it is placed), and it also returns that macro-step's branch words (`N_sub`, `state`, the collision and escape decisions).
+  on the host would put the CPU's branch in the GPU's record. So a compute entry in `crates/kernel/src/stage/branch_read.rs`, dispatched by `gpu_macro_pass` in `crates/validation/src/harness/`, calls TASK-M4-09's one loop body on its one carried-state type, with no second list of registers (applied per R-369). It takes and returns that carried state, and also returns the macro-step's branch words (`N_sub`, `state`, the collision and escape decisions).
 - The IC set, fixed before the first run and the same bits on all four: `fixtures/gates/parity_fixtures` (TASK-M4-18), with its
   non-chaotic and chaotic marking, and a near-decision stratum, `fixtures/gates/cross_backend_near_decision`, of ICs chosen to
   straddle collision, escape and `N_sub` decisions and a uniform grid across a basin boundary, each a chart and a point, all the survey entry takes. The header states each
