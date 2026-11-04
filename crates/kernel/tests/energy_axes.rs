@@ -1927,23 +1927,14 @@ negative_control!(
     check_floor_least(|l| l * l / 2.0)
 );
 
-/// `floor`'s edges at f64: 0 at `±0`, the smallest float where `l²` underflows, either sign alike, and `+∞` and NaN
-/// where `l²/2` has no float.
+/// `floor`'s edges at f64: 0 at `±0`, either sign alike, and the least normal float where `l²/2` is below it.
 fn check_floor_edges(floor: fn(f64) -> f64) {
     assert_eq!(floor(0.0).to_bits(), 0, "the floor at +0");
     assert_eq!(floor(-0.0).to_bits(), 0, "the floor at −0");
-    assert_eq!(
-        floor(1.0e-300).to_bits(),
-        1,
-        "the floor where l² underflows"
-    );
-    assert_eq!(
-        floor(-1.0e-300).to_bits(),
-        1,
-        "the floor where l² underflows"
-    );
-    assert_eq!(floor(1.0e200), f64::INFINITY, "the floor past f64");
-    assert!(floor(f64::NAN).is_nan(), "the floor of NaN");
+    let least = f64::MIN_POSITIVE;
+    assert_eq!(floor(1.0e-300), least, "the floor where l² underflows");
+    assert_eq!(floor(-1.0e-300), least, "the floor where l² underflows");
+    assert_eq!(floor(5.0e-324), least, "the floor of a subnormal spin");
 }
 
 /// The floor's edges at both precisions, and the step up's own, which leaves `+∞` and NaN where they are.
@@ -1952,9 +1943,8 @@ fn energy_axes_warped_floor_edges() {
     use invariant::{k_floor, WarpReal};
     check_floor_edges(k_floor);
     assert_eq!(k_floor(0.0_f32).to_bits(), 0);
-    assert_eq!(k_floor(1.0e-30_f32).to_bits(), 1);
-    assert_eq!(k_floor(1.0e30_f32), f32::INFINITY);
-    assert!(k_floor(f32::NAN).is_nan());
+    assert_eq!(k_floor(-0.0_f32).to_bits(), 0);
+    assert_eq!(k_floor(1.0e-30_f32), f32::MIN_POSITIVE);
     assert_eq!(0.0_f64.above().to_bits(), 1);
     assert_eq!(0.0_f32.above().to_bits(), 1);
     assert_eq!(1.0_f64.above(), 1.0 + f64::EPSILON);
@@ -1971,6 +1961,60 @@ negative_control!(
     "the rounded l²/2 alone leaves an underflowed spin's bottom row at K* = 0, below any spin",
     expected = "the floor where l² underflows",
     check_floor_edges(|l| l * l / 2.0)
+);
+
+/// `x` as a backend that flushes subnormal results leaves it.
+fn flushed(x: f64) -> f64 {
+    if x.is_subnormal() {
+        0.0
+    } else {
+        x
+    }
+}
+
+/// [`flushed`] at f32.
+fn flushed32(x: f32) -> f32 {
+    if x.is_subnormal() {
+        0.0
+    } else {
+        x
+    }
+}
+
+/// Under an emulated flush of the sum and of its terms, `floor` keeps the bottom row and the row above it feasible, and
+/// is normal or 0, for a tiny spin at both precisions (the determinism note's rule 6).
+fn check_floor_flushed(floor: fn(f64) -> f64, floor32: fn(f32) -> f32) {
+    for l in [1.0e-160, -1.0e-170, 1.0e-200, 1.0e-300, 2.0e-310] {
+        let k = floor(l);
+        assert!(k.is_normal(), "the floor at L_z = {l} is subnormal: {k}");
+        for line in [0.0, 1.0e-320] {
+            let sum = flushed(flushed(k) + flushed(line));
+            assert!(!infeasible(1.0, sum, l), "flushed, L_z = {l} blanks");
+        }
+    }
+    for l in [1.0e-20_f32, -1.0e-22, 1.0e-30, 1.0e-38, 1.0e-42] {
+        let k = floor32(l);
+        assert!(k.is_normal(), "the floor at L_z = {l} is subnormal: {k}");
+        for line in [0.0, 1.0e-42] {
+            let sum = flushed32(flushed32(k) + flushed32(line));
+            assert!(!infeasible(1.0, sum, l), "flushed, L_z = {l} blanks");
+        }
+    }
+}
+
+#[test]
+fn energy_axes_warped_floor_flushed() {
+    check_floor_flushed(invariant::k_floor, invariant::k_floor);
+}
+
+negative_control!(
+    energy_axes_warped_floor_flushed,
+    "a floor stepped up from the rounded l²/2, subnormal for a tiny spin, flushes to 0 and blanks the bottom row",
+    expected = "is subnormal",
+    check_floor_flushed(
+        |l| invariant::WarpReal::above(l * l / 2.0),
+        |l| invariant::WarpReal::above(l * l / 2.0)
+    )
 );
 
 /// Every pixel of a warped lone `Q` axis at every held `L_z` is a system at that `L_z`, under `mapping`: the bottom row

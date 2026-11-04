@@ -329,8 +329,9 @@ kinetic energy that spin allows: `K* = L_z²/2I + K_max·t^γ_K` on `K` and `KE`
 the bottom row `t = 0` is the floor itself, §2.2's rigid rotation with `a = 0`, and the top row exceeds `K_max`, which
 is a range, as past `t = 1` (R-508). The pixel's own virial ratio `2K*/|U|` is `Q(t) + L_z²/(I·|U|)`. At a held
 `L_z = 0` the floor is 0 and the lines above stand unchanged. The bottom row must not blank on rounding: the floor is
-the least float §2.2's exact test finds feasible at the held `L_z`, `L_z²/2` at `I = 1` rounded and raised one float
-where it rounded below, and adding a non-negative term to it cannot fall below it. Under the linear option the axis
+the least normal float §2.2's exact test finds feasible at the held `L_z`, `L_z²/2` at `I = 1` rounded, raised one
+float where it rounded below, and never subnormal, so a backend that flushes subnormals keeps it; adding a non-negative
+term to it cannot fall below it. Under the linear option the axis
 keeps its fixed values and no floor is added: its pixels with `K* < L_z²/2I` are not a system and draw blank (R-470).
 *Was:* "**A warped `t` axis at a held `L_z ≠ 0` is not offered (R-471 E1, R-506; RQ-683).** A lone `K`, `KE`, `E` or
 virial axis holds `L_z` at the chart's value. At a held `L_z ≠ 0` its pixels with `K* < L_z²/2I`, near `t = 0`, would
