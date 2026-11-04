@@ -323,7 +323,7 @@ merge:
 5. If `reviews-complete` stays red only from the `pull_request`-event run, which fails before any review and stays a
    separate check suite, re-run it: `gh run rerun <id>` (R-266, R-276).
 6. To re-run CI, prefer re-running the failed jobs (`gh run rerun <id> --failed`) over closing and reopening the PR
-   (the owner's note, R-633).
+   (the owner's note, R-633). A stuck required check: the paragraph below (R-681).
 
 **`main` red, or a required check stuck (R-681, 3 Nov 2026, a standing rule).** While `main`'s CI is red, or a
 required check on a pull request is stuck, no agent opens or updates any other pull request, and no other pull request
@@ -486,7 +486,8 @@ Approvals are of a head, so the reviewers approve the merged head again before t
 
 The human's standing rule of 2 Oct 2026 (R-369), which replaced the size rules and the "veto? holds the merge"
 practice, in force whether the human is away or not. Keep working through the plan under `plan/WORKFLOW.md` and
-`CLAUDE.md`. Progress is the goal: decide and continue, and stop only when nothing at all can proceed.
+`CLAUDE.md`. Progress is the goal: decide and continue, and stop only when nothing at all can proceed. A red `main` or a stuck
+required check stops other pull-request work at once, whatever else could proceed (R-681; § "Merging").
 
 **Merge** a PR once all of these hold:
 - every reviewer the task names has posted `VERDICT: APPROVE` on the head;

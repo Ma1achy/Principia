@@ -27461,6 +27461,7 @@ REQ-VAL-042 (statement); adds REQ-DEC-051, REQ-DEC-052 and REQ-PAY-112.
 *Refined by R-636 (28 Oct 2026: its two readings written into its text, the paragraphs marked "Added on the owner's
 update of 28 Oct 2026" in its RQ-601 and RQ-603 bullets: `J⁺` where the steer's text says `J⁻¹`, with what it does
 when `J` is singular, and "ray-degenerate" read per cell).*
+*Refined by R-681 (3 Nov 2026: for a stuck check, its note on re-running CI tightens to re-running only the job that reports it).*
 *Amended in part by R-708 (4 Nov 2026: in warped mode a held energy-type coordinate tilts in its warp coordinate and no cell is refused; "by value" and the refusal stand in linear mode; RQ-678 closed).*
 *Still in force: all of it, those two readings now part of its text (R-636), but "by value" and the refused cell on the Burrau charts in warped mode, which R-708 replaces.*
 *28 Oct 2026 · the owner's ruling batch of that morning, with the revised RQ-603 text sent after it; applied in
@@ -29775,8 +29776,9 @@ Changes REQ-VAL-148 (source, rulings, note).
 ## R-677 — CI runs in three tiers: a change to Principia's code runs full CI as before; one to the plan's task data or the GUI's artboards and references runs only the cheap checks and the tests that read what it changed, with no build, test shard, GPU suite or mutants; one to the docs runs only the cheap checks; a change takes its highest tier, and an unknown path runs full CI; mutants run only when `crates/` source changes, on the merge-ready head; every required check still reports under its own name *(amends R-656, R-662, R-110, R-177, R-235, R-305 and R-676)*
 *Amended in part by R-678 (3 Nov 2026: a head with no `.rs` file under `crates/` has its `mutants-check` reported
 passed by its job, not posted).*
+*Refined by R-684 (3 Nov 2026: tier (a)'s "full CI" on a code head reads R-684's two tiers, full on a merge candidate and `main`, quick on any other head; the classifier is unchanged).*
 *Still in force: all of it, the `mutants-check` of a head with no `.rs` file under `crates/` reported passed at once,
-"not applicable", by `mutants.yml`'s job (R-678) rather than posted.*
+"not applicable", by `mutants.yml`'s job (R-678) rather than posted, and tier (a) reading R-684's two code tiers.*
 *2 Nov 2026 · the owner's message of that day, item 3, and his two replies on `plan/requirements.yaml` later that day;
 applied in `scripts/ci_changes.sh`, `scripts/ci_req_fields.py`, `.github/workflows/ci.yml`,
 `.github/workflows/mutants.yml`, `xtask/tests/ci_changes.rs`, `xtask/tests/merge_ready.rs`,
@@ -29982,9 +29984,9 @@ Changes REQ-VAL-148 (source, rulings, note).
 
 ## R-679 — The 3 Nov triage rulings: LL-3 takes Hénon 1974 as its independent printed source for Standish's orbit, its period agreement with Li & Liao to 2e-10 recorded, and stops waiting on Standish 1970; planetary (star-plus-planets) sources are parked with the hierarchical triples, revisited with the v2+ 3D extension, not out of scope for good; per-point FTLE maps over the batch-152 planes, from the planned FTLE field, and shape-sphere residence statistics, from a new time-weighted occupancy accumulator, are M9 peeks, non-gating, recorded as candidate original results, with no build before M9 *(closes RQ-672, RQ-673 and RQ-674; amends R-630 item 9; refines R-668 item 5)*
 *3 Nov 2026 · the owner's message of that day on the triage questions; ported 3 Nov 2026; applied in
-`docs/design/principia_dd_replication.md` § 5.3 (a dated note under the table), § 5.14 (a bullet) and § 12.5 (a dated
+`docs/design/principia_dd_replication.md` § 5.3 (a dated note under the table and LL-3's cell), § 5.14 (a bullet), § 7 (TASK-M3-47's line) and § 12.5 (a dated
 paragraph), R-630's and R-668's forward lines, REQ-VAL-223 (reqio), REQ-VAL-344, REQ-VAL-345 and REQ-VAL-346 (reqio,
-new), TASK-M9-07 (notes), TASK-M9-41 (new), `docs/archive/review_queue/M0.md` (RQ-672, RQ-673 and RQ-674, taken from
+new), TASK-M9-07 (Goal, Deliverables, acceptance and notes), TASK-M9-37, TASK-M9-41 (new), `docs/verification/peek_log.md` (a dated line), `plan/tools/milestones.py`, `docs/archive/review_queue/M0.md` (RQ-672, RQ-673 and RQ-674, taken from
 PR #385's branch with their rulings), `plan/tasks.yaml` and `plan/rule_groups.yaml`*
 
 The owner's words, 3 Nov 2026, verbatim:
@@ -30029,6 +30031,7 @@ archives them, unchanged, each with a Ruling line quoting the owner's words.
 - **Where a candidate original result is recorded.** It has no reference, so no PASS or divergence (R-649): each is a
   row of `docs/verification/peek_log.md` whose outcome reads "candidate original result", with its tier (R-649 item 2),
   its inputs and its conventions.
+- **LL-3 while one half waits (PR #413, code F2, physics F1).** The owner's "stop waiting" would mean nothing if the task still waited whole, so TASK-M9-07 starts on the Standish half and the one-orbit check at (1, 1, 1), and the Yasko & Orlov half reads "not scored" in the same row until it runs. That half's control needs the paper still awaited, so the Standish half gets its own from held data: Hénon's `A = 0` orbit against Li & Liao's F2 at (0.6, 0.8, 1). The orbit list holds it, and Hénon's family 2, the other candidate, needs collision handling. A test's choice, which changes no result.
 - **The task.** TASK-M9-41 is new, depending on TASK-M3-14 (the CPU Benettin FTLE) and TASK-M4-13 (the GPU FTLE). It is
   not scored, and TASK-M9-37's report does not wait on it.
 - **The data actions** (marking the planetary rows PARKED, transcribing Hénon 1974's Table I from the page) are #385's
@@ -30066,8 +30069,8 @@ R-680 is in the "process" group of `plan/rule_groups.yaml`.
 
 ## R-681 — Standing rules: while `main` is red, or a required check is stuck, agents open and update no other pull request, and the owner is told in one message; a CI-tooling pull request shows its own `xtask-ci` passing before it merges; a stuck check is cleared by re-running only the job that reports it, never the whole pipeline *(refines R-369)*
 *3 Nov 2026 · the owner's three messages of that day on `main`'s red `xtask-ci` and the stuck `mutants-check`; ported
-3 Nov 2026; applied in `plan/OPERATIONS.md` § "Merging" (a paragraph) and § "Autonomy (R-369)" (a line), R-369's
-forward line and `plan/rule_groups.yaml`; changes no requirement*
+3 Nov 2026; applied in `plan/OPERATIONS.md` § "Merging" (a paragraph and step 6's pointer) and § "Autonomy (R-369)" (a
+line), R-369's and R-633's forward lines and `plan/rule_groups.yaml`; changes no requirement*
 
 The owner's words (3 Nov 2026), verbatim: item (3) of the message that opens "Top priority, nothing else until done:
 main's xtask-ci fails on every PR since #381":
@@ -30213,6 +30216,8 @@ intermediate heads duplicated that work; the guarantee that `main` only receives
 *Part (B), applied at step (4)'s pull request:* a build-target cache saved from `main` only, keyed on `Cargo.lock` and
 the toolchain, for the 2–3 slowest jobs, evicted to stay well under 10 GB, built with `actions/cache` or `rust-cache`
 (target only), not sccache, so R-666 stands; the cache size reported after a week. R-285 is not edited here.
+
+*Applied per R-369 (PR #413, code F5), a mechanical consequence, flagged since the owner listed only R-110, R-177 and R-235:* R-677's tier (a), "full CI as before", now reads the two tiers above, and it carries the forward line. R-662's "Full CI runs only when a pull request changes Principia's code" is unaffected: it says when full CI may run, and that still holds.
 
 R-684 is in the "ci" group of `plan/rule_groups.yaml`.
 
