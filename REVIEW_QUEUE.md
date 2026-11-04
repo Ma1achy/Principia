@@ -2001,3 +2001,269 @@ it is physics, the two rulings give different results on one chart.*
   control still runs exactly once per code run, and a control that stops failing its test reds the required `ci`
   through `ci-workspace`. REQ-SYS-077's statement and verify detail are amended to say so (PR #395, its `*Was:*` kept in
   the requirement). R-360's text in `decisions.md`, and `plan/CURRENT_RULES.md`, are unchanged: R-360 stays for the owner.
+
+## RQ-685: What R-297's "bit-identity" covers with the compute setting off: branch decisions only, or every Vulkan driver's division results *(physics; conflict: R-297, REQ-SYS-074's verify and the probe tests against REQ-INT-057 and parity contract § 2; R-84, R-649; issues #390, #396; context: the Windows RTX 2080 Super run at `e1df88fa`)*
+
+*Queued 4 Nov 2026 by the orchestrator's filing task, from the Windows GPU run (#390), the entry REQ-SYS-074's verify
+asks for ("a mismatch with the setting off is a REVIEW_QUEUE entry"). For the owner: yes, it changes what the corpus
+claims, what the probe tests assert and what the header records. Nothing is chosen. This entry also holds the run's
+record, which RQ-686 and RQ-687 share.*
+
+- **The run:**
+  - Commit `e1df88fa`, NVIDIA GeForce RTX 2080 SUPER, Vulkan, driver 621.01, Windows 26200.9711. Metal (Apple Paravirtual
+    device) and lavapipe (llvmpipe, LLVM 20.1.2, Mesa 25.2.8) are CI run 41744485022, the same commit;
+    `qa_m225_kernel_rho_angle_at_the_lambda_pole` on Metal is a local job (1380), since CI's `gpu-metal` doesn't select
+    it. Classification: #390, comment 6629109407.
+  - Windows GPU results are measurements (R-649), never gates. Nothing was re-baselined, and no fixture, tolerance or
+    test was changed.
+  - **13 Windows test failures. None fails on Metal, lavapipe and the RTX together.** 10 are NVIDIA-Vulkan-specific
+    (#396 six, #397 two, #399 one, #393 one); 2 are our refusal of a discrete adapter (#398:
+    `compute_fast_math_defaults_off`, `qa_compute_fast_math_header_is_the_dispatch`); 1 is both (#398 and #396:
+    `compute_fast_math_switch_acts`). Three `build_kernel` failures, Windows process failures (os error 193), are not
+    among the 13 and are not GPU results.
+  - **The hardware-health arm is clean.** The owner reported that the card may have faulty shader cores, and held these
+    findings until a determinism control ran. `cargo xtask golden --all`, 6 runs: all 453 output files identical. The 13
+    failing tests, 5 reruns each: 65 of 65 failed, one distinct output per test. `decode_` and
+    `cargo xtask gate decode-agreement`, 3 runs: 0 differing lines. No `nvlddmkm` event in any run window. The owner
+    released the findings. The Windows session's caveat stands: repeating on one card rules out an intermittent fault,
+    not a fixed one, and only agreement with another GPU or backend separates those. DX12 on this card is the planned
+    second discriminator (#390, Phase 2) and has not run.
+  - **The physics reach is unmeasured.** No GPU march was run at this commit: `spirv(compute` appears only in
+    `crates/kernel/src/` `bringup.rs`, `toolchain.rs`, `decode/invariant.rs` and `stage/{canon,decode,encode,fragment}.rs`,
+    so nothing here integrates a trajectory on a GPU, and nothing here shows how far these differences reach.
+- **File, section:**
+  - `decisions.md` § "R-297 — …", the human's words: "Off: bit-identity and identical branch decisions hold (R-84,
+    REQ-INT-057)."
+  - `docs/contracts/principia_parity_contract.md`:154, § 4: "**Off:** bit-identity and identical branch decisions hold
+    as this contract states them (R-84; Tier B)".
+  - The same file, :97, § 2, Tier B: "a GPU's `pow`/`sqrt`/`div` and libm's differ by 1–3 ulp *in every math mode*".
+  - `plan/requirements.yaml`, REQ-INT-057: branch decisions "must be bit-identical across the CPU and every GPU backend
+    on identical inputs, per step, while continuous values (positions, momenta, energy, trajectory, and the outcome
+    class they decide near a chaotic boundary) are left free to diverge and are never reconciled".
+  - `plan/requirements.yaml`, REQ-SYS-074's verify: "in the gpu-metal and gpu-lavapipe jobs … compares each bit for bit
+    with the CPU's correctly rounded f32 division and reports the mismatches per backend; it must show none on either
+    backend … a mismatch with the setting off is a REVIEW_QUEUE entry".
+  - `crates/validation/src/gpu.rs`:978-979: "bit for bit, on every backend"; `crates/validation/tests/qa_TASK-M0-44.rs`:3-4
+    the same, wider than the requirement's two jobs.
+  - `crates/kernel/src/canon.rs`:67-68: "`√`, `/` and `atan2` carry ulp bounds in WGSL, not correct rounding".
+  - `decisions.md`:3282, R-297's Applied note: "Where wgpu's own path compiles without fast-math and offers no switch
+    (Vulkan, on lavapipe in CI), off is that path". `crates/engine/src/compute.rs`:58: `Api::Vulkan =>
+    Some(all(StageMode::Off))`, a table entry; `crates/engine/src/contract/fast_math.rs`:24: "Compiled with fast-math
+    off." REQ-TOOL-141: each stage's mode "as compiled on the running backend". Nothing observes the driver.
+- **Measured (#396), bit-for-bit differences with the setting off:**
+
+  | Probe | Against | RTX | Metal off | Metal on | lavapipe | CPU reciprocal |
+  |---|---|--:|--:|--:|--:|--:|
+  | `(x + 0.5) / 255.0`, 256 | correct rounding | **191** | 0 | 191 | 0 | 191 |
+  | Harness fuzz, 65536 | correct rounding | **19407** | 0 | 20646 | 0 | 17762 |
+  | QA fuzz, 163840 | correct rounding | **50411** | 0 | not run | 0 | 44457 |
+  | `(x + 0.5) / 255.0`, 256 | `n * (1.0 / d)` | **0** | 191 | not run | 191 | 0 |
+  | QA fuzz, 163840 | `n * (1.0 / d)` | **22519** | 44457 | not run | 44457 | 0 |
+
+  The CPU column is a reproduction of the same inputs. With the constant divisor, the card's 191 values of x are exactly
+  the CPU reciprocal's set, by list comparison, with the same hash on all 12 occurrences across the runs. With a runtime
+  divisor it matches neither: the first eight mismatches are `0.5 / d` for d = 33, 37, 61, 67, 75, 83, 97, 123, each one
+  ulp from correct. With the setting on, the card has no measurement: each test that loops over the settings stopped at
+  off.
+- **Read from the code:** naga 30.0.1 writes a plain `OpFDiv`, and its SPIR-V backend has no `NoContraction`.
+- **Inferred, not measured:** the driver folds a constant divisor into a multiply; the card's runtime arithmetic is not
+  identified.
+- **From memory, unchecked:** Vulkan and WGSL bound `x / y` at 2.5 ULP, neither promises correct rounding, and no Vulkan
+  switch asks for it. The eight posted quotients are within that bound; no worst case over the fuzzed sets was printed.
+- **Reach:** branch decisions: none shown. Their inputs don't use division (R-547;
+  `docs/notes/principia_gpu_determinism_note.md`, rule 1: "No runtime `pow`/`sqrt`/`div` decides control flow"), and on
+  the card `decode_` passed 36 of 36 and `canonicaliser_` 28 of 28, on identical inputs. Trajectories: not measurable,
+  as above. The divisions M4 will put on the GPU include `crates/kernel/src/physics/force.rs`:19-21,
+  `occupant/kdk.rs`:65-74 and `driver/advance.rs`:125.
+- **The conflict:** R-297's "bit-identity" read with REQ-INT-057 limits the claim to branch decisions and leaves
+  continuous values free; read with REQ-SYS-074's verify and the two test comments, it is a claim about every division's
+  bits. The card satisfies the first reading as far as measured and fails the second, and "compiled Off" on Vulkan
+  records wgpu's path, not what the driver did.
+- **The questions:** (1) is "bit-identity" with the setting off a claim about branch decisions, or about every Vulkan
+  driver's division results? (2) what should the header record where a driver rewrites division with no switch?
+- **Options seen:** (a) branch decisions and the Tier B fields only: the claim stands on this card, the probe stays a
+  measurement on its two named jobs, and the "every backend" comments narrow; (b) every driver's division: this card
+  fails R-297, and no switch is known to fix it (from memory, as above), so the claim needs the project's own division or a list of supported
+  drivers; (c) bit-identity is claimed only on the drivers measured to give it, and any other Vulkan driver records
+  `StageMode::Unknown`, as `Api::Dx12` and `Api::Webgpu` do at `compute.rs`:59 and as R-303 does for the browser;
+  (d) another, stated by the owner.
+- **Measurements that would settle more:** both fuzzed sets' result words on the card (worst ulp, and whether the result
+  is a function of `d` times `n`); the halfway probe with 255.0 read from a buffer, beside the literal; the setting on;
+  the same probe on another Vulkan driver.
+- **Applied meanwhile:** nothing. No test, tolerance or comment changed.
+- **Waits:** nothing in the build loop: CI's Metal and lavapipe jobs are green at this commit, and no Windows job gates
+  anything. The ruling bears on M4's GPU march.
+
+## RQ-686: The near-tie reference on a Vulkan driver other than lavapipe: one reference per backend means per API, and the RTX shares lavapipe's API but not its arithmetic *(physics; silence: R-296, R-376, REQ-VAL-176 and REQ-VAL-138 name no driver; R-649; issues #390, #397, #399; context: the Windows RTX 2080 Super run, RQ-685)*
+
+*Queued 4 Nov 2026 by the orchestrator's filing task, from the Windows GPU run (#390). For the owner: yes, it changes
+what a golden near a tie is compared with. Nothing is chosen. The run's record, the 13 failures and the
+hardware-health arm are in RQ-685.*
+
+- **File, section:**
+  - `plan/requirements.yaml`, REQ-VAL-176: "must keep one reference per backend, and the runner must compare it only with
+    the reference for the backend it rendered on, naming that backend (R-269, R-287, R-296)"; its parenthesis names the
+    cause: "a value within an ulp of a tie can differ where the display shaders compile with fast-math, Metal via wgpu".
+  - `decisions.md` § "R-296 — …": "goldens near a tie use per-backend references", and its Result: "on lavapipe, R =
+    `(x + 0.5) / 255.0` matches correctly rounded f32 division; on Metal, it matches `(x + 0.5) × f32(1/255)`, because
+    wgpu 30 compiles MSL with the default `MTLCompileOptions`, which has fast-math on".
+  - `decisions.md`:5654, § "R-376 — …": REQ-VAL-138 is "0 steps, on every native backend CI renders on (lavapipe, Metal)",
+    and "a golden near a tie keeps one reference per backend"; R-296's Still in force line: "the half-way fixture's
+    references are confirmed, no longer proposed".
+  - `docs/contracts/principia_parity_contract.md`:151, § 4: "a value within an ulp of a tie can differ on a backend whose
+    display shaders compile with fast-math (Metal via wgpu), so goldens near a tie use per-backend references (R-296)".
+  - `xtask/src/golden.rs`:50-52: per-backend references are "named by the backend (`metal`, `vulkan`)".
+    `fixtures/golden/BASELINES.md`:28: `quantise/halfway@vulkan`, "on lavapipe".
+- **Measured (#397, #399):**
+
+  | | RTX 2080 Super (Vulkan) | Metal | lavapipe (Vulkan) |
+  |---|---:|---:|---:|
+  | `quantise/halfway` RGB sha256, first 16 hex | `db057b4b817dd461` | `db057b4b817dd461` | `4a66e83dbb876baa` |
+  | against its own API's reference | **FAIL**, step 1, 24064 of 65536 px | step 0 | step 0 |
+  | Exact f32 ties in R | 16896 px, 66 columns | 16896 px, 66 columns | 65280 px, 255 columns |
+  | `quantise/halfway_automatic` RGB sha256, first 16 hex | `d30f56643f06a081` | `7c0760e5a4b04ec7` | `4a66e83dbb876baa` |
+  | against its own API's reference | **FAIL**, step 1, 35396 px | step 0 | step 0 |
+  | Quantised against automatic | 57328 px, step 1 | 8704 px, step 1 | 0 px |
+
+  - Both hashes are the same on all 6 golden runs. The tolerance is REQ-VAL-138's 0. The other 149 golden cases are
+    byte-identical on all three backends.
+  - `quantise/halfway`: the card renders Metal's bytes. `24064 = 94 × 256`, R-296's 94 columns. A CPU run of
+    `(x + 0.5) × f32(1/255)` reproduces the 94 columns and the 66 tie columns, and correct rounding gives lavapipe's 255.
+    So the cause is RQ-685's division, in the fragment stage, with no fast-math flag set by anything we control.
+    `golden_halfway_quantise_rounds_half_to_even` passed, so the rounding is correct.
+  - `quantise/halfway_automatic`, the control case: against `vulkan.png` 35396 px (R 32512, G 3072, B 2779); against
+    `metal.png` 65302 px (R 65280, G 3072, B 2779). Every difference is one step, the render lower than the reference.
+    Inferred, not measured: not the division; `floor(v × 255 + o)` at `o ≈ 0.4556` gives 35355 and 57287 px against 35396
+    and 57328, a conversion biased by about 0.044 of a level. The golden path doesn't use this output.
+- **The gap:** the corpus keys a near-tie reference by "backend", the runner keys it by API, and the corpus gives Metal's
+  fast-math as the reason a case differs. `vulkan.png` was made on lavapipe, and on this card the same API gives Metal's
+  bytes for the quantised case and bytes of its own for the control. No document says what a near-tie case is compared
+  with on a Vulkan driver that isn't lavapipe, and R-376's value is stated for the backends CI renders on.
+- **The question:** what reference applies on a Vulkan driver other than lavapipe?
+- **Options seen:** (a) references keyed by driver, not API: the `vulkan` references are lavapipe's alone, and another
+  driver gets its own, blessed under a ruling; (b) near-tie cases are held only on the backends CI renders on (R-376's
+  scope), and on any other driver their result is reported, not compared to pass; (c) a driver may match any of the
+  existing references, which passes `quantise/halfway` here and not `quantise/halfway_automatic`; (d) another, stated by
+  the owner. Each of (a) to (c) leaves REQ-VAL-176's text to be reworded.
+- **Applied meanwhile:** nothing. Nothing is re-baselined.
+- **Waits:** nothing in the build loop: every golden case passes on CI's Metal and lavapipe jobs.
+
+## RQ-687: Whether the kernel takes its own f32 `sin` and `cos`, as `arctan.rs` does for `atan2` (RQ-628), given that it can change CPU bits *(physics; a decision that changes what is built; R-297, R-649; REQ-DEC-043; RQ-628, RQ-629; issues #390, #393; context: the Windows RTX 2080 Super run, RQ-685)*
+
+*Queued 4 Nov 2026 by the orchestrator's filing task, from the Windows GPU run (#390), as #393 says it must be: "That
+can change CPU bits, so it goes to `REVIEW_QUEUE.md` for the owner's decision." For the owner. Nothing is chosen. The
+run's record, the 13 failures and the hardware-health arm are in RQ-685.*
+
+- **File, section:**
+  - `crates/kernel/src/chart/shape_sphere.rs`:162: `let k = select(r == F::zero(), F::one(), Float::sin(r) / r);`. The note
+    at :52-55 claims each select "moves the output by rounding only". `crates/render/wgsl/decode.wgsl`:745 is the same
+    line in the fragment.
+  - The same class, not measured to fail: `shape_sphere.rs`:149-151 and :226, and `crates/kernel/src/decode/config.rs`:62-65.
+  - `crates/kernel/src/arctan.rs`:1-3: "at f64, the CPU's alone, libm's `atan2`, unchanged bit for bit; at f32, the GPU's
+    precision, [`atan2_f32`], the kernel's own, in integer arithmetic."
+  - `REVIEW_QUEUE.md` RQ-628, the 30 Oct note: decided by the orchestrator per R-369, option (a), which replaced `atan2` at
+    f32. No ruling in `decisions.md` names RQ-628.
+  - `REVIEW_QUEUE.md` RQ-629, still open: "WGSL, and Vulkan for GLSL.std.450, bound `sin` and `cos` only by an absolute
+    error of `2⁻¹¹` on `[−π, π]`", and its option "(c) the kernel's own `sin` and `cos` at f32, as `atan2` (a larger
+    change, beyond RQ-628's scope)". Its "No failure today" no longer holds, though this failure is `sin` near 0, not the
+    `cos α` near `π/2` RQ-629 is about.
+- **Measured (#393):**
+  - `qa_m225_kernel_rho_angle_at_the_lambda_pole` on the card: "n₀ = [1.0, 0.0, 0.0], φ_f = 0 at [0.5, 0.5005]: the kernel
+    decode stage's rho_angle 0e0 is 8388608 eps from Φ's f64 angle 1.5707963267948966e0, over REQ-DEC-043's 256". The line
+    is identical on 6 of 6 runs.
+  - Passes on lavapipe (main runs 41692855335, 41683257838) and on Metal (local job 1380).
+  - With the sinc in the built `kernel.wgsl` replaced by `1f` at its two sites, a temporary edit to the gitignored
+    build output, restored and hash-checked, the test passes on the card. On Metal, forcing that one `sin` to 0 gives the
+    card's exact message. Unedited, `decode_preset_shape_poles` passes on the card.
+  - Not verified: the card's `sin` near 0 itself; whether the final SPIR-V keeps `Sin`. The diagnosis's reading is that
+    `sin(1.00005e-7)` returning 0 conforms to the absolute bound; the isolation is by the edit, and the edit is not a fix.
+  - Related and unsettled (#400): `shape_sphere` fuzz, worst 52.05 eps vs f64 on the RTX, 28.55 on Metal, 17.12 on
+    lavapipe, against a tolerance of 256. This `sin` is one candidate cause and RQ-685's division another; the logs can't
+    separate them.
+- **Reach:** `ShapeMap::Exponential`, the map that failed, is built only in `validation` and tests, so that failure is not
+  reachable by a user, as traced in #393. The spherical map has the same exposure at :149-151 and is reachable, but its
+  exact poles aren't pixel centres; that stays open, as does how far deep zoom reaches it. Beyond the decode, the physics
+  reach is unmeasured, as RQ-685 says.
+- **What it would change:** at f32, on every backend, the decode's `sin` and `cos`, if built as `arctan.rs` is. By that
+  pattern f64 keeps libm's bits and the CPU's f32 bits change to the kernel's. Which fixtures and tolerances record those
+  bits has not been checked. A generated table would bring a calibration of its own, as REQ-GEN-044 did for `atan2`.
+- **The question:** does the kernel take its own f32 `sin` and `cos`, given that this can change CPU bits?
+- **Options seen:** (a) yes, both, in integer arithmetic as `arctan.rs`, for every site above; (b) only the sinc: a form of
+  `sin r / r` at `shape_sphere.rs`:162 and `decode.wgsl`:745 that doesn't read the backend's `sin` near 0, leaving the same
+  class at the other sites; (c) neither: #393 stays a platform finding, and RQ-629's option (a) or (b) stands; (d)
+  another, stated by the owner.
+- **Applied meanwhile:** nothing. Every assertion stays, and nothing is tuned or loosened (R-649).
+- **Waits:** nothing in the build loop: the test passes on CI's lavapipe. RQ-629's options wait with this one.
+
+## RQ-688: `stand-in-soak` is red on `main`: three `qa_m022_*` tests reach the 600 s timer on run 1 of 50, and the cause is not known *(silence: a failed verify with no cause; REQ-SYS-070, R-267; REQ-VAL-156, R-376; R-649; context: run 41781905241, PR #394)*
+
+*Queued 4 Nov 2026 by the orchestrator's filing task, from run 41781905241. This entry asks for the cause, not a timer
+change: no timer was touched (R-649). Nothing is chosen.*
+
+- **File, section:**
+  - `plan/requirements.yaml`, REQ-SYS-070's verify: "qa_TASK-M0-22.rs's stand-in-cargo tests pass in 50 consecutive
+    parallel runs on ubuntu-latest, with the run log kept on the PR".
+  - `.github/workflows/stand-in-soak.yml`: 50 runs of `cargo test -p xtask --test qa_TASK-M0-22 --test qa_TASK-M0-22_r235
+    --test ci --test qa_TASK-M0-36 --test qa_TASK-M0-37`, stopping at the first failure, on a pull request that changes
+    the listed paths and on `workflow_dispatch`, never on a push.
+  - `crates/validation/src/spawn.rs`:20-22: `SPAWN_TIMEOUT`, 600 s, REQ-VAL-156, confirmed by R-376.
+- **Measured:**
+  - Run 41781905241, `workflow_dispatch` on `main` at `e1df88fa`, job 126415145558, step "50 consecutive parallel runs":
+    `run 1 of 50 failed`. In `qa_TASK-M0-22`, 1 passed and 3 failed, finished in 600.09 s. The three:
+    `qa_m022_ci_fails_on_a_control_that_leaves_its_test_passing`, `qa_m022_ci_fails_on_a_test_without_control` and
+    `qa_m022_ci_passes_when_every_control_trips`. Each panics at `xtask/tests/qa_TASK-M0-22.rs`:67: "child
+    `…/target/debug/xtask ci` (pid 6193) was killed: it outlived the 600 s timeout" (pids 6193, 6200, 6196).
+  - The failure is a timeout. "Text file busy", REQ-SYS-070's own subject, is nowhere in the log. The `ci` test binary in
+    the same run passed, 5 of 5 in 88.03 s.
+  - The same three tests fail the same way, on run 1, at 600.08 to 600.09 s, on PR #394's heads: runs 41769443878
+    (`5e867800`), 41781911548 (`bd2b4c12`) and 41794663752 (`ef6ad489`). `e1df88fa`'s workflow has no step
+    "Dependencies without debug info", which those heads add, so that step is not the cause.
+  - The last green run, 41101800019 at `ffbd3f28`, 30 Oct: 50 of 50, on the same four tests 544.52 s on run 1 and 249.00
+    to 253.57 s on the other 49 (median 250.53 s). So run 1 was already within 56 s of the timer.
+  - Under nextest, one at a time, the three pass on `main` at `e1df88fa` (run 41744485022): 95.051 s, 95.446 s and 163.929 s.
+- **Later runs:** there is no later `stand-in-soak` run on `main`, because the workflow doesn't run on a push. `ci` on
+  `main` is green at `e1df88fa`, `39a766c9`, `d0062a5c` and `99881a7b`; run 41821036802 at `437d281d` was in progress at
+  11:39 UTC on 4 Nov. PR #394's last run, 41808766194 at `b5bf2f67` (`main` merged in, with #395 and #403), started at 09:35
+  and was still in progress at 11:39 UTC, where each failed run ended about 14 minutes after it started. That suggests
+  it passed run 1; its log can't be read until it ends, so this isn't known. PR #394 merged meanwhile.
+- **Read from the code, not measured:** of `xtask ci`'s runners, those that call `cargo` go to the test's stand-in, which
+  answers from canned text; only a call naming `golden_harness` reaches the real cargo
+  (`xtask/tests/qa_TASK-M0-22.rs`:45-47; `xtask/src/golden.rs`:1226-1234), and the golden runner renders on lavapipe. The
+  soak's build step doesn't build that binary, so on run 1 the three `xtask ci` children, side by side under libtest,
+  would share its cold build. `.config/nextest.toml`:31-33 records the same contention in `ci` shards, and the group
+  `xtask-cargo` that takes them one at a time there; the soak runs without it. This fits run 1's cost but doesn't explain
+  what moved it past 600 s between 30 Oct and 4 Nov.
+- **The question:** what made these tests go from 544.52 s to past 600 s on run 1, and is it still so on `437d281d`?
+- **Would settle it:** run 41808766194's log when it ends; a `workflow_dispatch` of the soak on current `main`; the time of
+  each `xtask ci` runner on a cold target, with the harness build apart.
+- **Applied meanwhile:** nothing. No timer is touched.
+- **Waits:** REQ-SYS-070's verify on `main`. A PR that changes the workflow's paths meets this run; no build task waits.
+
+## RQ-689: `jobq_a_finished_jobs_group_is_killed`'s control races perl's `setpgrp` against the runner's group kill *(a flaky control; REQ-VAL-147; R-658; context: `xtask/tests/jobq.rs` `finished_group_case`, run 41785718756, PR #394)*
+
+*Queued 4 Nov 2026 by the orchestrator's filing task. Nothing is chosen.*
+
+- **File, section:** `xtask/tests/jobq.rs`:572-591, `finished_group_case`, with `escape = true`:
+  `perl -e 'setpgrp(0,0); exec @ARGV' sleep 60 & echo $! > child.pid; exit 0`. The control at :599-604 expects "a
+  finished job's group outlived it". The test's queue sets `tick_ms = 50` (:45). `xtask/src/jobq.rs`:1258-1260, in
+  `Runner::pass`: `if running.reaped.is_none() && leader_exited(running.child.id()) { … signal_group(pgid,
+  rustix::process::Signal::KILL);`.
+- **What is racy, from the code:** the script writes the pid and exits at once, and nothing makes it wait for perl. The
+  background perl is in the job's process group until it reaches `setpgrp(0,0)`, so that call races perl's own start-up
+  against the next pass, at most about 50 ms after the leader exits. If the pass wins, the SIGKILL reaches perl in the
+  group, `alive(child)` is false, the assertion holds, and the control doesn't panic, so the case it means to show never
+  arises. `xtask controls` then reports that the test has no working control. The race is in the control only: without
+  `escape`, `sleep 60` never leaves the group and dies either way.
+- **Evidence it fails:** one failure found. Run 41785718756 (`ci`, PR #394, `4e6e455c`, attempt 1), `xtask-ci (2)`, job
+  126429139482: "xtask: test `jobq_a_finished_jobs_group_is_killed`: its control did not make it fail, so the test may not
+  be able to (philosophy §4.4)"; "test did not panic as expected at crates/validation/src/control.rs:94:16"; "xtask ci:
+  [3/10] controls FAILED: 1 test(s) without a control that makes them fail (REQ-VAL-147)". PR #394 didn't touch this
+  code. That the race is what fired there is read from the code: the log doesn't show perl's timing.
+- **Searched:** the last 25 failed `ci` runs, back to 1 Nov 21:22 UTC, show that one run only, and the 1431 local queue
+  logs show none. So the rate is low, and it is not measured.
+- **The gap:** the control can fail with nothing wrong, on any PR whose `xtask-ci` shard holds it.
+- **Options seen:** (a) the job's script waits, with a bound like `GATE`'s, until the child has left the group (a file
+  perl writes after `setpgrp`, or the child's `pgid` read back), then exits, so the kill always finds the case; a test-only
+  change; (b) another, stated by a reviewer or the owner.
+- **Applied meanwhile:** nothing.
+- **Waits:** nothing.
