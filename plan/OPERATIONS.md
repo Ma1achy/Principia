@@ -363,8 +363,15 @@ its branch at once. So if a stack is ever needed, per PR n: `gh pr edit n+1 --ba
 
 **Required checks.** Branch protection is the human's (`plan/HUMAN_SETUP.md` §2); the orchestrator never changes it,
 except for adding `mutants-check`, the one change R-305 allows. The human removed `gpu-kernel` from the required
-checks until #96 (TASK-M0-14) merges, since PRs off `main` never report it. Tell the human the moment #96 merges, so
-they can add it back.
+checks until #96 (TASK-M0-14) merged, since PRs off `main` never reported it, and required it again since. The human
+removed `mutants-check` from the required checks on 3 Nov 2026 (R-678): "`mutants-check` is no longer a required check
+on main: I removed it from branch protection because it was hanging merges." His condition for requiring it again:
+"When it's merged and verified on one real PR, tell me and I'll re-add `mutants-check` as required." So once R-678's
+fix (`mutants-check` a job of every `mutants.yml` run) has merged and a real pull request's merge-ready run has
+reported `mutants-check`, the orchestrator tells the human, and he requires it again; until then the merge watcher's
+wait for the merge-ready run's `mutants-check` (§ "Mutants on the merge-ready head") is the only gate on it. The
+required checks are `plan/HUMAN_SETUP.md` §2's list, `mutants-check` among them though `main`'s protection lacks it
+until he re-adds it, which `xtask/tests/ci_changes.rs` checks every required check against on every path (R-678).
 
 **What CI runs on a pull request (R-656, R-662, R-677).** `ci.yml` runs on a push to `main` (and to a `measure/`
 branch, R-272) and, for a pull request, through `pull_request` only, once per push. Each workflow that builds or tests
@@ -372,7 +379,7 @@ keeps one `concurrency` group per pull request, so a push cancels the run on the
 never cancelled (`no-atlas-params.yml` and `gemini-dispatch.yml` keep none, decisions.md R-656). `reviews.yml` keeps one
 group per pull request and event, so a burst of reviews leaves one run, and the `pull_request_review` run that re-runs
 the `pull_request` run (R-276) is not in that run's group, which would cancel it (R-676). `ci.yml`'s `changes` job,
-`mutants-pending` and `mutants-fixture` classify the change with `scripts/ci_changes.sh` (the pull request's merge
+`mutants-check` and `mutants-fixture` classify the change with `scripts/ci_changes.sh` (the pull request's merge
 commit against the base it merges onto; any other run runs everything) into three tiers, a change touching several
 taking the highest (R-677):
 - **code**, tier (a): `crates/`, `xtask/`, `fixtures/`, the Cargo files, the toolchain, `.github/`, `.cargo/`, the one
@@ -398,8 +405,8 @@ taking the highest (R-677):
 - **no GPU-path file** (only data and docs paths, `crates/gui/` and `crates/prin/`): the GPU suites' jobs (`gpu-kernel
   suites`, `gpu-metal suites`, `gpu-lavapipe suites`) are skipped; everything else runs;
 - **no `.rs` file under `crates/`** (`mutants=false`; the owner, 2 Nov 2026: "Mutants run only when crates/ source
-  changes, on the merge-ready head"): `mutants-check` is posted passed at once and `mutants`' shards find no `.rs` file
-  under `crates/` and pass. xtask's own code is mutated by the nightly full run. `mutants-fixture`, the gate's
+  changes, on the merge-ready head"): `mutants-check` passes at once, "not applicable", and `mutants`' shards find no
+  `.rs` file under `crates/` and pass. xtask's own code is mutated by the nightly full run. `mutants-fixture`, the gate's
   self-test on its fixtures, skips its steps only on a docs change, tier (c) (`tier=docs`), so a change to the gate's
   configuration (`.cargo/mutants.toml`, `fixtures/mutants/`, `scripts/contain.sh`, `mutants.yml`) runs it.
 `docs_only`, the name R-656 gave the verdict, is true on a tier (b) or (c) change, so the skips and gates kept it.
@@ -408,9 +415,9 @@ Every required check still reports under its own name and concludes success, so 
 `merge-batch.sh`'s `gh pr checks --required` reads `pass` for each. A skipped job never bears a required name: the
 required checks `ci`, `xtask-ci`, `gpu-kernel`, `gpu-metal` and `gpu-lavapipe` are gates that run whatever their jobs
 ended in and pass a skipped one only on the classification's verdict, and matrix jobs are named `<id> (<shard>)`.
-`mutants-check` is the exception: it is pending until the merge-ready run (below) posts its verdict, and is posted
-passed at once only on a head whose change has no `.rs` file under `crates/`, which has no mutant the gate runs
-(R-677). What a pull request skips runs on `main` after
+`mutants-check` is a job of every run of `mutants.yml`, `if: always()` (R-678): the merge-ready run's verdict
+(below), and success, "not applicable", on a head whose change has no `.rs` file under `crates/`, which has no mutant
+the gate runs (R-677), or that is not merge-ready. What a pull request skips runs on `main` after
 it merges, where every job runs. A superseded head's cancelled run leaves its gates failed or cancelled, as before:
 the owner kept them as they are, TASK-M0-45's checks and R-266 standing (30 Oct 2026, on #351, no ruling). A
 head that changes only prose a test reads does not run that test, which runs on `main` once it merges, so a contract's
@@ -424,12 +431,18 @@ the verdict) runs once per approved head, not on every push:
   names has approved the current head, with the user's own token, not a workflow's (a label a workflow's
   `GITHUB_TOKEN` puts on starts no run):
   `gh api --method POST repos/Ma1achy/Principia/issues/<N>/labels -f 'labels[]=merge-ready'`. It puts it on only
-  where it is absent; adding it again starts nothing. That starts the merge-ready run, whose verdict completes
-  `mutants-check` on the head, success or failure; the merge then waits for it like any required check.
-- **A push takes it off.** On every push to the pull request, `mutants-pending` removes the label and posts the new
-  head's `mutants-check` as `queued`, so the gate runs again only once the new head is approved and labelled again,
-  and the push cancels a merge-ready run still going on the old head. Other labels start nothing. To re-run the gate on
-  the same head (a flaky shard), take the label off and put it back.
+  where it is absent; adding it again starts nothing. That starts the merge-ready run, whose `mutants-check` is the
+  verdict, success or failure. Before the label a code head's `mutants-check` passes "not applicable" (R-678), so the
+  merge waits for the merge-ready run's `mutants-check` to pass with the notice "no surviving mutant", not for any
+  pass. The watcher reads that notice from the check run's annotations
+  (`gh api repos/Ma1achy/Principia/check-runs/<id>/annotations`, the message of the one titled `mutants-check`): a
+  job's step summary never reaches its check run, whose `output` title, summary and text are null.
+- **A push takes it off.** On every push to the pull request, `merge-ready-off` removes the label, and that run's
+  `mutants-check` passes "not applicable", so the gate runs again only once the new head is approved and labelled
+  again, and the push cancels a merge-ready run still going on the old head. Another label put on or taken off runs
+  only `mutants-check`, which reports the head's merge-ready verdict while the label is on, waiting for a merge-ready
+  run still going. Taking `merge-ready` off cancels its run. To re-run the gate on the same head (a flaky shard), take
+  the label off and put it back.
 - **A failed verdict.** Every approval comes before any mutant has run, so a survivor first shows after them, and it is
   still a qa finding (R-196; `plan/reviewers/qa.md`'s mutants item). The orchestrator reads the failed
   `mutants-check`: the verdict run's log and each shard's report of survivors (a shard that failed flakily, with no
@@ -438,10 +451,12 @@ the verdict) runs once per approved head, not on every push:
   `.cargo/mutants-equivalent.toml` with its one-line justification, which the code and qa reviewers approve (R-202).
   The fix round's push takes the label off, every reviewer the task names approves the new head again, and only then
   does the watcher put the label back on, starting the new head's merge-ready run.
-- **What branch protection sees.** `mutants-check` is a check run the workflow posts through the Checks API, under the
-  GitHub Actions app, never a job: before the label it is `queued` (pending), or "expected" if nothing posted it, so
-  the merge waits; it is never a skipped job, which GitHub would count as passed. A head whose change has no `.rs`
-  file under `crates/` has its posted passed at once (R-677), the verdict the shards would reach.
+- **What branch protection sees (R-678).** Of each workflow's runs on a head, branch protection counts only the latest
+  run's check suite, and a check run posted through the Checks API joins a suite GitHub picks: #379's posted
+  `mutants-check` sat in a superseded suite on #384's head and read "expected". So `mutants-check` is a job of every
+  run of `mutants.yml`, which runs on every new head and every label change, `if: always()`, never skipped, and the
+  latest run always carries it. A head whose change has no `.rs` file under `crates/` passes it at once (R-677), the
+  verdict the shards would reach.
 
 **Fix rounds are verified locally first (R-676).** A fix round runs the tests its fixes touch, their controls, and its
 mutants run where R-388 asks for one, through the job queue (R-658) on the head it is about to push, before it pushes;
