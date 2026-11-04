@@ -2218,7 +2218,7 @@ hardware-health arm are in RQ-685.*
 - **Applied meanwhile:** nothing. Nothing is re-baselined.
 - **Waits:** nothing in the build loop: every golden case passes on CI's Metal and lavapipe jobs.
 
-## RQ-687: Whether the kernel takes its own f32 `sin` and `cos`, as `arctan.rs` does for `atan2` (RQ-628), given that it can change CPU bits *(physics; a decision that changes what is built; R-297, R-649; REQ-DEC-043; RQ-628, RQ-629; issues #390, #393; context: the Windows RTX 2080 Super run, RQ-685)*
+## RQ-687: Whether the kernel takes its own f32 `sin` and `cos`, as `arctan.rs` does for `atan2` (RQ-628), given that it can change CPU bits *(physics; a decision that changes what is built; R-297, R-649; REQ-DEC-043; RQ-628, RQ-629; issues #390, #393, #401; context: the Windows RTX 2080 Super run, RQ-685)*
 
 *Queued 4 Nov 2026 by the orchestrator's filing task, from the Windows GPU run (#390), as #393 says it must be: "That
 can change CPU bits, so it goes to `REVIEW_QUEUE.md` for the owner's decision." For the owner. Nothing is chosen. The
@@ -2227,8 +2227,13 @@ run's record, the 13 failures and the hardware-health arm are in RQ-685.*
 - **File, section:**
   - `crates/kernel/src/chart/shape_sphere.rs`:162: `let k = select(r == F::zero(), F::one(), Float::sin(r) / r);`. The note
     at :52-55 claims each select "moves the output by rounding only". `crates/render/wgsl/decode.wgsl`:745 is the same
-    line in the fragment.
-  - The same class, not measured to fail: `shape_sphere.rs`:149-151 and :226, and `crates/kernel/src/decode/config.rs`:62-65.
+    line in the fragment, generated from `crates/kernel/src/stage/fragment.rs` (its header), so it follows the source.
+  - Every f32 `sin` and `cos` that reaches the GPU, through `stage/decode.rs` and `stage/fragment.rs`:
+    `shape_sphere.rs`:147 and :149-151 (`spherical`), :161-162 (`exponential`; `cos(r)` at :161 is under the same
+    absolute bound), :225-226 (`inverse`); `chart/burrau_acute.rs`:72 (`nu_of`, which the Burrau θ charts' decodes call);
+    `decode/config.rs`:62-65. Only :162 is measured to fail.
+  - Not on the GPU: `chart/tilt.rs`:356-357, :376 and :479, f64 at this commit, which no stage takes; `shape_sphere.rs`:589-592,
+    `hammer_forward`, f64.
   - `crates/kernel/src/arctan.rs`:1-3: "at f64, the CPU's alone, libm's `atan2`, unchanged bit for bit; at f32, the GPU's
     precision, [`atan2_f32`], the kernel's own, in integer arithmetic."
   - `REVIEW_QUEUE.md` RQ-628, the 30 Oct note: decided by the orchestrator per R-369, option (a), which replaced `atan2` at
@@ -2250,20 +2255,41 @@ run's record, the 13 failures and the hardware-health arm are in RQ-685.*
     card's exact message. Unedited, `decode_preset_shape_poles` passes on the card.
   - Not verified: the card's `sin` near 0 itself; whether the final SPIR-V keeps `Sin`. The diagnosis's reading is that
     `sin(1.00005e-7)` returning 0 conforms to the absolute bound; the isolation is by the edit, and the edit is not a fix.
+  - **Past `[−π, π]` (#401).** `spherical` has `θ = 2π·s` (:144-145), up to 2π̂, on the user-reachable map, outside the
+    range RQ-629's bound covers; from memory, unchecked, the specs set no bound there. `decode_cross_backend`,
+    `stage_decode_shape_sphere_defaults n₀ = ±1 poles`, η_E on: worst 28408617.97 eps against f64, `rho_angle`, at sample 2
+    (1, 0.5), identical on 3 of 3 runs. The row is outside REQ-DEC-043's domain, reported, not held. The same domain is
+    large elsewhere: Metal 1.400e8 eps (`rho_ratio`), the same sample; lavapipe 7.239e5 (`K_0`), at (0.5, 0.5).
+  - **A correction to #393's diagnosis (comment 6622072753).** #393 reads that line as: the card "returned π̂ for
+    `rho_angle`, forcing `sin(6.2831855) < 0` and `cos(1.5707964)` near 0", and says "the card's trig is near-flat there".
+    Computed in f64 on those f32 arguments, the true values are `sin(6.2831855)` = +1.7484556e-7 and `cos(1.5707964)` =
+    −4.371139e-8. So the negative sign isn't the true sign, and #393 doesn't say so: if #393's inference holds, the card's
+    `sin` has the wrong sign there, which is more than "near-flat", and flatness isn't shown (`sin` has slope 1 at 2π̂).
+    The inference itself checks: π is taken at the parameters' f32 type (`shape_sphere.rs`:75, :292), so true trig gives
+    `rho_angle` = −0.24498 at f64 and native f32 alike, as the two lines' near-equal eps say; `error` scales by
+    `max(|x64|, 1)`, so 28408617.97 eps is 3.38657, and the card's value is 3.14159, near π̂; and through `inverse` that
+    takes `p < 0`, so a negative `sin(θ)`, with `q` near 0. It stays inferred: the card's `sin` was not read. This
+    corrects #393's wording, not its conclusion that the card's trig is off outside `[−π, π]`.
   - Related and unsettled (#400): `shape_sphere` fuzz, worst 52.05 eps vs f64 on the RTX, 28.55 on Metal, 17.12 on
     lavapipe, against a tolerance of 256. This `sin` is one candidate cause and RQ-685's division another; the logs can't
     separate them.
 - **Reach:** `ShapeMap::Exponential`, the map that failed, is built only in `validation` and tests, so that failure is not
   reachable by a user, as traced in #393. The spherical map has the same exposure at :149-151 and is reachable, but its
-  exact poles aren't pixel centres; that stays open, as does how far deep zoom reaches it. Beyond the decode, the physics
-  reach is unmeasured, as RQ-685 says.
-- **What it would change:** at f32, on every backend, the decode's `sin` and `cos`, if built as `arctan.rs` is. By that
-  pattern f64 keeps libm's bits and the CPU's f32 bits change to the kernel's. Which fixtures and tolerances record those
-  bits has not been checked. A generated table would bring a calibration of its own, as REQ-GEN-044 did for `atan2`.
+  exact poles aren't pixel centres; that stays open, as does how far deep zoom reaches it. #401's line widens the class
+  past "`sin` near 0": on that map `θ` runs outside the bounded range. Beyond the decode, the physics reach is
+  unmeasured, as RQ-685 says.
+- **What each option would change:**
+  - (a), built as `arctan.rs` is: at f32, on every backend, the decode's `sin` and `cos`; f64 keeps libm's bits, and the
+    CPU's f32 bits change to the kernel's. Its per-pixel cost in compute and fragment is unmeasured. A generated table
+    would bring a calibration of its own, as REQ-GEN-044 did for `atan2`.
+  - (b): `exponential` is shared generic `F` code, so a new form changes f64 and f32 CPU bits near 0 unless it is gated
+    by precision. `cos(r)` at :161 stays under the same bound.
+  - (c): no bits change.
+  - Which fixtures and tolerances record those bits has not been checked.
 - **The question:** does the kernel take its own f32 `sin` and `cos`, given that this can change CPU bits?
-- **Options seen:** (a) yes, both, in integer arithmetic as `arctan.rs`, for every site above; (b) only the sinc: a form of
-  `sin r / r` at `shape_sphere.rs`:162 and `decode.wgsl`:745 that doesn't read the backend's `sin` near 0, leaving the same
-  class at the other sites; (c) neither: #393 stays a platform finding, and RQ-629's option (a) or (b) stands; (d)
+- **Options seen:** (a) yes, both, in integer arithmetic as `arctan.rs`, for every GPU site above; (b) only the sinc: a form
+  of `sin r / r` at `shape_sphere.rs`:162 that doesn't read the backend's `sin` near 0, `decode.wgsl` following from its
+  source, leaving the same class at the other sites; (c) neither: #393 stays a platform finding, and RQ-629's option (a) or (b) stands; (d)
   another, stated by the owner.
 - **Applied meanwhile:** nothing. Every assertion stays, and nothing is tuned or loosened (R-649).
 - **Waits:** nothing in the build loop: the test passes on CI's lavapipe. RQ-629's options wait with this one.
