@@ -59,6 +59,15 @@ struct Bed {
 const SUDO_ANSWERS: &str =
     "#!/bin/sh\necho \"$*\" >> \"$BED/sudo-calls\"\necho 'cow-root: 0 100 snapshot 7/100 16'\n";
 
+/// GNU `timeout`'s handling of its process group, the one thing these tests need of it: `--foreground` stays in the
+/// caller's group, and the plain call leaves it (`setpgid (0, 0)` in coreutils' timeout.c; here a job of its own, the
+/// command in the new group and the fake's own process outside it, so a KILL of the caller's group misses the command).
+/// Left out: the time limit, and the real one's users. `sudo` here runs as this user, so a KILL takes all of it, which
+/// on a runner it can't: `dmsetup` runs as root. The Mac has no `timeout`, so only CI runs the real one.
+const FAKE_TIMEOUT: &str = "#!/usr/bin/env bash\n\
+    if [ \"$1\" = --foreground ]; then\n  shift 2\n  exec \"$@\"\nfi\n\
+    shift\nset -m\n\"$@\" &\nset +m\nwait \"$!\"\n";
+
 impl Bed {
     fn new(tag: &str) -> Bed {
         let dir = Scratch::new(tag);
@@ -82,7 +91,7 @@ impl Bed {
         }
         let bed = Bed { dir };
         bed.fake("sudo", SUDO_ANSWERS);
-        bed.fake("timeout", "#!/bin/sh\nshift\nexec \"$@\"\n");
+        bed.fake("timeout", FAKE_TIMEOUT);
         bed
     }
 
@@ -384,7 +393,8 @@ negative_control!(
 
 const STUCK_SUDO: &str = "#!/bin/sh\nsleep 6\ntouch \"$BED/sudo-finished\"\n";
 
-/// A stuck device read holds up no reading, and the step's end takes it too.
+/// A stuck device read holds up no reading, and the step's end takes all of it that the stand-ins run: as this user, in
+/// the group `--foreground` keeps it in. What a KILL can't do on a runner, these can't show ([`FAKE_TIMEOUT`]).
 fn check_stuck_device(script: &str) {
     let bed = Bed::new("ci_watch_stuck_device");
     bed.fake("sudo", STUCK_SUDO);
@@ -438,6 +448,16 @@ mod device_left_running {
             "max_samples=480",
             "max_samples=1"
         ))
+    );
+}
+
+mod device_read_out_of_the_group {
+    use super::*;
+    negative_control!(
+        ci_watch_goes_on_beside_a_stuck_device_read,
+        "`timeout` without `--foreground`, which leaves the group the step's end KILLs",
+        expected = "the device read outlived the step",
+        check_stuck_device(&edit(&sampler(), "timeout --foreground 10", "timeout 10"))
     );
 }
 

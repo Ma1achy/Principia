@@ -59,11 +59,17 @@ loadavg ${line:-none}"
   done < "$proc/meminfo"
 }
 
-# The device-mapper's state, the copy-on-write root's fill among it, where sudo allows it.
+# The device-mapper's state, the copy-on-write root's fill among it, where sudo allows it. `--foreground` keeps
+# `timeout` and `sudo` in this group, which plain `timeout` leaves (`setpgid (0, 0)`, coreutils' timeout.c), so the KILL
+# of the group at the step's end reaches `timeout`. What that KILL can't do: `dmsetup` runs as root, which this user
+# can't signal, and a process stuck in the kernel in D state survives a KILL from anyone. With `timeout` gone, nothing
+# then times the read out, so a stuck one can outlive the step, holding none of its streams. Nor may a KILL reach `sudo`
+# itself: whether it does depends on the real uid it keeps, not settled here. With `--foreground` the 10 s limit signals
+# `sudo` alone, for it to relay to `dmsetup`; if it can't be signalled, the read stays stuck and stops only this loop.
 device_watch() {
   local n text
   for ((n = 1; n <= max_samples; n++)); do
-    text=$(timeout 10 sudo -n dmsetup status 2>&1)
+    text=$(timeout --foreground 10 sudo -n dmsetup status 2>&1)
     printf '== device %d, +%d s\n%s\n' "$n" "$SECONDS" "$text" >> "$watch_out"
     sleep "$seconds"
   done
@@ -117,7 +123,7 @@ sampler &
 sampler_pid=$!
 set +m
 
-# In a group of its own too, with `device_watch` and whatever that has in hand.
+# In a group of its own too, with `device_watch` and what that has in hand, less what its comment says a KILL can't do.
 set -m
 watch &
 watch_pid=$!
