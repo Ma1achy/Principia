@@ -6,7 +6,8 @@
 # not run, through `cargo test --doc` (R-231); `xtask/tests/nextest.rs` checks that together they list every test
 # `cargo test` did. `ci`, `ci-workspace` and `gpu-kernel` split the workspace's tests between them by nextest profile
 # (`.config/nextest.toml`), each step's NEXTEST_PROFILE: `gpu-kernel` runs the kernel's, `ci-workspace` the xtask
-# tests that run cargo on the workspace's own target directory, and `ci` every other test. `ci-release` runs the `ci`
+# tests that run cargo on the workspace's own target directory and validation's `qa_TASK-M0-24`, and `ci` every other
+# test. `ci-release` runs the `ci`
 # profile's tests again, at the release profile, as 2 shards from a release archive `ci-release-archive` builds once
 # (R-547, REQ-TOOL-189; R-325, REQ-SYS-078).
 # Sharding (R-336, R-360, R-366, REQ-SYS-077): `ci` runs its nextest run as 4 parallel shards, a matrix, each running
@@ -324,7 +325,7 @@ jobs:
           path: target/tmp/fixture-targets
           key: fixture-pool-ci-${{ runner.os }}-${{ steps.toolchain.outputs.cachekey }}-${{ hashFiles('Cargo.lock', 'fixtures/**/Cargo.toml', 'xtask/tests/fixtures/**/Cargo.toml') }}
 
-  # The xtask tests that run cargo on the workspace's own target directory (`.config/nextest.toml`'s `ci-workspace`
+  # The tests that run cargo on the workspace's own target directory (`.config/nextest.toml`'s `ci-workspace`
   # profile), beside the `ci` shards and on a build of their own (R-372, REQ-SYS-078): run from the shards' archive,
   # which carries no cargo build state, each would rebuild the workspace in its shard while holding every test thread.
   # On a data or docs pull request (R-656, R-662, R-677) it runs the cheap checks in their place, the one test job such
@@ -391,6 +392,14 @@ jobs:
         env:
           NEXTEST_PROFILE: ci-workspace
         run: cargo nextest run -p xtask
+        shell: bash .github/scripts/disk_sampler.sh {0}
+      # Validation's `qa_TASK-M0-24`: it runs `cargo xtask controls --list`, whose build the step above has made, and from
+      # the shards' archive it rebuilt that in its shard (`.config/nextest.toml`'s `ci-workspace` profile).
+      - name: cargo nextest run -p validation --test qa_TASK-M0-24
+        if: needs.changes.outputs.docs_only != 'true'
+        env:
+          NEXTEST_PROFILE: ci-workspace
+        run: cargo nextest run -p validation --test qa_TASK-M0-24
         shell: bash .github/scripts/disk_sampler.sh {0}
       # The three controls of `xtask/tests/nextest.rs` that list the workspace in its default feature set, which the
       # `xtask-ci` shards leave here (`controls::IN_CI_WORKSPACE`, which `tests/nextest.rs` checks against this line). The

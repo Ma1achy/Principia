@@ -611,3 +611,79 @@ validation::negative_control!(
         REPLACED
     )
 );
+
+/// Validation's `qa_TASK-M0-24`, whose `cargo xtask controls --list` rebuilt inside a `ci` shard from the archive.
+const CONTROLS_LISTING_BINARY: &str = "binary_id(=validation::qa_TASK-M0-24)";
+
+/// The text of the nextest profile `profile` of `config`: from its header to the next `[` header.
+fn profile_section<'a>(config: &'a str, profile: &str) -> &'a str {
+    let header = format!("[profile.{profile}]");
+    let start = config.find(&header).expect("the nextest profile exists");
+    let rest = &config[start + header.len()..];
+    rest.find("\n[").map_or(rest, |end| &rest[..end])
+}
+
+/// `qa_TASK-M0-24` is out of the `ci` shards, whose filter excludes by name what it lists (`not (…)`), in the
+/// `ci-workspace` profile, and in each of `workflows` one step runs validation under that profile, which selects only
+/// this binary of it; so its tests run once per run, and the build they need is the one that job has.
+fn check_the_controls_listing_runs_in_ci_workspace(config: &str, workflows: &[String]) {
+    let ci = profile_section(config, "ci");
+    assert!(
+        ci.contains("not (") && ci.contains(CONTROLS_LISTING_BINARY),
+        "the `ci` profile selects `qa_TASK-M0-24`, which rebuilds the workspace in its shard"
+    );
+    assert!(
+        profile_section(config, "ci-workspace").contains(CONTROLS_LISTING_BINARY),
+        "the `ci-workspace` profile does not select `qa_TASK-M0-24`"
+    );
+    for workflow in workflows {
+        let steps = jobs(workflow)
+            .iter()
+            .flat_map(|job| runs(job))
+            .filter(|(run, profile)| {
+                *profile == Some("ci-workspace") && run.contains("-p validation")
+            })
+            .count();
+        assert_eq!(
+            steps, 1,
+            "a workflow does not run `qa_TASK-M0-24` once, under the `ci-workspace` profile"
+        );
+    }
+}
+
+/// `ci.yml`, and the two other workflows that run the `ci` profile, which would otherwise lose the test.
+fn workflows_running_the_ci_profile() -> Vec<String> {
+    ["ci", "gate", "nightly"]
+        .map(|name| {
+            std::fs::read_to_string(root().join(format!(".github/workflows/{name}.yml"))).unwrap()
+        })
+        .to_vec()
+}
+
+fn nextest_config() -> String {
+    std::fs::read_to_string(root().join(".config/nextest.toml")).unwrap()
+}
+
+#[test]
+fn nextest_the_controls_listing_runs_in_ci_workspace() {
+    check_the_controls_listing_runs_in_ci_workspace(
+        &nextest_config(),
+        &workflows_running_the_ci_profile(),
+    );
+}
+
+validation::negative_control!(
+    nextest_the_controls_listing_runs_in_ci_workspace,
+    "workflows whose run of `qa_TASK-M0-24` is under the `ci` profile, which leaves it out",
+    expected = "does not run `qa_TASK-M0-24` once, under the `ci-workspace` profile",
+    check_the_controls_listing_runs_in_ci_workspace(
+        &nextest_config(),
+        &workflows_running_the_ci_profile()
+            .into_iter()
+            .map(|w| w.replace(
+                "NEXTEST_PROFILE: ci-workspace\n        run: cargo nextest run -p validation",
+                "NEXTEST_PROFILE: ci\n        run: cargo nextest run -p validation"
+            ))
+            .collect::<Vec<_>>()
+    )
+);
