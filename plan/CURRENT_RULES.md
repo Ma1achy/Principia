@@ -568,6 +568,7 @@ as history only.
 - **R-673** — Of the five "unclear" PDFs, the Belgrade gallery's initial-conditions PDF stays under its site's copy-and-use terms, crediting the gallery; the two Agekyan & Anosova translations, Anosova 1969 and Hudomal's thesis leave the tree for `docs/incoming/_local/`, with no history rewrite *(closes RQ-610; amends R-643)*
 - **R-674** — #368's Safari check runs once Safari is free, in both layouts, not deferred; a Safari run starts with Safari quit, by the human
 - **R-675** — The PR sweep is a standing duty: the orchestrator periodically checks every open PR and its CI state, and picks up any that was dropped or missed
+- **R-693** — Every R-, RQ-, REQ- or TASK- number shown to the owner comes with a plain-English gloss
 
 ## CI
 
