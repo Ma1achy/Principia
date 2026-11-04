@@ -29696,3 +29696,7 @@ The owner's words, verbatim:
 - **Addition 2's rule is in the parity contract's § 4 and in the fix task.** The owner's words do not say whether it
   reaches the golden suites, whose shared references are byte-equal across backends (R-287, R-296); the contract leaves
   them as they stand, and the question is RQ-692.
+- **"Must be tested on NVIDIA specifically" is read as a named Windows run that blocks nothing.** This is the port's reading:
+  the owner's line, unlike his item 1, doesn't say "measurement". No CI job runs NVIDIA and R-656 keeps out a self-hosted
+  runner, so no blocking test of it can exist in CI. The run is named in TASK-M6-08's notes and is not an acceptance line,
+  since a PR shows every acceptance command before it merges.
