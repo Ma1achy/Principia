@@ -65,7 +65,8 @@ loadavg ${line:-none}"
 # doesn't reach root processes, so `sudo`, `timeout` and `dmsetup` may outlive the step by up to the limit. `sudo`
 # itself runs before any timer starts, so a stall there is unbounded, but it costs only these samples, and shows as a
 # gap in them. A process stuck in the kernel in D state survives everything, the limit included. What root and
-# `timeout` do here comes from sudo's and coreutils' master sources, not `ubuntu-24.04`'s; CI is the first real run.
+# `timeout` do here comes from sudo's and coreutils' master sources, not `ubuntu-24.04`'s. CI has run this read there,
+# where `sudo` and `timeout` answer; it has not run the limit firing, or the read on a `cow-root`.
 device_watch() {
   local n text
   for ((n = 1; n <= max_samples; n++)); do

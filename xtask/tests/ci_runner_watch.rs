@@ -61,7 +61,8 @@ const SUDO_ANSWERS: &str =
 
 /// Only ever runs if the sampler's `timeout` is put back outside `sudo`: it hands on to the fake `sudo`, so that a Mac,
 /// which has no `timeout`, reads that the same way as a runner. Under `sudo`, the fake `sudo` runs nothing it is given,
-/// so the real `timeout`, the limit and root are in no test here: CI is the first real run.
+/// so the real `timeout`, the limit and root are in no test here. CI has run the read, but not the limit firing, nor
+/// the read on a `cow-root`.
 const FAKE_TIMEOUT: &str = "#!/bin/sh\nshift\nexec \"$@\"\n";
 
 impl Bed {
