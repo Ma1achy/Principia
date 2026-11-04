@@ -10,9 +10,10 @@
 //! - that config covers dependencies only, in the `dev` and `test` profiles, in the runner's CARGO_HOME;
 //! - the fixture pool's key follows these settings, in both jobs that use the pool.
 //!
-//! And from behaviour: a scratch workspace built with what the script writes panics through a non-member dependency;
-//! the panic and the workspace's own frame name file and line, and the dependency's frame carries no line table. Its
-//! control is why no test binary is stripped: `strip = "debuginfo"` takes the workspace's line tables too.
+//! And from behaviour: a scratch workspace outside every cargo config but its own, built with what the script writes,
+//! panics through a non-member dependency; the panic and the workspace's own frame name file and line, and the
+//! dependency's frame carries no line table. Its control is why no test binary is stripped: `strip = "debuginfo"` takes
+//! the workspace's line tables too.
 //!
 //! Each test has its negative control (R-176).
 
@@ -725,11 +726,37 @@ mod apart {
 
 // ---- Behaviour: what the script writes, built.
 
+/// Fails if a cargo config sits in `dir` or above it. cargo reads every `.cargo/config.toml` from its working directory
+/// up to the root, and those outrank `$CARGO_HOME`, so a scratch `CARGO_HOME` does not hide one.
+fn check_no_config_above(dir: &Path) {
+    for parent in dir.ancestors() {
+        for file in ["config.toml", "config"] {
+            let config = parent.join(".cargo").join(file);
+            assert!(
+                !config.exists(),
+                "{} would reach the scratch workspace",
+                config.display()
+            );
+        }
+    }
+}
+
+/// A fresh directory for `case`, this process's alone, that no cargo config reaches but the one the test writes. Not
+/// `CARGO_TARGET_TMPDIR`: on a runner that sits under `/home/runner/work`, below the `/home/runner/.cargo/config.toml`
+/// the workflows' action writes, so that config would set what the scratch's own is here to set.
+fn scratch_dir(case: &str) -> PathBuf {
+    let base = std::env::temp_dir().join(format!("ci_debug_info_{}_{case}", std::process::id()));
+    let _ = fs::remove_dir_all(&base);
+    fs::create_dir_all(&base).unwrap();
+    let base = base.canonicalize().unwrap();
+    check_no_config_above(&base);
+    base
+}
+
 /// Builds and runs a scratch workspace's failing test under the workflows' env, with `config` as the CARGO_HOME config,
 /// and returns everything it printed.
 fn run_scratch(case: &str, config: &str) -> String {
-    let base = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join(format!("ci_debug_info_{case}"));
-    let _ = fs::remove_dir_all(&base);
+    let base = scratch_dir(case);
     let write = |p: PathBuf, s: &str| {
         fs::create_dir_all(p.parent().unwrap()).unwrap();
         fs::write(p, s).unwrap();
@@ -779,6 +806,7 @@ fn run_scratch(case: &str, config: &str) -> String {
         String::from_utf8_lossy(&out.stdout),
         String::from_utf8_lossy(&out.stderr)
     );
+    let _ = fs::remove_dir_all(&base);
     assert!(
         !out.status.success() && text.contains("cidbg boom"),
         "the scratch test did not build and panic:\n{text}"
@@ -852,5 +880,23 @@ mod dependency_keeps_its_tables {
         "no dependencies' config: the dependency keeps its line tables",
         expected = "still carries file:line",
         check_backtrace(&run_scratch("none", ""))
+    );
+}
+
+#[cfg(feature = "controls")]
+mod config_above_the_scratch {
+    use super::*;
+
+    negative_control!(
+        a_panic_under_the_ci_settings_names_file_and_line,
+        "a cargo config above the scratch workspace, as on a runner under `/home/runner`, which CARGO_HOME does not hide",
+        expected = "would reach the scratch workspace",
+        {
+            let above = PathBuf::from(env!("CARGO_TARGET_TMPDIR"))
+                .join(format!("ci_debug_info_above_{}", std::process::id()));
+            fs::create_dir_all(above.join(".cargo")).unwrap();
+            fs::write(above.join(".cargo/config.toml"), "").unwrap();
+            check_no_config_above(&above.join("ws"))
+        }
     );
 }
