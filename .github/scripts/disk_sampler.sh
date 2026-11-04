@@ -14,11 +14,12 @@
 # Beside it, `watch` names a stall of the whole runner, which froze the sampler itself in `ci-workspace` (job
 # 126417229272): the sampler's `df`, `du` and its log depend on the disk, so what it reads from /proc stops when the
 # disk does. `watch` is a process of its own that writes $RUNNER_DISK_TMPFS/runner-pressure.log, on a tmpfs, and after
-# its first sample it reads and naps with shell builtins, so it starts nothing and depends on neither the disk nor a
-# fork. `device_watch`, which has to run a command, is a process apart, so a stuck `dmsetup` stops only itself. The job
-# sets RUNNER_DISK_TMPFS; the variable goes no further than this script, so that the tests the step runs, which run
-# this script on scratch folders, stay off the real tmpfs and never ask for sudo. Without a usable folder there, `watch`
-# writes beside $out, and without the variable `device_watch` doesn't run.
+# its first sample it reads and naps with shell builtins, so it forks nothing and opens nothing on the disk. It still
+# runs from the disk: bash and libc are file-backed, so a stall in reclaim or page-in can stop `watch` too, and a gap in
+# its samples is possible and is evidence in itself. `device_watch`, which has to run a command, is a process apart, so
+# a stuck `dmsetup` stops only itself. The job sets RUNNER_DISK_TMPFS; the variable goes no further than this script, so
+# that the tests the step runs, which run this script on scratch folders, stay off the real tmpfs and never ask for
+# sudo. Without a usable folder there, `watch` writes beside $out, and without the variable `device_watch` doesn't run.
 set -u
 
 script=$1
