@@ -7,8 +7,8 @@
 #       GUI's artboards and references (`docs/gui/design/`, `docs/gui/reference/`) runs only the cheap checks and the
 #       tests that read what it changed (R-677; `ci.yml`'s `ci-workspace`): no build, no test shard, no GPU suite, no
 #       mutants;
-#   (c) docs: the rest of the corpus, the plan's prose and Python, the scripts and the workbench run only the cheap
-#       checks, plan-check, the vocabulary lint and the atlas guard (R-662).
+#   (c) docs: the rest of the corpus, the plan's prose and Python, the scripts, the workbench and `.claude/` run only
+#       the cheap checks, plan-check, the vocabulary lint and the atlas guard (R-662, R-790).
 # A change touching several tiers runs the highest. One that touches no `.rs` file under `crates/` has no mutant to
 # run (R-677). Every required check still reports, under its own name, and concludes success only where its tier allows
 # it (R-656; R-266, R-305).
@@ -58,10 +58,10 @@ requirements_data() {
 }
 
 # The allowlist of what is not Principia's code: the corpus and its papers, the plan's prose, data and Python, the
-# scripts, the workbench and the root's markdown (R-662).
+# scripts, the workbench and the root's markdown (R-662), and `.claude/`, its commands, agents and settings (R-790).
 on_allowlist() {
   case "$1" in
-    docs/* | plan/* | scripts/* | workbench/*) return 0 ;;
+    docs/* | plan/* | scripts/* | workbench/* | .claude/*) return 0 ;;
     decisions.md | REVIEW_QUEUE.md | open-questions.md | README.md | CLAUDE.md | AGENTS.md | GEMINI.md) return 0 ;;
   esac
   return 1

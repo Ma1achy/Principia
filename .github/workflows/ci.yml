@@ -43,9 +43,9 @@
 #   `plan/requirements.yaml` when only fields no code reads change, `scripts/ci_req_fields.py` deciding) or the GUI's
 #   artboards and references (`docs/gui/design/`, `docs/gui/reference/`), with docs beside them or not: `ci-workspace`
 #   runs the cheap checks and the tests that read what changed, in place of its own tests;
-# - docs (tier c; R-662): the rest of `docs/`, `plan/` (its prose and Python), `scripts/`, `workbench/` and the root's
-#   markdown: `ci-workspace` runs only the cheap checks, the plan checks and the vocabulary lint
-#   (`no-atlas-params.yml`, the atlas guard, runs on every pull request).
+# - docs (tier c; R-662, R-790): the rest of `docs/`, `plan/` (its prose and Python), `scripts/`, `workbench/`,
+#   `.claude/` and the root's markdown: `ci-workspace` runs only the cheap checks, the plan checks and the vocabulary
+#   lint (`no-atlas-params.yml`, the atlas guard, runs on every pull request).
 # A data or docs change (`docs_only`, its name R-656's) skips `ci-archive` and the `ci` shards, `ci-checks`,
 # `ci-release-archive` and its shards, and `xtask-ci`'s shards; it and a code change to no GPU-path file (only
 # `crates/gui/` and `crates/prin/` beside data and docs) skip the GPU suites' jobs, `gpu-kernel`, `gpu-metal` and
