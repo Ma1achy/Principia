@@ -62,9 +62,9 @@ loadavg ${line:-none}"
 # The device-mapper's state, the copy-on-write root's fill among it, where sudo allows it. `timeout` runs under `sudo`,
 # as root, because `dmsetup` runs as root and this user's `timeout` could not signal it. The read holds none of the
 # step's streams. The KILL of the group at the step's end stops this loop, so no read starts after the step, but it
-# doesn't reach root processes, so `sudo`, `timeout` and `dmsetup` may outlive the step by up to the limit. `sudo` itself
-# runs before any timer starts, so a stall there is unbounded, but it costs only these samples, and shows as a gap in
-# them. A process stuck in the kernel in D state survives everything, the limit included. What root and `timeout` do
+# doesn't reach root processes, so `sudo`, `timeout` and `dmsetup` may outlive the step by up to the limit. `sudo`
+# itself runs before any timer starts, so a stall there is unbounded, but it costs only these samples, and shows as a
+# gap in them. A process stuck in the kernel in D state survives everything, the limit included. What root and `timeout` do
 # here comes from sudo's and coreutils' master sources, not `ubuntu-24.04`'s; CI is the first real run.
 device_watch() {
   local n text

@@ -60,8 +60,8 @@ const SUDO_ANSWERS: &str =
     "#!/bin/sh\necho \"$*\" >> \"$BED/sudo-calls\"\necho 'cow-root: 0 100 snapshot 7/100 16'\n";
 
 /// Only ever runs if the sampler's `timeout` is put back outside `sudo`: it hands on to the fake `sudo`, so that a Mac,
-/// which has no `timeout`, reads that the same way as a runner. Under `sudo`, the fake `sudo` runs nothing it is given, so
-/// the real `timeout`, the limit and root are in no test here: CI is the first real run.
+/// which has no `timeout`, reads that the same way as a runner. Under `sudo`, the fake `sudo` runs nothing it is given,
+/// so the real `timeout`, the limit and root are in no test here: CI is the first real run.
 const FAKE_TIMEOUT: &str = "#!/bin/sh\nshift\nexec \"$@\"\n";
 
 impl Bed {
@@ -418,7 +418,8 @@ negative_control!(
 
 /// A device read that the step's KILL doesn't reach, as it doesn't reach a root process on a runner: the read is a job
 /// of its own, in a group outside the one the KILL takes, and takes longer than any step here.
-const STUCK_SUDO: &str = "#!/usr/bin/env bash\nset -m\n(sleep 12; touch \"$BED/sudo-finished\") &\nset +m\nwait \"$!\"\n";
+const STUCK_SUDO: &str =
+    "#!/usr/bin/env bash\nset -m\n(sleep 12; touch \"$BED/sudo-finished\") &\nset +m\nwait \"$!\"\n";
 
 /// A stuck device read holds up no reading, and one that outlives the step doesn't hold the step open by its streams.
 fn check_stuck_device(script: &str) {
@@ -432,12 +433,13 @@ fn check_stuck_device(script: &str) {
         45,
     );
     let finished = bed.dir.join("sudo-finished");
-    assert!(!finished.exists(), "the device read held the step open");
+    let held_open = finished.exists();
     let log = bed.watch_log("shm").unwrap_or_default();
     assert!(
         samples(&log) >= 2,
         "a stuck `dmsetup` stopped `watch`:\n{log}"
     );
+    assert!(!held_open, "the device read held the step open");
     // The stand-in leaves nothing running behind the test.
     let end = Instant::now() + Duration::from_secs(20);
     while !finished.exists() && Instant::now() < end {
