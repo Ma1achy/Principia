@@ -1625,7 +1625,7 @@ mod no_probe {
     use super::*;
     negative_control!(
         ci_retry_workflow_probes_both_disks,
-        "`ci-release` with no probe, the one job with no `Free runner disk` step",
+        "`ci-release` with no probe",
         expected = "job `ci-release` has no disk probe",
         check_probe(&{
             let text = read(".github/workflows/ci.yml");
