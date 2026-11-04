@@ -352,7 +352,8 @@ fix below was made from the source itself, re-read on 3 Nov.
   printed on p.564 settles the Sweatman thesis row.
 - BKM (Doumbouya 2026) is kept `_local` until a peek needs it.
 - Values from repositories with no licence for their data are masked as `[value]` (mikha08-rgb/Nbody, eucliss, and
-  cft-rebound with its set-up values and counts, and others); values from published papers stay, with citation, under R-668 (items 3 and 9, the owner's data-reuse rule).
+  cft-rebound with its set-up values and counts, and others); values from published papers stay, with citation, under
+  R-668 (items 3 and 9, the owner's data-reuse rule).
 - Tomihisa 2011 (row 151) takes the guide verifier's reading over chunk 07's one-liner, since the owner put it in the
   precision-gap check.
 - Anosova, Bertov & Orlov 1984's velocity recipe is Anosova 1969, Trudy AO LGU 26, 88, not held; R-673's Anosova 1969 is
