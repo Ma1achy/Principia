@@ -30587,7 +30587,7 @@ The owner's words, 4 Nov 2026, verbatim:
 *Applied per R-369 (physics-reviewed on TASK-M2-52):*
 
 - `Φ_θ,L_z`'s held `K` takes the warp's own line, `K = K_max·t^γ_K`, with `t = t₀ + d`, `t₀ = (K₀/K_max)^(1/γ_K)` at the chart's held `K₀`. It takes no additive floor: that chart's `L_z` axis is §4.5's band at the pixel's own `K`, so `L_z²/2I = (2v − 1)²·λ_L²·K ≤ K` for every `K ≥ 0`, and a floor would make `K` depend on itself. This answers the choice RQ-678 left open within (a), held `K` warped to stay at or above 0.
-- `d` on that chart is in units of the warp coordinate: the slider reads `t` and its span is the warp's `[0, 1]`, as R-507 measures a hidden coordinate by its own slider span.
+- `d` on that chart is in units of the warp coordinate. The slider's span is RQ-679's, deferred by the owner to TASK-M8-48, and the caller's input until then (`d = span·d̃`, R-507).
 - A chart's mode is its energy axis's mapping: the `K` axis on `(ν, K)`, `Φ_θ,K` and `Φ_strip,K` (the same map), and the `L_z` axis on `Φ_θ,L_z`, whose band is its line of the warp (§2.1).
 - "Every pixel" reads over the chart's square, as R-512 reads R-471 E3. A pixel whose `(a, b)` leave it is past the edge.
 - "Blank per R-470" keeps R-633's reading in linear mode: no system, area weight 0.
