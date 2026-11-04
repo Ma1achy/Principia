@@ -662,6 +662,15 @@ change: no timer was touched (R-649). Nothing is chosen.*
 - **Waits:** nothing.
 - **4 Nov 2026 (R-707):** ruled: option (a), "you fix (test-only)". The entry stays open until that work is done; it is in hand on another branch.
 
+## RQ-698: `.claude/commands/*.md` joins `plan/tools/rulings.py`'s scanned files once the ruling those commands cite is on `main` *(a follow-up of PR #409, the rulings commands' tooling; code review 5771543937)*
+
+*Filed 4 Nov 2026 by PR #409's fix round, so the follow-up outlasts the PR. Nothing here is for the owner: a mechanical step, decided per R-369, which waits only on a merge.*
+
+- **File, section:** `plan/tools/rulings.py`, `REF_GLOBS`: "The files whose R-n and RQ-n references must resolve", which names `.claude/agents/*.md` and not `.claude/commands/*.md`; `.claude/commands/rulings-apply.md` § "1. Whose words, and may this run" cites the standing rule on `main` being red, which is on `rulings/2026-11-03-port3` and not yet on `main`.
+- **The gap:** an R-n or RQ-n reference in the two commands is checked by nothing, so one can go stale. Added now, the glob fails `plan/check_plan.py` on that citation.
+- **Options seen:** (a) add `.claude/commands/*.md` to `REF_GLOBS` in the first PR after `rulings/2026-11-03-port3` merges, and drop this entry's note from `.claude/commands/rulings-apply.md` that the rule is on that branch.
+- **Applied meanwhile:** none: the commands' references are read by review only.
+- **Waits:** `rulings/2026-11-03-port3`'s merge.
 ## RQ-693: What the `(L_z, E)` chart's `E` axis means at `ε ≠ 0`: R-670's refusal covers `Some(E*)`, and this chart has no `E*` *(physics; silence; R-670, RQ-656 (6); `docs/design/principia_chart_reference.md` § 2.1, § 2.2; `docs/design/principia_dd_decoder.md` § 3.6, § 3.7; context: TASK-M9-39, REQ-VAL-015)*
 
 *Queued 4 Nov 2026 from physics review 5771183527 of PR #408, F1. For the owner: yes, it changes results: which ICs such a chart's pixels decode to, or whether the chart runs softened at all. Nothing is chosen.*

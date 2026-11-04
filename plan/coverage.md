@@ -43,14 +43,14 @@ Of these: 236 calibration, 181 definition, 1669 obligation. Retired (kept for th
 
 ## Sections
 
-1707 sections in 61 files: 1359 yield at least one requirement; 348 yield none and are listed below with the reason.
+1709 sections in 61 files: 1359 yield at least one requirement; 350 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | gap (RQ-378) | 1 |
 | gap (RQ-391) | 2 |
 | gap (RQ-577) | 2 |
 | gap (RQ-618) | 1 |
-| informative only | 240 |
+| informative only | 242 |
 | out of v1 (R-125) | 1 |
 | out of v1 (R-420) | 1 |
 | parent heading (obligations are in its subsections) | 55 |
@@ -203,6 +203,8 @@ Of these: 236 calibration, 181 definition, 1669 obligation. Retired (kept for th
 | R-666 — sccache stays off: the job queue's builds do not use it | informative only | the owner's word of 31 Oct 2026: sccache stays off; process; changes no requirement |
 | R-674 — #368's Safari check runs once Safari is free, in both layouts, not deferred; a Safari run starts with Safari quit, by the human | informative only | the owner's two messages of 1 Nov 2026 on #368's Safari check, the deferral superseded; process (plan/HUMAN_SETUP.md § 6); changes no requirement |
 | R-675 — The PR sweep is a standing duty: the orchestrator periodically checks every open PR and its CI state, and picks up any that was dropped or missed | informative only | the owner's message of 1 Nov 2026: the periodic PR sweep; process (plan/OPERATIONS.md § Autonomy); changes no requirement |
+| R-693 — Every R-, RQ-, REQ- or TASK- number shown to the owner comes with a plain-English gloss | informative only | the owner's standing rule of 4 Nov 2026 on numbers shown to them; process; changes no requirement |
+| R-790 — `.claude/`, its commands, agents and settings, is docs tier: a change only to it runs only the cheap checks *(amends R-677 and R-662)* | informative only | the owner's word of 4 Nov 2026: `.claude/` is on the classifier's allowlist; process; changes no requirement |
 | R-681 — Standing rules: while `main` is red, or a required check is stuck, agents open and update no other pull request, and the owner is told in one message; a CI-tooling pull request shows its own `xtask-ci` passing before it merges; a stuck check is cleared by re-running only the job that reports it, never the whole pipeline *(refines R-369)* | informative only | the owner's three messages of 3 Nov 2026: main red or a stuck required check stops other PR work; a CI-tooling PR shows its own xtask-ci passing; a stuck check re-run alone; process (plan/OPERATIONS.md § Merging); changes no requirement |
 | R-682 — Admin bypass on `main` is the owner's alone: agents never use it, by `gh pr merge --admin` or any API merge that skips a required check; merge scripts merge only when every required check has passed; a stuck check goes to the owner, who decides whether to bypass *(amends R-266)* | informative only | the owner's message of 3 Nov 2026: admin bypass is the owner's alone; process (plan/OPERATIONS.md § Merging, plan/HUMAN_SETUP.md § 2); changes no requirement |
 | R-683 — The CI speed-up series, after the current CI fixes land: measure first, then five tooling pull requests in order, each with before and after numbers: one test binary per crate, a quick tier on every push, mutants in-diff on the merge-ready head, a bounded dependency cache saved from `main` only, and nightly compiler flags kept only if faster; R-285's amendment approved in principle only, its wording with step (4)'s pull request | informative only | the owner's message of 3 Nov 2026: the CI speed-up series and its order; R-285's amendment approved in principle only; ci; changes no requirement |
