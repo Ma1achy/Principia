@@ -68,7 +68,7 @@ alone does not answer the owner's question; the bits at identical operands do, a
 - `cargo test -p validation cross_backend_replay` (no GPU) — over synthetic digests, the first differing step is found at its
   step, and the state handed to `--replay` is the same bits for every backend; the control is a digest that drops `N_sub`, which
   a planted `N_sub` difference rejects. The standing, on the march's kinds, as `cross_backend_compare`'s: equal operands and differing
-  input bits, no fork, reads "unverified, not supported", on a `Wide`'s exponent alone too; differing operands do not; `other operation` does not; two GPUs sharing operands CPU f32's run didn't produce are arbitrated by the host's evaluation at those operands, and the one differing is named; a driver whose rows are all level 1 reads "no failure in 0", and N's control is a compare whose N counts all rows, which that case rejects. The control is a
+  input bits, no fork, reads "unverified, not supported", on a `Wide`'s exponent alone too, and the pair reads 0 disagreements and not PASS; differing operands do not; `other operation` does not; two GPUs sharing operands CPU f32's run didn't produce are arbitrated by the host's evaluation at those operands, and the one differing is named; a driver whose rows are all level 1 reads "no failure in 0", and N's control is a compare whose N counts all rows, which that case rejects. The control is a
   compare that reads only outcomes, which misses the first. A replayed collision fork whose positions differ reads as an upstream
   difference (REQ-VAL-348).
 - `cargo xtask gate cross-backend-march` — both arms' records on lavapipe, on Metal and on CPU f32, their comparison and the
@@ -77,8 +77,8 @@ alone does not answer the owner's question; the bits at identical operands do, a
 
 ## Notes
 - **A measurement under R-649, on tier (a), the GPU explorer.** It has no outside number, so it is neither an M9 target nor a
-  peek. It blocks nothing. **No tolerance chosen to make it pass:** the report holds no threshold. Each pair's outcome: PASS is 0
-  disagreements; anything else is EXPLAINED DIVERGENCE, with a measurement showing the mechanism, or UNEXPLAINED. Only the
+  peek. It blocks nothing. **No tolerance chosen to make it pass:** the report holds no threshold. Each pair's outcome: PASS is 0 disagreements with neither driver of the pair recorded unverified, not supported: the rate
+  counts outcomes, so bits differing at bit-identical operands of kind `+ and ×` leave it at 0 and are not PASS. Anything else is EXPLAINED DIVERGENCE, with a measurement showing the mechanism, or UNEXPLAINED. Only the
   controls assert.
 - **Reading the rate.** Metal against lavapipe is the clean-backend pair, and the NVIDIA pairs are read against it. On a chaotic
   trajectory a rounding difference can change a label with no defect in any branch (pitfalls §10), so a chaotic rate alone

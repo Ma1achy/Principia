@@ -55,7 +55,7 @@ that. It is the first test of R-690's driver condition, on fixed inputs.
 - `cargo test -p validation cross_backend_compare` (no GPU) — the comparison over synthetic records: a record against itself
   reads 0 of N, and one flipped outcome reads 1 of N and names the input; a pair over different inputs is refused, not
   compared; the control is a compare that ignores one outcome column, which the flipped case rejects. The standing: a synthetic pair of kind `+ and ×`
-  with equal operands and differing input bits, no fork, reads "unverified, not supported"; with equal operands and bits and a
+  with equal operands and differing input bits, no fork, reads "unverified, not supported", and the pair reads 0 disagreements and not PASS; with equal operands and bits and a
   different outcome it reads the same, as a comparison fork; with differing operands it does not; a `Wide` input with equal operands and only its exponent differing reads "unverified, not
   supported"; of kind `other operation`, an `fma` form included, it does not; at level 2 the driver whose bits differ from the written form on CPU f32 is the one named, and at level 3 the one whose outcome
   differs; two GPUs sharing operands CPU f32's run didn't produce are arbitrated by the host's evaluation at those operands, and the one differing is named; a clean driver reads "no failure in N", with its level 1 and `other operation` counts beside it; a
@@ -92,8 +92,8 @@ that. It is the first test of R-690's driver condition, on fixed inputs.
   A read-back entry is a different shader from the one that gave the row's outcome, and a rewrite depends on the code around the expression:
   differing bits there fail the driver in that entry, and no failure there says nothing of the production pipeline's compile.
 - **A measurement under R-649, on tier (a), the GPU explorer.** It has no outside number, so it is neither an M9 target nor a
-  peek. It blocks nothing, and no tolerance or threshold enters it. Each pair's outcome: PASS is 0 disagreements;
-  anything else is EXPLAINED DIVERGENCE, with a measurement showing the mechanism, or UNEXPLAINED.
+  peek. It blocks nothing, and no tolerance or threshold enters it. Each pair's outcome: PASS is 0 disagreements with neither driver of the pair recorded unverified, not supported: the rate
+  counts outcomes, so bits differing at bit-identical operands of kind `+ and ×` leave it at 0 and are not PASS. Anything else is EXPLAINED DIVERGENCE, with a measurement showing the mechanism, or UNEXPLAINED.
 - **The NVIDIA record** is a Windows session's run at the PR's head, `--record` with `PRIN_GPU_BACKEND=vulkan`, the file posted to
   #390. It is not a CI job (R-186). Nothing waits on it, and the task closes without it: M4's gate report lists the row as "not
   run" until it is posted, so the run stays visible (`plan/MILESTONES.md` § M4).
