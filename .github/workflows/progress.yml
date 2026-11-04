@@ -36,8 +36,10 @@ env:
   CARGO_TERM_COLOR: always
   CARGO_PROFILE_DEV_DEBUG: line-tables-only
   CARGO_PROFILE_TEST_DEBUG: line-tables-only
-  # No incremental state: no target directory is kept between runs (R-285), so it is only disk. In every workflow
-  # for rust-cache's key (R-337), as above. Local builds are unaffected (R-233).
+  # No incremental state. The workspace's target directory is not kept between runs (R-285), so it pays only inside a
+  # job that rebuilds: `cargo mutants` builds a crate again per mutant, 14 to 36% slower without it in a local timing,
+  # with no CI shard measured yet, which REQ-VAL-149's 300 minutes leaves room for (PR #394). In every workflow for
+  # rust-cache's key (R-337), as above. Local builds are unaffected (R-233).
   CARGO_INCREMENTAL: "0"
 
 jobs:
