@@ -4,7 +4,7 @@
 //! focus in the console, toggle the full height below the top bar and back to the dragged height; M while the search
 //! field is typed in types 'm'; → from Clear reaches maximise, then ×; maximised, the console covers the panels and the
 //! figure; the hover label stays on the strip of figure a dragged console leaves; a basis editor it covers is hidden and takes
-//! no input. Each check also runs on an outcome it must reject (R-176, through `rejects`; gui takes no dependency on
+//! no input; over the whole page, it leaves only the top bar and the footer to the keys. Each check also runs on an outcome it must reject (R-176, through `rejects`; gui takes no dependency on
 //! validation, R-187): a console of fixed height, an M that types nothing outside the field, and the others named.
 
 use std::path::{Path, PathBuf};
@@ -21,6 +21,8 @@ use crate::explore::breadcrumb;
 use crate::explore::footer::FOOTER;
 use crate::explore::hover_label::{BACKING, LISTEN_HINT};
 use crate::explore::manifold_view::{AXES, Q1_COMPONENTS, Q1_EDIT};
+use crate::explore::top_bar::TOP_BAR;
+use crate::explore::FIGURE;
 use crate::headless::{Headless, FRAME_S};
 use crate::layout::{console_handle, Layout, Splits, HANDLE, MIN_CONSOLE_H};
 use crate::mock::MockEngine;
@@ -756,6 +758,116 @@ fn mock_console_height_the_focus_leaves_an_editor_it_hides() {
     rejects("a focus left on a hidden field", || {
         assert_eq!(moved.path, kept.path)
     });
+}
+
+/// `app` at `path`, one frame on, the keyboard on.
+fn at_scope(h: &mut Headless, app: &mut App<MockSide>, id: &str) {
+    app.view.focus.path = app.keyboard.tree(app.view.mode).path_to(id);
+    app.view.focus.mode = NAV;
+    let _ = h.frame(app, Vec::new());
+}
+
+/// That Tab, Shift+Tab and the arrows go only between the top bar and the footer.
+fn keys_left_to_the_bars(h: &mut Headless, app: &mut App<MockSide>) {
+    at_scope(h, app, TOP_BAR);
+    press(h, app, Key::Tab, NONE);
+    assert_eq!(focus(app), [FOOTER]);
+    press(h, app, Key::Tab, NONE);
+    assert_eq!(focus(app), [TOP_BAR]);
+    press(h, app, Key::Tab, Modifiers::SHIFT);
+    assert_eq!(focus(app), [FOOTER]);
+    press(h, app, Key::ArrowLeft, NONE);
+    assert_eq!(focus(app), [TOP_BAR]);
+    press(h, app, Key::ArrowRight, NONE);
+    assert_eq!(focus(app), [FOOTER]);
+}
+
+#[test]
+fn mock_console_height_maximised_the_keys_reach_only_what_it_leaves() {
+    let (mut app, mut h) = opened();
+    rejects("the panels reached at the default height", || {
+        keys_left_to_the_bars(&mut h, &mut app)
+    });
+    open_console_again(&mut h, &mut app);
+    m(&mut h, &mut app, NONE);
+    keys_left_to_the_bars(&mut h, &mut app);
+    // Its own Tab stays inside it (R-450 A1).
+    at_scope(&mut h, &mut app, HEADER);
+    press(&mut h, &mut app, Key::Tab, NONE);
+    assert_eq!(focus(&app), [WINDOW, LOG]);
+}
+
+/// The focus back in the console's header bar, after a check moved it out.
+fn open_console_again(h: &mut Headless, app: &mut App<MockSide>) {
+    at_scope(h, app, HEADER);
+    assert_eq!(focus(app), [WINDOW, HEADER]);
+}
+
+#[test]
+fn mock_console_height_maximised_on_the_stain_page_too() {
+    let (mut app, mut h) = opened();
+    app.view.mode = engine::contract::view_ui::Mode::Stain;
+    settle(&mut h, &mut app);
+    open_console_again(&mut h, &mut app);
+    m(&mut h, &mut app, NONE);
+    keys_left_to_the_bars(&mut h, &mut app);
+}
+
+#[test]
+fn mock_console_height_dragged_to_the_top_the_keys_reach_only_what_it_leaves() {
+    let (mut app, mut h) = opened();
+    let edge = drawn(&app).min.y;
+    let top = full(&h, &app).min.y;
+    drag_edge(&mut h, &mut app, top + 40.0 - edge);
+    near(
+        drawn(&app).min.y,
+        full(&h, &app).min.y + 40.0,
+        "short of it",
+    );
+    rejects("the panels reached short of the top", || {
+        keys_left_to_the_bars(&mut h, &mut app)
+    });
+    drag_edge(&mut h, &mut app, -80.0);
+    settle(&mut h, &mut app);
+    same(drawn(&app), full(&h, &app));
+    assert!(!app.windows.console.maximised);
+    keys_left_to_the_bars(&mut h, &mut app);
+}
+
+#[test]
+fn mock_console_height_a_focus_it_covers_moves_to_it() {
+    let (mut app, mut h) = opened();
+    at_scope(&mut h, &mut app, FIGURE);
+    assert_eq!(focus(&app), [FIGURE], "under a docked console it stays");
+    open_console_again(&mut h, &mut app);
+    m(&mut h, &mut app, NONE);
+    app.view.focus.mode = INTERACT;
+    at_scope(&mut h, &mut app, FIGURE);
+    assert_eq!(focus(&app), [WINDOW, HEADER]);
+    assert_eq!(app.view.focus.mode, NAV);
+    // Restored, it stays in the console, as on main; a figure under the console is then reached again.
+    m(&mut h, &mut app, NONE);
+    assert_eq!(focus(&app), [WINDOW, HEADER]);
+    at_scope(&mut h, &mut app, FIGURE);
+    assert_eq!(focus(&app), [FIGURE]);
+    let restored = focus(&app);
+    rejects("a focus moved at the restored height", || {
+        assert_eq!(restored, [WINDOW, HEADER])
+    });
+}
+
+#[test]
+fn mock_console_height_closed_the_panels_are_reached_again() {
+    let (mut app, mut h) = opened();
+    m(&mut h, &mut app, NONE);
+    press(&mut h, &mut app, Key::Escape, NONE);
+    let _ = h.frame(&mut app, Vec::new());
+    assert!(!app.is_open(Window::Console));
+    assert_eq!(focus(&app), [FOOTER], "back on its opener");
+    press(&mut h, &mut app, Key::Tab, Modifiers::SHIFT);
+    let last = focus(&app);
+    assert_ne!(last, [TOP_BAR], "the panels are in the order again");
+    rejects("the order left at the bars", || assert_eq!(last, [TOP_BAR]));
 }
 
 #[test]

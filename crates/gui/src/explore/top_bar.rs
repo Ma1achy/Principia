@@ -24,6 +24,9 @@ use crate::app::Actions;
 use crate::keyboard::scopes::{Scope, ScopeId, ScopeTree};
 use crate::keyboard::Keyboard;
 
+/// The top bar's big scope.
+pub const TOP_BAR: ScopeId = "top_bar";
+
 /// The top bar's controls as keyboard scopes, in the order they are drawn: the menus, Overlays ▾, Run…, Profiler…,
 /// Export…, Help, and the mode switch's two sides.
 pub const CONTROLS: [(ScopeId, &str); 10] = [
@@ -72,14 +75,14 @@ pub const WINDOW_ENTRIES: [ScopeId; 7] = {
 /// Joins the top bar to `tree` as big scope 1, its controls under it, and each menu's entries under the menu,
 /// Overlays ▾'s toggles, all off and save as default among them (`overlays_menu`).
 pub fn register(tree: &mut ScopeTree) {
-    tree.register(None, Scope::group("top_bar", "Top bar"));
+    tree.register(None, Scope::group(TOP_BAR, "Top bar"));
     for (id, label) in CONTROLS {
         let scope = if MENUS.contains(&id) {
             Scope::menu(id, label)
         } else {
             Scope::control(id, label)
         };
-        tree.register(Some("top_bar"), scope);
+        tree.register(Some(TOP_BAR), scope);
     }
     tree.register(Some("file"), Scope::control(QUIT.0, QUIT.1));
     tree.register(Some("view"), Scope::control(HIDE.0, HIDE.1));
@@ -192,7 +195,7 @@ pub fn show(
     actions: &mut Actions,
 ) {
     let mode = bar_state.mode;
-    keyboard.place("top_bar", rect);
+    keyboard.place(TOP_BAR, rect);
     ui.painter().rect_filled(rect, 0.0, ui.visuals().panel_fill);
     let inner = rect.shrink2(egui::vec2(8.0, 0.0));
     let mut bar = ui.new_child(
