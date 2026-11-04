@@ -100,7 +100,7 @@ OPTION = re.compile(r"(?:^\s*(?:- )?|\*\*\s*|[;:,]\s+(?:(?:or|and)\s+)?)"
                     r"\((\d?[a-z]\d?|[ivx]+|\d)\)(\s+another\b)?", re.M)
 ITEM_AFTER_SENTENCE = re.compile(r"(?<=[.!?])\s+(?=(?:RQ|D)-\d+:)")
 SENTENCE_END = re.compile(r"[.!?][\"')\]]*\s*$")
-LINE = re.compile(r"^(RQ-\d+|D-\d+):\s*(.*)$", re.S)
+LINE = re.compile(r"^(RQ-\d+|D-\d+):[ \t]*(.*)$", re.S)
 # The section names a reply may keep, in capitals or as the report spells them. Only these are skipped: `DEFER ALL` is
 # not one, and a line that might be an answer is never dropped.
 HEADINGS = {"TOP", "PHYSICS", "VALIDATION", "GUI", "CI", "CI AND RECORD", "RECORD", "RECORD CORRECTIONS",
@@ -209,7 +209,10 @@ def report_items(text):
 
 
 def plain_form(body):
-    """(kind, value) if `body` is, whole, a form of the narrow grammar, whatever the entry offers; or None."""
+    """(kind, value) if `body` is, whole, a form of the narrow grammar, whatever the entry offers; or None. A wrapped
+    answer never is: the grammar is one line."""
+    if "\n" in body:
+        return None
     bare = body[:-1] if body.endswith(".") else body
     if bare in ("close", "veto"):
         return bare, ""
@@ -258,7 +261,7 @@ def read_answer(item, body, e, moot):
 def complete(answer):
     """Whether an answer's text can end there: it ended a sentence, or it is a plain form or a template line."""
     m = LINE.match(answer.strip())
-    body = m.group(2).strip() if m else ""
+    body = m.group(2).rstrip() if m else ""
     return bool(SENTENCE_END.search(answer)) or plain_form(body) is not None or body in UNFILLED + ("stands",)
 
 
@@ -293,7 +296,7 @@ def parse_reply(text, queue_text, closed=(), decisions=(), moot=(), report_fault
         try:
             if not m:
                 raise Refused("not a reply line `RQ-n: …` or `D-n: veto`")
-            item, body = m.group(1), m.group(2).strip()
+            item, body = m.group(1), m.group(2).rstrip()
             if body in UNFILLED or (item.startswith("D-") and body == "stands"):
                 unanswered.append(item)
                 continue
@@ -489,7 +492,7 @@ def defer(queue_text, rq, to, date, ruling, text):
 
 def ask(queue_text, rq, date, question):
     check_date(date)
-    one_line(question)
+    question = quoted(question)
     return append(queue_text, rq, f"- **Asked, {date}:** the owner: \"{question}\" Flagged for the next report.")
 
 
@@ -628,6 +631,11 @@ def self_test():
     expect("an id outside the decisions section", "D-2: veto", reason="D-2 is no decision")
     expect("an empty answer", "RQ-1:", reason="an empty answer")
     expect("an empty ask is no plain form", "RQ-1: ask:  ", "read", "")
+    expect("a wrapped ask", "RQ-1: ask: what does this cost,\nand when?", "read", "")
+    expect("an empty ask swallows no item", "RQ-1: ask:\nRQ-5: (a) +", "read", "a")
+    expect("a wrapped defer", "RQ-1: defer:\nM8", "read", "")
+    expect("wrapped options", "RQ-1: (a) +\n(b)", "read", "a, b")
+    expect("a label on the next line", "RQ-1:\n(a)", "read", "a")
     expect("no RQ", "(a)", reason="not a reply line")
     expect("two RQs at the head", "RQ-1, RQ-5: (a)", reason="not a reply line")
     expect("words before the first item", "agreed RQ-1: (a)", reason="not a reply line")
@@ -824,6 +832,9 @@ def self_test():
     e = entries_of(kept)["RQ-1"]
     if e["deferred"] != [("M8", "5 Nov 2026")] or e["asked"] != ["4 Nov 2026"]:
         fails.append(f"reply self-test: the dated lines must read back: {e}")
+    if "the owner: \"what does it cost,\n  and when?\" Flagged" not in ask(queue, "RQ-1", "4 Nov 2026",
+                                                                       "what does it cost,\nand when?"):
+        fails.append("reply self-test: a wrapped question must reach its Asked line whole")
     last = "none waits.\n- **Asked, 4 Nov 2026:** the owner: \"why?\" Flagged for the next report.\n"
     if not ask(queue, "RQ-8", "4 Nov 2026", "why?").endswith(last):
         fails.append("reply self-test: ask must append to the last entry")
