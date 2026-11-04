@@ -70,6 +70,9 @@ beside the owner's text. Then treat it as the kind it turned out to be, in step 
   question, and do nothing on it. That goes for options that exclude each other, a rider that leaves the meaning open,
   and anything that contradicts a ruling or the corpus (`CLAUDE.md` § "Rulings", § "Never guess, never defer").
 
+A line continues the answer above it unless it starts `RQ-n:` and the line above is complete, so one READ answer can run
+over several lines, and hold other items' ids. Read all of it: an entry it names beyond its first is yours to work out.
+
 A prose ruling outside the template is ported as any ruling is, not through this command.
 
 **Before closing any entry, plain or read, read it for what the answer leaves undecided.** The several-questions flag

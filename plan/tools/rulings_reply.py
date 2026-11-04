@@ -27,10 +27,13 @@ answered twice, a line naming no item, an empty answer, and a plain form that ca
 offer, an "another, stated by the owner" option with no statement, `close` on an entry with no ruling that the report
 doesn't group under "Ruled-or-moot", and a veto of an entry that applies nothing.
 
-A line may hold several answers, each starting `RQ-n:`, as in `RQ-641: (b). RQ-642: (a).`; each is read and answered on
-its own. A template line left as the report wrote it, or `D-n: stands`, is unanswered. A line that is a section name
-alone (`HEADINGS`, or a report's `##` heading) is no reply line either: it is skipped, and listed as skipped. A refused
-line changes nothing else; the rest of the reply stands. An answer takes the next R id, in reply order: CLAUDE.md has a
+A line continues the answer above it unless it starts a new item with `RQ-n:` or `D-n:` and the line above is complete:
+a plain form, or ended with a sentence. A blank line or a section name ends an answer. A line splits only after a
+sentence end, before such an item, as in `RQ-641: (b). RQ-642: (a).`, and each part is answered on its own. If unsure,
+the whole thing is one `read` answer, under its first item, so a wrapped answer is never cut short and an entry the
+owner only cited is never answered. A template line left as the report wrote it, or `D-n: stands`, is unanswered. A
+line that is a section name alone (`HEADINGS`, or a report's `##` heading) is no reply line either: it is skipped, and
+listed as skipped. A refused line changes nothing else; the rest of the reply stands. An answer takes the next R id, in reply order: CLAUDE.md has a
 deferral made by a ruling. `ask` takes none: it is a question, not an answer.
 
     open [--queue PATH]            the open RQs: id, title, the options offered, and the flags the report needs
@@ -73,6 +76,7 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), 
 ARCHIVE_FILE = QUEUE_ARCHIVE + "/M0.md"
 ANSWER_TEMPLATE = "<option> | defer:<milestone> | ask:<question> | veto"  # the report's template lines, unfilled
 DECISION_TEMPLATE = "<stands> | veto"
+UNFILLED = (ANSWER_TEMPLATE, DECISION_TEMPLATE)
 REPORT_FIELDS = ("Background", "Options", "Applied meanwhile", "What waits", "Recommendation", "Deferrable")
 DECISIONS_HEAD = "R-369 decisions"  # the report's sections these two lines read, by the start of their headings
 MOOT_HEAD = "Ruled-or-moot"
@@ -87,9 +91,9 @@ TITLE = re.compile(r"^## (RQ-\d+): (.*?)(?: \*\(.*)?$")
 # or "and". Elsewhere "(a)" is an option's prose citing one, and "(x)" or "(v)" a symbol.
 OPTION = re.compile(r"(?:^\s*(?:- )?|\*\*\s*|[;:,]\s+(?:(?:or|and)\s+)?)"
                     r"\((\d?[a-z]\d?|[ivx]+|\d)\)(\s+another\b)?", re.M)
-ITEM_AT = re.compile(r"(?<=\s)(?=(?:RQ|D)-\d+:)")
+ITEM_AFTER_SENTENCE = re.compile(r"(?<=[.!?])\s+(?=(?:RQ|D)-\d+:)")
+SENTENCE_END = re.compile(r"[.!?][\"')\]]*\s*$")
 LINE = re.compile(r"^(RQ-\d+|D-\d+):\s*(.*)$", re.S)
-ITEM_START = re.compile(r"^(?:RQ|D)-\d+\b")
 # The section names a reply may keep, in capitals or as the report spells them. Only these are skipped: `DEFER ALL` is
 # not one, and a line that might be an answer is never dropped.
 HEADINGS = {"TOP", "PHYSICS", "VALIDATION", "GUI", "CI", "CI AND RECORD", "RECORD", "RECORD CORRECTIONS",
@@ -243,53 +247,55 @@ def read_answer(item, body, e, moot):
     return "read", ", ".join(hints)
 
 
-def parts_of(line):
-    """A reply line's answers: split before each `RQ-n:` past the first, if it starts with one, or the line whole."""
-    return [p.strip() for p in ITEM_AT.split(line)] if LINE.match(line) else [line]
+def complete(answer):
+    """Whether an answer's text can end there: it ended a sentence, or it is a plain form or a template line."""
+    m = LINE.match(answer.strip())
+    body = m.group(2).strip() if m else ""
+    return bool(SENTENCE_END.search(answer)) or plain_form(body) is not None or body in UNFILLED
 
 
-def continued(lines, n):
-    """Whether the line under line `n` (from 1) may continue it: not blank, a section name, or the start of an item,
-    `RQ-1, RQ-2: …` among them, which is refused for itself and continues nothing."""
-    under = lines[n].strip() if n < len(lines) else ""
-    return bool(under) and under.lstrip("# ").upper() not in HEADINGS and not ITEM_START.match(under)
+def split_reply(lines):
+    """([(line number, an answer or a stray line)], [(line number, a section name)]): see the module's docstring."""
+    out, skipped, answering = [], [], False
+    for n, raw in enumerate(lines, 1):
+        line = raw.strip()
+        if not line or line.lstrip("# ").upper() in HEADINGS:
+            answering = False
+            if line:
+                skipped.append((n, line))
+        elif answering and not (LINE.match(line) and complete(out[-1][1])):
+            out[-1] = (out[-1][0], f"{out[-1][1]}\n{raw}")
+        else:
+            answering = bool(LINE.match(line))
+            parts = ITEM_AFTER_SENTENCE.split(line) if answering else [raw]
+            out += [(n, p) for p in (parts if len(parts) > 1 else [raw])]
+    return out, skipped
 
 
 def parse_reply(text, queue_text, closed=(), decisions=(), moot=()):
     """(accepted, refused, unanswered, skipped). accepted: dicts of line number, line (the answer as typed, less its
     line end), item, kind and value. refused: (line number, answer, reason). unanswered: item ids whose template
     line was left as written. skipped: (line number, line) of each section name."""
-    entries, accepted, refused, unanswered, skipped = entries_of(queue_text), [], [], [], []
-    lines = text.splitlines()
-    for n, raw in enumerate(lines, 1):
-        if not raw.strip():
-            continue
-        if raw.strip().lstrip("# ").upper() in HEADINGS:
-            skipped.append((n, raw.strip()))
-            continue
-        parts = parts_of(raw.strip())
-        for part in [raw] if len(parts) == 1 else parts:
-            m = LINE.match(part.strip())
-            try:
-                if not m:
-                    raise Refused("not a reply line `RQ-n: …` or `D-n: veto`")
-                item, body = m.group(1), m.group(2).strip()
-                if body in (ANSWER_TEMPLATE, DECISION_TEMPLATE) or (item.startswith("D-") and body == "stands"):
-                    unanswered.append(item)
-                    continue
-                if item.startswith("D-") and item not in decisions:
-                    raise Refused(f"{item} is no decision of the report")
-                if item.startswith("RQ-") and item not in entries:
-                    raise Refused(f"{item} is closed, in the archive" if item in closed
-                                  else f"{item} is no entry in the queue")
-                kind, value = read_answer(item, body, entries.get(item), moot)
-                accepted.append({"n": n, "line": part, "item": item, "kind": kind, "value": value})
-            except Refused as r:
-                refused.append((n, part, str(r)))
-    for a in [a for a in accepted if continued(lines, a["n"])]:
-        if a is [b for b in accepted if b["n"] == a["n"]][-1]:  # a wrapped line continues the last answer on its line
-            accepted.remove(a)
-            refused.append((a["n"], a["line"], f"line {a['n'] + 1} under it may continue it: it can't apply cut short"))
+    entries, accepted, refused, unanswered = entries_of(queue_text), [], [], []
+    answers, skipped = split_reply(text.splitlines())
+    for n, part in answers:
+        m = LINE.match(part.strip())
+        try:
+            if not m:
+                raise Refused("not a reply line `RQ-n: …` or `D-n: veto`")
+            item, body = m.group(1), m.group(2).strip()
+            if body in UNFILLED or (item.startswith("D-") and body == "stands"):
+                unanswered.append(item)
+                continue
+            if item.startswith("D-") and item not in decisions:
+                raise Refused(f"{item} is no decision of the report")
+            if item.startswith("RQ-") and item not in entries:
+                raise Refused(f"{item} is closed, in the archive" if item in closed
+                              else f"{item} is no entry in the queue")
+            kind, value = read_answer(item, body, entries.get(item), moot)
+            accepted.append({"n": n, "line": part, "item": item, "kind": kind, "value": value})
+        except Refused as r:
+            refused.append((n, part, str(r)))
     seen = [a["item"] for a in accepted] + [m.group(1) for _, r, _ in refused for m in [LINE.match(r.strip())] if m]
     twice = {i for i in seen if seen.count(i) > 1}
     refused += [(a["n"], a["line"], f"{a['item']} is answered twice") for a in accepted if a["item"] in twice]
@@ -381,6 +387,13 @@ def report_errors(report, queue_text):
     return errors
 
 
+def quoted(text):
+    """An answer as a queue line quotes it: every word of it, its later lines indented under the field."""
+    if not text.strip():
+        raise ValueError("an empty answer")
+    return text.replace("\n", "\n  ")
+
+
 def check_date(date):
     if not DATE.match(date):
         raise ValueError(f"date {date!r} is not in the form \"4 Nov 2026\"")
@@ -401,7 +414,7 @@ def find(blocks, rq):
 def close(queue_text, archive_text, rq, ruling, date, text, outcome):
     """The queue without entry `rq`, and the archive with it, unchanged but for a last "Ruling" line."""
     check_date(date)
-    one_line(text)
+    text = quoted(text)
     one_line(outcome)
     if not re.fullmatch(r"R-\d+", ruling):
         raise ValueError(f"{ruling!r} is not a ruling id")
@@ -422,7 +435,7 @@ def append(queue_text, rq, line):
 
 def defer(queue_text, rq, to, date, ruling, text):
     check_date(date)
-    one_line(text)
+    text = quoted(text)
     one_line(to)
     line = f"- **Deferred:** deferred to {to} by owner {date} ({ruling}, the owner: \"{text}\")."
     return append(queue_text, rq, line)
@@ -574,7 +587,7 @@ def self_test():
     expect("words before the first item", "agreed RQ-1: (a)", reason="not a reply line")
     expect("the owner's template, unfilled", "RQ-nnn: <option> | defer:<milestone>", reason="not a reply line")
 
-    ok, no = parse_reply("RQ-1: (a)\n\nRQ-1: (b)\nRQ-5: (a)\nRQ-5: nonsense\nRQ-3: defer:M3\n", queue)[:2]
+    ok, no = parse_reply("RQ-1: (a)\n\nRQ-1: (b)\nRQ-5: (a)\nRQ-5: nonsense.\nRQ-3: defer:M3\n", queue)[:2]
     if [a["item"] for a in ok] != ["RQ-3"] or [n for n, _, _ in no] != [1, 3, 4, 5]:
         fails.append(f"reply self-test: an item answered twice must lose both, and the rest stand: {ok} {no}")
     if not any("answered twice" in r for _, _, r in no):
@@ -597,19 +610,36 @@ def self_test():
         fails.append(f"reply self-test: only a section name is skipped, and it is listed: {ok} {skipped}")
     if [p for _, p, _ in no] != ["DEFER ALL", "VETO EVERYTHING", "OK", "Topics"]:
         fails.append(f"reply self-test: a line in capitals that is no section name is refused: {no}")
-    ok, no = parse_reply("RQ-1: (a) but continuing\non the next line with a condition\nRQ-5: (b)\n", queue)[:2]
-    if [a["item"] for a in ok] != ["RQ-5"] or [n for n, _, _ in no] != [1, 2] or "cut short" not in no[0][2]:
-        fails.append(f"reply self-test: a wrapped answer must be refused, with its second line: {ok} {no}")
-    ok, no = parse_reply("RQ-1: (b)\n- Warped mode: this.\n", queue)[:2]
-    if ok or len(no) != 2:
-        fails.append(f"reply self-test: a bullet under an answer binds it: {ok} {no}")
-    ok, no = parse_reply("RQ-5: (a). RQ-1: (b) but\nonly on Vulkan\n", queue)[:2]
-    if [a["item"] for a in ok] != ["RQ-5"] or [p for _, p, _ in no] != ["RQ-1: (b) but", "only on Vulkan"]:
-        fails.append(f"reply self-test: a wrapped line continues the last answer on its line: {ok} {no}")
-    for name, reply in [("a blank line", "RQ-1: (b)\n\nstray\n"), ("an item", "RQ-1: (b)\nRQ-2, RQ-3: (a)\n"),
-                        ("a section name", "RQ-1: (b)\nPHYSICS\n"), ("the end", "RQ-1: (b)")]:
-        if [a["item"] for a in parse_reply(reply, queue)[0]] != ["RQ-1"]:
-            fails.append(f"reply self-test: {name} under an answer continues nothing")
+    def answers(name, reply, want, refused=()):
+        ok, no = parse_reply(reply, queue)[:2]
+        got = [(a["item"], a["kind"]) for a in ok]
+        if got != want or [p for _, p, _ in no] != list(refused):
+            fails.append(f"reply self-test: {name}: expected {want} {refused}, got {got} {no}")
+
+    answers("a wrapped line joins its answer", "RQ-1: (a) but continuing\non the next line\nRQ-5: (b)\n",
+            [("RQ-1", "read")])
+    answers("a bullet joins its answer", "RQ-1: (b)\n- Warped mode: this.\n", [("RQ-1", "read")])
+    if parse_reply("RQ-1: (b)\n  - this\n", queue)[0][0]["line"] != "RQ-1: (b)\n  - this":
+        fails.append("reply self-test: a joined answer must keep its lines as typed")
+    answers("an id with no colon joins its answer", "RQ-1: (b) now. (a) later.\nRQ-5 deferred with it.\n",
+            [("RQ-1", "read")])
+    answers("an id naming a condition joins", "RQ-1: (a) unless\nRQ-5 is settled first\n", [("RQ-1", "read")])
+    answers("a decision's id joins", "RQ-2: amend it,\nD-1 being vetoed\n", [("RQ-2", "read")])
+    answers("a list of ids joins", "RQ-1: (b).\nRQ-2, RQ-3: (a)\n", [("RQ-1", "read")])
+    answers("a new item after a sentence", "RQ-1: (a) it is.\nRQ-5: (b)\n", [("RQ-1", "read"), ("RQ-5", "option")])
+    answers("a new item after a plain form", "RQ-1: (a)\nRQ-5: b\nRQ-1: ask: why\n",
+            [("RQ-5", "option")], ["RQ-1: (a)", "RQ-1: ask: why"])
+    answers("a new item after no sentence end joins", "RQ-1: (a) but\nRQ-5: (b)\n", [("RQ-1", "read")])
+    answers("a blank line ends an answer", "RQ-1: (a) but\n\nRQ-5: (b)\nstray\n", [("RQ-1", "read"), ("RQ-5", "read")])
+    answers("a section name ends an answer", "RQ-1: (a) but\nPHYSICS\nstray\n", [("RQ-1", "read")], ["stray"])
+    answers("the wrapped part is the last on its line", "RQ-5: (a). RQ-1: (b) but\nonly on Vulkan\n",
+            [("RQ-5", "option"), ("RQ-1", "read")])
+    answers("a split after a sentence", "RQ-1: (b). RQ-5: (a) there.", [("RQ-1", "option"), ("RQ-5", "read")])
+    answers("no split mid-sentence", "RQ-1: (b) as in RQ-5: (a) there.", [("RQ-1", "read")])
+    answers("no split with no sentence end", "RQ-1: (a) RQ-5: (b)", [("RQ-1", "read")])
+    answers("no split on an id with no colon", "RQ-1: (b). RQ-5 is deferred.", [("RQ-1", "read")])
+    answers("the template, then an item", f"RQ-1: {ANSWER_TEMPLATE}\nRQ-5: (a)\n", [("RQ-5", "option")])
+    answers("a stray line, then an item", "stray\nRQ-5: (a)\n", [("RQ-5", "option")], ["stray"])
     verbatim = "RQ-1:   (a)  "
     if parse_reply(verbatim, queue)[0][0]["line"] != verbatim:
         fails.append("reply self-test: the line must be kept as typed, for the ruling's quotation")
@@ -702,6 +732,9 @@ def self_test():
         open(os.path.join(a, "M0.md"), "w", encoding="utf-8").write(archive)
         if rq_ids(q, a)[1] or queue_text_errors(rest):
             fails.append(f"reply self-test: the closed entry fails the queue check: {rq_ids(q, a)[1]}")
+    wrapped = close(queue, "", "RQ-1", "R-700", "4 Nov 2026", "RQ-1: (a) but\nonly this", "(a).")[1]
+    if "the owner: \"RQ-1: (a) but\n  only this\"): (a).\n" not in wrapped:
+        fails.append(f"reply self-test: a wrapped answer must reach the Ruling line whole: {wrapped[-90:]!r}")
     rest, _ = close(queue, "", "RQ-8", "R-700", "4 Nov 2026", "x", "y")
     if not rest.endswith("- **Applied meanwhile:** none.\n"):
         fails.append(f"reply self-test: closing the last entry leaves one line end: {rest[-40:]!r}")
@@ -723,7 +756,7 @@ def self_test():
     good = ("RQ-1", "R-1", "4 Nov 2026", "x", "y")
     for i, (rq, ruling, date, text, outcome) in enumerate(
             [("RQ-9",) + good[1:], ("RQ-1", "694") + good[2:], good[:2] + ("2026-11-04",) + good[3:],
-             good[:3] + ("x\ny", "y"), good[:3] + ("", "y"), good[:4] + (" ",)]):
+             good[:4] + ("y\nz",), good[:3] + ("", "y"), good[:4] + (" ",)]):
         try:
             close(queue, "", rq, ruling, date, text, outcome)
             fails.append(f"reply self-test: bad close {i} must raise")
