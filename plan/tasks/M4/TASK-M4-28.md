@@ -87,7 +87,8 @@ alone does not answer the owner's question; the bits at identical operands do, a
   on 19407 of 65536 where Metal off and lavapipe read 0 (RQ-685), and M4 adds divisions to the force loop and the steppers, so
   a march on the card should differ from the first such step whatever contraction does. The discriminating result is differing
   bits at bit-identical operands, in a branch input of kind `+ and ×` (R-547; R-690). That points at contraction, reassociation or
-  distribution. A difference in a branch input holding a division or `fma`, `E_rel` or `|Δn̂|`, kind `other operation`, is not attributable that way.
+  distribution. A difference in a branch input of kind `other operation` is not attributable that way.
+- **The kind is read from `branch_inputs.rs`'s written form, not assumed.** `E_rel = ½|Δv|² − (M_pair + m_b)/d` is the physics definition, not the branch input's written form, which TASK-M4-03 writes and proves. By REQ-INT-064 and REQ-INT-061, `E_rel` and `|Δn̂|` are meant to be of kind `+ and ×`, so their operands are read like `d²`'s. A written form that holds a division or `fma` is reported as `other operation` and named as departing from REQ-INT-064.
 - **A shared state is not shared operands.** `detect_terminal` runs after the STEP, so the collision test reads `d²` of post-STEP
   positions, which have been through the force loop's divisions. A collision fork in `--replay` has identical inputs at the
   replay's level, and `d²` is `+` and `×`, but if its positions differ it is an upstream difference and convicts no driver.
