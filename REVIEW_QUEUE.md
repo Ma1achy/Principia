@@ -2353,11 +2353,11 @@ change: no timer was touched (R-649). Nothing is chosen.*
     to 253.57 s on the other 49 (median 250.53 s). So run 1 was already within 56 s of the timer.
   - Under nextest, one at a time, the three pass on `main` at `e1df88fa` (run 41744485022): 95.051 s, 95.446 s and 163.929 s.
 - **Later runs:** there is no later `stand-in-soak` run on `main`, because the workflow doesn't run on a push. `ci` on
-  `main` is green at `e1df88fa`, `39a766c9`, `d0062a5c` and `99881a7b`. Run 41821036802 at `437d281d` was still in progress
-  at 11:59 UTC on 4 Nov: 7 jobs passed, none failed, 11 not finished. PR #394's last run, 41808766194 at `b5bf2f67`
-  (`main` merged in, with #395 and #403), started at 09:35 and was still in progress at 11:59 UTC, 2 h 24 min on, where the
-  failed runs took 14 to 17 minutes (13 min 32 s to 17 min 07 s by the runs API). That suggests it passed run 1. Its log
-  can't be read until it ends, so this isn't known. PR #394 merged meanwhile.
+  `main` is green at `e1df88fa`, `39a766c9`, `d0062a5c` and `99881a7b`. Run 41821036802 at `437d281d` hadn't finished at 12:12 UTC on 4 Nov: 12 jobs passed, none failed, 7 not finished. PR
+  #394's last run, 41808766194 at `b5bf2f67` (`main` merged in, with #395 and #403), started at 09:35 and was still in
+  progress at 12:12 UTC, in step "50 consecutive parallel runs" since 09:37:32, 2 h 34 min on, where the failed runs took
+  14 to 17 minutes (13 min 32 s to 17 min 07 s by the runs API). That suggests it passed run 1. Its log can't be read until
+  it ends, so this isn't known. PR #394 merged meanwhile.
 - **Read from the code, not measured:** of `xtask ci`'s runners, those that call `cargo` go to the test's stand-in, which
   answers from canned text; only a call naming `golden_harness` reaches the real cargo
   (`xtask/tests/qa_TASK-M0-22.rs`:45-47; `xtask/src/golden.rs`:1226-1234), and the golden runner renders on lavapipe. The
