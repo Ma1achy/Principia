@@ -27,6 +27,9 @@ use validation::spawn::Spawn;
 
 const SCRIPT: &str = ".github/actions/cargo-ci-config/config.sh";
 const SCRIPT_STEP: &str = "uses: ./.github/actions/cargo-ci-config";
+/// How the one line that may name the script does: `ci.yml`'s `cachekey` (twice, in `ci` and `xtask-ci`), hashing it.
+const CACHEKEY: &str = "echo \"cachekey=";
+const HASHES_SCRIPT: &str = "cat .github/actions/cargo-ci-config/config.sh;";
 /// What `ci.yml`'s `cachekey` hashes of the environment, naming every setting in [`SETTINGS`].
 const KEYED_ENV: &str = "grep -E '^CARGO_(INCREMENTAL|PROFILE)'";
 /// The jobs that write the config themselves, in steps `qa_ci_archive_shrink` and `ci_workspace_disk` read, with what
@@ -557,7 +560,8 @@ mod clobbers {
 }
 
 /// The workflows' step is an action, whose one step runs the script: a `run:` step would run in the tests that run a
-/// job's `run:` steps outside CI, and write to that machine's CARGO_HOME (R-233).
+/// job's `run:` steps outside CI, and write to that machine's CARGO_HOME (R-233). So no line of a workflow names the
+/// script, on a `run:` line or inside a `run: |` block, but `cachekey`'s, which only hashes it.
 fn check_action(action: &str, files: &[(String, String)]) {
     assert!(
         action.contains("using: composite")
@@ -566,8 +570,13 @@ fn check_action(action: &str, files: &[(String, String)]) {
     );
     for (name, text) in files {
         for l in text.lines().map(uncommented) {
+            let rest = if l.trim_start().starts_with(CACHEKEY) {
+                l.replacen(HASHES_SCRIPT, "", 1)
+            } else {
+                l.to_owned()
+            };
             assert!(
-                !(l.contains("config.sh") && l.trim_start().starts_with("run:")),
+                !rest.contains("config.sh"),
                 "{name} runs the config script in a `run:` step: `{}`",
                 l.trim()
             );
@@ -606,6 +615,101 @@ mod run_step {
                 "gate.yml",
                 "        uses: ./.github/actions/cargo-ci-config\n",
                 "        run: bash .github/actions/cargo-ci-config/config.sh\n",
+            )
+        )
+    );
+}
+
+#[cfg(feature = "controls")]
+mod run_block {
+    use super::*;
+
+    negative_control!(
+        the_config_is_written_by_an_action,
+        "a workflow that runs the script from the body of a `run: |` block",
+        expected = "gate.yml runs the config script in a `run:` step",
+        check_action(
+            &action(),
+            &edited(
+                "gate.yml",
+                "        uses: ./.github/actions/cargo-ci-config\n",
+                "        run: |\n          set -eu\n          bash .github/actions/cargo-ci-config/config.sh\n",
+            )
+        )
+    );
+}
+
+#[cfg(feature = "controls")]
+mod run_beside {
+    use super::*;
+
+    negative_control!(
+        the_config_is_written_by_an_action,
+        "a job that keeps the action and also sources the script in a step of its own",
+        expected = "gate.yml runs the config script in a `run:` step",
+        check_action(
+            &action(),
+            &edited(
+                "gate.yml",
+                "        uses: ./.github/actions/cargo-ci-config\n",
+                "        uses: ./.github/actions/cargo-ci-config\n      - run: |\n          . .github/actions/cargo-ci-config/config.sh\n",
+            )
+        )
+    );
+}
+
+#[cfg(feature = "controls")]
+mod run_in_cachekey {
+    use super::*;
+
+    negative_control!(
+        the_config_is_written_by_an_action,
+        "`cachekey`'s line running the script as well as hashing it",
+        expected = "ci.yml runs the config script in a `run:` step",
+        check_action(
+            &action(),
+            &edited(
+                "ci.yml",
+                HASHES_SCRIPT,
+                "cat .github/actions/cargo-ci-config/config.sh; bash .github/actions/cargo-ci-config/config.sh;",
+            )
+        )
+    );
+}
+
+#[cfg(feature = "controls")]
+mod run_piped_in_cachekey {
+    use super::*;
+
+    negative_control!(
+        the_config_is_written_by_an_action,
+        "`cachekey`'s line piping the script to a shell, which is not the `cat` that only hashes it",
+        expected = "ci.yml runs the config script in a `run:` step",
+        check_action(
+            &action(),
+            &edited(
+                "ci.yml",
+                HASHES_SCRIPT,
+                "cat .github/actions/cargo-ci-config/config.sh | bash;",
+            )
+        )
+    );
+}
+
+#[cfg(feature = "controls")]
+mod cat_beyond_cachekey {
+    use super::*;
+
+    negative_control!(
+        the_config_is_written_by_an_action,
+        "the hashing `cat` on a line that is not `cachekey`'s: only that line may name the script",
+        expected = "gate.yml runs the config script in a `run:` step",
+        check_action(
+            &action(),
+            &edited(
+                "gate.yml",
+                "        uses: ./.github/actions/cargo-ci-config\n",
+                "        run: |\n          cat .github/actions/cargo-ci-config/config.sh; true\n",
             )
         )
     );
