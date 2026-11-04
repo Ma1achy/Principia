@@ -1890,6 +1890,7 @@ chosen.*
   2's numbers; (c) yes, only for results whose branch inputs the recorded failure doesn't reach; (d) another, stated by the owner.
 - **Applied meanwhile:** nothing.
 - **Waits:** nothing in the build. It bears on TASK-M8-41 (REQ-VAL-099) and on Paper 2.
+
 ## RQ-693: What the `(L_z, E)` chart's `E` axis means at `ε ≠ 0`: R-670's refusal covers `Some(E*)`, and this chart has no `E*` *(physics; silence; R-670, RQ-656 (6); `docs/design/principia_chart_reference.md` § 2.1, § 2.2; `docs/design/principia_dd_decoder.md` § 3.6, § 3.7; context: TASK-M9-39, REQ-VAL-015)*
 
 *Queued 4 Nov 2026 from physics review 5771183527 of PR #408, F1. For the owner: yes, it changes results: which ICs such a chart's pixels decode to, or whether the chart runs softened at all. Nothing is chosen.*
