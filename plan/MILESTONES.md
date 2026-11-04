@@ -270,8 +270,8 @@ render_contract "→ flat compute"; deep_zoom §3 layer 0: "defines the three co
 - The temporal march, lockstep and checkerboard.
 - The integration-seam cross-checks (debug_tooling_plan §G).
 - The first kernel benchmarks.
-- The kernel cross-backend check (R-686): M4's gate report lists REQ-VAL-347's and REQ-VAL-348's NVIDIA rows, as "not run" until
-  a Windows run posts them. That row is what carries the outstanding run after its task closes; it blocks nothing (R-649).
+- The kernel cross-backend check (R-686): M4's gate report lists REQ-VAL-347's and REQ-VAL-348's NVIDIA rows, the record and REQ-VAL-348's replay each its own, as "not run" until
+  a Windows run posts them (the builder is TASK-M4-27's). That row is what carries the outstanding run after its task closes; it blocks nothing (R-649).
 
 <!-- gate:M4 -->
 **Exit gate — 108 requirements** (and every earlier gate still green):

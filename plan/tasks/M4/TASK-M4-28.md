@@ -6,7 +6,7 @@
 - **Needs (earlier milestones):** REQ-INT-026, REQ-EVT-003, REQ-EVT-005, REQ-VAL-026
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** PIT-9, PIT-10
-- **Size:** ~900 lines
+- **Size:** ~950 lines
 
 ## Goal
 The owner's evidence for whether the missing `NoContraction` matters for the real kernel (R-686). The same IC set runs on
@@ -42,11 +42,11 @@ alone does not answer the owner's question; the bits at identical operands do, a
 - The pass entry. `gpu_step_once` is one STEP (parity contract § "1. The principle"): no `N_sub`, projection or detection, so iterating it isn't a march, and choosing `N_sub`
   on the host would put the CPU's branch in the GPU's record. So a compute entry in `crates/kernel/src/stage/branch_read.rs`, dispatched by `gpu_macro_pass` in `crates/validation/src/harness/`, calls TASK-M4-09's one loop body on its one carried-state type, with no second list of registers (applied per R-369). It takes and returns that carried state, and also returns the pass's branch words. Under Yoshida-4 those are `N_sub`, `state` and the collision and escape decisions. Under Heggie there is no `N_sub`: they are the steps taken, the budget flag, R-603's two counts, `state`, the collision decision and escape's sync-boundary sample.
 - The IC set, fixed before the first run and the same bits on all four: `fixtures/gates/parity_fixtures` (TASK-M4-18), with its
-  non-chaotic and chaotic marking, and a near-decision stratum, `fixtures/gates/cross_backend_near_decision`, of ICs chosen to
+  non-chaotic and chaotic marking, and a near-decision stratum, `fixtures/gates/cross-backend-march/near_decision/`, of ICs chosen to
   straddle collision and escape decisions on both occupants and `N_sub` decisions on Yoshida-4, and a uniform grid across a basin boundary, each a chart and a point, all the survey entry takes. The header states each
   stratum's N, so 0 of N carries its resolution.
 - A fixed-input arm: `fixtures/gates/tier_l_boundary_states` (TASK-M4-03) and TASK-M4-02's `synth.rs` generators, their output written once to
-  `fixtures/gates/cross_backend_fixed_inputs` so every backend reads the same bits, each state with the registers `detect_terminal` reads, on all four
+  `fixtures/gates/cross-backend-march/fixed_inputs/` so every backend reads the same bits, each state with the registers `detect_terminal` reads, on all four
   backends, read at the given state (below), reported per pair as a measurement, so a comparison
   exists where chaos can't reach it. `synth.rs`'s feasibility-edge states are decode's, and go through TASK-M4-27's decode read-back entries. TASK-M4-03 names `macos-15`
   and lavapipe; this arm is what brings REQ-INT-057's decisions to NVIDIA at identical inputs before TASK-M8-41.
@@ -69,6 +69,7 @@ alone does not answer the owner's question; the bits at identical operands do, a
   apart; for each disagreement, the first step that differs and whether the branch operation there agrees on identical
   inputs, as REQ-VAL-079's report does, the kind column of TASK-M4-27, extended to the march's branch inputs from TASK-M4-03's `branch_inputs.rs`.
   The header states the domain, the commit, each adapter line and the compute setting, NVIDIA's replay as its own row, "not run" until posted, so a record posted with its replay outstanding reads as that, and that N comes from the fixed-input arm and the replays. Each driver's line shows, per branch input and entry, N and the level 1 count.
+- The runner as TASK-M4-27 delivers it, for `fixtures/gates/cross-backend-march/`: a measurement gate whose controls are synthetic records, with `--replay` and `--replay-state` forwarded, and an `outstanding.json` listing NVIDIA's record and its replay as separate rows.
 - Negative controls for this task's tests (R-176).
 
 ## Acceptance tests
