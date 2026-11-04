@@ -29,8 +29,8 @@ that. It is the first test of R-690's driver condition, on fixed inputs.
 - `decisions.md` § "R-437 — The value of every `atan2` at a possible pole of the decode, encode and canonicalisation is defined: 0, for every sign of the zeros, chosen branch-free by a select on the operands against 0, so CPU and GPU agree *(closes RQ-285)*"
 
 ## Deliverables
-- `crates/validation/src/cross_backend.rs`: a record, one file per backend, keyed by the commit, the adapter line, the compute
-  fast-math setting and a hash of the inputs, with one row per input and its branch outcomes; and the comparison of any
+- `crates/validation/src/cross_backend.rs`: a record, one file per backend, keyed by the commit, the adapter line, the driver
+  version, the compute fast-math setting, the hardware label if any, and a hash of the inputs, with one row per input and its branch outcomes; and the comparison of any
   set of records, every pair: disagreements, inputs compared, the rate, and the inputs that disagreed.
 - `cargo xtask gate cross-backend-branches`: `--record` on the job's backend, `--compare` over records. The inputs are those
   `crates/engine/tests/canon_gpu.rs` and `crates/engine/tests/decode_cross_backend.rs` build, seeds fixed, with #393's from
@@ -52,7 +52,8 @@ that. It is the first test of R-690's driver condition, on fixed inputs.
   compared; the control is a compare that ignores one outcome column, which the flipped case rejects. The standing: a synthetic pair of kind `+ and ×`
   with equal operands and differing input bits, no fork, reads "unverified, not supported"; with equal operands and bits and a
   different outcome it reads the same, as a comparison fork; with differing operands it does not; of kind `other operation` it
-  does not. The control is a compare that reads only outcomes, which misses the first case (REQ-VAL-347).
+  does not; the driver differing from CPU f32 is the one named; a clean driver reads "no failure in N"; no record reads "not run".
+  The control is a compare that reads only outcomes, which misses the first case (REQ-VAL-347).
 - `cargo xtask gate cross-backend-branches` — records on lavapipe, on Metal and on CPU f32 and their comparison, in the PR,
   each pair's rate, the adapter lines and each driver's standing under R-690's condition; the header states the domain; every backend pair is listed, NVIDIA's as "not run"
   until its record is posted (REQ-VAL-347).
@@ -68,6 +69,11 @@ that. It is the first test of R-690's driver condition, on fixed inputs.
 
   A failing driver is recorded **unverified, not supported**, in those words. A row of kind `other operation` is reported as that
   kind. Nothing enforces the condition, and the recording blocks nothing.
+- **From a pair to a driver.** The arbiter is CPU f32's correctly rounded result on the same operands: the driver whose bits differ
+  from it is the one that fails. Each driver's standing reads one of "unverified, not supported", "no failure in N", N shown, never
+  "verified" or "supported", or "not run". "Driver unverified" (RQ-685's ruling) is a run header's word for a driver not measured,
+  not one of these. A standing's domain is stated with it: the compute stage, setting off, the adapter line and driver version,
+  and for NVIDIA its hardware label ("possibly faulty hardware"), so the words attach to that driver on that card.
 - **A measurement under R-649, on tier (a), the GPU explorer.** It has no outside number, so it is neither an M9 target nor a
   peek. It blocks nothing, and no tolerance or threshold enters it. Each pair's outcome: PASS is 0 disagreements;
   anything else is EXPLAINED DIVERGENCE, with a measurement showing the mechanism, or UNEXPLAINED.

@@ -86,7 +86,8 @@ alone does not answer the owner's question; the bits at identical operands do, a
 - **A shared state is not shared operands.** `detect_terminal` runs after the STEP, so the collision test reads `d²` of post-STEP
   positions, which have been through the force loop's divisions. A collision fork in `--replay` has identical inputs at the
   replay's level, and `d²` is `+` and `×`, but if its positions differ it is an upstream difference and convicts no driver.
-- **R-690's driver condition** is about bits, not forks, on TASK-M4-27's three levels, at the expression's own operands. A failing driver is recorded **unverified,
+- **R-690's driver condition** is about bits, not forks, on TASK-M4-27's three levels, at the expression's own operands, with its
+  arbiter, CPU f32's correctly rounded result, its three words and its domain (TASK-M4-27's Notes). A failing driver is recorded **unverified,
   not supported**, in those words. Nothing enforces the condition, and the recording blocks nothing.
 - **The NVIDIA record** is a Windows session's run at the PR's head, `--record` with `PRIN_GPU_BACKEND=vulkan`, the file posted to
   #390, under the same hardware label as that card's other runs. It is not a CI job (R-186). Nothing waits on it, and the task

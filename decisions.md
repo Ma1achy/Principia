@@ -29773,6 +29773,14 @@ operands:
 An input holding any other operation (division, `√`, `sin`, `cos`, a builtin) is reported as that kind and does not by itself fail
 this condition. The recording is a report's words and blocks nothing (R-649). It adds no claim on continuous bits.
 
+A disagreement belongs to a pair and a standing to a driver. The arbiter is CPU f32's correctly rounded result on the same operands:
+the driver whose bits differ from it fails. A report has three words: "unverified, not supported" for a driver measured and failing;
+"no failure in N", N shown, never "verified" or "supported", for a driver measured with none; "not run" for no record. RQ-685's
+ruling, in the same batch and ported elsewhere, says "driver unverified" of a driver not measured: that is this "not run", in a run
+header, and not this ruling's words, which only a measured failure earns. A standing holds for the compute stage with the setting
+off, on that adapter and driver version, and for NVIDIA under its hardware label, since repeating on one card can't rule out a
+fixed fault (RQ-685).
+
 ## R-691 — The raw-value rule for pixel comparisons is for cross-backend investigation only; goldens stay as they are on CI backends *(closes RQ-692; amends R-686)*
 *4 Nov 2026 · the owner's batch of that day; applied in `docs/contracts/principia_parity_contract.md` § 4, TASK-M6-53,
 `docs/archive/review_queue/M0.md` (RQ-692), R-686's forward lines and `plan/rule_groups.yaml`*
