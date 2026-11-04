@@ -30008,7 +30008,7 @@ archives them, unchanged, each with a Ruling line quoting the owner's words.
   planned field; REQ-VAL-344 maps it and adds nothing to it. No existing requirement plans an FTLE map over a plane's
   starts or a shape-sphere occupancy, so both are new.
 - **"The batch-152 planes"** are the planes the triage holds under `batches/papers-152`: the eucliss free-fall fate plane
-  (400 × 240) and its two unequal-mass velocity planes (`m₃ = 0.25` and `0.5`), the planes RQ-674's gap 2 names. They
+  (`[value]`) and its two unequal-mass velocity planes (`[value]`), the planes RQ-674's gap 2 names. They
   are AI-authored and held locally, so under R-668 item 6 they are peeks only; the maps use their starts, never their
   outcomes as a reference.
 - **Where a candidate original result is recorded.** It has no reference, so no PASS or divergence (R-649): each is a
