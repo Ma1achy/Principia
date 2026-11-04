@@ -21,9 +21,11 @@ use crate::app::App;
 use crate::explore::breadcrumb;
 use crate::explore::footer::FOOTER;
 use crate::explore::hover_label::{BACKING, LISTEN_HINT};
-use crate::explore::manifold_view::{AXES, Q1_COMPONENTS, Q1_EDIT};
+use crate::explore::manifold_view::{
+    control_reached, AXES, PRESET, Q1_COMPONENTS, Q1_EDIT, TILT_X,
+};
 use crate::explore::top_bar::TOP_BAR;
-use crate::explore::FIGURE;
+use crate::explore::{COMPASS, COMPASS_H, FIGURE};
 use crate::headless::{Headless, FRAME_S};
 use crate::layout::{console_handle, Layout, Splits, HANDLE, MIN_CONSOLE_H};
 use crate::mock::MockEngine;
@@ -875,6 +877,109 @@ fn mock_console_height_closed_the_panels_are_reached_again() {
     let last = focus(&app);
     assert_ne!(last, [TOP_BAR], "the panels are in the order again");
     rejects("the order left at the bars", || assert_eq!(last, [TOP_BAR]));
+}
+
+/// Whether a popup is open, and which layer has `at`.
+fn popup_at(h: &Headless, at: egui::Pos2) -> (bool, Option<egui::Order>) {
+    let order = h.ctx.layer_id_at(at).map(|l| l.order);
+    (egui::Popup::is_any_open(&h.ctx), order)
+}
+
+/// That no popup is open, and `at` is the console's.
+fn popup_gone(h: &Headless, at: egui::Pos2) {
+    assert_eq!(popup_at(h, at), (false, Some(egui::Order::Middle)));
+}
+
+/// The console dragged so its top edge stands at `y`, a few frames on.
+fn top_at(h: &mut Headless, app: &mut App<MockSide>, y: f32) {
+    let edge = drawn(app).min.y;
+    drag_edge(h, app, y - edge);
+    settle(h, app);
+}
+
+/// Where the open popup's entries are, by the scope of `below`'s control: the popup's first rows under it.
+fn under(app: &App<MockSide>, id: &str) -> egui::Pos2 {
+    app.keyboard
+        .place_of(id)
+        .expect("drawn")
+        .rect
+        .center_bottom()
+        + vec2(0.0, 14.0)
+}
+
+#[test]
+fn mock_console_height_it_reaches_a_control_past_its_bottom() {
+    let control = Rect::from_min_max(pos2(0.0, 80.0), pos2(10.0, 100.0));
+    assert!(!control_reached(control, 100.0), "to the point");
+    assert!(control_reached(control, 99.9));
+    rejects("a console a point under it", || {
+        assert!(control_reached(control, 100.1))
+    });
+}
+
+#[test]
+fn mock_console_height_dragged_past_it_a_panels_combo_closes() {
+    for id in [PRESET, TILT_X] {
+        let (mut app, mut h) = opened();
+        click_scope(&mut h, &mut app, id);
+        settle(&mut h, &mut app);
+        let control = app.keyboard.place_of(id).expect("drawn").rect;
+        let at = under(&app, id);
+        assert_eq!(popup_at(&h, at), (true, Some(egui::Order::Foreground)));
+        // Under the control, the popup hanging over the console, it stays.
+        top_at(&mut h, &mut app, control.max.y + 4.0);
+        assert_eq!(popup_at(&h, at), (true, Some(egui::Order::Foreground)));
+        let kept = popup_at(&h, at);
+        rejects("a popup the console has not reached", || {
+            assert_eq!(kept, (false, Some(egui::Order::Middle)))
+        });
+        top_at(&mut h, &mut app, control.min.y - 4.0);
+        popup_gone(&h, at);
+    }
+}
+
+#[test]
+fn mock_console_height_maximised_a_panels_combo_closes() {
+    for id in [PRESET, TILT_X] {
+        let (mut app, mut h) = opened();
+        click_scope(&mut h, &mut app, id);
+        settle(&mut h, &mut app);
+        let at = under(&app, id);
+        assert!(egui::Popup::is_any_open(&h.ctx));
+        app.windows.console.maximised = true;
+        settle(&mut h, &mut app);
+        popup_gone(&h, at);
+    }
+}
+
+#[test]
+fn mock_console_height_the_compass_menu_it_reaches_closes() {
+    let mut app = mock_app();
+    let mut h = headless();
+    settle(&mut h, &mut app);
+    click_scope(&mut h, &mut app, COMPASS_H);
+    settle(&mut h, &mut app);
+    let closed = egui::Popup::is_any_open(&h.ctx);
+    assert!(closed, "open, the console closed");
+    rejects("a menu no console reaches", || assert!(!closed));
+    app.side().engine().raise_error();
+    settle(&mut h, &mut app);
+    assert!(app.is_open(Window::Console));
+    assert!(!egui::Popup::is_any_open(&h.ctx));
+    assert_eq!(focus(&app), [COMPASS, COMPASS_H], "back on its control");
+}
+
+#[test]
+fn mock_console_height_the_focus_leaves_a_menu_it_closes() {
+    let (mut app, mut h) = opened();
+    click_scope(&mut h, &mut app, TILT_X);
+    settle(&mut h, &mut app);
+    let path = app.keyboard.tree(app.view.mode).path_to(TILT_X);
+    assert_eq!(focus(&app)[..path.len()], path[..], "in the menu");
+    assert!(focus(&app).len() > path.len(), "on an entry");
+    let top = app.keyboard.place_of(TILT_X).expect("drawn").rect.min.y - 4.0;
+    top_at(&mut h, &mut app, top);
+    assert_eq!(focus(&app), path);
 }
 
 /// `app` with the console closed from `covering`: maximised, or dragged to the top.

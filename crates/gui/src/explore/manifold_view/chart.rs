@@ -13,8 +13,8 @@ use engine::contract::set_field::SetField;
 use engine::contract::sim_config::{Latent, SimConfig};
 
 use super::{
-    axis, header, plane_edit, row, row_ui, Panel, View, AXES, BUILDER, PRESET, PRESETS,
-    Q1_COMPONENTS, Q1_EDIT, Q2_COMPONENTS, Q2_EDIT,
+    axis, close_under_console, header, plane_edit, row, row_ui, Panel, View, AXES, BUILDER, PRESET,
+    PRESETS, Q1_COMPONENTS, Q1_EDIT, Q2_COMPONENTS, Q2_EDIT,
 };
 
 /// The chart's kind: every chart the mock serves is the affine slice (chart_decoder_contract Part 3).
@@ -74,6 +74,7 @@ pub fn show(ui: &mut Ui, section: Rect, h: f32, clip: Rect, panel: &mut Panel<'_
                 ui.selectable_value(&mut chosen, Some(i), format!("{} × {}", AXES[a], AXES[b]));
             }
         });
+    close_under_console(&combo.response, panel.scratch.console_top);
     panel.place(PRESET, &combo.response, clip);
     if let Some(preset) = chosen.filter(|p| Some(*p) != view.preset) {
         panel.out.edit(
@@ -104,7 +105,7 @@ pub fn show(ui: &mut Ui, section: Rect, h: f32, clip: Rect, panel: &mut Panel<'_
         panel.place(edit, &button, clip);
         if open {
             let at = egui::pos2(section.min.x, button.rect.max.y);
-            if editor_clear(ui, at, i, panel.console_top) {
+            if editor_clear(ui, at, i, panel.scratch.console_top) {
                 editor(ui, at, i, components, panel);
             } else if panel.focus.last().is_some_and(|f| f != edit) && panel.focus_in(edit) {
                 // Its fields are not drawn, so the keys must not reach them.

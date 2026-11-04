@@ -858,6 +858,27 @@ pub struct Scratch {
     pub editing: [bool; 2],
     /// The figure's point the right-click menu was opened on, in `(s, t)`.
     pub menu_at: Option<(f64, f64)>,
+    /// The open console's top edge, this frame: the panels' popups stay above it, as their layer is above its (R-463 K2).
+    pub console_top: Option<f32>,
+}
+
+/// Closes the popup of `control`, open, once the console reaches the control: its layer is above the console's, so it
+/// would stay over the console and take its clicks with nothing left to show what opened it (R-463 K2). A popup that
+/// only hangs over the console from a control that shows stays, or the docked console would shut the panels' longer
+/// lists (applied per R-369). The pass is run again, so it is not drawn.
+pub fn close_under_console(control: &Response, console_top: Option<f32>) {
+    let popup = egui::Popup::default_response_id(control);
+    if console_top.is_some_and(|top| control_reached(control.rect, top))
+        && egui::Popup::is_id_open(&control.ctx, popup)
+    {
+        egui::Popup::close_id(&control.ctx, popup);
+        control.ctx.request_discard("a popup the console reached");
+    }
+}
+
+/// Whether the console's top edge `top` reaches `control`.
+pub fn control_reached(control: Rect, top: f32) -> bool {
+    control.max.y > top
 }
 
 /// What the panel, the compass and the figure ask for in one frame.
@@ -989,8 +1010,6 @@ pub struct Panel<'a> {
     pub keyboard: &'a mut Keyboard,
     /// The focus path.
     pub focus: &'a [String],
-    /// The open console's top edge: the panel's popups stay above it, as their layer is above its (R-463 K2).
-    pub console_top: Option<f32>,
     /// What the controls ask for.
     pub out: &'a mut Out,
 }

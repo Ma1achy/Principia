@@ -800,6 +800,7 @@ impl<S: EngineSide> App<S> {
         edits: &mut Vec<engine::contract::set_field::SetField>,
     ) {
         explore::place(&mut self.keyboard, layout);
+        self.manifold.console_top = self.console_open.then(|| self.console_rect(layout).min.y);
         // The figure's canvas is `layout.figure`; its points are read in `layout.field`, which no splitter moves.
         let (canvas, field) = (layout.figure, layout.field);
         // Each panel draws in a child of its own, so how many widgets it draws (the trajectory panel's change with the
@@ -869,13 +870,11 @@ impl<S: EngineSide> App<S> {
             targeted = snapshot;
             &targeted
         };
-        let console_top = self.console_open.then(|| self.console_rect(layout).min.y);
         let mut panel = explore::manifold_view::Panel {
             snapshot: shown,
             scratch: &mut self.manifold,
             keyboard: &mut self.keyboard,
             focus: &self.view.focus.path,
-            console_top,
             out,
         };
         explore::manifold_view::show(ui, layout.manifold_view, &mut panel);
