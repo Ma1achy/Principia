@@ -486,7 +486,8 @@ Approvals are of a head, so the reviewers approve the merged head again before t
 
 The human's standing rule of 2 Oct 2026 (R-369), which replaced the size rules and the "veto? holds the merge"
 practice, in force whether the human is away or not. Keep working through the plan under `plan/WORKFLOW.md` and
-`CLAUDE.md`. Progress is the goal: decide and continue, and stop only when nothing at all can proceed.
+`CLAUDE.md`. Progress is the goal: decide and continue, and stop only when nothing at all can proceed. A red `main` or a stuck
+required check stops other pull-request work at once, whatever else could proceed (R-681; § "Merging").
 
 **Merge** a PR once all of these hold:
 - every reviewer the task names has posted `VERDICT: APPROVE` on the head;
