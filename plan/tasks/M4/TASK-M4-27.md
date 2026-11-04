@@ -6,7 +6,7 @@
 - **Needs (earlier milestones):** REQ-DEC-017, REQ-DEC-008
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** PIT-9, PIT-10
-- **Size:** ~300 lines
+- **Size:** ~450 lines
 
 ## Goal
 The part of R-686's check that can run at this commit, on what the GPU runs: decode's and canon's branch outcomes, on
@@ -36,25 +36,38 @@ that. It is the first test of R-690's driver condition, on fixed inputs.
   `crates/engine/tests/canon_gpu.rs` and `crates/engine/tests/decode_cross_backend.rs` build, seeds fixed, with #393's from
   `crates/validation/tests/qa_TASK-M2-25_gpu.rs`. The outcomes are canon's branches (skip, coincidence, `ρ = 0`, mirror, `ρ_x` and
   `ρ_y` zero), decode's tags (`M01_TINY`, `INVARIANT_INFEASIBLE`, the energy tags) and decode's pole selects (R-436, R-437, R-438).
-  Each row carries the bits of its outcome's branch inputs as that backend computed them, so a disagreement sorts into a fork
-  on identical inputs or a difference already in the inputs (PIT-9, PIT-10). The report's header states its domain and that it does not answer the trajectory
+  The report's header states its domain and that it does not answer the trajectory
   question. The comparison is written into the gate report.
+- The test of R-690's condition, in `cross_backend.rs`. Each row has a **kind** column, from a list this task enumerates from the
+  written forms at `crates/kernel/src/canon.rs`, `decode/mass.rs`, `decode/invariant.rs` and `chart/burrau.rs`: `+ and ×`, or `other
+  operation` (division, `√`, `sin`, `cos`, a builtin; #393's select, reached through `sin`, is this kind). TASK-M4-03's
+  `branch_inputs.rs` isn't used: it lists the march's inputs and this task must not wait for it. A row of the first kind carries
+  the bits of the expression's own operands and of the input, read back at the evaluation. Where the stage emits neither, a
+  read-back entry from the same source, no parity-only physics. The comparison gives each such row its level (Notes).
 - Negative controls for this task's tests (R-176).
 
 ## Acceptance tests
 - `cargo test -p validation cross_backend_compare` (no GPU) — the comparison over synthetic records: a record against itself
-  reads 0 of N, one flipped outcome reads 1 of N and names the input, and one with different branch-input bits is sorted apart
-  from one with equal bits; a pair over different inputs is refused, not
-  compared; the control is a compare that ignores one outcome column, which the flipped case rejects (REQ-VAL-347).
+  reads 0 of N, and one flipped outcome reads 1 of N and names the input; a pair over different inputs is refused, not
+  compared; the control is a compare that ignores one outcome column, which the flipped case rejects. The standing: a synthetic pair of kind `+ and ×`
+  with equal operands and differing input bits, no fork, reads "unverified, not supported"; with equal operands and bits and a
+  different outcome it reads the same, as a comparison fork; with differing operands it does not; of kind `other operation` it
+  does not. The control is a compare that reads only outcomes, which misses the first case (REQ-VAL-347).
 - `cargo xtask gate cross-backend-branches` — records on lavapipe, on Metal and on CPU f32 and their comparison, in the PR,
   each pair's rate, the adapter lines and each driver's standing under R-690's condition; the header states the domain; every backend pair is listed, NVIDIA's as "not run"
   until its record is posted (REQ-VAL-347).
 - `python3 plan/check_plan.py`.
 
 ## Notes
-- **R-690's driver condition.** A driver with a fork on identical inputs in a branch input built only of `+` and `×` fails it, and the
-  report records that driver **unverified, not supported**, in those words. A fork in an input holding a division or `√` is reported
-  as that kind. Nothing enforces the condition, and the recording blocks nothing.
+- **R-690's driver condition is about bits, not forks.** An ulp moved in a branch input forks only within about an ulp of a threshold,
+  so a test of outcomes alone would read a failing driver as clean. Every row has identical stage inputs, but "built only of `+` and
+  `×`" is read at the expression's own operands (`decode/mass.rs`'s block is built on the emitted masses, not on `z`). Three levels:
+  - operands differ across the backends compared: an upstream difference, no evidence on the driver;
+  - operands bit-identical, input's bits differ: the driver fails, with or without a fork;
+  - operands and bits identical, outcome differs: a comparison fork, reported as that, and it fails too.
+
+  A failing driver is recorded **unverified, not supported**, in those words. A row of kind `other operation` is reported as that
+  kind. Nothing enforces the condition, and the recording blocks nothing.
 - **A measurement under R-649, on tier (a), the GPU explorer.** It has no outside number, so it is neither an M9 target nor a
   peek. It blocks nothing, and no tolerance or threshold enters it. Each pair's outcome: PASS is 0 disagreements;
   anything else is EXPLAINED DIVERGENCE, with a measurement showing the mechanism, or UNEXPLAINED.

@@ -6,14 +6,14 @@
 - **Needs (earlier milestones):** REQ-INT-026, REQ-EVT-003, REQ-EVT-005, REQ-VAL-026
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** PIT-9, PIT-10
-- **Size:** ~500 lines
+- **Size:** ~600 lines
 
 ## Goal
 The owner's evidence for whether the missing `NoContraction` matters for the real kernel (R-686). The same IC set runs on
 NVIDIA Vulkan, Metal, lavapipe and CPU f32, and the check compares outcome labels and each trajectory's branch-sensitive
 results, collision and escape decisions and step counts, not pixels. It reports the disagreement rate per backend pair,
 with no tolerance chosen to make it pass. It is a measurement under R-649. TASK-M4-05 delivers the march it runs. The rate
-alone does not answer the owner's question; the forks on identical inputs do, and they test R-690's driver condition (Notes).
+alone does not answer the owner's question; the bits at identical operands do, and they test R-690's driver condition (Notes).
 
 ## References
 - `decisions.md` § "R-686 — The kernel cross-backend check is a measurement (R-649): the same IC set on NVIDIA Vulkan, Metal, lavapipe and CPU f32, outcome labels and per-trajectory branch-sensitive results compared, not pixels, the disagreement rate reported per backend pair, no tolerance chosen to make it pass; pixel comparisons across backends go on raw pre-colour values with the outlier tail reported, never 8-bit frame equality, Metal against lavapipe's 161,394 / 221 recorded as the clean-backend baseline; `DECODE_SWITCHOVER`'s spec notes that bitwise agreement must be tested on NVIDIA specifically"
@@ -51,7 +51,7 @@ alone does not answer the owner's question; the forks on identical inputs do, an
   runs `--record`, then `--replay` on the file `--compare` writes.
 - The report, written into the gate report: each pair's disagreement count and rate, for each of those results and for any of them, non-chaotic and chaotic
   apart; for each disagreement, the first step that differs and whether the branch operation there agrees on identical
-  inputs, as REQ-VAL-079's report does, and which kind of branch input forked: `+` and `×` only, or holding a division or `√`.
+  inputs, as REQ-VAL-079's report does, the kind column of TASK-M4-27, extended to the march's branch inputs from TASK-M4-03's `branch_inputs.rs`.
   The header states the domain, the commit, each adapter line and the compute setting.
 - Negative controls for this task's tests (R-176).
 
@@ -60,7 +60,9 @@ alone does not answer the owner's question; the forks on identical inputs do, an
   label reads 1 of N, one changed step count reads 1 of N under that result alone, and the strata sum to the whole; the control is a compare that ignores step counts, which the changed step count rejects (REQ-VAL-348).
 - `cargo test -p validation cross_backend_replay` (no GPU) — over synthetic digests, the first differing step is found at its
   step, and the state handed to `--replay` is the same bits for every backend; the control is a digest that drops `N_sub`, which
-  a planted `N_sub` difference rejects (REQ-VAL-348).
+  a planted `N_sub` difference rejects. The standing, on the march's kinds, as `cross_backend_compare`'s: equal operands and differing
+  input bits, no fork, reads "unverified, not supported"; differing operands do not; `other operation` does not. The control is a
+  compare that reads only outcomes, which misses the first (REQ-VAL-348).
 - `cargo xtask gate cross-backend-march` — both arms' records on lavapipe, on Metal and on CPU f32, their comparison and the
   replay, in the PR, with each driver's standing under R-690's condition, every backend pair listed, NVIDIA's as "not run" until its record is posted (REQ-VAL-348).
 - `python3 plan/check_plan.py`.
@@ -75,12 +77,11 @@ alone does not answer the owner's question; the forks on identical inputs do, an
   shows no miscompile; the first-difference replay is what separates the two.
 - **A nonzero NVIDIA rate alone is not evidence on `NoContraction`.** The RTX's runtime division differs from correct rounding
   on 19407 of 65536 where Metal off and lavapipe read 0 (RQ-685), and M4 adds divisions to the force loop and the steppers, so
-  a march on the card should differ from the first such step whatever contraction does. The discriminating result is a fork on
-  identical inputs, from the replay or the fixed-input arm, in a branch input built only of `+` and `×` (R-547). A fork there
-  points at contraction or reassociation. A fork in a branch input holding a division, `E_rel` or `|Δn̂|`, is not attributable
-  that way. The report says which kind each fork is, from TASK-M4-03's `branch_inputs.rs`.
-- **R-690's driver condition.** A driver with a fork of the first kind fails it, and the report records that driver **unverified, not
-  supported**, in those words. Nothing enforces the condition, and the recording blocks nothing.
+  a march on the card should differ from the first such step whatever contraction does. The discriminating result is differing
+  bits at bit-identical operands, in a branch input built only of `+` and `×` (R-547). That points at contraction, reassociation or
+  distribution. A difference in a branch input holding a division, `E_rel` or `|Δn̂|`, is not attributable that way.
+- **R-690's driver condition** is about bits, not forks, on TASK-M4-27's three levels. A failing driver is recorded **unverified,
+  not supported**, in those words. Nothing enforces the condition, and the recording blocks nothing.
 - **The NVIDIA record** is a Windows session's run at the PR's head, `--record` with `PRIN_GPU_BACKEND=vulkan`, the file posted to
   #390, under the same hardware label as that card's other runs. It is not a CI job (R-186). Nothing waits on it, and the task
   closes without it: M4's gate report lists the row as "not run" until it is posted, though the owner's question rests on that
