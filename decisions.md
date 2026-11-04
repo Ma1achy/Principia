@@ -30027,7 +30027,7 @@ parking now reaches planetary sources. It closes **RQ-672**, **RQ-673** and **RQ
 
 R-679 is in the "design" group of `plan/rule_groups.yaml`, with R-668.
 
-Adds REQ-VAL-344, REQ-VAL-345 and REQ-VAL-346; changes REQ-VAL-223 (statement, source, rulings, note) and REQ-VAL-340 (verify, rulings, source, note).
+Adds REQ-VAL-344, REQ-VAL-345 and REQ-VAL-346; changes REQ-VAL-223 (statement, verify, source, rulings, note) and REQ-VAL-340 (verify, rulings, source, note).
 
 ## R-680 — Standing rule: the source page is re-read before any triage item becomes a target; the spot-check's six fixes to the library triage are PR #385's work, done after the CI fixes land
 *3 Nov 2026 · the owner's message of that day on the spot-check of the library triage; ported 3 Nov 2026; applied in
