@@ -1,0 +1,9 @@
+{
+  "conclusion": "failure",
+  "event": "push",
+  "head_branch": "main",
+  "head_sha": "e1df88fa78d5502a4e4ab3effe320288a6688fe4",
+  "id": 41744485022,
+  "path": ".github/workflows/ci.yml",
+  "run_attempt": 1
+}
