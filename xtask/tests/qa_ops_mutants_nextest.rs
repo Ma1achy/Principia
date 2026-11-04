@@ -18,7 +18,10 @@
 //! control (R-176), which feeds the same assertion an input differing in the one respect the requirement turns on.
 
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
+use std::process::Command;
+#[cfg(unix)]
+use std::process::Stdio;
+#[cfg(unix)]
 use std::time::{Duration, Instant};
 
 use validation::negative_control;
@@ -183,7 +186,9 @@ negative_control!(
 
 // ---------------------------------------------------------------------------------------------------------------
 // REQ-VAL-179: the timeout's SIGTERM to the test run's process group ends the run and its hung test process.
+// Unix only: process groups and `kill` have no Windows form, and this test is the one that needs them.
 
+#[cfg(unix)]
 const HANG_LIB: &str = r#"
 #[test]
 fn hangs() {
@@ -196,6 +201,7 @@ fn hangs() {
 }
 "#;
 
+#[cfg(unix)]
 fn alive(pid: u32) -> bool {
     Command::new("kill")
         .args(["-s", "0", &pid.to_string()])
@@ -204,6 +210,7 @@ fn alive(pid: u32) -> bool {
         .is_ok_and(|s| s.success())
 }
 
+#[cfg(unix)]
 fn signal(sig: &str, target: &str) {
     let _ = Command::new("kill")
         .args(["-s", sig, "--", target])
@@ -211,6 +218,7 @@ fn signal(sig: &str, target: &str) {
         .status();
 }
 
+#[cfg(unix)]
 /// Runs a probe whose test hangs as cargo-mutants runs it, in a process group of its own, and once the test is
 /// running sends `sig` to that group, as cargo-mutants' timeout sends SIGTERM. The run must then exit, and the hung
 /// test process be gone, within `within`.
@@ -280,12 +288,14 @@ fn timeout_ends_the_hung_test(toml: &str, sig: &str, within: Duration) {
     );
 }
 
+#[cfg(unix)]
 #[test]
 fn qa_ops_the_timeout_ends_the_test_run_and_its_hung_test() {
     timeout_ends_the_hung_test(&mutants_toml(), "TERM", Duration::from_secs(60));
 }
 
 // The same run sent a signal that ends nothing: the hung test keeps the run alive.
+#[cfg(unix)]
 negative_control!(
     qa_ops_the_timeout_ends_the_test_run_and_its_hung_test,
     "SIGCONT in place of the timeout's SIGTERM",

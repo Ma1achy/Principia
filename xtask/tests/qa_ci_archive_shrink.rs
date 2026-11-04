@@ -5,10 +5,12 @@
 //! debug info") and R-233 (the repository's own profiles, which govern local builds, stay at the default).
 //!
 //! Two kinds of test:
-//! - From the workflow text: the cargo config `ci-archive` writes reaches only the archive's build (written after the
-//!   cache restore, before the archive step, into the runner's CARGO_HOME, never the repository's config), strips only
-//!   dependencies (a `package."*"` table, which never matches a workspace member), and is the only debug-info setting
-//!   any workflow makes below R-374's top-level env, in any spacing.
+//! - From the workflow text: the cargo config `ci-archive` writes reaches the archive's build (written after the cache
+//!   restore, before the archive step, into the runner's CARGO_HOME, never the repository's config) and strips only
+//!   dependencies (a `package."*"` table, which never matches a workspace member); and, in any spacing, no `run:` line
+//!   of any workflow sets debug info below R-374's top-level env, but for this step and `ci-workspace`'s, which write
+//!   the same CARGO_HOME config. Every other job that runs cargo has it from `.github/actions/cargo-ci-config`, whose
+//!   tests are `ci_debug_info` and `qa_ci_debug_info`: since that PR the config is no longer this job's alone.
 //! - From behaviour: the exact payload the workflow writes, put in a scratch CARGO_HOME under R-374's env, builds a
 //!   scratch workspace whose test panics through a frame in a non-member path dependency. The workspace's own frame
 //!   still names file and line (R-374) and the panic message still names its location; the dependency's frame carries
@@ -106,7 +108,7 @@ fn written_config(text: &str) -> (String, String) {
     (payload.replace("\\n", "\n"), target)
 }
 
-/// The scoping of the archive's dependency strip, read from the workflows.
+/// The place and reach of the archive's dependency strip, read from the workflows.
 fn check_scoping(ci: &str, all: &[(String, String)]) {
     let lines = job_lines(ci, "ci-archive");
     let find = |needle: &str| {
@@ -153,7 +155,8 @@ fn check_scoping(ci: &str, all: &[(String, String)]) {
     }
     assert!(tables > 0, "the archive's cargo config sets no table");
 
-    // Below R-374's top-level env, the only debug-info setting in any workflow is this one step, in whatever spacing.
+    // Below R-374's top-level env, the only debug-info settings in any workflow's own lines are the jobs' `printf` steps,
+    // in whatever spacing; the action's step carries none.
     for (name, text) in all {
         for l in text.lines().map(uncommented) {
             let squeezed: String = l.chars().filter(|c| !c.is_whitespace()).collect();
@@ -165,7 +168,7 @@ fn check_scoping(ci: &str, all: &[(String, String)]) {
                 name == "ci.yml" && l.contains("run: printf '") && l.contains(CARGO_HOME_CONFIG);
             assert!(
                 !sets_debug || is_the_step,
-                "{name} sets debug info or writes a cargo config outside ci-archive's step: `{}`",
+                "{name} sets debug info or writes a cargo config outside the jobs' own config steps: `{}`",
                 l.trim()
             );
         }
@@ -183,7 +186,7 @@ fn check_scoping(ci: &str, all: &[(String, String)]) {
 }
 
 #[test]
-fn qa_archive_dependency_strip_reaches_only_the_archive_build() {
+fn qa_ci_archive_writes_its_own_dependency_config_before_the_archive() {
     check_scoping(&ci_yml(), &workflows());
 }
 
@@ -209,12 +212,56 @@ fn edited_ci(from: &str, to: &str) -> (String, Vec<(String, String)>) {
     with_ci(ci.replacen(from, to, 1))
 }
 
+/// `ci.yml` with `from` replaced by `to`, once, inside `ci-archive`'s step `STEP` alone: from the step's line to the
+/// next line at its indent or less. Text the same in another job's step (`ci-workspace` writes the same CARGO_HOME
+/// config) is never the one edited, whatever order the jobs are in.
+#[cfg(feature = "controls")]
+fn edited_archive_step(from: &str, to: &str) -> (String, Vec<(String, String)>) {
+    let ci = ci_yml();
+    let header = "\n  ci-archive:\n";
+    let mut at = ci.find(header).expect("ci.yml has no job ci-archive") + header.len();
+    let indent = |l: &str| l.len() - l.trim_start().len();
+    let mut range: Option<(usize, usize)> = None;
+    let mut step_indent = 0;
+    for line in ci[at..].split_inclusive('\n') {
+        let l = uncommented(line.trim_end());
+        if !l.trim().is_empty() {
+            match range {
+                None if indent(l) <= 2 => break,
+                None if l.trim() == STEP => {
+                    range = Some((at, ci.len()));
+                    step_indent = indent(l);
+                }
+                Some((start, _)) if indent(l) <= step_indent => {
+                    range = Some((start, at));
+                    break;
+                }
+                _ => {}
+            }
+        }
+        at += line.len();
+    }
+    let (start, end) = range.unwrap_or_else(|| panic!("ci-archive has no step `{STEP}`"));
+    let step = &ci[start..end];
+    assert!(
+        step.contains(from),
+        "ci-archive's step `{STEP}` has no `{from}` to edit"
+    );
+    let edited = format!(
+        "{}{}{}",
+        &ci[..start],
+        step.replacen(from, to, 1),
+        &ci[end..]
+    );
+    with_ci(edited)
+}
+
 negative_control!(
-    qa_archive_dependency_strip_reaches_only_the_archive_build,
+    qa_ci_archive_writes_its_own_dependency_config_before_the_archive,
     "a strip that covers the workspace's own crates as well as the dependencies",
     expected = "is not a dependency-only table",
     {
-        let (ci, all) = edited_ci(
+        let (ci, all) = edited_archive_step(
             "printf '[profile.test.package.\"*\"]",
             "printf '[profile.test]",
         );
@@ -227,11 +274,11 @@ mod repository_config {
     use super::*;
 
     negative_control!(
-        qa_archive_dependency_strip_reaches_only_the_archive_build,
+        qa_ci_archive_writes_its_own_dependency_config_before_the_archive,
         "a strip written into the repository's .cargo/config.toml, which local builds read (R-233)",
         expected = "is not the runner's CARGO_HOME config",
         {
-            let (ci, all) = edited_ci(CARGO_HOME_CONFIG, "\".cargo/config.toml\"");
+            let (ci, all) = edited_archive_step(CARGO_HOME_CONFIG, "\".cargo/config.toml\"");
             check_scoping(&ci, &all)
         }
     );
@@ -242,7 +289,7 @@ mod after_archive {
     use super::*;
 
     negative_control!(
-        qa_archive_dependency_strip_reaches_only_the_archive_build,
+        qa_ci_archive_writes_its_own_dependency_config_before_the_archive,
         "the config step moved below the archive step",
         expected = "runs after the archive step",
         {
@@ -266,9 +313,9 @@ mod other_job {
     use super::*;
 
     negative_control!(
-        qa_archive_dependency_strip_reaches_only_the_archive_build,
+        qa_ci_archive_writes_its_own_dependency_config_before_the_archive,
         "another job that lowers debug info with a spaced `debug = 0`",
-        expected = "sets debug info or writes a cargo config outside ci-archive's step",
+        expected = "sets debug info or writes a cargo config outside the jobs' own config steps",
         {
             let (ci, all) = edited_ci(
                 "\n  ci:\n",
@@ -281,12 +328,36 @@ mod other_job {
 
 // ---- Behaviour: the payload, built.
 
+/// A fresh directory for a scratch workspace, under the system's temporary directory and with no cargo config in any
+/// directory above it. cargo reads every `.cargo/config.toml` from its working directory up to the root, and those
+/// outrank `CARGO_HOME`'s: on a runner the target directory sits under `/home/runner`, whose `.cargo/config.toml` is
+/// the one CI writes, so a workspace there builds with that config whatever scratch `CARGO_HOME` it is given, and a
+/// control that leaves the config out cannot fail (run 41769443878, xtask-ci (3) and (4)).
+fn workspace_dir(case: &str) -> PathBuf {
+    let base = std::env::temp_dir().join(format!(
+        "qa_ci_archive_shrink_{}_{case}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&base);
+    fs::create_dir_all(&base).unwrap();
+    let base = base.canonicalize().unwrap();
+    for dir in base.ancestors() {
+        for file in ["config.toml", "config"] {
+            let config = dir.join(".cargo").join(file);
+            assert!(
+                !config.exists(),
+                "{} would reach the scratch workspace",
+                config.display()
+            );
+        }
+    }
+    base
+}
+
 /// Builds and runs a scratch workspace's failing test under R-374's env with `config` (if any) as the CARGO_HOME
 /// config, and returns everything it printed.
 fn run_scratch(case: &str, config: Option<&str>) -> String {
-    let base =
-        PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join(format!("qa_ci_archive_shrink_{case}"));
-    let _ = fs::remove_dir_all(&base);
+    let base = workspace_dir(case);
     let write = |p: PathBuf, s: &str| {
         fs::create_dir_all(p.parent().unwrap()).unwrap();
         fs::write(p, s).unwrap();
@@ -335,6 +406,7 @@ fn run_scratch(case: &str, config: Option<&str>) -> String {
         String::from_utf8_lossy(&out.stdout),
         String::from_utf8_lossy(&out.stderr)
     );
+    let _ = fs::remove_dir_all(&base);
     assert!(
         !out.status.success() && text.contains("qa shrink boom"),
         "the scratch test did not build and panic:\n{text}"
