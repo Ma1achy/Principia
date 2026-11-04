@@ -29679,6 +29679,10 @@ The owner's words, 4 Nov 2026, verbatim:
 *Applied per R-369:*
 - A path that only starts like it, `.claude` itself or `.clauderc`, is not on the list and runs full CI, as with the
   allowlist's other folders (R-662).
+- `xtask/tests/qa_R-662_ci_scope.rs`'s `cheap()` models the tracked paths with no `.claude/`, so
+  `qa_r662_every_tracked_path_classifies_as_the_ruling_says` and its control fail on `.claude/agents/*.md`. It is an
+  exception to R-290 forced by this ruling: `.claude/` joins that list in a `qa:` commit, by qa, for the reviewers to
+  confirm.
 - R-790 is the id reserved for this ruling. It follows R-678 in the file.
 
 R-790 is in the "ci" group of `plan/rule_groups.yaml`.
