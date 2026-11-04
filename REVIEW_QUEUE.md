@@ -2061,7 +2061,9 @@ record, which RQ-686 and RQ-687 share.*
     backend … a mismatch with the setting off is a REVIEW_QUEUE entry".
   - `crates/validation/src/gpu.rs`:978-979: "bit for bit, on every backend"; `crates/validation/tests/qa_TASK-M0-44.rs`:3-4
     the same, wider than the requirement's two jobs.
-  - `crates/kernel/src/canon.rs`:67-68: "`√`, `/` and `atan2` carry ulp bounds in WGSL, not correct rounding".
+  - `crates/kernel/src/canon.rs`:67-69: "`√`, `/` and `atan2` carry ulp bounds in WGSL, not correct rounding; `fma` is
+    not fused on every backend (CI's lavapipe evaluates it as a rounded product and an add, RQ-298), nor is `a·b + c`
+    left uncontracted on every one".
   - `decisions.md`:3282, R-297's Applied note: "Where wgpu's own path compiles without fast-math and offers no switch
     (Vulkan, on lavapipe in CI), off is that path". `crates/engine/src/compute.rs`:58: `Api::Vulkan =>
     Some(all(StageMode::Off))`, a table entry; `crates/engine/src/contract/fast_math.rs`:24: "Compiled with fast-math
@@ -2086,6 +2088,9 @@ record, which RQ-686 and RQ-687 share.*
   identified.
 - **From memory, unchecked:** Vulkan and WGSL bound `x / y` at 2.5 ULP, neither promises correct rounding, and no Vulkan
   switch asks for it. The eight posted quotients are within that bound; no worst case over the fuzzed sets was printed.
+  Also unchecked, from the physics reviewer's memory: SPV_KHR_float_controls2's `FPFastMathMode` has an `AllowRecip` bit,
+  which could forbid the reciprocal rewrite without giving correct rounding, and naga doesn't emit it. If so, the
+  constant and runtime cases differ here.
 - **Reach:**
   - **Branch decisions: a gap, not a clean result.** REQ-INT-057's are the wrapper's, and no GPU has run any of them: the
     wrapper has no compute entry point at this commit, and `detect` (`crates/kernel/src/driver/cadence.rs`:71) is a stub
@@ -2122,12 +2127,17 @@ record, which RQ-686 and RQ-687 share.*
     canon's and decode's branches are measured, on this card, and REQ-INT-057's are unmeasured on every GPU. "Compiled
     Off" on Vulkan records wgpu's path, not what the driver did.
 - **The questions:** (1) is "bit-identity" with the setting off a claim about branch decisions, or about every Vulkan
-  driver's division results? (2) what should the header record where a driver rewrites division with no switch?
+  driver's continuous results, division the one operation measured? (2) what should the header record where a driver rewrites division with no switch?
 - **Options seen:** (a) branch decisions and the Tier B fields only, which holds only if `E_rel` and `|Δn̂|` get
   written forms that take no driver's division, a gap still open and untested on any GPU; the probe then stays a
-  measurement on its two named jobs, and the "every backend" comments narrow; (b) every driver's division: this card
-  fails R-297, and no switch is known to fix it (from memory, as above), so the claim needs the project's own division or a list of supported
-  drivers; (c) bit-identity is claimed only on the drivers measured to give it, and any other Vulkan driver records
+  measurement on its two named jobs, and the "every backend" comments narrow; (b) every continuous result on every driver, division the
+  one operation measured: this card fails R-297. The reading reaches past division: `√` (`physics/pairs.rs`'s `norm` and
+  `cube`, which feed `force.rs`:19-21), contraction of `a·b + c`, and the builtins (`canon.rs`:67-69; parity :97). So the
+  project's own division wouldn't deliver it, and the probe passing on Metal and lavapipe doesn't show continuous
+  bit-identity there either. It needs the project's own arithmetic for each, or a list of supported drivers, and no
+  switch is known to give correct rounding (from memory, as above). The cost of a software division in the force loop
+  is unmeasured;
+  (c) bit-identity is claimed only on the drivers measured to give it, and any other Vulkan driver records
   `StageMode::Unknown`, as `Api::Dx12` and `Api::Webgpu` do at `compute.rs`:59 and as R-303 does for the browser;
   (d) another, stated by the owner.
 - **Measurements that would settle more:** both fuzzed sets' result words on the card (worst ulp, and whether the result
