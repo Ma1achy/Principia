@@ -14,9 +14,9 @@ here and not in `scripts/` because `.github/` is full CI whole (R-662), as `disk
                                      for a runner that died); WORKFLOW is the run's workflow file.
   ci_retry.py decide                 In `retry.yml`: fetch the run named by RUN_ID, RUN_ATTEMPT, RUN_CONCLUSION,
                                      WORKFLOW_PATH and HEAD_SHA (GH_REPO the repository) into that layout through `gh`,
-                                     classify it, write the decision and its reasons to $GITHUB_STEP_SUMMARY, and, on
-                                     a retry, ask for `rerun-failed-jobs`: the failed jobs and those that need them,
-                                     never the whole run.
+                                     classify it, and, on a retry, if HEAD_SHA is still HEAD_BRANCH's head, ask for
+                                     `rerun-failed-jobs`: the failed jobs and those that need them, never the whole
+                                     run. Writes the decision and its reasons to $GITHUB_STEP_SUMMARY.
 
 The verdict, one `key=value` line, then a line per failed job:
   retry=true|false   true only when the run concluded `failure`, its attempt is under MAX_ATTEMPTS, at least one
@@ -44,6 +44,7 @@ import re
 import subprocess
 import sys
 from pathlib import Path
+from urllib.parse import quote
 
 # Retry while the attempt is under 3: the first run and at most two re-runs (the owner's "max 1-2 attempts").
 MAX_ATTEMPTS = 3
@@ -300,7 +301,24 @@ def decide():
                 logs[jid] = log
         workflow_text = workflow_at(repo, os.environ.get("WORKFLOW_PATH", ""), os.environ.get("HEAD_SHA", ""))
     retry, reason, verdicts = classify(run, jobs, annotations, logs, workflow_text)
+    if retry:
+        gone = head_gone(repo, os.environ.get("HEAD_BRANCH", ""), os.environ.get("HEAD_SHA", ""))
+        if gone:
+            retry, reason = False, gone
     return finish(title, retry, reason, verdicts, repo, run_id)
+
+
+def head_gone(repo, branch, sha):
+    """Why the run's head is not its branch's head now, or None if it is. The checks fail towards no re-run: a pull
+    request's runs share a concurrency group, so a re-run of a superseded head would cancel the current head's run."""
+    if not branch or not sha:
+        return "the run's head or branch is not known"
+    text = gh([f"repos/{repo}/git/ref/heads/{quote(branch, safe='/')}"])
+    try:
+        live = json.loads(text)["object"]["sha"]
+    except (KeyError, TypeError, ValueError):
+        return f"the head of {branch} could not be read"
+    return None if live == sha else f"{branch} has moved from the run's head {sha} to {live}"
 
 
 def workflow_at(repo, path, sha):

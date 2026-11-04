@@ -1073,7 +1073,8 @@ impl Decided {
 }
 
 /// `decide` under `script`, on `run`, with a stand-in `gh` that serves `run` as GitHub does: the jobs in two pages, the
-/// run's workflow file `ci.yml`, a 404 for a job with no log, and refusing what `env` asks of it.
+/// run's workflow file `ci.yml`, a 404 for a job with no log, the branch's head `$STUB_HEAD`, and
+/// refusing what `env` asks of it.
 fn decide(script: &str, run: &Run, env: &[(&str, &str)]) -> Decided {
     let dir = Scratch::new("ci_retry_decide");
     let data = dir.join("run");
@@ -1114,6 +1115,10 @@ fn decide(script: &str, run: &Run, env: &[(&str, &str)]) -> Decided {
              id=${args##*jobs/}; id=${id%/logs}\n\
              cat \"$STUB_DATA/logs/$id.log\" 2> /dev/null || { echo 'gh: HTTP 404' >&2; exit 1; } ;;\n\
            *'/contents/'*) cat \"$STUB_WORKFLOW\" ;;\n\
+           *'/git/ref/heads/'*)\n\
+             if [ -n \"$STUB_REF_ERR\" ]; then echo \"$STUB_REF_ERR\" >&2; exit 1; fi\n\
+             if [ -n \"$STUB_REF_BODY\" ]; then echo \"$STUB_REF_BODY\"\n\
+             else echo \"{\\\"object\\\":{\\\"sha\\\":\\\"$STUB_HEAD\\\"}}\"; fi ;;\n\
          esac\n\
          exit 0\n",
     )
@@ -1149,6 +1154,8 @@ fn decide(script: &str, run: &Run, env: &[(&str, &str)]) -> Decided {
         )
         .env("WORKFLOW_PATH", ".github/workflows/ci.yml")
         .env("HEAD_SHA", "abc")
+        .env("HEAD_BRANCH", "main")
+        .env("STUB_HEAD", "abc")
         .env("GITHUB_STEP_SUMMARY", &summary);
     for (k, v) in env {
         cmd.env(k, v);
@@ -1331,6 +1338,70 @@ negative_control!(
     ))
 );
 
+/// A re-run shares its pull request's concurrency group, so one of a superseded head would cancel the current head's run.
+fn check_head(script: &str) {
+    let run = Run::saved(DISK_RUN);
+    let moved: [(&str, &[(&str, &str)]); 6] = [
+        ("a head its branch moved on from", &[("STUB_HEAD", "def")]),
+        (
+            "a branch that cannot be read",
+            &[("STUB_REF_ERR", "gh: HTTP 404")],
+        ),
+        ("an answer with no head", &[("STUB_REF_BODY", "{}")]),
+        ("an answer that is not JSON", &[("STUB_REF_BODY", "oops")]),
+        ("a run with no head", &[("HEAD_SHA", "")]),
+        ("a run with no branch", &[("HEAD_BRANCH", "")]),
+    ];
+    for (case, env) in moved {
+        let done = decide(script, &run, env);
+        assert!(done.ok, "{case}: decide failed");
+        assert!(done.posts().is_empty(), "{case}: asked for a re-run");
+        assert!(
+            done.summary.contains("Decision: no re-run"),
+            "{case}: the summary gives no decision"
+        );
+    }
+    // Live, on a branch with a slash in it, as a task's is: asked once, after the head is read.
+    let done = decide(script, &run, &[("HEAD_BRANCH", "task/TASK-M0-01")]);
+    assert_eq!(done.posts().len(), 1, "the live head: not re-run");
+    let read = done
+        .calls
+        .iter()
+        .position(|c| c == "gh api repos/o/r/git/ref/heads/task/TASK-M0-01");
+    let post = done.calls.iter().position(|c| c == RERUN);
+    assert!(read.is_some() && read < post, "the head is not read first");
+}
+
+#[test]
+fn ci_retry_decide_keeps_a_superseded_head() {
+    check_head(&script());
+}
+
+negative_control!(
+    ci_retry_decide_keeps_a_superseded_head,
+    "`decide` not looking at the head",
+    expected = "a head its branch moved on from: asked for a re-run",
+    check_head(&edit(
+        &script(),
+        "    if retry:\n        gone = ",
+        "    if False:\n        gone = "
+    ))
+);
+
+mod keeps_the_live_head {
+    use super::*;
+    negative_control!(
+        ci_retry_decide_keeps_a_superseded_head,
+        "every head taken for moved",
+        expected = "the live head: not re-run",
+        check_head(&edit(
+            &script(),
+            "return None if live == sha else",
+            "return None if False else"
+        ))
+    );
+}
+
 // ---- The workflow ---------------------------------------------------------------------------------------------------
 
 /// A workflow's text as JSON, parsed by PyYAML. YAML 1.1 reads the key `on` as `true`; it is put back as `on`.
@@ -1448,6 +1519,7 @@ fn check_job(yml: &str) {
         "RUN_CONCLUSION",
         "WORKFLOW_PATH",
         "HEAD_SHA",
+        "HEAD_BRANCH",
     ] {
         assert!(last["env"].get(key).is_some(), "the step has no {key}");
     }
