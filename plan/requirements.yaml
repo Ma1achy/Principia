@@ -4749,7 +4749,9 @@
   rulings:
   - R-502
   milestone: M4
-  note: "R-502: the N_sub thresholds are uniforms generated per sim key on the host, not compile-time constants."
+  rq:
+  - RQ-697
+  note: "R-502: the N_sub thresholds are uniforms generated per sim key on the host, not compile-time constants. It waits on RQ-697: the ionisation gate's total E > 0 is a branch input whose form that entry rules (physics review 5771573790 of PR #408, F8; applied per R-369)."
 - id: REQ-INT-062
   area: INT
   statement: "Every march loop in the kernel must have a bound (no bare `loop {`)."
@@ -5811,7 +5813,9 @@
   rulings:
   - R-32
   milestone: M3
-  note: "Doc text says the gate's definition pass is open; R-32 (recorded; applied before outcome data at scale) settles it. Recorded; applied before outcome data at scale."
+  rq:
+  - RQ-697
+  note: "Doc text says the gate's definition pass is open; R-32 (recorded; applied before outcome data at scale) settles it. Recorded; applied before outcome data at scale. It waits on RQ-697, what the gate's total E > 0 reads and by what form, at ε = 0 as well as ε ≠ 0 (physics review 5771573790 of PR #408, F8; applied per R-369)."
 - id: REQ-EVT-007
   area: EVT
   statement: "The `state` enum must hold the physical outcomes `escape`/`bounded`/`collision` and the lifecycle states `sim_failed` (non-finite during integration; payload untrustworthy except `state`) and `decode_failed`, mutually exclusive; there must be no `timeout` state and no `MAX_SUBSTEPS` terminal (reaching `T` is `bounded`)."
