@@ -237,7 +237,7 @@ fn edited(file: &str, from: &str, to: &str) -> Vec<(String, String)> {
 
 negative_control!(
     every_workflow_sets_the_same_build_settings,
-    "a workflow with other CARGO_* values, for which rust-cache computes a key nothing saves",
+    "a workflow with another CARGO_INCREMENTAL than ci.yml's",
     expected = "gate.yml sets other CARGO_* values than ci.yml",
     check_env(&edited(
         "gate.yml",

@@ -31,10 +31,12 @@ env:
   # for every workflow without exception (applied per R-369).
   CARGO_PROFILE_DEV_DEBUG: line-tables-only
   CARGO_PROFILE_TEST_DEBUG: line-tables-only
-  # No incremental state. The workspace's target directory is not kept between runs (R-285), so it pays only inside a
-  # job that rebuilds: `cargo mutants` builds a crate again per mutant, 14 to 36% slower without it in a local timing,
-  # with no CI shard measured yet, which REQ-VAL-149's 300 minutes leaves room for (PR #394). In every workflow for
-  # rust-cache's key (R-337), as above. Local builds are unaffected (R-233).
+  # No incremental state, the owner's CI setting (PR #394), in every workflow like R-374's values. `Swatinem/rust-cache`
+  # already exports CARGO_INCREMENTAL=0 to the steps after it, and before it computes its key, so its key and every
+  # build after it are the same without this line. What the line adds: the value in the steps before rust-cache, where
+  # no cargo build runs and `ci.yml`'s `cachekey` hashes it, and in jobs without rust-cache, where only `ci.yml`'s
+  # `ci-release` runs cargo and it builds only for the release doctests, which aren't incremental by default. Local
+  # builds are unaffected (R-233).
   CARGO_INCREMENTAL: "0"
 
 jobs:
