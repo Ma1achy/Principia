@@ -76,8 +76,8 @@ fn verdict(text: &str) -> bool {
     }
 }
 
-/// Whether a failed run at attempt 1 of `ci.yml`, made of `jobs`, is re-run. No job has a log: a dead runner leaves none.
-fn retried(jobs: &[Job]) -> bool {
+/// A saved failed run at `attempt`, made of `jobs`, whose ids are their places from 1.
+fn saved_run(jobs: &[Job], attempt: u64) -> Scratch {
     let dir = Scratch::new("qa_ci_retry");
     std::fs::create_dir_all(dir.join("annotations")).expect("scratch folder");
     let listed: Vec<Value> = jobs
@@ -99,11 +99,21 @@ fn retried(jobs: &[Job]) -> bool {
     }
     std::fs::write(
         dir.join("run.json"),
-        json!({"conclusion": "failure", "run_attempt": 1}).to_string(),
+        json!({"conclusion": "failure", "run_attempt": attempt}).to_string(),
     )
     .expect("run written");
     std::fs::write(dir.join("jobs.json"), Value::from(listed).to_string()).expect("jobs written");
-    verdict(&classify(&dir, "ci.yml"))
+    dir
+}
+
+/// Whether a failed run at `attempt` of `workflow`, made of `jobs`, is re-run.
+fn retried_at(jobs: &[Job], attempt: u64, workflow: &str) -> bool {
+    verdict(&classify(&saved_run(jobs, attempt), workflow))
+}
+
+/// Whether a failed run at attempt 1 of `ci.yml`, made of `jobs`, is re-run. No job has a log: a dead runner leaves none.
+fn retried(jobs: &[Job]) -> bool {
+    retried_at(jobs, 1, "ci.yml")
 }
 
 // ---- The owner's three saved runs, read as they are checked in --------------------------------------------------------
@@ -115,13 +125,15 @@ fn check_saved(cases: &[(&str, bool)]) {
     }
 }
 
-/// "today's 'No space left on device' run, a lost-communication sample, and a real test failure that must NOT retry".
+/// "today's 'No space left on device' run, a lost-communication sample, and a real test failure that must NOT retry";
+/// and `41211489245`, the real run this file's archive case first failed on.
 #[test]
 fn qa_ci_retry_saved_runs_as_checked_in() {
     check_saved(&[
         ("41744485022", true),
         ("41707146179", true),
         ("41431397009", false),
+        ("41211489245", true),
     ]);
 }
 
@@ -316,6 +328,144 @@ negative_control!(
     "the failure in the first case a fault after all",
     expected = "a failure beside a fault: re-run",
     check_kept(LOST)
+);
+
+// ---- The cap, the threshold and the other two workflows ----------------------------------------------------------------
+
+/// "run_attempt cap: retry while attempt < 3", and "attempt 3 is not". `cap` is that 3.
+fn check_cap(cap: u64) {
+    for attempt in 1..=4 {
+        let jobs = [failed("ci (3)", NO_SPACE), failed("ci", REAL)];
+        assert_eq!(
+            retried_at(&jobs, attempt, "ci.yml"),
+            attempt < cap,
+            "the cap at attempt {attempt}"
+        );
+    }
+}
+
+#[test]
+fn qa_ci_retry_stops_at_attempt_3() {
+    check_cap(3);
+}
+
+negative_control!(
+    qa_ci_retry_stops_at_attempt_3,
+    "attempt 3 expected to re-run",
+    expected = "the cap at attempt 3",
+    check_cap(4)
+);
+
+/// Whether a run is re-run whose one failed job's failed step, its log as the sampler writes it, read `kb` KiB free.
+fn retried_on_sample(kb: u64) -> bool {
+    let dir = saved_run(&[failed("ci (4)", REAL), failed("ci", REAL)], 1);
+    std::fs::create_dir_all(dir.join("logs")).expect("logs folder");
+    let log = format!(
+        "2026-11-04T00:31:12.4207242Z ##[group]Run cargo nextest run\n\
+         2026-11-04T00:41:13.5282689Z == sample 11, +601 s, avail_kb={kb}, 00:41:13\n\
+         2026-11-04T00:41:30.3574347Z ##[error]Process completed with exit code 100.\n"
+    );
+    std::fs::write(dir.join("logs/1.log"), log).expect("log written");
+    verdict(&classify(&dir, "ci.yml"))
+}
+
+/// "disk sampler lowest free <2G at the failure": the sampler's own 2 GiB, strictly under. `limit` is that, in KiB.
+fn check_low_disk(limit: u64) {
+    assert!(
+        retried_on_sample(limit - 1),
+        "one KiB under the limit: not re-run"
+    );
+    assert!(!retried_on_sample(limit), "at the limit: re-run");
+}
+
+#[test]
+fn qa_ci_retry_low_disk_is_strictly_under_2_gib() {
+    check_low_disk(2 * 1024 * 1024);
+}
+
+negative_control!(
+    qa_ci_retry_low_disk_is_strictly_under_2_gib,
+    "the limit a KiB higher, so that 2 GiB itself is under it",
+    expected = "one KiB under the limit: not re-run",
+    check_low_disk(2 * 1024 * 1024 + 1)
+);
+
+/// "for a failed CI/mutants/gate run": a fault in `gate.yml` and `mutants.yml`, with the real names and the gates their
+/// real runs show (the `mutants` run 41178118082 has its shards and `mutants-check` red).
+fn check_other_workflows(message: &str) {
+    assert!(
+        retried_at(
+            &[failed("cpu", message), failed("gate-report", REAL)],
+            1,
+            "gate.yml"
+        ),
+        "a fault in the gate's cpu job and the report: not re-run"
+    );
+    assert!(
+        retried_at(
+            &[
+                failed("mutants (3)", message),
+                failed("mutants-verdict", REAL),
+                failed("mutants-check", REAL),
+            ],
+            1,
+            "mutants.yml"
+        ),
+        "a fault in a mutants shard and its two gates: not re-run"
+    );
+}
+
+#[test]
+fn qa_ci_retry_a_fault_in_the_other_two_workflows() {
+    check_other_workflows(LOST);
+}
+
+negative_control!(
+    qa_ci_retry_a_fault_in_the_other_two_workflows,
+    "a real failure in place of the fault",
+    expected = "a fault in the gate's cpu job and the report: not re-run",
+    check_other_workflows(REAL)
+);
+
+/// A suite's real failure beside a fault in another suite, `real` that failure.
+fn check_other_kept(real: &str) {
+    assert!(
+        !retried_at(
+            &[
+                failed("cpu", real),
+                failed("gpu-metal", NO_SPACE),
+                failed("gate-report", REAL),
+            ],
+            1,
+            "gate.yml"
+        ),
+        "a failing suite beside a fault, in the gate: re-run"
+    );
+    assert!(
+        !retried_at(
+            &[
+                failed("mutants (3)", real),
+                failed("mutants (4)", LOST),
+                failed("mutants-verdict", REAL),
+                failed("mutants-check", REAL),
+            ],
+            1,
+            "mutants.yml"
+        ),
+        "a failing shard beside a fault: re-run"
+    );
+}
+
+#[test]
+fn qa_ci_retry_a_failure_beside_a_fault_in_the_other_two_workflows() {
+    check_other_kept(REAL);
+}
+
+negative_control!(
+    qa_ci_retry_a_failure_beside_a_fault_in_the_other_two_workflows,
+    "the suite's failure a fault after all",
+    expected = "a failing suite beside a fault, in the gate: re-run",
+    check_other_kept(LOST)
 );
 
 // ---- The workflow ------------------------------------------------------------------------------------------------------
