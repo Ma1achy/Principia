@@ -6,46 +6,37 @@ A reply holds one answer per item, in the owner's grammar (the order of 4 Nov 20
 
     RQ-nnn: <option> | defer:<milestone> | ask:<question> | veto
 
-The owner's real replies carry reasons and riders, and each ruling keeps their text verbatim, so only real ambiguity is
-refused. What is accepted, with the flags /rulings-apply reads, each a call to read the whole text and apply it:
+The parser recognises one narrow grammar exactly, and nothing else. A list of negations or of "or"-forms never ends, so
+it doesn't try to read words at all:
 
-    an option                `(a)`, `a`, `A.`: a label the entry's "Options" field offers. Words before or after it are
-                             kept and flagged `rider`: `(a) confirm 100 bits (mid-plateau)`, `Your (b) stands`
-    combined options         `(a), and (b) yes: ...`, `(a) + (c)`, `(a) and (b)`: every bracketed label named is taken
-                             as asked for together, flagged `combined`, as nothing here can tell options that exclude
-                             each other: /rulings-apply reads the entry for that
-    free text                any words on an entry with no labelled option, flagged `free-text`
-    `close`                  bare, on an entry that carries a ruling or that the report groups under "Ruled-or-moot"; or
-                             words ending `close`, on any entry, flagged `rider`
-    `veto`                   of what the entry applies meanwhile; `D-n: veto` vetoes the report's R-369 decision D-n,
-                             which has no RQ. Words after it are a `rider`
-    `defer:Mn`, `defer until <event>` (or `defer to …`)
-                             a deferral; words past the milestone, or an event in place of one, are a `rider`
-    `ask:<question>`
+`plain`, the whole answer being one of these, applied as it reads:
 
-Flagged `several` too is an option on an entry that shows several questions (numbered labels, a label listed twice,
-letters mixed with romans, "separately" or "Open within" in the options, or a field named "The questions", "Second
-question", or `Q-n`): the rest of it may still be open. The flag reads signs, and can miss one, so /rulings-apply reads
-every entry it would close. A line may hold several answers, each starting `RQ-n:`, as
-in `RQ-641: (b). RQ-642: (a).`; each is read and answered on its own. A template line left as the report wrote it, or
-`D-n: stands`, is unanswered. A line that is a section name alone (`HEADINGS`, or a report's `##` heading) is no reply
-line either: it is skipped, and listed as skipped. Any other line in capitals is refused like any other.
+    `(a)`, `a`, `A`, with or without a last stop     one label the entry offers
+    `(a) + (c)`                                      labels the entry offers, taken together
+    `close`  `veto`  `defer:Mn`  `ask:<question>`    with or without a last stop, on `close`, `veto` and `defer:`
+    `D-n: veto`                                      vetoes the report's R-369 decision D-n, which has no RQ
 
-Refused, and listed with the reason: an unknown or closed RQ, an unknown D-n, an option the entry doesn't offer, two
-options named as alternatives (any `or` between two labels, or `(a)/(b)`), a label after a negation (`not (a)`,
-`neither (a) nor (b)`), a negated `close`, two answers (a spaced `|`, or two lines for one item), a
-`defer:` naming no milestone, a veto of an entry that applies nothing, a bare label on an entry with none, words naming
-no option on an entry that offers them, and any line that doesn't start with an item.
+`read`, everything else that names a known item: riders, reasons, negations, combined forms in words, free text, any
+option on an entry that shows several questions (numbered labels, a label listed twice, letters mixed with romans,
+"separately" or "Open within" in the options, or a field named "The questions", "Second question", or `Q-n`). It is
+kept verbatim, with any labels found in it given only as a hint, and is never applied mechanically: /rulings-apply has
+the session read it and decide what it says, or ask the owner. Its R id is provisional.
 
-A line directly under an answer that starts no item of its own may continue it, as a wrapped sentence or a bullet does,
-so that answer is refused with it: it must not be applied cut short. A refused line changes nothing else; the rest of
-the reply stands. An answer takes the next R id, in reply order: CLAUDE.md
-has a deferral made by a ruling. `ask` takes none: it is a question, not an answer.
+Refused, and listed with the reason, is what can be stated simply: an unknown or closed RQ, an unknown D-n, an item
+answered twice, a line naming no item, an empty answer, and a plain form that can't stand: a label the entry doesn't
+offer, an "another, stated by the owner" option with no statement, `close` on an entry with no ruling that the report
+doesn't group under "Ruled-or-moot", and a veto of an entry that applies nothing.
+
+A line may hold several answers, each starting `RQ-n:`, as in `RQ-641: (b). RQ-642: (a).`; each is read and answered on
+its own. A template line left as the report wrote it, or `D-n: stands`, is unanswered. A line that is a section name
+alone (`HEADINGS`, or a report's `##` heading) is no reply line either: it is skipped, and listed as skipped. A refused
+line changes nothing else; the rest of the reply stands. An answer takes the next R id, in reply order: CLAUDE.md has a
+deferral made by a ruling. `ask` takes none: it is a question, not an answer.
 
     open [--queue PATH]            the open RQs: id, title, the options offered, and the flags the report needs
     parse REPLY [--queue PATH] [--archive DIR] [--report PATH] [--reserved-file PATH] [--answers-dir DIR]
-                                   the accepted lines, each with its R id, and the refused ones; exit 1 if any is
-                                   refused. REPLY may be `-`, for stdin. --answers-dir writes each accepted answer to
+                                   the plain answers and the read ones, each with its R id, and the refused ones; exit
+                                   1 if any is refused. REPLY may be `-`, for stdin. --answers-dir writes each answer to
                                    DIR/<item>.txt as typed (an `ask`, its question), for the commands below, so that
                                    no shell ever reads the owner's quotes, `$` or backticks
     next-id [--rq] [--reserved-file PATH]
@@ -103,21 +94,16 @@ ITEM_START = re.compile(r"^(?:RQ|D)-\d+\b")
 # not one, and a line that might be an answer is never dropped.
 HEADINGS = {"TOP", "PHYSICS", "VALIDATION", "GUI", "CI", "CI AND RECORD", "RECORD", "RECORD CORRECTIONS",
             "NEEDS OWNER NOW", "RULED-OR-MOOT", "RULED-OR-MOOT (TO CLOSE)", "REPLY TEMPLATE"}
-BRACKETED = re.compile(r"(?<!\w)\((\d?[a-zA-Z]\d?|[ivxIVX]+|\d)\)")  # a label named in a reply
-BARE = re.compile(r"^(\d?[a-zA-Z]\d?|[ivx]+)(?:[.,:;](?:\s|$)|$)")
-ALTERNATIVE = re.compile(r"(?i)\bor\b|^\s*[/|]\s*$")  # what, between two labels, offers them as alternatives
-NEGATION = r"(?:not|cannot|neither|nor|never|without|except|excluding|\w+n't|rather than|instead of)"
-NEGATED = re.compile(rf"(?i)\b{NEGATION}\s+(?:(?:option|either)\s+)?$")  # what may not stand just before a label
-NEGATED_CLOSE = re.compile(rf"(?i)\b{NEGATION}\b")
-SEPARATOR = re.compile(r"\s\|\s")  # the template's; `|w|` in a formula is none
-DEFER_TO = re.compile(r"^defer\s+(?:until|to|when)\b\s*(.+)$", re.S)
-DEFER_MILESTONE = re.compile(r"^defer:\s*(M\d)\b(.*)$", re.S)
+LABEL = r"(?:\(\d?[a-zA-Z]\d?\)|\([ivxIVX]+\)|\(\d\)|\d?[a-zA-Z]\d?|[ivx]+)"
+PLAIN_OPTIONS = re.compile(rf"^{LABEL}(?:\s*\+\s*{LABEL})*$")
+PLAIN_DEFER = re.compile(r"^defer:\s*(M\d)$")
+PLAIN_ASK = re.compile(r"^ask:\s*([^|]*\S)$")
+BRACKETED = re.compile(r"(?<!\w)\((\d?[a-zA-Z]\d?|[ivxIVX]+|\d)\)")  # the labels a `read` answer names: a hint only
 NOTHING = re.compile(r"(?i)^\s*(?:none|nothing)\b")
 RULED = re.compile(r"^(?:- \*\*Ruling:\*\*|- \*Ruled by|\*Ruled by)", re.M)
 ROMANS = {"i", "ii", "iii", "iv", "vi", "vii"}  # `v` and `x` are read as letters, the rarer reading of an option list
 MORE_IN_OPTIONS = re.compile(r"(?i)\bseparately\b|\bOpen within\b")
 MORE_FIELDS = re.compile(r"^- \*\*(?:The questions|Second question|Q-\d)", re.M)
-LONE = re.compile(r"^(?:\(\s*\w+\s*\)|\w{1,3})\.?$")  # a reply that is a label and nothing else
 HEADING_ID = re.compile(r"^## R-(\d+)\b", re.M)
 RQ_HEADING_ID = re.compile(r"^## RQ-(\d+)\b", re.M)
 DATE = re.compile(r"^\d{1,2} [A-Z][a-z]{2} \d{4}$")
@@ -210,74 +196,51 @@ def report_items(text):
     return decisions, moot, items, where
 
 
-def named(body, e):
-    """The offered labels `body` names, in order, without repeats, or Refused. Entries' labels are small, so a capital
-    is the same label."""
-    bare = BARE.match(body)
-    out = []
-    for token in ([bare.group(1)] if bare else []) + [m.group(1) for m in BRACKETED.finditer(body)]:
-        label = token.lower()
-        if label not in e["labels"]:
-            raise Refused(f"{e['id']} offers no option {token!r}: it offers {', '.join(e['labels'])}")
-        out.append(label)
-    pairs = list(BRACKETED.finditer(body))
-    for x in pairs:
-        if NEGATED.search(body[:x.start()]):
-            raise Refused(f"{x.group(0)} is negated: say which option is meant")
-    for x, y in zip(pairs, pairs[1:]):
-        if ALTERNATIVE.search(body[x.end():y.start()]):
-            raise Refused(f"options named as alternatives ({x.group(0)}, {y.group(0)}), with nothing saying which")
-    return list(dict.fromkeys(out))
+def plain_form(body):
+    """(kind, value) if `body` is, whole, a form of the narrow grammar, whatever the entry offers; or None."""
+    bare = body[:-1] if body.endswith(".") else body
+    if bare in ("close", "veto"):
+        return bare, ""
+    m = PLAIN_DEFER.match(bare)
+    if m:
+        return "defer", m.group(1)
+    m = PLAIN_ASK.match(body)
+    if m:
+        return "ask", m.group(1)
+    if PLAIN_OPTIONS.match(bare):
+        return "option", "+".join(x.strip("() ").lower() for x in bare.split("+"))
+    return None
 
 
 def read_answer(item, body, e, moot):
-    """(kind, value, flags) for a reply's `body` on `item`, or Refused with the reason."""
-    if SEPARATOR.search(body):
-        raise Refused("a spaced `|`: two answers on one line, or the template's separator; reply with one")
-    if body == "veto" or body.startswith("veto "):
-        if item.startswith("RQ-") and not e["applies"]:
-            raise Refused(f"{item} applies nothing meanwhile: there is nothing to veto")
-        return "veto", "", ["rider"] if body != "veto" else []
-    if item.startswith("D-"):
-        raise Refused(f"{item} is an R-369 decision: the only answer is `veto`")
-    if body.startswith("ask:"):
-        question = body[len("ask:"):].strip()
-        if not question:
-            raise Refused("an empty question")
-        return "ask", question, []
-    if body.startswith("defer:"):
-        m = DEFER_MILESTONE.match(body)
-        if not m:
-            raise Refused(f"{body!r}: `defer:` names a milestone, M0 to M9; say `defer until <event>` for another")
-        return "defer", m.group(1), ["rider"] if m.group(2).strip() else []
-    m = DEFER_TO.match(body)
-    if m:
-        return "defer", m.group(1).rstrip(" ."), ["rider"]
-    if body == "close":
-        if not e["ruled"] and item not in moot:
-            raise Refused(f"{item} carries no ruling and the report doesn't group it Ruled-or-moot: it can't be closed")
-        return "close", "", []
+    """(kind, value) for a reply's `body` on `item`, or Refused with the reason. Only a plain form that can stand takes
+    its own kind; everything else is `read`, its value the hint."""
     if not body:
         raise Refused("an empty answer")
-    if not e["labels"]:
-        if LONE.match(body):
-            raise Refused(f"{item} offers no labelled option: {body!r} names none of it")
-        return "free-text", "", ["free-text"]
-    labels = named(body, e)
-    if not labels:
-        if re.search(r"\bclose\.?$", body):
-            if NEGATED_CLOSE.search(re.split(r"[;:,.]", body.rstrip("."))[-1]):
-                raise Refused(f"a negated close: {item} stays as it is until the owner says what they want")
-            return "close", "", ["rider"]
-        raise Refused(f"names none of {item}'s options ({', '.join(e['labels'])}), and it offers them")
-    bare_only = LONE.match(body)
-    free = [label for label in labels if label in e["free"]]
-    if bare_only and free:
-        raise Refused(f"option {free[0]} is \"another, stated by the owner\": the statement is missing")
-    flags = [] if bare_only else ["rider"]
-    flags += ["combined"] if len(labels) > 1 else []
-    flags += ["several"] if e["several"] else []
-    return "option", "+".join(labels), flags
+    form = plain_form(body)
+    kind, value = form or ("read", "")
+    if item.startswith("D-") and kind != "veto":
+        form, kind = None, "read"
+    elif kind == "veto" and item.startswith("RQ-") and not e["applies"]:
+        raise Refused(f"{item} applies nothing meanwhile: there is nothing to veto")
+    elif kind == "close" and not e["ruled"] and item not in moot:
+        raise Refused(f"{item} carries no ruling and the report doesn't group it Ruled-or-moot: it can't be closed")
+    elif kind == "option":
+        labels = value.split("+")
+        for label in labels:
+            if label not in e["labels"]:
+                offers = ", ".join(e["labels"]) or "no labelled option"
+                raise Refused(f"{item} offers no option {label!r}: it offers {offers}")
+            if label in e["free"]:
+                raise Refused(f"option {label} is \"another, stated by the owner\": the statement is missing")
+        if e["several"]:
+            form, kind = None, "read"
+    if form and kind != "read":
+        return kind, value
+    hints = list(dict.fromkeys(m.group(1).lower() for m in BRACKETED.finditer(body)))
+    if e and e["several"]:
+        hints.append("entry shows several questions")
+    return "read", ", ".join(hints)
 
 
 def parts_of(line):
@@ -294,7 +257,7 @@ def continued(lines, n):
 
 def parse_reply(text, queue_text, closed=(), decisions=(), moot=()):
     """(accepted, refused, unanswered, skipped). accepted: dicts of line number, line (the answer as typed, less its
-    line end), item, kind, value and flags. refused: (line number, answer, reason). unanswered: item ids whose template
+    line end), item, kind and value. refused: (line number, answer, reason). unanswered: item ids whose template
     line was left as written. skipped: (line number, line) of each section name."""
     entries, accepted, refused, unanswered, skipped = entries_of(queue_text), [], [], [], []
     lines = text.splitlines()
@@ -319,8 +282,8 @@ def parse_reply(text, queue_text, closed=(), decisions=(), moot=()):
                 if item.startswith("RQ-") and item not in entries:
                     raise Refused(f"{item} is closed, in the archive" if item in closed
                                   else f"{item} is no entry in the queue")
-                kind, value, marks = read_answer(item, body, entries.get(item), moot)
-                accepted.append({"n": n, "line": part, "item": item, "kind": kind, "value": value, "flags": marks})
+                kind, value = read_answer(item, body, entries.get(item), moot)
+                accepted.append({"n": n, "line": part, "item": item, "kind": kind, "value": value})
             except Refused as r:
                 refused.append((n, part, str(r)))
     for a in [a for a in accepted if continued(lines, a["n"])]:
@@ -514,106 +477,102 @@ def self_test():
               "## State\n\n### D-2: not one\n")
     decisions, moot = report_items(report)[:2]
 
-    def expect(name, line, kind=None, value=None, reason=None, marks=()):
+    def expect(name, line, kind=None, value=None, reason=None):
         ok, no = parse_reply(line, queue, ("RQ-6",), decisions, moot)[:2]
-        if reason is None and (len(ok) != 1 or (ok[0]["kind"], ok[0]["value"]) != (kind, value)
-                               or ok[0]["flags"] != list(marks) or no):
-            fails.append(f"reply self-test {name!r}: expected {kind} {value!r} {marks}, got {ok} {no}")
+        if reason is None and (len(ok) != 1 or (ok[0]["kind"], ok[0]["value"]) != (kind, value) or no):
+            fails.append(f"reply self-test {name!r}: expected {kind} {value!r}, got {ok} {no}")
         elif reason is not None and (ok or len(no) != 1 or reason not in no[0][2]):
             fails.append(f"reply self-test {name!r}: expected a refusal naming {reason!r}, got {ok} {no}")
 
+    # plain: the narrow grammar, whole
     expect("an option in brackets", "RQ-1: (a)", "option", "a")
     expect("an option in brackets with a stop", "RQ-1: (a).", "option", "a")
     expect("an option bare", "RQ-1: b", "option", "b")
     expect("an option bare with a stop", "RQ-1: b.", "option", "b")
     expect("a capital", "RQ-1: (A)", "option", "a")
-    expect("a capital, bare, with its reason", "RQ-1: A. Integer hash; the look may change.", "option", "a",
-           marks=["rider"])
+    expect("a capital, bare", "RQ-1: A.", "option", "a")
     expect("no space after the colon, and spaces round the line", "  RQ-1:(b)  ", "option", "b")
-    expect("a reason after the option", "RQ-1: (a) confirm 100 bits (mid-plateau).", "option", "a", marks=["rider"])
-    expect("the option in the words", "RQ-1: Your (b) stands (a tolerance).", "option", "b", marks=["rider"])
-    expect("the article, not a label", "RQ-1: A sinc form, as in (b).", "option", "b", marks=["rider"])
-    expect("a formula's bars", "RQ-1: (a) with |w| and |dn| squared", "option", "a", marks=["rider"])
-    expect("the free option with its statement", "RQ-1: (c) neither, a third way", "option", "c", marks=["rider"])
-    expect("the free option bare", "RQ-1: (c)", reason="the statement is missing")
-    expect("two options joined", "RQ-1: (a), and (b) yes: add the peek.", "option", "a+b", marks=["rider", "combined"])
-    expect("two options by a plus", "RQ-1: (a) + (b)", "option", "a+b", marks=["rider", "combined"])
-    expect("two options by and", "RQ-1: (a) and (b)", "option", "a+b", marks=["rider", "combined"])
-    expect("one for now, one later", "RQ-1: (b) now: a form. (a) deferred to M4", "option", "b+a",
-           marks=["rider", "combined"])
-    expect("a label named twice", "RQ-1: (a), as (a) says", "option", "a", marks=["rider"])
-    expect("alternatives", "RQ-1: (a) or (b)", reason="named as alternatives")
-    expect("alternatives, with a comma", "RQ-1: (a), or (b)", reason="named as alternatives")
-    expect("alternatives by a slash", "RQ-1: (a)/(b)", reason="named as alternatives")
-    expect("alternatives by a bar", "RQ-1: (a)|(b)", reason="named as alternatives")
-    expect("an or anywhere between two labels", "RQ-1: (a) run this or that, plus (b)", reason="named as alternatives")
-    expect("or perhaps", "RQ-1: (a) or perhaps (b)", reason="named as alternatives")
-    expect("a semicolon and or", "RQ-1: (a); or (b)", reason="named as alternatives")
-    expect("an or after the last label", "RQ-1: (a), this or that", "option", "a", marks=["rider"])
-    expect("an or inside a word", "RQ-1: (a) for f32, plus (b)", "option", "a+b", marks=["rider", "combined"])
-    expect("not", "RQ-1: not (a)", reason="(a) is negated")
-    expect("not, with a name", "RQ-1: not option (a)", reason="(a) is negated")
-    expect("not, after an answer", "RQ-1: (a), not (b)", reason="(b) is negated")
-    expect("not either", "RQ-1: not either (b)", reason="(b) is negated")
-    expect("neither nor", "RQ-1: neither (a) nor (b)", reason="(a) is negated")
-    expect("nor alone", "RQ-1: (a) nor (b)", reason="(b) is negated")
-    expect("don't", "RQ-1: don't (a)", reason="(a) is negated")
-    expect("the owner's own shape", "RQ-1: not (a) or (b)", reason="(a) is negated")
-    expect("a negation further back", "RQ-1: not now: (a)", "option", "a", marks=["rider"])
-    expect("cannot", "RQ-1: cannot (a)", reason="(a) is negated")
-    expect("don't close", "RQ-1: don't close", reason="a negated close")
-    expect("do not close", "RQ-1: keep open, do not close", reason="a negated close")
-    expect("never close", "RQ-1: never close.", reason="a negated close")
-    expect("a negation in another clause", "RQ-1: not needed now; close.", "close", "", marks=["rider"])
+    expect("two taken together", "RQ-1: (a) + (b)", "option", "a+b")
+    expect("two taken together, tight", "RQ-1: a+b.", "option", "a+b")
+    expect("close of a ruled entry", "RQ-2: close", "close", "")
+    expect("close with a stop", "RQ-2: close.", "close", "")
+    expect("close of an entry the report calls moot", "RQ-5: close", "close", "")
+    expect("veto", "RQ-1: veto", "veto", "")
+    expect("veto with a stop", "RQ-1: veto.", "veto", "")
+    expect("a decision's veto", "D-1: veto", "veto", "")
+    expect("defer", "RQ-1: defer:M8", "defer", "M8")
+    expect("defer, spaced, with a stop", "RQ-1: defer: M9.", "defer", "M9")
+    expect("ask", "RQ-1: ask: what does this cost?", "ask", "what does this cost?")
+
+    # read: everything else on a known item, the labels a hint only; G2's and G3's lines among them
+    expect("a reason", "RQ-1: (a) confirm 100 bits (mid-plateau).", "read", "a")
+    expect("a capital with words", "RQ-1: A. Integer hash; the look may change.", "read", "")
+    expect("a label in the words", "RQ-1: Your (b) stands (a tolerance).", "read", "b")
+    expect("the free option with its statement", "RQ-1: (c) neither, a third way", "read", "c")
+    expect("words joining options", "RQ-1: (a), and (b) yes: add the peek.", "read", "a, b")
+    expect("and", "RQ-1: (a) and (b)", "read", "a, b")
+    expect("or", "RQ-1: (a) or (b)", "read", "a, b")
+    expect("or, unbracketed", "RQ-1: (a) or b", "read", "a")
+    expect("or, none bracketed", "RQ-1: a, or b", "read", "")
+    expect("a slash", "RQ-1: (a)/b", "read", "a")
+    expect("not", "RQ-1: not (a)", "read", "a")
+    expect("no", "RQ-1: no (a)", "read", "a")
+    expect("yes and no", "RQ-1: (a) yes, (b) no", "read", "a, b")
+    expect("a typographic apostrophe", "RQ-1: don\u2019t (a)", "read", "a")
+    expect("not the one", "RQ-1: not the (a) one", "read", "a")
+    expect("reject", "RQ-1: reject (a)", "read", "a")
+    expect("anything but", "RQ-1: anything but (a)", "read", "a")
+    expect("neither nor", "RQ-1: neither (a) nor (b)", "read", "a, b")
+    expect("don't close", "RQ-1: don't close", "read", "")
+    expect("do not close", "RQ-1: keep open, do not close", "read", "")
+    expect("too early to close", "RQ-1: too early to close", "read", "")
+    expect("close with a reason", "RQ-1: moot under R-9; close.", "read", "")
+    expect("a label not offered, in words", "RQ-1: (a) plus (z) too", "read", "a, z")
+    expect("a formula's bars", "RQ-1: (a) with |w| squared", "read", "a")
+    expect("two answers", "RQ-1: (a) | veto", "read", "a")
+    expect("the template with an answer left in it", f"RQ-1: (a) | {ANSWER_TEMPLATE}", "read", "a")
+    expect("an ask with the separator", "RQ-1: ask:why | veto", "read", "")
+    expect("defer to no milestone", "RQ-1: defer:later", "read", "")
+    expect("defer past the last milestone", "RQ-1: defer:M10", "read", "")
+    expect("defer to an event", "RQ-1: defer until the exporter is designed.", "read", "")
+    expect("defer with a reason", "RQ-1: defer:M8, when the chart is in", "read", "")
+    expect("defer with a capital", "RQ-1: Defer:M8", "read", "")
+    expect("veto with words", "RQ-1: veto it, wrong frame", "read", "")
+    expect("a word", "RQ-1: yes please", "read", "")
+    expect("a word alone", "RQ-1: yes", "read", "")
+    expect("a delegation", "RQ-1: you fix (test-only).", "read", "")
+    expect("an unbalanced bracket", "RQ-1: (a", "read", "")
+    expect("free text, on an entry with no label", "RQ-2: reword them, keeping the old.", "read", "")
+    expect("a decision answered otherwise", "D-1: (a)", "read", "a")
+    expect("a decision answered in words", "D-1: veto that one", "read", "")
+    several_hint = "entry shows several questions"
+    expect("a numbered family", "RQ-3: (1a)", "read", f"1a, {several_hint}")
+    expect("the second of a family, bare", "RQ-3: 2a", "read", several_hint)
+    expect("a label repeated", "RQ-7: (a)", "read", f"a, {several_hint}")
+    expect("a second question", "RQ-8: (a)", "read", f"a, {several_hint}")
+    expect("a list per question", "RQ-4: (a)", "read", f"a, {several_hint}")
+
+    # refused: what can be stated simply
     expect("an option not offered", "RQ-1: (z)", reason="offers no option 'z'")
-    expect("an option not offered, in a rider", "RQ-1: (a) plus (d) too", reason="offers no option 'd'")
-    expect("a label only cited in prose", "RQ-1: (v)", reason="offers no option 'v'")
-    expect("an unbalanced bracket", "RQ-1: (a", reason="names none of")
-    expect("a word, on an entry with options", "RQ-1: yes please", reason="names none of")
-    expect("a delegation", "RQ-1: you fix (test-only).", reason="names none of")
-    expect("a spaced bar", "RQ-1: (a) | veto", reason="a spaced `|`")
-    expect("an ask with the separator", "RQ-1: ask:why | veto", reason="a spaced `|`")
+    expect("one of two not offered", "RQ-1: (a) + (z)", reason="offers no option 'z'")
+    expect("a label cited only in prose", "RQ-1: (v)", reason="offers no option 'v'")
+    expect("a label on an entry with none", "RQ-2: (a)", reason="it offers no labelled option")
+    expect("the free option bare", "RQ-1: (c)", reason="the statement is missing")
+    expect("the free option taken together", "RQ-1: (a) + (c)", reason="the statement is missing")
+    expect("close of an open question", "RQ-1: close", reason="can't be closed")
+    expect("close with a stop, of an open question", "RQ-1: close.", reason="can't be closed")
+    expect("veto of an entry that applies nothing", "RQ-2: veto", reason="nothing to veto")
+    expect("veto of an entry applying none", "RQ-3: veto", reason="nothing to veto")
     expect("an unknown RQ", "RQ-9: (a)", reason="RQ-9 is no entry")
     expect("a closed RQ", "RQ-6: (a)", reason="RQ-6 is closed")
-    expect("free text, on an entry with no label", "RQ-2: reword them, keeping the old.", "free-text", "",
-           marks=["free-text"])
-    expect("a lone word, on an entry with no label", "RQ-2: (a)", reason="offers no labelled option")
-    expect("a numbered family", "RQ-3: (1a)", "option", "1a", marks=["several"])
-    expect("the second of a family", "RQ-3: 2a", "option", "2a", marks=["several"])
-    expect("a label repeated", "RQ-7: (a)", "option", "a", marks=["several"])
-    expect("a second question", "RQ-8: (a)", "option", "a", marks=["several"])
-    expect("a list per question, each after a comma", "RQ-4: (a)", "option", "a", marks=["several"])
+    expect("a decision the report has not", "D-7: veto", reason="D-7 is no decision")
+    expect("an id outside the decisions section", "D-2: veto", reason="D-2 is no decision")
     expect("an empty answer", "RQ-1:", reason="an empty answer")
+    expect("an empty ask is no plain form", "RQ-1: ask:  ", "read", "")
     expect("no RQ", "(a)", reason="not a reply line")
     expect("two RQs at the head", "RQ-1, RQ-5: (a)", reason="not a reply line")
     expect("words before the first item", "agreed RQ-1: (a)", reason="not a reply line")
     expect("the owner's template, unfilled", "RQ-nnn: <option> | defer:<milestone>", reason="not a reply line")
-    expect("the template with an answer left in it", f"RQ-1: (a) | {ANSWER_TEMPLATE}", reason="a spaced `|`")
-    expect("defer", "RQ-1: defer:M8", "defer", "M8")
-    expect("defer, spaced", "RQ-1: defer: M9", "defer", "M9")
-    expect("defer with a reason", "RQ-1: defer:M8, when the chart is in", "defer", "M8", marks=["rider"])
-    expect("defer to an event", "RQ-1: defer until the exporter is designed.", "defer", "the exporter is designed",
-           marks=["rider"])
-    expect("defer past the last milestone", "RQ-1: defer:M10", reason="`defer:` names a milestone")
-    expect("defer to no milestone", "RQ-1: defer:later", reason="`defer:` names a milestone")
-    expect("defer to nothing", "RQ-1: defer:", reason="`defer:` names a milestone")
-    expect("defer with a capital", "RQ-1: Defer:M8", reason="names none of")
-    expect("ask", "RQ-1: ask: what does this cost?", "ask", "what does this cost?")
-    expect("ask nothing", "RQ-1: ask:  ", reason="an empty question")
-    expect("veto", "RQ-1: veto", "veto", "")
-    expect("veto with a reason", "RQ-1: veto it, wrong frame", "veto", "", marks=["rider"])
-    expect("veto of an entry that applies nothing", "RQ-2: veto", reason="nothing to veto")
-    expect("veto of an entry applying none", "RQ-3: veto", reason="nothing to veto")
-    expect("a word starting veto", "RQ-1: vetoed", reason="names none of")
-    expect("a decision's veto", "D-1: veto", "veto", "")
-    expect("a decision answered otherwise", "D-1: (a)", reason="the only answer")
-    expect("stands, on an RQ", "RQ-1: stands", reason="names none of")
-    expect("a decision the report has not", "D-7: veto", reason="D-7 is no decision")
-    expect("an id outside the decisions section", "D-2: veto", reason="D-2 is no decision")
-    expect("close of a ruled entry", "RQ-2: close", "close", "")
-    expect("close of an entry the report calls moot", "RQ-5: close", "close", "")
-    expect("close of an open question", "RQ-1: close", reason="can't be closed")
-    expect("close with its reason", "RQ-1: moot under R-9; close.", "close", "", marks=["rider"])
 
     ok, no = parse_reply("RQ-1: (a)\n\nRQ-1: (b)\nRQ-5: (a)\nRQ-5: nonsense\nRQ-3: defer:M3\n", queue)[:2]
     if [a["item"] for a in ok] != ["RQ-3"] or [n for n, _, _ in no] != [1, 3, 4, 5]:
@@ -621,8 +580,9 @@ def self_test():
     if not any("answered twice" in r for _, _, r in no):
         fails.append(f"reply self-test: twice must be named: {no}")
     ok, no = parse_reply("RQ-1: (b). RQ-5: (a) one, as said. RQ-8: (a).  RQ-9: (a).\n", queue)[:2]
-    if ([(a["item"], a["value"], a["line"]) for a in ok]
-            != [("RQ-1", "b", "RQ-1: (b)."), ("RQ-5", "a", "RQ-5: (a) one, as said."), ("RQ-8", "a", "RQ-8: (a).")]
+    if ([(a["item"], a["kind"], a["line"]) for a in ok]
+            != [("RQ-1", "option", "RQ-1: (b)."), ("RQ-5", "read", "RQ-5: (a) one, as said."),
+                ("RQ-8", "read", "RQ-8: (a).")]
             or [p for _, p, _ in no] != ["RQ-9: (a)."] or any(a["line"] != a["line"].strip() for a in ok)):
         fails.append(f"reply self-test: several on one line must each stand or fall alone: {ok} {no}")
     ok, no = parse_reply("RQ-1: (b) with RQ-5 deferred alongside.\n", queue)[:2]
@@ -812,10 +772,16 @@ def show_parse(a, queue_text):
     first = next_free(branch_decisions(), read_reserved(a.reserved_file))
     if a.answers_dir:
         write_answers(a.answers_dir, ok)
-    print(f"ACCEPTED {len(ok)}")
-    for x, rid in zip(ok, assign(ok, first)):
-        what = f"{x['kind']} {x['value']}".rstrip() + (f" [{','.join(x['flags'])}]" if x["flags"] else "")
-        print(f"  line {x['n']}: {x['item']}  {what}  {rid or 'no ruling'}  |{x['line']}|")
+    ids = dict(zip((id(x) for x in ok), assign(ok, first)))
+    plain = [x for x in ok if x["kind"] != "read"]
+    print(f"PLAIN {len(plain)}")
+    for x in plain:
+        what = f"{x['kind']} {x['value']}".rstrip()
+        print(f"  line {x['n']}: {x['item']}  {what}  {ids[id(x)] or 'no ruling'}  |{x['line']}|")
+    print(f"READ {len(ok) - len(plain)}")
+    for x in ok:
+        if x["kind"] == "read":
+            print(f"  line {x['n']}: {x['item']}  hint: {x['value'] or 'none'}  {ids[id(x)]}  |{x['line']}|")
     print(f"REFUSED {len(no)}")
     for n, line, reason in no:
         print(f"  line {n}: |{line}|  {reason}")

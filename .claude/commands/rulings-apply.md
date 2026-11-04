@@ -5,7 +5,7 @@ argument-hint: <file or pasted reply>
 
 You are the orchestrating session. Apply the owner's reply, the file or pasted text below, to the record, as one rulings
 PR. Follow these steps exactly. Never guess: a line the parser refuses is listed back to the owner, and nothing is done
-on it. The owner's text goes into each ruling verbatim, and what it says is applied, not just the option it names.
+on it. The owner's text goes into each ruling verbatim, and what it says is applied, not just a label in it.
 
 The reply:
 
@@ -45,37 +45,42 @@ If `last-report` prints `none`, there is no report: leave `--report` out. Then e
 no decision for it to name, and bare `close` works only on an entry that carries a ruling.
 
 Create `reserved-ids.txt`, empty, if it isn't there; it holds lines starting `R-n`, for numbers promised and on no
-branch yet. `parse` prints each ACCEPTED answer with its kind, its flags and its R id, each REFUSED one with its reason,
-the UNANSWERED items, and the SKIPPED section names. A line may hold several answers, each read alone. The
-ids are one past the highest `## R-n` heading of `decisions.md` on every local and origin branch. It exits 1 if it
-refused anything: that is expected, and the accepted answers still go ahead.
+branch yet. The ids are one past the highest `## R-n` heading of `decisions.md` on every local and origin branch. `parse`
+exits 1 if it refused anything: that is expected, and the rest still go ahead. It prints:
 
-A refused line stays refused by this command. Don't repair it or infer what it meant: it goes to the owner in step 8
-as they typed it, with the reason. An answer with a line under it that starts no item is refused with that line, as the
-line may bind it. A prose ruling outside the template (several sentences, a list of ids) is ported
-as any ruling is, not through this command. If nothing was accepted, stop there.
+- **PLAIN:** answers that are, whole, a form of the narrow grammar: `(a)`, `(a) + (c)`, `close`, `veto`, `defer:Mn`,
+  `ask:<question>`. Apply these as they read.
+- **READ:** everything else that names a known item. Riders, reasons, negations, words of any kind, and any option on an
+  entry showing several questions. The parser has not understood these: it keeps them verbatim, and any labels it
+  found are a hint and nothing more.
+- **REFUSED:** with the reason. Don't repair a refused line or infer what it meant: it goes to the owner in step 8 as they
+  typed it.
+- **UNANSWERED** and **SKIPPED:** items left as the template had them, and section names.
 
-**A flag means read it.** For every answer flagged below, read the whole answer against the whole entry, and apply what
-it says:
+**Every READ answer is yours to read.** Take each in turn, read the whole answer against the whole entry, and decide
+what it says. The hint may be wrong: `not (a)` shows the hint `a`. Words decide. Say what you decided in the PR's table,
+beside the owner's text. Then treat it as the kind it turned out to be, in step 3's table:
 
-| Flag | What to read for |
-| --- | --- |
-| `rider` | Words round the option. They bind as the option does: a condition, a task to file, a value, another entry named ("RQ-629 deferred with it"), or "keep, defer", which keeps the entry open, deferred, whatever the option. |
-| `combined` | Several options taken together. Say in the ruling what each contributes; one may be for now and one for later. |
-| `free-text` | The entry offers no label, so the words are the answer. |
-| `several` | The entry shows several questions. See below. |
+- A label with reasons or riders is an option, and the riders bind as the option does: a condition, a task to file, a
+  value, another entry named ("RQ-629 deferred with it"), or "keep, defer", which keeps the entry open, deferred.
+- Several options taken together: say in the ruling what each contributes; one may be for now and one for later.
+- Words on an entry with no labels are the answer.
+- A question or a request ("bring me a brief") is an `ask`, and needs no ruling: its provisional R id goes unused.
+- **If you can't say what it means without choosing, ask the owner.** Take the answer out, list it in step 8 with the
+  question, and do nothing on it. That goes for options that exclude each other, a rider that leaves the meaning open,
+  and anything that contradicts a ruling or the corpus (`CLAUDE.md` § "Rulings", § "Never guess, never defer").
 
-**Before closing any entry, flagged or not, read it for what the answer leaves undecided.** The `several` flag reads
-signs and can miss one. Close the entry only if the answer settles all of it. Otherwise the ruling records what it
+A prose ruling outside the template is ported as any ruling is, not through this command.
+
+**Before closing any entry, plain or read, read it for what the answer leaves undecided.** The several-questions flag
+reads signs and can miss one. Close the entry only if the answer settles all of it. Otherwise the ruling records what it
 settles, and the entry stays open with a dated line saying what is left.
 
-Take an accepted answer out, list it with the refused ones and say why, if you can't apply it without choosing: options
-that exclude each other, a rider that leaves the meaning open, or one that contradicts a ruling or the corpus
-(`CLAUDE.md` § "Rulings", § "Never guess, never defer").
+If nothing is left to apply, stop there.
 
 ## 3. Each answer becomes a ruling
 
-For every accepted answer but `ask`, in reply order, add to `decisions.md`, at its end, under the R id `parse` gave:
+For every answer but `ask`, plain or read, in reply order, add to `decisions.md`, at its end, under the R id `parse` gave:
 
 ```
 ## R-n — <the decision, in a plain sentence> <its suffix, from the table below>
@@ -102,12 +107,12 @@ What each kind does, past that:
 
 | Kind | Reply line | Ruling | The entry | Heading suffix |
 | --- | --- | --- | --- | --- |
-| option | `RQ-n: (a) …` | yes | closed: the outcome, riders included, unless step 2 keeps it open | `*(closes RQ-m)*`, or `*(on RQ-m, which stays open)*` if it stays open |
-| free-text | `RQ-n: <words>` | yes | as its words say: closed, or open with a dated line | as for an option |
-| close | `RQ-n: close`, or words ending `close` | yes | closed: why it was ruled or moot | `*(closes RQ-m)*` |
+| option | `RQ-n: (a)`, or read as one | yes | closed: the outcome, riders included, unless step 2 keeps it open | `*(closes RQ-m)*`, or `*(on RQ-m, which stays open)*` if it stays open |
+| words | read, on an entry with no labels | yes | as its words say: closed, or open with a dated line | as for an option |
+| close | `RQ-n: close`, or read as one | yes | closed: why it was ruled or moot | `*(closes RQ-m)*` |
 | veto | `RQ-n: veto` | yes: what the entry applied is vetoed | closed; if the question itself is still undecided, file a new RQ for it in this PR, naming the closed one, so it isn't lost, numbered by `next-id --rq` | `*(closes RQ-m)*` |
 | veto | `D-n: veto` | yes: the report's decision D-n, named in full, is vetoed | none | `*(vetoes D-n of the report of <date>)*` |
-| defer | `RQ-n: defer:Mn`, `defer until <event>` | yes (`CLAUDE.md`: only the owner defers, by a ruling) | stays open, "deferred to <x> by owner <date>" | `*(defers RQ-m)*` |
+| defer | `RQ-n: defer:Mn`, or read as one, to a milestone or an event | yes (`CLAUDE.md`: only the owner defers, by a ruling) | stays open, "deferred to <x> by owner <date>" | `*(defers RQ-m)*` |
 | ask | `RQ-n: ask:…` | no: a question isn't an answer | stays open, the question appended and flagged for the next report | no ruling |
 
 ## 4. The queue

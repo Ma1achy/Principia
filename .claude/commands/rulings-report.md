@@ -73,7 +73,7 @@ Say in the item what the reply needs where it applies:
 
 - `several-questions`: one option leaves the rest open, so the reply should say what it answers. An entry asking
   several questions that the flag missed is the same: say so.
-- `no-labelled-options`: the owner answers in their own words, which are taken verbatim.
+- `no-labelled-options`: the owner answers in their own words.
 - Under Ruled-or-moot, the option is `close`: say what closes it.
 
 ## 4. The rest of the report
@@ -110,11 +110,10 @@ D-1: <stands> | veto
 ```
 
 Keep `<option>`, `<milestone>`, `<question>` and `<stands>` exactly so: the parser reads a line left as written as
-unanswered. Above the block, say: replace a line's right-hand side with your answer; `(a)` for an option, with any
-reason or rider after it, kept word for word; `(a) + (c)` or `(a), and (c) …` to take options together, never `(a) or
-(c)`; your own words on an entry with no lettered options; `defer:M0` to `defer:M9`, or `defer until <event>`; `close`
-for a Ruled-or-moot item; `ask:` and your question; or `veto`. On a decision line, `veto` or `stands`. A line left alone
-leaves its item as it is.
+unanswered. Above the block, say: replace a line's right-hand side with your answer. `(a)`, `(a) + (c)`, `close` (for a
+Ruled-or-moot item), `veto`, `defer:M0` to `defer:M9` or `ask:` and your question are applied as they read. Anything
+else, reasons and riders included, is welcome, and kept word for word: it is read, not parsed, and if it isn't clear you
+will be asked. On a decision line, `veto` or `stands`. A line left alone leaves its item as it is.
 
 ## 5. Check, then print
 
