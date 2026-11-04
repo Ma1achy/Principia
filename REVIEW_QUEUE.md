@@ -2164,7 +2164,7 @@ record, which RQ-686 and RQ-687 share.*
   anything. The ruling bears on M4's GPU march and on REQ-VAL-099's parity gate, which a real non-Metal GPU serves and
   lavapipe doesn't (R-110).
 
-## RQ-686: The near-tie reference on a Vulkan driver other than lavapipe: one reference per backend means per API, and the RTX shares lavapipe's API but not its arithmetic *(physics; silence: R-296, R-376, REQ-VAL-176 and REQ-VAL-138 name no driver; R-649; issues #390, #397, #399; context: the Windows RTX 2080 Super run, RQ-685)*
+## RQ-686: The near-tie reference on a Vulkan driver other than lavapipe: one reference per backend means per API, and the RTX shares lavapipe's API but not its arithmetic *(physics; silence: R-296, R-376, REQ-VAL-176 and REQ-VAL-138 name no Vulkan driver but lavapipe; R-649; issues #390, #397, #399; context: the Windows RTX 2080 Super run, RQ-685)*
 
 *Queued 4 Nov 2026 by the orchestrator's filing task, from the Windows GPU run (#390). For the owner: yes, it changes
 what a golden near a tie is compared with. Nothing is chosen. The run's record, the 13 failures and the
