@@ -2275,7 +2275,7 @@ run's record, the 13 failures and the hardware-health arm are in RQ-685.*
     `decode_cross_backend`, `stage_decode_shape_sphere_defaults n₀ = ±1 poles`, η_E on: worst 28408617.97 eps against f64
     and 28408618.00 against native f32, `rho_angle`, at sample 2 (1, 0.5), identical on 3 of 3 runs. The row is outside
     REQ-DEC-043's domain, reported, not held.
-  - **That sample is a pole.** `crates/engine/tests/decode_cross_backend.rs`:928-931: "`n₀ = +1` and `λ̃ = 0`", reached
+  - **That sample is a pole.** `crates/engine/tests/decode_cross_backend.rs`:928-932: "`n₀ = +1` and `λ̃ = 0`", reached
     only to each precision's rounding, "and `1/ρ` or the angle of a rounding-sized `λ̃` amplifies it". True `‖λ̃‖` there is
     about 9.0e-8 (computed), so these eps are the direction of a vector of that length, not a measure of how far the
     trig is off. Metal's worst in the same domain is at the same sample: 139986730.45 eps against f64, `rho_ratio`.
