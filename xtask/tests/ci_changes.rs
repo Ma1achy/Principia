@@ -13,10 +13,11 @@
 //!
 //! - `ci_changes_classifies_conservatively`: `scripts/ci_changes.sh classify` gives each change its tier, the highest
 //!   of its paths': docs only when every path is on its allowlist, the corpus, the plan's prose and Python, the
-//!   scripts, the workbench and `.claude/`; data when the plan's task data or the GUI's artboards and references are among them; code
-//!   otherwise. It skips the GPU suites only when no path is a GPU path, and runs mutants only when a `.rs` file under
-//!   `crates/` changes. An empty change, a workflow, an unknown top-level path and a path that merely starts like an
-//!   allowed one run everything, and so does a mixed change; `docs_only` is true exactly on a data or docs change.
+//!   scripts, the workbench and `.claude/`; data when the plan's task data or the GUI's artboards and references are
+//!   among them; code otherwise. It skips the GPU suites only when no path is a GPU path, and runs mutants only when a
+//!   `.rs` file under `crates/` changes. An empty change, a workflow, an unknown top-level path and a path that merely
+//!   starts like an allowed one run everything, and so does a mixed change; `docs_only` is true exactly on a data or
+//!   docs change.
 //! - `ci_changes_files_code_reads_run_everything`: each pattern of the script's `reads_code` list, the data only full
 //!   CI reads, the classifier itself (R-662) and the containment, is touched through real files it names, each
 //!   classifying as code: not docs-only, GPU suites run.
