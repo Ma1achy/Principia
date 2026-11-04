@@ -242,7 +242,7 @@ canonical_spec §1 item 6 and §11: "validate physics numerically", natively, be
 - The CPU-side parity suite (`computeIC`).
 
 <!-- gate:M3 -->
-**Exit gate — 231 requirements** (and every earlier gate still green):
+**Exit gate — 232 requirements** (and every earlier gate still green):
 
 - ENC (1): REQ-ENC-033
 - CHART (4): REQ-CHART-059, REQ-CHART-072, REQ-CHART-085…086
@@ -256,7 +256,7 @@ canonical_spec §1 item 6 and §11: "validate physics numerically", natively, be
 - TOOL (14): REQ-TOOL-031…039, REQ-TOOL-125, REQ-TOOL-132, REQ-TOOL-149…150, REQ-TOOL-219
 - VAL (57): REQ-VAL-025…041, REQ-VAL-043…055, REQ-VAL-115, REQ-VAL-117, REQ-VAL-119, REQ-VAL-123…124, REQ-VAL-126, REQ-VAL-128…136, REQ-VAL-139, REQ-VAL-146, REQ-VAL-168, REQ-VAL-170…171, REQ-VAL-190…191, REQ-VAL-195, REQ-VAL-250…251, REQ-VAL-336…337
 - PERF (6): REQ-PERF-001…004, REQ-PERF-083, REQ-PERF-085
-- SYS (3): REQ-SYS-017…019
+- SYS (4): REQ-SYS-017…019, REQ-SYS-096
 <!-- /gate:M3 -->
 
 ## M4 — Flat compute on the GPU (deep_zoom layer 0)
@@ -490,16 +490,17 @@ and tightens the GPU path (`docs/design/principia_dd_replication.md` § 12).
   below is a report block, not a gate block.
 
 <!-- report:M9 -->
-**Scored, never gated — 79 requirements**, the rows of `principia_dd_replication.md` § 12.2's table (R-649, R-650; each outcome PASS, EXPLAINED DIVERGENCE or UNEXPLAINED, in the report, or "not scored" with what it waits on; REQ-VAL-127 and REQ-VAL-221 are that table's definitions, tier (b)):
+**Scored, never gated — 81 requirements**, the rows of `principia_dd_replication.md` § 12.2's table (R-649, R-650; each outcome PASS, EXPLAINED DIVERGENCE or UNEXPLAINED, in the report, or "not scored" with what it waits on; REQ-VAL-127, REQ-VAL-221, REQ-VAL-342 and REQ-VAL-343 are that table's definitions, tier (b)):
 
-- VAL (79): REQ-VAL-042, REQ-VAL-127, REQ-VAL-201, REQ-VAL-203, REQ-VAL-205, REQ-VAL-207, REQ-VAL-209, REQ-VAL-211, REQ-VAL-213…214, REQ-VAL-216, REQ-VAL-218, REQ-VAL-220…223, REQ-VAL-225, REQ-VAL-227…228, REQ-VAL-230, REQ-VAL-232, REQ-VAL-234, REQ-VAL-236, REQ-VAL-238, REQ-VAL-240, REQ-VAL-242, REQ-VAL-244, REQ-VAL-246, REQ-VAL-248, REQ-VAL-252, REQ-VAL-254, REQ-VAL-256…257, REQ-VAL-259, REQ-VAL-261…262, REQ-VAL-264, REQ-VAL-266, REQ-VAL-268, REQ-VAL-270, REQ-VAL-272…273, REQ-VAL-275, REQ-VAL-277, REQ-VAL-279, REQ-VAL-281, REQ-VAL-283, REQ-VAL-285…286, REQ-VAL-288, REQ-VAL-290…291, REQ-VAL-293…295, REQ-VAL-297, REQ-VAL-299, REQ-VAL-301, REQ-VAL-303, REQ-VAL-305…306, REQ-VAL-308…309, REQ-VAL-311…314, REQ-VAL-316, REQ-VAL-318…319, REQ-VAL-321, REQ-VAL-323, REQ-VAL-325…327, REQ-VAL-329…330, REQ-VAL-333, REQ-VAL-335
+- VAL (81): REQ-VAL-042, REQ-VAL-127, REQ-VAL-201, REQ-VAL-203, REQ-VAL-205, REQ-VAL-207, REQ-VAL-209, REQ-VAL-211, REQ-VAL-213…214, REQ-VAL-216, REQ-VAL-218, REQ-VAL-220…223, REQ-VAL-225, REQ-VAL-227…228, REQ-VAL-230, REQ-VAL-232, REQ-VAL-234, REQ-VAL-236, REQ-VAL-238, REQ-VAL-240, REQ-VAL-242, REQ-VAL-244, REQ-VAL-246, REQ-VAL-248, REQ-VAL-252, REQ-VAL-254, REQ-VAL-256…257, REQ-VAL-259, REQ-VAL-261…262, REQ-VAL-264, REQ-VAL-266, REQ-VAL-268, REQ-VAL-270, REQ-VAL-272…273, REQ-VAL-275, REQ-VAL-277, REQ-VAL-279, REQ-VAL-281, REQ-VAL-283, REQ-VAL-285…286, REQ-VAL-288, REQ-VAL-290…291, REQ-VAL-293…295, REQ-VAL-297, REQ-VAL-299, REQ-VAL-301, REQ-VAL-303, REQ-VAL-305…306, REQ-VAL-308…309, REQ-VAL-311…314, REQ-VAL-316, REQ-VAL-318…319, REQ-VAL-321, REQ-VAL-323, REQ-VAL-325…327, REQ-VAL-329…330, REQ-VAL-333, REQ-VAL-335, REQ-VAL-342…343
 
 **The calibrations of those targets — 56 requirements** (R-71, R-650, § 12.3; each takes its target's tier and is put to the human in the report's list of calibrations, with no row of its own; REQ-SYS-095, M9's other calibration, is below):
 
 - VAL (56): REQ-VAL-202, REQ-VAL-204, REQ-VAL-206, REQ-VAL-208, REQ-VAL-210, REQ-VAL-212, REQ-VAL-215, REQ-VAL-217, REQ-VAL-219, REQ-VAL-224, REQ-VAL-226, REQ-VAL-229, REQ-VAL-231, REQ-VAL-233, REQ-VAL-235, REQ-VAL-237, REQ-VAL-239, REQ-VAL-241, REQ-VAL-243, REQ-VAL-245, REQ-VAL-247, REQ-VAL-249, REQ-VAL-253, REQ-VAL-255, REQ-VAL-258, REQ-VAL-260, REQ-VAL-263, REQ-VAL-265, REQ-VAL-267, REQ-VAL-269, REQ-VAL-271, REQ-VAL-274, REQ-VAL-276, REQ-VAL-278, REQ-VAL-280, REQ-VAL-282, REQ-VAL-284, REQ-VAL-287, REQ-VAL-289, REQ-VAL-292, REQ-VAL-296, REQ-VAL-298, REQ-VAL-300, REQ-VAL-302, REQ-VAL-304, REQ-VAL-307, REQ-VAL-310, REQ-VAL-315, REQ-VAL-317, REQ-VAL-320, REQ-VAL-322, REQ-VAL-324, REQ-VAL-328, REQ-VAL-331…332, REQ-VAL-334
 
-**Built, not scored — 3 requirements** (TASK-M9-39, R-654; no outcome and no row in the report, its tests blocking its own merge):
+**Built, not scored — 4 requirements** (TASK-M9-39, TASK-M9-40, R-654, R-669; no outcome and no row in the report, each task's tests blocking its own merge):
 
+- CHART (1): REQ-CHART-091
 - INT (1): REQ-INT-111
 - SYS (2): REQ-SYS-094…095
 

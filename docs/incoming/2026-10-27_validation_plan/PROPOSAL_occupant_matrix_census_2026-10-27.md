@@ -248,6 +248,9 @@ Every one of these comes from a mistake on the record.
 | census-stage1 | nightly | the full stage 1, CPU and lavapipe |
 | census-stage2 | weekly, sharded by fixture | the corpus and the maps, CPU and lavapipe, cached |
 
+*1 Nov 2026 (R-669, RQ-617 (a)):* the cadence is this table's and § 8.2's, as written, and `census-smoke` runs lavapipe
+beside the CPU. Nothing of the census is built yet.
+
 - Linux runners are free on a public repo. A matrix job allows 256 jobs, each with a six-hour limit, so shard by
   fixture and orbit block.
 - **Cache key:** kernel hash + full config hash + fixture id. Only cells whose inputs changed are rerun. When the

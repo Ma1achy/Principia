@@ -13,7 +13,7 @@ delivered them; only the filenames were changed.
 | `papers/heggie_1974_CeMech_10_217.pdf` | `3d6bd96043a715507c3bc2116df5f06e6c57925445f362738373cef6caf3a3ee` | Heggie (1974), "A global regularisation of the gravitational N-body problem", *Celest. Mech.* 10, 217–241, doi:10.1007/BF01227621 |
 | `papers/aarseth_zare_1974_CeMech_10_185.pdf` | `d1969c53dedf44765266bf5ea66b127e2835a84a32cec9e444a495555cd5b7f2` | Aarseth & Zare (1974), "A regularization of the three-body problem", *Celest. Mech.* 10, 185–205, doi:10.1007/BF01227619 |
 | `papers/tanikawa_mikkola_2015_PASJ_67_115.pdf` | `9bbf5d0eb6365722a04c3bc25d71608cd9c46b272f17988ffc305136c6c3e04c` | Tanikawa & Mikkola (2015), "Symbol sequences and orbits of the free-fall three-body problem", *PASJ* 67(6), 115, doi:10.1093/pasj/psv087 |
-| `papers/anosova_1969_Ap_5_81_part3.pdf` | `be19ced2478eb858f9a6399781deb80ecb7b3b6d64dc73e0588fffb3f68a8bcf` | Anosova (1969), "Investigation of the dynamics of triple systems by the Monte Carlo method. III. The case of components with different masses", *Astrophysics* 5, 81–84, doi:10.1007/BF01013354 |
+| `papers/anosova_1969_Ap_5_81_part3.pdf` (held locally since 2 Nov 2026 at `docs/incoming/_local/anosova_1969_Ap_5_81_part3.pdf`, gitignored, not in the repo; R-673) | `be19ced2478eb858f9a6399781deb80ecb7b3b6d64dc73e0588fffb3f68a8bcf` | Anosova (1969), "Investigation of the dynamics of triple systems by the Monte Carlo method. III. The case of components with different masses", *Astrophysics* 5, 81–84, doi:10.1007/BF01013354 |
 | `papers/valtonen_myllari_orlov_rubinov_2005_MNRAS_364_91.pdf` | `a35144f0204c79e9b05d3e1f27cc027d56a99550d9bba3ddf21dbd0a574f8697` | Valtonen, Mylläri, Orlov & Rubinov (2005), "Dynamics of rotating triple systems: statistical escape theory versus numerical simulations", *MNRAS* 364, 91–98, doi:10.1111/j.1365-2966.2005.09540.x |
 | `papers/martynova_orlov_rubinov_2009_AstRep_53_710.pdf` | `a4b715b0f3ae8a79620a8362e396d62b7ef7cef9b28469a090e6f8307beec8dd` | Martynova, Orlov & Rubinov (2009), "The structure of non-hierarchical triple system stability regions", *Astron. Rep.* 53, 710–721, doi:10.1134/S1063772909080034 |
 | `papers/heinamaki_lehto_valtonen_chernin_1999_MNRAS_310_811.pdf` | `4dd397de840215c16b4123803280384b663f4553896cef1bce6139ccc9421322` | Heinämäki, Lehto, Valtonen & Chernin (1999), "Chaos in three-body dynamics: Kolmogorov–Sinai entropy", *MNRAS* 310, 811–822, doi:10.1046/j.1365-8711.1999.02859.x |
@@ -97,3 +97,12 @@ PRs have merged. That is a separate, later step and a force-push of `main`.
 **Note added 31 Oct 2026 (R-661, closing RQ-646).** Two files changed after the table above was written, and its hashes are the
 files as delivered. By the owner's ruling, `catalogue.md` § 6.1 is reworded and the instruction's § C gains a bracketed
 correction. Their sha256s now: `INSTRUCTION_replication_suite_2026-10-25.md` `07013783acfa19248186a706e8b04883ece77d3ae765489b1ef983f65819c0dd`; `catalogue.md` `9998cdf4674fae5c157749448c46df1671992fb1e35d11ce1558430f2f74b03c`.
+
+## Held locally, not in the repo (RQ-610, 2 Nov 2026)
+
+The licence audit of 28 Oct 2026 (PR #327) found no rights statement in the Anosova 1969 translation,
+`papers/anosova_1969_Ap_5_81_part3.pdf`. The owner ruled on RQ-610 on
+2 Nov 2026 (R-673, option (c)) to move it to `docs/incoming/_local/`, as the ten were by R-643; it was removed from the
+tree in one ordinary commit, with no history rewrite (R-644). It is held locally, gitignored, under the **same
+filename** at `../_local/`. Its row above keeps its sha256, which still identifies it, and a path to it cited anywhere
+in the docs now resolves there. The citations are left as written, since they are records.
