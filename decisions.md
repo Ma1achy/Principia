@@ -328,7 +328,8 @@ escape has fired but the march continues. Files: pitfalls §2.4; integrator_cont
 
 ## R-32 — The ionisation gate is pairwise-unbound, separating and total `E > 0`, with settling *(IE-4 (c))*
 *Amended in part by R-670 (2 Nov 2026; RQ-656 (4)(ii): at `ε ≠ 0`, the three pairwise energies take the softened potential).*
-*Still in force: all of it at `ε = 0`; at `ε ≠ 0`, `d` reads `√(d² + ε²)` in the pairwise energies' potential term (R-670).*
+*Refined by R-710 (4 Nov 2026: total `E > 0` reads the stored `E_0`, its sign decided once per trajectory at `t = 0`; RQ-697 closed).*
+*Still in force: all of it at `ε = 0`, the third condition reading `E_0` (R-710); at `ε ≠ 0`, `d` reads `√(d² + ε²)` in the pairwise energies' potential term (R-670).*
 *24 Sep 2026 · recorded; applied before outcome data at scale*
 
 All three pairwise energies > 0, all separations growing, total `E > 0`, evaluated with the escape rule's settling. Its place in
@@ -348,6 +349,7 @@ dd_integrator :92; spike_brief :61.
 
 ## R-34 — FMA: explicit fma at every branch input, enumerated *(IE-6)*
 *Corrected by R-547.*
+*Amended in part by R-710 (4 Nov 2026: the ionisation gate's `E_0` sign is an enumerated exception).*
 *Still in force: every branch input that consumes multi-op arithmetic, the change-11 `|Δn̂|` and `E_rel` included, is
 enumerated rather than relying on a backend switch; "explicit fma" is corrected: such an input is built only from
 operations every IEEE backend rounds alike, with no intermediate that can be subnormal (R-547).*
@@ -712,6 +714,7 @@ The scale lives in `q` (a common zoom). chart_reference drops `s_u` and `s_v`.
 
 ## R-84 — Branch decisions across precisions *(closes RQ-35)*
 *Amended by R-297.*
+*Amended in part by R-710 (4 Nov 2026: the ionisation gate's `E_0` sign may differ between backends within a few ulp of `E_0 = 0`, reported).*
 *Still in force: all of it with the compute shaders' fast-math off, the default; with it on, an opt-in, parity is
 measured, not exact (R-297).*
 *25 Sep 2026 · applied in step 7*
@@ -30214,6 +30217,8 @@ the toolchain, for the 2–3 slowest jobs, evicted to stay well under 10 GB, bui
 R-684 is in the "ci" group of `plan/rule_groups.yaml`.
 
 ## R-694 — With the compute setting off, R-297's bit-identity means the branch decisions of REQ-INT-057 and the Tier B fields only, continuous values free across drivers; `E_rel` and `|Δn̂|` take written forms with no driver division or `√` in the decision; the header records "Off" only for drivers measured, otherwise wgpu's path with "driver unverified" *(closes RQ-685; refines R-297)*
+*Refined by R-710 (4 Nov 2026: "branch decisions" hold with one enumerated exception, the ionisation gate's `E_0` sign).*
+*Still in force: all of it.*
 *4 Nov 2026 · the owner's batch of that day; applied in `docs/contracts/principia_parity_contract.md` § 4, `docs/design/principia_dd_telemetry_and_tiers.md` § 5, `docs/contracts/principia_integrator_contract.md` Part 4 (dated notes), R-297's forward lines, `docs/archive/review_queue/M0.md` (RQ-685), `REVIEW_QUEUE.md`, REQ-INT-057, REQ-INT-064, REQ-SYS-074 and REQ-TOOL-141 (reqio), REQ-INT-112 and REQ-TOOL-221 (reqio, new), TASK-M4-29 and TASK-M4-30 (new), TASK-M4-03, `plan/tasks.yaml` and `plan/rule_groups.yaml`*
 
 The owner's words, 4 Nov 2026, verbatim:
@@ -30558,7 +30563,7 @@ R-707 is in the "process" group of `plan/rule_groups.yaml`.
 
 Changes REQ-VAL-319 (statement, verify, rulings, source, note).
 
-## R-708 — The tilted Burrau `K` charts follow R-471's two modes: warped, the default, every pixel a system under every tilt, the `K` axis floored at the pixel's own held `L_z` in the additive form and the bottom row never blanked; linear, rows at fixed values, an infeasible cell blank, held coordinates by value; held energy-type coordinates tilt in their warp coordinate in warped mode *(closes RQ-678; amends R-633; refines R-471 and R-508)*
+## R-708 — The tilted Burrau `K` charts follow R-471's two modes: warped, the default, every pixel a system under every tilt, the `K` axis floored at the pixel's own held `L_z` in the additive form and the bottom row never blanked; linear, rows at fixed values, an infeasible cell blank, held coordinates by value; held energy-type coordinates tilt in their warp coordinate in warped mode *(closes RQ-678 and RQ-683; amends R-633; refines R-471 and R-508)*
 *Refined by R-709 (4 Nov 2026: a held energy's warp coordinate past `t < 0`, if the implementer confirms it arises, clamps at `t = 0`).*
 *Still in force: all of it.*
 *4 Nov 2026 · the owner's ruling of that day; applied in `docs/contracts/principia_chart_decoder_contract.md` § "Tilt (basis edit)", `docs/design/principia_chart_reference.md` § "2.1 Feasibility, and the warp that makes every pixel valid" and § "4.5 The Burrau-family chart maps", R-471's, R-508's and R-633's forward lines, `docs/archive/review_queue/M0.md` (RQ-678, moved with its ruling), `REVIEW_QUEUE.md` (RQ-699, new), REQ-CHART-061, REQ-CHART-062 and REQ-CHART-067 (reqio), TASK-M2-38 and TASK-M2-52, `plan/tasks.yaml` and `plan/rule_groups.yaml`; built by TASK-M2-52, and by TASK-M2-37 for the single energy axis*
@@ -30580,7 +30585,7 @@ The owner's words, 4 Nov 2026, verbatim:
 - **Linear mode (R-471 E2, the per-axis option): RQ-678's option (b).** Rows keep fixed physical values, an infeasible cell (`K < L_z²/2I`) is not a system and draws blank per R-470, and held coordinates tilt by value. R-633's refusal stands in this mode.
 - **PR #388** keeps its refused-cell code and tests as the linear arm, and adds the warped path and its "no refused cells under tilt" test as the default. It does not merge until both arms are in.
 - **The rounding at the floor.** Warped mode must not blank the bottom row: `K ≥ L_z²/2I` at `t = 0` is tested in floating point, so it is handled, as §2.1's warp holds `L_max² ≤ 2K`, and tested.
-- **A single energy axis at held spin takes the same rule.** Its queue entry lives on PR #387's branch, which closes it.
+- **A single energy axis at held spin takes the same rule.** Its queue entry, RQ-683, is open only on PR #387's branch, so this port archives it with its ruling (`plan/OPERATIONS.md` § "Numbers"), and that PR's next fix pass deletes its open copy. REQ-CHART-067 states the floor, and §2.1's paragraph on it is that PR's.
 - **If the warped-coordinate tilt of a held `K` is not well-defined somewhere,** the case comes back to the owner.
 
 *Applied per R-369 (physics-reviewed on TASK-M2-52):*
@@ -30595,7 +30600,7 @@ The owner's words, 4 Nov 2026, verbatim:
 
 *The case that came back, in the sense of the ruling's last line:* the ruling names a warp coordinate for held `K`, but the held `L_z` of `(ν, K)` and `Φ_θ,K` is an energy-type hidden coordinate too (R-471 E1, R-633 c2), and §2.1's `L_z` line needs a held `K` those charts do not have. The port doesn't choose. RQ-699 asks. The `K` axis's floor is the same in every answer.
 
-*What it amends:* **R-633**, "tilted and sliced by value", on a held energy-type coordinate in warped mode only, and its refusal, which becomes the linear arm. *What it refines:* **R-471**, E2 and E3 on these charts, and **R-508**, the top of the floored axis. It closes **RQ-678**.
+*What it amends:* **R-633**, "tilted and sliced by value", on a held energy-type coordinate in warped mode only, and its refusal, which becomes the linear arm. *What it refines:* **R-471**, E2 and E3 on these charts, and **R-508**, the top of the floored axis. It closes **RQ-678** and **RQ-683**.
 
 R-708 is in the "physics" group of `plan/rule_groups.yaml`.
 
@@ -30628,3 +30633,32 @@ If it doesn't arise, none of these is built, and the PR says why.
 R-709 is in the "physics" group of `plan/rule_groups.yaml`.
 
 Changes REQ-CHART-062, REQ-GUI-241 and REQ-TOOL-169 (statement, verify, rulings, source, note).
+
+## R-710 — The ionisation gate's total-energy condition reads the stored `E_0`, its sign decided once per trajectory at `t = 0`, at `ε = 0` and `ε ≠ 0` alike; the condition stays; it is an enumerated exception in `branch_inputs.rs`, the decision differing between backends only within a few ulp of `E_0 = 0`, measured and reported, never reconciled; a control fixture fails if the condition is dropped *(closes RQ-697; amends R-34 and R-84; refines R-32 and R-694)*
+*4 Nov 2026 · the owner's words of that day; applied in `docs/contracts/principia_integrator_contract.md` Part 4 and Part 7, `docs/contracts/principia_parity_contract.md` § "Fast-math, per shader stage", R-32's, R-34's, R-84's and R-694's forward lines, `docs/archive/review_queue/M0.md` (RQ-697, moved with its ruling), REQ-EVT-006, REQ-INT-057, REQ-INT-061, REQ-INT-064, REQ-INT-111, REQ-INT-112, REQ-SYS-094, REQ-SYS-095 and REQ-VAL-059 (reqio), REQ-INT-113 (reqio, new, calibration), TASK-M3-12, TASK-M4-03, TASK-M4-29 and TASK-M9-39, `plan/tasks.yaml` and `plan/rule_groups.yaml`; built by TASK-M3-12, TASK-M4-03 and TASK-M9-39*
+
+The owner's words, 4 Nov 2026, verbatim:
+
+> RQ-697: (b). The gate's total-energy condition reads the stored E_0, its sign decided once per trajectory at t = 0. Physics: E is conserved, E_0 is the physical value, and live E differs only by drift, so a label must not flip on integration error; E < 0 forbids total escape, so the condition stays (not d). Cross-backend: an enumerated exception in branch_inputs.rs, consistent with R-685: the decision may differ between backends only within a few ulp of E_0 = 0; measured and reported, never reconciled. Add the review's control fixture (equilateral, radial outward speed just above sqrt(4/(3r)), all pairs unbound, E < 0) so the test fails if the condition is dropped. Applies at ε = 0 (TASK-M3-12) and ε ≠ 0 (TASK-M9-39) alike.
+
+*What it decides:*
+
+- **Option (b).** The gate's third condition reads the stored `E_0`, the `SimState` field formed at `t = 0`, not the live `E`, and not the decode's derived `E₀` (R-133 keeps the two apart). Its sign is decided once per trajectory at `t = 0`. `E` is conserved, `E_0` is the physical value, and live `E` differs only by drift, so a label must not flip on integration error.
+- **The condition stays.** `E < 0` forbids total escape, so option (d) is not taken.
+- **The cross-backend rule.** `E_0`'s terms hold a division and a `√`, so this is an enumerated exception in `branch_inputs.rs` to the rule that a branch decision is identical across backends. The decision may differ between backends only within a few ulp of `E_0 = 0`, and any such difference is measured and reported, never reconciled.
+- **The control fixture.** Unit masses on an equilateral triangle of side `r`, each moving radially outward at speed `u`, with `u²` just above `4/(3r)`: all pairs are unbound (`¾u² − 1/r > 0`), all separations grow, and `E ≈ −1/r < 0`. Dropping the condition then fails the test. TASK-M3-12's two earlier fixtures cannot tell.
+- **Both softenings.** It applies at `ε = 0` (TASK-M3-12) and at `ε ≠ 0` (TASK-M9-39), where `E_0` is the softened energy (R-654, R-670).
+
+*Applied per R-369:*
+
+- **The ruling number in "consistent with".** Quoted as written. As `decisions.md` numbers it, on PR #407, that number is the noise audit, which has no bearing here. The sentence's sense is RQ-685's ruling, R-694: branch decisions bit-identical, continuous values free. `E_0` is a continuous value, which is why the exception has to be named. This port reads it so and says so; if the owner meant another ruling, the rule above doesn't change.
+- **"A few ulp" is a value,** so it is a calibration (R-71): REQ-INT-113, proposed by TASK-M4-03 with its measurement, in ulps of the larger of `|K_0|` and `|V_0|`, since `E_0` beside 0 has lost those terms' magnitude. A fork past that width is reported as a defect, not absorbed.
+- **The exception is one entry.** The pair energies and `E_rel` stay under REQ-INT-064 and REQ-INT-112. Only `E_0`'s sign is excepted.
+- **`ionisation_gate` gains a second arm:** a synthetic state whose live `E` has the opposite sign to its stored `E_0` is decided by `E_0`, so reading the live value fails.
+- The fixture's numbers, `r = 10` as `three_way_unbound` has and `u² = 1.01·4/(3r)`, are a fixture's, not a tolerance.
+
+*What it amends:* **R-34**, as R-547 corrects it, and **R-84**, for this one decision. *What it refines:* **R-32**, by naming the quantity, and **R-694**, whose "branch decisions" hold with this exception. It closes **RQ-697**.
+
+R-710 is in the "physics" group of `plan/rule_groups.yaml`.
+
+Adds REQ-INT-113; changes REQ-EVT-006, REQ-INT-057, REQ-INT-061, REQ-INT-064, REQ-INT-111, REQ-INT-112, REQ-SYS-094, REQ-SYS-095 and REQ-VAL-059.

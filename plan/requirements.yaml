@@ -2978,7 +2978,7 @@
   - file: decisions.md
     section: "R-512 — Under Tip as sheet a window pixel whose own `(a, b)` leave the chart's square is past the edge, and blank past a bounded one; E3 and C6 read over the chart's square *(closes RQ-402; amends R-471, R-472 and R-477)*"
   - file: decisions.md
-    section: "R-708 — The tilted Burrau `K` charts follow R-471's two modes: warped, the default, every pixel a system under every tilt, the `K` axis floored at the pixel's own held `L_z` in the additive form and the bottom row never blanked; linear, rows at fixed values, an infeasible cell blank, held coordinates by value; held energy-type coordinates tilt in their warp coordinate in warped mode *(closes RQ-678; amends R-633; refines R-471 and R-508)*"
+    section: "R-708 — The tilted Burrau `K` charts follow R-471's two modes: warped, the default, every pixel a system under every tilt, the `K` axis floored at the pixel's own held `L_z` in the additive form and the bottom row never blanked; linear, rows at fixed values, an infeasible cell blank, held coordinates by value; held energy-type coordinates tilt in their warp coordinate in warped mode *(closes RQ-678 and RQ-683; amends R-633; refines R-471 and R-508)*"
   verify:
     method: property test
     detail: "cargo test -p kernel nav_fuzz_never_leaves (seeded, the seed printed): ≥ 1000 edits per gallery chart; after each, validate(centre) is Valid; on the invariant and Burrau K charts, warped, every grid pixel whose (a, b) lie in the square validates at every tilt, and under Lean each axis or X ≠ Y that is every grid pixel; control (the arm that fires): the same run under the linear option finds infeasible pixels inside [0,1]² and each is classified not a system (blank), and a fuzz run with the stop disabled reaches an invalid centre"
@@ -3021,7 +3021,7 @@
   - file: decisions.md
     section: "R-665 — On a tilted shape sphere the lines `N_a(½ + k) + N_b(2j − 2t) = 0`, where a pole map's image keeps `d`, are a named exception of measure zero to R-408: each pixel on them is counted, R-554 L3 standing *(closes RQ-634; amends R-408)*"
   - file: decisions.md
-    section: "R-708 — The tilted Burrau `K` charts follow R-471's two modes: warped, the default, every pixel a system under every tilt, the `K` axis floored at the pixel's own held `L_z` in the additive form and the bottom row never blanked; linear, rows at fixed values, an infeasible cell blank, held coordinates by value; held energy-type coordinates tilt in their warp coordinate in warped mode *(closes RQ-678; amends R-633; refines R-471 and R-508)*"
+    section: "R-708 — The tilted Burrau `K` charts follow R-471's two modes: warped, the default, every pixel a system under every tilt, the `K` axis floored at the pixel's own held `L_z` in the additive form and the bottom row never blanked; linear, rows at fixed values, an infeasible cell blank, held coordinates by value; held energy-type coordinates tilt in their warp coordinate in warped mode *(closes RQ-678 and RQ-683; amends R-633; refines R-471 and R-508)*"
   - file: decisions.md
     section: "R-709 — Pre-ruling for RQ-678's `t < 0` case, if the implementer confirms it arises: in warped mode the held energy's warp coordinate clamps at `t = 0`, each clamped pixel a real system flagged \"held at floor\" in the Inspector and the sidecar, the clamped-pixel share in the test output, no mirror; linear mode unchanged *(refines R-708)*"
   verify:
@@ -3129,7 +3129,7 @@
   note: "R-472 X3, X3a. Closed by TASK-M2-36. Physics review is required (⚑); it does not merge on the code reviewer's word alone. Physics review 5591497181 of PR #255, P1 (R-508 V2, V5; R-512 F1). *Was:* \"the invariant chart tilted is not a system past every edge\"."
 - id: REQ-CHART-067
   area: CHART
-  statement: "Axes of kind 3 (E, L_z, K, KE; PE once REQ-CHART-070 defines its warp) must be warped by default, wherever they appear (the invariant charts, the Burrau family's K axes, a mixed-axis chart, a Chart-builder axis), as chart_reference §2.1 warps them: alone or beside a non-energy axis each takes its own line of the warp, K (KE) = K_max·t^γ_K, E = U + K_max·t^γ_K, L_z = (2s − 1)·L_max with L_max = √(2IK) at the chart's held-fixed K, so every pixel inside [0,1]² is feasible by construction; on the Burrau family's K axes at a held L_z the axis is floored at the pixel's own held L_z, K = L_z²/2I + K_max·t^γ_K (R-708); every other physical-quantity axis (the virial ratio, the mass ratio through the mass link) must be warped to its feasible range by default too, by the warp REQ-CHART-070 writes (R-506); the warp's s axis is bounded past either edge and its t axis bounded below t = 0 and continuing, affine, past t = 1 (R-508); this supersedes R-408's port B1 as the default."
+  statement: "Axes of kind 3 (E, L_z, K, KE; PE once REQ-CHART-070 defines its warp) must be warped by default, wherever they appear (the invariant charts, the Burrau family's K axes, a mixed-axis chart, a Chart-builder axis), as chart_reference §2.1 warps them: alone or beside a non-energy axis each takes its own line of the warp, K (KE) = K_max·t^γ_K, E = U + K_max·t^γ_K, L_z = (2s − 1)·L_max with L_max = √(2IK) at the chart's held-fixed K, so every pixel inside [0,1]² is feasible by construction; on the Burrau family's K axes at a held L_z the axis is floored at the pixel's own held L_z, K = L_z²/2I + K_max·t^γ_K, and a lone K, KE, E or virial-ratio axis at a held L_z ≠ 0 stands on the same floor, K* = L_z²/2I + K_max·t^γ_K on K and KE, E = U + K* on E and K* = L_z²/2I + Q(t)·|U|/2 on the virial ratio, the pixel's own U and I (R-708, RQ-683); every other physical-quantity axis (the virial ratio, the mass ratio through the mass link) must be warped to its feasible range by default too, by the warp REQ-CHART-070 writes (R-506); the warp's s axis is bounded past either edge and its t axis bounded below t = 0 and continuing, affine, past t = 1 (R-508); this supersedes R-408's port B1 as the default."
   source:
   - file: decisions.md
     section: "R-471 — Energy-type axes (`E`, `L_z`, `K`, `KE`, `PE`) are warped by default, as chart_reference §2.1 warps them, the warp evaluated per pixel with that pixel's own `U`, `I` and masses, so every pixel inside `[0,1]²` is feasible under every tilt; a linear mapping is an option per axis, its infeasible pixels \"not a system\" and the navigation stop keeping the centre feasible, recorded in the view state and the sidecar ⚑ *(supersedes R-408's port B1 as the default)*"
@@ -3144,10 +3144,10 @@
   - file: decisions.md
     section: "R-508 — An energy chart's `t > 1` side continues: past `t = 1` the warp's `K > K_max` is drawn and counted as an affine side, while past `t < 0`, and the `s` axis past either edge, the warp stays bounded *(closes RQ-376; amends R-471)*"
   - file: decisions.md
-    section: "R-708 — The tilted Burrau `K` charts follow R-471's two modes: warped, the default, every pixel a system under every tilt, the `K` axis floored at the pixel's own held `L_z` in the additive form and the bottom row never blanked; linear, rows at fixed values, an infeasible cell blank, held coordinates by value; held energy-type coordinates tilt in their warp coordinate in warped mode *(closes RQ-678; amends R-633; refines R-471 and R-508)*"
+    section: "R-708 — The tilted Burrau `K` charts follow R-471's two modes: warped, the default, every pixel a system under every tilt, the `K` axis floored at the pixel's own held `L_z` in the additive form and the bottom row never blanked; linear, rows at fixed values, an infeasible cell blank, held coordinates by value; held energy-type coordinates tilt in their warp coordinate in warped mode *(closes RQ-678 and RQ-683; amends R-633; refines R-471 and R-508)*"
   verify:
     method: unit test
-    detail: "cargo test -p kernel energy_axes_warped: per chart with an energy-type axis, every pixel of a 65 × 65 grid over [0,1]² validates; the existing charts' decodes are bit-identical to before untilted; a mixed chart with a lone E axis decodes E = U + K_max·t^γ_K; R-508: on (L_z, K), (L_z, E) and (ν, K) the pixels of a window reaching to t = 1.5 decode as the warp's formula continued (K > K_max) and validate, the extension type is affine past t = 1 and bounded below t = 0 and past s's edges; R-506: a builder mass-ratio axis keeps every pixel's masses positive and summing to 1; controls: a lone E axis mapped linearly onto [U₀, U₀ + K_max] fails validate at the parabola's corners, a warp computed with the wrong held-fixed K puts a pixel outside the feasible region, and a t axis declared affine below t = 0, detected as decoding a non-system there or, for an even integer γ_K, a system the t > 0 side already draws (the fold), each fail"
+    detail: "cargo test -p kernel energy_axes_warped: per chart with an energy-type axis, every pixel of a 65 × 65 grid over [0,1]² validates; the existing charts' decodes are bit-identical to before untilted; a mixed chart with a lone E axis decodes E = U + K_max·t^γ_K; R-508: on (L_z, K), (L_z, E) and (ν, K) the pixels of a window reaching to t = 1.5 decode as the warp's formula continued (K > K_max) and validate, the extension type is affine past t = 1 and bounded below t = 0 and past s's edges; R-506: a builder mass-ratio axis keeps every pixel's masses positive and summing to 1; controls: a lone E axis mapped linearly onto [U₀, U₀ + K_max] fails validate at the parabola's corners, a warp computed with the wrong held-fixed K puts a pixel outside the feasible region, and a t axis declared affine below t = 0, detected as decoding a non-system there or, for an even integer γ_K, a system the t > 0 side already draws (the fold), each fail; R-708: at a held L_z ≠ 0 a warped lone K, KE, E and virial-ratio axis validate every pixel of the grid, the bottom row t = 0 included; control: the bottom row left to the rounding fails"
   rulings:
   - R-407
   - R-408
@@ -3156,7 +3156,7 @@
   - R-508
   - R-708
   milestone: M2
-  note: "R-471 (20 Oct 2026), E1, H1, H3. Closed by TASK-M2-37. K_max and γ_K stay REQ-CHART-044's calibration (R-71). R-508 (RQ-376 ruled): t > 1 continues, t < 0 and the s axis bounded. R-506 (RQ-372 ruled): every physical-quantity axis is warped by default. *Was:* \"the warped axis is bounded past its edge\" and \"The t > 1 side is RQ-376 (bounded meanwhile).\" Physics review is required (⚑); it does not merge on the code reviewer's word alone. Physics review 5587614130 of PR #255, item 4 (applied per R-369): for an even integer γ_K, t < 0 folds onto a valid t > 0 system, which the control accepts as detection. *Was:* \"a t axis declared affine below t = 0 decodes a non-system\". R-708 (4 Nov 2026, RQ-678): the floor on a Burrau K axis, the owner adding \"same rule for a single energy axis at held spin\", whose entry PR #387 closes. Built by TASK-M2-52."
+  note: "R-471 (20 Oct 2026), E1, H1, H3. Closed by TASK-M2-37. K_max and γ_K stay REQ-CHART-044's calibration (R-71). R-508 (RQ-376 ruled): t > 1 continues, t < 0 and the s axis bounded. R-506 (RQ-372 ruled): every physical-quantity axis is warped by default. *Was:* \"the warped axis is bounded past its edge\" and \"The t > 1 side is RQ-376 (bounded meanwhile).\" Physics review is required (⚑); it does not merge on the code reviewer's word alone. Physics review 5587614130 of PR #255, item 4 (applied per R-369): for an even integer γ_K, t < 0 folds onto a valid t > 0 system, which the control accepts as detection. *Was:* \"a t axis declared affine below t = 0 decodes a non-system\". R-708 (4 Nov 2026, RQ-678, RQ-683): the floor on a Burrau K axis, built by TASK-M2-52, and on a lone energy axis at held spin, the owner's \"same rule for a single energy axis at held spin\", built by TASK-M2-37."
 - id: REQ-CHART-068
   area: CHART
   statement: "A linear mapping must be an option per energy-type axis and per Chart-builder physical-quantity axis (R-506), a chart parameter (warped | linear) in SimConfig, a sim key: under it the axis is affine (R-408's B1 axis), mapped onto the warp's range at the slice centre on a gallery chart (K ∈ [0, K_max], E ∈ [U₀, U₀ + K_max], L_z ∈ ±√(2I₀K_max)) or onto its own range on a Chart-builder axis; its infeasible pixels in the window are not a system (blank, never integrated) and log no decoder-bug warning; the navigation stop keeps the centre feasible, the edge being validate's layer-2 boundary at the centre."
@@ -4681,7 +4681,7 @@
   note: "R-57 also fixes the 'w₂ < 0' label in integrator contract Part 6 (the negative Yoshida-6 weight is w₁; for Yoshida-4 it is w₀) — a doc fix, not a build obligation; R-500 withdrew that sentence's claim. R-501: the paper is not added; the citation and the order test check the transcription."
 - id: REQ-INT-057
   area: INT
-  statement: "With the compute shaders' fast-math off, the default (R-297), the wrapper's branch decisions made from the current state (substep bucket N_sub, cap decision, collision, escape, horizon, SIM_FAILED and terminal) must be bit-identical across the CPU and every GPU backend on identical inputs, per step, while continuous values (positions, momenta, energy, trajectory, and the outcome class they decide near a chaotic boundary) are left free to diverge and are never reconciled, and labels on chaotic trajectories may differ across precisions and are reported, not suppressed."
+  statement: "With the compute shaders' fast-math off, the default (R-297), the wrapper's branch decisions made from the current state (substep bucket N_sub, cap decision, collision, escape, horizon, SIM_FAILED and terminal) must be bit-identical across the CPU and every GPU backend on identical inputs, per step, but for the ionisation gate's stored E_0 sign, which may differ between backends only within REQ-INT-113's width of E_0 = 0, measured and reported, never reconciled (R-710), while continuous values (positions, momenta, energy, trajectory, and the outcome class they decide near a chaotic boundary) are left free to diverge and are never reconciled, and labels on chaotic trajectories may differ across precisions and are reported, not suppressed."
   source:
   - file: docs/contracts/principia_canonical_spec.md
     section: 2. The determinism law (the other defining decision)
@@ -4715,16 +4715,19 @@
     section: "R-297 — Fast-math per shader stage: off for compute by default, an explicit and recorded opt-in; display may keep it *(amends R-84, R-116)*"
   - file: decisions.md
     section: "R-694 — With the compute setting off, R-297's bit-identity means the branch decisions of REQ-INT-057 and the Tier B fields only, continuous values free across drivers; `E_rel` and `|Δn̂|` take written forms with no driver division or `√` in the decision; the header records \"Off\" only for drivers measured, otherwise wgpu's path with \"driver unverified\" *(closes RQ-685; refines R-297)*"
+  - file: decisions.md
+    section: "R-710 — The ionisation gate's total-energy condition reads the stored `E_0`, its sign decided once per trajectory at `t = 0`, at `ε = 0` and `ε ≠ 0` alike; the condition stays; it is an enumerated exception in `branch_inputs.rs`, the decision differing between backends only within a few ulp of `E_0 = 0`, measured and reported, never reconciled; a control fixture fails if the condition is dropped *(closes RQ-697; amends R-34 and R-84; refines R-32 and R-694)*"
   verify:
     method: property test
-    detail: "identical per-step inputs (fuzzed states) dispatched on GPU-f32 and CPU-f64: branch decisions bit-exact; no code adjusts continuous values toward agreement; no test asserts label equality along a chaotic trajectory"
+    detail: "identical per-step inputs (fuzzed states) dispatched on GPU-f32 and CPU-f64: branch decisions bit-exact; no code adjusts continuous values toward agreement; no test asserts label equality along a chaotic trajectory; boundary states either side of E_0 = 0: a differing ionisation decision is reported with its distance from 0 and lies within REQ-INT-113's width (R-710)"
   rulings:
   - R-34
   - R-84
   - R-297
   - R-694
+  - R-710
   milestone: M4
-  note: "R-84: parity_contract governs — branch decisions are identical on identical inputs, per step; labels on chaotic trajectories may differ across precisions (Tier L / Tier B). R-694 (4 Nov 2026, RQ-685 (a)): these decisions and the Tier B fields are what R-297's \"bit-identity\" means with the setting off; a driver's continuous arithmetic is no failure of it."
+  note: "R-84: parity_contract governs — branch decisions are identical on identical inputs, per step; labels on chaotic trajectories may differ across precisions (Tier L / Tier B). R-694 (4 Nov 2026, RQ-685 (a)): these decisions and the Tier B fields are what R-297's \"bit-identity\" means with the setting off; a driver's continuous arithmetic is no failure of it. R-710 (4 Nov 2026, RQ-697 (b)): the one enumerated exception."
 - id: REQ-INT-058
   area: INT
   statement: "Kernel code must follow the GPU compile-discipline checklist: comparison-only branches, no non-finite literals, constant/unrolled indices, flag-in-while-condition loops with zero breaks, clamp in f32 before any float→int cast, and every branch input that must agree across backends built only from operations every IEEE backend rounds alike, with no intermediate that can be subnormal (R-547)."
@@ -4778,7 +4781,7 @@
   milestone: M4
 - id: REQ-INT-061
   area: INT
-  statement: "Every branch decision in the kernel must depend only on comparisons against compile-time constants or against values every backend receives bit-identically (the sim key's N_sub threshold table, R-502), integer counters and single-rounded arithmetic, never on a runtime transcendental (`pow`, `sqrt`, `div`)."
+  statement: "Every branch decision in the kernel must depend only on comparisons against compile-time constants or against values every backend receives bit-identically (the sim key's N_sub threshold table, R-502), integer counters and single-rounded arithmetic, never on a runtime transcendental (`pow`, `sqrt`, `div`), the one enumerated exception being the ionisation gate's stored E_0 sign, which may differ between backends only within REQ-INT-113's width of E_0 = 0, measured and reported, never reconciled (R-710)."
   source:
   - file: docs/contracts/principia_integrator_contract.md
     section: Rules the new kernel must hold by construction
@@ -4794,15 +4797,16 @@
     section: "Tier B — integer-exact *given the same branch decisions* (integer & packed fields)"
   - file: decisions.md
     section: "R-502 — The `N_sub` thresholds are generated per sim key on the host, with a pinned pure-software libm, shipped as exact f32 bits and read by constant index; the table's maximum length is a calibration value, refused above it; a test asserts the default config reproduces the build-time table bitwise *(closes RQ-370)*"
+  - file: decisions.md
+    section: "R-710 — The ionisation gate's total-energy condition reads the stored `E_0`, its sign decided once per trajectory at `t = 0`, at `ε = 0` and `ε ≠ 0` alike; the condition stays; it is an enumerated exception in `branch_inputs.rs`, the decision differing between backends only within a few ulp of `E_0 = 0`, measured and reported, never reconciled; a control fixture fails if the condition is dropped *(closes RQ-697; amends R-34 and R-84; refines R-32 and R-694)*"
   verify:
     method: review checklist
-    detail: "enumerate all branch inputs; none is fed by runtime pow/sqrt/div; the spike control (runtime ceil((r_sub/sqrt(d2))^1.5)) is absent"
+    detail: "enumerate all branch inputs; none is fed by runtime pow/sqrt/div; the spike control (runtime ceil((r_sub/sqrt(d2))^1.5)) is absent; the list marks the E_0 sign as the only exception (R-710)"
   rulings:
   - R-502
+  - R-710
   milestone: M4
-  rq:
-  - RQ-697
-  note: "R-502: the N_sub thresholds are uniforms generated per sim key on the host, not compile-time constants. It waits on RQ-697: what this requirement holds of the ionisation gate's total E > 0 follows that ruling (physics review 5771573790 of PR #408, F8; applied per R-369)."
+  note: "R-502: the N_sub thresholds are uniforms generated per sim key on the host, not compile-time constants. It waits on RQ-697: what this requirement holds of the ionisation gate's total E > 0 follows that ruling (physics review 5771573790 of PR #408, F8; applied per R-369). R-710 (4 Nov 2026, RQ-697 (b)): the wait ends."
 - id: REQ-INT-062
   area: INT
   statement: "Every march loop in the kernel must have a bound (no bare `loop {`)."
@@ -4849,6 +4853,8 @@
     section: "R-547 — Decode and encode numerics: the swap test is the conjugacy; step 0 is skipped within a calibrated `τ_I` and rescales in two steps; a branch input that must agree across backends is built only from operations every IEEE backend rounds alike, with no subnormal intermediate; the native build runs without MIR GVN and CI runs it at the release profile; T1 holds off the mirror band; REQ-SYS-015 is split *(closes RQ-283, RQ-295, RQ-296, RQ-298, RQ-299, RQ-360 and RQ-365; corrects R-34)*"
   - file: decisions.md
     section: "R-694 — With the compute setting off, R-297's bit-identity means the branch decisions of REQ-INT-057 and the Tier B fields only, continuous values free across drivers; `E_rel` and `|Δn̂|` take written forms with no driver division or `√` in the decision; the header records \"Off\" only for drivers measured, otherwise wgpu's path with \"driver unverified\" *(closes RQ-685; refines R-297)*"
+  - file: decisions.md
+    section: "R-710 — The ionisation gate's total-energy condition reads the stored `E_0`, its sign decided once per trajectory at `t = 0`, at `ε = 0` and `ε ≠ 0` alike; the condition stays; it is an enumerated exception in `branch_inputs.rs`, the decision differing between backends only within a few ulp of `E_0 = 0`, measured and reported, never reconciled; a control fixture fails if the condition is dropped *(closes RQ-697; amends R-34 and R-84; refines R-32 and R-694)*"
   verify:
     method: review checklist
     detail: "an enumerated list of branch inputs exists; each multi-op input's form is written and proved by its task to round alike on every IEEE backend, fused or not, flushing subnormals or not; no reliance on per-backend FP-contraction settings or on fma fusion"
@@ -4856,8 +4862,9 @@
   - R-34
   - R-547
   - R-694
+  - R-710
   milestone: M4
-  note: "R-34, corrected by R-547 (RQ-298 (a), 21 Oct 2026): rules 2 and 6 of the determinism note, R-34 and this requirement are corrected; each held requirement is rewritten and re-proved in its own task. *Was:* \"must use explicit `fma` in a fixed written form\" and the note \"R-34 (recorded; applied before the parity gate on a second backend) settles Part 2c's open 'check whether contraction is controllable per backend' in favour of explicit fma everywhere. Recorded; applied before the parity gate on a second backend.\" (stale value, replaced by R-547). R-694 (4 Nov 2026, RQ-685): `E_rel` and `|Δn̂|` as R-29 and the payload doc write them hold a division and a `√`; their written forms are REQ-INT-112 (TASK-M4-29)."
+  note: "R-34, corrected by R-547 (RQ-298 (a), 21 Oct 2026): rules 2 and 6 of the determinism note, R-34 and this requirement are corrected; each held requirement is rewritten and re-proved in its own task. *Was:* \"must use explicit `fma` in a fixed written form\" and the note \"R-34 (recorded; applied before the parity gate on a second backend) settles Part 2c's open 'check whether contraction is controllable per backend' in favour of explicit fma everywhere. Recorded; applied before the parity gate on a second backend.\" (stale value, replaced by R-547). R-694 (4 Nov 2026, RQ-685): `E_rel` and `|Δn̂|` as R-29 and the payload doc write them hold a division and a `√`; their written forms are REQ-INT-112 (TASK-M4-29). R-710 (4 Nov 2026, RQ-697 (b)): the ionisation gate's E_0 sign need not agree across backends within REQ-INT-113's width, so it is outside \"must agree\", listed in the enumeration as the exception."
 - id: REQ-INT-065
   area: INT
   statement: "Occupant selection and the `FTLE_ENABLED` co-computation selection must select baked kernel variants, never runtime uniforms, and be on the sim key, while the ensemble must not be a baked variant: `copy_index` must be a uniform and each copy the same kernel dispatched again."
@@ -5730,7 +5737,7 @@
   note: "R-605 (25 Oct 2026, RQ-528 (d)): REQ-INT-085 is closed by TASK-M3-05 before Heggie is built, so the recalibration is its own calibration, applied per R-369. Closed by TASK-M3-41. Physics review 5644374613 of PR #293, F2 (applied per R-369): the value replaces REQ-INT-085's one threshold, so the proposal reports every occupant's verdict at it."
 - id: REQ-INT-111
   area: INT
-  statement: "With `epsilon` ≠ 0 the force law must be Plummer softening, V = −Σ mᵢmⱼ/√(r² + ε²) with F the negative gradient of V, ε a fraction of the initial hyperradius R fixed at t = 0 and never co-moving (R₀ = √(I₀/M) = 1 in the gauge, so the sim-key value is the fraction and the length, read as given and never recomputed from the state), and E, E₀ and the drift meters must read the softened V. At ε ≠ 0 (R-670), the collision test must stay on geometric r, min ‖rᵢ − rⱼ‖ < r_coll; the Chazy classifier's E must be the softened E_0; E_rel and the ionisation gate's three pairwise relative energies must take the softened potential, d read as √(d² + ε²) in the potential term only, each enumerated as a branch input under R-34, as R-547 corrects it, and decided comparison-only, no sqrt or div at the decision; the gate's total E > 0 must follow RQ-697's ruling; the decode stage's and the fragment decode's V₀ must be softened, ε their input, virial_ratio following; and the substep law must stay on geometric d² and r_min."
+  statement: "With `epsilon` ≠ 0 the force law must be Plummer softening, V = −Σ mᵢmⱼ/√(r² + ε²) with F the negative gradient of V, ε a fraction of the initial hyperradius R fixed at t = 0 and never co-moving (R₀ = √(I₀/M) = 1 in the gauge, so the sim-key value is the fraction and the length, read as given and never recomputed from the state), and E, E₀ and the drift meters must read the softened V. At ε ≠ 0 (R-670), the collision test must stay on geometric r, min ‖rᵢ − rⱼ‖ < r_coll; the Chazy classifier's E must be the softened E_0; E_rel and the ionisation gate's three pairwise relative energies must take the softened potential, d read as √(d² + ε²) in the potential term only, each enumerated as a branch input under R-34, as R-547 corrects it, and decided comparison-only, no sqrt or div at the decision; the gate's total E > 0 must read the stored softened E_0, its sign decided once per trajectory at t = 0 (R-710); the decode stage's and the fragment decode's V₀ must be softened, ε their input, virial_ratio following; and the substep law must stay on geometric d² and r_min."
   source:
   - file: decisions.md
     section: "R-654 — The softened force law is Plummer softening, `V = −Σ mᵢmⱼ/√(r² + ε²)`, with `ε` canonical, a fraction of the initial hyperradius `R` fixed at `t = 0` and never co-moving, recorded in every output header like `r_coll`; energy and drift are defined under the softened potential; its task is scheduled late, after the core build, and runs with `ε ≠ 0` stay refused until it lands *(closes RQ-627; queues RQ-656)*"
@@ -5742,18 +5749,20 @@
     section: "Tier N — tight numerical (checkable because nothing amplifies)"
   - file: decisions.md
     section: "R-670 — Softening's reach: a softened run keeps the collision test on geometric `r`, softening offered only on the unregularised occupants, the regularised ones refusing `ε ≠ 0`, and Chazy's `E` softened; the escape test's and the ionisation gate's pair energies take the softened potential, identical at `ε = 0`; the decode's `V₀` is softened, with `virial_ratio` following and `E₀ = K₀ + V₀`, so REQ-VAL-027, REQ-COL-006 and R-436's collision pole are restated for `ε ≠ 0` and unchanged at `ε = 0`; a view refuses `ε ≠ 0` with any `Some(E*)`; the substep law stays on geometric `d²` and `r_min` *(closes RQ-656; amends R-29, R-32, R-436 and R-654)*"
+  - file: decisions.md
+    section: "R-710 — The ionisation gate's total-energy condition reads the stored `E_0`, its sign decided once per trajectory at `t = 0`, at `ε = 0` and `ε ≠ 0` alike; the condition stays; it is an enumerated exception in `branch_inputs.rs`, the decision differing between backends only within a few ulp of `E_0 = 0`, measured and reported, never reconciled; a control fixture fails if the condition is dropped *(closes RQ-697; amends R-34 and R-84; refines R-32 and R-694)*"
   verify:
     method: unit test
-    detail: "the force equals the central difference of V at f64, for ε = 0, a small ε and an ε above the pair distance; ε = 0 is bit-identical to the Newtonian force and energy; ε is bitwise the sim-key value at every step and on every sample, along a run in which R changes; a softened leapfrog's drift under the softened V converges with step size; at ε ≠ 0 the decode stage's E₀ agrees with the kernel's E₀ under the softened V, the descriptor's V₀ softened (R-670); controls: E read with the Newtonian V at ε ≠ 0 fails that drift bound, an E₀ read with the Newtonian V at ε ≠ 0 fails that agreement, and an ε recomputed from the state or from R(t) fails the bitwise check; on gpu-metal and gpu-lavapipe, per step and per decode, each with ε ≠ 0 within its Tier-N tolerance of the f64 CPU, the FTLE shadow included, and at ε = 0 the same bits as the Newtonian kernel's, with the control that a GPU build whose force drops ε fails; at ε ≠ 0 a pair closing below r_coll collides at the geometric distance; E_rel and the ionisation gate's pair energies use √(d² + ε²) in the potential term and equal the written formulas bit for bit at ε = 0; the Chazy classifier reads the softened E_0; the substep bucket of a state is the same at ε = 0 and ε ≠ 0; with the controls that a collision test on √(r² + ε²) misses a geometric collision and an E_rel left Newtonian at ε ≠ 0 differs from the softened one on a close pair; at ε ≠ 0 the decode stage's V₀ equals −Σ mᵢmⱼ/√(r² + ε²), finite at a zero pair separation, virial_ratio and E₀ = K₀ + V₀ following; cargo xtask gate decode-agreement, its ε ≠ 0 arm on gpu-metal, gpu-lavapipe and the CPU twin: the fragment decode forms the same V₀ and the agreement preset compares there like any pixel, with the controls that a zero separation at ε ≠ 0 drawn invalid fails and an ε dropped from the fragment decode fails the agreement; cargo xtask gate e0-agreement, its ε ≠ 0 arm on the CPU, gpu-metal and gpu-lavapipe: E_0 agrees with the softened K_0 + V_0 within REQ-VAL-117's tolerance, the zero-separation pixel included, with the control that V_0 read Newtonian at ε ≠ 0 fails; at ε = 0 the −∞ select and every R-436 check unchanged; on boundary states at ε ≠ 0 either side of E_rel = 0 and of each gate pair's energy = 0, identical inputs give identical escape and gate-pair decisions on CPU-f64, CPU-f32, gpu-metal and gpu-lavapipe, with the control that a form taking √(d² + ε²) at the decision forks on the same inputs; the physics reviewer checks branch_inputs.rs enumerates E_rel and the gate's pair energies, neither fed by a runtime sqrt or div; at total E = 0 the gate's decision, and what branch_inputs.rs holds of it, are as RQ-697 rules"
+    detail: "the force equals the central difference of V at f64, for ε = 0, a small ε and an ε above the pair distance; ε = 0 is bit-identical to the Newtonian force and energy; ε is bitwise the sim-key value at every step and on every sample, along a run in which R changes; a softened leapfrog's drift under the softened V converges with step size; at ε ≠ 0 the decode stage's E₀ agrees with the kernel's E₀ under the softened V, the descriptor's V₀ softened (R-670); controls: E read with the Newtonian V at ε ≠ 0 fails that drift bound, an E₀ read with the Newtonian V at ε ≠ 0 fails that agreement, and an ε recomputed from the state or from R(t) fails the bitwise check; on gpu-metal and gpu-lavapipe, per step and per decode, each with ε ≠ 0 within its Tier-N tolerance of the f64 CPU, the FTLE shadow included, and at ε = 0 the same bits as the Newtonian kernel's, with the control that a GPU build whose force drops ε fails; at ε ≠ 0 a pair closing below r_coll collides at the geometric distance; E_rel and the ionisation gate's pair energies use √(d² + ε²) in the potential term and equal the written formulas bit for bit at ε = 0; the Chazy classifier reads the softened E_0; the substep bucket of a state is the same at ε = 0 and ε ≠ 0; with the controls that a collision test on √(r² + ε²) misses a geometric collision and an E_rel left Newtonian at ε ≠ 0 differs from the softened one on a close pair; at ε ≠ 0 the decode stage's V₀ equals −Σ mᵢmⱼ/√(r² + ε²), finite at a zero pair separation, virial_ratio and E₀ = K₀ + V₀ following; cargo xtask gate decode-agreement, its ε ≠ 0 arm on gpu-metal, gpu-lavapipe and the CPU twin: the fragment decode forms the same V₀ and the agreement preset compares there like any pixel, with the controls that a zero separation at ε ≠ 0 drawn invalid fails and an ε dropped from the fragment decode fails the agreement; cargo xtask gate e0-agreement, its ε ≠ 0 arm on the CPU, gpu-metal and gpu-lavapipe: E_0 agrees with the softened K_0 + V_0 within REQ-VAL-117's tolerance, the zero-separation pixel included, with the control that V_0 read Newtonian at ε ≠ 0 fails; at ε = 0 the −∞ select and every R-436 check unchanged; on boundary states at ε ≠ 0 either side of E_rel = 0 and of each gate pair's energy = 0, identical inputs give identical escape and gate-pair decisions on CPU-f64, CPU-f32, gpu-metal and gpu-lavapipe, with the control that a form taking √(d² + ε²) at the decision forks on the same inputs; the physics reviewer checks branch_inputs.rs enumerates E_rel and the gate's pair energies, neither fed by a runtime sqrt or div; at E_0 = 0 the gate's decision may differ between backends only within REQ-INT-113's width, reported with its distance from 0, and branch_inputs.rs lists it as the exception (R-710)"
   rulings:
   - R-654
   - R-670
+  - R-710
   milestone: M9
   rq:
   - RQ-693
   - RQ-694
-  - RQ-697
-  note: "R-654. Closed by TASK-M9-39, a build task after the core build, not a target: it is not scored, and its tests block its own merge. It waits on RQ-656 for the collision branch, the regularised occupants, the Chazy classifier, the escape test, the decode's V₀, η_E and the substep law. The E₀ agreement in its verify: physics review 5730650164 of PR #375, P1; what V₀ holds is RQ-656's, question (5), so the test holds E₀ to the softened V, as ruled, and V₀ to that ruling. Verify *was:* \"ε scales with the initial R and does not change as R does along a run\", which cannot fail on a canonical run, R₀ being 1 on all of them (physics review 5730650164 of PR #375, P3; applied per R-369). The GPU clause of its verify: physics review 5730650164 of PR #375, P2; applied per R-369. R-670 (2 Nov 2026, closing RQ-656): the collision test stays geometric; the regularised occupants refuse ε ≠ 0; Chazy's E, E_rel and the ionisation gate's pair energies and the decode's V₀ take the softened potential; a view refuses ε ≠ 0 with any Some(E*); the substep law stays geometric. *Was (verify):* \"…the descriptor's V₀ being in the form RQ-656's ruling gives…\"; *was (rq):* RQ-656. It waits on RQ-693 (physics review 5771183527 of PR #408, F1), RQ-694 (F2; code review 5771184172, C2) and RQ-697 (physics review 5771573790 of PR #408, F8), as its task does. R-670's sentences in the statement and verify: code review 5771184172 of PR #408, C1; *was (statement):* it ended at \"and E, E₀ and the drift meters must read the softened V.\"; *was (verify):* it ended at \"and at ε = 0 the same bits as the Newtonian kernel's, with the control that a GPU build whose force drops ε fails\". The branch-input clauses: physics review 5771183527 of PR #408, F4. The two gate arms: physics review 5771183527 of PR #408, F5."
+  note: "R-654. Closed by TASK-M9-39, a build task after the core build, not a target: it is not scored, and its tests block its own merge. It waits on RQ-656 for the collision branch, the regularised occupants, the Chazy classifier, the escape test, the decode's V₀, η_E and the substep law. The E₀ agreement in its verify: physics review 5730650164 of PR #375, P1; what V₀ holds is RQ-656's, question (5), so the test holds E₀ to the softened V, as ruled, and V₀ to that ruling. Verify *was:* \"ε scales with the initial R and does not change as R does along a run\", which cannot fail on a canonical run, R₀ being 1 on all of them (physics review 5730650164 of PR #375, P3; applied per R-369). The GPU clause of its verify: physics review 5730650164 of PR #375, P2; applied per R-369. R-670 (2 Nov 2026, closing RQ-656): the collision test stays geometric; the regularised occupants refuse ε ≠ 0; Chazy's E, E_rel and the ionisation gate's pair energies and the decode's V₀ take the softened potential; a view refuses ε ≠ 0 with any Some(E*); the substep law stays geometric. *Was (verify):* \"…the descriptor's V₀ being in the form RQ-656's ruling gives…\"; *was (rq):* RQ-656. It waits on RQ-693 (physics review 5771183527 of PR #408, F1), RQ-694 (F2; code review 5771184172, C2) and RQ-697 (physics review 5771573790 of PR #408, F8), as its task does. R-670's sentences in the statement and verify: code review 5771184172 of PR #408, C1; *was (statement):* it ended at \"and E, E₀ and the drift meters must read the softened V.\"; *was (verify):* it ended at \"and at ε = 0 the same bits as the Newtonian kernel's, with the control that a GPU build whose force drops ε fails\". The branch-input clauses: physics review 5771183527 of PR #408, F4. The two gate arms: physics review 5771183527 of PR #408, F5. R-710 (4 Nov 2026, RQ-697 (b)): the wait on RQ-697 ends. *Was (statement):* \"must follow RQ-697's ruling\"; *was (verify):* \"at total E = 0 the gate's decision, and what branch_inputs.rs holds of it, are as RQ-697 rules\"."
 - id: REQ-INT-112
   area: INT
   kind: definition
@@ -5774,8 +5783,28 @@
   - R-72
   - R-547
   - R-694
+  - R-710
   milestone: M4
-  note: "R-694 (4 Nov 2026, RQ-685 (a), \"as a task\"): TASK-M4-29. Neither input is on any GPU at the ruling's date, and REQ-INT-057's decisions are unmeasured on every GPU. RQ-697 (PR #408) holds the ionisation gate's total E > 0, which is not this requirement's; TASK-M4-29 waits on it through TASK-M3-12."
+  note: "R-694 (4 Nov 2026, RQ-685 (a), \"as a task\"): TASK-M4-29. Neither input is on any GPU at the ruling's date, and REQ-INT-057's decisions are unmeasured on every GPU. The ionisation gate's total E > 0 is not this requirement's: R-710 makes its E_0 sign the enumerated exception."
+- id: REQ-INT-113
+  area: INT
+  kind: calibration
+  statement: "The width within which the ionisation gate's stored E_0 sign may differ between backends (R-710's \"a few ulp of E_0 = 0\") must be calibrated: a number of ulps of the larger of |K_0| and |V_0|, proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human and recorded in decisions.md."
+  source:
+  - file: decisions.md
+    section: "R-710 — The ionisation gate's total-energy condition reads the stored `E_0`, its sign decided once per trajectory at `t = 0`, at `ε = 0` and `ε ≠ 0` alike; the condition stays; it is an enumerated exception in `branch_inputs.rs`, the decision differing between backends only within a few ulp of `E_0 = 0`, measured and reported, never reconciled; a control fixture fails if the condition is dropped *(closes RQ-697; amends R-34 and R-84; refines R-32 and R-694)*"
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: docs/contracts/principia_integrator_contract.md
+    section: Part 4 — Determinism, and the substep as the subtle seam
+  verify:
+    method: review checklist
+    detail: "CALIBRATION (R-71): the proposal measures E_0's sign on boundary states either side of E_0 = 0 on CPU-f64, CPU-f32, gpu-metal and gpu-lavapipe, states the widest fork found with its evidence, and physics reviewer checked; R-710 gives no number."
+  rulings:
+  - R-71
+  - R-710
+  milestone: M4
+  note: "R-710 (4 Nov 2026, RQ-697 (b)). Closed by TASK-M4-03. A fork past this width is reported as a defect, never reconciled."
 - id: REQ-EVT-001
   area: EVT
   statement: "Every pixel must get a labelled output — escape, collision or bounded (reaching the horizon is bounded), sim_failed or decode_failed, or RUNNING while in flight — with no timeout state, and substep-cap saturation a confidence flag, never a terminal."
@@ -5875,7 +5904,7 @@
   milestone: M3
 - id: REQ-EVT-006
   area: EVT
-  statement: "Triple ejection (ionisation) must be reported as `escape` with `detail = 3`, gated on all three pairwise relative energies positive, all three separations growing and total `E > 0`, evaluated with the escape rule's settling."
+  statement: "Triple ejection (ionisation) must be reported as `escape` with `detail = 3`, gated on all three pairwise relative energies positive, all three separations growing and total `E > 0`, reading the stored `E_0`, its sign decided once per trajectory at t = 0 at ε = 0 and ε ≠ 0 alike (R-710), evaluated with the escape rule's settling."
   source:
   - file: docs/contracts/principia_integrator_contract.md
     section: Part 7 — Detectors as the `SimState` producer
@@ -5883,15 +5912,16 @@
     section: 3.6 Detectors (per `STEP`, on the projected state)
   - file: decisions.md
     section: "R-32 — The ionisation gate is pairwise-unbound, separating and total `E > 0`, with settling *(IE-4 (c))*"
+  - file: decisions.md
+    section: "R-710 — The ionisation gate's total-energy condition reads the stored `E_0`, its sign decided once per trajectory at `t = 0`, at `ε = 0` and `ε ≠ 0` alike; the condition stays; it is an enumerated exception in `branch_inputs.rs`, the decision differing between backends only within a few ulp of `E_0 = 0`, measured and reported, never reconciled; a control fixture fails if the condition is dropped *(closes RQ-697; amends R-34 and R-84; refines R-32 and R-694)*"
   verify:
     method: unit test
-    detail: "a synthetic three-way unbound E > 0 state fires escape detail=3; a state with one bound pair does not"
+    detail: "a synthetic three-way unbound E > 0 state fires escape detail=3; a state with one bound pair does not; R-710: an equilateral state of unit masses, side r, each moving radially outward with u² just above 4/(3r), all pairs unbound and E < 0, does not fire detail = 3, and a state whose live E has the opposite sign to its stored E_0 is decided by E_0; controls: the condition dropped fails the first, the live E read fails the second"
   rulings:
   - R-32
+  - R-710
   milestone: M3
-  rq:
-  - RQ-697
-  note: "Doc text says the gate's definition pass is open; R-32 (recorded; applied before outcome data at scale) settles it. Recorded; applied before outcome data at scale. It waits on RQ-697, what the gate's total E > 0 reads and by what form, at ε = 0 as well as ε ≠ 0 (physics review 5771573790 of PR #408, F8; applied per R-369)."
+  note: "Doc text says the gate's definition pass is open; R-32 (recorded; applied before outcome data at scale) settles it. Recorded; applied before outcome data at scale. It waits on RQ-697, what the gate's total E > 0 reads and by what form, at ε = 0 as well as ε ≠ 0 (physics review 5771573790 of PR #408, F8; applied per R-369). R-710 (4 Nov 2026, RQ-697 (b)): the wait ends. *Was (statement):* \"and total `E > 0`, evaluated\"."
 - id: REQ-EVT-007
   area: EVT
   statement: "The `state` enum must hold the physical outcomes `escape`/`bounded`/`collision` and the lifecycle states `sim_failed` (non-finite during integration; payload untrustworthy except `state`) and `decode_failed`, mutually exclusive; there must be no `timeout` state and no `MAX_SUBSTEPS` terminal (reaching `T` is `bounded`)."
@@ -29841,7 +29871,7 @@
   milestone: M4
 - id: REQ-VAL-059
   area: VAL
-  statement: "Parity Tier L must assert exact agreement, on identical inputs, per step, of: `N_sub`, the terminal label and its precedence resolution, the `state` enum, escaper identity, collision pair (`detail`), feasibility and degenerate branch + reason, mirror-tie choice, coincident-pair rejection, decode-mode selection and loop iteration structure."
+  statement: "Parity Tier L must assert exact agreement, on identical inputs, per step, of: `N_sub`, the terminal label (but for the ionisation gate's stored E_0 sign, which may differ between backends only within REQ-INT-113's width of E_0 = 0, measured and reported, never reconciled (R-710)) and its precedence resolution, the `state` enum, escaper identity, collision pair (`detail`), feasibility and degenerate branch + reason, mirror-tie choice, coincident-pair rejection, decode-mode selection and loop iteration structure."
   source:
   - file: docs/contracts/principia_parity_contract.md
     section: Tier L — exact, no tolerance (the bulk of the suite)
@@ -29849,6 +29879,8 @@
     section: R-84 — Branch decisions across precisions *(closes RQ-35)*
   - file: decisions.md
     section: "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
+  - file: decisions.md
+    section: "R-710 — The ionisation gate's total-energy condition reads the stored `E_0`, its sign decided once per trajectory at `t = 0`, at `ε = 0` and `ε ≠ 0` alike; the condition stays; it is an enumerated exception in `branch_inputs.rs`, the decision differing between backends only within a few ulp of `E_0 = 0`, measured and reported, never reconciled; a control fixture fails if the condition is dropped *(closes RQ-697; amends R-34 and R-84; refines R-32 and R-694)*"
   verify:
     method: property test
     detail: "stateless test over boundary states: every listed decision identical across CPU-f64, CPU-f32 and native GPU (Metal, and lavapipe as the second native backend, R-110); spike baseline 705 states, 0 forks"
@@ -29858,8 +29890,9 @@
   - R-84
   - R-110
   - R-113
+  - R-710
   milestone: M4
-  note: "R-113 (RQ-97): the browser-GPU leg is the M8 browser Tier-L requirement closed with REQ-VAL-116."
+  note: "R-113 (RQ-97): the browser-GPU leg is the M8 browser Tier-L requirement closed with REQ-VAL-116. R-710 (4 Nov 2026, RQ-697 (b)): ionisation is `escape` with detail = 3, so the label takes the exception."
 - id: REQ-VAL-060
   area: VAL
   statement: "Parity Tier B must assert bit-exact CPU↔GPU agreement, given the same branch decisions and integer inputs, of `t_end_step`, `t_dmin_step`, `total_substeps`, every packed descriptor field (`state`, `detail`, `saturated`, `dmin_pair`, `last_symbol`) and its bit offset, and the free-group word arithmetic including `fgw_length_raw`; the f16 display scalars must not be asserted at Tier B."
@@ -41158,8 +41191,7 @@
   rq:
   - RQ-693
   - RQ-694
-  - RQ-697
-  note: "R-654. Closed by TASK-M9-39. The range of ε is REQ-SYS-095's, a calibration (R-71). It waits on RQ-656, as its task does. *Was (the range):* \"a definition written by that task (R-72; physics reviewer approves)\"; statement *was:* \"in the range its definition states\". Verify *was:* \"and just outside it, NaN and ±∞ are refused with the typed reason\", with no negative ε and no ε = 0 (physics review 5730650164 of PR #375, P4; applied per R-369). R-670 (2 Nov 2026) closes RQ-656, and the wait on it ends; *was (rq):* RQ-656. It waits on RQ-693 (physics review 5771183527 of PR #408, F1), RQ-694 (F2; code review 5771184172, C2) and RQ-697 (physics review 5771573790 of PR #408, F8), as its task does. R-670's sentences in the statement and verify: code review 5771184172 of PR #408, C1; *was (statement):* it ended at \"NaN, ±∞ and negative ε staying refused.\"; *was (verify):* it ended at \"control: a header writer dropping ε fails\"."
+  note: "R-654. Closed by TASK-M9-39. The range of ε is REQ-SYS-095's, a calibration (R-71). It waits on RQ-656, as its task does. *Was (the range):* \"a definition written by that task (R-72; physics reviewer approves)\"; statement *was:* \"in the range its definition states\". Verify *was:* \"and just outside it, NaN and ±∞ are refused with the typed reason\", with no negative ε and no ε = 0 (physics review 5730650164 of PR #375, P4; applied per R-369). R-670 (2 Nov 2026) closes RQ-656, and the wait on it ends; *was (rq):* RQ-656. It waits on RQ-693 (physics review 5771183527 of PR #408, F1), RQ-694 (F2; code review 5771184172, C2) and RQ-697 (physics review 5771573790 of PR #408, F8), as its task does. R-670's sentences in the statement and verify: code review 5771184172 of PR #408, C1; *was (statement):* it ended at \"NaN, ±∞ and negative ε staying refused.\"; *was (verify):* it ended at \"control: a header writer dropping ε fails\". R-710 (4 Nov 2026, RQ-697 (b)): the wait on RQ-697 ends."
 - id: REQ-SYS-095
   area: SYS
   kind: calibration
@@ -41180,8 +41212,7 @@
   rq:
   - RQ-693
   - RQ-694
-  - RQ-697
-  note: "R-654 gives ε's form and no bounds; the bounds change which runs are admitted, so they are values, not a definition (R-71; applied per R-369, code review 5730587922 of PR #375, C4). Closed by TASK-M9-39, a build task. Confirmed by the human with the M9 report if TASK-M9-39 has landed by then, otherwise in the next batch of calibrations after it lands, since the report does not wait on it. It waits on RQ-656, as its task does. R-670 (2 Nov 2026) closes RQ-656, and the wait on it ends; *was (rq):* RQ-656. It waits on RQ-693 (physics review 5771183527 of PR #408, F1), RQ-694 (F2; code review 5771184172, C2) and RQ-697 (physics review 5771573790 of PR #408, F8), as its task does."
+  note: "R-654 gives ε's form and no bounds; the bounds change which runs are admitted, so they are values, not a definition (R-71; applied per R-369, code review 5730587922 of PR #375, C4). Closed by TASK-M9-39, a build task. Confirmed by the human with the M9 report if TASK-M9-39 has landed by then, otherwise in the next batch of calibrations after it lands, since the report does not wait on it. It waits on RQ-656, as its task does. R-670 (2 Nov 2026) closes RQ-656, and the wait on it ends; *was (rq):* RQ-656. It waits on RQ-693 (physics review 5771183527 of PR #408, F1), RQ-694 (F2; code review 5771184172, C2) and RQ-697 (physics review 5771573790 of PR #408, F8), as its task does. R-710 (4 Nov 2026, RQ-697 (b)): the wait on RQ-697 ends."
 - id: REQ-SYS-096
   area: SYS
   statement: "Dispatch must refuse a `SimUniforms` whose `g` or `m_total` is not 1, NaN and ±∞ included, with a typed reason, as it refuses `ε ≠ 0`: the kernel runs only at `G = 1` and `M = 1`, and a source in another `G` is converted at the import boundary, never carried to the kernel (R-668)."

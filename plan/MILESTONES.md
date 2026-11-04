@@ -273,10 +273,10 @@ render_contract "→ flat compute"; deep_zoom §3 layer 0: "defines the three co
 - The first kernel benchmarks.
 
 <!-- gate:M4 -->
-**Exit gate — 109 requirements** (and every earlier gate still green):
+**Exit gate — 110 requirements** (and every earlier gate still green):
 
 - CHART (3): REQ-CHART-037, REQ-CHART-052, REQ-CHART-074
-- INT (17): REQ-INT-057…071, REQ-INT-083, REQ-INT-112
+- INT (18): REQ-INT-057…071, REQ-INT-083, REQ-INT-112…113
 - EVT (1): REQ-EVT-021
 - PAY (2): REQ-PAY-074, REQ-PAY-085
 - SCHED (12): REQ-SCHED-004…013, REQ-SCHED-084, REQ-SCHED-097
