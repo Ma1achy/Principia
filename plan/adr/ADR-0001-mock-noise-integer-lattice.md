@@ -16,6 +16,8 @@ since the corpus there is the authority (R-1), and `docs/archive/` and `docs/ref
 
 ## Context
 
+Sources: issue #390, comment 6632801932 (the RTX) and comment 6633374835 (Metal, lavapipe and the audit).
+
 **Observed:**
 - RTX 2080 SUPER, Vulkan, driver 621.01: `hash(i + vec2(1.0, 0.0))` in cell N and `hash(i)` in cell N+1 differ, with equal
   inputs.
@@ -159,8 +161,8 @@ be pinned, without images.
 
 ## Must not claim
 
-- That any real shader or kernel path is safe on NVIDIA. The audit's "no real shader has the mock's bug shape" is not
-  "safe": `canon.rs`'s premise stays unenforced on Vulkan (RQ-690).
+- That any real shader or kernel path is safe on NVIDIA. The audit's "No real shader has a float lattice hash" (issue #390,
+  comment 6633374835) is not "safe": `canon.rs`'s premise stays unenforced on Vulkan (RQ-690).
 - Anything on RQ-685, RQ-686 or RQ-687, or on R-297's meaning. No change to `StageMode::Off`, tolerances or probes.
 - A link to #393 or #396. Nothing here connects them. "Same driver" is a hypothesis.
 - That the driver's rewrite is proven. It is reproduced by a model; no compiler output exists.

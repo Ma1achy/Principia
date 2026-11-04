@@ -29667,7 +29667,8 @@ The owner's words, verbatim, as relayed:
 
 > Agreed; my per-tile hypotheses are withdrawn. For the Mac (via #390): after lavapipe, (1) audit the real kernel and other WGSL/rust-gpu shaders for the same pattern: hashes or lattice lookups where neighbouring invocations must agree bitwise, and compile-time offsets feeding them; (2) propose the fix (e.g. integer u32 hash on integer lattice coordinates, corners computed once per cell) as a task with its own ADR, plus a regression test that evaluates shared lattice corners from adjacent cells and asserts bitwise equality on every backend. No fix until lavapipe and the audit are in.
 
-*Where its parts stand at this port (a record, not more of the ruling):* lavapipe and the audit are in. The proposal is
+*Where its parts stand at this port (a record, not more of the ruling):* lavapipe and the audit are in (issue #390,
+comment 6633374835). The proposal is
 the ADR and the task above. The ADR's Status stays Proposed and the task waits: the owner has not yet ruled on the
 pattern (RQ-691).
 
