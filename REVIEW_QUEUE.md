@@ -2109,8 +2109,12 @@ record, which RQ-686 and RQ-687 share.*
   - **So the risk is open, not absent.** A driver whose quotients are one ulp off is the case where
     `(M_pair + m_b)/d` could flip `E_rel > 0` near zero, or `n̂` could flip `|Δn̂| < tau`. Neither is measured: neither
     input is on any GPU at this commit.
-  - **Trajectories:** not measurable, as above. The divisions M4 will put on the GPU include
-    `crates/kernel/src/physics/force.rs`:19-21, `occupant/kdk.rs`:65-74 and `driver/advance.rs`:125.
+  - **Trajectories:** not measurable, as above. But division is already on the GPU in the continuous decode, canon and
+    encode outputs (for example `crates/kernel/src/decode/config.rs`:78-84 and `canon.rs`:405), and these set every GPU
+    trajectory's start. The measured decode reach is #400's `shape_sphere` fuzz, 52.05, 28.55 and 17.12 eps on the RTX,
+    Metal and lavapipe against 256, cause unsettled (RQ-687). The divisions M4 will add include `physics/force.rs`:19-21,
+    `occupant/kdk.rs`:65-74, `occupant/rk4.rs`, `driver/advance.rs`:125 and `driver/welford.rs`; the default occupant is
+    Heggie × RK4 (REQ-INT-051; integrator contract :90).
 - **The conflict, which stays open:**
   - **That it means branch decisions:** R-84, which R-297 cites for this claim, says "`parity_contract` governs" and
     speaks only of branch decisions; parity § 4 says "as this contract states them"; REQ-INT-057 leaves continuous values
