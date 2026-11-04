@@ -14,6 +14,9 @@ env:
   # R-374: every CI job builds the dev and test profiles with line tables only; every workflow sets the same values.
   CARGO_PROFILE_DEV_DEBUG: line-tables-only
   CARGO_PROFILE_TEST_DEBUG: line-tables-only
+  # No incremental state, the owner's CI setting (PR #394), in every workflow like R-374's values. This workflow has no
+  # rust-cache to export it, so this line is what sets it for `cargo xtask web-skeleton`.
+  CARGO_INCREMENTAL: "0"
 
 jobs:
   build:
@@ -23,6 +26,10 @@ jobs:
       # The toolchain rust-toolchain.toml pins, and the wasm target this workflow alone and `ci.yml`'s `web-skeleton` need.
       - name: rustup toolchain install (rust-toolchain.toml)
         run: rustup toolchain install && rustup target add wasm32-unknown-unknown
+      # Every dependency without debug info, as a cargo config in the runner's CARGO_HOME; the workspace's own crates
+      # keep R-374's line tables (`.github/actions/cargo-ci-config`).
+      - name: Dependencies without debug info, every profile
+        uses: ./.github/actions/cargo-ci-config
       # The version `xtask::web_skeleton::WASM_BINDGEN_VERSION` pins; a test checks the two agree.
       - uses: taiki-e/install-action@v2
         with:
