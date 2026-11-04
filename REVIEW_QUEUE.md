@@ -2037,9 +2037,10 @@ record, which RQ-686 and RQ-687 share.*
   - `docs/contracts/principia_parity_contract.md`:154, § 4: "**Off:** bit-identity and identical branch decisions hold
     as this contract states them (R-84; Tier B)".
   - The same file, :97, § 2, Tier B: "a GPU's `pow`/`sqrt`/`div` and libm's differ by 1–3 ulp *in every math mode*".
-  - `plan/requirements.yaml`, REQ-INT-057: branch decisions "must be bit-identical across the CPU and every GPU backend
-    on identical inputs, per step, while continuous values (positions, momenta, energy, trajectory, and the outcome
-    class they decide near a chaotic boundary) are left free to diverge and are never reconciled".
+  - `plan/requirements.yaml`, REQ-INT-057: "the wrapper's branch decisions made from the current state (substep bucket
+    N_sub, cap decision, collision, escape, horizon, SIM_FAILED and terminal) must be bit-identical across the CPU and
+    every GPU backend on identical inputs, per step, while continuous values (positions, momenta, energy, trajectory,
+    and the outcome class they decide near a chaotic boundary) are left free to diverge and are never reconciled".
   - `plan/requirements.yaml`, REQ-SYS-074's verify: "in the gpu-metal and gpu-lavapipe jobs … compares each bit for bit
     with the CPU's correctly rounded f32 division and reports the mismatches per backend; it must show none on either
     backend … a mismatch with the setting off is a REVIEW_QUEUE entry".
@@ -2070,18 +2071,34 @@ record, which RQ-686 and RQ-687 share.*
   identified.
 - **From memory, unchecked:** Vulkan and WGSL bound `x / y` at 2.5 ULP, neither promises correct rounding, and no Vulkan
   switch asks for it. The eight posted quotients are within that bound; no worst case over the fuzzed sets was printed.
-- **Reach:** branch decisions: none shown. Their inputs don't use division (R-547;
-  `docs/notes/principia_gpu_determinism_note.md`, rule 1: "No runtime `pow`/`sqrt`/`div` decides control flow"), and on
-  the card `decode_` passed 36 of 36 and `canonicaliser_` 28 of 28, on identical inputs. Trajectories: not measurable,
-  as above. The divisions M4 will put on the GPU include `crates/kernel/src/physics/force.rs`:19-21,
-  `occupant/kdk.rs`:65-74 and `driver/advance.rs`:125.
+- **Reach:**
+  - **Branch decisions: a gap, not a clean result.** REQ-INT-057's are the wrapper's, and no GPU has run any of them: the
+    wrapper has no compute entry point at this commit, and `detect` (`crates/kernel/src/driver/cadence.rs`:71) is a stub
+    until TASK-M3-09 and TASK-M3-12. What is measured on this card is canon's and decode's branches (R-547), on identical
+    inputs: `decode_` 36 of 36 and `canonicaliser_` 28 of 28.
+  - **Division in a branch input is excluded by rule, and the rule isn't met in writing yet.** Rule 1 of
+    `docs/notes/principia_gpu_determinism_note.md`: "No runtime `pow`/`sqrt`/`div` decides control flow". REQ-INT-064 and
+    R-34 (corrected by R-547) require `|Δn̂|` and `E_rel` to be "built only from operations every IEEE backend rounds
+    alike", in a fixed written form, and `plan/tasks/M4/TASK-M4-03.md`:45 asks for "no runtime `pow`/`sqrt`/`div` feeding
+    a decision". But escape is on REQ-INT-057's list, and its `E_rel` has a division: `E_rel = ½|Δv|² − (M_pair + m_b)/d`
+    (R-29; `docs/contracts/principia_integrator_contract.md`:737). So has `|Δn̂|`: `n̂(r, m) = (u, v, w)/I`
+    (`docs/design/principia_dd_simstate_payload.md`:529), and `crates/kernel/src/shape.rs`:51-69 divides by `m01` and `i`;
+    its magnitude is also a `√` unless it is compared squared. The integrator contract, :608, calls both "shared branches
+    whose inputs are multi-op arithmetic". Neither written form exists, and nothing read here reconciles the two
+    formulas with the rule.
+  - **So the risk is open, not absent.** A driver whose quotients are one ulp off is the case where
+    `(M_pair + m_b)/d` could flip `E_rel > 0` near zero, or `n̂` could flip `|Δn̂| < tau`. Neither is measured: neither
+    input is on any GPU at this commit.
+  - **Trajectories:** not measurable, as above. The divisions M4 will put on the GPU include
+    `crates/kernel/src/physics/force.rs`:19-21, `occupant/kdk.rs`:65-74 and `driver/advance.rs`:125.
 - **The conflict:** R-297's "bit-identity" read with REQ-INT-057 limits the claim to branch decisions and leaves
   continuous values free; read with REQ-SYS-074's verify and the two test comments, it is a claim about every division's
-  bits. The card satisfies the first reading as far as measured and fails the second, and "compiled Off" on Vulkan
-  records wgpu's path, not what the driver did.
+  bits. The card fails the second. On the first, only canon's and decode's branches are measured, on this card, and
+  REQ-INT-057's are unmeasured on every GPU. "Compiled Off" on Vulkan records wgpu's path, not what the driver did.
 - **The questions:** (1) is "bit-identity" with the setting off a claim about branch decisions, or about every Vulkan
   driver's division results? (2) what should the header record where a driver rewrites division with no switch?
-- **Options seen:** (a) branch decisions and the Tier B fields only: the claim stands on this card, the probe stays a
+- **Options seen:** (a) branch decisions and the Tier B fields only, which holds only if `E_rel` and `|Δn̂|` get
+  written forms that take no driver's division, a gap still open and untested on any GPU; the probe then stays a
   measurement on its two named jobs, and the "every backend" comments narrow; (b) every driver's division: this card
   fails R-297, and no switch is known to fix it (from memory, as above), so the claim needs the project's own division or a list of supported
   drivers; (c) bit-identity is claimed only on the drivers measured to give it, and any other Vulkan driver records
