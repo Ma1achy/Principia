@@ -54,7 +54,7 @@ existing ones (NOW-28 to NOW-34, M9-35 to M9-46); the earlier ranks are not re-r
 
 | # | Rank | Item | What it tests | Effort | Watch for | Row |
 |---|---|---|---|---|---|---|
-| 1 | NOW-28 | eucliss free-fall fate plane (papers-152) | Free-fall escapes at equal masses: escaper fractions, escape-time histogram, survivors; the mirror-pair floor (gap 5) | S | AI-authored, unlicensed: peek, `_local`, values masked. Copy its escape predicate. Mirror-pair escaper agreement 0.97 (t < 10), 0.84 (10–20), 0.63 (20–50), 0.51 (> 50), on the convention in the spot-check's item 5 | 204 |
+| 1 | NOW-28 | eucliss free-fall fate plane (papers-152) | Free-fall escapes at equal masses: escaper fractions, escape-time histogram, survivors; the mirror-pair floor (gap 5) | S | AI-authored, unlicensed: peek, `_local`, values masked. Its escape predicate applies read-side to recorded runs, Principia's classifier unchanged (R-649). Mirror-pair escaper agreement 0.97 (t < 10), 0.84 (10–20), 0.63 (20–50), 0.51 (> 50), on the convention in the spot-check's item 5 | 204 |
 | 2 | NOW-29 | cft-rebound Burrau divergence (papers-72) | f64 against fp128 and fp256 on Burrau to t = [value]; an [value]-member ulp ensemble | S | GPL-3.0-or-later: never committed, values masked. Unreviewed, AI-assisted. Raised from RECORD-ONLY | 221 |
 | 3 | NOW-25 (standing) | Maissouradze 2026, 7 stable free-fall orbits | Free-fall closure at unequal masses, a 7.7e-5 passage | S | AI-assisted; data path is papers-12, not papers-128 | 90 |
 | 4 | NOW-24 (standing) | Kandel 2026, 86 refined starts | L≠0 closure, equal masses | S | Ours: 7 are atlas rows and 1 nearly; peek on the other 78 | 190 |
@@ -84,7 +84,7 @@ Bengochea 2011 and 2013.
 | 10 | M9-44 | Tian & Zhou 2003, Chin. Astron. Astrophys. 27, 209 | L≠0 equal-mass lifetimes by homology-map region | L | Table 1 fails its own arithmetic; sampling and root choice undefined | 148 |
 
 Then: M9-45 Puodzius 2026 (peek; multipliers on held Belgrade orbits, raised from RECORD-ONLY) and M9-46 ThreeBodyFractal
-Image02 (peek; finite-radius stop in SI units, a new stop predicate needed).
+Image02 (peek; finite-radius stop in SI units, a read-side stop predicate needed).
 
 ## SKIP list
 
