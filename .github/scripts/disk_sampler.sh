@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# The `shell:` of `cargo xtask ci` in `xtask-ci`, and of the heavy steps of the `ci` shards and `gpu-kernel`
-# (.github/workflows/ci.yml): runs the step's script exactly as the
+# The `shell:` of `cargo xtask ci` in `xtask-ci`, and of the heavy steps of the `ci` and `ci-release` shards,
+# `ci-workspace` and `gpu-kernel` (.github/workflows/ci.yml): runs the step's script exactly as the
 # default shell would (`bash -e {0}`), samples the runner's disk beside it, and exits with the script's own status. No
 # gate reads what it measures, and nothing it does can change that status: it has no `set -e`, and every sampling
 # failure, a write to a full disk among them, is ignored. It is here and not in `scripts/` because `.github/` is full CI
@@ -29,7 +29,7 @@ sampler() {
     avail=$(df -Pk / | awk 'NR == 2 { print $4 }')
     text="== sample $n, +$SECONDS s, avail_kb=$avail, $(date -u +%H:%M:%S)
 $(df -h /)
-$(du -sh target/debug/deps target/tmp/* /tmp | head -n 40)
+$(du -sh target/debug/deps target/release/deps target/tmp/* /tmp | head -n 40)
 $(free -m)"
     printf '%s\n' "$text" >> "$out"
     if ((n % log_every == 1 || ${avail:-0} < low_kb)); then

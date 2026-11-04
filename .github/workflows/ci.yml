@@ -594,7 +594,8 @@ jobs:
   # The release archive's tests as 2 shards, each running its `hash:` slice from `ci-release-archive`'s archive, with
   # no build or test compile of its own but shard 1's doctests at the same profile (R-231). `--no-fail-fast`: every
   # test that fails at the release profile is shown, not only the first. The GPU harness self-tests among them run on
-  # lavapipe, as in `ci`.
+  # lavapipe, as in `ci`. Its heavy steps run under the disk sampler (`.github/scripts/disk_sampler.sh`), as the `ci`
+  # shards' do: a measurement, read by no gate.
   ci-release:
     needs: ci-release-archive
     runs-on: ubuntu-24.04
@@ -609,6 +610,21 @@ jobs:
         shard: [1, 2]
     steps:
       - uses: actions/checkout@v4
+      # Runner disk, as in the `ci` shards (the same list, copied): before the toolchain and the download, logging the
+      # free space before and after. The runner starts at about 60 GB used whatever its size, so a 72 GB runner has 12 GB
+      # free here, and both shards have run out of it ("No space left on device": `ci-release (1)` of run 41791726904,
+      # `ci-release (2)` on PR #394). Test infrastructure only.
+      - name: Free runner disk
+        run: |
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache/CodeQL \
+            /usr/lib/jvm /opt/hostedtoolcache/Java_* /usr/share/swift \
+            /usr/local/share/chromium /opt/google /opt/microsoft /usr/local/share/powershell /usr/local/share/boost \
+            /usr/share/miniconda /usr/local/julia* /usr/local/lib/node_modules \
+            /opt/hostedtoolcache/go /opt/hostedtoolcache/node /opt/hostedtoolcache/PyPy /opt/hostedtoolcache/Ruby \
+            /usr/lib/google-cloud-sdk /usr/local/aws-cli /usr/local/aws-sam-cli /opt/az /usr/share/az_*
+          sudo docker image prune --all --force > /dev/null
+          df -h /
       # What the two disks hold, for moving the build to `/mnt` (the owner's candidate 1, 4 Nov 2026). It only measures,
       # and nothing it finds can fail the job.
       - name: Runner disks
@@ -656,10 +672,13 @@ jobs:
         env:
           NEXTEST_PROFILE: ci
         run: cargo nextest run --archive-file $RUNNER_TEMP/nextest-release.tar.zst --extract-to . --extract-overwrite --no-fail-fast --partition hash:${{ matrix.shard }}/2
-      # The workspace's doctests at the release profile, once, in shard 1, which nextest does not run (R-231).
+        shell: bash .github/scripts/disk_sampler.sh {0}
+      # The workspace's doctests at the release profile, once, in shard 1, which nextest does not run (R-231). Under the
+      # disk sampler too: this step is the job's one compile.
       - name: cargo test --workspace --release --no-fail-fast --doc
         if: matrix.shard == 1
         run: cargo test --workspace --release --no-fail-fast --doc
+        shell: bash .github/scripts/disk_sampler.sh {0}
 
   # The GPU kernel build and the tests that need the built kernel, in a job of their own beside `ci` (R-325,
   # REQ-SYS-076): `cargo xtask build-kernel` compiles the kernel to the GPU, rust-gpu → SPIR-V → naga → WGSL
