@@ -11,7 +11,11 @@ on:
         description: which test
         required: true
         type: choice
-        options: [green, proof, survivor, survivor-cancel, survivor-refuse, plant-runner, quota, cold, gpu-idle, log-diag, checkout, plant-git-hook, plant-git-config, delete-workspace]
+        options: [green, proof, survivor, survivor-cancel, survivor-refuse, plant-runner, quota, cold, gpu-idle, log-diag, checkout, plant-git-hook, plant-git-config, plant-state, plant-check, delete-workspace]
+      what:
+        description: for plant-state, what to plant
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -149,6 +153,56 @@ jobs:
         run: |
           git -C $env:GITHUB_WORKSPACE config core.fsmonitor true
           "planted key, exit $LASTEXITCODE"
+          exit 0
+
+      - name: Plant git state that redirects git
+        if: inputs.test == 'plant-state'
+        env:
+          WHAT: ${{ inputs.what }}
+        run: |
+          $w = $env:GITHUB_WORKSPACE
+          $t = 'E:\runner-tools\tmp'
+          git init -q $w
+          $d = "$w\.git"
+          $zero = '0' * 40
+          switch ($env:WHAT) {
+            'commondir' { [IO.File]::WriteAllText("$d\commondir", "E:/runner-tools/tmp/other.git`n") }
+            'gitdir' { [IO.File]::WriteAllText("$d\gitdir", "E:/runner-tools/tmp/other.git`n") }
+            'grafts' { [IO.File]::WriteAllText("$d\info\grafts", "$zero`n") }
+            'alternates' { [void][IO.Directory]::CreateDirectory("$d\objects\info"); [IO.File]::WriteAllText("$d\objects\info\alternates", "E:/runner-tools/tmp/objects`n") }
+            'replace-loose' { [void][IO.Directory]::CreateDirectory("$d\refs\replace"); [IO.File]::WriteAllText("$d\refs\replace\$zero", "$zero`n") }
+            'replace-packed' { [IO.File]::WriteAllText("$d\packed-refs", "$zero refs/replace/$zero`n") }
+            'modules' { [void][IO.Directory]::CreateDirectory("$d\modules\x") }
+            'worktrees' { [void][IO.Directory]::CreateDirectory("$d\worktrees\x") }
+            'junction' {
+              [void][IO.Directory]::CreateDirectory("$t\guard-target")
+              [IO.File]::WriteAllText("$t\guard-target\keep.txt", 'must survive')
+              cmd /c mklink /J "$d\link" "$t\guard-target"
+            }
+            'names' {
+              $body = "@echo ran> $t\guard-canary.txt`r`n"
+              [IO.File]::WriteAllText("$t\z.cmd", $body)
+              [IO.File]::WriteAllText("$w\z.cmd", $body)
+              [void][IO.Directory]::CreateDirectory("$w\a&z.cmd")
+              [IO.File]::WriteAllText("$w\b&z.cmd", 'x')
+              [void][IO.Directory]::CreateDirectory("$w\c %PATH% & z.cmd")
+              [IO.File]::WriteAllText("$d\hooks\post-checkout", "#!/bin/sh`n")
+            }
+            default { "unknown: $env:WHAT"; exit 1 }
+          }
+          "planted $env:WHAT"
+          exit 0
+
+      - name: Check what the guard left, and remove this test's probes
+        if: inputs.test == 'plant-check'
+        run: |
+          $t = 'E:\runner-tools\tmp'
+          $w = $env:GITHUB_WORKSPACE
+          "planted total left in checkout: $(@(Get-ChildItem -LiteralPath $w -Force -ErrorAction SilentlyContinue).Count)"
+          "planted name ran: $(Test-Path -LiteralPath "$t\guard-canary.txt")"
+          "planted junction target kept: $(Test-Path -LiteralPath "$t\guard-target\keep.txt")"
+          foreach ($f in "$t\z.cmd", "$t\guard-canary.txt", "$t\guard-target\keep.txt") { if (Test-Path -LiteralPath $f) { [IO.File]::Delete($f) } }
+          if (Test-Path -LiteralPath "$t\guard-target") { [IO.Directory]::Delete("$t\guard-target") }
           exit 0
 
       - name: Can a step delete its own checkout?
