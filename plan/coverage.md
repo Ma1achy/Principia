@@ -43,14 +43,14 @@ Of these: 236 calibration, 181 definition, 1672 obligation. Retired (kept for th
 
 ## Sections
 
-1717 sections in 61 files: 1366 yield at least one requirement; 351 yield none and are listed below with the reason.
+1725 sections in 61 files: 1366 yield at least one requirement; 359 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | gap (RQ-378) | 1 |
 | gap (RQ-391) | 2 |
 | gap (RQ-577) | 2 |
 | gap (RQ-618) | 1 |
-| informative only | 243 |
+| informative only | 251 |
 | out of v1 (R-125) | 1 |
 | out of v1 (R-420) | 1 |
 | parent heading (obligations are in its subsections) | 55 |
@@ -212,6 +212,14 @@ Of these: 236 calibration, 181 definition, 1672 obligation. Retired (kept for th
 | R-700 — RQ-631's option (a) is confirmed: it is R-655's ruling, already built in the kernel, and the follow-up the owner names is TASK-M8-56's quadtree *(closes RQ-631)* | informative only | the owner's confirmation of R-655; a contradiction recorded; changes no requirement |
 | R-706 — The owner's deferrals of 4 Nov: each entry stays open with its target, and RQ-654's place on the list changes nothing, R-669 having closed it, with BZ-1C's work in M9; RQ-647 is moot under R-669 | informative only | the owner's deferrals; each entry stays open with its target; records RQ-654's and RQ-647's state; changes no requirement |
 | R-711 — One measurement-only self-hosted runner, `malachys-pc-rtx2080s`, on the owner's PC, with no pull-request trigger on any self-hosted job; DX12 may run on it as a measurement; PC benchmarks stay apart from the Mac's performance gates; a recorded run on it can serve Paper 2's non-Metal parity evidence; its jobs have their own workflow; the signing rules *(closes RQ-695; amends R-174, R-186 and R-656)* | informative only | the owner's message of 5 Nov 2026: one measurement-only self-hosted runner and its rules; ci; changes no requirement |
+| The owner's saved orders of 3 and 4 Nov 2026 — the batch R-713 to R-719 | informative only | the batch's introduction: what the rulings already carried and what is held; changes no requirement |
+| R-713 — CI demand is reduced rather than waited out: a head not ready for review is not pushed, and pushes go in order of what is closest to merging; lands in `plan/OPERATIONS.md` § "Merging" | informative only | the owner's order of 4 Nov 2026 on CI demand; ci; changes no requirement |
+| R-714 — A failed CI job is retried automatically only on a runner-level fault, in at most two retries, never on a real test failure or a flake, the classifier a script tested on saved logs; every CI speed-up step reports disk use and must reduce or hold it; lands in `plan/OPERATIONS.md` § "Merging" | informative only | the owner's messages of 4 Nov 2026 on retries and disk; ci; changes no requirement |
+| R-715 — A CI speed-up is claimed or rejected only on medians over at least 5 runs per arm, with per-step durations and `cargo build --timings` totals; `ci-workspace` red on a test timer is diagnosed first, never retried and never given a longer timeout; lands in `plan/OPERATIONS.md` § "Merging" | informative only | the owner's order of 4 Nov 2026 on measuring CI; ci; changes no requirement |
+| R-716 — The ten CI optimisation candidates: each measured before and after, negative results reported, one pull request per item, items 1 and 4 first, then 2 and 3, then the rest; lands in `plan/OPERATIONS.md` § "Merging" | informative only | the owner's list of 4 Nov 2026 of CI candidates; ci; changes no requirement |
+| R-717 — `main` is not merged into a pull request, and CI is not re-run, just to refresh a branch that has no conflict; lands in `plan/OPERATIONS.md` § "Merging" | informative only | the owner's order of 4 Nov 2026 on refresh merges; process; changes no requirement |
+| R-718 — Generated plan files are not committed if nothing needs them in git; otherwise they are marked in `.gitattributes` and conflicts are resolved by regenerating, never by hand, with a check that the committed copy matches a fresh regeneration; lands in `plan/OPERATIONS.md` § "Merging" | informative only | the owner's order of 4 Nov 2026 on generated files; process; changes no requirement |
+| R-719 — A Windows-only, non-reproducing GPU result is hardware-suspect: recorded, not filed as a code bug; one that reproduces is checked against Metal and lavapipe, failing everywhere our bug, passing elsewhere an NVIDIA Vulkan platform finding with no re-baselining; lands in `plan/OPERATIONS.md` § "Windows GPU results" | informative only | the owner's messages of 4 Nov 2026 on the Windows GPU results; process; changes no requirement |
 
 ### `docs/contracts/principia_canonical_spec.md`
 

@@ -30979,3 +30979,146 @@ The owner's words, 5 Nov 2026, verbatim:
 R-712 is in the "ci" group of `plan/rule_groups.yaml`.
 
 Changes REQ-VAL-180 (source, rulings, note).
+
+## The owner's saved orders of 3 and 4 Nov 2026 — the batch R-713 to R-719
+*5 Nov 2026 · the owner's message of that day, item (3); each order's words are verbatim in its ruling*
+
+The owner's words, 5 Nov 2026, verbatim:
+
+> (3) write my saved orders in orch/r630/ (CI demand/retry/disk/measurement/candidates, no refresh merges, generated files, Windows hardware note, admin bypass) up as one ruling batch for the next port;
+
+Each order was checked against `decisions.md` first. What a ruling already carried is named here; what is new has its own number below.
+
+*Already carried:*
+
+- **Admin bypass** is **R-682**, its quote the whole order, so it has no number here and loses no words.
+- **Superseded runs cancelled on pull-request branches, never on `main`** (the demand order; candidate 10) is **R-656** and, for `reviews`, **R-676**. Nothing is lost.
+- **"Require branches to be up to date" off** is **R-266**. *Addition:* the owner's name for it, "(strict: false)".
+- **Candidate 2's archive** is in part **R-372**, and **candidate 4's debug info** in part **R-374**.
+- **The candidates' constraints:** no paid runners, **R-656** and **R-683**; no sccache, **R-666** with **R-684**; no mold, **R-683**; no tolerance or default changed to make anything pass, **R-649**; no retries of real or flaky failures, **R-224** with **R-714** below; "Keep main-held rules in force while main is red", **R-681**.
+
+*Held for the owner, nothing reworded:* **RQ-703** (the quick tier's place, against R-683 and R-684), **RQ-704** (refresh merges, against R-676 and R-388), **RQ-705** (candidate 4's strip, against R-374) and **RQ-706** (candidate 3's cache, against R-285).
+
+## R-713 — CI demand is reduced rather than waited out: a head not ready for review is not pushed, and pushes go in order of what is closest to merging; lands in `plan/OPERATIONS.md` § "Merging"
+*4 Nov 2026 · the owner's order of that day, written up 5 Nov 2026 under the batch's item (3); applied in `plan/OPERATIONS.md` § "Merging", `plan/rule_groups.yaml` and `plan/section_notes.yaml`; changes no requirement*
+
+The owner's words, 4 Nov 2026, verbatim:
+
+> The queue is the free-tier concurrency cap (~20 jobs; 16 running, 28 runs queued). Reduce demand rather than wait: don't push intermediate heads that aren't ready for review; cancel superseded runs on PR branches (cancel-in-progress, never on main); push in order of what's closest to merging (#407, #411, #385, #404 first). The quick tier from the CI series is the structural fix, so move it up the series.
+
+*What it decides:* the queue is the free tier's concurrency cap, so demand is reduced: a head not ready for review is not pushed, and pushes go in order of what is closest to merging. The four pull requests it names were that day's order. Cancelling superseded runs is R-656's.
+
+*Applied per R-369:* the last sentence, moving the quick tier up the series, meets R-684's "still in that order, after step (1)", so it is recorded and not applied here: **RQ-703**.
+
+R-713 is in the "ci" group of `plan/rule_groups.yaml`.
+
+## R-714 — A failed CI job is retried automatically only on a runner-level fault, in at most two retries, never on a real test failure or a flake, the classifier a script tested on saved logs; every CI speed-up step reports disk use and must reduce or hold it; lands in `plan/OPERATIONS.md` § "Merging"
+*4 Nov 2026 · the owner's three messages of that day, written up 5 Nov 2026 under the batch's item (3); applied in `plan/OPERATIONS.md` § "Merging", `plan/rule_groups.yaml` and `plan/section_notes.yaml`; changes no requirement; built by PR #392*
+
+The owner's words, 4 Nov 2026, verbatim:
+
+> "is it possible to make it auto retry if the CI fails for something outside of our control like that? can u exclude smaller runners?"
+> "yeah and also if we as part of the CI optimisation can also make it use less space + speed it up"
+
+> For the retry workflow: put the "is this a runner fault?" classifier in a script with tests against saved logs (today's "No space left on device" run, a lost-communication sample, and a real test failure that must NOT retry), so the PR proves the decision logic even though the trigger itself can only be exercised after merge. After merge, confirm on the first real runner fault and report it.
+
+*The plan agreed in that exchange, as the orchestrator recorded it, not the owner's words:*
+
+> Context: main e1df88fa red on 72G runners (image 20261018.96.1) vs usual 145G. Agreed plan: (1) disk fit on 72G runners + auto-retry of failed jobs only, on runner-level signatures only (no space, lost communication, shutdown signal, disk sampler <2G at failure), max 1-2 attempts, logged in run summary; never on real test failures/flakes. (2) every CI speed-up step also reports disk use (lowest free per job) before/after and must reduce or hold it.
+
+*What it decides:*
+
+- **The retry** re-runs failed jobs only, on runner-level signatures only (no space, lost communication, shutdown signal, the disk sampler under 2 GB at failure), in at most two retries, logged in the run's summary, never on a real test failure or a flake.
+- **The classifier** is a script with tests against saved logs, a real test failure among them that must not retry. On `main` it is `.github/scripts/ci_retry.py`, with `xtask/tests/ci_retry.rs`, `fixtures/ci_retry/` and `.github/workflows/retry.yml`.
+- **After merge** it is confirmed on the first real runner fault, and that is reported.
+- **Disk.** Every CI speed-up step reports disk use, the lowest free per job, before and after, and must reduce or hold it.
+
+R-714 is in the "ci" group of `plan/rule_groups.yaml`.
+
+## R-715 — A CI speed-up is claimed or rejected only on medians over at least 5 runs per arm, with per-step durations and `cargo build --timings` totals; `ci-workspace` red on a test timer is diagnosed first, never retried and never given a longer timeout; lands in `plan/OPERATIONS.md` § "Merging"
+*4 Nov 2026 · the owner's order of that day, written up 5 Nov 2026 under the batch's item (3); applied in `plan/OPERATIONS.md` § "Merging", `plan/rule_groups.yaml` and `plan/section_notes.yaml`; changes no requirement*
+
+The owner's words, 4 Nov 2026, verbatim:
+
+> 1. Wall time: with ~25 min run-to-run swing, single before/after runs can't show gains. Report medians over >=5 runs per arm, plus per-step durations and `cargo build --timings` compile totals, which are far less noisy than job wall time. Don't claim or reject a speed-up on fewer.
+> 2. ci-workspace going red on a test timer: diagnose whether it's disk pressure, runner load or a genuinely slow test before anything else. The retry must not cover it, and the timeout must not be raised to make it pass (R-649); fix the cause or split the shard.
+> Then ci-release cleanup + disk sampler, then ci-workspace fit, as planned.
+
+*What it decides:* items 1 and 2 are standing rules. The last line was that day's order of work. R-712's timeout is a mutant's, not a test timer's, so item 2 does not reach it.
+
+R-715 is in the "ci" group of `plan/rule_groups.yaml`.
+
+## R-716 — The ten CI optimisation candidates: each measured before and after, negative results reported, one pull request per item, items 1 and 4 first, then 2 and 3, then the rest; lands in `plan/OPERATIONS.md` § "Merging"
+*4 Nov 2026 · the owner's message of that day, written up 5 Nov 2026 under the batch's item (3); applied in `plan/OPERATIONS.md` § "Merging", `plan/rule_groups.yaml` and `plan/section_notes.yaml`; changes no requirement*
+
+The owner's words, 4 Nov 2026, verbatim:
+
+> Additional CI optimisation candidates for the ci-disk-retry / speed-up series. Measure each (wall time per job, peak disk, cache size) before and after; report negative results. Constraints unchanged: no paid runners, no sccache (R-666), no mold, no retries of real/flaky failures, no tolerance or default changes to make anything pass (R-649).
+>
+> 1. Use the runner's second disk. GitHub Ubuntu runners usually mount a separate ephemeral disk at /mnt. Measure `df -h / /mnt` on a few runs; if /mnt has space, put CARGO_TARGET_DIR (and nextest archive unpacking) there. This may solve the 72 GB problem outright.
+> 2. Build once, test many. One build job produces a `cargo nextest archive` (zstd) plus the built SPIR-V kernel; upload as artifacts; shards download and run with `--archive-file` and never compile. Compare total minutes and per-shard disk against the current per-shard builds.
+> 3. Cache the kernel. Key `cargo xtask build-kernel` output on a hash of the kernel crate sources + toolchain; skip the rust-gpu build entirely when unchanged.
+> 4. Debug info. In the CI profile set `debug = "line-tables-only"` (or 0) for the workspace and 0 for deps, `CARGO_INCREMENTAL=0`, `strip = "debuginfo"` for test binaries. Expect large disk and link-time savings; confirm panic backtraces stay usable.
+> 5. Feature unification. Check `cargo tree -d` and per-crate feature sets for deps rebuilt multiple times; consider a cargo-hakari workspace-hack crate. Report how many duplicate dep builds it removes.
+> 6. Merge overlapping steps. Make sure clippy/check/test/doc aren't each compiling the workspace separately where one build can serve several; drop any `--all-targets` build not needed by a later step.
+> 7. Balance shards by time. Use nextest JUnit timings to find the slowest tests and rebalance shards (or move known-slow suites to their own shard) so the critical path shrinks. Report the slowest 20 tests.
+> 8. Pre-built CI image. A GHCR container with the pinned nightly, rust-gpu toolchain components, nextest, and lavapipe/mesa preinstalled, rebuilt only when rust-toolchain.toml or the image Dockerfile changes. Measure setup time saved per job versus image pull time.
+> 9. Smaller checkout. `fetch-depth: 1`, and check whether large golden fixtures can be fetched only by the jobs that use them.
+> 10. Superseded runs. `concurrency: cancel-in-progress` on PR workflows (never on main), so a new push cancels the old run.
+>
+> Order: 1 and 4 first (cheap, likely solve disk), then 2 and 3, then the rest. One PR per item, each with before/after numbers in the description. Keep main-held rules in force while main is red.
+
+*What it decides:* the list, its measures, its order and one pull request per item, with R-715's and R-714's reporting on top.
+
+*Applied per R-369:*
+
+- **Against the repo.** The orchestrator's reading of 4 Nov: items 2, 3, 4 and 10 existed in part (R-372, R-320, R-374 and R-656), and `actions/checkout` already fetches at depth 1, so item 9 is the golden-fixture question.
+- **Interleaving** with R-683's series was the orchestrator's, applied per R-369 on 4 Nov, and is in RQ-703 with the quick tier.
+- **Item 4's `strip`** is not applied (PR #394): **RQ-705**.
+- **Item 3** is not ruled clear of R-285: **RQ-706**.
+
+R-716 is in the "ci" group of `plan/rule_groups.yaml`.
+
+## R-717 — `main` is not merged into a pull request, and CI is not re-run, just to refresh a branch that has no conflict; lands in `plan/OPERATIONS.md` § "Merging"
+*4 Nov 2026 · the owner's order of that day, written up 5 Nov 2026 under the batch's item (3); applied in `plan/OPERATIONS.md` § "Merging", `plan/rule_groups.yaml` and `plan/section_notes.yaml`; changes no requirement*
+
+The owner's words, 4 Nov 2026, verbatim:
+
+> Branch protection has "require up to date" OFF (strict: false). For #360 and any other PR you're merging main into: is it a real conflict, or our own process? If it's process only, don't merge main in, and don't re-run CI, just to refresh a branch that has no conflict.
+
+*What it decides:* before `main` is merged into a pull request, ask whether the conflict is real or only the process's. If it is only the process's, `main` is not merged in, and CI is not re-run just to refresh a branch. R-266 carries the setting, and R-676 carries the rule of merging `main` in only as needed.
+
+*Applied per R-369:* R-676's "or once right before the label" and R-388's "then it merges `main` in" each name a merge with no conflict, so they meet this order. Neither is reworded: **RQ-704**.
+
+R-717 is in the "process" group of `plan/rule_groups.yaml`.
+
+## R-718 — Generated plan files are not committed if nothing needs them in git; otherwise they are marked in `.gitattributes` and conflicts are resolved by regenerating, never by hand, with a check that the committed copy matches a fresh regeneration; lands in `plan/OPERATIONS.md` § "Merging"
+*4 Nov 2026 · the owner's order of that day, written up 5 Nov 2026 under the batch's item (3); applied in `plan/OPERATIONS.md` § "Merging", `plan/rule_groups.yaml` and `plan/section_notes.yaml`; changes no requirement*
+
+The owner's words, 4 Nov 2026, verbatim:
+
+> For the generated-plan-file conflicts: prefer not committing generated files if nothing needs them in git; otherwise mark them in .gitattributes and resolve conflicts by regenerating from sources (script or merge driver), never by hand-editing. Include a check that the committed copy matches a fresh regeneration, so a bad resolve can't land.
+
+*What it decides:* the order's three parts, in that order of preference. The check exists in part: `plan/check_plan.py` runs `coverage.py`, `milestones.py` and `reviewer_lists.py` with `--check`, and CI runs `current_rules.py --check`. Which generated files anything needs in git, and the `.gitattributes` marks, are a tooling pull request's; this port changes neither.
+
+R-718 is in the "process" group of `plan/rule_groups.yaml`.
+
+## R-719 — A Windows-only, non-reproducing GPU result is hardware-suspect: recorded, not filed as a code bug; one that reproduces is checked against Metal and lavapipe, failing everywhere our bug, passing elsewhere an NVIDIA Vulkan platform finding with no re-baselining; lands in `plan/OPERATIONS.md` § "Windows GPU results"
+*4 Nov 2026 · the owner's three messages of that day, written up 5 Nov 2026 under the batch's item (3); applied in `plan/OPERATIONS.md` § "Windows GPU results" (new), `plan/rule_groups.yaml` and `plan/section_notes.yaml`; changes no requirement*
+
+The owner's words, 4 Nov 2026, verbatim, in the order given:
+
+> The owner reports the Windows RTX 2080 SUPER may have faulty shader cores. Windows will tag failures reproducible vs hardware-suspect, with a determinism control and driver-event log. Treat Windows-only, non-reproducible GPU failures as hardware-suspect: record them, don't file them as code bugs unless they reproduce on Metal or lavapipe, or reproduce deterministically on Windows.
+
+> Refine the hold: the hardware-suspect rule covers only Windows-only, non-reproducing results. #397 matches Metal's hash, so it reproduces off this card; release it. #396 matches the CPU reciprocal's value set exactly, which scattered core faults cannot produce; treat it as systematic and release it once the determinism control shows the same 191 values on a second run. For the rest (#393, #399-#402) and the three questions, release each one individually as soon as the determinism control at e1df88fa shows it bit-identical across runs with no nvlddmkm events. Don't wait for the whole set.
+
+> Windows hardware-health arm is clean: 6x byte-identical golden --all, 65/65 reruns reproduce, 0 nvlddmkm events. Treat the 13 Windows GPU failures as reproducible findings, not hardware-suspect. To separate "NVIDIA/driver/compiler" from "our code", check each against Metal and lavapipe: fails everywhere = our bug; passes elsewhere = NVIDIA-Vulkan-specific (file as platform finding, no re-baselining). When the DX12 opt-in lands, Phase 2 on the same card is the second discriminator: same failure on DX12 points at the card or our code, different points at the Vulkan driver path.
+
+*What it decides:*
+
+- **The standing rule.** A Windows-only, non-reproducing GPU failure is hardware-suspect: it is recorded, and filed as a code bug only if it reproduces on Metal or lavapipe, or deterministically on Windows. The rule covers only such results.
+- **A result that reproduces** is checked against Metal and lavapipe: failing everywhere, it is our bug; passing elsewhere, it is NVIDIA Vulkan specific, filed as a platform finding with no re-baselining.
+- **The second discriminator.** Once the DX12 opt-in lands, a run on the same card: the same failure points at the card or our code, a different one at the Vulkan driver path.
+- **The day's results.** The second and third messages release that day's holds, and the third makes the 13 Windows GPU failures reproducible findings. Those were acts on those results. The owner-reported hardware caveat stays for Paper 2 (R-711, item 4).
+
+R-719 is in the "process" group of `plan/rule_groups.yaml`.

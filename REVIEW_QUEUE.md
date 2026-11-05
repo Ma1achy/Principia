@@ -744,3 +744,57 @@ held `L_z` shows. R-708's last line says to come back with such a case. Nothing 
 - **Applied meanwhile:** nothing. R-708's `K` floor, the "no refused cells" test and the linear arm are the same in
   every option; `d = 0` reproduces the untilted chart in every option.
 - **Waits:** TASK-M2-52's warped tilt into the held `L_z`, and so PR #388, which R-708 holds until both arms are in.
+
+## RQ-703: Whether the quick tier goes ahead of R-683's step (1), as the owner's 4 Nov order says, or after it, as R-683 and R-684 say *(conflict: R-713, R-683, R-684; context: R-716, PR #414)*
+
+*Queued 5 Nov 2026 by the port of the owner's saved orders. For the owner: an order and a ruling disagree on the series' order. Nothing is reworded.*
+
+- **File, section:**
+  - `decisions.md` § R-713, the owner's words, 4 Nov 2026: "The quick tier from the CI series is the structural fix, so move it up the series."
+  - `decisions.md` § R-684: "**R-683's steps (2) and (4) are ruled**, still in that order, after step (1), the test-binary consolidation".
+  - `decisions.md` § R-683, the owner's words: "Then, in order, each as its own tooling PR".
+  - `decisions.md` § R-716, the owner's words: "Order: 1 and 4 first (cheap, likely solve disk), then 2 and 3, then the rest." It doesn't say how that list sits with R-683's series; the orchestrator interleaved them, applied per R-369.
+- **Observed:** PR #414 merged the quick tier, and `main` at 8636f776 has no step (1) consolidation.
+- **The question:** does R-713's order amend R-683 and R-684, and how do R-716's items sit with R-683's steps?
+- **Options seen:** (a) R-713 stands, the quick tier ahead of step (1), R-683 and R-684 amended, and the orchestrator's interleaving accepted; (b) R-684's order stands for what remains, step (1) next; (c) another, stated by the owner.
+- **Applied meanwhile:** nothing is reworded. Merged work stays merged.
+- **Waits:** nothing in the build; only the order of the remaining CI steps.
+
+## RQ-704: Whether a merge of `main` with no conflict stays allowed right before `merge-ready` and at an early start, given the owner's "don't merge main in" *(conflict: R-717, R-676, R-388)*
+
+*Queued 5 Nov 2026 by the port of the owner's saved orders. For the owner: an order and two rulings disagree. Nothing is reworded.*
+
+- **File, section:**
+  - `decisions.md` § R-717, the owner's words, 4 Nov 2026: "If it's process only, don't merge main in, and don't re-run CI, just to refresh a branch that has no conflict."
+  - `decisions.md` § R-676: "`main` is merged in only on a conflict, when a merged change must be in the tree, or once right before the label, the reviewers then approving the merged head".
+  - `plan/OPERATIONS.md` § "Merging": "or once, right before the `merge-ready` label, after the reviewers' approvals and before § "Merging" step 2's merged-tree check."
+  - `decisions.md` § R-388 and `plan/WORKFLOW.md` § "The unit: one task, one branch, one PR": "then it merges `main` in and opens its PR normally".
+- **The question:** are R-676's "once right before the label" and R-388's merge "our own process", so that they lapse where there is no conflict?
+- **Options seen:** (a) both lapse: `main` is merged in only on a real conflict or when a merged change must be in the tree, § "Merging" step 2's merged-tree check standing in; (b) R-676's merge lapses and R-388's stays, its branch being off a head that has since merged; (c) both stay, as named process merges outside the order; (d) another, stated by the owner.
+- **Applied meanwhile:** nothing is reworded in R-676, R-388 or the two plan files.
+- **Waits:** nothing in the build.
+
+## RQ-705: Whether CI's test binaries take `strip = "debuginfo"`, as candidate 4 lists, given R-374's backtraces *(conflict: R-716, R-374; context: PR #394)*
+
+*Queued 5 Nov 2026 by the port of the owner's saved orders. For the owner: an order and a ruling disagree. Nothing is reworded.*
+
+- **File, section:**
+  - `decisions.md` § R-716, the owner's item 4: "`strip = "debuginfo"` for test binaries. Expect large disk and link-time savings; confirm panic backtraces stay usable."
+  - `decisions.md` § R-374: "Every CI job sets `CARGO_PROFILE_DEV_DEBUG=line-tables-only` and `CARGO_PROFILE_TEST_DEBUG=line-tables-only`", "Panics keep `file:line` backtraces".
+- **Observed:** PR #394's body says the strip half "is not applied, because it can't hold with R-374".
+- **The question:** does the candidate stand against R-374, or does R-374's backtrace keep the strip out?
+- **Options seen:** (a) R-374 stands, and the strip half of item 4 is dropped; (b) the strip is taken and R-374 amended for test binaries; (c) another, stated by the owner.
+- **Applied meanwhile:** PR #394's: no strip.
+- **Waits:** nothing in the build.
+
+## RQ-706: Whether caching the kernel's output, candidate 3, is allowed under R-285's "caches only" *(conflict: R-716, R-285; context: R-320, R-656, R-684)*
+
+*Queued 5 Nov 2026 by the port of the owner's saved orders. For the owner: an order and a ruling disagree. Nothing is reworded.*
+
+- **File, section:**
+  - `decisions.md` § R-716, the owner's item 3: "Cache the kernel. Key `cargo xtask build-kernel` output on a hash of the kernel crate sources + toolchain; skip the rust-gpu build entirely when unchanged."
+  - `decisions.md` § R-285's heading: "CI caches only the cargo registry and the fixture pool, with per-job keys", and its Still-in-force line, which adds the rust-gpu build and R-656's bounded target cache, "and until then no target directory is cached."
+- **The question:** does item 3 add the kernel's output to R-285's list?
+- **Options seen:** (a) yes: R-285 amended to list it; (b) no: the kernel's output is shared as an artifact within a run, as candidate 2 has it, not cached; (c) another, stated by the owner.
+- **Applied meanwhile:** nothing: no kernel-output cache is added by this port.
+- **Waits:** candidate 3's pull request.

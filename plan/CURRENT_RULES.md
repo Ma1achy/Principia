@@ -594,6 +594,9 @@ as history only.
 - **R-697** — The orchestrator's decisions of 30 Oct and 4 Nov on RQ-621, RQ-623, RQ-624, RQ-628, RQ-632 and RQ-684, and the `DECODE_SWITCHOVER` reading, are accepted; R-360 is amended to match RQ-684's move *(closes RQ-621, RQ-623, RQ-624, RQ-628, RQ-632 and RQ-684; amends R-360)*
 - **R-706** — The owner's deferrals of 4 Nov: each entry stays open with its target, and RQ-654's place on the list changes nothing, R-669 having closed it, with BZ-1C's work in M9; RQ-647 is moot under R-669
 - **R-707** — The batch's CI and record items: the cause of `stand-in-soak`'s failure is found with the timer untouched; `jobq_a_finished_jobs_group_is_killed`'s control is fixed, test-only; RQ-658, RQ-659 and RQ-660 are the orchestrator's to decide, each option (a); RQ-644 and RQ-646 are cleared with their history *(closes RQ-644, RQ-646, RQ-658, RQ-659 and RQ-660)*
+- **R-717** — `main` is not merged into a pull request, and CI is not re-run, just to refresh a branch that has no conflict; lands in `plan/OPERATIONS.md` § "Merging"
+- **R-718** — Generated plan files are not committed if nothing needs them in git; otherwise they are marked in `.gitattributes` and conflicts are resolved by regenerating, never by hand, with a check that the committed copy matches a fresh regeneration; lands in `plan/OPERATIONS.md` § "Merging"
+- **R-719** — A Windows-only, non-reproducing GPU result is hardware-suspect: recorded, not filed as a code bug; one that reproduces is checked against Metal and lavapipe, failing everywhere our bug, passing elsewhere an NVIDIA Vulkan platform finding with no re-baselining; lands in `plan/OPERATIONS.md` § "Windows GPU results"
 
 ## CI
 
@@ -654,6 +657,10 @@ as history only.
 - **R-695** — Near-tie golden cases are held only on the backends CI renders on; on any other driver their result is reported, not compared to pass *(closes RQ-686; amends R-296)*
 - **R-711** — One measurement-only self-hosted runner, `malachys-pc-rtx2080s`, on the owner's PC, with no pull-request trigger on any self-hosted job; DX12 may run on it as a measurement; PC benchmarks stay apart from the Mac's performance gates; a recorded run on it can serve Paper 2's non-Metal parity evidence; its jobs have their own workflow; the signing rules *(closes RQ-695; amends R-174, R-186 and R-656)*
 - **R-712** — The per-mutant timeout is set from the measured baseline test time, at about 3 times it; 8 shards are kept; a timed-out mutant counts as caught and is listed; #360's 135 unreached mutants go to the nightly run, and the same rule applies to #387 if it hits the limit *(amends R-376 for REQ-VAL-180)*
+- **R-713** — CI demand is reduced rather than waited out: a head not ready for review is not pushed, and pushes go in order of what is closest to merging; lands in `plan/OPERATIONS.md` § "Merging"
+- **R-714** — A failed CI job is retried automatically only on a runner-level fault, in at most two retries, never on a real test failure or a flake, the classifier a script tested on saved logs; every CI speed-up step reports disk use and must reduce or hold it; lands in `plan/OPERATIONS.md` § "Merging"
+- **R-715** — A CI speed-up is claimed or rejected only on medians over at least 5 runs per arm, with per-step durations and `cargo build --timings` totals; `ci-workspace` red on a test timer is diagnosed first, never retried and never given a longer timeout; lands in `plan/OPERATIONS.md` § "Merging"
+- **R-716** — The ten CI optimisation candidates: each measured before and after, negative results reported, one pull request per item, items 1 and 4 first, then 2 and 3, then the rest; lands in `plan/OPERATIONS.md` § "Merging"
 
 ## One-off acts (history only)
 
