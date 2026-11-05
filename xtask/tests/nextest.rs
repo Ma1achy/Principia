@@ -536,7 +536,7 @@ validation::negative_control!(
     )))
 );
 
-/// A block whose last line ends in `\\`, which the shell runs, with nothing to continue on.
+/// A block whose last line ends in `\`, which the shell runs, with nothing to continue on.
 const LAST_LINE_CONTINUED: &str =
     "      - run: |\n          echo a\n          cargo nextest run -p a \\\n";
 
@@ -584,7 +584,7 @@ validation::negative_control!(
     )))
 );
 
-/// A `\\` followed by a blank line, where the shell ends the command, and the next line is a command of its own.
+/// A `\` followed by a blank line, where the shell ends the command, and the next line is a command of its own.
 const CONTINUED_INTO_A_BLANK: &str =
     "      - run: |\n          echo a \\\n\n          cargo nextest run -p b\n";
 
@@ -612,6 +612,7 @@ validation::negative_control!(
 );
 
 /// Every workflow, with `from` replaced by `to` in the one that names it.
+#[cfg(feature = "controls")]
 fn workflows_edited(from: &str, to: &str) -> Vec<String> {
     let edited = workflows();
     assert!(

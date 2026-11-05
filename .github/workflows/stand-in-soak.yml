@@ -47,7 +47,7 @@ jobs:
   # One job per test binary (RQ-688; applied per R-369, under the owner's "fix the cause or split the shard"). The five
   # in series take about 5.5 times `ci_list_runs_no_control` a run, so on a runner where that test takes 85 s or more
   # the 50 runs outlast GitHub's 6 h job limit; run 41808766194, on the 74 s band, took 5 h 46. Alone, `qa_TASK-M0-22`,
-  # the longest, takes about 3.6 times it. Each job still makes all 50 runs, under the 600 s timer, in the workflow's
+  # the longest, takes 3.5 to 3.8 times it. Each job still makes all 50 runs, under the 600 s timer, in the workflow's
   # env. `fail-fast` is off, so one binary's failure doesn't stop the others' runs.
   soak:
     runs-on: ubuntu-24.04
