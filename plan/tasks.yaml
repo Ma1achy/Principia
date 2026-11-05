@@ -1240,8 +1240,8 @@
 - id: TASK-M4-09
   milestone: M4
   title: "Bounded dispatch: chunked marches that return before a watchdog"
-  depends_on: [TASK-M4-05, TASK-M4-02, TASK-M3-20]
-  needs: [REQ-SCHED-002, REQ-INT-007, REQ-INT-038, REQ-PERF-003, REQ-TOOL-001, REQ-EVT-010]
+  depends_on: [TASK-M4-05, TASK-M4-02, TASK-M3-20, TASK-M3-41]
+  needs: [REQ-SCHED-002, REQ-INT-007, REQ-INT-038, REQ-PERF-003, REQ-TOOL-001, REQ-EVT-010, REQ-INT-100, REQ-INT-101, REQ-INT-102, REQ-PAY-110]
   requirements: [REQ-PERF-010, REQ-PERF-081, REQ-INT-059]
   reviewers: [code, qa, physics, perf]
   pitfalls: []
@@ -1341,6 +1341,23 @@
   requirements: [REQ-RENDER-099, REQ-CHART-074]
   reviewers: [code, qa, physics, perf]  # ⚑ physics review required; not merged on the code reviewer's word alone
   pitfalls: []
+# TASK-M4-27: past TASK-M4-22 to TASK-M4-26, moved to M9 by R-650 and not reused (applied per R-369)
+- id: TASK-M4-27
+  milestone: M4
+  title: "The kernel cross-backend check, the arm for now: decode's and canon's branch outcomes on NVIDIA Vulkan, Metal, lavapipe and CPU f32, per backend pair (R-686)"
+  depends_on: [TASK-M2-07, TASK-M2-24, TASK-M2-25]
+  needs: [REQ-DEC-017, REQ-DEC-008]
+  requirements: [REQ-VAL-347]
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-9, PIT-10]
+- id: TASK-M4-28
+  milestone: M4
+  title: "The kernel cross-backend check: the same IC set marched on NVIDIA Vulkan, Metal, lavapipe and CPU f32, labels and branch-sensitive results compared per backend pair (R-686)"
+  depends_on: [TASK-M4-05, TASK-M4-02, TASK-M4-03, TASK-M4-09, TASK-M4-18, TASK-M4-27, TASK-M3-41]
+  needs: [REQ-INT-026, REQ-EVT-003, REQ-EVT-005, REQ-VAL-026, REQ-INT-080, REQ-INT-100, REQ-INT-101, REQ-INT-102, REQ-INT-103, REQ-INT-108, REQ-PAY-110]
+  requirements: [REQ-VAL-348]
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-9, PIT-10]
 - id: TASK-M5-01
   milestone: M5
   title: "QuadReduction ledger: member order, packing, histogram and impurity grain"
@@ -1996,6 +2013,15 @@
   needs: []
   requirements: [REQ-GUI-265]
   reviewers: [code, qa, gui, physics]  # ⚑ tilt maths
+  pitfalls: []
+# TASK-M6-53: past TASK-M6-52, moved to M9 by R-650 and not reused (applied per R-369)
+- id: TASK-M6-53
+  milestone: M6
+  title: "The GUI track (R-390): the mock's value noise hashes its lattice in integers, so shared corners agree bitwise"
+  depends_on: [TASK-M6-24]  # R-685; the pattern is option A (R-689)
+  needs: []
+  requirements: [REQ-GUI-412]
+  reviewers: [code, qa, gui]
   pitfalls: []
 - id: TASK-M7-01
   milestone: M7
@@ -2881,8 +2907,8 @@
 - id: TASK-M8-41
   milestone: M8
   title: "Release gates: the non-Metal parity run, the seam test index, the atlas horizon label, v1 web on GitHub Pages"
-  depends_on: [TASK-M8-40, TASK-M8-31, TASK-M8-32, TASK-M4-13, TASK-M8-42, TASK-M8-76]  # TASK-M8-76: R-621's header strip (REQ-GUI-398) before REQ-SYS-061 closes (applied per R-369)
-  needs: [REQ-VAL-057, REQ-TOOL-043, REQ-SYS-026, REQ-VAL-064]
+  depends_on: [TASK-M8-40, TASK-M8-31, TASK-M8-32, TASK-M4-13, TASK-M8-42, TASK-M8-76, TASK-M4-28]  # TASK-M8-76: R-621's header strip (REQ-GUI-398) before REQ-SYS-061 closes (applied per R-369); TASK-M4-28, and TASK-M4-27 through it: R-711's gate reads their records (applied per R-369)
+  needs: [REQ-VAL-057, REQ-TOOL-043, REQ-SYS-026, REQ-VAL-064, REQ-VAL-347, REQ-VAL-348]
   requirements: [REQ-VAL-099, REQ-VAL-105, REQ-SYS-061, REQ-SYS-046, REQ-SYS-086]
   reviewers: [code, qa, physics, gui]
   pitfalls: [PIT-9, PIT-10]
@@ -3770,7 +3796,7 @@
 - id: TASK-M9-37
   milestone: M9
   title: "M9's report: every external target with its tier, outcome and like-for-like checks"
-  depends_on: [TASK-M9-01, TASK-M9-02, TASK-M9-03, TASK-M9-04, TASK-M9-05, TASK-M9-06, TASK-M9-08, TASK-M9-10, TASK-M9-11, TASK-M9-12, TASK-M9-13, TASK-M9-14, TASK-M9-15, TASK-M9-16, TASK-M9-17, TASK-M9-18, TASK-M9-19, TASK-M9-20, TASK-M9-21, TASK-M9-26, TASK-M9-28, TASK-M9-30, TASK-M9-31, TASK-M9-32, TASK-M9-33, TASK-M9-34, TASK-M9-36]
+  depends_on: [TASK-M9-01, TASK-M9-02, TASK-M9-03, TASK-M9-04, TASK-M9-05, TASK-M9-06, TASK-M9-07, TASK-M9-08, TASK-M9-10, TASK-M9-11, TASK-M9-12, TASK-M9-13, TASK-M9-14, TASK-M9-15, TASK-M9-16, TASK-M9-17, TASK-M9-18, TASK-M9-19, TASK-M9-20, TASK-M9-21, TASK-M9-26, TASK-M9-28, TASK-M9-30, TASK-M9-31, TASK-M9-32, TASK-M9-33, TASK-M9-34, TASK-M9-36]
   needs: []
   requirements: [REQ-VAL-340]  # R-650 (30 Oct 2026)
   reviewers: [code, qa, physics]
@@ -3797,5 +3823,13 @@
   depends_on: [TASK-M2-14, TASK-M4-06, TASK-M4-17]
   needs: []
   requirements: [REQ-CHART-091]  # R-669 (1 Nov 2026), RQ-608 and RQ-618 (a)
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-3]
+- id: TASK-M9-41
+  milestone: M9
+  title: "Candidate original results: per-point FTLE maps over the batch-152 planes and a time-weighted shape-sphere occupancy accumulator (R-679)"
+  depends_on: [TASK-M3-14, TASK-M4-13]
+  needs: [REQ-INT-043, REQ-PAY-021, REQ-PAY-031, REQ-PAY-032, REQ-PAY-058]
+  requirements: [REQ-VAL-344, REQ-VAL-345, REQ-VAL-346]  # R-679 (3 Nov 2026), RQ-674
   reviewers: [code, qa, physics]
   pitfalls: [PIT-3]

@@ -10,6 +10,9 @@ wrong equation, a misencoded outcome, a broken invariant), with its own test and
 § "12.3 Outcomes, the like-for-like check and the forbidden moves" of the same file. Rows are added, never removed;
 a later peek of the same target is a new row.
 
+*3 Nov 2026 (R-679):* a candidate original result (§ 12.5) has no reference, so it is no external target and has none of
+those three outcomes. Its row's outcome reads "candidate original result".
+
 | Date | Target | Tier | Data source | Outcome | Like-for-like checks | Mechanism measurement | Commit |
 |---|---|---|---|---|---|---|---|
 | 29 Oct 2026 | GG-1 (REQ-VAL-295), point (1, 54) | (b), per point | Brutus run here, not Principia (ε = 10⁻⁴ to 10⁻⁶, L_w = 128), converted to HM units, against Fig. 1 read by route 2 (`docs/incoming/2026-10-28_rq598_data/brutus_run_here/hm_units_output.txt`) | UNEXPLAINED: log₁₀ T 0.236 against 0.521, −0.29 dex | Masses equal. Units: ours converted to HM by √(3λ³), a factor of 2.72 here. Not like-for-like: the escape radius (ours 10 of our units, the paper's 10 HM units) and the T cap (ours 1000 of our units, the paper's 10⁴ HM); the definition of T is open (RQ-612). The two panels agree at this point, so RQ-620 does not bear on it. Source accuracy: Fig. 1 read to one LUT step, 3/256 ≈ 0.012 dex (`docs/incoming/2026-10-28_rq598_data/README.md`) | none | 06f3dd8f (PR #335) |

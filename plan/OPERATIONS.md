@@ -310,7 +310,10 @@ merge:
    allows; two questions in different words; a deletion undone, or an entry restored whole. So after each merge the
    orchestrator still reads `git diff <before> <after> -- REVIEW_QUEUE.md`, which the batch merge prints, for these: a
    line doubled, restored or under the wrong RQ, or two notes that disagree. It fixes anything wrong by a follow-up PR.
-3. `gh pr merge N --merge --match-head-commit <full sha>`. Never `--admin` (R-266), never squash or rebase.
+3. `gh pr merge N --merge --match-head-commit <full sha>`. Never `--admin` (R-266), never squash or rebase. Admin
+   bypass is the owner's alone (R-682, 3 Nov 2026): no agent uses it, by `--admin` or any API merge that skips a
+   required check, and a merge script merges only when every required check has passed. A stuck check goes to the
+   owner, who decides whether to bypass.
 4. Then, as a separate command, never chained after the merge with `;`: confirm the remote branch is gone, since
    GitHub's "Automatically delete head branches" deletes it on merge (R-357): `git ls-remote --exit-code origin
    refs/heads/<branch>` exits 2, finding no such ref. Don't delete it yourself; if it is still there, tell the human.
@@ -320,7 +323,14 @@ merge:
 5. If `reviews-complete` stays red only from the `pull_request`-event run, which fails before any review and stays a
    separate check suite, re-run it: `gh run rerun <id>` (R-266, R-276).
 6. To re-run CI, prefer re-running the failed jobs (`gh run rerun <id> --failed`) over closing and reopening the PR
-   (the owner's note, R-633).
+   (the owner's note, R-633). A stuck required check: the paragraph below (R-681).
+
+**`main` red, or a required check stuck (R-681, 3 Nov 2026, a standing rule).** While `main`'s CI is red, or a
+required check on a pull request is stuck, no agent opens or updates any other pull request, and no other pull request
+merges, until `main` is green again or the check reports; the owner is told in one message what is red or stuck. A
+stuck check is cleared by re-running only the job that reports it, never a whole pipeline. A CI-tooling pull request,
+one that changes what CI runs or checks, shows its own `xtask-ci` run passing on its head before it merges: #381
+merged and broke `main`.
 
 **Advisory bot reviews before the merge (R-651, a standing rule).** Before step 3, the orchestrator's merge script
 checks, for Codex, Gemini CLI and Copilot each:
@@ -363,7 +373,7 @@ wait for the merge-ready run's `mutants-check` (§ "Mutants on the merge-ready h
 required checks are `plan/HUMAN_SETUP.md` §2's list, `mutants-check` among them though `main`'s protection lacks it
 until he re-adds it, which `xtask/tests/ci_changes.rs` checks every required check against on every path (R-678).
 
-**What CI runs on a pull request (R-656, R-662, R-677).** `ci.yml` runs on a push to `main` (and to a `measure/`
+**What CI runs on a pull request (R-656, R-662, R-677, R-684, R-790).** `ci.yml` runs on a push to `main` (and to a `measure/`
 branch, R-272) and, for a pull request, through `pull_request` only, once per push. Each workflow that builds or tests
 keeps one `concurrency` group per pull request, so a push cancels the run on the head it supersedes; a run on `main` is
 never cancelled (`no-atlas-params.yml` and `gemini-dispatch.yml` keep none, decisions.md R-656). `reviews.yml` keeps one
@@ -377,7 +387,7 @@ taking the highest (R-677):
   thresholds against, when a requirement is added or removed, a field code reads changes, or the field check cannot
   tell), the classifier `scripts/ci_changes.sh` and its field check `scripts/ci_req_fields.py`, the containment
   `scripts/contain.sh`, and any path the allowlist doesn't name, so an unknown top-level path fails towards full CI:
-  full CI;
+  full CI on the merge-candidate head, and the quick tier before it (R-684, below);
 - **data**, tier (b): the plan's task data, `plan/tasks/`, `plan/tasks.yaml` and `plan/MILESTONES.md`, and
   `plan/requirements.yaml` when only fields no code reads change (`statement`, `note`, `source`, `rulings`, `area`,
   `rq`; `scripts/ci_req_fields.py` decides, printing one reason line in the `changes` job's log, and
@@ -390,8 +400,9 @@ taking the highest (R-677):
   tests; `xtask/tests/ci_changes.rs` checks that every reader its scan finds is among them;
 - **docs**, tier (c), meaning it changes none of Principia's code (R-662; the owner, 31 Oct 2026: "Only the actual
   Principia CODE matters in ci"): every other path on the script's allowlist, `docs/`, `plan/` (its prose and Python),
-  `scripts/`, `workbench/` and the root's markdown: as tier (b), but `ci-workspace` runs only the cheap checks,
-  plan-check and the vocabulary lint, beside `no-atlas-params.yml`, the atlas guard;
+  `scripts/`, `workbench/`, `.claude/` (its commands, agents and settings; R-790) and the root's markdown: as tier (b),
+  but `ci-workspace` runs only the cheap checks, plan-check and the vocabulary lint, beside `no-atlas-params.yml`, the
+  atlas guard;
 - **no GPU-path file** (only data and docs paths, `crates/gui/` and `crates/prin/`): the GPU suites' jobs (`gpu-kernel
   suites`, `gpu-metal suites`, `gpu-lavapipe suites`) are skipped; everything else runs;
 - **no `.rs` file under `crates/`** (`mutants=false`; the owner, 2 Nov 2026: "Mutants run only when crates/ source
@@ -401,10 +412,37 @@ taking the highest (R-677):
   configuration (`.cargo/mutants.toml`, `fixtures/mutants/`, `scripts/contain.sh`, `mutants.yml`) runs it.
 `docs_only`, the name R-656 gave the verdict, is true on a tier (b) or (c) change, so the skips and gates kept it.
 
-Every required check still reports under its own name and concludes success, so the merge step is unchanged:
-`merge-batch.sh`'s `gh pr checks --required` reads `pass` for each. A skipped job never bears a required name: the
-required checks `ci`, `xtask-ci`, `gpu-kernel`, `gpu-metal` and `gpu-lavapipe` are gates that run whatever their jobs
-ended in and pass a skipped one only on the classification's verdict, and matrix jobs are named `<id> (<shard>)`.
+**The code tier's two levels (R-684).** The classifier applies first, so a data or docs head runs neither. Full CI (the
+unit, property, numerical-gate and native golden suites, the controls, the release profile and the GPU suites where
+the GPU-path rule applies) runs on the merge-candidate head, the one carrying `merge-ready`, and on every push to
+`main`. Every other code pull-request head runs the quick tier, one job, `ci-quick` (`ci-quick.yml`, which `ci.yml`
+calls): fmt, clippy and the build over the workspace, then the tests of the changed crates and their reverse dependencies, the `ci` and `ci-workspace` nextest
+profiles' and the doctests (`.github/scripts/ci_quick_crates.py`, which names how paths map to crates; only a change
+to `gui`, `prin`, or `xtask`, `.github/` and `scripts/` narrows the set, since `validation`, every other crate's
+dev-dependency, links the rest). So before the label:
+- "CI green on the head" means `ci-quick`, `pr-check` and `reviews-complete` pass, the full-only checks still pending;
+- `ci`, `xtask-ci`, `gpu-kernel`, `gpu-metal` and `gpu-lavapipe` read pending: `changes` posts each as a pending commit
+  status, and no job reports it, its gate skipping as `matrix.check` (run 41972273540), never a required name.
+  A skip therefore cannot pass one, and no pull request merges until the full suite has passed on its exact head.
+  `required-guard.sh` passes a check only on `pass`, so it reads neither a skip nor a pending status as one;
+- the watcher puts `merge-ready` on as § "Mutants on the merge-ready head" says, with no need for a full run first. That
+  starts two things on the head, without a push: `mutants.yml`'s merge-ready run, and, through `ci-full.yml`, a new
+  attempt of the head's `pull_request` run of `ci.yml`. `ci.yml` runs on no label change, because of each workflow's
+  runs on a head branch protection counts only the latest run's check suite (R-678): a re-run keeps the suite, and
+  its `changes` job reads the live label and says full. A run still going is cancelled first. `ci-status` closes the
+  five statuses from their gates;
+- a push makes the next head quick, its label having come off; taking `merge-ready` off cancels a full attempt still
+  going, and a full tier that has passed stands, having passed on that exact head. Putting it back re-runs the full
+  tier only if some full-only check has not passed. The automatic retry (`retry.yml`) counts attempts, and the full tier
+  starts at attempt 2, so it has one retry to the quick tier's two.
+The rationale, R-684's: since R-676 fix rounds are verified locally through the job queue, so full CI on intermediate
+heads duplicated that work; the guarantee that `main` only receives fully-tested heads is unchanged.
+
+Every required check reports under its own name on a full, data or docs run and concludes success, so the merge step
+is unchanged: `merge-batch.sh`'s `gh pr checks --required` reads `pass` for each. A skipped job never bears a required
+name: the required checks `ci`, `xtask-ci`, `gpu-kernel`, `gpu-metal` and `gpu-lavapipe` are gates that run whatever their
+jobs ended in, but on a quick run, and pass a skipped one only on the classification's verdict, and matrix jobs are
+named `<id> (<shard>)`, or for a gate, the one value of its matrix.
 `mutants-check` is a job of every run of `mutants.yml`, `if: always()` (R-678): the merge-ready run's verdict
 (below), and success, "not applicable", on a head whose change has no `.rs` file under `crates/`, which has no mutant
 the gate runs (R-677), or that is not merge-ready. What a pull request skips runs on `main` after
@@ -427,6 +465,8 @@ the verdict) runs once per approved head, not on every push:
   pass. The watcher reads that notice from the check run's annotations
   (`gh api repos/Ma1achy/Principia/check-runs/<id>/annotations`, the message of the one titled `mutants-check`): a
   job's step summary never reaches its check run, whose `output` title, summary and text are null.
+- **It starts the full tier too (R-684).** `ci-full.yml` re-runs the head's `ci.yml` run, whose new attempt is full CI;
+  § "What CI runs on a pull request". The merge waits for both.
 - **A push takes it off.** On every push to the pull request, `merge-ready-off` removes the label, and that run's
   `mutants-check` passes "not applicable", so the gate runs again only once the new head is approved and labelled
   again, and the push cancels a merge-ready run still going on the old head. Another label put on or taken off runs
@@ -476,7 +516,8 @@ Approvals are of a head, so the reviewers approve the merged head again before t
 
 The human's standing rule of 2 Oct 2026 (R-369), which replaced the size rules and the "veto? holds the merge"
 practice, in force whether the human is away or not. Keep working through the plan under `plan/WORKFLOW.md` and
-`CLAUDE.md`. Progress is the goal: decide and continue, and stop only when nothing at all can proceed.
+`CLAUDE.md`. Progress is the goal: decide and continue, and stop only when nothing at all can proceed. A red `main` or a stuck
+required check stops other pull-request work at once, whatever else could proceed (R-681; § "Merging").
 
 **Merge** a PR once all of these hold:
 - every reviewer the task names has posted `VERDICT: APPROVE` on the head;

@@ -16,8 +16,9 @@ use eframe::egui::{self, ComboBox, DragValue, Rect, Slider, Ui};
 use crate::explore::compass::Gesture;
 
 use super::{
-    basis_edit, header, row, row_ui, target_choices, target_edit, Panel, Target, Touch, View, AXES,
-    GAMMA, SECTION_TITLES, TAU1, TAU2, TILT_X, TILT_X_ENTRIES, TILT_Y, TILT_Y_ENTRIES,
+    basis_edit, close_under_console, header, row, row_ui, target_choices, target_edit, Panel,
+    Target, Touch, View, AXES, GAMMA, SECTION_TITLES, TAU1, TAU2, TILT_X, TILT_X_ENTRIES, TILT_Y,
+    TILT_Y_ENTRIES,
 };
 
 /// The tilts' span, in degrees.
@@ -151,6 +152,7 @@ pub fn show(ui: &mut Ui, section: Rect, h: f32, clip: Rect, panel: &mut Panel<'_
                     panel.keyboard.place_widget(entries[to], &entry);
                 }
             });
+        close_under_console(&combo.response, panel.scratch.console_top);
         panel.place(id, &combo.response, clip);
         if combo.response.is_pointer_button_down_on() || combo.response.clicked() {
             panel.scratch.compass.mode = Touch::Tilt;

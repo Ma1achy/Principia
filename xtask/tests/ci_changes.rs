@@ -9,12 +9,15 @@
 //! now. (b) PLAN-DATA: the reads_code files … → only the checks that read them … (c) DOCS: as now, cheap checks only.
 //! Mutants run only when crates/ source changes, on the merge-ready head."
 //!
+//! R-790, the owner's words of 4 Nov 2026: "R-677 amendment: .claude/ (commands, agents, settings) is docs tier."
+//!
 //! - `ci_changes_classifies_conservatively`: `scripts/ci_changes.sh classify` gives each change its tier, the highest
-//!   of its paths': docs only when every path is on its allowlist, the corpus, the plan's prose and Python, the scripts
-//!   and the workbench; data when the plan's task data or the GUI's artboards and references are among them; code
-//!   otherwise. It skips the GPU suites only when no path is a GPU path, and runs mutants only when a `.rs` file under
-//!   `crates/` changes. An empty change, a workflow, an unknown top-level path and a path that merely starts like an
-//!   allowed one run everything, and so does a mixed change; `docs_only` is true exactly on a data or docs change.
+//!   of its paths': docs only when every path is on its allowlist, the corpus, the plan's prose and Python, the
+//!   scripts, the workbench and `.claude/`; data when the plan's task data or the GUI's artboards and references are
+//!   among them; code otherwise. It skips the GPU suites only when no path is a GPU path, and runs mutants only when a
+//!   `.rs` file under `crates/` changes. An empty change, a workflow, an unknown top-level path and a path that merely
+//!   starts like an allowed one run everything, and so does a mixed change; `docs_only` is true exactly on a data or
+//!   docs change.
 //! - `ci_changes_files_code_reads_run_everything`: each pattern of the script's `reads_code` list, the data only full
 //!   CI reads, the classifier itself (R-662) and the containment, is touched through real files it names, each
 //!   classifying as code: not docs-only, GPU suites run.
@@ -70,6 +73,12 @@
 //!   run's check suite, so the workflow bearing a check either runs on the event, the job bearing it unskippable and,
 //!   in `ci.yml` and `mutants.yml`, concluding as it should, or runs on every new head, its push run standing; a
 //!   workflow runs on both label changes or neither, and filters no pull request.
+//! - R-684 (the owner, 3 Nov 2026: "Add a test that every required check reports in every path: quick, full, label
+//!   added, label removed, docs, plan-data"): `ci_changes_every_required_check_reports_on_every_path` walks those
+//!   paths. On a quick run no job reports a full-only required check, each gate skipping as `matrix.check` (run
+//!   41972273540), never a required one, and `ci_changes_no_skipped_job_reports_a_required_name` holds that; the re-run the label starts
+//!   reports each, passing. `ci_changes_each_head_asks_for_its_jobs` counts what each head asks of the runners.
+//!   `xtask/tests/ci_quick_tier.rs` tests what takes a head from one tier to the other.
 //! - `ci_changes_mutants_fixture_runs_on_the_gates_own_files`: `mutants.yml`'s `mutants-fixture`, the gate's self-test
 //!   on its fixtures, runs every step after its classification on a change to the gate's configuration
 //!   (`.cargo/mutants.toml`, `fixtures/mutants/untested/`, `fixtures/mutants/caps/`), which has no Rust under
@@ -289,6 +298,10 @@ const CASES: &[(&[&str], &str, bool, bool)] = &[
         false,
         false,
     ),
+    // `.claude/`, the whole directory (R-790).
+    (&[".claude/commands/x.md"], "docs", false, false),
+    (&[".claude/agents/x.md"], "docs", false, false),
+    (&[".claude/settings.json"], "docs", false, false),
     // Tier (b), the data only the cheap checks and its readers' tests read (R-677): no GPU suite, no mutants.
     (&["docs/gui/design/a.png"], "data", false, false),
     (&["docs/gui/reference/a/b.json"], "data", false, false),
@@ -338,7 +351,6 @@ const CASES: &[(&[&str], &str, bool, bool)] = &[
     (&["notes.md"], "code", true, false),
     (&[".cargo/config.toml"], "code", true, false),
     (&[".config/nextest.toml"], "code", true, false),
-    (&[".claude/agents/implementer.md"], "code", true, false),
     (&[".gitignore"], "code", true, false),
     // One code path among docs or data makes the change code.
     (
@@ -377,6 +389,8 @@ const CASES: &[(&[&str], &str, bool, bool)] = &[
     (&["planx/a.md"], "code", true, false),
     (&["scriptsx/a.sh"], "code", true, false),
     (&["workbenchx/a"], "code", true, false),
+    (&[".clauderc"], "code", true, false),
+    (&[".claude"], "code", true, false),
     (&["decisions.md.bak"], "code", true, false),
     (&["plan"], "code", true, false),
     (&["docs"], "code", true, false),
@@ -478,10 +492,38 @@ negative_control!(
     expected = "\".github/workflows/ci.yml\"] classified wrongly",
     check_classifier(&edited(
         "scripts/ci_changes.sh",
-        "    docs/* | plan/* | scripts/* | workbench/*) return 0 ;;",
-        "    docs/* | plan/* | scripts/* | workbench/* | .github/*) return 0 ;;"
+        "    docs/* | plan/* | scripts/* | workbench/* | .claude/*) return 0 ;;",
+        "    docs/* | plan/* | scripts/* | workbench/* | .claude/* | .github/*) return 0 ;;"
     ))
 );
+
+mod claude_not_on_the_allowlist {
+    use super::*;
+    negative_control!(
+        ci_changes_classifies_conservatively,
+        "the script without `.claude/` on its allowlist (R-790)",
+        expected = "\".claude/commands/x.md\"] classified wrongly",
+        check_classifier(&edited(
+            "scripts/ci_changes.sh",
+            " | workbench/* | .claude/*) return 0 ;;",
+            " | workbench/*) return 0 ;;"
+        ))
+    );
+}
+
+mod claude_prefix_on_the_allowlist {
+    use super::*;
+    negative_control!(
+        ci_changes_classifies_conservatively,
+        "the script's allowlist taking every path that only starts like `.claude/` (R-790)",
+        expected = "\".clauderc\"] classified wrongly",
+        check_classifier(&edited(
+            "scripts/ci_changes.sh",
+            " | workbench/* | .claude/*) return 0 ;;",
+            " | workbench/* | .claude*) return 0 ;;"
+        ))
+    );
+}
 
 mod data_below_docs {
     use super::*;
@@ -2111,7 +2153,7 @@ fn jobs(wf: &Value) -> Vec<(String, Value)> {
 fn named(wf: &Value, check: &str) -> (String, Value) {
     let mut by: Vec<(String, Value)> = jobs(wf)
         .into_iter()
-        .filter(|(_, j)| j.get("name").map(text).as_deref() == Some(check))
+        .filter(|(id, j)| reports(id, j) == check)
         .collect();
     assert_eq!(by.len(), 1, "ci_changes: not one job named `{check}`");
     by.remove(0)
@@ -2190,45 +2232,53 @@ const GPU_RUNS: &[Run] = &[
     run("a cancelled run", "success cancelled", "true", false),
 ];
 
+/// A gate runs whatever its jobs ended in, on every run but a quick one (R-684), which reports no full-only check.
+const GATE_RUNS: &str = "always() && needs.changes.outputs.quick != 'true'";
+
 const GPU_FLAG: &str =
     "${{ needs.changes.result == 'success' && needs.changes.outputs.gpu == 'false' }}";
 
 const GATES: &[Gate] = &[
-    // `needs: [ci, ci-checks, ci-workspace]`; DOCS_ONLY is `ci-workspace`'s output, empty unless it ran.
+    // `needs: [ci, ci-checks, ci-workspace, changes]`; DOCS_ONLY is `ci-workspace`'s output, empty unless it ran.
     Gate {
         check: "ci",
-        needs: &["ci", "ci-checks", "ci-workspace"],
+        needs: &["ci", "ci-checks", "ci-workspace", "changes"],
         flag: "DOCS_ONLY",
         from: "${{ needs.ci-workspace.outputs.docs_only }}",
         runs: &[
             run(
                 "a docs-only pull request",
-                "skipped skipped success",
+                "skipped skipped success success",
                 "true",
                 true,
             ),
-            run("a code change", "success success success", "false", true),
+            run(
+                "a code change",
+                "success success success success",
+                "false",
+                true,
+            ),
             run(
                 "the classification failed",
-                "skipped skipped skipped",
+                "skipped skipped skipped failure",
                 "",
                 false,
             ),
             run(
                 "a code change whose ci-checks was skipped",
-                "success skipped success",
+                "success skipped success success",
                 "false",
                 false,
             ),
             run(
                 "a docs-only pull request whose cheap checks failed",
-                "skipped skipped failure",
+                "skipped skipped failure success",
                 "true",
                 false,
             ),
             run(
                 "a cancelled shard",
-                "cancelled success success",
+                "cancelled success success success",
                 "false",
                 false,
             ),
@@ -2294,8 +2344,8 @@ fn check_gates(yml: &str) {
         let (id, job) = named(&wf, check);
         assert_eq!(
             text(&job["if"]),
-            "always()",
-            "ci_changes: the gate `{check}` ({id}) is not `if: always()`"
+            GATE_RUNS,
+            "ci_changes: the gate `{check}` ({id}) is not `if: {GATE_RUNS}`"
         );
         let needs: Vec<String> = job["needs"]
             .as_array()
@@ -2389,12 +2439,45 @@ fn check_skips(yml: &str) {
         changes.get("if").is_none() && changes.get("needs").is_none(),
         "ci_changes: the `changes` job can be skipped"
     );
-    // Each part of the verdict the jobs read, passed on as the classifier wrote it (R-677).
-    for key in ["tier", "docs_only", "gpu", "plan_data", "gui_data"] {
+    // Each part of the verdict the jobs read, passed on as the classifier wrote it (R-677), but what the code tier of
+    // the run decides (R-684): `.github/scripts/ci_tier.sh decide` runs after the classifier, on its verdict.
+    for key in ["tier", "plan_data", "gui_data"] {
         assert_eq!(
             text(&changes["outputs"][key]),
             format!("${{{{ steps.changes.outputs.{key} }}}}"),
             "ci_changes: the `changes` job does not pass on `{key}`"
+        );
+    }
+    for key in [
+        "docs_only",
+        "gpu",
+        "quick",
+        "packages",
+        "workspace_tests",
+        "report",
+    ] {
+        assert_eq!(
+            text(&changes["outputs"][key]),
+            format!("${{{{ steps.tier.outputs.{key} }}}}"),
+            "ci_changes: the `changes` job does not pass on `{key}` from the run's tier"
+        );
+    }
+    let at = |run: &str| {
+        steps
+            .iter()
+            .position(|s| text(&s["run"]).trim() == run)
+            .unwrap_or_else(|| panic!("ci_changes: the `changes` job does not run `{run}`"))
+    };
+    assert!(
+        at("scripts/ci_changes.sh detect") < at(".github/scripts/ci_tier.sh decide"),
+        "ci_changes: the run's tier comes before R-677's classifier"
+    );
+    let tier_step = &steps[at(".github/scripts/ci_tier.sh decide")];
+    for key in ["tier", "docs_only", "gpu"] {
+        assert_eq!(
+            text(&tier_step["env"][key.to_uppercase()]),
+            format!("${{{{ steps.changes.outputs.{key} }}}}"),
+            "ci_changes: the run's tier does not read the classifier's `{key}`"
         );
     }
     for (id, cond) in SKIPS {
@@ -2418,10 +2501,52 @@ fn check_skips(yml: &str) {
         "changes",
         "ci_changes: `ci-workspace` does not wait on the classification"
     );
-    assert!(
-        ws.get("if").is_none(),
-        "ci_changes: `ci-workspace` can be skipped"
+    assert_eq!(
+        text(&ws["if"]),
+        "needs.changes.outputs.quick != 'true'",
+        "ci_changes: `ci-workspace` skips on something but a quick run"
     );
+    let quick = &wf["jobs"]["ci-quick"];
+    assert_eq!(
+        (text(&quick["needs"]), text(&quick["if"])),
+        (
+            "changes".to_owned(),
+            "needs.changes.outputs.quick == 'true'".to_owned()
+        ),
+        "ci_changes: `ci-quick` does not run on a quick run alone"
+    );
+    assert_eq!(
+        (
+            text(&quick["uses"]),
+            text(&quick["with"]["packages"]),
+            text(&quick["with"]["workspace_tests"])
+        ),
+        (
+            "./.github/workflows/ci-quick.yml".to_owned(),
+            "${{ needs.changes.outputs.packages }}".to_owned(),
+            "${{ needs.changes.outputs.workspace_tests }}".to_owned()
+        ),
+        "ci_changes: `ci-quick` does not call the quick tier on the run's packages"
+    );
+    let called = parse(&read(".github/workflows/ci-quick.yml"));
+    let quick_runs: Vec<String> = called["jobs"]["ci-quick"]["steps"]
+        .as_array()
+        .expect("ci_changes: ci-quick's steps")
+        .iter()
+        .map(|s| text(&s["run"]))
+        .collect();
+    for want in [
+        "cargo fmt --all --check",
+        "cargo clippy --workspace --all-targets -- -D warnings",
+        "cargo build --workspace",
+        "cargo nextest run $PACKAGES --no-tests pass",
+        "cargo test $PACKAGES --doc",
+    ] {
+        assert!(
+            quick_runs.iter().any(|r| r.trim() == want),
+            "ci_changes: the quick tier does not run `{want}`"
+        );
+    }
     assert_eq!(
         text(&ws["outputs"]["docs_only"]),
         "${{ needs.changes.outputs.docs_only }}",
@@ -2543,10 +2668,33 @@ fn pull_request_workflows() -> Vec<(String, String)> {
     out
 }
 
-/// The check name a job reports: its `name:`, or its id. A matrix job's expands per shard; skipped, it is reported
-/// unexpanded.
-fn reports(id: &str, job: &Value) -> String {
+/// A job's `name:` as written, or its id.
+fn raw_name(id: &str, job: &Value) -> String {
     job.get("name").map(text).unwrap_or_else(|| id.to_owned())
+}
+
+/// What a job reports when skipped at job level, its `name:` unexpanded. A name that is wholly an expression reports the
+/// expression, `matrix.check` (run 41972273540); a mixed one stays raw, `xtask-ci (${{ matrix.shard }})` (run
+/// 41828315009).
+fn skipped_name(id: &str, job: &Value) -> String {
+    let raw = raw_name(id, job);
+    raw.strip_prefix("${{ ")
+        .and_then(|rest| rest.strip_suffix(" }}"))
+        .filter(|expression| !expression.contains("${{"))
+        .map_or_else(|| raw.clone(), str::to_owned)
+}
+
+/// The check name a job reports when it runs: its `name:`, or its id. A matrix job's expands per shard, which the check
+/// names here don't list; a gate's one-value matrix (R-684) expands to its one name.
+fn reports(id: &str, job: &Value) -> String {
+    let raw = raw_name(id, job);
+    match job["strategy"]["matrix"]["check"]
+        .as_array()
+        .map(Vec::as_slice)
+    {
+        Some([only]) if raw == "${{ matrix.check }}" => text(only),
+        _ => raw,
+    }
 }
 
 fn check_required(workflows: &[(String, String)]) {
@@ -2573,14 +2721,14 @@ fn check_required(workflows: &[(String, String)]) {
             }
         }
         for (id, job) in jobs(&wf) {
+            let raw = raw_name(&id, &job);
             let name = reports(&id, &job);
             if job.get("strategy").and_then(|s| s.get("matrix")).is_some() {
                 assert!(
-                    name.contains("${{ matrix.") || !REQUIRED.contains(&name.as_str()),
-                    "ci_changes: {file}'s matrix job `{id}` is named `{name}`, without its shard; skipped, it would \
-                     report the required name `{name}`"
+                    raw.contains("${{ matrix.") || !REQUIRED.contains(&raw.as_str()),
+                    "ci_changes: {file}'s matrix job `{id}` is named `{raw}`, without its shard; skipped, it would \
+                     report the required name `{raw}`"
                 );
-                continue;
             }
             if !REQUIRED.contains(&name.as_str()) || !runs_on_prs {
                 continue;
@@ -2591,6 +2739,13 @@ fn check_required(workflows: &[(String, String)]) {
             assert!(
                 !skippable || cond.starts_with("always()"),
                 "ci_changes: {file}'s job `{id}`, the required check `{name}`, can be skipped (if: `{cond}`)"
+            );
+            // A job an `if:` can skip whatever its `needs:` ended in: skipped, it must not report the required name
+            // (R-684).
+            assert!(
+                cond.is_empty() || cond == "always()" || skipped_name(&id, &job) != name,
+                "ci_changes: {file}'s job `{id}` skips on `{cond}` under the required name `{name}`, which GitHub would \
+                 count as passed"
             );
         }
     }
@@ -2612,6 +2767,87 @@ fn check_required(workflows: &[(String, String)]) {
 #[test]
 fn ci_changes_no_skipped_job_reports_a_required_name() {
     check_required(&pull_request_workflows());
+}
+
+fn check_gate_skip_names(workflows: &[(String, String)]) {
+    let (_, ci) = workflows
+        .iter()
+        .find(|(f, _)| f == "ci.yml")
+        .expect("ci_changes: no ci.yml");
+    let all = jobs(&parse(ci));
+    let gates: Vec<_> = all
+        .iter()
+        .filter(|(id, job)| REQUIRED.contains(&reports(id, job).as_str()))
+        .collect();
+    assert_eq!(gates.len(), 5, "ci_changes: ci.yml's gates are not five");
+    for (id, job) in gates {
+        assert_eq!(
+            skipped_name(id, job),
+            "matrix.check",
+            "ci_changes: ci.yml's gate `{id}` skips under a name no run has shown"
+        );
+    }
+    // A mixed name stays raw.
+    let (id, shards) = all
+        .iter()
+        .find(|(id, _)| id == "xtask-ci")
+        .expect("ci_changes: no xtask-ci job");
+    assert_eq!(
+        skipped_name(id, shards),
+        "xtask-ci (${{ matrix.shard }})",
+        "ci_changes: a mixed name did not stay raw"
+    );
+}
+
+#[test]
+fn ci_changes_a_gate_skips_as_its_expression() {
+    check_gate_skip_names(&pull_request_workflows());
+}
+
+negative_control!(
+    ci_changes_a_gate_skips_as_its_expression,
+    "ci.yml with the gate `ci` named outright",
+    expected = "ci_changes: ci.yml's gate `ci-gate` skips under a name no run has shown",
+    {
+        let mut workflows = pull_request_workflows();
+        let at = workflows
+            .iter()
+            .position(|(f, _)| f == "ci.yml")
+            .expect("ci_changes: no ci.yml");
+        workflows[at].1 = edited(
+            ".github/workflows/ci.yml",
+            "  ci-gate:\n    name: ${{ matrix.check }}\n",
+            "  ci-gate:\n    name: ci\n",
+        );
+        check_gate_skip_names(&workflows)
+    }
+);
+
+mod a_gate_skips_under_its_expression {
+    use super::*;
+    negative_control!(
+        ci_changes_no_skipped_job_reports_a_required_name,
+        "ci.yml with the gate `xtask-ci` named outright, so a quick run's skip reports the required name and passes",
+        expected = "skips on `always() && needs.changes.outputs.quick != 'true'` under the required name `xtask-ci`",
+        {
+            let mut workflows = pull_request_workflows();
+            let at = workflows
+                .iter()
+                .position(|(f, _)| f == "ci.yml")
+                .expect("ci_changes: no ci.yml");
+            let text = edited(
+                ".github/workflows/ci.yml",
+                "  xtask-ci-gate:\n    name: ${{ matrix.check }}\n",
+                "  xtask-ci-gate:\n    name: xtask-ci\n",
+            );
+            workflows[at].1 = text.replacen(
+                "    strategy:\n      matrix:\n        check: [xtask-ci]\n",
+                "",
+                1,
+            );
+            check_required(&workflows)
+        }
+    );
 }
 
 negative_control!(
@@ -2774,10 +3010,23 @@ fn needs_of(job: &Value) -> Vec<String> {
     }
 }
 
+/// `ci.yml`'s run on a pull request whose classification is `verdict`: each required check it reports with whether its
+/// gate's script passes.
+#[cfg(unix)]
+fn ci_run(yml: &str, verdict: &[(&str, String)]) -> Vec<(String, bool)> {
+    ci_walk(yml, verdict).1
+}
+
 /// `ci.yml`'s run on a pull request whose classification is `verdict`: every job's result, each job that runs
 /// succeeding, and each required check it reports with whether its gate's script passes.
 #[cfg(unix)]
-fn ci_run(yml: &str, verdict: &[(&str, String)]) -> Vec<(String, bool)> {
+fn ci_walk(
+    yml: &str,
+    verdict: &[(&str, String)],
+) -> (
+    std::collections::BTreeMap<String, String>,
+    Vec<(String, bool)>,
+) {
     use std::collections::BTreeMap;
     let wf = parse(yml);
     let all = jobs(&wf);
@@ -2833,7 +3082,11 @@ fn ci_run(yml: &str, verdict: &[(&str, String)]) -> Vec<(String, bool)> {
     }
     let mut reported = Vec::new();
     for (id, job) in &all {
-        let name = reports(id, job);
+        let name = if results[id] == "skipped" {
+            skipped_name(id, job)
+        } else {
+            reports(id, job)
+        };
         if !REQUIRED.contains(&name.as_str()) {
             continue;
         }
@@ -2864,8 +3117,102 @@ fn ci_run(yml: &str, verdict: &[(&str, String)]) -> Vec<(String, bool)> {
             });
         reported.push((name, pass));
     }
-    reported
+    (results, reported)
 }
+
+/// The jobs `ci.yml` asks of the runners on `verdict`, a matrix job counted per shard.
+#[cfg(unix)]
+fn jobs_asked(yml: &str, verdict: &[(&str, String)]) -> usize {
+    let wf = parse(yml);
+    let (results, _) = ci_walk(yml, verdict);
+    jobs(&wf)
+        .iter()
+        .filter(|(id, _)| results[id] != "skipped")
+        .map(|(_, job)| {
+            job["strategy"]["matrix"]
+                .as_object()
+                .and_then(|m| m.values().next())
+                .and_then(Value::as_array)
+                .map_or(1, Vec::len)
+        })
+        .sum()
+}
+
+/// The verdict `changes` passes on for a change the classifier read as `v`: on a quick run, what
+/// `.github/scripts/ci_tier.sh decide` writes, which `xtask/tests/ci_quick_tier.rs` tests.
+#[cfg(unix)]
+fn tier_verdict(v: &Verdict, quick: bool) -> [(&'static str, String); 8] {
+    let code_pr = v.tier == "code";
+    [
+        ("tier", v.tier.clone()),
+        ("docs_only", (quick || v.tier != "code").to_string()),
+        ("gpu", (!quick && v.gpu).to_string()),
+        ("plan_data", v.plan_data.to_string()),
+        ("gui_data", v.gui_data.to_string()),
+        ("mutants", v.mutants.to_string()),
+        ("quick", quick.to_string()),
+        ("report", (code_pr && !quick).to_string()),
+    ]
+}
+
+/// What each head asks of the runners from `ci.yml`, which is the owner's measure of the quick tier (4 Nov 2026: "The
+/// quick tier from the CI series is the structural fix"): every other workflow's jobs on a push are the same on each.
+#[cfg(unix)]
+fn check_jobs_asked(yml: &str) {
+    let script = read("scripts/ci_changes.sh");
+    let code = classify(&script, &["crates/kernel/src/lib.rs"]);
+    let no_gpu = classify(&script, &["crates/gui/src/lib.rs"]);
+    let docs = classify(&script, &["docs/design/principia_dd_replication.md"]);
+    for (what, v, quick, want) in [
+        // `changes` and `ci-quick`.
+        ("a quick head", &code, true, 2),
+        ("a quick head on no GPU path", &no_gpu, true, 2),
+        // The 24 jobs of full CI, and `ci-status`.
+        ("a full head", &code, false, 25),
+        // Without the three GPU suites.
+        ("a full head on no GPU path", &no_gpu, false, 22),
+        // `changes`, `ci-workspace` and the five gates.
+        ("a docs head", &docs, false, 7),
+    ] {
+        assert_eq!(
+            jobs_asked(yml, &tier_verdict(v, quick)),
+            want,
+            "ci_changes: the jobs {what} asks for"
+        );
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn ci_changes_each_head_asks_for_its_jobs() {
+    check_jobs_asked(&read(".github/workflows/ci.yml"));
+}
+
+#[cfg(unix)]
+mod a_full_only_job_on_quick {
+    use super::*;
+    negative_control!(
+        ci_changes_each_head_asks_for_its_jobs,
+        "ci.yml with `ci-workspace` running on a quick head",
+        expected = "ci_changes: the jobs a quick head asks for",
+        check_jobs_asked(&edited(
+            ".github/workflows/ci.yml",
+            "    needs: changes\n    if: needs.changes.outputs.quick != 'true'\n",
+            "    needs: changes\n",
+        ))
+    );
+}
+
+#[cfg(unix)]
+negative_control!(
+    ci_changes_each_head_asks_for_its_jobs,
+    "ci.yml with the gates running on a quick head",
+    expected = "ci_changes: the jobs a quick head asks for",
+    check_jobs_asked(&read(".github/workflows/ci.yml").replace(
+        "    if: always() && needs.changes.outputs.quick != 'true'\n",
+        "    if: always()\n",
+    ))
+);
 
 /// What `mutants.yml`'s `mutants-check` job reported: whether its report step passed, its log and its job summary.
 #[cfg(unix)]
@@ -2964,15 +3311,15 @@ fn check_every_tier_reports(ci: &str, mutants: &str) {
     let script = read("scripts/ci_changes.sh");
     for (what, paths) in TIER_CHANGES {
         let v = classify(&script, paths);
-        let verdict = [
-            ("tier", v.tier.clone()),
-            ("docs_only", (v.tier != "code").to_string()),
-            ("gpu", v.gpu.to_string()),
-            ("plan_data", v.plan_data.to_string()),
-            ("gui_data", v.gui_data.to_string()),
-            ("mutants", v.mutants.to_string()),
-        ];
-        let reported = ci_run(ci, &verdict);
+        let reported = ci_run(ci, &tier_verdict(&v, false));
+        // A code head's quick run reports none of them: pending, and never a pass (R-684).
+        if v.tier == "code" {
+            let quick = ci_run(ci, &tier_verdict(&v, true));
+            assert!(
+                quick.is_empty(),
+                "ci_changes: a quick run on {what} reports a required check: {quick:?}"
+            );
+        }
         for check in ["ci", "xtask-ci", "gpu-kernel", "gpu-metal", "gpu-lavapipe"] {
             let by: Vec<bool> = reported
                 .iter()
@@ -3043,6 +3390,24 @@ fn ci_changes_every_required_check_reports_on_every_tier() {
 }
 
 #[cfg(unix)]
+mod a_quick_run_never_passes_a_check {
+    use super::*;
+    negative_control!(
+        ci_changes_every_required_check_reports_on_every_tier,
+        "ci.yml whose gate `xtask-ci` runs on a quick run, as if the skip of its shards were a docs head's",
+        expected = "ci_changes: a quick run on a code change reports a required check",
+        check_every_tier_reports(
+            &edited(
+                ".github/workflows/ci.yml",
+                "    needs: [xtask-ci, changes]\n    if: always() && needs.changes.outputs.quick != 'true'\n",
+                "    needs: [xtask-ci, changes]\n    if: always()\n",
+            ),
+            &read(".github/workflows/mutants.yml"),
+        )
+    );
+}
+
+#[cfg(unix)]
 mod workspace_skipped_on_docs {
     use super::*;
     negative_control!(
@@ -3052,8 +3417,8 @@ mod workspace_skipped_on_docs {
         check_every_tier_reports(
             &edited(
                 ".github/workflows/ci.yml",
-                "  ci-workspace:\n    runs-on: ubuntu-24.04\n",
-                "  ci-workspace:\n    if: needs.changes.outputs.docs_only != 'true'\n    runs-on: ubuntu-24.04\n",
+                "    needs: changes\n    if: needs.changes.outputs.quick != 'true'\n",
+                "    needs: changes\n    if: needs.changes.outputs.docs_only != 'true'\n",
             ),
             &read(".github/workflows/mutants.yml"),
         )
@@ -3324,16 +3689,15 @@ fn check_every_path_reports(workflows: &[(String, String)], setup: &str) {
                 || on.as_str() == Some("pull_request")
         })
         .collect();
+    let ci_yml = &workflows
+        .iter()
+        .find(|(f, _)| f == "ci.yml")
+        .expect("ci.yml")
+        .1;
     for path in EVENT_PATHS {
         let v = classify(&script, path.paths);
-        let verdict = [
-            ("tier", v.tier.clone()),
-            ("docs_only", (v.tier != "code").to_string()),
-            ("gpu", v.gpu.to_string()),
-            ("plan_data", v.plan_data.to_string()),
-            ("gui_data", v.gui_data.to_string()),
-            ("mutants", v.mutants.to_string()),
-        ];
+        // R-684: a code head's run of `ci.yml` is quick, every first attempt of a push. `ci.yml` runs on no label change.
+        let verdict = tier_verdict(&v, v.tier == "code");
         let mut ci_reported: Option<Vec<(String, bool)>> = None;
         for check in REQUIRED {
             let owners: Vec<(&String, &Value, String)> = parsed
@@ -3375,6 +3739,17 @@ fn check_every_path_reports(workflows: &[(String, String)], setup: &str) {
                     "ci_changes: `{check}` is not reported on {}: {file} runs neither on it nor on every new head",
                     path.what
                 );
+                // `merge-ready` going on a code head starts the full tier: `ci-full.yml`'s re-run of that push run, in
+                // the same suite, whose attempt reads the label and reports the check, passing (R-684).
+                if file.as_str() == "ci.yml" && path.label == "merge-ready" && path.ready {
+                    let full = ci_run(ci_yml, &tier_verdict(&v, false));
+                    assert!(
+                        full.iter().any(|(n, pass)| n == check && *pass),
+                        "ci_changes: `{check}` does not pass on the full tier of {} (tier {})",
+                        path.what,
+                        v.tier
+                    );
+                }
                 continue;
             }
             // The job runs on this event: no `if:` and no `needs:`, or an `if:` led by `always()` that holds on it.
@@ -3395,14 +3770,16 @@ fn check_every_path_reports(workflows: &[(String, String)], setup: &str) {
                 path.what
             );
             if file.as_str() == "ci.yml" {
-                let reported = ci_reported.get_or_insert_with(|| {
-                    let yml = &workflows
-                        .iter()
-                        .find(|(f, _)| f == "ci.yml")
-                        .expect("ci.yml")
-                        .1;
-                    ci_run(yml, &verdict)
-                });
+                let reported = ci_reported.get_or_insert_with(|| ci_run(ci_yml, &verdict));
+                // Pending, never skipped-as-success: on a quick run no job reports a full-only check.
+                if v.tier == "code" {
+                    assert!(
+                        reported.iter().all(|(n, _)| n != check),
+                        "ci_changes: `{check}` is reported on the quick run of {}",
+                        path.what
+                    );
+                    continue;
+                }
                 assert!(
                     reported.iter().any(|(n, pass)| n == check && *pass),
                     "ci_changes: `{check}` does not pass on {} (tier {})",
@@ -3463,6 +3840,42 @@ fn workflows_edited(file: &str, from: &str, to: &str) -> Vec<(String, String)> {
         .unwrap_or_else(|| panic!("ci_changes: no {file}"));
     workflows[at].1 = edited(&format!(".github/workflows/{file}"), from, to);
     workflows
+}
+
+#[cfg(unix)]
+mod a_gate_runs_on_a_quick_head {
+    use super::*;
+    negative_control!(
+        ci_changes_every_required_check_reports_on_every_path,
+        "ci.yml whose gate `gpu-metal` runs on a quick run, its suites skipped, and passes the skip on no GPU path",
+        expected = "`gpu-metal` is reported on the quick run of code, a push",
+        check_every_path_reports(
+            &workflows_edited(
+                "ci.yml",
+                "    needs: [changes, gpu-metal]\n    if: always() && needs.changes.outputs.quick != 'true'\n",
+                "    needs: [changes, gpu-metal]\n    if: always()\n",
+            ),
+            &read("plan/HUMAN_SETUP.md"),
+        )
+    );
+}
+
+#[cfg(unix)]
+mod the_full_tier_passes {
+    use super::*;
+    negative_control!(
+        ci_changes_every_required_check_reports_on_every_path,
+        "ci.yml whose ci-checks stays quick's, so the full tier the label starts never passes `ci`",
+        expected = "`ci` does not pass on the full tier of label added: merge-ready, code (tier code)",
+        check_every_path_reports(
+            &workflows_edited(
+                "ci.yml",
+                "  ci-checks:\n    needs: changes\n    if: needs.changes.outputs.docs_only != 'true'\n",
+                "  ci-checks:\n    needs: changes\n    if: needs.changes.outputs.quick == 'true'\n",
+            ),
+            &read("plan/HUMAN_SETUP.md"),
+        )
+    );
 }
 
 #[cfg(unix)]
@@ -3540,8 +3953,8 @@ mod path_plan_data {
         check_every_path_reports(
             &workflows_edited(
                 "ci.yml",
-                "  ci-workspace:\n    runs-on: ubuntu-24.04\n",
-                "  ci-workspace:\n    if: needs.changes.outputs.docs_only != 'true'\n    runs-on: ubuntu-24.04\n",
+                "    needs: changes\n    if: needs.changes.outputs.quick != 'true'\n",
+                "    needs: changes\n    if: needs.changes.outputs.docs_only != 'true'\n",
             ),
             &read("plan/HUMAN_SETUP.md"),
         )

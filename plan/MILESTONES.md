@@ -270,9 +270,11 @@ render_contract "→ flat compute"; deep_zoom §3 layer 0: "defines the three co
 - The temporal march, lockstep and checkerboard.
 - The integration-seam cross-checks (debug_tooling_plan §G).
 - The first kernel benchmarks.
+- The kernel cross-backend check (R-686): M4's gate report lists REQ-VAL-347's and REQ-VAL-348's NVIDIA rows, the record and REQ-VAL-348's replay each its own, as "not run" until
+  a Windows run posts them (the builder is TASK-M4-27's). That row is what carries the outstanding run after its task closes; it blocks nothing (R-649).
 
 <!-- gate:M4 -->
-**Exit gate — 106 requirements** (and every earlier gate still green):
+**Exit gate — 108 requirements** (and every earlier gate still green):
 
 - CHART (3): REQ-CHART-037, REQ-CHART-052, REQ-CHART-074
 - INT (16): REQ-INT-057…071, REQ-INT-083
@@ -281,7 +283,7 @@ render_contract "→ flat compute"; deep_zoom §3 layer 0: "defines the three co
 - SCHED (12): REQ-SCHED-004…013, REQ-SCHED-084, REQ-SCHED-097
 - RENDER (11): REQ-RENDER-029…036, REQ-RENDER-078, REQ-RENDER-082, REQ-RENDER-099
 - TOOL (8): REQ-TOOL-040…045, REQ-TOOL-126…127
-- VAL (30): REQ-VAL-056…079, REQ-VAL-112, REQ-VAL-125, REQ-VAL-137, REQ-VAL-140…141, REQ-VAL-177
+- VAL (32): REQ-VAL-056…079, REQ-VAL-112, REQ-VAL-125, REQ-VAL-137, REQ-VAL-140…141, REQ-VAL-177, REQ-VAL-347…348
 - PERF (13): REQ-PERF-005…013, REQ-PERF-077, REQ-PERF-081, REQ-PERF-086, REQ-PERF-094
 - SYS (10): REQ-SYS-020…029
 <!-- /gate:M4 -->
@@ -336,14 +338,14 @@ render_contract "→ adaptive"; deep_zoom §3 layer 2 and §4.
   slots, merges without waiting for the gates of M1 to M5, and never holds up M1 or M2.
 
 <!-- gate:M6 -->
-**Exit gate — 225 requirements** (and every earlier gate still green):
+**Exit gate — 226 requirements** (and every earlier gate still green):
 
 - DEC (6): REQ-DEC-033…035, REQ-DEC-037, REQ-DEC-042, REQ-DEC-049
 - PAY (5): REQ-PAY-069, REQ-PAY-080…082, REQ-PAY-084
 - GEN (1): REQ-GEN-018
 - SCHED (29): REQ-SCHED-056…071, REQ-SCHED-077…078, REQ-SCHED-080…082, REQ-SCHED-089…096
 - REF (38): REQ-REF-011…037, REQ-REF-039…040, REQ-REF-042…044, REQ-REF-046…051
-- GUI (89): REQ-GUI-010…015, REQ-GUI-162, REQ-GUI-165…179, REQ-GUI-181…183, REQ-GUI-189…226, REQ-GUI-229, REQ-GUI-231…240, REQ-GUI-251…252, REQ-GUI-254…260, REQ-GUI-262, REQ-GUI-265, REQ-GUI-346…347, REQ-GUI-410…411
+- GUI (90): REQ-GUI-010…015, REQ-GUI-162, REQ-GUI-165…179, REQ-GUI-181…183, REQ-GUI-189…226, REQ-GUI-229, REQ-GUI-231…240, REQ-GUI-251…252, REQ-GUI-254…260, REQ-GUI-262, REQ-GUI-265, REQ-GUI-346…347, REQ-GUI-410…412
 - TOOL (5): REQ-TOOL-055…058, REQ-TOOL-159
 - VAL (13): REQ-VAL-084…095, REQ-VAL-142
 - PERF (38): REQ-PERF-034…067, REQ-PERF-084, REQ-PERF-088…090
@@ -475,10 +477,11 @@ and tightens the GPU path (`docs/design/principia_dd_replication.md` § 12).
   the ruled targets scored (FF-H, the figure-eight's published shape-sphere curve, SP-1's structural comparison with
   Szebehely & Peters); TASK-M9-37, the report; TASK-M9-38, the GPU-path tightening defined (REQ-VAL-341, a definition,
   R-72), each change it proposes with its own ruling.
-- **One build task:** TASK-M9-39, the softened force law, scheduled after the core build at the owner's word (R-654;
-  REQ-INT-111, REQ-SYS-094, REQ-SYS-095). It is not a target and is not scored: its tests block its own merge, and the
-  report does not wait on it. The block below lists its three requirements apart from what M9 scores, and the report
-  has no row for them. It lists apart too REQ-VAL-340, the report, and REQ-VAL-341, the definition that follows it,
+- **Three build tasks:** TASK-M9-39, the softened force law, scheduled after the core build at the owner's word
+  (R-654; REQ-INT-111, REQ-SYS-094, REQ-SYS-095); TASK-M9-40, the Šuvakov-plane chart (R-669; REQ-CHART-091); and
+  TASK-M9-41, the candidate original results (R-679; REQ-VAL-344 to REQ-VAL-346). None is a target or is scored: each
+  one's tests block its own merge, and the report waits on none of them. The block below lists their seven
+  requirements apart from what M9 scores, and the report has no row for them. It lists apart too REQ-VAL-340, the report, and REQ-VAL-341, the definition that follows it,
   which are not targets either, and the calibrations of the targets, which have the report's list of calibrations,
   not rows. What M9 scores is the rows of `principia_dd_replication.md` § 12.2's table, which the generator checks.
 - **When:** scoring waits for M9, and R-415's early-merge test does not bring an M9 task forward. Source ingest and
@@ -498,10 +501,11 @@ and tightens the GPU path (`docs/design/principia_dd_replication.md` § 12).
 
 - VAL (56): REQ-VAL-202, REQ-VAL-204, REQ-VAL-206, REQ-VAL-208, REQ-VAL-210, REQ-VAL-212, REQ-VAL-215, REQ-VAL-217, REQ-VAL-219, REQ-VAL-224, REQ-VAL-226, REQ-VAL-229, REQ-VAL-231, REQ-VAL-233, REQ-VAL-235, REQ-VAL-237, REQ-VAL-239, REQ-VAL-241, REQ-VAL-243, REQ-VAL-245, REQ-VAL-247, REQ-VAL-249, REQ-VAL-253, REQ-VAL-255, REQ-VAL-258, REQ-VAL-260, REQ-VAL-263, REQ-VAL-265, REQ-VAL-267, REQ-VAL-269, REQ-VAL-271, REQ-VAL-274, REQ-VAL-276, REQ-VAL-278, REQ-VAL-280, REQ-VAL-282, REQ-VAL-284, REQ-VAL-287, REQ-VAL-289, REQ-VAL-292, REQ-VAL-296, REQ-VAL-298, REQ-VAL-300, REQ-VAL-302, REQ-VAL-304, REQ-VAL-307, REQ-VAL-310, REQ-VAL-315, REQ-VAL-317, REQ-VAL-320, REQ-VAL-322, REQ-VAL-324, REQ-VAL-328, REQ-VAL-331…332, REQ-VAL-334
 
-**Built, not scored — 4 requirements** (TASK-M9-39, TASK-M9-40, R-654, R-669; no outcome and no row in the report, each task's tests blocking its own merge):
+**Built, not scored — 7 requirements** (TASK-M9-39, TASK-M9-40, TASK-M9-41, R-654, R-669, R-679; no outcome and no row in the report, each task's tests blocking its own merge):
 
 - CHART (1): REQ-CHART-091
 - INT (1): REQ-INT-111
+- VAL (3): REQ-VAL-344…346
 - SYS (2): REQ-SYS-094…095
 
 **The report and the definition — 2 requirements** (TASK-M9-37, TASK-M9-38, R-650; no target to score and no row in the report):
