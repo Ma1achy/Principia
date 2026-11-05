@@ -126,7 +126,7 @@ backends' masses are bit-identical; where the masses differ, it is precision (RE
 
 **The premise fails (R-547, closing RQ-298).** CI's lavapipe evaluates an explicit `fma` as a rounded product and an
 add, so the form above is not one every backend rounds alike. Under R-547 a branch input that must agree across
-backends is built only from operations every IEEE backend rounds alike, with no intermediate that can be subnormal
+backends is built only from operations every IEEE backend rounds alike (a condition on the driver, R-690), with no intermediate that can be subnormal
 (gpu_determinism_note rules 2 and 6). `M₀₁`'s form is rewritten to that rule and re-proved by TASK-M2-48
 (REQ-DEC-011, REQ-VAL-017); the two paragraphs above stand as the record of the form built until then.
 
