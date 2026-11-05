@@ -2422,6 +2422,12 @@ negative_control!(
     check_linear_held(Mapping::Warped)
 );
 
+/// The mass-ratio chart of the tests below.
+type RatioChart = MixedMassRatio<Alpha, Defaults, f64>;
+
+/// A realisation test, the chart's own or a control's.
+type Realised<'a> = &'a dyn Fn(&RatioChart, f64, &LinkParams<f64>) -> bool;
+
 /// The chart of Codex's two inputs on PR #387: `softmax_tanh` at `μ_max`, the mass controls `z`, bodies `(0, 1)`, over
 /// `asked`.
 fn ratio_slice(
@@ -2429,7 +2435,7 @@ fn ratio_slice(
     asked: [f64; 2],
     mapping: Mapping,
     p: &LinkParams<f64>,
-) -> Option<MixedMassRatio<Alpha, Defaults, f64>> {
+) -> Option<RatioChart> {
     let frozen = [0.3, -0.5, 0.2, -0.1, 0.15, 0.05, z[0], z[1]];
     MixedMassRatio::new(frozen, [0.2, 1.3], asked, [0, 1], mapping, p)
 }
@@ -2437,9 +2443,7 @@ fn ratio_slice(
 /// The held mass near 1 (chart_reference §2.1, "each to within `ε_μ`, relative"): `q = 1.12` at `μ_max = 10` keeps the
 /// held mass and the ratio and moves both swept masses by about 0.9%, so it is not realised, while a ratio the link does
 /// reach is. `realised` is the test applied.
-fn check_each_mass(
-    realised: &dyn Fn(&MixedMassRatio<Alpha, Defaults, f64>, f64, &LinkParams<f64>) -> bool,
-) {
+fn check_each_mass(realised: Realised) {
     let p = LinkParams {
         mu_max: 10.0,
         ..LinkParams::DEFAULT
@@ -2477,6 +2481,50 @@ negative_control!(
     })
 );
 
+/// Each mass within `ε_μ` does not bound the ratio within it: the two swept masses can each miss by most of `ε_μ`,
+/// opposite ways. So past the last ratio the realisation test takes, near the link's reach at `μ_max = 5`, there are
+/// ratios with every mass in tolerance that `realised` still refuses, found by bisection on the masses alone.
+fn check_ratio_binds(realised: Realised) {
+    let p = LinkParams::DEFAULT;
+    let chart = ratio_slice([0.0, 0.0], [0.5, 2.0], Mapping::Linear, &p).expect("the chart");
+    let each = |q: f64| {
+        let m = ratio_masses(chart.bodies, chart.held, q);
+        let back = <SoftmaxTanh as Link<2, 3>>::forward_at(
+            <SoftmaxTanh as Link<2, 3>>::inverse_at(m, &p),
+            &p,
+        );
+        back.iter()
+            .zip(m)
+            .all(|(&x, m)| (x - m).abs() <= 1.0e-6 * m)
+    };
+    let (mut ok, mut bad) = (1.0_f64, 1000.0_f64);
+    assert!(each(ok) && !each(bad), "the masses' edge is not bracketed");
+    for _ in 0..64 {
+        let mid = (ok * bad).sqrt();
+        if each(mid) {
+            ok = mid;
+        } else {
+            bad = mid;
+        }
+    }
+    assert!(
+        !realised(&chart, ok, &p),
+        "q = {ok}, every mass in tolerance, its ratio off by more than ε_μ, is realised"
+    );
+}
+
+#[test]
+fn energy_axes_mass_ratio_ratio_binds() {
+    check_ratio_binds(&|chart, q, p| chart.realised(q, p));
+}
+
+negative_control!(
+    energy_axes_mass_ratio_ratio_binds,
+    "a test of the masses alone takes the ratio at its edge",
+    expected = "is realised",
+    check_ratio_binds(&|_, _, _| true)
+);
+
 /// A saturated centre: at the mass controls `(10, 0)` the centre's ratio, about 148.4, fails the inverse's clamp, but
 /// the asked ratios below it are realised, so the warped range is theirs: `want` is `[q₀, q₁]`, each to within `1e-3`,
 /// relative, and every pixel is a system. `asked` wholly past the clamp finds no seed, and no chart.
@@ -2507,6 +2555,22 @@ fn energy_axes_mass_ratio_saturated_centre() {
         .is_none(),
         "a range wholly past the clamp is offered"
     );
+    let narrow = RatioChart::new(
+        [0.3, -0.5, 0.2, -0.1, 0.15, 0.05, 10.0, -1.5],
+        [0.2, 1.3],
+        [1.0e-3, 1.0e3],
+        [1, 0],
+        Mapping::Warped,
+        &LinkParams::DEFAULT,
+    )
+    .expect("an interval away from 1 and the centre finds its seed");
+    assert!(
+        (narrow.ratio[0] - 0.006738).abs() <= 1.0e-5
+            && (narrow.ratio[1] - 0.010871).abs() <= 1.0e-5,
+        "the interval away from 1 is {:?}",
+        narrow.ratio
+    );
+    check_every_pixel("a narrow range", system(&narrow));
     assert!(
         ratio_slice(
             [10.0, 0.0],
