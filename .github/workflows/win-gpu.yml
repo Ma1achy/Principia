@@ -1,0 +1,342 @@
+# Measurements on the owner's Windows PC, `malachys-pc-rtx2080s`, RTX 2080 SUPER (R-711 (lands first in its own rulings
+# PR), item 1, which amends R-186 and R-656 for this one runner): the Vulkan GPU suites, nightly and on `main`; the
+# Windows build and tests, nightly; and a nightly self-check, the only daily re-proof of the setup, since `schedule` fires
+# only from `main`. Every result here is a measurement, never a required check (R-649): the PC is sometimes off, and
+# nothing on `main` waits for it. No job here is gathered, retried or read by any gate, and a red one is not main red;
+# `xtask/tests/ci_self_hosted.rs` fails if that ever stops holding, or if a rule below is broken. DX12 waits for its
+# opt-in (R-711 item 2). No benchmarks, soak or mutants run here.
+#
+# The repository is public and this runner is a real PC, so these are the conditions for having it at all (R-711 items
+# 1 and 5, the owner's job rules of 5 Nov 2026). Never add a `pull_request` or `pull_request_target` trigger: only push
+# to `main`, schedule and workflow_dispatch, which is also the only way to run this on a branch. Every job carries the
+# repository and actor guard. No credential reaches a job: `contents: read`, no repository secret, and checkout with
+# `persist-credentials: false`. Every action is pinned to a full commit SHA, its version in a comment. The hook on the PC
+# enforces the same triggers from outside the repository, whatever this file says.
+#
+# `.env` on the runner sets CARGO_HOME, RUSTUP_HOME, CARGO_TARGET_DIR, TEMP and TMP on E:, so this file sets none of them
+# and never runs `cargo clean`: a job can change what's in the target folder, not remove it. `core.autocrlf false` is in
+# the account's read-only gitconfig. `.github/actions/cargo-ci-config` isn't used here: it writes a config into
+# CARGO_HOME, which is read-only to the account and outlives the job, so dependencies keep their default debug info on
+# this one runner.
+#
+# Every suite's output goes through `.github/scripts/win_measure.ps1`, which keeps the full output and labels the result
+# `possibly faulty hardware (owner-reported)`, with the commit and driver version, in the job's summary and artifact. A
+# recorded run can serve Paper 2's non-Metal parity evidence (R-711 item 4), and an artifact lasts 90 days at most, so
+# copy one that's cited. A step after a failed suite still runs, so one failure doesn't hide the rest; the job ends red.
+#
+# Concurrency: one group for the whole file, at the workflow's level, not the job's: at the job's level, the jobs of one
+# run would count as each other's rivals, and the second would be cancelled by the third. They share one GPU, and the one
+# runner already takes one job at a time. `cancel-in-progress: false`: a running measurement finishes, since cancelling
+# it would throw away hours of a run on a busy day. GitHub keeps at most one run waiting in a group and cancels the
+# older waiting one, so with the PC off at most two runs wait, one holding the group and the newest behind it, and
+# neither can pile up; a job a runner hasn't taken after 24 to 48 hours is cancelled by GitHub. A cancelled run is no
+# failure. The cost: a push while a nightly waits replaces it, so that night's Windows tests don't run, though the
+# self-check still does, as the first step of every job and in the PC's hook.
+#
+# The schedule, 05:17 UTC: Windows may restart for updates from 23:00 to 05:00 on this PC.
+#
+# The paths: what `scripts/ci_changes.sh` calls a GPU path, written as a filter. Docs-only pushes run nothing (R-711
+# item 5); nor do `gui` and `prin`, which no GPU job builds. `schedule` and `workflow_dispatch` ignore the filter.
+name: win-gpu
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "crates/**"
+      - "!crates/gui/**"
+      - "!crates/prin/**"
+      - "xtask/**"
+      - "fixtures/**"
+      - "plan/requirements.yaml"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "rust-toolchain.toml"
+      - ".cargo/**"
+      - ".config/**"
+      - ".github/workflows/win-gpu.yml"
+      - ".github/scripts/win_measure.ps1"
+  schedule:
+    - cron: "17 5 * * *"
+  workflow_dispatch:
+    inputs:
+      only:
+        description: Run one job of this workflow
+        type: choice
+        default: all
+        options:
+          - all
+          - win-vulkan
+          - win-tests
+          - win-self-check
+
+concurrency:
+  group: win-gpu
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    # Plain `shell: powershell` is refused here: the account's execution policy doesn't allow script files. With -File, a
+    # step's result comes from its own exit, so each step ends in an explicit one.
+    shell: powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File {0}
+
+env:
+  PRIN_GPU_BACKEND: vulkan
+  CARGO_TERM_COLOR: never
+  # R-374 and the owner's CI setting (PR #394), as in every workflow.
+  CARGO_PROFILE_DEV_DEBUG: line-tables-only
+  CARGO_PROFILE_TEST_DEBUG: line-tables-only
+  CARGO_INCREMENTAL: "0"
+
+jobs:
+  # The GPU suites `ci.yml`'s `gpu-kernel`, `gpu-metal` and `gpu-lavapipe` run, on this card under Vulkan. Phase 1 of #390
+  # took about 2.6 hours for these on this PC, warm; a cold build adds about 20 minutes.
+  win-vulkan:
+    if: github.repository == 'Ma1achy/Principia' && github.actor == 'Ma1achy' && (inputs.only == '' || inputs.only == 'all' || inputs.only == 'win-vulkan')
+    runs-on: [self-hosted, windows, nvidia]
+    timeout-minutes: 330
+    steps:
+      - name: Self-check, first step
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File E:\runner-tools\checks\self-check.ps1
+          exit $LASTEXITCODE
+      - name: Toolchain on PATH
+        run: |
+          Add-Content -LiteralPath $env:GITHUB_PATH -Value 'E:\runner-tools\cargo\bin'
+          exit 0
+      - name: Clean checkout
+        id: checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          clean: true
+      - name: Record the commit, driver and toolchain
+        run: |
+          & .github\scripts\win_measure.ps1 start
+          exit $LASTEXITCODE
+      - name: cargo xtask build-kernel
+        id: kernel
+        run: |
+          & .github\scripts\win_measure.ps1 run build-kernel cargo xtask build-kernel
+          exit $LASTEXITCODE
+      # The suites below are worth nothing on any other adapter, so they run only if this one shows the card's name.
+      - name: The harness runs on the RTX 2080 SUPER
+        id: adapter
+        if: ${{ !cancelled() && steps.kernel.outcome == 'success' }}
+        run: |
+          & .github\scripts\win_measure.ps1 run adapter cargo nextest run -p validation --features controls --no-capture --no-fail-fast --retries 0 -E 'test(=gpu::tests::gpu_harness_identity_round_trip)'
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          if (-not (Select-String -LiteralPath "$env:RUNNER_TEMP\win-measure\adapter.log" -Pattern 'adapter: NVIDIA GeForce RTX 2080 SUPER' -Quiet)) { exit 1 }
+          exit 0
+      - name: cargo nextest run -p validation -p xtask -p engine
+        if: ${{ !cancelled() && steps.adapter.outcome == 'success' }}
+        env:
+          NEXTEST_PROFILE: gpu-kernel
+        run: |
+          & .github\scripts\win_measure.ps1 run gpu-kernel cargo nextest run -p validation -p xtask -p engine --no-fail-fast --retries 0
+          exit $LASTEXITCODE
+      - name: cargo test -p validation -p xtask -p engine --doc
+        if: ${{ !cancelled() && steps.adapter.outcome == 'success' }}
+        run: |
+          & .github\scripts\win_measure.ps1 run gpu-kernel-doc cargo test -p validation -p xtask -p engine --doc
+          exit $LASTEXITCODE
+      - name: cargo nextest run -p validation --features controls gpu_harness
+        if: ${{ !cancelled() && steps.adapter.outcome == 'success' }}
+        run: |
+          & .github\scripts\win_measure.ps1 run gpu_harness cargo nextest run -p validation --features controls gpu_harness --no-capture --no-fail-fast --retries 0
+          exit $LASTEXITCODE
+      - name: cargo nextest run -p validation --features controls compute_fast_math
+        if: ${{ !cancelled() && steps.adapter.outcome == 'success' }}
+        run: |
+          & .github\scripts\win_measure.ps1 run compute_fast_math cargo nextest run -p validation --features controls compute_fast_math --no-capture --no-fail-fast --retries 0
+          exit $LASTEXITCODE
+      - name: cargo nextest run -p engine --features controls compute_entry
+        if: ${{ !cancelled() && steps.adapter.outcome == 'success' }}
+        run: |
+          & .github\scripts\win_measure.ps1 run compute_entry cargo nextest run -p engine --features controls compute_entry --no-capture --no-fail-fast --retries 0
+          exit $LASTEXITCODE
+      - name: cargo nextest run -p engine --features controls decode_
+        if: ${{ !cancelled() && steps.adapter.outcome == 'success' }}
+        run: |
+          & .github\scripts\win_measure.ps1 run decode cargo nextest run -p engine --features controls decode_ --no-capture --no-fail-fast --retries 0
+          exit $LASTEXITCODE
+      - name: cargo nextest run -p engine --features controls invariant_
+        if: ${{ !cancelled() && steps.adapter.outcome == 'success' }}
+        run: |
+          & .github\scripts\win_measure.ps1 run invariant cargo nextest run -p engine --features controls invariant_ --no-capture --no-fail-fast --retries 0
+          exit $LASTEXITCODE
+      - name: cargo nextest run -p engine --features controls qa_m206_
+        if: ${{ !cancelled() && steps.adapter.outcome == 'success' }}
+        run: |
+          & .github\scripts\win_measure.ps1 run qa_m206 cargo nextest run -p engine --features controls qa_m206_ --no-capture --no-fail-fast --retries 0
+          exit $LASTEXITCODE
+      - name: cargo nextest run -p engine --features controls canonicaliser_
+        if: ${{ !cancelled() && steps.adapter.outcome == 'success' }}
+        run: |
+          & .github\scripts\win_measure.ps1 run canonicaliser cargo nextest run -p engine --features controls canonicaliser_ --no-capture --no-fail-fast --retries 0
+          exit $LASTEXITCODE
+      - name: cargo nextest run -p engine --features controls encode_
+        if: ${{ !cancelled() && steps.adapter.outcome == 'success' }}
+        run: |
+          & .github\scripts\win_measure.ps1 run encode cargo nextest run -p engine --features controls encode_ --no-capture --no-fail-fast --retries 0
+          exit $LASTEXITCODE
+      - name: cargo xtask gate decode-agreement
+        if: ${{ !cancelled() && steps.adapter.outcome == 'success' }}
+        run: |
+          & .github\scripts\win_measure.ps1 run decode-agreement cargo xtask gate decode-agreement
+          exit $LASTEXITCODE
+      - name: cargo nextest run -p validation --features controls codegen_selftest
+        if: ${{ !cancelled() && steps.adapter.outcome == 'success' }}
+        run: |
+          & .github\scripts\win_measure.ps1 run codegen_selftest cargo nextest run -p validation --features controls codegen_selftest --no-capture --no-fail-fast --retries 0
+          exit $LASTEXITCODE
+      - name: cargo xtask golden --all
+        if: ${{ !cancelled() && steps.adapter.outcome == 'success' }}
+        run: |
+          & .github\scripts\win_measure.ps1 run golden cargo xtask golden --all
+          exit $LASTEXITCODE
+      - name: cargo nextest run -p xtask --features controls golden_halfway
+        if: ${{ !cancelled() && steps.adapter.outcome == 'success' }}
+        run: |
+          & .github\scripts\win_measure.ps1 run golden_halfway cargo nextest run -p xtask --features controls golden_halfway --no-capture --no-fail-fast --retries 0
+          exit $LASTEXITCODE
+      - name: Label the result in the summary
+        if: ${{ always() && steps.checkout.outcome == 'success' }}
+        run: |
+          & .github\scripts\win_measure.ps1 finish
+          exit $LASTEXITCODE
+      - name: Keep the full output
+        if: ${{ always() && steps.checkout.outcome == 'success' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: win-vulkan-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/win-measure
+          retention-days: 90
+
+  # `nightly.yml`'s CPU suites on Windows: the `ci` profile, and the two the `ci-workspace` profile adds there. Some of
+  # these tests need bash or PyYAML, which this PC's account isn't known to have, so a failure here is read by its cause.
+  win-tests:
+    if: github.repository == 'Ma1achy/Principia' && github.actor == 'Ma1achy' && github.event_name != 'push' && (inputs.only == '' || inputs.only == 'all' || inputs.only == 'win-tests')
+    runs-on: [self-hosted, windows, nvidia]
+    timeout-minutes: 240
+    steps:
+      - name: Self-check, first step
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File E:\runner-tools\checks\self-check.ps1
+          exit $LASTEXITCODE
+      - name: Toolchain on PATH
+        run: |
+          Add-Content -LiteralPath $env:GITHUB_PATH -Value 'E:\runner-tools\cargo\bin'
+          exit 0
+      - name: Clean checkout
+        id: checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          clean: true
+      - name: Record the commit, driver and toolchain
+        run: |
+          & .github\scripts\win_measure.ps1 start
+          exit $LASTEXITCODE
+      - name: cargo build --workspace --all-targets
+        id: build
+        run: |
+          & .github\scripts\win_measure.ps1 run build cargo build --workspace --all-targets --keep-going
+          exit $LASTEXITCODE
+      - name: cargo nextest run --workspace
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        env:
+          NEXTEST_PROFILE: ci
+        run: |
+          & .github\scripts\win_measure.ps1 run workspace cargo nextest run --workspace --no-fail-fast --retries 0
+          exit $LASTEXITCODE
+      - name: cargo nextest run -p validation --test qa_TASK-M0-24
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        env:
+          NEXTEST_PROFILE: ci-workspace
+        run: |
+          & .github\scripts\win_measure.ps1 run qa_TASK-M0-24 cargo nextest run -p validation --test qa_TASK-M0-24 --no-fail-fast --retries 0
+          exit $LASTEXITCODE
+      - name: cargo nextest run -p xtask --test qa_TASK-M0-06_list
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        env:
+          NEXTEST_PROFILE: ci-workspace
+        run: |
+          & .github\scripts\win_measure.ps1 run qa_TASK-M0-06_list cargo nextest run -p xtask --test qa_TASK-M0-06_list --no-fail-fast --retries 0
+          exit $LASTEXITCODE
+      - name: cargo test --workspace --doc
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: |
+          & .github\scripts\win_measure.ps1 run doc cargo test --workspace --doc
+          exit $LASTEXITCODE
+      - name: cargo xtask deps
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: |
+          & .github\scripts\win_measure.ps1 run deps cargo xtask deps
+          exit $LASTEXITCODE
+      - name: Label the result in the summary
+        if: ${{ always() && steps.checkout.outcome == 'success' }}
+        run: |
+          & .github\scripts\win_measure.ps1 finish
+          exit $LASTEXITCODE
+      - name: Keep the full output
+        if: ${{ always() && steps.checkout.outcome == 'success' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: win-tests-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/win-measure
+          retention-days: 90
+
+  # The only daily re-proof of the setup: this job's first step, and the PC's hook before it. The guard test runs here too
+  # (the hand-over on #390 asks for it), its controls with it, on the PC it protects; it reads the workflows with a YAML
+  # crate, not PyYAML, so that it needs nothing the account doesn't have.
+  win-self-check:
+    if: github.repository == 'Ma1achy/Principia' && github.actor == 'Ma1achy' && github.event_name != 'push' && (inputs.only == '' || inputs.only == 'all' || inputs.only == 'win-self-check')
+    runs-on: [self-hosted, windows, nvidia]
+    timeout-minutes: 60
+    steps:
+      - name: Self-check, first step
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File E:\runner-tools\checks\self-check.ps1
+          exit $LASTEXITCODE
+      - name: Toolchain on PATH
+        run: |
+          Add-Content -LiteralPath $env:GITHUB_PATH -Value 'E:\runner-tools\cargo\bin'
+          exit 0
+      - name: Clean checkout
+        id: checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          clean: true
+      - name: Record the commit, driver and toolchain
+        run: |
+          & .github\scripts\win_measure.ps1 start
+          exit $LASTEXITCODE
+      - name: No CRLF and no token left in the checkout
+        run: |
+          $crlf = @(git ls-files --eol | Select-String 'i/lf\s+w/(crlf|mixed)').Count
+          "tracked LF files with CRLF in the tree: $crlf"
+          $tok = @(Select-String -LiteralPath '.git\config' -Pattern 'extraheader|x-access-token' -ErrorAction SilentlyContinue).Count
+          "token lines in .git\config: $tok"
+          if ($crlf -or $tok) { exit 1 }
+          exit 0
+      - name: The guard on this workflow
+        run: |
+          & .github\scripts\win_measure.ps1 run guard cargo nextest run -p xtask --features controls --test ci_self_hosted --no-fail-fast --retries 0
+          exit $LASTEXITCODE
+      - name: Label the result in the summary
+        if: ${{ always() && steps.checkout.outcome == 'success' }}
+        run: |
+          & .github\scripts\win_measure.ps1 finish
+          exit $LASTEXITCODE
+      - name: Keep the full output
+        if: ${{ always() && steps.checkout.outcome == 'success' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: win-self-check-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/win-measure
+          retention-days: 90

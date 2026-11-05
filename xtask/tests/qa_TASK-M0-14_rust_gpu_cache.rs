@@ -366,7 +366,13 @@ fn step_of(lines: &[String], ind: usize) -> Step {
 }
 
 fn all_jobs(files: &[(String, String)]) -> Vec<Job> {
-    files.iter().flat_map(|(f, t)| parse_jobs(f, t)).collect()
+    // The self-hosted runner keeps its rust-gpu build on its own disk from job to job, so it restores no cache (R-711,
+    // which lands first in its own rulings PR).
+    files
+        .iter()
+        .filter(|(f, _)| f != "win-gpu.yml")
+        .flat_map(|(f, t)| parse_jobs(f, t))
+        .collect()
 }
 
 /// Whether a `run:` script builds the kernel: a command line running `build-kernel`, or `cargo xtask ci`.
