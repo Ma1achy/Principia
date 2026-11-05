@@ -62,9 +62,10 @@
 # "runs no full CI", and `gpu` false, so every full-only job skips exactly as on a docs head, and `quick` true, on which
 # `ci-workspace` and the gates skip too; `ci-quick` runs that tier's `ci-workspace` tests itself.
 # A quick run reports no required check that only the full tier reports (`ci`, `xtask-ci` and the three GPU gates), so a
-# skip cannot pass one: each gate is named by a one-value matrix, `${{ matrix.check }}`, and GitHub reports a job skipped
-# at job level under its raw `name:`, never expanded (run 41828315009: `xtask-ci (${{ matrix.shard }})|skipped`). Until
-# the full tier runs, branch protection reads each as expected, and `changes` also posts each pending as a commit status
+# skip cannot pass one: each gate is named by a one-value matrix, `${{ matrix.check }}`, and a job skipped at job level
+# never expands its `name:`. A name that is wholly an expression reports that expression, `matrix.check` (run
+# 41972273540: five of `matrix.check|skipped`); a mixed one stays raw (run 41828315009:
+# `xtask-ci (${{ matrix.shard }})|skipped`). Until the full tier runs, branch protection reads each as expected, and `changes` also posts each pending as a commit status
 # on the head, which `ci-status` closes when the full tier ends. So no pull request merges until the full suite has
 # passed on its exact head. R-684's rationale: since R-676 a fix round is verified locally through the job queue, so
 # full CI on intermediate heads duplicated that work; the guarantee that `main` only receives fully-tested heads stands.
@@ -619,8 +620,8 @@ jobs:
   # (DOCS_ONLY); if the classification failed, `ci-workspace` was skipped and passes nothing on, so the skips turn it
   # red.
   # On a quick run this gate and the four below skip (R-684), so that run asks for none of them, and each is named by a
-  # one-value matrix: skipped at job level, GitHub reports it under its raw `name:`, `${{ matrix.check }}`, never under a
-  # required name, so a skip here cannot read as a pass. It needs `changes` for that `if:`; `quick` reads empty if the
+  # one-value matrix: skipped at job level, GitHub reports it as `matrix.check` (run 41972273540), never under a required
+  # name, so a skip here cannot read as a pass. It needs `changes` for that `if:`; `quick` reads empty if the
   # classification failed, and the gate runs and fails.
   ci-gate:
     name: ${{ matrix.check }}

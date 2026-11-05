@@ -17,8 +17,8 @@
 # same merge commit. The new attempt finds the label on and is full.
 #
 # Pending, never skipped-as-success. On a quick run no job bears a required name, so a skip cannot pass one: a gate
-# skipped at job level reports its raw `name:` (`ci.yml`, the gates' comment), and until the full tier runs branch
-# protection reads the check as expected. `decide` also posts each one pending as a commit status, which belongs to no
+# skipped at job level reports `matrix.check` (run 41972273540; `ci.yml`, the gates' comment), and until the full tier
+# runs branch protection reads the check as expected. `decide` also posts each one pending as a commit status, which belongs to no
 # check suite and so no later run supersedes. When a check and a commit status share a name, GitHub requires both, so
 # `report` always closes what `decide` opened; that holds whether or not branch protection's app binding
 # (`required_status_checks`, app 15368) counts a status at all.

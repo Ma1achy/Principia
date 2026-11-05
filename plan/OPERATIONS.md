@@ -422,7 +422,7 @@ to `gui`, `prin`, or `xtask`, `.github/` and `scripts/` narrows the set, since `
 dev-dependency, links the rest). So before the label:
 - "CI green on the head" means `ci-quick`, `pr-check` and `reviews-complete` pass, the full-only checks still pending;
 - `ci`, `xtask-ci`, `gpu-kernel`, `gpu-metal` and `gpu-lavapipe` read pending: `changes` posts each as a pending commit
-  status, and no job reports it, its gate skipping under its raw `name:` (`${{ matrix.check }}`), never a required name.
+  status, and no job reports it, its gate skipping as `matrix.check` (run 41972273540), never a required name.
   A skip therefore cannot pass one, and no pull request merges until the full suite has passed on its exact head.
   `required-guard.sh` passes a check only on `pass`, so it reads neither a skip nor a pending status as one;
 - the watcher puts `merge-ready` on as § "Mutants on the merge-ready head" says, with no need for a full run first. That

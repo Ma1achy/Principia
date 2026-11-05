@@ -534,7 +534,6 @@ fn s(v: &Value) -> String {
     }
 }
 
-/// The jobs of `wf` reporting the check `name` (their `name:`, or their id where they have none).
 /// The check a job reports when it runs: its `name:`, or its id; a gate named by its one-value matrix reports that value
 /// (R-684), and skipped, on a quick run, its raw `name:`.
 fn reported_name(id: &str, job: &Value) -> String {
@@ -548,6 +547,7 @@ fn reported_name(id: &str, job: &Value) -> String {
     }
 }
 
+/// The jobs of `wf` reporting the check `name` (their `name:`, or their id where they have none).
 fn reporting<'a>(wf: &'a Value, name: &str) -> Vec<(&'a String, &'a Value)> {
     wf["jobs"]
         .as_object()

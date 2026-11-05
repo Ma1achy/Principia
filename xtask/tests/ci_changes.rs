@@ -75,8 +75,8 @@
 //!   workflow runs on both label changes or neither, and filters no pull request.
 //! - R-684 (the owner, 3 Nov 2026: "Add a test that every required check reports in every path: quick, full, label
 //!   added, label removed, docs, plan-data"): `ci_changes_every_required_check_reports_on_every_path` walks those
-//!   paths. On a quick run no job reports a full-only required check, each gate skipping under its raw `name:`, never a
-//!   required one, and `ci_changes_no_skipped_job_reports_a_required_name` holds that; the re-run the label starts
+//!   paths. On a quick run no job reports a full-only required check, each gate skipping as `matrix.check` (run
+//!   41972273540), never a required one, and `ci_changes_no_skipped_job_reports_a_required_name` holds that; the re-run the label starts
 //!   reports each, passing. `ci_changes_each_head_asks_for_its_jobs` counts what each head asks of the runners.
 //!   `xtask/tests/ci_quick_tier.rs` tests what takes a head from one tier to the other.
 //! - `ci_changes_mutants_fixture_runs_on_the_gates_own_files`: `mutants.yml`'s `mutants-fixture`, the gate's self-test
@@ -2668,10 +2668,20 @@ fn pull_request_workflows() -> Vec<(String, String)> {
     out
 }
 
-/// A job's `name:` as written, or its id: what it reports when skipped at job level. GitHub reports a skipped job's
-/// `name:` unexpanded, as run 41828315009 shows: `xtask-ci (${{ matrix.shard }})`.
+/// A job's `name:` as written, or its id.
 fn raw_name(id: &str, job: &Value) -> String {
     job.get("name").map(text).unwrap_or_else(|| id.to_owned())
+}
+
+/// What a job reports when skipped at job level, its `name:` unexpanded. A name that is wholly an expression reports the
+/// expression, `matrix.check` (run 41972273540); a mixed one stays raw, `xtask-ci (${{ matrix.shard }})` (run
+/// 41828315009).
+fn skipped_name(id: &str, job: &Value) -> String {
+    let raw = raw_name(id, job);
+    raw.strip_prefix("${{ ")
+        .and_then(|rest| rest.strip_suffix(" }}"))
+        .filter(|expression| !expression.contains("${{"))
+        .map_or_else(|| raw.clone(), str::to_owned)
 }
 
 /// The check name a job reports when it runs: its `name:`, or its id. A matrix job's expands per shard, which the check
@@ -2731,9 +2741,9 @@ fn check_required(workflows: &[(String, String)]) {
                 "ci_changes: {file}'s job `{id}`, the required check `{name}`, can be skipped (if: `{cond}`)"
             );
             // A job an `if:` can skip whatever its `needs:` ended in: skipped, it must not report the required name
-            // (R-684). A skip it reports is its raw `name:`.
+            // (R-684).
             assert!(
-                cond.is_empty() || cond == "always()" || raw != name,
+                cond.is_empty() || cond == "always()" || skipped_name(&id, &job) != name,
                 "ci_changes: {file}'s job `{id}` skips on `{cond}` under the required name `{name}`, which GitHub would \
                  count as passed"
             );
@@ -2759,7 +2769,61 @@ fn ci_changes_no_skipped_job_reports_a_required_name() {
     check_required(&pull_request_workflows());
 }
 
-mod a_gate_skips_under_its_raw_name {
+fn check_gate_skip_names(workflows: &[(String, String)]) {
+    let (_, ci) = workflows
+        .iter()
+        .find(|(f, _)| f == "ci.yml")
+        .expect("ci_changes: no ci.yml");
+    let all = jobs(&parse(ci));
+    let gates: Vec<_> = all
+        .iter()
+        .filter(|(id, job)| REQUIRED.contains(&reports(id, job).as_str()))
+        .collect();
+    assert_eq!(gates.len(), 5, "ci_changes: ci.yml's gates are not five");
+    for (id, job) in gates {
+        assert_eq!(
+            skipped_name(id, job),
+            "matrix.check",
+            "ci_changes: ci.yml's gate `{id}` skips under a name no run has shown"
+        );
+    }
+    // A mixed name stays raw.
+    let (id, shards) = all
+        .iter()
+        .find(|(id, _)| id == "xtask-ci")
+        .expect("ci_changes: no xtask-ci job");
+    assert_eq!(
+        skipped_name(id, shards),
+        "xtask-ci (${{ matrix.shard }})",
+        "ci_changes: a mixed name did not stay raw"
+    );
+}
+
+#[test]
+fn ci_changes_a_gate_skips_as_its_expression() {
+    check_gate_skip_names(&pull_request_workflows());
+}
+
+negative_control!(
+    ci_changes_a_gate_skips_as_its_expression,
+    "ci.yml with the gate `ci` named outright",
+    expected = "ci_changes: ci.yml's gate `ci-gate` skips under a name no run has shown",
+    {
+        let mut workflows = pull_request_workflows();
+        let at = workflows
+            .iter()
+            .position(|(f, _)| f == "ci.yml")
+            .expect("ci_changes: no ci.yml");
+        workflows[at].1 = edited(
+            ".github/workflows/ci.yml",
+            "  ci-gate:\n    name: ${{ matrix.check }}\n",
+            "  ci-gate:\n    name: ci\n",
+        );
+        check_gate_skip_names(&workflows)
+    }
+);
+
+mod a_gate_skips_under_its_expression {
     use super::*;
     negative_control!(
         ci_changes_no_skipped_job_reports_a_required_name,
@@ -3018,9 +3082,8 @@ fn ci_walk(
     }
     let mut reported = Vec::new();
     for (id, job) in &all {
-        // A job skipped at job level reports its raw `name:`.
         let name = if results[id] == "skipped" {
-            raw_name(id, job)
+            skipped_name(id, job)
         } else {
             reports(id, job)
         };
