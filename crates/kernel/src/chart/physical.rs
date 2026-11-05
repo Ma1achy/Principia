@@ -45,8 +45,8 @@
 //! coordinate is not one, nor is the physical axis's block (the momentum block for an energy axis, the mass block for
 //! the mass ratio). A tilt into a configuration control or a mass logit moves `U` and the masses across the window,
 //! and the decode reads them per pixel (E3). The held `L_z` or `K` is a hidden coordinate too under R-633, the physical
-//! parameter of the construction that holds the momentum block, and this chart does not tilt it yet: TASK-M2-52 builds
-//! that tilt on the owner's mode-dependent rule, held `L_z`'s under RQ-699.
+//! parameter of the construction that holds the momentum block. No task builds its tilt, and this chart does not tilt
+//! it: whether and how it tilts is RQ-701's.
 
 use core::fmt;
 use core::marker::PhantomData;
@@ -543,7 +543,7 @@ where
     f64: From<P>,
 {
     /// The frozen controls neither axis writes: not `A`'s coordinate, nor the momentum block. The held value is not an
-    /// index here: its tilt is TASK-M2-52's (the module's note).
+    /// index here: whether and how it tilts is RQ-701's (the module's note).
     fn hidden(&self, k: u32) -> bool {
         k < 8 && k != A::COORDINATE as u32 && !momentum_index(k)
     }

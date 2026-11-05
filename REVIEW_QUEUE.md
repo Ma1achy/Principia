@@ -2011,3 +2011,36 @@ it is physics; the two options draw different systems.*
   floor elsewhere.
 - **Applied meanwhile:** (a), the ruling's literal form, recorded in chart_reference §2.1 (PR #387).
 - **Waits:** nothing: RQ-682 keeps the virial axis off every builder chart.
+
+## RQ-701: Whether and how a `MixedEnergy` chart's held `L_z` or `K` tilts: a hidden coordinate under R-633 that nothing builds or queues *(physics; silence: R-633; chart_decoder_contract § "Tilt (basis edit)"; TASK-M2-52's six charts; context: TASK-M2-37)*
+
+*Queued 5 Nov 2026 by TASK-M2-37's fix round, on the orchestrator's decision (applied per R-369), from code review
+5778057939 (F1) and physics review 5778075140 (F4) of PR #387. For the owner: yes, it is physics; the tilt changes
+which systems the chart shows.*
+
+- **File, section:**
+  - `docs/contracts/principia_chart_decoder_contract.md` § "Tilt (basis edit)", "Charts that hold a block by a
+    construction": "where it holds a block by a physical construction, its hidden coordinates are that construction's
+    physical parameters". `MixedEnergy` holds the momentum block by chart_reference §2.2's construction, its `held`
+    the parameter.
+  - `docs/design/principia_chart_reference.md` § "4.5 The Burrau-family chart maps", the hidden coordinates' table,
+    which names only: "`(ν, K)`, `Φ_θ,K` (and `Φ_strip,K`, the same map) | the held `L_z` (0 untilted), a physical
+    value" and "`Φ_θ,L_z` | the held `K`, a physical value".
+  - `plan/tasks/M2/TASK-M2-52.md` § "Deliverables": "The six charts' hidden coordinates … the held `L_z` of `(ν, K)`
+    and `Φ_θ,K`; the held `K` of `Φ_θ,L_z`."
+  - `crates/kernel/src/chart/physical.rs`, `MixedEnergy`'s `top`: "`K_max` on `K`, `KE` and `E`, `Q_hi`, the top of the
+    asked range, on the virial ratio; not read on `L_z`."
+- **The silence:** the principle makes a lone-axis chart's held `L_z`, or the held `K` on an `L_z` axis, a hidden
+  coordinate, but the table and TASK-M2-52's six charts do not include `MixedEnergy`. So its tilt is neither built nor
+  queued, and `Hidden::hidden` on the chart lists only the frozen controls.
+- **The question:** does a `MixedEnergy` chart's held `L_z` or `K` tilt, and if so, how, in each of the warped and
+  linear mappings?
+- **Facts the answer has to meet:**
+  - On a lone `K` axis the held `L_z`'s warp coordinate, `(2s − 1)·L_max(K)`, has no held `K` for `L_max`.
+  - On an `L_z` axis, a held `K` tilted in the warp coordinate, `K = K_max·t^γ_K`, `t₀ = (K₀/K_max)^(1/γ_K)`, needs a
+    `K_max` that chart does not read. A linear chart's by-value tilt needs no owner answer, and is unbuilt too.
+- **Options seen:** none yet; a by-value tilt is the linear mapping's reading under the owner's ruling of 4 Nov 2026,
+  and the warped mapping has no form that meets both facts above.
+- **Applied meanwhile:** the held value is not tilted: the chart's hidden coordinates stay its frozen controls, and
+  chart_reference §2.1 says so (PR #387).
+- **Waits:** a tilt of the held value on a lone-axis chart; nothing else.
