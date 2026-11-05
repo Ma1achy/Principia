@@ -11,7 +11,7 @@ on:
         description: which test
         required: true
         type: choice
-        options: [green, proof, survivor, survivor-cancel, survivor-refuse, plant-runner, quota, cold]
+        options: [green, proof, survivor, survivor-cancel, survivor-refuse, plant-runner, quota, cold, gpu-idle]
 
 permissions:
   contents: read
@@ -123,3 +123,9 @@ jobs:
           cmd /c "rmdir /s /q $w"
           "cold folder left: $(Test-Path -LiteralPath $w)"
           exit $code
+
+      - name: Sample the GPU, read-only
+        if: inputs.test == 'gpu-idle'
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File E:\runner-tools\setup\06-gpu-sample.ps1 -Minutes 8 -Label service-job
+          exit 0
