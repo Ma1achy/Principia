@@ -266,6 +266,14 @@ const LOADER_SCENARIOS = {
       check(release?.args[1] === code, `${code}'s keyup under AltGraph did not reach the worker`);
       check(release.args[0] === held, `${code} came up as ${release.args[0]}, and egui holds ${held} down`);
     }
+    // A press and release leave nothing behind, so a later press dropped under AltGr keeps its keyup dropped too.
+    const keyup = (fields, held) => page.window.dispatchEvent(event("keyup", { repeat: false, ...fields, getModifierState: (m) => m === "AltGraph" && held }));
+    press(started, { key: "x", code: "KeyX" }, false);
+    keyup({ key: "x", code: "KeyX" }, false);
+    const before = keys();
+    press(started, { key: "ź", code: "KeyX", ...ctrlAlt }, true, "ź");
+    keyup({ key: "ź", code: "KeyX", ...ctrlAlt }, true);
+    check(keys() === before, "a keyup whose press was dropped went on");
   },
   async loader_cmd_up_releases_what_the_browser_withholds() {
     const started = await startLoader();

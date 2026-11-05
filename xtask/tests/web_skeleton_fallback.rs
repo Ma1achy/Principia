@@ -482,3 +482,13 @@ mod control_up_sweeps_too {
         )
     );
 }
+
+mod release_keeps_its_entry {
+    use super::*;
+    negative_control!(
+        loader_altgraph_character_reaches_the_input,
+        "a released key left in the map, as gui review 5777993926 G2 traced",
+        expected = "a keyup whose press was dropped went on",
+        run(ALTGRAPH, &loader("    else down.delete(e.code);\n", ""))
+    );
+}
