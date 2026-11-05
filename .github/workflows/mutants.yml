@@ -9,8 +9,8 @@
 # None saves: rust-cache's `save-if` holds only on a push to `main`, and there is no save step. rust-cache hashes the
 # environment's CARGO_* variables into its key, so CARGO_TERM_COLOR below is set as in `ci.yml`.
 #
-# Mutants run on the merge-ready head (R-656, R-676): the shards, the fixture and the verdict run only when the
-# `merge-ready` label is put on the pull request, which the orchestrator's merge watcher does once every reviewer the
+# Mutants run on the merge-ready head (R-656, R-676): the baseline, the shards, the fixture and the verdict run only when
+# the `merge-ready` label is put on the pull request, which the orchestrator's merge watcher does once every reviewer the
 # task names has approved the head (`plan/OPERATIONS.md` § "The merge-ready label"). A push to the pull request takes
 # the label off (`mutants-pending`), so the gate runs again only on a head approved again, and cancels a run on the head
 # it supersedes (`concurrency` below).
@@ -106,7 +106,8 @@ jobs:
           fi
   # The per-PR mutation gate (R-196, R-202; TASK-M0-23): `cargo mutants --in-diff` on the PR's diff against its base,
   # on pull requests only, since `--in-diff` needs a base. The run is sharded across n parallel jobs, shard k of n each
-  # (`--shard k/n`), each under its own time limit (R-302); the nightly full run (TASK-M0-19) is the backstop. Every
+  # (`--shard k/n`), each under its own time limit (R-302), after the one baseline `mutants-baseline`, below, measures for them
+  # all; the nightly full run (TASK-M0-19) is the backstop. Every
   # shard computes the same diff and reads the same exclusions, `.cargo/mutants.toml`'s, shared with the nightly run.
   # Each shard lists its surviving mutants and fails on any not in `.cargo/mutants-equivalent.toml`; `mutants-check`
   # below then checks every shard's report together, and fails if any shard failed or was cut off by its limit.
@@ -126,6 +127,7 @@ jobs:
   mutants:
     if: github.event_name == 'pull_request' && github.event.action == 'labeled' && github.event.label.name == 'merge-ready'
     runs-on: ubuntu-24.04
+    needs: mutants-baseline
     # statuses: the heartbeat of a shard's run (`scripts/contain.sh`).
     permissions:
       contents: read
@@ -273,15 +275,20 @@ jobs:
         env:
           RUSTFLAGS: -C link-arg=-Wl,--compress-debug-sections=zlib -Zmir-enable-passes=-GVN
         run: cargo run --quiet --package xtask -- build-kernel
-      # Each shard rebuilds and runs the unmutated baseline, then its share of the diff's mutants, dealt round-robin
-      # so that one file's mutants, whose tests cost alike, spread over the shards. The baseline runs the tests of
-      # every package the shard mutates; each mutant runs its own package's tests, through cargo-nextest
-      # (`.cargo/mutants.toml`, R-388 item 4). The limit is on this step, so the
-      # shard's partial report is still uploaded when it is hit, and the step then fails.
-      # The run's two caps (R-348) come from `.cargo/mutants.toml`, which this `cargo mutants` reads, as the nightly
-      # run and a local run do; the human confirmed both at the M0 gate (R-376; R-71):
-      # - the per-mutant timeout (REQ-VAL-180), cargo-mutants' `timeout_multiplier` and `minimum_test_timeout`: a
-      #   mutant whose tests hang is recorded as a timeout, and the shard goes on to its next mutant;
+      # Each shard runs its share of the diff's mutants, dealt round-robin so that one file's mutants, whose tests cost
+      # alike, spread over the shards. It runs no baseline: `mutants-baseline` ran the tests of every package the diff
+      # mutates, before any shard started, and a shard reaches here only if they passed (`--baseline=skip`). Each mutant
+      # runs its own package's tests, through cargo-nextest (`.cargo/mutants.toml`, R-388 item 4). The first mutant of
+      # each package also does the build the baseline used to warm: 115-194 s on PR #360, with no limit, since
+      # `--timeout` binds only a mutant's tests. The limit is on this step, so the shard's partial report is still
+      # uploaded when it is hit, and the step then fails.
+      # The run's two caps (R-348) come from `.cargo/mutants.toml`, as the nightly run's and a local run's do; the human
+      # confirmed both at the M0 gate (R-376; R-71), and the owner's order of 5 Nov 2026 (R-712, on the port) amends the
+      # first:
+      # - the per-mutant timeout (REQ-VAL-180), `timeout_multiplier` and `minimum_test_timeout`, applied to the measured
+      #   baseline by `cargo xtask mutants-timeout` and given here as `--timeout`, since a skipped baseline leaves
+      #   cargo-mutants nothing to multiply: a mutant whose tests hang is recorded as a timeout, and the shard goes on to
+      #   its next mutant. A timeout counts as caught, and the verdict lists each one;
       # - the per-process memory cap (REQ-VAL-181), `prlimit --as` (core dumps off) as nextest's runner on Linux: each
       #   test process of the baseline and of every mutant runs under it, and an allocation past it kills that test,
       #   not cargo-mutants, cargo, nextest or this step.
@@ -317,6 +324,7 @@ jobs:
         env:
           RUSTFLAGS: -C link-arg=-Wl,--compress-debug-sections=zlib -Zmir-enable-passes=-GVN
           PRIN_CONTAIN: required
+          MUTANT_TIMEOUT: ${{ needs.mutants-baseline.outputs.timeout }}
           HEARTBEAT_CONTEXT: mutants-heartbeat (${{ matrix.shard }})
           HEARTBEAT_OUT: ${{ runner.temp }}/mutants.out
           HEARTBEAT_SHA: ${{ github.event.pull_request.head.sha }}
@@ -329,9 +337,10 @@ jobs:
         run: |
           set +e
           start=$(date +%s)
-          cargo mutants --in-place --in-diff "$RUNNER_TEMP/pr.diff" \
+          cargo mutants --in-place --in-diff "$RUNNER_TEMP/pr.diff" --baseline=skip --timeout "$MUTANT_TIMEOUT" \
             --shard ${{ matrix.shard }}/8 --sharding round-robin -o "$RUNNER_TEMP"
           code=$?
+          echo "cargo mutants shard ${{ matrix.shard }}/8: per-mutant timeout $MUTANT_TIMEOUT s"
           echo "cargo mutants shard ${{ matrix.shard }}/8: exit $code, wall-clock $(( $(date +%s) - start )) s"
           # 0: none survived; 2: some survived; 3: some timed out. The check below decides (R-202). Only exit 0 may
           # mean "no mutant in this shard"; any other exit without outcomes fails the shard.
@@ -363,6 +372,202 @@ jobs:
         with:
           name: mutants-report-shard-${{ matrix.shard }}
           path: ${{ runner.temp }}/mutants.out
+          if-no-files-found: ignore
+
+  # The unmutated baseline, measured once for every shard (the owner's order of 5 Nov 2026, R-712, on the port: the
+  # per-mutant timeout comes from the measured baseline, 3 times it, and 8 shards stay). Each shard used to run a baseline
+  # of its own: on PR #360 (run 41957362447) that was 5064-5554 s of test time in seven shards of eight, of the shard's
+  # 300 minutes, and those seven were cut with 135 of 676 mutants unreached; the slowest mutant took 2405 s and none timed
+  # out, so a longer or shorter multiplier alone would change nothing. This job runs before the shards, on the same
+  # diff, in the same setup, with the same environment and containment as theirs: each setup step is the shard's of the
+  # same name, which says why. A diff with no `.rs` file under `crates/` skips the work and the job passes, as the shards
+  # do. A baseline that fails fails here, named, and no shard runs: `mutants-verdict`, which runs whatever the shards
+  # ended in, then fails on their result, `skipped`, and `mutants-check` reports it.
+  mutants-baseline:
+    if: github.event_name == 'pull_request' && github.event.action == 'labeled' && github.event.label.name == 'merge-ready'
+    runs-on: ubuntu-24.04
+    # statuses: the heartbeat of the run (`scripts/contain.sh`).
+    permissions:
+      contents: read
+      statuses: write
+    env:
+      PRIN_GPU_BACKEND: vulkan
+    # Empty on a diff with no `.rs` file under `crates/`, where every shard skips the step that reads them. A `--timeout`
+    # with no value is a usage error in cargo-mutants, so a shard that lost this output fails.
+    outputs:
+      baseline-seconds: ${{ steps.timeout.outputs.baseline-seconds }}
+      timeout: ${{ steps.timeout.outputs.timeout }}
+    steps:
+      - uses: actions/checkout@v4
+        timeout-minutes: 10
+        with:
+          fetch-depth: 0
+      - name: git diff origin/${{ github.base_ref }}...HEAD
+        id: diff
+        timeout-minutes: 5
+        run: |
+          git diff "origin/${{ github.base_ref }}...HEAD" > "$RUNNER_TEMP/pr.diff"
+          echo "PR diff: $(wc -l < "$RUNNER_TEMP/pr.diff") lines"
+          if grep -E '^\+\+\+ "?b/crates/.*\.rs"?[[:space:]]*$' "$RUNNER_TEMP/pr.diff" > /dev/null; then
+            echo "rust=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "rust=false" >> "$GITHUB_OUTPUT"
+            echo "cargo mutants: no mutant in this shard of the PR's diff: it changes no Rust source (.rs) under crates/"
+          fi
+      - name: Free runner disk
+        if: steps.diff.outputs.rust == 'true'
+        timeout-minutes: 20
+        run: |
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache
+          sudo rm -rf /usr/share/swift /usr/local/share/powershell /usr/local/share/chromium /usr/local/lib/node_modules \
+            /opt/az /opt/microsoft /opt/google /opt/pipx /usr/lib/jvm /usr/share/miniconda /usr/local/julia* \
+            /usr/local/share/vcpkg /usr/lib/google-cloud-sdk /usr/lib/firefox /usr/share/az_* /usr/local/aws-cli \
+            /usr/local/aws-sam-cli /usr/share/kotlinc
+          sudo docker system prune --all --force --volumes > /dev/null
+          sudo swapoff -a
+          sudo rm -f /swapfile
+          df -h /
+      - name: rustup toolchain install (rust-toolchain.toml)
+        id: toolchain
+        if: steps.diff.outputs.rust == 'true'
+        timeout-minutes: 5
+        run: |
+          rustup toolchain install
+          echo "channel=$(sed -n 's/^channel = "\(.*\)"$/\1/p' rust-toolchain.toml)" >> "$GITHUB_OUTPUT"
+      - uses: Swatinem/rust-cache@v2
+        if: steps.diff.outputs.rust == 'true'
+        timeout-minutes: 5
+        with:
+          prefix-key: cargo-registry
+          shared-key: ci
+          cache-targets: "false"
+          cache-bin: "false"
+          save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+      - name: Dependencies without debug info, every profile
+        if: steps.diff.outputs.rust == 'true'
+        timeout-minutes: 1
+        uses: ./.github/actions/cargo-ci-config
+      - uses: actions/cache/restore@v4
+        if: steps.diff.outputs.rust == 'true'
+        with:
+          path: ~/.cache/rust-gpu
+          key: rust-gpu-gpu-kernel-${{ runner.os }}-${{ steps.toolchain.outputs.channel }}
+        timeout-minutes: 5
+      - uses: taiki-e/install-action@v2
+        if: steps.diff.outputs.rust == 'true'
+        timeout-minutes: 5
+        with:
+          tool: cargo-mutants@27.1.0,cargo-nextest@0.9.146
+      - uses: actions/setup-python@v5
+        if: steps.diff.outputs.rust == 'true'
+        timeout-minutes: 5
+        with:
+          python-version: "3.12"
+      - name: Install PyYAML
+        if: steps.diff.outputs.rust == 'true'
+        timeout-minutes: 5
+        run: python3 -m pip install pyyaml
+      - name: Install Mesa (lavapipe)
+        if: steps.diff.outputs.rust == 'true'
+        timeout-minutes: 5
+        run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers
+      - name: cargo run --quiet --package xtask -- build-kernel
+        if: steps.diff.outputs.rust == 'true'
+        timeout-minutes: 20
+        env:
+          RUSTFLAGS: -C link-arg=-Wl,--compress-debug-sections=zlib -Zmir-enable-passes=-GVN
+        run: cargo run --quiet --package xtask -- build-kernel
+      - name: scripts/contain.sh check
+        if: steps.diff.outputs.rust == 'true'
+        timeout-minutes: 5
+        env:
+          PRIN_CONTAIN: required
+        shell: bash scripts/contain.sh check {0}
+        run: echo "the containment holds"
+      - name: The job queue's tests in their PID namespaces, when the diff changes the queue
+        if: steps.diff.outputs.rust == 'true'
+        timeout-minutes: 10
+        env:
+          PRIN_CONTAIN: required
+          RUSTFLAGS: -C link-arg=-Wl,--compress-debug-sections=zlib -Zmir-enable-passes=-GVN
+        shell: bash scripts/contain.sh run bash --noprofile --norc -eo pipefail {0}
+        run: |
+          if grep -q '^+++ b/xtask/src/jobq\.rs' "$RUNNER_TEMP/pr.diff"; then
+            cargo nextest run --package xtask --test jobq --test qa_R-658 \
+              --test qa_R-658_round2 --test qa_R-658_round3 --test qa_R-658_round4
+          fi
+      # cargo-mutants has no baseline-only mode, so this is its own baseline run, stopped from going further: what it
+      # measures is what it would itself have measured, on the packages `--in-diff` selects, with the test tool and test
+      # arguments of `.cargo/mutants.toml`, and nothing here repeats them. `--build-timeout 0` binds only the mutants
+      # (cargo-mutants gives the baseline's build no limit), so each mutant's build is stopped at its first poll and
+      # recorded as a timeout, in a millisecond (measured on `fixtures/mutants/untested`), its tests unrun. Those
+      # records mean nothing, and only the baseline's outcome and log are kept. So the exits differ from a shard's:
+      # 3: the baseline passed, and every mutant was stopped; 0: no mutant in the diff, so no baseline ran; 4: the
+      # unmutated tree fails its tests. The limit is the one the baseline ran under in a shard (REQ-VAL-149).
+      - name: cargo mutants --in-diff, the unmutated baseline alone
+        id: baseline
+        if: steps.diff.outputs.rust == 'true'
+        env:
+          RUSTFLAGS: -C link-arg=-Wl,--compress-debug-sections=zlib -Zmir-enable-passes=-GVN
+          PRIN_CONTAIN: required
+          HEARTBEAT_CONTEXT: mutants-heartbeat (baseline)
+          HEARTBEAT_OUT: ${{ runner.temp }}/mutants.out
+          HEARTBEAT_SHA: ${{ github.event.pull_request.head.sha }}
+          HEARTBEAT_TOKEN: ${{ github.token }}
+        shell: bash scripts/contain.sh run bash --noprofile --norc -eo pipefail {0}
+        timeout-minutes: 300
+        run: |
+          set +e
+          start=$(date +%s)
+          cargo mutants --in-place --in-diff "$RUNNER_TEMP/pr.diff" --build-timeout 0 -o "$RUNNER_TEMP"
+          code=$?
+          echo "cargo mutants baseline: exit $code, wall-clock $(( $(date +%s) - start )) s"
+          case $code in
+            3) echo "measured=true" >> "$GITHUB_OUTPUT" ;;
+            0) echo "cargo mutants: no mutant in the PR's diff, so no baseline to measure" ;;
+            4)
+              echo "::error::the unmutated baseline failed its tests: no mutant is evidence, and no shard runs" \
+                "(R-202); its log is log/baseline.log in the mutants-report-baseline artifact"
+              exit 4
+              ;;
+            *) echo "::error::cargo mutants exited $code measuring the baseline"; exit "$code" ;;
+          esac
+      # The baseline cut off by its limit or stalled: named, with every mutant untested, never a pass.
+      - name: Baseline cut off or failed
+        if: always() && steps.baseline.outcome != 'success' && steps.baseline.outcome != 'skipped'
+        timeout-minutes: 5
+        run: |
+          echo "::error::the mutants baseline did not finish: it failed, or was cut off by its limit (300 min);" \
+            "no shard runs, and no mutant is a pass (R-202, R-302)"
+          exit 1
+      # 3 times the measured test time, floored, as `.cargo/mutants.toml` says; published to the shards, and shown here
+      # and in the job's summary.
+      - name: cargo xtask mutants-timeout (REQ-VAL-180)
+        id: timeout
+        if: steps.diff.outputs.rust == 'true'
+        timeout-minutes: 5
+        env:
+          MEASURED: ${{ steps.baseline.outputs.measured }}
+          RUSTFLAGS: -C link-arg=-Wl,--compress-debug-sections=zlib -Zmir-enable-passes=-GVN
+        run: |
+          out="$RUNNER_TEMP/mutants-timeout.out"
+          if [ "$MEASURED" = true ]; then
+            cargo xtask mutants-timeout "$RUNNER_TEMP/mutants.out" > "$out"
+          else
+            cargo xtask mutants-timeout --no-mutant > "$out"
+          fi
+          cat "$out"
+          cat "$out" >> "$GITHUB_OUTPUT"
+          { echo "## Measured baseline"; echo; sed 's/$/  /' "$out"; } >> "${GITHUB_STEP_SUMMARY:-/dev/null}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        timeout-minutes: 5
+        with:
+          name: mutants-report-baseline
+          path: |
+            ${{ runner.temp }}/mutants.out/outcomes.json
+            ${{ runner.temp }}/mutants.out/log/baseline.log
           if-no-files-found: ignore
 
   # The gate fires on the fixture (REQ-VAL-148): without its killing test the untested branch's mutants survive and
@@ -477,6 +682,33 @@ jobs:
           CAPS_FIXTURE_HANG_SECS=5 CAPS_FIXTURE_ALLOC_MIB=256 caps controls
           expect controls settled CaughtMutant no
           expect controls provisioned CaughtMutant no
+      # The shards' path, end to end, on the same fixture (the owner's order of 5 Nov 2026, R-712, on the port), and the one
+      # place a change to it runs before it reaches a pull request's shards: `mutants-baseline`'s command stops at the
+      # baseline, whose time `cargo xtask mutants-timeout` turns into the floor here, and a shard's command, with the
+      # baseline skipped, takes that timeout: the hanging mutant is recorded as a timeout, and the check lists it.
+      - name: The measured baseline sets the shards' timeout
+        if: steps.changes.outputs.tier != 'docs'
+        timeout-minutes: 5
+        run: |
+          fixture=fixtures/mutants/caps
+          code=0
+          cargo mutants --dir "$fixture" --in-diff "$fixture/change.diff" --config .cargo/mutants.toml \
+            --build-timeout 0 -o "$RUNNER_TEMP/measured" || code=$?
+          [ "$code" = 3 ] || { echo "::error::the baseline alone exited $code, not 3"; exit 1; }
+          cargo xtask mutants-timeout "$RUNNER_TEMP/measured/mutants.out" | tee "$RUNNER_TEMP/measured.out"
+          MUTANT_TIMEOUT=$(sed -n 's/^timeout=//p' "$RUNNER_TEMP/measured.out")
+          floor=$(sed -n 's/^minimum_test_timeout = //p' .cargo/mutants.toml)
+          [ "$MUTANT_TIMEOUT" = "$floor" ] ||
+            { echo "::error::the fixture's timeout is $MUTANT_TIMEOUT s, not the floor, $floor s"; exit 1; }
+          code=0
+          cargo mutants --dir "$fixture" --in-diff "$fixture/change.diff" --config .cargo/mutants.toml \
+            --baseline=skip --timeout "$MUTANT_TIMEOUT" --no-shuffle -o "$RUNNER_TEMP/skipped" || code=$?
+          [ "$code" = 3 ] || { echo "::error::the shard's command exited $code, not 3"; exit 1; }
+          cargo xtask mutants-check "$RUNNER_TEMP/skipped/mutants.out" | tee "$RUNNER_TEMP/skipped-check.log"
+          grep -q "^mutants-check: 1 timed out over 1 shard" "$RUNNER_TEMP/skipped-check.log" ||
+            { echo "::error::mutants-check did not count the timeout"; exit 1; }
+          grep -q "timed out (not a survivor): src/lib.rs:.*settled" "$RUNNER_TEMP/skipped-check.log" ||
+            { echo "::error::mutants-check did not list the timeout"; exit 1; }
       - uses: actions/upload-artifact@v4
         if: always()
         timeout-minutes: 5
@@ -486,11 +718,14 @@ jobs:
             ${{ runner.temp }}/fixture/mutants.out
             ${{ runner.temp }}/caps/mutants.out
             ${{ runner.temp }}/controls/mutants.out
+            ${{ runner.temp }}/skipped/mutants.out
           if-no-files-found: ignore
 
   # The sharded run's verdict (R-202, R-302): runs after every shard, whatever their result. It fails if any shard
   # failed or was cut off by its limit, and checks every shard's report together against the equivalent-mutants list,
-  # listing each survivor of the whole run. `always()` makes it run on every merge-ready run, a cancelled or skipped
+  # listing each survivor of the whole run, and every mutant that timed out, by name, with a count, 0 included, in its
+  # log and its job's summary (the owner's order of 5 Nov 2026, R-712, on the port: a timeout counts as caught, but list
+  # them). `always()` makes it run on every merge-ready run, a cancelled or skipped
   # shard included (then it fails), and it passes when no shard has a mutant. `mutants-check`, below, reports its
   # result. It runs only on the merge-ready run, so it is not named `mutants-check`, which every run reports.
   # `mutants-check` waits for it, so it is bounded, a stall failing it in minutes (applied per R-369; the limits on
@@ -540,7 +775,7 @@ jobs:
           fail=0
           if [ "${{ needs.mutants.result }}" != success ]; then
             echo "::error::a mutants shard did not pass (result: ${{ needs.mutants.result }}): a survivor not" \
-              "listed, or a shard failed or was cut off by its limit (R-302)"
+              "listed, or a shard failed or was cut off by its limit (R-302); skipped: mutants-baseline failed"
             fail=1
           fi
           shards=()
@@ -548,11 +783,20 @@ jobs:
             if [ -f "$d/outcomes.json" ]; then shards+=("$d"); else echo "$(basename "$d"): no outcomes.json"; fi
           done
           echo "shard reports with outcomes: ${#shards[@]} of 8"
+          report="$RUNNER_TEMP/mutants-check.log"
           if [ "${#shards[@]}" -gt 0 ]; then
-            cargo xtask mutants-check "${shards[@]}" || fail=1
+            cargo xtask mutants-check "${shards[@]}" > "$report" || fail=1
           else
-            echo "mutants-check: no shard tested a mutant of this PR's diff"
+            echo "mutants-check: no shard tested a mutant of this PR's diff" > "$report"
+            echo "mutants-check: 0 timed out over 0 shard(s)" >> "$report"
           fi
+          cat "$report"
+          {
+            echo "## Timed-out mutants, each counted as caught"
+            echo
+            sed -n 's/^mutants-check: \([0-9]* timed out .*\)$/\1/p; s/^mutants-check: timed out (not a survivor): \(.*\)$/- \1/p' \
+              "$report"
+          } >> "${GITHUB_STEP_SUMMARY:-/dev/null}"
           exit "$fail"
 
   # `mutants-check`, the required status check on `main` (R-305), reported by every run of this workflow as a job of its
@@ -577,7 +821,9 @@ jobs:
     needs: mutants-verdict
     runs-on: ubuntu-24.04
     # The wait for a merge-ready run in progress: its shards' 300 minutes (REQ-VAL-149) and their setup, under GitHub's
-    # 360-minute limit for a hosted job.
+    # 360-minute limit for a hosted job. A merge-ready run can now outlast it, its baseline coming ahead of the shards'
+    # limit: another label put on in a run's first minutes, with shards that then run near their limit, would end this
+    # job at its limit, failed. Re-running this job alone, once the merge-ready run has ended, reports its verdict.
     timeout-minutes: 355
     permissions:
       contents: read

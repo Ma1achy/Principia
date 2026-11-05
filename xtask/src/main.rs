@@ -105,7 +105,12 @@ Commands:
                                   the per-PR mutation gate (R-196, R-202): list each mutant that survived the
                                   `cargo mutants` run whose output is <mutants.out>, or each shard's (R-302), and fail
                                   naming each one not in the equivalent-mutants list, .cargo/mutants-equivalent.toml
-                                  or <file>
+                                  or <file>; a mutant that timed out is no survivor, and every one is listed, with
+                                  a count
+  mutants-timeout <mutants.out> | --no-mutant
+                                  the per-mutant timeout (R-348, REQ-VAL-180): print as key=value lines the unmutated
+                                  baseline that run measured and the timeout .cargo/mutants.toml's multiplier and floor
+                                  give it; failing if the baseline did not pass. --no-mutant: the floor
   plan-check                      run plan/check_plan.py from the repo root (it also runs coverage.py,
                                   milestones.py and reviewer_lists.py with --check), streaming its output and
                                   exiting with its status; needs python3 and PyYAML (REQ-SYS-007, REQ-SYS-008)
@@ -197,6 +202,10 @@ fn main() -> ExitCode {
                 &workspace_root().join(xtask::mutants_check::EQUIVALENT_LIST),
             )
         }
+        ["mutants-timeout", arg] => xtask::mutants_check::run_timeout(
+            (*arg != "--no-mutant").then(|| Path::new(arg)),
+            &workspace_root().join(xtask::mutants_check::MUTANTS_CONFIG),
+        ),
         ["pr-check"] => match std::env::var("GITHUB_EVENT_PATH") {
             Ok(path) => xtask::pr_check::run(Path::new(&path)),
             Err(_) => {

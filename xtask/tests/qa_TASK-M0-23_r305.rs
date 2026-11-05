@@ -177,6 +177,12 @@ impl Ctx {
         }
         if let Some(rest) = o.strip_prefix("needs.") {
             let (job, field) = rest.split_once('.').expect("qa23r: needs.<job>.<field>");
+            // A job's output, the shards' measured timeout (the owner's order of 5 Nov 2026, R-712, on the port, the one
+            // change here, R-290's exception by that order): only a step's `env` reads it, and these runs stand in for
+            // the step that does.
+            if field.starts_with("outputs.") {
+                return String::new();
+            }
             assert_eq!(field, "result", "qa23r: needs field not understood: {o}");
             return self.needs.get(job).cloned().unwrap_or_default();
         }

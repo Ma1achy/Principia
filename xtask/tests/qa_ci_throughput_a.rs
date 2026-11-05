@@ -515,7 +515,12 @@ fn ran(results: &BTreeMap<String, String>) -> BTreeSet<String> {
 
 // ---- Test 1: which jobs run on which event -----------------------------------------------------------------------
 
-const MUTANTS_WORK: [&str; 3] = ["mutants", "mutants-fixture", "mutants-verdict"];
+const MUTANTS_WORK: [&str; 4] = [
+    "mutants-baseline",
+    "mutants",
+    "mutants-fixture",
+    "mutants-verdict",
+];
 
 fn work_runs_only_when_merge_ready(mutants: &str, others: &[(String, String)]) {
     let wf = parse(mutants);
@@ -644,14 +649,16 @@ mod any_label {
     use super::*;
     negative_control!(
         qa_cta_mutants_work_runs_only_on_the_merge_ready_run,
-        "the shards started by any label, not the merge-ready one",
+        // The baseline, since the owner's order of 5 Nov 2026 (R-712, on the port) the job the shards wait for, so that
+        // a shard started by any label alone is skipped with it: the one change here, R-290's exception by that order.
+        "the baseline the shards wait for started by any label, not the merge-ready one",
         expected = "another label's run runs jobs",
         work_runs_only_when_merge_ready(
             &edited(
                 "mutants.yml",
-                "  mutants:\n    if: github.event_name == 'pull_request' && github.event.action == 'labeled' && \
+                "  mutants-baseline:\n    if: github.event_name == 'pull_request' && github.event.action == 'labeled' && \
                  github.event.label.name == 'merge-ready'\n",
-                "  mutants:\n    if: github.event_name == 'pull_request' && github.event.action == 'labeled'\n"
+                "  mutants-baseline:\n    if: github.event_name == 'pull_request' && github.event.action == 'labeled'\n"
             ),
             &other_workflows()
         )
