@@ -1671,6 +1671,15 @@ fn check_ci_full(files: &[(String, String)]) {
             .any(|s| str_of(&s["run"]).trim() == ".github/scripts/ci_tier.sh merge-ready"),
         "ci_quick_tier: ci-full.yml does not run the script"
     );
+    // Another label's run must not join `merge-ready`'s group, or it cancels that job; `merge-ready`'s two runs share
+    // it, so taking the label off cancels (R-684, as `mutants.yml`'s group does).
+    assert_eq!(
+        str_of(&full["concurrency"]["group"]),
+        "ci-full-${{ github.event_name }}-${{ (github.ref == 'refs/heads/main' || \
+         github.event.label.name != 'merge-ready') && github.run_id || github.ref }}",
+        "ci_quick_tier: ci-full.yml's group lets another label's run cancel the merge-ready job, or merge-ready's own \
+         runs not share one"
+    );
     assert_eq!(
         str_of(&full["permissions"]["actions"]),
         "write",
@@ -1707,6 +1716,34 @@ mod on_both_label_changes {
             "ci-full.yml",
             "types: [labeled, unlabeled]",
             "types: [labeled]"
+        ))
+    );
+}
+
+mod another_label_cancels {
+    use super::*;
+    negative_control!(
+        ci_full_workflow_takes_the_label_events,
+        "ci-full.yml with every label's run in one group, so `design` going on cancels the merge-ready job",
+        expected = "ci_quick_tier: ci-full.yml's group lets another label's run cancel",
+        check_ci_full(&with_edit(
+            "ci-full.yml",
+            "    || github.event.label.name != 'merge-ready')\n",
+            "    )\n"
+        ))
+    );
+}
+
+mod merge_ready_runs_apart {
+    use super::*;
+    negative_control!(
+        ci_full_workflow_takes_the_label_events,
+        "ci-full.yml giving `merge-ready` a group per run, so taking it off cancels nothing",
+        expected = "ci_quick_tier: ci-full.yml's group lets another label's run cancel",
+        check_ci_full(&with_edit(
+            "ci-full.yml",
+            "    || github.event.label.name != 'merge-ready')\n",
+            "    || github.event.label.name == 'merge-ready')\n"
         ))
     );
 }

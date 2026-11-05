@@ -10,17 +10,24 @@
 # (`.github/scripts/ci_tier.sh merge-ready`). A label a workflow's `GITHUB_TOKEN` puts on starts no run; the merge
 # watcher puts it on with the user's own token (`plan/OPERATIONS.md` § "Mutants on the merge-ready head").
 #
-# Any other label's run skips its one job at job level, and asks for no runner.
+# Any other label's run skips its one job at job level, and asks for no runner, in a group of its own, so it cancels
+# nothing (below).
 name: ci-full
 
 on:
   pull_request:
     types: [labeled, unlabeled]
 
-# A later label change on the pull request supersedes the one before it. `github.ref` here is the pull request's merge
-# ref, never `main`; the guard says so as every workflow's does (applied per R-369).
+# A later change of `merge-ready` on the pull request supersedes the one before it, so taking it off cancels this job.
+# A run started by any other label changes nothing here and has a group of its own (its run id), as in `mutants.yml`:
+# in the shared group it would cancel the `merge-ready` job, perhaps between its cancel and its re-run, leaving the head
+# with the label on and no full run. `github.ref` here is the pull request's merge ref, never `main`; the guard says so
+# as every workflow's does (applied per R-369).
 concurrency:
-  group: ci-full-${{ github.event_name }}-${{ github.ref == 'refs/heads/main' && github.run_id || github.ref }}
+  group: >-
+    ci-full-${{ github.event_name }}-${{ (github.ref == 'refs/heads/main'
+    || github.event.label.name != 'merge-ready')
+    && github.run_id || github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 # `actions: write` to cancel and re-run the run; `pull-requests: read` for the live head.
