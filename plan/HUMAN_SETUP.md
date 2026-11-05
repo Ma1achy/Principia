@@ -34,6 +34,8 @@ In **Settings → Branches → Add branch protection rule** (or a ruleset) for `
   push to main runs CI again;
 - turn on "do not allow bypassing the above settings", so the required checks bind every merge, the agent's included
   (R-266).
+  *3 Nov 2026 (R-682):* the owner allows admin bypass on `main`, so that he can merge by hand when a required check
+  hangs. Agents never use it, and the required checks still bind every merge an agent makes.
 - turn on "require conversation resolution before merging" (R-276): a PR merges only when every review thread on it
   is resolved.
 
@@ -71,4 +73,7 @@ R-627's port, G3, applied per R-369).
    install node` if it is absent. Playwright itself is pinned in the repo and installed there by `npm ci`; it drives
    the installed Chrome stable (`channel: "chrome"`), so no Playwright browser download is needed.
 4. Safari's WebDriver: `sudo safaridriver --enable`; then in Safari, first Settings → Advanced → "Show features for
-   web developers", and only then Develop → "Allow Remote Automation", which that setting reveals.
+   web developers", and only then Develop → "Allow Remote Automation", which that setting reveals. Before each Safari
+   run (the WebDriver check, in both layouts), **quit Safari first**: the automation session takes over Safari, and a
+   window the human is using, such as a research session, collides with it. The human quits it; an agent never does
+   (R-674, R-349).

@@ -310,7 +310,10 @@ merge:
    allows; two questions in different words; a deletion undone, or an entry restored whole. So after each merge the
    orchestrator still reads `git diff <before> <after> -- REVIEW_QUEUE.md`, which the batch merge prints, for these: a
    line doubled, restored or under the wrong RQ, or two notes that disagree. It fixes anything wrong by a follow-up PR.
-3. `gh pr merge N --merge --match-head-commit <full sha>`. Never `--admin` (R-266), never squash or rebase.
+3. `gh pr merge N --merge --match-head-commit <full sha>`. Never `--admin` (R-266), never squash or rebase. Admin
+   bypass is the owner's alone (R-682, 3 Nov 2026): no agent uses it, by `--admin` or any API merge that skips a
+   required check, and a merge script merges only when every required check has passed. A stuck check goes to the
+   owner, who decides whether to bypass.
 4. Then, as a separate command, never chained after the merge with `;`: confirm the remote branch is gone, since
    GitHub's "Automatically delete head branches" deletes it on merge (R-357): `git ls-remote --exit-code origin
    refs/heads/<branch>` exits 2, finding no such ref. Don't delete it yourself; if it is still there, tell the human.
@@ -320,7 +323,14 @@ merge:
 5. If `reviews-complete` stays red only from the `pull_request`-event run, which fails before any review and stays a
    separate check suite, re-run it: `gh run rerun <id>` (R-266, R-276).
 6. To re-run CI, prefer re-running the failed jobs (`gh run rerun <id> --failed`) over closing and reopening the PR
-   (the owner's note, R-633).
+   (the owner's note, R-633). A stuck required check: the paragraph below (R-681).
+
+**`main` red, or a required check stuck (R-681, 3 Nov 2026, a standing rule).** While `main`'s CI is red, or a
+required check on a pull request is stuck, no agent opens or updates any other pull request, and no other pull request
+merges, until `main` is green again or the check reports; the owner is told in one message what is red or stuck. A
+stuck check is cleared by re-running only the job that reports it, never a whole pipeline. A CI-tooling pull request,
+one that changes what CI runs or checks, shows its own `xtask-ci` run passing on its head before it merges: #381
+merged and broke `main`.
 
 **Advisory bot reviews before the merge (R-651, a standing rule).** Before step 3, the orchestrator's merge script
 checks, for Codex, Gemini CLI and Copilot each:
@@ -363,7 +373,7 @@ wait for the merge-ready run's `mutants-check` (§ "Mutants on the merge-ready h
 required checks are `plan/HUMAN_SETUP.md` §2's list, `mutants-check` among them though `main`'s protection lacks it
 until he re-adds it, which `xtask/tests/ci_changes.rs` checks every required check against on every path (R-678).
 
-**What CI runs on a pull request (R-656, R-662, R-677).** `ci.yml` runs on a push to `main` (and to a `measure/`
+**What CI runs on a pull request (R-656, R-662, R-677, R-790).** `ci.yml` runs on a push to `main` (and to a `measure/`
 branch, R-272) and, for a pull request, through `pull_request` only, once per push. Each workflow that builds or tests
 keeps one `concurrency` group per pull request, so a push cancels the run on the head it supersedes; a run on `main` is
 never cancelled (`no-atlas-params.yml` and `gemini-dispatch.yml` keep none, decisions.md R-656). `reviews.yml` keeps one
@@ -390,8 +400,9 @@ taking the highest (R-677):
   tests; `xtask/tests/ci_changes.rs` checks that every reader its scan finds is among them;
 - **docs**, tier (c), meaning it changes none of Principia's code (R-662; the owner, 31 Oct 2026: "Only the actual
   Principia CODE matters in ci"): every other path on the script's allowlist, `docs/`, `plan/` (its prose and Python),
-  `scripts/`, `workbench/` and the root's markdown: as tier (b), but `ci-workspace` runs only the cheap checks,
-  plan-check and the vocabulary lint, beside `no-atlas-params.yml`, the atlas guard;
+  `scripts/`, `workbench/`, `.claude/` (its commands, agents and settings; R-790) and the root's markdown: as tier (b),
+  but `ci-workspace` runs only the cheap checks, plan-check and the vocabulary lint, beside `no-atlas-params.yml`, the
+  atlas guard;
 - **no GPU-path file** (only data and docs paths, `crates/gui/` and `crates/prin/`): the GPU suites' jobs (`gpu-kernel
   suites`, `gpu-metal suites`, `gpu-lavapipe suites`) are skipped; everything else runs;
 - **no `.rs` file under `crates/`** (`mutants=false`; the owner, 2 Nov 2026: "Mutants run only when crates/ source
@@ -476,7 +487,8 @@ Approvals are of a head, so the reviewers approve the merged head again before t
 
 The human's standing rule of 2 Oct 2026 (R-369), which replaced the size rules and the "veto? holds the merge"
 practice, in force whether the human is away or not. Keep working through the plan under `plan/WORKFLOW.md` and
-`CLAUDE.md`. Progress is the goal: decide and continue, and stop only when nothing at all can proceed.
+`CLAUDE.md`. Progress is the goal: decide and continue, and stop only when nothing at all can proceed. A red `main` or a stuck
+required check stops other pull-request work at once, whatever else could proceed (R-681; § "Merging").
 
 **Merge** a PR once all of these hold:
 - every reviewer the task names has posted `VERDICT: APPROVE` on the head;
@@ -530,6 +542,14 @@ a separate read-only dispatch whose findings go in the next summary (and any rel
 TASK-M7-05 merges early only if it passes the same test, and only once R-411's port (RQ-265) has merged.
 
 Merge under the conditions above, and file every question for the human in `REVIEW_QUEUE.md` (R-369).
+
+**The PR sweep** (R-675, 1 Nov 2026): a standing duty. Periodically check every open PR and its CI state, find any
+that has been dropped or missed by accident, and pick it up again: dispatch what it needs next (the fix, the
+reviewers, a re-run, the merge), as § "Merging" and `plan/WORKFLOW.md` § "The review loop" say. A PR whose work is
+under way is not dropped. The current mechanism is `orch/pr-sweep.sh` in the orchestrator's notes directory, outside
+the repo: it lists each open PR as ok, active or DROPPED (a failed or cancelled check, a conflict, a CHANGES verdict on
+the head, an approved head with no merge watcher, or a settled head with no verdict), and `--watch` repeats it and
+exits when a newly dropped PR appears. The duty stands whatever runs it.
 
 **Never, without the human** (R-369's list; R-349):
 - make or record a new ruling (applying an existing one is fine);
@@ -825,6 +845,7 @@ anything outside the repository and its build and scratch directories without as
   warm targets whose dependencies are already built, which leaves it nothing to hit. `--remap-path-prefix` through
   `RUSTFLAGS` can't be used here: the paths hold a space, which `RUSTFLAGS` splits on. (Tried first on 27 Sep 2026, with
   no hits.)
+- sccache stays off, the owner's word of 31 Oct 2026 (R-666): the job queue's builds and local builds do not use it.
 
 **Linux cloud.**
 - Use `$HOME/principia-work/worktrees/` and `$HOME/principia-work/targets/`, with the same rules: one worktree and one

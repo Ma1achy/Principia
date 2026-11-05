@@ -2,8 +2,8 @@
 
 - **Milestone:** M4
 - **Closes:** REQ-PERF-010, REQ-PERF-081, REQ-INT-059
-- **Depends on:** TASK-M4-05, TASK-M4-02, TASK-M3-20
-- **Needs (earlier milestones):** REQ-SCHED-002, REQ-INT-007, REQ-INT-038, REQ-PERF-003, REQ-TOOL-001, REQ-EVT-010
+- **Depends on:** TASK-M4-05, TASK-M4-02, TASK-M3-20, TASK-M3-41
+- **Needs (earlier milestones):** REQ-SCHED-002, REQ-INT-007, REQ-INT-038, REQ-PERF-003, REQ-TOOL-001, REQ-EVT-010, REQ-INT-100, REQ-INT-101, REQ-INT-102, REQ-PAY-110
 - **Reviewers:** code, qa, physics, perf
 - **Pitfalls:** none
 - **Size:** ~350 lines
@@ -24,6 +24,7 @@
 - `decisions.md` § "R-186 — GitHub-hosted runners first; no self-hosted runner *(amends R-110, R-169, R-174)*"
 
 ## Deliverables
+- `crates/kernel/src/driver/wrapper.rs`: the body of `integrate_with`'s loop as one function on one carried-state type, owned here and called by that loop, by every chunk and by TASK-M4-28's pass entry, with no change of behaviour. The type holds `(m, r, p)`, the macro index and every register the loop reads between macro-steps: `Geom`, `SubstepState`, the Welford state, `completed`, `n_0`, the cadence's and detectors' registers, REQ-PAY-059's lagged `n̂` wherever it is placed, and a regularised occupant's `budget_word`. Applied per R-369.
 - `crates/engine/src/chunking.rs`: chunk planner (macro-steps per dispatch) used by the GPU march and the CPU rayon path alike.
 - `crates/validation/tests/loop_shape.rs`: the 100-macro-step single-dispatch parity test.
 - `xtask` bench `dispatch-chunk`: per-chunk duration measurements on the human's own Mac (Metal) via `prin profile`, never on a hosted runner (R-186); the proposed bound with its evidence in the PR.

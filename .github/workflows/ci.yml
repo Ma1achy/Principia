@@ -43,9 +43,9 @@
 #   `plan/requirements.yaml` when only fields no code reads change, `scripts/ci_req_fields.py` deciding) or the GUI's
 #   artboards and references (`docs/gui/design/`, `docs/gui/reference/`), with docs beside them or not: `ci-workspace`
 #   runs the cheap checks and the tests that read what changed, in place of its own tests;
-# - docs (tier c; R-662): the rest of `docs/`, `plan/` (its prose and Python), `scripts/`, `workbench/` and the root's
-#   markdown: `ci-workspace` runs only the cheap checks, the plan checks and the vocabulary lint
-#   (`no-atlas-params.yml`, the atlas guard, runs on every pull request).
+# - docs (tier c; R-662, R-790): the rest of `docs/`, `plan/` (its prose and Python), `scripts/`, `workbench/`,
+#   `.claude/` and the root's markdown: `ci-workspace` runs only the cheap checks, the plan checks and the vocabulary
+#   lint (`no-atlas-params.yml`, the atlas guard, runs on every pull request).
 # A data or docs change (`docs_only`, its name R-656's) skips `ci-archive` and the `ci` shards, `ci-checks`,
 # `web-skeleton`, `ci-release-archive` and its shards, and `xtask-ci`'s shards; it and a code change to no GPU-path
 # file (only `crates/gui/` and `crates/prin/` beside data and docs) skip the GPU suites' jobs, `gpu-kernel`,
@@ -356,6 +356,7 @@ jobs:
     runs-on: ubuntu-24.04
     env:
       PRIN_GPU_BACKEND: vulkan
+      RUNNER_DISK_TMPFS: /dev/shm
     needs: changes
     outputs:
       docs_only: ${{ needs.changes.outputs.docs_only }}
@@ -483,6 +484,28 @@ jobs:
       - name: cargo nextest run -p render (the GUI's references' readers)
         if: needs.changes.outputs.tier == 'data' && needs.changes.outputs.gui_data == 'true'
         run: cargo nextest run -p render --test qa_TASK-M1-03
+      # The kernel's log, on a failure, and the samples, whatever the job ended in, as in `xtask-ci`: `runner-disk.log`,
+      # and from the tmpfs `runner-pressure.log`, written beside the steps under the disk sampler (RUNNER_DISK_TMPFS),
+      # and this step's copy of the kernel's log. Each file's own path, so a disk that filled up costs none of the tmpfs
+      # files. Measurements, read by no gate: `sudo` refused, a full disk or a failed upload fails nothing.
+      - name: Kernel log on a failure
+        if: failure()
+        continue-on-error: true
+        timeout-minutes: 1
+        run: sudo -n dmesg --ctime | tail -n 200 | tee "$RUNNER_DISK_TMPFS/runner-dmesg.log" || true
+      - uses: actions/upload-artifact@v4
+        if: always() && needs.changes.outputs.docs_only != 'true'
+        continue-on-error: true
+        timeout-minutes: 5
+        with:
+          name: runner-disk-ci-workspace
+          path: |
+            ${{ runner.temp }}/runner-disk.log
+            /dev/shm/runner-pressure.log
+            /dev/shm/runner-dmesg.log
+          if-no-files-found: warn
+          retention-days: 14
+          overwrite: true
 
   # Formatting, lints, the docs, the build and the crate-graph check, once, beside the test shards (R-195, R-387,
   # REQ-SYS-004). Skipped on a data or docs pull request (R-656, R-677): no such path is compiled.
@@ -643,7 +666,8 @@ jobs:
   # The release archive's tests as 2 shards, each running its `hash:` slice from `ci-release-archive`'s archive, with
   # no build or test compile of its own but shard 1's doctests at the same profile (R-231). `--no-fail-fast`: every
   # test that fails at the release profile is shown, not only the first. The GPU harness self-tests among them run on
-  # lavapipe, as in `ci`.
+  # lavapipe, as in `ci`. Its heavy steps run under the disk sampler (`.github/scripts/disk_sampler.sh`), as the `ci`
+  # shards' do: a measurement, read by no gate.
   ci-release:
     needs: ci-release-archive
     runs-on: ubuntu-24.04
@@ -652,12 +676,28 @@ jobs:
       actions: read
     env:
       PRIN_GPU_BACKEND: vulkan
+      RUNNER_DISK_TMPFS: /dev/shm
     strategy:
       fail-fast: false
       matrix:
         shard: [1, 2]
     steps:
       - uses: actions/checkout@v4
+      # Runner disk, as in the `ci` shards (the same list, copied): before the toolchain and the download, logging the
+      # free space before and after. The runner starts at about 60 GB used whatever its size, so a 72 GB runner has 12 GB
+      # free here, and both shards have run out of it ("No space left on device": `ci-release (1)` of run 41791726904,
+      # `ci-release (2)` on PR #394). Test infrastructure only.
+      - name: Free runner disk
+        run: |
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache/CodeQL \
+            /usr/lib/jvm /opt/hostedtoolcache/Java_* /usr/share/swift \
+            /usr/local/share/chromium /opt/google /opt/microsoft /usr/local/share/powershell /usr/local/share/boost \
+            /usr/share/miniconda /usr/local/julia* /usr/local/lib/node_modules \
+            /opt/hostedtoolcache/go /opt/hostedtoolcache/node /opt/hostedtoolcache/PyPy /opt/hostedtoolcache/Ruby \
+            /usr/lib/google-cloud-sdk /usr/local/aws-cli /usr/local/aws-sam-cli /opt/az /usr/share/az_*
+          sudo docker image prune --all --force > /dev/null
+          df -h /
       # What the two disks hold, for moving the build to `/mnt` (the owner's candidate 1, 4 Nov 2026). It only measures,
       # and nothing it finds can fail the job.
       - name: Runner disks
@@ -709,10 +749,35 @@ jobs:
         env:
           NEXTEST_PROFILE: ci
         run: cargo nextest run --archive-file $RUNNER_TEMP/nextest-release.tar.zst --extract-to . --extract-overwrite --no-fail-fast --partition hash:${{ matrix.shard }}/2
-      # The workspace's doctests at the release profile, once, in shard 1, which nextest does not run (R-231).
+        shell: bash .github/scripts/disk_sampler.sh {0}
+      # The workspace's doctests at the release profile, once, in shard 1, which nextest does not run (R-231). Under the
+      # disk sampler too: this step is the job's one compile.
       - name: cargo test --workspace --release --no-fail-fast --doc
         if: matrix.shard == 1
         run: cargo test --workspace --release --no-fail-fast --doc
+        shell: bash .github/scripts/disk_sampler.sh {0}
+      # The kernel's log, on a failure, and the samples, whatever the job ended in, as in `xtask-ci`: `runner-disk.log`,
+      # and from the tmpfs `runner-pressure.log`, written beside the steps under the disk sampler (RUNNER_DISK_TMPFS),
+      # and this step's copy of the kernel's log. Each file's own path, so a disk that filled up costs none of the tmpfs
+      # files. Measurements, read by no gate: `sudo` refused, a full disk or a failed upload fails nothing.
+      - name: Kernel log on a failure
+        if: failure()
+        continue-on-error: true
+        timeout-minutes: 1
+        run: sudo -n dmesg --ctime | tail -n 200 | tee "$RUNNER_DISK_TMPFS/runner-dmesg.log" || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        continue-on-error: true
+        timeout-minutes: 5
+        with:
+          name: runner-disk-ci-release-${{ matrix.shard }}
+          path: |
+            ${{ runner.temp }}/runner-disk.log
+            /dev/shm/runner-pressure.log
+            /dev/shm/runner-dmesg.log
+          if-no-files-found: warn
+          retention-days: 14
+          overwrite: true
 
   # The GPU kernel build and the tests that need the built kernel, in a job of their own beside `ci` (R-325,
   # REQ-SYS-076): `cargo xtask build-kernel` compiles the kernel to the GPU, rust-gpu → SPIR-V → naga → WGSL

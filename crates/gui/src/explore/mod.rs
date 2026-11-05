@@ -42,7 +42,8 @@ pub const MANIFOLD_VIEW: ScopeId = "manifold_view";
 /// The figure's scope: in interaction mode its arrows pan (§G3).
 pub const FIGURE: ScopeId = "figure";
 /// The Compass's big scope: the compass, then its Tilt and Slice buttons, then its view buttons Cube, Plücker, Jacobi
-/// and Shape (§G3; R-409 A2; R-452).
+/// and Shape, then, in the Cube view, the axis buttons H, V and D and, while it is shown, the badge (§G3; R-409 A2;
+/// R-452; R-459 G9).
 pub const COMPASS: ScopeId = "compass";
 /// The compass itself, one element in navigation mode: in interaction mode its arrows tilt in tilt mode and move the
 /// slice along the plane's normal in slice mode (§G3; R-409 F3).
@@ -59,10 +60,51 @@ pub const COMPASS_PLUCKER: ScopeId = "compass_plucker";
 pub const COMPASS_JACOBI: ScopeId = "compass_jacobi";
 /// The compass's Shape view button (R-452).
 pub const COMPASS_SHAPE: ScopeId = "compass_shape";
+/// The cube's H axis button, a menu of [`COMPASS_H_ENTRIES`] (R-459).
+pub const COMPASS_H: ScopeId = "compass_h";
+/// The cube's V axis button, a menu of [`COMPASS_V_ENTRIES`] (R-459).
+pub const COMPASS_V: ScopeId = "compass_v";
+/// The cube's third axis button, D, or X or Y while it shows a tilt target, a menu of [`COMPASS_D_ENTRIES`] (R-459).
+pub const COMPASS_D: ScopeId = "compass_d";
+/// The cube's "4D: see Plücker" badge, a sibling only while it is shown (R-459 G8, G9).
+pub const COMPASS_BADGE: ScopeId = "compass_badge";
+/// H's dropdown's entries, one per latent dimension; it holds those [`compass::choices`] offers.
+pub const COMPASS_H_ENTRIES: [ScopeId; 8] = [
+    "compass_h_0",
+    "compass_h_1",
+    "compass_h_2",
+    "compass_h_3",
+    "compass_h_4",
+    "compass_h_5",
+    "compass_h_6",
+    "compass_h_7",
+];
+/// V's dropdown's entries.
+pub const COMPASS_V_ENTRIES: [ScopeId; 8] = [
+    "compass_v_0",
+    "compass_v_1",
+    "compass_v_2",
+    "compass_v_3",
+    "compass_v_4",
+    "compass_v_5",
+    "compass_v_6",
+    "compass_v_7",
+];
+/// The third axis's dropdown's entries.
+pub const COMPASS_D_ENTRIES: [ScopeId; 8] = [
+    "compass_d_0",
+    "compass_d_1",
+    "compass_d_2",
+    "compass_d_3",
+    "compass_d_4",
+    "compass_d_5",
+    "compass_d_6",
+    "compass_d_7",
+];
 
 /// Joins Explore's big scopes after the top bar, in §G3's Tab order: 2 Manifold view, with its sub-scopes, 3 Figure,
 /// 4 Trajectory, with its elements, 5 Compass, with the compass, Tilt, Slice, Cube, Plücker, Jacobi and Shape inside
-/// (R-452), 6 Time, with its elements, 7 Legend, read-only. The figure and the compass are
+/// (R-452), H, V, D and the badge joining as the view shows them ([`compass::join`]; R-459), 6 Time, with its elements, 7 Legend, read-only. The figure and the compass are
 /// values the arrows adjust in interaction mode: the figure's pan, the compass's tilt or slice (registered as the
 /// tilt; [`compass::adjust`] steps by the mode). The Manifold view's controls join when it is first drawn
 /// ([`manifold_view::join`]).

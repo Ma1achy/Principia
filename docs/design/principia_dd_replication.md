@@ -115,6 +115,21 @@ al.'s databases, Simó's archive and Li & Liao's tables state no terms; they are
 stays the provenance check. *Was:* "Hristov et al.'s databases, Simó's and Li & Liao's tables state no terms, so they
 are fetched and hash-checked, not committed, while RQ-579 is open." The atlas's hunt orbits are not in the snapshot and stay out until the operator publishes them.
 
+*1 Nov 2026 (R-668, the owner's triage rulings):*
+- **The site-note families** (`r4new`, `rosette`, `bhhsat`, `bhunt`, `pancake`; 81 rows of OC26's snapshot) stay in it,
+  marked "operator's own search, unreviewed": closure peeks only, never targets. `bhhsat` is treated so unless its
+  comparison with Davoust & Broucke 1982 matches, in which case that paper is cited for it. `suvakov_pc` (personal
+  communication) is closure only.
+- **A digit match is a trace**, and a row so traced is marked "inferred" (HP27's 97 `hristov2026` rows, "inferred by
+  matching", among them).
+- **Data reuse** (the owner's standing rule): values published in a paper, or in a public database a paper points to,
+  may be stored with credit and citation, with no permission needed; a code is not. An author is emailed only as a last
+  resort.
+- **Unreviewed and AI-assisted sources** (Habl, Majumder, Adamini, the 2026 preprints in the library's papers-11 to 13)
+  are peeks only (§ 12.5), never targets.
+- **Rotating-frame closure** takes Kapela & Simó 2017, Davoust & Broucke 1982 and Titov's rotating-frame orbits, and
+  Hénon 1974 (R-669): its values with citation, read from the page, its PDF held locally.
+
 ---
 
 ## 4. Three findings carried over from the plan
@@ -277,9 +292,15 @@ atlas's rows (§ 4.1).
 | Target | Requirement | L / T | Reproduces | Chart | Milestone | Compare | Tolerance | Task |
 |---|---|---|---|---|---|---|---|---|
 | LL-1, LL-2 (DRAFT-VAL-02) | REQ-VAL-203 | V / A | Li & Liao 2019, Tables A1–A5 (234 initial conditions and periods, 10 decimals) | the Anosova physical-frame entry; a MassSimplex point for the five unequal mass sets | M9 | exact | REQ-VAL-204 (calibration, R-71) | TASK-M9-06 |
-| LL-3 | REQ-VAL-223 (waits: the owner's copies of the two papers, paywalled, R-630 item 9; was "waits: RQ-586") | V / A | Li & Liao 2019 p. 3: F1 at (0.6, 0.8, 1) is Standish's 1970 orbit; F1 and F2 at (1, 1, 1) are Yasko & Orlov's 2015 Orbits 16 and 17 | the Anosova physical-frame entry; a MassSimplex point | M9 | exact | REQ-VAL-224 (calibration, R-71) | TASK-M9-07 |
+| LL-3 | REQ-VAL-223 (the Yasko & Orlov half waits: the owner's copy, paywalled, R-630 item 9, R-679; was "waits: the owner's copies of the two papers", and before it "waits: RQ-586") | V / A | Li & Liao 2019 p. 3: F1 at (0.6, 0.8, 1) is Standish's 1970 orbit; F1 and F2 at (1, 1, 1) are Yasko & Orlov's 2015 Orbits 16 and 17 | the Anosova physical-frame entry; a MassSimplex point | M9 | exact | REQ-VAL-224 (calibration, R-71) | TASK-M9-07 |
 | LL-4 | REQ-VAL-225 | V / A | Li & Liao 2019 p. 3 and Fig. 3: T̄* ≈ 2.363 at equal masses; 1.663, 1.191, 0.776, 0.527 at m₃ = 0.8 … 0.2; fit 1.912 m₃ + 0.084 | none | M9 | exact per orbit; the fit statistical | REQ-VAL-226 (calibration, R-71) | TASK-M9-14 |
 | LL-5 | REQ-VAL-227 | V / A | the authors' website list of 316 free-fall orbits (82 beyond the paper's 234), carried by the atlas as 81 rows on three further mass sets | MassSimplex points | M9 | exact (closure only) | OC-1's (REQ-VAL-202): the same form, the same f64 refined initial conditions | TASK-M9-06 |
+
+*3 Nov 2026 (R-679, item 1, closing RQ-672):* LL-3's Standish half takes Hénon 1974 (Celest. Mech. 10, 375), held
+under R-669, as its independent printed source: Table I's `A = 0` row is Standish's orbit, and its period agrees with
+Li & Liao's F1 at (0.6, 0.8, 1) to 2e-10, the library triage's measurement (PR #385), recorded as information. That
+half no longer waits on Standish 1970, which is added beside Hénon 1974 if it is obtained. The Yasko & Orlov half
+still waits on the owner's copy of Yasko & Orlov 2015 (R-630 item 9).
 
 ### 5.4 The Belgrade orbits
 
@@ -403,6 +424,10 @@ scored, R-642 governing where they differ (`docs/incoming/2026-10-28_rq598_data/
   three-entry bin (LUT 29–31) at its wider precision, black meaning censored above 1000. Those parts may close on that
   scoring. The two panels (ε = 10⁻⁶ and ε = 10⁻⁷⁰) differ point by point; GG-1's per-point reference panel is
   undefined: RQ-620 (R-72). No panel is chosen.
+  *1 Nov 2026 (R-669, RQ-620):* a reproduction is compared per point only with the panel at its own ε (at ε = 10⁻⁶
+  with the left, at ε = 10⁻⁷⁰ with the right); our lifetimes per point with the ε = 10⁻⁷⁰ panel, and with the
+  ε = 10⁻⁶ panel by KS only; beside them, the reliability mask, the points where the two panels agree within one LUT
+  step, is reported.
 - **A reproduction unblocks provisionally.** It is labelled "vs <source>" ("vs Brutus, run here" for ours), never
   "replicates the paper", and qualifies only if it matches the paper's set-up (the same initial-condition distribution,
   at rest, the same frame) and uses a converged arbitrary-precision integrator: our Brutus built from
@@ -463,6 +488,24 @@ split isn't clean; none of the five splits cleanly (R-639), so all five are RQ-6
 RQ-608. R-637 closes RQ-598: V-11's primaries are fetched (Part I held locally, never committed; Part II committed,
 CC BY 4.0), and V-11 proceeds from Part I, read from the University of Turku repository's version (R-638). The
 data-not-in-the-repo row above stands for GG-1 and BR-1 only as far as the authors' full data goes (§ 5.10's note).
+*1 Nov 2026 (R-668, item 5):* hierarchical triples are parked with the v2+ 3D extension. V-11, "hierarchical stability
+limits", is parked with them: it reads "not scored: parked" in the M9 report, its requirement, calibration, task and data
+kept. TR-1, MK-1 and SL-1 are binary-plus-single scatterings, not hierarchical triples (R-669 on RQ-593's residual).
+*1 Nov 2026 (R-669), what each wait above is now:*
+- **The Šuvakov plane** (RQ-608, RQ-618 (a)): one M9 task, TASK-M9-40, defines (R-72) and builds `SuvakovPlane`, at
+  equal masses and at fixed m₃ (REQ-CHART-091); the five targets wait on it whole, none split, HU-1 and HU-2 with no
+  closure part (HU-3 tests it). R-636's "no chart build yet" gives way to it.
+- **The binary-plus-single chart** (RQ-593 (c)): not built. TR-1, MK-1 and SL-1 stay in M9, each "not scored: no
+  chart". Heggie & Sweatman 1991 (planar binary-single scattering, 50,000 runs, printed counts) joins them, in M9 and
+  not scored, with no requirement.
+- **The symbol-sequence field** (RQ-595 (b)): the per-pixel syzygy-symbol field only, defined (R-72) and built by
+  TASK-M9-28 (REQ-VAL-342). TS-1 runs on it; V-7 once Chernin et al.'s definitions are in hand; TS-2 "not scored: no
+  fixed-k velocity chart".
+- **The diagnostics** (RQ-596 (b)): N_scramble only, defined (R-72) and built by TASK-M9-24 (REQ-VAL-343), for PA-1's
+  split and SL-1's cut; f_col not built, TR-1's colouring "not scored: no f_col".
+- **Periodic-orbit continuation** (RQ-597 (b)): not built; LLL-1 "not scored: no continuation", the atlas's `li2021`
+  rows OC-1's closures. The SJTU tables' values are checked first for a partial comparison, as a peek (§ 12.5).
+- **The side-ratio chart** (RQ-594) is not ruled here, and PA-1 still waits on it.
 
 | Target | Requirement | L / T | Reproduces | Chart | Milestone | Compare | Tolerance | Task |
 |---|---|---|---|---|---|---|---|---|
@@ -506,6 +549,11 @@ no requirement while RQ-577 is open.
   beside uncut, is compatible. REQ-VAL-199 measures parting time, a different quantity. *Was (R-661):* "Boekholt & Portegies Zwart 2015, ensemble
   statistics surviving trajectory error: 3D Plummer initial conditions. Its method is what REQ-VAL-199 and "never discard a copy" already apply."
 - **D-6**, the prototype's other numbers, as a list: RQ-587 (§ 5.11).
+- **Hierarchical triples** (R-668, 1 Nov 2026): out of scope for now, parked with the v2+ 3D extension. Among the
+  library's sources, Vynatheya, Harrington, Tory, Hayashi, HopOn, Mushkin, Antoniadou and Figueras; among the targets,
+  V-11 (§ 5.12), kept and reading "not scored: parked".
+- **Planetary (star-plus-planets) sources** (R-679, item 2, 3 Nov 2026, closing RQ-673): parked with the hierarchical
+  triples, revisited with the v2+ 3D extension, not out of scope for good.
 
 Most of the scattering literature is 3D; only planar subsets apply. Results with no published data and no figure
 detail stay qualitative until the paper is in hand.
@@ -571,7 +619,7 @@ R-631 commits the fetched data (HP27, FF27); RQ-586's three papers are paywalled
 - **TASK-M3-44**, The syzygy count against the atlas's `syz` on every row (OC-5), and its counting convention. Targets: OC-5, OC-5's counting convention. Depends on TASK-M3-16, TASK-M3-42.
 - **TASK-M3-45**, The atlas's per-family coverage report (OC-6). Targets: OC-6. Depends on TASK-M3-42, TASK-M3-43, TASK-M3-44.
 - **TASK-M3-46**, Li & Liao's free-fall orbits: closure, rest at T/2 and the alias pairs (LL-1, LL-2, the first batch's DRAFT-VAL-02), and the website-only rows (LL-5). Targets: LL-1, LL-2, LL-5. Depends on TASK-M3-42, TASK-M2-13.
-- **TASK-M3-47**, Li & Liao's known orbits against Standish 1970 and Yasko & Orlov 2015 (LL-3). Targets: LL-3. Depends on TASK-M3-46. Waits on the owner's copies of Standish 1970 and Yasko & Orlov 2015 (paywalled, R-630 item 9; was "Waits on RQ-586.").
+- **TASK-M3-47**, Li & Liao's known orbits against Standish 1970 and Yasko & Orlov 2015 (LL-3). Targets: LL-3. Depends on TASK-M3-46. Its Yasko & Orlov half waits on the owner's copy of Yasko & Orlov 2015 (paywalled, R-630 item 9, R-679; was "Waits on the owner's copies of Standish 1970 and Yasko & Orlov 2015", and before it "Waits on RQ-586.").
 - **TASK-M3-48**, Heggie 1974's regularisation targets: the step ratio against Aarseth–Zare (H-1, H-2, DRAFT-VAL-04) and C/3 toward the Lagrange triple collision (H-3, DRAFT-VAL-03). Targets: H-3, H-1, H-2. Depends on TASK-M3-24, TASK-M3-08.
 - **TASK-M3-49**, Tanikawa & Mikkola 2021's triple-collision points on the free-fall plane (TM-1). Targets: TM-1. Depends on TASK-M3-48. Waits on the owner's copy of Tanikawa & Mikkola 2021 (paywalled, R-630 item 9; was "Waits on RQ-586.").
 - **TASK-M3-50**, Agekyan & Anosova II: decay times from exact rest (AA-6, the first batch's DRAFT-VAL-05). Targets: AA-6. Depends on TASK-M3-34, TASK-M2-20.
@@ -597,6 +645,8 @@ R-631 commits the fetched data (HP27, FF27); RQ-586's three papers are paywalled
 - **TASK-M4-23**, Hudomal's return-proximity map over the Šuvakov plane and the butterfly III zoom (HU-1, HU-2). Targets: HU-1, HU-2. Depends on TASK-M4-17, TASK-M3-53, TASK-M3-11. Waits on RQ-583 (RQ-582 closed by R-630; was "Waits on RQ-582, RQ-583.").
 - **TASK-M4-24**, Symbol-sequence maps: Tanikawa & Mikkola's free-fall and non-zero-L maps, and Valtonen et al.'s L/M/A/H partition (TS-1, TS-2, V-1/V-3/V-7). Targets: TS-1, TS-2, V-1/V-3/V-7. Depends on TASK-M4-17, TASK-M3-16. Waits on RQ-595.
 - **TASK-M4-25**, Li, Li & Liao's mass-plane contours for one periodic family (LLL-1). Targets: LLL-1. Depends on TASK-M4-17, TASK-M2-13. Waits on RQ-597.
+  *1 Nov 2026 (R-669):* RQ-593, RQ-595 to RQ-597, RQ-608 and RQ-618 are ruled (§ 5.12's dated line). TASK-M4-23 and
+  TASK-M8-99 (now TASK-M9-27 and TASK-M9-35) wait on TASK-M9-40, the Šuvakov-plane chart.
 - **TASK-M4-26** (added by R-636, 28 Oct 2026), The raised-cap run: the atlas rows OC-1, OC-3 and OC-6 recorded as "not evaluated within cap", evaluated at a calibrated raised horizon (REQ-VAL-332). Depends on TASK-M3-42, TASK-M3-43, TASK-M3-45.
 
 **M6.**
@@ -714,6 +764,9 @@ PLAN.md § 8's rules 9–18, transcribed:
 - *30 Oct 2026 (R-649, R-650):* for an external target "the gate" above is the scoring command, not a gate: it reports
   the outcome (§ 12.3) and blocks nothing, and its tolerance is confirmed by the human with M9's report, not at a
   milestone's gate. A target's control still fires or the test is broken (rule 16).
+- *3 Nov 2026 (R-680):* **the source page is re-read before any triage item becomes a target.** A library triage
+  row is a lead, not a transcription: its numbers, precision and horizon are checked against the page they cite, and
+  what the page contradicts is recorded as rule 10 has it, before a requirement or a fixture is written from it.
 
 ---
 
@@ -846,7 +899,10 @@ an earlier milestone, this section governs.*
   REQ-VAL-201 to REQ-VAL-249 and REQ-VAL-252 to REQ-VAL-332, FF-H (REQ-VAL-042), SP-1's feature set (REQ-VAL-127), the
   figure-eight's published shape-sphere curve (REQ-VAL-333, its tolerance REQ-VAL-334) and SP-1's structural comparison
   with Szebehely & Peters (REQ-VAL-335). M9 also holds its report (REQ-VAL-340) and the GPU-path tightening's
-  definition (REQ-VAL-341). A target's control (rule 16) is part of its test and still has to fire.
+  definition (REQ-VAL-341). A target's control (rule 16) is part of its test and still has to fire. *1 Nov 2026 (code
+  review 5730758034 of PR #375, R1; applied per R-369):* those ranges say what moved to M9, and they hold each target's
+  calibration too, which takes its target's tier (§ 12.2) and goes to the human with the report (§ 12.3); the report's
+  rows are § 12.2's table.
 - **Ingest and transcription** (a `docs/incoming/` data PR) go on whenever idle; scoring waits for M9, or is a peek
   (§ 12.5).
 
@@ -860,10 +916,13 @@ is scored on (b); a statistical target is scored on (a), statistically only; a q
 ensemble is scored on (a) too, (a) being the tier that agrees "statistically or qualitatively"; a mixed target is
 scored on (b) for its exact part and on (a) for its statistical or qualitative part (*applied per R-369*, R-649). A
 single chaotic trajectory set beside a figure (AA-4, V-6, SP-1's structural comparison) is (b). *31 Oct 2026, R-661:* "expected to agree statistically", "agrees" and "agreeing statistically", here and in this section's other lines, state what tier (a) is scored on, not a known result. That its f32 statistics agree is a hypothesis Principia will measure (BZ-1C), and no paper establishes it; what a score on (a) says meanwhile is RQ-649. Five map targets
-whose verify names a Result at f64 (AT-D2, OC-4 off and on the Šuvakov plane, AT-D1, AT-D3) are (a) by the rule;
-how their f64 Result runs square with it is RQ-622, and their scoring waits on it. B-2 (REQ-VAL-246) is
-statistical, so (a) by the rule, but its statement names the CPU FTLE and it is one start, the Burrau pixel; which
-instrument scores it is RQ-622 too, and its scoring waits on it. A GPU miss on a (b) target, or on
+whose verify named a Result at f64 (AT-D2, OC-4 off and on the Šuvakov plane, AT-D1, AT-D3) are scored on (a), with
+the f64 Result run beside it and recorded as information; an explained divergence between the two is a precision-tier finding
+(R-653, RQ-622 (c)). B-2 (REQ-VAL-246), one start, the Burrau pixel, fitted over many runs and so outside the
+single-trajectory clause, is scored on (a) by the GPU explorer's FTLE, with the CPU FTLE beside it on the same terms
+(R-653). *Was (until R-653):* "are (a) by the rule; how their f64 Result runs square with it is RQ-622, and their
+scoring waits on it. B-2 (REQ-VAL-246) is statistical, so (a) by the rule, but its statement names the CPU FTLE and it
+is one start, the Burrau pixel; which instrument scores it is RQ-622 too, and its scoring waits on it." A GPU miss on a (b) target, or on
 a mixed target's (b) part, is expected, not a defect. A calibration takes its target's tier. *Was (the port's first
 reading, corrected 30 Oct 2026 by the owner's confirmation):* "a statistical or qualitative one binds (b), with (a)
 expected to agree statistically or qualitatively; one with an exact part and a statistical part binds (b) for the
@@ -879,8 +938,8 @@ first, and (a) is expected to agree with the second statistically"; every (a) an
 | OC-5 | REQ-VAL-220 | exact (a count) | (b) |
 | OC-5's counting convention | REQ-VAL-221 | a definition | (b) |
 | OC-6 | REQ-VAL-222 | a report | (b) |
-| AT-D2 | REQ-VAL-308 | qualitative + a calibrated threshold | (a); its f64 Result: RQ-622 |
-| OC-4 (off the Šuvakov plane) | REQ-VAL-309 | statistical | (a); its f64 Result: RQ-622 |
+| AT-D2 | REQ-VAL-308 | qualitative + a calibrated threshold | (a); its f64 Result beside it, information (R-653) |
+| OC-4 (off the Šuvakov plane) | REQ-VAL-309 | statistical | (a); its f64 Result beside it, information (R-653) |
 | LL-1, LL-2 | REQ-VAL-203 | exact | (b) |
 | LL-3 | REQ-VAL-223 | exact | (b) |
 | LL-4 | REQ-VAL-225 | exact per orbit; the fit statistical | (b) per orbit; (a) for the fit |
@@ -897,9 +956,9 @@ first, and (a) is expected to agree with the second statistically"; every (a) an
 | TM-1 | REQ-VAL-240 | exact (scaling) | (b) |
 | CH-1 | REQ-VAL-242 | statistical | (a) |
 | B-1 | REQ-VAL-244 | exact to the figure's resolution | (b) |
-| B-2 | REQ-VAL-246 | statistical (loose) | (a); its CPU FTLE: RQ-622 |
+| B-2 | REQ-VAL-246 | statistical (loose) | (a); its CPU FTLE beside it, information (R-653) |
 | V-6 | REQ-VAL-248 | exact once shot; qualitative against the figure (one trajectory) | (b) |
-| Q-2's Theory row, Q-4 | REQ-VAL-211 | (i) exact; (ii) statistical; no integration | (b) for (i); (a) for (ii) |
+| Q-2's Theory row, Q-4 | REQ-VAL-211 | (i) exact; (ii) statistical; no integration | (b) for (i); no tier for (ii) (R-671; *was:* "(a) for (ii)") |
 | P-1 | REQ-VAL-252 | qualitative + statistical | (a) |
 | P-2 | REQ-VAL-254 | statistical | (a) |
 | P-3 | REQ-VAL-256 | qualitative | (a) |
@@ -933,9 +992,9 @@ first, and (a) is expected to agree with the second statistically"; every (a) an
 | D-4 | REQ-VAL-303 | measurement: reproduce or explain (on the CPU) | (b) |
 | D-5 | REQ-VAL-305 | exact (a count of 0) | (b) |
 | D-3 | REQ-VAL-306 | exact on the fixtures; statistical for the medians | (b) on the fixtures; (a) for the medians |
-| OC-4 on the Šuvakov plane | REQ-VAL-311 | statistical | (a); its f64 Result: RQ-622 |
-| AT-D1 | REQ-VAL-312 | qualitative | (a); its f64 Result: RQ-622 |
-| AT-D3 | REQ-VAL-313 | qualitative | (a); its f64 Result: RQ-622 |
+| OC-4 on the Šuvakov plane | REQ-VAL-311 | statistical | (a); its f64 Result beside it, information (R-653) |
+| AT-D1 | REQ-VAL-312 | qualitative | (a); its f64 Result beside it, information (R-653) |
+| AT-D3 | REQ-VAL-313 | qualitative | (a); its f64 Result beside it, information (R-653) |
 | HU-1 | REQ-VAL-314 | qualitative; exact at Table 23's minima | (b) at Table 23's minima; (a) for the map |
 | HU-2 | REQ-VAL-316 | qualitative + one exact point | (b) at the exact point; (a) for the map |
 | TR-1 | REQ-VAL-318 | qualitative | (a) |
@@ -951,6 +1010,21 @@ first, and (a) is expected to agree with the second statistically"; every (a) an
 | SP-1's feature set | REQ-VAL-127 | a definition | (b) |
 | the figure-eight's published shape-sphere curve | REQ-VAL-333 | exact | (b) |
 | SP-1, structurally against Szebehely & Peters | REQ-VAL-335 | structural (one trajectory, chaotic) | (b) |
+| TS-1's and V-7's syzygy-symbol field | REQ-VAL-342 | a definition | (b) |
+| PA-1's and SL-1's N_scramble | REQ-VAL-343 | a definition | (b) |
+
+*1 Nov 2026 (R-669):* the last two rows are the definitions RQ-595 (b) and RQ-596 (b) call for, each written by the task
+that first needs it, as OC-5's counting convention is. The Šuvakov-plane chart (REQ-CHART-091, TASK-M9-40) is a build
+task's, not a target, and has no row, as TASK-M9-39's softening has none. *3 Nov 2026 (R-679):* nor have REQ-VAL-344 to
+REQ-VAL-346 (TASK-M9-41, a build task, not scored), though REQ-VAL-346 is a definition.
+*2 Nov 2026 (R-671, closing RQ-669):* in a task that has no GPU run, a target's (a) part, or a row that is (a)
+throughout, keeps its tier and is listed "not scored yet: needs a GPU run" until an f32 GPU run scores it; beside it,
+the same statistic computed from the task's f64 runs is recorded at (b), with its outcome and its instrument stated (the
+CPU IC inspector at f64). The tier is not relabelled: that tier (a)'s f32 statistics agree is the unmeasured hypothesis
+of R-661, which BZ-1C measures. Q-4's (ii) has no integration on any instrument and is recorded with no tier.
+*2 Nov 2026 (R-672, closing RQ-670):* a definition's row (OC-5's counting convention, SP-1's feature set and R-669's
+two) reads the outcome of the target it serves, with the definition's approval by the physics reviewer, and until that
+target is scored records the approval; the outcome is counted once, in the served target's row.
 
 ### 12.3 Outcomes, the like-for-like check and the forbidden moves
 
@@ -1104,6 +1178,14 @@ triple collisions (Li 2021, Tanikawa 1995 and 2021); unequal-mass and non-zero-L
 2026). Each peek is a row of `docs/verification/peek_log.md`: date, target, tier, data source, outcome (§ 12.3), the
 like-for-like checks, the mechanism measurement where explained, and the commit. A peek is never a gate, and nothing
 is tuned to one.
+
+*3 Nov 2026 (R-679, item 3, closing RQ-674): candidate original results.* Two outputs no paper gives are planned as
+M9 peeks, non-gating, recorded as candidate original results, with no build before M9: per-point FTLE maps over the
+batch-152 planes (the eucliss free-fall plane and its two unequal-mass velocity planes, held locally and AI-authored,
+so peeks only, R-668 item 6), from the planned FTLE field (REQ-VAL-344); and shape-sphere residence statistics, from a
+time-weighted occupancy accumulator (REQ-VAL-345, its cell partition REQ-VAL-346's definition). Having no reference,
+they have no PASS or divergence: each is a row of `docs/verification/peek_log.md` whose outcome reads "candidate
+original result", with its tier, its inputs and its conventions. TASK-M9-41 builds both.
 
 ### 12.6 Verification deepening (post-build)
 

@@ -1165,6 +1165,14 @@
   requirements: [REQ-INT-101, REQ-INT-102, REQ-INT-103, REQ-VAL-195, REQ-INT-106, REQ-PAY-110, REQ-INT-108, REQ-PAY-111, REQ-INT-109, REQ-TOOL-219, REQ-PAY-112]  # R-603 to R-605 (25 Oct 2026); R-632: REQ-PAY-112 (RQ-581)
   reviewers: [code, qa, physics, gui, perf]  # gui: REQ-TOOL-219's readout arm (qa review 5644656634 of PR #293, Q1); perf: the SimState widths (perf review 5661999637 of PR #293, P1)
   pitfalls: [PIT-3]
+- id: TASK-M3-66
+  milestone: M3
+  title: "Dispatch refuses `g` and `m_total` other than 1 (R-668)"
+  depends_on: [TASK-M3-06]
+  needs: []
+  requirements: [REQ-SYS-096]  # R-668 (1 Nov 2026), RQ-668
+  reviewers: [code, qa, physics]
+  pitfalls: []
 - id: TASK-M4-01
   milestone: M4
   title: The shared kernel compiled to f32 SPIR-V and WGSL, under the compile-discipline lint
@@ -1232,8 +1240,8 @@
 - id: TASK-M4-09
   milestone: M4
   title: "Bounded dispatch: chunked marches that return before a watchdog"
-  depends_on: [TASK-M4-05, TASK-M4-02, TASK-M3-20]
-  needs: [REQ-SCHED-002, REQ-INT-007, REQ-INT-038, REQ-PERF-003, REQ-TOOL-001, REQ-EVT-010]
+  depends_on: [TASK-M4-05, TASK-M4-02, TASK-M3-20, TASK-M3-41]
+  needs: [REQ-SCHED-002, REQ-INT-007, REQ-INT-038, REQ-PERF-003, REQ-TOOL-001, REQ-EVT-010, REQ-INT-100, REQ-INT-101, REQ-INT-102, REQ-PAY-110]
   requirements: [REQ-PERF-010, REQ-PERF-081, REQ-INT-059]
   reviewers: [code, qa, physics, perf]
   pitfalls: []
@@ -1333,6 +1341,23 @@
   requirements: [REQ-RENDER-099, REQ-CHART-074]
   reviewers: [code, qa, physics, perf]  # ⚑ physics review required; not merged on the code reviewer's word alone
   pitfalls: []
+# TASK-M4-27: past TASK-M4-22 to TASK-M4-26, moved to M9 by R-650 and not reused (applied per R-369)
+- id: TASK-M4-27
+  milestone: M4
+  title: "The kernel cross-backend check, the arm for now: decode's and canon's branch outcomes on NVIDIA Vulkan, Metal, lavapipe and CPU f32, per backend pair (R-686)"
+  depends_on: [TASK-M2-07, TASK-M2-24, TASK-M2-25]
+  needs: [REQ-DEC-017, REQ-DEC-008]
+  requirements: [REQ-VAL-347]
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-9, PIT-10]
+- id: TASK-M4-28
+  milestone: M4
+  title: "The kernel cross-backend check: the same IC set marched on NVIDIA Vulkan, Metal, lavapipe and CPU f32, labels and branch-sensitive results compared per backend pair (R-686)"
+  depends_on: [TASK-M4-05, TASK-M4-02, TASK-M4-03, TASK-M4-09, TASK-M4-18, TASK-M4-27, TASK-M3-41]
+  needs: [REQ-INT-026, REQ-EVT-003, REQ-EVT-005, REQ-VAL-026, REQ-INT-080, REQ-INT-100, REQ-INT-101, REQ-INT-102, REQ-INT-103, REQ-INT-108, REQ-PAY-110]
+  requirements: [REQ-VAL-348]
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-9, PIT-10]
 - id: TASK-M5-01
   milestone: M5
   title: "QuadReduction ledger: member order, packing, histogram and impurity grain"
@@ -1988,6 +2013,15 @@
   needs: []
   requirements: [REQ-GUI-265]
   reviewers: [code, qa, gui, physics]  # ⚑ tilt maths
+  pitfalls: []
+# TASK-M6-53: past TASK-M6-52, moved to M9 by R-650 and not reused (applied per R-369)
+- id: TASK-M6-53
+  milestone: M6
+  title: "The GUI track (R-390): the mock's value noise hashes its lattice in integers, so shared corners agree bitwise"
+  depends_on: [TASK-M6-24]  # R-685; the pattern is option A (R-689)
+  needs: []
+  requirements: [REQ-GUI-412]
+  reviewers: [code, qa, gui]
   pitfalls: []
 - id: TASK-M7-01
   milestone: M7
@@ -3594,7 +3628,7 @@
 - id: TASK-M9-16
   milestone: M9
   title: "Burrau and the Pythagorean family: Chitan et al.'s sixteen triangles, Boekholt et al.'s lifetime and τ_L and Mikkola's bounce orbit (CH-1, B-1, B-2, V-6)"
-  depends_on: [TASK-M3-27, TASK-M3-25, TASK-M3-14, TASK-M3-34, TASK-M2-13]
+  depends_on: [TASK-M3-27, TASK-M3-25, TASK-M3-14, TASK-M3-34, TASK-M2-13, TASK-M4-13]
   needs: []
   requirements: [REQ-VAL-242, REQ-VAL-243, REQ-VAL-244, REQ-VAL-245, REQ-VAL-246, REQ-VAL-247, REQ-VAL-248, REQ-VAL-249]  # R-594, R-629 (27 Oct 2026)
   reviewers: [code, qa, physics]
@@ -3660,7 +3694,7 @@
   title: "Parischewsky et al.'s equilateral-triangle experiment around Lagrange (PA-1)"
   depends_on: [TASK-M3-34]
   needs: []
-  requirements: [REQ-VAL-323, REQ-VAL-324]  # R-594, R-629 (27 Oct 2026)
+  requirements: [REQ-VAL-323, REQ-VAL-324, REQ-VAL-343]  # R-594, R-629 (27 Oct 2026); R-669: REQ-VAL-343
   reviewers: [code, qa, physics]
   pitfalls: [PIT-2, PIT-3]
 - id: TASK-M9-25
@@ -3682,7 +3716,7 @@
 - id: TASK-M9-27
   milestone: M9
   title: "Hudomal's return-proximity map over the Šuvakov plane and the butterfly III zoom (HU-1, HU-2)"
-  depends_on: [TASK-M9-13, TASK-M4-17, TASK-M3-11]
+  depends_on: [TASK-M9-13, TASK-M4-17, TASK-M3-11, TASK-M9-40]  # TASK-M9-40: the Šuvakov-plane chart (R-669)
   needs: []
   requirements: [REQ-VAL-314, REQ-VAL-315, REQ-VAL-316, REQ-VAL-317]  # R-594, R-629 (27 Oct 2026)
   reviewers: [code, qa, physics]
@@ -3692,7 +3726,7 @@
   title: "Symbol-sequence maps: Tanikawa & Mikkola's free-fall and non-zero-L maps, and Valtonen et al.'s L/M/A/H partition (TS-1, TS-2, V-1/V-3/V-7)"
   depends_on: [TASK-M4-17, TASK-M3-16]
   needs: []
-  requirements: [REQ-VAL-325, REQ-VAL-326, REQ-VAL-327, REQ-VAL-328]  # R-594, R-629 (27 Oct 2026)
+  requirements: [REQ-VAL-325, REQ-VAL-326, REQ-VAL-327, REQ-VAL-328, REQ-VAL-342]  # R-594, R-629 (27 Oct 2026); R-669: REQ-VAL-342
   reviewers: [code, qa, physics]
   pitfalls: [PIT-3]
 - id: TASK-M9-29
@@ -3746,7 +3780,7 @@
 - id: TASK-M9-35
   milestone: M9
   title: "The Šuvakov plane rendered, at equal masses and at the eight values of m₃, and OC-4 there (AT-D1, AT-D3, OC-4 on the Šuvakov plane)"
-  depends_on: [TASK-M9-33]
+  depends_on: [TASK-M9-33, TASK-M9-40]  # TASK-M9-40: the Šuvakov-plane chart (R-669)
   needs: []
   requirements: [REQ-VAL-311, REQ-VAL-312, REQ-VAL-313]  # R-594, R-629 (27 Oct 2026)
   reviewers: [code, qa, physics]
@@ -3762,7 +3796,7 @@
 - id: TASK-M9-37
   milestone: M9
   title: "M9's report: every external target with its tier, outcome and like-for-like checks"
-  depends_on: [TASK-M9-01, TASK-M9-02, TASK-M9-03, TASK-M9-04, TASK-M9-05, TASK-M9-06, TASK-M9-08, TASK-M9-10, TASK-M9-11, TASK-M9-12, TASK-M9-13, TASK-M9-14, TASK-M9-15, TASK-M9-16, TASK-M9-17, TASK-M9-18, TASK-M9-19, TASK-M9-20, TASK-M9-21, TASK-M9-26, TASK-M9-30, TASK-M9-31, TASK-M9-32, TASK-M9-36]
+  depends_on: [TASK-M9-01, TASK-M9-02, TASK-M9-03, TASK-M9-04, TASK-M9-05, TASK-M9-06, TASK-M9-07, TASK-M9-08, TASK-M9-10, TASK-M9-11, TASK-M9-12, TASK-M9-13, TASK-M9-14, TASK-M9-15, TASK-M9-16, TASK-M9-17, TASK-M9-18, TASK-M9-19, TASK-M9-20, TASK-M9-21, TASK-M9-26, TASK-M9-28, TASK-M9-30, TASK-M9-31, TASK-M9-32, TASK-M9-33, TASK-M9-34, TASK-M9-36]
   needs: []
   requirements: [REQ-VAL-340]  # R-650 (30 Oct 2026)
   reviewers: [code, qa, physics]
@@ -3775,3 +3809,27 @@
   requirements: [REQ-VAL-341]  # R-649, R-650 (30 Oct 2026)
   reviewers: [code, qa, physics]
   pitfalls: []
+- id: TASK-M9-39
+  milestone: M9
+  title: "The softened force law: Plummer softening, built after the core build, and the refusal of ε ≠ 0 lifted"
+  depends_on: [TASK-M3-01, TASK-M3-05, TASK-M3-06, TASK-M4-03, TASK-M4-06, TASK-M4-04, TASK-M4-13, TASK-M2-12, TASK-M2-25, TASK-M3-12, TASK-M3-22, TASK-M7-35]  # R-670: what softening reaches
+  needs: []
+  requirements: [REQ-INT-111, REQ-SYS-094, REQ-SYS-095]  # R-654 (30 Oct 2026)
+  reviewers: [code, qa, physics, perf]
+  pitfalls: [PIT-9]
+- id: TASK-M9-40
+  milestone: M9
+  title: "The Šuvakov-plane chart, at equal masses and at fixed m₃, defined and built (R-669)"
+  depends_on: [TASK-M2-14, TASK-M4-06, TASK-M4-17]
+  needs: []
+  requirements: [REQ-CHART-091]  # R-669 (1 Nov 2026), RQ-608 and RQ-618 (a)
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-3]
+- id: TASK-M9-41
+  milestone: M9
+  title: "Candidate original results: per-point FTLE maps over the batch-152 planes and a time-weighted shape-sphere occupancy accumulator (R-679)"
+  depends_on: [TASK-M3-14, TASK-M4-13]
+  needs: [REQ-INT-043, REQ-PAY-021, REQ-PAY-031, REQ-PAY-032, REQ-PAY-058]
+  requirements: [REQ-VAL-344, REQ-VAL-345, REQ-VAL-346]  # R-679 (3 Nov 2026), RQ-674
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-3]

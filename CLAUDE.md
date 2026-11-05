@@ -144,6 +144,8 @@ Read this first; each rule points at its source.
 - A question on the list goes in `REVIEW_QUEUE.md`, and work carries on elsewhere; stop only if nothing at all can
   proceed. Don't stop just to report: report at natural points (a stop, a gate, or when the human asks) as one batched
   summary of what was decided, merged and still open.
+- The owner's standing rule (R-693): "every R-, RQ-, REQ- or TASK- number shown to the owner comes with a plain-English
+  gloss."
 
 ## Lints (`decisions.md` § "R-197 — Who may fix, suppress or configure a lint *(closes RQ-134)*")
 - CI runs `cargo fmt --check` and `cargo clippy --workspace --all-targets -- -D warnings` on every push (R-195).
