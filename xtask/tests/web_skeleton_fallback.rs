@@ -281,9 +281,12 @@ negative_control!(
 
 const ALTGRAPH: &str = "loader_altgraph_character_reaches_the_input";
 #[cfg(feature = "controls")]
+const RELEASE: &str = "const name = pressed ? e.key : down.get(e.code);";
+#[cfg(feature = "controls")]
 const ALT_GR: &str = r#"const altGr = e.ctrlKey && !e.metaKey && e.getModifierState("AltGraph");"#;
 #[cfg(feature = "controls")]
-const CHARACTER: &str = r#"if (altGr && (e.key.length === 1 || e.key === "Dead")) return;"#;
+const CHARACTER: &str =
+    r#"if (pressed && altGr && (e.key.length === 1 || e.key === "Dead")) return;"#;
 
 #[test]
 fn loader_altgraph_character_reaches_the_input() {
@@ -310,7 +313,7 @@ mod altgraph_forwards_the_key {
             ALTGRAPH,
             &loader(
                 CHARACTER,
-                r#"if (altGr && (e.key.length === 1 || e.key === "Dead")) { post("key", e.key, e.code, pressed, e.repeat, ...mods(e)); return; }"#
+                r#"if (pressed && altGr && (e.key.length === 1 || e.key === "Dead")) { post("key", e.key, e.code, pressed, e.repeat, ...mods(e)); return; }"#
             )
         )
     );
@@ -351,7 +354,10 @@ mod altgraph_takes_every_key {
         loader_altgraph_character_reaches_the_input,
         "every key under AltGraph taken for a character",
         expected = "AltGr's Enter was left to the page",
-        run(ALTGRAPH, &loader(CHARACTER, "if (altGr) return;"))
+        run(
+            ALTGRAPH,
+            &loader(CHARACTER, "if (pressed && altGr) return;")
+        )
     );
 }
 
@@ -363,7 +369,52 @@ mod altgraph_dead_key_a_chord {
         expected = "AltGr's dead key was cancelled",
         run(
             ALTGRAPH,
-            &loader(CHARACTER, "if (altGr && e.key.length === 1) return;")
+            &loader(
+                CHARACTER,
+                "if (pressed && altGr && e.key.length === 1) return;"
+            )
         )
+    );
+}
+
+mod altgraph_swallows_a_release {
+    use super::*;
+    negative_control!(
+        loader_altgraph_character_reaches_the_input,
+        "the guard on keyup too, as code review 5777907216 F1 traced: a key held as AltGr goes down stays down in egui",
+        expected = "Space's keyup under AltGraph did not reach the worker",
+        run(
+            ALTGRAPH,
+            &loader(
+                CHARACTER,
+                r#"if (altGr && (e.key.length === 1 || e.key === "Dead")) return;"#
+            )
+        )
+    );
+}
+
+mod altgraph_forwards_every_release {
+    use super::*;
+    negative_control!(
+        loader_altgraph_character_reaches_the_input,
+        "every keyup forwarded, not only those of a press that went on",
+        expected = "for egui to read as Ctrl+Alt",
+        run(
+            ALTGRAPH,
+            &loader(
+                RELEASE,
+                "const name = pressed ? e.key : down.get(e.code) ?? e.key;"
+            )
+        )
+    );
+}
+
+mod release_under_the_layer_name {
+    use super::*;
+    negative_control!(
+        loader_altgraph_character_reaches_the_input,
+        "a release named by its own event: a known code alone, with the layer's name, lets another key up in egui",
+        expected = "KeyQ came up as @",
+        run(ALTGRAPH, &loader(RELEASE, "const name = e.key;"))
     );
 }

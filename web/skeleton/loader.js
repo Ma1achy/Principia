@@ -161,13 +161,20 @@ function forward(worker, canvas) {
   const typed = () => { if (ime.value) post("text", ime.value); ime.value = ""; };
   ime.addEventListener("input", (e) => { if (!e.isComposing) typed(); }, { signal });
   ime.addEventListener("compositionend", typed, { signal });
+  // The keys whose press went on, each with the name it went on under: a release goes on only for these, and under
+  // that name, since egui lets a key up by name and the layer can change it (`7` down, AltGr down, `{` up).
+  const down = new Map();
   const key = (pressed) => (e) => {
     if (e.isComposing) return;
     // AltGr can report Ctrl and Alt as well (AltGr+Q, `@`, on a German layout on Windows). A character it types is text
     // alone: it stays with the input, and no key goes on for egui to read as Ctrl+Alt+A, a text field's select-all.
     const altGr = e.ctrlKey && !e.metaKey && e.getModifierState("AltGraph");
-    if (altGr && (e.key.length === 1 || e.key === "Dead")) return;
-    post("key", e.key, e.code, pressed, e.repeat, ...mods(e));
+    if (pressed && altGr && (e.key.length === 1 || e.key === "Dead")) return;
+    const name = pressed ? e.key : down.get(e.code);
+    if (name === undefined) return;
+    if (pressed) down.set(e.code, e.key);
+    else down.delete(e.code);
+    post("key", name, e.code, pressed, e.repeat, ...mods(e));
     // A printable key stays with the input, for its text, as does the clipboard's chord; every other key is the app's.
     const chord = e.metaKey || e.ctrlKey;
     if (e.key.length !== 1 && e.key !== "Dead" && !chord) e.preventDefault();

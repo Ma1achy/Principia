@@ -237,7 +237,8 @@ const LOADER_SCENARIOS = {
   async loader_altgraph_character_reaches_the_input() {
     const started = await startLoader();
     const texts = () => started.worker.posts.filter((m) => m.method === "text").map((m) => m.args[0]);
-    const keys = () => started.calls().filter((m) => m === "key").length;
+    const posted = (pressed) => started.worker.posts.filter((m) => m.method === "key" && m.args[2] === pressed);
+    const keys = () => posted(true).length + posted(false).length;
     const ctrlAlt = { ctrlKey: true, altKey: true };
     check(!press(started, { key: "@", ...ctrlAlt }, true, "@"), "AltGr's `@` was cancelled");
     check(texts().join() === "@", `AltGr's \`@\` reached the app as: ${texts()}`);
@@ -254,6 +255,17 @@ const LOADER_SCENARIOS = {
     check(keys() === 4, "a chord is not forwarded");
     check(!press(started, { key: "v", ctrlKey: true }, false), "Ctrl+V's paste was cancelled");
     check(texts().join() === "@,ą", `only AltGr's characters are text, and the app got: ${texts()}`);
+    // A key held as AltGr goes down still comes up, under the name it went down by, or it stays down in egui: Space held
+    // turns the stain canvas's presses into pans.
+    for (const [held, layered, code] of [[" ", " ", "Space"], ["q", "@", "KeyQ"], ["7", "{", "Digit7"]]) {
+      check(!press(started, { key: held, code }, false), `plain ${code} was cancelled`);
+      check(posted(true).at(-1).args[1] === code, `plain ${code}'s press is not forwarded`);
+      press(started, { key: "AltGraph", code: "AltRight", ...ctrlAlt }, true);
+      page.window.dispatchEvent(event("keyup", { key: layered, code, repeat: false, ...ctrlAlt, getModifierState: (m) => m === "AltGraph" }));
+      const release = posted(false).at(-1);
+      check(release?.args[1] === code, `${code}'s keyup under AltGraph did not reach the worker`);
+      check(release.args[0] === held, `${code} came up as ${release.args[0]}, and egui holds ${held} down`);
+    }
   },
   async loader_failed_worker_gives_up_its_forwards() {
     const started = await startLoader();
