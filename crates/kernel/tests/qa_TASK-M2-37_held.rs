@@ -10,9 +10,13 @@
 //! so the round trip keeps the ratio and moves `m_c`; the controls show the grid contains such slices.
 //!
 //! - `qa_held_realised_implies_held`: on a grid of `q = 10^{k/50}`, `k ∈ [−300, 300]`, every `q` that
-//!   [`MixedMassRatio::realised`] accepts round-trips to `m_c` at the held value, and the ratio `q`, to within `ε_μ`;
-//!   and every `q` whose round trip errors are all inside `ε_μ/16` is accepted (no over-refusal). Control: the
-//!   ratio-only round trip, blind to `m_c`, in `realised`'s place.
+//!   [`MixedMassRatio::realised`] accepts round-trips to `m_c` at the held value, and the ratio `q`, to within `ε_μ`.
+//!   Control: the ratio-only round trip, blind to `m_c`, in `realised`'s place.
+//! - `qa_held_realised_each_mass`: on that grid, every `q` it accepts returns each of `(m_a, m_b, m_c)` to within
+//!   `ε_μ`, relative. Control: the round trip that reads the ratio and `m_c` but not the two swept masses, which a slice
+//!   with `m_c` near 1 fools: the ratio and `m_c` hold while `m_a` sits on the link's floor.
+//! - `qa_held_realised_not_over_refused`: on that grid, every `q` whose ratio and every mass come back inside `ε_μ/16`
+//!   is accepted. Control: `realised` narrowed to `q ≥ 1`.
 //! - `qa_held_warped_every_pixel`: every pixel of the warped chart validates and decodes `m_c` at the held value and
 //!   the ratio `q(t)`. Control: the range a ratio-only realisation would give, drawn over the same pixels.
 //! - `qa_held_linear_refuses`: on the linear option over the asked range, every pixel that validates decodes `m_c` at
@@ -80,23 +84,37 @@ fn third(pair: [u32; 2]) -> usize {
     (3 - pair[0] - pair[1]) as usize
 }
 
-/// The round trip's relative errors at `q`: `(ratio, m_c, sum, positive)`.
-fn round_trip<S: Selection>(
-    pair: [u32; 2],
-    held: f64,
-    q: f64,
-    p: &LinkParams<f64>,
-) -> (f64, f64, f64, bool) {
+/// The round trip's errors at `q`.
+struct Trip {
+    /// The ratio's, relative.
+    ratio: f64,
+    /// `m_c`'s, relative to the held value.
+    m_c: f64,
+    /// The sum's.
+    sum: f64,
+    /// The largest of the three masses' (`m_c`'s among them), relative; `NaN` if any is.
+    worst: f64,
+    /// Whether every mass came back positive.
+    positive: bool,
+}
+
+/// The round trip's errors at `q`.
+fn round_trip<S: Selection>(pair: [u32; 2], held: f64, q: f64, p: &LinkParams<f64>) -> Trip {
     let m = masses(pair, held, q);
     let back =
         <S::MassLink as Link<2, 3>>::forward_at(<S::MassLink as Link<2, 3>>::inverse_at(m, p), p);
     let ratio = back[pair[1] as usize] / back[pair[0] as usize];
-    (
-        (ratio - q).abs() / q,
-        (back[third(pair)] - held).abs() / held,
-        (back.iter().sum::<f64>() - 1.0).abs(),
-        back.iter().all(|&x| x > 0.0),
-    )
+    Trip {
+        ratio: (ratio - q).abs() / q,
+        m_c: (back[third(pair)] - held).abs() / held,
+        sum: (back.iter().sum::<f64>() - 1.0).abs(),
+        worst: back
+            .iter()
+            .zip(m)
+            .map(|(&x, m)| (x - m).abs() / m)
+            .fold(0.0, |w: f64, e| if e > w || e.is_nan() { e } else { w }),
+        positive: back.iter().all(|&x| x > 0.0),
+    }
 }
 
 /// The ratio-only realisation, blind to `m_c` (the controls' predicate).
@@ -110,8 +128,8 @@ fn ratio_only<S: Selection>(
     if !(q.is_finite() && q > 0.0) {
         return false;
     }
-    let (r, _, s, pos) = round_trip::<S>(pair, held, q, p);
-    pos && r <= eps && s <= eps
+    let t = round_trip::<S>(pair, held, q, p);
+    t.positive && t.ratio <= eps && t.sum <= eps
 }
 
 /// Every `(slice, pair, p)` under `S`, with the linear chart over `[0.05, 20]` (for its `held`).
@@ -137,9 +155,40 @@ fn each<S: Selection>(p: &LinkParams<f64>, mut f: impl FnMut([f64; 8], [u32; 2],
 
 // ── realised(q) means m_c at the held value ─────────────────────────────────────────────────────────────────────────
 
-fn check_realised_arm<S: Selection>(link: &str, p: &LinkParams<f64>, blind: bool) -> usize {
-    let eps = eps_mu();
-    let mut accepted = 0;
+/// What a check takes in `realised`'s place: from `realised`'s answer, `q` and the round trip, whether `q` is accepted.
+type Gate = fn(bool, f64, &Trip) -> bool;
+
+/// `realised` itself.
+const REALISED: Gate = |yes, _, _| yes;
+
+/// One point of the grid, with its gate's answer.
+struct Point {
+    link: &'static str,
+    mu_max: f64,
+    z: [f64; 8],
+    pair: [u32; 2],
+    held: f64,
+    q: f64,
+    yes: bool,
+    trip: Trip,
+}
+
+impl Point {
+    /// The slice, for a failure's message.
+    fn at(&self) -> String {
+        format!(
+            "{} at μ_max = {}, mass controls ({}, {}), bodies {:?}",
+            self.link, self.mu_max, self.z[6], self.z[7], self.pair
+        )
+    }
+}
+
+fn walk_arm<S: Selection>(
+    link: &'static str,
+    p: &LinkParams<f64>,
+    gate: Gate,
+    f: &mut impl FnMut(&Point),
+) {
     each::<S>(p, |z, pair, held| {
         let chart = MixedMassRatio::<ZBeta, S, f64>::new(
             z,
@@ -152,56 +201,131 @@ fn check_realised_arm<S: Selection>(link: &str, p: &LinkParams<f64>, blind: bool
         .expect("a linear chart");
         for k in -300..=300 {
             let q = 10f64.powf(f64::from(k) / 50.0);
-            let yes = if blind {
-                ratio_only::<S>(pair, held, q, eps, p)
-            } else {
-                chart.realised(q, p)
-            };
-            let (r, c, s, pos) = round_trip::<S>(pair, held, q, p);
-            if yes {
-                accepted += 1;
-                assert!(
-                    pos && r <= eps && s <= eps && c <= eps,
-                    "{link} at μ_max = {}, mass controls ({}, {}), bodies {pair:?}: realised q = {q}, but its round \
-                     trip moves m_c off the held {held} by {c} relative (ratio error {r})",
-                    p.mu_max,
-                    z[6],
-                    z[7]
-                );
-            } else {
-                assert!(
-                    !(pos && r <= eps / 16.0 && s <= eps / 16.0 && c <= eps / 16.0),
-                    "{link} at μ_max = {}, mass controls ({}, {}), bodies {pair:?}: q = {q} refused, its round trip \
-                     well inside ε_μ",
-                    p.mu_max,
-                    z[6],
-                    z[7]
-                );
-            }
+            let trip = round_trip::<S>(pair, held, q, p);
+            f(&Point {
+                link,
+                mu_max: p.mu_max,
+                z,
+                pair,
+                held,
+                q,
+                yes: gate(chart.realised(q, p), q, &trip),
+                trip,
+            });
         }
     });
-    accepted
 }
 
-fn check_realised(blind: bool) {
-    let mut accepted = 0;
+/// `f` at every grid point of every slice, under each link and parameter set.
+fn walk(gate: Gate, mut f: impl FnMut(&Point)) {
     for p in softmax_params() {
-        accepted += check_realised_arm::<Defaults>("softmax_tanh", &p, blind);
+        walk_arm::<Defaults>("softmax_tanh", &p, gate, &mut f);
     }
-    accepted += check_realised_arm::<Stick>("stick_breaking", &LinkParams::DEFAULT, blind);
+    walk_arm::<Stick>("stick_breaking", &LinkParams::DEFAULT, gate, &mut f);
+}
+
+fn check_realised(gate: Gate) {
+    let eps = eps_mu();
+    let mut accepted = 0;
+    walk(gate, |pt| {
+        if pt.yes {
+            accepted += 1;
+            let t = &pt.trip;
+            assert!(
+                t.positive && t.ratio <= eps && t.sum <= eps && t.m_c <= eps,
+                "{}: realised q = {}, but its round trip moves m_c off the held {} by {} relative (ratio error {})",
+                pt.at(),
+                pt.q,
+                pt.held,
+                t.m_c,
+                t.ratio
+            );
+        }
+    });
     assert!(accepted > 0, "no ratio realised anywhere");
 }
 
 #[test]
 fn qa_held_realised_implies_held() {
-    check_realised(false);
+    check_realised(REALISED);
 }
 
 negative_control!(
     qa_held_realised_implies_held,
     "the ratio-only round trip in realised's place accepts ratios past the m_c logit's clamp, so it must fail",
     expected = "but its round trip moves m_c off the held",
-    check_realised(true)
+    check_realised(|_, _, t| t.positive && t.ratio <= eps_mu() && t.sum <= eps_mu())
+);
+
+fn check_each_mass(gate: Gate) {
+    let eps = eps_mu();
+    let mut accepted = 0;
+    walk(gate, |pt| {
+        if pt.yes {
+            accepted += 1;
+            assert!(
+                pt.trip.worst <= eps,
+                "{}: realised q = {}, but its round trip moves a mass by {} relative (m_c by {}, the ratio by {})",
+                pt.at(),
+                pt.q,
+                pt.trip.worst,
+                pt.trip.m_c,
+                pt.trip.ratio
+            );
+        }
+    });
+    assert!(accepted > 0, "no ratio realised anywhere");
+}
+
+#[test]
+fn qa_held_realised_each_mass() {
+    check_each_mass(REALISED);
+}
+
+negative_control!(
+    qa_held_realised_each_mass,
+    "the round trip that reads the ratio and m_c but not the swept masses accepts ratios whose m_a sits on the link's \
+     floor, so it must fail",
+    expected = "but its round trip moves a mass by",
+    check_each_mass(|_, _, t| {
+        let eps = eps_mu();
+        t.positive && t.ratio <= eps && t.sum <= eps && t.m_c <= eps
+    })
+);
+
+fn check_not_over_refused(gate: Gate) {
+    let well_inside = eps_mu() / 16.0;
+    let mut refused = 0;
+    walk(gate, |pt| {
+        if !pt.yes {
+            refused += 1;
+            let t = &pt.trip;
+            assert!(
+                !(t.positive
+                    && t.ratio <= well_inside
+                    && t.sum <= well_inside
+                    && t.worst <= well_inside),
+                "{}: q = {} refused, its round trip well inside ε_μ (each mass to {}, the ratio to {})",
+                pt.at(),
+                pt.q,
+                t.worst,
+                t.ratio
+            );
+        }
+    });
+    assert!(refused > 0, "no ratio refused anywhere");
+}
+
+#[test]
+fn qa_held_realised_not_over_refused() {
+    check_not_over_refused(REALISED);
+}
+
+negative_control!(
+    qa_held_realised_not_over_refused,
+    "realised narrowed to q ≥ 1 refuses ratios whose round trip is well inside ε_μ, so it must fail",
+    expected = "refused, its round trip well inside",
+    check_not_over_refused(|yes, q, _| yes && q >= 1.0)
 );
 
 // ── The warped chart: every pixel at the held m_c ───────────────────────────────────────────────────────────────────
