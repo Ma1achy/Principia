@@ -152,6 +152,7 @@ fn check_real_workspace(script: &str) {
         (&["crates/prin/src/main.rs", "plan/tasks/M1/x.md"], "prin"),
         (&["crates/gui/src/lib.rs", "workbench/x.py"], "gui"),
         (&["crates/gui/src/lib.rs", "README.md"], "gui"),
+        (&["crates/gui/src/lib.rs", "decisions.md"], "gui"),
         (&["crates/gui/src/lib.rs", ".claude/agents/x.md"], "gui"),
         // What it cannot place reaches every crate.
         (&["Cargo.lock"], ALL_CRATES),
@@ -167,6 +168,8 @@ fn check_real_workspace(script: &str) {
         ),
         (&["new-top-level/x"], ALL_CRATES),
         (&["top-level-file.txt"], ALL_CRATES),
+        // Only the classifier's root markdown files are dropped; another is unknown, and must not narrow.
+        (&["crates/gui/src/lib.rs", "NOTES.md"], ALL_CRATES),
         // A path that merely starts like a member's is no member's.
         (&["crates/gui-extra/src/lib.rs"], ALL_CRATES),
         (&["crates/gui"], ALL_CRATES),
@@ -198,6 +201,20 @@ mod everything_on_a_lockfile {
             CRATES,
             "        elif path == EVERYTHING_IN_PLAN:\n            return None\n",
             ""
+        ))
+    );
+}
+
+mod any_root_markdown {
+    use super::*;
+    negative_control!(
+        ci_quick_crates_on_the_workspace,
+        "the crates script dropping every root markdown file, so an unknown one beside `gui` tests only `gui`",
+        expected = "ci_quick_tier: the crates of [\"crates/gui/src/lib.rs\", \"NOTES.md\"]",
+        check_real_workspace(&edited(
+            CRATES,
+            "path in ROOT_MARKDOWN",
+            "\"/\" not in path and path.endswith(\".md\")"
         ))
     );
 }

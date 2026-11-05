@@ -13,10 +13,11 @@ with none, as a change to `crates/prin` alone, a binary, would be. It can print 
 A path counts for:
 - its crate, under a workspace member's directory;
 - `xtask`, under `.github/` or `scripts/`: nothing else reads the workflows and the scripts (`xtask/tests/`);
-- nothing, in the corpus, the plan, the workbench, `.claude/` or the root's markdown, which no build reads: R-677's classifier has already sent a
-  head of those alone to the cheap checks, and the readers of a tier (b) file beside code run in full CI;
+- nothing, in the corpus, the plan, the workbench, `.claude/` or the root's seven markdown files that
+  `scripts/ci_changes.sh` lists, which no build reads: R-677's classifier has already sent a head of those alone to the
+  cheap checks, and the readers of a tier (b) file beside code run in full CI;
 - every crate, otherwise: the Cargo files, the toolchain, `.cargo/`, `.config/`, `fixtures/`, `plan/requirements.yaml`
-  and any unknown path, as the classifier fails towards full CI.
+  and any unknown path, another root markdown file among them, as the classifier fails towards full CI.
 
 A reverse dependency is exactly what the build links: a crate is affected when a chain of normal or build dependencies
 reaches a changed crate, or when one of its dev-dependencies is itself affected, because a test binary links its
@@ -31,6 +32,15 @@ import tomllib
 
 TABLES = ("dependencies", "build-dependencies", "dev-dependencies")
 NOT_BUILT = ("docs/", "plan/", "workbench/", ".claude/")
+ROOT_MARKDOWN = (
+    "decisions.md",
+    "REVIEW_QUEUE.md",
+    "open-questions.md",
+    "README.md",
+    "CLAUDE.md",
+    "AGENTS.md",
+    "GEMINI.md",
+)
 XTASK_READS = (".github/", "scripts/")
 EVERYTHING_IN_PLAN = "plan/requirements.yaml"
 
@@ -73,7 +83,7 @@ def seeds(paths, dirs):
             out.add("xtask")
         elif path == EVERYTHING_IN_PLAN:
             return None
-        elif path.startswith(NOT_BUILT) or "/" not in path and path.endswith(".md"):
+        elif path.startswith(NOT_BUILT) or path in ROOT_MARKDOWN:
             continue
         else:
             return None
