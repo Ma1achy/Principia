@@ -215,8 +215,71 @@ async function heldIntoAltGr(dir, down, up, code) {
   check(told.at(-1) === false, `the app was never told of ${code}'s release, so egui holds it down: ${JSON.stringify(told)}`);
 }
 
+// Replays `events` on the window, each `[type, key, code, fields]`, then checks that the app was left holding nothing:
+// egui keeps a key down until a release under the name it went down by, and makes the next press of a key it holds a
+// repeat, which the app's commands skip (`keyboard/mod.rs`, `app.rs`'s undo keys).
+async function leavesNothingDown(dir, events) {
+  const { seen, appWorker } = await runLoader(dir, { search: "?layout=worker" });
+  check(appWorker, "?layout=worker started no worker");
+  for (const [type, key, code, fields = {}] of events) {
+    seen.page.dispatchEvent(
+      Object.assign(new Event(type, { cancelable: true }), {
+        key,
+        code,
+        repeat: false,
+        isComposing: false,
+        shiftKey: false,
+        ctrlKey: false,
+        altKey: false,
+        metaKey: false,
+        getModifierState: () => false,
+        ...fields,
+      }),
+    );
+  }
+  const held = new Set();
+  for (const { args } of appWorker.posts.filter((m) => m.type === "call" && m.method === "key")) {
+    if (args[2]) held.add(args[0]);
+    else held.delete(args[0]);
+  }
+  check(held.size === 0, `the app was left holding ${JSON.stringify([...held])}, so egui takes its next press for a repeat`);
+}
+
 function imeScenarios(dir) {
   return {
+    // A key held when a composition opens: UI Events has every keyup inside a composition carry `isComposing`.
+    async key_held_into_composition() {
+      await leavesNothingDown(dir, [
+        ["keydown", " ", "Space"],
+        ["keyup", " ", "Space", { isComposing: true }],
+      ]);
+    },
+    // The key that opens a composition: its keydown comes before `compositionstart`, so it is not composing, and its
+    // keyup is. `Process` is no name egui has, so the worker falls back on the code, `KeyA`.
+    async key_opening_a_composition() {
+      await leavesNothingDown(dir, [
+        ["keydown", "Process", "KeyA"],
+        ["keyup", "a", "KeyA", { isComposing: true }],
+      ]);
+    },
+    // A held key's auto-repeat under Shift, pressed over it: a second name on one code, `1` and then `!`, egui's Num1 and
+    // Exclamationmark. Both went down.
+    async key_renamed_by_its_repeat() {
+      await leavesNothingDown(dir, [
+        ["keydown", "1", "Digit1"],
+        ["keydown", "!", "Digit1", { repeat: true, shiftKey: true }],
+        ["keyup", "!", "Digit1", { shiftKey: true }],
+      ]);
+    },
+    // Cmd+Z on a Mac: the letter's keyup never fires while Cmd is held (eframe-0.36.2 `src/web/events.rs:307-327`, its own
+    // web runner's answer to it, emilk/egui#4724), so Cmd's release has to let the letter up as well.
+    async key_under_cmd_goes_up_with_cmd() {
+      await leavesNothingDown(dir, [
+        ["keydown", "Meta", "MetaLeft", { metaKey: true }],
+        ["keydown", "z", "KeyZ", { metaKey: true }],
+        ["keyup", "Meta", "MetaLeft"],
+      ]);
+    },
     // Space, which the Stain canvas reads while it is down.
     async key_held_into_altgr_space() {
       await heldIntoAltGr(dir, " ", " ", "Space");
