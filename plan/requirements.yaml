@@ -30302,7 +30302,7 @@
   note: "The supported-resolution list: REQ-TOOL-113 (calibration). R-483 C10 (20 Oct 2026)."
 - id: REQ-VAL-099
   area: VAL
-  statement: "The parity gate must be run on a non-Metal backend (Vulkan or D3D12) before any Paper-2 numbers are produced; it gates Paper 2, not the build. A recorded run on R-711's runner can serve, with its named commit, driver version and full output, if the parity measurement itself passes; the paper states the single-card evidence and the owner-reported hardware caveat; a second non-Metal GPU is welcome, not required."
+  statement: "The parity gate must be run on a non-Metal backend (Vulkan or D3D12) before any Paper-2 numbers are produced; it gates Paper 2, not the build. A recorded run on R-711's runner can serve, with its named commit, driver version and full output, if the parity measurement itself passes; the paper states the single-card evidence and the owner-reported hardware caveat; a second non-Metal GPU is welcome, not required. The owner-reported hardware caveat is RQ-685's run note: the owner reported that the card may have faulty shader cores, and repeating on one card rules out an intermittent fault, not a fixed one. The gate record prints what the paper must state, with, as a third item applied per R-369, R-690's word for that adapter and driver version."
   source:
   - file: docs/contracts/principia_canonical_spec.md
     section: 2. The determinism law (the other defining decision)
@@ -30318,15 +30318,18 @@
     section: "R-110 — What CI runs, where, and against which goldens *(closes RQ-79)*"
   - file: decisions.md
     section: "R-711 — One measurement-only self-hosted runner, `malachys-pc-rtx2080s`, on the owner's PC, with no pull-request trigger on any self-hosted job; DX12 may run on it as a measurement; PC benchmarks stay apart from the Mac's performance gates; a recorded run on it can serve Paper 2's non-Metal parity evidence; its jobs have their own workflow; the signing rules *(closes RQ-695; amends R-174, R-186 and R-656)*"
+  - file: decisions.md
+    section: "R-690 — R-547's \"operations every IEEE backend rounds alike\" is stated as a condition on the driver and tested by TASK-M4-27 and TASK-M4-28; it is not enforceable, and a driver that fails is recorded unverified, not supported *(closes RQ-690; amends R-547)*"
   verify:
-    detail: "the parity suite passes on a real (hardware) Vulkan or D3D12 GPU — lavapipe, the per-commit second backend, does not satisfy this (R-110); recorded before Paper-2 survey results; a run on R-711's runner names its commit and driver version and keeps its full output, the parity measurement itself passing, and the paper states the single-card evidence and the owner-reported hardware caveat (R-711)"
+    detail: "the parity suite passes on a real (hardware) Vulkan or D3D12 GPU — lavapipe, the per-commit second backend, does not satisfy this (R-110); recorded before Paper-2 survey results; a run on R-711's runner can serve: its record names its commit, API, driver version and R-690 hardware label and keeps its full output, and a record missing its commit, driver version or output is refused; the parity suite passes, the inputs of any level 3 row on that card among the run's Tier L inputs; and the gate record prints what the paper must state, the single-card evidence, the owner-reported hardware caveat and R-690's word for that adapter and driver version, which the physics reviewer checks (R-711)"
     method: numerical gate
   rulings:
   - R-58
   - R-110
+  - R-690
   - R-711
   milestone: M8
-  note: "R-711 (5 Nov 2026, item 4; RQ-695): the terms on a run on that runner, added to the statement and the verify. *Was (statement):* ends \"it gates Paper 2, not the build.\" Whether a card with an R-690 failure on record can pass is put to the physics reviewer of PR #416."
+  note: "R-711 (5 Nov 2026, item 4; RQ-695): the terms on a run on that runner, added to the statement and the verify. *Was (statement):* ends \"it gates Paper 2, not the build.\" The physics call, from the physics review of PR #416: the corpus settles whether a card with an R-690 failure on record can pass, and a record is no bar (\"can serve\" closed RQ-695; R-690's recording blocks nothing). \"The parity measurement itself\" is the parity suite (parity contract § 2, § 6), not R-690's three-level report. The inputs of a level 3 row on that card join the run's Tier L inputs, and the run itself decides. A level 2 record limits what a pass shows, no fork on the suite's inputs only, so the record and the paper carry R-690's standing word for that adapter and driver version, \"unverified, not supported\", \"no failure in N\" or \"not run\", as a third item beside the owner's two, applied per R-369. Tier N tolerances stay as native wgpu pins them (R-85), never re-pinned on this card's spread. RQ-685 stays open, and what a pass covers waits on it. The record's API and hardware label, and the refusal of a record missing its commit, driver version or output, are the same review's, applied per R-369. *Was (verify):* \"a run on R-711's runner names its commit and driver version and keeps its full output, the parity measurement itself passing, and the paper states the single-card evidence and the owner-reported hardware caveat (R-711)\"."
 - id: REQ-VAL-100
   area: VAL
   statement: "The same spec object must re-render the same video bit-identically on the same backend and match across backends to the parity contract's f32 tolerances, with branch decisions identical on identical inputs, per step, and terminal labels and outcome classes identical except on chaotic trajectories, where they may differ across precisions."
@@ -40376,7 +40379,7 @@
   milestone: M0
 - id: REQ-SYS-065
   area: SYS
-  statement: "GPU CI must run on two backends on every commit, on GitHub-hosted runners (R-186): macos-15 (Apple silicon, paravirtual Metal) for the Metal correctness suites and ubuntu-24.04 (pinned, R-375) with Mesa lavapipe (Vulkan), the harness taking its backend from PRIN_GPU_BACKEND=metal|vulkan (unset: metal on macOS, vulkan elsewhere; an unknown value is an error; the chosen backend is logged, R-206); the first check on macos-15 must show a Metal adapter and the M0 fixtures within tolerance, or the build stops for a REVIEW_QUEUE entry proposing a self-hosted runner. R-174's same-repository guard is dormant while no self-hosted runner exists."
+  statement: "GPU CI must run on two backends on every commit, on GitHub-hosted runners (R-186): macos-15 (Apple silicon, paravirtual Metal) for the Metal correctness suites and ubuntu-24.04 (pinned, R-375) with Mesa lavapipe (Vulkan), the harness taking its backend from PRIN_GPU_BACKEND=metal|vulkan (unset: metal on macOS, vulkan elsewhere; an unknown value is an error; the chosen backend is logged, R-206); the first check on macos-15 must show a Metal adapter and the M0 fixtures within tolerance, or the build stops for a REVIEW_QUEUE entry proposing a self-hosted runner. R-174's same-repository guard is dormant while no self-hosted runner exists. R-711's one measurement-only runner wakes R-174 for that runner, with no pull_request or pull_request_target trigger on any self-hosted job in place of that guard's allowance; it runs no job of this requirement's and no required or hosted job."
   source:
   - file: decisions.md
     section: "R-110 — What CI runs, where, and against which goldens *(closes RQ-79)*"
@@ -40392,9 +40395,11 @@
     section: "R-375 — CI's Linux runners are pinned to `ubuntu-24.04`, not `ubuntu-latest`; moving to Ubuntu 26 is a deliberate later step *(amends R-186)*"
   - file: decisions.md
     section: "R-656 — CI throughput: a push runs `ci.yml` only on `main` (and on R-272's `measure/` branches, which have no pull request), a pull request running it through `pull_request`; a pull request's superseded runs are cancelled, never a run on `main`; a docs-only pull request skips the build, test, GPU and mutants work, and one that changes no GPU-path file skips the GPU suites, inside the jobs, every required check still reporting success under its own name; mutants run on the merge-ready head; a bounded target cache is approved in principle, built in a later PR; no paid or self-hosted runner *(amends R-110, R-177, R-186, R-195, R-235, R-285 and R-335)*"
+  - file: decisions.md
+    section: "R-711 — One measurement-only self-hosted runner, `malachys-pc-rtx2080s`, on the owner's PC, with no pull-request trigger on any self-hosted job; DX12 may run on it as a measurement; PC benchmarks stay apart from the Mac's performance gates; a recorded run on it can serve Paper 2's non-Metal parity evidence; its jobs have their own workflow; the signing rules *(closes RQ-695; amends R-174, R-186 and R-656)*"
   verify:
+    detail: "the CI log shows gpu_harness and metal_hosted_probe green on macos-15 and gpu_harness green on lavapipe, with the named backends; no required or hosted job uses a self-hosted runner, R-711's measurement jobs, in their own workflow, being neither; an unknown PRIN_GPU_BACKEND fails naming the variable"
     method: review checklist
-    detail: "the CI log shows gpu_harness and metal_hosted_probe green on macos-15 and gpu_harness green on lavapipe, with the named backends; no job uses a self-hosted runner; an unknown PRIN_GPU_BACKEND fails naming the variable"
   rulings:
   - R-110
   - R-169
@@ -40403,8 +40408,9 @@
   - R-206
   - R-375
   - R-656
+  - R-711
   milestone: M0
-  note: "R-656: \"every commit\" is every push to main and every pull-request head; a head that changes no GPU-path file skips the GPU suites' jobs, gate jobs still reporting success under the checks' names, and the suites run again on main once it merges. No paid larger runner either."
+  note: "R-656: \"every commit\" is every push to main and every pull-request head; a head that changes no GPU-path file skips the GPU suites' jobs, gate jobs still reporting success under the checks' names, and the suites run again on main once it merges. No paid larger runner either. R-711 (5 Nov 2026, items 1, 2 and 5): one measurement-only runner, its jobs in their own workflow. *Was (verify):* \"no job uses a self-hosted runner\". *Was (statement):* ends \"is dormant while no self-hosted runner exists.\""
 - id: REQ-SYS-066
   area: SYS
   statement: "Every reviewer role a task file names must record its verdict as a PR review headed `VERDICT: APPROVE <role>` or `VERDICT: CHANGES <role>`, and the `reviews-complete` CI check must pass only when every named role has approved on the PR's latest commit with no later CHANGES verdict; an approval followed only by qa's own `qa: tests for <TASK-id>` commits, adding files only under qa's paths, counts on the head (R-260), and a PR whose title names no task passes with \"no task, no named reviewers\" (R-261)."

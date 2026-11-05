@@ -30510,7 +30510,7 @@ R-684 is in the "ci" group of `plan/rule_groups.yaml`.
 
 ## R-711 — One measurement-only self-hosted runner, `malachys-pc-rtx2080s`, on the owner's PC, with no pull-request trigger on any self-hosted job; DX12 may run on it as a measurement; PC benchmarks stay apart from the Mac's performance gates; a recorded run on it can serve Paper 2's non-Metal parity evidence; its jobs have their own workflow; the signing rules *(closes RQ-695; amends R-174, R-186 and R-656)*
 *5 Nov 2026 · the owner's message of that day; applied in the forward lines of R-58, R-110, R-174, R-186 and R-656,
-`docs/archive/review_queue/M0.md` (RQ-695 moved), `REVIEW_QUEUE.md`, TASK-M4-28 (a note), REQ-VAL-099 (reqio), TASK-M8-41,
+`docs/archive/review_queue/M0.md` (RQ-695 moved), `REVIEW_QUEUE.md`, TASK-M4-28 (a note), REQ-SYS-065 and REQ-VAL-099 (reqio), TASK-M0-04, TASK-M8-41,
 `plan/WORKFLOW.md`, `plan/HUMAN_SETUP.md` and `plan/rule_groups.yaml`*
 
 The owner's words, 5 Nov 2026, verbatim:
@@ -30535,12 +30535,15 @@ The owner's words, 5 Nov 2026, verbatim:
 - **`ci.yml`'s comment.** Item 1's correction of `.github/workflows/ci.yml`:31-32 goes with the first runner job's pull request; the file is unchanged here.
 - **R-174's account.** R-174 says the runner runs "under its own macOS user account", written of a Mac runner. This runner is a PC, so what wakes is the rule's sense, the runner's own user account.
 - **R-58 and R-110** are not amended: the non-Metal parity run still gates Paper 2 and not the build, and item 4 says what a run on this runner must show to serve it. Each carries a "Read with" line.
+- **Item 4 on a card with an R-690 failure on record,** from the physics review of #416: a record is no bar, and "the parity measurement itself" is the parity suite, not R-690's report. The inputs of a level 3 row on that card join the run's Tier L inputs. A level 2 record limits what a pass shows, so the record and the paper carry R-690's standing word for that adapter and driver version as a third item beside the owner's two. RQ-685 stays open. REQ-VAL-099 and TASK-M8-41 carry this.
+- **The check on "the paper must state",** from the same review: no task writes the paper, so the gate record prints what it must state, the physics reviewer checks that, and a record missing its commit, driver version or output is refused. The record also names the API and R-690's hardware label. "The owner-reported hardware caveat" is RQ-685's run note, as REQ-VAL-099 defines it.
+- **REQ-SYS-065's check** reads "no required or hosted job" (items 1, 2 and 5), and TASK-M0-04 conforms to it.
 
 *What it amends:* **R-174**, **R-186** and **R-656**, for this runner only. It closes **RQ-695**.
 
 R-711 is in the "ci" group of `plan/rule_groups.yaml`.
 
-Changes REQ-VAL-099 (statement, verify, source, rulings, note).
+Changes REQ-SYS-065 and REQ-VAL-099 (statement, verify, source, rulings, note).
 
 ## R-712 — The per-mutant timeout is set from the measured baseline test time, at about 3 times it; 8 shards are kept; a timed-out mutant counts as caught and is listed; #360's 135 unreached mutants go to the nightly run, and the same rule applies to #387 if it hits the limit *(amends R-348, R-376 and R-402 for REQ-VAL-180)*
 *5 Nov 2026 · the owner's message of that day; applied in the forward lines of R-348, R-376 and R-402, REQ-VAL-180 (reqio)
