@@ -996,6 +996,39 @@ fn mock_console_height_maximised_a_panels_combo_closes() {
 }
 
 #[test]
+fn mock_console_height_it_closes_the_figures_right_click_menu() {
+    let (mut app, mut h) = opened();
+    let figure = current(&h, &app).figure;
+    let at = figure.center_top() + vec2(0.0, 60.0);
+    let button = |pressed| Event::PointerButton {
+        pos: at,
+        button: egui::PointerButton::Secondary,
+        pressed,
+        modifiers: NONE,
+    };
+    for events in [
+        vec![Event::PointerMoved(at)],
+        vec![button(true)],
+        vec![button(false)],
+    ] {
+        let _ = h.frame(&mut app, events);
+    }
+    settle(&mut h, &mut app);
+    let inside = at + vec2(10.0, 8.0);
+    let kept = popup_at(&h, inside);
+    assert_eq!(
+        kept,
+        (true, Some(egui::Order::Foreground)),
+        "over the docked one"
+    );
+    rejects("a menu the docked console has not reached", || {
+        popup_gone(&h, inside)
+    });
+    top_at(&mut h, &mut app, at.y - 20.0);
+    popup_gone(&h, inside);
+}
+
+#[test]
 fn mock_console_height_the_compass_menu_it_reaches_closes() {
     let mut app = mock_app();
     let mut h = headless();

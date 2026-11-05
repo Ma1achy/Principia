@@ -204,6 +204,7 @@ pub fn figure(
             ui.close();
         }
     });
+    super::close_under_console(&response, scratch.console_top);
     if focused && !typing {
         let presses: Vec<(f64, egui::Modifiers)> = ui.input(|i| {
             i.events
