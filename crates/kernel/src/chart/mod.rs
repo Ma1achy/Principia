@@ -83,7 +83,7 @@ pub use spirv_std::num_traits::Float;
 
 pub use burrau::{Burrau, EuclidPlane};
 pub use burrau_acute::{BurrauThetaDeltaM, BurrauThetaK, BurrauThetaLz};
-pub use construction::{HeldLz, RestStart};
+pub use construction::{HeldK, HeldLz, RestStart};
 pub use energy::{Mapped, Mapping};
 pub use invariant::{InvariantLE, InvariantLK};
 pub use latent::Latent;

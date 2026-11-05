@@ -36,8 +36,9 @@
 //! physical value (R-633's construction charts, R-554 L5's `p_λ`) names it with an index of its own and adds `d` to that
 //! value in its own [`Tiltable::decode_shifted`]: the path is this one. A cell whose tilted physical value leaves no
 //! system is refused ([`Tiltable::refusal`]): the view's `validate` rejects it and its area weight is 0
-//! ([`Tilted::weight`]). Slicing sets a hidden coordinate's value at the centre ([`Hidden::sliced`], T6); on these
-//! charts every value of a latent control is a system, so no slice reaches an edge.
+//! ([`Tilted::weight`]). A held energy clamped at its floor is a system, and flagged ([`Tilted::held_at_floor`], R-709).
+//! Slicing sets a hidden coordinate's value at the centre ([`Hidden::sliced`], T6); on these charts every value of a
+//! latent control is a system, so no slice reaches an edge.
 //!
 //! **On the latent chart** the tilt is the decoder's basis edit, with no scale (T2; R-507 U2): [`latent_basis`], the
 //! columns placed on the axes `e_a`, `e_b` and the targets, turned by `γ` and scaled by `σ` as the GUI's `View::basis`
@@ -672,6 +673,12 @@ pub trait Tiltable: Hidden {
     fn refusal(&self, _a: f64, _b: f64, _shift: &Shift<f64>) -> Option<Constraint> {
         None
     }
+
+    /// Whether `shift` takes a held energy's warp coordinate below `t = 0`, so that it is clamped at its floor (R-709);
+    /// false on every chart but a warped held `K`.
+    fn held_at_floor(&self, _shift: &Shift<f64>) -> bool {
+        false
+    }
 }
 
 /// A chart and its tilt (the module's note): pixel `(u, v)` decodes at the tilted `(a, b)` with the hidden offsets.
@@ -811,6 +818,15 @@ where
             Some(_) => 0.0,
             None => f64::from(self.tilt.weight),
         }
+    }
+
+    /// Whether the pixel at `(u, v)` is a system whose held energy is clamped at its floor, "held at floor" in the
+    /// Inspector and the sidecar (R-709): a clamped offset alone is no pixel to flag past the chart's edge, which no
+    /// system draws.
+    pub fn held_at_floor(&self, u: f64, v: f64) -> bool {
+        let (_, shift) = self.at(u, v);
+        shift.is_some_and(|s| self.chart.held_at_floor(&s))
+            && self.validate(u, v) == ValidationResult::Valid
     }
 }
 

@@ -278,19 +278,19 @@ where
     R: LinkReal + PayloadReal + WarpReal + From<P>,
     P: Copy,
 {
-    decode_theta_k_lz(chart, u, v, R::zero())
+    decode_theta_k_lz(chart, u, R::zero(), chart.kinetic(v))
 }
 
-/// [`decode_theta_k`] with the construction at the held `L_z = lz` in place of 0, the chart's hidden coordinate
-/// (R-633; `super::construction`).
+/// [`decode_theta_k`] with the construction at the held `L_z = lz` in place of 0, the chart's hidden coordinate, and
+/// `K* = k` in place of `K(v)`, the row its mode gives (R-633, R-708; `super::construction`).
 #[inline]
-pub fn decode_theta_k_lz<R, P>(chart: &BurrauThetaK<P>, u: R, v: R, lz: R) -> (Decoded<R>, Outcome)
+pub fn decode_theta_k_lz<R, P>(chart: &BurrauThetaK<P>, u: R, lz: R, k: R) -> (Decoded<R>, Outcome)
 where
     R: LinkReal + PayloadReal + WarpReal + From<P>,
     P: Copy,
 {
     let nu = chart.nu(u);
-    let mut blocks = BurrauBlocks::new(embed(nu), burrau::seed(nu), lz, chart.kinetic(v));
+    let mut blocks = BurrauBlocks::new(embed(nu), burrau::seed(nu), lz, k);
     let decoded = decode::decode_with(&mut blocks, &unread().z);
     (decoded, blocks.outcome())
 }
@@ -346,13 +346,25 @@ impl<P: Copy> BurrauThetaLz<P> {
     /// The band's half-width `λ_L·L_max(K)`, `L_max(K) = √(2IK)` held to `L_max² ≤ 2K` ([`invariant::l_max`]).
     #[inline]
     pub fn lz_max<F: WarpReal + From<P>>(&self) -> F {
-        <F as From<P>>::from(self.lz_fraction) * invariant::l_max(self.kinetic::<F>())
+        self.band(self.kinetic::<F>())
     }
 
     /// `L_z(v) = (2v − 1)·λ_L·L_max(K)`.
     #[inline]
     pub fn lz<F: WarpReal + From<P>>(&self, v: F) -> F {
-        (v + v - F::one()) * self.lz_max::<F>()
+        self.lz_at(v, self.kinetic::<F>())
+    }
+
+    /// `L_z(v)` on the band of `K = k`, the pixel's own under a warped tilt (R-708).
+    #[inline]
+    pub fn lz_at<F: WarpReal + From<P>>(&self, v: F, k: F) -> F {
+        (v + v - F::one()) * self.band(k)
+    }
+
+    /// `λ_L·L_max(k)`, the half-width of the band of `K = k`.
+    #[inline]
+    fn band<F: WarpReal + From<P>>(&self, k: F) -> F {
+        <F as From<P>>::from(self.lz_fraction) * invariant::l_max(k)
     }
 
     /// The convention the chart's systems are stated in: the normalised one (chart_reference §4.2).
@@ -477,19 +489,24 @@ where
     R: LinkReal + PayloadReal + WarpReal + From<P>,
     P: Copy,
 {
-    decode_theta_lz_k(chart, u, v, chart.kinetic())
+    decode_theta_lz_at(chart, u, chart.lz(v), chart.kinetic())
 }
 
-/// [`decode_theta_lz`] with the construction at `K* = k`, the held `K` tilted (R-633; `super::construction`), `L_z(v)`
-/// the chart's own band, at its `K`.
+/// [`decode_theta_lz`] with the construction at `(L_z, K*) = (lz, k)`, the held `K` tilted and the band its mode gives
+/// (R-633, R-708; `super::construction`).
 #[inline]
-pub fn decode_theta_lz_k<R, P>(chart: &BurrauThetaLz<P>, u: R, v: R, k: R) -> (Decoded<R>, Outcome)
+pub fn decode_theta_lz_at<R, P>(
+    chart: &BurrauThetaLz<P>,
+    u: R,
+    lz: R,
+    k: R,
+) -> (Decoded<R>, Outcome)
 where
     R: LinkReal + PayloadReal + WarpReal + From<P>,
     P: Copy,
 {
     let nu = chart.nu(u);
-    let mut blocks = BurrauBlocks::new(embed(nu), burrau::seed(nu), chart.lz(v), k);
+    let mut blocks = BurrauBlocks::new(embed(nu), burrau::seed(nu), lz, k);
     let decoded = decode::decode_with(&mut blocks, &unread().z);
     (decoded, blocks.outcome())
 }

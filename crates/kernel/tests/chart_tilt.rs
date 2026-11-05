@@ -6,23 +6,27 @@
 //!   edit; the tilted shape sphere bijective, each pixel counted once; the f32 instantiation. On the six that hold a
 //!   block by a construction (`tilt_every_chart_construction_*`, R-633): `d = 0` bitwise the untilted chart, `ν₀` moved
 //!   by `d` with the masses kept, a rest start's momenta `D_mom` of the control from 0, the held `L_z` or `K` §2.2's
-//!   construction at the tilted value, its refused cells no system and weighted 0. RQ-471's corner `ray-degenerate`
-//!   over the whole registry, unfolded, weighted 0, its shares undefined.
+//!   construction at the tilted value under each of R-471's modes (R-708): warped, the default, no cell refused, the
+//!   bottom row included, the held `L_z` by value at both signs of `d` (R-720), the held `K` in its warp coordinate and
+//!   clamped at `t = 0` (R-709); linear, rows at fixed values, the refused cells no system and weighted 0. RQ-471's
+//!   corner `ray-degenerate` over the whole registry, unfolded, weighted 0, its shares undefined.
 //! - `tilt_mass_logits` (REQ-CHART-063, C7): the shape sphere tilted into each mass logit keeps every mass positive,
 //!   the three summing to 1.
 //! - `tilt_units` (REQ-CHART-064, R-507): the tilted axis's direction in the chart's parameters is the same at every
 //!   zoom; the latent chart's tilt is the basis edit, unscaled.
 //! - `slice_every_chart` (REQ-CHART-065's arms over the whole registry, T6): a slice moves one hidden control, the
 //!   decode at the centre following the link, never a stop on the five; on the six, a slice moves only that held value,
-//!   `ν₀`, the held `L_z` or `K`, or one momentum control. A slice past the edge stopping is REQ-CHART-060's.
+//!   `ν₀`, the held `L_z` or `K`, or one momentum control, the held `L_z` by value at both signs (R-720). A slice past
+//!   the edge stopping is REQ-CHART-060's.
 //! - `tilted_extension` (REQ-CHART-066, X3): the types act on the tilted `(a, b)`.
 //!
 //! Each test registers its negative control (R-176).
 
+use kernel::chart::burrau_acute;
 use kernel::chart::construction::{
     momentum_control, Held, LzChart, RestChart, HELD_K, HELD_LZ, NU0,
 };
-use kernel::chart::invariant::Invariant;
+use kernel::chart::invariant::{k_floor, l_max, Invariant};
 use kernel::chart::mixed::{Alpha, PRhoX};
 use kernel::chart::shape_sphere::{self, pixel_centre, PixelCount};
 use kernel::chart::tilt::{
@@ -30,9 +34,9 @@ use kernel::chart::tilt::{
 };
 use kernel::chart::{
     Burrau, BurrauThetaDeltaM, BurrauThetaK, BurrauThetaLz, Chart, ChartDecode, Constraint,
-    EuclidPlane, Float, HeldLz, InvariantLE, InvariantLK, Latent, MassSimplex, Mixed, RestStart,
-    ShapeMap, ShapeSphere, SystemImage, Tilt, TiltMap, TiltSpec, Tilted, ValidationResult,
-    REGISTRY,
+    EuclidPlane, Float, HeldK, HeldLz, InvariantLE, InvariantLK, Latent, Mapped, Mapping,
+    MassSimplex, Mixed, RestStart, ShapeMap, ShapeSphere, SystemImage, Tilt, TiltMap, TiltSpec,
+    Tilted, ValidationResult, REGISTRY,
 };
 use kernel::decode::invariant::infeasible;
 use kernel::decode::{self, config, mass, momentum, Decoded, Degenerate};
@@ -40,6 +44,7 @@ use kernel::generated::links::{
     Defaults, Link, LinkParams, Select, SigmoidAlpha, SigmoidBeta, SigmoidQ, SoftmaxTanh,
     SoftsignQ, TanhQ,
 };
+use std::io::Write;
 use validation::negative_control;
 
 /// The five charts that hold their blocks by latent controls (R-633's split).
@@ -2380,8 +2385,14 @@ fn slice_every_chart() {
             "MassSimplex" => slice_rest(simplex(), &[NU0], false),
             "EuclidPlane" => slice_rest(euclid(), &[], false),
             "BurrauThetaDeltaM" => slice_rest(delta_m(), &[], false),
-            "Burrau" => slice_lz(nu_k()),
-            "BurrauThetaK" => slice_lz(theta_k()),
+            "Burrau" => {
+                slice_lz(nu_k(), false);
+                slice_lz(linear(nu_k()), false);
+            }
+            "BurrauThetaK" => {
+                slice_lz(theta_k(), false);
+                slice_lz(linear(theta_k()), false);
+            }
             "BurrauThetaLz" => slice_k(),
             other => panic!("{other}"),
         }
@@ -2397,6 +2408,18 @@ negative_control!(
         check_simplex(true);
     }
 );
+
+mod slice_warp_lz {
+    use super::*;
+    negative_control!(
+        slice_every_chart,
+        "a slice of the held L_z moved in a warp coordinate is not L_z₀ + d, so it must fail",
+        expected = "is not L_z₀ + d",
+        {
+            slice_lz(nu_k(), true);
+        }
+    );
+}
 
 mod slice_momenta {
     use super::*;
@@ -2645,6 +2668,19 @@ fn theta_lz() -> BurrauThetaLz<f64> {
     }
 }
 
+/// `Φ_θ,L_z` warped, the default, under a warp of the test's own.
+fn held_k() -> HeldK<f64> {
+    HeldK::new(theta_lz(), 1.0, 1.5)
+}
+
+/// `chart` under the linear option, R-471 E2.
+fn linear<C>(chart: HeldLz<C, f64>) -> HeldLz<C, f64> {
+    HeldLz {
+        mapping: Mapping::Linear,
+        ..chart
+    }
+}
+
 /// `chart` under `s` about `CENTRE`, each target's slider span `span`.
 fn held_view<C: Tiltable<Param = f64>>(chart: C, s: &TiltSpec, span: f64) -> Tilted<C, f64> {
     Tilted::new(chart, Tilt::new(s, CENTRE, [span, span])).expect("a hidden target")
@@ -2692,6 +2728,13 @@ macro_rules! for_six {
         {
             let $c = theta_lz();
             let $own = $c;
+            for ($x, $span) in [(HELD_K, K_SPAN)] {
+                $body
+            }
+        }
+        {
+            let $c = held_k();
+            let $own = $c.chart;
             for ($x, $span) in [(HELD_K, K_SPAN)] {
                 $body
             }
@@ -2864,7 +2907,7 @@ enum Refused {
     Coloured,
 }
 
-/// A 30° tilt into the held value of a Burrau chart, `held(a, b, d)` the pixel's `(L_z, K)`: a cell with
+/// A 30° tilt into the held value of a Burrau chart in linear mode, `held(a, b, d)` the pixel's `(L_z, K)`: a cell with
 /// `K < L_z²/2I` is no system (tagged `INVARIANT_INFEASIBLE`, refused by `validate`, area weight 0), every other cell
 /// valid, weighted as the view, its momenta §2.2's construction at `(L_z, K)`: `Σpᵢ = 0`, `L_z(p) = L_z`, `K(p) = K`.
 fn check_refused<C: Tiltable<Param = f64> + Copy>(
@@ -2888,6 +2931,7 @@ fn check_refused<C: Tiltable<Param = f64> + Copy>(
             valid = view.chart().validate(a, b);
         }
         let name = chart.name();
+        assert!(!view.held_at_floor(u, v), "{name} at ({u}, {v})");
         if infeasible(1.0, k, lz) {
             counts[0] += 1;
             assert_eq!(
@@ -2926,21 +2970,26 @@ fn check_refused<C: Tiltable<Param = f64> + Copy>(
     );
 }
 
-/// The refused arm on the three Burrau charts.
+/// The linear arm on the three Burrau charts (R-708): rows at `K_max·b` or on the centre's band, a held value by value.
 fn check_burrau_refused(alter: Refused) {
-    let k = nu_k().chart;
-    check_refused(nu_k(), HELD_LZ, LZ_SPAN, |_, b, d| (d, k.kinetic(b)), alter);
-    let k = theta_k().chart;
-    check_refused(
-        theta_k(),
-        HELD_LZ,
-        LZ_SPAN,
-        |_, b, d| (d, k.kinetic(b)),
-        alter,
-    );
+    let c = linear(nu_k());
+    check_refused(c, HELD_LZ, LZ_SPAN, |_, b, d| (d, c.chart.k_max * b), alter);
+    let c = linear(theta_k());
+    check_refused(c, HELD_LZ, LZ_SPAN, |_, b, d| (d, c.chart.k_max * b), alter);
     let c = theta_lz();
     check_refused(
         c,
+        HELD_K,
+        K_SPAN,
+        |_, b, d| (c.lz(b), THETA_LZ_K + d),
+        alter,
+    );
+    let held = HeldK {
+        mapping: Mapping::Linear,
+        ..held_k()
+    };
+    check_refused(
+        held,
         HELD_K,
         K_SPAN,
         |_, b, d| (c.lz(b), THETA_LZ_K + d),
@@ -2972,6 +3021,24 @@ fn tilt_every_chart_construction_refused() {
     check_burrau_refused(Refused::AsBuilt);
     check_tilt_is_slice(nu_k());
     check_tilt_is_slice(theta_k());
+    check_tilt_is_slice(linear(nu_k()));
+    check_tilt_is_slice(linear(theta_k()));
+    // At L_z = 0 the linear arm is the mapped chart's linear option, bit for bit.
+    let mapping = [Mapping::Warped, Mapping::Linear];
+    let (burrau, acute) = (
+        Mapped::<_, Defaults>::new(nu_k().chart, mapping),
+        Mapped::<_, Defaults>::new(theta_k().chart, mapping),
+    );
+    for [u, v] in grid(9, 0.0, 1.0) {
+        assert_eq!(
+            bits(&linear(nu_k()).decode::<Defaults, f64>(u, v)),
+            bits(&burrau.decode::<Defaults, f64>(u, v))
+        );
+        assert_eq!(
+            bits(&linear(theta_k()).decode::<Defaults, f64>(u, v)),
+            bits(&acute.decode::<Defaults, f64>(u, v))
+        );
+    }
 }
 
 negative_control!(
@@ -2994,6 +3061,337 @@ mod refused_coloured {
         }
     );
 }
+
+/// How the warped arms decode a pixel, for a control.
+#[derive(Clone, Copy, PartialEq)]
+enum Warped {
+    AsBuilt,
+    /// The floor at the centre's held `L_z`, not the pixel's.
+    CentreFloor,
+    /// The held `L_z` moved in the warp coordinate `s`, `L_z = (2s − 1)·L_max(K)`.
+    WarpLz,
+    /// The held `L_z` held to one sign.
+    OneSign,
+    /// The held `K` moved by value.
+    ByValue,
+    /// `t < 0` mirrored onto `t > 0`.
+    Mirror,
+}
+
+/// The pixels of a 33 × 33 grid over the square, and its bottom and top rows themselves, `t = 0` and `t = 1`.
+fn rows() -> Vec<[f64; 2]> {
+    let rows = (0..33).flat_map(|i| [[pixel_centre(i, 33), 0.0], [pixel_centre(i, 33), 1.0]]);
+    grid(33, 0.0, 1.0).into_iter().chain(rows).collect()
+}
+
+/// The tilts of the warped arms: Tip as sheet on `τ₁`, which keeps the rows, and Lean each axis on `τ₂`.
+fn warped_tilts(x: u32) -> [TiltSpec; 2] {
+    [
+        spec(30.0, 0.0, TiltMap::Sheet, x, x),
+        spec(0.0, 30.0, TiltMap::Lean, x, x),
+    ]
+}
+
+/// Warped, a tilt into the held `L_z` about `centre`: no cell refused, every one §2.2's construction at the held
+/// `L_z₀ + d` by value, at both signs of `d`, and `K = L_z²/2I + K_max·t^γ_K` at the pixel's own `L_z`, past `K_max` at
+/// the top where the floor takes it there.
+fn check_warped_lz<C: LzChart<Param = f64>>(chart: HeldLz<C, f64>, centre: f64, alter: Warped) {
+    let chart = HeldLz {
+        lz: centre,
+        ..chart
+    };
+    let own = chart.chart;
+    let name = chart.name();
+    let mut above = 0;
+    for s in warped_tilts(HELD_LZ) {
+        let view = held_view(chart, &s, LZ_SPAN);
+        let mut signs = [0; 2];
+        for [u, v] in rows() {
+            let ([a, b], shift) = view.tilt().place(u, v);
+            let lz = centre + shift.dx;
+            let line = own.kinetic_at(b);
+            let on = |moved: f64| own.decode_lz(a, moved, k_floor(moved) + line);
+            let d = if alter == Warped::CentreFloor {
+                own.decode_lz(a, lz, k_floor(centre) + line)
+            } else if alter == Warped::WarpLz {
+                on(centre + 2.0 * shift.dx * l_max(k_floor(lz) + line))
+            } else if alter == Warped::OneSign {
+                on(lz.abs())
+            } else {
+                view.decode::<Defaults, f64>(u, v)
+            };
+            assert_eq!(
+                d.degenerate, None,
+                "{name} at ({u}, {v}): a cell refused under tilt"
+            );
+            assert_eq!(view.validate(u, v), ValidationResult::Valid, "{name}");
+            assert_eq!(view.chart().refusal(a, b, &shift), None, "{name}");
+            assert_eq!(view.weight(u, v), view.tilt().weight, "{name}");
+            let k = k_floor(lz) + line;
+            let (got_lz, got_k, drift) = invariants(&d);
+            let tol = 1e-12 * (1.0 + k);
+            assert!(
+                (got_lz - lz).abs() <= tol,
+                "{name} at ({u}, {v}): the held L_z {got_lz} is not L_z₀ + d = {lz}"
+            );
+            assert!(
+                (got_k - k).abs() <= tol && drift <= tol,
+                "{name} at ({u}, {v}): K = {got_k} is not the floor plus the warp's line, {k}"
+            );
+            signs[usize::from(shift.dx > 0.0)] += 1;
+            above += usize::from(k > own.k_max_at::<f64>());
+        }
+        assert!(
+            signs.iter().all(|&c| c > 100),
+            "{name}: both signs of d: {signs:?}"
+        );
+    }
+    assert!(above > 0, "{name}: a column above K_max");
+}
+
+/// The held `L_z` arm on `(ν, K)` and `Φ_θ,K` (`Φ_strip,K` the same map), at a centre at 0 and at each sign.
+fn check_warped_lz_all(alter: Warped) {
+    for centre in [0.0, 0.15, -0.3] {
+        check_warped_lz(nu_k(), centre, alter);
+        check_warped_lz(theta_k(), centre, alter);
+    }
+}
+
+#[test]
+fn tilt_every_chart_construction_warped_lz() {
+    check_warped_lz_all(Warped::AsBuilt);
+}
+
+negative_control!(
+    tilt_every_chart_construction_warped_lz,
+    "a floor computed at the centre's held L_z rather than the pixel's leaves cells with no construction, so it must fail",
+    expected = "a cell refused under tilt",
+    {
+        check_warped_lz_all(Warped::CentreFloor);
+    }
+);
+
+mod warped_lz_warp {
+    use super::*;
+    negative_control!(
+        tilt_every_chart_construction_warped_lz,
+        "a held L_z moved in a warp coordinate is not L_z₀ + d, so it must fail",
+        expected = "is not L_z₀ + d",
+        {
+            check_warped_lz_all(Warped::WarpLz);
+        }
+    );
+}
+
+mod warped_lz_sign {
+    use super::*;
+    negative_control!(
+        tilt_every_chart_construction_warped_lz,
+        "a held L_z held to one sign is not L_z₀ + d, so it must fail",
+        expected = "is not L_z₀ + d",
+        {
+            check_warped_lz_all(Warped::OneSign);
+        }
+    );
+}
+
+/// Warped, a tilt into the held `K₀` of `Φ_θ,L_z` at the exponent `gamma`: no cell refused, the held `K ≥ 0`, the pixel's
+/// `K = K_max·t^γ_K` at `t = t₀ + d` and the band at it. Where `t₀ + d < 0` the pixel is clamped at `t = 0`: a real
+/// system, the rest start at its own shape, flagged, never mirrored (R-709). The clamped pixels and the pixels counted.
+fn check_warped_k(k0: f64, gamma: f64, alter: Warped) -> (usize, usize) {
+    let chart = HeldK::new(
+        BurrauThetaLz {
+            k: k0,
+            ..theta_lz()
+        },
+        1.0,
+        gamma,
+    );
+    let c = chart.chart;
+    let t0 = k0.powf(1.0 / gamma);
+    let (mut clamped, mut total) = (0, 0);
+    for s in warped_tilts(HELD_K) {
+        let view = held_view(chart, &s, K_SPAN);
+        for [u, v] in rows() {
+            let ([a, b], shift) = view.tilt().place(u, v);
+            let t = t0 + shift.dx;
+            let d = if alter == Warped::ByValue {
+                burrau_acute::decode_theta_lz_at(&c, a, c.lz(b), k0 + shift.dx).0
+            } else if alter == Warped::Mirror {
+                let k = t.abs().powf(gamma);
+                burrau_acute::decode_theta_lz_at(&c, a, c.lz_at(b, k), k).0
+            } else {
+                view.decode::<Defaults, f64>(u, v)
+            };
+            assert_eq!(
+                d.degenerate, None,
+                "Φ_θ,L_z at ({u}, {v}): a cell refused under tilt"
+            );
+            assert_eq!(view.validate(u, v), ValidationResult::Valid);
+            assert_eq!(view.chart().refusal(a, b, &shift), None);
+            assert_eq!(view.weight(u, v), view.tilt().weight);
+            let k = if shift.dx == 0.0 {
+                k0
+            } else {
+                t.max(0.0).powf(gamma)
+            };
+            let lz = c.lz_at(b, k);
+            let (got_lz, got_k, drift) = invariants(&d);
+            assert_eq!(view.held_at_floor(u, v), t < 0.0, "at ({u}, {v})");
+            if t < 0.0 {
+                clamped += 1;
+                assert!(
+                    d.ic.p == [[0.0; 2]; 3] && got_k == 0.0 && got_lz == 0.0,
+                    "at ({u}, {v}): a clamped pixel is not the rest start at its floor: {:?}",
+                    d.ic.p
+                );
+            }
+            let tol = 1e-12 * (1.0 + k);
+            assert!(
+                got_k >= 0.0
+                    && (got_k - k).abs() <= tol
+                    && (got_lz - lz).abs() <= tol
+                    && drift <= tol,
+                "at ({u}, {v}): not the warp's K = {k}, L_z = {lz}: ({got_k}, {got_lz})"
+            );
+            total += 1;
+        }
+    }
+    (clamped, total)
+}
+
+/// The held `K` arm: a centre no tilt here takes below `t = 0` and one it does, at integer and non-integer `γ_K`.
+fn check_warped_k_all(alter: Warped) -> [(usize, usize); 2] {
+    let mut sums = [(0, 0); 2];
+    for gamma in [1.0, 1.5, 2.0, 2.5] {
+        for (i, k0) in [0.9, 0.01].into_iter().enumerate() {
+            let (clamped, total) = check_warped_k(k0, gamma, alter);
+            sums[i].0 += clamped;
+            sums[i].1 += total;
+        }
+    }
+    sums
+}
+
+#[test]
+fn tilt_every_chart_construction_warped_k() {
+    let [high, low] = check_warped_k_all(Warped::AsBuilt);
+    assert_eq!(high.0, 0, "no pixel clamped at K₀ = 0.9");
+    assert!(low.0 > 100, "the clamp arises: {low:?}");
+    // R-709's report, written past the harness's capture so that the test output shows it.
+    writeln!(
+        std::io::stderr(),
+        "R-709 clamped-pixel share: K₀ = 0.9: {}/{}; K₀ = 0.01: {}/{} = {:.4}",
+        high.0,
+        high.1,
+        low.0,
+        low.1,
+        low.0 as f64 / low.1 as f64
+    )
+    .unwrap();
+}
+
+negative_control!(
+    tilt_every_chart_construction_warped_k,
+    "a held K moved by value leaves K < 0, cells with no construction, so it must fail",
+    expected = "a cell refused under tilt",
+    {
+        check_warped_k_all(Warped::ByValue);
+    }
+);
+
+mod warped_k_mirror {
+    use super::*;
+    negative_control!(
+        tilt_every_chart_construction_warped_k,
+        "t < 0 mirrored onto t > 0 is not the clamp, so it must fail",
+        expected = "a clamped pixel is not the rest start",
+        {
+            check_warped_k_all(Warped::Mirror);
+        }
+    );
+}
+
+/// `L_z` values over thirty decades, both signs, none rounded to a tidy `l²/2`.
+fn lz_scan() -> impl Iterator<Item = f64> {
+    (1..4096).map(|i| {
+        let x = (f64::from(i) * 0.618_033_988_749_894_9).fract();
+        let magnitude = 10f64.powf(30.0 * x - 27.0);
+        if i % 2 == 0 {
+            magnitude
+        } else {
+            -magnitude
+        }
+    })
+}
+
+/// The bottom row, `t = 0`, at the pixel's own held `L_z`, is a system at every `L_z`, at f64 and at f32, on §2.2's exact
+/// test. `rounded` takes the rounded `l²/2` for the floor, leaving the row to the rounding (the control).
+fn check_bottom_row(rounded: bool) {
+    let (narrow, acute) = (
+        HeldLz::new(Burrau::<f32> {
+            nu_range: [0.1, 0.9],
+            k_max: 1.0,
+            gamma_k: 1.5,
+        }),
+        HeldLz::new(BurrauThetaK::<f32> {
+            theta_range: [0.2, std::f32::consts::FRAC_PI_4],
+            k_max: 1.0,
+            gamma_k: 1.5,
+        }),
+    );
+    for lz in lz_scan() {
+        let wide = nu_k().sliced(HELD_LZ, lz).unwrap();
+        let d = if rounded {
+            wide.chart.decode_lz(0.5, lz, 0.5 * lz * lz)
+        } else {
+            wide.decode::<Defaults, f64>(0.5, 0.0)
+        };
+        assert_eq!(
+            d.degenerate, None,
+            "the bottom row is blanked at L_z = {lz}"
+        );
+        assert_eq!(wide.validate(0.5, 0.0), ValidationResult::Valid);
+        let d = theta_k()
+            .sliced(HELD_LZ, lz)
+            .unwrap()
+            .decode::<Defaults, f64>(0.5, 0.0);
+        assert_eq!(
+            d.degenerate, None,
+            "the bottom row is blanked at L_z = {lz}"
+        );
+        let lz = lz as f32;
+        for d in [
+            narrow
+                .sliced(HELD_LZ, lz)
+                .unwrap()
+                .decode::<Defaults, f32>(0.5, 0.0),
+            acute
+                .sliced(HELD_LZ, lz)
+                .unwrap()
+                .decode::<Defaults, f32>(0.5, 0.0),
+        ] {
+            assert_eq!(
+                d.degenerate, None,
+                "the bottom row is blanked at L_z = {lz}"
+            );
+        }
+    }
+}
+
+#[test]
+fn tilt_every_chart_construction_bottom_row() {
+    check_bottom_row(false);
+}
+
+negative_control!(
+    tilt_every_chart_construction_bottom_row,
+    "a bottom row left to the rounding of l²/2 is blanked, so it must fail",
+    expected = "the bottom row is blanked",
+    {
+        check_bottom_row(true);
+    }
+);
 
 /// Each of the six's hidden coordinates, `hidden(k)` over `0..12`, and a tilt into any other refused; `admit` admits
 /// it as untilted (the control).
@@ -3050,6 +3448,11 @@ fn check_construction_targets(admit: bool) {
                 Tilted::new(theta_lz(), at(k)).is_some(),
                 "BurrauThetaLz",
             ),
+            (
+                held_k().hidden(k),
+                Tilted::new(held_k(), at(k)).is_some(),
+                "BurrauThetaLz",
+            ),
         ];
         for (hidden, admitted, name) in pairs {
             assert_eq!(hidden, want(name, k), "{name}: hidden {k}");
@@ -3102,10 +3505,18 @@ fn tilt_every_chart_construction_targets() {
     assert_eq!(nu_k().held(HELD_K), None);
     assert_eq!(Held::held(&theta_lz(), HELD_K), Some(THETA_LZ_K));
     assert_eq!(Held::held(&theta_lz(), NU0), None);
+    assert_eq!(held_k().held(HELD_K), Some(THETA_LZ_K));
+    assert_eq!(held_k().held(NU0), None);
     // The wrappers are the registered chart: its name and flags.
     assert_eq!((simplex().name(), nu_k().name()), ("MassSimplex", "Burrau"));
+    assert_eq!(held_k().name(), "BurrauThetaLz");
     assert!(nu_k().forbids_energy_normalisation() && !euclid().forbids_energy_normalisation());
+    assert!(held_k().forbids_energy_normalisation() && held_k().requires_per_pixel_mass());
     assert!(simplex().requires_per_pixel_mass() && theta_k().requires_per_pixel_mass());
+    assert_eq!(
+        format!("{:?}", held_k().map::<f64>(0.3, 0.4)),
+        format!("{:?}", theta_lz().map::<f64>(0.3, 0.4))
+    );
     assert_eq!(
         format!("{:?}", nu_k().map::<f64>(0.3, 0.4)),
         format!("{:?}", nu_k().chart.map::<f64>(0.3, 0.4))
@@ -3130,8 +3541,8 @@ negative_control!(
 #[test]
 fn tilt_every_chart_construction_validate() {
     let none = Shift::none();
-    // (ν, K) at a held L_z: below t = 0 the chart projects to K = 0, where no construction realises L_z ≠ 0.
-    let held = nu_k().sliced(HELD_LZ, 0.3).unwrap();
+    // Linear, (ν, K) at a held L_z: below t = 0 the chart projects to K = 0, where no construction realises L_z ≠ 0.
+    let held = linear(nu_k()).sliced(HELD_LZ, 0.3).unwrap();
     assert_eq!(
         held.validate(0.5, -0.2),
         ValidationResult::Reject {
@@ -3243,7 +3654,7 @@ fn tilt_every_chart_construction_validate() {
         }
     );
     // The held L_z's own refusal and check, through the trait.
-    let z = nu_k();
+    let z = linear(nu_k());
     let lz_shift = |dx: f64| Shift {
         x: HELD_LZ,
         dx,
@@ -3267,9 +3678,116 @@ fn tilt_every_chart_construction_validate() {
         }
     );
     assert_eq!(
-        theta_k().refusal(0.5, 0.01, &lz_shift(0.3)),
+        linear(theta_k()).refusal(0.5, 0.01, &lz_shift(0.3)),
         Some(Constraint::KAboveLzBound)
     );
+    // Warped, the same cells are systems; below t = 0 the bounded side stays; a held L_z with no finite floor is
+    // refused, at the chart's own check as at a tilt's.
+    let warped = nu_k();
+    assert_eq!(warped.refusal(0.5, 0.01, &lz_shift(0.3)), None);
+    let held = warped.sliced(HELD_LZ, 0.3).unwrap();
+    assert_eq!(held.validate(0.5, 0.01), ValidationResult::Valid);
+    assert_eq!(held.validate(0.5, 0.0), ValidationResult::Valid);
+    assert!(matches!(
+        held.validate(0.5, -0.2),
+        ValidationResult::Project { .. }
+    ));
+    let unfloored = warped.sliced(HELD_LZ, 1e200).unwrap();
+    assert_eq!(
+        unfloored.validate(0.5, 0.5),
+        ValidationResult::Reject {
+            failed: Constraint::KAboveLzBound
+        }
+    );
+    assert_eq!(
+        warped.refusal(0.5, 0.5, &lz_shift(1e200)),
+        Some(Constraint::KAboveLzBound)
+    );
+    // Warped, Φ_θ,L_z: the band at the pixel's own K, past it refused, inside it not; the chart's own check first.
+    let narrow = HeldK::new(
+        BurrauThetaLz {
+            lz_fraction: 0.5,
+            ..theta_lz()
+        },
+        1.0,
+        1.5,
+    );
+    assert_eq!(narrow.refusal(0.5, 1.4, &k_shift(0.1)), None);
+    assert_eq!(
+        narrow.refusal(0.5, 2.0, &k_shift(0.1)),
+        Some(Constraint::KAboveLzBound)
+    );
+    let at_rest = HeldK::new(
+        BurrauThetaLz {
+            k: 0.0,
+            ..theta_lz()
+        },
+        1.0,
+        1.5,
+    );
+    assert_eq!(
+        at_rest.validate_shifted(0.5, 1.5, &k_shift(0.5), &p),
+        ValidationResult::Reject {
+            failed: Constraint::KAboveLzBound
+        }
+    );
+    assert_eq!(
+        at_rest.validate_shifted(0.5, 0.5, &k_shift(0.5), &p),
+        ValidationResult::Valid
+    );
+    assert_eq!(
+        at_rest.validate_shifted(-2.0, 0.5, &k_shift(0.5), &p),
+        ValidationResult::Reject {
+            failed: Constraint::BurrauTheta
+        }
+    );
+    // A centre the check refuses still decodes finitely, its K taken at 0.
+    let below = held_k().sliced(HELD_K, -0.5).unwrap();
+    assert!(matches!(
+        below.validate(0.5, 0.5),
+        ValidationResult::Reject { .. }
+    ));
+    assert!(below
+        .decode_shifted::<Defaults, f64>(0.5, 0.5, &k_shift(0.3), &p)
+        .ic
+        .p
+        .iter()
+        .flatten()
+        .all(|x| x.is_finite()));
+    // The flag's boundary: t₀ + d = 0 exactly is not clamped, one step below it is; d = 0 and a linear chart never are.
+    let flagged = HeldK::new(
+        BurrauThetaLz {
+            k: 0.25,
+            ..theta_lz()
+        },
+        1.0,
+        2.0,
+    );
+    assert!(!flagged.held_at_floor(&k_shift(0.0)));
+    assert!(!flagged.held_at_floor(&k_shift(-0.5)));
+    assert!(flagged.held_at_floor(&k_shift(-0.5 - 1e-12)));
+    let by_value = HeldK {
+        mapping: Mapping::Linear,
+        ..flagged
+    };
+    assert!(!by_value.held_at_floor(&k_shift(-0.9)));
+    assert!(at_rest.held_at_floor(&k_shift(-1e-3)));
+    assert!(!at_rest.held_at_floor(&k_shift(1e-3)));
+    assert!(!nu_k().held_at_floor(&lz_shift(-0.9)));
+    // Through the view: flagged on a system, not past the chart's edge, not untilted.
+    let view = held_view(
+        at_rest,
+        &spec(30.0, 0.0, TiltMap::Sheet, HELD_K, HELD_K),
+        K_SPAN,
+    );
+    assert!(view.held_at_floor(0.1, 0.5));
+    assert!(!view.held_at_floor(-5.0, 0.5));
+    let off = held_view(
+        at_rest,
+        &spec(0.0, 0.0, TiltMap::Sheet, HELD_K, HELD_K),
+        K_SPAN,
+    );
+    assert!(!off.held_at_floor(0.1, 0.5));
 }
 
 negative_control!(
@@ -3343,40 +3861,80 @@ fn slice_rest<C: RestChart<Param = f64> + Held<f64>>(
     }
 }
 
-/// The held `L_z` sliced: only it moves, and the decode at the centre is §2.2's construction at `(L_z, K(v))`.
-fn slice_lz<C: LzChart<Param = f64> + PartialEq + std::fmt::Debug>(chart: HeldLz<C, f64>) {
+/// The held `L_z` sliced to each sign, past the untilted band too: only it moves, and the decode at the centre is §2.2's
+/// construction at `L_z₀ + d` by value and the row's `K`: warped, the floor plus the warp's line, linear, `K_max·t`
+/// (R-720). `warp` moves the held `L_z` in a warp coordinate instead (the control).
+fn slice_lz<C: LzChart<Param = f64> + PartialEq + std::fmt::Debug>(
+    chart: HeldLz<C, f64>,
+    warp: bool,
+) {
+    let row = |lz: f64| {
+        if chart.mapping == Mapping::Warped {
+            k_floor(lz) + chart.chart.kinetic_at(0.8)
+        } else {
+            chart.chart.k_max_at::<f64>() * 0.8
+        }
+    };
     for k in 0..12 {
-        let Some(sliced) = chart.sliced(k, 0.3) else {
-            assert_ne!(k, HELD_LZ, "{}: the held L_z refused", chart.name());
-            continue;
-        };
-        assert_eq!(k, HELD_LZ);
-        assert_eq!(
-            (sliced.held(HELD_LZ), sliced.chart),
-            (Some(0.3), chart.chart)
-        );
-        let (lz, kin, _) = invariants(&sliced.decode::<Defaults, f64>(0.5, 0.8));
-        let want = chart.chart.kinetic_at(0.8);
-        assert!(
-            (lz - 0.3).abs() < 1e-12 && (kin - want).abs() < 1e-12,
-            "{}: ({lz}, {kin})",
-            chart.name()
-        );
+        for value in [0.3, -0.3, -0.75, 0.75] {
+            let Some(sliced) = chart.sliced(k, value) else {
+                assert_ne!(k, HELD_LZ, "{}: the held L_z refused", chart.name());
+                continue;
+            };
+            assert_eq!(k, HELD_LZ);
+            assert_eq!(
+                (sliced.held(HELD_LZ), sliced.chart, sliced.mapping),
+                (Some(value), chart.chart, chart.mapping)
+            );
+            let d = if warp {
+                let moved = 2.0 * value * l_max(row(value));
+                chart.chart.decode_lz(0.5, moved, k_floor(moved) + row(0.0))
+            } else {
+                sliced.decode::<Defaults, f64>(0.5, 0.8)
+            };
+            let (lz, kin, _) = invariants(&d);
+            assert!(
+                (lz - value).abs() < 1e-12,
+                "{}: the sliced L_z {lz} is not L_z₀ + d = {value}",
+                chart.name()
+            );
+            assert!(
+                (kin - row(value)).abs() < 1e-12,
+                "{}: K = {kin}",
+                chart.name()
+            );
+        }
     }
 }
 
-/// `Φ_θ,L_z`'s held `K` sliced: only it moves, and the decode at the centre has `K(p)` the slice's.
+/// `Φ_θ,L_z`'s held `K` sliced, by value in either mode: only it moves, and the decode at the centre has `K(p)` the
+/// slice's.
 fn slice_k() {
     let chart = theta_lz();
     for k in 0..12 {
         let Some(sliced) = chart.sliced(k, 0.8) else {
             assert_ne!(k, HELD_K, "the held K refused");
+            assert!(held_k().sliced(k, 0.8).is_none(), "held K sliced {k}");
             continue;
         };
         assert_eq!(k, HELD_K);
         assert_eq!(sliced, BurrauThetaLz { k: 0.8, ..chart });
+        assert_eq!(
+            held_k().sliced(k, 0.8),
+            Some(HeldK {
+                chart: sliced,
+                ..held_k()
+            })
+        );
         let (_, kin, _) = invariants(&sliced.decode::<Defaults, f64>(0.5, 0.7));
         assert!((kin - 0.8).abs() < 1e-12, "Φ_θ,L_z: K = {kin}");
+        let (_, kin, _) = invariants(
+            &held_k()
+                .sliced(k, 0.8)
+                .unwrap()
+                .decode::<Defaults, f64>(0.5, 0.7),
+        );
+        assert!((kin - 0.8).abs() < 1e-12, "Φ_θ,L_z, warped: K = {kin}");
     }
 }
 
@@ -3450,15 +4008,19 @@ impl Chart for Allowing {
 }
 
 impl LzChart for Allowing {
-    fn kinetic_at(&self, v: f64) -> f64 {
+    fn kinetic_at<F: Float + From<f64>>(&self, v: F) -> F {
         self.0.kinetic_at(v)
     }
 
-    fn decode_lz<R>(&self, u: R, v: R, lz: R) -> Decoded<R>
+    fn k_max_at<F: Float + From<f64>>(&self) -> F {
+        self.0.k_max_at()
+    }
+
+    fn decode_lz<R>(&self, u: R, lz: R, k: R) -> Decoded<R>
     where
         R: kernel::generated::links::LinkReal + kernel::payload::PayloadReal + From<f64>,
     {
-        self.0.decode_lz(u, v, lz)
+        self.0.decode_lz(u, lz, k)
     }
 }
 
