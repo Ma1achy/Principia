@@ -833,9 +833,9 @@ impl<A: Coordinate, S: Selection> MixedMassRatio<A, S, f64> {
     /// monotone coordinates, so the miss does not rise toward the realised interval from either side beyond rounding
     /// (the largest rise measured, a relative `4.4e-9` on `softmax_tanh`; none on `stick_breaking`), and a trisection of
     /// `ln q` that keeps the side of the lower miss reaches it, inside the registered `μ_max ∈ [1, 10]`, at any width of
-    /// the ask and of the interval, each test to within `ε_μ/2`, an end at or below 0 taken at the least positive double. The search holds no count: it ends where
-    /// a probe no longer falls strictly inside the bracket, the bracket then at the doubles' own spacing, and each step
-    /// moves an end strictly inward, so it ends.
+    /// the ask and of the interval, each test to within `ε_μ/2`, an end at or below 0 taken at the least positive double.
+    /// The search holds no count: it ends where a probe no longer falls strictly inside the bracket, the bracket then at
+    /// the doubles' own spacing, and each step moves an end strictly inward, so it ends.
     ///
     /// The miss falls only non-strictly: past both clamps the round trip is constant, and `m_c`'s limb can hold the miss
     /// exactly level over a run `[A, B]` of `ln q`, as at `softmax_tanh`, `μ_max = 5`, bodies `(2, 0)`,
@@ -847,7 +847,7 @@ impl<A: Coordinate, S: Selection> MixedMassRatio<A, S, f64> {
     ///
     /// That argument covers exact ties only. A run level only to rounding is not a tie, and the comparison there reads
     /// the rounding. Inside the registered `μ_max ∈ [1, 10]`, which is the range this search answers for, such runs stay
-    /// below `(B − A)/(A − R) = 1`, measured at most 0.491 level to a relative `1e-7` and 0.640 to `1e-5`, so both probes
+    /// below `(B − A)/(A − R) = 1`, measured at most 0.527 level to a relative `1e-7` and 0.640 to `1e-5`, so both probes
     /// cannot lie on one with `R` in the bracket. The 2.23 level to `2e-8` and the 2.48 to `1e-7` both lie above 10.
     ///
     /// The range is provisional, so its limit is recorded: above `μ_max` about 29.3 the comparison can read rounding on
