@@ -64,18 +64,24 @@ full_tier() {
 }
 
 # The quick tier's packages, as cargo arguments: `--workspace` if the change cannot be read, which fails towards every
-# test. Sets `packages` and `workspace_tests`.
+# test. Sets `packages`, `doc_packages`, those of them with a library, which `cargo test --doc` needs and which can be
+# none, and `workspace_tests`.
 quick_packages() {
-  local changes="${CI_CHANGES:-$here/../../scripts/ci_changes.sh}" crates
-  crates=$("$changes" paths | python3 -I "$here/ci_quick_crates.py" --root "${CI_ROOT:-.}") || crates=""
+  local changes="${CI_CHANGES:-$here/../../scripts/ci_changes.sh}" crates="" libraries="" paths crate
+  local script="$here/ci_quick_crates.py" workspace="${CI_ROOT:-.}"
+  paths=$("$changes" paths) \
+    && crates=$(python3 -I "$script" --root "$workspace" <<< "$paths") \
+    && libraries=$(python3 -I "$script" --root "$workspace" --library <<< "$paths") \
+    || crates=""
   if [ -z "$crates" ]; then
     packages=--workspace
+    doc_packages=--workspace
     workspace_tests=true
     return
   fi
   packages=""
+  doc_packages=""
   workspace_tests=false
-  local crate
   for crate in $crates; do
     packages="$packages -p $crate"
     # `.config/nextest.toml`'s `ci-workspace` profile holds xtask's tests that run cargo on this target, and validation's
@@ -83,12 +89,17 @@ quick_packages() {
     if [ "$crate" = xtask ]; then workspace_tests=true; fi
   done
   packages=${packages# }
+  for crate in $libraries; do
+    doc_packages="$doc_packages -p $crate"
+  done
+  doc_packages=${doc_packages# }
 }
 
 decide() {
   local tier="${TIER:?TIER is not set}" pull_request=false quick=false
   if [ "${GITHUB_EVENT_NAME:-}" = pull_request ]; then pull_request=true; fi
   packages=""
+  doc_packages=""
   workspace_tests=false
   if [ "$tier" = code ]; then
     if ! full_tier; then quick=true; fi
@@ -98,6 +109,7 @@ decide() {
   fi
   output quick "$quick"
   output packages "$packages"
+  output doc_packages "$doc_packages"
   output workspace_tests "$workspace_tests"
   # `docs_only` is "runs no full CI", as R-677 reads it, and the GPU suites are full-only: `ci.yml`'s full-only jobs skip
   # on the two of them, on a quick run as on a docs one.

@@ -10,6 +10,8 @@
 //! - `ci_quick_crates_*`: `.github/scripts/ci_quick_crates.py`, on the real workspace and on a scratch one holding each
 //!   kind of dependency: the changed crates plus exactly the crates that link them, and every crate on a path it cannot
 //!   place.
+//! - `ci_quick_library_packages`: `--library`, the packages with doctests, none on a change to a binary alone.
+//! - `ci_quick_doctests_*`: the doctest step runs on those packages alone, and on none skips.
 //! - `ci_tier_decide_*`: `.github/scripts/ci_tier.sh decide`, under bash with a stand-in `gh`: quick or full on each event,
 //!   attempt and live label; a first-attempt push quick whatever the label; the outputs the jobs skip on; each full-only
 //!   check posted pending on a code pull-request head only.
@@ -46,6 +48,10 @@ const FULL_ONLY: [&str; 5] = ["ci", "xtask-ci", "gpu-kernel", "gpu-metal", "gpu-
 const ALL_CRATES: &str = "engine gui kernel ledger prin render validation xtask";
 const ALL_PACKAGES: &str =
     "-p engine -p gui -p kernel -p ledger -p prin -p render -p validation -p xtask";
+/// Every crate with a library target: all but `prin`, which is a binary.
+const ALL_LIBRARIES: &str = "engine gui kernel ledger render validation xtask";
+const ALL_LIBRARY_PACKAGES: &str =
+    "-p engine -p gui -p kernel -p ledger -p render -p validation -p xtask";
 
 fn root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -84,6 +90,15 @@ fn clean(cmd: &mut Command, home: &Path, bin: Option<&Path>) {
 
 /// What `script` prints for the changed `paths` on the workspace at `workspace`.
 fn crates_of(script: &str, workspace: &Path, paths: &[&str]) -> String {
+    run_crates(script, workspace, paths, "")
+}
+
+/// What `script --library` prints for the changed `paths` on the workspace at `workspace`.
+fn libraries_of(script: &str, workspace: &Path, paths: &[&str]) -> String {
+    run_crates(script, workspace, paths, "--library")
+}
+
+fn run_crates(script: &str, workspace: &Path, paths: &[&str], flag: &str) -> String {
     let dir = Scratch::new("ci_quick_crates");
     std::fs::create_dir_all(&*dir).expect("scratch");
     let file = dir.join("ci_quick_crates.py");
@@ -93,11 +108,12 @@ fn crates_of(script: &str, workspace: &Path, paths: &[&str]) -> String {
     let mut cmd = Command::new("bash");
     cmd.args([
         "-c",
-        r#"python3 -I "$1" --root "$2" < "$3""#,
+        r#"python3 -I "$1" --root "$2" $4 < "$3""#,
         "sh",
         file.to_str().expect("path"),
         workspace.to_str().expect("path"),
         input.to_str().expect("path"),
+        flag,
     ]);
     clean(&mut cmd, &dir, None);
     let out = cmd.timed_output().expect("ci_quick_tier: python ran");
@@ -208,6 +224,97 @@ negative_control!(
         CRATES,
         "path.startswith(m + \"/\")",
         "path.startswith(m)"
+    ))
+);
+
+/// A scratch workspace of one member of each kind of target: `a` with `src/lib.rs`, `b` with a `[lib]` table at another
+/// path, `c` with only `src/main.rs`.
+fn targets_workspace(dir: &Path) {
+    let member = |name: &str, body: &str, file: &str| {
+        let at = dir.join("crates").join(name);
+        std::fs::create_dir_all(at.join("src")).expect("member");
+        std::fs::write(
+            at.join("Cargo.toml"),
+            format!("[package]\nname = \"{name}\"\n{body}"),
+        )
+        .expect("manifest");
+        std::fs::write(at.join(file), "").expect("target");
+    };
+    std::fs::write(
+        dir.join("Cargo.toml"),
+        "[workspace]\nmembers = [\"crates/a\", \"crates/b\", \"crates/c\"]\n",
+    )
+    .expect("root manifest");
+    member("a", "", "src/lib.rs");
+    member("b", "[lib]\npath = \"other.rs\"\n", "other.rs");
+    member("c", "", "src/main.rs");
+}
+
+fn check_libraries(script: &str) {
+    let cases: &[(&[&str], &str)] = &[
+        // The binary alone has no doctests.
+        (&["crates/prin/src/main.rs"], ""),
+        (&["crates/gui/src/lib.rs"], "gui"),
+        (&["xtask/src/main.rs"], "xtask"),
+        (&["crates/gui/src/a.rs", "crates/prin/tests/b.rs"], "gui"),
+        (&["crates/kernel/src/lib.rs"], ALL_LIBRARIES),
+        (&["Cargo.lock"], ALL_LIBRARIES),
+        (&[], ALL_LIBRARIES),
+    ];
+    for (paths, want) in cases {
+        assert_eq!(
+            libraries_of(script, &root(), paths),
+            *want,
+            "ci_quick_tier: the libraries of {paths:?}"
+        );
+    }
+    let dir = Scratch::new("ci_quick_targets");
+    std::fs::create_dir_all(&*dir).expect("scratch");
+    targets_workspace(&dir);
+    assert_eq!(
+        libraries_of(script, &dir, &[]),
+        "a b",
+        "ci_quick_tier: each kind of target"
+    );
+}
+
+#[test]
+fn ci_quick_library_packages() {
+    check_libraries(&read(CRATES));
+}
+
+mod every_package_a_library {
+    use super::*;
+    negative_control!(
+        ci_quick_library_packages,
+        "the script not filtering, so a change to `prin` alone asks `cargo test --doc` for a binary",
+        expected = "ci_quick_tier: the libraries of [\"crates/prin/src/main.rs\"]",
+        check_libraries(&edited(CRATES, "    if args.library:\n", "    if False:\n"))
+    );
+}
+
+mod a_lib_table_missed {
+    use super::*;
+    negative_control!(
+        ci_quick_library_packages,
+        "the script reading only `src/lib.rs`, so a `[lib]` at another path has no doctests",
+        expected = "ci_quick_tier: each kind of target",
+        check_libraries(&edited(
+            CRATES,
+            "return \"lib\" in manifest(member_dir / \"Cargo.toml\") or ",
+            "return "
+        ))
+    );
+}
+
+negative_control!(
+    ci_quick_library_packages,
+    "the script reading only `[lib]` tables, so no crate here has doctests",
+    expected = "ci_quick_tier: the libraries of [\"crates/gui/src/lib.rs\"]",
+    check_libraries(&edited(
+        CRATES,
+        " or (member_dir / \"src\" / \"lib.rs\").exists()",
+        ""
     ))
 );
 
@@ -468,6 +575,7 @@ struct Decide {
     paths: Option<&'static [&'static str]>,
     quick: bool,
     packages: &'static str,
+    doc_packages: &'static str,
     workspace_tests: bool,
     /// Whether it reads the live label.
     reads_label: bool,
@@ -476,6 +584,7 @@ struct Decide {
 const GUI: Option<&[&str]> = Some(&["crates/gui/src/lib.rs"]);
 const KERNEL: Option<&[&str]> = Some(&["crates/kernel/src/lib.rs"]);
 const XTASK: Option<&[&str]> = Some(&["xtask/src/main.rs"]);
+const PRIN: Option<&[&str]> = Some(&["crates/prin/src/main.rs"]);
 
 /// The cases of a code pull request, the first naming each fact it turns on.
 const fn code(
@@ -496,6 +605,7 @@ const fn code(
         paths: GUI,
         quick,
         packages: if quick { "-p gui" } else { "" },
+        doc_packages: if quick { "-p gui" } else { "" },
         workspace_tests: false,
         reads_label,
     }
@@ -568,6 +678,7 @@ const DECIDES: &[Decide] = &[
         paths: KERNEL,
         quick: false,
         packages: "",
+        doc_packages: "",
         workspace_tests: false,
         reads_label: false,
     },
@@ -582,6 +693,7 @@ const DECIDES: &[Decide] = &[
         paths: Some(&["docs/a.md"]),
         quick: false,
         packages: "",
+        doc_packages: "",
         workspace_tests: false,
         reads_label: false,
     },
@@ -595,6 +707,7 @@ const DECIDES: &[Decide] = &[
         paths: Some(&["plan/tasks/M1/x.md"]),
         quick: false,
         packages: "",
+        doc_packages: "",
         workspace_tests: false,
         reads_label: false,
     },
@@ -609,6 +722,7 @@ const DECIDES: &[Decide] = &[
         paths: XTASK,
         quick: true,
         packages: "-p xtask",
+        doc_packages: "-p xtask",
         workspace_tests: true,
         reads_label: false,
     },
@@ -622,7 +736,22 @@ const DECIDES: &[Decide] = &[
         paths: KERNEL,
         quick: true,
         packages: ALL_PACKAGES,
+        doc_packages: ALL_LIBRARY_PACKAGES,
         workspace_tests: true,
+        reads_label: false,
+    },
+    Decide {
+        what: "a push to a binary alone",
+        event: "pull_request",
+        action: "synchronize",
+        attempt: "1",
+        tier: "code",
+        labels: "",
+        paths: PRIN,
+        quick: true,
+        packages: "-p prin",
+        doc_packages: "",
+        workspace_tests: false,
         reads_label: false,
     },
     Decide {
@@ -635,6 +764,7 @@ const DECIDES: &[Decide] = &[
         paths: None,
         quick: true,
         packages: "--workspace",
+        doc_packages: "--workspace",
         workspace_tests: true,
         reads_label: false,
     },
@@ -678,6 +808,11 @@ fn check_decide(script: &str) {
             got.output("packages"),
             d.packages,
             "ci_quick_tier: decide on {what}: packages"
+        );
+        assert_eq!(
+            got.output("doc_packages"),
+            d.doc_packages,
+            "ci_quick_tier: decide on {what}: doc_packages"
         );
         assert_eq!(
             got.output("workspace_tests"),
@@ -846,6 +981,26 @@ mod every_full_only_check {
             "FULL_ONLY=\"ci xtask-ci gpu-kernel gpu-metal gpu-lavapipe\"",
             "FULL_ONLY=\"ci xtask-ci gpu-kernel gpu-metal\""
         ))
+    );
+}
+
+mod doctests_of_a_binary {
+    use super::*;
+    negative_control!(
+        ci_tier_decide_each_event_attempt_and_label,
+        "decide asking for the doctests of every package, so a head changing only `prin` fails `cargo test --doc`",
+        expected = "ci_quick_tier: decide on a push to a binary alone: doc_packages",
+        check_decide(&edited(TIER, "--root \"$workspace\" --library", "--root \"$workspace\""))
+    );
+}
+
+mod doctests_when_unread {
+    use super::*;
+    negative_control!(
+        ci_tier_decide_each_event_attempt_and_label,
+        "decide dropping the doctests when the change cannot be read",
+        expected = "ci_quick_tier: decide on a push whose paths cannot be read: doc_packages",
+        check_decide(&edited(TIER, "    doc_packages=--workspace\n", ""))
     );
 }
 
@@ -1385,6 +1540,102 @@ fn pr_types(wf: &Value) -> Vec<&str> {
         .map(|a| a.iter().map(str_of).collect())
         .unwrap_or_else(|| vec!["opened", "synchronize", "reopened"])
 }
+
+/// The doctest step of `ci-quick.yml`, and what `ci.yml` hands it.
+fn check_doctests(files: &[(String, String)]) {
+    let parsed = parse(files);
+    let quick = &parsed["ci-quick.yml"]["jobs"]["ci-quick"];
+    let steps: Vec<&Value> = quick["steps"]
+        .as_array()
+        .expect("steps")
+        .iter()
+        .filter(|s| str_of(&s["run"]).contains("--doc"))
+        .collect();
+    assert_eq!(
+        steps.len(),
+        1,
+        "ci_quick_tier: ci-quick.yml has not one doctest step"
+    );
+    assert_eq!(
+        str_of(&steps[0]["env"]["PACKAGES"]),
+        "${{ inputs.doc_packages }}",
+        "ci_quick_tier: the doctests run on packages that may have no library"
+    );
+    assert_eq!(
+        str_of(&steps[0]["if"]),
+        "inputs.doc_packages != ''",
+        "ci_quick_tier: the doctest step runs with no package, on the whole default set"
+    );
+    let ci = &parsed["ci.yml"]["jobs"];
+    assert_eq!(
+        str_of(&ci["ci-quick"]["with"]["doc_packages"]),
+        "${{ needs.changes.outputs.doc_packages }}",
+        "ci_quick_tier: ci.yml does not hand ci-quick its doctests' packages"
+    );
+    assert_eq!(
+        str_of(&ci["changes"]["outputs"]["doc_packages"]),
+        "${{ steps.tier.outputs.doc_packages }}",
+        "ci_quick_tier: `changes` does not pass on the doctests' packages"
+    );
+}
+
+#[test]
+fn ci_quick_doctests_run_on_the_libraries_alone() {
+    check_doctests(&workflows());
+}
+
+mod doctests_on_every_package {
+    use super::*;
+    negative_control!(
+        ci_quick_doctests_run_on_the_libraries_alone,
+        "the doctest step reading `packages`, which holds `prin`",
+        expected = "ci_quick_tier: the doctests run on packages that may have no library",
+        check_doctests(&with_edit(
+            "ci-quick.yml",
+            "PACKAGES: ${{ inputs.doc_packages }}",
+            "PACKAGES: ${{ inputs.packages }}"
+        ))
+    );
+}
+
+mod doctests_on_nothing {
+    use super::*;
+    negative_control!(
+        ci_quick_doctests_run_on_the_libraries_alone,
+        "the doctest step running on an empty list",
+        expected = "ci_quick_tier: the doctest step runs with no package",
+        check_doctests(&with_edit(
+            "ci-quick.yml",
+            "        if: inputs.doc_packages != ''\n",
+            ""
+        ))
+    );
+}
+
+mod doctests_not_handed_over {
+    use super::*;
+    negative_control!(
+        ci_quick_doctests_run_on_the_libraries_alone,
+        "ci.yml calling ci-quick without the doctests' packages",
+        expected = "ci_quick_tier: ci.yml does not hand ci-quick its doctests' packages",
+        check_doctests(&with_edit(
+            "ci.yml",
+            "      doc_packages: ${{ needs.changes.outputs.doc_packages }}\n",
+            ""
+        ))
+    );
+}
+
+negative_control!(
+    ci_quick_doctests_run_on_the_libraries_alone,
+    "`changes` not passing the doctests' packages on",
+    expected = "ci_quick_tier: `changes` does not pass on the doctests' packages",
+    check_doctests(&with_edit(
+        "ci.yml",
+        "      doc_packages: ${{ steps.tier.outputs.doc_packages }}\n",
+        ""
+    ))
+);
 
 fn check_ci_full(files: &[(String, String)]) {
     let parsed = parse(files);

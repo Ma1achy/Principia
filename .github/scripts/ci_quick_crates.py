@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 """The crates a quick-tier head tests (R-684): the changed crates plus their reverse dependencies.
 
-    ci_quick_crates.py --root <workspace root> < changed-paths
+    ci_quick_crates.py --root <workspace root> [--library] < changed-paths
 
 Reads a pull request's changed paths on stdin, one per line, and prints the workspace packages whose tests the quick
 tier runs, space-separated and sorted. `.github/scripts/ci_tier.sh` calls it, and `xtask/tests/ci_quick_tier.rs` tests
 it. It reads the manifests with the standard library alone, so the `changes` job needs no toolchain.
+
+`--library` prints only those with a library target, the packages with doctests: `cargo test --doc` fails on a list
+with none, as a change to `crates/prin` alone, a binary, would be. It can print nothing.
 
 A path counts for:
 - its crate, under a workspace member's directory;
@@ -92,15 +95,23 @@ def affected(changed, deps):
     return reached | with_dev
 
 
+def has_library(member_dir):
+    """Whether a member has a library target: a `[lib]` table, or cargo's default `src/lib.rs`."""
+    return "lib" in manifest(member_dir / "Cargo.toml") or (member_dir / "src" / "lib.rs").exists()
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--root", type=pathlib.Path, required=True)
+    parser.add_argument("--library", action="store_true", help="only the packages with a library target")
     args = parser.parse_args()
     paths = [line.strip() for line in sys.stdin if line.strip()]
     dirs, deps = workspace(args.root)
     changed = seeds(paths, dirs) if paths else None
     # An empty set means the change names no crate: the classifier's tier says code, so nothing may go untested.
     packages = affected(changed, deps) if changed else set(deps)
+    if args.library:
+        packages &= {name for member, name in dirs.items() if has_library(args.root / member)}
     print(" ".join(sorted(packages)))
 
 

@@ -19,6 +19,10 @@ on:
       packages:
         required: true
         type: string
+      # Those of them with a library target, the doctests' packages, or nothing when none has one.
+      doc_packages:
+        required: true
+        type: string
       # "true" when those packages hold tests of the `ci-workspace` profile.
       workspace_tests:
         required: true
@@ -114,9 +118,11 @@ jobs:
           PACKAGES: ${{ inputs.packages }}
         run: cargo nextest run $PACKAGES --no-tests pass
         shell: bash .github/scripts/disk_sampler.sh {0}
+      # On the packages with a library: `cargo test --doc` fails on a list with none, as a change to `prin` alone is.
       - name: cargo test --doc (the changed crates and their reverse dependencies)
+        if: inputs.doc_packages != ''
         env:
-          PACKAGES: ${{ inputs.packages }}
+          PACKAGES: ${{ inputs.doc_packages }}
         run: cargo test $PACKAGES --doc
         shell: bash .github/scripts/disk_sampler.sh {0}
       # The `ci-workspace` profile's tests, on this job's own build, which they need (R-372), the profile's filter

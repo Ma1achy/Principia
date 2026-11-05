@@ -128,9 +128,10 @@ jobs:
   # `gui_data`, which of tier (b)'s data it changes (`scripts/ci_changes.sh`, which holds the lists).
   # Every other run, on `main` among them, is code: everything runs. The jobs below skip on its verdict, and the
   # gates read it. Then the code tier of this run (R-684; `.github/scripts/ci_tier.sh decide`): `quick`, true on a code
-  # pull-request head that is not merge-ready, with `packages`, the `-p` arguments of its tests, and `workspace_tests`,
-  # whether those include the `ci-workspace` profile's; `docs_only` and `gpu`, the classifier's, or true and false on a
-  # quick run, which runs no full CI; and `report`, whether `ci-status` closes the commit statuses this job opened.
+  # pull-request head that is not merge-ready, with `packages`, the `-p` arguments of its tests, `doc_packages`, those
+  # with a library, and `workspace_tests`, whether those include the `ci-workspace` profile's; `docs_only` and `gpu`, the
+  # classifier's, or true and false on a quick run, which runs no full CI; and `report`, whether `ci-status` closes the
+  # commit statuses this job opened.
   # `pull-requests: read` for the live label, `statuses: write` for those statuses.
   changes:
     runs-on: ubuntu-24.04
@@ -146,6 +147,7 @@ jobs:
       gui_data: ${{ steps.changes.outputs.gui_data }}
       quick: ${{ steps.tier.outputs.quick }}
       packages: ${{ steps.tier.outputs.packages }}
+      doc_packages: ${{ steps.tier.outputs.doc_packages }}
       workspace_tests: ${{ steps.tier.outputs.workspace_tests }}
       report: ${{ steps.tier.outputs.report }}
     steps:
@@ -182,6 +184,7 @@ jobs:
     uses: ./.github/workflows/ci-quick.yml
     with:
       packages: ${{ needs.changes.outputs.packages }}
+      doc_packages: ${{ needs.changes.outputs.doc_packages }}
       workspace_tests: ${{ needs.changes.outputs.workspace_tests }}
 
   # The workspace's tests, built once for the `ci` shards (R-372, REQ-SYS-078): `cargo nextest archive` builds every
