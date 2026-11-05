@@ -1005,8 +1005,8 @@ mod doctests_of_a_binary {
     use super::*;
     negative_control!(
         ci_tier_decide_each_event_attempt_and_label,
-        "decide asking for the doctests of every package, so a head changing only `prin` fails `cargo test --doc`",
-        expected = "ci_quick_tier: decide on a push to a binary alone: doc_packages",
+        "decide asking for the doctests of every package, `prin` among them, the kernel's case reading it first",
+        expected = "ci_quick_tier: decide on a kernel push: doc_packages",
         check_decide(&edited(TIER, "--root \"$workspace\" --library", "--root \"$workspace\""))
     );
 }
