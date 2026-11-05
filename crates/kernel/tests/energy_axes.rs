@@ -2688,6 +2688,41 @@ negative_control!(
 /// The range a chart `new` built is drawn over, at the asked range and parameters, its own or a control's.
 type NarrowedRange<'a> = &'a dyn Fn(&RatioChart, [f64; 2], &LinkParams<f64>) -> [f64; 2];
 
+/// `q = −1` is no ratio (chart_reference §2.1): its masses are infinite, so only the held mass's test can read a number,
+/// and at the mass controls `(−7.2543, −7.2543)`, `atanh(1 − ε_μ)`, the clamps of the inverse return that held mass.
+fn check_minus_one(realised: Realised) {
+    let p = LinkParams::DEFAULT;
+    let z = -(1.0_f64 - 1.0e-6).atanh();
+    let chart = ratio_slice([z, z], [0.5, 2.0], Mapping::Linear, &p).expect("the chart");
+    assert!(
+        !realised(&chart, -1.0, &p),
+        "q = -1, a mass ratio that does not exist, is realised"
+    );
+}
+
+#[test]
+fn energy_axes_mass_ratio_minus_one() {
+    check_minus_one(&|chart, q, p| chart.realised(q, p));
+}
+
+negative_control!(
+    energy_axes_mass_ratio_minus_one,
+    "the round trip's relative misses, with no test that q is positive, are NaN on the infinite masses and pass q = -1",
+    expected = "does not exist",
+    check_minus_one(&|chart, q, p| {
+        let m = ratio_masses(chart.bodies, chart.held, q);
+        let back = <SoftmaxTanh as Link<2, 3>>::forward_at(
+            <SoftmaxTanh as Link<2, 3>>::inverse_at(m, p),
+            p,
+        );
+        let each = back
+            .iter()
+            .zip(m)
+            .fold(0.0, |worst: f64, (&x, m)| worst.max((x - m).abs() / m));
+        each.max((ratio_of(chart.bodies, back) - q).abs() / q) <= 1.0e-6
+    })
+);
+
 /// The range at the held mass as held, without its narrowing: outward from `chart`'s range to `asked`, by bisection in
 /// `ln q`, each test at `ε_μ/2`.
 #[cfg(feature = "controls")]
