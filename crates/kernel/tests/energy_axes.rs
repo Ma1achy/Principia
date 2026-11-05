@@ -2685,8 +2685,12 @@ negative_control!(
     })
 );
 
+/// The range a chart `new` built is drawn over, at the asked range and parameters, its own or a control's.
+type NarrowedRange<'a> = &'a dyn Fn(&RatioChart, [f64; 2], &LinkParams<f64>) -> [f64; 2];
+
 /// The range at the held mass as held, without its narrowing: outward from `chart`'s range to `asked`, by bisection in
 /// `ln q`, each test at `ε_μ/2`.
+#[cfg(feature = "controls")]
 fn range_as_held(chart: &RatioChart, asked: [f64; 2], p: &LinkParams<f64>) -> [f64; 2] {
     let inside = |q: f64| {
         let m = ratio_masses(chart.bodies, chart.held, q);
@@ -2716,7 +2720,7 @@ fn range_as_held(chart: &RatioChart, asked: [f64; 2], p: &LinkParams<f64>) -> [f
 /// A chart narrowed to `f32` holds its pixels at a held mass near 1 (R-506, R-471 E3): on slices with `m_c` above 0.95,
 /// `softmax_tanh` at `μ_max = 5`, every one of 257 rows is realised on the chart as `with_params` narrows it. `range`
 /// is the range taken from the chart `new` builds, its own or a control's.
-fn check_narrowed(range: &dyn Fn(&RatioChart, [f64; 2], &LinkParams<f64>) -> [f64; 2]) {
+fn check_narrowed(range: NarrowedRange) {
     let p = LinkParams::DEFAULT;
     let asked = [1.0e-3, 1.0e3];
     let mut held_high = 0;
