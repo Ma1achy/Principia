@@ -672,11 +672,12 @@ fn softmax_tanh() -> LinkBuilder {
 /// `s = m₁ + m₂`, `u = m₂/s`, each `v` of them `artanh(clamp(2v − 1, ±(1 − ε_μ)²)/(1 − ε_μ))`; log-det
 /// `log √det(JᵀJ)` of its 3×2 Jacobian, `log(√3/4·(1 − ε_μ)²·s·sech² z₁·sech² z₂)` (R-368), each `log sech²` by
 /// [`log_sech2`]. `s`, `1 − s`, `u` and `1 − u` are written without cancellation against 1 (below), and so is the
-/// inverse: with `c = 1 − ε_μ`, `z = ½ log(N(v)/N(w))`, `N(a) = clamp(2a − ε_μ·t, c·ε_μ·t, c·(1 + c)·t)`, `t = v + w`,
-/// `(v, w) = (m₁ + m₂, m₀)` for `z₁` and `(m₂, m₁)` for `z₂` (§3.9's list of forms).
+/// inverse: with `c = 1 − ε_μ`, `z = ½ log(clamp(N(v)/N(w), ε_μ/(1 + c), (1 + c)/ε_μ))`,
+/// `N(a) = clamp(2a − ε_μ·t, c·ε_μ·t, c·(1 + c)·t)`, `t = v + w`, `(v, w) = (m₁ + m₂, m₀)` for `z₁` and `(m₂, m₁)` for
+/// `z₂` (§3.9's list of forms).
 ///
-/// The inverse is defined on the open simplex: at an exact corner, with two masses 0, it divides 0 by 0, past its clamp;
-/// a caller passes no exact corner (§3.9).
+/// The inverse is defined on the open simplex: at an exact corner, with two masses 0, it divides 0 by 0, which Rust's
+/// `max` turns into a finite clamp but SPIR-V's `FMax` leaves undefined; a caller passes no exact corner (§3.9).
 fn stick_breaking() -> LinkBuilder {
     // `½(1 + (1 − ε_μ)·t) = σ(2z) − ½ε_μ·t` and `1 − ½(1 + (1 − ε_μ)·t) = σ(−2z) + ½ε_μ·t`, `t = tanh z`: each
     // side is written so that where it is small it is a sum of terms of one sign, with no cancellation against 1,
@@ -688,7 +689,8 @@ fn stick_breaking() -> LinkBuilder {
     let (s, u) = (half(0), half(1));
     let m = vec![rest(0), mul(vec![s, rest(1)]), mul(vec![s, u])];
     // `artanh(clamp(2v/t − 1, ±c²)/c) = ½ log(N(v)/N(w))` with `c = 1 − ε_μ`: `2v − 1` at a small `v` cancels against 1
-    // the digits an f32 mass rests on, and the hand-cancelled quotient does not. Both limits are the table's `±c²`.
+    // the digits an f32 mass rests on, and the hand-cancelled quotient does not. `N`'s limits are the table's `±c²`,
+    // and the outer clamp's are the quotient those give: it holds the table's value at an exact corner.
     let z = |v, w| {
         let t = add(vec![v, w]);
         let c = one_minus(&EPS_MU);
@@ -698,7 +700,12 @@ fn stick_breaking() -> LinkBuilder {
             let raw = sub(mul(vec![num(2.0), a]), mul(vec![p(&EPS_MU), t]));
             clamp(raw, floor, cap)
         };
-        mul(vec![num(0.5), un(Op::Log, div(n(v), n(w)))])
+        let top = div(add(vec![num(1.0), c]), p(&EPS_MU));
+        let bottom = div(p(&EPS_MU), add(vec![num(1.0), c]));
+        mul(vec![
+            num(0.5),
+            un(Op::Log, clamp(div(n(v), n(w)), bottom, top)),
+        ])
     };
     let log_det = add(vec![
         mul(vec![num(0.5), un(Op::Log, num(3.0))]),

@@ -380,22 +380,26 @@ impl Link<2, 3> for StickBreaking {
         let t11 = t10 - t3;
         let t12 = Float::min(Float::max(t11, t6), t8);
         let t13 = t9 / t12;
-        let t14 = Float::ln(t13);
-        let t15 = R::LIT_1 * t14;
-        let t16 = R::LIT_3 * v[2];
-        let t17 = v[2] + v[1];
-        let t18 = R::EPS_MU * t17;
-        let t19 = t16 - t18;
-        let t20 = t5 * R::EPS_MU * t17;
-        let t21 = t5 * t7 * t17;
-        let t22 = Float::min(Float::max(t19, t20), t21);
-        let t23 = R::LIT_3 * v[1];
-        let t24 = t23 - t18;
-        let t25 = Float::min(Float::max(t24, t20), t21);
-        let t26 = t22 / t25;
-        let t27 = Float::ln(t26);
-        let t28 = R::LIT_1 * t27;
-        [t15, t28]
+        let t14 = R::EPS_MU / t7;
+        let t15 = t7 / R::EPS_MU;
+        let t16 = Float::min(Float::max(t13, t14), t15);
+        let t17 = Float::ln(t16);
+        let t18 = R::LIT_1 * t17;
+        let t19 = R::LIT_3 * v[2];
+        let t20 = v[2] + v[1];
+        let t21 = R::EPS_MU * t20;
+        let t22 = t19 - t21;
+        let t23 = t5 * R::EPS_MU * t20;
+        let t24 = t5 * t7 * t20;
+        let t25 = Float::min(Float::max(t22, t23), t24);
+        let t26 = R::LIT_3 * v[1];
+        let t27 = t26 - t21;
+        let t28 = Float::min(Float::max(t27, t23), t24);
+        let t29 = t25 / t28;
+        let t30 = Float::min(Float::max(t29, t14), t15);
+        let t31 = Float::ln(t30);
+        let t32 = R::LIT_1 * t31;
+        [t18, t32]
     }
 
     #[inline]
