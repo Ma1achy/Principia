@@ -377,7 +377,7 @@ justification = "Z0_HALF_RANGE is the constant 1.0, and dividing by 1.0 equals m
 
 [[equivalent]]
 mutant = "crates/gui/src/measure/mod.rs:343:37: replace < with <= in Session::begin_frame"
-justification = "the two differ only when the elapsed time equals the delay to the last bit, and then <= spins for one more clock read, about a microsecond of a delay no test or user can time to that precision, on a clock that keeps running, so it cannot hang"
+justification = "the two differ only when the elapsed time equals the delay exactly, routinely at the default delay of 0 when two reads fall in one clock tick, and then <= spins to the clock's next tick: under a microsecond natively, one coarsened performance.now() tick in the browser, up to that much work a frame, which no test can tell, since the session's clock is the real one, cannot be set, and keeps running, so it cannot hang"
 
 [[equivalent]]
 mutant = "xtask/src/jobq.rs:1605:26: replace < with <= in end_stale_group"
