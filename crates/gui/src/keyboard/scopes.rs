@@ -334,6 +334,8 @@ pub type Shortcut = (&'static str, &'static str);
 pub struct ScopeTree {
     nodes: Vec<Node>,
     shortcuts: Vec<Shortcut>,
+    /// While the console covers the page: the big scopes it leaves, the only ones Tab and the arrows reach.
+    left_uncovered: Option<&'static [ScopeId]>,
 }
 
 impl ScopeTree {
@@ -502,6 +504,29 @@ impl ScopeTree {
             .collect()
     }
 
+    /// Limits Tab and the arrows to the big scopes `left`, while the console covers the rest; with none, to them all.
+    pub fn leave_uncovered(&mut self, left: Option<&'static [ScopeId]>) {
+        self.left_uncovered = left;
+    }
+
+    /// The big scopes Tab and the arrows reach, in Tab order.
+    fn reachable(&self) -> Vec<ScopeId> {
+        let mut bigs = self.bigs();
+        if let Some(left) = self.left_uncovered {
+            bigs.retain(|big| left.contains(big));
+        }
+        bigs
+    }
+
+    /// Whether `path` is in a big scope the console covers: a window is over it, and any other scope out of the tree is
+    /// not one.
+    pub fn is_covered(&self, path: &[String]) -> bool {
+        path.first().is_some_and(|first| {
+            let holds = |bigs: Vec<ScopeId>| bigs.iter().any(|big| big == first);
+            holds(self.bigs()) && !holds(self.reachable())
+        })
+    }
+
     /// The window `path` is in: its first scope, when that is a window.
     pub fn window_of(&self, path: &[String]) -> Option<ScopeId> {
         let first = self.get(path.first()?)?;
@@ -612,7 +637,7 @@ impl ScopeTree {
                     focus.mode = KeyMode::Navigation;
                     return Outcome::Moved;
                 }
-                let bigs = self.bigs();
+                let bigs = self.reachable();
                 let n = bigs.len();
                 if n == 0 {
                     return Outcome::None;
@@ -695,7 +720,7 @@ impl ScopeTree {
                 }
                 let siblings = match parent {
                     Some(p) => self.children(Some(p)),
-                    None => self.bigs(),
+                    None => self.reachable(),
                 };
                 // A window itself has no siblings: the big scopes are not its.
                 let Some(i) = siblings.iter().position(|s| *s == id) else {
