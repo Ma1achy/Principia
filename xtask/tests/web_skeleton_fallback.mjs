@@ -221,7 +221,34 @@ async function checkFallback(started) {
   check(page.document.activeElement === canvas, "the fallback's canvas does not hold the keyboard");
 }
 
+// A key as the browser handles it: the keydown, then, unless it was cancelled, the edit the hidden input makes of it.
+// `getModifierState` answers only for AltGraph, as the key's fields say. Returns whether the key was cancelled.
+function press({ ime }, fields, altGraph, edit) {
+  const key = event("keydown", { code: "KeyQ", repeat: false, ...fields, getModifierState: (m) => m === "AltGraph" && altGraph });
+  page.window.dispatchEvent(key);
+  if (!key.defaultPrevented && edit) {
+    ime.value = edit;
+    ime.dispatchEvent(event("input", { data: edit, isComposing: false }));
+  }
+  return key.defaultPrevented;
+}
+
 const LOADER_SCENARIOS = {
+  async loader_altgraph_character_reaches_the_input() {
+    const started = await startLoader();
+    const texts = () => started.worker.posts.filter((m) => m.method === "text").map((m) => m.args[0]);
+    const ctrlAlt = { ctrlKey: true, altKey: true };
+    check(!press(started, { key: "@", ...ctrlAlt }, true, "@"), "AltGr's `@` was cancelled");
+    check(texts().join() === "@", `AltGr's \`@\` reached the app as: ${texts()}`);
+    check(started.calls().includes("key"), "AltGr's key is not forwarded");
+    check(!press(started, { key: "Dead", ...ctrlAlt }, true), "AltGr's dead key was cancelled");
+    check(press(started, { key: "Enter", ...ctrlAlt }, true), "AltGr's Enter was left to the page");
+    check(press(started, { key: "s", ctrlKey: true }, false, "s"), "Ctrl+S was left to the page");
+    check(press(started, { key: "@", ...ctrlAlt }, false, "@"), "Ctrl+Alt with no AltGraph was left to the page");
+    check(press(started, { key: "s", metaKey: true }, true, "s"), "Cmd+S under AltGraph was left to the page");
+    check(!press(started, { key: "v", ctrlKey: true }, false), "Ctrl+V's paste was cancelled");
+    check(texts().join() === "@", `only AltGr's \`@\` is text, and the app got: ${texts()}`);
+  },
   async loader_failed_worker_gives_up_its_forwards() {
     const started = await startLoader();
     checkForwarding(started);

@@ -278,3 +278,51 @@ negative_control!(
         )
     )
 );
+
+const ALTGRAPH: &str = "loader_altgraph_character_reaches_the_input";
+#[cfg(feature = "controls")]
+const CHORD: &str = r#"const chord = e.metaKey || (e.ctrlKey && !e.getModifierState("AltGraph"));"#;
+
+#[test]
+fn loader_altgraph_character_reaches_the_input() {
+    run(ALTGRAPH, &[]);
+}
+
+mod altgraph_a_chord {
+    use super::*;
+    negative_control!(
+        loader_altgraph_character_reaches_the_input,
+        "AltGraph not read: Ctrl with it is a chord, as Codex's finding traced",
+        expected = "AltGr's `@` was cancelled",
+        run(
+            ALTGRAPH,
+            &loader(CHORD, "const chord = e.metaKey || e.ctrlKey;")
+        )
+    );
+}
+
+mod ctrl_never_a_chord {
+    use super::*;
+    negative_control!(
+        loader_altgraph_character_reaches_the_input,
+        "Ctrl dropped from the chord altogether, not only under AltGraph",
+        expected = "Ctrl+S was left to the page",
+        run(ALTGRAPH, &loader(CHORD, "const chord = e.metaKey;"))
+    );
+}
+
+mod altgraph_excuses_meta {
+    use super::*;
+    negative_control!(
+        loader_altgraph_character_reaches_the_input,
+        "AltGraph excusing Cmd as well as Ctrl",
+        expected = "Cmd+S under AltGraph was left to the page",
+        run(
+            ALTGRAPH,
+            &loader(
+                CHORD,
+                r#"const chord = (e.metaKey || e.ctrlKey) && !e.getModifierState("AltGraph");"#
+            )
+        )
+    );
+}

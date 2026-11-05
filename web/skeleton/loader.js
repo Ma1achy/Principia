@@ -165,7 +165,8 @@ function forward(worker, canvas) {
     if (e.isComposing) return;
     post("key", e.key, e.code, pressed, e.repeat, ...mods(e));
     // A printable key stays with the input, for its text, as does the clipboard's chord; every other key is the app's.
-    const chord = e.metaKey || e.ctrlKey;
+    // AltGr can report Ctrl as well (AltGr+Q, `@`, on a German layout on Windows): that is typing, not a chord.
+    const chord = e.metaKey || (e.ctrlKey && !e.getModifierState("AltGraph"));
     if (e.key.length !== 1 && e.key !== "Dead" && !chord) e.preventDefault();
     if (chord && !"vcx".includes(e.key.toLowerCase())) e.preventDefault();
   };
