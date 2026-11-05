@@ -404,10 +404,10 @@ mutant = "crates/kernel/src/chart/physical.rs:809:33: replace > with >= in Mixed
 justification = "q = 0 then reaches the round trip, where m_b = 0 and a positive mass back makes that mass's relative miss infinite, the guard's own answer; the link's forward returns only positive masses"
 
 [[equivalent]]
-mutant = "crates/kernel/src/chart/physical.rs:881:29: replace > with >= in MixedMassRatio<A, S, f64>::edge"
+mutant = "crates/kernel/src/chart/physical.rs:891:29: replace > with >= in MixedMassRatio<A, S, f64>::edge"
 justification = "toward = from never reaches the test: new's from is the centre's ratio or the seed, each within eps_mu/2 by miss_narrowed, so edge returns at its first test for toward = from"
 
 [[equivalent]]
-mutant = "crates/kernel/src/chart/physical.rs:860:27: replace < with <= in MixedMassRatio<A, S, f64>::seed"
+mutant = "crates/kernel/src/chart/physical.rs:871:27: replace < with <= in MixedMassRatio<A, S, f64>::seed"
 justification = "the arms differ only where the two misses tie. The miss falls only non-strictly and has exact flats, but both probes on one flat [A, B] of ln q need B - A >= A - R, R the interval's near end, and (k - mu)/k, at most about 1/2 for softmax_tanh with m_c/(1 - m_c) = e^-k and a realised part needing k < 2*mu, never reaches that (measured at most 0.69 over exact flats, both links, mu_max 0.25 to 30). So the probes of a tie have the interval between them, which either arm keeps; both infinite is an end of the doubles the link does not reach, where neither arm finds a ratio"
 
