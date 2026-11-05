@@ -1,0 +1,170 @@
+# Temporary tests for the post-hand-over items. Lives only on branch runner/post; it never reaches main.
+# No pull_request trigger, ever.
+name: runner-post
+
+on:
+  push:
+    branches: [runner/post]
+  workflow_dispatch:
+    inputs:
+      test:
+        description: which test
+        required: true
+        type: choice
+        options: [green, proof, survivor, survivor-cancel, survivor-refuse, plant-runner, quota, cold, gpu-idle, log-diag, checkout, plant-git-hook, plant-git-config, delete-workspace]
+
+permissions:
+  contents: read
+
+jobs:
+  post:
+    if: github.repository == 'Ma1achy/Principia' && github.actor == 'Ma1achy'
+    runs-on: [self-hosted, windows, nvidia]
+    timeout-minutes: 240
+    defaults:
+      run:
+        shell: powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File {0}
+    env:
+      PRIN_GPU_BACKEND: vulkan
+      CARGO_TERM_COLOR: never
+    steps:
+      - name: Self-check
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File E:\runner-tools\checks\self-check.ps1
+          exit $LASTEXITCODE
+
+      - name: Sandbox proof, through the service
+        if: inputs.test == 'proof'
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File E:\runner-tools\setup\03-sandbox-proof.ps1 -Job
+          exit $LASTEXITCODE
+
+      - name: Start a process that tries to outlive the job
+        if: inputs.test == 'survivor' || inputs.test == 'survivor-cancel'
+        run: |
+          # RUNNER_TRACKING_ID=0 stops the runner's own orphan clean-up from seeing it.
+          $env:RUNNER_TRACKING_ID = '0'
+          $p = Start-Process powershell.exe -ArgumentList '-NoProfile','-Command','Start-Sleep -Seconds 1800' -WindowStyle Hidden -PassThru
+          "background process started: $($p.Id)"
+          exit 0
+
+      - name: Wait to be cancelled
+        if: inputs.test == 'survivor-cancel'
+        run: |
+          'waiting for the cancel'
+          Start-Sleep -Seconds 600
+          exit 0
+
+      - name: The job-started hook refuses a survivor
+        if: inputs.test == 'survivor-refuse'
+        run: |
+          # Runs the real hook from a step, with a background process alive. It must refuse, and stop that process.
+          $env:RUNNER_TRACKING_ID = '0'
+          $p = Start-Process powershell.exe -ArgumentList '-NoProfile','-Command','Start-Sleep -Seconds 1800' -WindowStyle Hidden -PassThru
+          "background process started: $($p.Id)"
+          $o = & powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File E:\runner-tools\checks\job-started.ps1
+          $code = $LASTEXITCODE
+          $o | Where-Object { $_ -match 'hook:|REFUSED' }
+          "hook exit $code; background process still alive: $([bool](Get-Process -Id $p.Id -ErrorAction SilentlyContinue))"
+          if ($code -eq 0) { exit 1 }
+          exit 0
+
+      - name: Plant a fake runner file
+        if: inputs.test == 'plant-runner'
+        run: |
+          New-Item -ItemType Directory -Force E:\runner-tools\tmp\fake-runner | Out-Null
+          Set-Content -LiteralPath E:\runner-tools\tmp\fake-runner\Runner.Listener.exe -Value 'not a real program'
+          'planted'
+          exit 0
+
+      - name: Fill the quota, then clean up
+        if: inputs.test == 'quota'
+        run: |
+          $f = 'E:\runner-tools\tmp\quota-fill.bin'
+          $chunk = New-Object byte[] (64MB)
+          (New-Object Random 1).NextBytes($chunk)
+          $mb = 0
+          $why = ''
+          try {
+              $s = [IO.File]::Open($f, 'Create', 'Write')
+              try { while ($mb -lt 40000) { $s.Write($chunk, 0, $chunk.Length); $mb += 64 } } finally { $s.Dispose() }
+          } catch { $x = $_.Exception; while ($x.InnerException) { $x = $x.InnerException }; $why = "$($x.GetType().Name): $($x.Message)" }
+          "written about $mb MB, then: $why"
+          [IO.File]::Delete($f)
+          "fill file left: $(Test-Path -LiteralPath $f)"
+          if (-not $why) { 'the limit was never reached'; exit 1 }
+          exit 0
+
+      - name: Cold build through the logging proxy
+        if: inputs.test == 'cold'
+        env:
+          HTTPS_PROXY: http://127.0.0.1:8899
+          HTTP_PROXY: http://127.0.0.1:8899
+          NO_PROXY: ''
+        run: |
+          $ErrorActionPreference = 'Continue'
+          $sw = [Diagnostics.Stopwatch]::StartNew()
+          $w = 'E:\runner-tools\tmp\cold'
+          New-Item -ItemType Directory -Force $w | Out-Null
+          $env:CARGO_HOME = "$w\cargo"
+          $env:CARGO_TARGET_DIR = "$w\target"
+          $env:LOCALAPPDATA = "$w\local"
+          $env:PATH = "E:\runner-tools\cargo\bin;$env:PATH"
+          New-Item -ItemType Directory -Force $env:LOCALAPPDATA | Out-Null
+          git clone --quiet https://github.com/Ma1achy/Principia.git "$w\repo" 2>&1 | ForEach-Object { "$_" }
+          "clone exit $LASTEXITCODE at $([math]::Round($sw.Elapsed.TotalMinutes,1)) min"
+          Set-Location "$w\repo"
+          cargo xtask build-kernel 2>&1 | ForEach-Object { "$_" } | Select-Object -Last 3
+          "build-kernel exit $LASTEXITCODE at $([math]::Round($sw.Elapsed.TotalMinutes,1)) min"
+          cargo nextest run -p validation --features controls --no-capture --no-fail-fast --retries 0 -E 'test(=gpu::tests::gpu_harness_identity_round_trip)' 2>&1 | ForEach-Object { "$_" } | Select-String 'adapter:|PASS|FAIL|error' | Select-Object -First 8 | ForEach-Object { $_.Line }
+          $code = $LASTEXITCODE
+          "test exit $code, total $([math]::Round($sw.Elapsed.TotalMinutes,1)) min"
+          Set-Location E:\runner-tools\tmp
+          cmd /c "rmdir /s /q $w"
+          "cold folder left: $(Test-Path -LiteralPath $w)"
+          exit $code
+
+      - name: Sample the GPU, read-only
+        if: inputs.test == 'gpu-idle'
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File E:\runner-tools\setup\06-gpu-sample.ps1 -Minutes 8 -Label service-job
+          exit 0
+
+      - name: Clean checkout
+        if: inputs.test == 'checkout'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          clean: true
+
+      - name: Plant an active git hook
+        if: inputs.test == 'plant-git-hook'
+        run: |
+          Set-Content -LiteralPath "$env:GITHUB_WORKSPACE\.git\hooks\post-checkout" -Value '#!/bin/sh'
+          "planted hook: $(Test-Path -LiteralPath "$env:GITHUB_WORKSPACE\.git\hooks\post-checkout")"
+          exit 0
+
+      - name: Plant a config key
+        if: inputs.test == 'plant-git-config'
+        run: |
+          git -C $env:GITHUB_WORKSPACE config core.fsmonitor true
+          "planted key, exit $LASTEXITCODE"
+          exit 0
+
+      - name: Can a step delete its own checkout?
+        if: inputs.test == 'delete-workspace'
+        run: |
+          "step folder is the workspace: $((Get-Location).Path -eq $env:GITHUB_WORKSPACE)"
+          $w = $env:GITHUB_WORKSPACE
+          $o = cmd /c "rmdir /s /q `"$w`" 2>&1"
+          "from inside: folder exists $(Test-Path -LiteralPath $w), items left $(@(Get-ChildItem -LiteralPath $w -Force -ErrorAction SilentlyContinue).Count), message: $o"
+          Set-Location E:\runner-tools\tmp
+          $o = cmd /c "rmdir /s /q `"$w`" 2>&1"
+          "from outside: folder exists $(Test-Path -LiteralPath $w), message: $o"
+          exit 0
+
+      - name: Which rights does this account have on the refusal log
+        if: inputs.test == 'log-diag'
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File E:\runner-tools\setup\07-log-diag.ps1
+          exit 0
