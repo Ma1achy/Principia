@@ -514,6 +514,8 @@ that carried it is withdrawn (R-500).*
 Files: dd_integrator :81–90, §6; integrator_contract :366.
 
 ## R-58 — The non-Metal parity run gates Paper 2, not the build *(TO-2)*
+*Read with R-711 (5 Nov 2026: a recorded run on R-711's runner can serve as the parity evidence, on the terms of its
+item 4).*
 *24 Sep 2026 · recorded; applied before Paper-2 numbers*
 
 Files: canonical_spec §2, §11; gpu_determinism_note and parity_contract if branch words fork.
@@ -923,6 +925,8 @@ windowed spectrum) become R-71 / R-72 calibration and definition requirements. T
 fixtures) wait for the human. ✱ marks a design ruling the human may veto.*
 
 ## R-110 — What CI runs, where, and against which goldens *(closes RQ-79)*
+*Read with R-711 (5 Nov 2026: a recorded run on R-711's runner can serve as Paper 2's non-Metal parity evidence, one
+card being enough on the terms of its item 4).*
 *Amended by R-186, R-656 and R-662.*
 *Amended in part by R-677 (2 Nov 2026: a head that changes only the plan's task data or the GUI's artboards and
 references, tier (b), runs the cheap checks and the tests that read what it changed in place of the suites).*
@@ -1454,10 +1458,11 @@ TASK-M3-12's stale note is removed.
 
 ## R-174 — The self-hosted runner runs only this repository's code *(closes H1)*
 *Amended by R-186.*
-*Still in force: outside contributors need approval before any workflow runs (the approval setting R-186 keeps); the
-fork guard (GPU jobs only for pushes and this repository's PRs, fork PRs getting the CPU and lavapipe jobs) and the
-runner's own macOS user account are dormant while no self-hosted runner exists (R-186), and apply again when one is
-added.*
+*Amended in part by R-711 (5 Nov 2026: this ruling wakes for R-711's runner, and no self-hosted job takes a
+`pull_request` or `pull_request_target` trigger, in place of its allowance for this repository's PRs).*
+*Still in force: outside contributors need approval before any workflow runs (the approval setting R-186 keeps); fork
+PRs getting the CPU and lavapipe jobs, and the runner's own user account, apply to R-711's runner; self-hosted jobs run
+only on push to `main`, schedule and `workflow_dispatch`, from Ma1achy on Ma1achy/Principia (R-711).*
 *25 Sep 2026 · applied in step 8*
 *Dormant since R-186 (26 Sep 2026): no self-hosted runner exists. The text stands, and applies again when one is added.*
 
@@ -1568,10 +1573,12 @@ can compile it.
 
 ## R-186 — GitHub-hosted runners first; no self-hosted runner *(amends R-110, R-169, R-174)*
 *Amended by R-375 and R-656.*
-*Still in force: all of it but the Linux runner's label: CI's Linux jobs run on `ubuntu-24.04`, pinned, not
+*Amended in part by R-711 (5 Nov 2026: one measurement-only self-hosted runner, `malachys-pc-rtx2080s`, is approved; PC
+benchmarks are separate measurements, never compared against this ruling's Mac performance gates).*
+*Still in force: all of it but the Linux runner's label and R-711's runner: CI's Linux jobs run on `ubuntu-24.04`, pinned, not
 `ubuntu-latest`, and moving to Ubuntu 26 is a deliberate later step (R-375); the Metal correctness suites on
-`macos-15`; benchmarks and performance gates on the human's Mac, never on hosted runners; no self-hosted runner, and
-no paid larger runner (R-656); per-commit CI as R-656 reads it, the GPU suites skipped on a head that changes no
+`macos-15`; benchmarks and performance gates on the human's Mac, never on hosted runners; no other self-hosted runner,
+and no paid larger runner (R-656); per-commit CI as R-656 reads it, the GPU suites skipped on a head that changes no
 GPU-path file.*
 *26 Sep 2026 · applied in step 8*
 
@@ -28921,10 +28928,12 @@ files code reads narrows to data code loads for behaviour, and the docs checks t
 label off; `reviews.yml` cancels its superseded runs per pull request and event).*
 *Amended in part by R-677 (2 Nov 2026: three tiers, code, data and docs; mutants only when `crates/` source changes).*
 *Amended in part by R-692 (4 Nov 2026: five paths of `crates/gui/` are GPU paths once TASK-M6-53 merges).*
+*Amended in part by R-711 (5 Nov 2026: "no self-hosted runner" excepts `malachys-pc-rtx2080s`, one measurement-only
+runner, whose jobs have their own workflow file; `ci.yml`, its counts and gates are unchanged).*
 *Still in force: all of it but what counts as docs-only and what a docs-only head runs, which are R-662's and R-677's,
 how the merge-ready head's mutants run and `reviews.yml`'s concurrency, which are R-676's, and which heads' mutants run,
 which is R-677's, and which of `gui`'s paths are GPU paths, which is R-692's: the push trigger, the cancelled runs, the in-job skips under each required check's own name, mutants
-on the merge-ready head, the approved target cache and no paid or self-hosted runner.*
+on the merge-ready head, the approved target cache, no paid runner, and no self-hosted runner but R-711's.*
 *30 Oct 2026 · the owner's two messages of that day; applied in `.github/workflows/ci.yml`,
 `.github/workflows/mutants.yml`, `scripts/ci_changes.sh` (new), `xtask/tests/ci_changes.rs` (new), three qa files
 (below), `plan/OPERATIONS.md`, `plan/WORKFLOW.md`, `docs/contracts/principia_parity_contract.md` §6, eight
@@ -30492,6 +30501,38 @@ the toolchain, for the 2–3 slowest jobs, evicted to stay well under 10 GB, bui
 *Applied per R-369 (PR #413, code F5), a mechanical consequence, flagged since the owner listed only R-110, R-177 and R-235:* R-677's tier (a), "full CI as before", now reads the two tiers above, and it carries the forward line. R-662's "Full CI runs only when a pull request changes Principia's code" is unaffected: it says when full CI may run, and that still holds.
 
 R-684 is in the "ci" group of `plan/rule_groups.yaml`.
+
+## R-711 — One measurement-only self-hosted runner, `malachys-pc-rtx2080s`, on the owner's PC, with no pull-request trigger on any self-hosted job; DX12 may run on it as a measurement; PC benchmarks stay apart from the Mac's performance gates; a recorded run on it can serve Paper 2's non-Metal parity evidence; its jobs have their own workflow; the signing rules *(closes RQ-695; amends R-174, R-186 and R-656)*
+*5 Nov 2026 · the owner's message of that day; applied in the forward lines of R-58, R-110, R-174, R-186 and R-656,
+`docs/archive/review_queue/M0.md` (RQ-695 moved), `REVIEW_QUEUE.md`, TASK-M4-28 (a note), `plan/rule_groups.yaml` and
+`plan/section_notes.yaml`; changes no requirement*
+
+The owner's words, 5 Nov 2026, verbatim:
+
+> Owner rulings, 5 Nov 2026, for the self-hosted Windows runner. Record verbatim as a ruling before the first job.
+>
+> 1. Self-hosted runner approved: one measurement-only runner, malachys-pc-rtx2080s, on the owner's PC. This amends R-186's and R-656's "no self-hosted runner" for this runner only. R-174 wakes, with the stricter rule replacing its PR allowance: no pull_request or pull_request_target trigger on any self-hosted job; only push to main, schedule and workflow_dispatch, from Ma1achy on Ma1achy/Principia. Correct the ci.yml:31-32 comment.
+> 2. DX12: once its opt-in lands, DX12 may run on this runner as a measurement job. It stays out of every required or hosted CI job, so the 4 Nov "in no CI job" order now reads "in no required or hosted CI job".
+> 3. Benchmarks: PC benchmarks are separate measurements, labelled by machine; never compared against R-186's Mac performance gates.
+> 4. Paper 2 (R-110/R-58, RQ-695): a recorded run on this runner can serve as the non-Metal parity evidence Paper 2 needs (named commit, driver version, full output), because R-58 gates the paper, not the build. It needs the parity measurement itself to pass, and the paper must state the single-card evidence and the owner-reported hardware caveat. A second non-Metal GPU is welcome later, not required. RQ-695 is closed by this.
+> 5. Workflow: self-hosted jobs live in their own workflow file with a paths filter (docs-only pushes don't run GPU suites). ci.yml, its counts and gates are unchanged; the mutants sweep there never feeds mutants-check.
+> 6. Signing:
+>    - Pre-signing commits: accept that pushes merging PRs which contain unsigned pre-signing commits (#360, #368, #387, #388) are refused by the hook. That only skips a measurement. No force-push to re-sign.
+>    - Merge commits: trust GitHub's web-flow key for merge commits only, with the merged-side rule.
+>    - Schedule and re-runs: verify in the smoke test what github.actor is for schedule and re-run events. Commit-signature verification is the primary gate there; the actor check is secondary.
+>    - Key protection: the signing key gets a passphrase, held in the macOS keychain via ssh-agent, so agents can still sign non-interactively. This protects the key at rest (backups, a stolen disk), not against a live compromise of the Mac; recorded as the known limit.
+
+*The DX12 order's wording.* R-711 amends the wording of the owner's DX12 order of 4 Nov: its "in no CI job" now reads "in no required or hosted CI job". That order is ruled on the DX12 branch, not yet on `main`, and is not touched here. Its ruling number is left out of this line because that ruling is not yet an entry in this file; that branch names R-711 when it lands.
+
+*Applied per R-369:*
+
+- **`ci.yml`'s comment.** Item 1's correction of `.github/workflows/ci.yml`:31-32 goes with the first runner job's pull request; the file is unchanged here.
+- **R-174's account.** R-174 says the runner runs "under its own macOS user account", written of a Mac runner. This runner is a PC, so what wakes is the rule's sense, the runner's own user account.
+- **R-58 and R-110** are not amended: the non-Metal parity run still gates Paper 2 and not the build, and item 4 says what a run on this runner must show to serve it. Each carries a "Read with" line.
+
+*What it amends:* **R-174**, **R-186** and **R-656**, for this runner only. It closes **RQ-695**.
+
+R-711 is in the "ci" group of `plan/rule_groups.yaml`.
 
 ## R-712 — The per-mutant timeout is set from the measured baseline test time, at about 3 times it; 8 shards are kept; a timed-out mutant counts as caught and is listed; #360's 135 unreached mutants go to the nightly run, and the same rule applies to #387 if it hits the limit *(amends R-376 for REQ-VAL-180)*
 *5 Nov 2026 · the owner's message of that day; applied in R-376's forward lines, REQ-VAL-180 (reqio) and
