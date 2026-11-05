@@ -1240,8 +1240,8 @@
 - id: TASK-M4-09
   milestone: M4
   title: "Bounded dispatch: chunked marches that return before a watchdog"
-  depends_on: [TASK-M4-05, TASK-M4-02, TASK-M3-20]
-  needs: [REQ-SCHED-002, REQ-INT-007, REQ-INT-038, REQ-PERF-003, REQ-TOOL-001, REQ-EVT-010]
+  depends_on: [TASK-M4-05, TASK-M4-02, TASK-M3-20, TASK-M3-41]
+  needs: [REQ-SCHED-002, REQ-INT-007, REQ-INT-038, REQ-PERF-003, REQ-TOOL-001, REQ-EVT-010, REQ-INT-100, REQ-INT-101, REQ-INT-102, REQ-PAY-110]
   requirements: [REQ-PERF-010, REQ-PERF-081, REQ-INT-059]
   reviewers: [code, qa, physics, perf]
   pitfalls: []
@@ -1341,6 +1341,23 @@
   requirements: [REQ-RENDER-099, REQ-CHART-074]
   reviewers: [code, qa, physics, perf]  # ⚑ physics review required; not merged on the code reviewer's word alone
   pitfalls: []
+# TASK-M4-27: past TASK-M4-22 to TASK-M4-26, moved to M9 by R-650 and not reused (applied per R-369)
+- id: TASK-M4-27
+  milestone: M4
+  title: "The kernel cross-backend check, the arm for now: decode's and canon's branch outcomes on NVIDIA Vulkan, Metal, lavapipe and CPU f32, per backend pair (R-686)"
+  depends_on: [TASK-M2-07, TASK-M2-24, TASK-M2-25]
+  needs: [REQ-DEC-017, REQ-DEC-008]
+  requirements: [REQ-VAL-347]
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-9, PIT-10]
+- id: TASK-M4-28
+  milestone: M4
+  title: "The kernel cross-backend check: the same IC set marched on NVIDIA Vulkan, Metal, lavapipe and CPU f32, labels and branch-sensitive results compared per backend pair (R-686)"
+  depends_on: [TASK-M4-05, TASK-M4-02, TASK-M4-03, TASK-M4-09, TASK-M4-18, TASK-M4-27, TASK-M3-41]
+  needs: [REQ-INT-026, REQ-EVT-003, REQ-EVT-005, REQ-VAL-026, REQ-INT-080, REQ-INT-100, REQ-INT-101, REQ-INT-102, REQ-INT-103, REQ-INT-108, REQ-PAY-110]
+  requirements: [REQ-VAL-348]
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-9, PIT-10]
 - id: TASK-M5-01
   milestone: M5
   title: "QuadReduction ledger: member order, packing, histogram and impurity grain"
@@ -1996,6 +2013,15 @@
   needs: []
   requirements: [REQ-GUI-265]
   reviewers: [code, qa, gui, physics]  # ⚑ tilt maths
+  pitfalls: []
+# TASK-M6-53: past TASK-M6-52, moved to M9 by R-650 and not reused (applied per R-369)
+- id: TASK-M6-53
+  milestone: M6
+  title: "The GUI track (R-390): the mock's value noise hashes its lattice in integers, so shared corners agree bitwise"
+  depends_on: [TASK-M6-24]  # R-685; the pattern is option A (R-689)
+  needs: []
+  requirements: [REQ-GUI-412]
+  reviewers: [code, qa, gui]
   pitfalls: []
 - id: TASK-M7-01
   milestone: M7

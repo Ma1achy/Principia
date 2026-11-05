@@ -10250,14 +10250,17 @@
     section: "`QuadRequest.flags`"
   - file: decisions.md
     section: "R-599 — Collapse is judged per axis: an axis along which the field is saturated and the samples are identical is genuinely flat and does not count; a quad stops only when every axis along which the field varies has collapsed, or at the screen floor; the readout names the saturated axis *(closes RQ-554; refines R-90's terminal stop)*"
+  - file: decisions.md
+    section: "R-686 — The kernel cross-backend check is a measurement (R-649): the same IC set on NVIDIA Vulkan, Metal, lavapipe and CPU f32, outcome labels and per-trajectory branch-sensitive results compared, not pixels, the disagreement rate reported per backend pair, no tolerance chosen to make it pass; pixel comparisons across backends go on raw pre-colour values with the outlier tail reported, never 8-bit frame equality, Metal against lavapipe's 161,394 / 221 recorded as the clean-backend baseline; `DECODE_SWITCHOVER`'s spec notes that bitwise agreement must be tested on NVIDIA specifically"
   verify:
     method: unit test
     detail: "force collapse with DECODE_MODE = 1: the quad is marked terminal (AT_F32_FLOOR) and never re-queued; the same symptom with DECODE_MODE = 0 switches instead; a non-collapsed quad at depth 21 decodes linearised and at depth 15 decodes full; a band quad at 10⁴·ê_k on the latent chart, collapsed along the saturated axis ê_k and structured along the other, switches and on the linear path keeps refining along the unsaturated axis to the screen floor, never stopped AT_F32_FLOOR above it (control: a collapse judged over both axes together stops it terminally and fails); a quad saturated along both in-plane axes stops AT_F32_FLOOR (control: a rule that never stops it refines to the screen floor and fails) (R-599)"
   rulings:
   - R-90
   - R-599
+  - R-686
   milestone: M6
-  note: "R-599 (25 Oct 2026, RQ-554 (c)): collapse is judged per axis; the switchover is unchanged; the readout's naming of the saturated axis is REQ-GUI-397 (applied per R-369). RQ-554 was (R-570's port, perf review 5624936602 of PR #279, P2): a band quad at 10⁴·ê_k, every collapsed pair along the saturated axis, switches, collapses again on the linear path and stops terminally here above the screen floor, while its other axis stays structured; whether such a quad keeps refining along the unsaturated direction is open. The terminal stop stands as written meanwhile; a ruling for RQ-554's (a) changes this requirement for band quads. *Was (statement):* \"The full decoder must switch to the linearised decoder once `quad.collapsed` is set (its adjacent samples give bitwise-identical ICs) or at depth ℓ_switch = 20 (lowering's SWITCH), whichever comes first, and sample collapse on the linearised decoder must fire AT_F32_FLOOR, a terminal stop cached as a quad fact, so the response to sample collapse keys off which decoder is active.\" *Was (verify):* \"force collapse with DECODE_MODE = 1: the quad is marked terminal (AT_F32_FLOOR) and never re-queued; the same symptom with DECODE_MODE = 0 switches instead; a non-collapsed quad at depth 21 decodes linearised and at depth 15 decodes full\""
+  note: "R-599 (25 Oct 2026, RQ-554 (c)): collapse is judged per axis; the switchover is unchanged; the readout's naming of the saturated axis is REQ-GUI-397 (applied per R-369). RQ-554 was (R-570's port, perf review 5624936602 of PR #279, P2): a band quad at 10⁴·ê_k, every collapsed pair along the saturated axis, switches, collapses again on the linear path and stops terminally here above the screen floor, while its other axis stays structured; whether such a quad keeps refining along the unsaturated direction is open. The terminal stop stands as written meanwhile; a ruling for RQ-554's (a) changes this requirement for band quads. *Was (statement):* \"The full decoder must switch to the linearised decoder once `quad.collapsed` is set (its adjacent samples give bitwise-identical ICs) or at depth ℓ_switch = 20 (lowering's SWITCH), whichever comes first, and sample collapse on the linearised decoder must fire AT_F32_FLOOR, a terminal stop cached as a quad fact, so the response to sample collapse keys off which decoder is active.\" *Was (verify):* \"force collapse with DECODE_MODE = 1: the quad is marked terminal (AT_F32_FLOOR) and never re-queued; the same symptom with DECODE_MODE = 0 switches instead; a non-collapsed quad at depth 21 decodes linearised and at depth 15 decodes full\" R-686 (4 Nov 2026): the bitwise agreement this switch reads must be tested on NVIDIA specifically: a Windows run of quad.collapsed over the same quads, compared with the other backends and posted to #390 (TASK-M6-08's notes). It blocks nothing; bitwise switchover on CI backends stays blocking (R-686, the owner's acceptance)."
 - id: REQ-SCHED-063
   area: SCHED
   statement: "A quad at the integration floor must be stopped there: flagged floor-limited, not re-queued as refinable, while its samples keep their real (low-confidence) outcomes rather than being terminated. The floor follows the occupant (R-563): with regularisation off, samples substep-saturated with suspect_fraction staying high, unchanged; under a regularised occupant, the stop reading saturated, set when either counted signal (the separation floor, the entry-cap hits) fires, and suspect_fraction, as for every occupant (R-603); and a footprint undetermined by its budget (budget_exhausted) must take the refinement policy's Undetermined decision, never split, never discarded and never treated as resolved, its remedy finer steps only as an explicit re-run, never an automatic one (R-603)."
@@ -24725,6 +24728,31 @@
   - R-550
   milestone: M6
   note: "Found by the code review of PR #365 (F4): the corpus sets no value for it. Closed by TASK-M6-35, proposed for the M6 gate. Physics review is required."
+- id: REQ-GUI-412
+  area: GUI
+  statement: "On the mock engine, a value-noise lattice corner shared by adjacent cells must be bitwise equal from each cell, on every backend the regression test runs on: CI's lavapipe and Metal block, and the NVIDIA run is a measurement (R-649)."
+  source:
+  - file: decisions.md
+    section: "R-685 — The real kernel and the other WGSL and rust-gpu shaders are audited for the mock noise's pattern, hashes or lattice lookups where neighbouring invocations must agree bitwise and compile-time offsets feeding them; the fix is proposed as a task with its own ADR, plus a regression test that asserts shared lattice corners bitwise equal on every backend; no fix until lavapipe and the audit are in"
+  - file: decisions.md
+    section: "R-686 — The kernel cross-backend check is a measurement (R-649): the same IC set on NVIDIA Vulkan, Metal, lavapipe and CPU f32, outcome labels and per-trajectory branch-sensitive results compared, not pixels, the disagreement rate reported per backend pair, no tolerance chosen to make it pass; pixel comparisons across backends go on raw pre-colour values with the outlier tail reported, never 8-bit frame equality, Metal against lavapipe's 161,394 / 221 recorded as the clean-backend baseline; `DECODE_SWITCHOVER`'s spec notes that bitwise agreement must be tested on NVIDIA specifically"
+  - file: decisions.md
+    section: "R-689 — The mock's noise is option A: an integer u32 hash on integer lattice coordinates, and the mock's noise look may change *(closes RQ-691)*"
+  - file: decisions.md
+    section: "R-691 — The raw-value rule for pixel comparisons is for cross-backend investigation only; goldens stay as they are on CI backends *(closes RQ-692; amends R-686)*"
+  - file: decisions.md
+    section: "R-692 — R-656 is amended for TASK-M6-53: of `crates/gui/`, the paths the new `gpu-metal` step reads are GPU paths, and the rest of the crate is not *(amends R-656)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui lattice_ on lavapipe and on Metal: lattice_shared_corners_bitwise across x, y and diagonal crossings, 2 views × 2 warps × 5 octaves, a negative-quadrant view and a far view, each case with crossings > 0; lattice_corners_match_cpu_twin; lattice_field_has_no_jump_lines; lattice_source_is_integer; each with its control through `rejects`."
+  rulings:
+  - R-685
+  - R-686
+  - R-689
+  - R-691
+  - R-692
+  milestone: M6
+  note: The pattern is option A (R-689).
 - id: REQ-TOOL-001
   area: TOOL
   statement: "Each session must record once: device (GPU/CPU model, core counts, VRAM or unified memory size in its own field), backend and driver version, precision support and f64 rate, build (commit hash, profile, feature flags) and display (resolution, refresh, DPI scale)."
@@ -37245,6 +37273,44 @@
   - R-672
   milestone: M9
   note: "R-669 (1 Nov 2026, RQ-596 (b)): N_scramble only; f_col is not built. Closed by TASK-M9-24, PA-1 being the target that runs on a chart; SL-1 reads it once a binary-plus-single chart exists. R-672 (2 Nov 2026): its row in M9's report reads the outcomes of PA-1 (REQ-VAL-323) and SL-1 (REQ-VAL-321), each counted once in its own row, with this definition's approval."
+- id: REQ-VAL-347
+  area: VAL
+  statement: "Decode's and canon's branch outcomes, decode's pole selects included, must be measured and reported, not asserted equal, on identical inputs: on Metal, lavapipe and CPU f32 by the closing task, and on NVIDIA Vulkan by a Windows run that blocks nothing (R-649), listed as not run in the report and in the M4 gate report until it is posted. The report must give the disagreement rate per backend pair, with no tolerance chosen to make it pass, and must state that fixed inputs cannot answer the trajectory question. The report must test R-690's driver condition per driver, on bits at the expression's own operands, with the written form on CPU f32, each operation correctly rounded, as arbiter; it must record a driver that fails as unverified, not supported, and one with none as no failure in N, N counting only evaluations of kind + and × with operands bit-identical to CPU f32's and the other two counts shown beside it per branch input and compiled entry, never verified or supported, each with its domain (compute stage, setting off, compiled entry read, adapter and driver version, any hardware label)."
+  source:
+  - file: decisions.md
+    section: "R-686 — The kernel cross-backend check is a measurement (R-649): the same IC set on NVIDIA Vulkan, Metal, lavapipe and CPU f32, outcome labels and per-trajectory branch-sensitive results compared, not pixels, the disagreement rate reported per backend pair, no tolerance chosen to make it pass; pixel comparisons across backends go on raw pre-colour values with the outlier tail reported, never 8-bit frame equality, Metal against lavapipe's 161,394 / 221 recorded as the clean-backend baseline; `DECODE_SWITCHOVER`'s spec notes that bitwise agreement must be tested on NVIDIA specifically"
+  - file: docs/contracts/principia_parity_contract.md
+    section: 4. Tolerance — and the cross-backend reality
+  - file: decisions.md
+    section: "R-690 — R-547's \"operations every IEEE backend rounds alike\" is stated as a condition on the driver and tested by TASK-M4-27 and TASK-M4-28; it is not enforceable, and a driver that fails is recorded unverified, not supported *(closes RQ-690; amends R-547)*"
+  verify:
+    detail: "cargo xtask gate cross-backend-branches: a record per backend and the comparison of every pair, each pair's disagreement count and rate over the same inputs, the header stating its domain; the control, a record compared with itself, reads 0, and one flipped outcome reads 1. The standing control: a synthetic pair of kind + and × with equal operands and differing input bits, no fork, reads \"unverified, not supported\", and a compare that reads only outcomes misses it. The N control: a synthetic driver whose rows are all level 1, operands differing, reads \"no failure in 0\", and a compare whose N counts all rows fails it. Only the controls assert. NVIDIA's record is a Windows run posted to issue #390; a backend not yet run is listed as not run."
+    method: numerical gate
+  rulings:
+  - R-649
+  - R-686
+  - R-690
+  milestone: M4
+  note: "The arm of R-686's check that runs on what the GPU runs now. It cannot answer the trajectory question: REQ-VAL-348 does. The gate asks that the report exists, never for a rate (R-649)."
+- id: REQ-VAL-348
+  area: VAL
+  statement: "The kernel's march must be measured across backends, not asserted equal, over the same IC set, under the default occupant, Heggie × RK4, and one unregularised occupant, with a pair over different occupants or sim keys refused: on Metal, lavapipe and CPU f32 by the closing task, and on NVIDIA Vulkan by a Windows run that blocks nothing (R-649), listed as not run in the report and in the M4 gate report until it is posted. It must compare outcome labels and each trajectory's branch-sensitive results (collision and escape decisions, step counts), not pixels, and report the disagreement rate per backend pair, with no tolerance chosen to make it pass. The report must test R-690's driver condition per driver, on bits at the expression's own operands, with the written form on CPU f32, each operation correctly rounded, as arbiter; it must record a driver that fails as unverified, not supported, and one with none as no failure in N, N counting only evaluations of kind + and × with operands bit-identical to CPU f32's and the other two counts shown beside it per branch input and compiled entry, never verified or supported, each with its domain (compute stage, setting off, compiled entry read, adapter and driver version, any hardware label)."
+  source:
+  - file: decisions.md
+    section: "R-686 — The kernel cross-backend check is a measurement (R-649): the same IC set on NVIDIA Vulkan, Metal, lavapipe and CPU f32, outcome labels and per-trajectory branch-sensitive results compared, not pixels, the disagreement rate reported per backend pair, no tolerance chosen to make it pass; pixel comparisons across backends go on raw pre-colour values with the outlier tail reported, never 8-bit frame equality, Metal against lavapipe's 161,394 / 221 recorded as the clean-backend baseline; `DECODE_SWITCHOVER`'s spec notes that bitwise agreement must be tested on NVIDIA specifically"
+  - file: docs/contracts/principia_parity_contract.md
+    section: 4. Tolerance — and the cross-backend reality
+  - file: decisions.md
+    section: "R-690 — R-547's \"operations every IEEE backend rounds alike\" is stated as a condition on the driver and tested by TASK-M4-27 and TASK-M4-28; it is not enforceable, and a driver that fails is recorded unverified, not supported *(closes RQ-690; amends R-547)*"
+  verify:
+    detail: "cargo xtask gate cross-backend-march: a decoded arm and a shared-start arm, under each occupant, over fixtures/gates/parity_fixtures and a near-decision stratum, a fixed-input arm over the Tier L boundary states, read on the given state with no STEP, each stratum's N in the header, a record per backend with per-step branch digests, a replay of each first difference on every backend, and the comparison of every pair, each pair's disagreement count and rate, per branch-sensitive result, the non-chaotic, chaotic and near-decision strata apart; the control, a record compared with itself, reads 0, and one flipped label reads 1. The standing control: a synthetic pair of kind + and × with equal operands and differing input bits, no fork, reads \"unverified, not supported\", and a compare that reads only outcomes misses it. The N control: a synthetic driver whose rows are all level 1, operands differing, reads \"no failure in 0\", and a compare whose N counts all rows fails it; a driver with N > 0 at the bucket and level 1 at collision shows 0 at collision. Only the controls assert. NVIDIA's record is a Windows run posted to issue #390; a backend not yet run is listed as not run."
+    method: numerical gate
+  rulings:
+  - R-649
+  - R-686
+  - R-690
+  milestone: M4
+  note: "R-686 asks for the evidence on whether the missing NoContraction matters for the real kernel. The rate alone is not that evidence, since division and √ are confounders (RQ-685): the discriminating result is differing bits at bit-identical operands in a branch input of kind + and × (R-547; R-690). The gate asks that the report exists, never for a rate (R-649)."
 - id: REQ-PERF-001
   area: PERF
   statement: "The per-step energy evaluation must reuse the pairwise distances from the force computation."
