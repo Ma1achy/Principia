@@ -1461,10 +1461,11 @@ TASK-M3-12's stale note is removed.
 *Amended in part by R-711 (5 Nov 2026: this ruling wakes for R-711's runner, and no self-hosted job takes a
 `pull_request` or `pull_request_target` trigger, in place of its allowance for this repository's PRs).*
 *Still in force: outside contributors need approval before any workflow runs (the approval setting R-186 keeps); fork
-PRs getting the CPU and lavapipe jobs, and the runner's own user account, apply to R-711's runner; self-hosted jobs run
+PRs get the hosted CPU and lavapipe jobs only; R-711's runner runs under its own user account; self-hosted jobs run
 only on push to `main`, schedule and `workflow_dispatch`, from Ma1achy on Ma1achy/Principia (R-711).*
 *25 Sep 2026 · applied in step 8*
 *Dormant since R-186 (26 Sep 2026): no self-hosted runner exists. The text stands, and applies again when one is added.*
+*The dormancy ended with R-711 (5 Nov 2026), for that runner.*
 
 GPU jobs on the self-hosted runner run only for pushes and for PRs from this repository:
 `if: github.event.pull_request.head.repo.full_name == github.repository` (or the event is a push). Fork PRs get the CPU
@@ -4316,9 +4317,10 @@ its installer's current release is used. A cargo tool CI adds later other than t
 
 ## R-348 — Mutants runs get a per-mutant timeout and a per-process memory cap on test processes; both values are calibrated
 *Amended by R-352 and R-376.*
+*Amended in part by R-712 (5 Nov 2026: the per-mutant timeout is about 3× the baseline's test time, in place of 2.0×).*
 *Still in force: all of it; R-352 accepts its items applied per R-204 and settles how a local run applies the caps: on
-macOS a local run gets the per-mutant timeout only, and CI's Linux runners enforce both caps. R-376 confirms both
-values at the M0 gate: the per-mutant timeout at 2.0× the baseline's test time with a 60 s floor (REQ-VAL-180), and
+macOS a local run gets the per-mutant timeout only, and CI's Linux runners enforce both caps. The per-mutant timeout is
+about 3× the baseline's test time (R-712) with R-376's 60 s floor (REQ-VAL-180), and R-376 confirms
 the memory cap at 8 GiB, set by `prlimit --as` with `--core=1` (REQ-VAL-181).*
 *1 Oct 2026 · applied in REQ-VAL-179, REQ-VAL-180 and REQ-VAL-181 (new), TASK-M0-49 (new) and TASK-M0-19*
 
@@ -7257,6 +7259,10 @@ fields' own units, as applied." The absolute reading stands as applied; nothing 
 Changes REQ-TOOL-160's statement, verify, rulings, sources and note; adds no requirement.
 
 ## R-402 — The nightly full mutants run is sharded to fit GitHub's 6-hour job limit: each package's mutants dealt round-robin into shards sized on their measured cost, counted each run *(amends R-376 as it applies to the nightly full run's shards)*
+*Amended in part by R-712 (5 Nov 2026: REQ-VAL-180's multiplier is about 3 times, in place of 2.0 times, for a nightly
+shard too).*
+*Still in force: all of it, a shard's baseline running that package's tests alone, so that the timeout is the package's
+own, at R-712's multiplier.*
 *9 Oct 2026 · applied in `.github/workflows/nightly.yml` (its `concurrency` group and jobs `mutants-plan`, `mutants`
 and `mutants-report`), `xtask/tests/qa_TASK-M0-19.rs` (`check_mutants`, a ruling-forced qa-file change), REQ-VAL-150
 (reqio), R-376's forward lines and `plan/rule_groups.yaml`*
@@ -30504,8 +30510,8 @@ R-684 is in the "ci" group of `plan/rule_groups.yaml`.
 
 ## R-711 — One measurement-only self-hosted runner, `malachys-pc-rtx2080s`, on the owner's PC, with no pull-request trigger on any self-hosted job; DX12 may run on it as a measurement; PC benchmarks stay apart from the Mac's performance gates; a recorded run on it can serve Paper 2's non-Metal parity evidence; its jobs have their own workflow; the signing rules *(closes RQ-695; amends R-174, R-186 and R-656)*
 *5 Nov 2026 · the owner's message of that day; applied in the forward lines of R-58, R-110, R-174, R-186 and R-656,
-`docs/archive/review_queue/M0.md` (RQ-695 moved), `REVIEW_QUEUE.md`, TASK-M4-28 (a note), `plan/rule_groups.yaml` and
-`plan/section_notes.yaml`; changes no requirement*
+`docs/archive/review_queue/M0.md` (RQ-695 moved), `REVIEW_QUEUE.md`, TASK-M4-28 (a note), REQ-VAL-099 (reqio), TASK-M8-41,
+`plan/WORKFLOW.md`, `plan/HUMAN_SETUP.md` and `plan/rule_groups.yaml`*
 
 The owner's words, 5 Nov 2026, verbatim:
 
@@ -30522,7 +30528,7 @@ The owner's words, 5 Nov 2026, verbatim:
 >    - Schedule and re-runs: verify in the smoke test what github.actor is for schedule and re-run events. Commit-signature verification is the primary gate there; the actor check is secondary.
 >    - Key protection: the signing key gets a passphrase, held in the macOS keychain via ssh-agent, so agents can still sign non-interactively. This protects the key at rest (backups, a stolen disk), not against a live compromise of the Mac; recorded as the known limit.
 
-*The DX12 order's wording.* R-711 amends the wording of the owner's DX12 order of 4 Nov: its "in no CI job" now reads "in no required or hosted CI job". That order is ruled on the DX12 branch, not yet on `main`, and is not touched here. Its ruling number is left out of this line because that ruling is not yet an entry in this file; that branch names R-711 when it lands.
+*The DX12 order's wording.* R-711 amends the wording of the owner's DX12 order of 4 Nov, not yet on `main`: its "in no CI job" now reads "in no required or hosted CI job". That order is not touched here, and its ruling number is left out of this line because that ruling is not yet an entry in this file.
 
 *Applied per R-369:*
 
@@ -30534,9 +30540,11 @@ The owner's words, 5 Nov 2026, verbatim:
 
 R-711 is in the "ci" group of `plan/rule_groups.yaml`.
 
-## R-712 — The per-mutant timeout is set from the measured baseline test time, at about 3 times it; 8 shards are kept; a timed-out mutant counts as caught and is listed; #360's 135 unreached mutants go to the nightly run, and the same rule applies to #387 if it hits the limit *(amends R-376 for REQ-VAL-180)*
-*5 Nov 2026 · the owner's message of that day; applied in R-376's forward lines, REQ-VAL-180 (reqio) and
-`plan/rule_groups.yaml`; built by tooling PR `tooling/mutants-measured-timeout`*
+Changes REQ-VAL-099 (statement, verify, source, rulings, note).
+
+## R-712 — The per-mutant timeout is set from the measured baseline test time, at about 3 times it; 8 shards are kept; a timed-out mutant counts as caught and is listed; #360's 135 unreached mutants go to the nightly run, and the same rule applies to #387 if it hits the limit *(amends R-348, R-376 and R-402 for REQ-VAL-180)*
+*5 Nov 2026 · the owner's message of that day; applied in the forward lines of R-348, R-376 and R-402, REQ-VAL-180 (reqio)
+and `plan/rule_groups.yaml`; built by #415*
 
 The owner's words, 5 Nov 2026, verbatim:
 
@@ -30544,15 +30552,19 @@ The owner's words, 5 Nov 2026, verbatim:
 
 *What it decides:*
 
-- **The timeout.** REQ-VAL-180's value is about 3 times the measured baseline test time, in place of R-376's 2.0 times. R-376's 60 s floor is not mentioned and stands.
-- **The form.** Of the two the order offers, the owner chose the explicit timeout, so the baseline is measured once and not per shard. `tooling/mutants-measured-timeout` carries it, and `.cargo/mutants.toml` keeps `timeout_multiplier = 2.0` until that pull request merges.
+- **The timeout.** REQ-VAL-180's value is about 3 times the measured baseline test time, in place of R-376's 2.0 times. The order offers two forms, `--timeout-multiplier` about 3 or an explicit timeout of about 3 times the baseline, and chooses neither. R-376's 60 s floor is not mentioned and stands.
 - **Shards.** REQ-VAL-149's 8 shards stay.
 - **A timeout counts as caught, and is listed.** `cargo xtask mutants-check` already lists one as "timed out (not a survivor)" (R-202, R-348).
-- **The gate does not relax.** R-302's rule, in `mutants.yml`, that a shard cut off by its limit fails, "never a pass", stays as it is. "The 135 unreached mutants" names #360's mutants, and #387's if it hits the limit; it passes no cut-off shard. R-302's nightly run is their backstop.
+- **#360's 135 unreached mutants** go to the nightly run, and the same rule applies to #387 if it hits the limit.
 
-*The evidence, for the record:* #360 had 0 timeouts in 541 judged mutants, with a baseline of 5064 to 5554 s and a slowest mutant of 2405 s (run 41957362447).
+*Applied per R-369:*
 
-*What it amends:* **R-376**, for REQ-VAL-180's multiplier only.
+- **The form, for the per-PR `mutants.yml` shards only:** the explicit timeout, the baseline measured once and not per shard. Nightly and local runs keep the multiplier, at 3.0, and R-402's baseline for a nightly shard is still its package's own. #415 builds both, and `.cargo/mutants.toml` keeps `timeout_multiplier = 2.0` until it merges.
+- **The gate does not relax.** This is the port's reading, the owner's words not naming R-302. R-302's rule, in `mutants.yml`, that a shard cut off by its limit fails, "never a pass", stays as it is. "The 135 unreached mutants" names #360's, and #387's if it hits the limit, and passes no cut-off shard. R-302's nightly run is their backstop.
+
+*The evidence, for the record:* #360 had 0 timeouts in 541 judged mutants, with a baseline of 5064 to 5554 s on the seven cut shards and 2814 s on the shard that finished, and a slowest mutant of 2405 s (run 41957362447).
+
+*What it amends:* **R-348**, **R-376** and **R-402**, for REQ-VAL-180's multiplier only.
 
 R-712 is in the "ci" group of `plan/rule_groups.yaml`.
 

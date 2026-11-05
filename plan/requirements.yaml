@@ -30302,7 +30302,7 @@
   note: "The supported-resolution list: REQ-TOOL-113 (calibration). R-483 C10 (20 Oct 2026)."
 - id: REQ-VAL-099
   area: VAL
-  statement: "The parity gate must be run on a non-Metal backend (Vulkan or D3D12) before any Paper-2 numbers are produced; it gates Paper 2, not the build."
+  statement: "The parity gate must be run on a non-Metal backend (Vulkan or D3D12) before any Paper-2 numbers are produced; it gates Paper 2, not the build. A recorded run on R-711's runner can serve, with its named commit, driver version and full output, if the parity measurement itself passes; the paper states the single-card evidence and the owner-reported hardware caveat; a second non-Metal GPU is welcome, not required."
   source:
   - file: docs/contracts/principia_canonical_spec.md
     section: 2. The determinism law (the other defining decision)
@@ -30316,13 +30316,17 @@
     section: 6. The harness
   - file: decisions.md
     section: "R-110 — What CI runs, where, and against which goldens *(closes RQ-79)*"
+  - file: decisions.md
+    section: "R-711 — One measurement-only self-hosted runner, `malachys-pc-rtx2080s`, on the owner's PC, with no pull-request trigger on any self-hosted job; DX12 may run on it as a measurement; PC benchmarks stay apart from the Mac's performance gates; a recorded run on it can serve Paper 2's non-Metal parity evidence; its jobs have their own workflow; the signing rules *(closes RQ-695; amends R-174, R-186 and R-656)*"
   verify:
+    detail: "the parity suite passes on a real (hardware) Vulkan or D3D12 GPU — lavapipe, the per-commit second backend, does not satisfy this (R-110); recorded before Paper-2 survey results; a run on R-711's runner names its commit and driver version and keeps its full output, the parity measurement itself passing, and the paper states the single-card evidence and the owner-reported hardware caveat (R-711)"
     method: numerical gate
-    detail: "the parity suite passes on a real (hardware) Vulkan or D3D12 GPU — lavapipe, the per-commit second backend, does not satisfy this (R-110); recorded before Paper-2 survey results"
   rulings:
   - R-58
   - R-110
+  - R-711
   milestone: M8
+  note: "R-711 (5 Nov 2026, item 4; RQ-695): the terms on a run on that runner, added to the statement and the verify. *Was (statement):* ends \"it gates Paper 2, not the build.\" Whether a card with an R-690 failure on record can pass is put to the physics reviewer of PR #416."
 - id: REQ-VAL-100
   area: VAL
   statement: "The same spec object must re-render the same video bit-identically on the same backend and match across backends to the parity contract's f32 tolerances, with branch decisions identical on identical inputs, per step, and terminal labels and outcome classes identical except on chaotic trajectories, where they may differ across precisions."
@@ -31779,7 +31783,7 @@
   - file: decisions.md
     section: "R-376 — The six M0 calibrations are confirmed: REQ-VAL-138, REQ-VAL-149 (8 shards × 300 min, a ceiling, not a target), REQ-VAL-151, REQ-VAL-156 (600 s), REQ-VAL-180 and REQ-VAL-181 *(closes RQ-202; amends R-71, R-203, R-214, R-217, R-233, R-269, R-287, R-296, R-302, R-305, R-348 and R-352 as they apply to these values)*"
   - file: decisions.md
-    section: "R-712 — The per-mutant timeout is set from the measured baseline test time, at about 3 times it; 8 shards are kept; a timed-out mutant counts as caught and is listed; #360's 135 unreached mutants go to the nightly run, and the same rule applies to #387 if it hits the limit *(amends R-376 for REQ-VAL-180)*"
+    section: "R-712 — The per-mutant timeout is set from the measured baseline test time, at about 3 times it; 8 shards are kept; a timed-out mutant counts as caught and is listed; #360's 135 unreached mutants go to the nightly run, and the same rule applies to #387 if it hits the limit *(amends R-348, R-376 and R-402 for REQ-VAL-180)*"
   verify:
     method: review checklist
     detail: "the proposal states the timeout, in the form cargo-mutants' timeout setting takes it (seconds, or a multiple of the baseline's test time with its floor), with its evidence: the unmutated baseline's test time on `ubuntu-latest` in each shard of the PRs merged so far, the slowest caught mutant's test time, and the headroom the value leaves within the per-shard limit (REQ-VAL-149); every run uses it, marked provisional until the human confirms it at the M0 gate (R-182, R-348)"
@@ -31790,7 +31794,7 @@
   - R-376
   - R-712
   milestone: M0
-  note: "Confirmed by R-376 (3 Oct 2026, at the M0 gate): 2.0 times the unmutated baseline's test time, no less than 60 s (`timeout_multiplier = 2.0`, `minimum_test_timeout = 60`, `.cargo/mutants.toml`). R-712 (5 Nov 2026): about 3 times the measured baseline test time, an explicit timeout, the baseline measured once and not per shard, the 60 s floor standing; a timed-out mutant counts as caught and is listed; built by `tooling/mutants-measured-timeout`, and `.cargo/mutants.toml` keeps its old value until then. *Was:* 2.0 times."
+  note: "Confirmed by R-376 (3 Oct 2026, at the M0 gate): 2.0 times the unmutated baseline's test time, no less than 60 s (`timeout_multiplier = 2.0`, `minimum_test_timeout = 60`, `.cargo/mutants.toml`). R-712 (5 Nov 2026): about 3 times the measured baseline test time, the 60 s floor standing; a timed-out mutant counts as caught and is listed. Applied per R-369 (R-712): the per-PR `mutants.yml` shards take an explicit timeout, the baseline measured once and not per shard; nightly and local runs keep the multiplier, at 3.0, a nightly shard's baseline its package's own (R-402); built by #415, and `.cargo/mutants.toml` keeps its old value until then. *Was:* 2.0 times."
 - id: REQ-VAL-181
   area: VAL
   kind: calibration

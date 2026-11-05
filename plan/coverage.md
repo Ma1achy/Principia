@@ -43,14 +43,14 @@ Of these: 232 calibration, 179 definition, 1664 obligation. Retired (kept for th
 
 ## Sections
 
-1701 sections in 61 files: 1351 yield at least one requirement; 350 yield none and are listed below with the reason.
+1701 sections in 61 files: 1352 yield at least one requirement; 349 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | gap (RQ-378) | 1 |
 | gap (RQ-391) | 2 |
 | gap (RQ-577) | 2 |
 | gap (RQ-618) | 1 |
-| informative only | 242 |
+| informative only | 241 |
 | out of v1 (R-125) | 1 |
 | out of v1 (R-420) | 1 |
 | parent heading (obligations are in its subsections) | 55 |
@@ -210,7 +210,6 @@ Of these: 232 calibration, 179 definition, 1664 obligation. Retired (kept for th
 | R-682 — Admin bypass on `main` is the owner's alone: agents never use it, by `gh pr merge --admin` or any API merge that skips a required check; merge scripts merge only when every required check has passed; a stuck check goes to the owner, who decides whether to bypass *(amends R-266)* | informative only | the owner's message of 3 Nov 2026: admin bypass is the owner's alone; process (plan/OPERATIONS.md § Merging, plan/HUMAN_SETUP.md § 2); changes no requirement |
 | R-683 — The CI speed-up series, after the current CI fixes land: measure first, then five tooling pull requests in order, each with before and after numbers: one test binary per crate, a quick tier on every push, mutants in-diff on the merge-ready head, a bounded dependency cache saved from `main` only, and nightly compiler flags kept only if faster; R-285's amendment approved in principle only, its wording with step (4)'s pull request | informative only | the owner's message of 3 Nov 2026: the CI speed-up series and its order; R-285's amendment approved in principle only; ci; changes no requirement |
 | R-684 — CI's two code tiers: full CI on every merge-candidate head, the one carrying the `merge-ready` label, and on every push to `main`; a quick tier on every other pull-request head (fmt, clippy, build, and the tests of the changed crates and their reverse dependencies), each full-only required check posted pending, never skipped-as-success; R-677's classifier first; done as R-683's step (2), and R-656's bounded target cache, without sccache, as its step (4) *(amends R-110, R-177 and R-235; rules R-676's tiers and R-683's steps (2) and (4))* | informative only | the owner's message of 3 Nov 2026, part (A): full CI on the merge-candidate head and main, a quick tier elsewhere, full-only checks pending; part (B) recorded under R-683; ci; changes no requirement here, built with R-683's steps (2) and (4) |
-| R-711 — One measurement-only self-hosted runner, `malachys-pc-rtx2080s`, on the owner's PC, with no pull-request trigger on any self-hosted job; DX12 may run on it as a measurement; PC benchmarks stay apart from the Mac's performance gates; a recorded run on it can serve Paper 2's non-Metal parity evidence; its jobs have their own workflow; the signing rules *(closes RQ-695; amends R-174, R-186 and R-656)* | informative only | the owner's message of 5 Nov 2026: one measurement-only self-hosted runner and its rules; ci; changes no requirement |
 
 ### `docs/contracts/principia_canonical_spec.md`
 

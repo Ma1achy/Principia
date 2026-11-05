@@ -152,7 +152,7 @@ to M8, the physics review of PR #342, F2).
 - [ ] REQ-GUI-150 — the proposal shows residuals and period errors for seeds that refine to catalogue orbits and for seeds that do not
 - [ ] REQ-TOOL-115 — the proposal shows idle memory traces with and without an injected leak and a threshold and window that flag the leak and not the clean trace
 - [ ] REQ-TOOL-214 — cargo xtask gate browser-webm-carrier: in the M8 Playwright browser suite on Chromium (R-134, R-149), a 12-frame sweep recorded as WebM through WebCodecs carries exactly one PRINCIPIA_SPEC tag, on the file as a whole, whose base64 decodes to the record, bitwise the .principia-sweep.json written beside it, and the native reader reads the downloaded file as recovered (controls: a tag on a track rather than the file, and a custom tag name, each fail)
-- [ ] REQ-VAL-099 — the parity suite passes on a real (hardware) Vulkan or D3D12 GPU — lavapipe, the per-commit second backend, does not satisfy this (R-110); recorded before Paper-2 survey results
+- [ ] REQ-VAL-099 — the parity suite passes on a real (hardware) Vulkan or D3D12 GPU — lavapipe, the per-commit second backend, does not satisfy this (R-110); recorded before Paper-2 survey results; a run on R-711's runner names its commit and driver version and keeps its full output, the parity measurement itself passing, and the paper states the single-card evidence and the owner-reported hardware caveat (R-711)
 - [ ] REQ-VAL-102 — spectral entropy for the figure-eight ≈ 0.076 and for the chaotic reference ≈ 0.177; periodic < chaotic
 - [ ] REQ-VAL-103 — a recorded measurement of spectral line resolution vs t gives the minimum t used by listen
 - [ ] REQ-VAL-107 — on a regular-region fixture of ICs, CPU and GPU classification agree for every IC
