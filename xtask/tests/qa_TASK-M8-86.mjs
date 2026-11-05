@@ -1,0 +1,494 @@
+// QA's harness for TASK-M8-86 (`qa_TASK-M8-86.rs`): `node qa_TASK-M8-86.mjs <directory holding the skeleton's scripts>
+// <scenario>`. It runs the real loader, probe worker and runner helpers on Node, a stub page and a stub `gui.js` around
+// the loader, and exits non-zero naming what failed. Written from the task's deliverables: the URL flags, the fields the
+// panel is given, the wasm-threads probe, and what the runner scripts write.
+import { Worker as NodeWorker, isMainThread, parentPort, workerData } from "node:worker_threads";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
+import { fileURLToPath, pathToFileURL } from "node:url";
+
+// A probe worker's thread: the real script, with `self` around the thread's port.
+if (!isMainThread) {
+  globalThis.self = { postMessage: (message) => parentPort.postMessage(message) };
+  await import(pathToFileURL(workerData).href);
+  parentPort.on("message", ({ role, memory }) => {
+    // A plain memory cannot cross threads: each worker makes its own, as a browser without shared memory leaves it.
+    const plain = memory === null ? new WebAssembly.Memory({ initial: 1, maximum: 1 }) : memory;
+    globalThis.self.onmessage({ data: { role, memory: plain } });
+  });
+} else {
+  await main();
+}
+
+async function main() {
+  const [dir, scenario] = process.argv.slice(2);
+  const scenarios = { ...probeScenarios(dir), ...loaderScenarios(dir), ...imeScenarios(dir), ...runnerScenarios(dir) };
+  if (!scenarios[scenario]) throw new Error(`no scenario ${scenario}`);
+  await scenarios[scenario]();
+  process.exit(0);
+}
+
+function check(holds, what) {
+  if (!holds) throw new Error(what);
+}
+
+function probeScenarios(dir) {
+  const probe = (memory) => new Promise((resolve, reject) => {
+    const script = join(dir, "probe-worker.js");
+    const [first, second] = ["first", "second"].map(() => new NodeWorker(fileURLToPath(import.meta.url), { workerData: script }));
+    first.on("error", reject);
+    second.on("error", reject);
+    first.on("message", (answer) => {
+      first.terminate();
+      second.terminate();
+      resolve(answer);
+    });
+    first.postMessage({ role: "first", memory });
+    second.postMessage({ role: "second", memory });
+  });
+  return {
+    async probe_shared_memory_says_ok() {
+      const answer = await probe(new WebAssembly.Memory({ initial: 1, maximum: 1, shared: true }));
+      check(answer === "ok", `the probe on shared memory said: ${answer}`);
+    },
+    async probe_unshared_memory_says_why_not() {
+      // The module's import asks for a shared memory: a plain one does not link, and the probe says why.
+      const answer = await probe(null);
+      check(answer !== "ok", "the probe said ok with no shared memory");
+      check(/\w+Error: /.test(answer), `the probe's reason: ${answer}`);
+    },
+  };
+}
+
+// The loader on a stub page: what it started, with what.
+async function runLoader(dir, { search, offscreen = true, gpu = true, isolated = true }) {
+  const seen = { main: [], workers: [], transferred: 0 };
+  const define = (name, value) => Object.defineProperty(globalThis, name, { value, writable: true, configurable: true });
+  define("__seen", seen);
+  writeFileSync(join(dir, "package.json"), '{ "type": "module" }\n');
+  writeFileSync(join(dir, "gui.js"), `
+    export default async function init() {}
+    export function title() { return "stub"; }
+    export async function start_main(canvas, environment) { globalThis.__seen.main.push(environment); }
+  `);
+  const canvas = {
+    clientWidth: 100,
+    clientHeight: 100,
+    style: {},
+    focus() {},
+    cloneNode() { return canvas; },
+    replaceWith() {},
+    addEventListener() {},
+    transferControlToOffscreen: offscreen ? () => { seen.transferred += 1; return {}; } : undefined,
+  };
+  define("location", { search });
+  define("window", globalThis);
+  // A page that is not isolated, with its service worker active, as Safari showed one (qa review 5728266391, F2): so no
+  // reload is waited for, no SharedArrayBuffer exists, and a shared memory cannot be posted to a worker.
+  const serviceWorker = isolated ? {} : { serviceWorker: { controller: {} } };
+  define("navigator", { platform: "MacIntel", gpu: gpu ? {} : undefined, ...serviceWorker });
+  define("crossOriginIsolated", isolated);
+  if (!isolated) delete globalThis.SharedArrayBuffer;
+  define("self", globalThis);
+  define("devicePixelRatio", 1);
+  // The window's listeners are real too, for the key replays.
+  seen.page = new EventTarget();
+  define("addEventListener", seen.page.addEventListener.bind(seen.page));
+  define("document", {
+    title: "",
+    body: { append() {} },
+    getElementById: () => canvas,
+    createElement: (tag) => {
+      // The worker layout's hidden input takes real listeners, for the IME replays.
+      const element = Object.assign(new EventTarget(), { value: "", focus() {}, remove() {}, style: {} });
+      if (tag === "input") seen.ime = element;
+      return element;
+    },
+  });
+  define("requestAnimationFrame", (tick) => setTimeout(() => tick(performance.now()), 16));
+  define("ResizeObserver", class { observe() {} disconnect() {} });
+  if (offscreen) define("OffscreenCanvas", class {});
+  define("Worker", class {
+    constructor(url) {
+      this.url = String(url);
+      this.posts = [];
+      seen.workers.push(this);
+    }
+    postMessage(message) {
+      if (!isolated && this.url.includes("probe-worker")) {
+        throw new DOMException("The object can not be cloned.", "DataCloneError");
+      }
+      this.posts.push(message);
+      if (this.url.includes("probe-worker") && message.role === "first") setTimeout(() => this.onmessage?.({ data: "ok" }), 0);
+      if (this.url.includes("worker.js") && !this.url.includes("probe") && message.type === "start") {
+        setTimeout(() => this.onmessage?.({ data: { type: "started" } }), 0);
+      }
+    }
+    terminate() {}
+  });
+  const silent = () => {};
+  console.warn = silent;
+  console.error = silent;
+  await import(pathToFileURL(join(dir, "loader.js")).href);
+  const until = Date.now() + 15000;
+  const appWorker = () => seen.workers.find((w) => w.url === "worker.js");
+  while (Date.now() < until) {
+    const failed = globalThis.__principiaMeasure?.status === "failed";
+    if (failed || seen.main.length > 0 || appWorker()?.posts.some((m) => m.type === "start")) break;
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  }
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  return { seen, appWorker: appWorker(), published: globalThis.__principiaMeasure };
+}
+
+// The worker layout's hidden input, as a browser drives it: `fire` sends one event, setting the input's value first when
+// the event's step changes it (a browser's commit changes it once, before the first event, and never restores what the
+// page cleared). `texts` is what was posted to the worker's `text`, which pushes one egui text event for each.
+async function imePage(dir) {
+  const { seen, appWorker } = await runLoader(dir, { search: "?layout=worker" });
+  check(appWorker, "?layout=worker started no worker");
+  check(seen.ime, "the worker layout has no hidden input");
+  const { ime } = seen;
+  const fire = (type, data, isComposing, value) => {
+    if (value !== undefined) ime.value = value;
+    ime.dispatchEvent(Object.assign(new Event(type), { data, isComposing }));
+  };
+  const texts = () => appWorker.posts.filter((m) => m.type === "call" && m.method === "text").map((m) => m.args[0]);
+  return { ime, fire, texts };
+}
+
+// A composition up to its commit: the interim text is in the input, and none of it is posted.
+function compose(page, text) {
+  const before = page.texts().length;
+  page.fire("compositionstart", "", undefined);
+  for (const interim of [...text].map((_, i) => `${text.slice(0, i + 1)}~`)) {
+    page.fire("compositionupdate", interim, undefined);
+    page.fire("input", interim, true, interim);
+  }
+  check(page.texts().length === before, `an interim composition was posted: ${JSON.stringify(page.texts().slice(before))}`);
+}
+
+// Each order of a commit's last two events, one commit after another: one post of the committed text for each, nothing
+// held over into the next, and a plain key after them still typed.
+function replayCommits(page, orders) {
+  for (const [name, send] of Object.entries(orders)) {
+    for (const text of ["\u4f60\u597d", "pin"]) {
+      compose(page, text);
+      const before = page.texts().length;
+      send(page, text);
+      const posted = page.texts().slice(before);
+      check(posted.length === 1, `${name}: one commit posted ${posted.length} times: ${JSON.stringify(posted)}`);
+      check(posted[0] === text, `${name}: the commit posted ${JSON.stringify(posted[0])}, not ${JSON.stringify(text)}`);
+      check(page.ime.value === "", `${name}: the input still holds ${JSON.stringify(page.ime.value)}`);
+    }
+    const before = page.texts().length;
+    page.fire("input", "a", false, "a");
+    const typed = page.texts().slice(before);
+    check(typed.length === 1 && typed[0] === "a", `${name}: a key after the commit posted ${JSON.stringify(typed)}`);
+  }
+}
+
+// A key held as AltGr goes down, then let go under it, as Windows reports AltGr: the key's own event comes with Ctrl, Alt
+// and AltGraph set, and with the layer's character in `key`. Returns what the app was told of that key: `[down, up]`.
+async function heldIntoAltGr(dir, down, up, code) {
+  const { seen, appWorker } = await runLoader(dir, { search: "?layout=worker" });
+  check(appWorker, "?layout=worker started no worker");
+  const fire = (type, key, altGraph) =>
+    seen.page.dispatchEvent(
+      Object.assign(new Event(type, { cancelable: true }), {
+        key,
+        code,
+        repeat: false,
+        isComposing: false,
+        shiftKey: false,
+        ctrlKey: altGraph,
+        altKey: altGraph,
+        metaKey: false,
+        getModifierState: (m) => m === "AltGraph" && altGraph,
+      }),
+    );
+  fire("keydown", down, false);
+  fire("keyup", up, true);
+  const told = appWorker.posts.filter((m) => m.type === "call" && m.method === "key" && m.args[1] === code).map((m) => m.args[2]);
+  check(told[0] === true, `the app was not told of ${code}'s press: ${JSON.stringify(told)}`);
+  check(told.at(-1) === false, `the app was never told of ${code}'s release, so egui holds it down: ${JSON.stringify(told)}`);
+}
+
+// Replays `events` on the window, each `[type, key, code, fields]`, then checks that the app was left holding nothing:
+// egui keeps a key down until a release under the name it went down by, and makes the next press of a key it holds a
+// repeat, which the app's commands skip (`keyboard/mod.rs`, `app.rs`'s undo keys).
+async function leavesNothingDown(dir, events) {
+  const { seen, appWorker } = await runLoader(dir, { search: "?layout=worker" });
+  check(appWorker, "?layout=worker started no worker");
+  for (const [type, key, code, fields = {}] of events) {
+    seen.page.dispatchEvent(
+      Object.assign(new Event(type, { cancelable: true }), {
+        key,
+        code,
+        repeat: false,
+        isComposing: false,
+        shiftKey: false,
+        ctrlKey: false,
+        altKey: false,
+        metaKey: false,
+        getModifierState: () => false,
+        ...fields,
+      }),
+    );
+  }
+  const held = new Set();
+  for (const { args } of appWorker.posts.filter((m) => m.type === "call" && m.method === "key")) {
+    if (args[2]) held.add(args[0]);
+    else held.delete(args[0]);
+  }
+  check(held.size === 0, `the app was left holding ${JSON.stringify([...held])}, so egui takes its next press for a repeat`);
+}
+
+function imeScenarios(dir) {
+  return {
+    // A key held when a composition opens: UI Events has every keyup inside a composition carry `isComposing`.
+    async key_held_into_composition() {
+      await leavesNothingDown(dir, [
+        ["keydown", " ", "Space"],
+        ["keyup", " ", "Space", { isComposing: true }],
+      ]);
+    },
+    // The key that opens a composition: its keydown comes before `compositionstart`, so it is not composing, and its
+    // keyup is. `Process` is no name egui has, so the worker falls back on the code, `KeyA`.
+    async key_opening_a_composition() {
+      await leavesNothingDown(dir, [
+        ["keydown", "Process", "KeyA"],
+        ["keyup", "a", "KeyA", { isComposing: true }],
+      ]);
+    },
+    // A held key's auto-repeat under Shift, pressed over it: a second name on one code, `1` and then `!`, egui's Num1 and
+    // Exclamationmark. Both went down.
+    async key_renamed_by_its_repeat() {
+      await leavesNothingDown(dir, [
+        ["keydown", "1", "Digit1"],
+        ["keydown", "!", "Digit1", { repeat: true, shiftKey: true }],
+        ["keyup", "!", "Digit1", { shiftKey: true }],
+      ]);
+    },
+    // Cmd+Z on a Mac: the letter's keyup never fires while Cmd is held (eframe-0.36.2 `src/web/events.rs:307-327`, its own
+    // web runner's answer to it, emilk/egui#4724), so Cmd's release has to let the letter up as well.
+    async key_under_cmd_goes_up_with_cmd() {
+      await leavesNothingDown(dir, [
+        ["keydown", "Meta", "MetaLeft", { metaKey: true }],
+        ["keydown", "z", "KeyZ", { metaKey: true }],
+        ["keyup", "Meta", "MetaLeft"],
+      ]);
+    },
+    // Space, which the Stain canvas reads while it is down.
+    async key_held_into_altgr_space() {
+      await heldIntoAltGr(dir, " ", " ", "Space");
+    },
+    // A letter, whose `key` the layer changes between its press and its release.
+    async key_held_into_altgr_letter() {
+      await heldIntoAltGr(dir, "q", "@", "KeyQ");
+    },
+    // `input` after `compositionend`, as code review 5772081382's F1 says Gecko sends it: the value is in place first.
+    async ime_compositionend_then_input() {
+      replayCommits(await imePage(dir), {
+        "compositionend, then input not composing": (page, text) => {
+          page.fire("compositionend", text, undefined, text);
+          page.fire("input", text, false);
+        },
+        "compositionend, then input still composing": (page, text) => {
+          page.fire("compositionend", text, undefined, text);
+          page.fire("input", text, true);
+        },
+      });
+    },
+    async ime_input_then_compositionend() {
+      replayCommits(await imePage(dir), {
+        // The order Chrome 155 sends, seen through CDP's Input.imeSetComposition and Input.insertText.
+        "input composing, then compositionend": (page, text) => {
+          page.fire("input", text, true, text);
+          page.fire("compositionend", text, undefined);
+        },
+        "input not composing, then compositionend": (page, text) => {
+          page.fire("input", text, false, text);
+          page.fire("compositionend", text, undefined);
+        },
+      });
+    },
+    // A cancelled composition commits nothing, and a plain deletion types nothing (each trace as Chrome 155 sent it).
+    async ime_cancel_and_delete_post_nothing() {
+      const page = await imePage(dir);
+      compose(page, "x");
+      page.fire("compositionupdate", "", undefined);
+      page.fire("input", null, true, "");
+      page.fire("compositionend", "", undefined);
+      check(page.texts().length === 0, `a cancelled composition posted ${JSON.stringify(page.texts())}`);
+      page.fire("input", null, false, "");
+      check(page.texts().length === 0, `a deletion posted ${JSON.stringify(page.texts())}`);
+    },
+  };
+}
+
+function loaderScenarios(dir) {
+  const checkMeasured = (env, layout, delay, run) => {
+    check(env, "no environment under ?measure");
+    check(env.layout === layout, `the panel's layout is ${env.layout}, not ${layout}`);
+    check(env.crossOriginIsolated === true, "crossOriginIsolated not reported");
+    check(env.sharedArrayBuffer === true, "SharedArrayBuffer not reported");
+    check(env.wasmThreads === "ok", `the probe's result: ${env.wasmThreads}`);
+    check(env.frameDelayMs === delay, `the delay flag: ${env.frameDelayMs}`);
+    check(env.run === run, `the run flag: ${env.run}`);
+    const stamps = env.idleLoopMs ?? [];
+    check(stamps.length > 10, `the idle loop has ${stamps.length} stamps`);
+    const span = stamps.at(-1) - stamps[0];
+    check(span >= 1900 && span <= 2600, `the idle loop ran ${span} ms, not 2 s`);
+  };
+  // Not being isolated is a reading, not a failure (R-649): the fields say so, and the run stays in the layout it asked for,
+  // so `fallback_reason`, which records a worker layout that failed, stays null.
+  const checkNotFailed = (published) => {
+    check(published?.status !== "failed", `a page not isolated was reported as failed: ${published?.reason}`);
+  };
+  const checkNotIsolated = (env, layout, run) => {
+    check(env, "no environment under ?measure");
+    check(env.layout === layout, `the panel's layout is ${env.layout}, not ${layout}`);
+    check(env.fallbackReason === null, `fallback_reason is ${env.fallbackReason}`);
+    check(env.crossOriginIsolated === false, `crossOriginIsolated reads ${env.crossOriginIsolated}`);
+    check(env.sharedArrayBuffer === false, `SharedArrayBuffer reads ${env.sharedArrayBuffer}`);
+    check(/^DataCloneError: /.test(env.wasmThreads), `the probe's result: ${env.wasmThreads}`);
+    check(env.run === run, `the run flag: ${env.run}`);
+    check((env.idleLoopMs ?? []).length > 10, "the idle loop did not run");
+  };
+  return {
+    async loader_not_isolated_layout_worker() {
+      const { seen, appWorker, published } = await runLoader(dir, { search: "?layout=worker&measure&run=idle", isolated: false });
+      checkNotFailed(published);
+      check(seen.main.length === 0, "not isolated, and ?layout=worker fell back to the main thread");
+      check(appWorker, "not isolated, and ?layout=worker started no worker");
+      check(seen.transferred === 1, `the canvas was transferred ${seen.transferred} times`);
+      const start = appWorker.posts.find((m) => m.type === "start");
+      checkNotIsolated(JSON.parse(start.environment), "worker", "idle");
+    },
+    async loader_not_isolated_layout_main() {
+      const { seen, appWorker, published } = await runLoader(dir, { search: "?layout=main&measure&run=pan", isolated: false });
+      checkNotFailed(published);
+      check(!appWorker, "not isolated, and ?layout=main started a worker");
+      check(seen.transferred === 0, "not isolated, and ?layout=main transferred its canvas");
+      check(seen.main.length === 1, `?layout=main started ${seen.main.length} main apps`);
+      checkNotIsolated(JSON.parse(seen.main[0]), "main", "pan");
+    },
+    async loader_layout_main() {
+      const { seen, appWorker } = await runLoader(dir, { search: "?layout=main&measure&frame_delay_ms=7&run=idle" });
+      check(!appWorker, "?layout=main started a worker");
+      check(seen.transferred === 0, "?layout=main transferred its canvas");
+      check(seen.main.length === 1, `?layout=main started ${seen.main.length} main apps`);
+      checkMeasured(JSON.parse(seen.main[0]), "main", "7", "idle");
+    },
+    async loader_layout_worker() {
+      const { seen, appWorker } = await runLoader(dir, { search: "?layout=worker&measure&run=pan" });
+      check(seen.main.length === 0, "?layout=worker started the main app");
+      check(appWorker, "?layout=worker started no worker");
+      check(seen.transferred === 1, `the canvas was transferred ${seen.transferred} times`);
+      const start = appWorker.posts.find((m) => m.type === "start");
+      checkMeasured(JSON.parse(start.environment), "worker", null, "pan");
+    },
+    async loader_layout_bad_is_refused() {
+      const { seen, appWorker, published } = await runLoader(dir, { search: "?layout=elsewhere&measure" });
+      check(published?.status === "failed", "a bad layout flag was not refused");
+      check(String(published.reason).includes("elsewhere"), `the reason: ${published.reason}`);
+      check(seen.main.length === 0 && !appWorker, "a bad layout flag started an app");
+    },
+    async loader_no_measure_no_environment() {
+      const { seen, appWorker } = await runLoader(dir, { search: "?layout=worker" });
+      check(appWorker, "no worker");
+      const start = appWorker.posts.find((m) => m.type === "start");
+      check(start.environment === null, `no ?measure, and the environment is ${start.environment}`);
+      check(seen.workers.length === 1, "no ?measure, and the threads probe ran");
+    },
+    async loader_missing_api_is_recorded() {
+      const { seen, appWorker } = await runLoader(dir, { search: "?layout=worker&measure", offscreen: false });
+      check(!appWorker, "a worker started with no OffscreenCanvas");
+      check(seen.main.length === 1, "no fallback to the main thread");
+      const env = JSON.parse(seen.main[0]);
+      check(env.layout === "main", `the layout fallen back to: ${env.layout}`);
+      check(String(env.fallbackReason).includes("OffscreenCanvas"), `the reason: ${env.fallbackReason}`);
+    },
+    async loader_no_webgpu_is_failed() {
+      const { seen, appWorker, published } = await runLoader(dir, { search: "?layout=worker&measure", gpu: false });
+      check(published?.status === "failed", "no WebGPU was not reported");
+      check(seen.main.length === 0 && !appWorker, "no WebGPU, and an app started");
+      check(published.crossOriginIsolated === true, "the failure lost the panel's fields");
+    },
+  };
+}
+
+function runnerScenarios(dir) {
+  const common = () => import(pathToFileURL(join(dir, "common.mjs")).href);
+  return {
+    async runner_args_and_url() {
+      const { parseArgs, runUrl } = await common();
+      const base = ["--url", "http://localhost:8000/", "--out", "o.json"];
+      const options = parseArgs([...base, "--layout", "main", "--frame-delay-ms", "40"]);
+      check(options.runs === "pan,idle", `the default runs: ${options.runs}`);
+      const url = new URL(runUrl(options, "idle"));
+      check(url.searchParams.has("measure"), "the run's URL has no measure flag");
+      check(url.searchParams.get("layout") === "main", `the layout flag: ${url.search}`);
+      check(url.searchParams.get("run") === "idle", `the run flag: ${url.search}`);
+      check(url.searchParams.get("frame_delay_ms") === "40", `the delay flag: ${url.search}`);
+      const plain = new URL(runUrl(parseArgs([...base, "--layout", "worker"]), "pan"));
+      check(!plain.searchParams.has("frame_delay_ms"), "a delay nobody asked for");
+      check(plain.searchParams.get("layout") === "worker", `the layout flag: ${plain.search}`);
+      for (const bad of [[...base, "--layout", "other"], [...base], ["--url", "u", "--layout", "main"]]) {
+        let threw = false;
+        try { parseArgs(bad); } catch { threw = true; }
+        check(threw, `parseArgs took ${bad}`);
+      }
+    },
+    // Isolation is a measurement, not a failure (R-649): a finished run that is not isolated is a good run, and each run
+    // keeps its own fields, as Safari's pan and idle differed (qa review 5728266391, F2).
+    async runner_each_run_keeps_its_own_isolation() {
+      const { waitForRun, writeFields } = await common();
+      const pan = { status: "done", layout: "worker", fallback_reason: null, cross_origin_isolated: true, shared_array_buffer: true, wasm_threads: "ok" };
+      const idle = {
+        status: "done",
+        layout: "worker",
+        fallback_reason: null,
+        cross_origin_isolated: false,
+        shared_array_buffer: false,
+        wasm_threads: "DataCloneError: The object can not be cloned.",
+      };
+      const got = await waitForRun(async () => idle);
+      check(got === idle, `a finished run that is not isolated came back as ${JSON.stringify(got)}`);
+      const out = join(mkdtempSync(join(tmpdir(), "qa-m8-86-")), "fields.json");
+      const code = writeFields({ url: "http://localhost/", layout: "worker", out }, "safari", { pan, idle });
+      check(code === 0, `a run that is not isolated exited ${code}`);
+      const { results } = JSON.parse(readFileSync(out, "utf8"));
+      check(results.pan.cross_origin_isolated === true && results.pan.wasm_threads === "ok", "the pan run's isolation");
+      check(
+        results.idle.cross_origin_isolated === false && results.idle.shared_array_buffer === false && results.idle.wasm_threads === idle.wasm_threads,
+        "the idle run's isolation",
+      );
+      for (const run of [results.pan, results.idle]) {
+        check(run.fallback_reason === null, `the written fallback_reason is ${run.fallback_reason}`);
+        check(run.layout === "worker", `the written layout is ${run.layout}`);
+      }
+    },
+    async runner_writes_the_fields() {
+      const { waitForRun, writeFields } = await common();
+      let reads = 0;
+      const fields = { status: "done", mean_fps: 60, layout: "worker" };
+      const read = async () => {
+        reads += 1;
+        if (reads === 1) throw new Error("the page is reloading");
+        return reads < 3 ? { status: "running" } : fields;
+      };
+      const got = await waitForRun(read);
+      check(got === fields, `the run's fields: ${JSON.stringify(got)}`);
+      const out = join(mkdtempSync(join(tmpdir(), "qa-m8-86-")), "fields.json");
+      const options = { url: "http://localhost/", layout: "worker", out };
+      check(writeFields(options, "chrome", { pan: fields, idle: fields }) === 0, "a good run did not exit 0");
+      const written = JSON.parse(readFileSync(out, "utf8"));
+      check(written.browser === "chrome" && written.layout === "worker", "the run's header");
+      check(written.results.pan.mean_fps === 60 && written.results.idle.layout === "worker", "the fields");
+      check(writeFields(options, "chrome", { pan: fields, idle: { status: "timed out" } }) === 1, "a timed-out run exited 0");
+    },
+  };
+}

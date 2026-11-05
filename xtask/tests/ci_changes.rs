@@ -3167,10 +3167,10 @@ fn check_jobs_asked(yml: &str) {
         // `changes` and `ci-quick`.
         ("a quick head", &code, true, 2),
         ("a quick head on no GPU path", &no_gpu, true, 2),
-        // The 23 jobs of full CI, and `ci-status`.
-        ("a full head", &code, false, 24),
+        // The 24 jobs of full CI, and `ci-status`.
+        ("a full head", &code, false, 25),
         // Without the three GPU suites.
-        ("a full head on no GPU path", &no_gpu, false, 21),
+        ("a full head on no GPU path", &no_gpu, false, 22),
         // `changes`, `ci-workspace` and the five gates.
         ("a docs head", &docs, false, 7),
     ] {
