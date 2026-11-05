@@ -2685,8 +2685,11 @@ negative_control!(
     })
 );
 
-/// A NaN is no mass (chart_reference §2.1, each mass "to within `ε_μ`"): a NaN mass control or `μ_max` realises nothing
-/// and offers no warped chart, under either link. `realised` is the test applied.
+/// A NaN is no mass (chart_reference §2.1, each mass "to within `ε_μ`"): wherever a NaN reaches a mass the chart reads,
+/// that mass is not realised, and warped, a NaN mass at `z₀` offers no chart. A NaN `μ_max` reaches `softmax_tanh` alone,
+/// `stick_breaking` reading no parameter. `stick_breaking` at `z = (0, NaN)`, bodies `(1, 2)`, holds a finite `m_0 = 0.5`
+/// and writes both NaN controls over, so its linear rows are real systems: realised, while the warped chart is refused.
+/// `realised` is the test applied.
 fn check_nan(realised: Realised) {
     let p = LinkParams::DEFAULT;
     let asked = [1.0e-3, 1.0e3];
@@ -2729,6 +2732,32 @@ fn check_nan(realised: Realised) {
         )
         .is_none(),
         "stick_breaking offers a chart at a NaN mass control"
+    );
+    let chart = MixedMassRatio::<Alpha, Stick, f64>::new(
+        frozen,
+        [0.2, 1.3],
+        asked,
+        bodies,
+        Mapping::Linear,
+        &p,
+    )
+    .expect("the chart");
+    assert!(
+        chart.held == 0.5 && chart.realised(1.0, &p),
+        "a linear row at a finite held mass and a NaN swept control is not realised"
+    );
+    let frozen = [0.3, -0.5, 0.2, -0.1, 0.15, 0.05, 0.0, 0.0];
+    assert!(
+        MixedMassRatio::<Alpha, Stick, f64>::new(
+            frozen,
+            [0.2, 1.3],
+            asked,
+            bodies,
+            Mapping::Warped,
+            &mu_nan
+        )
+        .is_some(),
+        "stick_breaking reads no μ_max, yet a NaN one refuses its chart"
     );
 }
 
