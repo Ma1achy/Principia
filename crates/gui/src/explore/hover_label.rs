@@ -71,9 +71,12 @@ pub fn placed(figure: Rect, cursor: Pos2, size: egui::Vec2) -> Rect {
     )
 }
 
-/// Draws the label `text` beside `cursor`, inside `figure`, above the figure's layer.
+/// Draws the label `text` beside `cursor`, above the figure's layer, inside `figure`, what shows of the figure, and
+/// clipped to it: a strip shorter than the label cuts it, as the layer is above the console that covers the rest.
 pub fn show(ctx: &egui::Context, figure: Rect, cursor: Pos2, text: String) {
-    let painter = ctx.layer_painter(LayerId::new(Order::Foreground, Id::new("hover label")));
+    let painter = ctx
+        .layer_painter(LayerId::new(Order::Foreground, Id::new("hover label")))
+        .with_clip_rect(figure);
     let font = egui::FontId::monospace(12.0);
     let galley = painter.layout(text, font, Color32::WHITE, MAX_WIDTH);
     let rect = placed(

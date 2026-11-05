@@ -37,12 +37,15 @@ exclude_globs = [
 # as strict as with the whole workspace's tests.
 test_tool = "nextest"
 
-# The per-mutant timeout (R-348; REQ-VAL-180, confirmed by the human at the M0 gate, R-376, R-71):
+# The per-mutant timeout (R-348; REQ-VAL-180, confirmed by the human at the M0 gate, R-376, R-71; amended by the owner's
+# order of 5 Nov 2026, R-712, whose multiplier of 3 supersedes R-376's 2.0):
 # a mutant whose tests run past it is recorded as a timeout, not a survivor (R-202), and the run goes on to its next
-# mutant. cargo-mutants sets it from the unmutated baseline's test time: `timeout_multiplier` times that time, but no
-# less than `minimum_test_timeout` seconds. Every run reads it here: the per-PR shards (`mutants.yml`), the nightly
-# full run (TASK-M0-19) and a local run, on Linux or macOS (R-352).
-timeout_multiplier = 2.0
+# mutant. It comes from the unmutated baseline's measured test time: `timeout_multiplier` times that time, but no less
+# than `minimum_test_timeout` seconds. Every run reads it here: the nightly full run (TASK-M0-19) and a local run, on
+# Linux or macOS (R-352), through cargo-mutants, which measures its own baseline; the per-PR shards (`mutants.yml`)
+# through `cargo xtask mutants-timeout`, from the one baseline `mutants-baseline` measures for all eight, each shard
+# having skipped its own: a shard of PR #360 spent 5064-5554 s of its 300 minutes on it (run 41957362447).
+timeout_multiplier = 3.0
 minimum_test_timeout = 60
 
 # The per-process memory cap on the test processes (R-348; REQ-VAL-181, confirmed by the human at the M0 gate, R-376,

@@ -177,6 +177,12 @@ def runs_on_prs(wf):
     return (isinstance(on, dict) and "pull_request" in on) or on == "pull_request" or \
         (isinstance(on, list) and "pull_request" in on)
 
+QUICK_GATE = "always() && needs.changes.outputs.quick != 'true'"
+
+def bears(job, jid):
+    name, only = str(job.get("name", jid)), ((job.get("strategy") or {}).get("matrix") or {}).get("check")
+    return str(only[0]) if name == "${{ matrix.check }}" and isinstance(only, list) and len(only) == 1 else name
+
 def report(args):
     files, names, action = json.loads(args[0]), json.loads(args[1]), args[2]
     wfs = [(f, load(f)) for f in files]
@@ -184,7 +190,7 @@ def report(args):
     problems = []
     for name in names:
         bearers = [(f, wf, jid, job) for f, wf in wfs for jid, job in (wf.get("jobs") or {}).items()
-                   if str(job.get("name", jid)) == name]
+                   if bears(job, jid) == name]
         if len(bearers) != 1:
             problems.append("`%s` is borne by %d jobs of the pull-request workflows, not one" % (name, len(bearers)))
             continue
@@ -202,7 +208,8 @@ def report(args):
                 problems.append("`%s` on `%s`: %s runs neither on it nor on every new head" % (name, action, f))
             continue
         cond = job.get("if")
-        if not ((cond is None and not needs_of(job)) or str(cond).strip() == "always()"):
+        # R-684: `ci.yml`'s gates skip on a quick run alone, under their raw `name:`, and report on any other.
+        if not ((cond is None and not needs_of(job)) or str(cond).strip() in ("always()", QUICK_GATE)):
             problems.append("`%s` on `%s`: %s's job `%s` can be skipped (if: %s)" % (name, action, f, jid, cond))
     print(json.dumps(problems))
 

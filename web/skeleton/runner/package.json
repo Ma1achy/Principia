@@ -1,0 +1,16 @@
+{
+  "name": "principia-web-skeleton-runner",
+  "private": true,
+  "type": "module",
+  "description": "The browser runner of the v1 web skeleton (TASK-M8-86): TASK-M8-96 measures with these scripts.",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "serve": "node serve.mjs",
+    "chrome": "node chrome.mjs",
+    "safari": "node safari.mjs"
+  },
+  "dependencies": {
+    "@playwright/test": "1.64.1",
+    "selenium-webdriver": "4.52.0"
+  }
+}

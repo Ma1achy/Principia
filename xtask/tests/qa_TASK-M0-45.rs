@@ -296,6 +296,11 @@ fn gate<'a>(jobs: &'a [Job], check: &str) -> (&'a Job, String) {
     let found: Vec<&Job> = jobs
         .iter()
         .filter(|j| match j.own("name") {
+            // R-684: a gate is named by its one-value matrix, so a quick run's skip reports no required name.
+            Some(name) if name == "${{ matrix.check }}" => j
+                .lines
+                .iter()
+                .any(|l| l.trim() == format!("check: [{check}]")),
             Some(name) => name == check,
             // A matrix job reports one check per shard, `<id> (<k>)`, never `<id>`.
             None => j.id == check && j.shards().is_none(),
@@ -343,7 +348,7 @@ fn check_gate(workflow: &str, check: &str, gathers: &[&str]) {
     }
     assert_eq!(
         job.own("if").as_deref(),
-        Some("always()"),
+        Some("always() && needs.changes.outputs.quick != 'true'"),
         "the check `{check}` (job `{}`) can be skipped when a job it gathers fails",
         job.id
     );
@@ -390,8 +395,8 @@ negative_control!(
     expected = "does not gather job `ci-checks`",
     check_gate(
         &the_workflow().replace(
-            "needs: [ci, ci-checks, ci-workspace]",
-            "needs: [ci, ci-workspace]"
+            "needs: [ci, ci-checks, ci-workspace,",
+            "needs: [ci, ci-workspace,"
         ),
         "ci",
         &["ci", "ci-checks", "ci-workspace"]
@@ -409,7 +414,7 @@ negative_control!(
     "the checked-in workflow with the ci check gathering the shards and the checks, not `ci-workspace`",
     expected = "does not gather job `ci-workspace`",
     check_gate(
-        &the_workflow().replace("needs: [ci, ci-checks, ci-workspace]", "needs: [ci, ci-checks]"),
+        &the_workflow().replace("needs: [ci, ci-checks, ci-workspace,", "needs: [ci, ci-checks,"),
         "ci",
         &["ci", "ci-checks", "ci-workspace"]
     )
@@ -431,7 +436,14 @@ negative_control!(
         let at = workflow.find("\n  xtask-ci-gate:\n").expect("no xtask-ci-gate job");
         let (head, tail) = workflow.split_at(at);
         check_gate(
-            &format!("{head}{}", tail.replacen("    if: always()\n", "", 1)),
+            &format!(
+                "{head}{}",
+                tail.replacen(
+                    "    if: always() && needs.changes.outputs.quick != 'true'\n",
+                    "",
+                    1
+                )
+            ),
             "xtask-ci",
             &["xtask-ci"],
         )

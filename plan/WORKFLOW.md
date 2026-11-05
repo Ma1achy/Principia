@@ -36,7 +36,7 @@ with `scripts/cloud-setup.sh`) is in `plan/OPERATIONS.md` (R-346).
   PRs and at the gates; from M8 the Playwright browser suite nightly, on GUI and colour PRs and at each gate, and the
   aggregate survey nightly and before release (R-134). GPU CI runs on GitHub-hosted runners (R-186): lavapipe
   (`mesa-vulkan-drivers`) on `ubuntu-24.04`, pinned (R-375), and `macos-15` (Apple silicon, paravirtual Metal) for the Metal
-  correctness suites only, both on every commit. There is no self-hosted runner, and lavapipe satisfies M4's two-backend check, and a real
+  correctness suites only, both on every commit. The one self-hosted runner is R-711's, for measurements only and in no required job, and lavapipe satisfies M4's two-backend check, and a real
   non-Metal GPU gates Paper 2 (R-58). A red CI blocks review.
 - The workflows (R-177): `ci.yml` on every push; `nightly.yml` (scheduled) runs the CPU and lavapipe suites and, from M8, the survey, not benchmarks (R-186);
   `screenshot.yml` on GUI PRs, which are PRs touching `crates/gui/**` or `docs/gui/**`; `gate.yml` (`workflow_dispatch`,
@@ -145,7 +145,9 @@ pinned version.)
    Reviewers never share a checkout: each gets its own git worktree at the PR head and its own `CARGO_TARGET_DIR`,
    which the orchestrator makes before dispatch and removes afterwards (R-219).
    A reviewer runs the acceptance commands and the tests the diff touches plus their dependents, and checks CI is green
-   on the head for the full suite; a full local run is only for a cross-cutting change (R-229).
+   on the head for the full suite; a full local run is only for a cross-cutting change (R-229). Before `merge-ready`, a
+   code head's green is the quick tier's, the full-only checks pending; the full suite then runs on the approved head
+   (R-684; `plan/OPERATIONS.md` § "What CI runs on a pull request").
 3. **Findings cite file and line** — of the diff, or of the doc section a finding rests on (`file` § "section"). A
    finding without a citation isn't actionable and is returned to its author.
 4. **The implementer fixes** each finding and replies on the finding with the fixing commit.

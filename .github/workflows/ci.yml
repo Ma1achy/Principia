@@ -47,11 +47,31 @@
 #   `.claude/` and the root's markdown: `ci-workspace` runs only the cheap checks, the plan checks and the vocabulary
 #   lint (`no-atlas-params.yml`, the atlas guard, runs on every pull request).
 # A data or docs change (`docs_only`, its name R-656's) skips `ci-archive` and the `ci` shards, `ci-checks`,
-# `ci-release-archive` and its shards, and `xtask-ci`'s shards; it and a code change to no GPU-path file (only
-# `crates/gui/` and `crates/prin/` beside data and docs) skip the GPU suites' jobs, `gpu-kernel`, `gpu-metal` and
-# `gpu-lavapipe`.
-# The required checks still report, under their own names, and conclude success: each is a gate that runs whatever
-# the jobs it gathers ended in (`ci`, `xtask-ci`, and the GPU suites' gates, which carry the names `gpu-kernel`,
+# `web-skeleton`, `ci-release-archive` and its shards, and `xtask-ci`'s shards; it and a code change to no GPU-path
+# file (only `crates/gui/` and `crates/prin/` beside data and docs) skip the GPU suites' jobs, `gpu-kernel`,
+# `gpu-metal` and `gpu-lavapipe`.
+# Where a code head runs, CI's two code tiers (R-684). R-677's classifier applies first, so a data or docs head runs
+# neither. A code pull request's head runs the quick tier: one job, `ci-quick`, running fmt, clippy, the build, and the
+# tests of the changed crates and their reverse dependencies (`.github/scripts/ci_quick_crates.py`). It runs full CI, the
+# jobs above and the GPU suites where the GPU-path rule applies, once it carries the `merge-ready` label, the trigger
+# mutants uses (R-676), and every push to `main` does. This workflow runs on no label change: of each workflow's runs on
+# a head, branch protection counts only the latest run's check suite (R-678), so another label's run would supersede the
+# suite holding the required checks. `ci-full.yml` re-runs the head's run when `merge-ready` goes on, a new attempt of
+# the same run, in the same suite, on the same merge commit, and the `changes` job of that attempt, reading the live
+# label, says full (`.github/scripts/ci_tier.sh`). On a quick run `changes` passes on `docs_only` true, which R-677 reads
+# "runs no full CI", and `gpu` false, so every full-only job skips exactly as on a docs head, and `quick` true, on which
+# `ci-workspace` and the gates skip too; `ci-quick` runs that tier's `ci-workspace` tests itself.
+# A quick run reports no required check that only the full tier reports (`ci`, `xtask-ci` and the three GPU gates), so a
+# skip cannot pass one: each gate is named by a one-value matrix, `${{ matrix.check }}`, and a job skipped at job level
+# never expands its `name:`. A name that is wholly an expression reports that expression, `matrix.check` (run
+# 41972273540: five of `matrix.check|skipped`); a mixed one stays raw (run 41828315009:
+# `xtask-ci (${{ matrix.shard }})|skipped`). Until the full tier runs, branch protection reads each as expected, and `changes` also posts each pending as a commit status
+# on the head, which `ci-status` closes when the full tier ends. So no pull request merges until the full suite has
+# passed on its exact head. R-684's rationale: since R-676 a fix round is verified locally through the job queue, so
+# full CI on intermediate heads duplicated that work; the guarantee that `main` only receives fully-tested heads stands.
+#
+# On a full, data or docs run the required checks still report, under their own names, and conclude success: each is a
+# gate that runs whatever the jobs it gathers ended in (`ci`, `xtask-ci`, and the GPU suites' gates, which carry the names `gpu-kernel`,
 # `gpu-metal` and `gpu-lavapipe`, the suites' jobs being named `<id> suites`), and passes a gathered job that was
 # skipped only when the classification ran and skipped it. A matrix job is named `<id> (<shard>)`, so a skipped one
 # never reports a bare required name.
@@ -98,9 +118,10 @@ env:
   # No incremental state, the owner's CI setting (PR #394), in every workflow like R-374's values. `Swatinem/rust-cache`
   # already exports CARGO_INCREMENTAL=0 to the steps after it, and before it computes its key, so its key and every
   # build after it are the same without this line. What the line adds: the value in the steps before rust-cache, where
-  # no cargo build runs and `ci.yml`'s `cachekey` hashes it, and in jobs without rust-cache, where only `ci.yml`'s
-  # `ci-release` runs cargo and it builds only for the release doctests, which aren't incremental by default. Local
-  # builds are unaffected (R-233).
+  # no cargo build runs and `ci.yml`'s `cachekey` hashes it, and in jobs without rust-cache, where two run cargo:
+  # `ci.yml`'s `ci-release`, which builds only for the release doctests, which aren't incremental by default, and
+  # `pages.yml`'s `build`, where it turns off incremental state for the dev-profile build of xtask that `cargo xtask
+  # web-skeleton` starts. Local builds are unaffected (R-233).
   CARGO_INCREMENTAL: "0"
 
 jobs:
@@ -108,15 +129,29 @@ jobs:
   # data or docs change, which runs no full CI; `gpu`, false when no changed path is a GPU path; and `plan_data` and
   # `gui_data`, which of tier (b)'s data it changes (`scripts/ci_changes.sh`, which holds the lists).
   # Every other run, on `main` among them, is code: everything runs. The jobs below skip on its verdict, and the
-  # gates read it.
+  # gates read it. Then the code tier of this run (R-684; `.github/scripts/ci_tier.sh decide`): `quick`, true on a code
+  # pull-request head that is not merge-ready, with `packages`, the `-p` arguments of its tests, `doc_packages`, those
+  # with a library, and `workspace_tests`, whether those include the `ci-workspace` profile's; `docs_only` and `gpu`, the
+  # classifier's, or true and false on a quick run, which runs no full CI; and `report`, whether `ci-status` closes the
+  # commit statuses this job opened.
+  # `pull-requests: read` for the live label, `statuses: write` for those statuses.
   changes:
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pull-requests: read
+      statuses: write
     outputs:
       tier: ${{ steps.changes.outputs.tier }}
-      docs_only: ${{ steps.changes.outputs.docs_only }}
-      gpu: ${{ steps.changes.outputs.gpu }}
+      docs_only: ${{ steps.tier.outputs.docs_only }}
+      gpu: ${{ steps.tier.outputs.gpu }}
       plan_data: ${{ steps.changes.outputs.plan_data }}
       gui_data: ${{ steps.changes.outputs.gui_data }}
+      quick: ${{ steps.tier.outputs.quick }}
+      packages: ${{ steps.tier.outputs.packages }}
+      doc_packages: ${{ steps.tier.outputs.doc_packages }}
+      workspace_tests: ${{ steps.tier.outputs.workspace_tests }}
+      report: ${{ steps.tier.outputs.report }}
     steps:
       - uses: actions/checkout@v4
       # The field check of `plan/requirements.yaml` (`scripts/ci_req_fields.py`) parses it with PyYAML; without it the
@@ -129,6 +164,30 @@ jobs:
       - name: scripts/ci_changes.sh detect
         id: changes
         run: scripts/ci_changes.sh detect
+      - name: .github/scripts/ci_tier.sh decide
+        id: tier
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          ACTION: ${{ github.event.action }}
+          PR: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          TIER: ${{ steps.changes.outputs.tier }}
+          DOCS_ONLY: ${{ steps.changes.outputs.docs_only }}
+          GPU: ${{ steps.changes.outputs.gpu }}
+        run: .github/scripts/ci_tier.sh decide
+
+  # The quick tier, one job (R-684): the whole of what a code pull-request head runs before `merge-ready`, beside
+  # `changes`, so that head asks for as few jobs as the ruling allows. A workflow of its own, called here, because it never
+  # runs on a push to `main`, so it saves no cache and restores the keys this workflow's jobs save (R-337).
+  ci-quick:
+    needs: changes
+    if: needs.changes.outputs.quick == 'true'
+    uses: ./.github/workflows/ci-quick.yml
+    with:
+      packages: ${{ needs.changes.outputs.packages }}
+      doc_packages: ${{ needs.changes.outputs.doc_packages }}
+      workspace_tests: ${{ needs.changes.outputs.workspace_tests }}
 
   # The workspace's tests, built once for the `ci` shards (R-372, REQ-SYS-078): `cargo nextest archive` builds every
   # test binary of the one feature set the shards run, the default, and writes them, with what running them needs (the
@@ -350,13 +409,14 @@ jobs:
   # which carries no cargo build state, each would rebuild the workspace in its shard while holding every test thread.
   # On a data or docs pull request (R-656, R-662, R-677) it runs the cheap checks in their place, the one test job such
   # a pull request runs: the plan checks and the vocabulary lint, and on a data one the tests that read what it changed.
-  # It passes the classification on to the gate `ci`.
+  # It passes the classification on to the gate `ci`. Skipped on a quick run (R-684), whose `ci-quick` runs these tests.
   ci-workspace:
     runs-on: ubuntu-24.04
     env:
       PRIN_GPU_BACKEND: vulkan
       RUNNER_DISK_TMPFS: /dev/shm
     needs: changes
+    if: needs.changes.outputs.quick != 'true'
     outputs:
       docs_only: ${{ needs.changes.outputs.docs_only }}
     steps:
@@ -555,15 +615,48 @@ jobs:
       - name: cargo xtask deps
         run: cargo xtask deps
 
+  # The v1 web skeleton's wasm build, build only, so a later change that breaks it is seen (TASK-M8-86, applied per
+  # R-369): the command `cargo xtask web-skeleton` builds with, in its debug profile; the wasm-bindgen step and the deploy
+  # are pages.yml's, by hand (R-627). Not gathered by the required check `ci`, as `gpu-kernel` is not. Skipped on a
+  # data or docs pull request (R-656, R-677).
+  web-skeleton:
+    needs: changes
+    if: needs.changes.outputs.docs_only != 'true'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: rustup toolchain install (rust-toolchain.toml)
+        run: rustup toolchain install && rustup target add wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+        with:
+          prefix-key: cargo-registry
+          shared-key: web-skeleton
+          cache-targets: "false"
+          cache-bin: "false"
+          save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+      # Every dependency without debug info, as a cargo config in the runner's CARGO_HOME; the workspace's own crates
+      # keep R-374's line tables (`.github/actions/cargo-ci-config`).
+      - name: Dependencies without debug info, every profile
+        uses: ./.github/actions/cargo-ci-config
+      - name: cargo rustc -p gui (wasm32, the web feature)
+        run: cargo rustc -p gui --lib --locked --target wasm32-unknown-unknown --features web --crate-type cdylib
+
   # The required check `ci` (R-266): every `ci` shard, `ci-checks` and `ci-workspace` passed. It runs whatever they
   # ended in (`always()`), so a failed or cancelled job turns it red rather than skipping it. R-656: a skipped job
   # passes only on a data or docs pull request (R-677), which `ci-workspace`, having run its checks, passes on
   # (DOCS_ONLY); if the classification failed, `ci-workspace` was skipped and passes nothing on, so the skips turn it
   # red.
+  # On a quick run this gate and the four below skip (R-684), so that run asks for none of them, and each is named by a
+  # one-value matrix: skipped at job level, GitHub reports it as `matrix.check` (run 41972273540), never under a required
+  # name, so a skip here cannot read as a pass. It needs `changes` for that `if:`; `quick` reads empty if the
+  # classification failed, and the gate runs and fails.
   ci-gate:
-    name: ci
-    needs: [ci, ci-checks, ci-workspace]
-    if: always()
+    name: ${{ matrix.check }}
+    needs: [ci, ci-checks, ci-workspace, changes]
+    if: always() && needs.changes.outputs.quick != 'true'
+    strategy:
+      matrix:
+        check: [ci]
     runs-on: ubuntu-24.04
     steps:
       - name: every job it gathers passed
@@ -841,9 +934,12 @@ jobs:
   # The required check `gpu-kernel` (R-656): `gpu-kernel`'s suites passed, or were skipped because the
   # classification found no GPU-path file in the pull request's change. It runs whatever they ended in (`always()`).
   gpu-kernel-gate:
-    name: gpu-kernel
+    name: ${{ matrix.check }}
     needs: [changes, gpu-kernel]
-    if: always()
+    if: always() && needs.changes.outputs.quick != 'true'
+    strategy:
+      matrix:
+        check: [gpu-kernel]
     runs-on: ubuntu-24.04
     steps:
       - name: the suites passed, or the change has no GPU-path file
@@ -973,9 +1069,12 @@ jobs:
   # The required check `xtask-ci` (R-266): every `xtask-ci` shard passed, as `ci-gate` gathers `ci`'s. R-656: the
   # shards may be skipped only when the classification ran and found a data or docs pull request (DOCS_ONLY, R-677).
   xtask-ci-gate:
-    name: xtask-ci
+    name: ${{ matrix.check }}
     needs: [xtask-ci, changes]
-    if: always()
+    if: always() && needs.changes.outputs.quick != 'true'
+    strategy:
+      matrix:
+        check: [xtask-ci]
     runs-on: ubuntu-24.04
     steps:
       - name: every job it gathers passed
@@ -1111,9 +1210,12 @@ jobs:
   # The required check `gpu-metal` (R-656): `gpu-metal`'s suites passed, or were skipped because the
   # classification found no GPU-path file in the pull request's change. It runs whatever they ended in (`always()`).
   gpu-metal-gate:
-    name: gpu-metal
+    name: ${{ matrix.check }}
     needs: [changes, gpu-metal]
-    if: always()
+    if: always() && needs.changes.outputs.quick != 'true'
+    strategy:
+      matrix:
+        check: [gpu-metal]
     runs-on: ubuntu-24.04
     steps:
       - name: the suites passed, or the change has no GPU-path file
@@ -1234,9 +1336,12 @@ jobs:
   # The required check `gpu-lavapipe` (R-656): `gpu-lavapipe`'s suites passed, or were skipped because the
   # classification found no GPU-path file in the pull request's change. It runs whatever they ended in (`always()`).
   gpu-lavapipe-gate:
-    name: gpu-lavapipe
+    name: ${{ matrix.check }}
     needs: [changes, gpu-lavapipe]
-    if: always()
+    if: always() && needs.changes.outputs.quick != 'true'
+    strategy:
+      matrix:
+        check: [gpu-lavapipe]
     runs-on: ubuntu-24.04
     steps:
       - name: the suites passed, or the change has no GPU-path file
@@ -1244,3 +1349,27 @@ jobs:
           RESULTS: ${{ join(needs.*.result, ' ') }}
           NO_GPU: ${{ needs.changes.result == 'success' && needs.changes.outputs.gpu == 'false' }}
         run: for r in $RESULTS; do [ "$r" = success ] || { [ "$r" = skipped ] && [ "$NO_GPU" = true ]; } || { echo "a job gpu-lavapipe gathers ended $r"; exit 1; }; done
+
+  # The commit statuses `changes` opened on a code pull-request head, closed from the five gates' results (R-684), on the
+  # full tier only. A required check and a commit status of one name are both required, so this runs whatever the gates
+  # ended in. Never on a quick run, whose statuses stay pending, or a docs or data head, which has none.
+  ci-status:
+    needs: [changes, ci-gate, xtask-ci-gate, gpu-kernel-gate, gpu-metal-gate, gpu-lavapipe-gate]
+    if: always() && needs.changes.outputs.report == 'true'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      statuses: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: .github/scripts/ci_tier.sh report
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          RESULT_ci: ${{ needs.ci-gate.result }}
+          RESULT_xtask_ci: ${{ needs.xtask-ci-gate.result }}
+          RESULT_gpu_kernel: ${{ needs.gpu-kernel-gate.result }}
+          RESULT_gpu_metal: ${{ needs.gpu-metal-gate.result }}
+          RESULT_gpu_lavapipe: ${{ needs.gpu-lavapipe-gate.result }}
+        run: .github/scripts/ci_tier.sh report

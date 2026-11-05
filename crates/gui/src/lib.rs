@@ -3,13 +3,19 @@
 //! or the real engine's data contract. The `mock` feature only chooses the engine the binary runs (RQ-252).
 
 pub mod app;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod bench;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod capture;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod cli;
 pub mod clock;
 pub mod explore;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod headless;
 pub mod keyboard;
 pub mod layout;
+pub mod measure;
 pub mod settings;
 pub mod side;
 pub mod stain;
@@ -17,6 +23,11 @@ pub mod theme;
 pub mod windows;
 
 pub mod mock;
+
+/// The wasm entry of the v1 web skeleton (TASK-M8-86, R-627).
+#[cfg(all(feature = "web", target_arch = "wasm32"))]
+#[cfg_attr(test, mutants::skip)]
+pub mod web;
 
 #[cfg(test)]
 mod tests {
@@ -29,11 +40,15 @@ mod tests {
     mod compass_position_gauge;
     mod compass_support;
     mod conformance;
+    mod console_open_close;
     mod degenerate_tilt_guards;
     mod f3_fallback_mock;
     mod f3_fill_modes;
     mod f3_fills_window_mock;
     mod f3_toggle_mock;
+    mod frame_window_stats;
+    mod measure_display;
+    mod measure_panel;
     mod mock_axis_labels;
     mod mock_compass;
     mod mock_compass_cube;
@@ -43,6 +58,7 @@ mod tests {
     mod mock_compass_steer_physical;
     mod mock_compass_view_keys;
     mod mock_compass_views;
+    mod mock_console_height;
     mod mock_console_keys;
     mod mock_content;
     mod mock_cube_axis_buttons;

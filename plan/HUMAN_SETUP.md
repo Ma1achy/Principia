@@ -6,15 +6,15 @@ The build assumes these are in place. The agent can't do them, except where note
 
 CI runs on GitHub-hosted runners: `ubuntu-24.04`, pinned by R-375 (CPU suites, lavapipe), and `macos-15` (Metal
 correctness suites).
-There is no self-hosted runner to register. Benchmarks and performance gates run on your own Mac via `prin profile`, at
+One self-hosted runner is approved, `malachys-pc-rtx2080s` on your PC, for measurements only (R-711); no other is registered. Benchmarks and performance gates run on your own Mac via `prin profile`, at
 milestone gates and on demand. If the first Metal check on `macos-15` fails or is flaky, the build stops with a
 REVIEW_QUEUE entry proposing a self-hosted runner. The agent then scripts its setup for your approval.
 
 ## 1. Outside-contributor approval (R-174, R-186)
 
 The repository is public. In **Settings → Actions → General → Fork pull request workflows from outside
-collaborators**, choose **"Require approval for all outside collaborators"**. (R-174's same-repository `if:` guard is
-dormant while there is no self-hosted runner, R-186; the approval setting still applies.)
+collaborators**, choose **"Require approval for all outside collaborators"**. (R-711 bars every pull-request trigger on its
+one self-hosted runner, in place of R-174's same-repository `if:` guard; the approval setting still applies.)
 
 ## 2. Branch protection on `main` (R-175, R-177)
 

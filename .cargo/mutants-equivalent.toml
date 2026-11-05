@@ -44,10 +44,6 @@ mutant = "crates/render/src/pipeline_cache.rs:503:48: replace | with ^ in frame_
 justification = "UNIFORM and COPY_DST are distinct single-bit wgpu::BufferUsages flags, so their ^ is their |"
 
 [[equivalent]]
-mutant = "crates/gui/src/explore/top_bar.rs:23:5: replace overlays_on -> u32 with 0"
-justification = "Overlays has no field yet (the overlay set has no toggle until its task, RQ-249), so the function's body is the constant 0 the mutant returns"
-
-[[equivalent]]
 mutant = "crates/validation/src/golden_scene.rs:238:32: replace | with ^ in d_min_samples"
 justification = "w & 0xffff has bits 0..16 only and F16_QNAN << 16 bits 16..32 only, so their ^ is their |"
 
@@ -72,32 +68,16 @@ mutant = "crates/engine/src/contract/conformance.rs:186:17: replace + with - in 
 justification = "shifted only builds the navigation case's target values, by a non-zero offset d; x - d differs from x exactly when x + d does, so the case moves every field it edits either way and passes and fails on the same engines"
 
 [[equivalent]]
-mutant = "crates/gui/src/explore/compass.rs:103:35: replace / with * in plane_frame"
-justification = "Z0_HALF_RANGE is 1.0, so z / 1.0 and z * 1.0 are the same value for every z"
-
-[[equivalent]]
-mutant = "crates/gui/src/explore/compass.rs:292:59: replace | with ^ in draw"
-justification = "the guard above has just checked i & (1 << b) == 0, and with that bit clear i ^ (1 << b) equals i | (1 << b)"
-
-[[equivalent]]
-mutant = "crates/gui/src/explore/manifold_view/mod.rs:795:20: replace * with / in adjust"
+mutant = "crates/gui/src/explore/manifold_view/mod.rs:961:20: replace * with / in adjust"
 justification = "Z0_HALF_RANGE is 1.0, so 2.0 * 1.0 and 2.0 / 1.0 are both 2.0 (TASK-M6-38 moved the line from 551)"
 
 [[equivalent]]
-mutant = "crates/gui/src/explore/manifold_view/mod.rs:805:57: replace * with / in adjust"
+mutant = "crates/gui/src/explore/manifold_view/mod.rs:971:57: replace * with / in adjust"
 justification = "Q_HALF_RANGE is 1.0, so (range * 2.0) * 1.0 and (range * 2.0) / 1.0 are the same value (TASK-M6-38 moved the line from 562)"
 
 [[equivalent]]
-mutant = "crates/gui/src/explore/compass.rs:1104:41: replace * with / in adjust"
+mutant = "crates/gui/src/explore/compass.rs:1496:41: replace * with / in adjust"
 justification = "Z0_HALF_RANGE is 1.0 (crates/gui/src/explore/manifold_view/mod.rs:56), so x * Z0_HALF_RANGE and x / Z0_HALF_RANGE are equal for every x (TASK-M6-38 moved the line from 1052)"
-
-[[equivalent]]
-mutant = "crates/gui/src/explore/compass.rs:183:41: replace * with / in slice_by_drag"
-justification = "Z0_HALF_RANGE is 1.0 (manifold_view::Z0_HALF_RANGE, a const), and x * 1.0 == x / 1.0 for every f64, so the drag's move is the same value"
-
-[[equivalent]]
-mutant = "crates/gui/src/explore/compass.rs:234:41: replace * with / in adjust"
-justification = "Z0_HALF_RANGE is 1.0 (manifold_view::Z0_HALF_RANGE, a const), and 2.0 * 1.0 == 2.0 / 1.0, so the slice arrow's step is the same value"
 
 [[equivalent]]
 mutant = "crates/kernel/src/canon.rs:259:18: replace / with % in wide"
@@ -116,44 +96,40 @@ mutant = "crates/kernel/src/canon.rs:342:10: replace < with <= in mirror_decisio
 justification = "c.m is ±0 only for c = 0, at the zero exponent, so left = m2*c^2 is 0 at the least exponent and wide_greater(left, right) is false: the mirror is not taken either way"
 
 [[equivalent]]
-mutant = "crates/gui/src/explore/compass.rs:268:34: replace / with * in point_of"
-justification = "Z0_HALF_RANGE is 1.0 (crates/gui/src/explore/manifold_view/mod.rs:52), so x / Z0_HALF_RANGE and x * Z0_HALF_RANGE are equal for every x"
+mutant = "crates/gui/src/explore/compass.rs:314:34: replace / with * in point_of"
+justification = "Z0_HALF_RANGE is 1.0 (crates/gui/src/explore/manifold_view/mod.rs:56), so x / Z0_HALF_RANGE and x * Z0_HALF_RANGE are equal for every x"
 
 [[equivalent]]
-mutant = "crates/gui/src/explore/compass.rs:325:64: replace > with >= in cross_section"
+mutant = "crates/gui/src/explore/compass.rs:371:64: replace > with >= in cross_section"
 justification = "da == 0.0 already has da.abs() <= ON_PLANE, which skips the edge before (da > 0.0) is read, so da > 0.0 and da >= 0.0 agree wherever it is read"
 
 [[equivalent]]
-mutant = "crates/gui/src/explore/compass.rs:325:78: replace > with >= in cross_section"
+mutant = "crates/gui/src/explore/compass.rs:371:78: replace > with >= in cross_section"
 justification = "db == 0.0 already has db.abs() <= ON_PLANE, which skips the edge before (db > 0.0) is read, so db > 0.0 and db >= 0.0 agree wherever it is read"
 
 [[equivalent]]
-mutant = "crates/gui/src/explore/compass.rs:331:21: replace < with <= in cross_section"
+mutant = "crates/gui/src/explore/compass.rs:377:21: replace < with <= in cross_section"
 justification = "only a 3-point result is affected, returned in edge order rather than by angle: any order of three points is the same triangle, drawn and compared (same_cycle) alike"
 
 [[equivalent]]
-mutant = "crates/gui/src/explore/compass.rs:331:21: replace < with == in cross_section"
+mutant = "crates/gui/src/explore/compass.rs:377:21: replace < with == in cross_section"
 justification = "only a result of three points or fewer is affected, returned unsorted rather than sorted by angle: an empty list, one point, the same segment either way round, or the same triangle in either winding, drawn and compared (same_cycle) alike"
 
 [[equivalent]]
-mutant = "crates/gui/src/explore/compass.rs:371:16: replace > with >= in clip"
+mutant = "crates/gui/src/explore/compass.rs:417:16: replace > with >= in clip"
 justification = "den == 0.0 has already continued the loop two lines above, so den > 0.0 and den >= 0.0 agree wherever it is read"
 
 [[equivalent]]
-mutant = "crates/gui/src/explore/compass.rs:412:47: replace + with - in grid"
+mutant = "crates/gui/src/explore/compass.rs:458:47: replace + with - in grid"
 justification = "2·GRID_REACH/GRID_STEP is 7.6 to within rounding, 0.4 from any integer, so its floor is 7 whether 1e-9 is added or taken away"
 
 [[equivalent]]
-mutant = "crates/gui/src/explore/compass.rs:866:53: replace * with / in Drag::moved"
-justification = "Z0_HALF_RANGE is 1.0 (crates/gui/src/explore/manifold_view/mod.rs:52), so x * Z0_HALF_RANGE and x / Z0_HALF_RANGE are equal for every x"
+mutant = "crates/gui/src/explore/compass.rs:1394:38: replace * with / in Shown::plane"
+justification = "Z0_HALF_RANGE is 1.0 (crates/gui/src/explore/manifold_view/mod.rs:56), so x * Z0_HALF_RANGE and x / Z0_HALF_RANGE are equal for every x"
 
 [[equivalent]]
-mutant = "crates/gui/src/explore/compass.rs:985:38: replace * with / in Shown::plane"
-justification = "Z0_HALF_RANGE is 1.0 (crates/gui/src/explore/manifold_view/mod.rs:52), so x * Z0_HALF_RANGE and x / Z0_HALF_RANGE are equal for every x"
-
-[[equivalent]]
-mutant = "crates/gui/src/capture.rs:116:28: replace * with / in CompassCase::edits"
-justification = "Z0_HALF_RANGE is 1.0 (crates/gui/src/explore/manifold_view/mod.rs:52), so depth * Z0_HALF_RANGE and depth / Z0_HALF_RANGE are equal for every depth"
+mutant = "crates/gui/src/capture.rs:134:28: replace * with / in CompassCase::edits"
+justification = "Z0_HALF_RANGE is 1.0 (crates/gui/src/explore/manifold_view/mod.rs:56), so depth * Z0_HALF_RANGE and depth / Z0_HALF_RANGE are equal for every depth"
 
 [[equivalent]]
 mutant = "crates/gui/src/explore/trajectory.rs:780:32: replace * with / in orbit_input"
@@ -164,7 +140,7 @@ mutant = "crates/gui/src/explore/trajectory.rs:781:32: replace * with / in orbit
 justification = "ORBIT_DEG_PER_POINT is 1.0, and x * 1.0 == x / 1.0 for every f64 x"
 
 [[equivalent]]
-mutant = "crates/gui/src/keyboard/scopes.rs:349:23: replace > with >= in ScopeTree::remove"
+mutant = "crates/gui/src/keyboard/scopes.rs:443:23: replace > with >= in ScopeTree::remove"
 justification = "remove_children has already removed every node whose parent is the removed index i, so no parent equals i and > and >= agree"
 
 [[equivalent]]
@@ -228,7 +204,7 @@ mutant = "crates/validation/src/roundtrip.rs:218:43: replace | with ^ in Sides::
 justification = "the fold ORs in 1 << k once for each distinct index k from enumerate, so bit k is always clear in b and b ^ (1 << k) equals b | (1 << k)"
 
 [[equivalent]]
-mutant = "crates/gui/src/explore/compass/views.rs:199:19: replace / with * in gauge"
+mutant = "crates/gui/src/explore/compass/views.rs:215:19: replace / with * in gauge"
 justification = "Z0_HALF_RANGE is 1.0 (manifold_view/mod.rs), and x / 1.0 and x * 1.0 are both x for every f64"
 
 [[equivalent]]
@@ -368,11 +344,11 @@ mutant = "crates/kernel/src/word/crossing.rs:82:28: replace < with <= in negativ
 justification = "the comparison is reached only when !reads_as_zero(d), so d is not ±0, and d <= 0 and d < 0 agree on every other value, NaN included"
 
 [[equivalent]]
-mutant = "crates/gui/src/explore/compass.rs:962:51: replace * with / in Drag::moved"
+mutant = "crates/gui/src/explore/compass.rs:1270:51: replace * with / in Drag::moved"
 justification = "sign is Reading::Vertical's, which reading_of only ever sets to 1.0 or -1.0, and y / ±1 equals y * ±1 exactly"
 
 [[equivalent]]
-mutant = "crates/gui/src/explore/compass.rs:966:53: replace * with / in Drag::moved"
+mutant = "crates/gui/src/explore/compass.rs:1274:53: replace * with / in Drag::moved"
 justification = "Z0_HALF_RANGE is the constant 1.0, and dividing by 1.0 equals multiplying by it exactly; a change to the constant makes the rate tests in mock_compass_cube and mock_compass_slice_follows_pointer tell them apart"
 
 [[equivalent]]
@@ -386,6 +362,10 @@ justification = "repeat is two runs of one pure function on one input, so u32::f
 [[equivalent]]
 mutant = "crates/ledger/src/gen/catalogue.rs:577:13: delete match arm \"eps_L\" in drift_wgsl"
 justification = "EPS_L_DEFAULT and EPS_E_DEFAULT, the register's eps_l and eps_e, are both 1e-6, so the wildcard arm gives the same default; a change to either makes drift_view_floor_uniforms_default_to_the_register tell them apart"
+
+[[equivalent]]
+mutant = "crates/gui/src/measure/mod.rs:343:37: replace < with <= in Session::begin_frame"
+justification = "the two differ only when the elapsed time equals the delay exactly, routinely at the default delay of 0 when two reads fall in one clock tick, and then <= spins to the clock's next tick: under a microsecond natively, one coarsened performance.now() tick in the browser, up to that much work a frame, which no test can tell, since the session's clock is the real one, cannot be set, and keeps running, so it cannot hang"
 
 [[equivalent]]
 mutant = "xtask/src/jobq.rs:1605:26: replace < with <= in end_stale_group"

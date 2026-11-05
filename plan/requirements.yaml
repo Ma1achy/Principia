@@ -21281,21 +21281,24 @@
   note: "R-463 (K1 to K3 applied per R-369); closed by TASK-M6-44. Adds the maximise button to REQ-GUI-189's header bar."
 - id: REQ-GUI-216
   area: GUI
-  statement: "On the mock engine, the console must open and must close each within one frame at 60 fps (16.7 ms), with an empty log, with 1 000 entries and with CONSOLE_ROWS entries, on the human's Mac; the time of the opening and closing frames, and where it goes (egui layout, the log's filter, the log's rows, the wgpu frame), must be measured before the fix and after it and given in the PR."
+  statement: "On the mock engine, the console must open and must close each within one frame at 60 fps, with an empty log, with 1 000 entries and with CONSOLE_ROWS entries, on the human's Mac, judged on each frame's CPU part, the frame less its wait on the device: in every table, at every log size, the slowest frame's CPU part must be under 16.7 ms (R-667); the time of the opening and closing frames, and where it goes (egui layout, the log's filter, the log's rows, the wgpu frame, its wait on the device apart), must be measured before the fix and after it and given in the PR, with the wait and a comparison with a control of the same frames with no console action reported beside the verdict, not as a gate."
   source:
   - file: docs/gui/principia_render_gui_spec.md
     section: G12. Console (`12_console.png`)
   - file: decisions.md
     section: "R-463 — The console's height drags and a maximise toggle (button and key M) fills the height below the top bar; its open and close lag is measured first, and both are brought within one frame at 60 fps, with the frame times before and after *(amends R-450 as it lists the header bar's controls)*"
+  - file: decisions.md
+    section: "R-667 — REQ-GUI-216 is judged on the CPU part of each frame: the slowest frame's CPU part, in every table at every log size, under 16.7 ms; the wait on the device is reported, and the console's action is compared with a control of no action beside it, which is not a gate *(closes RQ-671; amends R-463 K4)*"
   verify:
     method: benchmark
-    detail: "benchmark on the human's Mac (R-186): cargo run -p gui --features mock --release -- --bench console-open-close at the three log sizes, before and after, the frame times of the opening and closing frames and their breakdown in the PR; after the fix each is under 16.7 ms at every size; review checklist (perf reviewer): the breakdown names where the time went before the fix, the fix addresses it, and the after-table meets the target"
+    detail: "benchmark on the human's Mac (R-186): cargo run -p gui --features mock --release -- --bench console-open-close at the three log sizes, before and after, the frame times of the opening and closing frames and their breakdown in the PR; after the fix the CPU part of the slowest frame (the frame less its wait on the device) is under 16.7 ms in every table at every size (R-667); the wait, and the action arm against the control arm (frames at or over 16.7 ms and 10 ms in each, and the one-sided Fisher p), are reported, not judged; review checklist (perf reviewer): the breakdown names where the time went before the fix, the fix addresses it, and the after-table meets the target"
   rulings:
   - R-186
   - R-390
   - R-463
+  - R-667
   milestone: M6
-  note: "R-463 (K4 applied per R-369); closed by TASK-M6-44. The porter's pointer for the measurement, not a finding: the console filters and lays out the whole log every frame while open (windows/console.rs)."
+  note: "R-463 (K4 applied per R-369); closed by TASK-M6-44. The porter's pointer for the measurement, not a finding: the console filters and lays out the whole log every frame while open (windows/console.rs). R-667 (2 Nov 2026, closing RQ-671) judges the CPU part of each frame and reports the wait and the control comparison."
 - id: REQ-GUI-217
   area: GUI
   statement: "On the mock engine, a slice-mode drag on the compass's Cube view must move the slice along the drawn plane's normal (the decoder's, latent_normal) by the drag's 2-D screen displacement projected onto the drawn normal's screen direction ŝ (the unit vector along P(n̂) − P(0), P the cube's isometric projection), at R-451 B3's rate (a drag of the cube's full screen width, 2√3·S, along ŝ moving the slice across the whole range, S the cube's scale), the component across ŝ doing nothing, so the drawn plane moves with the pointer at every tilt; where |P(n̂) − P(0)| < 0.25·S the drag must read its vertical component instead, up moving the plane along the normal's side facing the viewer (n̂·(1, 1, 1) > 0), at the same rate, the whole range per 2√3·S of vertical travel; the tilt-mode drag must stay as R-451 B3 has it."
@@ -30322,7 +30325,7 @@
   note: "The supported-resolution list: REQ-TOOL-113 (calibration). R-483 C10 (20 Oct 2026)."
 - id: REQ-VAL-099
   area: VAL
-  statement: "The parity gate must be run on a non-Metal backend (Vulkan or D3D12) before any Paper-2 numbers are produced; it gates Paper 2, not the build."
+  statement: "The parity gate must be run on a non-Metal backend (Vulkan or D3D12) before any Paper-2 numbers are produced; it gates Paper 2, not the build. A recorded run on R-711's runner can serve, with its named commit, driver version and full output, if the parity measurement itself passes; the paper states the single-card evidence and the owner-reported hardware caveat; a second non-Metal GPU is welcome, not required. The owner-reported hardware caveat is RQ-685's run note: the owner reported that the card may have faulty shader cores, and repeating on one card rules out an intermittent fault, not a fixed one. The gate record prints what the paper must state, with, as a third item applied per R-369, R-690's word for that adapter, API and driver version, gate by gate."
   source:
   - file: docs/contracts/principia_canonical_spec.md
     section: 2. The determinism law (the other defining decision)
@@ -30336,13 +30339,20 @@
     section: 6. The harness
   - file: decisions.md
     section: "R-110 — What CI runs, where, and against which goldens *(closes RQ-79)*"
+  - file: decisions.md
+    section: "R-711 — One measurement-only self-hosted runner, `malachys-pc-rtx2080s`, on the owner's PC, with no pull-request trigger on any self-hosted job; DX12 may run on it as a measurement; PC benchmarks stay apart from the Mac's performance gates; a recorded run on it can serve Paper 2's non-Metal parity evidence; its jobs have their own workflow; the signing rules *(closes RQ-695; amends R-174, R-186 and R-656)*"
+  - file: decisions.md
+    section: "R-690 — R-547's \"operations every IEEE backend rounds alike\" is stated as a condition on the driver and tested by TASK-M4-27 and TASK-M4-28; it is not enforceable, and a driver that fails is recorded unverified, not supported *(closes RQ-690; amends R-547)*"
   verify:
+    detail: "the parity suite passes on a real (hardware) Vulkan or D3D12 GPU — lavapipe, the per-commit second backend, does not satisfy this (R-110); recorded before Paper-2 survey results; a run on R-711's runner can serve: its record names its commit, API, driver version and R-690 hardware label and keeps its full output, and a record missing its commit, driver version or output is refused; the parity suite passes; the run's Tier L inputs include the inputs of any level 3 row on that card; control: a synthetic record holding a level 3 row whose inputs the run leaves out is refused; and the gate record prints what the paper must state, the single-card evidence, the owner-reported hardware caveat and R-690's word for that adapter, API and driver version, read from each gate's committed `comparison.md` and `outstanding.json` (`fixtures/gates/cross-backend-branches/`, `fixtures/gates/cross-backend-march/`), including NVIDIA's row as posted to issue #390, a row's input bits from that gate's committed inputs and replay states; the record files themselves are on issue #390 or the branch named there, and the gates' control records are never read as a card's; \"no record\" is a lookup over both gates' `comparison.md` and `outstanding.json` as read, and a missing or unreadable file, or a level 3 row whose input bits can't be read, refuses the gate; control: a missing `comparison.md` is refused, not read as \"not run\"; the word prints gate by gate, each with its own N and each `outstanding.json` row beside it, the march's record and replay apart, and Ns are never summed: a measured failure in either gate prints \"unverified, not supported\" for the card; \"no failure in N\" prints its N; \"not run\" comes from `outstanding.json`'s row, or from that lookup finding no record: a driver version with no record reads \"not run\", and so does a run on an API with no record for that driver version (each applied per R-369); which the physics reviewer checks (R-711)"
     method: numerical gate
-    detail: "the parity suite passes on a real (hardware) Vulkan or D3D12 GPU — lavapipe, the per-commit second backend, does not satisfy this (R-110); recorded before Paper-2 survey results"
   rulings:
   - R-58
   - R-110
+  - R-690
+  - R-711
   milestone: M8
+  note: "R-711 (5 Nov 2026, item 4; RQ-695): the terms on a run on that runner, added to the statement and the verify. *Was (statement):* ends \"it gates Paper 2, not the build.\" The physics call, from the physics review of PR #416: the corpus settles whether a card with an R-690 failure on record can pass, and a record is no bar (\"can serve\" closed RQ-695; R-690's recording blocks nothing). \"The parity measurement itself\" is the parity suite (parity contract § 2, § 6), not R-690's three-level report. The inputs of a level 3 row on that card join the run's Tier L inputs, and the run itself decides. A level 2 record limits what a pass shows, no fork on the suite's inputs only, so the record and the paper carry R-690's standing word for that adapter, API and driver version, gate by gate, \"unverified, not supported\", \"no failure in N\" or \"not run\", as a third item beside the owner's two, applied per R-369. Tier N tolerances stay as native wgpu pins them (R-85), never re-pinned on this card's spread. RQ-685 stays open, and what a pass covers waits on it. The record's API and hardware label, and the refusal of a record missing its commit, driver version or output, are the same review's, applied per R-369. The gate reads each gate's committed `comparison.md` and `outstanding.json`, and never reads a gate's control records as a card's; a missing or unreadable file, or a level 3 row whose input bits can't be read, refuses the gate; the word prints gate by gate, each with its own N and each `outstanding.json` row beside it, and Ns are never summed; each applied per R-369. A run on an API with no record for that driver version reads \"not run\"; the level 3 join stays on that card, whatever the API. *Was (verify):* \"a run on R-711's runner names its commit and driver version and keeps its full output, the parity measurement itself passing, and the paper states the single-card evidence and the owner-reported hardware caveat (R-711)\"."
 - id: REQ-VAL-100
   area: VAL
   statement: "The same spec object must re-render the same video bit-identically on the same backend and match across backends to the parity contract's f32 tolerances, with branch decisions identical on identical inputs, per step, and terminal labels and outcome classes identical except on chaotic trajectories, where they may differ across precisions."
@@ -31798,6 +31808,8 @@
     section: "R-348 — Mutants runs get a per-mutant timeout and a per-process memory cap on test processes; both values are calibrated"
   - file: decisions.md
     section: "R-376 — The six M0 calibrations are confirmed: REQ-VAL-138, REQ-VAL-149 (8 shards × 300 min, a ceiling, not a target), REQ-VAL-151, REQ-VAL-156 (600 s), REQ-VAL-180 and REQ-VAL-181 *(closes RQ-202; amends R-71, R-203, R-214, R-217, R-233, R-269, R-287, R-296, R-302, R-305, R-348 and R-352 as they apply to these values)*"
+  - file: decisions.md
+    section: "R-712 — The per-mutant timeout is set from the measured baseline test time, at about 3 times it; 8 shards are kept; a timed-out mutant counts as caught and is listed; #360's 135 unreached mutants go to the nightly run, and the same rule applies to #387 if it hits the limit *(amends R-348, R-376 and R-402 for REQ-VAL-180)*"
   verify:
     method: review checklist
     detail: "the proposal states the timeout, in the form cargo-mutants' timeout setting takes it (seconds, or a multiple of the baseline's test time with its floor), with its evidence: the unmutated baseline's test time on `ubuntu-latest` in each shard of the PRs merged so far, the slowest caught mutant's test time, and the headroom the value leaves within the per-shard limit (REQ-VAL-149); every run uses it, marked provisional until the human confirms it at the M0 gate (R-182, R-348)"
@@ -31806,8 +31818,9 @@
   - R-182
   - R-348
   - R-376
+  - R-712
   milestone: M0
-  note: "Confirmed by R-376 (3 Oct 2026, at the M0 gate): 2.0 times the unmutated baseline's test time, no less than 60 s (`timeout_multiplier = 2.0`, `minimum_test_timeout = 60`, `.cargo/mutants.toml`)."
+  note: "Confirmed by R-376 (3 Oct 2026, at the M0 gate): 2.0 times the unmutated baseline's test time, no less than 60 s (`timeout_multiplier = 2.0`, `minimum_test_timeout = 60`, `.cargo/mutants.toml`). R-712 (5 Nov 2026): about 3 times the measured baseline test time, the 60 s floor standing; a timed-out mutant counts as caught and is listed. Applied per R-369 (R-712): the per-PR `mutants.yml` shards take an explicit timeout, the baseline measured once and not per shard; nightly and local runs keep the multiplier, at 3.0, a nightly shard's baseline its package's own (R-402); built by #415, and `.cargo/mutants.toml` keeps its old value until then. *Was:* 2.0 times."
 - id: REQ-VAL-181
   area: VAL
   kind: calibration
@@ -40389,7 +40402,7 @@
   milestone: M0
 - id: REQ-SYS-065
   area: SYS
-  statement: "GPU CI must run on two backends on every commit, on GitHub-hosted runners (R-186): macos-15 (Apple silicon, paravirtual Metal) for the Metal correctness suites and ubuntu-24.04 (pinned, R-375) with Mesa lavapipe (Vulkan), the harness taking its backend from PRIN_GPU_BACKEND=metal|vulkan (unset: metal on macOS, vulkan elsewhere; an unknown value is an error; the chosen backend is logged, R-206); the first check on macos-15 must show a Metal adapter and the M0 fixtures within tolerance, or the build stops for a REVIEW_QUEUE entry proposing a self-hosted runner. R-174's same-repository guard is dormant while no self-hosted runner exists."
+  statement: "GPU CI must run on two backends on every commit, on GitHub-hosted runners (R-186): macos-15 (Apple silicon, paravirtual Metal) for the Metal correctness suites and ubuntu-24.04 (pinned, R-375) with Mesa lavapipe (Vulkan), the harness taking its backend from PRIN_GPU_BACKEND=metal|vulkan (unset: metal on macOS, vulkan elsewhere; an unknown value is an error; the chosen backend is logged, R-206); the first check on macos-15 must show a Metal adapter and the M0 fixtures within tolerance, or the build stops for a REVIEW_QUEUE entry proposing a self-hosted runner. R-174's same-repository guard is dormant while no self-hosted runner exists. R-711's one measurement-only runner wakes R-174 for that runner, with no pull_request or pull_request_target trigger on any self-hosted job in place of that guard's allowance; it runs no job of this requirement's and no required or hosted job."
   source:
   - file: decisions.md
     section: "R-110 — What CI runs, where, and against which goldens *(closes RQ-79)*"
@@ -40405,9 +40418,11 @@
     section: "R-375 — CI's Linux runners are pinned to `ubuntu-24.04`, not `ubuntu-latest`; moving to Ubuntu 26 is a deliberate later step *(amends R-186)*"
   - file: decisions.md
     section: "R-656 — CI throughput: a push runs `ci.yml` only on `main` (and on R-272's `measure/` branches, which have no pull request), a pull request running it through `pull_request`; a pull request's superseded runs are cancelled, never a run on `main`; a docs-only pull request skips the build, test, GPU and mutants work, and one that changes no GPU-path file skips the GPU suites, inside the jobs, every required check still reporting success under its own name; mutants run on the merge-ready head; a bounded target cache is approved in principle, built in a later PR; no paid or self-hosted runner *(amends R-110, R-177, R-186, R-195, R-235, R-285 and R-335)*"
+  - file: decisions.md
+    section: "R-711 — One measurement-only self-hosted runner, `malachys-pc-rtx2080s`, on the owner's PC, with no pull-request trigger on any self-hosted job; DX12 may run on it as a measurement; PC benchmarks stay apart from the Mac's performance gates; a recorded run on it can serve Paper 2's non-Metal parity evidence; its jobs have their own workflow; the signing rules *(closes RQ-695; amends R-174, R-186 and R-656)*"
   verify:
+    detail: "the CI log shows gpu_harness and metal_hosted_probe green on macos-15 and gpu_harness green on lavapipe, with the named backends; no required or hosted job uses a self-hosted runner, R-711's measurement jobs, in their own workflow, being neither; an unknown PRIN_GPU_BACKEND fails naming the variable"
     method: review checklist
-    detail: "the CI log shows gpu_harness and metal_hosted_probe green on macos-15 and gpu_harness green on lavapipe, with the named backends; no job uses a self-hosted runner; an unknown PRIN_GPU_BACKEND fails naming the variable"
   rulings:
   - R-110
   - R-169
@@ -40416,8 +40431,9 @@
   - R-206
   - R-375
   - R-656
+  - R-711
   milestone: M0
-  note: "R-656: \"every commit\" is every push to main and every pull-request head; a head that changes no GPU-path file skips the GPU suites' jobs, gate jobs still reporting success under the checks' names, and the suites run again on main once it merges. No paid larger runner either."
+  note: "R-656: \"every commit\" is every push to main and every pull-request head; a head that changes no GPU-path file skips the GPU suites' jobs, gate jobs still reporting success under the checks' names, and the suites run again on main once it merges. No paid larger runner either. R-711 (5 Nov 2026, items 1, 2 and 5): one measurement-only runner, its jobs in their own workflow. *Was (verify):* \"no job uses a self-hosted runner\". *Was (statement):* ends \"is dormant while no self-hosted runner exists.\""
 - id: REQ-SYS-066
   area: SYS
   statement: "Every reviewer role a task file names must record its verdict as a PR review headed `VERDICT: APPROVE <role>` or `VERDICT: CHANGES <role>`, and the `reviews-complete` CI check must pass only when every named role has approved on the PR's latest commit with no later CHANGES verdict; an approval followed only by qa's own `qa: tests for <TASK-id>` commits, adding files only under qa's paths, counts on the head (R-260), and a PR whose title names no task passes with \"no task, no named reviewers\" (R-261)."
