@@ -1109,9 +1109,9 @@ saturates. In σ's units, `s = (1 + u)/2`, the tanh and softsign clamp `±(1 −
 clamp `[ε, 1 − ε]`.
 
 The two simplex inverses are defined on the open simplex. At an exact corner, with two masses 0, `softmax_tanh`'s
-`log(mₖ/m₀)` and `stick_breaking`'s `u = m₂/(m₁ + m₂)` divide 0 by 0. On the host, Rust's `max` ignores the NaN, so
-the clamp returns a finite value, but SPIR-V's `FMax` with a NaN operand is undefined, so a caller passes no exact
-corner (TASK-M2-15's encode).
+`log(mₖ/m₀)` and `stick_breaking`'s `u = m₂/(m₁ + m₂)` divide 0 by 0. On the host, Rust's `max` ignores `softmax_tanh`'s
+NaN, so its clamp returns a finite value, but SPIR-V's `FMax` with a NaN operand is undefined; `stick_breaking`'s form
+below divides past its clamp, so its NaN stays NaN at both. So a caller passes no exact corner (TASK-M2-15's encode).
 
 The trees write some terms in a form equal in algebra to the table's but with no step that overflows or cancels short
 of the float's own range (canonical_spec §9, walls 7 and 9, measure honesty and totality). At f32 and f64, with `MAX`
@@ -1124,7 +1124,11 @@ constant terms, rounds to `−MAX` (as for `stick_breaking` with `z₁ > 0`, who
 number). The other entries are finite for every finite control. The
 forms: each `log sech² x` as `2·(log 2 − abs(x) − softplus(−2·abs(x)))`, each `log σ(x)` as `−softplus(−x)`, and
 stick-breaking's `s` and `1 − s` as `σ(2z₁) − ½ε_μ·tanh z₁` and `σ(−2z₁) + ½ε_μ·tanh z₁` (and `u`, `1 − u` likewise
-in `z₂`).
+in `z₂`). Its inverse is written likewise, since `2v − 1` at a small `v` cancels against 1 the digits an `f32` mass
+rests on: with `c = 1 − ε_μ`, `z = ½ log(N(v)/N(w))`, `N(a) = clamp(2a − ε_μ·t, c·ε_μ·t, c·(1 + c)·t)`, `t = v + w`,
+for `z₁` with `(v, w) = (m₁ + m₂, m₀)` and for `z₂` with `(v, w) = (m₂, m₁)`. That is the table's inverse with
+`artanh(x) = ½ log((1 + x)/(1 − x))` cancelled by hand, the clamp's two limits the table's `±(1−ε_μ)²`. It reads `m₀`,
+which the table's form does not, and it is homogeneous in `t`, so a simplex within rounding is enough.
 
 - **The edge-reaching simplex link** *(definition, R-72; REQ-GEN-026)* is the stick-breaking map above. Where
   `softmax_tanh` stops at mass ratios `e^(±2μ_max)`, it reaches within `ε_μ/2` of each edge and of the corner
