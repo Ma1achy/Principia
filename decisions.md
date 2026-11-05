@@ -30577,8 +30577,8 @@ R-712 is in the "ci" group of `plan/rule_groups.yaml`.
 Changes REQ-VAL-180 (source, rulings, note).
 
 ## R-791 — At `ε ≠ 0` the `(L_z, E)` chart stays available with its energy axis the Newtonian energy, so a pixel's start never depends on `ε`; the axis is labelled Newtonian energy and the Inspector shows the softened energy beside it *(closes RQ-693)*
-*5 Nov 2026 · the owner's reply to the report of 5 Nov 2026; applied in `docs/archive/review_queue/M0.md` (RQ-693 moved), `docs/design/principia_chart_reference.md` § 2.1 and § 2.2, `docs/design/principia_dd_decoder.md` § 3.7, `docs/gui/principia_render_gui_spec.md` § G2 and § G8, REQ-VAL-015, REQ-CHART-092 and REQ-GUI-416 (reqio), TASK-M9-39, `plan/tasks.yaml` and `plan/rule_groups.yaml`;
-changes REQ-VAL-015; adds REQ-CHART-092 and REQ-GUI-416*
+*5 Nov 2026 · the owner's reply to the report of 5 Nov 2026; applied in `docs/archive/review_queue/M0.md` (RQ-693 moved), `docs/design/principia_chart_reference.md` § 2.1 and § 2.2, `docs/design/principia_dd_decoder.md` § 3.7, `docs/gui/principia_render_gui_spec.md` § G2 and § G8, REQ-VAL-015, REQ-CHART-092, REQ-GUI-416, and the `rq` lists of REQ-INT-111, REQ-SYS-094 and REQ-SYS-095 (reqio), TASK-M9-39, `plan/tasks.yaml` and `plan/rule_groups.yaml`;
+changes REQ-VAL-015, REQ-INT-111, REQ-SYS-094 and REQ-SYS-095; adds REQ-CHART-092 and REQ-GUI-416*
 
 The owner's words (5 Nov 2026), verbatim:
 
@@ -30600,8 +30600,8 @@ The owner's words (5 Nov 2026), verbatim:
 R-791 is in the "physics" group of `plan/rule_groups.yaml`.
 
 ## R-792 — At `ε ≠ 0` both of Chazy's two-body potentials soften, `pair_kup`'s and `out_kup`'s, so the classifier reads one physics *(closes RQ-694)*
-*5 Nov 2026 · the owner's reply to the report of 5 Nov 2026; applied in `docs/archive/review_queue/M0.md` (RQ-694 moved), `docs/design/principia_dd_chazy_final_motion.md` § 3.1, REQ-EVT-034 (reqio), TASK-M9-39, `plan/tasks.yaml` and `plan/rule_groups.yaml`;
-adds REQ-EVT-034*
+*5 Nov 2026 · the owner's reply to the report of 5 Nov 2026; applied in `docs/archive/review_queue/M0.md` (RQ-694 moved), `docs/design/principia_dd_chazy_final_motion.md` § 3.1, REQ-EVT-034 and the `rq` lists of REQ-INT-111, REQ-SYS-094 and REQ-SYS-095 (reqio), TASK-M9-39, `plan/tasks.yaml` and `plan/rule_groups.yaml`;
+changes REQ-INT-111, REQ-SYS-094 and REQ-SYS-095; adds REQ-EVT-034*
 
 The owner's words (5 Nov 2026), verbatim:
 
@@ -30686,7 +30686,7 @@ The owner's words (5 Nov 2026), verbatim:
 R-797 is in the "physics" group of `plan/rule_groups.yaml`.
 
 ## R-798 — PA-1 runs on the shape sphere at rest through a tested remap, with no new chart type; a shape-chart preset centred on the equilateral point shows the two side ratios in the Inspector *(closes RQ-594)*
-*5 Nov 2026 · the owner's reply to the report of 5 Nov 2026; applied in `docs/archive/review_queue/M0.md` (RQ-594 moved), `docs/design/principia_dd_replication.md` § 5.12 and the task list, `docs/gui/principia_render_gui_spec.md` § G2 and § G8, REQ-VAL-323, REQ-CHART-093 and REQ-GUI-417 (reqio), TASK-M9-24, TASK-M9-45 (new), `plan/tasks.yaml`, `plan/tools/milestones.py` and `plan/rule_groups.yaml`;
+*5 Nov 2026 · the owner's reply to the report of 5 Nov 2026; applied in `docs/archive/review_queue/M0.md` (RQ-594 moved), `docs/design/principia_dd_replication.md` § 5.12 and the task list, `docs/gui/principia_render_gui_spec.md` § G2 and § G8, REQ-VAL-323, REQ-CHART-093 and REQ-GUI-417 (reqio), TASK-M9-24, TASK-M9-37, TASK-M9-45 (new), `plan/tasks.yaml`, `plan/tools/milestones.py` and `plan/rule_groups.yaml`;
 changes REQ-VAL-323; adds REQ-CHART-093 and REQ-GUI-417*
 
 The owner's words (5 Nov 2026), verbatim:
