@@ -739,7 +739,8 @@ impl<A: Coordinate, S: Selection> MixedMassRatio<A, S, f64> {
     /// part of `asked` the link realises at `m_c`, as held and as narrowed to `f32`, a chart decoded there holding that
     /// value, found outward from the slice centre's own ratio, or, where the link does not realise that, a saturated
     /// centre, from `seed`. `None` where the bodies are not two distinct bodies, `asked` is not an increasing finite
-    /// range, or, warped, a mass at `z₀` is NaN or no ratio of `asked` is realised at both.
+    /// range, or, warped, a mass at `z₀` is NaN or no ratio of `asked` is realised at both. That last holds inside the
+    /// registered `μ_max ∈ [1, 10]`; above about 29.3 the search can also refuse a slice with a realised part (`seed`).
     pub fn new(
         frozen: [f64; 8],
         a_range: [f64; 2],
@@ -831,8 +832,8 @@ impl<A: Coordinate, S: Selection> MixedMassRatio<A, S, f64> {
     /// A realised ratio in the asked range, for a centre the link does not realise. The link's clamps are one-sided on
     /// monotone coordinates, so the miss does not rise toward the realised interval from either side beyond rounding
     /// (the largest rise measured, a relative `4.4e-9` on `softmax_tanh`; none on `stick_breaking`), and a trisection of
-    /// `ln q` that keeps the side of the lower miss reaches it at any width of the ask and of the interval, each test to
-    /// within `ε_μ/2`, an end at or below 0 taken at the least positive double. The search holds no count: it ends where
+    /// `ln q` that keeps the side of the lower miss reaches it, inside the registered `μ_max ∈ [1, 10]`, at any width of
+    /// the ask and of the interval, each test to within `ε_μ/2`, an end at or below 0 taken at the least positive double. The search holds no count: it ends where
     /// a probe no longer falls strictly inside the bracket, the bracket then at the doubles' own spacing, and each step
     /// moves an end strictly inward, so it ends.
     ///
@@ -845,10 +846,16 @@ impl<A: Coordinate, S: Selection> MixedMassRatio<A, S, f64> {
     /// over exact flats, at most 0.69.
     ///
     /// That argument covers exact ties only. A run level only to rounding is not a tie, and the comparison there reads
-    /// the rounding: such runs reach `(B − A)/(A − R) = 2.48` level to a relative `1e-7`, and 2.23 to `2e-8`, the latter
-    /// at `μ_max` above 10 only, with 0.527 the largest inside `μ_max` 1 to 10. What carries them is measurement, not a
-    /// bound: 2,677 asks aimed so that both probes fall on such a run, at `μ_max` 10 to 30, and 15,000 random slices,
-    /// lost no realised part.
+    /// the rounding. Inside the registered `μ_max ∈ [1, 10]`, which is the range this search answers for, such runs stay
+    /// below `(B − A)/(A − R) = 1`, measured at most 0.491 level to a relative `1e-7` and 0.640 to `1e-5`, so both probes
+    /// cannot lie on one with `R` in the bracket. The 2.23 level to `2e-8` and the 2.48 to `1e-7` both lie above 10.
+    ///
+    /// The range is provisional, so its limit is recorded: above `μ_max` about 29.3 the comparison can read rounding on
+    /// the first step, and `new` can refuse a slice with a realised part, the lowest measured at 29.26. With `m_c` tiny
+    /// the held limb sits on a floor of about `μ·ε_μ` and falls only by `q` or `1/q`, which puts `R` at `|ln q|` about
+    /// 10.4; below an absolute `1e-15` the two misses differ by rounding, past `|ln q|` about 34.5; and the run ends near
+    /// `2μ`. So `(2μ − 34.5)/(34.5 − 10.4) ≥ 1` needs `μ ≥ 29.3`. A refusal is the safe side, but a range raised past
+    /// that needs a search that does not read rounding.
     fn seed(&self, p: &LinkParams<f64>) -> Option<f64> {
         let eps = 0.5 * <f64 as ChartConstants>::EPS_MU;
         let mut lo = self.ratio[0].max(f64::MIN_POSITIVE).ln();
@@ -880,9 +887,9 @@ impl<A: Coordinate, S: Selection> MixedMassRatio<A, S, f64> {
     /// end where `upper`: `toward` itself where realised; `None` where it is not and lies on `from`'s inner side (an
     /// upper end below `from`, a lower end above it), the asked range then outside the interval the link realises;
     /// else the last realised ratio on the way, by bisection in `ln q` down to the doubles' own spacing, an end at or
-    /// below 0 taken at the least positive double. Each test here is to within `ε_μ/2`, so that the warp's rounding at the range's
-    /// ends (`q₀·(q₁/q₀)^t` at `t = 1`), and the narrowing of the ends, stay inside [`MixedMassRatio::realised`]'s
-    /// `ε_μ`; the narrowing of `held` is `miss_narrowed`'s.
+    /// below 0 taken at the least positive double. Each test here is to within `ε_μ/2`, so that the warp's rounding at
+    /// the range's ends (`q₀·(q₁/q₀)^t` at `t = 1`), and the narrowing of the ends, stay inside
+    /// [`MixedMassRatio::realised`]'s `ε_μ`; the narrowing of `held` is `miss_narrowed`'s.
     fn edge(&self, from: f64, toward: f64, upper: bool, p: &LinkParams<f64>) -> Option<f64> {
         let eps = 0.5 * <f64 as ChartConstants>::EPS_MU;
         if self.miss_narrowed(toward, p) <= eps {
