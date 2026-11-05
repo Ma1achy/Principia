@@ -15,11 +15,15 @@
 //!   `μ_max` includes values `f32` rounds by nearly half a spacing. Control: the range found as held alone.
 //! - `qa_narrowed_decode_softmax` and `qa_narrowed_decode_stick`: on that family the `f32` decode gives the masses §2.1
 //!   writes, each to `DECODE_TOL`, relative, not only some masses that are positive and sum to 1: a pixel that validates
-//!   and decodes another system is no pixel of the chart. Control: `qa_narrowed_decode_holds_narrowed_mass`'s.
+//!   and decodes another system is no pixel of the chart. Controls: for `softmax_tanh`, the masses at the held mass as
+//!   held, which the `f32` decode does not give; for `stick_breaking`, the decode through the table's own form at `f32`,
+//!   `2v − 1` and all, which cancels the digits of a small mass against 1 and is the system this test is here to refuse.
 //! - `qa_searches_end`: `new` returns on every ask that drives the searches to their ends, with no count of steps to
 //!   stop them (the doubles' own spacing does): the widest asks, asks about `q = 1` adjacent in doubles, asks out of
 //!   reach, with centres the link does not realise. Whatever it returns lies in the ask. Control: a stand-in search whose
 //!   closing test cannot fire, which the watchdog stops.
+//! - `qa_searches_end_on_nothing_realised`: an ask out of reach ends in a refusal. Control: asks in reach at the same
+//!   centres, which `new` answers, so the refusal is not what `new` does at those centres whatever is asked.
 //!
 //! **Values.** `ε_μ` is the register's link clamp (§2.1), the sum held to it as `qa_TASK-M2-37_any_ask.rs` holds it;
 //! `DECODE_TOL` is parity_contract §4's relative IC/decode figure, for an `f32` decode against the `f64` formula;
@@ -40,11 +44,11 @@ use kernel::chart::mixed::ZBeta;
 use kernel::chart::physical::MixedMassRatio;
 use kernel::chart::{Chart, ValidationResult};
 use kernel::generated::constants::ChartConstants;
-#[cfg(feature = "controls")]
-use kernel::generated::links::Link;
 use kernel::generated::links::{
     Defaults, LinkParams, Select, Selection, SigmoidAlpha, SigmoidBeta, SigmoidQ, StickBreaking,
 };
+#[cfg(feature = "controls")]
+use kernel::generated::links::{Link, LinkReal, Mass};
 use validation::{negative_control, tunables};
 
 /// The selection with `stick_breaking` on the mass block.
@@ -350,10 +354,64 @@ fn qa_narrowed_decode_softmax() {
     }
 }
 
+negative_control!(
+    qa_narrowed_decode_softmax,
+    "the f32 decode holds the mass as narrowed, so held to the mass as held the family must fail, though it validates",
+    expected = "is no system of the slice",
+    for mu_max in mu_maxes() {
+        family::<Defaults>(Range::Built, Target::AsHeld, &mu(mu_max));
+    }
+);
+
 #[test]
 fn qa_narrowed_decode_stick() {
     family::<Stick>(Range::Built, Target::Narrowed, &LinkParams::DEFAULT);
 }
+
+/// `stick_breaking` with the table's own inverse, `artanh(clamp(2v − 1, ±c²)/c)`, at the float it runs at: the form
+/// dd_generation_root §3.9 gave up, which at `f32` cancels a small mass's digits against 1.
+#[cfg(feature = "controls")]
+struct TableStick;
+
+#[cfg(feature = "controls")]
+impl Link<2, 3> for TableStick {
+    const NAME: &'static str = "stick_breaking";
+    type Codomain = Mass;
+
+    fn forward<R: LinkReal>(v: [R; 2]) -> [R; 3] {
+        <StickBreaking as Link<2, 3>>::forward(v)
+    }
+
+    fn inverse<R: LinkReal>(m: [R; 3]) -> [R; 2] {
+        let one = R::one();
+        let two = one + one;
+        let c = one - R::EPS_MU;
+        let cap = c * c;
+        let z = |v: R| {
+            let x = (two * v - one).max(-cap).min(cap) / c;
+            ((one + x) / (one - x)).ln() / two
+        };
+        let stick = m[1] + m[2];
+        [z(stick), z(m[2] / stick)]
+    }
+
+    fn log_det<R: LinkReal>(v: [R; 2]) -> R {
+        <StickBreaking as Link<2, 3>>::log_det(v)
+    }
+}
+
+#[cfg(feature = "controls")]
+type TableLinks =
+    Select<TableStick, SigmoidAlpha, SigmoidBeta, SigmoidQ, SigmoidQ, SigmoidQ, SigmoidQ>;
+
+negative_control!(
+    qa_narrowed_decode_stick,
+    "the table's own form at f32 loses a small mass's digits, so the chart built on it must decode another system",
+    expected = "is no system of the slice",
+    {
+        family::<TableLinks>(Range::Built, Target::Narrowed, &LinkParams::DEFAULT);
+    }
+);
 
 // ── The searches' ends ───────────────────────────────────────────────────────────────────────────────────────────────
 
@@ -445,15 +503,15 @@ fn qa_searches_end() {
     });
 }
 
-/// `softmax_tanh` reaches `|ln q|` at most `2·μ_max`, so an ask out of reach is refused, which takes `seed` through every
-/// step to its closing test where the centre is not realised (`z = (10, 0)` at `μ_max = 5`) and answers `None`.
-#[test]
-fn qa_searches_end_on_nothing_realised() {
-    watched(Duration::from_secs(120), |tick| {
+/// Every ask of `asks` refused at each centre: `softmax_tanh` reaches `|ln q|` at most `2·μ_max`, so an ask out of reach is
+/// refused, which takes `seed` through every step to its closing test where the centre is not realised
+/// (`z = (10, 0)` at `μ_max = 5`) and answers `None`.
+fn check_nothing_realised(asks: [[f64; 2]; 2]) {
+    watched(Duration::from_secs(120), move |tick| {
         let p = LinkParams::DEFAULT;
         for z in [[10.0, 0.0], [0.0, 20.0], [40.0, 40.0], [1000.0, -1000.0]] {
             for pair in PAIRS {
-                for asked in [[1.0e300, f64::MAX], [f64::MIN_POSITIVE, 1.0e-300]] {
+                for asked in asks {
                     assert!(
                         warped::<Defaults>(z, pair, asked, &p).is_none(),
                         "z {z:?}, bodies {pair:?}: a chart over {asked:?}"
@@ -464,6 +522,18 @@ fn qa_searches_end_on_nothing_realised() {
         }
     });
 }
+
+#[test]
+fn qa_searches_end_on_nothing_realised() {
+    check_nothing_realised([[1.0e300, f64::MAX], [f64::MIN_POSITIVE, 1.0e-300]]);
+}
+
+negative_control!(
+    qa_searches_end_on_nothing_realised,
+    "asks in reach have a realised part at these centres, so a test that held them refused must fail",
+    expected = "a chart over",
+    check_nothing_realised([[0.5, 2.0], [1.0e-3, 1.0e3]])
+);
 
 /// A trisection whose closing test cannot fire: `<=` for `<`, so it holds at `lo = hi`, the bracket no longer moving.
 #[cfg(feature = "controls")]

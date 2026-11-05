@@ -13,6 +13,11 @@
 //!   table's form at `f32`, whose loss is why the form changed.
 //! - `qa_stick_flag_is_the_clamp`: at `f32` and `f64`, a walk through each of the four clamps: the bit `SimplexClamp`
 //!   sets is what the inverse did. Control: the bit of the other control.
+//! - `qa_stick_flag_says_what_moved`: the same bit where `qa_stick_flag_is_the_clamp` looks away, float by float through
+//!   each clamp's edge, at masses as they round, not summing to 1 and with the other control elsewhere: bit clear, `z` is
+//!   the unclamped `½ log(N(v)/N(w))`, to `z`'s own rounding; bit set, `z` is the clamped value, to the same. So what the
+//!   bit does not say moves nothing past rounding (inverse-encode Part 3, "*says so*"). Control: the table's arguments at
+//!   `f32`, the flag of review 5789050941.
 //! - `qa_stick_decode_dense`: the chart, on the grid of review 5785451098's finding: decoded at `f32`, every mass is §2.1's
 //!   to `DECODE_TOL`. Control: the masses a row further on.
 //!
@@ -212,6 +217,7 @@ fn check_trip(inverse: impl Fn([f32; 3]) -> [f32; 2]) {
 }
 
 /// The table's own form at `f32`, `2v − 1` and all.
+#[cfg(feature = "controls")]
 fn table_f32(m: [f32; 3]) -> [f32; 2] {
     let c = 1.0 - <f32 as ChartConstants>::EPS_MU;
     let cap = c * c;
@@ -299,6 +305,101 @@ negative_control!(
     "the other control's bit does not say this control clamped, so read in its place it must fail",
     expected = "(flag)",
     check_flag::<f64>(true)
+);
+
+/// Masses with control `k`'s small limb the fraction `x` of its `t`, `k`'s `v` where not `large`, its `w` where `large`, as
+/// `R` rounds them: for control 0 `part` splits `m₁ + m₂`, for control 1 it is `m₁ + m₂`. The large limb is `nudge`
+/// spacings off, so the masses do not sum to 1.
+fn aimed<R: Q>(k: usize, large: bool, x: f64, part: f64, nudge: f64) -> [R; 3] {
+    let big = (1.0 - x) * (1.0 + nudge * R::spacing());
+    let (v, w) = if large { (big, x) } else { (x, big) };
+    let m = if k == 0 {
+        [w, v * part, v * (1.0 - part)]
+    } else {
+        [1.0 - part, part * w, part * v]
+    };
+    m.map(R::of)
+}
+
+/// dd_generation_root §3.9's `N(a) = 2a − ε_μ·t` of control `k`'s two limbs, in `f64` on the masses as held, so with no
+/// clamp and none of `R`'s rounding: `½ log(N(v)/N(w))`.
+fn unclamped<R: Q>(k: usize, m: [R; 3]) -> f64 {
+    let [m0, m1, m2] = m.map(Q::f);
+    let (v, w) = if k == 0 { (m1 + m2, m0) } else { (m2, m1) };
+    let e = R::EPS_MU.f();
+    let t = v + w;
+    0.5 * ((2.0 * v - e * t) / (2.0 * w - e * t)).ln()
+}
+
+/// Each clamp's edge walked at `R`, float by float over `±4000` half-spacings, and wide over `±5%`: bit `k` of `flag`
+/// clear, control `k`'s `z` is [`unclamped`]; set, it is the clamped value. Each to `z`'s own rounding, 2 `ε_R·z` as in
+/// [`check_flag`]: no property of the tree under test.
+fn check_says<R: Q>(flag: impl Fn([R; 3]) -> u32) {
+    let e = R::EPS_MU.f();
+    let end = 0.5 * e * (2.0 - e);
+    let sat = saturated::<R>();
+    let tol = 2.0 * R::spacing() * sat;
+    let fine = (-4000_i32..=4000).map(|j| f64::from(j) * 0.5 * R::spacing());
+    let wide = (-2000_i32..=2000).map(|j| f64::from(j) * 2.5e-5);
+    let walk: Vec<f64> = fine.chain(wide).collect();
+    let (mut set, mut clear) = (0_u32, 0_u32);
+    for k in 0..2_usize {
+        for large in [false, true] {
+            for part in [0.5, 0.25, 1.0e-3] {
+                for nudge in [-1.0, 0.0, 1.0] {
+                    for &d in &walk {
+                        let m = aimed::<R>(k, large, end * (1.0 + d), part, nudge);
+                        let z = <StickBreaking as Link<2, 3>>::inverse(m)[k].f();
+                        let bit = flag(m) & (1 << k) != 0;
+                        let want = if !bit {
+                            unclamped::<R>(k, m)
+                        } else if large {
+                            sat
+                        } else {
+                            -sat
+                        };
+                        assert!(
+                            (z - want).abs() <= tol,
+                            "control {k}, large side {large}, d = {d:e}, m = {m:?}: bit {bit}, z = {z:e} against \
+                             {want:e}, off by {:e}, past {tol:e} (says)",
+                            z - want
+                        );
+                        match bit {
+                            true => set += 1,
+                            false => clear += 1,
+                        }
+                    }
+                }
+            }
+        }
+    }
+    assert!(
+        set > 10_000 && clear > 10_000,
+        "the walk stays on one side of the edge: {set} set, {clear} clear"
+    );
+}
+
+#[test]
+fn qa_stick_flag_says_what_moved() {
+    check_says::<f64>(<StickBreaking as SimplexClamp>::clamps);
+    check_says::<f32>(<StickBreaking as SimplexClamp>::clamps);
+}
+
+/// The bit from the table's arguments, `2v − 1` against `±c²`, at `f32`.
+#[cfg(feature = "controls")]
+fn table_flag(m: [f32; 3]) -> u32 {
+    let c = 1.0 - <f32 as ChartConstants>::EPS_MU;
+    let cap = c * c;
+    let out = |x: f32| !((x >= -cap) & (x <= cap));
+    let stick = m[1] + m[2];
+    u32::from(out(2.0 * stick - 1.0)) | (u32::from(out(2.0 * (m[2] / stick) - 1.0)) << 1)
+}
+
+negative_control!(
+    qa_stick_flag_says_what_moved,
+    "the table's arguments at f32 leave a band of the clamp unflagged, where z moves with the bit clear, so it must fail",
+    expected = "(says)",
+    check_says::<f32>(table_flag)
 );
 
 /// The grid of review 5785451098: controls on `[−8, 8]` at quarters, every ordered pair, 2 asks, 33 rows, decoded at `f32`
