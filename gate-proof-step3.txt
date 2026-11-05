@@ -1,0 +1,1 @@
+Signed-gate proof, step 3: a signed commit merged by merge commit on GitHub. Throwaway branch, not for main.
