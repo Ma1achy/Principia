@@ -3195,20 +3195,20 @@ mod warped_lz_sign {
     );
 }
 
-/// Warped, a tilt into the held `K₀` of `Φ_θ,L_z` at the exponent `gamma`: no cell refused, the held `K ≥ 0`, the pixel's
+/// Warped, a tilt into the held `K₀` of `Φ_θ,L_z` under the warp `(k_max, gamma)`: no cell refused, the held `K ≥ 0`, the pixel's
 /// `K = K_max·t^γ_K` at `t = t₀ + d` and the band at it. Where `t₀ + d < 0` the pixel is clamped at `t = 0`: a real
 /// system, the rest start at its own shape, flagged, never mirrored (R-709). The clamped pixels and the pixels counted.
-fn check_warped_k(k0: f64, gamma: f64, alter: Warped) -> (usize, usize) {
+fn check_warped_k(k0: f64, k_max: f64, gamma: f64, alter: Warped) -> (usize, usize) {
     let chart = HeldK::new(
         BurrauThetaLz {
             k: k0,
             ..theta_lz()
         },
-        1.0,
+        k_max,
         gamma,
     );
     let c = chart.chart;
-    let t0 = k0.powf(1.0 / gamma);
+    let t0 = (k0 / k_max).powf(1.0 / gamma);
     let (mut clamped, mut total) = (0, 0);
     for s in warped_tilts(HELD_K) {
         let view = held_view(chart, &s, K_SPAN);
@@ -3218,7 +3218,7 @@ fn check_warped_k(k0: f64, gamma: f64, alter: Warped) -> (usize, usize) {
             let d = if alter == Warped::ByValue {
                 burrau_acute::decode_theta_lz_at(&c, a, c.lz(b), k0 + shift.dx).0
             } else if alter == Warped::Mirror {
-                let k = t.abs().powf(gamma);
+                let k = k_max * t.abs().powf(gamma);
                 burrau_acute::decode_theta_lz_at(&c, a, c.lz_at(b, k), k).0
             } else {
                 view.decode::<Defaults, f64>(u, v)
@@ -3233,7 +3233,7 @@ fn check_warped_k(k0: f64, gamma: f64, alter: Warped) -> (usize, usize) {
             let k = if shift.dx == 0.0 {
                 k0
             } else {
-                t.max(0.0).powf(gamma)
+                k_max * t.max(0.0).powf(gamma)
             };
             let lz = c.lz_at(b, k);
             let (got_lz, got_k, drift) = invariants(&d);
@@ -3260,12 +3260,13 @@ fn check_warped_k(k0: f64, gamma: f64, alter: Warped) -> (usize, usize) {
     (clamped, total)
 }
 
-/// The held `K` arm: a centre no tilt here takes below `t = 0` and one it does, at integer and non-integer `γ_K`.
+/// The held `K` arm: a centre no tilt here takes below `t = 0` and one it does, under two `K_max`, at integer and
+/// non-integer `γ_K`.
 fn check_warped_k_all(alter: Warped) -> [(usize, usize); 2] {
     let mut sums = [(0, 0); 2];
     for gamma in [1.0, 1.5, 2.0, 2.5] {
-        for (i, k0) in [0.9, 0.01].into_iter().enumerate() {
-            let (clamped, total) = check_warped_k(k0, gamma, alter);
+        for (i, k0, k_max) in [(0, 0.9, 1.0), (1, 0.01, 1.0), (1, 0.01, 2.0)] {
+            let (clamped, total) = check_warped_k(k0, k_max, gamma, alter);
             sums[i].0 += clamped;
             sums[i].1 += total;
         }
