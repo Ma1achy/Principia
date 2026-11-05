@@ -5648,9 +5648,11 @@ CI only; REQ-SYS-065's statement names the pinned label.
 ## R-376 — The six M0 calibrations are confirmed: REQ-VAL-138, REQ-VAL-149 (8 shards × 300 min, a ceiling, not a target), REQ-VAL-151, REQ-VAL-156 (600 s), REQ-VAL-180 and REQ-VAL-181 *(closes RQ-202; amends R-71, R-203, R-214, R-217, R-233, R-269, R-287, R-296, R-302, R-305, R-348 and R-352 as they apply to these values)*
 *Amended in part by R-402 (the nightly full run's shards: each package's mutants dealt round-robin into shards sized
 on their measured cost, counted each run, under a 330-minute step limit).*
-*Still in force: all of it but its note on the nightly full run's shards: the six confirmed values stand, REQ-VAL-149's
-8 shards × 300 min for the per-PR run among them; R-402 sizes the nightly full run's shards and gives its step a
-330-minute limit.*
+*Amended in part by R-712 (5 Nov 2026: REQ-VAL-180's per-mutant timeout is about 3 times the measured baseline test time,
+in place of 2.0 times).*
+*Still in force: all of it but its note on the nightly full run's shards and REQ-VAL-180's multiplier: the other confirmed
+values stand, REQ-VAL-149's 8 shards × 300 min for the per-PR run among them, and REQ-VAL-180's 60 s floor; R-402 sizes
+the nightly full run's shards and gives its step a 330-minute limit; R-712 sets the multiplier.*
 *3 Oct 2026 · applied in the six requirements (reqio), `.github/workflows/mutants.yml`, `.github/workflows/nightly.yml`,
 `.cargo/mutants.toml`, `crates/validation/src/spawn.rs`, `crates/validation/src/prop.rs`, `xtask/src/golden.rs`,
 `fixtures/golden/BASELINES.md`, the forward lines of the rulings it amends, and `docs/archive/review_queue/M0.md`
@@ -30490,3 +30492,27 @@ the toolchain, for the 2–3 slowest jobs, evicted to stay well under 10 GB, bui
 *Applied per R-369 (PR #413, code F5), a mechanical consequence, flagged since the owner listed only R-110, R-177 and R-235:* R-677's tier (a), "full CI as before", now reads the two tiers above, and it carries the forward line. R-662's "Full CI runs only when a pull request changes Principia's code" is unaffected: it says when full CI may run, and that still holds.
 
 R-684 is in the "ci" group of `plan/rule_groups.yaml`.
+
+## R-712 — The per-mutant timeout is set from the measured baseline test time, at about 3 times it; 8 shards are kept; a timed-out mutant counts as caught and is listed; #360's 135 unreached mutants go to the nightly run, and the same rule applies to #387 if it hits the limit *(amends R-376 for REQ-VAL-180)*
+*5 Nov 2026 · the owner's message of that day; applied in R-376's forward lines, REQ-VAL-180 (reqio) and
+`plan/rule_groups.yaml`; built by tooling PR `tooling/mutants-measured-timeout`*
+
+The owner's words, 5 Nov 2026, verbatim:
+
+> #360 mutants: don't use a fixed 10,000 s. Set the per-mutant timeout from the measured baseline test time (e.g. cargo-mutants --timeout-multiplier ~3, or an explicit timeout of about 3x the baseline), keep 8 shards, and report which mutants timed out: a timeout counts as caught, but list them. The 135 unreached mutants go to the nightly run. Apply the same rule to #387 if it hits the limit.
+
+*What it decides:*
+
+- **The timeout.** REQ-VAL-180's value is about 3 times the measured baseline test time, in place of R-376's 2.0 times. R-376's 60 s floor is not mentioned and stands.
+- **The form.** Of the two the order offers, the owner chose the explicit timeout, so the baseline is measured once and not per shard. `tooling/mutants-measured-timeout` carries it, and `.cargo/mutants.toml` keeps `timeout_multiplier = 2.0` until that pull request merges.
+- **Shards.** REQ-VAL-149's 8 shards stay.
+- **A timeout counts as caught, and is listed.** `cargo xtask mutants-check` already lists one as "timed out (not a survivor)" (R-202, R-348).
+- **The gate does not relax.** R-302's rule, in `mutants.yml`, that a shard cut off by its limit fails, "never a pass", stays as it is. "The 135 unreached mutants" names #360's mutants, and #387's if it hits the limit; it passes no cut-off shard. R-302's nightly run is their backstop.
+
+*The evidence, for the record:* #360 had 0 timeouts in 541 judged mutants, with a baseline of 5064 to 5554 s and a slowest mutant of 2405 s (run 41957362447).
+
+*What it amends:* **R-376**, for REQ-VAL-180's multiplier only.
+
+R-712 is in the "ci" group of `plan/rule_groups.yaml`.
+
+Changes REQ-VAL-180 (source, rulings, note).
