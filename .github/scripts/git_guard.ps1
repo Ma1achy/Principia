@@ -1,8 +1,9 @@
 # Refuses a job when the checkout kept between runs on the self-hosted runner holds something that would run or redirect
 # git (the owner, 5 Nov 2026; R-711 (lands first in its own rulings PR)). It runs before actions/checkout, which runs git
 # in that folder. A job can write there, so this file is never run from it: the step fetches this file at the job's own
-# commit. It reads .git as files, and each config through `git config --file`: see Read-Keys. The PC's job-started hook
-# runs a guard of its own, `E:\runner-tools\checks\git-guard.ps1`; this step is the second layer.
+# commit. It reads .git as files, each config through `git config --file`, and, once all of that has passed, has git hash
+# every object. The PC's job-started hook runs a guard of its own, `E:\runner-tools\checks\git-guard.ps1`; this step is the
+# second layer.
 #
 #   git_guard.ps1                  Guard $env:GITHUB_WORKSPACE. On firing, log to $env:WIN_REFUSAL_LOG, empty the checkout
 #                                  (a fresh clone next run) and exit 1.
@@ -51,17 +52,29 @@ $keys = @(
     'credential.*.helper'
     'http.*.proxy'
     'url.*.pushInsteadOf'
+    'fsck.*'
+    # Both are for a git newer than the PC's 2.43, which has neither, so an upgrade can't open them without a word.
+    'hook.*'
+    'extensions.refStorage'
 )
+# The git the PC's hook uses, and never a name: PATH can differ here, as an earlier step can write to GITHUB_PATH.
+$gitExe = 'C:\Program Files\Git\cmd\git.exe'
 # git reads each config itself, so a reader here never has to match its grammar: a config git can't read fails, and what
 # it reads is what the next git would. `--file` reads that one file and nothing of the checkout, `--no-includes` follows no
-# include, and listing keys runs nothing. It starts outside the checkout, from a full path, so a planted git.exe or a repo
-# around the folder it stands in can't be picked up; the job can't write to $env:SystemRoot. Any failure throws, so it
-# refuses. --null, because a subsection can hold a CR, which would split a key if it were read as lines.
+# include, and listing keys runs nothing. --null, because a subsection can hold a CR, which would split a key if it were
+# read as lines. git 2.43's documentation has each of these flags.
 $arguments = 'config --no-includes --file "{0}" --list --name-only --null'
-function Read-Keys($path) {
+# A commit's name proves nothing kept in .git, as git doesn't hash an object when it reads it: fsck does. --git-dir says
+# which repo, so no discovery runs. Not --connectivity-only, which leaves blobs unhashed.
+$objects = '--git-dir "{0}" fsck --no-dangling'
+
+# git's standard output. It starts outside the checkout, and the job can't write to $env:SystemRoot. Any failure throws, so
+# it refuses.
+function Invoke-Git($what) {
+    if (-not [System.IO.File]::Exists($gitExe)) { throw "no git at $gitExe" }
     $start = New-Object System.Diagnostics.ProcessStartInfo
-    $start.FileName = (Get-Command git -CommandType Application | Select-Object -First 1).Source
-    $start.Arguments = $arguments -f $path
+    $start.FileName = $gitExe
+    $start.Arguments = $what
     $start.WorkingDirectory = $env:SystemRoot
     $start.UseShellExecute = $false
     $start.RedirectStandardOutput = $true
@@ -70,8 +83,12 @@ function Read-Keys($path) {
     $errors = $run.StandardError.ReadToEndAsync()
     $out = $run.StandardOutput.ReadToEnd()
     $run.WaitForExit()
-    if ($run.ExitCode -ne 0) { throw "git can't read ${path}: $($errors.Result)" }
-    $out.Split([char]0) | Where-Object { $_ }
+    if ($run.ExitCode -ne 0) { throw "git $what failed, status $($run.ExitCode): $($errors.Result)" }
+    $out
+}
+
+function Read-Keys($path) {
+    (Invoke-Git ($arguments -f $path)).Split([char]0) | Where-Object { $_ }
 }
 
 # The entry of $parent called $name, or nothing. A listing that fails throws, where Test-Path would only say no.
@@ -88,6 +105,8 @@ function Find-Planted($git) {
     foreach ($redirect in 'commondir', 'gitdir') {
         if (Get-Entry $git $redirect) { $found += "redirect: $redirect" }
     }
+    # Refs kept here would hide a replace ref from the checks below.
+    if (Get-Entry $git 'reftable') { $found += '.git/reftable' }
     $hooks = Get-Entry $git 'hooks'
     if ($hooks) {
         foreach ($hook in @(Get-ChildItem -LiteralPath $hooks.FullName -Force)) {
@@ -115,6 +134,10 @@ function Find-Planted($git) {
                 if ($key -like $listed) { $found += "config key: $key" }
             }
         }
+    }
+    # Last, as it reads the kept repo: only what has passed all of the above gets as far as being opened by git.
+    if (-not $found.Count) {
+        $null = Invoke-Git ($objects -f $git.FullName)
     }
     $found
 }

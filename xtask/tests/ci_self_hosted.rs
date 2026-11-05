@@ -52,6 +52,8 @@ const GIT_GUARD: &str = ".github/scripts/git_guard.ps1";
 /// Where each job fetches the guard: its own commit, never the kept folder the guard distrusts.
 const GIT_GUARD_URL: &str = "https://raw.githubusercontent.com/$env:GITHUB_REPOSITORY/$env:GITHUB_SHA/.github/scripts/git_guard.ps1";
 const REFUSAL_LOG: &str = "WIN_REFUSAL_LOG";
+/// The exact path: `[AppendOnly]::Add` prefixes `\\??\\` to it as it stands (#390).
+const REFUSAL_LOG_PATH: &str = "E:\\runner-tools\\refusal-log\\refusals.log";
 const LABEL: &str = "possibly faulty hardware (owner-reported)";
 /// Branch protection's required checks on `main`. A self-hosted job bearing one of these names would report under it.
 /// The first five are `FULL_ONLY` in `.github/scripts/ci_tier.sh`, which the test reads.
@@ -1697,7 +1699,7 @@ mod bare_cargo {
 // ---- The .git guard (the owner, 5 Nov 2026) --------------------------------------------------------------------------
 
 /// A key for each item of the owner's list, in a case other than the list's: git matches a section and name in any case.
-const PLANTED: [&str; 35] = [
+const PLANTED: [&str; 40] = [
     "CORE.hookspath",
     "Core.FSMonitor",
     "core.sshcommand",
@@ -1733,9 +1735,14 @@ const PLANTED: [&str; 35] = [
     "Credential.https://x/.Helper",
     "HTTP.https://x/.Proxy",
     "url.https://x/.PUSHINSTEADOF",
+    "FSCK.skipList",
+    "fsck.MissingEmail",
+    "Hook.x.COMMAND",
+    "hook.x.Event",
+    "Extensions.RefStorage",
 ];
 /// What actions/checkout leaves in a kept `.git/config`, and near misses of the list.
-const HARMLESS: [&str; 16] = [
+const HARMLESS: [&str; 17] = [
     "core.repositoryformatversion",
     "core.filemode",
     "core.bare",
@@ -1752,6 +1759,7 @@ const HARMLESS: [&str; 16] = [
     "core.sparsecheckout",
     "core.sparsecheckoutcone",
     "extensions.worktreeconfig",
+    "transfer.fsckobjects",
 ];
 
 /// The script's `$keys`, its one list.
@@ -1761,7 +1769,11 @@ fn listed_keys(script: &str) -> Vec<&str> {
         .and_then(|(_, rest)| rest.split_once("\n)"))
         .expect("git_guard: no $keys list")
         .0;
-    list.lines().map(|l| l.trim().trim_matches('\'')).collect()
+    list.lines()
+        .map(str::trim)
+        .filter(|l| !l.starts_with('#'))
+        .map(|l| l.trim_matches('\''))
+        .collect()
 }
 
 /// PowerShell's `-like` for these patterns: `*` is any text, and case doesn't count.
@@ -2149,6 +2161,36 @@ mod key_scoped_proxy {
     );
 }
 
+mod key_fsck {
+    use super::*;
+    negative_control!(
+        git_guard_refuses_each_listed_key,
+        "fsck.* off the list",
+        expected = "git_guard: FSCK.skipList isn't refused",
+        check_keys(&read(GIT_GUARD).replace("    'fsck.*'\n", ""))
+    );
+}
+
+mod key_hook {
+    use super::*;
+    negative_control!(
+        git_guard_refuses_each_listed_key,
+        "hook.* off the list",
+        expected = "git_guard: Hook.x.COMMAND isn't refused",
+        check_keys(&read(GIT_GUARD).replace("    'hook.*'\n", ""))
+    );
+}
+
+mod key_ref_storage {
+    use super::*;
+    negative_control!(
+        git_guard_refuses_each_listed_key,
+        "extensions.refStorage off the list",
+        expected = "git_guard: Extensions.RefStorage isn't refused",
+        check_keys(&read(GIT_GUARD).replace("    'extensions.refStorage'\n", ""))
+    );
+}
+
 mod key_push_instead_of {
     use super::*;
     negative_control!(
@@ -2193,6 +2235,7 @@ fn check_guard_script(script: &str) {
         ("alternates", "'alternates'"),
         ("refs/replace/", "(Get-Entry $git 'refs') 'replace'"),
         ("packed-refs", "IndexOf('refs/replace/'"),
+        ("reftable", "Get-Entry $git 'reftable'"),
     ] {
         assert!(has(what), "git_guard: doesn't refuse {name}");
     }
@@ -2201,12 +2244,30 @@ fn check_guard_script(script: &str) {
         "git_guard: doesn't have git read the config"
     );
     assert!(
-        has("$start.WorkingDirectory = $env:SystemRoot") && has("-CommandType Application"),
+        has("$gitExe = 'C:\\Program Files\\Git\\cmd\\git.exe'")
+            && has("$start.FileName = $gitExe")
+            && has("$start.WorkingDirectory = $env:SystemRoot")
+            && !has("Get-Command"),
         "git_guard: starts git where the checkout can reach it"
+    );
+    assert!(
+        has("if (-not [System.IO.File]::Exists($gitExe)) { throw"),
+        "git_guard: a missing git doesn't refuse"
     );
     assert!(
         has("if ($run.ExitCode -ne 0) { throw"),
         "git_guard: a failed read doesn't refuse"
+    );
+    let text = code.join("\n");
+    let fsck = "$null = Invoke-Git ($objects -f $git.FullName)";
+    assert!(has(fsck), "git_guard: doesn't check the objects");
+    assert!(
+        text.contains(&format!("if (-not $found.Count) {{\n{fsck}")),
+        "git_guard: runs fsck on a repo that has failed"
+    );
+    assert!(
+        text.find(fsck) > text.find("foreach ($config in $configs) {"),
+        "git_guard: runs fsck before the other checks"
     );
     assert!(
         code.iter().find(|l| !l.is_empty()) == Some(&"$ErrorActionPreference = 'Stop'"),
@@ -2315,11 +2376,37 @@ mod git_by_name {
     use super::*;
     negative_control!(
         git_guard_script_holds_the_owners_order,
-        "git left to be found from the checkout",
+        "git left to be found by name",
         expected = "git_guard: starts git where the checkout can reach it",
         check_guard_script(&guard_edited(
-            "(Get-Command git -CommandType Application | Select-Object -First 1).Source",
-            "'git'"
+            "$start.FileName = $gitExe",
+            "$start.FileName = 'git'"
+        ))
+    );
+}
+
+mod git_through_path {
+    use super::*;
+    negative_control!(
+        git_guard_script_holds_the_owners_order,
+        "git found through PATH",
+        expected = "git_guard: starts git where the checkout can reach it",
+        check_guard_script(&guard_edited(
+            "$gitExe = 'C:\\Program Files\\Git\\cmd\\git.exe'",
+            "$gitExe = (Get-Command git).Source"
+        ))
+    );
+}
+
+mod missing_git_passes {
+    use super::*;
+    negative_control!(
+        git_guard_script_holds_the_owners_order,
+        "a missing git left to the start",
+        expected = "git_guard: a missing git doesn't refuse",
+        check_guard_script(&guard_edited(
+            "    if (-not [System.IO.File]::Exists($gitExe)) { throw \"no git at $gitExe\" }\n",
+            ""
         ))
     );
 }
@@ -2331,9 +2418,52 @@ mod failed_read_passes {
         "a failed read taken as no keys",
         expected = "git_guard: a failed read doesn't refuse",
         check_guard_script(&guard_edited(
-            "    if ($run.ExitCode -ne 0) { throw \"git can't read ${path}: $($errors.Result)\" }\n",
+            "    if ($run.ExitCode -ne 0) { throw \"git $what failed, status $($run.ExitCode): $($errors.Result)\" }\n",
             ""
         ))
+    );
+}
+
+mod objects_unchecked {
+    use super::*;
+    negative_control!(
+        git_guard_script_holds_the_owners_order,
+        "no fsck",
+        expected = "git_guard: doesn't check the objects",
+        check_guard_script(&guard_edited(
+            "        $null = Invoke-Git ($objects -f $git.FullName)\n",
+            ""
+        ))
+    );
+}
+
+mod fsck_on_a_failed_repo {
+    use super::*;
+    negative_control!(
+        git_guard_script_holds_the_owners_order,
+        "fsck run on a repo already refused",
+        expected = "git_guard: runs fsck on a repo that has failed",
+        check_guard_script(&guard_edited("if (-not $found.Count) {", "if ($true) {"))
+    );
+}
+
+mod fsck_first {
+    use super::*;
+    negative_control!(
+        git_guard_script_holds_the_owners_order,
+        "fsck run before the other checks",
+        expected = "git_guard: runs fsck before the other checks",
+        check_guard_script(
+            &guard_edited(
+                "    if (-not $found.Count) {\n        $null = Invoke-Git ($objects -f $git.FullName)\n    }\n",
+                ""
+            )
+            .replacen(
+                "    $found = @()\n",
+                "    $found = @()\n    if (-not $found.Count) {\n        $null = Invoke-Git ($objects -f $git.FullName)\n    }\n",
+                1
+            )
+        )
     );
 }
 
@@ -2405,6 +2535,19 @@ mod packed_replace_refs {
         check_guard_script(&guard_edited(
             "IndexOf('refs/replace/'",
             "IndexOf('refs/other/'"
+        ))
+    );
+}
+
+mod reftable {
+    use super::*;
+    negative_control!(
+        git_guard_script_holds_the_owners_order,
+        "a .git/reftable folder passed",
+        expected = "git_guard: doesn't refuse reftable",
+        check_guard_script(&guard_edited(
+            "    if (Get-Entry $git 'reftable') { $found += '.git/reftable' }\n",
+            ""
         ))
     );
 }
@@ -2520,25 +2663,103 @@ mod green {
     );
 }
 
-/// The keys of `file` by the script's own `git config` line, or nothing if git refuses it.
-fn git_keys(script: &str, file: &Path) -> Option<Vec<String>> {
+/// git, away from this user's config and any repo the test stands in.
+fn git(dir: &Path) -> std::process::Command {
+    let mut git = std::process::Command::new("git");
+    git.current_dir(dir)
+        .env("GIT_CONFIG_NOSYSTEM", "1")
+        .env("GIT_CONFIG_GLOBAL", dir.join("no_such_config"))
+        .env_remove("GIT_DIR")
+        .env_remove("GIT_WORK_TREE")
+        .env_remove("GIT_INDEX_FILE");
+    git
+}
+
+/// `git args` in `dir`, which must work; its output.
+fn git_ok(dir: &Path, args: &[&str]) -> String {
+    let out = git(dir).args(args).timed_output().expect("git ran");
+    assert!(out.status.success(), "git {args:?}: {out:?}");
+    String::from_utf8_lossy(&out.stdout).trim().to_owned()
+}
+
+/// A repo with a history, to fetch from.
+fn origin_repo(dir: &Path) {
+    std::fs::create_dir_all(dir).expect("a folder");
+    git_ok(dir, &["init", "-q"]);
+    for text in ["one", "two"] {
+        std::fs::write(dir.join("a.txt"), text).expect("a file");
+        git_ok(dir, &["add", "a.txt"]);
+        git_ok(
+            dir,
+            &[
+                "-c",
+                "user.name=x",
+                "-c",
+                "user.email=x@x",
+                "commit",
+                "-qm",
+                text,
+            ],
+        );
+    }
+}
+
+/// `dir` as actions/checkout leaves it with fetch-depth 1: `init`, a depth-1 fetch, a checkout.
+fn kept_repo(origin: &Path, dir: &Path) {
+    let url = origin.to_string_lossy().replace('\\', "/");
+    let url = format!("file:///{}", url.trim_start_matches('/'));
+    std::fs::create_dir_all(dir).expect("a folder");
+    git_ok(dir, &["init", "-q"]);
+    git_ok(dir, &["fetch", "-q", "--depth=1", &url, "HEAD"]);
+    git_ok(dir, &["checkout", "-q", "--detach", "FETCH_HEAD"]);
+    assert!(dir.join(".git/shallow").exists(), "a shallow repo");
+}
+
+/// Puts other content under the name of the blob at `a.txt`. Renames, as Windows renames a read-only object but won't
+/// overwrite one, and the fetch left it loose, as it has too few objects to keep a pack.
+fn overwrite_blob(dir: &Path) {
+    let object = |id: &str| dir.join(".git/objects").join(&id[..2]).join(&id[2..]);
+    let old = git_ok(dir, &["rev-parse", "HEAD:a.txt"]);
+    std::fs::write(dir.join("planted.txt"), "planted").expect("a file");
+    let new = git_ok(dir, &["hash-object", "-w", "planted.txt"]);
+    std::fs::remove_file(dir.join("planted.txt")).expect("a file gone");
+    std::fs::rename(object(&old), dir.join(".git/moved")).expect("a loose object");
+    std::fs::rename(object(&new), object(&old)).expect("a loose object");
+}
+
+/// A scratch folder of this test's own.
+fn scratch(name: &str) -> PathBuf {
+    static NEXT: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+    let dir = Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!(
+        "ci_self_hosted_{name}_{}_{}",
+        std::process::id(),
+        NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+    ));
+    std::fs::create_dir_all(&dir).expect("a folder");
+    dir
+}
+
+/// git on the script's `$name` line, with `path` for its `{0}`.
+fn script_git(script: &str, name: &str, path: &Path, cwd: &Path) -> std::process::Output {
+    let start = format!("${name} = '");
     let template = script
         .lines()
-        .find_map(|l| l.trim().strip_prefix("$arguments = '"))
+        .find_map(|l| l.trim().strip_prefix(start.as_str()))
         .and_then(|l| l.strip_suffix('\''))
-        .expect("git_guard: no $arguments line");
+        .expect("git_guard: no such line");
     let args = template.split_whitespace().map(|word| {
         if word == "\"{0}\"" {
-            file.as_os_str().to_owned()
+            path.as_os_str().to_owned()
         } else {
             word.into()
         }
     });
-    let out = std::process::Command::new("git")
-        .args(args)
-        .current_dir(file.parent().expect("a parent"))
-        .timed_output()
-        .expect("git ran");
+    git(cwd).args(args).timed_output().expect("git ran")
+}
+
+/// The keys of `file` by the script's own `git config` line, or nothing if git refuses it.
+fn git_keys(script: &str, file: &Path) -> Option<Vec<String>> {
+    let out = script_git(script, "arguments", file, file.parent().expect("a parent"));
     out.status.success().then(|| {
         String::from_utf8_lossy(&out.stdout)
             .split('\0')
@@ -2551,13 +2772,7 @@ fn git_keys(script: &str, file: &Path) -> Option<Vec<String>> {
 /// A config read by the script's own line finds the key under each form that hides one from a reader of its own, follows
 /// no include, and fails on what git can't read.
 fn check_git_reading(script: &str) {
-    static NEXT: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
-    let dir = Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!(
-        "ci_self_hosted_git_{}_{}",
-        std::process::id(),
-        NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
-    ));
-    std::fs::create_dir_all(&dir).expect("a folder");
+    let dir = scratch("git");
     let config = dir.join("config");
     let listed = listed_keys(script);
     for (form, text) in [
@@ -2647,6 +2862,46 @@ mod empty_filter {
     );
 }
 
+/// The script's own `fsck` line passes a kept shallow clone and refuses a blob overwritten under its own name.
+fn check_git_objects(script: &str) {
+    let base = scratch("fsck");
+    let (origin, dir) = (base.join("origin"), base.join("kept"));
+    origin_repo(&origin);
+    kept_repo(&origin, &dir);
+    let fsck = || script_git(script, "objects", &dir.join(".git"), &base);
+    assert!(
+        fsck().status.success(),
+        "git_guard: fsck refused a kept shallow clone"
+    );
+    overwrite_blob(&dir);
+    assert!(
+        !fsck().status.success(),
+        "git_guard: fsck passed an overwritten blob"
+    );
+}
+
+#[test]
+fn git_guard_finds_a_planted_object() {
+    check_git_objects(&read(GIT_GUARD));
+}
+
+negative_control!(
+    git_guard_finds_a_planted_object,
+    "connectivity only, which doesn't hash a blob",
+    expected = "git_guard: fsck passed an overwritten blob",
+    check_git_objects(&read(GIT_GUARD).replace("--no-dangling", "--connectivity-only"))
+);
+
+mod fsck_refuses_all {
+    use super::*;
+    negative_control!(
+        git_guard_finds_a_planted_object,
+        "a line that refuses every repo",
+        expected = "git_guard: fsck refused a kept shallow clone",
+        check_git_objects(&read(GIT_GUARD).replace("--no-dangling", "--no-such-flag"))
+    );
+}
+
 /// `script` run on each case as the job's step would run it, with `powershell`, which only Windows has. A key of
 /// [`PLANTED`] in a `.git/config` of its own, and each other thing the owner listed, is refused; a clean kept checkout and
 /// a first run pass.
@@ -2660,14 +2915,23 @@ fn check_script_refuses(script: &Path) {
         script.file_name().expect("a name").to_string_lossy()
     ));
     let _ = std::fs::remove_dir_all(&base);
-    let passes = |case: &str, files: &[(&str, &str)]| {
+    let origin = base.join("origin");
+    origin_repo(&origin);
+    // A real repo for each case that gets past the rest, or a failed fsck would hide what was meant to refuse.
+    let plant = |case: &str, repo: bool, files: &[(&str, &str)]| {
         let dir = base.join(case);
+        if repo {
+            kept_repo(&origin, &dir);
+        }
         std::fs::create_dir_all(&dir).expect("a case's folder");
         for (name, text) in files {
             let path = dir.join(name);
             std::fs::create_dir_all(path.parent().expect("a parent")).expect("a folder");
             std::fs::write(path, text).expect("a planted file");
         }
+        dir
+    };
+    let run = |dir: &Path| {
         let out = std::process::Command::new("powershell")
             .args([
                 "-NoProfile",
@@ -2678,11 +2942,15 @@ fn check_script_refuses(script: &Path) {
             ])
             .arg(script)
             .arg("check")
-            .arg(&dir)
+            .arg(dir)
             .timed_output()
             .expect("powershell ran");
-        out.status.success()
+        (
+            out.status.success(),
+            String::from_utf8_lossy(&out.stdout).into_owned(),
+        )
     };
+    let passes = |case: &str, files: &[(&str, &str)]| run(&plant(case, true, files)).0;
     let config = |text: &str| format!("{CLEAN}{text}");
     for (at, key) in PLANTED.iter().enumerate() {
         let (section, name) = key.split_once('.').expect("a section");
@@ -2703,7 +2971,7 @@ fn check_script_refuses(script: &Path) {
         (".git/hooks/pre-commit.sample", "#\n"),
     ];
     assert!(
-        passes("first_run", &[]),
+        run(&plant("first_run", false, &[])).0,
         "git_guard: the script refused a first run, or the folder a refusal leaves"
     );
     let sparse = [
@@ -2718,21 +2986,32 @@ fn check_script_refuses(script: &Path) {
         passes("clean", &clean),
         "git_guard: the script refused a clean checkout"
     );
-    let refused: [(&str, &[(&str, &str)]); 16] = [
+    // A case, what the script must say of it, and what's planted.
+    type Refused<'a> = (&'a str, &'a str, &'a [(&'a str, &'a str)]);
+    let refused: [Refused; 15] = [
         (
             "commondir",
+            "redirect: commondir",
             &[(".git/config", CLEAN), (".git/commondir", "planted\n")],
         ),
         (
             "gitdir",
+            "redirect: gitdir",
             &[(".git/config", CLEAN), (".git/gitdir", "planted\n")],
         ),
         (
+            "reftable",
+            ".git/reftable",
+            &[(".git/config", CLEAN), (".git/reftable/tables.list", "x\n")],
+        ),
+        (
             "grafts",
+            "info/grafts",
             &[(".git/config", CLEAN), (".git/info/grafts", "x\n")],
         ),
         (
             "alternates",
+            "objects/info/alternates",
             &[
                 (".git/config", CLEAN),
                 (".git/objects/info/alternates", "x\n"),
@@ -2740,10 +3019,12 @@ fn check_script_refuses(script: &Path) {
         ),
         (
             "a replace ref",
+            "refs/replace/",
             &[(".git/config", CLEAN), (".git/refs/replace/a", "x\n")],
         ),
         (
             "a packed replace ref",
+            "in packed-refs",
             &[
                 (".git/config", CLEAN),
                 (".git/packed-refs", "abc refs/replace/a\n"),
@@ -2751,6 +3032,7 @@ fn check_script_refuses(script: &Path) {
         ),
         (
             "a continuation",
+            "config key",
             &[(
                 ".git/config",
                 "[core]\n\tx = a\\\n[other]\n\thooksPath = /evil\n",
@@ -2758,6 +3040,7 @@ fn check_script_refuses(script: &Path) {
         ),
         (
             "a bare CR",
+            "config key",
             &[(
                 ".git/config",
                 "[core]\n\tx = a\r[other]\n\thooksPath = /evil\n",
@@ -2765,40 +3048,62 @@ fn check_script_refuses(script: &Path) {
         ),
         (
             "an empty subsection",
+            "config key",
             &[(".git/config", "[url \"\"]\n\tinsteadOf = x\n")],
         ),
         (
             "hook",
+            "active hook",
             &[(".git/config", CLEAN), (".git/hooks/pre-commit", "x")],
         ),
         (
             "attributes",
+            "info/attributes",
             &[(".git/config", CLEAN), (".git/info/attributes", "x")],
         ),
-        (".git as a file", &[(".git", "gitdir: elsewhere\n")]),
-        ("no config", &[(".git/HEAD", "x")]),
         (
             "an unreadable line",
+            "can't read",
             &[(".git/config", "[core\n\tbare = false\n")],
         ),
         (
             "a key on the section's line",
+            "config key",
             &[(".git/config", "[core] hooksPath = x\n")],
         ),
         (
             "a key in config.worktree",
+            "config key",
             &[
                 (".git/config", CLEAN),
                 (".git/config.worktree", "[core]\n\tpager = x\n"),
             ],
         ),
     ];
-    for (at, (case, files)) in refused.iter().enumerate() {
+    let refuses = |case: &str, reason: &str, dir: &Path| {
+        let (passed, said) = run(dir);
+        assert!(!passed, "git_guard: the script passed {case}");
         assert!(
-            !passes(&format!("refused_{at}"), files),
-            "git_guard: the script passed {case}"
+            said.contains(reason),
+            "git_guard: the script passed {case}, and something else refused it: {said}"
         );
+    };
+    for (at, (case, reason, files)) in refused.iter().enumerate() {
+        refuses(case, reason, &plant(&format!("refused_{at}"), true, files));
     }
+    refuses(
+        ".git as a file",
+        ".git is a file",
+        &plant("gitfile", false, &[(".git", "gitdir: elsewhere\n")]),
+    );
+    refuses(
+        "no config",
+        "can't read",
+        &plant("no_config", false, &[(".git/HEAD", "x")]),
+    );
+    let overwritten = plant("overwritten", true, &[]);
+    overwrite_blob(&overwritten);
+    refuses("an overwritten blob", "fsck", &overwritten);
     // A firing, as the job's step runs it, standing in the folder as the runner does, with a log of this test's own.
     let dir = base.join("firing");
     std::fs::create_dir_all(dir.join(".git/hooks")).expect("a folder");
@@ -2825,8 +3130,13 @@ fn check_script_refuses(script: &Path) {
         .timed_output()
         .expect("cmd ran");
     assert!(made.status.success(), "git_guard: no junction to plant");
-    // The real log exists; whether [AppendOnly]::Add creates a missing file isn't known, so this one exists too.
-    let log = base.join("refusals.log");
+    // [AppendOnly]::Add opens with FILE_OPEN, so it creates nothing, and prefixes `\\??\\` to the path as it stands: a full
+    // path, in backslashes, of a file that exists.
+    let log = PathBuf::from(
+        base.join("refusals.log")
+            .to_string_lossy()
+            .replace('/', "\\"),
+    );
     std::fs::write(&log, "").expect("the log");
     let out = std::process::Command::new("powershell")
         .args([
@@ -2886,10 +3196,9 @@ negative_control!(
 fn check_refusal_log(files: &[(String, String)]) {
     for (file, _, doc, _) in self_hosted(files) {
         let path = doc["env"][REFUSAL_LOG].as_str().unwrap_or("");
-        let bytes = path.as_bytes();
-        assert!(
-            bytes.len() > 3 && bytes[0].is_ascii_uppercase() && path[1..].starts_with(":\\"),
-            "{file}: {REFUSAL_LOG} is no path on the PC: `{path}`"
+        assert_eq!(
+            path, REFUSAL_LOG_PATH,
+            "{file}: {REFUSAL_LOG} is no path on the PC"
         );
     }
 }
@@ -2918,6 +3227,24 @@ negative_control!(
         files
     })
 );
+
+mod refusal_log_relative {
+    use super::*;
+    negative_control!(
+        self_hosted_refusal_log_is_a_path_on_the_pc,
+        "a path that isn't full",
+        expected = "win-gpu.yml: WIN_REFUSAL_LOG is no path on the PC",
+        check_refusal_log(&{
+            let mut files = workflows();
+            let (_, text) = files
+                .iter_mut()
+                .find(|(n, _)| n == WORKFLOW)
+                .expect("the workflow");
+            *text = text.replace(REFUSAL_LOG_PATH, "refusal-log\\refusals.log");
+            files
+        })
+    );
+}
 
 // ---- The paths filter (R-711 item 5) -----------------------------------------------------------------------------------
 
