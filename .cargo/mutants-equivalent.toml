@@ -422,3 +422,7 @@ justification = "the bound's two tests fall together. A third too small to move 
 [[equivalent]]
 mutant = "crates/kernel/src/chart/physical.rs:866:35: replace < with <= in MixedMassRatio<A, S, f64>::seed"
 justification = "the bound's two tests fall together. A third too small to move one end is too small to move the other, except with both ends non-zero and near 1e-308 (26 of 197,470 brackets within 7 ulps of every power of two). hi is 0 or stays far above that: hi moves only on a strict inequality of the misses, which needs two distinct exp values, so a bracket about 1e-16 wide or more, whose far is exactly 0 or at least about 1e-33. At an ask ending at q = 1, hi = 0 and lo does walk through 1e-308 to -5e-324, up to 1,841 steps; there far = -third moves whenever third is not 0 and near moves unless third rounds to 0, so they stop together (20,000 descents with hi = 0 never apart, nor 60,000 brackets of seed's own walk). NaN and inverted brackets fail both tests in either form, so the search ends on the same step with the same None"
+
+[[equivalent]]
+mutant = "crates/kernel/src/encode/blocks.rs:279:29: replace | with ^ in <impl SimplexClamp for StickBreaking>::clamps"
+justification = "the two operands are select(first, 1, 0) and select(second, 2, 0), which share no bit, so their ^ is their |"
