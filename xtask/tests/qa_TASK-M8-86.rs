@@ -1055,3 +1055,54 @@ negative_control!(
     expected = "the app was never told of KeyQ's release",
     node("key_held_into_altgr_letter", &NO_KEY_UP)
 );
+
+/// The same deliverable, by every way a press can go on with no release to follow it: a keyup inside a composition, a
+/// second name from a held key's repeat, a keyup Cmd eats. Each leaves egui holding the key, and its next press is taken
+/// for a repeat, which the app's commands skip: Cmd+Z's second undo is lost.
+#[test]
+fn qa_m8_86_a_key_held_into_a_composition_is_released() {
+    node("key_held_into_composition", &[]);
+}
+
+negative_control!(
+    qa_m8_86_a_key_held_into_a_composition_is_released,
+    "no key-up reaches the loader",
+    expected = "the app was left holding",
+    node("key_held_into_composition", &NO_KEY_UP)
+);
+
+#[test]
+fn qa_m8_86_the_key_opening_a_composition_is_released() {
+    node("key_opening_a_composition", &[]);
+}
+
+negative_control!(
+    qa_m8_86_the_key_opening_a_composition_is_released,
+    "no key-up reaches the loader",
+    expected = "the app was left holding",
+    node("key_opening_a_composition", &NO_KEY_UP)
+);
+
+#[test]
+fn qa_m8_86_a_key_renamed_by_its_repeat_is_released() {
+    node("key_renamed_by_its_repeat", &[]);
+}
+
+negative_control!(
+    qa_m8_86_a_key_renamed_by_its_repeat_is_released,
+    "no key-up reaches the loader",
+    expected = "the app was left holding",
+    node("key_renamed_by_its_repeat", &NO_KEY_UP)
+);
+
+#[test]
+fn qa_m8_86_a_key_under_cmd_goes_up_with_cmd() {
+    node("key_under_cmd_goes_up_with_cmd", &[]);
+}
+
+negative_control!(
+    qa_m8_86_a_key_under_cmd_goes_up_with_cmd,
+    "no key-up reaches the loader",
+    expected = "the app was left holding",
+    node("key_under_cmd_goes_up_with_cmd", &NO_KEY_UP)
+);
