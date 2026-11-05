@@ -152,10 +152,10 @@ jobs:
       workspace_tests: ${{ steps.tier.outputs.workspace_tests }}
       report: ${{ steps.tier.outputs.report }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       # The field check of `plan/requirements.yaml` (`scripts/ci_req_fields.py`) parses it with PyYAML; without it the
       # check fails, and the file runs full CI.
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
       - name: Install PyYAML
@@ -201,7 +201,7 @@ jobs:
     outputs:
       bytes: ${{ steps.size.outputs.bytes }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       # Runner disk: GitHub guarantees an ubuntu-24.04 runner only 14 GB free, and some start with about 11 GB. On such
       # runners this job, the `ci` shards and `gpu-kernel` ran out of space ("No space left on device") 43–72 s in, six
       # times from 31 Oct to 2 Nov (jobs 124655047195, 124714602351, 124749797258, 124824660636, 125205921995,
@@ -223,14 +223,14 @@ jobs:
       # builds (R-169).
       - name: rustup toolchain install (rust-toolchain.toml)
         run: rustup toolchain install
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           prefix-key: cargo-registry
           shared-key: ci-archive
           cache-targets: "false"
           cache-bin: "false"
           save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-      - uses: taiki-e/install-action@v2
+      - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
         with:
           tool: cargo-nextest@0.9.146
       # The archive's test binaries carry line tables for the workspace's own crates only (the owner's CI plan, 2 Nov
@@ -260,7 +260,7 @@ jobs:
         id: size
         run: echo "bytes=$(stat -c %s "$RUNNER_TEMP/nextest-ci.tar.zst")" >> "$GITHUB_OUTPUT"
       # Already zstd-compressed, so uploaded as it is; kept a day, the run's own.
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: nextest-ci
           path: ${{ runner.temp }}/nextest-ci.tar.zst
@@ -287,7 +287,7 @@ jobs:
       matrix:
         shard: [1, 2, 3, 4]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       # Runner disk, as in `ci-archive` (the same list, copied): before the toolchain and the cache restore, logging
       # the free space before and after. Test infrastructure only.
       - name: Free runner disk
@@ -314,7 +314,7 @@ jobs:
         run: |
           rustup toolchain install
           echo "cachekey=$({ rustc --version --verbose; env | grep -E '^CARGO_(INCREMENTAL|PROFILE)' | sort; cat .github/actions/cargo-ci-config/config.sh; } | sha256sum | cut -c1-20)" >> "$GITHUB_OUTPUT"
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           prefix-key: cargo-registry
           shared-key: ci
@@ -332,13 +332,13 @@ jobs:
       # saved by the step after the tests, only on a push to `main` (R-326) and only when the job passes, so a run cut
       # short by a failing test never saves a pool half built. Its key names this job, the only one that saves it
       # (R-285).
-      - uses: actions/cache/restore@v4
+      - uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: target/tmp/fixture-targets
           key: fixture-pool-ci-${{ runner.os }}-${{ steps.toolchain.outputs.cachekey }}-${{ hashFiles('Cargo.lock', 'fixtures/**/Cargo.toml', 'xtask/tests/fixtures/**/Cargo.toml') }}
           restore-keys: fixture-pool-ci-${{ runner.os }}-${{ steps.toolchain.outputs.cachekey }}-
       # xtask's plan_check tests run plan/check_plan.py, which needs Python and PyYAML (TASK-M0-02).
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
       - name: Install PyYAML
@@ -347,10 +347,10 @@ jobs:
       # here they run on lavapipe; metal_hosted_probe is ignored off macOS.
       - name: Install Mesa (lavapipe)
         run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers
-      - uses: taiki-e/install-action@v2
+      - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
         with:
           tool: cargo-nextest@0.9.146
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: nextest-ci
           path: ${{ runner.temp }}
@@ -397,7 +397,7 @@ jobs:
         if: matrix.shard == 1
         run: cargo test --workspace --doc
         shell: bash .github/scripts/disk_sampler.sh {0}
-      - uses: actions/cache/save@v4
+      - uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         with:
           path: target/tmp/fixture-targets
@@ -419,7 +419,7 @@ jobs:
     outputs:
       docs_only: ${{ needs.changes.outputs.docs_only }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       # Runner disk: the xtask build and its tests' own cargo runs on the workspace, `cargo xtask controls` and `cargo
       # xtask ci` among them, build much of what `xtask-ci` builds, which ran out of space on PRs #251 and #252
       # (`gate.yml`'s twin of this job frees it too). Remove the preinstalled toolsets it does not use, as `xtask-ci`
@@ -434,7 +434,7 @@ jobs:
       # builds (R-169).
       - name: rustup toolchain install (rust-toolchain.toml)
         run: rustup toolchain install
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           prefix-key: cargo-registry
           shared-key: ci-workspace
@@ -442,14 +442,14 @@ jobs:
           cache-bin: "false"
           save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
       # qa02's `cargo xtask ci` runs `cargo xtask plan-check`, which needs Python and PyYAML (REQ-SYS-007).
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
       - name: Install PyYAML
         run: python3 -m pip install pyyaml
       - name: Install Mesa (lavapipe)
         run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers
-      - uses: taiki-e/install-action@v2
+      - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
         with:
           tool: cargo-nextest@0.9.146
       # Runner disk, again: each test here builds the workspace on its one target, in several configurations (the
@@ -551,7 +551,7 @@ jobs:
         continue-on-error: true
         timeout-minutes: 1
         run: sudo -n dmesg --ctime | tail -n 200 | tee "$RUNNER_DISK_TMPFS/runner-dmesg.log" || true
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always() && needs.changes.outputs.docs_only != 'true'
         continue-on-error: true
         timeout-minutes: 5
@@ -572,7 +572,7 @@ jobs:
     if: needs.changes.outputs.docs_only != 'true'
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       # Runner disk: the pinned nightly with rustc-dev and llvm-tools (R-169), the workspace's build and the fixture
       # pool left this job with 11–24 MB free on ubuntu-24.04. Remove the preinstalled toolsets it does not use (.NET,
       # Android, GHC, CodeQL, the docker images), logging the free space before and after. Test infrastructure only.
@@ -586,7 +586,7 @@ jobs:
       # builds (R-169).
       - name: rustup toolchain install (rust-toolchain.toml)
         run: rustup toolchain install
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           prefix-key: cargo-registry
           shared-key: ci-checks
@@ -657,7 +657,7 @@ jobs:
     outputs:
       bytes: ${{ steps.size.outputs.bytes }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       # Runner disk: the workspace's release build. Remove the preinstalled toolsets it does not use, as `ci-checks`
       # does, logging the free space before and after. Test infrastructure only.
       - name: Free runner disk
@@ -670,7 +670,7 @@ jobs:
       # builds (R-169), and whose MIR GVN fault this job is for (R-547).
       - name: rustup toolchain install (rust-toolchain.toml)
         run: rustup toolchain install
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           prefix-key: cargo-registry
           shared-key: ci-release-archive
@@ -681,7 +681,7 @@ jobs:
       # keep R-374's line tables (`.github/actions/cargo-ci-config`).
       - name: Dependencies without debug info, every profile
         uses: ./.github/actions/cargo-ci-config
-      - uses: taiki-e/install-action@v2
+      - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
         with:
           tool: cargo-nextest@0.9.146
       - name: cargo nextest archive --workspace --release
@@ -694,7 +694,7 @@ jobs:
         id: size
         run: echo "bytes=$(stat -c %s "$RUNNER_TEMP/nextest-release.tar.zst")" >> "$GITHUB_OUTPUT"
       # Already zstd-compressed, so uploaded as it is; kept a day, the run's own.
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: nextest-release
           path: ${{ runner.temp }}/nextest-release.tar.zst
@@ -721,7 +721,7 @@ jobs:
       matrix:
         shard: [1, 2]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       # Runner disk, as in the `ci` shards (the same list, copied): before the toolchain and the download, logging the
       # free space before and after. The runner starts at about 60 GB used whatever its size, so a 72 GB runner has 12 GB
       # free here, and both shards have run out of it ("No space left on device": `ci-release (1)` of run 41791726904,
@@ -751,17 +751,17 @@ jobs:
       - name: Dependencies without debug info, every profile
         uses: ./.github/actions/cargo-ci-config
       # xtask's plan_check tests run plan/check_plan.py, which needs Python and PyYAML (TASK-M0-02).
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
       - name: Install PyYAML
         run: python3 -m pip install pyyaml
       - name: Install Mesa (lavapipe)
         run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers
-      - uses: taiki-e/install-action@v2
+      - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
         with:
           tool: cargo-nextest@0.9.146
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: nextest-release
           path: ${{ runner.temp }}
@@ -804,7 +804,7 @@ jobs:
         continue-on-error: true
         timeout-minutes: 1
         run: sudo -n dmesg --ctime | tail -n 200 | tee "$RUNNER_DISK_TMPFS/runner-dmesg.log" || true
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         continue-on-error: true
         timeout-minutes: 5
@@ -831,7 +831,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.gpu == 'true'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       # Runner disk, as in `ci-archive` (the same list, copied): before the toolchain and the cache restores, logging
       # the free space before and after. Test infrastructure only.
       - name: Free runner disk
@@ -858,7 +858,7 @@ jobs:
         run: |
           rustup toolchain install
           echo "channel=$(sed -n 's/^channel = "\(.*\)"$/\1/p' rust-toolchain.toml)" >> "$GITHUB_OUTPUT"
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           prefix-key: cargo-registry
           shared-key: gpu-kernel
@@ -873,13 +873,13 @@ jobs:
       # between runs (R-320): keyed on this job and the channel rust-toolchain.toml pins, so a toolchain bump starts a
       # fresh cache (REQ-SYS-075; per-job keys, R-285, REQ-SYS-073). Restored in every run, saved after the build only
       # on a push to `main` (R-326).
-      - uses: actions/cache/restore@v4
+      - uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: ~/.cache/rust-gpu
           key: rust-gpu-gpu-kernel-${{ runner.os }}-${{ steps.toolchain.outputs.channel }}
       - name: Install Mesa (lavapipe)
         run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers
-      - uses: taiki-e/install-action@v2
+      - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
         with:
           tool: cargo-nextest@0.9.146
       # The build and the tests run under the disk sampler (`.github/scripts/disk_sampler.sh`), as `cargo xtask ci` is
@@ -887,7 +887,7 @@ jobs:
       - name: cargo xtask build-kernel
         run: cargo xtask build-kernel
         shell: bash .github/scripts/disk_sampler.sh {0}
-      - uses: actions/cache/save@v4
+      - uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         with:
           path: ~/.cache/rust-gpu
@@ -943,7 +943,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.docs_only != 'true'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       # Runner disk: on PRs #251 and #252, shard 2 ran out of space 25–30 min into `cargo xtask ci` ("No space left on
       # device", run 39420000947): the kernel build, the controls' `--features controls` builds and the fixture pool,
       # beside the pinned nightly with rustc-dev and llvm-tools (R-169). Remove the preinstalled toolsets it does not
@@ -979,7 +979,7 @@ jobs:
           rustup toolchain install
           echo "cachekey=$({ rustc --version --verbose; env | grep -E '^CARGO_(INCREMENTAL|PROFILE)' | sort; cat .github/actions/cargo-ci-config/config.sh; } | sha256sum | cut -c1-20)" >> "$GITHUB_OUTPUT"
           echo "channel=$(sed -n 's/^channel = "\(.*\)"$/\1/p' rust-toolchain.toml)" >> "$GITHUB_OUTPUT"
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           prefix-key: cargo-registry
           shared-key: xtask-ci
@@ -992,7 +992,7 @@ jobs:
         uses: ./.github/actions/cargo-ci-config
       # The fixture pool the `ci` job saves, restored only, under its key: `cargo xtask controls` runs the fixture tests'
       # controls (R-270, R-285).
-      - uses: actions/cache/restore@v4
+      - uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: target/tmp/fixture-targets
           key: fixture-pool-ci-${{ runner.os }}-${{ steps.toolchain.outputs.cachekey }}-${{ hashFiles('Cargo.lock', 'fixtures/**/Cargo.toml', 'xtask/tests/fixtures/**/Cargo.toml') }}
@@ -1001,18 +1001,18 @@ jobs:
       # between runs (R-320): keyed on this job and the channel rust-toolchain.toml pins, so a toolchain bump starts a
       # fresh cache (REQ-SYS-075; per-job keys, R-285, REQ-SYS-073). Restored in every run, saved after `cargo xtask ci`
       # only on a push to `main` (R-326).
-      - uses: actions/cache/restore@v4
+      - uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: ~/.cache/rust-gpu
           key: rust-gpu-xtask-ci-${{ runner.os }}-${{ steps.toolchain.outputs.channel }}
       - name: Install Mesa (lavapipe)
         run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
       - name: Install PyYAML
         run: python3 -m pip install pyyaml
-      - uses: taiki-e/install-action@v2
+      - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
         with:
           tool: cargo-nextest@0.9.146
       # The disk beside the run, as no check does: `cargo xtask ci` under a shell that samples it and exits with its
@@ -1025,7 +1025,7 @@ jobs:
       - name: Runner disk after cargo xtask ci
         if: always()
         run: df -h /
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:
           name: runner-disk-xtask-ci-${{ matrix.shard }}
@@ -1033,7 +1033,7 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
           overwrite: true
-      - uses: actions/cache/save@v4
+      - uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         with:
           path: ~/.cache/rust-gpu
@@ -1065,7 +1065,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.gpu == 'true'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       # The toolchain rust-toolchain.toml pins, with its components: rust-gpu's nightly, on which the whole workspace
       # builds (R-169).
       - name: rustup toolchain install (rust-toolchain.toml)
@@ -1073,7 +1073,7 @@ jobs:
         run: |
           rustup toolchain install
           echo "channel=$(sed -n 's/^channel = "\(.*\)"$/\1/p' rust-toolchain.toml)" >> "$GITHUB_OUTPUT"
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           prefix-key: cargo-registry
           shared-key: gpu-metal
@@ -1089,17 +1089,17 @@ jobs:
       # it first.
       - name: Link rust-gpu's macOS cache to ~/.cache/rust-gpu
         run: mkdir -p ~/.cache/rust-gpu ~/Library/Caches && ln -sfn ~/.cache/rust-gpu ~/Library/Caches/rust-gpu
-      - uses: actions/cache/restore@v4
+      - uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: ~/.cache/rust-gpu
           key: rust-gpu-gpu-metal-${{ runner.os }}-${{ steps.toolchain.outputs.channel }}
-      - uses: taiki-e/install-action@v2
+      - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
         with:
           tool: cargo-nextest@0.9.146
       # The codegen self-test (TASK-M0-15) dispatches the kernel's WGSL, so the kernel is built first (R-110, R-186).
       - name: cargo xtask build-kernel
         run: cargo xtask build-kernel
-      - uses: actions/cache/save@v4
+      - uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         with:
           path: ~/.cache/rust-gpu
@@ -1206,7 +1206,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.gpu == 'true'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       # Runner disk: the kernel build, then validation, engine and xtask built once per `--features controls` suite and
       # the golden suites, as in `xtask-ci`, which ran out of space on PRs #251 and #252 (`nightly.yml`'s twin of this
       # job frees it too). Remove the preinstalled toolsets it does not use, as `xtask-ci` does, logging the free space
@@ -1230,7 +1230,7 @@ jobs:
         run: |
           rustup toolchain install
           echo "channel=$(sed -n 's/^channel = "\(.*\)"$/\1/p' rust-toolchain.toml)" >> "$GITHUB_OUTPUT"
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           prefix-key: cargo-registry
           shared-key: gpu-lavapipe
@@ -1242,19 +1242,19 @@ jobs:
       - name: Dependencies without debug info, every profile
         uses: ./.github/actions/cargo-ci-config
       # The rust-gpu build, kept between runs as in `gpu-kernel` (R-320, R-326), under this job's key.
-      - uses: actions/cache/restore@v4
+      - uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: ~/.cache/rust-gpu
           key: rust-gpu-gpu-lavapipe-${{ runner.os }}-${{ steps.toolchain.outputs.channel }}
       - name: Install Mesa (lavapipe)
         run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers
-      - uses: taiki-e/install-action@v2
+      - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
         with:
           tool: cargo-nextest@0.9.146
       # The codegen self-test (TASK-M0-15) dispatches the kernel's WGSL, so the kernel is built first (R-110, R-186).
       - name: cargo xtask build-kernel
         run: cargo xtask build-kernel
-      - uses: actions/cache/save@v4
+      - uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         with:
           path: ~/.cache/rust-gpu
@@ -1334,7 +1334,7 @@ jobs:
       contents: read
       statuses: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: .github/scripts/ci_tier.sh report
         env:
           GH_TOKEN: ${{ github.token }}

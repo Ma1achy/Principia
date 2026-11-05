@@ -61,7 +61,7 @@ jobs:
   cpu:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: Free runner disk
         run: |
           df -h /
@@ -73,7 +73,7 @@ jobs:
       - name: rustup toolchain install (rust-toolchain.toml)
         run: rustup toolchain install
       # The cargo registry `ci.yml`'s `ci` job saves on a push to `main`, restored read-only under its key (R-337).
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           prefix-key: cargo-registry
           shared-key: ci
@@ -84,14 +84,14 @@ jobs:
       # keep R-374's line tables (`.github/actions/cargo-ci-config`).
       - name: Dependencies without debug info, every profile
         uses: ./.github/actions/cargo-ci-config
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
       - name: Install PyYAML
         run: python3 -m pip install pyyaml
       - name: Install Mesa (lavapipe)
         run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers
-      - uses: taiki-e/install-action@v2
+      - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
         with:
           tool: cargo-nextest@0.9.146
       - name: cargo nextest run --workspace
@@ -111,7 +111,7 @@ jobs:
         env:
           MILESTONE: ${{ inputs.milestone }}
         run: cargo xtask gate-report --write-test-list target/gate-test-list/tests.txt --milestone "$MILESTONE"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: ${{ !cancelled() }}
         with:
           name: gate-test-list
@@ -127,7 +127,7 @@ jobs:
     env:
       PRIN_GPU_BACKEND: vulkan
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: Free runner disk
         run: |
           df -h /
@@ -139,7 +139,7 @@ jobs:
       - name: rustup toolchain install (rust-toolchain.toml)
         run: rustup toolchain install
       # The cargo registry `ci.yml`'s `ci` job saves on a push to `main`, restored read-only under its key (R-337).
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           prefix-key: cargo-registry
           shared-key: ci
@@ -151,14 +151,14 @@ jobs:
       - name: Dependencies without debug info, every profile
         uses: ./.github/actions/cargo-ci-config
       # qa02's `cargo xtask ci` runs `cargo xtask plan-check`, which needs Python and PyYAML (REQ-SYS-007).
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
       - name: Install PyYAML
         run: python3 -m pip install pyyaml
       - name: Install Mesa (lavapipe)
         run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers
-      - uses: taiki-e/install-action@v2
+      - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
         with:
           tool: cargo-nextest@0.9.146
       # Validation is here for `qa_TASK-M0-24`, the one test of it the profile selects.
@@ -173,7 +173,7 @@ jobs:
     env:
       PRIN_GPU_BACKEND: vulkan
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: Free runner disk
         run: |
           df -h /
@@ -188,7 +188,7 @@ jobs:
           rustup toolchain install
           echo "channel=$(sed -n 's/^channel = "\(.*\)"$/\1/p' rust-toolchain.toml)" >> "$GITHUB_OUTPUT"
       # The cargo registry `ci.yml`'s `ci` job saves on a push to `main`, restored read-only under its key (R-337).
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           prefix-key: cargo-registry
           shared-key: ci
@@ -201,18 +201,18 @@ jobs:
         uses: ./.github/actions/cargo-ci-config
       # The rust-gpu build, restored read-only under the key `ci.yml`'s `gpu-kernel` job saves it under on a push to
       # `main` (R-320, R-337; REQ-SYS-075); never saved here.
-      - uses: actions/cache/restore@v4
+      - uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: ~/.cache/rust-gpu
           key: rust-gpu-gpu-kernel-${{ runner.os }}-${{ steps.toolchain.outputs.channel }}
       - name: Install Mesa (lavapipe)
         run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
       - name: Install PyYAML
         run: python3 -m pip install pyyaml
-      - uses: taiki-e/install-action@v2
+      - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
         with:
           tool: cargo-nextest@0.9.146
       - name: cargo xtask ci
@@ -224,13 +224,13 @@ jobs:
     env:
       PRIN_GPU_BACKEND: metal
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       # The toolchain rust-toolchain.toml pins, with its components: rust-gpu's nightly, on which the whole workspace
       # builds (R-169).
       - name: rustup toolchain install (rust-toolchain.toml)
         run: rustup toolchain install
       # The cargo registry `ci.yml`'s `ci` job saves on a push to `main`, restored read-only under its key (R-337).
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           prefix-key: cargo-registry
           shared-key: ci
@@ -241,7 +241,7 @@ jobs:
       # keep R-374's line tables (`.github/actions/cargo-ci-config`).
       - name: Dependencies without debug info, every profile
         uses: ./.github/actions/cargo-ci-config
-      - uses: taiki-e/install-action@v2
+      - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
         with:
           tool: cargo-nextest@0.9.146
       - name: cargo nextest run -p validation --features controls metal_hosted_probe
@@ -265,7 +265,7 @@ jobs:
     env:
       PRIN_GPU_BACKEND: vulkan
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: Free runner disk
         run: |
           df -h /
@@ -280,7 +280,7 @@ jobs:
           rustup toolchain install
           echo "channel=$(sed -n 's/^channel = "\(.*\)"$/\1/p' rust-toolchain.toml)" >> "$GITHUB_OUTPUT"
       # The cargo registry `ci.yml`'s `ci` job saves on a push to `main`, restored read-only under its key (R-337).
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           prefix-key: cargo-registry
           shared-key: ci
@@ -293,13 +293,13 @@ jobs:
         uses: ./.github/actions/cargo-ci-config
       # The rust-gpu build, restored read-only under the key `ci.yml`'s `gpu-kernel` job saves it under on a push to
       # `main` (R-320, R-337; REQ-SYS-075); never saved here.
-      - uses: actions/cache/restore@v4
+      - uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: ~/.cache/rust-gpu
           key: rust-gpu-gpu-kernel-${{ runner.os }}-${{ steps.toolchain.outputs.channel }}
       - name: Install Mesa (lavapipe)
         run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers
-      - uses: taiki-e/install-action@v2
+      - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
         with:
           tool: cargo-nextest@0.9.146
       - name: cargo xtask build-kernel
@@ -327,13 +327,13 @@ jobs:
     env:
       PRIN_GPU_BACKEND: vulkan
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       # The toolchain rust-toolchain.toml pins, with its components: rust-gpu's nightly, on which the whole workspace
       # builds (R-169).
       - name: rustup toolchain install (rust-toolchain.toml)
         run: rustup toolchain install
       # The cargo registry `ci.yml`'s `ci` job saves on a push to `main`, restored read-only under its key (R-337).
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           prefix-key: cargo-registry
           shared-key: ci
@@ -348,7 +348,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers
       - name: cargo xtask screenshot --all
         run: cargo xtask screenshot --all
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:
           name: gate-screenshots
@@ -367,13 +367,13 @@ jobs:
       contents: read
       pull-requests: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       # The toolchain rust-toolchain.toml pins, with its components: rust-gpu's nightly, on which the whole workspace
       # builds (R-169).
       - name: rustup toolchain install (rust-toolchain.toml)
         run: rustup toolchain install
       # The cargo registry `ci.yml`'s `ci` job saves on a push to `main`, restored read-only under its key (R-337).
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           prefix-key: cargo-registry
           shared-key: ci
@@ -384,7 +384,7 @@ jobs:
       # keep R-374's line tables (`.github/actions/cargo-ci-config`).
       - name: Dependencies without debug info, every profile
         uses: ./.github/actions/cargo-ci-config
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
       - name: Install PyYAML
@@ -408,7 +408,7 @@ jobs:
           EOF
       # The `cpu` job's test listing (REQ-SYS-079). When that job never wrote it, the download fails, and the report
       # then fails every requirement that names a test, as nothing shows the test exists.
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         continue-on-error: true
         with:
           name: gate-test-list
@@ -429,7 +429,7 @@ jobs:
         env:
           MILESTONE: ${{ inputs.milestone }}
         run: cargo xtask gate-provisional --milestone "$MILESTONE"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:
           name: gate-report

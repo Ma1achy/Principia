@@ -638,8 +638,8 @@ negative_control!(
     expected = "job `gpu-kernel`: builds the kernel without saving ~/.cache/rust-gpu",
     check_restored_and_saved(&all_jobs(&edited(
         "ci.yml",
-        "      - uses: actions/cache/save@v4\n        if: github.event_name == 'push' && github.ref == 'refs/heads/main'\n        with:\n          path: ~/.cache/rust-gpu\n          key: rust-gpu-gpu-kernel-",
-        "      - uses: actions/cache/restore@v4\n        if: github.event_name == 'push' && github.ref == 'refs/heads/main'\n        with:\n          path: ~/.cache/rust-gpu\n          key: rust-gpu-gpu-kernel-"
+        "      - uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0\n        if: github.event_name == 'push' && github.ref == 'refs/heads/main'\n        with:\n          path: ~/.cache/rust-gpu\n          key: rust-gpu-gpu-kernel-",
+        "      - uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0\n        if: github.event_name == 'push' && github.ref == 'refs/heads/main'\n        with:\n          path: ~/.cache/rust-gpu\n          key: rust-gpu-gpu-kernel-"
     )))
 );
 
@@ -654,8 +654,8 @@ negative_control!(
     expected = "which the build does not",
     check_restored_and_saved(&all_jobs(&edited(
         "ci.yml",
-        "      - uses: actions/cache/restore@v4\n        with:\n          path: ~/.cache/rust-gpu\n          key: rust-gpu-gpu-kernel-",
-        "      - uses: actions/cache/restore@v4\n        if: github.event_name == 'push'\n        with:\n          path: ~/.cache/rust-gpu\n          key: rust-gpu-gpu-kernel-"
+        "      - uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0\n        with:\n          path: ~/.cache/rust-gpu\n          key: rust-gpu-gpu-kernel-",
+        "      - uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0\n        if: github.event_name == 'push'\n        with:\n          path: ~/.cache/rust-gpu\n          key: rust-gpu-gpu-kernel-"
     )))
 );
 
@@ -670,8 +670,8 @@ negative_control!(
     expected = "job `xtask-ci`: its ~/.cache/rust-gpu save step's `if:` is not the build's condition and a push to `main`",
     check_restored_and_saved(&all_jobs(&edited(
         "ci.yml",
-        "      - uses: actions/cache/save@v4\n        if: github.event_name == 'push' && github.ref == 'refs/heads/main'\n        with:\n          path: ~/.cache/rust-gpu\n          key: rust-gpu-xtask-ci-",
-        "      - uses: actions/cache/save@v4\n        with:\n          path: ~/.cache/rust-gpu\n          key: rust-gpu-xtask-ci-"
+        "      - uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0\n        if: github.event_name == 'push' && github.ref == 'refs/heads/main'\n        with:\n          path: ~/.cache/rust-gpu\n          key: rust-gpu-xtask-ci-",
+        "      - uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0\n        with:\n          path: ~/.cache/rust-gpu\n          key: rust-gpu-xtask-ci-"
     )))
 );
 
@@ -686,8 +686,8 @@ negative_control!(
     expected = "job `gpu-kernel`: its ~/.cache/rust-gpu save step's `if:` is not the build's condition and a push to `main`",
     check_restored_and_saved(&all_jobs(&edited(
         "ci.yml",
-        "      - uses: actions/cache/save@v4\n        if: github.event_name == 'push' && github.ref == 'refs/heads/main'\n        with:\n          path: ~/.cache/rust-gpu\n          key: rust-gpu-gpu-kernel-",
-        "      - uses: actions/cache/save@v4\n        if: github.event_name == 'push' || github.ref == 'refs/heads/main'\n        with:\n          path: ~/.cache/rust-gpu\n          key: rust-gpu-gpu-kernel-"
+        "      - uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0\n        if: github.event_name == 'push' && github.ref == 'refs/heads/main'\n        with:\n          path: ~/.cache/rust-gpu\n          key: rust-gpu-gpu-kernel-",
+        "      - uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0\n        if: github.event_name == 'push' || github.ref == 'refs/heads/main'\n        with:\n          path: ~/.cache/rust-gpu\n          key: rust-gpu-gpu-kernel-"
     )))
 );
 
@@ -718,7 +718,7 @@ negative_control!(
     expected = "job `mutants`: its ~/.cache/rust-gpu cache step restores and saves at once",
     check_restored_and_saved(&all_jobs(&edited(
         "mutants.yml",
-        "      - uses: actions/cache/restore@v4\n        if: steps.diff.outputs.rust == 'true'\n        with:\n          path: ~/.cache/rust-gpu",
+        "      - uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0\n        if: steps.diff.outputs.rust == 'true'\n        with:\n          path: ~/.cache/rust-gpu",
         "      - uses: actions/cache@v4\n        if: steps.diff.outputs.rust == 'true'\n        with:\n          path: ~/.cache/rust-gpu"
     )))
 );
@@ -935,7 +935,7 @@ negative_control!(
     check_restored_and_saved(&all_jobs(&edited(
         "mutants.yml",
         "        run: cargo run --quiet --package xtask -- build-kernel\n",
-        "        run: cargo run --quiet --package xtask -- build-kernel\n      - uses: actions/cache/save@v4\n        if: steps.diff.outputs.rust == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'\n        with:\n          path: ~/.cache/rust-gpu\n          key: rust-gpu-gpu-kernel-${{ runner.os }}-${{ steps.toolchain.outputs.channel }}\n"
+        "        run: cargo run --quiet --package xtask -- build-kernel\n      - uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0\n        if: steps.diff.outputs.rust == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'\n        with:\n          path: ~/.cache/rust-gpu\n          key: rust-gpu-gpu-kernel-${{ runner.os }}-${{ steps.toolchain.outputs.channel }}\n"
     )))
 );
 
