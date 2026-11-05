@@ -114,7 +114,7 @@ alone does not answer the owner's question; the bits at identical operands do, a
   #390, under the same hardware label as that card's other runs. A record too big to attach goes as a committed file on a branch named on the issue. Its replay is a second run, in the order the `--replay` bullet gives, `--replay replays.json nvidia-replay.json` on `replays.json` committed to a branch named on the issue, and blocks nothing either; each `--compare` after it rewrites `comparison.md`, and a commit turns the row in `outstanding.json` to posted. It is not a CI job (R-186). Nothing waits on it, and the task
   closes without it: M4's gate report lists the row as "not run" until it is posted, though the owner's question rests on that
   row (`plan/MILESTONES.md` § M4). It doesn't stand in for R-58's parity run, REQ-VAL-099, which gates Paper 2; whether a driver recorded unverified,
-  not supported can serve that gate is RQ-695.
+  not supported can serve that gate was RQ-695, which R-711 closes: a recorded run can serve it if the parity measurement itself passes. *Was:* "is RQ-695."
 - **Why generic ICs are not enough.** A 1-ulp difference flips a branch only within about an ulp of its threshold, so a small
   non-chaotic set reads 0 of N with a defect present (order of magnitude, assuming 10³ crossings per trajectory: 2.4e-4 per
   trajectory), and the chaotic stratum reads high with none. Hence the near-decision stratum and the fixed-input arm, which add

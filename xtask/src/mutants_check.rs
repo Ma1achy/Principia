@@ -1,12 +1,20 @@
 //! `cargo xtask mutants-check <mutants.out>... [--equivalent <file>]` — the per-PR mutation gate's verdict (R-196,
 //! R-202): reads the `outcomes.json` that `cargo mutants` writes, one per shard of the sharded run (R-302), lists each
-//! surviving (missed) mutant, and fails naming each one that is not in the checked-in equivalent-mutants list. Each entry of that list names one mutant, as
-//! cargo-mutants prints it, and carries a one-line justification the code and qa reviewers approve (R-202).
+//! surviving (missed) mutant, and fails naming each one that is not in the checked-in equivalent-mutants list. Each
+//! entry of that list names one mutant, as cargo-mutants prints it, and carries a one-line justification the code and
+//! qa reviewers approve (R-202). A mutant that timed out is no survivor: it counts as caught, and every one is listed
+//! by name, with a count, 0 included (the owner's order of 5 Nov, R-712).
+//!
+//! `cargo xtask mutants-timeout` sets the shards' per-mutant timeout from the one measured baseline, by the rule
+//! `.cargo/mutants.toml` gives every other run (R-348, REQ-VAL-180, as that order amends them).
 
 use std::path::Path;
 
 /// The checked-in equivalent-mutants list, relative to the workspace root.
 pub const EQUIVALENT_LIST: &str = ".cargo/mutants-equivalent.toml";
+
+/// cargo-mutants' configuration, relative to the workspace root: the timeout's multiplier and floor (R-348).
+pub const MUTANTS_CONFIG: &str = ".cargo/mutants.toml";
 
 /// One listed equivalent mutant.
 #[derive(Debug, PartialEq, Eq)]
@@ -132,6 +140,11 @@ pub fn run_shards(outs: &[&Path], list_path: &Path) -> Result<(), String> {
         found.timeouts.extend(shard.timeouts);
     }
     let list = equivalents(&read(list_path)?)?;
+    println!(
+        "mutants-check: {} timed out over {} shard(s): each counts as caught, not as a survivor",
+        found.timeouts.len(),
+        outs.len()
+    );
     for name in &found.timeouts {
         println!("mutants-check: timed out (not a survivor): {name}");
     }
@@ -161,4 +174,74 @@ pub fn run_shards(outs: &[&Path], list_path: &Path) -> Result<(), String> {
         list_path.display(),
         findings.join("\n  ")
     ))
+}
+
+/// A run's `timeout_multiplier` and `minimum_test_timeout`, from the text of `.cargo/mutants.toml`.
+pub fn timeout_rule(toml: &str) -> Result<(f64, f64), String> {
+    let doc: toml_edit::DocumentMut = toml
+        .parse()
+        .map_err(|e| format!("{MUTANTS_CONFIG} is not TOML: {e}"))?;
+    let number = |key: &str| {
+        let item = doc.get(key);
+        item.and_then(toml_edit::Item::as_float)
+            .or_else(|| item.and_then(toml_edit::Item::as_integer).map(|i| i as f64))
+            .ok_or(format!("{MUTANTS_CONFIG} has no number `{key}` (R-348)"))
+    };
+    Ok((
+        number("timeout_multiplier")?,
+        number("minimum_test_timeout")?,
+    ))
+}
+
+/// The unmutated baseline's test time, in seconds, from `outcomes.json`'s text: its `Test` phase, what cargo-mutants
+/// multiplies when it sets a timeout itself. A baseline that did not pass is refused, as [`outcomes`] refuses it, and
+/// so is a run that holds no baseline.
+pub fn baseline_seconds(json: &str) -> Result<f64, String> {
+    let doc: serde_json::Value =
+        serde_json::from_str(json).map_err(|e| format!("outcomes.json is not JSON: {e}"))?;
+    let list = doc["outcomes"]
+        .as_array()
+        .ok_or("outcomes.json has no `outcomes` array")?;
+    let baseline = list
+        .iter()
+        .find(|outcome| outcome["scenario"] == "Baseline")
+        .ok_or("outcomes.json holds no unmutated baseline: nothing was measured")?;
+    let summary = baseline["summary"].as_str().unwrap_or_default();
+    if summary != "Success" {
+        return Err(format!(
+            "the unmutated baseline did not pass ({summary}): no mutant is evidence"
+        ));
+    }
+    baseline["phase_results"]
+        .as_array()
+        .and_then(|phases| phases.iter().find(|phase| phase["phase"] == "Test"))
+        .and_then(|phase| phase["duration"].as_f64())
+        .ok_or_else(|| "the unmutated baseline has no timed Test phase".to_owned())
+}
+
+/// The per-mutant timeout in whole seconds: cargo-mutants' own rule, the baseline's test time times the multiplier,
+/// rounded up, and no less than the floor.
+pub fn per_mutant_timeout(baseline: f64, multiplier: f64, floor: f64) -> f64 {
+    (baseline * multiplier).ceil().max(floor)
+}
+
+/// Prints, as `key=value` lines for `$GITHUB_OUTPUT`, the measured baseline of the run whose output directory is `out`
+/// and the per-mutant timeout the shards take from it, under the rule in the file at `config`. With no `out`, a diff
+/// with no mutant, so nothing measured: the floor.
+pub fn run_timeout(out: Option<&Path>, config: &Path) -> Result<(), String> {
+    let read = |path: &Path| {
+        std::fs::read_to_string(path).map_err(|e| format!("cannot read {}: {e}", path.display()))
+    };
+    let (multiplier, floor) = timeout_rule(&read(config)?)?;
+    let baseline = match out {
+        Some(out) => baseline_seconds(&read(&out.join("outcomes.json"))?)
+            .map_err(|e| format!("{}: {e}", out.display()))?,
+        None => 0.0,
+    };
+    println!("baseline-seconds={baseline:.1}");
+    println!(
+        "timeout={:.0}",
+        per_mutant_timeout(baseline, multiplier, floor)
+    );
+    Ok(())
 }

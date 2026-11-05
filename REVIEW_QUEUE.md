@@ -1872,39 +1872,6 @@ change: no timer was touched (R-649). Nothing is chosen.*
 - **Applied meanwhile:** nothing.
 - **Waits:** nothing.
 
-## RQ-702: What refresh rate a browser run started from the measurement panel's button should read, when the rate was measured once at page load *(silence; TASK-M8-86, REQ-PERF-115; `plan/tasks/M8/TASK-M8-86.md` § "Deliverables")*
-
-*Queued 5 Nov 2026 from Codex thread `PRRT_kwDOUpUQ5c6z3aWc` of PR #368, code review 5779560269 F1 and gui review 5779587987 G3. The native half of the same finding is fixed there. Nothing is chosen.*
-
-- **File, section, quoted:**
-  - `plan/tasks/M8/TASK-M8-86.md` § "Deliverables", the frame statistics: "The display's refresh rate is measured apart from the app's work: in the browser, an empty `requestAnimationFrame` loop on the main thread, run for 2 s before the warm-up with the app idle, its median interval".
-  - `web/skeleton/loader.js:35`: "The empty requestAnimationFrame loop that measures the display, run before the app starts, so the app's frames cannot slow it."
-  - `web/skeleton/runner/common.mjs:24`: `url.searchParams.set("run", run);`
-- **The silence:** the task's "before the warm-up" does not say how long before. The loop runs once, as the page loads and before the app starts, and the rate it gives stands for the session.
-- **What a panel-button run reads:** that same rate, taken at page load however long ago, with nothing to mark it. A window moved to another display in between reads a stale rate, and its "capped" marks read that rate. `display_changed` is null in the browser, which watches nothing: the worker layout has no window rect, and the rate cannot be read again without another idle loop, which needs the app idle.
-- **Why `?run=` runs are unaffected:** the runner scripts start every run by that parameter (`common.mjs:24`), so the loader takes it with the idle loop's stamps, the run starts at the app's first step, and its warm-up follows the loop at once. Every measurement TASK-M8-96 takes goes this way. Nothing moves the window in them.
-- **Options seen:** (a) keep it, and state in the panel that a button run reads the page-load rate; (b) run the idle loop again before a button run's warm-up, the app paused for it; (c) mark a button run in the report, so that it is not read as a measurement.
-- **Applied meanwhile:** none: the rate stands as measured at page load, and measured runs go through `?run=`.
-- **Waits:** nothing. TASK-M8-96 uses `?run=` only; TASK-M8-37, if it keeps the panel, meets this question.
-## RQ-695: Whether a driver recorded "unverified, not supported" can serve REQ-VAL-099's parity gate for Paper 2 *(silence: R-690, R-58, R-110; REQ-VAL-099; context: the physics review of PR #407, F6, RQ-690's "Waits")*
-
-*Queued 4 Nov 2026 by the fix round of PR #407. For the owner: it bears on Paper 2's numbers, not on the build. Nothing is
-chosen.*
-
-- **File, section:**
-  - `decisions.md` § R-690, the owner's words: "a driver that fails is recorded unverified, not supported".
-  - `plan/requirements.yaml`, REQ-VAL-099: "The parity gate must be run on a non-Metal backend (Vulkan or D3D12) before any
-    Paper-2 numbers are produced; it gates Paper 2, not the build."
-  - `decisions.md` § R-110: "a real non-Metal GPU gates Paper 2 (R-58)".
-- **The gap:** R-690 records a driver as not supported and blocks nothing. REQ-VAL-099 and R-110 ask for a non-Metal GPU and say
-  nothing of a driver with that record. The RTX is the only such GPU in the record, and it has no standing yet: TASK-M4-27 and
-  TASK-M4-28 haven't run.
-- **The question:** if a non-Metal driver is recorded unverified, not supported, can a parity run on it serve the gate?
-- **Options seen:** (a) no: the gate needs a non-Metal driver with no such record; (b) yes, with the standing stated beside Paper
-  2's numbers; (c) yes, only for results whose branch inputs the recorded failure doesn't reach; (d) another, stated by the owner.
-- **Applied meanwhile:** nothing.
-- **Waits:** nothing in the build. It bears on TASK-M8-41 (REQ-VAL-099) and on Paper 2.
-
 ## RQ-698: `.claude/commands/*.md` joins `plan/tools/rulings.py`'s scanned files once the ruling those commands cite is on `main` *(a follow-up of PR #409, the rulings commands' tooling; code review 5771543937)*
 
 *Filed 4 Nov 2026 by PR #409's fix round, so the follow-up outlasts the PR. Nothing here is for the owner: a mechanical step, decided per R-369, which waits only on a merge.*
@@ -1969,3 +1936,18 @@ chosen.*
 - **Applied meanwhile:** nothing: the gate is not built (no `crates/` file names it), and dispatch refuses `ε ≠ 0` (R-654; TASK-M3-06), so no softened run exists.
 - **Waits:** TASK-M9-39 (REQ-INT-111, REQ-SYS-094, REQ-SYS-095); TASK-M3-12 (REQ-EVT-006), which builds the gate and cannot write its third condition at `ε = 0` without this ruling; and TASK-M4-03 (REQ-INT-061), which writes every kernel branch input's form into `branch_inputs.rs`, what it and REQ-INT-061 hold of this input following the ruling. REQ-EVT-006 is not the whole of the reach: those two tasks are it at `ε = 0`, and what depends on them waits through them. *Was:* "their waiting is for the ruling to say" (applied per R-369).
 - **Notes** (physics review 5771861276 of PR #408, for the port of the ruling): (1) `softened_tier_l`, REQ-INT-111's verify and TASK-M4-03's note and REQ-INT-061 now defer to this entry, and under option (a) or (b) those lines are re-read and take the ruling's exception, since the decision can then fork; all three tasks wait here, so nothing is built against them first. (2) TASK-M3-12's `ionisation_gate`, with its fixtures `three_way_unbound` and `one_bound_pair`, has no state with all pairs unbound, all separating and `E < 0`, so dropping the `E > 0` test passes it. The port adds that state as a control, if the condition stands: unit masses on an equilateral triangle of side `r`, each moving radially outward at speed `u` with `u²` just above `4/(3r)`, giving all pairs unbound and `E ≈ −1/r`. (3) REQ-INT-057 and REQ-VAL-059 require escape decisions and the terminal label bit-identical across backends, and ionisation is `escape` with `detail = 3`, so under option (a) or (b) they need the ruling's exception too.
+
+## RQ-702: What refresh rate a browser run started from the measurement panel's button should read, when the rate was measured once at page load *(silence; TASK-M8-86, REQ-PERF-115; `plan/tasks/M8/TASK-M8-86.md` § "Deliverables")*
+
+*Queued 5 Nov 2026 from Codex thread `PRRT_kwDOUpUQ5c6z3aWc` of PR #368, code review 5779560269 F1 and gui review 5779587987 G3. The native half of the same finding is fixed there. Nothing is chosen.*
+
+- **File, section, quoted:**
+  - `plan/tasks/M8/TASK-M8-86.md` § "Deliverables", the frame statistics: "The display's refresh rate is measured apart from the app's work: in the browser, an empty `requestAnimationFrame` loop on the main thread, run for 2 s before the warm-up with the app idle, its median interval".
+  - `web/skeleton/loader.js:35`: "The empty requestAnimationFrame loop that measures the display, run before the app starts, so the app's frames cannot slow it."
+  - `web/skeleton/runner/common.mjs:24`: `url.searchParams.set("run", run);`
+- **The silence:** the task's "before the warm-up" does not say how long before. The loop runs once, as the page loads and before the app starts, and the rate it gives stands for the session.
+- **What a panel-button run reads:** that same rate, taken at page load however long ago, with nothing to mark it. A window moved to another display in between reads a stale rate, and its "capped" marks read that rate. `display_changed` is null in the browser, which watches nothing: the worker layout has no window rect, and the rate cannot be read again without another idle loop, which needs the app idle.
+- **Why `?run=` runs are unaffected:** the runner scripts start every run by that parameter (`common.mjs:24`), so the loader takes it with the idle loop's stamps, the run starts at the app's first step, and its warm-up follows the loop at once. Every measurement TASK-M8-96 takes goes this way. Nothing moves the window in them.
+- **Options seen:** (a) keep it, and state in the panel that a button run reads the page-load rate; (b) run the idle loop again before a button run's warm-up, the app paused for it; (c) mark a button run in the report, so that it is not read as a measurement.
+- **Applied meanwhile:** none: the rate stands as measured at page load, and measured runs go through `?run=`.
+- **Waits:** nothing. TASK-M8-96 uses `?run=` only; TASK-M8-37, if it keeps the panel, meets this question.
