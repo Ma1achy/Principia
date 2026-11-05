@@ -739,7 +739,7 @@ impl<A: Coordinate, S: Selection> MixedMassRatio<A, S, f64> {
     /// part of `asked` the link realises at `m_c`, as held and as narrowed to `f32`, a chart decoded there holding that
     /// value, found outward from the slice centre's own ratio, or, where the link
     /// does not realise that, a saturated centre, from `seed`. `None` where the bodies are not two distinct bodies,
-    /// `asked` is not an increasing finite range, or, warped, the link realises none of `asked`.
+    /// `asked` is not an increasing finite range, or, warped, a mass at `z₀` is NaN or the link realises none of `asked`.
     pub fn new(
         frozen: [f64; 8],
         a_range: [f64; 2],
@@ -767,6 +767,9 @@ impl<A: Coordinate, S: Selection> MixedMassRatio<A, S, f64> {
         };
         if mapping == Mapping::Linear {
             return Some(chart);
+        }
+        if m.iter().any(|x| x.is_nan()) {
+            return None;
         }
         let centre = ratio_of(bodies, m);
         let from = if chart.miss_narrowed(centre, p) <= 0.5 * <f64 as ChartConstants>::EPS_MU {
@@ -801,7 +804,7 @@ impl<A: Coordinate, S: Selection> MixedMassRatio<A, S, f64> {
 
     /// The largest relative miss of the link's round trip at the ratio `q` and the held mass `held`, over the masses
     /// [`ratio_masses`] writes and the ratio: what [`MixedMassRatio::realised`] bounds. Infinite at a `q` not positive
-    /// and finite.
+    /// and finite, and at any limb that is NaN, a NaN held mass or link parameter: `f64::max` alone would drop it.
     fn miss_at(&self, held: f64, q: f64, p: &LinkParams<f64>) -> f64 {
         if !(q.is_finite() && q > 0.0) {
             return f64::INFINITY;
@@ -809,11 +812,20 @@ impl<A: Coordinate, S: Selection> MixedMassRatio<A, S, f64> {
         let m = ratio_masses(self.bodies, held, q);
         let link = <S::MassLink as Link<2, 3>>::inverse_at(m, p);
         let back = <S::MassLink as Link<2, 3>>::forward_at(link, p);
-        let each = back
-            .iter()
-            .zip(m)
-            .fold(0.0, |worst: f64, (&x, m)| worst.max((x - m).abs() / m));
-        each.max((ratio_of(self.bodies, back) - q).abs() / q)
+        let limbs = [
+            (back[0], m[0]),
+            (back[1], m[1]),
+            (back[2], m[2]),
+            (ratio_of(self.bodies, back), q),
+        ];
+        limbs.iter().fold(0.0, |worst: f64, &(x, m)| {
+            let miss = (x - m).abs() / m;
+            if miss.is_nan() {
+                f64::INFINITY
+            } else {
+                worst.max(miss)
+            }
+        })
     }
 
     /// A realised ratio in the asked range, for a centre the link does not realise. The link's clamps are one-sided on

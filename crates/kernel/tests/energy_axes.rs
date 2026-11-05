@@ -2685,6 +2685,76 @@ negative_control!(
     })
 );
 
+/// A NaN is no mass (chart_reference §2.1, each mass "to within `ε_μ`"): a NaN mass control or `μ_max` realises nothing
+/// and offers no warped chart, under either link. `realised` is the test applied.
+fn check_nan(realised: Realised) {
+    let p = LinkParams::DEFAULT;
+    let asked = [1.0e-3, 1.0e3];
+    let bodies = [1, 2];
+    let (held_nan, mu_nan) = (
+        [f64::NAN, 0.0],
+        LinkParams {
+            mu_max: f64::NAN,
+            ..p
+        },
+    );
+    let chart = bodies_slice(held_nan, bodies, asked, Mapping::Linear, &p).expect("the chart");
+    assert!(
+        !realised(&chart, 1.0, &p),
+        "a NaN held mass is realised at q = 1"
+    );
+    let chart =
+        bodies_slice([0.0, 0.0], bodies, asked, Mapping::Linear, &mu_nan).expect("the chart");
+    assert!(
+        !realised(&chart, 1.0, &mu_nan),
+        "a NaN μ_max is realised at q = 1"
+    );
+    assert!(
+        bodies_slice(held_nan, bodies, asked, Mapping::Warped, &p).is_none(),
+        "softmax_tanh offers a chart at a NaN mass control"
+    );
+    assert!(
+        bodies_slice([0.0, 0.0], [0, 1], asked, Mapping::Warped, &mu_nan).is_none(),
+        "a chart is offered at a NaN μ_max"
+    );
+    let frozen = [0.3, -0.5, 0.2, -0.1, 0.15, 0.05, 0.0, f64::NAN];
+    assert!(
+        MixedMassRatio::<Alpha, Stick, f64>::new(
+            frozen,
+            [0.2, 1.3],
+            asked,
+            bodies,
+            Mapping::Warped,
+            &p
+        )
+        .is_none(),
+        "stick_breaking offers a chart at a NaN mass control"
+    );
+}
+
+#[test]
+fn energy_axes_mass_ratio_nan() {
+    check_nan(&|chart, q, p| chart.realised(q, p));
+}
+
+negative_control!(
+    energy_axes_mass_ratio_nan,
+    "f64::max drops a NaN limb, so the round trip's misses alone pass a NaN held mass",
+    expected = "a NaN held mass is realised",
+    check_nan(&|chart, q, p| {
+        let m = ratio_masses(chart.bodies, chart.held, q);
+        let back = <SoftmaxTanh as Link<2, 3>>::forward_at(
+            <SoftmaxTanh as Link<2, 3>>::inverse_at(m, p),
+            p,
+        );
+        let each = back
+            .iter()
+            .zip(m)
+            .fold(0.0, |worst: f64, (&x, m)| worst.max((x - m).abs() / m));
+        each.max((ratio_of(chart.bodies, back) - q).abs() / q) <= 1.0e-6
+    })
+);
+
 /// The range a chart `new` built is drawn over, at the asked range and parameters, its own or a control's.
 type NarrowedRange<'a> = &'a dyn Fn(&RatioChart, [f64; 2], &LinkParams<f64>) -> [f64; 2];
 
