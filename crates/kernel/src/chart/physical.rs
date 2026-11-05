@@ -737,9 +737,9 @@ impl<A: Coordinate, S: Selection> MixedMassRatio<A, S, f64> {
     /// The chart over the asked range `asked` of `q = m_b/m_a`, `bodies = (a, b)`, under `mapping` at the link's tunable
     /// parameters `p` (the module's note): `m_c` the third body's mass at `z₀`'s mass controls; warped, the range the
     /// part of `asked` the link realises at `m_c`, as held and as narrowed to `f32`, a chart decoded there holding that
-    /// value, found outward from the slice centre's own ratio, or, where the link
-    /// does not realise that, a saturated centre, from `seed`. `None` where the bodies are not two distinct bodies,
-    /// `asked` is not an increasing finite range, or, warped, a mass at `z₀` is NaN or the link realises none of `asked`.
+    /// value, found outward from the slice centre's own ratio, or, where the link does not realise that, a saturated
+    /// centre, from `seed`. `None` where the bodies are not two distinct bodies, `asked` is not an increasing finite
+    /// range, or, warped, a mass at `z₀` is NaN or no ratio of `asked` is realised at both.
     pub fn new(
         frozen: [f64; 8],
         a_range: [f64; 2],
@@ -871,8 +871,8 @@ impl<A: Coordinate, S: Selection> MixedMassRatio<A, S, f64> {
     /// upper end below `from`, a lower end above it), the asked range then outside the interval the link realises;
     /// else the last realised ratio on the way, by bisection in `ln q`, sixty-four halvings, an end at or below 0 taken
     /// at the least positive double. Each test here is to within `ε_μ/2`, so that the warp's rounding at the range's
-    /// ends (`q₀·(q₁/q₀)^t` at `t = 1`), and the narrowing of the ends, stay inside [`MixedMassRatio::realised`]'s `ε_μ`; the
-    /// narrowing of `held` is `miss_narrowed`'s.
+    /// ends (`q₀·(q₁/q₀)^t` at `t = 1`), and the narrowing of the ends, stay inside [`MixedMassRatio::realised`]'s
+    /// `ε_μ`; the narrowing of `held` is `miss_narrowed`'s.
     fn edge(&self, from: f64, toward: f64, upper: bool, p: &LinkParams<f64>) -> Option<f64> {
         let eps = 0.5 * <f64 as ChartConstants>::EPS_MU;
         if self.miss_narrowed(toward, p) <= eps {
