@@ -926,12 +926,15 @@ fixtures) wait for the human. ✱ marks a design ruling the human may veto.*
 *Amended by R-186, R-656 and R-662.*
 *Amended in part by R-677 (2 Nov 2026: a head that changes only the plan's task data or the GUI's artboards and
 references, tier (b), runs the cheap checks and the tests that read what it changed in place of the suites).*
-*Still in force: the unit, property, numerical-gate and native golden suites on every commit; GUI screenshots on GUI PRs
-and at the gates; lavapipe as the second backend on every commit, meeting M4's two-backend check, and a real non-Metal
-GPU gating Paper 2 (R-58); "every commit" is every push to `main` and every pull-request head, but for R-656's skips
-as R-662 and R-677 scope them (a head that changes none of Principia's code runs only the cheap checks; one that
-changes only tier (b)'s data runs the cheap checks and the tests that read it; one that changes no GPU-path file skips
-the GPU suites);
+*Amended in part by R-684 (3 Nov 2026: "every commit" for the unit, property, numerical-gate and native golden suites
+and the GPU suites is every push to `main` and every merge-candidate head, the head carrying the `merge-ready` label;
+every other pull-request head runs the quick tier, each full-only required check posted pending; applied with R-683's
+step (2)).*
+*Still in force: the unit, property, numerical-gate and native golden suites, and lavapipe as the second backend, on
+every head of the full tier (R-684), meeting M4's two-backend check, and a real non-Metal GPU gating Paper 2 (R-58);
+R-662's and R-677's tiers applying first (a head that changes none of Principia's code runs only the cheap checks; one
+that changes only tier (b)'s data runs the cheap checks and the tests that read it), and R-656's skip of the GPU suites
+on a head that changes no GPU-path file; GUI screenshots on GUI PRs and at the gates (R-684 names no tier for them);
 Chrome stable and Safari for REQ-VAL-116; goldens rendered with native wgpu offscreen from M1, checked at M8 by the
 Playwright suite against the same baselines within tolerance, with no re-baselining without a gate decision; the
 runners and the benchmarks' schedule are R-186's.*
@@ -1489,10 +1492,14 @@ Crates without the `controls` feature are skipped, not failed.
 *Amended by R-656 and R-662.*
 *Amended in part by R-677 (2 Nov 2026: a head that changes only tier (b)'s data runs the tests that read it beside the
 cheap checks, in place of `cargo xtask ci`).*
-*Still in force: all of it, `ci.yml`'s "every push" read as R-656 reads it: every push to `main` and every pull-request
-head, a head that changes none of Principia's code (R-662) running plan-check and the vocabulary lint (in
-`ci-workspace`) in place of `cargo xtask ci`, and one that changes only the plan's task data or the GUI's artboards and
-references (R-677) running those and the tests that read what it changed.*
+*Amended in part by R-684 (3 Nov 2026: `ci.yml` runs `cargo xtask ci`, the controls job, on every push to `main` and
+every merge-candidate head, the head carrying the `merge-ready` label; every other pull-request head runs the quick
+tier, the controls job's required check posted pending; applied with R-683's step (2)).*
+*Still in force: all of it but which heads run `cargo xtask ci`: `nightly.yml`, the GUI PRs' screenshots, `gate.yml`
+and bench out of the per-commit `ci`; a head that changes none of Principia's code (R-662) running plan-check and the
+vocabulary lint (in `ci-workspace`) in place of `cargo xtask ci`, and one that changes only the plan's task data or the
+GUI's artboards and references (R-677) running those and the tests that read what it changed, R-677's classifier
+applying before R-684's tiers.*
 *25 Sep 2026 · applied in step 8*
 
 - `ci.yml` runs `cargo xtask ci` on every push, and that includes plan-check.
@@ -2243,9 +2250,12 @@ veto afterwards."
 ## R-235 — `qa_cargo_xtask_alias_runs_deps` uses the listing-only form of `cargo xtask ci`; the controls get their own CI job *(closes RQ-150)*
 *Amended by R-656.*
 *Amended in part by R-677 (2 Nov 2026: "docs-only" reads "runs no full CI", a tier (b) or tier (c) head).*
-*Still in force: all of it; CI's own job runs every control on every push to `main` and every pull-request head but a
-docs-only one, a head of R-677's tier (b) or (c), whose `xtask-ci` shards are skipped, the gate `xtask-ci` passing
-them only on that verdict (R-656).*
+*Amended in part by R-684 (3 Nov 2026: CI's own job runs every control on every push to `main` and every
+merge-candidate head, the head carrying the `merge-ready` label; on any other pull-request head of R-677's code tier,
+the quick tier, `xtask-ci` is posted pending, never skipped-as-success; applied with R-683's step (2)).*
+*Still in force: all of it but which heads run the controls: the listing-only form in `qa_cargo_xtask_alias_runs_deps`;
+the controls in a job of their own beside the tests; a head of R-677's tier (b) or (c), whose `xtask-ci` shards are
+skipped, the gate `xtask-ci` passing them only on that verdict (R-656).*
 *29 Sep 2026 · applied in TASK-M0-22*
 
 "R-235 (RQ-150): option (c). qa_cargo_xtask_alias_runs_deps uses the listing-only form of cargo xtask ci; CI's own step
@@ -2674,6 +2684,10 @@ precision question needs it and the Brutus-style reference is too slow. Recorded
 stay as they are (§7.1 already parks extended precision; this is its kernel-instantiation row).
 
 ## R-266 — "Require branches to be up to date" stays off; bypassing is not allowed *(amends HUMAN_SETUP §2)*
+*Amended in part by R-682 (3 Nov 2026: branch protection allows admin bypass on `main`, for the owner alone; agents
+never use it, and merge scripts merge only when every required check has passed).*
+*Still in force: all of it but "Do not allow bypassing": the up-to-date requirement stays off, and no merge an agent
+makes lands with a required check red.*
 *30 Sep 2026 · applied in plan/HUMAN_SETUP.md §2*
 
 "R-266: "Require branches to be up to date" stays off: CI runs on each PR merged with main, and every push to main runs
@@ -5317,6 +5331,9 @@ Changes no requirement.
 - R-368 is in the "physics" group of `plan/rule_groups.yaml`.
 
 ## R-369 — Standing rule on autonomy: no size gate; decide and continue; ask the human only for the five kinds listed *(supersedes R-234 and R-367; amends R-175, R-204, R-208, R-211, R-264, R-283, R-290 and R-357)*
+*Refined by R-681 (3 Nov 2026: while `main` is red or a required check is stuck, agents open and update no other pull
+request, whatever else could proceed).*
+*Still in force: all of it, R-681's stop added to "stop only when nothing at all can proceed".*
 *2 Oct 2026 · applied in CLAUDE.md, `plan/OPERATIONS.md`, `plan/WORKFLOW.md` and `plan/CURRENT_RULES.md`, and the
 forward lines of the rulings it names*
 
@@ -27112,10 +27129,12 @@ no permission is asked first; RQ-579 is closed with option (a)).*
 *Amended in part by R-632 (item 12: the three corrections RQ-588 to RQ-590 queue are applied, and the documents are
 edited; RQ-577 and RQ-583 unchanged).*
 *Amended in part by R-650 (its "drafts are M3 requirements": they are M9's, scored after the core build).*
+*Amended in part by R-679 (3 Nov 2026: item 9's Standish 1970 is no longer awaited for LL-3, whose Standish half takes
+Hénon 1974 as its printed source; Standish 1970 is added if obtained).*
 *Still in force: all of it but item 6, whose "ask the authors, keeping (c) meanwhile" R-631 replaces by committing the
 data (R-631), and item 12's "Don't edit those documents", which R-632 replaces by applying the three
-corrections (R-632); items 7 and 9's fetches stand, and item 7's database is committed under R-631; its drafts are
-M9 requirements, not M3 ones (R-650).*
+corrections (R-632); items 7 and 9's fetches stand, and item 7's database is committed under R-631, but LL-3 no longer
+waits on Standish 1970 (R-679); its drafts are M9 requirements, not M3 ones (R-650).*
 *27 Oct 2026 · the human's message of that evening; applied in `REVIEW_QUEUE.md` (RQ-577 and RQ-583 noted, RQ-588 to
 RQ-590 stay open), `docs/archive/review_queue/M0.md` (the seven closed entries, moved with their ruling), REQ-VAL-042
 and REQ-VAL-043 (reqio) and `plan/rule_groups.yaml`*
@@ -27432,6 +27451,7 @@ REQ-VAL-042 (statement); adds REQ-DEC-051, REQ-DEC-052 and REQ-PAY-112.
 *Refined by R-636 (28 Oct 2026: its two readings written into its text, the paragraphs marked "Added on the owner's
 update of 28 Oct 2026" in its RQ-601 and RQ-603 bullets: `J⁺` where the steer's text says `J⁻¹`, with what it does
 when `J` is singular, and "ray-degenerate" read per cell).*
+*Refined by R-681 (3 Nov 2026: for a stuck check, its note on re-running CI tightens to re-running only the job that reports it).*
 *Still in force: all of it, those two readings now part of its text (R-636).*
 *28 Oct 2026 · the owner's ruling batch of that morning, with the revised RQ-603 text sent after it; applied in
 `docs/design/principia_deep_zoom.md` § 2 ("`J_D`'s step rule", a paragraph added, and the latent Jacobian's step),
@@ -29502,6 +29522,9 @@ The owner's words (31 Oct 2026), verbatim, from that day's message:
 R-666 is in the "process" group of `plan/rule_groups.yaml`.
 
 ## R-668 — The 1 Nov library triage rulings: the site-note families stay, marked "operator's own search, unreviewed", closure peeks only and never targets, `bhhsat` with them unless Davoust & Broucke's comparison matches, `suvakov_pc` closure only; a digit match is a trace, marked "inferred"; values printed in a paper, or in a public database a paper points to, are stored with credit and citation, an author emailed only as a last resort; unreviewed and AI-assisted sources are peeks only; hierarchical triples are parked with the v2+ 3D extension; RQ-666 is confirmed; the kernel stays at `G = 1`, another `G` converted at the import boundary and what can't be converted refused *(closes RQ-666 and RQ-668; corrects R-468)*
+*Refined by R-679 (3 Nov 2026: item 5's parking reaches planetary, star-plus-planets, sources, revisited with the v2+
+3D extension).*
+*Still in force: all of it, item 5's parking now reaching planetary sources too (R-679).*
 *1 Nov 2026 · the owner's two messages of that day on the library triage, the second reversing the first's item 1; ported 2 Nov 2026; applied in `docs/design/principia_dd_replication.md` § 3 (a dated paragraph), § 5.12 (a dated line) and § 5.14 (a bullet), `docs/contracts/principia_integrator_contract.md` Part 5 (a dated paragraph), `docs/incoming/2026-10-31_library_triage/SUMMARY.md` (a dated note under its open questions), R-468's forward line and E3 (a dated correction), `docs/archive/review_queue/M0.md` (RQ-666 moved; RQ-668 filed and moved with this ruling), `REVIEW_QUEUE.md`, REQ-GUI-229, REQ-VAL-330 and REQ-VAL-331 (reqio), REQ-SYS-096 (reqio, new), TASK-M3-66 (new), TASK-M6-47, TASK-M9-25 and TASK-M9-37 (notes), `plan/tasks.yaml` and `plan/rule_groups.yaml`*
 
 The owner's words, 1 Nov 2026, verbatim, the first message:
@@ -29749,9 +29772,12 @@ R-675 is in the "process" group of `plan/rule_groups.yaml`.
 `crates/`, not a docs-only head).*
 *Amended in part by R-678 (3 Nov 2026: `mutants-check` is a job of every run, not a posted check run; a head that is not
 merge-ready passes "not applicable").*
-*Still in force: all of it but how `mutants-check` is reported and which heads pass without a run: the `merge-ready`
-label's run, the label taken off on a push, fix rounds checked locally, the `reviews` runs cancelled, `main` merged in
-in batches, and the quick and full tiers not ruled.*
+*Amended in part by R-684 (3 Nov 2026: the quick and full tiers of `ci.yml`, not ruled here, are ruled: full CI on
+every merge-candidate head, the one the `merge-ready` label marks, and every push to `main`; the quick tier on every
+other pull-request head; applied with R-683's step (2)).*
+*Still in force: all of it but how `mutants-check` is reported, which heads pass without a run, and the tiers left
+unruled: the `merge-ready` label's run, the label taken off on a push, fix rounds checked locally, the `reviews` runs
+cancelled, and `main` merged in in batches.*
 *2 Nov 2026 · the owner's CI plan of that day; applied in `.github/workflows/mutants.yml`,
 `.github/workflows/reviews.yml`, `xtask/tests/merge_ready.rs` (new), `xtask/tests/ci_changes.rs`,
 `xtask/tests/mutants_no_mutant.rs`, qa's `xtask/tests/qa_ci_throughput_a.rs` (new) and five qa files (below),
@@ -29801,6 +29827,9 @@ for changed crates plus their dependents (target ≤10 min)." Items (3) and (5) 
   the full suite only on the merge-ready head, conflicts with R-110 (the unit, property, numerical-gate and native
   golden suites on every commit), R-177 (`ci.yml` runs `cargo xtask ci` on every push) and R-235 (every control on
   every push), as R-656 and R-662 read them. As the owner asked, the conflict is with him, and `ci.yml` is unchanged.
+  *Ruled by R-684 (3 Nov 2026):* full CI on the merge-candidate head and every push to `main`, the quick tier on every
+  other pull-request head, done as R-683's step (2); the change to R-110, R-177 and R-235 is R-684's, in their
+  forward lines.
 
 *Applied per R-369:*
 - The label is named `merge-ready`, and the merge watcher puts it on with the user's own token, since a label a
@@ -29821,10 +29850,11 @@ Changes REQ-VAL-148 (source, rulings, note).
 ## R-677 — CI runs in three tiers: a change to Principia's code runs full CI as before; one to the plan's task data or the GUI's artboards and references runs only the cheap checks and the tests that read what it changed, with no build, test shard, GPU suite or mutants; one to the docs runs only the cheap checks; a change takes its highest tier, and an unknown path runs full CI; mutants run only when `crates/` source changes, on the merge-ready head; every required check still reports under its own name *(amends R-656, R-662, R-110, R-177, R-235, R-305 and R-676)*
 *Amended in part by R-678 (3 Nov 2026: a head with no `.rs` file under `crates/` has its `mutants-check` reported
 passed by its job, not posted).*
+*Refined by R-684 (3 Nov 2026: tier (a)'s "full CI" on a code head reads R-684's two tiers, full on a merge candidate and `main`, quick on any other head; the classifier is unchanged).*
 *Amended in part by R-790 (4 Nov 2026: `.claude/` is tier (c), docs, no longer an unnamed path that runs full CI).*
 *Still in force: all of it, the `mutants-check` of a head with no `.rs` file under `crates/` reported passed at once,
-"not applicable", by `mutants.yml`'s job (R-678) rather than posted, and `.claude/` in tier (c), docs (R-790), rather
-than an unnamed path.*
+"not applicable", by `mutants.yml`'s job (R-678) rather than posted, tier (a) reading R-684's two code tiers, and
+`.claude/` in tier (c), docs (R-790), rather than an unnamed path.*
 *2 Nov 2026 · the owner's message of that day, item 3, and his two replies on `plan/requirements.yaml` later that day;
 applied in `scripts/ci_changes.sh`, `scripts/ci_req_fields.py`, `.github/workflows/ci.yml`,
 `.github/workflows/mutants.yml`, `xtask/tests/ci_changes.rs`, `xtask/tests/merge_ready.rs`,
@@ -30261,3 +30291,243 @@ The owner's words, 4 Nov 2026, verbatim:
 - R-790 is the id reserved for this ruling. It follows R-678 in the file.
 
 R-790 is in the "ci" group of `plan/rule_groups.yaml`.
+
+## R-679 — The 3 Nov triage rulings: LL-3 takes Hénon 1974 as its independent printed source for Standish's orbit, its period agreement with Li & Liao to 2e-10 recorded, and stops waiting on Standish 1970; planetary (star-plus-planets) sources are parked with the hierarchical triples, revisited with the v2+ 3D extension, not out of scope for good; per-point FTLE maps over the batch-152 planes, from the planned FTLE field, and shape-sphere residence statistics, from a new time-weighted occupancy accumulator, are M9 peeks, non-gating, recorded as candidate original results, with no build before M9 *(closes RQ-672, RQ-673 and RQ-674; amends R-630 item 9; refines R-668 item 5)*
+*3 Nov 2026 · the owner's message of that day on the triage questions; ported 3 Nov 2026; applied in
+`docs/design/principia_dd_replication.md` § 5.3 (a dated note under the table and LL-3's cell), § 5.14 (a bullet), § 7 (TASK-M3-47's line) and § 12.5 (a dated
+paragraph), R-630's and R-668's forward lines, REQ-VAL-223 (reqio), REQ-VAL-344, REQ-VAL-345 and REQ-VAL-346 (reqio,
+new), TASK-M9-07 (Goal, Deliverables, acceptance and notes), TASK-M9-37, TASK-M9-41 (new), `docs/verification/peek_log.md` (a dated line), `plan/tools/milestones.py`, `plan/MILESTONES.md` (M9's build-task bullet), `docs/archive/review_queue/M0.md` (RQ-672, RQ-673 and RQ-674, taken from
+PR #385's branch with their rulings), `plan/tasks.yaml` and `plan/rule_groups.yaml`*
+
+The owner's words, 3 Nov 2026, verbatim:
+
+> Rulings on the triage: (1) LL-3 uses Hénon 1974 (held under R-669) as its independent printed source; period agreement with Li & Liao to 2e-10 recorded; stop waiting on Standish 1970 (add it later if obtained). (2) Planetary (star-plus-planets) sources: PARKED with the hierarchical triples under R-668, revisited with the v2+ 3D extension, not permanently out of scope. (3) Plan per-point FTLE maps over the batch-152 planes, using the planned FTLE field, and shape-sphere residence statistics (new requirement: a time-weighted occupancy accumulator) as M9 peeks, non-gating, recorded as candidate original results. Write the minimum new requirements; no build before M9. Triage PR goes in after the freeze lifts, as planned.
+
+*Context.* The three items answer RQ-672, RQ-673 and RQ-674, the library triage's open questions 1 to 3, which PR #385
+(the triage of batches 81 to 153 and the papers-11 to 13 addendum) files, open. This port lands after that PR and
+archives them, unchanged, each with a Ruling line quoting the owner's words.
+
+*What it decides:*
+
+- **Item 1 (RQ-672).** LL-3's first half, Li & Liao's F1 at (0.6, 0.8, 1) shown to be Standish's 1970 orbit, takes
+  Hénon 1974 (Celest. Mech. 10, 375), held under R-669, as its independent printed source: Table I's `A = 0` row, which
+  the triage reads as Standish's orbit. Its period agrees with Li & Liao's to 2e-10, the triage's measurement, recorded
+  as information. That half stops waiting on Standish 1970, which is added beside Hénon 1974 if it is obtained. In
+  R-630, this amends item 9 for Standish 1970 only: it is no longer awaited for LL-3. The other half, F1 and F2 at
+  (1, 1, 1) against Yasko & Orlov 2015, still waits on the owner's copy (R-630 item 9), as before.
+- **Item 2 (RQ-673).** Planetary (star-plus-planets) sources are parked with the hierarchical triples under R-668
+  item 5, revisited with the v2+ 3D extension, not out of scope for good. Their rows in the triage read PARKED.
+- **Item 3 (RQ-674).** Two outputs are planned as M9 peeks, non-gating, recorded as candidate original results, with
+  no build before M9:
+  - per-point FTLE maps over the batch-152 planes, using the planned FTLE field (REQ-VAL-344);
+  - shape-sphere residence statistics, from a new time-weighted occupancy accumulator (REQ-VAL-345).
+- **The minimum new requirements.** REQ-VAL-344, the FTLE maps; REQ-VAL-345, the accumulator and its statistics; and
+  REQ-VAL-346, the definition R-72 asks for of the accumulator's equal-area cell partition, which the corpus does not
+  give. The FTLE maps need no definition: they read the planned field, the Benettin FTLE (REQ-INT-043) as the payload
+  derives it (REQ-PAY-021, REQ-PAY-032), whose norm, renormalisation and finalisation are already defined, its horizon
+  the run's. One M9 task, TASK-M9-41, closes all three.
+- **The triage PR** goes in after the freeze lifts, as planned: PR #385, unchanged by this port.
+
+*Applied per R-369:*
+
+- **Existing FTLE requirements reused, none duplicated.** REQ-INT-043 (the Benettin FTLE), REQ-PAY-021 and REQ-PAY-032
+  (the derived `ftle` and `ftle_valid`), REQ-PAY-058 (frozen at escape) and REQ-TOOL-043 (the horizon map) are the
+  planned field; REQ-VAL-344 maps it and adds nothing to it. No existing requirement plans an FTLE map over a plane's
+  starts or a shape-sphere occupancy, so both are new.
+- **"The batch-152 planes"** are the planes the triage holds under `batches/papers-152`: the eucliss free-fall fate plane
+  (`[value]`) and its two unequal-mass velocity planes (`[value]`), the planes RQ-674's gap 2 names. They
+  are AI-authored and held locally, so under R-668 item 6 they are peeks only; the maps use their starts, never their
+  outcomes as a reference.
+- **Where a candidate original result is recorded.** It has no reference, so no PASS or divergence (R-649): each is a
+  row of `docs/verification/peek_log.md` whose outcome reads "candidate original result", with its tier (R-649 item 2),
+  its inputs and its conventions.
+- **LL-3 while one half waits (PR #413, code F2, physics F1).** The owner's "stop waiting" would mean nothing if the task still waited whole, so TASK-M9-07 starts on the Standish half and the one-orbit check at (1, 1, 1), and the Yasko & Orlov half reads "not scored" in the same row until it runs. That half's control needs the paper still awaited, so the Standish half gets its own from held data: Hénon's `A = 0` orbit against Li & Liao's F2 at (0.6, 0.8, 1). The orbit list holds it, and Hénon's family 2, the other candidate, needs collision handling. A test's choice, which changes no result.
+- **The task.** TASK-M9-41 is new, depending on TASK-M3-14 (the CPU Benettin FTLE) and TASK-M4-13 (the GPU FTLE). It is
+  not scored, and TASK-M9-37's report does not wait on it.
+- **The data actions** (marking the planetary rows PARKED, transcribing Hénon 1974's Table I from the page) are #385's
+  and the data PRs', under R-680's standing rule.
+
+*What it amends:* **R-630**, item 9, for Standish 1970 (LL-3 no longer waits on it). It refines **R-668**, item 5, whose
+parking now reaches planetary sources. It closes **RQ-672**, **RQ-673** and **RQ-674**.
+
+R-679 is in the "design" group of `plan/rule_groups.yaml`, with R-668.
+
+Adds REQ-VAL-344, REQ-VAL-345 and REQ-VAL-346; changes REQ-VAL-223 (statement, verify, source, rulings, note) and REQ-VAL-340 (verify, rulings, source, note).
+
+## R-680 — Standing rule: the source page is re-read before any triage item becomes a target; the spot-check's six fixes to the library triage are PR #385's work, done after the CI fixes land
+*3 Nov 2026 · the owner's message of that day on the spot-check of the library triage; ported 3 Nov 2026; applied in
+`docs/design/principia_dd_replication.md` § 8.3 (a dated bullet), `plan/rule_groups.yaml` and
+`plan/section_notes.yaml`; changes no requirement*
+
+The owner's words (3 Nov 2026), verbatim:
+
+> From an independent spot-check of the library triage (notes in the Principia project: research-landscape.md; triage numbers held up, 11/14 confirmed, none wrong). Fix before any of these become targets: (1) Li, Li, He & Liao 2021: the paper contradicts itself (abstract 1646 new / 1658 total vs §3.2 1642 new / 1653 incl. Tanikawa's 11); the spreadsheet holds 15 digits, not "up to 90". Correct the triage row and the target's precision. (2) Tanikawa–Umehara–Abe 1995 Table IV was never read; it has misprints: row 9 x = 0.49111357 (0.4911357 fits), row 1 α printed π/2 where the rule gives π/3. Transcribe from the page with these noted. (3) Horn et al.: the t ≤ 10 horizon is unverified (provenance file only; the paper trains to t = 5, tests to t = 7). Check the HDF5 itself when it's next touched. (4) eucliss_releases.json is cited by the triage but isn't in the library: fix the citation or mark it missing. (5) Batch-152 fate plane: mirror-pair escaper agreement is 0.97 (t < 10), 0.84 (10–20), 0.63 (20–50), 0.51 (> 50); state that in its peek, not "noise past t ≈ 20". (6) Check whether Stone & Leigh 2019 and Ginat & Perets 2021 were actually fetched (they appear only as context mentions in the triage); fetch if not. Standing rule from this: re-read the source page before any triage item becomes a target. Do these after the CI fixes land.
+
+*What it decides:*
+
+- **The standing rule.** Before any triage item becomes a target, its source page is re-read: the item's numbers are
+  checked against the page it cites before a requirement or a fixture is written from it, and a contradiction the page
+  holds is recorded as rule 10 of `principia_dd_replication.md` § 8.2 has it, never resolved by choosing.
+- **The six fixes are PR #385's work, not this port's.** Each corrects a triage row, a transcription, a citation or a
+  peek's wording in the triage that PR adds, and each is done there after the CI fixes land, as the owner says. This
+  port records the rule and changes no triage data.
+
+*Applied per R-369:* the rule is § 8.3's, among how the tasks apply the rules, since it binds the step from a triage
+row to a target, whichever task takes it.
+
+R-680 is in the "process" group of `plan/rule_groups.yaml`.
+
+## R-681 — Standing rules: while `main` is red, or a required check is stuck, agents open and update no other pull request, and the owner is told in one message; a CI-tooling pull request shows its own `xtask-ci` passing before it merges; a stuck check is cleared by re-running only the job that reports it, never the whole pipeline *(refines R-369)*
+*3 Nov 2026 · the owner's three messages of that day on `main`'s red `xtask-ci` and the stuck `mutants-check`; ported
+3 Nov 2026; applied in `plan/OPERATIONS.md` § "Merging" (a paragraph and step 6's pointer) and § "Autonomy (R-369)" (a
+line), R-369's and R-633's forward lines, `plan/rule_groups.yaml` and `plan/section_notes.yaml`; changes no requirement*
+
+The owner's words (3 Nov 2026), verbatim: item (3) of the message that opens "Top priority, nothing else until done:
+main's xtask-ci fails on every PR since #381":
+
+> (3) Standing rule from now: if main is red, all agents stop opening/updating other PRs until it's green again, and a CI-tooling PR must show its own xtask-ci passing before merge (#381 merged and broke main).
+
+Item 4 of his message that opens "`mutants-check` is no longer a required check on main":
+
+> 4. Standing rules: never re-run a whole pipeline to clear a stuck check (re-run only the job that reports it); if main is red or a required check is stuck, stop other PR work and tell me in one message.
+
+And the last sentence of his message that opens "#384 is blocked only by the required `mutants-check` showing
+"Expected — waiting for status"":
+
+> Re-running full CI to clear a stuck required check is banned from now: re-run the single job that reports it.
+
+*Context.* R-678 (PR #389) quotes item (2) of the third message and item 3 of the second, and leaves this part of them
+outside it ("re-running only the job that reports a stuck check, stopping other work when `main` is red"); this ruling
+ports it. The rest of the three messages (landing #384, #382 and #383, the mutants workflow's fix, the push-to-green
+report, and "Don't start other work while I'm away") were the day's instructions, acts rather than standing rules.
+
+*What it decides:*
+
+- **`main` red, or a required check stuck.** While `main`'s CI is red, or a required check on a pull request is stuck
+  (expected and never reported, or hanging), no agent opens or updates any other pull request until
+  `main` is green again or the check reports. The owner is told in one message what is red or stuck. Work that pushes
+  nothing goes on, as R-369 has it; the fix for `main` is the one pull request worked.
+- **A CI-tooling pull request** (one that changes what CI runs or checks) shows its own `xtask-ci` passing on its head
+  before it merges. #381 merged and broke `main`.
+- **A stuck check is re-run alone.** A stuck required check is cleared by re-running only the job that reports it,
+  never by re-running a whole pipeline or full CI. This tightens R-633's note ("prefer re-running the failed jobs over
+  closing and reopening the PR") for a stuck check.
+
+*Applied per R-369:*
+
+- "Passing" is a run of `xtask-ci` on the head that passes; a pass reported without running it, by a tier that skips
+  it (R-677), does not count for a CI-tooling pull request.
+- "Stop other PR work" is read with item (3)'s "stop opening/updating other PRs": no push, no new pull request, no
+  merge of another pull request; reviews and local work that push nothing go on.
+- In R-369, this refines "stop only when nothing at all can proceed": a red `main` or a stuck required check stops
+  other pull-request work at once, whatever else could proceed.
+- `CLAUDE.md` is not changed by this port.
+
+R-681 is in the "process" group of `plan/rule_groups.yaml`.
+
+## R-682 — Admin bypass on `main` is the owner's alone: agents never use it, by `gh pr merge --admin` or any API merge that skips a required check; merge scripts merge only when every required check has passed; a stuck check goes to the owner, who decides whether to bypass *(amends R-266)*
+*3 Nov 2026 · the owner's message of that day; ported 3 Nov 2026; applied in `plan/HUMAN_SETUP.md` § 2 (a dated note),
+`plan/OPERATIONS.md` § "Merging" (step 3), R-266's forward lines, `plan/rule_groups.yaml` and `plan/section_notes.yaml`;
+changes no requirement*
+
+The owner's words (3 Nov 2026), verbatim:
+
+> Branch protection: I'm allowing admin bypass on main so I can merge manually when a required check hangs. Agents must NEVER use admin bypass (no `gh pr merge --admin`, no API merges that skip required checks). Merge scripts merge only when every required check has passed. If a check is stuck, tell me and I'll decide whether to bypass.
+
+*What it decides:*
+
+- **Bypass is the owner's.** Branch protection on `main` allows admin bypass, so that the owner can merge by hand when
+  a required check hangs. In R-266, this amends "I'm turning on "Do not allow bypassing", so the required checks bind
+  every merge, including yours": the setting is off for the owner's bypass, and the required checks still bind every
+  merge an agent makes.
+- **Agents never bypass:** no `gh pr merge --admin`, and no API merge that skips a required check.
+- **Merge scripts merge only when every required check has passed.**
+- **A stuck check goes to the owner**, who decides whether to bypass (with R-681, in one message).
+
+R-682 is in the "process" group of `plan/rule_groups.yaml`.
+
+## R-683 — The CI speed-up series, after the current CI fixes land: measure first, then five tooling pull requests in order, each with before and after numbers: one test binary per crate, a quick tier on every push, mutants in-diff on the merge-ready head, a bounded dependency cache saved from `main` only, and nightly compiler flags kept only if faster; R-285's amendment approved in principle only, its wording with step (4)'s pull request
+*Amended in part by R-684 (3 Nov 2026: steps (2) and (4) are ruled, still in that order after step (1): step (2)'s
+quick and full tiers by R-684's part (A), step (4)'s cache by its part (B), R-656's approved bound applied to R-285,
+built with `actions/cache` or `rust-cache` (target only), not sccache).*
+*Still in force: all of it; the series, its order and its before and after numbers; R-285's wording still comes with
+step (4)'s pull request.*
+*3 Nov 2026 · the owner's message of that day; ported 3 Nov 2026; applied in `plan/rule_groups.yaml` and
+`plan/section_notes.yaml`; changes no requirement and no ruling in force*
+
+The owner's words (3 Nov 2026), verbatim:
+
+> CI speed-up research, after the current CI fixes land (#384, #382, #383, the mutants-check fix). Measure first: per job, split wall time into setup/archive download, build, link and test run, so we know where time goes. Then, in order, each as its own tooling PR with before/after numbers: (1) Consolidate integration tests: there are ~606 test binaries (engine 73, gui 28, kernel 107, ledger 74, prin 10, render 72, validation 94, xtask 148). Make one test binary per crate via tests/<crate>/main.rs that `mod`-includes the existing files unchanged (qa_TASK files stay separate files and keep their review ownership). Measure build+link time, archive size and mutants time. Check that nextest filters, per-test controls (REQ-VAL-147), screenshot/golden harnesses and reviews-check still work. (2) Quick tier on every push: only changed crates plus reverse dependencies (e.g. guppy/cargo-hakari determinator or a cargo-metadata script); full suite once at merge-ready; required checks always report. (3) cargo mutants --in-diff on the merge-ready head. (4) Bounded dependency cache saved from main only (rust-cache or sccache; amend R-285 as I approved in principle). (5) Try nightly `-Z threads=8` and `-Z share-generics=y` in CI builds, and opt-level 1–2 for dependencies in the test profile; keep each only if measured faster. Skip mold. Report each step's numbers. Don't propose paid runners or moving the repo to an organisation; I'll decide those later.
+
+*What it decides:*
+
+- **When.** After the current CI fixes land: #384, #382, #383 and the mutants-check fix (PR #389).
+- **Measure first.** Per job, wall time split into setup and archive download, build, link and test run.
+- **Then, in order, each its own tooling pull request with before and after numbers:** (1) one integration-test binary
+  per crate, `tests/<crate>/main.rs` `mod`-including the existing files unchanged, qa's `qa_TASK` files staying
+  separate files with their review ownership (R-290), measured for build and link time, archive size and mutants time,
+  and checked against nextest's filters, the per-test controls (REQ-VAL-147), the screenshot and golden harnesses and
+  `reviews-check`; (2) a quick tier on every push, only the changed crates and their reverse dependencies, the full
+  suite once at merge-ready, every required check still reporting; (3) `cargo mutants --in-diff` on the merge-ready
+  head; (4) a bounded dependency cache saved from `main` only, by `rust-cache` or sccache; (5) nightly `-Z threads=8`
+  and `-Z share-generics=y` in CI builds, and opt-level 1 to 2 for dependencies in the test profile, each kept only if
+  measured faster. mold is skipped. Each step's numbers are reported.
+- **R-285, approved in principle only.** "amend R-285 as I approved in principle" is the approval in principle R-656
+  recorded for a bounded cache saved from `main` only. R-285 is not amended by this ruling: the amendment's wording
+  comes with step (4)'s pull request, for the owner's ruling then.
+- **Not proposed:** paid runners, or moving the repo to an organisation; the owner decides those later.
+
+*Applied per R-369:* this ruling orders the work and changes no ruling in force. Where a step changes what a ruling
+fixes, the step's pull request brings the conflict to the owner, as R-676 did for the quick tier: step (2) against
+R-110, R-177 and R-235 as R-677 leaves them, step (4) against R-285, and, if it uses sccache, R-666's "off" for the
+job queue, which leaves CI unchanged.
+
+*3 Nov 2026, R-684:* the conflicts flagged above are settled by the owner. Step (2)'s, with R-110, R-177 and R-235 as
+R-677 leaves them, by R-684's part (A), which amends all three. Step (4)'s, with R-285 and R-666, by its part (B), which
+needs no new ruling: R-656's approved bound applied to R-285, a target-only cache by `actions/cache` or `rust-cache`,
+not sccache, so R-666 stands; applied at step (4)'s pull request, R-285 unedited until then.
+
+R-683 is in the "ci" group of `plan/rule_groups.yaml`.
+
+## R-684 — CI's two code tiers: full CI on every merge-candidate head, the one carrying the `merge-ready` label, and on every push to `main`; a quick tier on every other pull-request head (fmt, clippy, build, and the tests of the changed crates and their reverse dependencies), each full-only required check posted pending, never skipped-as-success; R-677's classifier first; done as R-683's step (2), and R-656's bounded target cache, without sccache, as its step (4) *(amends R-110, R-177 and R-235; rules R-676's tiers and R-683's steps (2) and (4))*
+*3 Nov 2026 · the owner's message of that day; ported 3 Nov 2026; applied in the forward lines of R-110, R-177, R-235,
+R-676, R-677 and R-683, `plan/rule_groups.yaml` and `plan/section_notes.yaml`; changes no requirement here; built with R-683's
+steps (2) and (4)*
+
+The owner's words (3 Nov 2026), verbatim:
+
+> Rulings to reconcile the CI speed-up conflicts. (A) Quick tier: amend R-110, R-177 and R-235 (and fill R-676's "quick and full tiers not ruled"). Full CI (unit, property, numerical-gate and native golden suites, the controls job, GPU suites where the GPU-path rule applies) runs on every merge-candidate head (the head carrying the merge-ready label, the same trigger mutants uses) and on every push to main. Every other pull-request head runs a QUICK tier: fmt, clippy, build, and tests for changed crates plus reverse dependencies. On a quick-tier run, each full-only required check is posted PENDING, never skipped-as-success, so no PR can merge until the full suite has passed on its exact head. Branch protection unchanged. The R-677 three-tier classifier still applies first (docs and plan-data heads never run either code tier). Add a test that every required check reports in every path: quick, full, label added, label removed, docs, plan-data. Rationale to record: since R-676 fix rounds are verified locally through the job queue, so full CI on intermediate heads duplicated that work; the guarantee that main only receives fully-tested heads is unchanged. (B) Cache: no new ruling needed beyond applying R-656's approved bound to R-285. Build-target cache saved from main only, keyed on Cargo.lock + toolchain, for the 2–3 slowest jobs, evicted to stay well under 10 GB; build it with actions/cache or rust-cache (target only), NOT sccache, so R-666 stands. Report the cache size after a week. Record (A) as the next R-number, quoting this message; do (A) and (B) as steps 2 and 4 of R-683's series, after the test-binary consolidation (step 1).
+
+R-684 records part (A). Part (B) is no new ruling: it applies R-656's approved bound to R-285, and is recorded under
+R-683, step (4).
+
+*What it decides (part (A)):*
+
+- **Full CI.** The unit, property, numerical-gate and native golden suites, the controls job, and the GPU suites where
+  R-656's GPU-path rule applies, run on every merge-candidate head, the head carrying the `merge-ready` label, the
+  trigger mutants uses (R-676), and on every push to `main`.
+- **The quick tier.** Every other pull-request head runs fmt, clippy, the build, and the tests of the changed crates
+  and their reverse dependencies.
+- **Full-only checks are pending on a quick run.** On a quick-tier run, each required check that only the full tier
+  reports is posted pending, never skipped-as-success, so no pull request merges until the full suite has passed on its
+  exact head.
+- **Branch protection is unchanged.**
+- **R-677's classifier applies first.** A docs or plan-data head, R-677's tier (c) or (b), runs neither code tier.
+- **A test that every required check reports in every path:** quick, full, label added, label removed, docs and
+  plan-data. It belongs to step (2)'s pull request, and is not written here.
+- **In R-110, R-177 and R-235**, "every commit" and "every push" for the full suites, the controls and the GPU suites
+  read every push to `main` and every merge-candidate head (their forward lines).
+- **R-676's "the quick and full tiers not ruled" is filled** by the two bullets above on full CI and the quick tier.
+- **R-683's steps (2) and (4) are ruled**, still in that order, after step (1), the test-binary consolidation: step
+  (2) builds part (A), and step (4) part (B).
+
+*The owner's rationale, as given:* since R-676, fix rounds are verified locally through the job queue, so full CI on
+intermediate heads duplicated that work; the guarantee that `main` only receives fully-tested heads is unchanged.
+
+*Part (B), applied at step (4)'s pull request:* a build-target cache saved from `main` only, keyed on `Cargo.lock` and
+the toolchain, for the 2–3 slowest jobs, evicted to stay well under 10 GB, built with `actions/cache` or `rust-cache`
+(target only), not sccache, so R-666 stands; the cache size reported after a week. R-285 is not edited here.
+
+*Applied per R-369 (PR #413, code F5), a mechanical consequence, flagged since the owner listed only R-110, R-177 and R-235:* R-677's tier (a), "full CI as before", now reads the two tiers above, and it carries the forward line. R-662's "Full CI runs only when a pull request changes Principia's code" is unaffected: it says when full CI may run, and that still holds.
+
+R-684 is in the "ci" group of `plan/rule_groups.yaml`.

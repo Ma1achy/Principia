@@ -310,7 +310,10 @@ merge:
    allows; two questions in different words; a deletion undone, or an entry restored whole. So after each merge the
    orchestrator still reads `git diff <before> <after> -- REVIEW_QUEUE.md`, which the batch merge prints, for these: a
    line doubled, restored or under the wrong RQ, or two notes that disagree. It fixes anything wrong by a follow-up PR.
-3. `gh pr merge N --merge --match-head-commit <full sha>`. Never `--admin` (R-266), never squash or rebase.
+3. `gh pr merge N --merge --match-head-commit <full sha>`. Never `--admin` (R-266), never squash or rebase. Admin
+   bypass is the owner's alone (R-682, 3 Nov 2026): no agent uses it, by `--admin` or any API merge that skips a
+   required check, and a merge script merges only when every required check has passed. A stuck check goes to the
+   owner, who decides whether to bypass.
 4. Then, as a separate command, never chained after the merge with `;`: confirm the remote branch is gone, since
    GitHub's "Automatically delete head branches" deletes it on merge (R-357): `git ls-remote --exit-code origin
    refs/heads/<branch>` exits 2, finding no such ref. Don't delete it yourself; if it is still there, tell the human.
@@ -320,7 +323,14 @@ merge:
 5. If `reviews-complete` stays red only from the `pull_request`-event run, which fails before any review and stays a
    separate check suite, re-run it: `gh run rerun <id>` (R-266, R-276).
 6. To re-run CI, prefer re-running the failed jobs (`gh run rerun <id> --failed`) over closing and reopening the PR
-   (the owner's note, R-633).
+   (the owner's note, R-633). A stuck required check: the paragraph below (R-681).
+
+**`main` red, or a required check stuck (R-681, 3 Nov 2026, a standing rule).** While `main`'s CI is red, or a
+required check on a pull request is stuck, no agent opens or updates any other pull request, and no other pull request
+merges, until `main` is green again or the check reports; the owner is told in one message what is red or stuck. A
+stuck check is cleared by re-running only the job that reports it, never a whole pipeline. A CI-tooling pull request,
+one that changes what CI runs or checks, shows its own `xtask-ci` run passing on its head before it merges: #381
+merged and broke `main`.
 
 **Advisory bot reviews before the merge (R-651, a standing rule).** Before step 3, the orchestrator's merge script
 checks, for Codex, Gemini CLI and Copilot each:
@@ -477,7 +487,8 @@ Approvals are of a head, so the reviewers approve the merged head again before t
 
 The human's standing rule of 2 Oct 2026 (R-369), which replaced the size rules and the "veto? holds the merge"
 practice, in force whether the human is away or not. Keep working through the plan under `plan/WORKFLOW.md` and
-`CLAUDE.md`. Progress is the goal: decide and continue, and stop only when nothing at all can proceed.
+`CLAUDE.md`. Progress is the goal: decide and continue, and stop only when nothing at all can proceed. A red `main` or a stuck
+required check stops other pull-request work at once, whatever else could proceed (R-681; § "Merging").
 
 **Merge** a PR once all of these hold:
 - every reviewer the task names has posted `VERDICT: APPROVE` on the head;

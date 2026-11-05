@@ -292,9 +292,15 @@ atlas's rows (§ 4.1).
 | Target | Requirement | L / T | Reproduces | Chart | Milestone | Compare | Tolerance | Task |
 |---|---|---|---|---|---|---|---|---|
 | LL-1, LL-2 (DRAFT-VAL-02) | REQ-VAL-203 | V / A | Li & Liao 2019, Tables A1–A5 (234 initial conditions and periods, 10 decimals) | the Anosova physical-frame entry; a MassSimplex point for the five unequal mass sets | M9 | exact | REQ-VAL-204 (calibration, R-71) | TASK-M9-06 |
-| LL-3 | REQ-VAL-223 (waits: the owner's copies of the two papers, paywalled, R-630 item 9; was "waits: RQ-586") | V / A | Li & Liao 2019 p. 3: F1 at (0.6, 0.8, 1) is Standish's 1970 orbit; F1 and F2 at (1, 1, 1) are Yasko & Orlov's 2015 Orbits 16 and 17 | the Anosova physical-frame entry; a MassSimplex point | M9 | exact | REQ-VAL-224 (calibration, R-71) | TASK-M9-07 |
+| LL-3 | REQ-VAL-223 (the Yasko & Orlov half waits: the owner's copy, paywalled, R-630 item 9, R-679; was "waits: the owner's copies of the two papers", and before it "waits: RQ-586") | V / A | Li & Liao 2019 p. 3: F1 at (0.6, 0.8, 1) is Standish's 1970 orbit; F1 and F2 at (1, 1, 1) are Yasko & Orlov's 2015 Orbits 16 and 17 | the Anosova physical-frame entry; a MassSimplex point | M9 | exact | REQ-VAL-224 (calibration, R-71) | TASK-M9-07 |
 | LL-4 | REQ-VAL-225 | V / A | Li & Liao 2019 p. 3 and Fig. 3: T̄* ≈ 2.363 at equal masses; 1.663, 1.191, 0.776, 0.527 at m₃ = 0.8 … 0.2; fit 1.912 m₃ + 0.084 | none | M9 | exact per orbit; the fit statistical | REQ-VAL-226 (calibration, R-71) | TASK-M9-14 |
 | LL-5 | REQ-VAL-227 | V / A | the authors' website list of 316 free-fall orbits (82 beyond the paper's 234), carried by the atlas as 81 rows on three further mass sets | MassSimplex points | M9 | exact (closure only) | OC-1's (REQ-VAL-202): the same form, the same f64 refined initial conditions | TASK-M9-06 |
+
+*3 Nov 2026 (R-679, item 1, closing RQ-672):* LL-3's Standish half takes Hénon 1974 (Celest. Mech. 10, 375), held
+under R-669, as its independent printed source: Table I's `A = 0` row is Standish's orbit, and its period agrees with
+Li & Liao's F1 at (0.6, 0.8, 1) to 2e-10, the library triage's measurement (PR #385), recorded as information. That
+half no longer waits on Standish 1970, which is added beside Hénon 1974 if it is obtained. The Yasko & Orlov half
+still waits on the owner's copy of Yasko & Orlov 2015 (R-630 item 9).
 
 ### 5.4 The Belgrade orbits
 
@@ -546,6 +552,8 @@ no requirement while RQ-577 is open.
 - **Hierarchical triples** (R-668, 1 Nov 2026): out of scope for now, parked with the v2+ 3D extension. Among the
   library's sources, Vynatheya, Harrington, Tory, Hayashi, HopOn, Mushkin, Antoniadou and Figueras; among the targets,
   V-11 (§ 5.12), kept and reading "not scored: parked".
+- **Planetary (star-plus-planets) sources** (R-679, item 2, 3 Nov 2026, closing RQ-673): parked with the hierarchical
+  triples, revisited with the v2+ 3D extension, not out of scope for good.
 
 Most of the scattering literature is 3D; only planar subsets apply. Results with no published data and no figure
 detail stay qualitative until the paper is in hand.
@@ -611,7 +619,7 @@ R-631 commits the fetched data (HP27, FF27); RQ-586's three papers are paywalled
 - **TASK-M3-44**, The syzygy count against the atlas's `syz` on every row (OC-5), and its counting convention. Targets: OC-5, OC-5's counting convention. Depends on TASK-M3-16, TASK-M3-42.
 - **TASK-M3-45**, The atlas's per-family coverage report (OC-6). Targets: OC-6. Depends on TASK-M3-42, TASK-M3-43, TASK-M3-44.
 - **TASK-M3-46**, Li & Liao's free-fall orbits: closure, rest at T/2 and the alias pairs (LL-1, LL-2, the first batch's DRAFT-VAL-02), and the website-only rows (LL-5). Targets: LL-1, LL-2, LL-5. Depends on TASK-M3-42, TASK-M2-13.
-- **TASK-M3-47**, Li & Liao's known orbits against Standish 1970 and Yasko & Orlov 2015 (LL-3). Targets: LL-3. Depends on TASK-M3-46. Waits on the owner's copies of Standish 1970 and Yasko & Orlov 2015 (paywalled, R-630 item 9; was "Waits on RQ-586.").
+- **TASK-M3-47**, Li & Liao's known orbits against Standish 1970 and Yasko & Orlov 2015 (LL-3). Targets: LL-3. Depends on TASK-M3-46. Its Yasko & Orlov half waits on the owner's copy of Yasko & Orlov 2015 (paywalled, R-630 item 9, R-679; was "Waits on the owner's copies of Standish 1970 and Yasko & Orlov 2015", and before it "Waits on RQ-586.").
 - **TASK-M3-48**, Heggie 1974's regularisation targets: the step ratio against Aarseth–Zare (H-1, H-2, DRAFT-VAL-04) and C/3 toward the Lagrange triple collision (H-3, DRAFT-VAL-03). Targets: H-3, H-1, H-2. Depends on TASK-M3-24, TASK-M3-08.
 - **TASK-M3-49**, Tanikawa & Mikkola 2021's triple-collision points on the free-fall plane (TM-1). Targets: TM-1. Depends on TASK-M3-48. Waits on the owner's copy of Tanikawa & Mikkola 2021 (paywalled, R-630 item 9; was "Waits on RQ-586.").
 - **TASK-M3-50**, Agekyan & Anosova II: decay times from exact rest (AA-6, the first batch's DRAFT-VAL-05). Targets: AA-6. Depends on TASK-M3-34, TASK-M2-20.
@@ -756,6 +764,9 @@ PLAN.md § 8's rules 9–18, transcribed:
 - *30 Oct 2026 (R-649, R-650):* for an external target "the gate" above is the scoring command, not a gate: it reports
   the outcome (§ 12.3) and blocks nothing, and its tolerance is confirmed by the human with M9's report, not at a
   milestone's gate. A target's control still fires or the test is broken (rule 16).
+- *3 Nov 2026 (R-680):* **the source page is re-read before any triage item becomes a target.** A library triage
+  row is a lead, not a transcription: its numbers, precision and horizon are checked against the page they cite, and
+  what the page contradicts is recorded as rule 10 has it, before a requirement or a fixture is written from it.
 
 ---
 
@@ -1004,7 +1015,8 @@ first, and (a) is expected to agree with the second statistically"; every (a) an
 
 *1 Nov 2026 (R-669):* the last two rows are the definitions RQ-595 (b) and RQ-596 (b) call for, each written by the task
 that first needs it, as OC-5's counting convention is. The Šuvakov-plane chart (REQ-CHART-091, TASK-M9-40) is a build
-task's, not a target, and has no row, as TASK-M9-39's softening has none.
+task's, not a target, and has no row, as TASK-M9-39's softening has none. *3 Nov 2026 (R-679):* nor have REQ-VAL-344 to
+REQ-VAL-346 (TASK-M9-41, a build task, not scored), though REQ-VAL-346 is a definition.
 *2 Nov 2026 (R-671, closing RQ-669):* in a task that has no GPU run, a target's (a) part, or a row that is (a)
 throughout, keeps its tier and is listed "not scored yet: needs a GPU run" until an f32 GPU run scores it; beside it,
 the same statistic computed from the task's f64 runs is recorded at (b), with its outcome and its instrument stated (the
@@ -1166,6 +1178,14 @@ triple collisions (Li 2021, Tanikawa 1995 and 2021); unequal-mass and non-zero-L
 2026). Each peek is a row of `docs/verification/peek_log.md`: date, target, tier, data source, outcome (§ 12.3), the
 like-for-like checks, the mechanism measurement where explained, and the commit. A peek is never a gate, and nothing
 is tuned to one.
+
+*3 Nov 2026 (R-679, item 3, closing RQ-674): candidate original results.* Two outputs no paper gives are planned as
+M9 peeks, non-gating, recorded as candidate original results, with no build before M9: per-point FTLE maps over the
+batch-152 planes (the eucliss free-fall plane and its two unequal-mass velocity planes, held locally and AI-authored,
+so peeks only, R-668 item 6), from the planned FTLE field (REQ-VAL-344); and shape-sphere residence statistics, from a
+time-weighted occupancy accumulator (REQ-VAL-345, its cell partition REQ-VAL-346's definition). Having no reference,
+they have no PASS or divergence: each is a row of `docs/verification/peek_log.md` whose outcome reads "candidate
+original result", with its tier, its inputs and its conventions. TASK-M9-41 builds both.
 
 ### 12.6 Verification deepening (post-build)
 
