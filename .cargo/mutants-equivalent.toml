@@ -409,5 +409,5 @@ justification = "toward = from never reaches the test: new's from is the centre'
 
 [[equivalent]]
 mutant = "crates/kernel/src/chart/physical.rs:840:27: replace < with <= in MixedMassRatio<A, S, f64>::seed"
-justification = "the arms differ only where the two misses tie, and the miss has its least value between two points that tie, a range either arm keeps; both infinite is an end of the doubles the link does not reach, where neither arm finds a ratio"
+justification = "the arms differ only where the two misses tie. The miss falls only non-strictly and has exact flats, but both probes on one flat [A, B] of ln q need B - A >= A - R, R the interval's near end, and (k - mu)/k, at most about 1/2 for softmax_tanh with m_c/(1 - m_c) = e^-k and a realised part needing k < 2*mu, never reaches that (measured at most 0.64 over 882 flats, both links, mu_max 0.25 to 30). So the probes of a tie have the interval between them, which either arm keeps; both infinite is an end of the doubles the link does not reach, where neither arm finds a ratio"
 

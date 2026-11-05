@@ -829,10 +829,18 @@ impl<A: Coordinate, S: Selection> MixedMassRatio<A, S, f64> {
     }
 
     /// A realised ratio in the asked range, for a centre the link does not realise. The link's clamps are one-sided on
-    /// monotone coordinates, so the miss falls toward the realised interval from each side, and a trisection of `ln q`
-    /// that keeps the side of the lower `miss` reaches it at any width of the ask and of the interval, each test to
+    /// monotone coordinates, so the miss never rises toward the realised interval from either side, and a trisection of
+    /// `ln q` that keeps the side of the lower miss reaches it at any width of the ask and of the interval, each test to
     /// within `ε_μ/2`, an end at or below 0 taken at the least positive double. `STEPS` takes the widest ask, about
     /// 1420 in `ln q`, below `1e-19`, under a double's spacing at `q = 1`.
+    ///
+    /// The miss falls only non-strictly: past both clamps the round trip is constant, and `m_c`'s limb can hold the miss
+    /// exactly level over a run `[A, B]` of `ln q`, as at `softmax_tanh`, `μ_max = 5`, bodies `(2, 0)`,
+    /// `z = (−1.925, 10)`, where `q = e⁶` and `q = e⁸` tie. A tie is safe because the two probes are a third of the
+    /// bracket apart, and the near end `R` of the interval lies in the bracket, so both probes on one flat need
+    /// `B − A ≥ A − R`. For `softmax_tanh`, with `m_c/(1 − m_c) = e^−k`, the flat is about `[μ, k]` and `R` about
+    /// `−(k − μ)`, so `(B − A)/(A − R)` is `(k − μ)/k`, at most about 1/2 since a realised part needs `k < 2μ`; measured,
+    /// at most 0.64 over 882 flats on either side, both links, `μ_max` 0.25 to 30.
     fn seed(&self, p: &LinkParams<f64>) -> Option<f64> {
         const STEPS: u32 = 128;
         let eps = 0.5 * <f64 as ChartConstants>::EPS_MU;
