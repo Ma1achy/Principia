@@ -400,25 +400,25 @@ mutant = "crates/kernel/src/chart/physical.rs:366:31: replace & with | in MixedE
 justification = "u_ref is read only through the rule's weight on a linear E (AxisE::rule); the K, KE, L_z and virial rules ignore it and a warped E's weight is 0, so computing it for more axes changes no K*"
 
 [[equivalent]]
-mutant = "crates/kernel/src/chart/physical.rs:809:33: replace > with >= in MixedMassRatio<A, S, f64>::miss_at"
+mutant = "crates/kernel/src/chart/physical.rs:810:33: replace > with >= in MixedMassRatio<A, S, f64>::miss_at"
 justification = "q = 0 then reaches the round trip, where m_b = 0 and a positive mass back makes that mass's relative miss infinite, the guard's own answer; the link's forward returns only positive masses"
 
 [[equivalent]]
-mutant = "crates/kernel/src/chart/physical.rs:891:29: replace > with >= in MixedMassRatio<A, S, f64>::edge"
+mutant = "crates/kernel/src/chart/physical.rs:898:29: replace > with >= in MixedMassRatio<A, S, f64>::edge"
 justification = "toward = from never reaches the test: new's from is the centre's ratio or the seed, each within eps_mu/2 by miss_narrowed, so edge returns at its first test for toward = from"
 
 [[equivalent]]
-mutant = "crates/kernel/src/chart/physical.rs:871:27: replace < with <= in MixedMassRatio<A, S, f64>::seed"
+mutant = "crates/kernel/src/chart/physical.rs:878:27: replace < with <= in MixedMassRatio<A, S, f64>::seed"
 justification = "the arms differ only where the two misses tie. The miss falls only non-strictly and has exact flats, but both probes on one flat [A, B] of ln q need B - A >= A - R, R the interval's near end, and (k - mu)/k, at most about 1/2 for softmax_tanh with m_c/(1 - m_c) = e^-k and a realised part needing k < 2*mu, never reaches that (measured at most 0.69 over exact flats, both links, mu_max 0.25 to 30). So the probes of a tie have the interval between them, which either arm keeps; both infinite is an end of the doubles the link does not reach, where neither arm finds a ratio"
 
 [[equivalent]]
-mutant = "crates/kernel/src/chart/physical.rs:859:21: replace < with <= in MixedMassRatio<A, S, f64>::seed"
-justification = "the bound's two tests fall together: a third too small to move one end is too small to move the other (600,000 brackets of adjacent doubles near powers of two: apart only at |ln q| about 1e-308). That size is not reached: below about 1e-16 exp gives q = 1 at both probes, they tie, and lo moves up to hi, whose size stays there. NaN and inverted brackets fail both tests in either form, so the search ends on the same step with the same None"
+mutant = "crates/kernel/src/chart/physical.rs:866:21: replace < with <= in MixedMassRatio<A, S, f64>::seed"
+justification = "the bound's two tests fall together. A third too small to move one end is too small to move the other, except with both ends non-zero and near 1e-308 (26 of 197,470 brackets within 7 ulps of every power of two). hi is 0 or stays far above that: hi moves only on a strict inequality of the misses, which needs two distinct exp values, so a bracket about 1e-16 wide or more, whose far is exactly 0 or at least about 1e-33. At an ask ending at q = 1, hi = 0 and lo does walk through 1e-308 to -5e-324, up to 1,841 steps; there far = -third moves whenever third is not 0 and near moves unless third rounds to 0, so they stop together (20,000 descents with hi = 0 never apart, nor 60,000 brackets of seed's own walk). NaN and inverted brackets fail both tests in either form, so the search ends on the same step with the same None"
 
 [[equivalent]]
-mutant = "crates/kernel/src/chart/physical.rs:859:28: replace && with || in MixedMassRatio<A, S, f64>::seed"
-justification = "the bound's two tests fall together: a third too small to move one end is too small to move the other (600,000 brackets of adjacent doubles near powers of two: apart only at |ln q| about 1e-308). That size is not reached: below about 1e-16 exp gives q = 1 at both probes, they tie, and lo moves up to hi, whose size stays there. NaN and inverted brackets fail both tests in either form, so the search ends on the same step with the same None"
+mutant = "crates/kernel/src/chart/physical.rs:866:28: replace && with || in MixedMassRatio<A, S, f64>::seed"
+justification = "the bound's two tests fall together. A third too small to move one end is too small to move the other, except with both ends non-zero and near 1e-308 (26 of 197,470 brackets within 7 ulps of every power of two). hi is 0 or stays far above that: hi moves only on a strict inequality of the misses, which needs two distinct exp values, so a bracket about 1e-16 wide or more, whose far is exactly 0 or at least about 1e-33. At an ask ending at q = 1, hi = 0 and lo does walk through 1e-308 to -5e-324, up to 1,841 steps; there far = -third moves whenever third is not 0 and near moves unless third rounds to 0, so they stop together (20,000 descents with hi = 0 never apart, nor 60,000 brackets of seed's own walk). NaN and inverted brackets fail both tests in either form, so the search ends on the same step with the same None"
 
 [[equivalent]]
-mutant = "crates/kernel/src/chart/physical.rs:859:35: replace < with <= in MixedMassRatio<A, S, f64>::seed"
-justification = "the bound's two tests fall together: a third too small to move one end is too small to move the other (600,000 brackets of adjacent doubles near powers of two: apart only at |ln q| about 1e-308). That size is not reached: below about 1e-16 exp gives q = 1 at both probes, they tie, and lo moves up to hi, whose size stays there. NaN and inverted brackets fail both tests in either form, so the search ends on the same step with the same None"
+mutant = "crates/kernel/src/chart/physical.rs:866:35: replace < with <= in MixedMassRatio<A, S, f64>::seed"
+justification = "the bound's two tests fall together. A third too small to move one end is too small to move the other, except with both ends non-zero and near 1e-308 (26 of 197,470 brackets within 7 ulps of every power of two). hi is 0 or stays far above that: hi moves only on a strict inequality of the misses, which needs two distinct exp values, so a bracket about 1e-16 wide or more, whose far is exactly 0 or at least about 1e-33. At an ask ending at q = 1, hi = 0 and lo does walk through 1e-308 to -5e-324, up to 1,841 steps; there far = -third moves whenever third is not 0 and near moves unless third rounds to 0, so they stop together (20,000 descents with hi = 0 never apart, nor 60,000 brackets of seed's own walk). NaN and inverted brackets fail both tests in either form, so the search ends on the same step with the same None"
