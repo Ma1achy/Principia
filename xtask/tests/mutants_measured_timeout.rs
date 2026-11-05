@@ -1,8 +1,8 @@
 //! The per-mutant timeout from one measured baseline (the owner's order of 5 Nov 2026, R-712, on the port; R-348,
-//! REQ-VAL-180 as it amends them; R-202, R-302): `mutants-baseline` measures the unmutated baseline once, in cargo-mutants'
-//! own run, on the shards' setup, and fails the gate if it fails; `cargo xtask mutants-timeout` applies
-//! `.cargo/mutants.toml`'s multiplier and floor to it, and the eight shards, their baselines skipped, take the result; a
-//! timed-out mutant stays no survivor, and every one is listed, across every shard, with a count, 0 included.
+//! REQ-VAL-180 as it amends them; R-202, R-302): `mutants-baseline` measures the unmutated baseline once, in
+//! cargo-mutants' own run, on the shards' setup, and fails the gate if it fails; `cargo xtask mutants-timeout` applies
+//! `.cargo/mutants.toml`'s multiplier and floor to it, and the eight shards, their baselines skipped, take the result;
+//! a timed-out mutant stays no survivor, and every one is listed, across every shard, with a count, 0 included.
 //!
 //! The workflow's shell steps run here in bash, with a stand-in `cargo` for `cargo mutants` and the built xtask for
 //! `cargo xtask`, as `qa_TASK-M0-23_shards.rs` runs them. `mutants-fixture` runs the same commands on the real
@@ -767,8 +767,9 @@ negative_control!(
     ))
 );
 
-/// A shard that lost the baseline's output fails: cargo-mutants 27.1.0 refuses `--timeout ""` as a usage error (`invalid
-/// value ''`), exit 1, which the shard's step fails on. That needs the variable quoted, so the empty value stays one.
+/// A shard that lost the baseline's output fails: cargo-mutants 27.1.0 refuses `--timeout ""` as a usage error
+/// (`invalid value ''`), exit 1, which the shard's step fails on. That needs the variable quoted, so the empty value
+/// stays one.
 fn empty_timeout_stays_a_value(yml: &str) {
     let wf = parse(yml);
     let script = text(&step(&wf["jobs"]["mutants"], "cargo mutants --in-diff --shard")["run"]);

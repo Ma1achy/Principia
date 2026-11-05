@@ -22,10 +22,10 @@
 //!   leaves the test to run without it (no `prlimit` there);
 //! - every `cargo mutants` call in CI's workflows reads that one file: none points it at another config, turns the
 //!   config off or overrides the timeout, and none runs on another directory (whose own `.cargo/mutants.toml` it
-//!   would read) without `--config .cargo/mutants.toml`. The one exception is the owner's order of 5 Nov 2026 (R-712, on
-//!   the port), the one change here, R-290's exception by that order: a run of `mutants.yml` with `--baseline=skip` has
-//!   no baseline for the file's multiplier to read, so it takes `--timeout "$MUTANT_TIMEOUT"`, that file's rule applied
-//!   to the one measured baseline (`cargo xtask mutants-timeout`).
+//!   would read) without `--config .cargo/mutants.toml`. The one exception is the owner's order of 5 Nov 2026 (R-712,
+//!   on the port), the one change here, R-290's exception by that order: a run of `mutants.yml` with `--baseline=skip`
+//!   has no baseline for the file's multiplier to read, so it takes `--timeout "$MUTANT_TIMEOUT"`, that file's rule
+//!   applied to the one measured baseline (`cargo xtask mutants-timeout`).
 //!
 //! The values themselves are calibrations (REQ-VAL-180, REQ-VAL-181), which the human confirmed at the M0 gate as they
 //! stood (R-376); no test here pins them. Each test's control (R-176) feeds the same assertion an input differing in the one respect the

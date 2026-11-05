@@ -1,9 +1,9 @@
 //! `cargo xtask mutants-check <mutants.out>... [--equivalent <file>]` — the per-PR mutation gate's verdict (R-196,
 //! R-202): reads the `outcomes.json` that `cargo mutants` writes, one per shard of the sharded run (R-302), lists each
-//! surviving (missed) mutant, and fails naming each one that is not in the checked-in equivalent-mutants list. Each entry of that list names one mutant, as
-//! cargo-mutants prints it, and carries a one-line justification the code and qa reviewers approve (R-202). A mutant
-//! that timed out is no survivor: it counts as caught, and every one is listed by name, with a count, 0 included (the
-//! owner's order of 5 Nov, R-712, on the port).
+//! surviving (missed) mutant, and fails naming each one that is not in the checked-in equivalent-mutants list. Each
+//! entry of that list names one mutant, as cargo-mutants prints it, and carries a one-line justification the code and
+//! qa reviewers approve (R-202). A mutant that timed out is no survivor: it counts as caught, and every one is listed
+//! by name, with a count, 0 included (the owner's order of 5 Nov, R-712, on the port).
 //!
 //! `cargo xtask mutants-timeout` sets the shards' per-mutant timeout from the one measured baseline, by the rule
 //! `.cargo/mutants.toml` gives every other run (R-348, REQ-VAL-180, as that order amends them).
@@ -194,8 +194,8 @@ pub fn timeout_rule(toml: &str) -> Result<(f64, f64), String> {
 }
 
 /// The unmutated baseline's test time, in seconds, from `outcomes.json`'s text: its `Test` phase, what cargo-mutants
-/// multiplies when it sets a timeout itself. A baseline that did not pass is refused, as [`outcomes`] refuses it, and so
-/// is a run that holds no baseline.
+/// multiplies when it sets a timeout itself. A baseline that did not pass is refused, as [`outcomes`] refuses it, and
+/// so is a run that holds no baseline.
 pub fn baseline_seconds(json: &str) -> Result<f64, String> {
     let doc: serde_json::Value =
         serde_json::from_str(json).map_err(|e| format!("outcomes.json is not JSON: {e}"))?;

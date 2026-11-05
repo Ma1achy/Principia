@@ -4,16 +4,17 @@
 # skipped `mutants-check`, and GitHub counts a skipped required check as passed. The jobs keep their `if:` on the
 # event, which always holds here. Caches (R-285, R-337): this workflow never runs on a push to `main`, where alone a
 # cache is saved (R-326), so a key of its own would find nothing. Each job restores, read-only, a key a `ci.yml` job
-# saves on `main`: the cargo registry under the `ci` job's key, `cargo-registry-ci-…`, and, in the `mutants` job, which
-# builds the kernel, the rust-gpu build under the `gpu-kernel` job's key, `rust-gpu-gpu-kernel-<os>-<channel>` (R-320).
+# saves on `main`: the cargo registry under the `ci` job's key, `cargo-registry-ci-…`, and, in `mutants-baseline` and
+# `mutants`, which build the kernel, the rust-gpu build under the `gpu-kernel` job's key,
+# `rust-gpu-gpu-kernel-<os>-<channel>` (R-320).
 # None saves: rust-cache's `save-if` holds only on a push to `main`, and there is no save step. rust-cache hashes the
 # environment's CARGO_* variables into its key, so CARGO_TERM_COLOR below is set as in `ci.yml`.
 #
-# Mutants run on the merge-ready head (R-656, R-676): the baseline, the shards, the fixture and the verdict run only when
-# the `merge-ready` label is put on the pull request, which the orchestrator's merge watcher does once every reviewer the
-# task names has approved the head (`plan/OPERATIONS.md` § "The merge-ready label"). A push to the pull request takes
-# the label off (`mutants-pending`), so the gate runs again only on a head approved again, and cancels a run on the head
-# it supersedes (`concurrency` below).
+# Mutants run on the merge-ready head (R-656, R-676): the baseline, the shards, the fixture and the verdict run only
+# when the `merge-ready` label is put on the pull request, which the orchestrator's merge watcher does once every
+# reviewer the task names has approved the head (`plan/OPERATIONS.md` § "The merge-ready label"). A push to the pull
+# request takes the label off (`mutants-pending`), so the gate runs again only on a head approved again, and cancels a
+# run on the head it supersedes (`concurrency` below).
 #
 # `mutants-check` is a job of every run of this workflow, `if: always()`, so it is never skipped (R-678). Branch
 # protection counts, of each workflow's runs on a head, only the latest run's check suite, as #384 and #386 showed: a
@@ -104,14 +105,14 @@ jobs:
             echo "$err" >&2
             exit 1
           fi
-  # The per-PR mutation gate (R-196, R-202; TASK-M0-23): `cargo mutants --in-diff` on the PR's diff against its base,
-  # on pull requests only, since `--in-diff` needs a base. The run is sharded across n parallel jobs, shard k of n each
-  # (`--shard k/n`), each under its own time limit (R-302), after the one baseline `mutants-baseline`, below, measures for them
-  # all; the nightly full run (TASK-M0-19) is the backstop. Every
-  # shard computes the same diff and reads the same exclusions, `.cargo/mutants.toml`'s, shared with the nightly run.
-  # Each shard lists its surviving mutants and fails on any not in `.cargo/mutants-equivalent.toml`; `mutants-check`
-  # below then checks every shard's report together, and fails if any shard failed or was cut off by its limit.
-  # `mutants-fixture` shows, on `fixtures/mutants/untested/`, that the gate can fire.
+  # The per-PR mutation gate (R-196, R-202; TASK-M0-23): `cargo mutants --in-diff` on the PR's diff against its base, on
+  # pull requests only, since `--in-diff` needs a base. The run is sharded across n parallel jobs, shard k of n each
+  # (`--shard k/n`), each under its own time limit (R-302), after the one baseline `mutants-baseline`, below, measures
+  # for them all; the nightly full run (TASK-M0-19) is the backstop. Every shard computes the same diff and reads the
+  # same exclusions, `.cargo/mutants.toml`'s, shared with the nightly run. Each shard lists its surviving mutants and
+  # fails on any not in `.cargo/mutants-equivalent.toml`; `mutants-check` below then checks every shard's report
+  # together, and fails if any shard failed or was cut off by its limit. `mutants-fixture` shows, on
+  # `fixtures/mutants/untested/`, that the gate can fire.
   # Every step has a limit of its own, so a stalled one fails the shard in minutes. The job has none: a job limit can't
   # tell a stall from REQ-VAL-149's 300 minutes for cargo mutants, and a stall would run to GitHub's 360 for the job.
   # The limits (applied per R-369) are about three times the longest of each step in this workflow's last 60 runs
@@ -287,8 +288,8 @@ jobs:
       # first:
       # - the per-mutant timeout (REQ-VAL-180), `timeout_multiplier` and `minimum_test_timeout`, applied to the measured
       #   baseline by `cargo xtask mutants-timeout` and given here as `--timeout`, since a skipped baseline leaves
-      #   cargo-mutants nothing to multiply: a mutant whose tests hang is recorded as a timeout, and the shard goes on to
-      #   its next mutant. A timeout counts as caught, and the verdict lists each one;
+      #   cargo-mutants nothing to multiply: a mutant whose tests hang is recorded as a timeout, and the shard goes on
+      #   to its next mutant. A timeout counts as caught, and the verdict lists each one;
       # - the per-process memory cap (REQ-VAL-181), `prlimit --as` (core dumps off) as nextest's runner on Linux: each
       #   test process of the baseline and of every mutant runs under it, and an allocation past it kills that test,
       #   not cargo-mutants, cargo, nextest or this step.
@@ -375,14 +376,14 @@ jobs:
           if-no-files-found: ignore
 
   # The unmutated baseline, measured once for every shard (the owner's order of 5 Nov 2026, R-712, on the port: the
-  # per-mutant timeout comes from the measured baseline, 3 times it, and 8 shards stay). Each shard used to run a baseline
-  # of its own: on PR #360 (run 41957362447) that was 5064-5554 s of test time in seven shards of eight, of the shard's
-  # 300 minutes, and those seven were cut with 135 of 676 mutants unreached; the slowest mutant took 2405 s and none timed
-  # out, so a longer or shorter multiplier alone would change nothing. This job runs before the shards, on the same
-  # diff, in the same setup, with the same environment and containment as theirs: each setup step is the shard's of the
-  # same name, which says why. A diff with no `.rs` file under `crates/` skips the work and the job passes, as the shards
-  # do. A baseline that fails fails here, named, and no shard runs: `mutants-verdict`, which runs whatever the shards
-  # ended in, then fails on their result, `skipped`, and `mutants-check` reports it.
+  # per-mutant timeout comes from the measured baseline, 3 times it, and 8 shards stay). Each shard used to run a
+  # baseline of its own: on PR #360 (run 41957362447) that was 5064-5554 s of test time in seven shards of eight, of the
+  # shard's 300 minutes, and those seven were cut with 135 of 676 mutants unreached; the slowest mutant took 2405 s and
+  # none timed out, so a longer or shorter multiplier alone would change nothing. This job runs before the shards, on
+  # the same diff, in the same setup, with the same environment and containment as theirs: each setup step is the
+  # shard's of the same name, which says why. A diff with no `.rs` file under `crates/` skips the work and the job
+  # passes, as the shards do. A baseline that fails fails here, named, and no shard runs: `mutants-verdict`, which runs
+  # whatever the shards ended in, then fails on their result, `skipped`, and `mutants-check` reports it.
   mutants-baseline:
     if: github.event_name == 'pull_request' && github.event.action == 'labeled' && github.event.label.name == 'merge-ready'
     runs-on: ubuntu-24.04
@@ -392,8 +393,8 @@ jobs:
       statuses: write
     env:
       PRIN_GPU_BACKEND: vulkan
-    # Empty on a diff with no `.rs` file under `crates/`, where every shard skips the step that reads them. A `--timeout`
-    # with no value is a usage error in cargo-mutants, so a shard that lost this output fails.
+    # Empty on a diff with no `.rs` file under `crates/`, where every shard skips the step that reads them. A
+    # `--timeout` with no value is a usage error in cargo-mutants, so a shard that lost this output fails.
     outputs:
       baseline-seconds: ${{ steps.timeout.outputs.baseline-seconds }}
       timeout: ${{ steps.timeout.outputs.timeout }}
@@ -682,10 +683,10 @@ jobs:
           CAPS_FIXTURE_HANG_SECS=5 CAPS_FIXTURE_ALLOC_MIB=256 caps controls
           expect controls settled CaughtMutant no
           expect controls provisioned CaughtMutant no
-      # The shards' path, end to end, on the same fixture (the owner's order of 5 Nov 2026, R-712, on the port), and the one
-      # place a change to it runs before it reaches a pull request's shards: `mutants-baseline`'s command stops at the
-      # baseline, whose time `cargo xtask mutants-timeout` turns into the floor here, and a shard's command, with the
-      # baseline skipped, takes that timeout: the hanging mutant is recorded as a timeout, and the check lists it.
+      # The shards' path, end to end, on the same fixture (the owner's order of 5 Nov 2026, R-712, on the port), and the
+      # one place a change to it runs before it reaches a pull request's shards: `mutants-baseline`'s command stops at
+      # the baseline, whose time `cargo xtask mutants-timeout` turns into the floor here, and a shard's command, with
+      # the baseline skipped, takes that timeout: the hanging mutant is recorded as a timeout, and the check lists it.
       - name: The measured baseline sets the shards' timeout
         if: steps.changes.outputs.tier != 'docs'
         timeout-minutes: 5
@@ -794,8 +795,8 @@ jobs:
           {
             echo "## Timed-out mutants, each counted as caught"
             echo
-            sed -n 's/^mutants-check: \([0-9]* timed out .*\)$/\1/p; s/^mutants-check: timed out (not a survivor): \(.*\)$/- \1/p' \
-              "$report"
+            sed -n -e 's/^mutants-check: \([0-9]* timed out .*\)$/\1/p' \
+              -e 's/^mutants-check: timed out (not a survivor): \(.*\)$/- \1/p' "$report"
           } >> "${GITHUB_STEP_SUMMARY:-/dev/null}"
           exit "$fail"
 
