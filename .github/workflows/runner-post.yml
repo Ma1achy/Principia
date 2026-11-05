@@ -177,6 +177,8 @@ jobs:
             'recent-hook' { git -C $w config gc.recentObjectsHook true }
             'branch-remote' { git -C $w config branch.x.remote other }
             'dup-key' { git -C $w config --add gc.auto 0 }
+            'fetch-value' { git -C $w config remote.origin.fetch "+refs/heads/x:refs/replace/$zero" }
+            'head-shape' { [IO.File]::WriteAllText("$d\HEAD", "ref: refs/replace/$zero`n") }
             'commondir' { [IO.File]::WriteAllText("$d\commondir", "E:/runner-tools/tmp/other.git`n") }
             'gitdir' { [IO.File]::WriteAllText("$d\gitdir", "E:/runner-tools/tmp/other.git`n") }
             'grafts' { [IO.File]::WriteAllText("$d\info\grafts", "$zero`n") }
