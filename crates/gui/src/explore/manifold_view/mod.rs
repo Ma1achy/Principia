@@ -858,7 +858,7 @@ pub struct Scratch {
     pub editing: [bool; 2],
     /// The figure's point the right-click menu was opened on, in `(s, t)`.
     pub menu_at: Option<(f64, f64)>,
-    /// The open console's top edge, this frame: the panels' popups stay above it, as their layer is above its (R-463 K2).
+    /// The open console's top edge, this frame: what the basis editors and the popups are held against (R-463 K2).
     pub console_top: Option<f32>,
 }
 

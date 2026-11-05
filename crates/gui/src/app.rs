@@ -1020,9 +1020,7 @@ impl<S: EngineSide> App<S> {
     /// under it cannot be reached, by Tab or the arrows, and a focus on one moves to the console, so no ring or key
     /// lands on a panel it covers (R-463 K2; applied per R-369). The focus is not put back when it lowers or closes.
     fn follow_console_cover(&mut self, layout: &Layout) {
-        let covering = self.console_open
-            && !self.console_auto_opened
-            && self.console_rect(layout).min.y <= layout.page.min.y;
+        let covering = self.console_open && self.console_rect(layout).min.y <= layout.page.min.y;
         let left = covering.then_some(&UNCOVERED_BIGS[..]);
         self.keyboard.tree_mut(Mode::Explore).leave_uncovered(left);
         self.keyboard.tree_mut(Mode::Stain).leave_uncovered(left);
