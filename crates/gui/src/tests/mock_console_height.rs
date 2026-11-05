@@ -991,6 +991,7 @@ fn mock_console_height_maximised_a_panels_combo_closes() {
         settle(&mut h, &mut app);
         let at = under(&app, id);
         assert!(egui::Popup::is_any_open(&h.ctx));
+        rejects("a popup still open", || popup_gone(&h, at));
         app.windows.console.maximised = true;
         settle(&mut h, &mut app);
         popup_gone(&h, at);
@@ -1088,9 +1089,11 @@ fn mock_console_height_the_focus_leaves_a_menu_it_closes() {
     let path = app.keyboard.tree(app.view.mode).path_to(TILT_X);
     assert_eq!(focus(&app)[..path.len()], path[..], "in the menu");
     assert!(focus(&app).len() > path.len(), "on an entry");
+    let entry = focus(&app);
     let top = app.keyboard.place_of(TILT_X).expect("drawn").rect.min.y - 4.0;
     top_at(&mut h, &mut app, top);
     assert_eq!(focus(&app), path);
+    rejects("a focus left on the entry", || assert_eq!(entry, path));
 }
 
 /// `app` with the console closed from `covering`: maximised, or dragged to the top.
