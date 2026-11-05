@@ -27,8 +27,10 @@
 //! a second. `μ_max` stays inside REQ-GEN-038's range, capped at 10 (R-597). Every slice, ask and row is test data.
 
 use std::panic::resume_unwind;
+#[cfg(feature = "controls")]
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{channel, RecvTimeoutError, Sender};
+#[cfg(feature = "controls")]
 use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
@@ -38,9 +40,10 @@ use kernel::chart::mixed::ZBeta;
 use kernel::chart::physical::MixedMassRatio;
 use kernel::chart::{Chart, ValidationResult};
 use kernel::generated::constants::ChartConstants;
+#[cfg(feature = "controls")]
+use kernel::generated::links::Link;
 use kernel::generated::links::{
-    Defaults, Link, LinkParams, Select, Selection, SigmoidAlpha, SigmoidBeta, SigmoidQ,
-    StickBreaking,
+    Defaults, LinkParams, Select, Selection, SigmoidAlpha, SigmoidBeta, SigmoidQ, StickBreaking,
 };
 use validation::{negative_control, tunables};
 
@@ -88,6 +91,7 @@ fn warped<S: Selection>(
 
 /// §2.1's round trip at `q`, at the held mass as held, each mass and the ratio to within `ε_μ/2`: the test's own, reading
 /// the link and no search.
+#[cfg(feature = "controls")]
 fn trip<S: Selection>(pair: [u32; 2], held: f64, q: f64, p: &LinkParams<f64>) -> bool {
     let m_a = (1.0 - held) / (1.0 + q);
     let mut m = [held; 3];
@@ -106,10 +110,23 @@ enum Range {
     /// The range `new` found.
     Built,
     /// Outward to the ask, the held mass as held alone: what a range blind to the narrowing gives.
+    #[cfg(feature = "controls")]
     AsHeld,
 }
 
+/// `chart`'s range as `new` found it: without the controls, the only way a check takes it.
+#[cfg(not(feature = "controls"))]
+fn ranged<S: Selection>(
+    chart: Ratio<S>,
+    _how: Range,
+    _asked: [f64; 2],
+    _p: &LinkParams<f64>,
+) -> Ratio<S> {
+    chart
+}
+
 /// `chart`'s range taken as `how` says, `asked` being what it was built on.
+#[cfg(feature = "controls")]
 fn ranged<S: Selection>(
     mut chart: Ratio<S>,
     how: Range,
@@ -141,6 +158,7 @@ enum Target {
     /// As narrowed, which an `f32` decode holds (§2.1).
     Narrowed,
     /// As held, which it does not.
+    #[cfg(feature = "controls")]
     AsHeld,
 }
 
@@ -176,6 +194,7 @@ fn pixels<S: Selection>(chart: &Ratio<S>, at: &str, target: Target, p: &LinkPara
     let held = match target {
         Target::Unread => None,
         Target::Narrowed => Some(wide.held),
+        #[cfg(feature = "controls")]
         Target::AsHeld => Some(chart.held),
     };
     for v in rows() {
@@ -447,6 +466,7 @@ fn qa_searches_end_on_nothing_realised() {
 }
 
 /// A trisection whose closing test cannot fire: `<=` for `<`, so it holds at `lo = hi`, the bracket no longer moving.
+#[cfg(feature = "controls")]
 fn never_closes(stop: &AtomicBool) {
     let (mut lo, hi) = (1.0_f64, 1.0_f64);
     while !stop.load(Ordering::Relaxed) {
