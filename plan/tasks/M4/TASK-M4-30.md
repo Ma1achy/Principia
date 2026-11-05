@@ -29,5 +29,5 @@
 
 ## Notes
 - Added by R-694 (4 Nov 2026, RQ-685, the honesty part of (c)).
-- One vocabulary: a driver recorded "driver unverified" is unverified, not supported. This is no `StageMode::Unknown`, and the Run window's control stays enabled; R-303 is the browser's alone.
+- "Driver unverified" is the header's word for a driver not measured, R-690's "not run", and not R-690's "unverified, not supported", which only a measured failure earns. *Was:* "One vocabulary: a driver recorded "driver unverified" is unverified, not supported." This is no `StageMode::Unknown`, and the Run window's control stays enabled; R-303 is the browser's alone.
 - A driver measured to fail is not listed.

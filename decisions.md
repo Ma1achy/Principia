@@ -30488,7 +30488,7 @@ The owner's words, 4 Nov 2026, verbatim:
 
 *Applied per R-369:*
 
-- **One vocabulary.** A driver recorded "driver unverified" is unverified, not supported, the words PR #407's driver-condition ruling uses of a driver that fails its test. A header line and a report read the same.
+- **Two words, two states.** "Driver unverified" is a run header's word for a driver not measured, R-690's "not run"; R-690's "unverified, not supported" is earned only by a measured failure. A header line and a report keep them apart. *Was:* "One vocabulary. A driver recorded "driver unverified" is unverified, not supported, the words PR #407's driver-condition ruling uses of a driver that fails its test. A header line and a report read the same." (corrected to R-690 and the parity contract § 4 once #407 merged).
 - **Measured** means measured to give R-297's claim as this ruling reads it: the driver is on a list held with the header code, each entry naming the run that shows it, and which runs qualify and what keys an entry are a definition (R-72), written by TASK-M4-30 and approved by the physics reviewer. A driver that was measured and failed is not on the list.
 - **M4.** Both tasks are M4's: REQ-INT-064 and REQ-INT-057 are, the escape detector is TASK-M3-12's, and the list rests on the branch tests TASK-M4-03 runs. TASK-M4-03 depends on TASK-M4-29, since its `|Δn̂|` and `E_rel` forms are those.
 - **REQ-SYS-074's "a mismatch with the setting off is a REVIEW_QUEUE entry"** stays for the two named jobs.
