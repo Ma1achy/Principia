@@ -106,10 +106,14 @@ $emptyIndex = '--git-dir "{0}" read-tree --empty'
 # true bytes transformed, and its `checkout --force` leaves any path whose blob is unchanged. At an empty tree `reset` writes
 # nothing and `checkout` writes every file. HEAD detached also skips the action's `checkout --detach`. A fixed name and date
 # give one commit, the same every run, so no run adds an object after the first, and none of these writes a config key.
-$emptyTree = '--git-dir "{0}" mktree'
+$emptyTree = '--git-dir "{0}" hash-object -t tree -w --no-filters "{1}"'
 $emptyCommit = '-c user.name=guard -c user.email=guard@localhost --git-dir "{0}" commit-tree -m guard {1}'
 $detachHead = '-c user.name=guard -c user.email=guard@localhost --git-dir "{0}" update-ref --no-deref HEAD {1}'
 $fixedDate = '1000000000 +0000'
+# The tree comes from this zero-byte file, read-only to the job's account, and git's input is never redirected, as under the
+# runner's service .NET writes a byte order mark into any stdin it opens, which `mktree` refuses. No line here reads stdin:
+# `commit-tree` takes -m, and `hash-object` and `update-ref` take no --stdin.
+$emptyFile = 'E:\runner-tools\checks\empty-file'
 
 # git's standard output. It starts outside the checkout, and the job can't write to $env:SystemRoot. Any failure throws, so
 # it refuses.
@@ -120,11 +124,9 @@ function Invoke-Git($what) {
     $start.Arguments = $what
     $start.WorkingDirectory = $env:SystemRoot
     $start.UseShellExecute = $false
-    $start.RedirectStandardInput = $true
     $start.RedirectStandardOutput = $true
     $start.RedirectStandardError = $true
     $run = [System.Diagnostics.Process]::Start($start)
-    $run.StandardInput.Close()
     $errors = $run.StandardError.ReadToEndAsync()
     $out = $run.StandardOutput.ReadToEnd()
     $run.WaitForExit()
@@ -221,10 +223,12 @@ try {
     # file; `.git` is kept, so the fetch's saving stays. It comes after every check, as it writes to the kept repo, and a
     # failure throws, so it refuses.
     if ($git.Count -and -not $planted.Count -and -not $check) {
+        $empty = Get-Item -LiteralPath $emptyFile -Force
+        if ($empty.Length -ne 0) { throw "$emptyFile isn't a zero-byte file" }
         $null = Invoke-Git ($emptyIndex -f $git[0].FullName)
         $env:GIT_AUTHOR_DATE = $fixedDate
         $env:GIT_COMMITTER_DATE = $fixedDate
-        $tree = (Invoke-Git ($emptyTree -f $git[0].FullName)).Trim()
+        $tree = (Invoke-Git ($emptyTree -f $git[0].FullName, $emptyFile)).Trim()
         $commit = (Invoke-Git ($emptyCommit -f $git[0].FullName, $tree)).Trim()
         $null = Invoke-Git ($detachHead -f $git[0].FullName, $commit)
     }

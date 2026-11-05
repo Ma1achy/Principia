@@ -2301,9 +2301,7 @@ fn check_guard_script(script: &str) {
     );
     let delete = "$null = Invoke-Git ($emptyIndex -f $git[0].FullName)";
     assert!(
-        text.contains(&format!(
-            "if ($git.Count -and -not $planted.Count -and -not $check) {{\n{delete}"
-        )),
+        has("if ($git.Count -and -not $planted.Count -and -not $check) {") && has(delete),
         "git_guard: doesn't empty the index"
     );
     assert!(
@@ -2316,7 +2314,8 @@ fn check_guard_script(script: &str) {
     );
     let detach = "$null = Invoke-Git ($detachHead -f $git[0].FullName, $commit)";
     assert!(
-        has("$emptyTree = '--git-dir \"{0}\" mktree'")
+        has("$emptyTree = '--git-dir \"{0}\" hash-object -t tree -w --no-filters \"{1}\"'")
+            && has("(Invoke-Git ($emptyTree -f $git[0].FullName, $emptyFile)).Trim()")
             && has("$emptyCommit = '-c user.name=guard -c user.email=guard@localhost --git-dir \"{0}\" commit-tree -m guard {1}'")
             && has("$detachHead = '-c user.name=guard -c user.email=guard@localhost --git-dir \"{0}\" update-ref --no-deref HEAD {1}'")
             && has(detach),
@@ -2328,8 +2327,18 @@ fn check_guard_script(script: &str) {
         "git_guard: detaches HEAD outside the try"
     );
     assert!(
-        has("$start.RedirectStandardInput = $true") && has("$run.StandardInput.Close()"),
-        "git_guard: leaves mktree waiting on its input"
+        !has("StandardInput") && !has("mktree") && !has("--stdin"),
+        "git_guard: gives git an input"
+    );
+    assert!(
+        has("$emptyFile = 'E:\\runner-tools\\checks\\empty-file'")
+            && has("$empty = Get-Item -LiteralPath $emptyFile -Force")
+            && has("if ($empty.Length -ne 0) { throw"),
+        "git_guard: takes a tree from a file it hasn't checked"
+    );
+    assert!(
+        text.find("$empty = Get-Item") < text.find(delete),
+        "git_guard: checks the empty file after it has changed the repo"
     );
     assert!(
         has("$env:GIT_AUTHOR_DATE = $fixedDate") && has("$env:GIT_COMMITTER_DATE = $fixedDate"),
@@ -2396,7 +2405,7 @@ fn git_guard_script_holds_the_owners_order() {
 
 /// The script's lines that empty the index.
 #[cfg(feature = "controls")]
-const EMPTY_INDEX: &str = "    if ($git.Count -and -not $planted.Count -and -not $check) {\n        $null = Invoke-Git ($emptyIndex -f $git[0].FullName)\n        $env:GIT_AUTHOR_DATE = $fixedDate\n        $env:GIT_COMMITTER_DATE = $fixedDate\n        $tree = (Invoke-Git ($emptyTree -f $git[0].FullName)).Trim()\n        $commit = (Invoke-Git ($emptyCommit -f $git[0].FullName, $tree)).Trim()\n        $null = Invoke-Git ($detachHead -f $git[0].FullName, $commit)\n    }\n";
+const EMPTY_INDEX: &str = "    if ($git.Count -and -not $planted.Count -and -not $check) {\n        $empty = Get-Item -LiteralPath $emptyFile -Force\n        if ($empty.Length -ne 0) { throw \"$emptyFile isn't a zero-byte file\" }\n        $null = Invoke-Git ($emptyIndex -f $git[0].FullName)\n        $env:GIT_AUTHOR_DATE = $fixedDate\n        $env:GIT_COMMITTER_DATE = $fixedDate\n        $tree = (Invoke-Git ($emptyTree -f $git[0].FullName, $emptyFile)).Trim()\n        $commit = (Invoke-Git ($emptyCommit -f $git[0].FullName, $tree)).Trim()\n        $null = Invoke-Git ($detachHead -f $git[0].FullName, $commit)\n    }\n";
 
 /// The script with `from` replaced by `to`.
 #[cfg(feature = "controls")]
@@ -2753,13 +2762,100 @@ mod head_detached_outside {
     );
 }
 
-mod input_left_open {
+mod input_redirected {
     use super::*;
     negative_control!(
         git_guard_script_holds_the_owners_order,
-        "mktree's input never closed",
-        expected = "git_guard: leaves mktree waiting on its input",
-        check_guard_script(&guard_edited("    $run.StandardInput.Close()\n", ""))
+        "git's input redirected, which writes a byte order mark into it under the service",
+        expected = "git_guard: gives git an input",
+        check_guard_script(&guard_edited(
+            "    $start.RedirectStandardOutput = $true\n",
+            "    $start.RedirectStandardInput = $true\n    $start.RedirectStandardOutput = $true\n"
+        ))
+    );
+}
+
+mod input_by_flag {
+    use super::*;
+    negative_control!(
+        git_guard_script_holds_the_owners_order,
+        "a line that reads git's input",
+        expected = "git_guard: gives git an input",
+        check_guard_script(&guard_edited(
+            "$fixedDate = '1000000000 +0000'
+",
+            "$fixedDate = '1000000000 +0000'
+$extra = 'hash-object --stdin'
+"
+        ))
+    );
+}
+
+mod tree_by_mktree {
+    use super::*;
+    negative_control!(
+        git_guard_script_holds_the_owners_order,
+        "the tree read from git's input",
+        expected = "git_guard: doesn't detach HEAD",
+        check_guard_script(&guard_edited(
+            "hash-object -t tree -w --no-filters \"{1}\"'",
+            "mktree'"
+        ))
+    );
+}
+
+mod empty_file_elsewhere {
+    use super::*;
+    negative_control!(
+        git_guard_script_holds_the_owners_order,
+        "another file for the tree",
+        expected = "git_guard: takes a tree from a file it hasn't checked",
+        check_guard_script(&guard_edited(
+            "$emptyFile = 'E:\\runner-tools\\checks\\empty-file'",
+            "$emptyFile = 'E:\\work\\empty-file'"
+        ))
+    );
+}
+
+mod empty_file_unread {
+    use super::*;
+    negative_control!(
+        git_guard_script_holds_the_owners_order,
+        "the file's being there not checked",
+        expected = "git_guard: takes a tree from a file it hasn't checked",
+        check_guard_script(&guard_edited(
+            "        $empty = Get-Item -LiteralPath $emptyFile -Force\n",
+            ""
+        ))
+    );
+}
+
+mod empty_file_any_size {
+    use super::*;
+    negative_control!(
+        git_guard_script_holds_the_owners_order,
+        "the file's size not checked",
+        expected = "git_guard: takes a tree from a file it hasn't checked",
+        check_guard_script(&guard_edited(
+            "        if ($empty.Length -ne 0) { throw \"$emptyFile isn't a zero-byte file\" }\n",
+            ""
+        ))
+    );
+}
+
+mod empty_file_checked_late {
+    use super::*;
+    negative_control!(
+        git_guard_script_holds_the_owners_order,
+        "the file checked after the index has gone",
+        expected = "git_guard: checks the empty file after it has changed the repo",
+        check_guard_script(
+            &guard_edited("        $empty = Get-Item -LiteralPath $emptyFile -Force\n", "").replacen(
+                "        $env:GIT_AUTHOR_DATE = $fixedDate\n",
+                "        $empty = Get-Item -LiteralPath $emptyFile -Force\n        $env:GIT_AUTHOR_DATE = $fixedDate\n",
+                1
+            )
+        )
     );
 }
 
@@ -3137,7 +3233,7 @@ fn script_git_on(
     let args = script_value(script, name).split_whitespace().map(|word| {
         if word == "\"{0}\"" {
             path.as_os_str().to_owned()
-        } else if word == "{1}" {
+        } else if word == "{1}" || word == "\"{1}\"" {
             second.into()
         } else {
             word.into()
@@ -3148,7 +3244,6 @@ fn script_git_on(
         .args(args)
         .env("GIT_AUTHOR_DATE", date)
         .env("GIT_COMMITTER_DATE", date)
-        .stdin(std::process::Stdio::null())
         .timed_output()
         .expect("git ran")
 }
@@ -3667,7 +3762,14 @@ fn guard_writes_the_index(script: &str, dir: &Path) {
     assert!(out.status.success(), "the empty index: {out:?}");
 }
 
-/// The script's own lines that detach HEAD at an empty tree; the commit.
+/// A zero-byte file, as `E:\\runner-tools\\checks\\empty-file` is on the PC.
+fn empty_file(cwd: &Path) -> String {
+    let file = cwd.join("empty-file");
+    std::fs::write(&file, "").expect("a file");
+    file.to_string_lossy().into_owned()
+}
+
+/// The script's own lines that detach HEAD at an empty tree, with the test's empty file for the PC's; the commit.
 fn guard_detaches_head(script: &str, dir: &Path) -> String {
     let (git_dir, cwd) = (dir.join(".git"), dir.parent().expect("a parent"));
     let line = |name: &str, second: &str| {
@@ -3675,7 +3777,7 @@ fn guard_detaches_head(script: &str, dir: &Path) -> String {
         assert!(out.status.success(), "{name}: {out:?}");
         String::from_utf8_lossy(&out.stdout).trim().to_owned()
     };
-    let tree = line("emptyTree", "");
+    let tree = line("emptyTree", &empty_file(cwd));
     let commit = line("emptyCommit", &tree);
     line("detachHead", &commit);
     commit
@@ -3854,7 +3956,11 @@ fn check_planted_head(script: &str, empty_index: bool) {
     let (origin, dir) = (base.join("origin"), base.join("kept"));
     origin_repo(&origin);
     kept_repo(&origin, &dir);
-    let tree = git_ok(&dir, &["mktree", "--missing"]);
+    let file = empty_file(&base);
+    let tree = git_ok(
+        &dir,
+        &["hash-object", "-t", "tree", "-w", "--no-filters", &file],
+    );
     let empty = git_ok(
         &dir,
         &[
