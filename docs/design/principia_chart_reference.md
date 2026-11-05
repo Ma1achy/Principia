@@ -356,8 +356,9 @@ and `m_b = q·m_a`. The axis writes the active mass link's inputs, `z_mass = L�
 back through the link, `m = L(z_mass)`, so every pixel's masses are positive and sum to 1.
 
 A ratio is realised when the link's inverse followed by its forward returns its masses `(m_a, m_b, m_c)`, `m_c` at
-its held value, each to within `ε_μ`, relative, since the inverse saturates past what the link reaches. Where the
-logit that sets `m_c` saturates first, the round trip keeps the ratio and moves `m_c`, and that ratio is not realised.
+its held value, and the ratio `q`, each to within `ε_μ`, relative, since the inverse saturates past what the link
+reaches. The ratio is read as well because each mass within `ε_μ` bounds it only to about `2·ε_μ`, and `q` is what the
+axis labels. Where the logit that sets `m_c` saturates first, the round trip keeps the ratio and moves `m_c`, and that ratio is not realised.
 `ε_μ = 10⁻⁶` is the link clamp (chart_decoder_contract § "Three hard requirements on any registered link", item 2;
 inverse_encode_contract Part 3), reused here as the round trip's tolerance, not a new constant.
 
