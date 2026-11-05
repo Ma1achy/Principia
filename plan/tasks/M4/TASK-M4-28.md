@@ -122,3 +122,4 @@ alone does not answer the owner's question; the bits at identical operands do, a
 - **Why TASK-M4-18 is a dependency:** it owns the fixture set and the label-flip report on Metal and lavapipe. This task adds the
   other two backends, the per-pair table and the per-trajectory results, and does not change that report.
 - Applied per R-369 (R-686): its own task, not a part of the fix task, TASK-M6-53, since the mock's fix needs no march.
+- *4 Nov 2026 (R-696):* RQ-687's option (a), the kernel's own `sin` and `cos`, is decided on this check and TASK-M4-27's; the entry stays open for it.
