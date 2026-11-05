@@ -2477,6 +2477,55 @@ negative_control!(
     })
 );
 
+/// A saturated centre: at the mass controls `(10, 0)` the centre's ratio, about 148.4, fails the inverse's clamp, but
+/// the asked ratios below it are realised, so the warped range is theirs: `want` is `[q₀, q₁]`, each to within `1e-3`,
+/// relative, and every pixel is a system. `asked` wholly past the clamp finds no seed, and no chart.
+fn check_saturated_centre(asked: [f64; 2], want: [f64; 2]) {
+    let p = LinkParams::DEFAULT;
+    let chart = ratio_slice([10.0, 0.0], asked, Mapping::Warped, &p).expect("no chart");
+    for (got, want) in chart.ratio.iter().zip(want) {
+        assert!(
+            (got - want).abs() <= 1.0e-3 * want,
+            "the range {:?} is not {want:?}",
+            chart.ratio
+        );
+    }
+    check_every_pixel("a saturated centre", system(&chart));
+}
+
+#[test]
+fn energy_axes_mass_ratio_saturated_centre() {
+    check_saturated_centre([1.0, 100.0], [1.0, 100.0]);
+    check_saturated_centre([1.0, 1000.0], [1.0, 148.413]);
+    assert!(
+        ratio_slice(
+            [10.0, 0.0],
+            [200.0, 1000.0],
+            Mapping::Warped,
+            &LinkParams::DEFAULT
+        )
+        .is_none(),
+        "a range wholly past the clamp is offered"
+    );
+    assert!(
+        ratio_slice(
+            [10.0, 0.0],
+            [0.0, 100.0],
+            Mapping::Warped,
+            &LinkParams::DEFAULT
+        )
+        .is_some(),
+        "an asked end at 0 finds no seed"
+    );
+}
+
+negative_control!(
+    energy_axes_mass_ratio_saturated_centre,
+    "a range wholly past the clamp has no chart",
+    expected = "no chart",
+    check_saturated_centre([200.0, 1000.0], [200.0, 1000.0])
+);
+
 /// How a mass-ratio arm forms its mass controls: the chart's own (its link's inverse at the ratio's masses), or the
 /// control's formula written for softmax_tanh at `μ_max = 5` alone, `m_i/m₀ = exp(5·tanh z_i)` solved for `z_i`.
 #[derive(Clone, Copy, PartialEq)]

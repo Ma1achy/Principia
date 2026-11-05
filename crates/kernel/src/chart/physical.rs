@@ -735,9 +735,9 @@ impl<A: Coordinate, S: Selection, P: Copy> MixedMassRatio<A, S, P> {
 impl<A: Coordinate, S: Selection> MixedMassRatio<A, S, f64> {
     /// The chart over the asked range `asked` of `q = m_b/m_a`, `bodies = (a, b)`, under `mapping` at the link's tunable
     /// parameters `p` (the module's note): `m_c` the third body's mass at `z₀`'s mass controls; warped, the range the
-    /// part of `asked` the link realises at `m_c`, found from the slice centre's own ratio outward. `None` where the
-    /// bodies are not two distinct bodies, `asked` is not an increasing finite range, or, warped, the link realises no
-    /// part of it.
+    /// part of `asked` the link realises at `m_c`, found outward from the slice centre's own ratio, or, where the link
+    /// does not realise that, a saturated centre, from [`MixedMassRatio::seed`]. `None` where the bodies are not two
+    /// distinct bodies, `asked` is not an increasing finite range, or, warped, no realised ratio is found.
     pub fn new(
         frozen: [f64; 8],
         a_range: [f64; 2],
@@ -767,11 +767,13 @@ impl<A: Coordinate, S: Selection> MixedMassRatio<A, S, f64> {
             return Some(chart);
         }
         let centre = ratio_of(bodies, m);
-        if !chart.realised_within(centre, 0.5 * <f64 as ChartConstants>::EPS_MU, p) {
-            return None;
-        }
-        let lo = chart.edge(centre, asked[0], false, p)?;
-        let hi = chart.edge(centre, asked[1], true, p)?;
+        let from = if chart.realised_within(centre, 0.5 * <f64 as ChartConstants>::EPS_MU, p) {
+            centre
+        } else {
+            chart.seed(p)?
+        };
+        let lo = chart.edge(from, asked[0], false, p)?;
+        let hi = chart.edge(from, asked[1], true, p)?;
         (lo < hi).then_some(MixedMassRatio {
             ratio: [lo, hi],
             ..chart
@@ -797,6 +799,19 @@ impl<A: Coordinate, S: Selection> MixedMassRatio<A, S, f64> {
         let back = <S::MassLink as Link<2, 3>>::forward_at(link, p);
         let each = back.iter().zip(m).all(|(&x, m)| (x - m).abs() <= eps * m);
         each && (ratio_of(self.bodies, back) - q).abs() <= eps * q
+    }
+
+    /// A realised ratio in the asked range, for a centre the link does not realise: the first of `SEEDS + 1` points even
+    /// in `ln q` over it, each to within `ε_μ/2`, an end at or below 0 taken at the least positive double. A realised
+    /// interval narrower than the grid's step is not found, and the chart is then not offered, the safe side.
+    fn seed(&self, p: &LinkParams<f64>) -> Option<f64> {
+        const SEEDS: u32 = 256;
+        let eps = 0.5 * <f64 as ChartConstants>::EPS_MU;
+        let lo = self.ratio[0].max(f64::MIN_POSITIVE).ln();
+        let hi = self.ratio[1].ln();
+        (0..=SEEDS)
+            .map(|i| (lo + (hi - lo) * f64::from(i) / f64::from(SEEDS)).exp())
+            .find(|&q| self.realised_within(q, eps, p))
     }
 
     /// The end of the realised range from the realised ratio `from` toward the asked end `toward`, the range's upper
