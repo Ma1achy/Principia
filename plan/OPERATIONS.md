@@ -363,7 +363,7 @@ wait for the merge-ready run's `mutants-check` (§ "Mutants on the merge-ready h
 required checks are `plan/HUMAN_SETUP.md` §2's list, `mutants-check` among them though `main`'s protection lacks it
 until he re-adds it, which `xtask/tests/ci_changes.rs` checks every required check against on every path (R-678).
 
-**What CI runs on a pull request (R-656, R-662, R-677).** `ci.yml` runs on a push to `main` (and to a `measure/`
+**What CI runs on a pull request (R-656, R-662, R-677, R-790).** `ci.yml` runs on a push to `main` (and to a `measure/`
 branch, R-272) and, for a pull request, through `pull_request` only, once per push. Each workflow that builds or tests
 keeps one `concurrency` group per pull request, so a push cancels the run on the head it supersedes; a run on `main` is
 never cancelled (`no-atlas-params.yml` and `gemini-dispatch.yml` keep none, decisions.md R-656). `reviews.yml` keeps one
@@ -390,8 +390,9 @@ taking the highest (R-677):
   tests; `xtask/tests/ci_changes.rs` checks that every reader its scan finds is among them;
 - **docs**, tier (c), meaning it changes none of Principia's code (R-662; the owner, 31 Oct 2026: "Only the actual
   Principia CODE matters in ci"): every other path on the script's allowlist, `docs/`, `plan/` (its prose and Python),
-  `scripts/`, `workbench/` and the root's markdown: as tier (b), but `ci-workspace` runs only the cheap checks,
-  plan-check and the vocabulary lint, beside `no-atlas-params.yml`, the atlas guard;
+  `scripts/`, `workbench/`, `.claude/` (its commands, agents and settings; R-790) and the root's markdown: as tier (b),
+  but `ci-workspace` runs only the cheap checks, plan-check and the vocabulary lint, beside `no-atlas-params.yml`, the
+  atlas guard;
 - **no GPU-path file** (only data and docs paths, `crates/gui/` and `crates/prin/`): the GPU suites' jobs (`gpu-kernel
   suites`, `gpu-metal suites`, `gpu-lavapipe suites`) are skipped; everything else runs;
 - **no `.rs` file under `crates/`** (`mutants=false`; the owner, 2 Nov 2026: "Mutants run only when crates/ source

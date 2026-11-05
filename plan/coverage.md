@@ -17,14 +17,14 @@
 | REF | 52 |
 | RENDER | 120 |
 | COL | 161 |
-| GUI | 386 |
+| GUI | 387 |
 | TOOL | 218 |
-| VAL | 342 |
+| VAL | 344 |
 | PERF | 115 |
 | SYS | 96 |
-| **total** | **2069** |
+| **total** | **2072** |
 
-Of these: 232 calibration, 178 definition, 1659 obligation. Retired (kept for their ids, not counted): 12.
+Of these: 232 calibration, 178 definition, 1662 obligation. Retired (kept for their ids, not counted): 12.
 
 ## Requirements per milestone
 
@@ -34,23 +34,23 @@ Of these: 232 calibration, 178 definition, 1659 obligation. Retired (kept for th
 | M1 | 108 |
 | M2 | 219 |
 | M3 | 232 |
-| M4 | 106 |
+| M4 | 108 |
 | M5 | 183 |
-| M6 | 225 |
+| M6 | 226 |
 | M7 | 261 |
 | M8 | 470 |
 | M9 | 143 |
 
 ## Sections
 
-1684 sections in 61 files: 1342 yield at least one requirement; 342 yield none and are listed below with the reason.
+1692 sections in 61 files: 1348 yield at least one requirement; 344 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | gap (RQ-378) | 1 |
 | gap (RQ-391) | 2 |
 | gap (RQ-577) | 2 |
 | gap (RQ-618) | 1 |
-| informative only | 234 |
+| informative only | 236 |
 | out of v1 (R-125) | 1 |
 | out of v1 (R-420) | 1 |
 | parent heading (obligations are in its subsections) | 55 |
@@ -203,6 +203,8 @@ Of these: 232 calibration, 178 definition, 1659 obligation. Retired (kept for th
 | R-666 — sccache stays off: the job queue's builds do not use it | informative only | the owner's word of 31 Oct 2026: sccache stays off; process; changes no requirement |
 | R-674 — #368's Safari check runs once Safari is free, in both layouts, not deferred; a Safari run starts with Safari quit, by the human | informative only | the owner's two messages of 1 Nov 2026 on #368's Safari check, the deferral superseded; process (plan/HUMAN_SETUP.md § 6); changes no requirement |
 | R-675 — The PR sweep is a standing duty: the orchestrator periodically checks every open PR and its CI state, and picks up any that was dropped or missed | informative only | the owner's message of 1 Nov 2026: the periodic PR sweep; process (plan/OPERATIONS.md § Autonomy); changes no requirement |
+| R-693 — Every R-, RQ-, REQ- or TASK- number shown to the owner comes with a plain-English gloss | informative only | the owner's standing rule of 4 Nov 2026 on numbers shown to them; process; changes no requirement |
+| R-790 — `.claude/`, its commands, agents and settings, is docs tier: a change only to it runs only the cheap checks *(amends R-677 and R-662)* | informative only | the owner's word of 4 Nov 2026: `.claude/` is on the classifier's allowlist; process; changes no requirement |
 
 ### `docs/contracts/principia_canonical_spec.md`
 

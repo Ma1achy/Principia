@@ -21197,6 +21197,9 @@ REQ-COL-104 and REQ-COL-105 (`rq` removed, rulings, verify, note), REQ-COL-101 a
 REQ-COL-139 and REQ-COL-140.
 
 ## R-547 — Decode and encode numerics: the swap test is the conjugacy; step 0 is skipped within a calibrated `τ_I` and rescales in two steps; a branch input that must agree across backends is built only from operations every IEEE backend rounds alike, with no subnormal intermediate; the native build runs without MIR GVN and CI runs it at the release profile; T1 holds off the mirror band; REQ-SYS-015 is split *(closes RQ-283, RQ-295, RQ-296, RQ-298, RQ-299, RQ-360 and RQ-365; corrects R-34)*
+*Amended in part by R-690 (4 Nov 2026: "every IEEE backend" is stated as a condition on the driver, tested and not
+enforceable; a driver that fails is recorded unverified, not supported).*
+*Still in force: all of it; R-690 says which drivers its cross-backend claim is held to.*
 *21 Oct 2026 · applied in `docs/design/principia_chart_reference.md` § "0.3 Momentum — free Jacobi momenta" (the
 transcription hazard note, with its earlier words kept) and § "0.5 Scale gauge" (a clause), `docs/design/principia_dd_encode.md`
 § "3.2 Canonicalisation `C` — the exact ordered procedure" (step 0's lines and a paragraph) and § "3.3 The gauge group
@@ -28895,9 +28898,10 @@ files code reads narrows to data code loads for behaviour, and the docs checks t
 *Amended in part by R-676 (2 Nov 2026: mutants run only on the run the `merge-ready` label starts, a push taking the
 label off; `reviews.yml` cancels its superseded runs per pull request and event).*
 *Amended in part by R-677 (2 Nov 2026: three tiers, code, data and docs; mutants only when `crates/` source changes).*
+*Amended in part by R-692 (4 Nov 2026: five paths of `crates/gui/` are GPU paths once TASK-M6-53 merges).*
 *Still in force: all of it but what counts as docs-only and what a docs-only head runs, which are R-662's and R-677's,
 how the merge-ready head's mutants run and `reviews.yml`'s concurrency, which are R-676's, and which heads' mutants run,
-which is R-677's: the push trigger, the cancelled runs, the in-job skips under each required check's own name, mutants
+which is R-677's, and which of `gui`'s paths are GPU paths, which is R-692's: the push trigger, the cancelled runs, the in-job skips under each required check's own name, mutants
 on the merge-ready head, the approved target cache and no paid or self-hosted runner.*
 *30 Oct 2026 · the owner's two messages of that day; applied in `.github/workflows/ci.yml`,
 `.github/workflows/mutants.yml`, `scripts/ci_changes.sh` (new), `xtask/tests/ci_changes.rs` (new), three qa files
@@ -29285,9 +29289,13 @@ Changes REQ-VAL-199 (statement, rulings, source, note).
 *Amended in part by R-677 (2 Nov 2026: the plan's task data and the GUI's artboards and references leave the data code
 loads that run full CI for tier (b), which runs the cheap checks and the tests that read them, and so does a change to
 `plan/requirements.yaml` that changes only fields no code reads).*
-*Still in force: all of it but which of the data code loads runs full CI: the allowlist, the cheap checks, failing
-towards full CI, the required checks reporting, `plan/requirements.yaml` (but a change to fields no code reads alone,
-R-677's), the classifier and `scripts/contain.sh` as full CI, and what a head that changes only prose costs.*
+*Amended in part by R-790 (4 Nov 2026: `.claude/` leaves the paths this ruling's "Applied per R-369" runs full CI, for
+tier (c), docs).*
+*Still in force: all of it but which of the data code loads runs full CI and `.claude/`'s tier: the allowlist, which
+holds `.claude/` (R-790), the cheap checks, failing towards full CI, the required checks reporting,
+`plan/requirements.yaml` (but a change to fields no code reads alone, R-677's), the classifier and
+`scripts/contain.sh` as full CI, the other dot-files as paths it doesn't name, and what a head that changes only prose
+costs.*
 *31 Oct 2026 · the owner's message of that day; applied in `scripts/ci_changes.sh`, `.github/workflows/ci.yml`,
 `.github/workflows/mutants.yml`, `xtask/tests/ci_changes.rs`, `xtask/tests/mutants_no_mutant.rs`,
 `xtask/tests/qa_R-656_ci_changes.rs`, `plan/OPERATIONS.md`, `plan/WORKFLOW.md`,
@@ -29772,8 +29780,10 @@ Changes REQ-VAL-148 (source, rulings, note).
 ## R-677 — CI runs in three tiers: a change to Principia's code runs full CI as before; one to the plan's task data or the GUI's artboards and references runs only the cheap checks and the tests that read what it changed, with no build, test shard, GPU suite or mutants; one to the docs runs only the cheap checks; a change takes its highest tier, and an unknown path runs full CI; mutants run only when `crates/` source changes, on the merge-ready head; every required check still reports under its own name *(amends R-656, R-662, R-110, R-177, R-235, R-305 and R-676)*
 *Amended in part by R-678 (3 Nov 2026: a head with no `.rs` file under `crates/` has its `mutants-check` reported
 passed by its job, not posted).*
+*Amended in part by R-790 (4 Nov 2026: `.claude/` is tier (c), docs, no longer an unnamed path that runs full CI).*
 *Still in force: all of it, the `mutants-check` of a head with no `.rs` file under `crates/` reported passed at once,
-"not applicable", by `mutants.yml`'s job (R-678) rather than posted.*
+"not applicable", by `mutants.yml`'s job (R-678) rather than posted, and `.claude/` in tier (c), docs (R-790), rather
+than an unnamed path.*
 *2 Nov 2026 · the owner's message of that day, item 3, and his two replies on `plan/requirements.yaml` later that day;
 applied in `scripts/ci_changes.sh`, `scripts/ci_req_fields.py`, `.github/workflows/ci.yml`,
 `.github/workflows/mutants.yml`, `xtask/tests/ci_changes.rs`, `xtask/tests/merge_ready.rs`,
@@ -29976,3 +29986,237 @@ one of `pull_request`'s kind; the rule above is what those runs show.
 R-678 is in the "ci" group of `plan/rule_groups.yaml`.
 
 Changes REQ-VAL-148 (source, rulings, note).
+
+## R-685 — The real kernel and the other WGSL and rust-gpu shaders are audited for the mock noise's pattern, hashes or lattice lookups where neighbouring invocations must agree bitwise and compile-time offsets feeding them; the fix is proposed as a task with its own ADR, plus a regression test that asserts shared lattice corners bitwise equal on every backend; no fix until lavapipe and the audit are in
+*4 Nov 2026 · the owner's instruction of that day, relayed verbatim to the Mac by the Windows session (issue #390, comment
+6632953769), following its finding of the block artefacts on the RTX 2080 SUPER (comment 6632801932); applied in
+`plan/adr/ADR-0001-mock-noise-integer-lattice.md` (new, Status Proposed), TASK-M6-53 and REQ-GUI-412 (new, the requirement
+reqio's), `REVIEW_QUEUE.md` (RQ-690, RQ-691) and `plan/rule_groups.yaml`*
+
+The owner's words, verbatim, as relayed:
+
+> Agreed; my per-tile hypotheses are withdrawn. For the Mac (via #390): after lavapipe, (1) audit the real kernel and other WGSL/rust-gpu shaders for the same pattern: hashes or lattice lookups where neighbouring invocations must agree bitwise, and compile-time offsets feeding them; (2) propose the fix (e.g. integer u32 hash on integer lattice coordinates, corners computed once per cell) as a task with its own ADR, plus a regression test that evaluates shared lattice corners from adjacent cells and asserts bitwise equality on every backend. No fix until lavapipe and the audit are in.
+
+*Where its parts stand at this port (a record, not more of the ruling):* lavapipe and the audit are in (issue #390,
+comment 6633374835). The proposal is
+the ADR and the task above. The ADR's Status stays Proposed and the task waits: the owner has not yet ruled on the
+pattern (RQ-691).
+R-689 then ruled it, option A, and the ADR's Status is Accepted.
+
+*Applied per R-369:* "on every backend" puts gui's lattice test in `gpu-metal`, which R-656's "the crates no GPU job builds
+(`gui`, `prin`)" didn't foresee. TASK-M6-53 makes only the paths that step reads GPU paths; the rest of `crates/gui/` stays
+off the GPU path. It is the ruling `xtask/tests/qa_R-662_ci_scope.rs`'s change answers to (R-290).
+The owner then had this written as a formal amendment: R-692.
+
+## R-686 — The kernel cross-backend check is a measurement (R-649): the same IC set on NVIDIA Vulkan, Metal, lavapipe and CPU f32, outcome labels and per-trajectory branch-sensitive results compared, not pixels, the disagreement rate reported per backend pair, no tolerance chosen to make it pass; pixel comparisons across backends go on raw pre-colour values with the outlier tail reported, never 8-bit frame equality, Metal against lavapipe's 161,394 / 221 recorded as the clean-backend baseline; `DECODE_SWITCHOVER`'s spec notes that bitwise agreement must be tested on NVIDIA specifically
+*Amended in part by R-691 (4 Nov 2026: the raw-value rule is for cross-backend investigation only; goldens stay as they
+are on CI backends).*
+*Still in force: all of it, the pixel rule as R-691 scopes it; the cross-backend check, the baseline and the `DECODE_SWITCHOVER`
+note stand, with that note's reading accepted by the owner (below).*
+*4 Nov 2026 · the owner's message of that day; applied in `docs/contracts/principia_parity_contract.md` § 4,
+`docs/contracts/principia_scheduler_contract.md` Part 4, `plan/MILESTONES.md` § M4, TASK-M6-53, TASK-M6-08's notes, TASK-M4-27 and TASK-M4-28, REQ-VAL-347
+and REQ-VAL-348 (new, the requirements reqio's), REQ-SCHED-062's note, `REVIEW_QUEUE.md` (RQ-692) and
+`plan/rule_groups.yaml`*
+
+The owner's words, verbatim:
+
+> Good. Two additions to the fix task:
+> 1. Kernel cross-backend check (measurement, R-649): same IC set on NVIDIA Vulkan, Metal, lavapipe and CPU f32; compare outcome labels and per-trajectory branch-sensitive results (collision/escape decisions, step counts), not pixels. Report the disagreement rate per backend pair; no tolerance chosen to make it pass. This is the evidence for whether the missing NoContraction matters for the real kernel.
+> 2. Pixel comparisons across backends go on raw pre-colour values with the outlier tail reported (count beyond a stated threshold), never 8-bit frame equality; record Metal-vs-lavapipe's 161,394 / 221 as the clean-backend baseline.
+> DECODE_SWITCHOVER: note in its spec that bitwise agreement must be tested on NVIDIA specifically.
+
+"The fix task" is R-685's, TASK-M6-53.
+
+*Applied per R-369:*
+- **Addition 1 is its own tasks, not a part of the fix task.** The mock's fix needs no kernel march, and the check does,
+  so one task would hold the fix until M4. TASK-M4-28 is the trajectory check, on TASK-M4-05's march. TASK-M4-27 is the
+  arm that can run now, on what the GPU runs at this commit, decode's and canon's branch outcomes on all four backends;
+  it is a task of its own because a task starts only when its Depends on has merged (`plan/WORKFLOW.md` § "The unit: one
+  task, one branch, one PR"). It cannot answer the trajectory question, and says so.
+- **Addition 2's rule is in the parity contract's § 4 and in the fix task.** The owner's words do not say whether it
+  reaches the golden suites, whose shared references are byte-equal across backends (R-287, R-296); the contract leaves
+  them as they stand, and the question is RQ-692.
+- **"Must be tested on NVIDIA specifically" is read as a named Windows run that blocks nothing.** This is the port's reading:
+  the owner's line, unlike his item 1, doesn't say "measurement". No CI job runs NVIDIA and R-656 keeps out a self-hosted
+  runner, so no blocking test of it can exist in CI. The run is named in TASK-M6-08's notes and is not an acceptance line,
+  since a PR shows every acceptance command before it merges.
+
+*Accepted by the owner, 4 Nov 2026 (his batch of that day), so that reading is now his. His words, verbatim:*
+
+> Your 30 Oct and 4 Nov decisions (621, 624, 628, 632, 684 and the DECODE_SWITCHOVER reading): accepted.
+
+> 4 = yes: an NVIDIA run is a named measurement; bitwise switchover on CI backends stays blocking.
+
+*So the NVIDIA run stays a named measurement that blocks nothing, and the bitwise switchover on CI backends stays blocking:
+TASK-M6-08's acceptance tests are that. The Applied per R-369 line above stands as the record of how it came.*
+
+## R-689 — The mock's noise is option A: an integer u32 hash on integer lattice coordinates, and the mock's noise look may change *(closes RQ-691)*
+*4 Nov 2026 · the owner's batch of that day; applied in `plan/adr/ADR-0001-mock-noise-integer-lattice.md` (Status Accepted),
+TASK-M6-53, REQ-GUI-412 (`rq` removed, reqio), `docs/archive/review_queue/M0.md` (RQ-691) and `plan/rule_groups.yaml`*
+
+The owner's words, verbatim:
+
+> RQ-691: A. Integer u32 hash; mock noise look may change.
+
+*Context:* the block artefacts on the RTX 2080 SUPER (R-685), and RQ-691's two options: (A) a new pattern with the cause removed
+by construction, and (D) the pattern kept with the `fract` amplifier remaining.
+
+*What it decides:* option A, as ADR-0001 § "Decision" has it. TASK-M6-53 builds it and no longer waits. Option D is not built.
+No golden holds mock pixels, so nothing is re-baselined.
+
+*What it amends:* nothing.
+
+## R-690 — R-547's "operations every IEEE backend rounds alike" is stated as a condition on the driver and tested by TASK-M4-27 and TASK-M4-28; it is not enforceable, and a driver that fails is recorded unverified, not supported *(closes RQ-690; amends R-547)*
+*4 Nov 2026 · the owner's batch of that day; applied in `docs/contracts/principia_parity_contract.md` § 4,
+`docs/notes/principia_gpu_determinism_note.md` (rules 2 and 6), `docs/design/principia_dd_decoder.md`, `docs/design/principia_dd_encode.md`,
+`docs/design/principia_dd_integrator.md`, `docs/contracts/principia_symbolic_dynamics_contract.md`,
+`docs/contracts/principia_integrator_contract.md` (twice), `docs/contracts/principia_canonical_spec.md` (a clause each), TASK-M4-27,
+TASK-M4-28, REQ-VAL-347 and REQ-VAL-348 (reqio), ADR-0001 § "Must not claim", `docs/archive/review_queue/M0.md` (RQ-690), R-547's forward lines
+and `plan/rule_groups.yaml`*
+
+The owner's words, verbatim:
+
+> RQ-690: State as a driver condition + test it (TASK-M4-27/28). Not enforceable; a driver that fails is recorded unverified, not supported.
+
+*Context:* `crates/kernel/src/canon.rs`:90-91 and three other sites rest on a backend that keeps its additions and multiplications
+correctly rounded and unreassociated. Nothing in the toolchain emits `NoContraction`, and the RTX's noise finding fits a driver
+that distributes over a constant (modelled; no compiler output exists).
+
+*What it decides:* the premise is a condition on a driver, not a property of IEEE backends in general. TASK-M4-27 and TASK-M4-28
+test it per driver. Nothing can enforce it. A driver that fails is recorded unverified, not supported.
+
+*What it amends:* R-547, whose "every IEEE backend" now reads as every backend whose driver meets that condition: it keeps the
+additions and multiplications of a branch input as written, correctly rounded, not reassociated and not distributed.
+`crates/kernel/src/canon.rs`:91 says "unreassociated", and the rewrite behind this ruling, `(a + c)·k` to `a·k + c·k`, is
+distribution; the contract is the authority. How a branch input is built does not change.
+
+*Applied per R-369:* the condition is about bits, not forks, as parity § 4's sentence, rule 2 of the determinism note and
+REQ-INT-066 settle it (physics review of PR #407). A branch input is read at the expression's own operands, and its kind is read on
+what a driver can round, as R-547's words and `crates/kernel/src/canon.rs`:71-86 settle it:
+- `+ and ×`: floating `+`, `−` and `×`, with what rounds nothing and a rewrite can't move: negation and `abs`, exact power-of-two
+  scalings, bit reads and masks, integer operations, selects and comparisons. The kernel's `Wide` forms are this kind, and a `Wide`'s
+  bits are its mantissa and its exponent, both.
+- `other operation`: an input holding an operation with an ulp bound rather than correct rounding (division, `√`, `sin`, `cos`,
+  `atan2`, a rounding builtin), or `fma`, which one driver fuses and another, lavapipe, rounds as two operations (RQ-298), so it has
+  no one result to hold a driver to.
+
+For the first kind, the test has three levels:
+- level 1, its operands differ across the backends compared: an upstream difference, no evidence on the driver;
+- level 2, its operands are bit-identical and its bits differ: the driver fails, with or without a fork;
+- level 3, its operands and bits are identical and the outcome differs: a comparison fork, reported as that, and it fails too.
+
+An input of the second kind is reported as that kind and does not by itself fail this condition.
+
+Levels are judged on operands, bits and outcome from one named compiled entry, so the read-back emits the outcome as well. A difference
+seen in a production entry that doesn't show in the read-back is reported under its own name, a production-only difference: it is no
+level and earns no word (applied per R-369: a rewrite in the production compile alone would otherwise read as a comparison fork, the
+very contraction this ruling is about under another name, and an upstream difference there would convict a driver). The recording is a report's words and blocks nothing (R-649). It adds no claim on continuous bits.
+
+A disagreement belongs to a pair and a standing to a driver. The arbiter is the written form evaluated on the CPU at f32, each
+operation correctly rounded, not the exact expression's correctly rounded value. It runs at CPU f32's operands: those of its own
+run's row or, where two GPUs share operands that run didn't produce, those shared operands, which the host evaluates (applied per
+R-369: this names a driver where the record otherwise has none). At level 2 the driver whose bits differ from it fails; at level 3,
+the driver whose outcome differs from CPU f32's. Operands that match neither are level 1. An evaluation is one input's one branch
+on one driver. A report has three words: "unverified, not supported" for a driver measured and failing;
+"no failure in N", N shown, never "verified" or "supported", for a driver measured with none; "not run" for no record. N counts only
+evaluations of the first kind with operands bit-identical to CPU f32's, so a driver whose rows are all level 1 reads "no failure in
+0", and each driver's line shows, per branch input and entry, N and its level 1 count, with its `other operation` count beside them, so a site
+that never reached the test shows as 0 under its own name. RQ-685's
+ruling, in the same batch and ported elsewhere, says "driver unverified" of a driver not measured: that is this "not run", in a run
+header, and not this ruling's words, which only a measured failure earns. A standing holds for the compute stage with the setting
+off, on that adapter and driver version, through the compiled entry each row names, and for NVIDIA under its hardware label, since
+repeating on one card can't rule out a fixed fault (RQ-685). A rewrite depends on the code around the expression: differing bits
+through a read-back entry fail the driver in that entry, and no failure through one says nothing of the production pipeline's compile.
+
+## R-691 — The raw-value rule for pixel comparisons is for cross-backend investigation only; goldens stay as they are on CI backends *(closes RQ-692; amends R-686)*
+*4 Nov 2026 · the owner's batch of that day; applied in `docs/contracts/principia_parity_contract.md` § 4, TASK-M6-53,
+`docs/archive/review_queue/M0.md` (RQ-692), R-686's forward lines and `plan/rule_groups.yaml`*
+
+The owner's words, verbatim:
+
+> RQ-692: (a). Goldens stay as they are on CI backends; raw-value rule is for cross-backend investigation only.
+
+*Context:* R-686's "never 8-bit frame equality" against a golden's one reference across backends (R-287, R-296).
+
+*What it decides:* RQ-692's option (a). The golden suites stay as they are on CI backends, as R-287 and R-296 have them. R-686's
+rule governs comparisons made to investigate how backends differ.
+
+*What it amends:* R-686, scoping its pixel rule. Its baseline stands.
+
+## R-692 — R-656 is amended for TASK-M6-53: of `crates/gui/`, the paths the new `gpu-metal` step reads are GPU paths, and the rest of the crate is not *(amends R-656)*
+*4 Nov 2026 · the owner's batch of that day; to be applied by TASK-M6-53 in `scripts/ci_changes.sh`, `.github/workflows/ci.yml`,
+`plan/OPERATIONS.md` and `xtask/tests/qa_R-662_ci_scope.rs`; R-656's forward lines and `plan/rule_groups.yaml` here*
+
+The owner's words, verbatim:
+
+> TASK-M6-53 narrowing R-656: write it as a formal amendment.
+
+*Context:* R-656 makes every path a GPU path but "the docs-only ones and the crates no GPU job builds (`gui`, `prin`)". R-685's "on
+every backend" puts gui's lattice test in `gpu-metal`, so `gui` is no longer a crate no GPU job builds.
+
+*What it decides:* once TASK-M6-53 merges, five paths of `crates/gui/` are GPU paths, what that step reads:
+`crates/gui/src/mock/*.wgsl`, `crates/gui/src/mock/canvas.rs`, `crates/gui/src/tests/mock_lattice.rs`,
+`crates/gui/src/tests/lattice_controls.wgsl` and `crates/gui/Cargo.toml`. Every other path of `crates/gui/` stays off the GPU path,
+and a change to one that breaks the step first shows on `main`, a gap TASK-M6-53 lists. `scripts/ci_changes.sh` has one `gpu`
+flag, so a change to one of the five runs all three GPU suites.
+
+*What it amends:* R-656's "the crates no GPU job builds (`gui`, `prin`)", which reads `prin` and those paths of `gui` aside. The
+rest of R-656 stands. It is the ruling `qa_R-662_ci_scope.rs`'s change answers to (R-290).
+
+## R-693 — Every R-, RQ-, REQ- or TASK- number shown to the owner comes with a plain-English gloss
+*4 Nov 2026 · the owner's message of that day ordering the `/rulings-report` and `/rulings-apply` commands; applied in
+`CLAUDE.md` § "When to ask the human", `AGENTS.md` § "Numbers shown to the owner", `plan/rule_groups.yaml` and
+`plan/section_notes.yaml`; changes no requirement*
+
+The owner's words (4 Nov 2026), verbatim, the message's last line:
+
+> Standing rule, add to CLAUDE.md/AGENTS.md: every R-, RQ-, REQ- or TASK- number shown to the owner comes with a plain-English gloss.
+
+*What it decides:* wherever an agent shows the owner one of these numbers, in a summary, a report, a question or a pull
+request, a few plain words saying what it is come with it. An id alone is not enough.
+
+*Applied per R-369:*
+- The rule is in `AGENTS.md` under a section of its own, before § "Code Review Rules", so that section, which
+  `GEMINI.md` and `.github/copilot-instructions.md` copy byte for byte (`xtask/tests/ai_review_rules.rs`), is unchanged:
+  the rule binds agents reporting to the owner, and is no review finding.
+- The rest of the message orders the two commands, which are tooling and not a ruling:
+  `.claude/commands/rulings-report.md`, `.claude/commands/rulings-apply.md` and `plan/tools/rulings_reply.py`. The
+  message's "Closed section" is the review
+  queue's archive, `docs/archive/review_queue/`, where R-292 and `plan/check_plan.py` already put a closed entry, which
+  gains a "Ruling" line with date, ruling and outcome and is never deleted. A veto of an R-369 decision that has no RQ
+  is answered on the report's `D-n` line, the message's grammar having no line for it; a deferral takes an R number as
+  an answer does (`CLAUDE.md` § "Never guess, never defer"), and `ask`, a question, takes none.
+
+R-693 is in the "process" group of `plan/rule_groups.yaml`.
+
+## R-790 — `.claude/`, its commands, agents and settings, is docs tier: a change only to it runs only the cheap checks *(amends R-677 and R-662)*
+*4 Nov 2026 · the owner's message of that day; applied in `scripts/ci_changes.sh`, `.github/workflows/ci.yml`'s
+comment, `xtask/tests/ci_changes.rs`, `plan/OPERATIONS.md` and `plan/rule_groups.yaml`*
+
+The owner's words, 4 Nov 2026, verbatim:
+
+> R-677 amendment: .claude/ (commands, agents, settings) is docs tier. #409 re-runs under the new tier. Keep the parser fix tested on today's real batch before code review, as planned.
+
+*What it decides:*
+- **`.claude/` is on the classifier's allowlist.** The whole directory, `.claude/*` in `scripts/ci_changes.sh`'s
+  `on_allowlist`: a change only to it is tier (c), docs, and a change beside code or data takes the highest tier, as
+  R-677 has it. R-677's tier (c), "the rest of R-662's allowlist", now holds it.
+- **It reaches R-662's sentence too.** The owner's words call this an R-677 amendment, and that stands. But the one
+  place the corpus gave `.claude/`'s tier is R-662's "Applied per R-369": "`.claude/`, `.cargo/`, `.config/`,
+  `.gitignore` and the other dot-files run full CI as paths it doesn't name." So this ruling amends that sentence as
+  well: `.claude/` leaves it, and `.cargo/`, `.config/`, `.gitignore` and the other dot-files stay.
+- **No carve-out.** `.claude/` has no entry in `reads_code`: a test reading a file of it would not run on a head that
+  changes only that file, as with any prose a test reads (R-662).
+- **The rest of the message is no rule.** The re-run of #409, and its parser fix tested on the day's real batch before
+  code review, are instructions for that pull request.
+
+*Applied per R-369:*
+- A path that only starts like it, `.claude` itself or `.clauderc`, is not on the list and runs full CI, as with the
+  allowlist's other folders (R-662).
+- `xtask/tests/qa_R-662_ci_scope.rs`'s `cheap()` models the tracked paths with no `.claude/`, so
+  `qa_r662_every_tracked_path_classifies_as_the_ruling_says` and its control fail on `.claude/agents/*.md`. It is an
+  exception to R-290 forced by this ruling: `.claude/` joins that list in a `qa:` commit, by qa, for the reviewers to
+  confirm.
+- R-790 is the id reserved for this ruling. It follows R-678 in the file.
+
+R-790 is in the "ci" group of `plan/rule_groups.yaml`.
