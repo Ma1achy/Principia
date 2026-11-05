@@ -11,7 +11,7 @@ on:
         description: which test
         required: true
         type: choice
-        options: [green, proof, survivor, survivor-cancel, survivor-refuse, plant-runner, quota, cold, gpu-idle, checkout, plant-git-hook, plant-git-config, delete-workspace]
+        options: [green, proof, survivor, survivor-cancel, survivor-refuse, plant-runner, quota, cold, gpu-idle, log-diag, checkout, plant-git-hook, plant-git-config, delete-workspace]
 
 permissions:
   contents: read
@@ -161,4 +161,10 @@ jobs:
           Set-Location E:\runner-tools\tmp
           $o = cmd /c "rmdir /s /q `"$w`" 2>&1"
           "from outside: folder exists $(Test-Path -LiteralPath $w), message: $o"
+          exit 0
+
+      - name: Which rights does this account have on the refusal log
+        if: inputs.test == 'log-diag'
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File E:\runner-tools\setup\07-log-diag.ps1
           exit 0
