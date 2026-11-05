@@ -161,30 +161,39 @@ function forward(worker, canvas) {
   const typed = () => { if (ime.value) post("text", ime.value); ime.value = ""; };
   ime.addEventListener("input", (e) => { if (!e.isComposing) typed(); }, { signal });
   ime.addEventListener("compositionend", typed, { signal });
-  // The keys whose press went on, each with the name it went on under: a release goes on only for these, and under
-  // that name, since egui lets a key up by name and the layer can change it (`7` down, AltGr down, `{` up).
+  // The invariant: a key the worker was told is down is always released. egui holds a key until a release under the name
+  // it went down by, and takes its next press for a repeat, which the app's commands skip. So `down` records, for each
+  // code, every name a press went on under and no release has followed: one code can have several (`1` down, Shift, `!`
+  // repeat), and a keyup's own `key` may be neither (`7` down, AltGr, `{` up). `release` is the only way out of it, and
+  // these reach it: the code's keyup, in or out of a composition; Cmd's keyup, for what the browser gave no keyup for
+  // (egui #4724; eframe's `on_keyup` in `?layout=main`), but a modifier still held, which keeps its own, and Cmd alone,
+  // since AltGr's release on Windows is a Control keyup and would let a key held across AltGr up early; blur, after which
+  // no keyup comes here; and a fresh press of a code still recorded, which proves its release was lost, whatever lost it.
   const down = new Map();
+  const release = (code, modifiers, keep) => {
+    for (const name of down.get(code) ?? []) {
+      if (keep?.(name)) continue;
+      post("key", name, code, false, false, ...modifiers);
+      down.get(code).delete(name);
+    }
+  };
   const key = (pressed) => (e) => {
-    if (e.isComposing) return;
+    if (pressed && !e.repeat) release(e.code, mods(e));
+    if (pressed && e.isComposing) return;
     // AltGr can report Ctrl and Alt as well (AltGr+Q, `@`, on a German layout on Windows). A character it types is text
     // alone: it stays with the input, and no key goes on for egui to read as Ctrl+Alt+A, a text field's select-all.
     const altGr = e.ctrlKey && !e.metaKey && e.getModifierState("AltGraph");
     if (pressed && altGr && (e.key.length === 1 || e.key === "Dead")) return;
-    // The browser may fire no keyup for a letter held under Cmd (egui #4724), so Cmd's own keyup lets go of what is left,
-    // as eframe's `on_keyup` does in `?layout=main`. A modifier still held keeps its keyup. Cmd alone: AltGr's release on
-    // Windows is a Control keyup, which would let a key held across AltGr up early.
-    if (!pressed && e.key === "Meta") {
-      for (const [code, held] of down) {
-        if (e.getModifierState(held)) continue;
-        post("key", held, code, false, false, ...mods(e));
-        down.delete(code);
+    if (pressed) {
+      if (!down.has(e.code)) down.set(e.code, new Set());
+      down.get(e.code).add(e.key);
+      post("key", e.key, e.code, true, e.repeat, ...mods(e));
+    } else {
+      release(e.code, mods(e));
+      if (e.key === "Meta") {
+        for (const code of down.keys()) release(code, mods(e), (name) => e.getModifierState(name));
       }
     }
-    const name = pressed ? e.key : down.get(e.code);
-    if (name === undefined) return;
-    if (pressed) down.set(e.code, e.key);
-    else down.delete(e.code);
-    post("key", name, e.code, pressed, e.repeat, ...mods(e));
     // A printable key stays with the input, for its text, as does the clipboard's chord; every other key is the app's.
     const chord = e.metaKey || e.ctrlKey;
     if (e.key.length !== 1 && e.key !== "Dead" && !chord) e.preventDefault();
@@ -199,7 +208,10 @@ function forward(worker, canvas) {
   addEventListener("copy", (e) => { post("copy"); e.preventDefault(); }, { signal });
   addEventListener("cut", (e) => { post("cut"); e.preventDefault(); }, { signal });
   addEventListener("focus", () => { ime.focus(); post("focus", true); }, { signal });
-  addEventListener("blur", () => post("focus", false), { signal });
+  addEventListener("blur", () => {
+    for (const code of down.keys()) release(code, [false, false, false, false]);
+    post("focus", false);
+  }, { signal });
   const resized = new ResizeObserver(() => post("resize", ...canvasSize(canvas)));
   resized.observe(canvas);
   return () => {

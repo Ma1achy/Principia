@@ -281,7 +281,7 @@ negative_control!(
 
 const ALTGRAPH: &str = "loader_altgraph_character_reaches_the_input";
 #[cfg(feature = "controls")]
-const RELEASE: &str = "const name = pressed ? e.key : down.get(e.code);";
+const KEYUP: &str = "      release(e.code, mods(e));\n      if (e.key === \"Meta\") {";
 #[cfg(feature = "controls")]
 const ALT_GR: &str = r#"const altGr = e.ctrlKey && !e.metaKey && e.getModifierState("AltGraph");"#;
 #[cfg(feature = "controls")]
@@ -402,8 +402,8 @@ mod altgraph_forwards_every_release {
         run(
             ALTGRAPH,
             &loader(
-                RELEASE,
-                "const name = pressed ? e.key : down.get(e.code) ?? e.key;"
+                KEYUP,
+                "      if (!down.get(e.code)?.size) post(\"key\", e.key, e.code, false, false, ...mods(e));\n      release(e.code, mods(e));\n      if (e.key === \"Meta\") {"
             )
         )
     );
@@ -418,8 +418,8 @@ mod release_under_the_layer_name {
         run(
             ALTGRAPH,
             &loader(
-                RELEASE,
-                "const name = pressed || down.has(e.code) ? e.key : undefined;"
+                KEYUP,
+                "      if (down.get(e.code)?.size) post(\"key\", e.key, e.code, false, false, ...mods(e));\n      down.get(e.code)?.clear();\n      if (e.key === \"Meta\") {"
             )
         )
     );
@@ -427,7 +427,9 @@ mod release_under_the_layer_name {
 
 const CMD_UP: &str = "loader_cmd_up_releases_what_the_browser_withholds";
 #[cfg(feature = "controls")]
-const SWEEP: &str = r#"if (!pressed && e.key === "Meta") {"#;
+const TAKEN: &str = "      down.get(code).delete(name);\n";
+#[cfg(feature = "controls")]
+const SWEEP: &str = r#"if (e.key === "Meta") {"#;
 
 #[test]
 fn loader_cmd_up_releases_what_the_browser_withholds() {
@@ -450,7 +452,7 @@ mod cmd_up_keeps_its_entries {
         loader_cmd_up_releases_what_the_browser_withholds,
         "a key let go by Cmd left in the map",
         expected = "a late keyup released z again",
-        run(CMD_UP, &loader("        down.delete(code);\n", ""))
+        run(CMD_UP, &loader(TAKEN, ""))
     );
 }
 
@@ -462,7 +464,7 @@ mod cmd_up_takes_held_modifiers {
         expected = "Shift went up with Cmd while still held",
         run(
             CMD_UP,
-            &loader("        if (e.getModifierState(held)) continue;\n", "")
+            &loader(", (name) => e.getModifierState(name))", ")")
         )
     );
 }
@@ -475,10 +477,7 @@ mod control_up_sweeps_too {
         expected = "Control's keyup let a held key up early",
         run(
             CMD_UP,
-            &loader(
-                SWEEP,
-                r#"if (!pressed && (e.key === "Meta" || e.key === "Control")) {"#
-            )
+            &loader(SWEEP, r#"if (e.key === "Meta" || e.key === "Control") {"#)
         )
     );
 }
@@ -489,6 +488,111 @@ mod release_keeps_its_entry {
         loader_altgraph_character_reaches_the_input,
         "a released key left in the map, as gui review 5777993926 G2 traced",
         expected = "a keyup whose press was dropped went on",
-        run(ALTGRAPH, &loader("    else down.delete(e.code);\n", ""))
+        run(ALTGRAPH, &loader(TAKEN, ""))
+    );
+}
+
+const EVERY_PRESS: &str = "loader_every_press_is_released";
+#[cfg(feature = "controls")]
+const FRESH: &str = "    if (pressed && !e.repeat) release(e.code, mods(e));\n";
+#[cfg(feature = "controls")]
+const BLUR: &str =
+    "    for (const code of down.keys()) release(code, [false, false, false, false]);\n";
+#[cfg(feature = "controls")]
+const FOCUS_LOST: &str = "    post(\"focus\", false);\n";
+
+#[test]
+fn loader_every_press_is_released() {
+    run(EVERY_PRESS, &[]);
+}
+
+mod blur_releases_nothing {
+    use super::*;
+    negative_control!(
+        loader_every_press_is_released,
+        "no release at blur",
+        expected = "a key held at blur was not released",
+        run(EVERY_PRESS, &loader(BLUR, ""))
+    );
+}
+
+mod blur_keeps_a_modifier {
+    use super::*;
+    negative_control!(
+        loader_every_press_is_released,
+        "blur's release with no event's modifiers to read",
+        expected = "blur's release left a modifier on",
+        run(
+            EVERY_PRESS,
+            &loader(
+                "release(code, [false, false, false, false])",
+                "release(code, [true, false, false, false])"
+            )
+        )
+    );
+}
+
+mod blur_releases_after_the_focus {
+    use super::*;
+    negative_control!(
+        loader_every_press_is_released,
+        "the focus lost before the release, when egui has already cleared the key",
+        expected = "blur's release came after the focus went",
+        run(
+            EVERY_PRESS,
+            &[("loader.js", FOCUS_LOST, ""), ("loader.js", BLUR, "    post(\"focus\", false);\n    for (const code of down.keys()) release(code, [false, false, false, false]);\n")]
+        )
+    );
+}
+
+mod fresh_press_keeps_the_lost_release {
+    use super::*;
+    negative_control!(
+        loader_every_press_is_released,
+        "a fresh press of a held code taken as the same press",
+        expected = "a fresh press did not release the press whose keyup was lost",
+        run(EVERY_PRESS, &loader(FRESH, ""))
+    );
+}
+
+mod repeat_counts_as_fresh {
+    use super::*;
+    negative_control!(
+        loader_every_press_is_released,
+        "the system's repeat taken for a fresh press",
+        expected = "a repeat released its own key",
+        run(
+            EVERY_PRESS,
+            &loader(FRESH, "    if (pressed) release(e.code, mods(e));\n")
+        )
+    );
+}
+
+mod one_name_a_code {
+    use super::*;
+    negative_control!(
+        loader_every_press_is_released,
+        "one name a code, the latest, as gui's and qa's route of `1` then `!` traced",
+        expected = "Digit1 came up as: !",
+        run(
+            EVERY_PRESS,
+            &loader(
+                "      if (!down.has(e.code)) down.set(e.code, new Set());\n",
+                "      down.set(e.code, new Set());\n"
+            )
+        )
+    );
+}
+
+mod composing_keydown_goes_on {
+    use super::*;
+    negative_control!(
+        loader_every_press_is_released,
+        "a keydown inside a composition forwarded",
+        expected = "a keydown inside a composition went on",
+        run(
+            EVERY_PRESS,
+            &loader("    if (pressed && e.isComposing) return;\n", "")
+        )
     );
 }

@@ -247,13 +247,13 @@ const LOADER_SCENARIOS = {
     check(texts().join() === "@,ą", `AltGr's \`ą\` reached the app as: ${texts()}`);
     check(!press(started, { key: "Dead", ...ctrlAlt }, true), "AltGr's dead key was cancelled");
     check(keys() === 0, `AltGr's characters went on as ${keys()} keys, for egui to read as Ctrl+Alt`);
-    check(press(started, { key: "Enter", ...ctrlAlt }, true), "AltGr's Enter was left to the page");
+    check(press(started, { key: "Enter", code: "Enter", ...ctrlAlt }, true), "AltGr's Enter was left to the page");
     check(keys() === 1, "AltGr's Enter is not forwarded");
-    check(press(started, { key: "s", ctrlKey: true }, false, "s"), "Ctrl+S was left to the page");
+    check(press(started, { key: "s", code: "KeyS", ctrlKey: true }, false, "s"), "Ctrl+S was left to the page");
     check(press(started, { key: "@", ...ctrlAlt }, false, "@"), "Ctrl+Alt with no AltGraph was left to the page");
-    check(press(started, { key: "s", ctrlKey: true, metaKey: true }, true, "s"), "Cmd+S under AltGraph was left to the page");
+    check(press(started, { key: "s", code: "KeyW", ctrlKey: true, metaKey: true }, true, "s"), "Cmd+S under AltGraph was left to the page");
     check(keys() === 4, "a chord is not forwarded");
-    check(!press(started, { key: "v", ctrlKey: true }, false), "Ctrl+V's paste was cancelled");
+    check(!press(started, { key: "v", code: "KeyV", ctrlKey: true }, false), "Ctrl+V's paste was cancelled");
     check(texts().join() === "@,ą", `only AltGr's characters are text, and the app got: ${texts()}`);
     // A key held as AltGr goes down still comes up, under the name it went down by, or it stays down in egui: Space held
     // turns the stain canvas's presses into pans.
@@ -299,6 +299,39 @@ const LOADER_SCENARIOS = {
     check(releases("KeyQ").length === 0, "Control's keyup let a held key up early");
     up("q", "KeyQ");
     check(releases("KeyQ").length === 1, "q's own keyup was lost");
+  },
+  async loader_every_press_is_released() {
+    const started = await startLoader();
+    const posted = (code, pressed) => started.worker.posts.filter((m) => m.method === "key" && m.args[1] === code && m.args[2] === pressed);
+    const up = (key, code) => page.window.dispatchEvent(event("keyup", { key, code, repeat: false, getModifierState: () => false }));
+    // Blur: no keyup comes here after it, so the release goes first, with every modifier off.
+    press(started, { key: "Control", code: "ControlLeft", ctrlKey: true }, false);
+    page.window.dispatchEvent(event("blur"));
+    check(posted("ControlLeft", false).length === 1, "a key held at blur was not released");
+    check(posted("ControlLeft", false)[0].args.slice(4).every((m) => m === false), "blur's release left a modifier on");
+    check(started.worker.posts.at(-1).method === "focus", "blur's release came after the focus went");
+    up("Control", "ControlLeft");
+    check(posted("ControlLeft", false).length === 1, "a keyup after blur released the key again");
+    // A fresh press of a code still held: its keyup was lost, whatever lost it, and this press must be no repeat in egui.
+    press(started, { key: "z", code: "KeyZ", metaKey: true }, false);
+    press(started, { key: "z", code: "KeyZ", metaKey: true }, false);
+    check(posted("KeyZ", false).length === 1, "a fresh press did not release the press whose keyup was lost");
+    check(started.worker.posts.filter((m) => m.method === "key").at(-1).args[2] === true, "the fresh press came before the release");
+    // The system's repeat is the same press, not a fresh one.
+    press(started, { key: "z", code: "KeyZ", repeat: true, metaKey: true }, false);
+    check(posted("KeyZ", false).length === 1, "a repeat released its own key");
+    up("z", "KeyZ");
+    check(posted("KeyZ", false).length === 2, "z's own keyup was lost");
+    // Every name a code went down by goes up together.
+    press(started, { key: "1", code: "Digit1" }, false);
+    press(started, { key: "!", code: "Digit1", repeat: true, shiftKey: true }, false);
+    up("!", "Digit1");
+    check(posted("Digit1", false).map((m) => m.args[0]).join() === "1,!", `Digit1 came up as: ${posted("Digit1", false).map((m) => m.args[0])}`);
+    // A keydown inside a composition never went on, so its keyup has nothing to release.
+    press(started, { key: "a", code: "KeyA", isComposing: true }, false);
+    check(posted("KeyA", true).length === 0, "a keydown inside a composition went on");
+    page.window.dispatchEvent(event("keyup", { key: "a", code: "KeyA", repeat: false, isComposing: true }));
+    check(posted("KeyA", false).length === 0, "a keyup inside a composition released what never went down");
   },
   async loader_failed_worker_gives_up_its_forwards() {
     const started = await startLoader();
