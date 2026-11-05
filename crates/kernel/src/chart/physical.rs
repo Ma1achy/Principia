@@ -736,7 +736,7 @@ impl<A: Coordinate, S: Selection> MixedMassRatio<A, S, f64> {
     /// The chart over the asked range `asked` of `q = m_b/m_a`, `bodies = (a, b)`, under `mapping` at the link's tunable
     /// parameters `p` (the module's note): `m_c` the third body's mass at `z₀`'s mass controls; warped, the range the
     /// part of `asked` the link realises at `m_c`, found outward from the slice centre's own ratio, or, where the link
-    /// does not realise that, a saturated centre, from [`MixedMassRatio::seed`]. `None` where the bodies are not two
+    /// does not realise that, a saturated centre, from `seed`. `None` where the bodies are not two
     /// distinct bodies, `asked` is not an increasing finite range, or, warped, no realised ratio is found.
     pub fn new(
         frozen: [f64; 8],
