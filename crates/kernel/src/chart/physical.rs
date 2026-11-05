@@ -736,8 +736,8 @@ impl<A: Coordinate, S: Selection> MixedMassRatio<A, S, f64> {
     /// The chart over the asked range `asked` of `q = m_b/m_a`, `bodies = (a, b)`, under `mapping` at the link's tunable
     /// parameters `p` (the module's note): `m_c` the third body's mass at `z₀`'s mass controls; warped, the range the
     /// part of `asked` the link realises at `m_c`, found outward from the slice centre's own ratio, or, where the link
-    /// does not realise that, a saturated centre, from `seed`. `None` where the bodies are not two
-    /// distinct bodies, `asked` is not an increasing finite range, or, warped, no realised ratio is found.
+    /// does not realise that, a saturated centre, from `seed`. `None` where the bodies are not two distinct bodies,
+    /// `asked` is not an increasing finite range, or, warped, the link realises none of `asked`.
     pub fn new(
         frozen: [f64; 8],
         a_range: [f64; 2],
@@ -767,7 +767,7 @@ impl<A: Coordinate, S: Selection> MixedMassRatio<A, S, f64> {
             return Some(chart);
         }
         let centre = ratio_of(bodies, m);
-        let from = if chart.realised_within(centre, 0.5 * <f64 as ChartConstants>::EPS_MU, p) {
+        let from = if chart.miss(centre, p) <= 0.5 * <f64 as ChartConstants>::EPS_MU {
             centre
         } else {
             chart.seed(p)?
@@ -786,32 +786,52 @@ impl<A: Coordinate, S: Selection> MixedMassRatio<A, S, f64> {
     /// round trip keeps the ratio and moves `m_c`, and where `m_c` is near 1 it can keep `m_c` and the ratio and move the
     /// two small masses together.
     pub fn realised(&self, q: f64, p: &LinkParams<f64>) -> bool {
-        self.realised_within(q, <f64 as ChartConstants>::EPS_MU, p)
+        self.miss(q, p) <= <f64 as ChartConstants>::EPS_MU
     }
 
-    /// [`MixedMassRatio::realised`] to within `eps`, relative.
-    fn realised_within(&self, q: f64, eps: f64, p: &LinkParams<f64>) -> bool {
+    /// The largest relative miss of the link's round trip at the ratio `q`, over the masses [`ratio_masses`] writes and
+    /// the ratio: what [`MixedMassRatio::realised`] bounds. Infinite at a `q` not positive and finite.
+    fn miss(&self, q: f64, p: &LinkParams<f64>) -> f64 {
         if !(q.is_finite() && q > 0.0) {
-            return false;
+            return f64::INFINITY;
         }
         let m = ratio_masses(self.bodies, self.held, q);
         let link = <S::MassLink as Link<2, 3>>::inverse_at(m, p);
         let back = <S::MassLink as Link<2, 3>>::forward_at(link, p);
-        let each = back.iter().zip(m).all(|(&x, m)| (x - m).abs() <= eps * m);
-        each && (ratio_of(self.bodies, back) - q).abs() <= eps * q
+        let each = back
+            .iter()
+            .zip(m)
+            .fold(0.0, |worst: f64, (&x, m)| worst.max((x - m).abs() / m));
+        each.max((ratio_of(self.bodies, back) - q).abs() / q)
     }
 
-    /// A realised ratio in the asked range, for a centre the link does not realise: the first of `SEEDS + 1` points even
-    /// in `ln q` over it, each to within `ε_μ/2`, an end at or below 0 taken at the least positive double. A realised
-    /// interval narrower than the grid's step is not found, and the chart is then not offered, the safe side.
+    /// A realised ratio in the asked range, for a centre the link does not realise. The link's clamps are one-sided on
+    /// monotone coordinates, so `miss` falls toward the realised interval from each side, and a trisection of `ln q`
+    /// that keeps the side of the lower `miss` reaches it at any width of the ask and of the interval, each test to
+    /// within `ε_μ/2`, an end at or below 0 taken at the least positive double. `STEPS` takes the widest ask, about
+    /// 1420 in `ln q`, below `1e-19`, under a double's spacing at `q = 1`.
     fn seed(&self, p: &LinkParams<f64>) -> Option<f64> {
-        const SEEDS: u32 = 256;
+        const STEPS: u32 = 128;
         let eps = 0.5 * <f64 as ChartConstants>::EPS_MU;
-        let lo = self.ratio[0].max(f64::MIN_POSITIVE).ln();
-        let hi = self.ratio[1].ln();
-        (0..=SEEDS)
-            .map(|i| (lo + (hi - lo) * f64::from(i) / f64::from(SEEDS)).exp())
-            .find(|&q| self.realised_within(q, eps, p))
+        let mut lo = self.ratio[0].max(f64::MIN_POSITIVE).ln();
+        let mut hi = self.ratio[1].ln();
+        for _ in 0..STEPS {
+            let third = (hi - lo) / 3.0;
+            let (below, above) = ((lo + third).exp(), (hi - third).exp());
+            let (miss_below, miss_above) = (self.miss(below, p), self.miss(above, p));
+            if miss_below <= eps {
+                return Some(below);
+            }
+            if miss_above <= eps {
+                return Some(above);
+            }
+            if miss_below < miss_above {
+                hi -= third;
+            } else {
+                lo += third;
+            }
+        }
+        None
     }
 
     /// The end of the realised range from the realised ratio `from` toward the asked end `toward`, the range's upper
@@ -822,7 +842,7 @@ impl<A: Coordinate, S: Selection> MixedMassRatio<A, S, f64> {
     /// ends (`q₀·(q₁/q₀)^t` at `t = 1`) stays inside [`MixedMassRatio::realised`]'s `ε_μ`.
     fn edge(&self, from: f64, toward: f64, upper: bool, p: &LinkParams<f64>) -> Option<f64> {
         let eps = 0.5 * <f64 as ChartConstants>::EPS_MU;
-        if self.realised_within(toward, eps, p) {
+        if self.miss(toward, p) <= eps {
             return Some(toward);
         }
         if upper != (toward > from) {
@@ -833,7 +853,7 @@ impl<A: Coordinate, S: Selection> MixedMassRatio<A, S, f64> {
         for _ in 0..64 {
             let mid = 0.5 * (ok + bad);
             let q = mid.exp();
-            if self.realised_within(q, eps, p) {
+            if self.miss(q, p) <= eps {
                 ok = mid;
                 last = q;
             } else {

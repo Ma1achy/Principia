@@ -2593,6 +2593,98 @@ negative_control!(
     check_saturated_centre([200.0, 1000.0], [200.0, 1000.0])
 );
 
+/// A warped mass-ratio range: at the mass controls `z`, bodies, asked range, parameters; the chart's own or a control's.
+type RatioRange<'a> =
+    &'a dyn Fn([f64; 2], [u32; 2], [f64; 2], &LinkParams<f64>) -> Option<[f64; 2]>;
+
+/// `ratio_slice` at any bodies.
+fn bodies_slice(
+    z: [f64; 2],
+    bodies: [u32; 2],
+    asked: [f64; 2],
+    mapping: Mapping,
+    p: &LinkParams<f64>,
+) -> Option<RatioChart> {
+    let frozen = [0.3, -0.5, 0.2, -0.1, 0.15, 0.05, z[0], z[1]];
+    MixedMassRatio::new(frozen, [0.2, 1.3], asked, bodies, mapping, p)
+}
+
+/// The asked range's width decides nothing (chart_reference §2.1, "the part of the asked range the link realises"): the
+/// saturated slice `(10, −1.5)`, realised on `[91.99, 148.41]`, keeps that range under every ask holding it, and across
+/// the links' slices, narrow realised parts among them, a wider ask keeps what a narrower one finds.
+fn check_ask_width(range: RatioRange) {
+    let p = LinkParams::DEFAULT;
+    for asked in [
+        [1.0e-3, 1.0e3],
+        [1.0e-30, 1.0e30],
+        [1.0e-100, 1.0e100],
+        [1.0e-300, 1.0e300],
+        [0.0, 1000.0],
+        [0.0, 200.0],
+    ] {
+        let got = range([10.0, -1.5], [0, 1], asked, &p)
+            .unwrap_or_else(|| panic!("the ask {asked:?} refuses the chart"));
+        for (got, want) in got.iter().zip([91.99, 148.41]) {
+            assert!(
+                (got - want).abs() <= 1.0e-3 * want,
+                "the ask {asked:?} gives {got}, not {want}"
+            );
+        }
+    }
+    let mut narrow = 0;
+    for mu_max in [2.0, 5.0, 10.0] {
+        let p = LinkParams { mu_max, ..p };
+        for bodies in [[0, 1], [1, 0], [0, 2], [2, 0], [1, 2], [2, 1]] {
+            for z in [
+                [10.0, 6.0],
+                [6.0, 10.0],
+                [10.0, -1.5],
+                [-10.0, -10.0],
+                [10.0, 10.0],
+                [-10.0, 3.0],
+                [3.0, -10.0],
+            ] {
+                let Some(base) = range(z, bodies, [1.0e-3, 1.0e3], &p) else {
+                    continue;
+                };
+                narrow += usize::from(base[1] / base[0] < 1.01);
+                for asked in [[0.0, 1.0e3], [1.0e-3, 1.0e300], [0.0, 1.0e300]] {
+                    let got = range(z, bodies, asked, &p).unwrap_or_else(|| {
+                        panic!("{z:?} {bodies:?}: the ask {asked:?} refuses what [1e-3, 1e3] finds")
+                    });
+                    assert!(
+                        got[0] <= base[0] * (1.0 + 1.0e-6) && got[1] >= base[1] * (1.0 - 1.0e-6),
+                        "{z:?} {bodies:?}: the ask {asked:?} gives {got:?}, less than {base:?}"
+                    );
+                }
+            }
+        }
+    }
+    assert!(narrow > 0, "no slice with a narrow realised part was tried");
+}
+
+#[test]
+fn energy_axes_mass_ratio_ask_width() {
+    check_ask_width(&|z, bodies, asked, p| {
+        bodies_slice(z, bodies, asked, Mapping::Warped, p).map(|chart| chart.ratio)
+    });
+}
+
+negative_control!(
+    energy_axes_mass_ratio_ask_width,
+    "a grid of 257 points even in ln q over the ask steps over the realised part once the ask is wide",
+    expected = "refuses the chart",
+    check_ask_width(&|z, bodies, asked, p| {
+        let chart = bodies_slice(z, bodies, asked, Mapping::Linear, p)?;
+        let (lo, hi) = (asked[0].max(f64::MIN_POSITIVE).ln(), asked[1].ln());
+        (0..=256)
+            .map(|i| (lo + (hi - lo) * f64::from(i) / 256.0).exp())
+            .any(|q| chart.realised(q, p))
+            .then(|| bodies_slice(z, bodies, asked, Mapping::Warped, p).map(|chart| chart.ratio))
+            .flatten()
+    })
+);
+
 /// How a mass-ratio arm forms its mass controls: the chart's own (its link's inverse at the ratio's masses), or the
 /// control's formula written for softmax_tanh at `μ_max = 5` alone, `m_i/m₀ = exp(5·tanh z_i)` solved for `z_i`.
 #[derive(Clone, Copy, PartialEq)]
