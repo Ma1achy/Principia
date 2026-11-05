@@ -1509,6 +1509,10 @@ tilted `(ν, K)`, `Φ_θ,K` and `Φ_θ,L_z` charts.*
   floored form is chosen.
 - **Waits:** nothing in TASK-M2-37; a Chart-builder lone `t` axis at a held `L_z ≠ 0` (TASK-M8-18) stays refused,
   warped, until the ruling.
+- **4 Nov 2026:** ruled by the owner 4 Nov; the ruling's port closes it. The owner's words: "RQ-683 (#387): same rule for a
+  single energy axis at held spin." PR #387 applies it: the warped axis exists, on the floor
+  `K* = L_z²/2I + K_max·t^γ_K`, and the linear option keeps its fixed values and blanks its infeasible pixels.
+
 ## RQ-684: R-360 has every control run across the `xtask-ci` shards, through `cargo xtask controls`; three now run in `ci-workspace` under nextest *(conflict: R-360 and REQ-SYS-077 against PR #395's item (f), decided per R-369; the code review (5763833425, F3) and qa review (5763914449, Q1) of PR #395; context: `tooling/ci-one-build`)*
 
 *Queued by the implementer of PR #395, on the orchestrator's decision; recorded for the owner. Nothing waits.*
@@ -2027,3 +2031,93 @@ chosen.*
 - **Applied meanwhile:** nothing: the gate is not built (no `crates/` file names it), and dispatch refuses `ε ≠ 0` (R-654; TASK-M3-06), so no softened run exists.
 - **Waits:** TASK-M9-39 (REQ-INT-111, REQ-SYS-094, REQ-SYS-095); TASK-M3-12 (REQ-EVT-006), which builds the gate and cannot write its third condition at `ε = 0` without this ruling; and TASK-M4-03 (REQ-INT-061), which writes every kernel branch input's form into `branch_inputs.rs`, what it and REQ-INT-061 hold of this input following the ruling. REQ-EVT-006 is not the whole of the reach: those two tasks are it at `ε = 0`, and what depends on them waits through them. *Was:* "their waiting is for the ruling to say" (applied per R-369).
 - **Notes** (physics review 5771861276 of PR #408, for the port of the ruling): (1) `softened_tier_l`, REQ-INT-111's verify and TASK-M4-03's note and REQ-INT-061 now defer to this entry, and under option (a) or (b) those lines are re-read and take the ruling's exception, since the decision can then fork; all three tasks wait here, so nothing is built against them first. (2) TASK-M3-12's `ionisation_gate`, with its fixtures `three_way_unbound` and `one_bound_pair`, has no state with all pairs unbound, all separating and `E < 0`, so dropping the `E > 0` test passes it. The port adds that state as a control, if the condition stands: unit masses on an equilateral triangle of side `r`, each moving radially outward at speed `u` with `u²` just above `4/(3r)`, giving all pairs unbound and `E ≈ −1/r`. (3) REQ-INT-057 and REQ-VAL-059 require escape decisions and the terminal label bit-identical across backends, and ionisation is `escape` with `detail = 3`, so under option (a) or (b) they need the ruling's exception too.
+
+## RQ-700: A warped virial axis with a range off 0 at a held `L_z ≠ 0`: where its bottom row sits *(physics; silence: the owner's ruling of 4 Nov 2026 on RQ-683; R-506 W2; context: TASK-M2-37)*
+
+*Queued 4 Nov 2026 from the physics review (5775188369, E1) of PR #387, by the orchestrator's decision. For the owner:
+it is physics; the two options draw different systems.*
+
+- **File, section:**
+  - the owner's ruling of 4 Nov 2026 on RQ-678 and RQ-683: "The floor uses the pixel's own held L_z, additive form K =
+    L_z²/2I + K_max·t^γ", and "RQ-683 (#387): same rule for a single energy axis at held spin."
+  - `docs/design/principia_chart_reference.md` § "2.1 Feasibility, and the warp that makes every pixel valid", the
+    virial ratio's paragraph: "Warped, it runs over the range's feasible part `[Q₀, Q_hi]`, `Q₀ = max(Q_lo, 0)`:
+    `Q(t) = Q₀ + (Q_hi − Q₀)·t^γ_K`".
+- **The silence:** the ruling's line starts at 0, but a virial axis keeps its asked range, so `Q₀ > 0` is possible. The
+  ruling and the corpus do not say how the floor sits under a range off 0. At `Q₀ = 0` both options below agree, and
+  both keep every pixel a system.
+- **The question:** on a warped virial axis with `Q₀ > 0` at a held `L_z ≠ 0`, what is the pixel's ratio?
+- **Options seen:** with `Q_min(U) = L_z²/(I·|U|)`, (a) as built, `K* = L_z²/2I + Q(t)·|U|/2`, the pixel's ratio
+  `Q(t) + Q_min(U)`, so the asked bottom `Q₀` is never drawn, even where it is feasible; (b) the floor under the rise
+  only, the ratio `max(Q₀, Q_min(U)) + (Q_hi − Q₀)·t^γ_K`, the bottom row at `Q₀` where `Q₀` is feasible and on the
+  floor elsewhere.
+- **Applied meanwhile:** (a), the ruling's literal form, recorded in chart_reference §2.1 (PR #387).
+- **Waits:** nothing: RQ-682 keeps the virial axis off every builder chart.
+
+## RQ-701: Whether and how a `MixedEnergy` chart's held `L_z` or `K` tilts and slices: a hidden coordinate under R-633 that nothing builds or queues *(physics; silence: R-633; the owner's ruling of 4 Nov 2026 on RQ-678 and RQ-683; chart_decoder_contract § "Tilt (basis edit)"; TASK-M2-52's six charts; context: TASK-M2-37)*
+
+*Queued 5 Nov 2026 by TASK-M2-37's fix round, on the orchestrator's decision (applied per R-369), from code review
+5778057939 (F1) and physics review 5778075140 (F4) of PR #387; rewritten from code review 5779819090 (F2) and physics
+review 5779878848 (F1), which found the first entry short of the contract's clause and of the ruling's lines. For the
+owner: yes, it is physics; the tilt changes which systems the chart shows.*
+
+- **File, section:**
+  - `docs/contracts/principia_chart_decoder_contract.md` § "Tilt (basis edit)", "Charts that hold a block by a
+    construction": "where it holds a block by a physical construction, its hidden coordinates are that construction's
+    physical parameters, tilted and sliced by value as the shape sphere's `p_λ` targets are, `d` added to the physical
+    value at the slice centre". `MixedEnergy` holds the momentum block by chart_reference §2.2's construction, its
+    `held` the parameter.
+  - The owner's ruling of 4 Nov 2026 on RQ-678, the warped mode: "Held energy-type hidden coordinates (R-633 c2) are
+    tilted in their warp coordinate in this mode, so held K stays ≥ 0. This amends R-633's "by value" for warped mode
+    only."
+  - The same ruling, the linear mode: "Rows keep fixed physical values; infeasible cells are "not a system", blank per
+    R-470; held coordinates tilt by value."
+  - The same ruling, on RQ-683: "RQ-683 (#387): same rule for a single energy axis at held spin."
+  - The same ruling, its last line: "If the warped-coordinate tilt of held K turns out not to be well-defined
+    somewhere, come back with the case."
+  - `docs/design/principia_chart_reference.md` § "4.5 The Burrau-family chart maps", the hidden coordinates' table,
+    which names only: "`(ν, K)`, `Φ_θ,K` (and `Φ_strip,K`, the same map) | the held `L_z` (0 untilted), a physical
+    value" and "`Φ_θ,L_z` | the held `K`, a physical value".
+  - `plan/tasks/M2/TASK-M2-52.md` § "Deliverables": "The six charts' hidden coordinates … the held `L_z` of `(ν, K)`
+    and `Φ_θ,K`; the held `K` of `Φ_θ,L_z`."
+  - `crates/kernel/src/chart/physical.rs`, `MixedEnergy`'s `top`: "`K_max` on `K`, `KE` and `E`, `Q_hi`, the top of the
+    asked range, on the virial ratio; not read on `L_z`."
+- **The silence:** the principle makes a lone-axis chart's held `L_z`, or the held `K` on an `L_z` axis, a hidden
+  coordinate, but the table and TASK-M2-52's six charts do not include `MixedEnergy`. So its tilt and its slice are
+  neither built nor queued, and `Hidden::hidden` on the chart lists only the frozen controls. The ruling reaches a
+  lone axis through its RQ-683 line. In the linear mode that settles the form: the held value tilts by value, and the
+  contract's clause slices it by value too; only the build is missing. In the warped mode the ruling amends "by value"
+  for the tilt and does not say what becomes of the slice. Its warp coordinate is not well-defined on these charts as
+  they stand, which is the case its last line asks to have brought back:
+  - **Held `L_z`, on a `K`, `KE`, `E` or virial axis.** `L_z`'s warp coordinate, `(2s − 1)·L_max(K)`, reads a held `K`,
+    and these charts hold none: `K` is what the pixel's axis sets. That rules out that one coordinate, not a tilt: the
+    additive floor takes any real `L_z`. The ruling's reason, "so held K stays ≥ 0", does not speak of `L_z`.
+  - **Held `K`, on an `L_z` axis.** The warp coordinate, `K = K_max·t^γ_K`, `t₀ = (K₀/K_max)^(1/γ_K)`, is well-formed,
+    and is the one the ruling's reason names. It needs a `K_max` this chart does not read: a missing value (R-71), not
+    a missing form. `top` is the field that would hold it.
+
+  These two concern different axes, so no one form has to meet both.
+- **The question:** in the warped mode, how does a tilt move the held `L_z` on a lone `K`, `KE`, `E` or virial axis,
+  and the held `K` on a lone `L_z` axis; and does a slice of the held value move the same way, or by value? In the
+  linear mode the form is the ruling's; only the build is open, and it waits on the warped answer so that both arms
+  come in together.
+- **Options seen, held `L_z`:**
+  - (a) By value on the floor: `L_z = L_z₀ + d`, §2.1's floor at the pixel's own tilted `L_z`. Every pixel stays a
+    system and no `L_max` is needed. Cost: the ruling's warp sentence then reaches held `K` only, and `|L_z|` has no
+    bound but the slider's span.
+  - (b) A warp coordinate on a fixed scale, `L_z = (2s − 1)·√(2·I·K_max)`, `s` bounded. Cost: a scale §2.1 does not
+    write for these charts, which `K`, `KE` and `E` can read through `K_max` and the virial axis cannot, its `top`
+    being `Q_hi`; and `s` needs a rule past its edges.
+  - (c) Another, stated by the owner.
+
+  The ruling's port queues the same question and options (a) to (c) for `(ν, K)`, `Φ_θ,K` and `Φ_strip,K`; the answer
+  there can be this one.
+- **Options seen, held `K`:**
+  - (a) The warp line, `K = K_max·t^γ_K`, with `K_max` supplied to the chart. Cost: a value this chart does not hold,
+    a calibration requirement under R-71 with REQ-CHART-044's placeholder meanwhile.
+  - (b) Another, stated by the owner.
+- **Slicing, in every option above:** by value, the contract's clause as it stands, or in the tilt's own coordinate.
+  The two agree at an offset of 0 and write different held values away from it.
+- **Applied meanwhile:** the held value is neither tilted nor sliced: the chart's hidden coordinates stay its frozen
+  controls, and chart_reference §2.1 says so (PR #387). `d = 0` reproduces the untilted chart in every option.
+- **Waits:** a tilt or a slice of the held value on a lone-axis chart; nothing else.

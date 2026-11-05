@@ -1131,7 +1131,7 @@ negative_control!(
 
 /// The virial ratio under the linear option at a held `L_z ≠ 0` (chart_reference §2.1: "Under the linear option the
 /// axis is `Q = Q_max·t`, affine, and its pixels with `K* < L_z²/2I` are not a system"), the chart built under
-/// `mapping` (`Linear`; the control's `Warped`, whose `Q_max·t^γ_K` is not the linear axis's `K*`): those pixels are
+/// `mapping` (`Linear`; the control's `Warped`, whose floor makes those pixels systems): those pixels are
 /// refused and the others decode `K* = Q_max·t·|U|/2`; a pixel on the boundary, to this test's rounding, is not judged.
 fn check_virial_linear(mapping: Mapping) {
     let held = 0.3;
@@ -1168,8 +1168,8 @@ fn qa_physical_axis_warps_virial_linear() {
 
 negative_control!(
     qa_physical_axis_warps_virial_linear,
-    "the warped virial axis, Q_max·t^γ_K, is not the linear axis's system",
-    expected = "is not its system",
+    "the warped virial axis stands on the floor, so its pixels with K* < L_z²/2I are systems",
+    expected = "with K* < L_z²/2I is a system",
     check_virial_linear(Mapping::Warped)
 );
 
@@ -1309,63 +1309,80 @@ fn config_i<Q: EnergyAxis>(u: f64, t: f64) -> f64 {
     phys(&d).i
 }
 
-/// A warped lone `Q` axis at the held `L_z = held` (chart_reference §2.1, "A warped `t` axis at a held `L_z ≠ 0` is
-/// not offered"; R-471 E1, R-506 W1; RQ-683 (a), applied per R-369): its line of the warp reaches `K* < L_z²/2I`
-/// inside the square (recomputed here from §2.1's line and the pixel's own `I`), so the chart is not offered, and
-/// `validate` refuses every pixel of `[0,1]²`: none validates, clamps or projects, and R-408's count makes each
-/// forbidden, none a system. `k_star` is §2.1's `K*` at `(t, U)`.
-fn check_unoffered_axis<Q: EnergyAxis>(held: f64, k_star: &dyn Fn(f64, f64) -> f64) {
-    let chart = lone::<Q>(held, Mapping::Warped, gamma_k());
+/// A lone `Q` axis at the held `L_z = held` (chart_reference §2.1, "A warped `t` axis at a held `L_z ≠ 0` stands on the
+/// floor"; the owner's ruling of 4 Nov 2026 on RQ-683; R-471 E1, R-506 W1), under `mapping` at `gamma`: warped, every
+/// pixel of `[0,1]²` validates, decodes §2.1's `K* = L_z²/2I + line`, the pixel's own `I`, and the held `L_z`, and R-408's
+/// count makes each a system. `line` is §2.1's line at `(t, U)`, which alone reaches `K* < L_z²/2I` inside the square,
+/// so the floor has ground.
+fn check_floored_axis<Q: EnergyAxis>(
+    held: f64,
+    mapping: Mapping,
+    gamma: f64,
+    line: &dyn Fn(f64, f64) -> f64,
+) {
+    let chart = lone::<Q>(held, mapping, gamma);
     let name = format!("{:?}", Q::QUANTITY);
     let mut nonsystems = 0;
     for [u, t] in unit() {
-        let base = phys(&lone::<Q>(0.0, Mapping::Warped, gamma_k()).decode::<Defaults, f64>(u, t));
-        let k = k_star(t, base.u);
+        let base = phys(&lone::<Q>(0.0, Mapping::Warped, gamma).decode::<Defaults, f64>(u, t));
+        let k = line(t, base.u);
         nonsystems += usize::from(held * held > 2.0 * base.i * k * (1.0 + 64.0 * EPS));
         let valid = chart.validate(u, t);
+        let d = chart.decode::<Defaults, f64>(u, t);
         assert!(
-            matches!(valid, ValidationResult::Reject { .. }),
-            "{name} warped at the held L_z = {held}: ({u}, {t}) is offered: {valid:?}"
+            valid == ValidationResult::Valid && d.degenerate.is_none(),
+            "{name} warped at the held L_z = {held}: ({u}, {t}) is refused: {valid:?}"
+        );
+        let p = phys(&d);
+        let want = held * held / (2.0 * base.i) + k;
+        assert!(
+            (p.k - want).abs() <= (TOL_K + RND) * EPS * want
+                && (p.lz - held).abs()
+                    <= TOL_L * EPS * (held.abs() + (2.0 * want).sqrt()) + RND * EPS * p.lz_scale,
+            "{name} warped at the held L_z = {held}: ({u}, {t}) is not its system: K = {} not {want}, L_z = {}",
+            p.k,
+            p.lz
         );
         assert_eq!(
-            count([Sides::both(ExtensionType::Bounded); 2], [u, t], false),
-            Count::Forbidden,
-            "{name}: a refused in-square pixel is not forbidden"
+            count([Sides::both(ExtensionType::Bounded); 2], [u, t], true),
+            Count::System,
+            "{name}: an in-square pixel is not a system"
         );
     }
     assert!(
-        held == 0.0 || nonsystems > 0,
-        "{name} warped at the held L_z = {held} has no pixel with K* < L_z²/2I: the refusal has no ground"
+        nonsystems > 0,
+        "{name} at the held L_z = {held} has no pixel its line alone leaves below L_z²/2I: the floor has no ground"
     );
 }
 
-/// Every warped lone `K`, `KE`, `E` and virial axis at the held `L_z = held` refused (the section above).
-fn check_unoffered(held: f64) {
-    let g = gamma_k();
+/// Every lone `K`, `KE`, `E` and virial axis at the held `L_z = held` on the floor (the section above).
+fn check_floored(held: f64, mapping: Mapping, g: f64) {
     let kt = move |t: f64, _: f64| warp_k(g, t);
-    check_unoffered_axis::<AxisK>(held, &kt);
-    check_unoffered_axis::<AxisKE>(held, &kt);
-    check_unoffered_axis::<AxisE>(held, &kt);
-    check_unoffered_axis::<AxisVirial>(held, &move |t, u| Q_MAX * t.powf(g) * u.abs() / 2.0);
+    check_floored_axis::<AxisK>(held, mapping, g, &kt);
+    check_floored_axis::<AxisKE>(held, mapping, g, &kt);
+    check_floored_axis::<AxisE>(held, mapping, g, &kt);
+    check_floored_axis::<AxisVirial>(held, mapping, g, &move |t, u| {
+        Q_MAX * t.powf(g) * u.abs() / 2.0
+    });
 }
 
 #[test]
-fn qa_energy_axes_warped_held_lz_refused() {
-    check_unoffered(HELD_LZ);
-    check_unoffered(-HELD_LZ);
+fn qa_energy_axes_warped_held_lz_floored() {
+    check_floored(HELD_LZ, Mapping::Warped, gamma_k());
+    check_floored(-HELD_LZ, Mapping::Warped, gamma_k());
 }
 
 negative_control!(
-    qa_energy_axes_warped_held_lz_refused,
-    "at the held L_z = 0 the warped axes are offered, every pixel a system (qa_energy_axes_warped_every_pixel)",
-    expected = "is offered",
-    check_unoffered(0.0)
+    qa_energy_axes_warped_held_lz_floored,
+    "the line with no floor, K_max·t, the linear chart at γ_K = 1, blanks its bottom rows",
+    expected = "is refused",
+    check_floored(HELD_LZ, Mapping::Linear, 1.0)
 );
 
 /// The linear option at the same held `L_z = 0.3` is offered (chart_reference §2.1: "Under the linear option it is
 /// offered, its pixels with `K* < L_z²/2I` not a system"), on a lone `K` and `KE` axis, `K* = K_max·t`: a pixel with
 /// `K* < L_z²/2I` at its own `I` is refused, one above it validates and decodes `K*` and the held `L_z`, and both kinds
-/// occur. `mapping` is the chart's (`Linear`; the control's `Warped`, refused everywhere).
+/// occur. `mapping` is the chart's (`Linear`; the control's `Warped`, whose floor makes those pixels systems).
 fn check_linear_held(mapping: Mapping) {
     fn axis<Q: EnergyAxis>(mapping: Mapping) {
         let chart = lone::<Q>(HELD_LZ, mapping, gamma_k());
@@ -1417,8 +1434,8 @@ fn qa_energy_axis_linear_option_held_lz() {
 
 negative_control!(
     qa_energy_axis_linear_option_held_lz,
-    "the warped axis at the held L_z = 0.3 is refused everywhere, so its feasible pixels are not systems",
-    expected = "is not its system",
+    "the warped axis at the held L_z = 0.3 stands on the floor, so its pixels with K_max·t < L_z²/2I are systems",
+    expected = "with K* < L_z²/2I is a system",
     check_linear_held(Mapping::Warped)
 );
 

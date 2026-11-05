@@ -1876,70 +1876,1026 @@ negative_control!(
     check_virial_range(|[_, hi], mapping, t| virial_want([0.0, hi], mapping, t))
 );
 
-/// A warped lone `K`, `KE`, `E` or virial axis at a held `L_z ≠ 0` is not offered (chart_reference §2.1; R-471 E1,
-/// R-506; RQ-683): `validate` refuses every point of `[−¼, 1¼]²` and every non-finite one, naming `K ≥ L_z²/2I`. At
-/// the held `held`, so `held = 0` (the control) is offered and fails it. The cases that stay offered: a held 0 or −0,
-/// the linear option at the same held value, and a warped `L_z` axis at a held `K ≠ 0`.
-fn check_unoffered(held: f64) {
-    fn refused<Q: EnergyAxis>(held: f64) {
-        let chart = lone::<Q>(held, Mapping::Warped);
+// ── A warped `t` axis at a held `L_z ≠ 0`: the floor (the owner's ruling of 4 Nov 2026 on RQ-683) ───────────────────
+
+/// The held values of the floor's tests, either sign, a tiny one and one past `K_max`'s own `L_max`.
+const HELD_LZ: [f64; 6] = [0.3, -0.3, 1.0e-300, 0.1, 1.7, 40.0];
+
+/// `n` values of `|L_z|` across `10^−12` to `10^4`, from a fixed generator, for the floor's rounding: `l²/2` lands on
+/// both sides of its float.
+fn held_values(n: u32) -> Vec<f64> {
+    let mut state = 0x9E37_79B9_7F4A_7C15_u64;
+    (0..n)
+        .map(|_| {
+            state ^= state << 13;
+            state ^= state >> 7;
+            state ^= state << 17;
+            let unit = (state >> 11) as f64 / (1u64 << 53) as f64;
+            10f64.powf(-12.0 + 16.0 * unit)
+        })
+        .collect()
+}
+
+/// `floor` is the least float the exact test finds feasible at each `L_z`, whichever way `l²/2` rounded, and some of
+/// them rounded below.
+fn check_floor_least(floor: fn(f64) -> f64) {
+    let mut raised = 0;
+    for l in held_values(4096) {
+        let k = floor(l);
         assert!(
-            !chart.offered(),
-            "{:?} warped at L_z = {held} is offered",
+            !infeasible(1.0, k, l),
+            "the floor at L_z = {l} rounds below L_z²/2"
+        );
+        assert!(
+            infeasible(1.0, invariant::WarpReal::below(k), l),
+            "the floor at L_z = {l} is not the least feasible float"
+        );
+        raised += usize::from(k != l * l / 2.0);
+    }
+    assert!(raised > 0, "no L_z rounded below: the sweep tests nothing");
+}
+
+#[test]
+fn energy_axes_warped_floor_rounding() {
+    check_floor_least(invariant::k_floor);
+}
+
+negative_control!(
+    energy_axes_warped_floor_rounding,
+    "the rounded L_z²/2 alone, not raised, falls below the exact bound on about half the sweep",
+    expected = "rounds below L_z²/2",
+    check_floor_least(|l| l * l / 2.0)
+);
+
+/// `floor`'s edges at f64: 0 at `±0`, either sign alike, and the least normal float where `l²/2` is below it.
+fn check_floor_edges(floor: fn(f64) -> f64) {
+    assert_eq!(floor(0.0).to_bits(), 0, "the floor at +0");
+    assert_eq!(floor(-0.0).to_bits(), 0, "the floor at −0");
+    let least = f64::MIN_POSITIVE;
+    assert_eq!(floor(1.0e-300), least, "the floor where l² underflows");
+    assert_eq!(floor(-1.0e-300), least, "the floor where l² underflows");
+    assert_eq!(floor(5.0e-324), least, "the floor of a subnormal spin");
+}
+
+/// The floor's edges at both precisions, and the step up's own, which leaves `+∞` and NaN where they are.
+#[test]
+fn energy_axes_warped_floor_edges() {
+    use invariant::{k_floor, WarpReal};
+    check_floor_edges(k_floor);
+    assert_eq!(k_floor(0.0_f32).to_bits(), 0);
+    assert_eq!(k_floor(-0.0_f32).to_bits(), 0);
+    assert_eq!(k_floor(1.0e-30_f32), f32::MIN_POSITIVE);
+    assert_eq!(0.0_f64.above().to_bits(), 1);
+    assert_eq!(0.0_f32.above().to_bits(), 1);
+    assert_eq!(1.0_f64.above(), 1.0 + f64::EPSILON);
+    assert_eq!(1.0_f32.above(), 1.0 + f32::EPSILON);
+    assert_eq!(f64::MAX.above(), f64::INFINITY);
+    assert_eq!(f32::MAX.above(), f32::INFINITY);
+    assert_eq!(f64::INFINITY.above(), f64::INFINITY);
+    assert_eq!(f32::INFINITY.above(), f32::INFINITY);
+    assert!(f64::NAN.above().is_nan() && f32::NAN.above().is_nan());
+}
+
+negative_control!(
+    energy_axes_warped_floor_edges,
+    "the rounded l²/2 alone leaves an underflowed spin's bottom row at K* = 0, below any spin",
+    expected = "the floor where l² underflows",
+    check_floor_edges(|l| l * l / 2.0)
+);
+
+/// `x` as a backend that flushes subnormal results leaves it.
+fn flushed(x: f64) -> f64 {
+    if x.is_subnormal() {
+        0.0
+    } else {
+        x
+    }
+}
+
+/// [`flushed`] at f32.
+fn flushed32(x: f32) -> f32 {
+    if x.is_subnormal() {
+        0.0
+    } else {
+        x
+    }
+}
+
+/// Under an emulated flush of the sum and of its terms, `floor` keeps the bottom row and the row above it feasible, and
+/// is normal or 0, for a tiny spin at both precisions (the determinism note's rule 6).
+fn check_floor_flushed(floor: fn(f64) -> f64, floor32: fn(f32) -> f32) {
+    for l in [1.0e-160, -1.0e-170, 1.0e-200, 1.0e-300, 2.0e-310] {
+        let k = floor(l);
+        assert!(k.is_normal(), "the floor at L_z = {l} is subnormal: {k}");
+        for line in [0.0, 1.0e-320] {
+            let sum = flushed(flushed(k) + flushed(line));
+            assert!(!infeasible(1.0, sum, l), "flushed, L_z = {l} blanks");
+        }
+    }
+    for l in [1.0e-20_f32, -1.0e-22, 1.0e-30, 1.0e-38, 1.0e-42] {
+        let k = floor32(l);
+        assert!(k.is_normal(), "the floor at L_z = {l} is subnormal: {k}");
+        for line in [0.0, 1.0e-42] {
+            let sum = flushed32(flushed32(k) + flushed32(line));
+            assert!(!infeasible(1.0, sum, l), "flushed, L_z = {l} blanks");
+        }
+    }
+}
+
+#[test]
+fn energy_axes_warped_floor_flushed() {
+    check_floor_flushed(invariant::k_floor, invariant::k_floor);
+}
+
+negative_control!(
+    energy_axes_warped_floor_flushed,
+    "a floor stepped up from the rounded l²/2, subnormal for a tiny spin, flushes to 0 and blanks the bottom row",
+    expected = "is subnormal",
+    check_floor_flushed(
+        |l| invariant::WarpReal::above(l * l / 2.0),
+        |l| invariant::WarpReal::above(l * l / 2.0)
+    )
+);
+
+/// Every pixel of a warped lone `Q` axis at every held `L_z` is a system at that `L_z`, under `mapping`: the bottom row
+/// included, with the rounding at the floor (the sweep's values at `u = ½`, `t = 0`, on the whole grid for
+/// [`HELD_LZ`]).
+fn check_held_axis<Q: EnergyAxis>(mapping: Mapping) {
+    for held in HELD_LZ {
+        check_every_pixel(
+            &format!("{:?} at L_z = {held}", Q::QUANTITY),
+            system(&lone::<Q>(held, mapping)),
+        );
+    }
+    for held in held_values(256) {
+        let chart = lone::<Q>(held, mapping);
+        assert!(
+            chart.validate(0.5, 0.0) == ValidationResult::Valid,
+            "the bottom row of {:?} at L_z = {held} is not a system",
             Q::QUANTITY
         );
-        let all = grid(-0.25, 1.25)
-            .into_iter()
-            .chain([[f64::NAN, 0.5], [0.5, f64::INFINITY]]);
-        for [u, v] in all {
-            assert_eq!(
-                chart.validate(u, v),
-                ValidationResult::Reject {
-                    failed: Constraint::KAboveLzBound
-                },
-                "{:?} warped at L_z = {held}: ({u}, {v}) is not refused",
+    }
+}
+
+fn check_held_axes(mapping: Mapping) {
+    check_held_axis::<AxisK>(mapping);
+    check_held_axis::<AxisKE>(mapping);
+    check_held_axis::<AxisE>(mapping);
+    check_held_axis::<AxisVirial>(mapping);
+}
+
+#[test]
+fn energy_axes_warped_held_lz_every_pixel() {
+    check_held_axes(Mapping::Warped);
+}
+
+negative_control!(
+    energy_axes_warped_held_lz_every_pixel,
+    "the linear option at the same held L_z adds no floor, so its low pixels are not systems",
+    expected = "is not a system",
+    check_held_axes(Mapping::Linear)
+);
+
+/// Each warped lone axis decodes `K* = floor(held) + line` and the held `L_z`; `E` reads `U + K*` at the pixel's own `U`
+/// and the virial ratio `Q(t)·|U|/2` above the floor; past the top row `K*` goes on and exceeds `K_max`. `floor` is the
+/// floor the test expects.
+fn check_held_targets(floor: fn(f64) -> f64) {
+    fn axis<Q: EnergyAxis>(held: f64, floor: f64, line: &dyn Fn(f64, f64) -> f64) {
+        let chart = lone::<Q>(held, Mapping::Warped);
+        for [u, t] in grid(0.0, 1.0) {
+            let d = chart.decode::<Defaults, f64>(u, t);
+            let (lz, k) = lz_k(&d);
+            let u_pot = kernel::decode::descriptor::potential(&d.ic);
+            let want = floor + line(t, u_pot);
+            let eps = f64::EPSILON;
+            assert!(
+                (k - want).abs() <= TOL_K * eps * want.max(f64::MIN_POSITIVE)
+                    && (lz - held).abs() <= TOL_L * eps * (held.abs() + (2.0 * want).sqrt()),
+                "{:?} at L_z = {held}, ({u}, {t}): K = {k}, L_z = {lz}, not K* = {want}",
                 Q::QUANTITY
             );
         }
     }
-    refused::<AxisK>(held);
-    refused::<AxisKE>(held);
-    refused::<AxisE>(held);
-    refused::<AxisVirial>(held);
-    for zero in [0.0, -0.0] {
-        assert!(
-            lone::<AxisK>(zero, Mapping::Warped).offered()
-                && lone::<AxisVirial>(zero, Mapping::Warped).offered(),
-            "a warped axis at L_z = {zero} is not offered"
-        );
+    let (top, g) = (k_max(), gamma_k());
+    for held in [0.3, -0.3, 1.7] {
+        let f = floor(held);
+        let kinetic = move |t: f64, _: f64| top * t.powf(g);
+        axis::<AxisK>(held, f, &kinetic);
+        axis::<AxisKE>(held, f, &kinetic);
+        axis::<AxisE>(held, f, &kinetic);
+        axis::<AxisVirial>(held, f, &move |t, u| top * t.powf(g) * u.abs() / 2.0);
     }
+}
+
+#[test]
+fn energy_axes_warped_held_lz_targets() {
+    check_held_targets(|l| l * l / 2.0);
+}
+
+negative_control!(
+    energy_axes_warped_held_lz_targets,
+    "the unfloored line K_max·t^γ is the warp of a held L_z = 0 only",
+    expected = "not K* =",
+    check_held_targets(|_| 0.0)
+);
+
+/// The bottom row under `mapping`, at the precision `$r`, across the sweep's held values: the construction feasible on
+/// every axis's pixel, the chart built at that precision.
+macro_rules! check_bottom_row {
+    ($r:ty, $axis:ty, $mapping:expr) => {
+        for l in held_values(1024) {
+            let frozen = Z0.map(|z| z as $r);
+            let chart: MixedEnergy<Alpha, $axis, Defaults, $r> = MixedEnergy::new(
+                frozen,
+                [0.2, 1.3],
+                k_max() as $r,
+                gamma_k() as $r,
+                l as $r,
+                $mapping,
+            );
+            let (_, outcome) = chart.decode_from(frozen, 0.5, 0.0, &LinkParams::DEFAULT);
+            assert!(
+                outcome == Outcome::Feasible,
+                "the bottom row at L_z = {l} is {outcome:?}"
+            );
+        }
+    };
+}
+
+/// The bottom row, `t = 0`, is a system at both precisions on every warped axis.
+fn check_bottom_rows(mapping: Mapping) {
+    check_bottom_row!(f64, AxisK, mapping);
+    check_bottom_row!(f64, AxisKE, mapping);
+    check_bottom_row!(f64, AxisE, mapping);
+    check_bottom_row!(f64, AxisVirial, mapping);
+    check_bottom_row!(f32, AxisK, mapping);
+    check_bottom_row!(f32, AxisKE, mapping);
+    check_bottom_row!(f32, AxisE, mapping);
+    check_bottom_row!(f32, AxisVirial, mapping);
+}
+
+#[test]
+fn energy_axes_warped_bottom_row() {
+    check_bottom_rows(Mapping::Warped);
+}
+
+negative_control!(
+    energy_axes_warped_bottom_row,
+    "the linear option's row t = 0 is K* = 0, below any spin, so it must fail",
+    expected = "the bottom row at L_z",
+    check_bottom_rows(Mapping::Linear)
+);
+
+/// Past the square: below `t = 0` a warped `t` axis clamps to the floor, past `t = 1` it continues on `K`, `KE` and `E`
+/// (R-508), and the virial ratio is bounded past both edges.
+fn check_held_sides(held: f64, want: fn(f64) -> f64) {
+    let moved = |v: f64| ValidationResult::Clamp {
+        u: 0.5,
+        v,
+        moved: [false, true],
+        failed: Constraint::KNonNegative,
+    };
+    let k = lone::<AxisK>(held, Mapping::Warped);
+    assert_eq!(k.validate(0.5, -0.25), moved(0.0), "t < 0, K");
+    assert_eq!(k.validate(0.5, 1.25), ValidationResult::Valid, "t > 1, K");
+    let q = lone::<AxisVirial>(held, Mapping::Warped);
+    assert_eq!(q.validate(0.5, -0.25), moved(0.0), "t < 0, virial");
+    assert_eq!(q.validate(0.5, 1.25), moved(1.0), "t > 1, virial");
+    let floor = lz_k(&k.decode::<Defaults, f64>(0.5, 0.0)).1;
     assert!(
-        !lone::<AxisK>(f64::NAN, Mapping::Warped).offered(),
-        "a warped axis at a NaN L_z is offered"
-    );
-    let linear = lone::<AxisK>(0.3, Mapping::Linear);
-    assert!(
-        linear.offered() && linear.validate(0.5, 1.0) == ValidationResult::Valid,
-        "the linear option at L_z = 0.3 is not offered"
-    );
-    let lz = lone::<AxisLz>(0.3, Mapping::Warped);
-    assert!(
-        lz.offered() && lz.validate(0.5, 0.5) == ValidationResult::Valid,
-        "a warped L_z axis at K = 0.3 is not offered"
+        (floor - want(held)).abs() <= TOL_K * f64::EPSILON * floor,
+        "the clamp's t = 0 reads K = {floor}, not the floor"
     );
 }
 
 #[test]
-fn energy_axes_warped_held_lz_unoffered() {
-    check_unoffered(0.3);
-    check_unoffered(-1e-300);
+fn energy_axes_warped_held_lz_sides() {
+    check_held_sides(0.3, |l| l * l / 2.0);
+    check_held_sides(-1.7, |l| l * l / 2.0);
 }
 
 negative_control!(
-    energy_axes_warped_held_lz_unoffered,
-    "a held L_z = 0 is offered and its pixels are systems, so it must fail",
-    expected = "is offered",
-    check_unoffered(0.0)
+    energy_axes_warped_held_lz_sides,
+    "a clamp read at K = 0 is the unfloored warp's, so it must fail",
+    expected = "not the floor",
+    check_held_sides(0.3, |_| 0.0)
+);
+
+/// A warped axis at a held `L_z ≠ 0` stays a system under a tilt into a mass logit and `z_β`: the pixel's own
+/// `U` and masses move, the floor, at `I = 1`, does not.
+fn check_held_tilted(mapping: Mapping) {
+    let chart = lone::<AxisE>(0.3, mapping);
+    let shift = Shift {
+        x: 6,
+        dx: 0.4,
+        y: 1,
+        dy: 0.3,
+        two: true,
+    };
+    for [u, t] in grid(0.0, 1.0) {
+        let valid = chart.validate_shifted(u, t, &shift, &LinkParams::DEFAULT);
+        assert!(
+            valid == ValidationResult::Valid,
+            "({u}, {t}) tilted is not a system: {valid:?}"
+        );
+    }
+}
+
+#[test]
+fn energy_axes_warped_held_lz_tilted() {
+    check_held_tilted(Mapping::Warped);
+}
+
+negative_control!(
+    energy_axes_warped_held_lz_tilted,
+    "the linear option under the same tilt keeps its fixed values, so its low pixels are not systems",
+    expected = "tilted is not a system",
+    check_held_tilted(Mapping::Linear)
+);
+
+/// The saturation across the overflow band, `l²` past the greatest float, `l²/2` finite up to `√2` above it, and past
+/// it, at f64: `floor` leaves the construction finite and §2.2's exact test labels the pixel. Beside the greatest float
+/// itself the rigid rotation's own momenta overflow, floor or none, and `validate` refuses the chart
+/// ([`check_unrepresentable`]).
+fn check_floor_saturates(floor: fn(f64) -> f64) {
+    for l in [
+        1.35e154, 1.6e154, 1.89e154, -1.6e154, 2.0e154, 1.0e200, 1.0e300,
+    ] {
+        let rule = Rule {
+            k0: floor(l),
+            weight: 0.0,
+            u_ref: 0.0,
+            s2: 0.0,
+            lz: l,
+            lz_on_warp: false,
+        };
+        let (d, outcome) =
+            decode_rule::<Defaults, f64>(rule, &Latent::new(Z0), &LinkParams::DEFAULT);
+        assert!(
+            d.ic.p.iter().flatten().all(|x| x.is_finite()),
+            "L_z = {l} decodes momenta that are not finite: {:?}",
+            d.ic.p
+        );
+        assert!(
+            outcome == Outcome::Infeasible,
+            "L_z = {l} is labelled {outcome:?}"
+        );
+    }
+}
+
+#[test]
+fn energy_axes_warped_floor_saturates() {
+    check_floor_saturates(invariant::k_floor);
+}
+
+negative_control!(
+    energy_axes_warped_floor_saturates,
+    "the greatest float as the floor doubles to +inf in the construction, inside the band where 2K >= l²",
+    expected = "decodes momenta that are not finite",
+    check_floor_saturates(|_| f64::MAX)
+);
+
+/// The same band at f32, on each warped axis: finite momenta, the label, and `validate` agreeing at the chart's own
+/// precision, the band below it a system.
+fn check_floor_saturates_f32(held: fn(f32) -> f32) {
+    fn axis<Q: EnergyAxis>(held: f32) {
+        let frozen = Z0.map(|z| z as f32);
+        let chart: MixedEnergy<Alpha, Q, Defaults, f32> = MixedEnergy::new(
+            frozen,
+            [0.2, 1.3],
+            k_max() as f32,
+            gamma_k() as f32,
+            held,
+            Mapping::Warped,
+        );
+        let (d, outcome) = chart.decode_from(frozen, 0.5, 0.0, &LinkParams::DEFAULT);
+        assert!(
+            d.ic.p.iter().flatten().all(|x| x.is_finite()) && outcome == Outcome::Infeasible,
+            "{:?} at the f32 L_z = {held}: {outcome:?}, {:?}",
+            Q::QUANTITY,
+            d.ic.p
+        );
+        assert_eq!(
+            chart.validate(0.5, 0.0),
+            ValidationResult::Reject {
+                failed: Constraint::KAboveLzBound
+            },
+            "{:?} at the f32 L_z = {held}: validate disagrees with the decode",
+            Q::QUANTITY
+        );
+    }
+    for l in [1.9e19_f32, 2.0e19, 2.6e19, -2.0e19, 1.0e30] {
+        axis::<AxisK>(held(l));
+        axis::<AxisKE>(held(l));
+        axis::<AxisE>(held(l));
+        axis::<AxisVirial>(held(l));
+    }
+}
+
+#[test]
+fn energy_axes_warped_floor_saturates_f32() {
+    check_floor_saturates_f32(|l| l);
+}
+
+negative_control!(
+    energy_axes_warped_floor_saturates_f32,
+    "a held L_z inside f32's range has its floor, feasible, so it must fail",
+    expected = "at the f32 L_z",
+    check_floor_saturates_f32(|l| l * 1.0e-3)
+);
+
+/// An f32 chart just inside the band is a system at f32, and `validate` agrees; an `L_z` axis's held `K` reads no floor,
+/// and the linear option's `K*` alone decides, each at the same held value.
+fn check_floor_fits(held: f32) {
+    fn chart<Q: EnergyAxis>(held: f32, mapping: Mapping) -> MixedEnergy<Alpha, Q, Defaults, f32> {
+        MixedEnergy::new(
+            Z0.map(|z| z as f32),
+            [0.2, 1.3],
+            k_max() as f32,
+            gamma_k() as f32,
+            held,
+            mapping,
+        )
+    }
+    assert_eq!(
+        chart::<AxisK>(held, Mapping::Warped).validate(0.5, 0.0),
+        ValidationResult::Valid,
+        "the warped axis at the f32 L_z = {held} is not a system"
+    );
+    assert_eq!(
+        chart::<AxisLz>(2.0e19, Mapping::Warped).validate(0.5, 0.5),
+        ValidationResult::Valid,
+        "an L_z axis's held K reads no floor"
+    );
+    assert_eq!(
+        chart::<AxisK>(1.0e10, Mapping::Linear).validate(0.5, 1.0),
+        ValidationResult::Reject {
+            failed: Constraint::KAboveLzBound
+        },
+        "the linear option's K* decides"
+    );
+}
+
+#[test]
+fn energy_axes_warped_floor_fits_f32() {
+    check_floor_fits(1.8e19);
+}
+
+negative_control!(
+    energy_axes_warped_floor_fits_f32,
+    "a held value past f32's band has no floor at f32, so its validate must refuse it",
+    expected = "is not a system",
+    check_floor_fits(2.0e19)
+);
+
+/// A held value with no floor, or none at all, is refused at every point: never a system, never a panic.
+fn check_unrepresentable(held: f64) {
+    for [u, v] in grid(0.0, 1.0) {
+        assert_eq!(
+            lone::<AxisK>(held, Mapping::Warped).validate(u, v),
+            ValidationResult::Reject {
+                failed: Constraint::KAboveLzBound
+            },
+            "the warped axis at L_z = {held}: ({u}, {v}) is not refused"
+        );
+    }
+}
+
+#[test]
+fn energy_axes_warped_held_lz_unrepresentable() {
+    check_unrepresentable(f64::NAN);
+    check_unrepresentable(f64::INFINITY);
+    check_unrepresentable(1.0e200);
+    check_unrepresentable(-1.0e200);
+    check_unrepresentable(1.0e308);
+}
+
+negative_control!(
+    energy_axes_warped_held_lz_unrepresentable,
+    "a finite spin with a representable floor is a system at every pixel",
+    expected = "is not refused",
+    check_unrepresentable(0.3)
+);
+
+/// The linear option at a held `L_z ≠ 0` keeps its fixed values (the owner's ruling, E2): `K* = K_max·t`, no floor, the
+/// row `t = 0` not a system (blank, R-470) and the top row one, on `K`, `KE`, `E` and, at a held `L_z` its top row
+/// clears, the virial ratio; `mapping` is the chart's. A warped `L_z` axis is as it was: `K` the held value, no floor added.
+fn check_linear_held(mapping: Mapping) {
+    fn axis<Q: EnergyAxis>(held: f64, mapping: Mapping) {
+        let chart = lone::<Q>(held, mapping);
+        assert_eq!(
+            chart.validate(0.5, 0.0),
+            ValidationResult::Reject {
+                failed: Constraint::KAboveLzBound
+            },
+            "{:?} linear: the row t = 0 is a system",
+            Q::QUANTITY
+        );
+        assert_eq!(
+            chart.validate(0.5, 1.0),
+            ValidationResult::Valid,
+            "{:?} linear: the top row is not a system",
+            Q::QUANTITY
+        );
+    }
+    axis::<AxisK>(0.3, mapping);
+    axis::<AxisKE>(0.3, mapping);
+    axis::<AxisE>(0.3, mapping);
+    axis::<AxisVirial>(0.05, mapping);
+    let lz = lone::<AxisLz>(0.3, Mapping::Warped);
+    let (_, k) = lz_k(&lz.decode::<Defaults, f64>(0.5, 0.75));
+    assert!(
+        (k - 0.3).abs() <= TOL_K * f64::EPSILON * 0.3,
+        "a warped L_z axis's K = {k} is not the held 0.3"
+    );
+}
+
+#[test]
+fn energy_axis_linear_option_held_lz_blanks() {
+    check_linear_held(Mapping::Linear);
+}
+
+negative_control!(
+    energy_axis_linear_option_held_lz_blanks,
+    "the warped axis at the same held L_z has the floor, so its row t = 0 is a system",
+    expected = "the row t = 0 is a system",
+    check_linear_held(Mapping::Warped)
+);
+
+/// The mass-ratio chart of the tests below.
+type RatioChart = MixedMassRatio<Alpha, Defaults, f64>;
+
+/// A realisation test, the chart's own or a control's.
+type Realised<'a> = &'a dyn Fn(&RatioChart, f64, &LinkParams<f64>) -> bool;
+
+/// The chart of Codex's two inputs on PR #387: `softmax_tanh` at `μ_max`, the mass controls `z`, bodies `(0, 1)`, over
+/// `asked`.
+fn ratio_slice(
+    z: [f64; 2],
+    asked: [f64; 2],
+    mapping: Mapping,
+    p: &LinkParams<f64>,
+) -> Option<RatioChart> {
+    let frozen = [0.3, -0.5, 0.2, -0.1, 0.15, 0.05, z[0], z[1]];
+    MixedMassRatio::new(frozen, [0.2, 1.3], asked, [0, 1], mapping, p)
+}
+
+/// The held mass near 1 (chart_reference §2.1, "each to within `ε_μ`, relative"): `q = 1.12` at `μ_max = 10` keeps the
+/// held mass and the ratio and moves both swept masses by about 0.9%, so it is not realised, while a ratio the link does
+/// reach is. `realised` is the test applied.
+fn check_each_mass(realised: Realised) {
+    let p = LinkParams {
+        mu_max: 10.0,
+        ..LinkParams::DEFAULT
+    };
+    let chart = ratio_slice([0.0, 3.0], [0.5, 2.0], Mapping::Linear, &p).expect("the chart");
+    assert!(
+        !realised(&chart, 1.12, &p),
+        "q = 1.12 is realised though its swept masses miss by about 0.9%"
+    );
+    assert!(
+        realised(&chart, 1.0, &p),
+        "the centre's q = 1 is not realised"
+    );
+}
+
+#[test]
+fn energy_axes_mass_ratio_each_mass() {
+    check_each_mass(&|chart, q, p| chart.realised(q, p));
+}
+
+negative_control!(
+    energy_axes_mass_ratio_each_mass,
+    "the held mass, the sum and the ratio alone pass q = 1.12, whose swept masses are off by 0.9%",
+    expected = "is realised though",
+    check_each_mass(&|chart, q, p| {
+        let eps = 1.0e-6;
+        let m = ratio_masses(chart.bodies, chart.held, q);
+        let back = <SoftmaxTanh as Link<2, 3>>::forward_at(
+            <SoftmaxTanh as Link<2, 3>>::inverse_at(m, p),
+            p,
+        );
+        (back[2] - chart.held).abs() <= eps * chart.held
+            && (back[1] / back[0] - q).abs() <= eps * q
+            && (back.iter().sum::<f64>() - 1.0).abs() <= eps
+    })
+);
+
+/// Each mass within `ε_μ` does not bound the ratio within it: the two swept masses can each miss by most of `ε_μ`,
+/// opposite ways. So past the last ratio the realisation test takes, near the link's reach at `μ_max = 5`, there are
+/// ratios with every mass in tolerance that `realised` still refuses, found by bisection on the masses alone.
+fn check_ratio_binds(realised: Realised) {
+    let p = LinkParams::DEFAULT;
+    let chart = ratio_slice([0.0, 0.0], [0.5, 2.0], Mapping::Linear, &p).expect("the chart");
+    let each = |q: f64| {
+        let m = ratio_masses(chart.bodies, chart.held, q);
+        let back = <SoftmaxTanh as Link<2, 3>>::forward_at(
+            <SoftmaxTanh as Link<2, 3>>::inverse_at(m, &p),
+            &p,
+        );
+        back.iter()
+            .zip(m)
+            .all(|(&x, m)| (x - m).abs() <= 1.0e-6 * m)
+    };
+    let (mut ok, mut bad) = (1.0_f64, 1000.0_f64);
+    assert!(each(ok) && !each(bad), "the masses' edge is not bracketed");
+    for _ in 0..64 {
+        let mid = (ok * bad).sqrt();
+        if each(mid) {
+            ok = mid;
+        } else {
+            bad = mid;
+        }
+    }
+    assert!(
+        !realised(&chart, ok, &p),
+        "q = {ok}, every mass in tolerance, its ratio off by more than ε_μ, is realised"
+    );
+}
+
+#[test]
+fn energy_axes_mass_ratio_ratio_binds() {
+    check_ratio_binds(&|chart, q, p| chart.realised(q, p));
+}
+
+negative_control!(
+    energy_axes_mass_ratio_ratio_binds,
+    "a test of the masses alone takes the ratio at its edge",
+    expected = "is realised",
+    check_ratio_binds(&|_, _, _| true)
+);
+
+/// A saturated centre: at the mass controls `(10, 0)` the centre's ratio, about 148.4, fails the inverse's clamp, but
+/// the asked ratios below it are realised, so the warped range is theirs: `want` is `[q₀, q₁]`, each to within `1e-3`,
+/// relative, and every pixel is a system. `asked` wholly past the clamp finds no seed, and no chart.
+fn check_saturated_centre(asked: [f64; 2], want: [f64; 2]) {
+    let p = LinkParams::DEFAULT;
+    let chart = ratio_slice([10.0, 0.0], asked, Mapping::Warped, &p).expect("no chart");
+    for (got, want) in chart.ratio.iter().zip(want) {
+        assert!(
+            (got - want).abs() <= 1.0e-3 * want,
+            "the range {:?} is not {want:?}",
+            chart.ratio
+        );
+    }
+    check_every_pixel("a saturated centre", system(&chart));
+}
+
+#[test]
+fn energy_axes_mass_ratio_saturated_centre() {
+    check_saturated_centre([1.0, 100.0], [1.0, 100.0]);
+    check_saturated_centre([1.0, 1000.0], [1.0, 148.413]);
+    assert!(
+        ratio_slice(
+            [10.0, 0.0],
+            [200.0, 1000.0],
+            Mapping::Warped,
+            &LinkParams::DEFAULT
+        )
+        .is_none(),
+        "a range wholly past the clamp is offered"
+    );
+    for (bodies, want) in [([1, 0], [0.006738, 0.010871]), ([0, 1], [91.99, 148.41])] {
+        let narrow = RatioChart::new(
+            [0.3, -0.5, 0.2, -0.1, 0.15, 0.05, 10.0, -1.5],
+            [0.2, 1.3],
+            [1.0e-3, 1.0e3],
+            bodies,
+            Mapping::Warped,
+            &LinkParams::DEFAULT,
+        )
+        .expect("an interval away from 1 and the centre finds its seed");
+        for (got, want) in narrow.ratio.iter().zip(want) {
+            assert!(
+                (got - want).abs() <= 1.0e-3 * want,
+                "the interval away from 1 is {:?}, not {want}",
+                narrow.ratio
+            );
+        }
+        check_every_pixel("a narrow range", system(&narrow));
+    }
+    assert!(
+        ratio_slice(
+            [10.0, 0.0],
+            [0.0, 100.0],
+            Mapping::Warped,
+            &LinkParams::DEFAULT
+        )
+        .is_some(),
+        "an asked end at 0 finds no seed"
+    );
+}
+
+negative_control!(
+    energy_axes_mass_ratio_saturated_centre,
+    "a range wholly past the clamp has no chart",
+    expected = "no chart",
+    check_saturated_centre([200.0, 1000.0], [200.0, 1000.0])
+);
+
+/// A warped mass-ratio range: at the mass controls `z`, bodies, asked range, parameters; the chart's own or a control's.
+type RatioRange<'a> =
+    &'a dyn Fn([f64; 2], [u32; 2], [f64; 2], &LinkParams<f64>) -> Option<[f64; 2]>;
+
+/// `ratio_slice` at any bodies.
+fn bodies_slice(
+    z: [f64; 2],
+    bodies: [u32; 2],
+    asked: [f64; 2],
+    mapping: Mapping,
+    p: &LinkParams<f64>,
+) -> Option<RatioChart> {
+    let frozen = [0.3, -0.5, 0.2, -0.1, 0.15, 0.05, z[0], z[1]];
+    MixedMassRatio::new(frozen, [0.2, 1.3], asked, bodies, mapping, p)
+}
+
+/// The asked range's width decides nothing (chart_reference §2.1, "the part of the asked range the link realises"): the
+/// saturated slice `(10, −1.5)`, realised on `[91.99, 148.41]`, keeps that range under every ask holding it, and across
+/// the links' slices, narrow realised parts among them, a wider ask keeps what a narrower one finds.
+fn check_ask_width(range: RatioRange) {
+    let p = LinkParams::DEFAULT;
+    for asked in [
+        [1.0e-3, 1.0e3],
+        [1.0e-30, 1.0e30],
+        [1.0e-100, 1.0e100],
+        [1.0e-300, 1.0e300],
+        [0.0, 1000.0],
+        [0.0, 200.0],
+    ] {
+        let got = range([10.0, -1.5], [0, 1], asked, &p)
+            .unwrap_or_else(|| panic!("the ask {asked:?} refuses the chart"));
+        for (got, want) in got.iter().zip([91.99, 148.41]) {
+            assert!(
+                (got - want).abs() <= 1.0e-3 * want,
+                "the ask {asked:?} gives {got}, not {want}"
+            );
+        }
+    }
+    let mut narrow = 0;
+    for mu_max in [2.0, 5.0, 10.0] {
+        let p = LinkParams { mu_max, ..p };
+        for bodies in [[0, 1], [1, 0], [0, 2], [2, 0], [1, 2], [2, 1]] {
+            for z in [
+                [10.0, 6.0],
+                [6.0, 10.0],
+                [10.0, -1.5],
+                [-10.0, -10.0],
+                [10.0, 10.0],
+                [-10.0, 3.0],
+                [3.0, -10.0],
+            ] {
+                let Some(base) = range(z, bodies, [1.0e-3, 1.0e3], &p) else {
+                    continue;
+                };
+                narrow += usize::from(base[1] / base[0] < 1.01);
+                for asked in [[0.0, 1.0e3], [1.0e-3, 1.0e300], [0.0, 1.0e300]] {
+                    let got = range(z, bodies, asked, &p).unwrap_or_else(|| {
+                        panic!("{z:?} {bodies:?}: the ask {asked:?} refuses what [1e-3, 1e3] finds")
+                    });
+                    assert!(
+                        got[0] <= base[0] * (1.0 + 1.0e-6) && got[1] >= base[1] * (1.0 - 1.0e-6),
+                        "{z:?} {bodies:?}: the ask {asked:?} gives {got:?}, less than {base:?}"
+                    );
+                }
+            }
+        }
+    }
+    assert!(narrow > 0, "no slice with a narrow realised part was tried");
+}
+
+#[test]
+fn energy_axes_mass_ratio_ask_width() {
+    check_ask_width(&|z, bodies, asked, p| {
+        bodies_slice(z, bodies, asked, Mapping::Warped, p).map(|chart| chart.ratio)
+    });
+}
+
+negative_control!(
+    energy_axes_mass_ratio_ask_width,
+    "a grid of 257 points even in ln q over the ask steps over the realised part once the ask is wide",
+    expected = "refuses the chart",
+    check_ask_width(&|z, bodies, asked, p| {
+        let chart = bodies_slice(z, bodies, asked, Mapping::Linear, p)?;
+        let (lo, hi) = (asked[0].max(f64::MIN_POSITIVE).ln(), asked[1].ln());
+        (0..=256)
+            .map(|i| (lo + (hi - lo) * f64::from(i) / 256.0).exp())
+            .any(|q| chart.realised(q, p))
+            .then(|| bodies_slice(z, bodies, asked, Mapping::Warped, p).map(|chart| chart.ratio))
+            .flatten()
+    })
+);
+
+/// A NaN is no mass (chart_reference §2.1, each mass "to within `ε_μ`"): wherever a NaN reaches a mass the chart reads,
+/// that mass is not realised, and warped, a NaN mass at `z₀` offers no chart. A NaN `μ_max` reaches `softmax_tanh` alone,
+/// `stick_breaking` reading no parameter. `stick_breaking` at `z = (0, NaN)`, bodies `(1, 2)`, holds a finite `m_0 = 0.5`
+/// and writes both NaN controls over, so its linear rows are real systems: realised, while the warped chart is refused.
+/// `realised` is the test applied.
+fn check_nan(realised: Realised) {
+    let p = LinkParams::DEFAULT;
+    let asked = [1.0e-3, 1.0e3];
+    let bodies = [1, 2];
+    let (held_nan, mu_nan) = (
+        [f64::NAN, 0.0],
+        LinkParams {
+            mu_max: f64::NAN,
+            ..p
+        },
+    );
+    let chart = bodies_slice(held_nan, bodies, asked, Mapping::Linear, &p).expect("the chart");
+    assert!(
+        !realised(&chart, 1.0, &p),
+        "a NaN held mass is realised at q = 1"
+    );
+    let chart =
+        bodies_slice([0.0, 0.0], bodies, asked, Mapping::Linear, &mu_nan).expect("the chart");
+    assert!(
+        !realised(&chart, 1.0, &mu_nan),
+        "a NaN μ_max is realised at q = 1"
+    );
+    assert!(
+        bodies_slice(held_nan, bodies, asked, Mapping::Warped, &p).is_none(),
+        "softmax_tanh offers a chart at a NaN mass control"
+    );
+    assert!(
+        bodies_slice([0.0, 0.0], [0, 1], asked, Mapping::Warped, &mu_nan).is_none(),
+        "a chart is offered at a NaN μ_max"
+    );
+    let frozen = [0.3, -0.5, 0.2, -0.1, 0.15, 0.05, 0.0, f64::NAN];
+    assert!(
+        MixedMassRatio::<Alpha, Stick, f64>::new(
+            frozen,
+            [0.2, 1.3],
+            asked,
+            bodies,
+            Mapping::Warped,
+            &p
+        )
+        .is_none(),
+        "stick_breaking offers a chart at a NaN mass control"
+    );
+    let chart = MixedMassRatio::<Alpha, Stick, f64>::new(
+        frozen,
+        [0.2, 1.3],
+        asked,
+        bodies,
+        Mapping::Linear,
+        &p,
+    )
+    .expect("the chart");
+    assert!(
+        chart.held == 0.5 && chart.realised(1.0, &p),
+        "a linear row at a finite held mass and a NaN swept control is not realised"
+    );
+    let frozen = [0.3, -0.5, 0.2, -0.1, 0.15, 0.05, 0.0, 0.0];
+    assert!(
+        MixedMassRatio::<Alpha, Stick, f64>::new(
+            frozen,
+            [0.2, 1.3],
+            asked,
+            bodies,
+            Mapping::Warped,
+            &mu_nan
+        )
+        .is_some(),
+        "stick_breaking reads no μ_max, yet a NaN one refuses its chart"
+    );
+}
+
+#[test]
+fn energy_axes_mass_ratio_nan() {
+    check_nan(&|chart, q, p| chart.realised(q, p));
+}
+
+negative_control!(
+    energy_axes_mass_ratio_nan,
+    "f64::max drops a NaN limb, so the round trip's misses alone pass a NaN held mass",
+    expected = "a NaN held mass is realised",
+    check_nan(&|chart, q, p| {
+        let m = ratio_masses(chart.bodies, chart.held, q);
+        let back = <SoftmaxTanh as Link<2, 3>>::forward_at(
+            <SoftmaxTanh as Link<2, 3>>::inverse_at(m, p),
+            p,
+        );
+        let each = back
+            .iter()
+            .zip(m)
+            .fold(0.0, |worst: f64, (&x, m)| worst.max((x - m).abs() / m));
+        each.max((ratio_of(chart.bodies, back) - q).abs() / q) <= 1.0e-6
+    })
+);
+
+/// The range a chart `new` built is drawn over, at the asked range and parameters, its own or a control's.
+type NarrowedRange<'a> = &'a dyn Fn(&RatioChart, [f64; 2], &LinkParams<f64>) -> [f64; 2];
+
+/// `q = −1` is no ratio (chart_reference §2.1): its masses are infinite, so only the held mass's test can read a number,
+/// and at the mass controls `(−7.2543, −7.2543)`, `atanh(1 − ε_μ)`, the clamps of the inverse return that held mass.
+fn check_minus_one(realised: Realised) {
+    let p = LinkParams::DEFAULT;
+    let z = -(1.0_f64 - 1.0e-6).atanh();
+    let chart = ratio_slice([z, z], [0.5, 2.0], Mapping::Linear, &p).expect("the chart");
+    assert!(
+        !realised(&chart, -1.0, &p),
+        "q = -1, a mass ratio that does not exist, is realised"
+    );
+}
+
+#[test]
+fn energy_axes_mass_ratio_minus_one() {
+    check_minus_one(&|chart, q, p| chart.realised(q, p));
+}
+
+negative_control!(
+    energy_axes_mass_ratio_minus_one,
+    "the round trip's relative misses, with no test that q is positive, are NaN on the infinite masses and pass q = -1",
+    expected = "does not exist",
+    check_minus_one(&|chart, q, p| {
+        let m = ratio_masses(chart.bodies, chart.held, q);
+        let back = <SoftmaxTanh as Link<2, 3>>::forward_at(
+            <SoftmaxTanh as Link<2, 3>>::inverse_at(m, p),
+            p,
+        );
+        let each = back
+            .iter()
+            .zip(m)
+            .fold(0.0, |worst: f64, (&x, m)| worst.max((x - m).abs() / m));
+        each.max((ratio_of(chart.bodies, back) - q).abs() / q) <= 1.0e-6
+    })
+);
+
+/// The range at the held mass as held, without its narrowing: outward from `chart`'s range to `asked`, by bisection in
+/// `ln q`, each test at `ε_μ/2`.
+#[cfg(feature = "controls")]
+fn range_as_held(chart: &RatioChart, asked: [f64; 2], p: &LinkParams<f64>) -> [f64; 2] {
+    let inside = |q: f64| {
+        let m = ratio_masses(chart.bodies, chart.held, q);
+        let back = <SoftmaxTanh as Link<2, 3>>::forward_at(
+            <SoftmaxTanh as Link<2, 3>>::inverse_at(m, p),
+            p,
+        );
+        back.iter()
+            .zip(m)
+            .all(|(&x, m)| (x - m).abs() <= 0.5e-6 * m)
+            && (ratio_of(chart.bodies, back) - q).abs() <= 0.5e-6 * q
+    };
+    [0, 1].map(|i| {
+        let (mut ok, mut bad) = (chart.ratio[i].ln(), asked[i].ln());
+        for _ in 0..64 {
+            let mid = 0.5 * (ok + bad);
+            if inside(mid.exp()) {
+                ok = mid;
+            } else {
+                bad = mid;
+            }
+        }
+        ok.exp()
+    })
+}
+
+/// A chart narrowed to `f32` holds its pixels at a held mass near 1 (R-506, R-471 E3): on slices with `m_c` above 0.95,
+/// `softmax_tanh` at `μ_max = 5`, every one of 257 rows is realised on the chart as `with_params` narrows it. `range`
+/// is the range taken from the chart `new` builds, its own or a control's.
+fn check_narrowed(range: NarrowedRange) {
+    let p = LinkParams::DEFAULT;
+    let asked = [1.0e-3, 1.0e3];
+    let mut held_high = 0;
+    for bodies in [[2, 1], [1, 2]] {
+        for i in 0..=24 {
+            for j in 0..=24 {
+                let z = [-6.0 + 0.1 * f64::from(i), -6.0 + 0.1 * f64::from(j)];
+                let Some(mut chart) = bodies_slice(z, bodies, asked, Mapping::Warped, &p) else {
+                    continue;
+                };
+                if chart.held <= 0.95 {
+                    continue;
+                }
+                held_high += 1;
+                chart.ratio = range(&chart, asked, &p);
+                let narrowed = chart.with_params(|x| x as f32).at_f64();
+                for row in 0..=256 {
+                    let q = narrowed.ratio_at(f64::from(row) / 256.0);
+                    assert!(
+                        narrowed.realised(q, &p),
+                        "{z:?} {bodies:?}, held {}: row {row} of {:?}, q = {q}, is refused on f32",
+                        chart.held,
+                        chart.ratio
+                    );
+                }
+            }
+        }
+    }
+    assert!(held_high > 100, "{held_high} charts held a mass above 0.95");
+}
+
+#[test]
+fn energy_axes_mass_ratio_narrowed() {
+    check_narrowed(&|chart, _, _| chart.ratio);
+}
+
+negative_control!(
+    energy_axes_mass_ratio_narrowed,
+    "a range found at the held mass as held alone reaches ratios the narrowed held mass does not realise",
+    expected = "refused on f32",
+    check_narrowed(&|chart, asked, p| range_as_held(chart, asked, p))
 );
 
 /// How a mass-ratio arm forms its mass controls: the chart's own (its link's inverse at the ratio's masses), or the
@@ -2436,7 +3392,8 @@ negative_control!(
 /// The warped range's end where the `m_c` logit clamps: bodies `(0, 1)` under `softmax_tanh`,
 /// `ln(m_c/m₀) = ln(m_c·(1 + q)/(1 − m_c))` reaches `±(1 − ε_μ)·μ_max` at `q* = e^{±(1 − ε_μ)μ_max}·(1 − m_c)/m_c − 1`,
 /// the top on [`SATURATING`]'s first two, the bottom on its third, the other end the asked one, the end past `q*` by
-/// no more than `ε_μ` over the round trip's slope there. `at_ratio` names the
+/// no more than `ε_μ` over the round trip's slope there, `m_c` at whichever of the held value and its `f32` narrowing
+/// binds, the range being the part realised at both (chart_reference §2.1). `at_ratio` names the
 /// formula the check expects instead: the end where the ratio's own logit `ln q` clamps, `e^{±(1 − ε_μ)μ_max}`, or the
 /// asked end, what a predicate blind to `m_c` gives.
 fn check_held_edge(at_ratio: bool) {
@@ -2445,8 +3402,13 @@ fn check_held_edge(at_ratio: bool) {
         let p = mu(s.mu_max);
         let chart = saturating_chart::<Defaults>(s.mass, s.pair, s.asked, Mapping::Warped, &p)
             .expect("a realised range");
-        let h = chart.held;
         let up = k < 2;
+        let narrowed = f64::from(chart.held as f32);
+        let h = if up {
+            chart.held.max(narrowed)
+        } else {
+            chart.held.min(narrowed)
+        };
         let sign = if up { 1.0 } else { -1.0 };
         let clamp = (sign * (1.0 - eps) * s.mu_max).exp();
         let want = if at_ratio {

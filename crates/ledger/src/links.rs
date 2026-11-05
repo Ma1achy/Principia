@@ -671,7 +671,10 @@ fn softmax_tanh() -> LinkBuilder {
 /// `s = ½(1 + (1 − ε_μ)·tanh z₁)`, `u = ½(1 + (1 − ε_μ)·tanh z₂)`, `m = (1 − s, s·(1 − u), s·u)`; inverse
 /// `s = m₁ + m₂`, `u = m₂/s`, each `v` of them `artanh(clamp(2v − 1, ±(1 − ε_μ)²)/(1 − ε_μ))`; log-det
 /// `log √det(JᵀJ)` of its 3×2 Jacobian, `log(√3/4·(1 − ε_μ)²·s·sech² z₁·sech² z₂)` (R-368), each `log sech²` by
-/// [`log_sech2`]. `s`, `1 − s`, `u` and `1 − u` are written without cancellation against 1 (below).
+/// [`log_sech2`]. `s`, `1 − s`, `u` and `1 − u` are written without cancellation against 1 (below), and so is the
+/// inverse: with `c = 1 − ε_μ`, `z = ½ log(clamp(N(v)/N(w), ε_μ/(1 + c), (1 + c)/ε_μ))`,
+/// `N(a) = clamp(2a − ε_μ·t, c·ε_μ·t, c·(1 + c)·t)`, `t = v + w`, `(v, w) = (m₁ + m₂, m₀)` for `z₁` and `(m₂, m₁)` for
+/// `z₂` (§3.9's list of forms).
 ///
 /// The inverse is defined on the open simplex: at an exact corner, with two masses 0, it divides 0 by 0, which Rust's
 /// `max` turns into a finite clamp but SPIR-V's `FMax` leaves undefined; a caller passes no exact corner (§3.9).
@@ -685,12 +688,24 @@ fn stick_breaking() -> LinkBuilder {
     let rest = |k| add(vec![un(Op::Sigmoid, un(Op::Neg, twice(k))), half_eps(k)]);
     let (s, u) = (half(0), half(1));
     let m = vec![rest(0), mul(vec![s, rest(1)]), mul(vec![s, u])];
-    let stick = add(vec![x(1), x(2)]);
-    let cap = mul(vec![one_minus(&EPS_MU), one_minus(&EPS_MU)]);
-    let z = |v| {
-        let t = sub(mul(vec![num(2.0), v]), num(1.0));
-        let clamped = clamp(t, un(Op::Neg, cap), cap);
-        un(Op::Artanh, div(clamped, one_minus(&EPS_MU)))
+    // `artanh(clamp(2v/t − 1, ±c²)/c) = ½ log(N(v)/N(w))` with `c = 1 − ε_μ`: `2v − 1` at a small `v` cancels against 1
+    // the digits an f32 mass rests on, and the hand-cancelled quotient does not. `N`'s limits are the table's `±c²`,
+    // and the outer clamp's are the quotient those give: it holds the table's value at an exact corner.
+    let z = |v, w| {
+        let t = add(vec![v, w]);
+        let c = one_minus(&EPS_MU);
+        let floor = mul(vec![c, p(&EPS_MU), t]);
+        let cap = mul(vec![c, add(vec![num(1.0), c]), t]);
+        let n = |a| {
+            let raw = sub(mul(vec![num(2.0), a]), mul(vec![p(&EPS_MU), t]));
+            clamp(raw, floor, cap)
+        };
+        let top = div(add(vec![num(1.0), c]), p(&EPS_MU));
+        let bottom = div(p(&EPS_MU), add(vec![num(1.0), c]));
+        mul(vec![
+            num(0.5),
+            un(Op::Log, clamp(div(n(v), n(w)), bottom, top)),
+        ])
     };
     let log_det = add(vec![
         mul(vec![num(0.5), un(Op::Log, num(3.0))]),
@@ -700,7 +715,11 @@ fn stick_breaking() -> LinkBuilder {
         log_sech2(x(0)),
         log_sech2(x(1)),
     ]);
-    let functions = (m, vec![z(stick), z(div(x(2), stick))], log_det);
+    let functions = (
+        m,
+        vec![z(add(vec![x(1), x(2)]), x(0)), z(x(2), x(1))],
+        log_det,
+    );
     let note = "reaches within ε_μ/2 of each edge and of the corner m₀ = 1, and within about ε_μ of the corners \
                 m₁ = 1 and m₂ = 1, where softmax ∘ μ_max·tanh stops at mass ratios e^(±2μ_max); its area element \
                 is 4√3·m₀m₁m₂ (exactly so at ε_μ = 0), the plain softmax measure, symmetric in the bodies, so it \

@@ -6,17 +6,19 @@
 //! **An energy-type axis alone** ([`MixedEnergy`]; R-471 H1). The axis takes its own line of chart_reference §2.1's
 //! warp and solves into the momentum block by §2.2's construction, its seed R-82's on the decoded `z_α`, the masses and
 //! configuration read as fixed (kind 3: the other axis sits upstream, in the mass or configuration block):
-//! - `K` and `KE` ([`AxisK`], [`AxisKE`]): `K* = K_max·t^γ_K`, at the chart's held `L_z`.
-//! - `E` ([`AxisE`]): `E = U + K_max·t^γ_K`, `U` the pixel's own potential, so `K* = K_max·t^γ_K` (E3).
+//! - `K` and `KE` ([`AxisK`], [`AxisKE`]): `K* = L_z²/2I + K_max·t^γ_K`, at the chart's held `L_z`.
+//! - `E` ([`AxisE`]): `E = U + K*`, that `K*`, `U` the pixel's own potential (E3).
 //! - `L_z` ([`AxisLz`]): `L_z = (2t − 1)·L_max`, `L_max = √(2·I·K)` at the chart's held `K`, `I = 1`.
 //! - The virial ratio ([`AxisVirial`]; chart_reference §2.1's paragraph) over the asked range `[Q_lo, Q_hi]`
 //!   ([`MixedEnergy::virial`]; [`MixedEnergy::new`]'s is `[0, Q_max]`): `Q = Q₀ + (Q_hi − Q₀)·t^γ_K`,
-//!   `Q₀ = max(Q_lo, 0)`, `K* = Q·|U|/2` on the pixel's own `U`, at the held `L_z`.
+//!   `Q₀ = max(Q_lo, 0)`, `K* = L_z²/2I + Q·|U|/2` on the pixel's own `U`, at the held `L_z`.
 //!
-//! At the held `L_z = 0` (`Φ_θ,K`'s), every pixel of `[0,1]²` is feasible on a `t` axis, `K* ≥ 0 = K_min`; an `L_z`
-//! axis is feasible at every held `K ≥ 0`. A warped `K`, `KE`, `E` or virial axis at a held `L_z ≠ 0` is not offered:
-//! its pixels with `K* < L_z²/2I` would be non-systems inside the square, which no warp written here makes feasible
-//! (R-471 E1, R-506), so `validate` refuses every point of it ([`MixedEnergy::offered`]; applied per R-369, RQ-683).
+//! Every pixel of `[0,1]²` is feasible on a warped `t` axis at every held `L_z` (the owner's ruling of 4 Nov 2026 on
+//! RQ-683; chart_reference §2.1): the floor `L_z²/2I` ([`invariant::k_floor`], 0 at the held `L_z = 0`, `Φ_θ,K`'s) sits
+//! under the line, so `K*` is at or above it, the bottom row `t = 0` exactly on it. `I = 1` on every pixel, so the floor
+//! does not vary across the window. A held `L_z` whose `L_z²` has no finite float at the chart's own precision has no
+//! floor, §2.1's one exception: `validate` refuses it there as the decode at that precision labels it. An `L_z` axis is
+//! feasible at every held `K ≥ 0`.
 //! Under the linear option (`super::energy::Mapping::Linear`) `K` and `KE` are `K_max·t`, `E` is `U₀ + K_max·t` with
 //! `U₀` the slice centre's potential, so `K* = E − U` at the pixel, the virial ratio `Q_lo + (Q_hi − Q_lo)·t`, their
 //! pixels with `K* < L_z²/2I` (or, virial, `Q < 0`) not a system, and `L_z`'s line is already linear at its held `K`
@@ -26,7 +28,8 @@
 //! two bodies, the third body's mass `m_c` held at its slice-centre value: `m_a = (1 − m_c)/(1 + q)`, `m_b = q·m_a`.
 //! The axis moves the active mass link's inputs, `z_mass = L⁻¹(m)`, and the decode reads the masses through the link,
 //! `L(z_mass)`, so every pixel's masses are positive and sum to 1. Warped, `q(t) = q₀·(q₁/q₀)^t` over `[q₀, q₁]`, the
-//! part of the asked range the link realises at `m_c` at its active parameters ([`MixedMassRatio::new`]); linear,
+//! part of the asked range the link realises at `m_c`, as held and as narrowed to `f32`, at its active parameters
+//! ([`MixedMassRatio::new`]); linear,
 //! `q(t) = q_lo + (q_hi − q_lo)·t` over the asked range, a pixel whose ratio the link does not realise, or at or below
 //! 0, not a system. A ratio is realised where the link's inverse followed by its forward returns its masses
 //! `(m_a, m_b, m_c)`, `m_c` at its held value, to within `ε_μ`, relative: the inverse saturates past what the link
@@ -42,7 +45,9 @@
 //! **Tilt** (R-473 J1). The hidden coordinates are the frozen controls the axes do not write: the other axis's
 //! coordinate is not one, nor is the physical axis's block (the momentum block for an energy axis, the mass block for
 //! the mass ratio). A tilt into a configuration control or a mass logit moves `U` and the masses across the window,
-//! and the decode reads them per pixel (E3).
+//! and the decode reads them per pixel (E3). The held `L_z` or `K` is a hidden coordinate too under R-633, the physical
+//! parameter of the construction that holds the momentum block. No task builds its tilt or its slice, and this chart
+//! does neither: whether and how it tilts and slices is RQ-701's.
 
 use core::fmt;
 use core::marker::PhantomData;
@@ -54,7 +59,7 @@ use super::invariant::{self, WarpReal};
 use super::mixed::{axis_check, lerp, place, Quantity as Coordinate};
 use super::tilt::{shift_controls, Hidden, Shift, Tiltable};
 use super::{Chart, ChartDecode, ChartOut, Constraint, ValidationResult};
-use crate::decode::invariant::Outcome;
+use crate::decode::invariant::{infeasible, Outcome};
 use crate::decode::{self, mass, Decoded, Latent};
 use crate::generated::constants::ChartConstants;
 use crate::generated::links::{Link, LinkParams, LinkReal, Selection};
@@ -312,31 +317,20 @@ impl<A: Coordinate, S: Selection, P: Float> MixedEnergy<A, AxisVirial, S, P> {
     }
 }
 
-impl<A: Coordinate, Q: EnergyAxis, S: Selection, P: Copy> MixedEnergy<A, Q, S, P> {
+impl<A: Coordinate, Q, S, P> MixedEnergy<A, Q, S, P> {
     /// The horizontal axis sits upstream of the momentum block the energy axis solves into (kind 3), checked where the
     /// chart is built.
     const UPSTREAM: () = assert!(
         !momentum_index(A::COORDINATE as u32),
         "an energy-type axis solves into the momentum block, which the other axis writes"
     );
+}
 
+impl<A: Coordinate, Q: EnergyAxis, S: Selection, P: WarpReal> MixedEnergy<A, Q, S, P> {
     /// The vertical axis's extension type ([`super::energy::extension`]).
     #[inline]
     pub fn extension(&self) -> Sides {
         sides(Q::QUANTITY, self.mapping)
-    }
-
-    /// Whether the chart is offered (the module's note): not a warped `K`, `KE`, `E` or virial axis at a held
-    /// `L_z ≠ 0`, whose pixels with `K* < L_z²/2I` would be non-systems inside the square. `validate` refuses every
-    /// point of a chart that is not.
-    #[inline]
-    pub fn offered(&self) -> bool
-    where
-        f64: From<P>,
-    {
-        self.mapping == Mapping::Linear
-            || Q::QUANTITY == Quantity::Lz
-            || f64::from(self.held) == 0.0
     }
 
     /// The vertical axis's value scale at `t`: on `K`, `KE` and `E` warped `top·t^γ_K`, linear `top·t`; on the virial
@@ -374,7 +368,13 @@ impl<A: Coordinate, Q: EnergyAxis, S: Selection, P: Copy> MixedEnergy<A, Q, S, P
         } else {
             R::zero()
         };
-        let rule = Q::rule(self.scale(v), w(self.held), linear, u_ref);
+        let held = w(self.held);
+        let rule = Q::rule(self.scale(v), held, linear, u_ref);
+        let floored = !linear & (Q::QUANTITY != Quantity::Lz);
+        let rule = Rule {
+            k0: select(floored, invariant::k_floor(held) + rule.k0, rule.k0),
+            ..rule
+        };
         decode_rule::<S, R>(rule, &Latent::new(z), p)
     }
 
@@ -395,8 +395,16 @@ impl<A: Coordinate, Q: EnergyAxis, S: Selection, P: Copy> MixedEnergy<A, Q, S, P
         )
     }
 
-    /// The check at `(u, v)` on the frozen controls `z` (the module's note): every point refused, naming
-    /// `K ≥ L_z²/2I`, where the chart is not [`MixedEnergy::offered`].
+    /// Whether the chart's own precision `P` holds the floor (the module's note): `check` decodes at f64, and an f32
+    /// chart's held `L_z` can have a floor at f64 and none at f32.
+    #[inline]
+    fn floor_held(&self) -> bool {
+        self.mapping == Mapping::Linear
+            || Q::QUANTITY == Quantity::Lz
+            || !infeasible(P::one(), invariant::k_floor(self.held), self.held)
+    }
+
+    /// The check at `(u, v)` on the frozen controls `z` (the module's note).
     fn check(&self, z: [f64; 8], u: f64, v: f64, p: &LinkParams<f64>) -> ValidationResult
     where
         f64: From<P>,
@@ -406,11 +414,6 @@ impl<A: Coordinate, Q: EnergyAxis, S: Selection, P: Copy> MixedEnergy<A, Q, S, P
             Constraint::KAboveLzBound,
             Constraint::KNonNegative,
         );
-        if !self.offered() {
-            return ValidationResult::Reject {
-                failed: Constraint::KAboveLzBound,
-            };
-        }
         if !(u.is_finite() && v.is_finite()) {
             return ValidationResult::Reject {
                 failed: select(u.is_finite(), vertical, Constraint::AxisDomain),
@@ -425,7 +428,7 @@ impl<A: Coordinate, Q: EnergyAxis, S: Selection, P: Copy> MixedEnergy<A, Q, S, P
         let cv = self.clamp_vertical(v);
         let (decoded, outcome) = self.decode_from(z, cu, cv, p);
         let finite = decoded.ic.p.iter().flatten().all(|x| x.is_finite());
-        if outcome == Outcome::Infeasible || !finite {
+        if outcome == Outcome::Infeasible || !finite || !self.floor_held() {
             return ValidationResult::Reject {
                 failed: Constraint::KAboveLzBound,
             };
@@ -443,7 +446,7 @@ impl<A: Coordinate, Q: EnergyAxis, S: Selection, P: Copy> MixedEnergy<A, Q, S, P
     }
 }
 
-impl<A: Coordinate, Q: EnergyAxis, S: Selection, P: Copy> Chart for MixedEnergy<A, Q, S, P>
+impl<A: Coordinate, Q: EnergyAxis, S: Selection, P: WarpReal> Chart for MixedEnergy<A, Q, S, P>
 where
     f64: From<P>,
 {
@@ -512,7 +515,8 @@ where
     }
 }
 
-impl<A: Coordinate, Q: EnergyAxis, S: Selection, P: Copy> ChartDecode for MixedEnergy<A, Q, S, P>
+impl<A: Coordinate, Q: EnergyAxis, S: Selection, P: WarpReal> ChartDecode
+    for MixedEnergy<A, Q, S, P>
 where
     f64: From<P>,
 {
@@ -535,11 +539,12 @@ where
     }
 }
 
-impl<A: Coordinate, Q: EnergyAxis, S: Selection, P: Copy> Hidden for MixedEnergy<A, Q, S, P>
+impl<A: Coordinate, Q: EnergyAxis, S: Selection, P: WarpReal> Hidden for MixedEnergy<A, Q, S, P>
 where
     f64: From<P>,
 {
-    /// The frozen controls neither axis writes: not `A`'s coordinate, nor the momentum block.
+    /// The frozen controls neither axis writes: not `A`'s coordinate, nor the momentum block. The held value is not an
+    /// index here: whether and how it tilts and slices is RQ-701's (the module's note).
     fn hidden(&self, k: u32) -> bool {
         k < 8 && k != A::COORDINATE as u32 && !momentum_index(k)
     }
@@ -554,7 +559,7 @@ where
     }
 }
 
-impl<A: Coordinate, Q: EnergyAxis, S: Selection, P: Copy> Tiltable for MixedEnergy<A, Q, S, P>
+impl<A: Coordinate, Q: EnergyAxis, S: Selection, P: WarpReal> Tiltable for MixedEnergy<A, Q, S, P>
 where
     f64: From<P>,
 {
@@ -731,9 +736,11 @@ impl<A: Coordinate, S: Selection, P: Copy> MixedMassRatio<A, S, P> {
 impl<A: Coordinate, S: Selection> MixedMassRatio<A, S, f64> {
     /// The chart over the asked range `asked` of `q = m_b/m_a`, `bodies = (a, b)`, under `mapping` at the link's tunable
     /// parameters `p` (the module's note): `m_c` the third body's mass at `z₀`'s mass controls; warped, the range the
-    /// part of `asked` the link realises at `m_c`, found from the slice centre's own ratio outward. `None` where the
-    /// bodies are not two distinct bodies, `asked` is not an increasing finite range, or, warped, the link realises no
-    /// part of it.
+    /// part of `asked` the link realises at `m_c`, as held and as narrowed to `f32`, a chart decoded there holding that
+    /// value, found outward from the slice centre's own ratio, or, where the link does not realise that, a saturated
+    /// centre, from `seed`. `None` where the bodies are not two distinct bodies, `asked` is not an increasing finite
+    /// range, or, warped, a mass at `z₀` is NaN or no ratio of `asked` is realised at both. That last holds inside the
+    /// registered `μ_max ∈ [1, 10]`; above about 29.3 the search can also refuse a slice with a realised part (`seed`).
     pub fn new(
         frozen: [f64; 8],
         a_range: [f64; 2],
@@ -762,12 +769,17 @@ impl<A: Coordinate, S: Selection> MixedMassRatio<A, S, f64> {
         if mapping == Mapping::Linear {
             return Some(chart);
         }
-        let centre = ratio_of(bodies, m);
-        if !chart.realised_within(centre, 0.5 * <f64 as ChartConstants>::EPS_MU, p) {
+        if m.iter().any(|x| x.is_nan()) {
             return None;
         }
-        let lo = chart.edge(centre, asked[0], false, p)?;
-        let hi = chart.edge(centre, asked[1], true, p)?;
+        let centre = ratio_of(bodies, m);
+        let from = if chart.miss_narrowed(centre, p) <= 0.5 * <f64 as ChartConstants>::EPS_MU {
+            centre
+        } else {
+            chart.seed(p)?
+        };
+        let lo = chart.edge(from, asked[0], false, p)?;
+        let hi = chart.edge(from, asked[1], true, p)?;
         (lo < hi).then_some(MixedMassRatio {
             ratio: [lo, hi],
             ..chart
@@ -775,41 +787,112 @@ impl<A: Coordinate, S: Selection> MixedMassRatio<A, S, f64> {
     }
 
     /// Whether the link realises the ratio `q` at the held `m_c`: `q` positive and finite, and the link's inverse then
-    /// forward returning the masses [`ratio_masses`] writes, positive, summing to 1, with ratio `q` and the third body's
-    /// mass at the held `m_c`, each to within `ε_μ`, relative. The last test is not implied by the others: where the
-    /// logit that sets `m_c` saturates before the ratio's does, the round trip keeps the ratio and the sum and moves
-    /// `m_c`, a system off the slice.
+    /// forward returning each of the masses [`ratio_masses`] writes, and the ratio `q`, to within `ε_μ`, relative
+    /// (chart_reference §2.1). Each mass is read: where the logit that sets `m_c` saturates before the ratio's does, the
+    /// round trip keeps the ratio and moves `m_c`, and where `m_c` is near 1 it can keep `m_c` and the ratio and move the
+    /// two small masses together.
     pub fn realised(&self, q: f64, p: &LinkParams<f64>) -> bool {
-        self.realised_within(q, <f64 as ChartConstants>::EPS_MU, p)
+        self.miss_at(self.held, q, p) <= <f64 as ChartConstants>::EPS_MU
     }
 
-    /// [`MixedMassRatio::realised`] to within `eps`, relative.
-    fn realised_within(&self, q: f64, eps: f64, p: &LinkParams<f64>) -> bool {
+    /// The larger of `miss_at` at the held value and at it narrowed to `f32`, the range's test: rounding `held` moves
+    /// the small masses by a relative `δ·m_c/(1 − m_c)`, which passes `ε_μ` at a held mass near 1.
+    fn miss_narrowed(&self, q: f64, p: &LinkParams<f64>) -> f64 {
+        let narrowed = f64::from(self.held as f32);
+        self.miss_at(self.held, q, p)
+            .max(self.miss_at(narrowed, q, p))
+    }
+
+    /// The largest relative miss of the link's round trip at the ratio `q` and the held mass `held`, over the masses
+    /// [`ratio_masses`] writes and the ratio: what [`MixedMassRatio::realised`] bounds. Infinite at a `q` not positive
+    /// and finite, and at any limb that is NaN, a NaN held mass or link parameter: `f64::max` alone would drop it.
+    fn miss_at(&self, held: f64, q: f64, p: &LinkParams<f64>) -> f64 {
         if !(q.is_finite() && q > 0.0) {
-            return false;
+            return f64::INFINITY;
         }
-        let m = ratio_masses(self.bodies, self.held, q);
+        let m = ratio_masses(self.bodies, held, q);
         let link = <S::MassLink as Link<2, 3>>::inverse_at(m, p);
         let back = <S::MassLink as Link<2, 3>>::forward_at(link, p);
-        let positive = back.iter().all(|&x| x > 0.0);
-        let sum = back[0] + back[1] + back[2];
-        let [a, b] = self.bodies;
-        let m_c = back[(3 - a - b) as usize];
-        positive
-            && (sum - 1.0).abs() <= eps
-            && (ratio_of(self.bodies, back) - q).abs() <= eps * q
-            && (m_c - self.held).abs() <= eps * self.held
+        let limbs = [
+            (back[0], m[0]),
+            (back[1], m[1]),
+            (back[2], m[2]),
+            (ratio_of(self.bodies, back), q),
+        ];
+        limbs.iter().fold(0.0, |worst: f64, &(x, m)| {
+            let miss = (x - m).abs() / m;
+            if miss.is_nan() {
+                f64::INFINITY
+            } else {
+                worst.max(miss)
+            }
+        })
+    }
+
+    /// A realised ratio in the asked range, for a centre the link does not realise. The link's clamps are one-sided on
+    /// monotone coordinates, so the miss does not rise toward the realised interval from either side beyond rounding
+    /// (the largest rise measured, a relative `4.4e-9` on `softmax_tanh`; none on `stick_breaking`), and a trisection of
+    /// `ln q` that keeps the side of the lower miss reaches it, inside the registered `μ_max ∈ [1, 10]`, at any width of
+    /// the ask and of the interval, each test to within `ε_μ/2`, an end at or below 0 taken at the least positive double.
+    /// The search holds no count: it ends where a probe no longer falls strictly inside the bracket, the bracket then at
+    /// the doubles' own spacing, and each step moves an end strictly inward, so it ends.
+    ///
+    /// The miss falls only non-strictly: past both clamps the round trip is constant, and `m_c`'s limb can hold the miss
+    /// exactly level over a run `[A, B]` of `ln q`, as at `softmax_tanh`, `μ_max = 5`, bodies `(2, 0)`,
+    /// `z = (−1.925, 10)`, where `q = e⁶` and `q = e⁸` tie. An exact tie is safe because the two probes are a third of
+    /// the bracket apart, and the near end `R` of the interval lies in the bracket, so both probes on one flat need
+    /// `B − A ≥ A − R`. For `softmax_tanh`, with `m_c/(1 − m_c) = e^−k`, the flat is about `[μ, k]` and `R` about
+    /// `−(k − μ)`, so `(B − A)/(A − R)` is `(k − μ)/k`, at most about 1/2 since a realised part needs `k < 2μ`; measured
+    /// over exact flats, at most 0.69.
+    ///
+    /// That argument covers exact ties only. A run level only to rounding is not a tie, and the comparison there reads
+    /// the rounding. Inside the registered `μ_max ∈ [1, 10]`, which is the range this search answers for, such runs stay
+    /// below `(B − A)/(A − R) = 1`, measured at most 0.527 level to a relative `1e-7` and 0.640 to `1e-5`, so both probes
+    /// cannot lie on one with `R` in the bracket. The 2.23 level to `2e-8` and the 2.48 to `1e-7` both lie above 10.
+    ///
+    /// The range is provisional, so its limit is recorded: above `μ_max` about 29.3 the comparison can read rounding on
+    /// the first step, and `new` can refuse a slice with a realised part, the lowest measured at 29.26. With `m_c` tiny
+    /// the held limb sits on a floor of about `μ·ε_μ` and falls only by `q` or `1/q`, which puts `R` at `|ln q|` about
+    /// 10.4; below an absolute `1e-15` the two misses differ by rounding, past `|ln q|` about 34.5; and the run ends near
+    /// `2μ`. So `(2μ − 34.5)/(34.5 − 10.4) ≥ 1` needs `μ ≥ 29.3`. A refusal is the safe side, but a range raised past
+    /// that needs a search that does not read rounding.
+    fn seed(&self, p: &LinkParams<f64>) -> Option<f64> {
+        let eps = 0.5 * <f64 as ChartConstants>::EPS_MU;
+        let mut lo = self.ratio[0].max(f64::MIN_POSITIVE).ln();
+        let mut hi = self.ratio[1].ln();
+        loop {
+            let third = (hi - lo) / 3.0;
+            let (near, far) = (lo + third, hi - third);
+            if !(lo < near && far < hi) {
+                return None;
+            }
+            let (below, above) = (near.exp(), far.exp());
+            let miss_below = self.miss_narrowed(below, p);
+            let miss_above = self.miss_narrowed(above, p);
+            if miss_below <= eps {
+                return Some(below);
+            }
+            if miss_above <= eps {
+                return Some(above);
+            }
+            if miss_below < miss_above {
+                hi = far;
+            } else {
+                lo = near;
+            }
+        }
     }
 
     /// The end of the realised range from the realised ratio `from` toward the asked end `toward`, the range's upper
     /// end where `upper`: `toward` itself where realised; `None` where it is not and lies on `from`'s inner side (an
     /// upper end below `from`, a lower end above it), the asked range then outside the interval the link realises;
-    /// else the last realised ratio on the way, by bisection in `ln q`, sixty-four halvings, an end at or below 0 taken
-    /// at the least positive double. Each test here is to within `ε_μ/2`, so that the warp's rounding at the range's
-    /// ends (`q₀·(q₁/q₀)^t` at `t = 1`) stays inside [`MixedMassRatio::realised`]'s `ε_μ`.
+    /// else the last realised ratio on the way, by bisection in `ln q` down to the doubles' own spacing, an end at or
+    /// below 0 taken at the least positive double. Each test here is to within `ε_μ/2`, so that the warp's rounding at
+    /// the range's ends (`q₀·(q₁/q₀)^t` at `t = 1`), and the narrowing of the ends, stay inside
+    /// [`MixedMassRatio::realised`]'s `ε_μ`; the narrowing of `held` is `miss_narrowed`'s.
     fn edge(&self, from: f64, toward: f64, upper: bool, p: &LinkParams<f64>) -> Option<f64> {
         let eps = 0.5 * <f64 as ChartConstants>::EPS_MU;
-        if self.realised_within(toward, eps, p) {
+        if self.miss_narrowed(toward, p) <= eps {
             return Some(toward);
         }
         if upper != (toward > from) {
@@ -817,17 +900,19 @@ impl<A: Coordinate, S: Selection> MixedMassRatio<A, S, f64> {
         }
         let (mut ok, mut bad) = (from.ln(), toward.max(f64::MIN_POSITIVE).ln());
         let mut last = from;
-        for _ in 0..64 {
+        loop {
             let mid = 0.5 * (ok + bad);
+            if mid == ok || mid == bad {
+                return Some(last);
+            }
             let q = mid.exp();
-            if self.realised_within(q, eps, p) {
+            if self.miss_narrowed(q, p) <= eps {
                 ok = mid;
                 last = q;
             } else {
                 bad = mid;
             }
         }
-        Some(last)
     }
 
     /// The check at `(u, v)` (the module's note).
