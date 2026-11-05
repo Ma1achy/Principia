@@ -424,3 +424,61 @@ mod release_under_the_layer_name {
         )
     );
 }
+
+const CMD_UP: &str = "loader_cmd_up_releases_what_the_browser_withholds";
+#[cfg(feature = "controls")]
+const SWEEP: &str = r#"if (!pressed && e.key === "Meta") {"#;
+
+#[test]
+fn loader_cmd_up_releases_what_the_browser_withholds() {
+    run(CMD_UP, &[]);
+}
+
+mod cmd_up_releases_nothing {
+    use super::*;
+    negative_control!(
+        loader_cmd_up_releases_what_the_browser_withholds,
+        "no release on Cmd's keyup, as gui review 5777993926 G1 traced: Cmd+Z leaves Z down in egui",
+        expected = "z's release was lost with Cmd's keyup",
+        run(CMD_UP, &loader(SWEEP, "if (false) {"))
+    );
+}
+
+mod cmd_up_keeps_its_entries {
+    use super::*;
+    negative_control!(
+        loader_cmd_up_releases_what_the_browser_withholds,
+        "a key let go by Cmd left in the map",
+        expected = "a late keyup released z again",
+        run(CMD_UP, &loader("        down.delete(code);\n", ""))
+    );
+}
+
+mod cmd_up_takes_held_modifiers {
+    use super::*;
+    negative_control!(
+        loader_cmd_up_releases_what_the_browser_withholds,
+        "a modifier still held let go with Cmd, which loses its own keyup",
+        expected = "Shift went up with Cmd while still held",
+        run(
+            CMD_UP,
+            &loader("        if (e.getModifierState(held)) continue;\n", "")
+        )
+    );
+}
+
+mod control_up_sweeps_too {
+    use super::*;
+    negative_control!(
+        loader_cmd_up_releases_what_the_browser_withholds,
+        "Control's keyup let go of what is held as well, which AltGr's release on Windows is",
+        expected = "Control's keyup let a held key up early",
+        run(
+            CMD_UP,
+            &loader(
+                SWEEP,
+                r#"if (!pressed && (e.key === "Meta" || e.key === "Control")) {"#
+            )
+        )
+    );
+}

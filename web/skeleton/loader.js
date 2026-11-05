@@ -170,6 +170,16 @@ function forward(worker, canvas) {
     // alone: it stays with the input, and no key goes on for egui to read as Ctrl+Alt+A, a text field's select-all.
     const altGr = e.ctrlKey && !e.metaKey && e.getModifierState("AltGraph");
     if (pressed && altGr && (e.key.length === 1 || e.key === "Dead")) return;
+    // The browser may fire no keyup for a letter held under Cmd (egui #4724), so Cmd's own keyup lets go of what is left,
+    // as eframe's `on_keyup` does in `?layout=main`. A modifier still held keeps its keyup. Cmd alone: AltGr's release on
+    // Windows is a Control keyup, which would let a key held across AltGr up early.
+    if (!pressed && e.key === "Meta") {
+      for (const [code, held] of down) {
+        if (e.getModifierState(held)) continue;
+        post("key", held, code, false, false, ...mods(e));
+        down.delete(code);
+      }
+    }
     const name = pressed ? e.key : down.get(e.code);
     if (name === undefined) return;
     if (pressed) down.set(e.code, e.key);

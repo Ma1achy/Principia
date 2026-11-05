@@ -267,6 +267,31 @@ const LOADER_SCENARIOS = {
       check(release.args[0] === held, `${code} came up as ${release.args[0]}, and egui holds ${held} down`);
     }
   },
+  async loader_cmd_up_releases_what_the_browser_withholds() {
+    const started = await startLoader();
+    const releases = (code) => started.worker.posts.filter((m) => m.method === "key" && m.args[1] === code && m.args[2] === false);
+    const up = (key, code, held = () => false) =>
+      page.window.dispatchEvent(event("keyup", { key, code, repeat: false, getModifierState: held }));
+    press(started, { key: "Meta", code: "MetaLeft", metaKey: true }, false);
+    press(started, { key: "z", code: "KeyZ", metaKey: true }, false);
+    up("Meta", "MetaLeft");
+    check(releases("KeyZ").length === 1, "z's release was lost with Cmd's keyup, so egui holds it down");
+    check(releases("KeyZ")[0].args[0] === "z", `z came up as ${releases("KeyZ")[0].args[0]}`);
+    up("z", "KeyZ");
+    check(releases("KeyZ").length === 1, "a late keyup released z again");
+    check(releases("MetaLeft").length === 1, "Cmd's own release was not forwarded once");
+    press(started, { key: "Shift", code: "ShiftLeft", shiftKey: true }, false);
+    press(started, { key: "Meta", code: "MetaLeft", metaKey: true }, false);
+    up("Meta", "MetaLeft", (m) => m === "Shift");
+    check(releases("ShiftLeft").length === 0, "Shift went up with Cmd while still held");
+    up("Shift", "ShiftLeft");
+    check(releases("ShiftLeft").length === 1, "Shift's own keyup was lost");
+    press(started, { key: "q", code: "KeyQ" }, false);
+    up("Control", "ControlLeft");
+    check(releases("KeyQ").length === 0, "Control's keyup let a held key up early");
+    up("q", "KeyQ");
+    check(releases("KeyQ").length === 1, "q's own keyup was lost");
+  },
   async loader_failed_worker_gives_up_its_forwards() {
     const started = await startLoader();
     checkForwarding(started);
