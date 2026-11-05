@@ -415,6 +415,12 @@ mod release_under_the_layer_name {
         loader_altgraph_character_reaches_the_input,
         "a release named by its own event: a known code alone, with the layer's name, lets another key up in egui",
         expected = "KeyQ came up as @",
-        run(ALTGRAPH, &loader(RELEASE, "const name = e.key;"))
+        run(
+            ALTGRAPH,
+            &loader(
+                RELEASE,
+                "const name = pressed || down.has(e.code) ? e.key : undefined;"
+            )
+        )
     );
 }
