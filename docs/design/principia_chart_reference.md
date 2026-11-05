@@ -364,7 +364,10 @@ that ratio is not realised.
 inverse_encode_contract Part 3), reused here as the round trip's tolerance, not a new constant.
 
 Warped, `q(t) = q₀·(q₁/q₀)^t`, geometric, over `[q₀, q₁]`: the part of the asked range the link realises at `m_c` and
-at its active parameters. The axis is bounded past both of its edges.
+at its active parameters. A chart decoded at `f32` holds `m_c` narrowed to `f32`, and rounding it moves the two small
+masses by a relative `δ·m_c/(1 − m_c)`, so the range is the part realised at `m_c` both as held and as narrowed, and
+where those share no ratio, as can happen at a held mass near 1, the chart is not offered. The axis is bounded past
+both of its edges.
 
 Linear, `q(t) = q_lo + (q_hi − q_lo)·t`, affine, over the asked range. A pixel whose ratio is at or below 0, or is not
 realised, is not a system.

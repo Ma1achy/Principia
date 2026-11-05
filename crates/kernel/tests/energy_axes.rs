@@ -2685,6 +2685,81 @@ negative_control!(
     })
 );
 
+/// The range at the held mass as held, without its narrowing: outward from `chart`'s range to `asked`, by bisection in
+/// `ln q`, each test at `ε_μ/2`.
+fn range_as_held(chart: &RatioChart, asked: [f64; 2], p: &LinkParams<f64>) -> [f64; 2] {
+    let inside = |q: f64| {
+        let m = ratio_masses(chart.bodies, chart.held, q);
+        let back = <SoftmaxTanh as Link<2, 3>>::forward_at(
+            <SoftmaxTanh as Link<2, 3>>::inverse_at(m, p),
+            p,
+        );
+        back.iter()
+            .zip(m)
+            .all(|(&x, m)| (x - m).abs() <= 0.5e-6 * m)
+            && (ratio_of(chart.bodies, back) - q).abs() <= 0.5e-6 * q
+    };
+    [0, 1].map(|i| {
+        let (mut ok, mut bad) = (chart.ratio[i].ln(), asked[i].ln());
+        for _ in 0..64 {
+            let mid = 0.5 * (ok + bad);
+            if inside(mid.exp()) {
+                ok = mid;
+            } else {
+                bad = mid;
+            }
+        }
+        ok.exp()
+    })
+}
+
+/// A chart narrowed to `f32` holds its pixels at a held mass near 1 (R-506, R-471 E3): on slices with `m_c` above 0.95,
+/// `softmax_tanh` at `μ_max = 5`, every one of 257 rows is realised on the chart as `with_params` narrows it. `range`
+/// is the range taken from the chart `new` builds, its own or a control's.
+fn check_narrowed(range: &dyn Fn(&RatioChart, [f64; 2], &LinkParams<f64>) -> [f64; 2]) {
+    let p = LinkParams::DEFAULT;
+    let asked = [1.0e-3, 1.0e3];
+    let mut held_high = 0;
+    for bodies in [[2, 1], [1, 2]] {
+        for i in 0..=24 {
+            for j in 0..=24 {
+                let z = [-6.0 + 0.1 * f64::from(i), -6.0 + 0.1 * f64::from(j)];
+                let Some(mut chart) = bodies_slice(z, bodies, asked, Mapping::Warped, &p) else {
+                    continue;
+                };
+                if chart.held <= 0.95 {
+                    continue;
+                }
+                held_high += 1;
+                chart.ratio = range(&chart, asked, &p);
+                let narrowed = chart.with_params(|x| x as f32).at_f64();
+                for row in 0..=256 {
+                    let q = narrowed.ratio_at(f64::from(row) / 256.0);
+                    assert!(
+                        narrowed.realised(q, &p),
+                        "{z:?} {bodies:?}, held {}: row {row} of {:?}, q = {q}, is refused on f32",
+                        chart.held,
+                        chart.ratio
+                    );
+                }
+            }
+        }
+    }
+    assert!(held_high > 100, "{held_high} charts held a mass above 0.95");
+}
+
+#[test]
+fn energy_axes_mass_ratio_narrowed() {
+    check_narrowed(&|chart, _, _| chart.ratio);
+}
+
+negative_control!(
+    energy_axes_mass_ratio_narrowed,
+    "a range found at the held mass as held alone reaches ratios the narrowed held mass does not realise",
+    expected = "refused on f32",
+    check_narrowed(&|chart, asked, p| range_as_held(chart, asked, p))
+);
+
 /// How a mass-ratio arm forms its mass controls: the chart's own (its link's inverse at the ratio's masses), or the
 /// control's formula written for softmax_tanh at `μ_max = 5` alone, `m_i/m₀ = exp(5·tanh z_i)` solved for `z_i`.
 #[derive(Clone, Copy, PartialEq)]
@@ -3179,7 +3254,8 @@ negative_control!(
 /// The warped range's end where the `m_c` logit clamps: bodies `(0, 1)` under `softmax_tanh`,
 /// `ln(m_c/m₀) = ln(m_c·(1 + q)/(1 − m_c))` reaches `±(1 − ε_μ)·μ_max` at `q* = e^{±(1 − ε_μ)μ_max}·(1 − m_c)/m_c − 1`,
 /// the top on [`SATURATING`]'s first two, the bottom on its third, the other end the asked one, the end past `q*` by
-/// no more than `ε_μ` over the round trip's slope there. `at_ratio` names the
+/// no more than `ε_μ` over the round trip's slope there, `m_c` at whichever of the held value and its `f32` narrowing
+/// binds, the range being the part realised at both (chart_reference §2.1). `at_ratio` names the
 /// formula the check expects instead: the end where the ratio's own logit `ln q` clamps, `e^{±(1 − ε_μ)μ_max}`, or the
 /// asked end, what a predicate blind to `m_c` gives.
 fn check_held_edge(at_ratio: bool) {
@@ -3188,8 +3264,13 @@ fn check_held_edge(at_ratio: bool) {
         let p = mu(s.mu_max);
         let chart = saturating_chart::<Defaults>(s.mass, s.pair, s.asked, Mapping::Warped, &p)
             .expect("a realised range");
-        let h = chart.held;
         let up = k < 2;
+        let narrowed = f64::from(chart.held as f32);
+        let h = if up {
+            chart.held.max(narrowed)
+        } else {
+            chart.held.min(narrowed)
+        };
         let sign = if up { 1.0 } else { -1.0 };
         let clamp = (sign * (1.0 - eps) * s.mu_max).exp();
         let want = if at_ratio {
