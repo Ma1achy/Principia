@@ -942,7 +942,7 @@ fn top_at(h: &mut Headless, app: &mut App<MockSide>, y: f32) {
     settle(h, app);
 }
 
-/// Where the open popup's entries are, by the scope of `below`'s control: the popup's first rows under it.
+/// A point on the first rows of the popup open under control `id`.
 fn under(app: &App<MockSide>, id: &str) -> egui::Pos2 {
     app.keyboard
         .place_of(id)
@@ -1071,9 +1071,9 @@ fn mock_console_height_the_compass_menu_it_reaches_closes() {
     settle(&mut h, &mut app);
     click_scope(&mut h, &mut app, COMPASS_H);
     settle(&mut h, &mut app);
-    let closed = egui::Popup::is_any_open(&h.ctx);
-    assert!(closed, "open, the console closed");
-    rejects("a menu no console reaches", || assert!(!closed));
+    let open = egui::Popup::is_any_open(&h.ctx);
+    assert!(open, "open, the console closed");
+    rejects("a menu no console reaches", || assert!(!open));
     app.side().engine().raise_error();
     settle(&mut h, &mut app);
     assert!(app.is_open(Window::Console));
@@ -1096,7 +1096,7 @@ fn mock_console_height_the_focus_leaves_a_menu_it_closes() {
     rejects("a focus left on the entry", || assert_eq!(entry, path));
 }
 
-/// `app` with the console closed from `covering`: maximised, or dragged to the top.
+/// A GUI with its console closed from over the page: maximised, or dragged to the top.
 fn closed_from(maximised: bool) -> (App<MockSide>, Headless) {
     let (mut app, mut h) = opened();
     if maximised {
@@ -1187,8 +1187,7 @@ fn mock_console_height_only_an_auto_open_lowers_it() {
 
 #[test]
 fn mock_console_height_reopened_no_frame_paints_the_editor_over_it() {
-    let (mut app, mut h, field) = editing();
-    let _ = field;
+    let (mut app, mut h, _) = editing();
     click_scope(&mut h, &mut app, MAXIMISE);
     settle(&mut h, &mut app);
     at_scope(&mut h, &mut app, HEADER);
