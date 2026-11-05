@@ -4337,7 +4337,7 @@
   rulings:
   - R-660
   milestone: M3
-  note: "R-660 (31 Oct 2026, RQ-626 (a)). What the predicates read beside REQ-INT-045 and REQ-PAY-112 is RQ-636, which this requirement does not wait on (the owner's ruling of 31 Oct 2026)."
+  note: "R-660 (31 Oct 2026, RQ-626 (a)). What the predicates read beside REQ-INT-045 and REQ-PAY-112 was RQ-636, ruled by R-669 (1 Nov 2026, RQ-636 (a)): the read-time predicates and the display read the stored latches. *Was (note, R-669):* \"What the predicates read beside REQ-INT-045 and REQ-PAY-112 is RQ-636, which this requirement does not wait on (the owner's ruling of 31 Oct 2026).\""
 - id: REQ-INT-041
   area: INT
   statement: "The diffusion slope must be a Welford streaming slope per macro-step: the time-only part derived in closed form (n = step_count, mean_t = (n+1)h/2, C_tt = h²n(n²−1)/12), the per-sample part updating mean_y and C_ty in two f32 accumulators with the old-mean time deviation δ_t = 0.5·n·h, never as stored (t, y) points or naive raw sums, and the slope C_ty/C_tt(n) read as NaN for n < 2 (R-245)."
