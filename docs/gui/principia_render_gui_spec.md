@@ -1776,7 +1776,11 @@ the top bar, and is remembered with the layout (R-462). A **maximise** button in
 and the console's shortcut **M** (§G3's scope shortcuts, not while the search field is being typed in) toggle it
 between its height and the full height below the top bar, covering the panels and the figure until toggled back; the
 user chose it, so it is no notification over the figure (§G1). Opening and closing it each complete within one frame
-at 60 fps (16.7 ms), measured on the human's Mac before and after the fix, with where the time went.
+at 60 fps, measured on the human's Mac before and after the fix, with where the time went: the CPU part of each frame,
+the frame less its wait on the device, is under 16.7 ms in the slowest frame at every log size; the wait is reported,
+and so is a comparison with the same frames with no console action, which is not a gate (R-667). *Was:* "Opening and
+closing it each complete within one frame at 60 fps (16.7 ms), measured on the human's Mac before and after the fix,
+with where the time went."
 
 **A decoder bug inside `[0,1]²` is warned here (R-467, clause 4).** Inside the square every gallery chart is valid by
 construction, so a pixel the chart classifies as not a system there (a validity failure, or a `Chart::map` that fails)

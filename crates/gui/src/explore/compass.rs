@@ -60,8 +60,9 @@ use engine::contract::view_ui::{Focus, KeyMode};
 use crate::explore::lock::GOLD;
 use crate::explore::manifold_view::tilt::{Angles, TILT_RANGE};
 use crate::explore::manifold_view::{
-    about_the_pin, add, axis, basis_edit, chart_coords, normal_edit, plane_edit, plane_s, point,
-    target_choices, target_edit, z0_edit, Out, Scratch, Target, Touch, View, AXES, Z0_HALF_RANGE,
+    about_the_pin, add, axis, basis_edit, chart_coords, close_under_console, normal_edit,
+    plane_edit, plane_s, point, target_choices, target_edit, z0_edit, Out, Scratch, Target, Touch,
+    View, AXES, Z0_HALF_RANGE,
 };
 use crate::explore::{
     COMPASS, COMPASS_BADGE, COMPASS_D, COMPASS_D_ENTRIES, COMPASS_H, COMPASS_H_ENTRIES,
@@ -1997,6 +1998,7 @@ fn axis_buttons(
                 keyboard.place_widget(entries[to], &entry);
             }
         });
+        close_under_console(&button, scratch.console_top);
         if picked != shown {
             if let Some(edit) = pick_edit(sim, edge, picked, drawing.third) {
                 out.edit(edit, None, scratch);

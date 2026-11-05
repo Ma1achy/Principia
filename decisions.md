@@ -12553,6 +12553,9 @@ applied by a follow-up task):*
 Adds REQ-GUI-213 and REQ-GUI-214.
 
 ## R-463 — The console's height drags and a maximise toggle (button and key M) fills the height below the top bar; its open and close lag is measured first, and both are brought within one frame at 60 fps, with the frame times before and after *(amends R-450 as it lists the header bar's controls)*
+*Amended in part by R-667 (K4's target: each frame's CPU part, the frame less its wait on the device, is judged against
+16.7 ms; the wait and a comparison with a control of no action are reported, not judged).*
+*Still in force: all of it but K4's "the target", which R-667 reads as the CPU part of the slowest frame.*
 *18 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G12. Console (`12_console.png`)" (a paragraph),
 § "G5. Windows (`04_windows.png`)" (the console docked) and § "G13. Where the artboards are overridden" (the console's
 header), `docs/gui/design/GUI_DESIGN_NOTES.md` § "12 Console" (conformed), R-450's heading block, REQ-GUI-215 and
@@ -29439,6 +29442,43 @@ The owner's words (31 Oct 2026), verbatim, from that day's message:
 *What it decides:* sccache is not enabled for local builds or the job queue, which refines R-658, item 4. It changes nothing in CI, which does not use it.
 
 R-666 is in the "process" group of `plan/rule_groups.yaml`.
+
+## R-667 — REQ-GUI-216 is judged on the CPU part of each frame: the slowest frame's CPU part, in every table at every log size, under 16.7 ms; the wait on the device is reported, and the console's action is compared with a control of no action beside it, which is not a gate *(closes RQ-671; amends R-463 K4)*
+*2 Nov 2026 · the owner's message of that day; applied in R-463's heading block (a forward line),
+`docs/gui/principia_render_gui_spec.md` § "G12. Console (`12_console.png`)" (a sentence, with its *Was*),
+`docs/archive/review_queue/M0.md` (RQ-671, moved with this ruling), REQ-GUI-216 (reqio: statement, verify, rulings,
+source, note), TASK-M6-44's references and acceptance and `plan/rule_groups.yaml`; built by TASK-M6-44 (`crates/gui/src/bench.rs`)*
+
+The owner's words (2 Nov 2026), verbatim, from that day's message, which rules other entries too:
+
+> 671 (c), with the do-nothing control comparison (d) reported beside it in the PR and report (not a gate).
+
+*Context.* RQ-671 was queued by TASK-M6-44 on perf review 5732685040 of PR #370. After the fix, the console's rows cost
+at most 0.44 ms at 10 000 entries, and job 702's ten release runs on the Mac still missed 16.7 ms in 3 of 30 action
+tables and 1 of 30 control tables, each miss in the wait on the device; the largest CPU part of any frame was 4.48 ms.
+RQ-671's option (c) read: "Judge the CPU part of the frame against 16.7 ms and report the wait"; its option (d):
+"Judge the action arm against the control: no more misses than the control, beyond what chance explains, over a
+stated number of runs."
+
+*What it decides:*
+- **The gate.** Each frame's CPU part, the frame less its wait on the device (egui's passes, the log's filter and rows,
+  tessellation, and the CPU's work through wgpu: uploading, encoding and submitting), is judged against 16.7 ms, one
+  frame at 60 fps. The rule stays the slowest frame's: in every table, at every log size, the frame whose CPU part is
+  largest must be under 16.7 ms.
+- **The wait is reported.** Each table gives each row's wait, and its slowest whole frame with that frame's wait.
+- **The control comparison is reported, not a gate.** Beside the verdict, the PR and the benchmark's report give, for
+  the action arm and the control arm (the same frames on the same GUI with no input and the console closed), the
+  frames at or over 16.7 ms and at or over 10 ms, and a one-sided Fisher exact p of the action arm having more of
+  them than the control. Neither count nor p passes or fails anything.
+- **What stays.** The 16.7 ms limit, the three log sizes, the slowest-frame rule, the measurement on the human's Mac
+  (R-186), the before and after tables with where the time went, the control arm and the wait's split from the CPU's
+  work.
+
+*Applied per R-369:* the ruling is ported in TASK-M6-44's own PR, because REQ-GUI-216 is the only thing it unblocks.
+
+R-667 is in the "design" group of `plan/rule_groups.yaml`, with R-463.
+
+Changes REQ-GUI-216 (statement, verify, rulings, source, note).
 
 ## R-668 — The 1 Nov library triage rulings: the site-note families stay, marked "operator's own search, unreviewed", closure peeks only and never targets, `bhhsat` with them unless Davoust & Broucke's comparison matches, `suvakov_pc` closure only; a digit match is a trace, marked "inferred"; values printed in a paper, or in a public database a paper points to, are stored with credit and citation, an author emailed only as a last resort; unreviewed and AI-assisted sources are peeks only; hierarchical triples are parked with the v2+ 3D extension; RQ-666 is confirmed; the kernel stays at `G = 1`, another `G` converted at the import boundary and what can't be converted refused *(closes RQ-666 and RQ-668; corrects R-468)*
 *Refined by R-679 (3 Nov 2026: item 5's parking reaches planetary, star-plus-planets, sources, revisited with the v2+

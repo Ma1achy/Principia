@@ -4,6 +4,8 @@
 
 pub mod app;
 #[cfg(not(target_arch = "wasm32"))]
+pub mod bench;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod capture;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod cli;
@@ -38,6 +40,7 @@ mod tests {
     mod compass_position_gauge;
     mod compass_support;
     mod conformance;
+    mod console_open_close;
     mod degenerate_tilt_guards;
     mod f3_fallback_mock;
     mod f3_fill_modes;
@@ -55,6 +58,7 @@ mod tests {
     mod mock_compass_steer_physical;
     mod mock_compass_view_keys;
     mod mock_compass_views;
+    mod mock_console_height;
     mod mock_console_keys;
     mod mock_content;
     mod mock_cube_axis_buttons;

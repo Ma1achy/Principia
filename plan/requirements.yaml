@@ -21261,21 +21261,24 @@
   note: "R-463 (K1 to K3 applied per R-369); closed by TASK-M6-44. Adds the maximise button to REQ-GUI-189's header bar."
 - id: REQ-GUI-216
   area: GUI
-  statement: "On the mock engine, the console must open and must close each within one frame at 60 fps (16.7 ms), with an empty log, with 1 000 entries and with CONSOLE_ROWS entries, on the human's Mac; the time of the opening and closing frames, and where it goes (egui layout, the log's filter, the log's rows, the wgpu frame), must be measured before the fix and after it and given in the PR."
+  statement: "On the mock engine, the console must open and must close each within one frame at 60 fps, with an empty log, with 1 000 entries and with CONSOLE_ROWS entries, on the human's Mac, judged on each frame's CPU part, the frame less its wait on the device: in every table, at every log size, the slowest frame's CPU part must be under 16.7 ms (R-667); the time of the opening and closing frames, and where it goes (egui layout, the log's filter, the log's rows, the wgpu frame, its wait on the device apart), must be measured before the fix and after it and given in the PR, with the wait and a comparison with a control of the same frames with no console action reported beside the verdict, not as a gate."
   source:
   - file: docs/gui/principia_render_gui_spec.md
     section: G12. Console (`12_console.png`)
   - file: decisions.md
     section: "R-463 — The console's height drags and a maximise toggle (button and key M) fills the height below the top bar; its open and close lag is measured first, and both are brought within one frame at 60 fps, with the frame times before and after *(amends R-450 as it lists the header bar's controls)*"
+  - file: decisions.md
+    section: "R-667 — REQ-GUI-216 is judged on the CPU part of each frame: the slowest frame's CPU part, in every table at every log size, under 16.7 ms; the wait on the device is reported, and the console's action is compared with a control of no action beside it, which is not a gate *(closes RQ-671; amends R-463 K4)*"
   verify:
     method: benchmark
-    detail: "benchmark on the human's Mac (R-186): cargo run -p gui --features mock --release -- --bench console-open-close at the three log sizes, before and after, the frame times of the opening and closing frames and their breakdown in the PR; after the fix each is under 16.7 ms at every size; review checklist (perf reviewer): the breakdown names where the time went before the fix, the fix addresses it, and the after-table meets the target"
+    detail: "benchmark on the human's Mac (R-186): cargo run -p gui --features mock --release -- --bench console-open-close at the three log sizes, before and after, the frame times of the opening and closing frames and their breakdown in the PR; after the fix the CPU part of the slowest frame (the frame less its wait on the device) is under 16.7 ms in every table at every size (R-667); the wait, and the action arm against the control arm (frames at or over 16.7 ms and 10 ms in each, and the one-sided Fisher p), are reported, not judged; review checklist (perf reviewer): the breakdown names where the time went before the fix, the fix addresses it, and the after-table meets the target"
   rulings:
   - R-186
   - R-390
   - R-463
+  - R-667
   milestone: M6
-  note: "R-463 (K4 applied per R-369); closed by TASK-M6-44. The porter's pointer for the measurement, not a finding: the console filters and lays out the whole log every frame while open (windows/console.rs)."
+  note: "R-463 (K4 applied per R-369); closed by TASK-M6-44. The porter's pointer for the measurement, not a finding: the console filters and lays out the whole log every frame while open (windows/console.rs). R-667 (2 Nov 2026, closing RQ-671) judges the CPU part of each frame and reports the wait and the control comparison."
 - id: REQ-GUI-217
   area: GUI
   statement: "On the mock engine, a slice-mode drag on the compass's Cube view must move the slice along the drawn plane's normal (the decoder's, latent_normal) by the drag's 2-D screen displacement projected onto the drawn normal's screen direction ŝ (the unit vector along P(n̂) − P(0), P the cube's isometric projection), at R-451 B3's rate (a drag of the cube's full screen width, 2√3·S, along ŝ moving the slice across the whole range, S the cube's scale), the component across ŝ doing nothing, so the drawn plane moves with the pointer at every tilt; where |P(n̂) − P(0)| < 0.25·S the drag must read its vertical component instead, up moving the plane along the normal's side facing the viewer (n̂·(1, 1, 1) > 0), at the same rate, the whole range per 2√3·S of vertical travel; the tilt-mode drag must stay as R-451 B3 has it."
