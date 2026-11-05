@@ -86,8 +86,6 @@ jobs:
         env:
           HTTPS_PROXY: http://127.0.0.1:8899
           HTTP_PROXY: http://127.0.0.1:8899
-          https_proxy: http://127.0.0.1:8899
-          http_proxy: http://127.0.0.1:8899
           NO_PROXY: ''
         run: |
           $ErrorActionPreference = 'Continue'
