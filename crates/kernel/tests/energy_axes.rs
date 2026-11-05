@@ -2555,22 +2555,25 @@ fn energy_axes_mass_ratio_saturated_centre() {
         .is_none(),
         "a range wholly past the clamp is offered"
     );
-    let narrow = RatioChart::new(
-        [0.3, -0.5, 0.2, -0.1, 0.15, 0.05, 10.0, -1.5],
-        [0.2, 1.3],
-        [1.0e-3, 1.0e3],
-        [1, 0],
-        Mapping::Warped,
-        &LinkParams::DEFAULT,
-    )
-    .expect("an interval away from 1 and the centre finds its seed");
-    assert!(
-        (narrow.ratio[0] - 0.006738).abs() <= 1.0e-5
-            && (narrow.ratio[1] - 0.010871).abs() <= 1.0e-5,
-        "the interval away from 1 is {:?}",
-        narrow.ratio
-    );
-    check_every_pixel("a narrow range", system(&narrow));
+    for (bodies, want) in [([1, 0], [0.006738, 0.010871]), ([0, 1], [91.99, 148.41])] {
+        let narrow = RatioChart::new(
+            [0.3, -0.5, 0.2, -0.1, 0.15, 0.05, 10.0, -1.5],
+            [0.2, 1.3],
+            [1.0e-3, 1.0e3],
+            bodies,
+            Mapping::Warped,
+            &LinkParams::DEFAULT,
+        )
+        .expect("an interval away from 1 and the centre finds its seed");
+        for (got, want) in narrow.ratio.iter().zip(want) {
+            assert!(
+                (got - want).abs() <= 1.0e-3 * want,
+                "the interval away from 1 is {:?}, not {want}",
+                narrow.ratio
+            );
+        }
+        check_every_pixel("a narrow range", system(&narrow));
+    }
     assert!(
         ratio_slice(
             [10.0, 0.0],
