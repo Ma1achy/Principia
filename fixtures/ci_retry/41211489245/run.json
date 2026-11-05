@@ -1,0 +1,9 @@
+{
+  "conclusion": "failure",
+  "event": "pull_request",
+  "head_branch": "task/TASK-M2-26",
+  "head_sha": "b84f591d7caaf973e375db86e6a2383ce4a29b47",
+  "id": 41211489245,
+  "path": ".github/workflows/ci.yml",
+  "run_attempt": 1
+}

@@ -1,0 +1,68 @@
+# Starts full CI on the merge-candidate head (R-684): `merge-ready` going on a pull request runs the full tier without a
+# new push, the trigger mutants uses (R-676), and going off cancels a full attempt still going, as it cancels the
+# merge-ready run of `mutants.yml`.
+#
+# It is a workflow of its own because `ci.yml` must run on no label change. Of each workflow's runs on a head, branch
+# protection counts only the latest run's check suite (R-678), so a run of `ci.yml` on another label would supersede the
+# suite holding the head's required checks. So this workflow takes the label events, and bears no required check, and
+# re-runs the head's `pull_request` run of `ci.yml` as `reviews.yml` re-runs its own (R-276): a new attempt, in the same
+# check suite, on the same merge commit, whose `changes` job reads the live label and says full
+# (`.github/scripts/ci_tier.sh merge-ready`). A label a workflow's `GITHUB_TOKEN` puts on starts no run; the merge
+# watcher puts it on with the user's own token (`plan/OPERATIONS.md` § "Mutants on the merge-ready head").
+#
+# Any other label's run skips its one job at job level, and asks for no runner, in a group of its own, so it cancels
+# nothing (below).
+name: ci-full
+
+on:
+  pull_request:
+    types: [labeled, unlabeled]
+
+# A later change of `merge-ready` on the pull request supersedes the one before it, so taking it off cancels this job.
+# A run started by any other label changes nothing here and has a group of its own (its run id), as in `mutants.yml`:
+# in the shared group it would cancel the `merge-ready` job, perhaps between its cancel and its re-run, leaving the head
+# with the label on and no full run. `github.ref` here is the pull request's merge ref, never `main`; the guard says so
+# as every workflow's does (applied per R-369).
+concurrency:
+  group: >-
+    ci-full-${{ github.event_name }}-${{ (github.ref == 'refs/heads/main'
+    || github.event.label.name != 'merge-ready')
+    && github.run_id || github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+# `actions: write` to cancel and re-run the run; `pull-requests: read` for the live head.
+permissions:
+  actions: write
+  contents: read
+  pull-requests: read
+
+env:
+  # R-374: every workflow sets line-tables-only at its top level. This job builds nothing; it sets them so that holds
+  # for every workflow without exception (applied per R-369).
+  CARGO_PROFILE_DEV_DEBUG: line-tables-only
+  CARGO_PROFILE_TEST_DEBUG: line-tables-only
+  # No incremental state, the owner's CI setting (PR #394), in every workflow like R-374's values. `Swatinem/rust-cache`
+  # already exports CARGO_INCREMENTAL=0 to the steps after it, and before it computes its key, so its key and every
+  # build after it are the same without this line. What the line adds: the value in the steps before rust-cache, where
+  # no cargo build runs and `ci.yml`'s `cachekey` hashes it, and in jobs without rust-cache, where two run cargo:
+  # `ci.yml`'s `ci-release`, which builds only for the release doctests, which aren't incremental by default, and
+  # `pages.yml`'s `build`, where it turns off incremental state for the dev-profile build of xtask that `cargo xtask
+  # web-skeleton` starts. Local builds are unaffected (R-233).
+  CARGO_INCREMENTAL: "0"
+
+jobs:
+  ci-full:
+    if: github.event.label.name == 'merge-ready'
+    runs-on: ubuntu-24.04
+    # Its waits, for a run to appear and for a cancelled run to end, are bounded in the script; this bounds the job.
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: .github/scripts/ci_tier.sh merge-ready
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          ACTION: ${{ github.event.action }}
+          PR: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: .github/scripts/ci_tier.sh merge-ready

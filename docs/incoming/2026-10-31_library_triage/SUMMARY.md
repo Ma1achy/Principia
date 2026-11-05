@@ -302,6 +302,10 @@ prefix `7d160daf` matches, tracked, no open licence seen. It stays until ruled, 
 `from_zips/three_body_papers/BF01013153.pdf` is byte-identical. `agekyan_anosova_1968_SvA_11_1006.pdf` and the Anosova
 1969 translation, also in this triage's already-have rows, are on RQ-610 too.
 
+*2 Nov 2026 (R-673, closing RQ-610 at (c)):* all three, and Hudomal's thesis, now held locally at
+`docs/incoming/_local/` under the same filenames, not in the repo; the Belgrade gallery's `initial-conditions.pdf` stays,
+under the gallery's copy-and-use terms, crediting the gallery. They remain "already have".
+
 ## Open questions for the owner
 
 1. **Does a site note count as "published"?** The five families (`r4new`, `rosette`, `bhhsat`, `bhunt`, `pancake`; 81 rows)
@@ -321,6 +325,16 @@ prefix `7d160daf` matches, tracked, no open licence seen. It stays until ruled, 
 9. **Li, Tao, Li & Liao 2025.** Table 1 is rights reserved, and there is no data file. Is transcribing it for approved use
    acceptable, and should the authors be asked for their long-decimal data? Does question 4's answer change with it?
 10. **BPZ cold records.** Commit both files (CC BY 4.0, 11.6 and 10.6 MB), or a sample? Is BZ-1 reopened for the cold sets?
+
+*Answered 1 Nov 2026 (R-668; R-669 for questions 14 and 15 of the papers-11 to 13 triage, which isn't on `main`: Hénon 1974 joins the rotating-frame set, Heggie & Sweatman 1991 in M9, not scored).* In
+order: 1, the five families stay, marked "operator's own search, unreviewed", closure peeks only, never targets (the
+owner's second message reversing his first), `bhhsat` the same unless Davoust & Broucke's comparison matches,
+`suvakov_pc` closure only; 2, yes, marked "inferred"; 3 and 9, values with credit and citation under the owner's
+data-reuse rule, the SJTU values committed, Li, Tao, Li & Liao 2025's Table 1 transcribed twice and diffed, authors
+emailed only as a last resort; 4, Kapela & Simó 2017 and Davoust & Broucke 1982 suffice, with Titov's rotating-frame
+orbits; 5, out of scope for now, parked with the v2+ 3D extension, the M9 list shrinking by them; 6, peeks only;
+7, yes, if a sample checks against the paper; 8, the paper and the 9.7 MB file once CC BY is confirmed, the 930 MB file
+out; 10, both committed (R-661). This record's rows are not rewritten; the rulings apply to them as read.
 
 **For the queue, once you say so; this PR files nothing:** PLAN row BR-1 still says the data isn't available, stale against
 R-641. REQ-VAL-319 and design 5.12 say Manwadkar's Table 1 where the probabilities are in Table 2. PLAN's 437 L≠0 rows list

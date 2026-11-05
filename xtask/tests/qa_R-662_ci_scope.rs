@@ -11,6 +11,10 @@
 //! instead; the field check `scripts/ci_req_fields.py` joins the scripts that are code; mutants run only on Rust under
 //! `crates/`. This file changes only where that ruling changes the behaviour it tests (R-677's exception to R-290).
 //!
+//! R-790 (4 Nov 2026) adds `.claude/`, its commands, agents and settings, to tier (c), the owner: "R-677 amendment:
+//! .claude/ (commands, agents, settings) is docs tier." `cheap`, the model below, gains it, and the near neighbours a
+//! prefix would catch join the unknown paths (R-790's exception to R-290).
+//!
 //! - `qa_r662_every_tracked_path_classifies_as_the_ruling_says`: every path `git ls-files` lists, against this file's
 //!   own reading of the ruling's lists (`ruling`).
 //! - `qa_r662_unknown_paths_run_everything`: paths the ruling names nowhere, alone and beside a cheap path.
@@ -128,10 +132,10 @@ fn tier_b(path: &str) -> bool {
         || ["plan/tasks.yaml", "plan/MILESTONES.md"].contains(&path)
 }
 
-/// R-662's "only the cheap checks" (R-677's tier c): `docs/`, `plan/`, `scripts/`, `workbench/` and the root's markdown,
-/// but that data.
+/// R-662's "only the cheap checks" (R-677's tier c): `docs/`, `plan/`, `scripts/`, `workbench/`, `.claude/` (R-790) and
+/// the root's markdown, but that data.
 fn cheap(path: &str) -> bool {
-    let listed = ["docs/", "plan/", "scripts/", "workbench/"]
+    let listed = ["docs/", "plan/", "scripts/", "workbench/", ".claude/"]
         .iter()
         .any(|d| path.starts_with(d))
         || (!path.contains('/') && path.ends_with(".md"));
@@ -219,6 +223,10 @@ fn check_tracked(script: &str, paths: &[String]) {
                 .any(|p| cheap(p) && p.starts_with("workbench/")),
         ),
         (
+            ".claude/",
+            paths.iter().any(|p| cheap(p) && p.starts_with(".claude/")),
+        ),
+        (
             "the artboards",
             paths.iter().any(|p| p.starts_with("docs/gui/design/")),
         ),
@@ -303,6 +311,19 @@ negative_control!(
     )
 );
 
+mod claude_runs_full_ci {
+    use super::*;
+    negative_control!(
+        qa_r662_every_tracked_path_classifies_as_the_ruling_says,
+        "the script with `.claude/` off its allowlist (R-790)",
+        expected = "paths the ruling gives only the cheap checks are not docs-only together",
+        check_tracked(
+            &swap(&script(), " | .claude/*) return 0 ;;", ") return 0 ;;"),
+            &tracked()
+        )
+    );
+}
+
 // ---- Unknown paths -----------------------------------------------------------------------------------------------
 
 /// Paths R-662 names nowhere, or that only look like a listed one.
@@ -328,6 +349,10 @@ const UNKNOWN: &[&str] = &[
     "Docs/a.md",
     "DOCS/a.md",
     "PLAN/a.md",
+    ".claude",
+    ".clauderc",
+    ".claude2/a.md",
+    ".CLAUDE/a.md",
     "Decisions.md",
     "decisions.MD",
     "decisions.md.orig",
@@ -340,11 +365,15 @@ const UNKNOWN: &[&str] = &[
     "fixtures/docs/a.md",
     "fixtures/plan/a.yaml",
     ".github/docs/a.md",
+    "a/.claude/b.md",
+    "crates/.claude/a.md",
+    ".github/.claude/a.md",
     // Paths written differently from how git prints a plain one, as git prints an odd one.
     "./docs/a.md",
     "/docs/a.md",
     " docs/a.md",
     "\"docs/a\\tb.md\"",
+    "./.claude/a.md",
     "   ",
 ];
 
@@ -376,6 +405,7 @@ fn check_unknown(script: &str) {
                 "plan/qa.py",
                 "scripts/qa.py",
                 "workbench/qa",
+                ".claude/qa.md",
                 "decisions.md"
             ]
         ),
@@ -466,6 +496,9 @@ impl Walk {
                 .and_then(|o| o.get(*key))
                 .cloned()
                 .unwrap_or_default(),
+            // A step's status functions, in a run with no failed step, which is the run this walk is of.
+            ["always()"] => "true".to_owned(),
+            ["failure()"] => "false".to_owned(),
             _ => panic!("qa_r662: the walk does not know the expression `{t}`"),
         }
     }
@@ -509,7 +542,10 @@ fn walk(yml: &Value, verdict: (bool, bool), fail: &[&str]) -> Walk {
             }
             let cond = s(&job["if"]);
             let ok = needs.iter().all(|n| w.results[n] == "success");
-            let runs = if cond.contains("always()") {
+            // R-684 joins an `if:` to `always()`: what follows it holds or skips the job.
+            let runs = if let Some(rest) = cond.strip_prefix("always() && ") {
+                w.eval(rest) == "true"
+            } else if cond.contains("always()") {
                 true
             } else {
                 ok && (cond.is_empty() || w.eval(&cond) == "true")
@@ -566,13 +602,26 @@ fn walk(yml: &Value, verdict: (bool, bool), fail: &[&str]) -> Walk {
     w
 }
 
+/// The check a job reports when it runs: its `name:`, or its id; a gate named by its one-value matrix reports that value
+/// (R-684), and skipped, on a quick run, its raw `name:`.
+fn reported_name(id: &str, job: &Value) -> String {
+    let name = job.get("name").map_or_else(|| id.to_owned(), s);
+    match job["strategy"]["matrix"]["check"]
+        .as_array()
+        .map(Vec::as_slice)
+    {
+        Some([only]) if name == "${{ matrix.check }}" => s(only),
+        _ => name,
+    }
+}
+
 /// The result of the job reporting the check `name`, which must be exactly one job.
 fn check_result(yml: &Value, w: &Walk, name: &str) -> String {
     let by: Vec<&String> = yml["jobs"]
         .as_object()
         .expect("jobs")
         .iter()
-        .filter(|(id, j)| j.get("name").map_or(id.as_str() == name, |n| s(n) == name))
+        .filter(|(id, j)| reported_name(id, j) == name)
         .map(|(id, _)| id)
         .collect();
     assert_eq!(by.len(), 1, "qa_r662: `{name}` is reported by {by:?}");
@@ -580,6 +629,43 @@ fn check_result(yml: &Value, w: &Walk, name: &str) -> String {
 }
 
 const GATES: [&str; 5] = ["ci", "xtask-ci", "gpu-kernel", "gpu-metal", "gpu-lavapipe"];
+
+/// The status functions a step's `if` holds read as a run with no failed step, and any other expression still stops
+/// the walk: it must not read as a false that hides a step.
+fn check_walk_reads_status(walk: &Walk, unknown: &[&str]) {
+    assert_eq!(walk.eval("always()"), "true", "qa_r662: `always()`");
+    assert_eq!(walk.eval("failure()"), "false", "qa_r662: `failure()`");
+    let mut outputs = BTreeMap::new();
+    outputs.insert("docs_only".to_owned(), "false".to_owned());
+    let mut seen = Walk::default();
+    seen.outputs.insert("changes".to_owned(), outputs);
+    let upload = "always() && needs.changes.outputs.docs_only != 'true'";
+    assert_eq!(seen.eval(upload), "true", "qa_r662: `{upload}`");
+    for expr in unknown {
+        let read = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| walk.eval(expr)));
+        assert!(read.is_err(), "qa_r662: the walk read `{expr}`");
+    }
+}
+
+#[test]
+fn qa_r662_walk_reads_status_and_refuses_the_rest() {
+    check_walk_reads_status(
+        &Walk::default(),
+        &[
+            "success()",
+            "cancelled()",
+            "hashFiles('x')",
+            "always() && cancelled()",
+        ],
+    );
+}
+
+negative_control!(
+    qa_r662_walk_reads_status_and_refuses_the_rest,
+    "a walk taken to refuse what it knows",
+    expected = "qa_r662: the walk read `failure()`",
+    check_walk_reads_status(&Walk::default(), &["failure()"])
+);
 
 /// The commands `ci-workspace` runs when `changes` said `docs_only`.
 fn workspace_runs(yml: &Value, docs_only: bool) -> String {
@@ -670,7 +756,10 @@ fn check_required(ci: &str, mutants: &str) {
     // The other side: full CI on code runs what the cheap path skipped, and the gates pass.
     let full = walk(&yml, (false, true), &[]);
     assert!(
-        full.results.values().all(|r| r == "success"),
+        // R-684: the quick tier's job, and `ci-status`, which only a code pull request's full tier runs.
+        full.results
+            .iter()
+            .all(|(id, r)| r == "success" || id == "ci-quick" || id == "ci-status"),
         "qa_r662: full CI skipped a job: {:?}",
         full.results
     );
@@ -703,24 +792,40 @@ fn check_required(ci: &str, mutants: &str) {
         "qa_r662: `ci` passes when its archive job failed"
     );
 
-    // `mutants-check`: its verdict job (`mutants-verdict`, which posts the check, R-656's merge-ready run) always runs
-    // once started, posts the check whatever happened, and its own script passes a run with no report and fails a
-    // failed shard.
+    // `mutants-check`: its verdict job (`mutants-verdict`, R-656's merge-ready run) always runs once started, and the
+    // job `mutants-check`, in every run (R-678, which replaced the check run the verdict job posted: R-678's exception
+    // to R-290, the one change here), runs whatever the verdict ended in and reports its result; the verdict's own
+    // script passes a run with no report and fails a failed shard.
     let mutants = parse(mutants);
     let job = &mutants["jobs"]["mutants-verdict"];
     assert!(
         s(&job["if"]).starts_with("always()"),
-        "qa_r662: `mutants-check` can be skipped"
+        "qa_r662: `mutants-check`'s verdict can be skipped"
+    );
+    let check = &mutants["jobs"]["mutants-check"];
+    let needs = match &check["needs"] {
+        Value::Array(a) => a.iter().map(s).collect::<Vec<_>>(),
+        other => vec![s(other)],
+    };
+    assert!(
+        s(&check["if"]) == "always()" && needs.iter().any(|n| n == "mutants-verdict"),
+        "qa_r662: `mutants-check` is not a job run whatever its verdict ended in (if: `{}`, needs: {needs:?})",
+        s(&check["if"])
+    );
+    assert!(
+        check["steps"]
+            .as_array()
+            .expect("qa_r662: mutants-check's steps")
+            .iter()
+            .any(|st| st.get("if").is_none()
+                && st["env"].as_object().is_some_and(|e| e
+                    .values()
+                    .any(|v| s(v) == "${{ needs.mutants-verdict.result }}"))),
+        "qa_r662: `mutants-check` does not report the verdict's result in a step that always runs"
     );
     let steps = job["steps"]
         .as_array()
-        .expect("qa_r662: mutants-check's steps");
-    assert!(
-        steps.iter().any(|st| s(&st["if"]) == "always()"
-            && s(&st["run"]).contains("check-runs")
-            && s(&st["run"]).contains("name=mutants-check")),
-        "qa_r662: the verdict is not posted as `mutants-check` whatever happened"
-    );
+        .expect("qa_r662: mutants-verdict's steps");
     let step = steps
         .iter()
         .find(|st| s(&st["run"]).contains("cargo xtask mutants-check"))
@@ -774,12 +879,46 @@ negative_control!(
     check_required(
         &swap(
             &read(".github/workflows/ci.yml"),
-            "    name: xtask-ci\n    needs: [xtask-ci, changes]\n    if: always()\n",
-            "    name: xtask-ci\n    needs: [xtask-ci, changes]\n"
+            "    needs: [xtask-ci, changes]\n    if: always() && needs.changes.outputs.quick != 'true'\n",
+            "    needs: [xtask-ci, changes]\n"
         ),
         &read(".github/workflows/mutants.yml")
     )
 );
+
+mod mutants_check_skipped_with_its_verdict {
+    use super::*;
+    negative_control!(
+        qa_r662_required_checks_report_on_the_cheap_path,
+        "mutants.yml's `mutants-check` job run only when its verdict passed",
+        expected = "`mutants-check` is not a job run whatever its verdict ended in",
+        check_required(
+            &read(".github/workflows/ci.yml"),
+            &swap(
+                &read(".github/workflows/mutants.yml"),
+                "  mutants-check:\n    if: always()\n",
+                "  mutants-check:\n"
+            )
+        )
+    );
+}
+
+mod mutants_check_ignores_its_verdict {
+    use super::*;
+    negative_control!(
+        qa_r662_required_checks_report_on_the_cheap_path,
+        "mutants.yml's `mutants-check` reading no verdict",
+        expected = "`mutants-check` does not report the verdict's result",
+        check_required(
+            &read(".github/workflows/ci.yml"),
+            &swap(
+                &read(".github/workflows/mutants.yml"),
+                "          VERDICT: ${{ needs.mutants-verdict.result }}\n",
+                "          VERDICT: success\n"
+            )
+        )
+    );
+}
 
 // ---- Git, on real commits -------------------------------------------------------------------------------------------
 
@@ -882,6 +1021,7 @@ const SHARD_CASES: &[(&[&str], bool)] = &[
     (&["plan/qa/a.rs"], false),
     (&["scripts/qa/a.rs"], false),
     (&["workbench/qa a.rs"], false),
+    (&[".claude/qa/a.rs"], false),
     (&["docs/reference/qa/a.rs", "workbench/qa/b.rs"], false),
     (&["crates/kernel/src/qa.rs"], true),
     (&["crates/gui/src/qa.rs"], true),
@@ -898,6 +1038,7 @@ const SHARD_CASES: &[(&[&str], bool)] = &[
     (&["xtask/crates/qa.rs"], false),
     // Mixed, the Rust under `crates/` on either side of the others in the diff's order.
     (&["crates/kernel/src/qa.rs", "docs/reference/qa/a.rs"], true),
+    (&[".claude/qa/a.rs", "crates/kernel/src/qa.rs"], true),
     (&["docs/reference/qa/a.rs", "zz/crates/qa.rs"], false),
     (
         &["docs/reference/qa/a.rs", "zz/qa.rs", "crates/zz/qa.rs"],
@@ -1032,6 +1173,25 @@ const DETECT_CASES: &[(&str, Pr, (bool, bool, &str))] = &[
             "docs/qa/b.pdf",
         ]),
         (true, false, "docs"),
+    ),
+    (
+        "`.claude/`'s agents, commands and settings",
+        Pr::Add(&[
+            ".claude/agents/qa.md",
+            ".claude/commands/qa.md",
+            ".claude/settings.json",
+        ]),
+        (true, false, "docs"),
+    ),
+    (
+        "`.claude/` beside a crate's file",
+        Pr::Add(&[".claude/agents/qa.md", "crates/kernel/src/qa.rs"]),
+        (false, true, "code"),
+    ),
+    (
+        "a name that only starts like `.claude/`",
+        Pr::Add(&[".clauderc"]),
+        (false, true, "code"),
     ),
     (
         "a non-ASCII name in the docs",

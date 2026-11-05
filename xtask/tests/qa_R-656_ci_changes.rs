@@ -27,9 +27,9 @@
 //!   request's, reads the change against the first parent (the base), not against the pull request's head; a non-pull
 //!   request event, and a commit that is no merge, run everything.
 //! - `qa_r656_required_checks_report_under_always`: the eight required checks are present; `ci.yml`'s five gates are
-//!   `if: always()` jobs; `mutants.yml`'s `mutants-check`, which R-656's merge-ready run makes a posted check run (the
-//!   owner's CI plan of 2 Nov 2026), is borne by no job, which a run skipping it would report passed, and is posted by
-//!   an `if: always()` job in an `if: always()` step; neither workflow filters `pull_request` by path.
+//!   `if: always()` jobs; `mutants.yml`'s `mutants-check` is, under R-678 (3 Nov 2026), one `if: always()` job of
+//!   every run, never a check run posted through the Checks API (R-656's merge-ready run had made it a posted one;
+//!   R-678 changed that, its exception to R-290); neither workflow filters `pull_request` by path.
 //! - `qa_r656_push_runs_only_main_and_measure`: `ci.yml`'s `push` names exactly `main` and `measure/**`; no other
 //!   workflow's `push` names a branch other than `main`.
 //!
@@ -534,16 +534,26 @@ fn s(v: &Value) -> String {
     }
 }
 
+/// The check a job reports when it runs: its `name:`, or its id; a gate named by its one-value matrix reports that value
+/// (R-684), and skipped, on a quick run, its raw `name:`.
+fn reported_name(id: &str, job: &Value) -> String {
+    let name = job.get("name").map_or_else(|| id.to_owned(), s);
+    match job["strategy"]["matrix"]["check"]
+        .as_array()
+        .map(Vec::as_slice)
+    {
+        Some([only]) if name == "${{ matrix.check }}" => s(only),
+        _ => name,
+    }
+}
+
 /// The jobs of `wf` reporting the check `name` (their `name:`, or their id where they have none).
 fn reporting<'a>(wf: &'a Value, name: &str) -> Vec<(&'a String, &'a Value)> {
     wf["jobs"]
         .as_object()
         .expect("qa_r656: jobs")
         .iter()
-        .filter(|(id, job)| {
-            job.get("name")
-                .map_or(id.as_str() == name, |n| s(n) == name)
-        })
+        .filter(|(id, job)| reported_name(id, job) == name)
         .collect()
 }
 
@@ -557,32 +567,42 @@ fn check_required(ci: &str, mutants: &str, pr_check: &str, reviews: &str) {
             "qa_r656: ci.yml has {} jobs reporting the required check `{gate}`",
             jobs.len()
         );
+        // R-684 skips the gates on a quick run alone, this file's exception to R-290, as R-678's below.
         assert_eq!(
             s(&jobs[0].1["if"]),
-            "always()",
+            "always() && needs.changes.outputs.quick != 'true'",
             "qa_r656: ci.yml's required check `{gate}` is not `if: always()`"
         );
     }
+    // R-678 (3 Nov 2026) replaces R-656's posted check run with a job of every run of `mutants.yml`: exactly one job
+    // bears `mutants-check`, under `if: always()` as `ci.yml`'s gates are, and no step posts it through the Checks API
+    // (a check run posted into another run's suite, which a later run supersedes, is not counted: #384). This is the
+    // one change here, R-678's exception to R-290.
     let mutants = parse(mutants);
-    assert!(
-        reporting(&mutants, "mutants-check").is_empty(),
-        "qa_r656: a mutants.yml job bears the required check `mutants-check`, which a run skipping it reports passed"
+    let jobs = reporting(&mutants, "mutants-check");
+    assert_eq!(
+        jobs.len(),
+        1,
+        "qa_r656: mutants.yml has {} jobs reporting the required check `mutants-check`",
+        jobs.len()
     );
-    let posts_always = mutants["jobs"]
+    assert_eq!(
+        s(&jobs[0].1["if"]),
+        "always()",
+        "qa_r656: mutants.yml's required check `mutants-check` is not `if: always()`"
+    );
+    let posts = mutants["jobs"]
         .as_object()
         .expect("qa_r656: jobs")
         .values()
-        .filter(|job| s(&job["if"]).starts_with("always()"))
         .flat_map(|job| job["steps"].as_array().cloned().unwrap_or_default())
         .any(|st| {
             let run = s(&st["run"]);
-            s(&st["if"]) == "always()"
-                && run.contains("check-runs")
-                && run.contains("name=mutants-check")
+            run.contains("check-runs") && run.contains("mutants-check")
         });
     assert!(
-        posts_always,
-        "qa_r656: mutants.yml's required check `mutants-check` is not posted under `if: always()`"
+        !posts,
+        "qa_r656: mutants.yml posts `mutants-check` through the Checks API, which a later run's suite supersedes"
     );
     for (wf, check) in [
         (parse(pr_check), "pr-check"),
@@ -626,14 +646,72 @@ negative_control!(
     check_required(
         &swap(
             &workflow("ci.yml"),
-            "    name: gpu-lavapipe\n    needs: [changes, gpu-lavapipe]\n    if: always()\n",
-            "    name: gpu-lavapipe\n    needs: [changes, gpu-lavapipe]\n    if: success()\n"
+            "    needs: [changes, gpu-lavapipe]\n    if: always() && needs.changes.outputs.quick != 'true'\n",
+            "    needs: [changes, gpu-lavapipe]\n    if: success()\n"
         ),
         &workflow("mutants.yml"),
         &workflow("pr-check.yml"),
         &workflow("reviews.yml"),
     )
 );
+
+mod mutants_check_skippable {
+    use super::*;
+    negative_control!(
+        qa_r656_required_checks_report_under_always,
+        "mutants.yml's `mutants-check` run only when its verdict job passed, so a run skipping it reports it passed",
+        expected = "mutants.yml's required check `mutants-check` is not `if: always()`",
+        check_required(
+            &workflow("ci.yml"),
+            &swap(
+                &workflow("mutants.yml"),
+                "  mutants-check:\n    if: always()\n",
+                "  mutants-check:\n    if: success()\n"
+            ),
+            &workflow("pr-check.yml"),
+            &workflow("reviews.yml"),
+        )
+    );
+}
+
+mod mutants_check_posted {
+    use super::*;
+    negative_control!(
+        qa_r656_required_checks_report_under_always,
+        "mutants.yml's `mutants-check` posted through the Checks API by a renamed job, as #379 had it",
+        expected = "mutants.yml has 0 jobs reporting the required check `mutants-check`",
+        check_required(
+            &workflow("ci.yml"),
+            &swap(
+                &workflow("mutants.yml"),
+                "  mutants-check:\n    if: always()\n",
+                "  mutants-report:\n    if: always()\n"
+            ),
+            &workflow("pr-check.yml"),
+            &workflow("reviews.yml"),
+        )
+    );
+}
+
+mod mutants_check_also_posted {
+    use super::*;
+    negative_control!(
+        qa_r656_required_checks_report_under_always,
+        "mutants.yml's `mutants-check` job also posting a check run of that name through the Checks API",
+        expected = "mutants.yml posts `mutants-check` through the Checks API",
+        check_required(
+            &workflow("ci.yml"),
+            &swap(
+                &workflow("mutants.yml"),
+                "      - name: Report mutants-check\n",
+                "      - run: gh api repos/o/r/check-runs -f name=mutants-check -f head_sha=abc\n      - name: Report \
+                 mutants-check\n"
+            ),
+            &workflow("pr-check.yml"),
+            &workflow("reviews.yml"),
+        )
+    );
+}
 
 /// Every workflow file, by name.
 fn workflows() -> Vec<(String, String)> {

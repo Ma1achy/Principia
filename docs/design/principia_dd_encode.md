@@ -205,7 +205,7 @@ implementation.
   precisions as `ε_phys` takes it (Part 4): REQ-ENC-026's calibration (R-71), proposed at `k = 128` by
   `fixtures/gates/curve_projection/`, provisional until the M2 gate.
 - **The branch inputs** (the human's ruling on RQ-298, 21 Oct 2026: a branch input that must agree across backends is
-  built only from operations every IEEE backend rounds alike, with no intermediate that can be subnormal). Every
+  built only from operations every IEEE backend rounds alike (a condition on the driver, R-690), with no intermediate that can be subnormal). Every
   comparison reads a squared distance or a squared length, each square formed as `IeeeBits::product(x, x)` of a
   difference `x` taken as 0 below `2^⌊e/4⌋`, `e` the precision's least normal exponent (`2⁻³¹` at f32), so that its
   partial products are normal, and the squares added in one fixed order, no `fma` written: the search's comparisons,

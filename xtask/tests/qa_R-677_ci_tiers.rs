@@ -915,6 +915,9 @@ impl Walk {
                 .and_then(|o| o.get(*key))
                 .cloned()
                 .unwrap_or_default(),
+            // A step's status functions, in a run with no failed step, which is the run this walk is of.
+            ["always()"] => "true".to_owned(),
+            ["failure()"] => "false".to_owned(),
             _ => panic!("qa_r677: the walk does not know the expression `{t}`"),
         }
     }
@@ -965,7 +968,10 @@ fn walk(yml: &Value, verdict: &[(&str, &str)], fail: &[&str]) -> Walk {
             }
             let cond = s(&job["if"]);
             let ok = needs.iter().all(|n| w.results[n] == "success");
-            let runs = if cond.contains("always()") {
+            // R-684 joins an `if:` to `always()`: what follows it holds or skips the job.
+            let runs = if let Some(rest) = cond.strip_prefix("always() && ") {
+                w.eval(rest) == "true"
+            } else if cond.contains("always()") {
                 true
             } else {
                 ok && (cond.is_empty() || w.eval(&cond) == "true")
@@ -1023,13 +1029,26 @@ fn walk(yml: &Value, verdict: &[(&str, &str)], fail: &[&str]) -> Walk {
     w
 }
 
+/// The check a job reports when it runs: its `name:`, or its id; a gate named by its one-value matrix reports that value
+/// (R-684), and skipped, on a quick run, its raw `name:`.
+fn reported_name(id: &str, job: &Value) -> String {
+    let name = job.get("name").map_or_else(|| id.to_owned(), s);
+    match job["strategy"]["matrix"]["check"]
+        .as_array()
+        .map(Vec::as_slice)
+    {
+        Some([only]) if name == "${{ matrix.check }}" => s(only),
+        _ => name,
+    }
+}
+
 /// The result of the job reporting the check `name`, which must be exactly one job.
 fn check_result(yml: &Value, w: &Walk, name: &str) -> String {
     let by: Vec<&String> = yml["jobs"]
         .as_object()
         .expect("jobs")
         .iter()
-        .filter(|(id, j)| j.get("name").map_or(id.as_str() == name, |n| s(n) == name))
+        .filter(|(id, j)| reported_name(id, j) == name)
         .map(|(id, _)| id)
         .collect();
     assert_eq!(by.len(), 1, "qa_r677: `{name}` is reported by {by:?}");
@@ -1038,6 +1057,43 @@ fn check_result(yml: &Value, w: &Walk, name: &str) -> String {
 
 /// `ci.yml`'s required checks.
 const GATES: [&str; 5] = ["ci", "xtask-ci", "gpu-kernel", "gpu-metal", "gpu-lavapipe"];
+
+/// The status functions a step's `if` holds read as a run with no failed step, and any other expression still stops
+/// the walk: it must not read as a false that hides a step.
+fn check_walk_reads_status(walk: &Walk, unknown: &[&str]) {
+    assert_eq!(walk.eval("always()"), "true", "qa_r677: `always()`");
+    assert_eq!(walk.eval("failure()"), "false", "qa_r677: `failure()`");
+    let mut outputs = BTreeMap::new();
+    outputs.insert("docs_only".to_owned(), "false".to_owned());
+    let mut seen = Walk::default();
+    seen.outputs.insert("changes".to_owned(), outputs);
+    let upload = "always() && needs.changes.outputs.docs_only != 'true'";
+    assert_eq!(seen.eval(upload), "true", "qa_r677: `{upload}`");
+    for expr in unknown {
+        let read = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| walk.eval(expr)));
+        assert!(read.is_err(), "qa_r677: the walk read `{expr}`");
+    }
+}
+
+#[test]
+fn qa_r677_walk_reads_status_and_refuses_the_rest() {
+    check_walk_reads_status(
+        &Walk::default(),
+        &[
+            "success()",
+            "cancelled()",
+            "hashFiles('x')",
+            "always() && cancelled()",
+        ],
+    );
+}
+
+negative_control!(
+    qa_r677_walk_reads_status_and_refuses_the_rest,
+    "a walk taken to refuse what it knows",
+    expected = "qa_r677: the walk read `failure()`",
+    check_walk_reads_status(&Walk::default(), &["failure()"])
+);
 
 /// The commands `ci-workspace` runs on `verdict`, each step's `if:` evaluated.
 fn workspace_runs(yml: &Value, verdict: &[(&str, &str)]) -> Vec<String> {

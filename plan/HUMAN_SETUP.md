@@ -20,17 +20,22 @@ dormant while there is no self-hosted runner, R-186; the approval setting still 
 
 In **Settings → Branches → Add branch protection rule** (or a ruleset) for `main`:
 - require a pull request before merging;
-- require status checks to pass: `ci`, `pr-check`, `reviews-complete`, `xtask-ci`, `gpu-metal` and `gpu-lavapipe`
-  (R-266; each appears in the list after its workflow has run once);
+- require status checks to pass: `ci`, `pr-check`, `reviews-complete`, `xtask-ci`, `gpu-kernel`, `gpu-metal` and
+  `gpu-lavapipe` (R-266, and `gpu-kernel` again since TASK-M0-14; each appears in the list after its workflow has run
+  once);
 - require `mutants-check` too (R-305), the per-PR mutation gate's verdict over every shard (TASK-M0-23). It reports on
-  every pull request: a head whose change has no `.rs` file under `crates/` passes at once (R-677), and any other
-  head's is pending until the `merge-ready` label's run completes it, passing when the diff has no surviving mutant
-  (R-676). The human authorised the agent to
+  every pull request event, a job of every run of `mutants.yml` (R-678): the merge-ready run's verdict, passing when
+  the diff has no surviving mutant (R-676); "not applicable", passed, on a head whose change has no `.rs` file under
+  `crates/` (R-677) or that is not merge-ready; and, when another label goes on or off a merge-ready head, that head's
+  merge-ready verdict. `xtask/tests/ci_changes.rs` checks that this list is the one every required check is tested
+  against. The human authorised the agent to
   add it, once TASK-M0-23 merges, and this is the one settings change R-305 allows;
 - leave "require branches to be up to date before merging" off (R-266): CI runs on each PR merged with main, and every
   push to main runs CI again;
 - turn on "do not allow bypassing the above settings", so the required checks bind every merge, the agent's included
   (R-266).
+  *3 Nov 2026 (R-682):* the owner allows admin bypass on `main`, so that he can merge by hand when a required check
+  hangs. Agents never use it, and the required checks still bind every merge an agent makes.
 - turn on "require conversation resolution before merging" (R-276): a PR merges only when every review thread on it
   is resolved.
 
@@ -68,4 +73,7 @@ R-627's port, G3, applied per R-369).
    install node` if it is absent. Playwright itself is pinned in the repo and installed there by `npm ci`; it drives
    the installed Chrome stable (`channel: "chrome"`), so no Playwright browser download is needed.
 4. Safari's WebDriver: `sudo safaridriver --enable`; then in Safari, first Settings → Advanced → "Show features for
-   web developers", and only then Develop → "Allow Remote Automation", which that setting reveals.
+   web developers", and only then Develop → "Allow Remote Automation", which that setting reveals. Before each Safari
+   run (the WebDriver check, in both layouts), **quit Safari first**: the automation session takes over Safari, and a
+   window the human is using, such as a research session, collides with it. The human quits it; an agent never does
+   (R-674, R-349).

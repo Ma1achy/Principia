@@ -1,14 +1,15 @@
 //! The GUI's own settings, kept across sessions (R-461 I4; R-462 J5): each window's place, by its name, and the panel
-//! layout, each splitter's place. Never the contract (gui_state_contract §2): not undoable, never read by the engine.
+//! layout, each splitter's place and the console's height (R-463 K1). Never the contract (gui_state_contract §2): not undoable, never read by the engine.
 //!
 //! **How they are stored** (TASK-M6-42's choice): one JSON file, `gui_settings.json`, in a `principia` directory under
 //! the platform's config directory ([`platform_path`]), written by the `serde_json` the crate already depends on and
 //! the standard library alone, so no dependency is added; eframe's own persistence would add its `persistence`
 //! feature's crates and keep egui's memory as well. The file is
-//! `{"windows": {"<name>": {"x": …, "y": …, "w": …, "h": …}, …}, "layout": {"<splitter>": …, …}}`, each place in
-//! points, each splitter a fraction of the window's width, or height (`crate::layout::Splits`); a splitter the file
-//! does not name is at its default. It is written each time a window's move or resize ends, a splitter's drag ends, a
-//! splitter is reset and the layout is reset, through a file beside it renamed over it, so a write cut short leaves
+//! `{"windows": {"<name>": {"x": …, "y": …, "w": …, "h": …}, …}, "layout": {"<splitter>": …, …, "console_top": …}}`,
+//! each place in points, each splitter a fraction of the window's width, or height (`crate::layout::Splits`), and
+//! `console_top` the console's top edge, a fraction of the window's height; one the file does not name is at its
+//! default, as `console_top` is never written until the edge is dragged. It is written each time a window's move or resize ends, a splitter's drag ends, a
+//! splitter is reset and the layout is reset, and as the console's height is dragged or reset, through a file beside it renamed over it, so a write cut short leaves
 //! the last one.
 //!
 //! A file that cannot be read is ignored, logged once to the console, and replaced on the next save; with no file,
@@ -24,6 +25,9 @@ use crate::windows::{self, place::Places};
 
 /// The settings file's name.
 pub const FILE: &str = "gui_settings.json";
+
+/// The console's top edge's name in the file's layout (R-463 K1).
+pub const CONSOLE_TOP: &str = "console_top";
 
 /// The directory under the platform's config directory that holds it.
 pub const DIR: &str = "principia";
@@ -50,6 +54,9 @@ impl Settings {
         let mut layout = Map::new();
         for splitter in Splitter::ALL {
             layout.insert(splitter.name().to_owned(), json!(self.layout.get(splitter)));
+        }
+        if let Some(top) = self.layout.console_top() {
+            layout.insert(CONSOLE_TOP.to_owned(), json!(top));
         }
         let mut text =
             serde_json::to_string_pretty(&json!({ "windows": windows, "layout": layout }))
@@ -78,17 +85,23 @@ impl Settings {
         let mut layout = Splits::default();
         if let Some(splits) = root.get("layout") {
             let splits = splits.as_object().ok_or("`layout` is not an object")?;
+            let fraction = |name: &str| -> Result<Option<f32>, String> {
+                splits
+                    .get(name)
+                    .map(|at| {
+                        at.as_f64()
+                            .filter(|v| (0.0..=1.0).contains(v))
+                            .map(|v| v as f32)
+                            .ok_or_else(|| format!("the splitter `{name}` is not in [0, 1]"))
+                    })
+                    .transpose()
+            };
             for splitter in Splitter::ALL {
-                if let Some(at) = splits.get(splitter.name()) {
-                    let at = at
-                        .as_f64()
-                        .filter(|v| (0.0..=1.0).contains(v))
-                        .ok_or_else(|| {
-                            format!("the splitter `{}` is not in [0, 1]", splitter.name())
-                        })?;
-                    layout.set(splitter, at as f32);
+                if let Some(at) = fraction(splitter.name())? {
+                    layout.set(splitter, at);
                 }
             }
+            layout.set_console_top(fraction(CONSOLE_TOP)?);
         }
         Ok(Self {
             places: Places::remembered(rects),

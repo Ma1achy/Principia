@@ -18,7 +18,9 @@ use super::support::{
 use crate::app::App;
 use crate::headless::Headless;
 use crate::side::{EngineSide, MockSide};
-use crate::windows::console::{self, Filter, CLEAR, CLOSE, COPY, HEADER, LOG, SEARCH, WINDOW};
+use crate::windows::console::{
+    self, Filter, CLEAR, CLOSE, COPY, HEADER, LOG, MAXIMISE, SEARCH, WINDOW,
+};
 
 const NONE: Modifiers = Modifiers::NONE;
 const SHIFT: Modifiers = Modifiers::SHIFT;
@@ -53,8 +55,8 @@ fn presses(h: &mut Headless, app: &mut App<MockSide>, key: Key, modifiers: Modif
     }
 }
 
-/// The header bar's controls, in visual order (R-450).
-const ROW: [&str; 8] = [
+/// The header bar's controls, in visual order (R-450, R-463 K3).
+const ROW: [&str; 9] = [
     "cs_all",
     "cs_warnings",
     "cs_errors",
@@ -62,6 +64,7 @@ const ROW: [&str; 8] = [
     SEARCH,
     COPY,
     CLEAR,
+    MAXIMISE,
     CLOSE,
 ];
 
@@ -328,7 +331,7 @@ fn mock_console_keys_the_breadcrumb_names_the_path() {
     assert_eq!(breadcrumb(&mut h, &mut app), "Console › Header");
     press(&mut h, &mut app, Key::Enter, NONE);
     let names = [
-        "All", "Warnings", "Errors", "Info", "Search", "Copy", "Clear", "Close",
+        "All", "Warnings", "Errors", "Info", "Search", "Copy", "Clear", "Maximise", "Close",
     ];
     for (k, name) in names.iter().enumerate() {
         if k > 0 {
@@ -337,7 +340,7 @@ fn mock_console_keys_the_breadcrumb_names_the_path() {
         let got = breadcrumb(&mut h, &mut app);
         assert_eq!(got, format!("Console › Header › {name}"));
     }
-    presses(&mut h, &mut app, Key::ArrowLeft, NONE, 2);
+    presses(&mut h, &mut app, Key::ArrowLeft, NONE, 3);
     let on_copy = breadcrumb(&mut h, &mut app);
     assert_eq!(on_copy, "Console › Header › Copy");
     press(&mut h, &mut app, Key::Escape, NONE);

@@ -131,7 +131,8 @@ momenta multiply by `√ℓ`. That is what makes the transformation canonical.
 it there would collapse the energy axis. **Enforce in code, not prose:** the validation pass
 refuses a chart with the flag set combined with any `E*` override — every `Some(E*)`, including
 `Some(0)` (R-25). On a chart that allows it, the outcome at `K0 = 0` and on `E* < U` is a label on the
-decode, never a refusal (`principia_dd_decoder.md` §3.7).
+decode, never a refusal (`principia_dd_decoder.md` §3.7). *2 Nov 2026 (R-670):* the validation pass also refuses
+`ε ≠ 0` combined with any `Some(E*)`, on every chart.
 
 ### 0.7 Degeneracy — every pixel gets a label
 

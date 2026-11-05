@@ -6,14 +6,16 @@
 # not run, through `cargo test --doc` (R-231); `xtask/tests/nextest.rs` checks that together they list every test
 # `cargo test` did. `ci`, `ci-workspace` and `gpu-kernel` split the workspace's tests between them by nextest profile
 # (`.config/nextest.toml`), each step's NEXTEST_PROFILE: `gpu-kernel` runs the kernel's, `ci-workspace` the xtask
-# tests that run cargo on the workspace's own target directory, and `ci` every other test. `ci-release` runs the `ci`
+# tests that run cargo on the workspace's own target directory and validation's `qa_TASK-M0-24`, and `ci` every other
+# test. `ci-release` runs the `ci`
 # profile's tests again, at the release profile, as 2 shards from a release archive `ci-release-archive` builds once
 # (R-547, REQ-TOOL-189; R-325, REQ-SYS-078).
 # Sharding (R-336, R-360, R-366, REQ-SYS-077): `ci` runs its nextest run as 4 parallel shards, a matrix, each running
 # nextest's `--partition hash:<k>/4`, which together run every test the unsharded run did; formatting, lints, the
 # docs (R-387), the build and the crate-graph check run once, beside them, in `ci-checks`. `xtask-ci` runs
 # `cargo xtask ci --partition <k>/4` as 4 parallel shards, which together run every control exactly once
-# (`xtask/src/controls.rs`).
+# (`xtask/src/controls.rs`), but for the three that list the workspace in its default feature set: `ci-workspace`, which
+# has that build, runs those once, in a step of their own (`controls::IN_CI_WORKSPACE`).
 # The shards share one test build (R-372, REQ-SYS-078): `ci-archive` builds the workspace's tests once, as a nextest
 # archive, and every `ci` shard runs its slice from that archive (`--archive-file`); no step of a shard builds the
 # workspace or compiles a test binary, but shard 1's doctests, which nextest does not run. The xtask tests that run
@@ -41,15 +43,35 @@
 #   `plan/requirements.yaml` when only fields no code reads change, `scripts/ci_req_fields.py` deciding) or the GUI's
 #   artboards and references (`docs/gui/design/`, `docs/gui/reference/`), with docs beside them or not: `ci-workspace`
 #   runs the cheap checks and the tests that read what changed, in place of its own tests;
-# - docs (tier c; R-662): the rest of `docs/`, `plan/` (its prose and Python), `scripts/`, `workbench/` and the root's
-#   markdown: `ci-workspace` runs only the cheap checks, the plan checks and the vocabulary lint
-#   (`no-atlas-params.yml`, the atlas guard, runs on every pull request).
+# - docs (tier c; R-662, R-790): the rest of `docs/`, `plan/` (its prose and Python), `scripts/`, `workbench/`,
+#   `.claude/` and the root's markdown: `ci-workspace` runs only the cheap checks, the plan checks and the vocabulary
+#   lint (`no-atlas-params.yml`, the atlas guard, runs on every pull request).
 # A data or docs change (`docs_only`, its name R-656's) skips `ci-archive` and the `ci` shards, `ci-checks`,
-# `ci-release-archive` and its shards, and `xtask-ci`'s shards; it and a code change to no GPU-path file (only
-# `crates/gui/` and `crates/prin/` beside data and docs) skip the GPU suites' jobs, `gpu-kernel`, `gpu-metal` and
-# `gpu-lavapipe`.
-# The required checks still report, under their own names, and conclude success: each is a gate that runs whatever
-# the jobs it gathers ended in (`ci`, `xtask-ci`, and the GPU suites' gates, which carry the names `gpu-kernel`,
+# `web-skeleton`, `ci-release-archive` and its shards, and `xtask-ci`'s shards; it and a code change to no GPU-path
+# file (only `crates/gui/` and `crates/prin/` beside data and docs) skip the GPU suites' jobs, `gpu-kernel`,
+# `gpu-metal` and `gpu-lavapipe`.
+# Where a code head runs, CI's two code tiers (R-684). R-677's classifier applies first, so a data or docs head runs
+# neither. A code pull request's head runs the quick tier: one job, `ci-quick`, running fmt, clippy, the build, and the
+# tests of the changed crates and their reverse dependencies (`.github/scripts/ci_quick_crates.py`). It runs full CI, the
+# jobs above and the GPU suites where the GPU-path rule applies, once it carries the `merge-ready` label, the trigger
+# mutants uses (R-676), and every push to `main` does. This workflow runs on no label change: of each workflow's runs on
+# a head, branch protection counts only the latest run's check suite (R-678), so another label's run would supersede the
+# suite holding the required checks. `ci-full.yml` re-runs the head's run when `merge-ready` goes on, a new attempt of
+# the same run, in the same suite, on the same merge commit, and the `changes` job of that attempt, reading the live
+# label, says full (`.github/scripts/ci_tier.sh`). On a quick run `changes` passes on `docs_only` true, which R-677 reads
+# "runs no full CI", and `gpu` false, so every full-only job skips exactly as on a docs head, and `quick` true, on which
+# `ci-workspace` and the gates skip too; `ci-quick` runs that tier's `ci-workspace` tests itself.
+# A quick run reports no required check that only the full tier reports (`ci`, `xtask-ci` and the three GPU gates), so a
+# skip cannot pass one: each gate is named by a one-value matrix, `${{ matrix.check }}`, and a job skipped at job level
+# never expands its `name:`. A name that is wholly an expression reports that expression, `matrix.check` (run
+# 41972273540: five of `matrix.check|skipped`); a mixed one stays raw (run 41828315009:
+# `xtask-ci (${{ matrix.shard }})|skipped`). Until the full tier runs, branch protection reads each as expected, and `changes` also posts each pending as a commit status
+# on the head, which `ci-status` closes when the full tier ends. So no pull request merges until the full suite has
+# passed on its exact head. R-684's rationale: since R-676 a fix round is verified locally through the job queue, so
+# full CI on intermediate heads duplicated that work; the guarantee that `main` only receives fully-tested heads stands.
+#
+# On a full, data or docs run the required checks still report, under their own names, and conclude success: each is a
+# gate that runs whatever the jobs it gathers ended in (`ci`, `xtask-ci`, and the GPU suites' gates, which carry the names `gpu-kernel`,
 # `gpu-metal` and `gpu-lavapipe`, the suites' jobs being named `<id> suites`), and passes a gathered job that was
 # skipped only when the classification ran and skipped it. A matrix job is named `<id> (<shard>)`, so a skipped one
 # never reports a bare required name.
@@ -93,21 +115,43 @@ env:
   # keys here too (R-337). R-233 (debug info at the default) governs local builds only.
   CARGO_PROFILE_DEV_DEBUG: line-tables-only
   CARGO_PROFILE_TEST_DEBUG: line-tables-only
+  # No incremental state, the owner's CI setting (PR #394), in every workflow like R-374's values. `Swatinem/rust-cache`
+  # already exports CARGO_INCREMENTAL=0 to the steps after it, and before it computes its key, so its key and every
+  # build after it are the same without this line. What the line adds: the value in the steps before rust-cache, where
+  # no cargo build runs and `ci.yml`'s `cachekey` hashes it, and in jobs without rust-cache, where two run cargo:
+  # `ci.yml`'s `ci-release`, which builds only for the release doctests, which aren't incremental by default, and
+  # `pages.yml`'s `build`, where it turns off incremental state for the dev-profile build of xtask that `cargo xtask
+  # web-skeleton` starts. Local builds are unaffected (R-233).
+  CARGO_INCREMENTAL: "0"
 
 jobs:
   # What a pull request's change touches (R-656, R-662, R-677): its `tier`, code, data or docs; `docs_only`, true on a
   # data or docs change, which runs no full CI; `gpu`, false when no changed path is a GPU path; and `plan_data` and
   # `gui_data`, which of tier (b)'s data it changes (`scripts/ci_changes.sh`, which holds the lists).
   # Every other run, on `main` among them, is code: everything runs. The jobs below skip on its verdict, and the
-  # gates read it.
+  # gates read it. Then the code tier of this run (R-684; `.github/scripts/ci_tier.sh decide`): `quick`, true on a code
+  # pull-request head that is not merge-ready, with `packages`, the `-p` arguments of its tests, `doc_packages`, those
+  # with a library, and `workspace_tests`, whether those include the `ci-workspace` profile's; `docs_only` and `gpu`, the
+  # classifier's, or true and false on a quick run, which runs no full CI; and `report`, whether `ci-status` closes the
+  # commit statuses this job opened.
+  # `pull-requests: read` for the live label, `statuses: write` for those statuses.
   changes:
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pull-requests: read
+      statuses: write
     outputs:
       tier: ${{ steps.changes.outputs.tier }}
-      docs_only: ${{ steps.changes.outputs.docs_only }}
-      gpu: ${{ steps.changes.outputs.gpu }}
+      docs_only: ${{ steps.tier.outputs.docs_only }}
+      gpu: ${{ steps.tier.outputs.gpu }}
       plan_data: ${{ steps.changes.outputs.plan_data }}
       gui_data: ${{ steps.changes.outputs.gui_data }}
+      quick: ${{ steps.tier.outputs.quick }}
+      packages: ${{ steps.tier.outputs.packages }}
+      doc_packages: ${{ steps.tier.outputs.doc_packages }}
+      workspace_tests: ${{ steps.tier.outputs.workspace_tests }}
+      report: ${{ steps.tier.outputs.report }}
     steps:
       - uses: actions/checkout@v4
       # The field check of `plan/requirements.yaml` (`scripts/ci_req_fields.py`) parses it with PyYAML; without it the
@@ -120,6 +164,30 @@ jobs:
       - name: scripts/ci_changes.sh detect
         id: changes
         run: scripts/ci_changes.sh detect
+      - name: .github/scripts/ci_tier.sh decide
+        id: tier
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          ACTION: ${{ github.event.action }}
+          PR: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          TIER: ${{ steps.changes.outputs.tier }}
+          DOCS_ONLY: ${{ steps.changes.outputs.docs_only }}
+          GPU: ${{ steps.changes.outputs.gpu }}
+        run: .github/scripts/ci_tier.sh decide
+
+  # The quick tier, one job (R-684): the whole of what a code pull-request head runs before `merge-ready`, beside
+  # `changes`, so that head asks for as few jobs as the ruling allows. A workflow of its own, called here, because it never
+  # runs on a push to `main`, so it saves no cache and restores the keys this workflow's jobs save (R-337).
+  ci-quick:
+    needs: changes
+    if: needs.changes.outputs.quick == 'true'
+    uses: ./.github/workflows/ci-quick.yml
+    with:
+      packages: ${{ needs.changes.outputs.packages }}
+      doc_packages: ${{ needs.changes.outputs.doc_packages }}
+      workspace_tests: ${{ needs.changes.outputs.workspace_tests }}
 
   # The workspace's tests, built once for the `ci` shards (R-372, REQ-SYS-078): `cargo nextest archive` builds every
   # test binary of the one feature set the shards run, the default, and writes them, with what running them needs (the
@@ -170,7 +238,8 @@ jobs:
       # 2026, item 3): every dependency is built without debug info, so the ~600 test binaries, each linking its
       # dependencies whole, stop carrying their line tables. A panic message still names file and line (from the
       # panic's location, not debug info), and a backtrace still names every frame, with file and line for the
-      # workspace's own (R-374); a frame inside a dependency is named without them. It is this job's alone: a cargo
+      # workspace's own (R-374); a frame inside a dependency is named without them. As every job that runs cargo does
+      # (`.github/actions/cargo-ci-config`), for the one profile this job builds in: a cargo
       # config in the runner's CARGO_HOME, where the archive step reads it, never in the repository (R-233 governs
       # local builds), and outside rust-cache's key, which hashes the CARGO_* environment (R-337). A package override
       # has no environment form, and the archive step's command line is pinned (R-372), so it is a file.
@@ -233,13 +302,19 @@ jobs:
             /usr/lib/google-cloud-sdk /usr/local/aws-cli /usr/local/aws-sam-cli /opt/az /usr/share/az_*
           sudo docker image prune --all --force > /dev/null
           df -h /
+      # What the two disks hold, for moving the build to `/mnt` (the owner's candidate 1, 4 Nov 2026). It only measures,
+      # and nothing it finds can fail the job.
+      - name: Runner disks
+        run: |
+          df -h / /mnt || true
+          lsblk || true
       # The toolchain rust-toolchain.toml pins, with its components: rust-gpu's nightly (R-169). The tests run cargo
       # themselves, on the fixtures and on the workspace.
       - name: rustup toolchain install (rust-toolchain.toml)
         id: toolchain
         run: |
           rustup toolchain install
-          echo "cachekey=$(rustc --version --verbose | sha256sum | cut -c1-20)" >> "$GITHUB_OUTPUT"
+          echo "cachekey=$({ rustc --version --verbose; env | grep -E '^CARGO_(INCREMENTAL|PROFILE)' | sort; cat .github/actions/cargo-ci-config/config.sh; } | sha256sum | cut -c1-20)" >> "$GITHUB_OUTPUT"
       - uses: Swatinem/rust-cache@v2
         with:
           prefix-key: cargo-registry
@@ -247,11 +322,17 @@ jobs:
           cache-targets: "false"
           cache-bin: "false"
           save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+      # Every dependency without debug info, as a cargo config in the runner's CARGO_HOME; the workspace's own crates
+      # keep R-374's line tables (`.github/actions/cargo-ci-config`).
+      - name: Dependencies without debug info, every profile
+        uses: ./.github/actions/cargo-ci-config
       # The fixture pool, one build directory per fixture type, kept between runs (R-270): cargo rebuilds in it only
-      # what changed. Keyed on what invalidates its builds: the runner, the toolchain, the lockfile and the fixtures'
-      # manifests; a new key starts from the latest pool of the same toolchain. Restored here in every run; saved by
-      # the step after the tests, only on a push to `main` (R-326) and only when the job passes, so a run cut short by
-      # a failing test never saves a pool half built. Its key names this job, the only one that saves it (R-285).
+      # what changed. Keyed on what invalidates its builds: the runner, the toolchain and the CI build settings, all in
+      # `cachekey`, for a pool built under other settings is rebuilt whole beside itself, and the lockfile and the
+      # fixtures' manifests; a new key starts from the latest pool of the same `cachekey`. Restored here in every run;
+      # saved by the step after the tests, only on a push to `main` (R-326) and only when the job passes, so a run cut
+      # short by a failing test never saves a pool half built. Its key names this job, the only one that saves it
+      # (R-285).
       - uses: actions/cache/restore@v4
         with:
           path: target/tmp/fixture-targets
@@ -323,17 +404,19 @@ jobs:
           path: target/tmp/fixture-targets
           key: fixture-pool-ci-${{ runner.os }}-${{ steps.toolchain.outputs.cachekey }}-${{ hashFiles('Cargo.lock', 'fixtures/**/Cargo.toml', 'xtask/tests/fixtures/**/Cargo.toml') }}
 
-  # The xtask tests that run cargo on the workspace's own target directory (`.config/nextest.toml`'s `ci-workspace`
+  # The tests that run cargo on the workspace's own target directory (`.config/nextest.toml`'s `ci-workspace`
   # profile), beside the `ci` shards and on a build of their own (R-372, REQ-SYS-078): run from the shards' archive,
   # which carries no cargo build state, each would rebuild the workspace in its shard while holding every test thread.
   # On a data or docs pull request (R-656, R-662, R-677) it runs the cheap checks in their place, the one test job such
   # a pull request runs: the plan checks and the vocabulary lint, and on a data one the tests that read what it changed.
-  # It passes the classification on to the gate `ci`.
+  # It passes the classification on to the gate `ci`. Skipped on a quick run (R-684), whose `ci-quick` runs these tests.
   ci-workspace:
     runs-on: ubuntu-24.04
     env:
       PRIN_GPU_BACKEND: vulkan
+      RUNNER_DISK_TMPFS: /dev/shm
     needs: changes
+    if: needs.changes.outputs.quick != 'true'
     outputs:
       docs_only: ${{ needs.changes.outputs.docs_only }}
     steps:
@@ -391,6 +474,25 @@ jobs:
           NEXTEST_PROFILE: ci-workspace
         run: cargo nextest run -p xtask
         shell: bash .github/scripts/disk_sampler.sh {0}
+      # Validation's `qa_TASK-M0-24`: it runs `cargo xtask controls --list`, whose build the step above has made, and from
+      # the shards' archive it rebuilt that in its shard (`.config/nextest.toml`'s `ci-workspace` profile).
+      - name: cargo nextest run -p validation --test qa_TASK-M0-24
+        if: needs.changes.outputs.docs_only != 'true'
+        env:
+          NEXTEST_PROFILE: ci-workspace
+        run: cargo nextest run -p validation --test qa_TASK-M0-24
+        shell: bash .github/scripts/disk_sampler.sh {0}
+      # The three controls of `xtask/tests/nextest.rs` that list the workspace in its default feature set, which the
+      # `xtask-ci` shards leave here (`controls::IN_CI_WORKSPACE`, which `tests/nextest.rs` checks against this line).
+      # `cargo nextest run -p xtask`, two steps up, has just built everything they list, for the tests they fault; in a
+      # shard they cost a second whole build of the workspace's tests (run 41756812074: 48 GB, shards 2 and 4). A control
+      # that does not make its test fail fails this step, as it fails `cargo xtask controls`. Applied per R-369.
+      - name: cargo nextest run --features controls (the default-feature listing's controls)
+        if: needs.changes.outputs.docs_only != 'true'
+        env:
+          NEXTEST_PROFILE: ci-workspace
+        run: cargo nextest run -p xtask --features controls --test nextest nextest_ci_steps_list_every_test_cargo_test_listed_without_features::negative_control nextest_ci_shards_together_list_every_test::negative_control nextest_ci_steps_list_every_test_under_their_profiles::negative_control
+        shell: bash .github/scripts/disk_sampler.sh {0}
       - name: Runner disk after the tests
         if: needs.changes.outputs.docs_only != 'true'
         run: df -h /
@@ -441,6 +543,28 @@ jobs:
       - name: cargo nextest run -p render (the GUI's references' readers)
         if: needs.changes.outputs.tier == 'data' && needs.changes.outputs.gui_data == 'true'
         run: cargo nextest run -p render --test qa_TASK-M1-03
+      # The kernel's log, on a failure, and the samples, whatever the job ended in, as in `xtask-ci`: `runner-disk.log`,
+      # and from the tmpfs `runner-pressure.log`, written beside the steps under the disk sampler (RUNNER_DISK_TMPFS),
+      # and this step's copy of the kernel's log. Each file's own path, so a disk that filled up costs none of the tmpfs
+      # files. Measurements, read by no gate: `sudo` refused, a full disk or a failed upload fails nothing.
+      - name: Kernel log on a failure
+        if: failure()
+        continue-on-error: true
+        timeout-minutes: 1
+        run: sudo -n dmesg --ctime | tail -n 200 | tee "$RUNNER_DISK_TMPFS/runner-dmesg.log" || true
+      - uses: actions/upload-artifact@v4
+        if: always() && needs.changes.outputs.docs_only != 'true'
+        continue-on-error: true
+        timeout-minutes: 5
+        with:
+          name: runner-disk-ci-workspace
+          path: |
+            ${{ runner.temp }}/runner-disk.log
+            /dev/shm/runner-pressure.log
+            /dev/shm/runner-dmesg.log
+          if-no-files-found: warn
+          retention-days: 14
+          overwrite: true
 
   # Formatting, lints, the docs, the build and the crate-graph check, once, beside the test shards (R-195, R-387,
   # REQ-SYS-004). Skipped on a data or docs pull request (R-656, R-677): no such path is compiled.
@@ -470,6 +594,10 @@ jobs:
           cache-targets: "false"
           cache-bin: "false"
           save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+      # Every dependency without debug info, as a cargo config in the runner's CARGO_HOME; the workspace's own crates
+      # keep R-374's line tables (`.github/actions/cargo-ci-config`).
+      - name: Dependencies without debug info, every profile
+        uses: ./.github/actions/cargo-ci-config
       - name: cargo fmt --all --check
         run: cargo fmt --all --check
       - name: cargo clippy --workspace --all-targets -- -D warnings
@@ -487,15 +615,48 @@ jobs:
       - name: cargo xtask deps
         run: cargo xtask deps
 
+  # The v1 web skeleton's wasm build, build only, so a later change that breaks it is seen (TASK-M8-86, applied per
+  # R-369): the command `cargo xtask web-skeleton` builds with, in its debug profile; the wasm-bindgen step and the deploy
+  # are pages.yml's, by hand (R-627). Not gathered by the required check `ci`, as `gpu-kernel` is not. Skipped on a
+  # data or docs pull request (R-656, R-677).
+  web-skeleton:
+    needs: changes
+    if: needs.changes.outputs.docs_only != 'true'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: rustup toolchain install (rust-toolchain.toml)
+        run: rustup toolchain install && rustup target add wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+        with:
+          prefix-key: cargo-registry
+          shared-key: web-skeleton
+          cache-targets: "false"
+          cache-bin: "false"
+          save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+      # Every dependency without debug info, as a cargo config in the runner's CARGO_HOME; the workspace's own crates
+      # keep R-374's line tables (`.github/actions/cargo-ci-config`).
+      - name: Dependencies without debug info, every profile
+        uses: ./.github/actions/cargo-ci-config
+      - name: cargo rustc -p gui (wasm32, the web feature)
+        run: cargo rustc -p gui --lib --locked --target wasm32-unknown-unknown --features web --crate-type cdylib
+
   # The required check `ci` (R-266): every `ci` shard, `ci-checks` and `ci-workspace` passed. It runs whatever they
   # ended in (`always()`), so a failed or cancelled job turns it red rather than skipping it. R-656: a skipped job
   # passes only on a data or docs pull request (R-677), which `ci-workspace`, having run its checks, passes on
   # (DOCS_ONLY); if the classification failed, `ci-workspace` was skipped and passes nothing on, so the skips turn it
   # red.
+  # On a quick run this gate and the four below skip (R-684), so that run asks for none of them, and each is named by a
+  # one-value matrix: skipped at job level, GitHub reports it as `matrix.check` (run 41972273540), never under a required
+  # name, so a skip here cannot read as a pass. It needs `changes` for that `if:`; `quick` reads empty if the
+  # classification failed, and the gate runs and fails.
   ci-gate:
-    name: ci
-    needs: [ci, ci-checks, ci-workspace]
-    if: always()
+    name: ${{ matrix.check }}
+    needs: [ci, ci-checks, ci-workspace, changes]
+    if: always() && needs.changes.outputs.quick != 'true'
+    strategy:
+      matrix:
+        check: [ci]
     runs-on: ubuntu-24.04
     steps:
       - name: every job it gathers passed
@@ -543,6 +704,10 @@ jobs:
           cache-targets: "false"
           cache-bin: "false"
           save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+      # Every dependency without debug info, as a cargo config in the runner's CARGO_HOME; the workspace's own crates
+      # keep R-374's line tables (`.github/actions/cargo-ci-config`).
+      - name: Dependencies without debug info, every profile
+        uses: ./.github/actions/cargo-ci-config
       - uses: taiki-e/install-action@v2
         with:
           tool: cargo-nextest@0.9.146
@@ -567,7 +732,8 @@ jobs:
   # The release archive's tests as 2 shards, each running its `hash:` slice from `ci-release-archive`'s archive, with
   # no build or test compile of its own but shard 1's doctests at the same profile (R-231). `--no-fail-fast`: every
   # test that fails at the release profile is shown, not only the first. The GPU harness self-tests among them run on
-  # lavapipe, as in `ci`.
+  # lavapipe, as in `ci`. Its heavy steps run under the disk sampler (`.github/scripts/disk_sampler.sh`), as the `ci`
+  # shards' do: a measurement, read by no gate.
   ci-release:
     needs: ci-release-archive
     runs-on: ubuntu-24.04
@@ -576,15 +742,41 @@ jobs:
       actions: read
     env:
       PRIN_GPU_BACKEND: vulkan
+      RUNNER_DISK_TMPFS: /dev/shm
     strategy:
       fail-fast: false
       matrix:
         shard: [1, 2]
     steps:
       - uses: actions/checkout@v4
+      # Runner disk, as in the `ci` shards (the same list, copied): before the toolchain and the download, logging the
+      # free space before and after. The runner starts at about 60 GB used whatever its size, so a 72 GB runner has 12 GB
+      # free here, and both shards have run out of it ("No space left on device": `ci-release (1)` of run 41791726904,
+      # `ci-release (2)` on PR #394). Test infrastructure only.
+      - name: Free runner disk
+        run: |
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache/CodeQL \
+            /usr/lib/jvm /opt/hostedtoolcache/Java_* /usr/share/swift \
+            /usr/local/share/chromium /opt/google /opt/microsoft /usr/local/share/powershell /usr/local/share/boost \
+            /usr/share/miniconda /usr/local/julia* /usr/local/lib/node_modules \
+            /opt/hostedtoolcache/go /opt/hostedtoolcache/node /opt/hostedtoolcache/PyPy /opt/hostedtoolcache/Ruby \
+            /usr/lib/google-cloud-sdk /usr/local/aws-cli /usr/local/aws-sam-cli /opt/az /usr/share/az_*
+          sudo docker image prune --all --force > /dev/null
+          df -h /
+      # What the two disks hold, for moving the build to `/mnt` (the owner's candidate 1, 4 Nov 2026). It only measures,
+      # and nothing it finds can fail the job.
+      - name: Runner disks
+        run: |
+          df -h / /mnt || true
+          lsblk || true
       # The toolchain rust-toolchain.toml pins (R-169): the tests run cargo themselves, on the fixtures.
       - name: rustup toolchain install (rust-toolchain.toml)
         run: rustup toolchain install
+      # Every dependency without debug info, as a cargo config in the runner's CARGO_HOME; the workspace's own crates
+      # keep R-374's line tables (`.github/actions/cargo-ci-config`).
+      - name: Dependencies without debug info, every profile
+        uses: ./.github/actions/cargo-ci-config
       # xtask's plan_check tests run plan/check_plan.py, which needs Python and PyYAML (TASK-M0-02).
       - uses: actions/setup-python@v5
         with:
@@ -623,10 +815,35 @@ jobs:
         env:
           NEXTEST_PROFILE: ci
         run: cargo nextest run --archive-file $RUNNER_TEMP/nextest-release.tar.zst --extract-to . --extract-overwrite --no-fail-fast --partition hash:${{ matrix.shard }}/2
-      # The workspace's doctests at the release profile, once, in shard 1, which nextest does not run (R-231).
+        shell: bash .github/scripts/disk_sampler.sh {0}
+      # The workspace's doctests at the release profile, once, in shard 1, which nextest does not run (R-231). Under the
+      # disk sampler too: this step is the job's one compile.
       - name: cargo test --workspace --release --no-fail-fast --doc
         if: matrix.shard == 1
         run: cargo test --workspace --release --no-fail-fast --doc
+        shell: bash .github/scripts/disk_sampler.sh {0}
+      # The kernel's log, on a failure, and the samples, whatever the job ended in, as in `xtask-ci`: `runner-disk.log`,
+      # and from the tmpfs `runner-pressure.log`, written beside the steps under the disk sampler (RUNNER_DISK_TMPFS),
+      # and this step's copy of the kernel's log. Each file's own path, so a disk that filled up costs none of the tmpfs
+      # files. Measurements, read by no gate: `sudo` refused, a full disk or a failed upload fails nothing.
+      - name: Kernel log on a failure
+        if: failure()
+        continue-on-error: true
+        timeout-minutes: 1
+        run: sudo -n dmesg --ctime | tail -n 200 | tee "$RUNNER_DISK_TMPFS/runner-dmesg.log" || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        continue-on-error: true
+        timeout-minutes: 5
+        with:
+          name: runner-disk-ci-release-${{ matrix.shard }}
+          path: |
+            ${{ runner.temp }}/runner-disk.log
+            /dev/shm/runner-pressure.log
+            /dev/shm/runner-dmesg.log
+          if-no-files-found: warn
+          retention-days: 14
+          overwrite: true
 
   # The GPU kernel build and the tests that need the built kernel, in a job of their own beside `ci` (R-325,
   # REQ-SYS-076): `cargo xtask build-kernel` compiles the kernel to the GPU, rust-gpu → SPIR-V → naga → WGSL
@@ -655,6 +872,12 @@ jobs:
             /usr/lib/google-cloud-sdk /usr/local/aws-cli /usr/local/aws-sam-cli /opt/az /usr/share/az_*
           sudo docker image prune --all --force > /dev/null
           df -h /
+      # What the two disks hold, for moving the build to `/mnt` (the owner's candidate 1, 4 Nov 2026). It only measures,
+      # and nothing it finds can fail the job.
+      - name: Runner disks
+        run: |
+          df -h / /mnt || true
+          lsblk || true
       # The toolchain rust-toolchain.toml pins, with its components: rust-gpu's nightly, on which the whole workspace
       # builds (R-169).
       - name: rustup toolchain install (rust-toolchain.toml)
@@ -669,6 +892,10 @@ jobs:
           cache-targets: "false"
           cache-bin: "false"
           save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+      # Every dependency without debug info, as a cargo config in the runner's CARGO_HOME; the workspace's own crates
+      # keep R-374's line tables (`.github/actions/cargo-ci-config`).
+      - name: Dependencies without debug info, every profile
+        uses: ./.github/actions/cargo-ci-config
       # The rust-gpu build, the `rustc_codegen_spirv` backend cargo-gpu's installer builds into ~/.cache/rust-gpu, kept
       # between runs (R-320): keyed on this job and the channel rust-toolchain.toml pins, so a toolchain bump starts a
       # fresh cache (REQ-SYS-075; per-job keys, R-285, REQ-SYS-073). Restored in every run, saved after the build only
@@ -707,9 +934,12 @@ jobs:
   # The required check `gpu-kernel` (R-656): `gpu-kernel`'s suites passed, or were skipped because the
   # classification found no GPU-path file in the pull request's change. It runs whatever they ended in (`always()`).
   gpu-kernel-gate:
-    name: gpu-kernel
+    name: ${{ matrix.check }}
     needs: [changes, gpu-kernel]
-    if: always()
+    if: always() && needs.changes.outputs.quick != 'true'
+    strategy:
+      matrix:
+        check: [gpu-kernel]
     runs-on: ubuntu-24.04
     steps:
       - name: the suites passed, or the change has no GPU-path file
@@ -722,9 +952,9 @@ jobs:
   # `cargo xtask ci --partition <k>/4` runs `cargo xtask build-kernel`, whose WGSL the kernel tests' controls dispatch,
   # in every shard; then `cargo xtask controls` on the controls whose names fall in slice k of 4, failing on any finding
   # (R-198, R-226); and, in shard 1 only, the other runners, among them `cargo xtask plan-check`, which needs Python
-  # and PyYAML (REQ-SYS-007). Together the 4 shards run every control exactly once. The GPU harness's controls run on
-  # lavapipe, as its tests do. `xtask/tests/nextest.rs`'s control lists tests through the pinned cargo-nextest
-  # (R-231). The kernel build stays here, as a runner `cargo xtask ci` registers: the kernel tests' controls read its
+  # and PyYAML (REQ-SYS-007). Together the 4 shards run every control exactly once, but for the three `ci-workspace`
+  # runs (`controls::IN_CI_WORKSPACE`). The GPU harness's controls run on lavapipe, as its tests do.
+  # `xtask/tests/nextest.rs`'s other controls list tests through the pinned cargo-nextest (R-231). The kernel build stays here, as a runner `cargo xtask ci` registers: the kernel tests' controls read its
   # output (R-325 moves it out of `ci`, not out of this job).
   xtask-ci:
     runs-on: ubuntu-24.04
@@ -762,13 +992,19 @@ jobs:
             /usr/lib/google-cloud-sdk /usr/local/aws-cli /usr/local/aws-sam-cli /opt/az /usr/share/az_*
           sudo docker image prune --all --force > /dev/null
           df -h /
+      # What the two disks hold, for moving the build to `/mnt` (the owner's candidate 1, 4 Nov 2026). It only measures,
+      # and nothing it finds can fail the job.
+      - name: Runner disks
+        run: |
+          df -h / /mnt || true
+          lsblk || true
       # The toolchain rust-toolchain.toml pins, with its components: rust-gpu's nightly, on which the whole workspace
       # builds (R-169).
       - name: rustup toolchain install (rust-toolchain.toml)
         id: toolchain
         run: |
           rustup toolchain install
-          echo "cachekey=$(rustc --version --verbose | sha256sum | cut -c1-20)" >> "$GITHUB_OUTPUT"
+          echo "cachekey=$({ rustc --version --verbose; env | grep -E '^CARGO_(INCREMENTAL|PROFILE)' | sort; cat .github/actions/cargo-ci-config/config.sh; } | sha256sum | cut -c1-20)" >> "$GITHUB_OUTPUT"
           echo "channel=$(sed -n 's/^channel = "\(.*\)"$/\1/p' rust-toolchain.toml)" >> "$GITHUB_OUTPUT"
       - uses: Swatinem/rust-cache@v2
         with:
@@ -777,6 +1013,10 @@ jobs:
           cache-targets: "false"
           cache-bin: "false"
           save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+      # Every dependency without debug info, as a cargo config in the runner's CARGO_HOME; the workspace's own crates
+      # keep R-374's line tables (`.github/actions/cargo-ci-config`).
+      - name: Dependencies without debug info, every profile
+        uses: ./.github/actions/cargo-ci-config
       # The fixture pool the `ci` job saves, restored only, under its key: `cargo xtask controls` runs the fixture tests'
       # controls (R-270, R-285).
       - uses: actions/cache/restore@v4
@@ -829,9 +1069,12 @@ jobs:
   # The required check `xtask-ci` (R-266): every `xtask-ci` shard passed, as `ci-gate` gathers `ci`'s. R-656: the
   # shards may be skipped only when the classification ran and found a data or docs pull request (DOCS_ONLY, R-677).
   xtask-ci-gate:
-    name: xtask-ci
+    name: ${{ matrix.check }}
     needs: [xtask-ci, changes]
-    if: always()
+    if: always() && needs.changes.outputs.quick != 'true'
+    strategy:
+      matrix:
+        check: [xtask-ci]
     runs-on: ubuntu-24.04
     steps:
       - name: every job it gathers passed
@@ -864,6 +1107,10 @@ jobs:
           cache-targets: "false"
           cache-bin: "false"
           save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+      # Every dependency without debug info, as a cargo config in the runner's CARGO_HOME; the workspace's own crates
+      # keep R-374's line tables (`.github/actions/cargo-ci-config`).
+      - name: Dependencies without debug info, every profile
+        uses: ./.github/actions/cargo-ci-config
       # The rust-gpu build, kept between runs as in `gpu-kernel` (R-320, R-326), under this job's key, at
       # ~/.cache/rust-gpu. On macOS cargo-gpu's installer builds into ~/Library/Caches/rust-gpu, so that is linked to
       # it first.
@@ -963,9 +1210,12 @@ jobs:
   # The required check `gpu-metal` (R-656): `gpu-metal`'s suites passed, or were skipped because the
   # classification found no GPU-path file in the pull request's change. It runs whatever they ended in (`always()`).
   gpu-metal-gate:
-    name: gpu-metal
+    name: ${{ matrix.check }}
     needs: [changes, gpu-metal]
-    if: always()
+    if: always() && needs.changes.outputs.quick != 'true'
+    strategy:
+      matrix:
+        check: [gpu-metal]
     runs-on: ubuntu-24.04
     steps:
       - name: the suites passed, or the change has no GPU-path file
@@ -994,6 +1244,12 @@ jobs:
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache/CodeQL
           sudo docker image prune --all --force > /dev/null
           df -h /
+      # What the two disks hold, for moving the build to `/mnt` (the owner's candidate 1, 4 Nov 2026). It only measures,
+      # and nothing it finds can fail the job.
+      - name: Runner disks
+        run: |
+          df -h / /mnt || true
+          lsblk || true
       # The toolchain rust-toolchain.toml pins, with its components: rust-gpu's nightly, on which the whole workspace
       # builds (R-169).
       - name: rustup toolchain install (rust-toolchain.toml)
@@ -1008,6 +1264,10 @@ jobs:
           cache-targets: "false"
           cache-bin: "false"
           save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+      # Every dependency without debug info, as a cargo config in the runner's CARGO_HOME; the workspace's own crates
+      # keep R-374's line tables (`.github/actions/cargo-ci-config`).
+      - name: Dependencies without debug info, every profile
+        uses: ./.github/actions/cargo-ci-config
       # The rust-gpu build, kept between runs as in `gpu-kernel` (R-320, R-326), under this job's key.
       - uses: actions/cache/restore@v4
         with:
@@ -1076,9 +1336,12 @@ jobs:
   # The required check `gpu-lavapipe` (R-656): `gpu-lavapipe`'s suites passed, or were skipped because the
   # classification found no GPU-path file in the pull request's change. It runs whatever they ended in (`always()`).
   gpu-lavapipe-gate:
-    name: gpu-lavapipe
+    name: ${{ matrix.check }}
     needs: [changes, gpu-lavapipe]
-    if: always()
+    if: always() && needs.changes.outputs.quick != 'true'
+    strategy:
+      matrix:
+        check: [gpu-lavapipe]
     runs-on: ubuntu-24.04
     steps:
       - name: the suites passed, or the change has no GPU-path file
@@ -1086,3 +1349,27 @@ jobs:
           RESULTS: ${{ join(needs.*.result, ' ') }}
           NO_GPU: ${{ needs.changes.result == 'success' && needs.changes.outputs.gpu == 'false' }}
         run: for r in $RESULTS; do [ "$r" = success ] || { [ "$r" = skipped ] && [ "$NO_GPU" = true ]; } || { echo "a job gpu-lavapipe gathers ended $r"; exit 1; }; done
+
+  # The commit statuses `changes` opened on a code pull-request head, closed from the five gates' results (R-684), on the
+  # full tier only. A required check and a commit status of one name are both required, so this runs whatever the gates
+  # ended in. Never on a quick run, whose statuses stay pending, or a docs or data head, which has none.
+  ci-status:
+    needs: [changes, ci-gate, xtask-ci-gate, gpu-kernel-gate, gpu-metal-gate, gpu-lavapipe-gate]
+    if: always() && needs.changes.outputs.report == 'true'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      statuses: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: .github/scripts/ci_tier.sh report
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          RESULT_ci: ${{ needs.ci-gate.result }}
+          RESULT_xtask_ci: ${{ needs.xtask-ci-gate.result }}
+          RESULT_gpu_kernel: ${{ needs.gpu-kernel-gate.result }}
+          RESULT_gpu_metal: ${{ needs.gpu-metal-gate.result }}
+          RESULT_gpu_lavapipe: ${{ needs.gpu-lavapipe-gate.result }}
+        run: .github/scripts/ci_tier.sh report
