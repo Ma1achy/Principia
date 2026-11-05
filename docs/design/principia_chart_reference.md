@@ -339,8 +339,8 @@ float where it rounded below, and never subnormal, so a backend that flushes sub
 term to it cannot fall below it. Under the linear option the axis
 keeps its fixed values and no floor is added: its pixels with `K* < L_z²/2I` are not a system and draw blank (R-470).
 The held `L_z`, and the held `K` on an `L_z` axis, is this chart's hidden coordinate under R-633, as the physical
-parameter of the construction that holds its momentum block. No task builds its tilt: whether and how it tilts is
-RQ-701's. The one exception to every pixel being a system: a held `L_z` whose `L_z²` has no finite float at the chart's
+parameter of the construction that holds its momentum block. No task builds its tilt or its slice: whether and how
+it tilts and slices is RQ-701's. The one exception to every pixel being a system: a held `L_z` whose `L_z²` has no finite float at the chart's
 own precision has no floor, and every pixel
 of that chart is not a system, §2.2's exact test labelling it and `validate` agreeing at that
 precision. *Was:* "**A warped `t` axis at a held `L_z ≠ 0` is not offered (R-471 E1, R-506; RQ-683).** A lone `K`, `KE`, `E` or
@@ -358,7 +358,8 @@ back through the link, `m = L(z_mass)`, so every pixel's masses are positive and
 A ratio is realised when the link's inverse followed by its forward returns its masses `(m_a, m_b, m_c)`, `m_c` at
 its held value, and the ratio `q`, each to within `ε_μ`, relative, since the inverse saturates past what the link
 reaches. The ratio is read as well because each mass within `ε_μ` bounds it only to about `2·ε_μ`, and `q` is what the
-axis labels. Where the logit that sets `m_c` saturates first, the round trip keeps the ratio and moves `m_c`, and that ratio is not realised.
+axis labels. Where the logit that sets `m_c` saturates first, the round trip keeps the ratio and moves `m_c`, and
+that ratio is not realised.
 `ε_μ = 10⁻⁶` is the link clamp (chart_decoder_contract § "Three hard requirements on any registered link", item 2;
 inverse_encode_contract Part 3), reused here as the round trip's tolerance, not a new constant.
 
