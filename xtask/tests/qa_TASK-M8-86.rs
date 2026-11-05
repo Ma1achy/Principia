@@ -1020,3 +1020,38 @@ negative_control!(
         )]
     )
 );
+
+/// A key the app was told went down is told as gone up, whatever the modifiers at its release (the task's deliverable:
+/// the loader "forwards what the worker cannot receive itself (pointer, keys, text, resize)"). egui holds a key down until
+/// its release, and `gui::stain` reads Space that way; AltGr pressed over a held key is no reason to lose the release.
+#[test]
+fn qa_m8_86_a_key_held_into_altgr_is_released_space() {
+    node("key_held_into_altgr_space", &[]);
+}
+
+#[test]
+fn qa_m8_86_a_key_held_into_altgr_is_released_letter() {
+    node("key_held_into_altgr_letter", &[]);
+}
+
+/// No key-up reaches the loader.
+#[cfg(feature = "controls")]
+const NO_KEY_UP: [(&str, &str, &str); 1] = [(
+    "loader.js",
+    r#"addEventListener("keyup","#,
+    r#"addEventListener("keyup-never","#,
+)];
+
+negative_control!(
+    qa_m8_86_a_key_held_into_altgr_is_released_space,
+    "the release of a held key lost",
+    expected = "the app was never told of Space's release",
+    node("key_held_into_altgr_space", &NO_KEY_UP)
+);
+
+negative_control!(
+    qa_m8_86_a_key_held_into_altgr_is_released_letter,
+    "the release of a held key lost",
+    expected = "the app was never told of KeyQ's release",
+    node("key_held_into_altgr_letter", &NO_KEY_UP)
+);

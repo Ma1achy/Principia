@@ -92,7 +92,9 @@ async function runLoader(dir, { search, offscreen = true, gpu = true, isolated =
   if (!isolated) delete globalThis.SharedArrayBuffer;
   define("self", globalThis);
   define("devicePixelRatio", 1);
-  define("addEventListener", () => {});
+  // The window's listeners are real too, for the key replays.
+  seen.page = new EventTarget();
+  define("addEventListener", seen.page.addEventListener.bind(seen.page));
   define("document", {
     title: "",
     body: { append() {} },
@@ -187,8 +189,42 @@ function replayCommits(page, orders) {
   }
 }
 
+// A key held as AltGr goes down, then let go under it, as Windows reports AltGr: the key's own event comes with Ctrl, Alt
+// and AltGraph set, and with the layer's character in `key`. Returns what the app was told of that key: `[down, up]`.
+async function heldIntoAltGr(dir, down, up, code) {
+  const { seen, appWorker } = await runLoader(dir, { search: "?layout=worker" });
+  check(appWorker, "?layout=worker started no worker");
+  const fire = (type, key, altGraph) =>
+    seen.page.dispatchEvent(
+      Object.assign(new Event(type, { cancelable: true }), {
+        key,
+        code,
+        repeat: false,
+        isComposing: false,
+        shiftKey: false,
+        ctrlKey: altGraph,
+        altKey: altGraph,
+        metaKey: false,
+        getModifierState: (m) => m === "AltGraph" && altGraph,
+      }),
+    );
+  fire("keydown", down, false);
+  fire("keyup", up, true);
+  const told = appWorker.posts.filter((m) => m.type === "call" && m.method === "key" && m.args[1] === code).map((m) => m.args[2]);
+  check(told[0] === true, `the app was not told of ${code}'s press: ${JSON.stringify(told)}`);
+  check(told.at(-1) === false, `the app was never told of ${code}'s release, so egui holds it down: ${JSON.stringify(told)}`);
+}
+
 function imeScenarios(dir) {
   return {
+    // Space, which the Stain canvas reads while it is down.
+    async key_held_into_altgr_space() {
+      await heldIntoAltGr(dir, " ", " ", "Space");
+    },
+    // A letter, whose `key` the layer changes between its press and its release.
+    async key_held_into_altgr_letter() {
+      await heldIntoAltGr(dir, "q", "@", "KeyQ");
+    },
     // `input` after `compositionend`, as code review 5772081382's F1 says Gecko sends it: the value is in place first.
     async ime_compositionend_then_input() {
       replayCommits(await imePage(dir), {
