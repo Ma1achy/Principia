@@ -968,7 +968,10 @@ fn walk(yml: &Value, verdict: &[(&str, &str)], fail: &[&str]) -> Walk {
             }
             let cond = s(&job["if"]);
             let ok = needs.iter().all(|n| w.results[n] == "success");
-            let runs = if cond.contains("always()") {
+            // R-684 joins an `if:` to `always()`: what follows it holds or skips the job.
+            let runs = if let Some(rest) = cond.strip_prefix("always() && ") {
+                w.eval(rest) == "true"
+            } else if cond.contains("always()") {
                 true
             } else {
                 ok && (cond.is_empty() || w.eval(&cond) == "true")
@@ -1026,13 +1029,26 @@ fn walk(yml: &Value, verdict: &[(&str, &str)], fail: &[&str]) -> Walk {
     w
 }
 
+/// The check a job reports when it runs: its `name:`, or its id; a gate named by its one-value matrix reports that value
+/// (R-684), and skipped, on a quick run, its raw `name:`.
+fn reported_name(id: &str, job: &Value) -> String {
+    let name = job.get("name").map_or_else(|| id.to_owned(), s);
+    match job["strategy"]["matrix"]["check"]
+        .as_array()
+        .map(Vec::as_slice)
+    {
+        Some([only]) if name == "${{ matrix.check }}" => s(only),
+        _ => name,
+    }
+}
+
 /// The result of the job reporting the check `name`, which must be exactly one job.
 fn check_result(yml: &Value, w: &Walk, name: &str) -> String {
     let by: Vec<&String> = yml["jobs"]
         .as_object()
         .expect("jobs")
         .iter()
-        .filter(|(id, j)| j.get("name").map_or(id.as_str() == name, |n| s(n) == name))
+        .filter(|(id, j)| reported_name(id, j) == name)
         .map(|(id, _)| id)
         .collect();
     assert_eq!(by.len(), 1, "qa_r677: `{name}` is reported by {by:?}");

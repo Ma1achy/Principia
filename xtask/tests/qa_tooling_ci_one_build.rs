@@ -208,7 +208,9 @@ fn check_left_controls_run_once(ci: &str) {
         let (job, condition, step) = &found[0];
         assert_eq!(job, "ci-workspace", "`{control}` runs in `{job}`");
         assert!(
-            condition.is_empty() && step.condition == DOCS_ONLY_SKIP,
+            // R-684: the job skips on a quick run, as the shards do, and its `ci-quick` runs the rest.
+            *condition == "needs.changes.outputs.quick != 'true'"
+                && step.condition == DOCS_ONLY_SKIP,
             "`{control}` runs on other heads than the shards that left it: `{}`",
             step.condition
         );
