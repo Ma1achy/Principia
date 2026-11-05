@@ -163,10 +163,13 @@ function forward(worker, canvas) {
   ime.addEventListener("compositionend", typed, { signal });
   const key = (pressed) => (e) => {
     if (e.isComposing) return;
+    // AltGr can report Ctrl and Alt as well (AltGr+Q, `@`, on a German layout on Windows). A character it types is text
+    // alone: it stays with the input, and no key goes on for egui to read as Ctrl+Alt+A, a text field's select-all.
+    const altGr = e.ctrlKey && !e.metaKey && e.getModifierState("AltGraph");
+    if (altGr && (e.key.length === 1 || e.key === "Dead")) return;
     post("key", e.key, e.code, pressed, e.repeat, ...mods(e));
     // A printable key stays with the input, for its text, as does the clipboard's chord; every other key is the app's.
-    // AltGr can report Ctrl as well (AltGr+Q, `@`, on a German layout on Windows): that is typing, not a chord.
-    const chord = e.metaKey || (e.ctrlKey && !e.getModifierState("AltGraph"));
+    const chord = e.metaKey || e.ctrlKey;
     if (e.key.length !== 1 && e.key !== "Dead" && !chord) e.preventDefault();
     if (chord && !"vcx".includes(e.key.toLowerCase())) e.preventDefault();
   };

@@ -281,7 +281,9 @@ negative_control!(
 
 const ALTGRAPH: &str = "loader_altgraph_character_reaches_the_input";
 #[cfg(feature = "controls")]
-const CHORD: &str = r#"const chord = e.metaKey || (e.ctrlKey && !e.getModifierState("AltGraph"));"#;
+const ALT_GR: &str = r#"const altGr = e.ctrlKey && !e.metaKey && e.getModifierState("AltGraph");"#;
+#[cfg(feature = "controls")]
+const CHARACTER: &str = r#"if (altGr && (e.key.length === 1 || e.key === "Dead")) return;"#;
 
 #[test]
 fn loader_altgraph_character_reaches_the_input() {
@@ -292,11 +294,24 @@ mod altgraph_a_chord {
     use super::*;
     negative_control!(
         loader_altgraph_character_reaches_the_input,
-        "AltGraph not read: Ctrl with it is a chord, as Codex's finding traced",
+        "AltGr's characters not told from chords, as Codex's finding traced",
         expected = "AltGr's `@` was cancelled",
+        run(ALTGRAPH, &loader(CHARACTER, ""))
+    );
+}
+
+mod altgraph_forwards_the_key {
+    use super::*;
+    negative_control!(
+        loader_altgraph_character_reaches_the_input,
+        "the input keeps AltGr's character, and its key goes on too: Ctrl+Alt+A, egui's select-all",
+        expected = "for egui to read as Ctrl+Alt",
         run(
             ALTGRAPH,
-            &loader(CHORD, "const chord = e.metaKey || e.ctrlKey;")
+            &loader(
+                CHARACTER,
+                r#"if (altGr && (e.key.length === 1 || e.key === "Dead")) { post("key", e.key, e.code, pressed, e.repeat, ...mods(e)); return; }"#
+            )
         )
     );
 }
@@ -305,9 +320,12 @@ mod ctrl_never_a_chord {
     use super::*;
     negative_control!(
         loader_altgraph_character_reaches_the_input,
-        "Ctrl dropped from the chord altogether, not only under AltGraph",
+        "any Ctrl taken for AltGr, not only under AltGraph",
         expected = "Ctrl+S was left to the page",
-        run(ALTGRAPH, &loader(CHORD, "const chord = e.metaKey;"))
+        run(
+            ALTGRAPH,
+            &loader(ALT_GR, "const altGr = e.ctrlKey && !e.metaKey;")
+        )
     );
 }
 
@@ -320,9 +338,32 @@ mod altgraph_excuses_meta {
         run(
             ALTGRAPH,
             &loader(
-                CHORD,
-                r#"const chord = (e.metaKey || e.ctrlKey) && !e.getModifierState("AltGraph");"#
+                ALT_GR,
+                r#"const altGr = e.ctrlKey && e.getModifierState("AltGraph");"#
             )
+        )
+    );
+}
+
+mod altgraph_takes_every_key {
+    use super::*;
+    negative_control!(
+        loader_altgraph_character_reaches_the_input,
+        "every key under AltGraph taken for a character",
+        expected = "AltGr's Enter was left to the page",
+        run(ALTGRAPH, &loader(CHARACTER, "if (altGr) return;"))
+    );
+}
+
+mod altgraph_dead_key_a_chord {
+    use super::*;
+    negative_control!(
+        loader_altgraph_character_reaches_the_input,
+        "a dead key under AltGraph not taken for a character",
+        expected = "AltGr's dead key was cancelled",
+        run(
+            ALTGRAPH,
+            &loader(CHARACTER, "if (altGr && e.key.length === 1) return;")
         )
     );
 }
