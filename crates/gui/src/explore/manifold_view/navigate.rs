@@ -204,7 +204,12 @@ pub fn figure(
             ui.close();
         }
     });
-    super::close_under_console(&response, scratch.console_top);
+    // The figure stays in use under a risen console, so the menu's control is the point it was opened on.
+    if let Some((_, t)) = scratch.menu_at {
+        let y = field.max.y - field.height() * t as f32;
+        let opened_on = Rect::from_min_max(egui::pos2(field.min.x, y), egui::pos2(field.max.x, y));
+        super::close_when_reached(&response, opened_on, scratch.console_top);
+    }
     if focused && !typing {
         let presses: Vec<(f64, egui::Modifiers)> = ui.input(|i| {
             i.events

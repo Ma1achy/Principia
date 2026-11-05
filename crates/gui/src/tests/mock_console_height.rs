@@ -22,8 +22,10 @@ use crate::explore::breadcrumb;
 use crate::explore::footer::FOOTER;
 use crate::explore::hover_label::{BACKING, LISTEN_HINT};
 use crate::explore::manifold_view::chart::editor_ends_above;
+use crate::explore::manifold_view::lock::LOCK_HERE;
+use crate::explore::manifold_view::navigate::figure_coords;
 use crate::explore::manifold_view::{
-    control_reached, AXES, PRESET, Q1_COMPONENTS, Q1_EDIT, TILT_X,
+    control_reached, point, AXES, PRESET, Q1_COMPONENTS, Q1_EDIT, TILT_X,
 };
 use crate::explore::top_bar::TOP_BAR;
 use crate::explore::{COMPASS, COMPASS_H, FIGURE};
@@ -995,11 +997,8 @@ fn mock_console_height_maximised_a_panels_combo_closes() {
     }
 }
 
-#[test]
-fn mock_console_height_it_closes_the_figures_right_click_menu() {
-    let (mut app, mut h) = opened();
-    let figure = current(&h, &app).figure;
-    let at = figure.center_top() + vec2(0.0, 60.0);
+/// A right-click at `at`, and the frames that settle it.
+fn right_click(h: &mut Headless, app: &mut App<MockSide>, at: egui::Pos2) {
     let button = |pressed| Event::PointerButton {
         pos: at,
         button: egui::PointerButton::Secondary,
@@ -1011,21 +1010,57 @@ fn mock_console_height_it_closes_the_figures_right_click_menu() {
         vec![button(true)],
         vec![button(false)],
     ] {
-        let _ = h.frame(&mut app, events);
+        let _ = h.frame(app, events);
     }
-    settle(&mut h, &mut app);
+    settle(h, app);
+}
+
+#[test]
+fn mock_console_height_it_closes_the_figures_right_click_menu() {
+    let (mut app, mut h) = opened();
+    let figure = current(&h, &app).figure;
+    let at = figure.center_top() + vec2(0.0, 60.0);
+    right_click(&mut h, &mut app, at);
     let inside = at + vec2(10.0, 8.0);
     let kept = popup_at(&h, inside);
-    assert_eq!(
-        kept,
-        (true, Some(egui::Order::Foreground)),
-        "over the docked one"
-    );
+    let open = (true, Some(egui::Order::Foreground));
+    assert_eq!(kept, open, "over the docked one");
     rejects("a menu the docked console has not reached", || {
         popup_gone(&h, inside)
     });
+    // Under the point, the menu hanging over the console, it stays.
+    top_at(&mut h, &mut app, at.y + 4.0);
+    assert_eq!(popup_at(&h, inside), open, "the point still shows");
     top_at(&mut h, &mut app, at.y - 20.0);
     popup_gone(&h, inside);
+}
+
+#[test]
+fn mock_console_height_a_right_click_on_what_shows_locks_that_point() {
+    let (mut app, mut h) = opened();
+    let (figure, field) = (current(&h, &app).figure, current(&h, &app).field);
+    let at = figure.center_top() + vec2(0.0, 60.0);
+    // Past the figure's bottom edge, and short of the point.
+    top_at(&mut h, &mut app, at.y + 120.0);
+    assert!(drawn(&app).min.y < figure.max.y, "past the figure's bottom");
+    right_click(&mut h, &mut app, at);
+    assert_eq!(
+        popup_at(&h, at + vec2(10.0, 8.0)),
+        (true, Some(egui::Order::Foreground)),
+        "the menu opens"
+    );
+    let plane = app.snapshot().sim.plane.clone();
+    let (s, t) = figure_coords(field, at);
+    assert!(!app.snapshot().sim.lock.locked);
+    click(&mut h, &mut app, LOCK_HERE);
+    settle(&mut h, &mut app);
+    let lock = app.snapshot().sim.lock.clone();
+    assert!(lock.locked, "lock here locked");
+    assert_eq!(lock.z_locked, point(&plane, s, t), "that point");
+    let elsewhere = point(&plane, s, t + 0.1);
+    rejects("a lock on another point", || {
+        assert_eq!(lock.z_locked, elsewhere)
+    });
 }
 
 #[test]

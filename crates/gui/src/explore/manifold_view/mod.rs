@@ -867,12 +867,17 @@ pub struct Scratch {
 /// only hangs over the console from a control that shows stays, or the docked console would shut the panels' longer
 /// lists (applied per R-369). The pass is run again, so it is not drawn.
 pub fn close_under_console(control: &Response, console_top: Option<f32>) {
-    let popup = egui::Popup::default_response_id(control);
-    if console_top.is_some_and(|top| control_reached(control.rect, top))
-        && egui::Popup::is_id_open(&control.ctx, popup)
+    close_when_reached(control, control.rect, console_top);
+}
+
+/// Closes the popup of `owner`, open, once the console reaches `control`, what opened it.
+pub fn close_when_reached(owner: &Response, control: Rect, console_top: Option<f32>) {
+    let popup = egui::Popup::default_response_id(owner);
+    if console_top.is_some_and(|top| control_reached(control, top))
+        && egui::Popup::is_id_open(&owner.ctx, popup)
     {
-        egui::Popup::close_id(&control.ctx, popup);
-        control.ctx.request_discard("a popup the console reached");
+        egui::Popup::close_id(&owner.ctx, popup);
+        owner.ctx.request_discard("a popup the console reached");
     }
 }
 
