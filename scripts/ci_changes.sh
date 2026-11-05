@@ -9,12 +9,16 @@
 #       mutants;
 #   (c) docs: the rest of the corpus, the plan's prose and Python, the scripts, the workbench and `.claude/` run only
 #       the cheap checks, plan-check, the vocabulary lint and the atlas guard (R-662, R-790).
-# A change touching several tiers runs the highest. One that touches no `.rs` file under `crates/` has no mutant to
-# run (R-677). Every required check still reports, under its own name, and concludes success only where its tier allows
-# it (R-656; R-266, R-305).
+# A change touching several tiers runs the highest. Tier (a)'s full CI is on the merge-candidate head and on `main`, and
+# every other code head runs the quick tier (R-684; `.github/scripts/ci_tier.sh`, which reads this verdict: this script
+# says what a change touches, that one what the run does with it). One that touches no `.rs` file under `crates/` has no
+# mutant to run (R-677). Every required check still reports, under its own name, and concludes success only where its
+# tier allows it (R-656; R-266, R-305).
 #
 #   scripts/ci_changes.sh detect       In a workflow step: classify this run's change and write its verdict to
 #                                      $GITHUB_OUTPUT (and print it, with the changed paths).
+#   scripts/ci_changes.sh paths        Print the pull request's changed paths, for the quick tier's crates (R-684;
+#                                      `.github/scripts/ci_tier.sh`); nothing if they can't be found.
 #   scripts/ci_changes.sh classify     Read changed paths from stdin, one per line; print the verdict. With
 #                                      CI_REQS_BASE and CI_REQS_HEAD naming the base's and the head's copies of
 #                                      `plan/requirements.yaml`, that file is tier (b) when `scripts/ci_req_fields.py`
@@ -246,9 +250,10 @@ detect() {
 
 case "${1:-}" in
   detect) detect ;;
+  paths) changed_paths ;;
   classify) classify ;;
   *)
-    echo "usage: scripts/ci_changes.sh detect | classify" >&2
+    echo "usage: scripts/ci_changes.sh detect | paths | classify" >&2
     exit 2
     ;;
 esac

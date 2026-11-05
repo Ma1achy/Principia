@@ -1,7 +1,7 @@
 # The stand-in-executable soak (REQ-SYS-070, R-267): the tests that write a stand-in `cargo` or `gh` and run xtask
 # against it, 50 consecutive runs, each test binary's tests in parallel, on ubuntu-24.04, where the fork/exec race
 # (ETXTBSY, "Text file busy") shows. Not per-push: it runs on a PR that changes the spawn helper or one of these
-# tests, and on demand.
+# tests, and on demand. One job per binary, each binary with its 50 runs (RQ-688; the job below says why).
 name: stand-in-soak
 
 on:
@@ -44,8 +44,23 @@ env:
 jobs:
   # `qa_m022_ci_passes_when_every_control_trips` runs the full `xtask ci`, whose golden runner renders (R-110): Mesa's
   # lavapipe, as in the ci and xtask-ci jobs (applied per R-204, RQ-168).
+  #
+  # One job per test binary (RQ-688; applied per R-369, under the owner's "fix the cause or split the shard"). The five
+  # in series take about 5.5 times `ci_list_runs_no_control` a run, so on a runner where that test takes 85 s or more
+  # the 50 runs outlast GitHub's 6 h job limit; run 41808766194, on the 74 s band, took 5 h 46. Alone, `qa_TASK-M0-22`,
+  # the longest, takes 3.5 to 3.8 times it. Each job still makes all 50 runs, under the 600 s timer, in the workflow's
+  # env. `fail-fast` is off, so one binary's failure doesn't stop the others' runs.
   soak:
     runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        test:
+          - qa_TASK-M0-22
+          - qa_TASK-M0-22_r235
+          - ci
+          - qa_TASK-M0-36
+          - qa_TASK-M0-37
     env:
       PRIN_GPU_BACKEND: vulkan
     steps:
@@ -70,15 +85,28 @@ jobs:
       - name: Install Mesa (lavapipe)
         run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers
       - name: Build the stand-in tests
-        run: >-
-          cargo test -p xtask --no-run --test qa_TASK-M0-22 --test qa_TASK-M0-22_r235 --test ci
-          --test qa_TASK-M0-36 --test qa_TASK-M0-37
+        run: cargo test -p xtask --no-run --test ${{ matrix.test }}
+      # RQ-688: on run 1, `xtask ci` children side by side under `cargo test`, each with the 600 s timer, share what the
+      # build step leaves cold: the build of `golden_harness`, which only the golden runner asks for, and lavapipe's
+      # first compile of every shader. One golden run first, alone, with no timer on the build, in the job's env, leaves
+      # both warm, and it is the very work the children's golden step does: this `target/debug/xtask` is the binary they
+      # spawn, where `cargo xtask` would resolve xtask's features without its dev-dependencies and could rebuild it. The
+      # 600 s timer and the 50 parallel runs stay as they are (R-649; REQ-SYS-070); applied per R-369.
+      # The log gives what RQ-688's open hypotheses need: the runner's hardware, this step's time, and what the shader
+      # cache holds on each side of it.
+      - name: Warm up the golden harness and Mesa's shader cache, one run alone
+        run: |
+          lscpu
+          nproc
+          cache="${XDG_CACHE_HOME:-$HOME/.cache}"
+          du -sh "$cache"/mesa_shader_cache* 2>/dev/null || echo "no Mesa shader cache before the warm-up"
+          time target/debug/xtask golden --all
+          du -sh "$cache"/mesa_shader_cache* 2>/dev/null || echo "no Mesa shader cache after the warm-up"
       - name: 50 consecutive parallel runs
         run: |
           for run in $(seq 1 50); do
             echo "::group::run $run of 50"
-            cargo test -p xtask --test qa_TASK-M0-22 --test qa_TASK-M0-22_r235 --test ci \
-              --test qa_TASK-M0-36 --test qa_TASK-M0-37 || { echo "run $run of 50 failed"; exit 1; }
+            cargo test -p xtask --test ${{ matrix.test }} || { echo "run $run of 50 failed"; exit 1; }
             echo "::endgroup::"
           done
           echo "stand-in soak: 50 consecutive parallel runs passed"

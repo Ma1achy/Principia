@@ -4,7 +4,9 @@
 //! sharded by its job's matrix (`--partition hash:${{ matrix.shard }}/4`, R-336, R-366) is listed once per shard, and a
 //! step that runs from a nextest archive (`--archive-file`, R-372, REQ-SYS-078) is listed with the arguments the
 //! `cargo nextest archive` step that builds that archive was given. The documented local run (`plan/WORKFLOW.md`,
-//! "Running the suite locally") installs the same pinned version.
+//! "Running the suite locally") installs the same pinned version. A `cargo test --no-run` builds and runs no test, so
+//! it is no test step. The one test step outside nextest is `stand-in-soak.yml`'s 50-run step, which REQ-SYS-070 needs
+//! ([`LIBTEST_SOAK`]).
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -68,15 +70,53 @@ fn jobs(workflow: &str) -> Vec<Vec<&str>> {
     jobs
 }
 
-/// The commands of a job's `run:` steps, each with the nextest profile it runs under: the `NEXTEST_PROFILE` its step's
-/// `env:` sets, or else the job's, or none (the default profile). CI's `ci`, `ci-workspace` and `gpu-kernel` jobs split
-/// the workspace's tests by profile (R-325, R-372, `.config/nextest.toml`).
-fn runs<'a>(job: &[&'a str]) -> Vec<(&'a str, Option<&'a str>)> {
+/// The shell commands of a `run:` step, from its value and, for a block scalar, the scalar's lines. A one-line value is
+/// one command. A folded scalar (`>`) has one command to each run of lines between blank lines: YAML folds a line break
+/// to a space, and keeps the one a blank line stands for. A literal scalar (`|`) has a command a line, without blank
+/// lines and comments, and a line ending in `\` continued on the next, with a space between the two, the indented form
+/// every workflow writes. As in the shell, a blank line or a comment after the `\`, or the end of the block, ends the
+/// command.
+fn commands(value: &str, block: &[&str]) -> Vec<String> {
+    if value.starts_with('>') {
+        return block
+            .split(|line| line.trim().is_empty())
+            .filter(|lines| !lines.is_empty())
+            .map(|lines| {
+                let lines: Vec<&str> = lines.iter().map(|line| line.trim()).collect();
+                lines.join(" ")
+            })
+            .collect();
+    }
+    if !value.starts_with('|') {
+        return vec![value.to_owned()];
+    }
+    let mut out = Vec::new();
+    let mut command = String::new();
+    // The blank line at the end ends a command the block's last line continues.
+    for line in block.iter().map(|line| line.trim()).chain([""]) {
+        let none = line.is_empty() || line.starts_with('#');
+        if !none {
+            command.push_str(line.trim_end_matches('\\').trim_end());
+            command.push(' ');
+        }
+        if (none || !line.ends_with('\\')) && !command.is_empty() {
+            out.push(std::mem::take(&mut command).trim_end().to_owned());
+        }
+    }
+    out
+}
+
+/// The commands of a job's `run:` steps, one-line, folded and block alike ([`commands`]), each with the nextest profile
+/// it runs under: the `NEXTEST_PROFILE` its step's `env:` sets, or else the job's, or none (the default profile). CI's
+/// `ci`, `ci-workspace` and `gpu-kernel` jobs split the workspace's tests by profile (R-325, R-372,
+/// `.config/nextest.toml`).
+fn runs<'a>(job: &[&'a str]) -> Vec<(String, Option<&'a str>)> {
     let mut out = Vec::new();
     let mut in_steps = false;
     let (mut job_profile, mut step_profile) = (None, None);
-    for line in job {
-        let line = line.trim_start();
+    let mut lines = job.iter().peekable();
+    while let Some(full_line) = lines.next() {
+        let line = full_line.trim_start();
         if line.trim_end() == "steps:" {
             in_steps = true;
         }
@@ -95,7 +135,19 @@ fn runs<'a>(job: &[&'a str]) -> Vec<(&'a str, Option<&'a str>)> {
             .strip_prefix("- run: ")
             .or_else(|| line.strip_prefix("run: "))
         {
-            out.push((run.trim(), step_profile.or(job_profile)));
+            let run = run.trim();
+            // A block scalar's lines are those indented past its `run:` key, and blank ones.
+            let key = full_line.len() - line.len() + if line.starts_with("- ") { 2 } else { 0 };
+            let mut block = Vec::new();
+            if run.starts_with(['|', '>']) {
+                while let Some(next) = lines.next_if(|next| {
+                    next.trim().is_empty() || next.len() - next.trim_start().len() > key
+                }) {
+                    block.push(*next);
+                }
+            }
+            let profile = step_profile.or(job_profile);
+            out.extend(commands(run, &block).into_iter().map(|c| (c, profile)));
         }
     }
     out
@@ -204,10 +256,39 @@ fn archives(workflow: &str) -> BTreeMap<String, Vec<String>> {
     archives
 }
 
+/// The one command that runs tests through `cargo test` and not nextest, doctests aside: the workflow's `name:`, its
+/// job and the command. `stand-in-soak.yml`'s 50-run step soaks for the race REQ-SYS-070 names, which needs the test
+/// binary's tests overlapping on its threads, and nextest gives each test a process of its own.
+const LIBTEST_SOAK: (&str, &str, &str) = (
+    "stand-in-soak",
+    "soak:",
+    r#"cargo test -p xtask --test ${{ matrix.test }} || { echo "run $run of 50 failed"; exit 1; }"#,
+);
+
+/// `run`, in `job` of `workflow`, is [`LIBTEST_SOAK`].
+fn is_libtest_soak(workflow: &str, job: &[&str], run: &str) -> bool {
+    let name = workflow
+        .lines()
+        .find_map(|line| line.strip_prefix("name: "));
+    (name, job[0].trim(), run) == (Some(LIBTEST_SOAK.0), LIBTEST_SOAK.1, LIBTEST_SOAK.2)
+}
+
+/// `rest`, what follows a `cargo test`, asks cargo only to build: `--no-run` among cargo's own arguments, before any
+/// `--`, past which it goes to the test binary and every test still runs; and a single command, for a shell separator
+/// (`&&`, `||`, `;`, `|`) leaves a `--no-run` governing one command of the line and tests to run in another.
+fn only_builds(rest: &str) -> bool {
+    !rest.contains(['&', '|', ';'])
+        && rest
+            .split_whitespace()
+            .take_while(|word| *word != "--")
+            .any(|word| word == "--no-run")
+}
+
 /// The test steps of `workflows`, and the pinned cargo-nextest version they install. Every job with a nextest step
 /// installs cargo-nextest at an exact version, and every job that installs it installs the same one; no step runs
-/// `cargo test` but for doctests. A nextest step that runs from an archive (`--archive-file`) has, in place of its reuse
-/// options, the arguments of the step in its workflow that builds that archive.
+/// `cargo test` but for doctests, a build (`--no-run`) and [`LIBTEST_SOAK`]. A nextest step that runs from an archive
+/// (`--archive-file`) has, in place of its reuse options, the arguments of the step in its workflow that builds that
+/// archive.
 fn test_steps(workflows: &[String]) -> (Vec<Step>, String) {
     let mut steps = Vec::new();
     let mut pins: Vec<String> = Vec::new();
@@ -216,7 +297,9 @@ fn test_steps(workflows: &[String]) -> (Vec<Step>, String) {
         for job in jobs(workflow) {
             let mut nextest = false;
             for (run, profile) in runs(&job).into_iter().flat_map(|(run, profile)| {
-                shards(&job, run).into_iter().map(move |run| (run, profile))
+                shards(&job, &run)
+                    .into_iter()
+                    .map(move |run| (run, profile))
             }) {
                 let run = run.as_str();
                 let words = |rest: &str| -> Vec<String> {
@@ -246,6 +329,9 @@ fn test_steps(workflows: &[String]) -> (Vec<Step>, String) {
                         profile: profile.map(str::to_owned),
                     });
                 } else if let Some(rest) = run.strip_prefix("cargo test") {
+                    if only_builds(rest) || is_libtest_soak(workflow, &job, run) {
+                        continue;
+                    }
                     assert!(
                         rest.split_whitespace().any(|w| w == "--doc"),
                         "a CI step runs tests through `cargo test`, not nextest: `{run}` (job {})",
@@ -259,7 +345,11 @@ fn test_steps(workflows: &[String]) -> (Vec<Step>, String) {
                 }
             }
             let pin = job.iter().find_map(|line| {
-                let version = line.trim().strip_prefix("tool: cargo-nextest@")?;
+                // `tool:` is a comma-separated list, `cargo-mutants@…,cargo-nextest@…` in the mutants jobs.
+                let tools = line.trim().strip_prefix("tool: ")?;
+                let version = tools
+                    .split(',')
+                    .find_map(|tool| tool.trim().strip_prefix("cargo-nextest@"))?;
                 let exact = version.split('.').count() == 3
                     && version.split('.').all(|n| n.parse::<u32>().is_ok());
                 exact.then(|| version.to_owned())
@@ -313,6 +403,297 @@ validation::negative_control!(
             &pin,
         )
     }
+);
+
+/// A workflow named `name`, with one job `job`, which installs the pinned cargo-nextest and then has `steps`, YAML
+/// list items at a step's indent.
+fn workflow_with(name: &str, job: &str, steps: &str) -> String {
+    format!(
+        "name: {name}\njobs:\n  {job}:\n    steps:\n      - uses: taiki-e/install-action@v2\n        with:\n          \
+         tool: cargo-nextest@0.9.146\n{steps}"
+    )
+}
+
+/// The arguments of each test step of `workflow`, in the workflow's order.
+fn step_args(workflow: &str) -> Vec<String> {
+    let (steps, _) = test_steps(&[workflow.to_owned()]);
+    steps.iter().map(|step| step.args.join(" ")).collect()
+}
+
+/// A literal block step: a comment, a line that is not cargo and a blank one are no commands, and the block ends at the
+/// next step, which is read as well.
+const BLOCK_STEPS: &str =
+    "      - name: A block\n        run: |\n          # cargo test -p commented\n          \
+    echo cargo test\n\n          cargo nextest run -p a\n      - run: cargo nextest run -p b\n";
+
+#[test]
+fn nextest_the_guard_reads_a_block_step() {
+    assert_eq!(
+        step_args(&workflow_with("w", "j", BLOCK_STEPS)),
+        ["-p a", "-p b"]
+    );
+}
+
+validation::negative_control!(
+    nextest_the_guard_reads_a_block_step,
+    "a `cargo test` in a block step of a workflow with no exception",
+    expected = "a CI step runs tests through `cargo test`",
+    drop(step_args(&workflow_with(
+        "w",
+        "j",
+        &BLOCK_STEPS.replace("cargo nextest run -p a", "cargo test -p a")
+    )))
+);
+
+/// A folded step, its command across two lines, as `run: >-` and `run: >` both write it.
+const FOLDED_STEP: &str =
+    "      - run: >-\n          cargo nextest run\n          -p a\n      - run: >\n          \
+    cargo nextest run\n          -p b\n";
+
+#[test]
+fn nextest_the_guard_reads_a_folded_step() {
+    assert_eq!(
+        step_args(&workflow_with("w", "j", FOLDED_STEP)),
+        ["-p a", "-p b"]
+    );
+}
+
+validation::negative_control!(
+    nextest_the_guard_reads_a_folded_step,
+    "a `cargo test` in a folded step of a workflow with no exception",
+    expected = "a CI step runs tests through `cargo test`",
+    drop(step_args(&workflow_with(
+        "w",
+        "j",
+        &FOLDED_STEP.replacen("cargo nextest run", "cargo test", 1)
+    )))
+);
+
+/// A block step's doctest command, its `--doc` on a continuation line, so the guard passes it only if it reads the
+/// two lines as the one command.
+const CONTINUED_STEP: &str =
+    "      - run: |\n          cargo test -p a \\\n            --doc\n          echo done\n";
+
+#[test]
+fn nextest_the_guard_reads_a_continued_command_whole() {
+    assert_eq!(
+        step_args(&workflow_with("w", "j", CONTINUED_STEP)),
+        ["-p a"]
+    );
+}
+
+validation::negative_control!(
+    nextest_the_guard_reads_a_continued_command_whole,
+    "the same two lines without the `\\`: a `cargo test -p a`, and a `--doc` that is no part of it",
+    expected = "a CI step runs tests through `cargo test`",
+    drop(step_args(&workflow_with(
+        "w",
+        "j",
+        &CONTINUED_STEP.replace(" \\\n", "\n")
+    )))
+);
+
+#[test]
+fn nextest_a_no_run_build_is_no_test_step() {
+    let build = "      - run: cargo test -p a --no-run --test b\n";
+    assert!(step_args(&workflow_with("w", "j", build)).is_empty());
+}
+
+validation::negative_control!(
+    nextest_a_no_run_build_is_no_test_step,
+    "`--no-run` past `--`, where it goes to the test binary and every test runs",
+    expected = "a CI step runs tests through `cargo test`",
+    drop(step_args(&workflow_with(
+        "w",
+        "j",
+        "      - run: cargo test -p a --test b -- --no-run\n"
+    )))
+);
+
+#[test]
+fn nextest_a_no_run_excuses_no_other_command_on_its_line() {
+    assert!(only_builds(" -p a --no-run --test b"));
+    for rest in [
+        " --no-run && cargo test -p b",
+        " -p b && cargo test --no-run",
+        " --no-run || cargo test -p b",
+        " --no-run; cargo test -p b",
+        " -p b; cargo test --no-run",
+        " --no-run | tee log",
+    ] {
+        assert!(!only_builds(rest), "`cargo test{rest}` runs tests");
+    }
+}
+
+validation::negative_control!(
+    nextest_a_no_run_excuses_no_other_command_on_its_line,
+    "a `--no-run` beside a second `cargo test` on its line, which runs tests",
+    expected = "a CI step runs tests through `cargo test`",
+    drop(step_args(&workflow_with(
+        "w",
+        "j",
+        "      - run: cargo test --no-run && cargo test -p b\n"
+    )))
+);
+
+/// A block whose last line ends in `\`, which the shell runs, with nothing to continue on.
+const LAST_LINE_CONTINUED: &str =
+    "      - run: |\n          echo a\n          cargo nextest run -p a \\\n";
+
+#[test]
+fn nextest_the_guard_reads_a_blocks_continued_last_line() {
+    assert_eq!(
+        step_args(&workflow_with("w", "j", LAST_LINE_CONTINUED)),
+        ["-p a"]
+    );
+}
+
+validation::negative_control!(
+    nextest_the_guard_reads_a_blocks_continued_last_line,
+    "a `cargo test` on a block's last line, ending in `\\`",
+    expected = "a CI step runs tests through `cargo test`",
+    drop(step_args(&workflow_with(
+        "w",
+        "j",
+        &LAST_LINE_CONTINUED.replace("cargo nextest run", "cargo test")
+    )))
+);
+
+/// A folded step with a blank line between two commands, which YAML keeps as a line break.
+const FOLDED_TWO_COMMANDS: &str =
+    "      - run: >-\n          cargo nextest run -p a\n\n          cargo nextest run -p b\n";
+
+#[test]
+fn nextest_a_blank_line_parts_a_folded_steps_commands() {
+    assert_eq!(
+        step_args(&workflow_with("w", "j", FOLDED_TWO_COMMANDS)),
+        ["-p a", "-p b"]
+    );
+}
+
+validation::negative_control!(
+    nextest_a_blank_line_parts_a_folded_steps_commands,
+    "a `cargo test` after a blank line in a folded step, beside a doctest whose `--doc` would excuse it on one line",
+    expected = "a CI step runs tests through `cargo test`",
+    drop(step_args(&workflow_with(
+        "w",
+        "j",
+        &FOLDED_TWO_COMMANDS
+            .replace("cargo nextest run -p a", "cargo test --doc")
+            .replace("cargo nextest run -p b", "cargo test -p b")
+    )))
+);
+
+/// A `\` followed by a blank line, where the shell ends the command, and the next line is a command of its own.
+const CONTINUED_INTO_A_BLANK: &str =
+    "      - run: |\n          echo a \\\n\n          cargo nextest run -p b\n";
+
+#[test]
+fn nextest_a_blank_line_or_comment_ends_a_continued_command() {
+    assert_eq!(
+        step_args(&workflow_with("w", "j", CONTINUED_INTO_A_BLANK)),
+        ["-p b"]
+    );
+    assert_eq!(
+        commands("|", &["echo a \\", "# a comment", "cargo nextest run"]),
+        ["echo a", "cargo nextest run"]
+    );
+}
+
+validation::negative_control!(
+    nextest_a_blank_line_or_comment_ends_a_continued_command,
+    "a `cargo test` after a blank line that ends the command before it",
+    expected = "a CI step runs tests through `cargo test`",
+    drop(step_args(&workflow_with(
+        "w",
+        "j",
+        &CONTINUED_INTO_A_BLANK.replace("cargo nextest run", "cargo test")
+    )))
+);
+
+/// Every workflow, with `from` replaced by `to` in the one that names it.
+#[cfg(feature = "controls")]
+fn workflows_edited(from: &str, to: &str) -> Vec<String> {
+    let edited = workflows();
+    assert!(
+        edited.iter().any(|workflow| workflow.contains(from)),
+        "no workflow has `{from}`"
+    );
+    edited.iter().map(|w| w.replace(from, to)).collect()
+}
+
+/// The workflows as they are: every `cargo test` step in them is a doctest, a build or [`LIBTEST_SOAK`].
+#[test]
+fn nextest_the_soak_is_the_exception_in_its_workflow_alone() {
+    test_steps(&workflows());
+}
+
+validation::negative_control!(
+    nextest_the_soak_is_the_exception_in_its_workflow_alone,
+    "the soak's job and step in a workflow of another name",
+    expected = "a CI step runs tests through `cargo test`",
+    drop(test_steps(&workflows_edited(
+        "name: stand-in-soak\n",
+        "name: another-soak\n"
+    )))
+);
+
+#[test]
+fn nextest_the_soak_is_the_exception_in_its_job_alone() {
+    test_steps(&workflows());
+}
+
+validation::negative_control!(
+    nextest_the_soak_is_the_exception_in_its_job_alone,
+    "the soak's step in another job of its workflow",
+    expected = "a CI step runs tests through `cargo test`",
+    drop(test_steps(&workflows_edited(
+        "\n  soak:\n",
+        "\n  another:\n"
+    )))
+);
+
+#[test]
+fn nextest_the_soak_is_the_exception_for_its_command_alone() {
+    test_steps(&workflows());
+}
+
+validation::negative_control!(
+    nextest_the_soak_is_the_exception_for_its_command_alone,
+    "another `cargo test` in the soak's job",
+    expected = "a CI step runs tests through `cargo test`",
+    drop(test_steps(&workflows_edited(
+        "--test ${{ matrix.test }} || {",
+        "--test ${{ matrix.test }} --features controls || {"
+    )))
+);
+
+/// The text of `.github/workflows/mutants.yml`, whose `mutants` job has a block `cargo nextest run`, its own `tool:`
+/// list installing cargo-mutants beside the pin.
+fn mutants_workflow() -> String {
+    std::fs::read_to_string(root().join(".github/workflows/mutants.yml")).unwrap()
+}
+
+#[test]
+fn nextest_a_pin_in_a_tool_list_counts() {
+    let (steps, pin) = test_steps(&[mutants_workflow()]);
+    assert!(
+        steps.iter().any(|step| step
+            .args
+            .join(" ")
+            .contains("--test jobq --test qa_R-658 --test")),
+        "the block `cargo nextest run` in `mutants` was not read whole"
+    );
+    assert_eq!(pin, "0.9.146");
+}
+
+validation::negative_control!(
+    nextest_a_pin_in_a_tool_list_counts,
+    "the `mutants` job's block `cargo nextest run` with cargo-nextest gone from its `tool:` list",
+    expected = "job mutants: runs nextest without installing cargo-nextest at an exact version",
+    drop(test_steps(&[
+        mutants_workflow().replace(",cargo-nextest@0.9.146", "")
+    ]))
 );
 
 /// The arguments of the `ci-workspace` step of `workflow` that runs controls, and the profile it runs under.

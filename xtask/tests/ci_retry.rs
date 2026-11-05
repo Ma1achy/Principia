@@ -1402,6 +1402,90 @@ mod keeps_the_live_head {
     );
 }
 
+// ---- `ci.yml`'s gates ---------------------------------------------------------------------------------------------
+
+/// The job id `script`'s `job_ids` and `id_of` give each API name, on the real `ci.yml`.
+fn ids_on_ci(script: &str, names: &[&str]) -> Vec<String> {
+    let dir = Scratch::new("ci_retry_ids");
+    std::fs::create_dir_all(&*dir).expect("scratch folder");
+    let file = dir.join("ci_retry.py");
+    std::fs::write(&file, script).expect("script written");
+    let out = Command::new("python3")
+        .args([
+            "-c",
+            "import importlib.util, sys\n\
+             s = importlib.util.spec_from_file_location('ci_retry', sys.argv[1])\n\
+             m = importlib.util.module_from_spec(s)\n\
+             sys.modules['ci_retry'] = m\n\
+             s.loader.exec_module(m)\n\
+             ids = m.job_ids(open(sys.argv[2]).read())\n\
+             print(' '.join(str(m.id_of(n, ids)) for n in sys.argv[3:]))",
+        ])
+        .arg(&file)
+        .arg(root().join(".github/workflows/ci.yml"))
+        .args(names)
+        .timed_output()
+        .expect("python3 ran");
+    assert!(
+        out.status.success(),
+        "ci_retry: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    String::from_utf8_lossy(&out.stdout)
+        .split_whitespace()
+        .map(str::to_owned)
+        .collect()
+}
+
+/// A gate named by its one-value matrix (R-684) is that value alone: a name that reads as "anything" would claim every
+/// job after it in the file, and the walk from a fault to its gate would stop there.
+fn check_matrix_gates(script: &str) {
+    assert_eq!(
+        ids_on_ci(
+            script,
+            &[
+                "ci",
+                "xtask-ci",
+                "gpu-kernel",
+                "gpu-metal",
+                "gpu-lavapipe",
+                "xtask-ci (2)",
+                "ci (3)",
+                "ci-release (1)",
+                "gpu-kernel suites",
+            ]
+        ),
+        [
+            "ci-gate",
+            "xtask-ci-gate",
+            "gpu-kernel-gate",
+            "gpu-metal-gate",
+            "gpu-lavapipe-gate",
+            "xtask-ci",
+            "ci",
+            "ci-release",
+            "gpu-kernel",
+        ],
+        "ci_retry: the job ids of ci.yml's names"
+    );
+}
+
+#[test]
+fn ci_retry_reads_a_gate_named_by_its_matrix() {
+    check_matrix_gates(&script());
+}
+
+negative_control!(
+    ci_retry_reads_a_gate_named_by_its_matrix,
+    "`ci.yml`'s gates read as a pattern of anything",
+    expected = "ci_retry: the job ids of ci.yml's names",
+    check_matrix_gates(&edit(
+        &script(),
+        "        if whole and isinstance(matrix, dict) and isinstance(matrix.get(whole.group(1)), list):\n",
+        "        if False:\n"
+    ))
+);
+
 // ---- The workflow ---------------------------------------------------------------------------------------------------
 
 /// A workflow's text as JSON, parsed by PyYAML. YAML 1.1 reads the key `on` as `true`; it is put back as `on`.

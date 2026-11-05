@@ -542,7 +542,10 @@ fn walk(yml: &Value, verdict: (bool, bool), fail: &[&str]) -> Walk {
             }
             let cond = s(&job["if"]);
             let ok = needs.iter().all(|n| w.results[n] == "success");
-            let runs = if cond.contains("always()") {
+            // R-684 joins an `if:` to `always()`: what follows it holds or skips the job.
+            let runs = if let Some(rest) = cond.strip_prefix("always() && ") {
+                w.eval(rest) == "true"
+            } else if cond.contains("always()") {
                 true
             } else {
                 ok && (cond.is_empty() || w.eval(&cond) == "true")
@@ -599,13 +602,26 @@ fn walk(yml: &Value, verdict: (bool, bool), fail: &[&str]) -> Walk {
     w
 }
 
+/// The check a job reports when it runs: its `name:`, or its id; a gate named by its one-value matrix reports that value
+/// (R-684), and skipped, on a quick run, its raw `name:`.
+fn reported_name(id: &str, job: &Value) -> String {
+    let name = job.get("name").map_or_else(|| id.to_owned(), s);
+    match job["strategy"]["matrix"]["check"]
+        .as_array()
+        .map(Vec::as_slice)
+    {
+        Some([only]) if name == "${{ matrix.check }}" => s(only),
+        _ => name,
+    }
+}
+
 /// The result of the job reporting the check `name`, which must be exactly one job.
 fn check_result(yml: &Value, w: &Walk, name: &str) -> String {
     let by: Vec<&String> = yml["jobs"]
         .as_object()
         .expect("jobs")
         .iter()
-        .filter(|(id, j)| j.get("name").map_or(id.as_str() == name, |n| s(n) == name))
+        .filter(|(id, j)| reported_name(id, j) == name)
         .map(|(id, _)| id)
         .collect();
     assert_eq!(by.len(), 1, "qa_r662: `{name}` is reported by {by:?}");
@@ -740,7 +756,10 @@ fn check_required(ci: &str, mutants: &str) {
     // The other side: full CI on code runs what the cheap path skipped, and the gates pass.
     let full = walk(&yml, (false, true), &[]);
     assert!(
-        full.results.values().all(|r| r == "success"),
+        // R-684: the quick tier's job, and `ci-status`, which only a code pull request's full tier runs.
+        full.results
+            .iter()
+            .all(|(id, r)| r == "success" || id == "ci-quick" || id == "ci-status"),
         "qa_r662: full CI skipped a job: {:?}",
         full.results
     );
@@ -860,8 +879,8 @@ negative_control!(
     check_required(
         &swap(
             &read(".github/workflows/ci.yml"),
-            "    name: xtask-ci\n    needs: [xtask-ci, changes]\n    if: always()\n",
-            "    name: xtask-ci\n    needs: [xtask-ci, changes]\n"
+            "    needs: [xtask-ci, changes]\n    if: always() && needs.changes.outputs.quick != 'true'\n",
+            "    needs: [xtask-ci, changes]\n"
         ),
         &read(".github/workflows/mutants.yml")
     )
