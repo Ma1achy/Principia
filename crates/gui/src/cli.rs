@@ -136,7 +136,7 @@ pub mod mock {
     }
 
     /// Opens the app's window on the mock through `runner`; with [`measure::MEASURE_VAR`] set, with the measurement
-    /// panel, on an event loop of its own.
+    /// panel.
     fn window(
         runner: impl FnOnce(&str, eframe::NativeOptions, eframe::AppCreator<'static>) -> eframe::Result,
     ) -> Result<(), String> {
