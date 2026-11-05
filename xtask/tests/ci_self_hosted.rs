@@ -8,12 +8,12 @@
 //!
 //! `win-gpu.yml`'s `win-self-check` runs this file on the PC, nightly, its controls with it, where neither bash nor PyYAML
 //! is known to exist. So it parses the workflows with a YAML crate, not with PyYAML as the other workflow tests do, and it
-//! starts no process but Windows' own PowerShell. Parsing, never scanning text: a trigger in `on: [push, pull_request]` is
-//! the same trigger.
+//! starts no process but git, which the PC has, and Windows' own PowerShell. Parsing, never scanning text: a trigger in
+//! `on: [push, pull_request]` is the same trigger.
 //!
 //! The same goes for `.github/scripts/git_guard.ps1` (the owner, 5 Nov 2026), with a limit: off Windows there is no
-//! PowerShell, so a test there reads the script's key list and its shape, and only `git_guard_script_refuses_what_is_planted`
-//! runs it, on the PC, each night.
+//! PowerShell, so a test there reads the script's key list and its shape and runs its `git config` line, and only
+//! `git_guard_script_refuses_what_is_planted` runs the script, on the PC, each night.
 //!
 //! Each test has its negative controls (R-176).
 
@@ -1109,6 +1109,15 @@ fn check_shape(files: &[(String, String)]) {
                             .is_some_and(|l| l.starts_with("exit ")),
                         "{file}/{id} has a step with no explicit exit: {run}"
                     );
+                    assert!(
+                        !run.contains("SilentlyContinue"),
+                        "{file}/{id} has a step that reads on past a failure: {run}"
+                    );
+                    assert!(
+                        !run.contains("git ls-files")
+                            || run.contains("$status -ne 0 -or -not $files.Count"),
+                        "{file}/{id} has a git read that can pass having read nothing: {run}"
+                    );
                     let lines: Vec<&str> = run.lines().collect();
                     for (at, line) in lines.iter().enumerate() {
                         if line.contains(".github\\scripts\\") {
@@ -1428,6 +1437,29 @@ mod unclean {
             "          clean: true\n",
             "          clean: false\n"
         ))
+    );
+}
+
+mod read_failure_passed_over {
+    use super::*;
+    negative_control!(
+        self_hosted_jobs_have_the_shape_the_runner_needs,
+        "a config read that can't fail",
+        expected = "win-gpu.yml/win-self-check has a step that reads on past a failure",
+        check_shape(&measured(
+            "-ErrorAction Stop",
+            "-ErrorAction SilentlyContinue"
+        ))
+    );
+}
+
+mod git_failure_passed_over {
+    use super::*;
+    negative_control!(
+        self_hosted_jobs_have_the_shape_the_runner_needs,
+        "git's failure left unread",
+        expected = "win-gpu.yml/win-self-check has a git read that can pass having read nothing",
+        check_shape(&measured("$status -ne 0 -or -not $files.Count", "$false"))
     );
 }
 
@@ -2154,9 +2186,27 @@ fn check_guard_script(script: &str) {
         has("'attributes'") && has("$found += 'info/attributes'"),
         "git_guard: doesn't refuse .git/info/attributes"
     );
+    for (name, what) in [
+        ("commondir", "'commondir'"),
+        ("gitdir", "'gitdir'"),
+        ("grafts", "Get-Entry $info 'grafts'"),
+        ("alternates", "'alternates'"),
+        ("refs/replace/", "(Get-Entry $git 'refs') 'replace'"),
+        ("packed-refs", "IndexOf('refs/replace/'"),
+    ] {
+        assert!(has(what), "git_guard: doesn't refuse {name}");
+    }
     assert!(
-        has("[System.IO.File]::ReadAllLines($path)") && !has("git config"),
-        "git_guard: doesn't read the config as a file"
+        has("$arguments = 'config --no-includes --file \"{0}\" --list --name-only --null'"),
+        "git_guard: doesn't have git read the config"
+    );
+    assert!(
+        has("$start.WorkingDirectory = $env:SystemRoot") && has("-CommandType Application"),
+        "git_guard: starts git where the checkout can reach it"
+    );
+    assert!(
+        has("if ($run.ExitCode -ne 0) { throw"),
+        "git_guard: a failed read doesn't refuse"
     );
     assert!(
         code.iter().find(|l| !l.is_empty()) == Some(&"$ErrorActionPreference = 'Stop'"),
@@ -2177,12 +2227,22 @@ fn check_guard_script(script: &str) {
     );
     assert!(
         has("foreach ($item in @(Get-ChildItem -LiteralPath $root -Force)) {")
-            && has("cmd /c rmdir /s /q \"$($item.FullName)\"")
-            && has("cmd /c del /f /q /a \"$($item.FullName)\""),
+            && has("[System.IO.Directory]::Delete($item.FullName, $false)")
+            && has("[System.IO.File]::Delete($item.FullName)"),
         "git_guard: doesn't empty the checkout"
     );
     assert!(
-        has("$_.Name -eq 'config.worktree'"),
+        !has("cmd ") && !has("Invoke-Expression") && !has("Start-Process"),
+        "git_guard: puts a planted name on a shell's line"
+    );
+    assert!(
+        code.join("\n")
+            .contains("if (-not $link) {\nforeach ($inner")
+            && has("-band [System.IO.FileAttributes]::ReparsePoint"),
+        "git_guard: follows a link when it empties the checkout"
+    );
+    assert!(
+        has("Get-Entry $git 'config.worktree'"),
         "git_guard: doesn't check config.worktree's keys"
     );
     assert_eq!(
@@ -2225,15 +2285,152 @@ mod attributes {
     );
 }
 
-mod through_git {
+mod reader_of_its_own {
     use super::*;
     negative_control!(
         git_guard_script_holds_the_owners_order,
-        "the config read through git, which can run what it reads",
-        expected = "git_guard: doesn't read the config as a file",
+        "a config read by anything but git",
+        expected = "git_guard: doesn't have git read the config",
         check_guard_script(&guard_edited(
-            "[System.IO.File]::ReadAllLines($path)",
-            "(git config --list --file $path)"
+            "$arguments = 'config --no-includes",
+            "$arguments = 'config --includes"
+        ))
+    );
+}
+
+mod git_from_the_checkout {
+    use super::*;
+    negative_control!(
+        git_guard_script_holds_the_owners_order,
+        "git started in the checkout",
+        expected = "git_guard: starts git where the checkout can reach it",
+        check_guard_script(&guard_edited(
+            "$start.WorkingDirectory = $env:SystemRoot",
+            "$start.WorkingDirectory = $path"
+        ))
+    );
+}
+
+mod git_by_name {
+    use super::*;
+    negative_control!(
+        git_guard_script_holds_the_owners_order,
+        "git left to be found from the checkout",
+        expected = "git_guard: starts git where the checkout can reach it",
+        check_guard_script(&guard_edited(
+            "(Get-Command git -CommandType Application | Select-Object -First 1).Source",
+            "'git'"
+        ))
+    );
+}
+
+mod failed_read_passes {
+    use super::*;
+    negative_control!(
+        git_guard_script_holds_the_owners_order,
+        "a failed read taken as no keys",
+        expected = "git_guard: a failed read doesn't refuse",
+        check_guard_script(&guard_edited(
+            "    if ($run.ExitCode -ne 0) { throw \"git can't read ${path}: $($errors.Result)\" }\n",
+            ""
+        ))
+    );
+}
+
+mod commondir {
+    use super::*;
+    negative_control!(
+        git_guard_script_holds_the_owners_order,
+        "commondir passed",
+        expected = "git_guard: doesn't refuse commondir",
+        check_guard_script(&guard_edited("'commondir', 'gitdir'", "'gitdir'"))
+    );
+}
+
+mod gitdir {
+    use super::*;
+    negative_control!(
+        git_guard_script_holds_the_owners_order,
+        "gitdir passed",
+        expected = "git_guard: doesn't refuse gitdir",
+        check_guard_script(&guard_edited("'commondir', 'gitdir'", "'commondir'"))
+    );
+}
+
+mod grafts {
+    use super::*;
+    negative_control!(
+        git_guard_script_holds_the_owners_order,
+        "info/grafts passed",
+        expected = "git_guard: doesn't refuse grafts",
+        check_guard_script(&guard_edited(
+            "    if (Get-Entry $info 'grafts') { $found += 'info/grafts' }\n",
+            ""
+        ))
+    );
+}
+
+mod alternates {
+    use super::*;
+    negative_control!(
+        git_guard_script_holds_the_owners_order,
+        "objects/info/alternates passed",
+        expected = "git_guard: doesn't refuse alternates",
+        check_guard_script(&guard_edited(
+            "    if (Get-Entry (Get-Entry (Get-Entry $git 'objects') 'info') 'alternates') { $found += 'objects/info/alternates' }\n",
+            ""
+        ))
+    );
+}
+
+mod replace_refs {
+    use super::*;
+    negative_control!(
+        git_guard_script_holds_the_owners_order,
+        "refs/replace/ passed",
+        expected = "git_guard: doesn't refuse refs/replace/",
+        check_guard_script(&guard_edited(
+            "(Get-Entry $git 'refs') 'replace'",
+            "(Get-Entry $git 'refs') 'other'"
+        ))
+    );
+}
+
+mod packed_replace_refs {
+    use super::*;
+    negative_control!(
+        git_guard_script_holds_the_owners_order,
+        "a replace ref in packed-refs passed",
+        expected = "git_guard: doesn't refuse packed-refs",
+        check_guard_script(&guard_edited(
+            "IndexOf('refs/replace/'",
+            "IndexOf('refs/other/'"
+        ))
+    );
+}
+
+mod name_on_a_shell_line {
+    use super::*;
+    negative_control!(
+        git_guard_script_holds_the_owners_order,
+        "a file deleted through cmd, where a planted name runs",
+        expected = "git_guard: puts a planted name on a shell's line",
+        check_guard_script(&guard_edited(
+            "            [System.IO.File]::Delete($item.FullName)\n",
+            "            [System.IO.File]::Delete($item.FullName)\n            cmd /c del \"$($item.FullName)\"\n"
+        ))
+    );
+}
+
+mod link_followed {
+    use super::*;
+    negative_control!(
+        git_guard_script_holds_the_owners_order,
+        "emptying what a link points to",
+        expected = "git_guard: follows a link when it empties the checkout",
+        check_guard_script(&guard_edited(
+            "            if (-not $link) {\n                foreach ($inner",
+            "            if ($true) {\n                foreach ($inner"
         ))
     );
 }
@@ -2297,8 +2494,8 @@ mod kept {
         "the checkout kept after a refusal",
         expected = "git_guard: doesn't empty the checkout",
         check_guard_script(&guard_edited(
-            "cmd /c rmdir /s /q \"$($item.FullName)\"",
-            "$null"
+            "            [System.IO.File]::Delete($item.FullName)\n",
+            ""
         ))
     );
 }
@@ -2309,7 +2506,7 @@ mod worktree_config_skipped {
         git_guard_script_holds_the_owners_order,
         "config.worktree left unread",
         expected = "git_guard: doesn't check config.worktree's keys",
-        check_guard_script(&guard_edited("$_.Name -eq 'config.worktree'", "$false"))
+        check_guard_script(&guard_edited("Get-Entry $git 'config.worktree'", "$null"))
     );
 }
 
@@ -2320,6 +2517,133 @@ mod green {
         "a refusal that passes the job",
         expected = "git_guard: doesn't fail the job",
         check_guard_script(&guard_edited("left\" }\nexit 1\n", "left\" }\nexit 0\n"))
+    );
+}
+
+/// The keys of `file` by the script's own `git config` line, or nothing if git refuses it.
+fn git_keys(script: &str, file: &Path) -> Option<Vec<String>> {
+    let template = script
+        .lines()
+        .find_map(|l| l.trim().strip_prefix("$arguments = '"))
+        .and_then(|l| l.strip_suffix('\''))
+        .expect("git_guard: no $arguments line");
+    let args = template.split_whitespace().map(|word| {
+        if word == "\"{0}\"" {
+            file.as_os_str().to_owned()
+        } else {
+            word.into()
+        }
+    });
+    let out = std::process::Command::new("git")
+        .args(args)
+        .current_dir(file.parent().expect("a parent"))
+        .timed_output()
+        .expect("git ran");
+    out.status.success().then(|| {
+        String::from_utf8_lossy(&out.stdout)
+            .split('\0')
+            .filter(|k| !k.is_empty())
+            .map(str::to_owned)
+            .collect()
+    })
+}
+
+/// A config read by the script's own line finds the key under each form that hides one from a reader of its own, follows
+/// no include, and fails on what git can't read.
+fn check_git_reading(script: &str) {
+    static NEXT: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+    let dir = Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!(
+        "ci_self_hosted_git_{}_{}",
+        std::process::id(),
+        NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+    ));
+    std::fs::create_dir_all(&dir).expect("a folder");
+    let config = dir.join("config");
+    let listed = listed_keys(script);
+    for (form, text) in [
+        (
+            "a \\ continuation",
+            "[core]\n\tx = a\\\n[other]\n\thooksPath = /evil\n",
+        ),
+        (
+            "a bare CR",
+            "[core]\n\tx = a\r[other]\n\thooksPath = /evil\n",
+        ),
+        ("an empty url subsection", "[url \"\"]\n\tinsteadOf = x\n"),
+        ("an empty filter subsection", "[filter \"\"]\n\tclean = x\n"),
+    ] {
+        std::fs::write(&config, text).expect("a config");
+        let keys = git_keys(script, &config).unwrap_or_default();
+        assert!(
+            keys.iter().any(|k| listed.iter().any(|p| like(k, p))),
+            "git_guard: the config read passed {form}: {keys:?}"
+        );
+    }
+    std::fs::write(dir.join("other"), "[core]\n\tpager = x\n").expect("a config");
+    std::fs::write(&config, "[include]\n\tpath = other\n").expect("a config");
+    let keys = git_keys(script, &config).unwrap_or_default();
+    assert_eq!(
+        keys,
+        ["include.path"],
+        "git_guard: the config read followed an include"
+    );
+    std::fs::write(&config, "[core\n\tbare = false\n").expect("a config");
+    assert_eq!(
+        git_keys(script, &config),
+        None,
+        "git_guard: a config git can't read was read"
+    );
+}
+
+#[test]
+fn git_guard_reads_a_config_as_git_does() {
+    check_git_reading(&read(GIT_GUARD));
+}
+
+negative_control!(
+    git_guard_reads_a_config_as_git_does,
+    "a read that follows an include",
+    expected = "git_guard: the config read followed an include",
+    check_git_reading(&read(GIT_GUARD).replace("--no-includes", "--includes"))
+);
+
+mod values_listed {
+    use super::*;
+    negative_control!(
+        git_guard_reads_a_config_as_git_does,
+        "a read that lists values with its keys",
+        expected = "git_guard: the config read passed a \\ continuation",
+        check_git_reading(&read(GIT_GUARD).replace(" --name-only", ""))
+    );
+}
+
+mod no_separator {
+    use super::*;
+    negative_control!(
+        git_guard_reads_a_config_as_git_does,
+        "a read without its separator",
+        expected = "git_guard: the config read passed a \\ continuation",
+        check_git_reading(&read(GIT_GUARD).replace(" --null", ""))
+    );
+}
+
+mod empty_url {
+    use super::*;
+    negative_control!(
+        git_guard_reads_a_config_as_git_does,
+        "`[url \"\"]` off the list",
+        expected = "git_guard: the config read passed an empty url subsection",
+        check_git_reading(&read(GIT_GUARD).replace("    'url.*.insteadOf'\n", ""))
+    );
+}
+
+mod empty_filter {
+    use super::*;
+    negative_control!(
+        git_guard_reads_a_config_as_git_does,
+        "`[filter \"\"]` off the list",
+        expected = "git_guard: the config read passed an empty filter subsection",
+        check_git_reading(&read(GIT_GUARD).replace("    'filter.*.clean'\n", ""))
     );
 }
 
@@ -2394,7 +2718,55 @@ fn check_script_refuses(script: &Path) {
         passes("clean", &clean),
         "git_guard: the script refused a clean checkout"
     );
-    let refused: [(&str, &[(&str, &str)]); 7] = [
+    let refused: [(&str, &[(&str, &str)]); 16] = [
+        (
+            "commondir",
+            &[(".git/config", CLEAN), (".git/commondir", "planted\n")],
+        ),
+        (
+            "gitdir",
+            &[(".git/config", CLEAN), (".git/gitdir", "planted\n")],
+        ),
+        (
+            "grafts",
+            &[(".git/config", CLEAN), (".git/info/grafts", "x\n")],
+        ),
+        (
+            "alternates",
+            &[
+                (".git/config", CLEAN),
+                (".git/objects/info/alternates", "x\n"),
+            ],
+        ),
+        (
+            "a replace ref",
+            &[(".git/config", CLEAN), (".git/refs/replace/a", "x\n")],
+        ),
+        (
+            "a packed replace ref",
+            &[
+                (".git/config", CLEAN),
+                (".git/packed-refs", "abc refs/replace/a\n"),
+            ],
+        ),
+        (
+            "a continuation",
+            &[(
+                ".git/config",
+                "[core]\n\tx = a\\\n[other]\n\thooksPath = /evil\n",
+            )],
+        ),
+        (
+            "a bare CR",
+            &[(
+                ".git/config",
+                "[core]\n\tx = a\r[other]\n\thooksPath = /evil\n",
+            )],
+        ),
+        (
+            "an empty subsection",
+            &[(".git/config", "[url \"\"]\n\tinsteadOf = x\n")],
+        ),
         (
             "hook",
             &[(".git/config", CLEAN), (".git/hooks/pre-commit", "x")],
@@ -2433,7 +2805,29 @@ fn check_script_refuses(script: &Path) {
     std::fs::write(dir.join(".git/config"), CLEAN).expect("a file");
     std::fs::write(dir.join(".git/hooks/pre-commit"), "x").expect("a file");
     std::fs::write(dir.join("kept.txt"), "x").expect("a file");
+    // A planted name that a shell would run, and a junction whose target must stay.
+    let marker = base.join("ran.txt");
+    std::fs::write(
+        dir.join("z.cmd"),
+        format!("@echo x > \"{}\"\r\n", marker.display()),
+    )
+    .expect("a file");
+    std::fs::write(dir.join("a&z.cmd"), "x").expect("a file");
+    let target = base.join("outside");
+    std::fs::create_dir_all(&target).expect("a folder");
+    std::fs::write(target.join("kept.txt"), "x").expect("a file");
+    let made = std::process::Command::new("cmd")
+        .arg("/c")
+        .arg("mklink")
+        .arg("/J")
+        .arg(dir.join("link"))
+        .arg(&target)
+        .timed_output()
+        .expect("cmd ran");
+    assert!(made.status.success(), "git_guard: no junction to plant");
+    // The real log exists; whether [AppendOnly]::Add creates a missing file isn't known, so this one exists too.
     let log = base.join("refusals.log");
+    std::fs::write(&log, "").expect("the log");
     let out = std::process::Command::new("powershell")
         .args([
             "-NoProfile",
@@ -2454,6 +2848,11 @@ fn check_script_refuses(script: &Path) {
     );
     let left = std::fs::read_dir(&dir).expect("the folder").count();
     assert_eq!(left, 0, "git_guard: the firing left the checkout unemptied");
+    assert!(!marker.exists(), "git_guard: a planted name ran");
+    assert!(
+        target.join("kept.txt").exists(),
+        "git_guard: the firing went through a link"
+    );
     let line = std::fs::read_to_string(&log).expect("the refusal log");
     assert!(
         line.contains("active hook"),

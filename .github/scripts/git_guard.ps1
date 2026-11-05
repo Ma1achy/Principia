@@ -1,8 +1,8 @@
 # Refuses a job when the checkout kept between runs on the self-hosted runner holds something that would run or redirect
 # git (the owner, 5 Nov 2026; R-711 (lands first in its own rulings PR)). It runs before actions/checkout, which runs git
 # in that folder. A job can write there, so this file is never run from it: the step fetches this file at the job's own
-# commit. It reads .git as files, never through git, so reading runs nothing and follows no include. The PC's job-started
-# hook runs a guard of its own, `E:\runner-tools\checks\git-guard.ps1`, on the same list; this step is the second layer.
+# commit. It reads .git as files, and each config through `git config --file`: see Read-Keys. The PC's job-started hook
+# runs a guard of its own, `E:\runner-tools\checks\git-guard.ps1`; this step is the second layer.
 #
 #   git_guard.ps1                  Guard $env:GITHUB_WORKSPACE. On firing, log to $env:WIN_REFUSAL_LOG, empty the checkout
 #                                  (a fresh clone next run) and exit 1.
@@ -52,44 +52,63 @@ $keys = @(
     'http.*.proxy'
     'url.*.pushInsteadOf'
 )
-$header = '^\[\s*([^\s"\]]+)(?:\s+"((?:[^"\\]|\\.)*)")?\s*\](.*)$'
-$entry = '^([A-Za-z][A-Za-z0-9-]*)\s*(=.*)?$'
-
-# A config file's full keys, one for each entry. A line this can't read as git would throws, so it refuses.
+# git reads each config itself, so a reader here never has to match its grammar: a config git can't read fails, and what
+# it reads is what the next git would. `--file` reads that one file and nothing of the checkout, `--no-includes` follows no
+# include, and listing keys runs nothing. It starts outside the checkout, from a full path, so a planted git.exe or a repo
+# around the folder it stands in can't be picked up; the job can't write to $env:SystemRoot. Any failure throws, so it
+# refuses. --null, because a subsection can hold a CR, which would split a key if it were read as lines.
+$arguments = 'config --no-includes --file "{0}" --list --name-only --null'
 function Read-Keys($path) {
-    $section = ''
-    foreach ($raw in [System.IO.File]::ReadAllLines($path)) {
-        $line = $raw.Trim()
-        if ($line -match $header) {
-            $name, $sub, $rest = $Matches[1], $Matches[2], $Matches[3]
-            $section = if ($sub) { "$name.$sub" } else { $name }
-            $line = $rest.Trim()
-        }
-        if ($line -eq '' -or $line[0] -eq '#' -or $line[0] -eq ';') { continue }
-        if (($section -eq '') -or ($line -notmatch $entry)) { throw "a line git's config can't hold, in ${path}: $raw" }
-        "$section.$($Matches[1])"
-    }
+    $start = New-Object System.Diagnostics.ProcessStartInfo
+    $start.FileName = (Get-Command git -CommandType Application | Select-Object -First 1).Source
+    $start.Arguments = $arguments -f $path
+    $start.WorkingDirectory = $env:SystemRoot
+    $start.UseShellExecute = $false
+    $start.RedirectStandardOutput = $true
+    $start.RedirectStandardError = $true
+    $run = [System.Diagnostics.Process]::Start($start)
+    $errors = $run.StandardError.ReadToEndAsync()
+    $out = $run.StandardOutput.ReadToEnd()
+    $run.WaitForExit()
+    if ($run.ExitCode -ne 0) { throw "git can't read ${path}: $($errors.Result)" }
+    $out.Split([char]0) | Where-Object { $_ }
+}
+
+# The entry of $parent called $name, or nothing. A listing that fails throws, where Test-Path would only say no.
+function Get-Entry($parent, $name) {
+    if ($parent) { @(Get-ChildItem -LiteralPath $parent.FullName -Force | Where-Object { $_.Name -eq $name }) | Select-Object -First 1 }
 }
 
 # What .git holds that it must not; empty if nothing.
 function Find-Planted($git) {
     if ($git.Attributes -band [System.IO.FileAttributes]::ReparsePoint) { return ".git is a link" }
     if (-not $git.PSIsContainer) { return ".git is a file" }
-    $held = @(Get-ChildItem -LiteralPath $git.FullName -Force)
     $found = @()
-    foreach ($hooks in @($held | Where-Object { $_.Name -eq 'hooks' })) {
+    # Each sends git elsewhere for its config, hooks or objects, or puts other content under a commit's name.
+    foreach ($redirect in 'commondir', 'gitdir') {
+        if (Get-Entry $git $redirect) { $found += "redirect: $redirect" }
+    }
+    $hooks = Get-Entry $git 'hooks'
+    if ($hooks) {
         foreach ($hook in @(Get-ChildItem -LiteralPath $hooks.FullName -Force)) {
             if ($hook.Name -notlike '*.sample') { $found += "active hook: $($hook.Name)" }
         }
     }
-    foreach ($info in @($held | Where-Object { $_.Name -eq 'info' })) {
-        if (@(Get-ChildItem -LiteralPath $info.FullName -Force | Where-Object { $_.Name -eq 'attributes' }).Count) {
-            $found += 'info/attributes'
-        }
+    $info = Get-Entry $git 'info'
+    if (Get-Entry $info 'attributes') { $found += 'info/attributes' }
+    if (Get-Entry $info 'grafts') { $found += 'info/grafts' }
+    if (Get-Entry (Get-Entry (Get-Entry $git 'objects') 'info') 'alternates') { $found += 'objects/info/alternates' }
+    $replace = Get-Entry (Get-Entry $git 'refs') 'replace'
+    if ($replace -and @(Get-ChildItem -LiteralPath $replace.FullName -Force -Recurse).Count) { $found += 'refs/replace/' }
+    $packed = Get-Entry $git 'packed-refs'
+    if ($packed -and [System.IO.File]::ReadAllText($packed.FullName).IndexOf('refs/replace/', [System.StringComparison]::OrdinalIgnoreCase) -ge 0) {
+        $found += 'refs/replace/ in packed-refs'
     }
     # `config` must exist: a .git without one is no checkout this script can vouch for. `config.worktree` needn't, and
     # isn't refused for existing, as actions/checkout writes one for sparse-checkout settings: it gets the same key check.
-    $configs = @($held | Where-Object { $_.Name -eq 'config.worktree' }) + @(Get-Item -LiteralPath (Join-Path $git.FullName 'config') -Force)
+    $configs = @(Get-Item -LiteralPath (Join-Path $git.FullName 'config') -Force)
+    $worktree = Get-Entry $git 'config.worktree'
+    if ($worktree) { $configs += $worktree }
     foreach ($config in $configs) {
         foreach ($key in @(Read-Keys $config.FullName)) {
             foreach ($listed in $keys) {
@@ -132,15 +151,25 @@ try {
     "git guard: could not write the refusal log: $_"
 }
 
-# Each thing in the checkout, `.git` with the rest, and not the folder itself, which the runner holds. rmdir and del,
-# because they remove a link and not what it points to, and they remove git's read-only files.
-foreach ($item in @(Get-ChildItem -LiteralPath $root -Force)) {
-    if ($item.PSIsContainer) {
-        cmd /c rmdir /s /q "$($item.FullName)"
-    } else {
-        cmd /c del /f /q /a "$($item.FullName)"
+# Each thing in the checkout, `.git` with the rest, and not the folder itself, which the runner holds. The names here are
+# planted, so no shell reads them, and only .NET's calls take them, as data. A link goes as a link: nothing goes inside it.
+function Remove-Entry($item) {
+    try {
+        $link = $item.Attributes -band [System.IO.FileAttributes]::ReparsePoint
+        if (-not $link) { $item.Attributes = [System.IO.FileAttributes]::Normal }
+        if ($item.PSIsContainer) {
+            if (-not $link) {
+                foreach ($inner in @(Get-ChildItem -LiteralPath $item.FullName -Force)) { Remove-Entry $inner }
+            }
+            [System.IO.Directory]::Delete($item.FullName, $false)
+        } else {
+            [System.IO.File]::Delete($item.FullName)
+        }
+    } catch {
+        "git guard: could not delete $($item.Name): $_"
     }
 }
+foreach ($item in @(Get-ChildItem -LiteralPath $root -Force)) { Remove-Entry $item }
 $left = @(Get-ChildItem -LiteralPath $root -Force)
 if ($left.Count) { "git guard: could not empty the checkout: $($left.Count) left" }
 exit 1

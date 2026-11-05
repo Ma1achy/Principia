@@ -360,9 +360,12 @@ jobs:
           exit $LASTEXITCODE
       - name: No CRLF and no token left in the checkout
         run: |
-          $crlf = @(git ls-files --eol | Select-String 'i/lf\s+w/(crlf|mixed)').Count
+          $files = @(git ls-files --eol)
+          $status = $LASTEXITCODE
+          if ($status -ne 0 -or -not $files.Count) { "git ls-files read nothing, status $status"; exit 1 }
+          $crlf = @($files | Select-String 'i/lf\s+w/(crlf|mixed)').Count
           "tracked LF files with CRLF in the tree: $crlf"
-          $tok = @(Select-String -LiteralPath '.git\config' -Pattern 'extraheader|x-access-token' -ErrorAction SilentlyContinue).Count
+          try { $tok = @(Select-String -LiteralPath '.git\config' -Pattern 'extraheader|x-access-token' -ErrorAction Stop).Count } catch { "could not read .git\config: $_"; exit 1 }
           "token lines in .git\config: $tok"
           if ($crlf -or $tok) { exit 1 }
           exit 0
