@@ -257,6 +257,12 @@ Lz(s,t)  = (2s − 1)·L_max(t)
 with `(s,t) = (u,v) ∈ [0,1]²`. **This maps the unit square onto the feasible interior, so no pixel
 is infeasible by construction** — which is why the warp exists rather than clamping.
 
+*5 Nov 2026 (R-791, closing RQ-693 (b)):* at `ε ≠ 0` the `(Lz, E)` chart stays available, and its `E` is the Newtonian
+energy: `U` here, in the feasible set, the warp and §2.2's `K*`, is `V` at `ε = 0`, never the softened `V₀` of
+`principia_dd_decoder.md` §3.6. So a pixel's start is the same at every `ε`, and toggling softening changes only the
+physics. The run's own `E₀` is softened, so it isn't the axis value: the axis is labelled as Newtonian energy whenever
+softening is on, and the Inspector shows the softened energy beside it (`principia_render_gui_spec.md` §G2, §G8).
+
 For `(Lz, K)`: identical, with `K* = K(t)` directly. Simpler, since `K ≥ 0` is the natural
 constraint.
 
@@ -360,6 +366,8 @@ if K* < K_min:  terminal
 a = √(2·(K* − Lz²/(2I)))
 vᵢ = vᵢ^(L) + a·wᵢ                pᵢ = mᵢ·vᵢ
 ```
+
+On the `(Lz, E)` chart at `ε ≠ 0`, this `U` is §2.1's Newtonian `U` (R-791).
 
 **The infeasible pixel's label** (defined per R-72). A pixel with `K* < K_min` is tagged
 `DEGENERATE(INVARIANT_INFEASIBLE)`, one of `DEGENERATE`'s enumerated causes (§0.7; `principia_dd_decoder.md` §2, "From

@@ -130,16 +130,18 @@ the running maximum moment of inertia `I_max`. `G = 1`. Transcribed from prin-rs
 
 - **`E`** is the total energy at `t = 0`, `E_0 = K_0 + V_0`, unsoftened (`energy::energy` at `eps2 = 0` on the initial
   state). The read side already carries it. *2 Nov 2026 (R-670, RQ-656 (3), option (a)):* at `ε ≠ 0`, `E` is the run's
-  `E_0` under the softened potential (R-654); "unsoftened" is the `ε = 0` case. The pair and outer two-body energies
-  below are not ruled for `ε ≠ 0`: they are RQ-694.
+  `E_0` under the softened potential (R-654); "unsoftened" is the `ε = 0` case. *5 Nov 2026 (R-792, closing RQ-694 (a)):*
+  at `ε ≠ 0` both two-body potentials below soften, as R-670 (4) reads `E_rel`, so the classifier reads one physics; the
+  separations, `v_r` and the kinetic terms stay geometric. *Was:* "The pair and outer two-body energies below are not
+  ruled for `ε ≠ 0`: they are RQ-694."
 - **`I`** is the moment of inertia about the centre of mass, `I = Σ_k m_k |r_k − R_com|²` (`energy::inertia`).
 - **`R_0`** is the initial hyperradius, `R_0 = √(I_0 / M)`, `M = Σ m_k` (`energy::hyperradius` on the initial state).
 - **A pair `(i, j)`'s two-body energies** (`pair_kup`): reduced mass `μ = m_i m_j / (m_i + m_j)`, `Δr = r_j − r_i`,
-  `Δv = v_j − v_i`, `d = |Δr|`; kinetic `K = ½ μ |Δv|²`, potential magnitude `U = m_i m_j / d` (positive), and radial
+  `Δv = v_j − v_i`, `d = |Δr|`; kinetic `K = ½ μ |Δv|²`, potential magnitude `U = m_i m_j / d` (positive; `/ √(d² + ε²)` at `ε ≠ 0`, R-792), and radial
   velocity `v_r = Δr·Δv / d` (receding when `v_r > 0`).
 - **The outer body `b`'s two-body energies** (`out_kup`), against the centre of mass of the other two, `(i, j)`:
   `M_p = m_i + m_j`, `R_c = (m_i r_i + m_j r_j)/M_p`, `V_c` likewise; `Δr = r_b − R_c`, `Δv = v_b − V_c`,
-  `μ = m_b M_p / (m_b + M_p)`, `K = ½ μ |Δv|²`, `U = m_b M_p / d`, `v_r = Δr·Δv / d`.
+  `μ = m_b M_p / (m_b + M_p)`, `K = ½ μ |Δv|²`, `U = m_b M_p / d` (`/ √(d² + ε²)` at `ε ≠ 0`, R-792), `v_r = Δr·Δv / d`.
 - **The parabolic band** (`band`): a ratio `q = K/U` is `+1` (hyperbolic) if `q > 1 + ε`, `−1` (bound) if `q < 1 − ε`,
   and `0` (parabolic) otherwise, `|q − 1| ≤ ε`.
 - **The hierarchy ratio of body `b`** is its distance from its pair's centre of mass over its pair's separation,

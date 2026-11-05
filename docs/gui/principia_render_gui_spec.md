@@ -290,6 +290,10 @@ the chart; the kept trajectories are the Trajectory panel's tabs and `Trace…`'
   warped (the default, every pixel feasible) or linear (an affine axis, its infeasible pixels blank), one undoable edit
   that re-integrates (R-471): one row per axis after Save view as chart, each two radio options, in that keyboard
   order (R-471 H10). *Was:* "With an energy-type axis (`E`, `L_z`, `K`)".
+  On an `(L_z, E)` chart with softening on, the `E` axis is labelled as Newtonian energy, which is what it reads, so a
+  pixel's start never depends on `ε` (R-791; `principia_chart_reference.md` §2.1).
+  A shape-chart preset centred on the equilateral (Lagrange) point sits among the chart presets, no new chart type, so
+  that view is one click away (R-798).
   **Links (R-478):** one compact row, `Links: softmax·tanh (μ_max 5) · sigmoid · sigmoid (q_max 2)`, the masses, the
   configuration and the momenta, each by its link's display name with its tunable parameters' active values (the
   configuration one item while α and β use one link family, `α tanh / β sigmoid` when they differ), and a
@@ -1572,7 +1576,8 @@ holds no sound control. Gui review 5595359543 of PR #267, G1.)"
   doesn't move.
 - **Readouts:** latent `z`, `α, β`, masses (each body's mass beside its number, e.g. "body 1 (m = 5/12)", R-549),
   `E · L_z`, outcome, F₂ word, round-trip error, gauge error; plots of energy error
-  and pair separations.
+  and pair separations. On an `(L_z, E)` chart with softening on, the softened energy is shown beside the
+  Newtonian energy the axis reads (R-791). On the equilateral-point preset, the readout shows the two side ratios (R-798).
 - **Tabs: Inspect** and **Create & locate**: build an IC, see where it lands in `z` and its distance from the slice, then
   **lock the view on it**, **centre a slice through it**, **mark it in the figure**, or **keep it**.
 - **Copy, save, open, mark and export (R-586, R-587; `principia_ic_save.md`).** Ctrl+C copies the IC's record

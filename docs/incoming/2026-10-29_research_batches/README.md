@@ -510,6 +510,8 @@ publishers, outside the repo.*
   t1–t4 at the starts where they fall inside 200; (c) leave the past-cap parts blocked by the horizon, as MO14-1's
   long-time part is.
 - **Applied meanwhile:** (c). The rows state the conversion and which parts the cap blocks; no new cap is chosen.
+- *5 Nov 2026 (R-800, on RQ-643):* option (b) now: these rows compare only what the cap reaches and the source states.
+  Option (a) is revisited at M9 if the cost measurement allows; no new cap is chosen.
 ```
 
 ## 11. Files

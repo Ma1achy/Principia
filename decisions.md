@@ -17338,6 +17338,8 @@ REQ-TOOL-172 (statement, verify, rulings, source, note; `rq` removed), REQ-TOOL-
 (statement, verify, rulings, note), REQ-TOOL-112 (rulings, note) and REQ-TOOL-174 (verify, rulings, note, with R-522).
 
 ## R-522 — Whether tier 2 of the embedding splits is ruled after TASK-M7-44's capacity re-measure: RQ-386 is parked until then, and tier 2 stays whole meanwhile
+*Amended in part by R-802 (5 Nov 2026: RQ-386 takes option (c), so the measurement decides the split, and the entry no longer returns to the owner with the numbers).*
+*Still in force: the deferral to TASK-M7-44's capacity re-measure, tier 2 whole until then, and what the measurement reports.*
 *20 Oct 2026 · applied in `REVIEW_QUEUE.md` (RQ-386, a "Parked" line; the entry stays open),
 `docs/design/principia_dd_image_embedding.md` § "7. Measured capacity and behaviour" (a paragraph added), REQ-TOOL-174
 (reqio: verify, rulings, source, note), TASK-M7-44 (references, notes) and `plan/rule_groups.yaml`; nothing is decided
@@ -30573,3 +30575,285 @@ The owner's words, 5 Nov 2026, verbatim:
 R-712 is in the "ci" group of `plan/rule_groups.yaml`.
 
 Changes REQ-VAL-180 (source, rulings, note).
+
+## R-791 — At `ε ≠ 0` the `(L_z, E)` chart stays available with its energy axis the Newtonian energy, so a pixel's start never depends on `ε`; the axis is labelled Newtonian energy and the Inspector shows the softened energy beside it *(closes RQ-693)*
+*5 Nov 2026 · the owner's reply to the report of 5 Nov 2026; applied in `docs/archive/review_queue/M0.md` (RQ-693 moved), `docs/design/principia_chart_reference.md` § 2.1 and § 2.2, `docs/design/principia_dd_decoder.md` § 3.7, `docs/gui/principia_render_gui_spec.md` § G2 and § G8, REQ-VAL-015, REQ-CHART-092 and REQ-GUI-416 (reqio), TASK-M9-39, `plan/tasks.yaml` and `plan/rule_groups.yaml`;
+changes REQ-VAL-015; adds REQ-CHART-092 and REQ-GUI-416*
+
+The owner's words (5 Nov 2026), verbatim:
+
+> RQ-693: (b). The chart stays available with softening on. Its energy axis is the Newtonian energy, so a pixel's starting state never depends on the softening length and toggling softening changes only the physics, never the start. Label the axis as Newtonian energy whenever softening is on, show the softened energy beside it in the Inspector, and reword REQ-VAL-015 to match.
+
+*What it decides:* option (b), "`U` Newtonian", with the owner's riders.
+
+- **The chart runs at `ε ≠ 0`.** Option (c), the refusal, is not taken. The view-level refusal of R-670 covers `Some(E*)` and is unchanged; this chart forbids `Some(E*)`, so it never reaches the chart.
+- **Its energy axis is the Newtonian energy.** The axis, the feasible set, the warp and `K*` read `U` as `V` at `ε = 0`, never the softened `V₀`. So a pixel's decoded start is the same at every `ε`, which is R-670's stated reason, and toggling softening changes only the physics.
+- **The run's own `E₀` is softened** (R-654), so it is not the axis value at `ε ≠ 0`. That is why the axis carries a label.
+- **The label and the readout.** The axis is labelled as Newtonian energy whenever softening is on, and the Inspector shows the softened energy beside it.
+- **REQ-VAL-015 is reworded to match:** its check reads the axis energy, `E₀` at `ε = 0` and the Newtonian energy at `ε ≠ 0`.
+
+*Applied per R-369:*
+
+- **Where it is built.** TASK-M9-39, which lifts the refusal, so the chart's softened start, its label and its readout arrive with the first softened run. The task gains the gui reviewer and TASK-M8-16 (the Inspector's readouts), as a dependency.
+- **The `(L_z, K)` chart** is untouched: its `K*` reads no `U` (`principia_chart_reference.md` § 2.2).
+
+R-791 is in the "physics" group of `plan/rule_groups.yaml`.
+
+## R-792 — At `ε ≠ 0` both of Chazy's two-body potentials soften, `pair_kup`'s and `out_kup`'s, so the classifier reads one physics *(closes RQ-694)*
+*5 Nov 2026 · the owner's reply to the report of 5 Nov 2026; applied in `docs/archive/review_queue/M0.md` (RQ-694 moved), `docs/design/principia_dd_chazy_final_motion.md` § 3.1, REQ-EVT-034 (reqio), TASK-M9-39, `plan/tasks.yaml` and `plan/rule_groups.yaml`;
+adds REQ-EVT-034*
+
+The owner's words (5 Nov 2026), verbatim:
+
+> RQ-694: (a). Both two-body potentials soften, matching E_rel, so the classifier reads one physics.
+
+*What it decides:* option (a). At `ε ≠ 0`, `pair_kup`'s `U = m_i m_j / √(d² + ε²)` and `out_kup`'s `U = m_b M_p / √(d² + ε²)`, as R-670 (4) reads `E_rel`. The separations, `v_r` and the kinetic terms stay geometric, the committed labels stand on a softened run, and `ε = 0` is bit-identical to the classifier as written. A softened `E` no longer sits beside a Newtonian `U`.
+
+*Applied per R-369:* TASK-M9-39 builds it, R-670 already making the Chazy classifier that task's to change at `ε ≠ 0` (TASK-M7-35 is its dependency).
+
+R-792 is in the "physics" group of `plan/rule_groups.yaml`.
+
+## R-793 — The state map's targets are the app's own charts: the `θ × dilation` and `ν × dilation` rows leave the targets and stay in the prototype's record *(closes RQ-680)*
+*5 Nov 2026 · the owner's reply to the report of 5 Nov 2026; applied in `docs/archive/review_queue/M0.md` (RQ-680 moved), `docs/design/principia_state_map.md` § SM1, REQ-COL-113, REQ-COL-115 and REQ-COL-129 (reqio), TASK-M7-47, TASK-M7-52 and `plan/rule_groups.yaml`;
+changes REQ-COL-113, REQ-COL-115 and REQ-COL-129*
+
+The owner's words (5 Nov 2026), verbatim:
+
+> RQ-680: (a). Drop the two dilation rows from the targets; they stay in the prototype's record.
+
+*What it decides:* option (a). The targets are the app's own charts, through `encode_into` and `curve::nearest`. SM1's `θ × dilation` and `ν × dilation` rows leave the target table and stay in the prototype's record, in the same section. Option (b), defining the two charts, is not taken. It drops requirement content, which is why it was the owner's call:
+
+- REQ-COL-113's check loses its `ν × dilation` arm.
+- REQ-COL-115's prototype figures keep `θ × h` and `ν × h` as the prototype's record, with no target to test.
+- REQ-COL-129 loses the `θ × h` and `ν × h` tolerances, and the compaction scale κ for dilation.
+
+It ends the wait on TASK-M7-52 and on TASK-M7-47's two arms.
+
+*Applied per R-369:* the state map's other mentions of the two charts are its prototype's measurements and recipes, and read as that record; a dated line in SM1 says so, and they are not rewritten. `docs/gui/reference/` is the prototype's own and is untouched.
+
+R-793 is in the "design" group of `plan/rule_groups.yaml`.
+
+## R-794 — The replication scoring command, `cargo xtask gate replication`, is a deliverable of TASK-M3-27; the atlas twins and OC-2's state and tolerance stay deferred to M9 *(on RQ-681, which stays open)*
+*5 Nov 2026 · the owner's reply to the report of 5 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-681, a deferral line; the entry stays open), `docs/design/principia_dd_replication.md` § "The gate", REQ-TOOL-222 (reqio), TASK-M3-27, TASK-M9-01, `plan/tasks.yaml` and `plan/rule_groups.yaml`;
+adds REQ-TOOL-222*
+
+The owner's words (5 Nov 2026), verbatim:
+
+> RQ-681: (a) as a deliverable of TASK-M3-27, the earlier user. Parts (b) and (c) stay deferred to M9.
+
+*What it decides:* part (a): the runner is a deliverable of TASK-M3-27, the earlier task that calls it, not of TASK-M9-01 or a new task. It builds `cargo xtask gate replication --target <id>` with `--propose`, `--render` and the three outcomes, as `principia_dd_replication.md` gives the command; it reports the outcome and blocks nothing, and a target's control still has to fire. Parts (b), the atlas twins and slice planes, and (c), which orbit state OC-2 recomputes and its tolerance, stay deferred to M9, so the entry stays open for them.
+
+*Applied per R-369:* TASK-M9-01 gains TASK-M3-27 as a dependency, as the entry names it. The other M9 tasks that call the command reach it through milestone order.
+
+R-794 is in the "design" group of `plan/rule_groups.yaml`.
+
+## R-795 — The precision-ladder proposal's seven questions are deferred to M3 *(defers RQ-577)*
+*5 Nov 2026 · the owner's reply to the report of 5 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-577, a deferral line; the entry stays open), `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
+changes no requirement*
+
+The owner's words (5 Nov 2026), verbatim:
+
+> RQ-577: defer:M3
+
+*What it decides:* the deferral, as it reads. The proposal's seven questions come up at M3, read with R-630, which has them ruled after M3 closes. R-265, R-572 and R-90 stand, R-637's leanings stay leanings, and nothing is built.
+
+R-795 is in the "physics" group of `plan/rule_groups.yaml`.
+
+## R-796 — How future GPU backends are held to accuracy for `sin` and `cos` near π/2 is deferred to M4 *(defers RQ-629)*
+*5 Nov 2026 · the owner's reply to the report of 5 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-629, a deferral line; the entry stays open), `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
+changes no requirement*
+
+The owner's words (5 Nov 2026), verbatim:
+
+> RQ-629: defer:M4
+
+*What it decides:* the deferral, as it reads. Nothing is built, and nothing waits.
+
+R-796 is in the "physics" group of `plan/rule_groups.yaml`.
+
+## R-797 — The kernel's `sin` and `cos`: option (b) now, the sinc site fixed and gated to f32; option (a) deferred to M4's cross-backend measurement *(on RQ-687, which stays open)*
+*5 Nov 2026 · the owner's reply to the report of 5 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-687, a deferral line; the entry stays open), `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
+changes no requirement*
+
+The owner's words (5 Nov 2026), verbatim:
+
+> RQ-687: (b) now, as ruled on 4 Nov: fix the sinc site, gated to f32. Option (a) is deferred to M4's cross-backend measurement.
+
+*What it decides:* option (b) now, the sinc at `crates/kernel/src/chart/shape_sphere.rs`:162 fixed and gated to f32; option (a), the kernel's own `sin` and `cos`, deferred to M4's cross-backend measurement, so the entry stays open for it. Every test stays, and nothing is loosened (R-649).
+
+*Read with the owner's ruling of 4 Nov.* The owner's "as ruled on 4 Nov" names that batch's ruling on this entry. It is on the rulings port, unmerged, so its number is left out here, as R-711 leaves out a ruling not yet in this file. The requirement and the task that build the fix come with the port. This entry adds neither, so nothing is planned twice.
+
+R-797 is in the "physics" group of `plan/rule_groups.yaml`.
+
+## R-798 — PA-1 runs on the shape sphere at rest through a tested remap, with no new chart type; a shape-chart preset centred on the equilateral point shows the two side ratios in the Inspector *(closes RQ-594)*
+*5 Nov 2026 · the owner's reply to the report of 5 Nov 2026; applied in `docs/archive/review_queue/M0.md` (RQ-594 moved), `docs/design/principia_dd_replication.md` § 5.12 and the task list, `docs/gui/principia_render_gui_spec.md` § G2 and § G8, REQ-VAL-323, REQ-CHART-093 and REQ-GUI-417 (reqio), TASK-M9-24, TASK-M9-45 (new), `plan/tasks.yaml`, `plan/tools/milestones.py` and `plan/rule_groups.yaml`;
+changes REQ-VAL-323; adds REQ-CHART-093 and REQ-GUI-417*
+
+The owner's words (5 Nov 2026), verbatim:
+
+> RQ-594: (a), a tested remap onto the shape sphere at rest. Also add a shape-chart preset centred on the equilateral (Lagrange) point, with the two side ratios shown in the Inspector readout, so the view is one click away. No new chart type.
+
+*What it decides:* option (a), with the owner's rider.
+
+- **The remap.** PA-1 runs on the shape sphere at rest, reached through a tested remap of side ratios to shape coordinates (rule 6). There is no `SideRatio` chart.
+- **The preset.** A shape-chart preset centred on the equilateral (Lagrange) point, so the view is one click away.
+- **The readout.** The Inspector shows the two side ratios.
+- **No new chart type.**
+
+It ends TASK-M9-24's wait, and REQ-VAL-323's `rq`. RQ-596 is already ruled (R-669).
+
+*Applied per R-369:*
+
+- **Who builds it.** A new build task, TASK-M9-45, builds the remap, the preset and the readout, with the gui reviewer, and TASK-M9-24, the scored target, depends on it, since `plan/tools/milestones.py` keeps a scored target's task apart from what is built, not scored (R-654).
+- **What the task defines (R-72, R-71).** Which pair of ratios is shown follows the paper's axes. Which of the two mirror points the preset centres on, and its window, are written by TASK-M9-45.
+
+R-798 is in the "physics" group of `plan/rule_groups.yaml`.
+
+## R-799 — The census takes a drift reference the corpus already has, not IAS15, and a harness-only step-limit axis of the contract's limit and `None`, with `Reject` a control *(on RQ-619, which stays open)*
+*5 Nov 2026 · the owner's reply to the report of 5 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-619, a dated line; the entry stays open), `docs/incoming/2026-10-27_validation_plan/PROPOSAL_occupant_matrix_census_2026-10-27.md` § 3.1 and § 3.2 (dated notes), `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
+changes no requirement*
+
+The owner's words (5 Nov 2026), verbatim:
+
+> RQ-619: (b) for both.
+
+*What it decides:* option (b) of each of the entry's two questions.
+
+- **Question 8, IAS15.** IAS15 is not built for the census. The drift reference comes from what the corpus already has, and the proposal's clause calling IAS15 "already the drift reference" is corrected.
+- **Question 9, the step limit.** A harness-only axis of the contract's predictive limit (`f = 0.02`) and `None`, with `Reject` a control. The integrator contract is unchanged.
+
+*What is left.* Option (b) of question 8 names two references the corpus has, R-33's convergence reference and the inspector's RK45 (contract Part 2), and the answer doesn't say which. So the entry stays open for that, with a dated line, and goes to the next report.
+
+R-799 is in the "physics" group of `plan/rule_groups.yaml`.
+
+## R-800 — The collinear statistical targets compare only what the horizon cap reaches and the source states; raising the cap is revisited at M9 if the cost measurement allows *(on RQ-643, which stays open)*
+*5 Nov 2026 · the owner's reply to the report of 5 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-643, a deferral line; the entry stays open), `docs/incoming/2026-10-29_research_batches/README.md` (a dated note), `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
+changes no requirement*
+
+The owner's words (5 Nov 2026), verbatim:
+
+> RQ-643: (b) now. Revisit (a) at M9 if the cost measurement allows.
+
+*What it decides:* option (b) for now: compare only what the cap reaches and the source states, for example Mikkola & Hietarinta 1989 Table 3's t1 to t4 at the starts where they fall inside 200, in place of (c), which was applied meanwhile. Option (a), raising the cap for these runs, is revisited at M9 if the cost measurement allows, which is R-610's own condition. So the entry stays open for (a). R-610's cap is unchanged.
+
+R-800 is in the "physics" group of `plan/rule_groups.yaml`.
+
+## R-801 — Saving a curved view offers the parent chart and its tilt only, with no flattened chart *(closes RQ-378)*
+*5 Nov 2026 · the owner's reply to the report of 5 Nov 2026; applied in `docs/archive/review_queue/M0.md` (RQ-378 moved), TASK-M8-48, `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
+changes no requirement*
+
+The owner's words (5 Nov 2026), verbatim:
+
+> RQ-378: (a).
+
+*What it decides:* option (a): Save view as chart on a curved view saves the parent chart and its tilt only, as R-475's S2 has it. That is what was already applied. The parking of R-510, R-568 and R-625 ends for this entry.
+
+R-801 is in the "design" group of `plan/rule_groups.yaml`.
+
+## R-802 — Tier 2 of the embedding splits only if TASK-M7-44's measurement finds it does not fit at 64² or 128² *(closes RQ-386; amends R-522)*
+*5 Nov 2026 · the owner's reply to the report of 5 Nov 2026; applied in `docs/archive/review_queue/M0.md` (RQ-386 moved), the forward lines of R-522, `docs/design/principia_dd_image_embedding.md` § 7, REQ-TOOL-174 (reqio), TASK-M7-44 and `plan/rule_groups.yaml`;
+changes REQ-TOOL-174*
+
+The owner's words (5 Nov 2026), verbatim:
+
+> RQ-386: (c).
+
+*What it decides:* option (c), decided by TASK-M7-44's measurement. Tier 2 stays whole unless tiers 1 and 2 fail to fit at 64² or 128² for a typical stain, the fixture `tier2_typical_stain`. If they fail, tier 2 splits as the entry's option (b) gives it: tier 2a (the stain graph's built-ins, their parameters and the ramp window) above tier 2b (overlays, lines, the playhead and hover, `f3_fill`), 2b dropping first. Tier 2 whole stands until the measurement. The entry closes because the rule is settled and only the measurement is left.
+
+*What it amends:* **R-522**, in that the entry no longer returns to the owner with the numbers: the measurement decides. R-522's deferral to the measurement, and what the measurement reports, stay in force.
+
+*Applied per R-369:* a split, if the measurement calls for one, is built in TASK-M7-44, which owns the tier table (REQ-TOOL-181).
+
+R-802 is in the "design" group of `plan/rule_groups.yaml`.
+
+## R-803 — Whether the presentation frames become a stage after the Print graph is deferred until the exporter is designed *(defers RQ-391)*
+*5 Nov 2026 · the owner's reply to the report of 5 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-391, a deferral line; the entry stays open), `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
+changes no requirement*
+
+The owner's words (5 Nov 2026), verbatim:
+
+> RQ-391: Defer until the exporter is designed.
+
+*What it decides:* the deferral, to an event: the exporter's design. It gives R-527's "later" that event. Nothing is built.
+
+R-803 is in the "design" group of `plan/rule_groups.yaml`.
+
+## R-804 — Where a margin node's two inputs sit is deferred to TASK-M7-12, options with a recommendation proposed when it starts *(defers RQ-675)*
+*5 Nov 2026 · the owner's reply to the report of 5 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-675, a deferral line; the entry stays open), TASK-M7-12, `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
+changes no requirement*
+
+The owner's words (5 Nov 2026), verbatim:
+
+> RQ-675: Defer to TASK-M7-12. Propose options with a recommendation when it starts.
+
+*What it decides:* the deferral, to the start of TASK-M7-12. The rider binds as the deferral does: when the task starts, the entry's options go to the owner with a recommendation. `main`'s assembler stands meanwhile.
+
+R-804 is in the "design" group of `plan/rule_groups.yaml`.
+
+## R-805 — TASK-M7-12's deliverables against the built assembler are deferred to that task, options with a recommendation proposed when it starts *(defers RQ-676)*
+*5 Nov 2026 · the owner's reply to the report of 5 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-676, a deferral line; the entry stays open), TASK-M7-12, `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
+changes no requirement*
+
+The owner's words (5 Nov 2026), verbatim:
+
+> RQ-676: Defer to TASK-M7-12. As above.
+
+*What it decides:* the deferral, to the start of TASK-M7-12. "As above" is RQ-675's line: the rider binds as the deferral does: when the task starts, the entry's options go to the owner with a recommendation. All three of the entry's parts are deferred.
+
+R-805 is in the "design" group of `plan/rule_groups.yaml`.
+
+## R-806 — A colour node's default input range and TASK-M7-13's deliverables are deferred to that task, options with a recommendation proposed when it starts *(defers RQ-677)*
+*5 Nov 2026 · the owner's reply to the report of 5 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-677, a deferral line; the entry stays open), TASK-M7-13, `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
+changes no requirement*
+
+The owner's words (5 Nov 2026), verbatim:
+
+> RQ-677: Defer to TASK-M7-13. As above.
+
+*What it decides:* the deferral, to the start of TASK-M7-13. "As above" is RQ-675's line: the rider binds as the deferral does: when the task starts, the entry's options go to the owner with a recommendation. Both of the entry's questions are deferred.
+
+R-806 is in the "design" group of `plan/rule_groups.yaml`.
+
+## R-807 — The slider span of the held shape, angular momentum and kinetic energy is deferred to TASK-M8-48, options with a recommendation proposed when it starts *(defers RQ-679)*
+*5 Nov 2026 · the owner's reply to the report of 5 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-679, a deferral line; the entry stays open), TASK-M8-48, `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
+changes no requirement*
+
+The owner's words (5 Nov 2026), verbatim:
+
+> RQ-679: Defer to TASK-M8-48. As above.
+
+*What it decides:* the deferral, to the start of TASK-M8-48, all of the entry with it, the questions inside its option (a) included. "As above" is RQ-675's line: the rider binds as the deferral does: when the task starts, the entry's options go to the owner with a recommendation.
+
+R-807 is in the "design" group of `plan/rule_groups.yaml`.
+
+## R-808 — `.claude/commands/*.md` joins the rulings reference check *(closes RQ-698)*
+*5 Nov 2026 · the owner's reply to the report of 5 Nov 2026; applied in `docs/archive/review_queue/M0.md` (RQ-698 moved), `plan/tools/rulings.py`, `.claude/commands/rulings-apply.md`, `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
+changes no requirement*
+
+The owner's words (5 Nov 2026), verbatim:
+
+> RQ-698: (a).
+
+*What it decides:* option (a): `.claude/commands/*.md` joins `REF_GLOBS` in `plan/tools/rulings.py`, so `plan/check_plan.py` resolves the R-n and RQ-n references in the two rulings commands, and the note in the apply command that its rule was on an unmerged branch goes. The branch it waited on has merged. This is the next rulings PR, so it is done here.
+
+R-808 is in the "ci" group of `plan/rule_groups.yaml`.
+
+## R-809 — `ci-gate` gathers `ci-release`: reading that job by eye before each merge is vetoed *(vetoes D-11 of the report of 5 Nov 2026)*
+*5 Nov 2026 · the owner's reply to the report of 5 Nov 2026; applied in REQ-TOOL-223 (reqio), TASK-M0-54 (new), `plan/tasks.yaml` and `plan/rule_groups.yaml`;
+adds REQ-TOOL-223*
+
+The owner's words (5 Nov 2026), verbatim:
+
+> D-11: veto. ci-gate should gather ci-release. A by-eye check is the convention that fails exactly where a check would have caught it.
+
+*What it decides:* the report's decision D-11, "`ci-gate` doesn't gather `ci-release`, so I read that job by eye before each merge" (from #404, ci-release and disk), is vetoed. `ci-release` joins the jobs the required check `ci` gathers, and the read by eye ends once that is built.
+
+This PR changes no workflow. What must be built is TASK-M0-54 (REQ-TOOL-223):
+
+- `.github/workflows/ci.yml`: `ci-gate` gathers `ci-release`, and the comments saying it isn't gathered are corrected.
+- A skip counts as a pass only on a docs or data change, where `ci-release` and its archive don't run. A failed archive job skips `ci-release`, and that skip must fail the gate.
+- The tests that model `ci-gate`'s `needs` follow, each arm with its control.
+
+Until then the read by eye goes on, so `ci-release` isn't left unread.
+
+R-809 is in the "ci" group of `plan/rule_groups.yaml`.

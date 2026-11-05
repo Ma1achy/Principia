@@ -159,6 +159,14 @@ as history only.
 - **R-665** — On a tilted shape sphere the lines `N_a(½ + k) + N_b(2j − 2t) = 0`, where a pole map's image keeps `d`, are a named exception of measure zero to R-408: each pixel on them is counted, R-554 L3 standing *(closes RQ-634; amends R-408)*
 - **R-670** — Softening's reach: a softened run keeps the collision test on geometric `r`, softening offered only on the unregularised occupants, the regularised ones refusing `ε ≠ 0`, and Chazy's `E` softened; the escape test's and the ionisation gate's pair energies take the softened potential, identical at `ε = 0`; the decode's `V₀` is softened, with `virial_ratio` following and `E₀ = K₀ + V₀`, so REQ-VAL-027, REQ-COL-006 and R-436's collision pole are restated for `ε ≠ 0` and unchanged at `ε = 0`; a view refuses `ε ≠ 0` with any `Some(E*)`; the substep law stays on geometric `d²` and `r_min` *(closes RQ-656; amends R-29, R-32, R-436 and R-654)*
 - **R-690** — R-547's "operations every IEEE backend rounds alike" is stated as a condition on the driver and tested by TASK-M4-27 and TASK-M4-28; it is not enforceable, and a driver that fails is recorded unverified, not supported *(closes RQ-690; amends R-547)*
+- **R-791** — At `ε ≠ 0` the `(L_z, E)` chart stays available with its energy axis the Newtonian energy, so a pixel's start never depends on `ε`; the axis is labelled Newtonian energy and the Inspector shows the softened energy beside it *(closes RQ-693)*
+- **R-792** — At `ε ≠ 0` both of Chazy's two-body potentials soften, `pair_kup`'s and `out_kup`'s, so the classifier reads one physics *(closes RQ-694)*
+- **R-795** — The precision-ladder proposal's seven questions are deferred to M3 *(defers RQ-577)*
+- **R-796** — How future GPU backends are held to accuracy for `sin` and `cos` near π/2 is deferred to M4 *(defers RQ-629)*
+- **R-797** — The kernel's `sin` and `cos`: option (b) now, the sinc site fixed and gated to f32; option (a) deferred to M4's cross-backend measurement *(on RQ-687, which stays open)*
+- **R-798** — PA-1 runs on the shape sphere at rest through a tested remap, with no new chart type; a shape-chart preset centred on the equilateral point shows the two side ratios in the Inspector *(closes RQ-594)*
+- **R-799** — The census takes a drift reference the corpus already has, not IAS15, and a harness-only step-limit axis of the contract's limit and `None`, with `Reject` a control *(on RQ-619, which stays open)*
+- **R-800** — The collinear statistical targets compare only what the horizon cap reaches and the source states; raising the cap is revisited at M9 if the cost measurement allows *(on RQ-643, which stays open)*
 
 ## Design and architecture
 
@@ -375,7 +383,7 @@ as history only.
 - **R-517** — The robustness comparison is the v2 side-by-side view's "compare links", the current view under the default links and under the active ones, built with that view; the Decoder window gets no button, and until then the comparison is made by hand *(closes RQ-381)*
 - **R-520** — Link parameters interpolate across keyframes in a blocking export only, eased linearly with every frame re-integrated, and the export is flagged; live playback keeps the cut, and a changed link id is a cut everywhere *(closes RQ-384; amends R-483)*. Still in force: all of it, F2's "the spec's `easing` curve" reading "the segment's own easing curve" (R-576); in a blocking export a segment set to cut cuts its link parameters, interpolating being the default (R-623). Amended by R-623 (at a link-parameter change a segment offers cut or interpolate, interpolating by default) and read by R-624 for a reel takeover; amended by R-576 (the easing curve that gives a segment's progress is that segment's own, not one curve for the whole spec).
 - **R-521** — Each recorded link carries its own registry-entry hash beside the build hash and the schema version: a mismatch refuses, naming exactly that link, and a match recreates across an unrelated schema change *(closes RQ-385; amends R-483)*
-- **R-522** — Whether tier 2 of the embedding splits is ruled after TASK-M7-44's capacity re-measure: RQ-386 is parked until then, and tier 2 stays whole meanwhile
+- **R-522** — Whether tier 2 of the embedding splits is ruled after TASK-M7-44's capacity re-measure: RQ-386 is parked until then, and tier 2 stays whole meanwhile. Still in force: the deferral to TASK-M7-44's capacity re-measure, tier 2 whole until then, and what the measurement reports. Amended in part by R-802 (5 Nov 2026: RQ-386 takes option (c), so the measurement decides the split, and the entry no longer returns to the owner with the numbers).
 - **R-523** — Badges go in the chrome or the status line, never over the figure: the decoder badge sits in the figure's header strip, above the plot *(closes RQ-387; amends R-479)*
 - **R-524** — The Print graph's Palette slot acts on the finished colour, never before the stain's lightness channel is composed *(closes RQ-388)*
 - **R-525** — The Viewing slot is off by default while the Medium is a screen medium, and the panel shows the reason *(closes RQ-389)*
@@ -458,6 +466,15 @@ as history only.
 - **R-689** — The mock's noise is option A: an integer u32 hash on integer lattice coordinates, and the mock's noise look may change *(closes RQ-691)*
 - **R-691** — The raw-value rule for pixel comparisons is for cross-backend investigation only; goldens stay as they are on CI backends *(closes RQ-692; amends R-686)*
 - **R-679** — The 3 Nov triage rulings: LL-3 takes Hénon 1974 as its independent printed source for Standish's orbit, its period agreement with Li & Liao to 2e-10 recorded, and stops waiting on Standish 1970; planetary (star-plus-planets) sources are parked with the hierarchical triples, revisited with the v2+ 3D extension, not out of scope for good; per-point FTLE maps over the batch-152 planes, from the planned FTLE field, and shape-sphere residence statistics, from a new time-weighted occupancy accumulator, are M9 peeks, non-gating, recorded as candidate original results, with no build before M9 *(closes RQ-672, RQ-673 and RQ-674; amends R-630 item 9; refines R-668 item 5)*
+- **R-793** — The state map's targets are the app's own charts: the `θ × dilation` and `ν × dilation` rows leave the targets and stay in the prototype's record *(closes RQ-680)*
+- **R-794** — The replication scoring command, `cargo xtask gate replication`, is a deliverable of TASK-M3-27; the atlas twins and OC-2's state and tolerance stay deferred to M9 *(on RQ-681, which stays open)*
+- **R-801** — Saving a curved view offers the parent chart and its tilt only, with no flattened chart *(closes RQ-378)*
+- **R-802** — Tier 2 of the embedding splits only if TASK-M7-44's measurement finds it does not fit at 64² or 128² *(closes RQ-386; amends R-522)*
+- **R-803** — Whether the presentation frames become a stage after the Print graph is deferred until the exporter is designed *(defers RQ-391)*
+- **R-804** — Where a margin node's two inputs sit is deferred to TASK-M7-12, options with a recommendation proposed when it starts *(defers RQ-675)*
+- **R-805** — TASK-M7-12's deliverables against the built assembler are deferred to that task, options with a recommendation proposed when it starts *(defers RQ-676)*
+- **R-806** — A colour node's default input range and TASK-M7-13's deliverables are deferred to that task, options with a recommendation proposed when it starts *(defers RQ-677)*
+- **R-807** — The slider span of the held shape, angular momentum and kinetic energy is deferred to TASK-M8-48, options with a recommendation proposed when it starts *(defers RQ-679)*
 
 ## Values
 
@@ -638,6 +655,8 @@ as history only.
 - **R-684** — CI's two code tiers: full CI on every merge-candidate head, the one carrying the `merge-ready` label, and on every push to `main`; a quick tier on every other pull-request head (fmt, clippy, build, and the tests of the changed crates and their reverse dependencies), each full-only required check posted pending, never skipped-as-success; R-677's classifier first; done as R-683's step (2), and R-656's bounded target cache, without sccache, as its step (4) *(amends R-110, R-177 and R-235; rules R-676's tiers and R-683's steps (2) and (4))*
 - **R-711** — One measurement-only self-hosted runner, `malachys-pc-rtx2080s`, on the owner's PC, with no pull-request trigger on any self-hosted job; DX12 may run on it as a measurement; PC benchmarks stay apart from the Mac's performance gates; a recorded run on it can serve Paper 2's non-Metal parity evidence; its jobs have their own workflow; the signing rules *(closes RQ-695; amends R-174, R-186 and R-656)*
 - **R-712** — The per-mutant timeout is set from the measured baseline test time, at about 3 times it; 8 shards are kept; a timed-out mutant counts as caught and is listed; #360's 135 unreached mutants go to the nightly run, and the same rule applies to #387 if it hits the limit *(amends R-348, R-376 and R-402 for REQ-VAL-180)*
+- **R-808** — `.claude/commands/*.md` joins the rulings reference check *(closes RQ-698)*
+- **R-809** — `ci-gate` gathers `ci-release`: reading that job by eye before each merge is vetoed *(vetoes D-11 of the report of 5 Nov 2026)*
 
 ## One-off acts (history only)
 

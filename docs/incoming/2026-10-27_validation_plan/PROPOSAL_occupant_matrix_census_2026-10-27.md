@@ -104,6 +104,9 @@ reproduces the main structures.
 | `eta` | a six-rung ladder per stepper | — |
 | build | §6 | — |
 
+*5 Nov 2026 (R-799, on RQ-619 (b) for both):* the table's step-limit row is ruled: a harness-only axis of the contract's
+predictive limit (`f` = 0.02) and `None`, with `Reject` a control. IAS15 is not built for the census.
+
 A combination that cannot be built (logH has no coordinate transformation and no reference body, so AZ's
 shared-reference flag means nothing there) is recorded with its reason and is never silently missing.
 
@@ -117,6 +120,10 @@ steppers join as a stepper value with a **tolerance ladder** as their axis:
   compare like for like rather than as a ratio under one stepper);
 - IAS15 (adaptive, tolerance-free in practice), already the drift reference in the logH comparison, promoted to a
   census column.
+
+*5 Nov 2026 (R-799, on RQ-619 (b) for both):* that clause is corrected: IAS15 is not built, in this repo or for the census,
+and the drift reference comes from what the corpus already has. Which of its two, R-33's convergence reference or the
+inspector's RK45 (integrator contract Part 2), stays open in RQ-619.
 
 For these, `eta` is replaced by the tolerance, and the reading is error against tolerance (an adaptive stepper whose
 error does not track its tolerance is the finding). Cost comparisons stay at matched force evaluations.

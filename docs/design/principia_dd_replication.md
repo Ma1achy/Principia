@@ -474,7 +474,7 @@ Each waits, with its requirement in place and its RQ named, for what it needs. N
 |---|---|---|
 | a chart over the Šuvakov plane (its labelling ruled by R-630, closing RQ-582) | HU-1, HU-2, AT-D1, AT-D3, OC-4 on the plane | RQ-583 (was "RQ-583, RQ-582") |
 | a binary-plus-single chart | TR-1, MK-1, SL-1 | RQ-593 |
-| a side-ratio chart, or a remap onto ShapeSphere at rest | PA-1 | RQ-594 |
+| ShapeSphere at rest by a tested remap, no new chart type (R-798; *was:* "a side-ratio chart, or a remap onto ShapeSphere at rest") | PA-1 | ruled by R-798 (*was:* RQ-594) |
 | a syzygy-symbol field and a fixed-k velocity chart | TS-1, TS-2, V-7 | RQ-595 |
 | the N_scramble and f_col diagnostics | PA-1's split, SL-1, TR-1's colouring | RQ-596 |
 | periodic-orbit continuation | LLL-1 | RQ-597 |
@@ -505,7 +505,9 @@ kept. TR-1, MK-1 and SL-1 are binary-plus-single scatterings, not hierarchical t
   split and SL-1's cut; f_col not built, TR-1's colouring "not scored: no f_col".
 - **Periodic-orbit continuation** (RQ-597 (b)): not built; LLL-1 "not scored: no continuation", the atlas's `li2021`
   rows OC-1's closures. The SJTU tables' values are checked first for a partial comparison, as a peek (§ 12.5).
-- **The side-ratio chart** (RQ-594) is not ruled here, and PA-1 still waits on it.
+- **The side-ratio chart** (RQ-594) is not ruled here, and PA-1 still waits on it. *5 Nov 2026 (R-798, closing RQ-594 (a)):*
+  ruled: there is no side-ratio chart. PA-1 runs on ShapeSphere at rest through a tested remap (REQ-CHART-093), and a shape-chart
+  preset centred on the equilateral point shows the two side ratios in the Inspector (REQ-GUI-417), both TASK-M9-45.
 
 | Target | Requirement | L / T | Reproduces | Chart | Milestone | Compare | Tolerance | Task |
 |---|---|---|---|---|---|---|---|---|
@@ -517,7 +519,7 @@ kept. TR-1, MK-1 and SL-1 are binary-plus-single scatterings, not hierarchical t
 | TR-1 | REQ-VAL-318 (waits: RQ-593, RQ-596) | R / B | Trani et al. 2024 (A&A 689, A24): the inclination-0 row of their map; f_col (12 nearest neighbours, regular above 2/3) | new: BinaryPlusSingle | M9 | qualitative | none: qualitative | TASK-M9-23 |
 | MK-1 | REQ-VAL-319 (waits: RQ-593) | R / B | Manwadkar, Kol, Trani & Leigh 2021: per-body escape probabilities over eight mass sets (Table 1) | new: BinaryPlusSingle at a mass point | M9 | statistical | REQ-VAL-320 (calibration, R-71) | TASK-M9-23 |
 | SL-1 | REQ-VAL-321 (waits: RQ-593, RQ-596) | R / B | Stone & Leigh 2019 (Nature 576, 406): the planar closed forms for the binary's energy and eccentricity | new: BinaryPlusSingle | M9 | statistical | REQ-VAL-322 (calibration, R-71) | TASK-M9-23 |
-| PA-1 | REQ-VAL-323 (waits: RQ-594, RQ-596) | R / B | Parischewsky, Trani & Leigh 2023 (SciPost Phys. Core 6, 016): escaper maps in side-ratio space around Lagrange; 82.1 % chaotic, 17.9 % regular | new: SideRatio, or ShapeSphere at rest by a tested remap | M9 | qualitative; the split statistical | REQ-VAL-324 (calibration, R-71) | TASK-M9-24 |
+| PA-1 | REQ-VAL-323 (*was:* "waits: RQ-594, RQ-596"; ruled by R-669 and R-798) | R / B | Parischewsky, Trani & Leigh 2023 (SciPost Phys. Core 6, 016): escaper maps in side-ratio space around Lagrange; 82.1 % chaotic, 17.9 % regular | ShapeSphere at rest by a tested remap, no new chart type (R-798; *was:* "new: SideRatio, or ShapeSphere at rest by a tested remap") | M9 | qualitative; the split statistical | REQ-VAL-324 (calibration, R-71) | TASK-M9-24 |
 | TS-1 (the 25 Oct tier B's symbol-sequence maps) | REQ-VAL-325 (waits: RQ-595) | R / B | Tanikawa & Mikkola 2008 (arXiv:0802.2465) and 2015 (PASJ 67, 115): maps of the first 2–4 syzygy symbols over the free-fall plane | the Anosova physical-frame entry, through the D11 mirror remap | M9 | qualitative | none: qualitative | TASK-M9-28 |
 | TS-2 | REQ-VAL-326 (waits: RQ-595) | R / B | Tanikawa & Mikkola 2008, Fig. 7: first-symbol maps at non-zero angular momentum, virial ratio 0 to 0.7 | new: a fixed-k velocity prescription over D11 ∪ D12 | M9 | qualitative | none: qualitative | TASK-M9-28 |
 | V-1 / V-3 / V-7 | REQ-VAL-327 (waits: RQ-595) | R / B | Valtonen et al. 2016, Figs. 4.1 and 4.9 (fits in `valtonen2016/data/fig4_1_*`): the L/M/A/H partition; the high-entropy share 0.66–0.83 against the text's 'roughly one half' | the Anosova physical-frame entry, at the book's ×2 scale | M9 | qualitative; the share statistical | REQ-VAL-328 (calibration, R-71) | TASK-M9-28 |
@@ -636,7 +638,7 @@ R-631 commits the fetched data (HP27, FF27); RQ-586's three papers are paywalled
 - **TASK-M3-61**, Region-D statistics: the lifetime tail and lifetime against Lyapunov time (V-9, MT-1). Targets: V-9, MT-1. Depends on TASK-M3-34, TASK-M3-14.
 - **TASK-M3-62**, Converged-code references: Boekholt et al. 2020's lifetime grid and Breen et al. 2020's Brutus runs (GG-1, BR-1). Targets: GG-1, BR-1. Depends on TASK-M3-25, TASK-M3-34. Waits on RQ-592, RQ-598.
 - **TASK-M3-63**, Binary-plus-single targets: Trani et al.'s planar row, Manwadkar et al.'s escape probabilities, Stone & Leigh's closed forms (TR-1, MK-1, SL-1). Targets: TR-1, MK-1, SL-1. Depends on TASK-M3-34. Waits on RQ-593, RQ-596.
-- **TASK-M3-64**, Parischewsky et al.'s equilateral-triangle experiment around Lagrange (PA-1). Targets: PA-1. Depends on TASK-M3-34. Waits on RQ-594, RQ-596.
+- **TASK-M3-64**, Parischewsky et al.'s equilateral-triangle experiment around Lagrange (PA-1). Targets: PA-1. Depends on TASK-M3-34. Waits on RQ-594, RQ-596. (*5 Nov 2026:* both are ruled, by R-669 and R-798; the task is now TASK-M9-24.)
 - **TASK-M3-65**, Hierarchical stability limits, prograde and retrograde (V-11). Targets: V-11. Depends on TASK-M3-34. Waits on RQ-598.
 
 **M4.**
@@ -764,6 +766,8 @@ PLAN.md § 8's rules 9–18, transcribed:
 - *30 Oct 2026 (R-649, R-650):* for an external target "the gate" above is the scoring command, not a gate: it reports
   the outcome (§ 12.3) and blocks nothing, and its tolerance is confirmed by the human with M9's report, not at a
   milestone's gate. A target's control still fires or the test is broken (rule 16).
+- *5 Nov 2026 (R-794, on RQ-681 (a)):* TASK-M3-27 builds this command, as the earlier task that calls it (REQ-TOOL-222);
+  every later target calls the same command.
 - *3 Nov 2026 (R-680):* **the source page is re-read before any triage item becomes a target.** A library triage
   row is a lead, not a transcription: its numbers, precision and horizon are checked against the page they cite, and
   what the page contradicts is recorded as rule 10 has it, before a requirement or a fixture is written from it.
