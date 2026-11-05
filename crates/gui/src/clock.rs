@@ -4,6 +4,14 @@
 //! deterministic tick), and with none the clock holds. It moves the playhead at the transport's speed and stops at
 //! the horizon `T`: the app then pauses the transport.
 
+/// The wall clocks: the standard library's natively, and web-time's in the browser, where the standard library's panic.
+pub mod time {
+    #[cfg(not(target_arch = "wasm32"))]
+    pub use std::time::{Instant, SystemTime, UNIX_EPOCH};
+    #[cfg(target_arch = "wasm32")]
+    pub use web_time::{Instant, SystemTime, UNIX_EPOCH};
+}
+
 use engine::contract::render_state::Playhead;
 use engine::contract::set_field::{Edit, RenderField, SetField};
 
