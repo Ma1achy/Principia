@@ -2337,8 +2337,10 @@ fn check_guard_script(script: &str) {
         "git_guard: takes a tree from a file it hasn't checked"
     );
     assert!(
-        text.find("$empty = Get-Item") < text.find(delete),
-        "git_guard: checks the empty file after it has changed the repo"
+        text.contains(&format!(
+            "if ($git.Count -and -not $planted.Count -and -not $check) {{\n$empty = Get-Item -LiteralPath $emptyFile -Force\nif ($empty.Length -ne 0) {{ throw \"$emptyFile isn't a zero-byte file\" }}\n{delete}"
+        )),
+        "git_guard: writes the index outside its gate"
     );
     assert!(
         has("$env:GIT_AUTHOR_DATE = $fixedDate") && has("$env:GIT_COMMITTER_DATE = $fixedDate"),
@@ -2782,11 +2784,21 @@ mod input_by_flag {
         "a line that reads git's input",
         expected = "git_guard: gives git an input",
         check_guard_script(&guard_edited(
-            "$fixedDate = '1000000000 +0000'
-",
-            "$fixedDate = '1000000000 +0000'
-$extra = 'hash-object --stdin'
-"
+            "$fixedDate = '1000000000 +0000'\n",
+            "$fixedDate = '1000000000 +0000'\n$extra = 'hash-object --stdin'\n"
+        ))
+    );
+}
+
+mod input_by_mktree {
+    use super::*;
+    negative_control!(
+        git_guard_script_holds_the_owners_order,
+        "a line for mktree, which reads git's input",
+        expected = "git_guard: gives git an input",
+        check_guard_script(&guard_edited(
+            "$fixedDate = '1000000000 +0000'\n",
+            "$fixedDate = '1000000000 +0000'\n$extra = 'mktree'\n"
         ))
     );
 }
@@ -2848,11 +2860,47 @@ mod empty_file_checked_late {
     negative_control!(
         git_guard_script_holds_the_owners_order,
         "the file checked after the index has gone",
-        expected = "git_guard: checks the empty file after it has changed the repo",
+        expected = "git_guard: writes the index outside its gate",
         check_guard_script(
             &guard_edited("        $empty = Get-Item -LiteralPath $emptyFile -Force\n", "").replacen(
                 "        $env:GIT_AUTHOR_DATE = $fixedDate\n",
                 "        $empty = Get-Item -LiteralPath $emptyFile -Force\n        $env:GIT_AUTHOR_DATE = $fixedDate\n",
+                1
+            )
+        )
+    );
+}
+
+mod empty_size_checked_late {
+    use super::*;
+    negative_control!(
+        git_guard_script_holds_the_owners_order,
+        "the file's size checked after the index has gone",
+        expected = "git_guard: writes the index outside its gate",
+        check_guard_script(
+            &guard_edited(
+                "        if ($empty.Length -ne 0) { throw \"$emptyFile isn't a zero-byte file\" }\n",
+                ""
+            )
+            .replacen(
+                "        $env:GIT_AUTHOR_DATE = $fixedDate\n",
+                "        if ($empty.Length -ne 0) { throw \"$emptyFile isn't a zero-byte file\" }\n        $env:GIT_AUTHOR_DATE = $fixedDate\n",
+                1
+            )
+        )
+    );
+}
+
+mod index_out_of_the_gate {
+    use super::*;
+    negative_control!(
+        git_guard_script_holds_the_owners_order,
+        "the write ahead of the gate, on a repo that has failed and in the check form",
+        expected = "git_guard: writes the index outside its gate",
+        check_guard_script(
+            &guard_edited("        $null = Invoke-Git ($emptyIndex -f $git[0].FullName)\n", "").replacen(
+                "    if ($git.Count -and -not $planted.Count -and -not $check) {\n",
+                "    $null = Invoke-Git ($emptyIndex -f $git[0].FullName)\n    if ($git.Count -and -not $planted.Count -and -not $check) {\n",
                 1
             )
         )
