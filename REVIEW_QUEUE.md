@@ -718,33 +718,6 @@ change: no timer was touched (R-649). Nothing is chosen.*
 - **Applied meanwhile:** R-638 stands, and the seeded draw is not run.
 - **Waits:** a BR-1 ensemble beyond the 12-run pilot.
 
-## RQ-699: What "tilted in their warp coordinate" means for the held `L_z` of `(ν, K)`, `Φ_θ,K` and `Φ_strip,K` *(physics; silence: R-708; R-471 E1; R-633 c2; REQ-CHART-062; context: TASK-M2-52, PR #388)*
-
-*Queued 4 Nov 2026 by R-708's port. For the owner: yes, it is physics; the answer changes which systems a tilt into the
-held `L_z` shows. R-708's last line says to come back with such a case. Nothing is chosen.*
-
-- **File, section:**
-  - `decisions.md` § "R-708 — …", the owner's words: "Held energy-type hidden coordinates (R-633 c2) are tilted in their
-    warp coordinate in this mode, so held K stays ≥ 0."
-  - `decisions.md` § "R-633 — …", the owner's (c) c2: "the (ν, K) chart and Φ_θ,K gain the held L_z, and Φ_θ,L_z gains
-    the held K, as physical hidden coordinates."
-  - `decisions.md` § "R-471 — …", the heading: "Energy-type axes (`E`, `L_z`, `K`, `KE`, `PE`)".
-  - `docs/design/principia_chart_reference.md` § 2.1: "`L_z = (2s − 1)·L_max` with `L_max = √(2·I·K)` at the kinetic
-    energy the chart holds fixed (as §4.5's `Φ_θ,L_z`)."
-- **The silence:** `L_z` is energy-type, and the held `L_z` is one of R-633 c2's two held coordinates, so the sentence
-  reaches it. Its reason, "so held K stays ≥ 0", speaks only of `K`. `L_z`'s warp coordinate is `s`, but §2.1's line
-  needs a `K` the chart holds fixed, and these charts hold none: `K` is the pixel's axis, and its floor reads the held
-  `L_z`. So on these charts `s` has no `L_max` to scale by.
-- **The question:** in warped mode, how does a tilt move the held `L_z` on these charts?
-- **Options seen:** (a) by value, as R-633 wrote it: `L_z = L_z₀ + d`, the sentence reaching held `K` only. R-708's
-  additive floor takes any real `L_z`, so every pixel stays a system; `|L_z|` has no bound but the slider's span. (b) In
-  a warp coordinate on a fixed scale, such as `L_z = (2s − 1)·√(2·I·K_max)`, `s` bounded: `|L_z|` is then bounded, at the
-  cost of a scale that §2.1 doesn't write for these charts, and `s` needs a rule past its edges. (c) Another, stated by
-  the owner.
-- **Applied meanwhile:** nothing. R-708's `K` floor, the "no refused cells" test and the linear arm are the same in
-  every option; `d = 0` reproduces the untilted chart in every option.
-- **Waits:** TASK-M2-52's warped tilt into the held `L_z`, and so PR #388, which R-708 holds until both arms are in.
-
 ## RQ-703: Whether the quick tier goes ahead of R-683's step (1), as the owner's 4 Nov order says, or after it, as R-683 and R-684 say *(conflict: R-713, R-683, R-684; context: R-716, PR #414)*
 
 *Queued 5 Nov 2026 by the port of the owner's saved orders. For the owner: an order and a ruling disagree on the series' order. Nothing is reworded.*

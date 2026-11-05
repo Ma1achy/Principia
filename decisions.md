@@ -27475,7 +27475,8 @@ update of 28 Oct 2026" in its RQ-601 and RQ-603 bullets: `J⁺` where the steer'
 when `J` is singular, and "ray-degenerate" read per cell).*
 *Refined by R-681 (3 Nov 2026: for a stuck check, its note on re-running CI tightens to re-running only the job that reports it).*
 *Amended in part by R-708 (4 Nov 2026: in warped mode a held energy-type coordinate tilts in its warp coordinate and no cell is refused; "by value" and the refusal stand in linear mode; RQ-678 closed).*
-*Still in force: all of it, those two readings now part of its text (R-636), but "by value" and the refused cell on the Burrau charts in warped mode, which R-708 replaces.*
+*Read with R-720 (5 Nov 2026: R-708's amendment reaches a held `K` only; a held `L_z` stays by value in both modes).*
+*Still in force: all of it, those two readings now part of its text (R-636), but the refused cell on the Burrau charts in warped mode, and "by value" for a held `K` there, which R-708 replaces.*
 *28 Oct 2026 · the owner's ruling batch of that morning, with the revised RQ-603 text sent after it; applied in
 `docs/design/principia_deep_zoom.md` § 2 ("`J_D`'s step rule", a paragraph added, and the latent Jacobian's step),
 `docs/design/principia_lines.md` § 8 (the trace fade's step), `docs/gui/principia_render_gui_spec.md` § "The compass:
@@ -30826,7 +30827,8 @@ Changes REQ-VAL-319 (statement, verify, rulings, source, note).
 
 ## R-708 — The tilted Burrau `K` charts follow R-471's two modes: warped, the default, every pixel a system under every tilt, the `K` axis floored at the pixel's own held `L_z` in the additive form and the bottom row never blanked; linear, rows at fixed values, an infeasible cell blank, held coordinates by value; held energy-type coordinates tilt in their warp coordinate in warped mode *(closes RQ-678 and RQ-683; amends R-633; refines R-471 and R-508)*
 *Refined by R-709 (4 Nov 2026: a held energy's warp coordinate past `t < 0`, if the implementer confirms it arises, clamps at `t = 0`).*
-*Still in force: all of it.*
+*Amended in part by R-720 (5 Nov 2026: "tilted in their warp coordinate" is narrowed to held `K` only; the held `L_z` tilts and slices by value, `L_z = L_z0 + d`).*
+*Still in force: all of it, but that a held `L_z` tilts in a warp coordinate, which R-720 narrows away.*
 *4 Nov 2026 · the owner's ruling of that day; applied in `docs/contracts/principia_chart_decoder_contract.md` § "Tilt (basis edit)", `docs/design/principia_chart_reference.md` § "2.1 Feasibility, and the warp that makes every pixel valid" and § "4.5 The Burrau-family chart maps", R-471's, R-508's and R-633's forward lines, `docs/archive/review_queue/M0.md` (RQ-678, moved with its ruling), `REVIEW_QUEUE.md` (RQ-699, new), REQ-CHART-061, REQ-CHART-062 and REQ-CHART-067 (reqio), TASK-M2-38 and TASK-M2-52, `plan/tasks.yaml` and `plan/rule_groups.yaml`; built by TASK-M2-52, and by TASK-M2-37 for the single energy axis*
 
 The owner's words, 4 Nov 2026, verbatim:
@@ -30860,6 +30862,8 @@ The owner's words, 4 Nov 2026, verbatim:
 - The linear arm's refusal covers the three charts as R-633 wrote it. In warped mode the corner arm, REQ-CHART-062's, is unchanged.
 
 *The case that came back, in the sense of the ruling's last line:* the ruling names a warp coordinate for held `K`, but the held `L_z` of `(ν, K)` and `Φ_θ,K` is an energy-type hidden coordinate too (R-471 E1, R-633 c2), and §2.1's `L_z` line needs a held `K` those charts do not have. The port doesn't choose. RQ-699 asks. The `K` axis's floor is the same in every answer.
+
+*Closed by R-720 (5 Nov 2026):* the owner ruled RQ-699 (a), by value, `L_z = L_z0 + d`, the warp coordinate meant for held `K`. The passage above stands as what was said on 4 Nov.
 
 *What it amends:* **R-633**, "tilted and sliced by value", on a held energy-type coordinate in warped mode only, and its refusal, which becomes the linear arm. *What it refines:* **R-471**, E2 and E3 on these charts, and **R-508**, the top of the floored axis. It closes **RQ-678** and **RQ-683**.
 
@@ -31122,3 +31126,32 @@ The owner's words, 4 Nov 2026, verbatim, in the order given:
 - **The day's results.** The second and third messages release that day's holds, and the third makes the 13 Windows GPU failures reproducible findings. Those were acts on those results. The owner-reported hardware caveat stays for Paper 2 (R-711, item 4).
 
 R-719 is in the "process" group of `plan/rule_groups.yaml`.
+
+## R-720 — The held `L_z` of `(ν, K)`, `Φ_θ,K` and `Φ_strip,K` tilts and slices by value, `L_z = L_z0 + d`; R-708's warp-coordinate tilt is narrowed to held `K` only; a column above `K_max` at large tilt is accepted, the practical bound the slider span, RQ-679, still deferred to TASK-M8-48 *(closes RQ-699; amends R-708)*
+*5 Nov 2026 · the owner's message of that day; applied in the forward lines of R-633 and R-708, R-708's "case that came back" passage, `docs/archive/review_queue/M0.md` (RQ-699 moved), `REVIEW_QUEUE.md`, `docs/contracts/principia_chart_decoder_contract.md` § "Tilt (basis edit)", `docs/design/principia_chart_reference.md` § "4.5 The Burrau-family chart maps", REQ-CHART-062 and REQ-CHART-065 (reqio), TASK-M2-52 and `plan/rule_groups.yaml`; built by TASK-M2-52*
+
+The owner's words, 5 Nov 2026, verbatim:
+
+> RQ-699: (a), by value: L_z = L_z0 + d. R-708's "tilt in the warp coordinate" was meant for held K (which must stay >= 0) and is narrowed to held K only; L_z has no sign constraint, and R-708's additive floor K = L_z^2/2I + K_max·t^gamma keeps every pixel a system at any L_z. A column sitting above K_max at large tilt is accepted (K_max is a display range, per R-508); the practical bound is the slider span, RQ-679, still deferred to TASK-M8-48. The same rule governs slicing the held L_z as well as tilting it. #388 can resume on this.
+
+*What it decides:*
+
+- **RQ-699, option (a).** The held `L_z` of `(ν, K)`, `Φ_θ,K` and `Φ_strip,K` moves by value, `L_z = L_z0 + d`, with no sign constraint.
+- **R-708's warp-coordinate tilt reaches held `K` only,** which must stay ≥ 0.
+- **R-708's additive floor** keeps every pixel a system at any `L_z`.
+- **A column above `K_max` at large tilt is accepted.** `K_max` is a display range, per R-508. The practical bound is the slider span, RQ-679, still deferred to TASK-M8-48.
+- **Slicing the held `L_z` takes the same rule** as tilting it.
+- **#388 can resume.** R-708's condition that it doesn't merge until both arms are in stands.
+
+*Applied per R-369:*
+
+- **Linear mode** is unchanged. A held `L_z` there was already by value, and R-708's refusal stands.
+- **R-633's "by value"** stands for a held `L_z` in both modes, so R-708's amendment of it now covers a held `K` only. R-633 carries a "Read with" line.
+- **R-709's clamp** reads as held `K` only, as it did: its words are "held K = its floor, L_z²/2I". Its text is unchanged.
+- **The checks.** REQ-CHART-062's and REQ-CHART-065's verifies each take an arm for the rule, with a control, so that a warp-coordinate move of the held `L_z` fails.
+
+*What it amends:* **R-708**, its sentence on held energy-type hidden coordinates, narrowed to held `K`. It closes **RQ-699**.
+
+R-720 is in the "physics" group of `plan/rule_groups.yaml`.
+
+Changes REQ-CHART-062 (statement, verify, rulings, source, note, rq) and REQ-CHART-065 (verify, rulings, source, note).
