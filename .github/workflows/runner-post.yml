@@ -11,7 +11,7 @@ on:
         description: which test
         required: true
         type: choice
-        options: [green, proof, survivor, survivor-cancel, plant-runner, quota, cold]
+        options: [green, proof, survivor, survivor-cancel, survivor-refuse, plant-runner, quota, cold]
 
 permissions:
   contents: read
@@ -53,6 +53,20 @@ jobs:
         run: |
           'waiting for the cancel'
           Start-Sleep -Seconds 600
+          exit 0
+
+      - name: The job-started hook refuses a survivor
+        if: inputs.test == 'survivor-refuse'
+        run: |
+          # Runs the real hook from a step, with a background process alive. It must refuse, and stop that process.
+          $env:RUNNER_TRACKING_ID = '0'
+          $p = Start-Process powershell.exe -ArgumentList '-NoProfile','-Command','Start-Sleep -Seconds 1800' -WindowStyle Hidden -PassThru
+          "background process started: $($p.Id)"
+          $o = & powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File E:unner-tools\checks\job-started.ps1
+          $code = $LASTEXITCODE
+          $o | Where-Object { $_ -match 'hook:|REFUSED' }
+          "hook exit $code; background process still alive: $([bool](Get-Process -Id $p.Id -ErrorAction SilentlyContinue))"
+          if ($code -eq 0) { exit 1 }
           exit 0
 
       - name: Plant a fake runner file
