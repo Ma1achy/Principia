@@ -376,6 +376,10 @@ mutant = "crates/gui/src/explore/compass.rs:966:53: replace * with / in Drag::mo
 justification = "Z0_HALF_RANGE is the constant 1.0, and dividing by 1.0 equals multiplying by it exactly; a change to the constant makes the rate tests in mock_compass_cube and mock_compass_slice_follows_pointer tell them apart"
 
 [[equivalent]]
+mutant = "crates/gui/src/measure/mod.rs:343:37: replace < with <= in Session::begin_frame"
+justification = "the two differ only when the elapsed time equals the delay exactly, routinely at the default delay of 0 when two reads fall in one clock tick, and then <= spins to the clock's next tick: under a microsecond natively, one coarsened performance.now() tick in the browser, up to that much work a frame, which no test can tell, since the session's clock is the real one, cannot be set, and keeps running, so it cannot hang"
+
+[[equivalent]]
 mutant = "xtask/src/jobq.rs:1605:26: replace < with <= in end_stale_group"
 justification = "the two differ only if the clock reads exactly the deadline, to the nanosecond, at that check: at most one more 100 ms sleep and look at the group, inside the grace's own 100 ms granularity, and the same outcome"
 

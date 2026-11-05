@@ -47,8 +47,13 @@ use crate::side::EngineSide;
 use crate::stain;
 use crate::windows;
 
-/// The big scopes the console leaves when it covers the page (R-463 K2).
-const UNCOVERED_BIGS: [ScopeId; 2] = [explore::top_bar::TOP_BAR, explore::footer::FOOTER];
+/// The big scopes the console leaves when it covers the page (R-463 K2): the bars, and a measured run's panel, which is
+/// beside the page and in no tree without a session.
+const UNCOVERED_BIGS: [ScopeId; 3] = [
+    explore::top_bar::TOP_BAR,
+    explore::footer::FOOTER,
+    crate::measure::PANEL_SCOPE,
+];
 
 /// How often the app reads a snapshot: the engine posts it throttled to ~10 Hz, never per frame (caching contract
 /// Part 6a; gui_state_contract §1).
@@ -266,8 +271,8 @@ impl<S: EngineSide> App<S> {
 
     /// Logs `message` to the console as the app's warning, counted in the footer.
     pub(crate) fn log_warning(&mut self, message: String) {
-        let at = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
+        let at = crate::clock::time::SystemTime::now()
+            .duration_since(crate::clock::time::UNIX_EPOCH)
             .map_or(0, |d| u64::try_from(d.as_millis()).unwrap_or(u64::MAX));
         self.console.push(LogEntry {
             severity: Severity::Warn,
@@ -1017,9 +1022,9 @@ impl<S: EngineSide> App<S> {
         }
     }
 
-    /// The console over the whole page, maximised or dragged to the top, leaves the top bar and the footer: the panels
-    /// under it cannot be reached, by Tab or the arrows, and a focus on one moves to the console, so no ring or key
-    /// lands on a panel it covers (R-463 K2; applied per R-369). The focus is not put back when it lowers or closes.
+    /// The console over the whole page, maximised or dragged to the top, leaves [`UNCOVERED_BIGS`]: the panels under it
+    /// cannot be reached, by Tab or the arrows, and a focus on one moves to the console, so no ring or key lands on a
+    /// panel it covers (R-463 K2; applied per R-369). The focus is not put back when it lowers or closes.
     fn follow_console_cover(&mut self, layout: &Layout) {
         let covering = self.console_open && self.console_rect(layout).min.y <= layout.page.min.y;
         let left = covering.then_some(&UNCOVERED_BIGS[..]);
@@ -1432,7 +1437,7 @@ impl<S: EngineSide> App<S> {
 
     /// Draws the focus ring on the focused scope, where it was drawn this frame, while keyboard navigation is on
     /// (R-460 H4, R-464).
-    fn draw_ring(&self, ctx: &egui::Context) {
+    pub(crate) fn draw_ring(&self, ctx: &egui::Context) {
         if !self.keyboard.navigating() {
             return;
         }

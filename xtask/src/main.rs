@@ -9,6 +9,9 @@ const USAGE: &str = "\
 Usage: cargo xtask <command>
 
 Commands:
+  web-skeleton [--out <dir>]      build the v1 web skeleton's site into <dir> (target/web-skeleton by default): the gui
+                                  crate for wasm32-unknown-unknown, its bindings by wasm-bindgen at the pinned version,
+                                  and web/skeleton's files; deployed by hand only, through pages.yml (R-627)
   bench (<bench> | --all) [--bless]
                                   run a fixed benchmark headless on the GPU (or every registered one), write its
                                   profiler schema v1 trace to target/bench/<bench>.jsonl and compare it with
@@ -196,6 +199,12 @@ fn main() -> ExitCode {
                 &outs,
                 &workspace_root().join(xtask::mutants_check::EQUIVALENT_LIST),
             )
+        }
+        ["web-skeleton"] => {
+            xtask::web_skeleton::build("wasm-bindgen", &xtask::web_skeleton::default_out())
+        }
+        ["web-skeleton", "--out", out] => {
+            xtask::web_skeleton::build("wasm-bindgen", Path::new(out))
         }
         ["pr-check"] => match std::env::var("GITHUB_EVENT_PATH") {
             Ok(path) => xtask::pr_check::run(Path::new(&path)),
