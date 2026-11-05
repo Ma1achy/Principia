@@ -207,7 +207,7 @@ try {
     $planted = if ($git.Count) { @(Find-Planted $git[0]) } else { @() }
     # The index is the record of what's on disk, so a job can forge it: a gitlink keeps a planted folder from `clean`, and a
     # stat entry keeps an edited file from `reset`. With no entries `clean` clears the tree and `reset` writes every tracked
-    # file; `.git` is kept, so the fetch's saving stays. git reads the old index to do it, so this comes after fsck, and a
+    # file; `.git` is kept, so the fetch's saving stays. It comes after every check, as it writes to the kept repo, and a
     # failure throws, so it refuses.
     if ($git.Count -and -not $planted.Count -and -not $check) {
         $null = Invoke-Git ($emptyIndex -f $git[0].FullName)
