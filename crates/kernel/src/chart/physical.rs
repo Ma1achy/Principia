@@ -829,7 +829,8 @@ impl<A: Coordinate, S: Selection> MixedMassRatio<A, S, f64> {
     }
 
     /// A realised ratio in the asked range, for a centre the link does not realise. The link's clamps are one-sided on
-    /// monotone coordinates, so the miss never rises toward the realised interval from either side, and a trisection of
+    /// monotone coordinates, so the miss does not rise toward the realised interval from either side beyond rounding
+    /// (the largest rise measured, a relative `4.4e-9` on `softmax_tanh`; none on `stick_breaking`), and a trisection of
     /// `ln q` that keeps the side of the lower miss reaches it at any width of the ask and of the interval, each test to
     /// within `ε_μ/2`, an end at or below 0 taken at the least positive double. The search holds no count: it ends where
     /// a probe no longer falls strictly inside the bracket, the bracket then at the doubles' own spacing, and each step
@@ -837,11 +838,17 @@ impl<A: Coordinate, S: Selection> MixedMassRatio<A, S, f64> {
     ///
     /// The miss falls only non-strictly: past both clamps the round trip is constant, and `m_c`'s limb can hold the miss
     /// exactly level over a run `[A, B]` of `ln q`, as at `softmax_tanh`, `μ_max = 5`, bodies `(2, 0)`,
-    /// `z = (−1.925, 10)`, where `q = e⁶` and `q = e⁸` tie. A tie is safe because the two probes are a third of the
-    /// bracket apart, and the near end `R` of the interval lies in the bracket, so both probes on one flat need
+    /// `z = (−1.925, 10)`, where `q = e⁶` and `q = e⁸` tie. An exact tie is safe because the two probes are a third of
+    /// the bracket apart, and the near end `R` of the interval lies in the bracket, so both probes on one flat need
     /// `B − A ≥ A − R`. For `softmax_tanh`, with `m_c/(1 − m_c) = e^−k`, the flat is about `[μ, k]` and `R` about
-    /// `−(k − μ)`, so `(B − A)/(A − R)` is `(k − μ)/k`, at most about 1/2 since a realised part needs `k < 2μ`; measured,
-    /// at most 0.64 over 882 flats on either side, both links, `μ_max` 0.25 to 30.
+    /// `−(k − μ)`, so `(B − A)/(A − R)` is `(k − μ)/k`, at most about 1/2 since a realised part needs `k < 2μ`; measured
+    /// over exact flats, at most 0.69.
+    ///
+    /// That argument covers exact ties only. A run level only to rounding is not a tie, and the comparison there reads
+    /// the rounding: such runs reach `(B − A)/(A − R) = 2.48` level to a relative `1e-7`, and 2.23 to `2e-8`, the latter
+    /// at `μ_max` above 10 only, with 0.527 the largest inside `μ_max` 1 to 10. What carries them is measurement, not a
+    /// bound: 2,677 asks aimed so that both probes fall on such a run, at `μ_max` 10 to 30, and 15,000 random slices,
+    /// lost no realised part.
     fn seed(&self, p: &LinkParams<f64>) -> Option<f64> {
         let eps = 0.5 * <f64 as ChartConstants>::EPS_MU;
         let mut lo = self.ratio[0].max(f64::MIN_POSITIVE).ln();
