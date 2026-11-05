@@ -1741,39 +1741,28 @@ const PLANTED: [&str; 40] = [
     "hook.x.Event",
     "Extensions.RefStorage",
 ];
-/// What actions/checkout leaves in a kept `.git/config`, and near misses of the list.
-const HARMLESS: [&str; 17] = [
-    "core.repositoryformatversion",
-    "core.filemode",
-    "core.bare",
-    "core.logallrefupdates",
-    "core.symlinks",
-    "core.ignorecase",
-    "core.autocrlf",
-    "remote.origin.url",
-    "remote.origin.fetch",
-    "gc.auto",
-    "http.https://github.com/.extraheader",
-    "filter.lfs.required",
-    "diff.x.binary",
-    "core.sparsecheckout",
-    "core.sparsecheckoutcone",
-    "extensions.worktreeconfig",
-    "transfer.fsckobjects",
-];
-
-/// The script's `$keys`, its one list.
-fn listed_keys(script: &str) -> Vec<&str> {
+/// The script's list `name`.
+fn quoted_list<'a>(script: &'a str, name: &str) -> Vec<&'a str> {
     let list = script
-        .split_once("$keys = @(\n")
+        .split_once(format!("${name} = @(\n").as_str())
         .and_then(|(_, rest)| rest.split_once("\n)"))
-        .expect("git_guard: no $keys list")
+        .expect("git_guard: no such list")
         .0;
     list.lines()
         .map(str::trim)
         .filter(|l| !l.starts_with('#'))
         .map(|l| l.trim_matches('\''))
         .collect()
+}
+
+/// The script's `$keys`: what a refusal names.
+fn listed_keys(script: &str) -> Vec<&str> {
+    quoted_list(script, "keys")
+}
+
+/// The script's `$allowed`, which is the list of what's harmless: all else refuses.
+fn allowed_keys(script: &str) -> Vec<&str> {
+    quoted_list(script, "allowed")
 }
 
 /// PowerShell's `-like` for these patterns: `*` is any text, and case doesn't count.
@@ -1804,10 +1793,14 @@ fn check_keys(script: &str) {
             "git_guard: {key} isn't refused"
         );
     }
-    for key in HARMLESS {
+    for key in allowed_keys(script) {
         assert!(
             !listed.iter().any(|p| like(key, p)),
             "git_guard: {key} is refused"
+        );
+        assert!(
+            !key.contains('*') && key == key.to_lowercase(),
+            "git_guard: {key} is no exact key as git prints it"
         );
     }
 }
@@ -2201,6 +2194,16 @@ mod key_push_instead_of {
     );
 }
 
+mod allowed_pattern {
+    use super::*;
+    negative_control!(
+        git_guard_refuses_each_listed_key,
+        "a pattern on the allowlist",
+        expected = "git_guard: remote.* is no exact key as git prints it",
+        check_keys(&read(GIT_GUARD).replace("    'remote.origin.url'\n", "    'remote.*'\n"))
+    );
+}
+
 mod harmless_key {
     use super::*;
     negative_control!(
@@ -2258,7 +2261,39 @@ fn check_guard_script(script: &str) {
         has("if ($run.ExitCode -ne 0) { throw"),
         "git_guard: a failed read doesn't refuse"
     );
+    assert!(
+        has("elseif ($allowed -cnotcontains $key) {"),
+        "git_guard: passes a key nobody listed"
+    );
+    assert!(
+        has("$found += \"config key: $key\""),
+        "git_guard: doesn't name a listed key"
+    );
+    assert!(
+        has("Where-Object { $_.Count -gt 1 }"),
+        "git_guard: passes a repeated key"
+    );
+    assert!(
+        has("$originUrl = 'https://github.com/Ma1achy/Principia'")
+            && has("if ($url -cne $originUrl) {"),
+        "git_guard: doesn't pin the fetch URL"
+    );
     let text = code.join("\n");
+    let delete = "[System.IO.File]::Delete((Join-Path $git[0].FullName 'index'))";
+    assert!(
+        text.contains(&format!(
+            "if ($git.Count -and -not $planted.Count -and -not $check) {{\n{delete}"
+        )),
+        "git_guard: doesn't delete the index"
+    );
+    assert!(
+        text.find("$planted = if ($git.Count)") < text.find(delete),
+        "git_guard: deletes the index before the checks"
+    );
+    assert!(
+        text.find(delete) < text.find("} catch {\n$planted ="),
+        "git_guard: a failed delete doesn't refuse"
+    );
     let fsck = "$null = Invoke-Git ($objects -f $git.FullName)";
     assert!(has(fsck), "git_guard: doesn't check the objects");
     assert!(
@@ -2317,6 +2352,10 @@ fn check_guard_script(script: &str) {
 fn git_guard_script_holds_the_owners_order() {
     check_guard_script(&read(GIT_GUARD));
 }
+
+/// The script's lines that delete the index.
+#[cfg(feature = "controls")]
+const DELETE_INDEX: &str = "    if ($git.Count -and -not $planted.Count -and -not $check) {\n        [System.IO.File]::Delete((Join-Path $git[0].FullName 'index'))\n    }\n";
 
 /// The script with `from` replaced by `to`.
 #[cfg(feature = "controls")]
@@ -2539,6 +2578,119 @@ mod packed_replace_refs {
     );
 }
 
+mod unlisted_key_passes {
+    use super::*;
+    negative_control!(
+        git_guard_script_holds_the_owners_order,
+        "a key nobody listed passing",
+        expected = "git_guard: passes a key nobody listed",
+        check_guard_script(&guard_edited(
+            "elseif ($allowed -cnotcontains $key) {",
+            "elseif ($false) {"
+        ))
+    );
+}
+
+mod listed_key_unnamed {
+    use super::*;
+    negative_control!(
+        git_guard_script_holds_the_owners_order,
+        "a listed key not named in the reason",
+        expected = "git_guard: doesn't name a listed key",
+        check_guard_script(&guard_edited(
+            "$found += \"config key: $key\"",
+            "$found += 'a config key'"
+        ))
+    );
+}
+
+mod repeated_key_passes {
+    use super::*;
+    negative_control!(
+        git_guard_script_holds_the_owners_order,
+        "a repeated key passing",
+        expected = "git_guard: passes a repeated key",
+        check_guard_script(&guard_edited(
+            "Where-Object { $_.Count -gt 1 }",
+            "Where-Object { $false }"
+        ))
+    );
+}
+
+mod url_unpinned {
+    use super::*;
+    negative_control!(
+        git_guard_script_holds_the_owners_order,
+        "any fetch URL passing",
+        expected = "git_guard: doesn't pin the fetch URL",
+        check_guard_script(&guard_edited(
+            "if ($url -cne $originUrl) {",
+            "if ($false) {"
+        ))
+    );
+}
+
+mod url_elsewhere {
+    use super::*;
+    negative_control!(
+        git_guard_script_holds_the_owners_order,
+        "the pin on another repo",
+        expected = "git_guard: doesn't pin the fetch URL",
+        check_guard_script(&guard_edited(
+            "$originUrl = 'https://github.com/Ma1achy/Principia'",
+            "$originUrl = 'https://github.com/other/Principia'"
+        ))
+    );
+}
+
+mod index_kept {
+    use super::*;
+    negative_control!(
+        git_guard_script_holds_the_owners_order,
+        "the index left in place",
+        expected = "git_guard: doesn't delete the index",
+        check_guard_script(&guard_edited(DELETE_INDEX, ""))
+    );
+}
+
+mod index_deleted_by_check {
+    use super::*;
+    negative_control!(
+        git_guard_script_holds_the_owners_order,
+        "the check form deleting the index",
+        expected = "git_guard: doesn't delete the index",
+        check_guard_script(&guard_edited(" -and -not $check) {", ") {"))
+    );
+}
+
+mod index_deleted_first {
+    use super::*;
+    negative_control!(
+        git_guard_script_holds_the_owners_order,
+        "the index deleted before the checks",
+        expected = "git_guard: deletes the index before the checks",
+        check_guard_script(&guard_edited(DELETE_INDEX, "").replacen(
+            "    $planted = if ($git.Count)",
+            &format!("{DELETE_INDEX}    $planted = if ($git.Count)"),
+            1
+        ))
+    );
+}
+
+mod index_delete_unguarded {
+    use super::*;
+    negative_control!(
+        git_guard_script_holds_the_owners_order,
+        "a failed delete past the try",
+        expected = "git_guard: a failed delete doesn't refuse",
+        check_guard_script(&guard_edited(DELETE_INDEX, "").replacen(
+            "if (-not $planted.Count) {\n",
+            &format!("{DELETE_INDEX}if (-not $planted.Count) {{\n"),
+            1
+        ))
+    );
+}
+
 mod reftable {
     use super::*;
     negative_control!(
@@ -2682,36 +2834,100 @@ fn git_ok(dir: &Path, args: &[&str]) -> String {
     String::from_utf8_lossy(&out.stdout).trim().to_owned()
 }
 
+/// `git args` in `dir`, as the action runs what it only warns about.
+fn git_try(dir: &Path, args: &[&str]) {
+    git(dir).args(args).timed_output().expect("git ran");
+}
+
+/// A commit of what's in `dir`'s index, at most.
+fn commit(dir: &Path, message: &str) {
+    git_ok(
+        dir,
+        &[
+            "-c",
+            "user.name=x",
+            "-c",
+            "user.email=x@x",
+            "commit",
+            "-q",
+            "--allow-empty",
+            "-m",
+            message,
+        ],
+    );
+}
+
 /// A repo with a history, to fetch from.
 fn origin_repo(dir: &Path) {
-    std::fs::create_dir_all(dir).expect("a folder");
+    std::fs::create_dir_all(dir.join(".cargo")).expect("a folder");
     git_ok(dir, &["init", "-q"]);
+    std::fs::write(dir.join(".cargo/config.toml"), "[build]\n").expect("a file");
     for text in ["one", "two"] {
         std::fs::write(dir.join("a.txt"), text).expect("a file");
-        git_ok(dir, &["add", "a.txt"]);
-        git_ok(
-            dir,
-            &[
-                "-c",
-                "user.name=x",
-                "-c",
-                "user.email=x@x",
-                "commit",
-                "-qm",
-                text,
-            ],
-        );
+        git_ok(dir, &["add", "."]);
+        commit(dir, text);
     }
 }
 
-/// `dir` as actions/checkout leaves it with fetch-depth 1: `init`, a depth-1 fetch, a checkout.
+/// What the action does to a repo it keeps, before it fetches (`git-directory-helper.ts`).
+fn action_prepare(dir: &Path) {
+    git_try(dir, &["checkout", "-q", "--detach"]);
+    git_try(dir, &["branch", "-q", "-D", "main"]);
+    git_try(dir, &["clean", "-ffdx", "-q"]);
+    git_try(dir, &["reset", "--hard", "-q", "HEAD"]);
+}
+
+/// What the action does to fetch `origin`'s HEAD and check it out (`git-source-provider.ts`), with `fetch-depth: 1`.
+fn action_fetch(origin: &Path, dir: &Path) {
+    let sha = git_ok(origin, &["rev-parse", "HEAD"]);
+    let refspec = format!("+{sha}:refs/remotes/origin/main");
+    git_ok(dir, &["config", "--local", "gc.auto", "0"]);
+    git_ok(
+        dir,
+        &[
+            "-c",
+            "protocol.version=2",
+            "fetch",
+            "-q",
+            "--no-tags",
+            "--prune",
+            "--no-recurse-submodules",
+            "--depth=1",
+            "origin",
+            &refspec,
+        ],
+    );
+    git_ok(dir, &["sparse-checkout", "disable"]);
+    git_try(
+        dir,
+        &[
+            "config",
+            "--local",
+            "--unset-all",
+            "extensions.worktreeConfig",
+        ],
+    );
+    git_ok(
+        dir,
+        &[
+            "checkout",
+            "-q",
+            "--force",
+            "-B",
+            "main",
+            "refs/remotes/origin/main",
+        ],
+    );
+}
+
+/// `dir` as actions/checkout leaves it on a first run.
 fn kept_repo(origin: &Path, dir: &Path) {
     let url = origin.to_string_lossy().replace('\\', "/");
     let url = format!("file:///{}", url.trim_start_matches('/'));
     std::fs::create_dir_all(dir).expect("a folder");
     git_ok(dir, &["init", "-q"]);
-    git_ok(dir, &["fetch", "-q", "--depth=1", &url, "HEAD"]);
-    git_ok(dir, &["checkout", "-q", "--detach", "FETCH_HEAD"]);
+    git_ok(dir, &["remote", "add", "origin", &url]);
+    action_fetch(origin, dir);
     assert!(dir.join(".git/shallow").exists(), "a shallow repo");
 }
 
@@ -2862,6 +3078,173 @@ mod empty_filter {
     );
 }
 
+/// `$allowed` is what the action's own commands leave: all of it, and only it, in a real repo.
+fn check_allowlist(script: &str) {
+    // Written only where the filesystem's probe calls for it, and this one only on a Mac.
+    const PROBED: [&str; 2] = ["core.symlinks", "core.ignorecase"];
+    const MAC: &str = "core.precomposeunicode";
+    let base = scratch("allow");
+    let (origin, dir) = (base.join("origin"), base.join("kept"));
+    origin_repo(&origin);
+    kept_repo(&origin, &dir);
+    let config = dir.join(".git/config");
+    let mut held = git_keys(script, &config).expect("the config");
+    held.extend(git_keys(script, &dir.join(".git/config.worktree")).expect("its worktree config"));
+    held.retain(|key| key != MAC);
+    let allowed = allowed_keys(script);
+    for key in &held {
+        assert!(
+            allowed.contains(&key.as_str()),
+            "git_guard: a clean checkout holds {key}, off the allowlist"
+        );
+    }
+    for key in allowed {
+        assert!(
+            PROBED.contains(&key) || held.iter().any(|k| k == key),
+            "git_guard: no clean checkout holds {key}"
+        );
+    }
+    let url = git_ok(&dir, &["config", "--get", "remote.origin.url"]);
+    let read = script_git(script, "originRead", &config, &base);
+    assert_eq!(
+        String::from_utf8_lossy(&read.stdout),
+        format!("{url}\0"),
+        "git_guard: reads remote.origin.url wrongly"
+    );
+}
+
+#[test]
+fn git_guard_allows_what_a_clean_checkout_holds() {
+    check_allowlist(&read(GIT_GUARD));
+}
+
+negative_control!(
+    git_guard_allows_what_a_clean_checkout_holds,
+    "a key the action writes off the list",
+    expected = "git_guard: a clean checkout holds gc.auto, off the allowlist",
+    check_allowlist(&read(GIT_GUARD).replace("    'gc.auto'\n", ""))
+);
+
+mod sparse_key_off {
+    use super::*;
+    negative_control!(
+        git_guard_allows_what_a_clean_checkout_holds,
+        "a key of config.worktree off the list",
+        expected = "git_guard: a clean checkout holds index.sparse, off the allowlist",
+        check_allowlist(&read(GIT_GUARD).replace("    'index.sparse'\n", ""))
+    );
+}
+
+mod allowed_stale {
+    use super::*;
+    negative_control!(
+        git_guard_allows_what_a_clean_checkout_holds,
+        "a key no checkout writes on the list",
+        expected = "git_guard: no clean checkout holds protocol.ext.allow",
+        check_allowlist(&read(GIT_GUARD).replace(
+            "    'gc.auto'\n",
+            "    'gc.auto'\n    'protocol.ext.allow'\n"
+        ))
+    );
+}
+
+mod url_read_wrongly {
+    use super::*;
+    negative_control!(
+        git_guard_allows_what_a_clean_checkout_holds,
+        "a read of another key",
+        expected = "git_guard: reads remote.origin.url wrongly",
+        check_allowlist(
+            &read(GIT_GUARD).replace("--get --null remote.origin.url", "--get --null gc.auto")
+        )
+    );
+}
+
+/// A tracked file edited in place, its time restored and `core.trustctime` off, so the index calls it unchanged; then the
+/// next run, with the index deleted as the guard deletes it or not.
+fn check_tampered_file(delete_index: bool) {
+    let base = scratch("tamper");
+    let (origin, dir) = (base.join("origin"), base.join("kept"));
+    origin_repo(&origin);
+    kept_repo(&origin, &dir);
+    let file = dir.join("a.txt");
+    let past = std::time::SystemTime::now() - std::time::Duration::from_secs(3600);
+    let stamp = || {
+        std::fs::File::options()
+            .write(true)
+            .open(&file)
+            .and_then(|f| f.set_modified(past))
+            .expect("a time set");
+    };
+    stamp();
+    git_ok(&dir, &["update-index", "--refresh", "-q"]);
+    std::fs::write(&file, "owt").expect("the edit");
+    stamp();
+    git_ok(&dir, &["config", "core.trustctime", "false"]);
+    assert_eq!(git_ok(&dir, &["status", "--porcelain"]), "", "the plant");
+    if delete_index {
+        std::fs::remove_file(dir.join(".git/index")).expect("the index");
+    }
+    action_prepare(&dir);
+    commit(&origin, "next");
+    action_fetch(&origin, &dir);
+    assert_eq!(
+        std::fs::read_to_string(&file).expect("the file"),
+        "two",
+        "git_guard: a tampered file survived the checkout"
+    );
+}
+
+/// A gitlink over `.cargo` in the index, with `.cargo` a repo of its own that holds a planted file.
+fn check_gitlink(delete_index: bool) {
+    let base = scratch("gitlink");
+    let (origin, dir) = (base.join("origin"), base.join("kept"));
+    origin_repo(&origin);
+    kept_repo(&origin, &dir);
+    let head = git_ok(&dir, &["rev-parse", "HEAD"]);
+    git_ok(&dir, &["rm", "-q", "--cached", "-r", ".cargo"]);
+    let entry = format!("160000,{head},.cargo");
+    git_ok(&dir, &["update-index", "--add", "--cacheinfo", &entry]);
+    let nested = dir.join(".cargo");
+    git_ok(&nested, &["init", "-q"]);
+    std::fs::write(nested.join("config"), "planted").expect("a file");
+    git_ok(&nested, &["add", "config"]);
+    commit(&nested, "planted");
+    if delete_index {
+        std::fs::remove_file(dir.join(".git/index")).expect("the index");
+    }
+    action_prepare(&dir);
+    commit(&origin, "next");
+    action_fetch(&origin, &dir);
+    assert!(
+        !nested.join("config").exists(),
+        "git_guard: a file planted under a gitlink survived the checkout"
+    );
+}
+
+#[test]
+fn git_guard_deleting_the_index_clears_both_plants() {
+    check_tampered_file(true);
+    check_gitlink(true);
+}
+
+negative_control!(
+    git_guard_deleting_the_index_clears_both_plants,
+    "the index kept, with the tampered file",
+    expected = "git_guard: a tampered file survived the checkout",
+    check_tampered_file(false)
+);
+
+mod gitlink_kept {
+    use super::*;
+    negative_control!(
+        git_guard_deleting_the_index_clears_both_plants,
+        "the index kept, with the gitlink",
+        expected = "git_guard: a file planted under a gitlink survived the checkout",
+        check_gitlink(false)
+    );
+}
+
 /// The script's own `fsck` line passes a kept shallow clone and refuses a blob overwritten under its own name.
 fn check_git_objects(script: &str) {
     let base = scratch("fsck");
@@ -2986,9 +3369,61 @@ fn check_script_refuses(script: &Path) {
         passes("clean", &clean),
         "git_guard: the script refused a clean checkout"
     );
+    assert!(
+        base.join("clean/.git/index").exists(),
+        "git_guard: the check form deleted the index"
+    );
+    let unlisted = config("[some]\n\tfuture = x\n");
+    let protocol = config("[protocol \"ext\"]\n\tallow = always\n");
+    let gc_hook = config("[gc]\n\trecentObjectsHook = x\n");
+    let trust = config("[core]\n\ttrustctime = false\n");
+    let repeated = config("[gc]\n\tauto = 0\n");
+    let two_urls = format!("[remote \"origin\"]\n\turl = ext::x\n{CLEAN}");
+    let with_git = CLEAN.replace("Ma1achy/Principia", "Ma1achy/Principia.git");
+    let elsewhere = CLEAN.replace("Ma1achy/Principia", "other/Principia");
     // A case, what the script must say of it, and what's planted.
     type Refused<'a> = (&'a str, &'a str, &'a [(&'a str, &'a str)]);
-    let refused: [Refused; 15] = [
+    let refused: [Refused; 23] = [
+        (
+            "a key nobody listed",
+            "off the allowlist: some.future",
+            &[(".git/config", unlisted.as_str())],
+        ),
+        (
+            "protocol.ext.allow",
+            "off the allowlist: protocol.ext.allow",
+            &[(".git/config", protocol.as_str())],
+        ),
+        (
+            "gc.recentObjectsHook",
+            "off the allowlist: gc.recentobjectshook",
+            &[(".git/config", gc_hook.as_str())],
+        ),
+        (
+            "core.trustctime",
+            "off the allowlist: core.trustctime",
+            &[(".git/config", trust.as_str())],
+        ),
+        (
+            "a repeated key",
+            "repeated config key: gc.auto",
+            &[(".git/config", repeated.as_str())],
+        ),
+        (
+            "a first URL",
+            "repeated config key: remote.origin.url",
+            &[(".git/config", two_urls.as_str())],
+        ),
+        (
+            "a URL with .git",
+            "remote.origin.url isn't this repo",
+            &[(".git/config", with_git.as_str())],
+        ),
+        (
+            "another URL",
+            "remote.origin.url isn't this repo",
+            &[(".git/config", elsewhere.as_str())],
+        ),
         (
             "commondir",
             "redirect: commondir",
@@ -3101,7 +3536,7 @@ fn check_script_refuses(script: &Path) {
         "can't read",
         &plant("no_config", false, &[(".git/HEAD", "x")]),
     );
-    let overwritten = plant("overwritten", true, &[]);
+    let overwritten = plant("overwritten", true, &[(".git/config", CLEAN)]);
     overwrite_blob(&overwritten);
     refuses("an overwritten blob", "fsck", &overwritten);
     // A firing, as the job's step runs it, standing in the folder as the runner does, with a log of this test's own.
@@ -3138,20 +3573,23 @@ fn check_script_refuses(script: &Path) {
             .replace('/', "\\"),
     );
     std::fs::write(&log, "").expect("the log");
-    let out = std::process::Command::new("powershell")
-        .args([
-            "-NoProfile",
-            "-NonInteractive",
-            "-ExecutionPolicy",
-            "Bypass",
-            "-File",
-        ])
-        .arg(script)
-        .current_dir(&dir)
-        .env("GITHUB_WORKSPACE", &dir)
-        .env("WIN_REFUSAL_LOG", &log)
-        .timed_output()
-        .expect("powershell ran");
+    let job = |dir: &Path| {
+        std::process::Command::new("powershell")
+            .args([
+                "-NoProfile",
+                "-NonInteractive",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+            ])
+            .arg(script)
+            .current_dir(dir)
+            .env("GITHUB_WORKSPACE", dir)
+            .env("WIN_REFUSAL_LOG", &log)
+            .timed_output()
+            .expect("powershell ran")
+    };
+    let out = job(&dir);
     assert!(
         !out.status.success(),
         "git_guard: the firing passed the job"
@@ -3168,6 +3606,25 @@ fn check_script_refuses(script: &Path) {
         line.contains("active hook"),
         "git_guard: the firing logged no reason"
     );
+    // Passing, as the job does: the index goes, and if it can't, the job refuses.
+    let kept = plant("kept", true, &[(".git/config", CLEAN)]);
+    assert!(
+        job(&kept).status.success(),
+        "git_guard: the job refused a clean checkout"
+    );
+    assert!(
+        !kept.join(".git/index").exists(),
+        "git_guard: the job left the index"
+    );
+    let stuck = plant("stuck", true, &[(".git/config", CLEAN)]);
+    let index = stuck.join(".git/index");
+    let mut held = std::fs::metadata(&index).expect("the index").permissions();
+    held.set_readonly(true);
+    std::fs::set_permissions(&index, held).expect("a read-only index");
+    assert!(
+        !job(&stuck).status.success(),
+        "git_guard: a failed delete passed the job"
+    );
 }
 
 #[cfg(windows)]
@@ -3179,14 +3636,16 @@ fn git_guard_script_refuses_what_is_planted() {
 #[cfg(windows)]
 negative_control!(
     git_guard_script_refuses_what_is_planted,
-    "the script with its list empty",
+    "the script with its lists off",
     expected = "git_guard: the script passed",
     {
         let edited = Path::new(env!("CARGO_TARGET_TMPDIR")).join("git_guard_no_keys.ps1");
         let script = read(GIT_GUARD);
         let (head, tail) = script.split_once("$keys = @(\n").expect("the list");
         let (_, tail) = tail.split_once("\n)").expect("its end");
-        std::fs::write(&edited, format!("{head}$keys = @(){tail}")).expect("the edit");
+        let edited_text = format!("{head}$keys = @(){tail}")
+            .replace("elseif ($allowed -cnotcontains $key)", "elseif ($false)");
+        std::fs::write(&edited, edited_text).expect("the edit");
         check_script_refuses(&edited)
     }
 );

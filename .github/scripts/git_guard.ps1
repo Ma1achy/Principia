@@ -1,12 +1,12 @@
 # Refuses a job when the checkout kept between runs on the self-hosted runner holds something that would run or redirect
 # git (the owner, 5 Nov 2026; R-711 (lands first in its own rulings PR)). It runs before actions/checkout, which runs git
 # in that folder. A job can write there, so this file is never run from it: the step fetches this file at the job's own
-# commit. It reads .git as files, each config through `git config --file`, and, once all of that has passed, has git hash
-# every object. The PC's job-started hook runs a guard of its own, `E:\runner-tools\checks\git-guard.ps1`; this step is the
-# second layer.
+# commit. It reads .git as files and each config through `git config --file`, takes only the keys a clean checkout holds,
+# and, once all of that has passed, has git hash every object and deletes `.git/index`. The PC's job-started hook runs a
+# guard of its own, `E:\runner-tools\checks\git-guard.ps1`; this step is the second layer.
 #
-#   git_guard.ps1                  Guard $env:GITHUB_WORKSPACE. On firing, log to $env:WIN_REFUSAL_LOG, empty the checkout
-#                                  (a fresh clone next run) and exit 1.
+#   git_guard.ps1                  Guard $env:GITHUB_WORKSPACE. On passing, delete .git/index. On firing, log to
+#                                  $env:WIN_REFUSAL_LOG, empty the checkout (a fresh clone next run) and exit 1.
 #   git_guard.ps1 check <folder>   Report on <folder>'s .git and exit 0 or 1, deleting nothing: the controls' way in.
 #
 # Fails closed: anything it can't read or follow is a refusal. A first run, with no .git, passes, as does the empty folder
@@ -14,7 +14,8 @@
 $ErrorActionPreference = 'Stop'
 
 # The config keys that can execute or redirect: the owner's list, then the same classes the PC's hook adds (applied per
-# R-369). Matched with -like, so `*` is any text, and without regard to case, as git matches a key's section and name.
+# R-369). Any key off $allowed refuses, so this list only names a refusal's reason, and a key can't pass by being missing
+# here. Matched with -like, so `*` is any text, and without regard to case, as git matches a key's section and name.
 # `xtask/tests/ci_self_hosted.rs` reads this list.
 $keys = @(
     'core.hooksPath'
@@ -57,6 +58,35 @@ $keys = @(
     'hook.*'
     'extensions.refStorage'
 )
+# The only keys a kept checkout may hold, as git prints them, each once: what actions/checkout v7.0.1 (3d3c42e5) leaves with
+# this workflow's inputs. Anything else refuses, at the cost of one red job and a fresh clone (the owner's order, widened
+# per R-369). Sources are in that action's `src/`.
+$allowed = @(
+    # git-command-manager.ts:367, `git init`; git-source-provider.ts:130. What git's probes write on this PC's Windows git.
+    'core.repositoryformatversion'
+    'core.filemode'
+    'core.bare'
+    'core.logallrefupdates'
+    'core.symlinks'
+    'core.ignorecase'
+    # git-command-manager.ts:406, `git remote add`; git-source-provider.ts:131.
+    'remote.origin.url'
+    'remote.origin.fetch'
+    # git-command-manager.ts:521; git-source-provider.ts:137.
+    'gc.auto'
+    # git-command-manager.ts:226, `checkout --force -B main refs/remotes/origin/main` with ref-helper.ts:37's start point,
+    # which sets the upstream. A dispatch from another branch leaves other keys, so the next run refuses and clones.
+    'branch.main.remote'
+    'branch.main.merge'
+    # git-command-manager.ts:197, `sparse-checkout disable`, in config.worktree: git 2.43's builtin/sparse-checkout.c:374-384.
+    'core.sparsecheckout'
+    'core.sparsecheckoutcone'
+    'index.sparse'
+)
+# What the action fetches from, url-helper.ts:20, with no `.git`. It compares this with the value it reads, and a differing
+# value deletes the folder (git-directory-helper.ts:27-29), but that reads only the last of several: hence one value here.
+$originUrl = 'https://github.com/Ma1achy/Principia'
+
 # The git the PC's hook uses, and never a name: PATH can differ here, as an earlier step can write to GITHUB_PATH.
 $gitExe = 'C:\Program Files\Git\cmd\git.exe'
 # git reads each config itself, so a reader here never has to match its grammar: a config git can't read fails, and what
@@ -64,6 +94,7 @@ $gitExe = 'C:\Program Files\Git\cmd\git.exe'
 # include, and listing keys runs nothing. --null, because a subsection can hold a CR, which would split a key if it were
 # read as lines. git 2.43's documentation has each of these flags.
 $arguments = 'config --no-includes --file "{0}" --list --name-only --null'
+$originRead = 'config --no-includes --file "{0}" --get --null remote.origin.url'
 # A commit's name proves nothing kept in .git, as git doesn't hash an object when it reads it: fsck does. --git-dir says
 # which repo, so no discovery runs. Not --connectivity-only, which leaves blobs unhashed.
 $objects = '--git-dir "{0}" fsck --no-dangling'
@@ -124,17 +155,25 @@ function Find-Planted($git) {
         $found += 'refs/replace/ in packed-refs'
     }
     # `config` must exist: a .git without one is no checkout this script can vouch for. `config.worktree` needn't, and
-    # isn't refused for existing, as actions/checkout writes one for sparse-checkout settings: it gets the same key check.
+    # isn't refused for existing, as the action's `sparse-checkout disable` writes one: it gets the same key check.
     $configs = @(Get-Item -LiteralPath (Join-Path $git.FullName 'config') -Force)
     $worktree = Get-Entry $git 'config.worktree'
     if ($worktree) { $configs += $worktree }
-    foreach ($config in $configs) {
-        foreach ($key in @(Read-Keys $config.FullName)) {
-            foreach ($listed in $keys) {
-                if ($key -like $listed) { $found += "config key: $key" }
-            }
+    $read = @()
+    foreach ($config in $configs) { $read += @(Read-Keys $config.FullName) }
+    foreach ($key in $read) {
+        if (@($keys | Where-Object { $key -like $_ }).Count) {
+            $found += "config key: $key"
+        } elseif ($allowed -cnotcontains $key) {
+            $found += "config key off the allowlist: $key"
         }
     }
+    # Each holds one value in a clean checkout, and git and the action can each read a different one of several.
+    foreach ($repeat in @($read | Group-Object | Where-Object { $_.Count -gt 1 })) {
+        $found += "repeated config key: $($repeat.Name)"
+    }
+    $url = (Invoke-Git ($originRead -f $configs[0].FullName)).TrimEnd([char]0)
+    if ($url -cne $originUrl) { $found += "remote.origin.url isn't this repo: $url" }
     # Last, as it reads the kept repo: only what has passed all of the above gets as far as being opened by git.
     if (-not $found.Count) {
         $null = Invoke-Git ($objects -f $git.FullName)
@@ -152,6 +191,12 @@ try {
     }
     $git = @($held | Where-Object { $_.Name -eq '.git' })
     $planted = if ($git.Count) { @(Find-Planted $git[0]) } else { @() }
+    # The index is the record of what's on disk, so a job can forge it: a gitlink keeps a planted folder from `clean`, and a
+    # stat entry keeps an edited file from `reset`. Without it `clean` clears the tree and `reset` writes every tracked file.
+    # A failed delete throws, so it refuses; the objects are kept, so the fetch's saving stays.
+    if ($git.Count -and -not $planted.Count -and -not $check) {
+        [System.IO.File]::Delete((Join-Path $git[0].FullName 'index'))
+    }
 } catch {
     $planted = @("can't read the checkout: $_")
 }

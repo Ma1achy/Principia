@@ -38,8 +38,9 @@
 # checkout's default depth of 1. A job that did would state its own depth and why. A job can write to that folder, so
 # each job's second step is `.github/scripts/git_guard.ps1`, before anything runs git there. It's fetched at the job's own
 # commit, since a copy in the kept folder is what it distrusts, and on a first run there is none. If it fires it logs to
-# WIN_REFUSAL_LOG, on the PC, empties the checkout and fails the job. The PC's hook runs the same guard before any step;
-# this one is the second layer.
+# WIN_REFUSAL_LOG, on the PC, empties the checkout and fails the job. If it passes it deletes `.git/index`, so `clean: true`
+# clears the whole tree and checkout writes it again. The PC's hook runs a guard of its own before any step; this one is
+# the second layer.
 #
 # Every script here is started as a child `powershell -File`, which sets $LASTEXITCODE even if the script can't load or
 # parse. `& script` wouldn't: the step would go on, and `exit $null` is a green step with nothing run.
