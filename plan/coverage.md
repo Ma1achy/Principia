@@ -8,49 +8,49 @@
 |---|---|
 | DEC | 52 |
 | ENC | 38 |
-| CHART | 90 |
+| CHART | 92 |
 | INT | 109 |
-| EVT | 32 |
+| EVT | 33 |
 | PAY | 111 |
 | GEN | 44 |
 | SCHED | 103 |
 | REF | 52 |
 | RENDER | 120 |
 | COL | 161 |
-| GUI | 387 |
-| TOOL | 218 |
+| GUI | 389 |
+| TOOL | 220 |
 | VAL | 347 |
 | PERF | 115 |
 | SYS | 96 |
-| **total** | **2075** |
+| **total** | **2082** |
 
-Of these: 232 calibration, 179 definition, 1664 obligation. Retired (kept for their ids, not counted): 12.
+Of these: 232 calibration, 179 definition, 1671 obligation. Retired (kept for their ids, not counted): 12.
 
 ## Requirements per milestone
 
 | milestone | count |
 |---|---|
-| M0 | 122 |
+| M0 | 123 |
 | M1 | 108 |
 | M2 | 219 |
-| M3 | 232 |
+| M3 | 233 |
 | M4 | 108 |
 | M5 | 183 |
 | M6 | 226 |
 | M7 | 261 |
 | M8 | 470 |
-| M9 | 146 |
+| M9 | 151 |
 
 ## Sections
 
-1701 sections in 61 files: 1352 yield at least one requirement; 349 yield none and are listed below with the reason.
+1720 sections in 61 files: 1359 yield at least one requirement; 361 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | gap (RQ-378) | 1 |
 | gap (RQ-391) | 2 |
 | gap (RQ-577) | 2 |
 | gap (RQ-618) | 1 |
-| informative only | 241 |
+| informative only | 253 |
 | out of v1 (R-125) | 1 |
 | out of v1 (R-420) | 1 |
 | parent heading (obligations are in its subsections) | 55 |
@@ -210,6 +210,18 @@ Of these: 232 calibration, 179 definition, 1664 obligation. Retired (kept for th
 | R-682 — Admin bypass on `main` is the owner's alone: agents never use it, by `gh pr merge --admin` or any API merge that skips a required check; merge scripts merge only when every required check has passed; a stuck check goes to the owner, who decides whether to bypass *(amends R-266)* | informative only | the owner's message of 3 Nov 2026: admin bypass is the owner's alone; process (plan/OPERATIONS.md § Merging, plan/HUMAN_SETUP.md § 2); changes no requirement |
 | R-683 — The CI speed-up series, after the current CI fixes land: measure first, then five tooling pull requests in order, each with before and after numbers: one test binary per crate, a quick tier on every push, mutants in-diff on the merge-ready head, a bounded dependency cache saved from `main` only, and nightly compiler flags kept only if faster; R-285's amendment approved in principle only, its wording with step (4)'s pull request | informative only | the owner's message of 3 Nov 2026: the CI speed-up series and its order; R-285's amendment approved in principle only; ci; changes no requirement |
 | R-684 — CI's two code tiers: full CI on every merge-candidate head, the one carrying the `merge-ready` label, and on every push to `main`; a quick tier on every other pull-request head (fmt, clippy, build, and the tests of the changed crates and their reverse dependencies), each full-only required check posted pending, never skipped-as-success; R-677's classifier first; done as R-683's step (2), and R-656's bounded target cache, without sccache, as its step (4) *(amends R-110, R-177 and R-235; rules R-676's tiers and R-683's steps (2) and (4))* | informative only | the owner's message of 3 Nov 2026, part (A): full CI on the merge-candidate head and main, a quick tier elsewhere, full-only checks pending; part (B) recorded under R-683; ci; changes no requirement here, built with R-683's steps (2) and (4) |
+| R-795 — The precision-ladder proposal's seven questions are deferred to M3 *(defers RQ-577)* | informative only | a deferral; no requirement changes |
+| R-796 — How future GPU backends are held to accuracy for `sin` and `cos` near π/2 is deferred to M4 *(defers RQ-629)* | informative only | a deferral; no requirement changes |
+| R-797 — The kernel's `sin` and `cos`: option (b) now, the sinc site fixed and gated to f32; option (a) deferred to M4's cross-backend measurement *(on RQ-687, which stays open)* | informative only | records the owner's answer; the requirement and the task that build the fix come with the 4 Nov rulings port |
+| R-799 — The census takes a drift reference the corpus already has, not IAS15, and a harness-only step-limit axis of the contract's limit and `None`, with `Reject` a control *(on RQ-619, which stays open)* | informative only | the census has no requirement yet; the proposal carries it, and RQ-619 stays open |
+| R-800 — The collinear statistical targets compare only what the horizon cap reaches and the source states; raising the cap is revisited at M9 if the cost measurement allows *(on RQ-643, which stays open)* | informative only | the rows are proposed, with no requirement yet; RQ-643 stays open for option (a) |
+| R-801 — Saving a curved view offers the parent chart and its tilt only, with no flattened chart *(closes RQ-378)* | informative only | the option applied already; no requirement changes |
+| R-803 — Whether the presentation frames become a stage after the Print graph is deferred until the exporter is designed *(defers RQ-391)* | informative only | a deferral; no requirement changes |
+| R-804 — Where a margin node's two inputs sit is deferred to TASK-M7-12, options with a recommendation proposed when it starts *(defers RQ-675)* | informative only | a deferral; no requirement changes |
+| R-805 — TASK-M7-12's deliverables against the built assembler are deferred to that task, options with a recommendation proposed when it starts *(defers RQ-676)* | informative only | a deferral; no requirement changes |
+| R-806 — A colour node's default input range and TASK-M7-13's deliverables are deferred to that task, options with a recommendation proposed when it starts *(defers RQ-677)* | informative only | a deferral; no requirement changes |
+| R-807 — The slider span of the held shape, angular momentum and kinetic energy is deferred to TASK-M8-48, options with a recommendation proposed when it starts *(defers RQ-679)* | informative only | a deferral; no requirement changes |
+| R-808 — `.claude/commands/*.md` joins the rulings reference check *(closes RQ-698)* | informative only | the owner's word on the rulings reference check; tooling; changes no requirement |
 
 ### `docs/contracts/principia_canonical_spec.md`
 

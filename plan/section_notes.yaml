@@ -1492,3 +1492,51 @@
   section: "R-790 — `.claude/`, its commands, agents and settings, is docs tier: a change only to it runs only the cheap checks *(amends R-677 and R-662)*"
   reason: informative only
   note: "the owner's word of 4 Nov 2026: `.claude/` is on the classifier's allowlist; process; changes no requirement"
+- file: decisions.md
+  section: "R-795 — The precision-ladder proposal's seven questions are deferred to M3 *(defers RQ-577)*"
+  reason: informative only
+  note: "a deferral; no requirement changes"
+- file: decisions.md
+  section: "R-796 — How future GPU backends are held to accuracy for `sin` and `cos` near π/2 is deferred to M4 *(defers RQ-629)*"
+  reason: informative only
+  note: "a deferral; no requirement changes"
+- file: decisions.md
+  section: "R-797 — The kernel's `sin` and `cos`: option (b) now, the sinc site fixed and gated to f32; option (a) deferred to M4's cross-backend measurement *(on RQ-687, which stays open)*"
+  reason: informative only
+  note: "records the owner's answer; the requirement and the task that build the fix come with the 4 Nov rulings port"
+- file: decisions.md
+  section: "R-799 — The census takes a drift reference the corpus already has, not IAS15, and a harness-only step-limit axis of the contract's limit and `None`, with `Reject` a control *(on RQ-619, which stays open)*"
+  reason: informative only
+  note: "the census has no requirement yet; the proposal carries it, and RQ-619 stays open"
+- file: decisions.md
+  section: "R-800 — The collinear statistical targets compare only what the horizon cap reaches and the source states; raising the cap is revisited at M9 if the cost measurement allows *(on RQ-643, which stays open)*"
+  reason: informative only
+  note: "the rows are proposed, with no requirement yet; RQ-643 stays open for option (a)"
+- file: decisions.md
+  section: "R-801 — Saving a curved view offers the parent chart and its tilt only, with no flattened chart *(closes RQ-378)*"
+  reason: informative only
+  note: "the option applied already; no requirement changes"
+- file: decisions.md
+  section: "R-803 — Whether the presentation frames become a stage after the Print graph is deferred until the exporter is designed *(defers RQ-391)*"
+  reason: informative only
+  note: "a deferral; no requirement changes"
+- file: decisions.md
+  section: "R-804 — Where a margin node's two inputs sit is deferred to TASK-M7-12, options with a recommendation proposed when it starts *(defers RQ-675)*"
+  reason: informative only
+  note: "a deferral; no requirement changes"
+- file: decisions.md
+  section: "R-805 — TASK-M7-12's deliverables against the built assembler are deferred to that task, options with a recommendation proposed when it starts *(defers RQ-676)*"
+  reason: informative only
+  note: "a deferral; no requirement changes"
+- file: decisions.md
+  section: "R-806 — A colour node's default input range and TASK-M7-13's deliverables are deferred to that task, options with a recommendation proposed when it starts *(defers RQ-677)*"
+  reason: informative only
+  note: "a deferral; no requirement changes"
+- file: decisions.md
+  section: "R-807 — The slider span of the held shape, angular momentum and kinetic energy is deferred to TASK-M8-48, options with a recommendation proposed when it starts *(defers RQ-679)*"
+  reason: informative only
+  note: "a deferral; no requirement changes"
+- file: decisions.md
+  section: "R-808 — `.claude/commands/*.md` joins the rulings reference check *(closes RQ-698)*"
+  reason: informative only
+  note: "the owner's word on the rulings reference check; tooling; changes no requirement"

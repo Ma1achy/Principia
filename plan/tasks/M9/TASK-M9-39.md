@@ -1,12 +1,12 @@
 # TASK-M9-39 — The softened force law: Plummer softening, built after the core build, and the refusal of ε ≠ 0 lifted
 
 - **Milestone:** M9
-- **Closes:** REQ-INT-111, REQ-SYS-094, REQ-SYS-095
-- **Depends on:** TASK-M3-01, TASK-M3-05, TASK-M3-06, TASK-M4-03, TASK-M4-06, TASK-M4-04, TASK-M4-13, TASK-M2-12, TASK-M2-25, TASK-M3-12, TASK-M3-22, TASK-M7-35
+- **Closes:** REQ-INT-111, REQ-SYS-094, REQ-SYS-095, REQ-CHART-092, REQ-EVT-034, REQ-GUI-416
+- **Depends on:** TASK-M3-01, TASK-M3-05, TASK-M3-06, TASK-M4-03, TASK-M4-06, TASK-M4-04, TASK-M4-13, TASK-M2-12, TASK-M2-25, TASK-M3-12, TASK-M3-22, TASK-M7-35, TASK-M8-16
 - **Needs (earlier milestones):** none
-- **Reviewers:** code, qa, physics, perf
+- **Reviewers:** code, qa, physics, perf, gui
 - **Pitfalls:** PIT-9
-- **Size:** ~650 lines
+- **Size:** ~800 lines
 
 ## Goal
 `epsilon` is carried, tagged and refused (TASK-M3-06); this task gives it its force law (R-654): `V = −Σ mᵢmⱼ/√(r² + ε²)`, the force its negative gradient, with `ε` canonical, a fraction of the initial hyperradius `R` fixed at `t = 0` and never co-moving, recorded in every output header like `r_coll`, and energy and drift defined under the softened potential. Scheduled late, after the core build, at the owner's word. What the softened potential reaches is R-670's (closing RQ-656): the collision test stays geometric, the regularised occupants refuse `ε ≠ 0`, Chazy's `E`, the escape test's and the ionisation gate's pair energies and the decode's `V₀` are softened, a view refuses `ε ≠ 0` with any `Some(E*)`, and the substep law stays geometric. *Was:* "it waits on RQ-656, and starts only once that entry is ruled."
@@ -27,6 +27,8 @@
 - `decisions.md` § "R-670 — Softening's reach: a softened run keeps the collision test on geometric `r`, softening offered only on the unregularised occupants, the regularised ones refusing `ε ≠ 0`, and Chazy's `E` softened; the escape test's and the ionisation gate's pair energies take the softened potential, identical at `ε = 0`; the decode's `V₀` is softened, with `virial_ratio` following and `E₀ = K₀ + V₀`, so REQ-VAL-027, REQ-COL-006 and R-436's collision pole are restated for `ε ≠ 0` and unchanged at `ε = 0`; a view refuses `ε ≠ 0` with any `Some(E*)`; the substep law stays on geometric `d²` and `r_min` *(closes RQ-656; amends R-29, R-32, R-436 and R-654)*"
 - `docs/design/principia_dd_chazy_final_motion.md` § "3.1 Inputs and definitions"
 - `docs/design/principia_dd_integrator.md` § "3.6 Detectors (per `STEP`, on the projected state)"
+- `decisions.md` § "R-791 — At `ε ≠ 0` the `(L_z, E)` chart stays available with its energy axis the Newtonian energy, so a pixel's start never depends on `ε`; the axis is labelled Newtonian energy and the Inspector shows the softened energy beside it *(closes RQ-693)*"
+- `decisions.md` § "R-792 — At `ε ≠ 0` both of Chazy's two-body potentials soften, `pair_kup`'s and `out_kup`'s, so the classifier reads one physics *(closes RQ-694)*"
 
 ## Deliverables
 - `crates/kernel/src/physics/pairs.rs`, `force.rs` and `energy.rs` — the softened force and potential, one `r² + ε²` shared by both, for `f32` and `f64`.
@@ -35,6 +37,8 @@
 - The softened kernel on the GPU, f32, through the baked variants (TASK-M4-06), `ε` in `SimUniforms`, the FTLE shadow included, with its per-step and per-decode comparison against the f64 CPU in `crates/validation`.
 - `ε` in every output header beside `r_coll`.
 - The range of `ε`'s calibration proposal, its ends with their evidence (R-71).
+- The `(L_z, E)` chart at `ε ≠ 0` (R-791): axis, feasible set, warp and `K*` read the Newtonian `U`, so a pixel's start doesn't depend on `ε`; the axis labelled as Newtonian energy whenever softening is on, and the softened energy beside it in the Inspector.
+- Chazy's `pair_kup` and `out_kup` at `ε ≠ 0` (R-792): both potentials soften, the separations, `v_r` and the kinetic terms geometric.
 - What R-670 requires (RQ-656): the collision test unchanged on geometric `r`; dispatch refusing `ε ≠ 0` on a regularised occupant, with a typed reason; the Chazy classifier's `E` the softened `E_0`; `E_rel` and the ionisation gate's pairwise energies with `√(d² + ε²)` in the potential term; the decode stage's and the fragment decode's `V₀` softened, `ε` their input, `virial_ratio` following, with no `−∞` select at `ε ≠ 0` (REQ-VAL-027's and REQ-COL-006's `ε ≠ 0` sentences); the view-level refusal of `ε ≠ 0` with any `Some(E*)`; the substep law unchanged on geometric `d²` and `r_min`. *Was:* "What RQ-656's ruling requires of the collision test, … and the substep law."
 - The softened branch inputs in `crates/kernel/src/branch_inputs.rs`, TASK-M4-03's list (R-34, as R-547 corrects it; R-670): `E_rel > 0` and each ionisation-gate pair's energy `> 0` at `ε ≠ 0`, each entered with its written form and decided comparison-only, with no `sqrt` or `div` at the decision. Both sides are positive, so `E_rel > 0` is `|Δv|⁴·(d² + ε²) > 4·(M_pair + m_b)²`, and a gate pair's the same with `m_i + m_j`; each is built only from operations every IEEE backend rounds alike, with no intermediate that can be subnormal. The gate's third input, total `E > 0`, which R-654 softens, follows RQ-697: what it reads, its form and how it is listed are that ruling's.
 
@@ -49,6 +53,9 @@
 - `cargo test -p validation softened_tier_l` — stateless, on boundary states at ε ≠ 0 either side of E_rel = 0 and of each gate pair's energy = 0, identical inputs to CPU-f64, CPU-f32, gpu-metal and gpu-lavapipe, each backend its own run: the escape decision and the gate's pair decisions are identical; control: a form that takes √(d² + ε²) at the decision forks on the same inputs; either side of total E = 0, the gate's decision is held as RQ-697 rules (REQ-INT-111).
 - Physics reviewer, against `branch_inputs.rs`: E_rel and the gate's pair energies at ε ≠ 0 are enumerated, each in its written form, neither fed by a runtime `sqrt` or `div`; what the list holds of the gate's total E > 0 is as RQ-697 rules (REQ-INT-111).
 - `cargo test -p engine softened_refusals` — dispatch refuses ε ≠ 0 on a regularised occupant, and a view with ε ≠ 0 and any Some(E*), Some(0) included, each with its typed reason; controls: an unregularised occupant at ε ≠ 0, and ε ≠ 0 with E* None, dispatch (REQ-SYS-094).
+- `cargo test -p kernel softened_lz_e_chart` — at ε ≠ 0 each pixel of an (L_z, E) chart decodes to its ε = 0 bits, and the axis reads the Newtonian energy; control: U read as the softened V₀ fails (REQ-CHART-092).
+- `cargo test -p kernel softened_chazy` — the two-body potentials soften at ε ≠ 0, and ε = 0 is bit-identical; control: a Newtonian U commits a different label (REQ-EVT-034).
+- `cargo test -p gui softened_energy_axis` — the axis label and the Inspector's two energies, each with its control (REQ-GUI-416).
 - Review checklist (physics reviewer) — the range of `ε`: the proposal measures what sets each end and states it, with its evidence; reviewer-checked, confirmed by the human and recorded in `decisions.md` (REQ-SYS-095).
 
 ## Notes
@@ -58,7 +65,7 @@
 - `E_rel` and the gate's pair energies are branch inputs (integrator contract Part 4), so softening them adds to R-34's enumeration, and `softened_reach` and `softened_gpu_parity` hold neither the branch's parity nor its form: the deliverable, `softened_tier_l` and TASK-M4-03 as a dependency follow (physics review 5771183527 of PR #408, F4; the squared form applied per R-369, its size ~650 lines). *Was:* Depends on without TASK-M4-03, ~550 lines.
 - The fragment decode's and the energy-agreement view's `ε ≠ 0` sentences are held where those checks run, on both GPU backends, not by `cargo test -p kernel` and not by `softened_gpu_parity`, whose per-decode comparison is the compute decode (physics review 5771183527 of PR #408, F5). *Was:* `softened_decode` held them.
 - Waits on RQ-697, what the ionisation gate's total `E > 0` reads and by what form (physics review 5771573790 of PR #408, F8): the task starts only once it is ruled.
-- Waits on RQ-693, the `(L_z, E)` chart's `E` axis at `ε ≠ 0` (physics review 5771183527 of PR #408, F1): the task starts only once it is ruled, since `softened_refusals` does not reach that chart. *Was:* no wait after R-670.
+- *5 Nov 2026 (R-791, closing RQ-693 (b); R-792, closing RQ-694 (a)):* neither is a wait now; this task builds both, and gains the gui reviewer and TASK-M8-16 for the Inspector. *Was:* "Waits on RQ-693, the `(L_z, E)` chart's `E` axis at `ε ≠ 0` (physics review 5771183527 of PR #408, F1): the task starts only once it is ruled, since `softened_refusals` does not reach that chart."; and before it, no wait after R-670.
 - Added by R-654 (30 Oct 2026; the port, 1 Nov 2026). A build task, not a target: it is not scored, its tests block its own merge, and TASK-M9-37, the report, does not wait on it. In M9 because R-650 and `plan/MILESTONES.md` call M0 to M8 the core build and no other milestone follows it (applied per R-369).
 - Calibrations proposed here (R-71; human confirmation with the M9 report if this task has landed by then, otherwise in the next batch after it lands, then recorded in decisions.md): REQ-SYS-095, the range of `ε`. *Was:* "Definitions written here (R-72; physics reviewer approves before merge): the range of `ε`." (code review 5730587922 of PR #375, C4; applied per R-369).
 - Scheduled at the owner's word; R-415's early-merge test does not bring it forward.

@@ -86,13 +86,13 @@ requirement, the logH falsification check of the re-registration mechanism.
   files, and every pitfall regression requirement that can be checked without physics.
 
 <!-- gate:M0 -->
-**Exit gate — 122 requirements** (and every earlier gate still green):
+**Exit gate — 123 requirements** (and every earlier gate still green):
 
 - PAY (22): REQ-PAY-001…005, REQ-PAY-007…020, REQ-PAY-087, REQ-PAY-091…092
 - GEN (13): REQ-GEN-001…008, REQ-GEN-024, REQ-GEN-028…029, REQ-GEN-031…032
 - SCHED (1): REQ-SCHED-001
 - RENDER (3): REQ-RENDER-001…002, REQ-RENDER-083
-- TOOL (20): REQ-TOOL-001…008, REQ-TOOL-119…121, REQ-TOOL-134, REQ-TOOL-136, REQ-TOOL-138…139, REQ-TOOL-141, REQ-TOOL-144…145, REQ-TOOL-147…148
+- TOOL (21): REQ-TOOL-001…008, REQ-TOOL-119…121, REQ-TOOL-134, REQ-TOOL-136, REQ-TOOL-138…139, REQ-TOOL-141, REQ-TOOL-144…145, REQ-TOOL-147…148, REQ-TOOL-223
 - VAL (38): REQ-VAL-001…009, REQ-VAL-138, REQ-VAL-147…167, REQ-VAL-169, REQ-VAL-175…176, REQ-VAL-178…181
 - SYS (25): REQ-SYS-001…008, REQ-SYS-063…079
 <!-- /gate:M0 -->
@@ -242,7 +242,7 @@ canonical_spec §1 item 6 and §11: "validate physics numerically", natively, be
 - The CPU-side parity suite (`computeIC`).
 
 <!-- gate:M3 -->
-**Exit gate — 232 requirements** (and every earlier gate still green):
+**Exit gate — 233 requirements** (and every earlier gate still green):
 
 - ENC (1): REQ-ENC-033
 - CHART (4): REQ-CHART-059, REQ-CHART-072, REQ-CHART-085…086
@@ -253,7 +253,7 @@ canonical_spec §1 item 6 and §11: "validate physics numerically", natively, be
 - SCHED (2): REQ-SCHED-002…003
 - RENDER (1): REQ-RENDER-028
 - GUI (1): REQ-GUI-008
-- TOOL (14): REQ-TOOL-031…039, REQ-TOOL-125, REQ-TOOL-132, REQ-TOOL-149…150, REQ-TOOL-219
+- TOOL (15): REQ-TOOL-031…039, REQ-TOOL-125, REQ-TOOL-132, REQ-TOOL-149…150, REQ-TOOL-219, REQ-TOOL-222
 - VAL (57): REQ-VAL-025…041, REQ-VAL-043…055, REQ-VAL-115, REQ-VAL-117, REQ-VAL-119, REQ-VAL-123…124, REQ-VAL-126, REQ-VAL-128…136, REQ-VAL-139, REQ-VAL-146, REQ-VAL-168, REQ-VAL-170…171, REQ-VAL-190…191, REQ-VAL-195, REQ-VAL-250…251, REQ-VAL-336…337
 - PERF (6): REQ-PERF-001…004, REQ-PERF-083, REQ-PERF-085
 - SYS (4): REQ-SYS-017…019, REQ-SYS-096
@@ -501,10 +501,12 @@ and tightens the GPU path (`docs/design/principia_dd_replication.md` § 12).
 
 - VAL (56): REQ-VAL-202, REQ-VAL-204, REQ-VAL-206, REQ-VAL-208, REQ-VAL-210, REQ-VAL-212, REQ-VAL-215, REQ-VAL-217, REQ-VAL-219, REQ-VAL-224, REQ-VAL-226, REQ-VAL-229, REQ-VAL-231, REQ-VAL-233, REQ-VAL-235, REQ-VAL-237, REQ-VAL-239, REQ-VAL-241, REQ-VAL-243, REQ-VAL-245, REQ-VAL-247, REQ-VAL-249, REQ-VAL-253, REQ-VAL-255, REQ-VAL-258, REQ-VAL-260, REQ-VAL-263, REQ-VAL-265, REQ-VAL-267, REQ-VAL-269, REQ-VAL-271, REQ-VAL-274, REQ-VAL-276, REQ-VAL-278, REQ-VAL-280, REQ-VAL-282, REQ-VAL-284, REQ-VAL-287, REQ-VAL-289, REQ-VAL-292, REQ-VAL-296, REQ-VAL-298, REQ-VAL-300, REQ-VAL-302, REQ-VAL-304, REQ-VAL-307, REQ-VAL-310, REQ-VAL-315, REQ-VAL-317, REQ-VAL-320, REQ-VAL-322, REQ-VAL-324, REQ-VAL-328, REQ-VAL-331…332, REQ-VAL-334
 
-**Built, not scored — 7 requirements** (TASK-M9-39, TASK-M9-40, TASK-M9-41, R-654, R-669, R-679; no outcome and no row in the report, each task's tests blocking its own merge):
+**Built, not scored — 12 requirements** (TASK-M9-39, TASK-M9-40, TASK-M9-41, TASK-M9-45, R-654, R-669, R-679, R-798; no outcome and no row in the report, each task's tests blocking its own merge):
 
-- CHART (1): REQ-CHART-091
+- CHART (3): REQ-CHART-091…093
 - INT (1): REQ-INT-111
+- EVT (1): REQ-EVT-034
+- GUI (2): REQ-GUI-416…417
 - VAL (3): REQ-VAL-344…346
 - SYS (2): REQ-SYS-094…095
 
