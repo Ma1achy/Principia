@@ -160,6 +160,40 @@ fn measure_display_a_run_is_flagged_and_never_read_during() {
     });
 }
 
+fn check_window_rect(watch: &Watch) {
+    let start = rect(0.0);
+    let grown = start.map(|r| Rect::from_min_size(r.min, r.size() + egui::vec2(50.0, 0.0)));
+    assert_eq!(
+        grown.map(|r| r.min),
+        start.map(|r| r.min),
+        "the same corner"
+    );
+    let (run, _) = watched_run(watch, [60.0, 60.0], [start, grown, start]);
+    assert_eq!(run.display_changed, Some(true), "resized on one monitor");
+    let (run, _) = watched_run(watch, [60.0, 60.0], [start, None, start]);
+    assert_eq!(
+        run.display_changed,
+        Some(true),
+        "minimised: egui has no rect"
+    );
+}
+
+#[test]
+fn measure_display_a_resize_or_minimise_flags_the_run() {
+    check_window_rect(&Session::watch_display);
+    rejects("only the corner compared", || {
+        check_window_rect(&|s, step, outer, read| {
+            let size = rect(0.0).map(|r| r.size()).expect("a rect");
+            s.watch_display(step, outer.map(|r| Rect::from_min_size(r.min, size)), read);
+        });
+    });
+    rejects("no rect taken for the rect at the start", || {
+        check_window_rect(&|s, step, outer, read| {
+            s.watch_display(step, outer.or(rect(0.0)), read);
+        });
+    });
+}
+
 fn check_later_run(watch: &Watch) {
     let (mut run, _) = watched_run(watch, [60.0, 120.0], [rect(0.0); 3]);
     assert_eq!(run.display_changed, Some(true));

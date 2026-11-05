@@ -262,8 +262,9 @@ pub struct Session {
     /// The size of the app's part of the window, in points, as of the last frame: what the two builds' figures are laid
     /// out in, so a display too small for the window a run asked for shows in the fields.
     pub app_size: Option<egui::Vec2>,
-    /// Whether the window moved, or its monitor's rate changed, during the current or last run: the rate its capped
-    /// marks read may not be the display it ran on. `None` where no run was watched: no run yet, or the browser.
+    /// Whether the window was moved, resized or minimised, or its monitor's rate changed, during the current or last run:
+    /// its figures may not be one window's on one display, and the rate its capped marks read may not be the display it
+    /// ran on. `None` where no run was watched: no run yet, or the browser.
     pub display_changed: Option<bool>,
     /// The run a button or a flag asked for, starting at the next step.
     pending: Option<Run>,
@@ -374,8 +375,9 @@ impl Session {
     /// window is on, not the primary's, so it is read through `read`, but never between a run's start and its end: the
     /// read is work, and those are the frames the run times. So: on every frame before a run, for the panel; on the
     /// frame a run starts, the rate that run reads against; and on the frame it ends, where a different rate flags the
-    /// run. A run's rate stands until the next. In between, `outer`, which egui has already, flags any move of the window
-    /// at no cost, so a window moved and moved back is seen too. A flag, not a refusal: the figures stay, marked.
+    /// run. A run's rate stands until the next. In between, `outer`, which egui has already, flags any change of the
+    /// window's whole rect at no cost: a move, moved back or not, a resize, or a minimise, which leaves egui no rect. A
+    /// flag, not a refusal: the figures stay, marked.
     pub fn watch_display(
         &mut self,
         step: Step,
