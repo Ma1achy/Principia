@@ -1012,6 +1012,7 @@ impl<S: EngineSide> App<S> {
             self.windows.console.maximised = false;
             if layout.console.min.y <= layout.page.min.y {
                 self.splits.set_console_top(None);
+                self.save_settings();
             }
         }
     }

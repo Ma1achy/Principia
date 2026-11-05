@@ -1136,6 +1136,31 @@ fn mock_console_height_opening_by_itself_it_takes_no_focus_at_any_height() {
 }
 
 #[test]
+fn mock_console_height_the_cleared_top_survives_a_restart() {
+    let dir = scratch("auto-open");
+    let path = dir.join(FILE);
+    {
+        let (mut app, mut h) = opened_at(&path);
+        drag_edge(&mut h, &mut app, -5000.0);
+        settle(&mut h, &mut app);
+        at_scope(&mut h, &mut app, HEADER);
+        press(&mut h, &mut app, Key::Escape, NONE);
+        let _ = h.frame(&mut app, Vec::new());
+        assert!(!app.is_open(Window::Console));
+        let (kept, _) = opened_at(&path);
+        let top = kept.splits.console_top();
+        assert!(top.is_some(), "saved as the drag ended");
+        rejects("a top the file still has", || assert_eq!(top, None));
+        app.side().engine().raise_error();
+        settle(&mut h, &mut app);
+        assert_eq!(app.splits.console_top(), None, "cleared");
+    }
+    let (app, _h) = opened_at(&path);
+    assert_eq!(app.splits.console_top(), None, "the file agrees");
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
 fn mock_console_height_only_an_auto_open_lowers_it() {
     // Opened by the keys, a console closed maximised opens maximised, and takes the focus.
     let (mut app, mut h) = closed_from(true);
