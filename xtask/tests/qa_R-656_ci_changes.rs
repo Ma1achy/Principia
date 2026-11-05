@@ -535,15 +535,25 @@ fn s(v: &Value) -> String {
 }
 
 /// The jobs of `wf` reporting the check `name` (their `name:`, or their id where they have none).
+/// The check a job reports when it runs: its `name:`, or its id; a gate named by its one-value matrix reports that value
+/// (R-684), and skipped, on a quick run, its raw `name:`.
+fn reported_name(id: &str, job: &Value) -> String {
+    let name = job.get("name").map_or_else(|| id.to_owned(), s);
+    match job["strategy"]["matrix"]["check"]
+        .as_array()
+        .map(Vec::as_slice)
+    {
+        Some([only]) if name == "${{ matrix.check }}" => s(only),
+        _ => name,
+    }
+}
+
 fn reporting<'a>(wf: &'a Value, name: &str) -> Vec<(&'a String, &'a Value)> {
     wf["jobs"]
         .as_object()
         .expect("qa_r656: jobs")
         .iter()
-        .filter(|(id, job)| {
-            job.get("name")
-                .map_or(id.as_str() == name, |n| s(n) == name)
-        })
+        .filter(|(id, job)| reported_name(id, job) == name)
         .collect()
 }
 
@@ -557,9 +567,10 @@ fn check_required(ci: &str, mutants: &str, pr_check: &str, reviews: &str) {
             "qa_r656: ci.yml has {} jobs reporting the required check `{gate}`",
             jobs.len()
         );
+        // R-684 skips the gates on a quick run alone, this file's exception to R-290, as R-678's below.
         assert_eq!(
             s(&jobs[0].1["if"]),
-            "always()",
+            "always() && needs.changes.outputs.quick != 'true'",
             "qa_r656: ci.yml's required check `{gate}` is not `if: always()`"
         );
     }
@@ -635,8 +646,8 @@ negative_control!(
     check_required(
         &swap(
             &workflow("ci.yml"),
-            "    name: gpu-lavapipe\n    needs: [changes, gpu-lavapipe]\n    if: always()\n",
-            "    name: gpu-lavapipe\n    needs: [changes, gpu-lavapipe]\n    if: success()\n"
+            "    needs: [changes, gpu-lavapipe]\n    if: always() && needs.changes.outputs.quick != 'true'\n",
+            "    needs: [changes, gpu-lavapipe]\n    if: success()\n"
         ),
         &workflow("mutants.yml"),
         &workflow("pr-check.yml"),

@@ -869,6 +869,17 @@ negative_control!(
 
 // ---- The parser reads what the checks rely on --------------------------------------------------------------------
 
+/// Whether `job` of the workflow `text` calls a workflow (R-684's `ci-quick`): it has no steps or runner of its own,
+/// and the called workflow's job, read in its own file, has them.
+fn calls_a_workflow(text: &str, job: &str) -> bool {
+    let header = format!("  {job}:");
+    text.lines()
+        .skip_while(|l| l.trim_end() != header)
+        .skip(1)
+        .take_while(|l| l.is_empty() || l.starts_with("   ") || l.trim_start().starts_with('#'))
+        .any(|l| l.starts_with("    uses: ./.github/workflows/"))
+}
+
 /// Guards the checks above against a parser that reads nothing: every workflow has a job, every job its steps, and
 /// the steps the task names are found with their inputs.
 fn check_parser_reads_the_workflows(files: &[(String, String)]) {
@@ -877,7 +888,7 @@ fn check_parser_reads_the_workflows(files: &[(String, String)]) {
         assert!(!jobs.is_empty(), "{f}: parser read no job");
         for j in &jobs {
             assert!(
-                !j.steps.is_empty(),
+                !j.steps.is_empty() || calls_a_workflow(t, &j.id),
                 "{f} job `{}`: parser read no step",
                 j.id
             );
