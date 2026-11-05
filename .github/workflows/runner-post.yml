@@ -11,7 +11,7 @@ on:
         description: which test
         required: true
         type: choice
-        options: [green, proof, survivor, survivor-cancel, survivor-refuse, plant-runner, quota, cold, gpu-idle, log-diag, checkout, plant-git-hook, plant-git-config, plant-state, plant-check, delete-workspace]
+        options: [green, proof, survivor, survivor-cancel, survivor-refuse, plant-runner, quota, cold, gpu-idle, log-diag, checkout, plant-git-hook, plant-git-config, plant-state, plant-check, stdin-probe, delete-workspace]
       what:
         description: for plant-state, what to plant
         required: false
@@ -220,6 +220,26 @@ jobs:
             default { "unknown: $env:WHAT"; exit 1 }
           }
           "planted $env:WHAT"
+          exit 0
+
+      - name: What closing a redirected stdin sends, under the service
+        if: inputs.test == 'stdin-probe'
+        run: |
+          $git = 'C:\Program Files\Git\cmd\git.exe'
+          $d = 'E:\runner-tools\tmp\stdin-probe'
+          & $git init -q --bare $d
+          "planted console input encoding: $([Console]::InputEncoding.WebName), preamble bytes $([Console]::InputEncoding.GetPreamble().Length)"
+          foreach ($a in "--git-dir `"$d`" mktree", "--git-dir `"$d`" hash-object -t tree -w --stdin") {
+            $i = New-Object Diagnostics.ProcessStartInfo
+            $i.FileName = $git; $i.Arguments = $a; $i.UseShellExecute = $false
+            $i.RedirectStandardInput = $true; $i.RedirectStandardOutput = $true; $i.RedirectStandardError = $true
+            $p = [Diagnostics.Process]::Start($i)
+            $p.StandardInput.Close()
+            $e = $p.StandardError.ReadToEndAsync(); $o = $p.StandardOutput.ReadToEnd(); $p.WaitForExit()
+            "planted [$($a.Split(' ')[2])] exit $($p.ExitCode) out [$($o.Trim())] err [$(($e.Result -replace '\s+',' ').Trim())]"
+          }
+          Set-Location E:\runner-tools\tmp
+          cmd /c "rmdir /s /q `"$d`""
           exit 0
 
       - name: Check what the guard left, and remove this test's probes
