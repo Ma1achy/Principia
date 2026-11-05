@@ -262,8 +262,13 @@ pub struct Session {
     /// The size of the app's part of the window, in points, as of the last frame: what the two builds' figures are laid
     /// out in, so a display too small for the window a run asked for shows in the fields.
     pub app_size: Option<egui::Vec2>,
+    /// Whether the window moved, or its monitor's rate changed, during the current or last run: the rate its capped
+    /// marks read may not be the display it ran on. `None` where no run was watched: no run yet, or the browser.
+    pub display_changed: Option<bool>,
     /// The run a button or a flag asked for, starting at the next step.
     pending: Option<Run>,
+    /// The window's outer rect as the run started.
+    outer_at_start: Option<egui::Rect>,
     frames: Vec<Frame>,
     marks: Arc<Marks>,
 }
@@ -276,6 +281,8 @@ impl Session {
             env,
             phase: Phase::Ready,
             app_size: None,
+            display_changed: None,
+            outer_at_start: None,
             frames: Vec::new(),
             marks: Arc::new(Marks {
                 origin: Instant::now(),
@@ -363,6 +370,34 @@ impl Session {
         step
     }
 
+    /// Keeps the rate on the window's own monitor, the frame's `step` having been taken. The rate is the monitor's the
+    /// window is on, not the primary's, so it is read through `read`, but never between a run's start and its end: the
+    /// read is work, and those are the frames the run times. So: on every frame before a run, for the panel; on the
+    /// frame a run starts, the rate that run reads against; and on the frame it ends, where a different rate flags the
+    /// run. A run's rate stands until the next. In between, `outer`, which egui has already, flags any move of the window
+    /// at no cost, so a window moved and moved back is seen too. A flag, not a refusal: the figures stay, marked.
+    pub fn watch_display(
+        &mut self,
+        step: Step,
+        outer: Option<egui::Rect>,
+        read: &dyn Fn() -> Option<f64>,
+    ) {
+        if step.started {
+            self.env.refresh_hz = read();
+            self.outer_at_start = outer;
+            self.display_changed = Some(false);
+        } else if step.finished {
+            if read() != self.env.refresh_hz {
+                self.display_changed = Some(true);
+            }
+        } else if self.phase == Phase::Ready {
+            self.env.refresh_hz = read();
+        }
+        if (self.running() || step.finished) && outer != self.outer_at_start {
+            self.display_changed = Some(true);
+        }
+    }
+
     /// The figures of the last run, if it ended with any.
     fn stats(&self) -> Option<WindowStats> {
         match self.phase {
@@ -395,6 +430,7 @@ impl Session {
             "layout": env.layout,
             "fallback_reason": env.fallback_reason,
             "refresh_hz": env.refresh_hz,
+            "display_changed": self.display_changed,
             "frame_delay_ms": env.frame_delay_ms,
             "app_width": self.app_size.map(|s| s.x),
             "app_height": self.app_size.map(|s| s.y),
@@ -448,6 +484,7 @@ impl Session {
                 env.refresh_hz
                     .map_or("–".to_owned(), |hz| format!("{hz:.1} Hz")),
             ),
+            ("display changed", yes_no(self.display_changed)),
             ("frame delay", format!("{:.0} ms", env.frame_delay_ms)),
             (
                 "app size",
@@ -570,7 +607,12 @@ pub struct Measured<S: EngineSide> {
     sink: Box<dyn FnMut(String)>,
     /// Whether the report has been sent since the panel opened.
     reported: bool,
+    /// Reads the rate of the window's monitor, where there is one.
+    rate: Option<RateRead>,
 }
+
+/// How a window's frame reads its monitor's refresh rate, in Hz.
+pub type RateRead = Box<dyn Fn(&eframe::Frame) -> Option<f64>>;
 
 impl<S: EngineSide> Measured<S> {
     /// `app` under `session`, its reports told to `sink`; with a session, the panel joins both keyboard trees.
@@ -590,7 +632,14 @@ impl<S: EngineSide> Measured<S> {
             from: None,
             sink,
             reported: false,
+            rate: None,
         }
+    }
+
+    /// This, with `rate` reading the monitor the window is on ([`Session::watch_display`]).
+    pub fn reading_rate(mut self, rate: RateRead) -> Self {
+        self.rate = Some(rate);
+        self
     }
 
     /// The app's input hook, the frame's start.
@@ -601,8 +650,13 @@ impl<S: EngineSide> Measured<S> {
         self.app.raw_input_hook(ctx, raw);
     }
 
-    /// One frame on the root `ui`.
+    /// One frame on the root `ui`, with no display to watch.
     pub fn ui(&mut self, ui: &mut egui::Ui) {
+        self.ui_watching(ui, None);
+    }
+
+    /// One frame on the root `ui`, reading the window's monitor through `read`.
+    fn ui_watching(&mut self, ui: &mut egui::Ui, read: Option<&dyn Fn() -> Option<f64>>) {
         if self.session.is_none() {
             self.app.ui(ui);
             return;
@@ -613,6 +667,9 @@ impl<S: EngineSide> Measured<S> {
         let session = self.session.as_mut().expect("checked above");
         session.app_size = Some(app_rect.size());
         let step = session.step(session.now_ms());
+        if let Some(read) = read {
+            session.watch_display(step, ctx.input(|i| i.viewport().outer_rect), read);
+        }
         if session.running() {
             ctx.request_repaint();
         }
@@ -666,8 +723,14 @@ impl<S: EngineSide> Measured<S> {
 }
 
 impl<S: EngineSide + 'static> eframe::App for Measured<S> {
-    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
-        Measured::ui(self, ui);
+    fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame) {
+        match self.rate.take() {
+            Some(rate) => {
+                self.ui_watching(ui, Some(&|| rate(frame)));
+                self.rate = Some(rate);
+            }
+            None => Measured::ui(self, ui),
+        }
     }
 
     fn raw_input_hook(&mut self, ctx: &egui::Context, raw_input: &mut egui::RawInput) {

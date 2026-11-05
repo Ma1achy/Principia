@@ -279,7 +279,7 @@ fn measure_begin_frame_spends_the_delay() {
 }
 
 /// The fields every report and the panel carry, in every phase.
-const REPORT_KEYS: [&str; 21] = [
+const REPORT_KEYS: [&str; 22] = [
     "status",
     "run",
     "build",
@@ -289,6 +289,7 @@ const REPORT_KEYS: [&str; 21] = [
     "layout",
     "fallback_reason",
     "refresh_hz",
+    "display_changed",
     "frame_delay_ms",
     "app_width",
     "app_height",
@@ -302,7 +303,7 @@ const REPORT_KEYS: [&str; 21] = [
     "acquire_mean_ms",
     "work_less_wait_p95_ms",
 ];
-const ROW_LABELS: [&str; 17] = [
+const ROW_LABELS: [&str; 18] = [
     "status",
     "build",
     "crossOriginIsolated",
@@ -311,6 +312,7 @@ const ROW_LABELS: [&str; 17] = [
     "layout",
     "fallback reason",
     "refresh rate",
+    "display changed",
     "frame delay",
     "app size",
     "frames",

@@ -44,6 +44,7 @@ mod tests {
     mod f3_fills_window_mock;
     mod f3_toggle_mock;
     mod frame_window_stats;
+    mod measure_display;
     mod measure_panel;
     mod mock_axis_labels;
     mod mock_compass;

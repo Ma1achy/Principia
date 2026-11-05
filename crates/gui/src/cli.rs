@@ -4,8 +4,8 @@
 //! runner spawns. Both run on the mock: without the `mock` feature there is no engine side with a figure yet, the real
 //! engine's frame loop and canvas being TASK-M8-05's, so both say so and fail. Both read `PRIN_MOCK_INVALID`, the mock's
 //! invalid-pixel test hook's launch switch (R-467 D8), and refuse a malformed value, naming it. `PRIN_MEASURE=1` opens the
-//! window with the v1 web skeleton's measurement panel beside the figure (TASK-M8-86, `crate::measure`), on an event loop
-//! of its own, whose primary monitor gives the refresh rate; its run's report is printed to stdout.
+//! window with the v1 web skeleton's measurement panel beside the figure (TASK-M8-86, `crate::measure`), which reads the
+//! refresh rate of the monitor the window is on; its run's report is printed to stdout.
 
 /// What the binary says without the `mock` feature.
 pub const NO_ENGINE: &str =
@@ -180,34 +180,20 @@ pub mod mock {
     #[cfg(not(test))]
     #[cfg_attr(test, mutants::skip)]
     mod measured {
-        use std::cell::Cell;
-        use std::rc::Rc;
-
-        use winit::application::ApplicationHandler;
-        use winit::event::{DeviceEvent, DeviceId, StartCause, WindowEvent};
-        use winit::event_loop::{ActiveEventLoop, EventLoop};
-        use winit::window::WindowId;
-
         use super::{measure, options, App, MockCanvas, MockSide, Store, MEASURED_WINDOW_SIZE};
         use crate::measure::{Environment, Measured, Session};
 
-        /// The window with the measurement panel, on an event loop of this function's, for its primary monitor's rate as
-        /// winit reports it, which the app's work does not change.
+        /// The window with the measurement panel.
         pub(super) fn measured_window(
             title: &str,
             canvas: &MockCanvas,
             side: MockSide,
         ) -> Result<(), String> {
-            let event_loop = EventLoop::<eframe::UserEvent>::with_user_event()
-                .build()
-                .map_err(|e| format!("gui: {e}"))?;
             let var = |name: &str| std::env::var(name).ok();
             let (delay, run) = (var(measure::DELAY_VAR), var(measure::RUN_VAR));
             // A malformed flag is refused before the window opens.
-            Environment::native(Some("1"), delay.as_deref(), run.as_deref(), None)?;
-            let refresh_hz = Rc::new(Cell::new(None));
-            let read = refresh_hz.clone();
-            let application = eframe::create_native(
+            let env = Environment::native(Some("1"), delay.as_deref(), run.as_deref(), None)?;
+            eframe::run_native(
                 title,
                 options(canvas, title, MEASURED_WINDOW_SIZE),
                 Box::new(move |cc| {
@@ -218,89 +204,24 @@ pub mod mock {
                         .ok_or("eframe opened no wgpu renderer")?
                         .target_format;
                     let app = App::with_settings(side, format, Store::platform());
-                    let env = Environment::native(
-                        Some("1"),
-                        delay.as_deref(),
-                        run.as_deref(),
-                        read.get(),
-                    )?;
-                    Ok(Box::new(Measured::new(
-                        app,
-                        env.map(Session::new),
-                        Box::new(|report| println!("{report}")),
-                    )))
+                    Ok(Box::new(
+                        Measured::new(
+                            app,
+                            env.map(Session::new),
+                            Box::new(|report| println!("{report}")),
+                        )
+                        .reading_rate(Box::new(monitor_rate)),
+                    ))
                 }),
-                &event_loop,
-            );
-            event_loop
-                .run_app(&mut Monitored {
-                    application,
-                    refresh_hz,
-                })
-                .map_err(|e| format!("gui: {e}"))
+            )
+            .map_err(|e| format!("gui: {e}"))
         }
 
-        /// eframe's application, the monitor's rate read first: winit gives monitors only to a running loop, and eframe
-        /// creates the app from one, so the rate is read at the loop's first event.
-        struct Monitored<'a> {
-            application: eframe::EframeWinitApplication<'a>,
-            refresh_hz: Rc<Cell<Option<f64>>>,
-        }
-
-        impl ApplicationHandler<eframe::UserEvent> for Monitored<'_> {
-            fn new_events(&mut self, event_loop: &ActiveEventLoop, cause: StartCause) {
-                if cause == StartCause::Init {
-                    self.refresh_hz.set(
-                        event_loop
-                            .primary_monitor()
-                            .and_then(|monitor| monitor.refresh_rate_millihertz())
-                            .map(|mhz| f64::from(mhz) / 1000.0),
-                    );
-                }
-                self.application.new_events(event_loop, cause);
-            }
-
-            fn resumed(&mut self, event_loop: &ActiveEventLoop) {
-                self.application.resumed(event_loop);
-            }
-
-            fn user_event(&mut self, event_loop: &ActiveEventLoop, event: eframe::UserEvent) {
-                self.application.user_event(event_loop, event);
-            }
-
-            fn window_event(
-                &mut self,
-                event_loop: &ActiveEventLoop,
-                window_id: WindowId,
-                event: WindowEvent,
-            ) {
-                self.application.window_event(event_loop, window_id, event);
-            }
-
-            fn device_event(
-                &mut self,
-                event_loop: &ActiveEventLoop,
-                device_id: DeviceId,
-                event: DeviceEvent,
-            ) {
-                self.application.device_event(event_loop, device_id, event);
-            }
-
-            fn about_to_wait(&mut self, event_loop: &ActiveEventLoop) {
-                self.application.about_to_wait(event_loop);
-            }
-
-            fn suspended(&mut self, event_loop: &ActiveEventLoop) {
-                self.application.suspended(event_loop);
-            }
-
-            fn exiting(&mut self, event_loop: &ActiveEventLoop) {
-                self.application.exiting(event_loop);
-            }
-
-            fn memory_warning(&mut self, event_loop: &ActiveEventLoop) {
-                self.application.memory_warning(event_loop);
-            }
+        /// The rate of the monitor the window is on, as winit reports it, which the app's work does not change.
+        fn monitor_rate(frame: &eframe::Frame) -> Option<f64> {
+            let monitor = frame.winit_window()?.current_monitor()?;
+            let millihertz = monitor.refresh_rate_millihertz()?;
+            Some(f64::from(millihertz) / 1000.0)
         }
     }
 }

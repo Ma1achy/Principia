@@ -44,8 +44,3 @@ web-sys = { version = "0.3", optional = true, features = [
   "Window",
   "WorkerGlobalScope",
 ] }
-
-# The monitor's refresh rate the measurement panel reads natively, as winit reports it (TASK-M8-86): the event loop
-# eframe's `create_native` runs on, at eframe's winit version.
-[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-winit = { version = "0.30", default-features = false, features = ["rwh_06"] }
