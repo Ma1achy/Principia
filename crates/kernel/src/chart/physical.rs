@@ -779,10 +779,10 @@ impl<A: Coordinate, S: Selection> MixedMassRatio<A, S, f64> {
     }
 
     /// Whether the link realises the ratio `q` at the held `m_c`: `q` positive and finite, and the link's inverse then
-    /// forward returning the masses [`ratio_masses`] writes, positive, summing to 1, with ratio `q` and the third body's
-    /// mass at the held `m_c`, each to within `ε_μ`, relative. The last test is not implied by the others: where the
-    /// logit that sets `m_c` saturates before the ratio's does, the round trip keeps the ratio and the sum and moves
-    /// `m_c`, a system off the slice.
+    /// forward returning each of the masses [`ratio_masses`] writes, and the ratio `q`, to within `ε_μ`, relative
+    /// (chart_reference §2.1). Each mass is read: where the logit that sets `m_c` saturates before the ratio's does, the
+    /// round trip keeps the ratio and moves `m_c`, and where `m_c` is near 1 it can keep `m_c` and the ratio and move the
+    /// two small masses together.
     pub fn realised(&self, q: f64, p: &LinkParams<f64>) -> bool {
         self.realised_within(q, <f64 as ChartConstants>::EPS_MU, p)
     }
@@ -795,14 +795,8 @@ impl<A: Coordinate, S: Selection> MixedMassRatio<A, S, f64> {
         let m = ratio_masses(self.bodies, self.held, q);
         let link = <S::MassLink as Link<2, 3>>::inverse_at(m, p);
         let back = <S::MassLink as Link<2, 3>>::forward_at(link, p);
-        let positive = back.iter().all(|&x| x > 0.0);
-        let sum = back[0] + back[1] + back[2];
-        let [a, b] = self.bodies;
-        let m_c = back[(3 - a - b) as usize];
-        positive
-            && (sum - 1.0).abs() <= eps
-            && (ratio_of(self.bodies, back) - q).abs() <= eps * q
-            && (m_c - self.held).abs() <= eps * self.held
+        let each = back.iter().zip(m).all(|(&x, m)| (x - m).abs() <= eps * m);
+        each && (ratio_of(self.bodies, back) - q).abs() <= eps * q
     }
 
     /// The end of the realised range from the realised ratio `from` toward the asked end `toward`, the range's upper

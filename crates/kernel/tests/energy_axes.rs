@@ -2422,6 +2422,61 @@ negative_control!(
     check_linear_held(Mapping::Warped)
 );
 
+/// The chart of Codex's two inputs on PR #387: `softmax_tanh` at `μ_max`, the mass controls `z`, bodies `(0, 1)`, over
+/// `asked`.
+fn ratio_slice(
+    z: [f64; 2],
+    asked: [f64; 2],
+    mapping: Mapping,
+    p: &LinkParams<f64>,
+) -> Option<MixedMassRatio<Alpha, Defaults, f64>> {
+    let frozen = [0.3, -0.5, 0.2, -0.1, 0.15, 0.05, z[0], z[1]];
+    MixedMassRatio::new(frozen, [0.2, 1.3], asked, [0, 1], mapping, p)
+}
+
+/// The held mass near 1 (chart_reference §2.1, "each to within `ε_μ`, relative"): `q = 1.12` at `μ_max = 10` keeps the
+/// held mass and the ratio and moves both swept masses by about 0.9%, so it is not realised, while a ratio the link does
+/// reach is. `realised` is the test applied.
+fn check_each_mass(
+    realised: &dyn Fn(&MixedMassRatio<Alpha, Defaults, f64>, f64, &LinkParams<f64>) -> bool,
+) {
+    let p = LinkParams {
+        mu_max: 10.0,
+        ..LinkParams::DEFAULT
+    };
+    let chart = ratio_slice([0.0, 3.0], [0.5, 2.0], Mapping::Linear, &p).expect("the chart");
+    assert!(
+        !realised(&chart, 1.12, &p),
+        "q = 1.12 is realised though its swept masses miss by about 0.9%"
+    );
+    assert!(
+        realised(&chart, 1.0, &p),
+        "the centre's q = 1 is not realised"
+    );
+}
+
+#[test]
+fn energy_axes_mass_ratio_each_mass() {
+    check_each_mass(&|chart, q, p| chart.realised(q, p));
+}
+
+negative_control!(
+    energy_axes_mass_ratio_each_mass,
+    "the held mass, the sum and the ratio alone pass q = 1.12, whose swept masses are off by 0.9%",
+    expected = "is realised though",
+    check_each_mass(&|chart, q, p| {
+        let eps = 1.0e-6;
+        let m = ratio_masses(chart.bodies, chart.held, q);
+        let back = <SoftmaxTanh as Link<2, 3>>::forward_at(
+            <SoftmaxTanh as Link<2, 3>>::inverse_at(m, p),
+            p,
+        );
+        (back[2] - chart.held).abs() <= eps * chart.held
+            && (back[1] / back[0] - q).abs() <= eps * q
+            && (back.iter().sum::<f64>() - 1.0).abs() <= eps
+    })
+);
+
 /// How a mass-ratio arm forms its mass controls: the chart's own (its link's inverse at the ratio's masses), or the
 /// control's formula written for softmax_tanh at `μ_max = 5` alone, `m_i/m₀ = exp(5·tanh z_i)` solved for `z_i`.
 #[derive(Clone, Copy, PartialEq)]
