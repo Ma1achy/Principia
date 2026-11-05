@@ -43,14 +43,14 @@ Of these: 236 calibration, 181 definition, 1672 obligation. Retired (kept for th
 
 ## Sections
 
-1715 sections in 61 files: 1365 yield at least one requirement; 350 yield none and are listed below with the reason.
+1716 sections in 61 files: 1365 yield at least one requirement; 351 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | gap (RQ-378) | 1 |
 | gap (RQ-391) | 2 |
 | gap (RQ-577) | 2 |
 | gap (RQ-618) | 1 |
-| informative only | 242 |
+| informative only | 243 |
 | out of v1 (R-125) | 1 |
 | out of v1 (R-420) | 1 |
 | parent heading (obligations are in its subsections) | 55 |
@@ -211,6 +211,7 @@ Of these: 236 calibration, 181 definition, 1672 obligation. Retired (kept for th
 | R-684 — CI's two code tiers: full CI on every merge-candidate head, the one carrying the `merge-ready` label, and on every push to `main`; a quick tier on every other pull-request head (fmt, clippy, build, and the tests of the changed crates and their reverse dependencies), each full-only required check posted pending, never skipped-as-success; R-677's classifier first; done as R-683's step (2), and R-656's bounded target cache, without sccache, as its step (4) *(amends R-110, R-177 and R-235; rules R-676's tiers and R-683's steps (2) and (4))* | informative only | the owner's message of 3 Nov 2026, part (A): full CI on the merge-candidate head and main, a quick tier elsewhere, full-only checks pending; part (B) recorded under R-683; ci; changes no requirement here, built with R-683's steps (2) and (4) |
 | R-700 — RQ-631's option (a) is confirmed: it is R-655's ruling, already built in the kernel, and the follow-up the owner names is TASK-M8-56's quadtree *(closes RQ-631)* | informative only | the owner's confirmation of R-655; a contradiction recorded; changes no requirement |
 | R-706 — The owner's deferrals of 4 Nov: each entry stays open with its target, and RQ-654's place on the list changes nothing, R-669 having closed it, with BZ-1C's work in M9; RQ-647 is moot under R-669 | informative only | the owner's deferrals; each entry stays open with its target; records RQ-654's and RQ-647's state; changes no requirement |
+| R-711 — One measurement-only self-hosted runner, `malachys-pc-rtx2080s`, on the owner's PC, with no pull-request trigger on any self-hosted job; DX12 may run on it as a measurement; PC benchmarks stay apart from the Mac's performance gates; a recorded run on it can serve Paper 2's non-Metal parity evidence; its jobs have their own workflow; the signing rules *(closes RQ-695; amends R-174, R-186 and R-656)* | informative only | the owner's message of 5 Nov 2026: one measurement-only self-hosted runner and its rules; ci; changes no requirement |
 
 ### `docs/contracts/principia_canonical_spec.md`
 

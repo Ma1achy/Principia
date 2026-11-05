@@ -662,25 +662,6 @@ change: no timer was touched (R-649). Nothing is chosen.*
 - **Waits:** nothing.
 - **4 Nov 2026 (R-707):** ruled: option (a), "you fix (test-only)". The entry stays open until that work is done; it is in hand on another branch.
 
-## RQ-695: Whether a driver recorded "unverified, not supported" can serve REQ-VAL-099's parity gate for Paper 2 *(silence: R-690, R-58, R-110; REQ-VAL-099; context: the physics review of PR #407, F6, RQ-690's "Waits")*
-
-*Queued 4 Nov 2026 by the fix round of PR #407. For the owner: it bears on Paper 2's numbers, not on the build. Nothing is
-chosen.*
-
-- **File, section:**
-  - `decisions.md` § R-690, the owner's words: "a driver that fails is recorded unverified, not supported".
-  - `plan/requirements.yaml`, REQ-VAL-099: "The parity gate must be run on a non-Metal backend (Vulkan or D3D12) before any
-    Paper-2 numbers are produced; it gates Paper 2, not the build."
-  - `decisions.md` § R-110: "a real non-Metal GPU gates Paper 2 (R-58)".
-- **The gap:** R-690 records a driver as not supported and blocks nothing. REQ-VAL-099 and R-110 ask for a non-Metal GPU and say
-  nothing of a driver with that record. The RTX is the only such GPU in the record, and it has no standing yet: TASK-M4-27 and
-  TASK-M4-28 haven't run.
-- **The question:** if a non-Metal driver is recorded unverified, not supported, can a parity run on it serve the gate?
-- **Options seen:** (a) no: the gate needs a non-Metal driver with no such record; (b) yes, with the standing stated beside Paper
-  2's numbers; (c) yes, only for results whose branch inputs the recorded failure doesn't reach; (d) another, stated by the owner.
-- **Applied meanwhile:** nothing.
-- **Waits:** nothing in the build. It bears on TASK-M8-41 (REQ-VAL-099) and on Paper 2.
-
 ## RQ-698: `.claude/commands/*.md` joins `plan/tools/rulings.py`'s scanned files once the ruling those commands cite is on `main` *(a follow-up of PR #409, the rulings commands' tooling; code review 5771543937)*
 
 *Filed 4 Nov 2026 by PR #409's fix round, so the follow-up outlasts the PR. Nothing here is for the owner: a mechanical step, decided per R-369, which waits only on a merge.*
