@@ -400,17 +400,13 @@ mutant = "crates/kernel/src/chart/physical.rs:365:31: replace & with | in MixedE
 justification = "u_ref is read only through the rule's weight on a linear E (AxisE::rule); the K, KE, L_z and virial rules ignore it and a warped E's weight is 0, so computing it for more axes changes no K*"
 
 [[equivalent]]
-mutant = "crates/kernel/src/chart/physical.rs:792:28: replace && with || in MixedMassRatio<A, S, f64>::realised_within"
-justification = "a q the guard then lets through, finite and <= 0, fails the ratio's test, |ratio - q| <= eps*q being false for q <= 0; q = +inf also gets through, and fails positive, ratio_masses giving m_b = inf*0 = NaN; so the guard only skips the round trip"
+mutant = "crates/kernel/src/chart/physical.rs:794:28: replace && with || in MixedMassRatio<A, S, f64>::realised_within"
+justification = "a q the guard then lets through, finite and <= 0, fails the ratio's test, |ratio - q| <= eps*q being false for q <= 0; q = +inf also gets through, and fails each mass's test, ratio_masses giving m_b = inf*0 = NaN; so the guard only skips the round trip"
 
 [[equivalent]]
-mutant = "crates/kernel/src/chart/physical.rs:792:33: replace > with >= in MixedMassRatio<A, S, f64>::realised_within"
+mutant = "crates/kernel/src/chart/physical.rs:794:33: replace > with >= in MixedMassRatio<A, S, f64>::realised_within"
 justification = "q = 0 then reaches the ratio's test, |ratio - 0| <= eps*0, which a round trip of positive masses fails, as the guard does"
 
 [[equivalent]]
-mutant = "crates/kernel/src/chart/physical.rs:798:47: replace > with >= in MixedMassRatio<A, S, f64>::realised_within"
-justification = "no round-trip mass is exactly 0 from finite inputs: both mass links keep every forward mass inside the interior (stick_breaking's sigma terms plus eps_mu*tanh, softmax_tanh bounded by mu_max); and a 0 m_a or m_b would make the ratio 0 or infinite and fail its eps test, and a 0 m_c fails the held mass's test, |0 - held| = held > eps*held"
-
-[[equivalent]]
-mutant = "crates/kernel/src/chart/physical.rs:819:29: replace > with >= in MixedMassRatio<A, S, f64>::edge"
-justification = "toward = from never reaches the test: new's only from is the centre's ratio, realised to within eps_mu/2, so edge returns at its first test for toward = from"
+mutant = "crates/kernel/src/chart/physical.rs:828:29: replace > with >= in MixedMassRatio<A, S, f64>::edge"
+justification = "toward = from never reaches the test: new's from is the centre's ratio or the seed, each realised to within eps_mu/2, so edge returns at its first test for toward = from"
