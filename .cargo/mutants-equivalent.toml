@@ -411,3 +411,14 @@ justification = "toward = from never reaches the test: new's from is the centre'
 mutant = "crates/kernel/src/chart/physical.rs:871:27: replace < with <= in MixedMassRatio<A, S, f64>::seed"
 justification = "the arms differ only where the two misses tie. The miss falls only non-strictly and has exact flats, but both probes on one flat [A, B] of ln q need B - A >= A - R, R the interval's near end, and (k - mu)/k, at most about 1/2 for softmax_tanh with m_c/(1 - m_c) = e^-k and a realised part needing k < 2*mu, never reaches that (measured at most 0.69 over exact flats, both links, mu_max 0.25 to 30). So the probes of a tie have the interval between them, which either arm keeps; both infinite is an end of the doubles the link does not reach, where neither arm finds a ratio"
 
+[[equivalent]]
+mutant = "crates/kernel/src/chart/physical.rs:859:21: replace < with <= in MixedMassRatio<A, S, f64>::seed"
+justification = "the bound's two tests fall together: third is at least a third of the bracket, and the gap above lo is at most the gap below hi, so a third too small to move lo is too small to move hi, and with hi's coarser binade the rounded third still moves both (subnormal gaps are equal on both sides, and a bracket across 0 holds lo's own size). So near == lo and far == hi happen on one step, and NaN or inverted brackets fail both tests in either form"
+
+[[equivalent]]
+mutant = "crates/kernel/src/chart/physical.rs:859:28: replace && with || in MixedMassRatio<A, S, f64>::seed"
+justification = "the bound's two tests fall together: third is at least a third of the bracket, and the gap above lo is at most the gap below hi, so a third too small to move lo is too small to move hi, and with hi's coarser binade the rounded third still moves both (subnormal gaps are equal on both sides, and a bracket across 0 holds lo's own size). So near == lo and far == hi happen on one step, and NaN or inverted brackets fail both tests in either form"
+
+[[equivalent]]
+mutant = "crates/kernel/src/chart/physical.rs:859:35: replace < with <= in MixedMassRatio<A, S, f64>::seed"
+justification = "the bound's two tests fall together: third is at least a third of the bracket, and the gap above lo is at most the gap below hi, so a third too small to move lo is too small to move hi, and with hi's coarser binade the rounded third still moves both (subnormal gaps are equal on both sides, and a bracket across 0 holds lo's own size). So near == lo and far == hi happen on one step, and NaN or inverted brackets fail both tests in either form"
