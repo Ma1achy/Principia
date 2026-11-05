@@ -1089,7 +1089,7 @@ fn mock_console_height_the_focus_leaves_a_menu_it_closes() {
     let path = app.keyboard.tree(app.view.mode).path_to(TILT_X);
     assert_eq!(focus(&app)[..path.len()], path[..], "in the menu");
     assert!(focus(&app).len() > path.len(), "on an entry");
-    let entry = focus(&app);
+    let entry = app.view.focus.path.clone();
     let top = app.keyboard.place_of(TILT_X).expect("drawn").rect.min.y - 4.0;
     top_at(&mut h, &mut app, top);
     assert_eq!(focus(&app), path);
