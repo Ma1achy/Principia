@@ -11,7 +11,7 @@ on:
         description: which test
         required: true
         type: choice
-        options: [green, proof, survivor, survivor-cancel, survivor-refuse, plant-runner, quota, cold, gpu-idle, log-diag, checkout, plant-git-hook, plant-git-config, plant-state, plant-check, stdin-probe, delete-workspace]
+        options: [green, proof, survivor, survivor-cancel, survivor-refuse, plant-runner, quota, cold, gpu-idle, log-diag, checkout, plant-git-hook, plant-git-config, plant-state, plant-check, stdin-probe, run-417, delete-workspace]
       what:
         description: for plant-state, what to plant
         required: false
@@ -220,6 +220,78 @@ jobs:
             default { "unknown: $env:WHAT"; exit 1 }
           }
           "planted $env:WHAT"
+          exit 0
+
+      - name: "g417: scratch checkout of main, first"
+        if: inputs.test == 'run-417'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+          clean: true
+          ref: main
+          path: g417
+
+      - name: "g417: run the script on the scratch checkout"
+        if: inputs.test == 'run-417'
+        run: |
+          $pin = '09b348f89d97e92520480c3a202281c190eee5ea'
+          $t = 'E:\runner-tools\tmp'
+          $s = "$t\g417.ps1"
+          [Net.ServicePointManager]::SecurityProtocol = 'Tls12'
+          (New-Object Net.WebClient).DownloadFile("https://raw.githubusercontent.com/Ma1achy/Principia/$pin/.github/scripts/git_guard.ps1", $s)
+          "g417: script $((Get-Item $s).Length) bytes, sha256 $((Get-FileHash $s -Algorithm SHA256).Hash)"
+          $scratch = "$env:GITHUB_WORKSPACE\g417"
+          function Run-It($label, $argv) {
+            $env:GITHUB_WORKSPACE = $scratch
+            $o = & powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $s @argv 2>&1
+            $code = $LASTEXITCODE
+            "g417: $label exit $code"
+            $o | ForEach-Object { "g417:   $_" }
+          }
+          Run-It 'check on the fresh checkout' @('check', $scratch)
+          Run-It 'guard, first' @()
+          "g417: HEAD now $((Get-Content -Raw "$scratch\.git\HEAD").Trim()), index $((Get-Item "$scratch\.git\index").Length) bytes"
+          Run-It 'guard, second' @()
+          exit 0
+
+      - name: "g417: the action on the kept scratch repo"
+        if: inputs.test == 'run-417'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+          clean: true
+          ref: main
+          path: g417
+
+      - name: "g417: after the action, then a planted hook, then clean up"
+        if: inputs.test == 'run-417'
+        run: |
+          $t = 'E:\runner-tools\tmp'
+          $s = "$t\g417.ps1"
+          $w = $env:GITHUB_WORKSPACE
+          $scratch = "$w\g417"
+          function Run-It($label, $argv) {
+            $env:GITHUB_WORKSPACE = $scratch
+            $o = & powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $s @argv 2>&1
+            $code = $LASTEXITCODE
+            "g417: $label exit $code"
+            $o | ForEach-Object { "g417:   $_" }
+          }
+          "g417: tree after the action, Cargo.toml there $(Test-Path "$scratch\Cargo.toml")"
+          Run-It 'check on the kept repo' @('check', $scratch)
+          Run-It 'guard, kept repo' @()
+          $log = "$t\g417.log"
+          [IO.File]::WriteAllText($log, '')
+          $env:WIN_REFUSAL_LOG = $log
+          [IO.File]::WriteAllText("$scratch\.git\hooks\post-checkout", "#!/bin/sh`n")
+          Run-It 'guard, planted hook' @()
+          "g417: left in scratch $(@(Get-ChildItem -LiteralPath $scratch -Force -ErrorAction SilentlyContinue).Count), log lines $(@(Get-Content $log).Count)"
+          "g417: real workspace kept: $(Test-Path "$w\.git")"
+          Set-Location $t
+          [IO.File]::Delete($s); [IO.File]::Delete($log)
+          if (Test-Path -LiteralPath $scratch) { [IO.Directory]::Delete($scratch) }
           exit 0
 
       - name: What closing a redirected stdin sends, under the service
