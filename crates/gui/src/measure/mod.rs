@@ -262,9 +262,9 @@ pub struct Session {
     /// The size of the app's part of the window, in points, as of the last frame: what the two builds' figures are laid
     /// out in, so a display too small for the window a run asked for shows in the fields.
     pub app_size: Option<egui::Vec2>,
-    /// Whether the window was moved, resized or minimised, or its monitor's rate changed, during the current or last run:
-    /// its figures may not be one window's on one display, and the rate its capped marks read may not be the display it
-    /// ran on. `None` where no run was watched: no run yet, or the browser.
+    /// Whether the window was moved, resized or minimised, or its monitor's rate changed, during the current or last
+    /// run: its figures may not be one window's on one display, and the rate its capped marks read may not be the
+    /// display it ran on. `None` where no run was watched: no run yet, or the browser.
     pub display_changed: Option<bool>,
     /// The run a button or a flag asked for, starting at the next step.
     pending: Option<Run>,
