@@ -2314,6 +2314,27 @@ fn check_guard_script(script: &str) {
         text.find(delete) < text.find("} catch {\n$planted ="),
         "git_guard: a failed write doesn't refuse"
     );
+    let detach = "$null = Invoke-Git ($detachHead -f $git[0].FullName, $commit)";
+    assert!(
+        has("$emptyTree = '--git-dir \"{0}\" mktree'")
+            && has("$emptyCommit = '-c user.name=guard -c user.email=guard@localhost --git-dir \"{0}\" commit-tree -m guard {1}'")
+            && has("$detachHead = '-c user.name=guard -c user.email=guard@localhost --git-dir \"{0}\" update-ref --no-deref HEAD {1}'")
+            && has(detach),
+        "git_guard: doesn't detach HEAD"
+    );
+    assert!(
+        text.find(delete) < text.find(detach)
+            && text.find(detach) < text.find("} catch {\n$planted ="),
+        "git_guard: detaches HEAD outside the try"
+    );
+    assert!(
+        has("$start.RedirectStandardInput = $true") && has("$run.StandardInput.Close()"),
+        "git_guard: leaves mktree waiting on its input"
+    );
+    assert!(
+        has("$env:GIT_AUTHOR_DATE = $fixedDate") && has("$env:GIT_COMMITTER_DATE = $fixedDate"),
+        "git_guard: makes a new commit each run"
+    );
     let fsck = "$null = Invoke-Git ($objects -f $git.FullName)";
     assert!(has(fsck), "git_guard: doesn't check the objects");
     assert!(
@@ -2375,7 +2396,7 @@ fn git_guard_script_holds_the_owners_order() {
 
 /// The script's lines that empty the index.
 #[cfg(feature = "controls")]
-const EMPTY_INDEX: &str = "    if ($git.Count -and -not $planted.Count -and -not $check) {\n        $null = Invoke-Git ($emptyIndex -f $git[0].FullName)\n    }\n";
+const EMPTY_INDEX: &str = "    if ($git.Count -and -not $planted.Count -and -not $check) {\n        $null = Invoke-Git ($emptyIndex -f $git[0].FullName)\n        $env:GIT_AUTHOR_DATE = $fixedDate\n        $env:GIT_COMMITTER_DATE = $fixedDate\n        $tree = (Invoke-Git ($emptyTree -f $git[0].FullName)).Trim()\n        $commit = (Invoke-Git ($emptyCommit -f $git[0].FullName, $tree)).Trim()\n        $null = Invoke-Git ($detachHead -f $git[0].FullName, $commit)\n    }\n";
 
 /// The script with `from` replaced by `to`.
 #[cfg(feature = "controls")]
@@ -2696,6 +2717,62 @@ mod index_line_gone {
         "a line that doesn't empty it",
         expected = "git_guard: doesn't empty the index",
         check_guard_script(&guard_edited(" read-tree --empty'", " read-tree HEAD'"))
+    );
+}
+
+mod head_left {
+    use super::*;
+    negative_control!(
+        git_guard_script_holds_the_owners_order,
+        "HEAD left where it was",
+        expected = "git_guard: doesn't detach HEAD",
+        check_guard_script(&guard_edited(
+            "        $null = Invoke-Git ($detachHead -f $git[0].FullName, $commit)\n",
+            ""
+        ))
+    );
+}
+
+mod head_detached_outside {
+    use super::*;
+    negative_control!(
+        git_guard_script_holds_the_owners_order,
+        "HEAD detached past the try",
+        expected = "git_guard: detaches HEAD outside the try",
+        check_guard_script(
+            &guard_edited(
+                "        $null = Invoke-Git ($detachHead -f $git[0].FullName, $commit)\n",
+                ""
+            )
+            .replacen(
+                "if (-not $planted.Count) {\n",
+                "$null = Invoke-Git ($detachHead -f $git[0].FullName, $commit)\nif (-not $planted.Count) {\n",
+                1
+            )
+        )
+    );
+}
+
+mod input_left_open {
+    use super::*;
+    negative_control!(
+        git_guard_script_holds_the_owners_order,
+        "mktree's input never closed",
+        expected = "git_guard: leaves mktree waiting on its input",
+        check_guard_script(&guard_edited("    $run.StandardInput.Close()\n", ""))
+    );
+}
+
+mod date_left_to_the_clock {
+    use super::*;
+    negative_control!(
+        git_guard_script_holds_the_owners_order,
+        "a commit of each run's own date",
+        expected = "git_guard: makes a new commit each run",
+        check_guard_script(&guard_edited(
+            "        $env:GIT_COMMITTER_DATE = $fixedDate\n",
+            ""
+        ))
     );
 }
 
@@ -3039,22 +3116,46 @@ fn scratch(name: &str) -> PathBuf {
     dir
 }
 
-/// git on the script's `$name` line, with `path` for its `{0}`.
-fn script_git(script: &str, name: &str, path: &Path, cwd: &Path) -> std::process::Output {
+/// The quoted value of the script's `$name` line.
+fn script_value<'a>(script: &'a str, name: &str) -> &'a str {
     let start = format!("${name} = '");
-    let template = script
+    script
         .lines()
         .find_map(|l| l.trim().strip_prefix(start.as_str()))
         .and_then(|l| l.strip_suffix('\''))
-        .expect("git_guard: no such line");
-    let args = template.split_whitespace().map(|word| {
+        .expect("git_guard: no such line")
+}
+
+/// git on the script's `$name` line, with `path` for its `{0}` and `second` for any `{1}`, at the script's fixed date.
+fn script_git_on(
+    script: &str,
+    name: &str,
+    path: &Path,
+    second: &str,
+    cwd: &Path,
+) -> std::process::Output {
+    let args = script_value(script, name).split_whitespace().map(|word| {
         if word == "\"{0}\"" {
             path.as_os_str().to_owned()
+        } else if word == "{1}" {
+            second.into()
         } else {
             word.into()
         }
     });
-    git(cwd).args(args).timed_output().expect("git ran")
+    let date = script_value(script, "fixedDate");
+    git(cwd)
+        .args(args)
+        .env("GIT_AUTHOR_DATE", date)
+        .env("GIT_COMMITTER_DATE", date)
+        .stdin(std::process::Stdio::null())
+        .timed_output()
+        .expect("git ran")
+}
+
+/// git on the script's `$name` line, with `path` for its `{0}`.
+fn script_git(script: &str, name: &str, path: &Path, cwd: &Path) -> std::process::Output {
+    script_git_on(script, name, path, "", cwd)
 }
 
 /// The keys of `file` by the script's own `git config` line, or nothing if git refuses it.
@@ -3566,8 +3667,28 @@ fn guard_writes_the_index(script: &str, dir: &Path) {
     assert!(out.status.success(), "the empty index: {out:?}");
 }
 
-/// One kept run and then a second: `.git` stays, so the clone is paid only when something was planted, and the checkout is
-/// the commit's. `wipe` is what the guard did before: no index at all.
+/// The script's own lines that detach HEAD at an empty tree; the commit.
+fn guard_detaches_head(script: &str, dir: &Path) -> String {
+    let (git_dir, cwd) = (dir.join(".git"), dir.parent().expect("a parent"));
+    let line = |name: &str, second: &str| {
+        let out = script_git_on(script, name, &git_dir, second, cwd);
+        assert!(out.status.success(), "{name}: {out:?}");
+        String::from_utf8_lossy(&out.stdout).trim().to_owned()
+    };
+    let tree = line("emptyTree", "");
+    let commit = line("emptyCommit", &tree);
+    line("detachHead", &commit);
+    commit
+}
+
+/// All the guard does to a repo that has passed.
+fn guard_passes(script: &str, dir: &Path) -> String {
+    guard_writes_the_index(script, dir);
+    guard_detaches_head(script, dir)
+}
+
+/// One kept run and then a second: `.git` stays, so the clone is paid only when something was planted, the checkout is the
+/// commit's, and the guard's lines change no config. `wipe` is what the guard did before: no index at all.
 fn check_kept_runs(script: &str, wipe: bool) {
     let base = scratch("kept");
     let (origin, dir) = (base.join("origin"), base.join("kept"));
@@ -3579,7 +3700,13 @@ fn check_kept_runs(script: &str, wipe: bool) {
         if wipe {
             std::fs::remove_file(dir.join(".git/index")).expect("the index");
         } else {
-            guard_writes_the_index(script, &dir);
+            let before = git_pairs(script, &dir.join(".git/config"));
+            guard_passes(script, &dir);
+            assert_eq!(
+                git_pairs(script, &dir.join(".git/config")),
+                before,
+                "git_guard: the guard's own lines changed the config"
+            );
         }
         action_prepare(&dir);
         commit(&origin, run);
@@ -3603,6 +3730,50 @@ fn git_guard_keeps_the_repo_across_runs() {
     check_kept_runs(&read(GIT_GUARD), false);
 }
 
+mod guard_writes_config {
+    use super::*;
+    negative_control!(
+        git_guard_keeps_the_repo_across_runs,
+        "a line that leaves a key",
+        expected = "git_guard: the guard's own lines changed the config",
+        check_kept_runs(
+            &read(GIT_GUARD).replace(
+                "update-ref --no-deref HEAD {1}'",
+                "config --local user.signingkey {1}'"
+            ),
+            false
+        )
+    );
+}
+
+/// Two runs of the guard, by `script` and then `next`, write one commit, so kept runs don't pile up objects.
+fn check_one_commit(script: &str, next: &str) {
+    let base = scratch("one");
+    let (origin, dir) = (base.join("origin"), base.join("kept"));
+    origin_repo(&origin);
+    kept_repo(&origin, &dir);
+    assert_eq!(
+        guard_passes(script, &dir),
+        guard_passes(next, &dir),
+        "git_guard: a run made a commit of its own"
+    );
+}
+
+#[test]
+fn git_guard_writes_one_commit() {
+    check_one_commit(&read(GIT_GUARD), &read(GIT_GUARD));
+}
+
+negative_control!(
+    git_guard_writes_one_commit,
+    "a date that moves",
+    expected = "git_guard: a run made a commit of its own",
+    check_one_commit(
+        &read(GIT_GUARD),
+        &read(GIT_GUARD).replace("$fixedDate = '1000000000", "$fixedDate = '1000000001")
+    )
+);
+
 negative_control!(
     git_guard_keeps_the_repo_across_runs,
     "no index at all, which the action answers by recreating the repo",
@@ -3610,8 +3781,74 @@ negative_control!(
     check_kept_runs(&read(GIT_GUARD), true)
 );
 
-/// A detached HEAD at an empty tree, the form the review planted: the guard's HEAD check allows the form, so what comes after
-/// it has to put the tree right.
+/// A commit that differs only by a `.gitattributes`, planted at `refs/heads/main`, with every config pair clean and HEAD in a
+/// form the guard allows. The action's `reset` runs before its fetch, so without the detached HEAD it writes the true blobs
+/// through those attributes, and its `checkout --force` leaves a path whose blob is unchanged. `git status` shows nothing, so
+/// the test compares bytes.
+fn check_planted_branch(script: &str, detach: bool) {
+    let base = scratch("branch");
+    let (origin, dir) = (base.join("origin"), base.join("kept"));
+    origin_repo(&origin);
+    kept_repo(&origin, &dir);
+    let attributes = dir.join(".gitattributes");
+    std::fs::write(&attributes, "* text eol=crlf\n").expect("a file");
+    git_ok(&dir, &["add", ".gitattributes"]);
+    let tree = git_ok(&dir, &["write-tree"]);
+    let planted = git_ok(
+        &dir,
+        &[
+            "-c",
+            "user.name=x",
+            "-c",
+            "user.email=x@x",
+            "commit-tree",
+            "-m",
+            "x",
+            &tree,
+        ],
+    );
+    git_ok(&dir, &["rm", "-q", "--cached", ".gitattributes"]);
+    std::fs::remove_file(&attributes).expect("a file gone");
+    git_ok(&dir, &["update-ref", "refs/heads/main", &planted]);
+    git_ok(&dir, &["reset", "-q", "--mixed"]);
+    if detach {
+        guard_passes(script, &dir);
+    } else {
+        guard_writes_the_index(script, &dir);
+    }
+    action_prepare(&dir);
+    commit(&origin, "next");
+    action_fetch(&origin, &dir);
+    let blob = git(&dir)
+        .args(["cat-file", "-p", "HEAD:.cargo/config.toml"])
+        .timed_output()
+        .expect("git ran");
+    assert!(
+        std::fs::read(dir.join(".cargo/config.toml")).expect("the file") == blob.stdout,
+        "git_guard: a planted branch changed a tracked file's bytes"
+    );
+    assert_eq!(git_ok(&dir, &["status", "--porcelain"]), "", "the status");
+    assert_eq!(
+        git_ok(&dir, &["rev-parse", "HEAD"]),
+        git_ok(&origin, &["rev-parse", "HEAD"]),
+        "the commit"
+    );
+}
+
+#[test]
+fn git_guard_a_planted_branch_changes_no_byte() {
+    check_planted_branch(&read(GIT_GUARD), true);
+}
+
+negative_control!(
+    git_guard_a_planted_branch_changes_no_byte,
+    "HEAD left at the planted branch",
+    expected = "git_guard: a planted branch changed a tracked file's bytes",
+    check_planted_branch(&read(GIT_GUARD), false)
+);
+
+/// A detached HEAD planted at an empty tree. The guard's HEAD check allows the form, so what the guard then does to HEAD has
+/// to leave the tree the commit's, as it does for a planted branch.
 fn check_planted_head(script: &str, empty_index: bool) {
     let base = scratch("head");
     let (origin, dir) = (base.join("origin"), base.join("kept"));
@@ -3633,7 +3870,7 @@ fn check_planted_head(script: &str, empty_index: bool) {
     );
     std::fs::write(dir.join(".git/HEAD"), format!("{empty}\n")).expect("HEAD");
     if empty_index {
-        guard_writes_the_index(script, &dir);
+        guard_passes(script, &dir);
     }
     action_prepare(&dir);
     commit(&origin, "next");
@@ -3688,7 +3925,7 @@ fn check_tampered_file(empty_index: bool) {
     git_ok(&dir, &["config", "core.trustctime", "false"]);
     assert_eq!(git_ok(&dir, &["status", "--porcelain"]), "", "the plant");
     if empty_index {
-        guard_writes_the_index(&read(GIT_GUARD), &dir);
+        guard_passes(&read(GIT_GUARD), &dir);
     }
     action_prepare(&dir);
     commit(&origin, "next");
@@ -3721,7 +3958,7 @@ fn check_gitlink(empty_index: bool) {
     git_ok(&nested, &["add", "config"]);
     commit(&nested, "planted");
     if empty_index {
-        guard_writes_the_index(&read(GIT_GUARD), &dir);
+        guard_passes(&read(GIT_GUARD), &dir);
     }
     action_prepare(&dir);
     commit(&origin, "next");
@@ -4185,6 +4422,18 @@ fn check_script_refuses(script: &Path) {
     assert!(
         kept.join(".git/index").exists() && git_ok(&kept, &["ls-files"]).is_empty(),
         "git_guard: the job left the index's entries"
+    );
+    assert!(
+        git_ok(&kept, &["ls-tree", "HEAD"]).is_empty()
+            && std::fs::read_to_string(kept.join(".git/HEAD"))
+                .expect("HEAD")
+                .len()
+                == 41,
+        "git_guard: the job left HEAD where it was"
+    );
+    assert!(
+        run(&kept).0,
+        "git_guard: the script refused what the job left"
     );
     let stuck = plant(
         "stuck",

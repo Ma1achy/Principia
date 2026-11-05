@@ -2,11 +2,12 @@
 # git (the owner, 5 Nov 2026; R-711 (lands first in its own rulings PR)). It runs before actions/checkout, which runs git
 # in that folder. A job can write there, so this file is never run from it: the step fetches this file at the job's own
 # commit. It reads .git as files and each config through `git config --file`, takes only the keys and values a clean
-# checkout holds, and, once all of that has passed, has git hash every object and write an empty index. The PC's job-started
-# hook runs a guard of its own, `E:\runner-tools\checks\git-guard.ps1`; this step is the second layer.
+# checkout holds, and, once all of that has passed, has git hash every object, write an empty index and detach HEAD at an
+# empty tree. The PC's job-started hook runs a guard of its own, `E:\runner-tools\checks\git-guard.ps1`; this step is the
+# second layer.
 #
-#   git_guard.ps1                  Guard $env:GITHUB_WORKSPACE. On passing, empty .git/index. On firing, log to
-#                                  $env:WIN_REFUSAL_LOG, empty the checkout (a fresh clone next run) and exit 1.
+#   git_guard.ps1                  Guard $env:GITHUB_WORKSPACE. On passing, empty .git/index and detach HEAD. On firing, log
+#                                  to $env:WIN_REFUSAL_LOG, empty the checkout (a fresh clone next run) and exit 1.
 #   git_guard.ps1 check <folder>   Report on <folder>'s .git and exit 0 or 1, deleting nothing: the controls' way in.
 #
 # Fails closed: anything it can't read or follow is a refusal. A first run, with no .git, passes, as does the empty folder
@@ -101,6 +102,14 @@ $objects = '--git-dir "{0}" fsck --no-dangling'
 # An index with no entries, and not none: with no index at all, the action's `checkout --detach` fails and it recreates the
 # repo, whatever the run (`git-directory-helper.ts:51-53, 109-113`), which pays for the clone every time.
 $emptyIndex = '--git-dir "{0}" read-tree --empty'
+# The action's `reset --hard` runs before its fetch, at the kept HEAD, so a planted commit's `.gitattributes` would write the
+# true bytes transformed, and its `checkout --force` leaves any path whose blob is unchanged. At an empty tree `reset` writes
+# nothing and `checkout` writes every file. HEAD detached also skips the action's `checkout --detach`. A fixed name and date
+# give one commit, the same every run, so no run adds an object after the first, and none of these writes a config key.
+$emptyTree = '--git-dir "{0}" mktree'
+$emptyCommit = '-c user.name=guard -c user.email=guard@localhost --git-dir "{0}" commit-tree -m guard {1}'
+$detachHead = '-c user.name=guard -c user.email=guard@localhost --git-dir "{0}" update-ref --no-deref HEAD {1}'
+$fixedDate = '1000000000 +0000'
 
 # git's standard output. It starts outside the checkout, and the job can't write to $env:SystemRoot. Any failure throws, so
 # it refuses.
@@ -111,9 +120,11 @@ function Invoke-Git($what) {
     $start.Arguments = $what
     $start.WorkingDirectory = $env:SystemRoot
     $start.UseShellExecute = $false
+    $start.RedirectStandardInput = $true
     $start.RedirectStandardOutput = $true
     $start.RedirectStandardError = $true
     $run = [System.Diagnostics.Process]::Start($start)
+    $run.StandardInput.Close()
     $errors = $run.StandardError.ReadToEndAsync()
     $out = $run.StandardOutput.ReadToEnd()
     $run.WaitForExit()
@@ -211,6 +222,11 @@ try {
     # failure throws, so it refuses.
     if ($git.Count -and -not $planted.Count -and -not $check) {
         $null = Invoke-Git ($emptyIndex -f $git[0].FullName)
+        $env:GIT_AUTHOR_DATE = $fixedDate
+        $env:GIT_COMMITTER_DATE = $fixedDate
+        $tree = (Invoke-Git ($emptyTree -f $git[0].FullName)).Trim()
+        $commit = (Invoke-Git ($emptyCommit -f $git[0].FullName, $tree)).Trim()
+        $null = Invoke-Git ($detachHead -f $git[0].FullName, $commit)
     }
 } catch {
     $planted = @("can't read the checkout: $_")
