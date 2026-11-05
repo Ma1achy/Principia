@@ -5,7 +5,8 @@
 #
 #   win_measure.ps1 start                       Record the identity of the run. Its reads can't fail the job.
 #   win_measure.ps1 run <name> <command> <arg>  Run the command, its output shown and kept in <name>.log, and exit with
-#                                               its status.
+#                                               its status. With $env:WIN_MEASURE_EXPECT set, a passing command whose
+#                                               output doesn't hold that text fails, and the record says why.
 #   win_measure.ps1 finish                      Write the job's summary, and copy in what this run wrote to the target
 #                                               folder's reports.
 #
@@ -48,7 +49,8 @@ switch ($verb) {
     }
     'run' {
         $name, $command, $commandArgs = $rest
-        $writer = New-Object System.IO.StreamWriter((Join-Path $dir "$name.log"), $true)
+        $log = Join-Path $dir "$name.log"
+        $writer = New-Object System.IO.StreamWriter($log, $true)
         $writer.AutoFlush = $true
         $clock = [System.Diagnostics.Stopwatch]::StartNew()
         # Cleared, so that a command that never started can't pass on an earlier status, or on none.
@@ -57,7 +59,13 @@ switch ($verb) {
         $code = $LASTEXITCODE
         $writer.Dispose()
         if ($null -eq $code) { $code = 1 }
-        Add-Content -LiteralPath $results -Value "$name`t$code`t$([int]$clock.Elapsed.TotalSeconds)"
+        $note = ''
+        if ($env:WIN_MEASURE_EXPECT -and $code -eq 0 -and -not (Select-String -LiteralPath $log -SimpleMatch -Pattern $env:WIN_MEASURE_EXPECT -Quiet)) {
+            $code = 1
+            $note = "refused: no '$env:WIN_MEASURE_EXPECT' in the output"
+            "win_measure: $note"
+        }
+        Add-Content -LiteralPath $results -Value "$name`t$code`t$([int]$clock.Elapsed.TotalSeconds)`t$note"
         exit $code
     }
     'finish' {
@@ -74,7 +82,7 @@ switch ($verb) {
             }
         }
         $summary = @(
-            "## $env:GITHUB_JOB: $label"
+            "## ${env:GITHUB_JOB}: $label"
             ''
             'A measurement, never a required check (R-649). Windows-only results that do not reproduce are hardware-suspect.'
             ''
@@ -84,8 +92,8 @@ switch ($verb) {
             ''
             'A suite not listed here did not run.'
             ''
-            '| suite | exit | seconds |'
-            '|---|---|---|'
+            '| suite | exit | seconds | note |'
+            '|---|---|---|---|'
         )
         if (Test-Path -LiteralPath $results) {
             $summary += Get-Content -LiteralPath $results | ForEach-Object { '| ' + ($_ -replace "`t", ' | ') + ' |' }

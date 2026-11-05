@@ -7,14 +7,20 @@
 //! names: a job naming only `nvidia` would reach the PC, and so would one whose runner is an expression.
 //!
 //! `win-gpu.yml`'s `win-self-check` runs this file on the PC, nightly, its controls with it, where neither bash nor PyYAML
-//! is known to exist. So it runs no process, and it parses the workflows with a YAML crate, not with PyYAML as the other
-//! workflow tests do. Parsing, never scanning text: a trigger in `on: [push, pull_request]` is the same trigger.
+//! is known to exist. So it parses the workflows with a YAML crate, not with PyYAML as the other workflow tests do, and it
+//! starts no process but Windows' own PowerShell. Parsing, never scanning text: a trigger in `on: [push, pull_request]` is
+//! the same trigger.
+//!
+//! The same goes for `.github/scripts/git_guard.ps1` (the owner, 5 Nov 2026), with a limit: off Windows there is no
+//! PowerShell, so a test there reads the script's key list and its shape, and only `git_guard_script_refuses_what_is_planted`
+//! runs it, on the PC, each night.
 //!
 //! Each test has its negative controls (R-176).
 
 use std::path::{Path, PathBuf};
 
 use validation::negative_control;
+use validation::spawn::Spawn;
 use yaml_rust2::{Yaml, YamlLoader};
 
 /// The measurement workflow and its jobs, so that the checks can't pass by finding nothing.
@@ -39,6 +45,13 @@ const RUNNER_ENV: [&str; 5] = [
     "TMP",
 ];
 const RECORD: &str = ".github/scripts/win_measure.ps1";
+/// The line that starts a script so that a script that can't load or parse still sets a failing status.
+const FAIL_CLOSED: &str = "powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File ";
+const STATUS: &str = "exit $LASTEXITCODE";
+const GIT_GUARD: &str = ".github/scripts/git_guard.ps1";
+/// Where each job fetches the guard: its own commit, never the kept folder the guard distrusts.
+const GIT_GUARD_URL: &str = "https://raw.githubusercontent.com/$env:GITHUB_REPOSITORY/$env:GITHUB_SHA/.github/scripts/git_guard.ps1";
+const REFUSAL_LOG: &str = "WIN_REFUSAL_LOG";
 const LABEL: &str = "possibly faulty hardware (owner-reported)";
 /// Branch protection's required checks on `main`. A self-hosted job bearing one of these names would report under it.
 /// The first five are `FULL_ONLY` in `.github/scripts/ci_tier.sh`, which the test reads.
@@ -278,7 +291,7 @@ mod flow_form {
                 .find(|(n, _)| n == WORKFLOW)
                 .expect("the workflow");
             let at = text.find("\non:\n").expect("on:") + 1;
-            let end = text.find("\nconcurrency:").expect("concurrency:") + 1;
+            let end = text.find("\npermissions:").expect("permissions:") + 1;
             let text = format!("{}on: [push, pull_request]\n{}", &text[..at], &text[end..]);
             vec![(file, text)]
         })
@@ -982,20 +995,35 @@ mod another_owner {
 
 // ---- What the runner needs of a job (the hand-over on #390) ------------------------------------------------------------
 
+/// Whether the step's script ends by starting `script` fail closed and exiting with its status.
+fn ends_in_a_call(step: &Yaml, script: &str) -> bool {
+    let lines: Vec<&str> = step["run"].as_str().unwrap_or("").lines().collect();
+    lines.len() >= 2
+        && lines[lines.len() - 2] == format!("{FAIL_CLOSED}{script}")
+        && lines[lines.len() - 1] == STATUS
+}
+
+/// Whether the step fetches the .git guard at the job's own commit, refuses if it can't, and starts what it fetched.
+fn fetches_the_guard(step: &Yaml) -> bool {
+    let run = step["run"].as_str().unwrap_or("");
+    ends_in_a_call(step, "$guard")
+        && run.lines().any(|l| {
+            l.contains("Invoke-WebRequest") && l.contains(GIT_GUARD_URL) && l.ends_with("exit 1 }")
+        })
+}
+
 fn check_shape(files: &[(String, String)]) {
     for (file, _, doc, ids) in self_hosted(files) {
-        let concurrency = &doc["concurrency"];
         assert!(
-            concurrency["group"]
-                .as_str()
-                .is_some_and(|g| !g.contains("${{")),
-            "{file} has no one concurrency group"
+            doc["concurrency"].is_badvalue(),
+            "{file} has a concurrency group across its jobs, so a push would displace a nightly"
         );
-        assert_eq!(
-            concurrency["cancel-in-progress"].as_bool(),
-            Some(false),
-            "{file} cancels a running measurement"
-        );
+        for (id, job) in entries(&doc["jobs"]) {
+            assert!(
+                is_self_hosted(job),
+                "{file}/{id} is a hosted job among self-hosted ones, out of reach of the exceptions they hold"
+            );
+        }
         for s in all_strings(&doc) {
             assert!(!s.contains("cargo clean"), "{file} runs `cargo clean`");
             assert!(!RUNNER_ENV.contains(&s), "{file} sets {s}");
@@ -1008,9 +1036,15 @@ fn check_shape(files: &[(String, String)]) {
         for id in ids {
             let job = &doc["jobs"][id.as_str()];
             assert_eq!(list(&job["runs-on"]), LABELS, "{file}/{id}'s runner");
-            assert!(
-                job["concurrency"].is_badvalue(),
-                "{file}/{id} has a concurrency of its own: the file's jobs would cancel each other"
+            assert_eq!(
+                job["concurrency"]["group"].as_str(),
+                Some(id.as_str()),
+                "{file}/{id} has no concurrency group of its own"
+            );
+            assert_eq!(
+                job["concurrency"]["cancel-in-progress"].as_bool(),
+                Some(false),
+                "{file}/{id} cancels a running measurement"
             );
             assert!(
                 job["timeout-minutes"].as_i64().is_some(),
@@ -1029,8 +1063,32 @@ fn check_shape(files: &[(String, String)]) {
             let steps = steps(job);
             let runs = |s: &Yaml, what: &str| s["run"].as_str().is_some_and(|r| r.contains(what));
             assert!(
-                steps.first().is_some_and(|s| runs(s, SELF_CHECK)),
+                steps.first().is_some_and(|s| ends_in_a_call(s, SELF_CHECK)),
                 "{file}/{id} doesn't run the self-check first"
+            );
+            assert!(
+                steps.get(1).is_some_and(fetches_the_guard),
+                "{file}/{id} doesn't run the fetched .git guard second"
+            );
+            let checkout = steps
+                .iter()
+                .position(|s| {
+                    s["uses"]
+                        .as_str()
+                        .is_some_and(|u| u.starts_with("actions/checkout@"))
+                })
+                .unwrap_or_else(|| panic!("{file}/{id} has no checkout"));
+            assert!(checkout > 1, "{file}/{id} checks out before the .git guard");
+            let with = &steps[checkout]["with"];
+            assert_eq!(
+                with["fetch-depth"].as_i64(),
+                Some(1),
+                "{file}/{id} doesn't fetch at depth 1"
+            );
+            assert_eq!(
+                with["clean"].as_bool(),
+                Some(true),
+                "{file}/{id} doesn't clean the kept checkout"
             );
             assert!(
                 steps
@@ -1051,6 +1109,15 @@ fn check_shape(files: &[(String, String)]) {
                             .is_some_and(|l| l.starts_with("exit ")),
                         "{file}/{id} has a step with no explicit exit: {run}"
                     );
+                    let lines: Vec<&str> = run.lines().collect();
+                    for (at, line) in lines.iter().enumerate() {
+                        if line.contains(".github\\scripts\\") {
+                            assert!(
+                                line.starts_with(FAIL_CLOSED) && lines.get(at + 1) == Some(&STATUS),
+                                "{file}/{id} doesn't start a script fail closed: {line}"
+                            );
+                        }
+                    }
                 }
             }
         }
@@ -1128,8 +1195,8 @@ mod no_exit {
         "a step that ends without its exit, so it passes whatever failed",
         expected = "win-gpu.yml/win-vulkan has a step with no explicit exit",
         check_shape(&measured(
-            "          & .github\\scripts\\win_measure.ps1 run build-kernel cargo xtask build-kernel\n          exit $LASTEXITCODE\n",
-            "          & .github\\scripts\\win_measure.ps1 run build-kernel cargo xtask build-kernel\n"
+            "win_measure.ps1 run build-kernel cargo xtask build-kernel\n          exit $LASTEXITCODE\n",
+            "win_measure.ps1 run build-kernel cargo xtask build-kernel\n"
         ))
     );
 }
@@ -1149,9 +1216,9 @@ mod no_group {
     negative_control!(
         self_hosted_jobs_have_the_shape_the_runner_needs,
         "no concurrency group",
-        expected = "win-gpu.yml has no one concurrency group",
+        expected = "win-gpu.yml/win-vulkan has no concurrency group of its own",
         check_shape(&measured(
-            "concurrency:\n  group: win-gpu\n  cancel-in-progress: false\n",
+            "    concurrency:\n      group: win-vulkan\n      cancel-in-progress: false\n",
             ""
         ))
     );
@@ -1161,11 +1228,37 @@ mod group_per_ref {
     use super::*;
     negative_control!(
         self_hosted_jobs_have_the_shape_the_runner_needs,
-        "a group per branch, which isn't one group",
-        expected = "win-gpu.yml has no one concurrency group",
+        "a group per branch, so that a queue per branch can pile up",
+        expected = "win-gpu.yml/win-vulkan has no concurrency group of its own",
         check_shape(&measured(
-            "  group: win-gpu\n",
-            "  group: win-gpu-${{ github.ref }}\n"
+            "      group: win-vulkan\n",
+            "      group: win-vulkan-${{ github.ref }}\n"
+        ))
+    );
+}
+
+mod shared_group {
+    use super::*;
+    negative_control!(
+        self_hosted_jobs_have_the_shape_the_runner_needs,
+        "two jobs in one group, where a run's jobs displace each other",
+        expected = "win-gpu.yml/win-tests has no concurrency group of its own",
+        check_shape(&measured(
+            "      group: win-tests\n",
+            "      group: win-vulkan\n"
+        ))
+    );
+}
+
+mod workflow_group {
+    use super::*;
+    negative_control!(
+        self_hosted_jobs_have_the_shape_the_runner_needs,
+        "one group across the file, where a push displaces a nightly",
+        expected = "win-gpu.yml has a concurrency group across its jobs",
+        check_shape(&measured(
+            "permissions:\n",
+            "concurrency:\n  group: win-gpu\n  cancel-in-progress: false\n\npermissions:\n"
         ))
     );
 }
@@ -1175,23 +1268,165 @@ mod cancels {
     negative_control!(
         self_hosted_jobs_have_the_shape_the_runner_needs,
         "a new push cancelling a running measurement",
-        expected = "win-gpu.yml cancels a running measurement",
+        expected = "win-gpu.yml/win-vulkan cancels a running measurement",
         check_shape(&measured(
-            "  cancel-in-progress: false\n",
-            "  cancel-in-progress: true\n"
+            "      cancel-in-progress: false\n",
+            "      cancel-in-progress: true\n"
         ))
     );
 }
 
-mod job_group {
+mod hosted_job {
     use super::*;
     negative_control!(
         self_hosted_jobs_have_the_shape_the_runner_needs,
-        "a group at a job's level",
-        expected = "win-gpu.yml/win-tests has a concurrency of its own",
+        "a hosted job in the file, which the rust-gpu cache check doesn't read",
+        expected = "win-gpu.yml/hosted is a hosted job among self-hosted ones",
         check_shape(&measured(
-            "  win-tests:\n",
-            "  win-tests:\n    concurrency: win-gpu\n"
+            "jobs:\n",
+            "jobs:\n  hosted:\n    runs-on: ubuntu-24.04\n    steps: []\n"
+        ))
+    );
+}
+
+/// A script started in the step's own process: if it can't parse, the step goes on, to `exit $null`, which passes.
+#[cfg(feature = "controls")]
+const IN_PROCESS: &str =
+    "& .github\\scripts\\win_measure.ps1 start\n          exit $LASTEXITCODE\n";
+
+mod in_process {
+    use super::*;
+    negative_control!(
+        self_hosted_jobs_have_the_shape_the_runner_needs,
+        "a script started with `&`",
+        expected = "win-gpu.yml/win-vulkan doesn't start a script fail closed",
+        check_shape(&measured(
+            "powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\\scripts\\win_measure.ps1 start\n          exit $LASTEXITCODE\n",
+            IN_PROCESS
+        ))
+    );
+}
+
+mod status_dropped {
+    use super::*;
+    negative_control!(
+        self_hosted_jobs_have_the_shape_the_runner_needs,
+        "a script whose status the step replaces",
+        expected = "win-gpu.yml/win-vulkan doesn't start a script fail closed",
+        check_shape(&measured(
+            "win_measure.ps1 start\n          exit $LASTEXITCODE\n",
+            "win_measure.ps1 start\n          exit 0\n"
+        ))
+    );
+}
+
+mod self_check_in_process {
+    use super::*;
+    negative_control!(
+        self_hosted_jobs_have_the_shape_the_runner_needs,
+        "the self-check started with `&`",
+        expected = "win-gpu.yml/win-vulkan doesn't run the self-check first",
+        check_shape(&measured(
+            "          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File E:\\runner-tools",
+            "          & E:\\runner-tools"
+        ))
+    );
+}
+
+mod guard_in_process {
+    use super::*;
+    negative_control!(
+        self_hosted_jobs_have_the_shape_the_runner_needs,
+        "the .git guard started with `&`",
+        expected = "win-gpu.yml/win-vulkan doesn't run the fetched .git guard second",
+        check_shape(&measured(
+            "powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $guard",
+            "& $guard"
+        ))
+    );
+}
+
+mod guard_gone {
+    use super::*;
+    negative_control!(
+        self_hosted_jobs_have_the_shape_the_runner_needs,
+        "a job without the .git guard",
+        expected = "win-gpu.yml/win-vulkan doesn't run the fetched .git guard second",
+        check_shape(&measured(
+            "      - name: Guard the kept checkout\n",
+            "      - name: Another step\n        run: exit 0\n      - name: Guard the kept checkout\n"
+        ))
+    );
+}
+
+mod guard_from_the_kept_folder {
+    use super::*;
+    negative_control!(
+        self_hosted_jobs_have_the_shape_the_runner_needs,
+        "the .git guard fetched from anywhere but the job's own commit",
+        expected = "win-gpu.yml/win-vulkan doesn't run the fetched .git guard second",
+        check_shape(&measured("/$env:GITHUB_SHA/", "/main/"))
+    );
+}
+
+mod guard_fetch_may_fail {
+    use super::*;
+    negative_control!(
+        self_hosted_jobs_have_the_shape_the_runner_needs,
+        "a failed fetch that carries on",
+        expected = "win-gpu.yml/win-vulkan doesn't run the fetched .git guard second",
+        check_shape(&measured(
+            "\"could not fetch the guard: $_\"; exit 1 }",
+            "}"
+        ))
+    );
+}
+
+mod guard_after_checkout {
+    use super::*;
+    negative_control!(
+        self_hosted_jobs_have_the_shape_the_runner_needs,
+        "a checkout before the .git guard",
+        expected = "win-gpu.yml/win-vulkan checks out before the .git guard",
+        check_shape(&measured(
+            "      - name: Self-check, first step\n        run: |\n          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File E:\\runner-tools\\checks\\self-check.ps1\n          exit $LASTEXITCODE\n      - name: Guard the kept checkout\n",
+            "      - name: Self-check, first step\n        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1\n        run: |\n          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File E:\\runner-tools\\checks\\self-check.ps1\n          exit $LASTEXITCODE\n      - name: Guard the kept checkout\n"
+        ))
+    );
+}
+
+mod no_depth {
+    use super::*;
+    negative_control!(
+        self_hosted_jobs_have_the_shape_the_runner_needs,
+        "a checkout that leaves its depth implicit",
+        expected = "win-gpu.yml/win-vulkan doesn't fetch at depth 1",
+        check_shape(&measured("          fetch-depth: 1\n", ""))
+    );
+}
+
+mod full_clone {
+    use super::*;
+    negative_control!(
+        self_hosted_jobs_have_the_shape_the_runner_needs,
+        "a full clone, 11 minutes on this PC",
+        expected = "win-gpu.yml/win-vulkan doesn't fetch at depth 1",
+        check_shape(&measured(
+            "          fetch-depth: 1\n",
+            "          fetch-depth: 0\n"
+        ))
+    );
+}
+
+mod unclean {
+    use super::*;
+    negative_control!(
+        self_hosted_jobs_have_the_shape_the_runner_needs,
+        "a kept checkout left uncleaned",
+        expected = "win-gpu.yml/win-vulkan doesn't clean the kept checkout",
+        check_shape(&measured(
+            "          clean: true\n",
+            "          clean: false\n"
         ))
     );
 }
@@ -1419,13 +1654,871 @@ mod bare_cargo {
         expected = "win-gpu.yml/win-vulkan runs cargo outside the record",
         check_record(
             &measured(
-                "          & .github\\scripts\\win_measure.ps1 run build-kernel cargo xtask build-kernel\n",
+                "          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\\scripts\\win_measure.ps1 run build-kernel cargo xtask build-kernel\n",
                 "          cargo xtask build-kernel\n"
             ),
             &read(RECORD)
         )
     );
 }
+
+// ---- The .git guard (the owner, 5 Nov 2026) --------------------------------------------------------------------------
+
+/// A key for each item of the owner's list, in a case other than the list's: git matches a section and name in any case.
+const PLANTED: [&str; 35] = [
+    "CORE.hookspath",
+    "Core.FSMonitor",
+    "core.sshcommand",
+    "CORE.EDITOR",
+    "core.Pager",
+    "filter.LFS.Clean",
+    "FILTER.a.smudge",
+    "filter.a b.PROCESS",
+    "Diff.x.TextConv",
+    "Credential.Helper",
+    "INCLUDE.path",
+    "includeif.gitdir:/x/.path",
+    "URL.https://x/.INSTEADOF",
+    "HTTP.Proxy",
+    "GPG.program",
+    "gpg.SSH.Program",
+    "core.GITPROXY",
+    "Core.AskPass",
+    "core.ATTRIBUTESFILE",
+    "CORE.Worktree",
+    "core.ExcludesFile",
+    "DIFF.External",
+    "diff.x.COMMAND",
+    "Merge.x.Driver",
+    "ALIAS.st",
+    "Pager.log",
+    "Sequence.Editor",
+    "gpg.X509.Program",
+    "Remote.origin.UploadPack",
+    "remote.origin.RECEIVEPACK",
+    "REMOTE.origin.proxy",
+    "remote.origin.VCS",
+    "Credential.https://x/.Helper",
+    "HTTP.https://x/.Proxy",
+    "url.https://x/.PUSHINSTEADOF",
+];
+/// What actions/checkout leaves in a kept `.git/config`, and near misses of the list.
+const HARMLESS: [&str; 16] = [
+    "core.repositoryformatversion",
+    "core.filemode",
+    "core.bare",
+    "core.logallrefupdates",
+    "core.symlinks",
+    "core.ignorecase",
+    "core.autocrlf",
+    "remote.origin.url",
+    "remote.origin.fetch",
+    "gc.auto",
+    "http.https://github.com/.extraheader",
+    "filter.lfs.required",
+    "diff.x.binary",
+    "core.sparsecheckout",
+    "core.sparsecheckoutcone",
+    "extensions.worktreeconfig",
+];
+
+/// The script's `$keys`, its one list.
+fn listed_keys(script: &str) -> Vec<&str> {
+    let list = script
+        .split_once("$keys = @(\n")
+        .and_then(|(_, rest)| rest.split_once("\n)"))
+        .expect("git_guard: no $keys list")
+        .0;
+    list.lines().map(|l| l.trim().trim_matches('\'')).collect()
+}
+
+/// PowerShell's `-like` for these patterns: `*` is any text, and case doesn't count.
+fn like(key: &str, pattern: &str) -> bool {
+    let (key, pattern) = (key.to_lowercase(), pattern.to_lowercase());
+    let mut parts = pattern.split('*');
+    let first = parts.next().expect("a part");
+    let Some(mut rest) = key.strip_prefix(first) else {
+        return false;
+    };
+    let mut last = None;
+    for part in parts {
+        if let Some(prior) = last.replace(part) {
+            let Some((_, after)) = rest.split_once(prior) else {
+                return false;
+            };
+            rest = after;
+        }
+    }
+    last.map_or(rest.is_empty(), |part| rest.ends_with(part))
+}
+
+fn check_keys(script: &str) {
+    let listed = listed_keys(script);
+    for key in PLANTED {
+        assert!(
+            listed.iter().any(|p| like(key, p)),
+            "git_guard: {key} isn't refused"
+        );
+    }
+    for key in HARMLESS {
+        assert!(
+            !listed.iter().any(|p| like(key, p)),
+            "git_guard: {key} is refused"
+        );
+    }
+}
+
+#[test]
+fn git_guard_refuses_each_listed_key() {
+    check_keys(&read(GIT_GUARD));
+}
+
+mod key_hooks_path {
+    use super::*;
+    negative_control!(
+        git_guard_refuses_each_listed_key,
+        "core.hooksPath off the list",
+        expected = "git_guard: CORE.hookspath isn't refused",
+        check_keys(&read(GIT_GUARD).replace("    'core.hooksPath'\n", ""))
+    );
+}
+
+mod key_fsmonitor {
+    use super::*;
+    negative_control!(
+        git_guard_refuses_each_listed_key,
+        "core.fsmonitor off the list",
+        expected = "git_guard: Core.FSMonitor isn't refused",
+        check_keys(&read(GIT_GUARD).replace("    'core.fsmonitor'\n", ""))
+    );
+}
+
+mod key_ssh_command {
+    use super::*;
+    negative_control!(
+        git_guard_refuses_each_listed_key,
+        "core.sshCommand off the list",
+        expected = "git_guard: core.sshcommand isn't refused",
+        check_keys(&read(GIT_GUARD).replace("    'core.sshCommand'\n", ""))
+    );
+}
+
+mod key_editor {
+    use super::*;
+    negative_control!(
+        git_guard_refuses_each_listed_key,
+        "core.editor off the list",
+        expected = "git_guard: CORE.EDITOR isn't refused",
+        check_keys(&read(GIT_GUARD).replace("    'core.editor'\n", ""))
+    );
+}
+
+mod key_pager {
+    use super::*;
+    negative_control!(
+        git_guard_refuses_each_listed_key,
+        "core.pager off the list",
+        expected = "git_guard: core.Pager isn't refused",
+        check_keys(&read(GIT_GUARD).replace("    'core.pager'\n", ""))
+    );
+}
+
+mod key_filter_clean {
+    use super::*;
+    negative_control!(
+        git_guard_refuses_each_listed_key,
+        "filter.*.clean off the list",
+        expected = "git_guard: filter.LFS.Clean isn't refused",
+        check_keys(&read(GIT_GUARD).replace("    'filter.*.clean'\n", ""))
+    );
+}
+
+mod key_filter_smudge {
+    use super::*;
+    negative_control!(
+        git_guard_refuses_each_listed_key,
+        "filter.*.smudge off the list",
+        expected = "git_guard: FILTER.a.smudge isn't refused",
+        check_keys(&read(GIT_GUARD).replace("    'filter.*.smudge'\n", ""))
+    );
+}
+
+mod key_filter_process {
+    use super::*;
+    negative_control!(
+        git_guard_refuses_each_listed_key,
+        "filter.*.process off the list",
+        expected = "git_guard: filter.a b.PROCESS isn't refused",
+        check_keys(&read(GIT_GUARD).replace("    'filter.*.process'\n", ""))
+    );
+}
+
+mod key_textconv {
+    use super::*;
+    negative_control!(
+        git_guard_refuses_each_listed_key,
+        "diff.*.textconv off the list",
+        expected = "git_guard: Diff.x.TextConv isn't refused",
+        check_keys(&read(GIT_GUARD).replace("    'diff.*.textconv'\n", ""))
+    );
+}
+
+mod key_credential {
+    use super::*;
+    negative_control!(
+        git_guard_refuses_each_listed_key,
+        "credential.helper off the list",
+        expected = "git_guard: Credential.Helper isn't refused",
+        check_keys(&read(GIT_GUARD).replace("    'credential.helper'\n", ""))
+    );
+}
+
+mod key_include {
+    use super::*;
+    negative_control!(
+        git_guard_refuses_each_listed_key,
+        "include.path off the list",
+        expected = "git_guard: INCLUDE.path isn't refused",
+        check_keys(&read(GIT_GUARD).replace("    'include.path'\n", ""))
+    );
+}
+
+mod key_include_if {
+    use super::*;
+    negative_control!(
+        git_guard_refuses_each_listed_key,
+        "includeIf.* off the list",
+        expected = "git_guard: includeif.gitdir:/x/.path isn't refused",
+        check_keys(&read(GIT_GUARD).replace("    'includeIf.*'\n", ""))
+    );
+}
+
+mod key_instead_of {
+    use super::*;
+    negative_control!(
+        git_guard_refuses_each_listed_key,
+        "url.*.insteadOf off the list",
+        expected = "git_guard: URL.https://x/.INSTEADOF isn't refused",
+        check_keys(&read(GIT_GUARD).replace("    'url.*.insteadOf'\n", ""))
+    );
+}
+
+mod key_proxy {
+    use super::*;
+    negative_control!(
+        git_guard_refuses_each_listed_key,
+        "http.proxy off the list",
+        expected = "git_guard: HTTP.Proxy isn't refused",
+        check_keys(&read(GIT_GUARD).replace("    'http.proxy'\n", ""))
+    );
+}
+
+mod key_gpg {
+    use super::*;
+    negative_control!(
+        git_guard_refuses_each_listed_key,
+        "gpg.program off the list",
+        expected = "git_guard: GPG.program isn't refused",
+        check_keys(&read(GIT_GUARD).replace("    'gpg.program'\n", ""))
+    );
+}
+
+mod key_gpg_ssh {
+    use super::*;
+    negative_control!(
+        git_guard_refuses_each_listed_key,
+        "gpg.ssh.program off the list, and the wider gpg.*.program that also takes it",
+        expected = "git_guard: gpg.SSH.Program isn't refused",
+        check_keys(
+            &read(GIT_GUARD)
+                .replace("    'gpg.ssh.program'\n", "")
+                .replace("    'gpg.*.program'\n", "")
+        )
+    );
+}
+
+mod key_git_proxy {
+    use super::*;
+    negative_control!(
+        git_guard_refuses_each_listed_key,
+        "core.gitProxy off the list",
+        expected = "git_guard: core.GITPROXY isn't refused",
+        check_keys(&read(GIT_GUARD).replace("    'core.gitProxy'\n", ""))
+    );
+}
+
+mod key_ask_pass {
+    use super::*;
+    negative_control!(
+        git_guard_refuses_each_listed_key,
+        "core.askPass off the list",
+        expected = "git_guard: Core.AskPass isn't refused",
+        check_keys(&read(GIT_GUARD).replace("    'core.askPass'\n", ""))
+    );
+}
+
+mod key_attributes_file {
+    use super::*;
+    negative_control!(
+        git_guard_refuses_each_listed_key,
+        "core.attributesFile off the list",
+        expected = "git_guard: core.ATTRIBUTESFILE isn't refused",
+        check_keys(&read(GIT_GUARD).replace("    'core.attributesFile'\n", ""))
+    );
+}
+
+mod key_worktree {
+    use super::*;
+    negative_control!(
+        git_guard_refuses_each_listed_key,
+        "core.worktree off the list",
+        expected = "git_guard: CORE.Worktree isn't refused",
+        check_keys(&read(GIT_GUARD).replace("    'core.worktree'\n", ""))
+    );
+}
+
+mod key_excludes_file {
+    use super::*;
+    negative_control!(
+        git_guard_refuses_each_listed_key,
+        "core.excludesFile off the list",
+        expected = "git_guard: core.ExcludesFile isn't refused",
+        check_keys(&read(GIT_GUARD).replace("    'core.excludesFile'\n", ""))
+    );
+}
+
+mod key_diff_external {
+    use super::*;
+    negative_control!(
+        git_guard_refuses_each_listed_key,
+        "diff.external off the list",
+        expected = "git_guard: DIFF.External isn't refused",
+        check_keys(&read(GIT_GUARD).replace("    'diff.external'\n", ""))
+    );
+}
+
+mod key_diff_command {
+    use super::*;
+    negative_control!(
+        git_guard_refuses_each_listed_key,
+        "diff.*.command off the list",
+        expected = "git_guard: diff.x.COMMAND isn't refused",
+        check_keys(&read(GIT_GUARD).replace("    'diff.*.command'\n", ""))
+    );
+}
+
+mod key_merge_driver {
+    use super::*;
+    negative_control!(
+        git_guard_refuses_each_listed_key,
+        "merge.*.driver off the list",
+        expected = "git_guard: Merge.x.Driver isn't refused",
+        check_keys(&read(GIT_GUARD).replace("    'merge.*.driver'\n", ""))
+    );
+}
+
+mod key_alias {
+    use super::*;
+    negative_control!(
+        git_guard_refuses_each_listed_key,
+        "alias.* off the list",
+        expected = "git_guard: ALIAS.st isn't refused",
+        check_keys(&read(GIT_GUARD).replace("    'alias.*'\n", ""))
+    );
+}
+
+mod key_pager_cmd {
+    use super::*;
+    negative_control!(
+        git_guard_refuses_each_listed_key,
+        "pager.* off the list",
+        expected = "git_guard: Pager.log isn't refused",
+        check_keys(&read(GIT_GUARD).replace("    'pager.*'\n", ""))
+    );
+}
+
+mod key_sequence_editor {
+    use super::*;
+    negative_control!(
+        git_guard_refuses_each_listed_key,
+        "sequence.editor off the list",
+        expected = "git_guard: Sequence.Editor isn't refused",
+        check_keys(&read(GIT_GUARD).replace("    'sequence.editor'\n", ""))
+    );
+}
+
+mod key_gpg_other {
+    use super::*;
+    negative_control!(
+        git_guard_refuses_each_listed_key,
+        "gpg.*.program off the list",
+        expected = "git_guard: gpg.X509.Program isn't refused",
+        check_keys(&read(GIT_GUARD).replace("    'gpg.*.program'\n", ""))
+    );
+}
+
+mod key_uploadpack {
+    use super::*;
+    negative_control!(
+        git_guard_refuses_each_listed_key,
+        "remote.*.uploadpack off the list",
+        expected = "git_guard: Remote.origin.UploadPack isn't refused",
+        check_keys(&read(GIT_GUARD).replace("    'remote.*.uploadpack'\n", ""))
+    );
+}
+
+mod key_receivepack {
+    use super::*;
+    negative_control!(
+        git_guard_refuses_each_listed_key,
+        "remote.*.receivepack off the list",
+        expected = "git_guard: remote.origin.RECEIVEPACK isn't refused",
+        check_keys(&read(GIT_GUARD).replace("    'remote.*.receivepack'\n", ""))
+    );
+}
+
+mod key_remote_proxy {
+    use super::*;
+    negative_control!(
+        git_guard_refuses_each_listed_key,
+        "remote.*.proxy off the list",
+        expected = "git_guard: REMOTE.origin.proxy isn't refused",
+        check_keys(&read(GIT_GUARD).replace("    'remote.*.proxy'\n", ""))
+    );
+}
+
+mod key_remote_vcs {
+    use super::*;
+    negative_control!(
+        git_guard_refuses_each_listed_key,
+        "remote.*.vcs off the list",
+        expected = "git_guard: remote.origin.VCS isn't refused",
+        check_keys(&read(GIT_GUARD).replace("    'remote.*.vcs'\n", ""))
+    );
+}
+
+mod key_scoped_credential {
+    use super::*;
+    negative_control!(
+        git_guard_refuses_each_listed_key,
+        "credential.*.helper off the list",
+        expected = "git_guard: Credential.https://x/.Helper isn't refused",
+        check_keys(&read(GIT_GUARD).replace("    'credential.*.helper'\n", ""))
+    );
+}
+
+mod key_scoped_proxy {
+    use super::*;
+    negative_control!(
+        git_guard_refuses_each_listed_key,
+        "http.*.proxy off the list",
+        expected = "git_guard: HTTP.https://x/.Proxy isn't refused",
+        check_keys(&read(GIT_GUARD).replace("    'http.*.proxy'\n", ""))
+    );
+}
+
+mod key_push_instead_of {
+    use super::*;
+    negative_control!(
+        git_guard_refuses_each_listed_key,
+        "url.*.pushInsteadOf off the list",
+        expected = "git_guard: url.https://x/.PUSHINSTEADOF isn't refused",
+        check_keys(&read(GIT_GUARD).replace("    'url.*.pushInsteadOf'\n", ""))
+    );
+}
+
+mod harmless_key {
+    use super::*;
+    negative_control!(
+        git_guard_refuses_each_listed_key,
+        "a pattern wide enough to take what checkout leaves",
+        expected = "git_guard: core.repositoryformatversion is refused",
+        check_keys(&read(GIT_GUARD).replace("    'core.editor'\n", "    'core.*'\n"))
+    );
+}
+
+/// What holds the rest of the owner's order. Off Windows nothing can run these lines, so this reads that they're there;
+/// `git_guard_script_refuses_what_is_planted` runs them.
+fn check_guard_script(script: &str) {
+    let code: Vec<&str> = script
+        .lines()
+        .map(str::trim)
+        .filter(|l| !l.starts_with('#'))
+        .collect();
+    let has = |what: &str| code.iter().any(|l| l.contains(what));
+    assert!(
+        has("$hook.Name -notlike '*.sample'"),
+        "git_guard: doesn't refuse an active hook"
+    );
+    assert!(
+        has("'attributes'") && has("$found += 'info/attributes'"),
+        "git_guard: doesn't refuse .git/info/attributes"
+    );
+    assert!(
+        has("[System.IO.File]::ReadAllLines($path)") && !has("git config"),
+        "git_guard: doesn't read the config as a file"
+    );
+    assert!(
+        code.iter().find(|l| !l.is_empty()) == Some(&"$ErrorActionPreference = 'Stop'"),
+        "git_guard: doesn't stop at what it can't read"
+    );
+    assert!(
+        has("$planted = @(\"can't read the checkout: $_\")"),
+        "git_guard: doesn't refuse what it can't read"
+    );
+    assert!(
+        has(". E:\\runner-tools\\checks\\append-only.ps1")
+            && has("[AppendOnly]::Add($env:WIN_REFUSAL_LOG"),
+        "git_guard: doesn't log through the append-only writer"
+    );
+    assert!(
+        has("if ($status -ne 0) {"),
+        "git_guard: doesn't report a failed log write"
+    );
+    assert!(
+        has("foreach ($item in @(Get-ChildItem -LiteralPath $root -Force)) {")
+            && has("cmd /c rmdir /s /q \"$($item.FullName)\"")
+            && has("cmd /c del /f /q /a \"$($item.FullName)\""),
+        "git_guard: doesn't empty the checkout"
+    );
+    assert!(
+        has("$_.Name -eq 'config.worktree'"),
+        "git_guard: doesn't check config.worktree's keys"
+    );
+    assert_eq!(
+        code.iter().rfind(|l| !l.is_empty()),
+        Some(&"exit 1"),
+        "git_guard: doesn't fail the job"
+    );
+}
+
+#[test]
+fn git_guard_script_holds_the_owners_order() {
+    check_guard_script(&read(GIT_GUARD));
+}
+
+/// The script with `from` replaced by `to`.
+#[cfg(feature = "controls")]
+fn guard_edited(from: &str, to: &str) -> String {
+    let script = read(GIT_GUARD);
+    assert!(script.contains(from), "the edit's target is gone: {from}");
+    script.replacen(from, to, 1)
+}
+
+mod any_hook {
+    use super::*;
+    negative_control!(
+        git_guard_script_holds_the_owners_order,
+        "every hook passing",
+        expected = "git_guard: doesn't refuse an active hook",
+        check_guard_script(&guard_edited("-notlike '*.sample'", "-notlike '*'"))
+    );
+}
+
+mod attributes {
+    use super::*;
+    negative_control!(
+        git_guard_script_holds_the_owners_order,
+        "attributes left alone",
+        expected = "git_guard: doesn't refuse .git/info/attributes",
+        check_guard_script(&guard_edited("$found += 'info/attributes'", "$null"))
+    );
+}
+
+mod through_git {
+    use super::*;
+    negative_control!(
+        git_guard_script_holds_the_owners_order,
+        "the config read through git, which can run what it reads",
+        expected = "git_guard: doesn't read the config as a file",
+        check_guard_script(&guard_edited(
+            "[System.IO.File]::ReadAllLines($path)",
+            "(git config --list --file $path)"
+        ))
+    );
+}
+
+mod carries_on {
+    use super::*;
+    negative_control!(
+        git_guard_script_holds_the_owners_order,
+        "an error passed over",
+        expected = "git_guard: doesn't stop at what it can't read",
+        check_guard_script(&guard_edited(
+            "$ErrorActionPreference = 'Stop'",
+            "$ErrorActionPreference = 'Continue'"
+        ))
+    );
+}
+
+mod unread_passes {
+    use super::*;
+    negative_control!(
+        git_guard_script_holds_the_owners_order,
+        "an unreadable .git passing",
+        expected = "git_guard: doesn't refuse what it can't read",
+        check_guard_script(&guard_edited(
+            "$planted = @(\"can't read the checkout: $_\")",
+            "$planted = @()"
+        ))
+    );
+}
+
+mod unlogged {
+    use super::*;
+    negative_control!(
+        git_guard_script_holds_the_owners_order,
+        "a line through Add-Content, which the log refuses",
+        expected = "git_guard: doesn't log through the append-only writer",
+        check_guard_script(&guard_edited(
+            "[AppendOnly]::Add($env:WIN_REFUSAL_LOG, ",
+            "Add-Content $env:WIN_REFUSAL_LOG "
+        ))
+    );
+}
+
+mod log_status_dropped {
+    use super::*;
+    negative_control!(
+        git_guard_script_holds_the_owners_order,
+        "a failed log write passed over",
+        expected = "git_guard: doesn't report a failed log write",
+        check_guard_script(&guard_edited(
+            "    if ($status -ne 0) { \"git guard: could not write the refusal log: status $status\" }\n",
+            ""
+        ))
+    );
+}
+
+mod kept {
+    use super::*;
+    negative_control!(
+        git_guard_script_holds_the_owners_order,
+        "the checkout kept after a refusal",
+        expected = "git_guard: doesn't empty the checkout",
+        check_guard_script(&guard_edited(
+            "cmd /c rmdir /s /q \"$($item.FullName)\"",
+            "$null"
+        ))
+    );
+}
+
+mod worktree_config_skipped {
+    use super::*;
+    negative_control!(
+        git_guard_script_holds_the_owners_order,
+        "config.worktree left unread",
+        expected = "git_guard: doesn't check config.worktree's keys",
+        check_guard_script(&guard_edited("$_.Name -eq 'config.worktree'", "$false"))
+    );
+}
+
+mod green {
+    use super::*;
+    negative_control!(
+        git_guard_script_holds_the_owners_order,
+        "a refusal that passes the job",
+        expected = "git_guard: doesn't fail the job",
+        check_guard_script(&guard_edited("left\" }\nexit 1\n", "left\" }\nexit 0\n"))
+    );
+}
+
+/// `script` run on each case as the job's step would run it, with `powershell`, which only Windows has. A key of
+/// [`PLANTED`] in a `.git/config` of its own, and each other thing the owner listed, is refused; a clean kept checkout and
+/// a first run pass.
+// Compiled everywhere so a mistake here shows on the Mac, not first on the PC; called only under `cfg(windows)`.
+#[cfg_attr(not(windows), allow(dead_code))]
+fn check_script_refuses(script: &Path) {
+    const CLEAN: &str = "[core]\n\trepositoryformatversion = 0\n\tfilemode = false\n\tbare = false\n\tlogallrefupdates = true\n\tsymlinks = false\n\tignorecase = true\n[remote \"origin\"]\n\turl = https://github.com/Ma1achy/Principia\n\tfetch = +refs/heads/*:refs/remotes/origin/*\n[gc]\n\tauto = 0\n";
+    let base = Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!(
+        "ci_self_hosted_guard_{}_{}",
+        std::process::id(),
+        script.file_name().expect("a name").to_string_lossy()
+    ));
+    let _ = std::fs::remove_dir_all(&base);
+    let passes = |case: &str, files: &[(&str, &str)]| {
+        let dir = base.join(case);
+        std::fs::create_dir_all(&dir).expect("a case's folder");
+        for (name, text) in files {
+            let path = dir.join(name);
+            std::fs::create_dir_all(path.parent().expect("a parent")).expect("a folder");
+            std::fs::write(path, text).expect("a planted file");
+        }
+        let out = std::process::Command::new("powershell")
+            .args([
+                "-NoProfile",
+                "-NonInteractive",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+            ])
+            .arg(script)
+            .arg("check")
+            .arg(&dir)
+            .timed_output()
+            .expect("powershell ran");
+        out.status.success()
+    };
+    let config = |text: &str| format!("{CLEAN}{text}");
+    for (at, key) in PLANTED.iter().enumerate() {
+        let (section, name) = key.split_once('.').expect("a section");
+        let (sub, name) = name.rsplit_once('.').unwrap_or(("", name));
+        let header = if sub.is_empty() {
+            format!("[{section}]\n")
+        } else {
+            format!("[{section} \"{sub}\"]\n")
+        };
+        let text = config(&format!("{header}\t{name} = x\n"));
+        assert!(
+            !passes(&format!("key_{at}"), &[(".git/config", &text)]),
+            "git_guard: the script passed {key}"
+        );
+    }
+    let clean = [
+        (".git/config", CLEAN),
+        (".git/hooks/pre-commit.sample", "#\n"),
+    ];
+    assert!(
+        passes("first_run", &[]),
+        "git_guard: the script refused a first run, or the folder a refusal leaves"
+    );
+    let sparse = [
+        (".git/config", CLEAN),
+        (".git/config.worktree", "[core]\n\tsparseCheckout = true\n"),
+    ];
+    assert!(
+        passes("sparse", &sparse),
+        "git_guard: the script refused a sparse config.worktree"
+    );
+    assert!(
+        passes("clean", &clean),
+        "git_guard: the script refused a clean checkout"
+    );
+    let refused: [(&str, &[(&str, &str)]); 7] = [
+        (
+            "hook",
+            &[(".git/config", CLEAN), (".git/hooks/pre-commit", "x")],
+        ),
+        (
+            "attributes",
+            &[(".git/config", CLEAN), (".git/info/attributes", "x")],
+        ),
+        (".git as a file", &[(".git", "gitdir: elsewhere\n")]),
+        ("no config", &[(".git/HEAD", "x")]),
+        (
+            "an unreadable line",
+            &[(".git/config", "[core\n\tbare = false\n")],
+        ),
+        (
+            "a key on the section's line",
+            &[(".git/config", "[core] hooksPath = x\n")],
+        ),
+        (
+            "a key in config.worktree",
+            &[
+                (".git/config", CLEAN),
+                (".git/config.worktree", "[core]\n\tpager = x\n"),
+            ],
+        ),
+    ];
+    for (at, (case, files)) in refused.iter().enumerate() {
+        assert!(
+            !passes(&format!("refused_{at}"), files),
+            "git_guard: the script passed {case}"
+        );
+    }
+    // A firing, as the job's step runs it, standing in the folder as the runner does, with a log of this test's own.
+    let dir = base.join("firing");
+    std::fs::create_dir_all(dir.join(".git/hooks")).expect("a folder");
+    std::fs::write(dir.join(".git/config"), CLEAN).expect("a file");
+    std::fs::write(dir.join(".git/hooks/pre-commit"), "x").expect("a file");
+    std::fs::write(dir.join("kept.txt"), "x").expect("a file");
+    let log = base.join("refusals.log");
+    let out = std::process::Command::new("powershell")
+        .args([
+            "-NoProfile",
+            "-NonInteractive",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+        ])
+        .arg(script)
+        .current_dir(&dir)
+        .env("GITHUB_WORKSPACE", &dir)
+        .env("WIN_REFUSAL_LOG", &log)
+        .timed_output()
+        .expect("powershell ran");
+    assert!(
+        !out.status.success(),
+        "git_guard: the firing passed the job"
+    );
+    let left = std::fs::read_dir(&dir).expect("the folder").count();
+    assert_eq!(left, 0, "git_guard: the firing left the checkout unemptied");
+    let line = std::fs::read_to_string(&log).expect("the refusal log");
+    assert!(
+        line.contains("active hook"),
+        "git_guard: the firing logged no reason"
+    );
+}
+
+#[cfg(windows)]
+#[test]
+fn git_guard_script_refuses_what_is_planted() {
+    check_script_refuses(&root().join(GIT_GUARD));
+}
+
+#[cfg(windows)]
+negative_control!(
+    git_guard_script_refuses_what_is_planted,
+    "the script with its list empty",
+    expected = "git_guard: the script passed",
+    {
+        let edited = Path::new(env!("CARGO_TARGET_TMPDIR")).join("git_guard_no_keys.ps1");
+        let script = read(GIT_GUARD);
+        let (head, tail) = script.split_once("$keys = @(\n").expect("the list");
+        let (_, tail) = tail.split_once("\n)").expect("its end");
+        std::fs::write(&edited, format!("{head}$keys = @(){tail}")).expect("the edit");
+        check_script_refuses(&edited)
+    }
+);
+
+// ---- The refusal log ---------------------------------------------------------------------------------------------------
+
+fn check_refusal_log(files: &[(String, String)]) {
+    for (file, _, doc, _) in self_hosted(files) {
+        let path = doc["env"][REFUSAL_LOG].as_str().unwrap_or("");
+        let bytes = path.as_bytes();
+        assert!(
+            bytes.len() > 3 && bytes[0].is_ascii_uppercase() && path[1..].starts_with(":\\"),
+            "{file}: {REFUSAL_LOG} is no path on the PC: `{path}`"
+        );
+    }
+}
+
+#[test]
+fn self_hosted_refusal_log_is_a_path_on_the_pc() {
+    check_refusal_log(&workflows());
+}
+
+negative_control!(
+    self_hosted_refusal_log_is_a_path_on_the_pc,
+    "a value that's not a path",
+    expected = "win-gpu.yml: WIN_REFUSAL_LOG is no path on the PC",
+    check_refusal_log(&{
+        let mut files = workflows();
+        let (_, text) = files
+            .iter_mut()
+            .find(|(n, _)| n == WORKFLOW)
+            .expect("the workflow");
+        let line = text
+            .lines()
+            .find(|l| l.trim_start().starts_with(REFUSAL_LOG))
+            .expect("the value")
+            .to_owned();
+        *text = text.replace(&line, "  WIN_REFUSAL_LOG: pending");
+        files
+    })
+);
 
 // ---- The paths filter (R-711 item 5) -----------------------------------------------------------------------------------
 
@@ -1485,6 +2578,7 @@ fn check_paths(files: &[(String, String)]) {
             ".config/nextest.toml",
             ".github/workflows/win-gpu.yml",
             ".github/scripts/win_measure.ps1",
+            ".github/scripts/git_guard.ps1",
         ] {
             assert!(
                 filter_takes(&patterns, path),
