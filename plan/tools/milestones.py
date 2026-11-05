@@ -27,8 +27,9 @@ AREAS = ["DEC", "ENC", "CHART", "INT", "EVT", "PAY", "GEN", "SCHED", "REF", "REN
          "PERF", "SYS"]
 MILESTONES = [f"M{i}" for i in range(9)]  # the milestones with exit gates
 REPORTS = ["M9"]  # the milestones that exit on a report, not a gate (R-650)
-# The build tasks in a report milestone: not scored, the report not waiting on them (R-654, R-669).
-BUILD_TASKS = {"M9": ["TASK-M9-39", "TASK-M9-40"]}  # TASK-M9-40: the Šuvakov-plane chart (R-669)
+# The build tasks in a report milestone: not scored, the report not waiting on them (R-654, R-669, R-679).
+# TASK-M9-40: the Šuvakov-plane chart (R-669); TASK-M9-41: the candidate original results, M9 peeks (R-679).
+BUILD_TASKS = {"M9": ["TASK-M9-39", "TASK-M9-40", "TASK-M9-41"]}
 # The tasks in a report milestone that close no target: the report itself and a definition it precedes.
 REPORT_TASKS = {"M9": ["TASK-M9-37", "TASK-M9-38"]}
 
@@ -96,7 +97,7 @@ def gate_block(reqs, m, report=False, built=(), reporting=(), targets=()):
              f"with no row of its own; {', '.join(other)}, M9's other calibration, is below):", "",
              *area_lines(calibrations)]
     if unscored:
-        lines += ["", f"**Built, not scored — {len(unscored)} requirements** ({', '.join(BUILD_TASKS[m])}, R-654, R-669; no "
+        lines += ["", f"**Built, not scored — {len(unscored)} requirements** ({', '.join(BUILD_TASKS[m])}, R-654, R-669, R-679; no "
                   "outcome and no row in the report, each task's tests blocking its own merge):", "",
                   *area_lines(unscored)]
     notarget = [i for i in ids if i in reporting]
