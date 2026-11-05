@@ -600,7 +600,8 @@ Field views are unit tests; these are the integration tests. Each compares a val
 `K_0 + V_0` is `−∞` where `V_0` is (the f64 collision pole, `principia_dd_decoder.md` §3.6). The view tests each
 stored operand, `E_0`, `K_0` and `V_0`, on its bits before any arithmetic, `K_0 + V_0` included, and draws a pixel
 with a non-finite one in the invalid colour, on the CPU and the GPU alike, never `log|(−∞) − (−∞)|`; every
-cross-check view and agreement preset that reads a stored value does the same.
+cross-check view and agreement preset that reads a stored value does the same. *4 Nov 2026 (R-670):* at `ε ≠ 0`, `V_0`
+is softened and finite at a zero separation, so there is no collision pole, and the `−∞` here applies at `ε = 0` only.
 
 **The kernel keeps one debug mode (R-75)** — `principia_colour_composition.md` Appendix A's bring-up mode: the kernel writes a known pattern instead of physics, for when payload writes are too broken for the fragment-recompute presets to run. It is a baked kernel variant (lowering contract Part 3), not a dispatch flag (R-41). It skips integration and writes into the **existing payload slots** — no new buffers. UV, DECODE and ROUNDTRIP are fragment presets (the rows above), not kernel modes.
 

@@ -5,9 +5,9 @@ Usage (from this folder): python3 -I build.py ../../../../fixtures/anosova/table
 
 Sources:
   I  = T. A. Agekyan & Zh. P. Anosova, Soviet Astronomy 11(6), 1006-1014 (1968), Table 1, pp. 1010-1012
-       (docs/incoming/2026-10-24_anosova/papers/agekyan_anosova_1968_SvA_11_1006.pdf, an ADS image scan).
+       (docs/incoming/2026-10-24_anosova/papers/agekyan_anosova_1968_SvA_11_1006.pdf; held locally since 2 Nov 2026 at docs/incoming/_local/agekyan_anosova_1968_SvA_11_1006.pdf, R-673, an ADS image scan).
   II = the same authors, Astrophysics 4(1), 11-16, doi:10.1007/BF01013153, Table 1 (pp. 12-14) and Table 3 (p. 15)
-       (docs/incoming/2026-10-24_anosova/papers/agekyan_anosova_1968_Ap_4_11_part2.pdf).
+       (docs/incoming/2026-10-24_anosova/papers/agekyan_anosova_1968_Ap_4_11_part2.pdf; held locally since 2 Nov 2026 at docs/incoming/_local/agekyan_anosova_1968_Ap_4_11_part2.pdf, R-673).
 
 A and B are independent readings: A from full-page renders at 300 dpi (II) or 400 dpi strips (I); B from separate
 column-strip crops (II) or the 1400-pixel page overviews (I). The script diffs them and stops on any difference that

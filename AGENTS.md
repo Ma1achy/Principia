@@ -2,6 +2,11 @@
 
 Authority: `CLAUDE.md`, and the `docs/` corpus with `decisions.md` overriding it (R-1); the map is `docs/read_first/principia_INDEX.md`.
 
+## Numbers shown to the owner
+
+The owner's standing rule (`decisions.md` R-693): "every R-, RQ-, REQ- or TASK- number shown to the owner comes with a
+plain-English gloss."
+
 ## Code Review Rules
 
 The brief for the three advisory AI reviewers, Codex, Gemini (the review workflow) and GitHub Copilot, for the trial

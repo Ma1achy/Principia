@@ -81,7 +81,7 @@ confirmed by the owner at the M3 gate, REQ-PAY-070).** Transcribed from the lite
   one in the negative, and the endpoint on the equator when one is. Body 0 between: cut `a`; body 2: cut `b`; body 1:
   no crossing. `d`, the `r²ₖ` and their comparisons are branch inputs, formed under R-547 (integrator contract Part 4):
   each coordinate taken in as a mantissa in `[1, 2)` and an integer exponent, the differences, products and sums
-  formed on those, so no intermediate is subnormal and every IEEE backend rounds them alike. `d` is decided on that
+  formed on those, so no intermediate is subnormal and every IEEE backend rounds them alike (a condition on the driver, R-690). `d` is decided on that
   exponent before it is converted: below the float's normal range it is zero, and in the range the conversion is
   exact, so no subnormal is formed (R-547; gpu_determinism_note § "The discipline", rule 6), and a value a conversion
   would round up to the least normal cannot read differently on a backend that flushes. Its side is then read by Part

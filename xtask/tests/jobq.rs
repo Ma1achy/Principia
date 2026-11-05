@@ -567,16 +567,19 @@ negative_control!(
     timeout_case("jobq_timeout_control", true)
 );
 
-/// A job that starts a background `sleep 60` (with `escape`, in a process group of its own) and exits 0 at once: it
-/// must end with status 0, and its background child, left in its group, must be killed when the runner reaps it.
+/// A job that starts a background `sleep 60` and exits 0: it must end with status 0, and its background child, left in
+/// its group, must be killed when the runner reaps it. With `escape` the child takes a process group of its own, and
+/// the job exits only once perl has written `go`, after `setpgrp`, so the runner's kill can't reach it first (RQ-689).
 fn finished_group_case(tag: &str, escape: bool) {
     let q = Q::new(tag, "");
-    let child = if escape {
-        "perl -e 'setpgrp(0,0); exec @ARGV' sleep 60"
+    let script = if escape {
+        format!(
+            "perl -e 'setpgrp(0,0) or die; open(F, q(>), q(go)) or die; close F; exec @ARGV' \
+             sleep 60 & echo $! > child.pid; {GATE}; exit 0"
+        )
     } else {
-        "sleep 60"
+        "sleep 60 & echo $! > child.pid; exit 0".to_owned()
     };
-    let script = format!("{child} & echo $! > child.pid; exit 0");
     let id = q.submit("build", "finished", &[], &["sh", "-c", &script]);
     let (code, out) = q.wait(id);
     let child = read_pid(&q.work().join("child.pid"));

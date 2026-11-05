@@ -57,7 +57,8 @@ search. GitHub's own search API is not reachable from that session, so a repo-sc
   will be shared on reasonable request to the corresponding author", and draws its own Plummer initial conditions
   rather than reusing these. **The initial conditions are fully specified**: a uniform grid of spacing 0.015625 (1/64)
   over the Agekyan–Anosova map gives 1212 points (§2 and Appendix A). The map is defined in
-  `../2026-10-24_anosova/papers/agekyan_anosova_1968_SvA_11_1006.pdf`. Brutus runs at L_w = 1024 bits fixed. The
+  `../2026-10-24_anosova/papers/agekyan_anosova_1968_SvA_11_1006.pdf` (held locally since 2 Nov 2026 at
+  `../_local/agekyan_anosova_1968_SvA_11_1006.pdf`, R-673). Brutus runs at L_w = 1024 bits fixed. The
   per-point lifetimes appear only in Fig. 1 (two panels: ε = 10⁻⁶ left, ε = 10⁻⁷⁰ right; colour log₁₀ T on 0–3;
   black for T > 1000). The paper's K–S test gives p = 0.72 between the two panels.
 - **A false lead.** TIB's Leibniz Data Manager listed a "Three-Body Problem Dataset" beside Breen et al. in search
