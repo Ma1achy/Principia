@@ -3793,29 +3793,29 @@ fn fd_burrau_theta_k_body(words_in: fd_burrau_theta_k_words) -> fd_burrau_theta_
         words.w[9u] = 0u;
         words.w[10u] = 0u;
         words.w[39u] = 1u;
-        let _e129 = (_e83 + ((_e88 - _e83) * bitcast<f32>(_e101)));
-        let _e133 = (cos(_e129) / (1f + sin(_e129)));
-        let _e134 = (_e133 * _e133);
-        let _e135 = (1f - _e134);
-        let _e136 = (_e133 + _e133);
-        let _e137 = (1f + _e134);
-        let _e139 = ((_e135 + _e136) + _e137);
-        let _e142 = (_e137 / _e139);
-        let _e143 = (_e136 / _e139);
-        let _e144 = (_e135 / _e139);
-        let _e150 = (_e136 + _e133);
-        let _e151 = (_e150 - _e136);
-        let _e161 = select(1u, 0u, ((_e150 < 1f) || ((_e150 == 1f) && (((_e136 - (_e150 - _e151)) + (_e133 - _e151)) <= 0f))));
-        let _e163 = (_e93 * pow(bitcast<f32>(_e105), _e98));
-        let _e164 = bitcast<u32>(_e142);
+        let _e128 = (_e93 * pow(bitcast<f32>(_e105), _e98));
+        let _e131 = (_e83 + ((_e88 - _e83) * bitcast<f32>(_e101)));
+        let _e135 = (cos(_e131) / (1f + sin(_e131)));
+        let _e136 = (_e135 * _e135);
+        let _e137 = (1f - _e136);
+        let _e138 = (_e135 + _e135);
+        let _e139 = (1f + _e136);
+        let _e141 = ((_e137 + _e138) + _e139);
+        let _e144 = (_e139 / _e141);
+        let _e145 = (_e138 / _e141);
+        let _e146 = (_e137 / _e141);
+        let _e152 = (_e138 + _e135);
+        let _e153 = (_e152 - _e138);
+        let _e163 = select(1u, 0u, ((_e152 < 1f) || ((_e152 == 1f) && (((_e138 - (_e152 - _e153)) + (_e135 - _e153)) <= 0f))));
+        let _e164 = bitcast<u32>(_e144);
         let _e169 = (bitcast<i32>(((_e164 >> bitcast<u32>(23i)) & 255u)) - 127i);
-        let _e184 = ((_e142 * bitcast<f32>((bitcast<u32>(((_e169 / -2i) + 127i)) << bitcast<u32>(23i)))) * bitcast<f32>((bitcast<u32>((((_e169 / 2i) - _e169) + 127i)) << bitcast<u32>(23i))));
+        let _e184 = ((_e144 * bitcast<f32>((bitcast<u32>(((_e169 / -2i) + 127i)) << bitcast<u32>(23i)))) * bitcast<f32>((bitcast<u32>((((_e169 / 2i) - _e169) + 127i)) << bitcast<u32>(23i))));
         let _e189 = bitcast<i32>(((bitcast<u32>(_e184) >> bitcast<u32>(23i)) & 255u));
         let _e196 = (_e184 * bitcast<f32>((bitcast<u32>((254i - _e189)) << bitcast<u32>(23i))));
         let _e199 = select((_e169 + (_e189 - 127i)), -32768i, (_e184 == 0f));
-        let _e200 = bitcast<u32>(_e143);
+        let _e200 = bitcast<u32>(_e145);
         let _e205 = (bitcast<i32>(((_e200 >> bitcast<u32>(23i)) & 255u)) - 127i);
-        let _e220 = ((_e143 * bitcast<f32>((bitcast<u32>(((_e205 / -2i) + 127i)) << bitcast<u32>(23i)))) * bitcast<f32>((bitcast<u32>((((_e205 / 2i) - _e205) + 127i)) << bitcast<u32>(23i))));
+        let _e220 = ((_e145 * bitcast<f32>((bitcast<u32>(((_e205 / -2i) + 127i)) << bitcast<u32>(23i)))) * bitcast<f32>((bitcast<u32>((((_e205 / 2i) - _e205) + 127i)) << bitcast<u32>(23i))));
         let _e225 = bitcast<i32>(((bitcast<u32>(_e220) >> bitcast<u32>(23i)) & 255u));
         let _e232 = (_e220 * bitcast<f32>((bitcast<u32>((254i - _e225)) << bitcast<u32>(23i))));
         let _e235 = select((_e205 + (_e225 - 127i)), -32768i, (_e220 == 0f));
@@ -3841,12 +3841,12 @@ fn fd_burrau_theta_k_body(words_in: fd_burrau_theta_k_words) -> fd_burrau_theta_
         let _e283 = select(select(_e273, 127i, (_e273 > 127i)), -126i, (_e273 < -126i));
         let _e290 = (_e273 - _e283);
         let _e300 = ((_e270 * bitcast<f32>((bitcast<u32>((_e283 + 127i)) << bitcast<u32>(23i)))) * bitcast<f32>((bitcast<u32>((select(select(_e290, 127i, (_e290 > 127i)), -126i, (_e290 < -126i)) + 127i)) << bitcast<u32>(23i))));
-        let _e301 = (_e142 * _e143);
+        let _e301 = (_e144 * _e145);
         let _e303 = sqrt((_e301 / _e300));
-        let _e305 = sqrt((_e144 * _e300));
-        let _e306 = ((_e135 / _e137) * _e303);
-        let _e307 = ((-((_e135 * _e136)) / (_e137 * (_e136 + _e137))) * _e305);
-        let _e308 = ((_e136 / _e137) * _e305);
+        let _e305 = sqrt((_e146 * _e300));
+        let _e306 = ((_e137 / _e139) * _e303);
+        let _e307 = ((-((_e137 * _e138)) / (_e139 * (_e138 + _e139))) * _e305);
+        let _e308 = ((_e138 / _e139) * _e305);
         let _e314 = sqrt((((_e306 * _e306) + (_e307 * _e307)) + (_e308 * _e308)));
         let _e315 = (_e306 / _e314);
         let _e316 = (_e307 / _e314);
@@ -3854,21 +3854,21 @@ fn fd_burrau_theta_k_body(words_in: fd_burrau_theta_k_words) -> fd_burrau_theta_
         let _e318 = (_e315 / _e303);
         let _e319 = (_e316 / _e305);
         let _e320 = (_e317 / _e305);
-        let _e322 = -((_e144 * _e319));
-        let _e323 = (_e144 * _e320);
+        let _e322 = -((_e146 * _e319));
+        let _e323 = (_e146 * _e320);
         let _e324 = -(_e323);
-        let _e327 = ((_e143 / _e300) * _e318);
+        let _e327 = ((_e145 / _e300) * _e318);
         let _e328 = (_e322 - _e327);
-        let _e329 = ((_e142 / _e300) * _e318);
+        let _e329 = ((_e144 / _e300) * _e318);
         let _e330 = (_e322 + _e329);
         let _e331 = (_e300 * _e319);
         let _e332 = (_e300 * _e320);
         let _e333 = -(_e327);
-        let _e336 = ((_e142 * _e333) + (_e143 * _e329));
+        let _e336 = ((_e144 * _e333) + (_e145 * _e329));
         let _e337 = (_e333 - _e336);
         let _e338 = (_e329 - _e336);
         let _e339 = -(_e336);
-        let _e350 = (((_e142 * -((_e324 * _e337))) + (_e143 * -((_e324 * _e338)))) + (_e144 * -((_e332 * _e339))));
+        let _e350 = (((_e144 * -((_e324 * _e337))) + (_e145 * -((_e324 * _e338)))) + (_e146 * -((_e332 * _e339))));
         let _e351 = (_e350 * _e323);
         let _e352 = (_e337 - _e351);
         let _e354 = -((_e350 * _e328));
@@ -3877,34 +3877,34 @@ fn fd_burrau_theta_k_body(words_in: fd_burrau_theta_k_words) -> fd_burrau_theta_
         let _e360 = -(_e332);
         let _e362 = (_e339 - (_e350 * _e360));
         let _e364 = -((_e350 * _e331));
-        let _e367 = (_e142 + _e143);
-        let _e370 = ((_e322 * _e367) + (_e144 * _e331));
-        let _e373 = ((_e324 * _e367) + (_e144 * _e332));
+        let _e367 = (_e144 + _e145);
+        let _e370 = ((_e322 * _e367) + (_e146 * _e331));
+        let _e373 = ((_e324 * _e367) + (_e146 * _e332));
         let _e374 = (_e322 - _e370);
         let _e375 = (_e324 - _e373);
         let _e376 = (_e331 - _e370);
         let _e377 = (_e332 - _e373);
         let _e379 = (_e324 * _e374);
-        let _e390 = (((_e142 * ((_e328 * _e375) - _e379)) + (_e143 * ((_e330 * _e375) - _e379))) + (_e144 * ((_e331 * _e377) - (_e332 * _e376))));
+        let _e390 = (((_e144 * ((_e328 * _e375) - _e379)) + (_e145 * ((_e330 * _e375) - _e379))) + (_e146 * ((_e331 * _e377) - (_e332 * _e376))));
         let _e392 = (_e374 - (_e390 * _e323));
         let _e394 = (_e375 - (_e390 * _e328));
         let _e397 = (_e375 - (_e390 * _e330));
         let _e400 = (_e376 - (_e390 * _e360));
         let _e402 = (_e377 - (_e390 * _e331));
-        let _e412 = (((_e142 * (_e328 * _e337)) + (_e143 * (_e330 * _e338))) + (_e144 * (_e331 * _e339)));
+        let _e412 = (((_e144 * (_e328 * _e337)) + (_e145 * (_e330 * _e338))) + (_e146 * (_e331 * _e339)));
         let _e414 = -((_e412 * _e323));
         let _e416 = (_e337 - (_e412 * _e328));
         let _e419 = (_e338 - (_e412 * _e330));
         let _e422 = -((_e412 * _e360));
         let _e424 = (_e339 - (_e412 * _e331));
         let _e427 = -(_e320);
-        let _e429 = -((_e144 * _e427));
+        let _e429 = -((_e146 * _e427));
         let _e430 = (_e300 * _e427);
-        let _e433 = ((_e429 * _e367) + (_e144 * _e430));
+        let _e433 = ((_e429 * _e367) + (_e146 * _e430));
         let _e434 = (_e429 - _e433);
         let _e435 = (_e430 - _e433);
         let _e437 = (_e324 * _e434);
-        let _e448 = (((_e142 * ((_e328 * _e374) - _e437)) + (_e143 * ((_e330 * _e374) - _e437))) + (_e144 * ((_e331 * _e376) - (_e332 * _e435))));
+        let _e448 = (((_e144 * ((_e328 * _e374) - _e437)) + (_e145 * ((_e330 * _e374) - _e437))) + (_e146 * ((_e331 * _e376) - (_e332 * _e435))));
         let _e450 = (_e434 - (_e448 * _e323));
         let _e452 = (_e374 - (_e448 * _e328));
         let _e455 = (_e374 - (_e448 * _e330));
@@ -3913,26 +3913,26 @@ fn fd_burrau_theta_k_body(words_in: fd_burrau_theta_k_words) -> fd_burrau_theta_
         let _e477 = (_e392 * _e392);
         let _e490 = (_e414 * _e414);
         let _e503 = (_e450 * _e450);
-        let _e517 = select(1i, 0i, (_e161 == 4u));
+        let _e517 = select(1i, 0i, (_e163 == 4u));
         if (_e517 != 0i) {
-            switch bitcast<i32>(_e161) {
+            switch bitcast<i32>(_e163) {
                 case 0: {
-                    phi_63487_ = (((_e142 * ((_e352 * _e352) + (_e354 * _e354))) + (_e143 * ((_e356 * _e356) + (_e358 * _e358)))) + (_e144 * ((_e362 * _e362) + (_e364 * _e364))));
+                    phi_63487_ = (((_e144 * ((_e352 * _e352) + (_e354 * _e354))) + (_e145 * ((_e356 * _e356) + (_e358 * _e358)))) + (_e146 * ((_e362 * _e362) + (_e364 * _e364))));
                     phi_63488_ = array<array<f32, 2>, 3>(array<f32, 2>(_e352, _e354), array<f32, 2>(_e356, _e358), array<f32, 2>(_e362, _e364));
                     break;
                 }
                 case 1: {
-                    phi_63487_ = (((_e142 * (_e477 + (_e394 * _e394))) + (_e143 * (_e477 + (_e397 * _e397)))) + (_e144 * ((_e400 * _e400) + (_e402 * _e402))));
+                    phi_63487_ = (((_e144 * (_e477 + (_e394 * _e394))) + (_e145 * (_e477 + (_e397 * _e397)))) + (_e146 * ((_e400 * _e400) + (_e402 * _e402))));
                     phi_63488_ = array<array<f32, 2>, 3>(array<f32, 2>(_e392, _e394), array<f32, 2>(_e392, _e397), array<f32, 2>(_e400, _e402));
                     break;
                 }
                 case 2: {
-                    phi_63487_ = (((_e142 * (_e490 + (_e416 * _e416))) + (_e143 * (_e490 + (_e419 * _e419)))) + (_e144 * ((_e422 * _e422) + (_e424 * _e424))));
+                    phi_63487_ = (((_e144 * (_e490 + (_e416 * _e416))) + (_e145 * (_e490 + (_e419 * _e419)))) + (_e146 * ((_e422 * _e422) + (_e424 * _e424))));
                     phi_63488_ = array<array<f32, 2>, 3>(array<f32, 2>(_e414, _e416), array<f32, 2>(_e414, _e419), array<f32, 2>(_e422, _e424));
                     break;
                 }
                 case 3: {
-                    phi_63487_ = (((_e142 * (_e503 + (_e452 * _e452))) + (_e143 * (_e503 + (_e455 * _e455)))) + (_e144 * ((_e458 * _e458) + (_e460 * _e460))));
+                    phi_63487_ = (((_e144 * (_e503 + (_e452 * _e452))) + (_e145 * (_e503 + (_e455 * _e455)))) + (_e146 * ((_e458 * _e458) + (_e460 * _e460))));
                     phi_63488_ = array<array<f32, 2>, 3>(array<f32, 2>(_e450, _e452), array<f32, 2>(_e450, _e455), array<f32, 2>(_e458, _e460));
                     break;
                 }
@@ -3953,9 +3953,9 @@ fn fd_burrau_theta_k_body(words_in: fd_burrau_theta_k_words) -> fd_burrau_theta_
         let _e525 = phi_63490_;
         let _e527 = phi_63491_;
         let _e528 = sqrt(_e525);
-        let _e544 = bitcast<u32>(_e163);
+        let _e544 = bitcast<u32>(_e128);
         let _e557 = select(select(0u, 2u, !((_e517 == 1i))), 1u, select(((false != ((_e544 >> bitcast<u32>(31i)) != 0u)) || false), false, (false || ((_e544 & 2147483647u) == 0u))));
-        let _e559 = fma(-0f, 0f, (_e163 + _e163));
+        let _e559 = fma(-0f, 0f, (_e128 + _e128));
         if (_e559 != _e559) {
             phi_84410_ = true;
         } else {
@@ -3963,12 +3963,12 @@ fn fd_burrau_theta_k_body(words_in: fd_burrau_theta_k_words) -> fd_burrau_theta_
         }
         let _e564 = phi_84410_;
         let _e567 = select(0f, sqrt(select(_e559, 0f, _e564)), (_e557 == 0u));
-        let _e569 = (_e142 * (_e567 * (_e527[0][0] / _e528)));
-        let _e571 = (_e142 * (_e567 * (_e527[0][1] / _e528)));
-        let _e573 = (_e143 * (_e567 * (_e527[1][0] / _e528)));
-        let _e575 = (_e143 * (_e567 * (_e527[1][1] / _e528)));
-        let _e577 = (_e144 * (_e567 * (_e527[2][0] / _e528)));
-        let _e579 = (_e144 * (_e567 * (_e527[2][1] / _e528)));
+        let _e569 = (_e144 * (_e567 * (_e527[0][0] / _e528)));
+        let _e571 = (_e144 * (_e567 * (_e527[0][1] / _e528)));
+        let _e573 = (_e145 * (_e567 * (_e527[1][0] / _e528)));
+        let _e575 = (_e145 * (_e567 * (_e527[1][1] / _e528)));
+        let _e577 = (_e146 * (_e567 * (_e527[2][0] / _e528)));
+        let _e579 = (_e146 * (_e567 * (_e527[2][1] / _e528)));
         switch bitcast<i32>(_e557) {
             case 0: {
                 phi_63940_ = 5u;
@@ -3991,7 +3991,7 @@ fn fd_burrau_theta_k_body(words_in: fd_burrau_theta_k_words) -> fd_burrau_theta_
         let _e586 = select(_e582, _e279, (select(1i, 0i, (_e279 == 5u)) != 0i));
         let _e591 = (_e330 - _e328);
         let _e592 = (_e324 - _e324);
-        let _e593 = (_e331 - (((_e142 * _e328) + (_e143 * _e330)) / _e367));
+        let _e593 = (_e331 - (((_e144 * _e328) + (_e145 * _e330)) / _e367));
         let _e594 = (_e332 - _e324);
         let _e595 = (_e315 * _e317);
         let _e596 = (_e315 * _e316);
@@ -4005,8 +4005,8 @@ fn fd_burrau_theta_k_body(words_in: fd_burrau_theta_k_words) -> fd_burrau_theta_
         let _e604 = select(_e599, 3.1415925f, _e603);
         let _e614 = (_e592 * _e592);
         let _e617 = (sqrt((_e301 / _e367)) * sqrt(((_e591 * _e591) + _e614)));
-        let _e624 = (sqrt((_e144 * _e367)) * sqrt(((_e593 * _e593) + (_e594 * _e594))));
-        let _e641 = (((((_e569 * _e569) + (_e571 * _e571)) / (_e142 + _e142)) + (((_e573 * _e573) + (_e575 * _e575)) / (_e143 + _e143))) + (((_e577 * _e577) + (_e579 * _e579)) / (_e144 + _e144)));
+        let _e624 = (sqrt((_e146 * _e367)) * sqrt(((_e593 * _e593) + (_e594 * _e594))));
+        let _e641 = (((((_e569 * _e569) + (_e571 * _e571)) / (_e144 + _e144)) + (((_e573 * _e573) + (_e575 * _e575)) / (_e145 + _e145))) + (((_e577 * _e577) + (_e579 * _e579)) / (_e146 + _e146)));
         let _e642 = (_e328 - _e330);
         let _e645 = sqrt(((_e642 * _e642) + _e614));
         let _e646 = (_e328 - _e331);
@@ -4029,25 +4029,25 @@ fn fd_burrau_theta_k_body(words_in: fd_burrau_theta_k_words) -> fd_burrau_theta_
         }
         let _e664 = phi_84758_;
         let _e665 = select(_e660, _e645, _e664);
-        let _e677 = bitcast<f32>(select(bitcast<u32>(-((((_e301 / _e645) + ((_e142 * _e144) / _e651)) + ((_e143 * _e144) / _e655)))), 4286578688u, (_e665 == 0f)));
-        let _e678 = (_e142 != _e142);
+        let _e677 = bitcast<f32>(select(bitcast<u32>(-((((_e301 / _e645) + ((_e144 * _e146) / _e651)) + ((_e145 * _e146) / _e655)))), 4286578688u, (_e665 == 0f)));
+        let _e678 = (_e144 != _e144);
         if _e678 {
             phi_84773_ = true;
         } else {
-            phi_84773_ = (_e143 <= _e142);
+            phi_84773_ = (_e145 <= _e144);
         }
         let _e681 = phi_84773_;
         if _e678 {
             phi_84788_ = true;
         } else {
-            phi_84788_ = (_e143 >= _e142);
+            phi_84788_ = (_e145 >= _e144);
         }
         let _e685 = phi_84788_;
         let _e693 = bitcast<u32>(_e677);
         let _e703 = select(5u, _e586, (select(1i, 0i, (_e586 == 5u)) != 0i));
         words.w[11u] = _e164;
         words.w[12u] = _e200;
-        let _e708 = bitcast<u32>(_e144);
+        let _e708 = bitcast<u32>(_e146);
         words.w[13u] = _e708;
         words.w[14u] = bitcast<u32>(_e328);
         let _e714 = bitcast<u32>(_e324);
@@ -4065,7 +4065,7 @@ fn fd_burrau_theta_k_body(words_in: fd_burrau_theta_k_words) -> fd_burrau_theta_
         words.w[26u] = _e164;
         words.w[27u] = _e200;
         words.w[28u] = _e708;
-        words.w[29u] = bitcast<u32>((select(_e142, _e143, _e681) / select(_e142, _e143, _e685)));
+        words.w[29u] = bitcast<u32>((select(_e144, _e145, _e681) / select(_e144, _e145, _e685)));
         words.w[30u] = bitcast<u32>(_e617);
         words.w[31u] = bitcast<u32>(_e624);
         words.w[32u] = bitcast<u32>(bitcast<f32>(select(bitcast<u32>((_e617 / _e624)), 2139095040u, (_e624 == 0f))));
