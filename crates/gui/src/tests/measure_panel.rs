@@ -14,6 +14,7 @@ use crate::app::App;
 use crate::cli::mock::{MEASURED_WINDOW_SIZE, WINDOW_SIZE};
 use crate::explore::breadcrumb::{self, RING_WIDTH};
 use crate::explore::footer::FOOTER;
+use crate::explore::top_bar::TOP_BAR;
 use crate::headless::Headless;
 use crate::measure::stats::{Frame, WARM_UP_MS, WINDOW_MS};
 use crate::measure::{
@@ -957,6 +958,30 @@ fn measure_panel_keyboard_ring_follows_the_layer() {
     );
     rejects("a ring drawn while presenting", || {
         assert_eq!(step_rings(&ctx, &mut measured, Vec::new()).len(), 1);
+    });
+}
+
+/// The console over the whole page leaves the panel beside it, which it does not cover (R-463 K2): a focus on the panel
+/// stays there, and Tab reaches it with the bars, and nothing under the console.
+#[test]
+fn measure_panel_keyboard_stays_reachable_beside_a_covering_console() {
+    let (ctx, mut measured) = measured_panel();
+    step_rings(&ctx, &mut measured, Vec::new());
+    press_on(&ctx, &mut measured, Key::Tab, Modifiers::SHIFT);
+    assert_eq!(focus_of(&measured), [PANEL_SCOPE]);
+    measured.app.console_open = true;
+    measured.app.windows.console.maximised = true;
+    step_rings(&ctx, &mut measured, Vec::new());
+    assert_eq!(focus_of(&measured), [PANEL_SCOPE], "the focus stays");
+
+    for big in [TOP_BAR, FOOTER, PANEL_SCOPE] {
+        press_on(&ctx, &mut measured, Key::Tab, Modifiers::NONE);
+        assert_eq!(focus_of(&measured), [big], "Tab, with the console over");
+    }
+    rejects("a tree that leaves the panel out", || {
+        let tree = measured.app.keyboard.tree_mut(Mode::Explore);
+        tree.leave_uncovered(Some(&[TOP_BAR, FOOTER]));
+        assert!(!tree.is_covered(&measured.app.view.focus.path));
     });
 }
 
