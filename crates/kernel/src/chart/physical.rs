@@ -831,8 +831,9 @@ impl<A: Coordinate, S: Selection> MixedMassRatio<A, S, f64> {
     /// A realised ratio in the asked range, for a centre the link does not realise. The link's clamps are one-sided on
     /// monotone coordinates, so the miss never rises toward the realised interval from either side, and a trisection of
     /// `ln q` that keeps the side of the lower miss reaches it at any width of the ask and of the interval, each test to
-    /// within `ε_μ/2`, an end at or below 0 taken at the least positive double. `STEPS` takes the widest ask, about
-    /// 1420 in `ln q`, below `1e-19`, under a double's spacing at `q = 1`.
+    /// within `ε_μ/2`, an end at or below 0 taken at the least positive double. The search holds no count: it ends where
+    /// a probe no longer falls strictly inside the bracket, the bracket then at the doubles' own spacing, and each step
+    /// moves an end strictly inward, so it ends.
     ///
     /// The miss falls only non-strictly: past both clamps the round trip is constant, and `m_c`'s limb can hold the miss
     /// exactly level over a run `[A, B]` of `ln q`, as at `softmax_tanh`, `μ_max = 5`, bodies `(2, 0)`,
@@ -842,13 +843,16 @@ impl<A: Coordinate, S: Selection> MixedMassRatio<A, S, f64> {
     /// `−(k − μ)`, so `(B − A)/(A − R)` is `(k − μ)/k`, at most about 1/2 since a realised part needs `k < 2μ`; measured,
     /// at most 0.64 over 882 flats on either side, both links, `μ_max` 0.25 to 30.
     fn seed(&self, p: &LinkParams<f64>) -> Option<f64> {
-        const STEPS: u32 = 128;
         let eps = 0.5 * <f64 as ChartConstants>::EPS_MU;
         let mut lo = self.ratio[0].max(f64::MIN_POSITIVE).ln();
         let mut hi = self.ratio[1].ln();
-        for _ in 0..STEPS {
+        loop {
             let third = (hi - lo) / 3.0;
-            let (below, above) = ((lo + third).exp(), (hi - third).exp());
+            let (near, far) = (lo + third, hi - third);
+            if !(lo < near && far < hi) {
+                return None;
+            }
+            let (below, above) = (near.exp(), far.exp());
             let miss_below = self.miss_narrowed(below, p);
             let miss_above = self.miss_narrowed(above, p);
             if miss_below <= eps {
@@ -858,19 +862,18 @@ impl<A: Coordinate, S: Selection> MixedMassRatio<A, S, f64> {
                 return Some(above);
             }
             if miss_below < miss_above {
-                hi -= third;
+                hi = far;
             } else {
-                lo += third;
+                lo = near;
             }
         }
-        None
     }
 
     /// The end of the realised range from the realised ratio `from` toward the asked end `toward`, the range's upper
     /// end where `upper`: `toward` itself where realised; `None` where it is not and lies on `from`'s inner side (an
     /// upper end below `from`, a lower end above it), the asked range then outside the interval the link realises;
-    /// else the last realised ratio on the way, by bisection in `ln q`, sixty-four halvings, an end at or below 0 taken
-    /// at the least positive double. Each test here is to within `ε_μ/2`, so that the warp's rounding at the range's
+    /// else the last realised ratio on the way, by bisection in `ln q` down to the doubles' own spacing, an end at or
+    /// below 0 taken at the least positive double. Each test here is to within `ε_μ/2`, so that the warp's rounding at the range's
     /// ends (`q₀·(q₁/q₀)^t` at `t = 1`), and the narrowing of the ends, stay inside [`MixedMassRatio::realised`]'s
     /// `ε_μ`; the narrowing of `held` is `miss_narrowed`'s.
     fn edge(&self, from: f64, toward: f64, upper: bool, p: &LinkParams<f64>) -> Option<f64> {
@@ -883,8 +886,11 @@ impl<A: Coordinate, S: Selection> MixedMassRatio<A, S, f64> {
         }
         let (mut ok, mut bad) = (from.ln(), toward.max(f64::MIN_POSITIVE).ln());
         let mut last = from;
-        for _ in 0..64 {
+        loop {
             let mid = 0.5 * (ok + bad);
+            if mid == ok || mid == bad {
+                return Some(last);
+            }
             let q = mid.exp();
             if self.miss_narrowed(q, p) <= eps {
                 ok = mid;
@@ -893,7 +899,6 @@ impl<A: Coordinate, S: Selection> MixedMassRatio<A, S, f64> {
                 bad = mid;
             }
         }
-        Some(last)
     }
 
     /// The check at `(u, v)` (the module's note).
