@@ -62,7 +62,7 @@ jobs:
           $env:RUNNER_TRACKING_ID = '0'
           $p = Start-Process powershell.exe -ArgumentList '-NoProfile','-Command','Start-Sleep -Seconds 1800' -WindowStyle Hidden -PassThru
           "background process started: $($p.Id)"
-          $o = & powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File E:unner-tools\checks\job-started.ps1
+          $o = & powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File E:\runner-tools\checks\job-started.ps1
           $code = $LASTEXITCODE
           $o | Where-Object { $_ -match 'hook:|REFUSED' }
           "hook exit $code; background process still alive: $([bool](Get-Process -Id $p.Id -ErrorAction SilentlyContinue))"
