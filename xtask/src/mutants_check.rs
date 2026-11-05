@@ -3,7 +3,7 @@
 //! surviving (missed) mutant, and fails naming each one that is not in the checked-in equivalent-mutants list. Each
 //! entry of that list names one mutant, as cargo-mutants prints it, and carries a one-line justification the code and
 //! qa reviewers approve (R-202). A mutant that timed out is no survivor: it counts as caught, and every one is listed
-//! by name, with a count, 0 included (the owner's order of 5 Nov, R-712, on the port).
+//! by name, with a count, 0 included (the owner's order of 5 Nov, R-712).
 //!
 //! `cargo xtask mutants-timeout` sets the shards' per-mutant timeout from the one measured baseline, by the rule
 //! `.cargo/mutants.toml` gives every other run (R-348, REQ-VAL-180, as that order amends them).

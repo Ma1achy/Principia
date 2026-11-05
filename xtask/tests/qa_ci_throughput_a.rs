@@ -649,7 +649,7 @@ mod any_label {
     use super::*;
     negative_control!(
         qa_cta_mutants_work_runs_only_on_the_merge_ready_run,
-        // The baseline, since the owner's order of 5 Nov 2026 (R-712, on the port) the job the shards wait for, so that
+        // The baseline, since the owner's order of 5 Nov 2026 (R-712) the job the shards wait for, so that
         // a shard started by any label alone is skipped with it: the one change here, R-290's exception by that order.
         "the baseline the shards wait for started by any label, not the merge-ready one",
         expected = "another label's run runs jobs",

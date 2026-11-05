@@ -38,7 +38,7 @@ exclude_globs = [
 test_tool = "nextest"
 
 # The per-mutant timeout (R-348; REQ-VAL-180, confirmed by the human at the M0 gate, R-376, R-71; amended by the owner's
-# order of 5 Nov 2026, R-712, on the port, whose multiplier of 3 supersedes R-376's 2.0):
+# order of 5 Nov 2026, R-712, whose multiplier of 3 supersedes R-376's 2.0):
 # a mutant whose tests run past it is recorded as a timeout, not a survivor (R-202), and the run goes on to its next
 # mutant. It comes from the unmutated baseline's measured test time: `timeout_multiplier` times that time, but no less
 # than `minimum_test_timeout` seconds. Every run reads it here: the nightly full run (TASK-M0-19) and a local run, on

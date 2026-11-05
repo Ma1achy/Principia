@@ -178,7 +178,7 @@ impl Ctx {
         if let Some(rest) = o.strip_prefix("needs.") {
             let (job, field) = rest.split_once('.').expect("qa23r: needs.<job>.<field>");
             // The one output the order introduces, the shards' measured timeout (the owner's order of 5 Nov 2026, R-712,
-            // on the port, the one change here, R-290's exception by that order): a shard's step `env` reads it, and
+            // the one change here, R-290's exception by that order): a shard's step `env` reads it, and
             // these runs stand in for that step. Any other field still panics below.
             if job == "mutants-baseline" && field == "outputs.timeout" {
                 return String::new();

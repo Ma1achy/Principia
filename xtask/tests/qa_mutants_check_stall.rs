@@ -273,7 +273,7 @@ fn check_awaited_bounded(yml: &str) {
         "qa_mcs: mutants-check does not wait for mutants-verdict ({jobs:?}), so it cannot report the verdict"
     );
     // The shards apart: `qa_mcs_every_shard_step_is_bounded` covers them, since their run is long by design. So is the
-    // one baseline they wait for (the owner's order of 5 Nov 2026, R-712, on the port, the one change here, R-290's
+    // one baseline they wait for (the owner's order of 5 Nov 2026, R-712, the one change here, R-290's
     // exception by that order), whose every step `merge_ready_mutants_check_reports_a_stalled_step` holds to a limit.
     for j in jobs
         .iter()

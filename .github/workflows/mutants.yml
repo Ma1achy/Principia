@@ -284,7 +284,7 @@ jobs:
       # `--timeout` binds only a mutant's tests. The limit is on this step, so the shard's partial report is still
       # uploaded when it is hit, and the step then fails.
       # The run's two caps (R-348) come from `.cargo/mutants.toml`, as the nightly run's and a local run's do; the human
-      # confirmed both at the M0 gate (R-376; R-71), and the owner's order of 5 Nov 2026 (R-712, on the port) amends the
+      # confirmed both at the M0 gate (R-376; R-71), and the owner's order of 5 Nov 2026 (R-712) amends the
       # first:
       # - the per-mutant timeout (REQ-VAL-180), `timeout_multiplier` and `minimum_test_timeout`, applied to the measured
       #   baseline by `cargo xtask mutants-timeout` and given here as `--timeout`, since a skipped baseline leaves
@@ -375,7 +375,7 @@ jobs:
           path: ${{ runner.temp }}/mutants.out
           if-no-files-found: ignore
 
-  # The unmutated baseline, measured once for every shard (the owner's order of 5 Nov 2026, R-712, on the port: the
+  # The unmutated baseline, measured once for every shard (the owner's order of 5 Nov 2026, R-712: the
   # per-mutant timeout comes from the measured baseline, 3 times it, and 8 shards stay). Each shard used to run a
   # baseline of its own: on PR #360 (run 41957362447) that was 5064-5554 s of test time in seven shards of eight, of the
   # shard's 300 minutes, and those seven were cut with 135 of 676 mutants unreached; the slowest mutant took 2405 s and
@@ -683,7 +683,7 @@ jobs:
           CAPS_FIXTURE_HANG_SECS=5 CAPS_FIXTURE_ALLOC_MIB=256 caps controls
           expect controls settled CaughtMutant no
           expect controls provisioned CaughtMutant no
-      # The shards' path, end to end, on the same fixture (the owner's order of 5 Nov 2026, R-712, on the port), and the
+      # The shards' path, end to end, on the same fixture (the owner's order of 5 Nov 2026, R-712), and the
       # one place a change to it runs before it reaches a pull request's shards: `mutants-baseline`'s command stops at
       # the baseline, whose time `cargo xtask mutants-timeout` turns into the floor here, and a shard's command, with
       # the baseline skipped, takes that timeout: the hanging mutant is recorded as a timeout, and the check lists it.
@@ -725,7 +725,7 @@ jobs:
   # The sharded run's verdict (R-202, R-302): runs after every shard, whatever their result. It fails if any shard
   # failed or was cut off by its limit, and checks every shard's report together against the equivalent-mutants list,
   # listing each survivor of the whole run, and every mutant that timed out, by name, with a count, 0 included, in its
-  # log and its job's summary (the owner's order of 5 Nov 2026, R-712, on the port: a timeout counts as caught, but list
+  # log and its job's summary (the owner's order of 5 Nov 2026, R-712: a timeout counts as caught, but list
   # them). `always()` makes it run on every merge-ready run, a cancelled or skipped
   # shard included (then it fails), and it passes when no shard has a mutant. `mutants-check`, below, reports its
   # result. It runs only on the merge-ready run, so it is not named `mutants-check`, which every run reports.

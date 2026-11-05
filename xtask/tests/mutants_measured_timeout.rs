@@ -1,4 +1,4 @@
-//! The per-mutant timeout from one measured baseline (the owner's order of 5 Nov 2026, R-712, on the port; R-348,
+//! The per-mutant timeout from one measured baseline (the owner's order of 5 Nov 2026, R-712; R-348,
 //! REQ-VAL-180 as it amends them; R-202, R-302): `mutants-baseline` measures the unmutated baseline once, in
 //! cargo-mutants' own run, on the shards' setup, and fails the gate if it fails; `cargo xtask mutants-timeout` applies
 //! `.cargo/mutants.toml`'s multiplier and floor to it, and the eight shards, their baselines skipped, take the result;
