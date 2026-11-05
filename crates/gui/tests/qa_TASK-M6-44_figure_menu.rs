@@ -1,9 +1,9 @@
-//! QA tests for TASK-M6-44, from R-463 K2 ("the panels under it cannot be reached") as the figure stays in use under a
-//! risen console: its right-click menu goes when the console reaches the point it was opened on, whatever raised the
-//! console, and not before. A console opening by itself shuts the menu of a point it covers and leaves one it does not,
-//! an entry of a menu left hanging over a console risen after it was opened locks that point, and a console that opened
-//! by itself and is then maximised covers the panels as any other. Each test runs both arms (R-176), so neither
-//! "always" nor "never" passes.
+//! QA tests for TASK-M6-44, from R-463 K2 ("Maximised, it covers the panels and the figure until toggled back") as the
+//! figure stays in use under a risen console: its right-click menu goes when the console reaches the point it was
+//! opened on, whatever raised the console, and not before. A console opening by itself shuts the menu of a point it
+//! covers and leaves one it does not, an entry of a menu left hanging over a console risen after it was opened locks
+//! that point, and a console that opened by itself and is then maximised covers the panels as any other. Each test runs
+//! both arms (R-176), so neither "always" nor "never" passes.
 // The file name gives a crate name that is not snake case.
 #![allow(non_snake_case)]
 
