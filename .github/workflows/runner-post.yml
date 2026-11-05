@@ -172,6 +172,22 @@ jobs:
             'alternates' { [void][IO.Directory]::CreateDirectory("$d\objects\info"); [IO.File]::WriteAllText("$d\objects\info\alternates", "E:/runner-tools/tmp/objects`n") }
             'replace-loose' { [void][IO.Directory]::CreateDirectory("$d\refs\replace"); [IO.File]::WriteAllText("$d\refs\replace\$zero", "$zero`n") }
             'replace-packed' { [IO.File]::WriteAllText("$d\packed-refs", "$zero refs/replace/$zero`n") }
+            'hook-key' { git -C $w config hook.x.command true }
+            'refstorage-key' { git -C $w config extensions.refStorage files }
+            'fsck-key' { git -C $w config fsck.missingEmail ignore }
+            'reftable' { [void][IO.Directory]::CreateDirectory("$d\reftable") }
+            'object' {
+              [IO.File]::WriteAllText("$w\a.txt", "real`n")
+              [IO.File]::WriteAllText("$w\b.txt", "planted`n")
+              git -C $w add a.txt b.txt
+              git -C $w -c user.name=t -c user.email=t@t commit -q -m one
+              $a = (git -C $w rev-parse HEAD:a.txt).Trim()
+              $b = (git -C $w rev-parse HEAD:b.txt).Trim()
+              $va = "$d\objects\$($a.Substring(0,2))\$($a.Substring(2))"
+              $vb = "$d\objects\$($b.Substring(0,2))\$($b.Substring(2))"
+              [IO.File]::SetAttributes($va, 'Normal')
+              [IO.File]::Copy($vb, $va, $true)
+            }
             'modules' { [void][IO.Directory]::CreateDirectory("$d\modules\x") }
             'worktrees' { [void][IO.Directory]::CreateDirectory("$d\worktrees\x") }
             'junction' {
