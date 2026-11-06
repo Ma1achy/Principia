@@ -66,6 +66,7 @@ Also read `plan/adr/ADR-0001-mock-noise-integer-lattice.md` § "Decision" and §
 - `cargo xtask screenshot --all` — before and after of `01_main/mock_shell` and `02_stain/mock_stain` in the PR, for the eye;
   no comparison across backends.
 - `python3 plan/check_plan.py`.
+- Proposal: `JUMP_STEP` 0.01, `JUMP_RUN` 16; the qa reviewer checks them and the human confirms them at the M6 gate (REQ-GUI-418).
 
 ## Notes
 - **The pattern is option A (R-689; ADR-0001 § "Alternatives").** No golden changes: no fixture holds mock pixels, so nothing is

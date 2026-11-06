@@ -19,7 +19,7 @@ to M8, the physics review of PR #342, F2).
 - [ ] Each gate is shown able to fail — a control (sign-flipped variant, known-answer field, a comparison that must differ) is run and fails. `docs/read_first/principia_00_philosophy.md` § "4.4 A test that cannot fail is not a test"; `docs/read_first/principia_01_pitfalls.md` § "9. A PARITY CHECK THAT MASKS THE BITS THE FORK LANDS IN"
 
 <!-- list:numerical-gates -->
-*127 requirements, generated from `plan/requirements.yaml` — do not edit by hand.*
+*126 requirements, generated from `plan/requirements.yaml` — do not edit by hand.*
 
 **M0**
 - [ ] REQ-VAL-004 — R-171: order samples coarse → fine (strides 32, 4, 1, 0; stride 0 unstrided, the finest); r_k = |x_k − x_{k−1}| / |x_{k−1}|; pass iff r_k strictly decreasing and the finest r_k below the threshold (provisional 0.1 against REQ-VAL-135 until M3). The recorded sequence 0.2153 → 0.4423 → 0.5494 → 0.0947 (r = 1.054, 0.242, 0.828) must fail; a strictly shrinking fixture must pass.
@@ -130,7 +130,6 @@ to M8, the physics review of PR #342, F2).
 - [ ] REQ-REF-043 — decisions.md records the exact angle with its evidence: structured counts on the white-noise fixture (≈ chance) and on coherent fixtures at the chosen angle
 - [ ] REQ-REF-044 — decisions.md records the target with its evidence: estimator sea_fraction against the full-cache footprint-spread CDF on the tolerance-study fixtures, and the tier-derivation error that error costs
 - [ ] REQ-REF-051 — per named slice, resident quads with and without the latch over a live playhead to the horizon, the difference and its share of the resident count; recorded in decisions.md
-- [ ] REQ-GUI-418 — the proposal gives the shipped field's and the distributed-offset control's line counts at both views on Metal and lavapipe, and how they move with each value; recorded in decisions.md
 - [ ] REQ-VAL-087 — record where S_word fires relative to outcome impurity on the tolerance-study fixtures; the split's output is unchanged with S_word present or absent
 - [ ] REQ-VAL-088 — a recorded measurement fixes (threshold, eta) together
 - [ ] REQ-VAL-093 — record crossing-count distribution and its correlation with outcome impurity on reference charts
