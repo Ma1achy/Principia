@@ -635,6 +635,13 @@ pub fn driver_of(info: &AdapterInfo, os: Option<String>) -> String {
     }
 }
 
+/// What one run of `sw_vers` answered: its output, where it succeeded and gave any. A failing run prints its usage on
+/// stdout, which must not become a driver key.
+pub fn sw_vers_answer(success: bool, stdout: &[u8]) -> Option<String> {
+    let text = String::from_utf8_lossy(stdout).trim().to_owned();
+    (success && !text.is_empty()).then_some(text)
+}
+
 /// This machine's macOS version and build, `None` elsewhere.
 pub fn os_build() -> Option<String> {
     let read = |flag: &str| {
@@ -642,8 +649,7 @@ pub fn os_build() -> Option<String> {
             .arg(flag)
             .output()
             .ok()?;
-        let text = String::from_utf8_lossy(&out.stdout).trim().to_owned();
-        (!text.is_empty()).then_some(text)
+        sw_vers_answer(out.status.success(), &out.stdout)
     };
     let (version, build) = (read("-productVersion")?, read("-buildVersion")?);
     Some(format!("macOS {version} ({build})"))

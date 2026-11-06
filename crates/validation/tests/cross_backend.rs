@@ -13,9 +13,9 @@ use kernel::chart::Latent;
 use kernel::stage::decode::{DecodeUniforms, DecodeVariant, LatentDefaults, UniformChart};
 use validation::cross_backend::{
     backend_of, build_inputs, chart_of, check_read_back, compare, compiled, control_verdict,
-    driver_of, listed, os_build, record_cpu, with_points, Batch, Comparison, Count, Emits, Group,
-    Inputs, Kind, Listed, PairOutcome, Part, Record, Row, Word, CANON_ENTRY, CPU, DOMAIN, LIST,
-    NAME, NOT_EMITTED,
+    driver_of, listed, os_build, record_cpu, sw_vers_answer, with_points, Batch, Comparison, Count,
+    Emits, Group, Inputs, Kind, Listed, PairOutcome, Part, Record, Row, Word, CANON_ENTRY, CPU,
+    DOMAIN, LIST, NAME, NOT_EMITTED,
 };
 use validation::gate::report::Verdict;
 use validation::gate::{self, GateConfig, GateSpec};
@@ -1468,6 +1468,32 @@ negative_control!(
     "the other platform's answer",
     expected = "the machine's OS build is not as this platform gives it",
     check_os_build(!cfg!(target_os = "macos"))
+);
+
+#[test]
+fn cross_backend_read_back_sw_vers_answers_only_on_success() {
+    assert_eq!(
+        sw_vers_answer(false, b"Usage: sw_vers\n"),
+        None,
+        "a failing run's usage became an answer"
+    );
+    assert_eq!(
+        sw_vers_answer(true, b" 27.0.1\n").as_deref(),
+        Some("27.0.1")
+    );
+    assert_eq!(sw_vers_answer(true, b" \n"), None, "nothing is no answer");
+    assert_eq!(sw_vers_answer(false, b""), None);
+}
+
+negative_control!(
+    cross_backend_read_back_sw_vers_answers_only_on_success,
+    "a run that failed, read as one that succeeded",
+    expected = "a failing run's usage became an answer",
+    assert_eq!(
+        sw_vers_answer(true, b"Usage: sw_vers\n"),
+        None,
+        "a failing run's usage became an answer"
+    )
 );
 
 fn check_compiled(canon: StageMode) {

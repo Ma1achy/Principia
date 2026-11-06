@@ -412,5 +412,5 @@ mutant = "crates/kernel/src/encode/blocks.rs:279:29: replace | with ^ in <impl S
 justification = "the two operands are select(first, 1, 0) and select(second, 2, 0), which share no bit, so their ^ is their |"
 
 [[equivalent]]
-mutant = "crates/validation/src/cross_backend.rs:998:22: replace < with <= in at_inertia"
+mutant = "crates/validation/src/cross_backend.rs:1004:22: replace < with <= in at_inertia"
 justification = "i == target has already pushed the state and left the loop, so i <= target and i < target agree on every i that reaches the step"
