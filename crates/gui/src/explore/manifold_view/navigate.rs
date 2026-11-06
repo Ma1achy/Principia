@@ -12,7 +12,7 @@ use engine::contract::sim_config::Plane;
 
 use super::{
     add, basis_edit, in_plane, reset::Section, row, row_ui, z0_edit, Out, Panel, Scratch, View,
-    CENTRE_U, CENTRE_V, SECTION_TITLES, ZOOM, ZOOM_RANGE,
+    CENTRE_U, CENTRE_V, ZOOM, ZOOM_RANGE,
 };
 use crate::keyboard::keymap::{multiplier, Direction};
 use crate::keyboard::scopes::{Adjust, Base, StepKind};
@@ -49,15 +49,7 @@ pub fn magnification(zoom: f64) -> String {
 
 /// Draws Navigate's own rows in `section`, then the depth readout and the lock under them.
 pub fn show(ui: &mut Ui, section: Rect, h: f32, clip: Rect, panel: &mut Panel<'_>) {
-    super::header_with_reset(
-        ui,
-        section,
-        h,
-        clip,
-        (SECTION_TITLES[1], NOTE),
-        Section::Navigate,
-        panel,
-    );
+    super::header_with_reset(ui, section, h, clip, NOTE, Section::Navigate, panel);
     let plane = panel.snapshot.sim.plane.clone();
     let view = View::read(&panel.snapshot.sim);
     let label_w = super::chart::LABEL_W;

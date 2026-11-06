@@ -18,8 +18,8 @@ use crate::explore::compass::Gesture;
 
 use super::{
     basis_edit, close_under_console, reset::Section, row, row_ui, target_choices, target_edit,
-    Panel, Target, Touch, View, AXES, GAMMA, SECTION_TITLES, TAU1, TAU2, TILT_X, TILT_X_ENTRIES,
-    TILT_Y, TILT_Y_ENTRIES,
+    Panel, Target, Touch, View, AXES, GAMMA, TAU1, TAU2, TILT_X, TILT_X_ENTRIES, TILT_Y,
+    TILT_Y_ENTRIES,
 };
 
 /// The tilts' span, in degrees.
@@ -83,15 +83,7 @@ pub const TARGET_W: f32 = 64.0;
 /// Draws Tilt in `section`: `τ₁` and its target, `τ₂` and its target, then `γ`, a row each.
 pub fn show(ui: &mut Ui, section: Rect, h: f32, clip: Rect, panel: &mut Panel<'_>) {
     let view = View::read(&panel.snapshot.sim);
-    super::header_with_reset(
-        ui,
-        section,
-        h,
-        clip,
-        (SECTION_TITLES[3], ""),
-        Section::Tilt,
-        panel,
-    );
+    super::header_with_reset(ui, section, h, clip, "", Section::Tilt, panel);
     let angles = Angles::of(&view);
     panel.scratch.compass.slider = None;
     for (i, (id, label, value, (lo, hi))) in [

@@ -11,10 +11,7 @@
 
 use eframe::egui::{self, DragValue, Rect, RichText, Slider, Stroke, Ui};
 
-use super::{
-    reset::Section, row, row_ui, z0_edit, Panel, Touch, AXES, SECTION_TITLES, SLIDERS,
-    Z0_HALF_RANGE,
-};
+use super::{reset::Section, row, row_ui, z0_edit, Panel, Touch, AXES, SLIDERS, Z0_HALF_RANGE};
 use crate::explore::lock::GOLD;
 
 /// The width of the value field, in points (a look choice, R-390).
@@ -113,15 +110,7 @@ pub fn show(ui: &mut Ui, section: Rect, h: f32, clip: Rect, panel: &mut Panel<'_
     } else {
         ""
     };
-    super::header_with_reset(
-        ui,
-        section,
-        h,
-        clip,
-        (SECTION_TITLES[2], note),
-        Section::SliceCentre,
-        panel,
-    );
+    super::header_with_reset(ui, section, h, clip, note, Section::SliceCentre, panel);
     let z0 = panel.snapshot.sim.plane.z0;
     for (i, name) in AXES.iter().enumerate() {
         let anchor = lock.locked.then_some(lock.z_locked[i]);

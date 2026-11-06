@@ -19,7 +19,7 @@ use engine::contract::sim_config::{SimConfig, LATENT_DIM};
 
 use super::{
     about_the_pin, basis_edit, z0_edit, PresetHome, View, PRESET_HOMES, RESET_NAVIGATE,
-    RESET_SLICE_CENTRE, RESET_TILT,
+    RESET_SLICE_CENTRE, RESET_TILT, SECTION_TITLES,
 };
 use crate::keyboard::scopes::ScopeId;
 
@@ -66,6 +66,15 @@ impl Section {
             Section::SliceCentre => RESET_SLICE_CENTRE,
             Section::Tilt => RESET_TILT,
             Section::Navigate => RESET_NAVIGATE,
+        }
+    }
+
+    /// Its heading.
+    pub fn title(self) -> &'static str {
+        match self {
+            Section::SliceCentre => SECTION_TITLES[2],
+            Section::Tilt => SECTION_TITLES[3],
+            Section::Navigate => SECTION_TITLES[1],
         }
     }
 

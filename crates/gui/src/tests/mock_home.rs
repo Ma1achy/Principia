@@ -17,7 +17,6 @@ use crate::explore::manifold_view::{self as mv, View, PRESET_HOMES};
 use crate::explore::top_bar::{self, HOME};
 use crate::explore::{time, FIGURE};
 use crate::layout::{Layout, Splitter};
-use crate::side::EngineSide;
 use crate::windows::console;
 
 const NONE: Modifiers = Modifiers::NONE;
@@ -53,8 +52,11 @@ fn home_key(rig: &mut Rig, modifiers: Modifiers) {
     let _ = rig.1.frame(&mut rig.0, Vec::new());
 }
 
+/// A way to Home: what it is, and the script.
+type Way = (&'static str, fn(&mut Rig));
+
 /// Each way to Home, on the rig it has moved.
-fn ways() -> Vec<(&'static str, fn(&mut Rig))> {
+fn ways() -> Vec<Way> {
     vec![
         ("the button", click_button),
         ("the key on the Figure", |rig| {

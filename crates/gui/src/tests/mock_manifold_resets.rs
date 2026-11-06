@@ -25,7 +25,7 @@ use crate::explore::manifold_view::{
 };
 use crate::explore::FIGURE;
 use crate::headless::Headless;
-use crate::side::{EngineSide, MockSide};
+use crate::side::MockSide;
 
 const NONE: Modifiers = Modifiers::NONE;
 const SHIFT: Modifiers = Modifiers::SHIFT;

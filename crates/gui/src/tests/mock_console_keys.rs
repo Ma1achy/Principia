@@ -1002,6 +1002,16 @@ fn mock_console_keys_the_tree_lands_moves_and_scrolls_as_r450_has_it() {
     let typing = run(&tree, &on_control(SEARCH), INTERACT, Key(End), 1.0).1;
     assert_eq!(typing, Outcome::None);
     assert_eq!(run(&tree, &[], NAV, Key(End), 1.0).1, Outcome::None);
+    // But Home, which is the command Home off a list it scrolls, the focus left where it is (R-466 K1).
+    for (path, mode) in [
+        (&ON_LOG[..], NAV),
+        (&on_control(SEARCH)[..], INTERACT),
+        (&[][..], NAV),
+    ] {
+        let (at, outcome) = run(&tree, path, mode, Key(Home), 1.0);
+        assert_eq!(outcome, Outcome::Home);
+        assert_eq!(at, (owned(path), mode));
+    }
     // A window of the old kind keeps its landing on a section's first element.
     let mut old = crate::keyboard::scopes::ScopeTree::new();
     old.register(None, crate::keyboard::scopes::Scope::window("w", "W"));

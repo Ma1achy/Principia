@@ -1,8 +1,9 @@
 //! The Explore page (render_gui_spec §G2; 01_main.png): the top bar with Overlays ▾ (`top_bar`, `overlays_menu`),
 //! the footer, and the regions — the left Manifold view (`manifold_view`), the right Trajectory panel (`trajectory`),
 //! and the bottom row's compass (`compass`), Time (`time`) and Legend (`legend`). The figure's rect is left to the
-//! figure: nothing is drawn over it but its own marks, the lock's reticle (`lock`) and the hover label (`hover_label`)
-//! (§G1), and its axis labels sit beside it (`axis_labels`). Each region is a big scope of the keyboard's tree (§G3);
+//! figure: nothing is drawn over it but its own marks, the lock's reticle (`lock`), the hover label (`hover_label`) and
+//! the Home button, the one control over it (`manifold_view::reset`; §G1, R-466), and its axis labels sit beside it
+//! (`axis_labels`). Each region is a big scope of the keyboard's tree (§G3);
 //! the Manifold view's four sub-scopes, the compass with its Tilt and Slice buttons and its view buttons, Trajectory's
 //! and Time's elements are reached with Enter, and the Legend is read-only.
 

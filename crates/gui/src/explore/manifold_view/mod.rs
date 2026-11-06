@@ -1,6 +1,7 @@
 //! The left panel, "Manifold view": ONE group (render_gui_spec §G2; GUI_DESIGN_NOTES § "01 Explore"; 01_main.png;
 //! R-390, ORDER item 3). Chart, Navigate with the depth readout, its precision warning and the lock, Slice centre and
 //! Tilt, top to bottom, are one thing: how you view the manifold (named "Centre z₀" and "Slice & tilt" before R-457).
+//! Navigate, Slice centre and Tilt each have a reset, returning the section to the chart preset's own values (`reset`).
 //! Every edit is a `SetField` on `z₀`, on the basis `q₁, q₂`, on the slice frame or on the lock: navigation is chart
 //! construction, with no camera (§G1; chart_decoder_contract Part 4). The panel reads the snapshot and keeps nothing of
 //! the state itself.
@@ -1155,14 +1156,14 @@ fn title_in(ui: &mut Ui, rect: Rect, title: &str, note: &str) {
     }
 }
 
-/// Draws a section's header in row 0 of `rect`, with the section's reset at its right end (R-466 K6), dimmed at home
+/// Draws `section`'s header in row 0 of `rect`, with its title, a weak note and the section's reset at its right end (R-466 K6), dimmed at home
 /// (K11): a click on it is its command.
 pub fn header_with_reset(
     ui: &mut Ui,
     rect: Rect,
     h: f32,
     clip: Rect,
-    (title, note): (&str, &str),
+    note: &str,
     section: reset::Section,
     panel: &mut Panel<'_>,
 ) {
@@ -1185,5 +1186,5 @@ pub fn header_with_reset(
     }
     panel.place(section.scope(), &button, clip);
     let left = Rect::from_min_max(line.min, pos2(button.rect.min.x, line.max.y));
-    title_in(ui, left, title, note);
+    title_in(ui, left, section.title(), note);
 }
