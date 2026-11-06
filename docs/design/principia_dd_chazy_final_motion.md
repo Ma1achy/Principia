@@ -137,11 +137,11 @@ the running maximum moment of inertia `I_max`. `G = 1`. Transcribed from prin-rs
 - **`I`** is the moment of inertia about the centre of mass, `I = Σ_k m_k |r_k − R_com|²` (`energy::inertia`).
 - **`R_0`** is the initial hyperradius, `R_0 = √(I_0 / M)`, `M = Σ m_k` (`energy::hyperradius` on the initial state).
 - **A pair `(i, j)`'s two-body energies** (`pair_kup`): reduced mass `μ = m_i m_j / (m_i + m_j)`, `Δr = r_j − r_i`,
-  `Δv = v_j − v_i`, `d = |Δr|`; kinetic `K = ½ μ |Δv|²`, potential magnitude `U = m_i m_j / d` (positive; `/ √(d² + ε²)` at `ε ≠ 0`, R-792), and radial
+  `Δv = v_j − v_i`, `d = |Δr|`; kinetic `K = ½ μ |Δv|²`, potential magnitude `U = m_i m_j / d` (positive; `/ √(d² + ε²)` at softening's `ε ≠ 0`, R-792), and radial
   velocity `v_r = Δr·Δv / d` (receding when `v_r > 0`).
 - **The outer body `b`'s two-body energies** (`out_kup`), against the centre of mass of the other two, `(i, j)`:
   `M_p = m_i + m_j`, `R_c = (m_i r_i + m_j r_j)/M_p`, `V_c` likewise; `Δr = r_b − R_c`, `Δv = v_b − V_c`,
-  `μ = m_b M_p / (m_b + M_p)`, `K = ½ μ |Δv|²`, `U = m_b M_p / d` (`/ √(d² + ε²)` at `ε ≠ 0`, R-792), `v_r = Δr·Δv / d`.
+  `μ = m_b M_p / (m_b + M_p)`, `K = ½ μ |Δv|²`, `U = m_b M_p / d` (`/ √(d² + ε²)` at softening's `ε ≠ 0`, R-792), `v_r = Δr·Δv / d`.
 - **The parabolic band** (`band`): a ratio `q = K/U` is `+1` (hyperbolic) if `q > 1 + ε`, `−1` (bound) if `q < 1 − ε`,
   and `0` (parabolic) otherwise, `|q − 1| ≤ ε`.
 - **The hierarchy ratio of body `b`** is its distance from its pair's centre of mass over its pair's separation,

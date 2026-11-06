@@ -292,7 +292,7 @@ the chart; the kept trajectories are the Trajectory panel's tabs and `Trace…`'
   order (R-471 H10). *Was:* "With an energy-type axis (`E`, `L_z`, `K`)".
   On an `(L_z, E)` chart with softening on, the `E` axis is labelled as Newtonian energy, which is what it reads, so a
   pixel's start never depends on `ε` (R-791; `principia_chart_reference.md` §2.1).
-  A shape-chart preset centred on the equilateral (Lagrange) point sits among the chart presets, no new chart type, so
+  A shape-chart preset centred on the equilateral (Lagrange) point, at rest, sits among the chart presets, no new chart type, so
   that view is one click away (R-798).
   **Links (R-478):** one compact row, `Links: softmax·tanh (μ_max 5) · sigmoid · sigmoid (q_max 2)`, the masses, the
   configuration and the momenta, each by its link's display name with its tunable parameters' active values (the

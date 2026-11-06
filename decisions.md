@@ -29603,6 +29603,8 @@ R-669 is in the "design" group of `plan/rule_groups.yaml`, with R-639 and R-661.
 Adds REQ-CHART-091, REQ-VAL-342 and REQ-VAL-343; changes REQ-INT-045 (statement, note), REQ-PAY-112 (statement, verify, note), REQ-VAL-199, REQ-VAL-295, REQ-VAL-311 to REQ-VAL-314, REQ-VAL-316, REQ-VAL-318, REQ-VAL-319, REQ-VAL-321, REQ-VAL-323, REQ-VAL-325 to REQ-VAL-327 and REQ-VAL-329 (rulings, rq, notes).
 
 ## R-670 — Softening's reach: a softened run keeps the collision test on geometric `r`, softening offered only on the unregularised occupants, the regularised ones refusing `ε ≠ 0`, and Chazy's `E` softened; the escape test's and the ionisation gate's pair energies take the softened potential, identical at `ε = 0`; the decode's `V₀` is softened, with `virial_ratio` following and `E₀ = K₀ + V₀`, so REQ-VAL-027, REQ-COL-006 and R-436's collision pole are restated for `ε ≠ 0` and unchanged at `ε = 0`; a view refuses `ε ≠ 0` with any `Some(E*)`; the substep law stays on geometric `d²` and `r_min` *(closes RQ-656; amends R-29, R-32, R-436 and R-654)*
+*Extended by R-791 (5 Nov 2026: the `(L_z, E)` chart, which the refusal doesn't cover, reads a Newtonian `U`, so a pixel's start doesn't depend on `ε` there) and R-792 (5 Nov 2026: Chazy's two-body potentials soften, beside the `E` this ruling softens).*
+*Still in force: all of it.*
 *1 and 2 Nov 2026 · the owner's second message of 1 Nov (questions (1) to (3)) and his message of 2 Nov (questions (4) to (7)); ported 2 Nov 2026; applied in `docs/contracts/principia_integrator_contract.md` Part 7 (the softening paragraph, a dated restatement) and Part 4 (a dated line), `docs/design/principia_dd_decoder.md` § 2, § 3.6 and § 3.7 (dated lines), `docs/design/principia_chart_reference.md` § 0.6 (a dated line), `docs/design/principia_dd_chazy_final_motion.md` § 3.1 (a dated line), `docs/design/principia_dd_generation_root.md` § "Open" (a dated line), `docs/contracts/principia_render_contract.md`, `docs/design/principia_colour_composition.md`, `docs/design/principia_dd_integrator.md` § 3.6, `docs/read_first/principia_01_pitfalls.md` § 2.2 and `docs/design/principia_dd_generation_root.md` § 3.6 (dated lines), `plan/reviewers/physics.md` § 4, the forward lines of R-29, R-32, R-436 and R-654, `docs/archive/review_queue/M0.md` (RQ-656 moved), `REVIEW_QUEUE.md`, REQ-VAL-027, REQ-COL-006, REQ-INT-111, REQ-SYS-094 and REQ-SYS-095 (reqio), TASK-M9-39 and `plan/rule_groups.yaml`*
 
 The owner's words, verbatim. 1 Nov 2026, his second message, item (2), of RQ-656's questions (1) to (3), which were all it then asked:
@@ -31222,7 +31224,7 @@ R-720 is in the "physics" group of `plan/rule_groups.yaml`.
 Changes REQ-CHART-062 (statement, verify, rulings, source, note, rq) and REQ-CHART-065 (verify, rulings, source, note).
 
 ## R-791 — At `ε ≠ 0` the `(L_z, E)` chart stays available with its energy axis the Newtonian energy, so a pixel's start never depends on `ε`; the axis is labelled Newtonian energy and the Inspector shows the softened energy beside it *(closes RQ-693)*
-*5 Nov 2026 · the owner's reply to the report of 5 Nov 2026; applied in `docs/archive/review_queue/M0.md` (RQ-693 moved), `docs/design/principia_chart_reference.md` § 2.1 and § 2.2, `docs/design/principia_dd_decoder.md` § 3.7, `docs/gui/principia_render_gui_spec.md` § G2 and § G8, REQ-VAL-015, REQ-CHART-092, REQ-GUI-416, and the `rq` lists of REQ-INT-111, REQ-SYS-094 and REQ-SYS-095 (reqio), TASK-M9-39, `plan/tasks.yaml` and `plan/rule_groups.yaml`;
+*5 Nov 2026 · the owner's reply to the report of 5 Nov 2026; applied in `docs/archive/review_queue/M0.md` (RQ-693 moved), `docs/design/principia_chart_reference.md` § 2.1 and § 2.2, `docs/design/principia_dd_decoder.md` § 3.7, `docs/design/principia_dd_encode.md`, `docs/design/principia_debug_tooling_plan.md` § G, `docs/contracts/principia_render_contract.md` § "Cross-check views (the seams)", `docs/contracts/principia_inverse_encode_contract.md`, `docs/contracts/principia_integrator_contract.md` Part 7, `docs/gui/principia_render_gui_spec.md` § G2 and § G8, REQ-VAL-015, REQ-CHART-092, REQ-GUI-416, and the `rq` lists of REQ-INT-111, REQ-SYS-094 and REQ-SYS-095 (reqio), TASK-M9-39, `plan/tasks.yaml` and `plan/rule_groups.yaml`;
 changes REQ-VAL-015, REQ-INT-111, REQ-SYS-094 and REQ-SYS-095; adds REQ-CHART-092 and REQ-GUI-416*
 
 The owner's words (5 Nov 2026), verbatim:
@@ -31241,11 +31243,17 @@ The owner's words (5 Nov 2026), verbatim:
 
 - **Where it is built.** TASK-M9-39, which lifts the refusal, so the chart's softened start, its label and its readout arrive with the first softened run. The task gains the gui reviewer and TASK-M8-16 (the Inspector's readouts), as a dependency.
 - **The `(L_z, K)` chart** is untouched: its `K*` reads no `U` (`principia_chart_reference.md` § 2.2).
+- **Encode follows decode** (physics review 5805354224 of #430, F2). The chart's encode reads the same Newtonian `U`, or entering a pixel's `(L_z, E)` would not return its `z` at `ε ≠ 0`. TASK-M9-39 separates that `U` from `V₀` at each call site.
+- **The gradient view** (the same review's F3; code review 5805379312's C1). The stored `E_0` is softened, so the view gets a Newtonian read from the decode, and its check at `ε ≠ 0` runs tilted, since a constant offset leaves an untilted gradient looking right.
+
+*What it leaves.* The ruling names the `(L_z, E)` chart. The lone, mixed and Chart-builder `E` axes and the virial-ratio axis read the same `U`, and whether it reaches them is the owner's: RQ-709, filed 6 Nov 2026, on which TASK-M9-39 waits.
+
+*What it extends:* **R-670**, whose reason, that a pixel's start never depends on `ε`, now holds on a chart its refusal doesn't cover.
 
 R-791 is in the "physics" group of `plan/rule_groups.yaml`.
 
 ## R-792 — At `ε ≠ 0` both of Chazy's two-body potentials soften, `pair_kup`'s and `out_kup`'s, so the classifier reads one physics *(closes RQ-694)*
-*5 Nov 2026 · the owner's reply to the report of 5 Nov 2026; applied in `docs/archive/review_queue/M0.md` (RQ-694 moved), `docs/design/principia_dd_chazy_final_motion.md` § 3.1, REQ-EVT-034 and the `rq` lists of REQ-INT-111, REQ-SYS-094 and REQ-SYS-095 (reqio), TASK-M9-39, `plan/tasks.yaml` and `plan/rule_groups.yaml`;
+*5 Nov 2026 · the owner's reply to the report of 5 Nov 2026; applied in `docs/archive/review_queue/M0.md` (RQ-694 moved), `docs/design/principia_dd_chazy_final_motion.md` § 3.1, `docs/contracts/principia_integrator_contract.md` Part 7, REQ-EVT-034 and the `rq` lists of REQ-INT-111, REQ-SYS-094 and REQ-SYS-095 (reqio), TASK-M9-39, `plan/tasks.yaml` and `plan/rule_groups.yaml`;
 changes REQ-INT-111, REQ-SYS-094 and REQ-SYS-095; adds REQ-EVT-034*
 
 The owner's words (5 Nov 2026), verbatim:
@@ -31254,13 +31262,15 @@ The owner's words (5 Nov 2026), verbatim:
 
 *What it decides:* option (a). At `ε ≠ 0`, `pair_kup`'s `U = m_i m_j / √(d² + ε²)` and `out_kup`'s `U = m_b M_p / √(d² + ε²)`, as R-670 (4) reads `E_rel`. The separations, `v_r` and the kinetic terms stay geometric, the committed labels stand on a softened run, and `ε = 0` is bit-identical to the classifier as written. A softened `E` no longer sits beside a Newtonian `U`.
 
-*Applied per R-369:* TASK-M9-39 builds it, R-670 already making the Chazy classifier that task's to change at `ε ≠ 0` (TASK-M7-35 is its dependency).
+*Applied per R-369:* TASK-M9-39 builds it, R-670 already making the Chazy classifier that task's to change at `ε ≠ 0` (TASK-M7-35 is its dependency). The softened label on the GPU is measured by `cargo xtask gate chazy-parity` at `ε ≠ 0` (REQ-VAL-183's band check).
+
+*What it extends:* **R-670**, whose softening of Chazy's `E` left these two-body energies unruled.
 
 R-792 is in the "physics" group of `plan/rule_groups.yaml`.
 
 ## R-793 — The state map's targets are the app's own charts: the `θ × dilation` and `ν × dilation` rows leave the targets and stay in the prototype's record *(closes RQ-680)*
-*5 Nov 2026 · the owner's reply to the report of 5 Nov 2026; applied in `docs/archive/review_queue/M0.md` (RQ-680 moved), `docs/design/principia_state_map.md` § SM1, REQ-COL-113, REQ-COL-115 and REQ-COL-129 (reqio), TASK-M7-47, TASK-M7-52 and `plan/rule_groups.yaml`;
-changes REQ-COL-113, REQ-COL-115 and REQ-COL-129*
+*5 Nov 2026 · the owner's reply to the report of 5 Nov 2026; applied in `docs/archive/review_queue/M0.md` (RQ-680 moved), `docs/design/principia_state_map.md` § SM1, REQ-COL-113, REQ-COL-115, REQ-COL-117, REQ-COL-121, REQ-COL-129 and REQ-GUI-280 (reqio), TASK-M7-47, TASK-M7-52 and `plan/rule_groups.yaml`;
+changes REQ-COL-113, REQ-COL-115, REQ-COL-117, REQ-COL-121, REQ-COL-129 and REQ-GUI-280*
 
 The owner's words (5 Nov 2026), verbatim:
 
@@ -31268,13 +31278,15 @@ The owner's words (5 Nov 2026), verbatim:
 
 *What it decides:* option (a). The targets are the app's own charts, through `encode_into` and `curve::nearest`. SM1's `θ × dilation` and `ν × dilation` rows leave the target table and stay in the prototype's record, in the same section. Option (b), defining the two charts, is not taken. It drops requirement content, which is why it was the owner's call:
 
-- REQ-COL-113's check loses its `ν × dilation` arm.
+- REQ-COL-113's check loses its `ν × dilation` arm, for an arm on a bounded axis (below).
 - REQ-COL-115's prototype figures keep `θ × h` and `ν × h` as the prototype's record, with no target to test.
 - REQ-COL-129 loses the `θ × h` and `ν × h` tolerances, and the compaction scale κ for dilation.
+- REQ-COL-117's past-edge arm and REQ-GUI-280's curve-axis test move to the `(ν, K)` chart, an app chart with a bounded `ν` on a curve.
+- REQ-COL-121 loses its `θ` arm on `θ × dilation`: its arm on the shape sphere's `θ` period is the same repeat pair on an app chart.
 
 It ends the wait on TASK-M7-52 and on TASK-M7-47's two arms.
 
-*Applied per R-369:* the state map's other mentions of the two charts are its prototype's measurements and recipes, and read as that record; a dated line in SM1 says so, and they are not rewritten. `docs/gui/reference/` is the prototype's own and is untouched.
+*Applied per R-369:* the state map's other mentions of the two charts are its prototype's measurements and recipes, and read as that record; a dated line in SM1 says so, and they are not rewritten. `docs/gui/reference/` is the prototype's own and is untouched. REQ-COL-113's arm becomes "a bounded axis's past a bounded edge, on a target that has one", so that status stays tested.
 
 *What it amends:* **R-706**, for RQ-680.
 
@@ -31290,7 +31302,10 @@ The owner's words (5 Nov 2026), verbatim:
 
 *What it decides:* part (a): the runner is a deliverable of TASK-M3-27, the earlier task that calls it, not of TASK-M9-01 or a new task. It builds `cargo xtask gate replication --target <id>` with `--propose`, `--render` and the three outcomes, as `principia_dd_replication.md` gives the command; it reports the outcome and blocks nothing, and a target's control still has to fire. Parts (b), the atlas twins and slice planes, and (c), which orbit state OC-2 recomputes and its tolerance, stay deferred to M9, so the entry stays open for them.
 
-*Applied per R-369:* TASK-M9-01 gains TASK-M3-27 as a dependency, as the entry names it. The other M9 tasks that call the command reach it through milestone order.
+*Applied per R-369:*
+
+- **Dependencies.** TASK-M9-01 gains TASK-M3-27 as a dependency, as the entry names it. The other M9 tasks that call the command reach it through milestone order.
+- **PL-8a moves to `cargo xtask gate burrau-smoke --target PL-8a`** (physics review 5805354224 of #430, F4). This command blocks nothing on its outcome, as R-649 has it for external targets, and PL-8a is internal and blocking (`principia_dd_replication.md` § 12.1), so it can't run here. It goes beside SP-1 and SP-2, whose command blocks. TASK-M3-27 still builds the scoring command, as the owner ruled, tested on synthetic targets, and its first real user is M9's.
 
 *What it amends:* **R-706**, for RQ-681's part (a).
 
@@ -31356,13 +31371,17 @@ It ends TASK-M9-24's wait, and REQ-VAL-323's `rq`. RQ-596 is already ruled (R-66
 *Applied per R-369:*
 
 - **Who builds it.** A new build task, TASK-M9-45, builds the remap, the preset and the readout, with the gui reviewer, and TASK-M9-24, the scored target, depends on it, since `plan/tools/milestones.py` keeps a scored target's task apart from what is built, not scored (R-654).
-- **What the task defines (R-72, R-71).** Which pair of ratios is shown follows the paper's axes. Which of the two mirror points the preset centres on, and its window, are written by TASK-M9-45.
+- **What the task defines (R-72, R-71).** Which pair of ratios is shown follows the paper's axes. Which of the two mirror points the preset centres on, its map and its window are written by TASK-M9-45. The spherical map can't centre on a pole, so its map is one with no pole in view (`principia_chart_reference.md` § 3.3).
+- **At rest.** The owner's first clause and PA-1 are at rest, and the rider's "the view" is that view, so the preset sets the momenta to rest (physics review 5805354224 of #430, F5).
+- **The remap's home.** `crates/kernel/src/chart/side_ratio.rs`, so `validation` and, through the engine's typed surface, the Inspector read one source, and `crates/gui` keeps depending on `engine` alone.
 
 *What it amends:* **R-706**, for RQ-594.
 
 R-798 is in the "physics" group of `plan/rule_groups.yaml`.
 
 ## R-799 — The census takes a drift reference the corpus already has, not IAS15, and a harness-only step-limit axis of the contract's limit and `None`, with `Reject` a control *(on RQ-619, which stays open)*
+*Amended in part by R-811 (6 Nov 2026: of the two references question 8's option (b) names, the census takes R-33's convergence reference, and RQ-619 closes).*
+*Still in force: IAS15 not built for the census, the proposal's clause corrected, and the step-limit axis, a harness-only axis of the contract's limit and `None`, with `Reject` a control.*
 *5 Nov 2026 · the owner's reply to the report of 5 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-619, a dated line; the entry stays open), `docs/incoming/2026-10-27_validation_plan/PROPOSAL_occupant_matrix_census_2026-10-27.md` § 3.1 and § 3.2 (dated notes), `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
 changes no requirement*
 
@@ -31421,11 +31440,9 @@ The owner's words (5 Nov 2026), verbatim:
 
 *What it decides:* option (c), decided by TASK-M7-44's measurement. Tier 2 stays whole unless tiers 1 and 2 fail to fit at 64² or 128² for a typical stain, the fixture `tier2_typical_stain`. If they fail, tier 2 splits as the entry's option (b) gives it: tier 2a (the stain graph's built-ins, their parameters and the ramp window) above tier 2b (overlays, lines, the playhead and hover, `f3_fill`), 2b dropping first. Tier 2 whole stands until the measurement. The entry closes because the rule is settled and only the measurement is left.
 
-*What it amends:* **R-522**, in that the entry no longer returns to the owner with the numbers: the measurement decides. R-522's deferral to the measurement, and what the measurement reports, stay in force.
+*What it amends:* **R-522**, in that the entry no longer returns to the owner with the numbers: the measurement decides. R-522's deferral to the measurement, and what the measurement reports, stay in force. **R-706**, for RQ-386.
 
 *Applied per R-369:* a split, if the measurement calls for one, is built in TASK-M7-44, which owns the tier table (REQ-TOOL-181).
-
-*What it amends:* **R-706**, for RQ-386.
 
 R-802 is in the "design" group of `plan/rule_groups.yaml`.
 
@@ -31543,6 +31560,8 @@ The owner's words (6 Nov 2026), verbatim:
 
 > RQ-619 (8): R-33's convergence reference. RK45 is unregularised and weakest at close encounters, which the census measures. Correct § 3.2's clause to say so.
 
-*What it decides:* the one thing R-799 left open: of the two references question 8's option (b) names, the census's drift reference is R-33's convergence reference. The inspector's RK45 is not used, being unregularised and weakest at close encounters, which the census measures. The proposal's § 3.2 clause is corrected to say so. With question 9 settled by R-799, nothing in the entry is left, so it closes. The census harness still has no task, and RQ-617 stays open beside it.
+*What it decides:* the one thing R-799 left open: of the two references question 8's option (b) names, the census's drift reference is R-33's convergence reference. The inspector's RK45 is not used, being unregularised and weakest at close encounters, which the census measures. The proposal's § 3.2 clause is corrected to say so. With question 9 settled by R-799, nothing in the entry is left, so it closes. The census harness still has no task.
+
+*What it amends:* **R-799**, for what it left open.
 
 R-811 is in the "physics" group of `plan/rule_groups.yaml`.

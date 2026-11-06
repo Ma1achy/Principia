@@ -769,8 +769,9 @@ PLAN.md § 8's rules 9–18, transcribed:
 - *30 Oct 2026 (R-649, R-650):* for an external target "the gate" above is the scoring command, not a gate: it reports
   the outcome (§ 12.3) and blocks nothing, and its tolerance is confirmed by the human with M9's report, not at a
   milestone's gate. A target's control still fires or the test is broken (rule 16).
-- *5 Nov 2026 (R-794, on RQ-681 (a)):* TASK-M3-27 builds this command, as the earlier task that calls it (REQ-TOOL-222);
-  every later target calls the same command.
+- *5 Nov 2026 (R-794, on RQ-681 (a)):* TASK-M3-27 builds this command (REQ-TOOL-222); every external target calls it.
+  PL-8a does not: it is internal and blocking (§ 12.1), so it runs as `cargo xtask gate burrau-smoke --target PL-8a`,
+  beside SP-1 and SP-2.
 - *3 Nov 2026 (R-680):* **the source page is re-read before any triage item becomes a target.** A library triage
   row is a lead, not a transcription: its numbers, precision and horizon are checked against the page they cite, and
   what the page contradicts is recorded as rule 10 has it, before a requirement or a fixture is written from it.
