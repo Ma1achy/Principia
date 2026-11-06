@@ -354,7 +354,10 @@ which the zoom reads × 1.00), defined here and in §G7 by TASK-M6-45 (R-72, REQ
 **The three values (REQ-GUI-224):** a preset's **base point** `b` is a value for each of the eight latent coordinates;
 its **centre** `(u, v)` is the base point's two coordinates on the preset's axes, `u = b·e_a`, `v = b·e_b`, so the two
 can never disagree (the definition R-466 allows); its **window** is a scale `σ_h > 0`. The preset's **home view** is
-`z₀ = b`, `q₁ = σ_h e_a`, `q₂ = σ_h e_b`. The zoom row reads `log₂(σ_h / σ)` and its magnification `σ_h / σ`, so it
+`z₀ = b`, `q₁ = σ_h e_a`, `q₂ = σ_h e_b`. These formulae hold for a preset whose axes are two of the eight latent
+coordinate axes at one scale, as all six of the mock's are (§G7). What the three values are for any other chart a
+preset can hold (an oblique or unequal-scale pair, an axis of another kind, a curved chart) and for a view saved
+tilted is not yet defined: RQ-709, for TASK-M8-18. The zoom row reads `log₂(σ_h / σ)` and its magnification `σ_h / σ`, so it
 reads 0 and × 1.00 at the window whatever `σ_h` is; with no active preset there is no window, and the row reads
 `−log₂ σ` and `1 / σ`, `σ_h = 1` (applied per R-369). The depth readout stays absolute, `−log₂ σ` (§G2's depth readout):
 it counts the chart's own scale, which a preset's window does not change. Choosing a preset keeps `σ` (applied per
@@ -1407,9 +1410,10 @@ drawn on the edge when it has left (board 6)".
   primitive triple, and the neighbourhood swept, e.g. mass × momentum).
 - **Presets are saved pairs of axes and are editable:** Save, Duplicate, Delete. Each preset also carries the values
   the resets and Home read (§G2, R-466): a base point, a centre `(u, v)` and a window, defined by TASK-M6-45 (R-72,
-  REQ-GUI-224); a saved preset stores them with its axes. Save stores the chart as it stands: its `z₀` as the base
-  point, so the centre its coordinates on the axes, and its scale `σ` as the window, so the saved view is the preset's
-  home view; Duplicate copies the three. On the mock the presets are these, placeholder content (R-390), the real
+  REQ-GUI-224); a saved preset stores them with its axes. Save of a chart within §G2's formulae, `q₁ = σ e_a`,
+  `q₂ = σ e_b` on two latent coordinate axes, stores its `z₀` as the base point, so the centre its coordinates on the
+  axes, and its scale `σ` as the window, and that saved view is the preset's home view; any other chart's three values
+  are not yet defined (§G2, RQ-709). Duplicate copies the three. On the mock the presets are these, placeholder content (R-390), the real
   engine's being REQ-GUI-082's; each base point decodes to a system, the masses `softmax(0, μ₁, μ₂)` being positive
   whatever `z_μ1`, `z_μ2` are (chart_decoder_contract Part 2):
 

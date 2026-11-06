@@ -19272,6 +19272,8 @@
   - R-466
   - R-516
   milestone: M8
+  rq:
+  - RQ-709
   note: "R-466 (18 Oct 2026; review round 1 of PR #243, gui review F6): a chart preset carries a base point, a centre and a window (REQ-GUI-224, defined by TASK-M6-45), and a saved preset stores them with its axes. R-475 L3 (20 Oct 2026): saved charts (Save view as chart) sit in the preset selector's Saved group beside the builder's presets, in the same store (REQ-GUI-239). R-478 W3: the Chart builder shows the links read-only (REQ-GUI-253, 20 Oct 2026). R-516 (20 Oct 2026): a preset may optionally pin the links it was designed under, stored with it and applied on load (REQ-GUI-254, TASK-M6-50); the builder's Save, Duplicate and Delete keep a preset's pin with it. Gui review G2 of PR #265 (applied per R-369): the verify gains the pin arm (R-516 K2). *Was:* the verify's \"; control: a saved preset whose resets fall back to another preset's values fails\"."
 - id: REQ-GUI-109
   area: GUI

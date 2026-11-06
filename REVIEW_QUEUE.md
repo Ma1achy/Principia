@@ -2128,3 +2128,24 @@ owner: yes, it is physics; the tilt changes which systems the chart shows.*
   - (iii) A margin derived from that rounding, `ε_μ − k·2⁻²⁴`: `k = 1` gives `0.940·ε_μ`, on the need with little room; `k = 2` gives `0.881·ε_μ`, with room. Neither value was run; the runs at 0.95, 0.9 and 0.8 bracket them. It changes the same code and docs as (ii).
 - **Applied meanwhile:** `ε_μ/2`, as built.
 - **Waits:** nothing is held. The code stands at `ε_μ/2` until a ruling.
+
+## RQ-709: What a saved preset's base point, centre and window are when its chart is not two latent coordinate axes at one scale *(physics; silence; REQ-GUI-108, REQ-GUI-224, R-466, R-475; `docs/gui/principia_render_gui_spec.md` § G2, § G7; context: TASK-M8-18)*
+
+*Queued 6 Nov 2026 from physics review 5805243152 of PR #429 (TASK-M6-45), finding F1. Not chosen here. The definition now stops where it is true, and the mock's six presets are all inside it.*
+
+**In plain English:** every chart preset has a home view, built from a starting point, a centre and a zoom scale. Those definitions work when the preset's two axes are plain latent coordinates at the same scale, which all six mock presets are. A user can also save other charts: skewed axes, axes at different scales, axes that are physical quantities, curved charts, or a tilted view. For those, the formula gives no home view, or gives one that differs from the chart that was saved, so Home would change the chart. The saved-presets task needs an answer before it can store these values.
+
+- **File, section:**
+  - `docs/gui/principia_render_gui_spec.md` § G2 "Resets and Home": "The preset's **home view** is `z₀ = b`, `q₁ = σ_h e_a`, `q₂ = σ_h e_b`."
+  - `docs/gui/principia_render_gui_spec.md` § G2, Save view as chart, as R-475 has it, which commits the view as a named chart, storing "a latent view as the oblique chart `(z₀, q₁, q₂)`" and a curved chart as "its parent chart, slice centre and tilt".
+  - `docs/gui/principia_render_gui_spec.md` § G7: "**Each axis has a kind:** latent direction (any mix of the eight `z` components, normalised; a normalise button shows `|q|`), physical quantity (…), or Burrau dimension (…)".
+  - `plan/requirements.yaml` REQ-GUI-108: "a saved preset must store, with its axes, its home values: its base point, its centre and its window"; its verify: "the section resets and Home of the saved preset read back exactly".
+- **The silence, case by case:**
+  - Unequal scales, `|q₁| ≠ |q₂|`: one `σ_h` cannot express the chart, and Home would change it.
+  - Non-orthogonal axes: `u = b·e_a`, `v = b·e_b` are not the base point's coordinates on the axes, and they disagree with Navigate's own row, which inverts the Gram matrix.
+  - A physical-quantity or Burrau axis, or a curved chart: there is no `e_a`, so neither the centre nor the window is defined.
+  - A tilted view: is the saved pair the new axes, or the parent's? § G2's three sections and R-466 K2's "six dimensions off them" depend on the answer.
+- **The question:** for each of these charts, what are the home view, the centre and the window, and what does the zoom row read against?
+- **Options seen:** (a) a preset stores its whole saved triple `(z₀, q₁, q₂)` as its home view, with the zoom row reading against a scale still to be named; (b) only charts within § G2's formulae store home values, and the resets and Home are dimmed on any other, as with no active preset (R-466 K3); (c) a definition per axis kind.
+- **Applied meanwhile:** § G2 and § G7 bound the formulae to a preset whose axes are two latent coordinate axes at one scale. All six mock presets qualify, so no code changes.
+- **Waits:** REQ-GUI-108's home values for any other chart, in TASK-M8-18.
