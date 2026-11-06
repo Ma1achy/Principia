@@ -27,7 +27,7 @@ The replication suite's targets PA-1 run as engine tests (`principia_dd_replicat
 
 ## Deliverables
 - The work on ShapeSphere at rest through the tested remap (R-798; *was:* "The work on the chart RQ-594 rules"); N_scramble, defined first (R-72; REQ-VAL-343) beside PA-1's row of `principia_dd_replication.md` § 5.12, both papers' words quoted, approved by the physics reviewer, then built (R-669, RQ-596 (b)). *Was:* "The work on the chart RQ-594 rules and the N_scramble diagnostic RQ-596 rules."
-- `crates/validation/src/gates/side_ratio.rs`, reading TASK-M9-45's remap (R-798, no new chart type); the calibration proposal.
+- `crates/validation/src/gates/side_ratio.rs`, reading TASK-M9-45's remap, `crates/kernel/src/chart/side_ratio.rs` (R-798, no new chart type); the calibration proposal.
 
 ## Acceptance tests
 - `cargo xtask gate replication --target PA-1` — on ShapeSphere at rest through the remap (*was:* "the chart RQ-594 rules"), the split once RQ-596 is; the maps reviewed by the physics reviewer; the split at REQ-VAL-324's level; control: a map at the wrong side ratio range must misplace the regular region; the outcome recorded with its tier: PASS where the comparison above holds, otherwise EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED, never a merge condition (R-649); the control still has to fire (REQ-VAL-323).

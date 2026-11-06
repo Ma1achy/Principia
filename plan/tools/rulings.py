@@ -26,8 +26,8 @@ RULINGS = "decisions.md"
 QUEUE = "REVIEW_QUEUE.md"
 QUEUE_ARCHIVE = "docs/archive/review_queue"
 # The files whose R-n and RQ-n references must resolve: the root working docs, the plan, the live corpus, the review
-# queue's archive, the agents' instructions and the rulings commands. Files that don't exist are skipped (the plan-check tests copy only
-# part of the tree). docs/reference/ and the rest of docs/archive/ are records in their own numbering, not scanned.
+# queue's archive, the agents' instructions and the rulings commands. Files that don't exist are skipped (the
+# plan-check tests copy only part of the tree). docs/reference/ and the rest of docs/archive/ are records in their own numbering, not scanned.
 REF_GLOBS = [
     "decisions.md", "REVIEW_QUEUE.md", "open-questions.md", "CLAUDE.md", "README.md",
     "plan/**/*.md", "plan/**/*.yaml",
