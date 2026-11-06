@@ -1249,10 +1249,21 @@ negative_control!(
     check_mass_ratio(true)
 );
 
+/// Which decode of a mapped chart [`check_mapped_is_own`] holds against the chart.
+#[derive(Clone, Copy, PartialEq)]
+enum MappedRead {
+    /// [`Chart::decode`].
+    Own,
+    /// The mapped chart's own rule path, `decode_from` on the frozen controls.
+    Rule,
+    /// [`Chart::decode`] one float up the `v` axis (the control): a difference no tolerance would see.
+    UlpOff,
+}
+
 /// Every axis warped, a mapped invariant chart is the chart, bitwise, over a window past every edge of the square, at
-/// `γ_K = gamma` (REQ-CHART-067: "the existing charts' decodes are bit-identical to before untilted"); `rule` reads the
-/// mapped chart's own rule path (`decode_from` on the frozen controls) in its place, the control's other decode.
-fn check_mapped_is_own(gamma: f64, rule: bool) {
+/// `γ_K = gamma`, through its decode and its rule path (REQ-CHART-067: "the existing charts' decodes are bit-identical
+/// to before untilted").
+fn check_mapped_is_own(gamma: f64, read: MappedRead) {
     let warped = [Mapping::Warped; 2];
     let lk = InvariantLK(inv(gamma));
     let le = InvariantLE(inv(gamma));
@@ -1260,15 +1271,20 @@ fn check_mapped_is_own(gamma: f64, rule: bool) {
     let mle = Mapped::<_, Defaults>::new(le, warped);
     let p = LinkParams::DEFAULT;
     for [u, v] in grid([-0.25, 1.25], [-0.25, 1.25]) {
-        let (a, b) = if rule {
+        let (a, b) = if read == MappedRead::Rule {
             (
                 mlk.decode_from(u, v, &lk.0.frozen(), &p).0,
                 mle.decode_from(u, v, &le.0.frozen(), &p).0,
             )
         } else {
+            let at = if read == MappedRead::UlpOff {
+                f64::from_bits(v.to_bits() + 1)
+            } else {
+                v
+            };
             (
-                mlk.decode::<Defaults, f64>(u, v),
-                mle.decode::<Defaults, f64>(u, v),
+                mlk.decode::<Defaults, f64>(u, at),
+                mle.decode::<Defaults, f64>(u, at),
             )
         };
         assert!(
@@ -1285,16 +1301,17 @@ fn check_mapped_is_own(gamma: f64, rule: bool) {
 
 #[test]
 fn qa_energy_axes_warped_mapped_is_own() {
-    check_mapped_is_own(gamma_k(), false);
-    check_mapped_is_own(1.5, false);
+    for read in [MappedRead::Own, MappedRead::Rule] {
+        check_mapped_is_own(gamma_k(), read);
+        check_mapped_is_own(1.5, read);
+    }
 }
 
 negative_control!(
     qa_energy_axes_warped_mapped_is_own,
-    "the mapped chart's rule path, read in place of the chart's own decode, differs from the chart below t = 0 at a \
-     non-integer γ_K",
+    "the mapped chart read one float up the v axis is a different system, which a bitwise comparison must see",
     expected = "is not the chart bitwise",
-    check_mapped_is_own(1.5, true)
+    check_mapped_is_own(1.5, MappedRead::UlpOff)
 );
 
 // ── Fix round 1: a warped lone `t` axis at a held `L_z ≠ 0`; the virial ratio's own asked range ───────────────────────

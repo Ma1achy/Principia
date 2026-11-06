@@ -37,6 +37,15 @@
 //!   following, and the tilt's `t₀` recomputed from the new `K₀`; the triangle at the sliced `ν₀`; `D_mom` of the sliced
 //!   control); a slice of any other index is not offered.
 //!
+//! - `qa_tilt_every_chart_shifted_energy_bound`, the fix round: `Φ_θ,L_z`'s `L_z` axis is affine (§5.4), so by value the
+//!   bound on a row past the centre's band is `K + d`'s, the pixel's: a system exactly where `2(K + d) ≥ L_z(b)²`. Warped,
+//!   the band moves with `K`, so a row past it is refused at every `K > 0`.
+//! - `qa_no_construction_finite_2k` and `qa_decode_no_finite_2k`: a `K*` has a construction only with a finite `2K*`
+//!   (§4.5, §2.2's `a = √(2K*)`), at each float: the predicate against `(k + k).is_finite()`, and the decode labelled, its
+//!   momenta 0 and finite, the same for an `L_z` with no finite square; the last values below each edge stay systems.
+//! - `qa_refusal_at_chart_precision`: a target with a construction at f64 and none at an f32 chart's own precision is
+//!   refused by `validate`, weight 0, not just tagged by the decode; at one f32 target the label and the refusal agree.
+//!
 //! Controls: the held `L_z` read without `d`; a floor at the centre's `L_z`, not the pixel's; a held `L_z` moved in a warp
 //! coordinate, or held to one sign, tilted and sliced; a bottom row left to the rounding of `l²/2`; a refused cell
 //! weighted as the tilt; a held `K` tilted by value; a mirrored `t < 0`; a held `K` slice moved in `t`, or a `t₀` not
@@ -52,6 +61,7 @@ use kernel::chart::{
     Burrau, BurrauThetaDeltaM, BurrauThetaK, BurrauThetaLz, Chart, EuclidPlane, HeldK, HeldLz,
     Mapping, MassSimplex, RestStart, Tilt, TiltMap, TiltSpec, Tilted, ValidationResult,
 };
+use kernel::decode::invariant::{infeasible, no_construction};
 use kernel::decode::{momentum, Decoded, Degenerate};
 use kernel::generated::links::{Defaults, LinkParams};
 use validation::negative_control;
@@ -1375,3 +1385,417 @@ mod slice_stale_t0 {
         }
     );
 }
+
+// ── The fix round: the shifted energy's L_z bound, a finite 2K*, the chart's own precision ───────────────────────────
+
+/// `Φ_θ,L_z` over a window past the band, `v ∈ [−0.4, 1.4]`, tilted into the held `K`: by value (`bare`, or `HeldK` in
+/// linear mode) a cell is a system exactly where `2(K₀ + d) ≥ L_z(b)²`, `L_z(b) = (2b − 1)·√(2K₀)` the centre's band
+/// (§5.4: "past `L_z`'s the formula continues and `L_z² > 2IK` is not a system"). `centre` reads the chart's own check at
+/// `K₀` in the view's place (the control).
+fn check_shifted_bound<Ch: Tiltable<Param = f64> + Copy>(
+    name: &str,
+    chart: Ch,
+    k0: f64,
+    centre: bool,
+) {
+    let span = 4.0;
+    let tv = view(chart, Arm::SheetT1, HELD_K, span);
+    let w = tv.tilt().weight;
+    let (mut past_valid, mut past_refused) = (0, 0);
+    for i in 0..33 {
+        for j in 0..33 {
+            let (u, v) = (f64::from(i) / 32.0, -0.4 + 1.8 * f64::from(j) / 32.0);
+            let (a, b, d) = Arm::SheetT1.place(u, v, span);
+            let lz = (2.0 * b - 1.0) * (2.0 * k0).sqrt();
+            let k = k0 + d;
+            let gap = 2.0 * k - lz * lz;
+            if gap.abs() < 1e-9 {
+                continue; // On §2.2's boundary.
+            }
+            let result = if centre {
+                chart.validate(a, b)
+            } else {
+                tv.validate(u, v)
+            };
+            let past = !(0.0..=1.0).contains(&b);
+            if gap > 0.0 {
+                past_valid += usize::from(past);
+                assert_eq!(
+                    result,
+                    ValidationResult::Valid,
+                    "{name} at ({u}, {v}): K + d = {k} reaches L_z = {lz}, yet the cell is no system"
+                );
+                assert_eq!(tv.weight(u, v), w, "{name} at ({u}, {v})");
+                let got = tv.decode::<Defaults, f64>(u, v);
+                assert_eq!(got.degenerate, None, "{name} at ({u}, {v})");
+                assert!(
+                    (k_of(&got) - k).abs() < TOL && (lz_of(&got) - lz).abs() < TOL,
+                    "{name} at ({u}, {v}): (K, L_z)(p) = ({}, {}), expected ({k}, {lz})",
+                    k_of(&got),
+                    lz_of(&got)
+                );
+            } else {
+                past_refused += usize::from(past);
+                assert!(
+                    centre || matches!(result, ValidationResult::Reject { .. }),
+                    "{name} at ({u}, {v}): K + d = {k} short of L_z = {lz} validates as {result:?}"
+                );
+                assert_eq!(tv.weight(u, v), 0.0, "{name} at ({u}, {v})");
+            }
+        }
+    }
+    assert!(
+        past_valid > 20 && past_refused > 20,
+        "{name}: past the band, {past_valid} systems and {past_refused} refused"
+    );
+}
+
+fn check_shifted_bound_all(centre: bool) {
+    let k0 = 0.5;
+    check_shifted_bound("Φ_θ,L_z", theta_lz(k0), k0, centre);
+    let linear = HeldK {
+        mapping: Mapping::Linear,
+        ..HeldK::new(theta_lz(k0), 1.0, 1.5)
+    };
+    check_shifted_bound("Φ_θ,L_z, linear", linear, k0, centre);
+    // Warped, the band is the pixel's own: |2b − 1| > 1 is refused at every K > 0.
+    let warped = view(
+        HeldK::new(theta_lz(k0), 1.0, 1.5),
+        Arm::SheetT1,
+        HELD_K,
+        1.0,
+    );
+    for (u, v) in [(0.9, 1.2), (0.9, -0.2), (C[0] + 0.1, 1.05)] {
+        assert!(
+            matches!(warped.validate(u, v), ValidationResult::Reject { .. }),
+            "warped past the band at ({u}, {v})"
+        );
+        assert_eq!(
+            warped.weight(u, v),
+            0.0,
+            "warped past the band at ({u}, {v})"
+        );
+    }
+}
+
+#[test]
+fn qa_tilt_every_chart_shifted_energy_bound() {
+    check_shifted_bound_all(false);
+}
+
+negative_control!(
+    qa_tilt_every_chart_shifted_energy_bound,
+    "the L_z bound read at the centre's K₀ takes a cell K + d reaches for no system and must fail",
+    expected = "yet the cell is no system",
+    {
+        check_shifted_bound_all(true);
+    }
+);
+
+/// `no_construction` against the oracle `(k + k).is_finite()`, at `$t`, with `L_z = 0`, and [`infeasible`]'s own arm kept.
+/// `$old` reads [`infeasible`] alone, the predicate before the fix (the control).
+macro_rules! finite_2k {
+    ($t:ty, $old:expr) => {{
+        let test = |k: $t, l: $t| {
+            if $old {
+                infeasible(1.0, k, l)
+            } else {
+                no_construction(k, l)
+            }
+        };
+        let last = <$t>::MAX * 0.5;
+        let first = <$t>::from_bits(last.to_bits() + 1);
+        for k in [first, <$t>::MAX, <$t>::INFINITY, <$t>::NAN] {
+            assert!(
+                test(k, 0.0),
+                "a K* with no finite 2K* has a construction: {k}"
+            );
+        }
+        for k in [0.0, 1.0, last] {
+            assert!(!test(k, 0.0), "K* = {k} has a finite 2K*");
+        }
+        assert!(
+            test(-1.0, 0.0) && test(1.0, 2.0) && !test(2.0, 2.0),
+            "the exact test"
+        );
+        // Across every binade, the mantissa stepped.
+        let bits = <$t>::MAX.to_bits();
+        let mut x = 1;
+        while x < 4096 {
+            let k = <$t>::from_bits(bits / 4096 * x + bits / 8191);
+            assert_eq!(test(k, 0.0), !(k + k).is_finite(), "at K* = {k}");
+            x += 1;
+        }
+    }};
+}
+
+fn check_finite_2k(old: bool) {
+    finite_2k!(f64, old);
+    finite_2k!(f32, old);
+}
+
+#[test]
+fn qa_no_construction_finite_2k() {
+    check_finite_2k(false);
+}
+
+negative_control!(
+    qa_no_construction_finite_2k,
+    "the exact test alone, the predicate before the fix, gives a K* with no finite 2K* a construction",
+    expected = "a K* with no finite 2K* has a construction",
+    {
+        check_finite_2k(true);
+    }
+);
+
+/// The decode on each side of the two edges at f64: `K* ≥ 2^1023`, and `|L_z| ≥ 2^512`. `shift` puts the edge one float
+/// low, so that the last system is expected labelled (the control).
+fn check_decode_2k(shift: bool) {
+    let last = f64::MAX * 0.5;
+    let first = f64::from_bits(last.to_bits() + 1);
+    let chart = nu_k();
+    let no_system = |d: &Decoded<f64>, what: &str| {
+        assert_eq!(
+            d.degenerate,
+            Some(Degenerate::InvariantInfeasible),
+            "{what} is not labelled"
+        );
+        assert!(
+            d.ic.p.iter().flatten().all(|&p| p == 0.0),
+            "{what}: momenta {:?} are not 0",
+            d.ic.p
+        );
+    };
+    for k in [first, f64::MAX, f64::INFINITY, f64::NAN] {
+        no_system(&chart.decode_lz(0.5, 0.0, k), "K* past the edge");
+        no_system(&chart.decode_lz(0.5, 0.3, k), "K* past the edge, L_z = 0.3");
+        no_system(&theta_k().decode_lz(0.5, 0.0, k), "Φ_θ,K, K* past the edge");
+    }
+    let d = chart.decode_lz(0.5, 0.0, last);
+    if shift {
+        no_system(&d, "the last K*");
+    }
+    assert_eq!(d.degenerate, None, "the last K* is a system");
+    assert!(d.ic.p.iter().flatten().all(|p| p.is_finite()));
+    assert!((k_of(&d) / last - 1.0).abs() < TOL, "K(p) = {}", k_of(&d));
+    // `2^512`, the first |L_z| with no finite square, and the float below it.
+    let square_edge = 2f64.powi(512);
+    for l in [square_edge, -square_edge, 1e300] {
+        no_system(
+            &chart.decode_lz(0.5, l, f64::MAX * 0.25),
+            "an L_z with no finite square",
+        );
+    }
+    let l = f64::from_bits(square_edge.to_bits() - 1);
+    let d = chart.decode_lz(0.5, l, last);
+    assert_eq!(d.degenerate, None, "the last L_z is a system");
+    assert!(
+        (lz_of(&d) / l - 1.0).abs() < TOL,
+        "the last L_z keeps its spin: L_z(p) = {}",
+        lz_of(&d)
+    );
+}
+
+#[test]
+fn qa_decode_no_finite_2k() {
+    check_decode_2k(false);
+}
+
+negative_control!(
+    qa_decode_no_finite_2k,
+    "the last K* with a finite 2K* expected labelled must fail: it is a system",
+    expected = "the last K* is not labelled",
+    {
+        check_decode_2k(true);
+    }
+);
+
+/// 2K overflows f32 at this K, not f64.
+const F32_EDGE_K: f32 = 2.0e38;
+
+fn narrow_tilt(arm: Arm, x: u32, span: f64) -> Tilt<f32> {
+    let w = Tilt::new(&arm.spec(x), C, [span, span]);
+    Tilt {
+        on: w.on,
+        two: w.two,
+        rank_loss: w.rank_loss,
+        centre: w.centre.map(|x| x as f32),
+        columns: w.columns.map(|c| c.map(|x| x as f32)),
+        x: w.x,
+        y: w.y,
+        span: w.span.map(|x| x as f32),
+        weight: w.weight as f32,
+        normal_zero: w.normal_zero,
+        strip: w.strip,
+    }
+}
+
+/// One pixel of an f32 view with a `K*` past f32's edge and inside f64's: refused, weight 0, the f32 decode labelled
+/// with finite momenta, where f64 alone sees a system. `wide` reads the f64 predicate in the view's place (the control).
+fn refused_at_f32<Ch: Tiltable<Param = f32>>(
+    name: &str,
+    tv: &Tilted<Ch, f32>,
+    (u, v): (f64, f64),
+    k: f64,
+    wide: bool,
+) {
+    assert!(
+        !no_construction(k, 0.0),
+        "{name}: the fixture's K* = {k} must have a construction at f64"
+    );
+    let refused = if wide {
+        no_construction(k, 0.0)
+    } else {
+        matches!(tv.validate(u, v), ValidationResult::Reject { .. })
+    };
+    assert!(
+        refused,
+        "{name} at ({u}, {v}): K* = {k} is not refused at the chart's own precision"
+    );
+    assert_eq!(tv.weight(u, v), 0.0, "{name} at ({u}, {v})");
+    let d = tv.decode::<Defaults, f32>(u as f32, v as f32);
+    assert_eq!(
+        d.degenerate,
+        Some(Degenerate::InvariantInfeasible),
+        "{name} at ({u}, {v}): the f32 decode's label"
+    );
+    assert!(d.ic.p.iter().flatten().all(|p| p.is_finite()), "{name}");
+}
+
+fn check_own_precision(wide: bool) {
+    let burrau = Burrau::<f32> {
+        nu_range: [0.1, 0.9],
+        k_max: F32_EDGE_K,
+        gamma_k: 1.5,
+    };
+    let acute = BurrauThetaK::<f32> {
+        theta_range: [0.2, std::f32::consts::FRAC_PI_4],
+        k_max: F32_EDGE_K,
+        gamma_k: 1.5,
+    };
+    let top = (0.5, 1.0);
+    let edge = f64::from(F32_EDGE_K);
+    // The held L_z's charts, the top row past f32's edge, in each mode; v = 1/8 a system.
+    for mapping in [Mapping::Warped, Mapping::Linear] {
+        let a = HeldLz {
+            mapping,
+            ..HeldLz::new(burrau)
+        };
+        let t = HeldLz {
+            mapping,
+            ..HeldLz::new(acute)
+        };
+        let (va, vt) = (
+            Tilted::new(a, narrow_tilt(Arm::SheetT1, HELD_LZ, 1.0)).unwrap(),
+            Tilted::new(t, narrow_tilt(Arm::SheetT1, HELD_LZ, 1.0)).unwrap(),
+        );
+        refused_at_f32("(ν, K)", &va, top, edge, wide);
+        refused_at_f32("Φ_θ,K", &vt, top, edge, wide);
+        assert_eq!(va.validate(0.5, 0.125), ValidationResult::Valid);
+        assert_eq!(vt.validate(0.5, 0.125), ValidationResult::Valid);
+    }
+    // Φ_θ,L_z by value: K₀ + d past f32's edge at the window's far side, the centre a system.
+    let bare = BurrauThetaLz::<f32> {
+        theta_range: [0.2, std::f32::consts::FRAC_PI_4],
+        k: 1.0e38,
+        lz_fraction: 1.0,
+    };
+    let span = 3.0e38;
+    let by_value = Tilted::new(bare, narrow_tilt(Arm::SheetT1, HELD_K, span)).unwrap();
+    let (_, _, d) = Arm::SheetT1.place(1.0, 0.5, span);
+    refused_at_f32("Φ_θ,L_z", &by_value, (1.0, 0.5), 1.0e38 + d, wide);
+    assert_eq!(by_value.validate(C[0], C[1]), ValidationResult::Valid);
+    // Warped: K_max·t^γ past f32's edge.
+    let warped = Tilted::new(
+        HeldK::new(bare, 3.0e38, 1.5),
+        narrow_tilt(Arm::SheetT1, HELD_K, 1.0),
+    )
+    .unwrap();
+    let (_, _, d) = Arm::SheetT1.place(1.0, 0.5, 1.0);
+    let k = 3.0e38 * ((1.0e38f64 / 3.0e38).powf(1.0 / 1.5) + d).powf(1.5);
+    refused_at_f32("Φ_θ,L_z, warped", &warped, (1.0, 0.5), k, wide);
+    assert_eq!(warped.validate(C[0], C[1]), ValidationResult::Valid);
+}
+
+#[test]
+fn qa_refusal_at_chart_precision() {
+    check_own_precision(false);
+}
+
+negative_control!(
+    qa_refusal_at_chart_precision,
+    "a K* read by the f64 predicate alone has a construction, so a refusal at f64 misses it and must fail",
+    expected = "is not refused at the chart's own precision",
+    {
+        check_own_precision(true);
+    }
+);
+
+/// Linear f32 `(ν, K)` at the same f32 target: walking `b` float by float across the floor at each offset, the f32
+/// decode labels a target exactly where the chart's refusal, given that target widened, refuses it (the fix's "a target
+/// that has no construction only there is refused"). `inverted` expects the opposite (the control).
+fn check_target_refused(inverted: bool) {
+    let chart = HeldLz {
+        mapping: Mapping::Linear,
+        ..HeldLz::new(Burrau::<f32> {
+            nu_range: [0.1, 0.9],
+            k_max: 1.0,
+            gamma_k: 1.5,
+        })
+    };
+    let params = LinkParams::<f32>::DEFAULT;
+    let shift = |dx: f32| kernel::chart::tilt::Shift {
+        x: HELD_LZ,
+        dx,
+        y: HELD_LZ,
+        dy: 0.0f32,
+        two: false,
+    };
+    let wide = |dx: f64| kernel::chart::tilt::Shift {
+        x: HELD_LZ,
+        dx,
+        y: HELD_LZ,
+        dy: 0.0f64,
+        two: false,
+    };
+    let (mut labelled, mut systems) = (0, 0);
+    for i in 1..200 {
+        let dx = i as f32 * 0.00613;
+        let floor = (0.5 * f64::from(dx) * f64::from(dx)) as f32;
+        for s in 0..48u32 {
+            let b = f32::from_bits(floor.to_bits() + s - 24);
+            let got = chart
+                .decode_shifted::<Defaults, f32>(0.5, b, &shift(dx), &params)
+                .degenerate
+                .is_some();
+            let refused = chart
+                .refusal(0.5, f64::from(b), &wide(f64::from(dx)))
+                .is_some();
+            assert_eq!(
+                refused,
+                got != inverted,
+                "at b = {b}, d = {dx}: the f32 decode's label and the chart's refusal disagree"
+            );
+            labelled += usize::from(got);
+            systems += usize::from(!got);
+        }
+    }
+    assert!(
+        labelled > 500 && systems > 500,
+        "{labelled} labelled, {systems} systems"
+    );
+}
+
+#[test]
+fn qa_refusal_at_chart_precision_target() {
+    check_target_refused(false);
+}
+
+negative_control!(
+    qa_refusal_at_chart_precision_target,
+    "the label and the refusal expected opposite must fail",
+    expected = "the f32 decode's label and the chart's refusal disagree",
+    {
+        check_target_refused(true);
+    }
+);
