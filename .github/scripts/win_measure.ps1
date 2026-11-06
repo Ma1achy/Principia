@@ -1,7 +1,7 @@
-# The Windows measurement jobs' record (`.github/workflows/win-gpu.yml`; R-649, R-711 (lands first in its own rulings
-# PR)). Every result carries the label below in the job's summary, with its commit and driver version, and its full
-# output is kept in $RUNNER_TEMP\win-measure, which the job uploads: item 4 of that ruling lets a recorded run serve
-# Paper 2's non-Metal parity evidence.
+# The Windows measurement jobs' record (`.github/workflows/win-gpu.yml`; R-649, R-711). Every result carries the label
+# below in the job's summary, with its commit and driver version, and its full output is kept in
+# $RUNNER_TEMP\win-measure, which the job uploads: item 4 of that ruling lets a recorded run serve Paper 2's non-Metal
+# parity evidence.
 #
 #   win_measure.ps1 start                       Record the identity of the run. Its reads can't fail the job.
 #   win_measure.ps1 run <name> <command> <arg>  Run the command, its output shown and kept in <name>.log, and exit with

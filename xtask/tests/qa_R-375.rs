@@ -115,8 +115,8 @@ fn check_every_runner_pinned(files: &[(String, String)]) {
             }
             let runs_on =
                 runs_on.unwrap_or_else(|| panic!("qa_r375: {file}: job `{job}` names no runs-on"));
-            // R-711 (lands first in its own rulings PR), item 1: the one self-hosted runner, its jobs in this file alone.
-            if file == "win-gpu.yml" && runs_on == SELF_HOSTED {
+            // R-711 item 1: the one self-hosted runner, its jobs in these two files alone.
+            if (file == "win-gpu.yml" || file == "runner-proof.yml") && runs_on == SELF_HOSTED {
                 continue;
             }
             assert!(

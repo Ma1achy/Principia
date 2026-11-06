@@ -156,8 +156,8 @@ fn check_order(files: &[(String, Value)]) {
     let mut checked = Vec::new();
     for (name, doc) in files {
         for (id, job) in jobs(doc) {
-            // The self-hosted runner's CARGO_HOME is read-only to its jobs and outlives them (R-711, which lands first
-            // in its own rulings PR), and `check_once` refuses the config there.
+            // The self-hosted runner's CARGO_HOME is read-only to its jobs and outlives them (R-711),
+            // and `check_once` refuses the config there.
             if job["runs-on"][0] == "self-hosted" {
                 continue;
             }

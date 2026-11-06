@@ -1,7 +1,12 @@
-//! The guard on the self-hosted runner, the owner's PC (R-711 (lands first in its own rulings PR), items 1 and 5, and the
-//! owner's job rules of 5 Nov 2026): "Add a CI guard test that fails if any workflow puts a self-hosted job under a
-//! pull_request* trigger, uses an unpinned action in a self-hosted job, or makes any self-hosted job required or
-//! gathered." Its results are measurements, never required checks (R-649).
+//! The guard on the self-hosted runner, the owner's PC (R-711 items 1 and 5, and the owner's job rules of 5 Nov 2026):
+//! "Add a CI guard test that fails if any workflow puts a self-hosted job under a pull_request* trigger, uses an unpinned
+//! action in a self-hosted job, or makes any self-hosted job required or gathered." Its results are measurements, never
+//! required checks (R-649).
+//!
+//! Two workflows run there. `win-gpu.yml` runs the suites. `runner-proof.yml`, the owner's weekly proof, runs one script
+//! of the PC's and has no checkout, no record and no push. Every rule above and every rule of a job's shape that it can
+//! meet holds for both; [`check_proof`] pins that file to its one step, so that what it's spared can't be used to run
+//! anything else on the PC.
 //!
 //! The repository is public, so a job that isn't plainly a GitHub-hosted image counts as self-hosted, whatever labels it
 //! names: a job naming only `nvidia` would reach the PC, and so would one whose runner is an expression.
@@ -29,6 +34,25 @@ const JOBS: [&str; 3] = ["win-vulkan", "win-tests", "win-self-check"];
 /// The jobs that run nightly only.
 const NIGHTLY_ONLY: [&str; 2] = ["win-tests", "win-self-check"];
 const NOT_ON_PUSH: &str = "github.event_name != 'push'";
+/// The weekly proof's workflow and its one job (the owner, 5 Nov 2026).
+const PROOF_WORKFLOW: &str = "runner-proof.yml";
+const PROOF_JOB: &str = "runner-proof";
+const PROOF_TRIGGERS: [&str; 2] = ["schedule", "workflow_dispatch"];
+/// Sunday, 05:00 UTC, an hour after the PC's 04:00 update task (#390).
+const PROOF_CRON: &str = "0 5 * * 0";
+const PROOF_TIMEOUT: i64 = 30;
+/// Every key the file may hold at each level, sorted. A key not listed could change what the step's two lines start: an
+/// `env` of `PATH` anywhere, or a `working-directory`, which on this runner is the folder a job can write.
+const PROOF_TOP_KEYS: [&str; 6] = ["defaults", "env", "jobs", "name", "on", "permissions"];
+const PROOF_JOB_KEYS: [&str; 5] = ["concurrency", "if", "runs-on", "steps", "timeout-minutes"];
+const PROOF_STEP_KEYS: [&str; 2] = ["name", "run"];
+const PROOF_ENV_KEYS: [&str; 3] = [
+    "CARGO_INCREMENTAL",
+    "CARGO_PROFILE_DEV_DEBUG",
+    "CARGO_PROFILE_TEST_DEBUG",
+];
+/// The script on the PC, as the proof's step calls it.
+const PROOF_CALL: &str = "E:\\runner-tools\\setup\\03-sandbox-proof.ps1 -Job";
 /// R-711 item 1's triggers, the only ones a workflow with a self-hosted job may have.
 const TRIGGERS: [&str; 3] = ["push", "schedule", "workflow_dispatch"];
 const GUARD: &str = "github.repository == 'Ma1achy/Principia' && github.actor == 'Ma1achy'";
@@ -192,7 +216,8 @@ fn steps(job: &Yaml) -> &[Yaml] {
 }
 
 /// The workflows that hold a self-hosted job, each as (file, text, document, its self-hosted jobs by id). Finding fewer
-/// than the measurement workflow's jobs fails, so no check here passes by reading nothing.
+/// than the measurement workflow's jobs fails, so no check here passes by reading nothing. [`check_proof`] finds the
+/// weekly proof's job.
 fn self_hosted(files: &[(String, String)]) -> Vec<(&str, &str, Yaml, Vec<String>)> {
     let mut out = Vec::new();
     for (file, text) in files {
@@ -217,6 +242,13 @@ fn self_hosted(files: &[(String, String)]) -> Vec<(&str, &str, Yaml, Vec<String>
             "no self-hosted job {job} in {WORKFLOW}: {found:?}"
         );
     }
+    out
+}
+
+/// [`self_hosted`], less the weekly proof, for what only a job that runs the suites has.
+fn suites(files: &[(String, String)]) -> Vec<(&str, &str, Yaml, Vec<String>)> {
+    let mut out = self_hosted(files);
+    out.retain(|(file, _, _, _)| *file != PROOF_WORKFLOW);
     out
 }
 
@@ -1014,6 +1046,46 @@ fn fetches_the_guard(step: &Yaml) -> bool {
         })
 }
 
+/// What a job that runs the suites has, beyond every self-hosted job: the steps before its first suite. The PC's hook
+/// runs the self-check before any step of any job; a suite's job runs it again, as its first step.
+fn check_suite_steps(file: &str, id: &str, steps: &[Yaml]) {
+    let runs = |s: &Yaml, what: &str| s["run"].as_str().is_some_and(|r| r.contains(what));
+    assert!(
+        steps.first().is_some_and(|s| ends_in_a_call(s, SELF_CHECK)),
+        "{file}/{id} doesn't run the self-check first"
+    );
+    assert!(
+        steps.get(1).is_some_and(fetches_the_guard),
+        "{file}/{id} doesn't run the fetched .git guard second"
+    );
+    let checkout = steps
+        .iter()
+        .position(|s| {
+            s["uses"]
+                .as_str()
+                .is_some_and(|u| u.starts_with("actions/checkout@"))
+        })
+        .unwrap_or_else(|| panic!("{file}/{id} has no checkout"));
+    assert!(checkout > 1, "{file}/{id} checks out before the .git guard");
+    let with = &steps[checkout]["with"];
+    assert_eq!(
+        with["fetch-depth"].as_i64(),
+        Some(1),
+        "{file}/{id} doesn't fetch at depth 1"
+    );
+    assert_eq!(
+        with["clean"].as_bool(),
+        Some(true),
+        "{file}/{id} doesn't clean the kept checkout"
+    );
+    assert!(
+        steps
+            .iter()
+            .any(|s| runs(s, "GITHUB_PATH") && runs(s, CARGO_BIN)),
+        "{file}/{id} doesn't put the toolchain on PATH"
+    );
+}
+
 fn check_shape(files: &[(String, String)]) {
     for (file, _, doc, ids) in self_hosted(files) {
         assert!(
@@ -1030,11 +1102,13 @@ fn check_shape(files: &[(String, String)]) {
             assert!(!s.contains("cargo clean"), "{file} runs `cargo clean`");
             assert!(!RUNNER_ENV.contains(&s), "{file} sets {s}");
         }
-        assert_eq!(
-            doc["env"]["PRIN_GPU_BACKEND"].as_str(),
-            Some("vulkan"),
-            "{file} doesn't select Vulkan"
-        );
+        if file != PROOF_WORKFLOW {
+            assert_eq!(
+                doc["env"]["PRIN_GPU_BACKEND"].as_str(),
+                Some("vulkan"),
+                "{file} doesn't select Vulkan"
+            );
+        }
         for id in ids {
             let job = &doc["jobs"][id.as_str()];
             assert_eq!(list(&job["runs-on"]), LABELS, "{file}/{id}'s runner");
@@ -1063,41 +1137,9 @@ fn check_shape(files: &[(String, String)]) {
                 "{file}/{id} runs on the wrong events"
             );
             let steps = steps(job);
-            let runs = |s: &Yaml, what: &str| s["run"].as_str().is_some_and(|r| r.contains(what));
-            assert!(
-                steps.first().is_some_and(|s| ends_in_a_call(s, SELF_CHECK)),
-                "{file}/{id} doesn't run the self-check first"
-            );
-            assert!(
-                steps.get(1).is_some_and(fetches_the_guard),
-                "{file}/{id} doesn't run the fetched .git guard second"
-            );
-            let checkout = steps
-                .iter()
-                .position(|s| {
-                    s["uses"]
-                        .as_str()
-                        .is_some_and(|u| u.starts_with("actions/checkout@"))
-                })
-                .unwrap_or_else(|| panic!("{file}/{id} has no checkout"));
-            assert!(checkout > 1, "{file}/{id} checks out before the .git guard");
-            let with = &steps[checkout]["with"];
-            assert_eq!(
-                with["fetch-depth"].as_i64(),
-                Some(1),
-                "{file}/{id} doesn't fetch at depth 1"
-            );
-            assert_eq!(
-                with["clean"].as_bool(),
-                Some(true),
-                "{file}/{id} doesn't clean the kept checkout"
-            );
-            assert!(
-                steps
-                    .iter()
-                    .any(|s| runs(s, "GITHUB_PATH") && runs(s, CARGO_BIN)),
-                "{file}/{id} doesn't put the toolchain on PATH"
-            );
+            if file != PROOF_WORKFLOW {
+                check_suite_steps(file, &id, steps);
+            }
             for step in steps {
                 assert!(
                     step["shell"].is_badvalue(),
@@ -1550,7 +1592,7 @@ fn check_record(files: &[(String, String)], script: &str) {
             && script.contains("GITHUB_STEP_SUMMARY"),
         "{RECORD} doesn't record the commit and driver in the summary"
     );
-    for (file, _, doc, ids) in self_hosted(files) {
+    for (file, _, doc, ids) in suites(files) {
         for id in ids {
             let steps = steps(&doc["jobs"][id.as_str()]);
             let always = |s: &Yaml| s["if"].as_str().is_some_and(|c| c.contains("always()"));
@@ -4628,7 +4670,7 @@ negative_control!(
 // ---- The refusal log ---------------------------------------------------------------------------------------------------
 
 fn check_refusal_log(files: &[(String, String)]) {
-    for (file, _, doc, _) in self_hosted(files) {
+    for (file, _, doc, _) in suites(files) {
         let path = doc["env"][REFUSAL_LOG].as_str().unwrap_or("");
         assert_eq!(
             path, REFUSAL_LOG_PATH,
@@ -4708,7 +4750,7 @@ fn filter_takes(patterns: &[&str], path: &str) -> bool {
 }
 
 fn check_paths(files: &[(String, String)]) {
-    for (file, _, doc, _) in self_hosted(files) {
+    for (file, _, doc, _) in suites(files) {
         let push = &doc["on"]["push"];
         assert!(
             push["paths-ignore"].is_badvalue(),
@@ -4822,6 +4864,686 @@ mod wide_pattern {
         check_paths(&measured(
             "      - \"xtask/**\"\n",
             "      - \"*.md\"\n      - \"xtask/**\"\n"
+        ))
+    );
+}
+
+mod push_gone {
+    use super::*;
+    negative_control!(
+        self_hosted_paths_skip_docs_only_pushes,
+        "the suites' push gone, which only the weekly proof may be without",
+        expected = "win-gpu.yml has no paths filter",
+        check_paths(&measured("  push:\n", "  workflow_run:\n"))
+    );
+}
+
+// ---- The weekly proof (the owner, 5 Nov 2026; #390) -------------------------------------------------------------------
+
+/// `edited` on the weekly proof's workflow.
+#[cfg(feature = "controls")]
+fn proved(from: &str, to: &str) -> Vec<(String, String)> {
+    edited(PROOF_WORKFLOW, from, to)
+}
+
+/// That `value`, a part of the weekly proof's file, holds exactly the keys `want`, which is sorted.
+fn proof_keys(what: &str, value: &Yaml, want: &[&str]) {
+    let mut found: Vec<&str> = entries(value).into_iter().map(|(k, _)| k).collect();
+    found.sort_unstable();
+    assert!(
+        found == want,
+        "{PROOF_WORKFLOW}'s {what} holds {found:?}, not {want:?}"
+    );
+}
+
+/// Exactly the job the Windows session specified, and nothing more: it's spared the rules a suite's job keeps because it
+/// has no checkout, no cargo and no push, so each of those stays true here.
+fn check_proof(files: &[(String, String)]) {
+    let workflows = self_hosted(files);
+    let (_, _, doc, ids) = workflows
+        .iter()
+        .find(|(file, _, _, _)| *file == PROOF_WORKFLOW)
+        .unwrap_or_else(|| panic!("no self-hosted job in {PROOF_WORKFLOW}"));
+    assert_eq!(
+        ids,
+        &[PROOF_JOB],
+        "{PROOF_WORKFLOW} holds more than its one job"
+    );
+    proof_keys("workflow", doc, &PROOF_TOP_KEYS);
+    proof_keys("env", &doc["env"], &PROOF_ENV_KEYS);
+    proof_keys("defaults", &doc["defaults"], &["run"]);
+    proof_keys("defaults.run", &doc["defaults"]["run"], &["shell"]);
+    let on: Vec<&str> = entries(&doc["on"]).into_iter().map(|(k, _)| k).collect();
+    assert_eq!(on, PROOF_TRIGGERS, "{PROOF_WORKFLOW}'s triggers");
+    let cron: Vec<&str> = doc["on"]["schedule"]
+        .as_vec()
+        .map(|crons| {
+            crons
+                .iter()
+                .map(|c| c["cron"].as_str().unwrap_or(""))
+                .collect()
+        })
+        .unwrap_or_default();
+    assert_eq!(cron, [PROOF_CRON], "{PROOF_WORKFLOW}'s schedule");
+    proof_keys("schedule entry", &doc["on"]["schedule"][0], &["cron"]);
+    proof_keys("workflow_dispatch", &doc["on"]["workflow_dispatch"], &[]);
+    let job = &doc["jobs"][PROOF_JOB];
+    proof_keys("job", job, &PROOF_JOB_KEYS);
+    assert_eq!(
+        job["if"].as_str(),
+        Some(GUARD),
+        "{PROOF_WORKFLOW}'s condition isn't the guard alone"
+    );
+    assert_eq!(
+        job["timeout-minutes"].as_i64(),
+        Some(PROOF_TIMEOUT),
+        "{PROOF_WORKFLOW}'s timeout"
+    );
+    let steps = steps(job);
+    assert!(
+        steps.len() == 1
+            && steps[0]["run"].as_str().unwrap_or("").lines().count() == 2
+            && ends_in_a_call(&steps[0], PROOF_CALL),
+        "{PROOF_WORKFLOW} doesn't run the sandbox proof, alone and fail closed: {steps:?}"
+    );
+    proof_keys("step", &steps[0], &PROOF_STEP_KEYS);
+}
+
+#[test]
+fn runner_proof_is_the_one_weekly_job() {
+    check_proof(&workflows());
+}
+
+negative_control!(
+    runner_proof_is_the_one_weekly_job,
+    "the workflow gone",
+    expected = "no self-hosted job in runner-proof.yml",
+    check_proof(
+        &workflows()
+            .into_iter()
+            .filter(|(n, _)| n != PROOF_WORKFLOW)
+            .collect::<Vec<_>>()
+    )
+);
+
+mod proof_second_job {
+    use super::*;
+    negative_control!(
+        runner_proof_is_the_one_weekly_job,
+        "a second job, spared the suites' rules",
+        expected = "runner-proof.yml holds more than its one job",
+        check_proof(&proved(
+            "jobs:\n",
+            "jobs:\n  other:\n    runs-on: [self-hosted, windows, nvidia]\n    steps: []\n"
+        ))
+    );
+}
+
+mod proof_on_push {
+    use super::*;
+    negative_control!(
+        runner_proof_is_the_one_weekly_job,
+        "a push trigger, with no paths filter",
+        expected = "runner-proof.yml's triggers",
+        check_proof(&proved(
+            "on:\n  schedule:\n",
+            "on:\n  push:\n    branches: [main]\n  schedule:\n"
+        ))
+    );
+}
+
+mod proof_not_by_hand {
+    use super::*;
+    negative_control!(
+        runner_proof_is_the_one_weekly_job,
+        "the hand trigger gone",
+        expected = "runner-proof.yml's triggers",
+        check_proof(&proved("  workflow_dispatch:\n", ""))
+    );
+}
+
+mod proof_other_hour {
+    use super::*;
+    negative_control!(
+        runner_proof_is_the_one_weekly_job,
+        "the hour of the PC's update task",
+        expected = "runner-proof.yml's schedule",
+        check_proof(&proved("cron: \"0 5 * * 0\"", "cron: \"0 4 * * 0\""))
+    );
+}
+
+mod proof_daily {
+    use super::*;
+    negative_control!(
+        runner_proof_is_the_one_weekly_job,
+        "every day in place of Sunday",
+        expected = "runner-proof.yml's schedule",
+        check_proof(&proved("cron: \"0 5 * * 0\"", "cron: \"0 5 * * *\""))
+    );
+}
+
+mod proof_second_cron {
+    use super::*;
+    negative_control!(
+        runner_proof_is_the_one_weekly_job,
+        "a second schedule beside the weekly one",
+        expected = "runner-proof.yml's schedule",
+        check_proof(&proved(
+            "    - cron: \"0 5 * * 0\"\n",
+            "    - cron: \"0 5 * * 0\"\n    - cron: \"0 6 * * 0\"\n"
+        ))
+    );
+}
+
+mod proof_cronless_entry {
+    use super::*;
+    negative_control!(
+        runner_proof_is_the_one_weekly_job,
+        "a second schedule entry with no cron",
+        expected = "runner-proof.yml's schedule",
+        check_proof(&proved(
+            "    - cron: \"0 5 * * 0\"\n",
+            "    - cron: \"0 5 * * 0\"\n    - timezone: x\n"
+        ))
+    );
+}
+
+mod proof_condition {
+    use super::*;
+    negative_control!(
+        runner_proof_is_the_one_weekly_job,
+        "a condition beyond the guard, which `check_guard` allows a suite",
+        expected = "runner-proof.yml's condition isn't the guard alone",
+        check_proof(&proved(
+            "github.actor == 'Ma1achy'\n",
+            "github.actor == 'Ma1achy' && false\n"
+        ))
+    );
+}
+
+mod proof_timeout {
+    use super::*;
+    negative_control!(
+        runner_proof_is_the_one_weekly_job,
+        "a timeout past the half hour",
+        expected = "runner-proof.yml's timeout",
+        check_proof(&proved("timeout-minutes: 30", "timeout-minutes: 31"))
+    );
+}
+
+mod proof_checkout {
+    use super::*;
+    negative_control!(
+        runner_proof_is_the_one_weekly_job,
+        "a checkout, without the `.git` guard a suite's job has before it",
+        expected = "doesn't run the sandbox proof, alone and fail closed",
+        check_proof(&proved(
+            "      - name: Sandbox proof\n",
+            "      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1\n      - name: Sandbox proof\n"
+        ))
+    );
+}
+
+mod proof_more_script {
+    use super::*;
+    negative_control!(
+        runner_proof_is_the_one_weekly_job,
+        "more in the step, ahead of the call",
+        expected = "doesn't run the sandbox proof, alone and fail closed",
+        check_proof(&proved(
+            "        run: |\n",
+            "        run: |\n          cargo xtask ci\n"
+        ))
+    );
+}
+
+mod proof_no_job_flag {
+    use super::*;
+    negative_control!(
+        runner_proof_is_the_one_weekly_job,
+        "the script without `-Job`, which prints the detail the PC keeps",
+        expected = "doesn't run the sandbox proof, alone and fail closed",
+        check_proof(&proved(".ps1 -Job\n", ".ps1\n"))
+    );
+}
+
+mod proof_in_process {
+    use super::*;
+    negative_control!(
+        runner_proof_is_the_one_weekly_job,
+        "the script started with `&`, whose parse failure passes",
+        expected = "doesn't run the sandbox proof, alone and fail closed",
+        check_proof(&proved(
+            "powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File E:\\",
+            "& E:\\"
+        ))
+    );
+}
+
+mod proof_status_dropped {
+    use super::*;
+    negative_control!(
+        runner_proof_is_the_one_weekly_job,
+        "the failure count replaced by a pass",
+        expected = "doesn't run the sandbox proof, alone and fail closed",
+        check_proof(&proved("exit $LASTEXITCODE\n", "exit 0\n"))
+    );
+}
+
+mod proof_job_may_fail {
+    use super::*;
+    negative_control!(
+        runner_proof_is_the_one_weekly_job,
+        "a job that passes whatever the proof finds",
+        expected = "runner-proof.yml's job holds [\"concurrency\", \"continue-on-error\", \"if\"",
+        check_proof(&proved(
+            "    timeout-minutes: 30\n",
+            "    timeout-minutes: 30\n    continue-on-error: true\n"
+        ))
+    );
+}
+
+mod proof_step_may_fail {
+    use super::*;
+    negative_control!(
+        runner_proof_is_the_one_weekly_job,
+        "a step that passes whatever the proof finds",
+        expected = "runner-proof.yml's step holds [\"continue-on-error\", \"name\", \"run\"]",
+        check_proof(&proved(
+            "      - name: Sandbox proof\n",
+            "      - name: Sandbox proof\n        continue-on-error: true\n"
+        ))
+    );
+}
+
+mod proof_skipped {
+    use super::*;
+    negative_control!(
+        runner_proof_is_the_one_weekly_job,
+        "a step that never runs",
+        expected = "runner-proof.yml's step holds [\"if\", \"name\", \"run\"]",
+        check_proof(&proved(
+            "      - name: Sandbox proof\n",
+            "      - name: Sandbox proof\n        if: false\n"
+        ))
+    );
+}
+
+mod proof_step_path {
+    use super::*;
+    negative_control!(
+        runner_proof_is_the_one_weekly_job,
+        "a `PATH` on the step, which changes the `powershell` its two lines start",
+        expected = "runner-proof.yml's step holds [\"env\", \"name\", \"run\"]",
+        check_proof(&proved(
+            "      - name: Sandbox proof\n",
+            "      - name: Sandbox proof\n        env:\n          PATH: ${{ github.workspace }}\n"
+        ))
+    );
+}
+
+mod proof_step_directory {
+    use super::*;
+    negative_control!(
+        runner_proof_is_the_one_weekly_job,
+        "a working directory on the step",
+        expected = "runner-proof.yml's step holds [\"name\", \"run\", \"working-directory\"]",
+        check_proof(&proved(
+            "      - name: Sandbox proof\n",
+            "      - name: Sandbox proof\n        working-directory: x\n"
+        ))
+    );
+}
+
+mod proof_job_path {
+    use super::*;
+    negative_control!(
+        runner_proof_is_the_one_weekly_job,
+        "a `PATH` on the job",
+        expected = "runner-proof.yml's job holds [\"concurrency\", \"env\", \"if\"",
+        check_proof(&proved(
+            "    timeout-minutes: 30\n",
+            "    timeout-minutes: 30\n    env:\n      PATH: x\n"
+        ))
+    );
+}
+
+mod proof_job_defaults {
+    use super::*;
+    negative_control!(
+        runner_proof_is_the_one_weekly_job,
+        "`defaults` on the job, over the workflow's",
+        expected = "runner-proof.yml's job holds [\"concurrency\", \"defaults\", \"if\"",
+        check_proof(&proved(
+            "    timeout-minutes: 30\n",
+            "    timeout-minutes: 30\n    defaults:\n      run:\n        working-directory: x\n"
+        ))
+    );
+}
+
+mod proof_job_container {
+    use super::*;
+    negative_control!(
+        runner_proof_is_the_one_weekly_job,
+        "the job in a container",
+        expected = "runner-proof.yml's job holds [\"concurrency\", \"container\", \"if\"",
+        check_proof(&proved(
+            "    timeout-minutes: 30\n",
+            "    timeout-minutes: 30\n    container: x\n"
+        ))
+    );
+}
+
+mod proof_top_key {
+    use super::*;
+    negative_control!(
+        runner_proof_is_the_one_weekly_job,
+        "a top-level key beyond the file's own",
+        expected = "runner-proof.yml's workflow holds [\"defaults\", \"env\", \"jobs\", \"name\", \"on\", \"permissions\", \"run-name\"]",
+        check_proof(&proved(
+            "permissions:\n  contents: read\n",
+            "run-name: x\n\npermissions:\n  contents: read\n"
+        ))
+    );
+}
+
+mod proof_top_key_gone {
+    use super::*;
+    negative_control!(
+        runner_proof_is_the_one_weekly_job,
+        "a top-level key gone",
+        expected =
+            "runner-proof.yml's workflow holds [\"defaults\", \"env\", \"jobs\", \"name\", \"on\"]",
+        check_proof(&proved("permissions:\n  contents: read\n", ""))
+    );
+}
+
+mod proof_top_path {
+    use super::*;
+    negative_control!(
+        runner_proof_is_the_one_weekly_job,
+        "a `PATH` in the workflow's env",
+        expected = "runner-proof.yml's env holds [\"CARGO_INCREMENTAL\", \"CARGO_PROFILE_DEV_DEBUG\", \"CARGO_PROFILE_TEST_DEBUG\", \"PATH\"]",
+        check_proof(&proved(
+            "  CARGO_INCREMENTAL: \"0\"\n",
+            "  CARGO_INCREMENTAL: \"0\"\n  PATH: x\n"
+        ))
+    );
+}
+
+mod proof_defaults_key {
+    use super::*;
+    negative_control!(
+        runner_proof_is_the_one_weekly_job,
+        "a key in `defaults` beside `run`",
+        expected = "runner-proof.yml's defaults holds [\"other\", \"run\"]",
+        check_proof(&proved(
+            "defaults:\n  run:\n",
+            "defaults:\n  other: x\n  run:\n"
+        ))
+    );
+}
+
+mod proof_defaults_directory {
+    use super::*;
+    negative_control!(
+        runner_proof_is_the_one_weekly_job,
+        "a working directory in `defaults.run`",
+        expected = "runner-proof.yml's defaults.run holds [\"shell\", \"working-directory\"]",
+        check_proof(&proved(
+            "    shell: powershell ",
+            "    working-directory: x\n    shell: powershell "
+        ))
+    );
+}
+
+mod proof_inputs {
+    use super::*;
+    negative_control!(
+        runner_proof_is_the_one_weekly_job,
+        "inputs on the hand trigger",
+        expected = "runner-proof.yml's workflow_dispatch holds [\"inputs\"]",
+        check_proof(&proved(
+            "  workflow_dispatch:\n",
+            "  workflow_dispatch:\n    inputs:\n      a:\n        type: string\n"
+        ))
+    );
+}
+
+mod proof_timezone {
+    use super::*;
+    negative_control!(
+        runner_proof_is_the_one_weekly_job,
+        "more than the cron in the schedule's entry",
+        expected = "runner-proof.yml's schedule entry holds [\"cron\", \"timezone\"]",
+        check_proof(&proved(
+            "    - cron: \"0 5 * * 0\"\n",
+            "    - cron: \"0 5 * * 0\"\n      timezone: x\n"
+        ))
+    );
+}
+
+// The rules every self-hosted job keeps, read on the weekly proof: each of these checks takes both workflows, and each
+// fails here on this file, so no check passes by leaving it out.
+
+mod proof_pull_request {
+    use super::*;
+    negative_control!(
+        self_hosted_jobs_have_only_the_three_triggers,
+        "pull_request added to the weekly proof",
+        expected = "runner-proof.yml: a self-hosted job under the trigger `pull_request`",
+        check_triggers(&proved(
+            "on:\n  schedule:\n",
+            "on:\n  pull_request:\n  schedule:\n"
+        ))
+    );
+}
+
+mod proof_pull_request_target {
+    use super::*;
+    negative_control!(
+        self_hosted_jobs_have_only_the_three_triggers,
+        "pull_request_target added to the weekly proof",
+        expected = "runner-proof.yml: a self-hosted job under the trigger `pull_request_target`",
+        check_triggers(&proved(
+            "on:\n  schedule:\n",
+            "on:\n  pull_request_target:\n  schedule:\n"
+        ))
+    );
+}
+
+mod proof_unpinned {
+    use super::*;
+    negative_control!(
+        self_hosted_jobs_pin_every_action,
+        "an action at a tag in the weekly proof",
+        expected = "runner-proof.yml/runner-proof uses an unpinned action: actions/checkout@v7",
+        check_pins(&proved(
+            "      - name: Sandbox proof\n",
+            "      - uses: actions/checkout@v7\n      - name: Sandbox proof\n"
+        ))
+    );
+}
+
+mod proof_retried {
+    use super::*;
+    negative_control!(
+        self_hosted_jobs_are_never_required_or_gathered,
+        "retry.yml following the weekly proof",
+        expected = "retry.yml reads the self-hosted workflow runner-proof.yml",
+        check_not_gathered(
+            &edited(
+                "retry.yml",
+                "[ci, mutants, gate]",
+                "[ci, mutants, gate, runner-proof]"
+            ),
+            &consumers(),
+            &read(TIER_SCRIPT)
+        )
+    );
+}
+
+mod proof_gathered_by_a_script {
+    use super::*;
+    negative_control!(
+        self_hosted_jobs_are_never_required_or_gathered,
+        "the tier script gathering the weekly proof",
+        expected = ".github/scripts/ci_tier.sh reads the self-hosted workflow runner-proof.yml",
+        check_not_gathered(
+            &workflows(),
+            &[(
+                TIER_SCRIPT.to_owned(),
+                format!(
+                    "{}\nFULL_ONLY=\"$FULL_ONLY runner-proof\"\n",
+                    read(TIER_SCRIPT)
+                )
+            )],
+            &read(TIER_SCRIPT)
+        )
+    );
+}
+
+mod proof_required_name {
+    use super::*;
+    negative_control!(
+        self_hosted_jobs_are_never_required_or_gathered,
+        "the weekly proof named for a required check",
+        expected = "runner-proof.yml/runner-proof reports as the required check ci",
+        check_not_gathered(
+            &proved("  runner-proof:\n", "  runner-proof:\n    name: ci\n"),
+            &consumers(),
+            &read(TIER_SCRIPT)
+        )
+    );
+}
+
+mod proof_secret {
+    use super::*;
+    negative_control!(
+        self_hosted_jobs_hold_no_credential,
+        "a secret in the weekly proof's step",
+        expected = "runner-proof.yml names secrets",
+        check_no_credential(&proved(
+            "        run: |\n",
+            "        env:\n          K: ${{ secrets.KEY }}\n        run: |\n"
+        ))
+    );
+}
+
+mod proof_write {
+    use super::*;
+    negative_control!(
+        self_hosted_jobs_hold_no_credential,
+        "write access in the weekly proof",
+        expected = "runner-proof.yml/runner-proof isn't `contents: read` alone",
+        check_no_credential(&proved(
+            "permissions:\n  contents: read\n",
+            "permissions:\n  contents: write\n"
+        ))
+    );
+}
+
+mod proof_no_actor {
+    use super::*;
+    negative_control!(
+        self_hosted_jobs_keep_the_repo_and_actor_guard,
+        "the actor left out of the weekly proof",
+        expected = "runner-proof.yml/runner-proof lacks the repository and actor guard",
+        check_guard(&proved(" && github.actor == 'Ma1achy'", ""))
+    );
+}
+
+mod proof_label {
+    use super::*;
+    negative_control!(
+        self_hosted_jobs_have_the_shape_the_runner_needs,
+        "the weekly proof with a label fewer",
+        expected = "runner-proof.yml/runner-proof's runner",
+        check_shape(&proved(
+            "runs-on: [self-hosted, windows, nvidia]",
+            "runs-on: [self-hosted, windows]"
+        ))
+    );
+}
+
+mod proof_shell {
+    use super::*;
+    negative_control!(
+        self_hosted_jobs_have_the_shape_the_runner_needs,
+        "plain `shell: powershell` in the weekly proof",
+        expected = "runner-proof.yml/runner-proof's shell is one the runner refuses",
+        check_shape(&proved(SHELL, "powershell"))
+    );
+}
+
+mod proof_step_shell {
+    use super::*;
+    negative_control!(
+        self_hosted_jobs_have_the_shape_the_runner_needs,
+        "a step of the weekly proof with a shell of its own",
+        expected = "runner-proof.yml/runner-proof overrides the shell in a step",
+        check_shape(&proved(
+            "      - name: Sandbox proof\n",
+            "      - name: Sandbox proof\n        shell: powershell\n"
+        ))
+    );
+}
+
+mod proof_no_exit {
+    use super::*;
+    negative_control!(
+        self_hosted_jobs_have_the_shape_the_runner_needs,
+        "the weekly proof's step without its exit",
+        expected = "runner-proof.yml/runner-proof has a step with no explicit exit",
+        check_shape(&proved("          exit $LASTEXITCODE\n", ""))
+    );
+}
+
+mod proof_no_group {
+    use super::*;
+    negative_control!(
+        self_hosted_jobs_have_the_shape_the_runner_needs,
+        "the weekly proof without its concurrency group",
+        expected = "runner-proof.yml/runner-proof has no concurrency group of its own",
+        check_shape(&proved(
+            "    concurrency:\n      group: runner-proof\n      cancel-in-progress: false\n",
+            ""
+        ))
+    );
+}
+
+mod proof_no_timeout {
+    use super::*;
+    negative_control!(
+        self_hosted_jobs_have_the_shape_the_runner_needs,
+        "the weekly proof with GitHub's default six hours",
+        expected = "runner-proof.yml/runner-proof has no timeout",
+        check_shape(&proved("    timeout-minutes: 30\n", ""))
+    );
+}
+
+mod proof_hosted_job {
+    use super::*;
+    negative_control!(
+        self_hosted_jobs_have_the_shape_the_runner_needs,
+        "a hosted job in the weekly proof's file",
+        expected = "runner-proof.yml/hosted is a hosted job among self-hosted ones",
+        check_shape(&proved(
+            "jobs:\n",
+            "jobs:\n  hosted:\n    runs-on: ubuntu-24.04\n    steps: []\n"
+        ))
+    );
+}
+
+mod proof_moves_temp {
+    use super::*;
+    negative_control!(
+        self_hosted_jobs_have_the_shape_the_runner_needs,
+        "the weekly proof moving TEMP",
+        expected = "runner-proof.yml sets TEMP",
+        check_shape(&proved(
+            "  CARGO_INCREMENTAL: \"0\"\n",
+            "  CARGO_INCREMENTAL: \"0\"\n  TEMP: C:\\t\n"
         ))
     );
 }

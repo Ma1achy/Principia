@@ -1,5 +1,5 @@
 # Refuses a job when the checkout kept between runs on the self-hosted runner holds something that would run or redirect
-# git (the owner, 5 Nov 2026; R-711 (lands first in its own rulings PR)). It runs before actions/checkout, which runs git
+# git (the owner, 5 Nov 2026; R-711). It runs before actions/checkout, which runs git
 # in that folder. A job can write there, so this file is never run from it: the step fetches this file at the job's own
 # commit. It reads .git as files and each config through `git config --file`, takes only the keys and values a clean
 # checkout holds, and, once all of that has passed, has git hash every object, write an empty index and detach HEAD at an
