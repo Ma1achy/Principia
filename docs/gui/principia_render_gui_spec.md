@@ -357,7 +357,7 @@ can never disagree (the definition R-466 allows); its **window** is a scale `σ_
 `z₀ = b`, `q₁ = σ_h e_a`, `q₂ = σ_h e_b`. These formulae hold for a preset whose axes are two of the eight latent
 coordinate axes at one scale, as all six of the mock's are (§G7). What the three values are for any other chart a
 preset can hold (an oblique or unequal-scale pair, an axis of another kind, a curved chart) and for a view saved
-tilted is not yet defined: RQ-709, for TASK-M8-18. The zoom row reads `log₂(σ_h / σ)` and its magnification `σ_h / σ`, so it
+tilted is not yet defined: RQ-711, for TASK-M8-18. The zoom row reads `log₂(σ_h / σ)` and its magnification `σ_h / σ`, so it
 reads 0 and × 1.00 at the window whatever `σ_h` is; with no active preset there is no window, and the row reads
 `−log₂ σ` and `1 / σ`, `σ_h = 1` (applied per R-369). The depth readout stays absolute, `−log₂ σ` (§G2's depth readout):
 it counts the chart's own scale, which a preset's window does not change. Choosing a preset keeps `σ` (applied per
@@ -1415,7 +1415,7 @@ drawn on the edge when it has left (board 6)".
   REQ-GUI-224); a saved preset stores them with its axes. Save of a chart within §G2's formulae, `q₁ = σ e_a`,
   `q₂ = σ e_b` on two latent coordinate axes, stores its `z₀` as the base point, so the centre its coordinates on the
   axes, and its scale `σ` as the window, and that saved view is the preset's home view; any other chart's three values
-  are not yet defined (§G2, RQ-709). Duplicate copies the three. On the mock the presets are these, placeholder content (R-390), the real
+  are not yet defined (§G2, RQ-711). Duplicate copies the three. On the mock the presets are these, placeholder content (R-390), the real
   engine's being REQ-GUI-082's; at the decoder's default links, with `μ_max` in range and η_E off, each base point
   decodes to a system (chart_decoder_contract Part 4, R-570, R-597, R-598), the masses being `softmax(0, μ₁, μ₂)` with
   `μₖ = μ_max · tanh(z_μk)` and `M₀₁` above `ε_M01` (dd_decoder §3.1):

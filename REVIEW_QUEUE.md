@@ -2129,7 +2129,7 @@ owner: yes, it is physics; the tilt changes which systems the chart shows.*
 - **Applied meanwhile:** `ε_μ/2`, as built.
 - **Waits:** nothing is held. The code stands at `ε_μ/2` until a ruling.
 
-## RQ-709: What a saved preset's base point, centre and window are when its chart is not two latent coordinate axes at one scale *(physics; silence; REQ-GUI-108, REQ-GUI-224, R-466, R-475; `docs/gui/principia_render_gui_spec.md` § G2, § G7; context: TASK-M8-18)*
+## RQ-711: What a saved preset's base point, centre and window are when its chart is not two latent coordinate axes at one scale *(physics; silence; REQ-GUI-108, REQ-GUI-224, R-466, R-475; `docs/gui/principia_render_gui_spec.md` § G2, § G7; context: TASK-M8-18)*
 
 *Queued 6 Nov 2026 from physics review 5805243152 of PR #429 (TASK-M6-45), finding F1. Not chosen here. The definition now stops where it is true, and the mock's six presets are all inside it.*
 
