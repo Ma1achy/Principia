@@ -610,11 +610,14 @@ pub struct Record {
 /// The backend a harness adapter is, by name (the module's note).
 pub fn backend_of(info: &AdapterInfo) -> String {
     let name = info.name.to_lowercase();
+    let vulkan = info.backend == wgpu::Backend::Vulkan;
     if info.backend == wgpu::Backend::Metal {
         "Metal".to_owned()
-    } else if name.contains("llvmpipe") {
+    } else if vulkan && name.contains("llvmpipe") {
         "lavapipe".to_owned()
-    } else if name.contains("nvidia") || name.contains("geforce") || name.contains("rtx") {
+    } else if vulkan
+        && (name.contains("nvidia") || name.contains("geforce") || name.contains("rtx"))
+    {
         "NVIDIA Vulkan".to_owned()
     } else {
         info.name.clone()
