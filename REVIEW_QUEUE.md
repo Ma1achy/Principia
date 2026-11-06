@@ -1451,6 +1451,68 @@ it is physics, the two rulings give different results on one chart.*
 - **Applied meanwhile:** nothing.
 - **Waits:** TASK-M9-01; TASK-M3-27 for (a).
 
+## RQ-682: Which of the four axis kinds a virial-ratio axis is: R-471 H3 says it is not kind 3, the kinds are a closed set, and kind 2 is a scalar inside one block *(silence: R-471 H3; R-506 W2; chart_decoder_contract § "The four axis kinds — a closed set"; context: TASK-M2-37, TASK-M8-18)*
+
+*Queued 3 Nov 2026 by TASK-M2-37. Nothing in TASK-M2-37 waits: the kernel's virial-ratio axis
+(`kernel::chart::physical::AxisVirial`, chart_reference §2.1's new paragraph) decodes and validates, but it has no
+authoring descriptor, so the well-posedness validator cannot take a chart with one and no chart offers it.*
+
+- **File, section:**
+  - `decisions.md`:13867, § "R-471 — …", H3: "The virial ratio and the mass ratio are not kind 3, so B1 stands for
+    them."
+  - `docs/contracts/principia_chart_decoder_contract.md` § "The four axis kinds — a closed set": kind 2 is a "scalar
+    inside one block: `m₀`, `θ`, `φ`", which "inverts into its block"; kind 3 is "`E`, `L_z`, `K`, `KE`, `PE`", which
+    "*solves* into a downstream sector, upstream sectors read as fixed".
+  - `docs/design/principia_chart_reference.md` § "2.1 …", the virial ratio's paragraph: `K* = Q(t)·|U|/2`, using the
+    pixel's own `U`.
+- **The silence:** `Q = 2K/|U|` reads the configuration and the masses (through `U`) and solves into the momenta, as a
+  kind-3 axis does, but H3 says it is not kind 3. It is not inside one block, so it is not kind 2 as written. No kind
+  fits, and the set is closed, so the descriptor a builder chart needs (its kind, the blocks it reads, its downstream
+  check and its feasibility flag) is not given.
+- **The question:** what kind a virial-ratio axis is.
+- **Options seen:** (a) kind 3, with H3 read as being only about B1's extension, which R-506 has since superseded;
+  `InvariantQuantity` then gains the virial ratio, solving into the momenta and reading the configuration and the
+  masses; (b) kind 2 in the momenta, with a note that its inversion reads the upstream blocks; (c) another reading,
+  stated by the owner.
+- **Applied meanwhile:** nothing. The engine's descriptors cover the lone `K`, `KE`, `E` and `L_z` axes and the mass
+  ratio (kind 2 in the masses, its residual the third body's mass), not the virial ratio.
+- **Waits:** the builder's virial-ratio axis (TASK-M8-18).
+
+## RQ-683: Whether a warped lone `K`, `KE`, `E` or virial-ratio axis at a held `L_z ≠ 0` should exist, and under what warp *(physics; silence: R-471 E1, R-506; REQ-CHART-067; context: TASK-M2-37)*
+
+*Queued 3 Nov 2026 by TASK-M2-37's fix round (physics review 5748188476 of PR #387, F1). For the owner: yes, it is
+physics; the warp's form changes which systems the axis shows. RQ-678 does not cover it: RQ-678 asks only about the
+tilted `(ν, K)`, `Φ_θ,K` and `Φ_θ,L_z` charts.*
+
+- **File, section:**
+  - `decisions.md`:13840-13842, § "R-471 — …", E1: "`K = K_max t^γ_K`, `L_max = √(2IK)`, `L_z = (2s−1) L_max`. Every
+    pixel inside `[0,1]²` is feasible by construction."
+  - `decisions.md` § "R-506 — …", W1: "A Chart-builder chart logs R-467's decoder-bug warning for a pixel inside
+    `[0,1]²` that is not a system when every physical-quantity axis it has is warped, the chart then valid there by
+    construction".
+  - `plan/requirements.yaml`, REQ-CHART-067: "alone or beside a non-energy axis each takes its own line of the warp,
+    K (KE) = K_max·t^γ_K, E = U + K_max·t^γ_K, …"
+  - `docs/design/principia_chart_reference.md` § "2.1 …", the virial ratio's paragraph: "At a held `L_z = 0` every pixel
+    of `[0,1]²` is feasible, since `K* ≥ 0`."
+- **The silence:** a lone `K`, `KE`, `E` or virial-ratio axis holds the chart's `L_z`. At a held `L_z ≠ 0`, its line of
+  the warp, `K* = K_max·t^γ_K` (or `Q(t)·|U|/2`), reaches `K* < L_z²/2I` near `t = 0`, so those pixels inside the square
+  are not a system, against E1's "feasible by construction", and under W1 they would log the decoder-bug warning. No
+  ruling or section says whether such an axis is offered warped, or with what floor.
+- **The question:** should a warped lone `K`, `KE`, `E` or virial axis at a held `L_z ≠ 0` exist, and if so under what
+  warp?
+- **Options seen:** (a) refused, as built: no chart offers it warped, `validate` refusing every point; the linear option
+  offers it, its pixels with `K* < L_z²/2I` not a system (E2); (b) a floored warp, such as `K* = L_z²/2I + K_max·t^γ_K`
+  on `K` and `KE` (with `E = U + K*` and the virial ratio's `Q` floored at `L_z²/(I·|U|)` at the pixel's own `U` and
+  `I`), written as a §2.1 paragraph under physics review; (c) another reading, stated by the owner.
+- **Applied meanwhile:** (a), applied per R-369 (TASK-M2-37): `kernel::chart::physical::MixedEnergy::offered` is false
+  for such a chart and its `validate` refuses every point, naming `K ≥ L_z²/2I`; chart_reference §2.1 says so. No
+  floored form is chosen.
+- **Waits:** nothing in TASK-M2-37; a Chart-builder lone `t` axis at a held `L_z ≠ 0` (TASK-M8-18) stays refused,
+  warped, until the ruling.
+- **4 Nov 2026:** ruled by the owner 4 Nov; the ruling's port closes it. The owner's words: "RQ-683 (#387): same rule for a
+  single energy axis at held spin." PR #387 applies it: the warped axis exists, on the floor
+  `K* = L_z²/2I + K_max·t^γ_K`, and the linear option keeps its fixed values and blanks its infeasible pixels.
+
 ## RQ-684: R-360 has every control run across the `xtask-ci` shards, through `cargo xtask controls`; three now run in `ci-workspace` under nextest *(conflict: R-360 and REQ-SYS-077 against PR #395's item (f), decided per R-369; the code review (5763833425, F3) and qa review (5763914449, Q1) of PR #395; context: `tooling/ci-one-build`)*
 
 *Queued by the implementer of PR #395, on the orchestrator's decision; recorded for the owner. Nothing waits.*
@@ -1937,6 +1999,95 @@ change: no timer was touched (R-649). Nothing is chosen.*
 - **Waits:** TASK-M9-39 (REQ-INT-111, REQ-SYS-094, REQ-SYS-095); TASK-M3-12 (REQ-EVT-006), which builds the gate and cannot write its third condition at `ε = 0` without this ruling; and TASK-M4-03 (REQ-INT-061), which writes every kernel branch input's form into `branch_inputs.rs`, what it and REQ-INT-061 hold of this input following the ruling. REQ-EVT-006 is not the whole of the reach: those two tasks are it at `ε = 0`, and what depends on them waits through them. *Was:* "their waiting is for the ruling to say" (applied per R-369).
 - **Notes** (physics review 5771861276 of PR #408, for the port of the ruling): (1) `softened_tier_l`, REQ-INT-111's verify and TASK-M4-03's note and REQ-INT-061 now defer to this entry, and under option (a) or (b) those lines are re-read and take the ruling's exception, since the decision can then fork; all three tasks wait here, so nothing is built against them first. (2) TASK-M3-12's `ionisation_gate`, with its fixtures `three_way_unbound` and `one_bound_pair`, has no state with all pairs unbound, all separating and `E < 0`, so dropping the `E > 0` test passes it. The port adds that state as a control, if the condition stands: unit masses on an equilateral triangle of side `r`, each moving radially outward at speed `u` with `u²` just above `4/(3r)`, giving all pairs unbound and `E ≈ −1/r`. (3) REQ-INT-057 and REQ-VAL-059 require escape decisions and the terminal label bit-identical across backends, and ionisation is `escape` with `detail = 3`, so under option (a) or (b) they need the ruling's exception too.
 
+## RQ-700: A warped virial axis with a range off 0 at a held `L_z ≠ 0`: where its bottom row sits *(physics; silence: the owner's ruling of 4 Nov 2026 on RQ-683; R-506 W2; context: TASK-M2-37)*
+
+*Queued 4 Nov 2026 from the physics review (5775188369, E1) of PR #387, by the orchestrator's decision. For the owner:
+it is physics; the two options draw different systems.*
+
+- **File, section:**
+  - the owner's ruling of 4 Nov 2026 on RQ-678 and RQ-683: "The floor uses the pixel's own held L_z, additive form K =
+    L_z²/2I + K_max·t^γ", and "RQ-683 (#387): same rule for a single energy axis at held spin."
+  - `docs/design/principia_chart_reference.md` § "2.1 Feasibility, and the warp that makes every pixel valid", the
+    virial ratio's paragraph: "Warped, it runs over the range's feasible part `[Q₀, Q_hi]`, `Q₀ = max(Q_lo, 0)`:
+    `Q(t) = Q₀ + (Q_hi − Q₀)·t^γ_K`".
+- **The silence:** the ruling's line starts at 0, but a virial axis keeps its asked range, so `Q₀ > 0` is possible. The
+  ruling and the corpus do not say how the floor sits under a range off 0. At `Q₀ = 0` both options below agree, and
+  both keep every pixel a system.
+- **The question:** on a warped virial axis with `Q₀ > 0` at a held `L_z ≠ 0`, what is the pixel's ratio?
+- **Options seen:** with `Q_min(U) = L_z²/(I·|U|)`, (a) as built, `K* = L_z²/2I + Q(t)·|U|/2`, the pixel's ratio
+  `Q(t) + Q_min(U)`, so the asked bottom `Q₀` is never drawn, even where it is feasible; (b) the floor under the rise
+  only, the ratio `max(Q₀, Q_min(U)) + (Q_hi − Q₀)·t^γ_K`, the bottom row at `Q₀` where `Q₀` is feasible and on the
+  floor elsewhere.
+- **Applied meanwhile:** (a), the ruling's literal form, recorded in chart_reference §2.1 (PR #387).
+- **Waits:** nothing: RQ-682 keeps the virial axis off every builder chart.
+
+## RQ-701: Whether and how a `MixedEnergy` chart's held `L_z` or `K` tilts and slices: a hidden coordinate under R-633 that nothing builds or queues *(physics; silence: R-633; the owner's ruling of 4 Nov 2026 on RQ-678 and RQ-683; chart_decoder_contract § "Tilt (basis edit)"; TASK-M2-52's six charts; context: TASK-M2-37)*
+
+*Queued 5 Nov 2026 by TASK-M2-37's fix round, on the orchestrator's decision (applied per R-369), from code review
+5778057939 (F1) and physics review 5778075140 (F4) of PR #387; rewritten from code review 5779819090 (F2) and physics
+review 5779878848 (F1), which found the first entry short of the contract's clause and of the ruling's lines. For the
+owner: yes, it is physics; the tilt changes which systems the chart shows.*
+
+- **File, section:**
+  - `docs/contracts/principia_chart_decoder_contract.md` § "Tilt (basis edit)", "Charts that hold a block by a
+    construction": "where it holds a block by a physical construction, its hidden coordinates are that construction's
+    physical parameters, tilted and sliced by value as the shape sphere's `p_λ` targets are, `d` added to the physical
+    value at the slice centre". `MixedEnergy` holds the momentum block by chart_reference §2.2's construction, its
+    `held` the parameter.
+  - The owner's ruling of 4 Nov 2026 on RQ-678, the warped mode: "Held energy-type hidden coordinates (R-633 c2) are
+    tilted in their warp coordinate in this mode, so held K stays ≥ 0. This amends R-633's "by value" for warped mode
+    only."
+  - The same ruling, the linear mode: "Rows keep fixed physical values; infeasible cells are "not a system", blank per
+    R-470; held coordinates tilt by value."
+  - The same ruling, on RQ-683: "RQ-683 (#387): same rule for a single energy axis at held spin."
+  - The same ruling, its last line: "If the warped-coordinate tilt of held K turns out not to be well-defined
+    somewhere, come back with the case."
+  - `docs/design/principia_chart_reference.md` § "4.5 The Burrau-family chart maps", the hidden coordinates' table,
+    which names only: "`(ν, K)`, `Φ_θ,K` (and `Φ_strip,K`, the same map) | the held `L_z` (0 untilted), a physical
+    value" and "`Φ_θ,L_z` | the held `K`, a physical value".
+  - `plan/tasks/M2/TASK-M2-52.md` § "Deliverables": "The six charts' hidden coordinates … the held `L_z` of `(ν, K)`
+    and `Φ_θ,K`; the held `K` of `Φ_θ,L_z`."
+  - `crates/kernel/src/chart/physical.rs`, `MixedEnergy`'s `top`: "`K_max` on `K`, `KE` and `E`, `Q_hi`, the top of the
+    asked range, on the virial ratio; not read on `L_z`."
+- **The silence:** the principle makes a lone-axis chart's held `L_z`, or the held `K` on an `L_z` axis, a hidden
+  coordinate, but the table and TASK-M2-52's six charts do not include `MixedEnergy`. So its tilt and its slice are
+  neither built nor queued, and `Hidden::hidden` on the chart lists only the frozen controls. The ruling reaches a
+  lone axis through its RQ-683 line. In the linear mode that settles the form: the held value tilts by value, and the
+  contract's clause slices it by value too; only the build is missing. In the warped mode the ruling amends "by value"
+  for the tilt and does not say what becomes of the slice. Its warp coordinate is not well-defined on these charts as
+  they stand, which is the case its last line asks to have brought back:
+  - **Held `L_z`, on a `K`, `KE`, `E` or virial axis.** `L_z`'s warp coordinate, `(2s − 1)·L_max(K)`, reads a held `K`,
+    and these charts hold none: `K` is what the pixel's axis sets. That rules out that one coordinate, not a tilt: the
+    additive floor takes any real `L_z`. The ruling's reason, "so held K stays ≥ 0", does not speak of `L_z`.
+  - **Held `K`, on an `L_z` axis.** The warp coordinate, `K = K_max·t^γ_K`, `t₀ = (K₀/K_max)^(1/γ_K)`, is well-formed,
+    and is the one the ruling's reason names. It needs a `K_max` this chart does not read: a missing value (R-71), not
+    a missing form. `top` is the field that would hold it.
+
+  These two concern different axes, so no one form has to meet both.
+- **The question:** in the warped mode, how does a tilt move the held `L_z` on a lone `K`, `KE`, `E` or virial axis,
+  and the held `K` on a lone `L_z` axis; and does a slice of the held value move the same way, or by value? In the
+  linear mode the form is the ruling's; only the build is open, and it waits on the warped answer so that both arms
+  come in together.
+- **Options seen, held `L_z`:**
+  - (a) By value on the floor: `L_z = L_z₀ + d`, §2.1's floor at the pixel's own tilted `L_z`. Every pixel stays a
+    system and no `L_max` is needed. Cost: the ruling's warp sentence then reaches held `K` only, and `|L_z|` has no
+    bound but the slider's span.
+  - (b) A warp coordinate on a fixed scale, `L_z = (2s − 1)·√(2·I·K_max)`, `s` bounded. Cost: a scale §2.1 does not
+    write for these charts, which `K`, `KE` and `E` can read through `K_max` and the virial axis cannot, its `top`
+    being `Q_hi`; and `s` needs a rule past its edges.
+  - (c) Another, stated by the owner.
+
+  The ruling's port queues the same question and options (a) to (c) for `(ν, K)`, `Φ_θ,K` and `Φ_strip,K`; the answer
+  there can be this one.
+- **Options seen, held `K`:**
+  - (a) The warp line, `K = K_max·t^γ_K`, with `K_max` supplied to the chart. Cost: a value this chart does not hold,
+    a calibration requirement under R-71 with REQ-CHART-044's placeholder meanwhile.
+  - (b) Another, stated by the owner.
+- **Slicing, in every option above:** by value, the contract's clause as it stands, or in the tilt's own coordinate.
+  The two agree at an offset of 0 and write different held values away from it.
+- **Applied meanwhile:** the held value is neither tilted nor sliced: the chart's hidden coordinates stay its frozen
+  controls, and chart_reference §2.1 says so (PR #387). `d = 0` reproduces the untilted chart in every option.
+- **Waits:** a tilt or a slice of the held value on a lone-axis chart; nothing else.
 ## RQ-702: What refresh rate a browser run started from the measurement panel's button should read, when the rate was measured once at page load *(silence; TASK-M8-86, REQ-PERF-115; `plan/tasks/M8/TASK-M8-86.md` § "Deliverables")*
 
 *Queued 5 Nov 2026 from Codex thread `PRRT_kwDOUpUQ5c6z3aWc` of PR #368, code review 5779560269 F1 and gui review 5779587987 G3. The native half of the same finding is fixed there. Nothing is chosen.*
@@ -1951,3 +2102,29 @@ change: no timer was touched (R-649). Nothing is chosen.*
 - **Options seen:** (a) keep it, and state in the panel that a button run reads the page-load rate; (b) run the idle loop again before a button run's warm-up, the app paused for it; (c) mark a button run in the report, so that it is not read as a measurement.
 - **Applied meanwhile:** none: the rate stands as measured at page load, and measured runs go through `?run=`.
 - **Waits:** nothing. TASK-M8-96 uses `?run=` only; TASK-M8-37, if it keeps the panel, meets this question.
+
+## RQ-707: What margin the search for a mass-ratio axis's range holds a ratio to: chart_reference §2.1 needs one and names none, and the code's `ε_μ/2` can refuse an ask realised at `ε_μ` *(silence; a value without a source; `crates/kernel/src/chart/physical.rs`; context: TASK-M2-37)*
+
+*Queued 6 Nov 2026 from Codex's P1 on PR #387 at `crates/kernel/src/chart/physical.rs`:898, which the physics reviewer reproduced and called a silence of the corpus. Not chosen here. The margin stays as built, and the doc on `MixedMassRatio::new` now says what it does.*
+
+**In plain English:** a mass-ratio axis asks for a range of ratios, and the code keeps the ratios the mass link can really produce. The docs say how close a ratio must come to count, but the code tests a stricter figure, half of that, and the docs never give it. So the range can come out shorter than the docs promise, and a chart can be refused that the docs would offer. Usually the loss is tiny, but at an extreme ratio it can be large: in the worst case measured, the range's end stops about 240 times short. No chart ever shows a wrong system. The question is whether to write that stricter figure into the docs or change it.
+
+- **File, section, quoted:**
+  - `docs/design/principia_chart_reference.md` § "2.1 Feasibility, and the warp that makes every pixel valid", lines 358-369: "A ratio is realised when the link's inverse followed by its forward returns its masses `(m_a, m_b, m_c)`, `m_c` at its held value, and the ratio `q`, each to within `ε_μ`, relative"; "`ε_μ = 10⁻⁶` is the link clamp (…), reused here as the round trip's tolerance, not a new constant."; "the part of the asked range the link realises at `m_c`"; "where those share no ratio, as can happen at a held mass near 1, the chart is not offered".
+  - `docs/read_first/principia_00_philosophy.md` § 4.2: "Every constant must be derived or absent".
+  - `crates/kernel/src/chart/physical.rs`:776, :860 and :894, the factor `0.5` on `ε_μ`, which sits in code only.
+- **The silence:** read literally with "the part of the asked range the link realises", §2.1 gives `ε_μ` as the figure. But feasibility forces a margin on top of it, because the warp's rounding at the range's ends and the narrowing of those ends to `f32` must stay inside the `ε_μ` a decoded pixel is held to. §2.1 names none. The code's `ε_μ/2` moves `q₀` and `q₁`, and its effect is a trimmed range or a chart not offered, never a wrong system.
+- **Measured** (physics reviewer, 6 Nov 2026, `/Volumes/X10 Pro/Principia/orch/scratch/387-phys3/phys3_tmp.rs.txt`, jobs 2485-2487):
+  - The band between the range at `ε_μ/2` and at `ε_μ` has a median width in `ln q` of `5.0e-7`.
+  - The worst is 5.48 nats, at `softmax_tanh`, `μ_max = 10`, `z ≈ (7.31, −2)`, bodies `(1, 2)`, a range end at an extreme ratio.
+  - For `softmax_tanh` with `max(q, 1/q)` below about `1e6`, the width goes about as `(ε_μ/2)·max(q, 1/q)`, within 0.86 to 1.14 up to about `1e5`. Past that it jumps: at the 5.48-nat case the law gives 1.01 nats at the `ε_μ/2` end, `max(q, 1/q)` about `2.03e6`, and the `ε_μ` end sits at `4.85e8`.
+  - For `stick_breaking` that law is wrong by six orders. The widest band is `9.99e-4` at `max(q, 1/q)` about `2.0e9`, and `1.64e-4` at `3.3e8`, about as `(ε_μ²/2)·max(q, 1/q)`.
+  - A margin must leave room. At the full `ε_μ` (`f = 1.0`), 62% of narrowed `softmax_tanh` charts (29722 of 48188) and 44% of `stick_breaking` charts (2223 of 5066) have a refused row in the square. At `f = 0.95` it is 27 and 97 charts, and at `f = 0.9` and `0.5` it is 0. The least that works is about `f = 0.94`.
+  - That need has a source. The worst end rise is `0.0551` to `0.0593` of `ε_μ` over every margin and both links (job 2486), just under the `f32` rounding of a narrowed end, `2⁻²⁴/ε_μ = 0.0596`. So the need is `1 − 2⁻²⁴/ε_μ = 0.9404`.
+- **The question:** what margin does the range's search hold, and where is it written?
+- **Options seen:** the `1/2` of (i) and the `0.9` of (ii) are chosen values, neither derived; § 4.2 above is why that matters.
+  - (i) Keep `ε_μ/2` and add a §2.1 sentence naming it as the range's margin. The physics reviewer recommends it as simple and comfortably past the measured need. It changes the docs only.
+  - (ii) A tighter margin, `0.9·ε_μ`, enough on these measurements. Its band is an estimated one fifth the width: not measured, since the runs took the band only between `ε_μ/2` and `ε_μ`, and following from the linear region, so not reaching the jump past about `1e6`. It also changes the three factors in `physical.rs` and that file's docs on the margin.
+  - (iii) A margin derived from that rounding, `ε_μ − k·2⁻²⁴`: `k = 1` gives `0.940·ε_μ`, on the need with little room; `k = 2` gives `0.881·ε_μ`, with room. Neither value was run; the runs at 0.95, 0.9 and 0.8 bracket them. It changes the same code and docs as (ii).
+- **Applied meanwhile:** `ε_μ/2`, as built.
+- **Waits:** nothing is held. The code stands at `ε_μ/2` until a ruling.

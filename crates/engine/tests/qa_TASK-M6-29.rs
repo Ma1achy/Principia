@@ -40,6 +40,7 @@ fn sim() -> SimConfig {
     SimConfig {
         chart: Chart {
             window: engine::contract::sim_config::Window::SQUARE,
+            mapping: Default::default(),
         },
         plane: Plane {
             z0: ZERO,

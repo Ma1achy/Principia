@@ -47,8 +47,12 @@
 //! - **The mass** ([`SimplexClamp`]): the simplex's reachable region is two-dimensional, and no comparison of the input
 //!   with constants read off the forward bounds it, so each simplex link states its own clamp's argument, as the
 //!   registry's inverse forms it, and the test is that argument outside the clamp's interval: for `softmax_tanh`
-//!   `log(mₖ/m₀)` against `±(1 − ε_μ)·μ_max` (Part 3), for `stick_breaking` `2(m₁ + m₂) − 1` and `2m₂/(m₁ + m₂) − 1`
-//!   against `±(1 − ε_μ)²`. The argument is the inverse's own arithmetic, so the test is the clamp's, bit for bit.
+//!   `log(mₖ/m₀)` against `±(1 − ε_μ)·μ_max` (Part 3), for `stick_breaking` the raw `2a − ε_μ·t` of each `N(a)` against
+//!   `c·ε_μ·t`, `c = 1 − ε_μ`, the floor of the clamp dd_generation_root §3.9's form applies. That is the inverse's own
+//!   arithmetic at the small side, which is where the edge is resolved. In exact arithmetic `N(v) + N(w) = 2c·t`, so one
+//!   `N` passes its floor exactly as the other passes its top `c·(1 + c)·t`; the large `N`'s top alone can also trip a
+//!   few ulps short of the edge, moving `z` only by rounding, and is no clamp to flag. The outer clamp of `N(v)/N(w)`
+//!   likewise holds an exact corner, which [`guard`] keeps out, and on the open simplex moves only rounding.
 //!
 //! **The simplex corner** (registry note, TASK-M2-01 qa (c)): the simplex inverses divide `0` by `0` at an exact
 //! corner, which SPIR-V's `FMax` leaves undefined. So a mass that is not positive is selected as the smallest positive
@@ -252,18 +256,27 @@ impl SimplexClamp for SoftmaxTanh {
     }
 }
 
-/// `2(m₁ + m₂) − 1` and `2m₂/(m₁ + m₂) − 1` against `±(1 − ε_μ)²` (the registry's R-72 entry), as its inverse forms
-/// them.
+/// Whether `stick_breaking`'s inverse clamps `(v, w)`: `2a − ε_μ·t` of `v` or of `w` below `c·ε_μ·t`, `t = v + w`,
+/// `c = 1 − ε_μ`, each operation in the order the registry's tree does it (dd_generation_root §3.9's list of forms; the
+/// module's note says why the floor is the edge).
+#[inline]
+fn stick_clamps<R: LinkReal>(v: R, w: R) -> bool {
+    let two = R::one() + R::one();
+    let c = R::one() - R::EPS_MU;
+    let t = v + w;
+    let shift = R::EPS_MU * t;
+    let floor = c * R::EPS_MU * t;
+    !(((two * v - shift) >= floor) & ((two * w - shift) >= floor))
+}
+
+/// Each of the two clamps of the registry's R-72 entry, as its inverse forms them: `(v, w) = (m₁ + m₂, m₀)`, then
+/// `(m₂, m₁)`.
 impl SimplexClamp for StickBreaking {
     #[inline]
     fn clamps<R: LinkReal>(m: [R; 3]) -> u32 {
-        let two = R::one() + R::one();
-        let keep = R::one() - R::EPS_MU;
-        let cap = keep * keep;
-        let stick = m[1] + m[2];
-        let s = two * stick - R::one();
-        let u = two * (m[2] / stick) - R::one();
-        select(outside(s, cap), 1, 0) | select(outside(u, cap), 2, 0)
+        let first = stick_clamps(m[1] + m[2], m[0]);
+        let second = stick_clamps(m[2], m[1]);
+        select(first, 1, 0) | select(second, 2, 0)
     }
 }
 

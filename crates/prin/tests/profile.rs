@@ -129,6 +129,7 @@ fn skeleton() -> (SimConfig, RenderState) {
         SimConfig {
             chart: Chart {
                 window: Window::SQUARE,
+                mapping: Default::default(),
             },
             plane: Plane {
                 z0: [0.0; 8],
@@ -409,7 +410,7 @@ fn profile_file_canonical_same_bytes_twice() {
     check_same_text(
         &canonical::to_string(&sim).unwrap(),
         &canonical::to_string(&sim2).unwrap(),
-        r#"{"chart":{"window":{"centre":[0.5,0.5],"half":[0.5,0.5]}},"collision":{},"horizon":{"t":0},"integrator":{},"kernel_variant":"physics","links":{"alpha":{"id":"sigmoid_alpha","params":{}},"beta":{"id":"sigmoid_beta","params":{}},"mass":{"id":"softmax_tanh","params":{"mu_max":5}},"momenta":{"id":"sigmoid_q","params":{"q_max":2}}},"lock":{"locked":false,"z_locked":[0,0,0,0,0,0,0,0]},"plane":{"q1":[0,0,0,0,0,0,0,0],"q2":[0,0,0,0,0,0,0,0],"z0":[0,0,0,0,0,0,0,0]},"quality":{},"slice":{"frame":{"normal":5,"tilt_x":5,"tilt_y":5}}}"#,
+        r#"{"chart":{"mapping":["warped","warped"],"window":{"centre":[0.5,0.5],"half":[0.5,0.5]}},"collision":{},"horizon":{"t":0},"integrator":{},"kernel_variant":"physics","links":{"alpha":{"id":"sigmoid_alpha","params":{}},"beta":{"id":"sigmoid_beta","params":{}},"mass":{"id":"softmax_tanh","params":{"mu_max":5}},"momenta":{"id":"sigmoid_q","params":{"q_max":2}}},"lock":{"locked":false,"z_locked":[0,0,0,0,0,0,0,0]},"plane":{"q1":[0,0,0,0,0,0,0,0],"q2":[0,0,0,0,0,0,0,0],"z0":[0,0,0,0,0,0,0,0]},"quality":{},"slice":{"frame":{"normal":5,"tilt_x":5,"tilt_y":5}}}"#,
     );
     check_same_text(
         &canonical::to_string(&render).unwrap(),
