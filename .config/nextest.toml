@@ -87,6 +87,30 @@ filter = "binary_id(=xtask::jobq) | binary_id(/^xtask::qa_R-658/)"
 slow-timeout = { period = "120s", terminate-after = 3 }
 priority = 100
 
+# The tests that catch the mutants of TASK-M3-05's source run first, ahead of the slow GPU suites. It is for the mutants
+# gate again (R-302; REQ-VAL-149, R-376): a mutant runs its package's tests in priority and then name order until one
+# fails, and `--max-fail=1:immediate` (`.cargo/mutants.toml`) stops the run there at once. On PR #360 (run 42131013368,
+# 661 of its 676 mutants reported) the catching test took about 0.01 s and started some 350 s in, behind `agreement_preset_gpu`
+# and `codegen_selftest`, which are 63% of the test time spent before a catch in validation, and two mutants caught by
+# `qa_look_*` waited 2750 s. Validation's 293 caught mutants at that rate cut four shards of eight at 300 min. The tests
+# this names take 163 s of test time in all. It is `test()`, not `binary_id()`: nextest refuses a config whose
+# `binary_id()` matches no binary, for every run, and most of these binaries came with that PR.
+# Only the schedule changes: the same tests, under the same limits, and a survivor still runs every one. Owner-approved
+# 6 Nov 2026, outside the rulings report.
+[[profile.default.overrides]]
+filter = """
+    test(/^projection_parity_/)
+    | test(/^drift_/)
+    | test(/^golden_scene_/)
+    | test(/^qa_look_/)
+    | test(/^com_projection_/)
+    | test(/^close_encounter_drift_/)
+    | test(/^invariant_monitor_/)
+    | test(/^fixtures_/)
+    | test(/^stored_values_no_nan/)
+"""
+priority = 75
+
 # Each of the job queue's test processes in a PID namespace of its own during a mutants run (`scripts/contain.sh test`;
 # a pass-through unless the run sets PRIN_TEST_PIDNS): nothing a mutant of the queue starts outlives its test, and nothing
 # it signals is outside it. `within-wrapper`: the memory cap, the target runner `.cargo/mutants.toml` sets, stays around
