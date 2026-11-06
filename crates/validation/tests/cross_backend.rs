@@ -929,6 +929,9 @@ fn cross_backend_compare_the_list_is_the_written_forms() {
         "INVARIANT_INFEASIBLE",
         "seed_z_alpha",
         "seed_nu",
+        "angle_cross_zero",
+        "angle_dot_zero",
+        "angle_dot_negative",
     ] {
         let l = listed(b).unwrap();
         assert!(
@@ -945,7 +948,7 @@ fn cross_backend_compare_the_list_is_the_written_forms() {
         );
         other += 1;
     }
-    assert_eq!(other, 9);
+    assert_eq!(other, 6);
     assert!(listed("sphere_inverse_pole").unwrap().kind == Kind::Other);
     assert!(listed("no such").is_none());
     let names: std::collections::BTreeSet<_> = LIST.iter().map(|l| l.name).collect();

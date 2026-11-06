@@ -16,6 +16,11 @@
 //! outcome and input bits. A decode branch has a `present` word first, 0 where the variant has no such branch or `η_E`
 //! is off; its operands are the entry's own emitted values, `decode/mass.rs`'s the masses it emitted. A branch of kind
 //! `other operation` (division, `√`, `sin`, `cos`, `atan2`, or a value reached through them) emits its outcome alone.
+//! A kind is the expression's own, read at its own operands (R-690): `rho_angle`'s cross and dot are `+`, `−` and `×` on
+//! the emitted `ρ̃`, `λ̃`, however those were reached, so their slots are of the first kind.
+//!
+//! **The module.** These entries are built with the rest of the kernel, and `cargo xtask build-kernel` parts them into
+//! `target/spirv/branch_read.wgsl`: no runtime path runs them, so they stay out of the production `kernel.wgsl`.
 //!
 //! **Domain** (pitfalls §10): fixed inputs through two stages; no trajectory. A read-back entry is a different shader from
 //! the production one, and what it shows holds for that entry's compile.
@@ -74,6 +79,10 @@ type FeasibilityBits = [u32; 5];
 type OneOperand = [u32; 1];
 /// A seed's input: `z_α`'s two sign reads, or `3ν`'s `s` and `e`.
 type SeedBits = [u32; 2];
+/// `rho_angle`'s operands: `ρ̃`, then `λ̃`, each `x` then `y`.
+type AngleOperands = [u32; 4];
+/// `rho_angle`'s input to one test: the cross or the dot.
+type AngleBits = [u32; 1];
 /// No words: an `other operation` slot holds its `present` and outcome alone.
 type NoWords = [u32; 0];
 
@@ -121,6 +130,9 @@ pub struct DecodeSlot<O, B> {
 /// An `other operation` slot: present, outcome.
 pub type OtherSlot = DecodeSlot<NoWords, NoWords>;
 
+/// A slot of `rho_angle`'s, of kind `+ and ×`: its `ρ̃`, `λ̃` and the product its test reads.
+pub type AngleSlot = DecodeSlot<AngleOperands, AngleBits>;
+
 /// One decode sample's words, whose shape gives the `*_AT` offsets below.
 #[repr(C)]
 pub struct DecodeRead {
@@ -143,11 +155,11 @@ pub struct DecodeRead {
     /// `virial_ratio`'s pole's slot (R-436).
     pub virial_pole: OtherSlot,
     /// `rho_angle`'s `ρ̃ × λ̃ = 0` slot (R-437).
-    pub cross_zero: OtherSlot,
+    pub cross_zero: AngleSlot,
     /// `rho_angle`'s `ρ̃ · λ̃ = 0` slot (R-437).
-    pub dot_zero: OtherSlot,
+    pub dot_zero: AngleSlot,
     /// `rho_angle`'s `ρ̃ · λ̃ < 0` slot.
-    pub dot_negative: OtherSlot,
+    pub dot_negative: AngleSlot,
     /// The shape sphere inverse's `p = q = 0` slot (R-437).
     pub sphere_pole: OtherSlot,
 }
@@ -227,6 +239,8 @@ pub const CROSS_ZERO_AT: usize = word_of!(DecodeRead, cross_zero);
 pub const DOT_ZERO_AT: usize = word_of!(DecodeRead, dot_zero);
 /// [`DecodeRead::dot_negative`].
 pub const DOT_NEGATIVE_AT: usize = word_of!(DecodeRead, dot_negative);
+/// `rho_angle`'s operand words, then a test's input words.
+pub const ANGLE_SHAPE: (usize, usize) = (words::<AngleOperands>(), words::<AngleBits>());
 /// [`DecodeRead::sphere_pole`].
 pub const SPHERE_POLE_AT: usize = word_of!(DecodeRead, sphere_pole);
 /// The words of one decode sample.
@@ -344,6 +358,38 @@ pub fn write_nu_seed(out: &mut [u32], at: usize, nu: f32) {
     out[at + 2] = nu.to_bits();
     out[at + 3] = s.to_bits();
     out[at + 4] = e.to_bits();
+}
+
+/// Writes one of `rho_angle`'s slots from word `at` of `out`: its outcome `c` on `input`, at `ρ̃`, `λ̃`.
+#[inline]
+fn write_angle_slot(
+    out: &mut [u32],
+    at: usize,
+    (rho, lambda): ([f32; 2], [f32; 2]),
+    c: bool,
+    input: f32,
+) {
+    out[at] = 1;
+    out[at + 1] = word(c);
+    out[at + 2] = rho[0].to_bits();
+    out[at + 3] = rho[1].to_bits();
+    out[at + 4] = lambda[0].to_bits();
+    out[at + 5] = lambda[1].to_bits();
+    out[at + 6] = input.to_bits();
+}
+
+/// Writes `rho_angle`'s three slots of the sample at word `at` of `out`, on the configuration block's own `ρ̃` and `λ̃`,
+/// through the functions `descriptor::config_angle` calls.
+#[inline]
+pub fn write_angle(out: &mut [u32], at: usize, rho: [f32; 2], lambda: [f32; 2]) {
+    let (cross, dot) = descriptor::cross_dot(rho, lambda);
+    let vectors = (rho, lambda);
+    let zero = descriptor::cross_zero(cross);
+    write_angle_slot(out, at + CROSS_ZERO_AT, vectors, zero, cross);
+    let zero = descriptor::dot_zero(dot);
+    write_angle_slot(out, at + DOT_ZERO_AT, vectors, zero, dot);
+    let negative = descriptor::dot_negative(dot);
+    write_angle_slot(out, at + DOT_NEGATIVE_AT, vectors, negative, dot);
 }
 
 /// Writes an `other operation` slot, its outcome `c`, at word `at` of `out`.
@@ -540,10 +586,7 @@ pub fn write_decode<V: BranchVariant>(
         descriptor::collision_pole(p.r_min_pair_0),
     );
     write_other(out, at + VIRIAL_POLE_AT, descriptor::virial_pole(p.V_0));
-    let (cross, dot) = descriptor::cross_dot(d.config.rho_t, d.config.lambda_t);
-    write_other(out, at + CROSS_ZERO_AT, descriptor::cross_zero(cross));
-    write_other(out, at + DOT_ZERO_AT, descriptor::dot_zero(dot));
-    write_other(out, at + DOT_NEGATIVE_AT, descriptor::dot_negative(dot));
+    write_angle(out, at, d.config.rho_t, d.config.lambda_t);
     if reads.sphere {
         write_other(
             out,

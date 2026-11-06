@@ -36,7 +36,9 @@
 //! negation and `abs`, exact power-of-two scalings, bit reads and masks, integer operations, selects and comparisons.
 //! `other operation` holds an operation with an ulp bound rather than correct rounding (division, `√`, `sin`, `cos`,
 //! `atan2`, a rounding builtin) or `fma`. R-438's select is the encode's `β`, which these inputs do not run; the decode's
-//! reading of `λ̃ = 0` is `rho_angle`'s, R-437's rows (applied per R-369). Each `+ and ×` input names the kernel function
+//! reading of `λ̃ = 0` is `rho_angle`'s, R-437's rows (applied per R-369). A kind is the expression's own, read at its
+//! own operands, not at how they were reached: `rho_angle`'s `ρ̃₀λ̃₁ − ρ̃₁λ̃₀` and `ρ̃₀λ̃₀ + ρ̃₁λ̃₁` are `+`, `−` and `×` on the
+//! emitted `ρ̃`, `λ̃`, the form R-690 exists for. Each `+ and ×` input names the kernel function
 //! the arbiter evaluates, at f32, with no second copy ([`Listed::evaluate`]).
 //!
 //! **The levels and the standing** ([`compare`]): the parity contract's § 4 and the task's notes. Three levels, on a row
@@ -151,6 +153,8 @@ pub enum Arbiter {
     AlphaSeed,
     /// `branch_read::write_nu_seed`.
     NuSeed,
+    /// `branch_read::write_angle`.
+    Angle,
 }
 
 /// One branch: its name, its slot in the read-back's words, its kind and what emits it.
@@ -339,23 +343,29 @@ pub const LIST: [Listed; 19] = [
         "decode/descriptor.rs: V₀ non-finite (R-436), through √ and division",
         Emits::Nothing,
     ),
-    other_row(
+    exact_row(
         "angle_cross_zero",
         read::CROSS_ZERO_AT,
-        "decode/descriptor.rs: ρ̃ × λ̃ = 0 (R-437), through sin, cos and √",
+        read::ANGLE_SHAPE,
+        "decode/descriptor.rs: ρ̃₀λ̃₁ − ρ̃₁λ̃₀ = 0 (R-437), on the emitted ρ̃, λ̃",
         Emits::Nothing,
+        Arbiter::Angle,
     ),
-    other_row(
+    exact_row(
         "angle_dot_zero",
         read::DOT_ZERO_AT,
-        "decode/descriptor.rs: ρ̃ · λ̃ = 0 (R-437), through sin, cos and √",
+        read::ANGLE_SHAPE,
+        "decode/descriptor.rs: ρ̃₀λ̃₀ + ρ̃₁λ̃₁ = 0 (R-437), on the emitted ρ̃, λ̃",
         Emits::Nothing,
+        Arbiter::Angle,
     ),
-    other_row(
+    exact_row(
         "angle_dot_negative",
         read::DOT_NEGATIVE_AT,
-        "decode/descriptor.rs: ρ̃ · λ̃ < 0, through sin, cos and √",
+        read::ANGLE_SHAPE,
+        "decode/descriptor.rs: ρ̃₀λ̃₀ + ρ̃₁λ̃₁ < 0, on the emitted ρ̃, λ̃",
         Emits::Nothing,
+        Arbiter::Angle,
     ),
     other_row(
         "sphere_inverse_pole",
@@ -425,6 +435,7 @@ impl Listed {
             Arbiter::Feasibility => read::write_feasibility(&mut words, self.at, f(0), f(1)),
             Arbiter::AlphaSeed => read::write_alpha_seed(&mut words, self.at, f(0)),
             Arbiter::NuSeed => read::write_nu_seed(&mut words, self.at, f(0)),
+            Arbiter::Angle => read::write_angle(&mut words, 0, [f(0), f(1)], [f(2), f(3)]),
         }
         let (outcome, _, bits) = self.read(&words)?;
         Some((outcome, bits.to_vec()))

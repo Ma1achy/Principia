@@ -174,15 +174,16 @@ fn branch_read_the_layout_is_the_declared_one() {
         (read::COLLISION_POLE_AT, 33),
         (read::VIRIAL_POLE_AT, 35),
         (read::CROSS_ZERO_AT, 37),
-        (read::DOT_ZERO_AT, 39),
-        (read::DOT_NEGATIVE_AT, 41),
-        (read::SPHERE_POLE_AT, 43),
-        (read::DECODE_WORDS, 45),
+        (read::DOT_ZERO_AT, 44),
+        (read::DOT_NEGATIVE_AT, 51),
+        (read::SPHERE_POLE_AT, 58),
+        (read::DECODE_WORDS, 60),
     ];
     for (k, (got, want)) in shapes.into_iter().enumerate() {
         assert_eq!(got, want, "the layout moved, entry {k}");
     }
     assert_eq!(read::M01_SHAPE, (2, 4));
+    assert_eq!(read::ANGLE_SHAPE, (4, 1));
     assert_eq!(read::FEASIBILITY_SHAPE, (2, 5));
     assert_eq!(read::ALPHA_SEED_SHAPE, (1, 2));
     assert_eq!(read::NU_SEED_SHAPE, (1, 2));
@@ -301,10 +302,24 @@ fn expected_decode<V: BranchVariant>(
     other(read::COLLISION_POLE_AT, collision_pole(p.r_min_pair_0));
     other(read::VIRIAL_POLE_AT, virial_pole(p.V_0));
     let (cross, dot) = cross_dot(d.config.rho_t, d.config.lambda_t);
-    other(read::CROSS_ZERO_AT, cross_zero(cross));
-    other(read::DOT_ZERO_AT, dot_zero(dot));
-    other(read::DOT_NEGATIVE_AT, dot_negative(dot));
+    let (rho, lambda) = (d.config.rho_t, d.config.lambda_t);
+    let mut angle = |at: usize, c: bool, input: f32| {
+        e[at] = 1;
+        e[at + 1] = word(c);
+        e[at + 2] = rho[0].to_bits();
+        e[at + 3] = rho[1].to_bits();
+        e[at + 4] = lambda[0].to_bits();
+        e[at + 5] = lambda[1].to_bits();
+        e[at + 6] = input.to_bits();
+    };
+    angle(read::CROSS_ZERO_AT, cross_zero(cross), cross);
+    angle(read::DOT_ZERO_AT, dot_zero(dot), dot);
+    angle(read::DOT_NEGATIVE_AT, dot_negative(dot), dot);
     if reads.sphere {
+        let mut other = |at: usize, c: bool| {
+            e[at] = 1;
+            e[at + 1] = word(c);
+        };
         other(read::SPHERE_POLE_AT, inverse_pole(reads.pq[0], reads.pq[1]));
     }
     e
