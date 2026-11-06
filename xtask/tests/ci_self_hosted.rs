@@ -41,6 +41,16 @@ const PROOF_TRIGGERS: [&str; 2] = ["schedule", "workflow_dispatch"];
 /// Sunday, 05:00 UTC, an hour after the PC's 04:00 update task (#390).
 const PROOF_CRON: &str = "0 5 * * 0";
 const PROOF_TIMEOUT: i64 = 30;
+/// Every key the file may hold at each level, sorted. A key not listed could change what the step's two lines start: an
+/// `env` of `PATH` anywhere, or a `working-directory`, which on this runner is the folder a job can write.
+const PROOF_TOP_KEYS: [&str; 6] = ["defaults", "env", "jobs", "name", "on", "permissions"];
+const PROOF_JOB_KEYS: [&str; 5] = ["concurrency", "if", "runs-on", "steps", "timeout-minutes"];
+const PROOF_STEP_KEYS: [&str; 2] = ["name", "run"];
+const PROOF_ENV_KEYS: [&str; 3] = [
+    "CARGO_INCREMENTAL",
+    "CARGO_PROFILE_DEV_DEBUG",
+    "CARGO_PROFILE_TEST_DEBUG",
+];
 /// The script on the PC, as the proof's step calls it.
 const PROOF_CALL: &str = "E:\\runner-tools\\setup\\03-sandbox-proof.ps1 -Job";
 /// R-711 item 1's triggers, the only ones a workflow with a self-hosted job may have.
@@ -4876,6 +4886,16 @@ fn proved(from: &str, to: &str) -> Vec<(String, String)> {
     edited(PROOF_WORKFLOW, from, to)
 }
 
+/// That `value`, a part of the weekly proof's file, holds exactly the keys `want`, which is sorted.
+fn proof_keys(what: &str, value: &Yaml, want: &[&str]) {
+    let mut found: Vec<&str> = entries(value).into_iter().map(|(k, _)| k).collect();
+    found.sort_unstable();
+    assert!(
+        found == want,
+        "{PROOF_WORKFLOW}'s {what} holds {found:?}, not {want:?}"
+    );
+}
+
 /// Exactly the job the Windows session specified, and nothing more: it's spared the rules a suite's job keeps because it
 /// has no checkout, no cargo and no push, so each of those stays true here.
 fn check_proof(files: &[(String, String)]) {
@@ -4889,14 +4909,26 @@ fn check_proof(files: &[(String, String)]) {
         &[PROOF_JOB],
         "{PROOF_WORKFLOW} holds more than its one job"
     );
+    proof_keys("workflow", doc, &PROOF_TOP_KEYS);
+    proof_keys("env", &doc["env"], &PROOF_ENV_KEYS);
+    proof_keys("defaults", &doc["defaults"], &["run"]);
+    proof_keys("defaults.run", &doc["defaults"]["run"], &["shell"]);
     let on: Vec<&str> = entries(&doc["on"]).into_iter().map(|(k, _)| k).collect();
     assert_eq!(on, PROOF_TRIGGERS, "{PROOF_WORKFLOW}'s triggers");
     let cron: Vec<&str> = doc["on"]["schedule"]
         .as_vec()
-        .map(|crons| crons.iter().filter_map(|c| c["cron"].as_str()).collect())
+        .map(|crons| {
+            crons
+                .iter()
+                .map(|c| c["cron"].as_str().unwrap_or(""))
+                .collect()
+        })
         .unwrap_or_default();
     assert_eq!(cron, [PROOF_CRON], "{PROOF_WORKFLOW}'s schedule");
+    proof_keys("schedule entry", &doc["on"]["schedule"][0], &["cron"]);
+    proof_keys("workflow_dispatch", &doc["on"]["workflow_dispatch"], &[]);
     let job = &doc["jobs"][PROOF_JOB];
+    proof_keys("job", job, &PROOF_JOB_KEYS);
     assert_eq!(
         job["if"].as_str(),
         Some(GUARD),
@@ -4914,16 +4946,7 @@ fn check_proof(files: &[(String, String)]) {
             && ends_in_a_call(&steps[0], PROOF_CALL),
         "{PROOF_WORKFLOW} doesn't run the sandbox proof, alone and fail closed: {steps:?}"
     );
-    for (what, scope) in [("job", job), ("step", &steps[0])] {
-        assert!(
-            scope["continue-on-error"].is_badvalue(),
-            "{PROOF_WORKFLOW}'s {what} passes whatever the proof finds"
-        );
-    }
-    assert!(
-        steps[0]["if"].is_badvalue(),
-        "{PROOF_WORKFLOW}'s step has a condition of its own"
-    );
+    proof_keys("step", &steps[0], &PROOF_STEP_KEYS);
 }
 
 #[test]
@@ -5008,6 +5031,19 @@ mod proof_second_cron {
         check_proof(&proved(
             "    - cron: \"0 5 * * 0\"\n",
             "    - cron: \"0 5 * * 0\"\n    - cron: \"0 6 * * 0\"\n"
+        ))
+    );
+}
+
+mod proof_cronless_entry {
+    use super::*;
+    negative_control!(
+        runner_proof_is_the_one_weekly_job,
+        "a second schedule entry with no cron",
+        expected = "runner-proof.yml's schedule",
+        check_proof(&proved(
+            "    - cron: \"0 5 * * 0\"\n",
+            "    - cron: \"0 5 * * 0\"\n    - timezone: x\n"
         ))
     );
 }
@@ -5099,7 +5135,7 @@ mod proof_job_may_fail {
     negative_control!(
         runner_proof_is_the_one_weekly_job,
         "a job that passes whatever the proof finds",
-        expected = "runner-proof.yml's job passes whatever the proof finds",
+        expected = "runner-proof.yml's job holds [\"concurrency\", \"continue-on-error\", \"if\"",
         check_proof(&proved(
             "    timeout-minutes: 30\n",
             "    timeout-minutes: 30\n    continue-on-error: true\n"
@@ -5112,7 +5148,7 @@ mod proof_step_may_fail {
     negative_control!(
         runner_proof_is_the_one_weekly_job,
         "a step that passes whatever the proof finds",
-        expected = "runner-proof.yml's step passes whatever the proof finds",
+        expected = "runner-proof.yml's step holds [\"continue-on-error\", \"name\", \"run\"]",
         check_proof(&proved(
             "      - name: Sandbox proof\n",
             "      - name: Sandbox proof\n        continue-on-error: true\n"
@@ -5125,10 +5161,164 @@ mod proof_skipped {
     negative_control!(
         runner_proof_is_the_one_weekly_job,
         "a step that never runs",
-        expected = "runner-proof.yml's step has a condition of its own",
+        expected = "runner-proof.yml's step holds [\"if\", \"name\", \"run\"]",
         check_proof(&proved(
             "      - name: Sandbox proof\n",
             "      - name: Sandbox proof\n        if: false\n"
+        ))
+    );
+}
+
+mod proof_step_path {
+    use super::*;
+    negative_control!(
+        runner_proof_is_the_one_weekly_job,
+        "a `PATH` on the step, which changes the `powershell` its two lines start",
+        expected = "runner-proof.yml's step holds [\"env\", \"name\", \"run\"]",
+        check_proof(&proved(
+            "      - name: Sandbox proof\n",
+            "      - name: Sandbox proof\n        env:\n          PATH: ${{ github.workspace }}\n"
+        ))
+    );
+}
+
+mod proof_step_directory {
+    use super::*;
+    negative_control!(
+        runner_proof_is_the_one_weekly_job,
+        "a working directory on the step",
+        expected = "runner-proof.yml's step holds [\"name\", \"run\", \"working-directory\"]",
+        check_proof(&proved(
+            "      - name: Sandbox proof\n",
+            "      - name: Sandbox proof\n        working-directory: x\n"
+        ))
+    );
+}
+
+mod proof_job_path {
+    use super::*;
+    negative_control!(
+        runner_proof_is_the_one_weekly_job,
+        "a `PATH` on the job",
+        expected = "runner-proof.yml's job holds [\"concurrency\", \"env\", \"if\"",
+        check_proof(&proved(
+            "    timeout-minutes: 30\n",
+            "    timeout-minutes: 30\n    env:\n      PATH: x\n"
+        ))
+    );
+}
+
+mod proof_job_defaults {
+    use super::*;
+    negative_control!(
+        runner_proof_is_the_one_weekly_job,
+        "`defaults` on the job, over the workflow's",
+        expected = "runner-proof.yml's job holds [\"concurrency\", \"defaults\", \"if\"",
+        check_proof(&proved(
+            "    timeout-minutes: 30\n",
+            "    timeout-minutes: 30\n    defaults:\n      run:\n        working-directory: x\n"
+        ))
+    );
+}
+
+mod proof_job_container {
+    use super::*;
+    negative_control!(
+        runner_proof_is_the_one_weekly_job,
+        "the job in a container",
+        expected = "runner-proof.yml's job holds [\"concurrency\", \"container\", \"if\"",
+        check_proof(&proved(
+            "    timeout-minutes: 30\n",
+            "    timeout-minutes: 30\n    container: x\n"
+        ))
+    );
+}
+
+mod proof_top_key {
+    use super::*;
+    negative_control!(
+        runner_proof_is_the_one_weekly_job,
+        "a top-level key beyond the file's own",
+        expected = "runner-proof.yml's workflow holds [\"defaults\", \"env\", \"jobs\", \"name\", \"on\", \"permissions\", \"run-name\"]",
+        check_proof(&proved(
+            "permissions:\n  contents: read\n",
+            "run-name: x\n\npermissions:\n  contents: read\n"
+        ))
+    );
+}
+
+mod proof_top_key_gone {
+    use super::*;
+    negative_control!(
+        runner_proof_is_the_one_weekly_job,
+        "a top-level key gone",
+        expected =
+            "runner-proof.yml's workflow holds [\"defaults\", \"env\", \"jobs\", \"name\", \"on\"]",
+        check_proof(&proved("permissions:\n  contents: read\n", ""))
+    );
+}
+
+mod proof_top_path {
+    use super::*;
+    negative_control!(
+        runner_proof_is_the_one_weekly_job,
+        "a `PATH` in the workflow's env",
+        expected = "runner-proof.yml's env holds [\"CARGO_INCREMENTAL\", \"CARGO_PROFILE_DEV_DEBUG\", \"CARGO_PROFILE_TEST_DEBUG\", \"PATH\"]",
+        check_proof(&proved(
+            "  CARGO_INCREMENTAL: \"0\"\n",
+            "  CARGO_INCREMENTAL: \"0\"\n  PATH: x\n"
+        ))
+    );
+}
+
+mod proof_defaults_key {
+    use super::*;
+    negative_control!(
+        runner_proof_is_the_one_weekly_job,
+        "a key in `defaults` beside `run`",
+        expected = "runner-proof.yml's defaults holds [\"other\", \"run\"]",
+        check_proof(&proved(
+            "defaults:\n  run:\n",
+            "defaults:\n  other: x\n  run:\n"
+        ))
+    );
+}
+
+mod proof_defaults_directory {
+    use super::*;
+    negative_control!(
+        runner_proof_is_the_one_weekly_job,
+        "a working directory in `defaults.run`",
+        expected = "runner-proof.yml's defaults.run holds [\"shell\", \"working-directory\"]",
+        check_proof(&proved(
+            "    shell: powershell ",
+            "    working-directory: x\n    shell: powershell "
+        ))
+    );
+}
+
+mod proof_inputs {
+    use super::*;
+    negative_control!(
+        runner_proof_is_the_one_weekly_job,
+        "inputs on the hand trigger",
+        expected = "runner-proof.yml's workflow_dispatch holds [\"inputs\"]",
+        check_proof(&proved(
+            "  workflow_dispatch:\n",
+            "  workflow_dispatch:\n    inputs:\n      a:\n        type: string\n"
+        ))
+    );
+}
+
+mod proof_timezone {
+    use super::*;
+    negative_control!(
+        runner_proof_is_the_one_weekly_job,
+        "more than the cron in the schedule's entry",
+        expected = "runner-proof.yml's schedule entry holds [\"cron\", \"timezone\"]",
+        check_proof(&proved(
+            "    - cron: \"0 5 * * 0\"\n",
+            "    - cron: \"0 5 * * 0\"\n      timezone: x\n"
         ))
     );
 }
