@@ -128,7 +128,7 @@ ci_records() {
       if (t ~ /^runs-on:/) {
         v = unquote(substr(t, 9))
         if (v ~ /^ubuntu-/) linux = 1
-        else if (v !~ /^(macos|windows)-/) print "U " FILENAME ":" FNR ": " t
+        else if (v !~ /^(macos|windows)-/ && v !~ /^\[self-hosted, *windows[],]/) print "U " FILENAME ":" FNR ": " t
         next
       }
       if (t ~ /^uses:/) {

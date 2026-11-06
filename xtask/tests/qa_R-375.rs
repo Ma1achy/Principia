@@ -18,6 +18,7 @@ use validation::negative_control;
 
 /// The two pinned runner images R-375 allows.
 const PINNED: [&str; 2] = ["ubuntu-24.04", "macos-15"];
+const SELF_HOSTED: &str = "[self-hosted, windows, nvidia]";
 
 fn workflows_dir() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../.github/workflows")
@@ -114,6 +115,10 @@ fn check_every_runner_pinned(files: &[(String, String)]) {
             }
             let runs_on =
                 runs_on.unwrap_or_else(|| panic!("qa_r375: {file}: job `{job}` names no runs-on"));
+            // R-711 (lands first in its own rulings PR), item 1: the one self-hosted runner, its jobs in this file alone.
+            if file == "win-gpu.yml" && runs_on == SELF_HOSTED {
+                continue;
+            }
             assert!(
                 PINNED.contains(&runs_on.as_str()),
                 "qa_r375: {file}: job `{job}` runs on `{runs_on}`, not a pinned image (R-375: {PINNED:?})"
