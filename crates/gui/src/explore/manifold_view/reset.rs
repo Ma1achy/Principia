@@ -229,8 +229,9 @@ pub fn house(rect: Rect, colour: Color32) -> [Shape; 2] {
 }
 
 /// Draws the Home button over the figure, on `shown`, what shows of the canvas: on a layer above the figure's, which
-/// takes the pointer, so a click on it, dimmed or not, is none on the figure (K7). Where the console reaches it, it is
-/// not drawn: its layer is above the console's (R-463 K2; applied per R-369). Returns whether it was clicked.
+/// takes the pointer, so a click on it, dimmed or not, is none on the figure (K7). That layer is above the windows' and
+/// the console's too, so the app draws it only where none reaches it (R-463 K2, R-461; applied per R-369). Returns
+/// whether it was clicked.
 pub fn home_button(ctx: &egui::Context, shown: Rect, sim: &SimConfig) -> bool {
     let rect = home_rect(shown);
     if !shown.contains_rect(rect) {

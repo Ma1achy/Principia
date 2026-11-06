@@ -741,10 +741,14 @@ impl<S: EngineSide> App<S> {
         if self.view.mode == Mode::Explore {
             self.paint_figure(&ctx, &layout, true);
             self.paint_reticle(&ctx, &layout);
-            // The one control over the figure, what the console leaves of its corner (R-466 K7).
+            // The one control over the figure, what the console leaves of its corner (R-466 K7), and only while no
+            // window lies on it: a click there is the window's (R-461).
             let shown = self.uncovered(layout.figure, &layout);
-            actions.home |=
-                explore::manifold_view::reset::home_button(&ctx, shown, &self.snapshot.sim);
+            let home = explore::manifold_view::reset::home_rect(shown);
+            if !self.window_over(home, &layout) {
+                actions.home |=
+                    explore::manifold_view::reset::home_button(&ctx, shown, &self.snapshot.sim);
+            }
         }
         // A click on a text field starts typing in it, on every page and in every window (R-456).
         self.keyboard
@@ -1069,6 +1073,16 @@ impl<S: EngineSide> App<S> {
             shown.max.y = shown.max.y.min(self.console_rect(layout).min.y);
         }
         shown
+    }
+
+    /// Whether an open window reaches `rect`. The windows move, over the figure too (R-461); the console, which does not,
+    /// is [`Self::uncovered`]'s.
+    fn window_over(&self, rect: egui::Rect, layout: &Layout) -> bool {
+        self.view.windows.open.iter().any(|&window| {
+            self.places
+                .shown(window, windows::rect(window, layout), layout.window)
+                .intersects(rect)
+        })
     }
 
     /// This frame's drag on the console's top edge, read before anything is drawn, as a splitter's: from its edge when

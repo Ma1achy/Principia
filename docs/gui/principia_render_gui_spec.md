@@ -447,7 +447,9 @@ its Screen preset the dev default; this line is its Ends only preset, offered.)*
 points, sits in the canvas's top-right corner, inset 8 points (R-466; its look applied per R-369, K7), the corner of
 the shown rect below the header strip (R-523, the decoder badge below; gui review G3 of PR #265): a click on it is
 Home, never a click on the figure (it pins nothing and starts no pan); it is dimmed while all three sections are home,
-and it hides with the layer (F3, present mode). **At launch and after Home** (applied per R-369, gui review
+and it hides with the layer (F3, present mode). It is the figure's control, not a window's: where the console or an
+open window reaches its rect it is not drawn, and a click there is the window's (applied per R-369, R-461; review of
+PR #429). **At launch and after Home** (applied per R-369, gui review
 5595357065's note on PR #265; accepted by R-559), the chart's unit square [0,1]² spans the shown rect's shorter side, centred in it, at
 one scale in both directions, and the extended field is drawn around it (R-537); a resize then keeps that scale and
 shows more or less of the field (Layout, below). The orbit's path is drawn from the cursor's IC:

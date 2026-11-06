@@ -2,7 +2,7 @@
 //! top-right corner, the Home key in both keyboard modes and View › Home, and leaves everything else alone. Each check
 //! is shown failing on what a GUI with the fault would leave (R-176, through `rejects`; `support`'s note).
 
-use eframe::egui::{Event, Key, Modifiers};
+use eframe::egui::{vec2, Event, Key, Modifiers};
 use engine::contract::sim_config::Plane;
 use engine::contract::view_ui::{KeyMode, Mode, Window};
 
@@ -10,7 +10,7 @@ use super::mock_layout_splitters::drag_splitter;
 use super::mock_manifold_resets::{
     at_preset, check_home, move_all, move_navigate, step, Rig, Values, MU1, SCRIPT_PRESETS,
 };
-use super::mock_windows_move_resize::{drag_title, open};
+use super::mock_windows_move_resize::{drag_title, drawn, open};
 use super::support::{click_scope, keys_on, names, press, rejects, texts};
 use crate::explore::manifold_view::reset::{self, home_rect, HOME_INSET, HOME_NAME, HOME_SIDE};
 use crate::explore::manifold_view::{self as mv, View, PRESET_HOMES};
@@ -264,6 +264,50 @@ fn mock_home_button_goes_under_a_console_reaching_it() {
     rig.0.windows.console.maximised = true;
     let _ = rig.1.frame(&mut rig.0, Vec::new());
     assert!(!button_drawn(&mut rig), "a maximised one covers it");
+}
+
+/// Every movable window: on the button's rect it is not drawn and a click there is the window's; a window two points
+/// short of it, or gone, leaves it working (R-461).
+#[test]
+fn mock_home_button_goes_under_a_window_reaching_it() {
+    for window in [
+        Window::Run,
+        Window::ChartBuilder,
+        Window::Export,
+        Window::Display,
+        Window::Profiler,
+        Window::Inspector,
+    ] {
+        let mut rig = at_preset(0);
+        move_navigate(&mut rig);
+        open(&mut rig.1, &mut rig.0, window);
+        assert!(button_drawn(&mut rig), "{window:?} opens beside the figure");
+        let button = home_rect(canvas(&rig));
+        let r = drawn(&rig.0, window);
+        // Its left edge two points right of the button, then two points over it.
+        let up = button.min.y - r.min.y;
+        drag_title(
+            &mut rig.1,
+            &mut rig.0,
+            window,
+            vec2(button.max.x + 2.0 - r.min.x, up),
+        );
+        let _ = rig.1.frame(&mut rig.0, Vec::new());
+        assert!(button_drawn(&mut rig), "{window:?} short of it");
+        drag_title(&mut rig.1, &mut rig.0, window, vec2(-4.0, 0.0));
+        let _ = rig.1.frame(&mut rig.0, Vec::new());
+        assert!(!button_drawn(&mut rig), "{window:?} on it");
+        click_button(&mut rig);
+        rejects("a click on the window that ran Home", || {
+            check_home(&Values::read(&rig.0, 0), 0)
+        });
+        // Control: the same click, the window gone, is Home.
+        rig.0.close_window(&rig.1.ctx, window);
+        let _ = rig.1.frame(&mut rig.0, Vec::new());
+        assert!(button_drawn(&mut rig), "{window:?} gone");
+        click_button(&mut rig);
+        check_home(&Values::read(&rig.0, 0), 0);
+    }
 }
 
 #[test]
