@@ -1117,6 +1117,7 @@ either file as schema v1 or v2 (R-534; *was:* "as schema v1").
   That record is the export's sidecar: with `SimConfig` it carries the tilt map (`tilt_map=sheet|lean`, R-474), a
   curved chart's tilt (R-473), each energy-type axis's mapping (R-471) and a saved chart's definition (R-475), and
   beside it F3's fill mode (`f3_fill=extend|fit`, R-472) and the lines (`Lines`, R-476).
+  If TASK-M2-52 confirms that R-709's clamp arises, it also carries, per pixel, which pixels are "held at floor".
   With `SimConfig` it carries the occupant, its regularisation and stepper, and, for a pair measured not to work, its
   warning, the measured text (R-561).
   With `SimConfig` it carries the links, each block's id and parameter values, written in full even at the defaults
@@ -1587,6 +1588,10 @@ holds no sound control. Gui review 5595359543 of PR #267, G1.)"
   twice (`principia_ic_save.md` §3.5; applied per R-369, gui review 5638421533 of PR #287, G9); each is one `SetField` on
   `RenderField::Lines` and one undo entry (R-69). **Export trajectory…** writes
   `<label>.traj.csv`, one row per step as taken, its body columns labelled 1-based (`body1_x` …).
+
+**"Held at floor" (R-709).** If TASK-M2-52 confirms that a held energy's warp coordinate reaches `t < 0` on a tilted
+Burrau chart in warped mode (`principia_chart_reference.md` §4.5), the Inspector labels a clamped pixel "held at floor".
+It is a real system, opened and read like any other; the label says only that its tilted held value was clamped.
 
 ## G9. Import picture · saved views · record a sweep (`09_importrecord.png`)
 

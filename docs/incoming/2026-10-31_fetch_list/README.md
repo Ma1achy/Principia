@@ -25,6 +25,8 @@ Wording, the owner's: data we hold is "already have"; "rejected" is only for wha
 | Hénon 1976, *A family of periodic solutions of the planar three-body problem, and their stability*, Celest. Mech. 13, 267–285, doi:10.1007/BF01228647 | The scan's p. 1: "All Rights Reserved / Copyright © 1976 by D. Reidel Publishing Company" | `_local`, ADS scan, for citation only | |
 | "Barrio et al. 2009, PRE 79, 036208" | — | **Not obtained: the citation does not verify** | RQ-645: that DOI is Barré & Yamaguchi, on Hamiltonian mean-field clusters |
 
+*4 Nov 2026 (R-702, closing RQ-645, option (b)):* both drop off the list: "Barrio et al. 2009, PRE 79, 036208", and "PASJ 60, 883" for Tanikawa & Mikkola 2008, for which arXiv:0802.2465 stands. Their rows stay as the record.
+
 `_local` is `docs/incoming/_local/fetch_list_2026-10-31/`, ignored by `.gitignore` line 21. `sources.tsv` gives each file's
 hash and URL.
 

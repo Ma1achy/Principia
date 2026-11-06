@@ -840,10 +840,26 @@
 - id: TASK-M2-52
   milestone: M2
   title: "Tilt and slice on the six charts that hold a block by a construction: the mass simplex's `ν₀`, a rest start's momentum controls from 0, and the held `L_z` or `K` of the Burrau charts, as physical hidden coordinates (R-633, R-473) ⚑"
-  depends_on: [TASK-M2-36]  # R-633 (RQ-603): split from TASK-M2-36, on its tilt path
+  depends_on: [TASK-M2-36, TASK-M2-37]  # R-633 (RQ-603): split from TASK-M2-36, on its tilt path
   needs: []
   requirements: [REQ-CHART-062, REQ-CHART-065]  # R-633: only this task can close them, once every chart tilts
   reviewers: [code, qa, physics]  # ⚑ physics review required; not merged on the code reviewer's word alone
+  pitfalls: []
+- id: TASK-M2-53
+  milestone: M2
+  title: "The f32 exponential sinc that never reads the backend's `sin` near 0 (R-696)"
+  depends_on: [TASK-M2-28]
+  needs: []
+  requirements: [REQ-DEC-053, REQ-DEC-054]
+  reviewers: [code, qa, physics]
+  pitfalls: []
+- id: TASK-M2-54
+  milestone: M2
+  title: "`arctan_sum_bits` confirmed in the constants register (R-699)"
+  depends_on: [TASK-M2-26]
+  needs: []
+  requirements: [REQ-GEN-045]
+  reviewers: [code, qa]
   pitfalls: []
 - id: TASK-M3-02
   milestone: M3
@@ -1106,7 +1122,7 @@
   title: "Escape re-validation: precision, recall and the tau gap"
   depends_on: [TASK-M3-33]
   needs: [REQ-VAL-004, REQ-VAL-006]
-  requirements: [REQ-VAL-040, REQ-VAL-051, REQ-EVT-019, REQ-VAL-135, REQ-EVT-025, REQ-VAL-168]
+  requirements: [REQ-VAL-040, REQ-VAL-051, REQ-EVT-019, REQ-VAL-135, REQ-EVT-025, REQ-VAL-168, REQ-EVT-033]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-2.2, PIT-2.3, PIT-3]
 - id: TASK-M3-35
@@ -1192,9 +1208,9 @@
 - id: TASK-M4-03
   milestone: M4
   title: "Tier L: branch decisions bit-identical on identical inputs, at the enumerated branch inputs"
-  depends_on: [TASK-M4-02]
+  depends_on: [TASK-M4-02, TASK-M4-29]
   needs: [REQ-INT-028, REQ-INT-029, REQ-EVT-003, REQ-EVT-004, REQ-EVT-005, REQ-EVT-020, REQ-DEC-017, REQ-ENC-016, REQ-DEC-022, REQ-DEC-008, REQ-DEC-007, REQ-PAY-018]
-  requirements: [REQ-INT-057, REQ-INT-061, REQ-INT-064, REQ-INT-066, REQ-EVT-021, REQ-VAL-059, REQ-VAL-078]
+  requirements: [REQ-INT-057, REQ-INT-061, REQ-INT-064, REQ-INT-066, REQ-EVT-021, REQ-VAL-059, REQ-VAL-078, REQ-INT-113]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-9, PIT-10]
 - id: TASK-M4-04
@@ -1358,6 +1374,30 @@
   requirements: [REQ-VAL-348]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-9, PIT-10]
+- id: TASK-M4-29
+  milestone: M4
+  title: "Written forms for `E_rel` and `|Δn̂|` that use no driver division or `√` in the decision (R-694)"
+  depends_on: [TASK-M4-02, TASK-M3-12]
+  needs: []
+  requirements: [REQ-INT-112]
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-2.2, PIT-9]
+- id: TASK-M4-30
+  milestone: M4
+  title: "The header records \"Off\" only for drivers measured, otherwise wgpu's path with \"driver unverified\" (R-694)"
+  depends_on: [TASK-M4-03]
+  needs: []
+  requirements: [REQ-TOOL-221]
+  reviewers: [code, qa, physics]
+  pitfalls: []
+- id: TASK-M4-31
+  milestone: M4
+  title: "Near-tie golden cases held only on CI's backends, elsewhere reported (R-695)"
+  depends_on: [TASK-M4-30]
+  needs: []
+  requirements: [REQ-VAL-349]
+  reviewers: [code, qa, physics]
+  pitfalls: []
 - id: TASK-M5-01
   milestone: M5
   title: "QuadReduction ledger: member order, packing, histogram and impurity grain"
@@ -2021,6 +2061,22 @@
   depends_on: [TASK-M6-24]  # R-685; the pattern is option A (R-689)
   needs: []
   requirements: [REQ-GUI-412]
+  reviewers: [code, qa, gui]
+  pitfalls: []
+- id: TASK-M6-55
+  milestone: M6
+  title: "A least window size, and the layout's minimums re-measured (R-705)"
+  depends_on: [TASK-M6-35]
+  needs: []
+  requirements: [REQ-GUI-414]
+  reviewers: [code, qa, gui]
+  pitfalls: []
+- id: TASK-M6-56
+  milestone: M6
+  title: "A typed basis read whole, and zoom scaling the stored basis (R-705)"
+  depends_on: [TASK-M6-40]
+  needs: []
+  requirements: [REQ-GUI-415]
   reviewers: [code, qa, gui]
   pitfalls: []
 - id: TASK-M7-01
@@ -2835,7 +2891,7 @@
 - id: TASK-M8-32
   milestone: M8
   title: "Export & share window: image with pxpack, state snapshot and share link, present mode (04_windows.png)"
-  depends_on: [TASK-M8-30, TASK-M8-31, TASK-M8-87, TASK-M7-32, TASK-M6-28, TASK-M2-34, TASK-M6-47, TASK-M8-46, TASK-M6-48, TASK-M2-37, TASK-M2-40, TASK-M7-45, TASK-M3-39]  # R-467 D13: the background and Fit (code review F4 on PR #253); TASK-M6-48, TASK-M2-37 and TASK-M2-40 for the sidecar's tilt_map, mappings and saved charts (R-471 to R-475); TASK-M7-45 generates the entry hashes (R-521 H5; code review F9 of PR #265, applied per R-369); TASK-M3-39 the pair table whose warning the sidecar carries (R-561)
+  depends_on: [TASK-M8-30, TASK-M8-31, TASK-M8-87, TASK-M7-32, TASK-M6-28, TASK-M2-34, TASK-M6-47, TASK-M8-46, TASK-M6-48, TASK-M2-37, TASK-M2-40, TASK-M7-45, TASK-M3-39, TASK-M2-52]  # R-467 D13: the background and Fit (code review F4 on PR #253); TASK-M6-48, TASK-M2-37 and TASK-M2-40 for the sidecar's tilt_map, mappings and saved charts (R-471 to R-475); TASK-M7-45 generates the entry hashes (R-521 H5; code review F9 of PR #265, applied per R-369); TASK-M3-39 the pair table whose warning the sidecar carries (R-561)
   needs: [REQ-TOOL-059, REQ-TOOL-065, REQ-TOOL-067, REQ-TOOL-070, REQ-TOOL-071, REQ-TOOL-072, REQ-INT-098]
   requirements: [REQ-TOOL-102, REQ-TOOL-103, REQ-GUI-100, REQ-TOOL-146, REQ-TOOL-167, REQ-TOOL-168, REQ-TOOL-169, REQ-GUI-353]
   reviewers: [code, qa, gui, physics]  # physics for present mode's fill past [0,1]² (R-407)
@@ -3831,5 +3887,29 @@
   depends_on: [TASK-M3-14, TASK-M4-13]
   needs: [REQ-INT-043, REQ-PAY-021, REQ-PAY-031, REQ-PAY-032, REQ-PAY-058]
   requirements: [REQ-VAL-344, REQ-VAL-345, REQ-VAL-346]  # R-679 (3 Nov 2026), RQ-674
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-3]
+- id: TASK-M9-42
+  milestone: M9
+  title: "GG-1: the eight neighbours of (3, 43), a peek (R-701)"
+  depends_on: []
+  needs: []
+  requirements: [REQ-VAL-350]
+  reviewers: [code, qa, physics]
+  pitfalls: []
+- id: TASK-M9-43
+  milestone: M9
+  title: "Read Paper I's normalisation for Tanikawa 2000's time columns (R-702)"
+  depends_on: []
+  needs: []
+  requirements: [REQ-VAL-351]
+  reviewers: [code, qa, physics]
+  pitfalls: []
+- id: TASK-M9-44
+  milestone: M9
+  title: "LL-6: all 316 free-fall orbits against the authors' table, a peek target (R-704)"
+  depends_on: [TASK-M9-06]
+  needs: []
+  requirements: [REQ-VAL-352, REQ-VAL-353]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-3]
