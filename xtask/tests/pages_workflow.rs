@@ -245,8 +245,8 @@ mod deploy_in_build {
         "actions/deploy-pages as a step of the build job",
         expected = "outside the deploy job",
         manual(&edited(
-            "      - uses: actions/checkout@v4\n",
-            "      - uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e\n      - uses: actions/checkout@v4\n"
+            "      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0\n",
+            "      - uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e\n      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0\n"
         ))
     );
 }
@@ -257,8 +257,8 @@ mod grant_in_build {
         "`pages: write` granted to the build job",
         expected = "outside the deploy job",
         manual(&edited(
-            "    steps:\n      - uses: actions/checkout@v4\n",
-            "    permissions:\n      pages: write\n    steps:\n      - uses: actions/checkout@v4\n"
+            "    steps:\n      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0\n",
+            "    permissions:\n      pages: write\n    steps:\n      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0\n"
         ))
     );
 }
@@ -284,8 +284,8 @@ fn check_faults(check: impl Fn(&str) -> Result<(), String>) {
         (edited("@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5", "@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03g"), "deploy-pages at a pinned"),
         (edited("@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4.0.0", "@v4"), "upload-pages-artifact at a pinned"),
         // Nothing outside the deploy job can deploy: not a step, nor a grant, in the build job, or above or below the jobs.
-        (edited("      - uses: actions/checkout@v4\n", "      - uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e\n"), "`- uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e` can deploy outside"),
-        (edited("      - uses: actions/checkout@v4\n", "      - uses: \"actions/deploy-pages@v4\"\n"), "can deploy outside"),
+        (edited("      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0\n", "      - uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e\n"), "`- uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e` can deploy outside"),
+        (edited("      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0\n", "      - uses: \"actions/deploy-pages@v4\"\n"), "can deploy outside"),
         (edited("    steps:\n      - uses: actions/checkout", "    permissions:\n      pages: write\n    steps:\n      - uses: actions/checkout"), "`pages: write` can deploy outside"),
         (edited("    steps:\n      - uses: actions/checkout", "    permissions:\n      id-token: write\n    steps:\n      - uses: actions/checkout"), "`id-token: write` can deploy outside"),
         (edited("    steps:\n      - uses: actions/checkout", "    permissions: write-all\n    steps:\n      - uses: actions/checkout"), "`permissions: write-all` can deploy outside"),

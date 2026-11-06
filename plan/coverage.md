@@ -6,25 +6,25 @@
 
 | area | count |
 |---|---|
-| DEC | 52 |
+| DEC | 54 |
 | ENC | 38 |
 | CHART | 90 |
-| INT | 109 |
-| EVT | 32 |
+| INT | 111 |
+| EVT | 33 |
 | PAY | 111 |
-| GEN | 44 |
+| GEN | 45 |
 | SCHED | 103 |
 | REF | 52 |
 | RENDER | 120 |
 | COL | 161 |
-| GUI | 387 |
-| TOOL | 218 |
-| VAL | 347 |
+| GUI | 389 |
+| TOOL | 219 |
+| VAL | 352 |
 | PERF | 115 |
 | SYS | 96 |
-| **total** | **2075** |
+| **total** | **2089** |
 
-Of these: 232 calibration, 179 definition, 1664 obligation. Retired (kept for their ids, not counted): 12.
+Of these: 236 calibration, 181 definition, 1672 obligation. Retired (kept for their ids, not counted): 12.
 
 ## Requirements per milestone
 
@@ -32,25 +32,25 @@ Of these: 232 calibration, 179 definition, 1664 obligation. Retired (kept for th
 |---|---|
 | M0 | 122 |
 | M1 | 108 |
-| M2 | 219 |
-| M3 | 232 |
-| M4 | 108 |
+| M2 | 222 |
+| M3 | 233 |
+| M4 | 112 |
 | M5 | 183 |
-| M6 | 226 |
+| M6 | 228 |
 | M7 | 261 |
 | M8 | 470 |
-| M9 | 146 |
+| M9 | 150 |
 
 ## Sections
 
-1698 sections in 61 files: 1349 yield at least one requirement; 349 yield none and are listed below with the reason.
+1727 sections in 61 files: 1369 yield at least one requirement; 358 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | gap (RQ-378) | 1 |
 | gap (RQ-391) | 2 |
 | gap (RQ-577) | 2 |
 | gap (RQ-618) | 1 |
-| informative only | 241 |
+| informative only | 250 |
 | out of v1 (R-125) | 1 |
 | out of v1 (R-420) | 1 |
 | parent heading (obligations are in its subsections) | 55 |
@@ -205,11 +205,20 @@ Of these: 232 calibration, 179 definition, 1664 obligation. Retired (kept for th
 | R-675 — The PR sweep is a standing duty: the orchestrator periodically checks every open PR and its CI state, and picks up any that was dropped or missed | informative only | the owner's message of 1 Nov 2026: the periodic PR sweep; process (plan/OPERATIONS.md § Autonomy); changes no requirement |
 | R-693 — Every R-, RQ-, REQ- or TASK- number shown to the owner comes with a plain-English gloss | informative only | the owner's standing rule of 4 Nov 2026 on numbers shown to them; process; changes no requirement |
 | R-790 — `.claude/`, its commands, agents and settings, is docs tier: a change only to it runs only the cheap checks *(amends R-677 and R-662)* | informative only | the owner's word of 4 Nov 2026: `.claude/` is on the classifier's allowlist; process; changes no requirement |
-| R-680 — Standing rule: the source page is re-read before any triage item becomes a target; the spot-check's six fixes to the library triage are PR #385's work, done after the CI fixes land | informative only | the owner's message of 3 Nov 2026 on the spot-check of the library triage: a standing rule (principia_dd_replication.md § 8.3); the six fixes are PR #385's; changes no requirement |
 | R-681 — Standing rules: while `main` is red, or a required check is stuck, agents open and update no other pull request, and the owner is told in one message; a CI-tooling pull request shows its own `xtask-ci` passing before it merges; a stuck check is cleared by re-running only the job that reports it, never the whole pipeline *(refines R-369)* | informative only | the owner's three messages of 3 Nov 2026: main red or a stuck required check stops other PR work; a CI-tooling PR shows its own xtask-ci passing; a stuck check re-run alone; process (plan/OPERATIONS.md § Merging); changes no requirement |
 | R-682 — Admin bypass on `main` is the owner's alone: agents never use it, by `gh pr merge --admin` or any API merge that skips a required check; merge scripts merge only when every required check has passed; a stuck check goes to the owner, who decides whether to bypass *(amends R-266)* | informative only | the owner's message of 3 Nov 2026: admin bypass is the owner's alone; process (plan/OPERATIONS.md § Merging, plan/HUMAN_SETUP.md § 2); changes no requirement |
 | R-683 — The CI speed-up series, after the current CI fixes land: measure first, then five tooling pull requests in order, each with before and after numbers: one test binary per crate, a quick tier on every push, mutants in-diff on the merge-ready head, a bounded dependency cache saved from `main` only, and nightly compiler flags kept only if faster; R-285's amendment approved in principle only, its wording with step (4)'s pull request | informative only | the owner's message of 3 Nov 2026: the CI speed-up series and its order; R-285's amendment approved in principle only; ci; changes no requirement |
 | R-684 — CI's two code tiers: full CI on every merge-candidate head, the one carrying the `merge-ready` label, and on every push to `main`; a quick tier on every other pull-request head (fmt, clippy, build, and the tests of the changed crates and their reverse dependencies), each full-only required check posted pending, never skipped-as-success; R-677's classifier first; done as R-683's step (2), and R-656's bounded target cache, without sccache, as its step (4) *(amends R-110, R-177 and R-235; rules R-676's tiers and R-683's steps (2) and (4))* | informative only | the owner's message of 3 Nov 2026, part (A): full CI on the merge-candidate head and main, a quick tier elsewhere, full-only checks pending; part (B) recorded under R-683; ci; changes no requirement here, built with R-683's steps (2) and (4) |
+| R-700 — RQ-631's option (a) is confirmed: it is R-655's ruling, already built in the kernel, and the follow-up the owner names is TASK-M8-56's quadtree *(closes RQ-631)* | informative only | the owner's confirmation of R-655; a contradiction recorded; changes no requirement |
+| R-706 — The owner's deferrals of 4 Nov: each entry stays open with its target, and RQ-654's place on the list changes nothing, R-669 having closed it, with BZ-1C's work in M9; RQ-647 is moot under R-669 | informative only | the owner's deferrals; each entry stays open with its target; records RQ-654's and RQ-647's state; changes no requirement |
+| The owner's saved orders of 3 and 4 Nov 2026 — the batch R-713 to R-719 | informative only | the batch's introduction: what the rulings already carried and what is held; changes no requirement |
+| R-713 — CI demand is reduced rather than waited out: a head not ready for review is not pushed, and pushes go in order of what is closest to merging; lands in `plan/OPERATIONS.md` § "Merging" | informative only | the owner's order of 4 Nov 2026 on CI demand; ci; changes no requirement |
+| R-714 — A failed CI job is retried automatically only on a runner-level fault, in at most two retries, never on a real test failure or a flake, the classifier a script tested on saved logs; every CI speed-up step reports disk use and must reduce or hold it; lands in `plan/OPERATIONS.md` § "Merging" | informative only | the owner's messages of 4 Nov 2026 on retries and disk; ci; changes no requirement |
+| R-715 — A CI speed-up is claimed or rejected only on medians over at least 5 runs per arm, with per-step durations and `cargo build --timings` totals; `ci-workspace` red on a test timer is diagnosed first, never retried and never given a longer timeout; lands in `plan/OPERATIONS.md` § "Merging" | informative only | the owner's order of 4 Nov 2026 on measuring CI; ci; changes no requirement |
+| R-716 — The ten CI optimisation candidates: each measured before and after, negative results reported, one pull request per item, items 1 and 4 first, then 2 and 3, then the rest; lands in `plan/OPERATIONS.md` § "Merging" | informative only | the owner's list of 4 Nov 2026 of CI candidates; ci; changes no requirement |
+| R-717 — `main` is not merged into a pull request, and CI is not re-run, just to refresh a branch that has no conflict; lands in `plan/OPERATIONS.md` § "Merging" | informative only | the owner's order of 4 Nov 2026 on refresh merges; process; changes no requirement |
+| R-718 — Generated plan files are not committed if nothing needs them in git; otherwise they are marked in `.gitattributes` and conflicts are resolved by regenerating, never by hand, with a check that the committed copy matches a fresh regeneration; lands in `plan/OPERATIONS.md` § "Merging" | informative only | the owner's order of 4 Nov 2026 on generated files; process; changes no requirement |
+| R-719 — A Windows-only, non-reproducing GPU result is hardware-suspect: recorded, not filed as a code bug; one that reproduces is checked against Metal and lavapipe, failing everywhere our bug, passing elsewhere an NVIDIA Vulkan platform finding with no re-baselining; lands in `plan/OPERATIONS.md` § "Windows GPU results" | informative only | the owner's messages of 4 Nov 2026 on the Windows GPU results; process; changes no requirement |
 
 ### `docs/contracts/principia_canonical_spec.md`
 

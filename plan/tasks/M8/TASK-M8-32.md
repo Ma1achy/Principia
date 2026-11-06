@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-TOOL-102, REQ-TOOL-103, REQ-GUI-100, REQ-TOOL-146, REQ-TOOL-167, REQ-TOOL-168, REQ-TOOL-169, REQ-GUI-353
-- **Depends on:** TASK-M8-30, TASK-M8-31, TASK-M8-87, TASK-M7-32, TASK-M6-28, TASK-M2-34, TASK-M6-47, TASK-M8-46, TASK-M6-48, TASK-M2-37, TASK-M2-40, TASK-M7-45, TASK-M3-39
+- **Depends on:** TASK-M8-30, TASK-M8-31, TASK-M8-87, TASK-M7-32, TASK-M6-28, TASK-M2-34, TASK-M6-47, TASK-M8-46, TASK-M6-48, TASK-M2-37, TASK-M2-40, TASK-M7-45, TASK-M3-39, TASK-M2-52
 - **Needs (earlier milestones):** REQ-TOOL-059, REQ-TOOL-065, REQ-TOOL-067, REQ-TOOL-070, REQ-TOOL-071, REQ-TOOL-072, REQ-INT-098
 - **Reviewers:** code, qa, gui, physics
 - **Pitfalls:** none
@@ -27,6 +27,7 @@ The Export & share window offers image export (size in multiples of the view, fo
 ## Deliverables
 - `crates/gui/src/windows/export_share.rs` — calls the exporter (TASK-M8-30) and the M7 embedding.
 - `crates/gui/src/present.rs`.
+- If TASK-M2-52 confirms that R-709's clamp arises: the sidecar records the "held at floor" pixels (REQ-TOOL-169).
 - Tests: `png_pxpack_roundtrip`, `state_share_roundtrip`; screenshot cases `04_windows/export`, `01_main/present`, `01_main/present_sphere`, `01_main/present_esc`, `01_main/present_fit`.
 - Present mode's fill on the real engine (R-406, R-407, R-467, R-468): the figure given the window as F3 off gives it, in the mode View › F3 fills by sets: in Extend TASK-M8-05's extension per axis type, a forbidden pixel drawn as the canvas background (TASK-M2-34's render); in Fit TASK-M8-46's scaled square, the rest the canvas background.
   *Was: "using TASK-M8-05's extension per axis type and hatch fallback". Stale, replaced by R-467 and R-468.*
@@ -66,3 +67,4 @@ The Export & share window offers image export (size in multiples of the view, fo
 - R-484 RT2, RT3 (20 Oct 2026): the window's tier report is TASK-M8-53's (REQ-GUI-263); the sidecar carries the links through `SimConfig` (R-483).
 - **R-521 H2, H5 (20 Oct 2026; code review F1 of PR #265, applied per R-369):** snapshot JSON and the share link carry, beside the build hash and the schema version, the four entry hashes of their links (dd_generation_root §3.9, "Each entry's own hash"); TASK-M8-53's `every_destination_links` (REQ-TOOL-176) checks them. This task depends on TASK-M7-45, which generates the hashes (code review F9 of PR #265, applied per R-369).
 - R-627 (27 Oct 2026): this task runs on the real engine, so where it depended on a task R-627 moves to the mock it depends on that task's real-engine side, which depends on it: TASK-M8-05 by TASK-M8-87 (applied per R-369). *Was:* "- **Depends on:** TASK-M8-30, TASK-M8-31, TASK-M8-05, TASK-M7-32, TASK-M6-28, TASK-M2-34, TASK-M6-47, TASK-M8-46, TASK-M6-48, TASK-M2-37, TASK-M2-40, TASK-M7-45, TASK-M3-39".
+- *4 Nov 2026 (R-709):* the sidecar's "held at floor" record is conditional, as ruled. This task now depends on TASK-M2-52, which reports the flag.

@@ -1,6 +1,6 @@
 //! `SimUniforms` and dispatch's refusals (`engine::contract::sim_uniforms`, `engine::dispatch::validate`;
 //! integrator_contract Part 3, Part 5; dd_simstate_payload §2, `times`; dd_generation_root §3.7, "Open"; R-86, R-132,
-//! R-502, R-575, R-610; TASK-M3-06):
+//! R-502, R-575, R-610, R-668; TASK-M3-06, TASK-M3-66):
 //! - `sim_uniforms_defaults`: the default `SimUniforms` is Part 3's table, and `dt_macro = T/65535` above `T = 65.535`,
 //!   `10⁻³` at and below it (REQ-INT-026).
 //! - `horizon_refusal`: a `(T, dt_macro)` giving 65536 macro-steps is refused at dispatch and launches nothing, 65535
@@ -14,6 +14,9 @@
 //!   dispatch returns the generator's refusal at `N_max = L_max + 1` and launches nothing (REQ-INT-028, in part; R-502).
 //! - `horizon_default`: the default horizon, `T = 200`, and `T = 10`, 0.5 and 0.4 accepted; nothing in `[0.4, 200]`
 //!   refused, and a `T` below 0.4 refused with its reason (REQ-INT-081).
+//! - `units_refusal`: dispatch refuses `g` and `m_total` other than 1, each with its own refusal naming the field and
+//!   its value, launches nothing for either, and dispatches `g = m_total = 1`; the sim key still moves with each
+//!   (REQ-SYS-096).
 
 use std::cell::Cell;
 
@@ -1043,6 +1046,219 @@ negative_control!(
     "a sim key of the horizon alone misses the rest",
     expected = "is off the sim key",
     check_every_value_keyed(&|u: &SimUniforms| u.t_horizon.to_bits().to_be_bytes().to_vec())
+);
+
+// ── units_refusal (REQ-SYS-096; R-668) ───────────────────────────────────────────────────────────────────────────
+
+/// Dispatch itself, holding that it launches once for an accepted sim key and never for a refused one.
+fn launched(u: &SimUniforms) -> Result<u32, DispatchError> {
+    let launches = Cell::new(0);
+    let got = dispatch(u, |v| {
+        launches.set(launches.get() + 1);
+        v.horizon_steps()
+    });
+    assert_eq!(
+        launches.get(),
+        u32::from(got.is_ok()),
+        "dispatch launched {} times for {got:?}",
+        launches.get()
+    );
+    got
+}
+
+/// A unit `SimUniforms` carries.
+#[derive(Clone, Copy)]
+enum Unit {
+    G,
+    MTotal,
+}
+
+impl Unit {
+    /// The default sim key with this unit at `x`.
+    fn set(self, x: f64) -> SimUniforms {
+        let d = SimUniforms::default();
+        match self {
+            Unit::G => SimUniforms { g: x, ..d },
+            Unit::MTotal => SimUniforms { m_total: x, ..d },
+        }
+    }
+
+    /// The value `e` carries, if `e` is this unit's refusal.
+    fn carried(self, e: &DispatchError) -> Option<f64> {
+        match (self, *e) {
+            (Unit::G, DispatchError::GravitationalConstant { g }) => Some(g),
+            (Unit::MTotal, DispatchError::TotalMass { m_total }) => Some(m_total),
+            _ => None,
+        }
+    }
+
+    /// The name its refusal's reason gives.
+    fn name(self) -> &'static str {
+        match self {
+            Unit::G => "g",
+            Unit::MTotal => "m_total",
+        }
+    }
+}
+
+/// `check` refuses `unit` at 2, ±0, −1, the nearest f64 on either side of 1, NaN and ±∞, each with its own refusal
+/// carrying the value bit for bit, and a reason naming the field, the value and why.
+fn check_unit_refused(check: &Check, unit: Unit) {
+    let name = unit.name();
+    let one = 1.0_f64;
+    for x in [
+        2.0,
+        0.0,
+        -0.0,
+        -1.0,
+        one.next_down(),
+        one.next_up(),
+        f64::NAN,
+        f64::INFINITY,
+        f64::NEG_INFINITY,
+    ] {
+        let got = check(&unit.set(x));
+        let carried = got.as_ref().err().and_then(|e| unit.carried(e));
+        assert_eq!(
+            carried.map(f64::to_bits),
+            Some(x.to_bits()),
+            "{name} {x} is not refused as such: {got:?}"
+        );
+        let message = got.unwrap_err().to_string();
+        assert!(
+            message.starts_with(&format!("{name} {x} is refused: the kernel runs only at")),
+            "{name} {x}'s refusal gives no reason: {message}"
+        );
+    }
+}
+
+#[test]
+fn units_refusal_g() {
+    check_unit_refused(&launched, Unit::G);
+}
+
+negative_control!(
+    units_refusal_g,
+    "a check_carried that skips g accepts a G = 1 run keyed under another g",
+    expected = "is not refused as such",
+    check_unit_refused(
+        &|u: &SimUniforms| launched(&SimUniforms { g: 1.0, ..*u }),
+        Unit::G
+    )
+);
+
+#[test]
+fn units_refusal_m_total() {
+    check_unit_refused(&launched, Unit::MTotal);
+}
+
+negative_control!(
+    units_refusal_m_total,
+    "a check_carried that skips m_total accepts an M = 1 run keyed under another m_total",
+    expected = "is not refused as such",
+    check_unit_refused(
+        &|u: &SimUniforms| launched(&SimUniforms { m_total: 1.0, ..*u }),
+        Unit::MTotal
+    )
+);
+
+/// `check` dispatches `g = m_total = 1`.
+fn check_units_of_one_dispatch(check: &Check) {
+    let u = SimUniforms {
+        g: 1.0,
+        m_total: 1.0,
+        ..SimUniforms::default()
+    };
+    assert_eq!(check(&u), Ok(50000), "g = m_total = 1 does not dispatch");
+}
+
+#[test]
+fn units_refusal_one_dispatches() {
+    check_units_of_one_dispatch(&launched);
+}
+
+negative_control!(
+    units_refusal_one_dispatches,
+    "a dispatch that refuses every g refuses the one it runs at",
+    expected = "g = m_total = 1 does not dispatch",
+    check_units_of_one_dispatch(
+        &|u: &SimUniforms| Err(DispatchError::GravitationalConstant { g: u.g })
+    )
+);
+
+/// `check` keeps the module note's order: the softening length, and before it the horizon, ahead of `g`, and `g` ahead
+/// of `m_total`.
+fn check_units_order(check: &Check) {
+    let both = SimUniforms {
+        g: 2.0,
+        m_total: 3.0,
+        ..SimUniforms::default()
+    };
+    assert_eq!(
+        check(&both),
+        Err(DispatchError::GravitationalConstant { g: 2.0 }),
+        "g is not refused ahead of m_total"
+    );
+    let softened = SimUniforms {
+        epsilon: 1e-3,
+        ..both
+    };
+    assert_eq!(
+        check(&softened),
+        Err(DispatchError::Softening { epsilon: 1e-3 }),
+        "epsilon is not refused ahead of g"
+    );
+    let long = SimUniforms {
+        t_horizon: 1000.0,
+        ..both
+    };
+    assert_eq!(
+        check(&long),
+        Err(DispatchError::HorizonAboveCap { t_horizon: 1000.0 }),
+        "the horizon is not refused ahead of g"
+    );
+}
+
+#[test]
+fn units_refusal_order() {
+    check_units_order(&launched);
+}
+
+negative_control!(
+    units_refusal_order,
+    "a dispatch that checks m_total first gives a refusal out of the note's order",
+    expected = "g is not refused ahead of m_total",
+    check_units_order(&|u: &SimUniforms| if u.m_total == 1.0 {
+        launched(u)
+    } else {
+        Err(DispatchError::TotalMass { m_total: u.m_total })
+    })
+);
+
+/// The sim key keeps `g = 2` and `m_total = 2` apart from the default without dispatching them: each still moves it.
+#[test]
+fn units_refusal_sim_key_g() {
+    check_every_value_keyed(&SimUniforms::sim_key_bytes);
+}
+
+negative_control!(
+    units_refusal_sim_key_g,
+    "a sim key blind to g, once dispatch refuses every other g",
+    expected = "g is off the sim key",
+    check_every_value_keyed(&|u: &SimUniforms| SimUniforms { g: 1.0, ..*u }.sim_key_bytes())
+);
+
+/// As `units_refusal_sim_key_g`, its control blind to `m_total`.
+#[test]
+fn units_refusal_sim_key_m_total() {
+    check_every_value_keyed(&SimUniforms::sim_key_bytes);
+}
+
+negative_control!(
+    units_refusal_sim_key_m_total,
+    "a sim key blind to m_total, once dispatch refuses every other m_total",
+    expected = "m_total is off the sim key",
+    check_every_value_keyed(&|u: &SimUniforms| SimUniforms { m_total: 1.0, ..*u }.sim_key_bytes())
 );
 
 // ── sim_uniforms_nsub_table (REQ-INT-028, in part; R-502) ────────────────────────────────────────────────────────

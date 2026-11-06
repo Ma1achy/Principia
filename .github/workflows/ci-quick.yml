@@ -52,7 +52,7 @@ jobs:
       PRIN_GPU_BACKEND: vulkan
       RUNNER_DISK_TMPFS: /dev/shm
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       # Runner disk, as in `ci-archive` (the same list, copied): before the toolchain and the cache restores, logging
       # the free space before and after. Test infrastructure only.
       - name: Free runner disk
@@ -76,7 +76,7 @@ jobs:
       # Saved only in a run on a push to `main`, which this workflow never is, so it saves nothing (R-326). It restores,
       # read-only, the key `ci.yml`'s `ci-checks` job saves on `main`, `cargo-registry-ci-checks-…`, the job whose build
       # this one repeats (R-337).
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           prefix-key: cargo-registry
           shared-key: ci-checks
@@ -89,20 +89,20 @@ jobs:
         uses: ./.github/actions/cargo-ci-config
       # The fixture pool `ci.yml`'s `ci` job saves, restored only, under its key, `fixture-pool-ci-…` (R-270, R-285,
       # R-337).
-      - uses: actions/cache/restore@v4
+      - uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: target/tmp/fixture-targets
           key: fixture-pool-ci-${{ runner.os }}-${{ steps.toolchain.outputs.cachekey }}-${{ hashFiles('Cargo.lock', 'fixtures/**/Cargo.toml', 'xtask/tests/fixtures/**/Cargo.toml') }}
           restore-keys: fixture-pool-ci-${{ runner.os }}-${{ steps.toolchain.outputs.cachekey }}-
       # xtask's plan_check tests run plan/check_plan.py, which needs Python and PyYAML (TASK-M0-02).
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
       - name: Install PyYAML
         run: python3 -m pip install pyyaml
       - name: Install Mesa (lavapipe)
         run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers
-      - uses: taiki-e/install-action@v2
+      - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
         with:
           tool: cargo-nextest@0.9.146
       - name: cargo fmt --all --check
@@ -147,7 +147,7 @@ jobs:
         continue-on-error: true
         timeout-minutes: 1
         run: sudo -n dmesg --ctime | tail -n 200 | tee "$RUNNER_DISK_TMPFS/runner-dmesg.log" || true
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         continue-on-error: true
         timeout-minutes: 5
