@@ -383,7 +383,10 @@ fn mock_manifold_resets_zoom_span_bounds_one_sigma_span() {
     }
     let shifted = View::read(&at_preset(1).0.snapshot().sim);
     rejects("a span left in row units", || {
-        assert_eq!(shifted.with_zoom_row(mv::ZOOM_RANGE.1).zoom(), mv::ZOOM_RANGE.1)
+        assert_eq!(
+            shifted.with_zoom_row(mv::ZOOM_RANGE.1).zoom(),
+            mv::ZOOM_RANGE.1
+        )
     });
 }
 
@@ -401,7 +404,7 @@ fn mock_manifold_resets_preset_choice_keeps_sigma_at_the_slider_ends() {
         let view = View::read(&rig.0.snapshot().sim).with_zoom(zoom);
         rig.0.set_field(basis_edit(view.basis()));
         settle(&mut rig.1, &mut rig.0);
-        let before = rig.0.snapshot();
+        let depth = rig.0.snapshot().history.undo_depth;
         let (app, h) = (&mut rig.0, &mut rig.1);
         app.view.focus.path = app.keyboard.tree(app.view.mode).path_to(mv::PRESET);
         keys_on(h, app);
@@ -413,7 +416,7 @@ fn mock_manifold_resets_preset_choice_keeps_sigma_at_the_slider_ends() {
         assert_eq!(read.scale, view.scale, "σ kept from zoom {zoom}");
         assert_eq!(
             after.history.undo_depth,
-            before.history.undo_depth + 1,
+            depth + 1,
             "one edit from zoom {zoom}"
         );
     }

@@ -138,8 +138,18 @@ fn mock_home_key_leaves_the_focus_and_the_mode() {
     press(&mut rig.1, &mut rig.0, Key::Enter, NONE);
     let (path, mode) = (focus_of(&rig), rig.0.view.focus.mode);
     home_key(&mut rig, NONE);
-    assert_eq!(focus_of(&rig), path);
-    assert_eq!(rig.0.view.focus.mode, mode);
+    check_home(&Values::read(&rig.0, 0), 0);
+    let same = |rig: &Rig| {
+        assert_eq!(focus_of(rig), path);
+        assert_eq!(rig.0.view.focus.mode, mode);
+    };
+    same(&rig);
+    // Controls: a Home that moved the focus, or left interaction mode, fails.
+    rig.0.view.focus.mode = KeyMode::Navigation;
+    rejects("a Home that left interaction mode", || same(&rig));
+    focus_on(&mut rig, mv::SLIDERS[3]);
+    rig.0.view.focus.mode = mode;
+    rejects("a Home that moved the focus", || same(&rig));
 }
 
 #[test]
@@ -317,6 +327,10 @@ fn mock_home_key_on_the_stain_page() {
     rig.0.view.mode = Mode::Stain;
     let _ = rig.1.frame(&mut rig.0, Vec::new());
     assert!(!button_drawn(&mut rig), "the button is the canvas's");
+    rejects(
+        "a view off home, which a Home doing nothing here leaves",
+        || check_home(&Values::read(&rig.0, 0), 0),
+    );
     home_key(&mut rig, NONE);
     check_home(&Values::read(&rig.0, 0), 0);
 }
