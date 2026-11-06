@@ -439,9 +439,14 @@ totality"), as `η_E`'s `E* < U` is `DEGENERATE(ENERGY_INFEASIBLE)` (`principia_
 produces no physical IC there, which is what `decode_failed` records, and none of `detail`'s codes 0–2 (non-finite
 output, degenerate configuration, invalid mass construction) describes it. It is a decode failure, not a dynamical
 outcome: the sample is terminal at decode, kept, never dropped. Its momenta are finite, `a = 0` selected, so
-`pᵢ = mᵢ·vᵢ^(L)`; nothing integrates them. The test is exactly `K* < L_z²/(2I)`, decided as `2·I·K* < L_z²` with no
-rounding at the decision, so one input takes one branch at every precision and on every backend; `K* = K_min` is
-feasible, with `a = 0`.
+`pᵢ = mᵢ·vᵢ^(L)`; nothing integrates them. The exception: where `L_z²` or `2K*` has no finite float at the decode's own
+precision (§2.1's exception, §4.5), nothing bounds `L_z·r`, so `L_z` is selected out too and `pᵢ = 0`, finite as every
+decode of a finite input is (applied per R-369, the physics reviewer's call on #388; *was:* no exception). Such a pixel
+is always infeasible, so no feasible pixel is touched. The exact test is exactly `K* < L_z²/(2I)`, decided as
+`2·I·K* < L_z²` with no rounding at the decision, so one input takes one branch of that test at every precision and on
+every backend; `K* = K_min` is feasible, with `a = 0`. The bound on `2K*` is each precision's own range, not a common
+cap: `K*` in `[2¹²⁷, 2¹²⁸)` has no construction at f32 and has one at f64, as §2.1's exception is at the chart's own
+precision (*was:* "so one input takes one branch at every precision and on every backend").
 
 **Its precedence.** The decode runs mass → config → momentum, and a decode an earlier block has already tagged keeps
 that tag (`principia_dd_decoder.md` §3.7): a pixel the mass block tags `DEGENERATE(M01_TINY)` keeps that tag, whatever
@@ -903,8 +908,9 @@ with no construction there (`K < L_z²/2I`) reads as refused: no system, area we
   REQ-CHART-060's stop holds the centre at `K₀ ≥ 0`, and `t₀` is recomputed from the new `K₀` (applied per R-369).
   A second exception of §2.1's kind: a pixel whose `K*` has no finite `2K*` at the decode's own precision, reached only
   at an extreme `γ_K` or `d`, or on a held `L_z` where the floor plus the line passes it, has no construction. §2.2's
-  construction labels it `INVARIANT_INFEASIBLE`, with `a = 0` and finite momenta, on `K*`'s exponent bits beside the
-  exact test, `validate` refuses it at the chart's own precision, and its area weight is 0. No `K` is saturated into a system and nothing is mirrored (applied per R-369,
+  construction labels it `INVARIANT_INFEASIBLE`, with `a = 0` and momenta 0, as at an `L_z` with no finite square, on
+  `K*`'s exponent bits beside the exact test, `validate` refuses it at the chart's own precision, and its area weight
+  is 0. No `K` is saturated into a system and nothing is mirrored (applied per R-369,
   the physics reviewer's call on #388).
 - **If the implementer confirms it arises (R-709).** A held energy's warp coordinate past `t < 0` clamps at `t = 0`, held
   `K` at its floor, `L_z²/2I` (on `Φ_θ,L_z`, where `L_z` is read off `K`, both are 0: the rest start at the pixel's own
