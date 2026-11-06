@@ -1089,11 +1089,12 @@ type per axis of every Burrau-family chart (§4.5), with the reasoning:
   `Φ_θ,K`'s vertical axis). It is §2.1's `K(t) = K_max·t^γ_K`, bounded for
   §2.1's reasons: `t < 0` has no real value for a non-integer `γ_K` (an odd integer gives `K < 0`, an even one folds back
   onto `t > 0`). Its `t > 1` side (`K > K_max`, feasible at `L_z = 0`) continues, affine, as on the warp (R-508, ruling
-  RQ-376), and is counted. *5 Nov 2026 (R-720):* on a floored axis it is `L_z²/2I + K(t)`, and a `K` above `K_max` inside
-  the square is counted, as that side is (REQ-CHART-056). *Was:* "is left undeclared, as on the warp (R-407, A5)". The table's rows for the warp, the
+  RQ-376), and is counted. *Was:* "is left undeclared, as on the warp (R-407, A5)". The table's rows for the warp, the
   `(ν, K)` chart and `Φ_θ,K` follow; *was:* "bounded" (the warp's vertical axis), "`K` bounded (declares nothing; the
   warp's `K(t)`, §2.1)", "`K` bounded (declares nothing; as on `(ν, K)`)", "hatched on every side; the `t > 1` side is
-  not declared (§2.1)", "hatched on every side" and "out of the count and the total (the domain's end)".
+  not declared (§2.1)", "hatched on every side" and "out of the count and the total (the domain's end)". *5 Nov 2026
+  (R-720):* on a floored axis it is `L_z²/2I + K(t)`, and a `K` above `K_max` inside the square is counted, as the `t > 1`
+  side is (REQ-CHART-056).
 - **`θ`, bounded** (every acute-angle chart's horizontal axis). The axis's edges are `θ_min` and `θ_max`
   (REQ-CHART-045), inside the domain `(0, π/4]`, so past each edge the formula first runs through real systems the
   chart does not show: below `u = 0` the thin triangles of `θ ∈ (0, θ_min)`, and above `u = 1`, where `θ_max < π/4`,

@@ -930,3 +930,24 @@ owner: yes, it is physics; the tilt changes which systems the chart shows.*
   - (iii) A margin derived from that rounding, `ε_μ − k·2⁻²⁴`: `k = 1` gives `0.940·ε_μ`, on the need with little room; `k = 2` gives `0.881·ε_μ`, with room. Neither value was run; the runs at 0.95, 0.9 and 0.8 bracket them. It changes the same code and docs as (ii).
 - **Applied meanwhile:** `ε_μ/2`, as built.
 - **Waits:** nothing is held. The code stands at `ε_μ/2` until a ruling.
+
+## RQ-708: Whether the running kernel reaches the ionisation gate only after `E_rel > 0`, or the gate fires on its own *(physics; silence: R-29, R-32, R-710; TASK-M3-12 § Goal; `docs/contracts/principia_integrator_contract.md` Part 7; context: physics review 5801941254 of PR #425)*
+
+*Queued 6 Nov 2026 by the port's fix round, from physics review 5801941254 of PR #425, finding N1. For the owner: yes, it is physics; the answer changes when a triple ejection is recorded. Nothing is chosen.*
+
+**In plain English:** a triple ejection is reported as an escape. The task says an escape needs one body unbound from the other two, and then calls a triple ejection a kind of escape. The older ruling lists the triple ejection's own three conditions and doesn't mention that test. So the same run can end at two different times. The label comes out the same; the time it ends, and everything frozen at that moment, does not.
+
+- **File, section:**
+  - `plan/tasks/M3/TASK-M3-12.md` § Goal: "Escape is detected post-step on the projected state iff `|Δn̂|` over the 0.4-time-unit window `< tau` AND `E_rel > 0` — two conditions, no receding test, no `r_esc`, no `k_esc`", then "Triple ejection is escape with `detail = 3`, gated on all pairwise energies positive, all separations growing and total `E > 0` read from the stored `E_0`".
+  - `decisions.md` § "R-32 — …": "All three pairwise energies > 0, all separations growing, total `E > 0`, evaluated with the escape rule's settling."
+  - `docs/contracts/principia_integrator_contract.md` Part 7: "`ESCAPE ⟺ |Δn̂| over a window < tau AND E_rel > 0`."
+  - `docs/design/principia_dd_integrator.md`:223: "Triple ejection is `ESCAPE` with `detail = 3`; its gate is ruled by R-32, applied later."
+- **The silence:** the first reading has the gate classify a firing that `E_rel > 0` has already allowed. The second has the gate fire on its own, R-32 naming the escape rule's settling and not its `E_rel` test. No file says which. The gate isn't built: no file in `crates/kernel/src` names it. R-710's predicate test holds under either answer.
+- **The case that tells them apart:** the equilateral family, unit masses, side `r`, each moving radially outward at speed `u`, with `2/r < u² < 3.08/r`. Every pair is unbound, every separation grows, `E > 0` and `n̂` is settled, while `E_rel < 0` for every body. Example: `u² = 2.5/r₀` gives `E = 0.75/r₀` and `E_rel = 0.75E − 1.214/r(t)`, which turns positive only at `r ≈ 2.16 r₀`. Behind `E_rel > 0` the `detail = 3` firing waits until then; on its own it fires a window after the start. The label agrees, but `t_end` and all that freezes at `t_esc` differ. Only `E > 0` states are affected, so the 8D chart and not rest starts.
+- **The question:** does the running kernel reach the ionisation gate only after `E_rel > 0`, or does the gate fire on its own?
+- **Options seen:**
+  - (a) Behind `E_rel > 0`: the escape rule fires first, as usual, and the gate then says whether the escape is a triple ejection. The firing waits until one body is unbound from the other two.
+  - (b) On its own: the gate is a second way to fire, with the escape rule's settling and its own three conditions. The firing comes as soon as those hold, a window after the start in the case above.
+  - (c) Another, stated by the owner.
+- **Applied meanwhile:** nothing.
+- **Waits:** TASK-M3-12's gate (REQ-EVT-006).
