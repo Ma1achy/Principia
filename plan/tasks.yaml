@@ -2963,8 +2963,8 @@
 - id: TASK-M8-41
   milestone: M8
   title: "Release gates: the non-Metal parity run, the seam test index, the atlas horizon label, v1 web on GitHub Pages"
-  depends_on: [TASK-M8-40, TASK-M8-31, TASK-M8-32, TASK-M4-13, TASK-M8-42, TASK-M8-76]  # TASK-M8-76: R-621's header strip (REQ-GUI-398) before REQ-SYS-061 closes (applied per R-369)
-  needs: [REQ-VAL-057, REQ-TOOL-043, REQ-SYS-026, REQ-VAL-064]
+  depends_on: [TASK-M8-40, TASK-M8-31, TASK-M8-32, TASK-M4-13, TASK-M8-42, TASK-M8-76, TASK-M4-28]  # TASK-M8-76: R-621's header strip (REQ-GUI-398) before REQ-SYS-061 closes (applied per R-369); TASK-M4-28, and TASK-M4-27 through it: R-711's gate reads their records (applied per R-369)
+  needs: [REQ-VAL-057, REQ-TOOL-043, REQ-SYS-026, REQ-VAL-064, REQ-VAL-347, REQ-VAL-348]
   requirements: [REQ-VAL-099, REQ-VAL-105, REQ-SYS-061, REQ-SYS-046, REQ-SYS-086]
   reviewers: [code, qa, physics, gui]
   pitfalls: [PIT-9, PIT-10]

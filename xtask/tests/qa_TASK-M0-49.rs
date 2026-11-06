@@ -22,7 +22,10 @@
 //!   leaves the test to run without it (no `prlimit` there);
 //! - every `cargo mutants` call in CI's workflows reads that one file: none points it at another config, turns the
 //!   config off or overrides the timeout, and none runs on another directory (whose own `.cargo/mutants.toml` it
-//!   would read) without `--config .cargo/mutants.toml`.
+//!   would read) without `--config .cargo/mutants.toml`. The one exception is the owner's order of 5 Nov 2026 (R-712),
+//!   the one change here, R-290's exception by that order: a run of `mutants.yml` with `--baseline=skip`
+//!   has no baseline for the file's multiplier to read, so it takes `--timeout "$MUTANT_TIMEOUT"`, that file's rule
+//!   applied to the one measured baseline (`cargo xtask mutants-timeout`).
 //!
 //! The values themselves are calibrations (REQ-VAL-180, REQ-VAL-181), which the human confirmed at the M0 gate as they
 //! stood (R-376); no test here pins them. Each test's control (R-176) feeds the same assertion an input differing in the one respect the
@@ -403,12 +406,20 @@ fn every_run_reads_the_caps(workflows: &[(String, String)]) {
         for cmd in invocations(yml) {
             found += 1;
             let words: Vec<&str> = cmd.split_whitespace().collect();
+            let measured = file == "mutants.yml"
+                && words.contains(&"--baseline=skip")
+                && words
+                    .windows(2)
+                    .any(|w| w == ["--timeout", "\"$MUTANT_TIMEOUT\""]);
             for banned in [
                 "--no-config",
                 "--timeout",
                 "--timeout-multiplier",
                 "--minimum-test-timeout",
             ] {
+                if measured && banned == "--timeout" {
+                    continue;
+                }
                 assert!(
                     !words.iter().any(|w| *w == banned || w.starts_with(&format!("{banned}="))),
                     "qa49: a cargo mutants run does not read the caps from .cargo/mutants.toml ({file}: `{banned}`): {cmd}"
@@ -478,6 +489,45 @@ mod overridden {
         every_run_reads_the_caps(&[(
             "control.yml".to_owned(),
             "      - run: |\n          cargo mutants --in-place --in-diff pr.diff --timeout 9999 -o out\n".to_owned()
+        )])
+    );
+}
+
+mod measured_elsewhere {
+    use super::*;
+    negative_control!(
+        qa49_every_cargo_mutants_run_in_ci_reads_the_caps,
+        "the measured timeout in a workflow other than the mutants gate's",
+        expected = "qa49: a cargo mutants run does not read the caps from .cargo/mutants.toml",
+        every_run_reads_the_caps(&[(
+            "control.yml".to_owned(),
+            "      - run: |\n          cargo mutants --in-diff pr.diff --baseline=skip --timeout \"$MUTANT_TIMEOUT\" -o out\n".to_owned()
+        )])
+    );
+}
+
+mod measured_with_its_baseline {
+    use super::*;
+    negative_control!(
+        qa49_every_cargo_mutants_run_in_ci_reads_the_caps,
+        "the measured timeout on a run that has a baseline of its own to read the file's multiplier against",
+        expected = "qa49: a cargo mutants run does not read the caps from .cargo/mutants.toml",
+        every_run_reads_the_caps(&[(
+            "mutants.yml".to_owned(),
+            "      - run: |\n          cargo mutants --in-diff pr.diff --timeout \"$MUTANT_TIMEOUT\" -o out\n".to_owned()
+        )])
+    );
+}
+
+mod measured_by_hand {
+    use super::*;
+    negative_control!(
+        qa49_every_cargo_mutants_run_in_ci_reads_the_caps,
+        "a shard with a fixed timeout, not the measured one",
+        expected = "qa49: a cargo mutants run does not read the caps from .cargo/mutants.toml",
+        every_run_reads_the_caps(&[(
+            "mutants.yml".to_owned(),
+            "      - run: |\n          cargo mutants --in-diff pr.diff --baseline=skip --timeout 10000 -o out\n".to_owned()
         )])
     );
 }

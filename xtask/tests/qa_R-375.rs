@@ -18,6 +18,7 @@ use validation::negative_control;
 
 /// The two pinned runner images R-375 allows.
 const PINNED: [&str; 2] = ["ubuntu-24.04", "macos-15"];
+const SELF_HOSTED: &str = "[self-hosted, windows, nvidia]";
 
 fn workflows_dir() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../.github/workflows")
@@ -86,6 +87,17 @@ fn jobs(text: &str) -> Vec<(String, Option<String>)> {
     out
 }
 
+/// Whether `job` of the workflow `text` calls a workflow (R-684's `ci-quick`): it has no steps or runner of its own,
+/// and the called workflow's job, read in its own file, has them.
+fn calls_a_workflow(text: &str, job: &str) -> bool {
+    let header = format!("  {job}:");
+    text.lines()
+        .skip_while(|l| l.trim_end() != header)
+        .skip(1)
+        .take_while(|l| l.is_empty() || l.starts_with("   ") || l.trim_start().starts_with('#'))
+        .any(|l| l.starts_with("    uses: ./.github/workflows/"))
+}
+
 /// R-375: every job of every workflow runs on a pinned image, `ubuntu-24.04` or `macos-15`; there is at least one
 /// workflow, every workflow has a job, and the Linux image is in use (so the check reads something).
 fn check_every_runner_pinned(files: &[(String, String)]) {
@@ -98,8 +110,15 @@ fn check_every_runner_pinned(files: &[(String, String)]) {
             "qa_r375: {file} has no job the check read"
         );
         for (job, runs_on) in jobs {
+            if calls_a_workflow(text, &job) {
+                continue;
+            }
             let runs_on =
                 runs_on.unwrap_or_else(|| panic!("qa_r375: {file}: job `{job}` names no runs-on"));
+            // R-711 item 1: the one self-hosted runner, its jobs in these two files alone.
+            if (file == "win-gpu.yml" || file == "runner-proof.yml") && runs_on == SELF_HOSTED {
+                continue;
+            }
             assert!(
                 PINNED.contains(&runs_on.as_str()),
                 "qa_r375: {file}: job `{job}` runs on `{runs_on}`, not a pinned image (R-375: {PINNED:?})"

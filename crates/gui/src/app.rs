@@ -19,7 +19,9 @@
 //! splitter (`crate::layout`), dragged, double-clicked to reset it, and all reset by View › reset layout; the layout is
 //! saved to the same settings as each drag ends and at each reset (R-462). The field keeps its place on the screen
 //! whatever the splitters, so a resized canvas shows more or less of it at the same scale, and the engine side is told
-//! the span shown, computing only what it newly exposes: no `SetField` (R-462 J4).
+//! the span shown, computing only what it newly exposes: no `SetField` (R-462 J4). The console's top edge is a splitter
+//! as well, on either page, its height remembered with the layout and reset with it; its maximise button and M toggle
+//! the height below the top bar, over the panels and the figure until toggled back (R-463).
 
 use std::sync::Arc;
 
@@ -44,6 +46,14 @@ use crate::settings::{Settings, Store};
 use crate::side::EngineSide;
 use crate::stain;
 use crate::windows;
+
+/// The big scopes the console leaves when it covers the page (R-463 K2): the bars, and a measured run's panel, which is
+/// beside the page and in no tree without a session.
+const UNCOVERED_BIGS: [ScopeId; 3] = [
+    explore::top_bar::TOP_BAR,
+    explore::footer::FOOTER,
+    crate::measure::PANEL_SCOPE,
+];
 
 /// How often the app reads a snapshot: the engine posts it throttled to ~10 Hz, never per frame (caching contract
 /// Part 6a; gui_state_contract §1).
@@ -119,6 +129,11 @@ pub struct App<S: EngineSide> {
     /// While a drag holds a splitter: its edge, in points, and its place when the drag began. egui ends one drag, a
     /// frame with none, before it begins another, so this is the held splitter's.
     splitting: Option<(f32, f32)>,
+    /// While a drag holds the console's top edge: the edge when it began, in points, and the place and maximised state
+    /// the drag started from, for a drag back to where it began (R-463 K1).
+    console_drag: Option<(f32, Option<f32>, bool)>,
+    /// Whether the console opened by itself since the last frame.
+    console_auto_opened: bool,
     /// Where the GUI's settings are kept (R-461 I4).
     store: Store,
     /// Whether a save of the settings has failed this session: it is logged once.
@@ -198,6 +213,8 @@ impl<S: EngineSide> App<S> {
             places: Default::default(),
             splits: Splits::default(),
             splitting: None,
+            console_drag: None,
+            console_auto_opened: false,
             store: Store::default(),
             save_failed: false,
             present: false,
@@ -253,9 +270,9 @@ impl<S: EngineSide> App<S> {
     }
 
     /// Logs `message` to the console as the app's warning, counted in the footer.
-    fn log_warning(&mut self, message: String) {
-        let at = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
+    pub(crate) fn log_warning(&mut self, message: String) {
+        let at = crate::clock::time::SystemTime::now()
+            .duration_since(crate::clock::time::UNIX_EPOCH)
             .map_or(0, |d| u64::try_from(d.as_millis()).unwrap_or(u64::MAX));
         self.console.push(LogEntry {
             severity: Severity::Warn,
@@ -339,10 +356,11 @@ impl<S: EngineSide> App<S> {
     }
 
     /// Reads a snapshot: its entries join the console and the counts; an error among them opens the console, taking
-    /// no focus (§G12; R-405).
+    /// no focus (§G3; §G12; R-405).
     fn read(&mut self) {
         self.snapshot = self.side.engine().snapshot();
         if absorb(&self.snapshot, &mut self.console, &mut self.counts) {
+            self.console_auto_opened |= !self.console_open;
             self.console_open = true;
         }
     }
@@ -472,9 +490,13 @@ impl<S: EngineSide> App<S> {
         let span = orbit.map_or(0.0, |o| o.path_t);
         let moving = self.trajectory.moving(orbit.is_some())
             || (self.is_open(Window::Inspector) && self.windows.inspector.moving());
+        // One tick a frame: a discarded pass's rerun of the frame is not another (the mock's clock counts ticks).
+        let first_pass = ctx.current_pass_index() == 0;
         let ticked = self.side.time_source().map(|source| {
             (
-                self.clock.frame(source, playback),
+                first_pass
+                    .then(|| self.clock.frame(source, playback))
+                    .flatten(),
                 source.rate_hz(),
                 source.held_seconds(),
             )
@@ -516,15 +538,19 @@ impl<S: EngineSide> App<S> {
         // there is followed to its end, wherever the pointer and the layer then are.
         let held = Layout::with_splits(ui.max_rect(), ctx.pixels_per_point(), &self.splits);
         self.follow_splitter(&ctx, &held);
+        self.follow_console_edge(&ctx, &held);
+        self.lower_auto_opened_console(&held);
         let layout = Layout::with_splits(ui.max_rect(), ctx.pixels_per_point(), &self.splits);
         if self.present {
             self.presenting(&ctx, &layout);
             return;
         }
-        if self.view.mode == Mode::Explore {
-            self.paint_figure(&ctx, &layout, self.shown);
-        }
         if !self.shown {
+            // Hidden, no console changes what covers the figure: it is painted now. Shown, once the frame's keys and
+            // controls have settled the console (below).
+            if self.view.mode == Mode::Explore {
+                self.paint_figure(&ctx, &layout, false);
+            }
             // Hidden, the layer takes no key: it forgets the ones it held, whose releases now go to egui. The hover,
             // the layer's, goes with it.
             self.keyboard.stand_down();
@@ -562,6 +588,7 @@ impl<S: EngineSide> App<S> {
             &self.stain,
             content.as_ref(),
         );
+        self.follow_console_cover(&layout);
         let activated = self
             .keyboard
             .run(&ctx, self.view.mode, &mut self.view.focus, now);
@@ -621,6 +648,7 @@ impl<S: EngineSide> App<S> {
         }
         self.undo_keys(&ctx);
         self.shortcuts(&ctx, &mut actions, &mut edits, &mut out);
+        self.console_shortcut(&ctx);
         if let Some(due) = self.keyboard.next_repeat_s() {
             ctx.request_repaint_after(std::time::Duration::from_secs_f64((due - now).max(0.0)));
         }
@@ -645,6 +673,8 @@ impl<S: EngineSide> App<S> {
             &mut self.keyboard,
             &mut actions,
         );
+        // The console the keys or the top bar asked for is over the page, whose hover is read below.
+        self.open_asked_console(&ctx, &mut actions);
         let focused = self.scroll_focus();
         match self.view.mode {
             Mode::Explore => self.explore(ui, &layout, focused.clone(), &mut out, &mut edits),
@@ -682,6 +712,8 @@ impl<S: EngineSide> App<S> {
             &mut self.keyboard,
             &mut actions,
         );
+        // And the footer's click.
+        self.open_asked_console(&ctx, &mut actions);
         let (closed, held) =
             self.draw_windows(&ctx, &layout, focused, &mut window_edits, &mut acts);
         // A move or resize ended: the places are saved (R-461 I4).
@@ -692,9 +724,15 @@ impl<S: EngineSide> App<S> {
             self.close_window(&ctx, window);
         }
         self.act(&ctx, acts);
+        // The console is settled for the frame: what it leaves of the figure is known (R-463 K2).
+        if self.view.mode == Mode::Explore {
+            self.paint_figure(&ctx, &layout, true);
+            self.paint_reticle(&ctx, &layout);
+        }
         // A click on a text field starts typing in it, on every page and in every window (R-456).
         self.keyboard
             .follow_text_clicks(&ctx, self.view.mode, &mut self.view.focus);
+        self.follow_console_cover(&layout);
         self.draw_ring(&ctx);
         if let Some(overlays) = actions.overlays.take() {
             edits.push(engine::contract::set_field::SetField {
@@ -767,6 +805,7 @@ impl<S: EngineSide> App<S> {
         edits: &mut Vec<engine::contract::set_field::SetField>,
     ) {
         explore::place(&mut self.keyboard, layout);
+        self.manifold.console_top = self.console_open.then(|| self.console_rect(layout).min.y);
         // The figure's canvas is `layout.figure`; its points are read in `layout.field`, which no splitter moves.
         let (canvas, field) = (layout.figure, layout.field);
         // Each panel draws in a child of its own, so how many widgets it draws (the trajectory panel's change with the
@@ -844,6 +883,11 @@ impl<S: EngineSide> App<S> {
             out,
         };
         explore::manifold_view::show(ui, layout.manifold_view, &mut panel);
+        if let Some(id) = out.focus.take() {
+            let tree = self.keyboard.tree(self.view.mode);
+            self.view.focus.path = tree.path_to(id);
+            self.view.focus.mode = KeyMode::Navigation;
+        }
         self.manifold.compass.hover = self.hover_sent;
         let sim = &self.snapshot.sim;
         explore::compass::show(
@@ -860,10 +904,6 @@ impl<S: EngineSide> App<S> {
         );
         let span = layout.span(true);
         explore::axis_labels::show(ui, layout.axis_x, layout.axis_y, canvas, &sim.plane, span);
-        let reticle = explore::lock::reticle_at(&sim.lock, &sim.plane, field);
-        if let Some(at) = reticle.filter(|at| canvas.contains(*at)) {
-            explore::lock::reticle(ui.ctx(), canvas, at);
-        }
         // The splitters' handles, after the panels, so they take the pointer at the boundaries; a double-click resets
         // one, and the layout is saved (R-462 J3, J5).
         let resets = crate::layout::splitters(ui, layout);
@@ -875,6 +915,7 @@ impl<S: EngineSide> App<S> {
             self.save_settings();
         }
         let ctx = ui.ctx().clone();
+        let uncovered = self.uncovered(canvas, layout);
         let pointer = ctx.pointer_hover_pos();
         // A pointer carrying a window, by its title bar or an edge, hovers no figure point (R-461; gui_state_contract
         // §2's hover is the figure point under the cursor), nor one on a splitter or dragging it (R-462).
@@ -882,7 +923,12 @@ impl<S: EngineSide> App<S> {
             .iter()
             .any(|e| windows::held(&ctx, e).is_some())
             || self.splitting.is_some()
-            || pointer.and_then(|p| layout.splitter_at(p)).is_some();
+            || self.console_drag.is_some()
+            || pointer.and_then(|p| layout.splitter_at(p)).is_some()
+            || pointer.is_some_and(|p| {
+                self.console_open
+                    && crate::layout::console_handle(self.console_rect(layout)).contains(p)
+            });
         let over_figure = !carrying
             && pointer
                 .and_then(|p| ctx.layer_id_at(p))
@@ -890,7 +936,7 @@ impl<S: EngineSide> App<S> {
         // The figure point is read in the field, on the canvas only.
         self.send_hover(explore::hover_label::figure_point(
             field,
-            pointer.filter(|p| canvas.contains(*p)),
+            pointer.filter(|p| uncovered.contains(*p)),
             over_figure,
         ));
         if let (Some(sample), Some(cursor), Some(_)) =
@@ -901,7 +947,7 @@ impl<S: EngineSide> App<S> {
                 self.snapshot.render.playhead.t,
                 self.snapshot.sim.horizon.t,
             );
-            explore::hover_label::show(&ctx, canvas, cursor, text);
+            explore::hover_label::show(&ctx, uncovered, cursor, text);
         }
     }
 
@@ -927,6 +973,131 @@ impl<S: EngineSide> App<S> {
                     self.save_settings();
                 }
             }
+        }
+    }
+
+    /// Opens the console if a control in `actions` asked for it, so that it is drawn in this frame, not the next (R-463).
+    fn open_asked_console(&mut self, ctx: &egui::Context, actions: &mut Actions) {
+        let (console, others): (Vec<_>, Vec<_>) = std::mem::take(&mut actions.open)
+            .into_iter()
+            .partition(|id| windows::opened_by(id) == Some(Window::Console));
+        actions.open = others;
+        for opener in console {
+            // The page is drawn by now: a basis editor it asked for would paint over the console for this frame.
+            if !self.console_open && self.manifold.editing.contains(&true) {
+                ctx.request_discard("the console opened over a basis editor");
+            }
+            self.open_window(ctx, Window::Console, Some(opener));
+        }
+    }
+
+    /// The lock's reticle on the figure, on what the console leaves of it.
+    fn paint_reticle(&self, ctx: &egui::Context, layout: &Layout) {
+        let sim = &self.snapshot.sim;
+        let uncovered = self.uncovered(layout.figure, layout);
+        let reticle = explore::lock::reticle_at(&sim.lock, &sim.plane, layout.field);
+        if let Some(at) = reticle.filter(|at| uncovered.contains(*at)) {
+            explore::lock::reticle(ctx, uncovered, at);
+        }
+    }
+
+    /// Where the console is in `layout`: at its dragged height, or the whole height below the top bar (R-463 K1, K2).
+    pub fn console_rect(&self, layout: &Layout) -> egui::Rect {
+        if self.windows.console.maximised {
+            layout.page
+        } else {
+            layout.console
+        }
+    }
+
+    /// A console that opened by itself takes no focus (§G3), so it does not open over the page: a maximised one opens
+    /// at its docked height, and one dragged to the top at the default height (applied per R-369).
+    fn lower_auto_opened_console(&mut self, layout: &Layout) {
+        if std::mem::take(&mut self.console_auto_opened) {
+            self.windows.console.maximised = false;
+            if layout.console.min.y <= layout.page.min.y {
+                self.splits.set_console_top(None);
+                self.save_settings();
+            }
+        }
+    }
+
+    /// The console over the whole page, maximised or dragged to the top, leaves [`UNCOVERED_BIGS`]: the panels under it
+    /// cannot be reached, by Tab or the arrows, and a focus on one moves to the console, so no ring or key lands on a
+    /// panel it covers (R-463 K2; applied per R-369). The focus is not put back when it lowers or closes.
+    fn follow_console_cover(&mut self, layout: &Layout) {
+        let covering = self.console_open && self.console_rect(layout).min.y <= layout.page.min.y;
+        let left = covering.then_some(&UNCOVERED_BIGS[..]);
+        self.keyboard.tree_mut(Mode::Explore).leave_uncovered(left);
+        self.keyboard.tree_mut(Mode::Stain).leave_uncovered(left);
+        let tree = self.keyboard.tree(self.view.mode);
+        if tree.is_covered(&self.view.focus.path) {
+            self.view.focus.path = tree.window_landing(windows::console::WINDOW);
+            self.view.focus.mode = KeyMode::Navigation;
+        }
+    }
+
+    /// The figure's canvas as it shows: `canvas`, less what an open console covers (R-463 K2). The figure and its marks
+    /// are drawn on layers above the windows', so they are clipped to this.
+    fn uncovered(&self, canvas: egui::Rect, layout: &Layout) -> egui::Rect {
+        let mut shown = canvas;
+        if self.console_open {
+            shown.max.y = shown.max.y.min(self.console_rect(layout).min.y);
+        }
+        shown
+    }
+
+    /// This frame's drag on the console's top edge, read before anything is drawn, as a splitter's: from its edge when
+    /// the drag began by the pointer's travel since its press, held to its range; a maximised console drops to the
+    /// height the drag gives. Back where it began, it is as it was. When the drag ends the layout is saved (R-463 K1).
+    fn follow_console_edge(&mut self, ctx: &egui::Context, layout: &Layout) {
+        let Some(delta) = windows::console_held(ctx) else {
+            if self.console_drag.take().is_some() {
+                self.save_settings();
+            }
+            return;
+        };
+        let rect = self.console_rect(layout);
+        let (start, top, maximised) = *self.console_drag.get_or_insert((
+            rect.min.y,
+            self.splits.console_top(),
+            self.windows.console.maximised,
+        ));
+        if delta == 0.0 {
+            self.splits.set_console_top(top);
+            self.windows.console.maximised = maximised;
+        } else {
+            let fraction = layout.console_dragged(start, delta);
+            self.splits.set_console_top(Some(fraction));
+            self.windows.console.maximised = false;
+        }
+    }
+
+    /// M, the console scope's shortcut: with the focus in the console, in either mode, on either page, toggles its full
+    /// height, as its button does; a search field being typed in keeps its 'm', and the `?` overlay takes every key
+    /// (§G3; R-463 K2). The system's repeats of a held press are not presses.
+    fn console_shortcut(&mut self, ctx: &egui::Context) {
+        let in_console = self
+            .view
+            .focus
+            .path
+            .first()
+            .is_some_and(|f| f == windows::console::WINDOW);
+        if !in_console || ctx.text_edit_focused() || self.keyboard.shortcuts_open {
+            return;
+        }
+        let presses = ctx.input(|i| {
+            i.events
+                .iter()
+                .filter(|e| {
+                    matches!(e, egui::Event::Key { key: Key::M, pressed: true, repeat: false, modifiers, .. }
+                        if modifiers.is_none())
+                })
+                .count()
+        });
+        for _ in 0..presses {
+            let console = &mut self.windows.console;
+            console.maximised = !console.maximised;
         }
     }
 
@@ -1126,6 +1297,7 @@ impl<S: EngineSide> App<S> {
     ) -> (Vec<Window>, bool) {
         let mut closed = Vec::new();
         let mut held = false;
+        let mut resets = false;
         let mut open = self.view.windows.open.clone();
         if self.console_open {
             open.push(Window::Console);
@@ -1134,13 +1306,18 @@ impl<S: EngineSide> App<S> {
         let view_px =
             [layout.figure.width(), layout.figure.height()].map(|v| (v * ppp).round() as u32);
         let quick = self.side.canvas().map(|c| (c, self.format));
+        let console_rect = self.console_rect(layout);
         let mut keys = windows::Keys {
             keyboard: &mut self.keyboard,
             focused,
         };
         for window in open {
             let e = windows::entry(window);
-            let default = windows::rect(window, layout);
+            let default = if window == Window::Console {
+                console_rect
+            } else {
+                windows::rect(window, layout)
+            };
             let mut rect = if windows::place::movable(window) {
                 self.places.shown(window, default, layout.window)
             } else {
@@ -1211,6 +1388,17 @@ impl<S: EngineSide> App<S> {
             if !still {
                 closed.push(window);
             }
+            // The console's top edge: a double-click resets the height, and the layout is saved (R-463 K1; R-462 J3).
+            if window == Window::Console && windows::console_edge(ctx, rect) {
+                self.splits.set_console_top(None);
+                self.windows.console.maximised = false;
+                resets = true;
+                // As its maximise click: drawn, and the figure clipped, at the new height in this frame.
+                ctx.request_discard("the console's edge double-clicked");
+            }
+        }
+        if resets {
+            self.save_settings();
         }
         (closed, held)
     }
@@ -1224,7 +1412,12 @@ impl<S: EngineSide> App<S> {
                     self.console.clear();
                     self.counts = Counts::default();
                 }
-                windows::console::Act::Close => self.close_window(ctx, Window::Console),
+                windows::console::Act::Close => {
+                    self.close_window(ctx, Window::Console);
+                    // A click on × lands as the console is drawn: the frame's second pass draws it gone, so it closes
+                    // in the click's frame, as Esc does (R-463). egui gives a second pass no input to act on twice.
+                    ctx.request_discard("the console closed by its ×");
+                }
                 windows::console::Act::Focus(id) => self.keyboard.focus_by_click(
                     ctx,
                     self.view.mode,
@@ -1244,7 +1437,7 @@ impl<S: EngineSide> App<S> {
 
     /// Draws the focus ring on the focused scope, where it was drawn this frame, while keyboard navigation is on
     /// (R-460 H4, R-464).
-    fn draw_ring(&self, ctx: &egui::Context) {
+    pub(crate) fn draw_ring(&self, ctx: &egui::Context) {
         if !self.keyboard.navigating() {
             return;
         }
@@ -1274,6 +1467,7 @@ impl<S: EngineSide> App<S> {
         }
         if actions.reset_layout {
             self.splits = Splits::default();
+            self.windows.console.maximised = false;
             self.save_settings();
         }
         if actions.quit {
@@ -1300,6 +1494,12 @@ impl<S: EngineSide> App<S> {
         let Some(canvas) = self.side.figure(drawn.placement) else {
             return;
         };
+        // The console covers what it is over, on a layer this one draws above (R-463 K2); hidden, the layer has none.
+        let clip = if shown {
+            self.uncovered(drawn.clip, layout)
+        } else {
+            drawn.clip
+        };
         let callback = egui_wgpu::Callback::new_paint_callback(
             layout.window,
             FigureCallback {
@@ -1308,7 +1508,7 @@ impl<S: EngineSide> App<S> {
             },
         );
         ctx.layer_painter(LayerId::new(Order::Middle, Id::new("figure")))
-            .with_clip_rect(drawn.clip)
+            .with_clip_rect(clip)
             .add(callback);
     }
 }

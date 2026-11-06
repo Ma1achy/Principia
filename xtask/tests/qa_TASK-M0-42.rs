@@ -423,12 +423,12 @@ fn qa_m0_42_no_rust_cache_step_keeps_its_default_target_cache() {
 
 negative_control!(
     qa_m0_42_no_rust_cache_step_keeps_its_default_target_cache,
-    "screenshot.yml with a bare `Swatinem/rust-cache@v2` step, whose default caches `target`",
+    "screenshot.yml with a bare `Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3` step, whose default caches `target`",
     expected = "caches a target directory",
     check_rust_cache_caches_no_target(&all_jobs(&edited(
         "screenshot.yml",
-        "      - uses: Swatinem/rust-cache@v2\n        with:\n          prefix-key: cargo-registry\n          shared-key: ci\n          cache-targets: \"false\"\n          cache-bin: \"false\"\n",
-        "      - uses: Swatinem/rust-cache@v2\n"
+        "      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3\n        with:\n          prefix-key: cargo-registry\n          shared-key: ci\n          cache-targets: \"false\"\n          cache-bin: \"false\"\n",
+        "      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3\n"
     )))
 );
 
@@ -730,7 +730,7 @@ fn qa_m0_42_a_saving_cache_key_names_its_own_job() {
 negative_control!(
     qa_m0_42_a_saving_cache_key_names_its_own_job,
     "ci.yml with xtask-ci saving the rust-gpu build under the ci job's key, a path other jobs save too (R-320)",
-    expected = "job `xtask-ci` step `actions/cache/save@v4`: cache key \"rust-gpu-ci-",
+    expected = "job `xtask-ci` step `actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0`: cache key \"rust-gpu-ci-",
     check_keys_name_their_job(&all_jobs(&edited(
         "ci.yml",
         "github.ref == 'refs/heads/main'\n        with:\n          path: ~/.cache/rust-gpu\n          key: rust-gpu-xtask-ci-",
@@ -746,7 +746,7 @@ fn qa_m0_42_a_restore_key_in_a_saving_job_names_its_own_job() {
 negative_control!(
     qa_m0_42_a_restore_key_in_a_saving_job_names_its_own_job,
     "ci.yml with gpu-kernel restoring the rust-gpu build under xtask-ci's key, though gpu-kernel saves its own",
-    expected = "step `actions/cache/restore@v4`: cache key \"rust-gpu-xtask-ci-",
+    expected = "step `actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0`: cache key \"rust-gpu-xtask-ci-",
     check_keys_name_their_job(&all_jobs(&edited(
         "ci.yml",
         "key: rust-gpu-gpu-kernel-",
@@ -846,7 +846,7 @@ negative_control!(
     expected = "saved by the `ci` job alone",
     check_only_ci_saves_the_pool(&all_jobs(&edited(
         "ci.yml",
-        "      - uses: actions/cache/restore@v4\n        with:\n          path: target/tmp/fixture-targets\n          key: fixture-pool-ci-${{ runner.os }}-${{ steps.toolchain.outputs.cachekey }}-${{ hashFiles('Cargo.lock', 'fixtures/**/Cargo.toml', 'xtask/tests/fixtures/**/Cargo.toml') }}\n          restore-keys: fixture-pool-ci-${{ runner.os }}-${{ steps.toolchain.outputs.cachekey }}-\n      # The rust-gpu build",
+        "      - uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0\n        with:\n          path: target/tmp/fixture-targets\n          key: fixture-pool-ci-${{ runner.os }}-${{ steps.toolchain.outputs.cachekey }}-${{ hashFiles('Cargo.lock', 'fixtures/**/Cargo.toml', 'xtask/tests/fixtures/**/Cargo.toml') }}\n          restore-keys: fixture-pool-ci-${{ runner.os }}-${{ steps.toolchain.outputs.cachekey }}-\n      # The rust-gpu build",
         "      - uses: actions/cache@v4\n        with:\n          path: target/tmp/fixture-targets\n          key: fixture-pool-ci-${{ runner.os }}-${{ steps.toolchain.outputs.cachekey }}-${{ hashFiles('Cargo.lock', 'fixtures/**/Cargo.toml', 'xtask/tests/fixtures/**/Cargo.toml') }}\n          restore-keys: fixture-pool-ci-${{ runner.os }}-${{ steps.toolchain.outputs.cachekey }}-\n      # The rust-gpu build"
     )))
 );
@@ -862,12 +862,23 @@ negative_control!(
     expected = "saved by the `ci` job alone",
     check_only_ci_saves_the_pool(&all_jobs(&edited(
         "ci.yml",
-        "      - uses: actions/cache/save@v4\n        if: github.event_name == 'push' && github.ref == 'refs/heads/main'\n        with:\n          path: target/tmp/fixture-targets",
-        "      - uses: actions/cache/restore@v4\n        if: github.event_name == 'push' && github.ref == 'refs/heads/main'\n        with:\n          path: target/tmp/fixture-targets"
+        "      - uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0\n        if: github.event_name == 'push' && github.ref == 'refs/heads/main'\n        with:\n          path: target/tmp/fixture-targets",
+        "      - uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0\n        if: github.event_name == 'push' && github.ref == 'refs/heads/main'\n        with:\n          path: target/tmp/fixture-targets"
     )))
 );
 
 // ---- The parser reads what the checks rely on --------------------------------------------------------------------
+
+/// Whether `job` of the workflow `text` calls a workflow (R-684's `ci-quick`): it has no steps or runner of its own,
+/// and the called workflow's job, read in its own file, has them.
+fn calls_a_workflow(text: &str, job: &str) -> bool {
+    let header = format!("  {job}:");
+    text.lines()
+        .skip_while(|l| l.trim_end() != header)
+        .skip(1)
+        .take_while(|l| l.is_empty() || l.starts_with("   ") || l.trim_start().starts_with('#'))
+        .any(|l| l.starts_with("    uses: ./.github/workflows/"))
+}
 
 /// Guards the checks above against a parser that reads nothing: every workflow has a job, every job its steps, and
 /// the steps the task names are found with their inputs.
@@ -877,7 +888,7 @@ fn check_parser_reads_the_workflows(files: &[(String, String)]) {
         assert!(!jobs.is_empty(), "{f}: parser read no job");
         for j in &jobs {
             assert!(
-                !j.steps.is_empty(),
+                !j.steps.is_empty() || calls_a_workflow(t, &j.id),
                 "{f} job `{}`: parser read no step",
                 j.id
             );
@@ -1045,7 +1056,7 @@ negative_control!(
     qa_m0_42_rust_cache_saves_only_on_a_push_to_main,
     "pr-check.yml with its rust-cache step's save-if removed, so it saves in every run",
     expected =
-        "job `pr-check` step `Swatinem/rust-cache@v2`: saves in a run other than a push to `main`",
+        "job `pr-check` step `Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3`: saves in a run other than a push to `main`",
     check_saved_only_on_main(&all_jobs(&edited(
         "pr-check.yml",
         "          save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}\n",
@@ -1061,7 +1072,7 @@ fn qa_m0_42_rust_cache_save_if_is_a_conjunction() {
 negative_control!(
     qa_m0_42_rust_cache_save_if_is_a_conjunction,
     "reviews.yml with its save-if an `||`, which a pull-request run satisfies",
-    expected = "job `reviews-complete` step `Swatinem/rust-cache@v2`: saves in a run other than a push to `main`",
+    expected = "job `reviews-complete` step `Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3`: saves in a run other than a push to `main`",
     check_saved_only_on_main(&all_jobs(&edited(
         "reviews.yml",
         "save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}",
@@ -1077,11 +1088,11 @@ fn qa_m0_42_a_save_step_saves_only_on_a_push_to_main() {
 negative_control!(
     qa_m0_42_a_save_step_saves_only_on_a_push_to_main,
     "ci.yml with the ci job's pool save step unconditioned, so a pull-request run saves the pool",
-    expected = "job `ci` step `actions/cache/save@v4`: saves in a run other than a push to `main`",
+    expected = "job `ci` step `actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0`: saves in a run other than a push to `main`",
     check_saved_only_on_main(&all_jobs(&edited(
         "ci.yml",
-        "      - uses: actions/cache/save@v4\n        if: github.event_name == 'push' && github.ref == 'refs/heads/main'\n        with:\n          path: target/tmp/fixture-targets",
-        "      - uses: actions/cache/save@v4\n        with:\n          path: target/tmp/fixture-targets"
+        "      - uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0\n        if: github.event_name == 'push' && github.ref == 'refs/heads/main'\n        with:\n          path: target/tmp/fixture-targets",
+        "      - uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0\n        with:\n          path: target/tmp/fixture-targets"
     )))
 );
 
@@ -1094,11 +1105,11 @@ negative_control!(
     qa_m0_42_a_save_step_saves_only_on_main,
     "ci.yml with xtask-ci's rust-gpu save on a push to any branch",
     expected =
-        "job `xtask-ci` step `actions/cache/save@v4`: saves in a run other than a push to `main`",
+        "job `xtask-ci` step `actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0`: saves in a run other than a push to `main`",
     check_saved_only_on_main(&all_jobs(&edited(
         "ci.yml",
-        "      - uses: actions/cache/save@v4\n        if: github.event_name == 'push' && github.ref == 'refs/heads/main'\n        with:\n          path: ~/.cache/rust-gpu\n          key: rust-gpu-xtask-ci-",
-        "      - uses: actions/cache/save@v4\n        if: github.event_name == 'push'\n        with:\n          path: ~/.cache/rust-gpu\n          key: rust-gpu-xtask-ci-"
+        "      - uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0\n        if: github.event_name == 'push' && github.ref == 'refs/heads/main'\n        with:\n          path: ~/.cache/rust-gpu\n          key: rust-gpu-xtask-ci-",
+        "      - uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0\n        if: github.event_name == 'push'\n        with:\n          path: ~/.cache/rust-gpu\n          key: rust-gpu-xtask-ci-"
     )))
 );
 
@@ -1113,7 +1124,7 @@ negative_control!(
     expected = "job `gpu-kernel` step `actions/cache@v4`: restores and saves in one step",
     check_saved_only_on_main(&all_jobs(&edited(
         "ci.yml",
-        "      - uses: actions/cache/restore@v4\n        with:\n          path: ~/.cache/rust-gpu\n          key: rust-gpu-gpu-kernel-",
+        "      - uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0\n        with:\n          path: ~/.cache/rust-gpu\n          key: rust-gpu-gpu-kernel-",
         "      - uses: actions/cache@v4\n        with:\n          path: ~/.cache/rust-gpu\n          key: rust-gpu-gpu-kernel-"
     )))
 );
@@ -1126,11 +1137,11 @@ fn qa_m0_42_every_restore_runs_in_every_run() {
 negative_control!(
     qa_m0_42_every_restore_runs_in_every_run,
     "ci.yml with the ci job's pool restore limited to pushes to main, so a pull-request run starts cold",
-    expected = "job `ci` step `actions/cache/restore@v4`: does not restore in every run",
+    expected = "job `ci` step `actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0`: does not restore in every run",
     check_saved_only_on_main(&all_jobs(&edited(
         "ci.yml",
-        "      - uses: actions/cache/restore@v4\n        with:\n          path: target/tmp/fixture-targets",
-        "      - uses: actions/cache/restore@v4\n        if: github.event_name == 'push' && github.ref == 'refs/heads/main'\n        with:\n          path: target/tmp/fixture-targets"
+        "      - uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0\n        with:\n          path: target/tmp/fixture-targets",
+        "      - uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0\n        if: github.event_name == 'push' && github.ref == 'refs/heads/main'\n        with:\n          path: target/tmp/fixture-targets"
     )))
 );
 
@@ -1193,7 +1204,7 @@ fn qa_m0_42_a_pr_only_restore_reads_a_ci_yml_saved_path() {
 negative_control!(
     qa_m0_42_a_pr_only_restore_reads_a_ci_yml_saved_path,
     "mutants.yml restoring the rust-gpu build under its own pre-R-337 key, which no ci.yml job saves",
-    expected = "job `mutants` step `actions/cache/restore@v4`: cache key \"rust-gpu-mutants-",
+    expected = "job `mutants` step `actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0`: cache key \"rust-gpu-mutants-",
     check_keys_name_their_job(&all_jobs(&edited(
         "mutants.yml",
         "key: rust-gpu-gpu-kernel-",
@@ -1209,11 +1220,11 @@ fn qa_m0_42_no_pr_only_workflow_saves() {
 negative_control!(
     qa_m0_42_no_pr_only_workflow_saves,
     "stand-in-soak.yml with an actions/cache/save step, conditioned on a push to `main`, after its rust-cache step",
-    expected = "stand-in-soak.yml job `soak` step `actions/cache/save@v4`: saves a cache, though stand-in-soak.yml never runs on a push to `main`",
+    expected = "stand-in-soak.yml job `soak` step `actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0`: saves a cache, though stand-in-soak.yml never runs on a push to `main`",
     check_saved_only_on_main(&all_jobs(&edited(
         "stand-in-soak.yml",
         "          save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}\n",
-        "          save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}\n      - uses: actions/cache/save@v4\n        if: github.event_name == 'push' && github.ref == 'refs/heads/main'\n        with:\n          path: ~/.cargo/registry\n          key: cargo-registry-ci-soak\n"
+        "          save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}\n      - uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0\n        if: github.event_name == 'push' && github.ref == 'refs/heads/main'\n        with:\n          path: ~/.cargo/registry\n          key: cargo-registry-ci-soak\n"
     )))
 );
 

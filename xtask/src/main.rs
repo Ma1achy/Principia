@@ -9,6 +9,9 @@ const USAGE: &str = "\
 Usage: cargo xtask <command>
 
 Commands:
+  web-skeleton [--out <dir>]      build the v1 web skeleton's site into <dir> (target/web-skeleton by default): the gui
+                                  crate for wasm32-unknown-unknown, its bindings by wasm-bindgen at the pinned version,
+                                  and web/skeleton's files; deployed by hand only, through pages.yml (R-627)
   bench (<bench> | --all) [--bless]
                                   run a fixed benchmark headless on the GPU (or every registered one), write its
                                   profiler schema v1 trace to target/bench/<bench>.jsonl and compare it with
@@ -105,7 +108,12 @@ Commands:
                                   the per-PR mutation gate (R-196, R-202): list each mutant that survived the
                                   `cargo mutants` run whose output is <mutants.out>, or each shard's (R-302), and fail
                                   naming each one not in the equivalent-mutants list, .cargo/mutants-equivalent.toml
-                                  or <file>
+                                  or <file>; a mutant that timed out is no survivor, and every one is listed, with
+                                  a count
+  mutants-timeout <mutants.out> | --no-mutant
+                                  the per-mutant timeout (R-348, REQ-VAL-180): print as key=value lines the unmutated
+                                  baseline that run measured and the timeout .cargo/mutants.toml's multiplier and floor
+                                  give it; failing if the baseline did not pass. --no-mutant: the floor
   plan-check                      run plan/check_plan.py from the repo root (it also runs coverage.py,
                                   milestones.py and reviewer_lists.py with --check), streaming its output and
                                   exiting with its status; needs python3 and PyYAML (REQ-SYS-007, REQ-SYS-008)
@@ -196,6 +204,16 @@ fn main() -> ExitCode {
                 &outs,
                 &workspace_root().join(xtask::mutants_check::EQUIVALENT_LIST),
             )
+        }
+        ["mutants-timeout", arg] => xtask::mutants_check::run_timeout(
+            (*arg != "--no-mutant").then(|| Path::new(arg)),
+            &workspace_root().join(xtask::mutants_check::MUTANTS_CONFIG),
+        ),
+        ["web-skeleton"] => {
+            xtask::web_skeleton::build("wasm-bindgen", &xtask::web_skeleton::default_out())
+        }
+        ["web-skeleton", "--out", out] => {
+            xtask::web_skeleton::build("wasm-bindgen", Path::new(out))
         }
         ["pr-check"] => match std::env::var("GITHUB_EVENT_PATH") {
             Ok(path) => xtask::pr_check::run(Path::new(&path)),

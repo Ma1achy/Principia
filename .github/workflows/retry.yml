@@ -34,9 +34,10 @@ env:
   # No incremental state, the owner's CI setting (PR #394), in every workflow like R-374's values. `Swatinem/rust-cache`
   # already exports CARGO_INCREMENTAL=0 to the steps after it, and before it computes its key, so its key and every
   # build after it are the same without this line. What the line adds: the value in the steps before rust-cache, where
-  # no cargo build runs and `ci.yml`'s `cachekey` hashes it, and in jobs without rust-cache, where only `ci.yml`'s
-  # `ci-release` runs cargo and it builds only for the release doctests, which aren't incremental by default. Local
-  # builds are unaffected (R-233).
+  # no cargo build runs and `ci.yml`'s `cachekey` hashes it, and in jobs without rust-cache, where two run cargo:
+  # `ci.yml`'s `ci-release`, which builds only for the release doctests, which aren't incremental by default, and
+  # `pages.yml`'s `build`, where it turns off incremental state for the dev-profile build of xtask that `cargo xtask
+  # web-skeleton` starts. Local builds are unaffected (R-233).
   CARGO_INCREMENTAL: "0"
 
 jobs:
@@ -45,11 +46,11 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
       # The script reads the run's workflow file for its gates (a job's `needs`) with PyYAML.
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
       - name: Install PyYAML

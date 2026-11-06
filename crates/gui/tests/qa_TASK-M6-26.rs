@@ -1180,6 +1180,7 @@ fn real_app_at_depth(octaves: f64) -> Rig<RealSide> {
     let sim = SimConfig {
         chart: Chart {
             window: engine::contract::sim_config::Window::SQUARE,
+            mapping: Default::default(),
         },
         plane: Plane {
             z0: [0.1; 8],

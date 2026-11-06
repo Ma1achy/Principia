@@ -1,7 +1,7 @@
 //! QA tests for TASK-M6-32, written from R-450 and its requirements, not from the implementation:
 //!
 //! - REQ-GUI-189 (R-450, A1 to A6; render_gui_spec §G3, §G12): the console is a window of exactly two scopes, the
-//!   header bar (All, Warnings, Errors, Info, the search field, Copy, Clear, ×, in that order) and the log. Opened from
+//!   header bar (All, Warnings, Errors, Info, the search field, Copy, Clear, maximise, ×, in that order, R-463 K3) and the log. Opened from
 //!   the footer or Windows › Console it lands in navigation mode on the header bar scope itself; an error opens it
 //!   taking no focus. ↑ ↓, Tab and Shift+Tab move between the two scopes, inside the window; Enter on the header bar
 //!   goes onto All, ← → cross every header control, × included, stopping at the row's ends, and Esc goes back up. The
@@ -43,9 +43,9 @@ const INTERACT: KeyMode = KeyMode::Interaction;
 /// §G3's breadcrumb separator, from R-450's example "Console › Header › Copy".
 const SEP: &str = " › ";
 
-/// The header bar's elements in R-450's visual order, by A6's breadcrumb names.
-const HEADER_ROW: [&str; 8] = [
-    "All", "Warnings", "Errors", "Info", "Search", "Copy", "Clear", "Close",
+/// The header bar's elements in R-450's visual order, as R-463 K3 amends it, by A6's breadcrumb names.
+const HEADER_ROW: [&str; 9] = [
+    "All", "Warnings", "Errors", "Info", "Search", "Copy", "Clear", "Maximise", "Close",
 ];
 
 /// Asserts that `check` panics: the check can fail (R-176's control, run in the test).
@@ -407,12 +407,12 @@ fn script(h: &mut Headless, app: &mut App<MockSide>) -> Vec<At> {
     }
     // Into the header bar, → across it to × and past its end, ↑ ↓ doing nothing, ← back past its start, Esc up.
     step(h, app, Key::Enter, NONE);
-    for _ in 0..8 {
+    for _ in 0..9 {
         step(h, app, Key::ArrowRight, NONE);
     }
     step(h, app, Key::ArrowUp, NONE);
     step(h, app, Key::ArrowDown, NONE);
-    for _ in 0..8 {
+    for _ in 0..9 {
         step(h, app, Key::ArrowLeft, NONE);
     }
     step(h, app, Key::Escape, NONE);
@@ -443,13 +443,13 @@ fn expected() -> Vec<At> {
         log.clone(),
         header.clone(),
     ]);
-    // Enter: All; → ×8: Warnings to Close, then Close kept; ↑ ↓ nothing; ← ×8: Clear to All, then All kept.
+    // Enter: All; → ×9: Warnings to Close, then Close kept; ↑ ↓ nothing; ← ×9: Maximise to All, then All kept.
     t.push(on("All"));
     for c in &HEADER_ROW[1..] {
         t.push(on(c));
     }
     t.extend([on("Close"), on("Close"), on("Close")]);
-    for c in HEADER_ROW[..7].iter().rev() {
+    for c in HEADER_ROW[..8].iter().rev() {
         t.push(on(c));
     }
     t.push(on("All"));
@@ -522,7 +522,7 @@ fn qa_r450_enter_on_close_and_esc_at_the_top_level_close_back_to_the_opener() {
         // Enter on ×.
         let (mut app, mut h, opener) = open(opened);
         press(&mut h, &mut app, Key::Enter, NONE);
-        presses(&mut h, &mut app, Key::ArrowRight, NONE, 7);
+        presses(&mut h, &mut app, Key::ArrowRight, NONE, 8);
         check_at(&app, &["Console", "Header", "Close"], NAV, "→ to ×");
         press(&mut h, &mut app, Key::Enter, NONE);
         settle(&mut h, &mut app);
@@ -656,7 +656,7 @@ fn qa_r450_the_breadcrumb_follows_the_two_scopes() {
     rejects("R-405's breadcrumb on copy", || {
         check_crumb(&copy, "Console › copy and clear › copy", "on Copy")
     });
-    presses(&mut h, &mut app, Key::ArrowRight, NONE, 2);
+    presses(&mut h, &mut app, Key::ArrowRight, NONE, 3);
     check_crumb(
         &top_bar_texts(&mut h, &mut app),
         "Console › Header › Close",
@@ -923,11 +923,15 @@ fn qa_r450_after_an_auto_open_a_click_then_the_keys_reach_copy_clear_and_close()
         "Esc ends the typing",
     );
     let mut reached = Vec::new();
-    for _ in 0..3 {
+    for _ in 0..4 {
         press(&mut h, &mut app, Key::ArrowRight, NONE);
         reached.push(labels(&app).last().cloned().unwrap_or_default());
     }
-    assert_eq!(reached, ["Copy", "Clear", "Close"], "→ from the field");
+    assert_eq!(
+        reached,
+        ["Copy", "Clear", "Maximise", "Close"],
+        "→ from the field"
+    );
     press(&mut h, &mut app, Key::Escape, NONE);
     press(&mut h, &mut app, Key::ArrowDown, NONE);
     check_at(&app, &["Console", "Log"], NAV, "↓ to the log");

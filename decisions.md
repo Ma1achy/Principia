@@ -1465,10 +1465,11 @@ TASK-M3-12's stale note is removed.
 *Amended in part by R-711 (5 Nov 2026: this ruling wakes for R-711's runner, and no self-hosted job takes a
 `pull_request` or `pull_request_target` trigger, in place of its allowance for this repository's PRs).*
 *Still in force: outside contributors need approval before any workflow runs (the approval setting R-186 keeps); fork
-PRs getting the CPU and lavapipe jobs, and the runner's own user account, apply to R-711's runner; self-hosted jobs run
+PRs get the hosted CPU and lavapipe jobs only; R-711's runner runs under its own user account; self-hosted jobs run
 only on push to `main`, schedule and `workflow_dispatch`, from Ma1achy on Ma1achy/Principia (R-711).*
 *25 Sep 2026 · applied in step 8*
 *Dormant since R-186 (26 Sep 2026): no self-hosted runner exists. The text stands, and applies again when one is added.*
+*The dormancy ended with R-711 (5 Nov 2026), for that runner.*
 
 GPU jobs on the self-hosted runner run only for pushes and for PRs from this repository:
 `if: github.event.pull_request.head.repo.full_name == github.repository` (or the event is a push). Fork PRs get the CPU
@@ -4322,9 +4323,10 @@ its installer's current release is used. A cargo tool CI adds later other than t
 
 ## R-348 — Mutants runs get a per-mutant timeout and a per-process memory cap on test processes; both values are calibrated
 *Amended by R-352 and R-376.*
+*Amended in part by R-712 (5 Nov 2026: the per-mutant timeout is about 3× the baseline's test time, in place of 2.0×).*
 *Still in force: all of it; R-352 accepts its items applied per R-204 and settles how a local run applies the caps: on
-macOS a local run gets the per-mutant timeout only, and CI's Linux runners enforce both caps. R-376 confirms both
-values at the M0 gate: the per-mutant timeout at 2.0× the baseline's test time with a 60 s floor (REQ-VAL-180), and
+macOS a local run gets the per-mutant timeout only, and CI's Linux runners enforce both caps. The per-mutant timeout is
+about 3× the baseline's test time (R-712) with R-376's 60 s floor (REQ-VAL-180), and R-376 confirms
 the memory cap at 8 GiB, set by `prlimit --as` with `--core=1` (REQ-VAL-181).*
 *1 Oct 2026 · applied in REQ-VAL-179, REQ-VAL-180 and REQ-VAL-181 (new), TASK-M0-49 (new) and TASK-M0-19*
 
@@ -7264,6 +7266,10 @@ fields' own units, as applied." The absolute reading stands as applied; nothing 
 Changes REQ-TOOL-160's statement, verify, rulings, sources and note; adds no requirement.
 
 ## R-402 — The nightly full mutants run is sharded to fit GitHub's 6-hour job limit: each package's mutants dealt round-robin into shards sized on their measured cost, counted each run *(amends R-376 as it applies to the nightly full run's shards)*
+*Amended in part by R-712 (5 Nov 2026: REQ-VAL-180's multiplier is about 3 times, in place of 2.0 times, for a nightly
+shard too).*
+*Still in force: all of it, a shard's baseline running that package's tests alone, so that the timeout is the package's
+own, at R-712's multiplier.*
 *9 Oct 2026 · applied in `.github/workflows/nightly.yml` (its `concurrency` group and jobs `mutants-plan`, `mutants`
 and `mutants-report`), `xtask/tests/qa_TASK-M0-19.rs` (`check_mutants`, a ruling-forced qa-file change), REQ-VAL-150
 (reqio), R-376's forward lines and `plan/rule_groups.yaml`*
@@ -12569,6 +12575,9 @@ applied by a follow-up task):*
 Adds REQ-GUI-213 and REQ-GUI-214.
 
 ## R-463 — The console's height drags and a maximise toggle (button and key M) fills the height below the top bar; its open and close lag is measured first, and both are brought within one frame at 60 fps, with the frame times before and after *(amends R-450 as it lists the header bar's controls)*
+*Amended in part by R-667 (K4's target: each frame's CPU part, the frame less its wait on the device, is judged against
+16.7 ms; the wait and a comparison with a control of no action are reported, not judged).*
+*Still in force: all of it but K4's "the target", which R-667 reads as the CPU part of the slowest frame.*
 *18 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G12. Console (`12_console.png`)" (a paragraph),
 § "G5. Windows (`04_windows.png`)" (the console docked) and § "G13. Where the artboards are overridden" (the console's
 header), `docs/gui/design/GUI_DESIGN_NOTES.md` § "12 Console" (conformed), R-450's heading block, REQ-GUI-215 and
@@ -29467,6 +29476,43 @@ The owner's words (31 Oct 2026), verbatim, from that day's message:
 
 R-666 is in the "process" group of `plan/rule_groups.yaml`.
 
+## R-667 — REQ-GUI-216 is judged on the CPU part of each frame: the slowest frame's CPU part, in every table at every log size, under 16.7 ms; the wait on the device is reported, and the console's action is compared with a control of no action beside it, which is not a gate *(closes RQ-671; amends R-463 K4)*
+*2 Nov 2026 · the owner's message of that day; applied in R-463's heading block (a forward line),
+`docs/gui/principia_render_gui_spec.md` § "G12. Console (`12_console.png`)" (a sentence, with its *Was*),
+`docs/archive/review_queue/M0.md` (RQ-671, moved with this ruling), REQ-GUI-216 (reqio: statement, verify, rulings,
+source, note), TASK-M6-44's references and acceptance and `plan/rule_groups.yaml`; built by TASK-M6-44 (`crates/gui/src/bench.rs`)*
+
+The owner's words (2 Nov 2026), verbatim, from that day's message, which rules other entries too:
+
+> 671 (c), with the do-nothing control comparison (d) reported beside it in the PR and report (not a gate).
+
+*Context.* RQ-671 was queued by TASK-M6-44 on perf review 5732685040 of PR #370. After the fix, the console's rows cost
+at most 0.44 ms at 10 000 entries, and job 702's ten release runs on the Mac still missed 16.7 ms in 3 of 30 action
+tables and 1 of 30 control tables, each miss in the wait on the device; the largest CPU part of any frame was 4.48 ms.
+RQ-671's option (c) read: "Judge the CPU part of the frame against 16.7 ms and report the wait"; its option (d):
+"Judge the action arm against the control: no more misses than the control, beyond what chance explains, over a
+stated number of runs."
+
+*What it decides:*
+- **The gate.** Each frame's CPU part, the frame less its wait on the device (egui's passes, the log's filter and rows,
+  tessellation, and the CPU's work through wgpu: uploading, encoding and submitting), is judged against 16.7 ms, one
+  frame at 60 fps. The rule stays the slowest frame's: in every table, at every log size, the frame whose CPU part is
+  largest must be under 16.7 ms.
+- **The wait is reported.** Each table gives each row's wait, and its slowest whole frame with that frame's wait.
+- **The control comparison is reported, not a gate.** Beside the verdict, the PR and the benchmark's report give, for
+  the action arm and the control arm (the same frames on the same GUI with no input and the console closed), the
+  frames at or over 16.7 ms and at or over 10 ms, and a one-sided Fisher exact p of the action arm having more of
+  them than the control. Neither count nor p passes or fails anything.
+- **What stays.** The 16.7 ms limit, the three log sizes, the slowest-frame rule, the measurement on the human's Mac
+  (R-186), the before and after tables with where the time went, the control arm and the wait's split from the CPU's
+  work.
+
+*Applied per R-369:* the ruling is ported in TASK-M6-44's own PR, because REQ-GUI-216 is the only thing it unblocks.
+
+R-667 is in the "design" group of `plan/rule_groups.yaml`, with R-463.
+
+Changes REQ-GUI-216 (statement, verify, rulings, source, note).
+
 ## R-668 — The 1 Nov library triage rulings: the site-note families stay, marked "operator's own search, unreviewed", closure peeks only and never targets, `bhhsat` with them unless Davoust & Broucke's comparison matches, `suvakov_pc` closure only; a digit match is a trace, marked "inferred"; values printed in a paper, or in a public database a paper points to, are stored with credit and citation, an author emailed only as a last resort; unreviewed and AI-assisted sources are peeks only; hierarchical triples are parked with the v2+ 3D extension; RQ-666 is confirmed; the kernel stays at `G = 1`, another `G` converted at the import boundary and what can't be converted refused *(closes RQ-666 and RQ-668; corrects R-468)*
 *Refined by R-679 (3 Nov 2026: item 5's parking reaches planetary, star-plus-planets, sources, revisited with the v2+
 3D extension).*
@@ -30930,8 +30976,8 @@ Adds REQ-INT-113; changes REQ-EVT-006, REQ-INT-057, REQ-INT-061, REQ-INT-064, RE
 
 ## R-711 — One measurement-only self-hosted runner, `malachys-pc-rtx2080s`, on the owner's PC, with no pull-request trigger on any self-hosted job; DX12 may run on it as a measurement; PC benchmarks stay apart from the Mac's performance gates; a recorded run on it can serve Paper 2's non-Metal parity evidence; its jobs have their own workflow; the signing rules *(closes RQ-695; amends R-174, R-186 and R-656)*
 *5 Nov 2026 · the owner's message of that day; applied in the forward lines of R-58, R-110, R-174, R-186 and R-656,
-`docs/archive/review_queue/M0.md` (RQ-695 moved), `REVIEW_QUEUE.md`, `plan/rule_groups.yaml` and
-`plan/section_notes.yaml`; changes no requirement*
+`docs/archive/review_queue/M0.md` (RQ-695 moved), `REVIEW_QUEUE.md`, TASK-M4-28 (a note), REQ-SYS-065 and REQ-VAL-099 (reqio), TASK-M0-04, TASK-M8-41,
+`plan/WORKFLOW.md`, `plan/HUMAN_SETUP.md` and `plan/rule_groups.yaml`*
 
 The owner's words, 5 Nov 2026, verbatim:
 
@@ -30948,21 +30994,27 @@ The owner's words, 5 Nov 2026, verbatim:
 >    - Schedule and re-runs: verify in the smoke test what github.actor is for schedule and re-run events. Commit-signature verification is the primary gate there; the actor check is secondary.
 >    - Key protection: the signing key gets a passphrase, held in the macOS keychain via ssh-agent, so agents can still sign non-interactively. This protects the key at rest (backups, a stolen disk), not against a live compromise of the Mac; recorded as the known limit.
 
-*The DX12 order's wording.* R-711 amends the wording of the owner's DX12 order of 4 Nov: its "in no CI job" now reads "in no required or hosted CI job". That order is ruled on the DX12 branch, which is not in this port, and is not touched here. Its ruling number is left out of this line because that ruling is not yet an entry in this file; the branch's port names R-711 when it lands.
+*The DX12 order's wording.* R-711 amends the wording of the owner's DX12 order of 4 Nov, not yet on `main`: its "in no CI job" now reads "in no required or hosted CI job". That order is not touched here, and its ruling number is left out of this line because that ruling is not yet an entry in this file.
 
 *Applied per R-369:*
 
 - **`ci.yml`'s comment.** Item 1's correction of `.github/workflows/ci.yml`:31-32 goes with the first runner job's pull request; the file is unchanged here.
 - **R-174's account.** R-174 says the runner runs "under its own macOS user account", written of a Mac runner. This runner is a PC, so what wakes is the rule's sense, the runner's own user account.
 - **R-58 and R-110** are not amended: the non-Metal parity run still gates Paper 2 and not the build, and item 4 says what a run on this runner must show to serve it. Each carries a "Read with" line.
+- **Item 4 on a card with an R-690 failure on record,** from the physics review of #416: a record is no bar, and "the parity measurement itself" is the parity suite, not R-690's report. The inputs of a level 3 row on that card join the run's Tier L inputs. A level 2 record limits what a pass shows, so the record and the paper carry R-690's standing word for that adapter, API and driver version, gate by gate, as a third item beside the owner's two. RQ-685 stays open. REQ-VAL-099 and TASK-M8-41 carry this.
+- **The check on "the paper must state",** from the same review: no task writes the paper, so the gate record prints what it must state, the physics reviewer checks that, and a record missing its commit, driver version or output is refused. The record also names the API and R-690's hardware label. "The owner-reported hardware caveat" is RQ-685's run note, as REQ-VAL-099 defines it.
+- **Where the gate reads R-690's word,** from the same review and the code review: the level 3 rows and the word come from the records of TASK-M4-27 and TASK-M4-28, so TASK-M8-41 depends on TASK-M4-28, needs REQ-VAL-347 and REQ-VAL-348 and names where it reads them. It reads each gate's committed `comparison.md` and `outstanding.json`, never a gate's control records as a card's. "No record" is a lookup over those files as read: a missing or unreadable file, or a level 3 row whose input bits can't be read, refuses the gate, and a synthetic record holding a level 3 row whose inputs the run leaves out is refused. The word prints gate by gate, each with its own N and each `outstanding.json` row beside it; a measured failure in either gate prints "unverified, not supported" for the card, and Ns are never summed.
+- **REQ-SYS-065's check** reads "no required or hosted job" (items 1, 2 and 5), and TASK-M0-04 conforms to it.
 
 *What it amends:* **R-174**, **R-186** and **R-656**, for this runner only. It closes **RQ-695**.
 
 R-711 is in the "ci" group of `plan/rule_groups.yaml`.
 
-## R-712 — The per-mutant timeout is set from the measured baseline test time, at about 3 times it; 8 shards are kept; a timed-out mutant counts as caught and is listed; #360's 135 unreached mutants go to the nightly run, and the same rule applies to #387 if it hits the limit *(amends R-376 for REQ-VAL-180)*
-*5 Nov 2026 · the owner's message of that day; applied in R-376's forward lines, REQ-VAL-180 (reqio) and
-`plan/rule_groups.yaml`; built by tooling PR `tooling/mutants-measured-timeout`*
+Changes REQ-SYS-065 and REQ-VAL-099 (statement, verify, source, rulings, note).
+
+## R-712 — The per-mutant timeout is set from the measured baseline test time, at about 3 times it; 8 shards are kept; a timed-out mutant counts as caught and is listed; #360's 135 unreached mutants go to the nightly run, and the same rule applies to #387 if it hits the limit *(amends R-348, R-376 and R-402 for REQ-VAL-180)*
+*5 Nov 2026 · the owner's message of that day; applied in the forward lines of R-348, R-376 and R-402, REQ-VAL-180 (reqio)
+and `plan/rule_groups.yaml`; built by #415*
 
 The owner's words, 5 Nov 2026, verbatim:
 
@@ -30970,15 +31022,19 @@ The owner's words, 5 Nov 2026, verbatim:
 
 *What it decides:*
 
-- **The timeout.** REQ-VAL-180's value is about 3 times the measured baseline test time, in place of R-376's 2.0 times. R-376's 60 s floor is not mentioned and stands.
-- **The form.** Of the two the order offers, the owner chose the explicit timeout, so the baseline is measured once and not per shard. `tooling/mutants-measured-timeout` carries it, and `.cargo/mutants.toml` keeps `timeout_multiplier = 2.0` until that pull request merges.
+- **The timeout.** REQ-VAL-180's value is about 3 times the measured baseline test time, in place of R-376's 2.0 times. The order offers two forms, `--timeout-multiplier` about 3 or an explicit timeout of about 3 times the baseline, and chooses neither. R-376's 60 s floor is not mentioned and stands.
 - **Shards.** REQ-VAL-149's 8 shards stay.
 - **A timeout counts as caught, and is listed.** `cargo xtask mutants-check` already lists one as "timed out (not a survivor)" (R-202, R-348).
-- **The gate does not relax.** R-302's rule, in `mutants.yml`, that a shard cut off by its limit fails, "never a pass", stays as it is. "The 135 unreached mutants" names #360's mutants, and #387's if it hits the limit; it passes no cut-off shard. R-302's nightly run is their backstop.
+- **#360's 135 unreached mutants** go to the nightly run, and the same rule applies to #387 if it hits the limit.
 
-*The evidence, for the record:* #360 had 0 timeouts in 541 judged mutants, with a baseline of 5064 to 5554 s and a slowest mutant of 2405 s (run 41957362447).
+*Applied per R-369:*
 
-*What it amends:* **R-376**, for REQ-VAL-180's multiplier only.
+- **The form, for the per-PR `mutants.yml` shards only:** the explicit timeout, the baseline measured once and not per shard. Nightly and local runs keep the multiplier, at 3.0, and R-402's baseline for a nightly shard is still its package's own. #415 builds both, and `.cargo/mutants.toml` keeps `timeout_multiplier = 2.0` until it merges.
+- **The gate does not relax.** This is the port's reading, the owner's words not naming R-302. R-302's rule, in `mutants.yml`, that a shard cut off by its limit fails, "never a pass", stays as it is. "The 135 unreached mutants" names #360's, and #387's if it hits the limit, and passes no cut-off shard. R-302's nightly run is their backstop.
+
+*The evidence, for the record:* #360 had 0 timeouts in 541 judged mutants, with a baseline of 5064 to 5554 s on the seven cut shards and 2814 s on the shard that finished, and a slowest mutant of 2405 s (run 41957362447).
+
+*What it amends:* **R-348**, **R-376** and **R-402**, for REQ-VAL-180's multiplier only.
 
 R-712 is in the "ci" group of `plan/rule_groups.yaml`.
 

@@ -1501,10 +1501,6 @@
   reason: informative only
   note: "the owner's word of 4 Nov 2026: `.claude/` is on the classifier's allowlist; process; changes no requirement"
 - file: decisions.md
-  section: "R-711 — One measurement-only self-hosted runner, `malachys-pc-rtx2080s`, on the owner's PC, with no pull-request trigger on any self-hosted job; DX12 may run on it as a measurement; PC benchmarks stay apart from the Mac's performance gates; a recorded run on it can serve Paper 2's non-Metal parity evidence; its jobs have their own workflow; the signing rules *(closes RQ-695; amends R-174, R-186 and R-656)*"
-  reason: informative only
-  note: "the owner's message of 5 Nov 2026: one measurement-only self-hosted runner and its rules; ci; changes no requirement"
-- file: decisions.md
   section: "The owner's saved orders of 3 and 4 Nov 2026 — the batch R-713 to R-719"
   reason: informative only
   note: "the batch's introduction: what the rulings already carried and what is held; changes no requirement"

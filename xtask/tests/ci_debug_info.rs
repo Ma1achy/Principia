@@ -42,6 +42,7 @@ const OWN_STEP: [(&str, &str); 2] = [
     ),
 ];
 const RUST_CACHE: &str = "uses: Swatinem/rust-cache@";
+const SELF_HOSTED: &str = "runs-on: [self-hosted,";
 const INCREMENTAL: &str = "CARGO_INCREMENTAL";
 const SETTINGS: [(&str, &str); 3] = [
     ("CARGO_INCREMENTAL", "0"),
@@ -334,6 +335,11 @@ fn check_jobs(files: &[(String, String)]) {
     let mut checked = 0;
     for (name, text) in files {
         for (job, lines) in jobs(text) {
+            // The self-hosted runner's CARGO_HOME is read-only to its jobs and outlives them, so they can't write this
+            // config (R-711; `win-gpu.yml`, whose header says so).
+            if lines.iter().any(|l| l.trim().starts_with(SELF_HOSTED)) {
+                continue;
+            }
             let Some(first) = lines.iter().position(|l| runs_cargo(l)) else {
                 continue;
             };
@@ -438,7 +444,7 @@ mod before_checkout {
         {
             check_jobs(&without_step(|t| {
                 let job = t.find(XTASK_CI).unwrap();
-                let checkout = "      - uses: actions/checkout@v4\n";
+                let checkout = "      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0\n";
                 let at = job + t[job..].find(checkout).unwrap();
                 format!("{}{STEP_TEXT}{}", &t[..at], &t[at..])
             }))

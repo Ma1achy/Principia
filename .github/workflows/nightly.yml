@@ -40,9 +40,10 @@ env:
   # No incremental state, the owner's CI setting (PR #394), in every workflow like R-374's values. `Swatinem/rust-cache`
   # already exports CARGO_INCREMENTAL=0 to the steps after it, and before it computes its key, so its key and every
   # build after it are the same without this line. What the line adds: the value in the steps before rust-cache, where
-  # no cargo build runs and `ci.yml`'s `cachekey` hashes it, and in jobs without rust-cache, where only `ci.yml`'s
-  # `ci-release` runs cargo and it builds only for the release doctests, which aren't incremental by default. Local
-  # builds are unaffected (R-233).
+  # no cargo build runs and `ci.yml`'s `cachekey` hashes it, and in jobs without rust-cache, where two run cargo:
+  # `ci.yml`'s `ci-release`, which builds only for the release doctests, which aren't incremental by default, and
+  # `pages.yml`'s `build`, where it turns off incremental state for the dev-profile build of xtask that `cargo xtask
+  # web-skeleton` starts. Local builds are unaffected (R-233).
   CARGO_INCREMENTAL: "0"
 
 jobs:
@@ -52,7 +53,7 @@ jobs:
   cpu:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: Free runner disk
         run: |
           df -h /
@@ -64,7 +65,7 @@ jobs:
       - name: rustup toolchain install (rust-toolchain.toml)
         run: rustup toolchain install
       # The cargo registry `ci.yml`'s `ci` job saves on a push to `main`, restored read-only under its key (R-337).
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           prefix-key: cargo-registry
           shared-key: ci
@@ -76,14 +77,14 @@ jobs:
       - name: Dependencies without debug info, every profile
         uses: ./.github/actions/cargo-ci-config
       # xtask's plan_check tests run plan/check_plan.py, which needs Python and PyYAML (TASK-M0-02).
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
       - name: Install PyYAML
         run: python3 -m pip install pyyaml
       - name: Install Mesa (lavapipe)
         run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers
-      - uses: taiki-e/install-action@v2
+      - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
         with:
           tool: cargo-nextest@0.9.146
       - name: cargo nextest run --workspace
@@ -113,7 +114,7 @@ jobs:
     env:
       PRIN_GPU_BACKEND: vulkan
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: Free runner disk
         run: |
           df -h /
@@ -128,7 +129,7 @@ jobs:
           rustup toolchain install
           echo "channel=$(sed -n 's/^channel = "\(.*\)"$/\1/p' rust-toolchain.toml)" >> "$GITHUB_OUTPUT"
       # The cargo registry `ci.yml`'s `ci` job saves on a push to `main`, restored read-only under its key (R-337).
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           prefix-key: cargo-registry
           shared-key: ci
@@ -141,18 +142,18 @@ jobs:
         uses: ./.github/actions/cargo-ci-config
       # The rust-gpu build, restored read-only under the key `ci.yml`'s `gpu-kernel` job saves it under on a push to
       # `main` (R-320, R-337; REQ-SYS-075); never saved here.
-      - uses: actions/cache/restore@v4
+      - uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: ~/.cache/rust-gpu
           key: rust-gpu-gpu-kernel-${{ runner.os }}-${{ steps.toolchain.outputs.channel }}
       - name: Install Mesa (lavapipe)
         run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
       - name: Install PyYAML
         run: python3 -m pip install pyyaml
-      - uses: taiki-e/install-action@v2
+      - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
         with:
           tool: cargo-nextest@0.9.146
       - name: cargo xtask ci
@@ -166,7 +167,7 @@ jobs:
     env:
       PRIN_GPU_BACKEND: vulkan
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: Free runner disk
         run: |
           df -h /
@@ -181,7 +182,7 @@ jobs:
           rustup toolchain install
           echo "channel=$(sed -n 's/^channel = "\(.*\)"$/\1/p' rust-toolchain.toml)" >> "$GITHUB_OUTPUT"
       # The cargo registry `ci.yml`'s `ci` job saves on a push to `main`, restored read-only under its key (R-337).
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           prefix-key: cargo-registry
           shared-key: ci
@@ -194,13 +195,13 @@ jobs:
         uses: ./.github/actions/cargo-ci-config
       # The rust-gpu build, restored read-only under the key `ci.yml`'s `gpu-kernel` job saves it under on a push to
       # `main` (R-320, R-337; REQ-SYS-075); never saved here.
-      - uses: actions/cache/restore@v4
+      - uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: ~/.cache/rust-gpu
           key: rust-gpu-gpu-kernel-${{ runner.os }}-${{ steps.toolchain.outputs.channel }}
       - name: Install Mesa (lavapipe)
         run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers
-      - uses: taiki-e/install-action@v2
+      - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
         with:
           tool: cargo-nextest@0.9.146
       - name: cargo xtask build-kernel
@@ -239,12 +240,12 @@ jobs:
       total: ${{ steps.plan.outputs.total }}
       matrix: ${{ steps.plan.outputs.matrix }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       # The toolchain rust-toolchain.toml pins: the listing reads the workspace's metadata with it (R-169).
       - name: rustup toolchain install (rust-toolchain.toml)
         run: rustup toolchain install
       # The cargo registry `ci.yml`'s `ci` job saves on a push to `main`, restored read-only under its key (R-337).
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           prefix-key: cargo-registry
           shared-key: ci
@@ -255,7 +256,7 @@ jobs:
       # keep R-374's line tables (`.github/actions/cargo-ci-config`).
       - name: Dependencies without debug info, every profile
         uses: ./.github/actions/cargo-ci-config
-      - uses: taiki-e/install-action@v2
+      - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
         with:
           tool: cargo-mutants@27.1.0,cargo-nextest@0.9.146
       - name: cargo mutants --list (the full run's mutants, dealt into shards by package)
@@ -316,7 +317,7 @@ jobs:
       max-parallel: 12
       matrix: ${{ fromJSON(needs.mutants-plan.outputs.matrix) }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: Free runner disk
         run: |
           df -h /
@@ -331,7 +332,7 @@ jobs:
           rustup toolchain install
           echo "channel=$(sed -n 's/^channel = "\(.*\)"$/\1/p' rust-toolchain.toml)" >> "$GITHUB_OUTPUT"
       # The cargo registry `ci.yml`'s `ci` job saves on a push to `main`, restored read-only under its key (R-337).
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           prefix-key: cargo-registry
           shared-key: ci
@@ -344,16 +345,16 @@ jobs:
         uses: ./.github/actions/cargo-ci-config
       # The rust-gpu build, restored read-only under the key `ci.yml`'s `gpu-kernel` job saves it under on a push to
       # `main` (R-320, R-337; REQ-SYS-075); never saved here.
-      - uses: actions/cache/restore@v4
+      - uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: ~/.cache/rust-gpu
           key: rust-gpu-gpu-kernel-${{ runner.os }}-${{ steps.toolchain.outputs.channel }}
-      - uses: taiki-e/install-action@v2
+      - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
         with:
           tool: cargo-mutants@27.1.0,cargo-nextest@0.9.146
       # What the mutated packages' tests need, as in `mutants.yml`: Python and PyYAML, lavapipe, and the kernel's SPIR-V
       # and WGSL, built as the cargo call the alias expands to (setup for the tests, not one of the checks).
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
       - name: Install PyYAML
@@ -394,7 +395,7 @@ jobs:
           echo "cargo mutants $PACKAGE shard $SHARD: exit $code, wall-clock $(( $(date +%s) - start )) s"
           df -h /
           case $code in 0|2|3) ;; *) exit "$code" ;; esac
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:
           name: mutants-nightly-shard-${{ matrix.package }}-${{ matrix.k }}
@@ -411,7 +412,7 @@ jobs:
     needs: [mutants-plan, mutants]
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           pattern: mutants-nightly-shard-*
           path: ${{ runner.temp }}/shards
@@ -450,7 +451,7 @@ jobs:
             echo "::error::$uploaded of ${expected:-?} shards reported, $dealt of ${total:-?} mutants (R-402)"
             exit 1
           fi
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:
           name: mutants-nightly-report

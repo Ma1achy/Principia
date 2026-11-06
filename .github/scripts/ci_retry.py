@@ -128,10 +128,17 @@ def job_ids(workflow_text):
     for jid, job in jobs.items():
         job = job or {}
         name = str(job.get("name", jid))
-        parts = re.split(r"\$\{\{.*?\}\}", name)
-        pattern = ".+?".join(re.escape(p) for p in parts)
-        if len(parts) == 1 and (job.get("strategy") or {}).get("matrix"):
-            pattern += r" \(.+\)"
+        matrix = (job.get("strategy") or {}).get("matrix") or {}
+        # A gate of `ci.yml` is named by a one-value matrix (R-684): that value is its whole name, and a pattern of
+        # "anything" would claim every other job.
+        whole = re.fullmatch(r"\$\{\{\s*matrix\.(\w+)\s*\}\}", name)
+        if whole and isinstance(matrix, dict) and isinstance(matrix.get(whole.group(1)), list):
+            pattern = "(?:" + "|".join(re.escape(str(v)) for v in matrix[whole.group(1)]) + ")"
+        else:
+            parts = re.split(r"\$\{\{.*?\}\}", name)
+            pattern = ".+?".join(re.escape(p) for p in parts)
+            if len(parts) == 1 and matrix:
+                pattern += r" \(.+\)"
         needs = job.get("needs") or []
         if isinstance(needs, str):
             needs = [needs]

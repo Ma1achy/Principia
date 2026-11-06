@@ -858,6 +858,32 @@ pub struct Scratch {
     pub editing: [bool; 2],
     /// The figure's point the right-click menu was opened on, in `(s, t)`.
     pub menu_at: Option<(f64, f64)>,
+    /// The open console's top edge, this frame: what the basis editors and the popups are held against (R-463 K2).
+    pub console_top: Option<f32>,
+}
+
+/// Closes the popup of `control`, open, once the console reaches the control: its layer is above the console's, so it
+/// would stay over the console and take its clicks with nothing left to show what opened it (R-463 K2). A popup that
+/// only hangs over the console from a control that shows stays, or the docked console would shut the panels' longer
+/// lists (applied per R-369). The pass is run again, so it is not drawn.
+pub fn close_under_console(control: &Response, console_top: Option<f32>) {
+    close_when_reached(control, control.rect, console_top);
+}
+
+/// Closes the popup of `owner`, open, once the console reaches `control`, what opened it.
+pub fn close_when_reached(owner: &Response, control: Rect, console_top: Option<f32>) {
+    let popup = egui::Popup::default_response_id(owner);
+    if console_top.is_some_and(|top| control_reached(control, top))
+        && egui::Popup::is_id_open(&owner.ctx, popup)
+    {
+        egui::Popup::close_id(&owner.ctx, popup);
+        owner.ctx.request_discard("a popup the console reached");
+    }
+}
+
+/// Whether the console's top edge `top` reaches `control`.
+pub fn control_reached(control: Rect, top: f32) -> bool {
+    control.max.y > top
 }
 
 /// What the panel, the compass and the figure ask for in one frame.
@@ -872,6 +898,8 @@ pub struct Out {
     pub windows: Vec<Window>,
     /// The console's lines for the physical steers refused (R-550).
     pub refusals: Vec<String>,
+    /// The scope the focus goes back to, off a basis editor the console has hidden.
+    pub focus: Option<ScopeId>,
 }
 
 impl Out {

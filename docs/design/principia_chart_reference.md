@@ -305,6 +305,75 @@ does not write (the virial ratio's, a ratio's range in the logits) are REQ-CHART
 under physics review before a chart offers them. The decoder-bug warning (R-467, clause 4) is for a chart whose
 physical-quantity axes are all warped.
 
+**The `PE` axis: no chart offers it (REQ-CHART-070, R-471 H2).** `PE = U` is a function of the configuration and the
+masses alone, so a `PE` axis would solve into the configuration block, not the momenta (kind 3, reading the masses).
+At the masses and scale gauge (§0.5) it is unbounded below, toward a collision; a level `U = U*` is a curve in the
+configuration's DOF, so an axis of it needs a residual convention to pick a point on that curve, as well as a warp of
+`t` onto the range. This
+section writes neither, so no chart offers a `PE` axis: the well-posedness validator refuses one (TASK-M2-37). A warp
+for it is a new paragraph here, under physics review, before any chart offers it.
+
+**The virial ratio's warp (REQ-CHART-070, R-506 W2).** For `Q = 2K/|U|` (`U < 0` at positive masses), the axis keeps
+its own asked range `[Q_lo, Q_hi]`, as a Chart-builder axis does (R-471 H4; render_gui_spec §G7). Warped, it runs
+over the range's feasible part `[Q₀, Q_hi]`, `Q₀ = max(Q_lo, 0)`: `Q(t) = Q₀ + (Q_hi − Q₀)·t^γ_K`, where `γ_K` is this
+section's exponent, so the range `[0, Q_max]` gives `Q_max·t^γ_K`; a range with `Q_hi ≤ 0` has no feasible part, and
+no chart offers it. The kinetic energy at the pixel is `K* = Q(t)·|U|/2`, using the pixel's own `U` (E3). `K*` is
+built by §2.2's construction at the chart's held `L_z`. At a held `L_z = 0` every pixel of `[0,1]²` is feasible,
+since `K* ≥ 0`; at a held `L_z ≠ 0` the next paragraph adds the floor. The axis is bounded past both of its edges. Under the linear option the axis is
+`Q(t) = Q_lo + (Q_hi − Q_lo)·t`, affine, over the asked range, and its pixels with `Q < 0` or `K* < L_z²/2I` are not a
+system.
+
+**A warped `t` axis at a held `L_z ≠ 0` stands on the floor (the owner's ruling of 4 Nov 2026 on RQ-683).** A lone
+`K`, `KE`, `E` or virial axis holds `L_z` at the chart's value. Warped, its line adds the floor `L_z²/2I`, the least
+kinetic energy that spin allows: `K* = L_z²/2I + K_max·t^γ_K` on `K` and `KE`, `E = U + K*` with that `K*` on `E`, and
+`K* = L_z²/2I + Q(t)·|U|/2` on the virial ratio, the pixel's own `U` and `I`. So every pixel of `[0,1]²` is a system.
+On `K`, `KE` and `E`, and on the virial ratio with `Q₀ = 0`, the bottom row `t = 0` is the floor itself, §2.2's rigid
+rotation with `a = 0`. The top row exceeds `K_max` on `K`, `KE` and `E`, and `Q_hi` on the virial ratio: each is a
+range, and `K_max` is passed past `t = 1` too (R-508). The pixel's own virial ratio `2K*/|U|` is
+`Q(t) + L_z²/(I·|U|)`. On `K`, at `I = 1`, the floor is constant, so a row is a level set of `K`. On the virial ratio
+the offset varies with `U`, so a row is no level set of `2K/|U|`, and a readout of the axis shows the pixel's own
+ratio. With `Q₀ > 0` the additive form is applied until the owner answers RQ-700: the asked bottom `Q₀` is not drawn
+even where it is feasible, and `a ≠ 0` on the bottom row. At a held
+`L_z = 0` the floor is 0 and the lines above stand unchanged. The bottom row must not blank on rounding: the floor is
+the least normal float §2.2's exact test finds feasible at the held `L_z`, `L_z²/2` at `I = 1` rounded, raised one
+float where it rounded below, and never subnormal, so a backend that flushes subnormals keeps it; adding a non-negative
+term to it cannot fall below it. Under the linear option the axis
+keeps its fixed values and no floor is added: its pixels with `K* < L_z²/2I` are not a system and draw blank (R-470).
+The held `L_z`, and the held `K` on an `L_z` axis, is this chart's hidden coordinate under R-633, as the physical
+parameter of the construction that holds its momentum block. No task builds its tilt or its slice: whether and how
+it tilts and slices is RQ-701's. The one exception to every pixel being a system: a held `L_z` whose `L_z²` has no
+finite float at the chart's own precision has no floor, and every pixel of that chart is not a system,
+§2.2's exact test labelling it and `validate` agreeing at that precision. *Was:* "**A warped `t` axis at a held `L_z ≠
+0` is not offered (R-471 E1, R-506; RQ-683).** A lone `K`, `KE`, `E` or
+virial axis holds `L_z` at the chart's value. At a held `L_z ≠ 0` its pixels with `K* < L_z²/2I`, near `t = 0`, would
+be non-systems inside the square, and no warp written here makes them feasible. So no chart offers that axis warped at
+a held `L_z ≠ 0`: `validate` refuses every point of it (applied per R-369, TASK-M2-37). Whether such an axis should
+exist, and under what warp, is RQ-683's. Under the linear option it is offered, its pixels with `K* < L_z²/2I` not a
+system."
+
+**The mass ratio's range in the link's inputs (REQ-CHART-070, R-506 W3).** For two bodies `a` and `b`, the axis is the
+ratio `q = m_b/m_a`, with the third body's mass `m_c` held at its slice-centre value. Then `m_a = (1 − m_c)/(1 + q)`
+and `m_b = q·m_a`. The axis writes the active mass link's inputs, `z_mass = L⁻¹(m)`, and the decode reads the masses
+back through the link, `m = L(z_mass)`, so every pixel's masses are positive and sum to 1.
+
+A ratio is realised when the link's inverse followed by its forward returns its masses `(m_a, m_b, m_c)`, `m_c` at
+its held value, and the ratio `q`, each to within `ε_μ`, relative, since the inverse saturates past what the link
+reaches. The ratio is read as well because each mass within `ε_μ` bounds it only to about `2·ε_μ`, and `q` is what the
+axis labels. Where the logit that sets `m_c` saturates first, the round trip keeps the ratio and moves `m_c`, and
+that ratio is not realised.
+`ε_μ = 10⁻⁶` is the link clamp (chart_decoder_contract § "Three hard requirements on any registered link", item 2;
+inverse_encode_contract Part 3), reused here as the round trip's tolerance, not a new constant.
+
+Warped, `q(t) = q₀·(q₁/q₀)^t`, geometric, over `[q₀, q₁]`: the part of the asked range the link realises at `m_c` and
+at its active parameters. A chart decoded at `f32` holds `m_c` narrowed to `f32`, and rounding it moves the two small
+masses by a relative `δ·m_c/(1 − m_c)`, so the range is the part realised at `m_c` both as held and as narrowed, and
+where those share no ratio, as can happen at a held mass near 1, the chart is not offered. The `ε_μ` test runs at f64
+arithmetic on the narrowed values, and an `f32` decode's own rounding is held to Tier N (parity_contract §4). The axis
+is bounded past both of its edges.
+
+Linear, `q(t) = q_lo + (q_hi − q_lo)·t`, affine, over the asked range. A pixel whose ratio is at or below 0, or is not
+realised, is not a system.
+
 ### 2.2 Deterministic momentum construction
 
 Given target `Lz` and `K*`, construct `pᵢ` with `Σpᵢ = 0`, `K = K*`, `Lz` as specified. Work in

@@ -363,7 +363,7 @@ const STEP: &str = "      - name: cargo xtask ci --partition ${{ matrix.shard }}
      run: cargo xtask ci --partition ${{ matrix.shard }}/4\n";
 
 const AFTER: &str = "      - name: Runner disk after cargo xtask ci\n        \
-     if: always()\n        run: df -h /\n      - uses: actions/upload-artifact@v4\n        \
+     if: always()\n        run: df -h /\n      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2\n        \
      if: always()\n        with:\n          name: runner-disk-xtask-ci-${{ matrix.shard }}\n          \
      path: ${{ runner.temp }}/runner-disk.log\n";
 
@@ -388,7 +388,7 @@ negative_control!(
     "the upload only on a pass, when a failure is what it's for",
     expected = "the samples are not uploaded straight after the step",
     check_wired(&read(".github/workflows/ci.yml").replace(
-        "      - uses: actions/upload-artifact@v4\n        if: always()\n",
-        "      - uses: actions/upload-artifact@v4\n",
+        "      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2\n        if: always()\n",
+        "      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2\n",
     ))
 );

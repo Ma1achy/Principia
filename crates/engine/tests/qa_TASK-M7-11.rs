@@ -136,6 +136,7 @@ fn sim() -> SimConfig {
     SimConfig {
         chart: Chart {
             window: Window::SQUARE,
+            mapping: Default::default(),
         },
         plane: Plane {
             z0: [0.0; 8],

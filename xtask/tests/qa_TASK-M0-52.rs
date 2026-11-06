@@ -543,8 +543,8 @@ negative_control!(
     expected = "shard builds or compiles of its own: `cargo build --workspace`",
     check_archive(&edited(
         &the_workflow(),
-        "      - uses: actions/download-artifact@v4\n",
-        "      - run: cargo build --workspace\n      - uses: actions/download-artifact@v4\n"
+        "      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0\n",
+        "      - run: cargo build --workspace\n      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0\n"
     ))
 );
 
@@ -575,8 +575,8 @@ negative_control!(
     expected = "downloads no artifact `nextest-ci` there",
     check_archive(&edited(
         &the_workflow(),
-        "      - uses: actions/download-artifact@v4\n        with:\n          name: nextest-ci\n",
-        "      - uses: actions/download-artifact@v4\n        with:\n          name: nextest-other\n"
+        "      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0\n        with:\n          name: nextest-ci\n",
+        "      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0\n        with:\n          name: nextest-other\n"
     ))
 );
 

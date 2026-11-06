@@ -1126,7 +1126,14 @@ constant terms, rounds to `−MAX` (as for `stick_breaking` with `z₁ > 0`, who
 number). The other entries are finite for every finite control. The
 forms: each `log sech² x` as `2·(log 2 − abs(x) − softplus(−2·abs(x)))`, each `log σ(x)` as `−softplus(−x)`, and
 stick-breaking's `s` and `1 − s` as `σ(2z₁) − ½ε_μ·tanh z₁` and `σ(−2z₁) + ½ε_μ·tanh z₁` (and `u`, `1 − u` likewise
-in `z₂`).
+in `z₂`). Its inverse is written likewise, since `2v − 1` at a small `v` cancels against 1 the digits an `f32` mass
+rests on: with `c = 1 − ε_μ`, `z = ½ log(clamp(N(v)/N(w), ε_μ/(1 + c), (1 + c)/ε_μ))`,
+`N(a) = clamp(2a − ε_μ·t, c·ε_μ·t, c·(1 + c)·t)`, `t = v + w`, for `z₁` with `(v, w) = (m₁ + m₂, m₀)` and for `z₂` with
+`(v, w) = (m₂, m₁)`. That is the table's inverse with `artanh(x) = ½ log((1 + x)/(1 − x))` cancelled by hand, the limits
+of `N`'s clamp the table's `±(1−ε_μ)²`. The outer clamp's limits are the quotient those give, so it moves nothing
+but rounding on the open simplex, and at an exact corner it is the clamp the paragraph above speaks of, with the
+table's value. The form reads `m₀`, which the table's does not, and it is homogeneous in `t`, so a simplex within
+rounding is enough.
 
 - **The edge-reaching simplex link** *(definition, R-72; REQ-GEN-026)* is the stick-breaking map above. Where
   `softmax_tanh` stops at mass ratios `e^(±2μ_max)`, it reaches within `ε_μ/2` of each edge and of the corner
