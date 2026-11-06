@@ -101,7 +101,7 @@ alone does not answer the owner's question; the bits at identical operands do, a
   a march on the card should differ from the first such step whatever contraction does. The discriminating result is differing
   bits at bit-identical operands, in a branch input of kind `+ and ×` (R-547; R-690). That points at contraction, reassociation or
   distribution. A difference in a branch input of kind `other operation` is not attributable that way.
-- **The kind is read from `branch_inputs.rs`'s written form, not assumed.** `E_rel = ½|Δv|² − (M_pair + m_b)/d` is the physics definition, not the branch input's written form, which TASK-M4-03 writes and proves. By REQ-INT-064 and REQ-INT-061, `E_rel` and `|Δn̂|` are meant to be of kind `+ and ×`, so their operands are read like `d²`'s. A written form that holds a division or `fma` is reported as `other operation` and named as departing from REQ-INT-064.
+- **The kind is read from `branch_inputs.rs`'s written form, not assumed.** `E_rel = ½|Δv|² − (M_pair + m_b)/d` is the physics definition, not the branch input's written form, which TASK-M4-29 writes and TASK-M4-03 enumerates (R-694). By REQ-INT-064 and REQ-INT-061, `E_rel` and `|Δn̂|` are meant to be of kind `+ and ×`, so their operands are read like `d²`'s. A written form that holds a division or `fma` is reported as `other operation` and named as departing from REQ-INT-064; the ionisation gate's stored `E_0` sign, R-710's enumerated exception (RQ-697 (b)), is outside REQ-INT-064's "must agree", so it is reported as `other operation` and names no departure.
 - **A shared state is not shared operands.** `detect_terminal` runs after the STEP, so the collision test reads `d²` of post-STEP
   positions, which have been through the force loop's divisions. A collision fork in `--replay` has identical inputs at the
   replay's level, and `d²` is `+` and `×`, but if its positions differ it is an upstream difference and convicts no driver. That is why the fixed-input arm reads `detect_terminal`'s inputs on the given state, with no STEP.
@@ -122,3 +122,5 @@ alone does not answer the owner's question; the bits at identical operands do, a
 - **Why TASK-M4-18 is a dependency:** it owns the fixture set and the label-flip report on Metal and lavapipe. This task adds the
   other two backends, the per-pair table and the per-trajectory results, and does not change that report.
 - Applied per R-369 (R-686): its own task, not a part of the fix task, TASK-M6-53, since the mock's fix needs no march.
+- *4 Nov 2026 (R-696):* RQ-687's option (a), the kernel's own `sin` and `cos`, is decided on this check and TASK-M4-27's; the entry stays open for it.
+- *4 Nov 2026 (R-694, R-710):* the kind note reads TASK-M4-29 and the `E_0` exception. *Was:* "which TASK-M4-03 writes and proves" and "named as departing from REQ-INT-064." with no exception.
