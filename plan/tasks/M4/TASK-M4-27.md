@@ -56,8 +56,9 @@ that. It is the first test of R-690's driver condition, on fixed inputs.
   `branch_inputs.rs` isn't used: it lists the march's inputs and this task must not wait for it. The list gives each input of the first kind
   the kernel function the arbiter evaluates, called at f32 with no second copy. The comparison gives each such row its level (Notes).
 - The read-back, `crates/kernel/src/stage/branch_read.rs`, the source of a row's bits: one compute entry for canon and one for each decode variant the
-  inputs run, built into `target/spirv/kernel.wgsl` as `stage_branch_read_*`, with a dispatcher beside `canonicalise_gpu` in
-  `crates/engine/src/decode_dispatch.rs`. It is a module of its own because `decode_cross_backend_registry` takes every `stage_decode_` entry for a decode
+  inputs run, `stage_branch_read_*`, with a dispatcher beside `canonicalise_gpu` in
+  `crates/engine/src/decode_dispatch.rs`. There is one rust-gpu build; `xtask/src/build_kernel.rs` parts its entries through naga, as `xtask/src/fragment_wgsl.rs` does: `target/spirv/kernel.wgsl`
+  stays the production module, without them, and `target/spirv/branch_read.wgsl` holds them alone, the file every read-back dispatch and any later comparison loads (applied per R-369, code review of PR #431: no runtime path runs these entries, and a pipeline's cost follows the module's size). It is a module of its own because `decode_cross_backend_registry` takes every `stage_decode_` entry for a decode
   variant it must run. No parity-only physics: each branch's input and decision move into a function that its production site and the
   entry both call, with no change of behaviour, and CPU f32's record calls the same functions at f32. For each branch the entry emits
   the outcome, and for kind `+ and ×` the expression's own operands and the input's bits, both sides of a comparison, a `Wide`'s
@@ -95,6 +96,7 @@ that. It is the first test of R-690's driver condition, on fixed inputs.
 - `cargo xtask build-kernel`, then `PRIN_GPU_BACKEND=metal cargo xtask gate cross-backend-branches --record metal.json`, on the Mac through the job queue; `gh workflow run gate.yml --ref <branch> -f milestone=M4`, its `cross-backend records` step giving `lavapipe.json` and `cpu-f32.json`, fetched with `gh run download`; then `cargo xtask gate cross-backend-branches --compare metal.json lavapipe.json cpu-f32.json` on the Mac through the job queue, `comparison.md` committed. In the PR:
   each pair's rate, the adapter lines and each driver's standing under R-690's condition; the header states the domain; every backend pair is listed, NVIDIA's as "not run"
   until its record is posted (REQ-VAL-347).
+- `cargo xtask build-kernel` — `target/spirv/kernel.wgsl` holds no `stage_branch_read_*` entry and is back to its size before this task, within a few bytes; `target/spirv/branch_read.wgsl` holds those entries alone, in `xtask/tests/build_kernel.rs`, and the PR shows both sizes (REQ-VAL-347).
 - `python3 plan/check_plan.py`.
 
 ## Notes
