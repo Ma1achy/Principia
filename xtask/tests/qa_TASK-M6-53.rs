@@ -6,13 +6,15 @@
 //!   What classifies each path is `qa_R-662_ci_scope.rs`'s; here, that the five are all the step reads: a sixth file it
 //!   reads would fail on `main` first, with no ruling behind that gap.
 //!
-//! Each check runs its control through [`rejects`] (R-176): the shipped text with one change.
+//! Each check runs its controls through [`rejects`] (R-176): the shipped text with one change. Each test also has its
+//! `negative_control!`, so `cargo xtask controls` can see it fail (REQ-VAL-147, R-199).
 
 // The file name `qa_TASK-M6-53` gives a crate name that is not snake case.
 #![allow(non_snake_case)]
 
 use std::path::{Path, PathBuf};
 
+use validation::negative_control;
 use yaml_rust2::{Yaml, YamlLoader};
 
 /// `gpu-metal`'s step, as the task's Deliverables give it.
@@ -138,6 +140,17 @@ fn qa_m653_lattice_tests_block_on_metal_and_on_lavapipe() {
     rejects("an archive without gui", || assert_lavapipe(&excluded));
 }
 
+negative_control!(
+    qa_m653_lattice_tests_block_on_metal_and_on_lavapipe,
+    "gpu-metal with no step that runs the lattice tests",
+    expected = "gpu-metal's lattice step",
+    assert_metal(&parse(&changed(
+        &read(".github/workflows/ci.yml"),
+        &format!("run: {STEP}"),
+        "run: cargo nextest run -p gui no_such_test --no-capture",
+    )))
+);
+
 /// R-692's list, read from the ruling's own words.
 fn is_listed(path: &str) -> bool {
     path.strip_prefix("crates/gui/src/mock/")
@@ -240,3 +253,13 @@ fn qa_m653_the_step_reads_only_r692s_five_paths() {
     assert!(selected_test("#[test]\n#[ignore]\nfn lattice_a() {}"));
     assert!(!selected_test("#[test]\nfn other() {}\nfn lattice_a() {}"));
 }
+
+negative_control!(
+    qa_m653_the_step_reads_only_r692s_five_paths,
+    "the step's test reading a file off R-692's list",
+    expected = "off R-692's list",
+    assert_includes_listed(
+        "crates/gui/src/tests/mock_lattice.rs",
+        "include_str!(\"mock_other.wgsl\")",
+    )
+);
