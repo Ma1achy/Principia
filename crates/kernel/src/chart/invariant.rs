@@ -87,10 +87,14 @@ fn select<T: Copy>(c: bool, t: T, f: T) -> T {
     }
 }
 
-/// The float below a non-negative float, for [`l_max`]'s steps down.
+/// The floats beside a non-negative float, for [`l_max`]'s steps down and [`k_floor`]'s step up.
 pub trait WarpReal: ExactSign {
     /// The next float toward 0 from a positive finite `self`; `self` itself at `±0`.
     fn below(self) -> Self;
+
+    /// The next float up from a non-negative finite `self`; `self` itself at `+∞` and NaN, read on the bits (the
+    /// determinism note's rule 4: no non-finite literal).
+    fn above(self) -> Self;
 }
 
 impl WarpReal for f32 {
@@ -99,6 +103,12 @@ impl WarpReal for f32 {
         let bits = self.to_bits();
         f32::from_bits(bits - select(bits & 0x7FFF_FFFF == 0, 0, 1))
     }
+
+    #[inline]
+    fn above(self) -> f32 {
+        let bits = self.to_bits();
+        f32::from_bits(bits + select(bits < 0x7F80_0000, 1, 0))
+    }
 }
 
 impl WarpReal for f64 {
@@ -106,6 +116,12 @@ impl WarpReal for f64 {
     fn below(self) -> f64 {
         let bits = self.to_bits();
         f64::from_bits(bits - select(bits & 0x7FFF_FFFF_FFFF_FFFF == 0, 0, 1))
+    }
+
+    #[inline]
+    fn above(self) -> f64 {
+        let bits = self.to_bits();
+        f64::from_bits(bits + select(bits < 0x7FF0_0000_0000_0000, 1, 0))
     }
 }
 
@@ -122,6 +138,24 @@ fn lower<R: WarpReal>(k: R, l: R) -> R {
 pub fn l_max<R: WarpReal>(k: R) -> R {
     let root = Float::sqrt(k + k);
     lower(k, lower(k, lower(k, lower(k, root))))
+}
+
+/// The floor `L_z²/2I` at `I = 1`, the least normal float the exact test finds feasible at `L_z = l`, 0 at `l = ±0` on
+/// `l`'s bits: the rounded `l²/2`, at least the least normal float, one float up where it rounded below, as it can by at
+/// most one float. Never subnormal, so a backend that flushes subnormal results (the determinism note's rule 6) keeps
+/// it, and the sum on it, and no subnormal reaches the exact test. Unlike [`l_max`], the floor is
+/// on `K*`, the operand a warped `t` axis adds to (chart_reference §2.1), and adding a non-negative term cannot take a
+/// rounded sum below it, so a pixel above the floor stays feasible. Multiplication alone: a backend may round a quotient
+/// by more than half a float, and this result decides a branch. An `l` whose `l²` has no finite float has no floor:
+/// its value saturates at half the greatest finite float, so `K*` stays finite, the construction's `2K*` too, and the
+/// exact test finds the pixel infeasible, `2K* < l²`, at every precision.
+#[inline]
+pub fn k_floor<R: WarpReal>(l: R) -> R {
+    let most = R::max_value() * R::two_to(-1);
+    let k = Float::max(l * l * R::two_to(-1), R::min_positive_value());
+    let k = Float::min(k, most);
+    let k = select(infeasible(R::one(), k, l), Float::min(k.above(), most), k);
+    select(l.binade().zero, R::zero(), k)
 }
 
 /// A chart point's targets under the warp: the kinetic energy `K* = K(t)`, `L_max(t)` and `L_z(s, t)`.

@@ -498,6 +498,18 @@ in only when the pull request conflicts with `main`, when a merged change it dep
 right before the `merge-ready` label, after the reviewers' approvals and before § "Merging" step 2's merged-tree check.
 Approvals are of a head, so the reviewers approve the merged head again before the watcher labels it.
 
+**CI demand (R-713).** A head not ready for review is not pushed, and pushes go in order of what is closest to merging.
+
+**Automatic retries and disk (R-714).** `retry.yml` re-runs failed jobs only on a runner-level fault, in at most two retries, never on a real test failure or a flake; its classifier is tested on saved logs. Every CI speed-up step reports the lowest free disk per job, before and after, and must reduce or hold it.
+
+**Measuring CI (R-715).** A speed-up is claimed or rejected only on medians over at least 5 runs per arm, with per-step durations and `cargo build --timings` totals. `ci-workspace` red on a test timer is diagnosed first, as disk pressure, runner load or a slow test; the retry doesn't cover it, the timeout isn't raised, and the cause is fixed or the shard split.
+
+**CI candidates (R-716).** The ten candidates are worked one pull request each, measured before and after, negative results reported. Items 3 and 4 and the order against R-683 are held in RQ-703, RQ-705 and RQ-706.
+
+**No refresh merges (R-717).** `main` is not merged into a pull request, and CI is not re-run, just to refresh a branch with no conflict. RQ-704 holds this against R-676's paragraph in this section and R-388.
+
+**Generated files (R-718).** A generated plan file is not committed if nothing needs it in git. Otherwise it is marked in `.gitattributes`, a conflict in it is resolved by regenerating, never by hand, and a check shows the committed copy matches a fresh regeneration.
+
 **Numbers.**
 - **An RQ's form.** A heading `## RQ-n: <question>`, a `- **File, section:**` field and a `- **Applied meanwhile:**`
   field (§ "Escalation" of `plan/WORKFLOW.md`); the plan check fails an entry without them.
@@ -910,6 +922,12 @@ anything outside the repository and its build and scratch directories without as
 - Benchmarks and performance gates run on the human's Mac via `prin profile` (R-186), never on a hosted runner or a
   cloud machine. A cloud session never reports a performance number of its own: it asks the human for the run, and its
   PR says it waits for it (`plan/WORKFLOW.md`).
+
+## Windows GPU results (R-719)
+
+- A Windows-only, non-reproducing GPU result is hardware-suspect: record it, and file it as a code bug only if it reproduces on Metal or lavapipe, or deterministically on Windows.
+- A result that reproduces is checked against Metal and lavapipe. Failing everywhere is our bug. Passing elsewhere is NVIDIA Vulkan specific: file it as a platform finding, with no re-baselining.
+- Once the DX12 opt-in lands, the same card is the second discriminator: the same failure points at the card or our code, a different one at the Vulkan driver path.
 
 ## `measure/` branches (R-272)
 

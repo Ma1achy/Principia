@@ -125,6 +125,8 @@ boundaries (R-565; the probe's grid was 0.1), for three pairs: **f32–f64** (wh
 - **Parted at**: the first boundary at which the chord exceeds **0.1**, the decorrelation threshold (separation at the
   system's own scale: Boekholt 2015, Hernandez et al. 2020).
 
+*4 Nov 2026 (R-702, closing RQ-648):* both values are chosen by analogy with those papers, not transferred: their 10⁻³ and 10⁻¹ are phase-space measures, for f64 against a converged code, and these marks are chords on the shape sphere, for f32 against f64. The marks themselves do not change: they are measured, shown and editable.
+
 A pair whose chord never exceeds a mark reads "did not part by `T`" for it. `t_part(f32)` below is the f32–f64 pair's
 "parted at", and `t_part(f64)` the f64–f64′ pair's.
 
@@ -345,7 +347,8 @@ the nominal copy, as the f32 run must be to equal the atlas pixel's.
   its predicted ratio, compared with 1, never with `ln eps₃₂ / ln eps₆₄ ≈ 0.44`. Never read off one trajectory. A
   start a pair of which has not parted by the horizon `T` is censored: that pair's `t_part` is taken as `T`, the
   start's ratio is a bound, it stays in the median over all 256, and the count of censored starts is reported; the
-  gate is valid only if fewer than half of the 256 are censored (R-632, closing RQ-575: Q1 (a), Q2 (ii)). The
+  gate is valid only if fewer than half of the 256 are censored (R-632, closing RQ-575: Q1 (a), Q2 (ii)). *4 Nov 2026
+  (R-703, closing RQ-655):* with neither pair parted the ratio bounds nothing, so such a start reads "unresolved" in the report, counted apart from the one-sided bounds, and stays in the median. The
   tolerance on the median's distance from 1 is a calibration for the gate (REQ-VAL-199). It tests the parting ratio, not
   outcome statistics. Its median's 95% rank interval over 256 is ranks 112 to 145, the quantiles 0.44 to 0.57, and c bounds
   of one direction move the affected end out by c ranks, unbounded at 112 or more; for scale, a KS at 5% over 256 has critical

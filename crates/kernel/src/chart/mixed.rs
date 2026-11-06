@@ -267,7 +267,7 @@ fn pick<F>(k: Coordinate, at: Coordinate, x: F, w: F) -> F {
 
 /// `z` with the coordinate `at` set to `x`, each component read by a literal index (gpu_determinism_note rule 5).
 #[inline]
-fn place<F: Copy>(z: [F; 8], at: Coordinate, x: F) -> [F; 8] {
+pub(super) fn place<F: Copy>(z: [F; 8], at: Coordinate, x: F) -> [F; 8] {
     use Coordinate::*;
     [
         pick(ZAlpha, at, x, z[0]),
@@ -283,7 +283,7 @@ fn place<F: Copy>(z: [F; 8], at: Coordinate, x: F) -> [F; 8] {
 
 /// `lo + (hi − lo)·t`.
 #[inline]
-fn lerp<F: Float>(range: [F; 2], t: F) -> F {
+pub(super) fn lerp<F: Float>(range: [F; 2], t: F) -> F {
     range[0] + (range[1] - range[0]) * t
 }
 
@@ -388,7 +388,7 @@ impl<H: Quantity, V: Quantity, P: Copy> Mixed<H, V, P> {
 /// One axis's check at `t` on `range` against the domain `[lo, hi]` (the module's note): `Ok(t)` inside the domain,
 /// `Ok(t′)` with `t′ ≠ t` where the axis meets the domain's edge, `Err(())` where nothing can be clamped: a value that
 /// is not finite, a range of no width or of a width past f64's range, or an edge four inward steps of `t` do not reach.
-fn axis_check([lo, hi]: [f64; 2], range: [f64; 2], t: f64) -> Result<f64, ()> {
+pub(super) fn axis_check([lo, hi]: [f64; 2], range: [f64; 2], t: f64) -> Result<f64, ()> {
     let x = lerp(range, t);
     if !x.is_finite() {
         return Err(());

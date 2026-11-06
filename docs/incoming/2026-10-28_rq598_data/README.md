@@ -203,6 +203,8 @@ NvMgeneration, not AMUSE, and pilot BR-1 from the NVM starting points"); the blo
 - **Checked and rejected** (R-642), with the owner's reasons:
   - `https://github.com/dosier/TBP-Group-39-TrainData`: no data, different initial conditions;
   - `https://github.com/stipefrkovic/three-body-problem`: non-zero velocities, Verlet.
+*4 Nov 2026 (R-701):* the questions RQ-612, RQ-613, RQ-615 and RQ-616 add to the emails below are in `QUESTIONS_for_authors.md`, in this directory.
+
 - **The emails.** The owner is emailing Breen (the full ~10⁴ set) and Boekholt (GG-1's per-point lifetimes) regardless.
 - **The gates of R-638.** Fig. 1 reconciles to exactly 1212 points per panel (met, § 5 item 2). The measured cost per
   point is reported before any Brutus run is scaled or goes below ε = 10⁻⁶ (`brutus_run_here/REPORT.md`); R-640's

@@ -42,6 +42,7 @@ fn sim() -> SimConfig {
     SimConfig {
         chart: Chart {
             window: engine::contract::sim_config::Window::SQUARE,
+            mapping: Default::default(),
         },
         plane: Plane {
             z0: [0.0; 8],
@@ -439,6 +440,7 @@ impl EngineInterface for Broken {
                 horizon: self.horizon.clone(),
                 chart: Chart {
                     window: self.window,
+                    mapping: Default::default(),
                 },
                 slice: Slice { frame: self.frame },
                 ..sim()
