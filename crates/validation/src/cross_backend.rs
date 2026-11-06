@@ -2128,6 +2128,8 @@ pub struct Count {
     pub other: u64,
     /// Rows at operands two GPUs share and CPU f32's run didn't produce, the host's evaluation agreeing.
     pub arbitrated: u64,
+    /// Rows at such operands whose bits or outcome the host's evaluation does not give: failures, outside N.
+    pub arbitrated_failed: u64,
 }
 
 /// A failure of R-690's condition.
@@ -2201,8 +2203,10 @@ pub struct Comparison {
 /// What one row of a driver reads against the arbiter.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Judged {
-    /// Level 2 or 3.
+    /// Level 2 or 3, at CPU f32's operands.
     Fails(u8),
+    /// Level 2 or 3, at operands two GPUs share, against the host's evaluation.
+    ArbitratedFails(u8),
     /// Reached the test, at CPU f32's operands, and agrees.
     Clean,
     /// Reached the test, at operands two GPUs share, and agrees.
@@ -2231,8 +2235,8 @@ fn judge(l: Option<&Listed>, kind: Kind, row: &Row, cpu: Option<&Row>, others: &
         return Judged::Upstream;
     }
     match l.and_then(|l| l.evaluate(row.operands)) {
-        Some((_, bits)) if bits != row.bits => Judged::Fails(2),
-        Some((outcome, _)) if outcome != row.read_outcome => Judged::Fails(3),
+        Some((_, bits)) if bits != row.bits => Judged::ArbitratedFails(2),
+        Some((outcome, _)) if outcome != row.read_outcome => Judged::ArbitratedFails(3),
         Some(_) => Judged::Arbitrated,
         None => Judged::Upstream,
     }
@@ -2396,20 +2400,39 @@ pub fn compare(records: &[Record]) -> Result<Comparison, String> {
                 let count: &mut Count = counts[i]
                     .entry((branch.to_owned(), entry.to_owned()))
                     .or_default();
-                match judge(l, kind, row, on_cpu, &others) {
+                let failed = match judge(l, kind, row, on_cpu, &others) {
                     Judged::Fails(level) => {
                         count.n += 1;
-                        failures[i].push(Failure {
-                            branch: branch.to_owned(),
-                            entry: entry.to_owned(),
-                            level,
-                            input,
-                        });
+                        Some(level)
                     }
-                    Judged::Clean => count.n += 1,
-                    Judged::Arbitrated => count.arbitrated += 1,
-                    Judged::Upstream => count.level_1 += 1,
-                    Judged::Other => count.other += 1,
+                    Judged::ArbitratedFails(level) => {
+                        count.arbitrated_failed += 1;
+                        Some(level)
+                    }
+                    Judged::Clean => {
+                        count.n += 1;
+                        None
+                    }
+                    Judged::Arbitrated => {
+                        count.arbitrated += 1;
+                        None
+                    }
+                    Judged::Upstream => {
+                        count.level_1 += 1;
+                        None
+                    }
+                    Judged::Other => {
+                        count.other += 1;
+                        None
+                    }
+                };
+                if let Some(level) = failed {
+                    failures[i].push(Failure {
+                        branch: branch.to_owned(),
+                        entry: entry.to_owned(),
+                        level,
+                        input,
+                    });
                 }
             }
         }
@@ -2578,16 +2601,16 @@ impl Comparison {
                 Some(s) => {
                     t.push_str(&format!(
                         "\n### {b}: {}\n\nDomain: {}.\n\n\
-                         | branch input | entry | kind | N | level 1 | other operation | shared operands, host agrees |\n\
-                         |---|---|---|---|---|---|---|\n",
+                         | branch input | entry | kind | N | level 1 | other operation | shared operands, host agrees | \
+                         shared operands, host differs |\n|---|---|---|---|---|---|---|---|\n",
                         s.word.text(),
                         s.domain
                     ));
                     for ((branch, entry), c) in &s.counts {
                         let kind = listed(branch).map_or("", |l| l.kind.word());
                         t.push_str(&format!(
-                            "| {branch} | {entry} | {kind} | {} | {} | {} | {} |\n",
-                            c.n, c.level_1, c.other, c.arbitrated
+                            "| {branch} | {entry} | {kind} | {} | {} | {} | {} | {} |\n",
+                            c.n, c.level_1, c.other, c.arbitrated, c.arbitrated_failed
                         ));
                     }
                     let mut tally: BTreeMap<(&str, &str, u8), (u64, u32)> = BTreeMap::new();

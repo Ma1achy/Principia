@@ -480,10 +480,18 @@ fn check_arbitrated() {
             level_1: 0,
             other: 0,
             arbitrated: 4,
+            arbitrated_failed: 0,
         }
     );
     assert_eq!(c.pair("Metal", "lavapipe").unwrap().level_2, 1);
-    assert_eq!(c.standing("lavapipe").unwrap().failures[0].level, 2);
+    let l = c.standing("lavapipe").unwrap();
+    assert_eq!(l.failures[0].level, 2);
+    let count = l.counts[&("M01_TINY".to_owned(), ENTRY.to_owned())];
+    assert_eq!(
+        (count.n, count.arbitrated, count.arbitrated_failed),
+        (0, 3, 1),
+        "a failure off CPU f32's operands is outside N"
+    );
 }
 
 #[test]
