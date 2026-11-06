@@ -29144,7 +29144,7 @@
   note: "κ(z): REQ-ENC-025 (definition)."
 - id: REQ-VAL-015
   area: VAL
-  statement: "The invariant-chart gradient view (E_0 or Lz_0 on an (L_z,E)/(L_z,K) chart) must render a perfect axis-aligned gradient; on an (L_z,E) chart the energy it reads is the axis's: E_0 at ε = 0, and the Newtonian energy at ε ≠ 0 (R-791), never the softened E_0."
+  statement: "The invariant-chart gradient view (E_0 or Lz_0 on an untilted (L_z,E)/(L_z,K) chart) must render a perfect axis-aligned gradient; on an (L_z,E) chart the energy it reads is the axis's: E_0 at ε = 0, and the Newtonian energy at ε ≠ 0 (R-791), never the softened E_0."
   source:
   - file: docs/contracts/principia_render_contract.md
     section: Cross-check views (the seams)
@@ -29161,7 +29161,7 @@
   - R-71
   - R-791
   milestone: M2
-  note: "The view's tolerance: REQ-VAL-112 (calibration). R-791 (5 Nov 2026, RQ-693 (b)): reworded to match. *Was:* the statement ended at \"gradient\", and the verify read \"on an (L_z,E) chart, E_0 is constant along\". At ε = 0 nothing changes. The arm's place: physics review 5805354224 of PR #430, F3. *Was (verify):* \"REQ-CHART-092, whose test runs that arm\". Its form: physics review 5805959783 of PR #430, N1. *Was (verify):* \"whose gate arm runs tilted\". The two arms apart: Codex P1 on PR #430: under the warp a shape or mass tilt moves the energy with U, so constancy along L_z holds untilted only. *Was (verify):* \"on an (L_z,E) chart, the axis's energy (E_0 at ε = 0; at ε ≠ 0 the Newtonian energy, REQ-CHART-092, whose gate arm runs under the warp on a chart tilted into a shape or mass control, pixel by pixel, since an untilted chart can't tell the two energies apart) is constant along the L_z axis and monotone along E to within f32 rounding of the target\"."
+  note: "The view's tolerance: REQ-VAL-112 (calibration). R-791 (5 Nov 2026, RQ-693 (b)): reworded to match. *Was:* the statement ended at \"gradient\", and the verify read \"on an (L_z,E) chart, E_0 is constant along\". At ε = 0 nothing changes. The arm's place: physics review 5805354224 of PR #430, F3. *Was (verify):* \"REQ-CHART-092, whose test runs that arm\". Its form: physics review 5805959783 of PR #430, N1. *Was (verify):* \"whose gate arm runs tilted\". The two arms apart: Codex P1 on PR #430: under the warp a shape or mass tilt moves the energy with U, so constancy along L_z holds untilted only. *Was (verify):* \"on an (L_z,E) chart, the axis's energy (E_0 at ε = 0; at ε ≠ 0 the Newtonian energy, REQ-CHART-092, whose gate arm runs under the warp on a chart tilted into a shape or mass control, pixel by pixel, since an untilted chart can't tell the two energies apart) is constant along the L_z axis and monotone along E to within f32 rounding of the target\". Untilted: physics review 5807487754 of PR #430, N5: tilted into a shape or mass control, a warped E follows the pixel's U (R-471 E3). *Was (statement):* \"(E_0 or Lz_0 on an (L_z,E)/(L_z,K) chart)\"."
 - id: REQ-VAL-016
   area: VAL
   statement: "Burrau at ν = 1/2 must reproduce (3,4,5) and the classical configuration to a stated tolerance."
