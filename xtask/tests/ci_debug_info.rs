@@ -438,7 +438,7 @@ mod before_checkout {
         {
             check_jobs(&without_step(|t| {
                 let job = t.find(XTASK_CI).unwrap();
-                let checkout = "      - uses: actions/checkout@v4\n";
+                let checkout = "      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0\n";
                 let at = job + t[job..].find(checkout).unwrap();
                 format!("{}{STEP_TEXT}{}", &t[..at], &t[at..])
             }))

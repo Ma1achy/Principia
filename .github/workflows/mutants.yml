@@ -144,7 +144,7 @@ jobs:
         # gate (R-376; R-71, R-302). A change to n changes this list and `--shard k/8` below.
         shard: [0, 1, 2, 3, 4, 5, 6, 7]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         timeout-minutes: 10
         with:
           fetch-depth: 0
@@ -202,7 +202,7 @@ jobs:
           rustup toolchain install
           echo "channel=$(sed -n 's/^channel = "\(.*\)"$/\1/p' rust-toolchain.toml)" >> "$GITHUB_OUTPUT"
       # The cargo registry `ci.yml`'s `ci` job saves on a push to `main`, restored read-only under its key (R-337).
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         if: steps.diff.outputs.rust == 'true'
         timeout-minutes: 5
         with:
@@ -221,13 +221,13 @@ jobs:
       # restored read-only under the key `ci.yml`'s `gpu-kernel` job saves it under on a push to `main`: that job and the
       # channel rust-toolchain.toml pins, so a toolchain bump starts a fresh cache (R-320, R-337; REQ-SYS-075). Restored
       # in every run that builds the kernel; never saved here.
-      - uses: actions/cache/restore@v4
+      - uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         if: steps.diff.outputs.rust == 'true'
         with:
           path: ~/.cache/rust-gpu
           key: rust-gpu-gpu-kernel-${{ runner.os }}-${{ steps.toolchain.outputs.channel }}
         timeout-minutes: 5
-      - uses: taiki-e/install-action@v2
+      - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
         if: steps.diff.outputs.rust == 'true'
         timeout-minutes: 5
         with:
@@ -236,7 +236,7 @@ jobs:
       # `xtask/tests/nextest.rs` (R-231).
       # What the mutated packages' tests need, as in the per-push jobs: Python and PyYAML for xtask's plan_check
       # tests (TASK-M0-02), lavapipe for the GPU harness (R-169).
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         if: steps.diff.outputs.rust == 'true'
         timeout-minutes: 5
         with:
@@ -368,7 +368,7 @@ jobs:
         env:
           RUSTFLAGS: -C link-arg=-Wl,--compress-debug-sections=zlib -Zmir-enable-passes=-GVN
         run: cargo xtask mutants-check "$RUNNER_TEMP/mutants.out"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         timeout-minutes: 5
         with:
@@ -400,7 +400,7 @@ jobs:
       baseline-seconds: ${{ steps.timeout.outputs.baseline-seconds }}
       timeout: ${{ steps.timeout.outputs.timeout }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         timeout-minutes: 10
         with:
           fetch-depth: 0
@@ -437,7 +437,7 @@ jobs:
         run: |
           rustup toolchain install
           echo "channel=$(sed -n 's/^channel = "\(.*\)"$/\1/p' rust-toolchain.toml)" >> "$GITHUB_OUTPUT"
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         if: steps.diff.outputs.rust == 'true'
         timeout-minutes: 5
         with:
@@ -450,18 +450,18 @@ jobs:
         if: steps.diff.outputs.rust == 'true'
         timeout-minutes: 1
         uses: ./.github/actions/cargo-ci-config
-      - uses: actions/cache/restore@v4
+      - uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         if: steps.diff.outputs.rust == 'true'
         with:
           path: ~/.cache/rust-gpu
           key: rust-gpu-gpu-kernel-${{ runner.os }}-${{ steps.toolchain.outputs.channel }}
         timeout-minutes: 5
-      - uses: taiki-e/install-action@v2
+      - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
         if: steps.diff.outputs.rust == 'true'
         timeout-minutes: 5
         with:
           tool: cargo-mutants@27.1.0,cargo-nextest@0.9.146
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         if: steps.diff.outputs.rust == 'true'
         timeout-minutes: 5
         with:
@@ -562,7 +562,7 @@ jobs:
           cat "$out"
           cat "$out" >> "$GITHUB_OUTPUT"
           { echo "## Measured baseline"; echo; sed 's/$/  /' "$out"; } >> "${GITHUB_STEP_SUMMARY:-/dev/null}"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         timeout-minutes: 5
         with:
@@ -581,7 +581,7 @@ jobs:
     if: github.event_name == 'pull_request' && github.event.action == 'labeled' && github.event.label.name == 'merge-ready'
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         timeout-minutes: 10
       # What this change touches (R-656, R-677): on a pull request of tier (c), docs only, every later step is skipped
       # and the job passes; the fixture shows the gate can fire, and no such change reaches the gate. Unlike the
@@ -608,7 +608,7 @@ jobs:
         timeout-minutes: 5
         run: rustup toolchain install
       # The cargo registry `ci.yml`'s `ci` job saves on a push to `main`, restored read-only under its key (R-337).
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         if: steps.changes.outputs.tier != 'docs'
         timeout-minutes: 5
         with:
@@ -625,7 +625,7 @@ jobs:
         uses: ./.github/actions/cargo-ci-config
       # cargo-nextest: the fixtures' tests run through it, as the shards' do (`test_tool` in `.cargo/mutants.toml`,
       # R-388 item 4).
-      - uses: taiki-e/install-action@v2
+      - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
         if: steps.changes.outputs.tier != 'docs'
         timeout-minutes: 5
         with:
@@ -711,7 +711,7 @@ jobs:
             { echo "::error::mutants-check did not count the timeout"; exit 1; }
           grep -q "timed out (not a survivor): src/lib.rs:.*settled" "$RUNNER_TEMP/skipped-check.log" ||
             { echo "::error::mutants-check did not list the timeout"; exit 1; }
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         timeout-minutes: 5
         with:
@@ -742,7 +742,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         timeout-minutes: 10
       # The toolchain rust-toolchain.toml pins, with its components: rust-gpu's nightly, on which the whole workspace
       # builds (R-169).
@@ -750,7 +750,7 @@ jobs:
         timeout-minutes: 5
         run: rustup toolchain install
       # The cargo registry `ci.yml`'s `ci` job saves on a push to `main`, restored read-only under its key (R-337).
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         timeout-minutes: 5
         with:
           prefix-key: cargo-registry
@@ -763,7 +763,7 @@ jobs:
       - name: Dependencies without debug info, every profile
         timeout-minutes: 1
         uses: ./.github/actions/cargo-ci-config
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         timeout-minutes: 5
         with:
           pattern: mutants-report-shard-*
@@ -832,7 +832,7 @@ jobs:
       actions: read
       pull-requests: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         id: checkout
         timeout-minutes: 10
       # What this change touches (R-677): a change with no `.rs` file under `crates/` has no mutant the gate runs. The

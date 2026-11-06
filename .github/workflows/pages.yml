@@ -22,7 +22,7 @@ jobs:
   build:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       # The toolchain rust-toolchain.toml pins, and the wasm target this workflow alone and `ci.yml`'s `web-skeleton` need.
       - name: rustup toolchain install (rust-toolchain.toml)
         run: rustup toolchain install && rustup target add wasm32-unknown-unknown
@@ -31,7 +31,7 @@ jobs:
       - name: Dependencies without debug info, every profile
         uses: ./.github/actions/cargo-ci-config
       # The version `xtask::web_skeleton::WASM_BINDGEN_VERSION` pins; a test checks the two agree.
-      - uses: taiki-e/install-action@v2
+      - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
         with:
           tool: wasm-bindgen-cli@0.2.129
       - name: cargo xtask web-skeleton
