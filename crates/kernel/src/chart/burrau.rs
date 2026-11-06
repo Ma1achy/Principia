@@ -261,13 +261,14 @@ pub(super) fn unread<F: Float>() -> ChartOut<F> {
     }
 }
 
-/// The layer-3 check on the f64 decode `d` (the module's note): `None` where it is sane. The masses are positive at
+/// The layer-3 check on the f64 decode `d` (the module's note): `None` where it is sane, a decode with no construction
+/// not, its finite momenta no system (chart_reference §4.5). The masses are positive at
 /// every `ν ∈ (0, 1)`, so only the positions and the momenta are read.
 pub(super) fn sanity(d: &Decoded<f64>) -> Option<Constraint> {
     let finite = |v: &[[f64; 2]; 3]| v.iter().flatten().all(|x| x.is_finite());
     if !finite(&d.ic.r) {
         Some(Constraint::ComAtOrigin)
-    } else if !finite(&d.ic.p) {
+    } else if !finite(&d.ic.p) || d.degenerate == Some(Degenerate::InvariantInfeasible) {
         Some(Constraint::MomentumZero)
     } else {
         None

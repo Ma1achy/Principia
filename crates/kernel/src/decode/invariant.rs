@@ -79,7 +79,13 @@
 //! select or a comparison: no `fma` (lavapipe does not fuse an explicit one, RQ-298), no `√`, no division. A backend
 //! that contracts or fuses any `a·b + c` here rounds the same exact product. The claim holds on every backend that
 //! keeps its additions and multiplications correctly rounded and unreassociated (fast-math off, R-84), for identical
-//! finite inputs (PIT-10); non-finite inputs are the decode's non-finite case, not this test's.
+//! finite inputs (PIT-10); non-finite inputs are not this test's.
+//!
+//! **A `K*` with no finite `2K*`.** The construction takes `a = √(2K*)`, so a `K*` whose double has no finite float at
+//! the decode's own precision, `±∞` and NaN included, has no construction: [`no_construction`] says so beside the test,
+//! on `K*`'s binade alone, an integer, and [`Outcome::Infeasible`] follows, `a = 0` (chart_reference §4.5). Its momenta
+//! are 0, as are those of an `L_z` whose `L_z²` has no finite float (§2.1's exception): nothing bounds `L_z·r` there,
+//! and the decode of a finite input is finite. No `K*` is saturated into a system.
 //!
 //! **What is not a branch here.** `a` (formed as `√max(fma(−L_z, L_z, 2K*), 0)`), `w` and the seeds' norms are
 //! continuous values; the branches are the feasibility test and, on a decoded configuration, `z_α ≤ 0`.
@@ -125,6 +131,9 @@ pub trait ExactSign: LinkReal {
     fn limbs(self) -> [Self; 3];
     /// `2^e` from its bits, for a normal exponent `e`.
     fn two_to(e: i32) -> Self;
+    /// The first binade whose double has no finite float: a `self` at or past it, `±∞` and NaN included, has
+    /// [`Binade::e`] at least this (their exponent field reads one past the greatest finite binade).
+    fn doubling_limit() -> i32;
 }
 
 impl ExactSign for f32 {
@@ -158,6 +167,11 @@ impl ExactSign for f32 {
     #[inline]
     fn two_to(e: i32) -> f32 {
         f32::from_bits(((e + 127) as u32) << 23)
+    }
+
+    #[inline]
+    fn doubling_limit() -> i32 {
+        127
     }
 }
 
@@ -193,6 +207,11 @@ impl ExactSign for f64 {
     fn two_to(e: i32) -> f64 {
         f64::from_bits(((e + 1023) as u64) << 52)
     }
+
+    #[inline]
+    fn doubling_limit() -> i32 {
+        1023
+    }
 }
 
 /// The sign of `2^E·x·y − z²` for `x, y, z ∈ [1, 2)`, `scale = 2^E`, `E ∈ {−1, 0, 1}`, as a float of that sign (exactly
@@ -223,6 +242,13 @@ pub fn infeasible<R: ExactSign>(i: R, k: R, l: R) -> bool {
     let near = columns(scale, bi.s, bk.s, bl.s) < R::zero();
     let below = select(e > 1, false, select(e < -1, true, near));
     select(flat, moving, negative | (moving & below))
+}
+
+/// Whether the construction has nothing at `(L_z, K*) = (l, k)`, `I = 1`, at the decode's own precision: [`infeasible`],
+/// or `k` has no finite double (the module's note). The one predicate of the decode and of every chart's refusal.
+#[inline]
+pub fn no_construction<R: ExactSign>(k: R, l: R) -> bool {
+    infeasible(R::one(), k, l) | (k.binade().e >= R::doubling_limit())
 }
 
 /// The label of an infeasible pixel, `DEGENERATE(INVARIANT_INFEASIBLE)`, as `(state, detail)` of payload §2's
@@ -258,7 +284,8 @@ pub enum Seed {
 pub enum Outcome {
     /// `K* ≥ K_min` and a seed qualified: `p` meets `L_z` and `K*`.
     Feasible,
-    /// `K* < K_min`: labelled [`infeasible_label`], momenta the rigid rotation.
+    /// `K* < K_min`, or no finite `2K*`: labelled [`infeasible_label`], momenta the rigid rotation (0 where `2K*` or
+    /// `L_z²` has no finite float, the module's note).
     Infeasible,
     /// Feasible, but no seed has `‖w⁽²⁾‖²_m > ε_w`: `DEGENERATE` (R-82), momenta the rigid rotation.
     Degenerate,
@@ -432,11 +459,18 @@ fn finish<R: ExactSign>(
     let norm = Float::sqrt(n2);
     let unit = |v: [R; 2]| [v[0] / norm, v[1] / norm];
     let w = [unit(w[0]), unit(w[1]), unit(w[2])];
-    let short = infeasible(R::one(), k_star, lz);
+    let short = no_construction(k_star, lz);
     let outcome = select(
         short,
         Outcome::Infeasible,
         select(seed.is_none(), Outcome::Degenerate, Outcome::Feasible),
+    );
+    let limit = R::doubling_limit();
+    let held = lz.binade().e;
+    let spin = select(
+        (k_star.binade().e >= limit) | (held + held > limit),
+        zero,
+        lz,
     );
     let a2 = Float::mul_add(-lz, lz, k_star + k_star);
     let a = select(
@@ -446,7 +480,10 @@ fn finish<R: ExactSign>(
     );
     let body = |mi: R, ri: [R; 2], wi: [R; 2]| {
         let jr = j(ri);
-        [mi * (lz * jr[0] + a * wi[0]), mi * (lz * jr[1] + a * wi[1])]
+        [
+            mi * (spin * jr[0] + a * wi[0]),
+            mi * (spin * jr[1] + a * wi[1]),
+        ]
     };
     Construction {
         p: [

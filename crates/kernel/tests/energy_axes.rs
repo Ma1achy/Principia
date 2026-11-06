@@ -2214,15 +2214,16 @@ negative_control!(
 );
 
 /// The saturation across the overflow band, `l²` past the greatest float, `l²/2` finite up to `√2` above it, and past
-/// it, at f64: `floor` leaves the construction finite and §2.2's exact test labels the pixel. Beside the greatest float
-/// itself the rigid rotation's own momenta overflow, floor or none, and `validate` refuses the chart
-/// ([`check_unrepresentable`]).
-fn check_floor_saturates(floor: fn(f64) -> f64) {
+/// it, at f64: the floor leaves the construction finite and §2.2's exact test labels the pixel. An `L_z` with no finite
+/// square takes no rigid rotation, whose `L_z·r` nothing bounds there, so the momenta are 0; `validate` refuses the chart
+/// ([`check_unrepresentable`]). `held` maps each `L_z` (the control).
+fn check_floor_saturates(held: fn(f64) -> f64) {
     for l in [
         1.35e154, 1.6e154, 1.89e154, -1.6e154, 2.0e154, 1.0e200, 1.0e300,
     ] {
+        let l = held(l);
         let rule = Rule {
-            k0: floor(l),
+            k0: invariant::k_floor(l),
             weight: 0.0,
             u_ref: 0.0,
             s2: 0.0,
@@ -2245,14 +2246,14 @@ fn check_floor_saturates(floor: fn(f64) -> f64) {
 
 #[test]
 fn energy_axes_warped_floor_saturates() {
-    check_floor_saturates(invariant::k_floor);
+    check_floor_saturates(|l| l);
 }
 
 negative_control!(
     energy_axes_warped_floor_saturates,
-    "the greatest float as the floor doubles to +inf in the construction, inside the band where 2K >= l²",
-    expected = "decodes momenta that are not finite",
-    check_floor_saturates(|_| f64::MAX)
+    "an L_z with a finite square has its floor, a system, so it must fail",
+    expected = "is labelled",
+    check_floor_saturates(|l| l * 1.0e-10)
 );
 
 /// The same band at f32, on each warped axis: finite momenta, the label, and `validate` agreeing at the chart's own

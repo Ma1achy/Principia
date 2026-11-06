@@ -38,12 +38,13 @@ use kernel::chart::{
     MassSimplex, Mixed, RestStart, ShapeMap, ShapeSphere, SystemImage, Tilt, TiltMap, TiltSpec,
     Tilted, ValidationResult, REGISTRY,
 };
-use kernel::decode::invariant::infeasible;
+use kernel::decode::invariant::{infeasible, no_construction};
 use kernel::decode::{self, config, mass, momentum, Decoded, Degenerate};
 use kernel::generated::links::{
-    Defaults, Link, LinkParams, Select, SigmoidAlpha, SigmoidBeta, SigmoidQ, SoftmaxTanh,
+    Defaults, Link, LinkParams, LinkReal, Select, SigmoidAlpha, SigmoidBeta, SigmoidQ, SoftmaxTanh,
     SoftsignQ, TanhQ,
 };
+use kernel::payload::PayloadReal;
 use std::io::Write;
 use validation::negative_control;
 
@@ -3394,6 +3395,260 @@ negative_control!(
     }
 );
 
+/// An offset `dx` on the held `K`.
+fn held_k_shift(dx: f64) -> Shift<f64> {
+    Shift {
+        x: HELD_K,
+        dx,
+        y: HELD_K,
+        dy: 0.0,
+        two: false,
+    }
+}
+
+/// Linear `Φ_θ,L_z` past the centre's band (`b = 1.3`, `L_z = 1.6`, `L_z²/2 = 1.28`, `K₀ = 0.5`): the `L_z` axis is affine
+/// (chart_reference §5.4), so the bound is `K + d`'s. The cell is a system where `K + d` reaches it and refused where
+/// it doesn't. `centre` reads the chart's check at the centre's `K₀` instead (the control).
+fn past_band<C: Tiltable<Param = f64> + Copy>(chart: C, centre: bool) {
+    let name = chart.name();
+    let view = held_view(
+        chart,
+        &spec(30.0, 0.0, TiltMap::Sheet, HELD_K, HELD_K),
+        2.0 * K_SPAN,
+    );
+    let (u, v) = (1.0, 1.3);
+    let ([a, b], shift) = view.tilt().place(u, v);
+    assert!(b > 1.0 && (0.0..=1.0).contains(&a) && shift.dx > 0.78);
+    let valid = if centre {
+        view.chart().validate(a, b)
+    } else {
+        view.validate(u, v)
+    };
+    assert_eq!(
+        valid,
+        ValidationResult::Valid,
+        "{name}: a cell past the centre's band that K + d reaches"
+    );
+    assert_eq!(view.weight(u, v), view.tilt().weight, "{name}");
+    let d = view.decode::<Defaults, f64>(u, v);
+    assert_eq!(d.degenerate, None, "{name}");
+    let (lz, k, drift) = invariants(&d);
+    let want = (2.0 * b - 1.0, THETA_LZ_K + shift.dx);
+    assert!(
+        (lz - want.0).abs() < 1e-12 && (k - want.1).abs() < 1e-12 && drift < 1e-12,
+        "{name}: ({lz}, {k}) is not {want:?}"
+    );
+    // The same row where K + d falls short, at d = 0 and below K = 0: refused, weighted 0.
+    for u in [CENTRE[0], 0.0] {
+        assert_eq!(
+            view.validate(u, v),
+            ValidationResult::Reject {
+                failed: Constraint::KAboveLzBound
+            },
+            "{name} at {u}"
+        );
+        assert_eq!(view.weight(u, v), 0.0, "{name} at {u}");
+    }
+    // The bound's two sides: L_z²/2 − K₀ = 0.78 and a little.
+    let p = LinkParams::DEFAULT;
+    let refused = ValidationResult::Reject {
+        failed: Constraint::KAboveLzBound,
+    };
+    assert_eq!(
+        chart.validate_shifted(0.5, 1.3, &held_k_shift(0.78), &p),
+        refused,
+        "{name}"
+    );
+    assert_eq!(
+        chart.validate_shifted(0.5, 1.3, &held_k_shift(0.79), &p),
+        ValidationResult::Valid,
+        "{name}"
+    );
+}
+
+/// The linear arm past the band, on the bare chart and on `HeldK` in linear mode.
+fn check_past_band(centre: bool) {
+    past_band(theta_lz(), centre);
+    past_band(
+        HeldK {
+            mapping: Mapping::Linear,
+            ..held_k()
+        },
+        centre,
+    );
+}
+
+#[test]
+fn tilt_every_chart_construction_past_band() {
+    check_past_band(false);
+}
+
+negative_control!(
+    tilt_every_chart_construction_past_band,
+    "the L_z bound checked at the centre's K₀ refuses a cell K + d reaches, so it must fail",
+    expected = "a cell past the centre's band",
+    {
+        check_past_band(true);
+    }
+);
+
+/// A pixel with no construction: refused by the chart's check at its own precision, tagged, its momenta finite. `k` is
+/// the pixel's `K*`, `blind` reads a check of `K*` alone instead of the chart's (the control).
+fn check_refused_arm<C, R>(c: &C, [a, b]: [R; 2], dx: R, k: f64, blind: bool, name: &str)
+where
+    C: Tiltable<Param = R>,
+    R: LinkReal + PayloadReal + From<f32>,
+    f64: From<R>,
+{
+    let wide = held_k_shift(f64::from(dx));
+    let (wa, wb) = (f64::from(a), f64::from(b));
+    let got = if blind {
+        (!k.is_finite()).then_some(Constraint::KAboveLzBound)
+    } else {
+        c.refusal(wa, wb, &wide)
+    };
+    assert_eq!(
+        got,
+        Some(Constraint::KAboveLzBound),
+        "{name}: a K* with no finite 2K* is read as a system"
+    );
+    assert_eq!(
+        c.validate_shifted(wa, wb, &wide, &LinkParams::DEFAULT),
+        ValidationResult::Reject {
+            failed: Constraint::KAboveLzBound
+        },
+        "{name}"
+    );
+    let own = Shift {
+        x: HELD_K,
+        dx,
+        y: HELD_K,
+        dy: <R as From<f32>>::from(0.0),
+        two: false,
+    };
+    let d = c.decode_shifted::<Defaults, R>(a, b, &own, &LinkParams::DEFAULT);
+    assert_eq!(
+        d.degenerate,
+        Some(Degenerate::InvariantInfeasible),
+        "{name}"
+    );
+    let p = d.ic.p.iter().flatten();
+    assert!(p.map(|&x| f64::from(x)).all(f64::is_finite), "{name}");
+}
+
+/// [`check_refused_arm`] and its neighbours at the float `$p`: `K = +∞`, a finite `K` past `max/2`, the floor plus the
+/// warp's line past it and an `L_z` with no finite square, each refused on each chart that reaches it, and `K = max/2`,
+/// the last value still a system (chart_reference §4.5).
+macro_rules! no_finite_2k {
+    ($name:ident, $p:ident) => {
+        fn $name(blind: bool) {
+            let bound = Some(Constraint::KAboveLzBound);
+            let max = <$p>::MAX;
+            let last = max * 0.5;
+            let bare = |k: $p| BurrauThetaLz::<$p> {
+                theta_range: [0.2, 0.7],
+                k,
+                lz_fraction: 1.0,
+            };
+            for (k, want) in [
+                (<$p>::INFINITY, true),
+                (<$p>::NAN, true),
+                (max, true),
+                (max * 0.75, true),
+                (<$p>::from_bits(last.to_bits() + 1), true),
+                (last, false),
+                (last * 0.75, false),
+            ] {
+                assert_eq!(no_construction(k, 0.0), want, "{k}");
+            }
+            // K = +∞ on a warped held K, at L_z = 0 and on a row whose L_z·r has no finite float.
+            let warped = HeldK::new(bare(1.0), 1.0, 1e5);
+            for b in [0.5, 0.9] {
+                check_refused_arm(&warped, [0.5, b], 1.0, f64::INFINITY, blind, "warped");
+            }
+            // K finite past max/2: by the chart's K, by K + d and linear.
+            let past = f64::from(max) * 0.75;
+            let linear = HeldK {
+                mapping: Mapping::Linear,
+                ..HeldK::new(bare(max * 0.75), 1.0, 1.5)
+            };
+            for b in [0.5, 0.9] {
+                let (centre, moved) = (bare(max * 0.75), bare(1.0));
+                check_refused_arm(&centre, [0.5, b], 0.0, past, blind, "bare");
+                check_refused_arm(&moved, [0.5, b], max * 0.75, past, blind, "K + d");
+                check_refused_arm(&linear, [0.5, b], 0.0, past, blind, "linear");
+            }
+            // The floor plus the line, each below max/2: past it only as a sum.
+            let burrau = Burrau::<$p> {
+                nu_range: [0.2, 0.4],
+                k_max: max * 0.25,
+                gamma_k: 1.0,
+            };
+            let held = |lz: $p| HeldLz::new(burrau).sliced(HELD_LZ, lz).unwrap();
+            let sum = held((max * 0.81).sqrt());
+            check_refused_arm(&sum, [0.5, 1.0], 0.0, past, blind, "floor plus line");
+            // An L_z with no finite square, whose L_z·r can pass the float's range.
+            let wild = held(max * 0.9);
+            check_refused_arm(&wild, [0.5, 0.0], 0.0, past, blind, "no floor");
+            // The last value still a system.
+            let c = bare(last);
+            let none = held_k_shift(0.0);
+            assert_eq!(c.refusal(0.5, 0.5, &none), None);
+            assert_eq!(
+                c.validate_shifted(0.5, 0.5, &none, &LinkParams::DEFAULT),
+                ValidationResult::Valid
+            );
+            let own = Shift::<$p>::none();
+            let d = c.decode_shifted::<Defaults, $p>(0.5, 0.5, &own, &LinkParams::DEFAULT);
+            assert_eq!(d.degenerate, None);
+            assert!(d.ic.p.iter().flatten().all(|x| x.is_finite()));
+            // Through the view: weight 0, and not "held at floor".
+            let s = spec(30.0, 0.0, TiltMap::Sheet, HELD_K, HELD_K);
+            let wide = Tilt::new(&s, CENTRE, [2.0 * K_SPAN, 2.0 * K_SPAN]);
+            let tilt = Tilt::<$p> {
+                on: wide.on,
+                two: wide.two,
+                rank_loss: wide.rank_loss,
+                centre: wide.centre.map(|x| x as $p),
+                columns: wide.columns.map(|c| c.map(|x| x as $p)),
+                x: wide.x,
+                y: wide.y,
+                span: wide.span.map(|x| x as $p),
+                weight: wide.weight as $p,
+                normal_zero: wide.normal_zero,
+                strip: wide.strip,
+            };
+            let view = Tilted::new(warped, tilt).expect("a hidden target");
+            assert_eq!(view.weight(1.0, 0.5), 0.0);
+            assert!(!view.held_at_floor(1.0, 0.5));
+            assert_eq!(
+                view.validate(1.0, 0.5),
+                ValidationResult::Reject {
+                    failed: bound.unwrap()
+                }
+            );
+        }
+    };
+}
+
+no_finite_2k!(check_no_finite_2k_f64, f64);
+no_finite_2k!(check_no_finite_2k_f32, f32);
+
+#[test]
+fn tilt_every_chart_construction_no_finite_2k() {
+    check_no_finite_2k_f64(false);
+    check_no_finite_2k_f32(false);
+}
+
+negative_control!(
+    tilt_every_chart_construction_no_finite_2k,
+    "a check on a finite K* alone reads a finite K* with no finite 2K* as a system, so it must fail",
+    expected = "a K* with no finite 2K* is read as a system",
+    {
+        check_no_finite_2k_f64(true);
+    }
+);
+
 /// Each of the six's hidden coordinates, `hidden(k)` over `0..12`, and a tilt into any other refused; `admit` admits
 /// it as untilted (the control).
 fn check_construction_targets(admit: bool) {
@@ -3638,10 +3893,24 @@ fn tilt_every_chart_construction_validate() {
         Some(Constraint::KAboveLzBound)
     );
     assert_eq!(c.refusal(0.5, 1.0, &k_shift(0.0)), None);
-    assert!(matches!(
+    assert_eq!(
         c.validate_shifted(0.5, 1.3, &k_shift(0.0), &p),
-        ValidationResult::Project { .. }
-    ));
+        ValidationResult::Reject {
+            failed: Constraint::KAboveLzBound
+        }
+    );
+    assert_eq!(
+        c.validate_shifted(f64::NAN, 0.5, &k_shift(0.0), &p),
+        ValidationResult::Reject {
+            failed: Constraint::BurrauTheta
+        }
+    );
+    assert_eq!(
+        c.validate_shifted(0.5, f64::NAN, &k_shift(0.0), &p),
+        ValidationResult::Reject {
+            failed: Constraint::KAboveLzBound
+        }
+    );
     assert_eq!(
         c.validate_shifted(0.5, 1.3, &k_shift(-0.1), &p),
         ValidationResult::Reject {

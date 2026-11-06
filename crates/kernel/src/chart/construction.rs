@@ -43,7 +43,10 @@
 //! view's `validate` refuses it ([`Constraint::KAboveLzBound`]) and its area weight is 0
 //! ([`super::tilt::Tilted::weight`]); the chart's `system_image` stays its own. The warped path runs the same test, which
 //! no pixel inside the square fails: past it `|2b − 1|·λ_L` can pass 1, and a `L_z` with no finite floor is refused
-//! ([`k_floor`]).
+//! ([`k_floor`]), as is a pixel whose `K*` has no finite double (chart_reference §4.5). Layer 3 reads the pixel's own
+//! decode, and every refusal also runs the exact test at the chart's own precision `P`: a target that has no
+//! construction only there is refused by `validate`, not just tagged by the decode at `P`, as
+//! [`super::physical`]'s `floor_held`.
 //!
 //! **The held values.** The registered charts' own parameters stay as they are; a rest start's momentum controls, the
 //! held `L_z`, a chart's mode and `Φ_θ,L_z`'s warp are held beside the chart by the wrappers [`RestStart`], [`HeldLz`] and
@@ -57,10 +60,10 @@ use super::burrau_acute::{self, BurrauThetaDeltaM, BurrauThetaK, BurrauThetaLz, 
 use super::energy::Mapping;
 use super::invariant::{self, k_floor, WarpReal};
 use super::mass_simplex::{self, MassSimplex};
-use super::tilt::{shift_controls, shifted, Hidden, Shift, Tiltable};
+use super::tilt::{narrow, shift_controls, shifted, Hidden, Shift, Tiltable};
 use super::{Chart, ChartDecode, ChartOut, Constraint, ValidationResult};
 use crate::decode::config::Config;
-use crate::decode::invariant::infeasible;
+use crate::decode::invariant::no_construction;
 use crate::decode::mass::Masses;
 use crate::decode::momentum::{self, Momentum};
 use crate::decode::{self, Blocks, Decoded, Ic, Latent};
@@ -80,6 +83,12 @@ pub const HELD_K: u32 = crate::generated::constants::HIDDEN_HELD_K;
 #[inline]
 pub fn momentum_control(k: u32) -> bool {
     (2..6).contains(&k)
+}
+
+/// [`Constraint::KAboveLzBound`] where the targets `(L_z, K*)`, at the chart's own precision, have no construction.
+#[inline]
+fn refused_own<P: WarpReal>((lz, k): (P, P)) -> Option<Constraint> {
+    no_construction(k, lz).then_some(Constraint::KAboveLzBound)
 }
 
 /// `rest`, the chart's check at `(u, v)`, then `refusal` at the point it accepts, or moves to: a point the check would
@@ -603,9 +612,15 @@ where
         }
     }
 
-    /// No construction at `(L_z, K*)`, `K*` the row's: `K* < L_z²/2I`, by the construction's exact test.
-    fn refused_at(&self, b: f64, lz: f64) -> Option<Constraint> {
-        infeasible(1.0, self.row(b, lz), lz).then_some(Constraint::KAboveLzBound)
+    /// What leaves no system at the held `L_z = lz` at `(a, b)`: no construction at the row's `K*` by the exact test,
+    /// at the chart's own precision and at f64, or layer 3 on the pixel's own decode.
+    fn refused_at(&self, a: f64, b: f64, lz: f64, own: P) -> Option<Constraint>
+    where
+        P: WarpReal,
+    {
+        refused_own((own, self.row(narrow(b), own)))
+            .or_else(|| refused_own((lz, self.row(b, lz))))
+            .or_else(|| burrau_acute::decoded_sanity(&self.decode_held(a, b, lz)))
     }
 
     /// `D ∘ Φ` at `(u, v)` with the held `L_z = lz`, the row's `K*` at it.
@@ -618,7 +633,7 @@ where
     }
 }
 
-impl<C: LzChart<Param = P>, P: Copy> Chart for HeldLz<C, P>
+impl<C: LzChart<Param = P>, P: WarpReal> Chart for HeldLz<C, P>
 where
     f64: From<P>,
 {
@@ -644,8 +659,8 @@ where
     /// The chart's check, then the construction at the held `L_z`.
     fn validate(&self, u: f64, v: f64) -> ValidationResult {
         let lz = f64::from(self.lz);
-        refuse(u, v, self.chart.validate(u, v), |_, b| {
-            self.refused_at(b, lz)
+        refuse(u, v, self.chart.validate(u, v), |a, b| {
+            self.refused_at(a, b, lz, self.lz)
         })
     }
 
@@ -660,7 +675,7 @@ where
     }
 }
 
-impl<C: LzChart<Param = P>, P: Copy> ChartDecode for HeldLz<C, P>
+impl<C: LzChart<Param = P>, P: WarpReal> ChartDecode for HeldLz<C, P>
 where
     f64: From<P>,
 {
@@ -674,7 +689,7 @@ where
     }
 }
 
-impl<C: LzChart<Param = P>, P: Copy> Hidden for HeldLz<C, P>
+impl<C: LzChart<Param = P>, P: WarpReal> Hidden for HeldLz<C, P>
 where
     f64: From<P>,
 {
@@ -688,7 +703,7 @@ where
     }
 }
 
-impl<C: LzChart<Param = P>, P: Copy> Tiltable for HeldLz<C, P>
+impl<C: LzChart<Param = P>, P: WarpReal> Tiltable for HeldLz<C, P>
 where
     f64: From<P>,
 {
@@ -714,14 +729,15 @@ where
         })
     }
 
-    fn refusal(&self, _a: f64, b: f64, shift: &Shift<f64>) -> Option<Constraint> {
-        self.refused_at(b, shifted(f64::from(self.lz), HELD_LZ, shift))
+    fn refusal(&self, a: f64, b: f64, shift: &Shift<f64>) -> Option<Constraint> {
+        let own = shifted(self.lz, HELD_LZ, &shift.at_precision::<P>());
+        self.refused_at(a, b, shifted(f64::from(self.lz), HELD_LZ, shift), own)
     }
 }
 
 // ── The held K: Φ_θ,L_z ───────────────────────────────────────────────────────────────────────────────────────────
 
-impl<P: Copy> Hidden for BurrauThetaLz<P>
+impl<P: WarpReal> Hidden for BurrauThetaLz<P>
 where
     f64: From<P>,
 {
@@ -736,7 +752,15 @@ where
     }
 }
 
-impl<P: Copy> Tiltable for BurrauThetaLz<P>
+impl<P: Copy> BurrauThetaLz<P> {
+    /// The targets `(L_z, K*)` of the row `b` by value: the centre's band, `K + d`.
+    #[inline]
+    fn by_value<R: WarpReal + From<P>>(&self, b: R, shift: &Shift<R>) -> (R, R) {
+        (self.lz(b), shifted(self.kinetic::<R>(), HELD_K, shift))
+    }
+}
+
+impl<P: WarpReal> Tiltable for BurrauThetaLz<P>
 where
     f64: From<P>,
 {
@@ -748,26 +772,29 @@ where
         S: Selection,
         R: LinkReal + PayloadReal + From<P>,
     {
-        let k = shifted(self.kinetic::<R>(), HELD_K, shift);
-        burrau_acute::decode_theta_lz_at(self, u, self.lz(v), k).0
+        let (lz, k) = self.by_value(v, shift);
+        burrau_acute::decode_theta_lz_at(self, u, lz, k).0
     }
 
+    /// The chart's `θ` and finiteness, then the `L_z` bound at `(L_z(b), K + d)`, not at the centre's `K`: `L_z`'s axis
+    /// is affine (chart_reference §5.4), so a row past the centre's band is a system where `K + d` reaches it.
     fn validate_shifted(
         &self,
         a: f64,
         b: f64,
         shift: &Shift<f64>,
-        p: &LinkParams<f64>,
+        _p: &LinkParams<f64>,
     ) -> ValidationResult {
-        refuse(a, b, self.validate_params(a, b, p), |a, b| {
-            self.refusal(a, b, shift)
-        })
+        self.validate_at(a, b, self.refusal(a, b, shift))
     }
 
-    /// No construction at `(L_z(b), K + d)`: `K + d < L_z(b)²/2I`, by the construction's exact test.
-    fn refusal(&self, _a: f64, b: f64, shift: &Shift<f64>) -> Option<Constraint> {
-        let k = shifted(self.kinetic::<f64>(), HELD_K, shift);
-        infeasible(1.0, k, self.lz::<f64>(b)).then_some(Constraint::KAboveLzBound)
+    /// No system at `(L_z(b), K + d)`: no construction at the chart's own precision, or
+    /// [`BurrauThetaLz::refused_at`] at f64.
+    fn refusal(&self, a: f64, b: f64, shift: &Shift<f64>) -> Option<Constraint> {
+        refused_own(self.by_value(narrow::<f64, P>(b), &shift.at_precision())).or_else(|| {
+            let (lz, k) = self.by_value(b, shift);
+            self.refused_at(a, lz, k)
+        })
     }
 }
 
@@ -833,7 +860,7 @@ where
     }
 }
 
-impl<P: Copy> Chart for HeldK<P>
+impl<P: WarpReal> Chart for HeldK<P>
 where
     f64: From<P>,
 {
@@ -871,7 +898,7 @@ where
     }
 }
 
-impl<P: Copy> ChartDecode for HeldK<P>
+impl<P: WarpReal> ChartDecode for HeldK<P>
 where
     f64: From<P>,
 {
@@ -885,7 +912,7 @@ where
     }
 }
 
-impl<P: Copy> Hidden for HeldK<P>
+impl<P: WarpReal> Hidden for HeldK<P>
 where
     f64: From<P>,
 {
@@ -901,7 +928,7 @@ where
     }
 }
 
-impl<P: Copy> Tiltable for HeldK<P>
+impl<P: WarpReal> Tiltable for HeldK<P>
 where
     f64: From<P>,
 {
@@ -920,6 +947,8 @@ where
         }
     }
 
+    /// Warped, the chart's own check at the centre, the band's edge the same `b` at every `K > 0`, then the refusal;
+    /// linear, the bare chart's, by value.
     fn validate_shifted(
         &self,
         a: f64,
@@ -927,16 +956,22 @@ where
         shift: &Shift<f64>,
         p: &LinkParams<f64>,
     ) -> ValidationResult {
-        refuse(a, b, self.chart.validate_params(a, b, p), |a, b| {
-            self.refusal(a, b, shift)
-        })
+        if self.mapping == Mapping::Warped {
+            refuse(a, b, self.chart.validate_params(a, b, p), |a, b| {
+                self.refusal(a, b, shift)
+            })
+        } else {
+            self.chart.validate_shifted(a, b, shift, p)
+        }
     }
 
-    /// No construction at the pixel's targets, by the construction's exact test.
+    /// Warped, no system at the pixel's targets, as [`BurrauThetaLz`]'s; linear, the bare chart's, by value.
     fn refusal(&self, a: f64, b: f64, shift: &Shift<f64>) -> Option<Constraint> {
         if self.mapping == Mapping::Warped {
-            let (lz, k) = self.warped(b, shift);
-            infeasible(1.0, k, lz).then_some(Constraint::KAboveLzBound)
+            refused_own(self.warped(narrow::<f64, P>(b), &shift.at_precision())).or_else(|| {
+                let (lz, k) = self.warped(b, shift);
+                self.chart.refused_at(a, lz, k)
+            })
         } else {
             self.chart.refusal(a, b, shift)
         }

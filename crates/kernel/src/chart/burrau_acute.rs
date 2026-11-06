@@ -59,7 +59,7 @@ use super::{
 };
 use crate::burrau::{Convention, System, CONVENTION, CONVENTION_STATEMENT};
 use crate::decode::config::Config;
-use crate::decode::invariant::{infeasible, Outcome};
+use crate::decode::invariant::{infeasible, no_construction, Outcome};
 use crate::decode::mass::Masses;
 use crate::decode::momentum::Momentum;
 use crate::decode::{self, descriptor, Blocks, Decoded, Ic};
@@ -124,7 +124,7 @@ fn fold_label(name: &str) -> ChartLabel<'_> {
 }
 
 /// Layer 3 on the f64 decode `d` (the module's note): the decoded masses positive, then [`sanity`].
-fn decoded_sanity(d: &Decoded<f64>) -> Option<Constraint> {
+pub(super) fn decoded_sanity(d: &Decoded<f64>) -> Option<Constraint> {
     if d.ic.m.iter().all(|&m| m > 0.0) {
         sanity(d)
     } else {
@@ -392,7 +392,7 @@ impl<P: Copy> BurrauThetaLz<P> {
     }
 }
 
-impl<P: Copy> BurrauThetaLz<P>
+impl<P: WarpReal> BurrauThetaLz<P>
 where
     f64: From<P>,
 {
@@ -406,6 +406,32 @@ where
     #[inline]
     fn lz_infeasible(&self, v: f64) -> bool {
         infeasible(1.0, self.kinetic::<f64>(), self.lz(v))
+    }
+
+    /// What leaves no system at the targets `(lz, k)` of a tilted pixel at `u`: no construction there by §2.2's exact
+    /// test, a `K*` with no finite double included, or layer 3 on the pixel's own decode.
+    pub(super) fn refused_at(&self, u: f64, lz: f64, k: f64) -> Option<Constraint> {
+        if no_construction(k, lz) {
+            return Some(Constraint::KAboveLzBound);
+        }
+        decoded_sanity(&decode_theta_lz_at(self, u, lz, k).0)
+    }
+
+    /// The check of a tilted pixel by value at `(u, v)`: the chart's `θ` and finiteness, then `refused`, the pixel's
+    /// own ([`Tiltable::refusal`](super::tilt::Tiltable::refusal)), not the centre's. Nothing is projected: the tilted
+    /// view has no point to project to.
+    pub(super) fn validate_at(
+        &self,
+        u: f64,
+        v: f64,
+        refused: Option<Constraint>,
+    ) -> ValidationResult {
+        let failed = Constraint::KAboveLzBound;
+        match (reject_early(self.theta(u), u, v, failed), refused) {
+            (Some(early), _) => early,
+            (None, Some(failed)) => ValidationResult::Reject { failed },
+            (None, None) => ValidationResult::Valid,
+        }
     }
 
     /// The feasible `v` nearest an infeasible `v` (the module's note): the band's edge on `v`'s side,
@@ -426,7 +452,7 @@ where
     }
 }
 
-impl<P: Copy> Chart for BurrauThetaLz<P>
+impl<P: WarpReal> Chart for BurrauThetaLz<P>
 where
     f64: From<P>,
 {
@@ -469,8 +495,13 @@ where
             return r;
         }
         let t = select(self.lz_infeasible(v), self.nearest_feasible(v), v);
+        // A `K` with no construction on any row at the chart's own precision; at f64, layer 3 reads the tag.
+        let no_row = no_construction(self.kinetic::<P>(), P::zero());
         match decoded_sanity(&decode_theta_lz(self, u, t).0) {
             Some(failed) => ValidationResult::Reject { failed },
+            None if no_row => ValidationResult::Reject {
+                failed: Constraint::KAboveLzBound,
+            },
             None if t != v => ValidationResult::Project {
                 u,
                 v: t,
@@ -511,7 +542,7 @@ where
     (decoded, blocks.outcome())
 }
 
-impl<P: Copy> ChartDecode for BurrauThetaLz<P>
+impl<P: WarpReal> ChartDecode for BurrauThetaLz<P>
 where
     f64: From<P>,
 {

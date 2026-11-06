@@ -552,7 +552,25 @@ pub struct Shift<R> {
     pub two: bool,
 }
 
+/// `x` at the float `F`, rounded, `±∞` past its range, NaN kept: a cast between floats takes every value.
+#[inline]
+pub(super) fn narrow<R: Float, F: Float>(x: R) -> F {
+    <F as spirv_std::num_traits::NumCast>::from(x).unwrap_or(F::nan())
+}
+
 impl<R: Float> Shift<R> {
+    /// The same offsets at the float `F`, rounded, as a chart's own precision reads them; `±∞` past `F`'s range.
+    #[inline]
+    pub(super) fn at_precision<F: Float>(&self) -> Shift<F> {
+        Shift {
+            x: self.x,
+            dx: narrow(self.dx),
+            y: self.y,
+            dy: narrow(self.dy),
+            two: self.two,
+        }
+    }
+
     /// No offset: its targets name no coordinate (`u32::MAX`), so [`shift_controls`] and a chart's own physical
     /// coordinates take it with no arithmetic.
     #[inline]
