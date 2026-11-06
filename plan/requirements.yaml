@@ -33893,7 +33893,7 @@
   note: "Calibrates REQ-VAL-238 (HU-5); never set from a published number to make it pass (rule 4). Closed by TASK-M9-13 (was TASK-M3-53) (R-594, R-629). 30 Oct 2026 (R-649, R-650): calibrates a measurement, never a gate; scored in M9 (was M3); confirmed by the human with the M9 report (REQ-VAL-340), not at a gate. Its target's tier: Tier (b), the CPU IC inspector: it binds at f64 or higher, and a GPU miss on it is expected, not a defect (R-649 item 2). Statement *was:* \"…confirmed by the human at the M3 gate…\"."
 - id: REQ-VAL-240
   area: VAL
-  statement: "On the free-fall plane, the binary-collision curves must converge on each of Tanikawa & Mikkola 2021's eleven triple-collision points (Table 2), and `d_min` must scale toward each along Table 4's approach initial conditions (radii 1e-3 to 1e-5), after the D11 mirror remap (rule 6) (TM-1)."
+  statement: "On the free-fall plane, the binary-collision curves must converge on each of Tanikawa & Mikkola 2021's eleven triple-collision points (Table 2), and `d_min` must scale toward each along Table 4's approach initial conditions (radii 1e-3 to 1e-5), no remap: the 2021 paper's eq. (2) is Anosova's region (rule 6, R-702; *was:* \"after the D11 mirror remap (rule 6)\") (TM-1)."
   source:
   - file: docs/design/principia_dd_replication.md
     section: 5.5 Regularisation
@@ -33915,9 +33915,11 @@
     section: 12.2 Tiers
   - file: docs/design/principia_dd_replication.md
     section: "12.3 Outcomes, the like-for-like check and the forbidden moves"
+  - file: decisions.md
+    section: "R-702 — The library's open readings: Paper I's normalisation is read for Tanikawa 2000's times; Broucke 2006 stays context; Martynova & Orlov's fractions are compared with the 56 stated; the two unverified citations drop; the trust line's marks gain a dated \"chosen by analogy\" line; Tanikawa's free-fall papers are named by the frame each uses, no mirror for the ones read; AN-2 is shape-only *(closes RQ-640, RQ-641, RQ-642, RQ-645, RQ-648, RQ-650 and RQ-651; refines R-574)*"
   verify:
+    detail: "Tables 1, 2 and 4 transcribed twice once the paper is in the repo (rule 1, 2); no remap: the frame check a tested function (R-702; *was:* \"the D11 remap a tested function\"); the measured d_min slope per point within REQ-VAL-241; control: an approach line through a point off the table must not converge"
     method: numerical gate
-    detail: "Tables 1, 2 and 4 transcribed twice once the paper is in the repo (rule 1, 2); the D11 remap a tested function; the measured d_min slope per point within REQ-VAL-241; control: an approach line through a point off the table must not converge"
   rulings:
   - R-71
   - R-560
@@ -33926,8 +33928,9 @@
   - R-630
   - R-649
   - R-650
+  - R-702
   milestone: M9
-  note: "Reproduces: Tanikawa & Mikkola 2021, Tables 1, 2 and 4 (eleven triple-collision points, e.g. (0.19208270, 0.30936018); approach ICs at radii 1e-3 to 1e-5). Chart: the Anosova physical-frame entry, after the D11 mirror remap. Milestone: M9 (was M3; R-650). Compare: exact (scaling) (rule 8). Tolerance: REQ-VAL-241 (calibration, R-71). Row TM-1 of principia_dd_replication.md § \"5.5 Regularisation\"; layer replication, tier A; closed by TASK-M9-09 (was TASK-M3-49) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (b), the CPU IC inspector: it binds at f64 or higher, and a GPU miss on it is expected, not a defect (R-649 item 2)."
+  note: "Reproduces: Tanikawa & Mikkola 2021, Tables 1, 2 and 4 (eleven triple-collision points, e.g. (0.19208270, 0.30936018); approach ICs at radii 1e-3 to 1e-5). Chart: the Anosova physical-frame entry, no remap: the 2021 paper's eq. (2) is Anosova's region (R-702; *was:* \"after the D11 mirror remap\"). Milestone: M9 (was M3; R-650). Compare: exact (scaling) (rule 8). Tolerance: REQ-VAL-241 (calibration, R-71). Row TM-1 of principia_dd_replication.md § \"5.5 Regularisation\"; layer replication, tier A; closed by TASK-M9-09 (was TASK-M3-49) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (b), the CPU IC inspector: it binds at f64 or higher, and a GPU miss on it is expected, not a defect (R-649 item 2)."
 - id: REQ-VAL-241
   area: VAL
   kind: calibration
@@ -35881,6 +35884,8 @@
     section: "R-669 — The owner adopts the recommendations on the fifteen questions of 1 Nov but RQ-656: the Šuvakov-plane chart is one M9 task, its five targets waiting on it whole; a syzygy-symbol field only; N_scramble only; no periodic-orbit continuation, after the SJTU partial check; TR-1, MK-1 and SL-1 stay in M9, not scored, with no chart; the census's CI cadence as § 8.1 and § 8.2 write it, lavapipe in the smoke job; REQ-VAL-199 keeps 256 starts; GG-1's panels by like ε; the drift predicates read the stored latch, live values only for control flow; BZ-1C's starts by Path B, a list-of-starts chart the fallback; Hénon 1974 joins the rotating-frame set; Heggie & Sweatman 1991 in M9, not scored *(closes RQ-593, RQ-595, RQ-596, RQ-597, RQ-608, RQ-617, RQ-618, RQ-620, RQ-636, RQ-647 and RQ-654; amends R-636, R-637 and R-639; refines R-642)*"
   - file: decisions.md
     section: "R-671 — In a task with no GPU run, a statistical or qualitative target's statistic from the f64 runs is recorded at tier (b), its instrument stated, and its (a) part stays listed \"not scored yet: needs a GPU run\", the tier not relabelled; Q-4's no-integration part is recorded with no tier *(closes RQ-669; refines R-649)*"
+  - file: decisions.md
+    section: "R-701 — GG-1 and BR-1: the eight neighbours of (3, 43) are run, ours stays labelled ours meanwhile, `p_max` is 4, no ε = 10⁻⁷⁰ cost is quoted, the authors' trajectories stay local, both BR-1 readings stay reported, and the open questions go to the authors in the owner's pending emails *(closes RQ-612, RQ-613, RQ-615 and RQ-616)*"
   verify:
     method: numerical gate
     detail: "per-point lifetimes as they publish them, if obtained (RQ-598); the reliability of our run read from the convergence reference (R-33); agreement within REQ-VAL-296; control: lifetimes to the criterion firing rather than to the last close approach must disagree"
@@ -35899,8 +35904,9 @@
   - R-650
   - R-669
   - R-671
+  - R-701
   milestone: M9
-  note: "Reproduces: Boekholt, Portegies Zwart & Valtonen 2020 (MNRAS 493, 3932): 1,212 points at spacing 1/64, converged with Brutus to t = 10⁴; lifetime to the last close approach. Chart: the Anosova physical-frame entry. Milestone: M9 (was M3; R-650). Compare: per point where reliable (rule 8: a converged code); KS otherwise (rule 8). Tolerance: REQ-VAL-296 (calibration, R-71). Row GG-1 (the 25 Oct tier B's converged lifetime grid) of principia_dd_replication.md § \"5.10 Converged-code references\"; layer replication, tier B; closed by TASK-M9-22 (was TASK-M3-62) (R-594, R-629). Systems that end past 200 are recorded as \"not evaluated within cap\", never as failures (R-636, closing RQ-592). RQ-598 closed by R-637 (option (a)); scored as R-638 and R-640 to R-642 rule it, R-642 governing: the Fig. 1 extraction (docs/incoming/2026-10-28_rq598_data/transcriptions/gg1_fig1/) is the paper's own published values and scores directly, all 1212 points per panel at one LUT step (3/256 ≈ 0.0117 dex), the three-entry bin (LUT 29–31) at its wider precision, black meaning censored above 1000 (GG-1's per-point reference panel is undefined: Fig. 1's two panels, ε = 10⁻⁶ and ε = 10⁻⁷⁰, differ point by point, and no panel is chosen; RQ-620, R-72); a qualifying reproduction (the paper's set-up, a converged arbitrary-precision integrator; our Brutus from pgbreen/NvMgeneration at 98906f4) scores provisionally, labelled \"vs <source>\" (\"vs Brutus, run here\"), never \"replicates the paper\". Re-score obligation (R-640, R-642): when the authors' per-point lifetimes arrive, every result scored against a reproduction is re-scored against them; where ours and theirs disagree, theirs governs and the disagreement is queued. The cost per point is reported before any Brutus run is scaled or goes below ε = 10⁻⁶ (R-638). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (b), the CPU IC inspector, for each point where reliable, where a GPU miss is expected, not a defect; tier (a), the GPU explorer, for the KS part, scored there statistically or qualitatively only (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b) for its exact part, its statistical part (b) too, with (a) expected to agree\". R-669 (1 Nov 2026, RQ-620 as recommended): a reproduction is compared per point only with the Fig. 1 panel at its own ε (ε = 10⁻⁶ the left, ε = 10⁻⁷⁰ the right); our lifetimes per point with the ε = 10⁻⁷⁰ panel, and with the ε = 10⁻⁶ panel by KS only; the reliability mask, where the two panels agree within one LUT step, reported beside them. R-671 (2 Nov 2026, RQ-669 (ii)): its task has no GPU run, so its (a) part keeps its tier and reads \"not scored yet: needs a GPU run\" in M9's report, and the same statistic from the task's f64 runs is recorded beside it at (b), with its outcome and instrument stated. *Was (rq):* RQ-669."
+  note: "Reproduces: Boekholt, Portegies Zwart & Valtonen 2020 (MNRAS 493, 3932): 1,212 points at spacing 1/64, converged with Brutus to t = 10⁴; lifetime to the last close approach. Chart: the Anosova physical-frame entry. Milestone: M9 (was M3; R-650). Compare: per point where reliable (rule 8: a converged code); KS otherwise (rule 8). Tolerance: REQ-VAL-296 (calibration, R-71). Row GG-1 (the 25 Oct tier B's converged lifetime grid) of principia_dd_replication.md § \"5.10 Converged-code references\"; layer replication, tier B; closed by TASK-M9-22 (was TASK-M3-62) (R-594, R-629). Systems that end past 200 are recorded as \"not evaluated within cap\", never as failures (R-636, closing RQ-592). RQ-598 closed by R-637 (option (a)); scored as R-638 and R-640 to R-642 rule it, R-642 governing: the Fig. 1 extraction (docs/incoming/2026-10-28_rq598_data/transcriptions/gg1_fig1/) is the paper's own published values and scores directly, all 1212 points per panel at one LUT step (3/256 ≈ 0.0117 dex), the three-entry bin (LUT 29–31) at its wider precision, black meaning censored above 1000 (GG-1's per-point reference panel is undefined: Fig. 1's two panels, ε = 10⁻⁶ and ε = 10⁻⁷⁰, differ point by point, and no panel is chosen; RQ-620, R-72); a qualifying reproduction (the paper's set-up, a converged arbitrary-precision integrator; our Brutus from pgbreen/NvMgeneration at 98906f4) scores provisionally, labelled \"vs <source>\" (\"vs Brutus, run here\"), never \"replicates the paper\". Re-score obligation (R-640, R-642): when the authors' per-point lifetimes arrive, every result scored against a reproduction is re-scored against them; where ours and theirs disagree, theirs governs and the disagreement is queued. The cost per point is reported before any Brutus run is scaled or goes below ε = 10⁻⁶ (R-638). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (b), the CPU IC inspector, for each point where reliable, where a GPU miss is expected, not a defect; tier (a), the GPU explorer, for the KS part, scored there statistically or qualitatively only (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b) for its exact part, its statistical part (b) too, with (a) expected to agree\". R-669 (1 Nov 2026, RQ-620 as recommended): a reproduction is compared per point only with the Fig. 1 panel at its own ε (ε = 10⁻⁶ the left, ε = 10⁻⁷⁰ the right); our lifetimes per point with the ε = 10⁻⁷⁰ panel, and with the ε = 10⁻⁶ panel by KS only; the reliability mask, where the two panels agree within one LUT step, reported beside them. R-671 (2 Nov 2026, RQ-669 (ii)): its task has no GPU run, so its (a) part keeps its tier and reads \"not scored yet: needs a GPU run\" in M9's report, and the same statistic from the task's f64 runs is recorded beside it at (b), with its outcome and instrument stated. *Was (rq):* RQ-669. R-701 (4 Nov 2026, RQ-612, RQ-613): ours stays labelled ours meanwhile, and the eight neighbours of (3, 43) run as a peek (REQ-VAL-350, TASK-M9-42). Brutus runs at `p_max` = 4, `L_w` set explicitly. No ε = 10⁻⁷⁰ cost is quoted until the authors answer."
 - id: REQ-VAL-296
   area: VAL
   kind: calibration
@@ -35963,6 +35969,8 @@
     section: 12.2 Tiers
   - file: docs/design/principia_dd_replication.md
     section: "12.3 Outcomes, the like-for-like check and the forbidden moves"
+  - file: decisions.md
+    section: "R-701 — GG-1 and BR-1: the eight neighbours of (3, 43) are run, ours stays labelled ours meanwhile, `p_max` is 4, no ε = 10⁻⁷⁰ cost is quoted, the authors' trajectories stay local, both BR-1 readings stay reported, and the open questions go to the authors in the owner's pending emails *(closes RQ-612, RQ-613, RQ-615 and RQ-616)*"
   verify:
     method: numerical gate
     detail: "the data, if obtained (RQ-598); per trajectory chord against theirs within REQ-VAL-298; control: a run with one coordinate perturbed by 1e-8 must part from theirs before t = 10"
@@ -35978,8 +35986,9 @@
   - R-642
   - R-649
   - R-650
+  - R-701
   milestone: M9
-  note: "Reproduces: Breen et al. 2020 (MNRAS 494, 2465): per-trajectory Brutus runs to t = 10. Chart: the Anosova physical-frame entry (Breen's frame). Milestone: M9 (was M3; R-650). Compare: exact (rule 8: a converged code) (rule 8). Tolerance: REQ-VAL-298 (calibration, R-71). Row BR-1 of principia_dd_replication.md § \"5.10 Converged-code references\"; layer replication, tier C; closed by TASK-M9-22 (was TASK-M3-62) (R-594, R-629). RQ-598 closed by R-637 (option (a)); scored as R-638 and R-640 to R-642 rule it, R-642 governing: against the authors' own 180 trajectories of github.com/pgbreen/NVM at a35c378 directly, not provisionally (R-641), for those 180 of the paper's ~10⁴, the files never committed (no licence; their per-file sha256 table is docs/incoming/2026-10-28_rq598_data/nvm_a35c378_sha256.txt) and the 44 that end early checked for why before they are scored; the rest of the ~10⁴ awaits the authors' full set, asked for by email. A qualifying reproduction (the paper's set-up, a converged arbitrary-precision integrator; our Brutus from pgbreen/NvMgeneration at 98906f4, BR-1's reference code, GPL-3.0) scores provisionally, labelled \"vs <source>\" (\"vs Brutus, run here\"), never \"replicates the paper\". Re-score obligation (R-640, R-642): when the authors' full set arrives, every result scored against a reproduction is re-scored against it; where ours and theirs disagree, theirs governs and the disagreement is queued. The cost per point is reported before any Brutus run is scaled or goes below ε = 10⁻⁶ (R-638). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (b), the CPU IC inspector: it binds at f64 or higher, and a GPU miss on it is expected, not a defect (R-649 item 2)."
+  note: "Reproduces: Breen et al. 2020 (MNRAS 494, 2465): per-trajectory Brutus runs to t = 10. Chart: the Anosova physical-frame entry (Breen's frame). Milestone: M9 (was M3; R-650). Compare: exact (rule 8: a converged code) (rule 8). Tolerance: REQ-VAL-298 (calibration, R-71). Row BR-1 of principia_dd_replication.md § \"5.10 Converged-code references\"; layer replication, tier C; closed by TASK-M9-22 (was TASK-M3-62) (R-594, R-629). RQ-598 closed by R-637 (option (a)); scored as R-638 and R-640 to R-642 rule it, R-642 governing: against the authors' own 180 trajectories of github.com/pgbreen/NVM at a35c378 directly, not provisionally (R-641), for those 180 of the paper's ~10⁴, the files never committed (no licence; their per-file sha256 table is docs/incoming/2026-10-28_rq598_data/nvm_a35c378_sha256.txt) and the 44 that end early checked for why before they are scored; the rest of the ~10⁴ awaits the authors' full set, asked for by email. A qualifying reproduction (the paper's set-up, a converged arbitrary-precision integrator; our Brutus from pgbreen/NvMgeneration at 98906f4, BR-1's reference code, GPL-3.0) scores provisionally, labelled \"vs <source>\" (\"vs Brutus, run here\"), never \"replicates the paper\". Re-score obligation (R-640, R-642): when the authors' full set arrives, every result scored against a reproduction is re-scored against it; where ours and theirs disagree, theirs governs and the disagreement is queued. The cost per point is reported before any Brutus run is scaled or goes below ε = 10⁻⁶ (R-638). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (b), the CPU IC inspector: it binds at f64 or higher, and a GPU miss on it is expected, not a defect (R-649 item 2). R-701 (4 Nov 2026, RQ-613, RQ-615, RQ-616): Brutus runs at `p_max` = 4, `L_w` set explicitly. No ε = 10⁻⁷⁰ cost is quoted until the authors answer. The NVM trajectories stay local, and BR-1's converged fraction reports both readings of \"< 0.1\" until Breen answers. RQ-696 holds the seeded draw."
 - id: REQ-VAL-298
   area: VAL
   kind: calibration
@@ -36988,7 +36997,7 @@
   note: "Calibrates REQ-VAL-323 (PA-1); never set from a published number to make it pass (rule 4). Closed by TASK-M9-24 (was TASK-M3-64) (R-594, R-629). 30 Oct 2026 (R-649, R-650): calibrates a measurement, never a gate; scored in M9 (was M3); confirmed by the human with the M9 report (REQ-VAL-340), not at a gate. Its target's tier: Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Statement *was:* \"…confirmed by the human at the M3 gate…\". Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\"."
 - id: REQ-VAL-325
   area: VAL
-  statement: "Maps of the first two to four syzygy symbols over the free-fall plane must reproduce Tanikawa & Mikkola's 2008 and 2015 maps in their convention and labelling, after the D11 mirror remap (TS-1)."
+  statement: "Maps of the first two to four syzygy symbols over the free-fall plane must reproduce Tanikawa & Mikkola's 2008 and 2015 maps in their convention and labelling; no remap for 2015's maps; for 2008's the figures decide, read beside the unremapped map (R-702; *was:* \"after the D11 mirror remap\") (TS-1)."
   source:
   - file: docs/design/principia_dd_replication.md
     section: 5.12 Targets that wait for a chart, a diagnostic or data
@@ -37010,17 +37019,20 @@
     section: "12.3 Outcomes, the like-for-like check and the forbidden moves"
   - file: decisions.md
     section: "R-669 — The owner adopts the recommendations on the fifteen questions of 1 Nov but RQ-656: the Šuvakov-plane chart is one M9 task, its five targets waiting on it whole; a syzygy-symbol field only; N_scramble only; no periodic-orbit continuation, after the SJTU partial check; TR-1, MK-1 and SL-1 stay in M9, not scored, with no chart; the census's CI cadence as § 8.1 and § 8.2 write it, lavapipe in the smoke job; REQ-VAL-199 keeps 256 starts; GG-1's panels by like ε; the drift predicates read the stored latch, live values only for control flow; BZ-1C's starts by Path B, a list-of-starts chart the fallback; Hénon 1974 joins the rotating-frame set; Heggie & Sweatman 1991 in M9, not scored *(closes RQ-593, RQ-595, RQ-596, RQ-597, RQ-608, RQ-617, RQ-618, RQ-620, RQ-636, RQ-647 and RQ-654; amends R-636, R-637 and R-639; refines R-642)*"
+  - file: decisions.md
+    section: "R-702 — The library's open readings: Paper I's normalisation is read for Tanikawa 2000's times; Broucke 2006 stays context; Martynova & Orlov's fractions are compared with the 56 stated; the two unverified citations drop; the trust line's marks gain a dated \"chosen by analogy\" line; Tanikawa's free-fall papers are named by the frame each uses, no mirror for the ones read; AN-2 is shape-only *(closes RQ-640, RQ-641, RQ-642, RQ-645, RQ-648, RQ-650 and RQ-651; refines R-574)*"
   verify:
+    detail: "the syzygy-symbol field once RQ-595 is ruled; reviewed by the physics reviewer; control: the map without the mirror remap must be mirrored, which applies only to a map that takes the remap; for a map in Anosova's region, the control is a mirrored map that must fail to match (R-702; *was:* \"control: the map without the mirror remap must be mirrored\")"
     method: review checklist
-    detail: "the syzygy-symbol field once RQ-595 is ruled; reviewed by the physics reviewer; control: the map without the mirror remap must be mirrored"
   rulings:
   - R-594
   - R-629
   - R-649
   - R-650
   - R-669
+  - R-702
   milestone: M9
-  note: "Reproduces: Tanikawa & Mikkola 2008 (arXiv:0802.2465) and 2015 (PASJ 67, 115): maps of the first 2–4 syzygy symbols over the free-fall plane. Chart: the Anosova physical-frame entry, through the D11 mirror remap. Milestone: M9 (was M4; R-650). Compare: qualitative (rule 8). Tolerance: none: qualitative. Row TS-1 (the 25 Oct tier B's symbol-sequence maps) of principia_dd_replication.md § \"5.12 Targets that wait for a chart, a diagnostic or data\"; layer replication, tier B; closed by TASK-M9-28 (was TASK-M4-24) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M4), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\". R-669 (1 Nov 2026, RQ-595 (b)): the syzygy-symbol field is REQ-VAL-342, defined and built by TASK-M9-28; \"once RQ-595 is ruled\" reads as that field. *Was (rq):* RQ-595."
+  note: "Reproduces: Tanikawa & Mikkola 2008 (arXiv:0802.2465) and 2015 (PASJ 67, 115): maps of the first 2–4 syzygy symbols over the free-fall plane. Chart: the Anosova physical-frame entry; no remap for 2015's maps; for 2008's the figures decide, read beside the unremapped map (R-702; *was:* \"through the D11 mirror remap\"). Milestone: M9 (was M4; R-650). Compare: qualitative (rule 8). Tolerance: none: qualitative. Row TS-1 (the 25 Oct tier B's symbol-sequence maps) of principia_dd_replication.md § \"5.12 Targets that wait for a chart, a diagnostic or data\"; layer replication, tier B; closed by TASK-M9-28 (was TASK-M4-24) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M4), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\". R-669 (1 Nov 2026, RQ-595 (b)): the syzygy-symbol field is REQ-VAL-342, defined and built by TASK-M9-28; \"once RQ-595 is ruled\" reads as that field. *Was (rq):* RQ-595."
 - id: REQ-VAL-326
   area: VAL
   statement: "First-symbol maps at non-zero angular momentum, virial ratio 0 to 0.7 (Tanikawa & Mikkola 2008, Fig. 7), must be reproduced, the fixed-k velocity prescription read from the 2015 PASJ paper (TS-2)."
@@ -37630,6 +37642,12 @@
     section: 4. Tolerance — and the cross-backend reality
   - file: decisions.md
     section: "R-690 — R-547's \"operations every IEEE backend rounds alike\" is stated as a condition on the driver and tested by TASK-M4-27 and TASK-M4-28; it is not enforceable, and a driver that fails is recorded unverified, not supported *(closes RQ-690; amends R-547)*"
+  - file: decisions.md
+    section: "R-694 — With the compute setting off, R-297's bit-identity means the branch decisions of REQ-INT-057 and the Tier B fields only, continuous values free across drivers; `E_rel` and `|Δn̂|` take written forms with no driver division or `√` in the decision; the header records \"Off\" only for drivers measured, otherwise wgpu's path with \"driver unverified\" *(closes RQ-685; refines R-297)*"
+  - file: decisions.md
+    section: "R-696 — RQ-687's option (b) now: a sinc form at `shape_sphere.rs`:162 that never reads the backend's `sin` near 0, gated to f32 so f64 bits do not move; option (a), the kernel's own `sin` and `cos`, is deferred to M4, decided on the cross-backend check, and RQ-629 with it"
+  - file: decisions.md
+    section: "R-710 — The ionisation gate's total-energy condition reads the stored `E_0`, its sign decided once per trajectory at `t = 0`, at `ε = 0` and `ε ≠ 0` alike; the condition stays; it is an enumerated exception in `branch_inputs.rs`, the decision differing between backends only within a few ulp of `E_0 = 0`, measured and reported, never reconciled; a control fixture fails if the condition is dropped *(closes RQ-697; amends R-34 and R-84; refines R-32 and R-694)*"
   verify:
     detail: "cargo xtask gate cross-backend-march: a decoded arm and a shared-start arm, under each occupant, over fixtures/gates/parity_fixtures and a near-decision stratum, a fixed-input arm over the Tier L boundary states, read on the given state with no STEP, each stratum's N in the header, a record per backend with per-step branch digests, a replay of each first difference on every backend, and the comparison of every pair, each pair's disagreement count and rate, per branch-sensitive result, the non-chaotic, chaotic and near-decision strata apart; the control, a record compared with itself, reads 0, and one flipped label reads 1. The standing control: a synthetic pair of kind + and × with equal operands and differing input bits, no fork, reads \"unverified, not supported\", and a compare that reads only outcomes misses it. The N control: a synthetic driver whose rows are all level 1, operands differing, reads \"no failure in 0\", and a compare whose N counts all rows fails it; a driver with N > 0 at the bucket and level 1 at collision shows 0 at collision. Only the controls assert. NVIDIA's record is a Windows run posted to issue #390; a backend not yet run is listed as not run."
     method: numerical gate
@@ -37637,8 +37655,11 @@
   - R-649
   - R-686
   - R-690
+  - R-694
+  - R-696
+  - R-710
   milestone: M4
-  note: "R-686 asks for the evidence on whether the missing NoContraction matters for the real kernel. The rate alone is not that evidence, since division and √ are confounders (RQ-685): the discriminating result is differing bits at bit-identical operands in a branch input of kind + and × (R-547; R-690). The gate asks that the report exists, never for a rate (R-649)."
+  note: "R-686 asks for the evidence on whether the missing NoContraction matters for the real kernel. The rate alone is not that evidence, since division and √ are confounders (RQ-685): the discriminating result is differing bits at bit-identical operands in a branch input of kind + and × (R-547; R-690). The gate asks that the report exists, never for a rate (R-649). R-694 (4 Nov 2026, RQ-685): the kind is read from `branch_inputs.rs`'s written form, which TASK-M4-29 writes and TASK-M4-03 enumerates. R-710 (4 Nov 2026, RQ-697 (b)): the ionisation gate's stored `E_0` sign, the enumerated exception, is outside REQ-INT-064's \"must agree\", so it is reported as `other operation` and names no departure. R-696 (4 Nov 2026): RQ-687's option (a), the kernel's own `sin` and `cos`, is decided on this check and TASK-M4-27's; the entry stays open for it."
 - id: REQ-VAL-349
   area: VAL
   statement: "The golden runner must compare a case that keeps one reference per backend only on the backends CI renders on (Metal, and Vulkan on lavapipe), and on any other driver must render it and report its result with the driver's name, neither passing nor failing it; a case with one reference across backends must be compared on every driver (R-695)."
@@ -41278,12 +41299,15 @@
     section: "R-654 — The softened force law is Plummer softening, `V = −Σ mᵢmⱼ/√(r² + ε²)`, with `ε` canonical, a fraction of the initial hyperradius `R` fixed at `t = 0` and never co-moving, recorded in every output header like `r_coll`; energy and drift are defined under the softened potential; its task is scheduled late, after the core build, and runs with `ε ≠ 0` stay refused until it lands *(closes RQ-627; queues RQ-656)*"
   - file: docs/contracts/principia_integrator_contract.md
     section: Part 7 — Detectors as the `SimState` producer
+  - file: decisions.md
+    section: "R-710 — The ionisation gate's total-energy condition reads the stored `E_0`, its sign decided once per trajectory at `t = 0`, at `ε = 0` and `ε ≠ 0` alike; the condition stays; it is an enumerated exception in `branch_inputs.rs`, the decision differing between backends only within a few ulp of `E_0 = 0`, measured and reported, never reconciled; a control fixture fails if the condition is dropped *(closes RQ-697; amends R-34 and R-84; refines R-32 and R-694)*"
   verify:
     detail: "every output header of a run carries ε beside r_coll, equal to the dispatched value's bits; an ε > 0 run is tagged and refused pooling with ε = 0; finite ε at each end of the range dispatches, and just outside it, negative ε, NaN and ±∞ are refused with the typed reason; ε = 0 dispatches untagged at any calibrated range; control: a header writer dropping ε fails; dispatch refuses ε ≠ 0 on a regularised occupant, and a view with ε ≠ 0 and any Some(E*), Some(0) included, each with its typed reason; controls: an unregularised occupant at ε ≠ 0, and ε ≠ 0 with E* None, dispatch"
     method: unit test
   rulings:
   - R-654
   - R-670
+  - R-710
   milestone: M9
   rq:
   - RQ-693
@@ -41298,6 +41322,8 @@
     section: "R-654 — The softened force law is Plummer softening, `V = −Σ mᵢmⱼ/√(r² + ε²)`, with `ε` canonical, a fraction of the initial hyperradius `R` fixed at `t = 0` and never co-moving, recorded in every output header like `r_coll`; energy and drift are defined under the softened potential; its task is scheduled late, after the core build, and runs with `ε ≠ 0` stay refused until it lands *(closes RQ-627; queues RQ-656)*"
   - file: decisions.md
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: decisions.md
+    section: "R-710 — The ionisation gate's total-energy condition reads the stored `E_0`, its sign decided once per trajectory at `t = 0`, at `ε = 0` and `ε ≠ 0` alike; the condition stays; it is an enumerated exception in `branch_inputs.rs`, the decision differing between backends only within a few ulp of `E_0 = 0`, measured and reported, never reconciled; a control fixture fails if the condition is dropped *(closes RQ-697; amends R-34 and R-84; refines R-32 and R-694)*"
   verify:
     detail: "CALIBRATION (R-71): the proposal measures what sets each end of the range and states it, with its evidence; physics reviewer checked; R-654 gives no value."
     method: review checklist
@@ -41305,6 +41331,7 @@
   - R-71
   - R-654
   - R-670
+  - R-710
   milestone: M9
   rq:
   - RQ-693

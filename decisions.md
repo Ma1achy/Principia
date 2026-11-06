@@ -30530,7 +30530,7 @@ R-684 is in the "ci" group of `plan/rule_groups.yaml`.
 ## R-694 — With the compute setting off, R-297's bit-identity means the branch decisions of REQ-INT-057 and the Tier B fields only, continuous values free across drivers; `E_rel` and `|Δn̂|` take written forms with no driver division or `√` in the decision; the header records "Off" only for drivers measured, otherwise wgpu's path with "driver unverified" *(closes RQ-685; refines R-297)*
 *Refined by R-710 (4 Nov 2026: "branch decisions" hold with one enumerated exception, the ionisation gate's `E_0` sign).*
 *Still in force: all of it.*
-*4 Nov 2026 · the owner's batch of that day; applied in `docs/contracts/principia_parity_contract.md` § 4, `docs/design/principia_dd_telemetry_and_tiers.md` § 5, `docs/contracts/principia_integrator_contract.md` Part 4 (dated notes), R-297's forward lines, `docs/archive/review_queue/M0.md` (RQ-685), `REVIEW_QUEUE.md`, REQ-INT-057, REQ-INT-064, REQ-SYS-074 and REQ-TOOL-141 (reqio), REQ-VAL-099 (reqio, its note) and TASK-M8-41 (its note), REQ-INT-112 and REQ-TOOL-221 (reqio, new), TASK-M4-29 and TASK-M4-30 (new), TASK-M4-03, TASK-M4-28 (a note), `plan/tasks.yaml` and `plan/rule_groups.yaml`*
+*4 Nov 2026 · the owner's batch of that day; applied in `docs/contracts/principia_parity_contract.md` § 4, `docs/design/principia_dd_telemetry_and_tiers.md` § 5, `docs/contracts/principia_integrator_contract.md` Part 4 (dated notes), R-297's forward lines, `docs/archive/review_queue/M0.md` (RQ-685), `REVIEW_QUEUE.md`, REQ-INT-057, REQ-INT-064, REQ-SYS-074 and REQ-TOOL-141 (reqio), REQ-VAL-099 (reqio, its note) and TASK-M8-41 (its note), REQ-VAL-348 (reqio: rulings, source, note), REQ-INT-112 and REQ-TOOL-221 (reqio, new), TASK-M4-29 and TASK-M4-30 (new), TASK-M4-03, TASK-M4-28 (a note), `plan/tasks.yaml` and `plan/rule_groups.yaml`*
 
 The owner's words, 4 Nov 2026, verbatim:
 
@@ -30558,7 +30558,7 @@ The owner's words, 4 Nov 2026, verbatim:
 
 R-694 is in the "design" group of `plan/rule_groups.yaml`, with R-297.
 
-Adds REQ-INT-112 and REQ-TOOL-221; changes REQ-INT-057, REQ-INT-064, REQ-SYS-074 and REQ-TOOL-141 (rulings, source, notes) and REQ-VAL-099 (rulings, source, note).
+Adds REQ-INT-112 and REQ-TOOL-221; changes REQ-INT-057, REQ-INT-064, REQ-SYS-074 and REQ-TOOL-141 (rulings, source, notes), and REQ-VAL-099 and REQ-VAL-348 (rulings, source, note).
 
 ## R-695 — Near-tie golden cases are held only on the backends CI renders on; on any other driver their result is reported, not compared to pass *(closes RQ-686; amends R-296)*
 *4 Nov 2026 · the owner's batch of that day; applied in `docs/contracts/principia_parity_contract.md` § 4 (a dated note), R-296's forward lines, `docs/archive/review_queue/M0.md` (RQ-686), `REVIEW_QUEUE.md`, REQ-VAL-176 and REQ-VAL-138 (reqio), REQ-VAL-349 (reqio, new), TASK-M4-31 (new), `plan/tasks.yaml` and `plan/rule_groups.yaml`*
@@ -30580,7 +30580,7 @@ R-695 is in the "ci" group of `plan/rule_groups.yaml`, with R-296.
 Adds REQ-VAL-349; changes REQ-VAL-176 and REQ-VAL-138 (rulings, source, notes).
 
 ## R-696 — RQ-687's option (b) now: a sinc form at `shape_sphere.rs`:162 that never reads the backend's `sin` near 0, gated to f32 so f64 bits do not move; option (a), the kernel's own `sin` and `cos`, is deferred to M4, decided on the cross-backend check, and RQ-629 with it
-*4 Nov 2026 · the owner's batch of that day; applied in `REVIEW_QUEUE.md` (RQ-687 and RQ-629, each stays open with a dated line), `docs/design/principia_dd_decoder.md` § 3.2 (a dated note), REQ-DEC-053 and REQ-DEC-054 (reqio, new), TASK-M2-53 (new), TASK-M4-28 (a note), `plan/tasks.yaml` and `plan/rule_groups.yaml`*
+*4 Nov 2026 · the owner's batch of that day; applied in `REVIEW_QUEUE.md` (RQ-687 and RQ-629, each stays open with a dated line), `docs/design/principia_dd_decoder.md` § 3.2 (a dated note), REQ-DEC-053 and REQ-DEC-054 (reqio, new), REQ-VAL-348 (reqio: rulings, source, note), TASK-M2-53 (new), TASK-M4-28 (a note), `plan/tasks.yaml` and `plan/rule_groups.yaml`*
 
 The owner's words, 4 Nov 2026, verbatim:
 
@@ -30601,7 +30601,7 @@ The owner's words, 4 Nov 2026, verbatim:
 
 R-696 is in the "physics" group of `plan/rule_groups.yaml`.
 
-Adds REQ-DEC-053 and REQ-DEC-054.
+Adds REQ-DEC-053 and REQ-DEC-054; changes REQ-VAL-348 (rulings, source, note).
 
 ## R-697 — The orchestrator's decisions of 30 Oct and 4 Nov on RQ-621, RQ-623, RQ-624, RQ-628, RQ-632 and RQ-684, and the `DECODE_SWITCHOVER` reading, are accepted; R-360 is amended to match RQ-684's move *(closes RQ-621, RQ-623, RQ-624, RQ-628, RQ-632 and RQ-684; amends R-360)*
 *4 Nov 2026 · the owner's batch of that day; applied in R-360's forward lines, `docs/archive/review_queue/M0.md` (six entries moved), `REVIEW_QUEUE.md`, REQ-SYS-077 (reqio) and `plan/rule_groups.yaml`*
@@ -30680,7 +30680,7 @@ The owner's words, 4 Nov 2026, verbatim:
 R-700 is in the "physics" group of `plan/rule_groups.yaml`, with R-655.
 
 ## R-701 — GG-1 and BR-1: the eight neighbours of (3, 43) are run, ours stays labelled ours meanwhile, `p_max` is 4, no ε = 10⁻⁷⁰ cost is quoted, the authors' trajectories stay local, both BR-1 readings stay reported, and the open questions go to the authors in the owner's pending emails *(closes RQ-612, RQ-613, RQ-615 and RQ-616)*
-*4 Nov 2026 · the owner's batch of that day; applied in `docs/design/principia_dd_replication.md` § 5.10 (a dated note), `docs/incoming/2026-10-28_rq598_data/QUESTIONS_for_authors.md` (new), that directory's README (a dated line), `docs/archive/review_queue/M0.md` (four entries moved), `REVIEW_QUEUE.md`, REQ-VAL-350 (reqio, new), TASK-M9-42 (new), TASK-M9-22 and TASK-M9-37 (notes), `plan/tools/milestones.py`, `plan/tasks.yaml` and `plan/rule_groups.yaml`*
+*4 Nov 2026 · the owner's batch of that day; applied in `docs/design/principia_dd_replication.md` § 5.10 (a dated note), `docs/incoming/2026-10-28_rq598_data/QUESTIONS_for_authors.md` (new), that directory's README (a dated line), `docs/archive/review_queue/M0.md` (four entries moved), `REVIEW_QUEUE.md`, REQ-VAL-295 and REQ-VAL-297 (reqio: rulings, source, note), REQ-VAL-350 (reqio, new), TASK-M9-42 (new), TASK-M9-22 and TASK-M9-37 (notes), `plan/tools/milestones.py`, `plan/tasks.yaml` and `plan/rule_groups.yaml`*
 
 The owner's words, 4 Nov 2026, verbatim:
 
@@ -30711,10 +30711,10 @@ The owner's words, 4 Nov 2026, verbatim:
 
 R-701 is in the "design" group of `plan/rule_groups.yaml`, with R-642.
 
-Adds REQ-VAL-350.
+Adds REQ-VAL-350; changes REQ-VAL-295 and REQ-VAL-297 (rulings, source, note).
 
 ## R-702 — The library's open readings: Paper I's normalisation is read for Tanikawa 2000's times; Broucke 2006 stays context; Martynova & Orlov's fractions are compared with the 56 stated; the two unverified citations drop; the trust line's marks gain a dated "chosen by analogy" line; Tanikawa's free-fall papers are named by the frame each uses, no mirror for the ones read; AN-2 is shape-only *(closes RQ-640, RQ-641, RQ-642, RQ-645, RQ-648, RQ-650 and RQ-651; refines R-574)*
-*4 Nov 2026 · the owner's batch of that day; applied in `docs/design/principia_dd_replication.md` (TM-1's and TS-1's rows and rule 6 of § 8.1, corrected with a *Was*), `docs/design/principia_honesty_precision.md` § 3.2 (a dated line), `docs/incoming/2026-10-25_replication/catalogue.md` line 13 and `docs/incoming/2026-10-27_validation_plan/PLAN.md` (TM-1's row, TS-1's row and § 8, corrected with a *Was*), `docs/incoming/2026-10-29_research_batches/README.md`, `docs/incoming/2026-10-28_external_sources/README.md` and `docs/incoming/2026-10-31_fetch_list/README.md` (dated notes), R-574's forward lines, `docs/archive/review_queue/M0.md` (seven entries moved), `REVIEW_QUEUE.md`, REQ-VAL-342 (reqio: statement, rulings, note), REQ-VAL-351 (reqio, new), TASK-M9-43 (new), TASK-M9-09 and TASK-M9-28, `plan/tools/milestones.py`, `plan/tasks.yaml` and `plan/rule_groups.yaml`*
+*4 Nov 2026 · the owner's batch of that day; applied in `docs/design/principia_dd_replication.md` (TM-1's and TS-1's rows and rule 6 of § 8.1, corrected with a *Was*), `docs/design/principia_honesty_precision.md` § 3.2 (a dated line), `docs/incoming/2026-10-25_replication/catalogue.md` line 13 and `docs/incoming/2026-10-27_validation_plan/PLAN.md` (TM-1's row, TS-1's row and § 8, corrected with a *Was*), `docs/incoming/2026-10-29_research_batches/README.md`, `docs/incoming/2026-10-28_external_sources/README.md` and `docs/incoming/2026-10-31_fetch_list/README.md` (dated notes), R-574's forward lines, `docs/archive/review_queue/M0.md` (seven entries moved), `REVIEW_QUEUE.md`, REQ-VAL-342 (reqio: statement, rulings, note), REQ-VAL-240 and REQ-VAL-325 (reqio: statement, verify, rulings, source, note), REQ-VAL-351 (reqio, new), TASK-M9-43 (new), TASK-M9-09 and TASK-M9-28, `plan/tools/milestones.py`, `plan/tasks.yaml` and `plan/rule_groups.yaml`*
 
 The owner's words, 4 Nov 2026, verbatim:
 
@@ -30745,7 +30745,7 @@ The owner's words, 4 Nov 2026, verbatim:
 
 R-702 is in the "design" group of `plan/rule_groups.yaml`.
 
-Adds REQ-VAL-351; changes REQ-VAL-342 (statement, rulings, note).
+Adds REQ-VAL-351; changes REQ-VAL-342 (statement, rulings, note), and REQ-VAL-240 and REQ-VAL-325 (statement, verify, rulings, source, note).
 
 ## R-703 — A statistical target scored on tier (a) alone is labelled "f32; f64 agreement not yet measured" until BZ-1C; BZ-1C's third side uses both escape criteria, and any energy cut is shown both ways with its counts; a start with neither pair parted reads "unresolved", counted apart *(closes RQ-649, RQ-652, RQ-653 and RQ-655; refines R-632 and R-649)*
 *4 Nov 2026 · the owner's batch of that day; applied in `docs/design/principia_dd_replication.md` § 12.2 (a dated paragraph), `docs/design/principia_honesty_precision.md` § 6 (a dated line), `docs/incoming/2026-10-27_validation_plan/PLAN.md` (a dated note under BZ-1C), the forward lines of R-632 and R-649, `docs/archive/review_queue/M0.md` (four entries moved), `REVIEW_QUEUE.md`, REQ-VAL-199 and REQ-VAL-340 (reqio), TASK-M8-76 and TASK-M9-37 (notes) and `plan/rule_groups.yaml`*
@@ -30949,7 +30949,7 @@ R-709 is in the "physics" group of `plan/rule_groups.yaml`.
 Changes REQ-CHART-062, REQ-GUI-241 and REQ-TOOL-169 (statement, verify, rulings, source, note).
 
 ## R-710 — The ionisation gate's total-energy condition reads the stored `E_0`, its sign decided once per trajectory at `t = 0`, at `ε = 0` and `ε ≠ 0` alike; the condition stays; it is an enumerated exception in `branch_inputs.rs`, the decision differing between backends only within a few ulp of `E_0 = 0`, measured and reported, never reconciled; a control fixture fails if the condition is dropped *(closes RQ-697; amends R-34 and R-84; refines R-32 and R-694)*
-*4 Nov 2026 · the owner's words of that day; applied in `docs/contracts/principia_integrator_contract.md` Part 4 and Part 7, `docs/contracts/principia_parity_contract.md` § "Fast-math, per shader stage" and § "2. The three tiers", `docs/contracts/principia_canonical_spec.md` § 9, `docs/notes/principia_gpu_determinism_note.md` rule 1, `plan/reviewers/code.md` and `plan/reviewers/physics.md` (dated lines), R-32's, R-34's, R-84's and R-694's forward lines, `docs/archive/review_queue/M0.md` (RQ-697, moved with its ruling), REQ-EVT-006, REQ-INT-057, REQ-INT-061, REQ-INT-064, REQ-INT-111, REQ-INT-112, REQ-SYS-094, REQ-SYS-095, REQ-VAL-059 and REQ-VAL-099 (reqio), REQ-INT-113 (reqio, new, calibration), TASK-M3-12, TASK-M4-03, TASK-M4-28 (a note), TASK-M4-29 and TASK-M9-39, `plan/tasks.yaml` and `plan/rule_groups.yaml`; built by TASK-M3-12, TASK-M4-03 and TASK-M9-39*
+*4 Nov 2026 · the owner's words of that day; applied in `docs/contracts/principia_integrator_contract.md` Part 4 and Part 7, `docs/contracts/principia_parity_contract.md` § "Fast-math, per shader stage" and § "2. The three tiers", `docs/contracts/principia_canonical_spec.md` § 9, `docs/notes/principia_gpu_determinism_note.md` rule 1, `plan/reviewers/code.md` and `plan/reviewers/physics.md` (dated lines), R-32's, R-34's, R-84's and R-694's forward lines, `docs/archive/review_queue/M0.md` (RQ-697, moved with its ruling), REQ-EVT-006, REQ-INT-057, REQ-INT-061, REQ-INT-064, REQ-INT-111, REQ-INT-112, REQ-SYS-094, REQ-SYS-095, REQ-VAL-059, REQ-VAL-099 and REQ-VAL-348 (reqio), REQ-INT-113 (reqio, new, calibration), TASK-M3-12, TASK-M4-03, TASK-M4-28 (a note), TASK-M4-29 and TASK-M9-39, `plan/tasks.yaml` and `plan/rule_groups.yaml`; built by TASK-M3-12, TASK-M4-03 and TASK-M9-39*
 
 The owner's words, 4 Nov 2026, verbatim:
 
@@ -30975,7 +30975,7 @@ The owner's words, 4 Nov 2026, verbatim:
 
 R-710 is in the "physics" group of `plan/rule_groups.yaml`.
 
-Adds REQ-INT-113; changes REQ-EVT-006, REQ-INT-057, REQ-INT-061, REQ-INT-064, REQ-INT-111, REQ-INT-112, REQ-SYS-094, REQ-SYS-095, REQ-VAL-059 and REQ-VAL-099.
+Adds REQ-INT-113; changes REQ-EVT-006, REQ-INT-057, REQ-INT-061, REQ-INT-064, REQ-INT-111, REQ-INT-112, REQ-SYS-094, REQ-SYS-095, REQ-VAL-059, REQ-VAL-099 and REQ-VAL-348.
 
 ## R-711 — One measurement-only self-hosted runner, `malachys-pc-rtx2080s`, on the owner's PC, with no pull-request trigger on any self-hosted job; DX12 may run on it as a measurement; PC benchmarks stay apart from the Mac's performance gates; a recorded run on it can serve Paper 2's non-Metal parity evidence; its jobs have their own workflow; the signing rules *(closes RQ-695; amends R-174, R-186 and R-656)*
 *5 Nov 2026 · the owner's message of that day; applied in the forward lines of R-58, R-110, R-174, R-186 and R-656,

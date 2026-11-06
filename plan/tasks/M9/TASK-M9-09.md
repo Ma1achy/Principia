@@ -9,7 +9,7 @@
 - **Size:** ~300 lines
 
 ## Goal
-The replication suite's targets TM-1 run as engine tests (`principia_dd_replication.md`; R-594, R-629). On the free-fall plane, the binary-collision curves must converge on each of Tanikawa & Mikkola 2021's eleven triple-collision points (Table 2), and `d_min` must scale toward each along Table 4's approach initial conditions (radii 1e-3 to 1e-5), after the D11 mirror remap (rule 6) (TM-1). Each tolerance is a calibration, proposed here with its evidence and confirmed by the human with the M9 report (R-71).
+The replication suite's targets TM-1 run as engine tests (`principia_dd_replication.md`; R-594, R-629). On the free-fall plane, the binary-collision curves must converge on each of Tanikawa & Mikkola 2021's eleven triple-collision points (Table 2), and `d_min` must scale toward each along Table 4's approach initial conditions (radii 1e-3 to 1e-5), no remap: the 2021 paper's eq. (2) is Anosova's region (rule 6, R-702; *was:* "after the D11 mirror remap (rule 6)") (TM-1). Each tolerance is a calibration, proposed here with its evidence and confirmed by the human with the M9 report (R-71).
 
 ## References
 - `docs/design/principia_dd_replication.md` § "5.5 Regularisation"

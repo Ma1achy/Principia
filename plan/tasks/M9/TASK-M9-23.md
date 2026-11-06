@@ -9,7 +9,7 @@
 - **Size:** ~350 lines
 
 ## Goal
-The replication suite's targets TR-1, MK-1, SL-1 run as engine tests (`principia_dd_replication.md`; R-594, R-629). The inclination-0 row of Trani et al. 2024's map, as a one-dimensional scan in binary phase, must reproduce the escaper sequence and the regularity statistic f_col (TR-1). Per-body escape probabilities over Manwadkar et al. 2021's eight mass sets must be measured in a planar re-run and compared as distributions with their Table 1 (MK-1). Binned binary energy and eccentricity distributions must be compared with Stone & Leigh 2019's planar closed forms, with the cut N_scramble ≥ 2 (SL-1). Each tolerance is a calibration, proposed here with its evidence and confirmed by the human with the M9 report (R-71).
+The replication suite's targets TR-1, MK-1, SL-1 run as engine tests (`principia_dd_replication.md`; R-594, R-629). The inclination-0 row of Trani et al. 2024's map, as a one-dimensional scan in binary phase, must reproduce the escaper sequence and the regularity statistic f_col (TR-1). Per-body escape probabilities over Manwadkar et al. 2021's eight mass sets must be measured in a planar re-run and compared as distributions with their Table 2, Table 1 for the mass sets (R-707; *was:* "with their Table 1") (MK-1). Binned binary energy and eccentricity distributions must be compared with Stone & Leigh 2019's planar closed forms, with the cut N_scramble ≥ 2 (SL-1). Each tolerance is a calibration, proposed here with its evidence and confirmed by the human with the M9 report (R-71).
 
 ## References
 - `docs/design/principia_dd_replication.md` § "5.12 Targets that wait for a chart, a diagnostic or data"
