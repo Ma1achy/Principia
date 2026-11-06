@@ -1203,6 +1203,8 @@ jobs:
       # R-692); the `ci` shards run them on lavapipe. They claim nothing of the real kernel (ADR-0001 § "Must not claim").
       - name: cargo nextest run -p gui lattice_
         run: cargo nextest run -p gui lattice_ --no-capture
+      - name: cargo test -p gui lattice_ --doc
+        run: cargo test -p gui lattice_ --doc
       # Every golden suite on Metal (R-186's first Metal check, TASK-M0-06), each case against its one reference
       # across backends, or its Metal one where it keeps one per backend (R-269, R-287, R-296; TASK-M0-43).
       - name: cargo xtask golden --all
