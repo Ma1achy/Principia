@@ -988,6 +988,8 @@ fn check_navigate(texts: &[(String, Rect)], scopes: &[&str]) {
         "zoom",
         "unlock",
         "open in Inspector",
+        // Changed by TASK-M6-45's qa commit (R-466 K6, K15).
+        "reset",
     ];
     want.sort_unstable();
     assert_eq!(got, want, "Navigate's widgets");
@@ -1054,11 +1056,10 @@ fn qa_mock_manifold_sections_navigate_has_centre_zoom_depth_and_lock_and_no_z0_b
 fn qa_mock_manifold_sections_slice_centre_eight_sliders_each_number_box_edits_its_component() {
     let mut rig = mock();
     let id = rig.find(None, "Slice centre");
-    assert_eq!(
-        rig.child_labels(id),
-        AXES,
-        "Slice centre's eight sliders, in order"
-    );
+    // The eight, then the reset, its last element (R-466 K6; changed by TASK-M6-45's qa commit, R-466 K15).
+    let mut labels = rig.child_labels(id);
+    assert_eq!(labels.pop(), Some("reset"));
+    assert_eq!(labels, AXES, "Slice centre's eight sliders, in order");
     for (i, name) in AXES.iter().enumerate() {
         // Typed into the number box beside the slider: the value on the slider's row, right of its name.
         let texts = rig.texts();
@@ -1107,7 +1108,8 @@ fn qa_mock_manifold_sections_slice_centre_eight_sliders_each_number_box_edits_it
 fn check_tilt(scopes: &[&str]) {
     assert_eq!(
         scopes,
-        ["τ₁", "tilt τ₁ into", "τ₂", "tilt τ₂ into", "γ"],
+        // The reset last: changed by TASK-M6-45's qa commit (R-466 K6, K15).
+        ["τ₁", "tilt τ₁ into", "τ₂", "tilt τ₂ into", "γ", "reset"],
         "Tilt's widgets"
     );
 }

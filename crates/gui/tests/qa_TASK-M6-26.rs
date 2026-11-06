@@ -51,6 +51,8 @@ use engine::contract::snapshot::Snapshot;
 use engine::contract::view_ui::{KeyMode, Mode, Window};
 use gui::app::App;
 use gui::capture::{render_frame, Shot, FORMAT, PIXELS_PER_POINT, SIZE};
+use gui::explore::manifold_view::reset::home_rect;
+use gui::explore::manifold_view::RESET_SLICE_CENTRE;
 use gui::headless::Headless;
 use gui::keyboard::scopes::Arrows;
 use gui::layout::Layout;
@@ -652,7 +654,9 @@ fn qa_mock_manifold_view_locked_sliders_read_anchor_plus_offset_and_move_by_excu
         .into_iter()
         .find(|id| tree.get(id).unwrap().label == "Slice centre")
         .expect("Slice centre");
-    let sliders = tree.children(Some(centre));
+    // Its reset is its last element (R-466 K6; changed by TASK-M6-45's qa commit, R-466 K15).
+    let mut sliders = tree.children(Some(centre));
+    assert_eq!(sliders.pop(), Some(RESET_SLICE_CENTRE), "the reset is last");
     assert_eq!(sliders.len(), 8, "eight sliders");
     for (i, slider) in sliders.into_iter().enumerate() {
         let before = rig.snap();
@@ -930,6 +934,16 @@ fn within_one_pixel(
     let [x0, y0, x1, y1] =
         [figure.min.x, figure.min.y, figure.max.x, figure.max.y].map(|v| f64::from(v) * p);
     let (w, h) = (x1 - x0, y1 - y0);
+    // The Home button is no part of the stand-in, which is redrawn under it (R-466 K7; changed by TASK-M6-45's qa commit,
+    // R-466 K15): neither a pixel on it nor a source on it has anything to match.
+    let button = home_rect(figure).expand(2.0);
+    let (bx0, by0, bx1, by1) = (
+        f64::from(button.min.x) * p,
+        f64::from(button.min.y) * p,
+        f64::from(button.max.x) * p,
+        f64::from(button.max.y) * p,
+    );
+    let on_button = |x: f64, y: f64| x >= bx0 && x < bx1 && y >= by0 && y < by1;
     let (mut checked, mut strays) = (0, Vec::new());
     let mut y = y0.ceil() as i64 + 2;
     while (y as f64) < y1 - 2.0 {
@@ -948,7 +962,14 @@ fn within_one_pixel(
             let (bx, by) = (x0 + sb * w - 0.5, y1 - tb * h - 0.5);
             // Only a source on a pixel centre has a pixel to match; one between pixels has none of its colour.
             let on_grid = (bx - bx.round()).abs() < 0.01 && (by - by.round()).abs() < 0.01;
-            if on_grid && bx >= x0 + 2.0 && bx < x1 - 3.0 && by >= y0 + 2.0 && by < y1 - 3.0 {
+            let clear = !on_button(x as f64, y as f64) && !on_button(bx, by);
+            if clear
+                && on_grid
+                && bx >= x0 + 2.0
+                && bx < x1 - 3.0
+                && by >= y0 + 2.0
+                && by < y1 - 3.0
+            {
                 checked += 1;
                 let want = px(after, x, y);
                 let (cx, cy) = (bx.round() as i64, by.round() as i64);
@@ -1590,7 +1611,9 @@ fn qa_mock_keyboard_enter_reaches_every_control_of_each_section() {
     }
     // Slice centre's eight are §G2's eight names.
     let mut rig = mock();
-    let seen = walk(&mut rig, "Slice centre");
+    let mut seen = walk(&mut rig, "Slice centre");
+    // And its reset, last (R-466 K6; changed by TASK-M6-45's qa commit, R-466 K15).
+    assert_eq!(seen.pop().as_deref(), Some("reset"));
     assert_eq!(seen, AXES);
     rejects("the sliders out of order", || {
         let mut swapped = AXES;
