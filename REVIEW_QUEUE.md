@@ -765,7 +765,7 @@ owner: yes, it is physics; the tilt changes which systems the chart shows.*
   - `decisions.md` § "R-791 — …", the owner's words: "Its energy axis is the Newtonian energy, so a pixel's starting state never depends on the softening length and toggling softening changes only the physics, never the start."
   - `docs/design/principia_chart_reference.md` § 2.1, "Every energy-type axis is warped by default (R-471)": "`E = U + K_max·t^γ_K`"; and the virial ratio: "The kinetic energy at the pixel is `K* = Q(t)·|U|/2`, using the pixel's own `U` (E3)."
   - `crates/kernel/src/chart/energy.rs`:303, `potential`: "The potential `U` of the masses and configuration, `G = 1` (the descriptor's `V_0`)."
-  - `crates/kernel/src/chart/physical.rs`:10: "`E` ([`AxisE`]): `E = U + K*`, that `K*`, `U` the pixel's own potential (E3)."; :13: "`K* = L_z²/2I + Q·|U|/2` on the pixel's own `U`".
+  - `crates/kernel/src/chart/physical.rs`:10: "`E` ([`AxisE`]): `E = U + K*`, that `K*`, `U` the pixel's own potential (E3)."; :14: "`K* = L_z²/2I + Q·|U|/2` on the pixel's own `U`".
   - `docs/design/principia_dd_decoder.md` § 3.6, dated 2 Nov 2026: "At `ε ≠ 0`, `V₀ = − Σ_{i<j} mᵢmⱼ / √(‖rᵢ − rⱼ‖² + ε²)`".
 - **The silence:** R-670's refusal covers `Some(E*)` only, and R-791, REQ-CHART-092 and TASK-M9-39 name only `(L_z, E)`. These axes share `potential` with it, and TASK-M9-39 softens that path. So at `ε ≠ 0` their pixels get a start that depends on `ε`, with no label and no readout. The virial axis is the harder case, because R-670 makes the stored `virial_ratio` softened, so a Newtonian axis would disagree with its own readout.
 - **The question:** at `ε ≠ 0`, what `U` do these axes read, and do their charts run?

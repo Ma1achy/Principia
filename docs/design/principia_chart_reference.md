@@ -380,8 +380,8 @@ arithmetic on the narrowed values, and an `f32` decode's own rounding is held to
 is bounded past both of its edges.
 
 The search for `[q₀, q₁]` holds a ratio to `ε_μ/2`, half the tolerance above, and that margin is the search's alone: a
-ratio still counts as realised at `ε_μ`, so `[q₀, q₁]` can be shorter than the part the link realises at `ε_μ`, by up to
-5.48 in `ln q` at an extreme ratio, and a chart realised at `ε_μ` can be refused. The reason is measured. The range's ends are narrowed to `f32`, and that rounding
+ratio still counts as realised at `ε_μ`, so `[q₀, q₁]` can be shorter than the part the link realises at `ε_μ`, by as much as the
+measured worst, 5.48 in `ln q`, at an extreme ratio, and a chart realised at `ε_μ` can be refused. The reason is measured. The range's ends are narrowed to `f32`, and that rounding
 must stay inside the `ε_μ` a decoded pixel is held to: at the full `ε_μ`, 62% of narrowed `softmax_tanh` charts had a
 refused row. The need is `1 − 2⁻²⁴/ε_μ ≈ 0.94` of `ε_μ`. The `1/2` is chosen with room, not derived (R-810, closing
 RQ-707 (i)).

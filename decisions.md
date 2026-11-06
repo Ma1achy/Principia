@@ -19726,7 +19726,9 @@ a wrap mode, Repeat, Mirror or Clamp, with a separate dim setting; SM6 and SM11 
 checkerboard, SM12 six tests; SM15's Flow preset becomes the tileable checkerboard under Repeat, dimming off).*
 *Amended by R-544 (the shape sphere target's mirror).*
 *Amended by R-558.*
-*Still in force: all of it but SM8's one fixed treatment past the Picture's square, which R-543 makes the default
+*Amended in part by R-793 (5 Nov 2026: SM6's dilation compaction scale, 0.6, goes with the `θ × dilation` and `ν × dilation` targets).*
+*Still in force: all of it but SM6's dilation scale, which R-793 drops, SM8's one fixed treatment past the Picture's
+square, which R-543 makes the default
 (Mirror, dimmed) of a wrap mode, and the Flow preset's picture and settings, which R-543 replaces, every saved
 stain rendering as before (R-543); and, for the shape sphere chart only, SM1's mirror identification, SM3's
 hemisphere fold and in-square mirror pixels, SM4's hemisphere row and SM7's identity modulo the mirror: the shape
@@ -22912,6 +22914,8 @@ Changes no requirement on `main`: none holds these entries, and the Print graph'
 `plan/section_notes.yaml` gains this heading, "planned (the plan PR)", as R-524 to R-536 have.
 
 ## R-558 — The state map's twenty entries are ruled: any chart may be a target, its inverse generated beside the view's; a tilted target the branch nearest the slice; never a criterion input; the vMF colouring kept and stated not one-to-one; the nominal copy; an ended run held; no history fields; the prototype's constants the starting values; Chart position a named seam-6 exception, with no fixed t; Replace-L's chroma scaling an option, "keep in gamut", off by default; Shape n̂ stays `vector`; the code's reading of the mirror and the clamp; the file's preset names and the trace's fade; "Edit stain…"; no figure ring under the trace; one colour node; `α_min = 0`; "none" a setting of the node *(closes RQ-480 to RQ-489 and RQ-496 to RQ-505; amends R-542)*
+*Amended in part by R-793 (5 Nov 2026: the 0.6 in RQ-487's `κ` goes with the dilation targets).*
+*Still in force: all the rest, RQ-487's latent 3, momenta 0.3 and tilt π among it.*
 *21 Oct 2026 · applied in `docs/design/principia_state_map.md` (the adoption note; SM2's, SM5a's and SM10's notes; SM8's
 last sentence; SM11's and SM15's node lines, "a fixed t" struck; SM15's brightness and inspector paragraphs and its
 transcription's preset sentence; a "Ruled" paragraph after SM13; each with its earlier words kept),
@@ -31244,7 +31248,7 @@ The owner's words (5 Nov 2026), verbatim:
 - **Where it is built.** TASK-M9-39, which lifts the refusal, so the chart's softened start, its label and its readout arrive with the first softened run. The task gains the gui reviewer and TASK-M8-16 (the Inspector's readouts), as a dependency.
 - **The `(L_z, K)` chart** is untouched: its `K*` reads no `U` (`principia_chart_reference.md` § 2.2).
 - **Encode follows decode** (physics review 5805354224 of #430, F2). The chart's encode reads the same Newtonian `U`, or entering a pixel's `(L_z, E)` would not return its `z` at `ε ≠ 0`. TASK-M9-39 separates that `U` from `V₀` at each call site.
-- **The gradient view** (the same review's F3; code review 5805379312's C1). The stored `E_0` is softened, so the view gets a Newtonian read from the decode, and its check at `ε ≠ 0` runs tilted, since a constant offset leaves an untilted gradient looking right.
+- **The gradient view** (the same review's F3; code review 5805379312's C1). The stored `E_0` is softened, so the view gets a Newtonian read from the decode, and its check at `ε ≠ 0` runs under the warp, the default, on a chart tilted into a shape or mass control, since a constant offset leaves an untilted gradient looking right and a momentum tilt moves neither `U` nor the offset. Under the warp the energy varies with the pixel's `U`, so the check is per pixel: the view's energy minus the pixel's Newtonian `U` equals `K(t)` (form (b) of physics review 5805959783 of PR #430, N1, applied per R-369).
 
 *What it leaves.* The ruling names the `(L_z, E)` chart. The lone, mixed and Chart-builder `E` axes and the virial-ratio axis read the same `U`, and whether it reaches them is the owner's: RQ-709, filed 6 Nov 2026, on which TASK-M9-39 waits.
 
@@ -31288,7 +31292,7 @@ It ends the wait on TASK-M7-52 and on TASK-M7-47's two arms.
 
 *Applied per R-369:* the state map's other mentions of the two charts are its prototype's measurements and recipes, and read as that record; a dated line in SM1 says so, and they are not rewritten. `docs/gui/reference/` is the prototype's own and is untouched. REQ-COL-113's arm becomes "a bounded axis's past a bounded edge, on a target that has one", so that status stays tested.
 
-*What it amends:* **R-706**, for RQ-680.
+*What it amends:* **R-706**, for RQ-680; **R-542**, H7's dilation `κ`, and **R-558**, the 0.6 in RQ-487's `κ`, which go with the target.
 
 R-793 is in the "design" group of `plan/rule_groups.yaml`.
 
