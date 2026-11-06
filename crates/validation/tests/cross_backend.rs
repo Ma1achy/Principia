@@ -1316,13 +1316,12 @@ negative_control!(
     )
 );
 
-/// The fixture is what the builders give. Not on Windows: the builders call the platform's `sin_cos` and `powf`, which
-/// is why the fixture exists at all (the module's note).
-#[cfg(not(windows))]
+/// The fixture is what the builders give, bit for bit, on the platform that wrote it alone: the builders call the
+/// platform's `sin_cos` and `powf`, which is why the fixture exists at all (the module's note). CI's Linux gives other
+/// bits, run 42288064592.
+#[cfg(target_os = "macos")]
 fn check_fixture(inputs: &Inputs) {
     let held = Inputs::load(root()).expect("the fixture");
-    assert_eq!(held.parts, inputs.parts);
-    assert_eq!(held.batches, inputs.batches);
     assert_eq!(
         held.hash(),
         inputs.hash(),
@@ -1330,13 +1329,13 @@ fn check_fixture(inputs: &Inputs) {
     );
 }
 
-#[cfg(not(windows))]
+#[cfg(target_os = "macos")]
 #[test]
 fn cross_backend_read_back_fixture_is_the_builders() {
     check_fixture(&build_inputs());
 }
 
-#[cfg(not(windows))]
+#[cfg(target_os = "macos")]
 negative_control!(
     cross_backend_read_back_fixture_is_the_builders,
     "one state of the builders' moved",
@@ -1345,6 +1344,47 @@ negative_control!(
         let mut inputs = build_inputs();
         inputs.canon[7].m[0] += 0.125;
         check_fixture(&inputs);
+    }
+);
+
+/// A batch with its bits left out: what the builders give on every platform.
+fn batch_shape(b: &Batch) -> (String, String, usize, bool, usize) {
+    (
+        b.entry.clone(),
+        b.label.clone(),
+        b.uniform.len(),
+        b.e_star.is_some(),
+        b.points,
+    )
+}
+
+/// The fixture has the builders' shape, on any platform: the same runs of states and the same batches, whatever the
+/// platform's `sin_cos` and `powf` make of their bits.
+fn check_fixture_shape(inputs: &Inputs) {
+    let held = Inputs::load(root()).expect("the fixture");
+    let shape = |i: &Inputs| i.batches.iter().map(batch_shape).collect::<Vec<_>>();
+    assert_eq!(held.parts, inputs.parts);
+    assert_eq!(held.canon.len(), inputs.canon.len());
+    assert_eq!(held.points.len(), inputs.points.len());
+    assert!(
+        shape(&held) == shape(inputs),
+        "the fixture's batches are not the builders'"
+    );
+}
+
+#[test]
+fn cross_backend_read_back_fixture_has_the_builders_shape() {
+    check_fixture_shape(&build_inputs());
+}
+
+negative_control!(
+    cross_backend_read_back_fixture_has_the_builders_shape,
+    "a batch of the builders' grown by a point",
+    expected = "the fixture's batches are not the builders'",
+    {
+        let mut inputs = build_inputs();
+        inputs.batches[0].points += 1;
+        check_fixture_shape(&inputs);
     }
 );
 
