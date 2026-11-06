@@ -25,8 +25,9 @@ refusals are genuine contradictions, each with a named reason. Reduced capabilit
 4. The virial axis is built by TASK-M2-37 (`AxisVirial`), with its warp written. What it lacks is RQ-682's
    answer, so "then virial" is a descriptor and a ruling, not a build (§ 9).
 5. A baked axis pair costs little to build and more in the module, which every pipeline parses whole. 4 passes the
-   measured criterion on one Mac and 8 doesn't, so **4 is provisional** until the Windows Vulkan run is in, and it holds
-   only while decode stays its own entry (§ 11).
+   measured criterion on the Mac and on the Windows Vulkan run and 8 doesn't, on every test that moves with the count.
+   **4 is the proposal.** One test doesn't pass on Windows at any count, none included: the 12 gallery pipelines alone
+   take 2.7 s against C3's 2 s, which RQ-NEW-5 has to settle. It holds only while decode stays its own entry (§ 11).
 6. A view is a point, and every edit a path, but morph is not the general form of tilt and zoom in one formula: no single
    blend reproduces them bitwise. The path type does, with tilt and zoom as arms running their own code (§ 17).
 7. Of the 6 Nov primitives (§§ 3.1, 3.2), most are axes on CPU batch or aliases of existing rows. Orbital elements and
@@ -872,7 +873,7 @@ preview draws the same contours.
 
 ## 11. The axis cap
 
-**The number here, 4, is provisional** until the Windows Vulkan run is in (below). No primitive of § 3.1 takes a slot: they
+**The number here, 4, is the proposal.** The Windows Vulkan run is in (below), and one question stays open for RQ-NEW-5: C3's 2 s on Vulkan. No primitive of § 3.1 takes a slot: they
 stay CPU batch with the label, and `SuvakovPlane` is R-669's own.
 
 The order asks for a number with its measured cost (item 5). The bound's duty is REQ-PERF-007's: "bounded to the
@@ -948,9 +949,8 @@ is re-read against it. The customers need four, and the re-measure below allows 
 | 3 | R-669's `SuvakovPlane`, if RQ-NEW-1 leaves it baked as one chart. It is ruled as its own chart, so its entry is in the module whatever the cap says, and counting it here is the cautious reading |
 | 4 | one spare, for the first pair a replication target wants live; `stage_blend` takes it if live paths are adopted (§ 17.12) |
 
-**Proposed, provisionally: 4 baked entries beyond the gallery, created lazily, decode-only.** Everything past it is `CPU
-batch: not baked`, a label and never a refusal (§ 6). **4 is provisional:** it rests on one Mac, on Metal. The owner has asked
-for the Windows runner's Vulkan result on an RTX 2080 SUPER before it's ruled. That run is going, from `measure/chart-pairs` at 6543782c, and hasn't reported.
+**Proposed: 4 baked entries beyond the gallery, created lazily, decode-only.** Everything past it is `CPU
+batch: not baked`, a label and never a refusal (§ 6). The owner asked for the Windows runner's Vulkan result on an RTX 2080 SUPER before it's ruled, and it's below.
 
 **The re-measure, with the real pair.** Criterion written first (`orch/scratch/chartcomp/cap2-criterion.md`): C1 to C4 as above,
 unchanged, plus C3′: the 12 gallery pipelines at `P` within 1.25 × at `P = 0`, since every pipeline parses the whole module,
@@ -973,13 +973,41 @@ margin, and C1's limit, read in the first run as about 6, isn't what binds. C1 p
 from 14 to 38 s between repeats, so that ratio can't be read finely here. C3 passes at 1.6 s. C3′ passes at 1.23. Each pair adds
 about 56 ms to start-up across the gallery, built or not.
 
-**So 4 still stands, more tightly, and stays provisional.** The Windows arm (Vulkan, RTX 2080 SUPER) is running from `measure/chart-pairs` at 6543782c and hasn't reported, under the
-same criterion, so the cap stays provisional until it does: if the machines disagree, the lower number stands in the proposal. `stage_blend`, if
+**The Windows run, the same criterion unchanged.** Vulkan on the runner's RTX 2080 SUPER, Windows 11, GitHub run 42270588241 from `measure/chart-pairs` at 6543782c. All 12 arms reported, three repeats of the four `P`, each kernel test passing; the job shows red only through a mistake in the workflow's final check, not the measurement. Results: `orch/scratch/chartcomp/windows-pairs-results.txt`. The module bytes equal the Mac's exactly at every `P`, so both machines measured the same modules. Times are the median of each arm's last two passes, then of the three repeats, as the criterion says; the Mac's are the least of its warm passes, because of its load, so compare ratios, not milliseconds.
+
+| `P` | WGSL ratio, both | build (s), Mac / Windows | 12 gallery (ms), Mac / Windows | gallery ratio, Mac / Windows | eager `12 + P` (ms), Mac / Windows | eager minus gallery, per pair (ms), Mac / Windows | a pair's first creation (ms), Mac / Windows |
+|---|---|---|---|---|---|---|---|
+| 0 | | 21.5 / 26.3 | 958 / 2729 | | 958 / **2703 fail** | | |
+| 1 | 1.06 | 20.1 / 28.0 | 1019 / 2869 | 1.06 / 1.05 | 1101 / **3053 fail** | 82 / 176 | 325 to 885 / 326 to 338 |
+| 4 | **1.24** | 22.4 / 32.7 | 1178 / 3390 | **1.23 / 1.24** | 1591 / **4397 fail** | 103 / 246 | 239 to 255 / 367 to 373 |
+| 8 | 1.48 **fail** | 22.4 / 39.2 | 1410 / 4076 | 1.47 / 1.49 **fail** | 2345 **fail** / **6743 fail** | 117 / 330 | 243 to 1006 / 419 to 431 |
+
+Against the criterion, on Windows:
+
+| Test | `P = 4` | `P = 8` | Note |
+|---|---|---|---|
+| C1 build, +30 s and ≤ 1.25 | **pass**, +6.4 s, 1.243 | **fail**, 1.49 | a clean read here, unlike the Mac's, and it binds |
+| C2 module ≤ 1.25 | **pass**, 1.24 | **fail**, 1.48 | exact, and the same on both |
+| C3 eager `12 + P` ≤ 2 s | **fail**, 4.40 s | **fail**, 6.74 s | **fails at `P = 0` too, 2.70 s, with no pairs at all** |
+| C3 one creation ≤ 1.25 × baseline | **pass**, 1.24 | **fail**, 1.49 | as on the Mac, from the gallery's time over its 12 pipelines |
+| C3′ 12 gallery ≤ 1.25 × at `P = 0` | **pass**, 1.24 | **fail**, 1.49 | at the limit: the first repeat alone reads 1.251, and the least of the warm passes 1.248 |
+| C4 validates, fits 24 floats | **pass** | **pass** | the same module |
+
+**On every test that moves with `P`, the machines agree: 4 passes and 8 fails.** So the lower-number rule picks nothing. Windows makes the ceiling tighter, not lower. Scaling by the measured slopes, a fifth pair would read about 1.30 on C1 and on C3′ as well as on C2, an extrapolation for the two timed ones.
+
+**C3's 2 s is the one test that doesn't pass, and the criterion's two sentences read differently on it.** The test as written is "on this Mac", which leaves the 2 s the Mac's and 4 passing it. The re-measure also says "A criterion is not relaxed for either machine"; applied that way the 2 s fails at every `P`, zero included, so no count passes on Windows and the rule "the largest `P` passing C1 to C4" gives no number. Neither reading gives a number other than 4, and neither was changed to get there: the failure is the existing gallery's on this machine, about 225 ms a pipeline at `P = 0`, and pairs only add to it. The 2 s was this design's own number, for veto, so **the reading is the owner's, in RQ-NEW-5**, beside #427's start-up budget. With pairs created on first use (V7), the Windows start-up at the cap is the gallery's 3.39 s against 2.73 s today, about 165 ms a pair built or not, and a pair's first use about 0.37 s.
+
+**Three cautions.**
+- *A measurement only.* It gates nothing (R-649).
+- *Possibly faulty hardware.* The owner reports this card may have faulty cores, so these times are one possibly faulty card's. The sizes don't depend on it.
+- *The first arm ran cold.* The run's first arm took 119.5 s to build against 26.1 and 26.3 for its repeats, and 3340 ms on the gallery's first pass against 2779 and 2794; the medians set both aside, but comparing absolute times across arms carries that cache state. **Eager minus gallery within an arm** shares the module and the cache state, so it's the sound comparison: about nothing at `P = 0` (−35 to −4 ms), and per pair 176, 246 and 330 ms, near one gallery pipeline at that `P` (239, 282 and 340 ms). An eager pair costs what a creation costs, then, and no cache is hiding it. Eager first passes run about 60 to 85 ms a pair above the later ones at `P` = 4 and 8, and Windows load wasn't recorded.
+
+**So 4 stands as the proposal, more tightly, with C3's 2 s on Vulkan open.** The run the cap was waiting for is in; the number is the owner's in RQ-NEW-5. `stage_blend`, if
 live paths are adopted (§ 17.12), is one more entry in the same module, and at about a pair's size it takes the fourth slot.
 
-**What this can't say.** One Mac. Times are under the queue's other jobs, whose load ranged from 4 to 42; sizes are exact
-and times aren't, so C1 and C3's small ratios carry that noise, and `P` = 4's eager pass is a bare one. Metal alone:
-nothing here says what Vulkan, DX12 or WebGPU pay; wgpu and naga's parse is shared, the driver's compile isn't, and on
+**What this can't say.** Of the Mac's run: one Mac. Times are under the queue's other jobs, whose load ranged from 4 to 42; sizes are exact
+and times aren't, so C1 and C3's small ratios carry that noise, and `P` = 4's eager pass is a bare one. Metal alone,
+and with the Windows run Vulkan on one card: nothing here says what DX12 or WebGPU pay, or another Vulkan driver; wgpu and naga's parse is shared, the driver's compile isn't, and on
 Metal the disk cache hides the first compile unless defeated, which the second run did with salted entries. A pipeline's
 GPU run time wasn't measured, nor was CI's own build time. The first run's stand-in was a heavy region-D pair; the re-measure
 uses the real pair, in copies, since the other three aren't built. The measurement branch is a throwaway, not in the repo.
@@ -1068,7 +1096,7 @@ Nothing below is decided here.
 | RQ-NEW-3 | Region D's definition: domain (a), (b) or (c); eq. 3 for AA-3 and AA-5; the horizon | (a), outside D blank and uncounted (agreed in principle by the owner, not a ruling); yes; the comparison cuts by pixel |
 | RQ-NEW-4 | Hold `L_z`: the physics of § 5.3, and the held half of RQ-701 | (a) amended, as § 5.3, on the physics reviewer's note |
 | RQ-NEW-11 | Whether a rest chart refuses hold `L_z`, or labels it "not at rest" | the owner's choice; the physics reviewer leans to a declared flag |
-| RQ-NEW-5 | The axis cap | 4, provisional until the Windows Vulkan run is in; § 11. The start-up budget itself is issue #427 |
+| RQ-NEW-5 | The axis cap; C3's 2 s on Vulkan | 4; the Windows Vulkan run agrees on every test that moves with the count, and C3's 2 s fails there at every count, none included; § 11. The start-up budget itself is issue #427 |
 | RQ-NEW-6 | The virial kind: RQ-682 | RQ-682 (a) |
 | RQ-NEW-7 | R-669: a user-built plane that lands on a refused one | it may be built, is never scored, and the row stays |
 | RQ-NEW-8 | Seam 3: a CPU-filled IC buffer | an exception for labelled batch views |
@@ -1123,7 +1151,7 @@ Tasks, milestones chosen by what depends on them. `TASK-M4-06` gains TASK-NEW-3 
 
 ## 16. What this does not settle
 
-- Vulkan pipeline costs are owed from the Windows runner, whose run is going (§ 11); DX12 and WebGPU aren't planned. § 11 measured Metal, on one Mac.
+- § 11 measured Metal on one Mac and Vulkan on one RTX 2080 SUPER, which may be faulty and whose result is a measurement only; DX12 and WebGPU aren't planned. Whether C3's 2 s applies on Vulkan, where the gallery alone takes 2.7 s, isn't settled: RQ-NEW-5.
 - `D₁₁` against RQ-650, still open, and the other gaps of § 20.
 - Whether a composed chart's linearised deep-zoom decode needs its own derivative: `J_D` on a baked pair follows the shared
   path at M6; a CPU batch view has no deep zoom until a task gives it one.
