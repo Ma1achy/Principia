@@ -425,6 +425,39 @@ const CASES: &[(&[&str], &str, bool, bool)] = &[
         true,
         true,
     ),
+    // R-692: what `gpu-metal`'s `lattice_` step reads is a GPU path, and the rest of `crates/gui/` is not.
+    (&["crates/gui/src/mock/noise.wgsl"], "code", true, false),
+    (&["crates/gui/src/mock/marks.wgsl"], "code", true, false),
+    (&["crates/gui/src/mock/canvas.rs"], "code", true, true),
+    (
+        &["crates/gui/src/tests/mock_lattice.rs"],
+        "code",
+        true,
+        true,
+    ),
+    (
+        &["crates/gui/src/tests/lattice_controls.wgsl"],
+        "code",
+        true,
+        false,
+    ),
+    (&["crates/gui/Cargo.toml"], "code", true, false),
+    (&["crates/gui/src/mock/mod.rs"], "code", false, true),
+    (&["crates/gui/src/mock/noise.rs"], "code", false, true),
+    (
+        &["crates/gui/src/tests/mock_content.rs"],
+        "code",
+        false,
+        true,
+    ),
+    (&["crates/gui/src/tests/a.wgsl"], "code", false, false),
+    (&["crates/gui/src/noise.wgsl"], "code", false, false),
+    (
+        &["crates/gui/src/app.rs", "crates/gui/src/mock/noise.wgsl"],
+        "code",
+        true,
+        true,
+    ),
     (&["crates/guix/src/a.rs"], "code", true, true),
     (
         &[

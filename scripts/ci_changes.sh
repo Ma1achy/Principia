@@ -147,14 +147,20 @@ tier_of() {
   fi
 }
 
-# The paths no GPU job builds, reads or runs: the data and docs ones, and the two crates nothing in the GPU jobs depends
-# on (`gui` and `prin`; the GPU jobs build validation, engine, render, kernel, ledger and xtask). Everything else, a
-# lockfile, a toolchain, a fixture, a workflow or data only full CI reads among it, runs the GPU suites.
+# The paths no GPU job builds, reads or runs: the data and docs ones, `prin`, and `gui` but for what `gpu-metal`'s
+# `lattice_` step reads (R-692): `prin` nothing in the GPU jobs depends on, and of `gui` only that step builds anything
+# (the other GPU jobs build validation, engine, render, kernel, ledger and xtask). A change to one of those five runs
+# all three GPU suites, this script having one `gpu` flag; a change to the rest of `gui` that breaks the step first
+# shows on `main`. Everything else, a lockfile, a toolchain, a fixture, a workflow or data only full CI reads among it,
+# runs the GPU suites.
 is_not_gpu() {
   if [ "$(tier_of "$1")" != code ]; then
     return 0
   fi
   case "$1" in
+    crates/gui/src/mock/*.wgsl | crates/gui/src/mock/canvas.rs) return 1 ;;
+    crates/gui/src/tests/mock_lattice.rs | crates/gui/src/tests/lattice_controls.wgsl) return 1 ;;
+    crates/gui/Cargo.toml) return 1 ;;
     crates/gui/* | crates/prin/*) return 0 ;;
   esac
   return 1

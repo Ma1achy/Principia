@@ -50,8 +50,9 @@
 #   lint (`no-atlas-params.yml`, the atlas guard, runs on every pull request).
 # A data or docs change (`docs_only`, its name R-656's) skips `ci-archive` and the `ci` shards, `ci-checks`,
 # `web-skeleton`, `ci-release-archive` and its shards, and `xtask-ci`'s shards; it and a code change to no GPU-path
-# file (only `crates/gui/` and `crates/prin/` beside data and docs) skip the GPU suites' jobs, `gpu-kernel`,
-# `gpu-metal` and `gpu-lavapipe`.
+# file (only `crates/prin/` and `crates/gui/` beside data and docs, but for the five paths of `crates/gui/` that
+# `gpu-metal`'s `lattice_` step reads, R-692, `scripts/ci_changes.sh`'s `is_not_gpu`) skip the GPU suites' jobs,
+# `gpu-kernel`, `gpu-metal` and `gpu-lavapipe`.
 # Where a code head runs, CI's two code tiers (R-684). R-677's classifier applies first, so a data or docs head runs
 # neither. A code pull request's head runs the quick tier: one job, `ci-quick`, running fmt, clippy, the build, and the
 # tests of the changed crates and their reverse dependencies (`.github/scripts/ci_quick_crates.py`). It runs full CI, the
@@ -1198,6 +1199,10 @@ jobs:
         run: cargo nextest run -p validation --features controls codegen_selftest --no-capture
       - name: cargo test -p validation --features controls codegen_selftest --doc
         run: cargo test -p validation --features controls codegen_selftest --doc
+      # The mock noise's shared lattice corners on Metal, its controls included (REQ-GUI-412; R-685's "on every backend",
+      # R-692); the `ci` shards run them on lavapipe. They claim nothing of the real kernel (ADR-0001 § "Must not claim").
+      - name: cargo nextest run -p gui lattice_
+        run: cargo nextest run -p gui lattice_ --no-capture
       # Every golden suite on Metal (R-186's first Metal check, TASK-M0-06), each case against its one reference
       # across backends, or its Metal one where it keeps one per backend (R-269, R-287, R-296; TASK-M0-43).
       - name: cargo xtask golden --all

@@ -403,8 +403,11 @@ taking the highest (R-677):
   `scripts/`, `workbench/`, `.claude/` (its commands, agents and settings; R-790) and the root's markdown: as tier (b),
   but `ci-workspace` runs only the cheap checks, plan-check and the vocabulary lint, beside `no-atlas-params.yml`, the
   atlas guard;
-- **no GPU-path file** (only data and docs paths, `crates/gui/` and `crates/prin/`): the GPU suites' jobs (`gpu-kernel
-  suites`, `gpu-metal suites`, `gpu-lavapipe suites`) are skipped; everything else runs;
+- **no GPU-path file** (only data and docs paths, `crates/prin/` and `crates/gui/`, but for the five paths of
+  `crates/gui/` that `gpu-metal`'s `lattice_` step reads, R-692: `crates/gui/src/mock/*.wgsl`,
+  `crates/gui/src/mock/canvas.rs`, `crates/gui/src/tests/mock_lattice.rs`, `crates/gui/src/tests/lattice_controls.wgsl`
+  and `crates/gui/Cargo.toml`): the GPU suites' jobs (`gpu-kernel suites`, `gpu-metal suites`, `gpu-lavapipe suites`)
+  are skipped; everything else runs;
 - **no `.rs` file under `crates/`** (`mutants=false`; the owner, 2 Nov 2026: "Mutants run only when crates/ source
   changes, on the merge-ready head"): `mutants-check` passes at once, "not applicable", and `mutants`' shards find no
   `.rs` file under `crates/` and pass. xtask's own code is mutated by the nightly full run. `mutants-fixture`, the gate's

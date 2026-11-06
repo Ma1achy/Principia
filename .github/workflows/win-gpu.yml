@@ -47,8 +47,9 @@
 #
 # The schedule, 05:17 UTC: Windows may restart for updates from 23:00 to 05:00 on this PC.
 #
-# The paths: what `scripts/ci_changes.sh` calls a GPU path, written as a filter. Docs-only pushes run nothing (R-711
-# item 5); nor do `gui` and `prin`, which no GPU job builds. `schedule` and `workflow_dispatch` ignore the filter.
+# The paths: what `scripts/ci_changes.sh` calls a GPU path, written as a filter, less R-692's five paths of `gui`. Docs-only
+# pushes run nothing (R-711 item 5); nor do `gui` and `prin`, which no job here builds. `schedule` and
+# `workflow_dispatch` ignore the filter.
 name: win-gpu
 
 on:
