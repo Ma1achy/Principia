@@ -275,6 +275,25 @@ pub(super) fn sanity(d: &Decoded<f64>) -> Option<Constraint> {
     }
 }
 
+/// `rest`, the chart's check at `(u, v)`, then `refusal` at the point it accepts, or moves to: a point the check would
+/// commit to and the tilted value refuses is refused.
+pub(super) fn refuse(
+    u: f64,
+    v: f64,
+    rest: ValidationResult,
+    refusal: impl Fn(f64, f64) -> Option<Constraint>,
+) -> ValidationResult {
+    let (a, b) = match rest {
+        ValidationResult::Valid => (u, v),
+        ValidationResult::Project { u, v, .. } | ValidationResult::Clamp { u, v, .. } => (u, v),
+        ValidationResult::Reject { .. } => return rest,
+    };
+    match refusal(a, b) {
+        Some(failed) => ValidationResult::Reject { failed },
+        None => rest,
+    }
+}
+
 /// Layer 2's `ν ∈ (0, 1)`.
 #[inline]
 fn in_family(nu: f64) -> bool {
@@ -404,6 +423,37 @@ where
     }
 }
 
+impl<P: Copy> Burrau<P>
+where
+    f64: From<P>,
+{
+    /// The check without layer 3: `ν` in the family, finiteness, and `K ≥ 0`, a `v` below 0 projected to 0.
+    pub(super) fn check_axes(&self, u: f64, v: f64) -> ValidationResult {
+        if !(u.is_finite() && v.is_finite()) {
+            return ValidationResult::Reject {
+                failed: select(
+                    u.is_finite(),
+                    Constraint::KNonNegative,
+                    Constraint::BurrauNu,
+                ),
+            };
+        }
+        if !in_family(self.nu(u)) {
+            return ValidationResult::Reject {
+                failed: Constraint::BurrauNu,
+            };
+        }
+        if v < 0.0 {
+            return ValidationResult::Project {
+                u,
+                v: 0.0,
+                failed: Constraint::KNonNegative,
+            };
+        }
+        ValidationResult::Valid
+    }
+}
+
 impl<P: Copy> Chart for Burrau<P>
 where
     f64: From<P>,
@@ -443,30 +493,9 @@ where
 
     /// Layer 2's `ν ∈ (0, 1)` and `K ≥ 0`, then layer 3 on the f64 decode (the module's note).
     fn validate(&self, u: f64, v: f64) -> ValidationResult {
-        if !(u.is_finite() && v.is_finite()) {
-            return ValidationResult::Reject {
-                failed: select(
-                    u.is_finite(),
-                    Constraint::KNonNegative,
-                    Constraint::BurrauNu,
-                ),
-            };
-        }
-        if !in_family(self.nu(u)) {
-            return ValidationResult::Reject {
-                failed: Constraint::BurrauNu,
-            };
-        }
-        let t = v.max(0.0);
-        match sanity(&decode(self, u, t).0) {
-            Some(failed) => ValidationResult::Reject { failed },
-            None if t != v => ValidationResult::Project {
-                u,
-                v: t,
-                failed: Constraint::KNonNegative,
-            },
-            None => ValidationResult::Valid,
-        }
+        refuse(u, v, self.check_axes(u, v), |a, b| {
+            sanity(&decode(self, a, b).0)
+        })
     }
 }
 

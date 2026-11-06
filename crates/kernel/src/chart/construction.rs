@@ -55,7 +55,7 @@
 
 use spirv_std::num_traits::Float;
 
-use super::burrau::{self, embed, select, Burrau, EuclidPlane, RestBlocks};
+use super::burrau::{self, embed, refuse, select, Burrau, EuclidPlane, RestBlocks};
 use super::burrau_acute::{self, BurrauThetaDeltaM, BurrauThetaK, BurrauThetaLz, DeltaMBlocks};
 use super::energy::Mapping;
 use super::invariant::{self, k_floor, WarpReal};
@@ -89,25 +89,6 @@ pub fn momentum_control(k: u32) -> bool {
 #[inline]
 fn refused_own<P: WarpReal>((lz, k): (P, P)) -> Option<Constraint> {
     no_construction(k, lz).then_some(Constraint::KAboveLzBound)
-}
-
-/// `rest`, the chart's check at `(u, v)`, then `refusal` at the point it accepts, or moves to: a point the check would
-/// commit to and the tilted value refuses is refused.
-fn refuse(
-    u: f64,
-    v: f64,
-    rest: ValidationResult,
-    refusal: impl Fn(f64, f64) -> Option<Constraint>,
-) -> ValidationResult {
-    let (a, b) = match rest {
-        ValidationResult::Valid => (u, v),
-        ValidationResult::Project { u, v, .. } | ValidationResult::Clamp { u, v, .. } => (u, v),
-        ValidationResult::Reject { .. } => return rest,
-    };
-    match refusal(a, b) {
-        Some(failed) => ValidationResult::Reject { failed },
-        None => rest,
-    }
 }
 
 // ── A rest start: the momentum controls from 0 ────────────────────────────────────────────────────────────────────
@@ -545,6 +526,9 @@ pub trait LzChart: Chart + Copy {
     /// `K_max`, the top of the linear option's range.
     fn k_max_at<F: Float + From<Self::Param>>(&self) -> F;
 
+    /// The chart's check without layer 3: its horizontal axis, finiteness and `K ≥ 0`.
+    fn check_axes(&self, u: f64, v: f64) -> ValidationResult;
+
     /// `D ∘ Φ` at the horizontal `u` with the construction at `(L_z, K*) = (lz, k)`.
     fn decode_lz<R>(&self, u: R, lz: R, k: R) -> Decoded<R>
     where
@@ -563,6 +547,10 @@ where
     #[inline]
     fn k_max_at<F: Float + From<P>>(&self) -> F {
         <F as From<P>>::from(self.k_max)
+    }
+
+    fn check_axes(&self, u: f64, v: f64) -> ValidationResult {
+        self.check_axes(u, v)
     }
 
     #[inline]
@@ -586,6 +574,10 @@ where
     #[inline]
     fn k_max_at<F: Float + From<P>>(&self) -> F {
         <F as From<P>>::from(self.k_max)
+    }
+
+    fn check_axes(&self, u: f64, v: f64) -> ValidationResult {
+        self.check_axes(u, v)
     }
 
     #[inline]
@@ -621,6 +613,21 @@ where
         refused_own((own, self.row(narrow(b), own)))
             .or_else(|| refused_own((lz, self.row(b, lz))))
             .or_else(|| burrau_acute::decoded_sanity(&self.decode_held(a, b, lz)))
+    }
+
+    /// The check ahead of the refusal: warped, `warp`, the chart's own; linear, its axes alone, the chart's layer 3
+    /// decoding the warp's line, not the row, which [`HeldLz::refused_at`] reads (R-471 E2).
+    fn row_check(
+        &self,
+        u: f64,
+        v: f64,
+        warp: impl FnOnce() -> ValidationResult,
+    ) -> ValidationResult {
+        if self.mapping == Mapping::Warped {
+            warp()
+        } else {
+            self.chart.check_axes(u, v)
+        }
     }
 
     /// `D ∘ Φ` at `(u, v)` with the held `L_z = lz`, the row's `K*` at it.
@@ -659,9 +666,8 @@ where
     /// The chart's check, then the construction at the held `L_z`.
     fn validate(&self, u: f64, v: f64) -> ValidationResult {
         let lz = f64::from(self.lz);
-        refuse(u, v, self.chart.validate(u, v), |a, b| {
-            self.refused_at(a, b, lz, self.lz)
-        })
+        let rest = self.row_check(u, v, || self.chart.validate(u, v));
+        refuse(u, v, rest, |a, b| self.refused_at(a, b, lz, self.lz))
     }
 
     /// The construction at the held `L_z` and the row's `K*` there.
@@ -724,9 +730,8 @@ where
         shift: &Shift<f64>,
         p: &LinkParams<f64>,
     ) -> ValidationResult {
-        refuse(a, b, self.chart.validate_params(a, b, p), |a, b| {
-            self.refusal(a, b, shift)
-        })
+        let rest = self.row_check(a, b, || self.chart.validate_params(a, b, p));
+        refuse(a, b, rest, |a, b| self.refusal(a, b, shift))
     }
 
     fn refusal(&self, a: f64, b: f64, shift: &Shift<f64>) -> Option<Constraint> {

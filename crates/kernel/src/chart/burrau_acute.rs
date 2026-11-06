@@ -50,7 +50,7 @@
 use spirv_std::num_traits::Float;
 
 use super::burrau::{
-    self, embed, lerp, sanity, select, system_config, system_masses, unread, BurrauBlocks,
+    self, embed, lerp, refuse, sanity, select, system_config, system_masses, unread, BurrauBlocks,
 };
 use super::invariant::{self, WarpReal};
 use super::{
@@ -215,6 +215,26 @@ where
     }
 }
 
+impl<P: Copy> BurrauThetaK<P>
+where
+    f64: From<P>,
+{
+    /// The check without layer 3: `θ` in range, finiteness, and `K ≥ 0`, a `v` below 0 projected to 0.
+    pub(super) fn check_axes(&self, u: f64, v: f64) -> ValidationResult {
+        if let Some(r) = reject_early(self.theta(u), u, v, Constraint::KNonNegative) {
+            return r;
+        }
+        if v < 0.0 {
+            return ValidationResult::Project {
+                u,
+                v: 0.0,
+                failed: Constraint::KNonNegative,
+            };
+        }
+        ValidationResult::Valid
+    }
+}
+
 impl<P: Copy> Chart for BurrauThetaK<P>
 where
     f64: From<P>,
@@ -254,19 +274,9 @@ where
 
     /// Layer 2's `θ ∈ (0, π/4]` and `K ≥ 0`, then layer 3 on the f64 decode (the module's note).
     fn validate(&self, u: f64, v: f64) -> ValidationResult {
-        if let Some(r) = reject_early(self.theta(u), u, v, Constraint::KNonNegative) {
-            return r;
-        }
-        let t = v.max(0.0);
-        match decoded_sanity(&decode_theta_k(self, u, t).0) {
-            Some(failed) => ValidationResult::Reject { failed },
-            None if t != v => ValidationResult::Project {
-                u,
-                v: t,
-                failed: Constraint::KNonNegative,
-            },
-            None => ValidationResult::Valid,
-        }
+        refuse(u, v, self.check_axes(u, v), |a, b| {
+            decoded_sanity(&decode_theta_k(self, a, b).0)
+        })
     }
 }
 

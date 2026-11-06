@@ -3659,6 +3659,108 @@ negative_control!(
     }
 );
 
+/// The linear rows off the warp's line: at `v = 1e200` the row is `K = 1e200`, a system on R-471 E2's affine axis, where
+/// the warp's `K_max·v^γ_K` overflows. The check reads the row's decode, keeping the axes' layers; warped, the pixel is
+/// the line's and refused. `warp_line` reads the chart's own check instead (the control).
+fn off_warp_line<C>(chart: C, warp_line: bool)
+where
+    C: LzChart<Param = f64>,
+{
+    let name = chart.name().to_string();
+    let wide = 1.0e200;
+    let warped = HeldLz::new(chart);
+    let row = HeldLz {
+        mapping: Mapping::Linear,
+        ..warped
+    };
+    let none = held_k_shift(0.0);
+    let p = LinkParams::DEFAULT;
+    let valid = if warp_line {
+        chart.validate(0.5, wide)
+    } else {
+        row.validate(0.5, wide)
+    };
+    assert_eq!(
+        valid,
+        ValidationResult::Valid,
+        "{name}: a linear row off the warp's line is refused"
+    );
+    assert_eq!(
+        row.validate_shifted(0.5, wide, &none, &p),
+        ValidationResult::Valid,
+        "{name}"
+    );
+    assert_eq!(
+        row.decode::<Defaults, f64>(0.5, wide).degenerate,
+        None,
+        "{name}"
+    );
+    assert!(
+        matches!(warped.validate(0.5, wide), ValidationResult::Reject { .. }),
+        "{name}: warped, the pixel is the line's"
+    );
+    // The axes' layers stay, and the row past 2K*'s limit is no system.
+    for (u, v) in [
+        (f64::NAN, 0.5),
+        (0.5, f64::NAN),
+        (0.5, f64::INFINITY),
+        (1.0e3, 0.5),
+    ] {
+        assert!(
+            matches!(row.validate(u, v), ValidationResult::Reject { .. }),
+            "{name} at ({u}, {v})"
+        );
+    }
+    assert_eq!(
+        row.validate(0.5, 1.0e308),
+        ValidationResult::Reject {
+            failed: Constraint::KAboveLzBound
+        },
+        "{name}"
+    );
+    assert_eq!(
+        row.validate(0.5, -0.5),
+        ValidationResult::Project {
+            u: 0.5,
+            v: 0.0,
+            failed: Constraint::KNonNegative
+        },
+        "{name}"
+    );
+    assert_eq!(row.validate(0.5, 0.5), ValidationResult::Valid, "{name}");
+}
+
+fn check_off_warp_line(warp_line: bool) {
+    off_warp_line(
+        Burrau {
+            gamma_k: 2.0,
+            ..nu_k().chart
+        },
+        warp_line,
+    );
+    off_warp_line(
+        BurrauThetaK {
+            gamma_k: 2.0,
+            ..theta_k().chart
+        },
+        warp_line,
+    );
+}
+
+#[test]
+fn tilt_every_chart_construction_linear_off_warp_line() {
+    check_off_warp_line(false);
+}
+
+negative_control!(
+    tilt_every_chart_construction_linear_off_warp_line,
+    "the check on the warp's line refuses a linear row it never decodes, so it must fail",
+    expected = "a linear row off the warp's line is refused",
+    {
+        check_off_warp_line(true);
+    }
+);
+
 /// Each of the six's hidden coordinates, `hidden(k)` over `0..12`, and a tilt into any other refused; `admit` admits
 /// it as untilted (the control).
 fn check_construction_targets(admit: bool) {
@@ -4294,6 +4396,10 @@ impl LzChart for Allowing {
 
     fn k_max_at<F: Float + From<f64>>(&self) -> F {
         self.0.k_max_at()
+    }
+
+    fn check_axes(&self, u: f64, v: f64) -> ValidationResult {
+        self.0.check_axes(u, v)
     }
 
     fn decode_lz<R>(&self, u: R, lz: R, k: R) -> Decoded<R>
