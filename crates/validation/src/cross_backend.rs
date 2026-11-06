@@ -624,6 +624,45 @@ pub fn backend_of(info: &AdapterInfo) -> String {
     }
 }
 
+/// The driver version a record is keyed by: what the adapter reports or, where it reports nothing, as wgpu's Metal
+/// backend doesn't, `os`, the operating system's build, which is where that driver ships (the task's Deliverables).
+pub fn driver_of(info: &AdapterInfo, os: Option<String>) -> String {
+    let reported = format!("{} {}", info.driver, info.driver_info);
+    match (reported.trim(), os) {
+        ("", Some(os)) => format!("{os}: the adapter reports no driver, so its OS build stands in"),
+        ("", None) => "not reported by the adapter".to_owned(),
+        (reported, _) => reported.to_owned(),
+    }
+}
+
+/// This machine's macOS version and build, `None` elsewhere.
+pub fn os_build() -> Option<String> {
+    let read = |flag: &str| {
+        let out = std::process::Command::new("sw_vers")
+            .arg(flag)
+            .output()
+            .ok()?;
+        let text = String::from_utf8_lossy(&out.stdout).trim().to_owned();
+        (out.status.success() && !text.is_empty()).then_some(text)
+    };
+    let (version, build) = (read("-productVersion")?, read("-buildVersion")?);
+    Some(format!("macOS {version} ({build})"))
+}
+
+/// A record's words for the compiled modes `modes`, one per entry read: any entry not compiled off is named.
+pub fn compiled(modes: &[(String, StageMode)]) -> String {
+    let otherwise: Vec<String> = modes
+        .iter()
+        .filter(|(_, mode)| *mode != StageMode::Off)
+        .map(|(entry, mode)| format!("{entry}: {mode:?}"))
+        .collect();
+    if otherwise.is_empty() {
+        "compute compiled off".to_owned()
+    } else {
+        format!("compiled otherwise: {}", otherwise.join(", "))
+    }
+}
+
 // ── The inputs ───────────────────────────────────────────────────────────────────────────────────────────────────
 
 /// A named run of canon states in [`Inputs::canon`].
@@ -1846,8 +1885,10 @@ struct GpuDecode<'a> {
     inputs: &'a Inputs,
     harness: &'a GpuHarness,
     wgsl: &'a str,
-    /// Each entry's compute mode as compiled that was not off.
-    modes: BTreeSet<String>,
+    /// The read-back's module.
+    read_wgsl: &'a str,
+    /// Each entry's compute mode as compiled.
+    modes: Vec<(String, StageMode)>,
     out: Vec<Raw>,
 }
 
@@ -1966,7 +2007,11 @@ pub fn record_cpu(inputs: &Inputs, commit: &str) -> Result<Record, String> {
     Ok(Record {
         commit: commit.to_owned(),
         backend: CPU.to_owned(),
-        adapter: "CPU f32: the kernel source, native (rustc)".to_owned(),
+        adapter: format!(
+            "CPU f32: the kernel source, native (rustc), on {}-{}",
+            std::env::consts::ARCH,
+            std::env::consts::OS
+        ),
         driver: "not a driver".to_owned(),
         fast_math: "setting off; no shader".to_owned(),
         hardware_label: None,
@@ -2019,20 +2064,16 @@ pub fn record_gpu(root: &Path, inputs: &Inputs, commit: &str) -> Result<Record, 
     on_each_variant(&mut decode)?;
     let (canon_operands, groups) = rows(inputs, &canon, &words, &decode.out);
     let info = h.adapter_info();
-    let compiled = if decode.modes.is_empty() {
-        "compute compiled off".to_owned()
-    } else {
-        format!(
-            "compiled otherwise: {}",
-            decode.modes.into_iter().collect::<Vec<_>>().join(", ")
-        )
-    };
+    let driver = driver_of(info, os_build());
     Ok(Record {
         commit: commit.to_owned(),
         backend: backend_of(info),
-        adapter: info.to_string(),
-        driver: format!("{} {}", info.driver, info.driver_info),
-        fast_math: format!("setting off; {compiled}"),
+        adapter: format!(
+            "adapter: {} | backend: {:?} | driver: {driver}",
+            info.name, info.backend
+        ),
+        driver,
+        fast_math: format!("setting off; {}", compiled(&decode.modes)),
         hardware_label: None,
         inputs_hash: inputs.hash(),
         inputs: inputs.len() as u32,

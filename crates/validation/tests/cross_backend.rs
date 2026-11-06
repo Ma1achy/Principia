@@ -6,14 +6,16 @@
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU32, Ordering};
 
+use engine::contract::fast_math::StageMode;
 use engine::decode_dispatch::uniform_words;
 use kernel::canon::Canonical;
 use kernel::chart::Latent;
 use kernel::stage::decode::{DecodeUniforms, DecodeVariant, LatentDefaults, UniformChart};
 use validation::cross_backend::{
-    backend_of, build_inputs, chart_of, check_read_back, compare, control_verdict, listed,
-    record_cpu, with_points, Batch, Comparison, Count, Emits, Group, Inputs, Kind, Listed,
-    PairOutcome, Part, Record, Row, Word, CANON_ENTRY, CPU, DOMAIN, LIST, NAME, NOT_EMITTED,
+    backend_of, build_inputs, chart_of, check_read_back, compare, compiled, control_verdict,
+    driver_of, listed, os_build, record_cpu, with_points, Batch, Comparison, Count, Emits, Group,
+    Inputs, Kind, Listed, PairOutcome, Part, Record, Row, Word, CANON_ENTRY, CPU, DOMAIN, LIST,
+    NAME, NOT_EMITTED,
 };
 use validation::gate::report::Verdict;
 use validation::gate::{self, GateConfig, GateSpec};
@@ -1364,7 +1366,131 @@ fn cross_backend_read_back_adapter_names_its_slot() {
     assert_eq!(backend_of(&info("GeForce x", Vulkan)), "NVIDIA Vulkan");
     assert_eq!(backend_of(&info("RTX x", Vulkan)), "NVIDIA Vulkan");
     assert_eq!(backend_of(&info("Other", Vulkan)), "Other");
+    // The named slots are Vulkan's: another API on that adapter keeps its adapter's name.
+    use wgpu::Backend::{Dx12, Gl};
+    let geforce = "NVIDIA GeForce x";
+    assert_eq!(backend_of(&info(geforce, Dx12)), geforce);
+    assert_eq!(
+        backend_of(&info("llvmpipe (LLVM 19)", Gl)),
+        "llvmpipe (LLVM 19)"
+    );
 }
+
+fn check_driver(blank: &str) {
+    let info = |driver: &str, driver_info: &str| AdapterInfo {
+        name: "Apple M2".to_owned(),
+        driver: driver.to_owned(),
+        driver_info: driver_info.to_owned(),
+        backend: wgpu::Backend::Metal,
+    };
+    let os = || Some("macOS 1.0 (A1)".to_owned());
+    assert_eq!(driver_of(&info("Mesa", "25.2"), os()), "Mesa 25.2");
+    assert_eq!(driver_of(&info("", "25.2"), os()), "25.2");
+    assert_eq!(driver_of(&info("Mesa", ""), None), "Mesa");
+    let stood_in = driver_of(&info(blank, ""), os());
+    assert!(
+        stood_in.starts_with("macOS 1.0 (A1)"),
+        "a blank driver took no OS build: {stood_in}"
+    );
+    assert_eq!(
+        driver_of(&info("", ""), None),
+        "not reported by the adapter"
+    );
+}
+
+#[test]
+fn cross_backend_read_back_a_blank_driver_takes_the_os_build() {
+    check_driver("");
+}
+
+negative_control!(
+    cross_backend_read_back_a_blank_driver_takes_the_os_build,
+    "an adapter that reports a driver",
+    expected = "a blank driver took no OS build",
+    check_driver("Mesa")
+);
+
+fn check_os_build(want: bool) {
+    assert_eq!(
+        os_build().is_some_and(|b| b.starts_with("macOS ") && b.ends_with(')')),
+        want,
+        "the machine's OS build is not as this platform gives it"
+    );
+}
+
+#[test]
+fn cross_backend_read_back_os_build_is_macos_alone() {
+    check_os_build(cfg!(target_os = "macos"));
+}
+
+negative_control!(
+    cross_backend_read_back_os_build_is_macos_alone,
+    "the other platform's answer",
+    expected = "the machine's OS build is not as this platform gives it",
+    check_os_build(!cfg!(target_os = "macos"))
+);
+
+fn check_compiled(canon: StageMode) {
+    let modes = [
+        ("stage_decode_latent_defaults".to_owned(), StageMode::Off),
+        ("stage_branch_read_canon".to_owned(), canon),
+    ];
+    assert_eq!(
+        compiled(&modes),
+        "compute compiled off",
+        "a mode was not off"
+    );
+}
+
+#[test]
+fn cross_backend_read_back_compiled_names_any_entry_not_off() {
+    check_compiled(StageMode::Off);
+    assert_eq!(compiled(&[]), "compute compiled off");
+    let on = [("stage_branch_read_canon".to_owned(), StageMode::On)];
+    assert_eq!(
+        compiled(&on),
+        "compiled otherwise: stage_branch_read_canon: On"
+    );
+}
+
+negative_control!(
+    cross_backend_read_back_compiled_names_any_entry_not_off,
+    "canon's read-back compiled on",
+    expected = "a mode was not off",
+    check_compiled(StageMode::On)
+);
+
+fn check_angle_kind(branch: &str) {
+    let l = listed(branch).expect("on the list");
+    assert_eq!(l.kind, Kind::AddMul, "{branch} is not of the first kind");
+    assert_eq!(l.operands, 4);
+    // ρ̃ = (2, 3), λ̃ = (5, −7): the cross 2·(−7) − 3·5 = −29, the dot 2·5 + 3·(−7) = −11.
+    let operands = [2.0f32, 3.0, 5.0, -7.0].map(f32::to_bits);
+    let (outcome, bits) = l.evaluate(&operands).expect("an arbiter");
+    let (want_outcome, want) = match branch {
+        "angle_cross_zero" => (0, -29.0f32),
+        "angle_dot_zero" => (0, -11.0),
+        _ => (1, -11.0),
+    };
+    assert_eq!((outcome, bits), (want_outcome, vec![want.to_bits()]));
+}
+
+/// R-690: a kind is read on the expression's own operands, and `rho_angle`'s are `+`, `−` and `×` on the emitted `ρ̃`, `λ̃`.
+/// #393's select stays `other operation`, by the task's name.
+#[test]
+fn cross_backend_read_back_rho_angle_is_of_the_first_kind() {
+    for branch in ["angle_cross_zero", "angle_dot_zero", "angle_dot_negative"] {
+        check_angle_kind(branch);
+    }
+    assert_eq!(listed("sphere_inverse_pole").unwrap().kind, Kind::Other);
+}
+
+negative_control!(
+    cross_backend_read_back_rho_angle_is_of_the_first_kind,
+    "a branch of the other kind",
+    expected = "is not of the first kind",
+    check_angle_kind("sphere_inverse_pole")
+);
 
 negative_control!(
     cross_backend_read_back_adapter_names_its_slot,
