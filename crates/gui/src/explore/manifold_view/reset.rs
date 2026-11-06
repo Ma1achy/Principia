@@ -31,7 +31,7 @@ pub const RESET: &str = "reset";
 pub const ALREADY_HOME: &str = "already at the chart preset's values";
 /// The tooltip of a reset or Home with no active preset (K3).
 pub const NO_PRESET: &str = "no chart preset";
-/// The Home button's name and tooltip (K7).
+/// The Home button's name (K7).
 pub const HOME_NAME: &str = "Home";
 /// The Home button's tooltip (K7).
 pub const HOME_TOOLTIP: &str = "Home: reset Slice centre, Tilt and Navigate (Home)";
