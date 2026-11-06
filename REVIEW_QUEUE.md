@@ -2102,3 +2102,23 @@ owner: yes, it is physics; the tilt changes which systems the chart shows.*
 - **Options seen:** (a) keep it, and state in the panel that a button run reads the page-load rate; (b) run the idle loop again before a button run's warm-up, the app paused for it; (c) mark a button run in the report, so that it is not read as a measurement.
 - **Applied meanwhile:** none: the rate stands as measured at page load, and measured runs go through `?run=`.
 - **Waits:** nothing. TASK-M8-96 uses `?run=` only; TASK-M8-37, if it keeps the panel, meets this question.
+
+## RQ-707: What margin the search for a mass-ratio axis's range holds a ratio to: chart_reference §2.1 needs one and names none, and the code's `ε_μ/2` can refuse an ask realised at `ε_μ` *(silence; a value without a source; `crates/kernel/src/chart/physical.rs`; context: TASK-M2-37)*
+
+*Queued 6 Nov 2026 from Codex's P1 on PR #387 at `crates/kernel/src/chart/physical.rs`:898, which the physics reviewer reproduced and called a silence of the corpus. Not chosen here. The margin stays as built, and the doc on `MixedMassRatio::new` now says what it does.*
+
+**In plain English:** a mass-ratio axis asks for a range of ratios, and the code keeps the ratios the mass link can really produce. The docs say how close a ratio must come to count, but the code tests a stricter figure, half of that, and the docs never give it. So the range can come out a little shorter than the docs promise, and a chart can be refused that the docs would offer. No chart ever shows a wrong system. The question is whether to write that stricter figure into the docs or change it.
+
+- **File, section, quoted:**
+  - `docs/design/principia_chart_reference.md` § "2.1 Feasibility, and the warp that makes every pixel valid", lines 358-369: "`ε_μ = 10⁻⁶` is the link clamp (…), reused here as the round trip's tolerance, not a new constant."; "the part of the asked range the link realises at `m_c`"; "where those share no ratio, as can happen at a held mass near 1, the chart is not offered".
+  - `docs/read_first/principia_00_philosophy.md` § 4.2: "Every constant must be derived or absent".
+  - `crates/kernel/src/chart/physical.rs`:776, :860 and :894, the factor `0.5` on `ε_μ`, which sits in code only.
+- **The silence:** §2.1's feasibility needs some margin, because the warp's rounding at the range's ends and the narrowing of those ends to `f32` must stay inside the `ε_μ` a decoded pixel is held to. §2.1 names none. The code's `ε_μ/2` moves `q₀` and `q₁`, and its effect is a trimmed range or a chart not offered, never a wrong system.
+- **Measured** (physics reviewer, 6 Nov 2026, `/Volumes/X10 Pro/Principia/orch/scratch/387-phys3/phys3_tmp.rs.txt`, jobs 2485-2487):
+  - The band between the range at `ε_μ/2` and at `ε_μ` has a median width in `ln q` of `5.0e-7`.
+  - The worst is 5.48 nats, at `μ_max = 10`, `z ≈ (7.31, −2)`, bodies `(1, 2)`, a range end at an extreme ratio. The width goes about as `(ε_μ/2)·max(q, 1/q)`.
+  - A margin must leave room. At the full `ε_μ` (`f = 1.0`), 62% of narrowed `softmax_tanh` charts (29722 of 48188) and 44% of `stick_breaking` charts (2223 of 5066) have a refused row in the square. At `f = 0.95` it is 27 and 97 charts, and at `f = 0.9` and `0.5` it is 0. The least that works is about `f = 0.94`.
+- **The question:** what margin does the range's search hold, and where is it written?
+- **Options seen:** (i) keep `ε_μ/2` and add a §2.1 sentence naming it as the range's margin, which the physics reviewer recommends as simple and comfortably past the measured need; (ii) a tighter margin, `0.9·ε_μ`, enough on these measurements, its band one fifth the width.
+- **Applied meanwhile:** `ε_μ/2`, as built.
+- **Waits:** option (i) changes the docs only. Option (ii) also changes the three factors in `physical.rs` and that file's docs on the margin.

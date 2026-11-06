@@ -29,7 +29,7 @@
 //! The axis moves the active mass link's inputs, `z_mass = L⁻¹(m)`, and the decode reads the masses through the link,
 //! `L(z_mass)`, so every pixel's masses are positive and sum to 1. Warped, `q(t) = q₀·(q₁/q₀)^t` over `[q₀, q₁]`, the
 //! part of the asked range the link realises at `m_c`, as held and as narrowed to `f32`, at its active parameters
-//! ([`MixedMassRatio::new`]); linear,
+//! ([`MixedMassRatio::new`], to the search's margin `ε_μ/2`, RQ-707); linear,
 //! `q(t) = q_lo + (q_hi − q_lo)·t` over the asked range, a pixel whose ratio the link does not realise, or at or below
 //! 0, not a system. A ratio is realised where the link's inverse followed by its forward returns its masses
 //! `(m_a, m_b, m_c)`, `m_c` at its held value, to within `ε_μ`, relative: the inverse saturates past what the link
@@ -596,8 +596,8 @@ pub struct MixedMassRatio<A, S, P> {
     pub frozen: [P; 8],
     /// `[lo, hi]`, the horizontal axis's value at `u = 0` and `u = 1`.
     pub a_range: [P; 2],
-    /// `[q₀, q₁]`, the ratio at `t = 0` and `t = 1`: warped, the part of the asked range the link realises; linear,
-    /// the asked range.
+    /// `[q₀, q₁]`, the ratio at `t = 0` and `t = 1`: warped, the part of the asked range the link realises to `ε_μ/2`;
+    /// linear, the asked range.
     pub ratio: [P; 2],
     /// The bodies `(a, b)` of `q = m_b/m_a`.
     pub bodies: [u32; 2],
@@ -739,8 +739,8 @@ impl<A: Coordinate, S: Selection> MixedMassRatio<A, S, f64> {
     /// part of `asked` the link realises at `m_c`, as held and as narrowed to `f32`, a chart decoded there holding that
     /// value, found outward from the slice centre's own ratio, or, where the link does not realise that, a saturated
     /// centre, from `seed`. `None` where the bodies are not two distinct bodies, `asked` is not an increasing finite
-    /// range, or, warped, a mass at `z₀` is NaN or no ratio of `asked` is realised at both. That last holds inside the
-    /// registered `μ_max ∈ [1, 10]`; above about 29.3 the search can also refuse a slice with a realised part (`seed`).
+    /// range, or, warped, a mass at `z₀` is NaN or no ratio of `asked` lies within `ε_μ/2` at both, the search's margin
+    /// (`edge`, RQ-707), which can refuse an ask realised at full `ε_μ`; above `μ_max` about 29.3 `seed` can too.
     pub fn new(
         frozen: [f64; 8],
         a_range: [f64; 2],
@@ -885,7 +885,7 @@ impl<A: Coordinate, S: Selection> MixedMassRatio<A, S, f64> {
 
     /// The end of the realised range from the realised ratio `from` toward the asked end `toward`, the range's upper
     /// end where `upper`: `toward` itself where realised; `None` where it is not and lies on `from`'s inner side (an
-    /// upper end below `from`, a lower end above it), the asked range then outside the interval the link realises;
+    /// upper end below `from`, a lower end above it), the asked range then outside the interval these tests pass;
     /// else the last realised ratio on the way, by bisection in `ln q` down to the doubles' own spacing, an end at or
     /// below 0 taken at the least positive double. Each test here is to within `ε_μ/2`, so that the warp's rounding at
     /// the range's ends (`q₀·(q₁/q₀)^t` at `t = 1`), and the narrowing of the ends, stay inside
