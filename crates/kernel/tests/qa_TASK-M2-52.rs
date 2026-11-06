@@ -1,38 +1,56 @@
 //! qa's tests for TASK-M2-52, written from REQ-CHART-062's R-633 arms and REQ-CHART-065 (chart_reference §4.5,
-//! "Hidden coordinates under tilt and slice", and §2.2's construction), each with its negative control (R-176):
+//! "Hidden coordinates under tilt and slice", and §2.2's construction) as R-708, R-709 and R-720 rule them, each with
+//! its negative control (R-176). `I = 1` throughout.
 //!
 //! - `qa_tilt_every_chart_hidden_set`: each of the six construction charts offers exactly §4.5's table's hidden
 //!   coordinates: the mass simplex `ν₀` and the four momentum controls, the Euclid plane and the δm strip the four
 //!   momentum controls, `(ν, K)` and `Φ_θ,K` the held `L_z`, `Φ_θ,L_z` the held `K`.
-//! - `qa_tilt_every_chart_held_lz`: `(ν, K)` and `Φ_θ,K` tilted 30° into the held `L_z` (Tip as sheet on `τ₁`, Lean
-//!   each axis on `τ₂`), and slid to a non-zero centre: each pixel's `(a, b, d)` is `R·(u, v, 0)` from the closed form;
-//!   where `K(b) ≥ (L_z + d)²/2I` (`I = 1`) the momenta satisfy §2.2's three constraints, `Σp = 0`, `L_z(p) = L_z + d`
-//!   and `K(p) = K(b)`, to machine precision, the cell valid and weighted as the tilt; where `K(b) < (L_z + d)²/2I` the
-//!   cell is refused: `DEGENERATE(INVARIANT_INFEASIBLE)`, the view's check a rejection, area weight 0, and its momenta
-//!   §2.2's `a = 0` ones (`L_z(p) = L_z + d`, `K(p) = K_min`). Both kinds occur on the window.
-//! - `qa_tilt_every_chart_held_k`: `Φ_θ,L_z` tilted into the held `K`, the same with `K* = K + d` and
-//!   `L_z(b) = (2b − 1)·λ_L·√(2K)` at the centre's `K`.
+//! - `qa_tilt_every_chart_held_lz`, warped, the default (R-708, R-720): `(ν, K)` and `Φ_θ,K` (`Φ_strip,K` the same map)
+//!   tilted 30° into the held `L_z`, about a centre at 0 and at each sign, at a slider span of 2 and of 40: over a 33 × 33
+//!   grid of the square's vertices, the bottom row `v = 0` among them, no cell is refused, and each is §2.2's construction
+//!   at `L_z = L_z₀ + d`, by value at both signs of `d`, and `K = L_z²/2 + K_max·b^γ_K`, the floor at the pixel's own `L_z`,
+//!   past `K_max` where the floor takes it there. At `L_z = 0` the held chart is the registered one, bit for bit.
+//! - `qa_tilt_every_chart_held_lz_linear`, linear (R-708, R-633's refusal): rows at the fixed `K(b) = K_max·b`, the held
+//!   `L_z + d` by value: where `K(b) ≥ L_z²/2` the momenta satisfy §2.2's three constraints, `Σp = 0`, `L_z(p)` and
+//!   `K(p)`, to machine precision, the cell valid and weighted as the tilt; where `K(b) < L_z²/2` the cell is refused:
+//!   `DEGENERATE(INVARIANT_INFEASIBLE)`, the view's check a rejection, area weight 0, and its momenta §2.2's `a = 0`
+//!   ones. Both kinds occur on the window.
+//! - `qa_tilt_every_chart_bottom_row`: `t = 0` at a held `L_z` whose `l²` rounds below the exact value is a system: the
+//!   floor's rounding is handled (R-708's "must not blank the bottom row").
+//! - `qa_tilt_every_chart_held_k`, linear: `Φ_θ,L_z` tilted into the held `K`, bare and as `HeldK` in linear mode, the
+//!   refusal arm with `K* = K + d` and `L_z(b) = (2b − 1)·λ_L·√(2K)` at the centre's `K`.
+//! - `qa_tilt_every_chart_held_k_warped`, warped (R-708, R-709): the held `K` moved in its warp coordinate,
+//!   `K = K_max·t^γ_K`, `t = t₀ + d`, the band at the pixel's own `K`: no cell refused; past `t = 0` the pixel is clamped
+//!   there, a real system at rest, flagged, not mirrored; the clamped-pixel share in the test output.
 //! - `qa_tilt_every_chart_nu0`: the mass simplex tilted into `ν₀`: each pixel's masses are §4.5's ternary map at
 //!   `(a, b)` and its triangle is the Burrau right triangle at `ν₀ + d` (side ratios `(1 − ν²) : 2ν : (1 + ν²)`
 //!   opposite bodies 2, 1, 0), at rest; where `ν₀ + d ∉ (0, 1)` the cell is refused, weight 0.
 //! - `qa_tilt_every_chart_rest_start`: each rest-start chart tilted into each momentum control: masses and positions
 //!   the untilted chart's at `(a, b)`, momenta `D_mom` of the control at `d` (the others 0) under the pixel's masses,
 //!   `Σp = 0`; every cell valid. The centre pixel of every arm is the untilted chart's, bitwise.
-//! - `qa_slice_every_chart_construction_edge`: a physical slice past the construction's edge (`ν₀ ∉ (0, 1)`, a held
-//!   `L_z` past `√(2IK(v))`, a held `K < 0`) leaves a centre that `validate` refuses, so REQ-CHART-060's stop can
-//!   find it; one inside passes.
+//! - `qa_slice_every_chart_construction_edge`: REQ-CHART-060's stop. A physical slice past the construction's edge
+//!   (`ν₀ ∉ (0, 1)`, a held `K < 0`, and in linear mode a held `L_z` past `√(2K(v))`) leaves a centre that `validate`
+//!   refuses; one inside passes. In warped mode a held `L_z` has no such edge: the floor keeps it a system at any `L_z`
+//!   (R-720), and a held `K` stops at `K₀ = 0`.
 //! - `qa_slice_every_chart_construction`: a slice of each hidden coordinate moves only that held value; the decode at
-//!   the centre follows (`L_z(p)` the sliced `L_z`; `K(p)` the sliced `K`, its band following; the triangle at the sliced
-//!   `ν₀`; `D_mom` of the sliced control); a slice of any other index is not offered.
+//!   the centre follows (the sliced `L_z` by value at both signs, its row's `K` by the mode; `K(p) = K₀ + d`, its band
+//!   following, and the tilt's `t₀` recomputed from the new `K₀`; the triangle at the sliced `ν₀`; `D_mom` of the sliced
+//!   control); a slice of any other index is not offered.
 //!
-//! Controls: the held `L_z` read without `d`; a refused cell weighted as the tilt; the triangle read at `ν₀` without
-//! `d`; a momentum control's `d` put on the next control; a `K` slice that leaves the momenta's `K` unchanged.
+//! Controls: the held `L_z` read without `d`; a floor at the centre's `L_z`, not the pixel's; a held `L_z` moved in a warp
+//! coordinate, or held to one sign, tilted and sliced; a bottom row left to the rounding of `l²/2`; a refused cell
+//! weighted as the tilt; a held `K` tilted by value; a mirrored `t < 0`; a held `K` slice moved in `t`, or a `t₀` not
+//! recomputed; the triangle read at `ν₀` without `d`; a momentum control's `d` put on the next control; a `K` slice that
+//! leaves the momenta's `K` unchanged; a warped `L_z` past the band expected refused.
 
-use kernel::chart::construction::{Held, HELD_K, HELD_LZ, NU0};
+use std::io::Write;
+
+use kernel::chart::burrau_acute::decode_theta_lz_at;
+use kernel::chart::construction::{Held, LzChart, HELD_K, HELD_LZ, NU0};
 use kernel::chart::tilt::{Hidden, Tiltable};
 use kernel::chart::{
-    Burrau, BurrauThetaDeltaM, BurrauThetaK, BurrauThetaLz, Chart, EuclidPlane, HeldLz,
-    MassSimplex, RestStart, Tilt, TiltMap, TiltSpec, Tilted, ValidationResult,
+    Burrau, BurrauThetaDeltaM, BurrauThetaK, BurrauThetaLz, Chart, EuclidPlane, HeldK, HeldLz,
+    Mapping, MassSimplex, RestStart, Tilt, TiltMap, TiltSpec, Tilted, ValidationResult,
 };
 use kernel::decode::{momentum, Decoded, Degenerate};
 use kernel::generated::links::{Defaults, LinkParams};
@@ -166,7 +184,7 @@ fn check_hidden_set(swap: bool) {
     } else {
         (mom.clone(), vec![HELD_LZ])
     };
-    let cases: [(&str, Vec<u32>, Vec<u32>); 6] = [
+    let cases: [(&str, Vec<u32>, Vec<u32>); 7] = [
         (
             "the mass simplex",
             hidden_set(&RestStart::new(simplex(0.5))),
@@ -181,6 +199,11 @@ fn check_hidden_set(swap: bool) {
         ("(ν, K)", hidden_set(&HeldLz::new(nu_k())), nu_k_set),
         ("Φ_θ,K", hidden_set(&HeldLz::new(theta_k())), vec![HELD_LZ]),
         ("Φ_θ,L_z", hidden_set(&theta_lz(0.5)), vec![HELD_K]),
+        (
+            "Φ_θ,L_z, held",
+            hidden_set(&HeldK::new(theta_lz(0.5), 1.0, 1.5)),
+            vec![HELD_K],
+        ),
     ];
     for (name, got, want) in cases {
         assert_eq!(got, want, "the hidden set of {name} is not §4.5's table's");
@@ -207,6 +230,19 @@ negative_control!(
 
 // ── The held L_z and the held K ──────────────────────────────────────────────────────────────────────────────────────
 
+/// The square's 33 × 33 vertices, its edges included: the bottom row `v = 0` is itself a row (R-708).
+fn vertices() -> Vec<[f64; 2]> {
+    let at = |k: u32| f64::from(k) / 32.0;
+    (0..33)
+        .flat_map(|j| (0..33).map(move |i| [at(i), at(j)]))
+        .collect()
+}
+
+/// A hair above `l²/2`, so that a control's wrong `L_z` is a construction and fails on its value, not on the rounding.
+fn above_floor(l: f64) -> f64 {
+    0.5 * l * l * (1.0 + 4.0 * f64::EPSILON)
+}
+
 #[derive(Clone, Copy, PartialEq)]
 enum Ctl {
     None,
@@ -216,8 +252,8 @@ enum Ctl {
     WeightRefused,
 }
 
-/// Over a 33 × 33 grid of `view`: `target(a, b, d)` gives `(L_z, K*)`; the §2.2 constraints on each feasible cell,
-/// refusal on each infeasible one.
+/// The linear arm, over a 33 × 33 grid of `view`: `target(a, b, d)` gives `(L_z, K*)`; the §2.2 constraints on each
+/// feasible cell, refusal on each infeasible one.
 fn check_construction<Ch: Tiltable<Param = f64>>(
     name: &str,
     view: &Tilted<Ch, f64>,
@@ -301,31 +337,199 @@ fn check_construction<Ch: Tiltable<Param = f64>>(
     );
 }
 
-fn check_held_lz(ctl: Ctl) {
+/// What a warped arm decodes, for a control: the view's own pixel, or the wrong system a wrong rule would build.
+#[derive(Clone, Copy, PartialEq)]
+enum Warped {
+    AsRuled,
+    /// The held `L_z` without `d`.
+    NoD,
+    /// The floor at the centre's held `L_z`, not the pixel's.
+    CentreFloor,
+    /// The held `L_z` moved in the warp coordinate `s` of §2.1's `L_z = (2s − 1)·L_max`, `s` off its value by `d`.
+    WarpLz,
+    /// The held `L_z` held to one sign.
+    OneSign,
+}
+
+/// R-708 and R-720 on one chart, its `K` axis `K_max·b^γ_K` and its held `L_z` about `centre`, in the mode a new
+/// [`HeldLz`] takes: every vertex of the square a system, `L_z = L_z₀ + d`, `K = L_z²/2 + K_max·b^γ_K`.
+fn check_warped_lz<C: LzChart<Param = f64>>(
+    name: &str,
+    chart: C,
+    [k_max, gamma]: [f64; 2],
+    (centre, arm, span): (f64, Arm, f64),
+    alter: Warped,
+) {
+    let held = HeldLz {
+        lz: centre,
+        ..HeldLz::new(chart)
+    };
+    let tv = view(held, arm, HELD_LZ, span);
+    let w = tv.tilt().weight;
+    let (mut d_signs, mut lz_signs, mut above) = ([0, 0], [0, 0], 0);
+    for [u, v] in vertices() {
+        let (a, b, d) = arm.place(u, v, span);
+        let lz = centre + d;
+        let line = k_max * b.powf(gamma);
+        let k = 0.5 * lz * lz + line;
+        let got = if alter == Warped::NoD {
+            chart.decode_lz(a, centre, above_floor(centre) + line)
+        } else if alter == Warped::CentreFloor {
+            chart.decode_lz(a, lz, above_floor(centre) + line)
+        } else if alter == Warped::WarpLz {
+            let moved = centre + 2.0 * d * (2.0 * k).sqrt();
+            chart.decode_lz(a, moved, above_floor(moved) + line)
+        } else if alter == Warped::OneSign {
+            chart.decode_lz(a, lz.abs(), above_floor(lz) + line)
+        } else {
+            tv.decode::<Defaults, f64>(u, v)
+        };
+        assert_eq!(
+            got.degenerate, None,
+            "{name} at ({u}, {v}), L_z = {lz}: a cell refused under tilt"
+        );
+        assert_eq!(
+            tv.validate(u, v),
+            ValidationResult::Valid,
+            "{name} at ({u}, {v})"
+        );
+        assert_eq!(tv.weight(u, v), w, "{name} at ({u}, {v})");
+        let tol = TOL * (1.0 + k);
+        let p = total_p(&got);
+        assert!(
+            p[0].abs() < tol && p[1].abs() < tol,
+            "{name} at ({u}, {v}): Σp = {p:?}"
+        );
+        assert!(
+            (lz_of(&got) - lz).abs() < tol,
+            "{name} at ({u}, {v}): L_z(p) = {} does not realise the tilted L_z {lz}",
+            lz_of(&got)
+        );
+        assert!(
+            (k_of(&got) - k).abs() < tol,
+            "{name} at ({u}, {v}): K(p) = {} is not the floor plus the warp's line, {k}",
+            k_of(&got)
+        );
+        d_signs[usize::from(d > 0.0)] += 1;
+        lz_signs[usize::from(lz > 0.0)] += 1;
+        above += usize::from(k > k_max);
+    }
+    assert!(
+        d_signs.iter().all(|&c| c > 100) && lz_signs.iter().all(|&c| c > 20),
+        "{name}: both signs: d {d_signs:?}, L_z {lz_signs:?}"
+    );
+    // R-720's "a column above K_max at large tilt": the wide span reaches it on every arm.
+    assert!(span < 40.0 || above > 0, "{name}: no cell above K_max");
+    assert_eq!(
+        bits(&tv.decode::<Defaults, f64>(C[0], C[1])),
+        bits(&held.decode::<Defaults, f64>(C[0], C[1])),
+        "{name}: the centre moved"
+    );
+    if centre == 0.0 {
+        for [u, v] in vertices() {
+            assert_eq!(
+                bits(&held.decode::<Defaults, f64>(u, v)),
+                bits(&chart.decode::<Defaults, f64>(u, v)),
+                "{name}: L_z = 0 is not the registered chart at ({u}, {v})"
+            );
+        }
+    }
+}
+
+fn check_held_lz(alter: Warped) {
+    for centre in [0.0, 0.15, -0.3] {
+        for arm in [Arm::SheetT1, Arm::LeanT2] {
+            for span in [2.0, 40.0] {
+                let at = (centre, arm, span);
+                check_warped_lz("(ν, K)", nu_k(), [1.0, 1.5], at, alter);
+                check_warped_lz("Φ_θ,K", theta_k(), [1.0, 1.5], at, alter);
+            }
+        }
+    }
+}
+
+#[test]
+fn qa_tilt_every_chart_held_lz() {
+    check_held_lz(Warped::AsRuled);
+}
+
+negative_control!(
+    qa_tilt_every_chart_held_lz,
+    "the held L_z read without the tilt's d must fail",
+    expected = "does not realise the tilted L_z",
+    {
+        check_held_lz(Warped::NoD);
+    }
+);
+
+mod centre_floor {
+    use super::*;
+    negative_control!(
+        qa_tilt_every_chart_held_lz,
+        "a floor at the centre's held L_z, not the pixel's, leaves no construction and must fail",
+        expected = "a cell refused under tilt",
+        {
+            check_held_lz(Warped::CentreFloor);
+        }
+    );
+}
+
+mod warp_lz {
+    use super::*;
+    negative_control!(
+        qa_tilt_every_chart_held_lz,
+        "a held L_z moved in a warp coordinate is not L_z0 + d and must fail",
+        expected = "does not realise the tilted L_z",
+        {
+            check_held_lz(Warped::WarpLz);
+        }
+    );
+}
+
+mod one_sign {
+    use super::*;
+    negative_control!(
+        qa_tilt_every_chart_held_lz,
+        "a held L_z held to one sign is not L_z0 + d and must fail",
+        expected = "does not realise the tilted L_z",
+        {
+            check_held_lz(Warped::OneSign);
+        }
+    );
+}
+
+/// Linear mode: the rows `K(b) = K_max·b`, fixed, the held `L_z` by value, cells below the floor refused.
+fn check_linear_lz(ctl: Ctl) {
     let span = 2.0;
     for centre_lz in [0.0, 0.15] {
         for arm in [Arm::SheetT1, Arm::LeanT2] {
-            let mut a = HeldLz::new(nu_k());
-            a.lz = centre_lz;
-            let ka = a.chart;
+            let a = HeldLz {
+                lz: centre_lz,
+                mapping: Mapping::Linear,
+                ..HeldLz::new(nu_k())
+            };
+            let ka = a.chart.k_max;
             check_construction(
-                "(ν, K)",
+                "(ν, K), linear",
                 &view(a, arm, HELD_LZ, span),
                 arm,
                 span,
-                |_, b, d| (centre_lz + d, ka.k_max * b.powf(ka.gamma_k)),
+                |_, b, d| (centre_lz + d, ka * b),
                 a.decode::<Defaults, f64>(C[0], C[1]),
                 ctl,
             );
-            let mut t = HeldLz::new(theta_k());
-            t.lz = centre_lz;
-            let kt = t.chart;
+            let t = HeldLz {
+                lz: centre_lz,
+                mapping: Mapping::Linear,
+                ..HeldLz::new(theta_k())
+            };
+            let kt = t.chart.k_max;
             check_construction(
-                "Φ_θ,K",
+                "Φ_θ,K, linear",
                 &view(t, arm, HELD_LZ, span),
                 arm,
                 span,
-                |_, b, d| (centre_lz + d, kt.k_max * b.powf(kt.gamma_k)),
+                |_, b, d| (centre_lz + d, kt * b),
                 t.decode::<Defaults, f64>(C[0], C[1]),
                 ctl,
             );
@@ -334,43 +538,117 @@ fn check_held_lz(ctl: Ctl) {
 }
 
 #[test]
-fn qa_tilt_every_chart_held_lz() {
-    check_held_lz(Ctl::None);
+fn qa_tilt_every_chart_held_lz_linear() {
+    check_linear_lz(Ctl::None);
 }
 
 negative_control!(
-    qa_tilt_every_chart_held_lz,
+    qa_tilt_every_chart_held_lz_linear,
     "the held L_z read without the tilt's d must fail",
     expected = "does not realise the tilted L_z",
     {
-        check_held_lz(Ctl::NoD);
+        check_linear_lz(Ctl::NoD);
     }
 );
 
 mod refused_weighted {
     use super::*;
     negative_control!(
-        qa_tilt_every_chart_held_lz,
+        qa_tilt_every_chart_held_lz_linear,
         "a refused cell counted with the tilt's area weight must fail",
         expected = "refused cell weighted",
         {
-            check_held_lz(Ctl::WeightRefused);
+            check_linear_lz(Ctl::WeightRefused);
         }
     );
 }
 
+/// The bottom row at held `L_z` values, a good share of them with `l²` rounded below its exact value, so that `l²/2` is
+/// under the floor: `t = 0` is a system on each. `naive` builds the construction at the rounded `l²/2` (the control).
+fn check_bottom_row(naive: bool) {
+    let mut rounded = 0;
+    for i in 1..2048 {
+        let x = (f64::from(i) * 0.754_877_666_246_692_7).fract();
+        let l = 3.0 * x - 1.5;
+        // `l·l − (l·l)_rounded`, exact: above 0 where the product rounded down.
+        rounded += usize::from(l.mul_add(l, -(l * l)) > 0.0);
+        let (a, t) = (
+            HeldLz::new(nu_k()).sliced(HELD_LZ, l).unwrap(),
+            HeldLz::new(theta_k()).sliced(HELD_LZ, l).unwrap(),
+        );
+        let (da, dt) = if naive {
+            (
+                nu_k().decode_lz(0.5, l, 0.5 * l * l),
+                theta_k().decode_lz(0.5, l, 0.5 * l * l),
+            )
+        } else {
+            (
+                a.decode::<Defaults, f64>(0.5, 0.0),
+                t.decode::<Defaults, f64>(0.5, 0.0),
+            )
+        };
+        assert_eq!(
+            da.degenerate, None,
+            "the bottom row is blanked at L_z = {l}"
+        );
+        assert_eq!(
+            dt.degenerate, None,
+            "the bottom row is blanked at L_z = {l}"
+        );
+        assert_eq!(a.validate(0.5, 0.0), ValidationResult::Valid, "L_z = {l}");
+        assert_eq!(t.validate(0.5, 0.0), ValidationResult::Valid, "L_z = {l}");
+        assert!((lz_of(&da) - l).abs() < TOL, "L_z(p) at L_z = {l}");
+        assert!((lz_of(&dt) - l).abs() < TOL, "L_z(p) at L_z = {l}");
+    }
+    assert!(
+        rounded > 500,
+        "{rounded} held values rounded below the floor"
+    );
+}
+
+#[test]
+fn qa_tilt_every_chart_bottom_row() {
+    check_bottom_row(false);
+}
+
+negative_control!(
+    qa_tilt_every_chart_bottom_row,
+    "a bottom row left to the rounding of l²/2 must fail",
+    expected = "the bottom row is blanked",
+    {
+        check_bottom_row(true);
+    }
+);
+
+/// The linear arm of the held `K`: the bare chart's tilt, and [`HeldK`]'s in linear mode, by value, blank where
+/// infeasible (R-708, R-709's "linear mode unchanged").
 fn check_held_k(ctl: Ctl) {
     let span = 2.0;
     for centre_k in [0.5, 0.3] {
         for arm in [Arm::SheetT1, Arm::LeanT2] {
             let chart = theta_lz(centre_k);
+            // L_z(b) = (2b − 1)·λ_L·√(2K) at the centre's K; K* = K + d.
+            let target =
+                |_: f64, b: f64, d: f64| ((2.0 * b - 1.0) * (2.0 * centre_k).sqrt(), centre_k + d);
             check_construction(
                 "Φ_θ,L_z",
                 &view(chart, arm, HELD_K, span),
                 arm,
                 span,
-                // L_z(b) = (2b − 1)·λ_L·√(2IK) at the centre's K; K* = K + d.
-                |_, b, d| ((2.0 * b - 1.0) * (2.0 * centre_k).sqrt(), centre_k + d),
+                target,
+                chart.decode::<Defaults, f64>(C[0], C[1]),
+                ctl,
+            );
+            let linear = HeldK {
+                mapping: Mapping::Linear,
+                ..HeldK::new(chart, 1.0, 1.5)
+            };
+            check_construction(
+                "Φ_θ,L_z, linear",
+                &view(linear, arm, HELD_K, span),
+                arm,
+                span,
+                target,
                 chart.decode::<Defaults, f64>(C[0], C[1]),
                 ctl,
             );
@@ -391,6 +669,154 @@ mod held_k_controls {
         expected = "is not K* =",
         {
             check_held_k(Ctl::NoD);
+        }
+    );
+}
+
+/// What the warped held `K` arm decodes, for a control.
+#[derive(Clone, Copy, PartialEq)]
+enum WarpedK {
+    AsRuled,
+    /// The held `K` moved by value, as in linear mode.
+    ByValue,
+    /// `t < 0` mirrored onto `t > 0`.
+    Mirror,
+}
+
+/// R-708 and R-709 on `Φ_θ,L_z`: every vertex a system at `K = K_max·t^γ_K`, `t = t₀ + d`, the band at it; a pixel past
+/// `t = 0` clamped there at rest and flagged. The clamped pixels and the pixels counted.
+fn check_warped_k(
+    [k0, k_max, gamma]: [f64; 3],
+    arm: Arm,
+    span: f64,
+    alter: WarpedK,
+) -> (usize, usize) {
+    let chart = HeldK::new(theta_lz(k0), k_max, gamma);
+    let bare = chart.chart;
+    let tv = view(chart, arm, HELD_K, span);
+    let w = tv.tilt().weight;
+    let t0 = (k0 / k_max).powf(1.0 / gamma);
+    let (mut clamped, mut total) = (0, 0);
+    for [u, v] in vertices() {
+        let (a, b, d) = arm.place(u, v, span);
+        let t = t0 + d;
+        if t.abs() < 1e-12 {
+            continue; // On the clamp: an ulp of d decides which side.
+        }
+        let k = if d == 0.0 {
+            k0
+        } else {
+            k_max * t.max(0.0).powf(gamma)
+        };
+        let band = 2.0 * b - 1.0;
+        let lz = band * (2.0 * k).sqrt();
+        let got = if alter == WarpedK::ByValue {
+            decode_theta_lz_at(&bare, a, band * (2.0 * k0).sqrt(), k0 + d).0
+        } else if alter == WarpedK::Mirror {
+            let k = k_max * t.abs().powf(gamma);
+            decode_theta_lz_at(&bare, a, band * (2.0 * k).sqrt() * (1.0 - f64::EPSILON), k).0
+        } else {
+            tv.decode::<Defaults, f64>(u, v)
+        };
+        assert_eq!(
+            got.degenerate, None,
+            "Φ_θ,L_z at ({u}, {v}): a cell refused under tilt"
+        );
+        assert_eq!(
+            tv.validate(u, v),
+            ValidationResult::Valid,
+            "Φ_θ,L_z at ({u}, {v})"
+        );
+        assert_eq!(tv.weight(u, v), w, "Φ_θ,L_z at ({u}, {v})");
+        assert_eq!(
+            tv.held_at_floor(u, v),
+            t < 0.0,
+            "Φ_θ,L_z at ({u}, {v}): the held-at-floor flag at t = {t}"
+        );
+        if t < 0.0 {
+            clamped += 1;
+            assert!(
+                got.ic.p.iter().flatten().all(|&p| p == 0.0),
+                "Φ_θ,L_z at ({u}, {v}): a clamped pixel is not at rest: {:?}",
+                got.ic.p
+            );
+        }
+        let tol = TOL * (1.0 + k);
+        let p = total_p(&got);
+        assert!(
+            p[0].abs() < tol && p[1].abs() < tol,
+            "Φ_θ,L_z at ({u}, {v}): Σp = {p:?}"
+        );
+        assert!(
+            (k_of(&got) - k).abs() < tol && (lz_of(&got) - lz).abs() < tol,
+            "Φ_θ,L_z at ({u}, {v}): (K, L_z)(p) = ({}, {}) is not the warp's ({k}, {lz})",
+            k_of(&got),
+            lz_of(&got)
+        );
+        total += 1;
+    }
+    assert_eq!(
+        bits(&tv.decode::<Defaults, f64>(C[0], C[1])),
+        bits(&bare.decode::<Defaults, f64>(C[0], C[1])),
+        "Φ_θ,L_z: the centre moved"
+    );
+    (clamped, total)
+}
+
+/// A centre no tilt at the first span takes below `t = 0`, one that it does, under two warps, integer and not.
+fn check_warped_k_all(alter: WarpedK) -> [(usize, usize); 2] {
+    let mut sums = [(0, 0); 2];
+    for arm in [Arm::SheetT1, Arm::LeanT2] {
+        for (i, fixture) in [
+            (0, [0.5, 1.0, 1.5]),
+            (0, [0.5, 2.0, 2.0]),
+            (1, [0.05, 1.0, 1.5]),
+            (1, [0.05, 2.0, 2.5]),
+        ] {
+            let (clamped, total) = check_warped_k(fixture, arm, 1.0, alter);
+            sums[i].0 += clamped;
+            sums[i].1 += total;
+            check_warped_k(fixture, arm, 8.0, alter);
+        }
+    }
+    sums
+}
+
+#[test]
+fn qa_tilt_every_chart_held_k_warped() {
+    let [high, low] = check_warped_k_all(WarpedK::AsRuled);
+    assert_eq!(high.0, 0, "no pixel clamped at the high centre");
+    assert!(low.0 > 100, "the clamp arises: {low:?}");
+    // R-709's report, past the harness's capture so that the test output shows it.
+    writeln!(
+        std::io::stderr(),
+        "R-709 clamped-pixel share (qa): high centre {}/{}; low centre {}/{} = {:.4}",
+        high.0,
+        high.1,
+        low.0,
+        low.1,
+        low.0 as f64 / low.1 as f64
+    )
+    .unwrap();
+}
+
+negative_control!(
+    qa_tilt_every_chart_held_k_warped,
+    "a held K tilted by value leaves cells with no construction and must fail",
+    expected = "a cell refused under tilt",
+    {
+        check_warped_k_all(WarpedK::ByValue);
+    }
+);
+
+mod mirror {
+    use super::*;
+    negative_control!(
+        qa_tilt_every_chart_held_k_warped,
+        "t < 0 mirrored onto t > 0 is not the clamp and must fail",
+        expected = "a clamped pixel is not at rest",
+        {
+            check_warped_k_all(WarpedK::Mirror);
         }
     );
 }
@@ -562,19 +988,122 @@ negative_control!(
 
 // ── REQ-CHART-065: slice ─────────────────────────────────────────────────────────────────────────────────────────────
 
-fn check_slice(stale_k: bool) {
+/// A control of [`check_slice`].
+#[derive(Clone, Copy, PartialEq)]
+enum SliceCtl {
+    None,
+    /// The momenta's `K` expected unchanged by a slice of the held `K`.
+    StaleK,
+    /// The held `L_z` slid in the warp coordinate `s`, `L_z = (2s − 1)·L_max`.
+    WarpLz,
+    /// The held `K` slid in `t`, not by value.
+    KInT,
+    /// The tilt's `t₀` left at the unsliced `K₀`.
+    StaleT0,
+}
+
+/// The held `L_z` slid by value, each sign, in each mode, the row's `K` the mode's (R-720: "the same rule governs slicing
+/// the held L_z as well as tilting it"): warped, past the untilted band as well; linear, inside it.
+fn slice_lz<C: LzChart<Param = f64> + PartialEq + std::fmt::Debug>(
+    name: &str,
+    chart: C,
+    [k_max, gamma]: [f64; 2],
+    ctl: SliceCtl,
+) {
+    let line = k_max * C[1].powf(gamma);
+    for (mapping, values) in [
+        (Mapping::Warped, [0.3, -0.2, 1.5, -1.5]),
+        (Mapping::Linear, [0.3, -0.2, 0.9, -0.9]),
+    ] {
+        let held = HeldLz {
+            mapping,
+            ..HeldLz::new(chart)
+        };
+        for value in values {
+            let s = held.sliced(HELD_LZ, value).expect("L_z is sliceable");
+            assert_eq!(
+                (s.chart, s.mapping, s.held(HELD_LZ)),
+                (chart, mapping, Some(value)),
+                "{name}: a slice moved more than the held L_z"
+            );
+            let k = if mapping == Mapping::Warped {
+                0.5 * value * value + line
+            } else {
+                k_max * C[1]
+            };
+            let d = if ctl == SliceCtl::WarpLz && mapping == Mapping::Warped {
+                let moved = 2.0 * value * (2.0 * line).sqrt();
+                chart.decode_lz(C[0], moved, above_floor(moved) + line)
+            } else {
+                s.decode::<Defaults, f64>(C[0], C[1])
+            };
+            assert_eq!(d.degenerate, None, "{name}: L_z = {value}");
+            assert_eq!(s.validate(C[0], C[1]), ValidationResult::Valid, "{name}");
+            let tol = TOL * (1.0 + k);
+            assert!(
+                (lz_of(&d) - value).abs() < tol,
+                "{name}: the sliced L_z: L_z(p) = {}, expected {value}",
+                lz_of(&d)
+            );
+            assert!(
+                (k_of(&d) - k).abs() < tol,
+                "{name}: K(p) = {} is not the row's {k} at L_z = {value}",
+                k_of(&d)
+            );
+        }
+    }
+}
+
+/// The held `K` slid by value on [`HeldK`], and the tilt's `t₀` recomputed from the new `K₀` (R-720's reading of R-633).
+fn slice_k(ctl: SliceCtl) {
+    let c = theta_lz(0.5);
+    let h = HeldK::new(c, 1.0, 1.5);
+    let s = h.sliced(HELD_K, 0.8).expect("K is sliceable");
+    assert_eq!(
+        s,
+        HeldK {
+            chart: BurrauThetaLz { k: 0.8, ..c },
+            ..h
+        }
+    );
+    assert_eq!(s.held(HELD_K), Some(0.8));
+    let d = if ctl == SliceCtl::KInT {
+        // K₀ = 0.5 moved by d = 0.3 in t, not in K.
+        let k = (0.5f64.powf(1.0 / 1.5) + 0.3).powf(1.5);
+        let lz = (2.0 * C[1] - 1.0) * (2.0 * k).sqrt();
+        decode_theta_lz_at(&c, C[0], lz, k).0
+    } else {
+        s.decode::<Defaults, f64>(C[0], C[1])
+    };
+    assert!(
+        (k_of(&d) - 0.8).abs() < TOL,
+        "the sliced K: K(p) = {}, expected K₀ + d = 0.8",
+        k_of(&d)
+    );
+    let span = 1.0;
+    let tv = view(
+        if ctl == SliceCtl::StaleT0 { h } else { s },
+        Arm::SheetT1,
+        HELD_K,
+        span,
+    );
+    let t0 = 0.8f64.powf(1.0 / 1.5);
+    for [u, v] in vertices() {
+        let (_, _, d) = Arm::SheetT1.place(u, v, span);
+        let k = (t0 + d).max(0.0).powf(1.5);
+        let got = k_of(&tv.decode::<Defaults, f64>(u, v));
+        assert!(
+            (got - k).abs() < TOL * (1.0 + k),
+            "t₀ is not recomputed from the sliced K₀: K(p) = {got}, expected {k}"
+        );
+    }
+}
+
+fn check_slice(ctl: SliceCtl) {
     // (ν, K) and Φ_θ,K: the held L_z.
+    slice_lz("(ν, K)", nu_k(), [1.0, 1.5], ctl);
+    slice_lz("Φ_θ,K", theta_k(), [1.0, 1.5], ctl);
     let a = HeldLz::new(nu_k());
-    let s = a.sliced(HELD_LZ, 0.3).expect("L_z is sliceable");
-    assert_eq!((s.chart, s.held(HELD_LZ)), (a.chart, Some(0.3)));
-    let d = s.decode::<Defaults, f64>(C[0], C[1]);
-    assert!((lz_of(&d) - 0.3).abs() < TOL, "L_z(p) = {}", lz_of(&d));
-    assert!((k_of(&d) - nu_k().kinetic::<f64>(C[1])).abs() < TOL);
-    let t = HeldLz::new(theta_k());
-    let s = t.sliced(HELD_LZ, -0.2).expect("L_z is sliceable");
-    assert_eq!((s.chart, s.held(HELD_LZ)), (t.chart, Some(-0.2)));
-    let d = s.decode::<Defaults, f64>(C[0], C[1]);
-    assert!((lz_of(&d) + 0.2).abs() < TOL);
     // Φ_θ,L_z: the held K, its band following.
     let c = theta_lz(0.5);
     let s = c.sliced(HELD_K, 0.8).expect("K is sliceable");
@@ -583,13 +1112,14 @@ fn check_slice(stale_k: bool) {
         (c.theta_range, c.lz_fraction, Some(0.8))
     );
     let d = s.decode::<Defaults, f64>(C[0], C[1]);
-    let want_k = if stale_k { 0.5 } else { 0.8 };
+    let want_k = if ctl == SliceCtl::StaleK { 0.5 } else { 0.8 };
     assert!(
         (k_of(&d) - want_k).abs() < TOL,
         "the sliced K: K(p) = {}, expected {want_k}",
         k_of(&d)
     );
     assert!((lz_of(&d) - (2.0 * C[1] - 1.0) * 1.6f64.sqrt()).abs() < TOL);
+    slice_k(ctl);
     // The mass simplex's ν₀: the triangle at the sliced value, the controls unmoved.
     let m = RestStart::new(simplex(0.5));
     let s = m.sliced(NU0, 0.3).expect("ν₀ is sliceable");
@@ -635,18 +1165,37 @@ fn check_slice(stale_k: bool) {
     }
     for k in (0..16).filter(|k| *k != HELD_K) {
         assert!(c.sliced(k, 0.4).is_none(), "Φ_θ,L_z sliced {k}");
+        assert!(
+            HeldK::new(c, 1.0, 1.5).sliced(k, 0.4).is_none(),
+            "HeldK sliced {k}"
+        );
     }
+}
+
+/// How [`check_slice_edge`] reads the edge.
+#[derive(Clone, Copy, PartialEq)]
+enum Edge {
+    AsRuled,
+    /// The centres past the edge expected to validate.
+    PastAsValid,
+    /// The warped held `L_z` past the band expected refused, the reading R-720 replaces.
+    WarpedRefused,
 }
 
 /// REQ-CHART-065's "subject to REQ-CHART-060's stop": REQ-CHART-060 stops a slice where the centre, `Φ` at the slice
 /// centre's hidden coordinates, fails `validate`. So a physical slice past the construction's edge must leave a centre
-/// that fails it, and one inside must pass: `ν₀ ∉ (0, 1)`; a held `L_z` with `K(v) < L_z²/2I`; a held `K < 0`, below
-/// every `L_z(v)²/2I`. `past_as_valid` expects the centres past the edge to validate (the control).
-fn check_slice_edge(past_as_valid: bool) {
+/// that fails it, and one inside must pass: `ν₀ ∉ (0, 1)`; a held `K < 0`, below every `L_z(v)²/2`, the stop at
+/// `K₀ = 0` in either mode; in linear mode a held `L_z` with `K(v) < L_z²/2`. In warped mode the held `L_z` has no edge:
+/// the floor keeps every pixel a system at any `L_z` (R-720).
+fn check_slice_edge(edge: Edge) {
     let ok = |r: ValidationResult| r == ValidationResult::Valid;
     let refused = |r: ValidationResult| matches!(r, ValidationResult::Reject { .. });
     let past = |r: ValidationResult, what: &str| {
-        let want = if past_as_valid { ok(r) } else { refused(r) };
+        let want = if edge == Edge::PastAsValid {
+            ok(r)
+        } else {
+            refused(r)
+        };
         assert!(
             want,
             "a slice past the edge ({what}) leaves a centre that validates as {r:?}"
@@ -662,44 +1211,98 @@ fn check_slice_edge(past_as_valid: bool) {
     for nu in [0.0, 1.0, 1.2, -0.1] {
         past(m.sliced(NU0, nu).unwrap().validate(C[0], C[1]), "ν₀");
     }
-    let a = HeldLz::new(nu_k());
-    let k = nu_k().kinetic::<f64>(C[1]);
-    let edge = (2.0 * k).sqrt();
-    assert!(ok(a
-        .sliced(HELD_LZ, 0.9 * edge)
-        .unwrap()
-        .validate(C[0], C[1])));
-    assert!(ok(a
-        .sliced(HELD_LZ, -0.9 * edge)
-        .unwrap()
-        .validate(C[0], C[1])));
-    past(
-        a.sliced(HELD_LZ, 1.1 * edge).unwrap().validate(C[0], C[1]),
-        "L_z",
+    // Warped: no edge in L_z, at either sign, at 0.5, 1.1, 10 and 1000 times the untilted band's L_max(K_max).
+    let (a, t) = (HeldLz::new(nu_k()), HeldLz::new(theta_k()));
+    let band = 2f64.sqrt();
+    for lz in [0.5, 1.1, 10.0, 1e3]
+        .into_iter()
+        .flat_map(|f| [f * band, -f * band])
+    {
+        for r in [
+            a.sliced(HELD_LZ, lz).unwrap().validate(C[0], C[1]),
+            t.sliced(HELD_LZ, lz).unwrap().validate(C[0], C[1]),
+        ] {
+            let want = if edge == Edge::WarpedRefused {
+                refused(r)
+            } else {
+                ok(r)
+            };
+            assert!(
+                want,
+                "a warped slice of the held L_z = {lz} validates as {r:?}"
+            );
+        }
+    }
+    // Linear: the row K(v) = K_max·v is fixed, so L_z has its edge there.
+    let (al, tl) = (
+        HeldLz {
+            mapping: Mapping::Linear,
+            ..a
+        },
+        HeldLz {
+            mapping: Mapping::Linear,
+            ..t
+        },
     );
-    past(
-        a.sliced(HELD_LZ, -1.1 * edge).unwrap().validate(C[0], C[1]),
-        "−L_z",
-    );
-    let t = HeldLz::new(theta_k());
-    let k = theta_k().kinetic::<f64>(C[1]);
-    let edge = (2.0 * k).sqrt();
-    assert!(ok(t
-        .sliced(HELD_LZ, 0.9 * edge)
-        .unwrap()
-        .validate(C[0], C[1])));
-    past(
-        t.sliced(HELD_LZ, 1.1 * edge).unwrap().validate(C[0], C[1]),
-        "Φ_θ,K's L_z",
-    );
+    let lin_edge = (2.0 * nu_k().k_max * C[1]).sqrt();
+    for (name, r) in [
+        (
+            "L_z",
+            al.sliced(HELD_LZ, 1.1 * lin_edge)
+                .unwrap()
+                .validate(C[0], C[1]),
+        ),
+        (
+            "−L_z",
+            al.sliced(HELD_LZ, -1.1 * lin_edge)
+                .unwrap()
+                .validate(C[0], C[1]),
+        ),
+        (
+            "Φ_θ,K's L_z",
+            tl.sliced(HELD_LZ, 1.1 * lin_edge)
+                .unwrap()
+                .validate(C[0], C[1]),
+        ),
+        (
+            "Φ_θ,K's −L_z",
+            tl.sliced(HELD_LZ, -1.1 * lin_edge)
+                .unwrap()
+                .validate(C[0], C[1]),
+        ),
+    ] {
+        past(r, name);
+    }
+    for lz in [0.9 * lin_edge, -0.9 * lin_edge] {
+        assert!(ok(al.sliced(HELD_LZ, lz).unwrap().validate(C[0], C[1])));
+        assert!(ok(tl.sliced(HELD_LZ, lz).unwrap().validate(C[0], C[1])));
+    }
+    // The held K, bare and held, in either mode: a stop at K₀ = 0, itself a system, the rest start.
     let c = theta_lz(0.5);
+    let h = HeldK::new(c, 1.0, 1.5);
+    let hl = HeldK {
+        mapping: Mapping::Linear,
+        ..h
+    };
     assert!(ok(c.sliced(HELD_K, 0.05).unwrap().validate(C[0], C[1])));
     past(c.sliced(HELD_K, -0.5).unwrap().validate(C[0], C[1]), "K");
+    for held in [h, hl] {
+        assert!(ok(held.sliced(HELD_K, 0.05).unwrap().validate(C[0], C[1])));
+        let zero = held.sliced(HELD_K, 0.0).unwrap();
+        assert!(ok(zero.validate(C[0], C[1])), "K₀ = 0 is the stop itself");
+        let d = zero.decode::<Defaults, f64>(C[0], C[1]);
+        assert_eq!(d.degenerate, None, "K₀ = 0");
+        assert!(d.ic.p.iter().flatten().all(|&p| p == 0.0), "K₀ = 0 at rest");
+        past(
+            held.sliced(HELD_K, -0.1).unwrap().validate(C[0], C[1]),
+            "HeldK's K",
+        );
+    }
 }
 
 #[test]
 fn qa_slice_every_chart_construction_edge() {
-    check_slice_edge(false);
+    check_slice_edge(Edge::AsRuled);
 }
 
 negative_control!(
@@ -707,13 +1310,25 @@ negative_control!(
     "a centre past the edge expected to validate must fail",
     expected = "a slice past the edge",
     {
-        check_slice_edge(true);
+        check_slice_edge(Edge::PastAsValid);
     }
 );
 
+mod warped_refused {
+    use super::*;
+    negative_control!(
+        qa_slice_every_chart_construction_edge,
+        "a warped held L_z past the band expected refused must fail: the floor keeps it a system",
+        expected = "a warped slice of the held L_z",
+        {
+            check_slice_edge(Edge::WarpedRefused);
+        }
+    );
+}
+
 #[test]
 fn qa_slice_every_chart_construction() {
-    check_slice(false);
+    check_slice(SliceCtl::None);
 }
 
 negative_control!(
@@ -721,6 +1336,42 @@ negative_control!(
     "a K slice expected to leave the momenta's K unchanged must fail",
     expected = "the sliced K",
     {
-        check_slice(true);
+        check_slice(SliceCtl::StaleK);
     }
 );
+
+mod slice_warp_lz {
+    use super::*;
+    negative_control!(
+        qa_slice_every_chart_construction,
+        "a slice of the held L_z moved in a warp coordinate must fail",
+        expected = "the sliced L_z",
+        {
+            check_slice(SliceCtl::WarpLz);
+        }
+    );
+}
+
+mod slice_k_in_t {
+    use super::*;
+    negative_control!(
+        qa_slice_every_chart_construction,
+        "a slice of the held K moved in t must fail",
+        expected = "the sliced K",
+        {
+            check_slice(SliceCtl::KInT);
+        }
+    );
+}
+
+mod slice_stale_t0 {
+    use super::*;
+    negative_control!(
+        qa_slice_every_chart_construction,
+        "a tilt whose t₀ is not recomputed from the sliced K₀ must fail",
+        expected = "t₀ is not recomputed",
+        {
+            check_slice(SliceCtl::StaleT0);
+        }
+    );
+}
