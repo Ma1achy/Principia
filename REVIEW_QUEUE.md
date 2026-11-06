@@ -951,3 +951,22 @@ owner: yes, it is physics; the tilt changes which systems the chart shows.*
   - (c) Another, stated by the owner.
 - **Applied meanwhile:** nothing.
 - **Waits:** TASK-M3-12's gate (REQ-EVT-006).
+
+## RQ-710: What `K_max` and `γ_K` the warp of `Φ_θ,L_z`'s held `K` takes, on a chart with no `K` axis to read them from *(a value, R-71; R-708; R-709; chart_reference §4.5; REQ-CHART-044; REQ-CHART-046; context: TASK-M2-52, TASK-M8-48)*
+
+*Queued 6 Nov 2026 by TASK-M2-52's fix round, on physics review 5805852854 (P2) of PR #388. For the owner: when a tilt moves the held kinetic energy on the `θ × L_z` chart, these two numbers set how far each pixel's energy moves, so they change which systems the tilted chart shows. Nothing is chosen.*
+
+- **File, section:**
+  - `docs/design/principia_chart_reference.md`:896-897, § "4.5 The Burrau-family chart maps": "`Φ_θ,L_z`'s held `K` is tilted in its warp coordinate, `K = K_max·t^γ_K`, `t = t₀ + d`, `t₀ = (K₀/K_max)^(1/γ_K)`, `d` in units of `t`".
+  - `decisions.md`:30905, § "R-708 — …", applied per R-369: "`Φ_θ,L_z`'s held `K` takes the warp's own line, `K = K_max·t^γ_K`, with `t = t₀ + d`, `t₀ = (K₀/K_max)^(1/γ_K)` at the chart's held `K₀`."
+  - `docs/design/principia_chart_reference.md`:806, § "4.5 The Burrau-family chart maps", gives `Φ_θ,K` its values: "are the invariant warp's (REQ-CHART-044, R-113)". It gives `Φ_θ,L_z` none.
+  - `plan/requirements.yaml`, REQ-CHART-044: "The invariant-chart warp defaults K_max (> 0) and γ_K (≥ 1) must be calibrated".
+  - `plan/requirements.yaml`, REQ-CHART-046: "Φ_θ,L_z's fixed K and its L_z range must be calibrated".
+- **The gap:** the formula needs a `K_max` and a `γ_K` for a chart that holds `K` and has no `K` axis. Neither calibration requirement names this warp, and RQ-679 asks only for the slider's span. RQ-701 raises the same value for a lone `L_z` axis on `MixedEnergy`, not for this chart. Away from `d = 0` the two numbers set the decoded state.
+- **Options seen:**
+  - (a) REQ-CHART-044's invariant warp, as `Φ_θ,K` has it. Cost: `K_max` then has no tie to this chart's calibrated `K`, which may lie above it, so `t₀ > 1`, which R-508's side allows.
+  - (b) `K_max` at the chart's calibrated `K` (REQ-CHART-046), so `t₀ = 1`, with REQ-CHART-044's `γ_K`. Cost: a slice of the held `K` needs a rule for whether `K_max` follows it.
+  - (c) A calibration requirement of this chart's own under R-71, proposed with evidence at the M2 gate.
+  - (d) Another, stated by the owner.
+- **Applied meanwhile:** no value. `kernel::chart::construction::HeldK` takes both as inputs, and the tests' values are the tests' own.
+- **Waits:** only a default tilted view of this chart, through TASK-M8-48. TASK-M2-52's kernel work does not wait.
