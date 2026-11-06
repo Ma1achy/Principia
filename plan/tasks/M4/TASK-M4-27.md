@@ -96,7 +96,7 @@ that. It is the first test of R-690's driver condition, on fixed inputs.
 - `cargo xtask build-kernel`, then `PRIN_GPU_BACKEND=metal cargo xtask gate cross-backend-branches --record metal.json`, on the Mac through the job queue; `gh workflow run gate.yml --ref <branch> -f milestone=M4`, its `cross-backend records` step giving `lavapipe.json` and `cpu-f32.json`, fetched with `gh run download`; then `cargo xtask gate cross-backend-branches --compare metal.json lavapipe.json cpu-f32.json` on the Mac through the job queue, `comparison.md` committed. In the PR:
   each pair's rate, the adapter lines and each driver's standing under R-690's condition; the header states the domain; every backend pair is listed, NVIDIA's as "not run"
   until its record is posted (REQ-VAL-347).
-- `cargo xtask build-kernel` — `target/spirv/kernel.wgsl` holds no `stage_branch_read_*` entry and is back to its size before this task, within a few bytes; `target/spirv/branch_read.wgsl` holds those entries alone, in `xtask/tests/build_kernel.rs`, and the PR shows both sizes (REQ-VAL-347).
+- `cargo xtask build-kernel` — `target/spirv/kernel.wgsl` holds no `stage_branch_read_*` entry and, the numbers in generated names aside, the same lines as before this task, its size moving only with those digits; `target/spirv/branch_read.wgsl` holds those entries alone, in `xtask/tests/build_kernel.rs`, and the PR shows both sizes (REQ-VAL-347).
 - `python3 plan/check_plan.py`.
 
 ## Notes
