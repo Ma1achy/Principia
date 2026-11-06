@@ -336,7 +336,7 @@ fn check_jobs(files: &[(String, String)]) {
     for (name, text) in files {
         for (job, lines) in jobs(text) {
             // The self-hosted runner's CARGO_HOME is read-only to its jobs and outlives them, so they can't write this
-            // config (R-711, which lands first in its own rulings PR; `win-gpu.yml`, whose header says so).
+            // config (R-711; `win-gpu.yml`, whose header says so).
             if lines.iter().any(|l| l.trim().starts_with(SELF_HOSTED)) {
                 continue;
             }

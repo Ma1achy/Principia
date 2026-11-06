@@ -366,8 +366,7 @@ fn step_of(lines: &[String], ind: usize) -> Step {
 }
 
 fn all_jobs(files: &[(String, String)]) -> Vec<Job> {
-    // The self-hosted runner keeps its rust-gpu build on its own disk from job to job, so it restores no cache (R-711,
-    // which lands first in its own rulings PR).
+    // The self-hosted runner keeps its rust-gpu build on its own disk from job to job, so it restores no cache (R-711).
     files
         .iter()
         .filter(|(f, _)| f != "win-gpu.yml")

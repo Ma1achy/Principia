@@ -732,7 +732,7 @@ validation::negative_control!(
     }
 );
 
-/// The self-hosted Windows job (R-711, which lands first in its own rulings PR) is no Linux job, so a cloud session has
+/// The self-hosted Windows job (R-711) is no Linux job, so a cloud session has
 /// nothing to set up for it; a self-hosted job on anything else is one the script can't place.
 const WINDOWS_RUNNER: &str = "runs-on: [self-hosted, windows, nvidia]";
 

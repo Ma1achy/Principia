@@ -1,10 +1,10 @@
-# Measurements on the owner's Windows PC, `malachys-pc-rtx2080s`, RTX 2080 SUPER (R-711 (lands first in its own rulings
-# PR), item 1, which amends R-186 and R-656 for this one runner): the Vulkan GPU suites, nightly and on `main`; the
-# Windows build and tests, nightly; and a nightly self-check, the only daily re-proof of the setup, since `schedule` fires
-# only from `main`. Every result here is a measurement, never a required check (R-649): the PC is sometimes off, and
-# nothing on `main` waits for it. No job here is gathered, retried or read by any gate, and a red one is not main red;
-# `xtask/tests/ci_self_hosted.rs` fails if that ever stops holding, or if a rule below is broken. DX12 waits for its
-# opt-in (R-711 item 2). No benchmarks, soak or mutants run here.
+# Measurements on the owner's Windows PC, `malachys-pc-rtx2080s`, RTX 2080 SUPER (R-711 item 1, which amends R-186 and
+# R-656 for this one runner): the Vulkan GPU suites, nightly and on `main`; the Windows build and tests, nightly; and
+# a nightly self-check, the only daily re-proof of the setup, since `schedule` fires only from `main`. Every result
+# here is a measurement, never a required check (R-649): the PC is sometimes off, and nothing on `main` waits for it.
+# No job here is gathered, retried or read by any gate, and a red one is not main red; `xtask/tests/ci_self_hosted.rs`
+# fails if that ever stops holding, or if a rule below is broken. DX12 waits for its opt-in (R-711 item 2). No
+# benchmarks, soak or mutants run here.
 #
 # The repository is public and this runner is a real PC, so these are the conditions for having it at all (R-711 items
 # 1 and 5, the owner's job rules of 5 Nov 2026). Never add a `pull_request` or `pull_request_target` trigger: only push

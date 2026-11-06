@@ -28,10 +28,10 @@
 # The per-PR mutation gate runs on pull requests only, in its own workflow, `mutants.yml` (R-196, R-202, R-302, R-305);
 # the per-push jobs are unchanged by it (R-177). Bench runs nightly and screenshots on GUI PRs, in their own workflows
 # (R-177).
-# GitHub-hosted runners (R-186), the GPU jobs too. The one self-hosted runner runs measurements only, in `win-gpu.yml`,
-# never here (R-711 (lands first in its own rulings PR), item 1). That wakes R-174, with a stricter rule in place of its
-# PR allowance: no `pull_request` or `pull_request_target` trigger on any self-hosted job, only push to `main`, schedule
-# and workflow_dispatch, from Ma1achy on Ma1achy/Principia.
+# GitHub-hosted runners (R-186), the GPU jobs too. The one self-hosted runner runs measurements only, in `win-gpu.yml`
+# and `runner-proof.yml`, never here (R-711 item 1). That wakes R-174, with a stricter rule in place of its PR allowance:
+# no `pull_request` or `pull_request_target` trigger on any self-hosted job, only push to `main`, schedule and
+# workflow_dispatch, from Ma1achy on Ma1achy/Principia.
 #
 # What runs when (R-656). A push runs this workflow only on `main` (and on a `measure/` branch, which never has a pull
 # request, R-272); a pull request's pushes run it through `pull_request`, once each, never twice. Every run on `main`
