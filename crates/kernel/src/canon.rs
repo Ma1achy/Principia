@@ -198,9 +198,17 @@ const ZERO_EXPONENT: i32 = i16::MIN as i32;
 /// `[2^−83, 4)` in magnitude but 0 (f32; `[2^−112, 4)` at f64), and none is subnormal on any backend, whatever the
 /// state's scale or its terms' spread.
 #[derive(Clone, Copy)]
-pub(crate) struct Wide<R> {
+pub struct Wide<R> {
     m: R,
     e: i32,
+}
+
+impl Wide<f32> {
+    /// The mantissa's bits and the exponent, as words: both, since a `Wide`'s value is the pair (R-690).
+    #[inline]
+    pub fn words(self) -> [u32; 2] {
+        [self.m.to_bits(), self.e as u32]
+    }
 }
 
 /// `x·2^k` normalised, for `x` 0 or a normal float within `[2^−83, 4)` in magnitude (f32; `[2^−112, 4)` at f64): its
@@ -359,7 +367,7 @@ fn wide_inertia<R: LinkReal + IeeeBits>(mass: [Wide<R>; 3], x: [[Wide<R>; 2]; 3]
 
 /// The masses and the coordinates of `r` as [`Wide`]s.
 #[inline]
-fn wide_state<R: LinkReal + IeeeBits>(
+pub fn wide_state<R: LinkReal + IeeeBits>(
     m: [R; 3],
     r: [[R; 2]; 3],
 ) -> ([Wide<R>; 3], [[Wide<R>; 2]; 3]) {
@@ -386,11 +394,22 @@ pub fn inertia<R: LinkReal + IeeeBits>(m: [R; 3], r: [[R; 2]; 3]) -> R {
     to_float(wide_inertia(mass, x))
 }
 
-/// Step 0's skip test, the branch input: `|I_in − 1| ≤ τ_I`, compared as [`Wide`]s.
+/// Step 0's skip test's two sides, the branch input: `|I_in − 1|` and `τ_I`, as [`Wide`]s.
 #[inline]
-fn skipped<R: LinkReal + IeeeBits>(i: Wide<R>) -> bool {
-    let off = wide_abs(wide_sub(i, wide(R::one())));
-    !wide_greater(off, wide(R::TAU_I))
+pub fn skip_input<R: LinkReal + IeeeBits>(i: Wide<R>) -> [Wide<R>; 2] {
+    [wide_abs(wide_sub(i, wide(R::one()))), wide(R::TAU_I)]
+}
+
+/// Step 0's skip decision on [`skip_input`]'s sides: `|I_in − 1| ≤ τ_I`.
+#[inline]
+pub fn skip_taken<R: LinkReal + IeeeBits>(sides: [Wide<R>; 2]) -> bool {
+    !wide_greater(sides[0], sides[1])
+}
+
+/// Whether step 0 runs: `lookup_rescaled`, neither skipped nor the bodies coincident.
+#[inline]
+pub fn step_runs(skip: bool, coincident: bool) -> bool {
+    !(skip | coincident)
 }
 
 /// `v·k`.
@@ -435,6 +454,21 @@ fn scaled_coordinate<R: LinkReal + IeeeBits>(c: Wide<R>, root: R, q: i32) -> R {
     to_float(renorm(c.m / root, c.e - 2 * q))
 }
 
+/// Step 1a's CoM-frame coordinates of the [`Wide`] state `(mass, x)`, and step 0's `I_in` in that frame.
+#[inline]
+pub fn com_frame<R: LinkReal + IeeeBits>(
+    mass: [Wide<R>; 3],
+    x: [[Wide<R>; 2]; 3],
+) -> ([[Wide<R>; 2]; 3], Wide<R>) {
+    let com = wide_com(mass, x);
+    let c = [
+        [wide_sub(x[0][0], com[0]), wide_sub(x[0][1], com[1])],
+        [wide_sub(x[1][0], com[0]), wide_sub(x[1][1], com[1])],
+        [wide_sub(x[2][0], com[0]), wide_sub(x[2][1], com[1])],
+    ];
+    (c, wide_inertia(mass, c))
+}
+
 /// Steps 1a and 0 on the [`Wide`] state `(mass, x)` and the momenta `p` (the module's note); `coincident` is the
 /// bodies' coincidence, `ρ = 0` and `d02 = 0`.
 #[inline]
@@ -444,16 +478,10 @@ fn scale_wide<R: LinkReal + IeeeBits>(
     p: [[R; 2]; 3],
     coincident: bool,
 ) -> Scaled<R> {
-    // 1a: the CoM frame.
-    let com = wide_com(mass, x);
-    let c = [
-        [wide_sub(x[0][0], com[0]), wide_sub(x[0][1], com[1])],
-        [wide_sub(x[1][0], com[0]), wide_sub(x[1][1], com[1])],
-        [wide_sub(x[2][0], com[0]), wide_sub(x[2][1], com[1])],
-    ];
-    // 0: I_in, the skip, and the two steps, `I_in = s·2^{4q}`, `s` in [1, 16).
-    let i = wide_inertia(mass, c);
-    let run = !(skipped(i) | coincident);
+    // 1a: the CoM frame, and I_in in it.
+    let (c, i) = com_frame(mass, x);
+    // 0: the skip, and the two steps, `I_in = s·2^{4q}`, `s` in [1, 16).
+    let run = step_runs(skip_taken(skip_input(i)), coincident);
     let q = select(run, i.e >> 2, 0);
     let s = i.m * R::pow2(i.e & 3);
     let root = select(run, Float::sqrt(s), R::one());
@@ -496,7 +524,7 @@ pub fn scale_step<R: LinkReal + IeeeBits>(ic: &Ic<R>) -> Scaled<R> {
 
 /// Both components 0: `ρ = 0`, step 2's guard (`lookup_clamped`, R-13), true for `+0` and `−0` alike.
 #[inline]
-fn is_pole<R: LinkReal + IeeeBits>(v: [Wide<R>; 2]) -> bool {
+pub fn is_pole<R: LinkReal + IeeeBits>(v: [Wide<R>; 2]) -> bool {
     is_zero(v[0]) & is_zero(v[1])
 }
 
@@ -504,7 +532,7 @@ fn is_pole<R: LinkReal + IeeeBits>(v: [Wide<R>; 2]) -> bool {
 /// smaller capped at 60, so the larger is in `[1, 2)` and the smaller 0 or at least `2^−60` in magnitude; and whether
 /// `ρ = 0`, the pole. At the pole both are `±0`.
 #[inline]
-fn scaled_rho<R: LinkReal + IeeeBits>(rho: [Wide<R>; 2]) -> ([R; 2], bool) {
+pub fn scaled_rho<R: LinkReal + IeeeBits>(rho: [Wide<R>; 2]) -> ([R; 2], bool) {
     let e = select(rho[0].e > rho[1].e, rho[0].e, rho[1].e);
     let gap = |k: i32| {
         let g = e - k;
@@ -519,11 +547,17 @@ fn scaled_rho<R: LinkReal + IeeeBits>(rho: [Wide<R>; 2]) -> ([R; 2], bool) {
     )
 }
 
+/// A scaled `ρ` component is 0, the zero test step 2 reads an exact zero with ([`scaled_rho`]).
+#[inline]
+pub fn axis_zero<R: LinkReal>(x: R) -> bool {
+    x == R::zero()
+}
+
 /// Step 2's angle from the scaled `ρ` (`x`, `y`) and its pole: `atan2(y, x)`, a zero `x` taken as `+0`, and `+0` at the
 /// pole, each a select ([`rotation_angle`]).
 #[inline]
 fn angle_of<R: LinkReal>(v: [R; 2], pole: bool) -> R {
-    let x = select(v[0] == R::zero(), R::zero(), v[0]);
+    let x = select(axis_zero(v[0]), R::zero(), v[0]);
     select(pole, R::zero(), Float::atan2(v[1], x))
 }
 
@@ -601,15 +635,47 @@ pub fn mirror_taken<R: LinkReal>(lambda_t_y: R) -> bool {
     lambda_t_y < -R::DELTA_LAMBDA
 }
 
-/// Step 3's decision on the [`Wide`] masses and pair differences `ρ = r₁ − r₀`, `d02 = r₂ − r₀`, `d12 = r₂ − r₁`
+/// Step 3's branch input ([`mirror_decision`]): `c`, and the two sides of `m₂c² > δ_λ²·M₀₁·‖ρ‖²·d²`.
+#[derive(Clone, Copy)]
+pub struct MirrorInput<R> {
+    /// `c = ρ × Λ`.
+    pub c: Wide<R>,
+    /// `m₂c²`.
+    pub left: Wide<R>,
+    /// `δ_λ²·M₀₁·‖ρ‖²·d²`.
+    pub right: Wide<R>,
+}
+
+/// Step 3's decision on its branch input: mirror iff `c < 0` and the left side is above the right.
+#[inline]
+pub fn mirror_side<R: LinkReal + IeeeBits>(input: &MirrorInput<R>) -> bool {
+    (input.c.m < R::zero()) & wide_greater(input.left, input.right)
+}
+
+/// A plane vector in `Wide`, `x` then `y`.
+pub type WideVec<R> = [Wide<R>; 2];
+
+/// The pair differences `ρ = r₁ − r₀`, `d02 = r₂ − r₀` and `d12 = r₂ − r₁` of the [`Wide`] coordinates `x`.
+#[inline]
+pub fn pair_differences<R: LinkReal + IeeeBits>(
+    x: [[Wide<R>; 2]; 3],
+) -> (WideVec<R>, WideVec<R>, WideVec<R>) {
+    (
+        difference(x[0], x[1]),
+        difference(x[0], x[2]),
+        difference(x[1], x[2]),
+    )
+}
+
+/// Step 3's branch input on the [`Wide`] masses and pair differences `ρ = r₁ − r₀`, `d02 = r₂ − r₀`, `d12 = r₂ − r₁`
 /// ([`mirror_decision`]).
 #[inline]
-fn decide<R: LinkReal + IeeeBits>(
+pub fn mirror_input<R: LinkReal + IeeeBits>(
     mass: [Wide<R>; 3],
     rho: [Wide<R>; 2],
     d02: [Wide<R>; 2],
     d12: [Wide<R>; 2],
-) -> bool {
+) -> MirrorInput<R> {
     let pole = is_pole(rho);
     let one = wide(R::one());
     let zero = wide(R::zero());
@@ -633,7 +699,7 @@ fn decide<R: LinkReal + IeeeBits>(
         wide_mul(wide_mul(wide_mul(delta, delta), m01), wide_norm2(axis)),
         d2,
     );
-    (c.m < R::zero()) & wide_greater(left, right)
+    MirrorInput { c, left, right }
 }
 
 /// Step 3's decision (R-82), on the positions `r` in any frame, before step 0 (the module's note):
@@ -651,12 +717,8 @@ fn decide<R: LinkReal + IeeeBits>(
 #[inline]
 pub fn mirror_decision<R: LinkReal + IeeeBits>(m: [R; 3], r: [[R; 2]; 3]) -> bool {
     let (mass, x) = wide_state(m, r);
-    decide(
-        mass,
-        difference(x[0], x[1]),
-        difference(x[0], x[2]),
-        difference(x[1], x[2]),
-    )
+    let (rho, d02, d12) = pair_differences(x);
+    mirror_side(&mirror_input(mass, rho, d02, d12))
 }
 
 /// `(v_x, −v_y)` where `flip` holds, else `v`, selected.
@@ -705,14 +767,10 @@ fn canonical<R: LinkReal + IeeeBits>(ic: &Ic<R>, mirror_step: bool) -> Canonical
     let (mass, x) = wide_state(m, ic.r);
     // The pair differences every branch reads (the module's note): step 2's guard and angle, step 3's decision and
     // step 0's coincidence, all translation- and scale-free in exact arithmetic.
-    let (rho, d02, d12) = (
-        difference(x[0], x[1]),
-        difference(x[0], x[2]),
-        difference(x[1], x[2]),
-    );
+    let (rho, d02, d12) = pair_differences(x);
     let (turned, clamped) = scaled_rho(rho);
     let phi = angle_of(turned, clamped);
-    let mirrored = mirror_step & decide(mass, rho, d02, d12);
+    let mirrored = mirror_step & mirror_side(&mirror_input(mass, rho, d02, d12));
     // 1a and 0.
     let scaled = scale_wide(mass, x, ic.p, clamped & is_pole(d02));
     // 1b: zero total momentum.

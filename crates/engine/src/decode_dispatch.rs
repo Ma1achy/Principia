@@ -13,6 +13,8 @@
 //! - [`encode_gpu`] and [`beta_gpu`]: encode `E` on given `(m, r, p)`, `kernel::stage::encode::encode`, and its `β` on
 //!   given operands, `kernel::stage::encode::beta`, for the cross-backend checks of their selects and notices at the
 //!   poles and on the `−x` half-axis (REQ-ENC-007, REQ-DEC-014).
+//! - [`branch_read_canon_gpu`] and [`BranchReadStage`]: the read-back of canon's and each decode variant's branches,
+//!   `kernel::stage::branch_read`, for the cross-backend check (R-690; TASK-M4-27).
 //! - [`decode_only_with`]: parity_contract §1's `decodeOnly(chart, uv, simKey) → (m, r, p, ICDescriptor)`, the CPU-f64
 //!   instantiation of the same source, `kernel::stage::decode::sample_with` at f64 (R-118, R-265), with the same
 //!   `Option` target as the dispatch; [`decode_only`] is it with `η_E` off.
@@ -26,6 +28,7 @@ use kernel::chart::ChartDecode;
 use kernel::decode::Ic;
 use kernel::generated::links::Selection;
 use kernel::payload::ICDescriptor;
+use kernel::stage::branch_read::{self, BranchVariant};
 use kernel::stage::canon as canon_stage;
 use kernel::stage::decode::{
     self as stage, DecodeMode, DecodeOut, DecodeUniforms, DecodeVariant, UniformChart,
@@ -45,6 +48,9 @@ pub const DESCRIBE_ENTRY: &str = "stage_decode_describe";
 
 /// The WGSL entry point naga names for `kernel::stage::canon::canonicalise`.
 pub const CANONICALISE_ENTRY: &str = "stage_canon_canonicalise";
+
+/// The WGSL entry point naga names for `kernel::stage::branch_read::canon`.
+pub const BRANCH_READ_CANON_ENTRY: &str = "stage_branch_read_canon";
 
 /// The WGSL entry point naga names for `kernel::stage::encode::encode`.
 pub const ENCODE_ENTRY: &str = "stage_encode_encode";
@@ -446,6 +452,109 @@ pub fn canonicalise_gpu(
     Ok((0..ics.len())
         .map(|i| canon_stage::read_canonical(&read[0], i))
         .collect())
+}
+
+/// Canon's read-back, `kernel::stage::branch_read::canon`, dispatched on `device` over `ics`, one invocation each, under
+/// the fast-math `setting`: `kernel::stage::branch_read::CANON_WORDS` words per state, filled with NaN before the
+/// dispatch. Its pipeline is made per call: a test's and a gate's, never on a navigation path.
+pub fn branch_read_canon_gpu(
+    device: &wgpu::Device,
+    queue: &wgpu::Queue,
+    wgsl: &str,
+    ics: &[Ic<f32>],
+    setting: FastMath,
+) -> Result<Vec<u32>, ComputeError> {
+    if ics.is_empty() {
+        return Ok(Vec::new());
+    }
+    let mut words = vec![0; ics.len() * stage::ic_words()];
+    for (i, ic) in ics.iter().enumerate() {
+        stage::write_ic(&mut words, i, ic);
+    }
+    run_entry(
+        device,
+        queue,
+        (wgsl, BRANCH_READ_CANON_ENTRY),
+        &words,
+        (ics.len(), branch_read::CANON_WORDS),
+        setting,
+    )
+}
+
+/// The read-back of the decode variant `V`'s branches (`kernel::stage::branch_read`): its pipeline, created once.
+pub struct BranchReadStage<V: BranchVariant> {
+    kernel: ComputeKernel,
+    variant: PhantomData<V>,
+}
+
+impl<V: BranchVariant> BranchReadStage<V> {
+    /// The pipeline of `V`'s read-back entry point in `wgsl`, created on `device` under the fast-math `setting`.
+    pub fn new(device: &wgpu::Device, wgsl: &str, setting: FastMath) -> Result<Self, ComputeError> {
+        let kernel = pipeline(
+            device,
+            &ComputeShader {
+                label: V::READ_ENTRY,
+                wgsl,
+                entry: V::READ_ENTRY,
+            },
+            setting,
+        )?;
+        Ok(Self {
+            kernel,
+            variant: PhantomData,
+        })
+    }
+
+    /// The compute stage's fast-math mode as compiled.
+    pub fn mode(&self) -> StageMode {
+        self.kernel.mode()
+    }
+
+    /// Dispatches the read-back once over `uv`, one invocation per point, with `chart`'s parameters and the energy target
+    /// `e_star` as the uniform: `kernel::stage::branch_read::DECODE_WORDS` words per point, zero before the dispatch, so a
+    /// sample the kernel did not write reads as no branch present. No pipeline is created.
+    pub fn dispatch(
+        &self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        chart: &V::Chart,
+        e_star: Option<f32>,
+        uv: &[[f32; 2]],
+    ) -> Result<Vec<u32>, ComputeError> {
+        if uv.is_empty() {
+            return Ok(Vec::new());
+        }
+        let per = branch_read::DECODE_WORDS;
+        let n = check_output_words(uv.len(), per, &device.limits())?;
+        let uniforms = DecodeUniforms {
+            chart: chart.uniform(),
+            flags: [0, 0, 0, 0].into(),
+            energy: stage::energy(e_star),
+        };
+        let uniform = buffer(
+            device,
+            "branch read uniforms",
+            &uniform_words(&uniforms),
+            wgpu::BufferUsages::UNIFORM,
+        );
+        let points: Vec<u32> = uv.iter().flatten().map(|x| x.to_bits()).collect();
+        let points = buffer(
+            device,
+            "branch read uv",
+            &points,
+            wgpu::BufferUsages::STORAGE,
+        );
+        let outputs = [output(device, "branch read out", 0, uv.len() * per)];
+        let mut read = dispatch_and_read(
+            device,
+            queue,
+            &self.kernel,
+            &[&uniform, &points],
+            &outputs,
+            n,
+        )?;
+        Ok(read.remove(0))
+    }
 }
 
 /// The number of samples `n` a dispatch writing `words` words per sample, and no descriptors, covers on a device with

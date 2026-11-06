@@ -1,7 +1,8 @@
 //! The numerical-gate runner's process, which `cargo xtask gate` runs: xtask reaches `validation` only as a
 //! dev-dependency (systems_architecture §7.1; R-176, R-187), so it runs this binary rather than linking the runner.
 //!
-//! `gate --root <workspace> (<gate> | --all | --list)`: runs one gate, every registered gate, or lists them.
+//! `gate --root <workspace> (<gate> [<flags>] | --all | --list)`: runs one gate, a measurement gate's flags, every
+//! registered gate, or lists them.
 
 use std::path::Path;
 use std::process::ExitCode;
@@ -19,8 +20,11 @@ fn main() -> ExitCode {
             let root = Path::new(root);
             validation::gate::run(root, name, &validation::gate::out_dir(root))
         }
+        ["--root", root, name, flags @ ..] if !name.starts_with('-') => {
+            validation::gate::run_flags(Path::new(root), name, flags)
+        }
         _ => Err(format!(
-            "unrecognised arguments `{}`; usage: gate --root <workspace> (<gate> | --all | --list)",
+            "unrecognised arguments `{}`; usage: gate --root <workspace> (<gate> [<flags>] | --all | --list)",
             args.join(" ")
         )),
     };

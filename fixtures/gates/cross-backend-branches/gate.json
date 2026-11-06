@@ -1,0 +1,14 @@
+{
+  "gate": "cross-backend-branches",
+  "inputs": [
+    "control-self.json",
+    "control-flipped.json",
+    "control-bits.json",
+    "control-inputs.json",
+    "control-level-1.json"
+  ],
+  "measurement": {
+    "requirement": "REQ-VAL-347",
+    "ruling": "R-649"
+  }
+}

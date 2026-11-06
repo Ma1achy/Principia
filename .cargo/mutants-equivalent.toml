@@ -366,3 +366,7 @@ justification = "WNOHANG and WNOWAIT are distinct single-bit waitid options on b
 [[equivalent]]
 mutant = "xtask/src/jobq.rs:1511:41: replace | with ^ in leader_exited"
 justification = "WEXITED (0x4) and WNOHANG (0x1) share no bit on both the Linux and the Mac targets, so their ^ is their |, and the options passed to waitid are the same bits"
+
+[[equivalent]]
+mutant = "crates/kernel/src/canon.rs:652:16: replace < with <= in mirror_side"
+justification = "at c = 0 the left side m₂c² is 0, which wide_greater never takes above the right side's δ_λ²·M₀₁·‖ρ‖²·d² ≥ 0, so c ≤ 0 and c < 0 agree on every state"

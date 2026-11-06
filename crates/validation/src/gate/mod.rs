@@ -20,6 +20,11 @@
 //! A threshold is refused unless it names a live requirement of `plan/requirements.yaml`; a provisional one, a region
 //! minimum, or an arm's bound, unless that requirement is a calibration requirement. Each input carries `"expected"`: `"pass"`,
 //! `"fail"` or `"refused"`; the run fails naming each input whose outcome is not the expected one.
+//!
+//! **A measurement gate** (R-649; TASK-M4-27): its `gate.json` carries `"measurement": { "requirement": …, "ruling": … }`
+//! in place of `threshold` and `min_regions`, and a file with both is refused ([`GateSpec`]). No threshold enters it. Its
+//! `inputs` are its control records alone, the only ones with `"expected"`, which `gate <name>` and `gate --all` run
+//! with no GPU ([`MeasurementGate`]). What it measures runs under its flags, which assert nothing.
 
 pub mod report;
 
@@ -30,6 +35,7 @@ use serde::Deserialize;
 pub use report::{GateReport, Minimum, RegionCount, Regions, Verdict};
 
 use crate::convergence::ConvergenceGate;
+use crate::cross_backend::CrossBackendGate;
 use crate::decode_agreement::DecodeAgreementGate;
 use crate::decode_f32_eps::DecodeF32EpsGate;
 use crate::decode_sanity::DecodeSanityGate;
@@ -71,6 +77,58 @@ pub const REGISTRY: &[&dyn Gate] = &[
     &DecodeAgreementGate,
     &LiteratureImportGate,
 ];
+
+/// A measurement gate (R-649): no threshold; its controls, and what it measures, under its flags.
+pub trait MeasurementGate: Sync {
+    /// The gate's name: its directory under `fixtures/gates/`.
+    fn name(&self) -> &'static str;
+
+    /// Judges one control input, `fixture` (its JSON, without `"expected"`), named `name`; `Err` refuses it.
+    fn control(
+        &self,
+        config: &MeasurementConfig,
+        name: &str,
+        fixture: &serde_json::Value,
+    ) -> Result<MeasurementControl, String>;
+
+    /// Runs the flags `args` on the workspace at `root`.
+    fn flags(&self, root: &Path, args: &[&str]) -> Result<(), String>;
+}
+
+/// A control's result.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MeasurementControl {
+    /// What the input is.
+    pub description: String,
+    /// The verdict, which is the control's alone.
+    pub verdict: Verdict,
+    /// The report the control's comparison gives.
+    pub markdown: String,
+}
+
+/// The registered measurement gates, in the order `--all` runs them, after [`REGISTRY`].
+pub const MEASUREMENTS: &[&dyn MeasurementGate] = &[&CrossBackendGate];
+
+/// `gate.json`'s `measurement`: what it is measured under, in place of a threshold.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Measurement {
+    /// The requirement.
+    pub requirement: String,
+    /// The ruling that makes it a measurement.
+    pub ruling: String,
+}
+
+/// A measurement gate's configuration.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MeasurementConfig {
+    /// The gate's name.
+    pub gate: String,
+    /// The control inputs, relative to the gate's directory, in the order they run.
+    pub inputs: Vec<String>,
+    /// What it is measured under.
+    pub measurement: Measurement,
+}
 
 /// Whether a threshold is confirmed, or a calibration requirement's provisional value.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
@@ -160,10 +218,23 @@ pub struct ArmBound {
 struct GateFile {
     gate: String,
     inputs: Vec<String>,
-    threshold: Threshold,
-    min_regions: MinRegionsField,
+    #[serde(default)]
+    threshold: Option<Threshold>,
+    #[serde(default)]
+    min_regions: Option<MinRegionsField>,
     #[serde(default)]
     randomise_bound: Option<ArmBound>,
+    #[serde(default)]
+    measurement: Option<Measurement>,
+}
+
+/// A `gate.json`: a gate with a threshold, or a measurement gate, which has none.
+#[derive(Debug, Clone)]
+pub enum GateSpec {
+    /// A numerical gate.
+    Threshold(GateConfig),
+    /// A measurement gate.
+    Measurement(MeasurementConfig),
 }
 
 /// A gate's configuration, read from `fixtures/gates/<gate>/gate.json` and checked against the requirements.
@@ -236,12 +307,61 @@ fn check_requirement(
     Ok(())
 }
 
+impl GateSpec {
+    /// Parses `text` (a `gate.json`), a measurement refused beside a threshold, and checks it against `requirements` (the
+    /// text of `plan/requirements.yaml`).
+    pub fn parse(text: &str, requirements: &str) -> Result<Self, String> {
+        let mut file: GateFile =
+            serde_json::from_str(text).map_err(|e| format!("gate.json: {e}"))?;
+        let Some(measurement) = file.measurement.take() else {
+            return GateConfig::from_file(file, requirements).map(GateSpec::Threshold);
+        };
+        if file.threshold.is_some() || file.min_regions.is_some() || file.randomise_bound.is_some()
+        {
+            return Err(
+                "gate.json: a measurement names no threshold, region minimum or bound (R-649)"
+                    .to_owned(),
+            );
+        }
+        check_requirement(
+            requirements,
+            "gate.json: the measurement",
+            &measurement.requirement,
+            false,
+        )?;
+        if file.inputs.is_empty() {
+            return Err("gate.json: no inputs".to_owned());
+        }
+        Ok(GateSpec::Measurement(MeasurementConfig {
+            gate: file.gate,
+            inputs: file.inputs,
+            measurement,
+        }))
+    }
+}
+
 impl GateConfig {
     /// Parses `text` (a `gate.json`) and checks its threshold and region minimum against `requirements` (the text of
-    /// `plan/requirements.yaml`).
+    /// `plan/requirements.yaml`). A measurement has neither, and is refused here.
     pub fn parse(text: &str, requirements: &str) -> Result<Self, String> {
-        let file: GateFile = serde_json::from_str(text).map_err(|e| format!("gate.json: {e}"))?;
-        let t = &file.threshold;
+        match GateSpec::parse(text, requirements)? {
+            GateSpec::Threshold(config) => Ok(config),
+            GateSpec::Measurement(m) => Err(format!(
+                "gate.json: {} is a measurement and has no threshold (R-649)",
+                m.gate
+            )),
+        }
+    }
+
+    /// `file` checked against `requirements`.
+    fn from_file(file: GateFile, requirements: &str) -> Result<Self, String> {
+        let threshold = file
+            .threshold
+            .ok_or("gate.json: missing field `threshold`")?;
+        let m = file
+            .min_regions
+            .ok_or("gate.json: missing field `min_regions`")?;
+        let t = &threshold;
         if !t.value.is_finite() {
             return Err(format!(
                 "gate.json: the threshold {} is not finite",
@@ -260,7 +380,6 @@ impl GateConfig {
                 t.requirement
             ));
         }
-        let m = &file.min_regions;
         check_requirement(
             requirements,
             "gate.json: the region minimum",
@@ -270,10 +389,10 @@ impl GateConfig {
         let min_regions = match m.value {
             Some(value) => Minimum::Declared {
                 value,
-                requirement: m.requirement.clone(),
+                requirement: m.requirement,
             },
             None => Minimum::NotCalibrated {
-                requirement: m.requirement.clone(),
+                requirement: m.requirement,
             },
         };
         if let Some(b) = &file.randomise_bound {
@@ -291,7 +410,7 @@ impl GateConfig {
         Ok(Self {
             gate: file.gate,
             inputs: file.inputs,
-            threshold: file.threshold,
+            threshold,
             min_regions,
             randomise_bound: file.randomise_bound,
         })
@@ -336,51 +455,140 @@ pub fn gate(name: &str) -> Result<&'static dyn Gate, String> {
         })
 }
 
-/// Reads and checks `fixtures/gates/<gate>/gate.json` under `root`.
+/// The registered measurement gate named `name`, if `name` is one.
+fn measurement(name: &str) -> Option<&'static dyn MeasurementGate> {
+    MEASUREMENTS.iter().copied().find(|g| g.name() == name)
+}
+
+/// Reads and checks `fixtures/gates/<gate>/gate.json` under `root`, a gate with a threshold.
 pub fn config(root: &Path, gate: &str) -> Result<GateConfig, String> {
+    match spec(root, gate)? {
+        GateSpec::Threshold(config) => Ok(config),
+        GateSpec::Measurement(_) => Err(format!(
+            "{gate} is a measurement and has no threshold (R-649)"
+        )),
+    }
+}
+
+/// Reads and checks `fixtures/gates/<gate>/gate.json` under `root`.
+pub fn spec(root: &Path, gate: &str) -> Result<GateSpec, String> {
     let path = root.join("fixtures/gates").join(gate).join("gate.json");
     let text = std::fs::read_to_string(&path)
         .map_err(|e| format!("cannot read {}: {e}", path.display()))?;
     let requirements_path = root.join("plan/requirements.yaml");
     let requirements = std::fs::read_to_string(&requirements_path)
         .map_err(|e| format!("cannot read {}: {e}", requirements_path.display()))?;
-    let config =
-        GateConfig::parse(&text, &requirements).map_err(|e| format!("{}: {e}", path.display()))?;
-    if config.gate != gate {
+    let spec =
+        GateSpec::parse(&text, &requirements).map_err(|e| format!("{}: {e}", path.display()))?;
+    let named = match &spec {
+        GateSpec::Threshold(config) => &config.gate,
+        GateSpec::Measurement(config) => &config.gate,
+    };
+    if named != gate {
         return Err(format!(
-            "{} names gate `{}`, not `{gate}`",
-            path.display(),
-            config.gate
+            "{} names gate `{named}`, not `{gate}`",
+            path.display()
         ));
     }
-    Ok(config)
+    Ok(spec)
+}
+
+/// Reads an input file: its JSON, without `"expected"`, and that.
+fn read_input(path: &Path) -> Result<(serde_json::Value, Expected), String> {
+    let text = std::fs::read_to_string(path)
+        .map_err(|e| format!("cannot read {}: {e}", path.display()))?;
+    let mut value: serde_json::Value =
+        serde_json::from_str(&text).map_err(|e| format!("{}: {e}", path.display()))?;
+    let expected = value
+        .as_object_mut()
+        .and_then(|o| o.remove("expected"))
+        .ok_or_else(|| {
+            format!(
+                "{}: no \"expected\" (pass, fail or refused)",
+                path.display()
+            )
+        })?;
+    let expected: Expected = serde_json::from_value(expected)
+        .map_err(|e| format!("{}: \"expected\": {e}", path.display()))?;
+    Ok((value, expected))
+}
+
+/// Runs the flags `args` of the measurement gate `name` on the workspace at `root`.
+pub fn run_flags(root: &Path, name: &str, args: &[&str]) -> Result<(), String> {
+    measurement(name)
+        .ok_or_else(|| format!("gate `{name}` takes no flags: it is not a measurement gate"))?
+        .flags(root, args)
+}
+
+/// Runs the measurement gate `g`'s control inputs under `root`: no GPU, and each report under `out`.
+fn run_measurement(root: &Path, g: &dyn MeasurementGate, out: &Path) -> Result<(), String> {
+    let name = g.name();
+    let GateSpec::Measurement(config) = spec(root, name)? else {
+        return Err(format!("{name}: its gate.json names no measurement"));
+    };
+    let dir = root.join("fixtures/gates").join(name);
+    println!(
+        "gate {name}: a measurement ({}, {}); its controls alone assert",
+        config.measurement.requirement, config.measurement.ruling
+    );
+    let report_dir = out.join(name);
+    std::fs::create_dir_all(&report_dir).map_err(|e| format!("{}: {e}", report_dir.display()))?;
+    let mut wrong = Vec::new();
+    for input in &config.inputs {
+        let (value, expected) = read_input(&dir.join(input))?;
+        let outcome = match g.control(&config, input, &value) {
+            Ok(control) => {
+                println!(
+                    "gate {name}: {input}: {} (expected {}): {}",
+                    control.verdict.word().to_uppercase(),
+                    word(expected),
+                    control.description
+                );
+                let path = report_dir.join(format!("{input}.md"));
+                std::fs::write(&path, &control.markdown)
+                    .map_err(|e| format!("{}: {e}", path.display()))?;
+                match control.verdict {
+                    Verdict::Pass => Expected::Pass,
+                    Verdict::Fail => Expected::Fail,
+                }
+            }
+            Err(reason) => {
+                println!(
+                    "gate {name}: {input}: REFUSED (expected {}): {reason}",
+                    word(expected)
+                );
+                Expected::Refused
+            }
+        };
+        if outcome != expected {
+            wrong.push(format!(
+                "{input} gave {}, expected {}",
+                word(outcome),
+                word(expected)
+            ));
+        }
+    }
+    if wrong.is_empty() {
+        println!("gate {name}: every control gave its expected outcome");
+        Ok(())
+    } else {
+        Err(format!("gate {name}: {}", wrong.join("; ")))
+    }
 }
 
 /// Runs the gate `name` on each of its inputs under `root`, writing reports under `out`, and printing each outcome.
 /// Fails naming each input whose outcome is not its expected one.
 pub fn run(root: &Path, name: &str, out: &Path) -> Result<(), String> {
+    if let Some(g) = measurement(name) {
+        return run_measurement(root, g, out);
+    }
     let gate = gate(name)?;
     let config = config(root, name)?;
     let dir = root.join("fixtures/gates").join(name);
     println!("gate {name}: threshold {}", config.threshold.describe());
     let mut wrong = Vec::new();
     for input in &config.inputs {
-        let path = dir.join(input);
-        let text = std::fs::read_to_string(&path)
-            .map_err(|e| format!("cannot read {}: {e}", path.display()))?;
-        let mut value: serde_json::Value =
-            serde_json::from_str(&text).map_err(|e| format!("{}: {e}", path.display()))?;
-        let expected = value
-            .as_object_mut()
-            .and_then(|o| o.remove("expected"))
-            .ok_or_else(|| {
-                format!(
-                    "{}: no \"expected\" (pass, fail or refused)",
-                    path.display()
-                )
-            })?;
-        let expected: Expected = serde_json::from_value(expected)
-            .map_err(|e| format!("{}: \"expected\": {e}", path.display()))?;
+        let (value, expected) = read_input(&dir.join(input))?;
         let outcome = match gate.run(&config, input, &value) {
             Ok(report) => {
                 let (md, js) = report.write(out)?;
@@ -440,10 +648,11 @@ fn word(expected: Expected) -> &'static str {
 
 /// Runs every registered gate, in order; fails naming each gate that failed.
 pub fn run_all(root: &Path, out: &Path) -> Result<(), String> {
-    let failed: Vec<String> = REGISTRY
+    let names = REGISTRY
         .iter()
-        .filter_map(|g| run(root, g.name(), out).err())
-        .collect();
+        .map(|g| g.name())
+        .chain(MEASUREMENTS.iter().map(|g| g.name()));
+    let failed: Vec<String> = names.filter_map(|g| run(root, g, out).err()).collect();
     if failed.is_empty() {
         Ok(())
     } else {
@@ -460,6 +669,18 @@ pub fn list(root: &Path) -> Result<(), String> {
             "gate {}: threshold {}; inputs: {}",
             g.name(),
             config.threshold.describe(),
+            config.inputs.join(", ")
+        );
+    }
+    for g in MEASUREMENTS {
+        let GateSpec::Measurement(config) = spec(root, g.name())? else {
+            return Err(format!("{}: its gate.json names no measurement", g.name()));
+        };
+        println!(
+            "gate {}: measurement ({}, {}), no threshold; controls: {}",
+            g.name(),
+            config.measurement.requirement,
+            config.measurement.ruling,
             config.inputs.join(", ")
         );
     }

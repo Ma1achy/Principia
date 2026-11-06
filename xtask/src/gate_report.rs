@@ -36,6 +36,10 @@
 //!   list to `target/gate-report/<Mn>-provisional.txt` beside the report, and fails while any is listed: an entry
 //!   still so marked blocks its gate, as an unconfirmed calibration does (dd_generation_root §3.8). It is its own
 //!   command, run beside the report by `gate.yml`, so the requirement lines above keep their form.
+//! - A measurement's runs (R-649; TASK-M4-27): each `fixtures/gates/<gate>/outstanding.json` lists the runs a measurement
+//!   waits on, with their state, for a milestone, and the report of that milestone or a later one prints those lines and
+//!   the gate's `comparison.md` after its count ([`measurement_section`]). They are no [`Outcome`], so they count neither
+//!   as a pass nor as a failure, and the requirement's own line stays on its controls.
 
 use std::cell::OnceCell;
 use std::collections::{BTreeMap, BTreeSet};
@@ -1001,6 +1005,92 @@ pub fn write_test_list(
     Ok(())
 }
 
+/// A gate's `outstanding.json`: the runs a measurement still waits on, and their state (TASK-M4-27).
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Outstanding {
+    /// The milestone whose report lists them.
+    pub milestone: String,
+    /// The runs.
+    pub runs: Vec<OutstandingRun>,
+}
+
+/// One run a measurement waits on.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct OutstandingRun {
+    /// The requirement.
+    pub requirement: String,
+    /// The run.
+    pub run: String,
+    /// `not run`, or what was posted.
+    pub state: String,
+}
+
+/// The lines of `outstanding` (the text of an `outstanding.json`) and of `comparison` (a `comparison.md`, printed as
+/// written), under the gate `gate`, for the report of `milestone`; empty where the file's milestone is a later one's.
+pub fn measurement_section(
+    gate: &str,
+    outstanding: &str,
+    comparison: Option<&str>,
+    milestone: &str,
+) -> Result<String, String> {
+    let file: Outstanding =
+        serde_json::from_str(outstanding).map_err(|e| format!("{gate}: outstanding.json: {e}"))?;
+    if number(&file.milestone)? > number(milestone)? {
+        return Ok(String::new());
+    }
+    let mut text =
+        format!("\nOutstanding runs of the measurement {gate}, neither pass nor fail:\n");
+    for r in &file.runs {
+        text.push_str(&format!("{}  {}: {}\n", r.requirement, r.run, r.state));
+    }
+    if let Some(comparison) = comparison {
+        text.push('\n');
+        text.push_str(comparison);
+    }
+    Ok(text)
+}
+
+/// Every gate's [`measurement_section`] under `root`.
+pub fn measurement_sections(root: &Path, milestone: &str) -> Result<String, String> {
+    let gates = root.join("fixtures/gates");
+    if !gates.is_dir() {
+        return Ok(String::new());
+    }
+    let at = |path: &Path, e: std::io::Error| format!("{}: {e}", path.display());
+    let mut dirs: Vec<PathBuf> = std::fs::read_dir(&gates)
+        .map_err(|e| at(&gates, e))?
+        .map(|entry| entry.map(|e| e.path()))
+        .collect::<Result<_, _>>()
+        .map_err(|e| at(&gates, e))?;
+    dirs.sort();
+    let mut text = String::new();
+    for dir in dirs {
+        let path = dir.join("outstanding.json");
+        if !path.exists() {
+            continue;
+        }
+        let outstanding = std::fs::read_to_string(&path).map_err(|e| at(&path, e))?;
+        let comparison = std::fs::read_to_string(dir.join("comparison.md")).ok();
+        let gate = dir.file_name().unwrap_or_default().to_string_lossy();
+        text.push_str(&measurement_section(
+            &gate,
+            &outstanding,
+            comparison.as_deref(),
+            milestone,
+        )?);
+    }
+    Ok(text)
+}
+
+/// `report` from [`render`] with `sections` after it, its pass or fail as it stands: they are no [`Outcome`].
+pub fn with_sections(report: Result<String, String>, sections: &str) -> Result<String, String> {
+    report
+        .map(|text| text + sections)
+        .map_err(|text| text + sections)
+}
+
 /// `cargo xtask gate-report`, on the workspace at `root`, a review-checklist requirement's PRs read from `prs`, with no
 /// test listing: every named test is then missing ([`run_listed`]).
 pub fn run(
@@ -1050,7 +1140,10 @@ pub fn run_listed(
             }
         }
     }
-    let report = render(milestone, &got);
+    let report = with_sections(
+        render(milestone, &got),
+        &measurement_sections(root, milestone)?,
+    );
     let out = root
         .join("target/gate-report")
         .join(format!("{milestone}.txt"));

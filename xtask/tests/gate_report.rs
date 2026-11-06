@@ -14,9 +14,10 @@ use std::path::{Path, PathBuf};
 
 use validation::negative_control;
 use xtask::gate_report::{
-    benchmark_ids, check_named_tests, closing_rulings, closing_tasks, gate_ids, named_tests,
-    names_ruling, outcomes, render, review_checklist_ids, review_outcome, run, run_listed,
-    test_builds, title_rulings, verifies, NamedTest, Outcome, PrSource, Recorded, TestList,
+    benchmark_ids, check_named_tests, closing_rulings, closing_tasks, gate_ids,
+    measurement_section, measurement_sections, named_tests, names_ruling, outcomes, render,
+    review_checklist_ids, review_outcome, run, run_listed, test_builds, title_rulings, verifies,
+    with_sections, NamedTest, Outcome, PrSource, Recorded, TestList,
 };
 
 fn fixture() -> PathBuf {
@@ -1391,6 +1392,140 @@ negative_control!(
         assert!(
             !test.matches("session::tests::header_fields"),
             "an exact filter matched a longer name, or a substring filter did not"
+        );
+    }
+);
+
+// ── gate_report_outstanding (TASK-M4-27; REQ-VAL-347) ───────────────────────────────────────────────────────────────
+
+const OUTSTANDING: &str = r#"{ "milestone": "M4", "runs": [
+    { "requirement": "REQ-VAL-347", "run": "the NVIDIA Vulkan record", "state": "not run" },
+    { "requirement": "REQ-VAL-348", "run": "the replay", "state": "posted on #390, run 12" }
+] }"#;
+
+const COMPARISON: &str = "# the comparison\n\n| a | b |\n";
+
+fn section(milestone: &str) -> String {
+    measurement_section(
+        "cross-backend-branches",
+        OUTSTANDING,
+        Some(COMPARISON),
+        milestone,
+    )
+    .expect("the section")
+}
+
+#[test]
+fn gate_report_outstanding_prints_each_state_and_the_comparison() {
+    let text = section("M4");
+    assert!(
+        text.contains("REQ-VAL-347  the NVIDIA Vulkan record: not run\n"),
+        "{text}"
+    );
+    assert!(
+        text.contains("REQ-VAL-348  the replay: posted on #390, run 12\n"),
+        "{text}"
+    );
+    assert!(text.ends_with(COMPARISON), "{text}");
+    assert_eq!(
+        section("M5"),
+        text,
+        "a later report lists the earlier gate's"
+    );
+    assert_eq!(section("M3"), "", "an earlier report lists a later gate's");
+    let bare = measurement_section("g", OUTSTANDING, None, "M4").unwrap();
+    assert!(!bare.contains("the comparison"));
+    let e = measurement_section("g", "{}", None, "M4").unwrap_err();
+    assert!(e.contains("outstanding.json"), "{e}");
+    assert!(measurement_section("g", OUTSTANDING, None, "Q").is_err());
+}
+
+negative_control!(
+    gate_report_outstanding_prints_each_state_and_the_comparison,
+    "a section with no runs in it",
+    expected = "the outstanding row did not print",
+    assert!(
+        measurement_section("g", r#"{ "milestone": "M4", "runs": [] }"#, None, "M4")
+            .unwrap()
+            .contains("not run"),
+        "the outstanding row did not print"
+    )
+);
+
+/// A report with its sections.
+type Joined = fn(&[(String, Outcome)], &str) -> Result<String, String>;
+
+/// The sections beside a passing and a failing report: `add` is how they are joined.
+fn check_sections_change_no_verdict(add: Joined) {
+    let passing = [("REQ-VAL-347".to_owned(), Outcome::Pass)];
+    let failing = [("REQ-VAL-347".to_owned(), Outcome::Fail)];
+    let extra = section("M4");
+    let with = add(&passing, &extra);
+    let plain = render("M4", &passing);
+    assert_eq!(with.is_ok(), plain.is_ok());
+    assert_eq!(
+        with.unwrap().split("\n\nOutstanding").next(),
+        plain.unwrap().trim_end().split("\n\nOutstanding").next(),
+        "the sections moved the report's count"
+    );
+    assert!(
+        add(&failing, &extra).is_err(),
+        "the sections passed a failing report"
+    );
+    assert!(add(&failing, &extra).unwrap_err().ends_with(COMPARISON));
+}
+
+#[test]
+fn gate_report_outstanding_changes_no_pass_fail_or_exit() {
+    check_sections_change_no_verdict(|o, s| with_sections(render("M4", o), s));
+}
+
+negative_control!(
+    gate_report_outstanding_changes_no_pass_fail_or_exit,
+    "a render that makes the row an Outcome",
+    expected = "the sections moved the report's count",
+    check_sections_change_no_verdict(|o, s| {
+        let mut rows = o.to_vec();
+        rows.push(("REQ-VAL-348".to_owned(), Outcome::Pass));
+        with_sections(render("M4", &rows), s)
+    })
+);
+
+#[test]
+fn gate_report_outstanding_is_gathered_from_the_gates() {
+    let root = Path::new(env!("CARGO_TARGET_TMPDIR")).join("outstanding");
+    let _ = std::fs::remove_dir_all(&root);
+    let gate = root.join("fixtures/gates/g");
+    std::fs::create_dir_all(&gate).unwrap();
+    std::fs::create_dir_all(root.join("fixtures/gates/h")).unwrap();
+    std::fs::write(gate.join("outstanding.json"), OUTSTANDING).unwrap();
+    std::fs::write(gate.join("comparison.md"), COMPARISON).unwrap();
+    let text = measurement_sections(&root, "M4").unwrap();
+    assert!(text.contains("the measurement g,"), "{text}");
+    assert!(text.ends_with(COMPARISON), "{text}");
+    assert_eq!(measurement_sections(&root, "M3").unwrap(), "");
+    std::fs::remove_file(gate.join("comparison.md")).unwrap();
+    assert!(!measurement_sections(&root, "M4")
+        .unwrap()
+        .contains("# the comparison"));
+    assert_eq!(
+        measurement_sections(&root.join("nowhere"), "M4").unwrap(),
+        ""
+    );
+}
+
+negative_control!(
+    gate_report_outstanding_is_gathered_from_the_gates,
+    "no gate holding one",
+    expected = "the gate's runs were not gathered",
+    {
+        let root = Path::new(env!("CARGO_TARGET_TMPDIR")).join("outstanding-none");
+        std::fs::create_dir_all(root.join("fixtures/gates/g")).unwrap();
+        assert!(
+            measurement_sections(&root, "M4")
+                .unwrap()
+                .contains("not run"),
+            "the gate's runs were not gathered"
         );
     }
 );

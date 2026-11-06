@@ -45,10 +45,13 @@ Commands:
                                   without it (R-187, R-191); reads `cargo metadata --format-version 1` on
                                   this workspace or on <Cargo.toml>'s, or reads <file>, a metadata fixture
                                   (the compile check is then skipped)
-  gate (<gate> | --all | --list)  run the numerical gate <gate>, or every registered gate, on its inputs in
+  gate (<gate> [<flags>] | --all | --list)
+                                  run the numerical gate <gate>, or every registered gate, on its inputs in
                                   fixtures/gates/<gate>/, against the threshold its gate.json names by requirement
                                   id, writing each report under target/gates/; fails naming each input whose outcome
-                                  is not its expected one (TASK-M0-05); --list lists the gates and runs none
+                                  is not its expected one (TASK-M0-05); --list lists the gates and runs none; what
+                                  follows a measurement gate's name is its flags, cross-backend-branches' --write-inputs,
+                                  --record <file> [--cpu-f32] [--hardware-label <label>] and --compare <records>
   gate-report --milestone <Mn> --results <file> [--bench-results <dir>] [--test-list <file>]
                                   list every requirement of <Mn>'s gate block and every earlier one
                                   (plan/MILESTONES.md) with its result from <file> (a JSON object, id to `pass` or
@@ -172,8 +175,8 @@ fn main() -> ExitCode {
         ["controls", rest @ ..] if rest.contains(&"--partition") => controls_partition(rest),
         ["gate", "--all"] => xtask::gate::run(&workspace_manifest(), xtask::gate::Which::All),
         ["gate", "--list"] => xtask::gate::run(&workspace_manifest(), xtask::gate::Which::List),
-        ["gate", name] if !name.starts_with('-') => {
-            xtask::gate::run(&workspace_manifest(), xtask::gate::Which::One(name))
+        ["gate", name, flags @ ..] if !name.starts_with('-') => {
+            xtask::gate::run(&workspace_manifest(), xtask::gate::Which::One(name, flags))
         }
         ["plan-check"] => {
             return match xtask::plan_check::status(&xtask::plan_check::repo_root()) {
