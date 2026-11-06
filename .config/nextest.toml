@@ -113,7 +113,8 @@ xtask-cargo = { max-threads = 1 }
 # them, the per-pixel mass decode's (`engine`'s `per_pixel_mass_gpu`, TASK-M2-13) and decoder test 12 across backends
 # (`engine`'s `decode_cross_backend` and `qa_TASK-M2-24_gpu`, TASK-M2-24), the lock's locked-against-free render
 # (`engine`'s `lock_gpu`, TASK-M2-23), the kernel's own f32 `atan2` as the backend compiles it (`engine`'s `arctan_gpu`,
-# RQ-628), and the agreement preset's against the decode stage (validation's
+# RQ-628), the read-back's dispatchers and the cross-backend record (`engine`'s `branch_read_gpu`, validation's
+# `cross_backend_gpu`, TASK-M4-27), and the agreement preset's against the decode stage (validation's
 # `agreement_preset_gpu` and `qa_TASK-M2-25_gpu`) and the fragment snippets' check against the kernel's translation
 # (xtask's `fragment_wgsl`, TASK-M2-25); the xtask tests that run cargo on
 # the workspace's own target directory, and validation's `qa_TASK-M0-24`, run in the `ci-workspace` job under the `ci-workspace` profile (R-372,
@@ -142,6 +143,8 @@ default-filter = """
         | binary_id(=engine::qa_TASK-M2-24_gpu)
         | binary_id(=engine::lock_gpu)
         | binary_id(=engine::arctan_gpu)
+        | binary_id(=engine::branch_read_gpu)
+        | binary_id(=validation::cross_backend_gpu)
         | binary_id(=validation::decode_f32_eps_gpu)
         | binary_id(=validation::invariant_gradient_gpu)
         | binary_id(=validation::agreement_preset_gpu)
@@ -199,6 +202,8 @@ default-filter = """
     | binary_id(=engine::qa_TASK-M2-24_gpu)
     | binary_id(=engine::lock_gpu)
     | binary_id(=engine::arctan_gpu)
+    | binary_id(=engine::branch_read_gpu)
+    | binary_id(=validation::cross_backend_gpu)
     | binary_id(=validation::decode_f32_eps_gpu)
     | binary_id(=validation::invariant_gradient_gpu)
     | binary_id(=validation::agreement_preset_gpu)
