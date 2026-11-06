@@ -30,6 +30,6 @@ Put PA-1's side ratios on the shape sphere at rest, and make the region around t
 
 ## Notes
 - Written by this task (R-72, R-71), proposed in its PR: which pair of side ratios the readout shows, following PA-1's paper; which of the two mirror points the preset centres on; the preset's map; and its window.
-- The map (`principia_chart_reference.md` §§ 3.3, 3.4). The spherical map can't do it: at equal masses `L⁺` is the pole, on the top edge at any `φ`. The exponential map about `n0` has no poles in view. `ShapeMap::Exponential` is validation and tests only today, so the preset makes it reachable, and its centre is the sinc of R-696 and TASK-M2-53.
+- The map (`principia_chart_reference.md` §§ 3.3, 3.4). The spherical map can't do it: at equal masses `L⁺` is the pole, on the top edge at any `θ`. The exponential map about `n0` has no poles in view. `ShapeMap::Exponential` is validation and tests only today, so the preset makes it reachable, and its centre is the sinc of R-696 and TASK-M2-53.
 - *6 Nov 2026 (physics review 5805354224 of PR #430, F5, F10; code review 5805379312, C3):* the remap's home, the Inspector's path, the preset's at-rest and map, and the pole at equal masses only. *Was:* "in `crates/validation/src/gates/side_ratio.rs`'s reach"; no at-rest, map or centre pixel; "the equilateral point at the pole".
 - Added by R-798 (5 Nov 2026, RQ-594 (a)), applied per R-369 as its own task. A build task, not a target: it is not scored, and TASK-M9-24, the target, depends on it.
