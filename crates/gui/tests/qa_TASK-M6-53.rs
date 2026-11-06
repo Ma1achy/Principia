@@ -21,7 +21,8 @@
 use std::collections::HashMap;
 
 use engine::contract::canvas::Canvas;
-use gui::mock::canvas::{noise_source, MockCanvas};
+use gui::layout::Placement;
+use gui::mock::canvas::{noise_source, uniform_bytes, MockCanvas, CHART_BINDING, NO_INVALID};
 use naga::valid::{Capabilities, ModuleInfo, ValidationFlags, Validator};
 use naga::{Expression, Function, Handle, MathFunction, Module, ScalarKind};
 
@@ -100,6 +101,12 @@ fn qa_cell_corners(@builtin(global_invocation_id) id: vec3<u32>) {
 fn qa_value_noise(@builtin(global_invocation_id) id: vec3<u32>) {
     qa_out[id.x] = vec4<u32>(bitcast<u32>(value_noise(bitcast<vec2<f32>>(qa_in[id.x]))), 0u, 0u, 0u);
 }
+
+@compute @workgroup_size(1)
+fn qa_stand_in(@builtin(global_invocation_id) id: vec3<u32>) {
+    let field = stand_in_at(bitcast<vec2<f32>>(qa_in[id.x]), vec2<f32>(0.0, 0.0));
+    qa_out[id.x] = bitcast<vec4<u32>>(vec4<f32>(field.n, field.warp, 0.0));
+}
 "#;
 
 /// The shipped source with the one occurrence of `from` changed to `to`.
@@ -109,8 +116,15 @@ fn changed(from: &str, to: &str) -> String {
     source.replace(from, to)
 }
 
-/// `entry` of `source` and [`PROBES`] over `input`, one invocation each: each result's bits.
-fn probe(canvas: &MockCanvas, source: &str, entry: &str, input: &[[u32; 2]]) -> Vec<[u32; 4]> {
+/// `entry` of `source` and [`PROBES`] over `input`, one invocation each, with the uniform `chart` if it reads one: each
+/// result's bits.
+fn probe(
+    canvas: &MockCanvas,
+    source: &str,
+    entry: &str,
+    input: &[[u32; 2]],
+    chart: Option<&[u8]>,
+) -> Vec<[u32; 4]> {
     let context = canvas.context();
     let device = &context.device;
     let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
@@ -143,19 +157,34 @@ fn probe(canvas: &MockCanvas, source: &str, entry: &str, input: &[[u32; 2]]) -> 
     let output = buffer(wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC);
     let readback = buffer(wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST);
     context.queue.write_buffer(&source_buffer, 0, &bytes);
+    let chart = chart.map(|bytes| {
+        let buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("qa lattice chart"),
+            size: bytes.len() as u64,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+        context.queue.write_buffer(&buffer, 0, bytes);
+        buffer
+    });
+    let mut entries = vec![
+        wgpu::BindGroupEntry {
+            binding: 20,
+            resource: source_buffer.as_entire_binding(),
+        },
+        wgpu::BindGroupEntry {
+            binding: 21,
+            resource: output.as_entire_binding(),
+        },
+    ];
+    entries.extend(chart.iter().map(|buffer| wgpu::BindGroupEntry {
+        binding: CHART_BINDING,
+        resource: buffer.as_entire_binding(),
+    }));
     let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
         label: Some("qa lattice"),
         layout: &pipeline.get_bind_group_layout(0),
-        entries: &[
-            wgpu::BindGroupEntry {
-                binding: 20,
-                resource: source_buffer.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 21,
-                resource: output.as_entire_binding(),
-            },
-        ],
+        entries: &entries,
     });
     let mut encoder = device.create_command_encoder(&Default::default());
     {
@@ -189,13 +218,13 @@ fn probe(canvas: &MockCanvas, source: &str, entry: &str, input: &[[u32; 2]]) -> 
 /// The cells' corners as `source` gives them.
 fn cell_corners_of(canvas: &MockCanvas, source: &str, cells: &[[i32; 2]]) -> Vec<[u32; 4]> {
     let input: Vec<[u32; 2]> = cells.iter().map(|c| c.map(|v| v as u32)).collect();
-    probe(canvas, source, "qa_cell_corners", &input)
+    probe(canvas, source, "qa_cell_corners", &input, None)
 }
 
 /// `value_noise` at `points` as `source` gives it, its bits.
 fn value_noise_of(canvas: &MockCanvas, source: &str, points: &[[f32; 2]]) -> Vec<u32> {
     let input: Vec<[u32; 2]> = points.iter().map(|p| p.map(f32::to_bits)).collect();
-    probe(canvas, source, "qa_value_noise", &input)
+    probe(canvas, source, "qa_value_noise", &input, None)
         .into_iter()
         .map(|[bits, ..]| bits)
         .collect()
@@ -472,4 +501,60 @@ fn qa_m653_the_offset_and_the_cell_stay_integer() {
     rejects("a corner read outside cell_corners", || {
         assert_one_floor(&second_read)
     });
+}
+
+/// The stand-in's `n`, `warp.x` and `warp.y` at centre `[cx, cy]` and half-span `half`, tilts 0, on a square grid of the
+/// field's `[-1, 1]²`.
+fn stand_in_of(canvas: &MockCanvas, source: &str, [cx, cy]: [f32; 2], half: f32) -> Vec<[u32; 4]> {
+    const GRID: u16 = 200;
+    let chart = [
+        [cx, cy, 0.0, 0.0],
+        [half, 0.0, 0.0, 0.0],
+        [0.0, half, 0.0, 0.0],
+    ];
+    let bytes = uniform_bytes(chart, Placement::IDENTITY, NO_INVALID, [0; 3]);
+    let along = |i: u16| 2.0 * f32::from(i) / f32::from(GRID - 1) - 1.0;
+    let input: Vec<[u32; 2]> = (0..GRID)
+        .flat_map(|y| (0..GRID).map(move |x| [x, y]))
+        .map(|[x, y]| [along(x).to_bits(), along(y).to_bits()])
+        .collect();
+    probe(canvas, source, "qa_stand_in", &input, Some(&bytes))
+}
+
+/// Asserts each of the field's three values is a number in `[0, 1]`: a blend of corners in `[0, 1)` by weights summing
+/// to 1 or less can be nothing else. The jump-line check can't say this: a NaN compares false, so a field of NaN holds no
+/// line and passes, the hole `raw_difference`'s `non_finite` closed in the report (REQ-GUI-418's detector).
+fn assert_numbers(fields: &[[u32; 4]]) {
+    for [n, x, y, _] in fields {
+        for bits in [n, x, y] {
+            let value = f32::from_bits(*bits);
+            assert!((0.0..=1.0).contains(&value), "a field value of {value}");
+        }
+    }
+}
+
+#[test]
+fn qa_m653_the_field_the_jump_check_reads_is_numbers() {
+    let canvas = MockCanvas::new().expect("a GPU adapter for the mock's canvas");
+    // REQ-GUI-412's four views.
+    let views = [
+        ([0.0, 0.0], 1.0 / 0.77),
+        ([0.18, 0.41], 1.0),
+        ([-40.0, -30.0], 1.0),
+        ([4.0e4, 4.0e4], 1.0),
+    ];
+    for (centre, half) in views {
+        assert_numbers(&stand_in_of(&canvas, &noise_source(), centre, half));
+    }
+
+    // All the exponent's bits set, with no float operation for a compiler to fold: an infinity or a NaN, whichever `n`
+    // holds in its mantissa.
+    let broken = changed(
+        "return StandIn(n, fract(n * 4.0), warp);",
+        "return StandIn(bitcast<f32>(bitcast<u32>(n) | 0x7f800000u), fract(n * 4.0), warp);",
+    );
+    parsed(&broken);
+    let (centre, half) = views[0];
+    let control = stand_in_of(&canvas, &broken, centre, half);
+    rejects("a field of no numbers", || assert_numbers(&control));
 }
