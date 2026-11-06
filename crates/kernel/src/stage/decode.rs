@@ -979,3 +979,6 @@ pub fn link_tanh(
         output[i] = tanh_sat(input[i]);
     }
 }
+
+// Throwaway (measure/chart-pairs): the real region-D pair, P copies, written by scripts/measure_chart_pairs.py.
+include!("pair_measure.inc");
