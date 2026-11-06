@@ -3590,9 +3590,19 @@ macro_rules! no_finite_2k {
             // An L_z with no finite square, whose L_z·r can pass the float's range.
             let wild = held(max * 0.9);
             check_refused_arm(&wild, [0.5, 0.0], 0.0, past, blind, "no floor");
+            // The chart's own check agrees, at its own precision, and layer 3 reads the pixel's decode.
+            assert!(matches!(
+                bare(max * 0.75).validate(0.5, 0.5),
+                ValidationResult::Reject { .. }
+            ));
+            let none = held_k_shift(0.0);
+            let layer_3 = Some(Constraint::DecodedMassPositive);
+            assert_eq!(bare(1.0).refusal(f64::NAN, 0.5, &none), layer_3);
+            assert_eq!(warped.refusal(f64::NAN, 0.5, &none), layer_3);
+            assert_eq!(held(0.5).refusal(f64::NAN, 0.5, &none), layer_3);
             // The last value still a system.
             let c = bare(last);
-            let none = held_k_shift(0.0);
+            assert_eq!(c.validate(0.5, 0.5), ValidationResult::Valid);
             assert_eq!(c.refusal(0.5, 0.5, &none), None);
             assert_eq!(
                 c.validate_shifted(0.5, 0.5, &none, &LinkParams::DEFAULT),

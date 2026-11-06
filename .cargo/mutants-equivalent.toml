@@ -200,6 +200,10 @@ mutant = "crates/kernel/src/chart/burrau_acute.rs:444:33: replace > with >= in B
 justification = "nearest_feasible runs only on an infeasible v; v = 1/2 gives L_z = 0, feasible at every K >= 0, so it never reaches the comparison, and at K < 0 no v is feasible, both edges fail, and the clamp returns 1/2 either way"
 
 [[equivalent]]
+mutant = "crates/kernel/src/decode/invariant.rs:471:53: replace > with >= in finish"
+justification = "held + held is even and doubling_limit is odd (127 at f32, 1023 at f64), so they are never equal and > and >= agree on every input"
+
+[[equivalent]]
 mutant = "crates/kernel/src/chart/construction.rs:876:9: replace <impl Chart for HeldK<P>>::forbids_energy_normalisation -> bool with true"
 justification = "HeldK's chart is the concrete BurrauThetaLz, whose forbids_energy_normalisation is the constant true, so the delegation is true for every HeldK and no test can tell them apart"
 
