@@ -1414,8 +1414,9 @@ drawn on the edge when it has left (board 6)".
   `q₂ = σ e_b` on two latent coordinate axes, stores its `z₀` as the base point, so the centre its coordinates on the
   axes, and its scale `σ` as the window, and that saved view is the preset's home view; any other chart's three values
   are not yet defined (§G2, RQ-709). Duplicate copies the three. On the mock the presets are these, placeholder content (R-390), the real
-  engine's being REQ-GUI-082's; each base point decodes to a system, the masses `softmax(0, μ₁, μ₂)` being positive
-  whatever `z_μ1`, `z_μ2` are (chart_decoder_contract Part 2):
+  engine's being REQ-GUI-082's; at the decoder's default links, with `μ_max` in range and η_E off, each base point
+  decodes to a system (chart_decoder_contract Part 4, R-570, R-597, R-598), the masses being `softmax(0, μ₁, μ₂)` with
+  `μₖ = μ_max · tanh(z_μk)` and `M₀₁` above `ε_M01` (dd_decoder §3.1):
 
   | Preset | Base point `(z_α, z_β, z_q0, z_q1, z_q2, z_q3, z_μ1, z_μ2)` | Centre `(u, v)` | Window `σ_h` |
   |---|---|---|---|
