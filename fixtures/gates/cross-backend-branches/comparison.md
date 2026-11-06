@@ -8,9 +8,9 @@ Inputs: 236346, hash `455b67f16ebf9adb`.
 
 | backend | commit | adapter | driver | fast math | hardware label |
 |---|---|---|---|---|---|
-| Metal | bdb4911c97a5fa0de2ea8e53e71d3b040e2b947c | adapter: Apple M3 Pro \| backend: Metal \| driver:   |   | setting off; compute compiled off | none |
-| lavapipe | bdb4911c97a5fa0de2ea8e53e71d3b040e2b947c | adapter: llvmpipe (LLVM 20.1.2, 256 bits) \| backend: Vulkan \| driver: llvmpipe Mesa 25.2.8-0ubuntu0.24.04.4 (LLVM 20.1.2) | llvmpipe Mesa 25.2.8-0ubuntu0.24.04.4 (LLVM 20.1.2) | setting off; compute compiled off | none |
-| CPU f32 | bdb4911c97a5fa0de2ea8e53e71d3b040e2b947c | CPU f32: the kernel source, native (rustc) | not a driver | setting off; no shader | none |
+| Metal | 4c32b1b4a19291d5e7cf3982d31934d32a054ca2 | adapter: Apple M3 Pro \| backend: Metal \| driver: macOS 27.0.1 (26A434): the adapter reports no driver, so its OS build stands in | macOS 27.0.1 (26A434): the adapter reports no driver, so its OS build stands in | setting off; compute compiled off | none |
+| lavapipe | 4c32b1b4a19291d5e7cf3982d31934d32a054ca2 | adapter: llvmpipe (LLVM 20.1.2, 256 bits) \| backend: Vulkan \| driver: llvmpipe Mesa 25.2.8-0ubuntu0.24.04.4 (LLVM 20.1.2) | llvmpipe Mesa 25.2.8-0ubuntu0.24.04.4 (LLVM 20.1.2) | setting off; compute compiled off | none |
+| CPU f32 | 4c32b1b4a19291d5e7cf3982d31934d32a054ca2 | CPU f32: the kernel source, native (rustc), on x86_64-linux | not a driver | setting off; no shader | none |
 
 ## Disagreement rate, per backend pair
 
@@ -21,9 +21,9 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 | NVIDIA Vulkan / Metal | not run | not run | | | | | | | not run |
 | NVIDIA Vulkan / lavapipe | not run | not run | | | | | | | not run |
 | NVIDIA Vulkan / CPU f32 | not run | not run | | | | | | | not run |
-| Metal / lavapipe | 609 of 236346 | 2.577e-3 | 33730 | 975 | 0 | 0 | 103 | 0 | UNEXPLAINED |
-| Metal / CPU f32 | 5034 of 236346 | 2.130e-2 | 62581 | 0 | 0 | 0 | 124 | 0 | UNEXPLAINED |
-| lavapipe / CPU f32 | 5032 of 236346 | 2.129e-2 | 60117 | 1355 | 0 | 0 | 43 | 0 | UNEXPLAINED |
+| Metal / lavapipe | 609 of 236346 | 2.577e-3 | 214288 | 975 | 0 | 0 | 91 | 0 | UNEXPLAINED |
+| Metal / CPU f32 | 5034 of 236346 | 2.130e-2 | 243292 | 17 | 0 | 0 | 111 | 0 | UNEXPLAINED |
+| lavapipe / CPU f32 | 5032 of 236346 | 2.129e-2 | 106638 | 1355 | 0 | 0 | 42 | 0 | UNEXPLAINED |
 
 ## The inputs that disagreed
 
@@ -10717,249 +10717,255 @@ N counts evaluations of kind `+ and ×` with operands bit-identical to CPU f32's
 
 ### NVIDIA Vulkan: not run
 
-### Metal: no failure in 1065335
+### Metal: unverified, not supported
 
-Domain: the compute stage, setting off; compute compiled off, adapter: Apple M3 Pro | backend: Metal | driver:  , driver  , read through stage_branch_read_burrau_defaults, stage_branch_read_burrau_theta_delta_m_defaults, stage_branch_read_burrau_theta_k_defaults, stage_branch_read_burrau_theta_lz_defaults, stage_branch_read_canon, stage_branch_read_euclid_plane_defaults, stage_branch_read_invariant_le_defaults, stage_branch_read_invariant_lk_defaults, stage_branch_read_latent_defaults, stage_branch_read_latent_stick_breaking, stage_branch_read_mass_simplex_defaults, stage_branch_read_mixed_mu1_alpha_defaults, stage_branch_read_shape_sphere_defaults.
+Domain: the compute stage, setting off; compute compiled off, adapter: Apple M3 Pro | backend: Metal | driver: macOS 27.0.1 (26A434): the adapter reports no driver, so its OS build stands in, driver macOS 27.0.1 (26A434): the adapter reports no driver, so its OS build stands in, read through stage_branch_read_burrau_defaults, stage_branch_read_burrau_theta_delta_m_defaults, stage_branch_read_burrau_theta_k_defaults, stage_branch_read_burrau_theta_lz_defaults, stage_branch_read_canon, stage_branch_read_euclid_plane_defaults, stage_branch_read_invariant_le_defaults, stage_branch_read_invariant_lk_defaults, stage_branch_read_latent_defaults, stage_branch_read_latent_stick_breaking, stage_branch_read_mass_simplex_defaults, stage_branch_read_mixed_mu1_alpha_defaults, stage_branch_read_shape_sphere_defaults.
 
-| branch input | entry | kind | N | level 1 | other operation | shared operands, host agrees |
-|---|---|---|---|---|---|---|
-| ENERGY_INFEASIBLE | stage_branch_read_burrau_theta_delta_m_defaults | other operation | 0 | 0 | 566 | 0 |
-| ENERGY_INFEASIBLE | stage_branch_read_euclid_plane_defaults | other operation | 0 | 0 | 566 | 0 |
-| ENERGY_INFEASIBLE | stage_branch_read_latent_defaults | other operation | 0 | 0 | 2419 | 0 |
-| ENERGY_INFEASIBLE | stage_branch_read_latent_stick_breaking | other operation | 0 | 0 | 3360 | 0 |
-| ENERGY_INFEASIBLE | stage_branch_read_mass_simplex_defaults | other operation | 0 | 0 | 566 | 0 |
-| ENERGY_INFEASIBLE | stage_branch_read_mixed_mu1_alpha_defaults | other operation | 0 | 0 | 876 | 0 |
-| ENERGY_INFEASIBLE | stage_branch_read_shape_sphere_defaults | other operation | 0 | 0 | 1169 | 0 |
-| ENERGY_UNSCALABLE | stage_branch_read_burrau_theta_delta_m_defaults | other operation | 0 | 0 | 566 | 0 |
-| ENERGY_UNSCALABLE | stage_branch_read_euclid_plane_defaults | other operation | 0 | 0 | 566 | 0 |
-| ENERGY_UNSCALABLE | stage_branch_read_latent_defaults | other operation | 0 | 0 | 2419 | 0 |
-| ENERGY_UNSCALABLE | stage_branch_read_latent_stick_breaking | other operation | 0 | 0 | 3360 | 0 |
-| ENERGY_UNSCALABLE | stage_branch_read_mass_simplex_defaults | other operation | 0 | 0 | 566 | 0 |
-| ENERGY_UNSCALABLE | stage_branch_read_mixed_mu1_alpha_defaults | other operation | 0 | 0 | 876 | 0 |
-| ENERGY_UNSCALABLE | stage_branch_read_shape_sphere_defaults | other operation | 0 | 0 | 1169 | 0 |
-| INVARIANT_INFEASIBLE | stage_branch_read_burrau_defaults | + and × | 180 | 400 | 0 | 105 |
-| INVARIANT_INFEASIBLE | stage_branch_read_burrau_theta_k_defaults | + and × | 255 | 300 | 0 | 130 |
-| INVARIANT_INFEASIBLE | stage_branch_read_burrau_theta_lz_defaults | + and × | 685 | 0 | 0 | 0 |
-| INVARIANT_INFEASIBLE | stage_branch_read_invariant_le_defaults | + and × | 1570 | 1900 | 0 | 460 |
-| INVARIANT_INFEASIBLE | stage_branch_read_invariant_lk_defaults | + and × | 1600 | 1875 | 0 | 455 |
-| M01_TINY | stage_branch_read_burrau_defaults | + and × | 580 | 105 | 0 | 0 |
-| M01_TINY | stage_branch_read_burrau_theta_delta_m_defaults | + and × | 331 | 362 | 0 | 10 |
-| M01_TINY | stage_branch_read_burrau_theta_k_defaults | + and × | 390 | 265 | 0 | 30 |
-| M01_TINY | stage_branch_read_burrau_theta_lz_defaults | + and × | 400 | 255 | 0 | 30 |
-| M01_TINY | stage_branch_read_euclid_plane_defaults | + and × | 698 | 5 | 0 | 0 |
-| M01_TINY | stage_branch_read_invariant_le_defaults | + and × | 0 | 2620 | 0 | 1310 |
-| M01_TINY | stage_branch_read_invariant_lk_defaults | + and × | 0 | 3930 | 0 | 0 |
-| M01_TINY | stage_branch_read_latent_defaults | + and × | 431 | 2247 | 0 | 327 |
-| M01_TINY | stage_branch_read_latent_stick_breaking | + and × | 2438 | 13088 | 0 | 28674 |
-| M01_TINY | stage_branch_read_mass_simplex_defaults | + and × | 384 | 319 | 0 | 0 |
-| M01_TINY | stage_branch_read_mixed_mu1_alpha_defaults | + and × | 195 | 850 | 0 | 50 |
-| M01_TINY | stage_branch_read_shape_sphere_defaults | + and × | 0 | 1452 | 0 | 222 |
-| angle_cross_zero | stage_branch_read_burrau_defaults | other operation | 0 | 0 | 685 | 0 |
-| angle_cross_zero | stage_branch_read_burrau_theta_delta_m_defaults | other operation | 0 | 0 | 703 | 0 |
-| angle_cross_zero | stage_branch_read_burrau_theta_k_defaults | other operation | 0 | 0 | 685 | 0 |
-| angle_cross_zero | stage_branch_read_burrau_theta_lz_defaults | other operation | 0 | 0 | 685 | 0 |
-| angle_cross_zero | stage_branch_read_euclid_plane_defaults | other operation | 0 | 0 | 703 | 0 |
-| angle_cross_zero | stage_branch_read_invariant_le_defaults | other operation | 0 | 0 | 3930 | 0 |
-| angle_cross_zero | stage_branch_read_invariant_lk_defaults | other operation | 0 | 0 | 3930 | 0 |
-| angle_cross_zero | stage_branch_read_latent_defaults | other operation | 0 | 0 | 3005 | 0 |
-| angle_cross_zero | stage_branch_read_latent_stick_breaking | other operation | 0 | 0 | 44200 | 0 |
-| angle_cross_zero | stage_branch_read_mass_simplex_defaults | other operation | 0 | 0 | 703 | 0 |
-| angle_cross_zero | stage_branch_read_mixed_mu1_alpha_defaults | other operation | 0 | 0 | 1095 | 0 |
-| angle_cross_zero | stage_branch_read_shape_sphere_defaults | other operation | 0 | 0 | 1674 | 0 |
-| angle_dot_negative | stage_branch_read_burrau_defaults | other operation | 0 | 0 | 685 | 0 |
-| angle_dot_negative | stage_branch_read_burrau_theta_delta_m_defaults | other operation | 0 | 0 | 703 | 0 |
-| angle_dot_negative | stage_branch_read_burrau_theta_k_defaults | other operation | 0 | 0 | 685 | 0 |
-| angle_dot_negative | stage_branch_read_burrau_theta_lz_defaults | other operation | 0 | 0 | 685 | 0 |
-| angle_dot_negative | stage_branch_read_euclid_plane_defaults | other operation | 0 | 0 | 703 | 0 |
-| angle_dot_negative | stage_branch_read_invariant_le_defaults | other operation | 0 | 0 | 3930 | 0 |
-| angle_dot_negative | stage_branch_read_invariant_lk_defaults | other operation | 0 | 0 | 3930 | 0 |
-| angle_dot_negative | stage_branch_read_latent_defaults | other operation | 0 | 0 | 3005 | 0 |
-| angle_dot_negative | stage_branch_read_latent_stick_breaking | other operation | 0 | 0 | 44200 | 0 |
-| angle_dot_negative | stage_branch_read_mass_simplex_defaults | other operation | 0 | 0 | 703 | 0 |
-| angle_dot_negative | stage_branch_read_mixed_mu1_alpha_defaults | other operation | 0 | 0 | 1095 | 0 |
-| angle_dot_negative | stage_branch_read_shape_sphere_defaults | other operation | 0 | 0 | 1674 | 0 |
-| angle_dot_zero | stage_branch_read_burrau_defaults | other operation | 0 | 0 | 685 | 0 |
-| angle_dot_zero | stage_branch_read_burrau_theta_delta_m_defaults | other operation | 0 | 0 | 703 | 0 |
-| angle_dot_zero | stage_branch_read_burrau_theta_k_defaults | other operation | 0 | 0 | 685 | 0 |
-| angle_dot_zero | stage_branch_read_burrau_theta_lz_defaults | other operation | 0 | 0 | 685 | 0 |
-| angle_dot_zero | stage_branch_read_euclid_plane_defaults | other operation | 0 | 0 | 703 | 0 |
-| angle_dot_zero | stage_branch_read_invariant_le_defaults | other operation | 0 | 0 | 3930 | 0 |
-| angle_dot_zero | stage_branch_read_invariant_lk_defaults | other operation | 0 | 0 | 3930 | 0 |
-| angle_dot_zero | stage_branch_read_latent_defaults | other operation | 0 | 0 | 3005 | 0 |
-| angle_dot_zero | stage_branch_read_latent_stick_breaking | other operation | 0 | 0 | 44200 | 0 |
-| angle_dot_zero | stage_branch_read_mass_simplex_defaults | other operation | 0 | 0 | 703 | 0 |
-| angle_dot_zero | stage_branch_read_mixed_mu1_alpha_defaults | other operation | 0 | 0 | 1095 | 0 |
-| angle_dot_zero | stage_branch_read_shape_sphere_defaults | other operation | 0 | 0 | 1674 | 0 |
-| coincidence | stage_branch_read_canon | + and × | 174348 | 0 | 0 | 0 |
-| mirror | stage_branch_read_canon | + and × | 174348 | 0 | 0 | 0 |
-| pole_rho_ratio | stage_branch_read_burrau_defaults | other operation | 0 | 0 | 685 | 0 |
-| pole_rho_ratio | stage_branch_read_burrau_theta_delta_m_defaults | other operation | 0 | 0 | 703 | 0 |
-| pole_rho_ratio | stage_branch_read_burrau_theta_k_defaults | other operation | 0 | 0 | 685 | 0 |
-| pole_rho_ratio | stage_branch_read_burrau_theta_lz_defaults | other operation | 0 | 0 | 685 | 0 |
-| pole_rho_ratio | stage_branch_read_euclid_plane_defaults | other operation | 0 | 0 | 703 | 0 |
-| pole_rho_ratio | stage_branch_read_invariant_le_defaults | other operation | 0 | 0 | 3930 | 0 |
-| pole_rho_ratio | stage_branch_read_invariant_lk_defaults | other operation | 0 | 0 | 3930 | 0 |
-| pole_rho_ratio | stage_branch_read_latent_defaults | other operation | 0 | 0 | 3005 | 0 |
-| pole_rho_ratio | stage_branch_read_latent_stick_breaking | other operation | 0 | 0 | 44200 | 0 |
-| pole_rho_ratio | stage_branch_read_mass_simplex_defaults | other operation | 0 | 0 | 703 | 0 |
-| pole_rho_ratio | stage_branch_read_mixed_mu1_alpha_defaults | other operation | 0 | 0 | 1095 | 0 |
-| pole_rho_ratio | stage_branch_read_shape_sphere_defaults | other operation | 0 | 0 | 1674 | 0 |
-| pole_v0 | stage_branch_read_burrau_defaults | other operation | 0 | 0 | 685 | 0 |
-| pole_v0 | stage_branch_read_burrau_theta_delta_m_defaults | other operation | 0 | 0 | 703 | 0 |
-| pole_v0 | stage_branch_read_burrau_theta_k_defaults | other operation | 0 | 0 | 685 | 0 |
-| pole_v0 | stage_branch_read_burrau_theta_lz_defaults | other operation | 0 | 0 | 685 | 0 |
-| pole_v0 | stage_branch_read_euclid_plane_defaults | other operation | 0 | 0 | 703 | 0 |
-| pole_v0 | stage_branch_read_invariant_le_defaults | other operation | 0 | 0 | 3930 | 0 |
-| pole_v0 | stage_branch_read_invariant_lk_defaults | other operation | 0 | 0 | 3930 | 0 |
-| pole_v0 | stage_branch_read_latent_defaults | other operation | 0 | 0 | 3005 | 0 |
-| pole_v0 | stage_branch_read_latent_stick_breaking | other operation | 0 | 0 | 44200 | 0 |
-| pole_v0 | stage_branch_read_mass_simplex_defaults | other operation | 0 | 0 | 703 | 0 |
-| pole_v0 | stage_branch_read_mixed_mu1_alpha_defaults | other operation | 0 | 0 | 1095 | 0 |
-| pole_v0 | stage_branch_read_shape_sphere_defaults | other operation | 0 | 0 | 1674 | 0 |
-| pole_virial | stage_branch_read_burrau_defaults | other operation | 0 | 0 | 685 | 0 |
-| pole_virial | stage_branch_read_burrau_theta_delta_m_defaults | other operation | 0 | 0 | 703 | 0 |
-| pole_virial | stage_branch_read_burrau_theta_k_defaults | other operation | 0 | 0 | 685 | 0 |
-| pole_virial | stage_branch_read_burrau_theta_lz_defaults | other operation | 0 | 0 | 685 | 0 |
-| pole_virial | stage_branch_read_euclid_plane_defaults | other operation | 0 | 0 | 703 | 0 |
-| pole_virial | stage_branch_read_invariant_le_defaults | other operation | 0 | 0 | 3930 | 0 |
-| pole_virial | stage_branch_read_invariant_lk_defaults | other operation | 0 | 0 | 3930 | 0 |
-| pole_virial | stage_branch_read_latent_defaults | other operation | 0 | 0 | 3005 | 0 |
-| pole_virial | stage_branch_read_latent_stick_breaking | other operation | 0 | 0 | 44200 | 0 |
-| pole_virial | stage_branch_read_mass_simplex_defaults | other operation | 0 | 0 | 703 | 0 |
-| pole_virial | stage_branch_read_mixed_mu1_alpha_defaults | other operation | 0 | 0 | 1095 | 0 |
-| pole_virial | stage_branch_read_shape_sphere_defaults | other operation | 0 | 0 | 1674 | 0 |
-| rho_x_zero | stage_branch_read_canon | + and × | 174348 | 0 | 0 | 0 |
-| rho_y_zero | stage_branch_read_canon | + and × | 174348 | 0 | 0 | 0 |
-| rho_zero | stage_branch_read_canon | + and × | 174348 | 0 | 0 | 0 |
-| seed_nu | stage_branch_read_burrau_defaults | + and × | 550 | 135 | 0 | 0 |
-| seed_nu | stage_branch_read_burrau_theta_k_defaults | + and × | 350 | 305 | 0 | 30 |
-| seed_nu | stage_branch_read_burrau_theta_lz_defaults | + and × | 350 | 305 | 0 | 30 |
-| seed_z_alpha | stage_branch_read_invariant_le_defaults | + and × | 3930 | 0 | 0 | 0 |
-| seed_z_alpha | stage_branch_read_invariant_lk_defaults | + and × | 3930 | 0 | 0 | 0 |
-| skip | stage_branch_read_canon | + and × | 174348 | 0 | 0 | 0 |
-| sphere_inverse_pole | stage_branch_read_shape_sphere_defaults | other operation | 0 | 0 | 1674 | 0 |
+| branch input | entry | kind | N | level 1 | other operation | shared operands, host agrees | shared operands, host differs |
+|---|---|---|---|---|---|---|---|
+| ENERGY_INFEASIBLE | stage_branch_read_burrau_theta_delta_m_defaults | other operation | 0 | 0 | 566 | 0 | 0 |
+| ENERGY_INFEASIBLE | stage_branch_read_euclid_plane_defaults | other operation | 0 | 0 | 566 | 0 | 0 |
+| ENERGY_INFEASIBLE | stage_branch_read_latent_defaults | other operation | 0 | 0 | 2419 | 0 | 0 |
+| ENERGY_INFEASIBLE | stage_branch_read_latent_stick_breaking | other operation | 0 | 0 | 3360 | 0 | 0 |
+| ENERGY_INFEASIBLE | stage_branch_read_mass_simplex_defaults | other operation | 0 | 0 | 566 | 0 | 0 |
+| ENERGY_INFEASIBLE | stage_branch_read_mixed_mu1_alpha_defaults | other operation | 0 | 0 | 876 | 0 | 0 |
+| ENERGY_INFEASIBLE | stage_branch_read_shape_sphere_defaults | other operation | 0 | 0 | 1169 | 0 | 0 |
+| ENERGY_UNSCALABLE | stage_branch_read_burrau_theta_delta_m_defaults | other operation | 0 | 0 | 566 | 0 | 0 |
+| ENERGY_UNSCALABLE | stage_branch_read_euclid_plane_defaults | other operation | 0 | 0 | 566 | 0 | 0 |
+| ENERGY_UNSCALABLE | stage_branch_read_latent_defaults | other operation | 0 | 0 | 2419 | 0 | 0 |
+| ENERGY_UNSCALABLE | stage_branch_read_latent_stick_breaking | other operation | 0 | 0 | 3360 | 0 | 0 |
+| ENERGY_UNSCALABLE | stage_branch_read_mass_simplex_defaults | other operation | 0 | 0 | 566 | 0 | 0 |
+| ENERGY_UNSCALABLE | stage_branch_read_mixed_mu1_alpha_defaults | other operation | 0 | 0 | 876 | 0 | 0 |
+| ENERGY_UNSCALABLE | stage_branch_read_shape_sphere_defaults | other operation | 0 | 0 | 1169 | 0 | 0 |
+| INVARIANT_INFEASIBLE | stage_branch_read_burrau_defaults | + and × | 180 | 400 | 0 | 105 | 0 |
+| INVARIANT_INFEASIBLE | stage_branch_read_burrau_theta_k_defaults | + and × | 255 | 300 | 0 | 130 | 0 |
+| INVARIANT_INFEASIBLE | stage_branch_read_burrau_theta_lz_defaults | + and × | 685 | 0 | 0 | 0 | 0 |
+| INVARIANT_INFEASIBLE | stage_branch_read_invariant_le_defaults | + and × | 1570 | 1900 | 0 | 460 | 0 |
+| INVARIANT_INFEASIBLE | stage_branch_read_invariant_lk_defaults | + and × | 1600 | 1875 | 0 | 455 | 0 |
+| M01_TINY | stage_branch_read_burrau_defaults | + and × | 580 | 105 | 0 | 0 | 0 |
+| M01_TINY | stage_branch_read_burrau_theta_delta_m_defaults | + and × | 331 | 362 | 0 | 10 | 0 |
+| M01_TINY | stage_branch_read_burrau_theta_k_defaults | + and × | 390 | 265 | 0 | 30 | 0 |
+| M01_TINY | stage_branch_read_burrau_theta_lz_defaults | + and × | 400 | 255 | 0 | 30 | 0 |
+| M01_TINY | stage_branch_read_euclid_plane_defaults | + and × | 698 | 5 | 0 | 0 | 0 |
+| M01_TINY | stage_branch_read_invariant_le_defaults | + and × | 0 | 2620 | 0 | 1310 | 0 |
+| M01_TINY | stage_branch_read_invariant_lk_defaults | + and × | 0 | 3930 | 0 | 0 | 0 |
+| M01_TINY | stage_branch_read_latent_defaults | + and × | 431 | 2247 | 0 | 327 | 0 |
+| M01_TINY | stage_branch_read_latent_stick_breaking | + and × | 2438 | 13088 | 0 | 28674 | 0 |
+| M01_TINY | stage_branch_read_mass_simplex_defaults | + and × | 384 | 319 | 0 | 0 | 0 |
+| M01_TINY | stage_branch_read_mixed_mu1_alpha_defaults | + and × | 195 | 850 | 0 | 50 | 0 |
+| M01_TINY | stage_branch_read_shape_sphere_defaults | + and × | 0 | 1452 | 0 | 222 | 0 |
+| angle_cross_zero | stage_branch_read_burrau_defaults | + and × | 245 | 440 | 0 | 0 | 0 |
+| angle_cross_zero | stage_branch_read_burrau_theta_delta_m_defaults | + and × | 60 | 627 | 0 | 16 | 0 |
+| angle_cross_zero | stage_branch_read_burrau_theta_k_defaults | + and × | 140 | 520 | 0 | 25 | 0 |
+| angle_cross_zero | stage_branch_read_burrau_theta_lz_defaults | + and × | 130 | 540 | 0 | 15 | 0 |
+| angle_cross_zero | stage_branch_read_euclid_plane_defaults | + and × | 240 | 463 | 0 | 0 | 0 |
+| angle_cross_zero | stage_branch_read_invariant_le_defaults | + and × | 0 | 3930 | 0 | 0 | 0 |
+| angle_cross_zero | stage_branch_read_invariant_lk_defaults | + and × | 0 | 3930 | 0 | 0 | 0 |
+| angle_cross_zero | stage_branch_read_latent_defaults | + and × | 279 | 2548 | 0 | 178 | 0 |
+| angle_cross_zero | stage_branch_read_latent_stick_breaking | + and × | 250 | 43745 | 0 | 205 | 0 |
+| angle_cross_zero | stage_branch_read_mass_simplex_defaults | + and × | 90 | 613 | 0 | 0 | 0 |
+| angle_cross_zero | stage_branch_read_mixed_mu1_alpha_defaults | + and × | 0 | 1090 | 0 | 5 | 0 |
+| angle_cross_zero | stage_branch_read_shape_sphere_defaults | + and × | 327 | 1280 | 0 | 67 | 0 |
+| angle_dot_negative | stage_branch_read_burrau_defaults | + and × | 245 | 440 | 0 | 0 | 0 |
+| angle_dot_negative | stage_branch_read_burrau_theta_delta_m_defaults | + and × | 60 | 627 | 0 | 16 | 0 |
+| angle_dot_negative | stage_branch_read_burrau_theta_k_defaults | + and × | 140 | 520 | 0 | 25 | 0 |
+| angle_dot_negative | stage_branch_read_burrau_theta_lz_defaults | + and × | 130 | 540 | 0 | 15 | 0 |
+| angle_dot_negative | stage_branch_read_euclid_plane_defaults | + and × | 240 | 463 | 0 | 0 | 0 |
+| angle_dot_negative | stage_branch_read_invariant_le_defaults | + and × | 0 | 3930 | 0 | 0 | 0 |
+| angle_dot_negative | stage_branch_read_invariant_lk_defaults | + and × | 0 | 3930 | 0 | 0 | 0 |
+| angle_dot_negative | stage_branch_read_latent_defaults | + and × | 279 | 2548 | 0 | 178 | 0 |
+| angle_dot_negative | stage_branch_read_latent_stick_breaking | + and × | 250 | 43745 | 0 | 205 | 0 |
+| angle_dot_negative | stage_branch_read_mass_simplex_defaults | + and × | 90 | 613 | 0 | 0 | 0 |
+| angle_dot_negative | stage_branch_read_mixed_mu1_alpha_defaults | + and × | 0 | 1090 | 0 | 5 | 0 |
+| angle_dot_negative | stage_branch_read_shape_sphere_defaults | + and × | 327 | 1280 | 0 | 67 | 0 |
+| angle_dot_zero | stage_branch_read_burrau_defaults | + and × | 245 | 440 | 0 | 0 | 0 |
+| angle_dot_zero | stage_branch_read_burrau_theta_delta_m_defaults | + and × | 60 | 627 | 0 | 16 | 0 |
+| angle_dot_zero | stage_branch_read_burrau_theta_k_defaults | + and × | 140 | 520 | 0 | 25 | 0 |
+| angle_dot_zero | stage_branch_read_burrau_theta_lz_defaults | + and × | 130 | 540 | 0 | 15 | 0 |
+| angle_dot_zero | stage_branch_read_euclid_plane_defaults | + and × | 240 | 463 | 0 | 0 | 0 |
+| angle_dot_zero | stage_branch_read_invariant_le_defaults | + and × | 0 | 3930 | 0 | 0 | 0 |
+| angle_dot_zero | stage_branch_read_invariant_lk_defaults | + and × | 0 | 3930 | 0 | 0 | 0 |
+| angle_dot_zero | stage_branch_read_latent_defaults | + and × | 279 | 2548 | 0 | 178 | 0 |
+| angle_dot_zero | stage_branch_read_latent_stick_breaking | + and × | 250 | 43745 | 0 | 205 | 0 |
+| angle_dot_zero | stage_branch_read_mass_simplex_defaults | + and × | 90 | 613 | 0 | 0 | 0 |
+| angle_dot_zero | stage_branch_read_mixed_mu1_alpha_defaults | + and × | 0 | 1090 | 0 | 5 | 0 |
+| angle_dot_zero | stage_branch_read_shape_sphere_defaults | + and × | 327 | 1280 | 0 | 67 | 0 |
+| coincidence | stage_branch_read_canon | + and × | 174348 | 0 | 0 | 0 | 0 |
+| mirror | stage_branch_read_canon | + and × | 174348 | 0 | 0 | 0 | 0 |
+| pole_rho_ratio | stage_branch_read_burrau_defaults | other operation | 0 | 0 | 685 | 0 | 0 |
+| pole_rho_ratio | stage_branch_read_burrau_theta_delta_m_defaults | other operation | 0 | 0 | 703 | 0 | 0 |
+| pole_rho_ratio | stage_branch_read_burrau_theta_k_defaults | other operation | 0 | 0 | 685 | 0 | 0 |
+| pole_rho_ratio | stage_branch_read_burrau_theta_lz_defaults | other operation | 0 | 0 | 685 | 0 | 0 |
+| pole_rho_ratio | stage_branch_read_euclid_plane_defaults | other operation | 0 | 0 | 703 | 0 | 0 |
+| pole_rho_ratio | stage_branch_read_invariant_le_defaults | other operation | 0 | 0 | 3930 | 0 | 0 |
+| pole_rho_ratio | stage_branch_read_invariant_lk_defaults | other operation | 0 | 0 | 3930 | 0 | 0 |
+| pole_rho_ratio | stage_branch_read_latent_defaults | other operation | 0 | 0 | 3005 | 0 | 0 |
+| pole_rho_ratio | stage_branch_read_latent_stick_breaking | other operation | 0 | 0 | 44200 | 0 | 0 |
+| pole_rho_ratio | stage_branch_read_mass_simplex_defaults | other operation | 0 | 0 | 703 | 0 | 0 |
+| pole_rho_ratio | stage_branch_read_mixed_mu1_alpha_defaults | other operation | 0 | 0 | 1095 | 0 | 0 |
+| pole_rho_ratio | stage_branch_read_shape_sphere_defaults | other operation | 0 | 0 | 1674 | 0 | 0 |
+| pole_v0 | stage_branch_read_burrau_defaults | other operation | 0 | 0 | 685 | 0 | 0 |
+| pole_v0 | stage_branch_read_burrau_theta_delta_m_defaults | other operation | 0 | 0 | 703 | 0 | 0 |
+| pole_v0 | stage_branch_read_burrau_theta_k_defaults | other operation | 0 | 0 | 685 | 0 | 0 |
+| pole_v0 | stage_branch_read_burrau_theta_lz_defaults | other operation | 0 | 0 | 685 | 0 | 0 |
+| pole_v0 | stage_branch_read_euclid_plane_defaults | other operation | 0 | 0 | 703 | 0 | 0 |
+| pole_v0 | stage_branch_read_invariant_le_defaults | other operation | 0 | 0 | 3930 | 0 | 0 |
+| pole_v0 | stage_branch_read_invariant_lk_defaults | other operation | 0 | 0 | 3930 | 0 | 0 |
+| pole_v0 | stage_branch_read_latent_defaults | other operation | 0 | 0 | 3005 | 0 | 0 |
+| pole_v0 | stage_branch_read_latent_stick_breaking | other operation | 0 | 0 | 44200 | 0 | 0 |
+| pole_v0 | stage_branch_read_mass_simplex_defaults | other operation | 0 | 0 | 703 | 0 | 0 |
+| pole_v0 | stage_branch_read_mixed_mu1_alpha_defaults | other operation | 0 | 0 | 1095 | 0 | 0 |
+| pole_v0 | stage_branch_read_shape_sphere_defaults | other operation | 0 | 0 | 1674 | 0 | 0 |
+| pole_virial | stage_branch_read_burrau_defaults | other operation | 0 | 0 | 685 | 0 | 0 |
+| pole_virial | stage_branch_read_burrau_theta_delta_m_defaults | other operation | 0 | 0 | 703 | 0 | 0 |
+| pole_virial | stage_branch_read_burrau_theta_k_defaults | other operation | 0 | 0 | 685 | 0 | 0 |
+| pole_virial | stage_branch_read_burrau_theta_lz_defaults | other operation | 0 | 0 | 685 | 0 | 0 |
+| pole_virial | stage_branch_read_euclid_plane_defaults | other operation | 0 | 0 | 703 | 0 | 0 |
+| pole_virial | stage_branch_read_invariant_le_defaults | other operation | 0 | 0 | 3930 | 0 | 0 |
+| pole_virial | stage_branch_read_invariant_lk_defaults | other operation | 0 | 0 | 3930 | 0 | 0 |
+| pole_virial | stage_branch_read_latent_defaults | other operation | 0 | 0 | 3005 | 0 | 0 |
+| pole_virial | stage_branch_read_latent_stick_breaking | other operation | 0 | 0 | 44200 | 0 | 0 |
+| pole_virial | stage_branch_read_mass_simplex_defaults | other operation | 0 | 0 | 703 | 0 | 0 |
+| pole_virial | stage_branch_read_mixed_mu1_alpha_defaults | other operation | 0 | 0 | 1095 | 0 | 0 |
+| pole_virial | stage_branch_read_shape_sphere_defaults | other operation | 0 | 0 | 1674 | 0 | 0 |
+| rho_x_zero | stage_branch_read_canon | + and × | 174348 | 0 | 0 | 0 | 0 |
+| rho_y_zero | stage_branch_read_canon | + and × | 174348 | 0 | 0 | 0 | 0 |
+| rho_zero | stage_branch_read_canon | + and × | 174348 | 0 | 0 | 0 | 0 |
+| seed_nu | stage_branch_read_burrau_defaults | + and × | 550 | 135 | 0 | 0 | 0 |
+| seed_nu | stage_branch_read_burrau_theta_k_defaults | + and × | 350 | 305 | 0 | 30 | 0 |
+| seed_nu | stage_branch_read_burrau_theta_lz_defaults | + and × | 350 | 305 | 0 | 30 | 0 |
+| seed_z_alpha | stage_branch_read_invariant_le_defaults | + and × | 3930 | 0 | 0 | 0 | 0 |
+| seed_z_alpha | stage_branch_read_invariant_lk_defaults | + and × | 3930 | 0 | 0 | 0 | 0 |
+| skip | stage_branch_read_canon | + and × | 174348 | 0 | 0 | 0 | 0 |
+| sphere_inverse_pole | stage_branch_read_shape_sphere_defaults | other operation | 0 | 0 | 1674 | 0 | 0 |
+
+Failure: level 2, angle_cross_zero through stage_branch_read_shape_sphere_defaults: 9 rows, the first stage_decode_shape_sphere_defaults #393 batch 422 point 5.
+
+Failure: level 2, angle_dot_negative through stage_branch_read_shape_sphere_defaults: 4 rows, the first stage_decode_shape_sphere_defaults #393 batch 422 point 6.
+
+Failure: level 2, angle_dot_zero through stage_branch_read_shape_sphere_defaults: 4 rows, the first stage_decode_shape_sphere_defaults #393 batch 422 point 6.
 
 ### lavapipe: unverified, not supported
 
 Domain: the compute stage, setting off; compute compiled off, adapter: llvmpipe (LLVM 20.1.2, 256 bits) | backend: Vulkan | driver: llvmpipe Mesa 25.2.8-0ubuntu0.24.04.4 (LLVM 20.1.2), driver llvmpipe Mesa 25.2.8-0ubuntu0.24.04.4 (LLVM 20.1.2), read through stage_branch_read_burrau_defaults, stage_branch_read_burrau_theta_delta_m_defaults, stage_branch_read_burrau_theta_k_defaults, stage_branch_read_burrau_theta_lz_defaults, stage_branch_read_canon, stage_branch_read_euclid_plane_defaults, stage_branch_read_invariant_le_defaults, stage_branch_read_invariant_lk_defaults, stage_branch_read_latent_defaults, stage_branch_read_latent_stick_breaking, stage_branch_read_mass_simplex_defaults, stage_branch_read_mixed_mu1_alpha_defaults, stage_branch_read_shape_sphere_defaults.
 
-| branch input | entry | kind | N | level 1 | other operation | shared operands, host agrees |
-|---|---|---|---|---|---|---|
-| ENERGY_INFEASIBLE | stage_branch_read_burrau_theta_delta_m_defaults | other operation | 0 | 0 | 566 | 0 |
-| ENERGY_INFEASIBLE | stage_branch_read_euclid_plane_defaults | other operation | 0 | 0 | 566 | 0 |
-| ENERGY_INFEASIBLE | stage_branch_read_latent_defaults | other operation | 0 | 0 | 2419 | 0 |
-| ENERGY_INFEASIBLE | stage_branch_read_latent_stick_breaking | other operation | 0 | 0 | 3360 | 0 |
-| ENERGY_INFEASIBLE | stage_branch_read_mass_simplex_defaults | other operation | 0 | 0 | 566 | 0 |
-| ENERGY_INFEASIBLE | stage_branch_read_mixed_mu1_alpha_defaults | other operation | 0 | 0 | 876 | 0 |
-| ENERGY_INFEASIBLE | stage_branch_read_shape_sphere_defaults | other operation | 0 | 0 | 1169 | 0 |
-| ENERGY_UNSCALABLE | stage_branch_read_burrau_theta_delta_m_defaults | other operation | 0 | 0 | 566 | 0 |
-| ENERGY_UNSCALABLE | stage_branch_read_euclid_plane_defaults | other operation | 0 | 0 | 566 | 0 |
-| ENERGY_UNSCALABLE | stage_branch_read_latent_defaults | other operation | 0 | 0 | 2419 | 0 |
-| ENERGY_UNSCALABLE | stage_branch_read_latent_stick_breaking | other operation | 0 | 0 | 3360 | 0 |
-| ENERGY_UNSCALABLE | stage_branch_read_mass_simplex_defaults | other operation | 0 | 0 | 566 | 0 |
-| ENERGY_UNSCALABLE | stage_branch_read_mixed_mu1_alpha_defaults | other operation | 0 | 0 | 876 | 0 |
-| ENERGY_UNSCALABLE | stage_branch_read_shape_sphere_defaults | other operation | 0 | 0 | 1169 | 0 |
-| INVARIANT_INFEASIBLE | stage_branch_read_burrau_defaults | + and × | 260 | 320 | 0 | 105 |
-| INVARIANT_INFEASIBLE | stage_branch_read_burrau_theta_k_defaults | + and × | 235 | 320 | 0 | 130 |
-| INVARIANT_INFEASIBLE | stage_branch_read_burrau_theta_lz_defaults | + and × | 685 | 0 | 0 | 0 |
-| INVARIANT_INFEASIBLE | stage_branch_read_invariant_le_defaults | + and × | 1870 | 1600 | 0 | 460 |
-| INVARIANT_INFEASIBLE | stage_branch_read_invariant_lk_defaults | + and × | 1815 | 1660 | 0 | 455 |
-| M01_TINY | stage_branch_read_burrau_defaults | + and × | 685 | 0 | 0 | 0 |
-| M01_TINY | stage_branch_read_burrau_theta_delta_m_defaults | + and × | 678 | 15 | 0 | 10 |
-| M01_TINY | stage_branch_read_burrau_theta_k_defaults | + and × | 640 | 15 | 0 | 30 |
-| M01_TINY | stage_branch_read_burrau_theta_lz_defaults | + and × | 630 | 25 | 0 | 30 |
-| M01_TINY | stage_branch_read_euclid_plane_defaults | + and × | 703 | 0 | 0 | 0 |
-| M01_TINY | stage_branch_read_invariant_le_defaults | + and × | 0 | 2620 | 0 | 1310 |
-| M01_TINY | stage_branch_read_invariant_lk_defaults | + and × | 0 | 3930 | 0 | 0 |
-| M01_TINY | stage_branch_read_latent_defaults | + and × | 348 | 2330 | 0 | 327 |
-| M01_TINY | stage_branch_read_latent_stick_breaking | + and × | 2599 | 12927 | 0 | 28674 |
-| M01_TINY | stage_branch_read_mass_simplex_defaults | + and × | 703 | 0 | 0 | 0 |
-| M01_TINY | stage_branch_read_mixed_mu1_alpha_defaults | + and × | 60 | 985 | 0 | 50 |
-| M01_TINY | stage_branch_read_shape_sphere_defaults | + and × | 0 | 1452 | 0 | 222 |
-| angle_cross_zero | stage_branch_read_burrau_defaults | other operation | 0 | 0 | 685 | 0 |
-| angle_cross_zero | stage_branch_read_burrau_theta_delta_m_defaults | other operation | 0 | 0 | 703 | 0 |
-| angle_cross_zero | stage_branch_read_burrau_theta_k_defaults | other operation | 0 | 0 | 685 | 0 |
-| angle_cross_zero | stage_branch_read_burrau_theta_lz_defaults | other operation | 0 | 0 | 685 | 0 |
-| angle_cross_zero | stage_branch_read_euclid_plane_defaults | other operation | 0 | 0 | 703 | 0 |
-| angle_cross_zero | stage_branch_read_invariant_le_defaults | other operation | 0 | 0 | 3930 | 0 |
-| angle_cross_zero | stage_branch_read_invariant_lk_defaults | other operation | 0 | 0 | 3930 | 0 |
-| angle_cross_zero | stage_branch_read_latent_defaults | other operation | 0 | 0 | 3005 | 0 |
-| angle_cross_zero | stage_branch_read_latent_stick_breaking | other operation | 0 | 0 | 44200 | 0 |
-| angle_cross_zero | stage_branch_read_mass_simplex_defaults | other operation | 0 | 0 | 703 | 0 |
-| angle_cross_zero | stage_branch_read_mixed_mu1_alpha_defaults | other operation | 0 | 0 | 1095 | 0 |
-| angle_cross_zero | stage_branch_read_shape_sphere_defaults | other operation | 0 | 0 | 1674 | 0 |
-| angle_dot_negative | stage_branch_read_burrau_defaults | other operation | 0 | 0 | 685 | 0 |
-| angle_dot_negative | stage_branch_read_burrau_theta_delta_m_defaults | other operation | 0 | 0 | 703 | 0 |
-| angle_dot_negative | stage_branch_read_burrau_theta_k_defaults | other operation | 0 | 0 | 685 | 0 |
-| angle_dot_negative | stage_branch_read_burrau_theta_lz_defaults | other operation | 0 | 0 | 685 | 0 |
-| angle_dot_negative | stage_branch_read_euclid_plane_defaults | other operation | 0 | 0 | 703 | 0 |
-| angle_dot_negative | stage_branch_read_invariant_le_defaults | other operation | 0 | 0 | 3930 | 0 |
-| angle_dot_negative | stage_branch_read_invariant_lk_defaults | other operation | 0 | 0 | 3930 | 0 |
-| angle_dot_negative | stage_branch_read_latent_defaults | other operation | 0 | 0 | 3005 | 0 |
-| angle_dot_negative | stage_branch_read_latent_stick_breaking | other operation | 0 | 0 | 44200 | 0 |
-| angle_dot_negative | stage_branch_read_mass_simplex_defaults | other operation | 0 | 0 | 703 | 0 |
-| angle_dot_negative | stage_branch_read_mixed_mu1_alpha_defaults | other operation | 0 | 0 | 1095 | 0 |
-| angle_dot_negative | stage_branch_read_shape_sphere_defaults | other operation | 0 | 0 | 1674 | 0 |
-| angle_dot_zero | stage_branch_read_burrau_defaults | other operation | 0 | 0 | 685 | 0 |
-| angle_dot_zero | stage_branch_read_burrau_theta_delta_m_defaults | other operation | 0 | 0 | 703 | 0 |
-| angle_dot_zero | stage_branch_read_burrau_theta_k_defaults | other operation | 0 | 0 | 685 | 0 |
-| angle_dot_zero | stage_branch_read_burrau_theta_lz_defaults | other operation | 0 | 0 | 685 | 0 |
-| angle_dot_zero | stage_branch_read_euclid_plane_defaults | other operation | 0 | 0 | 703 | 0 |
-| angle_dot_zero | stage_branch_read_invariant_le_defaults | other operation | 0 | 0 | 3930 | 0 |
-| angle_dot_zero | stage_branch_read_invariant_lk_defaults | other operation | 0 | 0 | 3930 | 0 |
-| angle_dot_zero | stage_branch_read_latent_defaults | other operation | 0 | 0 | 3005 | 0 |
-| angle_dot_zero | stage_branch_read_latent_stick_breaking | other operation | 0 | 0 | 44200 | 0 |
-| angle_dot_zero | stage_branch_read_mass_simplex_defaults | other operation | 0 | 0 | 703 | 0 |
-| angle_dot_zero | stage_branch_read_mixed_mu1_alpha_defaults | other operation | 0 | 0 | 1095 | 0 |
-| angle_dot_zero | stage_branch_read_shape_sphere_defaults | other operation | 0 | 0 | 1674 | 0 |
-| coincidence | stage_branch_read_canon | + and × | 174348 | 0 | 0 | 0 |
-| mirror | stage_branch_read_canon | + and × | 174348 | 0 | 0 | 0 |
-| pole_rho_ratio | stage_branch_read_burrau_defaults | other operation | 0 | 0 | 685 | 0 |
-| pole_rho_ratio | stage_branch_read_burrau_theta_delta_m_defaults | other operation | 0 | 0 | 703 | 0 |
-| pole_rho_ratio | stage_branch_read_burrau_theta_k_defaults | other operation | 0 | 0 | 685 | 0 |
-| pole_rho_ratio | stage_branch_read_burrau_theta_lz_defaults | other operation | 0 | 0 | 685 | 0 |
-| pole_rho_ratio | stage_branch_read_euclid_plane_defaults | other operation | 0 | 0 | 703 | 0 |
-| pole_rho_ratio | stage_branch_read_invariant_le_defaults | other operation | 0 | 0 | 3930 | 0 |
-| pole_rho_ratio | stage_branch_read_invariant_lk_defaults | other operation | 0 | 0 | 3930 | 0 |
-| pole_rho_ratio | stage_branch_read_latent_defaults | other operation | 0 | 0 | 3005 | 0 |
-| pole_rho_ratio | stage_branch_read_latent_stick_breaking | other operation | 0 | 0 | 44200 | 0 |
-| pole_rho_ratio | stage_branch_read_mass_simplex_defaults | other operation | 0 | 0 | 703 | 0 |
-| pole_rho_ratio | stage_branch_read_mixed_mu1_alpha_defaults | other operation | 0 | 0 | 1095 | 0 |
-| pole_rho_ratio | stage_branch_read_shape_sphere_defaults | other operation | 0 | 0 | 1674 | 0 |
-| pole_v0 | stage_branch_read_burrau_defaults | other operation | 0 | 0 | 685 | 0 |
-| pole_v0 | stage_branch_read_burrau_theta_delta_m_defaults | other operation | 0 | 0 | 703 | 0 |
-| pole_v0 | stage_branch_read_burrau_theta_k_defaults | other operation | 0 | 0 | 685 | 0 |
-| pole_v0 | stage_branch_read_burrau_theta_lz_defaults | other operation | 0 | 0 | 685 | 0 |
-| pole_v0 | stage_branch_read_euclid_plane_defaults | other operation | 0 | 0 | 703 | 0 |
-| pole_v0 | stage_branch_read_invariant_le_defaults | other operation | 0 | 0 | 3930 | 0 |
-| pole_v0 | stage_branch_read_invariant_lk_defaults | other operation | 0 | 0 | 3930 | 0 |
-| pole_v0 | stage_branch_read_latent_defaults | other operation | 0 | 0 | 3005 | 0 |
-| pole_v0 | stage_branch_read_latent_stick_breaking | other operation | 0 | 0 | 44200 | 0 |
-| pole_v0 | stage_branch_read_mass_simplex_defaults | other operation | 0 | 0 | 703 | 0 |
-| pole_v0 | stage_branch_read_mixed_mu1_alpha_defaults | other operation | 0 | 0 | 1095 | 0 |
-| pole_v0 | stage_branch_read_shape_sphere_defaults | other operation | 0 | 0 | 1674 | 0 |
-| pole_virial | stage_branch_read_burrau_defaults | other operation | 0 | 0 | 685 | 0 |
-| pole_virial | stage_branch_read_burrau_theta_delta_m_defaults | other operation | 0 | 0 | 703 | 0 |
-| pole_virial | stage_branch_read_burrau_theta_k_defaults | other operation | 0 | 0 | 685 | 0 |
-| pole_virial | stage_branch_read_burrau_theta_lz_defaults | other operation | 0 | 0 | 685 | 0 |
-| pole_virial | stage_branch_read_euclid_plane_defaults | other operation | 0 | 0 | 703 | 0 |
-| pole_virial | stage_branch_read_invariant_le_defaults | other operation | 0 | 0 | 3930 | 0 |
-| pole_virial | stage_branch_read_invariant_lk_defaults | other operation | 0 | 0 | 3930 | 0 |
-| pole_virial | stage_branch_read_latent_defaults | other operation | 0 | 0 | 3005 | 0 |
-| pole_virial | stage_branch_read_latent_stick_breaking | other operation | 0 | 0 | 44200 | 0 |
-| pole_virial | stage_branch_read_mass_simplex_defaults | other operation | 0 | 0 | 703 | 0 |
-| pole_virial | stage_branch_read_mixed_mu1_alpha_defaults | other operation | 0 | 0 | 1095 | 0 |
-| pole_virial | stage_branch_read_shape_sphere_defaults | other operation | 0 | 0 | 1674 | 0 |
-| rho_x_zero | stage_branch_read_canon | + and × | 174348 | 0 | 0 | 0 |
-| rho_y_zero | stage_branch_read_canon | + and × | 174348 | 0 | 0 | 0 |
-| rho_zero | stage_branch_read_canon | + and × | 174348 | 0 | 0 | 0 |
-| seed_nu | stage_branch_read_burrau_defaults | + and × | 685 | 0 | 0 | 0 |
-| seed_nu | stage_branch_read_burrau_theta_k_defaults | + and × | 670 | 15 | 0 | 0 |
-| seed_nu | stage_branch_read_burrau_theta_lz_defaults | + and × | 640 | 40 | 0 | 5 |
-| seed_z_alpha | stage_branch_read_invariant_le_defaults | + and × | 3930 | 0 | 0 | 0 |
-| seed_z_alpha | stage_branch_read_invariant_lk_defaults | + and × | 3930 | 0 | 0 | 0 |
-| skip | stage_branch_read_canon | + and × | 174348 | 0 | 0 | 0 |
-| sphere_inverse_pole | stage_branch_read_shape_sphere_defaults | other operation | 0 | 0 | 1674 | 0 |
+| branch input | entry | kind | N | level 1 | other operation | shared operands, host agrees | shared operands, host differs |
+|---|---|---|---|---|---|---|---|
+| ENERGY_INFEASIBLE | stage_branch_read_burrau_theta_delta_m_defaults | other operation | 0 | 0 | 566 | 0 | 0 |
+| ENERGY_INFEASIBLE | stage_branch_read_euclid_plane_defaults | other operation | 0 | 0 | 566 | 0 | 0 |
+| ENERGY_INFEASIBLE | stage_branch_read_latent_defaults | other operation | 0 | 0 | 2419 | 0 | 0 |
+| ENERGY_INFEASIBLE | stage_branch_read_latent_stick_breaking | other operation | 0 | 0 | 3360 | 0 | 0 |
+| ENERGY_INFEASIBLE | stage_branch_read_mass_simplex_defaults | other operation | 0 | 0 | 566 | 0 | 0 |
+| ENERGY_INFEASIBLE | stage_branch_read_mixed_mu1_alpha_defaults | other operation | 0 | 0 | 876 | 0 | 0 |
+| ENERGY_INFEASIBLE | stage_branch_read_shape_sphere_defaults | other operation | 0 | 0 | 1169 | 0 | 0 |
+| ENERGY_UNSCALABLE | stage_branch_read_burrau_theta_delta_m_defaults | other operation | 0 | 0 | 566 | 0 | 0 |
+| ENERGY_UNSCALABLE | stage_branch_read_euclid_plane_defaults | other operation | 0 | 0 | 566 | 0 | 0 |
+| ENERGY_UNSCALABLE | stage_branch_read_latent_defaults | other operation | 0 | 0 | 2419 | 0 | 0 |
+| ENERGY_UNSCALABLE | stage_branch_read_latent_stick_breaking | other operation | 0 | 0 | 3360 | 0 | 0 |
+| ENERGY_UNSCALABLE | stage_branch_read_mass_simplex_defaults | other operation | 0 | 0 | 566 | 0 | 0 |
+| ENERGY_UNSCALABLE | stage_branch_read_mixed_mu1_alpha_defaults | other operation | 0 | 0 | 876 | 0 | 0 |
+| ENERGY_UNSCALABLE | stage_branch_read_shape_sphere_defaults | other operation | 0 | 0 | 1169 | 0 | 0 |
+| INVARIANT_INFEASIBLE | stage_branch_read_burrau_defaults | + and × | 260 | 320 | 0 | 105 | 0 |
+| INVARIANT_INFEASIBLE | stage_branch_read_burrau_theta_k_defaults | + and × | 235 | 320 | 0 | 130 | 0 |
+| INVARIANT_INFEASIBLE | stage_branch_read_burrau_theta_lz_defaults | + and × | 685 | 0 | 0 | 0 | 0 |
+| INVARIANT_INFEASIBLE | stage_branch_read_invariant_le_defaults | + and × | 1870 | 1600 | 0 | 460 | 0 |
+| INVARIANT_INFEASIBLE | stage_branch_read_invariant_lk_defaults | + and × | 1815 | 1660 | 0 | 455 | 0 |
+| M01_TINY | stage_branch_read_burrau_defaults | + and × | 685 | 0 | 0 | 0 | 0 |
+| M01_TINY | stage_branch_read_burrau_theta_delta_m_defaults | + and × | 678 | 15 | 0 | 10 | 0 |
+| M01_TINY | stage_branch_read_burrau_theta_k_defaults | + and × | 640 | 15 | 0 | 30 | 0 |
+| M01_TINY | stage_branch_read_burrau_theta_lz_defaults | + and × | 630 | 25 | 0 | 30 | 0 |
+| M01_TINY | stage_branch_read_euclid_plane_defaults | + and × | 703 | 0 | 0 | 0 | 0 |
+| M01_TINY | stage_branch_read_invariant_le_defaults | + and × | 0 | 2620 | 0 | 1310 | 0 |
+| M01_TINY | stage_branch_read_invariant_lk_defaults | + and × | 0 | 3930 | 0 | 0 | 0 |
+| M01_TINY | stage_branch_read_latent_defaults | + and × | 348 | 2330 | 0 | 327 | 0 |
+| M01_TINY | stage_branch_read_latent_stick_breaking | + and × | 2599 | 12927 | 0 | 28674 | 0 |
+| M01_TINY | stage_branch_read_mass_simplex_defaults | + and × | 703 | 0 | 0 | 0 | 0 |
+| M01_TINY | stage_branch_read_mixed_mu1_alpha_defaults | + and × | 60 | 985 | 0 | 50 | 0 |
+| M01_TINY | stage_branch_read_shape_sphere_defaults | + and × | 0 | 1452 | 0 | 222 | 0 |
+| angle_cross_zero | stage_branch_read_burrau_defaults | + and × | 685 | 0 | 0 | 0 | 0 |
+| angle_cross_zero | stage_branch_read_burrau_theta_delta_m_defaults | + and × | 647 | 40 | 0 | 16 | 0 |
+| angle_cross_zero | stage_branch_read_burrau_theta_k_defaults | + and × | 640 | 20 | 0 | 25 | 0 |
+| angle_cross_zero | stage_branch_read_burrau_theta_lz_defaults | + and × | 615 | 55 | 0 | 15 | 0 |
+| angle_cross_zero | stage_branch_read_euclid_plane_defaults | + and × | 703 | 0 | 0 | 0 | 0 |
+| angle_cross_zero | stage_branch_read_invariant_le_defaults | + and × | 0 | 3930 | 0 | 0 | 0 |
+| angle_cross_zero | stage_branch_read_invariant_lk_defaults | + and × | 0 | 3930 | 0 | 0 | 0 |
+| angle_cross_zero | stage_branch_read_latent_defaults | + and × | 417 | 2410 | 0 | 178 | 0 |
+| angle_cross_zero | stage_branch_read_latent_stick_breaking | + and × | 40830 | 3165 | 0 | 205 | 0 |
+| angle_cross_zero | stage_branch_read_mass_simplex_defaults | + and × | 703 | 0 | 0 | 0 | 0 |
+| angle_cross_zero | stage_branch_read_mixed_mu1_alpha_defaults | + and × | 130 | 960 | 0 | 5 | 0 |
+| angle_cross_zero | stage_branch_read_shape_sphere_defaults | + and × | 1121 | 486 | 0 | 67 | 0 |
+| angle_dot_negative | stage_branch_read_burrau_defaults | + and × | 685 | 0 | 0 | 0 | 0 |
+| angle_dot_negative | stage_branch_read_burrau_theta_delta_m_defaults | + and × | 647 | 40 | 0 | 16 | 0 |
+| angle_dot_negative | stage_branch_read_burrau_theta_k_defaults | + and × | 640 | 20 | 0 | 25 | 0 |
+| angle_dot_negative | stage_branch_read_burrau_theta_lz_defaults | + and × | 615 | 55 | 0 | 15 | 0 |
+| angle_dot_negative | stage_branch_read_euclid_plane_defaults | + and × | 703 | 0 | 0 | 0 | 0 |
+| angle_dot_negative | stage_branch_read_invariant_le_defaults | + and × | 0 | 3930 | 0 | 0 | 0 |
+| angle_dot_negative | stage_branch_read_invariant_lk_defaults | + and × | 0 | 3930 | 0 | 0 | 0 |
+| angle_dot_negative | stage_branch_read_latent_defaults | + and × | 417 | 2410 | 0 | 178 | 0 |
+| angle_dot_negative | stage_branch_read_latent_stick_breaking | + and × | 40830 | 3165 | 0 | 205 | 0 |
+| angle_dot_negative | stage_branch_read_mass_simplex_defaults | + and × | 703 | 0 | 0 | 0 | 0 |
+| angle_dot_negative | stage_branch_read_mixed_mu1_alpha_defaults | + and × | 130 | 960 | 0 | 5 | 0 |
+| angle_dot_negative | stage_branch_read_shape_sphere_defaults | + and × | 1121 | 486 | 0 | 67 | 0 |
+| angle_dot_zero | stage_branch_read_burrau_defaults | + and × | 685 | 0 | 0 | 0 | 0 |
+| angle_dot_zero | stage_branch_read_burrau_theta_delta_m_defaults | + and × | 647 | 40 | 0 | 16 | 0 |
+| angle_dot_zero | stage_branch_read_burrau_theta_k_defaults | + and × | 640 | 20 | 0 | 25 | 0 |
+| angle_dot_zero | stage_branch_read_burrau_theta_lz_defaults | + and × | 615 | 55 | 0 | 15 | 0 |
+| angle_dot_zero | stage_branch_read_euclid_plane_defaults | + and × | 703 | 0 | 0 | 0 | 0 |
+| angle_dot_zero | stage_branch_read_invariant_le_defaults | + and × | 0 | 3930 | 0 | 0 | 0 |
+| angle_dot_zero | stage_branch_read_invariant_lk_defaults | + and × | 0 | 3930 | 0 | 0 | 0 |
+| angle_dot_zero | stage_branch_read_latent_defaults | + and × | 417 | 2410 | 0 | 178 | 0 |
+| angle_dot_zero | stage_branch_read_latent_stick_breaking | + and × | 40830 | 3165 | 0 | 205 | 0 |
+| angle_dot_zero | stage_branch_read_mass_simplex_defaults | + and × | 703 | 0 | 0 | 0 | 0 |
+| angle_dot_zero | stage_branch_read_mixed_mu1_alpha_defaults | + and × | 130 | 960 | 0 | 5 | 0 |
+| angle_dot_zero | stage_branch_read_shape_sphere_defaults | + and × | 1121 | 486 | 0 | 67 | 0 |
+| coincidence | stage_branch_read_canon | + and × | 174348 | 0 | 0 | 0 | 0 |
+| mirror | stage_branch_read_canon | + and × | 174348 | 0 | 0 | 0 | 0 |
+| pole_rho_ratio | stage_branch_read_burrau_defaults | other operation | 0 | 0 | 685 | 0 | 0 |
+| pole_rho_ratio | stage_branch_read_burrau_theta_delta_m_defaults | other operation | 0 | 0 | 703 | 0 | 0 |
+| pole_rho_ratio | stage_branch_read_burrau_theta_k_defaults | other operation | 0 | 0 | 685 | 0 | 0 |
+| pole_rho_ratio | stage_branch_read_burrau_theta_lz_defaults | other operation | 0 | 0 | 685 | 0 | 0 |
+| pole_rho_ratio | stage_branch_read_euclid_plane_defaults | other operation | 0 | 0 | 703 | 0 | 0 |
+| pole_rho_ratio | stage_branch_read_invariant_le_defaults | other operation | 0 | 0 | 3930 | 0 | 0 |
+| pole_rho_ratio | stage_branch_read_invariant_lk_defaults | other operation | 0 | 0 | 3930 | 0 | 0 |
+| pole_rho_ratio | stage_branch_read_latent_defaults | other operation | 0 | 0 | 3005 | 0 | 0 |
+| pole_rho_ratio | stage_branch_read_latent_stick_breaking | other operation | 0 | 0 | 44200 | 0 | 0 |
+| pole_rho_ratio | stage_branch_read_mass_simplex_defaults | other operation | 0 | 0 | 703 | 0 | 0 |
+| pole_rho_ratio | stage_branch_read_mixed_mu1_alpha_defaults | other operation | 0 | 0 | 1095 | 0 | 0 |
+| pole_rho_ratio | stage_branch_read_shape_sphere_defaults | other operation | 0 | 0 | 1674 | 0 | 0 |
+| pole_v0 | stage_branch_read_burrau_defaults | other operation | 0 | 0 | 685 | 0 | 0 |
+| pole_v0 | stage_branch_read_burrau_theta_delta_m_defaults | other operation | 0 | 0 | 703 | 0 | 0 |
+| pole_v0 | stage_branch_read_burrau_theta_k_defaults | other operation | 0 | 0 | 685 | 0 | 0 |
+| pole_v0 | stage_branch_read_burrau_theta_lz_defaults | other operation | 0 | 0 | 685 | 0 | 0 |
+| pole_v0 | stage_branch_read_euclid_plane_defaults | other operation | 0 | 0 | 703 | 0 | 0 |
+| pole_v0 | stage_branch_read_invariant_le_defaults | other operation | 0 | 0 | 3930 | 0 | 0 |
+| pole_v0 | stage_branch_read_invariant_lk_defaults | other operation | 0 | 0 | 3930 | 0 | 0 |
+| pole_v0 | stage_branch_read_latent_defaults | other operation | 0 | 0 | 3005 | 0 | 0 |
+| pole_v0 | stage_branch_read_latent_stick_breaking | other operation | 0 | 0 | 44200 | 0 | 0 |
+| pole_v0 | stage_branch_read_mass_simplex_defaults | other operation | 0 | 0 | 703 | 0 | 0 |
+| pole_v0 | stage_branch_read_mixed_mu1_alpha_defaults | other operation | 0 | 0 | 1095 | 0 | 0 |
+| pole_v0 | stage_branch_read_shape_sphere_defaults | other operation | 0 | 0 | 1674 | 0 | 0 |
+| pole_virial | stage_branch_read_burrau_defaults | other operation | 0 | 0 | 685 | 0 | 0 |
+| pole_virial | stage_branch_read_burrau_theta_delta_m_defaults | other operation | 0 | 0 | 703 | 0 | 0 |
+| pole_virial | stage_branch_read_burrau_theta_k_defaults | other operation | 0 | 0 | 685 | 0 | 0 |
+| pole_virial | stage_branch_read_burrau_theta_lz_defaults | other operation | 0 | 0 | 685 | 0 | 0 |
+| pole_virial | stage_branch_read_euclid_plane_defaults | other operation | 0 | 0 | 703 | 0 | 0 |
+| pole_virial | stage_branch_read_invariant_le_defaults | other operation | 0 | 0 | 3930 | 0 | 0 |
+| pole_virial | stage_branch_read_invariant_lk_defaults | other operation | 0 | 0 | 3930 | 0 | 0 |
+| pole_virial | stage_branch_read_latent_defaults | other operation | 0 | 0 | 3005 | 0 | 0 |
+| pole_virial | stage_branch_read_latent_stick_breaking | other operation | 0 | 0 | 44200 | 0 | 0 |
+| pole_virial | stage_branch_read_mass_simplex_defaults | other operation | 0 | 0 | 703 | 0 | 0 |
+| pole_virial | stage_branch_read_mixed_mu1_alpha_defaults | other operation | 0 | 0 | 1095 | 0 | 0 |
+| pole_virial | stage_branch_read_shape_sphere_defaults | other operation | 0 | 0 | 1674 | 0 | 0 |
+| rho_x_zero | stage_branch_read_canon | + and × | 174348 | 0 | 0 | 0 | 0 |
+| rho_y_zero | stage_branch_read_canon | + and × | 174348 | 0 | 0 | 0 | 0 |
+| rho_zero | stage_branch_read_canon | + and × | 174348 | 0 | 0 | 0 | 0 |
+| seed_nu | stage_branch_read_burrau_defaults | + and × | 685 | 0 | 0 | 0 | 0 |
+| seed_nu | stage_branch_read_burrau_theta_k_defaults | + and × | 640 | 15 | 0 | 0 | 30 |
+| seed_nu | stage_branch_read_burrau_theta_lz_defaults | + and × | 615 | 40 | 0 | 5 | 25 |
+| seed_z_alpha | stage_branch_read_invariant_le_defaults | + and × | 3930 | 0 | 0 | 0 | 0 |
+| seed_z_alpha | stage_branch_read_invariant_lk_defaults | + and × | 3930 | 0 | 0 | 0 | 0 |
+| skip | stage_branch_read_canon | + and × | 174348 | 0 | 0 | 0 | 0 |
+| sphere_inverse_pole | stage_branch_read_shape_sphere_defaults | other operation | 0 | 0 | 1674 | 0 | 0 |
 
 Failure: level 2, seed_nu through stage_branch_read_burrau_defaults: 510 rows, the first stage_decode_burrau_defaults fuzz batch 278 point 0.
 
