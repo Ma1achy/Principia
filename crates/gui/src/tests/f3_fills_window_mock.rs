@@ -57,10 +57,15 @@ pub(super) fn clear() -> [u8; 4] {
     clear_colour(&egui::Visuals::dark()).to_array()
 }
 
-/// `a` and `b` are identical over `rect`.
+/// `a` and `b` are identical over `rect`, but on the Home button, the one control over the figure, which hides with the
+/// layer (R-466 K7).
 pub(super) fn check_same_over(a: &[u8], b: &[u8], rect: [usize; 4], what: &str) {
+    let home = px(crate::explore::manifold_view::reset::home_rect(
+        layout().figure,
+    ));
+    let on_home = |x: usize, y: usize| x >= home[0] && x < home[2] && y >= home[1] && y < home[3];
     for y in rect[1]..rect[3] {
-        for x in rect[0]..rect[2] {
+        for x in (rect[0]..rect[2]).filter(|x| !on_home(*x, y)) {
             assert_eq!(
                 pixel(a, x, y),
                 pixel(b, x, y),

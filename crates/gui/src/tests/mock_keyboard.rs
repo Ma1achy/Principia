@@ -354,7 +354,15 @@ fn mock_keyboard_menu_entry_acts_and_closes() {
     }
     let hidden = |shown: bool| assert!(!shown, "View › F3 hide did not hide the layer");
     let before = app.shown;
-    keys(&mut h, &mut app, &[(Key::Enter, NONE), (Key::Enter, NONE)]);
+    keys(
+        &mut h,
+        &mut app,
+        &[
+            (Key::Enter, NONE),
+            (Key::ArrowDown, NONE),
+            (Key::Enter, NONE),
+        ],
+    );
     hidden(app.shown);
     assert_eq!(focus(&app), ["top_bar", "view"]);
     press(&mut h, &mut app, Key::F3, NONE);
@@ -362,7 +370,7 @@ fn mock_keyboard_menu_entry_acts_and_closes() {
     assert!(!egui::Popup::is_any_open(&h.ctx));
     // The layer still has the keys: Enter opens View again.
     press(&mut h, &mut app, Key::Enter, NONE);
-    assert_eq!(focus(&app), ["top_bar", "view", "view_hide"]);
+    assert_eq!(focus(&app), ["top_bar", "view", "view_home"]);
     rejects("the layer shown, before the entry", || hidden(before));
 }
 
@@ -1851,12 +1859,24 @@ fn mock_keyboard_manifold_view_scopes() {
         mv::ZOOM,
         mv::UNLOCK,
         mv::OPEN_INSPECTOR,
+        mv::RESET_NAVIGATE,
     ];
-    let tilt = [mv::TAU1, mv::TILT_X, mv::TAU2, mv::TILT_Y, mv::GAMMA];
+    let tilt = [
+        mv::TAU1,
+        mv::TILT_X,
+        mv::TAU2,
+        mv::TILT_Y,
+        mv::GAMMA,
+        mv::RESET_TILT,
+    ];
+    let slice_centre: Vec<_> = mv::SLIDERS
+        .into_iter()
+        .chain([mv::RESET_SLICE_CENTRE])
+        .collect();
     let check = |tree: &ScopeTree| {
         assert_eq!(tree.children(Some(mv::CHART)), chart);
         assert_eq!(tree.children(Some(mv::NAVIGATE)), navigate);
-        assert_eq!(tree.children(Some(mv::SLICE_CENTRE)), mv::SLIDERS);
+        assert_eq!(tree.children(Some(mv::SLICE_CENTRE)), slice_centre);
         assert_eq!(tree.children(Some(mv::TILT)), tilt);
         assert_eq!(tree.children(Some(mv::Q1_EDIT)), mv::Q1_COMPONENTS);
         assert_eq!(tree.children(Some(mv::Q2_EDIT)), mv::Q2_COMPONENTS);

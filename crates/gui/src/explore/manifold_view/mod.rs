@@ -23,10 +23,12 @@ pub mod chart;
 pub mod depth;
 pub mod lock;
 pub mod navigate;
+pub mod reset;
 pub mod tilt;
 
 use eframe::egui::{
-    self, pos2, vec2, Align, Layout as EguiLayout, Rect, Response, RichText, Ui, UiBuilder,
+    self, pos2, vec2, Align, Button, Label, Layout as EguiLayout, Rect, Response, RichText, Ui,
+    UiBuilder,
 };
 use engine::contract::set_field::{Edit, SetField, SimField};
 use engine::contract::sim_config::{Latent, Lock, Plane, SimConfig, SliceFrame, LATENT_DIM};
@@ -45,6 +47,42 @@ pub const AXES: [&str; LATENT_DIM] = ["z_α", "z_β", "z_q0", "z_q1", "z_q2", "z
 /// content on the mock (R-390): the preset names on the real engine are REQ-GUI-082's, TASK-M8-06's. The last,
 /// `z_q3 × z_μ1`, holds the default slice normal `z_q3`, as `tilt_targets` needs one (applied per R-369, REQ-GUI-205).
 pub const PRESETS: [(usize, usize); 6] = [(0, 1), (2, 3), (4, 5), (6, 7), (0, 6), (5, 6)];
+
+/// A chart preset's home values (render_gui_spec §G2, §G7; R-466, REQ-GUI-224): what the resets and Home read.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct PresetHome {
+    /// The base point: a value for each of the eight latent coordinates. The preset's home view has `z₀` here.
+    pub base: Latent,
+    /// The window `σ_h`: the scale at which the zoom row reads × 1.00.
+    pub window: f64,
+}
+
+impl PresetHome {
+    /// The centre `(u, v)` of the preset on the axes `(a, b)`: the base point's coordinates on them (§G2).
+    pub fn centre(&self, a: usize, b: usize) -> (f64, f64) {
+        (self.base[a], self.base[b])
+    }
+}
+
+/// The base point of 01_main.png's system, which five of the mock's presets share.
+const ARTBOARD: PresetHome = PresetHome {
+    base: crate::mock::MOCK_Z0,
+    window: 1.0,
+};
+
+/// Each of [`PRESETS`]' home values, by its index there: §G7's table, placeholder content on the mock (R-390). The first
+/// is the mock's starting view, so it opens at home. The second has home values of its own.
+pub const PRESET_HOMES: [PresetHome; 6] = [
+    ARTBOARD,
+    PresetHome {
+        base: [0.250, 0.500, 0.125, -0.250, 0.0625, 0.375, 0.250, -0.125],
+        window: 0.5,
+    },
+    ARTBOARD,
+    ARTBOARD,
+    ARTBOARD,
+    ARTBOARD,
+];
 
 /// The default slice normal and tilt target, the slice axis: `z_q3`, as 01_main.png's compass names its depth axis
 /// (applied per R-369: the direction library is TASK-M8-07's), or the first axis the preset leaves hidden when the
@@ -94,6 +132,8 @@ pub const ZOOM: ScopeId = "zoom";
 pub const UNLOCK: ScopeId = "lock_unlock";
 /// The lock badge's open in Inspector.
 pub const OPEN_INSPECTOR: ScopeId = "lock_inspector";
+/// Navigate's reset, the last element of its sub-scope (R-466 K6).
+pub const RESET_NAVIGATE: ScopeId = "reset_navigate";
 /// Slice centre's eight sliders.
 pub const SLIDERS: [ScopeId; LATENT_DIM] = [
     "slice_centre_0",
@@ -105,6 +145,8 @@ pub const SLIDERS: [ScopeId; LATENT_DIM] = [
     "slice_centre_6",
     "slice_centre_7",
 ];
+/// Slice centre's reset, the last element of its sub-scope (R-466 K6).
+pub const RESET_SLICE_CENTRE: ScopeId = "reset_slice_centre";
 /// The tilt `τ₁`.
 pub const TAU1: ScopeId = "tau1";
 /// `τ₁`'s target dropdown, "tilt τ₁ into \[X\]" (R-457 E5): a menu, its entries the dimensions it offers.
@@ -115,6 +157,8 @@ pub const TAU2: ScopeId = "tau2";
 pub const TILT_Y: ScopeId = "tilt_y";
 /// The rotation `γ`.
 pub const GAMMA: ScopeId = "gamma";
+/// Tilt's reset, the last element of its sub-scope (R-466 K6).
+pub const RESET_TILT: ScopeId = "reset_tilt";
 /// `τ₁`'s dropdown's entries, one per latent dimension; it holds the six [`target_choices`] offers.
 pub const TILT_X_ENTRIES: [ScopeId; LATENT_DIM] = [
     "tilt_x_0", "tilt_x_1", "tilt_x_2", "tilt_x_3", "tilt_x_4", "tilt_x_5", "tilt_x_6", "tilt_x_7",
@@ -202,14 +246,20 @@ pub fn join(tree: &mut ScopeTree) {
         Some(NAVIGATE),
         Scope::control(OPEN_INSPECTOR, "open in Inspector"),
     );
+    tree.register(Some(NAVIGATE), Scope::control(RESET_NAVIGATE, reset::RESET));
     for (id, name) in SLIDERS.into_iter().zip(AXES) {
         tree.register(Some(SLICE_CENTRE), Scope::value(id, name, Bounded));
     }
+    tree.register(
+        Some(SLICE_CENTRE),
+        Scope::control(RESET_SLICE_CENTRE, reset::RESET),
+    );
     tree.register(Some(TILT), Scope::value(TAU1, "τ₁", Angle));
     tree.register(Some(TILT), Scope::menu(TILT_X, "tilt τ₁ into"));
     tree.register(Some(TILT), Scope::value(TAU2, "τ₂", Angle));
     tree.register(Some(TILT), Scope::menu(TILT_Y, "tilt τ₂ into"));
     tree.register(Some(TILT), Scope::value(GAMMA, "γ", Angle));
+    tree.register(Some(TILT), Scope::control(RESET_TILT, reset::RESET));
     for (key, action) in SHORTCUTS {
         tree.register_shortcut(key, action);
     }
@@ -555,9 +605,24 @@ impl View {
         }
     }
 
-    /// The zoom, in log₂: `−log₂ σ`.
+    /// The zoom, in log₂: `−log₂ σ`. Absolute, as the depth readout counts it; the zoom row reads [`View::zoom_row`].
     pub fn zoom(&self) -> f64 {
         -self.scale.log2()
+    }
+
+    /// The window `σ_h` the zoom row reads against: the active preset's, or 1 with none (§G2, REQ-GUI-224).
+    pub fn window(&self) -> f64 {
+        self.preset.map_or(1.0, |p| PRESET_HOMES[p].window)
+    }
+
+    /// The zoom as its row reads it: `log₂(σ_h / σ)`, 0 at the preset's window (R-466, REQ-GUI-224).
+    pub fn zoom_row(&self) -> f64 {
+        self.window().log2() + self.zoom()
+    }
+
+    /// This view at the zoom row's reading `row`.
+    pub fn with_zoom_row(self, row: f64) -> Self {
+        self.with_zoom(row - self.window().log2())
     }
 
     /// This view at zoom `zoom`.
@@ -894,6 +959,9 @@ pub struct Out {
     /// Commands already turned about the pin, each sent as it is, one history entry: a compass drag's edit, made from
     /// the plane where the drag began, not the frame's (R-458 F1).
     pub commands: Vec<Vec<SetField>>,
+    /// The resets' commands, also turned about the pin, each sent under a fresh key of its own: one history entry,
+    /// whatever else the pointer holds (R-466 K10).
+    pub fresh: Vec<Vec<SetField>>,
     /// The windows to open.
     pub windows: Vec<Window>,
     /// The console's lines for the physical steers refused (R-550).
@@ -918,10 +986,14 @@ impl Out {
     }
 }
 
-/// Enter on control `id`, as its click: the panel's, a target dropdown's entry picking that target among them, and the
-/// compass's Tilt and Slice.
+/// Enter on control `id`, as its click: the panel's, a section's reset and a target dropdown's entry picking that
+/// target among them, and the compass's Tilt and Slice.
 pub fn activate(id: &str, snapshot: &Snapshot, scratch: &mut Scratch, out: &mut Out) {
     if compass::pick(id, &snapshot.sim, scratch, out) {
+        return;
+    }
+    if let Some(section) = reset::Section::of(id) {
+        out.fresh.push(reset::command(&snapshot.sim, section));
         return;
     }
     let view = View::read(&snapshot.sim);
@@ -1070,10 +1142,48 @@ pub fn show(ui: &mut Ui, rect: Rect, panel: &mut Panel<'_>) {
 
 /// Draws a section's header in row 0 of `section`: its title, and a weak note beside it.
 pub fn header(ui: &mut Ui, section: Rect, h: f32, title: &str, note: &str) {
-    let mut row = row_ui(ui, row(section, h, 0));
+    title_in(ui, row(section, h, 0), title, note);
+}
+
+/// Draws `title`, and a weak note beside it, in `rect`; the note gives way to what is beside it in the row.
+fn title_in(ui: &mut Ui, rect: Rect, title: &str, note: &str) {
+    let mut row = row_ui(ui, rect);
     row.label(RichText::new(title).strong());
     if !note.is_empty() {
         row.add_space(8.0);
-        row.label(RichText::new(note).weak().small());
+        row.add(Label::new(RichText::new(note).weak().small()).truncate());
     }
+}
+
+/// Draws a section's header in row 0 of `rect`, with the section's reset at its right end (R-466 K6), dimmed at home
+/// (K11): a click on it is its command.
+pub fn header_with_reset(
+    ui: &mut Ui,
+    rect: Rect,
+    h: f32,
+    clip: Rect,
+    (title, note): (&str, &str),
+    section: reset::Section,
+    panel: &mut Panel<'_>,
+) {
+    let line = row(rect, h, 0);
+    let mut right = ui.new_child(
+        UiBuilder::new()
+            .max_rect(line)
+            .layout(EguiLayout::right_to_left(Align::Center)),
+    );
+    let sim = &panel.snapshot.sim;
+    let button = right
+        .add_enabled(
+            reset::enabled(sim, section),
+            Button::new(reset::RESET).small(),
+        )
+        .on_hover_text(section.tooltip())
+        .on_disabled_hover_text(reset::dimmed_because(sim));
+    if button.clicked() {
+        panel.out.fresh.push(reset::command(sim, section));
+    }
+    panel.place(section.scope(), &button, clip);
+    let left = Rect::from_min_max(line.min, pos2(button.rect.min.x, line.max.y));
+    title_in(ui, left, title, note);
 }

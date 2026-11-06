@@ -1,5 +1,5 @@
-//! Navigate (render_gui_spec §G2): the centre `(u, v)` and the zoom in log₂, editable by drag or by typing; under them
-//! the depth readout, the precision warning and the lock (`depth`, `lock`), and nothing more: no grid of `z₀` values,
+//! Navigate (render_gui_spec §G2): a "reset" beside its heading (`super::reset`; R-466), the centre `(u, v)` and the
+//! zoom in log₂, read against the preset's window, editable by drag or by typing; under them the depth readout, the precision warning and the lock (`depth`, `lock`), and nothing more: no grid of `z₀` values,
 //! which repeated the Slice centre sliders (R-457). And the figure's own gestures, which are
 //! navigation too: a drag pans, the wheel zooms, and with the Figure scope focused the arrows pan and + / − zoom (§G3).
 //! Each is one `SetField`: a pan on `z₀` (`Δz₀ ∈ span(q₁, q₂)`), a zoom on the basis, scaled about the centre, and,
@@ -11,8 +11,8 @@ use eframe::egui::{self, DragValue, Key, Rect, Response, RichText, Sense, Slider
 use engine::contract::sim_config::Plane;
 
 use super::{
-    add, basis_edit, header, in_plane, row, row_ui, z0_edit, Out, Panel, Scratch, View, CENTRE_U,
-    CENTRE_V, SECTION_TITLES, ZOOM, ZOOM_RANGE,
+    add, basis_edit, in_plane, reset::Section, row, row_ui, z0_edit, Out, Panel, Scratch, View,
+    CENTRE_U, CENTRE_V, SECTION_TITLES, ZOOM, ZOOM_RANGE,
 };
 use crate::keyboard::keymap::{multiplier, Direction};
 use crate::keyboard::scopes::{Adjust, Base, StepKind};
@@ -42,14 +42,22 @@ pub fn wheel_octaves(events: &[egui::Event]) -> f64 {
         .sum()
 }
 
-/// The magnification `2^zoom`, as the zoom row reads it: "× 1.00".
+/// The magnification `2^zoom`, as the zoom row reads it, `zoom` its reading ([`View::zoom_row`]), so `σ_h / σ`: "× 1.00".
 pub fn magnification(zoom: f64) -> String {
     format!("× {:.2}", zoom.exp2())
 }
 
 /// Draws Navigate's own rows in `section`, then the depth readout and the lock under them.
 pub fn show(ui: &mut Ui, section: Rect, h: f32, clip: Rect, panel: &mut Panel<'_>) {
-    header(ui, section, h, SECTION_TITLES[1], NOTE);
+    super::header_with_reset(
+        ui,
+        section,
+        h,
+        clip,
+        (SECTION_TITLES[1], NOTE),
+        Section::Navigate,
+        panel,
+    );
     let plane = panel.snapshot.sim.plane.clone();
     let view = View::read(&panel.snapshot.sim);
     let label_w = super::chart::LABEL_W;
@@ -79,15 +87,15 @@ pub fn show(ui: &mut Ui, section: Rect, h: f32, clip: Rect, panel: &mut Panel<'_
     }
     let mut zoom_row = row_ui(ui, row(section, h, 2));
     zoom_row.add_sized([label_w, h], egui::Label::new("zoom (log₂)"));
-    let mut zoom = view.zoom();
+    let mut zoom = view.zoom_row();
     zoom_row.spacing_mut().slider_width = (zoom_row.available_width() - 70.0).max(40.0);
     let slider =
         zoom_row.add(Slider::new(&mut zoom, ZOOM_RANGE.0..=ZOOM_RANGE.1).show_value(false));
     panel.place(ZOOM, &slider, clip);
-    zoom_row.label(RichText::new(magnification(view.zoom())).monospace());
+    zoom_row.label(RichText::new(magnification(view.zoom_row())).monospace());
     if slider.changed() {
         panel.out.edit(
-            basis_edit(view.with_zoom(zoom).basis()),
+            basis_edit(view.with_zoom_row(zoom).basis()),
             None,
             panel.scratch,
         );

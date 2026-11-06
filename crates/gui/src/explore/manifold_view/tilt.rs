@@ -1,4 +1,5 @@
-//! Tilt (render_gui_spec §G2; named "Slice & tilt" before R-457): "tilt `τ₁` into \[X\]" and "tilt `τ₂` into \[Y\]",
+//! Tilt (render_gui_spec §G2; named "Slice & tilt" before R-457): a "reset" beside its heading (`super::reset`; R-466),
+//! "tilt `τ₁` into \[X\]" and "tilt `τ₂` into \[Y\]",
 //! each a slider with its number box and, under it, the dropdown of the dimension it tilts into, then the rotation `γ`.
 //! Each angle is one `SetField` on the basis, which turns about the centre, and, locked, about the pin: the app turns
 //! every basis edit about it ([`super::about_the_pin`], §G4). The tilts span `[−90°, 90°]` (chart_decoder_contract
@@ -16,9 +17,9 @@ use eframe::egui::{self, ComboBox, DragValue, Rect, Slider, Ui};
 use crate::explore::compass::Gesture;
 
 use super::{
-    basis_edit, close_under_console, header, row, row_ui, target_choices, target_edit, Panel,
-    Target, Touch, View, AXES, GAMMA, SECTION_TITLES, TAU1, TAU2, TILT_X, TILT_X_ENTRIES, TILT_Y,
-    TILT_Y_ENTRIES,
+    basis_edit, close_under_console, reset::Section, row, row_ui, target_choices, target_edit,
+    Panel, Target, Touch, View, AXES, GAMMA, SECTION_TITLES, TAU1, TAU2, TILT_X, TILT_X_ENTRIES,
+    TILT_Y, TILT_Y_ENTRIES,
 };
 
 /// The tilts' span, in degrees.
@@ -82,7 +83,15 @@ pub const TARGET_W: f32 = 64.0;
 /// Draws Tilt in `section`: `τ₁` and its target, `τ₂` and its target, then `γ`, a row each.
 pub fn show(ui: &mut Ui, section: Rect, h: f32, clip: Rect, panel: &mut Panel<'_>) {
     let view = View::read(&panel.snapshot.sim);
-    header(ui, section, h, SECTION_TITLES[3], "");
+    super::header_with_reset(
+        ui,
+        section,
+        h,
+        clip,
+        (SECTION_TITLES[3], ""),
+        Section::Tilt,
+        panel,
+    );
     let angles = Angles::of(&view);
     panel.scratch.compass.slider = None;
     for (i, (id, label, value, (lo, hi))) in [

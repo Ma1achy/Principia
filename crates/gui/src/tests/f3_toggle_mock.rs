@@ -33,17 +33,9 @@ fn pixel(shot: &Shot, x: usize, y: usize) -> [u8; 4] {
     shot.rgba[i..i + 4].try_into().unwrap()
 }
 
-/// The two captures are identical over `rect`.
+/// The two captures are identical over `rect`, but on the Home button (R-466 K7).
 fn check_same_figure(a: &Shot, b: &Shot, rect: [usize; 4]) {
-    for y in rect[1]..rect[3] {
-        for x in rect[0]..rect[2] {
-            assert_eq!(
-                pixel(a, x, y),
-                pixel(b, x, y),
-                "the figure differs at ({x}, {y})"
-            );
-        }
-    }
+    super::f3_fills_window_mock::check_same_over(&a.rgba, &b.rgba, rect, "the figure");
 }
 
 #[test]

@@ -118,6 +118,7 @@ fn mock_debug_view_entry_after_f3_hide_with_a_check_mark() {
     assert_eq!(
         tree.children(Some("view")),
         [
+            crate::explore::top_bar::HOME.0,
             HIDE.0,
             crate::explore::top_bar::FILL_ROW.0,
             ENTRY.0,
@@ -167,6 +168,7 @@ fn mock_debug_view_keyboard() {
         Key::Enter,
         Key::ArrowRight,
         Key::Enter,
+        Key::ArrowDown,
         Key::ArrowDown,
         Key::ArrowDown,
     ] {

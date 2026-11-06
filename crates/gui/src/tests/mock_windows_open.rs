@@ -79,7 +79,9 @@ fn check_open(app: &mut App<MockSide>, h: &mut Headless, entry: &Entry) {
     let all = names(h, app);
     let f = px(l.figure);
     for n in &all {
-        if let Some(r) = n.rect {
+        // The Home button is the one control over the figure (R-466 K7).
+        let home = n.name == crate::explore::manifold_view::reset::HOME_NAME;
+        if let Some(r) = n.rect.filter(|_| !home) {
             let over = r[0] < f[2] && f[0] < r[2] && r[1] < f[3] && f[1] < r[3];
             assert!(!over, "`{}` at {r:?} over the figure {f:?}", n.name);
         }

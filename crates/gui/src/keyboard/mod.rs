@@ -380,6 +380,8 @@ impl Keyboard {
                         self.open_menu = None;
                     }
                 }
+                // As Enter on View › Home, with the focus left where it is (R-466 K1).
+                Outcome::Home => activated.push(crate::explore::top_bar::HOME.0),
                 Outcome::Adjust(adjust) => self.adjusted.push(adjust),
                 Outcome::Scroll(scroll) => self.scrolled.push(scroll),
                 Outcome::Leave(window) => {

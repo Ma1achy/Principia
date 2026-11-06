@@ -128,6 +128,7 @@ fn mock_layout_remembered_view_reset_layout_restores_the_defaults() {
     assert_eq!(
         tree.children(Some("view")),
         [
+            crate::explore::top_bar::HOME.0,
             crate::explore::top_bar::HIDE.0,
             crate::explore::top_bar::FILL_ROW.0,
             crate::explore::top_bar::DEBUG_VIEW.0,
