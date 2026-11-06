@@ -901,6 +901,11 @@ with no construction there (`K < L_z²/2I`) reads as refused: no system, area we
   tilt is accepted, the practical bound the slider span, RQ-679 (R-720, ruling RQ-699; *was:* "How the held `L_z` itself
   moves is RQ-699."). A slice of a held `K` stays by value in both modes, `K₀ + d`: R-708 amends the tilt only,
   REQ-CHART-060's stop holds the centre at `K₀ ≥ 0`, and `t₀` is recomputed from the new `K₀` (applied per R-369).
+  A second exception of §2.1's kind: a pixel whose `K*` has no finite `2K*` at the decode's own precision, reached only
+  at an extreme `γ_K` or `d`, or on a held `L_z` where the floor plus the line passes it, has no construction. §2.2's
+  construction labels it `INVARIANT_INFEASIBLE`, with `a = 0` and finite momenta, on `K*`'s exponent bits beside the
+  exact test, `validate` refuses it at the chart's own precision, and its area weight is 0. No `K` is saturated into a system and nothing is mirrored (applied per R-369,
+  the physics reviewer's call on #388).
 - **If the implementer confirms it arises (R-709).** A held energy's warp coordinate past `t < 0` clamps at `t = 0`, held
   `K` at its floor, `L_z²/2I` (on `Φ_θ,L_z`, where `L_z` is read off `K`, both are 0: the rest start at the pixel's own
   shape). Each clamped pixel is a real system, flagged "held at floor" in the Inspector and the sidecar, and the test
