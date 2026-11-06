@@ -23,6 +23,7 @@ use crate::explore::manifold_view::{
     self as mv, axis, basis_edit, lock_edit, row, z0_edit, Touch, View, PRESETS, PRESET_HOMES,
     TAU1, TILT_Y_ENTRIES,
 };
+use crate::explore::top_bar::HOME;
 use crate::explore::FIGURE;
 use crate::headless::Headless;
 use crate::side::MockSide;
@@ -358,6 +359,12 @@ fn mock_manifold_resets_read_the_preset_never_literal_zero() {
         PRESET_HOMES[0], PRESET_HOMES[1],
         "a second preset of other home values"
     );
+    // §G7's table: the second preset's values, each sign among them.
+    assert_eq!(
+        PRESET_HOMES[1].base,
+        [0.250, 0.500, 0.125, -0.250, 0.0625, 0.375, 0.250, -0.125]
+    );
+    assert_eq!(PRESET_HOMES[1].window, 0.5);
     assert_eq!(
         PRESET_HOMES[0].base,
         crate::mock::MOCK_Z0,
@@ -675,6 +682,28 @@ fn mock_reset_dimming_at_home_and_after_a_move() {
         let _ = rig.1.frame(&mut rig.0, Vec::new());
         check_dimming(drawn_dimmed(&mut rig), &[]);
     }
+}
+
+/// Whether View › Home, with View open, is drawn disabled.
+fn view_home_dimmed(rig: &mut Rig) -> bool {
+    click_scope(&mut rig.1, &mut rig.0, "view");
+    let output = rig.1.frame(&mut rig.0, Vec::new());
+    let place = rig.0.keyboard.place_of(HOME.0).expect("View is open");
+    let dimmed = disabled(&output, place.rect);
+    press(&mut rig.1, &mut rig.0, Key::Escape, NONE);
+    dimmed
+}
+
+#[test]
+fn mock_reset_dimming_view_menu_follows_home() {
+    assert!(view_home_dimmed(&mut at_preset(0)), "dimmed at home");
+    let mut moved = at_preset(0);
+    move_navigate(&mut moved);
+    assert!(!view_home_dimmed(&mut moved), "live off home");
+    // Control: the check tells the two apart.
+    rejects("View › Home live at home", || {
+        assert!(!view_home_dimmed(&mut at_preset(0)))
+    });
 }
 
 #[test]
