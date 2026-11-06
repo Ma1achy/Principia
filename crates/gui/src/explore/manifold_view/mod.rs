@@ -95,7 +95,8 @@ pub const SLICE_AXIS: usize = engine::contract::sim_config::Z_Q3 as usize;
 pub const Z0_HALF_RANGE: f64 = 1.0;
 /// The span a basis component's field is stepped across by the keyboard's bounded step (a look choice, R-390).
 pub const Q_HALF_RANGE: f64 = 1.0;
-/// The zoom slider's span, in log₂ (a look choice, R-390): four octaves out, forty-eight in.
+/// The zoom's span in `−log₂ σ` (a look choice, R-390): four octaves out, forty-eight in. The slider, on the row, takes
+/// it through [`View::zoom_row_range`], so it bounds the same `σ` under every preset.
 pub const ZOOM_RANGE: (f64, f64) = (-4.0, 48.0);
 
 /// Manifold view's sub-scopes (render_gui_spec §G3), in order, with their ids.
@@ -619,6 +620,13 @@ impl View {
     /// The zoom as its row reads it: `log₂(σ_h / σ)`, 0 at the preset's window (R-466, REQ-GUI-224).
     pub fn zoom_row(&self) -> f64 {
         self.window().log2() + self.zoom()
+    }
+
+    /// [`ZOOM_RANGE`] as the zoom row reads it. A preset's choice keeps `σ` (§G2), so the row may move and the slider,
+    /// which clamps what it is given and calls that a change, must move with it.
+    pub fn zoom_row_range(&self) -> std::ops::RangeInclusive<f64> {
+        let window = self.window().log2();
+        ZOOM_RANGE.0 + window..=ZOOM_RANGE.1 + window
     }
 
     /// This view at the zoom row's reading `row`.

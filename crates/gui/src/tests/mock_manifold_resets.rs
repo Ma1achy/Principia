@@ -372,6 +372,53 @@ fn mock_manifold_resets_read_the_preset_never_literal_zero() {
     );
 }
 
+/// The slider's span is one `σ` span under every preset: its ends are `ZOOM_RANGE`, whatever the window.
+#[test]
+fn mock_manifold_resets_zoom_span_bounds_one_sigma_span() {
+    for p in 0..PRESETS.len() {
+        let view = View::read(&at_preset(p).0.snapshot().sim);
+        let span = view.zoom_row_range();
+        assert_eq!(view.with_zoom_row(*span.start()).zoom(), mv::ZOOM_RANGE.0);
+        assert_eq!(view.with_zoom_row(*span.end()).zoom(), mv::ZOOM_RANGE.1);
+    }
+    let shifted = View::read(&at_preset(1).0.snapshot().sim);
+    rejects("a span left in row units", || {
+        assert_eq!(shifted.with_zoom_row(mv::ZOOM_RANGE.1).zoom(), mv::ZOOM_RANGE.1)
+    });
+}
+
+/// Choosing a preset is one edit and keeps `σ`, from either end of the slider, where the row moving off a span left in
+/// row units would clamp and send an edit of its own.
+#[test]
+fn mock_manifold_resets_preset_choice_keeps_sigma_at_the_slider_ends() {
+    for (from, zoom) in [
+        (0, mv::ZOOM_RANGE.0),
+        (0, mv::ZOOM_RANGE.1),
+        (1, mv::ZOOM_RANGE.0),
+        (1, mv::ZOOM_RANGE.1),
+    ] {
+        let mut rig = at_preset(from);
+        let view = View::read(&rig.0.snapshot().sim).with_zoom(zoom);
+        rig.0.set_field(basis_edit(view.basis()));
+        settle(&mut rig.1, &mut rig.0);
+        let before = rig.0.snapshot();
+        let (app, h) = (&mut rig.0, &mut rig.1);
+        app.view.focus.path = app.keyboard.tree(app.view.mode).path_to(mv::PRESET);
+        keys_on(h, app);
+        press(h, app, Key::Enter, NONE);
+        settle(h, app);
+        let after = rig.0.snapshot();
+        let read = View::read(&after.sim);
+        assert_eq!(read.preset, Some(from + 1), "the next preset");
+        assert_eq!(read.scale, view.scale, "σ kept from zoom {zoom}");
+        assert_eq!(
+            after.history.undo_depth,
+            before.history.undo_depth + 1,
+            "one edit from zoom {zoom}"
+        );
+    }
+}
+
 /// The zoom row reads against the window, the depth stays absolute, and a drag or a typed zoom lands against it.
 #[test]
 fn mock_manifold_resets_zoom_row_reads_the_window() {

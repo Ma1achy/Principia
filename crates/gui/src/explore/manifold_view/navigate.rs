@@ -12,7 +12,7 @@ use engine::contract::sim_config::Plane;
 
 use super::{
     add, basis_edit, in_plane, reset::Section, row, row_ui, z0_edit, Out, Panel, Scratch, View,
-    CENTRE_U, CENTRE_V, ZOOM, ZOOM_RANGE,
+    CENTRE_U, CENTRE_V, ZOOM,
 };
 use crate::keyboard::keymap::{multiplier, Direction};
 use crate::keyboard::scopes::{Adjust, Base, StepKind};
@@ -81,8 +81,7 @@ pub fn show(ui: &mut Ui, section: Rect, h: f32, clip: Rect, panel: &mut Panel<'_
     zoom_row.add_sized([label_w, h], egui::Label::new("zoom (log₂)"));
     let mut zoom = view.zoom_row();
     zoom_row.spacing_mut().slider_width = (zoom_row.available_width() - 70.0).max(40.0);
-    let slider =
-        zoom_row.add(Slider::new(&mut zoom, ZOOM_RANGE.0..=ZOOM_RANGE.1).show_value(false));
+    let slider = zoom_row.add(Slider::new(&mut zoom, view.zoom_row_range()).show_value(false));
     panel.place(ZOOM, &slider, clip);
     zoom_row.label(RichText::new(magnification(view.zoom_row())).monospace());
     if slider.changed() {
