@@ -2295,10 +2295,14 @@ struct Tally {
 
 impl Tally {
     fn add(&mut self, kind: Kind, input: u32, a: Option<&Row>, b: Option<&Row>) {
-        let (Some(a), Some(b)) = (a, b) else {
-            self.disagreed.insert(input);
-            self.one_side += 1;
-            return;
+        let (a, b) = match (a, b) {
+            (Some(a), Some(b)) => (a, b),
+            (None, None) => return,
+            _ => {
+                self.disagreed.insert(input);
+                self.one_side += 1;
+                return;
+            }
         };
         let differs = a.outcome() != b.outcome();
         if differs {
