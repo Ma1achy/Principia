@@ -92,9 +92,10 @@ priority = 100
 # fails, and `--max-fail=1:immediate` (`.cargo/mutants.toml`) stops the run there at once. On PR #360 (run 42131013368,
 # 661 of its 676 mutants reported) the catching test took about 0.01 s and started some 350 s in, behind
 # `agreement_preset_gpu` and `codegen_selftest`, 63% of the test time spent before a catch in validation, and two
-# mutants caught by `qa_look_*` waited 2750 s; four of the eight shards were cut at 300 min. The tests named here take
-# 163 s of test time in all. On the same tree and shards, run 42268889165: the 323 mutants with a reference came out
-# the same, mutant for mutant, and the caught ones' test time fell from 1067 min to 34.
+# mutants caught by `qa_look_*` waited 2750 s; three of the eight shards stood cut at 300 min in its last attempt, and
+# six were cut in one attempt or another. The tests named here take 163 s of test time in all. On the same tree and
+# shards, run 42268889165: the 323 mutants with a reference came out the same, mutant for mutant, and the caught ones'
+# test time fell from 1067 min to 34.
 # It is `test()`, not `binary_id()`: nextest refuses a config whose `binary_id()` matches no binary, on every run, and
 # most of these binaries came with that PR.
 # Only the schedule changes: the same tests, under the same limits, and a survivor still runs every one. Owner-approved
