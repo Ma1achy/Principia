@@ -29,11 +29,13 @@ const OCTAVES: u32 = 5;
 const OFFSETS: [[i32; 2]; 4] = [[0, 0], [1, 0], [0, 1], [1, 1]];
 /// A pixel's neighbours: every pair of adjacent pixels once.
 const NEIGHBOURS: [[isize; 2]; 4] = [[1, 0], [0, 1], [1, 1], [1, -1]];
-/// The smallest step away from the neighbouring slopes that counts toward a jump line ([`jump_lines`]). `warp.x` and
-/// `warp.y` peak at 0.0009 when shipped, and `n`, steep where the warp folds it, at 0.025 on short curved ridges.
+/// The smallest step away from the neighbouring slopes that counts toward a jump line ([`jump_lines`]). Tolerance:
+/// REQ-GUI-418 (calibrated), proposed, pending the M6 gate (R-71). `warp.x` and `warp.y` peak at 0.0009 when shipped, and
+/// `n`, steep where the warp folds it, at 0.025 on short curved ridges.
 const JUMP_STEP: f32 = 0.01;
-/// How many adjacent pixels along a line must all hold such a step: a cell's edge at octave 3, the shortest whose jump
-/// stands above [`JUMP_STEP`]. `n`'s ridges bend off a column sooner: at half this run the shipped field has 6 lines.
+/// How many adjacent pixels along a line must all hold such a step. Tolerance: REQ-GUI-418 (calibrated), proposed, pending
+/// the M6 gate (R-71). A cell's edge at octave 3, the shortest whose jump stands above [`JUMP_STEP`]. `n`'s ridges bend
+/// off a column sooner: at half this run the shipped field has 6 lines, so the shipped `n` set this value.
 const JUMP_RUN: usize = 16;
 /// The raw pre-colour threshold, fixed before the first compare run and not moved after it
 /// (`docs/contracts/principia_parity_contract.md` § 4): one 8-bit level, in the field's raw units.
@@ -835,18 +837,25 @@ fn lattice_raw_precolour_dump() {
 struct RawDifference {
     /// Pixels not bit-equal.
     differing: usize,
-    /// Pixels further apart than [`RAW_THRESHOLD`].
+    /// Pixels further apart than [`RAW_THRESHOLD`], of those both finite.
     beyond: usize,
-    /// The largest difference.
+    /// The largest difference, of those both finite.
     largest: f32,
+    /// Pixels with a NaN or an infinity on either side, which no difference can say anything of.
+    non_finite: usize,
 }
 
 /// Field `i` of the pixels `a` and `b`, compared.
 fn raw_difference(a: &[[u32; 3]], b: &[[u32; 3]], i: usize) -> RawDifference {
     let mut seen = RawDifference::default();
     for (a, b) in a.iter().zip(b) {
-        let difference = (f32::from_bits(a[i]) - f32::from_bits(b[i])).abs();
+        let (x, y) = (f32::from_bits(a[i]), f32::from_bits(b[i]));
         seen.differing += usize::from(a[i] != b[i]);
+        if !(x.is_finite() && y.is_finite()) {
+            seen.non_finite += 1;
+            continue;
+        }
+        let difference = (x - y).abs();
         seen.beyond += usize::from(difference > RAW_THRESHOLD);
         seen.largest = seen.largest.max(difference);
     }
@@ -898,4 +907,24 @@ fn lattice_raw_difference_boundaries() {
     assert_eq!((on.differing, on.beyond), (1, 0));
     let past = raw_difference(&zero, &at(RAW_THRESHOLD * 1.5), 2);
     assert_eq!((past.differing, past.beyond), (1, 1));
+
+    // A NaN compares false and `f32::max` drops it, so only its own count shows it, on either side.
+    let nan = at(f32::NAN);
+    let one = RawDifference {
+        differing: 1,
+        non_finite: 1,
+        ..RawDifference::default()
+    };
+    assert_eq!(raw_difference(&zero, &nan, 0), one);
+    assert_eq!(raw_difference(&nan, &zero, 0), one);
+    assert_eq!(raw_difference(&zero, &at(f32::INFINITY), 0), one);
+    assert_eq!(raw_difference(&zero, &at(f32::NEG_INFINITY), 0), one);
+    // The same NaN on both sides is bit-equal, and still counted.
+    let same = raw_difference(&nan, &nan, 0);
+    assert_eq!((same.differing, same.non_finite), (0, 1));
+    // A non-finite pixel leaves its neighbours' figures alone.
+    let far = RAW_THRESHOLD * 1.5;
+    let mixed = raw_difference(&[zero[0], zero[0]], &[nan[0], at(far)[0]], 0);
+    assert_eq!((mixed.differing, mixed.beyond, mixed.non_finite), (2, 1, 1));
+    assert_eq!(mixed.largest, far);
 }

@@ -2020,7 +2020,7 @@
   title: "The GUI track (R-390): the mock's value noise hashes its lattice in integers, so shared corners agree bitwise"
   depends_on: [TASK-M6-24]  # R-685; the pattern is option A (R-689)
   needs: []
-  requirements: [REQ-GUI-412]
+  requirements: [REQ-GUI-412, REQ-GUI-418]
   reviewers: [code, qa, gui]
   pitfalls: []
 - id: TASK-M7-01

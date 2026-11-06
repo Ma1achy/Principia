@@ -1,7 +1,7 @@
 # TASK-M6-53 — The GUI track (R-390): the mock's value noise hashes its lattice in integers, so shared corners agree bitwise
 
 - **Milestone:** M6
-- **Closes:** REQ-GUI-412
+- **Closes:** REQ-GUI-412, REQ-GUI-418
 - **Depends on:** TASK-M6-24
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, gui
@@ -53,7 +53,8 @@ Also read `plan/adr/ADR-0001-mock-noise-integer-lattice.md` § "Decision" and §
 - `lattice_corners_match_cpu_twin`: every corner equals the Rust twin's bits at its integer coordinates. Control, through
   `rejects`: a twin with one multiplier changed (REQ-GUI-412).
 - `lattice_field_has_no_jump_lines`: 0 jump lines in `warp.x`, `warp.y`, `n` at the two views, through the shipped
-  `stand_in_at`. Control, through `rejects`: the same field on the distributed-offset noise (REQ-GUI-412).
+  `stand_in_at`; tolerance: REQ-GUI-418 (calibrated), the detector's `JUMP_STEP` and `JUMP_RUN`. Control, through `rejects`: the
+  same field on the distributed-offset noise (REQ-GUI-412).
 - `lattice_source_is_integer` (no GPU): naga's IR of `noise_source()` holds no float binary operation in `lattice_hash`, and
   in `corner` only the one multiply by a power of two. Control, through `rejects`: the old `hash` (REQ-GUI-412).
 - `lattice_raw_precolour_dump` on Metal and on lavapipe, and `lattice_raw_precolour_compare` on the two dumps, both `#[ignore]`
