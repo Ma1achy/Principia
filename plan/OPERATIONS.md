@@ -506,7 +506,7 @@ Approvals are of a head, so the reviewers approve the merged head again before t
 
 **CI candidates (R-716).** The ten candidates are worked one pull request each, measured before and after, negative results reported. Items 3 and 4 and the order against R-683 are held in RQ-703, RQ-705 and RQ-706.
 
-**No refresh merges (R-717).** `main` is not merged into a pull request, and CI is not re-run, just to refresh a branch with no conflict. RQ-704 holds this against the paragraph above and R-388.
+**No refresh merges (R-717).** `main` is not merged into a pull request, and CI is not re-run, just to refresh a branch with no conflict. RQ-704 holds this against R-676's paragraph in this section and R-388.
 
 **Generated files (R-718).** A generated plan file is not committed if nothing needs it in git. Otherwise it is marked in `.gitattributes`, a conflict in it is resolved by regenerating, never by hand, and a check shows the committed copy matches a fresh regeneration.
 

@@ -876,8 +876,8 @@ the twins side decides it.
 **Hidden coordinates under tilt and slice (R-633, ruling RQ-603).** These charts hold their blocks by a construction,
 not by latent controls, so their hidden coordinates are the construction's physical parameters, tilted and sliced by
 value as R-554 L5's `p_λ` (`principia_chart_decoder_contract.md` § "Tilt (basis edit)", "Tilt on every chart"), but a
-held `K` in warped mode, which R-708 tilts in its warp coordinate, below the table (R-720; *was:* "a held energy-type
-coordinate in warped mode"):
+held `K` in warped mode, which R-708 tilts in its warp coordinate and which still slices by value, below the table (R-720;
+*was:* "a held energy-type coordinate in warped mode"):
 
 | Chart | Hidden coordinates | At `d = 0` |
 |---|---|---|
@@ -897,8 +897,10 @@ with no construction there (`K < L_z²/2I`) reads as refused: no system, area we
   coordinate, `K = K_max·t^γ_K`, `t = t₀ + d`, `t₀ = (K₀/K_max)^(1/γ_K)`, `d` in units of `t`, so it stays ≥ 0; it takes
   no floor, the band above giving `L_z²/2I ≤ K` at every `K ≥ 0`. Rounding at the floor must not blank the bottom row,
   as §2.1 holds `L_max² ≤ 2K`. The held `L_z` moves by value, tilted and sliced alike, `L_z = L_z₀ + d`, with no sign
-  constraint: the floor keeps every pixel a system at any `L_z`, and a column above `K_max` at large tilt is accepted, the
-  practical bound the slider span, RQ-679 (R-720, ruling RQ-699; *was:* "How the held `L_z` itself moves is RQ-699.").
+  constraint: the floor keeps every pixel a system at any `L_z` (§2.1's one exception), and a column above `K_max` at large
+  tilt is accepted, the practical bound the slider span, RQ-679 (R-720, ruling RQ-699; *was:* "How the held `L_z` itself
+  moves is RQ-699."). A slice of a held `K` stays by value in both modes, `K₀ + d`: R-708 amends the tilt only,
+  REQ-CHART-060's stop holds the centre at `K₀ ≥ 0`, and `t₀` is recomputed from the new `K₀` (applied per R-369).
 - **If the implementer confirms it arises (R-709).** A held energy's warp coordinate past `t < 0` clamps at `t = 0`, held
   `K` at its floor, `L_z²/2I` (on `Φ_θ,L_z`, where `L_z` is read off `K`, both are 0: the rest start at the pixel's own
   shape). Each clamped pixel is a real system, flagged "held at floor" in the Inspector and the sidecar, and the test
@@ -1087,7 +1089,8 @@ type per axis of every Burrau-family chart (§4.5), with the reasoning:
   `Φ_θ,K`'s vertical axis). It is §2.1's `K(t) = K_max·t^γ_K`, bounded for
   §2.1's reasons: `t < 0` has no real value for a non-integer `γ_K` (an odd integer gives `K < 0`, an even one folds back
   onto `t > 0`). Its `t > 1` side (`K > K_max`, feasible at `L_z = 0`) continues, affine, as on the warp (R-508, ruling
-  RQ-376), and is counted. *Was:* "is left undeclared, as on the warp (R-407, A5)". The table's rows for the warp, the
+  RQ-376), and is counted. *5 Nov 2026 (R-720):* on a floored axis it is `L_z²/2I + K(t)`, and a `K` above `K_max` inside
+  the square is counted, as that side is (REQ-CHART-056). *Was:* "is left undeclared, as on the warp (R-407, A5)". The table's rows for the warp, the
   `(ν, K)` chart and `Φ_θ,K` follow; *was:* "bounded" (the warp's vertical axis), "`K` bounded (declares nothing; the
   warp's `K(t)`, §2.1)", "`K` bounded (declares nothing; as on `(ν, K)`)", "hatched on every side; the `t > 1` side is
   not declared (§2.1)", "hatched on every side" and "out of the count and the total (the domain's end)".

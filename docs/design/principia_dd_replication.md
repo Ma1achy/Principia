@@ -949,7 +949,7 @@ first, and (a) is expected to agree with the second statistically"; every (a) an
 | LL-3 | REQ-VAL-223 | exact | (b) |
 | LL-4 | REQ-VAL-225 | exact per orbit; the fit statistical | (b) per orbit; (a) for the fit |
 | LL-5 | REQ-VAL-227 | exact (closure only) | (b) |
-| LL-6 | REQ-VAL-352 | exact (closure, to the table's 10 decimals) | (b) |
+| LL-6 | REQ-VAL-352 | exact (closure, at REQ-VAL-353's tolerance) | (b) |
 | BG-4 | REQ-VAL-213 | exact | (b) |
 | SD-1 | REQ-VAL-228 | exact | (b) |
 | BG-1 | REQ-VAL-230 | exact | (b) |
