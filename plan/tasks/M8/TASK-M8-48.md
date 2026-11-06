@@ -26,6 +26,7 @@ The real engine's Manifold view tilts and slices every chart (targets the chart'
 ## Deliverables
 - The edit path's stop in the real engine's contract (`crates/engine/src/contract/`), the Manifold view's sections on every chart, the mapping control, the readout line, Save view as chart for curved views.
 - Tests `real_tilt_every_chart`, `energy_axis_mapping_control`, `nav_stop_edit_path`, `saved_curved_chart`.
+- If TASK-M2-52 confirms that R-709's clamp arises: the Inspector's "held at floor" label (REQ-GUI-241).
 
 ## Acceptance tests
 - `cargo test -p gui real_tilt_every_chart` and `cargo xtask screenshot 01_main` — REQ-GUI-241's verify.
@@ -44,3 +45,4 @@ The real engine's Manifold view tilts and slices every chart (targets the chart'
 - R-484 J9 (20 Oct 2026): filling the chart params clears T2's `Chart {}`; T2 is TASK-M8-53's.
 - R-627 (27 Oct 2026): this task runs on the real engine, so where it depended on a task R-627 moves to the mock it depends on that task's real-engine side, which depends on it: TASK-M8-06 by TASK-M8-89 (applied per R-369). *Was:* "- **Depends on:** TASK-M8-06, TASK-M8-03, TASK-M6-48, TASK-M6-49, TASK-M2-36, TASK-M2-37, TASK-M2-38, TASK-M2-40, TASK-M8-18".
 - **R-633 (28 Oct 2026, RQ-603):** TASK-M2-36 is split, and TASK-M2-52 builds tilt and slice on the six construction charts and closes REQ-CHART-062, which this task needs; so this task, which tilts and slices every chart on the real engine, depends on it (applied per R-369). *Was:* "- **Depends on:** TASK-M8-89, TASK-M8-03, TASK-M6-48, TASK-M6-49, TASK-M2-36, TASK-M2-37, TASK-M2-38, TASK-M2-40, TASK-M8-18".
+- *4 Nov 2026 (R-708, R-709):* the Burrau charts' tilt targets follow R-471's two modes. The Inspector's label is conditional, as ruled.

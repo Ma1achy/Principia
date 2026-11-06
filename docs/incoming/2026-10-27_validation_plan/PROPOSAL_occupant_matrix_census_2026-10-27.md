@@ -118,12 +118,10 @@ steppers join as a stepper value with a **tolerance ladder** as their axis:
 
 - an embedded Runge–Kutta pair (RKF4(5) or Dormand–Prince 8(5,3); Heggie 1974 used RKF7(8), so H-1/H-2 can then
   compare like for like rather than as a ratio under one stepper);
-- IAS15 (adaptive, tolerance-free in practice), already the drift reference in the logH comparison, promoted to a
-  census column.
-
-*5 Nov 2026 (R-799, on RQ-619 (b) for both):* that clause is corrected: IAS15 is not built, in this repo or for the census,
-and the drift reference comes from what the corpus already has. Which of its two, R-33's convergence reference or the
-inspector's RK45 (integrator contract Part 2), stays open in RQ-619.
+- IAS15 is not built, in this repo or for the census. The census's drift reference is R-33's convergence reference,
+  not the inspector's RK45, which is unregularised and weakest at close encounters, the thing the census measures
+  (R-799; R-811, closing RQ-619). *Was:* "IAS15 (adaptive, tolerance-free in practice), already the drift reference in
+  the logH comparison, promoted to a census column."
 
 For these, `eta` is replaced by the tolerance, and the reading is error against tolerance (an adaptive stepper whose
 error does not track its tolerance is the finding). Cost comparisons stay at matched force evaluations.

@@ -141,9 +141,9 @@ negative_control!(
 /// given what it needs, runs on any ref and through no environment, whatever the deploy job says.
 fn deploy_in_the_build_job() -> String {
     edited(
-        "    runs-on: ubuntu-24.04\n    steps:\n      - uses: actions/checkout@v4\n",
+        "    runs-on: ubuntu-24.04\n    steps:\n      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0\n",
         &format!(
-            "    runs-on: ubuntu-24.04\n    permissions:\n      pages: write\n      id-token: write\n    steps:\n      - uses: {DEPLOY_STEP}\n      - uses: actions/checkout@v4\n"
+            "    runs-on: ubuntu-24.04\n    permissions:\n      pages: write\n      id-token: write\n    steps:\n      - uses: {DEPLOY_STEP}\n      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0\n"
         ),
     )
 }

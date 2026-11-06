@@ -897,6 +897,8 @@ citing its calibration requirement, and read from the register like any other; n
 | `literature_import_tol` | 256, `k` in `k·ε` relative at f64, the literature import's tolerance on each start's `E`, `L_z`, `R` and `L_z²·|E|/(G²·M⁵)` after multiplying back by the recorded rescale (inverse-encode contract Part 7; dd_validation_orbits §1.6 and §2; TASK-M2-20) | canonical-units | M2 | REQ-VAL-120 |
 | `arctan_sum_bits` | 100, the fraction bits of the arctangent generator's integer sum, a working precision: 72 to 121 bits write the same `generated/arctan.rs`, measured (RQ-628's option (a); RQ-635; TASK-M2-26) | canonical-units | M2 | REQ-GEN-044 |
 
+*4 Nov 2026 (R-699, closing RQ-635):* `arctan_sum_bits` above is confirmed at 100, its class `canonical-units` standing; its mark comes off in TASK-M2-54 (REQ-GEN-045).
+
 The register's entries confirmed at the M1 gate (R-428): each was provisional until M1 (R-427), is confirmed as
 proposed, and cites R-428 in place of its calibration requirement (REQ-TOOL-160 for the floors, REQ-COL-055 for the
 hatch); none is hashed. `d_min`'s floor at binary16's smallest normal is intended: a floor at 2⁻²⁰ would compress
@@ -1124,7 +1126,14 @@ constant terms, rounds to `−MAX` (as for `stick_breaking` with `z₁ > 0`, who
 number). The other entries are finite for every finite control. The
 forms: each `log sech² x` as `2·(log 2 − abs(x) − softplus(−2·abs(x)))`, each `log σ(x)` as `−softplus(−x)`, and
 stick-breaking's `s` and `1 − s` as `σ(2z₁) − ½ε_μ·tanh z₁` and `σ(−2z₁) + ½ε_μ·tanh z₁` (and `u`, `1 − u` likewise
-in `z₂`).
+in `z₂`). Its inverse is written likewise, since `2v − 1` at a small `v` cancels against 1 the digits an `f32` mass
+rests on: with `c = 1 − ε_μ`, `z = ½ log(clamp(N(v)/N(w), ε_μ/(1 + c), (1 + c)/ε_μ))`,
+`N(a) = clamp(2a − ε_μ·t, c·ε_μ·t, c·(1 + c)·t)`, `t = v + w`, for `z₁` with `(v, w) = (m₁ + m₂, m₀)` and for `z₂` with
+`(v, w) = (m₂, m₁)`. That is the table's inverse with `artanh(x) = ½ log((1 + x)/(1 − x))` cancelled by hand, the limits
+of `N`'s clamp the table's `±(1−ε_μ)²`. The outer clamp's limits are the quotient those give, so it moves nothing
+but rounding on the open simplex, and at an exact corner it is the clamp the paragraph above speaks of, with the
+table's value. The form reads `m₀`, which the table's does not, and it is homogeneous in `t`, so a simplex within
+rounding is enough.
 
 - **The edge-reaching simplex link** *(definition, R-72; REQ-GEN-026)* is the stick-breaking map above. Where
   `softmax_tanh` stops at mass ratios `e^(±2μ_max)`, it reaches within `ε_μ/2` of each edge and of the corner

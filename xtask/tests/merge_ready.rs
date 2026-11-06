@@ -1122,7 +1122,7 @@ mod stall_shards_not_awaited {
 negative_control!(
     merge_ready_mutants_check_reports_a_stalled_step,
     "mutants-check's checkout with no limit of its own, so a stall runs to the job's 355 minutes",
-    expected = "mutants-check's step `actions/checkout@v4` has no limit of its own",
+    expected = "mutants-check's step `actions/checkout@11d5960a326750d5838078e36cf38b85af677262` has no limit of its own",
     check_step_limits(&edited(
         "mutants.yml",
         "        id: checkout\n        timeout-minutes: 10\n",
@@ -1149,7 +1149,7 @@ mod stall_fixture_cache {
     negative_control!(
         merge_ready_mutants_check_reports_a_stalled_step,
         "mutants-fixture's cargo registry restore with no limit of its own",
-        expected = "mutants-fixture's step `Swatinem/rust-cache@v2` has no limit of its own",
+        expected = "mutants-fixture's step `Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0` has no limit of its own",
         check_step_limits(&edited(
             "mutants.yml",
             "        if: steps.changes.outputs.tier != 'docs'\n        timeout-minutes: 5\n",
@@ -1163,11 +1163,11 @@ mod stall_verdict_checkout {
     negative_control!(
         merge_ready_mutants_check_reports_a_stalled_step,
         "mutants-verdict's checkout with no limit of its own",
-        expected = "mutants-verdict's step `actions/checkout@v4` has no limit of its own",
+        expected = "mutants-verdict's step `actions/checkout@11d5960a326750d5838078e36cf38b85af677262` has no limit of its own",
         check_step_limits(&edited(
             "mutants.yml",
-            "      contents: read\n    steps:\n      - uses: actions/checkout@v4\n        timeout-minutes: 10\n",
-            "      contents: read\n    steps:\n      - uses: actions/checkout@v4\n"
+            "      contents: read\n    steps:\n      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0\n        timeout-minutes: 10\n",
+            "      contents: read\n    steps:\n      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0\n"
         ))
     );
 }
@@ -1177,11 +1177,11 @@ mod stall_shard_checkout {
     negative_control!(
         merge_ready_mutants_check_reports_a_stalled_step,
         "a shard's checkout with no limit of its own, so a stall holds the verdict, and mutants-check, for hours",
-        expected = "mutants's step `actions/checkout@v4` has no limit of its own",
+        expected = "mutants's step `actions/checkout@11d5960a326750d5838078e36cf38b85af677262` has no limit of its own",
         check_step_limits(&edited(
             "mutants.yml",
-            "      - uses: actions/checkout@v4\n        timeout-minutes: 10\n        with:\n          fetch-depth: 0\n",
-            "      - uses: actions/checkout@v4\n        with:\n          fetch-depth: 0\n"
+            "      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0\n        timeout-minutes: 10\n        with:\n          fetch-depth: 0\n",
+            "      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0\n        with:\n          fetch-depth: 0\n"
         ))
     );
 }
@@ -1191,7 +1191,7 @@ mod stall_shard_rust_gpu {
     negative_control!(
         merge_ready_mutants_check_reports_a_stalled_step,
         "a shard's rust-gpu restore with no limit of its own",
-        expected = "mutants's step `actions/cache/restore@v4` has no limit of its own",
+        expected = "mutants's step `actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830` has no limit of its own",
         check_step_limits(&edited(
             "mutants.yml",
             "steps.toolchain.outputs.channel }}\n        timeout-minutes: 5\n",

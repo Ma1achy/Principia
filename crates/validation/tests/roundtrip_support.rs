@@ -314,7 +314,7 @@ negative_control!(
 
 // ── The registry ─────────────────────────────────────────────────────────────────────────────────────────────────
 
-/// The registry: its fourteen keys in chart_reference §5.1's order, each a chart of its type that decodes, the key
+/// The registry: its seventeen keys in chart_reference §5.1's order, each a chart of its type that decodes, the key
 /// its own; no chart for an unknown key.
 fn check_registry(listed: Vec<&'static str>) {
     let want = [
@@ -332,6 +332,9 @@ fn check_registry(listed: Vec<&'static str>) {
         ("mass_simplex", "MassSimplex"),
         ("mixed", "Mixed"),
         ("mixed_latent", "Mixed"),
+        ("mixed_energy", "MixedEnergy"),
+        ("mixed_mass_ratio", "MixedMassRatio"),
+        ("mapped_invariant_lk", "Mapped"),
     ];
     assert_eq!(
         listed,
@@ -386,7 +389,7 @@ type Pin = (&'static str, [f64; 3], [[f64; 2]; 3], [[f64; 2]; 3]);
 
 /// Each representative's decoded state at `(0.3, 0.6)`, at f64, recorded when `eps_phys` was measured (REQ-ENC-024):
 /// the gate's evidence holds for these parameters, so a change to one shows here and the measurement is redone.
-const PINS: [Pin; 14] = [
+const PINS: [Pin; 17] = [
     (
         "latent",
         [0.6272664253929692, 0.21246580628066192, 0.16026776832636883],
@@ -569,6 +572,44 @@ const PINS: [Pin; 14] = [
             [-0.17339492997249284, -0.0],
             [-0.02594105927741852, 0.0],
             [0.19933598924991136, 0.0],
+        ],
+    ),
+    (
+        "mixed_energy",
+        [0.4652013584873277, 0.0695972830253446, 0.4652013584873277],
+        [
+            [-0.3739947537957338, -0.6594932299063834],
+            [2.4998514305443686, -0.6594932299063834],
+            [4.6423782065253136e-17, 0.7581578965882274],
+        ],
+        [
+            [-0.20877944103949078, -2.897396781380163e-18],
+            [0.2087794410394908, 2.8973967813801628e-18],
+            [-5.873569687965345e-18, 3.5965241589678392e-34],
+        ],
+    ),
+    (
+        "mixed_mass_ratio",
+        [0.23635933050253716, 0.4303073361641295, 0.33333333333333326],
+        [
+            [-1.4580790904338172, -0.33278275692776765],
+            [0.8008940788851321, -0.33278275692776765],
+            [4.075413380830224e-17, 0.6655655138555354],
+        ],
+        [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0]],
+    ),
+    (
+        "mapped_invariant_lk",
+        [0.18765851021265834, 0.5034580929408304, 0.3088833968465113],
+        [
+            [-1.4180240220439386, -0.48629691452012197],
+            [0.2582631139542424, -0.48629691452012197],
+            [0.44055336733357675, 1.0880736067991903],
+        ],
+        [
+            [-0.08725821250507158, -0.000148484989349524],
+            [-0.23409997879363825, -0.3701944841601251],
+            [0.3213581912987098, 0.37034296914947473],
         ],
     ),
 ];

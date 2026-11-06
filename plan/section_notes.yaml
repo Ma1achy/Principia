@@ -1489,9 +1489,49 @@
   reason: informative only
   note: "the owner's message of 3 Nov 2026, part (A): full CI on the merge-candidate head and main, a quick tier elsewhere, full-only checks pending; part (B) recorded under R-683; ci; changes no requirement here, built with R-683's steps (2) and (4)"
 - file: decisions.md
+  section: "R-700 — RQ-631's option (a) is confirmed: it is R-655's ruling, already built in the kernel, and the follow-up the owner names is TASK-M8-56's quadtree *(closes RQ-631)*"
+  reason: informative only
+  note: "the owner's confirmation of R-655; a contradiction recorded; changes no requirement"
+- file: decisions.md
+  section: "R-706 — The owner's deferrals of 4 Nov: each entry stays open with its target, and RQ-654's place on the list changes nothing, R-669 having closed it, with BZ-1C's work in M9; RQ-647 is moot under R-669"
+  reason: informative only
+  note: "the owner's deferrals; each entry stays open with its target; records RQ-654's and RQ-647's state; changes no requirement"
+- file: decisions.md
   section: "R-790 — `.claude/`, its commands, agents and settings, is docs tier: a change only to it runs only the cheap checks *(amends R-677 and R-662)*"
   reason: informative only
   note: "the owner's word of 4 Nov 2026: `.claude/` is on the classifier's allowlist; process; changes no requirement"
+- file: decisions.md
+  section: "The owner's saved orders of 3 and 4 Nov 2026 — the batch R-713 to R-719"
+  reason: informative only
+  note: "the batch's introduction: what the rulings already carried and what is held; changes no requirement"
+- file: decisions.md
+  section: "R-713 — CI demand is reduced rather than waited out: a head not ready for review is not pushed, and pushes go in order of what is closest to merging; lands in `plan/OPERATIONS.md` § \"Merging\""
+  reason: informative only
+  note: "the owner's order of 4 Nov 2026 on CI demand; ci; changes no requirement"
+- file: decisions.md
+  section: "R-714 — A failed CI job is retried automatically only on a runner-level fault, in at most two retries, never on a real test failure or a flake, the classifier a script tested on saved logs; every CI speed-up step reports disk use and must reduce or hold it; lands in `plan/OPERATIONS.md` § \"Merging\""
+  reason: informative only
+  note: "the owner's messages of 4 Nov 2026 on retries and disk; ci; changes no requirement"
+- file: decisions.md
+  section: "R-715 — A CI speed-up is claimed or rejected only on medians over at least 5 runs per arm, with per-step durations and `cargo build --timings` totals; `ci-workspace` red on a test timer is diagnosed first, never retried and never given a longer timeout; lands in `plan/OPERATIONS.md` § \"Merging\""
+  reason: informative only
+  note: "the owner's order of 4 Nov 2026 on measuring CI; ci; changes no requirement"
+- file: decisions.md
+  section: "R-716 — The ten CI optimisation candidates: each measured before and after, negative results reported, one pull request per item, items 1 and 4 first, then 2 and 3, then the rest; lands in `plan/OPERATIONS.md` § \"Merging\""
+  reason: informative only
+  note: "the owner's list of 4 Nov 2026 of CI candidates; ci; changes no requirement"
+- file: decisions.md
+  section: "R-717 — `main` is not merged into a pull request, and CI is not re-run, just to refresh a branch that has no conflict; lands in `plan/OPERATIONS.md` § \"Merging\""
+  reason: informative only
+  note: "the owner's order of 4 Nov 2026 on refresh merges; process; changes no requirement"
+- file: decisions.md
+  section: "R-718 — Generated plan files are not committed if nothing needs them in git; otherwise they are marked in `.gitattributes` and conflicts are resolved by regenerating, never by hand, with a check that the committed copy matches a fresh regeneration; lands in `plan/OPERATIONS.md` § \"Merging\""
+  reason: informative only
+  note: "the owner's order of 4 Nov 2026 on generated files; process; changes no requirement"
+- file: decisions.md
+  section: "R-719 — A Windows-only, non-reproducing GPU result is hardware-suspect: recorded, not filed as a code bug; one that reproduces is checked against Metal and lavapipe, failing everywhere our bug, passing elsewhere an NVIDIA Vulkan platform finding with no re-baselining; lands in `plan/OPERATIONS.md` § \"Windows GPU results\""
+  reason: informative only
+  note: "the owner's messages of 4 Nov 2026 on the Windows GPU results; process; changes no requirement"
 - file: decisions.md
   section: "R-795 — The precision-ladder proposal's seven questions are deferred to M3 *(defers RQ-577)*"
   reason: informative only
@@ -1503,11 +1543,11 @@
 - file: decisions.md
   section: "R-797 — The kernel's `sin` and `cos`: option (b) now, the sinc site fixed and gated to f32; option (a) deferred to M4's cross-backend measurement *(on RQ-687, which stays open)*"
   reason: informative only
-  note: "records the owner's answer; the requirement and the task that build the fix come with the 4 Nov rulings port"
+  note: "restates R-696; REQ-DEC-053 and TASK-M2-53 build the fix"
 - file: decisions.md
   section: "R-799 — The census takes a drift reference the corpus already has, not IAS15, and a harness-only step-limit axis of the contract's limit and `None`, with `Reject` a control *(on RQ-619, which stays open)*"
   reason: informative only
-  note: "the census has no requirement yet; the proposal carries it, and RQ-619 stays open"
+  note: "the census has no requirement yet; the proposal carries it"
 - file: decisions.md
   section: "R-800 — The collinear statistical targets compare only what the horizon cap reaches and the source states; raising the cap is revisited at M9 if the cost measurement allows *(on RQ-643, which stays open)*"
   reason: informative only
@@ -1540,3 +1580,11 @@
   section: "R-808 — `.claude/commands/*.md` joins the rulings reference check *(closes RQ-698)*"
   reason: informative only
   note: "the owner's word on the rulings reference check; tooling; changes no requirement"
+- file: decisions.md
+  section: "R-810 — A warped mass-ratio axis's range is searched at half the round-trip tolerance, `ε_μ/2`, and `principia_chart_reference.md` § 2.1 says so, with the measured reason *(closes RQ-707)*"
+  reason: informative only
+  note: "docs only: the margin stays as built, and chart_reference § 2.1 names it"
+- file: decisions.md
+  section: "R-811 — The census's drift reference is R-33's convergence reference, not the inspector's RK45, and the proposal's § 3.2 clause says why *(closes RQ-619)*"
+  reason: informative only
+  note: "the census has no requirement yet; the proposal carries it"

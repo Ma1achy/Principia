@@ -295,6 +295,7 @@ atlas's rows (§ 4.1).
 | LL-3 | REQ-VAL-223 (the Yasko & Orlov half waits: the owner's copy, paywalled, R-630 item 9, R-679; was "waits: the owner's copies of the two papers", and before it "waits: RQ-586") | V / A | Li & Liao 2019 p. 3: F1 at (0.6, 0.8, 1) is Standish's 1970 orbit; F1 and F2 at (1, 1, 1) are Yasko & Orlov's 2015 Orbits 16 and 17 | the Anosova physical-frame entry; a MassSimplex point | M9 | exact | REQ-VAL-224 (calibration, R-71) | TASK-M9-07 |
 | LL-4 | REQ-VAL-225 | V / A | Li & Liao 2019 p. 3 and Fig. 3: T̄* ≈ 2.363 at equal masses; 1.663, 1.191, 0.776, 0.527 at m₃ = 0.8 … 0.2; fit 1.912 m₃ + 0.084 | none | M9 | exact per orbit; the fit statistical | REQ-VAL-226 (calibration, R-71) | TASK-M9-14 |
 | LL-5 | REQ-VAL-227 | V / A | the authors' website list of 316 free-fall orbits (82 beyond the paper's 234), carried by the atlas as 81 rows on three further mass sets | MassSimplex points | M9 | exact (closure only) | OC-1's (REQ-VAL-202): the same form, the same f64 refined initial conditions | TASK-M9-06 |
+| LL-6 | REQ-VAL-352 | V / A | the authors' table of all 316 free-fall orbits (`sjtu-liao/three-body`, x, y and T at 10 decimals, the 82 website-only orbits included), R-704 | MassSimplex points | M9, as a peek | closure from the table's own start; the table against the atlas's `pub_*` where it holds the row | REQ-VAL-353 (calibration, R-71) | TASK-M9-44 |
 
 *3 Nov 2026 (R-679, item 1, closing RQ-672):* LL-3's Standish half takes Hénon 1974 (Celest. Mech. 10, 375), held
 under R-669, as its independent printed source: Table I's `A = 0` row is Standish's orbit, and its period agrees with
@@ -328,7 +329,7 @@ RK4 (R-560).
 |---|---|---|---|---|---|---|---|---|
 | H-3 (DRAFT-VAL-03) | REQ-VAL-205 | R / A | Heggie 1974, Table III (C/3 against Δ toward the Lagrange triple collision) | ShapeSphere at rest through Lagrange; Latent | M9 | exact (scaling) | REQ-VAL-206 (calibration, R-71) | TASK-M9-08 |
 | H-1, H-2 (DRAFT-VAL-04) | REQ-VAL-207 | R / C | Heggie 1974, Tables I and II (steps and \|δE/E\|; step ratios 147/129, 257/225, 455/397; 48/42, 83/70, 149/124) | BodyPlane Burrau pixel (H-1); none, Path A (H-2) | M9 | ratio, recorded both ways | REQ-VAL-208 (calibration, R-71) | TASK-M9-08 |
-| TM-1 | REQ-VAL-240 (waits: the owner's copy of the paper, paywalled, R-630 item 9; was "waits: RQ-586") | R / A | Tanikawa & Mikkola 2021, Tables 1, 2 and 4 (eleven triple-collision points, e.g. (0.19208270, 0.30936018); approach ICs at radii 1e-3 to 1e-5) | the Anosova physical-frame entry, after the D11 mirror remap | M9 | exact (scaling) | REQ-VAL-241 (calibration, R-71) | TASK-M9-09 |
+| TM-1 | REQ-VAL-240 (waits: the owner's copy of the paper, paywalled, R-630 item 9; was "waits: RQ-586") | R / A | Tanikawa & Mikkola 2021, Tables 1, 2 and 4 (eleven triple-collision points, e.g. (0.19208270, 0.30936018); approach ICs at radii 1e-3 to 1e-5) | the Anosova physical-frame entry, no remap: the 2021 paper's eq. (2) is Anosova's region (R-702; *was:* "after the D11 mirror remap") | M9 | exact (scaling) | REQ-VAL-241 (calibration, R-71) | TASK-M9-09 |
 
 ### 5.6 Burrau and the Pythagorean family
 
@@ -445,6 +446,8 @@ part (§ 12.2; *was:* "GG-1 (b) per point, its KS part (b) with (a) expected to 
 owner's confirmation of 30 Oct 2026, R-649). The first peek, GG-1 at three points from PR #335 ("Brutus, run here"
 against Fig. 1), is UNEXPLAINED (`docs/verification/peek_log.md`; RQ-612 holds its like-for-like questions).
 
+*4 Nov 2026 (R-701):* GG-1's eight neighbours of (3, 43) run as a peek, TASK-M9-42, ours staying labelled ours meanwhile. Brutus runs at `p_max` = 4, `L_w` set explicitly. No ε = 10⁻⁷⁰ cost is quoted until the authors answer. The NVM trajectories stay local, and BR-1's converged fraction reports both readings of "< 0.1" until Breen answers. The questions are in `docs/incoming/2026-10-28_rq598_data/QUESTIONS_for_authors.md`; RQ-696 holds the seeded draw.
+
 | Target | Requirement | L / T | Reproduces | Chart | Milestone | Compare | Tolerance | Task |
 |---|---|---|---|---|---|---|---|---|
 | GG-1 (the 25 Oct tier B's converged lifetime grid) | REQ-VAL-295 (scored in M9, R-650; its per-point reference panel is RQ-620's; *was:* "waits: RQ-592, RQ-598", both closed, by R-636 and R-637) | R / B | Boekholt, Portegies Zwart & Valtonen 2020 (MNRAS 493, 3932): 1,212 points at spacing 1/64, converged with Brutus to t = 10⁴; lifetime to the last close approach | the Anosova physical-frame entry | M9 | per point where reliable (rule 8: a converged code); KS otherwise | REQ-VAL-296 (calibration, R-71) | TASK-M9-22 |
@@ -517,10 +520,10 @@ kept. TR-1, MK-1 and SL-1 are binary-plus-single scatterings, not hierarchical t
 | HU-1 | REQ-VAL-314 (waits: RQ-583) | R / B | Hudomal 2015 Fig. 8: the return-proximity map over (p₁, p₂) ∈ [0.3, 0.5] × [0.1, 0.5]; Table 23's minima | new: SuvakovPlane | M9 | qualitative; exact at Table 23's minima | REQ-VAL-315 (calibration, R-71) | TASK-M9-27 |
 | HU-2 | REQ-VAL-316 (waits: RQ-583) | R / B | Hudomal 2015 Fig. 34 and Table 23: the butterfly III zoom, three candidates, the middle one at (0.405916, 0.230163), T = 13.866 | new: SuvakovPlane, zoomed | M9 | qualitative + one exact point | REQ-VAL-317 (calibration, R-71) | TASK-M9-27 |
 | TR-1 | REQ-VAL-318 (waits: RQ-593, RQ-596) | R / B | Trani et al. 2024 (A&A 689, A24): the inclination-0 row of their map; f_col (12 nearest neighbours, regular above 2/3) | new: BinaryPlusSingle | M9 | qualitative | none: qualitative | TASK-M9-23 |
-| MK-1 | REQ-VAL-319 (waits: RQ-593) | R / B | Manwadkar, Kol, Trani & Leigh 2021: per-body escape probabilities over eight mass sets (Table 1) | new: BinaryPlusSingle at a mass point | M9 | statistical | REQ-VAL-320 (calibration, R-71) | TASK-M9-23 |
+| MK-1 | REQ-VAL-319 (waits: RQ-593) | R / B | Manwadkar, Kol, Trani & Leigh 2021: per-body escape probabilities over eight mass sets (Table 2, Table 1 for the mass sets, R-707; *was:* "(Table 1)") | new: BinaryPlusSingle at a mass point | M9 | statistical | REQ-VAL-320 (calibration, R-71) | TASK-M9-23 |
 | SL-1 | REQ-VAL-321 (waits: RQ-593, RQ-596) | R / B | Stone & Leigh 2019 (Nature 576, 406): the planar closed forms for the binary's energy and eccentricity | new: BinaryPlusSingle | M9 | statistical | REQ-VAL-322 (calibration, R-71) | TASK-M9-23 |
 | PA-1 | REQ-VAL-323 (*was:* "waits: RQ-594, RQ-596"; ruled by R-669 and R-798) | R / B | Parischewsky, Trani & Leigh 2023 (SciPost Phys. Core 6, 016): escaper maps in side-ratio space around Lagrange; 82.1 % chaotic, 17.9 % regular | ShapeSphere at rest by a tested remap, no new chart type (R-798; *was:* "new: SideRatio, or ShapeSphere at rest by a tested remap") | M9 | qualitative; the split statistical | REQ-VAL-324 (calibration, R-71) | TASK-M9-24 |
-| TS-1 (the 25 Oct tier B's symbol-sequence maps) | REQ-VAL-325 (waits: RQ-595) | R / B | Tanikawa & Mikkola 2008 (arXiv:0802.2465) and 2015 (PASJ 67, 115): maps of the first 2–4 syzygy symbols over the free-fall plane | the Anosova physical-frame entry, through the D11 mirror remap | M9 | qualitative | none: qualitative | TASK-M9-28 |
+| TS-1 (the 25 Oct tier B's symbol-sequence maps) | REQ-VAL-325 (waits: RQ-595) | R / B | Tanikawa & Mikkola 2008 (arXiv:0802.2465) and 2015 (PASJ 67, 115): maps of the first 2–4 syzygy symbols over the free-fall plane | the Anosova physical-frame entry; no remap for 2015's maps; for 2008's the figures decide, read beside the unremapped map (R-702; *was:* "through the D11 mirror remap") | M9 | qualitative | none: qualitative | TASK-M9-28 |
 | TS-2 | REQ-VAL-326 (waits: RQ-595) | R / B | Tanikawa & Mikkola 2008, Fig. 7: first-symbol maps at non-zero angular momentum, virial ratio 0 to 0.7 | new: a fixed-k velocity prescription over D11 ∪ D12 | M9 | qualitative | none: qualitative | TASK-M9-28 |
 | V-1 / V-3 / V-7 | REQ-VAL-327 (waits: RQ-595) | R / B | Valtonen et al. 2016, Figs. 4.1 and 4.9 (fits in `valtonen2016/data/fig4_1_*`): the L/M/A/H partition; the high-entropy share 0.66–0.83 against the text's 'roughly one half' | the Anosova physical-frame entry, at the book's ×2 scale | M9 | qualitative; the share statistical | REQ-VAL-328 (calibration, R-71) | TASK-M9-28 |
 | LLL-1 | REQ-VAL-329 (waits: RQ-597) | R / B | Li, Li & Liao 2020 (arXiv:2007.10184): period, angular momentum and stability contours over (m₁, m₂) for one family (13,315 stable of 135,445) | MassSimplex | M9 | qualitative | none: qualitative | TASK-M9-29 |
@@ -693,7 +696,7 @@ Rules 1–8 of the 25 Oct instruction, "the ones that worked for Anosova", verba
    theirs, but it must be shown, not assumed. Agekyan & Anosova lost 21 of their 100 runs to energy error, and they
    say so themselves.
 6. **Remap before comparing.** Coordinate conventions differ between papers. Agekyan–Anosova put two bodies at
-   (∓½, 0). Lehto et al. use (0, 0) and (1, 0). Tanikawa uses the mirror labelling D11. Each map is converted into one of
+   (∓½, 0). Lehto et al. use (0, 0) and (1, 0). Tanikawa, Umehara & Abe 1995, Tanikawa & Mikkola 2015 and 2021 and Tanikawa, Saito & Mikkola 2019 use Agekyan–Anosova's own region, (x + 0.5)², which they call D or D11; Tanikawa & Mikkola 2008, p. 3, prints (x − 0.5)², recorded as printed (R-702; *was:* "Tanikawa uses the mirror labelling D11."). Each map is converted into one of
    our charts, and the conversion is a tested function, not a figure overlay.
 7. **State the escape criterion.** Published lifetimes depend on the criterion used (50a or 100a plus hyperbolic;
    r > 10, receding, E > 0; Fewbody's tidal tolerance). Outcome identity is robust once an escape is real; a lifetime is
@@ -933,6 +936,8 @@ expected to agree statistically or qualitatively; one with an exact part and a s
 first, and (a) is expected to agree with the second statistically"; every (a) and mixed row of the table below read
 "(b); (a) statistically or qualitatively" or "(b); its statistical part also (a)".
 
+*4 Nov 2026 (R-703, closing RQ-649):* a statistical target scored on tier (a) alone is labelled "f32; f64 agreement not yet measured", until BZ-1C reports; it can pass or fail for two reasons, the physics or f32, and the label says so. The tiers below do not change.
+
 | Target | Requirement | Compare (§ 5) | Tier |
 |---|---|---|---|
 | OC-1 | REQ-VAL-201 | exact | (b) |
@@ -948,6 +953,7 @@ first, and (a) is expected to agree with the second statistically"; every (a) an
 | LL-3 | REQ-VAL-223 | exact | (b) |
 | LL-4 | REQ-VAL-225 | exact per orbit; the fit statistical | (b) per orbit; (a) for the fit |
 | LL-5 | REQ-VAL-227 | exact (closure only) | (b) |
+| LL-6 | REQ-VAL-352 | exact (closure, at REQ-VAL-353's tolerance) | (b) |
 | BG-4 | REQ-VAL-213 | exact | (b) |
 | SD-1 | REQ-VAL-228 | exact | (b) |
 | BG-1 | REQ-VAL-230 | exact | (b) |

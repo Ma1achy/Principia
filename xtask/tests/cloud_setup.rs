@@ -101,7 +101,7 @@ fn linux_jobs(file: &str, workflow: &str) -> Vec<Vec<String>> {
                 .map(unquote)
                 .unwrap_or_default();
             assert!(
-                ["ubuntu-", "macos-", "windows-"]
+                ["ubuntu-", "macos-", "windows-", "[self-hosted, windows"]
                     .iter()
                     .any(|os| runner.starts_with(os)),
                 "{file}: a job runs on `{runner}`, which this check can't place as Linux or not"
@@ -727,6 +727,32 @@ validation::negative_control!(
     expected = "cloud-setup.sh accepted a CI install step it doesn't know",
     {
         let copy = scratch("refuses_control");
+        copy_tree(&copy, str::to_owned, None);
+        check_refused(&copy)
+    }
+);
+
+/// The self-hosted Windows job (R-711) is no Linux job, so a cloud session has
+/// nothing to set up for it; a self-hosted job on anything else is one the script can't place.
+const WINDOWS_RUNNER: &str = "runs-on: [self-hosted, windows, nvidia]";
+
+fn on_a_linux_self_hosted_runner(text: &str) -> String {
+    text.replace(WINDOWS_RUNNER, "runs-on: [self-hosted, linux]")
+}
+
+#[test]
+fn cloud_setup_refuses_a_self_hosted_runner_it_cannot_place() {
+    let copy = scratch("self_hosted");
+    copy_tree(&copy, on_a_linux_self_hosted_runner, None);
+    check_refused(&copy);
+}
+
+validation::negative_control!(
+    cloud_setup_refuses_a_self_hosted_runner_it_cannot_place,
+    "the self-hosted Windows job, which the script places",
+    expected = "cloud-setup.sh accepted a CI install step it doesn't know",
+    {
+        let copy = scratch("self_hosted_control");
         copy_tree(&copy, str::to_owned, None);
         check_refused(&copy)
     }

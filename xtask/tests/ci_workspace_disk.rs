@@ -297,7 +297,7 @@ mod before_cache {
         {
             let ci = ci_yml();
             let step = step_text(&ci);
-            let cache = "      - uses: Swatinem/rust-cache@v2\n        with:\n          prefix-key: cargo-registry\n          \
+            let cache = "      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3\n        with:\n          prefix-key: cargo-registry\n          \
                          shared-key: ci-workspace\n";
             assert!(ci.contains(cache));
             check_step(

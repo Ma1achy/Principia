@@ -41,6 +41,9 @@ rustix = { version = "1", features = ["process", "std"] }
 # Controls reach xtask's tests through a dev-dependency on validation (R-176).
 [dev-dependencies]
 validation = { path = "../crates/validation" }
+# `tests/ci_self_hosted.rs` parses the workflows on the self-hosted runner, where PyYAML, the other workflow tests' parser,
+# isn't known to exist (R-711).
+yaml-rust2 = { version = "0.13", default-features = false }
 
 # Under `controls`, each `negative_control!` in xtask's tests compiles as a test (REQ-VAL-152, R-176).
 [features]

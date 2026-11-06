@@ -924,11 +924,11 @@ fn check_wired(ci: &str) {
             "`{name}` names no tmpfs"
         );
         let upload = job
-            .find("actions/upload-artifact@v4")
+            .find("actions/upload-artifact@")
             .map(|at| &job[at..])
             .unwrap_or_else(|| panic!("`{name}` uploads nothing"));
         assert!(
-            upload.starts_with("actions/upload-artifact@v4\n        if: always()")
+            upload.starts_with("actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2\n        if: always()")
                 && upload.contains("\n        continue-on-error: true\n"),
             "`{name}`'s upload is not unconditional and harmless"
         );
@@ -954,7 +954,7 @@ fn check_wired(ci: &str) {
         assert!(
             job.rfind("disk_sampler.sh {0}")
                 .is_some_and(|last| last < dmesg)
-                && dmesg < job.find("actions/upload-artifact@v4").unwrap_or(0),
+                && dmesg < job.find("actions/upload-artifact@").unwrap_or(0),
             "`{name}`'s kernel log is not between the sampled steps and the upload"
         );
     }

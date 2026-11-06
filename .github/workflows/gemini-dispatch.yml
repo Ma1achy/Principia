@@ -115,7 +115,8 @@ jobs:
 
       - name: Checkout repository
         if: env.GEMINI_KEY_PRESENT == 'true'
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1, as the example pins it
+        # As the example pins it.
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           persist-credentials: false
 

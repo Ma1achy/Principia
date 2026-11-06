@@ -57,7 +57,7 @@ jobs:
     # Its waits, for a run to appear and for a cancelled run to end, are bounded in the script; this bounds the job.
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: .github/scripts/ci_tier.sh merge-ready
         env:
           GH_TOKEN: ${{ github.token }}

@@ -141,18 +141,20 @@ negative_control!(
 /// worsts within `k`.
 fn check_rows(i: &Input, k: f64) {
     let got = rows(i);
-    assert_eq!(got.len(), 30, "the rows");
+    // 17 registered charts (validation::roundtrip, TASK-M2-37's three among them) at f64 and f32, 34 rows, then the
+    // latent draws' two.
+    assert_eq!(got.len(), 36, "the rows");
     for (n, r) in got.iter().enumerate() {
         assert_eq!(
             r.bits,
             if n % 2 == 0 { 64 } else { 32 },
             "row {n}'s precision"
         );
-        let want = if n >= 28 { i.fuzz } else { i.per_chart } as usize;
+        let want = if n >= 34 { i.fuzz } else { i.per_chart } as usize;
         assert_eq!(r.samples, want, "{}'s samples", r.source);
         assert!(!fails(r, k), "{} f{} fails: {r:?}", r.source, r.bits);
     }
-    assert_eq!(got[28].source, "latent z (8-D)");
+    assert_eq!(got[34].source, "latent z (8-D)");
 }
 
 #[test]
@@ -208,7 +210,8 @@ fn check_judge(judge: Judge) {
         "no margin {margin}: {:?}",
         pass.scatter
     );
-    let n = 28 * 64 + 2 * 256;
+    // The 34 chart rows' 64 points each and the two latent rows' 256.
+    let n = 34 * 64 + 2 * 256;
     assert_eq!(
         pass.regions.map(|r| r.count),
         Some(RegionCount::Recorded(n))
@@ -236,7 +239,7 @@ fn check_judge(judge: Judge) {
     );
     assert_eq!(
         fail.negative_results[0].matches(" (CoM ").count(),
-        30,
+        36,
         "every row named"
     );
 }
