@@ -385,6 +385,13 @@ fn mock_manifold_resets_zoom_row_reads_the_window() {
     let mut rig = at_preset(1);
     let texts = frame_texts(&mut rig.1, &mut rig.0);
     assert!(texts.iter().any(|t| t == "× 1.00"), "the row at the window");
+    // Three quarter-octave steps in, on the row: a window's × 1.68, not the absolute × 3.36.
+    step(&mut rig, mv::ZOOM, Key::ArrowUp, NONE, 3);
+    let texts = frame_texts(&mut rig.1, &mut rig.0);
+    assert!(
+        texts.iter().any(|t| t == "× 1.68"),
+        "the row off the window"
+    );
     // Control: read absolutely, the row would say × 2.00 at this window.
     rejects("a zoom row reading −log₂ σ", || {
         assert_eq!(magnification(view.zoom()), "× 1.00")
@@ -413,6 +420,38 @@ fn mock_manifold_resets_scopes_keep_the_order() {
         assert_eq!(Section::of(section.scope()), Some(section));
     }
     assert_eq!(Section::of(mv::TAU1), None);
+}
+
+/// The text of the tooltip over `at`, after the pointer has rested there.
+fn tooltip_over(rig: &mut Rig, at: Pos2) -> Vec<String> {
+    let _ = rig.1.frame(&mut rig.0, vec![Event::PointerMoved(at)]);
+    for _ in 0..4 {
+        let _ = rig.1.frame(&mut rig.0, Vec::new());
+    }
+    frame_texts(&mut rig.1, &mut rig.0)
+}
+
+#[test]
+fn mock_manifold_resets_tooltips_name_the_commands() {
+    assert_eq!(
+        SECTIONS.map(Section::tooltip),
+        [
+            "Reset Slice centre to the chart preset's base point",
+            "Reset Tilt: τ₁, τ₂ and γ to 0",
+            "Reset Navigate to the chart preset's centre and window",
+        ]
+    );
+    for section in SECTIONS {
+        let mut rig = at_preset(0);
+        move_all(&mut rig);
+        let place = rig.0.keyboard.place_of(section.scope()).expect("placed");
+        let texts = tooltip_over(&mut rig, place.rect.center());
+        assert!(texts.iter().any(|t| t == section.tooltip()), "{section:?}");
+        // Dimmed, it says why.
+        let mut home = at_preset(0);
+        let texts = tooltip_over(&mut home, place.rect.center());
+        assert!(texts.iter().any(|t| t == ALREADY_HOME), "{texts:?}");
+    }
 }
 
 #[test]

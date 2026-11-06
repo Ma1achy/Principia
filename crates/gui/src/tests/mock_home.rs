@@ -166,6 +166,14 @@ fn mock_home_button_is_painted_in_strokes() {
             "{shape:?}"
         );
     }
+    // A roof over a square: the roof's peak above the middle, the walls' foot below it.
+    let points = |shape: &eframe::egui::Shape| match shape {
+        eframe::egui::Shape::Path(path) => path.points.clone(),
+        other => panic!("a stroke, not {other:?}"),
+    };
+    let [roof, walls] = reset::house(rect, colour);
+    assert!(points(&roof)[1].y < rect.center().y - 5.0, "the peak");
+    assert!(points(&walls)[1].y > rect.center().y + 5.0, "the foot");
     let shapes = super::support::shapes(&mut rig.1, &mut rig.0);
     let lines = shapes
         .iter()
