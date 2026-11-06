@@ -19,7 +19,8 @@ Commands:
                                   scope's p95 listed (telemetry §1.1); --bless writes the trace as the baseline first.
                                   Not in `ci` nor any hosted workflow: run on the human's Mac (R-186)
   build-kernel [--bless]          compile crates/kernel to SPIR-V with rust-gpu (target/spirv/kernel.spv) and
-                                  translate it to WGSL with naga (target/spirv/kernel.wgsl); refuses when
+                                  translate it to WGSL with naga (target/spirv/kernel.wgsl, and the read-back's
+                                  entries apart in target/spirv/branch_read.wgsl); refuses when
                                   rust-gpu's backend needs another nightly than rust-toolchain.toml pins
                                   (canonical_spec §1 item 2); fails when a fragment snippet lifted from the
                                   translation (crates/render/wgsl/decode.wgsl, encode.wgsl,

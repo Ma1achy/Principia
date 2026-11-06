@@ -13,7 +13,7 @@
 //! - [`encode_gpu`] and [`beta_gpu`]: encode `E` on given `(m, r, p)`, `kernel::stage::encode::encode`, and its `β` on
 //!   given operands, `kernel::stage::encode::beta`, for the cross-backend checks of their selects and notices at the
 //!   poles and on the `−x` half-axis (REQ-ENC-007, REQ-DEC-014).
-//! - [`branch_read_canon_gpu`] and [`BranchReadStage`]: the read-back of canon's and each decode variant's branches,
+//! - [`BranchReadCanon`] and [`BranchReadStage`]: the read-back of canon's and each decode variant's branches,
 //!   `kernel::stage::branch_read`, for the cross-backend check (R-690; TASK-M4-27).
 //! - [`decode_only_with`]: parity_contract §1's `decodeOnly(chart, uv, simKey) → (m, r, p, ICDescriptor)`, the CPU-f64
 //!   instantiation of the same source, `kernel::stage::decode::sample_with` at f64 (R-118, R-265), with the same
@@ -408,9 +408,66 @@ pub fn check_canon_samples(n: usize, limits: &wgpu::Limits) -> Result<u32, Compu
     Ok(checked)
 }
 
-/// Canonicalisation `C`, `kernel::stage::canon::canonicalise`, dispatched on `device` over `ics`, one invocation each,
-/// under the fast-math `setting`: each one's [`Canonical`] as the GPU computes it, its output words filled with NaN
-/// before the dispatch. Its pipeline is made per call: a test's, never on a navigation path.
+/// Canonicalisation `C`, `kernel::stage::canon::canonicalise`: its pipeline, created once.
+pub struct CanonStage {
+    kernel: ComputeKernel,
+}
+
+impl CanonStage {
+    /// The pipeline of `C`'s entry point in `wgsl`, created on `device` under the fast-math `setting`.
+    pub fn new(device: &wgpu::Device, wgsl: &str, setting: FastMath) -> Result<Self, ComputeError> {
+        let shader = ComputeShader {
+            label: CANONICALISE_ENTRY,
+            wgsl,
+            entry: CANONICALISE_ENTRY,
+        };
+        let kernel = pipeline(device, &shader, setting)?;
+        Ok(Self { kernel })
+    }
+
+    /// The compute stage's fast-math mode as compiled.
+    pub fn mode(&self) -> StageMode {
+        self.kernel.mode()
+    }
+
+    /// `C` dispatched over `ics`, one invocation each: each one's [`Canonical`] as the GPU computes it, its output words
+    /// filled with NaN before the dispatch. No pipeline is created.
+    pub fn dispatch(
+        &self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        ics: &[Ic<f32>],
+    ) -> Result<Vec<Canonical<f32>>, ComputeError> {
+        if ics.is_empty() {
+            return Ok(Vec::new());
+        }
+        let n = check_canon_samples(ics.len(), &device.limits())?;
+        let count = ics.len() * canon_stage::canon_words();
+        let mut words = vec![0; ics.len() * stage::ic_words()];
+        for (i, ic) in ics.iter().enumerate() {
+            stage::write_ic(&mut words, i, ic);
+        }
+        let input = buffer(
+            device,
+            "canonicalise ic",
+            &words,
+            wgpu::BufferUsages::STORAGE,
+        );
+        let outputs = [output(
+            device,
+            "canonicalise out",
+            f32::NAN.to_bits(),
+            count,
+        )];
+        let read = dispatch_and_read(device, queue, &self.kernel, &[&input], &outputs, n)?;
+        Ok((0..ics.len())
+            .map(|i| canon_stage::read_canonical(&read[0], i))
+            .collect())
+    }
+}
+
+/// [`CanonStage::dispatch`] with its pipeline made per call: a test's, never on a navigation path. No pipeline is made
+/// for an empty `ics`.
 pub fn canonicalise_gpu(
     device: &wgpu::Device,
     queue: &wgpu::Queue,
@@ -421,64 +478,54 @@ pub fn canonicalise_gpu(
     if ics.is_empty() {
         return Ok(Vec::new());
     }
-    let n = check_canon_samples(ics.len(), &device.limits())?;
-    let count = ics.len() * canon_stage::canon_words();
-    let kernel = pipeline(
-        device,
-        &ComputeShader {
-            label: CANONICALISE_ENTRY,
-            wgsl,
-            entry: CANONICALISE_ENTRY,
-        },
-        setting,
-    )?;
-    let mut words = vec![0; ics.len() * stage::ic_words()];
-    for (i, ic) in ics.iter().enumerate() {
-        stage::write_ic(&mut words, i, ic);
-    }
-    let input = buffer(
-        device,
-        "canonicalise ic",
-        &words,
-        wgpu::BufferUsages::STORAGE,
-    );
-    let outputs = [output(
-        device,
-        "canonicalise out",
-        f32::NAN.to_bits(),
-        count,
-    )];
-    let read = dispatch_and_read(device, queue, &kernel, &[&input], &outputs, n)?;
-    Ok((0..ics.len())
-        .map(|i| canon_stage::read_canonical(&read[0], i))
-        .collect())
+    CanonStage::new(device, wgsl, setting)?.dispatch(device, queue, ics)
 }
 
-/// Canon's read-back, `kernel::stage::branch_read::canon`, dispatched on `device` over `ics`, one invocation each, under
-/// the fast-math `setting`: `kernel::stage::branch_read::CANON_WORDS` words per state, filled with NaN before the
-/// dispatch. Its pipeline is made per call: a test's and a gate's, never on a navigation path.
-pub fn branch_read_canon_gpu(
-    device: &wgpu::Device,
-    queue: &wgpu::Queue,
-    wgsl: &str,
-    ics: &[Ic<f32>],
-    setting: FastMath,
-) -> Result<Vec<u32>, ComputeError> {
-    if ics.is_empty() {
-        return Ok(Vec::new());
+/// Canon's read-back, `kernel::stage::branch_read::canon`: its pipeline, created once.
+pub struct BranchReadCanon {
+    kernel: ComputeKernel,
+}
+
+impl BranchReadCanon {
+    /// The pipeline of the read-back's canon entry in `wgsl`, created on `device` under the fast-math `setting`.
+    pub fn new(device: &wgpu::Device, wgsl: &str, setting: FastMath) -> Result<Self, ComputeError> {
+        let shader = ComputeShader {
+            label: BRANCH_READ_CANON_ENTRY,
+            wgsl,
+            entry: BRANCH_READ_CANON_ENTRY,
+        };
+        let kernel = pipeline(device, &shader, setting)?;
+        Ok(Self { kernel })
     }
-    let mut words = vec![0; ics.len() * stage::ic_words()];
-    for (i, ic) in ics.iter().enumerate() {
-        stage::write_ic(&mut words, i, ic);
+
+    /// The compute stage's fast-math mode as compiled.
+    pub fn mode(&self) -> StageMode {
+        self.kernel.mode()
     }
-    run_entry(
-        device,
-        queue,
-        (wgsl, BRANCH_READ_CANON_ENTRY),
-        &words,
-        (ics.len(), branch_read::CANON_WORDS),
-        setting,
-    )
+
+    /// The read-back dispatched over `ics`, one invocation each: `kernel::stage::branch_read::CANON_WORDS` words per
+    /// state, filled with NaN before the dispatch. No pipeline is created.
+    pub fn dispatch(
+        &self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        ics: &[Ic<f32>],
+    ) -> Result<Vec<u32>, ComputeError> {
+        if ics.is_empty() {
+            return Ok(Vec::new());
+        }
+        let mut words = vec![0; ics.len() * stage::ic_words()];
+        for (i, ic) in ics.iter().enumerate() {
+            stage::write_ic(&mut words, i, ic);
+        }
+        run_kernel(
+            device,
+            queue,
+            (&self.kernel, BRANCH_READ_CANON_ENTRY),
+            &words,
+            (ics.len(), branch_read::CANON_WORDS),
+        )
+    }
 }
 
 /// The read-back of the decode variant `V`'s branches (`kernel::stage::branch_read`): its pipeline, created once.
@@ -592,7 +639,7 @@ fn run_entry(
     (n, per): (usize, usize),
     setting: FastMath,
 ) -> Result<Vec<u32>, ComputeError> {
-    let samples = check_output_words(n, per, &device.limits())?;
+    check_output_words(n, per, &device.limits())?;
     let kernel = pipeline(
         device,
         &ComputeShader {
@@ -602,9 +649,21 @@ fn run_entry(
         },
         setting,
     )?;
+    run_kernel(device, queue, (&kernel, entry), input, (n, per))
+}
+
+/// `kernel` dispatched over `n` samples of `input`, `per` words each, its output filled with NaN first.
+fn run_kernel(
+    device: &wgpu::Device,
+    queue: &wgpu::Queue,
+    (kernel, entry): (&ComputeKernel, &str),
+    input: &[u32],
+    (n, per): (usize, usize),
+) -> Result<Vec<u32>, ComputeError> {
+    let samples = check_output_words(n, per, &device.limits())?;
     let input = buffer(device, entry, input, wgpu::BufferUsages::STORAGE);
     let outputs = [output(device, entry, f32::NAN.to_bits(), n * per)];
-    let mut read = dispatch_and_read(device, queue, &kernel, &[&input], &outputs, samples)?;
+    let mut read = dispatch_and_read(device, queue, kernel, &[&input], &outputs, samples)?;
     Ok(read.remove(0))
 }
 

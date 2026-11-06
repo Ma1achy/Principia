@@ -7,7 +7,9 @@
 use std::path::Path;
 
 use engine::contract::fast_math::{FastMath, StageMode};
-use engine::decode_dispatch::{branch_read_canon_gpu, BranchReadStage, BRANCH_READ_CANON_ENTRY};
+use engine::decode_dispatch::{
+    BranchReadCanon, BranchReadStage, CanonStage, BRANCH_READ_CANON_ENTRY,
+};
 use kernel::chart::Latent;
 use kernel::decode::Ic;
 use kernel::stage::branch_read as read;
@@ -20,6 +22,13 @@ use validation::gpu::GpuHarness;
 use validation::negative_control;
 
 fn wgsl() -> String {
+    let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../target/spirv/branch_read.wgsl");
+    std::fs::read_to_string(path)
+        .expect("target/spirv/branch_read.wgsl: run `cargo xtask build-kernel` first")
+}
+
+/// The production module, which holds none of the read-back's entries.
+fn production() -> String {
     let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../target/spirv/kernel.wgsl");
     std::fs::read_to_string(path)
         .expect("target/spirv/kernel.wgsl: run `cargo xtask build-kernel` first")
@@ -46,7 +55,9 @@ fn check_canon(sample: usize) {
     let h = harness();
     let states = [state(0.0), state(0.25), state(0.5)];
     let setting = FastMath::default();
-    let got = branch_read_canon_gpu(h.device(), h.queue(), &wgsl(), &states, setting).unwrap();
+    let reader = BranchReadCanon::new(h.device(), &wgsl(), setting).unwrap();
+    let got = reader.dispatch(h.device(), h.queue(), &states).unwrap();
+    assert_eq!(reader.mode(), StageMode::Off);
     assert_eq!(got.len(), 3 * read::CANON_WORDS);
     let at = sample * read::CANON_WORDS;
     assert_eq!(
@@ -62,9 +73,37 @@ fn check_canon(sample: usize) {
 fn branch_read_gpu_canon_echoes_its_operands() {
     check_canon(1);
     let h = harness();
-    let none = branch_read_canon_gpu(h.device(), h.queue(), "", &[], FastMath::default());
+    let reader = BranchReadCanon::new(h.device(), &wgsl(), FastMath::default()).unwrap();
+    let none = reader.dispatch(h.device(), h.queue(), &[]);
     assert_eq!(none.unwrap(), Vec::<u32>::new());
 }
+
+fn check_production_module(wgsl: &str) {
+    let h = harness();
+    let setting = FastMath::default();
+    let stage = CanonStage::new(h.device(), wgsl, setting).expect("canon's production entry");
+    assert_eq!(stage.mode(), StageMode::Off);
+    let none = stage.dispatch(h.device(), h.queue(), &[]).unwrap();
+    assert!(none.is_empty());
+    let got = stage.dispatch(h.device(), h.queue(), &[state(0.0)]);
+    assert_eq!(got.unwrap().len(), 1);
+    assert!(
+        BranchReadCanon::new(h.device(), &production(), setting).is_err(),
+        "the production module holds the read-back's entry"
+    );
+}
+
+#[test]
+fn branch_read_gpu_canon_stage_runs_from_the_production_module() {
+    check_production_module(&production());
+}
+
+negative_control!(
+    branch_read_gpu_canon_stage_runs_from_the_production_module,
+    "the read-back's module, which has no production entry",
+    expected = "canon's production entry",
+    check_production_module(&wgsl())
+);
 
 negative_control!(
     branch_read_gpu_canon_echoes_its_operands,

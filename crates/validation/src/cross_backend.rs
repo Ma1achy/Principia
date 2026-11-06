@@ -55,7 +55,7 @@ use std::path::{Path, PathBuf};
 
 use engine::contract::fast_math::{FastMath, StageMode};
 use engine::decode_dispatch::{
-    branch_read_canon_gpu, canonicalise_gpu, uniform_words, BranchReadStage, DecodeStage,
+    uniform_words, BranchReadCanon, BranchReadStage, CanonStage, DecodeStage, CANONICALISE_ENTRY,
 };
 use kernel::canon::{canonicalise, scale_step, Canonical};
 use kernel::chart::invariant::Invariant;
@@ -1846,12 +1846,9 @@ impl Visit for GpuDecode<'_> {
         let setting = FastMath::default();
         let at = |e: engine::compute::ComputeError| format!("{}: {e}", V::ENTRY);
         let stage = DecodeStage::<V>::new(device, self.wgsl, setting).map_err(at)?;
-        let reader = BranchReadStage::<V>::new(device, self.wgsl, setting).map_err(at)?;
-        for mode in [stage.mode(), reader.mode()] {
-            if mode != StageMode::Off {
-                self.modes.insert(format!("{}: {mode:?}", V::ENTRY));
-            }
-        }
+        let reader = BranchReadStage::<V>::new(device, self.read_wgsl, setting).map_err(at)?;
+        self.modes.push((V::ENTRY.to_owned(), stage.mode()));
+        self.modes.push((V::READ_ENTRY.to_owned(), reader.mode()));
         for (n, b, uv) in with_points(self.inputs) {
             if b.entry != V::ENTRY {
                 continue;
@@ -1966,6 +1963,17 @@ pub fn record_cpu(inputs: &Inputs, commit: &str) -> Result<Record, String> {
     })
 }
 
+/// The read-back's module, which `cargo xtask build-kernel` parts from the production `kernel.wgsl`.
+pub fn read_back_wgsl(root: &Path) -> Result<String, String> {
+    let path = root.join("target/spirv/branch_read.wgsl");
+    std::fs::read_to_string(&path).map_err(|e| {
+        format!(
+            "refused: cannot read {} ({e}); run `cargo xtask build-kernel` first",
+            path.display()
+        )
+    })
+}
+
 /// The states one dispatch takes, so that an output buffer stays within the default binding size.
 const CANON_CHUNK: usize = 1 << 16;
 
@@ -1973,23 +1981,25 @@ const CANON_CHUNK: usize = 1 << 16;
 pub fn record_gpu(root: &Path, inputs: &Inputs, commit: &str) -> Result<Record, String> {
     let h = GpuHarness::new().map_err(|e| e.to_string())?;
     let wgsl = kernel_wgsl(root)?;
+    let read_wgsl = read_back_wgsl(root)?;
     let setting = FastMath::default();
+    let at = |e: engine::compute::ComputeError| e.to_string();
+    let stage = CanonStage::new(h.device(), &wgsl, setting).map_err(at)?;
+    let reader = BranchReadCanon::new(h.device(), &read_wgsl, setting).map_err(at)?;
     let (mut canon, mut words) = (Vec::new(), Vec::new());
     for chunk in inputs.canon.chunks(CANON_CHUNK) {
-        canon.extend(
-            canonicalise_gpu(h.device(), h.queue(), &wgsl, chunk, setting)
-                .map_err(|e| e.to_string())?,
-        );
-        words.extend(
-            branch_read_canon_gpu(h.device(), h.queue(), &wgsl, chunk, setting)
-                .map_err(|e| e.to_string())?,
-        );
+        canon.extend(stage.dispatch(h.device(), h.queue(), chunk).map_err(at)?);
+        words.extend(reader.dispatch(h.device(), h.queue(), chunk).map_err(at)?);
     }
     let mut decode = GpuDecode {
         inputs,
         harness: &h,
         wgsl: &wgsl,
-        modes: BTreeSet::new(),
+        read_wgsl: &read_wgsl,
+        modes: vec![
+            (CANONICALISE_ENTRY.to_owned(), stage.mode()),
+            (CANON_ENTRY.to_owned(), reader.mode()),
+        ],
         out: vec![Raw::default(); inputs.batches.len()],
     };
     on_each_variant(&mut decode)?;
