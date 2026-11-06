@@ -37022,7 +37022,7 @@
   - file: decisions.md
     section: "R-702 — The library's open readings: Paper I's normalisation is read for Tanikawa 2000's times; Broucke 2006 stays context; Martynova & Orlov's fractions are compared with the 56 stated; the two unverified citations drop; the trust line's marks gain a dated \"chosen by analogy\" line; Tanikawa's free-fall papers are named by the frame each uses, no mirror for the ones read; AN-2 is shape-only *(closes RQ-640, RQ-641, RQ-642, RQ-645, RQ-648, RQ-650 and RQ-651; refines R-574)*"
   verify:
-    detail: "the syzygy-symbol field once RQ-595 is ruled; reviewed by the physics reviewer; control: the map without the mirror remap must be mirrored, which applies only to a map that takes the remap; for a map in Anosova's region, the control is a mirrored map that must fail to match (R-702; *was:* \"control: the map without the mirror remap must be mirrored\")"
+    detail: "the syzygy-symbol field once RQ-595 is ruled; reviewed by the physics reviewer; control: the map without the mirror remap must be mirrored, which applies only to a map that takes the remap; for a map in Anosova's region, the control is our map with bodies 2 and 3 exchanged, each pixel started at (−x, y), its symbols not swapped back, and drawn at the pixel's own (x, y): regions 2 and 3 trade places, and it must fail to match (R-702; *was:* \"control: the map without the mirror remap must be mirrored\"; physics review 5802604301 of PR #425, T1; *was:* \"a mirrored map that must fail to match\")"
     method: review checklist
   rulings:
   - R-594
