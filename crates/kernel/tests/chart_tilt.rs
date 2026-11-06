@@ -3761,6 +3761,67 @@ negative_control!(
     }
 );
 
+/// `ν₀ + d` rounding onto an end of `(0, 1)` at the chart's own precision: an f32 simplex whose f32 sum is exactly 1 or
+/// exactly 0, inside at f64, is the decode's collision, refused with weight 0; one f32 float inside each end, and a
+/// plain offset, stay systems. `wide` reads the test at f64 alone (the control).
+fn check_simplex_own_precision(wide: bool) {
+    let chart = RestStart::new(MassSimplex::<f32> {
+        nu0: 0.5,
+        eps_m: 1e-4,
+    });
+    let p = LinkParams::DEFAULT;
+    let shift = |dx: f64| Shift {
+        x: NU0,
+        dx,
+        y: NU0,
+        dy: 0.0,
+        two: false,
+    };
+    for (dx, end) in [(0.4999999701976776, 1.0), (-0.4999999999, 0.0)] {
+        assert!(dx + 0.5 > 0.0 && dx + 0.5 < 1.0, "inside at f64");
+        assert_eq!(0.5 + dx as f32, end, "the f32 sum");
+        let got = if wide {
+            None
+        } else {
+            chart.refusal(0.37, 0.3, &shift(dx))
+        };
+        assert_eq!(
+            got,
+            Some(Constraint::BurrauNu),
+            "a ν at an end of (0, 1) at f32 is read as a system"
+        );
+        assert_eq!(
+            chart.validate_shifted(0.37, 0.3, &shift(dx), &p),
+            ValidationResult::Reject {
+                failed: Constraint::BurrauNu
+            }
+        );
+    }
+    let inside = [0.25, 0.5 - f64::from(f32::EPSILON) / 2.0, 2.0e-8 - 0.5];
+    for dx in inside {
+        assert_eq!(chart.refusal(0.37, 0.3, &shift(dx)), None, "{dx}");
+        assert_eq!(
+            chart.validate_shifted(0.37, 0.3, &shift(dx), &p),
+            ValidationResult::Valid,
+            "{dx}"
+        );
+    }
+}
+
+#[test]
+fn tilt_every_chart_construction_simplex_own_precision() {
+    check_simplex_own_precision(false);
+}
+
+negative_control!(
+    tilt_every_chart_construction_simplex_own_precision,
+    "the test at f64 alone finds both ends inside (0, 1), so it must fail",
+    expected = "a ν at an end of (0, 1) at f32 is read as a system",
+    {
+        check_simplex_own_precision(true);
+    }
+);
+
 /// Each of the six's hidden coordinates, `hidden(k)` over `0..12`, and a tilt into any other refused; `admit` admits
 /// it as untilted (the control).
 fn check_construction_targets(admit: bool) {

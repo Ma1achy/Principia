@@ -44,9 +44,9 @@
 //! ([`super::tilt::Tilted::weight`]); the chart's `system_image` stays its own. The warped path runs the same test, which
 //! no pixel inside the square fails: past it `|2b − 1|·λ_L` can pass 1, and a `L_z` with no finite floor is refused
 //! ([`k_floor`]), as is a pixel whose `K*` has no finite double (chart_reference §4.5). Layer 3 reads the pixel's own
-//! decode, and every refusal also runs the exact test at the chart's own precision `P`: a target that has no
-//! construction only there is refused by `validate`, not just tagged by the decode at `P`, as
-//! [`super::physical`]'s `floor_held`.
+//! decode, and every refusal also runs at the chart's own precision `P`: a target that has no construction only there
+//! is refused by `validate`, not just tagged by the decode at `P`, as [`super::physical`]'s `floor_held`, and a
+//! `ν₀ + d` that rounds onto an end of `(0, 1)` only there is refused too, the decode's triangle a collision.
 //!
 //! **The held values.** The registered charts' own parameters stay as they are; a rest start's momentum controls, the
 //! held `L_z`, a chart's mode and `Φ_θ,L_z`'s warp are held beside the chart by the wrappers [`RestStart`], [`HeldLz`] and
@@ -168,6 +168,12 @@ where
     decode::decode_with(&mut FromRest::<B, S, R>::new(blocks, *p), &z)
 }
 
+/// `ν` not in `(0, 1)`, NaN included.
+#[inline]
+fn outside_unit<F: Float>(nu: F) -> bool {
+    !(nu > F::zero() && nu < F::one())
+}
+
 /// A chart that starts at rest: its masses and configuration its own, its momenta from the momentum controls.
 pub trait RestChart: Chart + Copy {
     /// Whether `k` names one of the chart's own physical hidden coordinates: `ν₀` on the mass simplex.
@@ -200,7 +206,7 @@ pub trait RestChart: Chart + Copy {
         R: LinkReal + PayloadReal + From<Self::Param>;
 }
 
-impl<P: Copy> RestChart for MassSimplex<P>
+impl<P: Float> RestChart for MassSimplex<P>
 where
     f64: From<P>,
 {
@@ -215,10 +221,11 @@ where
         })
     }
 
-    /// `ν₀ + d` outside `(0, 1)`: a side zero or negative.
+    /// `ν₀ + d` outside `(0, 1)`, at f64 or at the chart's own precision: a side zero or negative.
     fn refusal(&self, _a: f64, _b: f64, shift: &Shift<f64>) -> Option<Constraint> {
-        let nu = shifted(f64::from(self.nu0), NU0, shift);
-        (!(nu > 0.0 && nu < 1.0)).then_some(Constraint::BurrauNu)
+        let wide = shifted(f64::from(self.nu0), NU0, shift);
+        let own = shifted(self.nu0, NU0, &shift.at_precision::<P>());
+        (outside_unit(wide) || outside_unit(own)).then_some(Constraint::BurrauNu)
     }
 
     /// The triangle at `ν₀ + d`, the masses the map's at `(u, v)`.

@@ -204,11 +204,11 @@ mutant = "crates/kernel/src/decode/invariant.rs:471:53: replace > with >= in fin
 justification = "held + held is even and doubling_limit is odd (127 at f32, 1023 at f64), so they are never equal and > and >= agree on every input"
 
 [[equivalent]]
-mutant = "crates/kernel/src/chart/construction.rs:880:9: replace <impl Chart for HeldK<P>>::forbids_energy_normalisation -> bool with true"
+mutant = "crates/kernel/src/chart/construction.rs:887:9: replace <impl Chart for HeldK<P>>::forbids_energy_normalisation -> bool with true"
 justification = "HeldK's chart is the concrete BurrauThetaLz, whose forbids_energy_normalisation is the constant true, so the delegation is true for every HeldK and no test can tell them apart"
 
 [[equivalent]]
-mutant = "crates/kernel/src/chart/construction.rs:888:9: replace <impl Chart for HeldK<P>>::requires_per_pixel_mass -> bool with true"
+mutant = "crates/kernel/src/chart/construction.rs:895:9: replace <impl Chart for HeldK<P>>::requires_per_pixel_mass -> bool with true"
 justification = "HeldK's chart is the concrete BurrauThetaLz, whose requires_per_pixel_mass is the constant true, so the delegation is true for every HeldK and no test can tell them apart"
 
 [[equivalent]]
