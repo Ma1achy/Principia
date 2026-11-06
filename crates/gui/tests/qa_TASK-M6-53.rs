@@ -7,7 +7,7 @@
 //!   Olano (2020), its top 24 bits times 2⁻²⁴; integer additions; `f` and `c` from one `floor`; no cast of `floor`
 //!   straight to u32, which saturates the negative half-plane to 0.
 //!
-//! These run the shipped `noise_source()` in a compute dispatch, a compilation context none of the fragment tests has,
+//! These run the shipped `noise_source()` in entry points of their own, drawn one pixel per input and read back as bits,
 //! and go by the integer lattice itself: every quadrant, and both ends of `i32`, which no view reaches. They read
 //! `value_noise` as well as `cell_corners`, since a probe that takes `floor` itself says nothing of the cell
 //! `value_noise` takes. Their names hold no `lattice_`, so `gpu-metal`'s step reads none of this file and R-692's five
@@ -87,25 +87,41 @@ fn cells() -> Vec<[i32; 2]> {
     all
 }
 
+/// The width of a probe's target, in pixels, each pixel one input.
+const WIDTH: u32 = 256;
+/// The target's format: bits, which nothing converts.
+const BITS: wgpu::TextureFormat = wgpu::TextureFormat::Rgba32Uint;
+
 /// The entry points appended to the shipped module: each takes its input as bits and gives its result back as bits.
 const PROBES: &str = r#"
 @group(0) @binding(20) var<storage, read> qa_in: array<vec2<u32>>;
-@group(0) @binding(21) var<storage, read_write> qa_out: array<vec4<u32>>;
 
-@compute @workgroup_size(1)
-fn qa_cell_corners(@builtin(global_invocation_id) id: vec3<u32>) {
-    qa_out[id.x] = bitcast<vec4<u32>>(cell_corners(bitcast<vec2<i32>>(qa_in[id.x])));
+@vertex
+fn qa_vertex(@builtin(vertex_index) index: u32) -> @builtin(position) vec4<f32> {
+    let corner = vec2<f32>(f32((index << 1u) & 2u), f32(index & 2u));
+    return vec4<f32>(corner * 2.0 - 1.0, 0.0, 1.0);
 }
 
-@compute @workgroup_size(1)
-fn qa_value_noise(@builtin(global_invocation_id) id: vec3<u32>) {
-    qa_out[id.x] = vec4<u32>(bitcast<u32>(value_noise(bitcast<vec2<f32>>(qa_in[id.x]))), 0u, 0u, 0u);
+// The input of the pixel at `position`, the inputs in reading order, `QA_WIDTH` of them to a row.
+fn qa_input(position: vec4<f32>) -> vec2<u32> {
+    let pixel = vec2<u32>(position.xy);
+    return qa_in[pixel.y * QA_WIDTH + pixel.x];
 }
 
-@compute @workgroup_size(1)
-fn qa_stand_in(@builtin(global_invocation_id) id: vec3<u32>) {
-    let field = stand_in_at(bitcast<vec2<f32>>(qa_in[id.x]), vec2<f32>(0.0, 0.0));
-    qa_out[id.x] = bitcast<vec4<u32>>(vec4<f32>(field.n, field.warp, 0.0));
+@fragment
+fn qa_cell_corners(@builtin(position) position: vec4<f32>) -> @location(0) vec4<u32> {
+    return bitcast<vec4<u32>>(cell_corners(bitcast<vec2<i32>>(qa_input(position))));
+}
+
+@fragment
+fn qa_value_noise(@builtin(position) position: vec4<f32>) -> @location(0) vec4<u32> {
+    return vec4<u32>(bitcast<u32>(value_noise(bitcast<vec2<f32>>(qa_input(position)))), 0u, 0u, 0u);
+}
+
+@fragment
+fn qa_stand_in(@builtin(position) position: vec4<f32>) -> @location(0) vec4<u32> {
+    let field = stand_in_at(bitcast<vec2<f32>>(qa_input(position)), vec2<f32>(0.0, 0.0));
+    return bitcast<vec4<u32>>(vec4<f32>(field.n, field.warp, 0.0));
 }
 "#;
 
@@ -116,7 +132,7 @@ fn changed(from: &str, to: &str) -> String {
     source.replace(from, to)
 }
 
-/// `entry` of `source` and [`PROBES`] over `input`, one invocation each, with the uniform `chart` if it reads one: each
+/// `entry` of `source` and [`PROBES`] over `input`, one pixel each, with the uniform `chart` if it reads one: each
 /// result's bits.
 fn probe(
     canvas: &MockCanvas,
@@ -129,14 +145,29 @@ fn probe(
     let device = &context.device;
     let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
         label: Some("qa lattice"),
-        source: wgpu::ShaderSource::Wgsl(format!("{source}\n{PROBES}").into()),
+        source: wgpu::ShaderSource::Wgsl(
+            format!("{source}\nconst QA_WIDTH: u32 = {WIDTH}u;\n{PROBES}").into(),
+        ),
     });
-    let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+    let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
         label: Some("qa lattice"),
         layout: None,
-        module: &module,
-        entry_point: Some(entry),
-        compilation_options: Default::default(),
+        vertex: wgpu::VertexState {
+            module: &module,
+            entry_point: Some("qa_vertex"),
+            compilation_options: Default::default(),
+            buffers: &[],
+        },
+        fragment: Some(wgpu::FragmentState {
+            module: &module,
+            entry_point: Some(entry),
+            compilation_options: Default::default(),
+            targets: &[Some(BITS.into())],
+        }),
+        primitive: Default::default(),
+        depth_stencil: None,
+        multisample: Default::default(),
+        multiview_mask: None,
         cache: None,
     });
     let bytes: Vec<u8> = input
@@ -144,18 +175,36 @@ fn probe(
         .flatten()
         .flat_map(|word| word.to_ne_bytes())
         .collect();
-    let size = input.len() as u64 * 16;
-    let buffer = |usage| {
-        device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("qa lattice"),
-            size,
-            usage,
-            mapped_at_creation: false,
-        })
+    let source_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+        label: Some("qa lattice"),
+        size: bytes.len() as u64,
+        usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+        mapped_at_creation: false,
+    });
+    let rows = (input.len() as u32).div_ceil(WIDTH);
+    let row = WIDTH * 16;
+    let extent = wgpu::Extent3d {
+        width: WIDTH,
+        height: rows,
+        depth_or_array_layers: 1,
     };
-    let source_buffer = buffer(wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST);
-    let output = buffer(wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC);
-    let readback = buffer(wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST);
+    let target = device.create_texture(&wgpu::TextureDescriptor {
+        label: Some("qa lattice"),
+        size: extent,
+        mip_level_count: 1,
+        sample_count: 1,
+        dimension: wgpu::TextureDimension::D2,
+        format: BITS,
+        usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC,
+        view_formats: &[],
+    });
+    let view = target.create_view(&Default::default());
+    let readback = device.create_buffer(&wgpu::BufferDescriptor {
+        label: Some("qa lattice readback"),
+        size: u64::from(row) * u64::from(rows),
+        usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+        mapped_at_creation: false,
+    });
     context.queue.write_buffer(&source_buffer, 0, &bytes);
     let chart = chart.map(|bytes| {
         let buffer = device.create_buffer(&wgpu::BufferDescriptor {
@@ -167,16 +216,10 @@ fn probe(
         context.queue.write_buffer(&buffer, 0, bytes);
         buffer
     });
-    let mut entries = vec![
-        wgpu::BindGroupEntry {
-            binding: 20,
-            resource: source_buffer.as_entire_binding(),
-        },
-        wgpu::BindGroupEntry {
-            binding: 21,
-            resource: output.as_entire_binding(),
-        },
-    ];
+    let mut entries = vec![wgpu::BindGroupEntry {
+        binding: 20,
+        resource: source_buffer.as_entire_binding(),
+    }];
     entries.extend(chart.iter().map(|buffer| wgpu::BindGroupEntry {
         binding: CHART_BINDING,
         resource: buffer.as_entire_binding(),
@@ -188,12 +231,34 @@ fn probe(
     });
     let mut encoder = device.create_command_encoder(&Default::default());
     {
-        let mut pass = encoder.begin_compute_pass(&Default::default());
+        let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                view: &view,
+                depth_slice: None,
+                resolve_target: None,
+                ops: wgpu::Operations {
+                    load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
+                    store: wgpu::StoreOp::Store,
+                },
+            })],
+            ..Default::default()
+        });
         pass.set_pipeline(&pipeline);
         pass.set_bind_group(0, &bind_group, &[]);
-        pass.dispatch_workgroups(input.len() as u32, 1, 1);
+        pass.draw(0..3, 0..1);
     }
-    encoder.copy_buffer_to_buffer(&output, 0, &readback, 0, size);
+    encoder.copy_texture_to_buffer(
+        target.as_image_copy(),
+        wgpu::TexelCopyBufferInfo {
+            buffer: &readback,
+            layout: wgpu::TexelCopyBufferLayout {
+                offset: 0,
+                bytes_per_row: Some(row),
+                rows_per_image: Some(rows),
+            },
+        },
+        extent,
+    );
     context.queue.submit([encoder.finish()]);
     readback
         .slice(..)
@@ -211,6 +276,7 @@ fn probe(
         .collect();
     words
         .chunks_exact(4)
+        .take(input.len())
         .map(|w| [w[0], w[1], w[2], w[3]])
         .collect()
 }
