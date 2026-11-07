@@ -75,3 +75,45 @@ print('plane through rest both',jac(lambda a,b:both(a*e[0]+b*e[1]),(.3,.2)))
 print('plane through rest L  ',jac(lambda a,b:hoL(a*e[0]+b*e[1]),(.3,.2)))
 print('plane through rigid both',jac(lambda a,b:both(1.3*Jr+a*e[0]+b*e[1]),(.3,.2)))
 print('plane through rest, E only',jac(lambda a,b:(lambda x:x/np.sqrt(ip(x,x,m)))(a*e[0]+b*e[1]),(.3,.2)))
+# 4 what section 3 left unmeasured, added 7 Nov (code review 5809378376); the rng continues, so the figures above don't move
+Eo=lambda x:x/np.sqrt(ip(x,x,m))      # hold E alone: radial about rest, at fixed K
+print('plane through rigid, E only',jac(lambda a,b:Eo(1.3*Jr+a*e[0]+b*e[1]),(.3,.2)))
+print('plane generic, E only      ',jac(lambda a,b:Eo(v+a*e[0]+b*e[1]),(.3,.2)))
+print('plane contains Jr, both    ',jac(lambda a,b:both(v+a*Jr+b*e[1]),(.3,.2)))
+print('plane contains Jr and rest, E only',jac(lambda a,b:Eo(a*Jr+b*e[1]),(.3,.2)))
+def rigid_share(N=2000):
+    # how often each hold's rank verdict follows the rule, over random states and planes
+    bad={'E through rigid drops':0,'both through rigid keeps':0}
+    global m,r,v,Jr
+    for _ in range(N):
+        m,r,v=state(); Jr=J(r); c=1.3*Jr
+        f=[rng.normal(size=(3,2)) for __ in range(2)]; f=[x-np.sum(m[:,None]*x,0) for x in f]
+        a=jac(lambda s,t:Eo(c+s*f[0]+t*f[1]),(.3,.2)); b=jac(lambda s,t:both(c+s*f[0]+t*f[1]),(.3,.2))
+        bad['E through rigid drops']+=a[1]<1e-6; bad['both through rigid keeps']+=b[1]>1e-6
+    return bad
+print('rule over 2000 random states and planes',rigid_share())
+# the axis plane (p_rho,y, p_lambda,y) at a collinear shape: Jr lies in it
+m=rng.dirichlet([3,3,3]); x=np.array([-1.,.2,1.1]); x-=np.sum(m*x); x/=np.sqrt(np.sum(m*x*x))
+r=np.stack([x,0*x],-1); Jr=J(r)
+ey=lambda u:np.stack([0*u,u],-1)
+prho=ey(np.array([-1/m[0],1/m[1],0.])); plam=ey(np.array([-1/(m[0]+m[1]),-1/(m[0]+m[1]),1/m[2]]))
+base=rng.normal(size=(3,2)); base-=np.sum(m[:,None]*base,0); base[:,1]=0; base-=np.sum(m[:,None]*base,0)
+print('collinear, (p_rho,y, p_lam,y), L',jac(lambda a,b:hoL(base+a*prho+b*plam),(.3,.2)))
+# hold L_z alone is the nearest point of {L_z = L*}: random points of that set are farther
+worst=np.inf
+for _ in range(20000):
+    m,r,v=state(); Ls=rng.normal(); h=hoL(v,Ls)
+    x=rng.normal(size=(3,2)); x-=np.sum(m[:,None]*x,0); x-=L(r,x,m)/ip(r,r,m)*J(r)
+    o=h+x; worst=min(worst,ip(o-v,o-v,m)-ip(h-v,h-v,m))
+print('hold L_z nearest: least excess over 20000',worst)
+# a near-rigid pixel: the direction of delta-v, f32 against f64
+def dirgap(frac,N=4000):
+    F=np.float32; g=[]
+    for _ in range(N):
+        m,r,v=state(); vL=L(r,v,m)*J(r); d=v-vL; d/=np.sqrt(ip(d,d,m)); c=rng.normal()*1.2+.1
+        vt=c*J(r)+frac*abs(c)*d
+        D=lambda M,R,V,T:(lambda W:(lambda x:x/np.sqrt(np.sum(M[:,None]*x*x,dtype=T)))(W-np.sum(M*(R[:,0]*W[:,1]-R[:,1]*W[:,0]),dtype=T)*np.stack([-R[:,1],R[:,0]],-1)))(V)
+        a=D(m.astype(F),r.astype(F),vt.astype(F),F).astype(float); b=D(m,r,vt,float)
+        g.append(np.sqrt(ip(a-b,a-b,m)))
+    return np.median(g),np.max(g)
+for f in (1e-2,1e-5,1e-7): print('direction gap f32 vs f64 at',f,'med, max %.2e %.2e'%dirgap(f))

@@ -410,7 +410,7 @@ v  ← (L*/I)·J r + √((K* − L*²/2I)/K̂)·δ̂
 
 The reviewer's f32 figures, worst `|ΔL_z|`, one pass against two: `‖δv‖/‖v‖ = 10⁻¹`: 2.9·10⁻⁶ against 1.8·10⁻⁷; `10⁻³`:
 3.2·10⁻⁴ against 1.9·10⁻⁷; `10⁻⁵`: 2.8·10⁻² against 1.4·10⁻⁷; `10⁻⁷`: 1.3 against 4.2·10⁻⁷. A near-rigid pixel stays
-ill-conditioned in direction, as `η_E` is near rest: f32 and f64 can differ there by `O(1)` in `δ̂` with no tag. The tag
+ill-conditioned in direction, as `η_E` is near rest: f32 and f64 can differ there by `O(1)` in `δ̂` with no tag (0.49 median, 1.15 worst at `10⁻⁷`). The tag
 is the exact test `s = 0`, not `‖δv‖²_m ≤ ε_w‖v‖²_m`, which would make a branch tag depend on rounding, against the
 comparison-only rule.
 
@@ -475,12 +475,16 @@ Hold `E` already moves a chart's momentum axis off its label: `q_k` is what the 
 is today's behaviour on `Mixed`. Hold `L_z` does the same. It is reduced capability, so it is a label: "axis reads the
 value before the hold", which also names a hidden `p_fixed` or `p_λ` tilt target.
 
-**Rank loss has two cases**, both `ray-degenerate` (§ 5.5, row 9). (i) Hold `L_z`: the swept plane contains `Jr`, which is
-an axis plane at a real configuration, `(p_ρ,y, p_λ,y)` at a collinear shape; singular values 1.35 and 2·10⁻¹⁰. (ii) Hold
-`E` on, with or without `L_z`: **any plane through a point with `δv = 0`**. The radial projection sends the plane to a
-circle, so the chart is rays: both held, 5.3 and 2·10⁻¹⁰; through a rigid rotation, 5.3 and 6·10⁻¹⁰; hold `E` alone through
-rest, today, 2.5 and 10⁻¹⁰. That is the default `z₀`, so a momentum-momentum plane at rest under both holds is one curve of
-systems. A generic plane keeps rank 2 (6.2 and 0.45).
+**Rank loss has three cases**, each `ray-degenerate` (§ 5.5, row 9). (i) Hold `L_z`, alone or with hold `E`: the swept plane
+contains `Jr`, which is an axis plane at a real configuration, `(p_ρ,y, p_λ,y)` at a collinear shape; singular values 1.35 and
+2·10⁻¹⁰ on a general plane containing `Jr`, 4.4 and 3·10⁻¹¹ on that axis plane, 0.70 and 6·10⁻¹⁰ with both held. (ii) Hold `E`
+alone: **a plane through rest**. `η_E` is a radial projection centred on rest, so it sends the plane to a circle and the chart is
+rays: today, 2.5 and 10⁻¹⁰. (iii) Both held: **a plane through a point with `δv = 0`**, rest or a rigid rotation, since the scale
+is centred on `(L*/I)·Jr`: through rest, 5.3 and 2·10⁻¹⁰; through a rigid rotation, 5.3 and 6·10⁻¹⁰. Rest is the default `z₀`, so a
+momentum-momentum plane at rest under both holds is one curve of systems. **A plane through a rigid rotation that misses rest
+keeps rank 2 under hold `E` alone** (2.0 and 0.99), since rest, not the rotation, is that projection's centre: over 2,000 random
+states and planes it never dropped rank, and with both held it always did. A generic plane keeps rank 2: 6.2 and 0.45 both
+held, 2.3 and 0.85 under hold `E` alone. Hold `L_z` alone through rest keeps it too (1.7 and 1.0): it is a shift, not a scale.
 
 ### 5.5 Every case where two axes can't be independent
 
@@ -497,7 +501,7 @@ the same quantity (refused, § 6.1), coupled by a map (the pair is legal, and it
 | 6 | Polar at `r = 0`, exponential at `r = π` | the angle has no meaning there | `ray-degenerate` row or disc; `−n₀` counted once (REQ-CHART-078) |
 | 7 | Kind 4 | one `ν` slaves config and mass | a config or mass axis beside it is a same-block collision, `Coupling`'s flag; the slice can't pin those blocks |
 | 8 | Axes in one block, generic | `(θ, α)`, `(γ₀, θ)`, `(U, r₀₂/r₀₁)` | independent except on a curve where the Jacobian drops rank: numerical, and the curve is the seam |
-| 9 | Two momentum axes under a hold | the swept plane contains `Jr` (hold `L_z`), or passes through a point with `δv = 0`: rest or a rigid rotation (hold `E`, alone or with `L_z`) | `ray-degenerate` where it does; a label (§ 5.4) |
+| 9 | Two momentum axes under a hold | the swept plane contains `Jr` (hold `L_z`, alone or with `E`), or passes through rest (hold `E` alone), or through a point with `δv = 0`, rest or a rigid rotation (both held) | `ray-degenerate` where it does; a label (§ 5.4) |
 | 10 | Region D's edge | eq. 8 couples `ξ` and `η` | not a product domain: § 8.4 |
 | 11 | Mass axis and a shape held | `m` moves `U` and the geometric shape | the axis states what it holds (§ 3) |
 | 12 | Raw `z_μ` axis | softmax couples all three masses | contract Part 4: the line is "identical except one mass logit" |
@@ -1036,7 +1040,7 @@ Each with a control (R-176), named here and owned by a task.
 | `stereographic_identity` | § 8.2's line at random masses, against a state built from `A₁, A₂, A₃` by dd_decoder §3.2 | `μ_ρ/μ_λ` inverted; `d` dropped | TASK-M4-34 |
 | `hold_lz` | `L_z = L*` to tolerance on every chart allowing it, a near-rigid fixture included (`‖δv‖/‖v‖` from 10⁻¹ to 10⁻⁷ at f32); `Σp = 0`; both held: `E*` too; off: bitwise | `η_E` applied alone with both on fails `L_z`; one projection fails the near-rigid fixture | TASK-M8-118 |
 | `hold_outcomes` | § 5.3's six outcomes in order, each on an exact fixture; a tagged pixel's momenta unchanged; a rest pixel on the floor becomes `(L*/I)·Jr` | the order swapped at 2 and 3 | TASK-M8-118 |
-| `hold_rank` | a momentum plane containing `Jr`, and one through rest and through a rigid rotation under hold `E`, each report `ray-degenerate`; a generic plane doesn't | the label removed | TASK-M8-118 |
+| `hold_rank` | a momentum plane containing `Jr`, one through rest under hold `E` alone, and one through rest and one through a rigid rotation with both held, each report `ray-degenerate`; a generic plane doesn't | the label removed; a plane through a rigid rotation under hold `E` alone reporting rank loss | TASK-M8-118 |
 | `hold_encode` | Part 6 step 4 reads the held decode; a state off `{L_z = L*}` gets the stated outcome | step 4 on the unheld decode lands on a wrong pixel | TASK-M8-118 |
 | `baked_cap` | baked pairs in `stage::decode` at or under the ledger's constant | one entry over | TASK-M4-33 |
 | `excluded_primitives` | no row with an inverse names a binary phase, eccentricity, impact parameter or fixed `k` (R-669) | one added | TASK-M4-33 |
