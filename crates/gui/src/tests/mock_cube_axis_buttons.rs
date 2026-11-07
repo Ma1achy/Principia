@@ -1054,9 +1054,9 @@ fn read_back_off(read: &View, q1: &Latent, q2: &Latent) -> f64 {
 }
 
 /// R-459 G3: a negative determinant is the pair the other way round where that order reads the basis back. Reading back
-/// in neither order it stays as typed, a typed mirrored basis outside the map's image keeping its tilt, and the next edit
-/// built from the view keeping the plane near it; where a target is on the wrong vector or the swap would keep more of
-/// the tilt it reads its dominant axes (R-705, `manifold_view_basis`).
+/// in neither order it stays as typed where that keeps strictly more of the tilt, a typed mirrored basis outside the
+/// map's image keeping its tilt, and the view's own basis at another scale reading the same; otherwise, or with a target
+/// on the wrong vector, it reads its dominant axes (R-705, `manifold_view_basis`).
 #[test]
 fn mock_cube_axis_buttons_a_mirrored_basis_is_swapped_where_that_keeps_it() {
     let vector = |parts: &[(usize, f64)]| -> Latent {
@@ -1081,9 +1081,9 @@ fn mock_cube_axis_buttons_a_mirrored_basis_is_swapped_where_that_keeps_it() {
     let tilt = 0.8_f64.atan2(0.6).to_degrees();
     let as_typed = in_frame(frame(Z_Q3, Z_Q3, Z_MU1), &q1, &q2);
     check_tilt_kept(&as_typed, tilt);
-    // The next edit built from the view, a zoom, leaves the axes and the tilt where they were.
+    // The view's own basis, at another scale, reads the same: the axes and the tilt where they were.
     let (p1, p2) = as_typed.with_zoom(1.0).basis();
-    let zoomed = View::framed(
+    let rescaled = View::framed(
         &Plane {
             z0: [0.0; 8],
             q1: p1,
@@ -1091,8 +1091,8 @@ fn mock_cube_axis_buttons_a_mirrored_basis_is_swapped_where_that_keeps_it() {
         },
         Some(&frame(Z_Q3, Z_Q3, Z_MU1)),
     );
-    check_axes(&zoomed, (Z_ALPHA, Z_BETA), "zoomed");
-    check_tau1(&zoomed, tilt);
+    check_axes(&rescaled, (Z_ALPHA, Z_BETA), "rescaled");
+    check_tau1(&rescaled, tilt);
     rejects("a swap that loses the tilt", || {
         assert_eq!((as_typed.a, as_typed.b), (Z_BETA, Z_ALPHA))
     });
@@ -1110,11 +1110,11 @@ fn mock_cube_axis_buttons_a_mirrored_basis_is_swapped_where_that_keeps_it() {
     rejects("the swap's reading where X != Y loses z_q3", || {
         check_tilt_kept(&swapped, tilt)
     });
-    rejects("a zoom that loses the tilt", || {
+    rejects("a rescaled view that loses the tilt", || {
         check_tau1(
             &View {
                 tau1: 0.0,
-                ..zoomed
+                ..rescaled
             },
             tilt,
         )

@@ -353,14 +353,53 @@ fn manifold_view_basis_every_pair_either_way_round_is_decided_by_the_basis() {
     check_dominant(&half, (MU1, ALPHA), 0.5);
 }
 
+/// The latent axes H and V read on the mock once `q₁ = e_β`, `q₂ = e_α` are picked in `frame` and `typed` is set through
+/// Chart's basis edit.
+fn h_v_after_typing(frame: SliceFrame, typed: (Latent, Latent)) -> (usize, usize) {
+    let (mut app, mut h) = typed_app((axis(BETA, 1.0), axis(ALPHA, 1.0)));
+    app.set_field(frame_edit(frame, None));
+    let _ = h.frame(&mut app, Vec::new());
+    let picked = View::read(&app.snapshot().sim);
+    assert_eq!((picked.a, picked.b), (BETA, ALPHA), "the pick");
+    app.set_field(mv::plane_edit(&app.snapshot().sim, typed));
+    let _ = h.frame(&mut app, Vec::new());
+    let view = View::read(&app.snapshot().sim);
+    (view.a, view.b)
+}
+
 #[test]
-fn manifold_view_basis_a_mirrored_tie_stays_as_typed() {
-    // No tilt for either order to keep, and no reading back: the order as typed, though the dominant axes are the swap's.
+fn manifold_view_basis_a_length_typed_on_a_picked_pair_does_not_swap_h_and_v() {
+    let q1 = mv::add(&axis(ALPHA, 0.1), 1.0, &axis(BETA, 1.0));
+    let cases = [
+        (axis(BETA, 0.5), axis(ALPHA, 1.0)),
+        (axis(BETA, 1.0), axis(ALPHA, 2.0)),
+        (q1, axis(ALPHA, 1.0)),
+        (mv::add(&q1, 1e-6, &axis(Q3, 1.0)), axis(ALPHA, 1.0)),
+    ];
+    for frame in [SPLIT, SliceFrame::along(Q3 as u32)] {
+        for typed in cases {
+            assert_eq!(h_v_after_typing(frame, typed), (BETA, ALPHA), "{typed:?}");
+        }
+    }
+    // A real tilt on its own target stays as typed: that order keeps it, and the swap would not.
+    let tilted = (
+        mv::add(&axis(ALPHA, -0.6), 0.8, &axis(Q3, 1.0)),
+        axis(BETA, 1.0),
+    );
+    assert_eq!(h_v_after_typing(SPLIT, tilted), (ALPHA, BETA));
+    rejects("H and V swapped by the typed tilt", || {
+        assert_eq!(h_v_after_typing(SPLIT, tilted), (BETA, ALPHA))
+    });
+}
+
+#[test]
+fn manifold_view_basis_a_mirrored_tie_reads_its_dominant_axes() {
+    // No tilt for either order to keep, and no reading back: its dominant axes, the swap's here.
     let q1 = mv::add(&axis(Q0, 0.6), 0.8, &axis(MU2, 1.0));
     let q2 = mv::add(&axis(Q0, 1.0), 0.2, &axis(MU2, 1.0));
     let tie = read((q1, q2), SPLIT);
-    check_on(&tie, (Q0, MU2));
-    // With a tilt the swap would keep better, each target on its own vector, it is the dominant axes.
+    check_on(&tie, (MU2, Q0));
+    // A tilt the swap would keep better, each target on its own vector, reads them as well.
     let more = read(
         (
             mv::add(&q1, 0.3, &axis(Q3, 1.0)),
@@ -369,12 +408,19 @@ fn manifold_view_basis_a_mirrored_tie_stays_as_typed() {
         SPLIT,
     );
     check_on(&more, (MU2, Q0));
-    rejects("the basis with a tilt to keep, as typed", || {
-        check_on(&more, (Q0, MU2))
+    // A tilt the swap would lose stays as typed.
+    let kept = read(
+        (
+            mv::add(&q1, 0.3, &axis(Q3, 1.0)),
+            mv::add(&axis(Q0, -0.2), 1.0, &axis(MU2, -1.0)),
+        ),
+        SPLIT,
+    );
+    check_on(&kept, (Q0, MU2));
+    rejects("the tilt the order keeps, read as a tie", || {
+        check_on(&kept, (MU2, Q0))
     });
-    rejects("the tie, on its dominant axes", || {
-        check_on(&tie, (MU2, Q0))
-    });
+    rejects("the tie, as typed", || check_on(&tie, (Q0, MU2)));
 }
 
 #[test]

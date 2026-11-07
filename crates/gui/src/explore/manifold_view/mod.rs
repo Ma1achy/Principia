@@ -396,9 +396,10 @@ fn lost(view: &View, q1: &Latent, q2: &Latent, counted: &dyn Fn(usize) -> bool) 
 /// `misplaced` decides by the basis, whichever order `i < j` lands on (R-705). A positive determinant (`σ² cos τ₁ cos τ₂`
 /// whatever `γ`) is `(i, j)` unless a target is misplaced: then `None`. A negative one is `(j, i)` where that order reads
 /// the basis back: a view the map gives, a pair picked the other way round, kept to the ends of its range (R-459 G3), a
-/// typed component's sign saying nothing of H and V. Any other mirrored basis is outside the map's image: `None` with a
-/// target misplaced, so the dominant axes read. With none, it stays `(i, j)` unless `(j, i)` would keep more of the
-/// tilt, the components on the targets, and then `None` as well: H and V are the dominant axes (R-459 G3). With
+/// typed component's sign saying nothing of H and V. Any other mirrored basis is outside the map's image, and H and V are
+/// its dominant axes (R-459 G3), `None`, but for one case: no target misplaced, and `(i, j)` keeps strictly more of the
+/// tilt, the components on the targets, than `(j, i)`, so the tilt stays on its own target. A tie, no tilt to keep, is
+/// `None`: a length typed on a picked pair does not swap H and V. With
 /// `X = z_q3`, `Y = z_μ1`, `q₁ = ε e_α + 0.8 e_μ1`, `q₂ = e_β`, `ε = −0.6` reads back, `(z_β, z_α)`, and either side of it,
 /// up to `|ε| = 0.8`, reads its dominant axes `(z_μ1, z_β)`. `read` is [`View::framed`]'s reading on an order.
 fn tilted_axes(
@@ -426,8 +427,8 @@ fn tilted_axes(
     if lost(&swapped, q1, q2, &|_| true) <= READS_BACK * (dot(q1, q1) + dot(q2, q2)) {
         return Some((j, i));
     }
-    let keeps_more = lost(&swapped, q1, q2, &on_target) < lost(&read(i, j), q1, q2, &on_target);
-    (!misplaced(i, j) && !keeps_more).then_some((i, j))
+    let keeps_more = lost(&read(i, j), q1, q2, &on_target) < lost(&swapped, q1, q2, &on_target);
+    (keeps_more && !misplaced(i, j)).then_some((i, j))
 }
 
 /// The rotation `γ` of `q1`, `q2` as the axes `(a, b)` read it, and the two turned back by it: `(γ, σ u₁, σ u₂)` for a
