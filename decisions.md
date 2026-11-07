@@ -30436,8 +30436,8 @@ report, and "Don't start other work while I'm away") were the day's instructions
 R-681 is in the "process" group of `plan/rule_groups.yaml`.
 
 ## R-682 — Admin bypass on `main` is the owner's alone: agents never use it, by `gh pr merge --admin` or any API merge that skips a required check; merge scripts merge only when every required check has passed; a stuck check goes to the owner, who decides whether to bypass *(amends R-266)*
-*See R-812 (7 Nov 2026): the owner is still told in one message what is stuck, and whether to bypass, a one-way door, is
-asked through `/rulings-report` only.*
+*Amended in part by R-812 (7 Nov 2026: the owner is still told in one message what is stuck, and whether to bypass, a
+one-way door, is asked through `/rulings-report` only).*
 *Still in force: all of it, the bypass asked as R-812 says.*
 *3 Nov 2026 · the owner's message of that day; ported 3 Nov 2026; applied in `plan/HUMAN_SETUP.md` § 2 (a dated note),
 `plan/OPERATIONS.md` § "Merging" (step 3), R-266's forward lines, `plan/rule_groups.yaml` and `plan/section_notes.yaml`;
