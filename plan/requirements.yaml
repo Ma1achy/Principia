@@ -4430,13 +4430,13 @@
     section: 10.4 The symmetry filter
   verify:
     method: unit test
-    detail: "cargo test -p engine symmetry_filter_rest_reconstructs: a third-body rest chart whose pairs decode to exact mirrors, filtered, plus its mirror, is the full chart bitwise, outcome fields equal, signed fields flipped; mutations: a signed field not flipped fails, the canonical side off by one row fails"
+    detail: "cargo test -p engine symmetry_filter_rest_reconstructs: a third-body rest chart declaring the mirror only, one copy, whose pairs decode to exact mirrors, filtered, plus its mirror, is the full chart bitwise, outcome fields equal, signed fields flipped; mutations: a signed field not flipped fails, the canonical side off by one row fails"
   rulings:
   - R-544
   milestone: M8
 - id: REQ-CHART-137
   area: CHART
-  statement: "A pixel must be blanked only if its partner is actually in the chart's domain, checked through the chart's own map and never through Enc; on a chart holding something that breaks the symmetry nothing must be blanked and the toggle must read \"no duplicates in this chart\" (the owner's order, RQ-736)."
+  statement: "A pixel must be blanked only if its partner is actually in the chart's domain, checked through the chart's own map after signed C (translation, rotation and scale removed, the mirror step not taken) and never through the contract's C or Enc; on a chart holding something that breaks the symmetry nothing must be blanked and the toggle must read \"no duplicates in this chart\" (the owner's order, RQ-736)."
   source:
   - file: docs/design/principia_chart_composition.md
     section: 10.4 The symmetry filter
@@ -4444,7 +4444,7 @@
     section: 8.8 Region D must match the papers (order item A5)
   verify:
     method: unit test
-    detail: "cargo test -p engine symmetry_filter_fixed_velocity: on a shape-sphere chart with fixed non-zero velocities the filter blanks nothing and reads no duplicates in this chart; a partner out of the view and in the domain still blanks, and at unequal masses or eq. 3's near-rest start the swap blanks nothing; mutation: the partner check removed, blanking by the map's (θ, π − φ) alone, fails"
+    detail: "cargo test -p engine symmetry_filter_fixed_velocity: on a shape-sphere chart with fixed velocities p_ρ = (0.1, 0.1), p_λ = (0, 0) relative to ρ̃ on +x, Π·p ≠ p asserted after signed C first, the filter blanks nothing and reads no duplicates in this chart; a partner out of the view and in the domain still blanks, and at unequal masses or eq. 3's near-rest start the swap blanks nothing; the same chart at p_ρ = (0.1, 0) does blank; mutation: the partner check removed, blanking by the map's (θ, π − φ) alone, fails"
   rulings:
   - R-544
   milestone: M8
@@ -25935,9 +25935,10 @@
   verify:
     method: unit test
     detail: "cargo test -p gui symmetry_filter_toggle: the toggle on the chart's panel and in the export dialog, its no-partners state, one click from the filter's view to the full disc with no new run; control: the toggle left live with no partners fails"
-  rulings:
-  - R-369
+  rulings: []
   milestone: M8
+  rq:
+  - RQ-736
 - id: REQ-TOOL-001
   area: TOOL
   statement: "Each session must record once: device (GPU/CPU model, core counts, VRAM or unified memory size in its own field), backend and driver version, precision support and f64 rate, build (commit hash, profile, feature flags) and display (resolution, refresh, DPI scale)."

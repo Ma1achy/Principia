@@ -17,6 +17,8 @@ The first registered closed-form pair: `(ξ, η)` through the explicit-configura
 - `docs/design/principia_chart_composition.md` § "8.4 What the chart is: the domain"
 - `docs/design/principia_chart_composition.md` § "8.6 The momentum, and the rescale per pixel"
 - `docs/design/principia_chart_composition.md` § "12. Tests that can fail"
+- `docs/design/principia_chart_composition.md` § "6.6 The symmetry rule"
+- `docs/design/principia_chart_composition.md` § "10.4 The symmetry filter"
 - `docs/design/principia_dd_validation_orbits.md` § "1.6 Agekyan–Anosova region D — the near-rest starts (R-592)"
 
 ## Deliverables

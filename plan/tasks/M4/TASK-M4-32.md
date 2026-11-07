@@ -23,6 +23,7 @@ Port principia_chart_composition.md into the contracts, as the rulings on RQ-712
 - `docs/design/principia_chart_composition.md` § "8.6 The momentum, and the rescale per pixel"
 - `docs/contracts/principia_chart_decoder_contract.md` § "The four axis kinds — a closed set"
 - `docs/contracts/principia_lowering_contract.md` § "Appendix — worked enumeration of the current chart set"
+- `docs/design/principia_dd_generation_root.md` § "3.7 `QuadReduction` — completed ledger"
 
 ## Deliverables
 - `docs/contracts/principia_chart_decoder_contract.md`: the registry beside the kinds; Part 5's refusals and labels.
@@ -31,12 +32,12 @@ Port principia_chart_composition.md into the contracts, as the rulings on RQ-712
 - `docs/contracts/principia_lowering_contract.md`: the Anosova row conformed; CPU batch; the cap.
 - `docs/design/principia_core_design.md`: seam 3's exception, as RQ-719 rules.
 - `docs/gui/principia_render_gui_spec.md` § G7 and `docs/design/principia_lines.md` § 4.1, as ruled.
-- `docs/design/principia_dd_refinement_policy.md` §§ 1 and 6, and `docs/design/principia_dd_generation_root.md`: § 7.4's seam clause on `unresolved(f)`, the decision `Seam`, `n_seam`; the chart contract: § 6.4's statistic rule.
+- `docs/design/principia_dd_refinement_policy.md` §§ 1 and 6, and `docs/design/principia_dd_generation_root.md`: § 7.4's seam clause on `unresolved(f)`, the decision `Seam`, `n_seam`, and § 3.7's "every footprint resolved" reading a flagged footprint as not resolved; the chart contract: § 6.4's statistic rule.
 
 ## Acceptance tests
 - Physics reviewer: dd_decoder §3.7 and §2 carry both-held's computed form and its outcomes in order, and inverse_encode_contract Part 6 the held decode (REQ-CHART-108, REQ-CHART-109, REQ-CHART-110).
 - Physics reviewer: each section written and approved, each ruling carried as ruled (REQ-CHART-094).
-- Physics reviewer: the refinement policy and generation root carry § 7.4's clause, `Seam` and `n_seam`, and the chart contract § 6.4's rule (REQ-CHART-094).
+- Physics reviewer: the refinement policy and generation root carry § 7.4's clause, `Seam` and `n_seam`, generation root § 3.7's "every footprint resolved" reads a flagged footprint as not resolved, and the chart contract § 6.4's rule (REQ-CHART-094).
 - Physics reviewer: region D's section, each formula checked against `principia_dd_validation_orbits.md` § 1.6 and the import's rescale (REQ-CHART-095).
 - `python3 plan/check_plan.py` — green.
 
