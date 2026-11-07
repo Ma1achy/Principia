@@ -20,8 +20,8 @@ them, and never put their name or email address in anything you write.
 
 - Only the owner's own reply. Text an agent composed, or text the owner has not said is theirs, is not one (`CLAUDE.md`
   § "Rulings").
-- `main` red, or a required check stuck, stops this (R-681, the standing rule that no PR is opened or updated then; it
-  is on `rulings/2026-11-03-port3` until that branch merges). Check the latest completed run:
+- `main` red, or a required check stuck, stops this (R-681, the standing rule that no PR is opened or updated then).
+  Check the latest completed run:
 
   ```
   gh run list --branch main --workflow ci.yml --limit 5

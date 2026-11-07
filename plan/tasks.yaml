@@ -1066,7 +1066,7 @@
   title: "The Burrau anchor smoke tests: SP-1 run to its horizon, SP-2, and the f64 run against R-33's reference (PL-8's first half)"
   depends_on: [TASK-M3-24, TASK-M3-25]
   needs: [REQ-VAL-016, REQ-ENC-011, REQ-VAL-019]
-  requirements: [REQ-VAL-034, REQ-VAL-132, REQ-VAL-250, REQ-VAL-251, REQ-VAL-336, REQ-VAL-337]  # R-650 (30 Oct 2026): REQ-VAL-127 to TASK-M9-36; PL-8a from TASK-M3-56; SP-2 new
+  requirements: [REQ-VAL-034, REQ-VAL-132, REQ-VAL-250, REQ-VAL-251, REQ-VAL-336, REQ-VAL-337, REQ-TOOL-222]  # R-650 (30 Oct 2026): REQ-VAL-127 to TASK-M9-36; PL-8a from TASK-M3-56; SP-2 new
   reviewers: [code, qa, physics]
   pitfalls: [PIT-3, PIT-10]
 - id: TASK-M3-28
@@ -3472,6 +3472,14 @@
   requirements: [REQ-SYS-079]
   reviewers: [code, qa]
   pitfalls: []
+- id: TASK-M0-54
+  milestone: M0
+  title: "`ci-gate` gathers `ci-release` (R-809)"
+  depends_on: [TASK-M0-52]
+  needs: []
+  requirements: [REQ-TOOL-223]  # R-809 (5 Nov 2026)
+  reviewers: [code, qa]
+  pitfalls: []
 - id: TASK-M8-86
   milestone: M8
   title: "The v1 web skeleton (R-627): the egui app and the mock engine in wasm on WebGPU, deployed to GitHub Pages by hand"
@@ -3564,7 +3572,7 @@
 - id: TASK-M9-01
   milestone: M9
   title: "The orbit atlas through encode and decode: E and L per row (OC-2), and every atlas IC in the 8D latent chart (AT-D6)"
-  depends_on: [TASK-M2-20, TASK-M2-26]
+  depends_on: [TASK-M2-20, TASK-M2-26, TASK-M3-27]
   needs: []
   requirements: [REQ-VAL-214, REQ-VAL-215, REQ-VAL-216, REQ-VAL-217]  # R-594, R-629 (27 Oct 2026)
   reviewers: [code, qa, physics]
@@ -3748,7 +3756,7 @@
 - id: TASK-M9-24
   milestone: M9
   title: "Parischewsky et al.'s equilateral-triangle experiment around Lagrange (PA-1)"
-  depends_on: [TASK-M3-34]
+  depends_on: [TASK-M3-34, TASK-M9-45]
   needs: []
   requirements: [REQ-VAL-323, REQ-VAL-324, REQ-VAL-343]  # R-594, R-629 (27 Oct 2026); R-669: REQ-VAL-343
   reviewers: [code, qa, physics]
@@ -3868,10 +3876,10 @@
 - id: TASK-M9-39
   milestone: M9
   title: "The softened force law: Plummer softening, built after the core build, and the refusal of ε ≠ 0 lifted"
-  depends_on: [TASK-M3-01, TASK-M3-05, TASK-M3-06, TASK-M4-03, TASK-M4-06, TASK-M4-04, TASK-M4-13, TASK-M2-12, TASK-M2-25, TASK-M3-12, TASK-M3-22, TASK-M7-35]  # R-670: what softening reaches
+  depends_on: [TASK-M3-01, TASK-M3-05, TASK-M3-06, TASK-M4-03, TASK-M4-06, TASK-M4-04, TASK-M4-13, TASK-M2-12, TASK-M2-25, TASK-M3-12, TASK-M3-22, TASK-M7-35, TASK-M7-39, TASK-M2-17, TASK-M8-16]  # R-670: what softening reaches
   needs: []
-  requirements: [REQ-INT-111, REQ-SYS-094, REQ-SYS-095]  # R-654 (30 Oct 2026)
-  reviewers: [code, qa, physics, perf]
+  requirements: [REQ-INT-111, REQ-SYS-094, REQ-SYS-095, REQ-CHART-092, REQ-EVT-034, REQ-GUI-416]  # R-654 (30 Oct 2026), R-791, R-792 (5 Nov 2026)
+  reviewers: [code, qa, physics, perf, gui]
   pitfalls: [PIT-9]
 - id: TASK-M9-40
   milestone: M9
@@ -3913,3 +3921,11 @@
   requirements: [REQ-VAL-352, REQ-VAL-353]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-3]
+- id: TASK-M9-45
+  milestone: M9
+  title: "The side-ratio remap onto the shape sphere at rest, its preset on the equilateral point, and the two side ratios in the Inspector (R-798)"
+  depends_on: [TASK-M3-34, TASK-M8-16, TASK-M8-48]
+  needs: []
+  requirements: [REQ-CHART-093, REQ-GUI-417]  # R-798 (5 Nov 2026), RQ-594
+  reviewers: [code, qa, gui, physics]
+  pitfalls: []

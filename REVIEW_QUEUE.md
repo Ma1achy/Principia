@@ -7,57 +7,6 @@ Only open entries are kept here (R-292). Once an entry has a ruling it moves, un
 `docs/archive/review_queue/`: `untangling.md` holds RQ-1 to RQ-128, and `M0.md` RQ-129 onward; each later
 milestone gets its own file after its gate. Ids never change.
 
-## RQ-378: Whether "Save view as chart" on a curved chart should also offer a flattened oblique-latent version, where one exists locally *(the human's queued question, R-469 §11, R-475; context: TASK-M2-40, TASK-M8-48)*
-
-*Queued by the human (R-469 §11: "Whether "Save view as chart" on a curved chart should also offer a flattened
-oblique-latent version, where one exists locally."). For the human: yes, it changes what Save view as chart builds.*
-
-- **File, section:**
-  - `decisions.md` § "R-475 — …", the human's words, S2: on a curved chart the saved chart is "the parent chart, its
-    slice centre, and the tilt (map, angles, targets)"; on a latent view, "`(z₀, q₁, q₂)` as an oblique chart".
-  - `docs/gui/principia_render_gui_spec.md` § "G2. …", the Chart bullet's Save view as chart.
-- **The question:** a curved view near its centre is approximated by its tangent plane, an oblique latent chart
-  `(z₀, J q̂₁, J q̂₂)`; whether saving should also offer that flattened chart, and what "exists locally" requires (a
-  full-rank Jacobian at the centre, the window small enough).
-- **Options seen:** (a) no, the parent chart and its tilt only (S2 as written); (b) yes, a second option "Save as
-  flat chart", offered where the decoder's Jacobian at the centre has rank 2 (it needs the derivative RQ-341 raises);
-  (c) yes, with the flattened chart shown only as provenance, not offered.
-- **Applied meanwhile:** (a). Nothing waits.
-- **Parked:** R-510 (20 Oct 2026), the human: "RQ-378: parked until RQ-341." A deferral by ruling: the entry stays
-  open, blocked on RQ-341, and returns to the human when RQ-341 is ruled; (a) stays applied and nothing waits.
-- **21 Oct 2026:** RQ-341 is ruled (R-550), so R-510's parking has ended and the entry is with the human again. The
-  human's batch of 21 Oct leaves it open (R-545); (a) stays applied and nothing waits.
-- **21 Oct 2026 (evening):** RQ-341 is ruled (R-550), and the human parked RQ-378 again, with no target (R-568): "yeah
-  ok we can park that for now then". The entry stays open, (a) stays applied, nothing waits, and it returns when he
-  raises it. *Was:* "RQ-341 is ruled (the 21 Oct batch, PR #274)", before R-550 was on main.
-- **25 Oct 2026 (R-625):** the human: "Parked (RQ-378, RQ-386, RQ-391): stay parked." The entry stays open and parked (R-510, R-568); what it applies stays applied, and nothing waits.
-- **4 Nov 2026 (R-706):** option (a) applied, and deferred by owner 4 Nov 2026, with no target. The entry stays open.
-
-## RQ-386: Whether tier 2 of the embedding should split further, the ramp window and colour mode above the overlays and lines, if measurement shows tier 2 itself often does not fit at small sizes *(the human's queued question, R-484 RT2; context: TASK-M7-44)*
-
-*Queued by the human (the round-trip rule, "Queue, don't rule"). For the human: yes, it changes what a small image
-carries.*
-
-- **File, section:**
-  - `decisions.md` § "R-484 — …", the human's words: "Whether tier 2 should split further, for example ramp window and
-    colour mode above overlays and lines, if measurement shows tier 2 itself often does not fit at small sizes." and
-    RT2's table: "**2. Colour** | `RenderState` as built-ins: colour mode enum and every parameter, the ramp window,
-    overlays and the line system."
-  - `docs/design/principia_dd_image_embedding.md` § "6. What travels": "**The ramp window is not optional.** An
-    auto-ranged ramp manufactures or hides the difference it is meant to show".
-  - The same, § "7. Measured capacity and behaviour", to be re-measured with the tiers (R-483 H6, TASK-M7-44).
-- **Options seen:** (a) tier 2 whole, as RT2 has it; (b) tier 2a (the stain graph's built-ins, their parameters and the
-  ramp window) above tier 2b (overlays, lines, the playhead and hover, `f3_fill`), 2b dropping first; (c) decided by
-  TASK-M7-44's measurement: split only if tier 2 fails to fit at 64² or 128² for a typical stain.
-- **Applied meanwhile:** (a). Nothing waits; TASK-M7-44's measurement reports tier 2's size so the human can rule with
-  it.
-- **Parked:** R-522 (20 Oct 2026), the human: "RQ-386 after the capacity re-measure." A deferral by ruling: the entry
-  stays open, waiting on TASK-M7-44's capacity re-measure (REQ-TOOL-174), which reports tier 2's own size and, at
-  64² and 128², whether tiers 1 and 2 fit; it then returns to the human with those numbers. Meanwhile (a), tier 2
-  whole, stands, and nothing else waits.
-- **25 Oct 2026 (R-625):** the human: "Parked (RQ-378, RQ-386, RQ-391): stay parked." The entry stays open and parked (R-522); what it applies stays applied, and nothing waits.
-- **4 Nov 2026 (R-706):** deferred to TASK-M7-44's measurement by owner 4 Nov 2026. Option (c): split only if that measurement says so; (a) stands until then. The entry stays open.
-
 ## RQ-391: Whether the Export Styles' frames (Polaroid border, banknote, poster) become a later "Frame" stage after the Print graph *(the human's queued question, R-485, §0 "separate, later", the message's point 6; context: none until ruled)*
 
 *Queued by the human (point 6, as RQ-388), and §0: "On presentation frames (Polaroid, banknote, posters): separate,
@@ -75,6 +24,7 @@ later." For the human: yes, whether there is a Frame stage at all.*
   medium (R-486).
 - **25 Oct 2026 (R-625):** the human: "Parked (RQ-378, RQ-386, RQ-391): stay parked." The entry stays open and parked (R-527); what it applies stays applied, and nothing waits.
 - **4 Nov 2026 (R-706):** deferred until the exporter is designed, by owner 4 Nov 2026. The entry stays open.
+- **Deferred:** deferred to the exporter's design by owner 5 Nov 2026 (R-803, the owner: "RQ-391: Defer until the exporter is designed.").
 
 ## RQ-577: The precision-ladder proposal's seven open questions (§6), and the amendments it proposes to R-265, R-572, R-90, canonical spec §1 item 3, deep zoom §2 and its layer table, and integrator contract Part 2 and Part 2b *(the human's queued questions on the 26 Oct incoming proposal; R-265, R-572, R-90, R-561, R-547, R-33; context: none built)*
 
@@ -155,62 +105,7 @@ here.*
   in their order, **not rulings**: nothing is applied and nothing is built. The census's stage-1 results attach to this
   entry as evidence only (R-637, closing RQ-599). Stays open until M3 closes (R-630).
 - **4 Nov 2026 (R-706):** deferred to its own session by owner 4 Nov 2026. The entry stays open.
-
-## RQ-594: A side-ratio chart for Parischewsky et al.'s equilateral-triangle experiment, or a tested remap onto ShapeSphere at rest *(the human's queued question, R-594 item 6; `docs/design/principia_dd_replication.md` § 5.12; REQ-VAL-323; context: TASK-M3-64)*
-
-*Queued by R-594 (25 Oct 2026), ported 27 Oct 2026. For the human: yes, R-594 item 6: "any new chart a target
-needs".*
-
-*30 Oct 2026 (R-649, R-650):* the targets here are measurements, never gates, scored in M9
-(`docs/design/principia_dd_replication.md` § 12). The context task is now TASK-M9-24 (was TASK-M3-64). This question
-still decides what is built for them, never whether a milestone passes; it stays open.
-
-- **File, section:** `docs/design/principia_dd_replication.md` § "5.12 Targets that wait for a chart, a diagnostic or
-  data": PA-1, "Escaper-identity maps in side-ratio space around the Lagrange point", chart "new: SideRatio, or
-  ShapeSphere at rest by a tested remap".
-- **The question:** Parischewsky, Trani & Leigh 2023 map escaper identity over the triangle's side ratios around the
-  equilateral (Lagrange) configuration, at rest. Is that a new chart, or the existing ShapeSphere chart at rest
-  reached through a tested remap of side ratios to shape coordinates (rule 6)?
-- **Options seen:** (a) a remap onto ShapeSphere at rest, no new chart; (b) a new SideRatio chart; (c) neither, PA-1
-  waits.
-- **Applied meanwhile:** (c); REQ-VAL-323 carries `rq: RQ-594`.
-- **Waits:** TASK-M3-64 (and RQ-596 for its chaotic/regular split).
-- **28 Oct 2026 (R-636):** stays open. The five-chart build, TASK-M2-36 (and TASK-M2-52 after it), is held until the
-  owner rules on the replication batch, RQ-591 to RQ-598 (R-636: "Five-chart build (queue item d): hold until Malachy
-  rules on the replication batch; do not start it."); flagged in R-636: those charts come from R-633's split, not from
-  this batch.
-- **28 Oct 2026 (R-637):** the owner: "Five-chart build: yes, I meant only the replication charts. This morning's
-  five-chart split may go ahead." R-636's hold is lifted for TASK-M2-36 and TASK-M2-52. This entry's chart is a replication chart and is not built ahead of
-  its ruling (R-594 item 5). Stays open.
-- **4 Nov 2026 (R-706):** deferred to M9 by owner 4 Nov 2026. The entry stays open.
-
-## RQ-619: The census's code questions the integrator contract doesn't settle: IAS15 as a drift reference, and the step-limit axis beyond the predictive limit *(R-637: "where the contract is silent, queue the question, don't infer from the prototype"; RQ-599's questions 8 and 9; `docs/incoming/2026-10-27_validation_plan/PROPOSAL_occupant_matrix_census_2026-10-27.md` § 3.1, § 3.2; `docs/contracts/principia_integrator_contract.md` Part 2b; context: none built)*
-
-*Queued 29 Oct 2026 by R-637's port. For the owner: yes, R-637 asks for it, and it decides what the census harness
-builds.*
-
-- **File, section** (RQ-599's questions, now in `docs/archive/review_queue/M0.md`, verbatim):
-  - **8, IAS15:** "§ 3.2 calls IAS15 "already the drift reference in the logH comparison". The only record of it in the
-    repo says "**IAS15 is not built.** … its only role here is a reference arm"
-    (`docs/reference/prin-rs/docs/NOTES_excerpts.md` :119–121). Is IAS15 to be built for the census, or is that clause
-    to be corrected?"
-  - **9, the step-limit axis:** "prin-rs's `StepLimit` (`None`, `Reject`, `Predictive`, `AbGrowth`, `Global`) is AZ's
-    alone …; Heggie and logH carry only the predictive limit, through `step_limit_f` …, and the contract fixes the
-    predictive limit at f = 0.02 (Part 2b, R-160). § 3.1 crosses the step limit "fully" and omits `Reject`. Is the
-    step-limit axis AZ-only beyond `None`/`Predictive`, and is `Reject` a value or a control?"
-  - The contract, Part 2b: "**The predictive step limit:** `dτ ≤ f·d_min / (|v_rel|_max·A·B)`, with f = 0.02 (R-160)."
-    It names no IAS15, no drift reference for a census, and no step limit but that one.
-- **The questions:** (8) whether the census builds IAS15, uses a reference the corpus has, or corrects § 3.2's clause;
-  (9) whether the census sweeps a step limit beyond the contract's one, and if so which values, and whether `Reject` is
-  a value or a control.
-- **Options seen:** for 8, (a) build IAS15 for the census, (b) take the drift reference from what the corpus already
-  has (R-33's convergence reference; the inspector's RK45, contract Part 2), correcting § 3.2's clause, (c) drop the
-  drift reference from the census; for 9, (a) no step-limit axis: every cell runs the contract's predictive limit at
-  f = 0.02, (b) a harness-only axis of the contract's limit and none (`None`), `Reject` a control, (c) another set,
-  stated by the owner.
-- **Applied meanwhile:** none. Nothing of the census is built.
-- **Waits:** the census harness (with RQ-617).
-- **4 Nov 2026 (R-706):** deferred to M9 by owner 4 Nov 2026. The entry stays open.
+- **Deferred:** deferred to M3 by owner 5 Nov 2026 (R-795, the owner: "RQ-577: defer:M3").
 
 ## RQ-643: The collinear statistical targets' stops lie past R-610's horizon cap in the integrator's units (proposed OR02-1, OR03-1, MH89-1) *(physics review of the 29 Oct research-batches ingest, finding F4; `docs/incoming/2026-10-29_research_batches/README.md` § 10.3, § 10.5, `horizons_integrator_units.txt`; context: none built)*
 
@@ -236,6 +131,7 @@ builds.*
   long-time part is.
 - **Applied meanwhile:** (c). The rows state the conversion and which parts the cap blocks; no new cap is chosen.
 - **4 Nov 2026 (R-706):** deferred to M9 by owner 4 Nov 2026. The entry stays open.
+- **Deferred:** deferred to M9, option (a) only, if the cost measurement allows, with option (b) applied now (R-800) by owner 5 Nov 2026 (R-800, the owner: "RQ-643: (b) now. Revisit (a) at M9 if the cost measurement allows.").
 
 ## RQ-629: WGSL and Vulkan bound `sin` and `cos` only by an absolute error, where the decode's `cos α` near `π/2` needs a relative one *(a note for future backends; REQ-ENC-024, REQ-RENDER-025; R-297; inverse-encode contract Part 4; dd_decoder §3.2; context: RQ-628, TASK-M2-26, PR #343)*
 
@@ -272,6 +168,7 @@ builds.*
 - **Applied meanwhile:** none; nothing is built for it.
 - **Waits:** nothing.
 - **4 Nov 2026 (R-696):** deferred to M4 by owner 4 Nov 2026, with RQ-687's option (a), decided on the cross-backend check. The entry stays open.
+- **Deferred:** deferred to M4 by owner 5 Nov 2026 (R-796, the owner: "RQ-629: defer:M4").
 
 ## RQ-675: A margin node's two field ins: render_gui_spec § 5 puts them on a derived source, § 3.1 gives a source no input and a brightness one *(a conflict inside the spec; REQ-GUI-024; render_gui_spec § 3.1, § 5, § 15 item 6; context: TASK-M7-12)*
 
@@ -302,6 +199,7 @@ builds.*
 - **Applied meanwhile:** nothing; `main`'s assembler stands.
 - **Waits:** TASK-M7-12's `stain_fanout` arm (REQ-GUI-024).
 - **4 Nov 2026 (R-706):** deferred to the start of TASK-M7-12 or TASK-M7-13 by owner 4 Nov 2026. Options with a recommendation are proposed then. The entry stays open.
+- **Deferred:** deferred to the start of TASK-M7-12, options with a recommendation proposed then by owner 5 Nov 2026 (R-804, the owner: "RQ-675: Defer to TASK-M7-12. Propose options with a recommendation when it starts.").
 
 ## RQ-676: TASK-M7-12's deliverables against the built assembler: a second walk, an edit-sequence proptest that cannot live in `render`, and a fallback distinct from `#141418` *(a task file against `main`'s code and the corpus; REQ-RENDER-010, REQ-RENDER-072, REQ-RENDER-081; render_gui_spec § 13; R-467; systems_architecture § 7.1; context: TASK-M7-12)*
 
@@ -341,6 +239,7 @@ builds.*
 - **Applied meanwhile:** nothing; the task file stands as written.
 - **Waits:** TASK-M7-12.
 - **4 Nov 2026 (R-706):** deferred to the start of TASK-M7-12 or TASK-M7-13 by owner 4 Nov 2026. Options with a recommendation are proposed then. The entry stays open.
+- **Deferred:** deferred to the start of TASK-M7-12, options with a recommendation proposed then by owner 5 Nov 2026 (R-805, the owner: "RQ-676: Defer to TASK-M7-12. As above.").
 
 ## RQ-677: A slot occupant's default `inputDomains` when no field is wired, and for an unbounded field; and TASK-M7-13's deliverables against the built registry *(a definition requirement, R-72; R-53; REQ-GEN-019; gui_state_contract § 3; context: TASK-M7-13)*
 
@@ -375,6 +274,7 @@ builds.*
 - **Applied meanwhile:** nothing; `main`'s registry stands.
 - **Waits:** TASK-M7-13.
 - **4 Nov 2026 (R-706):** deferred to the start of TASK-M7-12 or TASK-M7-13 by owner 4 Nov 2026. Options with a recommendation are proposed then. The entry stays open.
+- **Deferred:** deferred to the start of TASK-M7-13, options with a recommendation proposed then by owner 5 Nov 2026 (R-806, the owner: "RQ-677: Defer to TASK-M7-13. As above.").
 
 ## RQ-679: The slider span of `ν₀`, the held `L_z` and the held `K`, which R-507 U1 divides a hidden offset by, while § G2's Slice centre lists only the eight latent sliders *(a definition requirement, R-72, and a value, R-71; R-507 U1; R-633; render_gui_spec § G2; context: TASK-M8-48, TASK-M2-52)*
 
@@ -404,37 +304,7 @@ builds.*
   as `d = span·d̃` (`Tilt::offsets`, :555-564), and no TASK-M2-52 acceptance arm depends on its value.
 - **4 Nov 2026 (R-706):** deferred to the start of TASK-M8-48 by owner 4 Nov 2026. Options with a recommendation are proposed then. The entry stays open.
 - **5 Nov 2026 (R-720; physics review 5801728548 of #425, P2):** R-507 U1 divides `d` by "that coordinate's slider span, the Slice centre slider's range". R-708 puts a held `K`'s tilt `d` in units of `t`, and a slice of a held `K` stays by value, so a by-value slider has its span in `K`. The same slider then has two units on `Φ_θ,L_z`. The span's definition has to say which, and how they convert.
-
-## RQ-680: TASK-M7-52's target charts: SM1's table has `θ × dilation` and `ν × dilation`, which no app chart has *(a definition requirement, R-72; R-542; state_map SM1; REQ-COL-113, REQ-COL-115, REQ-COL-129, REQ-COL-134; context: TASK-M7-52, TASK-M7-47)*
-
-*Queued 3 Nov 2026 by the orchestrator's filing task, from the read-only pre-flight of TASK-M7-52. Nothing is chosen.*
-
-- **File, section:**
-  - `docs/design/principia_state_map.md`:147-148, § "SM1. Definition", the target table: "| `θ × dilation` | `(θ, h)`, `h`
-    the scale-free homologous rate `(Σ m r·v)/I · I^¾` | — (never left) |" and "| `ν × dilation` | `(ν, h)`, `ν` the
-    nearest point of the right-triangle curve (mirror folded) | past a bounded edge when `ν ∉ [1/32, 31/32]` …".
-    The same section, :133-135: "*Transcribed from the prototype (R-542; `smWhere`, `smTarget`).* The prototype's targets
-    are its charts".
-  - `plan/requirements.yaml`:16609, REQ-COL-129: "θ × h 7e-8 … ν × h 4.9e-4"; REQ-COL-115's verify (:16366) and
-    REQ-COL-113's (:16330), TASK-M7-47's `chart_position_identity` and `chart_position_status`, name the same targets.
-  - `plan/requirements.yaml`, REQ-COL-134's verify: "over seeded states per target", naming no targets.
-- **Checked:** "dilation" appears in neither `docs/design/principia_chart_reference.md` nor
-  `docs/gui/principia_render_gui_spec.md` (§ G7, the Chart builder, included), nor under `crates/kernel/src`. The app's
-  charts encode through `crates/kernel/src/encode/by_kind.rs`'s `encode_into` (:210), and a curve axis's nearest point is
-  `crates/kernel/src/encode/curve.rs`'s `nearest` (:242). The corpus does name the dilation rate as an axis quantity:
-  `decisions.md`:18628, the traces' leave table, "A physical quantity (`E`, `L_z`, `K`, a momentum, the dilation rate)",
-  and `docs/design/principia_lines.md`:333, § "8. Traces", "a physical quantity (`E`, `L_z`, `K`, a momentum, the
-  dilation rate)".
-- **The gap:** which charts are "each target chart" for the one projection: SM1's targets are the prototype's, two of
-  them with an axis the app does not define.
-- **Options seen:** (a) the targets are the app's charts, through `encode_into` and `curve::nearest`, SM1's dilation
-  rows and REQ-COL-113's, -115's and -129's θ × h and ν × h read as the prototype's record. (a) leaves REQ-COL-129's
-  `θ × h` and `ν × h` tolerances, and TASK-M7-47's arms on them, without a target, so it drops requirement content and
-  is the owner's call; (b) define the two dilation charts (their `h` axis, range and link) and build them as targets;
-  (c) another, stated by the owner.
-- **Applied meanwhile:** nothing.
-- **Waits:** TASK-M7-52 (and TASK-M7-47's `θ × h` and `ν × h` arms through it).
-- **4 Nov 2026 (R-706):** deferred to M9 by owner 4 Nov 2026. The entry stays open.
+- **Deferred:** deferred to the start of TASK-M8-48, options with a recommendation proposed then by owner 5 Nov 2026 (R-807, the owner: "RQ-679: Defer to TASK-M8-48. As above.").
 
 ## RQ-681: TASK-M9-01: no task builds the scoring runner it calls, AT-D6's twins and slice planes are undefined, and OC-2's state and precision are unsettled *(silence, R-72; R-71; R-649, R-650; REQ-VAL-214 to REQ-VAL-217; dd_replication § 4.3, § 8; context: TASK-M9-01, TASK-M3-27, RQ-660)*
 
@@ -477,6 +347,7 @@ builds.*
 - **Applied meanwhile:** nothing.
 - **Waits:** TASK-M9-01; TASK-M3-27 for (a).
 - **4 Nov 2026 (R-706):** deferred to M9 by owner 4 Nov 2026. The entry stays open.
+- **Deferred:** deferred to M9, parts (b) and (c), with part (a) ruled, a deliverable of TASK-M3-27 (R-794) by owner 5 Nov 2026 (R-794, the owner: "RQ-681: (a) as a deliverable of TASK-M3-27, the earlier user. Parts (b) and (c) stay deferred to M9.").
 
 ## RQ-682: Which of the four axis kinds a virial-ratio axis is: R-471 H3 says it is not kind 3, the kinds are a closed set, and kind 2 is a scalar inside one block *(silence: R-471 H3; R-506 W2; chart_decoder_contract § "The four axis kinds — a closed set"; context: TASK-M2-37, TASK-M8-18)*
 
@@ -599,6 +470,7 @@ run's record, the 13 failures and the hardware-health arm are in RQ-685.*
 - **Applied meanwhile:** nothing. Every assertion stays, and nothing is tuned or loosened (R-649).
 - **Waits:** nothing in the build loop: the test passes on CI's lavapipe. RQ-629's options wait with this one.
 - **4 Nov 2026 (R-696):** option (b) ruled: a sinc form at `shape_sphere.rs`:162 that never reads the backend's `sin` near 0, gated to f32 (REQ-DEC-053, TASK-M2-53). Option (a) deferred to M4 by owner 4 Nov 2026, decided on the cross-backend check (TASK-M4-27 and TASK-M4-28, R-686); the entry stays open for it.
+- **Deferred:** deferred to M4's cross-backend measurement, option (a), with option (b) ruled (R-797) by owner 5 Nov 2026 (R-797, the owner: "RQ-687: (b) now, as ruled on 4 Nov: fix the sinc site, gated to f32. Option (a) is deferred to M4's cross-backend measurement.").
 
 ## RQ-688: `stand-in-soak` is red on `main`: three `qa_m022_*` tests reach the 600 s timer on run 1 of 50, and the cause is not known *(silence: a failed verify with no cause; REQ-SYS-070, R-267; REQ-VAL-156, R-376; R-649; context: run 41781905241, PR #394)*
 
@@ -689,49 +561,6 @@ change: no timer was touched (R-649). Nothing is chosen.*
 - **Applied meanwhile:** nothing.
 - **Waits:** nothing.
 - **4 Nov 2026 (R-707):** ruled: option (a), "you fix (test-only)". The entry stays open until that work is done; it is in hand on another branch.
-
-## RQ-698: `.claude/commands/*.md` joins `plan/tools/rulings.py`'s scanned files once the ruling those commands cite is on `main` *(a follow-up of PR #409, the rulings commands' tooling; code review 5771543937)*
-
-*Filed 4 Nov 2026 by PR #409's fix round, so the follow-up outlasts the PR. Nothing here is for the owner: a mechanical step, decided per R-369, which waits only on a merge.*
-
-- **File, section:** `plan/tools/rulings.py`, `REF_GLOBS`: "The files whose R-n and RQ-n references must resolve", which names `.claude/agents/*.md` and not `.claude/commands/*.md`; `.claude/commands/rulings-apply.md` § "1. Whose words, and may this run" cites the standing rule on `main` being red, which is on `rulings/2026-11-03-port3` and not yet on `main`.
-- **The gap:** an R-n or RQ-n reference in the two commands is checked by nothing, so one can go stale. Added now, the glob fails `plan/check_plan.py` on that citation.
-- **Options seen:** (a) add `.claude/commands/*.md` to `REF_GLOBS` in the first PR after `rulings/2026-11-03-port3` merges, and drop this entry's note from `.claude/commands/rulings-apply.md` that the rule is on that branch.
-- **Applied meanwhile:** none: the commands' references are read by review only.
-- **Waits:** `rulings/2026-11-03-port3`'s merge.
-## RQ-693: What the `(L_z, E)` chart's `E` axis means at `ε ≠ 0`: R-670's refusal covers `Some(E*)`, and this chart has no `E*` *(physics; silence; R-670, RQ-656 (6); `docs/design/principia_chart_reference.md` § 2.1, § 2.2; `docs/design/principia_dd_decoder.md` § 3.6, § 3.7; context: TASK-M9-39, REQ-VAL-015)*
-
-*Queued 4 Nov 2026 from physics review 5771183527 of PR #408, F1. For the owner: yes, it changes results: which ICs such a chart's pixels decode to, or whether the chart runs softened at all. Nothing is chosen.*
-
-- **File, section, quoted:**
-  - `decisions.md` § "R-670 — …", the owner's words: "(6)(iii)"; its reading: "A view refuses `ε ≠ 0` with any `Some(E*)`, as a forbidding chart refuses any `Some(E*)` (dd_decoder § 3.7, R-25): `η_E` never runs on a softened decode, so a pixel's IC never depends on `ε`".
-  - `docs/design/principia_dd_decoder.md` § 3.7: "**Under softening (R-670, RQ-656 (6)(iii), 2 Nov 2026).** A view refuses `ε ≠ 0` with any `Some(E*)`, `Some(0)` included, as a forbidding chart refuses it below: `η_E` never runs on a softened decode, so a pixel's IC does not depend on `ε`".
-  - `docs/design/principia_dd_decoder.md` § 3.7: "**It must be disabled** on the invariant-momentum charts $(L_z, E)$ and $(L_z, K)$, where energy is a chart coordinate or is fixed by the momentum construction."
-  - `docs/design/principia_chart_reference.md` § 2.1: "`E = U + K` with `K ≥ 0`, so `E ≥ U`", "`|Lz| ≤ √(2·I·K) = √(2·I·(E − U))`", "The feasible region is the interior of a parabola with apex at `(Lz, E) = (0, U)` — the rest start.", and the warp's "`E(t)     = U + K(t)`".
-  - `docs/design/principia_chart_reference.md` § 2.2, "(iii) Mix to the target kinetic energy": "`K* = E − U          (or K(t) directly on the (Lz,K) chart)`".
-  - `docs/design/principia_dd_decoder.md` § 3.7: "$U = V_0$ and $K_0$ are §3.6's, of the decoded $(m, r, p)$"; § 3.6, dated 2 Nov 2026: "At `ε ≠ 0`, `V₀ = − Σ_{i<j} mᵢmⱼ / √(‖rᵢ − rⱼ‖² + ε²)`".
-  - `plan/requirements.yaml`, REQ-VAL-015, verify: "on an (L_z,E) chart, E_0 is constant along the L_z axis and monotone along E to within f32 rounding of the target".
-- **The silence:** RQ-656 (6) asked about `η_E`, and R-670 rules that. A `(L_z, E)` chart forbids `Some(E*)`, so no energy target reaches it; its energy is the axis, and its `U` is the fixed configuration's potential. § 3.7 reads `U` as `V₀`, and R-670 softens `V₀` at `ε ≠ 0`. Nothing says which `U` the chart's axis, feasible set and `K*` read at `ε ≠ 0`, and R-670's "a pixel's IC never depends on `ε`" is stated of the refusal, which does not cover this chart. The `(L_z, K)` chart has `K* = K(t)` and reads no `U` in its `K*`.
-- **The question:** at `ε ≠ 0`, what does the `(L_z, E)` chart's `E` axis read, and does the chart run?
-- **Options seen:** (a) `U` softened: the axis is the run's softened `E₀`, and REQ-VAL-015 holds as written, but the IC and the feasible set then depend on `ε`, against R-670's stated reason; (b) `U` Newtonian: the IC does not depend on `ε`, but the run's softened `E₀` is not the axis value, the region under the parabola no longer means what § 2.1 says, and REQ-VAL-015 needs restating; (c) the chart refuses `ε ≠ 0`, at the view level, as with `Some(E*)`, which nothing says; (d) another, stated by the owner.
-- **Applied meanwhile:** none needed: dispatch refuses `ε ≠ 0` (R-654; TASK-M3-06), so no softened run exists.
-- **Waits:** TASK-M9-39 (REQ-INT-111, REQ-SYS-094, REQ-SYS-095). Nothing in M0 to M8 waits.
-
-## RQ-694: What Chazy's `pair_kup` and `out_kup` read at `ε ≠ 0`: R-670 softens the classifier's `E` and leaves the `K/U` its labels read *(physics; silence; R-670, RQ-656 (3); `docs/design/principia_dd_chazy_final_motion.md` § 3.1, § 3.2; context: TASK-M9-39, TASK-M7-35)*
-
-*Queued 4 Nov 2026 from physics review 5771183527 of PR #408, F2, and code review 5771184172, C2. For the owner: yes, it changes results: which label a softened run commits. Nothing is chosen.*
-
-- **File, section, quoted:**
-  - `decisions.md` § "R-670 — …", the owner's words: "656 (a)", option (a) of RQ-656 (1) to (3): "Chazy's `E` softened as the ruling's energy."
-  - `docs/design/principia_dd_chazy_final_motion.md` § 3.1: "*2 Nov 2026 (R-670, RQ-656 (3), option (a)):* at `ε ≠ 0`, `E` is the run's `E_0` under the softened potential (R-654); "unsoftened" is the `ε = 0` case."
-  - `docs/design/principia_dd_chazy_final_motion.md` § 3.1: "**A pair `(i, j)`'s two-body energies** (`pair_kup`): reduced mass `μ = m_i m_j / (m_i + m_j)`, `Δr = r_j − r_i`, `Δv = v_j − v_i`, `d = |Δr|`; kinetic `K = ½ μ |Δv|²`, potential magnitude `U = m_i m_j / d` (positive)".
-  - `docs/design/principia_dd_chazy_final_motion.md` § 3.1: "**The outer body `b`'s two-body energies** (`out_kup`), against the centre of mass of the other two, `(i, j)`: … `μ = m_b M_p / (m_b + M_p)`, `K = ½ μ |Δv|²`, `U = m_b M_p / d`, `v_r = Δr·Δv / d`."
-  - `docs/design/principia_dd_chazy_final_motion.md` § 3.2: "**H** | every pair separation > `h_far · R_0`, every pair receding, every pair `K/U > 1 + ε`", with HP, P, HE and PE reading `K/U` too, and all five committed. That table's `ε` is the parabolic band's (§ 3.1), not softening's.
-- **The silence:** RQ-656 (3) asked of `E` only, and R-670 softens `E`. Nothing rules the pair and outer two-body energies. Once the refusal is lifted the classifier runs on every softened run, with a softened `E` beside a Newtonian `U`, unless a ruling says otherwise, and the committed labels can change. A softened `out_kup` is not a term of the dynamics' `V`, since `b`'s potential there is pairwise, about each body and not about the pair's centre of mass; R-670 (4) reads `E_rel`, which has the same shape, as `d` read as `√(d² + ε²)` in the potential term.
-- **The question:** at `ε ≠ 0`, what do `pair_kup`'s and `out_kup`'s `U` read, and do the committed labels stand on a softened run?
-- **Options seen:** (a) both soften, `U = m_i m_j / √(d² + ε²)` and `U = m_b M_p / √(d² + ε²)`, as R-670 (4) reads `E_rel`, the separations, `v_r` and the kinetic terms geometric; (b) both stay Newtonian as written, `E` alone softened; (c) the classifier's two-body labels do not run at `ε ≠ 0`, the run reading only the labels that take `E`; (d) another, stated by the owner.
-- **Applied meanwhile:** none needed: dispatch refuses `ε ≠ 0` (R-654; TASK-M3-06), so no softened run exists.
-- **Waits:** TASK-M9-39 (REQ-INT-111, REQ-SYS-094, REQ-SYS-095). Nothing in M0 to M8 waits.
 
 ## RQ-696: Whether BR-1 runs from the authors' own initial conditions stand in for R-638's seeded draw *(the part of RQ-615 R-701 does not reach; R-638; `docs/incoming/2026-10-28_rq598_data/README.md` § 4 task 4; context: TASK-M9-22)*
 
@@ -905,32 +734,6 @@ owner: yes, it is physics; the tilt changes which systems the chart shows.*
 - **Applied meanwhile:** none: the rate stands as measured at page load, and measured runs go through `?run=`.
 - **Waits:** nothing. TASK-M8-96 uses `?run=` only; TASK-M8-37, if it keeps the panel, meets this question.
 
-## RQ-707: What margin the search for a mass-ratio axis's range holds a ratio to: chart_reference §2.1 needs one and names none, and the code's `ε_μ/2` can refuse an ask realised at `ε_μ` *(silence; a value without a source; `crates/kernel/src/chart/physical.rs`; context: TASK-M2-37)*
-
-*Queued 6 Nov 2026 from Codex's P1 on PR #387 at `crates/kernel/src/chart/physical.rs`:898, which the physics reviewer reproduced and called a silence of the corpus. Not chosen here. The margin stays as built, and the doc on `MixedMassRatio::new` now says what it does.*
-
-**In plain English:** a mass-ratio axis asks for a range of ratios, and the code keeps the ratios the mass link can really produce. The docs say how close a ratio must come to count, but the code tests a stricter figure, half of that, and the docs never give it. So the range can come out shorter than the docs promise, and a chart can be refused that the docs would offer. Usually the loss is tiny, but at an extreme ratio it can be large: in the worst case measured, the range's end stops about 240 times short. No chart ever shows a wrong system. The question is whether to write that stricter figure into the docs or change it.
-
-- **File, section, quoted:**
-  - `docs/design/principia_chart_reference.md` § "2.1 Feasibility, and the warp that makes every pixel valid", lines 358-369: "A ratio is realised when the link's inverse followed by its forward returns its masses `(m_a, m_b, m_c)`, `m_c` at its held value, and the ratio `q`, each to within `ε_μ`, relative"; "`ε_μ = 10⁻⁶` is the link clamp (…), reused here as the round trip's tolerance, not a new constant."; "the part of the asked range the link realises at `m_c`"; "where those share no ratio, as can happen at a held mass near 1, the chart is not offered".
-  - `docs/read_first/principia_00_philosophy.md` § 4.2: "Every constant must be derived or absent".
-  - `crates/kernel/src/chart/physical.rs`:776, :860 and :894, the factor `0.5` on `ε_μ`, which sits in code only.
-- **The silence:** read literally with "the part of the asked range the link realises", §2.1 gives `ε_μ` as the figure. But feasibility forces a margin on top of it, because the warp's rounding at the range's ends and the narrowing of those ends to `f32` must stay inside the `ε_μ` a decoded pixel is held to. §2.1 names none. The code's `ε_μ/2` moves `q₀` and `q₁`, and its effect is a trimmed range or a chart not offered, never a wrong system.
-- **Measured** (physics reviewer, 6 Nov 2026, `/Volumes/X10 Pro/Principia/orch/scratch/387-phys3/phys3_tmp.rs.txt`, jobs 2485-2487):
-  - The band between the range at `ε_μ/2` and at `ε_μ` has a median width in `ln q` of `5.0e-7`.
-  - The worst is 5.48 nats, at `softmax_tanh`, `μ_max = 10`, `z ≈ (7.31, −2)`, bodies `(1, 2)`, a range end at an extreme ratio.
-  - For `softmax_tanh` with `max(q, 1/q)` below about `1e6`, the width goes about as `(ε_μ/2)·max(q, 1/q)`, within 0.86 to 1.14 up to about `1e5`. Past that it jumps: at the 5.48-nat case the law gives 1.01 nats at the `ε_μ/2` end, `max(q, 1/q)` about `2.03e6`, and the `ε_μ` end sits at `4.85e8`.
-  - For `stick_breaking` that law is wrong by six orders. The widest band is `9.99e-4` at `max(q, 1/q)` about `2.0e9`, and `1.64e-4` at `3.3e8`, about as `(ε_μ²/2)·max(q, 1/q)`.
-  - A margin must leave room. At the full `ε_μ` (`f = 1.0`), 62% of narrowed `softmax_tanh` charts (29722 of 48188) and 44% of `stick_breaking` charts (2223 of 5066) have a refused row in the square. At `f = 0.95` it is 27 and 97 charts, and at `f = 0.9` and `0.5` it is 0. The least that works is about `f = 0.94`.
-  - That need has a source. The worst end rise is `0.0551` to `0.0593` of `ε_μ` over every margin and both links (job 2486), just under the `f32` rounding of a narrowed end, `2⁻²⁴/ε_μ = 0.0596`. So the need is `1 − 2⁻²⁴/ε_μ = 0.9404`.
-- **The question:** what margin does the range's search hold, and where is it written?
-- **Options seen:** the `1/2` of (i) and the `0.9` of (ii) are chosen values, neither derived; § 4.2 above is why that matters.
-  - (i) Keep `ε_μ/2` and add a §2.1 sentence naming it as the range's margin. The physics reviewer recommends it as simple and comfortably past the measured need. It changes the docs only.
-  - (ii) A tighter margin, `0.9·ε_μ`, enough on these measurements. Its band is an estimated one fifth the width: not measured, since the runs took the band only between `ε_μ/2` and `ε_μ`, and following from the linear region, so not reaching the jump past about `1e6`. It also changes the three factors in `physical.rs` and that file's docs on the margin.
-  - (iii) A margin derived from that rounding, `ε_μ − k·2⁻²⁴`: `k = 1` gives `0.940·ε_μ`, on the need with little room; `k = 2` gives `0.881·ε_μ`, with room. Neither value was run; the runs at 0.95, 0.9 and 0.8 bracket them. It changes the same code and docs as (ii).
-- **Applied meanwhile:** `ε_μ/2`, as built.
-- **Waits:** nothing is held. The code stands at `ε_μ/2` until a ruling.
-
 ## RQ-708: Whether the running kernel reaches the ionisation gate only after `E_rel > 0`, or the gate fires on its own *(physics; silence: R-29, R-32, R-710; TASK-M3-12 § Goal; `docs/contracts/principia_integrator_contract.md` Part 7; context: physics review 5801941254 of PR #425)*
 
 *Queued 6 Nov 2026 by the port's fix round, from physics review 5801941254 of PR #425, finding N1. For the owner: yes, it is physics; the answer changes when a triple ejection is recorded. Nothing is chosen.*
@@ -951,3 +754,22 @@ owner: yes, it is physics; the tilt changes which systems the chart shows.*
   - (c) Another, stated by the owner.
 - **Applied meanwhile:** nothing.
 - **Waits:** TASK-M3-12's gate (REQ-EVT-006).
+
+## RQ-709: Whether R-791's Newtonian energy reaches the other axes that read `U`: the lone, mixed and Chart-builder `E` axes and the virial-ratio axis *(physics; silence; R-791, R-670, R-654; `docs/design/principia_chart_reference.md` § 2.1; `crates/kernel/src/chart/energy.rs`:303; context: TASK-M9-39, REQ-CHART-092)*
+
+*Queued 6 Nov 2026 from physics review 5805354224 of PR #430, F1. For the owner: yes, it changes results: which start such a chart's pixels decode to at `ε ≠ 0`, or whether those charts run softened at all. Nothing is chosen.*
+
+**In plain English:** the owner ruled that the chart of angular momentum against energy keeps its energy axis Newtonian once softening is on, so a pixel's starting state never depends on the softening length. That ruling names one chart. Other axes read the same potential: an energy axis on its own, on a mixed chart or from the Chart builder, and the virial-ratio axis. As the plan stands, softening would reach them, so their pixels' starts would depend on the softening length, which is what the owner's reason forbids for the first chart. Nothing has run softened yet, because softened runs are refused until the end of the build.
+
+- **File, section, quoted:**
+  - `decisions.md` § "R-791 — …", the owner's words: "Its energy axis is the Newtonian energy, so a pixel's starting state never depends on the softening length and toggling softening changes only the physics, never the start."
+  - `docs/design/principia_chart_reference.md` § 2.1, "Every energy-type axis is warped by default (R-471)": "`E = U + K_max·t^γ_K`"; and the virial ratio: "The kinetic energy at the pixel is `K* = Q(t)·|U|/2`, using the pixel's own `U` (E3)."
+  - `crates/kernel/src/chart/energy.rs`:303, `potential`: "The potential `U` of the masses and configuration, `G = 1` (the descriptor's `V_0`)."
+  - `crates/kernel/src/chart/physical.rs`:10: "`E` ([`AxisE`]): `E = U + K*`, that `K*`, `U` the pixel's own potential (E3)."; :14: "`K* = L_z²/2I + Q·|U|/2` on the pixel's own `U`".
+  - `docs/design/principia_dd_decoder.md` § 3.6, dated 2 Nov 2026: "At `ε ≠ 0`, `V₀ = − Σ_{i<j} mᵢmⱼ / √(‖rᵢ − rⱼ‖² + ε²)`".
+- **The silence:** R-670's refusal covers `Some(E*)` only, and R-791, REQ-CHART-092 and TASK-M9-39 name only `(L_z, E)`. These axes share `potential` with it, and TASK-M9-39 softens that path. So at `ε ≠ 0` their pixels get a start that depends on `ε`, with no label and no readout. The virial axis is the harder case, because R-670 makes the stored `virial_ratio` softened, so a Newtonian axis would disagree with its own readout.
+- **The question:** at `ε ≠ 0`, what `U` do these axes read, and do their charts run?
+- **Options seen:** (a) Newtonian on every axis that reads `U`, each labelled, with the softened value beside it in the Inspector, as R-791: no start depends on `ε`, and the virial axis differs from the stored `virial_ratio`; (b) these charts refuse `ε ≠ 0` at the view, as with `Some(E*)`: nothing disagrees, and they can't be viewed softened; (c) softened on these axes: each axis is the run's true value, and the start depends on `ε`, against R-791's reason; (d) the `E` axes as (a) and the virial axis as (b); (e) another, stated by the owner.
+- **Recommendation:** (a): one rule for every axis that reads `U`, with the owner's reason kept and no chart lost. The virial axis's disagreement is the same one R-791 already labels on the energy axis.
+- **Applied meanwhile:** none needed: dispatch refuses `ε ≠ 0` (R-654; TASK-M3-06), so no softened run exists.
+- **Waits:** TASK-M9-39 (REQ-INT-111, REQ-SYS-094, REQ-SYS-095). Nothing in M0 to M8 waits.
