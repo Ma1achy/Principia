@@ -45,6 +45,8 @@
 //!   momenta 0 and finite, the same for an `L_z` with no finite square; the last values below each edge stay systems.
 //! - `qa_refusal_at_chart_precision`: a target with a construction at f64 and none at an f32 chart's own precision is
 //!   refused by `validate`, weight 0, not just tagged by the decode; at one f32 target the label and the refusal agree.
+//! - `qa_refusal_at_chart_precision_view`: the same through an f32 view, on the placement the f32 decode reads: the
+//!   held-value charts, the held `L_z` and the held `K` by value at a non-zero `d`, have no labelled pixel left valid.
 //!
 //! Controls: the held `L_z` read without `d`; a floor at the centre's `L_z`, not the pixel's; a held `L_z` moved in a warp
 //! coordinate, or held to one sign, tilted and sliced; a bottom row left to the rounding of `l²/2`; a refused cell
@@ -1797,5 +1799,111 @@ negative_control!(
     expected = "the f32 decode's label and the chart's refusal disagree",
     {
         check_target_refused(true);
+    }
+);
+
+/// One f32 view, along each column: the rows are bisected to where the f32 decode's label flips and walked float by
+/// float about it, and every pixel it labels is refused and weighted 0, the check on the view's own placement at f32.
+/// The placement at f32 and the f64 one narrowed differ there, so `wide` reads the chart's refusal of the f64 placement
+/// in the view's place (the control). The columns that crossed.
+fn walk_floor<Ch: Tiltable<Param = f32>>(name: &str, tv: &Tilted<Ch, f32>, wide: bool) -> usize {
+    let tagged = |u: f32, v: f32| tv.decode::<Defaults, f32>(u, v).degenerate.is_some();
+    let mut crossed = 0;
+    for i in 0..257 {
+        let u = i as f32 / 256.0;
+        let (mut lo, mut hi) = (0.0f32, 0.5f32);
+        if !tagged(u, lo) || tagged(u, hi) {
+            continue;
+        }
+        for _ in 0..40 {
+            let mid = 0.5 * (lo + hi);
+            if tagged(u, mid) {
+                lo = mid;
+            } else {
+                hi = mid;
+            }
+        }
+        crossed += 1;
+        for s in 0..48u32 {
+            let v = f32::from_bits(lo.to_bits() + s - 24);
+            if !tagged(u, v) {
+                continue;
+            }
+            let (wu, wv) = (f64::from(u), f64::from(v));
+            let refused = if wide {
+                let ([a, b], shift) = tv.at::<f64>(wu, wv);
+                tv.chart().refusal(a, b, &shift.unwrap()).is_some()
+            } else {
+                matches!(tv.validate(wu, wv), ValidationResult::Reject { .. })
+            };
+            assert!(
+                refused,
+                "{name}: a pixel the f32 decode labels is a system at ({u}, {v})"
+            );
+            if !wide {
+                assert_eq!(tv.weight(wu, wv), 0.0, "{name} at ({u}, {v})");
+            }
+        }
+    }
+    crossed
+}
+
+fn check_view_refused(wide: bool) {
+    let burrau = Burrau::<f32> {
+        nu_range: [0.1, 0.9],
+        k_max: 1.0,
+        gamma_k: 1.5,
+    };
+    let acute = BurrauThetaK::<f32> {
+        theta_range: [0.2, std::f32::consts::FRAC_PI_4],
+        k_max: 1.0,
+        gamma_k: 1.5,
+    };
+    let bare = BurrauThetaLz::<f32> {
+        theta_range: [0.2, std::f32::consts::FRAC_PI_4],
+        k: 0.5,
+        lz_fraction: 1.0,
+    };
+    let a = HeldLz {
+        mapping: Mapping::Linear,
+        ..HeldLz::new(burrau)
+    };
+    let t = HeldLz {
+        mapping: Mapping::Linear,
+        ..HeldLz::new(acute)
+    };
+    let linear_k = HeldK {
+        mapping: Mapping::Linear,
+        ..HeldK::new(bare, 1.0, 1.5)
+    };
+    let tilt_lz = narrow_tilt(Arm::SheetT1, HELD_LZ, 2.0);
+    let tilt_k = narrow_tilt(Arm::SheetT1, HELD_K, 1.0);
+    let crossed = [
+        walk_floor("(ν, K)", &Tilted::new(a, tilt_lz).unwrap(), wide),
+        walk_floor("Φ_θ,K", &Tilted::new(t, tilt_lz).unwrap(), wide),
+        walk_floor("Φ_θ,L_z", &Tilted::new(bare, tilt_k).unwrap(), wide),
+        walk_floor(
+            "Φ_θ,L_z, linear",
+            &Tilted::new(linear_k, tilt_k).unwrap(),
+            wide,
+        ),
+    ];
+    assert!(
+        crossed.iter().all(|&c| c > 50),
+        "columns that crossed the floor: {crossed:?}"
+    );
+}
+
+#[test]
+fn qa_refusal_at_chart_precision_view() {
+    check_view_refused(false);
+}
+
+negative_control!(
+    qa_refusal_at_chart_precision_view,
+    "the chart's refusal of the f64 placement misses a pixel the f32 decode labels, so it must fail",
+    expected = "a pixel the f32 decode labels is a system",
+    {
+        check_view_refused(true);
     }
 );
