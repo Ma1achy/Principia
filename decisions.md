@@ -30436,6 +30436,9 @@ report, and "Don't start other work while I'm away") were the day's instructions
 R-681 is in the "process" group of `plan/rule_groups.yaml`.
 
 ## R-682 — Admin bypass on `main` is the owner's alone: agents never use it, by `gh pr merge --admin` or any API merge that skips a required check; merge scripts merge only when every required check has passed; a stuck check goes to the owner, who decides whether to bypass *(amends R-266)*
+*See R-812 (7 Nov 2026): the owner is still told in one message what is stuck, and whether to bypass, a one-way door, is
+asked through `/rulings-report` only.*
+*Still in force: all of it, the bypass asked as R-812 says.*
 *3 Nov 2026 · the owner's message of that day; ported 3 Nov 2026; applied in `plan/HUMAN_SETUP.md` § 2 (a dated note),
 `plan/OPERATIONS.md` § "Merging" (step 3), R-266's forward lines, `plan/rule_groups.yaml` and `plan/section_notes.yaml`;
 changes no requirement*
@@ -31581,8 +31584,8 @@ R-811 is in the "physics" group of `plan/rule_groups.yaml`.
 *7 Nov 2026 · the owner's ruling received that day, its rider and their confirmation; applied in `CLAUDE.md` § "When to
 ask the human", `.claude/commands/rulings-report.md` § 2 and § 4, `plan/OPERATIONS.md` § "Merging", § "Reviewers",
 § "Autonomy (R-369)", § "The GUI track (R-390)" and § "Asking the human", `plan/WORKFLOW.md` § "Task files",
-§ "Human checkpoints: the milestone gates" and § "Escalation", R-204's and R-369's "Still in force" lines,
-`plan/rule_groups.yaml` and `plan/section_notes.yaml`; changes no requirement*
+§ "Human checkpoints: the milestone gates" and § "Escalation", the forward and "Still in force" lines of R-204, R-369,
+R-390 and R-682, `plan/rule_groups.yaml` and `plan/section_notes.yaml`; changes no requirement*
 
 The owner's ruling, received 7 Nov 2026, verbatim (the date in its first line is the text's own, and stands):
 
