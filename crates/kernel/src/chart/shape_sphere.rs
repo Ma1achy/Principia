@@ -68,7 +68,8 @@
 //! f32, [`sinc_f32`], below the cut `r² < SINC_CUT2_F32` the series `1 − r²/3! + r⁴/5! − r⁶/7!` in `r²` alone, and
 //! `sin(r)/r` from there up. The form has a cut because one with none would be the kernel's own `sin` at every `r`,
 //! RQ-687's option (a), deferred to M4 (R-696). `cos(r)` stays the backend's. `r²` is the `‖d‖²` of `d`'s `fma` chain
-//! (`square`), decided on before any square root (gpu_determinism_note's rule; `crate::encode::by_kind`'s centre).
+//! (`square`). That select chooses between two forms of one continuous value and writes no tag, so it need not agree
+//! across backends, and R-547's rule for a branch input that must does not bind it: the chain gives no such agreement.
 //!
 //! **`p = −0`** (applied per R-369, TASK-M2-43; pitfalls §11). The point's `n₁ = sin φ·sin θ` is `−0` wherever one
 //! factor is a zero and the other negative: on the `L⁺` row (`t = 1`, `φ = +0`) for every `s ∈ (½, 1)`, where
@@ -213,8 +214,9 @@ pub fn sinc_of(sin_r: f32, r: f32, square: f32) -> f32 {
     )
 }
 
-/// `‖d‖²`, a chain of explicit `fma`s from the lone first product, for the f32 sinc's cut to decide on (R-34): not
-/// [`radius`]'s square root, which no branch decides on.
+/// `‖d‖²`, a chain of `fma`s from the lone first product, which the f32 sinc's cut decides on and its series reads, in
+/// place of [`radius`]'s square root. `fma` gives no agreement across backends (lavapipe rounds the product, then the
+/// add), and that select needs none: it chooses a continuous value and writes no tag (the module's note).
 #[inline]
 fn square<F: Float>(d: [F; 3]) -> F {
     Float::mul_add(d[2], d[2], Float::mul_add(d[1], d[1], d[0] * d[0]))
