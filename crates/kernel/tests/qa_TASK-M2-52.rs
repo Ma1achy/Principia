@@ -47,25 +47,42 @@
 //!   refused by `validate`, weight 0, not just tagged by the decode; at one f32 target the label and the refusal agree.
 //! - `qa_refusal_at_chart_precision_view`: the same through an f32 view, on the placement the f32 decode reads: the
 //!   held-value charts, the held `L_z` and the held `K` by value at a non-zero `d`, have no labelled pixel left valid.
+//! - `qa_refusal_at_placed_domain_end`: each chart's domain ends through an f32 view, walked float by float: a pixel placed
+//!   outside at f32 is refused where the check at the f64 placement passes, and one inside at both stays a system. A
+//!   domain end's weight is `qa_weight_reads_refusals_only`'s.
+//! - `qa_view_check_reads_own_parameters`: REQ-DEC-048's active value on a view's check at the chart's own precision: at
+//!   `μ_max` 1, 1.7 and 8, at f64 and f32, on a linear energy axis, the view accepts a pixel exactly where the chart's
+//!   check passes and the decode at that `p`, at that precision, is a system; `p` changes the answer on each arm.
+//! - `qa_construction_check_free_of_parameters`: the construction charts read no link for their systems, so on all of
+//!   them, at f64 and f32, tilted, the check at any `μ_max` and `q_max` is the check at the defaults.
+//! - `qa_weight_reads_refusals_only`: REQ-CHART-062's area weight 0 is the refusal's: on every chart, at f64 and f32, over
+//!   a window past the square, the weight is 0 exactly where the chart refuses at f64 or at its own precision, and there
+//!   the check rejects too; a rejection that is no refusal, a domain end or a linear energy axis' infeasible pixel, keeps
+//!   the tilt's. The weight takes no parameters.
 //!
 //! Controls: the held `L_z` read without `d`; a floor at the centre's `L_z`, not the pixel's; a held `L_z` moved in a warp
 //! coordinate, or held to one sign, tilted and sliced; a bottom row left to the rounding of `l²/2`; a refused cell
 //! weighted as the tilt; a held `K` tilted by value; a mirrored `t < 0`; a held `K` slice moved in `t`, or a `t₀` not
 //! recomputed; the triangle read at `ν₀` without `d`; a momentum control's `d` put on the next control; a `K` slice that
-//! leaves the momenta's `K` unchanged; a warped `L_z` past the band expected refused.
+//! leaves the momenta's `K` unchanged; a warped `L_z` past the band expected refused; layer 3 read at the defaults, not
+//! `p`; a chart that does read `p` put through the construction charts' check; a weight that reads the check, or layer 3
+//! at the defaults; a refused pixel weighted as the tilt.
 
 use std::io::Write;
 
 use kernel::chart::burrau_acute::decode_theta_lz_at;
 use kernel::chart::construction::{Held, LzChart, HELD_K, HELD_LZ, NU0};
-use kernel::chart::tilt::{Hidden, Tiltable};
+use kernel::chart::invariant::Invariant;
+use kernel::chart::tilt::{Hidden, Shift, Tiltable};
 use kernel::chart::{
-    Burrau, BurrauThetaDeltaM, BurrauThetaK, BurrauThetaLz, Chart, EuclidPlane, HeldK, HeldLz,
-    Mapping, MassSimplex, RestStart, Tilt, TiltMap, TiltSpec, Tilted, ValidationResult,
+    Burrau, BurrauThetaDeltaM, BurrauThetaK, BurrauThetaLz, Chart, EuclidPlane, Float, HeldK,
+    HeldLz, InvariantLE, Mapped, Mapping, MassSimplex, RestStart, Tilt, TiltMap, TiltSpec, Tilted,
+    ValidationResult,
 };
 use kernel::decode::invariant::{infeasible, no_construction};
 use kernel::decode::{momentum, Decoded, Degenerate};
-use kernel::generated::links::{Defaults, LinkParams};
+use kernel::generated::links::{Defaults, LinkParams, LinkReal};
+use kernel::payload::PayloadReal;
 use validation::negative_control;
 
 /// The view's centre, off `(½, ½)`.
@@ -1907,3 +1924,765 @@ negative_control!(
         check_view_refused(true);
     }
 );
+
+/// The f32 tilt of `spec`, about `C`, at the span `span`, as a chart at f32 holds it.
+fn f32_tilt(spec: &TiltSpec, span: f64) -> Tilt<f32> {
+    let w = Tilt::new(spec, C, [span, span]);
+    Tilt {
+        on: w.on,
+        two: w.two,
+        rank_loss: w.rank_loss,
+        centre: w.centre.map(|x| x as f32),
+        columns: w.columns.map(|c| c.map(|x| x as f32)),
+        x: w.x,
+        y: w.y,
+        span: w.span.map(|x| x as f32),
+        weight: w.weight as f32,
+        normal_zero: w.normal_zero,
+        strip: w.strip,
+    }
+}
+
+/// One domain end of one chart.
+struct End<'a> {
+    name: &'a str,
+    /// The pixel axis walked, 0 for `u`, 1 for `v`.
+    axis: usize,
+    /// The placed value of that axis at the end, at f64.
+    at: f64,
+    /// A pixel on the other axis.
+    other: f32,
+    /// Whether the fixture's angles reach a pixel outside at f32 alone. A sum at the simplex's upper ends rounds to 1, on
+    /// the domain, before it can pass it, so a pixel past them is past them at f64 too.
+    rounds: bool,
+    /// Whether `(a, b)` placed at f32 is outside the domain.
+    outside: &'a dyn Fn(f32, f32) -> bool,
+}
+
+/// `end` through `tv`, a tilt `cos` of the axis: bisected at f32 to where the placement leaves the domain, then walked
+/// float by float. `wide` reads the check at the f64 placement in the view's place (the control). The pixels outside at
+/// f32, and those of them the check at the f64 placement passes.
+fn walk_end<Ch: Tiltable<Param = f32>>(
+    tv: &Tilted<Ch, f32>,
+    end: &End,
+    cos: f64,
+    wide: bool,
+) -> [usize; 2] {
+    let c = C[end.axis];
+    let edge = c + (end.at - c) / cos;
+    let pixel = |x: f32| {
+        if end.axis == 0 {
+            (x, end.other)
+        } else {
+            (end.other, x)
+        }
+    };
+    let out = |x: f32| {
+        let (u, v) = pixel(x);
+        let ([a, b], _) = tv.at::<f32>(u, v);
+        (end.outside)(a, b)
+    };
+    let side = if end.at > c { 0.2 } else { -0.2 };
+    let (mut lo, mut hi) = ((edge - side) as f32, (edge + side) as f32);
+    assert!(!out(lo) && out(hi), "{}: the walk's start", end.name);
+    for _ in 0..48 {
+        let mid = 0.5 * (lo + hi);
+        if out(mid) {
+            hi = mid;
+        } else {
+            lo = mid;
+        }
+    }
+    let params = LinkParams::<f64>::DEFAULT;
+    let ulp = f32::EPSILON * hi.abs().max(1e-3) * 0.5;
+    let mut tally = [0, 0];
+    for k in -32..32 {
+        let x = hi + k as f32 * ulp;
+        let (u, v) = pixel(x);
+        let (wu, wv) = (f64::from(u), f64::from(v));
+        let ([a, b], shift) = tv.at::<f64>(wu, wv);
+        let at_f64 = tv.chart().validate_shifted(a, b, &shift.unwrap(), &params);
+        let passes = at_f64 == ValidationResult::Valid;
+        if out(x) {
+            tally[0] += 1;
+            tally[1] += usize::from(passes);
+            let refused = if wide {
+                !passes
+            } else {
+                matches!(tv.validate(wu, wv), ValidationResult::Reject { .. })
+            };
+            assert!(
+                refused,
+                "{}: a pixel placed outside at f32 is a system at ({u}, {v})",
+                end.name
+            );
+        } else if passes
+            && tv
+                .decode::<Defaults, f32>(u, v)
+                .ic
+                .m
+                .iter()
+                .all(|&m| m > 0.0)
+        {
+            // Near θ = 0 a mass can round to 0 at f32 inside the fold: layer 3's to refuse.
+            assert_eq!(
+                tv.validate(wu, wv),
+                ValidationResult::Valid,
+                "{}: a pixel inside at both is refused at ({u}, {v})",
+                end.name
+            );
+        }
+    }
+    tally
+}
+
+/// Every end of `ends` under each of `angles`, all into the hidden target `x`, on `map`.
+fn walk_ends<Ch: Tiltable<Param = f32> + Copy>(
+    chart: Ch,
+    x: u32,
+    span: f64,
+    ends: &[End],
+    wide: bool,
+) {
+    for end in ends {
+        let mut tally = [0, 0];
+        for i in 0..64 {
+            let tau = 17.0 + 1.0625 * f64::from(i);
+            let spec = TiltSpec {
+                tau1: if end.axis == 0 { tau } else { 0.0 },
+                tau2: if end.axis == 0 { 0.0 } else { tau },
+                map: if end.axis == 0 {
+                    TiltMap::Sheet
+                } else {
+                    TiltMap::Lean
+                },
+                x,
+                y: x,
+            };
+            let tv = Tilted::new(chart, f32_tilt(&spec, span)).expect("a hidden target");
+            let got = walk_end(&tv, end, tau.to_radians().cos(), wide);
+            tally = [tally[0] + got[0], tally[1] + got[1]];
+        }
+        assert!(
+            tally[0] > 100 && (tally[1] > 0 || !end.rounds),
+            "{} at {}: outside at f32 {}, of them passing at the f64 placement {}",
+            end.name,
+            end.at,
+            tally[0],
+            tally[1]
+        );
+    }
+}
+
+fn check_placed_ends(wide: bool) {
+    // θ inside the fold, read at f32 and on the placed value exact at f64: f32's π/4 lies above the fold's end.
+    let fold = std::f64::consts::FRAC_PI_4;
+    let theta_ok = |th: f32, wide: f64| th > 0.0 && wide > 0.0 && th <= fold as f32 && wide <= fold;
+    // The ends of θ on the range [0.2, 0.7]: θ = 0 and θ = π/4.
+    let (low, high) = (-0.4, (std::f64::consts::FRAC_PI_4 - 0.2) / 0.5);
+
+    let burrau = Burrau::<f32> {
+        nu_range: [0.25, 0.75],
+        k_max: 1.0,
+        gamma_k: 1.0,
+    };
+    let nu_out = |a: f32, _: f32| {
+        let nu = burrau.nu::<f32>(a);
+        !(nu > 0.0 && nu < 1.0)
+    };
+    let below = |_: f32, b: f32| b < 0.0;
+    let held = |at, axis, outside| End {
+        name: "(ν, K)",
+        axis,
+        at,
+        other: 0.5,
+        rounds: true,
+        outside,
+    };
+    walk_ends(
+        HeldLz::new(burrau),
+        HELD_LZ,
+        1.0,
+        &[
+            held(1.5, 0, &nu_out),
+            held(-0.5, 0, &nu_out),
+            held(0.0, 1, &below),
+        ],
+        wide,
+    );
+
+    let acute = BurrauThetaK::<f32> {
+        theta_range: [0.2, 0.7],
+        k_max: 1.0,
+        gamma_k: 1.0,
+    };
+    let acute_out = |a: f32, _: f32| !theta_ok(acute.theta::<f32>(a), acute.theta(f64::from(a)));
+    let held = |at, axis, outside| End {
+        name: "Φ_θ,K",
+        axis,
+        at,
+        other: 0.5,
+        rounds: true,
+        outside,
+    };
+    walk_ends(
+        HeldLz::new(acute),
+        HELD_LZ,
+        1.0,
+        &[
+            held(low, 0, &acute_out),
+            held(high, 0, &acute_out),
+            held(0.0, 1, &below),
+        ],
+        wide,
+    );
+
+    let bare = BurrauThetaLz::<f32> {
+        theta_range: [0.2, 0.7],
+        k: 0.5,
+        lz_fraction: 1.0,
+    };
+    let bare_out = |a: f32, _: f32| !theta_ok(bare.theta::<f32>(a), bare.theta(f64::from(a)));
+    let lz_end = |name, at| End {
+        name,
+        axis: 0,
+        at,
+        other: 0.5,
+        rounds: true,
+        outside: &bare_out,
+    };
+    let bare_ends = [lz_end("Φ_θ,L_z", low), lz_end("Φ_θ,L_z", high)];
+    walk_ends(bare, HELD_K, 0.1, &bare_ends, wide);
+    let warped = HeldK::new(bare, 1.0, 1.5);
+    let warped_ends = [lz_end("HeldK", low), lz_end("HeldK", high)];
+    walk_ends(warped, HELD_K, 0.1, &warped_ends, wide);
+    let linear = HeldK {
+        mapping: Mapping::Linear,
+        ..warped
+    };
+    let linear_ends = [lz_end("HeldK, linear", low), lz_end("HeldK, linear", high)];
+    walk_ends(linear, HELD_K, 0.1, &linear_ends, wide);
+
+    let square = |a: f32, b: f32| !((0.0..=1.0).contains(&a) && (0.0..=1.0).contains(&b));
+    let simplex_end = |axis, at, rounds| End {
+        name: "the mass simplex",
+        axis,
+        at,
+        other: 0.3,
+        rounds,
+        outside: &square,
+    };
+    walk_ends(
+        RestStart::new(MassSimplex::<f32> {
+            nu0: 0.5,
+            eps_m: 1e-4,
+        }),
+        2,
+        1.0,
+        &[
+            simplex_end(0, 0.0, true),
+            simplex_end(0, 1.0, false),
+            simplex_end(1, 0.0, true),
+            simplex_end(1, 1.0, false),
+        ],
+        wide,
+    );
+
+    let plane = EuclidPlane::<f32> {
+        m_range: [1.0, 32.0],
+        nu_range: [0.25, 0.75],
+    };
+    let plane_out = |_: f32, b: f32| {
+        let nu = plane.nu::<f32>(b);
+        !(nu > 0.0 && nu < 1.0)
+    };
+    let plane_end = |at| End {
+        name: "the Euclid plane",
+        axis: 1,
+        at,
+        other: 0.5,
+        rounds: true,
+        outside: &plane_out,
+    };
+    walk_ends(
+        RestStart::new(plane),
+        2,
+        1.0,
+        &[plane_end(1.5), plane_end(-0.5)],
+        wide,
+    );
+
+    let delta = BurrauThetaDeltaM::<f32> {
+        theta_range: [0.2, 0.7],
+        m_target: [0.5, 0.5, 0.0],
+    };
+    let delta_theta = |a: f32, _: f32| !theta_ok(delta.theta::<f32>(a), delta.theta(f64::from(a)));
+    let delta_mass = |a: f32, b: f32| delta.masses::<f32>(a, b).iter().any(|&m| m <= 0.0);
+    let delta_end = |axis, at, outside| End {
+        name: "the δm strip",
+        axis,
+        at,
+        other: 0.5,
+        rounds: true,
+        outside,
+    };
+    walk_ends(
+        RestStart::new(delta),
+        2,
+        1.0,
+        &[
+            delta_end(0, low, &delta_theta),
+            delta_end(0, high, &delta_theta),
+            delta_end(1, 1.0, &delta_mass),
+        ],
+        wide,
+    );
+}
+
+#[test]
+fn qa_refusal_at_placed_domain_end() {
+    check_placed_ends(false);
+}
+
+negative_control!(
+    qa_refusal_at_placed_domain_end,
+    "the check at the f64 placement passes a pixel the f32 placement puts outside the domain, so it must fail",
+    expected = "a pixel placed outside at f32 is a system",
+    {
+        check_placed_ends(true);
+    }
+);
+
+// ── The view's parameters, and what the weight reads ─────────────────────────────────────────────────────────────────
+
+/// `x` at f32, rounded, a chart's own precision.
+fn at_f32(x: f64) -> f32 {
+    x as f32
+}
+
+/// `x` at f64.
+fn at_f64(x: f64) -> f64 {
+    x
+}
+
+/// The tilt of `spec` at the span `span` at f64, as [`f32_tilt`] holds it at f32.
+fn f64_tilt(spec: &TiltSpec, span: f64) -> Tilt<f64> {
+    Tilt::new(spec, C, [span, span])
+}
+
+/// Layer 3 from §4.5: positive masses, finite positions and momenta, and a construction.
+fn is_system<R: Float + PayloadReal>(d: &Decoded<R>) -> bool {
+    d.ic.m.iter().all(|&m| m > R::zero())
+        && d.ic.r.iter().flatten().all(|x| x.is_finite())
+        && d.ic.p.iter().flatten().all(|x| x.is_finite())
+        && d.degenerate != Some(Degenerate::InvariantInfeasible)
+}
+
+/// The `(L_z, E)` chart at `mapping`: its `K*` reads the potential at the pixel's masses, which `μ_max` moves.
+fn le_chart<P: Copy>(n: fn(f64) -> P, mapping: [Mapping; 2]) -> Mapped<InvariantLE<P>, Defaults>
+where
+    f64: From<P>,
+{
+    Mapped::new(
+        InvariantLE(Invariant {
+            z_cfg: [n(0.25), n(-0.45)],
+            z_mass: [n(0.6), n(-0.35)],
+            k_max: n(2.5),
+            gamma_k: n(1.5),
+        }),
+        mapping,
+    )
+}
+
+/// The view's answer against the chart's check at `p` and layer 3 at `p`, each at the view's own precision, on a 129²
+/// grid. `old` puts layer 3 at the defaults in the view's place (the control). The pixels accepted by the chart's check,
+/// and those of them whose layer 3 the defaults would answer differently.
+fn check_own_p<Ch, P>(
+    name: &str,
+    view: &Tilted<Ch, P>,
+    n: fn(f64) -> P,
+    p: &LinkParams<f64>,
+    old: bool,
+) -> (u32, u32)
+where
+    Ch: Tiltable<Param = P>,
+    P: LinkReal + PayloadReal,
+    f64: From<P>,
+{
+    let own = LinkParams {
+        mu_max: n(p.mu_max),
+        q_max: n(p.q_max),
+    };
+    let chart = view.chart();
+    let (mut checked, mut moved) = (0, 0);
+    for j in 0..=128 {
+        for i in 0..=128 {
+            let (u, v) = (i as f64 / 128.0, j as f64 / 128.0);
+            let ([a, b], shift) = view.at::<f64>(u, v);
+            let ([wa, wb], placed) = view.at::<P>(n(u), n(v));
+            let placed = placed.expect("tilted");
+            let wide = Shift {
+                x: placed.x,
+                dx: f64::from(placed.dx),
+                y: placed.y,
+                dy: f64::from(placed.dy),
+                two: placed.two,
+            };
+            let passes = chart.validate_shifted(a, b, &shift.expect("tilted"), p)
+                == ValidationResult::Valid
+                && chart.validate_shifted(f64::from(wa), f64::from(wb), &wide, p)
+                    == ValidationResult::Valid
+                && chart.refusal_own(wa, wb, &placed).is_none();
+            let at_p = is_system(&view.decode_params::<Defaults, P>(n(u), n(v), &own));
+            let defaults = LinkParams::DEFAULT;
+            let at_default = is_system(&view.decode_params::<Defaults, P>(n(u), n(v), &defaults));
+            let got = if old {
+                passes && at_default
+            } else {
+                view.validate_params(u, v, p) == ValidationResult::Valid
+            };
+            assert_eq!(
+                got,
+                passes && at_p,
+                "{name}: the check misreads the system at μ_max {}, at ({u}, {v})",
+                p.mu_max
+            );
+            checked += u32::from(passes);
+            moved += u32::from(passes && at_p != at_default);
+        }
+    }
+    (checked, moved)
+}
+
+/// Both of the arms at each `μ_max`, at one precision.
+fn own_p_arms<P>(name: &str, n: fn(f64) -> P, tilt: fn(&TiltSpec, f64) -> Tilt<P>, old: bool)
+where
+    P: LinkReal + PayloadReal,
+    f64: From<P>,
+{
+    let sheet = |tau, x| TiltSpec {
+        tau1: tau,
+        tau2: 0.0,
+        map: TiltMap::Sheet,
+        x,
+        y: x,
+    };
+    for mu_max in [1.0, 1.7, 8.0] {
+        let p = LinkParams { mu_max, q_max: 2.0 };
+        let linear = Tilted::new(
+            le_chart(n, [Mapping::Linear; 2]),
+            tilt(&sheet(30.0, 0), 2.0),
+        );
+        let top = Tilted::new(
+            le_chart(n, [Mapping::Warped, Mapping::Linear]),
+            tilt(&sheet(45.0, 6), 6.0),
+        );
+        let a = check_own_p(name, &linear.expect("hidden"), n, &p, old);
+        let b = check_own_p(name, &top.expect("hidden"), n, &p, old);
+        assert!(a.0 > 1_000 && b.0 > 1_000, "{name}: {a:?}, {b:?}");
+        assert!(
+            a.1 + b.1 > 0,
+            "{name}: μ_max {mu_max} changes no pixel's answer: {a:?}, {b:?}"
+        );
+    }
+}
+
+fn check_own_parameters(old: bool) {
+    own_p_arms("f64", at_f64, f64_tilt, old);
+    own_p_arms("f32", at_f32, f32_tilt, old);
+}
+
+#[test]
+fn qa_view_check_reads_own_parameters() {
+    check_own_parameters(false);
+}
+
+negative_control!(
+    qa_view_check_reads_own_parameters,
+    "layer 3 read at the defaults answers for another system, so it must fail",
+    expected = "the check misreads the system",
+    {
+        check_own_parameters(true);
+    }
+);
+
+/// `visit(name, view, args…)` on each construction chart, warped and linear, tilted into a hidden target of each kind, at
+/// the float `$p`.
+macro_rules! each_construction {
+    ($p:ty, $n:expr, $tilt:expr, $visit:ident $(, $arg:expr)*) => {{
+        let n: fn(f64) -> $p = $n;
+        let tilt: fn(&TiltSpec, f64) -> Tilt<$p> = $tilt;
+        let sheet = |x| Arm::SheetT1.spec(x);
+        let theta_range = [n(0.2), n(0.7)];
+        let nu_range = [n(0.1), n(0.9)];
+        let nu_k = Burrau { nu_range, k_max: n(1.0), gamma_k: n(1.5) };
+        let th_k = BurrauThetaK { theta_range, k_max: n(1.0), gamma_k: n(1.5) };
+        let th_lz = BurrauThetaLz { theta_range, k: n(0.5), lz_fraction: n(1.0) };
+        let held_lz = tilt(&sheet(HELD_LZ), 2.0);
+        let held_k = tilt(&sheet(HELD_K), 0.4);
+        let control = tilt(&sheet(2), 1.0);
+        let linear_nu = HeldLz { mapping: Mapping::Linear, ..HeldLz::new(nu_k) };
+        let linear_th = HeldLz { mapping: Mapping::Linear, ..HeldLz::new(th_k) };
+        let warped_k = HeldK::new(th_lz, n(1.0), n(1.5));
+        let linear_k = HeldK { mapping: Mapping::Linear, ..warped_k };
+        let simplex = MassSimplex { nu0: n(0.5), eps_m: n(1e-4) };
+        let plane = EuclidPlane { m_range: [n(1.0), n(32.0)], nu_range };
+        let strip = BurrauThetaDeltaM { theta_range, m_target: [n(0.5), n(0.5), n(0.0)] };
+        $visit("(ν, K)", &Tilted::new(HeldLz::new(nu_k), held_lz).unwrap() $(, $arg)*);
+        $visit("Φ_θ,K", &Tilted::new(HeldLz::new(th_k), held_lz).unwrap() $(, $arg)*);
+        $visit("(ν, K), linear", &Tilted::new(linear_nu, held_lz).unwrap() $(, $arg)*);
+        $visit("Φ_θ,K, linear", &Tilted::new(linear_th, held_lz).unwrap() $(, $arg)*);
+        $visit("Φ_θ,L_z", &Tilted::new(th_lz, held_k).unwrap() $(, $arg)*);
+        $visit("Φ_θ,L_z, warped", &Tilted::new(warped_k, held_k).unwrap() $(, $arg)*);
+        $visit("Φ_θ,L_z, linear", &Tilted::new(linear_k, held_k).unwrap() $(, $arg)*);
+        let at_nu0 = Tilted::new(RestStart::new(simplex), tilt(&sheet(NU0), 1.0));
+        $visit("the simplex, ν₀", &at_nu0.unwrap() $(, $arg)*);
+        $visit("the simplex", &Tilted::new(RestStart::new(simplex), control).unwrap() $(, $arg)*);
+        $visit("the plane", &Tilted::new(RestStart::new(plane), control).unwrap() $(, $arg)*);
+        $visit("the strip", &Tilted::new(RestStart::new(strip), control).unwrap() $(, $arg)*);
+    }};
+}
+
+/// The check at each non-default `p` against the check at the defaults, over the window past the square.
+fn check_p_free<Ch, P>(name: &str, view: &Tilted<Ch, P>)
+where
+    Ch: Tiltable<Param = P>,
+    P: LinkReal + PayloadReal,
+    f64: From<P>,
+{
+    let at = |k: u32| -0.5 + k as f64 / 32.0;
+    for (mu_max, q_max) in [(1.0, 2.0), (8.0, 2.0), (5.0, 4.0)] {
+        let p = LinkParams { mu_max, q_max };
+        for j in 0..=64 {
+            for i in 0..=64 {
+                let (u, v) = (at(i), at(j));
+                assert_eq!(
+                    view.validate_params(u, v, &p),
+                    view.validate(u, v),
+                    "{name}: the check moved with μ_max {mu_max}, q_max {q_max} at ({u}, {v})"
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn qa_construction_check_free_of_parameters() {
+    each_construction!(f64, at_f64, f64_tilt, check_p_free);
+    each_construction!(f32, at_f32, f32_tilt, check_p_free);
+}
+
+negative_control!(
+    qa_construction_check_free_of_parameters,
+    "a chart whose check reads the link parameters must fail the same comparison",
+    expected = "the check moved",
+    {
+        let spec = Arm::SheetT1.spec(0);
+        let chart = le_chart(at_f64, [Mapping::Linear; 2]);
+        check_p_free(
+            "(L_z, E)",
+            &Tilted::new(chart, f64_tilt(&spec, 2.0)).unwrap(),
+        );
+    }
+);
+
+/// What `check_weight_pixel` reads as the weight: the view's, or a stand-in (the controls).
+#[derive(Clone, Copy, PartialEq)]
+enum WeightRead {
+    View,
+    /// 0 wherever the check rejects, the weight of a rule that reads the check.
+    Check,
+    /// The refusals, then 0 wherever the decode at the defaults, at the view's precision, is no system: layer 3 read at a
+    /// default no one gave.
+    Layer3,
+    /// The tilt's everywhere, a weight that reads no refusal.
+    Tilt,
+}
+
+/// Pixels seen by `qa_weight_reads_refusals_only`.
+#[derive(Default)]
+struct WeightTally {
+    /// Refused: weight 0, rejected.
+    refused: u32,
+    /// Rejected by no refusal: the tilt's weight.
+    rejected: u32,
+    /// Accepted.
+    valid: u32,
+}
+
+/// The rule at one pixel: the weight is 0 exactly where the chart refuses, at f64 or at the view's own precision, and
+/// the check rejects where it is.
+fn check_weight_pixel<Ch, P>(
+    name: &str,
+    view: &Tilted<Ch, P>,
+    n: fn(f64) -> P,
+    read: WeightRead,
+    (u, v): (f64, f64),
+    tally: &mut WeightTally,
+) where
+    Ch: Tiltable<Param = P>,
+    P: LinkReal + PayloadReal,
+    f64: From<P>,
+{
+    let tilt = f64::from(view.tilt().weight);
+    assert!(tilt > 0.0, "{name}: the tilt's weight is {tilt}");
+    let ([a, b], shift) = view.at::<f64>(u, v);
+    let ([wa, wb], placed) = view.at::<P>(n(u), n(v));
+    let refused = view
+        .chart()
+        .refusal(a, b, &shift.expect("tilted"))
+        .is_some()
+        || view
+            .chart()
+            .refusal_own(wa, wb, &placed.expect("tilted"))
+            .is_some();
+    let check = view.validate(u, v);
+    let rejected = check != ValidationResult::Valid;
+    let read_layer_3 = || {
+        let d = view.decode_params::<Defaults, P>(n(u), n(v), &LinkParams::DEFAULT);
+        refused || !is_system(&d)
+    };
+    let zero =
+        (read == WeightRead::Check && rejected) || (read == WeightRead::Layer3 && read_layer_3());
+    let weight = if read == WeightRead::View {
+        view.weight(u, v)
+    } else if read == WeightRead::Tilt || !zero {
+        tilt
+    } else {
+        0.0
+    };
+    if refused {
+        assert_eq!(
+            weight, 0.0,
+            "{name}: a refused pixel weighted, at ({u}, {v})"
+        );
+        assert!(
+            rejected,
+            "{name}: a refused pixel passes the check at ({u}, {v})"
+        );
+        tally.refused += 1;
+    } else {
+        assert_eq!(
+            weight, tilt,
+            "{name}: the weight reads more than the refusals at ({u}, {v})"
+        );
+        tally.rejected += u32::from(rejected);
+        tally.valid += u32::from(!rejected);
+    }
+}
+
+/// The rule over the window past the square, the domain ends inside it.
+fn check_weight_window<Ch, P>(
+    name: &str,
+    view: &Tilted<Ch, P>,
+    n: fn(f64) -> P,
+    read: WeightRead,
+    tally: &mut WeightTally,
+) where
+    Ch: Tiltable<Param = P>,
+    P: LinkReal + PayloadReal,
+    f64: From<P>,
+{
+    let at = |k: u32| -0.5 + k as f64 / 32.0;
+    for j in 0..=64 {
+        for i in 0..=64 {
+            check_weight_pixel(name, view, n, read, (at(i), at(j)), tally);
+        }
+    }
+}
+
+/// `weight` takes the pixel and nothing else: a parameter added to it fails the build here.
+fn pixel_only<Ch: Tiltable<Param = f64>>(_: fn(&Tilted<Ch, f64>, f64, f64) -> f64) {}
+
+fn check_weight_rule(read: WeightRead) {
+    pixel_only::<HeldLz<Burrau<f64>, f64>>(Tilted::weight);
+    let mut wide = WeightTally::default();
+    each_construction!(
+        f64,
+        at_f64,
+        f64_tilt,
+        check_weight_window,
+        at_f64,
+        read,
+        &mut wide
+    );
+    assert!(
+        wide.refused > 100 && wide.rejected > 100 && wide.valid > 100,
+        "at f64: {} refused, {} rejected, {} valid",
+        wide.refused,
+        wide.rejected,
+        wide.valid
+    );
+    let mut own = WeightTally::default();
+    each_construction!(
+        f32,
+        at_f32,
+        f32_tilt,
+        check_weight_window,
+        at_f32,
+        read,
+        &mut own
+    );
+    assert!(
+        own.refused > 100 && own.rejected > 100 && own.valid > 100,
+        "at f32: {} refused, {} rejected, {} valid",
+        own.refused,
+        own.rejected,
+        own.valid
+    );
+
+    // A linear energy axis: its check rejects pixels past the parabola, and no refusal is a construction's.
+    let spec = Arm::SheetT1.spec(0);
+    let mut latent = WeightTally::default();
+    let chart = le_chart(at_f64, [Mapping::Linear; 2]);
+    let view = Tilted::new(chart, f64_tilt(&spec, 2.0)).unwrap();
+    check_weight_window("(L_z, E)", &view, at_f64, read, &mut latent);
+    let chart = le_chart(at_f32, [Mapping::Linear; 2]);
+    let view = Tilted::new(chart, f32_tilt(&spec, 2.0)).unwrap();
+    check_weight_window("(L_z, E) at f32", &view, at_f32, read, &mut latent);
+    assert!(
+        latent.refused == 0 && latent.rejected > 100 && latent.valid > 100,
+        "(L_z, E): {} refused, {} rejected, {} valid",
+        latent.refused,
+        latent.rejected,
+        latent.valid
+    );
+}
+
+#[test]
+fn qa_weight_reads_refusals_only() {
+    check_weight_rule(WeightRead::View);
+}
+
+negative_control!(
+    qa_weight_reads_refusals_only,
+    "a weight that reads the check zeroes a pixel no refusal leaves empty, so it must fail",
+    expected = "the weight reads more than the refusals",
+    {
+        check_weight_rule(WeightRead::Check);
+    }
+);
+
+mod weight_layer_3 {
+    use super::*;
+    negative_control!(
+        qa_weight_reads_refusals_only,
+        "layer 3 at the defaults in the weight, a default it wasn't given, must fail",
+        expected = "the weight reads more than the refusals",
+        {
+            check_weight_rule(WeightRead::Layer3);
+        }
+    );
+}
+
+mod weight_no_refusal {
+    use super::*;
+    negative_control!(
+        qa_weight_reads_refusals_only,
+        "a refused pixel weighted as the tilt must fail",
+        expected = "a refused pixel weighted",
+        {
+            check_weight_rule(WeightRead::Tilt);
+        }
+    );
+}
