@@ -1,0 +1,5 @@
+row ('1',) col n: eye='1' ocr=''
+row ('6',) col n: eye='6' ocr=''
+row ('8',) col n: eye='8' ocr=''
+row ('9',) col n: eye='9' ocr=''
+rows eye=14 ocr=14; cells compared 56; disagreements 4

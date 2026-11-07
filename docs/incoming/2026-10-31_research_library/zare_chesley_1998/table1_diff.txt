@@ -1,0 +1,6 @@
+row ('1',) col k: eye='inf' ocr='00'
+row ('2',) col k: eye='0' ocr=''
+row ('3',) col k: eye='1' ocr=''
+row ('4',) col k: eye='2' ocr=''
+row ('5',) col k: eye='3' ocr=''
+rows eye=8 ocr=8; cells compared 32; disagreements 5
