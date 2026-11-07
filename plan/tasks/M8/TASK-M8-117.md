@@ -25,3 +25,4 @@ Under a lock a path is a based homotopy: the anchor's IC words fixed at the cent
 ## Notes
 - The linearised decoder's per-frame tangent plane (design § 17.8) needs REQ-DEC-033 first.
 - Waits on its rulings item: RQ-721. Nothing here is implemented until ruled (the order's A6, "Nothing implemented until ruled"); TASK-M4-37 in Depends on holds it.
+- *7 Nov 2026 (R-849, R-850):* RQ-721 and its rider are ruled. Under the lock no path makes a labelled jump: where the anchor can't exist in chart B, it slides continuously to its nearest point in B and the centre pixel follows it, the model's Theorem 8 its construction. "Nearest" is a definition (R-72) this task writes under physics review, the owner's example keeping shape and masses where B allows and easing the held-fixed coordinates to B's values along the path. The jump stays only for a time-axis chart to an IC-only chart.

@@ -1,7 +1,7 @@
 # TASK-M8-48 — On the real engine: tilt and slice on every chart, the energy axes' mapping control, the navigation stop in the edit path, and Save view as chart on curved views (R-469, R-471, R-473, R-475) ⚑
 
 - **Milestone:** M8
-- **Closes:** REQ-GUI-241, REQ-GUI-242, REQ-GUI-243, REQ-GUI-244
+- **Closes:** REQ-GUI-241, REQ-GUI-242, REQ-GUI-243, REQ-GUI-244, REQ-CHART-141
 - **Depends on:** TASK-M8-89, TASK-M8-03, TASK-M6-48, TASK-M6-49, TASK-M2-36, TASK-M2-37, TASK-M2-38, TASK-M2-40, TASK-M8-18, TASK-M2-52
 - **Needs (earlier milestones):** REQ-CHART-060, REQ-CHART-062, REQ-CHART-068, REQ-CHART-073, REQ-CHART-077
 - **Reviewers:** code, qa, gui, physics
@@ -47,3 +47,4 @@ The real engine's Manifold view tilts and slices every chart (targets the chart'
 - **R-633 (28 Oct 2026, RQ-603):** TASK-M2-36 is split, and TASK-M2-52 builds tilt and slice on the six construction charts and closes REQ-CHART-062, which this task needs; so this task, which tilts and slices every chart on the real engine, depends on it (applied per R-369). *Was:* "- **Depends on:** TASK-M8-89, TASK-M8-03, TASK-M6-48, TASK-M6-49, TASK-M2-36, TASK-M2-37, TASK-M2-38, TASK-M2-40, TASK-M8-18".
 - *4 Nov 2026 (R-708, R-709):* the Burrau charts' tilt targets follow R-471's two modes. The Inspector's label is conditional, as ruled.
 - *6 Nov 2026 (R-708, RQ-710; physics review 5805852854 of #388, P2):* a default view of `Φ_θ,L_z` must wrap the chart in `kernel::chart::HeldK`. The bare `BurrauThetaLz` holds no warp, so `Tilted::new` on it gives the linear arm, R-708's non-default mode. `HeldK` needs the warp's `K_max` and `γ_K`, which RQ-710 asks for.
+- *7 Nov 2026 (R-818, R-833, R-822):* RQ-701 is ruled in form and deferred to this task's start: on a `MixedEnergy` chart the held `L_z` tilts and slices by value on the floor, and the held `K` on a lone `L_z` axis takes the warp line, slicing by value, its `K_max` a calibration of the chart's own as RQ-710's. `Φ_θ,L_z`'s held-`K` `K_max` and `γ_K` are this task's calibration to propose (REQ-CHART-141), `K_max` at the chart's calibrated `K` the value named. RQ-679, the slider spans, is deferred to this task's start as before (R-822).

@@ -1,7 +1,7 @@
 # TASK-M8-119 — The virial pair: its axis kind, descriptor and entry
 
 - **Milestone:** M8
-- **Closes:** REQ-CHART-103
+- **Closes:** REQ-CHART-103, REQ-CHART-139
 - **Depends on:** TASK-M4-37, TASK-M4-33, TASK-M2-37
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
@@ -18,10 +18,13 @@ The kernel's `AxisVirial` is built on TASK-M2-37: this gives it the descriptor t
 ## Deliverables
 - `crates/engine/src/chart_authoring/`: `InvariantQuantity`'s or its kind's row, as RQ-717 rules.
 - One baked entry.
+- `kernel::chart::physical`'s virial axis at `Q₀ > 0` and a held `L_z ≠ 0`: the floor under the rise only, `max(Q₀, Q_min(U)) + (Q_hi − Q₀)·t^γ_K`, the additive form unchanged at `Q₀ = 0` (R-817, RQ-700 (b); REQ-CHART-139).
 
 ## Acceptance tests
 - `cargo test -p engine virial_descriptor` — the validator takes it; refused beside hold E and a K axis; forward by mapping: linear agrees with `virial_ratio`, warped at a held L_z ≠ 0 reads `2(K − L_z²/2I)/|U|`, labelled `Q above the floor`; `forward(inverse(x)) = x` on both arms; controls: no descriptor refused, the warped row read as the state's ratio, mutation: a factor changed in the inverse, the row being a scale solve (REQ-CHART-103).
+- `cargo test -p kernel virial_floor_under_rise` — REQ-CHART-139's arms and control.
 
 ## Notes
 - RQ-700 is outside TASK-M4-37's gate, so nothing in Depends on holds it: the arm for a held L_z ≠ 0, where the axis reads above the floor (§ 9), doesn't start until RQ-700 is ruled, by this note. TS-2 stays "not scored: no fixed-k velocity chart" (R-669).
 - Waits on its rulings item: RQ-717. Nothing here is implemented until ruled (the order's A6, "Nothing implemented until ruled"); TASK-M4-37 in Depends on holds it.
+- *7 Nov 2026 (R-816, R-838, R-817):* the virial ratio is kind 3 (RQ-682 (a), RQ-717), and RQ-700 is ruled (b). Both waits end.
