@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-CHART-107
-- **Depends on:** TASK-M4-33, TASK-M4-06
+- **Depends on:** TASK-M4-37, TASK-M4-33, TASK-M4-06
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics, perf
 - **Pitfalls:** none
@@ -25,3 +25,4 @@ The third lowering: an unbaked or numerical pair fills the integrator's IC buffe
 
 ## Notes
 - Waits on RQ-719. Shares R-669's Path B batch where that exists.
+- Waits on its rulings item: RQ-719. Nothing here is implemented until ruled (the order's A6, "Nothing implemented until ruled"); TASK-M4-37 in Depends on holds it.

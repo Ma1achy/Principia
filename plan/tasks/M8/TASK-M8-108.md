@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-GUI-421
-- **Depends on:** TASK-M8-106, TASK-M8-77, TASK-M8-78
+- **Depends on:** TASK-M4-37, TASK-M8-106, TASK-M8-77, TASK-M8-78
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, gui
 - **Pitfalls:** none
@@ -23,3 +23,4 @@ A chart-change segment offers morph beside cut and dissolve, with a band on the 
 
 ## Notes
 - What to try: on `cargo run -p gui --features mock`, set a chart-change segment to morph, open the planner and read its row. The default for a new segment is RQ-721's.
+- Waits on its rulings item: RQ-721. Nothing here is implemented until ruled (the order's A6, "Nothing implemented until ruled"); TASK-M4-37 in Depends on holds it.

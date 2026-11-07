@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-CHART-105, REQ-CHART-106
-- **Depends on:** TASK-M8-100
+- **Depends on:** TASK-M4-37, TASK-M8-100
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** none
@@ -22,3 +22,6 @@ Define (R-72) and build the two other 2-spheres in the state, under § 3.3's exp
 ## Acceptance tests
 - Physics reviewer: the section, its frames and seams (REQ-CHART-105).
 - `cargo test -p kernel exp_map_targets` — L_z and K hold on the momentum sphere, Σm = 1 on the mass sphere, the shape target bitwise; control: a bad frame (REQ-CHART-106).
+
+## Notes
+- Waits on its rulings item: RQ-720. Nothing here is implemented until ruled (the order's A6, "Nothing implemented until ruled"); TASK-M4-37 in Depends on holds it.

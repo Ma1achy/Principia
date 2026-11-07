@@ -2,7 +2,7 @@
 
 - **Milestone:** M4
 - **Closes:** REQ-CHART-103
-- **Depends on:** TASK-M4-33, TASK-M2-37
+- **Depends on:** TASK-M4-37, TASK-M4-33, TASK-M2-37
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** none
@@ -24,3 +24,4 @@ The kernel's `AxisVirial` is built on TASK-M2-37: this gives it the descriptor t
 
 ## Notes
 - Waits on RQ-717, and on RQ-700 for a held L_z ≠ 0, where the axis reads above the floor (§ 9). TS-2 stays "not scored: no fixed-k velocity chart" (R-669).
+- Waits on its rulings item: RQ-717, RQ-700. Nothing here is implemented until ruled (the order's A6, "Nothing implemented until ruled"); TASK-M4-37 in Depends on holds it.

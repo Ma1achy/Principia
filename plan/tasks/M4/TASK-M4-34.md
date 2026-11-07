@@ -2,7 +2,7 @@
 
 - **Milestone:** M4
 - **Closes:** REQ-CHART-100, REQ-CHART-101
-- **Depends on:** TASK-M4-33, TASK-M2-20
+- **Depends on:** TASK-M4-37, TASK-M4-33, TASK-M2-20
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics, perf
 - **Pitfalls:** none
@@ -32,3 +32,4 @@ The first registered closed-form pair: `(ξ, η)` through the explicit-configura
 ## Notes
 - R-798's remap (REQ-CHART-093, TASK-M9-45) shares § 8.3's and § 8.2's lines: one source. PA-1's route is unchanged.
 - The target frames (D11, Lehto's lens, Breen's) stay those targets' tested functions (R-72): this pair does not depend on them.
+- Waits on its rulings item: RQ-713, RQ-714. Nothing here is implemented until ruled (the order's A6, "Nothing implemented until ruled"); TASK-M4-37 in Depends on holds it.

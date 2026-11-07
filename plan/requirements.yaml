@@ -4163,6 +4163,20 @@
   rulings:
   - R-72
   milestone: M8
+- id: REQ-CHART-125
+  area: CHART
+  kind: definition
+  statement: "The chart composition's rulings items, RQ-712 to RQ-731, must be answered by the owner and each answer applied to the design doc, before any task of that design starts: nothing is implemented until ruled."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: "14. Doors: the rulings items"
+  verify:
+    method: review checklist
+    detail: "DEFINITION (R-72): every one of RQ-712 to RQ-731 closed by a ruling in decisions.md, each carried into the design doc, its status no longer Proposed; python3 plan/check_plan.py green"
+  rulings:
+  - R-72
+  milestone: M4
+  note: "The gate of the design's 24 tasks: they name its task in Depends on, the field the ready list reads."
 - id: REQ-INT-001
   area: INT
   statement: "The unwrapped phase `θ̃` must be a running SimState accumulator that adds the principal-value delta of `atan2(n_v, n_u)` each step, with `orbit_count = ⌊|θ̃|/2π⌋` and `retrograde = sign(θ̃) < 0` derived at read."

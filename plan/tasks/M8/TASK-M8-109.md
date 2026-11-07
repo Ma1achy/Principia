@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-CHART-117, REQ-CHART-118
-- **Depends on:** TASK-M4-33, TASK-M8-100, TASK-M7-72
+- **Depends on:** TASK-M4-37, TASK-M4-33, TASK-M8-100, TASK-M7-72
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** none
@@ -27,3 +27,4 @@ Every row of the registry's 6 Nov table, each as an axis on CPU batch, an alias 
 
 ## Notes
 - Waits on RQ-723, RQ-724 and RQ-725. No row is baked. Nothing here scores a target: R-668 and R-669 stand.
+- Waits on its rulings item: RQ-723, RQ-724, RQ-725, RQ-730. Nothing here is implemented until ruled (the order's A6, "Nothing implemented until ruled"); TASK-M4-37 in Depends on holds it.

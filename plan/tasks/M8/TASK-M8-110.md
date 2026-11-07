@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-CHART-121
-- **Depends on:** TASK-M4-34
+- **Depends on:** TASK-M4-37, TASK-M4-34
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** none
@@ -23,3 +23,4 @@ The read-back map at any masses, and a test per region-D target.
 
 ## Notes
 - Waits on RQ-728.
+- Waits on its rulings item: RQ-728. Nothing here is implemented until ruled (the order's A6, "Nothing implemented until ruled"); TASK-M4-37 in Depends on holds it.

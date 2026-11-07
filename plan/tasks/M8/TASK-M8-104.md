@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-GUI-420
-- **Depends on:** TASK-M8-18, TASK-M4-33
+- **Depends on:** TASK-M4-37, TASK-M8-18, TASK-M4-33
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, gui
 - **Pitfalls:** none
@@ -23,3 +23,4 @@ One swept axis and one annotation axis, as the Euclid plane has it, offered as a
 
 ## Notes
 - R-669 stands: this does not build a binary-plus-single chart, and TR-1 stays "not scored: no chart".
+- Waits on the owner's ruling of the design doc as a whole, no single item mapping here (the order's A6, "Nothing implemented until ruled"); TASK-M4-37 in Depends on holds it.

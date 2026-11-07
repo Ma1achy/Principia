@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-CHART-115
-- **Depends on:** TASK-M8-106, TASK-M2-23
+- **Depends on:** TASK-M4-37, TASK-M8-106, TASK-M2-23
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** none
@@ -24,3 +24,4 @@ Under a lock a path is a based homotopy: the anchor's IC words fixed at the cent
 
 ## Notes
 - The linearised decoder's per-frame tangent plane (design § 17.8) needs REQ-DEC-033 first.
+- Waits on its rulings item: RQ-721. Nothing here is implemented until ruled (the order's A6, "Nothing implemented until ruled"); TASK-M4-37 in Depends on holds it.

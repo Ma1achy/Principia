@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-CHART-113, REQ-CHART-114, REQ-CHART-116, REQ-CHART-124
-- **Depends on:** TASK-M8-105, TASK-M8-102, TASK-M8-31
+- **Depends on:** TASK-M4-37, TASK-M8-105, TASK-M8-102, TASK-M8-31
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics, perf
 - **Pitfalls:** none
@@ -36,3 +36,4 @@ Every arm of the path type, with tilt and zoom calling their own code, a frame r
 
 ## Notes
 - If path_tilt_bitwise or path_zoom_bitwise can't pass through the path type, the generalisation isn't adopted: stop and report (the owner's rule).
+- Waits on its rulings item: RQ-721. Nothing here is implemented until ruled (the order's A6, "Nothing implemented until ruled"); TASK-M4-37 in Depends on holds it.

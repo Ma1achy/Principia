@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-CHART-112
-- **Depends on:** TASK-M4-32
+- **Depends on:** TASK-M4-37, TASK-M4-32
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** none
@@ -29,3 +29,4 @@ RQ-721's ruling written into the contracts, docs first, so that the build tasks 
 
 ## Notes
 - Waits on RQ-721.
+- Waits on its rulings item: RQ-721. Nothing here is implemented until ruled (the order's A6, "Nothing implemented until ruled"); TASK-M4-37 in Depends on holds it.

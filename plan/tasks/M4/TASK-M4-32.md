@@ -2,7 +2,7 @@
 
 - **Milestone:** M4
 - **Closes:** REQ-CHART-094, REQ-CHART-095, REQ-CHART-108, REQ-CHART-109, REQ-CHART-110
-- **Depends on:** TASK-M2-37, TASK-M2-52
+- **Depends on:** TASK-M4-37, TASK-M2-37, TASK-M2-52
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** none
@@ -38,3 +38,4 @@ Port principia_chart_composition.md into the contracts, as the rulings on RQ-712
 
 ## Notes
 - Waits on RQ-712, RQ-713, RQ-714, RQ-715, RQ-716, RQ-719. The virial kind's answer (RQ-717) lands in this task if it is ruled by then, else in TASK-M4-36.
+- Waits on its rulings item: RQ-712, RQ-713, RQ-714, RQ-715, RQ-716, RQ-719. Nothing here is implemented until ruled (the order's A6, "Nothing implemented until ruled"); TASK-M4-37 in Depends on holds it.

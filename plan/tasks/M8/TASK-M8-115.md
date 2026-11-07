@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-GUI-422
-- **Depends on:** TASK-M8-113
+- **Depends on:** TASK-M4-37, TASK-M8-113
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, gui
 - **Pitfalls:** none
@@ -23,3 +23,4 @@ Every bullet of the GUI table, with its mock-up.
 
 ## Notes
 - Waits on RQ-727. The time-zoom binding is checked against G3's table.
+- Waits on its rulings item: RQ-727. Nothing here is implemented until ruled (the order's A6, "Nothing implemented until ruled"); TASK-M4-37 in Depends on holds it.

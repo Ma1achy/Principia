@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-PERF-118
-- **Depends on:** TASK-M8-113
+- **Depends on:** TASK-M4-37, TASK-M8-113
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, perf
 - **Pitfalls:** none
@@ -25,3 +25,4 @@ Stored rows under the budget, and the GPU column measured.
 
 ## Notes
 - The column entry counts in the cap's C2. The re-measure runs on the default occupant, at Δ_sync's row spacing; REQ-INT-080's value bears on this mode.
+- Waits on its rulings item: RQ-727. Nothing here is implemented until ruled (the order's A6, "Nothing implemented until ruled"); TASK-M4-37 in Depends on holds it.

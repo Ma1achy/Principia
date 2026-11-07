@@ -1401,7 +1401,7 @@
 - id: TASK-M4-32
   milestone: M4
   title: "The chart composition in the contracts: registry, refusals, lowerings, region D"
-  depends_on: [TASK-M2-37, TASK-M2-52]
+  depends_on: [TASK-M4-37, TASK-M2-37, TASK-M2-52]
   needs: []
   requirements: [REQ-CHART-094, REQ-CHART-095, REQ-CHART-108, REQ-CHART-109, REQ-CHART-110]
   reviewers: [code, qa, physics]
@@ -1409,7 +1409,7 @@
 - id: TASK-M4-33
   milestone: M4
   title: "The primitive registry, the refusals, the labels and the bitwise digest"
-  depends_on: [TASK-M4-32, TASK-M2-14]
+  depends_on: [TASK-M4-37, TASK-M4-32, TASK-M2-14]
   needs: []
   requirements: [REQ-CHART-096, REQ-CHART-097, REQ-CHART-098, REQ-CHART-099, REQ-PERF-116]
   reviewers: [code, qa, physics, perf]
@@ -1417,7 +1417,7 @@
 - id: TASK-M4-34
   milestone: M4
   title: "Region D: the third-body pair, its preset, and the angles and side ratios it carries"
-  depends_on: [TASK-M4-33, TASK-M2-20]
+  depends_on: [TASK-M4-37, TASK-M4-33, TASK-M2-20]
   needs: []
   requirements: [REQ-CHART-100, REQ-CHART-101]
   reviewers: [code, qa, physics, perf]
@@ -1425,7 +1425,7 @@
 - id: TASK-M4-35
   milestone: M4
   title: "Hold L_z on any chart, beside energy normalisation"
-  depends_on: [TASK-M4-33, TASK-M2-37, TASK-M2-52]
+  depends_on: [TASK-M4-37, TASK-M4-33, TASK-M2-37, TASK-M2-52]
   needs: []
   requirements: [REQ-CHART-102, REQ-CHART-111]
   reviewers: [code, qa, physics]
@@ -1433,9 +1433,17 @@
 - id: TASK-M4-36
   milestone: M4
   title: "The virial pair: its axis kind, descriptor and entry"
-  depends_on: [TASK-M4-33, TASK-M2-37]
+  depends_on: [TASK-M4-37, TASK-M4-33, TASK-M2-37]
   needs: []
   requirements: [REQ-CHART-103]
+  reviewers: [code, qa, physics]
+  pitfalls: []
+- id: TASK-M4-37
+  milestone: M4
+  title: "The owner's rulings on the chart composition design, applied (a gate: not an implementer's task)"
+  depends_on: []
+  needs: []
+  requirements: [REQ-CHART-125]
   reviewers: [code, qa, physics]
   pitfalls: []
 - id: TASK-M5-01
@@ -2683,7 +2691,7 @@
 - id: TASK-M7-72
   milestone: M7
   title: "Contours of any registered primitive"
-  depends_on: [TASK-M7-43, TASK-M4-33]
+  depends_on: [TASK-M4-37, TASK-M7-43, TASK-M4-33]
   needs: [REQ-CHART-096]
   requirements: [REQ-RENDER-121]
   reviewers: [code, qa, gui, physics]
@@ -3620,7 +3628,7 @@
 - id: TASK-M8-100
   milestone: M8
   title: "Warps as options, and polar and log-polar pair maps"
-  depends_on: [TASK-M4-33]
+  depends_on: [TASK-M4-37, TASK-M4-33]
   needs: [REQ-CHART-096]
   requirements: [REQ-CHART-104]
   reviewers: [code, qa, physics, perf]
@@ -3628,7 +3636,7 @@
 - id: TASK-M8-101
   milestone: M8
   title: "Curved slices off the shape sphere: the momentum and mass spheres"
-  depends_on: [TASK-M8-100]
+  depends_on: [TASK-M4-37, TASK-M8-100]
   needs: []
   requirements: [REQ-CHART-105, REQ-CHART-106]
   reviewers: [code, qa, physics]
@@ -3636,7 +3644,7 @@
 - id: TASK-M8-102
   milestone: M8
   title: "CPU batch: numerical inverses, their branch rule and seam"
-  depends_on: [TASK-M4-33, TASK-M4-06]
+  depends_on: [TASK-M4-37, TASK-M4-33, TASK-M4-06]
   needs: []
   requirements: [REQ-CHART-107]
   reviewers: [code, qa, physics, perf]
@@ -3644,7 +3652,7 @@
 - id: TASK-M8-103
   milestone: M8
   title: "The Chart builder's composition panels"
-  depends_on: [TASK-M8-18, TASK-M4-34, TASK-M4-35, TASK-M8-100, TASK-M8-102]
+  depends_on: [TASK-M4-37, TASK-M8-18, TASK-M4-34, TASK-M4-35, TASK-M8-100, TASK-M8-102]
   needs: []
   requirements: [REQ-GUI-419]
   reviewers: [code, qa, physics, gui]
@@ -3652,7 +3660,7 @@
 - id: TASK-M8-104
   milestone: M8
   title: "1D charts in the GUI"
-  depends_on: [TASK-M8-18, TASK-M4-33]
+  depends_on: [TASK-M4-37, TASK-M8-18, TASK-M4-33]
   needs: []
   requirements: [REQ-GUI-420]
   reviewers: [code, qa, gui]
@@ -3660,7 +3668,7 @@
 - id: TASK-M8-105
   milestone: M8
   title: "Chart paths in the contracts"
-  depends_on: [TASK-M4-32]
+  depends_on: [TASK-M4-37, TASK-M4-32]
   needs: []
   requirements: [REQ-CHART-112]
   reviewers: [code, qa, physics]
@@ -3668,7 +3676,7 @@
 - id: TASK-M8-106
   milestone: M8
   title: "The path type, the line on blocks, and export through CPU batch"
-  depends_on: [TASK-M8-105, TASK-M8-102, TASK-M8-31]
+  depends_on: [TASK-M4-37, TASK-M8-105, TASK-M8-102, TASK-M8-31]
   needs: []
   requirements: [REQ-CHART-113, REQ-CHART-114, REQ-CHART-116, REQ-CHART-124]
   reviewers: [code, qa, physics, perf]
@@ -3676,7 +3684,7 @@
 - id: TASK-M8-107
   milestone: M8
   title: "Live paths: the blend entry and the coarse cover"
-  depends_on: [TASK-M8-106]
+  depends_on: [TASK-M4-37, TASK-M8-106]
   needs: []
   requirements: [REQ-PERF-117]
   reviewers: [code, qa, physics, perf]
@@ -3684,7 +3692,7 @@
 - id: TASK-M8-108
   milestone: M8
   title: "The Sequence's morph segment"
-  depends_on: [TASK-M8-106, TASK-M8-77, TASK-M8-78]
+  depends_on: [TASK-M4-37, TASK-M8-106, TASK-M8-77, TASK-M8-78]
   needs: []
   requirements: [REQ-GUI-421]
   reviewers: [code, qa, gui]
@@ -3692,7 +3700,7 @@
 - id: TASK-M8-109
   milestone: M8
   title: "The primitives of 6 Nov: axes and overlays"
-  depends_on: [TASK-M4-33, TASK-M8-100, TASK-M7-72]
+  depends_on: [TASK-M4-37, TASK-M4-33, TASK-M8-100, TASK-M7-72]
   needs: []
   requirements: [REQ-CHART-117, REQ-CHART-118]
   reviewers: [code, qa, physics]
@@ -3700,7 +3708,7 @@
 - id: TASK-M8-110
   milestone: M8
   title: "Region D's exact map and every target's native coordinates"
-  depends_on: [TASK-M4-34]
+  depends_on: [TASK-M4-37, TASK-M4-34]
   needs: []
   requirements: [REQ-CHART-121]
   reviewers: [code, qa, physics]
@@ -3708,7 +3716,7 @@
 - id: TASK-M8-111
   milestone: M8
   title: "The primitives of the full order"
-  depends_on: [TASK-M8-109]
+  depends_on: [TASK-M4-37, TASK-M8-109]
   needs: []
   requirements: [REQ-CHART-119, REQ-CHART-120]
   reviewers: [code, qa, physics]
@@ -3716,7 +3724,7 @@
 - id: TASK-M8-112
   milestone: M8
   title: "Paper frames as presets"
-  depends_on: [TASK-M8-110]
+  depends_on: [TASK-M4-37, TASK-M8-110]
   needs: []
   requirements: [REQ-CHART-122]
   reviewers: [code, qa, physics]
@@ -3724,7 +3732,7 @@
 - id: TASK-M8-113
   milestone: M8
   title: "Time-axis chart mode"
-  depends_on: [TASK-M4-33]
+  depends_on: [TASK-M4-37, TASK-M4-33]
   needs: []
   requirements: [REQ-CHART-123]
   reviewers: [code, qa, physics]
@@ -3732,7 +3740,7 @@
 - id: TASK-M8-114
   milestone: M8
   title: "Time-axis storage and the column cost"
-  depends_on: [TASK-M8-113]
+  depends_on: [TASK-M4-37, TASK-M8-113]
   needs: []
   requirements: [REQ-PERF-118]
   reviewers: [code, qa, perf]
@@ -3740,7 +3748,7 @@
 - id: TASK-M8-115
   milestone: M8
   title: "Time-axis mode in the GUI"
-  depends_on: [TASK-M8-113]
+  depends_on: [TASK-M4-37, TASK-M8-113]
   needs: []
   requirements: [REQ-GUI-422]
   reviewers: [code, qa, gui]
@@ -3748,7 +3756,7 @@
 - id: TASK-M8-116
   milestone: M8
   title: "Time-axis mode in Sequence and export sidecars"
-  depends_on: [TASK-M8-115, TASK-M8-77]
+  depends_on: [TASK-M4-37, TASK-M8-115, TASK-M8-77]
   needs: []
   requirements: [REQ-GUI-423]
   reviewers: [code, qa, gui]
@@ -3756,7 +3764,7 @@
 - id: TASK-M8-117
   milestone: M8
   title: "Paths under a lock: the stored anchor"
-  depends_on: [TASK-M8-106, TASK-M2-23]
+  depends_on: [TASK-M4-37, TASK-M8-106, TASK-M2-23]
   needs: []
   requirements: [REQ-CHART-115]
   reviewers: [code, qa, physics]

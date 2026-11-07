@@ -2,7 +2,7 @@
 
 - **Milestone:** M4
 - **Closes:** REQ-CHART-096, REQ-CHART-097, REQ-CHART-098, REQ-CHART-099, REQ-PERF-116
-- **Depends on:** TASK-M4-32, TASK-M2-14
+- **Depends on:** TASK-M4-37, TASK-M4-32, TASK-M2-14
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics, perf
 - **Pitfalls:** none
@@ -35,3 +35,4 @@ The authoring layer gains the registry, every pair is validated against one refu
 
 ## Notes
 - The cap's value is RQ-716's ruling. Nothing here changes a kernel bit.
+- Waits on its rulings item: RQ-716, RQ-722. Nothing here is implemented until ruled (the order's A6, "Nothing implemented until ruled"); TASK-M4-37 in Depends on holds it.

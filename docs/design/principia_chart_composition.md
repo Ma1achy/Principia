@@ -1118,6 +1118,8 @@ Nothing below is decided here.
 
 ## 15. Plan
 
+**Nothing here starts until ruled.** TASK-M4-37, the owner's rulings applied, sits in the Depends on of all 24 tasks below, and each names the rulings item it waits on, or the design as a whole.
+
 Tasks, milestones chosen by what depends on them. `TASK-M4-06` gains TASK-M4-34 in Depends on.
 
 | Task | Milestone | What | Waits |

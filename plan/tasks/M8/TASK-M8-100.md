@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-CHART-104
-- **Depends on:** TASK-M4-33
+- **Depends on:** TASK-M4-37, TASK-M4-33
 - **Needs (earlier milestones):** REQ-CHART-096
 - **Reviewers:** code, qa, physics, perf
 - **Pitfalls:** none
@@ -24,3 +24,4 @@ Power and log as options per axis, polar and log-polar on any pair, each declare
 
 ## Notes
 - Reviewed under RQ-720's reading of R-594 item 5.
+- Waits on its rulings item: RQ-720. Nothing here is implemented until ruled (the order's A6, "Nothing implemented until ruled"); TASK-M4-37 in Depends on holds it.

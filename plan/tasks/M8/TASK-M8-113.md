@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-CHART-123
-- **Depends on:** TASK-M4-33
+- **Depends on:** TASK-M4-37, TASK-M4-33
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** none
@@ -27,3 +27,4 @@ The mode, column marching and row reads, on CPU batch first.
 
 ## Notes
 - Waits on RQ-727, whose ruling amends the caching contract's T row and the temporal note.
+- Waits on its rulings item: RQ-727. Nothing here is implemented until ruled (the order's A6, "Nothing implemented until ruled"); TASK-M4-37 in Depends on holds it.

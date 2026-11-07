@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-GUI-419
-- **Depends on:** TASK-M8-18, TASK-M4-34, TASK-M4-35, TASK-M8-100, TASK-M8-102
+- **Depends on:** TASK-M4-37, TASK-M8-18, TASK-M4-34, TASK-M4-35, TASK-M8-100, TASK-M8-102
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics, gui
 - **Pitfalls:** none
@@ -24,3 +24,4 @@
 
 ## Notes
 - What to try: on `cargo run -p gui --features mock`, build a pair the table refuses, and read the Domain preview.
+- Waits on the owner's ruling of the design doc as a whole, no single item mapping here (the order's A6, "Nothing implemented until ruled"); TASK-M4-37 in Depends on holds it.

@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-CHART-122
-- **Depends on:** TASK-M8-110
+- **Depends on:** TASK-M4-37, TASK-M8-110
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** none
@@ -23,3 +23,4 @@ Each paper's frame as a preset over the registry, tested against its coordinates
 
 ## Notes
 - Waits on RQ-729 and RQ-650. The M9 tasks take these presets.
+- Waits on its rulings item: RQ-729, RQ-650. Nothing here is implemented until ruled (the order's A6, "Nothing implemented until ruled"); TASK-M4-37 in Depends on holds it.

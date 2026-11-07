@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-CHART-119, REQ-CHART-120
-- **Depends on:** TASK-M8-109
+- **Depends on:** TASK-M4-37, TASK-M8-109
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** none
@@ -24,3 +24,4 @@ Each row of the full order's table, as its verdict says, on CPU batch.
 
 ## Notes
 - Waits on RQ-723, RQ-725, RQ-726 and RQ-730. Nothing here scores a target; R-668 and R-669 stand.
+- Waits on its rulings item: RQ-723, RQ-725, RQ-726, RQ-730. Nothing here is implemented until ruled (the order's A6, "Nothing implemented until ruled"); TASK-M4-37 in Depends on holds it.
