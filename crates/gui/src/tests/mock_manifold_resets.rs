@@ -390,8 +390,7 @@ fn mock_manifold_resets_zoom_span_bounds_one_sigma_span() {
     });
 }
 
-/// Choosing a preset is one edit and keeps `σ`, from either end of the slider, where the row moving off a span left in
-/// row units would clamp and send an edit of its own.
+/// Choosing a preset is one edit and keeps `σ`, from either end of the slider's span.
 #[test]
 fn mock_manifold_resets_preset_choice_keeps_sigma_at_the_slider_ends() {
     for (from, zoom) in [
@@ -635,8 +634,18 @@ fn mock_reset_undo_at_home_adds_no_entry() {
         press(h, app, Key::Enter, NONE);
     }
     press(&mut rig.1, &mut rig.0, Key::Home, NONE);
-    assert_eq!(rig.0.snapshot().history.undo_depth, depth, "nothing sent");
-    assert_eq!(rig.0.console().len(), rows, "nothing logged");
+    let nothing = |now: (u32, usize)| {
+        assert_eq!(now.0, depth, "nothing sent");
+        assert_eq!(now.1, rows, "nothing logged");
+    };
+    nothing((rig.0.snapshot().history.undo_depth, rig.0.console().len()));
+    // Controls: an undoable edit at home, and a logged row, each fail.
+    rejects("a row logged at home", || nothing((depth, rows + 1)));
+    let view = View::read(&rig.0.snapshot().sim);
+    rig.0.set_field(basis_edit(view.with_zoom_row(1.0).basis()));
+    let _ = rig.1.frame(&mut rig.0, Vec::new());
+    let sent = rig.0.snapshot().history.undo_depth;
+    rejects("an edit sent at home", || nothing((sent, rows)));
 }
 
 /// A command is under a fresh key even with the pointer held: Home pressed through a drag leaves its own entry (K10).

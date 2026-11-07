@@ -622,8 +622,8 @@ impl View {
         self.window().log2() + self.zoom()
     }
 
-    /// [`ZOOM_RANGE`] as the zoom row reads it. A preset's choice keeps `σ` (§G2), so the row may move and the slider,
-    /// which clamps what it is given and calls that a change, must move with it.
+    /// [`ZOOM_RANGE`] as the zoom row reads it. A preset's choice keeps `σ` (§G2), so the row moves with the window; the
+    /// span moves too, or the slider would pin its handle at an end for a `σ` inside `ZOOM_RANGE` and reach one past it.
     pub fn zoom_row_range(&self) -> std::ops::RangeInclusive<f64> {
         let window = self.window().log2();
         ZOOM_RANGE.0 + window..=ZOOM_RANGE.1 + window
