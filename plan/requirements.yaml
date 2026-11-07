@@ -3880,19 +3880,21 @@
   - RQ-722
 - id: REQ-CHART-103
   area: CHART
-  statement: "The virial ratio must be a registered axis of the kind RQ-717 rules, with its authoring descriptor, and the pair (configuration axis, Q) must be offered, the kernel's AxisVirial unchanged, the row's forward stated per mapping and a warped axis at a held L_z ≠ 0 labelled Q above the floor."
+  statement: "The virial ratio must be a registered axis of the kind RQ-717 rules, with its authoring descriptor, and the pair (configuration axis, Q) must be offered, the kernel's AxisVirial unchanged but for REQ-CHART-139's floor under the rise, the row's forward stated per mapping: a warped axis at a held L_z ≠ 0 reads its own coordinate Q(t) = Q₀ + (Q_hi − Q₀)·t^γ_K under R-817's floor, labelled Q above the floor at Q₀ = 0; its label at Q₀ > 0 is RQ-741's."
   source:
   - file: docs/design/principia_chart_composition.md
     section: 9. Then virial
   verify:
     method: unit test
-    detail: "cargo test -p engine virial_descriptor: the validator takes a chart with a virial axis, refuses it beside hold E and beside a K axis by name; the row's forward by mapping: linear, or at L_z = 0, agrees with the descriptor's virial_ratio; warped at a held L_z ≠ 0 it reads 2(K − L_z²/2I)/|U|, labelled; forward(inverse(x)) = x on both arms; controls: a virial axis with no descriptor is refused, the warped row read as the state's own ratio fails, a factor changed in the inverse fails, the row being a scale solve"
+    detail: "cargo test -p engine virial_descriptor: the validator takes a chart with a virial axis, refuses it beside hold E and beside a K axis by name; the row's forward by mapping: linear, or at L_z = 0, agrees with the descriptor's virial_ratio; warped at a held L_z ≠ 0 it reads Q₀ + 2(K − max(Q₀·|U|/2, L_z²/2I))/|U| (R-817): at Q₀ = 0 that is 2(K − L_z²/2I)/|U|, labelled Q above the floor; at Q₀ > 0 it is the state's own ratio 2K/|U| where Q₀ ≥ Q_min(U) = L_z²/(I·|U|), and that ratio less Q_min(U) − Q₀ elsewhere; forward(inverse(x)) = x on every arm, at Q₀ = 0 and at Q₀ > 0 on a column with Q_min(U) < Q₀, one with Q_min(U) = Q₀ and one with Q_min(U) > Q₀ (Q₀ = 1, Q_min(U) = 0.25, t = 0 reads 1); controls: a virial axis with no descriptor is refused, the warped row read as the state's own ratio fails at Q₀ = 0, the Q₀ = 0 form 2(K − L_z²/2I)/|U| on a Q₀ > 0 axis fails where Q₀ ≥ Q_min(U), a factor changed in the inverse fails, the row being a scale solve"
   rulings:
   - R-506
+  - R-817
   milestone: M8
   rq:
-  - RQ-700
   - RQ-717
+  - RQ-741
+  note: "R-817 (7 Nov 2026, RQ-700 (b)) moves the floor under the rise at Q₀ > 0; the forward is the inverse of its decode, returning the axis's coordinate Q(t) of chart_reference § 2.1. The label at Q₀ > 0, where the axis reads the state's own ratio on a column with Q₀ ≥ Q_min(U) and Q₀ plus the excess above the floor on the rest, is RQ-741's."
 - id: REQ-CHART-104
   area: CHART
   statement: "Each axis must take a warp of the closed four (linear, power, log, feasibility), bitwise today's on the linear arm, and a chart must take a pair map (affine, polar about a point, log-polar), each declared type under physics review."
@@ -4100,19 +4102,19 @@
   - RQ-721
 - id: REQ-CHART-115
   area: CHART
-  statement: "Under a lock a path must be a based homotopy: the anchor's IC words stored at the path's start and taken at the centre on every frame, ends included, unless the anchor isn't in B, which is labelled and unbased; about the current pin with an excursion, the area factor at the centre within 0.5 of the ends' on swapped and orthogonal planes, snap-back bit for bit, a chart-mode switch under a lock recording the words."
+  statement: "Under a lock a path must be a based homotopy: the anchor's IC words stored at the path's start and taken at the centre on every frame, ends included, where the anchor stays in B; where it can't exist in B (region D, rest, Burrau and other constrained charts), the anchor must slide continuously to its nearest point in B, by REQ-CHART-146's definition, and the centre pixel follow it, with no labelled jump, the jump kept only for a time-axis chart to an IC-only chart (R-849); about the current pin with an excursion, the area factor at the centre within 0.5 of the ends' on swapped and orthogonal planes, snap-back bit for bit, a chart-mode switch under a lock recording the words."
   source:
   - file: docs/design/principia_chart_composition.md
     section: "17.8 Lock: a based homotopy"
   verify:
     method: unit test
-    detail: "cargo test -p engine path_lock_centre: a probe at (½, ½) reads one set of words on every frame, ends included, affine and nonlinear, δ = 0 and δ ≠ 0; snap-back bit for bit; the area factor at the centre within 0.5 of the ends' on swapped and orthogonal planes; anchor not in B labelled, unbased; controls: the select removed fails, offsets blended linearly fails"
+    detail: "cargo test -p engine path_lock_centre: where the anchor stays in B, a probe at (½, ½) reads one set of words on every frame, ends included, affine and nonlinear, δ = 0 and δ ≠ 0; snap-back bit for bit; the area factor at the centre within 0.5 of the ends' on swapped and orthogonal planes; where the anchor can't exist in B (a region D, a rest and a Burrau B), the probe reads the stored words at s = 0 and B's nearest point to the anchor at s = 1, the slide continuous between (the largest step in the probe's state between frames shrinking each time the frame step is halved, twice over), with no label and no jump; a time-axis chart to an IC-only chart keeps its labelled jump; controls: the select removed fails, offsets blended linearly fails, a labelled jump where the anchor can't exist in B fails"
   rulings:
   - R-69
   - R-92
+  - R-849
+  - R-850
   milestone: M8
-  rq:
-  - RQ-721
 - id: REQ-CHART-116
   area: CHART
   statement: "A path must offer control charts built from each arm's own interpolation, alignment that reaches the identity at s = 1, and re-timing for constant visual speed by a recorded table pinned at both ends, easing untouched."
@@ -4586,6 +4588,24 @@
   - R-849
   milestone: M8
   note: "Closed by TASK-M8-102. Speeding the solve up is a future goal with no task, as for morphs."
+- id: REQ-CHART-146
+  area: CHART
+  kind: definition
+  statement: "\"Nearest point in B\", where the locked anchor slides when it can't exist in chart B (R-849, the RQ-721 rider), must be defined, the chart-space model's Theorem 8 its construction, the owner's example keeping shape and masses where B allows and easing the held-fixed coordinates to B's values along the path, written into chart_composition § 17.8 by the task that builds the slide and approved by the physics reviewer before merge (R-72)."
+  source:
+  - file: decisions.md
+    section: "R-849 — A typed combination with no registered inverse gets a general numerical solve on the CPU, recording its branch rule, marking its seams and labelled CPU-only; and under the lock a chart path never jumps: the anchor slides continuously to its nearest point in a constrained chart *(closes RQ-733; on RQ-721, closed by R-850)*"
+  - file: docs/design/principia_chart_composition.md
+    section: "17.8 Lock: a based homotopy"
+  verify:
+    method: review checklist
+    detail: "chart_composition § 17.8 states the nearest point in B to a locked anchor for region D, rest, Burrau and the other constrained charts: what is kept, what is eased to B's values, the result unique or its tie rule stated, and continuous along the path; the physics reviewer approved"
+  rulings:
+  - R-72
+  - R-849
+  - R-850
+  milestone: M8
+  note: "R-849 (7 Nov 2026): \"define 'nearest'\". Closed by TASK-M8-117."
 - id: REQ-INT-001
   area: INT
   statement: "The unwrapped phase `θ̃` must be a running SimState accumulator that adds the principal-value delta of `atan2(n_v, n_u)` each step, with `orbit_count = ⌊|θ̃|/2π⌋` and `retrograde = sign(θ̃) < 0` derived at read."

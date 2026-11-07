@@ -3750,7 +3750,7 @@
   title: "Paths under a lock: the stored anchor"
   depends_on: [TASK-M4-37, TASK-M8-106, TASK-M2-23]
   needs: []
-  requirements: [REQ-CHART-115]
+  requirements: [REQ-CHART-115, REQ-CHART-146]
   reviewers: [code, qa, physics]
   pitfalls: []
 - id: TASK-M8-118

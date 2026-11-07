@@ -721,3 +721,19 @@ waits on the answer.
 - **Waits:** nothing built; no task depends on it.
 - **Asked, 7 Nov 2026:** the owner: "f32 band: measure HeldLz, HeldK and Burrau at f32 first and report." Flagged for the next report.
 - **7 Nov 2026:** the measurement the owner asked for was run that day, its criterion written before the first run (R-649), on PR #388's head 5e3f45be over `HeldLz`, `HeldK` and Burrau's charts at f32 against f64, and reported to the owner the same day; the criterion and the logs are in the orchestrator's notes (`orch/scratch/f32band/`, outside the repository). The question stays open for the owner's ruling on it.
+
+## RQ-741: What does a warped virial axis at a held `L_z ≠ 0` say it reads when its asked bottom `Q₀ > 0`? *(a one-way door: what the instrument claims; R-817, R-506; Codex on PR #443, 7 Nov 2026; context: TASK-M8-119, REQ-CHART-103)*
+
+*Filed 7 Nov 2026 by the rulings PR of that day, from Codex's finding on PR #443 (`plan/tasks/M8/TASK-M8-119.md`). Nothing is chosen.*
+
+*In plain English: the virial ratio compares kinetic and potential energy. On a spinning chart it can't go below a floor that depends on each pixel's shape. Today the axis is labelled "Q above the floor", because it reads the ratio less that floor. The owner's ruling of 7 Nov (R-817) puts the floor under the rise only, so where the asked bottom of the range is above the floor, the axis now reads the ratio itself. On the other columns it reads the asked bottom plus the excess above the floor. The label "Q above the floor" stays true only when the range starts at 0. What the axis is labelled when it starts above 0 is not said anywhere.*
+
+- **File, section:**
+  - `decisions.md` § "R-817 — A warped virial axis with an asked bottom `Q₀ > 0` at a held `L_z ≠ 0` puts the floor under the rise only: …": "the pixel's ratio is `max(Q₀, Q_min(U)) + (Q_hi − Q₀)·t^γ_K`, so the bottom row is the asked bottom `Q₀` where `Q₀` is feasible and the floor elsewhere, and the rows span the asked range."
+  - `docs/design/principia_chart_composition.md` § "9. Then virial": "the label at `L_z ≠ 0` is `Q above the floor`, with the state's own `Q` in the readout."
+  - `plan/requirements.yaml` REQ-CHART-103, as it stood: "a warped axis at a held L_z ≠ 0 labelled Q above the floor".
+- **The silence:** the axis's coordinate is chart_reference § 2.1's `Q(t) = Q₀ + (Q_hi − Q₀)·t^γ_K`, so its forward, the inverse of R-817's decode, is `Q₀ + 2(K − max(Q₀·|U|/2, L_z²/2I))/|U|`: the state's own ratio `2K/|U|` on a column where `Q₀ ≥ Q_min(U) = L_z²/(I·|U|)`, and that ratio less `Q_min(U) − Q₀` on the rest. At `Q₀ = 0` it is `2(K − L_z²/2I)/|U|`, the built axis, and `Q above the floor` is exact. At `Q₀ > 0` no file names the label, and one label can't be exact on both kinds of column.
+- **The question:** on a warped virial axis at a held `L_z ≠ 0` with `Q₀ > 0`, what is the axis labelled?
+- **Options seen:** (a) `Q`, the ratio, with the columns where `Q₀` is infeasible marked (as the floor is) and the state's own ratio in the readout; (b) `Q above the floor` throughout, its meaning stated as `Q₀` plus the excess above the floor; (c) a label per column kind, `Q` where `Q₀` is feasible and `Q above the floor` elsewhere; (d) another, stated by the owner.
+- **Applied meanwhile:** REQ-CHART-103 and TASK-M8-119 take R-817's forward and its round trip, and `Q above the floor` at `Q₀ = 0` only, both settled by R-817 and § 2.1; they name this entry for the label at `Q₀ > 0`.
+- **Waits:** TASK-M8-119's label at `Q₀ > 0` only; its descriptor, forward and decode go ahead.

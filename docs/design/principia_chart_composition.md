@@ -19,9 +19,11 @@ rest", R-841; RQ-723 (b), orbital elements as axes at a labelled pair, plus over
 R-848; RQ-725 and RQ-726, R-669 reversed, fixed-`k` and binary-plus-single charts built when their turn comes, R-847;
 RQ-727 (a), R-842; RQ-728 (a), R-843, its mask read with RQ-714's open part; RQ-730 (a), R-844; RQ-733 (b), a general
 numerical solve on CPU batch, R-849; RQ-736, R-853, with the symmetry rule, R-854, and the filter order, R-855; the model's
-§ 6b classification, R-852. RQ-711 (a), R-820, the zoom row's scale still open. Open: RQ-729, RQ-731 and RQ-732, the
+§ 6b classification, R-852. RQ-711 (a), R-820, the zoom row's scale still open. RQ-700 (b), R-817, in chart_reference §2.1, which
+TASK-M8-119 carries into § 9: at `Q₀ > 0` the virial floor sits under the rise only, so § 9's axis reads its coordinate `Q(t)`, the state's own ratio
+on a column where `Q₀` is feasible, and `Q above the floor` is its label at `Q₀ = 0`; its label at `Q₀ > 0` is RQ-741's. Open: RQ-729, RQ-731 and RQ-732, the
 record PR's; RQ-734, RQ-735; RQ-738, RQ-736's correction list and the filter's conflicts; RQ-739, the mirror-step
-proposal.
+proposal; RQ-741, the virial axis's label at `Q₀ > 0`.
 
 **The order, in a line.** Charts are built from primitives and combinations of primitives, each axis independent and
 customisable, composing with what exists and adding no chart type. Any axis may be paired with any other. The only

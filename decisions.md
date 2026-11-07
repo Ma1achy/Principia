@@ -31756,6 +31756,7 @@ R-816 is in the "physics" group of `plan/rule_groups.yaml`.
 ## R-817 — A warped virial axis with an asked bottom `Q₀ > 0` at a held `L_z ≠ 0` puts the floor under the rise only: the pixel's ratio is `max(Q₀, Q_min(U)) + (Q_hi − Q₀)·t^γ_K` *(closes RQ-700)*
 *7 Nov 2026 · the owner's reply to the report of 7 Nov 2026; applied in `docs/archive/review_queue/M0.md` (RQ-700 moved), `docs/design/principia_chart_reference.md` § 2.1, REQ-CHART-139 (reqio, new), TASK-M8-119, `plan/tasks.yaml`, `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
 adds REQ-CHART-139*
+*Also applied 7 Nov 2026, from Codex's finding on PR #443: REQ-CHART-103 (reqio), its forward the inverse of this decode, TASK-M8-119's acceptance and `docs/design/principia_chart_composition.md` (status); the label at `Q₀ > 0` queued as RQ-741.*
 
 The owner's words (7 Nov 2026), verbatim:
 
@@ -32214,6 +32215,7 @@ R-848 is in the "physics" group of `plan/rule_groups.yaml`.
 ## R-849 — A typed combination with no registered inverse gets a general numerical solve on the CPU, recording its branch rule, marking its seams and labelled CPU-only; and under the lock a chart path never jumps: the anchor slides continuously to its nearest point in a constrained chart *(closes RQ-733; on RQ-721, closed by R-850)*
 *7 Nov 2026 · the owner's reply to the report of 7 Nov 2026; applied in `docs/archive/review_queue/M0.md` (RQ-733 moved), REQ-CHART-145 (reqio, new), TASK-M8-102, TASK-M8-117, `docs/design/principia_chart_composition.md` (status), TASK-M4-37, `plan/tasks.yaml`, `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
 adds REQ-CHART-145*
+*Also applied 7 Nov 2026, from Codex's finding on PR #443: REQ-CHART-115 (reqio), the sliding anchor in place of `anchor not in B`, REQ-CHART-146 (reqio, new), "nearest" as a definition (R-72), and TASK-M8-117's acceptance.*
 
 The owner's words (7 Nov 2026), verbatim:
 
