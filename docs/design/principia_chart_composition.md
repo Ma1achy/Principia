@@ -152,10 +152,13 @@ In the formulas `r_ij = ‖r_i − r_j‖`, `γ_k` is the interior angle at body
 | `I`, `R`, `ℓ` | §0.5 | refused: **size-only** | — | — | no | size-only |
 
 **Combinations.** A combination is an expression over primitives, in the stain's expression syntax, the subset §4.1 of
-`principia_lines.md` needs (R-509). It inherits the weakest inverse class of its parts unless a closed form is registered
-for it. Its `angle-like` is true if any part is. Its scale is computed, not declared. On the GPU no expression is ever
-interpreted (lowering Part 1): a combination reaches the GPU only as a registered, baked row, and otherwise runs as CPU
-batch, where an interpreter is allowed, since it is not a kernel.
+`principia_lines.md` needs (R-509). Its forward is the expression. Its inverse class is not read from its parts: `exp(K) + K`
+has closed parts and no closed inverse, and `K + L_z` doesn't say which part moves. It is `closed` only with a registered
+closed inverse, `numerical` only with a registered numerical one, naming what it solves for and its branch rule (§ 7.3), and
+otherwise `none`: a forward-only overlay, and as an axis `NoJointInverse` (RQ-733). Its `angle-like` is true if any part is.
+Its scale is computed, not declared. On the GPU no expression is ever interpreted (lowering Part 1): a combination reaches
+the GPU only as a registered, baked row. Otherwise, with a registered inverse, it runs as CPU batch, where an interpreter may
+evaluate its forward, since it is not a kernel.
 
 **Scale-size refusal is a computed property too.** The `size-only` column is declared, and a test checks the declaration:
 it samples decodes and fails any row whose forward is constant on them and is not declared `size-only` (§ 12).
@@ -270,9 +273,9 @@ committed. Identities: `docs/incoming/2026-11-06_chart_composition/checks/a5_che
 | Li–Li–Liao 2020 collinear `L = 0` `(x₁, v₁)`, `(m₁, m₂)` plane | `r = (x₁, 1, 0)` on `x`, perpendicular `v`, `v₂ = −m₁v₁x₁/m₂` (0.4531080538 reproduced), `v₃` by `P = 0`. `PP/li_li_liao_2020_arXiv2007.10184.pdf` | closed | bounded | `L = 0`, collinear | any shape pair | LLL-1, "not scored: no continuation" | **axis pair**, unscored; R-669's "one M9 task" doesn't reach it |
 | BHH collinear-perpendicular Jacobi `(a, c; L)` | definition unread: `INC/2026-10-26_orbit_catalogues/CITATIONS.md` `bhh2026`, an atlas note | | | | | atlas rows | **a definition requirement** (R-72) |
 | isosceles choreography `c₁…c₄` | `x₁ = −2c₁, x₂ = x₃ = c₁, y₂ = −y₃ = c₂, u₁ = 0, u₂ = −u₃ = c₃, v₁ = −2c₄, v₂ = v₃ = c₄`. `INC/2026-10-27_hp_ics/README.md`, Simó's normalisation | closed on a 2-plane | bounded | three DOF after `C`: `c₁`'s scale is gone | | Simó's rows | **axis pair** on a named 2-plane, any two of the three |
-| Titov isosceles, collinear | `INC/2026-10-28_external_sources/titov_2024/ch5_decoding_check.txt`; `INC/_local/titov_2024/disser_titov.pdf` | closed | | `h = −1`, unit masses | as McGehee | TI-1, proposed | **preset** of the row below |
-| Orlov collinear `(k, φ)`, fixed `E` | virial `k`, velocity angle at a passage through the COM. `INC/_local/martynova_orlov_rubinov_2009_AstRep_53_710.pdf` p. 2; `INC/2026-10-29_research_batches/orlov_2002/` | closed | `k` bounded, `φ` periodic | shape fixed, so `E` by `I = 1` | `Q = 2k` | OR02-1, proposed | **polar view of the Šuvakov plane** at equal masses; unscored until TASK-M9-40 |
-| Mikkola–Hietarinta `(R, θ)`, fixed `E` | their eq. 7; `INC/2026-10-29_research_batches/mikkola_hietarinta_1989/` | definition unread on the page | | `E = −1` | | MH89-1, proposed | **a definition requirement** |
+| Titov isosceles, collinear | `INC/2026-10-28_external_sources/titov_2024/ch5_decoding_check.txt`; `INC/_local/titov_2024/disser_titov.pdf` | closed | | unit masses; the paper's `h = −1` is a unit conversion (§ 20), not a chart hold | as McGehee | TI-1, proposed | **preset** of the row below |
+| Orlov collinear `(k, φ)`, at the paper's fixed `E` | virial `k = K/\|U\|` and a velocity angle, as the central body passes through the COM with all three on a line. **Two scans:** rectilinear, `tan φ = ṙ/ρ̇`, `INC/_local/research_batches_2026-10-29/further_research/Orlov_2002_Linear_Triple_Encounters.pdf` p. 933, eqs. 4 to 9, `INC/2026-10-29_research_batches/orlov_2002/`; planar, `φ` the central body's velocity against the line, `INC/_local/martynova_orlov_rubinov_2009_AstRep_53_710.pdf` p. 2 | closed | `k` bounded in `(0, 1)`, `φ` periodic | shape and masses. **Not `E`:** at `I = 1` the shape fixes `U`, so `E_c = (k − 1)\|U\|` moves with `k`, and a hold `E*` is `AxisAndHold`. The paper's `h = −1` is a unit conversion (§ 20), per start: `ℓ(k) = G M²(1 − k)\|U_c\|/\|h\|`, `(5/√6)(1 − k)` at OR02-1's unit masses, with `t` and length by § 8.6, so its `t = 100` runs from 60.3 to 5.94·10⁴ in `t_c` (RQ-643) and the chart carries `paper scale differs` | `Q = 2k` | OR02-1, proposed | planar: **polar view of the Šuvakov plane** at equal masses, unscored until TASK-M9-40. Rectilinear: **not that plane**; it is a pair on the collinear momentum block, `p_ρ` and `p_λ` along the line, `φ` the paper's angle and not the mass-weighted polar one, unscored, no task. The two meet only on Schubart's line, Orlov's `φ = 135°, 315°`, the planar `φ = 0` |
+| Mikkola–Hietarinta `(R, θ)`, at the paper's fixed `E` | their eq. 7; `INC/2026-10-29_research_batches/mikkola_hietarinta_1989/` | definition unread on the page | | the paper's `E = −1` is a unit conversion (§ 20), not a chart hold; what the chart holds is the definition requirement's | | MH89-1, proposed | **a definition requirement** |
 | McGehee-type, collinear and isosceles | `T = ½(ρ′² + ¼ρ²E′²)`, Titov ch. 5, checked in `ch5_decoding_check.txt` | closed | | `I = 1` fixes `ρ` | `ρ` is **size-only**; `ρ′` is `h`; the angle is the arc on `n̂` | TI-1 | **aliases**: shape arc and `h`. Regularised time is no axis |
 
 **Against R-669 and RQ-593.** The order's "feeds RQ-593's BinaryPlusSingle chart" is a real conflict. R-669: "no binary-plus-single
@@ -568,7 +571,7 @@ of rank 2 (§ 12).
 | `branch: <rule>`, `seam` | § 7.3 |
 | `axis reads before the hold` | § 5.4, a hidden `p_fixed` or `p_λ` tilt target included |
 | `one orientation` | a chart reaching `η ≥ 0` only, as the third-body pair and the angle pair do (the shape sphere's whole-sphere rule, R-544, stays that chart's) |
-| `paper scale differs` | a `gauge` axis at `I = 1` (§ 8.6), or a held `L*` or `E*` on region D (§ 5.3) |
+| `paper scale differs` | a `gauge` axis at `I = 1` (§ 8.6), a held `L*` or `E*` on region D (§ 5.3), or a chart read against a paper that normalises `E`, so `ℓ` moves across it (§ 3.2's Orlov row) |
 | `Q above the floor` | a warped virial axis at a held `L_z ≠ 0`: it reads the excess above the rotational floor, the state's own `Q` in the readout (§ 9) |
 
 **R-506 W1 unchanged.** A chart with any linear axis logs no decoder-bug warning; a chart whose physical axes are all warped
@@ -1129,6 +1132,7 @@ Nothing below is decided here.
 | RQ-729 | Paper frames the library doesn't settle | presets where read; each gap unbuilt |
 | RQ-730 | Hill's threshold at unequal masses: labelled pair, `max`, or median | physics, the owner's; labelled pair |
 | RQ-731 | REQ-VAL-326's pointer to the 2015 paper | correct it to the 2008 paper |
+| RQ-733 | A user-typed combination with no registered inverse: an overlay only, or a general solve | registered inverses only; an overlay otherwise |
 
 **New extension types: none proposed.** Polar's `ϕ` and `r` declare existing types, under R-407 clause 3's physics review.
 
@@ -1850,7 +1854,7 @@ a tolerance: a CPU batch rounds once to f32, so such a chart would integrate one
 | Log-polar about a TCP (TM-1) | polar pair map on `(ξ, η)` about the point, log warp | radii 10⁻³ to 10⁻⁵, azimuths per Table 4 | Table 4's points | `INC/2026-10-25_replication/catalogue.md` § 1.5; `INC/2026-10-29_research_batches/tanikawa_mikkola_2021/` |
 | Rotating family (Valtonen 2005) | `L²E` | `w = −L²E/(G²m⁵)`: **an alias of `L²E`** | `w` at a built state | `INC/_local/valtonen_myllari_orlov_rubinov_2005_MNRAS_364_91.pdf` eq. 1 |
 
-**Catalogue energy normalisations are a stated unit conversion, never an axis.** `E = −½` (Simó: `M = 1`, § `INC/2026-10-27_hp_ics/README.md` line 107), Hudomal's (`TARGETS.md` § Hudomal), are § 8.6's `E_paper = G M² E_c/ℓ`, with `ℓ` scaled so the energy matches: a function in the comparison, one number per orbit, on the import's path.
+**Catalogue energy normalisations are a stated unit conversion, never an axis.** `E = −½` (Simó: `M = 1`, § `INC/2026-10-27_hp_ics/README.md` line 107), Hudomal's (`TARGETS.md` § Hudomal), are § 8.6's `E_paper = G M² E_c/ℓ`, with `ℓ` scaled so the energy matches: a function in the comparison, one number per orbit, on the import's path. A scan at fixed paper energy, § 3.2's Orlov, Mikkola–Hietarinta and Titov rows, is the same conversion with `ℓ` a function of the pixel, not one number per orbit.
 
 **Gaps.** The order lists these as frames the library can't determine. Checked; four of them it can:
 

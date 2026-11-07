@@ -1077,7 +1077,7 @@ owner: yes, it is physics; the tilt changes which systems the chart shows.*
   - `decisions.md` § R-669: "TS-2 (REQ-VAL-326) reads "not scored: no fixed-k velocity chart""; "The Šuvakov-plane chart, `SuvakovPlane`, at equal masses and at fixed m₃, is defined (R-72) and built by one M9 task, TASK-M9-40".
   - `docs/incoming/2026-10-25_replication/papers/tanikawa_mikkola_2008_arXiv0802.2465.pdf` § 3.1: "we give maximal angular momentum for a given configuration triangle"; § 4.2: "virial coefficient k = T/|U|".
   - the owner's order, part C: "symmetric-IC families: Suvakov-Dmitrasinovic plane (m3 free, and the middle-body-labelled-2 variant), Li & Liao 2017 generalised plane … isosceles choreography (c1..c4), Titov isosceles, Orlov collinear (k, phi) and Mikkola-Hietarinta (R, theta) at fixed E".
-- **The findings:** the prescription is the rigid rotation `v = ωJr`, `ω² = 2k|U|/I`, `Q = 2k`, over `D₁₁ ∪ D₁₂`; only its sense isn't printed. A chart of it is what R-669 refuses. `v₂/v_esc` isn't `k`, and the corpus has it: `√chazy_qk[2]`. *Corrected on physics note 2: 86acb50f's premise that the prescription wasn't held was false.* `(α₂, β₁)` isn't `k`. A rest arm under hold `L*` is a rigid rotation at constant `L`, the nearest neighbour, for RQ-718 and RQ-722. Li & Liao 2017's plane is `SuvakovPlane` after `C`. Orlov's `(k, φ)` reads as its polar view at equal masses.
+- **The findings:** the prescription is the rigid rotation `v = ωJr`, `ω² = 2k|U|/I`, `Q = 2k`, over `D₁₁ ∪ D₁₂`; only its sense isn't printed. A chart of it is what R-669 refuses. `v₂/v_esc` isn't `k`, and the corpus has it: `√chazy_qk[2]`. *Corrected on physics note 2: 86acb50f's premise that the prescription wasn't held was false.* `(α₂, β₁)` isn't `k`. A rest arm under hold `L*` is a rigid rotation at constant `L`, the nearest neighbour, for RQ-718 and RQ-722. Li & Liao 2017's plane is `SuvakovPlane` after `C`. Martynova, Orlov & Rubinov's planar `(k, φ)` is its polar view at equal masses; Orlov 2002's rectilinear `(k, φ)` is not, the two meeting only on Schubart's line. Both fix `E` as the paper's normalisation, not as a hold on the chart (§ 3.2).
 - **Options:**
   - (a) **Recommended.** R-669 stands: no fixed-`k` chart; TS-2 "not scored"; `SuvakovPlane` one M9 task, with Li & Liao's plane and the labelling variant its presets. The third-body ratio, `(α₂, β₁)` and Li–Li–Liao's `(x₁, v₁)` are axes, unscored. A user's rigid-rotation hold is a user's picture under RQ-718. Isosceles families, BHH and Mikkola–Hietarinta take definition requirements (R-72), with no build here.
   - (b) Reverse R-669 for TS-2: build the fixed-`k` chart.
@@ -1204,3 +1204,20 @@ owner: yes, it is physics; the tilt changes which systems the chart shows.*
   - (b) Rewrite only the 2 task lines, and leave the prose, which reads as a description rather than a command.
 - **Applied meanwhile:** nothing. PR #422's own lines are fixed; these older lines are unchanged.
 - **Waits:** nothing. TASK-M6-32 and TASK-M6-33 are merged.
+
+## RQ-733: Does a user-typed combination with no registered inverse get a general solve, or stay a forward-only overlay? *(a one-way door: scope, and the reading of the order's "combinations of primitives"; Codex's P1 on PR #422, thread PRRT_kwDOUpUQ5c60z6LL; context: TASK-M4-33, TASK-M8-102, REQ-CHART-096, REQ-CHART-107)*
+
+*Queued 7 Nov 2026 from PR #422, for the owner's rulings report. Nothing is implemented until ruled (the owner's order of 6 Nov, A6).*
+
+*In plain English: an axis can be a formula combining several quantities. To start a system from a pixel, the program must run that formula backwards. Having simple parts doesn't make the whole formula reversible, so the design now treats a formula as reversible only if someone has written down how. This asks whether a formula a user types should get an automatic numerical solver, or stay something you can only draw as an overlay until one is written.*
+
+- **File, section:**
+  - the owner's order of 6 Nov 2026, as `docs/design/principia_chart_composition.md`, "The order, in a line": "Charts are built from primitives and combinations of primitives".
+  - `docs/design/principia_chart_composition.md` § 7.3: "**Rule:** declared per registered inverse".
+  - `docs/design/principia_chart_composition.md` § 3, "Combinations", as corrected: "otherwise `none`: a forward-only overlay, and as an axis `NoJointInverse`".
+- **The question:** can a builder expression with no registered inverse be an axis?
+- **Options:**
+  - (a) **Recommended.** No: registered inverses only. Every inverse has a named unknown, a branch rule and a test.
+  - (b) A general numerical solve on CPU batch: the user names the quantity it moves, and the expression takes § 7.3's fixed starts and a declared default rule, labelled `CPU batch: numerical`.
+- **Applied meanwhile:** (a), which only withholds: nothing is built, and (b) would add to it.
+- **Waits:** nothing. Read at TASK-M4-37; TASK-M4-33 goes ahead on (a).
