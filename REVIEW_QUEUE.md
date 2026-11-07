@@ -783,7 +783,7 @@ owner: yes, it is physics; the tilt changes which systems the chart shows.*
 - **File, section:**
   - the owner's order of 6 Nov 2026, item 1: "A new capability is a new axis kind, warp or pair map in the builder, not a new chart type (R-798)."
   - `docs/contracts/principia_chart_decoder_contract.md` § "The four axis kinds — a closed set": "Burrau introduces no fifth kind." REQ-CHART-004: "Chart axes must be one of the closed set of four kinds".
-  - `decisions.md` § R-798 (branch `rulings/2026-11-05-apply`), the owner's words: "RQ-594: (a), a tested remap onto the shape sphere at rest. Also add a shape-chart preset … No new chart type." What it decides: "**No new chart type.**", under PA-1's heading.
+  - `decisions.md` § R-798, the owner's words: "RQ-594: (a), a tested remap onto the shape sphere at rest. Also add a shape-chart preset … No new chart type." What it decides: "**No new chart type.**", under PA-1's heading.
   - `decisions.md` § R-669: "The Šuvakov-plane chart, `SuvakovPlane`, … is defined (R-72) and built by one M9 task"; REQ-CHART-091: "built as one chart … with its row in the lowering appendix and its baked compute variant".
 - **The conflict:** read literally, the order opens the set the contract closes, and takes R-798's sentence beyond PA-1, where R-669 has already ruled a new chart.
 - **The question:** is a new capability a new *entry* under the four kinds, and does "no new chart type" hold from here on, generally?
@@ -801,7 +801,7 @@ owner: yes, it is physics; the tilt changes which systems the chart shows.*
 *In plain English: the owner ruled that one paper's picture runs by converting side ratios onto the existing shape chart, with no side-ratio chart. The new order lists side ratios as a thing an axis can be. This asks whether both can stand.*
 
 - **File, section:**
-  - `decisions.md` § R-798 (branch `rulings/2026-11-05-apply`): "**The remap.** PA-1 runs on the shape sphere at rest, reached through a tested remap of side ratios to shape coordinates (rule 6). There is no `SideRatio` chart."
+  - `decisions.md` § R-798: "**The remap.** PA-1 runs on the shape sphere at rest, reached through a tested remap of side ratios to shape coordinates (rule 6). There is no `SideRatio` chart."
   - the owner's order, item 3: "Each primitive (interior angles, side ratios, Jacobi coordinates, mass ratios, E, Lz, K, virial ratio, latent components, ...) declares".
 - **The conflict:** an axis pair of side ratios, offered in the builder, draws what the ruling said does not exist.
 - **Options:**
@@ -819,24 +819,25 @@ owner: yes, it is physics; the tilt changes which systems the chart shows.*
 - **File, section:**
   - `docs/design/principia_dd_validation_orbits.md` § "1.6": "**Region D** (I, Fig. 1 and eq. 8): `ξ ≥ 0`, `η ≥ 0`, `(ξ + ½)² + η² ≤ 1`. A point outside it is not a region-D start, and the import refuses it."
   - `docs/contracts/principia_lowering_contract.md`, Appendix, the Anosova row: "physical (m,r,p) construction → **canonicalise entry** → standard pipeline | region D bounds".
-  - `docs/contracts/principia_chart_decoder_contract.md` Part 3: "**Inside `[0,1]²` every gallery chart is valid by construction** … so a pixel hatched there is a decoder bug". And § "decisions.md" R-506: "warped to its feasible range by default".
+  - `docs/contracts/principia_chart_decoder_contract.md` Part 3: "**Inside `[0,1]²` every gallery chart is valid by construction** … so a pixel hatched there is a decoder bug". And `decisions.md` § R-506: "warped to its feasible range by default".
   - `decisions.md` § R-554: "inside `[0,1]²` such a pixel is the domain's end by design … it draws blank and logs no decoder-bug warning", the exponential map's exception.
   - `docs/design/principia_dd_replication.md` § 5.8: "AA-3 | … the Anosova physical-frame entry" with no velocity stated; "AA-2 | … eq. (3) velocities".
 - **The silences, four:**
-  1. D is not a rectangle, so a square chart either masks, shows the outside, or warps. The outside pixels are real systems: relabelled copies.
+  1. D is not a rectangle, so a square chart either masks, shows the outside, or warps. The outside pixels are real systems: relabelled copies at equal masses and `L_z = 0`, other systems otherwise (the Reach line above).
   2. A mask makes pixels inside the square that are not drawn, which the contract calls a decoder bug on a gallery chart.
   3. AA-3 and AA-5 don't say which velocities.
   4. The kernel decodes at `I = 1`, so each pixel has its own rescale `ℓ`, 0.408 to 0.577 over D, and one sim-key `T` is a paper time varying by a factor of 1.68 across the chart.
 - **Options on (1), (2):**
   - (a) **Recommended.** A mask. Axes `ξ ∈ [0, ½]`, `η ∈ [0, √3/2]`, linear, a preset of the general third-body pair; outside eq. 8 is the domain's end, blank, out of the count and the total, no warning, R-554's exception extended by name. Pixels stay uniform in `(ξ, η)`, as the papers sample, and the picture is theirs. R-506's warp reads as trivial here: every `(ξ, η)` is a system, so the range is its whole range.
-  - (b) The plane, unmasked. D drawn as a contour; statistics filter. No exception needed; the Atlas shows relabelled copies.
+  - (b) The plane, unmasked. D drawn as a contour; statistics filter. No exception needed; the Atlas shows relabelled copies at equal masses and `L_z = 0`, other systems otherwise.
   - (c) A warp onto the square, polar about the left body. Every pixel in D, no exception, R-506 read literally; the measure is not the papers' and the apex is a ray-degenerate edge.
 - **Options on (3):** (a) **recommended**, AA-3 and AA-5 read paper I's own runs, so eq. 3; (b) exact rest.
 - **Options on (4):** (a) **recommended**, the run reaches the longest pixel's horizon and the comparison cuts each pixel at its own, a tested function (rule 11), the kernel untouched; (b) a per-pixel `T`, a kernel change.
 - **Applied meanwhile:** nothing built. The design's § 8 writes (a) in each case.
 - **Owner, 6 Nov:** outside region D blank and uncounted is agreed in principle. That is not a ruling; this entry stays open.
+- **Waits:** the design's tasks behind TASK-M4-37, and no existing task. TASK-M4-06's golden (REQ-RENDER-082) needs this domain, so its edge to TASK-M4-34 is applied when this is ruled.
 
-## RQ-715: Hold `L_z`, and how it meets `η_E` *(physics, a one-way door; §0.6; R-25, R-670, R-720; closes the held-`L_z` half of RQ-701 only; context: TASK-M4-35)*
+## RQ-715: Hold `L_z`, and how it meets `η_E` *(physics, a one-way door; §0.6; R-25, R-670, R-720; closes the held-`L_z` half of RQ-701 only; context: TASK-M8-118)*
 
 *Queued 7 Nov 2026 from the chart composition design, PR #422, for the owner's rulings report. Nothing is implemented until ruled (the owner's order of 6 Nov, A6).*
 
@@ -847,12 +848,12 @@ owner: yes, it is physics; the tilt changes which systems the chart shows.*
   - `docs/contracts/principia_inverse_encode_contract.md` Part 5: "rigid rotation `v^(L) = (L_z/I)·J r` (the *minimal-kinetic-energy* realisation of `L_z`".
   - `docs/contracts/principia_chart_decoder_contract.md`, the curve `v(s) = v⁽ᴸ⁾ + eˢ·(v − v⁽ᴸ⁾)`, "along which `L_z` is exactly constant" (REQ-CHART-051).
   - the owner's order, item 4: "hold Lz fixed on any chart, alongside energy normalisation, with the same refusal rules where Lz is itself an axis".
-  - `decisions.md` § R-720 (branch `rulings/2026-11-04-port`): "The held `L_z` of `(ν, K)`, `Φ_θ,K` and `Φ_strip,K` moves by value", and "The same rule governs slicing the held L_z as well as tilting it."
+  - `decisions.md` § R-720: "The held `L_z` of `(ν, K)`, `Φ_θ,K` and `Φ_strip,K` moves by value", and "The same rule governs slicing the held L_z as well as tilting it."
   - RQ-701 (open, queue): "Whether and how a `MixedEnergy` chart's held `L_z` or `K` tilts and slices".
   - PR #422, physics review 5803342655, the note this entry follows; script `orch/scratch/422-physics/hold.py`.
 - **The silence:** no corpus text says how the two projections compose, what their outcomes are, or what a tilt does to a held `L*` outside R-720's three charts.
 - **Options:**
-  - (a) **Recommended, amended per the physics review.** Design § 5.3: hold `L_z` adds the rigid rotation; with both held, the scale takes only the part orthogonal to it, `η = √((E* − U − L*²/2I)/K_δ)`, the unique nearest point of the fibre, closed form, and the corpus's own decomposition; off, bitwise today's. Conditions: `K_δ` computed from `δv`, with the second projection (F1, F2), the outcome order (F3) and encode's held decode (F7) written as definitions before the build task (REQ-CHART-108 to 21); by value inside a chart that holds `L_z` by construction, and no tilt target on a free chart (F4); the wider `ray-degenerate` rank loss (F5); RQ-722 put to the owner (F6).
+  - (a) **Recommended, amended per the physics review.** Design § 5.3: hold `L_z` adds the rigid rotation; with both held, the scale takes only the part orthogonal to it, `η = √((E* − U − L*²/2I)/K_δ)`, the unique nearest point of the fibre, closed form, and the corpus's own decomposition; off, bitwise today's. Conditions: `K_δ` computed from `δv`, with the second projection (F1, F2), the outcome order (F3) and encode's held decode (F7) written as definitions before the build task (REQ-CHART-108 to REQ-CHART-110); by value inside a chart that holds `L_z` by construction, and no tilt target on a free chart (F4); the wider `ray-degenerate` rank loss (F5); RQ-722 put to the owner (F6).
   - (b) As (a), but both held is refused: hold one at a time. **Not recommended:** the order says "alongside energy normalisation", and only genuine contradictions may be refused. The fibre is non-empty wherever `2K* ≥ L*²`, so this is reduced capability at most, and that's a label.
   - (c) Hold `L_z` solves in the hidden momentum directions, keeping any swept momentum axis's label true. **Not recommended:** it isn't really a solve. Alone it is `Δv ∝ P Jr`, closed form, equal to (a) when no momentum axis is swept, but the hold then depends on which axes are swept, so a tilt changes the IC even at fixed `v`. It fails where `P Jr = 0`, exactly (a)'s rank-loss set, a label turned into a failure, and both held loses further pixels since `E*` has to be met in a smaller subspace. All that to keep one label true.
 - **Applied meanwhile:** (a) amended, unbuilt.
@@ -891,13 +892,13 @@ owner: yes, it is physics; the tilt changes which systems the chart shows.*
 - **On the 2 s, recommended:** read it as written, the Mac's number, keep it unchanged, and let #427 set any Vulkan start-up budget, since the gallery fails it with no pairs and the cap can't cure that. This reading is the one under which the proposal passes, so it's flagged as such. If the 2 s applies on Windows, no cap passes, and the gallery itself would have to shrink or go lazy.
 - **Applied meanwhile:** (a), with the value in one ledger constant, so a different ruling changes one number and the test `baked_cap`.
 
-## RQ-717: Which kind the virial-ratio axis is *(RQ-682, open in the queue; R-471 H3; a one-way door if ruled as a new kind; context: TASK-M4-36, TASK-M8-18)*
+## RQ-717: Which kind the virial-ratio axis is *(RQ-682, open in the queue; R-471 H3; a one-way door if ruled as a new kind; context: TASK-M8-119, TASK-M8-18)*
 
 *Queued 7 Nov 2026 from the chart composition design, PR #422, for the owner's rulings report. Nothing is implemented until ruled (the owner's order of 6 Nov, A6).*
 
-*In plain English: the order's second customer is the virial ratio, which compares kinetic and potential energy. The kernel's code for it is written on the warp branch, but the builder can't take it until someone says which of the four kinds it is. That question is already queued, and nothing else stands in the way.*
+*In plain English: the order's second customer is the virial ratio, which compares kinetic and potential energy. The kernel's code for it is written on the warp branch, but the builder can't take it until someone says which of the four kinds it is. That question is already queued, and at a held `L_z ≠ 0` RQ-700 also decides what a row of it means.*
 
-- **File, section:** RQ-682, on PR #387's branch, whose options are (a) kind 3, (b) kind 2 in the momenta, (c) another. `decisions.md` § R-471 H3: "The virial ratio and the mass ratio are not kind 3, so B1 stands for them."
+- **File, section:** RQ-682, open in the queue, whose options are (a) kind 3, (b) kind 2 in the momenta, (c) another. `decisions.md` § R-471 H3: "The virial ratio and the mass ratio are not kind 3, so B1 stands for them."
 - **Recommendation:** RQ-682 (a). H3's sentence is about B1's extension, which R-506 has superseded; `Q` solves into the momenta and reads the upstream blocks, what kind 3 is.
 - **Applied meanwhile:** nothing; the design's virial rows say "by RQ-682".
 
@@ -939,7 +940,7 @@ owner: yes, it is physics; the tilt changes which systems the chart shows.*
 *In plain English: an earlier rule said not to build a chart before a target needs it. The order asks for general options, polar and curved slices, that no target needs yet.*
 
 - **File, section:**
-  - `decisions.md` § R-594: "a target that needs a chart that doesn't exist waits for it. Do not build charts ahead of it."
+  - `decisions.md` § R-594: "a target that needs a chart that doesn't exist waits for that chart. Do not build charts ahead of it."
   - the owner's order, item 4: "polar and log as general options"; "curved slices off the shape sphere (momentum, mass)".
 - **Options:**
   - (a) **Recommended.** R-594 item 5 governs charts built *for a target*; builder options are the owner's own order, and none is built for a target.
@@ -978,7 +979,7 @@ owner: yes, it is physics; the tilt changes which systems the chart shows.*
 - **Recommendation:** (a).
 - **Applied meanwhile:** (a), unbuilt. Nothing is implemented until this is answered.
 
-## RQ-722: Does a chart at rest refuse hold `L_z`, or say "not at rest"? *(a choice for the owner beside RQ-715; the order's item 4 and its last block; F6 of the physics review; context: TASK-M4-33, TASK-M4-35)*
+## RQ-722: Does a chart at rest refuse hold `L_z`, or say "not at rest"? *(a choice for the owner beside RQ-715; the order's item 4 and its last block; F6 of the physics review; context: TASK-M4-33, TASK-M8-118)*
 
 *Queued 7 Nov 2026 from the chart composition design, PR #422, for the owner's rulings report. Nothing is implemented until ruled (the owner's order of 6 Nov, A6).*
 
@@ -1081,7 +1082,7 @@ owner: yes, it is physics; the tilt changes which systems the chart shows.*
   - `docs/contracts/principia_caching_contract.md`, the invalidation table: "`T`, `dt_macro`, thresholds, `eps` floors | **All sim buffers** (signature change; the march re-boots from `t = 0`)".
   - REQ-INT-080, the calibration of `Δ_sync`; R-560, the default occupant Heggie × RK4; R-602; R-610, `T ≤ 200`.
   - `docs/design/principia_chart_composition.md` §§ 18, 19.
-- **Findings:** a mode needs no `AxisKind`; "axis kind" in the builder is the selector's word. Rows read boundary states: no new landing logic. `n_sync` no longer exists (R-565). For an unregularised occupant, past `T = 65.535` the macro-step moves with `T`, so raising `T` there is a new run; a regularised occupant has no such line. Visible rows cost `payload_mem`, 315 MB per copy at 1080p; macro-step dense output is 3.79 GB per copy at `T = 13`, 14.6 GB at the default `T = 50`, 19.1 GB at `T = 200`.
+- **Findings:** a mode needs no `AxisKind`; "axis kind" in the builder is the selector's word. Rows read boundary states: no new landing logic. `n_sync` no longer exists (R-565). For an unregularised occupant, past `T = 65.535` the macro-step moves with `T`, so raising `T` there is a new run; a regularised occupant has no such line. Visible rows cost `payload_mem`, 315 MB per copy at 1080p, 348 MB with each row's own word: a reduced word isn't append-only, so no length recovers it; macro-step dense output is 3.79 GB per copy at `T = 13`, 14.6 GB at the default `T = 50`, 19.1 GB at `T = 200`.
 - **Findings of physics note 3 (a findings note, not a ruling):**
   - *The window comes off the sim key.* `T` stays on it as the march's top; `(t_lo, t_hi, warp, rows)` is a view. Raising `T` as a continuation **amends the caching contract's `T` row**, for regularised occupants always and for unregularised ones while `dt_macro` is unchanged, up to R-610's cap.
   - *The default occupant resolves time only to `Δ_sync`.* At `T = 13`, `H = 1080`: 130 distinct rows at 0.1, drawn as bands 8 rows tall. Time zoom floors at one boundary; re-integrating can't go finer. **This mode now bears on REQ-INT-080's value**, whose cost is 2% at 0.1 and about 50% at 0.0125. The cost measured so far is on an unregularised stand-in; **the re-measure on Heggie × RK4 is owed.**
