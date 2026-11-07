@@ -26,6 +26,10 @@ use xtask::controls::IN_CI_WORKSPACE;
 
 const M0_24_FILTER: &str = "binary_id(=validation::qa_TASK-M0-24)";
 const DOCS_ONLY_SKIP: &str = "needs.changes.outputs.docs_only != 'true'";
+/// A test step's skip on a full attempt that adds to the quick tier (the owner, 7 Nov 2026): a docs or data head, or
+/// an earlier attempt of the run that passed `ci-quick` over every crate.
+const COMPOSED_SKIP: &str =
+    "needs.changes.outputs.docs_only != 'true' && needs.changes.outputs.quick_covers_ci != 'true'";
 const SAMPLER: &str = "bash .github/scripts/disk_sampler.sh {0}";
 
 fn root() -> &'static Path {
@@ -260,7 +264,8 @@ fn check_ci_workspace_is_measured(ci: &str) {
         .expect("the job's last df");
     let nextest: Vec<usize> = (0..steps.len())
         .filter(|&at| {
-            steps[at].run.starts_with("cargo nextest run") && steps[at].condition == DOCS_ONLY_SKIP
+            steps[at].run.starts_with("cargo nextest run")
+                && [DOCS_ONLY_SKIP, COMPOSED_SKIP].contains(&steps[at].condition.as_str())
         })
         .collect();
     assert!(

@@ -10,6 +10,10 @@
 # (`.github/scripts/ci_tier.sh merge-ready`). A label a workflow's `GITHUB_TOKEN` puts on starts no run; the merge
 # watcher puts it on with the user's own token (`plan/OPERATIONS.md` § "Mutants on the merge-ready head").
 #
+# The full tier adds to the quick tier (the owner, 7 Nov 2026: "The full tier should compose / add on to the quick
+# tier"): a quick run still going is waited for, never cancelled, and the re-run starts when it ends; the full attempt
+# then skips what that quick attempt passed (`ci_tier.sh decide`, `quick_passed` and `quick_covers_ci`).
+#
 # Any other label's run skips its one job at job level, and asks for no runner, in a group of its own, so it cancels
 # nothing (below).
 name: ci-full
@@ -54,8 +58,9 @@ jobs:
   ci-full:
     if: github.event.label.name == 'merge-ready'
     runs-on: ubuntu-24.04
-    # Its waits, for a run to appear and for a cancelled run to end, are bounded in the script; this bounds the job.
-    timeout-minutes: 10
+    # Its waits, for a run to appear and for a quick run to end, are bounded in the script, the second at 350 minutes;
+    # this bounds the job, at GitHub's 360 for a hosted job, as `mutants.yml`'s `mutants-check` waits (R-678).
+    timeout-minutes: 360
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: .github/scripts/ci_tier.sh merge-ready

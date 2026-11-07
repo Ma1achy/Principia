@@ -433,8 +433,19 @@ dev-dependency, links the rest). So before the label:
   starts two things on the head, without a push: `mutants.yml`'s merge-ready run, and, through `ci-full.yml`, a new
   attempt of the head's `pull_request` run of `ci.yml`. `ci.yml` runs on no label change, because of each workflow's
   runs on a head branch protection counts only the latest run's check suite (R-678): a re-run keeps the suite, and
-  its `changes` job reads the live label and says full. A run still going is cancelled first. `ci-status` closes the
-  five statuses from their gates;
+  its `changes` job reads the live label and says full. `ci-status` closes the five statuses from their gates;
+- the full tier adds to the quick tier (the owner, 7 Nov 2026: "The full tier should compose / add on to the quick
+  tier"). A quick run still going when the label goes on is never cancelled: `ci-full.yml` waits for it to end, then
+  starts the full attempt, so quick work is never thrown away. It waits at most 350 minutes; a wait cut off fails its
+  job, named, and starts nothing, the full-only checks staying pending. The full attempt skips what an earlier
+  attempt's `ci-quick` passed on the same merge commit, the re-run keeping its commit, where it would only repeat it:
+  `ci-checks`' fmt, clippy and build, the same commands over the workspace (`changes`' output `quick_passed`, read from
+  that attempt's jobs); and, when that `ci-quick` tested every crate (`quick_covers_ci`), the `ci` profile's tests it
+  ran: `ci-archive` and with it the `ci` shards, and `ci-workspace`'s xtask, qa_TASK-M0-24 and xtask doctest steps.
+  When `ci-quick` tested only the changed crates, the shards run whole. The gate `ci` passes the shards' skip once,
+  and only on that proof (`COVERED`: the shards skipped and `quick_covers_ci`); any other skip still turns it red.
+  Every gate still runs and reports under its own name, so a full pass still means the full suite passed on that
+  merge commit, in this attempt or the quick one. The label going on after the quick run ended composes the same way;
 - a push makes the next head quick, its label having come off; taking `merge-ready` off cancels a full attempt still
   going, and a full tier that has passed stands, having passed on that exact head. Putting it back re-runs the full
   tier only if some full-only check has not passed. The automatic retry (`retry.yml`) counts attempts, and the full tier

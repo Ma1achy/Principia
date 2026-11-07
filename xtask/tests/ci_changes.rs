@@ -81,7 +81,10 @@
 //!   added, label removed, docs, plan-data"): `ci_changes_every_required_check_reports_on_every_path` walks those
 //!   paths. On a quick run no job reports a full-only required check, each gate skipping as `matrix.check` (run
 //!   41972273540), never a required one, and `ci_changes_no_skipped_job_reports_a_required_name` holds that; the re-run the label starts
-//!   reports each, passing. `ci_changes_each_head_asks_for_its_jobs` counts what each head asks of the runners.
+//!   reports each, passing, and so does that re-run when it carries the quick tier's pass, of every crate or of some
+//!   (the label put on while the quick run goes, or after it: the owner, 7 Nov 2026, "The full tier should compose /
+//!   add on to the quick tier"). `ci_changes_the_ci_gate_passes_*`: the gate `ci` passes the shards' skip only on the
+//!   quick tier's proof, once. `ci_changes_each_head_asks_for_its_jobs` counts what each head asks of the runners.
 //!   `xtask/tests/ci_quick_tier.rs` tests what takes a head from one tier to the other.
 //! - `ci_changes_mutants_fixture_runs_on_the_gates_own_files`: `mutants.yml`'s `mutants-fixture`, the gate's self-test
 //!   on its fixtures, runs every step after its classification on a change to the gate's configuration
@@ -2457,14 +2460,132 @@ negative_control!(
     ))
 );
 
+/// The gate `ci` on a full attempt that adds to the quick tier (the owner, 7 Nov 2026): COVERED, the shards skipped on
+/// `changes`' proof that an earlier attempt of this run passed `ci-quick` over every crate on this merge commit, passes
+/// that one skip, and nothing else: each run its RESULTS (`needs: [ci, ci-checks, ci-workspace, ci-release, changes]`),
+/// its COVERED as the expression gives it, and whether the gate passes.
+const COVERED_RUNS: &[(&str, &str, &str, bool)] = &[
+    (
+        "the shards skipped on the cover",
+        "skipped success success success success",
+        "true",
+        true,
+    ),
+    (
+        "the shards skipped without the cover",
+        "skipped success success success success",
+        "false",
+        false,
+    ),
+    (
+        "the shards skipped on the cover, ci-checks skipped too",
+        "skipped skipped success success success",
+        "true",
+        false,
+    ),
+    (
+        "the shards skipped on the cover, ci-release skipped too",
+        "skipped success success skipped success",
+        "true",
+        false,
+    ),
+    (
+        "the shards skipped on the cover, ci-workspace failed",
+        "skipped success failure success success",
+        "true",
+        false,
+    ),
+    (
+        "every job passing, the cover found",
+        "success success success success success",
+        "false",
+        true,
+    ),
+];
+
+fn check_covered_gate(yml: &str) {
+    let wf = parse(yml);
+    let (_, job) = named(&wf, "ci");
+    let step = &job["steps"][0];
+    assert_eq!(
+        text(&step["env"]["COVERED"]),
+        "${{ needs.ci.result == 'skipped' && needs.changes.outputs.quick_covers_ci == 'true' }}",
+        "ci_changes: the gate `ci`'s COVERED is not the shards' skip on the quick tier's cover"
+    );
+    let script = text(&step["run"]);
+    for (what, results, covered, pass) in COVERED_RUNS {
+        assert_eq!(
+            passes(
+                &script,
+                &[
+                    ("RESULTS", results),
+                    ("DOCS_ONLY", "false"),
+                    ("COVERED", covered)
+                ]
+            ),
+            *pass,
+            "ci_changes: the gate `ci` on {what}: passed is not {pass}"
+        );
+    }
+}
+
+#[test]
+fn ci_changes_the_ci_gate_passes_the_shards_skip_on_the_quick_tiers_proof_alone() {
+    check_covered_gate(&read(".github/workflows/ci.yml"));
+}
+
+mod a_skip_without_the_proof {
+    use super::*;
+    negative_control!(
+        ci_changes_the_ci_gate_passes_the_shards_skip_on_the_quick_tiers_proof_alone,
+        "the gate `ci` passing any skip on a full attempt",
+        expected = "ci_changes: the gate `ci` on the shards skipped without the cover: passed is not false",
+        check_covered_gate(&edited(
+            ".github/workflows/ci.yml",
+            "[ \"$r\" = skipped ] && [ \"$COVERED\" = true ] && COVERED=spent;",
+            "[ \"$r\" = skipped ] && COVERED=spent;"
+        ))
+    );
+}
+
+mod one_skip_only {
+    use super::*;
+    negative_control!(
+        ci_changes_the_ci_gate_passes_the_shards_skip_on_the_quick_tiers_proof_alone,
+        "the gate `ci` passing every skip once the cover is found",
+        expected =
+            "ci_changes: the gate `ci` on the shards skipped on the cover, ci-checks skipped too",
+        check_covered_gate(&edited(
+            ".github/workflows/ci.yml",
+            "[ \"$COVERED\" = true ] && COVERED=spent;",
+            "[ \"$COVERED\" = true ];"
+        ))
+    );
+}
+
+negative_control!(
+    ci_changes_the_ci_gate_passes_the_shards_skip_on_the_quick_tiers_proof_alone,
+    "the gate `ci` reading the cover alone, whatever the shards ended in",
+    expected = "ci_changes: the gate `ci`'s COVERED is not",
+    check_covered_gate(&edited(
+        ".github/workflows/ci.yml",
+        "COVERED: ${{ needs.ci.result == 'skipped' && needs.changes.outputs.quick_covers_ci == 'true' }}",
+        "COVERED: ${{ needs.changes.outputs.quick_covers_ci == 'true' }}"
+    ))
+);
+
 // ---- The jobs that skip --------------------------------------------------------------------------------------
 
 const DOCS_SKIP: &str = "needs.changes.outputs.docs_only != 'true'";
+/// `ci-archive`'s, and `ci-workspace`'s `ci`-profile tests': a docs or data head, or a full attempt whose earlier quick attempt tested every crate (the owner,
+/// 7 Nov 2026: "The full tier should compose / add on to the quick tier"), whose skip the gate `ci` passes on its proof.
+const COVERS_SKIP: &str =
+    "needs.changes.outputs.docs_only != 'true' && needs.changes.outputs.quick_covers_ci != 'true'";
 const GPU_SKIP: &str = "needs.changes.outputs.gpu == 'true'";
 
 /// Each job in `ci.yml` that skips on the classification, and the condition it runs on.
 const SKIPS: [(&str, &str); 7] = [
-    ("ci-archive", DOCS_SKIP),
+    ("ci-archive", COVERS_SKIP),
     ("ci-checks", DOCS_SKIP),
     ("ci-release-archive", DOCS_SKIP),
     ("xtask-ci", DOCS_SKIP),
@@ -2505,6 +2626,8 @@ fn check_skips(yml: &str) {
         "quick",
         "packages",
         "workspace_tests",
+        "quick_passed",
+        "quick_covers_ci",
         "report",
     ] {
         assert_eq!(
@@ -2612,7 +2735,7 @@ fn check_skips(yml: &str) {
             .map(|s| text(&s["run"]))
             .collect()
     };
-    let tests = runs(DOCS_SKIP);
+    let tests = runs(COVERS_SKIP);
     for want in ["cargo nextest run -p xtask", "cargo test -p xtask --doc"] {
         assert!(
             tests.iter().any(|r| r.trim() == want),
@@ -3317,8 +3440,8 @@ mod a_pass_refused {
         expected = "with every job passing, `ci-release`'s result and whether `ci` passed",
         check_gathers_release(&edited(
             ".github/workflows/ci.yml",
-            "do [ \"$r\" = success ] || { [ \"$r\" = skipped ] && [ \"$DOCS_ONLY\" = true ]; } || { echo \"a job ci gathers",
-            "do { [ \"$r\" = skipped ] && [ \"$DOCS_ONLY\" = true ]; } || { echo \"a job ci gathers",
+            "do [ \"$r\" = success ] || { [ \"$r\" = skipped ] && [ \"$COVERED\" = true ] && COVERED=spent; } || {",
+            "do { [ \"$r\" = skipped ] && [ \"$COVERED\" = true ] && COVERED=spent; } || {",
         ))
     );
 }
@@ -3371,6 +3494,18 @@ fn tier_verdict(v: &Verdict, quick: bool) -> [(&'static str, String); 8] {
         ("quick", quick.to_string()),
         ("report", (code_pr && !quick).to_string()),
     ]
+}
+
+/// The verdict of a full attempt on a code head after an earlier attempt of the same run passed the quick tier (the
+/// owner, 7 Nov 2026: "The full tier should compose / add on to the quick tier"): `tier_verdict`'s full verdict, with
+/// `quick_passed` and `quick_covers_ci`, whether that tier tested every crate, as `.github/scripts/ci_tier.sh decide`
+/// writes them then.
+#[cfg(unix)]
+fn composed_verdict(v: &Verdict, covers: bool) -> Vec<(&'static str, String)> {
+    let mut verdict = tier_verdict(v, false).to_vec();
+    verdict.push(("quick_passed", "true".to_owned()));
+    verdict.push(("quick_covers_ci", covers.to_string()));
+    verdict
 }
 
 /// What each head asks of the runners from `ci.yml`, which is the owner's measure of the quick tier (4 Nov 2026: "The
@@ -3967,6 +4102,20 @@ fn check_every_path_reports(workflows: &[(String, String)], setup: &str) {
                         path.what,
                         v.tier
                     );
+                    // The label put on while the head's quick run is going, or after it passed: the full attempt
+                    // carries that pass (owner, 7 Nov 2026), and every check still reports under its name and passes.
+                    if v.tier == "code" {
+                        for (covers, how) in [(true, "every crate"), (false, "some crates")] {
+                            let composed = ci_run(ci_yml, &composed_verdict(&v, covers));
+                            assert!(
+                                composed.iter().any(|(n, pass)| n == check && *pass),
+                                "ci_changes: `{check}` does not pass on the full tier that adds to a quick tier of \
+                                 {how}, of {} (tier {})",
+                                path.what,
+                                v.tier
+                            );
+                        }
+                    }
                 }
                 continue;
             }
@@ -4090,6 +4239,45 @@ mod the_full_tier_passes {
                 "ci.yml",
                 "  ci-checks:\n    needs: changes\n    if: needs.changes.outputs.docs_only != 'true'\n",
                 "  ci-checks:\n    needs: changes\n    if: needs.changes.outputs.quick == 'true'\n",
+            ),
+            &read("plan/HUMAN_SETUP.md"),
+        )
+    );
+}
+
+/// `ci-checks` skipped at job level on the quick tier's pass, rather than its three steps: the gate `ci` then reads a
+/// skip on a code head, and fails, so the composed full tier never passes it.
+#[cfg(unix)]
+mod the_composed_tier_passes {
+    use super::*;
+    negative_control!(
+        ci_changes_every_required_check_reports_on_every_path,
+        "ci.yml skipping the whole of `ci-checks` when the quick tier passed",
+        expected = "`ci` does not pass on the full tier that adds to a quick tier of every crate, of label added: merge-ready, code",
+        check_every_path_reports(
+            &workflows_edited(
+                "ci.yml",
+                "  ci-checks:\n    needs: changes\n    if: needs.changes.outputs.docs_only != 'true'\n",
+                "  ci-checks:\n    needs: changes\n    if: needs.changes.outputs.docs_only != 'true' && needs.changes.outputs.quick_passed != 'true'\n",
+            ),
+            &read("plan/HUMAN_SETUP.md"),
+        )
+    );
+}
+
+/// The shards skipped on a quick tier of some crates: the gate `ci` has no proof for that skip, and turns red.
+#[cfg(unix)]
+mod the_shards_on_some_crates {
+    use super::*;
+    negative_control!(
+        ci_changes_every_required_check_reports_on_every_path,
+        "ci.yml skipping `ci-archive`, and with it the shards, on any quick pass",
+        expected = "`ci` does not pass on the full tier that adds to a quick tier of some crates, of label added: merge-ready, code",
+        check_every_path_reports(
+            &workflows_edited(
+                "ci.yml",
+                "    if: needs.changes.outputs.docs_only != 'true' && needs.changes.outputs.quick_covers_ci != 'true'\n    runs-on: ubuntu-24.04\n    outputs:\n      bytes:",
+                "    if: needs.changes.outputs.docs_only != 'true' && needs.changes.outputs.quick_passed != 'true'\n    runs-on: ubuntu-24.04\n    outputs:\n      bytes:",
             ),
             &read("plan/HUMAN_SETUP.md"),
         )
