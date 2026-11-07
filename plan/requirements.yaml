@@ -4591,7 +4591,7 @@
 - id: REQ-CHART-146
   area: CHART
   kind: definition
-  statement: "\"Nearest point in B\", where the locked anchor slides when it can't exist in chart B (R-849, the RQ-721 rider), must be defined, the chart-space model's Theorem 8 its construction, the owner's example keeping shape and masses where B allows and easing the held-fixed coordinates to B's values along the path, written into chart_composition § 17.8 by the task that builds the slide and approved by the physics reviewer before merge (R-72)."
+  statement: "\"Nearest point in B\", where the locked anchor slides when it can't exist in chart B (R-849, the RQ-721 rider), must be defined, the chart-space model's Theorem 8 its construction, the owner's example being to keep shape and masses where B allows and ease the held-fixed coordinates to B's values along the path, written into chart_composition § 17.8 by the task that builds the slide and approved by the physics reviewer before merge (R-72)."
   source:
   - file: decisions.md
     section: "R-849 — A typed combination with no registered inverse gets a general numerical solve on the CPU, recording its branch rule, marking its seams and labelled CPU-only; and under the lock a chart path never jumps: the anchor slides continuously to its nearest point in a constrained chart *(closes RQ-733; on RQ-721, closed by R-850)*"
