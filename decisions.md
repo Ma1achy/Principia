@@ -6381,7 +6381,9 @@ Adds REQ-INT-086; REQ-INT-001's verify detail and rulings change, and it carries
 well as the slider touched).*
 *Extended by R-627 (27 Oct 2026; M8's GUI tasks join the track on the mock engine, each followed by a small task wiring
 it to the real engine; a v1 web skeleton on the mock, deployed to GitHub Pages by hand only).*
-*Still in force: all of it, as its text reads, except that TASK-M6-24 is reviewed by physics as well as code, qa and
+*Amended in part by R-812 (7 Nov 2026: a silence on look, as "scope and taste", is a one-way door, asked through
+`/rulings-report`; a silence on feel or behaviour is still decided under R-369, as a two-way door).*
+*Still in force: all of it, as its text reads, except a silence on look (R-812); that TASK-M6-24 is reviewed by physics as well as code, qa and
 gui, for REQ-GUI-176 and REQ-GUI-177 only; and that ORDER item 3's compass switches between slicing and tilting by its
 Tilt and Slice buttons as well as by activity, in a fixed view with no orbit (R-409).*
 *6 Oct 2026 · applied in `docs/contracts/principia_gui_state_contract.md` §1 and `docs/gui/principia_render_gui_spec.md`'s
@@ -31640,7 +31642,7 @@ holding no merge, a veto fixed in a follow-up PR, filing in `REVIEW_QUEUE.md` an
 *Applied, and left open:* the text's "Apply now", the re-sort of the open queue, is the orchestrator's work from 7 Nov
 2026, not this port's. Where this text meets earlier text the later ruling is applied, and the pull request that ported
 it lists each such point as flagged, with both quotes: among them R-376's 8 shards against the rider's "shard counts",
-and R-681's and R-682's word to the owner on a stuck check. It changes no requirement, so
+R-390's silences on look, and R-681's and R-682's word to the owner on a stuck check. It changes no requirement, so
 REQ-VAL-149 reads as it did.
 
 R-812 is in the "process" group of `plan/rule_groups.yaml`.
