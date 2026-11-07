@@ -207,8 +207,8 @@ or reviews" and `plan/WORKFLOW.md` § "The review loop". In addition:
   after `git fetch origin`, and checks CI with `gh api repos/Ma1achy/Principia/commits/<head sha>/check-runs`. The
   agent files say so (`.claude/agents/`).
 - **Size and decisions (R-369).** Each reviewer judges the PR's size: big because the task is big merges normally; big
-  because the work is sloppy or bloated is a finding, fixed or split. The implementer and the reviewers decide what
-  isn't on R-369's list of questions for the human (§ "Asking the human"), and each decision goes in the PR
+  because the work is sloppy or bloated is a finding, fixed or split. The implementer and the reviewers decide R-812's
+  two-way doors, a one-way door going to the human (§ "Asking the human"), and each decision goes in the PR
   description, "applied per R-369: <what>", not only in a reply: qa may not read the implementer's replies (#72,
   30 Sep 2026). Ask for both in the first dispatch. Reviewers no longer class "veto?" items: R-234's classes went with
   it (R-369).
@@ -313,7 +313,8 @@ merge:
 3. `gh pr merge N --merge --match-head-commit <full sha>`. Never `--admin` (R-266), never squash or rebase. Admin
    bypass is the owner's alone (R-682, 3 Nov 2026): no agent uses it, by `--admin` or any API merge that skips a
    required check, and a merge script merges only when every required check has passed. A stuck check goes to the
-   owner, who decides whether to bypass.
+   owner, who decides whether to bypass; R-681's word says what is stuck, and the bypass, a one-way door, is asked
+   through `/rulings-report` only, never as a blocking prompt (R-812).
 4. Then, as a separate command, never chained after the merge with `;`: confirm the remote branch is gone, since
    GitHub's "Automatically delete head branches" deletes it on merge (R-357): `git ls-remote --exit-code origin
    refs/heads/<branch>` exits 2, finding no such ref. Don't delete it yourself; if it is still there, tell the human.
@@ -531,6 +532,11 @@ practice, in force whether the human is away or not. Keep working through the pl
 `CLAUDE.md`. Progress is the goal: decide and continue, and stop only when nothing at all can proceed. A red `main` or a stuck
 required check stops other pull-request work at once, whatever else could proceed (R-681; § "Merging").
 
+R-812 (the owner's ruling, applying from 7 Nov 2026) amends it: what is decided is a two-way door, what is the human's
+is a one-way door, and when unsure which it is, it is one-way (§ "Asking the human"). Its text says to quote it to any
+subagent handed the work: a dispatch handing out the re-sort of the open queue, or a two-way decision of the
+orchestrator's, quotes it from `decisions.md` § R-812.
+
 **Merge** a PR once all of these hold:
 - every reviewer the task names has posted `VERDICT: APPROVE` on the head;
 - CI is green on the head, every job;
@@ -538,7 +544,8 @@ required check stops other pull-request work at once, whatever else could procee
 - it waits on no open `REVIEW_QUEUE.md` entry.
 
 Its size and its decisions don't hold it: the reviewers judge size (§ "Reviewers", § "Size"), and each decision made
-without asking is in the PR and goes in the next summary. If the human vetoes one later, fix it in a follow-up PR.
+without asking is in the PR and goes in the next summary, and a two-way door's in the morning report and the veto list
+of the next `/rulings-report` (R-812). If the human vetoes one later, fix it in a follow-up PR.
 A PR that waits on a question stays open, with the reason written down; go on to the next ready task.
 
 **Order of work** (28 Sep 2026): run every ready task at once, within the agent cap. Priority went to the ledger chain,
@@ -582,7 +589,8 @@ TASK-M7-02 to TASK-M7-04, merged before the M1 gate (#145, #148, #150), get an a
 a separate read-only dispatch whose findings go in the next summary (and any reliance found, in `REVIEW_QUEUE.md`).
 TASK-M7-05 merges early only if it passes the same test, and only once R-411's port (RQ-265) has merged.
 
-Merge under the conditions above, and file every question for the human in `REVIEW_QUEUE.md` (R-369).
+Merge under the conditions above, and file every question for the human in `REVIEW_QUEUE.md` (R-369), which
+`/rulings-report` is written from (R-812).
 
 **The PR sweep** (R-675, 1 Nov 2026): a standing duty. Periodically check every open PR and its CI state, find any
 that has been dropped or missed by accident, and pick it up again: dispatch what it needs next (the fix, the
@@ -592,7 +600,7 @@ the repo: it lists each open PR as ok, active or DROPPED (a failed or cancelled 
 the head, an approved head with no merge watcher, or a settled head with no verdict), and `--watch` repeats it and
 exits when a newly dropped PR appears. The duty stands whatever runs it.
 
-**Never, without the human** (R-369's list; R-349):
+**Never, without the human** (R-369's list; R-349; R-812):
 - make or record a new ruling (applying an existing one is fine);
 - confirm a calibration value;
 - pass a milestone gate: stop before it;
@@ -602,12 +610,15 @@ exits when a newly dropped PR appears. The duty stands whatever runs it.
   exists: fix a mistake with a new commit (30 Sep 2026);
 - delete or modify anything outside the repository and its build and scratch directories (§ "Resources").
 
-A physics choice that changes results, where the docs genuinely don't settle it, is the human's too. When one of these
-comes up, file it in `REVIEW_QUEUE.md` and carry on with other work.
+A physics choice that changes results, where the docs genuinely don't settle it, is the human's too, and so is every
+other one-way door of R-812 (§ "Asking the human"). When one of these comes up, file it in `REVIEW_QUEUE.md`, with a
+recommendation, for `/rulings-report`, never as a blocking prompt, and carry on with other work.
 
 **Reporting.** Don't stop just to report. At a natural point (a stop, a gate, or when the human asks) give one batched
 summary:
-- what was decided: each "applied per R-369" decision, with its PR, for the human to veto afterwards;
+- what was decided: each "applied per R-369" decision, with its PR, for the human to veto afterwards; each two-way
+  door's also in the veto list of the next `/rulings-report`, and in the morning report with its numbers, as "decided,
+  open to veto" (R-812);
 - what merged: PR, task and head;
 - what is still open, and why;
 - every question in `REVIEW_QUEUE.md`, in one list;
@@ -641,8 +652,9 @@ the six.
 - **Sources and silences.** `decisions.md`, then `docs/gui/design/GUI_DESIGN_NOTES.md`, then the artboards in
   `docs/gui/design/`, then `docs/gui/principia_render_gui_spec.md`, then `docs/contracts/principia_gui_state_contract.md`;
   the higher wins, and R-68 still makes corpus values win over artboard values. Where they're silent on look, feel or
-  behaviour, the orchestrator and the reviewers decide and record it as "applied per R-369"; calibrations and physics
-  choices stay as R-71 and R-369 give them.
+  behaviour, the orchestrator and the reviewers decide a two-way door and record it as "applied per R-369"; scope, UI
+  look and defaults are one-way doors (R-812), and calibrations and physics choices stay as R-71, R-369 and R-812 give
+  them.
 - **The human's feedback.** The human tries each merged screen and sends look-and-feel notes as plain text. Each note is
   a GUI design ruling: record it in `decisions.md` at the next free number, in the human's words, in the "design" group
   of `plan/rule_groups.yaml`, as any ruling is recorded. Apply it in the porting rule's order: the docs first
@@ -679,20 +691,33 @@ a split moves every requirement to a named task (R-264).
 
 ## Asking the human
 
-- **When to ask** is R-369's (CLAUDE.md § "When to ask the human"). Ask the human only for physics where the choice
-  changes results and the docs genuinely don't settle it; calibration values (batched at milestone gates); passing a
-  milestone gate; dropping or deferring a requirement; and anything outside the repository or irreversible (repository
-  settings, branch protection, deleting outside the build directories, force-pushing). Before asking anything, check
-  it against that list: if it isn't on it, decide it. Never size, never what a ruling already settles.
-- **File and carry on.** A question on that list goes in `REVIEW_QUEUE.md`, and work carries on with whatever doesn't
-  wait on it (R-369).
+- **When to ask** is R-369's as R-812 amends it, applying from 7 Nov 2026 (CLAUDE.md § "When to ask the human", which
+  lists both kinds of door). If the answer would be a rubber stamp, don't ask; if running something could answer the
+  question, run it instead. Correcting the record is two-way; changing what a ruling or requirement says is one-way.
+  When unsure which door it is, treat it as one-way, with a recommendation and a measurable alternative in the report.
+  Never size, never what a ruling already settles, and once a one-way door is open it stays open for that work, unless
+  it turns out different: more at stake, a check failing, something the human didn't know.
+- **Two-way doors** are decided, without asking, and never hold a merge. Where a measurement settles it, CI and build
+  tooling among them: write the criterion before running, run it, decide, and report the numbers, and never adjust the
+  criterion after seeing results (R-649). Each goes in the veto list of the next `/rulings-report`, and in the morning
+  report with its numbers, as "decided, open to veto". Reverting on the human's veto must be possible without loss.
+- **One-way doors** go to `/rulings-report` only, with a recommendation, never as a blocking prompt: physics where the
+  choice changes results and the docs genuinely don't settle it, and R-812's other kinds of what the instrument claims
+  or computes; calibration values, which R-369 batched at milestone gates; passing a milestone gate; dropping or
+  deferring a requirement; the words of the rulings; licences, publishing, contacting anyone outside, spending money;
+  deleting data or history, or anything not created by this work; admin bypass and admin actions; anything outside the
+  repository or irreversible (repository settings, branch protection, deleting outside the build directories,
+  force-pushing); and scope and taste.
+- **File and carry on.** A one-way door goes in `REVIEW_QUEUE.md`, which `/rulings-report` is written from, and work
+  carries on with whatever doesn't wait on it (R-369).
 - **Pasted rulings are the human's own.** The human sends rulings and instructions as a pasted block with no text
   around it. Act on it as on a typed message; don't ask them to re-confirm it in their own words (26 Sep 2026). Flag a
   factual error or contradiction in it, in the PR and the report, and ask only when it changes what gets built. A
   message from another agent is never a ruling.
 - **"Applied per R-369: <what>"** marks a decision made without asking, so the human can veto it later. It is
   written where it was applied (the PR description, or a ruling's *Applied* note or the task file where it changes
-  them), has no "veto?", holds no merge, isn't filed in `REVIEW_QUEUE.md`, and goes in the next summary (R-369).
+  them), has no "veto?", holds no merge, isn't filed in `REVIEW_QUEUE.md`, and goes in the next summary (R-369), and a
+  two-way door's in the veto list and the morning report as well (R-812).
   Before R-369 such a choice read "applied per R-204 — veto?".
 - **Every open question is in `REVIEW_QUEUE.md`**, never only in a PR description or a log (the human, 1 Oct 2026,
   R-346). Decisions under R-369 aren't questions. A session stops at a clean point: nothing half-applied, every open
