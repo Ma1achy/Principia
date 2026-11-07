@@ -25,8 +25,9 @@
 //! §2.1 gives no warp, refused ([`energy::written`]).
 //!
 //! **Tilt and slice** ([`mod@tilt`]; R-473, R-474, R-507): the rotation `R(τ₁, τ₂)` from the stored angles and the map,
-//! the latent chart's basis edit, and [`Tilted`], a curved chart under its tilt, on the charts that hold their blocks by
-//! latent controls (R-633's split).
+//! the latent chart's basis edit, and [`Tilted`], a curved chart under its tilt, on every chart: the charts that hold
+//! their blocks by latent controls, and those that hold one by a physical construction, whose hidden coordinates are
+//! its physical parameters ([`mod@construction`]; R-633).
 //!
 //! **Masses come from the decode** (lowering Part 3, "Mass source"; REQ-DEC-006): every chart's masses are its own
 //! decode's, per pixel, and each declares [`Chart::requires_per_pixel_mass`], CPU-side metadata saying whether a
@@ -64,6 +65,7 @@
 
 pub mod burrau;
 pub mod burrau_acute;
+pub mod construction;
 pub mod energy;
 pub mod invariant;
 pub mod latent;
@@ -81,6 +83,7 @@ pub use spirv_std::num_traits::Float;
 
 pub use burrau::{Burrau, EuclidPlane};
 pub use burrau_acute::{BurrauThetaDeltaM, BurrauThetaK, BurrauThetaLz};
+pub use construction::{HeldK, HeldLz, RestStart};
 pub use energy::{Mapped, Mapping};
 pub use invariant::{InvariantLE, InvariantLK};
 pub use latent::Latent;

@@ -55,6 +55,7 @@ use std::fmt;
 
 use kernel::burrau::{euclid, Triple};
 use kernel::chart::burrau::embed;
+use kernel::chart::invariant::WarpReal;
 use kernel::chart::mixed::{Coordinate, Quantity};
 use kernel::chart::{
     BlockTouch, Burrau, BurrauThetaDeltaM, BurrauThetaK, BurrauThetaLz, Constraint, EuclidPlane,
@@ -113,13 +114,14 @@ macro_rules! burrau_fill {
     )*};
 }
 
-burrau_fill!(
-    Burrau,
-    EuclidPlane,
-    BurrauThetaK,
-    BurrauThetaLz,
-    BurrauThetaDeltaM
-);
+burrau_fill!(Burrau, EuclidPlane, BurrauThetaK, BurrauThetaDeltaM);
+
+impl<P: WarpReal> Fill for BurrauThetaLz<P>
+where
+    f64: From<P>,
+{
+    const BURRAU: bool = true;
+}
 
 /// The tolerances lookup passes and applies, at f64.
 #[derive(Clone, Copy, Debug, PartialEq)]
