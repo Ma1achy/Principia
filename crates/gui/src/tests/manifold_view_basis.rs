@@ -66,6 +66,11 @@ fn check_dominant(view: &View, (a, b): (usize, usize), sigma: f64) {
     check_near(view.scale, sigma, "σ");
 }
 
+/// Asserts `view` is on the axes `(a, b)`, no preset's.
+fn check_on(view: &View, (a, b): (usize, usize)) {
+    assert_eq!((view.preset, view.a, view.b), (None, a, b), "{view:?}");
+}
+
 #[test]
 fn manifold_view_basis_y_on_q1_reads_a_finite_zoom_in_that_frame() {
     let [only, _] = typed();
@@ -126,8 +131,17 @@ fn manifold_view_basis_x_on_q2_is_counted_as_y_on_q1_is() {
     });
 }
 
+/// Asserts `view` is the first preset at `σ = 1`, tilted `(τ₁, τ₂)`.
+fn check_first_preset_tilted(view: &View, tau1: f64, tau2: f64) {
+    assert_eq!((view.preset, view.a, view.b), (Some(0), ALPHA, BETA));
+    check_near(view.scale, 1.0, "σ");
+    check_near(view.tau1, tau1, "τ₁");
+    check_near(view.tau2, tau2, "τ₂");
+}
+
 #[test]
 fn manifold_view_basis_a_target_on_its_own_vector_stays_a_tilt() {
+    let tilt = 0.8f64.atan2(0.6);
     let [_, split] = typed();
     // The same basis with `X = z_μ1`: a tilt of the first preset, not a component on the wrong vector.
     let own = SliceFrame {
@@ -135,18 +149,19 @@ fn manifold_view_basis_a_target_on_its_own_vector_stays_a_tilt() {
         tilt_y: Q3 as u32,
         ..SPLIT
     };
-    let view = read(split, own);
-    assert_eq!((view.preset, view.a, view.b), (Some(0), ALPHA, BETA));
-    check_near(view.scale, 1.0, "σ");
-    check_near(view.tau1, 0.8f64.atan2(0.6), "τ₁");
-    // One target: no wrong vector, so the tilt on `q₁` and the tilt on `q₂` are both read.
+    check_first_preset_tilted(&read(split, own), tilt, 0.0);
+    rejects("`z_μ1` as Y, on the wrong vector", || {
+        check_first_preset_tilted(&read(split, SPLIT), tilt, 0.0)
+    });
+    // One target: no wrong vector, so the tilt on `q₂` is read as the tilt on `q₁` is.
     let (q1, q2) = (
         axis(ALPHA, 1.0),
         mv::add(&axis(BETA, 0.6), 0.8, &axis(Q3, 1.0)),
     );
-    let view = read((q1, q2), SliceFrame::along(Q3 as u32));
-    assert_eq!((view.preset, view.a, view.b), (Some(0), ALPHA, BETA));
-    check_near(view.tau2, 0.8f64.atan2(0.6), "τ₂");
+    check_first_preset_tilted(&read((q1, q2), SliceFrame::along(Q3 as u32)), 0.0, tilt);
+    rejects("two targets, X on the wrong vector", || {
+        check_first_preset_tilted(&read((q1, q2), SPLIT), 0.0, tilt)
+    });
 }
 
 /// Asserts `basis` reads as the first preset in [`SPLIT`].
@@ -264,18 +279,29 @@ fn manifold_view_basis_a_mirrored_basis_reads_back_or_reads_its_dominant_axes() 
     });
 }
 
+/// Asserts `view` is the pair `(z_q0, z_μ2)` at `σ = 1`, `q₁` tilted into its target.
+fn check_pair_tilted(view: &View) {
+    check_on(view, (Q0, MU2));
+    check_near(view.tau1, 0.8f64.atan2(0.6), "τ₁");
+    check_near(view.scale, 1.0, "σ");
+}
+
 #[test]
 fn manifold_view_basis_a_tilted_pair_no_preset_names_is_counted_too() {
     // The axes `(z_q0, z_μ2)`, tilted within the targets as a pair H and V picked reads, with `Y` on `q₁`.
     let q1 = mv::add(&axis(Q0, 0.6), 0.8, &axis(MU1, 1.0));
-    let view = read((q1, axis(MU2, 1.0)), SPLIT);
-    check_dominant(&view, (MU1, MU2), 1.0);
+    let misplaced = read((q1, axis(MU2, 1.0)), SPLIT);
+    check_dominant(&misplaced, (MU1, MU2), 1.0);
     // The same axes with `X` there are that pair's tilt.
     let q1 = mv::add(&axis(Q0, 0.6), 0.8, &axis(Q3, 1.0));
-    let view = read((q1, axis(MU2, 1.0)), SPLIT);
-    assert_eq!((view.preset, view.a, view.b), (None, Q0, MU2));
-    check_near(view.tau1, 0.8f64.atan2(0.6), "τ₁");
-    check_near(view.scale, 1.0, "σ");
+    let tilted = read((q1, axis(MU2, 1.0)), SPLIT);
+    check_pair_tilted(&tilted);
+    rejects("Y on the wrong vector, read as the pair's tilt", || {
+        check_pair_tilted(&misplaced)
+    });
+    rejects("the pair's tilt, read on its dominant axes", || {
+        check_dominant(&tilted, (MU1, MU2), 1.0)
+    });
 }
 
 /// The latent dimensions no frame here takes.
@@ -332,10 +358,22 @@ fn manifold_view_basis_a_mirrored_tie_stays_as_typed() {
     // No tilt for either order to keep, and no reading back: the order as typed, though the dominant axes are the swap's.
     let q1 = mv::add(&axis(Q0, 0.6), 0.8, &axis(MU2, 1.0));
     let q2 = mv::add(&axis(Q0, 1.0), 0.2, &axis(MU2, 1.0));
-    let view = read((q1, q2), SPLIT);
-    assert_eq!((view.preset, view.a, view.b), (None, Q0, MU2));
-    rejects("the tie read on its dominant axes", || {
-        assert_eq!((view.preset, view.b, view.a), (None, Q0, MU2))
+    let tie = read((q1, q2), SPLIT);
+    check_on(&tie, (Q0, MU2));
+    // With a tilt the swap would keep better, each target on its own vector, it is the dominant axes.
+    let more = read(
+        (
+            mv::add(&q1, 0.3, &axis(Q3, 1.0)),
+            mv::add(&q2, 0.5, &axis(MU1, 1.0)),
+        ),
+        SPLIT,
+    );
+    check_on(&more, (MU2, Q0));
+    rejects("the basis with a tilt to keep, as typed", || {
+        check_on(&more, (Q0, MU2))
+    });
+    rejects("the tie, on its dominant axes", || {
+        check_on(&tie, (MU2, Q0))
     });
 }
 
@@ -343,16 +381,20 @@ fn manifold_view_basis_a_mirrored_tie_stays_as_typed() {
 fn manifold_view_basis_a_pair_with_no_turn_is_no_tilted_pair() {
     // `q₂` is twice `q₁` on a pair no preset names: a determinant of 0, which reads by its dominant axes, not as the pair.
     let q1 = mv::add(&axis(Q0, 0.5), 1.0, &axis(MU2, 1.0));
-    let view = read((q1, q1.map(|c| c * 2.0)), SPLIT);
-    assert_eq!((view.preset, view.a, view.b), (None, MU2, Q0));
-    rejects("the pair read in its own order", || {
-        assert_eq!((view.preset, view.b, view.a), (None, MU2, Q0))
+    let flat = read((q1, q1.map(|c| c * 2.0)), SPLIT);
+    check_on(&flat, (MU2, Q0));
+    // A little turn, and it is the pair.
+    let q2 = mv::add(&axis(Q0, 1.0), 2.1, &axis(MU2, 1.0));
+    let turned = read((q1, q2), SPLIT);
+    check_on(&turned, (Q0, MU2));
+    rejects("the turned basis, read as one with no turn", || {
+        check_on(&turned, (MU2, Q0))
     });
+    rejects("no turn, read as the pair", || check_on(&flat, (Q0, MU2)));
 }
 
-/// Asserts `v` reads back from its own basis, angles and scale, with its frame.
-fn check_reads_back(v: View) {
-    let back = View::framed(&plane(v.basis()), Some(&v.frame()));
+/// Asserts `back` is the view `v`: its axes, targets, preset, angles and scale.
+fn check_same_view(v: &View, back: &View) {
     assert_eq!(
         (back.a, back.b, back.x, back.y),
         (v.a, v.b, v.x, v.y),
@@ -365,9 +407,14 @@ fn check_reads_back(v: View) {
     check_near(back.gamma, v.gamma, "γ");
 }
 
+/// Asserts `v` reads back from its own basis, angles and scale, with its frame.
+fn check_reads_back(v: View) {
+    check_same_view(&v, &View::framed(&plane(v.basis()), Some(&v.frame())));
+}
+
 #[test]
 fn manifold_view_basis_a_turned_view_keeps_its_reading() {
-    // `γ` puts `Y` on `q₁` and `X` on `q₂` on every view the map gives: it is the turned-back vectors that count.
+    // `γ` puts `Y` on `q₁` and `X` on `q₂` on every view the map gives, and each reading gives its basis back.
     let angles = [-1.2, -0.4, 0.3, 1.1];
     let mut turned = None;
     for (&(a, b), preset) in PRESETS.iter().take(2).zip(0..) {
@@ -403,22 +450,33 @@ fn manifold_view_basis_a_turned_view_keeps_its_reading() {
         y: MU1,
         ..v
     });
-    rejects("a view that reads another's angles", || {
-        check_near(v.gamma, v.gamma + 0.1, "γ")
+    // Counted as typed alone, the last view would read its dominant axes: the same basis without the read-back's rescue,
+    // half of `q₁`, does.
+    let (q1, q2) = v.basis();
+    let cut = View::framed(&plane((q1.map(|c| c / 2.0), q2)), Some(&v.frame()));
+    assert_eq!(cut.preset, None);
+    rejects("a view off its reading, its basis not given back", || {
+        check_same_view(&v, &cut)
     });
+}
+
+/// Asserts `view`'s rotation is 0, the first axis's column reading it.
+fn check_read_on_the_first(view: &View) {
+    assert_eq!(view.gamma, 0.0, "{view:?}");
 }
 
 #[test]
 fn manifold_view_basis_equal_axes_read_gamma_on_the_first() {
     // Both axes hold 1: the first's column gives `γ = 0`, the second's would give 90°.
-    let view = read(
-        (
-            mv::add(&axis(ALPHA, 1.0), 1.0, &axis(BETA, 1.0)),
-            [0.0; LATENT_DIM],
-        ),
-        SPLIT,
-    );
-    assert_eq!(view.gamma, 0.0);
+    let on = |b: f64| {
+        let q1 = mv::add(&axis(ALPHA, 1.0), b, &axis(BETA, 1.0));
+        read((q1, [0.0; LATENT_DIM]), SPLIT)
+    };
+    check_read_on_the_first(&on(1.0));
+    // The second a little the longer: its column reads, and that is the 90°.
+    rejects("the second column's reading", || {
+        check_read_on_the_first(&on(1.0 + 1e-6))
+    });
 }
 
 /// The basis `edit` sets.
@@ -524,21 +582,34 @@ fn check_finite((q1, q2): &(Latent, Latent)) {
     assert!(q1.iter().chain(q2).all(|c| c.is_finite()), "{q1:?} {q2:?}");
 }
 
+/// Asserts the edit's basis `got` is the view's, `want`, and finite.
+fn check_takes(got: &(Latent, Latent), want: &(Latent, Latent)) {
+    assert_eq!(got, want);
+    check_finite(got);
+}
+
 #[test]
 fn manifold_view_basis_a_zoom_with_no_scale_to_scale_takes_the_views_basis() {
     let edits = |basis: (Latent, Latent)| {
         let view = View::of(&plane(basis));
         let to = view.with_zoom(1.0);
-        (edited(&zoom_to(&plane(basis), view, to)), to.basis())
+        let scaled = |q: &Latent| q.map(|c| c * (to.scale / view.scale));
+        (
+            edited(&zoom_to(&plane(basis), view, to)),
+            to.basis(),
+            (scaled(&basis.0), scaled(&basis.1)),
+        )
     };
     // `σ = 0`: no basis, and a basis with no plane, `q₁` a multiple of `q₂` on `e_b`. Scaled, each is NaN.
     for basis in [
         ([0.0; LATENT_DIM], [0.0; LATENT_DIM]),
         (axis(BETA, 0.5), axis(BETA, 1.0)),
     ] {
-        let (got, want) = edits(basis);
-        assert_eq!(got, want);
-        check_finite(&got);
+        let (got, want, scaled) = edits(basis);
+        check_takes(&got, &want);
+        rejects("the basis scaled by the infinite factor", || {
+            check_takes(&scaled, &want)
+        });
     }
     // `σ` past `f64`: the factor is 0, and scaled the basis would be no basis.
     let huge = mv::add(&axis(ALPHA, f64::MAX), f64::MAX, &axis(MU1, 1.0));
@@ -546,11 +617,10 @@ fn manifold_view_basis_a_zoom_with_no_scale_to_scale_takes_the_views_basis() {
         View::of(&plane((huge, axis(BETA, 1.0)))).scale,
         f64::INFINITY
     );
-    let (got, want) = edits((huge, axis(BETA, 1.0)));
-    assert_eq!(got, want);
-    rejects("the zero basis scaled by the infinite factor", || {
-        let zero = [0.0; LATENT_DIM].map(|c: f64| c * f64::INFINITY);
-        check_finite(&(zero, zero))
+    let (got, want, scaled) = edits((huge, axis(BETA, 1.0)));
+    check_takes(&got, &want);
+    rejects("the basis scaled by the factor 0", || {
+        check_takes(&scaled, &want)
     });
 }
 
