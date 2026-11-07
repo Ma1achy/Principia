@@ -5,7 +5,7 @@
 
 use kernel::canon::{
     axis_zero, canonicalise, com_frame, is_pole, mirror_input, mirror_side, pair_differences,
-    scaled_rho, skip_input, skip_taken, step_runs, wide_state, Canonical, Wide,
+    scaled_rho, skip_input, skip_taken, step_runs, wide_state, Canonical, MirrorInput, Wide,
 };
 use kernel::chart::burrau::{seed, seed_input, seed_of_sum};
 use kernel::chart::invariant::Invariant;
@@ -194,6 +194,38 @@ negative_control!(
     "a word past the layout",
     expected = "the layout moved",
     assert_eq!(read::CANON_WORDS + 1, 40, "the layout moved")
+);
+
+/// Step 3's decision as `mirror_side` states it, on hand-made sides: `c < 0` strictly, with the left side above the
+/// right. `c = 0` is no mirror whatever the sides. `mirror_input` itself never gives those sides at `c = 0`, its left
+/// side being `m₂c²`, a zero, below every other value; `side` is the decision under test.
+fn check_mirror_side(side: fn(&MirrorInput<f32>) -> bool) {
+    let (mass, x) = wide_state([0.5, 0.25, 0.25], [[-1.0, 0.0], [1.0, -0.0], [0.0; 2]]);
+    let [left, right] = [mass[0], mass[1]];
+    let at =
+        |c: Wide<f32>, left: Wide<f32>, right: Wide<f32>| side(&MirrorInput { c, left, right });
+    for zero in [x[0][1], x[1][1]] {
+        assert!(!at(zero, left, right), "c = 0 mirrored");
+    }
+    assert!(
+        at(x[0][0], left, right),
+        "c < 0 above the side did not mirror"
+    );
+    assert!(!at(x[1][0], left, right), "c > 0 mirrored");
+    assert!(!at(x[0][0], right, left), "c < 0 below the side mirrored");
+    assert!(!at(x[0][0], left, left), "c < 0 on the side mirrored");
+}
+
+#[test]
+fn branch_read_mirror_side_at_the_boundary_of_c() {
+    check_mirror_side(mirror_side);
+}
+
+negative_control!(
+    branch_read_mirror_side_at_the_boundary_of_c,
+    "a decision that takes c = 0 as c < 0",
+    expected = "c = 0 mirrored",
+    check_mirror_side(|i| i.c.words()[0] & 0x7fff_ffff == 0 || mirror_side(i))
 );
 
 fn check_m01(m0: f32, m1: f32) {

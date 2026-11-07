@@ -87,6 +87,20 @@ filter = "binary_id(=xtask::jobq) | binary_id(/^xtask::qa_R-658/)"
 slow-timeout = { period = "120s", terminate-after = 3 }
 priority = 100
 
+# The tests that catch the mutants of TASK-M4-27's source run first, ahead of their packages' slower tests. It is for
+# the mutants gate again (R-302; REQ-VAL-149, R-376): the diff has 1895 mutants, 1332 of them in
+# `validation::cross_backend`, whose every test takes under 7 s, while a survivor of its builders took 25-47 min (run
+# 42342356065, all 8 shards cut at 300 min). Only the schedule changes: the same tests, under the same limits, and a
+# survivor still runs every one. Applied per R-369.
+[[profile.default.overrides]]
+filter = """
+    binary_id(=validation::cross_backend_inputs)
+    | binary_id(=validation::cross_backend)
+    | binary_id(=validation::qa_TASK-M4-27)
+    | binary_id(=kernel::branch_read)
+"""
+priority = 80
+
 # Each of the job queue's test processes in a PID namespace of its own during a mutants run (`scripts/contain.sh test`;
 # a pass-through unless the run sets PRIN_TEST_PIDNS): nothing a mutant of the queue starts outlives its test, and nothing
 # it signals is outside it. `within-wrapper`: the memory cap, the target runner `.cargo/mutants.toml` sets, stays around
