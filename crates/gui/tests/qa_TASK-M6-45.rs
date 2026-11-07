@@ -20,7 +20,8 @@
 //! - REQ-GUI-224's zoom row, by the Chart's own preset edit: choosing a preset keeps `σ` and the row reads against the
 //!   new window; the depth readout stays absolute.
 //!
-//! Each check runs its own control (R-176) through [`rejects`].
+//! gui's tests have no route to `negative_control!` (R-187), so every test here runs its own control (R-176) in itself,
+//! through [`rejects`]: the test's own check, on a real state the app is left in or read back from.
 // The file name `qa_TASK-M6-45` gives a crate name that is not snake case.
 #![allow(non_snake_case)]
 
@@ -205,6 +206,38 @@ fn section_ok(
     }
 }
 
+/// `section`'s reset is dimmed on `after`.
+fn dimmed_after(after: &SimConfig, section: Section) -> Result<(), String> {
+    if enabled(after, section) {
+        return Err(format!("{section:?} still live after its reset"));
+    }
+    Ok(())
+}
+
+/// `sim` reads as preset `p`.
+fn reads_preset(sim: &SimConfig, p: usize) -> Result<(), String> {
+    match View::read(sim).preset {
+        Some(read) if read == p => Ok(()),
+        read => Err(format!("the preset read {read:?}")),
+    }
+}
+
+/// `s` is preset `p`'s home view, with Home dimmed on it.
+fn home_view(s: &SimConfig, p: usize) -> Result<(), String> {
+    let (a, b) = PRESETS[p];
+    let w = PRESET_HOMES[p].window;
+    if !(near(&s.plane.z0, &PRESET_HOMES[p].base)
+        && near(&s.plane.q1, &e(a, w))
+        && near(&s.plane.q2, &e(b, w)))
+    {
+        return Err(format!("left {:?}", s.plane));
+    }
+    if home_enabled(s) {
+        return Err("Home live at home".to_owned());
+    }
+    Ok(())
+}
+
 /// One section's reset from `sim`, checked against K2.
 fn check_section(
     sim: &SimConfig,
@@ -228,14 +261,12 @@ fn check_section(
     }
     let mut after = sim.clone();
     apply(&mut after, &edits);
+    dimmed_after(&after, section)?;
     if !section_ok(sim, &after, p, targets, sigma, angles, section) {
         return Err(format!(
             "{section:?} moved what it must not: {:?}",
             after.plane
         ));
-    }
-    if enabled(&after, section) {
-        return Err(format!("{section:?} still live after its reset"));
     }
     Ok(())
 }
@@ -485,13 +516,16 @@ fn qa_presets_carry_g7_table() {
 fn qa_mock_opens_at_home() {
     let (mut app, mut h) = rig();
     let _ = h.frame(&mut app, Vec::new());
-    assert!(!home_enabled(&app.snapshot().sim), "the mock opens at home");
-    // Control: moved, it is not.
+    let at_home = |app: &App<MockSide>| {
+        assert!(!home_enabled(&app.snapshot().sim), "the mock opens at home");
+    };
+    at_home(&app);
+    // Control: the same check on the app moved.
     let mut z0 = app.snapshot().sim.plane.z0;
     z0[2] += 0.25;
     app.set_field(z0_edit(z0));
     let _ = h.frame(&mut app, Vec::new());
-    assert!(home_enabled(&app.snapshot().sim));
+    rejects("an app moved off home", || at_home(&app));
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -501,10 +535,7 @@ fn qa_mock_opens_at_home() {
 fn qa_each_reset_alone_over_every_preset_target_and_tilt() {
     let base = base_sim();
     let n = sweep(&base, |sim, p, targets, sigma, angles| {
-        let view = View::read(sim);
-        if view.preset != Some(p) {
-            return Err(format!("the preset read {:?}", view.preset));
-        }
+        reads_preset(sim, p)?;
         for section in SECTIONS {
             check_section(sim, p, targets, sigma, angles, section)?;
         }
@@ -518,10 +549,13 @@ fn qa_each_reset_alone_over_every_preset_target_and_tilt() {
     let sim = pose(&base, p, targets, sigma, angles);
     let good =
         |after: &SimConfig, section| section_ok(&sim, after, p, targets, sigma, angles, section);
-    // A reset that does nothing.
+    // A reset that does nothing, on the check of what it leaves and on the check that it dims.
     for section in SECTIONS {
         rejects("a reset that does nothing", || assert!(good(&sim, section)));
+        assert!(dimmed_after(&sim, section).is_err(), "{section:?} is live");
     }
+    // Another preset's reading: the pose is not preset 1's.
+    assert!(reads_preset(&sim, 1).is_err(), "the pose is preset {p}'s");
     // K2's first reading: `z₀ ← z₀ + P⊥(b − z₀)`, across the tilted plane.
     let mut across = sim.clone();
     let (q1, q2) = (sim.plane.q1, sim.plane.q2);
@@ -566,37 +600,23 @@ fn qa_three_resets_in_all_orders_are_home_over_every_preset_target_and_tilt() {
     ];
     let base = base_sim();
     let n = sweep(&base, |sim, p, _, _, _| {
-        let (a, b) = PRESETS[p];
-        let w = PRESET_HOMES[p].window;
-        let at_home = |s: &SimConfig| {
-            near(&s.plane.z0, &PRESET_HOMES[p].base)
-                && near(&s.plane.q1, &e(a, w))
-                && near(&s.plane.q2, &e(b, w))
-        };
         for order in ORDERS {
             let mut s = sim.clone();
             for i in order {
                 let edits = command(&s, SECTIONS[i]);
                 apply(&mut s, &edits);
             }
-            if !at_home(&s) {
-                return Err(format!("{order:?} left {:?}", s.plane));
-            }
-            if home_enabled(&s) {
-                return Err(format!("{order:?}: Home live at home"));
-            }
+            home_view(&s, p).map_err(|why| format!("{order:?}: {why}"))?;
         }
         let mut s = sim.clone();
         apply(&mut s, &home(sim));
-        if !at_home(&s) {
-            return Err(format!("Home left {:?}", s.plane));
-        }
-        Ok(())
+        home_view(&s, p).map_err(|why| format!("Home: {why}"))
     })
     .unwrap_or_else(|why| panic!("{why}"));
     assert!(n > 100_000, "the sweep ran {n} poses");
-    // Control: two of the three do not reach it.
+    // Controls: the check on a pose off home, and two of the three, neither of which is it.
     let sim = pose(&base, 1, (0, 6), 0.25, (0.3, 0.2, 0.1));
+    assert!(home_view(&sim, 1).is_err(), "the pose is off home");
     let mut s = sim.clone();
     for section in [Section::Tilt, Section::Navigate] {
         let edits = command(&s, section);
@@ -605,6 +625,7 @@ fn qa_three_resets_in_all_orders_are_home_over_every_preset_target_and_tilt() {
     rejects("two resets taken for Home", || {
         assert!(near(&s.plane.z0, &PRESET_HOMES[1].base))
     });
+    assert!(home_view(&s, 1).is_err(), "two resets are no Home");
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -616,26 +637,37 @@ fn qa_dimming_tilted_reads_the_preset_coordinates() {
     let w = PRESET_HOMES[1].window;
     let mut sim = pose(&base, 1, (0, 6), w, (0.4, -0.3, 0.2));
     sim.plane.z0 = PRESET_HOMES[1].base;
-    assert!(
-        !enabled(&sim, Section::SliceCentre),
-        "z₀ is at the base point"
-    );
-    assert!(
-        !enabled(&sim, Section::Navigate),
-        "z₀ at the centre, σ at the window"
-    );
+    let slice_dimmed = |s: &SimConfig| {
+        assert!(!enabled(s, Section::SliceCentre), "z₀ is at the base point");
+    };
+    let navigate_dimmed = |s: &SimConfig| {
+        assert!(
+            !enabled(s, Section::Navigate),
+            "z₀ at the centre, σ at the window"
+        );
+    };
+    slice_dimmed(&sim);
+    navigate_dimmed(&sim);
     assert!(enabled(&sim, Section::Tilt));
     assert!(home_enabled(&sim));
-    // Control: the same pose in the plane's coordinates has `z₀` moved off the plane's centre by nothing the check saw;
-    // a coordinate on an axis moved lights Navigate alone, one off them Slice centre alone.
+    // Controls: a coordinate on an axis moved lights Navigate alone, one off them Slice centre alone; untilted and at
+    // the window, Tilt and Home are dimmed.
     let mut moved = sim.clone();
     moved.plane.z0[2] += 1e-9;
-    assert!(enabled(&moved, Section::Navigate));
-    assert!(!enabled(&moved, Section::SliceCentre));
+    rejects("z₀ moved on an axis", || navigate_dimmed(&moved));
+    slice_dimmed(&moved);
     let mut moved = sim.clone();
     moved.plane.z0[6] += 1e-9;
-    assert!(enabled(&moved, Section::SliceCentre));
-    assert!(!enabled(&moved, Section::Navigate));
+    rejects("z₀ moved off the axes", || slice_dimmed(&moved));
+    navigate_dimmed(&moved);
+    let mut untilted = sim.clone();
+    apply(&mut untilted, &command(&sim, Section::Tilt));
+    rejects("Tilt at home read as live", || {
+        assert!(enabled(&untilted, Section::Tilt))
+    });
+    rejects("Home at home read as live", || {
+        assert!(home_enabled(&untilted))
+    });
     // A window of 0.5: the zoom compared as log₂(σ / σ_h), on both sides of K11's tolerance.
     let scaled = |octaves: f64| {
         let mut s = base.clone();
@@ -657,24 +689,77 @@ fn qa_dimming_tilted_reads_the_preset_coordinates() {
 
 #[test]
 fn qa_no_preset_every_command_is_empty() {
-    let mut sim = base_sim();
     // A basis out of every preset's frame: all eight coordinates in both vectors.
-    sim.plane.q1 = std::array::from_fn(|i| 0.1 + 0.01 * i as f64);
-    sim.plane.q2 = std::array::from_fn(|i| 0.3 - 0.02 * i as f64);
-    assert_eq!(View::read(&sim).preset, None, "no preset holds it");
-    for section in SECTIONS {
-        assert!(!enabled(&sim, section));
-        assert!(command(&sim, section).is_empty());
-    }
-    assert!(!home_enabled(&sim));
-    assert!(home(&sim).is_empty());
-    assert_eq!(reset::dimmed_because(&sim), NO_PRESET);
+    let mut none = Rig::new(0);
+    none.app.set_field(basis_edit((
+        std::array::from_fn(|i| 0.1 + 0.01 * i as f64),
+        std::array::from_fn(|i| 0.3 - 0.02 * i as f64),
+    )));
+    none.idle(3);
+    let sim = none.sim();
+    assert_eq!(View::read(sim).preset, None, "no preset holds it");
+    let dimmed = |s: &SimConfig| {
+        for section in SECTIONS {
+            assert!(!enabled(s, section));
+        }
+        assert!(!home_enabled(s));
+    };
+    let empty = |s: &SimConfig| {
+        for section in SECTIONS {
+            assert!(command(s, section).is_empty());
+        }
+        assert!(home(s).is_empty());
+    };
+    let no_preset = |s: &SimConfig| assert_eq!(reset::dimmed_because(s), NO_PRESET);
+    dimmed(sim);
+    empty(sim);
+    no_preset(sim);
+    // Controls: the same three checks on a moved view with its preset active, read back from the app.
+    let mut live = Rig::new(0);
+    live.moved();
+    assert!(View::read(live.sim()).preset.is_some(), "a preset holds it");
+    rejects("a moved view dimmed", || dimmed(live.sim()));
+    rejects("a moved view with no command", || empty(live.sim()));
+    rejects("a preset read as none", || no_preset(live.sim()));
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
 // REQ-GUI-219: the Home key, wherever the focus is.
 
-/// The Home key from `id`, `enter` going in first, on a moved rig: the home view, the focus and the mode unchanged.
+/// The Home key on `rig`, moved, with the focus where it is: the home view of preset `p`, one entry, the focus and the
+/// mode unchanged. The same check is run on the moved view before the key, and on each fault set in the app after it: a
+/// focus moved, a mode left, an entry too many.
+fn check_home_key(rig: &mut Rig, p: usize, what: &str, modifiers: Modifiers) {
+    let (path, mode) = (rig.app.view.focus.path.clone(), rig.app.view.focus.mode);
+    let depth = rig.depth();
+    let landed = |rig: &Rig| {
+        rig.at_home(p, what);
+        assert_eq!(rig.depth(), depth + 1, "{what}: one entry");
+        assert_eq!(rig.app.view.focus.path, path, "{what}: the focus stays");
+        assert_eq!(rig.app.view.focus.mode, mode, "{what}: the mode stays");
+    };
+    rejects(&format!("{what}: a view off home"), || landed(rig));
+    rig.key(Key::Home, modifiers);
+    landed(rig);
+    rig.app.view.focus.mode = match mode {
+        KeyMode::Navigation => KeyMode::Interaction,
+        KeyMode::Interaction => KeyMode::Navigation,
+    };
+    rejects(&format!("{what}: a mode left"), || landed(rig));
+    rig.app.view.focus.mode = mode;
+    rig.app.view.focus.path.pop();
+    rejects(&format!("{what}: a focus moved"), || landed(rig));
+    rig.app.view.focus.path.clone_from(&path);
+    let z0 = rig.sim().plane.z0;
+    let mut off = z0;
+    off[2] += 0.25;
+    rig.app.set_field(z0_edit(off));
+    rig.app.set_field(z0_edit(z0));
+    rig.idle(1);
+    rejects(&format!("{what}: more entries"), || landed(rig));
+}
+
+/// The Home key from `id`, `enter` going in first, on a moved rig.
 fn home_from(setup: impl Fn(&mut Rig), id: &str, enter: bool, modifiers: Modifiers) {
     let mut rig = Rig::new(0);
     setup(&mut rig);
@@ -684,13 +769,7 @@ fn home_from(setup: impl Fn(&mut Rig), id: &str, enter: bool, modifiers: Modifie
         rig.key(Key::Enter, NONE);
         assert_eq!(rig.app.view.focus.mode, KeyMode::Interaction, "{id}");
     }
-    let (path, mode) = (rig.app.view.focus.path.clone(), rig.app.view.focus.mode);
-    let depth = rig.depth();
-    rig.key(Key::Home, modifiers);
-    rig.at_home(0, id);
-    assert_eq!(rig.depth(), depth + 1, "{id}: one entry");
-    assert_eq!(rig.app.view.focus.path, path, "{id}: the focus stays");
-    assert_eq!(rig.app.view.focus.mode, mode, "{id}: the mode stays");
+    check_home_key(&mut rig, 0, id, modifiers);
 }
 
 #[test]
@@ -715,11 +794,15 @@ fn qa_home_key_on_elements_of_every_kind() {
     rig.focus(FIGURE);
     rig.key(Key::End, NONE);
     rig.key(Key::PageUp, NONE);
-    assert_eq!(rig.sim().plane, before);
+    let untouched = |rig: &Rig| assert_eq!(rig.sim().plane, before);
+    untouched(&rig);
     rejects("a Home key that did nothing", || {
         rig.key(Key::PageDown, NONE);
         rig.at_home(0, "Page Down")
     });
+    // The same check after a real Home.
+    rig.key(Key::Home, NONE);
+    rejects("the Home key taken for End", || untouched(&rig));
 }
 
 #[test]
@@ -729,8 +812,7 @@ fn qa_home_key_with_a_menu_open_and_on_the_stain_page() {
     rig.moved();
     rig.focus("view");
     rig.key(Key::Enter, NONE);
-    rig.key(Key::Home, NONE);
-    rig.at_home(0, "View's menu open");
+    check_home_key(&mut rig, 0, "View's menu open", NONE);
     // On the Stain page, navigating and interacting.
     for enter in [false, true] {
         let mut rig = Rig::new(1);
@@ -741,8 +823,7 @@ fn qa_home_key_with_a_menu_open_and_on_the_stain_page() {
         if enter {
             rig.key(Key::Enter, NONE);
         }
-        rig.key(Key::Home, NONE);
-        rig.at_home(1, "the Stain page");
+        check_home_key(&mut rig, 1, "the Stain page", NONE);
     }
 }
 
@@ -750,16 +831,23 @@ fn qa_home_key_with_a_menu_open_and_on_the_stain_page() {
 fn qa_home_key_after_a_mouse_click_acts_and_shows_the_ring() {
     let mut rig = Rig::new(0);
     rig.moved();
+    let hidden = |rig: &Rig| assert!(!rig.app.keyboard.navigating(), "the click hid the ring");
+    let shown = |rig: &Rig| assert!(rig.app.keyboard.navigating(), "the key shows the ring (K1)");
+    rig.key(UNBOUND, NONE);
+    rejects("the ring on before the click", || hidden(&rig));
     let beside = rig.button().center() - vec2(90.0, -40.0);
     rig.click(beside);
-    assert!(!rig.app.keyboard.navigating(), "the click hid the ring");
+    hidden(&rig);
+    rejects("the ring off after the click", || shown(&rig));
+    rejects("a view off home", || rig.at_home(0, "after a click"));
     rig.key(Key::Home, NONE);
     rig.at_home(0, "after a click");
-    assert!(rig.app.keyboard.navigating(), "the key shows the ring (K1)");
+    shown(&rig);
 }
 
-#[test]
-fn qa_home_key_in_a_number_box_moves_the_caret() {
+/// Slider 2's number box on a moved rig: `.25` typed over its text, the Home key if `home_key`, `-`, Enter. Returns the
+/// rig, and `q₁` when the text was typed.
+fn type_in_the_box(home_key: bool) -> (Rig, Latent) {
     let mut rig = Rig::new(0);
     rig.moved();
     let row = rig
@@ -790,15 +878,45 @@ fn qa_home_key_in_a_number_box_moves_the_caret() {
     let _ = rig
         .h
         .frame(&mut rig.app, vec![Event::Text(".25".to_owned())]);
-    let plane = rig.sim().plane.clone();
-    rig.key(Key::Home, NONE);
-    assert_eq!(rig.sim().plane.q1, plane.q1, "nothing reset");
+    let q1 = rig.sim().plane.q1;
+    if home_key {
+        rig.key(Key::Home, NONE);
+    }
+    (rig, q1)
+}
+
+/// The rest of [`type_in_the_box`]: `-` at the caret, then Enter.
+fn finish_typing(rig: &mut Rig) {
     let _ = rig.h.frame(&mut rig.app, vec![Event::Text("-".to_owned())]);
     rig.key(Key::Enter, NONE);
     rig.idle(2);
-    // Control: the caret at the start reads −0.25; a Home that left the caret reads ".25-", no number at all.
-    assert_eq!(rig.sim().plane.z0[2], -0.25, "the caret went to the start");
-    assert_ne!(rig.sim().plane.z0[2], PRESET_HOMES[0].base[2]);
+}
+
+#[test]
+fn qa_home_key_in_a_number_box_moves_the_caret() {
+    let nothing_reset =
+        |rig: &Rig, q1: &Latent| assert_eq!(rig.sim().plane.q1, *q1, "nothing reset");
+    let caret_at_start = |rig: &Rig| {
+        assert_eq!(rig.sim().plane.z0[2], -0.25, "the caret went to the start");
+        assert_ne!(rig.sim().plane.z0[2], PRESET_HOMES[0].base[2]);
+    };
+    let (mut rig, q1) = type_in_the_box(true);
+    nothing_reset(&rig, &q1);
+    finish_typing(&mut rig);
+    caret_at_start(&rig);
+    // Control: the same script without the key leaves the caret at the end, ".25-", which is no number.
+    let (mut plain, _) = type_in_the_box(false);
+    finish_typing(&mut plain);
+    rejects("a key that left the caret", || caret_at_start(&plain));
+    // Control: the key out of the field is Home, which resets `q₁`.
+    let mut home_run = Rig::new(0);
+    home_run.moved();
+    let q1 = home_run.sim().plane.q1;
+    home_run.key(Key::Home, NONE);
+    home_run.at_home(0, "the key out of the field");
+    rejects("a Home run from the field", || {
+        nothing_reset(&home_run, &q1)
+    });
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -810,6 +928,9 @@ fn qa_home_button_tooltips() {
     let at = rig.button().center();
     let texts = rig.tooltip(at);
     assert!(texts.contains(ALREADY_HOME), "dimmed at home: {texts}");
+    rejects("a dimmed button read as live", || {
+        assert!(texts.contains(HOME_TOOLTIP))
+    });
     // No preset: the tooltip says so.
     let q1: Latent = std::array::from_fn(|i| 0.1 + 0.01 * i as f64);
     let q2: Latent = std::array::from_fn(|i| 0.3 - 0.02 * i as f64);
@@ -818,6 +939,9 @@ fn qa_home_button_tooltips() {
     rig.idle(3);
     let texts = rig.tooltip(at);
     assert!(texts.contains(NO_PRESET), "no preset: {texts}");
+    rejects("no preset read as at home", || {
+        assert!(texts.contains(ALREADY_HOME))
+    });
     // Live.
     let mut rig = Rig::new(0);
     rig.moved();
@@ -825,6 +949,9 @@ fn qa_home_button_tooltips() {
     assert!(texts.contains(HOME_TOOLTIP), "live: {texts}");
     rejects("a live button read as dimmed", || {
         assert!(texts.contains(ALREADY_HOME))
+    });
+    rejects("a live button read as no preset", || {
+        assert!(texts.contains(NO_PRESET))
     });
 }
 
@@ -841,14 +968,18 @@ fn qa_home_button_does_not_take_a_click_on_a_window_over_it() {
     let r = rig.drawn(Window::Run);
     assert!(r.expand(-4.0).contains(corner), "{r:?} covers {corner:?}");
     let (plane, depth) = (rig.sim().plane.clone(), rig.depth());
+    let unmoved = |rig: &Rig| assert_eq!(rig.sim().plane, plane, "the click was the window's");
+    let no_command = |rig: &Rig| assert_eq!(rig.depth(), depth, "no command");
     rig.click(corner);
-    assert_eq!(rig.sim().plane, plane, "the click was the window's");
-    assert_eq!(rig.depth(), depth, "no command");
-    // Control: with the window closed, the same click is Home.
+    unmoved(&rig);
+    no_command(&rig);
+    // Control: with the window closed, the same click is Home, which the same two checks refuse.
     rig.app.close_window(&rig.h.ctx, Window::Run);
     rig.idle(3);
     rig.click(corner);
     rig.at_home(0, "the button uncovered");
+    rejects("a click that moved the view", || unmoved(&rig));
+    rejects("a click that ran a command", || no_command(&rig));
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -877,35 +1008,77 @@ fn ways() -> Vec<Way> {
     ]
 }
 
+/// A moved rig on the second preset, locked if `locked`, the pin off the centre, so the lock's rule has work to do.
+fn entry_rig(locked: bool) -> Rig {
+    let mut rig = Rig::new(1);
+    rig.moved();
+    if locked {
+        let plane = rig.sim().plane.clone();
+        let z_locked: Latent =
+            std::array::from_fn(|i| plane.z0[i] + 0.25 * plane.q1[i] - 0.5 * plane.q2[i]);
+        rig.app.set_field(lock_edit(Lock {
+            locked: true,
+            z_locked,
+        }));
+        rig.idle(3);
+    }
+    rig
+}
+
+/// Every way to a command is one entry, one undo restoring it bit for bit and one redo setting it again. Each check is
+/// also run on the state that refutes it, read back from the app: before the way, before the undo, before the redo, and
+/// after a further edit and a changed lock; then on a Home really sent as separate entries.
 fn one_entry(locked: bool) {
     for (what, way) in ways() {
-        let mut rig = Rig::new(1);
-        rig.moved();
-        if locked {
-            // The pin off the centre, so the lock's rule has work to do.
-            let plane = rig.sim().plane.clone();
-            let z_locked: Latent =
-                std::array::from_fn(|i| plane.z0[i] + 0.25 * plane.q1[i] - 0.5 * plane.q2[i]);
-            rig.app.set_field(lock_edit(Lock {
-                locked: true,
-                z_locked,
-            }));
-            rig.idle(3);
-        }
+        let mut rig = entry_rig(locked);
         let (before, lock, depth) = (rig.sim().plane.clone(), rig.sim().lock.clone(), rig.depth());
+        let acted = |rig: &Rig| assert_ne!(rig.sim().plane, before, "{what} acted");
+        let one = |rig: &Rig| assert_eq!(rig.depth(), depth + 1, "{what}: one entry");
+        let lock_kept = |rig: &Rig| assert_eq!(rig.sim().lock, lock, "{what}: the lock stays");
+        let undone = |rig: &Rig| assert_eq!(rig.depth(), depth, "{what}: one undo");
+        let restored = |rig: &Rig| {
+            assert_eq!(rig.sim().plane, before, "{what}: restored bit for bit");
+        };
+        rejects("a command that did nothing", || acted(&rig));
+        rejects("no entry", || one(&rig));
         way(&mut rig);
         let after = rig.sim().plane.clone();
-        assert_ne!(after, before, "{what} acted");
-        assert_eq!(rig.depth(), depth + 1, "{what}: one entry");
-        assert_eq!(rig.sim().lock, lock, "{what}: the lock stays");
+        let redone = |rig: &Rig| assert_eq!(rig.sim().plane, after, "{what}: redo sets it again");
+        acted(&rig);
+        one(&rig);
+        lock_kept(&rig);
+        rejects("an undo that left the depth", || undone(&rig));
+        rejects("an undo that restored nothing", || restored(&rig));
         rig.app.undo();
         rig.idle(3);
-        assert_eq!(rig.depth(), depth, "{what}: one undo");
-        assert_eq!(rig.sim().plane, before, "{what}: restored bit for bit");
+        undone(&rig);
+        restored(&rig);
+        rejects("a redo that set nothing", || redone(&rig));
         rig.app.redo();
         rig.idle(3);
-        assert_eq!(rig.sim().plane, after, "{what}: redo sets it again");
+        redone(&rig);
+        // A further entry, and a lock changed, read back from the app.
+        let mut z0 = after.z0;
+        z0[2] += 0.25;
+        rig.app.set_field(z0_edit(z0));
+        rig.app.set_field(lock_edit(Lock {
+            locked: !lock.locked,
+            z_locked: lock.z_locked,
+        }));
+        rig.idle(3);
+        rejects("two entries", || one(&rig));
+        rejects("a lock changed", || lock_kept(&rig));
     }
+    // A Home really sent as separate entries.
+    let mut rig = entry_rig(locked);
+    let depth = rig.depth();
+    let one = |rig: &Rig| assert_eq!(rig.depth(), depth + 1, "one entry");
+    let sim = rig.sim().clone();
+    for edit in home(&sim) {
+        rig.app.set_field(edit);
+    }
+    rig.idle(3);
+    rejects("a command of two entries", || one(&rig));
 }
 
 #[test]
@@ -918,24 +1091,18 @@ fn qa_each_way_is_one_entry_locked() {
     one_entry(true);
 }
 
-#[test]
-fn qa_one_entry_control_two_entries_fail() {
-    let mut rig = Rig::new(1);
-    rig.moved();
-    let depth = rig.depth();
-    // A Home sent as two entries, by hand.
-    let sim = rig.sim().clone();
-    for edit in home(&sim) {
-        rig.app.set_field(edit);
-    }
-    rig.idle(3);
-    rejects("a command of two entries", || {
-        assert_eq!(rig.depth(), depth + 1)
-    });
-}
-
 // ---------------------------------------------------------------------------------------------------------------------
 // K6: the keyboard reaches each reset, last.
+
+/// The arrows from the focus to `id`, ↓ alone.
+fn walk_to(rig: &mut Rig, id: &str) {
+    let mut steps = 0;
+    while rig.app.view.focus.path.last().map(String::as_str) != Some(id) {
+        steps += 1;
+        assert!(steps < 20, "the arrows never reach {id}");
+        rig.key(Key::ArrowDown, NONE);
+    }
+}
 
 #[test]
 fn qa_each_reset_is_reached_last_and_enter_is_its_click() {
@@ -948,34 +1115,55 @@ fn qa_each_reset_is_reached_last_and_enter_is_its_click() {
             Section::Tilt => mv::TILT,
             Section::Navigate => mv::NAVIGATE,
         };
+        let on_reset = |rig: &Rig| {
+            assert_eq!(
+                rig.app.view.focus.path.last().map(String::as_str),
+                Some(id),
+                "{section:?}: on its reset"
+            );
+        };
+        let not_on_reset = |rig: &Rig| {
+            assert_ne!(
+                rig.app.view.focus.path.last().map(String::as_str),
+                Some(id),
+                "Enter lands on the section's first element"
+            );
+        };
+        let acted = |rig: &Rig| assert!(!enabled(rig.sim(), section), "{section:?}: Enter acted");
         rig.focus(parent);
         rig.key(Key::Enter, NONE);
-        let first = rig.app.view.focus.path.last().map(String::as_str);
-        assert_ne!(
-            first,
-            Some(id),
-            "Enter lands on the section's first element"
-        );
-        let mut steps = 0;
-        while rig.app.view.focus.path.last().map(String::as_str) != Some(id) {
-            steps += 1;
-            assert!(steps < 20, "{section:?}: the arrows never reach its reset");
-            rig.key(Key::ArrowDown, NONE);
-        }
+        not_on_reset(&rig);
+        rejects("the first element taken for the reset", || on_reset(&rig));
+        walk_to(&mut rig, id);
+        rejects("the reset taken for the first element", || {
+            not_on_reset(&rig)
+        });
         rig.key(Key::ArrowDown, NONE);
-        assert_eq!(
-            rig.app.view.focus.path.last().map(String::as_str),
-            Some(id),
-            "{section:?}: nothing after the reset"
-        );
+        on_reset(&rig);
+        // Control: another section's reset is never reached from here.
+        let other = SECTIONS.into_iter().find(|s| *s != section).expect("three");
+        rejects("a reset out of this section", || {
+            walk_to(&mut rig, other.scope())
+        });
+        on_reset(&rig);
+        rejects("an Enter that did nothing", || acted(&rig));
         rig.key(Key::Enter, NONE);
-        assert!(!enabled(rig.sim(), section), "{section:?}: Enter acted");
+        acted(&rig);
         // Dimmed, it keeps its place, and Enter on it is nothing.
         let (plane, depth) = (rig.sim().plane.clone(), rig.depth());
-        assert_eq!(rig.app.view.focus.path.last().map(String::as_str), Some(id));
+        let nothing = |rig: &Rig| {
+            assert_eq!(rig.sim().plane, plane);
+            assert_eq!(rig.depth(), depth);
+        };
+        on_reset(&rig);
         rig.key(Key::Enter, NONE);
-        assert_eq!(rig.sim().plane, plane);
-        assert_eq!(rig.depth(), depth);
+        nothing(&rig);
+        // Control: the same check on a real edit.
+        let mut z0 = plane.z0;
+        z0[2] += 0.25;
+        rig.app.set_field(z0_edit(z0));
+        rig.idle(1);
+        rejects("an Enter that sent an edit", || nothing(&rig));
     }
 }
 
@@ -984,27 +1172,38 @@ fn qa_each_reset_is_reached_last_and_enter_is_its_click() {
 
 #[test]
 fn qa_choosing_a_preset_keeps_sigma_and_home_reads_its_window() {
+    let chosen = |view: &View| {
+        assert_eq!(view.preset, Some(1));
+        assert_eq!(view.scale, 1.0, "§G2: choosing a preset keeps σ");
+        assert_eq!(view.zoom_row(), -1.0, "log₂(σ_h / σ) = log₂ 0.5");
+        assert_eq!(view.zoom(), 0.0, "the depth stays absolute");
+    };
+    let homed = |view: &View| {
+        assert_eq!(view.zoom_row(), 0.0, "× 1.00 at the window");
+        assert_eq!(view.zoom(), 1.0, "the depth reads −log₂ 0.5");
+    };
     let mut rig = Rig::new(0);
     let sim = rig.sim().clone();
     let view = View::read(&sim);
+    // Controls: before the choice, it is the other preset; after it, not yet home.
+    rejects("the first preset taken for the second", || chosen(&view));
     rig.app.set_field(preset_edit(&sim, view, 1));
     rig.idle(3);
     let view = View::read(rig.sim());
-    assert_eq!(view.preset, Some(1));
-    assert_eq!(view.scale, 1.0, "§G2: choosing a preset keeps σ");
-    assert_eq!(view.zoom_row(), -1.0, "log₂(σ_h / σ) = log₂ 0.5");
-    assert_eq!(view.zoom(), 0.0, "the depth stays absolute");
+    chosen(&view);
     assert!(
         enabled(rig.sim(), Section::Navigate),
         "off this preset's window"
     );
+    rejects("a choice taken for home", || homed(&view));
+    rejects("a view off home", || rig.at_home(1, "the second preset"));
     rig.key(Key::Home, NONE);
     rig.at_home(1, "the second preset");
     let view = View::read(rig.sim());
-    assert_eq!(view.zoom_row(), 0.0, "× 1.00 at the window");
-    assert_eq!(view.zoom(), 1.0, "the depth reads −log₂ 0.5");
-    // Control: the first preset's window is no home of this one.
-    rejects("σ = 1 as the second preset's home", || {
-        assert_eq!(view.scale, 1.0)
+    homed(&view);
+    // Controls: at home the first preset's window is no home of this one, and Navigate is dimmed.
+    rejects("σ = 1 as the second preset's home", || chosen(&view));
+    rejects("Navigate live at home", || {
+        assert!(enabled(rig.sim(), Section::Navigate))
     });
 }
