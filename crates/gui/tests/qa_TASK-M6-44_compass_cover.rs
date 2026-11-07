@@ -11,6 +11,7 @@ use eframe::egui::{
 use engine::contract::sim_config::Plane;
 use gui::app::App;
 use gui::capture::{PIXELS_PER_POINT, SIZE};
+use gui::explore::manifold_view::{basis_edit, View};
 use gui::explore::{compass, COMPASS_CUBE};
 use gui::headless::Headless;
 use gui::layout::{Layout, Splitter};
@@ -140,6 +141,13 @@ fn column_y(app: &App<MockSide>) -> f32 {
 /// How far a wheel over the compass, the panels at their least so its column overflows, moves the column.
 fn wheel_moves_the_column(cover: Option<bool>) -> f32 {
     let (mut app, mut h) = rig();
+    // Tilted to a corner, where no plane is drawn: since R-705's minimums the column overflows at the panels' least only
+    // with a long readout, the Cube view's on the mock's plane and the Jacobi view's there both fitting.
+    let mut corner = View::read(&app.snapshot().sim);
+    corner.tau1 = 90f64.to_radians();
+    corner.tau2 = 90f64.to_radians();
+    app.set_field(basis_edit(corner.basis()));
+    let _ = settled(&mut h, &mut app);
     // The panels at their least: the handles dragged past their ends.
     let l = Layout::with_splits(h.screen(), PIXELS_PER_POINT, &app.splits);
     drag(
