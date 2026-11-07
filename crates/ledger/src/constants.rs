@@ -1108,23 +1108,25 @@ pub const INV_PHI: ConstantBuilder = ConstantBuilder {
     provisional: None,
 };
 
+/// The ruling that confirmed `arctan_sum_bits` (dd_generation_root §3.8, `provisional`): the entry cites it in place of
+/// its calibration requirement.
+const R699: Citation = Citation::Corpus {
+    file: "decisions.md",
+    section: "R-699 — `arctan_sum_bits` = 100 is confirmed as proposed: mid-plateau, with margin on both sides *(closes RQ-635)*",
+};
+
 /// The fraction bits of the arctangent generator's integer sum (`crate::gen::arctan`; RQ-628's option (a)), 100: each
 /// `atan(k/8)` is summed in units of `2⁻¹⁰⁰` before rounding to the Q0.64 and Q2.62 words the kernel's file holds. Not in
-/// that file, and only the generator reads it. The corpus gives no such precision, so this is REQ-GEN-044's proposal
-/// (R-71), TASK-M2-26's, provisional until the M2 gate (R-427; RQ-635). A choice on a measured plateau, not a derivation:
-/// the generator's sum in exact integers writes the same table at every count from 72 to 121 bits. At 71 three of its
-/// eleven words differ, at 122 a product passes `2¹²⁸`, and the stated bound on those products, a term below `2^bits`
-/// times a numerator below `2¹⁴`, proves it up to 114. 100 is a round number with 28 bits of room above the first count
-/// that writes the table and 22 below the first that overflows. Admissible as expressed in canonical units, a pure
-/// number, as [`CURVE_GRID_LOG2`] is; RQ-635 asks whether that class stands, since no class fits a working precision
-/// exactly.
-pub const ARCTAN_SUM_BITS: ConstantBuilder = proposed(
-    "arctan_sum_bits",
-    100.0,
-    Admissibility::CanonicalUnits,
-    "REQ-GEN-044",
-    "M2",
-);
+/// that file, and only the generator reads it. The corpus gives no such precision, so this was REQ-GEN-044's proposal
+/// (R-71), TASK-M2-26's, provisional until the M2 gate (R-427), and the human confirmed it as proposed ahead of that
+/// gate (R-699, closing RQ-635): a confirmed entry citing that ruling (REQ-GEN-045). A choice on a measured plateau, not
+/// a derivation: the generator's sum in exact integers writes the same table at every count from 72 to 121 bits. At 71
+/// three of its eleven words differ, at 122 a product passes `2¹²⁸`, and the stated bound on those products, a term
+/// below `2^bits` times a numerator below `2¹⁴`, proves it up to 114. 100 is a round number with 28 bits of room above
+/// the first count that writes the table and 22 below the first that overflows. Admissible as expressed in canonical
+/// units, a pure number, as [`CURVE_GRID_LOG2`] is; no class fits a working precision exactly, and R-699 lets this one
+/// stand.
+pub const ARCTAN_SUM_BITS: ConstantBuilder = confirmed("arctan_sum_bits", 100.0, R699);
 
 /// The section that defines `hue_wheel` (R-72).
 const PRELUDE_SECTION: Citation = Citation::Corpus {

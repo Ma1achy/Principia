@@ -556,7 +556,7 @@ pub fn readout(set: Set, push: &Pushforward) -> String {
     )
 }
 
-/// From here up the readout's stretch is in scientific form. Measured at the least panel and at 1024 by 768, with each
+/// From here up the readout's stretch is in scientific form. Measured at a panel of 240 by 160 and at 1024 by 768, with each
 /// view's widest pairs and the focus on the compass element: the whole column shows in one stop with plain digits up to
 /// `99999.999`, not at `999999.999`. The stretch grows past `1e18` toward the Shape sphere's pole, and from here up the
 /// plain digits are no shorter than `1.699e18` (a look choice, R-390).
