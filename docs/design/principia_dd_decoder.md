@@ -77,6 +77,9 @@ decode makes that test 12 compares bit for bit across backends, with the value i
 
 The selects that choose a pole's value (§3.2's `atan2` poles, §3.6's `rho_angle` cases and R-436's pole values) read
 comparisons against the constant 0 or `±π̂` of values already computed; they choose a stored value, not a tag.
+The shape sphere's f32 exponential sinc reads one comparison they do not cover, `z < 0.0625`, the multi-op `z = ‖d‖²`
+against the nonzero `sinc_cut²` (R-696; REQ-DEC-054's proposal): it chooses between two forms of one continuous value
+and writes no tag, so test 12 does not compare it and it is outside the table's rule.
 
 ---
 

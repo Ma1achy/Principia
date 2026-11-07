@@ -33,6 +33,7 @@ pub mod mock {
 
     use crate::app::{window_title, App};
     use crate::capture;
+    use crate::layout::LEAST_WINDOW;
     use crate::measure;
     use crate::mock::{canvas::MockCanvas, MockEngine};
     use crate::settings::Store;
@@ -98,6 +99,10 @@ pub mod mock {
     pub const MEASURED_WINDOW_SIZE: [f32; 2] =
         [WINDOW_SIZE[0] + measure::PANEL_WIDTH, WINDOW_SIZE[1]];
 
+    /// The measured window's least inner size: the app keeps [`LEAST_WINDOW`] beside the panel's strip.
+    pub const MEASURED_LEAST_WINDOW: [f32; 2] =
+        [LEAST_WINDOW[0] + measure::PANEL_WIDTH, LEAST_WINDOW[1]];
+
     /// Runs the command `args` names; the window through `runner`, which `eframe::run_native` is outside tests.
     pub fn dispatch(
         args: &[String],
@@ -125,13 +130,20 @@ pub mod mock {
         }
     }
 
-    /// The window's options: its title, its size, and egui-wgpu built from `canvas`'s device and queue.
-    pub fn options(canvas: &MockCanvas, title: &str, size: [f32; 2]) -> eframe::NativeOptions {
+    /// The window's options: its title, its size, the least size it may be resized to, and egui-wgpu built from
+    /// `canvas`'s device and queue.
+    pub fn options(
+        canvas: &MockCanvas,
+        title: &str,
+        size: [f32; 2],
+        least: [f32; 2],
+    ) -> eframe::NativeOptions {
         let context = canvas.context().clone();
         let mut options = eframe::NativeOptions {
             viewport: eframe::egui::ViewportBuilder::default()
                 .with_title(title)
-                .with_inner_size(size),
+                .with_inner_size(size)
+                .with_min_inner_size(least),
             ..Default::default()
         };
         options.wgpu_options.wgpu_setup = WgpuSetup::Existing(WgpuSetupExisting {
@@ -156,7 +168,7 @@ pub mod mock {
         }
         runner(
             title,
-            options(&canvas, title, WINDOW_SIZE),
+            options(&canvas, title, WINDOW_SIZE, LEAST_WINDOW),
             Box::new(move |cc| {
                 crate::theme::install(&cc.egui_ctx);
                 let format = cc
@@ -188,7 +200,10 @@ pub mod mock {
     #[cfg(not(test))]
     #[cfg_attr(test, mutants::skip)]
     mod measured {
-        use super::{measure, options, App, MockCanvas, MockSide, Store, MEASURED_WINDOW_SIZE};
+        use super::{
+            measure, options, App, MockCanvas, MockSide, Store, MEASURED_LEAST_WINDOW,
+            MEASURED_WINDOW_SIZE,
+        };
         use crate::measure::{Environment, Measured, Session};
 
         /// The window with the measurement panel.
@@ -203,7 +218,7 @@ pub mod mock {
             let env = Environment::native(Some("1"), delay.as_deref(), run.as_deref(), None)?;
             eframe::run_native(
                 title,
-                options(canvas, title, MEASURED_WINDOW_SIZE),
+                options(canvas, title, MEASURED_WINDOW_SIZE, MEASURED_LEAST_WINDOW),
                 Box::new(move |cc| {
                     crate::theme::install(&cc.egui_ctx);
                     let format = cc

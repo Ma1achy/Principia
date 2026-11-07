@@ -137,7 +137,7 @@ fn check_moved(before: &Layout, after: &Layout, splitter: Splitter, by: f32) {
 #[test]
 fn mock_layout_splitters_a_drag_moves_each_boundary_by_the_drag() {
     for splitter in Splitter::ALL {
-        for by in [-16.0, 30.0] {
+        for by in [-16.0, 24.0] {
             let (mut app, mut h) = settled();
             let before = current(&h, &app);
             assert_eq!(before, Layout::new(h.screen(), h.pixels_per_point()));
@@ -169,7 +169,7 @@ fn mock_layout_splitters_a_drag_moves_each_boundary_by_the_drag() {
 }
 
 /// The least size of each panel and of the canvas, in `layout`, against its minimum: none under it.
-fn check_minimums(layout: &Layout) {
+pub(super) fn check_minimums(layout: &Layout) {
     let top_row = layout.bottom_row.min.y - layout.top_bar.max.y;
     for (what, size, min) in [
         (
@@ -679,8 +679,8 @@ fn mock_layout_splitters_reset_holds_the_default_to_the_range() {
             );
         }
     }
-    // The top row's bottom, held by the top row's minimum: a window 806 points high, where the default leaves the top row under it.
-    let short = Rect::from_min_size(pos2(0.0, 0.0), vec2(screen.width(), 806.0));
+    // The top row's bottom, held by the top row's minimum: a window 812 points high, where the default leaves the top row under it.
+    let short = Rect::from_min_size(pos2(0.0, 0.0), vec2(screen.width(), 812.0));
     let l = Layout::new(short, ppp);
     let mut splits = Splits::default();
     splits.set(Splitter::TopBottom, 0.6);

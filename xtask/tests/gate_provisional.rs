@@ -109,9 +109,9 @@ negative_control!(
 /// `shape_roundtrip_bound` (REQ-CHART-053), the invariant warp's `k_max` and `gamma_k` (REQ-CHART-044), the
 /// Burrau ν = 1/2 gate's `burrau_nu_half_tol` (REQ-VAL-118), and the acute-angle Burrau charts' `burrau_theta_min`
 /// and `burrau_theta_max` (REQ-CHART-045) and `burrau_theta_lz_k` and `burrau_theta_lz_fraction` (REQ-CHART-046), and
-/// step 0's skip tolerance `tau_i` (REQ-ENC-035), and the round trip's `eps_phys` (REQ-ENC-024), and lookup's layer-3 `decode_sanity` (REQ-ENC-027) and layer-1
-/// `zero_class` (REQ-ENC-037), and the literature import's `literature_import_tol` (REQ-VAL-120), and the arctangent
-/// generator's `arctan_sum_bits` (REQ-GEN-044).
+/// step 0's skip tolerance `tau_i` (REQ-ENC-035), and the f32 sinc's `sinc_cut` and `sinc_bound` (REQ-DEC-054), and the round trip's `eps_phys` (REQ-ENC-024), and lookup's layer-3 `decode_sanity` (REQ-ENC-027) and layer-1
+/// `zero_class` (REQ-ENC-037), and the literature import's `literature_import_tol` (REQ-VAL-120). `arctan_sum_bits`
+/// is not listed: R-699 confirmed it (REQ-GEN-045).
 fn check_register_m1_m2(register: &[ConstantBuilder]) {
     check_lists("M1", register, &[]);
     check_lists(
@@ -128,6 +128,8 @@ fn check_register_m1_m2(register: &[ConstantBuilder]) {
             ("burrau_theta_lz_k", "M2", "REQ-CHART-046"),
             ("burrau_theta_lz_fraction", "M2", "REQ-CHART-046"),
             ("tau_i", "M2", "REQ-ENC-035"),
+            ("sinc_cut", "M2", "REQ-DEC-054"),
+            ("sinc_bound", "M2", "REQ-DEC-054"),
             ("log_floor_rho_ratio", "M2", "REQ-TOOL-163"),
             ("log_floor_r_min_pair_0", "M2", "REQ-TOOL-163"),
             ("shape_vec_js_tol", "M2", "REQ-CHART-049"),
@@ -136,7 +138,6 @@ fn check_register_m1_m2(register: &[ConstantBuilder]) {
             ("decode_sanity", "M2", "REQ-ENC-027"),
             ("zero_class", "M2", "REQ-ENC-037"),
             ("literature_import_tol", "M2", "REQ-VAL-120"),
-            ("arctan_sum_bits", "M2", "REQ-GEN-044"),
         ],
     );
 }
@@ -164,6 +165,29 @@ negative_control!(
             .collect::<Vec<_>>()
     )
 );
+
+/// The register with `arctan_sum_bits` still marked provisional until M2 lists it (REQ-GEN-045).
+mod arctan_sum_bits_still_marked {
+    use super::*;
+    negative_control!(
+        gate_provisional_no_register_entry_blocks_the_m1_gate,
+        "a register whose `arctan_sum_bits` is still provisional until M2 lists it at M2",
+        expected = "the M2 list",
+        check_register_m1_m2(
+            &REGISTER
+                .iter()
+                .map(|k| match k.name {
+                    "arctan_sum_bits" => ConstantBuilder {
+                        citation: Some(Citation::Calibration("REQ-GEN-044")),
+                        provisional: Some("M2"),
+                        ..*k
+                    },
+                    _ => *k,
+                })
+                .collect::<Vec<_>>()
+        )
+    );
+}
 
 /// Checks that `milestone` is refused as no milestone, naming it.
 fn check_refused(milestone: &str) {

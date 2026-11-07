@@ -19,6 +19,11 @@ use crate::side::MockSide;
 /// The mock preset's frame `(e_a, e_b, e_d)`.
 pub const FRAME: (usize, usize, usize) = (PRESETS[0].0, PRESETS[0].1, SLICE_AXIS);
 
+/// A compass under the least the splitters allow since R-705, in points: the least before it, which a layout remembered
+/// from then keeps, the minimums holding drags and not [`crate::layout::Layout::with_splits`]. Its column overflows in
+/// every view.
+pub const NARROW_PANEL: [f32; 2] = [240.0, 160.0];
+
 /// The view `(τ₁, τ₂, γ)` in degrees at scale `σ`, in the mock preset's frame.
 pub fn view(tau1: f64, tau2: f64, gamma: f64, sigma: f64) -> View {
     View {

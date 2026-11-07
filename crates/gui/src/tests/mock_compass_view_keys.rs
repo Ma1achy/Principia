@@ -12,7 +12,7 @@ use eframe::egui::{
 use engine::contract::sim_config::Plane;
 use engine::contract::view_ui::{Focus, KeyMode, Mode};
 
-use super::compass_support::{app_at, plane, setfields, view};
+use super::compass_support::{app_at, plane, setfields, view, NARROW_PANEL};
 use super::support::{focus, rejects};
 use crate::app::App;
 use crate::capture::PIXELS_PER_POINT;
@@ -32,7 +32,7 @@ use crate::explore::{
 use crate::headless::Headless;
 use crate::keyboard::keymap::{Command, Direction};
 use crate::keyboard::scopes::{Scope, ScopeTree, StepKind};
-use crate::layout::{Layout, Splitter, MIN_BOTTOM_H, MIN_COMPASS_W};
+use crate::layout::{Layout, Splitter};
 use crate::side::MockSide;
 
 const NONE: Modifiers = Modifiers::NONE;
@@ -438,24 +438,24 @@ fn settled_output(h: &mut Headless, app: &mut App<MockSide>) -> FullOutput {
     h.frame(app, Vec::new())
 }
 
-/// The app at `p` in a window of `window` points, at the least panel if `least`, the focus on the compass element by
+/// The app at `p` in a window of `window` points, at [`NARROW_PANEL`] if `narrow`, the focus on the compass element by
 /// Tab and Enter, in view `index` of [`SIBLINGS`] by the keys, back on the element: and the panel.
 fn at_element(
     p: &Plane,
     window: [f32; 2],
-    least: bool,
+    narrow: bool,
     index: usize,
 ) -> (App<MockSide>, Headless, Rect) {
     let (mut app, mut h) = app_at(p);
     h.set_size(window.map(|points| (points * PIXELS_PER_POINT) as u32));
     let screen = h.screen();
-    if least {
+    if narrow {
         let footer = Layout::new(screen, PIXELS_PER_POINT).footer.min.y;
         app.splits
-            .set(Splitter::CompassTime, MIN_COMPASS_W / screen.width());
+            .set(Splitter::CompassTime, NARROW_PANEL[0] / screen.width());
         app.splits.set(
             Splitter::TopBottom,
-            (footer - MIN_BOTTOM_H) / screen.height(),
+            (footer - NARROW_PANEL[1]) / screen.height(),
         );
     }
     for key in [Key::Tab; 5] {
@@ -476,7 +476,7 @@ fn at_element(
 
 /// The sizes the column overflows at, the windows the gui review measured.
 const SMALL: [(&str, [f32; 2], bool); 3] = [
-    ("the least panel", [1440.0, 900.0], true),
+    ("the narrow panel", [1440.0, 900.0], true),
     ("1024 by 768", [1024.0, 768.0], false),
     ("1280 by 720", [1280.0, 720.0], false),
 ];
@@ -535,9 +535,9 @@ fn wheel(h: &mut Headless, app: &mut App<MockSide>, panel: Rect, points: f32) ->
 /// text where the buttons leave it, which fails wherever the column overflows.
 #[test]
 fn mock_compass_view_keys_the_element_brings_the_column_text_into_view() {
-    for (name, window, least) in SMALL {
+    for (name, window, narrow) in SMALL {
         for index in FOUR {
-            let (mut app, mut h, panel) = at_element(&tilted(), window, least, index);
+            let (mut app, mut h, panel) = at_element(&tilted(), window, narrow, index);
             let output = settled_output(&mut h, &mut app);
             let text = column_text(&app, panel);
             assert_eq!(
@@ -606,9 +606,9 @@ fn height_in_place_of(h: &Headless, output: &FullOutput, text: &str, other: &str
 #[test]
 fn mock_compass_view_keys_near_the_pole_the_element_shows_the_whole_column() {
     let shape = 6;
-    for (name, window, least) in SMALL {
+    for (name, window, narrow) in SMALL {
         for r in [0.0, 1e-13, 1e-9, 1e-5, 1e-3] {
-            let (mut app, mut h, panel) = at_element(&near_the_pole(r), window, least, shape);
+            let (mut app, mut h, panel) = at_element(&near_the_pole(r), window, narrow, shape);
             let output = settled_output(&mut h, &mut app);
             let text = column_text(&app, panel);
             assert_eq!(unread(&output, panel, &text), None, "{name}, r = {r}");
@@ -652,8 +652,8 @@ fn mock_compass_view_keys_near_the_pole_the_element_shows_the_whole_column() {
 #[test]
 fn mock_compass_view_keys_just_under_the_threshold_the_element_shows_the_plain_digits() {
     let shape = 6;
-    for (name, window, least) in SMALL {
-        let (mut app, mut h, panel) = at_element(&near_the_pole(8.889e-3), window, least, shape);
+    for (name, window, narrow) in SMALL {
+        let (mut app, mut h, panel) = at_element(&near_the_pole(8.889e-3), window, narrow, shape);
         let output = settled_output(&mut h, &mut app);
         let text = column_text(&app, panel);
         assert_eq!(unread(&output, panel, &text), None, "{name}");
@@ -688,8 +688,8 @@ fn rows_of(output: &FullOutput, text: &str) -> usize {
 fn mock_compass_view_keys_the_element_keeps_the_end_as_the_readout_grows() {
     let shape = 6;
     let off = near_the_pole(1e-5).z0;
-    let (name, window, least) = SMALL[0];
-    let (mut app, mut h, panel) = at_element(&at_the_pole(), window, least, shape);
+    let (name, window, narrow) = SMALL[0];
+    let (mut app, mut h, panel) = at_element(&at_the_pole(), window, narrow, shape);
     let output = settled_output(&mut h, &mut app);
     let before = rows_of(&output, &column_text(&app, panel)[0]);
     app.set_field(z0_edit(off));
@@ -699,7 +699,7 @@ fn mock_compass_view_keys_the_element_keeps_the_end_as_the_readout_grows() {
     assert!(after > before, "the readout grew: {before} to {after} rows");
     assert_eq!(unread(&output, panel, &hint), None, "{name}");
     // The same edit with the focus on a button leaves the hint where it was, off the view.
-    let (mut app, mut h, panel) = at_element(&at_the_pole(), window, least, shape);
+    let (mut app, mut h, panel) = at_element(&at_the_pole(), window, narrow, shape);
     let _ = after_keys(&mut h, &mut app, Key::ArrowRight, 1);
     app.set_field(z0_edit(off));
     let output = settled_output(&mut h, &mut app);
@@ -711,8 +711,8 @@ fn mock_compass_view_keys_the_element_keeps_the_end_as_the_readout_grows() {
 /// With the focus on the element the wheel is still the user's: it takes the column back up, and stays there.
 #[test]
 fn mock_compass_view_keys_at_the_element_the_wheel_still_scrolls() {
-    let (name, window, least) = SMALL[0];
-    let (mut app, mut h, panel) = at_element(&tilted(), window, least, 3);
+    let (name, window, narrow) = SMALL[0];
+    let (mut app, mut h, panel) = at_element(&tilted(), window, narrow, 3);
     let output = settled_output(&mut h, &mut app);
     let title = [compass::TITLE.to_owned()];
     rejects("the title at the column's end", || {
@@ -739,8 +739,8 @@ fn rings_in(output: &FullOutput) -> Vec<Rect> {
 /// scrolled; none at all, wholly scrolled off, where the ring on the button's whole rect would cross the panel's top.
 #[test]
 fn mock_compass_view_keys_the_ring_stays_in_the_panel_under_the_wheel() {
-    let (name, window, least) = SMALL[0];
-    let (mut app, mut h, panel) = at_element(&tilted(), window, least, 3);
+    let (name, window, narrow) = SMALL[0];
+    let (mut app, mut h, panel) = at_element(&tilted(), window, narrow, 3);
     let output = after_keys(&mut h, &mut app, Key::ArrowRight, 1);
     assert_eq!(at(&app), (vec![COMPASS, COMPASS_TILT], KeyMode::Navigation));
     let at_rest = rings_in(&output);
