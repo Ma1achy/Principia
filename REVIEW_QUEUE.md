@@ -826,7 +826,7 @@ owner: yes, it is physics; the tilt changes which systems the chart shows.*
   1. D is not a rectangle, so a square chart either masks, shows the outside, or warps. The outside pixels are real systems: relabelled copies at equal masses and `L_z = 0`, other systems otherwise (the Reach line above).
   2. A mask makes pixels inside the square that are not drawn, which the contract calls a decoder bug on a gallery chart.
   3. AA-3 and AA-5 don't say which velocities.
-  4. The kernel decodes at `I = 1`, so each pixel has its own rescale `ℓ`, 0.408 to 0.577 over D, and one sim-key `T` is a paper time varying by a factor of 1.68 across the chart.
+  4. The kernel decodes at `I = 1`, so each pixel has its own rescale `ℓ`, 0.408 to 0.577 over D at equal masses, and one sim-key `T` is a paper time varying by a factor of 1.68 across the chart there; other masses differ, and `T_c`'s `ℓ_min` is taken at the run's masses.
 - **Options on (1), (2):**
   - (a) **Recommended.** A mask. Axes `ξ ∈ [0, ½]`, `η ∈ [0, √3/2]`, linear, a preset of the general third-body pair; outside eq. 8 is the domain's end, blank, out of the count and the total, no warning, R-554's exception extended by name. Pixels stay uniform in `(ξ, η)`, as the papers sample, and the picture is theirs. R-506's warp reads as trivial here: every `(ξ, η)` is a system, so the range is its whole range.
   - (b) The plane, unmasked. D drawn as a contour; statistics filter. No exception needed; the Atlas shows relabelled copies at equal masses and `L_z = 0`, other systems otherwise.

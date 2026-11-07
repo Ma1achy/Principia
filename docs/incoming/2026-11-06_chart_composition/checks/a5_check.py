@@ -76,3 +76,29 @@ print("LLL v2",-1*1.21800411067968*-0.372008640907423)
 m=np.array([1,.8,.6]);print("Routh",(m[0]*m[1]+m[0]*m[2]+m[1]*m[2])/m.sum()**2, "equal",3/9)
 # rho_2 alias, rest tidal alias
 print("rho_2 at (xi,eta)=(.2,.3),m=(1,.8,.6): d_out/d_pair",np.hypot(.2-(.8-1)/(2*1.8),.3))
+# added 7 Nov (physics review 5809614741): Tanikawa-Mikkola at any mass, mass-weighted, and the focal and Parischewsky inverses
+# beyond their one point above. L_com is an independent sum over positions and velocities, after C's boost.
+rng=np.random.default_rng(23)
+def tm(x,y,a2,b1,m,frame):
+    A=np.array([(x,y),(-.5,0),(.5,0)]); c=A.mean(0) if frame=="centroid" else (m[:,None]*A).sum(0)/m.sum()
+    R=A-c; V=np.array([-2*a2*R[0]+b1*R[1],a2*R[0]-2*b1*R[1],0*R[0]]); V[2]=-V[0]-V[1]
+    return A,V-(m[:,None]*V).sum(0)/m.sum()                      # C's boost
+def Lcom(A,V,m,weighted=True):
+    w=m if weighted else np.ones(3); r=A-(m[:,None]*A).sum(0)/m.sum()
+    return (w*(r[:,0]*V[:,1]-r[:,1]*V[:,0])).sum()
+m=np.array([1,.8,.6]); print("TM23 Codex's point L_com: COM R %.1e; centroid R %.4f"%(Lcom(*tm(0,.3,.1,0,m,"com"),m),Lcom(*tm(0,.3,.1,0,m,"centroid"),m)))
+w=dict(com=0,centroid=0,unweighted=0)
+for _ in range(20000):
+    m=rng.dirichlet([3,3,3]); x,y,a2,b1=rng.uniform(-1,1,4)
+    w["com"]=max(w["com"],abs(Lcom(*tm(x,y,a2,b1,m,"com"),m))); w["centroid"]=max(w["centroid"],abs(Lcom(*tm(x,y,a2,b1,m,"centroid"),m)))
+    w["unweighted"]=max(w["unweighted"],abs(Lcom(*tm(x,y,a2,b1,m,"com"),m,False)))
+print("TM23 worst L_com over 20000 random masses",w)
+wf=wp=0
+for _ in range(200000):
+    x,y=rng.uniform(0,.5),rng.uniform(1e-3,.8661)
+    r1,r2=np.hypot(x+.5,y),np.hypot(x-.5,y)
+    if (x+.5)**2+y**2>1: continue
+    Z=abs(r1-r2)/(r1+r2); s=r1+r2; t=Z*s
+    wf=max(wf,abs(s*t/2-x),abs(.5*np.sqrt((s*s-1)*(1-t*t))-y))
+    p,q=r2/r1,r2; a=q/p; b=q; xi=(a*a-b*b)/2; wp=max(wp,abs(xi-x),abs(np.sqrt(max(a*a-(xi+.5)**2,0))-y))
+print("focal inverse worst over D",wf,"Parischewsky inverse worst over D",wp)
