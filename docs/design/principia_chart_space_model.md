@@ -32,7 +32,21 @@ override a measured or ruled section.** The proofs below stand on the corrected 
    those pixels are blank and tagged.
 5. **In the gauge, `L_z`'s sign isn't preserved:** the encode's mirror flips it. The scale-free invariant
    overlap is `L_z²E` and the sign of `E` only (§6b corrected below).
-6. Everything else stands: concatenation and easing (Thm 4–5), the lock's anchor-preserving and excursion
+6. **Symmetry acts on starting states only (owner rule, 7 Nov).** Every symmetry reduction (translation,
+   rotation, scale, and the mirror where used) describes a *starting state* at `t = 0`. It never acts on the
+   dynamics. During a run, the only operation besides the step is the per-step centre-of-mass projection,
+   which removes floating-point drift, not a degree of freedom. `E` and `L_z` are monitored, never
+   corrected, and nothing is rotated, rescaled, mirrored or canonicalised. Regularised integrators change
+   variables internally for accuracy and evolve the same physical system. Trajectories therefore move
+   freely over the whole shape sphere: the polar angle crosses 90° at every syzygy. Every chart shows the
+   full range of the angles it sweeps. Shape-sphere charts show both mirror halves of starts (R-544), and a
+   mirror is only ever a declared, optional view or statistic: counting mirror pairs once, or the IC
+   constructor's display of a triangle and its flip.
+   *Proposed (rulings report, one-way):* remove the decoder's mirror step and let latent `β` run over the
+   full circle. Then `D(Z)` reaches the mirror half, item 1's mirror exception disappears, every chart uses
+   one decode path, and the mirror deadband seam in §8 no longer exists. Until that's ruled, item 1 stands as
+   written.
+7. Everything else stands: concatenation and easing (Thm 4–5), the lock's anchor-preserving and excursion
    split (Thm 6), the based morph and the sliding anchor (Thm 7–8, with the anchor in `S`), time charts
    (Thm 9), composed axes (Thm 10, with assembly into `S`), and the quantity classes with final-condition
    charts (§6b, Thm 11, approximate in the app).
@@ -383,7 +397,8 @@ Everything above is exact. In f32 and f64:
   anchor is carried as **stored words**, which is §17.8's design. The model says *what* must be constant, and
   stored words are *how*.
 - **Continuity becomes "small step, small change except at declared seams".** The encode `E` has genuine
-  discontinuities: the mirror deadband (`λ̃_y = 0`) and collision degeneracies. These affect only how `φ` is
+  discontinuities: the mirror deadband (`λ̃_y = 0`, gone if the mirror step is removed, §0.6) and collision
+  degeneracies. These affect only how `φ` is
   *built* for a nonlinear chart, never the morph itself, which is continuous in `Z` (Thm 1). Seams belong to
   charts, not to paths.
 

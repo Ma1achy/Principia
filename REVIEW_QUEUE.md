@@ -849,6 +849,7 @@ owner: yes, it is physics; the tilt changes which systems the chart shows.*
   2. A mask makes pixels inside the square that are not drawn, which the contract calls a decoder bug on a gallery chart.
   3. AA-3 and AA-5 don't say which velocities.
   4. The kernel decodes at `I = 1`, so each pixel has its own rescale `ℓ`, 0.408 to 0.577 over D at equal masses, and one sim-key `T` is a paper time varying by a factor of 1.68 across the chart there; other masses differ, and `T_c`'s `ℓ_min` is taken at the run's masses.
+- **Overtaken for the presets (RQ-736):** the owner's filter order, 7 Nov 2026: "region D presets render the full disc, with the filter on by default for the paper-frame presets only." So (b) with a display filter, and (a) stays the record of what was agreed in principle. The conflict with (a) is listed there.
 - **Options on (1), (2):**
   - (a) **Recommended.** A mask. Axes `ξ ∈ [0, ½]`, `η ∈ [0, √3/2]`, linear, a preset of the general third-body pair; outside eq. 8 is the domain's end, blank, out of the count and the total, no warning, R-554's exception extended by name. Pixels stay uniform in `(ξ, η)`, as the papers sample, and the picture is theirs. R-506's warp reads as trivial here: every `(ξ, η)` is a system, so the range is its whole range.
   - (b) The plane, unmasked. D drawn as a contour; statistics filter. No exception needed; the Atlas shows relabelled copies at equal masses and `L_z = 0`, other systems otherwise.
@@ -1264,7 +1265,7 @@ owner: yes, it is physics; the tilt changes which systems the chart shows.*
 - **Applied meanwhile:** nothing: § 7.5 states both, and neither is built.
 - **Waits:** nothing. The native tasks go ahead either way. Read at TASK-M4-37.
 
-## RQ-736: The chart-space model against the corpus *(ruled by the owner, 7 Nov 2026, closing in the rulings PR; a correction list for the owner and one question stay open; code review 5812391223 F2 and F3, physics review 5812399731 part B, Codex's threads on the model, PR #422)*
+## RQ-736: The chart-space model against the corpus *(ruled by the owner, 7 Nov 2026, closing in the rulings PR; a correction list for the owner and the filter order's conflicts stay open; code review 5812391223 F2 and F3, physics review 5812399731 part B, Codex's threads on the model, PR #422)*
 
 *Queued 7 Nov 2026 from PR #422. The owner's answer is recorded here and closes in the rulings PR; nothing in `decisions.md` changes in PR #422.*
 
@@ -1284,17 +1285,18 @@ owner: yes, it is physics; the tilt changes which systems the chart shows.*
 
   > RQ-736 rider: the mirror half of the shape sphere is never dropped or folded, in any chart or any morph (R-544 stands). Signed per-block blending is required precisely so that morphs through shape-sphere charts keep both halves; add a test that a path between two lower-half views stays in the lower half.
 
-- **Applied meanwhile:** in PR #422, the revised model copied byte for byte; design §§ 3.3, 10.3, 17.2, 17.3 and 17.8 and RQ-734 follow it; `path_lower_half_stays`, REQ-CHART-133, closed by TASK-M8-106; `trajectory_polar_unfolded`, REQ-CHART-134, closed by TASK-M8-58. RQ-721 and its rider are not applied.
+- **Applied meanwhile:** in PR #422, the revised model copied byte for byte; design §§ 3.3, 10.3, 17.2, 17.3 and 17.8 and RQ-734 follow it; `path_lower_half_stays`, REQ-CHART-133, closed by TASK-M8-106; `trajectory_polar_unfolded`, REQ-CHART-134, closed by TASK-M8-58; design § 6.6 carries the symmetry rule, with its proposal only tagged; design § 10.4, REQ-CHART-135 to 138, REQ-GUI-424 and TASK-M8-120 carry the filter order. RQ-721 and its rider are not applied.
 - **The owner's second rider, verbatim, 7 Nov 2026:**
 
   > Rider for RQ-736 / R-544: the mirror fold applies only to how the latent chart encodes a STARTING state at t = 0, and to the IC constructor's teaching display. It never applies to trajectories, dynamics, or the shape-sphere charts: every shape-sphere chart shows the full theta 0-360 and phi 0-180 range of starts, and trajectories cross the equator freely. Add a test that a shape-sphere trajectory's polar angle is never folded (it crosses 90 deg at syzygies).
-- **One question, narrowed by the second rider, still open:** every `(θ, φ)` shape-sphere chart shows the full range, so that part is answered. What's open is a chart outside `(θ, φ)` that reaches one half by its own coordinates.
+- **One question, narrowed by the second rider, closed by the owner's ruling and filter order below:** every `(θ, φ)` shape-sphere chart shows the full range, so that part is answered. What was open is a chart outside `(θ, φ)` that reaches one half by its own coordinates.
   - `docs/design/principia_chart_composition.md` § 8.2: "**It is the shape sphere, stereographically.**", of region D's `(ξ, η)`; § 8.1: "**Region D** (eq. 8): `ξ ≥ 0`, `η ≥ 0`". So the third-body pair may count as a shape-sphere chart, and the rider's "every shape-sphere chart" would then reach it.
-  - `docs/design/principia_chart_composition.md` § 6.2: "`one orientation` | a chart reaching `η ≥ 0` only, as the third-body pair and the angle pair do (the shape sphere's whole-sphere rule, R-544, stays that chart's)".
+  - `docs/design/principia_chart_composition.md` § 6.2, as it read: "`one orientation` | a chart reaching `η ≥ 0` only, as the third-body pair and the angle pair do (the shape sphere's whole-sphere rule, R-544, stays that chart's)".
+  - The same design, § 3.1's discrete labels row: "no inverse: `none`, overlay; the third-body pair's fold stays a label"; and its elongation row: "closed, one orientation", "**alias** of `\|n_w\|`, warped". Both stand: a label, and an inverse reaching one orientation by its own coordinates.
   - The riders: "never dropped or folded, in any chart or any morph"; "every shape-sphere chart shows the full theta 0-360 and phi 0-180 range of starts".
   - (a) **Recommended.** Such a chart isn't a drop: it's a labelled view of the half it reaches, and the mirror half stays reachable by another chart, so the `one orientation` label stands.
   - (b) Every chart over shape reaches both halves: the third-body pair and the angle pair gain a signed arm, and region D's definition (RQ-714) is read with it.
-  - What stands meanwhile: the label, unbuilt.
+  - What stood meanwhile: the label, unbuilt. Closed: the filter gives the papers' domains, and the label `reduced domain` remains where the axes can't carry the sign.
 - **Not settled by the revised model: a correction list for the owner.** What stands meanwhile on each: the corpus and § 17. The model's file is untouched in PR #422 beyond the owner's copy. Recommended on each: correct the wording at the next revision; only item 1 has options.
   1. **Which tilt.** Model § 0.2: "**Affine tilt is the ruled lean-each-axis map (R-474), not a Grassmannian geodesic.**" `docs/contracts/principia_chart_decoder_contract.md` § "Two tilt maps": "**Tip as sheet**, the default (`sheet`)", "**Lean each axis**, an option (`lean`)", with the sheet "turned rigidly". So the default tilt is a rigid rotation, and lean is the option. (a) **Recommended.** § 0.2 reads "R-474's two tilt maps, each tested against its own formula", which the contract and `path_tilt_bitwise` already say. (b) Lean each axis becomes the default, which amends R-474.
   2. **Body text § 0 overrides but doesn't rewrite.** Model § 1: "Every chart Principia has fits this"; § 2: "**Rule: always blend in `Z`, never in physical coordinates.**"; § 7: "**Proved** (Thm 1): requires blending in `Z` and the decoder being total"; § 9: "blend in latent space, never in physical space"; § 8: "never the morph itself, which is continuous in `Z` (Thm 1)". § 0: "\"Always blend in Z\" is withdrawn."
@@ -1312,10 +1314,97 @@ owner: yes, it is physics; the tilt changes which systems the chart shows.*
      - Model § 8: "Seams belong to charts, not to paths": fails for that family.
      - Model § 9: "the target's nearest admissible point": nearest holds only for coordinate constraints.
      - `E` names both the energy and encode (model § 2, § 8).
-- **A second question, open: trajectories read through the latent frame.** The rider says the mirror fold "never applies to trajectories". These corpus lines apply it to a live state on every chart but the shape sphere's:
+- **A second question, closed by the owner's ruling below, against recommendation (a): trajectories read through the latent frame.** The rider says the mirror fold "never applies to trajectories". These corpus lines apply it to a live state on every chart but the shape sphere's:
   - `docs/design/principia_state_map.md` § "SM1. Definition": "`colour(sample, t) = C_T( fold_T( P_T( E( x(t) ) ) ) )`"; "`E` is the encode …: scale and rotation are removed, mirror images identified."; "Every other target is unchanged."; and its `ν × dilation` row: "the nearest point of the right-triangle curve (mirror folded)".
   - `docs/design/principia_lines.md`, the trace on a chart: "the latent chart's canonical"; "On a chart that carries the y-momenta the canonical frame mirrors at every syzygy, so the trace jumps there and a marker is drawn at both ends of the jump."
   - (a) **Recommended.** The rider's "trajectories" means the trajectory's own state and the shape-sphere charts: a latent chart's picture of a later state is a reading through that chart, labelled, and both lines stand.
   - (b) Those lines change: no state at `t > 0` is mirrored on any chart, and the state map and the trace carry signed coordinates on every target.
-  - What stands meanwhile: those lines, as ruled corpus, unchanged. The shape-sphere side is already clean: `principia_lines.md`'s "with no fold and no kink (R-544)", `principia_trajectory_viewing.md`'s "never folded or bounced at the equator", `principia_listen.md`'s shape vector "with no canonical frame", and the kernel's `shape::shape`, which reads the signed `n̂`.
-- **Waits:** nothing. The ruling closes in the rulings PR; the list waits for the owner's next revision.
+  - What stood meanwhile: those lines, as ruled corpus, unchanged in PR #422; they change in the rulings PR. The shape-sphere side is already clean: `principia_lines.md`'s "with no fold and no kink (R-544)", `principia_trajectory_viewing.md`'s "never folded or bounced at the equator", `principia_listen.md`'s shape vector "with no canonical frame", and the kernel's `shape::shape`, which reads the signed `n̂`.
+- **The owner's ruling on the two open questions, verbatim, 7 Nov 2026:**
+
+  > Owner, 7 Nov 2026 (verbatim):
+  >
+  > RQ-736, the two open questions:
+  > 1. State map (SM1 fold, the "(mirror folded)" row) and latent-chart traces: these violate the 7 Nov
+  >    symmetry rule, so sign them. Colour later states and draw traces in the signed, unfolded state;
+  >    traces are continuous through syzygies. A mirror-identified colouring may remain only as a
+  >    declared, optional view, labelled as such, never the default.
+  > 2. Region D and the presets that inherit its limit (Anosova half-disc, Parischewsky, the angle pair):
+  >    a labelled view. It's the papers' reduced domain of starts (eta >= 0 the mirror, xi >= 0 the body
+  >    swap at equal masses), so it stands, labelled "reduced domain", with the full disc offered as a
+  >    one-click option. At unequal masses xi >= 0 isn't a symmetry; state what the preset does there
+  >    (RQ-728 links).
+
+- **The owner's symmetry filter order, verbatim, 7 Nov 2026. Its last bullet supersedes part 2 of the ruling above, and the later one governs where they differ.** "State what the preset does at unequal masses" still stands, and the filter's correctness rule and per-chart declaration are how it's stated (design § 8.8).
+
+  > Owner, 7 Nov 2026 (verbatim):
+  >
+  > Feature: symmetry filter (owner, 7 Nov), a display option applied after rendering, never a change to
+  > what's computed.
+  > - An optional GUI toggle (also on export) that draws as transparent every pixel whose STARTING state
+  >   is the symmetry image of another start present in the same chart, keeping one canonical
+  >   representative of each pair. Symmetries: the mirror (whole system, positions and velocities), and
+  >   body-label swaps where the masses make them exact. Declared per chart, extensible.
+  > - Correctness rule: blank a pixel only if its partner is actually in the chart's domain (check via
+  >   the chart's own map). On charts that hold something that breaks the symmetry (e.g. a shape-sphere
+  >   chart with fixed nonzero velocities), partners are absent and nothing is blanked; show "no
+  >   duplicates in this chart" rather than an empty toggle.
+  > - The canonical choice is stated in the legend and export sidecar (e.g. "mirror pairs shown once:
+  >   eta >= 0"). Region D's quarter disc, the Anosova half-disc and the half shape sphere at rest come
+  >   out of this filter rather than out of reduced chart domains, so the papers' figures are
+  >   reproducible with the full disc still computed underneath.
+  > - Optional later: a "skip computing duplicates" export setting for speed, off by default and
+  >   labelled.
+  > - Tests: on a rest chart, filtered + its mirror reproduces the full chart bitwise (outcome fields
+  >   equal, signed fields flipped); on a fixed-velocity shape-sphere chart the filter blanks nothing.
+  > - This also answers RQ-736 question 2: region D presets render the full disc, with the filter on by
+  >   default for the paper-frame presets only.
+
+- **The owner's symmetry rule and its addition, verbatim, 7 Nov 2026, as received. The rule arrives by the rulings PR; its proposal stays one until ruled ("Mirror-step removal stays a proposal until ruled: don't apply it, just tag the sections it would touch.").**
+
+  > Owner, 7 Nov 2026 (verbatim):
+  >
+  > Owner rule, 7 Nov 2026 (symmetry): symmetry reductions apply only to how a STARTING state is
+  > described at t = 0, never to the dynamics or the simulation. Trajectories always evolve in full
+  > physical space: nothing is folded, mirrored, quotiented or canonicalised during integration or in
+  > anything displayed about a trajectory (for example, the shape-sphere polar angle crosses 90 degrees
+  > freely at syzygies). Where a symmetry is used at all (counting mirror pairs once, the IC
+  > constructor showing that a triangle and its flip are mirror images), it is a declared, optional
+  > view or statistic, never a removal of starting states or angles. Every chart shows the full range
+  > of the angles it sweeps.
+  >
+  > Proposed change, for the rulings report with a recommendation (it changes the decoder, so
+  > one-way): remove the decoder's mirror step entirely and let the latent beta run over the full
+  > circle, so every chart, the shape sphere included, uses one decode path with no special case.
+  > Report before deciding:
+  > 1. Bitwise check: every existing preset, saved chart and golden test with beta in [0, pi]
+  >    reproduces unchanged (expected, since the mirror step never fires there); list any that don't.
+  > 2. What becomes unnecessary: the mirror step, its deadband rules (R-82, R-438) and the shape
+  >    sphere's separate decode path (R-544's skip).
+  > 3. What needs a new option: R-408's count-each-system-once statistics become "mirror pairs counted
+  >    once" as an optional statistic, never by dropping starts.
+  > 4. Encode: a lower-half state now encodes to beta in (pi, 2 pi) instead of a mirrored state; list
+  >    every stored z, IC save file or test that relied on the old mirrored encode.
+  > 5. Cost: latent charts covering both halves have twice the area in beta; state the effect on
+  >    default windows.
+  >
+  > Owner, 7 Nov 2026, addition (verbatim):
+  >
+  > Add to the 7 Nov symmetry rule: during integration the only operation besides the step itself is
+  > the per-step centre-of-mass projection (integrator contract Part 1), which removes floating-point
+  > drift and no physical degree of freedom. Energy and L_z are monitored, never corrected. No rotation
+  > removal, rescaling, mirroring or canonicalisation ever happens during a run. Regularised integrators
+  > change variables internally for accuracy; they evolve the same physical system.
+
+- **Conflicts the filter order and the ruling leave, none resolved here. What stands meanwhile on each: the design's reading as stated, unbuilt.**
+  1. **R-544's words.** `decisions.md` § R-544's title: "no hemisphere toggle, no remap and no fold at the equator"; `docs/contracts/principia_chart_decoder_contract.md`: "nothing is folded or hidden", "The shape sphere has no one-hemisphere view (R-544)". Against the order: "the half shape sphere at rest come out of this filter". The filter is such a toggle, as a view. Reading held: the owner's later order governs and R-544's words want amending in the rulings PR.
+  2. **RQ-714 and what it touches.** Its (a), "A mask", agreed in principle; `docs/design/principia_dd_validation_orbits.md` § 1.6: "A point outside it is not a region-D start, and the import refuses it."; the lowering Appendix: "region D bounds"; REQ-CHART-095 and REQ-CHART-100. Against "region D presets render the full disc". Reading held: the import's refusal stands (an import isn't a chart), and the preset's domain is RQ-714's question, answered by the filter order.
+  3. **"Full disc".** Eq. 8's D is `ξ ≥ 0, η ≥ 0, (ξ + ½)² + η² ≤ 1`, and its four images under the mirror and the swap are the lens `(|ξ| + ½)² + η² ≤ 1`, not a disc. Reading held: the lens. The alternative: a whole disc about the origin, part of whose pixels no image of D reaches.
+  4. **Eq. 3's velocities.** "Region D's quarter disc … come out of this filter", but the near-rest start of `principia_dd_validation_orbits.md` § 1.6 has `ẋ ≠ 0`, so the swap's image isn't on the chart and the correctness rule keeps `ξ < 0`. AA-2 and AA-7 run eq. 3, and AA-3 and AA-5 do by RQ-714's (3)(a). So on those presets the filter gives `η ≥ 0`, not D. Options: (a) `ξ ≥ 0` shown by the label `reduced domain` of the ruling above, a separate crop; (b) the half is drawn; (c) the eq. 3 chart declares the swap as approximate. Recommended (b), since it needs no exception to the correctness rule.
+  5. **"Bitwise".** The order's test: "filtered + its mirror reproduces the full chart bitwise". `docs/design/principia_chart_reference.md`: "bitwise where the integration is mirror-exact, else to rounding (R-544 §4) … the two pixels of a pair decode to mirror images only to the decode's rounding". Ensemble copies' offsets aren't mirror-symmetric either. Reading held: the test's fixture decodes its pairs to exact mirrors, one copy; the alternative is a pixel-by-pixel comparison from the exactly mirrored state `Π·x`.
+  6. **The angle pair and Parischewsky's pair.** The ruling: the presets "that inherit its limit (Anosova half-disc, Parischewsky, the angle pair)"; the order: "region D presets render the full disc". Their axes are unsigned, so neither has a partner or a full disc. Reading held: part 2's label stands for those two, as `reduced domain`, with no filter and no one-click full disc.
+  7. **R-408's statistics on a filtered view.** The order: "a display option applied after rendering", so the legend's shares stay those of the computed chart, while the papers' fractions are of D. Reading held: shares of the computed chart, a paper's own fraction by `in_region_d` (design § 6.4).
+  8. **Order of building.** TASK-M4-34's preset and TASK-M4-06's golden are M4, the filter M8. Reading held: the preset renders the lens with D as a contour until TASK-M8-120 lands, and the golden reads `in_region_d`.
+  9. **Unequal masses.** The ruling: "state what the preset does there (RQ-728 links)". RQ-728 settles the labelling; no document says how a paper's D at a Li & Liao mass set is shown once the mask is gone. Reading held: a contour on the half the mirror leaves (design § 8.8). A gap.
+- **For the rulings PR, from the two closed questions (no edit in PR #422; a code task follows there):** `docs/design/principia_state_map.md` lines 108 to 124, SM1's `fold_T(P_T(E(x(t))))`, "mirror images identified" and "Every other target is unchanged."; line 155, the `ν × dilation` row's "(mirror folded)"; `docs/design/principia_lines.md` line 285, "the latent chart's canonical"; line 351, "the canonical frame mirrors at every syzygy, so the trace jumps there". All sign: later states coloured and traces drawn signed and unfolded, continuous through syzygies, a mirror-identified colouring only as a declared optional view, never the default. Plus conflict 1's and 2's words.
+- **Waits:** TASK-M4-34's preset and TASK-M8-120, which read this entry at TASK-M4-37; no other task of the design. The ruling closes in the rulings PR; the correction list waits for the owner's next revision.
