@@ -27,7 +27,7 @@ The authoring layer gains the registry, every pair is validated against one refu
 - `resolve`'s lowering and labels; the ledger constant for the cap.
 
 ## Acceptance tests
-- `cargo test -p engine size_only_refused` and `cargo test -p engine excluded_primitives` — I, R and ℓ refused by name; each row sampled on decodes; controls: a constant row declared free fails, a row naming a binary phase fails (REQ-CHART-096).
+- `cargo test -p engine size_only_refused` and `cargo test -p engine excluded_primitives` — I, R and ℓ refused by name; each row sampled on decodes; a combination with no registered inverse classed `none`, whatever its parts; controls: a constant row declared free fails, a row naming a binary phase fails, `exp(K) + K` reported closed fails (REQ-CHART-096).
 - `cargo test -p engine pair_table_complete` — the rank test agrees with the table both ways; controls: a row removed, a rank-2 pair added (REQ-CHART-097).
 - `cargo test -p engine lowering_labels` — each of the three lowerings and its labels; control: an unbaked pair refused fails (REQ-CHART-098).
 - `cargo test -p engine presets_bitwise` — every chart, preset and saved chart against the digest; controls: a mantissa bit flipped, a default field serialised (REQ-CHART-099).

@@ -3749,12 +3749,12 @@
   - RQ-719
 - id: REQ-CHART-096
   area: CHART
-  statement: "Every primitive must be one row of one CPU-side registry declaring its forward formula, its inverse class (closed, numerical or none), its axis kind, its natural extension type, whether it is angle-like, and its scale behaviour; a combination must inherit the weakest inverse class of its parts unless a closed form is registered; a size-only primitive must be refused as an axis by name; and no row with an inverse may name a binary phase, eccentricity, impact parameter or fixed k, forward-only overlay rows being free to (R-669)."
+  statement: "Every primitive must be one row of one CPU-side registry declaring its forward formula, its inverse class (closed, numerical or none), its axis kind, its natural extension type, whether it is angle-like, and its scale behaviour; a combination must be classed closed or numerical only by a registered inverse of that class, a numerical one naming what it solves for and its branch rule, and none otherwise, whatever its parts' classes; a size-only primitive must be refused as an axis by name; and no row with an inverse may name a binary phase, eccentricity, impact parameter or fixed k, forward-only overlay rows being free to (R-669)."
   source:
   - file: docs/design/principia_chart_composition.md
     section: 3. The primitive registry
   verify:
-    detail: "cargo test -p engine -- size_only_refused excluded_primitives: I, R and ℓ refused by name; every registered row sampled on decodes, one constant there and not declared size-only failing; control: a row constant on decodes declared free fails; a row with an inverse naming a binary phase fails, a forward-only overlay row naming one passes; a combination of a closed and a numerical part reports numerical"
+    detail: "cargo test -p engine -- size_only_refused excluded_primitives: I, R and ℓ refused by name; every registered row sampled on decodes, one constant there and not declared size-only failing; control: a row constant on decodes declared free fails; a row with an inverse naming a binary phase fails, a forward-only overlay row naming one passes; a combination of closed parts with no registered inverse, as exp(K) + K, reports none and refuses as an axis with NoJointInverse, and one with a registered closed or numerical inverse reports that class; control: the first reported closed fails"
     method: unit test
   rulings:
   - R-407
@@ -3763,6 +3763,7 @@
   rq:
   - RQ-716
   - RQ-722
+  - RQ-733
 - id: REQ-CHART-097
   area: CHART
   statement: "Any axis must pair with any other of any kind, and the validator must refuse only genuine contradictions (an axis and a constraint on one quantity, two axes fixing one quantity, a pair with no joint inverse, a size-only axis, and, if RQ-722 so rules, a hold on a chart declared at rest), each a named Refusal variant the Domain preview shows."
