@@ -372,11 +372,13 @@ fn tilted_axes(
     };
     let reads_back = lost((j, i), &|_| true) <= READS_BACK * (dot(q1, q1) + dot(q2, q2));
     let keeps_more = lost((j, i), &on_target) < lost((i, j), &on_target);
-    Some(if reads_back || keeps_more {
-        (j, i)
-    } else {
-        (i, j)
-    })
+    if reads_back {
+        return Some((j, i));
+    }
+    if misplaced(i, j) {
+        return None;
+    }
+    Some(if keeps_more { (j, i) } else { (i, j) })
 }
 
 /// The rotation `γ` of `q1`, `q2` as the axes `(a, b)` read it, and the two turned back by it: `(γ, σ u₁, σ u₂)` for a

@@ -205,8 +205,7 @@ fn manifold_view_basis_a_small_component_is_noise_as_typed_though_not_turned_bac
 }
 
 #[test]
-fn manifold_view_basis_a_mirrored_basis_keeps_its_swapped_reading() {
-    // `Y` on `q₁` at a negative determinant: the swap reads the tilt back, `R-459 G3`'s reading. From 0 up there is none.
+fn manifold_view_basis_a_mirrored_basis_reads_back_or_reads_its_dominant_axes() {
     let at = |alpha: f64| {
         read(
             (
@@ -216,14 +215,51 @@ fn manifold_view_basis_a_mirrored_basis_keeps_its_swapped_reading() {
             SPLIT,
         )
     };
-    let mirrored = at(-0.6);
-    assert_eq!((mirrored.a, mirrored.b), (BETA, ALPHA));
-    check_near(mirrored.scale, 1.0, "σ");
-    check_near(mirrored.tau2, -(0.8f64.atan2(0.6)), "τ₂");
+    // `Y` on `q₁` at a negative determinant, reading back exactly on the other order: a view the map gives, `Y` on its
+    // own vector there, so it keeps that reading. From 0 up there is none.
+    let exact = at(-0.6);
+    assert_eq!((exact.a, exact.b), (BETA, ALPHA));
+    check_near(exact.scale, 1.0, "σ");
+    check_near(exact.tau2, -(0.8f64.atan2(0.6)), "τ₂");
     check_dominant(&at(0.0), (MU1, BETA), 0.8);
     check_dominant(&at(0.6), (MU1, BETA), 1.0);
-    rejects("the mirrored basis as a typed one", || {
-        check_dominant(&mirrored, (MU1, BETA), 1.0)
+    rejects("the exact reading as a typed one", || {
+        check_dominant(&exact, (MU1, BETA), 1.0)
+    });
+    // The same at a sign that reads back in neither order: `Y` still on the wrong vector, and the dominant axes.
+    let short = read(
+        (
+            mv::add(&axis(ALPHA, -0.3), 0.4, &axis(MU1, 1.0)),
+            axis(BETA, 1.0),
+        ),
+        SPLIT,
+    );
+    check_dominant(&short, (MU1, BETA), 0.5);
+    rejects("the reading as typed, Y left out", || {
+        check_dominant(
+            &View {
+                a: ALPHA,
+                b: BETA,
+                ..short
+            },
+            (MU1, BETA),
+            0.5,
+        )
+    });
+    // And past a swap that would keep more of the tilt: the exact basis with `X` beside it no longer reads back.
+    let q1 = mv::add(&axis(MU1, 0.8), -0.6, &axis(ALPHA, 1.0));
+    let more = read((mv::add(&q1, 0.3, &axis(Q3, 1.0)), axis(BETA, 1.0)), SPLIT);
+    check_dominant(&more, (MU1, BETA), 1.09f64.sqrt());
+    rejects("the swap, X read by nothing", || {
+        check_dominant(
+            &View {
+                a: BETA,
+                b: ALPHA,
+                ..more
+            },
+            (MU1, BETA),
+            1.09f64.sqrt(),
+        )
     });
 }
 
