@@ -176,6 +176,21 @@ as history only.
 - **R-800** — The collinear statistical targets compare only what the horizon cap reaches and the source states; raising the cap is revisited at M9 if the cost measurement allows *(on RQ-643, which stays open)*
 - **R-810** — A warped mass-ratio axis's range is searched at half the round-trip tolerance, `ε_μ/2`, and `principia_chart_reference.md` § 2.1 says so, with the measured reason *(closes RQ-707)*
 - **R-811** — The census's drift reference is R-33's convergence reference, not the inspector's RK45, and the proposal's § 3.2 clause says why *(closes RQ-619)*
+- **R-816** — A virial-ratio axis is kind 3: it solves into the momenta, reading the configuration and the masses as fixed upstream; R-471 H3's "not kind 3" is read as about B1's extension only *(closes RQ-682)*
+- **R-817** — A warped virial axis with an asked bottom `Q₀ > 0` at a held `L_z ≠ 0` puts the floor under the rise only: the pixel's ratio is `max(Q₀, Q_min(U)) + (Q_hi − Q₀)·t^γ_K` *(closes RQ-700)*
+- **R-818** — A `MixedEnergy` chart's held `L_z` tilts and slices by value on the floor and its held `K` on the warp line, with `K_max` ruled as RQ-710's, built in M8; and a triple ejection waits behind `E_rel > 0` *(on RQ-701, which stays open, deferred to M8; closes RQ-708)*
+- **R-819** — R-791's Newtonian energy reaches every axis that reads `U`: the lone, mixed and Chart-builder `E` axes and the virial ratio, each labelled, the softened value beside it in the Inspector, which also shows the virial axis's disagreement with the stored ratio *(closes RQ-709)*
+- **R-821** — The precision-ladder proposal's seven questions stay deferred to M3 *(defers RQ-577)*
+- **R-822** — GPU `sin` and `cos` near π/2: a per-backend check against f64 at M4, the kernel's own `sin` and `cos` ruled with RQ-687 on M4's cross-backend numbers; RQ-679 deferred to M8 and RQ-687 to M4; BR-1 runs both the authors' starts and the seeded draw, each labelled *(defers RQ-629, RQ-679 and RQ-687; closes RQ-696)*
+- **R-836** — Hold `L_z` adds the rigid rotation, the scale taking only the part orthogonal to it when both are held, and outcomes 4 and 5 test `rigid(v, Jr)`, an exact predicate against a dyadic `τ` *(closes RQ-715)*
+- **R-838** — The virial-ratio axis's kind is RQ-682's answer: kind 3 *(closes RQ-717)*
+- **R-843** — Region D at unequal masses: the plane is geometric at every mass, D is labelled, one sector, AN-1 is its own preset, a half-disc of radius 10, and a statistic over D says "one labelling" *(closes RQ-728)*
+- **R-844** — Hill's threshold at unequal masses is the labelled pair's: pair `(i, j)` is cut off from the third iff `c > max(f_i, f_j)`, blank at `E ≥ 0` and `ε ≠ 0` *(closes RQ-730)*
+- **R-845** — Region D as a chart: a paper's fixed horizon is read by running to the longest pixel's horizon and cutting each pixel at its own; the default velocities are each target's, offered as presets *(on RQ-714, which stays open)*. Still in force: all of it. Refined by R-851 (7 Nov 2026: the velocity default fixed on the count, exact rest, eq. 3 the second preset).
+- **R-848** — The Saari split's `h` is a builder axis, its range under physics review; R-793 stands *(closes RQ-724)*
+- **R-851** — Region D's default velocities are exact rest, with eq. 3 the second preset; AA-3 and AA-5 read eq. 3, AA-8 runs under both, eq. 3 reproduces Agekyan & Anosova's velocities in their own units before canonicalising, and its 19% spread at `I = 1` is stated beside the preset *(on RQ-714, which stays open)*
+- **R-853** — The chart-space model is corrected to the corpus, which stands wherever it measured or ruled; the shape sphere's mirror half is never dropped or folded, the mirror fold is a starting state's only, and the state map and latent-chart traces are signed *(closes RQ-736)*. Still in force: all of it but open question 2's "reduced domain" for region D's presets. Amended in part by R-855 (7 Nov 2026, the owner's filter order: region D's presets render the full disc, the filter on by default for the paper-frame presets only).
+- **R-854** — Symmetry reductions apply only to how a starting state is described at `t = 0`: trajectories evolve and are shown in full physical space, nothing is folded during a run, and the only operation besides the step is the per-step centre-of-mass projection, energy and `L_z` monitored, never corrected
 
 ## Design and architecture
 
@@ -487,6 +502,26 @@ as history only.
 - **R-802** — Tier 2 of the embedding splits only if TASK-M7-44's measurement finds it does not fit at 64² or 128² *(closes RQ-386; amends R-522)*
 - **R-803** — Whether the presentation frames become a stage after the Print graph is deferred until the exporter is designed *(defers RQ-391)*
 - **R-807** — The slider span of the held shape, angular momentum and kinetic energy is deferred to TASK-M8-48, options with a recommendation proposed when it starts *(defers RQ-679)*
+- **R-813** — A margin node's two field inputs sit on a `colour` or `post` occupant declaring two `// @input`s; render_gui_spec § 5's example is reworded and a `source` keeps no input *(closes RQ-675)*
+- **R-814** — TASK-M7-12 extends `assemble.rs` and `codegen/` with no second walk, its edit-sequence proptest runs under `cargo test -p engine`, and the fallback must differ from `#141418` too *(closes RQ-676)*
+- **R-815** — An untransformed slot input's default domain is "inherits", resolved per wire at assembly, an unbounded field taking `(0, 1)`; TASK-M7-13's scan is decided by the written relocated-binary and wasm criterion *(closes RQ-677)*
+- **R-820** — A saved preset whose chart is not two latent axes at one scale stores its whole saved triple `(z₀, q₁, q₂)` as its home view; the zoom row's scale is still to be named *(on RQ-711, which stays open)*
+- **R-823** — The collinear statistical targets' cap question stays deferred to M9 *(defers RQ-643)*
+- **R-824** — OC-2 recomputes each atlas row from its `ref_*` state, the figures rerun at M9; the rest of TASK-M9-01's gaps stay deferred to M9 *(on RQ-681, which stays open, deferred to M9)*
+- **R-825** — Whether the presentation frames become a stage stays deferred until the exporter is designed *(defers RQ-391)*
+- **R-826** — A browser run started from the measurement panel's button is marked in its report as not a measurement *(closes RQ-702)*
+- **R-834** — Four axis kinds stay: a new capability is a registry entry under one of them, "no new chart type" is the rule from now on for anything not already ruled, and `SuvakovPlane` stands as R-669 ruled it *(closes RQ-712)*
+- **R-835** — A side-ratio axis in the builder and R-798's "no `SideRatio` chart" both stand: the axis is a registered closed pair, and PA-1 keeps its remap *(closes RQ-713)*
+- **R-839** — Core seam 3 holds for live views; a labelled CPU-batch view is the stated exception, writing the IC buffer the decode stage writes, never reached by a gesture *(closes RQ-719)*
+- **R-840** — R-594 item 5 governs charts built for a target; the builder's general options are the owner's own order and built in M8, last *(closes RQ-720)*
+- **R-841** — A chart at rest under hold `L_z` is labelled "not at rest", not refused *(closes RQ-722)*
+- **R-842** — Time as an axis is a chart mode, not a fifth kind: `T` on the sim key and the window off it, a cache per column of at most one screen height of rows, re-integrating from `t = 0` past it; it amends the temporal note and the caching contract's `T` row *(closes RQ-727)*
+- **R-846** — RQ-718 closes on R-669's reversal: a user-built plane is the user's chart and is never scored *(closes RQ-718)*
+- **R-847** — R-669 is reversed: fixed-`k` and binary-plus-single (scattering) become charts and builder axes, built when their turn comes, with Heggie & Sweatman 1991 alongside and f_col built with the scattering chart; their targets score in M9; orbital elements are axes at a labelled pair, plus overlays; MK-1 stays, labelled a planar re-run *(closes RQ-723, RQ-725 and RQ-726)*
+- **R-849** — A typed combination with no registered inverse gets a general numerical solve on the CPU, recording its branch rule, marking its seams and labelled CPU-only; and under the lock a chart path never jumps: the anchor slides continuously to its nearest point in a constrained chart *(closes RQ-733; on RQ-721, closed by R-850)*
+- **R-850** — Chart paths: the morph is the general form, one path abstraction for every view edit, special cases run by their own code as exact specialisations, each operation tested bitwise against today and against its own path family's formula, never across families *(closes RQ-721)*. Still in force: all of it but the labelled jump under the lock. Amended in part by R-849 (7 Nov 2026, the owner's later rider: under the lock the anchor slides, no labelled jump, the jump kept only for time-axis to IC-only charts).
+- **R-852** — Every registry primitive is classed as a state function, a conserved quantity (exact or approximate, labelled) or a trajectory functional, never an axis; final-condition charts stay a design item for the rulings report, with the check that conserved axes are `T`-independent *(on RQ-734, which stays open)*
+- **R-855** — The symmetry filter: an optional display option after rendering, never a change to what is computed, blanking a start only where its partner is in the chart's domain, its canonical choice stated, on by default for the paper-frame presets only
 
 ## Values
 
@@ -523,6 +558,8 @@ as history only.
 - **R-575** — The horizon stays 50 by default and can be raised or lowered, not floored at 50 *(amends R-132 and the Run window's `T_horizon ∈ [50, 200]`; queues RQ-555)*. Still in force: the default 50, raised or lowered, not floored at 50, within `[0.4, 200]` (R-610). Amended by R-610 (`T_horizon ∈ [0.4, 200]`; RQ-555 closed).
 - **R-610** — The horizon's floor is one closure window, 0.4, below which the escape arm cannot fire, and the settings say so; the cap stays at 200 until long horizons are measured for cost: `T_horizon ∈ [0.4, 200]`, default 50 *(closes RQ-555; amends R-575's interim range)*
 - **R-699** — `arctan_sum_bits` = 100 is confirmed as proposed: mid-plateau, with margin on both sides *(closes RQ-635)*
+- **R-833** — `Φ_θ,L_z`'s held `K` warp takes a `K_max` and `γ_K` of its own, a calibration (R-71), with `K_max` at the chart's calibrated `K` proposed at the gate *(closes RQ-710)*
+- **R-837** — The axis cap is 4 baked entries beyond the gallery, counted as entries, decode-only, created on first use, a pair past the cap running as CPU batch *(on RQ-716, which stays open)*
 
 ## Process
 
@@ -616,6 +653,7 @@ as history only.
 - **R-718** — Generated plan files are not committed if nothing needs them in git; otherwise they are marked in `.gitattributes` and conflicts are resolved by regenerating, never by hand, with a check that the committed copy matches a fresh regeneration; lands in `plan/OPERATIONS.md` § "Merging"
 - **R-719** — A Windows-only, non-reproducing GPU result is hardware-suspect: recorded, not filed as a code bug; one that reproduces is checked against Metal and lavapipe, failing everywhere our bug, passing elsewhere an NVIDIA Vulkan platform finding with no re-baselining; lands in `plan/OPERATIONS.md` § "Windows GPU results"
 - **R-812** — Two-way doors are decided and shown afterwards, by measurement where one can settle it, CI and build tooling among them; one-way doors are asked through `/rulings-report` only while work carries on; when unsure, a door is one-way *(amends R-369)*
+- **R-827** — R-676's merge of `main` right before the `merge-ready` label lapses where there is no conflict; R-388's merge at an early start stays *(closes RQ-704)*
 
 ## CI
 
@@ -682,6 +720,9 @@ as history only.
 - **R-716** — The ten CI optimisation candidates: each measured before and after, negative results reported, one pull request per item, items 1 and 4 first, then 2 and 3, then the rest; lands in `plan/OPERATIONS.md` § "Merging". Still in force: all of it but item 4's strip half and item 3's cache. Amended in part by R-828 (7 Nov 2026; RQ-705 (a): item 4's strip half is dropped, R-374 standing) and R-829 (RQ-706: item 3's cache is not taken; an in-run artifact only if it measurably saves time, R-285 unchanged).
 - **R-808** — `.claude/commands/*.md` joins the rulings reference check *(closes RQ-698)*
 - **R-809** — `ci-gate` gathers `ci-release`: reading that job by eye before each merge is vetoed *(vetoes D-11 of the report of 5 Nov 2026)*
+- **R-828** — R-374 stands: CI's test binaries keep their line tables, and the `strip = "debuginfo"` half of R-716's item 4 is dropped *(closes RQ-705)*
+- **R-829** — The kernel's built output isn't cached: it may be shared as an artifact within a run only if that measurably saves time; R-285 is unchanged *(closes RQ-706)*
+- **R-832** — RQ-703 closes, overtaken: the quick tier merged by #414, and what remains of the CI series follows R-684's order, step (1) next *(closes RQ-703)*
 
 ## One-off acts (history only)
 
@@ -754,46 +795,5 @@ as history only.
 - **R-573** — "Payload summary" is deleted from TASK-M8-02: it is defined nowhere, used nowhere, and no test asks for it
 - **R-579** — The mirror test's run arms move to M3: REQ-CHART-082's runs become REQ-CHART-085, closed by TASK-M3-38 after TASK-M3-04 and TASK-M3-12; REQ-CHART-082 keeps at M2 the classification, the "does not apply" case, the shape and state pair checks and the bitwise `Π·x` check *(closes RQ-523; a deferral by ruling, from the M2 gate to M3; settles the split R-544's dated line drafted)*
 - **R-625** — RQ-378, RQ-386 and RQ-391 stay parked; the calibrations are taken at their gates, as planned, `μ_max` kept at most 10 *(amends nothing; R-568's, R-522's and R-527's parking stands)*
-- **R-813** — A margin node's two field inputs sit on a `colour` or `post` occupant declaring two `// @input`s; render_gui_spec § 5's example is reworded and a `source` keeps no input *(closes RQ-675)*
-- **R-814** — TASK-M7-12 extends `assemble.rs` and `codegen/` with no second walk, its edit-sequence proptest runs under `cargo test -p engine`, and the fallback must differ from `#141418` too *(closes RQ-676)*
-- **R-815** — An untransformed slot input's default domain is "inherits", resolved per wire at assembly, an unbounded field taking `(0, 1)`; TASK-M7-13's scan is decided by the written relocated-binary and wasm criterion *(closes RQ-677)*
-- **R-816** — A virial-ratio axis is kind 3: it solves into the momenta, reading the configuration and the masses as fixed upstream; R-471 H3's "not kind 3" is read as about B1's extension only *(closes RQ-682)*
-- **R-817** — A warped virial axis with an asked bottom `Q₀ > 0` at a held `L_z ≠ 0` puts the floor under the rise only: the pixel's ratio is `max(Q₀, Q_min(U)) + (Q_hi − Q₀)·t^γ_K` *(closes RQ-700)*
-- **R-818** — A `MixedEnergy` chart's held `L_z` tilts and slices by value on the floor and its held `K` on the warp line, with `K_max` ruled as RQ-710's, built in M8; and a triple ejection waits behind `E_rel > 0` *(on RQ-701, which stays open, deferred to M8; closes RQ-708)*
-- **R-819** — R-791's Newtonian energy reaches every axis that reads `U`: the lone, mixed and Chart-builder `E` axes and the virial ratio, each labelled, the softened value beside it in the Inspector, which also shows the virial axis's disagreement with the stored ratio *(closes RQ-709)*
-- **R-820** — A saved preset whose chart is not two latent axes at one scale stores its whole saved triple `(z₀, q₁, q₂)` as its home view; the zoom row's scale is still to be named *(on RQ-711, which stays open)*
-- **R-821** — The precision-ladder proposal's seven questions stay deferred to M3 *(defers RQ-577)*
-- **R-822** — GPU `sin` and `cos` near π/2: a per-backend check against f64 at M4, the kernel's own `sin` and `cos` ruled with RQ-687 on M4's cross-backend numbers; RQ-679 deferred to M8 and RQ-687 to M4; BR-1 runs both the authors' starts and the seeded draw, each labelled *(defers RQ-629, RQ-679 and RQ-687; closes RQ-696)*
-- **R-823** — The collinear statistical targets' cap question stays deferred to M9 *(defers RQ-643)*
-- **R-824** — OC-2 recomputes each atlas row from its `ref_*` state, the figures rerun at M9; the rest of TASK-M9-01's gaps stay deferred to M9 *(on RQ-681, which stays open, deferred to M9)*
-- **R-825** — Whether the presentation frames become a stage stays deferred until the exporter is designed *(defers RQ-391)*
-- **R-826** — A browser run started from the measurement panel's button is marked in its report as not a measurement *(closes RQ-702)*
-- **R-827** — R-676's merge of `main` right before the `merge-ready` label lapses where there is no conflict; R-388's merge at an early start stays *(closes RQ-704)*
-- **R-828** — R-374 stands: CI's test binaries keep their line tables, and the `strip = "debuginfo"` half of R-716's item 4 is dropped *(closes RQ-705)*
-- **R-829** — The kernel's built output isn't cached: it may be shared as an artifact within a run only if that measurably saves time; R-285 is unchanged *(closes RQ-706)*
 - **R-830** — RQ-688 closes: `stand-in-soak`'s cause was the cold first run on the slow runner band, the timer untouched, and the entry's own criterion is met *(closes RQ-688)*
 - **R-831** — RQ-689 closes: the job-queue test's flaky control was fixed test-only by #410 *(closes RQ-689)*
-- **R-832** — RQ-703 closes, overtaken: the quick tier merged by #414, and what remains of the CI series follows R-684's order, step (1) next *(closes RQ-703)*
-- **R-833** — `Φ_θ,L_z`'s held `K` warp takes a `K_max` and `γ_K` of its own, a calibration (R-71), with `K_max` at the chart's calibrated `K` proposed at the gate *(closes RQ-710)*
-- **R-834** — Four axis kinds stay: a new capability is a registry entry under one of them, "no new chart type" is the rule from now on for anything not already ruled, and `SuvakovPlane` stands as R-669 ruled it *(closes RQ-712)*
-- **R-835** — A side-ratio axis in the builder and R-798's "no `SideRatio` chart" both stand: the axis is a registered closed pair, and PA-1 keeps its remap *(closes RQ-713)*
-- **R-836** — Hold `L_z` adds the rigid rotation, the scale taking only the part orthogonal to it when both are held, and outcomes 4 and 5 test `rigid(v, Jr)`, an exact predicate against a dyadic `τ` *(closes RQ-715)*
-- **R-837** — The axis cap is 4 baked entries beyond the gallery, counted as entries, decode-only, created on first use, a pair past the cap running as CPU batch *(on RQ-716, which stays open)*
-- **R-838** — The virial-ratio axis's kind is RQ-682's answer: kind 3 *(closes RQ-717)*
-- **R-839** — Core seam 3 holds for live views; a labelled CPU-batch view is the stated exception, writing the IC buffer the decode stage writes, never reached by a gesture *(closes RQ-719)*
-- **R-840** — R-594 item 5 governs charts built for a target; the builder's general options are the owner's own order and built in M8, last *(closes RQ-720)*
-- **R-841** — A chart at rest under hold `L_z` is labelled "not at rest", not refused *(closes RQ-722)*
-- **R-842** — Time as an axis is a chart mode, not a fifth kind: `T` on the sim key and the window off it, a cache per column of at most one screen height of rows, re-integrating from `t = 0` past it; it amends the temporal note and the caching contract's `T` row *(closes RQ-727)*
-- **R-843** — Region D at unequal masses: the plane is geometric at every mass, D is labelled, one sector, AN-1 is its own preset, a half-disc of radius 10, and a statistic over D says "one labelling" *(closes RQ-728)*
-- **R-844** — Hill's threshold at unequal masses is the labelled pair's: pair `(i, j)` is cut off from the third iff `c > max(f_i, f_j)`, blank at `E ≥ 0` and `ε ≠ 0` *(closes RQ-730)*
-- **R-845** — Region D as a chart: a paper's fixed horizon is read by running to the longest pixel's horizon and cutting each pixel at its own; the default velocities are each target's, offered as presets *(on RQ-714, which stays open)*. Still in force: all of it. Refined by R-851 (7 Nov 2026: the velocity default fixed on the count, exact rest, eq. 3 the second preset).
-- **R-846** — RQ-718 closes on R-669's reversal: a user-built plane is the user's chart and is never scored *(closes RQ-718)*
-- **R-847** — R-669 is reversed: fixed-`k` and binary-plus-single (scattering) become charts and builder axes, built when their turn comes, with Heggie & Sweatman 1991 alongside and f_col built with the scattering chart; their targets score in M9; orbital elements are axes at a labelled pair, plus overlays; MK-1 stays, labelled a planar re-run *(closes RQ-723, RQ-725 and RQ-726)*
-- **R-848** — The Saari split's `h` is a builder axis, its range under physics review; R-793 stands *(closes RQ-724)*
-- **R-849** — A typed combination with no registered inverse gets a general numerical solve on the CPU, recording its branch rule, marking its seams and labelled CPU-only; and under the lock a chart path never jumps: the anchor slides continuously to its nearest point in a constrained chart *(closes RQ-733; on RQ-721, closed by R-850)*
-- **R-850** — Chart paths: the morph is the general form, one path abstraction for every view edit, special cases run by their own code as exact specialisations, each operation tested bitwise against today and against its own path family's formula, never across families *(closes RQ-721)*. Still in force: all of it but the labelled jump under the lock. Amended in part by R-849 (7 Nov 2026, the owner's later rider: under the lock the anchor slides, no labelled jump, the jump kept only for time-axis to IC-only charts).
-- **R-851** — Region D's default velocities are exact rest, with eq. 3 the second preset; AA-3 and AA-5 read eq. 3, AA-8 runs under both, eq. 3 reproduces Agekyan & Anosova's velocities in their own units before canonicalising, and its 19% spread at `I = 1` is stated beside the preset *(on RQ-714, which stays open)*
-- **R-852** — Every registry primitive is classed as a state function, a conserved quantity (exact or approximate, labelled) or a trajectory functional, never an axis; final-condition charts stay a design item for the rulings report, with the check that conserved axes are `T`-independent *(on RQ-734, which stays open)*
-- **R-853** — The chart-space model is corrected to the corpus, which stands wherever it measured or ruled; the shape sphere's mirror half is never dropped or folded, the mirror fold is a starting state's only, and the state map and latent-chart traces are signed *(closes RQ-736)*. Still in force: all of it but open question 2's "reduced domain" for region D's presets. Amended in part by R-855 (7 Nov 2026, the owner's filter order: region D's presets render the full disc, the filter on by default for the paper-frame presets only).
-- **R-854** — Symmetry reductions apply only to how a starting state is described at `t = 0`: trajectories evolve and are shown in full physical space, nothing is folded during a run, and the only operation besides the step is the per-step centre-of-mass projection, energy and `L_z` monitored, never corrected
-- **R-855** — The symmetry filter: an optional display option after rendering, never a change to what is computed, blanking a start only where its partner is in the chart's domain, its canonical choice stated, on by default for the paper-frame presets only
