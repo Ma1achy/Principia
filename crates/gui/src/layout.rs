@@ -46,20 +46,65 @@ pub const MIN_TOP_H: f32 = 590.0;
 /// The figure's canvas's least width, in points, its axis strip apart: so no splitter can close it (J2; a look choice,
 /// R-390). Its height is held by [`MIN_TOP_H`].
 pub const MIN_CANVAS_W: f32 = 240.0;
-/// The bottom row's least height, in points: the compass's cube and buttons, and Time's transport, whole (J2). The rest
-/// of the compass's column is not whole in one view here: it scrolls inside the panel, and the focus on the compass
-/// element brings its end into view (measured: at the compass's default width, 354, the Cube view's column fits with no
-/// bar from 158.7 up; at [`MIN_COMPASS_W`] only from 232.7, and the physical views' help scrolls at this height).
-pub const MIN_BOTTOM_H: f32 = 160.0;
-/// The compass's least width, in points: its cube and its buttons beside it (J2). The readout and the hint wrap in the
-/// column and never pass the edge (measured: with the column's bar, the title wraps to a second row below 236).
-pub const MIN_COMPASS_W: f32 = 240.0;
+/// The bottom row's least height, in points: the compass's cube, its buttons and its widest readout, and Time's
+/// transport, whole in one view (J2; R-705). The widest readout is tilt mode's with its line where no plane is drawn, in
+/// any view (measured at [`MIN_COMPASS_W`]: its last row shows from 169 up at 1 and 1.5 pixels per point, from 171 at 2;
+/// the tilted Plücker line and the physical views' widest, a stretch in scientific form, show well under this). The
+/// hint or help under the readout is not whole here: the column scrolls inside the panel, and the focus on the compass
+/// element brings its end into view (measured: the physical views' help ends in view from 191 up, 195 at 2 pixels per
+/// point, and the longest column, under the readout just named, from 203, 207 at 2).
+pub const MIN_BOTTOM_H: f32 = 172.0;
+/// The compass's least width, in points: its cube, its buttons beside it and its widest readout, whole in one view (J2;
+/// R-705). The same readout as [`MIN_BOTTOM_H`]'s decides it, at every height the bottom row can take, since a taller
+/// cube narrows the column until it reaches half this width (measured, at scales 1 to 3: from 335 up its last row
+/// shows at every height from [`MIN_BOTTOM_H`] to the artboard's window's 197; at 334 wide and 181 high, at 2 pixels per
+/// point, it leaves the view, and at 172 high it does from 325 down).
+pub const MIN_COMPASS_W: f32 = 336.0;
 /// Time's least width, in points: its transport row, the speed slider and its value, whole (J2; measured: the speed's
 /// value passes the edge below 336).
 pub const MIN_TIME_W: f32 = 340.0;
 /// The Legend's least width, in points: a key's swatch, label and share on one row (J2; a look choice, R-390: its rows
 /// elide rather than overflow).
 pub const MIN_LEGEND_W: f32 = 240.0;
+
+/// How far a panel can fall short of its share of the window, in points: each of its two edges rounds to a whole pixel,
+/// by at most half a pixel, and a pixel is at most a point at any scale of a pixel per point or more.
+const EDGE_ROUNDING: f32 = 1.0;
+
+/// The least length of a window, in whole points, at which a panel taking `share` of that length is at least `min`
+/// long, its edges rounded.
+const fn least_length(min: f32, share: f32) -> f32 {
+    ((min + EDGE_ROUNDING) / share).ceil()
+}
+
+/// The least inner size of the app's window, in points (R-705): the least at which the default layout meets every
+/// minimum, each panel's share of the window taken from 01_main.png's edges. The compass binds the width and the top row
+/// the height; the bottom row alone, its share 295/1350 of the height, would allow less. The window refuses to
+/// go smaller; below it no layout is promised, and [`Layout::with_splits`] still holds only the splitters' drags.
+pub const LEAST_WINDOW: [f32; 2] = [
+    least_length(MIN_MANIFOLD_W, LEFT_RIGHT / ARTBOARD[0])
+        .max(least_length(
+            MIN_CANVAS_W + AXIS_Y_W,
+            (RIGHT_LEFT - LEFT_RIGHT) / ARTBOARD[0],
+        ))
+        .max(least_length(
+            MIN_TRAJECTORY_W,
+            (ARTBOARD[0] - RIGHT_LEFT) / ARTBOARD[0],
+        ))
+        .max(least_length(MIN_COMPASS_W, COMPASS_RIGHT / ARTBOARD[0]))
+        .max(least_length(
+            MIN_TIME_W,
+            (LEGEND_LEFT - COMPASS_RIGHT) / ARTBOARD[0],
+        ))
+        .max(least_length(
+            MIN_LEGEND_W,
+            (ARTBOARD[0] - LEGEND_LEFT) / ARTBOARD[0],
+        )),
+    least_length(MIN_TOP_H, (BOTTOM_TOP - TOP_BAR_BOTTOM) / ARTBOARD[1]).max(least_length(
+        MIN_BOTTOM_H,
+        (FOOTER_TOP - BOTTOM_TOP) / ARTBOARD[1],
+    )),
+];
 
 /// The console's least height, in points: its header bar and three log rows, with its window's margins and the line
 /// under the list, whole (R-463 K1; measured: below this its log shows two rows).
