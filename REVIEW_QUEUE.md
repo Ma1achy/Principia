@@ -1221,3 +1221,43 @@ owner: yes, it is physics; the tilt changes which systems the chart shows.*
   - (b) A general numerical solve on CPU batch: the user names the quantity it moves, and the expression takes § 7.3's fixed starts and a declared default rule, labelled `CPU batch: numerical`.
 - **Applied meanwhile:** (a), which only withholds: nothing is built, and (b) would add to it.
 - **Waits:** nothing. Read at TASK-M4-37; TASK-M4-33 goes ahead on (a).
+
+## RQ-734: Final-condition charts: build them, and on what terms? *(a one-way door: what the instrument computes, and the reading of the owner's model; the owner's review of PR #422, 7 Nov 2026; context: `docs/design/principia_chart_composition.md` § 10.3, no task)*
+
+*Queued 7 Nov 2026 from PR #422, for the owner's rulings report. Nothing is built until ruled (the owner's order of 6 Nov, A6).*
+
+*In plain English: the owner's model shows you can pick where a system is at a later time and work backwards to the start that gets there, by flipping the velocities and running forward. That gives a new kind of chart. The theorem is about the equations; building it raises three practical questions the model's words don't answer: our default integrator doesn't run backwards exactly, starts get rescaled to a standard size, and the design currently bars anything "measured after t = 0".*
+
+- **File, section:**
+  - `docs/design/principia_chart_space_model.md` Theorem 11: "A chart whose axes are state functions evaluated at time `T`" and "For conserved axes `φ_T` is independent of `T` in those coordinates, which makes a built-in check."
+  - the owner on the model, 7 Nov 2026: "Add "final-condition" charts (Theorem 11, time-reversal: flip momenta, integrate forward T, flip back) as a design item for the rulings report, with the check that conserved axes are T-independent."
+  - `docs/contracts/principia_integrator_contract.md` Part 2, the reversibility flags (R-500): "`run_reversible` says the bound occupant's whole run is time-symmetric, as the reversibility test binds it: only logH's TTL time mode (R-162)"; "The default occupant is Heggie × RK4 (R-560)".
+  - `docs/design/principia_chart_composition.md` § 3.1, the Rejected table: "anything measured after `t = 0` | results, not axes".
+  - `docs/design/principia_chart_composition.md` § 10.3 and § 3.3, flags 1 and 3.
+- **The questions and options:**
+  - **Whether.** (a) **Recommended.** Keep it as a design item and build it after the M8 charts, as a CPU batch chart, `T` on the sim key, a mask for runs that don't survive, and the three checks of § 10.3. (b) Don't build it: the rejection stands as written.
+  - **The occupant.** The theorem reverses the equations, not the integrator. (a) **Recommended.** Any occupant: a forward run from the start found must reach `ψ(u)` within a tolerance, and a pixel that doesn't is masked, its reason named. (b) A run-reversible occupant only, logH's TTL mode, which changes the integrator for this chart and departs from the default (R-560).
+  - **The gauge.** `F_{−T}` leaves `I ≠ 1`, and `C` rescales by a per-pixel `s`. (a) **Recommended.** Keep `I = 1`: the chart's start is an ordinary one, the `T`-independence check reads `E` and `L_z` before the rescale, the time reached on a pixel is per pixel as in § 8.6, and the chart carries `paper scale differs`. (b) Skip the rescale for this chart: `T` is one number across it, and it's an exception to `C` that every later stage must then carry.
+  - **The rejection.** (a) **Recommended.** Narrow "anything measured after `t = 0`" to event reads and functionals, so a state function at a fixed `T` can be an axis of this chart. (b) Leave it, which goes with option (b) of the first question.
+- **Measured and reasoned:** all of this is reasoned. No such chart has been run, and the extra run's cost, one integration of length `T` per sample, isn't measured. The scaling of `E`, `L` and `L²E` under `C` is algebra.
+- **Applied meanwhile:** the rejection stands; nothing is built.
+- **Waits:** nothing. No task of the design depends on it. Read at TASK-M4-37.
+
+## RQ-735: What does the browser build get of chart composition? *(a one-way door: what the product is, and scope under R-571; the owner's review of PR #422, 7 Nov 2026; context: `docs/design/principia_chart_composition.md` § 7.5, TASK-M8-102, TASK-M8-96)*
+
+*Queued 7 Nov 2026 from PR #422, for the owner's rulings report. Nothing is built for either option until ruled (the owner's order of 6 Nov, A6).*
+
+*In plain English: most of the new chart axes have no fast formula for the graphics card, so they run on the main processor, a route called CPU batch. The browser version either leaves those out, or runs the same Rust code compiled to WebAssembly, slower. The owner's rule for the browser says "the whole native app", which points at the second.*
+
+- **File, section:**
+  - `docs/contracts/principia_canonical_spec.md` (R-571): "v1 web: the whole native app, compiled to run in the browser, with the same interface, the same features and the same stains"; "where the browser cannot do something the native app does, v1 web says so in the app, and does not get a different design".
+  - `docs/contracts/principia_caching_contract.md`, "Measured on Pages first (R-627)": "whether SharedArrayBuffer and wasm threads then actually work, in each browser of R-110's pair".
+  - `docs/design/principia_chart_composition.md` § 13, V24: "Every § 3.1 and § 3.2 row is CPU batch"; § 7.5.
+  - the owner's review of PR #422, 7 Nov 2026: "Web: state what the browser build gets. Closed-form GPU charts only, or a WASM CPU route for numerical axes and CPU-only morphs."
+- **The question:** does the browser build run CPU batch?
+- **Options:**
+  - (a) Closed-form GPU charts only. The baked pairs run; every other chart says in the app that the browser can't. Nothing to build, and most of the new primitives aren't in the browser.
+  - (b) **Recommended.** A WASM CPU route too: numerical axes, unbaked closed forms and CPU-only morphs run as CPU batch in the engine's worker, labelled and not live. It's the same code, so it adds a target and its tests, not a design.
+- **Measured and reasoned:** nothing is measured in a browser. § 11's measurements are Metal and Vulkan, not WebGPU; TASK-M8-96's test of wasm threads on Pages hasn't run, so CPU batch's thread count there is unknown; and bit-for-bit agreement of a wasm f64 solve with a native one isn't measured. The recommendation is reasoned from R-571's words and V24. If TASK-M8-96 finds one thread only, (b) stands and is slower.
+- **Applied meanwhile:** nothing: § 7.5 states both, and neither is built.
+- **Waits:** nothing. The native tasks go ahead either way. Read at TASK-M4-37.
