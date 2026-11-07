@@ -474,15 +474,9 @@ impl View {
         // is no wrong vector: both tilt into it.
         let misplaced = |a: usize, b: usize| -> bool {
             let [d, x, y] = hidden(a, b);
-            let cut = READS_BACK * total;
-            x != y
-                && q1[y] * q1[y] + q2[x] * q2[x] > cut
-                && lost(
-                    &Self::in_frame(None, a, b, [d, x, y], q1, q2),
-                    q1,
-                    q2,
-                    &|_| true,
-                ) > cut
+            let typed = q1[y] * q1[y] + q2[x] * q2[x];
+            let reading = Self::in_frame(None, a, b, [d, x, y], q1, q2);
+            x != y && typed.min(lost(&reading, q1, q2, &|_| true)) > READS_BACK * total
         };
         if let Some((a, b)) = axis_pair(q1, q2) {
             let preset = PRESETS.iter().position(|&p| p == (a, b));

@@ -328,6 +328,18 @@ fn manifold_view_basis_every_pair_either_way_round_is_decided_by_the_basis() {
 }
 
 #[test]
+fn manifold_view_basis_a_mirrored_tie_stays_as_typed() {
+    // No tilt for either order to keep, and no reading back: the order as typed, though the dominant axes are the swap's.
+    let q1 = mv::add(&axis(Q0, 0.6), 0.8, &axis(MU2, 1.0));
+    let q2 = mv::add(&axis(Q0, 1.0), 0.2, &axis(MU2, 1.0));
+    let view = read((q1, q2), SPLIT);
+    assert_eq!((view.preset, view.a, view.b), (None, Q0, MU2));
+    rejects("the tie read on its dominant axes", || {
+        assert_eq!((view.preset, view.b, view.a), (None, Q0, MU2))
+    });
+}
+
+#[test]
 fn manifold_view_basis_a_pair_with_no_turn_is_no_tilted_pair() {
     // `q₂` is twice `q₁` on a pair no preset names: a determinant of 0, which reads by its dominant axes, not as the pair.
     let q1 = mv::add(&axis(Q0, 0.5), 1.0, &axis(MU2, 1.0));
