@@ -5674,6 +5674,7 @@ CI only; REQ-SYS-065's statement names the pinned label.
 on their measured cost, counted each run, under a 330-minute step limit).*
 *Amended in part by R-712 (5 Nov 2026: REQ-VAL-180's per-mutant timeout is about 3 times the measured baseline test time,
 in place of 2.0 times).*
+*Refined by R-857 (7 Nov 2026: a change of REQ-VAL-149's shard count decided by measurement is two-way under R-812's CI rider; the 8 shards stand until one).*
 *Still in force: all of it but its note on the nightly full run's shards and REQ-VAL-180's multiplier: the other confirmed
 values stand, REQ-VAL-149's 8 shards × 300 min for the per-PR run among them, and REQ-VAL-180's 60 s floor; R-402 sizes
 the nightly full run's shards and gives its step a 330-minute limit; R-712 sets the multiplier.*
@@ -12265,6 +12266,7 @@ Adds REQ-GUI-206 and REQ-GUI-207; changes REQ-GUI-181 and REQ-GUI-193 (rulings, 
 ## R-459 — The cube's H, V and D axis labels are buttons, each a dropdown of latent dimensions, no dimension twice, each pick one undoable edit, H and V in step with Chart's horizontal q₁ and vertical q₂; in Tilt mode the third axis shows what the gesture tilts into, and a "4D: see Plücker" badge appears when both angles are set into different targets *(amends R-451 B1's labels)*
 *Amended in part by R-474 (20 Oct 2026; the third axis draws the gesture's plane under the active map, a single tilt
 the same under both).*
+*Refined by R-858 (7 Nov 2026: a typed basis, a mirrored tilt on its own target included, stays as typed; the app never rewrites a basis the user typed).*
 *Still in force: all of it, the plane drawn under the active map (R-474).*
 *18 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view (`01_main.png`)"
 (the compass), § "The compass: look and views (R-451, R-452)" (the labels, the readout and two bullets) and § "G3.
@@ -31011,6 +31013,8 @@ R-710 is in the "physics" group of `plan/rule_groups.yaml`.
 Adds REQ-INT-113; changes REQ-EVT-006, REQ-INT-057, REQ-INT-061, REQ-INT-064, REQ-INT-111, REQ-INT-112, REQ-SYS-094, REQ-SYS-095, REQ-VAL-059, REQ-VAL-099 and REQ-VAL-348.
 
 ## R-711 — One measurement-only self-hosted runner, `malachys-pc-rtx2080s`, on the owner's PC, with no pull-request trigger on any self-hosted job; DX12 may run on it as a measurement; PC benchmarks stay apart from the Mac's performance gates; a recorded run on it can serve Paper 2's non-Metal parity evidence; its jobs have their own workflow; the signing rules *(closes RQ-695; amends R-174, R-186 and R-656)*
+*Extended by R-856 (7 Nov 2026: a recorded run on the runner takes a clean target only where it is filed as evidence, item 4's parity run among them; other recorded runs keep the runner's target).*
+*Still in force: all of it.*
 *5 Nov 2026 · the owner's message of that day; applied in the forward lines of R-58, R-110, R-174, R-186 and R-656,
 `docs/archive/review_queue/M0.md` (RQ-695 moved), `REVIEW_QUEUE.md`, TASK-M4-28 (a note), REQ-SYS-065 and REQ-VAL-099 (reqio), TASK-M0-04, TASK-M8-41,
 `plan/WORKFLOW.md`, `plan/HUMAN_SETUP.md` and `plan/rule_groups.yaml`*
@@ -31049,6 +31053,8 @@ R-711 is in the "ci" group of `plan/rule_groups.yaml`.
 Changes REQ-SYS-065 and REQ-VAL-099 (statement, verify, source, rulings, note).
 
 ## R-712 — The per-mutant timeout is set from the measured baseline test time, at about 3 times it; 8 shards are kept; a timed-out mutant counts as caught and is listed; #360's 135 unreached mutants go to the nightly run, and the same rule applies to #387 if it hits the limit *(amends R-348, R-376 and R-402 for REQ-VAL-180)*
+*Refined by R-857 (7 Nov 2026: its 8 shards may change by measurement, a two-way door under R-812's CI rider).*
+*Still in force: all of it, the 8 shards until a measured change (R-857).*
 *5 Nov 2026 · the owner's message of that day; applied in the forward lines of R-348, R-376 and R-402, REQ-VAL-180 (reqio)
 and `plan/rule_groups.yaml`; built by #415*
 
@@ -31607,6 +31613,8 @@ The owner's words (6 Nov 2026), verbatim:
 R-811 is in the "physics" group of `plan/rule_groups.yaml`.
 
 ## R-812 — Two-way doors are decided and shown afterwards, by measurement where one can settle it, CI and build tooling among them; one-way doors are asked through `/rulings-report` only while work carries on; when unsure, a door is one-way *(amends R-369)*
+*Refined by R-857 (7 Nov 2026: the four readings PR #434 left unchosen, flags 2, 8, 9 and 10: a measured shard-count change two-way, the morning report the dated `orch/` report file, lint R-197's, a requirement's correction two-way only where it restates the ruling's words faithfully).*
+*Still in force: all of it.*
 *7 Nov 2026 · the owner's ruling received that day, its rider and their confirmation; applied in `CLAUDE.md` § "When to
 ask the human", `.claude/commands/rulings-report.md` § 2 and § 4, `plan/OPERATIONS.md` § "Merging", § "Reviewers",
 § "Autonomy (R-369)", § "The GUI track (R-390)" and § "Asking the human", `plan/WORKFLOW.md` § "Task files",
@@ -32467,3 +32475,79 @@ The owner's words (7 Nov 2026), verbatim:
 *What it amends:* **R-853**, its answer to the second open question, for region D's presets.
 
 R-855 is in the "design" group of `plan/rule_groups.yaml`.
+
+## R-856 — A recorded run on R-711's runner takes a clean target only where it is filed as evidence; other recorded runs keep the runner's target, as now *(the report's kept-checkout item, which had no queue entry; extends R-711)*
+*7 Nov 2026 · the owner's reply to the report of 7 Nov 2026, answering its item "The limits of a kept checkout, restated
+as you asked", which had no queue entry; applied in REQ-VAL-099 (reqio: statement, rulings, source, note), TASK-M8-41
+(a deliverable, an acceptance line and a note), `plan/OPERATIONS.md` § "Windows GPU results (R-719)", R-711's forward
+line and `plan/rule_groups.yaml`; changes REQ-VAL-099*
+
+The owner's words (7 Nov 2026), verbatim, a line of the reply under its heading "Branch RQs (#422 / #388), to apply when they can be ruled:":
+
+> Kept checkout: (ii), clean target only for runs filed as evidence.
+
+*What it decides:* option (ii) of the report's item, whose three options were the orchestrator's (the notes held none):
+"(i) every recorded run takes a clean target; (ii) only runs filed as evidence do; (iii) as now, stating the limit." A
+run on R-711's runner that is filed as evidence, the non-Metal parity run serving Paper 2 (R-711 item 4, REQ-VAL-099)
+first among them, starts from a clean target, about 20 minutes cold by the report; every other recorded run on the
+runner keeps its target between jobs, as now. The report's three limits of a kept checkout stand as limits: a clean
+target answers the writable target only, not the check before the use, the writable `.git` or PowerShell starting inside
+the kept tree, nor the registry and rust-gpu caches. The report's optional read-only object store is not ruled. The
+runner's workflow builds nothing filed as evidence today, so nothing built changes: TASK-M8-41's
+`cargo xtask gate parity-non-metal` record states that its run started from a clean target, and a record that doesn't
+is refused (applied per R-369).
+
+*What it extends:* **R-711**, item 4: what a recorded run serving as Paper 2's evidence starts from.
+
+R-856 is in the "ci" group of `plan/rule_groups.yaml`.
+
+## R-857 — The four doors readings #434 left unchosen: a measured change of the shard count is two-way under the CI rider; the "morning report" is the dated report file in `orch/`; lint configuration stays R-197's; correcting a requirement's statement to match a ruling is two-way only where it restates the ruling's words faithfully, otherwise one-way *(the report's doors-readings item, flags 2, 8, 9 and 10 of PR #434; refines R-812)*
+*7 Nov 2026 · the owner's reply to the report of 7 Nov 2026, answering its item "Doors readings #434 left unchosen, for
+you if you want them", which had no queue entry; applied in `plan/OPERATIONS.md` § "Asking the human", REQ-VAL-149
+(reqio: rulings, source, note), the forward lines of R-376, R-712 and R-812, and `plan/rule_groups.yaml`; changes
+REQ-VAL-149's rulings and note, not its statement*
+
+The owner's words (7 Nov 2026), verbatim, a line of the reply under its heading "Branch RQs (#422 / #388), to apply when they can be ruled:":
+
+> Doors flags: 2, a measured shard-count change is two-way under the CI rider. 8, "morning report" is
+> the dated orch/ report file. 9, lint stays R-197's. 10, correcting a requirement's statement to
+> match a ruling is two-way only where it restates the ruling's words faithfully; otherwise one-way.
+
+*What it decides:* the four readings PR #434 (R-812's port) flagged and left unchosen, each as the report put it:
+
+- **Flag 2, shard counts.** "does a measured change of the shard count need a ruling? 8 stands meanwhile." No: a change
+  of REQ-VAL-149's shard count, decided by measurement, is a two-way door under R-812's rider ("CI and build tooling
+  (caching, linkers, test profiles, shard counts): two-way, decided by measurement, reported with numbers"): its
+  criterion written before the run (R-649), reported with numbers, listed for veto, and recorded on REQ-VAL-149. The
+  8 shards of R-376 and R-712 stand until such a change. The per-shard time limit is not named, and stays R-376's.
+- **Flag 8, "morning report".** The morning report of R-812's text is the dated report file in `orch/`.
+- **Flag 9, lint configuration.** It stays R-197's: changing `clippy.toml` or a `[lints]` table needs a ruling, R-812's
+  rider not naming lints.
+- **Flag 10, correcting a requirement.** Correcting a requirement's statement to match a ruling is a two-way door only
+  where the new statement restates the ruling's words faithfully; otherwise it is one-way, as the report's default had
+  it.
+
+*What it refines:* **R-812**, the four points its port left unchosen; and **R-376** and **R-712**, as to how their 8
+shards may change, their values unchanged. R-197 is read, not amended.
+
+R-857 is in the "process" group of `plan/rule_groups.yaml`.
+
+## R-858 — A typed basis is kept as typed: a mirrored tilt on its own target that doesn't read back stays as the user typed it, and the app never rewrites a basis the user typed *(the report's mirrored-tilt item, which had no queue entry; refines R-459)*
+*7 Nov 2026 · the owner's reply to the report of 7 Nov 2026, answering its item "A mirrored tilt on its own target",
+which had no queue entry; applied in `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view
+(`01_main.png`)" (Chart), REQ-GUI-415 (reqio: rulings, source, note), R-459's forward line and
+`plan/rule_groups.yaml`; changes REQ-GUI-415's rulings and note*
+
+The owner's words (7 Nov 2026), verbatim, a line of the reply under its heading "Branch RQs (#422 / #388), to apply when they can be ruled:":
+
+> Mirrored tilt: (a), as typed. The app never rewrites a basis the user typed.
+
+*What it decides:* option (a) of the report's item, as built on `main` by TASK-M6-56 (PR #438): a typed basis such as
+`q₁ = −0.6 e_α + 0.8 e_q3, q₂ = e_β`, a mirrored tilt on its own target that doesn't read back, stays as typed and
+reads as `main` reads it. Option (b), every mirrored basis that doesn't read back reading its dominant axes, is not
+taken. The rule beneath it is general: the app never rewrites a basis the user typed, a zoom scaling the stored basis
+as R-705 has it. Nothing built changes, so no task.
+
+*What it refines:* **R-459**, whose words on H and V in step with `q₁` and `q₂` the item read.
+
+R-858 is in the "design" group of `plan/rule_groups.yaml`.

@@ -706,3 +706,17 @@ waits on the answer.
 - **Options:** (a) remove the mirror step, as proposed, once the five reports are in; (b) keep it, the symmetry rule (R-854) and the filter (R-855) standing on the signed `C` they already read.
 - **Applied meanwhile:** nothing. The decoder and its tests are unchanged.
 - **Waits:** nothing built; no task depends on it.
+
+## RQ-740: Does R-708's "every pixel is a system under every tilt" allow an f32 chart to refuse a pixel inside the band where f32 rounding, not the chart, decides? *(a one-way door: what the instrument computes; R-708, R-471; the report of 7 Nov 2026, "Open from today's merges, to be filed as entries"; context: TASK-M2-52 (PR #388, merged))*
+
+*Filed 7 Nov 2026 by the rulings PR of that day. The report put this to the owner before it had an entry, and the owner's answer asked for a measurement first, so it is filed here as an ask.*
+
+*In plain English: on the tilted held-value charts, the chart is promised to show a real three-body system at every pixel inside its square. At f32 (single precision), a pixel right at the square's edge can round to just outside it and be refused, though the same pixel at f64 is fine. The question is whether such a refusal breaks the promise.*
+
+- **File, section:** `decisions.md` § "R-708 — The tilted Burrau `K` charts follow R-471's two modes: …", the owner's words: "Warped mode (E1, the default): option (a). Every pixel is a system under every tilt."; `docs/design/principia_chart_reference.md` § "2.1 Feasibility, and the warp that makes every pixel valid".
+- **The report's item (7 Nov 2026):** "Whether "every pixel" allows refusing inside the f32 band. R-708 (held energy's warp) has no phrase for that band. Warped invariant charts at f32 refuse 0 of 3.16 million pixels; `HeldLz`, `HeldK` and Burrau at f32 aren't covered."
+- **Needed:** whether a refusal inside the f32 band is allowed under R-708's "every pixel", or such a pixel must be shown; the measurement the owner asked for comes first.
+- **Applied meanwhile:** nothing. `Tilted::validate` on `main` (TASK-M2-52, PR #388) refuses where its f32 checks fail, as built.
+- **Waits:** nothing built; no task depends on it.
+- **Asked, 7 Nov 2026:** the owner: "f32 band: measure HeldLz, HeldK and Burrau at f32 first and report." Flagged for the next report.
+- **7 Nov 2026:** the measurement the owner asked for was run that day, its criterion written before the first run (R-649), on PR #388's head 5e3f45be over `HeldLz`, `HeldK` and Burrau's charts at f32 against f64, and reported to the owner the same day; the criterion and the logs are in the orchestrator's notes (`orch/scratch/f32band/`, outside the repository). The question stays open for the owner's ruling on it.

@@ -266,7 +266,8 @@ from the demos in `docs/incoming/2026-10-21_trace_playback/demo/`:
 view the manifold. **No trace controls** (R-541 G3): nothing about a trajectory is in the left panel, which is about
 the chart; the kept trajectories are the Trajectory panel's tabs and `Trace…`'s list.
 - **Chart:** the preset, named by its axes (e.g. "z_α × z_β", never a nickname); the two basis vectors `q₁`, `q₂`, each with
-  an edit button; **Chart builder…** (§G7); the chart's kind (affine or nonlinear). When the chart is the shape sphere,
+  an edit button, a basis the user types kept as typed, a mirrored tilt on its own target included: the app never
+  rewrites it (R-858); **Chart builder…** (§G7); the chart's kind (affine or nonlinear). When the chart is the shape sphere,
   the section also shows the **projection selector** (equirectangular, or an equal-area alternative) —
   `principia_chart_reference.md` §3.3 (R-113). There is no hemisphere toggle: the shape sphere chart is the whole sphere,
   always (R-544). *Was (R-113, R-412, the toggle removed by R-544):* "and the **hemisphere toggle** (one hemisphere, or
