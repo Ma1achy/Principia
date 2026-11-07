@@ -45,7 +45,10 @@ fn axis(k: usize) -> Latent {
 /// A `SimConfig` with `plane`, `window` and `links`, every other group at the skeleton's values.
 fn config(plane: Plane, window: Window, links: Links) -> SimConfig {
     SimConfig {
-        chart: Chart { window },
+        chart: Chart {
+            window,
+            mapping: Default::default(),
+        },
         plane,
         slice: Slice {
             frame: SliceFrame::along(Z_Q3),

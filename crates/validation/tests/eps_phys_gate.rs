@@ -544,16 +544,17 @@ fn check_judge(judge: Judge) {
         "the pass gives no margin {margin}: {:?}",
         pass.scatter
     );
+    // 17 registered charts at f64 and f32, 256 points each, and the latent fuzz's 1024 at each.
     assert_eq!(
         pass.regions.as_ref().map(|r| r.count.clone()),
-        Some(RegionCount::Recorded(28 * 256 + 2 * 1024)),
+        Some(RegionCount::Recorded(34 * 256 + 2 * 1024)),
         "the pass's sample count"
     );
     assert_eq!(
         pass.negative_results,
         [format!(
             "0 of {} samples beyond ε_phys or against their clamp flags",
-            28 * 256 + 2 * 1024
+            34 * 256 + 2 * 1024
         )],
         "the pass's negative results"
     );
@@ -574,7 +575,7 @@ fn check_judge(judge: Judge) {
     );
     assert_eq!(
         fail.negative_results[0].matches(" interior, ").count(),
-        30,
+        36,
         "the fail names every row: {:?}",
         fail.negative_results
     );

@@ -223,7 +223,7 @@ mod free_after_restore {
         let rest = without_free(text, "gpu-kernel");
         let cache = start
             + rest[start..]
-                .find("      - uses: Swatinem/rust-cache@v2\n")
+                .find("      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3\n")
                 .expect("the rust-cache step");
         // The next line at the steps' indent, a step or the comment over one.
         let after = cache
@@ -242,7 +242,7 @@ mod free_after_restore {
         qa_ci_free_disk_each_job_frees_before_its_first_cache_restore,
         "`gpu-kernel` freeing its disk only after rust-cache restored the registry",
         expected =
-            "job `gpu-kernel` restores a cache (Swatinem/rust-cache@v2) before it frees the disk",
+            "job `gpu-kernel` restores a cache (Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3) before it frees the disk",
         check_order(&moved(&workflow()))
     );
 }

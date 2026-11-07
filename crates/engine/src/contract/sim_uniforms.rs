@@ -24,6 +24,10 @@
 //! unsoftened run. No force law takes `epsilon` yet and the corpus does not define one (RQ-627), so dispatch refuses
 //! any `epsilon` other than 0 ([`crate::dispatch::validate`]); the field, its tag and its sim-key byte stay.
 //!
+//! **The units** (Part 5; R-668). `g` and `m_total` are carried and on the sim key, and the kernel runs only at `G = 1`
+//! and `M = 1`, so dispatch refuses any other value of either ([`crate::dispatch::validate`]): a source in another `G`
+//! or total mass is converted at the import boundary. The fields and their sim-key bytes stay.
+//!
 //! **Benettin's `n_renorm` and `δ₀`** (dd_integrator §3.8) have no value yet: they are REQ-INT-076's calibration, which
 //! the task that needs them proposes. Until then each is `None`, and `Default` gives no number for them.
 
@@ -61,9 +65,9 @@ pub struct SimUniforms {
     pub eps_e: f64,
     /// `eps_L`, the relative angular momentum drift's floor at rest starts: default `10⁻⁶`.
     pub eps_l: f64,
-    /// `G`, 1.
+    /// `G`, 1: dispatch refuses any other value (R-668).
     pub g: f64,
-    /// `M_total`, 1.
+    /// `M_total`, 1: dispatch refuses any other value (R-668).
     pub m_total: f64,
     /// `epsilon`, the optional softening length, canonical and fixed at `t = 0`: default 0, unsoftened.
     pub epsilon: f64,

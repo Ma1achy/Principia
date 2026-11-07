@@ -26,6 +26,7 @@ The real engine's Manifold view tilts and slices every chart (targets the chart'
 ## Deliverables
 - The edit path's stop in the real engine's contract (`crates/engine/src/contract/`), the Manifold view's sections on every chart, the mapping control, the readout line, Save view as chart for curved views.
 - Tests `real_tilt_every_chart`, `energy_axis_mapping_control`, `nav_stop_edit_path`, `saved_curved_chart`.
+- If TASK-M2-52 confirms that R-709's clamp arises: the Inspector's "held at floor" label (REQ-GUI-241).
 
 ## Acceptance tests
 - `cargo test -p gui real_tilt_every_chart` and `cargo xtask screenshot 01_main` — REQ-GUI-241's verify.
@@ -36,10 +37,12 @@ The real engine's Manifold view tilts and slices every chart (targets the chart'
 
 ## Notes
 - **⚑ Physics review is required** (the instruction's "How to work this", 4): this task does not merge on the code reviewer's word alone; its reviewer list includes physics.
-- **RQ-378** (a flattened oblique-latent save of a curved chart) waits on nothing; meanwhile not offered.
+- **RQ-378** (a flattened oblique-latent save of a curved chart) waits on nothing; meanwhile not offered. *5 Nov 2026 (R-801, closing RQ-378 (a)):* ruled: not offered.
+- *5 Nov 2026 (R-807):* RQ-679, the slider span of the held coordinates, is deferred to this task's start: when it starts, its options go to the owner with a recommendation, and the span waits on the answer.
 - **R-510 (20 Oct 2026):** RQ-378 is parked until RQ-341; nothing waits. **Review round 1 of PR #255 (applied per R-369):** on a curved chart the Slice centre sliders its axes set are read-only and dimmed (gui review G2; R-473 J11, REQ-GUI-241); the mapping rows follow Save view as chart in the keyboard order and offer `KE` (G7, G9; R-471 H10, REQ-GUI-242); a saved curved chart's target dropdowns do not offer its saved target (RQ-403).
 - **R-513 (20 Oct 2026) rules RQ-403:** a saved curved chart's target dropdowns offer its saved target too, a new tilt into it composing the rotations in the kernel (REQ-CHART-077, TASK-M2-40, which this task depends on already); the round-1 note's "do not offer its saved target (RQ-403)" no longer applies.
 - **R-537 EX3 (20 Oct 2026):** the stop is judged on the centre after the axes' types fold it, so a pan across a seam or a pole never stops; with the controls shown the view may sit past the chart's square (TASK-M8-55, REQ-GUI-267). The stop itself is unchanged.
 - R-484 J9 (20 Oct 2026): filling the chart params clears T2's `Chart {}`; T2 is TASK-M8-53's.
 - R-627 (27 Oct 2026): this task runs on the real engine, so where it depended on a task R-627 moves to the mock it depends on that task's real-engine side, which depends on it: TASK-M8-06 by TASK-M8-89 (applied per R-369). *Was:* "- **Depends on:** TASK-M8-06, TASK-M8-03, TASK-M6-48, TASK-M6-49, TASK-M2-36, TASK-M2-37, TASK-M2-38, TASK-M2-40, TASK-M8-18".
 - **R-633 (28 Oct 2026, RQ-603):** TASK-M2-36 is split, and TASK-M2-52 builds tilt and slice on the six construction charts and closes REQ-CHART-062, which this task needs; so this task, which tilts and slices every chart on the real engine, depends on it (applied per R-369). *Was:* "- **Depends on:** TASK-M8-89, TASK-M8-03, TASK-M6-48, TASK-M6-49, TASK-M2-36, TASK-M2-37, TASK-M2-38, TASK-M2-40, TASK-M8-18".
+- *4 Nov 2026 (R-708, R-709):* the Burrau charts' tilt targets follow R-471's two modes. The Inspector's label is conditional, as ruled.

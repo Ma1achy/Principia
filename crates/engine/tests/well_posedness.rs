@@ -5,6 +5,7 @@
 //!   chart with no swept axis and a declared flag the axes contradict are each refused.
 //! - `validator_invariant_downstream_*` (REQ-CHART-006): an invariant axis whose dependency set is not upstream of its
 //!   sector is refused; `(L_z, E)` solves jointly.
+//! - `pe_axis_refused_by_validator` (REQ-CHART-070): a `PE` axis is refused, chart_reference §2.1 writing no warp for it.
 //! - `chart_descriptors_*` (REQ-CHART-014, REQ-CHART-012): every registered chart returns its descriptors and passes;
 //!   the shape sphere's spherical map bijective (R-544) and its exponential map's cap bijective, inside one hemisphere
 //!   or straddling the equator (R-503, R-544; REQ-CHART-075), the full-range Burrau (Euclid) chart `DoubleCover`
@@ -28,13 +29,15 @@ use engine::chart_authoring::{
 };
 use kernel::chart::invariant::Invariant;
 use kernel::chart::mixed::{Alpha, Coordinate, PRhoX, ZMu1, ZQ0, ZQ2, ZQ3};
+use kernel::chart::physical::{AxisE, MixedEnergy, MixedMassRatio};
 use kernel::chart::{
     Axis, BlockTouch, Burrau, BurrauThetaDeltaM, BurrauThetaK, BurrauThetaLz, Chart, ChartOut,
     EuclidPlane, Float, InvariantLE, InvariantLK, Latent, MassSimplex, Mixed, ShapeMap,
     ShapeSphere, SystemImage, ValidationResult,
 };
+use kernel::chart::{Mapped, Mapping};
 use kernel::decode::{self, Decoded};
-use kernel::generated::links::Defaults;
+use kernel::generated::links::{Defaults, LinkParams};
 use validation::negative_control;
 
 // ── Fixtures ───────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -920,22 +923,10 @@ fn validator_invariant_downstream_joint_solve() {
         }],
     );
     check_solves(latent(e(0), e(5)), &[]);
-    // An invariant in each of two sectors: two solves, neither joint, in the decoder's order.
-    let chart = probe(
-        [
-            invariant(InvariantQuantity::E, Block::Momentum, config_mass()),
-            invariant(InvariantQuantity::PE, Block::Config, Block::Mass.only()),
-        ],
-        frozen_but(&[
-            Coordinate::ZAlpha,
-            Coordinate::ZQ0,
-            Coordinate::ZQ1,
-            Coordinate::ZQ2,
-        ]),
-        vec![seed()],
-    );
+    // An invariant in each of two sectors: two solves, neither joint, in the decoder's order. The validator reads only
+    // the descriptor, and a `PE` axis is refused (`pe_axis_refused_by_validator`), so the config invariant is a `K`.
     check_solves(
-        chart,
+        two_sectors(InvariantQuantity::K),
         &[
             Solve {
                 sector: Block::Config,
@@ -975,6 +966,47 @@ negative_control!(
                 joint: false,
             },
         ],
+    )
+);
+
+/// An `E` axis into the momenta beside a `config` axis of `config` into the configuration, reading the masses.
+fn two_sectors(config: InvariantQuantity) -> Probe {
+    probe(
+        [
+            invariant(InvariantQuantity::E, Block::Momentum, config_mass()),
+            invariant(config, Block::Config, Block::Mass.only()),
+        ],
+        frozen_but(&[
+            Coordinate::ZAlpha,
+            Coordinate::ZQ0,
+            Coordinate::ZQ1,
+            Coordinate::ZQ2,
+        ]),
+        vec![seed()],
+    )
+}
+
+// ── REQ-CHART-070 ──────────────────────────────────────────────────────────────────────────────────────────────────
+
+/// A `PE` axis is refused by the well-posedness validator: chart_reference §2.1 writes no warp for it, so no chart
+/// offers it (R-471 H2). The same chart with a `K` axis in its place passes, so the refusal is the quantity's.
+#[test]
+fn pe_axis_refused_by_validator() {
+    check_refused(
+        two_sectors(InvariantQuantity::PE),
+        Refusal::NoWarpWritten { axis: "invariant" },
+    );
+    let accepted = validate(two_sectors(InvariantQuantity::K), None);
+    assert!(accepted.is_ok(), "the K chart is refused: {accepted:?}");
+}
+
+negative_control!(
+    pe_axis_refused_by_validator,
+    "the same chart with a K axis is not refused",
+    expected = "is not refused",
+    check_refused(
+        two_sectors(InvariantQuantity::K),
+        Refusal::NoWarpWritten { axis: "invariant" },
     )
 );
 
@@ -1102,6 +1134,44 @@ fn chart_descriptors_registered_charts() {
         bij,
     );
     assert_eq!(raw.kind(), ChartKind::Affine);
+    // The physical-quantity mixed-axis charts and a mapped chart (TASK-M2-37): a lone E solves into the momenta, the
+    // mass ratio is kind 2 in the masses, and a mapping leaves the descriptor the chart's own.
+    let energy = check_registered(
+        MixedEnergy::<ZMu1, AxisE, Defaults, f64>::new(
+            [0.0; 8],
+            [-1.0, 1.0],
+            1.0,
+            2.0,
+            0.0,
+            Mapping::Warped,
+        ),
+        2,
+        bij,
+    );
+    assert!(energy.has_feasibility_boundary);
+    let ratio = check_registered(
+        MixedMassRatio::<Alpha, Defaults, f64>::new(
+            [0.0; 8],
+            [0.1, 1.4],
+            [0.05, 20.0],
+            [0, 1],
+            Mapping::Warped,
+            &LinkParams::DEFAULT,
+        )
+        .expect("a realised range"),
+        2,
+        bij,
+    );
+    assert_eq!(ratio.axes[1].kind(), Some(AxisKind::DerivedInBlock));
+    let mapped = check_registered(
+        Mapped::<_, Defaults>::new(
+            InvariantLK(invariant_params()),
+            [Mapping::Linear, Mapping::Linear],
+        ),
+        2,
+        bij,
+    );
+    assert_eq!(mapped, InvariantLK(invariant_params()).descriptor());
 }
 
 negative_control!(

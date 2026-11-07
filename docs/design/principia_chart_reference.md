@@ -257,6 +257,14 @@ Lz(s,t)  = (2s − 1)·L_max(t)
 with `(s,t) = (u,v) ∈ [0,1]²`. **This maps the unit square onto the feasible interior, so no pixel
 is infeasible by construction** — which is why the warp exists rather than clamping.
 
+*5 Nov 2026 (R-791, closing RQ-693 (b)):* at `ε ≠ 0` the `(Lz, E)` chart stays available, and its `E` is the Newtonian
+energy: `U` here, in the feasible set, the warp and §2.2's `K*`, is `V` at `ε = 0`, never the softened `V₀` of
+`principia_dd_decoder.md` §3.6. So a pixel's start is the same at every `ε`, and toggling softening changes only the
+physics. The run's own `E₀` is softened, so it isn't the axis value: the axis is labelled as Newtonian energy whenever
+softening is on, and the Inspector shows the softened energy beside it (`principia_render_gui_spec.md` §G2, §G8). Encode
+reads the same Newtonian `U` on this chart, so entering a pixel's `(Lz, E)` returns that pixel's `z` at any `ε`. Whether
+this reaches the other axes that read `U`, the lone, mixed and Chart-builder `E` axes and the virial ratio, is RQ-709.
+
 For `(Lz, K)`: identical, with `K* = K(t)` directly. Simpler, since `K ≥ 0` is the natural
 constraint.
 
@@ -281,7 +289,8 @@ axis takes its own line of the warp: `K` (`KE`) `= K_max·t^γ_K`, `E = U + K_ma
 yet: REQ-CHART-070 (R-72), and no chart offers one until it is. **The warp is evaluated per pixel,** with that pixel's
 own `U`, `I` and masses: a tilt or slice that moves a hidden coordinate (masses, shape) changes `U` and `I` across the
 window, and a warp computed once at the centre would put some pixels outside the feasible region; evaluated per pixel,
-every pixel stays feasible under every tilt (R-471, E3; R-473, T5), each pixel whose own chart parameters lie in
+every pixel stays feasible under every tilt (R-471, E3; R-473, T5; at a held `L_z` on a Burrau `K` axis through the floor
+of R-708, §4.5), each pixel whose own chart parameters lie in
 `[0,1]²`: under Tip as sheet with one target and both angles set a window pixel's `(a, b)` can leave the square, the
 axes' types then acting on it (§5.4), and such a pixel is past the edge, blank past a bounded one (R-512, ruling
 RQ-402; R-471, H9). *Was:* "and what such a pixel draws is RQ-402 (R-471, H9)." Untilted, they are `z₀`'s at every pixel (§2, the
@@ -303,6 +312,82 @@ moves the mass logits, so every pixel's masses are positive and sum to 1." The w
 does not write (the virial ratio's, a ratio's range in the logits) are REQ-CHART-070's definition (R-72), written here
 under physics review before a chart offers them. The decoder-bug warning (R-467, clause 4) is for a chart whose
 physical-quantity axes are all warped.
+
+**The `PE` axis: no chart offers it (REQ-CHART-070, R-471 H2).** `PE = U` is a function of the configuration and the
+masses alone, so a `PE` axis would solve into the configuration block, not the momenta (kind 3, reading the masses).
+At the masses and scale gauge (§0.5) it is unbounded below, toward a collision; a level `U = U*` is a curve in the
+configuration's DOF, so an axis of it needs a residual convention to pick a point on that curve, as well as a warp of
+`t` onto the range. This
+section writes neither, so no chart offers a `PE` axis: the well-posedness validator refuses one (TASK-M2-37). A warp
+for it is a new paragraph here, under physics review, before any chart offers it.
+
+**The virial ratio's warp (REQ-CHART-070, R-506 W2).** For `Q = 2K/|U|` (`U < 0` at positive masses), the axis keeps
+its own asked range `[Q_lo, Q_hi]`, as a Chart-builder axis does (R-471 H4; render_gui_spec §G7). Warped, it runs
+over the range's feasible part `[Q₀, Q_hi]`, `Q₀ = max(Q_lo, 0)`: `Q(t) = Q₀ + (Q_hi − Q₀)·t^γ_K`, where `γ_K` is this
+section's exponent, so the range `[0, Q_max]` gives `Q_max·t^γ_K`; a range with `Q_hi ≤ 0` has no feasible part, and
+no chart offers it. The kinetic energy at the pixel is `K* = Q(t)·|U|/2`, using the pixel's own `U` (E3). `K*` is
+built by §2.2's construction at the chart's held `L_z`. At a held `L_z = 0` every pixel of `[0,1]²` is feasible,
+since `K* ≥ 0`; at a held `L_z ≠ 0` the next paragraph adds the floor. The axis is bounded past both of its edges. Under the linear option the axis is
+`Q(t) = Q_lo + (Q_hi − Q_lo)·t`, affine, over the asked range, and its pixels with `Q < 0` or `K* < L_z²/2I` are not a
+system.
+
+**A warped `t` axis at a held `L_z ≠ 0` stands on the floor (the owner's ruling of 4 Nov 2026 on RQ-683).** A lone
+`K`, `KE`, `E` or virial axis holds `L_z` at the chart's value. Warped, its line adds the floor `L_z²/2I`, the least
+kinetic energy that spin allows: `K* = L_z²/2I + K_max·t^γ_K` on `K` and `KE`, `E = U + K*` with that `K*` on `E`, and
+`K* = L_z²/2I + Q(t)·|U|/2` on the virial ratio, the pixel's own `U` and `I`. So every pixel of `[0,1]²` is a system.
+On `K`, `KE` and `E`, and on the virial ratio with `Q₀ = 0`, the bottom row `t = 0` is the floor itself, §2.2's rigid
+rotation with `a = 0`. The top row exceeds `K_max` on `K`, `KE` and `E`, and `Q_hi` on the virial ratio: each is a
+range, and `K_max` is passed past `t = 1` too (R-508). The pixel's own virial ratio `2K*/|U|` is
+`Q(t) + L_z²/(I·|U|)`. On `K`, at `I = 1`, the floor is constant, so a row is a level set of `K`. On the virial ratio
+the offset varies with `U`, so a row is no level set of `2K/|U|`, and a readout of the axis shows the pixel's own
+ratio. With `Q₀ > 0` the additive form is applied until the owner answers RQ-700: the asked bottom `Q₀` is not drawn
+even where it is feasible, and `a ≠ 0` on the bottom row. At a held
+`L_z = 0` the floor is 0 and the lines above stand unchanged. The bottom row must not blank on rounding: the floor is
+the least normal float §2.2's exact test finds feasible at the held `L_z`, `L_z²/2` at `I = 1` rounded, raised one
+float where it rounded below, and never subnormal, so a backend that flushes subnormals keeps it; adding a non-negative
+term to it cannot fall below it. Under the linear option the axis
+keeps its fixed values and no floor is added: its pixels with `K* < L_z²/2I` are not a system and draw blank (R-470).
+The held `L_z`, and the held `K` on an `L_z` axis, is this chart's hidden coordinate under R-633, as the physical
+parameter of the construction that holds its momentum block. No task builds its tilt or its slice: whether and how
+it tilts and slices is RQ-701's. The one exception to every pixel being a system: a held `L_z` whose `L_z²` has no
+finite float at the chart's own precision has no floor, and every pixel of that chart is not a system,
+§2.2's exact test labelling it and `validate` agreeing at that precision. *Was:* "**A warped `t` axis at a held `L_z ≠
+0` is not offered (R-471 E1, R-506; RQ-683).** A lone `K`, `KE`, `E` or
+virial axis holds `L_z` at the chart's value. At a held `L_z ≠ 0` its pixels with `K* < L_z²/2I`, near `t = 0`, would
+be non-systems inside the square, and no warp written here makes them feasible. So no chart offers that axis warped at
+a held `L_z ≠ 0`: `validate` refuses every point of it (applied per R-369, TASK-M2-37). Whether such an axis should
+exist, and under what warp, is RQ-683's. Under the linear option it is offered, its pixels with `K* < L_z²/2I` not a
+system."
+
+**The mass ratio's range in the link's inputs (REQ-CHART-070, R-506 W3).** For two bodies `a` and `b`, the axis is the
+ratio `q = m_b/m_a`, with the third body's mass `m_c` held at its slice-centre value. Then `m_a = (1 − m_c)/(1 + q)`
+and `m_b = q·m_a`. The axis writes the active mass link's inputs, `z_mass = L⁻¹(m)`, and the decode reads the masses
+back through the link, `m = L(z_mass)`, so every pixel's masses are positive and sum to 1.
+
+A ratio is realised when the link's inverse followed by its forward returns its masses `(m_a, m_b, m_c)`, `m_c` at
+its held value, and the ratio `q`, each to within `ε_μ`, relative, since the inverse saturates past what the link
+reaches. The ratio is read as well because each mass within `ε_μ` bounds it only to about `2·ε_μ`, and `q` is what the
+axis labels. Where the logit that sets `m_c` saturates first, the round trip keeps the ratio and moves `m_c`, and
+that ratio is not realised.
+`ε_μ = 10⁻⁶` is the link clamp (chart_decoder_contract § "Three hard requirements on any registered link", item 2;
+inverse_encode_contract Part 3), reused here as the round trip's tolerance, not a new constant.
+
+Warped, `q(t) = q₀·(q₁/q₀)^t`, geometric, over `[q₀, q₁]`: the part of the asked range the link realises at `m_c` and
+at its active parameters. A chart decoded at `f32` holds `m_c` narrowed to `f32`, and rounding it moves the two small
+masses by a relative `δ·m_c/(1 − m_c)`, so the range is the part realised at `m_c` both as held and as narrowed, and
+where those share no ratio, as can happen at a held mass near 1, the chart is not offered. The `ε_μ` test runs at f64
+arithmetic on the narrowed values, and an `f32` decode's own rounding is held to Tier N (parity_contract §4). The axis
+is bounded past both of its edges.
+
+The search for `[q₀, q₁]` holds a ratio to `ε_μ/2`, half the tolerance above, and that margin is the search's alone: a
+ratio still counts as realised at `ε_μ`, so `[q₀, q₁]` can be shorter than the part the link realises at `ε_μ`, by as much as the
+measured worst, 5.48 in `ln q`, at an extreme ratio, and a chart realised at `ε_μ` can be refused. The reason is measured. The range's ends are narrowed to `f32`, and that rounding
+must stay inside the `ε_μ` a decoded pixel is held to: at the full `ε_μ`, 62% of narrowed `softmax_tanh` charts had a
+refused row. The need is `1 − 2⁻²⁴/ε_μ ≈ 0.94` of `ε_μ`. The `1/2` is chosen with room, not derived (R-810, closing
+RQ-707 (i)).
+
+Linear, `q(t) = q_lo + (q_hi − q_lo)·t`, affine, over the asked range. A pixel whose ratio is at or below 0, or is not
+realised, is not a system.
 
 ### 2.2 Deterministic momentum construction
 
@@ -360,6 +445,8 @@ if K* < K_min:  terminal
 a = √(2·(K* − Lz²/(2I)))
 vᵢ = vᵢ^(L) + a·wᵢ                pᵢ = mᵢ·vᵢ
 ```
+
+On the `(Lz, E)` chart at `ε ≠ 0`, this `U` is §2.1's Newtonian `U` (R-791).
 
 **The infeasible pixel's label** (defined per R-72). A pixel with `K* < K_min` is tagged
 `DEGENERATE(INVARIANT_INFEASIBLE)`, one of `DEGENERATE`'s enumerated causes (§0.7; `principia_dd_decoder.md` §2, "From
@@ -805,7 +892,9 @@ the twins side decides it.
 
 **Hidden coordinates under tilt and slice (R-633, ruling RQ-603).** These charts hold their blocks by a construction,
 not by latent controls, so their hidden coordinates are the construction's physical parameters, tilted and sliced by
-value as R-554 L5's `p_λ` (`principia_chart_decoder_contract.md` § "Tilt (basis edit)", "Tilt on every chart"):
+value as R-554 L5's `p_λ` (`principia_chart_decoder_contract.md` § "Tilt (basis edit)", "Tilt on every chart"), but a
+held `K` in warped mode, which R-708 tilts in its warp coordinate and which still slices by value, below the table (R-720;
+*was:* "a held energy-type coordinate in warped mode"):
 
 | Chart | Hidden coordinates | At `d = 0` |
 |---|---|---|
@@ -816,8 +905,27 @@ value as R-554 L5's `p_λ` (`principia_chart_decoder_contract.md` § "Tilt (basi
 
 A momentum control is tilted from 0 and its momenta are `D_mom` of it under the pixel's masses, every registered
 momentum link mapping 0 to 0. With a held `L_z` or `K` tilted, the momenta are §2.2's construction at the tilted value
-(§2.2 takes any `L_z` with `K ≥ L_z²/2I`), and a cell with no construction there (`K < L_z²/2I`) reads as refused:
-no system, area weight 0. Built by TASK-M2-52 on TASK-M2-36's tilt path.
+(§2.2 takes any `L_z` with `K ≥ L_z²/2I`). The rest follows R-471's two modes (R-708, ruling RQ-678; *was:* "and a cell
+with no construction there (`K < L_z²/2I`) reads as refused: no system, area weight 0", in every mode).
+
+- **Warped mode, the default.** Every pixel inside the chart's square is a system under every tilt, no cell refused.
+  `(ν, K)`, `Φ_θ,K` and `Φ_strip,K` floor the axis at the pixel's own held `L_z`, $K = L_z^2/2I + K_{\max} t^{\gamma_K}$,
+  which may pass `K_max` at the top, a range as R-508's side continues. `Φ_θ,L_z`'s held `K` is tilted in its warp
+  coordinate, `K = K_max·t^γ_K`, `t = t₀ + d`, `t₀ = (K₀/K_max)^(1/γ_K)`, `d` in units of `t`, so it stays ≥ 0; it takes
+  no floor, the band above giving `L_z²/2I ≤ K` at every `K ≥ 0`. Rounding at the floor must not blank the bottom row,
+  as §2.1 holds `L_max² ≤ 2K`. The held `L_z` moves by value, tilted and sliced alike, `L_z = L_z₀ + d`, with no sign
+  constraint: the floor keeps every pixel a system at any `L_z` (§2.1's one exception), and a column above `K_max` at large
+  tilt is accepted, the practical bound the slider span, RQ-679 (R-720, ruling RQ-699; *was:* "How the held `L_z` itself
+  moves is RQ-699."). A slice of a held `K` stays by value in both modes, `K₀ + d`: R-708 amends the tilt only,
+  REQ-CHART-060's stop holds the centre at `K₀ ≥ 0`, and `t₀` is recomputed from the new `K₀` (applied per R-369).
+- **If the implementer confirms it arises (R-709).** A held energy's warp coordinate past `t < 0` clamps at `t = 0`, held
+  `K` at its floor, `L_z²/2I` (on `Φ_θ,L_z`, where `L_z` is read off `K`, both are 0: the rest start at the pixel's own
+  shape). Each clamped pixel is a real system, flagged "held at floor" in the Inspector and the sidecar, and the test
+  output reports the clamped-pixel share. There is no mirror.
+- **Linear mode, the option per axis (R-471 E2).** Rows keep fixed physical values, a held coordinate tilts by value,
+  and a cell with no construction there (`K < L_z²/2I`) is no system, area weight 0, blank (R-470).
+
+Built by TASK-M2-52 on TASK-M2-36's tilt path, the linear option on TASK-M2-37's.
 
 ### 4.6 The central hypothesis
 
@@ -1001,7 +1109,9 @@ type per axis of every Burrau-family chart (§4.5), with the reasoning:
   RQ-376), and is counted. *Was:* "is left undeclared, as on the warp (R-407, A5)". The table's rows for the warp, the
   `(ν, K)` chart and `Φ_θ,K` follow; *was:* "bounded" (the warp's vertical axis), "`K` bounded (declares nothing; the
   warp's `K(t)`, §2.1)", "`K` bounded (declares nothing; as on `(ν, K)`)", "hatched on every side; the `t > 1` side is
-  not declared (§2.1)", "hatched on every side" and "out of the count and the total (the domain's end)".
+  not declared (§2.1)", "hatched on every side" and "out of the count and the total (the domain's end)". *5 Nov 2026
+  (R-720):* on a floored axis it is `L_z²/2I + K(t)`, and a `K` above `K_max` inside the square is counted, as the `t > 1`
+  side is (REQ-CHART-056).
 - **`θ`, bounded** (every acute-angle chart's horizontal axis). The axis's edges are `θ_min` and `θ_max`
   (REQ-CHART-045), inside the domain `(0, π/4]`, so past each edge the formula first runs through real systems the
   chart does not show: below `u = 0` the thin triangles of `θ ∈ (0, θ_min)`, and above `u = 1`, where `θ_max < π/4`,

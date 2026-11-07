@@ -840,10 +840,26 @@
 - id: TASK-M2-52
   milestone: M2
   title: "Tilt and slice on the six charts that hold a block by a construction: the mass simplex's `ν₀`, a rest start's momentum controls from 0, and the held `L_z` or `K` of the Burrau charts, as physical hidden coordinates (R-633, R-473) ⚑"
-  depends_on: [TASK-M2-36]  # R-633 (RQ-603): split from TASK-M2-36, on its tilt path
+  depends_on: [TASK-M2-36, TASK-M2-37]  # R-633 (RQ-603): split from TASK-M2-36, on its tilt path
   needs: []
   requirements: [REQ-CHART-062, REQ-CHART-065]  # R-633: only this task can close them, once every chart tilts
   reviewers: [code, qa, physics]  # ⚑ physics review required; not merged on the code reviewer's word alone
+  pitfalls: []
+- id: TASK-M2-53
+  milestone: M2
+  title: "The f32 exponential sinc that never reads the backend's `sin` near 0 (R-696)"
+  depends_on: [TASK-M2-28]
+  needs: []
+  requirements: [REQ-DEC-053, REQ-DEC-054]
+  reviewers: [code, qa, physics]
+  pitfalls: []
+- id: TASK-M2-54
+  milestone: M2
+  title: "`arctan_sum_bits` confirmed in the constants register (R-699)"
+  depends_on: [TASK-M2-26]
+  needs: []
+  requirements: [REQ-GEN-045]
+  reviewers: [code, qa]
   pitfalls: []
 - id: TASK-M3-02
   milestone: M3
@@ -1050,7 +1066,7 @@
   title: "The Burrau anchor smoke tests: SP-1 run to its horizon, SP-2, and the f64 run against R-33's reference (PL-8's first half)"
   depends_on: [TASK-M3-24, TASK-M3-25]
   needs: [REQ-VAL-016, REQ-ENC-011, REQ-VAL-019]
-  requirements: [REQ-VAL-034, REQ-VAL-132, REQ-VAL-250, REQ-VAL-251, REQ-VAL-336, REQ-VAL-337]  # R-650 (30 Oct 2026): REQ-VAL-127 to TASK-M9-36; PL-8a from TASK-M3-56; SP-2 new
+  requirements: [REQ-VAL-034, REQ-VAL-132, REQ-VAL-250, REQ-VAL-251, REQ-VAL-336, REQ-VAL-337, REQ-TOOL-222]  # R-650 (30 Oct 2026): REQ-VAL-127 to TASK-M9-36; PL-8a from TASK-M3-56; SP-2 new
   reviewers: [code, qa, physics]
   pitfalls: [PIT-3, PIT-10]
 - id: TASK-M3-28
@@ -1106,7 +1122,7 @@
   title: "Escape re-validation: precision, recall and the tau gap"
   depends_on: [TASK-M3-33]
   needs: [REQ-VAL-004, REQ-VAL-006]
-  requirements: [REQ-VAL-040, REQ-VAL-051, REQ-EVT-019, REQ-VAL-135, REQ-EVT-025, REQ-VAL-168]
+  requirements: [REQ-VAL-040, REQ-VAL-051, REQ-EVT-019, REQ-VAL-135, REQ-EVT-025, REQ-VAL-168, REQ-EVT-033]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-2.2, PIT-2.3, PIT-3]
 - id: TASK-M3-35
@@ -1192,9 +1208,9 @@
 - id: TASK-M4-03
   milestone: M4
   title: "Tier L: branch decisions bit-identical on identical inputs, at the enumerated branch inputs"
-  depends_on: [TASK-M4-02]
+  depends_on: [TASK-M4-02, TASK-M4-29]
   needs: [REQ-INT-028, REQ-INT-029, REQ-EVT-003, REQ-EVT-004, REQ-EVT-005, REQ-EVT-020, REQ-DEC-017, REQ-ENC-016, REQ-DEC-022, REQ-DEC-008, REQ-DEC-007, REQ-PAY-018]
-  requirements: [REQ-INT-057, REQ-INT-061, REQ-INT-064, REQ-INT-066, REQ-EVT-021, REQ-VAL-059, REQ-VAL-078]
+  requirements: [REQ-INT-057, REQ-INT-061, REQ-INT-064, REQ-INT-066, REQ-EVT-021, REQ-VAL-059, REQ-VAL-078, REQ-INT-113]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-9, PIT-10]
 - id: TASK-M4-04
@@ -1358,6 +1374,30 @@
   requirements: [REQ-VAL-348]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-9, PIT-10]
+- id: TASK-M4-29
+  milestone: M4
+  title: "Written forms for `E_rel` and `|Δn̂|` that use no driver division or `√` in the decision (R-694)"
+  depends_on: [TASK-M4-02, TASK-M3-12]
+  needs: []
+  requirements: [REQ-INT-112]
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-2.2, PIT-9]
+- id: TASK-M4-30
+  milestone: M4
+  title: "The header records \"Off\" only for drivers measured, otherwise wgpu's path with \"driver unverified\" (R-694)"
+  depends_on: [TASK-M4-03]
+  needs: []
+  requirements: [REQ-TOOL-221]
+  reviewers: [code, qa, physics]
+  pitfalls: []
+- id: TASK-M4-31
+  milestone: M4
+  title: "Near-tie golden cases held only on CI's backends, elsewhere reported (R-695)"
+  depends_on: [TASK-M4-30]
+  needs: []
+  requirements: [REQ-VAL-349]
+  reviewers: [code, qa, physics]
+  pitfalls: []
 - id: TASK-M5-01
   milestone: M5
   title: "QuadReduction ledger: member order, packing, histogram and impurity grain"
@@ -2021,6 +2061,22 @@
   depends_on: [TASK-M6-24]  # R-685; the pattern is option A (R-689)
   needs: []
   requirements: [REQ-GUI-412]
+  reviewers: [code, qa, gui]
+  pitfalls: []
+- id: TASK-M6-55
+  milestone: M6
+  title: "A least window size, and the layout's minimums re-measured (R-705)"
+  depends_on: [TASK-M6-35]
+  needs: []
+  requirements: [REQ-GUI-414]
+  reviewers: [code, qa, gui]
+  pitfalls: []
+- id: TASK-M6-56
+  milestone: M6
+  title: "A typed basis read whole, and zoom scaling the stored basis (R-705)"
+  depends_on: [TASK-M6-40]
+  needs: []
+  requirements: [REQ-GUI-415]
   reviewers: [code, qa, gui]
   pitfalls: []
 - id: TASK-M7-01
@@ -2835,7 +2891,7 @@
 - id: TASK-M8-32
   milestone: M8
   title: "Export & share window: image with pxpack, state snapshot and share link, present mode (04_windows.png)"
-  depends_on: [TASK-M8-30, TASK-M8-31, TASK-M8-87, TASK-M7-32, TASK-M6-28, TASK-M2-34, TASK-M6-47, TASK-M8-46, TASK-M6-48, TASK-M2-37, TASK-M2-40, TASK-M7-45, TASK-M3-39]  # R-467 D13: the background and Fit (code review F4 on PR #253); TASK-M6-48, TASK-M2-37 and TASK-M2-40 for the sidecar's tilt_map, mappings and saved charts (R-471 to R-475); TASK-M7-45 generates the entry hashes (R-521 H5; code review F9 of PR #265, applied per R-369); TASK-M3-39 the pair table whose warning the sidecar carries (R-561)
+  depends_on: [TASK-M8-30, TASK-M8-31, TASK-M8-87, TASK-M7-32, TASK-M6-28, TASK-M2-34, TASK-M6-47, TASK-M8-46, TASK-M6-48, TASK-M2-37, TASK-M2-40, TASK-M7-45, TASK-M3-39, TASK-M2-52]  # R-467 D13: the background and Fit (code review F4 on PR #253); TASK-M6-48, TASK-M2-37 and TASK-M2-40 for the sidecar's tilt_map, mappings and saved charts (R-471 to R-475); TASK-M7-45 generates the entry hashes (R-521 H5; code review F9 of PR #265, applied per R-369); TASK-M3-39 the pair table whose warning the sidecar carries (R-561)
   needs: [REQ-TOOL-059, REQ-TOOL-065, REQ-TOOL-067, REQ-TOOL-070, REQ-TOOL-071, REQ-TOOL-072, REQ-INT-098]
   requirements: [REQ-TOOL-102, REQ-TOOL-103, REQ-GUI-100, REQ-TOOL-146, REQ-TOOL-167, REQ-TOOL-168, REQ-TOOL-169, REQ-GUI-353]
   reviewers: [code, qa, gui, physics]  # physics for present mode's fill past [0,1]² (R-407)
@@ -3416,6 +3472,14 @@
   requirements: [REQ-SYS-079]
   reviewers: [code, qa]
   pitfalls: []
+- id: TASK-M0-54
+  milestone: M0
+  title: "`ci-gate` gathers `ci-release` (R-809)"
+  depends_on: [TASK-M0-52]
+  needs: []
+  requirements: [REQ-TOOL-223]  # R-809 (5 Nov 2026)
+  reviewers: [code, qa]
+  pitfalls: []
 - id: TASK-M8-86
   milestone: M8
   title: "The v1 web skeleton (R-627): the egui app and the mock engine in wasm on WebGPU, deployed to GitHub Pages by hand"
@@ -3508,7 +3572,7 @@
 - id: TASK-M9-01
   milestone: M9
   title: "The orbit atlas through encode and decode: E and L per row (OC-2), and every atlas IC in the 8D latent chart (AT-D6)"
-  depends_on: [TASK-M2-20, TASK-M2-26]
+  depends_on: [TASK-M2-20, TASK-M2-26, TASK-M3-27]
   needs: []
   requirements: [REQ-VAL-214, REQ-VAL-215, REQ-VAL-216, REQ-VAL-217]  # R-594, R-629 (27 Oct 2026)
   reviewers: [code, qa, physics]
@@ -3692,7 +3756,7 @@
 - id: TASK-M9-24
   milestone: M9
   title: "Parischewsky et al.'s equilateral-triangle experiment around Lagrange (PA-1)"
-  depends_on: [TASK-M3-34]
+  depends_on: [TASK-M3-34, TASK-M9-45]
   needs: []
   requirements: [REQ-VAL-323, REQ-VAL-324, REQ-VAL-343]  # R-594, R-629 (27 Oct 2026); R-669: REQ-VAL-343
   reviewers: [code, qa, physics]
@@ -3812,10 +3876,10 @@
 - id: TASK-M9-39
   milestone: M9
   title: "The softened force law: Plummer softening, built after the core build, and the refusal of ε ≠ 0 lifted"
-  depends_on: [TASK-M3-01, TASK-M3-05, TASK-M3-06, TASK-M4-03, TASK-M4-06, TASK-M4-04, TASK-M4-13, TASK-M2-12, TASK-M2-25, TASK-M3-12, TASK-M3-22, TASK-M7-35]  # R-670: what softening reaches
+  depends_on: [TASK-M3-01, TASK-M3-05, TASK-M3-06, TASK-M4-03, TASK-M4-06, TASK-M4-04, TASK-M4-13, TASK-M2-12, TASK-M2-25, TASK-M3-12, TASK-M3-22, TASK-M7-35, TASK-M7-39, TASK-M2-17, TASK-M8-16]  # R-670: what softening reaches
   needs: []
-  requirements: [REQ-INT-111, REQ-SYS-094, REQ-SYS-095]  # R-654 (30 Oct 2026)
-  reviewers: [code, qa, physics, perf]
+  requirements: [REQ-INT-111, REQ-SYS-094, REQ-SYS-095, REQ-CHART-092, REQ-EVT-034, REQ-GUI-416]  # R-654 (30 Oct 2026), R-791, R-792 (5 Nov 2026)
+  reviewers: [code, qa, physics, perf, gui]
   pitfalls: [PIT-9]
 - id: TASK-M9-40
   milestone: M9
@@ -3833,3 +3897,35 @@
   requirements: [REQ-VAL-344, REQ-VAL-345, REQ-VAL-346]  # R-679 (3 Nov 2026), RQ-674
   reviewers: [code, qa, physics]
   pitfalls: [PIT-3]
+- id: TASK-M9-42
+  milestone: M9
+  title: "GG-1: the eight neighbours of (3, 43), a peek (R-701)"
+  depends_on: []
+  needs: []
+  requirements: [REQ-VAL-350]
+  reviewers: [code, qa, physics]
+  pitfalls: []
+- id: TASK-M9-43
+  milestone: M9
+  title: "Read Paper I's normalisation for Tanikawa 2000's time columns (R-702)"
+  depends_on: []
+  needs: []
+  requirements: [REQ-VAL-351]
+  reviewers: [code, qa, physics]
+  pitfalls: []
+- id: TASK-M9-44
+  milestone: M9
+  title: "LL-6: all 316 free-fall orbits against the authors' table, a peek target (R-704)"
+  depends_on: [TASK-M9-06]
+  needs: []
+  requirements: [REQ-VAL-352, REQ-VAL-353]
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-3]
+- id: TASK-M9-45
+  milestone: M9
+  title: "The side-ratio remap onto the shape sphere at rest, its preset on the equilateral point, and the two side ratios in the Inspector (R-798)"
+  depends_on: [TASK-M3-34, TASK-M8-16, TASK-M8-48]
+  needs: []
+  requirements: [REQ-CHART-093, REQ-GUI-417]  # R-798 (5 Nov 2026), RQ-594
+  reviewers: [code, qa, gui, physics]
+  pitfalls: []

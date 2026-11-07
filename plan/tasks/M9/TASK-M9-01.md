@@ -2,7 +2,7 @@
 
 - **Milestone:** M9
 - **Closes:** REQ-VAL-214, REQ-VAL-215, REQ-VAL-216, REQ-VAL-217
-- **Depends on:** TASK-M2-20, TASK-M2-26
+- **Depends on:** TASK-M2-20, TASK-M2-26, TASK-M3-27
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** PIT-3
@@ -44,3 +44,4 @@ The replication suite's targets OC-2, AT-D6 run as engine tests (`principia_dd_r
 - One of the orbit catalogue's six tests (`docs/incoming/2026-10-26_orbit_catalogues/INSTRUCTION_orbit_catalogues_2026-10-26.md` § "What to do with it (an addition to tier A)"), folded in by R-629.
 - Reference data are read from the records named in each requirement's verify; the records stay records (R-159), and the contract is `principia_dd_replication.md`.
 - *30 Oct 2026 (R-649, R-650):* moved to M9, external replication, and renumbered: formerly TASK-M2-51 (milestone M2). Its targets are measurements, never gates: each is scored in M9, or early as a peek (information only, `docs/verification/peek_log.md`), and its outcome is PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED, never a failure that blocks; like-for-like is checked first, and nothing is tuned, loosened or special-cased to pass (`docs/design/principia_dd_replication.md` § "12.3 Outcomes, the like-for-like check and the forbidden moves"). The tier each binds is § "12.2 Tiers"'s: (b). Its calibrations are confirmed by the human with the M9 report (REQ-VAL-340), *was:* "at the M2 gate".
+- *5 Nov 2026 (R-794, on RQ-681):* the scoring command comes from TASK-M3-27. RQ-681's parts (b), the twins and slice planes, and (c), OC-2's state and tolerance, stay open, deferred to M9: this task waits on them.

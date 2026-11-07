@@ -128,8 +128,8 @@ mod after_the_toolchain {
         check_free(&edit_after(
             &ci_yml(),
             "\n  ci-release:\n",
-            "      - uses: actions/checkout@v4\n",
-            "      - uses: actions/checkout@v4\n      - run: rustup toolchain install\n"
+            "      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0\n",
+            "      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0\n      - run: rustup toolchain install\n"
         ))
     );
 }

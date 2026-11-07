@@ -32,9 +32,11 @@
 use engine::chart_authoring::{validate, Authored, ValidatedChart};
 use kernel::chart::invariant::{Invariant, WarpReal};
 use kernel::chart::mixed::{Alpha, PRhoX, ZMu1, ZQ2};
+use kernel::chart::physical::AxisE;
 use kernel::chart::{
     Burrau, BurrauThetaDeltaM, BurrauThetaK, BurrauThetaLz, EuclidPlane, InvariantLE, InvariantLK,
-    Latent, MassSimplex, Mixed, ShapeMap, ShapeSphere,
+    Latent, Mapped, Mapping, MassSimplex, Mixed, MixedEnergy, MixedMassRatio, ShapeMap,
+    ShapeSphere,
 };
 use kernel::decode::{self, Decoded, Ic};
 use kernel::encode::{encode, Encoded, SimplexClamp};
@@ -310,6 +312,19 @@ impl<H, V, P> Reference for Mixed<H, V, P> {
     const AGAINST: Against = Against::Decoded;
 }
 
+impl<A, V, S, P> Reference for MixedEnergy<A, V, S, P> {
+    const AGAINST: Against = Against::Decoded;
+}
+
+impl<A, S, P> Reference for MixedMassRatio<A, S, P> {
+    const AGAINST: Against = Against::Decoded;
+}
+
+/// A mapping changes which state a pixel decodes, not whether it is on `C`'s section: the chart's own.
+impl<C: Reference, S> Reference for Mapped<C, S> {
+    const AGAINST: Against = C::AGAINST;
+}
+
 impl<P> Reference for ShapeSphere<P> {
     const AGAINST: Against = Against::Canonical;
 }
@@ -392,6 +407,9 @@ macro_rules! registered_charts {
         $m!(mass_simplex);
         $m!(mixed);
         $m!(mixed_latent);
+        $m!(mixed_energy);
+        $m!(mixed_mass_ratio);
+        $m!(mapped_invariant_lk);
     };
 }
 
@@ -528,6 +546,38 @@ pub mod charts {
     /// A mixed chart of two latent coordinates, `z_μ1` and `z_q2`.
     pub fn mixed_latent<P: Precision>() -> Mixed<ZMu1, ZQ2, P> {
         Mixed::new(of([0.0; 8]), of([-1.0, 1.0]), of([-1.0, 1.0]))
+    }
+
+    /// A mixed chart of `z_μ1` and a lone `E` axis, warped, at `L_z = 0` (TASK-M2-37).
+    pub fn mixed_energy<P: Precision>() -> MixedEnergy<ZMu1, AxisE, Defaults, P> {
+        MixedEnergy::new(
+            of([0.0; 8]),
+            of([-1.0, 1.0]),
+            P::of(1.0),
+            P::of(2.0),
+            P::of(0.0),
+            Mapping::Warped,
+        )
+    }
+
+    /// A mixed chart of `α` and the mass ratio `m₁/m₀` on `[0.05, 20]`, warped, built at f64 and narrowed
+    /// (TASK-M2-37).
+    pub fn mixed_mass_ratio<P: Precision>() -> MixedMassRatio<Alpha, Defaults, P> {
+        MixedMassRatio::<Alpha, Defaults, f64>::new(
+            [0.0; 8],
+            [0.1, 1.4],
+            [0.05, 20.0],
+            [0, 1],
+            Mapping::Warped,
+            &kernel::generated::links::LinkParams::DEFAULT,
+        )
+        .expect("the link realises part of the range")
+        .with_params(P::of)
+    }
+
+    /// `(L_z, K)` with its `K` axis linear (TASK-M2-37).
+    pub fn mapped_invariant_lk<P: Precision>() -> Mapped<InvariantLK<P>, Defaults> {
+        Mapped::new(InvariantLK(invariant()), [Mapping::Warped, Mapping::Linear])
     }
 }
 

@@ -67,7 +67,8 @@ minimum_test_timeout = 60
 #   caught. nextest gives each test a process of its own, so such exits are many times likelier than under `cargo test`.
 #   A mutant that breaks a test fails all three runs; a retry can only turn a catch into a survivor, never the reverse.
 # - `--max-fail=1:immediate`: the first test failing all its runs catches the mutant, and the tests still running are
-#   stopped at once rather than waited for.
+#   stopped at once rather than waited for. What a caught mutant costs is then what runs before that test, which
+#   `priority` in `.config/nextest.toml` sets: it orders the schedule alone, and a survivor still runs every test.
 additional_cargo_test_args = [
     "--no-tests=warn",
     "--retries=2",

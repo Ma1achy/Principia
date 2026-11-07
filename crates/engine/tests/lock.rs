@@ -69,6 +69,7 @@ fn sim(plane: Plane) -> SimConfig {
     SimConfig {
         chart: Chart {
             window: Window::SQUARE,
+            mapping: Default::default(),
         },
         plane,
         slice: Slice {

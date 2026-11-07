@@ -529,8 +529,9 @@ fn check_softmax_edges<R: P>() {
     }
 }
 
-/// `stick_breaking`'s clamp bits on each of its arguments, `2(m₁ + m₂) − 1` and `2m₂/(m₁ + m₂) − 1`, inside and past
-/// `±(1 − ε_μ)²`.
+/// `stick_breaking`'s clamp bits on each of its controls, aimed by the table's arguments, `2(m₁ + m₂) − 1` and
+/// `2m₂/(m₁ + m₂) − 1`, inside and past `±(1 − ε_μ)²`, a margin wide enough for either arithmetic. [`check_stick_flag`]
+/// aims at the edge itself.
 fn check_stick_edges<R: P>() {
     let keep = R::one() - R::EPS_MU;
     let cap = (keep * keep).f();
@@ -550,6 +551,8 @@ fn check_stick_edges<R: P>() {
         (point(0.5, (1.0 - cap * (1.0 - margin)) / 2.0), 0),
     ];
     for (m, bits) in cases {
+        // Past the clamp at `s` near 0 the point leaves the simplex at f32, and `guard` is how a mass gets here.
+        let m = guard(m);
         assert_eq!(
             <StickBreaking as SimplexClamp>::clamps(m),
             bits,
@@ -558,6 +561,81 @@ fn check_stick_edges<R: P>() {
         );
     }
 }
+
+/// Masses a relative `x` from control `k`'s clamp edge at the tiny end of its fraction: `v/t = x` for `z_k`, or
+/// `w/t = x` where `large`.
+fn stick_aimed<R: P>(k: usize, large: bool, x: f64) -> [R; 3] {
+    let half = R::of(0.5);
+    if k == 0 {
+        let small = R::of(x);
+        let rest = half * (R::one() - small);
+        if large {
+            [small, rest, rest]
+        } else {
+            [R::one() - small, half * small, half * small]
+        }
+    } else {
+        let small = half * R::of(x);
+        let big = half - small;
+        if large {
+            [half, small, big]
+        } else {
+            [half, big, small]
+        }
+    }
+}
+
+/// The clamp bit at `stick_breaking`'s edge is the inverse's clamp: each of the four clamps of `N`
+/// (dd_generation_root §3.9's form), a relative `d` of `ladder` past the edge and short of it. Past it the bit is set
+/// and `z` is the clamped value, read off the inverse deep past the edge; short of it neither. `ladder` starts where
+/// `z` resolves `d` at `R`.
+fn check_stick_flag<R: P>(flag: impl Fn([R; 3]) -> u32, ladder: &[f64]) {
+    let e = R::EPS_MU.f();
+    let end = 0.5 * e * (2.0 - e);
+    for k in 0..2_usize {
+        for large in [false, true] {
+            let bit = 1_u32 << k;
+            let inverse = |m: [R; 3]| <StickBreaking as Link<2, 3>>::inverse(m)[k].f();
+            let held = inverse(stick_aimed::<R>(k, large, 0.25 * end));
+            for &d in ladder {
+                for (past, x) in [(true, end * (1.0 - d)), (false, end * (1.0 + d))] {
+                    let m = stick_aimed::<R>(k, large, x);
+                    let z = inverse(m);
+                    let at_end = (z - held).abs() <= 2.0 * R::eps().f() * held.abs();
+                    assert_eq!(
+                        (flag(m), at_end),
+                        (if past { bit } else { 0 }, past),
+                        "control {k}, large side {large}, d = {d:e}, m = {m:?}: bits and clamped, z = {z:e} (edge)"
+                    );
+                }
+            }
+        }
+    }
+}
+
+const STICK_LADDER_F64: [f64; 7] = [1e-13, 1e-12, 1e-11, 1e-10, 1e-9, 1e-8, 1e-7];
+const STICK_LADDER_F32: [f64; 3] = [1e-5, 1e-4, 1e-3];
+
+#[test]
+fn encode_core_stick_flag_is_the_clamp() {
+    check_stick_flag::<f64>(<StickBreaking as SimplexClamp>::clamps, &STICK_LADDER_F64);
+    check_stick_flag::<f32>(<StickBreaking as SimplexClamp>::clamps, &STICK_LADDER_F32);
+}
+
+negative_control!(
+    encode_core_stick_flag_is_the_clamp,
+    "the table's arguments, `2v − 1` against `±c²`, place the edge a relative 3e-11 away, which the inverse does not",
+    expected = "(edge)",
+    check_stick_flag::<f64>(
+        |m| {
+            let cap = (1.0 - f64::EPS_MU) * (1.0 - f64::EPS_MU);
+            let stick = m[1] + m[2];
+            let out = |x: f64| !((x >= -cap) & (x <= cap));
+            u32::from(out(2.0 * stick - 1.0)) | (u32::from(out(2.0 * (m[2] / stick) - 1.0)) << 1)
+        },
+        &STICK_LADDER_F64
+    )
+);
 
 /// The simplex's corners and edges through [`guard`]: every mass that is not positive is the smallest positive normal,
 /// so the inverse sees no `0/0`; each gives a finite `z` with the clamp flagged, the corner `m₂ = 1` the `m₀ = m₁` limit

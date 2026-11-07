@@ -635,6 +635,20 @@ pub trait Tiltable: Hidden {
     where
         S: Selection,
         R: LinkReal + PayloadReal + From<Self::Param>;
+
+    /// The chart's check at the tilted `(a, b)` with `shift` added to the hidden coordinates, at the tunable parameters
+    /// `p`: by default its own check at `(a, b)`, where the axes' types act (X3a) and which no hidden offset moves; a
+    /// chart whose feasibility reads the pixel's own decode, a linear energy axis (R-471 E2, E3;
+    /// `super::energy::Mapped`), overrides it.
+    fn validate_shifted(
+        &self,
+        a: f64,
+        b: f64,
+        _shift: &Shift<f64>,
+        p: &LinkParams<f64>,
+    ) -> ValidationResult {
+        self.validate_params(a, b, p)
+    }
 }
 
 /// A chart and its tilt (the module's note): pixel `(u, v)` decodes at the tilted `(a, b)` with the hidden offsets.
@@ -713,8 +727,9 @@ where
         self.chart.requires_per_pixel_mass() || (self.tilt.on && tilted)
     }
 
-    /// The chart's check on the tilted `(a, b)`, where its axes' types act (X3a); a failure is reported as refused,
-    /// since a projected or clamped `(a, b)` names no point of the tilted view.
+    /// The chart's check on the tilted `(a, b)` with the pixel's hidden offsets ([`Tiltable::validate_shifted`]), where
+    /// its axes' types act (X3a); a failure is reported as refused, since a projected or clamped `(a, b)` names no point
+    /// of the tilted view.
     fn validate(&self, u: f64, v: f64) -> ValidationResult {
         self.validate_params(u, v, &LinkParams::DEFAULT)
     }
@@ -723,7 +738,7 @@ where
     fn validate_params(&self, u: f64, v: f64, p: &LinkParams<f64>) -> ValidationResult {
         match self.at(u, v) {
             (_, None) => self.chart.validate_params(u, v, p),
-            ([a, b], Some(_)) => match self.chart.validate_params(a, b, p) {
+            ([a, b], Some(shift)) => match self.chart.validate_shifted(a, b, &shift, p) {
                 ValidationResult::Valid => ValidationResult::Valid,
                 ValidationResult::Project { failed, .. }
                 | ValidationResult::Clamp { failed, .. }
