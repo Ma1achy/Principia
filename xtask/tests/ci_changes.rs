@@ -52,6 +52,10 @@
 //!   `gpu-lavapipe` run whatever their jobs ended in, read every one's result and a flag set from the classification,
 //!   and (their one-line scripts, run under bash) pass a job skipped on that verdict, and fail when the
 //!   classification failed, when a job its verdict runs was skipped, and on any failed or cancelled job.
+//! - `ci_gate_gathers_release` (R-809, REQ-TOOL-223): the gate `ci` gathers `ci-release`. A change of each tier is run
+//!   through `ci.yml`'s jobs with `ci-release` or `ci-release-archive` failing: on a code head a failed shard, and the
+//!   skip a failed archive leaves, fail the gate; every job passing passes it, and so does the skip on a data or docs
+//!   head.
 //! - `ci_changes_jobs_skip_on_the_verdict`: the `changes` job runs the classifier and cannot be skipped; the build,
 //!   test and GPU jobs wait on it alone and skip on its verdict (data or docs, or no GPU-path file); `ci-workspace`
 //!   runs its tests or, on a data or docs pull request, the cheap checks, and on a data one its readers' tests, built
@@ -92,6 +96,7 @@
 //! The two `ci_changes_every_required_check_reports_on_*` tests' `mutants-check` run needs Unix to compile: its
 //! stand-ins are executable scripts found through `PATH`, marked executable with `PermissionsExt`. Those two tests,
 //! their controls and what only they use are `#[cfg(unix)]` (#391), so the rest of this target compiles on Windows.
+//! `ci_gate_gathers_release` walks the same jobs, so it and its controls are `#[cfg(unix)]` too.
 //! Whether the rest passes there is not established: none of this target's tests has run on Windows.
 
 use std::path::{Path, PathBuf};
@@ -2239,46 +2244,59 @@ const GPU_FLAG: &str =
     "${{ needs.changes.result == 'success' && needs.changes.outputs.gpu == 'false' }}";
 
 const GATES: &[Gate] = &[
-    // `needs: [ci, ci-checks, ci-workspace, changes]`; DOCS_ONLY is `ci-workspace`'s output, empty unless it ran.
+    // `needs: [ci, ci-checks, ci-workspace, ci-release, changes]`; DOCS_ONLY is `ci-workspace`'s output, empty unless
+    // it ran.
     Gate {
         check: "ci",
-        needs: &["ci", "ci-checks", "ci-workspace", "changes"],
+        needs: &["ci", "ci-checks", "ci-workspace", "ci-release", "changes"],
         flag: "DOCS_ONLY",
         from: "${{ needs.ci-workspace.outputs.docs_only }}",
         runs: &[
             run(
                 "a docs-only pull request",
-                "skipped skipped success success",
+                "skipped skipped success skipped success",
                 "true",
                 true,
             ),
             run(
                 "a code change",
-                "success success success success",
+                "success success success success success",
                 "false",
                 true,
             ),
             run(
                 "the classification failed",
-                "skipped skipped skipped failure",
+                "skipped skipped skipped skipped failure",
                 "",
                 false,
             ),
             run(
                 "a code change whose ci-checks was skipped",
-                "success skipped success success",
+                "success skipped success success success",
                 "false",
                 false,
             ),
             run(
                 "a docs-only pull request whose cheap checks failed",
-                "skipped skipped failure success",
+                "skipped skipped failure skipped success",
                 "true",
                 false,
             ),
             run(
                 "a cancelled shard",
-                "cancelled success success success",
+                "cancelled success success success success",
+                "false",
+                false,
+            ),
+            run(
+                "a code change with a failed ci-release shard",
+                "success success success failure success",
+                "false",
+                false,
+            ),
+            run(
+                "a code change whose ci-release was skipped",
+                "success success success skipped success",
                 "false",
                 false,
             ),
@@ -3017,12 +3035,26 @@ fn ci_run(yml: &str, verdict: &[(&str, String)]) -> Vec<(String, bool)> {
     ci_walk(yml, verdict).1
 }
 
-/// `ci.yml`'s run on a pull request whose classification is `verdict`: every job's result, each job that runs
-/// succeeding, and each required check it reports with whether its gate's script passes.
+/// `ci.yml`'s run on a pull request whose classification is `verdict`, each job that runs succeeding: as
+/// [`ci_walk_failing`] with none failing.
 #[cfg(unix)]
 fn ci_walk(
     yml: &str,
     verdict: &[(&str, String)],
+) -> (
+    std::collections::BTreeMap<String, String>,
+    Vec<(String, bool)>,
+) {
+    ci_walk_failing(yml, verdict, &[])
+}
+
+/// `ci.yml`'s run on a pull request whose classification is `verdict`: every job's result, each job that runs
+/// succeeding but those in `failing`, and each required check it reports with whether its gate's script passes.
+#[cfg(unix)]
+fn ci_walk_failing(
+    yml: &str,
+    verdict: &[(&str, String)],
+    failing: &[&str],
 ) -> (
     std::collections::BTreeMap<String, String>,
     Vec<(String, bool)>,
@@ -3072,7 +3104,11 @@ fn ci_walk(
                     .unwrap_or_default();
                 outputs.insert(id.clone(), outs);
             }
-            let result = if ran { "success" } else { "skipped" };
+            let result = match (ran, failing.contains(&id.as_str())) {
+                (false, _) => "skipped",
+                (true, true) => "failure",
+                (true, false) => "success",
+            };
             results.insert(id.clone(), result.to_owned());
         }
         assert!(
@@ -3118,6 +3154,155 @@ fn ci_walk(
         reported.push((name, pass));
     }
     (results, reported)
+}
+
+/// The gate `ci` on a change of each tier (R-809, REQ-TOOL-223): `ci-gate` gathers `ci-release`, whose shards `needs`
+/// joins as one result. On a code head, a failed shard fails it, a failed `ci-release-archive` skips `ci-release` and
+/// that skip fails it, and every job passing passes it; on a data or docs head `ci-release` skips, and that skip passes
+/// it.
+#[cfg(unix)]
+fn check_gathers_release(yml: &str) {
+    let wf = parse(yml);
+    let (_, gate) = named(&wf, "ci");
+    assert!(
+        needs_of(&gate).iter().any(|n| n == "ci-release"),
+        "ci_changes: `ci-gate`'s `needs` does not hold `ci-release`"
+    );
+    const CODE_RUNS: [(&str, &[&str], &str, bool); 3] = [
+        ("every job passing", &[], "success", true),
+        (
+            "a failed `ci-release` shard",
+            &["ci-release"],
+            "failure",
+            false,
+        ),
+        (
+            "a failed `ci-release-archive`",
+            &["ci-release-archive"],
+            "skipped",
+            false,
+        ),
+    ];
+    const NOTHING_FAILS: [(&str, &[&str], &str, bool); 1] =
+        [("nothing failing", &[], "skipped", true)];
+    let script = read("scripts/ci_changes.sh");
+    for (change, paths) in TIER_CHANGES {
+        let v = classify(&script, paths);
+        let runs: &[_] = if v.tier == "code" {
+            &CODE_RUNS
+        } else {
+            &NOTHING_FAILS
+        };
+        for (what, failing, release, pass) in runs {
+            let (results, reported) = ci_walk_failing(yml, &tier_verdict(&v, false), failing);
+            let ci: Vec<bool> = reported
+                .iter()
+                .filter(|(n, _)| n == "ci")
+                .map(|(_, p)| *p)
+                .collect();
+            assert_eq!(
+                (results["ci-release"].as_str(), ci.as_slice()),
+                (*release, [*pass].as_slice()),
+                "ci_changes: on {change} with {what}, `ci-release`'s result and whether `ci` passed"
+            );
+        }
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn ci_gate_gathers_release() {
+    check_gathers_release(&read(".github/workflows/ci.yml"));
+}
+
+#[cfg(unix)]
+negative_control!(
+    ci_gate_gathers_release,
+    "ci.yml with `ci-release` left out of `ci-gate`'s `needs`",
+    expected = "ci_changes: `ci-gate`'s `needs` does not hold `ci-release`",
+    check_gathers_release(&edited(
+        ".github/workflows/ci.yml",
+        "needs: [ci, ci-checks, ci-workspace, ci-release, changes]",
+        "needs: [ci, ci-checks, ci-workspace, changes]",
+    ))
+);
+
+#[cfg(unix)]
+mod a_skip_passed_on_a_code_head {
+    use super::*;
+    negative_control!(
+        ci_gate_gathers_release,
+        "ci.yml with the gate `ci` passing any skip",
+        expected =
+            "with a failed `ci-release-archive`, `ci-release`'s result and whether `ci` passed",
+        check_gathers_release(&edited(
+            ".github/workflows/ci.yml",
+            "[ \"$DOCS_ONLY\" = true ]; } || { echo \"a job ci gathers",
+            "true; } || { echo \"a job ci gathers",
+        ))
+    );
+}
+
+#[cfg(unix)]
+mod a_failed_shard_passed {
+    use super::*;
+    negative_control!(
+        ci_gate_gathers_release,
+        "ci.yml with the gate `ci` passing a failed job",
+        expected =
+            "with a failed `ci-release` shard, `ci-release`'s result and whether `ci` passed",
+        check_gathers_release(&edited(
+            ".github/workflows/ci.yml",
+            "[ \"$DOCS_ONLY\" = true ]; } || { echo \"a job ci gathers",
+            "[ \"$DOCS_ONLY\" = true ]; } || [ \"$r\" = failure ] || { echo \"a job ci gathers",
+        ))
+    );
+}
+
+#[cfg(unix)]
+mod a_failed_archive_not_skipping_the_shards {
+    use super::*;
+    negative_control!(
+        ci_gate_gathers_release,
+        "ci.yml with `ci-release` running whatever its archive ended in",
+        expected =
+            "with a failed `ci-release-archive`, `ci-release`'s result and whether `ci` passed",
+        check_gathers_release(&edited(
+            ".github/workflows/ci.yml",
+            "    needs: ci-release-archive\n",
+            "    needs: ci-release-archive\n    if: always()\n",
+        ))
+    );
+}
+
+#[cfg(unix)]
+mod a_pass_refused {
+    use super::*;
+    negative_control!(
+        ci_gate_gathers_release,
+        "ci.yml with the gate `ci` failing a job that passed",
+        expected = "with every job passing, `ci-release`'s result and whether `ci` passed",
+        check_gathers_release(&edited(
+            ".github/workflows/ci.yml",
+            "do [ \"$r\" = success ] || { [ \"$r\" = skipped ] && [ \"$DOCS_ONLY\" = true ]; } || { echo \"a job ci gathers",
+            "do { [ \"$r\" = skipped ] && [ \"$DOCS_ONLY\" = true ]; } || { echo \"a job ci gathers",
+        ))
+    );
+}
+
+#[cfg(unix)]
+mod a_docs_skip_refused {
+    use super::*;
+    negative_control!(
+        ci_gate_gathers_release,
+        "ci.yml with the gate `ci` passing no skip",
+        expected = "with nothing failing, `ci-release`'s result and whether `ci` passed",
+        check_gathers_release(&edited(
+            ".github/workflows/ci.yml",
+            "|| { [ \"$r\" = skipped ] && [ \"$DOCS_ONLY\" = true ]; } || { echo \"a job ci gathers",
+            "|| { echo \"a job ci gathers",
+        ))
+    );
 }
 
 /// The jobs `ci.yml` asks of the runners on `verdict`, a matrix job counted per shard.

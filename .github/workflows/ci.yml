@@ -643,18 +643,19 @@ jobs:
       - name: cargo rustc -p gui (wasm32, the web feature)
         run: cargo rustc -p gui --lib --locked --target wasm32-unknown-unknown --features web --crate-type cdylib
 
-  # The required check `ci` (R-266): every `ci` shard, `ci-checks` and `ci-workspace` passed. It runs whatever they
-  # ended in (`always()`), so a failed or cancelled job turns it red rather than skipping it. R-656: a skipped job
-  # passes only on a data or docs pull request (R-677), which `ci-workspace`, having run its checks, passes on
-  # (DOCS_ONLY); if the classification failed, `ci-workspace` was skipped and passes nothing on, so the skips turn it
-  # red.
+  # The required check `ci` (R-266): every `ci` shard, `ci-checks`, `ci-workspace` and every `ci-release` shard (R-809)
+  # passed. It runs whatever they ended in (`always()`), so a failed or cancelled job turns it red rather than skipping
+  # it. R-656: a skipped job passes only on a data or docs pull request (R-677), which `ci-workspace`, having run its
+  # checks, passes on (DOCS_ONLY); if the classification failed, `ci-workspace` was skipped and passes nothing on, so
+  # the skips turn it red. A failed `ci-release-archive`, which runs only on a code head, skips `ci-release`, and on a
+  # code head that skip turns it red too (R-809).
   # On a quick run this gate and the four below skip (R-684), so that run asks for none of them, and each is named by a
   # one-value matrix: skipped at job level, GitHub reports it as `matrix.check` (run 41972273540), never under a required
   # name, so a skip here cannot read as a pass. It needs `changes` for that `if:`; `quick` reads empty if the
   # classification failed, and the gate runs and fails.
   ci-gate:
     name: ${{ matrix.check }}
-    needs: [ci, ci-checks, ci-workspace, changes]
+    needs: [ci, ci-checks, ci-workspace, ci-release, changes]
     if: always() && needs.changes.outputs.quick != 'true'
     strategy:
       matrix:
@@ -674,11 +675,11 @@ jobs:
   # sets RUSTFLAGS; `ci-release` runs it as 2 shards (`--partition hash:<k>/2`), so each job stays within ~10.5 min
   # (R-325; REQ-SYS-078 allows one archive job per build profile, applied per R-369). Under the `ci` profile
   # (`.config/nextest.toml`): every native test but those that need the built kernel, which `gpu-kernel` runs, and
-  # those that run cargo on the workspace's own target directory, which `ci-workspace` runs. Not gathered by the
-  # required check `ci`, as `gpu-kernel` is not (applied per R-369). The archive job frees the runner's disk as
-  # `ci-checks` does.
-  # Skipped on a data or docs pull request (R-656, R-677), and with it `ci-release`, which needs its archive; neither is
-  # gathered by a required check.
+  # those that run cargo on the workspace's own target directory, which `ci-workspace` runs. The required check `ci`
+  # gathers `ci-release`, and through it this archive job, whose failure skips the shards (R-809). The archive job frees
+  # the runner's disk as `ci-checks` does.
+  # Skipped on a data or docs pull request (R-656, R-677), and with it `ci-release`, which needs its archive; that skip
+  # is the only one of `ci-release` that `ci-gate` passes.
   ci-release-archive:
     needs: changes
     if: needs.changes.outputs.docs_only != 'true'
@@ -735,7 +736,7 @@ jobs:
   # no build or test compile of its own but shard 1's doctests at the same profile (R-231). `--no-fail-fast`: every
   # test that fails at the release profile is shown, not only the first. The GPU harness self-tests among them run on
   # lavapipe, as in `ci`. Its heavy steps run under the disk sampler (`.github/scripts/disk_sampler.sh`), as the `ci`
-  # shards' do: a measurement, read by no gate.
+  # shards' do: a measurement, read by no gate. The job's own result is gathered by the required check `ci` (R-809).
   ci-release:
     needs: ci-release-archive
     runs-on: ubuntu-24.04
