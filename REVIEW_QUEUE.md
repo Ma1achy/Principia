@@ -1183,3 +1183,23 @@ owner: yes, it is physics; the tilt changes which systems the chart shows.*
   - (a) **Recommended.** Change the pointer to Tanikawa & Mikkola 2008 § 3.1 and § 4.2, and note `k` against `Q`. TS-2 stays "not scored" (R-669).
   - (b) Leave it, since TS-2 isn't scored.
 - **Applied meanwhile:** nothing.
+
+## RQ-732: Older acceptance and verify lines that give `cargo test` two filters: 2 in the invalid form, 5 more in prose, not the 43 a grep finds *(a record correction, a two-way door under R-812; Codex's P2 on PR #422, thread PRRT_kwDOUpUQ5c60yEWq; context: TASK-M6-32, TASK-M6-33, REQ-CHART-070, REQ-PAY-097, REQ-PAY-098, REQ-GUI-178)*
+
+*Queued 7 Nov 2026 from PR #422, for the orchestrator to decide: the correction is reversible, so R-812 doesn't send it to the owner. PR #422 fixed its own 12 lines to `cargo test -p engine -- <a> <b>`.*
+
+**In plain English:** `cargo test` takes one test-name filter before `--`, so a command naming two fails before any test runs. A few older lines in the plan name two. The grep for the form finds 43 lines on `main`, but most of those are sentences that carry on after one test name; the lines to fix are 7.
+
+- **File, section:**
+  - The form, as `cargo test --help` gives it and Codex's P2 quotes it: "`cargo test [OPTIONS] [TESTNAME] [-- [ARGS]...]`"; "invoking the first command produces `unexpected argument 'path_zoom_bitwise' found`".
+  - The count: `grep -rnE 'cargo test -p [a-z_-]+ [a-z0-9_]+ [a-z0-9_]+' plan --include='*.md' --include='*.yaml'` gives 43 lines on `main` at c4dd9d98, and 45 with PR #422's two new lines, both of them the "two commands" kind below. The 43 are:
+    - 2 in the invalid form, both already-merged tasks' acceptance lines: `plan/tasks/M6/TASK-M6-32.md`:59, "`cargo test -p gui mock_keyboard scope_tab_order_mock`", and `plan/tasks/M6/TASK-M6-33.md`:61, "`cargo test -p gui mock_compass_modes mock_compass_keys`".
+    - 5 naming two filters in prose, which fail the same way if run as written: `plan/requirements.yaml`:3223 (REQ-CHART-070), "cargo test -p kernel pe_axis and physical_axis_warps"; `plan/requirements.yaml`:8909 (REQ-PAY-097) and :8929 (REQ-PAY-098), "cargo test -p ledger declared_ranges and numeric_view_template pass with it"; `plan/requirements.yaml`:21351 (REQ-GUI-178), "cargo test -p gui mock_keyboard and scope_tab_order_mock"; and `plan/reviewers/gui.md`:129, its generated copy.
+    - 29 of two separate commands, already valid, as "cargo test -p gui f3_fill_modes and cargo xtask screenshot 01_main".
+    - 7 of one filter and then a sentence, already valid, as "cargo test -p render outcome_palette_separation computes them".
+- **The question:** should the 7 lines become the valid form, `cargo test -p <crate> -- <a> <b>`?
+- **Options seen:**
+  - (a) **Recommended.** Rewrite the 2 task lines and the 4 verify details to that form in a follow-up plan PR, through `plan/tools/reqio.py` for the details, and regenerate the fifth, `plan/reviewers/gui.md`:129. No test changes, and the 36 valid lines stay as they are.
+  - (b) Rewrite only the 2 task lines, and leave the prose, which reads as a description rather than a command.
+- **Applied meanwhile:** nothing. PR #422's own lines are fixed; these older lines are unchanged.
+- **Waits:** nothing. TASK-M6-32 and TASK-M6-33 are merged.
