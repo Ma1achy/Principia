@@ -785,10 +785,10 @@ fn check_coincident(inputs: &Inputs) {
             x.m == b.m && x.p == b.p && x.r[0] == b.r[0] && x.r[2] == b.r[2],
             "a parted pair is not the first state's"
         );
-        for j in 0..2 {
+        for (j, along) in off.iter().enumerate() {
             let moved = f64::from(x.r[1][j]) - f64::from(b.r[0][j]);
             assert!(
-                (moved - off[j] * step).abs() <= 0.25 * step,
+                (moved - along * step).abs() <= 0.25 * step,
                 "a parted pair is not 2⁻²⁰ along its axis"
             );
         }
@@ -1167,7 +1167,7 @@ fn exact_words(name: &str, n: usize) -> usize {
         TIE | TAU | SUBNORMAL | RANGE | SCALE | COINCIDENT | SIGNED_ZERO => ALL,
         // `+x`'s blocks take `θ = 0`, whose sine and cosine every platform gives alike.
         HIERARCHY if (n / 2000) % 3 != 1 => ALL,
-        EDGE if (n / (40 * SWEEP)) % 2 == 0 => ALL,
+        EDGE if (n / (40 * SWEEP)).is_multiple_of(2) => ALL,
         TURNED | SEAM | HIERARCHY | EDGE => MASSES_AND_MOMENTA,
         _ => 0,
     }
@@ -1236,10 +1236,10 @@ fn is_near(a: f32, b: f32, scale: f64) -> bool {
 /// momenta are not held: saturated, they are f32's conditioning, 10⁶ eps and more.
 fn check_fixture_near(inputs: &Inputs, held: &Inputs) {
     let positions = |x: &Ic<f32>, y: &Ic<f32>, name: &str, scale: [f64; 3]| {
-        for i in 0..3 {
+        for ((p, q), s) in x.r.iter().zip(&y.r).zip(scale) {
             for j in 0..2 {
                 assert!(
-                    is_near(x.r[i][j], y.r[i][j], scale[i]),
+                    is_near(p[j], q[j], s),
                     "a position a platform call reaches is off the fixture's: {name}"
                 );
             }
