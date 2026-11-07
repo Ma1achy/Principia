@@ -50,9 +50,11 @@ pub const MIN_CANVAS_W: f32 = 240.0;
 /// transport, whole in one view (J2; R-705). The widest readout is tilt mode's with its line where no plane is drawn, in
 /// any view (measured at [`MIN_COMPASS_W`]: its last row shows from 169 up at 1 and 1.5 pixels per point, from 171 at 2;
 /// the tilted Plücker line and the physical views' widest, a stretch in scientific form, show well under this). The
-/// hint or help under the readout is not whole here: the column scrolls inside the panel, and the focus on the compass
-/// element brings its end into view (measured: the physical views' help ends in view from 191 up, 195 at 2 pixels per
-/// point, and the longest column, under the readout just named, from 203, 207 at 2).
+/// hint or help under the readout need not be whole here: the column scrolls inside the panel, and the focus on the
+/// compass element brings its end into view (measured at [`MIN_COMPASS_W`], at 1 and 1.5 pixels per point: the Jacobi
+/// view's help is whole at this height and 173, leaves the view from 174, the taller cube narrowing the column until
+/// its readout wraps to two rows, and returns from 191; the Shape view's ends in view only from 191; at 2 pixels per
+/// point both only from 195; and the longest column, under the readout just named, from 203, 207 at 2).
 pub const MIN_BOTTOM_H: f32 = 172.0;
 /// The compass's least width, in points: its cube, its buttons beside it and its widest readout, whole in one view (J2;
 /// R-705). The same readout as [`MIN_BOTTOM_H`]'s decides it, at every height the bottom row can take, since a taller
