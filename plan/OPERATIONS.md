@@ -700,6 +700,8 @@ a split moves every requirement to a named task (R-264).
 - **When to ask** is R-369's as R-812 amends it, applying from 7 Nov 2026 (CLAUDE.md § "When to ask the human", which
   lists both kinds of door). If the answer would be a rubber stamp, don't ask; if running something could answer the
   question, run it instead. Correcting the record is two-way; changing what a ruling or requirement says is one-way.
+  Correcting a requirement's statement to match a ruling is two-way only where it restates the ruling's words
+  faithfully; otherwise it is one-way (R-857).
   When unsure which door it is, treat it as one-way, with a recommendation and a measurable alternative in the report.
   Never size, never what a ruling already settles, and once a one-way door is open it stays open for that work, unless
   it turns out different: more at stake, a check failing, something the human didn't know.
@@ -707,6 +709,9 @@ a split moves every requirement to a named task (R-264).
   tooling among them: write the criterion before running, run it, decide, and report the numbers, and never adjust the
   criterion after seeing results (R-649). Each goes in the veto list of the next `/rulings-report`, and in the morning
   report with its numbers, as "decided, open to veto". Reverting on the human's veto must be possible without loss.
+  The morning report is the dated report file in `orch/` (R-857). A change of the mutants job's shard count
+  (REQ-VAL-149), decided by measurement, is one of these, under R-812's CI rider (R-857); lint configuration is not:
+  changing `clippy.toml` or a `[lints]` table still needs a ruling (R-197, R-857).
 - **One-way doors** go to `/rulings-report` only, never as a blocking prompt: physics where the choice changes results
   and the docs genuinely don't settle it, and R-812's other kinds of what the instrument claims or computes; calibration
   values (batched at milestone gates); passing a milestone gate; dropping or deferring a requirement; the words of the
@@ -957,6 +962,8 @@ anything outside the repository and its build and scratch directories without as
 
 - A Windows-only, non-reproducing GPU result is hardware-suspect: record it, and file it as a code bug only if it reproduces on Metal or lavapipe, or deterministically on Windows.
 - A result that reproduces is checked against Metal and lavapipe. Failing everywhere is our bug. Passing elsewhere is NVIDIA Vulkan specific: file it as a platform finding, with no re-baselining.
+- A recorded run on R-711's runner takes a clean target only where it is filed as evidence, as the Paper 2 parity run
+  is; every other recorded run keeps the runner's target, as now (R-856).
 - Once the DX12 opt-in lands, the same card is the second discriminator: the same failure points at the card or our code, a different one at the Vulkan driver path.
 
 ## `measure/` branches (R-272)
