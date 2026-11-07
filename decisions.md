@@ -31619,7 +31619,7 @@ The owner's confirmation, 7 Nov 2026, answering the two readings, verbatim:
 > overlapping versions on the record.
 
 *What it decides:* the quotes above are the rule, one amendment of R-369. A second text of the owner's, of 7 Nov 2026,
-is folded in below in its own short phrases, only where it adds to them, so the record holds one version.
+is folded in below in its own short phrases, the three points the confirmation names, so the record holds one version.
 
 - **The two confirmed readings.** It applies from 7 Nov 2026. Correcting the record is two-way; changing what a ruling
   or requirement says is one-way.
@@ -31628,13 +31628,7 @@ is folded in below in its own short phrases, only where it adds to them, so the 
 - **The morning report.** A two-way decision is listed with its numbers "in the morning report as "decided, open to
   veto"", as well as in the veto list of the next `/rulings-report`.
 - **Reversible without loss.** "Reverting on my veto must be possible without loss."
-- **The criterion comes first.** "Write the success criterion before measuring", for any two-way decision a measurement
-  settles, and never adjust it after seeing results (R-649).
 - **The gloss.** "Every R/RQ/REQ/TASK number in reports carries a plain-English gloss (R-693)."
-- **What the second text adds to the one-way list:** "physics and numerics", "tolerances and thresholds", "anything that
-  changes output bits", "deleting anything not created by this work" and "admin actions". Its defaults, licences,
-  publishing, contacting anyone, spending money, and scope and taste are the core's already. Every one-way door goes
-  "with a recommendation", not only one in doubt.
 
 *What it amends:* **R-369.** Item 2's list is decided as two-way doors, where it is no one-way door. Item 3's list stays
 the owner's, as one-way doors asked through `/rulings-report` only, in place of its "(batched at milestone gates)" as

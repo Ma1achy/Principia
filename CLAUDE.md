@@ -148,14 +148,12 @@ Read this first; each rule points at its source.
   the reviews pass and CI is green, and list the decisions in the next summary, in the veto list of the next
   `/rulings-report`, and with their numbers in the morning report as "decided, open to veto". If the human vetoes one
   later, fix it in a follow-up PR.
-- One-way doors: ask through `/rulings-report` only, with a recommendation, never as a blocking prompt, and keep working
-  on everything else. They are anything that changes what the instrument claims or computes (physics definitions and
-  numerics, physics where the choice changes results and the docs genuinely don't settle it, defaults, tolerances and
-  thresholds, CPU or GPU bits, anything that changes output bits, corpus-invalidating changes); calibration values,
-  which R-369 batched at milestone gates; passing a milestone gate; dropping or deferring a requirement; amending or
-  reinterpreting the owner's rulings' words; licences, publishing, contacting anyone outside, spending money; deleting
-  data or history, or anything not created by this work; admin bypass (R-682) and admin actions; anything outside the
-  repo or irreversible (repo settings, branch protection, deleting outside the build directories, force-pushing); and
+- One-way doors: ask through `/rulings-report` only, never as a blocking prompt, and keep working on everything else.
+  They are anything that changes what the instrument claims or computes (physics definitions, physics where the choice
+  changes results and the docs genuinely don't settle it, defaults, tolerances, CPU or GPU bits, corpus-invalidating
+  changes); calibration values, which R-369 batched at milestone gates; passing a milestone gate; dropping or deferring
+  a requirement; amending or reinterpreting the owner's rulings' words; licences, publishing, contacting anyone outside,
+  spending money; deleting data or history; admin bypass (R-682); anything outside the repo or irreversible (repo settings, branch protection, deleting outside the build directories, force-pushing); and
   scope and taste: new features, UI look, what the product is.
 - Correcting the record is two-way; changing what a ruling or requirement says is one-way. When unsure which door it is,
   treat it as one-way, and put a recommendation and a measurable alternative in the report.
