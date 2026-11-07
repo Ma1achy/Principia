@@ -46,3 +46,4 @@ Codegen walks the stain graph — source(s) → optional colour and optional bri
 ## Notes
 - Gap: render_gui_spec §13 gives the invalid-graph fallback as "flat grey / error tint" — which one, and its value, are not given (see the milestone report).
 - Closes, for gaps the corpus leaves open: REQ-RENDER-081 (R-71 calibration) (classification accepted by R-132).
+- *5 Nov 2026 (R-804, R-805):* RQ-675 and RQ-676 are deferred to this task's start: when it starts, their options go to the owner with a recommendation, and it waits on the answers.

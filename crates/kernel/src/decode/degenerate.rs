@@ -9,7 +9,7 @@
 //! |---|---|---|
 //! | `M01_TINY` | the mass block, `M₀₁ < ε_M01` (dd_decoder §3.1) | 2, invalid mass construction |
 //! | `NO_QUALIFYING_SEED` | the invariant construction, no seed with `‖w⁽²⁾‖²_m > ε_w` (§3.4, R-82) | 1, degenerate configuration |
-//! | `INVARIANT_INFEASIBLE` | the invariant construction, `K* < L_z²/(2I)` (chart_reference §2.2) | 3, other |
+//! | `INVARIANT_INFEASIBLE` | the invariant construction, `K* < L_z²/(2I)`, or no finite `2K*` (chart_reference §2.2, §4.5) | 3, other |
 //! | `ENERGY_INFEASIBLE` | `η_E`, `E* < U` (§3.7) | 3, other |
 //! | `ENERGY_UNSCALABLE` | `η_E`, the rest start at `E* > U` or the collision pole (§3.7) | 3, other |
 //!

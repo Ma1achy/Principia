@@ -1,6 +1,7 @@
 //! The left panel, "Manifold view": ONE group (render_gui_spec §G2; GUI_DESIGN_NOTES § "01 Explore"; 01_main.png;
 //! R-390, ORDER item 3). Chart, Navigate with the depth readout, its precision warning and the lock, Slice centre and
 //! Tilt, top to bottom, are one thing: how you view the manifold (named "Centre z₀" and "Slice & tilt" before R-457).
+//! Navigate, Slice centre and Tilt each have a reset, returning the section to the chart preset's own values (`reset`).
 //! Every edit is a `SetField` on `z₀`, on the basis `q₁, q₂`, on the slice frame or on the lock: navigation is chart
 //! construction, with no camera (§G1; chart_decoder_contract Part 4). The panel reads the snapshot and keeps nothing of
 //! the state itself.
@@ -23,10 +24,12 @@ pub mod chart;
 pub mod depth;
 pub mod lock;
 pub mod navigate;
+pub mod reset;
 pub mod tilt;
 
 use eframe::egui::{
-    self, pos2, vec2, Align, Layout as EguiLayout, Rect, Response, RichText, Ui, UiBuilder,
+    self, pos2, vec2, Align, Button, Label, Layout as EguiLayout, Rect, Response, RichText, Ui,
+    UiBuilder,
 };
 use engine::contract::set_field::{Edit, SetField, SimField};
 use engine::contract::sim_config::{Latent, Lock, Plane, SimConfig, SliceFrame, LATENT_DIM};
@@ -46,6 +49,42 @@ pub const AXES: [&str; LATENT_DIM] = ["z_α", "z_β", "z_q0", "z_q1", "z_q2", "z
 /// `z_q3 × z_μ1`, holds the default slice normal `z_q3`, as `tilt_targets` needs one (applied per R-369, REQ-GUI-205).
 pub const PRESETS: [(usize, usize); 6] = [(0, 1), (2, 3), (4, 5), (6, 7), (0, 6), (5, 6)];
 
+/// A chart preset's home values (render_gui_spec §G2, §G7; R-466, REQ-GUI-224): what the resets and Home read.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct PresetHome {
+    /// The base point: a value for each of the eight latent coordinates. The preset's home view has `z₀` here.
+    pub base: Latent,
+    /// The window `σ_h`: the scale at which the zoom row reads × 1.00.
+    pub window: f64,
+}
+
+impl PresetHome {
+    /// The centre `(u, v)` of the preset on the axes `(a, b)`: the base point's coordinates on them (§G2).
+    pub fn centre(&self, a: usize, b: usize) -> (f64, f64) {
+        (self.base[a], self.base[b])
+    }
+}
+
+/// The base point of 01_main.png's system, which five of the mock's presets share.
+const ARTBOARD: PresetHome = PresetHome {
+    base: crate::mock::MOCK_Z0,
+    window: 1.0,
+};
+
+/// Each of [`PRESETS`]' home values, by its index there: §G7's table, placeholder content on the mock (R-390). The first
+/// is the mock's starting view, so it opens at home. The second has home values of its own.
+pub const PRESET_HOMES: [PresetHome; 6] = [
+    ARTBOARD,
+    PresetHome {
+        base: [0.250, 0.500, 0.125, -0.250, 0.0625, 0.375, 0.250, -0.125],
+        window: 0.5,
+    },
+    ARTBOARD,
+    ARTBOARD,
+    ARTBOARD,
+    ARTBOARD,
+];
+
 /// The default slice normal and tilt target, the slice axis: `z_q3`, as 01_main.png's compass names its depth axis
 /// (applied per R-369: the direction library is TASK-M8-07's), or the first axis the preset leaves hidden when the
 /// preset shows `z_q3` (gui_state_contract §2's default for the slice frame).
@@ -56,7 +95,8 @@ pub const SLICE_AXIS: usize = engine::contract::sim_config::Z_Q3 as usize;
 pub const Z0_HALF_RANGE: f64 = 1.0;
 /// The span a basis component's field is stepped across by the keyboard's bounded step (a look choice, R-390).
 pub const Q_HALF_RANGE: f64 = 1.0;
-/// The zoom slider's span, in log₂ (a look choice, R-390): four octaves out, forty-eight in.
+/// The zoom's span in `−log₂ σ` (a look choice, R-390): four octaves out, forty-eight in. The slider, on the row, takes
+/// it through [`View::zoom_row_range`], so it bounds the same `σ` under every preset.
 pub const ZOOM_RANGE: (f64, f64) = (-4.0, 48.0);
 
 /// Manifold view's sub-scopes (render_gui_spec §G3), in order, with their ids.
@@ -94,6 +134,8 @@ pub const ZOOM: ScopeId = "zoom";
 pub const UNLOCK: ScopeId = "lock_unlock";
 /// The lock badge's open in Inspector.
 pub const OPEN_INSPECTOR: ScopeId = "lock_inspector";
+/// Navigate's reset, the last element of its sub-scope (R-466 K6).
+pub const RESET_NAVIGATE: ScopeId = "reset_navigate";
 /// Slice centre's eight sliders.
 pub const SLIDERS: [ScopeId; LATENT_DIM] = [
     "slice_centre_0",
@@ -105,6 +147,8 @@ pub const SLIDERS: [ScopeId; LATENT_DIM] = [
     "slice_centre_6",
     "slice_centre_7",
 ];
+/// Slice centre's reset, the last element of its sub-scope (R-466 K6).
+pub const RESET_SLICE_CENTRE: ScopeId = "reset_slice_centre";
 /// The tilt `τ₁`.
 pub const TAU1: ScopeId = "tau1";
 /// `τ₁`'s target dropdown, "tilt τ₁ into \[X\]" (R-457 E5): a menu, its entries the dimensions it offers.
@@ -115,6 +159,8 @@ pub const TAU2: ScopeId = "tau2";
 pub const TILT_Y: ScopeId = "tilt_y";
 /// The rotation `γ`.
 pub const GAMMA: ScopeId = "gamma";
+/// Tilt's reset, the last element of its sub-scope (R-466 K6).
+pub const RESET_TILT: ScopeId = "reset_tilt";
 /// `τ₁`'s dropdown's entries, one per latent dimension; it holds the six [`target_choices`] offers.
 pub const TILT_X_ENTRIES: [ScopeId; LATENT_DIM] = [
     "tilt_x_0", "tilt_x_1", "tilt_x_2", "tilt_x_3", "tilt_x_4", "tilt_x_5", "tilt_x_6", "tilt_x_7",
@@ -202,14 +248,20 @@ pub fn join(tree: &mut ScopeTree) {
         Some(NAVIGATE),
         Scope::control(OPEN_INSPECTOR, "open in Inspector"),
     );
+    tree.register(Some(NAVIGATE), Scope::control(RESET_NAVIGATE, reset::RESET));
     for (id, name) in SLIDERS.into_iter().zip(AXES) {
         tree.register(Some(SLICE_CENTRE), Scope::value(id, name, Bounded));
     }
+    tree.register(
+        Some(SLICE_CENTRE),
+        Scope::control(RESET_SLICE_CENTRE, reset::RESET),
+    );
     tree.register(Some(TILT), Scope::value(TAU1, "τ₁", Angle));
     tree.register(Some(TILT), Scope::menu(TILT_X, "tilt τ₁ into"));
     tree.register(Some(TILT), Scope::value(TAU2, "τ₂", Angle));
     tree.register(Some(TILT), Scope::menu(TILT_Y, "tilt τ₂ into"));
     tree.register(Some(TILT), Scope::value(GAMMA, "γ", Angle));
+    tree.register(Some(TILT), Scope::control(RESET_TILT, reset::RESET));
     for (key, action) in SHORTCUTS {
         tree.register_shortcut(key, action);
     }
@@ -308,6 +360,15 @@ pub fn dominant(v: &Latent) -> usize {
     )
 }
 
+/// The axis other than `off` that `v` leans on most; the first of equals, so the first axis not `off` where `v` holds
+/// nothing else: a frame's two axes are two (R-459's "no dimension twice").
+fn dominant_off(v: &Latent, off: usize) -> usize {
+    (0..LATENT_DIM)
+        .filter(|&i| i != off)
+        .reduce(|best, i| if v[i].abs() > v[best].abs() { i } else { best })
+        .expect("eight axes, one left out")
+}
+
 /// The axes `(a, b)` of a basis along two axes alone, `q₁` with no component but on `e_a` and `q₂` none but on `e_b`,
 /// `a < b`, as a steer on the compass's Plücker grid sets it (R-452 C5); `None` for any other basis.
 pub fn axis_pair(q1: &Latent, q2: &Latent) -> Option<(usize, usize)> {
@@ -327,23 +388,34 @@ pub fn axis_pair(q1: &Latent, q2: &Latent) -> Option<(usize, usize)> {
 /// other way round count as reading it back (R-459 G3); that is not the only case in which they are swapped.
 const READS_BACK: f64 = 1e-18;
 
+/// What `view`'s basis leaves of `q1`, `q2` on the components `counted`: the sum of the squared differences.
+fn lost(view: &View, q1: &Latent, q2: &Latent, counted: &dyn Fn(usize) -> bool) -> f64 {
+    let (p1, p2) = view.basis();
+    (0..LATENT_DIM)
+        .filter(|&k| counted(k))
+        .map(|k| (p1[k] - q1[k]).powi(2) + (p2[k] - q2[k]).powi(2))
+        .sum()
+}
+
 /// The axes of a basis tilted within `frame`'s targets on axes no preset names, as H and V can pick them: the two axes
 /// the basis has anything on off the targets, `i < j`. How large a component is says nothing here: at `τ = ±90°` the
 /// kept axis's is `cos 90° ≈ 6e-17`, and it is what still names the axis, [`View::basis`] leaving every other component
 /// exactly 0. `None` where the basis has any other number of axes off the targets, or no plane on the two.
 ///
-/// A positive determinant (`σ² cos τ₁ cos τ₂` whatever `γ`) is `(i, j)`. A negative one may be `(j, i)`. That is a pair
-/// picked the other way round, kept to the ends of its range (R-459 G3), only where that order reads the basis back: a
-/// typed component's sign says nothing of H and V. A mirrored basis neither order reads back is outside the map's image,
-/// so some reading of it loses something: `(j, i)` only if it keeps more of the tilt, the components on the targets, and
-/// else `(i, j)`. Only that last case reads alike on both sides of a component passing through 0. Where the swap is
-/// taken, axes, angles and scale jump there: the swap keeps the tilt on the target it can hold, as with `X = z_q3`,
-/// `Y = z_μ1`, `q₁ = ε e_α + 0.8 e_μ1`, `q₂ = e_β`, which below 0 reads `(z_β, z_α)`, `σ = 1`, and from 0 up
-/// `(z_α, z_β)`, `σ = ε`. `read` is [`View::framed`]'s reading on an order.
+/// `misplaced` decides by the basis, whichever order `i < j` lands on (R-705). A positive determinant (`σ² cos τ₁ cos τ₂`
+/// whatever `γ`) is `(i, j)` unless a target is misplaced: then `None`. A negative one is `(j, i)` where that order reads
+/// the basis back: a view the map gives, a pair picked the other way round, kept to the ends of its range (R-459 G3), a
+/// typed component's sign saying nothing of H and V. Any other mirrored basis is outside the map's image, and H and V are
+/// its dominant axes (R-459 G3), `None`, but for one case: no target misplaced, and `(i, j)` keeps strictly more of the
+/// tilt, the components on the targets, than `(j, i)`, so the tilt stays on its own target. A tie, no tilt to keep, is
+/// `None`: a length typed on a picked pair does not swap H and V. With
+/// `X = z_q3`, `Y = z_μ1`, `q₁ = ε e_α + 0.8 e_μ1`, `q₂ = e_β`, `ε = −0.6` reads back, `(z_β, z_α)`, and either side of it,
+/// up to `|ε| = 0.8`, reads its dominant axes `(z_μ1, z_β)`. `read` is [`View::framed`]'s reading on an order.
 fn tilted_axes(
     q1: &Latent,
     q2: &Latent,
     frame: &SliceFrame,
+    misplaced: impl Fn(usize, usize) -> bool,
     read: impl Fn(usize, usize) -> View,
 ) -> Option<(usize, usize)> {
     let on_target =
@@ -355,25 +427,31 @@ fn tilted_axes(
     }
     let turn = q1[i] * q2[j] - q1[j] * q2[i];
     if turn > 0.0 {
-        return Some((i, j));
+        return (!misplaced(i, j)).then_some((i, j));
     }
     if turn == 0.0 {
         return None;
     }
-    let lost = |(a, b): (usize, usize), counted: &dyn Fn(usize) -> bool| -> f64 {
-        let (p1, p2) = read(a, b).basis();
-        (0..LATENT_DIM)
-            .filter(|&k| counted(k))
-            .map(|k| (p1[k] - q1[k]).powi(2) + (p2[k] - q2[k]).powi(2))
-            .sum()
-    };
-    let reads_back = lost((j, i), &|_| true) <= READS_BACK * (dot(q1, q1) + dot(q2, q2));
-    let keeps_more = lost((j, i), &on_target) < lost((i, j), &on_target);
-    Some(if reads_back || keeps_more {
-        (j, i)
+    let swapped = read(j, i);
+    if lost(&swapped, q1, q2, &|_| true) <= READS_BACK * (dot(q1, q1) + dot(q2, q2)) {
+        return Some((j, i));
+    }
+    let keeps_more = lost(&read(i, j), q1, q2, &on_target) < lost(&swapped, q1, q2, &on_target);
+    (keeps_more && !misplaced(i, j)).then_some((i, j))
+}
+
+/// The rotation `γ` of `q1`, `q2` as the axes `(a, b)` read it, and the two turned back by it: `(γ, σ u₁, σ u₂)` for a
+/// basis [`View::basis`] gives, whose `σ u₁` is on `e_a` and `e_X` alone and `σ u₂` on `e_b` and `e_Y` alone.
+fn turned_back(a: usize, b: usize, q1: &Latent, q2: &Latent) -> (f64, Latent, Latent) {
+    let gamma = if q1[a].hypot(q2[a]) >= q1[b].hypot(q2[b]) {
+        (-q2[a]).atan2(q1[a])
     } else {
-        (i, j)
-    })
+        q1[b].atan2(q2[b])
+    };
+    let (sin_g, cos_g) = gamma.sin_cos();
+    let u1 = add(&q1.map(|v| v * cos_g), -sin_g, q2);
+    let u2 = add(&q2.map(|v| v * cos_g), sin_g, q1);
+    (gamma, u1, u2)
 }
 
 /// The chart, as the panel reads it in a preset's frame and the slice frame's hidden dimensions.
@@ -426,6 +504,12 @@ impl View {
     /// on them, however small a component, before any preset is allowed its rounding: otherwise a pair picked with H or
     /// V loses that axis at the tilt's ends (R-459 G3). Only a basis no exact reading holds is a preset's with stray
     /// components at the floating point's noise, and failing that its dominant axes' frame.
+    ///
+    /// With `X ≠ Y` a reading on axes also needs each target on its own vector: `Y` on `q₁` or `X` on `q₂` is no tilt of
+    /// the plane, past the floating point's noise, unless that reading gives the basis back, as a turned view's does,
+    /// having both as typed (R-705). Such a basis reads in its dominant axes' frame, whatever the sign of its determinant and
+    /// whichever way round its axes lie. A mirrored basis whose swapped order reads it back is no such basis: it is in the
+    /// map's image, and `tilted_axes` keeps it there.
     pub fn framed(plane: &Plane, frame: Option<&SliceFrame>) -> Self {
         let (q1, q2) = (&plane.q1, &plane.q2);
         let total = dot(q1, q1) + dot(q2, q2);
@@ -448,6 +532,14 @@ impl View {
                 .filter(|i| ![a, b, x, y].contains(i))
                 .all(|i| q1[i] == 0.0 && q2[i] == 0.0)
         };
+        // `Y` on `q₁` or `X` on `q₂`, past the noise, that the reading on `(a, b)` does not give back. With one target there
+        // is no wrong vector: both tilt into it.
+        let misplaced = |a: usize, b: usize| -> bool {
+            let [d, x, y] = hidden(a, b);
+            let typed = q1[y] * q1[y] + q2[x] * q2[x];
+            let reading = Self::in_frame(None, a, b, [d, x, y], q1, q2);
+            x != y && typed.min(lost(&reading, q1, q2, &|_| true)) > READS_BACK * total
+        };
         if let Some((a, b)) = axis_pair(q1, q2) {
             let preset = PRESETS.iter().position(|&p| p == (a, b));
             return Self::in_frame(preset, a, b, hidden(a, b), q1, q2);
@@ -465,7 +557,7 @@ impl View {
         // A preset's pair the other way round, `q₁` on its `e_b` and `q₂` on its `e_a`, is no turn of the preset, whose
         // determinant on its axes is `σ² cos τ₁ cos τ₂ ≥ 0`: it is the axes H and V picked so (R-459 G3).
         let turn = |a: usize, b: usize| q1[a] * q2[b] - q1[b] * q2[a];
-        let exactly = |a: usize, b: usize| turn(a, b) >= 0.0 && holds(a, b);
+        let exactly = |a: usize, b: usize| turn(a, b) >= 0.0 && holds(a, b) && !misplaced(a, b);
         let within_noise = |a: usize, b: usize| {
             let off: f64 = {
                 let [_, x, y] = hidden(a, b);
@@ -474,7 +566,9 @@ impl View {
                     .map(|i| q1[i] * q1[i] + q2[i] * q2[i])
                     .sum()
             };
-            turn(a, b) >= -1e-12 * total && off <= 1e-18 * total.max(f64::MIN_POSITIVE)
+            turn(a, b) >= -1e-12 * total
+                && off <= 1e-18 * total.max(f64::MIN_POSITIVE)
+                && !misplaced(a, b)
         };
         let preset_where = |test: &dyn Fn(usize, usize) -> bool| {
             PRESETS.iter().position(|&(a, b)| fits(a, b) && test(a, b))
@@ -482,7 +576,7 @@ impl View {
         let (found, (a, b)) = if let Some(p) = preset_where(&exactly) {
             (Some(p), PRESETS[p])
         } else if let Some(pair) = frame.and_then(|f| {
-            tilted_axes(q1, q2, f, |a, b| {
+            tilted_axes(q1, q2, f, misplaced, |a, b| {
                 Self::in_frame(None, a, b, hidden(a, b), q1, q2)
             })
         }) {
@@ -491,14 +585,21 @@ impl View {
             (Some(p), PRESETS[p])
         } else {
             let a = dominant(q1);
-            let mut q2_rest = *q2;
-            q2_rest[a] = 0.0;
-            (None, (a, dominant(&q2_rest)))
+            // `q₂` wholly on `a` leaves `q₁` to name the plane; with nothing there either, there is no plane to name.
+            let other = if (0..LATENT_DIM).any(|i| i != a && q2[i] != 0.0) {
+                q2
+            } else {
+                q1
+            };
+            (None, (a, dominant_off(other, a)))
         };
         Self::in_frame(found, a, b, hidden(a, b), q1, q2)
     }
 
-    /// The scale, tilts and rotation of `q1`, `q2` on the axes `(a, b)`, the normal `d` and the targets `x`, `y`.
+    /// The scale, tilts and rotation of `q1`, `q2` on the axes `(a, b)`, the normal `d` and the targets `x`, `y`. `σ` is
+    /// read whole (R-705): the `e_a` column's length `|(q₁[a], q₂[a])|`, `σ u₁`'s part on `e_X`, and what `σ u₁` holds off
+    /// `e_a`, `e_b` and `e_X`, which [`View::basis`] leaves 0. A basis sheared on its own axes reads as it did: `σ u₁`'s
+    /// parts on `e_a` and `e_b` do not enter, the column standing for the first.
     fn in_frame(
         preset: Option<usize>,
         a: usize,
@@ -509,14 +610,13 @@ impl View {
     ) -> Self {
         let cos1 = q1[a].hypot(q2[a]);
         let cos2 = q1[b].hypot(q2[b]);
-        let gamma = if cos1 >= cos2 {
-            (-q2[a]).atan2(q1[a])
-        } else {
-            q1[b].atan2(q2[b])
-        };
-        let (sin_g, cos_g) = gamma.sin_cos();
-        let sin1 = cos_g * q1[x] - sin_g * q2[x];
-        let sin2 = sin_g * q1[y] + cos_g * q2[y];
+        let (gamma, u1, u2) = turned_back(a, b, q1, q2);
+        let (sin1, sin2) = (u1[x], u2[y]);
+        let stray = (0..LATENT_DIM)
+            .filter(|i| ![a, b, x].contains(i))
+            .map(|i| u1[i] * u1[i])
+            .sum::<f64>()
+            .sqrt();
         // `+ 0.0` reads a −0 angle as 0, as the readouts show it.
         Self {
             preset,
@@ -525,7 +625,7 @@ impl View {
             d,
             x,
             y,
-            scale: cos1.hypot(sin1),
+            scale: cos1.hypot(sin1).hypot(stray),
             tau1: sin1.atan2(cos1) + 0.0,
             tau2: sin2.atan2(cos2) + 0.0,
             gamma: gamma + 0.0,
@@ -555,9 +655,31 @@ impl View {
         }
     }
 
-    /// The zoom, in log₂: `−log₂ σ`.
+    /// The zoom, in log₂: `−log₂ σ`. Absolute, as the depth readout counts it; the zoom row reads [`View::zoom_row`].
     pub fn zoom(&self) -> f64 {
         -self.scale.log2()
+    }
+
+    /// The window `σ_h` the zoom row reads against: the active preset's, or 1 with none (§G2, REQ-GUI-224).
+    pub fn window(&self) -> f64 {
+        self.preset.map_or(1.0, |p| PRESET_HOMES[p].window)
+    }
+
+    /// The zoom as its row reads it: `log₂(σ_h / σ)`, 0 at the preset's window (R-466, REQ-GUI-224).
+    pub fn zoom_row(&self) -> f64 {
+        self.window().log2() + self.zoom()
+    }
+
+    /// [`ZOOM_RANGE`] as the zoom row reads it. A preset's choice keeps `σ` (§G2), so the row moves with the window; the
+    /// span moves too, or the slider would pin its handle at an end for a `σ` inside `ZOOM_RANGE` and reach one past it.
+    pub fn zoom_row_range(&self) -> std::ops::RangeInclusive<f64> {
+        let window = self.window().log2();
+        ZOOM_RANGE.0 + window..=ZOOM_RANGE.1 + window
+    }
+
+    /// This view at the zoom row's reading `row`.
+    pub fn with_zoom_row(self, row: f64) -> Self {
+        self.with_zoom(row - self.window().log2())
     }
 
     /// This view at zoom `zoom`.
@@ -894,6 +1016,9 @@ pub struct Out {
     /// Commands already turned about the pin, each sent as it is, one history entry: a compass drag's edit, made from
     /// the plane where the drag began, not the frame's (R-458 F1).
     pub commands: Vec<Vec<SetField>>,
+    /// The resets' commands, also turned about the pin, each sent under a fresh key of its own: one history entry,
+    /// whatever else the pointer holds (R-466 K10).
+    pub fresh: Vec<Vec<SetField>>,
     /// The windows to open.
     pub windows: Vec<Window>,
     /// The console's lines for the physical steers refused (R-550).
@@ -918,10 +1043,14 @@ impl Out {
     }
 }
 
-/// Enter on control `id`, as its click: the panel's, a target dropdown's entry picking that target among them, and the
-/// compass's Tilt and Slice.
+/// Enter on control `id`, as its click: the panel's, a section's reset and a target dropdown's entry picking that
+/// target among them, and the compass's Tilt and Slice.
 pub fn activate(id: &str, snapshot: &Snapshot, scratch: &mut Scratch, out: &mut Out) {
     if compass::pick(id, &snapshot.sim, scratch, out) {
+        return;
+    }
+    if let Some(section) = reset::Section::of(id) {
+        out.fresh.push(reset::command(&snapshot.sim, section));
         return;
     }
     let view = View::read(&snapshot.sim);
@@ -985,11 +1114,7 @@ pub fn adjust(adjust: &Adjust, snapshot: &Snapshot, scratch: &mut Scratch, out: 
             None,
             scratch,
         ),
-        ZOOM => out.edit(
-            basis_edit(view.with_zoom(view.zoom() + octaves).basis()),
-            None,
-            scratch,
-        ),
+        ZOOM => out.edit(navigate::zoom_by(plane, octaves), None, scratch),
         TAU1 | TAU2 | GAMMA => {
             let mut angles = tilt::Angles::of(&view);
             angles.turn(id, degrees);
@@ -1070,10 +1195,48 @@ pub fn show(ui: &mut Ui, rect: Rect, panel: &mut Panel<'_>) {
 
 /// Draws a section's header in row 0 of `section`: its title, and a weak note beside it.
 pub fn header(ui: &mut Ui, section: Rect, h: f32, title: &str, note: &str) {
-    let mut row = row_ui(ui, row(section, h, 0));
+    title_in(ui, row(section, h, 0), title, note);
+}
+
+/// Draws `title`, and a weak note beside it, in `rect`; the note gives way to what is beside it in the row.
+fn title_in(ui: &mut Ui, rect: Rect, title: &str, note: &str) {
+    let mut row = row_ui(ui, rect);
     row.label(RichText::new(title).strong());
     if !note.is_empty() {
         row.add_space(8.0);
-        row.label(RichText::new(note).weak().small());
+        row.add(Label::new(RichText::new(note).weak().small()).truncate());
     }
+}
+
+/// Draws `section`'s header in row 0 of `rect`, with its title, a weak note and the section's reset at its right end (R-466 K6), dimmed at home
+/// (K11): a click on it is its command.
+pub fn header_with_reset(
+    ui: &mut Ui,
+    rect: Rect,
+    h: f32,
+    clip: Rect,
+    note: &str,
+    section: reset::Section,
+    panel: &mut Panel<'_>,
+) {
+    let line = row(rect, h, 0);
+    let mut right = ui.new_child(
+        UiBuilder::new()
+            .max_rect(line)
+            .layout(EguiLayout::right_to_left(Align::Center)),
+    );
+    let sim = &panel.snapshot.sim;
+    let button = right
+        .add_enabled(
+            reset::enabled(sim, section),
+            Button::new(reset::RESET).small(),
+        )
+        .on_hover_text(section.tooltip())
+        .on_disabled_hover_text(reset::dimmed_because(sim));
+    if button.clicked() {
+        panel.out.fresh.push(reset::command(sim, section));
+    }
+    panel.place(section.scope(), &button, clip);
+    let left = Rect::from_min_max(line.min, pos2(button.rect.min.x, line.max.y));
+    title_in(ui, left, section.title(), note);
 }

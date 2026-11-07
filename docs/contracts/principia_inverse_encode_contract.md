@@ -459,6 +459,10 @@ clamp is defined for layer 3, so a failure is rejected, naming the constraint.
 - **Reject**: refuse with an error naming the failed constraint. Only when projecting or clamping would give a
   qualitatively different IC from the one intended.
 
+*5 Nov 2026 (R-791, closing RQ-693 (b)):* at `ε ≠ 0` this contract's `U` on $(L_z, E)$, in the parabola and in
+`K* = E − U`, is the Newtonian `U`, `V` at `ε = 0`, never the softened `V₀`, as the decode's is
+(`principia_chart_reference.md` §2.1). The other axes that read `U` are RQ-709.
+
 **The nearest valid point** (R-72; REQ-ENC-030). On the invariant charts, a projection keeps the energy and moves
 `L_z` alone. At the frozen configuration and masses, the kinetic energy is `K* = E − U` on $(L_z, E)$ and `K* = K` on
 $(L_z, K)$, and the points feasible at that energy are the segment $|L_z| \le \sqrt{2I K^*}$. The nearest valid point is

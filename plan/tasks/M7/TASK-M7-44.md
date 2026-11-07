@@ -21,12 +21,14 @@ Every field of `SimConfig` and `RenderState` is given a tier in one compile-time
 - `docs/design/principia_dd_image_embedding.md` § "7. Measured capacity and behaviour"
 - `docs/design/principia_dd_image_embedding.md` § "9. Obligations"
 - `docs/contracts/principia_gui_state_contract.md` § "2. The editable state is the entire coupling surface"
+- `decisions.md` § "R-802 — Tier 2 of the embedding splits only if TASK-M7-44's measurement finds it does not fit at 64² or 128² *(closes RQ-386; amends R-522)*"
 
 ## Deliverables
 - `crates/engine/src/contract/tiers.rs` and `TIERS`.
 - The tiered writer and the flags in `crates/render/src/embed/`; the version-4 layout.
 - The old-record reading; the re-measured §7 table, in the PR and in a docs edit through the porting rule.
 - Tests `tier_table` (with its compile-fail arm), `embed_tiers`, `embed_tier_flags`, `embed_old_records`; the capacity measurement.
+- If tiers 1 and 2 don't fit at 64² or 128² for `tier2_typical_stain`, tier 2 split as R-802 gives, 2a above 2b, in the tier table (REQ-TOOL-181), and the capacity table measured on the split tiers (REQ-TOOL-174).
 
 ## Acceptance tests
 - `cargo test -p render embed_old_records` — REQ-TOOL-173's verify (C12).
@@ -42,3 +44,4 @@ Every field of `SimConfig` and `RenderState` is given a tier in one compile-time
 - **R-522 (20 Oct 2026):** RQ-386 (whether tier 2 splits) is parked until this task's capacity re-measure. The PR reports tier 2's own size and, at 64² and 128², whether tiers 1 and 2 fit for the default stain and a typical edited one (REQ-TOOL-174); the orchestrator then returns RQ-386 to the human with those numbers. Meanwhile tier 2 is whole. *Was:* "Splitting tier 2 is RQ-386; meanwhile tier 2 is whole."
 - **R-521:** tier 1 carries the four entry hashes beside the build hash and the schema version; the measurement includes them (TASK-M7-45, a dependency; applied per R-369).
 - **Physics review P4 of PR #265 (applied per R-369):** the "typical edited" stain is the fixture `tier2_typical_stain`, added by this task with the contents REQ-TOOL-174's verify names.
+- *5 Nov 2026 (R-802, closing RQ-386 (c)):* the measurement decides; RQ-386 no longer returns to the owner with the numbers, as the R-522 note above had it.

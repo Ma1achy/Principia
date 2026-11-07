@@ -163,6 +163,8 @@ post node.
 | drift shape | `energy_drift` (final) vs `delta_E_max_abs` (max) | distinguishes secular loss from recovered spike |
 | colour independence (pitfalls §1.2 (c)) | one slice, from one payload, in event, greyscale and hue modes (`principia_colour_composition.md` §4.1) | the three modes' edge maps agree: colouring is a pure function applied after the physics |
 
+*5 Nov 2026 (R-791, closing RQ-693 (b)):* at `ε ≠ 0` the invariant-chart gradient reads the chart's axis energy, the Newtonian energy, not the stored `E_0`, which is softened (R-654). An untilted chart would still show an axis-aligned gradient on the softened `E_0`, offset by a constant, so the check at `ε ≠ 0` runs under the warp on a chart tilted into a shape or mass control, pixel by pixel: the view's energy minus the pixel's Newtonian `U` equals `K(t)` (REQ-CHART-092). A momentum tilt moves neither `U` nor the offset. The gradient is axis-aligned on an untilted chart; tilted into a shape or mass control, a warped `E` follows the pixel's `U` (R-471 E3), at any `ε`, and the check is per pixel.
+
 **The edge map (R-72; REQ-VAL-182).** The colour-independence check (pitfalls §1.2 (c); REQ-VAL-012) compares the
 edge maps of one slice, rendered from one payload in the three modes colour composition §4.1 defines: event,
 greyscale and hue.

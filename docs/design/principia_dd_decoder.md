@@ -35,7 +35,7 @@ enum"):
 |---|---|---|
 | `M01_TINY` | the mass block: `M₀₁ < ε_M01` (§3.1), on the emitted masses of every chart, a chart that sets its masses directly included | 2, invalid mass construction |
 | `NO_QUALIFYING_SEED` | the invariant-momentum construction: feasible targets, but no seed has `‖w⁽²⁾‖²_m > ε_w` (§3.4, R-82) | 1, degenerate configuration |
-| `INVARIANT_INFEASIBLE` | the invariant-momentum construction: `K* < L_z²/(2I)` (`principia_chart_reference.md` §2.2) | 3, other |
+| `INVARIANT_INFEASIBLE` | the invariant-momentum construction: `K* < L_z²/(2I)`, or a `K*` whose `2K*` has no finite float at the decode's own precision (`principia_chart_reference.md` §2.2, §4.5) | 3, other |
 | `ENERGY_INFEASIBLE` | `η_E`: `E* < U` (§3.7) | 3, other |
 | `ENERGY_UNSCALABLE` | `η_E`: the rest start at `E* > U`, or the collision pole `U = −∞` (§3.7) | 3, other |
 
@@ -65,7 +65,8 @@ decode makes that test 12 compares bit for bit across backends, with the value i
 | Decision | Branch input, and its form | Where |
 |---|---|---|
 | `M01_TINY` | `M₀₁`, the one rounded sum `m₀ + m₁` of the emitted masses, formed in mantissa-exponent arithmetic: each mass scaled into `[1, 2)` by powers of two, the two aligned and added once, every product exact and no intermediate subnormal; against the constant `ε_M01`, compared by exponent, then mantissa (§3.1, "The branch input, rewritten"; R-547, built by TASK-M2-48, REQ-DEC-011). *Was:* "`M₀₁ = fma(m₁, 1, m₀)` against the constant `ε_M01`, from the emitted masses (§3.1, "The branch input"; its premise fails, R-547: the form is rewritten to R-547's rule and re-proved by TASK-M2-48, REQ-DEC-011)" | `kernel::decode::mass` (`kernel::canon`'s mantissa-exponent sum) |
-| `INVARIANT_INFEASIBLE` | the sign of `2·I·K* − L_z²`, exactly, from the operands' bits: binades and limb products, every product exact, no `fma`, no `√`, no division (applied meanwhile under RQ-298; the corrected rule's form, R-547, as built by TASK-M2-09) | `kernel::decode::invariant::infeasible` |
+| `INVARIANT_INFEASIBLE` | the sign of `2·I·K* − L_z²`, exactly, from the operands' bits: binades and limb products, every product exact, no `fma`, no `√`, no division; and `K*`'s binade, an integer, for a `2K*` with no finite float, NaN included (applied meanwhile under RQ-298; the corrected rule's form, R-547, as built by TASK-M2-09) | `kernel::decode::invariant::infeasible`, `no_construction` |
+| the momenta's `L_z`, 0 in its place | `K*`'s binade at or past `2K*`'s limit, or twice `L_z`'s binade past it (the limit is 1023 at f64, 127 at f32), integers read on the bits, each precision at its own range: a select, reached only where the outcome is already `INVARIANT_INFEASIBLE` (`principia_chart_reference.md` §2.2) | `kernel::decode::invariant::finish` |
 | `L_max`'s four steps down (the warp's edge columns) | the same exact sign at each step | `kernel::chart::invariant::l_max` |
 | the seed, on a decoded configuration | `z_α ≤ 0`, read on the control's bits | `kernel::decode::invariant::decoded_seed` |
 | the seed, on the Burrau family | `3ν ≤ 1`, by a two-sum of `2ν + ν`, comparisons only | `kernel::chart::burrau::seed` |
@@ -76,6 +77,9 @@ decode makes that test 12 compares bit for bit across backends, with the value i
 
 The selects that choose a pole's value (§3.2's `atan2` poles, §3.6's `rho_angle` cases and R-436's pole values) read
 comparisons against the constant 0 or `±π̂` of values already computed; they choose a stored value, not a tag.
+The shape sphere's f32 exponential sinc reads one comparison they do not cover, `z < 0.0625`, the multi-op `z = ‖d‖²`
+against the nonzero `sinc_cut²` (R-696; REQ-DEC-054's proposal): it chooses between two forms of one continuous value
+and writes no tag, so test 12 does not compare it and it is outside the table's rule.
 
 ---
 
@@ -411,6 +415,10 @@ comparison on $\infty$.
 **Under softening (R-670, RQ-656 (6)(iii), 2 Nov 2026).** A view refuses `ε ≠ 0` with any `Some(E*)`, `Some(0)`
 included, as a forbidding chart refuses it below: `η_E` never runs on a softened decode, so a pixel's IC does not depend
 on `ε`, and `ENERGY_INFEASIBLE` and `ENERGY_UNSCALABLE` keep their meaning.
+
+*5 Nov 2026 (R-791, closing RQ-693 (b)):* the $(L_z, E)$ chart forbids `Some(E*)`, so that refusal doesn't reach it.
+It runs at `ε ≠ 0`, and its $U$ is then §3.6's Newtonian $V_0$, not the softened form, so a pixel's IC doesn't depend on
+`ε` there either (`principia_chart_reference.md` §2.1).
 
 **Where it is allowed.** Only on charts that decode arbitrary momenta without enforcing an energy: the
 free-Jacobi-momentum chart and the latent chart. **It must be disabled** on the invariant-momentum charts

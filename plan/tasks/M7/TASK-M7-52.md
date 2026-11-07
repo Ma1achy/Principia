@@ -20,6 +20,7 @@ One Rust source for SM1's `P_T`, "the target chart's projection, the one the tra
 - `docs/design/principia_dd_encode.md` § "2. Consolidated contract"
 - `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
 - `decisions.md` § "R-297 — Fast-math per shader stage: off for compute by default, an explicit and recorded opt-in; display may keep it *(amends R-84, R-116)*"
+- `decisions.md` § "R-793 — The state map's targets are the app's own charts: the `θ × dilation` and `ν × dilation` rows leave the targets and stay in the prototype's record *(closes RQ-680)*"
 
 ## Deliverables
 - The projection module in `crates/kernel` beside the encode (the only crate rust-gpu compiles), its leaving rule and curve nearest point; its WGSL snippet emitted to `crates/render/wgsl/` by `cargo xtask build-kernel`, as TASK-M2-25's decode and encode are (R-116); the host trace calls the kernel function. *Was:* "The projection module (`crates/render/`), …, generated to WGSL from the same source (R-116)." (code re-review C2 of PR #270).
@@ -42,3 +43,4 @@ One Rust source for SM1's `P_T`, "the target chart's projection, the one the tra
 - **The measured tolerance is a fixed constant (PR #270's qa advisory, applied per R-369):** it is recorded in the code, never re-measured on a test run, so the test never checks a build against its own measurement.
 - **Goal reworded (C5):** *Was:* "Chart position (TASK-M7-47, generated to WGSL, R-116) and the trace (TASK-M8-58) both call it."
 - **Ruled by R-558 as applied meanwhile:** RQ-498 (a), the shape-sphere target from the signed n̂; RQ-503 (a), main's `α_min = 0`.
+- *5 Nov 2026 (R-793, closing RQ-680 (a)):* the targets are the app's own charts, through `encode_into` and `curve::nearest`; SM1's two dilation rows are the prototype's record, and the wait on RQ-680 ends.

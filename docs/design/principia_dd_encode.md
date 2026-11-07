@@ -34,6 +34,10 @@ From **navigation (Part 4)**: the lock on nonlinear charts prefers CPU forward r
 | **Invariant fibre** *(momentum stage of (L_z,E)/(L_z,K) charts)* | `v = L_z·Jr + a·w`, `a = √(2(K*−L_z²/2))` (I = 1) | chart coords = evaluate `L_z(x)`, `E(x)` directly; latent = **run the same construction**, then free-momentum-invert the constructed `p = m·v` | closure is *by construction* — one code path, so lookup and clicked pixel land on the same z |
 | **Curve (Burrau)** | `γ: ν ↦ (α, β, μ₁, μ₂)`; `θ(ν)` monotone | on-curve: `ν(θ) = sec θ − tan θ` from the canonical leg ratio; masses cross-check `μ₁ = log(b/c)`, `μ₂ = log(a/c)` | `sec θ − tan θ` inverts `θ(ν)` in closed form on `θ ∈ (0, π/2)` ✓ |
 
+*5 Nov 2026 (R-791, closing RQ-693 (b)):* at `ε ≠ 0` the Invariant fibre row's `E(x)` on $(L_z, E)$ is the Newtonian
+energy, `V` at `ε = 0`, as the decode's axis is (`principia_chart_reference.md` §2.1), so encode and decode agree on a
+softened run. The other axes that read `U` are RQ-709.
+
 **`β` at the `α = 0` pole (R-437).** At `λ̃ = 0`, `β = atan2(|λ̃_y|, λ̃_x)` is at its pole: there `β` is 0, whatever the
 signs of the zeros, chosen by a select on `λ̃_x = 0` and `λ̃_y = 0`, not obtained from `atan2(0, 0)`, which GLSL.std.450
 and WGSL leave undefined (`principia_dd_decoder.md` §3.2, "Every `atan2` at a possible pole"). `α = atan2(‖λ̃‖, ‖ρ̃‖)`

@@ -563,7 +563,7 @@ where
 /// `Φ_θ,L_z`: `θ` by [`curve_axis`], on the curve the closed form's `θ` read directly; `L_z` by the band's inverse
 /// `v = (L_z/(λ_L·L_max(K)) + 1)/2`, `v = ½` where the band's half-width is 0; the fixed `K` is the comparison's.
 /// [`ByKind::coords`] is `tol = 0`.
-impl<P: Copy> ByKind for BurrauThetaLz<P>
+impl<P: crate::chart::invariant::WarpReal> ByKind for BurrauThetaLz<P>
 where
     f64: From<P>,
 {
@@ -596,7 +596,7 @@ where
     }
 }
 
-impl<P: Copy> CurveChart for BurrauThetaLz<P>
+impl<P: crate::chart::invariant::WarpReal> CurveChart for BurrauThetaLz<P>
 where
     f64: From<P>,
 {

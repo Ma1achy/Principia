@@ -257,6 +257,14 @@ Lz(s,t)  = (2s − 1)·L_max(t)
 with `(s,t) = (u,v) ∈ [0,1]²`. **This maps the unit square onto the feasible interior, so no pixel
 is infeasible by construction** — which is why the warp exists rather than clamping.
 
+*5 Nov 2026 (R-791, closing RQ-693 (b)):* at `ε ≠ 0` the `(Lz, E)` chart stays available, and its `E` is the Newtonian
+energy: `U` here, in the feasible set, the warp and §2.2's `K*`, is `V` at `ε = 0`, never the softened `V₀` of
+`principia_dd_decoder.md` §3.6. So a pixel's start is the same at every `ε`, and toggling softening changes only the
+physics. The run's own `E₀` is softened, so it isn't the axis value: the axis is labelled as Newtonian energy whenever
+softening is on, and the Inspector shows the softened energy beside it (`principia_render_gui_spec.md` §G2, §G8). Encode
+reads the same Newtonian `U` on this chart, so entering a pixel's `(Lz, E)` returns that pixel's `z` at any `ε`. Whether
+this reaches the other axes that read `U`, the lone, mixed and Chart-builder `E` axes and the virial ratio, is RQ-709.
+
 For `(Lz, K)`: identical, with `K* = K(t)` directly. Simpler, since `K ≥ 0` is the natural
 constraint.
 
@@ -371,6 +379,13 @@ where those share no ratio, as can happen at a held mass near 1, the chart is no
 arithmetic on the narrowed values, and an `f32` decode's own rounding is held to Tier N (parity_contract §4). The axis
 is bounded past both of its edges.
 
+The search for `[q₀, q₁]` holds a ratio to `ε_μ/2`, half the tolerance above, and that margin is the search's alone: a
+ratio still counts as realised at `ε_μ`, so `[q₀, q₁]` can be shorter than the part the link realises at `ε_μ`, by as much as the
+measured worst, 5.48 in `ln q`, at an extreme ratio, and a chart realised at `ε_μ` can be refused. The reason is measured. The range's ends are narrowed to `f32`, and that rounding
+must stay inside the `ε_μ` a decoded pixel is held to: at the full `ε_μ`, 62% of narrowed `softmax_tanh` charts had a
+refused row. The need is `1 − 2⁻²⁴/ε_μ ≈ 0.94` of `ε_μ`. The `1/2` is chosen with room, not derived (R-810, closing
+RQ-707 (i)).
+
 Linear, `q(t) = q_lo + (q_hi − q_lo)·t`, affine, over the asked range. A pixel whose ratio is at or below 0, or is not
 realised, is not a system.
 
@@ -431,6 +446,8 @@ a = √(2·(K* − Lz²/(2I)))
 vᵢ = vᵢ^(L) + a·wᵢ                pᵢ = mᵢ·vᵢ
 ```
 
+On the `(Lz, E)` chart at `ε ≠ 0`, this `U` is §2.1's Newtonian `U` (R-791).
+
 **The infeasible pixel's label** (defined per R-72). A pixel with `K* < K_min` is tagged
 `DEGENERATE(INVARIANT_INFEASIBLE)`, one of `DEGENERATE`'s enumerated causes (§0.7; `principia_dd_decoder.md` §2, "From
 totality"), as `η_E`'s `E* < U` is `DEGENERATE(ENERGY_INFEASIBLE)` (`principia_dd_decoder.md` §3.7). Its
@@ -439,9 +456,14 @@ totality"), as `η_E`'s `E* < U` is `DEGENERATE(ENERGY_INFEASIBLE)` (`principia_
 produces no physical IC there, which is what `decode_failed` records, and none of `detail`'s codes 0–2 (non-finite
 output, degenerate configuration, invalid mass construction) describes it. It is a decode failure, not a dynamical
 outcome: the sample is terminal at decode, kept, never dropped. Its momenta are finite, `a = 0` selected, so
-`pᵢ = mᵢ·vᵢ^(L)`; nothing integrates them. The test is exactly `K* < L_z²/(2I)`, decided as `2·I·K* < L_z²` with no
-rounding at the decision, so one input takes one branch at every precision and on every backend; `K* = K_min` is
-feasible, with `a = 0`.
+`pᵢ = mᵢ·vᵢ^(L)`; nothing integrates them. The exception: where `L_z²` or `2K*` has no finite float at the decode's own
+precision (§2.1's exception, §4.5), nothing bounds `L_z·r`, so `L_z` is selected out too and `pᵢ = 0`, finite as every
+decode of a finite input is (applied per R-369, the physics reviewer's call on #388; *was:* no exception). Such a pixel
+is always infeasible, so no feasible pixel is touched. The exact test is exactly `K* < L_z²/(2I)`, decided as
+`2·I·K* < L_z²` with no rounding at the decision, so one input takes one branch of that test at every precision and on
+every backend; `K* = K_min` is feasible, with `a = 0`. The bound on `2K*` is each precision's own range, not a common
+cap: `K*` in `[2¹²⁷, 2¹²⁸)` has no construction at f32 and has one at f64, as §2.1's exception is at the chart's own
+precision (*was:* "so one input takes one branch at every precision and on every backend").
 
 **Its precedence.** The decode runs mass → config → momentum, and a decode an earlier block has already tagged keeps
 that tag (`principia_dd_decoder.md` §3.7): a pixel the mass block tags `DEGENERATE(M01_TINY)` keeps that tag, whatever
@@ -901,6 +923,12 @@ with no construction there (`K < L_z²/2I`) reads as refused: no system, area we
   tilt is accepted, the practical bound the slider span, RQ-679 (R-720, ruling RQ-699; *was:* "How the held `L_z` itself
   moves is RQ-699."). A slice of a held `K` stays by value in both modes, `K₀ + d`: R-708 amends the tilt only,
   REQ-CHART-060's stop holds the centre at `K₀ ≥ 0`, and `t₀` is recomputed from the new `K₀` (applied per R-369).
+  A second exception of §2.1's kind: a pixel whose `K*` has no finite `2K*` at the decode's own precision, reached only
+  at an extreme `γ_K` or `d`, or on a held `L_z` where the floor plus the line passes it, has no construction. §2.2's
+  construction labels it `INVARIANT_INFEASIBLE`, with `a = 0` and momenta 0, as at an `L_z` with no finite square, on
+  `K*`'s exponent bits beside the exact test, `validate` refuses it at the chart's own precision, and its area weight
+  is 0. No `K` is saturated into a system and nothing is mirrored (applied per R-369,
+  the physics reviewer's call on #388).
 - **If the implementer confirms it arises (R-709).** A held energy's warp coordinate past `t < 0` clamps at `t = 0`, held
   `K` at its floor, `L_z²/2I` (on `Φ_θ,L_z`, where `L_z` is read off `K`, both are 0: the rest start at the pixel's own
   shape). Each clamped pixel is a real system, flagged "held at floor" in the Inspector and the sidecar, and the test

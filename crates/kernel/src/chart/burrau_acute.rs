@@ -50,16 +50,17 @@
 use spirv_std::num_traits::Float;
 
 use super::burrau::{
-    self, embed, lerp, sanity, select, system_config, system_masses, unread, BurrauBlocks,
+    self, embed, lerp, refuse, sanity, select, system_config, system_masses, unread, BurrauBlocks,
 };
 use super::invariant::{self, WarpReal};
+use super::tilt::narrow;
 use super::{
     AxisMeta, BlockTouch, Chart, ChartDecode, ChartLabel, ChartOut, Constraint, SystemImage,
     ValidationResult,
 };
 use crate::burrau::{Convention, System, CONVENTION, CONVENTION_STATEMENT};
 use crate::decode::config::Config;
-use crate::decode::invariant::{infeasible, Outcome};
+use crate::decode::invariant::{infeasible, no_construction, Outcome};
 use crate::decode::mass::Masses;
 use crate::decode::momentum::Momentum;
 use crate::decode::{self, descriptor, Blocks, Decoded, Ic};
@@ -87,8 +88,8 @@ fn theta_at<F: Float + From<P>, P: Copy>(theta_range: [P; 2], u: F) -> F {
 
 /// Layer 2's `θ ∈ (0, π/4]`.
 #[inline]
-fn in_fold(theta: f64) -> bool {
-    theta > 0.0 && theta <= core::f64::consts::FRAC_PI_4
+pub(super) fn in_fold<F: Float>(theta: F) -> bool {
+    theta > F::zero() && theta <= narrow(core::f64::consts::FRAC_PI_4)
 }
 
 /// The axis metadata of `θ`: it writes the configuration and the masses, through `ν`.
@@ -123,9 +124,9 @@ fn fold_label(name: &str) -> ChartLabel<'_> {
     burrau::label(name, SystemImage::Bijective)
 }
 
-/// Layer 3 on the f64 decode `d` (the module's note): the decoded masses positive, then [`sanity`].
-fn decoded_sanity(d: &Decoded<f64>) -> Option<Constraint> {
-    if d.ic.m.iter().all(|&m| m > 0.0) {
+/// Layer 3 on the decode `d`, at f64 or at a view's own precision (the module's note): the decoded masses positive, then [`sanity`].
+pub(super) fn decoded_sanity<R: LinkReal + PayloadReal>(d: &Decoded<R>) -> Option<Constraint> {
+    if d.ic.m.iter().all(|&m| m > R::zero()) {
         sanity(d)
     } else {
         Some(Constraint::DecodedMassPositive)
@@ -215,6 +216,26 @@ where
     }
 }
 
+impl<P: Copy> BurrauThetaK<P>
+where
+    f64: From<P>,
+{
+    /// The check without layer 3: `θ` in range, finiteness, and `K ≥ 0`, a `v` below 0 projected to 0.
+    pub(super) fn check_axes(&self, u: f64, v: f64) -> ValidationResult {
+        if let Some(r) = reject_early(self.theta(u), u, v, Constraint::KNonNegative) {
+            return r;
+        }
+        if v < 0.0 {
+            return ValidationResult::Project {
+                u,
+                v: 0.0,
+                failed: Constraint::KNonNegative,
+            };
+        }
+        ValidationResult::Valid
+    }
+}
+
 impl<P: Copy> Chart for BurrauThetaK<P>
 where
     f64: From<P>,
@@ -254,19 +275,9 @@ where
 
     /// Layer 2's `θ ∈ (0, π/4]` and `K ≥ 0`, then layer 3 on the f64 decode (the module's note).
     fn validate(&self, u: f64, v: f64) -> ValidationResult {
-        if let Some(r) = reject_early(self.theta(u), u, v, Constraint::KNonNegative) {
-            return r;
-        }
-        let t = v.max(0.0);
-        match decoded_sanity(&decode_theta_k(self, u, t).0) {
-            Some(failed) => ValidationResult::Reject { failed },
-            None if t != v => ValidationResult::Project {
-                u,
-                v: t,
-                failed: Constraint::KNonNegative,
-            },
-            None => ValidationResult::Valid,
-        }
+        refuse(u, v, self.check_axes(u, v), |a, b| {
+            decoded_sanity(&decode_theta_k(self, a, b).0)
+        })
     }
 }
 
@@ -278,8 +289,19 @@ where
     R: LinkReal + PayloadReal + WarpReal + From<P>,
     P: Copy,
 {
+    decode_theta_k_lz(chart, u, R::zero(), chart.kinetic(v))
+}
+
+/// [`decode_theta_k`] with the construction at the held `L_z = lz` in place of 0, the chart's hidden coordinate, and
+/// `K* = k` in place of `K(v)`, the row its mode gives (R-633, R-708; `super::construction`).
+#[inline]
+pub fn decode_theta_k_lz<R, P>(chart: &BurrauThetaK<P>, u: R, lz: R, k: R) -> (Decoded<R>, Outcome)
+where
+    R: LinkReal + PayloadReal + WarpReal + From<P>,
+    P: Copy,
+{
     let nu = chart.nu(u);
-    let mut blocks = BurrauBlocks::new(embed(nu), burrau::seed(nu), R::zero(), chart.kinetic(v));
+    let mut blocks = BurrauBlocks::new(embed(nu), burrau::seed(nu), lz, k);
     let decoded = decode::decode_with(&mut blocks, &unread().z);
     (decoded, blocks.outcome())
 }
@@ -335,13 +357,25 @@ impl<P: Copy> BurrauThetaLz<P> {
     /// The band's half-width `λ_L·L_max(K)`, `L_max(K) = √(2IK)` held to `L_max² ≤ 2K` ([`invariant::l_max`]).
     #[inline]
     pub fn lz_max<F: WarpReal + From<P>>(&self) -> F {
-        <F as From<P>>::from(self.lz_fraction) * invariant::l_max(self.kinetic::<F>())
+        self.band(self.kinetic::<F>())
     }
 
     /// `L_z(v) = (2v − 1)·λ_L·L_max(K)`.
     #[inline]
     pub fn lz<F: WarpReal + From<P>>(&self, v: F) -> F {
-        (v + v - F::one()) * self.lz_max::<F>()
+        self.lz_at(v, self.kinetic::<F>())
+    }
+
+    /// `L_z(v)` on the band of `K = k`, the pixel's own under a warped tilt (R-708).
+    #[inline]
+    pub fn lz_at<F: WarpReal + From<P>>(&self, v: F, k: F) -> F {
+        (v + v - F::one()) * self.band(k)
+    }
+
+    /// `λ_L·L_max(k)`, the half-width of the band of `K = k`.
+    #[inline]
+    fn band<F: WarpReal + From<P>>(&self, k: F) -> F {
+        <F as From<P>>::from(self.lz_fraction) * invariant::l_max(k)
     }
 
     /// The convention the chart's systems are stated in: the normalised one (chart_reference §4.2).
@@ -369,7 +403,7 @@ impl<P: Copy> BurrauThetaLz<P> {
     }
 }
 
-impl<P: Copy> BurrauThetaLz<P>
+impl<P: WarpReal> BurrauThetaLz<P>
 where
     f64: From<P>,
 {
@@ -383,6 +417,32 @@ where
     #[inline]
     fn lz_infeasible(&self, v: f64) -> bool {
         infeasible(1.0, self.kinetic::<f64>(), self.lz(v))
+    }
+
+    /// What leaves no system at the targets `(lz, k)` of a tilted pixel at `u`: no construction there by §2.2's exact
+    /// test, a `K*` with no finite double included, or layer 3 on the pixel's own decode.
+    pub(super) fn refused_at(&self, u: f64, lz: f64, k: f64) -> Option<Constraint> {
+        if no_construction(k, lz) {
+            return Some(Constraint::KAboveLzBound);
+        }
+        decoded_sanity(&decode_theta_lz_at(self, u, lz, k).0)
+    }
+
+    /// The check of a tilted pixel by value at `(u, v)`: the chart's `θ` and finiteness, then `refused`, the pixel's
+    /// own ([`Tiltable::refusal`](super::tilt::Tiltable::refusal)), not the centre's. Nothing is projected: the tilted
+    /// view has no point to project to.
+    pub(super) fn validate_at(
+        &self,
+        u: f64,
+        v: f64,
+        refused: Option<Constraint>,
+    ) -> ValidationResult {
+        let failed = Constraint::KAboveLzBound;
+        match (reject_early(self.theta(u), u, v, failed), refused) {
+            (Some(early), _) => early,
+            (None, Some(failed)) => ValidationResult::Reject { failed },
+            (None, None) => ValidationResult::Valid,
+        }
     }
 
     /// The feasible `v` nearest an infeasible `v` (the module's note): the band's edge on `v`'s side,
@@ -403,7 +463,7 @@ where
     }
 }
 
-impl<P: Copy> Chart for BurrauThetaLz<P>
+impl<P: WarpReal> Chart for BurrauThetaLz<P>
 where
     f64: From<P>,
 {
@@ -446,8 +506,13 @@ where
             return r;
         }
         let t = select(self.lz_infeasible(v), self.nearest_feasible(v), v);
+        // A `K` with no construction on any row at the chart's own precision; at f64, layer 3 reads the tag.
+        let no_row = no_construction(self.kinetic::<P>(), P::zero());
         match decoded_sanity(&decode_theta_lz(self, u, t).0) {
             Some(failed) => ValidationResult::Reject { failed },
+            None if no_row => ValidationResult::Reject {
+                failed: Constraint::KAboveLzBound,
+            },
             None if t != v => ValidationResult::Project {
                 u,
                 v: t,
@@ -466,13 +531,29 @@ where
     R: LinkReal + PayloadReal + WarpReal + From<P>,
     P: Copy,
 {
+    decode_theta_lz_at(chart, u, chart.lz(v), chart.kinetic())
+}
+
+/// [`decode_theta_lz`] with the construction at `(L_z, K*) = (lz, k)`, the held `K` tilted and the band its mode gives
+/// (R-633, R-708; `super::construction`).
+#[inline]
+pub fn decode_theta_lz_at<R, P>(
+    chart: &BurrauThetaLz<P>,
+    u: R,
+    lz: R,
+    k: R,
+) -> (Decoded<R>, Outcome)
+where
+    R: LinkReal + PayloadReal + WarpReal + From<P>,
+    P: Copy,
+{
     let nu = chart.nu(u);
-    let mut blocks = BurrauBlocks::new(embed(nu), burrau::seed(nu), chart.lz(v), chart.kinetic());
+    let mut blocks = BurrauBlocks::new(embed(nu), burrau::seed(nu), lz, k);
     let decoded = decode::decode_with(&mut blocks, &unread().z);
     (decoded, blocks.outcome())
 }
 
-impl<P: Copy> ChartDecode for BurrauThetaLz<P>
+impl<P: WarpReal> ChartDecode for BurrauThetaLz<P>
 where
     f64: From<P>,
 {

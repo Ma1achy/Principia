@@ -27,13 +27,14 @@ use crate::mock::quads::{self, UNIT};
 use crate::mock::MockEngine;
 use crate::side::{EngineSide, FigureView, MockSide};
 
-/// The steps that choose Fit from the keyboard: Tab to the top bar, Enter, → to View, Enter on to F3 hide, ↓ to the
+/// The steps that choose Fit from the keyboard: Tab to the top bar, Enter, → to View, Enter on to Home, ↓ to F3 hide, ↓ to the
 /// row, Enter on to Extend, → to Fit, Enter.
-const CHOOSE_FIT: [Step; 8] = [
+const CHOOSE_FIT: [Step; 9] = [
     Step::Tab,
     Step::Enter,
     Step::ArrowRight,
     Step::Enter,
+    Step::ArrowDown,
     Step::ArrowDown,
     Step::Enter,
     Step::ArrowRight,
@@ -46,11 +47,12 @@ fn fit_then_f3() -> Vec<Step> {
 }
 
 /// The keys of [`CHOOSE_FIT`] up to the row.
-const TO_ROW: [Key; 5] = [
+const TO_ROW: [Key; 6] = [
     Key::Tab,
     Key::Enter,
     Key::ArrowRight,
     Key::Enter,
+    Key::ArrowDown,
     Key::ArrowDown,
 ];
 
@@ -181,7 +183,13 @@ fn f3_fill_modes_row_is_in_the_view_menu_and_marked() {
     top_bar::register(&mut tree);
     assert_eq!(
         tree.children(Some("view")),
-        [HIDE.0, FILL_ROW.0, DEBUG_VIEW.0, top_bar::RESET_LAYOUT.0]
+        [
+            top_bar::HOME.0,
+            HIDE.0,
+            FILL_ROW.0,
+            DEBUG_VIEW.0,
+            top_bar::RESET_LAYOUT.0
+        ]
     );
     assert_eq!(tree.children(Some(FILL_ROW.0)), [FILL_EXTEND.0, FILL_FIT.0]);
     let mut app = mock_app();

@@ -529,11 +529,12 @@ const PRESENTATION: [&str; 14] = [
 /// lookup's layer-3 `decode_sanity` and layer-1 `zero_class` (TASK-M2-19), validation tolerances on lookup and lock;
 /// and the literature import's `literature_import_tol` (TASK-M2-20), the `literature-import` gate's tolerance; and
 /// `step_reversal_tol`, `step_reversal_edge_f64`, `step_reversal_edge_f32` and `step_reversal_edge_max` (TASK-M3-02),
-/// dd_integrator §5 test 3's criterion and its domain's edges; and step 0's skip tolerance `tau_i` (TASK-M2-47), which
+/// dd_integrator §5 test 3's criterion and its domain's edges; and the f32 sinc's `sinc_cut` (TASK-M2-53), which decides
+/// which form gives `k`, not what a stored bit means, and `sinc_bound`, a test's tolerance; and step 0's skip tolerance `tau_i` (TASK-M2-47), which
 /// decides whether `C` rescales, not what a stored bit means; and the arctangent generator's `arctan_sum_bits`
 /// (TASK-M2-26), whose values write the same file across their range, and which no stored bit depends on. None is among the entries §3.8 hashes ("The hash"), so
 /// none is hashed.
-const CALIBRATIONS: [&str; 14] = [
+const CALIBRATIONS: [&str; 16] = [
     "r_pole",
     "n_norm_tol",
     "shape_vec_js_tol",
@@ -547,6 +548,8 @@ const CALIBRATIONS: [&str; 14] = [
     "step_reversal_edge_f32",
     "step_reversal_edge_max",
     "tau_i",
+    "sinc_cut",
+    "sinc_bound",
     "arctan_sum_bits",
 ];
 
@@ -630,6 +633,11 @@ const WRAPPER: [&str; 12] = [
 /// whole turn, which decide the view's basis, never what a stored bit means, so they are not hashed.
 const TILT: [&str; 3] = ["tilt_right_angle", "tilt_half_turn", "tilt_turn"];
 
+/// The construction charts' physical hidden coordinates' indices (TASK-M2-52; R-633, chart_reference §4.5): `ν₀`'s, the
+/// held `L_z`'s and the held `K`'s, past the latent controls, which decide which coordinate a tilt or a slice moves,
+/// never what a stored bit means, so they are not hashed.
+const HIDDEN: [&str; 3] = ["hidden_nu0", "hidden_held_lz", "hidden_held_k"];
+
 #[test]
 fn schema_version_hashes_the_registers_stored_bits_entries() {
     for name in STORED_BITS {
@@ -645,7 +653,8 @@ fn schema_version_hashes_the_registers_stored_bits_entries() {
     // invariant charts' warp defaults (TASK-M2-12), or the Burrau family's (TASK-M2-10), or the march's crossing
     // capacity (TASK-M3-15), or the steppers' coefficients (TASK-M3-02), or the curve projection's search
     // (TASK-M2-18), or the substep law's (TASK-M3-03), or the view window's square (TASK-M2-21), or the slice
-    // frame's default axis (TASK-M6-38), or the wrapper's loop parameters (TASK-M3-06), or the tilt's angles (TASK-M2-36).
+    // frame's default axis (TASK-M6-38), or the wrapper's loop parameters (TASK-M3-06), or the tilt's angles (TASK-M2-36), or the construction charts' hidden indices
+    // (TASK-M2-52).
     for k in REGISTER.iter().filter(|k| !STORED_BITS.contains(&k.name)) {
         assert!(
             ledger::links::CHART_CONSTANTS
@@ -662,7 +671,8 @@ fn schema_version_hashes_the_registers_stored_bits_entries() {
                 || WINDOW.contains(&k.name)
                 || SLICE.contains(&k.name)
                 || WRAPPER.contains(&k.name)
-                || TILT.contains(&k.name),
+                || TILT.contains(&k.name)
+                || HIDDEN.contains(&k.name),
             "`{}` is neither a stored-bits entry nor a chart constant, so it is not hashed",
             k.name
         );
@@ -737,6 +747,12 @@ fn schema_version_hashes_the_registers_stored_bits_entries() {
         assert!(
             REGISTER.iter().any(|k| k.name == name) && !STORED_BITS.contains(&name),
             "the tilt's entry `{name}` is not an unhashed register entry"
+        );
+    }
+    for name in HIDDEN {
+        assert!(
+            REGISTER.iter().any(|k| k.name == name) && !STORED_BITS.contains(&name),
+            "the hidden index `{name}` is not an unhashed register entry"
         );
     }
 }
