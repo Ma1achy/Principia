@@ -57,6 +57,8 @@ pub use engine::{presets, stain};
 /// `r_pole`'s register entry (REQ-INT-086, R-433), for the kernel crate's tests, which reach the ledger only through
 /// this dev-dependency: the kernel takes the ledger as a build-dependency alone (systems_architecture §7.1, R-185).
 pub use ledger::constants::R_POLE;
+/// REQ-DEC-054's cut and bound on the f32 sinc (R-696), which `kernel/tests/exponential_sinc.rs` reads.
+pub use ledger::constants::{SINC_BOUND, SINC_CUT};
 
 /// The invariant charts' warp defaults, `K_max` and `γ_K` (REQ-CHART-044, proposed; TASK-M2-12), for the kernel crate's
 /// tests, as `r_pole` is.

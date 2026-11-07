@@ -11,7 +11,7 @@ use engine::contract::set_field::{Edit, SimField};
 use engine::contract::sim_config::{Latent, Links, Lock, Plane, SimConfig, SliceFrame, LATENT_DIM};
 
 use super::compass_physical_views::{leaked, linear_a, missing};
-use super::compass_support::{app_at, compass_rect, plane, setfields, square, view};
+use super::compass_support::{app_at, compass_rect, plane, setfields, square, view, NARROW_PANEL};
 use super::support::{click_scope, press, rejects};
 use crate::app::App;
 use crate::capture::{PIXELS_PER_POINT, SIZE};
@@ -24,7 +24,7 @@ use crate::explore::compass::{COLUMN_BAR, MARGIN, SLICE_BUTTON, TILT_BUTTON, TIT
 use crate::explore::manifold_view::{dot, frame_edit, lock_edit, norm, point, View};
 use crate::explore::{COMPASS, COMPASS_JACOBI, COMPASS_SHAPE, COMPASS_TILT};
 use crate::headless::Headless;
-use crate::layout::{Layout, Splitter, MIN_BOTTOM_H, MIN_COMPASS_W};
+use crate::layout::{Layout, Splitter};
 use crate::side::MockSide;
 
 /// A tilted, zoomed start plane.
@@ -470,19 +470,19 @@ fn laid_clipped(output: &FullOutput, wanted: &str) -> Option<(Rect, Rect, usize)
     })
 }
 
-/// `id`'s view in a window `window` points in size, its compass at the least the splitters allow if `least`, and the
+/// `id`'s view in a window `window` points in size, its compass at [`NARROW_PANEL`] if `narrow`, and the
 /// panel.
-fn help_at(id: &'static str, window: [f32; 2], least: bool) -> (App<MockSide>, Headless, Rect) {
+fn help_at(id: &'static str, window: [f32; 2], narrow: bool) -> (App<MockSide>, Headless, Rect) {
     let (mut app, mut h) = app_with(&start(), Decoder::default(), id);
     h.set_size(window.map(|points| (points * PIXELS_PER_POINT) as u32));
     let screen = h.screen();
-    if least {
+    if narrow {
         let footer = Layout::new(screen, PIXELS_PER_POINT).footer.min.y;
         app.splits
-            .set(Splitter::CompassTime, MIN_COMPASS_W / screen.width());
+            .set(Splitter::CompassTime, NARROW_PANEL[0] / screen.width());
         app.splits.set(
             Splitter::TopBottom,
-            (footer - MIN_BOTTOM_H) / screen.height(),
+            (footer - NARROW_PANEL[1]) / screen.height(),
         );
     }
     let _ = h.frame(&mut app, Vec::new());
@@ -540,24 +540,25 @@ fn mock_compass_steer_physical_the_help_fits_at_the_artboard_with_no_bar() {
     }
 }
 
-/// The physical views' help at the least panel and the windows the review measured it past: it is clipped to the panel,
+/// The physical views' help at the narrow panel and the windows the review measured it past: it is clipped to the panel,
 /// the column's buttons whole above it, the wheel brings its last row into view, and the focus moving to a button the
 /// wheel took off brings that back.
 #[test]
 fn mock_compass_steer_physical_the_help_stays_in_the_panel_and_is_reachable() {
     let sizes = [
-        ("the least panel", [1440.0, 900.0], true),
+        ("the narrow panel", [1440.0, 900.0], true),
         ("1280 by 720", [1280.0, 720.0], false),
         ("1280 by 800", [1280.0, 800.0], false),
         ("1024 by 768", [1024.0, 768.0], false),
     ];
     for id in [COMPASS_JACOBI, COMPASS_SHAPE] {
-        for (name, window, least) in sizes {
-            let (mut app, mut h, panel) = help_at(id, window, least);
-            if least {
+        for (name, window, narrow) in sizes {
+            let (mut app, mut h, panel) = help_at(id, window, narrow);
+            if narrow {
                 let size = panel.size();
                 assert!(
-                    (size.x - MIN_COMPASS_W).abs() < 1.0 && (size.y - MIN_BOTTOM_H).abs() < 1.0,
+                    (size.x - NARROW_PANEL[0]).abs() < 1.0
+                        && (size.y - NARROW_PANEL[1]).abs() < 1.0,
                     "{size:?}"
                 );
             }
@@ -607,8 +608,8 @@ fn mock_compass_steer_physical_the_help_stays_in_the_panel_and_is_reachable() {
                 help.max.y <= clip.max.y,
                 "{name}: {help:?} ends in {clip:?}"
             );
-            // The wheel took the buttons off at the least panel: the focus moving to one brings it back.
-            if least {
+            // The wheel took the buttons off at the narrow panel: the focus moving to one brings it back.
+            if narrow {
                 let shows = |app: &App<MockSide>| {
                     let tilt = app.keyboard.place_of(COMPASS_TILT).expect("placed");
                     tilt.hit.is_positive() && clip.contains_rect(tilt.rect)

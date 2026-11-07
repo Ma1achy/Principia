@@ -15,8 +15,8 @@
 //!
 //! **What `Real` gives the physics layer** (integrator_contract Part 2c, "Rules the new kernel must hold by
 //! construction"): the four operations and negation, [`RealOps::fma`], [`RealOps::square_root`] and the comparisons
-//! of `PartialOrd`, and nothing else; its one other function, [`Real::arctan2`], asks for `num_traits::Float` too, so
-//! code bounded by `Real` alone cannot reach it. It carries no numeric constant, no epsilon, no largest value, no infinity: rule 1
+//! of `PartialOrd`, and nothing else; its two other functions, [`Real::arctan2`] and [`Real::sinc`], ask for
+//! `num_traits::Float` too, so code bounded by `Real` alone cannot reach them. It carries no numeric constant, no epsilon, no largest value, no infinity: rule 1
 //! forbids a precision-dependent constant in a control-flow decision, so code bounded by `Real` alone, as
 //! [`crate::physics`] is, has none to reach. A tolerance that must scale with precision is supplied where the value is
 //! used, never where a branch is taken. `NAME` is the precision row's label for the ledger, not a number. The two
@@ -58,6 +58,18 @@ pub trait Real:
     {
         Float::atan2(self, x)
     }
+
+    /// `sin r/r` at `r = self`, nonzero, for a type that is also a `Float`, with `_square` the `r²` the caller formed
+    /// before its square root: `sin(r)/r` by default, so the f64 path's bits do not move and `r²` is not read, and at
+    /// f32, the GPU's precision, [`crate::chart::shape_sphere::sinc_f32`], which reads no backend `sin` near 0 (R-696).
+    /// The shape sphere's exponential map calls it, as [`Real::arctan2`] is gated.
+    #[inline]
+    fn sinc(self, _square: Self) -> Self
+    where
+        Self: Float,
+    {
+        Float::sin(self) / self
+    }
 }
 
 impl Real for f32 {
@@ -66,6 +78,11 @@ impl Real for f32 {
     #[inline]
     fn arctan2(self, x: f32) -> f32 {
         crate::arctan::atan2_f32(self, x)
+    }
+
+    #[inline]
+    fn sinc(self, square: f32) -> f32 {
+        crate::chart::shape_sphere::sinc_f32(self, square)
     }
 }
 

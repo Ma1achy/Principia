@@ -15,6 +15,11 @@
 //!   factor of the f64 angle of `Φ`'s vectors at the same point, a whole turn apart counted as none. Control: the angle
 //!   read from the stage's own stored positions (the form R-628 replaced), held to the same checks.
 //!
+//! - REQ-DEC-053, R-696 (`qa_m253_flat_sin_keeps_rho_angle_near_the_lambda_pole`, added by TASK-M2-53's QA, here because
+//!   this file is in the `gpu-kernel` run and its fixture is RQ-687's): the same pole and points, on the built kernel's
+//!   WGSL with the backend's `sin` emulated as 0 up to WGSL's absolute `2⁻¹¹`, RQ-687's measured case, on whichever
+//!   backend runs the test. Control: the WGSL with the f32 sinc put back to the line before R-696 moves `rho_angle`.
+//!
 //! **Domain** (pitfalls §10): the decode alone, its inputs held fixed; each chart at the harness's fixed parameters
 //! (`validation::decode_preset::uniforms`), inside its square.
 
@@ -285,4 +290,99 @@ negative_control!(
     "the angle of the stage's stored positions, the form R-628 replaced, must be found at or near the pole",
     expected = "the kernel decode stage's rho_angle",
     check_kernel_pole(true)
+);
+
+// ── REQ-DEC-053, R-696: the same fixture with the backend's `sin` emulated as 0 near 0 ───────────────────────────────
+
+/// The kernel's WGSL with every `sin` emulated as RQ-687's card read: 0 up to WGSL's absolute `2⁻¹¹`.
+fn flat_sin(wgsl: &str) -> String {
+    let mut out = String::with_capacity(wgsl.len());
+    let mut rest = wgsl;
+    let mut count = 0;
+    while let Some(at) = rest.find("sin(") {
+        let (before, after) = rest.split_at(at);
+        out.push_str(before);
+        let named = before
+            .chars()
+            .next_back()
+            .is_some_and(|c| c.is_alphanumeric() || c == '_');
+        if !named {
+            out.push_str("qa_flat_");
+            count += 1;
+        }
+        out.push_str("sin(");
+        rest = &after[4..];
+    }
+    out.push_str(rest);
+    assert!(count > 0, "the kernel's WGSL calls no sin");
+    out.push_str("\nfn qa_flat_sin(x: f32) -> f32 { return select(sin(x), 0f, abs(x) <= 0.00048828125f); }\n");
+    out
+}
+
+/// `wgsl` with each f32 sinc back to the line before R-696: R-696's inner select, on the series, dropped for `sin(r)/r`.
+#[cfg(feature = "controls")]
+fn old_sinc(wgsl: &str) -> String {
+    const OPEN: &str = "select((sin(";
+    let mut out = String::with_capacity(wgsl.len());
+    let mut rest = wgsl;
+    let mut count = 0;
+    while let Some(at) = rest.find(OPEN) {
+        let (before, form) = rest.split_at(at);
+        let quotient = form.find(", fma(").expect("the sinc's select");
+        let shut = form.find("< 0.0625f))").expect("the sinc's cut") + "< 0.0625f))".len();
+        out.push_str(before);
+        out.push_str(&form["select(".len()..quotient]);
+        rest = &form[shut..];
+        count += 1;
+    }
+    out.push_str(rest);
+    assert!(count > 0, "the kernel's WGSL holds no f32 sinc");
+    out
+}
+
+/// `check_kernel_pole`'s checks on `wgsl`, its own message for the near points so that a control names this test.
+fn check_flat_pole(wgsl: &str) {
+    use kernel::chart::ChartDecode;
+    let gpu = gpu();
+    let f = factor();
+    let tau = std::f64::consts::TAU;
+    for c in cases() {
+        let got = kernel_angles(&gpu, wgsl, &c, false);
+        assert_eq!(
+            got[0].to_bits(),
+            0,
+            "the pole's rho_angle under the flat sin"
+        );
+        for (uv, g) in points().into_iter().zip(got).skip(1) {
+            let k64 = c
+                .decode_at::<kernel::generated::links::Defaults, f64>(
+                    f64::from(uv[0]),
+                    f64::from(uv[1]),
+                )
+                .config;
+            let truth = case_angle64(k64.rho_t, k64.lambda_t);
+            let diff = (f64::from(g) - truth).rem_euclid(tau);
+            let diff = diff.min(tau - diff);
+            let err = diff / (f64::from(f32::EPSILON) * truth.abs().max(1.0));
+            assert!(
+                err <= f,
+                "under the flat sin, n₀ = {:?}, φ_f = {} at {uv:?}: rho_angle {g:e} is {err} eps from Φ's f64 angle \
+                 {truth:e}, over REQ-DEC-043's {f}",
+                c.n0,
+                c.phase
+            );
+        }
+    }
+}
+
+#[test]
+fn qa_m253_flat_sin_keeps_rho_angle_near_the_lambda_pole() {
+    check_flat_pole(&flat_sin(&kernel_wgsl()));
+}
+
+negative_control!(
+    qa_m253_flat_sin_keeps_rho_angle_near_the_lambda_pole,
+    "the line before R-696, on the flat sin, must move rho_angle at the near points",
+    expected = "under the flat sin",
+    check_flat_pole(&flat_sin(&old_sinc(&kernel_wgsl())))
 );

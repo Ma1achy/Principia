@@ -1412,3 +1412,37 @@ owner: yes, it is physics; the tilt changes which systems the chart shows.*
   9. **Unequal masses.** The ruling: "state what the preset does there (RQ-728 links)". RQ-728 settles the labelling; no document says how a paper's D at a Li & Liao mass set is shown once the mask is gone. Reading held: a contour on the half the mirror leaves (design § 8.8). A gap.
 - **For the rulings PR, from the two closed questions (no edit in PR #422; a code task follows there):** `docs/design/principia_state_map.md` lines 108 to 124, SM1's `fold_T(P_T(E(x(t))))`, "mirror images identified" and "Every other target is unchanged."; line 155, the `ν × dilation` row's "(mirror folded)"; `docs/design/principia_lines.md` line 285, "the latent chart's canonical"; line 351, "the canonical frame mirrors at every syzygy, so the trace jumps there". All sign: later states coloured and traces drawn signed and unfolded, continuous through syzygies, a mirror-identified colouring only as a declared optional view, never the default. Plus conflict 1's and 2's words.
 - **Waits:** TASK-M4-34's preset and TASK-M8-120, which read this entry at TASK-M4-37; no other task of the design. The ruling closes in the rulings PR; the correction list waits for the owner's next revision.
+
+## RQ-737: V-11's primary states "f g = 1" at e_in = i = m3 = 0, while its own eq. (11) gives 0.7 there: which holds for the prograde limit? *(conflict inside a source; the owner's 31 Oct request, "V-11 Part I"; `docs/incoming/2026-10-31_research_library/myllari_2018/README.md`; REQ-VAL-330; context: TASK-M9-25 (was TASK-M3-65); V-11 parked by R-668 item 5)*
+
+*Queued 31 Oct 2026 by the library ingest as RQ-639, and filed 7 Nov 2026 as RQ-737, RQ-639 being already taken on
+`main`. For the owner only if the physics review can't settle it: it scales the prograde number by (1/0.7)^(1/3) = 1.126
+at low e_in. It blocks nothing now: V-11 is parked with hierarchical triples by R-668 item 5 (1 Nov 2026).*
+
+**In plain English:** the V-11 stability paper (Mylläri et al. 2018) says in words that its stability factor is 1 for a
+circular, flat, prograde orbit with a light third body, but its own printed formula gives 0.7 there. The printed formula
+matches the paper's own figures, so the sentence looks like the slip. The answer moves V-11's prograde comparison number by
+about 13 %. V-11 is parked for now (R-668, the owner's 1 Nov ruling that parks hierarchical-triple targets), so nothing
+waits on the answer.
+
+- **File, section:**
+  - Mylläri et al. 2018, MNRAS 476, 830 (local only), abstract, p. 830, and p. 836: "At the limit of ein = i = m3 = 0, f g = 1."
+  - The same paper, eq. (11), p. 833, as printed: f(e_in, cos i) = {1 − ⅔e_in[1 − ½e_in²] − 0.3 cos i [1 − ½e_in +
+    2 cos i (1 − (5/2)e_in^(3/2) − cos i)]}, which gives f(0, 1) = 0.7, and f = 1 at cos i = 0 (i = 90°).
+  - `docs/incoming/2026-10-31_research_library/myllari_2018/formula_check.txt`.
+- **The question:** whether V-11 scores against eq. (11) as printed, or treats the stated limit as the paper's intent.
+  Eq. (11) as printed reproduces Fig. 5's curves at cos i = +1 (3.15, 3.97, 4.79 against about 3.2, 4.0, 4.75, by eye), so the
+  sentence looks the likelier slip; it may mean i = 90°.
+  At the limit itself (e_in = 0, cos i = +1), eq. (11) as printed gives 2.37, 2.99, 3.61 at e_out = 0.3 (eq. (13),
+  `formula_check.txt`), against about 2.35, 3.0, 3.6 read by eye from Figs. 7 and 8; the stated limit (a factor of 1.126)
+  would give about 2.67, 3.37, 4.07. Fig. 7's caption says e_out = 0, where eq. (13) gives 2.24, 2.82, 3.40, so the match
+  holds only if Fig. 7's curves are drawn for e_out = 0.3, as Fig. 8's are (`myllari_2018/README.md`).
+- **Options seen:** (a) eq. (11) as printed; (b) the stated limit, f g = 1 at e_in = i = m3 = 0; (c) another, stated by
+  the owner.
+- **Applied meanwhile:** eq. (11) as printed, in the record. Nothing is built; REQ-VAL-330's text and TASK-M9-25 are
+  unchanged. V-11 (REQ-VAL-330, the hierarchical-triple stability target) is parked by R-668 item 5 (1 Nov 2026), the
+  owner's words: "5: hierarchical triples out of scope for now; park them with the v2+ 3D extension; shrink the M9 list
+  accordingly." It reads "not scored: parked" in the M9 report (`decisions.md` § R-668, "Item 5"), so the question
+  blocks nothing now.
+- **Waits:** nothing now: V-11 is parked by R-668 item 5. Its prograde comparison number waits on this only if the
+  parking is lifted and V-11 is scored.
