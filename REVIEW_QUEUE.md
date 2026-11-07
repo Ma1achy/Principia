@@ -774,9 +774,9 @@ owner: yes, it is physics; the tilt changes which systems the chart shows.*
 - **Applied meanwhile:** none needed: dispatch refuses `ε ≠ 0` (R-654; TASK-M3-06), so no softened run exists.
 - **Waits:** TASK-M9-39 (REQ-INT-111, REQ-SYS-094, REQ-SYS-095). Nothing in M0 to M8 waits.
 
-## RQ-711: What a saved preset's base point, centre and window are when its chart is not two latent coordinate axes at one scale *(physics; silence; REQ-GUI-108, REQ-GUI-224, R-466, R-475; `docs/gui/principia_render_gui_spec.md` § G2, § G7; context: TASK-M8-18)*
+## RQ-711: What a saved preset's base point, centre and window are when its chart is not two latent coordinate axes at one scale *(physics; silence; REQ-GUI-108, REQ-GUI-224, REQ-GUI-417, R-466, R-475, R-798; `docs/gui/principia_render_gui_spec.md` § G2, § G7; context: TASK-M8-18)*
 
-*Queued 6 Nov 2026 from physics review 5805243152 of PR #429 (TASK-M6-45), finding F1. Not chosen here. The definition now stops where it is true, and the mock's six presets are all inside it.*
+*Queued 6 Nov 2026 from physics review 5805243152 of PR #429 (TASK-M6-45), finding F1. Not chosen here. The definition now stops where it is true, and the mock's six presets are all inside it. This entry covers saved presets; R-798's shipped preset is outside it.*
 
 **In plain English:** every chart preset has a home view, built from a starting point, a centre and a zoom scale. Those definitions work when the preset's two axes are plain latent coordinates at the same scale, which all six mock presets are. A user can also save other charts: skewed axes, axes at different scales, axes that are physical quantities, curved charts, or a tilted view. For those, the formula gives no home view, or gives one that differs from the chart that was saved, so Home would change the chart. The saved-presets task needs an answer before it can store these values.
 
@@ -788,7 +788,7 @@ owner: yes, it is physics; the tilt changes which systems the chart shows.*
 - **The silence, case by case:**
   - Unequal scales, `|q₁| ≠ |q₂|`: one `σ_h` cannot express the chart, and Home would change it.
   - Non-orthogonal axes: `u = b·e_a`, `v = b·e_b` are not the base point's coordinates on the axes, and they disagree with Navigate's own row, which inverts the Gram matrix.
-  - A physical-quantity or Burrau axis, or a curved chart: there is no `e_a`, so neither the centre nor the window is defined.
+  - A physical-quantity or Burrau axis, or a curved chart: there is no `e_a`, so neither the centre nor the window is defined. R-798's equilateral-point shape-chart preset (REQ-GUI-417) is a curved chart too, but a shipped preset, not a saved one: its map and window are TASK-M9-45's, and it does not wait on this entry.
   - A tilted view: is the saved pair the new axes, or the parent's? § G2's three sections and R-466 K2's "six dimensions off them" depend on the answer.
 - **The question:** for each of these charts, what are the home view, the centre and the window, and what does the zoom row read against?
 - **Options seen:** (a) a preset stores its whole saved triple `(z₀, q₁, q₂)` as its home view, with the zoom row reading against a scale still to be named; (b) only charts within § G2's formulae store home values, and the resets and Home are dimmed on any other, as with no active preset (R-466 K3); (c) a definition per axis kind.
