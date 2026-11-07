@@ -17,14 +17,14 @@
 | REF | 52 |
 | RENDER | 121 |
 | COL | 161 |
-| GUI | 396 |
+| GUI | 397 |
 | TOOL | 221 |
 | VAL | 352 |
 | PERF | 118 |
 | SYS | 96 |
-| **total** | **2138** |
+| **total** | **2139** |
 
-Of these: 237 calibration, 192 definition, 1709 obligation. Retired (kept for their ids, not counted): 12.
+Of these: 238 calibration, 192 definition, 1709 obligation. Retired (kept for their ids, not counted): 12.
 
 ## Requirements per milestone
 
@@ -36,7 +36,7 @@ Of these: 237 calibration, 192 definition, 1709 obligation. Retired (kept for th
 | M3 | 234 |
 | M4 | 125 |
 | M5 | 183 |
-| M6 | 228 |
+| M6 | 229 |
 | M7 | 262 |
 | M8 | 498 |
 | M9 | 155 |
