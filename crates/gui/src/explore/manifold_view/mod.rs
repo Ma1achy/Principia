@@ -360,6 +360,15 @@ pub fn dominant(v: &Latent) -> usize {
     )
 }
 
+/// The axis other than `off` that `v` leans on most; the first of equals, so the first axis not `off` where `v` holds
+/// nothing else: a frame's two axes are two (R-459's "no dimension twice").
+fn dominant_off(v: &Latent, off: usize) -> usize {
+    (0..LATENT_DIM)
+        .filter(|&i| i != off)
+        .reduce(|best, i| if v[i].abs() > v[best].abs() { i } else { best })
+        .expect("eight axes, one left out")
+}
+
 /// The axes `(a, b)` of a basis along two axes alone, `q₁` with no component but on `e_a` and `q₂` none but on `e_b`,
 /// `a < b`, as a steer on the compass's Plücker grid sets it (R-452 C5); `None` for any other basis.
 pub fn axis_pair(q1: &Latent, q2: &Latent) -> Option<(usize, usize)> {
@@ -576,9 +585,7 @@ impl View {
             (Some(p), PRESETS[p])
         } else {
             let a = dominant(q1);
-            let mut q2_rest = *q2;
-            q2_rest[a] = 0.0;
-            (None, (a, dominant(&q2_rest)))
+            (None, (a, dominant_off(q2, a)))
         };
         Self::in_frame(found, a, b, hidden(a, b), q1, q2)
     }

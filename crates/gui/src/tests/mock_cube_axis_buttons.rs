@@ -1159,19 +1159,20 @@ fn mock_cube_axis_buttons_a_mirrored_basis_is_swapped_where_that_keeps_it() {
         &[(Z_ALPHA, 1.0), (Z_BETA, 0.2), (Z_MU1, 0.5)],
     );
     check_axes(&more, (Z_BETA, Z_ALPHA), "the dominant axes");
-    // And a tie, no tilt to keep, stays as typed: the unequal lengths are no reading's, so no read-back.
+    // And a tie, no tilt to keep, reads its dominant axes, here the order as typed: the unequal lengths are no reading's,
+    // so no read-back.
     let tie = in_frame(
         frame(Z_Q3, Z_Q3, Z_MU1),
         &[(Z_ALPHA, -0.6), (Z_BETA, 0.1)],
         &[(Z_ALPHA, 0.1), (Z_BETA, 1.0)],
     );
-    check_axes(&tie, (Z_ALPHA, Z_BETA), "a tie");
+    check_axes(&tie, (Z_ALPHA, Z_BETA), "a tie's dominant axes");
     rejects("a tie swapped", || {
-        check_axes(&tie, (Z_BETA, Z_ALPHA), "the dominant axes")
+        check_axes(&tie, (Z_BETA, Z_ALPHA), "the other order")
     });
     rejects(
         "the basis that would keep more of the tilt, left as typed",
-        || check_axes(&more, (Z_ALPHA, Z_BETA), "a tie"),
+        || check_axes(&more, (Z_ALPHA, Z_BETA), "the order as typed"),
     );
 }
 

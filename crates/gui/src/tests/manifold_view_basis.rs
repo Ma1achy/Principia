@@ -423,6 +423,75 @@ fn manifold_view_basis_a_mirrored_tie_reads_its_dominant_axes() {
     rejects("the tie, as typed", || check_on(&tie, (Q0, MU2)));
 }
 
+/// Asserts `view` holds two axes.
+fn check_two_axes(view: &View) {
+    assert_ne!(view.a, view.b, "no dimension twice: {view:?}");
+}
+
+#[test]
+fn manifold_view_basis_a_frame_never_holds_one_axis_twice() {
+    // `q₂` wholly on `q₁`'s dominant axis, the first: `Y` on `q₁`, and a mirrored tie. The second axis is the first left.
+    let misplaced = read(
+        (
+            mv::add(&axis(ALPHA, 2.0), 1.0, &axis(MU1, 1.0)),
+            axis(ALPHA, 1.0),
+        ),
+        SPLIT,
+    );
+    check_dominant(&misplaced, (ALPHA, BETA), 5.8f64.sqrt());
+    let tie = read(
+        (
+            mv::add(&axis(ALPHA, 2.0), 1.0, &axis(BETA, 1.0)),
+            axis(ALPHA, 1.0),
+        ),
+        SPLIT,
+    );
+    check_on(&tie, (ALPHA, BETA));
+    rejects("the fallback's one axis twice", || {
+        check_two_axes(&View {
+            b: ALPHA,
+            ..misplaced
+        })
+    });
+    // Of two equal components on `q₂`, the first.
+    let equal = read(
+        (
+            axis(MU1, 0.8),
+            mv::add(&axis(BETA, 1.0), 1.0, &axis(MU2, 1.0)),
+        ),
+        SPLIT,
+    );
+    check_on(&equal, (MU1, BETA));
+    rejects("the last of equals", || check_on(&equal, (MU1, MU2)));
+    // Every first axis, `q₂` wholly on it, with every other axis on `q₁`, in both kinds of frame; then bases of few values,
+    // ties on every side, some spanning no plane at all.
+    let mut read_some = 0;
+    let frames = [SPLIT, SliceFrame::along(Q3 as u32)];
+    for a in 0..LATENT_DIM {
+        for other in (0..LATENT_DIM).filter(|&i| i != a) {
+            let q1 = mv::add(&axis(a, 2.0), 1.0, &axis(other, 1.0));
+            for frame in frames {
+                check_two_axes(&read((q1, axis(a, 1.0)), frame));
+                read_some += 1;
+            }
+        }
+    }
+    assert_eq!(read_some, 112);
+    for (basis, frame) in bases_from(20_000, |seed| {
+        [0.0, 0.0, 0.0, 0.5, -0.5, 1.0, -1.0, 2.0][(seed % 8) as usize]
+    }) {
+        check_two_axes(&read(basis, frame));
+    }
+    // The bases with no plane that the zoom's fallback takes.
+    for basis in [
+        ([0.0; LATENT_DIM], [0.0; LATENT_DIM]),
+        (axis(BETA, 0.5), axis(BETA, 1.0)),
+        (axis(ALPHA, 2.0), axis(ALPHA, 1.0)),
+    ] {
+        check_two_axes(&read(basis, SPLIT));
+    }
+}
+
 #[test]
 fn manifold_view_basis_a_pair_with_no_turn_is_no_tilted_pair() {
     // `q₂` is twice `q₁` on a pair no preset names: a determinant of 0, which reads by its dominant axes, not as the pair.
@@ -559,8 +628,8 @@ fn check_same_plane(before: (Latent, Latent), after: (Latent, Latent)) {
     }
 }
 
-/// `n` typed bases and frames, seeded: each component in `[−1, 1]`, some on no axis at all, and `X ≠ Y` on most.
-fn fuzzed(n: usize) -> Vec<((Latent, Latent), SliceFrame)> {
+/// `n` typed bases and frames, seeded, each component `component` of a seed.
+fn bases_from(n: usize, component: impl Fn(u64) -> f64) -> Vec<((Latent, Latent), SliceFrame)> {
     let mut state = 0x9e37_79b9_7f4a_7c15_u64;
     let mut next = move || {
         state ^= state << 13;
@@ -570,13 +639,6 @@ fn fuzzed(n: usize) -> Vec<((Latent, Latent), SliceFrame)> {
     };
     (0..n)
         .map(|_| {
-            let component = |seed: u64| {
-                if seed.is_multiple_of(3) {
-                    0.0
-                } else {
-                    seed as f64 / u64::MAX as f64 * 2.0 - 1.0
-                }
-            };
             let q1 = std::array::from_fn(|_| component(next()));
             let q2 = std::array::from_fn(|_| component(next()));
             let target = |seed: u64| (seed % LATENT_DIM as u64) as u32;
@@ -588,6 +650,17 @@ fn fuzzed(n: usize) -> Vec<((Latent, Latent), SliceFrame)> {
             ((q1, q2), frame)
         })
         .collect()
+}
+
+/// `n` typed bases and frames, each component in `[−1, 1]`, some on no axis at all, and `X ≠ Y` on most.
+fn fuzzed(n: usize) -> Vec<((Latent, Latent), SliceFrame)> {
+    bases_from(n, |seed| {
+        if seed.is_multiple_of(3) {
+            0.0
+        } else {
+            seed as f64 / u64::MAX as f64 * 2.0 - 1.0
+        }
+    })
 }
 
 /// The sound bases of [`fuzzed`]: those spanning a plane.
