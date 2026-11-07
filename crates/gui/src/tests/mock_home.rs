@@ -211,17 +211,19 @@ fn mock_home_button_is_painted_in_strokes() {
     rejects("a shape of no stroke", || {
         points(&eframe::egui::Shape::Noop);
     });
-    let shapes = super::support::shapes(&mut rig.1, &mut rig.0);
-    let lines = shapes
-        .iter()
-        .filter(|s| {
-            !matches!(s, eframe::egui::Shape::Text(_))
-                && rect.contains_rect(s.visual_bounding_rect())
-        })
-        .count();
-    let two_strokes = |lines: usize| assert!(lines >= 2, "the two strokes: {lines}");
-    two_strokes(lines);
-    rejects("the house lost a stroke", || two_strokes(1));
+    let two_strokes = |shapes: &[eframe::egui::Shape]| {
+        let strokes = shapes
+            .iter()
+            .filter(|s| matches!(s, eframe::egui::Shape::Path(_)))
+            .filter(|s| rect.contains_rect(s.visual_bounding_rect()))
+            .count();
+        assert_eq!(strokes, 2, "the two strokes");
+    };
+    two_strokes(&super::support::shapes(&mut rig.1, &mut rig.0));
+    // Control: the same count on a real frame with the button hidden.
+    press(&mut rig.1, &mut rig.0, Key::F3, NONE);
+    let hidden = super::support::shapes(&mut rig.1, &mut rig.0);
+    rejects("a frame without the house", || two_strokes(&hidden));
 }
 
 /// The state a click on the figure would change.
@@ -500,11 +502,15 @@ fn mock_home_locked_lands_on_the_home_view() {
         assert_eq!(now, depth + 1, "one entry");
     };
     let after = rig.0.snapshot();
-    let (z0, now) = (after.sim.plane.z0, after.history.undo_depth);
-    landed(z0, &after.sim.lock, now);
+    let (z0, now, kept) = (
+        after.sim.plane.z0,
+        after.history.undo_depth,
+        after.sim.lock.clone(),
+    );
+    landed(z0, &kept, now);
     // Controls: a Home that stopped off the home view, dropped the lock, or took two entries.
     rejects("a landing off the home view", || {
-        landed(sim.plane.z0, &after.sim.lock, now)
+        landed(sim.plane.z0, &kept, now)
     });
     rejects("a dropped lock", || {
         let dropped = Lock {
@@ -513,9 +519,10 @@ fn mock_home_locked_lands_on_the_home_view() {
         };
         landed(z0, &dropped, now)
     });
-    rejects("a Home of two entries", || {
-        landed(z0, &after.sim.lock, depth + 2)
-    });
+    rig.0.set_field(mv::z0_edit(sim.plane.z0));
+    let _ = rig.1.frame(&mut rig.0, Vec::new());
+    let two = rig.0.snapshot().history.undo_depth;
+    rejects("a Home of two entries", || landed(z0, &kept, two));
 }
 
 /// What Home must leave alone.

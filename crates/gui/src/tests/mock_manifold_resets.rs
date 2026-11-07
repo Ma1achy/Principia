@@ -425,11 +425,15 @@ fn mock_manifold_resets_preset_choice_keeps_sigma_at_the_slider_ends() {
             assert_eq!(scale, view.scale, "σ kept from zoom {zoom}");
             assert_eq!(now, depth + 1, "one edit from zoom {zoom}");
         };
-        kept(read.scale, after.history.undo_depth);
-        rejects("a choice that moved σ", || {
-            kept(read.scale * 2.0, after.history.undo_depth)
-        });
-        rejects("a choice of two edits", || kept(read.scale, depth + 2));
+        let (scale, now, z0) = (read.scale, after.history.undo_depth, after.sim.plane.z0);
+        kept(scale, now);
+        rejects("a choice that moved σ", || kept(scale * 2.0, now));
+        let mut off = z0;
+        off[2] += 0.25;
+        rig.0.set_field(z0_edit(off));
+        let _ = rig.1.frame(&mut rig.0, Vec::new());
+        let two = rig.0.snapshot().history.undo_depth;
+        rejects("a choice of two edits", || kept(scale, two));
     }
 }
 
@@ -665,7 +669,9 @@ fn mock_reset_undo_at_home_adds_no_entry() {
     };
     nothing((rig.0.snapshot().history.undo_depth, rig.0.console().len()));
     // Controls: an undoable edit at home, and a logged row, each fail.
-    rejects("a row logged at home", || nothing((depth, rows + 1)));
+    rig.0.log_warning("a row at home".to_owned());
+    let logged = rig.0.console().len();
+    rejects("a row logged at home", || nothing((depth, logged)));
     let view = View::read(&rig.0.snapshot().sim);
     rig.0.set_field(basis_edit(view.with_zoom_row(1.0).basis()));
     let _ = rig.1.frame(&mut rig.0, Vec::new());
