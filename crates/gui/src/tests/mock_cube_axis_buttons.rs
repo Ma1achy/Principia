@@ -1054,8 +1054,9 @@ fn read_back_off(read: &View, q1: &Latent, q2: &Latent) -> f64 {
 }
 
 /// R-459 G3: a negative determinant is the pair the other way round where that order reads the basis back, or, reading
-/// back in neither order, where it keeps more of the tilt; otherwise it stays as typed. A typed mirrored basis outside
-/// the map's image keeps its tilt, and the next edit built from the view keeps the plane near it.
+/// back in neither order with each target on its own vector, where it keeps more of the tilt; otherwise it stays as
+/// typed. A typed mirrored basis outside the map's image keeps its tilt, and the next edit built from the view keeps the
+/// plane near it. With a target on the wrong vector it reads its dominant axes (R-705, `manifold_view_basis`).
 #[test]
 fn mock_cube_axis_buttons_a_mirrored_basis_is_swapped_where_that_keeps_it() {
     let vector = |parts: &[(usize, f64)]| -> Latent {
