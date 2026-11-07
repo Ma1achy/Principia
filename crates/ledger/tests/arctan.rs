@@ -5,8 +5,10 @@
 //!   f64's own error of f64's `atan` and `π` (the integer sums are far finer, so the f64 value is the coarser of the
 //!   two); `atan 0 = 0` and `ATAN_EIGHTHS[8] = π/4` exactly, the generator's `π/4`; and `1/(2j + 3)` in Q0.32, rounded
 //!   to nearest.
+//! - `arctan_sum_bits_confirmed`: the register's `arctan_sum_bits` is a confirmed entry, 100, citing R-699's heading in
+//!   `decisions.md`, unmarked (REQ-GEN-045; `arctan_generated_is_emitted` holds the file byte-identical to it).
 
-use ledger::constants::ARCTAN_SUM_BITS;
+use ledger::constants::{Citation, ConstantBuilder, Value, ARCTAN_SUM_BITS, REGISTER};
 use ledger::gen::arctan::{
     arctan_file, atan_eighth, eighth_q64, emit, half_pi_q62, pi_q62, series_q32, series_terms,
     sum_bits, ARCTAN_PATH,
@@ -58,6 +60,113 @@ negative_control!(
     expected = "the checked-in arctan.rs is not the emitter's output",
     check_emitted(&on_disk().replace("0x2168_C235", "0x2168_C236"))
 );
+
+/// Checks that `k` stands as R-699 leaves `arctan_sum_bits`: 100, unmarked, and citing R-699's heading in `decisions.md`.
+fn check_confirmed(k: &ConstantBuilder) {
+    assert!(
+        matches!(k.value, Some(Value::Exact(v)) if v == 100.0),
+        "`arctan_sum_bits` is not 100: {:?}",
+        k.value
+    );
+    assert_eq!(
+        k.provisional, None,
+        "`arctan_sum_bits` is still provisional"
+    );
+    let Some(Citation::Corpus {
+        file: "decisions.md",
+        section,
+    }) = k.citation
+    else {
+        panic!(
+            "`arctan_sum_bits` does not cite R-699 in decisions.md: {:?}",
+            k.citation
+        )
+    };
+    let decisions =
+        std::fs::read_to_string(format!("{}/../../decisions.md", env!("CARGO_MANIFEST_DIR")))
+            .expect("read decisions.md");
+    assert!(
+        section.starts_with("R-699 ") && decisions.lines().any(|l| l == format!("## {section}")),
+        "`arctan_sum_bits` does not cite R-699's heading in decisions.md: {section}"
+    );
+}
+
+#[test]
+fn arctan_sum_bits_confirmed() {
+    let held = REGISTER.iter().find(|k| k.name == "arctan_sum_bits");
+    check_confirmed(held.expect("the register holds `arctan_sum_bits`"));
+    assert_eq!(sum_bits(), 100, "the sum reads the register's 100");
+}
+
+negative_control!(
+    arctan_sum_bits_confirmed,
+    "the entry still marked provisional until M2",
+    expected = "`arctan_sum_bits` is still provisional",
+    check_confirmed(&ConstantBuilder {
+        provisional: Some("M2"),
+        ..ARCTAN_SUM_BITS
+    })
+);
+
+// `arctan_sum_bits_confirmed`'s other controls, one on each clause of `check_confirmed`.
+
+mod not_100 {
+    use super::*;
+    negative_control!(
+        arctan_sum_bits_confirmed,
+        "the entry at the plateau's next count, 101",
+        expected = "`arctan_sum_bits` is not 100",
+        check_confirmed(&ConstantBuilder {
+            value: Some(Value::Exact(101.0)),
+            ..ARCTAN_SUM_BITS
+        })
+    );
+}
+
+mod cites_its_requirement {
+    use super::*;
+    negative_control!(
+        arctan_sum_bits_confirmed,
+        "the entry still citing its calibration requirement",
+        expected = "does not cite R-699 in decisions.md",
+        check_confirmed(&ConstantBuilder {
+            citation: Some(Citation::Calibration("REQ-GEN-044")),
+            ..ARCTAN_SUM_BITS
+        })
+    );
+}
+
+mod cites_another_ruling {
+    use super::*;
+    negative_control!(
+        arctan_sum_bits_confirmed,
+        "the entry citing a heading in decisions.md that is not R-699's",
+        expected = "does not cite R-699's heading",
+        check_confirmed(&ConstantBuilder {
+            citation: Some(Citation::Corpus {
+                file: "decisions.md",
+                section: "R-1 — not R-699",
+            }),
+            ..ARCTAN_SUM_BITS
+        })
+    );
+}
+
+mod cites_no_heading {
+    use super::*;
+    negative_control!(
+        arctan_sum_bits_confirmed,
+        "the entry citing R-699 by a heading decisions.md does not hold",
+        expected = "does not cite R-699's heading",
+        check_confirmed(&ConstantBuilder {
+            citation: Some(Citation::Corpus {
+                file: "decisions.md",
+                section: "R-699 — no such heading",
+            }),
+            ..ARCTAN_SUM_BITS
+        })
+    );
+}
 
 /// The emitted numbers, as `(atan(k/8) in Q0.64 for k = 0 … 8, π/2 and π in Q2.62, 1/(2j + 3) in Q0.32)`.
 type Numbers = (Vec<u64>, u64, u64, Vec<u32>);
