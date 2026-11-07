@@ -611,8 +611,8 @@ exits when a newly dropped PR appears. The duty stands whatever runs it.
 - delete or modify anything outside the repository and its build and scratch directories (§ "Resources").
 
 A physics choice that changes results, where the docs genuinely don't settle it, is the human's too, and so is every
-other one-way door of R-812 (§ "Asking the human"). When one of these comes up, file it in `REVIEW_QUEUE.md`, with a
-recommendation, for `/rulings-report`, never as a blocking prompt, and carry on with other work.
+other one-way door of R-812 (§ "Asking the human"). When one of these comes up, file it in `REVIEW_QUEUE.md`, for
+`/rulings-report`, never as a blocking prompt, and carry on with other work.
 
 **Reporting.** Don't stop just to report. At a natural point (a stop, a gate, or when the human asks) give one batched
 summary:
@@ -651,10 +651,10 @@ the six.
   changed, on `cargo run -p gui --features mock` (`plan/WORKFLOW.md` § "The unit: one task, one branch, one PR").
 - **Sources and silences.** `decisions.md`, then `docs/gui/design/GUI_DESIGN_NOTES.md`, then the artboards in
   `docs/gui/design/`, then `docs/gui/principia_render_gui_spec.md`, then `docs/contracts/principia_gui_state_contract.md`;
-  the higher wins, and R-68 still makes corpus values win over artboard values. Where they're silent on look, feel or
-  behaviour, the orchestrator and the reviewers decide a two-way door and record it as "applied per R-369"; scope, UI
-  look and defaults are one-way doors (R-812), and calibrations and physics choices stay as R-71, R-369 and R-812 give
-  them.
+  the higher wins, and R-68 still makes corpus values win over artboard values. Where they're silent on feel or
+  behaviour, the orchestrator and the reviewers decide and record it as "applied per R-369". A silence on look is a
+  one-way door, as new features and what the product is are ("scope and taste", R-812), and calibrations and physics
+  choices stay as R-71, R-369 and R-812 give them.
 - **The human's feedback.** The human tries each merged screen and sends look-and-feel notes as plain text. Each note is
   a GUI design ruling: record it in `decisions.md` at the next free number, in the human's words, in the "design" group
   of `plan/rule_groups.yaml`, as any ruling is recorded. Apply it in the porting rule's order: the docs first
@@ -701,12 +701,11 @@ a split moves every requirement to a named task (R-264).
   tooling among them: write the criterion before running, run it, decide, and report the numbers, and never adjust the
   criterion after seeing results (R-649). Each goes in the veto list of the next `/rulings-report`, and in the morning
   report with its numbers, as "decided, open to veto". Reverting on the human's veto must be possible without loss.
-- **One-way doors** go to `/rulings-report` only, with a recommendation, never as a blocking prompt: physics where the
-  choice changes results and the docs genuinely don't settle it, and R-812's other kinds of what the instrument claims
-  or computes; calibration values, which R-369 batched at milestone gates; passing a milestone gate; dropping or
-  deferring a requirement; the words of the rulings; licences, publishing, contacting anyone outside, spending money;
-  deleting data or history, or anything not created by this work; admin bypass and admin actions; anything outside the
-  repository or irreversible (repository settings, branch protection, deleting outside the build directories,
+- **One-way doors** go to `/rulings-report` only, never as a blocking prompt: physics where the choice changes results
+  and the docs genuinely don't settle it, and R-812's other kinds of what the instrument claims or computes; calibration
+  values (batched at milestone gates); passing a milestone gate; dropping or deferring a requirement; the words of the
+  rulings; licences, publishing, contacting anyone outside, spending money; deleting data or history; admin bypass;
+  anything outside the repository or irreversible (repository settings, branch protection, deleting outside the build directories,
   force-pushing); and scope and taste.
 - **File and carry on.** A one-way door goes in `REVIEW_QUEUE.md`, which `/rulings-report` is written from, and work
   carries on with whatever doesn't wait on it (R-369).

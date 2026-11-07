@@ -233,7 +233,7 @@ Nothing is chosen by the implementer or a reviewer where the corpus doesn't deci
 An entry's form, which the plan check holds it to: a heading `## RQ-n: <question>`, and in its body a
 `- **File, section:**` field and a `- **Applied meanwhile:**` field (`none`, if nothing is).
 The task stays open, blocked, until the human rules. Work continues on other tasks. An open entry reaches the human
-through `/rulings-report`, with a recommendation, never as a blocking prompt; an entry that is a two-way door isn't
+through `/rulings-report`, never as a blocking prompt; an entry that is a two-way door isn't
 held for them, and the orchestrator and the reviewers decide it and report it (R-812).
 
 ## No deferral
