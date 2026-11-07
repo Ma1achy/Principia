@@ -8,49 +8,49 @@
 |---|---|
 | DEC | 54 |
 | ENC | 38 |
-| CHART | 90 |
+| CHART | 92 |
 | INT | 111 |
-| EVT | 33 |
+| EVT | 34 |
 | PAY | 111 |
 | GEN | 45 |
 | SCHED | 103 |
 | REF | 52 |
 | RENDER | 120 |
 | COL | 161 |
-| GUI | 389 |
-| TOOL | 219 |
+| GUI | 391 |
+| TOOL | 221 |
 | VAL | 352 |
 | PERF | 115 |
 | SYS | 96 |
-| **total** | **2089** |
+| **total** | **2096** |
 
-Of these: 236 calibration, 181 definition, 1672 obligation. Retired (kept for their ids, not counted): 12.
+Of these: 236 calibration, 181 definition, 1679 obligation. Retired (kept for their ids, not counted): 12.
 
 ## Requirements per milestone
 
 | milestone | count |
 |---|---|
-| M0 | 122 |
+| M0 | 123 |
 | M1 | 108 |
 | M2 | 222 |
-| M3 | 233 |
+| M3 | 234 |
 | M4 | 112 |
 | M5 | 183 |
 | M6 | 228 |
 | M7 | 261 |
 | M8 | 470 |
-| M9 | 150 |
+| M9 | 155 |
 
 ## Sections
 
-1727 sections in 61 files: 1369 yield at least one requirement; 358 yield none and are listed below with the reason.
+1748 sections in 61 files: 1376 yield at least one requirement; 372 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | gap (RQ-378) | 1 |
 | gap (RQ-391) | 2 |
 | gap (RQ-577) | 2 |
 | gap (RQ-618) | 1 |
-| informative only | 250 |
+| informative only | 264 |
 | out of v1 (R-125) | 1 |
 | out of v1 (R-420) | 1 |
 | parent heading (obligations are in its subsections) | 55 |
@@ -219,6 +219,20 @@ Of these: 236 calibration, 181 definition, 1672 obligation. Retired (kept for th
 | R-717 — `main` is not merged into a pull request, and CI is not re-run, just to refresh a branch that has no conflict; lands in `plan/OPERATIONS.md` § "Merging" | informative only | the owner's order of 4 Nov 2026 on refresh merges; process; changes no requirement |
 | R-718 — Generated plan files are not committed if nothing needs them in git; otherwise they are marked in `.gitattributes` and conflicts are resolved by regenerating, never by hand, with a check that the committed copy matches a fresh regeneration; lands in `plan/OPERATIONS.md` § "Merging" | informative only | the owner's order of 4 Nov 2026 on generated files; process; changes no requirement |
 | R-719 — A Windows-only, non-reproducing GPU result is hardware-suspect: recorded, not filed as a code bug; one that reproduces is checked against Metal and lavapipe, failing everywhere our bug, passing elsewhere an NVIDIA Vulkan platform finding with no re-baselining; lands in `plan/OPERATIONS.md` § "Windows GPU results" | informative only | the owner's messages of 4 Nov 2026 on the Windows GPU results; process; changes no requirement |
+| R-795 — The precision-ladder proposal's seven questions are deferred to M3 *(defers RQ-577)* | informative only | a deferral; no requirement changes |
+| R-796 — How future GPU backends are held to accuracy for `sin` and `cos` near π/2 is deferred to M4 *(defers RQ-629)* | informative only | a deferral; no requirement changes |
+| R-797 — The kernel's `sin` and `cos`: option (b) now, the sinc site fixed and gated to f32; option (a) deferred to M4's cross-backend measurement *(on RQ-687, which stays open)* | informative only | restates R-696; REQ-DEC-053 and TASK-M2-53 build the fix |
+| R-799 — The census takes a drift reference the corpus already has, not IAS15, and a harness-only step-limit axis of the contract's limit and `None`, with `Reject` a control *(on RQ-619, which stays open)* | informative only | the census has no requirement yet; the proposal carries it |
+| R-800 — The collinear statistical targets compare only what the horizon cap reaches and the source states; raising the cap is revisited at M9 if the cost measurement allows *(on RQ-643, which stays open)* | informative only | the rows are proposed, with no requirement yet; RQ-643 stays open for option (a) |
+| R-801 — Saving a curved view offers the parent chart and its tilt only, with no flattened chart *(closes RQ-378)* | informative only | the option applied already; no requirement changes |
+| R-803 — Whether the presentation frames become a stage after the Print graph is deferred until the exporter is designed *(defers RQ-391)* | informative only | a deferral; no requirement changes |
+| R-804 — Where a margin node's two inputs sit is deferred to TASK-M7-12, options with a recommendation proposed when it starts *(defers RQ-675)* | informative only | a deferral; no requirement changes |
+| R-805 — TASK-M7-12's deliverables against the built assembler are deferred to that task, options with a recommendation proposed when it starts *(defers RQ-676)* | informative only | a deferral; no requirement changes |
+| R-806 — A colour node's default input range and TASK-M7-13's deliverables are deferred to that task, options with a recommendation proposed when it starts *(defers RQ-677)* | informative only | a deferral; no requirement changes |
+| R-807 — The slider span of the held shape, angular momentum and kinetic energy is deferred to TASK-M8-48, options with a recommendation proposed when it starts *(defers RQ-679)* | informative only | a deferral; no requirement changes |
+| R-808 — `.claude/commands/*.md` joins the rulings reference check *(closes RQ-698)* | informative only | the owner's word on the rulings reference check; tooling; changes no requirement |
+| R-810 — A warped mass-ratio axis's range is searched at half the round-trip tolerance, `ε_μ/2`, and `principia_chart_reference.md` § 2.1 says so, with the measured reason *(closes RQ-707)* | informative only | docs only: the margin stays as built, and chart_reference § 2.1 names it |
+| R-811 — The census's drift reference is R-33's convergence reference, not the inspector's RK45, and the proposal's § 3.2 clause says why *(closes RQ-619)* | informative only | the census has no requirement yet; the proposal carries it |
 
 ### `docs/contracts/principia_canonical_spec.md`
 

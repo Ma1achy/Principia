@@ -1532,3 +1532,59 @@
   section: "R-719 — A Windows-only, non-reproducing GPU result is hardware-suspect: recorded, not filed as a code bug; one that reproduces is checked against Metal and lavapipe, failing everywhere our bug, passing elsewhere an NVIDIA Vulkan platform finding with no re-baselining; lands in `plan/OPERATIONS.md` § \"Windows GPU results\""
   reason: informative only
   note: "the owner's messages of 4 Nov 2026 on the Windows GPU results; process; changes no requirement"
+- file: decisions.md
+  section: "R-795 — The precision-ladder proposal's seven questions are deferred to M3 *(defers RQ-577)*"
+  reason: informative only
+  note: "a deferral; no requirement changes"
+- file: decisions.md
+  section: "R-796 — How future GPU backends are held to accuracy for `sin` and `cos` near π/2 is deferred to M4 *(defers RQ-629)*"
+  reason: informative only
+  note: "a deferral; no requirement changes"
+- file: decisions.md
+  section: "R-797 — The kernel's `sin` and `cos`: option (b) now, the sinc site fixed and gated to f32; option (a) deferred to M4's cross-backend measurement *(on RQ-687, which stays open)*"
+  reason: informative only
+  note: "restates R-696; REQ-DEC-053 and TASK-M2-53 build the fix"
+- file: decisions.md
+  section: "R-799 — The census takes a drift reference the corpus already has, not IAS15, and a harness-only step-limit axis of the contract's limit and `None`, with `Reject` a control *(on RQ-619, which stays open)*"
+  reason: informative only
+  note: "the census has no requirement yet; the proposal carries it"
+- file: decisions.md
+  section: "R-800 — The collinear statistical targets compare only what the horizon cap reaches and the source states; raising the cap is revisited at M9 if the cost measurement allows *(on RQ-643, which stays open)*"
+  reason: informative only
+  note: "the rows are proposed, with no requirement yet; RQ-643 stays open for option (a)"
+- file: decisions.md
+  section: "R-801 — Saving a curved view offers the parent chart and its tilt only, with no flattened chart *(closes RQ-378)*"
+  reason: informative only
+  note: "the option applied already; no requirement changes"
+- file: decisions.md
+  section: "R-803 — Whether the presentation frames become a stage after the Print graph is deferred until the exporter is designed *(defers RQ-391)*"
+  reason: informative only
+  note: "a deferral; no requirement changes"
+- file: decisions.md
+  section: "R-804 — Where a margin node's two inputs sit is deferred to TASK-M7-12, options with a recommendation proposed when it starts *(defers RQ-675)*"
+  reason: informative only
+  note: "a deferral; no requirement changes"
+- file: decisions.md
+  section: "R-805 — TASK-M7-12's deliverables against the built assembler are deferred to that task, options with a recommendation proposed when it starts *(defers RQ-676)*"
+  reason: informative only
+  note: "a deferral; no requirement changes"
+- file: decisions.md
+  section: "R-806 — A colour node's default input range and TASK-M7-13's deliverables are deferred to that task, options with a recommendation proposed when it starts *(defers RQ-677)*"
+  reason: informative only
+  note: "a deferral; no requirement changes"
+- file: decisions.md
+  section: "R-807 — The slider span of the held shape, angular momentum and kinetic energy is deferred to TASK-M8-48, options with a recommendation proposed when it starts *(defers RQ-679)*"
+  reason: informative only
+  note: "a deferral; no requirement changes"
+- file: decisions.md
+  section: "R-808 — `.claude/commands/*.md` joins the rulings reference check *(closes RQ-698)*"
+  reason: informative only
+  note: "the owner's word on the rulings reference check; tooling; changes no requirement"
+- file: decisions.md
+  section: "R-810 — A warped mass-ratio axis's range is searched at half the round-trip tolerance, `ε_μ/2`, and `principia_chart_reference.md` § 2.1 says so, with the measured reason *(closes RQ-707)*"
+  reason: informative only
+  note: "docs only: the margin stays as built, and chart_reference § 2.1 names it"
+- file: decisions.md
+  section: "R-811 — The census's drift reference is R-33's convergence reference, not the inspector's RK45, and the proposal's § 3.2 clause says why *(closes RQ-619)*"
+  reason: informative only
+  note: "the census has no requirement yet; the proposal carries it"

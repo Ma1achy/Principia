@@ -3656,6 +3656,36 @@
   - R-669
   milestone: M9
   note: "R-669 (1 Nov 2026, RQ-608 and RQ-618 (a)): one M9 chart task, TASK-M9-40; OC-4 on the plane, AT-D1, AT-D3, HU-1 and HU-2 (REQ-VAL-311 to REQ-VAL-314, REQ-VAL-316) wait on it whole. A build task, not a target: not scored. The GPU variant and the chart reference § 5.2's general tests: code review 5771184172 of PR #408, C6."
+- id: REQ-CHART-092
+  area: CHART
+  statement: "At ε ≠ 0 the (L_z, E) chart must stay available with its E axis the Newtonian energy: the axis, the feasible set, the warp, K* and the chart's encode must read U as V at ε = 0, never the softened V₀, so a pixel's decoded start is the same at every ε (R-791)."
+  source:
+  - file: decisions.md
+    section: "R-791 — At `ε ≠ 0` the `(L_z, E)` chart stays available with its energy axis the Newtonian energy, so a pixel's start never depends on `ε`; the axis is labelled Newtonian energy and the Inspector shows the softened energy beside it *(closes RQ-693)*"
+  - file: docs/design/principia_chart_reference.md
+    section: 2.1 Feasibility, and the warp that makes every pixel valid
+  verify:
+    method: unit test
+    detail: "cargo test -p kernel softened_lz_e_chart: over seeded pixels of an (L_z, E) chart, at ε ≠ 0 each decoded IC equals the same pixel's at ε = 0, bit for bit; the axis value equals the Newtonian energy to f32 rounding and, on an untilted chart, is constant along L_z and monotone along E (REQ-VAL-015's untilted arm at ε ≠ 0); the run's stored E₀ is the softened one; at ε ≠ 0 entering a pixel's (L_z, E) returns that pixel's z to the encode's own tolerance; controls: U read as the softened V₀ must fail the bitwise check, and an encode reading the softened V₀ must miss the pixel; cargo xtask gate invariant-gradient, its ε ≠ 0 arm, under the warp on a chart tilted into a shape or mass control: the view reads the Newtonian energy from the decode, and at each pixel that energy minus the pixel's Newtonian U equals K(t) to f32 rounding; controls: a view reading the softened E_0 must fail, V_ε − U staying in that residual; a view subtracting the slice centre's U₀ in place of the pixel's U must fail, which only such a tilt can show; cargo test -p engine softened_refusals: a view on this chart isn't refused at ε ≠ 0"
+  rulings:
+  - R-791
+  milestone: M9
+  note: "Closed by TASK-M9-39. The (L_z, K) chart reads no U in its K* and is untouched. The encode clause, its arm and the gradient's arm: physics review 5805354224 of PR #430, F2 and F3; code review 5805379312 of PR #430, C1. With U Newtonian, REQ-ENC-009's and REQ-COL-115's identity holds on this chart at ε ≠ 0. The view isn't refused is a dispatch check, so it runs in the engine (physics review 5805354224 of PR #430, F9). *Was (statement):* \"the axis, the feasible set, the warp and K* must read\"; *was (verify):* \"a view on this chart isn't refused at ε ≠ 0; control: U read as the softened V₀ must fail the bitwise check\". The arm's per-pixel form: physics review 5805959783 of PR #430, N1, (b), applied per R-369, since a tilt into a shape or mass control moves the warped axis with U, so \"constant along L_z\" fails on correct code. *Was (the arm):* \"on a tilted chart: the view reads the Newtonian energy from the decode, constant along L_z and monotone along E\". The second control: physics review 5806035329 of PR #430, N4. *Was (the control):* \"control: a view reading the softened E_0 must fail, V_ε − U staying in that residual, as it can't on an untilted chart, where V_ε − U is a constant offset, or on a momentum tilt, which moves neither U nor the offset\". The kernel test's constancy: Codex P1 on PR #430: under the warp a shape or mass tilt moves the energy with U, so constancy along L_z holds untilted only. *Was (verify):* \"the axis value equals the Newtonian energy to f32 rounding, constant along L_z and monotone along E (REQ-VAL-015's arm at ε ≠ 0);\"."
+- id: REQ-CHART-093
+  area: CHART
+  statement: "Side ratios around the equilateral (Lagrange) point must reach ShapeSphere at rest through one tested remap to shape coordinates, with no new chart type (PA-1, R-798)."
+  source:
+  - file: decisions.md
+    section: "R-798 — PA-1 runs on the shape sphere at rest through a tested remap, with no new chart type; a shape-chart preset centred on the equilateral point shows the two side ratios in the Inspector *(closes RQ-594)*"
+  - file: docs/design/principia_dd_replication.md
+    section: 5.12 Targets that wait for a chart, a diagnostic or data
+  verify:
+    method: unit test
+    detail: "cargo test -p validation side_ratio_remap: side ratios to shape coordinates and back is the identity to f64 rounding over the map's range, the equilateral point maps to the sphere's pole at equal masses and otherwise to the L± that principia_chart_reference.md § 3.4 computes, and each point's decoded triangle has the side ratios it was given; control: a remap with two sides swapped must fail"
+  rulings:
+  - R-798
+  milestone: M9
+  note: "Closed by TASK-M9-45; TASK-M9-24 reads it for PA-1 (REQ-VAL-323). The remap lives in crates/kernel/src/chart/side_ratio.rs, so validation and the engine read one source. The unequal-mass arm: physics review 5805354224 of PR #430, F5; *was (verify):* \"the equilateral point maps to the sphere's pole,\", true at equal masses only."
 - id: REQ-INT-001
   area: INT
   statement: "The unwrapped phase `θ̃` must be a running SimState accumulator that adds the principal-value delta of `atan2(n_v, n_u)` each step, with `orbit_count = ⌊|θ̃|/2π⌋` and `retrograde = sign(θ̃) < 0` derived at read."
@@ -5762,11 +5792,12 @@
   - R-654
   - R-670
   - R-710
+  - R-791
+  - R-792
   milestone: M9
   rq:
-  - RQ-693
-  - RQ-694
-  note: "R-654. Closed by TASK-M9-39, a build task after the core build, not a target: it is not scored, and its tests block its own merge. It waits on RQ-656 for the collision branch, the regularised occupants, the Chazy classifier, the escape test, the decode's V₀, η_E and the substep law. The E₀ agreement in its verify: physics review 5730650164 of PR #375, P1; what V₀ holds is RQ-656's, question (5), so the test holds E₀ to the softened V, as ruled, and V₀ to that ruling. Verify *was:* \"ε scales with the initial R and does not change as R does along a run\", which cannot fail on a canonical run, R₀ being 1 on all of them (physics review 5730650164 of PR #375, P3; applied per R-369). The GPU clause of its verify: physics review 5730650164 of PR #375, P2; applied per R-369. R-670 (2 Nov 2026, closing RQ-656): the collision test stays geometric; the regularised occupants refuse ε ≠ 0; Chazy's E, E_rel and the ionisation gate's pair energies and the decode's V₀ take the softened potential; a view refuses ε ≠ 0 with any Some(E*); the substep law stays geometric. *Was (verify):* \"…the descriptor's V₀ being in the form RQ-656's ruling gives…\"; *was (rq):* RQ-656. It waits on RQ-693 (physics review 5771183527 of PR #408, F1), RQ-694 (F2; code review 5771184172, C2) and RQ-697 (physics review 5771573790 of PR #408, F8), as its task does. R-670's sentences in the statement and verify: code review 5771184172 of PR #408, C1; *was (statement):* it ended at \"and E, E₀ and the drift meters must read the softened V.\"; *was (verify):* it ended at \"and at ε = 0 the same bits as the Newtonian kernel's, with the control that a GPU build whose force drops ε fails\". The branch-input clauses: physics review 5771183527 of PR #408, F4. The two gate arms: physics review 5771183527 of PR #408, F5. R-710 (4 Nov 2026, RQ-697 (b)): the wait on RQ-697 ends. *Was (statement):* \"must follow RQ-697's ruling\"; *was (verify):* \"at total E = 0 the gate's decision, and what branch_inputs.rs holds of it, are as RQ-697 rules\"."
+  - RQ-709
+  note: "R-654. Closed by TASK-M9-39, a build task after the core build, not a target: it is not scored, and its tests block its own merge. It waits on RQ-656 for the collision branch, the regularised occupants, the Chazy classifier, the escape test, the decode's V₀, η_E and the substep law. The E₀ agreement in its verify: physics review 5730650164 of PR #375, P1; what V₀ holds is RQ-656's, question (5), so the test holds E₀ to the softened V, as ruled, and V₀ to that ruling. Verify *was:* \"ε scales with the initial R and does not change as R does along a run\", which cannot fail on a canonical run, R₀ being 1 on all of them (physics review 5730650164 of PR #375, P3; applied per R-369). The GPU clause of its verify: physics review 5730650164 of PR #375, P2; applied per R-369. R-670 (2 Nov 2026, closing RQ-656): the collision test stays geometric; the regularised occupants refuse ε ≠ 0; Chazy's E, E_rel and the ionisation gate's pair energies and the decode's V₀ take the softened potential; a view refuses ε ≠ 0 with any Some(E*); the substep law stays geometric. *Was (verify):* \"…the descriptor's V₀ being in the form RQ-656's ruling gives…\"; *was (rq):* RQ-656. It waits on RQ-693 (physics review 5771183527 of PR #408, F1), RQ-694 (F2; code review 5771184172, C2) and RQ-697 (physics review 5771573790 of PR #408, F8), as its task does. R-670's sentences in the statement and verify: code review 5771184172 of PR #408, C1; *was (statement):* it ended at \"and E, E₀ and the drift meters must read the softened V.\"; *was (verify):* it ended at \"and at ε = 0 the same bits as the Newtonian kernel's, with the control that a GPU build whose force drops ε fails\". The branch-input clauses: physics review 5771183527 of PR #408, F4. The two gate arms: physics review 5771183527 of PR #408, F5. R-710 (4 Nov 2026, RQ-697 (b)): the wait on RQ-697 ends. *Was (statement):* \"must follow RQ-697's ruling\"; *was (verify):* \"at total E = 0 the gate's decision, and what branch_inputs.rs holds of it, are as RQ-697 rules\". R-791 and R-792 (5 Nov 2026) rule RQ-693 and RQ-694, and the wait on them ends; *was (rq):* RQ-693, RQ-694. It waits on RQ-709, what the other axes that read U read at ε ≠ 0 (physics review 5805354224 of PR #430, F1), as its task does."
 - id: REQ-INT-112
   area: INT
   kind: definition
@@ -6482,6 +6513,21 @@
   - R-698
   milestone: M3
   note: "R-698 (4 Nov 2026, RQ-639 (a)). RQ-639's second question: a lower bound at or above about 2⁻⁹⁸ leaves TASK-M3-06's `dt_macro` refusal unreachable, the entry's reading. Closed by TASK-M3-34."
+- id: REQ-EVT-034
+  area: EVT
+  statement: "At ε ≠ 0 the Chazy classifier's two-body potentials must soften, pair_kup's U = m_i m_j / √(d² + ε²) and out_kup's U = m_b M_p / √(d² + ε²), the separations, v_r and the kinetic terms staying geometric, so a softened E never sits beside a Newtonian U (R-792)."
+  source:
+  - file: decisions.md
+    section: "R-792 — At `ε ≠ 0` both of Chazy's two-body potentials soften, `pair_kup`'s and `out_kup`'s, so the classifier reads one physics *(closes RQ-694)*"
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 3.1 Inputs and definitions
+  verify:
+    method: unit test
+    detail: "cargo test -p kernel softened_chazy: at ε ≠ 0, on fixtures with d comparable to ε, pair_kup and out_kup read the softened U and the geometric d and v_r; at ε = 0 every chazy_fixtures label and value is bit-identical; control: a Newtonian U at ε ≠ 0 must commit a different label on a fixture built to separate them; cargo xtask gate chazy-parity, its ε ≠ 0 arm: the f32 label against the f64 one, a differing sample within the band of REQ-VAL-183 or failing, as at ε = 0"
+  rulings:
+  - R-792
+  milestone: M9
+  note: "Closed by TASK-M9-39, which R-670 gives the classifier's change at ε ≠ 0. The GPU arm: physics review 5805354224 of PR #430, F12: the classifier runs on the GPU too, and the kernel test doesn't reach it. *Was (verify):* it ended at \"on a fixture built to separate them\"."
 - id: REQ-PAY-001
   area: PAY
   statement: "ICDescriptor must be 64 B (its 12 f32 fields plus explicit padding, with E₀ derived as K_0 + V_0 and not stored), and the sample descriptor must use bits 0–9 (bits 8–9 `last_symbol`) with bits 10–15 reserved."
@@ -16555,15 +16601,18 @@
     section: "R-558 — The state map's twenty entries are ruled: any chart may be a target, its inverse generated beside the view's; a tilted target the branch nearest the slice; never a criterion input; the vMF colouring kept and stated not one-to-one; the nominal copy; an ended run held; no history fields; the prototype's constants the starting values; Chart position a named seam-6 exception, with no fixed t; Replace-L's chroma scaling an option, \"keep in gamut\", off by default; Shape n̂ stays `vector`; the code's reading of the mirror and the clamp; the file's preset names and the trace's fade; \"Edit stain…\"; no figure ring under the trace; one colour node; `α_min = 0`; \"none\" a setting of the node *(closes RQ-480 to RQ-489 and RQ-496 to RQ-505; amends R-542)*"
   - file: decisions.md
     section: "R-544 — The shape sphere chart is the whole sphere: pixel `(θ, φ)` decodes to the system whose signed `n̂` is that point, R-141's decode gauge removed for it, no hemisphere toggle, no remap and no fold at the equator, every pixel its own system; the mirror a fact about fates, tested and never identified, and shown as information in the initial-condition constructor *(amends R-113, R-141, R-537, R-59, R-178, R-408, R-503, R-538 and R-542; withdraws R-412; settles RQ-498 and RQ-504 where they turn on the hemisphere)*"
+  - file: decisions.md
+    section: "R-793 — The state map's targets are the app's own charts: the `θ × dilation` and `ν × dilation` rows leave the targets and stay in the prototype's record *(closes RQ-680)*"
   verify:
     method: unit test
-    detail: "cargo test -p render chart_position_status: on a constructed state per target chart (SM1's table), each status the chart can give is reached, left read from a shown coordinate's clamp (REQ-COL-133): the latent chart's left on a constructed state with λ̃ (or ρ̃) within ε_z of 0, the side from cos 2α = n₁ (on main α_min = 0, RQ-503); the latent momenta's left where the clamp acts, |q| ≥ q_max(1 − 2ε_q); ν × dilation's past a bounded edge outside [1/32, 31/32]; a sim_failed state undetermined; the shape sphere target read from the signed n̂ over the whole sphere (R-544); each on-chart point equal to the chart's coordinates; a decode_failed sample and a not-a-system pixel draw blank; controls: a periodic target written on a branch (θ unwrapped) instead of the quotient, a left state reported on the chart, a decode_failed sample projected and coloured, a sim_failed sample drawn blank, and a left test on a non-finite z (which main's encode never gives), each fail"
+    detail: "cargo test -p render chart_position_status: on a constructed state per target chart (SM1's table), each status the chart can give is reached, left read from a shown coordinate's clamp (REQ-COL-133): the latent chart's left on a constructed state with λ̃ (or ρ̃) within ε_z of 0, the side from cos 2α = n₁ (on main α_min = 0, RQ-503); the latent momenta's left where the clamp acts, |q| ≥ q_max(1 − 2ε_q); a bounded axis's past a bounded edge, on a target that has one; a sim_failed state undetermined; the shape sphere target read from the signed n̂ over the whole sphere (R-544); each on-chart point equal to the chart's coordinates; a decode_failed sample and a not-a-system pixel draw blank; controls: a periodic target written on a branch (θ unwrapped) instead of the quotient, a left state reported on the chart, a decode_failed sample projected and coloured, a sim_failed sample drawn blank, and a left test on a non-finite z (which main's encode never gives), each fail"
   rulings:
   - R-542
-  - R-558
   - R-544
+  - R-558
+  - R-793
   milestone: M7
-  note: "SM1, SM4, SM5 (physics review). Left is read from the encode's clamp (REQ-COL-133; PR #270 physics P4); the latent α case is constructed, main's α_min being 0 (RQ-503); the shape sphere target reads the signed n̂ over both hemispheres, the code's reading (RQ-498 (a), RQ-504 (a); physics P1). A fixed t and the target chart read wait on RQ-489. Closed by TASK-M7-47. *Was (the bundle's draft, reworded by the port; R-542 H8):* \"Chart position ⟨chart⟩ must yield, per sample, the system's position on the chosen chart at the chosen time (playhead, t = 0 or a fixed t) and one of four statuses (ok, clamped, past a bounded edge, undetermined), derived at read from r, p at the playhead, the masses and the existing encode, storing nothing.\" R-544 (21 Oct 2026) settles RQ-498 and RQ-504 where they turn on the hemisphere: the shape-sphere target is the whole sphere with the signed n̂, and there is no one-hemisphere view (RQ-504's subject), so `rq: RQ-504` goes; RQ-498 stays for its other parts. Ruled by R-558: RQ-489 (a), Chart position a named seam-6 exception (REQ-COL-141), its times the playhead and t = 0 only, \"a fixed t\" struck; RQ-498 (a) and RQ-504 (a), the signed n̂ over the full sphere, as applied; RQ-503 (a), α_min = 0, the α case constructed. *Was:* \"A fixed t and the target chart read wait on RQ-489.\""
+  note: "SM1, SM4, SM5 (physics review). Left is read from the encode's clamp (REQ-COL-133; PR #270 physics P4); the latent α case is constructed, main's α_min being 0 (RQ-503); the shape sphere target reads the signed n̂ over both hemispheres, the code's reading (RQ-498 (a), RQ-504 (a); physics P1). A fixed t and the target chart read wait on RQ-489. Closed by TASK-M7-47. *Was (the bundle's draft, reworded by the port; R-542 H8):* \"Chart position ⟨chart⟩ must yield, per sample, the system's position on the chosen chart at the chosen time (playhead, t = 0 or a fixed t) and one of four statuses (ok, clamped, past a bounded edge, undetermined), derived at read from r, p at the playhead, the masses and the existing encode, storing nothing.\" R-544 (21 Oct 2026) settles RQ-498 and RQ-504 where they turn on the hemisphere: the shape-sphere target is the whole sphere with the signed n̂, and there is no one-hemisphere view (RQ-504's subject), so `rq: RQ-504` goes; RQ-498 stays for its other parts. Ruled by R-558: RQ-489 (a), Chart position a named seam-6 exception (REQ-COL-141), its times the playhead and t = 0 only, \"a fixed t\" struck; RQ-498 (a) and RQ-504 (a), the signed n̂ over the full sphere, as applied; RQ-503 (a), α_min = 0, the α case constructed. *Was:* \"A fixed t and the target chart read wait on RQ-489.\" R-793 (5 Nov 2026, RQ-680 (a)): the targets are the app's own charts. *Was:* \"ν × dilation's past a bounded edge outside [1/32, 31/32]\"."
 - id: REQ-COL-114
   area: COL
   statement: "The state map must change no SimState, payload, ICDescriptor or other layout: no stored field, accumulator or kernel change; a need for one is queued, never added."
@@ -16591,15 +16640,18 @@
     section: "R-542 — The state map, as `principia_state_map.md` gives it and its prototype's code transcribes it: each sample coloured by where its own system is now on a chosen chart, through one stain node, Chart position, on every chart, the shape sphere included, coloured by a base and layers; Shape n̂ a separate node, unchanged; a system that leaves the chart drawn at the edge it left by, its last position not stored; no sim struct changed; Chart position waits on RQ-489 *(extends R-64)*"
   - file: decisions.md
     section: "R-544 — The shape sphere chart is the whole sphere: pixel `(θ, φ)` decodes to the system whose signed `n̂` is that point, R-141's decode gauge removed for it, no hemisphere toggle, no remap and no fold at the equator, every pixel its own system; the mirror a fact about fates, tested and never identified, and shown as information in the initial-condition constructor *(amends R-113, R-141, R-537, R-59, R-178, R-408, R-503, R-538 and R-542; withdraws R-412; settles RQ-498 and RQ-504 where they turn on the hemisphere)*"
+  - file: decisions.md
+    section: "R-793 — The state map's targets are the app's own charts: the `θ × dilation` and `ν × dilation` rows leave the targets and stay in the prototype's record *(closes RQ-680)*"
   verify:
     method: property test
-    detail: "cargo test -p render chart_position_identity: per chart, the worst |projected − own chart point| in chart units is within its calibrated tolerance (REQ-COL-129; the prototype's figures are latent 4e-7, sphere 1.5e-6 measured without R-141's gauge and re-measured on the app, simplex 5e-6, momenta 2.7e-8, θ × h 7e-8, tilted E and F 1.9e-6, ν × h 4.9e-4 from its 1/1000 curve table), never a tolerance the test chooses; on the sphere measured in n̂, every pixel, both hemispheres, against its own point, the primary range directly (R-544), away from R-437's seam as stated; controls: a mirror slip (a lower-hemisphere pixel compared with its mirror point, or projected through R-141's gauge), a fold onto a quotient that is missed, and a wrong projection, each fail"
+    detail: "cargo test -p render chart_position_identity: per chart, the worst |projected − own chart point| in chart units is within its calibrated tolerance (REQ-COL-129; the prototype's figures are latent 4e-7, sphere 1.5e-6 measured without R-141's gauge and re-measured on the app, simplex 5e-6, momenta 2.7e-8, tilted E and F 1.9e-6; its θ × h 7e-8 and ν × h 4.9e-4, from its 1/1000 curve table, are its record, with no target, R-793), never a tolerance the test chooses; on the sphere measured in n̂, every pixel, both hemispheres, against its own point, the primary range directly (R-544), away from R-437's seam as stated; controls: a mirror slip (a lower-hemisphere pixel compared with its mirror point, or projected through R-141's gauge), a fold onto a quotient that is missed, and a wrong projection, each fail"
   rulings:
   - R-542
-  - R-558
   - R-544
+  - R-558
+  - R-793
   milestone: M7
-  note: "SM12 Identity at t = 0 (physics review). On the shape sphere modulo the mirror (R-141's gauge; RQ-498; PR #270 physics P2); the tolerances are REQ-COL-129's calibrations, the sphere's 1.5e-6 the ungauged prototype's, re-measured on the app (qa F2). Closed by TASK-M7-47. *Was (the bundle's draft, reworded by the port; R-542 H8):* \"At t = 0 on its own chart, every sample's Chart position must equal its own chart coordinate to the f32 round trip.\" R-544 (21 Oct 2026; the second addendum) supersedes the human's RQ-498 clause \"the t = 0 identity on the sphere is stated modulo the mirror, under R-141\": on the shape sphere chart the identity holds point for point, so `rq: RQ-498` goes for this requirement. The sphere's 1.5e-6 is the ungauged prototype's, not measured under one hemisphere. RQ-498 is ruled (a) by R-558, but the clause this statement applied meanwhile, \"The t = 0 identity on the sphere is stated modulo the mirror, under R-141\", is superseded by the human's second addendum to the shape sphere ruling (\"On the shape sphere there is no mirror identification now, so the identity holds point for point\"), not applied by R-558, and applied by R-544's port, which restates the statement point for point (merge of main into PR #274, applied per R-369). *Was:* \"and left to that ruling's port; the statement's shape-sphere clause stands only until that port restates it.\""
+  note: "SM12 Identity at t = 0 (physics review). On the shape sphere modulo the mirror (R-141's gauge; RQ-498; PR #270 physics P2); the tolerances are REQ-COL-129's calibrations, the sphere's 1.5e-6 the ungauged prototype's, re-measured on the app (qa F2). Closed by TASK-M7-47. *Was (the bundle's draft, reworded by the port; R-542 H8):* \"At t = 0 on its own chart, every sample's Chart position must equal its own chart coordinate to the f32 round trip.\" R-544 (21 Oct 2026; the second addendum) supersedes the human's RQ-498 clause \"the t = 0 identity on the sphere is stated modulo the mirror, under R-141\": on the shape sphere chart the identity holds point for point, so `rq: RQ-498` goes for this requirement. The sphere's 1.5e-6 is the ungauged prototype's, not measured under one hemisphere. RQ-498 is ruled (a) by R-558, but the clause this statement applied meanwhile, \"The t = 0 identity on the sphere is stated modulo the mirror, under R-141\", is superseded by the human's second addendum to the shape sphere ruling (\"On the shape sphere there is no mirror identification now, so the identity holds point for point\"), not applied by R-558, and applied by R-544's port, which restates the statement point for point (merge of main into PR #274, applied per R-369). *Was:* \"and left to that ruling's port; the statement's shape-sphere clause stands only until that port restates it.\" R-793 (5 Nov 2026, RQ-680 (a)): *Was:* \"momenta 2.7e-8, θ × h 7e-8, tilted E and F 1.9e-6, ν × h 4.9e-4 from its 1/1000 curve table)\"."
 - id: REQ-COL-116
   area: COL
   statement: "A system that has left the chart must be drawn at the edge it left by, with no stored history; 'none' must be available as an option of the node."
@@ -16630,12 +16682,13 @@
     section: "R-542 — The state map, as `principia_state_map.md` gives it and its prototype's code transcribes it: each sample coloured by where its own system is now on a chosen chart, through one stain node, Chart position, on every chart, the shape sphere included, coloured by a base and layers; Shape n̂ a separate node, unchanged; a system that leaves the chart drawn at the edge it left by, its last position not stored; no sim struct changed; Chart position waits on RQ-489 *(extends R-64)*"
   verify:
     method: unit test
-    detail: "cargo test -p render chart_position_four_results: on the latent momenta target, the left samples are exactly those whose momentum link clamps, at the link's own margin written into SM5 by REQ-COL-133 (q_max(1 − 2ε_q) for the logit link; q_max(1 − ε_q) for tanh_q and softsign_q since R-481), with constructed states at either side of the margin; on ν × dilation the past-edge samples exactly those whose nearest ν lies outside the bounded range; with 'when it leaves: none', neither is drawn as a colour; controls: left drawn as a clamped colour, a past-edge sample counted as left, and a margin taken from another link, each fail"
+    detail: "cargo test -p render chart_position_four_results: on the latent momenta target, the left samples are exactly those whose momentum link clamps, at the link's own margin written into SM5 by REQ-COL-133 (q_max(1 − 2ε_q) for the logit link; q_max(1 − ε_q) for tanh_q and softsign_q since R-481), with constructed states at either side of the margin; on the (ν, K) target the past-edge samples exactly those whose nearest ν lies outside that chart's bounded range; with 'when it leaves: none', neither is drawn as a colour; controls: left drawn as a clamped colour, a past-edge sample counted as left, and a margin taken from another link, each fail"
   rulings:
   - R-542
   - R-558
+  - R-793
   milestone: M7
-  note: "SM12 Four results, its arm as written (physics review). Against SM5a's default clamp: RQ-498, (a) applied meanwhile, the test run under 'none'. The clamp's margin per REQ-COL-133 (PR #270 physics P4). Closed by TASK-M7-47. Ruled (a) by R-558 (RQ-498): the clamp stays the default and the Four results test runs with 'when it leaves: none'."
+  note: "SM12 Four results, its arm as written (physics review). Against SM5a's default clamp: RQ-498, (a) applied meanwhile, the test run under 'none'. The clamp's margin per REQ-COL-133 (PR #270 physics P4). Closed by TASK-M7-47. Ruled (a) by R-558 (RQ-498): the clamp stays the default and the Four results test runs with 'when it leaves: none'. R-793 (5 Nov 2026, RQ-680 (a)): the targets are the app's own charts. *Was (verify):* \"on ν × dilation … the bounded range\"."
 - id: REQ-COL-118
   area: COL
   statement: "Chart position's colour must be equal on identified points of the target's quotient: θ and θ + 2π, and n̂ across a pole crossing."
@@ -16697,13 +16750,14 @@
     section: "R-544 — The shape sphere chart is the whole sphere: pixel `(θ, φ)` decodes to the system whose signed `n̂` is that point, R-141's decode gauge removed for it, no hemisphere toggle, no remap and no fold at the equator, every pixel its own system; the mirror a fact about fates, tested and never identified, and shown as information in the initial-condition constructor *(amends R-113, R-141, R-537, R-59, R-178, R-408, R-503, R-538 and R-542; withdraws R-412; settles RQ-498 and RQ-504 where they turn on the hemisphere)*"
   verify:
     method: property test
-    detail: "cargo test -p engine chart_position_copies: over seeded repeat pairs (the θ period and the pole crossings on the shape sphere, no hemisphere fold (R-544); θ on θ × dilation), every copy's IC is bitwise equal to its canonical quad's sample's, and every copy's colour bitwise equal to its canonical sample's colour; controls: re-decoding from the copy's own coordinate (differs on about 1 of 400 pairs in the IC), and a colour computed from screen or copy position (differs in the colour), each fail; a colour comparison at t = 20 is not the test for the first arm (it reads 0 with and without the fix)"
+    detail: "cargo test -p engine chart_position_copies: over seeded repeat pairs (the θ period and the pole crossings on the shape sphere, no hemisphere fold (R-544)), every copy's IC is bitwise equal to its canonical quad's sample's, and every copy's colour bitwise equal to its canonical sample's colour; controls: re-decoding from the copy's own coordinate (differs on about 1 of 400 pairs in the IC), and a colour computed from screen or copy position (differs in the colour), each fail; a colour comparison at t = 20 is not the test for the first arm (it reads 0 with and without the fix)"
   rulings:
   - R-542
-  - R-558
   - R-544
+  - R-558
+  - R-793
   milestone: M8
-  note: "SM3, SM12 Copies agree, both its arms (PR #270 qa F1). EX7's canonical addressing (R-537, REQ-SCHED-101). Mirror pixels inside the square agree to rounding (RQ-498). Closed by TASK-M8-66. *Was (the bundle's draft, reworded by the port; R-542 H8):* \"Every copy of a sample in the extension must be the canonical sample, its IC bitwise equal.\" R-544 (21 Oct 2026; the second addendum) supersedes the human's RQ-498 clause \"in-square mirrors match to rounding\": on the shape sphere chart there are no mirror pixels inside the square to match, a lower-hemisphere pixel being its own system, so the sentence \"Mirror pixels inside the square agree to rounding (RQ-498)\" above no longer applies and `rq: RQ-498` goes. RQ-498 is ruled (a) by R-558: bitwise copies for EX7 repeats. Its clause \"in-square mirrors match to rounding\", which this note applied meanwhile, is superseded by the human's second addendum to the shape sphere ruling (\"On the shape sphere there is no mirror identification now, so the identity holds point for point\"), not applied by R-558, and applied by R-544's port, which drops the verify's hemisphere fold among the repeat pairs (merge of main into PR #274, applied per R-369). *Was:* \"and left to that ruling's port; the verify's hemisphere fold among the repeat pairs is that ruling's site too.\""
+  note: "SM3, SM12 Copies agree, both its arms (PR #270 qa F1). EX7's canonical addressing (R-537, REQ-SCHED-101). Mirror pixels inside the square agree to rounding (RQ-498). Closed by TASK-M8-66. *Was (the bundle's draft, reworded by the port; R-542 H8):* \"Every copy of a sample in the extension must be the canonical sample, its IC bitwise equal.\" R-544 (21 Oct 2026; the second addendum) supersedes the human's RQ-498 clause \"in-square mirrors match to rounding\": on the shape sphere chart there are no mirror pixels inside the square to match, a lower-hemisphere pixel being its own system, so the sentence \"Mirror pixels inside the square agree to rounding (RQ-498)\" above no longer applies and `rq: RQ-498` goes. RQ-498 is ruled (a) by R-558: bitwise copies for EX7 repeats. Its clause \"in-square mirrors match to rounding\", which this note applied meanwhile, is superseded by the human's second addendum to the shape sphere ruling (\"On the shape sphere there is no mirror identification now, so the identity holds point for point\"), not applied by R-558, and applied by R-544's port, which drops the verify's hemisphere fold among the repeat pairs (merge of main into PR #274, applied per R-369). *Was:* \"and left to that ruling's port; the verify's hemisphere fold among the repeat pairs is that ruling's site too.\" R-793 (5 Nov 2026, RQ-680 (a)): `θ × dilation` isn't a target, and the shape sphere's θ period is the same repeat pair. *Was (verify):* \"; θ on θ × dilation\"."
 - id: REQ-COL-122
   area: COL
   statement: "Chart position's colour slot must be one base (Gradient, Site blend, Palette or Picture) followed by an ordered list of optional layers (bandmask or site_overlay), offering on each quotient only the bases and layers SM11 defines for it."
@@ -16836,7 +16890,7 @@
 - id: REQ-COL-129
   area: COL
   kind: calibration
-  statement: "The state map's default constants must be calibrated: tiles across (6), the index palette's chroma (0.08), the layer line width (0.045 of a cell), the dot radius (0.13), the plane gradient (L 0.75, ±0.095), the sphere's (L 0.64 + 0.20 n₃, ±0.095), the compaction scales κ (latent 3, momenta 0.3, the tilt's s π, dilation 0.6), and the t = 0 identity's tolerances per chart (the prototype's: latent 4e-7, sphere 1.5e-6, simplex 5e-6, momenta 2.7e-8, θ × h 7e-8, tilted 1.9e-6, ν × h 4.9e-4; the sphere's and ν × h's re-measured on the app), the one projection's native–WGSL agreement tolerance (REQ-COL-134; R-297's form), the Torus gradient's constants (R 0.074, r 0.037, L₀ 0.70, r_L 0.12) and its default Repeats (2), and the tileable checkerboard's chroma and lightness factors (0.8, 0.8) and its parity step (± 0.07) (R-543); proposed with the prototype's values, the gamut evidence and the app's measurements by the task that needs them, confirmed by the human at the M7 gate."
+  statement: "The state map's default constants must be calibrated: tiles across (6), the index palette's chroma (0.08), the layer line width (0.045 of a cell), the dot radius (0.13), the plane gradient (L 0.75, ±0.095), the sphere's (L 0.64 + 0.20 n₃, ±0.095), the compaction scales κ (latent 3, momenta 0.3, the tilt's s π), and the t = 0 identity's tolerances per chart (the prototype's: latent 4e-7, sphere 1.5e-6, simplex 5e-6, momenta 2.7e-8, tilted 1.9e-6; the sphere's re-measured on the app), the one projection's native–WGSL agreement tolerance (REQ-COL-134; R-297's form), the Torus gradient's constants (R 0.074, r 0.037, L₀ 0.70, r_L 0.12) and its default Repeats (2), and the tileable checkerboard's chroma and lightness factors (0.8, 0.8) and its parity step (± 0.07) (R-543); proposed with the prototype's values, the gamut evidence and the app's measurements by the task that needs them, confirmed by the human at the M7 gate."
   source:
   - file: docs/design/principia_state_map.md
     section: SM13. Queue, don't rule
@@ -16850,16 +16904,19 @@
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
   - file: decisions.md
     section: "R-543 — Colour maps that tile the infinite plane, as the state map follow-up gives them and its prototype's code transcribes them: a Torus gradient on the plane and the cylinder, periodic in chart units, one-to-one within a period and seamless across periods; a wrap mode past the Picture's square, Repeat, Mirror or Clamp, and a separate dim setting, Mirror and dimmed by default so every saved stain renders as before; a tileable checkerboard; the Flow preset becomes it under Repeat *(amends R-542)*"
+  - file: decisions.md
+    section: "R-793 — The state map's targets are the app's own charts: the `θ × dilation` and `ν × dilation` rows leave the targets and stay in the prototype's record *(closes RQ-680)*"
   verify:
     method: review checklist
     detail: "each value is a register entry citing R-542 and RQ-487, proposed with the prototype's value and its gamut check (0 out-of-gamut samples) or, for a tolerance, the app's measured worst error, confirmed at the M7 gate; no test picks its own tolerance"
   rulings:
   - R-71
   - R-542
-  - R-558
   - R-543
+  - R-558
+  - R-793
   milestone: M7
-  note: "SM13 Q8 (RQ-487); κ added per R-369 (R-542 H7); the identity's tolerances added (R-542 H13; PR #270 qa F2, physics P2). Closed by TASK-M7-48; the identity's tolerances proposed by TASK-M7-47; the one projection's native–WGSL agreement tolerance proposed by TASK-M7-52 (PR #270 code re-review, C5, applied per R-369, accepted by R-559), which measures it and uses its measured value in REQ-COL-134's and REQ-COL-135's tests until the M7 gate confirms it, as TASK-M2-25 uses REQ-DEC-043's factor. RQ-487 concerns the tiling defaults and the other constants only; TASK-M7-52 does not close this requirement and does not wait on RQ-487. *Was (C5):* \"Closed by TASK-M7-48, the tolerances proposed by TASK-M7-47.\" *Was (the bundle's draft, reworded by the port; R-542 H8):* \"The state map's default constants must be calibrated: tiles across (6), index palette chroma (0.08), layer line width (0.045 of a cell), dot radius (0.13), 2D plane gradient (L 0.75, ±0.095).\" The Torus's and the tileable checkerboard's constants added by R-543 (H7; REQ-COL-136, REQ-COL-138), proposed by TASK-M7-48 and TASK-M7-49 with their gamut evidence (0 of 240²; 0 of 64 cells at a limit), confirmed at the M7 gate with SM6's. *Was (R-543):* \"… and the one projection's native–WGSL agreement tolerance (REQ-COL-134; R-297's form); proposed with …\" RQ-487 ruled (a) by R-558: the prototype's values are the starting values, the port's additions included (κ 3, 0.3, π, 0.6; line width 0.045; dot radius 0.13; the plane gradient's L 0.75 and chroma 0.095), confirmed at the M7 gate."
+  note: "SM13 Q8 (RQ-487); κ added per R-369 (R-542 H7); the identity's tolerances added (R-542 H13; PR #270 qa F2, physics P2). Closed by TASK-M7-48; the identity's tolerances proposed by TASK-M7-47; the one projection's native–WGSL agreement tolerance proposed by TASK-M7-52 (PR #270 code re-review, C5, applied per R-369, accepted by R-559), which measures it and uses its measured value in REQ-COL-134's and REQ-COL-135's tests until the M7 gate confirms it, as TASK-M2-25 uses REQ-DEC-043's factor. RQ-487 concerns the tiling defaults and the other constants only; TASK-M7-52 does not close this requirement and does not wait on RQ-487. *Was (C5):* \"Closed by TASK-M7-48, the tolerances proposed by TASK-M7-47.\" *Was (the bundle's draft, reworded by the port; R-542 H8):* \"The state map's default constants must be calibrated: tiles across (6), index palette chroma (0.08), layer line width (0.045 of a cell), dot radius (0.13), 2D plane gradient (L 0.75, ±0.095).\" The Torus's and the tileable checkerboard's constants added by R-543 (H7; REQ-COL-136, REQ-COL-138), proposed by TASK-M7-48 and TASK-M7-49 with their gamut evidence (0 of 240²; 0 of 64 cells at a limit), confirmed at the M7 gate with SM6's. *Was (R-543):* \"… and the one projection's native–WGSL agreement tolerance (REQ-COL-134; R-297's form); proposed with …\" RQ-487 ruled (a) by R-558: the prototype's values are the starting values, the port's additions included (κ 3, 0.3, π, 0.6; line width 0.045; dot radius 0.13; the plane gradient's L 0.75 and chroma 0.095), confirmed at the M7 gate. R-793 (5 Nov 2026, RQ-680 (a)): the two dilation targets leave, so their κ and tolerances go, the prototype's record in state_map SM1. *Was:* \"the compaction scales κ (latent 3, momenta 0.3, the tilt's s π, dilation 0.6)\" and \"(the prototype's: latent 4e-7, sphere 1.5e-6, simplex 5e-6, momenta 2.7e-8, θ × h 7e-8, tilted 1.9e-6, ν × h 4.9e-4; the sphere's and ν × h's re-measured on the app)\"."
 - id: REQ-COL-130
   area: COL
   statement: "A Picture base must pull back an image laid on the target's square through the flow: nearest texel at the point's (u, v), mirror-repeated and dimmed (×0.62) past the square on an affine axis by default (the wrap mode and dim setting are REQ-COL-137's, R-543), the built-ins (checkerboard, the tileable checkerboard of REQ-COL-138, grid, rings) or the user's own, uploaded, bound as a render-side texture, never a sim struct; a brightness node applies over a Picture base as over every other base."
@@ -22730,13 +22787,14 @@
     section: "R-553 — The trace's queued questions are ruled as applied meanwhile: repeats at half strength; the star at the start, Pictures' triangle; the end event over a syzygy; chevrons and edge pins separate; a presentation readout says \"not a system\" and names the check, `decode_failed`, its detail and \"forbidden\" only in a debug view; a non-finite step ends the run `sim_failed`; the continuous θ branch only; Sunset the ramp's default; three bug classes, no updated bundle; the trace leaves at `|q₃| ≥ q_max`; a curve axis's samples past its edge counted apart; T18's fade arm only where a distance is defined; TF3 the default length's; a kept orbit's `Trace` in `Lines`; TM8 on the shown axes *(closes RQ-412 to RQ-415, RQ-417, RQ-418 and RQ-421 to RQ-429; amends R-537 and R-538)*"
   verify:
     method: unit test
-    detail: "cargo test -p render trace_curve_axis (R-538 T18): on the right-triangle ν × dilation-rate chart, a run's shape perturbed off the curve keeps its point at the nearest ν, and where an off-plane distance is defined the fade grows with the perturbation (elsewhere the settings line says there is no fade, RQ-426 (a)); a sample whose nearest ν lies past ν's edge is not drawn, draws no ring and counts in \"past the domain's end\", not in the not-a-system count; control: dropping or clamping the point fails; review (physics)"
+    detail: "cargo test -p render trace_curve_axis (R-538 T18): on the (ν, K) chart, a run's shape perturbed off the curve keeps its point at the nearest ν, and where an off-plane distance is defined the fade grows with the perturbation (elsewhere the settings line says there is no fade, RQ-426 (a)); a sample whose nearest ν lies past ν's edge is not drawn, draws no ring and counts in \"past the domain's end\", not in the not-a-system count; control: dropping or clamping the point fails; review (physics)"
   rulings:
   - R-509
   - R-538
   - R-553
+  - R-793
   milestone: M8
-  note: "R-538 TF1 (J5, J6). Closed by TASK-M8-58. RQ-425 (a) and RQ-426 (a), ruled by R-553 as applied meanwhile. *Was (verify):* \"not \\\"in forbidden\\\"\" (R-553 K1). Physics review is required (⚑); it does not merge on the code reviewer's word alone."
+  note: "R-538 TF1 (J5, J6). Closed by TASK-M8-58. RQ-425 (a) and RQ-426 (a), ruled by R-553 as applied meanwhile. *Was (verify):* \"not \\\"in forbidden\\\"\" (R-553 K1). Physics review is required (⚑); it does not merge on the code reviewer's word alone. R-793 (5 Nov 2026, RQ-680 (a)): dilation isn't an app chart. *Was (verify):* \"on the right-triangle ν × dilation-rate chart\"."
 - id: REQ-GUI-281
   area: GUI
   statement: "With a trace animated with the playhead, the trace must be drawn from t = 0 to its end (its event or the horizon), with no head marker, whenever the playhead is not playing and its scrubber is not being dragged, and to the head, with the head marker, while it plays or is scrubbed (R-538 TF3); the static mode draws the whole trace and the own clock is always animated; a fixed window or last-Δt length is kept as chosen (RQ-427 (a)); the GUI passes the drawn extent to the line pass each frame, so the engine reads no ViewUI state."
@@ -24951,6 +25009,36 @@
   - R-705
   milestone: M6
   note: "R-705 (4 Nov 2026, RQ-663 (c)), the owner: \"it's a real bug\". Found by code review 5726096107 of PR #366. TASK-M6-56."
+- id: REQ-GUI-416
+  area: GUI
+  statement: "With softening on, an (L_z, E) chart's energy axis must be labelled as Newtonian energy, and the Inspector must show the softened energy beside the Newtonian energy (R-791)."
+  source:
+  - file: decisions.md
+    section: "R-791 — At `ε ≠ 0` the `(L_z, E)` chart stays available with its energy axis the Newtonian energy, so a pixel's start never depends on `ε`; the axis is labelled Newtonian energy and the Inspector shows the softened energy beside it *(closes RQ-693)*"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: "G8. Inspector — one IC, its trajectory, one timeline (`05_inspectors.png`)"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui softened_energy_axis: with ε ≠ 0 on an (L_z, E) chart the axis label names Newtonian energy and the Inspector's readout shows both energies, the softened one equal to the run's E₀; with ε = 0 the label and the readout are unchanged; controls: the label kept at ε ≠ 0 off this chart, and the softened energy shown as the axis value, each fail"
+  rulings:
+  - R-791
+  milestone: M9
+  note: Closed by TASK-M9-39.
+- id: REQ-GUI-417
+  area: GUI
+  statement: "The chart presets must include a shape-chart preset centred on the equilateral (Lagrange) point, at rest, so the view is one click away, and on that preset the Inspector readout must show the two side ratios; no new chart type (R-798)."
+  source:
+  - file: decisions.md
+    section: "R-798 — PA-1 runs on the shape sphere at rest through a tested remap, with no new chart type; a shape-chart preset centred on the equilateral point shows the two side ratios in the Inspector *(closes RQ-594)*"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: "G8. Inspector — one IC, its trajectory, one timeline (`05_inspectors.png`)"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui equilateral_preset: choosing the preset centres the shape chart on the equilateral point, at the centre pixel, at rest, on the map its definition states, with no other chart kind added, and the Inspector shows the two side ratios for the IC under it, each equal to the remap's (REQ-CHART-093) to f32 rounding, 1 and 1 at the point; controls: a preset centred off the point, a preset with non-zero momenta, and side ratios read from the wrong pair, each fail"
+  rulings:
+  - R-798
+  milestone: M9
+  note: "Closed by TASK-M9-45. Which pair of ratios follows PA-1's paper; which mirror point the preset centres on, its map and its window are written by that task (R-72, R-71). At rest, and the map: physics review 5805354224 of PR #430, F5, R-798's reading. The ratios reach the Inspector through the engine's typed surface. *Was (statement):* no \"at rest\"; *was (verify):* no map, centre pixel or momenta control."
 - id: REQ-TOOL-001
   area: TOOL
   statement: "Each session must record once: device (GPU/CPU model, core counts, VRAM or unified memory size in its own field), backend and driver version, precision support and f64 rate, build (commit hash, profile, feature flags) and display (resolution, refresh, DPI scale)."
@@ -27876,16 +27964,19 @@
     section: 7. Measured capacity and behaviour
   - file: decisions.md
     section: "R-522 — Whether tier 2 of the embedding splits is ruled after TASK-M7-44's capacity re-measure: RQ-386 is parked until then, and tier 2 stays whole meanwhile"
+  - file: decisions.md
+    section: "R-802 — Tier 2 of the embedding splits only if TASK-M7-44's measurement finds it does not fit at 64² or 128² *(closes RQ-386; amends R-522)*"
   verify:
     method: benchmark
-    detail: "xtask: the measurement table at 64², 128², 256², 512², 1024² for the three tier sets, run on the Mac, recorded in §7, tier 1 holding the four entry hashes (R-521); at 64² it states whether one config-only tile still holds; it reports tier 2's own size and, at 64² and 128², whether tiers 1 and 2 fit for the default stain and for the fixture tier2_typical_stain (R-522), which TASK-M7-44 adds: a built-in colour mode other than the default with every parameter off its default, a fixed ramp window, two overlays on, and the line system holding the Grid preset and one contour set of three levels; a record that does not fit reports not embedded and writes no partial tile"
+    detail: "xtask: the measurement table at 64², 128², 256², 512², 1024² for the three tier sets, run on the Mac, recorded in §7, tier 1 holding the four entry hashes (R-521); at 64² it states whether one config-only tile still holds; it reports tier 2's own size and, at 64² and 128², whether tiers 1 and 2 fit for the default stain and for the fixture tier2_typical_stain (R-522), which TASK-M7-44 adds: a built-in colour mode other than the default with every parameter off its default, a fixed ramp window, two overlays on, and the line system holding the Grid preset and one contour set of three levels; a record that does not fit reports not embedded and writes no partial tile; if tiers 1 and 2 do not fit at 64² or 128² for tier2_typical_stain, tier 2 splits as R-802 gives, and the table is measured on the split tiers"
   rulings:
   - R-483
   - R-484
   - R-521
   - R-522
+  - R-802
   milestone: M7
-  note: "R-483 X6, H6 (20 Oct 2026). R-522: RQ-386 (whether tier 2 splits) is parked until this measurement; the PR reports tier 2's size and fit, and the orchestrator returns RQ-386 to the human with them. *Was:* the verify's \"for the three tier sets, run on the Mac, recorded in §7; at 64² it states whether one config-only tile still holds; a record\". Physics review P4 of PR #265 (applied per R-369): the typical edited stain is the named fixture tier2_typical_stain. *Was:* the verify's \"for a typical edited one\"."
+  note: "R-483 X6, H6 (20 Oct 2026). R-522: RQ-386 (whether tier 2 splits) is parked until this measurement; the PR reports tier 2's size and fit, and the orchestrator returns RQ-386 to the human with them. *Was:* the verify's \"for the three tier sets, run on the Mac, recorded in §7; at 64² it states whether one config-only tile still holds; a record\". Physics review P4 of PR #265 (applied per R-369): the typical edited stain is the named fixture tier2_typical_stain. *Was:* the verify's \"for a typical edited one\". R-802 (5 Nov 2026, RQ-386 (c)): the measurement decides, and RQ-386 no longer returns to the owner with the numbers."
 - id: REQ-TOOL-175
   area: TOOL
   statement: "A keyframe's state must be its `SimConfig`, links included: a change of a link id between keyframes must be a cut everywhere, and a change of a link parameter a cut in live playback; in a blocking export, in a segment set to interpolate, the default (R-623), between keyframes whose link ids are the same, each differing link parameter must ease linearly in its value, a + s·(b − a) with s the segment's progress under the segment's own easing curve (R-576), clamped into [min(a, b), max(a, b)], each keyframe's own frame taking that keyframe's value bit for bit, with every frame re-integrated at its own values, a type (b) segment priced before the job runs; and a segment set to cut must cut there in the export as in live playback (R-623)."
@@ -28804,6 +28895,34 @@
   - R-694
   milestone: M4
   note: "R-694 (4 Nov 2026), the honesty part of RQ-685's option (c), not its `StageMode::Unknown`. A driver recorded so is not measured, R-690's \"not run\", and not R-690's \"unverified, not supported\", which only a measured failure earns. *Was:* \"A driver recorded so is unverified, not supported.\" TASK-M4-30."
+- id: REQ-TOOL-222
+  area: TOOL
+  statement: "`cargo xtask gate replication --target <id>` must be the one scoring command for external targets, with `--propose` for a calibration's proposal and `--render` for a qualitative target's figure beside the paper's; it must report PASS, EXPLAINED DIVERGENCE or UNEXPLAINED and block nothing on the outcome, and a target whose control doesn't fire must fail it (R-794, R-649)."
+  source:
+  - file: decisions.md
+    section: "R-794 — The replication scoring command, `cargo xtask gate replication`, is a deliverable of TASK-M3-27; the atlas twins and OC-2's state and tolerance stay deferred to M9 *(on RQ-681, which stays open)*"
+  - file: docs/design/principia_dd_replication.md
+    section: 8.3 How the tasks apply them
+  verify:
+    method: unit test
+    detail: "cargo test -p xtask gate_replication_command: on synthetic targets each of the three outcomes is reported and exits 0; an unknown id is refused with its name; --propose and --render reach the target's own proposal and figure; a control that doesn't fire exits non-zero naming the target; controls: an outcome that fails the run, and a control that doesn't fire reported as a pass, each fail"
+  rulings:
+  - R-794
+  milestone: M3
+  note: "Closed by TASK-M3-27, RQ-681 (a). It scores external targets, so its own test uses synthetic ones. PL-8a is internal and blocking (principia_dd_replication.md § 12.1), so it runs under burrau-smoke, whose outcome blocks (R-794, applied per R-369; physics review 5805354224 of PR #430, F4). *Was:* \"Its first target is PL-8a.\""
+- id: REQ-TOOL-223
+  area: TOOL
+  statement: "The required check `ci` must gather `ci-release`: a `ci-release` shard that fails, or that skips on a change that isn't docs or data, must fail the check, and a skip on a docs or data change must pass it (R-809)."
+  source:
+  - file: decisions.md
+    section: "R-809 — `ci-gate` gathers `ci-release`: reading that job by eye before each merge is vetoed *(vetoes D-11 of the report of 5 Nov 2026)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p xtask ci_gate_gathers_release: `ci-gate`'s `needs` holds `ci-release`, and over the gate's modelled results a failed shard fails, a skip with a failed `ci-release-archive` fails, a pass passes, and a skip on a docs or data head passes; controls: `ci-release` left out of `needs`, and a skip passed on a code head, each fail"
+  rulings:
+  - R-809
+  milestone: M0
+  note: "Closed by TASK-M0-54. Replaces the read by eye of D-11 in the report of 5 Nov 2026."
 - id: REQ-VAL-001
   area: VAL
   statement: "Error meters and verification claims must be checked against the formulation, not only the data (e.g. COM drift must not be used as an error meter for an integrator that integrates relative coordinates)."
@@ -29025,7 +29144,7 @@
   note: "κ(z): REQ-ENC-025 (definition)."
 - id: REQ-VAL-015
   area: VAL
-  statement: "The invariant-chart gradient view (E_0 or Lz_0 on an (L_z,E)/(L_z,K) chart) must render a perfect axis-aligned gradient."
+  statement: "The invariant-chart gradient view (E_0 or Lz_0 on an untilted (L_z,E)/(L_z,K) chart) must render a perfect axis-aligned gradient; on an (L_z,E) chart the energy it reads is the axis's: E_0 at ε = 0, and the Newtonian energy at ε ≠ 0 (R-791), never the softened E_0."
   source:
   - file: docs/contracts/principia_render_contract.md
     section: Cross-check views (the seams)
@@ -29033,13 +29152,16 @@
     section: "G. Cross-check views (certify a *seam*, not a field — integration tests with a display)"
   - file: decisions.md
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: decisions.md
+    section: "R-791 — At `ε ≠ 0` the `(L_z, E)` chart stays available with its energy axis the Newtonian energy, so a pixel's start never depends on `ε`; the axis is labelled Newtonian energy and the Inspector shows the softened energy beside it *(closes RQ-693)*"
   verify:
     method: numerical gate
-    detail: "on an (L_z,E) chart, E_0 is constant along the L_z axis and monotone along E to within f32 rounding of the target"
+    detail: "on an untilted (L_z,E) chart, the axis's energy (E_0 at ε = 0; at ε ≠ 0 the Newtonian energy) is constant along the L_z axis and monotone along E to within f32 rounding of the target; at ε ≠ 0, under the warp on a chart tilted into a shape or mass control, the check is REQ-CHART-092's gate arm, per pixel: that energy minus the pixel's Newtonian U equals K(t) to f32 rounding, since the untilted gradient can't tell the two energies apart"
   rulings:
   - R-71
+  - R-791
   milestone: M2
-  note: "The view's tolerance: REQ-VAL-112 (calibration)."
+  note: "The view's tolerance: REQ-VAL-112 (calibration). R-791 (5 Nov 2026, RQ-693 (b)): reworded to match. *Was:* the statement ended at \"gradient\", and the verify read \"on an (L_z,E) chart, E_0 is constant along\". At ε = 0 nothing changes. The arm's place: physics review 5805354224 of PR #430, F3. *Was (verify):* \"REQ-CHART-092, whose test runs that arm\". Its form: physics review 5805959783 of PR #430, N1. *Was (verify):* \"whose gate arm runs tilted\". The two arms apart: Codex P1 on PR #430: under the warp a shape or mass tilt moves the energy with U, so constancy along L_z holds untilted only. *Was (verify):* \"on an (L_z,E) chart, the axis's energy (E_0 at ε = 0; at ε ≠ 0 the Newtonian energy, REQ-CHART-092, whose gate arm runs under the warp on a chart tilted into a shape or mass control, pixel by pixel, since an untilted chart can't tell the two energies apart) is constant along the L_z axis and monotone along E to within f32 rounding of the target\". Untilted: physics review 5807487754 of PR #430, N5: tilted into a shape or mass control, a warped E follows the pixel's U (R-471 E3). *Was (statement):* \"(E_0 or Lz_0 on an (L_z,E)/(L_z,K) chart)\"."
 - id: REQ-VAL-016
   area: VAL
   statement: "Burrau at ν = 1/2 must reproduce (3,4,5) and the classical configuration to a stated tolerance."
@@ -36946,9 +37068,11 @@
     section: "R-669 — The owner adopts the recommendations on the fifteen questions of 1 Nov but RQ-656: the Šuvakov-plane chart is one M9 task, its five targets waiting on it whole; a syzygy-symbol field only; N_scramble only; no periodic-orbit continuation, after the SJTU partial check; TR-1, MK-1 and SL-1 stay in M9, not scored, with no chart; the census's CI cadence as § 8.1 and § 8.2 write it, lavapipe in the smoke job; REQ-VAL-199 keeps 256 starts; GG-1's panels by like ε; the drift predicates read the stored latch, live values only for control flow; BZ-1C's starts by Path B, a list-of-starts chart the fallback; Hénon 1974 joins the rotating-frame set; Heggie & Sweatman 1991 in M9, not scored *(closes RQ-593, RQ-595, RQ-596, RQ-597, RQ-608, RQ-617, RQ-618, RQ-620, RQ-636, RQ-647 and RQ-654; amends R-636, R-637 and R-639; refines R-642)*"
   - file: decisions.md
     section: "R-671 — In a task with no GPU run, a statistical or qualitative target's statistic from the f64 runs is recorded at tier (b), its instrument stated, and its (a) part stays listed \"not scored yet: needs a GPU run\", the tier not relabelled; Q-4's no-integration part is recorded with no tier *(closes RQ-669; refines R-649)*"
+  - file: decisions.md
+    section: "R-798 — PA-1 runs on the shape sphere at rest through a tested remap, with no new chart type; a shape-chart preset centred on the equilateral point shows the two side ratios in the Inspector *(closes RQ-594)*"
   verify:
     method: numerical gate
-    detail: "the chart RQ-594 rules, the split once RQ-596 is; the maps reviewed by the physics reviewer; the split at REQ-VAL-324's level; control: a map at the wrong side ratio range must misplace the regular region"
+    detail: "on ShapeSphere at rest through REQ-CHART-093's remap (R-798), the split once RQ-596 is; the maps reviewed by the physics reviewer; the split at REQ-VAL-324's level; control: a map at the wrong side ratio range must misplace the regular region"
   rulings:
   - R-71
   - R-594
@@ -36957,10 +37081,9 @@
   - R-650
   - R-669
   - R-671
+  - R-798
   milestone: M9
-  rq:
-  - RQ-594
-  note: "Reproduces: Parischewsky, Trani & Leigh 2023 (SciPost Phys. Core 6, 016): escaper maps in side-ratio space around Lagrange; 82.1 % chaotic, 17.9 % regular. Chart: new: SideRatio, or ShapeSphere at rest by a tested remap. Milestone: M9 (was M3; R-650). Compare: qualitative; the split statistical (rule 8). Tolerance: REQ-VAL-324 (calibration, R-71). Row PA-1 of principia_dd_replication.md § \"5.12 Targets that wait for a chart, a diagnostic or data\"; layer replication, tier B; closed by TASK-M9-24 (was TASK-M3-64) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\". R-669 (1 Nov 2026, RQ-596 (b)): N_scramble is REQ-VAL-343, defined and built by TASK-M9-24; the chart still waits on RQ-594. *Was (rq):* RQ-594, RQ-596. R-671 (2 Nov 2026, RQ-669 (ii)) reads the f64 runs of a task with no GPU run, and this task has no runs while RQ-594 is open: its row reads \"not scored\" with RQ-594 as what it waits on, with no record at (b). Once its task has run with no GPU run, its (a) part keeps its tier and reads \"not scored yet: needs a GPU run\" in M9's report, and the same statistic from the task's f64 runs is recorded beside it at (b), with its outcome and instrument stated. *Was (rq):* RQ-669."
+  note: "Reproduces: Parischewsky, Trani & Leigh 2023 (SciPost Phys. Core 6, 016): escaper maps in side-ratio space around Lagrange; 82.1 % chaotic, 17.9 % regular. Chart: new: SideRatio, or ShapeSphere at rest by a tested remap. Milestone: M9 (was M3; R-650). Compare: qualitative; the split statistical (rule 8). Tolerance: REQ-VAL-324 (calibration, R-71). Row PA-1 of principia_dd_replication.md § \"5.12 Targets that wait for a chart, a diagnostic or data\"; layer replication, tier B; closed by TASK-M9-24 (was TASK-M3-64) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\". R-669 (1 Nov 2026, RQ-596 (b)): N_scramble is REQ-VAL-343, defined and built by TASK-M9-24; the chart still waits on RQ-594. *Was (rq):* RQ-594, RQ-596. R-671 (2 Nov 2026, RQ-669 (ii)) reads the f64 runs of a task with no GPU run, and this task has no runs while RQ-594 is open: its row reads \"not scored\" with RQ-594 as what it waits on, with no record at (b). Once its task has run with no GPU run, its (a) part keeps its tier and reads \"not scored yet: needs a GPU run\" in M9's report, and the same statistic from the task's f64 runs is recorded beside it at (b), with its outcome and instrument stated. *Was (rq):* RQ-669. R-798 (5 Nov 2026, RQ-594 (a)): the chart is ShapeSphere at rest through a tested remap, no new chart type. *Was (rq):* RQ-594. *Was (verify):* \"the chart RQ-594 rules\"."
 - id: REQ-VAL-324
   area: VAL
   kind: calibration
@@ -41308,11 +41431,12 @@
   - R-654
   - R-670
   - R-710
+  - R-791
+  - R-792
   milestone: M9
   rq:
-  - RQ-693
-  - RQ-694
-  note: "R-654. Closed by TASK-M9-39. The range of ε is REQ-SYS-095's, a calibration (R-71). It waits on RQ-656, as its task does. *Was (the range):* \"a definition written by that task (R-72; physics reviewer approves)\"; statement *was:* \"in the range its definition states\". Verify *was:* \"and just outside it, NaN and ±∞ are refused with the typed reason\", with no negative ε and no ε = 0 (physics review 5730650164 of PR #375, P4; applied per R-369). R-670 (2 Nov 2026) closes RQ-656, and the wait on it ends; *was (rq):* RQ-656. It waits on RQ-693 (physics review 5771183527 of PR #408, F1), RQ-694 (F2; code review 5771184172, C2) and RQ-697 (physics review 5771573790 of PR #408, F8), as its task does. R-670's sentences in the statement and verify: code review 5771184172 of PR #408, C1; *was (statement):* it ended at \"NaN, ±∞ and negative ε staying refused.\"; *was (verify):* it ended at \"control: a header writer dropping ε fails\". R-710 (4 Nov 2026, RQ-697 (b)): the wait on RQ-697 ends."
+  - RQ-709
+  note: "R-654. Closed by TASK-M9-39. The range of ε is REQ-SYS-095's, a calibration (R-71). It waits on RQ-656, as its task does. *Was (the range):* \"a definition written by that task (R-72; physics reviewer approves)\"; statement *was:* \"in the range its definition states\". Verify *was:* \"and just outside it, NaN and ±∞ are refused with the typed reason\", with no negative ε and no ε = 0 (physics review 5730650164 of PR #375, P4; applied per R-369). R-670 (2 Nov 2026) closes RQ-656, and the wait on it ends; *was (rq):* RQ-656. It waits on RQ-693 (physics review 5771183527 of PR #408, F1), RQ-694 (F2; code review 5771184172, C2) and RQ-697 (physics review 5771573790 of PR #408, F8), as its task does. R-670's sentences in the statement and verify: code review 5771184172 of PR #408, C1; *was (statement):* it ended at \"NaN, ±∞ and negative ε staying refused.\"; *was (verify):* it ended at \"control: a header writer dropping ε fails\". R-710 (4 Nov 2026, RQ-697 (b)): the wait on RQ-697 ends. R-791 and R-792 (5 Nov 2026) rule RQ-693 and RQ-694, and the wait on them ends; *was (rq):* RQ-693, RQ-694. It waits on RQ-709, what the other axes that read U read at ε ≠ 0 (physics review 5805354224 of PR #430, F1), as its task does."
 - id: REQ-SYS-095
   area: SYS
   kind: calibration
@@ -41332,11 +41456,12 @@
   - R-654
   - R-670
   - R-710
+  - R-791
+  - R-792
   milestone: M9
   rq:
-  - RQ-693
-  - RQ-694
-  note: "R-654 gives ε's form and no bounds; the bounds change which runs are admitted, so they are values, not a definition (R-71; applied per R-369, code review 5730587922 of PR #375, C4). Closed by TASK-M9-39, a build task. Confirmed by the human with the M9 report if TASK-M9-39 has landed by then, otherwise in the next batch of calibrations after it lands, since the report does not wait on it. It waits on RQ-656, as its task does. R-670 (2 Nov 2026) closes RQ-656, and the wait on it ends; *was (rq):* RQ-656. It waits on RQ-693 (physics review 5771183527 of PR #408, F1), RQ-694 (F2; code review 5771184172, C2) and RQ-697 (physics review 5771573790 of PR #408, F8), as its task does. R-710 (4 Nov 2026, RQ-697 (b)): the wait on RQ-697 ends."
+  - RQ-709
+  note: "R-654 gives ε's form and no bounds; the bounds change which runs are admitted, so they are values, not a definition (R-71; applied per R-369, code review 5730587922 of PR #375, C4). Closed by TASK-M9-39, a build task. Confirmed by the human with the M9 report if TASK-M9-39 has landed by then, otherwise in the next batch of calibrations after it lands, since the report does not wait on it. It waits on RQ-656, as its task does. R-670 (2 Nov 2026) closes RQ-656, and the wait on it ends; *was (rq):* RQ-656. It waits on RQ-693 (physics review 5771183527 of PR #408, F1), RQ-694 (F2; code review 5771184172, C2) and RQ-697 (physics review 5771573790 of PR #408, F8), as its task does. R-710 (4 Nov 2026, RQ-697 (b)): the wait on RQ-697 ends. R-791 and R-792 (5 Nov 2026) rule RQ-693 and RQ-694, and the wait on them ends; *was (rq):* RQ-693, RQ-694. It waits on RQ-709, what the other axes that read U read at ε ≠ 0 (physics review 5805354224 of PR #430, F1), as its task does."
 - id: REQ-SYS-096
   area: SYS
   statement: "Dispatch must refuse a `SimUniforms` whose `g` or `m_total` is not 1, NaN and ±∞ included, with a typed reason, as it refuses `ε ≠ 0`: the kernel runs only at `G = 1` and `M = 1`, and a source in another `G` is converted at the import boundary, never carried to the kernel (R-668)."

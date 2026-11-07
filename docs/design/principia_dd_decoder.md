@@ -412,6 +412,10 @@ comparison on $\infty$.
 included, as a forbidding chart refuses it below: `η_E` never runs on a softened decode, so a pixel's IC does not depend
 on `ε`, and `ENERGY_INFEASIBLE` and `ENERGY_UNSCALABLE` keep their meaning.
 
+*5 Nov 2026 (R-791, closing RQ-693 (b)):* the $(L_z, E)$ chart forbids `Some(E*)`, so that refusal doesn't reach it.
+It runs at `ε ≠ 0`, and its $U$ is then §3.6's Newtonian $V_0$, not the softened form, so a pixel's IC doesn't depend on
+`ε` there either (`principia_chart_reference.md` §2.1).
+
 **Where it is allowed.** Only on charts that decode arbitrary momenta without enforcing an energy: the
 free-Jacobi-momentum chart and the latent chart. **It must be disabled** on the invariant-momentum charts
 $(L_z, E)$ and $(L_z, K)$, where energy is a chart coordinate or is fixed by the momentum construction.

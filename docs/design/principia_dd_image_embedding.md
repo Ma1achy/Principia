@@ -344,6 +344,11 @@ and the ramp window above the overlays and lines, if tier 2 often does not fit a
 the re-measure: TASK-M7-44 reports tier 2's own size and, at 64² and 128², whether tiers 1 and 2 fit for the default
 stain and for the fixture `tier2_typical_stain` (REQ-TOOL-174 names its contents), and RQ-386 returns to the human with those numbers. Meanwhile tier 2 is whole.
 
+*5 Nov 2026 (R-802, closing RQ-386 (c)):* the measurement decides, and the question no longer returns to the owner. Tier 2
+stays whole unless tiers 1 and 2 fail to fit at 64² or 128² for `tier2_typical_stain`. If they fail, it splits: tier 2a,
+the stain graph's built-ins, their parameters and the ramp window, above tier 2b, overlays, lines, the playhead and
+hover, and `f3_fill`, 2b dropping first. TASK-M7-44 measures, and builds the split if it is called for.
+
 **Config-only payload 596 B JSON → 382 B deflated. Full `frag.glsl` 11,367 B → 2,969 B.**
 
 | resolution | config only | config + full shader |
