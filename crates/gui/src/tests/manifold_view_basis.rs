@@ -430,7 +430,7 @@ fn check_two_axes(view: &View) {
 
 #[test]
 fn manifold_view_basis_a_frame_never_holds_one_axis_twice() {
-    // `q₂` wholly on `q₁`'s dominant axis, the first: `Y` on `q₁`, and a mirrored tie. The second axis is the first left.
+    // `q₂` wholly on `q₁`'s dominant axis, the first: `Y` on `q₁`, and a mirrored tie. `q₁` names the second axis.
     let misplaced = read(
         (
             mv::add(&axis(ALPHA, 2.0), 1.0, &axis(MU1, 1.0)),
@@ -438,7 +438,7 @@ fn manifold_view_basis_a_frame_never_holds_one_axis_twice() {
         ),
         SPLIT,
     );
-    check_dominant(&misplaced, (ALPHA, BETA), 5.8f64.sqrt());
+    check_dominant(&misplaced, (ALPHA, MU1), 5.0f64.sqrt());
     let tie = read(
         (
             mv::add(&axis(ALPHA, 2.0), 1.0, &axis(BETA, 1.0)),
@@ -490,6 +490,99 @@ fn manifold_view_basis_a_frame_never_holds_one_axis_twice() {
     ] {
         check_two_axes(&read(basis, SPLIT));
     }
+}
+
+/// Whether each of `view`'s axes holds something of `basis`: the chart names axes of the plane.
+fn names_its_plane((q1, q2): &(Latent, Latent), view: &View) -> bool {
+    let holds = |i: usize| q1[i] != 0.0 || q2[i] != 0.0;
+    holds(view.a) && holds(view.b)
+}
+
+/// Asserts `view` of `basis` holds two axes, each holding something of the basis.
+fn check_names_its_plane(basis: &(Latent, Latent), view: &View) {
+    check_two_axes(view);
+    assert!(names_its_plane(basis, view), "{basis:?}: {view:?}");
+}
+
+#[test]
+fn manifold_view_basis_q2_on_the_first_axis_leaves_q1_to_name_the_plane() {
+    let one_target = SliceFrame::along(Q3 as u32);
+    // Both signs of `q₂` read alike in the default frame: its sign decides nothing of the chart's name.
+    for (first, sign) in [(ALPHA, 1.0), (ALPHA, -1.0), (BETA, 1.0), (BETA, -1.0)] {
+        let basis = (
+            mv::add(&axis(first, 2.0), 1.0, &axis(MU1, 1.0)),
+            axis(first, sign),
+        );
+        let view = read(basis, one_target);
+        assert_eq!((view.a, view.b), (first, MU1), "{basis:?}");
+        check_names_its_plane(&basis, &view);
+        rejects("an axis the plane does not hold", || {
+            check_names_its_plane(&basis, &View { b: Q0, ..view })
+        });
+    }
+    // In a frame of two targets, on axes no preset names: likewise.
+    let basis = (
+        mv::add(&axis(BETA, 2.0), 1.0, &axis(MU2, 1.0)),
+        axis(BETA, 1.0),
+    );
+    assert_eq!(
+        (read(basis, SPLIT).a, read(basis, SPLIT).b),
+        (BETA, MU2),
+        "{basis:?}"
+    );
+    // Nothing off the axis on either vector, no plane and no preset the frame fits: only here the first axis left stands.
+    check_on(&read((axis(MU1, 2.0), axis(MU1, 1.0)), SPLIT), (MU1, ALPHA));
+}
+
+#[test]
+fn manifold_view_basis_every_spanning_basis_names_its_plane() {
+    // The frames: each basis's seeded one, any normal and targets, a target on an axis and `X = Y` among them, then
+    // `X = z_q3`, `Y = z_μ1`, and the default one target. The bases: few values, so ties and empty columns are common.
+    let values: [&[f64]; 3] = [
+        &[0.0, 0.0, 0.0, 0.5, -0.5, 1.0, -1.0, 2.0],
+        &[0.0, 0.0, 0.0, 0.0, 0.0, 1.0, -1.0, 0.25],
+        &[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.6],
+    ];
+    let (mut spanning, mut at_a_tilts_end) = (0, 0);
+    for set in values {
+        for (basis, seeded) in bases_from(50_000, |seed| set[(seed % set.len() as u64) as usize]) {
+            if mv::plane_s(&basis.0, &basis.1) < mv::PLANE_S_CUT {
+                continue;
+            }
+            for frame in [seeded, SPLIT, SliceFrame::along(Q3 as u32)] {
+                spanning += 1;
+                let view = read(basis, frame);
+                check_two_axes(&view);
+                // One class is outside the invariant, as on `main`: a preset whose axis holds nothing, the basis all on
+                // its targets there, reads that axis at a tilt of ±90°. Every reading that is no preset's is inside it.
+                if !names_its_plane(&basis, &view) {
+                    assert!(view.preset.is_some(), "{basis:?} {frame:?}: {view:?}");
+                    at_a_tilts_end += 1;
+                }
+            }
+        }
+    }
+    assert!(spanning > 300_000, "{spanning}");
+    assert!(
+        at_a_tilts_end * 100 < spanning,
+        "{at_a_tilts_end} of {spanning}"
+    );
+    let basis = (
+        mv::add(&axis(ALPHA, 2.0), 1.0, &axis(MU1, 1.0)),
+        axis(ALPHA, 1.0),
+    );
+    rejects(
+        "the fallback's first axis left, on a basis with a plane",
+        || {
+            check_names_its_plane(
+                &basis,
+                &View {
+                    b: BETA,
+                    ..read(basis, SliceFrame::along(Q3 as u32))
+                },
+            )
+        },
+    );
 }
 
 #[test]

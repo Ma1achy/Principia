@@ -585,7 +585,13 @@ impl View {
             (Some(p), PRESETS[p])
         } else {
             let a = dominant(q1);
-            (None, (a, dominant_off(q2, a)))
+            // `q₂` wholly on `a` leaves `q₁` to name the plane; with nothing there either, there is no plane to name.
+            let other = if (0..LATENT_DIM).any(|i| i != a && q2[i] != 0.0) {
+                q2
+            } else {
+                q1
+            };
+            (None, (a, dominant_off(other, a)))
         };
         Self::in_frame(found, a, b, hidden(a, b), q1, q2)
     }
