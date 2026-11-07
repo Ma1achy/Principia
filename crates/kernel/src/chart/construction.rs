@@ -1070,8 +1070,12 @@ where
         }
     }
 
-    /// Warped, where `t₀ + d < 0`: the coordinate clamped at `t = 0` (R-709).
-    fn held_at_floor(&self, shift: &Shift<f64>) -> bool {
-        self.mapping == Mapping::Warped && self.t0::<f64>() + shifted(0.0, HELD_K, shift) < 0.0
+    /// Warped, where `t₀ + d < 0` at `R`: the coordinate [`HeldK::warped_k`] clamps at `t = 0` (R-709).
+    fn held_at_floor<R>(&self, shift: &Shift<R>) -> bool
+    where
+        R: LinkReal + PayloadReal + From<P>,
+    {
+        self.mapping == Mapping::Warped
+            && self.t0::<R>() + shifted(R::zero(), HELD_K, shift) < R::zero()
     }
 }

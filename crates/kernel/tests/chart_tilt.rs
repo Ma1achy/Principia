@@ -4010,6 +4010,77 @@ negative_control!(
     }
 );
 
+/// Whether the decode's momenta are all zero, the rest start a clamp at `t = 0` gives.
+fn at_rest<R: Float + PayloadReal>(d: &Decoded<R>) -> bool {
+    d.ic.p.iter().flatten().all(|&x| x == R::zero())
+}
+
+/// The held-at-floor flag is the decode's, at that decode's precision. At this pixel the f32 placement takes `t₀ + d` below
+/// 0, so the f32 decode clamps to the rest start, and the f64 placement leaves it above, so the f64 decode doesn't: each
+/// is flagged as it clamps, along the floats about the flip. `wide` reads the f64 flag for the f32 decode (the control).
+fn check_floor_own_precision(wide: bool) {
+    let chart = HeldK::new(
+        BurrauThetaLz::<f32> {
+            theta_range: [0.2, std::f32::consts::FRAC_PI_4],
+            k: 0.1,
+            lz_fraction: 1.0,
+        },
+        1.0,
+        1.0,
+    );
+    let tilt = Tilt::new(
+        &spec(10.0, 0.0, TiltMap::Sheet, HELD_K, HELD_K),
+        [0.5, 0.5],
+        [1.5, 1.5],
+    );
+    let view = Tilted::new(chart, tilt_at!(f32, tilt)).expect("a hidden target");
+    let (u, v) = (0.11608197_f32, 0.5_f32);
+    let (wu, wv) = (f64::from(u), f64::from(v));
+    assert_eq!(wu, 0.11608196794986725, "the reported pixel");
+    let (_, own) = view.at::<f32>(u, v);
+    assert!(0.1 + own.expect("tilted").dx < 0.0, "t₀ + d at f32");
+    let (_, shift) = view.at::<f64>(wu, wv);
+    assert!(
+        f64::from(0.1_f32) + shift.expect("tilted").dx > 0.0,
+        "t₀ + d at f64"
+    );
+    assert_eq!(view.validate(wu, wv), ValidationResult::Valid);
+    assert!(at_rest(&view.decode::<Defaults, f32>(u, v)));
+    assert!(!at_rest(&view.decode::<Defaults, f64>(wu, wv)));
+    assert!(!view.held_at_floor(wu, wv), "the f64 decode isn't clamped");
+    let flag = |x: f32| {
+        if wide {
+            view.held_at_floor(f64::from(x), f64::from(v))
+        } else {
+            view.held_at_floor(x, v)
+        }
+    };
+    assert!(flag(u), "a pixel the f32 decode clamps is not flagged");
+    let (mut flagged, mut clear) = (0, 0);
+    for s in 0..129u32 {
+        let x = f32::from_bits(u.to_bits() + s - 64);
+        let clamped = at_rest(&view.decode::<Defaults, f32>(x, v));
+        assert_eq!(flag(x), clamped, "the flag and the f32 decode at {x}");
+        flagged += u32::from(clamped);
+        clear += u32::from(!clamped);
+    }
+    assert!(flagged > 0 && clear > 0, "the walk crosses the clamp");
+}
+
+#[test]
+fn tilt_every_chart_construction_floor_own_precision() {
+    check_floor_own_precision(false);
+}
+
+negative_control!(
+    tilt_every_chart_construction_floor_own_precision,
+    "the flag read at f64 misses the pixel the f32 decode clamps, so it must fail",
+    expected = "a pixel the f32 decode clamps is not flagged",
+    {
+        check_floor_own_precision(true);
+    }
+);
+
 /// Each chart's `refusal_own` reads every placed coordinate at f32: the shape at both ends of the domain, the top of the
 /// fold included, the vertical axis below 0 on the held-`L_z` charts, and a placed point inside still a system. `blind`
 /// reads a check of the held pair alone (the control).

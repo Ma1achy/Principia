@@ -37,6 +37,9 @@
 //! value in its own [`Tiltable::decode_shifted`]: the path is this one. A cell whose tilted physical value leaves no
 //! system is refused ([`Tiltable::refusal`]): the view's `validate` rejects it and its area weight is 0
 //! ([`Tilted::weight`]). A held energy clamped at its floor is a system, and flagged ([`Tilted::held_at_floor`], R-709).
+//! What is said of a pixel's decode is said at that decode's precision: the flag at the decode's own, and a refusal at
+//! f64 and at the chart's own, [`Tilted::weight`] and [`Chart::validate_params`] reading both. Only [`Tilted::pixel`]'s
+//! count stays at f64: it counts the view's pixels, not a decode's output.
 //! Slicing sets a hidden coordinate's value at the centre ([`Hidden::sliced`], T6); on these charts every value of a
 //! latent control is a system, so no slice reaches an edge.
 //!
@@ -717,9 +720,13 @@ pub trait Tiltable: Hidden {
         None
     }
 
-    /// Whether `shift` takes a held energy's warp coordinate below `t = 0`, so that it is clamped at its floor (R-709);
-    /// false on every chart but a warped held `K`.
-    fn held_at_floor(&self, _shift: &Shift<f64>) -> bool {
+    /// Whether `shift` takes a held energy's warp coordinate below `t = 0`, so that it is clamped at its floor (R-709),
+    /// read at `R`, the decode's own precision, so that it answers as [`Tiltable::decode_shifted`] clamps; false on every
+    /// chart but a warped held `K`.
+    fn held_at_floor<R>(&self, _shift: &Shift<R>) -> bool
+    where
+        R: LinkReal + PayloadReal + From<Self::Param>,
+    {
         false
     }
 }
@@ -917,11 +924,18 @@ where
 
     /// Whether the pixel at `(u, v)` is a system whose held energy is clamped at its floor, "held at floor" in the
     /// Inspector and the sidecar (R-709): a clamped offset alone is no pixel to flag past the chart's edge, which no
-    /// system draws.
-    pub fn held_at_floor(&self, u: f64, v: f64) -> bool {
+    /// system draws. The pixel comes in the type it was decoded at: `R` places it and reads the clamp, as
+    /// [`Chart::decode_params`] does, so the flag is that decode's, the f32 and f64 decodes of one pixel able to clamp
+    /// differently. [`Chart::validate`] at the defaults is exact here: the only chart that flags, a warped held `K`,
+    /// reads no link.
+    pub fn held_at_floor<R>(&self, u: R, v: R) -> bool
+    where
+        R: LinkReal + PayloadReal + From<P>,
+        f64: From<R>,
+    {
         let (_, shift) = self.at(u, v);
         shift.is_some_and(|s| self.chart.held_at_floor(&s))
-            && self.validate(u, v) == ValidationResult::Valid
+            && self.validate(f64::from(u), f64::from(v)) == ValidationResult::Valid
     }
 }
 
