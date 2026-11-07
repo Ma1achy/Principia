@@ -344,8 +344,11 @@ Polar and log are general options, so they apply to any pair, and a polar view o
 - **Momentum.** At fixed configuration and masses, `{p : L_z = L*, K = K*}` is generically 2-dimensional
   (inverse_encode_contract Part 5, kind 3). It is `v = v^(L) + a·w`, `a` fixed and `w` a unit vector in the 3-space
   orthogonal to `Jr` in `⟨·,·⟩_m`: a 2-sphere, and §2.2's seeded direction is one point on it. The map sweeps `w`.
-- **Mass.** `(√m₀, √m₁, √m₂)` is a unit vector, so the simplex is an octant of a 2-sphere. The map sweeps it, every
-  pixel's masses positive and summing to 1 by construction.
+- **Mass.** `(√m₀, √m₁, √m₂)` is a unit vector, so the simplex is an octant of a 2-sphere. The map runs on the sphere, and
+  chart_reference §3.3 stops it only at `r = π`, so it leaves the octant: from equal masses at `r` between 0.6155 and 0.9553.
+  A pixel with any component `≤ 0` is the domain's end, blank, out of the count and the total. `mᵢ = nᵢ²` is read only inside,
+  where the chart is one-to-one, since `r < π`; read outside it would fold 8 sphere points onto one mass set. At an edge or
+  corner the rule is the mass simplex's: validation layer 2's narrowed simplex, buffered `mᵢ ≥ ε_m`.
 
 Each is a definition under physics review, closed by TASK-M8-101 (R-72). Neither is a new chart type: each is
 `ExpMap<Target>`, the shape sphere's being `ExpMap<Shape>`, its bits unchanged.
@@ -508,6 +511,7 @@ the same quantity (refused, § 6.1), coupled by a map (the pair is legal, and it
 | 20 | Body 2's speed or heading, `‖p_λ‖` or `∠p_λ`; `γ_ρ`, `∠p_ρ`; `h`, `K_dil`; `K_rot`, `L_z`; `v₂/v_esc`, `‖p_λ‖` at a frozen shape | aliases | refused |
 | 21 | `h` and `L_z` under hold `E` | `r` and `Jr` are orthogonal, so independent, but `K_dil + K_rot ≤ K` | feasible region, tagged, as row 3 |
 | 22 | Polar angles about the COM at a collinear shape | a line of shapes on one point | `ray-degenerate`, a seam |
+| 23 | The mass sphere's octant edge | `Σ mᵢ = 1` with every `mᵢ > 0`, so `√m` stays in one octant while the map runs on the sphere | not a product domain: a pixel with a component `≤ 0` is blank, out of the count and the total (§ 5.2); at the edge, the mass simplex's narrowed simplex, buffered `mᵢ ≥ ε_m` |
 
 ---
 

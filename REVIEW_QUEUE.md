@@ -850,7 +850,7 @@ owner: yes, it is physics; the tilt changes which systems the chart shows.*
   - the owner's order, item 4: "hold Lz fixed on any chart, alongside energy normalisation, with the same refusal rules where Lz is itself an axis".
   - `decisions.md` § R-720: "The held `L_z` of `(ν, K)`, `Φ_θ,K` and `Φ_strip,K` moves by value", and "The same rule governs slicing the held L_z as well as tilting it."
   - RQ-701 (open, queue): "Whether and how a `MixedEnergy` chart's held `L_z` or `K` tilts and slices".
-  - PR #422, physics review 5803342655, the note this entry follows; script `orch/scratch/422-physics/hold.py`.
+  - PR #422, physics review 5803342655, the note this entry follows; script `docs/incoming/2026-11-06_chart_composition/checks/hold.py`.
 - **The silence:** no corpus text says how the two projections compose, what their outcomes are, or what a tilt does to a held `L*` outside R-720's three charts.
 - **Options:**
   - (a) **Recommended, amended per the physics review.** Design § 5.3: hold `L_z` adds the rigid rotation; with both held, the scale takes only the part orthogonal to it, `η = √((E* − U − L*²/2I)/K_δ)`, the unique nearest point of the fibre, closed form, and the corpus's own decomposition; off, bitwise today's. Conditions: `K_δ` computed from `δv`, with the second projection (F1, F2), the outcome order (F3) and encode's held decode (F7) written as definitions before the build task (REQ-CHART-108 to REQ-CHART-110); by value inside a chart that holds `L_z` by construction, and no tilt target on a free chart (F4); the wider `ray-degenerate` rank loss (F5); RQ-722 put to the owner (F6).
