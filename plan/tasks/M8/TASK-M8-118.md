@@ -23,7 +23,7 @@ The new constraint, the twin of `η_E`: a uniform, off by default and bitwise to
 - `crates/kernel/src/decode/energy_norm.rs`, or its neighbour: the projection.
 - `crates/kernel/src/stage/decode.rs`: the uniform's switch and value.
 - `crates/engine/src/chart_validate.rs`: `forbids_lz_hold`, its refusals.
-- `crates/engine/src/lookup.rs`: encode under a hold, Part 6's step 4 on the held decode, and the stated outcome for a state off `{L_z = L*}`. This task is that code's only home: TASK-M4-32 closes REQ-CHART-110 as a document change.
+- Encode under a hold. `crates/kernel/src/encode/by_kind.rs`, `encode_into_within_params`: Part 6's step 4, reading the held decode, with the hold's values reaching it. `crates/engine/src/lookup.rs`: passes those values in, and its own decodes, the re-encode and layer 3, read the held decode too. Where the stated outcome for a state off `{L_z = L*}` lives follows REQ-CHART-110's definition. This task is that code's only home: TASK-M4-32 closes REQ-CHART-110 as a document change.
 - Under RQ-715's option (i): `kernel::decode::invariant::rigid`, the bench `hold-rigid-tau`, and the calibration proposal for `τ` (REQ-CHART-126).
 - Under RQ-715's option (i): `crates/engine/tests/hold_cross_backend.rs`, package `engine`, with the tests `hold_outcomes_cross_backend`, `hold_outcomes`' GPU arm, and `hold_rigid_tau_tags`, the bench's lavapipe leg; a step running that binary in both the `gpu-metal suites` and `gpu-lavapipe suites` jobs of `.github/workflows/ci.yml`, since those jobs run only the selectors named in their steps; and its entries in `.config/nextest.toml`, as `engine::decode_cross_backend` has.
 
