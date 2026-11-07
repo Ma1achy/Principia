@@ -166,7 +166,7 @@ The second run, 20:15 to 20:30 UTC, had the screen unlocked, checked before each
 
 | Cell, Safari 27.0.1 | Worker layout | Main layout |
 |---|---|---|
-| Where egui ran | a Web Worker on an OffscreenCanvas, no fallback: the panel's `layout` "worker", `fallback_reason` null | eframe's web runner on the main thread, as asked: the panel's `layout` "main" |
+| Where egui ran | a Web Worker on an OffscreenCanvas, no fallback: the panel's `layout` "worker", `fallback_reason` null; the "mock engine" tag on screen | eframe's web runner on the main thread, as asked: the panel's `layout` "main"; the "mock engine" tag on screen |
 | Service worker active, first and second load | `crossOriginIsolated` true; `SharedArrayBuffer` exists; wasm threads "ok" | the same |
 | Unregistered, the same document | `unregister()` resolved true and `getRegistrations()` read empty; still isolated, `SharedArrayBuffer` exists, threads "ok" | the same |
 | Unregistered, then reloaded | the page registered `coi-serviceworker.js` again; isolated, threads "ok" | the same |
@@ -174,7 +174,7 @@ The second run, 20:15 to 20:30 UTC, had the screen unlocked, checked before each
 
 Never registered: Safari's WebDriver has no preload script (asked for WebDriver BiDi, it returned no socket), so nothing can stop the skeleton's page registering the service worker as it loads. The reading is therefore taken on the site's own 404 page, `https://ma1achy.github.io/Principia/never-registered-arm`, in a fresh session. That page is the same origin, has no `coi-serviceworker` script, and showed no registration and no controller. The probe is the loader's procedure, run there by script. The app does not run on that page, so where egui runs without isolation is not observed in Safari. In Chrome, both layouts ran without it.
 
-The controller and the registration both read `https://ma1achy.github.io/Principia/coi-serviceworker.js`, the site's own origin.
+The controller and the registration both read `https://ma1achy.github.io/Principia/coi-serviceworker.js`, the site's own origin. The "mock engine" tag was seen in both layouts in two ways: in the footer of every screenshot the text run took, and in the page title, "principia · dev — mock engine", read on every load of the COOP/COEP run.
 
 *Text input and the clipboard, Safari 27.0.1.* The console's filter field, the page opened with `?measure`. Keys and text go in through WebDriver actions; each result is read back through Cmd+A, Cmd+C and `pbpaste`, with the page's events logged. The run was taken twice, alike. The cells hold in both layouts, through the same mechanisms as in Chrome: in the worker layout the hidden `<input id="ime">` and messages to the worker, in the main layout eframe's text agent.
 
@@ -182,7 +182,7 @@ The controller and the registration both read `https://ma1achy.github.io/Princip
 |---|---|---|---|
 | ASCII typing, "Abc xyz 123 ~!" | works: `input` events on the hidden input | works: `input` events on the agent | none |
 | Non-ASCII, "é ß Ω 日本" | works | works | none |
-| Copy and cut out, to the pasteboard | works: a `copy` or `cut` event, then `navigator.clipboard.writeText`, which resolved | works, the same | none observed: each `writeText` resolved |
+| Copy and cut out, to the pasteboard | works: a `copy` or `cut` event, then `navigator.clipboard.writeText`, which resolved; after the cut, the field's emptying was seen in the run's screenshot (its "Filter…" placeholder), since the read-back of an empty field copies nothing | works, the same, the emptied field seen the same way | none observed: each `writeText` resolved |
 | Paste in, text the field itself had copied | works: Cmd+V, then a `paste` event on the input, then the text | works: a `paste` event on the agent | none: `readText` was never called |
 | An IME composition | pending (the human's) | pending (the human's) | |
 | A paste from another application | pending (the human's) | pending (the human's) | |
@@ -198,7 +198,9 @@ The controller and the registration both read `https://ma1achy.github.io/Princip
 | Safari 27.0.1 | main | 1440 × 848 | pan | 59.95 | 1800 | 60.00 capped | 53.42 | 2.36 | 3.48 | 0.11 | 3.36 |
 | Safari 27.0.1 | main | 1440 × 848 | idle | 59.95 | 1800 | 60.00 capped | 53.76 | 2.13 | 3.22 | 0.10 | 3.10 |
 
-The worker's two means are not marked capped. They are 2.19% and 2.24% above the main thread's measured rate, just past the 2%: the worker's `requestAnimationFrame` presented 38 and 41 frames more in the window than the main thread's rate allows. The cause is not traced. The table keeps the report's marks as they stand. The worker's work time is about a third of the main layout's in Safari, where in Chrome the two layouts were alike.
+The worker's two means are not marked capped. Each is measured against that row's own refresh rate, taken on the main thread before the run: 61.267 against 59.952 Hz on the pan and 61.367 against 60.024 Hz idle. That is 2.19% and 2.24% above, just past the 2%. The rounded figures printed in the table give 2.20% for the pan. The worker's `requestAnimationFrame` counted about 39 and 40 frames more in the window than that row's measured rate allows (1838 − 59.952 × 30 and 1841 − 60.024 × 30). Those are callbacks that did work; whether each was presented is not observed. The cause is not traced, and the table keeps the report's marks as they stand.
+
+The worker layout's work time, as a ratio of the main layout's, is 0.36 on the pan and 0.39 idle for the mean, and 0.29 and 0.45 for the p95. In Chrome the two layouts were alike. The comparison is across unlike runs: the Safari rows ran with a `cargo mutants` job in the build queue, at load1 4.53 to 5.82, and on a larger app area, 1440 × 848 pt; the Chrome rows ran with the queue empty, at 1212 × 813 pt.
 
 Still pending (the human's), until the M8 gate: an IME composition and a paste from another application, in each Safari layout run.
 
