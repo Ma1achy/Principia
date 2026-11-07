@@ -2,7 +2,8 @@
 //! dominant axes' frame, the preset's test counting those components, `σ` read whole; and a zoom edit scales the stored
 //! basis, so the plane stays where it is. A view the map gives reads as it did at every `γ`, a mirrored basis whose swapped
 //! order reads it back being one of them, and so does a basis with each target on its own vector as typed: a component
-//! counts only on the wrong vector both as typed and turned back. Each check is also run on an input it must reject, through [`rejects`] (gui has no route to
+//! counts only on the wrong vector as typed, on a reading that does not give the basis back, whichever way round the
+//! axes lie. Each check is also run on an input it must reject, through [`rejects`] (gui has no route to
 //! `negative_control!`, `support`'s note).
 
 use engine::contract::set_field::{Edit, SetField, SimField};
@@ -177,8 +178,8 @@ fn manifold_view_basis_only_past_the_noise_is_a_component_counted() {
 }
 
 #[test]
-fn manifold_view_basis_a_small_component_is_noise_as_typed_though_not_turned_back() {
-    // Each target on its own vector as typed, sheared so that turned back both are on the other's: a preset's reading.
+fn manifold_view_basis_a_small_component_is_noise_on_a_reading_that_gives_nothing_back() {
+    // Each target on its own vector as typed, sheared so that no reading gives it back: a preset's reading.
     let (q1, q2) = (
         mv::add(&axis(Q0, 0.6), 0.8, &axis(Q3, 1.0)),
         mv::add(&axis(Q0, 0.8), 0.6, &axis(MU1, 1.0)),
@@ -275,6 +276,55 @@ fn manifold_view_basis_a_tilted_pair_no_preset_names_is_counted_too() {
     assert_eq!((view.preset, view.a, view.b), (None, Q0, MU2));
     check_near(view.tau1, 0.8f64.atan2(0.6), "τ₁");
     check_near(view.scale, 1.0, "σ");
+}
+
+/// The latent dimensions no frame here takes.
+const OFF_TARGETS: [usize; 6] = [ALPHA, BETA, Q0, 3, 4, MU2];
+
+#[test]
+fn manifold_view_basis_every_pair_either_way_round_is_decided_by_the_basis() {
+    let reads = |q1: Latent, q2: Latent| read((q1, q2), SPLIT);
+    let mut pairs = 0;
+    for p in OFF_TARGETS {
+        for r in OFF_TARGETS.into_iter().filter(|&r| r != p) {
+            for sign in [1.0, -1.0] {
+                // `Y` on `q₁`: the sort lands on either determinant, and no reading gives this one back.
+                let q1 = mv::add(&axis(p, sign * 0.3), 0.4, &axis(MU1, 1.0));
+                check_dominant(&reads(q1, axis(r, 1.0)), (MU1, r), 0.5);
+                // `X` on `q₂`.
+                let q2 = mv::add(&axis(r, sign * 0.3), 0.4, &axis(Q3, 1.0));
+                check_dominant(&reads(axis(p, 1.0), q2), (p, Q3), 1.0);
+                pairs += 1;
+            }
+        }
+    }
+    assert_eq!(pairs, 60);
+    // The positive determinant in its typed order that the sort makes negative.
+    let q1 = mv::add(&axis(BETA, 0.6), 0.8, &axis(MU1, 1.0));
+    let view = reads(q1, axis(ALPHA, 1.0));
+    check_dominant(&view, (MU1, ALPHA), 1.0);
+    rejects(
+        "the sorted pair, Y on its own vector turned by −90°",
+        || {
+            check_dominant(
+                &View {
+                    a: ALPHA,
+                    b: BETA,
+                    ..view
+                },
+                (MU1, ALPHA),
+                1.0,
+            )
+        },
+    );
+    // A view the map gives with the axes that way round, `Y` on `q₁` as typed at γ = −90°: it reads back, so it stays.
+    let q1 = mv::add(&axis(BETA, -0.6), 0.8, &axis(MU1, 1.0));
+    let exact = reads(q1, axis(ALPHA, 1.0));
+    assert_eq!((exact.preset, exact.a, exact.b), (Some(0), ALPHA, BETA));
+    check_near(exact.gamma, -std::f64::consts::FRAC_PI_2, "γ");
+    // Half its length, it gives nothing back, and reads its dominant axes.
+    let half = reads(q1.map(|c| c / 2.0), axis(ALPHA, 1.0));
+    check_dominant(&half, (MU1, ALPHA), 0.5);
 }
 
 #[test]

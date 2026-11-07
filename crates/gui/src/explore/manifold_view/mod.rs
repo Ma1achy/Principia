@@ -327,20 +327,28 @@ pub fn axis_pair(q1: &Latent, q2: &Latent) -> Option<(usize, usize)> {
 /// other way round count as reading it back (R-459 G3); that is not the only case in which they are swapped.
 const READS_BACK: f64 = 1e-18;
 
+/// What `view`'s basis leaves of `q1`, `q2` on the components `counted`: the sum of the squared differences.
+fn lost(view: &View, q1: &Latent, q2: &Latent, counted: &dyn Fn(usize) -> bool) -> f64 {
+    let (p1, p2) = view.basis();
+    (0..LATENT_DIM)
+        .filter(|&k| counted(k))
+        .map(|k| (p1[k] - q1[k]).powi(2) + (p2[k] - q2[k]).powi(2))
+        .sum()
+}
+
 /// The axes of a basis tilted within `frame`'s targets on axes no preset names, as H and V can pick them: the two axes
 /// the basis has anything on off the targets, `i < j`. How large a component is says nothing here: at `τ = ±90°` the
 /// kept axis's is `cos 90° ≈ 6e-17`, and it is what still names the axis, [`View::basis`] leaving every other component
 /// exactly 0. `None` where the basis has any other number of axes off the targets, or no plane on the two.
 ///
-/// A positive determinant (`σ² cos τ₁ cos τ₂` whatever `γ`) is `(i, j)`, unless a target is on the wrong vector for that
-/// pair, `misplaced` (R-705): then it is no tilt of it, and `None`. A negative one is `(j, i)` where that order reads the
-/// basis back: a view the map gives, a pair picked the other way round, kept to the ends of its range (R-459 G3), a typed
-/// component's sign saying nothing of H and V. A mirrored basis neither order reads back is outside the map's image. With
-/// a target misplaced on `(i, j)` it is `None`, as at a positive determinant. Otherwise some reading of it loses
-/// something: `(j, i)` only if it keeps more of the tilt, the components on the targets, and else `(i, j)`. Only that last
-/// case reads alike on both sides of a component passing through 0. Where a swap is taken, axes, angles and scale jump
-/// there. With `X = z_q3`, `Y = z_μ1`, `q₁ = ε e_α + 0.8 e_μ1`, `q₂ = e_β`, `ε = −0.6` reads back, `(z_β, z_α)`, and either
-/// side of it, up to `|ε| = 0.8`, reads its dominant axes `(z_μ1, z_β)`. `read` is [`View::framed`]'s reading on an order.
+/// `misplaced` decides by the basis, whichever order `i < j` lands on (R-705). A positive determinant (`σ² cos τ₁ cos τ₂`
+/// whatever `γ`) is `(i, j)` unless a target is misplaced: then `None`. A negative one is `(j, i)` where that order reads
+/// the basis back: a view the map gives, a pair picked the other way round, kept to the ends of its range (R-459 G3), a
+/// typed component's sign saying nothing of H and V. Any other mirrored basis is outside the map's image: `None` with a
+/// target misplaced, so the dominant axes read. With none, it stays `(i, j)` unless `(j, i)` would keep more of the
+/// tilt, the components on the targets, and then `None` as well: H and V are the dominant axes (R-459 G3). With
+/// `X = z_q3`, `Y = z_μ1`, `q₁ = ε e_α + 0.8 e_μ1`, `q₂ = e_β`, `ε = −0.6` reads back, `(z_β, z_α)`, and either side of it,
+/// up to `|ε| = 0.8`, reads its dominant axes `(z_μ1, z_β)`. `read` is [`View::framed`]'s reading on an order.
 fn tilted_axes(
     q1: &Latent,
     q2: &Latent,
@@ -362,22 +370,12 @@ fn tilted_axes(
     if turn == 0.0 {
         return None;
     }
-    let lost = |(a, b): (usize, usize), counted: &dyn Fn(usize) -> bool| -> f64 {
-        let (p1, p2) = read(a, b).basis();
-        (0..LATENT_DIM)
-            .filter(|&k| counted(k))
-            .map(|k| (p1[k] - q1[k]).powi(2) + (p2[k] - q2[k]).powi(2))
-            .sum()
-    };
-    let reads_back = lost((j, i), &|_| true) <= READS_BACK * (dot(q1, q1) + dot(q2, q2));
-    let keeps_more = lost((j, i), &on_target) < lost((i, j), &on_target);
-    if reads_back {
+    let swapped = read(j, i);
+    if lost(&swapped, q1, q2, &|_| true) <= READS_BACK * (dot(q1, q1) + dot(q2, q2)) {
         return Some((j, i));
     }
-    if misplaced(i, j) {
-        return None;
-    }
-    Some(if keeps_more { (j, i) } else { (i, j) })
+    let keeps_more = lost(&swapped, q1, q2, &on_target) < lost(&read(i, j), q1, q2, &on_target);
+    (!misplaced(i, j) && !keeps_more).then_some((i, j))
 }
 
 /// The rotation `γ` of `q1`, `q2` as the axes `(a, b)` read it, and the two turned back by it: `(γ, σ u₁, σ u₂)` for a
@@ -446,10 +444,10 @@ impl View {
     /// components at the floating point's noise, and failing that its dominant axes' frame.
     ///
     /// With `X ≠ Y` a reading on axes also needs each target on its own vector: `Y` on `q₁` or `X` on `q₂` is no tilt of
-    /// the plane, as typed and still once turned back by `γ`, a turned view having both as typed (R-705). Past the floating
-    /// point's noise such a basis reads in its dominant axes' frame, whatever the sign of its determinant. A mirrored basis
-    /// whose swapped order reads it back exactly is not such a basis: it is in the map's image, its targets on their own
-    /// vectors on that order, and `tilted_axes` keeps it there.
+    /// the plane, past the floating point's noise, unless that reading gives the basis back, as a turned view's does,
+    /// having both as typed (R-705). Such a basis reads in its dominant axes' frame, whatever the sign of its determinant and
+    /// whichever way round its axes lie. A mirrored basis whose swapped order reads it back is no such basis: it is in the
+    /// map's image, and `tilted_axes` keeps it there.
     pub fn framed(plane: &Plane, frame: Option<&SliceFrame>) -> Self {
         let (q1, q2) = (&plane.q1, &plane.q2);
         let total = dot(q1, q1) + dot(q2, q2);
@@ -472,14 +470,19 @@ impl View {
                 .filter(|i| ![a, b, x, y].contains(i))
                 .all(|i| q1[i] == 0.0 && q2[i] == 0.0)
         };
-        // `Y` on `q₁` or `X` on `q₂`, past the noise, as typed and turned back. With one target there is no wrong vector:
-        // both tilt into it.
+        // `Y` on `q₁` or `X` on `q₂`, past the noise, that the reading on `(a, b)` does not give back. With one target there
+        // is no wrong vector: both tilt into it.
         let misplaced = |a: usize, b: usize| -> bool {
-            let [_, x, y] = hidden(a, b);
-            let (_, u1, u2) = turned_back(a, b, q1, q2);
-            let typed = q1[y] * q1[y] + q2[x] * q2[x];
-            let turned = u1[y] * u1[y] + u2[x] * u2[x];
-            x != y && typed.min(turned) > READS_BACK * total
+            let [d, x, y] = hidden(a, b);
+            let cut = READS_BACK * total;
+            x != y
+                && q1[y] * q1[y] + q2[x] * q2[x] > cut
+                && lost(
+                    &Self::in_frame(None, a, b, [d, x, y], q1, q2),
+                    q1,
+                    q2,
+                    &|_| true,
+                ) > cut
         };
         if let Some((a, b)) = axis_pair(q1, q2) {
             let preset = PRESETS.iter().position(|&p| p == (a, b));
