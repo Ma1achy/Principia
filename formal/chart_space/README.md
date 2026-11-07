@@ -1,10 +1,16 @@
 # The chart-space model in Lean 4
 
 A machine-checked formalisation of `chart-space-model.md` (7 Nov 2026, held outside the repository at
-`orch/charts/`), by the owner's order of 7 Nov 2026: Theorems 1, 2, 4, 5, 6, 7, 8 and 9, over
-`Z = EuclideanSpace ℝ (Fin 8)` and the compact square `U = [-1,1]^2`, with `D : Z → Sys` for an abstract topological
-space `Sys`, assumed continuous, and total because it is a function. Floating point (§8) is out of it, and so is
-Theorem 3.
+`orch/charts/`), by the owner's orders of 7 Nov 2026: Theorems 1, 2, 4 to 11, over `Z = EuclideanSpace ℝ (Fin 8)` and
+the compact square `U = [-1,1]^2`, with `D : Z → Sys` for an abstract topological space `Sys`, assumed continuous, and
+total because it is a function. Floating point (§8) is out of it, and so is Theorem 3.
+
+The model was revised the same day (its §0, after the owner's ruling on RQ-736): charts map into the signed per-block
+state space `S` (masses on the simplex, configuration on the shape sphere, momenta in `R^4`), and paths blend block by
+block. The proofs over `Z` stand, as ordered. `ChartSpace/Signed.lean` adds the §0 form where it changes a theorem:
+Theorem 1 over `S`, and Theorems 7 and 8 for charts into any space. Corollary 1 is withdrawn by §0.4 and isn't proved.
+**Theorem 2 now describes a family, not Principia's tilt**: §0.2 makes affine tilt R-474's lean-each-axis map, tested
+against its own formula, so what is proved of Theorem 2 here is a property of the latent-plane rotation family only.
 
 This directory is outside the Rust workspace. It is a measurement of the model, not a contract: nothing in Principia
 builds on it, and its workflow is never a required check.
@@ -26,12 +32,15 @@ theorem listed in `ChartSpace/Axioms.lean` depending on an axiom beyond `propext
 | File | Document | Contents |
 |---|---|---|
 | `ChartSpace/Basic.lean` | §1 | `Z`, `U`, `Chart`, `EditPath` (Mathlib's `Homotopy`), `frame`, affine charts |
-| `ChartSpace/Morph.lean` | §2 | Theorem 1, Corollary 1, charts with seams |
+| `ChartSpace/Morph.lean` | §2 | Theorem 1, charts with seams |
 | `ChartSpace/Ops.lean` | §3 | slice, pan, zoom; what is and isn't well defined |
 | `ChartSpace/Tilt.lean` | §2, §3 | the rotation, area, Theorem 2 and its negative parts |
 | `ChartSpace/Compose.lean` | §4 | Theorems 4 and 5, Sequences, the Corollary |
 | `ChartSpace/Lock.lean` | §5 | lock state, snap-back, Theorems 6, 7 and 8 |
 | `ChartSpace/TimeAxis.lean` | §6 | Theorem 9 |
+| `ChartSpace/Signed.lean` | §0 | Theorem 1 over `S`, block-wise paths, the antipodal case; Theorems 7, 8 in any space |
+| `ChartSpace/Composed.lean` | §3b | Theorem 10, the per-axis morph |
+| `ChartSpace/Flow.lean` | §6b | Theorem 11, the gauge's invariants |
 | `ChartSpace/Axioms.lean` | | `#check_axioms` on every main theorem; not part of the library |
 
 ## Result
@@ -39,8 +48,11 @@ theorem listed in `ChartSpace/Axioms.lean` depending on an axiom beyond `propext
 | Document | Status | Lean |
 |---|---|---|
 | Theorem 1 | proved as stated | `theorem1` |
-| Corollary 1 | proved; `D` is a function, so it has no further content | `corollary1` |
-| Theorem 2, area and rank | proved as stated | `theorem2_tilt` |
+| Theorem 1, §0.1 form: `S` and its charts path-connected | proved as stated | `theorem1_signed`, `theorem1_general` |
+| Theorem 1, §0.1 form: block by block, geodesic on the sphere | proved with A8 (no antipodal pixel); false without it (F11) | `blockPath`, `sphere_blend_jumps` |
+| Theorem 1, §0.1 form: the antipodal case | the chord vanishes; a great-circle path exists for each choice of a normal | `antipodal_chord`, `antipodal_halfCircle` |
+| Corollary 1 | withdrawn by §0.4; not proved | |
+| Theorem 2, area and rank | proved as stated, of the latent-plane rotation family, which §0.2 says isn't Principia's tilt | `theorem2_tilt` |
 | Theorem 2, "is the geodesic" | proved for §3's family; as a statement about planes it needs A5 | `theorem2_tilt`, `tilt_constant_speed`, F3 |
 | Theorem 2, swapped axes | the computation is proved as stated; the pair isn't a tilt (F2) | `theorem2_swap`, `swap_is_not_a_tilt` |
 | Theorem 4 | proved as stated | `theorem4` |
@@ -52,9 +64,17 @@ theorem listed in `ChartSpace/Axioms.lean` depending on an axiom beyond `propext
 | §5 snap-back, additive excursions | proved, with A7 | `snap_restores_anchor`, `slice_slice`, `slices_any_order`, `snap_after_slices` |
 | Theorem 7, forward, iff, converse | proved as stated, with "contain" read as "at the centre" (F10) | `theorem7_forward`, `theorem7_iff`, `theorem7_converse` |
 | Theorem 8 | proved with A2 and A3; `S(s,0) = a_s` is false without them | `theorem8`, `theorem8_pointwise`, `sliding_centre_iff` |
+| Theorem 7, 8, §0.7 form (anchor in `S`) | proved for charts into any space, without the formulas `B` and `S`, which need a vector space | `theorem7_general`, `theorem8_general` |
 | Theorem 9 | proved once §6's types are fixed (A6) | `theorem9_time_to_time`, `theorem9_time_to_IC` |
+| Theorem 10 | proved as stated, the seam clause included | `theorem10`, `theorem10_seams` |
+| Theorem 10, "every theorem holds on `U \ Σ`" | false for zoom (F12); true for Theorem 1 | `zoom_enters_seam`, `lineMorphOn` |
+| §3b per-axis morph keeps axis 2 | proved, with the assembly realising the axis values (§3b's own definition) and no pair map | `axis_morph_keeps_meaning` |
+| Theorem 11 | proved for an abstract reversible flow, with A9; over `Z` it needs A10 | `theorem11`, `theorem11_latent` |
+| §6b item 2, the gauge | proved: `L_z²E` and the sign of `E` kept, `E` not; the mirror flips `L_z`'s sign (F13) | `gauge_keeps`, `gauge_moves_E`, `mirror_flips_Lz` |
 | Theorem 3, §8 | out of the order | |
 | Corollary 2 | not formalised: it is a claim about the concrete `D` and `E`, which `D` abstract can't state | |
+| §0.3, §0.4 (slice in hidden coordinates, held constraints blanking) | not formalised: claims about Principia's concrete charts | |
+| Theorem 11's "chaos folds `φ_T`" | not formalised: a remark about the real flow, not a theorem | |
 
 "The same set of charts in the same order" in Theorem 5 is stated without reduction: the ranges are equal, and for every
 `n` and every list of `n` charts, repeats allowed, one path visits the list in order iff the other does
@@ -71,6 +91,19 @@ Each is marked in the source by its name.
 - **A5** (`tilt_constant_speed`): `t` orthogonal to the frame's columns, for a tilt to be a geodesic of planes.
 - **A6** (`timeChart`): in §6, `φ` is a curve `[-1,1] → Z`, not a chart of §1, and `t_play ∈ [0,T]`.
 - **A7** (`Locked.snap`): snap-back also translates the chart by `−δ`. Setting `δ ← 0` alone breaks `φ(0) = a + δ`.
+- **A8** (`blockPath`, `hA`): no pixel is antipodal on the sphere between the two charts, for the block-wise
+  great-circle path to be one.
+- **A9** (`RevFlow`): the abstract flow. The order makes the reversibility identity `F_{−t} = R ∘ F_t ∘ R` a stated
+  hypothesis (`rev`, assumed only where the trajectory survives). The document also uses, unstated: `F_0 = id`
+  (`zero`); a surviving trajectory runs back to its start, and the way back survives (`inv`); survival backwards from
+  `x` is survival forwards from `R x` (`rev_survives`); and `F_t` is continuous where the trajectory survives (`cont`).
+  `R` is an involution (`R_invol`).
+- **A10** (`theorem11_latent`, `hDE`): over `Z`, `φ_T = Enc ∘ F_{−T} ∘ D ∘ ψ` reaches `D(ψ(u))` at `T` only if the decode
+  undoes the encode on the start, which §0.1 says Principia's decode doesn't (it saturates and canonicalises).
+
+Where the trajectory must survive, for Theorem 11: pixel `u` is in the chart where `Survives (−T) (ψ u)`, which is
+where the forward trajectory from the flipped state `R(ψ(u))` survives `[0, T]`. There, and only there, `φ_T(u)` is
+the one start that survives to `T` and is at `ψ(u)` then, and `φ_T` is continuous; elsewhere the pixel is masked.
 
 ## Findings
 
@@ -112,6 +145,24 @@ Each is marked in the source by its name.
   whole content is what happens at `u = 0`.
 - **F10. "Contain" means "at the centre".** Theorem 7's title and §9 say a chart contains the anchor; the theorem needs
   `ψ(0) = a`. A chart showing `a` off-centre has no based morph (`contains_is_not_enough`).
+
+- **F11. §0.1's block-wise sphere geodesic isn't always a path (A8).** Between antipodes the chord passes through `0`, so
+  the shortest arc is undefined (`antipodal_chord`). Worse, when an antipodal pixel borders others the frame at
+  `s = ½` has no continuous extension across it (`sphere_blend_jumps`: a constant chart against a chart sweeping a
+  circle through the antipode, where the frame's coordinate is near `+1` on one side and `−1` on the other). A path
+  still exists (`theorem1_signed`: `U` contracts to its centre, so any path-connected target will do), but it must be
+  built, not taken pixel by pixel along shortest arcs. Between antipodes the great circle is a choice
+  (`antipodal_halfCircle`).
+- **F12. Theorem 10's "every theorem holds on `U \ Σ`" is too broad.** Theorem 1 does (`lineMorphOn`). Zoom doesn't:
+  a pixel off the seam can zoom onto it (`zoom_enters_seam`), so zoom's frames aren't maps on `U \ Σ`. Theorems 6–8
+  speak of `φ(0)`, so they need the centre off the seam, which polar's origin, a seam §3b names, isn't when the pair
+  map is centred on the view.
+- **F13. §6b contradicts itself on `L_z`'s sign.** Item 2 and §0.5 keep only `L_z²E` and the sign of `E` in the gauge,
+  because the encode's mirror flips `L_z`. The limits bullet still checks "the signs of `E` and `L_z`" for independence
+  of `T` (`mirror_flips_Lz`). Its own correction note says the same.
+- **F14. Theorem 7 and 8 over `S` keep their content, not their formulas.** §0.7 says they stand "with the anchor in
+  `S`". `B` and `S` use `a + (1−s)(φ − a)`, which the sphere block doesn't have. They hold anyway for any target,
+  because `U` contracts to its centre (`theorem7_general`, `theorem8_general`).
 
 Smaller notes: Theorem 1's path needs neither (D1) nor (D2), only the claim about decoding does (`lineMorph` has no `D`),
 so "only because the decoder is total" is about the decoded frames, not the path. Theorem 9 is about paths in

@@ -19,7 +19,6 @@ elab "#check_axioms " id:ident : command => do
 -- §2
 #check_axioms ChartSpace.theorem1
 #check_axioms ChartSpace.chartSpace_pathConnected
-#check_axioms ChartSpace.corollary1
 #check_axioms ChartSpace.seam_is_not_a_frame
 #check_axioms ChartSpace.blend_continuous_in_s
 -- §3, the domains
@@ -74,6 +73,28 @@ elab "#check_axioms " id:ident : command => do
 #check_axioms ChartSpace.IsRetraction.isPreconnected
 #check_axioms ChartSpace.pin_isRetraction
 #check_axioms ChartSpace.pin_keeps_free_coordinates
+-- §0
+#check_axioms ChartSpace.theorem1_general
+#check_axioms ChartSpace.chartSpace_pathConnected_general
+#check_axioms ChartSpace.theorem1_signed
+#check_axioms ChartSpace.theorem7_general
+#check_axioms ChartSpace.theorem8_general
+#check_axioms ChartSpace.sphereBlend_on_arc
+#check_axioms ChartSpace.blockPath_apply
+#check_axioms ChartSpace.antipodal_chord
+#check_axioms ChartSpace.antipodal_halfCircle
+#check_axioms ChartSpace.sphere_blend_jumps
+-- §3b
+#check_axioms ChartSpace.theorem10
+#check_axioms ChartSpace.theorem10_seams
+#check_axioms ChartSpace.zoom_enters_seam
+#check_axioms ChartSpace.axis_morph_keeps_meaning
 -- §6
 #check_axioms ChartSpace.theorem9_time_to_time
 #check_axioms ChartSpace.theorem9_time_to_IC
+-- §6b
+#check_axioms ChartSpace.theorem11
+#check_axioms ChartSpace.theorem11_latent
+#check_axioms ChartSpace.gauge_keeps
+#check_axioms ChartSpace.gauge_moves_E
+#check_axioms ChartSpace.mirror_flips_Lz

@@ -3,7 +3,10 @@
 -/
 import Mathlib.Analysis.Complex.Tietze
 import Mathlib.Analysis.InnerProductSpace.PiL2
+import Mathlib.Analysis.Normed.Module.Connected
 import Mathlib.Analysis.Normed.Module.FiniteDimension
+import Mathlib.Analysis.Convex.StdSimplex
+import Mathlib.Analysis.Convex.PathConnected
 import Mathlib.Analysis.SpecialFunctions.Pow.Continuity
 import Mathlib.Analysis.SpecialFunctions.Trigonometric.Deriv
 import Mathlib.LinearAlgebra.Matrix.Rank

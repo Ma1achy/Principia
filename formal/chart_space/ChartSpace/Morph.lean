@@ -36,12 +36,6 @@ theorem chartSpace_pathConnected : PathConnectedSpace Chart where
   nonempty := ⟨ContinuousMap.const U 0⟩
   joined φ ψ := ⟨(lineMorph φ ψ).toPath⟩
 
-/-- §2 **Corollary 1**: no frame is invalid. In this model `D` is a function, so the claim is the statement that
-every frame's every pixel has a decoded system. It is true by totality and has no further content here; the masks are
-not modelled. -/
-theorem corollary1 {Sys : Type*} (D : Z → Sys) (φ ψ : Chart) (s : I) (u : U) :
-    ∃ y : Sys, y = D (lineMorph φ ψ (s, u)) := ⟨_, rfl⟩
-
 /-- §8 against §1 (finding F7). A chart with a seam (a discontinuous `φ`, which §8 says `E ∘ Φ` can be) is not a chart
 of §1, and it can't be a frame of any path of §1: frame 0 of a jointly continuous map is continuous. -/
 theorem seam_is_not_a_frame (φ : U → Z) (hφ : ¬ Continuous φ) :

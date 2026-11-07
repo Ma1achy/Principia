@@ -5,3 +5,6 @@ import ChartSpace.Tilt
 import ChartSpace.Compose
 import ChartSpace.Lock
 import ChartSpace.TimeAxis
+import ChartSpace.Signed
+import ChartSpace.Composed
+import ChartSpace.Flow
