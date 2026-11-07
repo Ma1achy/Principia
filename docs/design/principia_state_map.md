@@ -144,6 +144,13 @@ one-hemisphere view targets the full sphere)"; "the one-hemisphere view to the f
 | mass simplex | `(u, v)` from the masses (`u = m₂`, `v = m₃/(1 − m₂)`, on the raw masses) | — (never left) |
 | latent momenta | `(z_q1, z_q3)` when both are finite | left: each non-finite one `sign(q_i)·∞` |
 | tilted into `z_q3` or `p_λ,y` | `(s, φ)`, `s = a cos 30° + (d/κ) sin 30°` with `a = θ + 2πk − π` on the branch `k ∈ [−4, 4]` with the smallest out-of-plane `|w| = |−a sin 30° + (d/κ) cos 30°|`, `κ = 0.6/π`, `d` the target coordinate (`z_q3`, or `p_λ,y`) in the unmirrored frame | left, when `z_q3` has no value (`|q₃| ≥ q_max`): `s = sign(q₃)·∞`, `φ` kept |
+
+*5 Nov 2026 (R-793, closing RQ-680 (a)):* the targets are the app's own charts, through `encode_into` and
+`curve::nearest`. The prototype's two dilation rows leave the table above and stay here as its record, with no target:
+this doc's other mentions of those two charts are the prototype's measurements and recipes, and read the same way.
+
+| Target (the prototype's record) | On the chart | Otherwise |
+|---|---|---|
 | `θ × dilation` | `(θ, h)`, `h` the scale-free homologous rate `(Σ m r·v)/I · I^¾` | — (never left) |
 | `ν × dilation` | `(ν, h)`, `ν` the nearest point of the right-triangle curve (mirror folded) | past a bounded edge when `ν ∉ [1/32, 31/32]`: clamped to that end, `h` kept |
 
