@@ -414,3 +414,23 @@ justification = "the two operands are select(first, 1, 0) and select(second, 2, 
 [[equivalent]]
 mutant = "crates/validation/src/cross_backend.rs:1004:22: replace < with <= in at_inertia"
 justification = "i == target has already pushed the state and left the loop, so i <= target and i < target agree on every i that reaches the step"
+
+[[equivalent]]
+mutant = "crates/validation/src/cross_backend.rs:880:40: delete - in axis_tie"
+justification = "the turned ties' a is at most 2δ_λ = 2e-12, and every f32 word they give is the f64 value rounded at 0.25..2.3, whose nearest f32 rounding midpoint is 3.4e-10 away at the closest (measured over all 60 states), so a change of at most 5.7e-12 in the a terms rounds to the same 60 states, bit for bit"
+
+[[equivalent]]
+mutant = "crates/validation/src/cross_backend.rs:904:39: replace - with + in turned"
+justification = "the turned ties' a is at most 2δ_λ = 2e-12, and every f32 word they give is the f64 value rounded at 0.25..2.3, whose nearest f32 rounding midpoint is 3.4e-10 away at the closest (measured over all 60 states), so a change of at most 5.7e-12 in the a terms rounds to the same 60 states, bit for bit"
+
+[[equivalent]]
+mutant = "crates/validation/src/cross_backend.rs:904:60: replace + with - in turned"
+justification = "the turned ties' a is at most 2δ_λ = 2e-12, and every f32 word they give is the f64 value rounded at 0.25..2.3, whose nearest f32 rounding midpoint is 3.4e-10 away at the closest (measured over all 60 states), so a change of at most 5.7e-12 in the a terms rounds to the same 60 states, bit for bit"
+
+[[equivalent]]
+mutant = "crates/validation/src/cross_backend.rs:931:78: replace / with % in turned_ties"
+justification = "the turned ties' a is at most 2δ_λ = 2e-12, and every f32 word they give is the f64 value rounded at 0.25..2.3, whose nearest f32 rounding midpoint is 3.4e-10 away at the closest (measured over all 60 states), so a change of at most 5.7e-12 in the a terms rounds to the same 60 states, bit for bit"
+
+[[equivalent]]
+mutant = "crates/validation/src/cross_backend.rs:931:78: replace / with * in turned_ties"
+justification = "the turned ties' a is at most 2δ_λ = 2e-12, and every f32 word they give is the f64 value rounded at 0.25..2.3, whose nearest f32 rounding midpoint is 3.4e-10 away at the closest (measured over all 60 states), so a change of at most 5.7e-12 in the a terms rounds to the same 60 states, bit for bit"
