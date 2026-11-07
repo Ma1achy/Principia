@@ -3821,7 +3821,7 @@
   - RQ-722
 - id: REQ-CHART-100
   area: CHART
-  statement: "The third-body pair (ξ, η) must be a closed-form baked pair through the explicit-configuration path, with its region-D preset as RQ-714 rules, at exact rest and, at equal masses, at eq. 3's velocities, at other masses q̄ being the Jacobi form of p̂ at those masses, after C's boost, ending in canonicalise as the lowering appendix's row states."
+  statement: "The third-body pair (ξ, η) must be a closed-form baked pair through the explicit-configuration path, with its region-D preset as RQ-714 and RQ-736 rule, at exact rest and, at equal masses, at eq. 3's velocities, at other masses q̄ being the Jacobi form of p̂ at those masses, after C's boost, ending in the signed canonicalisation, C with its step 3, the mirror, not taken (canonicalise_signed, R-544's path), at the lowering appendix's canonicalise entry: a pixel at η < 0 must decode to its own system, the mirror image of the pixel at (ξ, −η) where the held velocities are their own mirror image, never folded onto it; and on η ≥ 0, D included, the decode must be bit-identical to C with the mirror step."
   source:
   - file: docs/design/principia_chart_composition.md
     section: 8.2 The closed form
@@ -3833,7 +3833,7 @@
     section: Appendix — worked enumeration of the current chart set
   verify:
     method: unit test
-    detail: "cargo test -p kernel region_d_plane and cargo test -p engine region_d_variant: every Table 1 row's pixel decodes to the import's canonical state within REQ-VAL-120's tolerance; eq. 8's edges; eq. 3's momenta at √ℓ; I = 1; the stereographic identity at random masses; controls: bodies 0 and 1 swapped misses the rows, q not scaled by √ℓ fails, μ_ρ/μ_λ inverted fails, d dropped at unequal masses fails (Table 1's equal masses have d = 0, so this control runs on the stereographic identity's masses)"
+    detail: "cargo test -p kernel region_d_plane and cargo test -p engine region_d_variant: every Table 1 row's pixel decodes to the import's canonical state within REQ-VAL-120's tolerance; eq. 8's edges; eq. 3's momenta at √ℓ; I = 1; the stereographic identity at random masses; the signed half: on both presets, every pixel with η < 0 decodes to Π of the (ξ, −η) pixel's state to the decode's rounding, λ̃_y < 0 kept, and at eq. 3 with L_z opposite; every pixel with η ≥ 0 is bit-identical to the decode ending in canonicalise; controls: bodies 0 and 1 swapped misses the rows, q not scaled by √ℓ fails, μ_ρ/μ_λ inverted fails, d dropped at unequal masses fails (Table 1's equal masses have d = 0, so this control runs on the stereographic identity's masses), a decode ending in canonicalise (step 3 taken), which lands every η < 0 pixel on its (ξ, −η) partner, fails"
   rulings:
   - R-592
   milestone: M4
@@ -3841,6 +3841,7 @@
   - RQ-711
   - RQ-713
   - RQ-714
+  - RQ-736
 - id: REQ-CHART-101
   area: CHART
   statement: "Each closed-form primitive and pair must round-trip, forward(inverse(x)) = x over its domain at f64 and at f32, the interior angles and the side ratios among them, each with its mass-weighted form onto the shape sphere."
