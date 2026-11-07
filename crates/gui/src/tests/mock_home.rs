@@ -3,7 +3,7 @@
 //! is shown failing on what a GUI with the fault would leave (R-176, through `rejects`; `support`'s note).
 
 use eframe::egui::{vec2, Event, Key, Modifiers};
-use engine::contract::sim_config::Plane;
+use engine::contract::sim_config::{Latent, Lock, Plane};
 use engine::contract::view_ui::{KeyMode, Mode, Window};
 
 use super::mock_layout_splitters::drag_splitter;
@@ -156,11 +156,21 @@ fn mock_home_key_leaves_the_focus_and_the_mode() {
 fn mock_home_button_is_in_the_corner() {
     let rig = at_preset(0);
     let shown = canvas(&rig);
+    let in_corner = |rect: eframe::egui::Rect| {
+        assert_eq!(rect.width(), HOME_SIDE);
+        assert_eq!(rect.height(), HOME_SIDE);
+        assert!((shown.max.x - rect.max.x - HOME_INSET).abs() < 1e-3);
+        assert!((rect.min.y - shown.min.y - HOME_INSET).abs() < 1e-3);
+    };
     let rect = home_rect(shown);
-    assert_eq!(rect.width(), HOME_SIDE);
-    assert_eq!(rect.height(), HOME_SIDE);
-    assert!((shown.max.x - rect.max.x - HOME_INSET).abs() < 1e-3);
-    assert!((rect.min.y - shown.min.y - HOME_INSET).abs() < 1e-3);
+    in_corner(rect);
+    rejects("a button of another size", || in_corner(rect.expand(1.0)));
+    rejects("an inset off to the left", || {
+        in_corner(rect.translate(vec2(-1.0, 0.0)))
+    });
+    rejects("an inset off downward", || {
+        in_corner(rect.translate(vec2(0.0, 1.0)))
+    });
 }
 
 /// A house of strokes, no glyph: each stroke inside its button.
@@ -170,20 +180,37 @@ fn mock_home_button_is_painted_in_strokes() {
     let rect = home_rect(canvas(&rig));
     let _ = rig.1.frame(&mut rig.0, Vec::new());
     let colour = eframe::egui::Color32::WHITE;
-    for shape in reset::house(rect, colour) {
-        assert!(
-            rect.contains_rect(shape.visual_bounding_rect()),
-            "{shape:?}"
-        );
-    }
+    let inside = |shapes: [eframe::egui::Shape; 2]| {
+        for shape in shapes {
+            assert!(
+                rect.contains_rect(shape.visual_bounding_rect()),
+                "{shape:?}"
+            );
+        }
+    };
+    inside(reset::house(rect, colour));
+    rejects("a house drawn off the button", || {
+        inside(reset::house(rect.translate(rect.size() / 2.0), colour))
+    });
     // A roof over a square: the roof's peak above the middle, the walls' foot below it.
     let points = |shape: &eframe::egui::Shape| match shape {
         eframe::egui::Shape::Path(path) => path.points.clone(),
         other => panic!("a stroke, not {other:?}"),
     };
     let [roof, walls] = reset::house(rect, colour);
-    assert!(points(&roof)[1].y < rect.center().y - 5.0, "the peak");
-    assert!(points(&walls)[1].y > rect.center().y + 5.0, "the foot");
+    let peak = |shape: &eframe::egui::Shape| {
+        assert!(points(shape)[1].y < rect.center().y - 5.0, "the peak")
+    };
+    let foot = |shape: &eframe::egui::Shape| {
+        assert!(points(shape)[1].y > rect.center().y + 5.0, "the foot")
+    };
+    peak(&roof);
+    foot(&walls);
+    rejects("the house upside down", || peak(&walls));
+    rejects("the roof at the foot", || foot(&roof));
+    rejects("a shape of no stroke", || {
+        points(&eframe::egui::Shape::Noop);
+    });
     let shapes = super::support::shapes(&mut rig.1, &mut rig.0);
     let lines = shapes
         .iter()
@@ -192,7 +219,9 @@ fn mock_home_button_is_painted_in_strokes() {
                 && rect.contains_rect(s.visual_bounding_rect())
         })
         .count();
-    assert!(lines >= 2, "the two strokes: {lines}");
+    let two_strokes = |lines: usize| assert!(lines >= 2, "the two strokes: {lines}");
+    two_strokes(lines);
+    rejects("the house lost a stroke", || two_strokes(1));
 }
 
 /// The state a click on the figure would change.
@@ -370,8 +399,17 @@ fn mock_home_key_in_a_typed_field_moves_the_caret() {
     home_key(&mut rig, NONE);
     let _ = rig.1.frame(&mut rig.0, vec![Event::Text("c".to_owned())]);
     let _ = rig.1.frame(&mut rig.0, Vec::new());
-    assert_eq!(rig.0.windows.console.text, "cab", "the caret at the start");
-    assert_eq!(Values::read(&rig.0, 0), before, "nothing reset");
+    let typed = |text: &str, values: &Values| {
+        assert_eq!(text, "cab", "the caret at the start");
+        assert_eq!(*values, before, "nothing reset");
+    };
+    let after = Values::read(&rig.0, 0);
+    typed(&rig.0.windows.console.text, &after);
+    // Controls: the key eaten, so the caret stays at the end; and the key taken for Home.
+    rejects("a caret left at the end", || typed("abc", &after));
+    rejects("a Home run from the field", || {
+        typed(&rig.0.windows.console.text, &Values::home(0))
+    });
 }
 
 #[test]
@@ -417,7 +455,9 @@ fn mock_home_key_does_not_repeat_and_keeps_the_overlay() {
     let moved = Values::read(&rig.0, 0);
     let _ = rig.1.frame(&mut rig.0, vec![repeat]);
     let _ = rig.1.frame(&mut rig.0, Vec::new());
-    assert_eq!(Values::read(&rig.0, 0), moved, "a held key acts once");
+    let once = |values: &Values| assert_eq!(*values, moved, "a held key acts once");
+    once(&Values::read(&rig.0, 0));
+    rejects("a repeat that ran Home", || once(&Values::home(0)));
 
     // Over the `?` overlay, which takes every key, it does nothing.
     let mut rig = at_preset(0);
@@ -426,7 +466,9 @@ fn mock_home_key_does_not_repeat_and_keeps_the_overlay() {
     rig.0.keyboard.shortcuts_open = true;
     let _ = rig.1.frame(&mut rig.0, Vec::new());
     home_key(&mut rig, NONE);
-    assert_eq!(Values::read(&rig.0, 0), before, "the overlay takes it");
+    let taken = |values: &Values| assert_eq!(*values, before, "the overlay takes it");
+    taken(&Values::read(&rig.0, 0));
+    rejects("a Home under the overlay", || taken(&Values::home(0)));
 }
 
 /// Moves `z₀` through the contract, the Home key still down.
@@ -443,7 +485,7 @@ fn mock_home_locked_lands_on_the_home_view() {
     let mut rig = at_preset(0);
     move_all(&mut rig);
     let sim = rig.0.snapshot().sim.clone();
-    let lock = engine::contract::sim_config::Lock {
+    let lock = Lock {
         locked: true,
         z_locked: mv::point(&sim.plane, 0.75, 0.25),
     };
@@ -452,13 +494,28 @@ fn mock_home_locked_lands_on_the_home_view() {
     let depth = rig.0.snapshot().history.undo_depth;
     click_button(&mut rig);
     check_home(&Values::read(&rig.0, 0), 0);
-    assert_eq!(rig.0.snapshot().sim.plane.z0, PRESET_HOMES[0].base);
-    assert_eq!(
-        rig.0.snapshot().sim.lock,
-        lock,
-        "the lock and its anchor stay"
-    );
-    assert_eq!(rig.0.snapshot().history.undo_depth, depth + 1, "one entry");
+    let landed = |z0: Latent, kept: &Lock, now: u32| {
+        assert_eq!(z0, PRESET_HOMES[0].base);
+        assert_eq!(*kept, lock, "the lock and its anchor stay");
+        assert_eq!(now, depth + 1, "one entry");
+    };
+    let after = rig.0.snapshot();
+    let (z0, now) = (after.sim.plane.z0, after.history.undo_depth);
+    landed(z0, &after.sim.lock, now);
+    // Controls: a Home that stopped off the home view, dropped the lock, or took two entries.
+    rejects("a landing off the home view", || {
+        landed(sim.plane.z0, &after.sim.lock, now)
+    });
+    rejects("a dropped lock", || {
+        let dropped = Lock {
+            locked: false,
+            ..lock.clone()
+        };
+        landed(z0, &dropped, now)
+    });
+    rejects("a Home of two entries", || {
+        landed(z0, &after.sim.lock, depth + 2)
+    });
 }
 
 /// What Home must leave alone.
@@ -559,10 +616,17 @@ fn mock_home_leaves_alone_everything_else() {
 fn mock_home_view_menu_is_first_with_its_shortcut() {
     let rig = at_preset(0);
     let tree = rig.0.keyboard.tree(rig.0.view.mode);
-    assert_eq!(tree.children(Some("view")).first(), Some(&HOME.0));
+    let children = tree.children(Some("view"));
+    let is_home = |i: usize| assert_eq!(children.get(i), Some(&HOME.0));
+    is_home(0);
+    rejects("Home past the first entry", || is_home(1));
     assert_eq!(top_bar::HOME.1, "Home");
-    let row = crate::keyboard::keymap::SHORTCUTS
-        .iter()
-        .find(|(key, _)| *key == "Home");
-    assert!(row.is_some_and(|(_, action)| action.contains("chart preset")));
+    let row_of = |shortcut: &str| {
+        let row = crate::keyboard::keymap::SHORTCUTS
+            .iter()
+            .find(|(key, _)| *key == shortcut);
+        assert!(row.is_some_and(|(_, action)| action.contains("chart preset")));
+    };
+    row_of("Home");
+    rejects("a row of another key", || row_of("F3"));
 }
