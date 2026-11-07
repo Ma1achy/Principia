@@ -155,9 +155,13 @@ Page numbers are the journal's; PDF page = journal page − 473, since the PDF h
 
 **`decode_check.txt` confirms this decode on their own numbers**, integrating their eq. (6) with our DOP853, no engine:
 the lattice has exactly 62605 points. Newton's accelerations match eq. (2) to 15 digits. From the printed q_k, f returns
-to (q_k, 0) with exactly k binary collisions, for all six rows, to within the rounding of q_k amplified by |a_k|, and
-finite differences of f give a_1 = −0.9882, b_1 = −0.0095 and values near each printed a_k, b_k (within 0.6 %, the
-printed q_k being only near the fixed point). This is a check of the reading; it isn't a replication and scores nothing.
+near (q_k, 0) with exactly k binary collisions, for all six rows. Near a fixed point a start δ off returns with a
+Q1-residual of (a_k − 1)·δ, and q_k's fifth decimal bounds |δ| by 5 × 10⁻⁶. Rows 2, 3 and 5 are within that bound. Rows 1,
+4 and 6 are not: Q1-residuals 1.27 × 10⁻⁵, 2.18 × 10⁻⁴ and 5.75 × 10⁻⁴ (§ 4) against bounds of about 9.9 × 10⁻⁶,
+1.9 × 10⁻⁴ and 3.8 × 10⁻⁴, so our integration puts the fixed point about 6.4 × 10⁻⁶, 5.7 × 10⁻⁶ and 7.6 × 10⁻⁶ from the
+printed q_k; the P1-residuals, through c_k = (a_k² − 1)/b_k, give the same offsets. Recorded, not corrected: the cause may
+be the paper's or our integration's. Finite differences of f give a_1 = −0.9882, b_1 = −0.0095 and values near each
+printed a_k, b_k (within 0.6 %, the printed q_k being only near the fixed point). This is a check of the reading; it isn't a replication and scores nothing.
 
 ### 5.2 Three of the owner's phrases against the paper
 
@@ -215,13 +219,13 @@ PLAN.md § 3.2, after task 15b's rows:
 ```
 | HORN-1 (proposed, 31 Oct 2026) | R | C | `RL31/README.md` § 3; Horn et al. 2024, doi:10.5281/zenodo.11032352, CC BY 4.0, data on demand by md5 (`RL31/horn_2024/fetch.sh`); Horn et al. 2025 (JCP 521, 113536) § 5.4 | From each stored t = 0 state (unit masses, G = 1, planar; states read as stored), our state against the stored one at each stored t ≤ 10: a growth curve of the difference per run, reported beside the source's own conservation in the stored rows. Brutus's tolerance for these runs is not stated and the export is float64, so the stored rows are not assumed converged; any row past their own measured accuracy is not evaluated. `all_runs` repeats the runs and is not counted | fetched on demand, never committed | Path A (a per-run import, not a chart) | CPU IC inspector | exact (their measurement) | data on demand · proposed 31 Oct; R-649 tier (b) CPU IC inspector, scores in M9 or as an information-only peek, non-gating |
 | ZC-1 (proposed, 31 Oct 2026) | R | B | `RL31/README.md` § 5; Zare & Chesley 1998 (Chaos 8, 475), Tables I–III: `RL31/zare_chesley_1998/` | Planar isosceles, equal masses, zero angular momentum, their section (y = 0 with ẏ > 0, Q1 = √x, P1 = 2Q1ẋ, uniform area on Q1² + P1² < 1; in unit masses, G = 1, E = −1, x and y × 2.5, times × 1.25, velocities × 2). On their lattice (δ = 0.005, 62,605 points) the measures of A_∞ and A_0 … A_6 (k binary collisions before the next syzygy; A_∞ hyperbolic escape), and R_1 … R_14's measures, μ(R̃) = 0.0526, by their Theorem 2. Their 266 not-computable points (0.4 %) and their lattice set the source's resolution; rounding must keep the run on the subset or the departure is reported | `RL31/zare_chesley_1998/table{1,2,3}_reconciled.csv`, `decode_check.txt` | Path A; no chart | outcome classifier; a binary-collision count; a syzygy event | statistical | data transcribed · proposed 31 Oct; R-649 tier (a) GPU explorer, scores in M9, non-gating |
-| ZC-2 (proposed, 31 Oct 2026) | R | A | as ZC-1, Table II | Beside ZC-1, optional: from (q_k, 0), k = 1 … 6, f returns to the start after k binary collisions, to q_k's printed 5 decimals amplified by \|a_k\|; a_k and b_k at their printed digits | `RL31/zare_chesley_1998/table2_reconciled.csv` | Path A | regularisation | exact | data transcribed · proposed 31 Oct; R-649 tier (b) CPU IC inspector, scores in M9, non-gating |
+| ZC-2 (proposed, 31 Oct 2026) | R | A | as ZC-1, Table II | Beside ZC-1, optional: from (q_k, 0), k = 1 … 6, f returns to the start after k binary collisions, and a_k, b_k against their printed values; each tolerance is a calibration requirement (R-71), not set here (§ 5.1 records rows 1, 4 and 6 outside q_k's fifth-decimal rounding) | `RL31/zare_chesley_1998/table2_reconciled.csv` | Path A | regularisation | exact | data transcribed · proposed 31 Oct; R-649 tier (b) CPU IC inspector, scores in M9, non-gating |
 ```
 
 And a dated note after the table:
 
 ```
-*Note added 31 Oct 2026 (rows HORN-1, ZC-1, ZC-2; proposed, not ruled, not counted in § 3.3).* Horn 2024 is CC BY 4.0 by Zenodo's API, quoted in `RL31/README.md` § 3.1; its 930 MB file is fetched on demand and never committed, and its accuracy is not stated, so HORN-1 reads it as a measurement rather than a reference. Zare & Chesley's paper is local only. V-11's comparison number is now in `RL31/myllari_2018/`; REQ-VAL-330's text and TASK-M3-65 are unchanged.
+*Note added 31 Oct 2026 (rows HORN-1, ZC-1, ZC-2; proposed, not ruled, not counted in § 3.3).* Horn 2024 is CC BY 4.0 by Zenodo's API, quoted in `RL31/README.md` § 3.1; its 930 MB file is fetched on demand and never committed, and its accuracy is not stated, so HORN-1 reads it as a measurement rather than a reference. Zare & Chesley's paper is local only. V-11's comparison number is now in `RL31/myllari_2018/`; REQ-VAL-330's text and TASK-M9-25 (was TASK-M3-65) are unchanged.
 ```
 
 ZC-2 goes beyond the owner's request, because the owner named Table II and tier (a) cannot bind its exact points; the
