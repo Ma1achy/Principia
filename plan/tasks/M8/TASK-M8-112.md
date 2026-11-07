@@ -24,4 +24,5 @@ Each paper's frame as a preset over the registry, tested against its coordinates
 ## Notes
 - RQ-650 is outside TASK-M4-37's gate, so nothing in Depends on holds it: D₁₁'s preset doesn't start until RQ-650 is ruled, by this note. If RQ-729 rules for the presets, TASK-M9-20, -22 and -28 take them, by edges TASK-M4-37 applies then; until it does, those tasks' own functions stand.
 - Each preset's base point, centre and window (R-466's definition of a preset) are undefined on these pairs, which aren't two latent coordinate axes: RQ-711, read at TASK-M4-37, or a task that defines them under R-72 as TASK-M9-45 does (design § 20). Only those home values wait: the pairs, the masks and `preset_paper_coords` do not.
+- Each paper-frame preset declares the filter on, as TASK-M8-120 reads it (design § 10.4; RQ-736).
 - Waits on its rulings item: RQ-729. Nothing here is implemented until ruled (the order's A6, "Nothing implemented until ruled"); TASK-M4-37 in Depends on holds it.

@@ -4341,20 +4341,20 @@
     section: "7.4 Seams: jitter, spread and refinement"
   verify:
     method: unit test
-    detail: "cargo test -p engine seam_jitter_flagged: on a composed chart the copies are the sampling note's offsets in (u, v), whatever the seam; a footprint across a numerical seam, polar's branch line or region D's mask, a baked chart's, is flagged in the resolve pass, a numerical branch read from the IC record, all E + 1 copies in the pool, spread_shape, spread_event, ensemble_spread and error_ratio labelled seam-contaminated; two orders, one flag; controls: a copy dropped at the seam fails, the flag read from a neighbour fails"
+    detail: "cargo test -p engine seam_jitter_flagged: on a composed chart the copies are the sampling note's offsets in (u, v), whatever the seam; a footprint across a numerical seam, a closed-form CPU batch row's two-root branch or mask, polar's branch line or a baked chart's mask is flagged in the resolve pass, any CPU batch chart's branch read from the IC record and its mask from that record's decode_failed, all E + 1 copies in the pool, spread_shape, spread_event, ensemble_spread and error_ratio labelled seam-contaminated; two orders, one flag; controls: a copy dropped at the seam fails, the flag read from a neighbour fails"
   rulings:
   - R-80
   - R-100
   milestone: M8
 - id: REQ-CHART-130
   area: CHART
-  statement: "Declared seams must be masked from the refinement criterion: on a flagged footprint unresolved(f) must not fire from spread, event class, the latch or a composed chart's own mask, a quad of such footprints must take the decision Seam with its count n_seam reported, its coherence must not raise its priority, and a chart of today's registry must be bitwise unchanged."
+  statement: "Declared seams must be masked from the refinement criterion: on a flagged footprint unresolved(f) must not fire from spread, event class, the latch or a composed chart's own mask, a quad with any flagged footprint and none unresolved must take the decision Seam with its count n_seam reported, the added QuadReduction slot and CPU batch's branch word being a schema change, its coherence must not raise its priority, and a chart of today's registry must be bitwise unchanged."
   source:
   - file: docs/design/principia_chart_composition.md
     section: "7.4 Seams: jitter, spread and refinement"
   verify:
     method: unit test
-    detail: "cargo test -p engine seam_refinement_masked: a flagged footprint leaves n_unresolved, a mask-blanked copy included; a quad of them takes the decision Seam with n_seam counted, and coherence gives it no priority; a non-finite copy on it still fires; an unflagged neighbour with real spread still splits; a chart of today's registry decides bitwise as REQ-REF-022; controls: the mask removed splits quads along the seam at every depth, the mask applied to an unflagged footprint fails, Keep taken for Seam fails"
+    detail: "cargo test -p engine seam_refinement_masked: a flagged footprint leaves n_unresolved, a mask-blanked copy included; a quad with any flagged footprint and none unresolved takes the decision Seam, a mixed quad included, with n_seam counted, and coherence gives it no priority; a non-finite copy on it still fires; an unflagged neighbour with real spread still splits; a chart of today's registry decides bitwise as REQ-REF-022; controls: the mask removed splits quads along the seam at every depth, the mask applied to an unflagged footprint fails, Keep taken for Seam, Seam taken only when every footprint is flagged fails"
   rulings: []
   milestone: M8
 - id: REQ-CHART-131
@@ -4377,7 +4377,7 @@
     section: 6.5 Chaos measures live in phase space
   verify:
     method: unit test
-    detail: "cargo test -p engine ftle_chart_independent: a linear chart, a warped one at a pixel where the warp's value is exact, and a third with a different tangent through the same state, a tilted pair, decode one bit pattern and give one lambda_T bit for bit; control: delta_0's direction taken from a chart tangent fails"
+    detail: "cargo test -p engine ftle_chart_independent: a linear chart, a warped one at a pixel where the warp's value is exact, and a third with a different tangent through the same state, a tilted pair, decode one bit pattern and give one lambda_T bit for bit, read on copy 0; control: delta_0's direction taken from a chart tangent fails"
   rulings: []
   milestone: M8
 - id: REQ-CHART-133
@@ -4390,7 +4390,7 @@
     section: 17.14 Tests
   verify:
     method: unit test
-    detail: "cargo test -p engine path_lower_half_stays: a path between two lower-half views keeps n₂ < 0 at every pixel of every frame, ends included, on the signed state; controls: canon::canonicalise for the signed form, which mirrors, fails; a literal z blend, which reaches n₂ ≥ 0 only, fails"
+    detail: "cargo test -p engine path_lower_half_stays: two views wholly in the open lower hemisphere, whose ends differ at the chart layer, so the arm function returns Path::Line, asserted first, keep n₂ < 0 at every pixel of every frame, ends included, on the signed state; on the other arms the test asserts only signed, no mirror taken; controls: canon::canonicalise for the signed form, which mirrors, fails; a literal z blend, which reaches n₂ ≥ 0 only, fails"
   rulings:
   - R-544
   milestone: M8
@@ -4407,6 +4407,60 @@
     detail: "cargo test -p kernel trajectory_polar_unfolded: the figure-eight, run by the kernel: φ = acos(n_w) from the signed n̂ at every macro-step lies on both sides of 90°, crosses it at every syzygy, and the sign of n_w matches the triangle's signed area computed from the positions; control: the polar angle folded, min(φ, π − φ), fails"
   rulings:
   - R-544
+  milestone: M8
+- id: REQ-CHART-135
+  area: CHART
+  statement: "The symmetry filter must be a display option applied after rendering, never a change to what is computed: on or off, the sim key, the payload, refinement, every outcome and R-408's statistics must be unchanged, and a chart's symmetries (the mirror of the whole system, body-label swaps where the masses make them exact) must be declared per chart and extensible (the owner's order of 7 Nov, RQ-736; design § 6.6)."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: 10.4 The symmetry filter
+  - file: docs/design/principia_chart_composition.md
+    section: 6.6 The symmetry rule
+  verify:
+    method: unit test
+    detail: "cargo test -p engine symmetry_filter_display_only: filter on and off give one sim key, payload and statistic, bit for bit; a chart's list of symmetries takes a new entry with no change to the filter; control: the filter feeding a statistic fails"
+  rulings:
+  - R-408
+  milestone: M8
+- id: REQ-CHART-136
+  area: CHART
+  statement: "A pixel must be drawn transparent only if its starting state is the image of another start present in the same chart, one canonical representative of each pair kept, so that on a rest chart the filtered chart and its mirror reproduce the full chart bitwise, outcome fields equal and signed fields flipped (the owner's test, RQ-736)."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: 10.4 The symmetry filter
+  verify:
+    method: unit test
+    detail: "cargo test -p engine symmetry_filter_rest_reconstructs: a third-body rest chart whose pairs decode to exact mirrors, filtered, plus its mirror, is the full chart bitwise, outcome fields equal, signed fields flipped; mutations: a signed field not flipped fails, the canonical side off by one row fails"
+  rulings:
+  - R-544
+  milestone: M8
+- id: REQ-CHART-137
+  area: CHART
+  statement: "A pixel must be blanked only if its partner is actually in the chart's domain, checked through the chart's own map and never through Enc; on a chart holding something that breaks the symmetry nothing must be blanked and the toggle must read \"no duplicates in this chart\" (the owner's order, RQ-736)."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: 10.4 The symmetry filter
+  - file: docs/design/principia_chart_composition.md
+    section: 8.8 Region D must match the papers (order item A5)
+  verify:
+    method: unit test
+    detail: "cargo test -p engine symmetry_filter_fixed_velocity: on a shape-sphere chart with fixed non-zero velocities the filter blanks nothing and reads no duplicates in this chart; a partner out of the view and in the domain still blanks, and at unequal masses or eq. 3's near-rest start the swap blanks nothing; mutation: the partner check removed, blanking by the map's (θ, π − φ) alone, fails"
+  rulings:
+  - R-544
+  milestone: M8
+- id: REQ-CHART-138
+  area: CHART
+  statement: "The canonical choice must be stated in the legend and the export sidecar (for example \"mirror pairs shown once: eta >= 0\"), and the filter must default on for the paper-frame presets only, so that region D's quarter disc, the Anosova half-disc and the half shape sphere at rest are its output with the full domain computed underneath, and a replication target must score what is computed, never what the filter drew (the owner's order, RQ-736)."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: 10.4 The symmetry filter
+  - file: docs/design/principia_chart_composition.md
+    section: 8.1 The definition
+  verify:
+    method: unit test
+    detail: "cargo test -p engine symmetry_filter_statement: the legend and the sidecar state the canonical choice; a paper-frame preset opens with the filter on, any other chart with it off; a target's score is one with the filter on or off; controls: the statement dropped fails, the default on for every chart fails"
+  rulings:
+  - R-649
   milestone: M8
 - id: REQ-INT-001
   area: INT
@@ -25870,6 +25924,20 @@
   milestone: M8
   rq:
   - RQ-727
+- id: REQ-GUI-424
+  area: GUI
+  statement: "The symmetry filter must be a toggle in the GUI and on export, reading \"no duplicates in this chart\", not an empty toggle, where the chart has no partners; on a region-D preset turning it off must be the one click to the full disc (the owner's order and ruling, RQ-736)."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: 10.4 The symmetry filter
+  - file: docs/design/principia_chart_composition.md
+    section: "6.2 Labels: reduced capability, never a refusal"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui symmetry_filter_toggle: the toggle on the chart's panel and in the export dialog, its no-partners state, one click from the filter's view to the full disc with no new run; control: the toggle left live with no partners fails"
+  rulings:
+  - R-369
+  milestone: M8
 - id: REQ-TOOL-001
   area: TOOL
   statement: "Each session must record once: device (GPU/CPU model, core counts, VRAM or unified memory size in its own field), backend and driver version, precision support and f64 rate, build (commit hash, profile, feature flags) and display (resolution, refresh, DPI scale)."

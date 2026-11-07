@@ -1637,10 +1637,6 @@
   reason: rationale
   note: "the framing checked against the contract"
 - file: docs/design/principia_chart_composition.md
-  section: "17.14 Tests"
-  reason: informative only
-  note: "carried in the requirements' verify lines"
-- file: docs/design/principia_chart_composition.md
   section: "15. Plan"
   reason: informative only
   note: "the task list, carried in plan/tasks.yaml"

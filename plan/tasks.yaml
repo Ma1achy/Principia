@@ -3769,6 +3769,14 @@
   requirements: [REQ-CHART-103]
   reviewers: [code, qa, physics]
   pitfalls: []
+- id: TASK-M8-120
+  milestone: M8
+  title: "The symmetry filter: a display option after rendering, GUI and export"
+  depends_on: [TASK-M4-37, TASK-M8-112, TASK-M8-103, TASK-M8-32]
+  needs: []
+  requirements: [REQ-CHART-135, REQ-CHART-136, REQ-CHART-137, REQ-CHART-138, REQ-GUI-424]
+  reviewers: [code, qa, physics, gui]
+  pitfalls: []
 - id: TASK-M9-01
   milestone: M9
   title: "The orbit atlas through encode and decode: E and L per row (OC-2), and every atlas IC in the 8D latent chart (AT-D6)"

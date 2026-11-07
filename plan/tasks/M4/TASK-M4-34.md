@@ -33,4 +33,5 @@ The first registered closed-form pair: `(ξ, η)` through the explicit-configura
 - R-798's remap (REQ-CHART-093, TASK-M9-45) shares § 8.3's and § 8.2's lines: one source. PA-1's route is unchanged.
 - The target frames (D11, Lehto's lens, Breen's) stay those targets' tested functions (R-72) unless RQ-729 rules for the presets (design § 8.5): this pair does not depend on them either way.
 - The preset's base point, centre and window (R-466's definition of a preset) are undefined on this pair, which isn't two latent coordinate axes: RQ-711, read at TASK-M4-37, or a task that defines them under R-72 as TASK-M9-45 does (design § 20). Only those home values wait: the pair, the mask, the tests and the TASK-M4-06 edge do not.
-- Waits on its rulings item: RQ-713, RQ-714. Nothing here is implemented until ruled (the order's A6, "Nothing implemented until ruled"); TASK-M4-37 in Depends on holds it.
+- RQ-736's filter order overtakes RQ-714's mask for the preset: the full disc, signed, with D its filter's output (design §§ 8.4 and 10.4). What the preset draws until TASK-M8-120 lands is on RQ-736's list.
+- Waits on its rulings item: RQ-713, RQ-714, RQ-736 for the preset's domain. Nothing here is implemented until ruled (the order's A6, "Nothing implemented until ruled"); TASK-M4-37 in Depends on holds it.
