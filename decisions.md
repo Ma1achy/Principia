@@ -32329,8 +32329,8 @@ R-852 is in the "design" group of `plan/rule_groups.yaml`.
 ## R-853 — The chart-space model is corrected to the corpus, which stands wherever it measured or ruled; the shape sphere's mirror half is never dropped or folded, the mirror fold is a starting state's only, and the state map and latent-chart traces are signed *(closes RQ-736)*
 *Amended in part by R-855 (7 Nov 2026, the owner's filter order: region D's presets render the full disc, the filter on by default for the paper-frame presets only).*
 *Still in force: all of it but open question 2's "reduced domain" for region D's presets.*
-*7 Nov 2026 · the owner's ruling on RQ-736 of that day, its two riders and its answers to the two open questions, held for this rulings PR; applied in `docs/archive/review_queue/M0.md` (RQ-736 moved), `REVIEW_QUEUE.md` (RQ-738, new), `docs/design/principia_state_map.md` § SM1 and its target table, `docs/design/principia_lines.md` (projection; syzygies), REQ-COL-163 (reqio, new), REQ-CHART-133 and REQ-CHART-134 (reqio, rulings), REQ-GUI-279 (reqio: statement, rulings, note; the physics review of PR #443, P1), TASK-M7-52, TASK-M8-58, `plan/tasks.yaml`, `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
-adds REQ-COL-163; changes REQ-CHART-133's and REQ-CHART-134's rulings and REQ-GUI-279's statement*
+*7 Nov 2026 · the owner's ruling on RQ-736 of that day, its two riders and its answers to the two open questions, held for this rulings PR; applied in `docs/archive/review_queue/M0.md` (RQ-736 moved), `REVIEW_QUEUE.md` (RQ-738, new), `docs/design/principia_state_map.md` § SM1 and its target table, `docs/design/principia_lines.md` (projection; syzygies), REQ-COL-163 (reqio, new), REQ-CHART-133 and REQ-CHART-134 (reqio, rulings), REQ-GUI-279 (reqio: statement, rulings, note; the physics review of PR #443, P1), REQ-GUI-273 (reqio: statement, rulings, source, note; its re-check, P1), TASK-M7-52, TASK-M8-58, `plan/tasks.yaml`, `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
+adds REQ-COL-163; changes REQ-CHART-133's and REQ-CHART-134's rulings and REQ-GUI-279's and REQ-GUI-273's statements*
 
 The owner's ruling (7 Nov 2026), verbatim:
 
@@ -32510,7 +32510,7 @@ is refused (applied per R-369).
 
 R-856 is in the "ci" group of `plan/rule_groups.yaml`.
 
-## R-857 — The four doors readings #434 left unchosen: a measured change of the shard count is two-way under the CI rider; the "morning report" is the dated report file in `orch/`; lint configuration stays R-197's; correcting a requirement's statement to match a ruling is two-way only where it restates the ruling's words faithfully, otherwise one-way *(the report's doors-readings item, flags 2, 8, 9 and 10 of PR #434; refines R-812)*
+## R-857 — The four doors readings #434 left unchosen: a measured change of the shard count is two-way under the CI rider; the "morning report" is the dated report file in `orch/`; lint configuration stays R-197's; correcting a requirement's statement to match a ruling is two-way only where it restates the ruling's words faithfully, otherwise one-way *(the report's doors-readings item, flags 2, 8, 9 and 10 of PR #434; refines R-812, R-376 and R-712)*
 *7 Nov 2026 · the owner's reply to the report of 7 Nov 2026, answering its item "Doors readings #434 left unchosen, for
 you if you want them", which had no queue entry; applied in `plan/OPERATIONS.md` § "Asking the human", REQ-VAL-149
 (reqio: rulings, source, note), the forward lines of R-376, R-712 and R-812, and `plan/rule_groups.yaml`; changes

@@ -712,7 +712,7 @@ waits on the answer.
 
 *Filed 7 Nov 2026 by the rulings PR of that day. The report put this to the owner before it had an entry, and the owner's answer asked for a measurement first, so it is filed here as an ask.*
 
-*In plain English: on the tilted held-value charts, the chart is promised to show a real three-body system at every pixel inside its square. At f32 (single precision), a pixel right at the square's edge can round to just outside it and be refused, though the same pixel at f64 is fine. The question is whether such a refusal breaks the promise.*
+*In plain English: on the tilted held-value charts, the chart is promised to show a real three-body system at every pixel inside its square. The warp puts the feasibility limit on the bottom row, where the held constraint is just met. A pixel on or near that floor never leaves the square, but at f32 (single precision) it can decode to a state just past the constraint (for example `K` just below `L_z²/2I`, or a layer-3 check failing on the f32 decode) and be refused, though at f64 the same pixel is a system. The question is whether such a refusal breaks the promise.*
 
 - **File, section:** `decisions.md` § "R-708 — The tilted Burrau `K` charts follow R-471's two modes: …", the owner's words: "Warped mode (E1, the default): option (a). Every pixel is a system under every tilt."; `docs/design/principia_chart_reference.md` § "2.1 Feasibility, and the warp that makes every pixel valid".
 - **The report's item (7 Nov 2026):** "Whether "every pixel" allows refusing inside the f32 band. R-708 (held energy's warp) has no phrase for that band. Warped invariant charts at f32 refuse 0 of 3.16 million pixels; `HeldLz`, `HeldK` and Burrau at f32 aren't covered."
