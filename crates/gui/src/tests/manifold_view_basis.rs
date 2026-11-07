@@ -241,6 +241,17 @@ fn manifold_view_basis_a_tilted_pair_no_preset_names_is_counted_too() {
     check_near(view.scale, 1.0, "σ");
 }
 
+#[test]
+fn manifold_view_basis_a_pair_with_no_turn_is_no_tilted_pair() {
+    // `q₂` is twice `q₁` on a pair no preset names: a determinant of 0, which reads by its dominant axes, not as the pair.
+    let q1 = mv::add(&axis(Q0, 0.5), 1.0, &axis(MU2, 1.0));
+    let view = read((q1, q1.map(|c| c * 2.0)), SPLIT);
+    assert_eq!((view.preset, view.a, view.b), (None, MU2, Q0));
+    rejects("the pair read in its own order", || {
+        assert_eq!((view.preset, view.b, view.a), (None, MU2, Q0))
+    });
+}
+
 /// Asserts `v` reads back from its own basis, angles and scale, with its frame.
 fn check_reads_back(v: View) {
     let back = View::framed(&plane(v.basis()), Some(&v.frame()));
