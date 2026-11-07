@@ -31,6 +31,8 @@ Planar three-body problem. Degrees of freedom, accounted honestly:
 
 ## Part 2 — The decoder
 
+*[mirror-step proposal, 7 Nov 2026 (R-854; RQ-739): the owner's proposal to remove the decoder's mirror step, latent `β` over the full circle, would touch this section. A proposal, not applied; nothing here changes until it is ruled.]*
+
 **Latent controls** `z ∈ ℝ⁸`. These are *controls*, not physical quantities — each is pushed through a smooth decoder (sigmoid / softmax / warp) to reach a physical value. Chart coordinates `(s,t) ∈ [0,1]²` map in via a chart map; the validated region is the unit hypercube `[0,1]⁸`. (Past `[0,1]²`, where the figure fills the window, an extended pixel's `z` may leave `[0,1]⁸`: the hypercube bound is the encode path's check, inverse_encode layer 1 on lookup and lock, and an extended pixel is checked by layers 2 and 3 only, Part 3, R-407.) **No latent coordinate is spent on a gauge direction** (this is why the old z₂, z₃ Cartesian-Jacobi directions were dropped in the 10D→8D cleanup).
 
 **Block ordering (convention — fix once, then hold):**
@@ -160,6 +162,10 @@ z(s,t) = z₀ + (2s−1) q₁ + (2t−1) q₂        (s,t) ∈ [0,1]²
 | **2. Derived-in-block** | scalar inside one block: `m₀`, `θ`, `φ` | inverts into its block | **under-determines the 2D block** → chart must declare a *residual convention* for the leftover within-block DOF |
 | **3. Cross-block invariant** | `E`, `L_z`, `K`, `KE`, `PE` | *solves* into a downstream sector, upstream sectors read as fixed | must sit **downstream** of every block it depends on; brings **feasibility boundaries** (infeasible pixels tagged, not dropped); two coupled invariants → joint solve; **warped by default** (`principia_chart_reference.md` §2.1, evaluated per pixel), every pixel of `[0,1]²` feasible, a linear mapping an option per axis whose infeasible pixels are not a system (R-471) |
 | **4. Coupled curve** | one scalar `ν` slaving *several* blocks via a fixed nonlinear embed (Burrau/Euclid: `ν → (α,β,μ₁,μ₂)`) | the embed pins config + mass together | tilt is only well-posed **at a point** (Part 4); decouple the coupling → decomposes back to a plain block axis |
+
+*7 Nov 2026 (R-816, ruling RQ-682 (a), and R-838, RQ-717):* the **virial ratio** `Q = 2K/|U|` is kind 3: it solves
+into the momenta and reads the configuration and the masses as fixed upstream. R-471 H3's "not kind 3" is read as about
+B1's extension only, which R-506 has superseded. The set stays closed at four (R-834, RQ-712 (a)).
 
 Burrau introduces no fifth kind. Kind 4 *degrading* into kind 1/2 when you drop the mass coupling is the signal the taxonomy is at the right level.
 
@@ -545,6 +551,8 @@ The kernel receives `(z₀, q₁, q₂, chart id + params)` — identical in fre
 ---
 
 ## Part 5 — Well-posedness and the validation contract
+
+*[mirror-step proposal, 7 Nov 2026 (R-854; RQ-739): the owner's proposal to remove the decoder's mirror step, latent `β` over the full circle, would touch this section. A proposal, not applied; nothing here changes until it is ruled.]*
 
 A chart is **well-posed iff its swept axes + conventions + slice pin all 8 DOF**: no block over- or under-determined. The usual case is 2 swept + 6 frozen. The exception is **annotation axes** (below): a chart may sweep only 1 physical DOF and render it across a 2D canvas, giving 1 swept + 7 frozen, provided the other axis is declared annotation-only.
 

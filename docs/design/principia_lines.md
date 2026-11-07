@@ -282,7 +282,8 @@ it:
   On a shape chart this is exact: the state's shape maps back onto `(z_α, z_β)`. **Per shown axis, in order (R-538
   TF2):** each sample's chart parameters are taken on the branch nearest the previous sample's (θ ± 2π; over a pole
   θ + π with φ reflected), every coordinate of a mix read in the frame the chart's own parameters are defined in (the
-  full shape sphere's `(θ, φ)` unmirrored, `ρ` along `+x`; the latent chart's canonical); then the axes are mixed (a
+  full shape sphere's `(θ, φ)` unmirrored, `ρ` along `+x`; the latent chart's signed and unfolded, R-853, *was:* "the
+  latent chart's canonical"); then the axes are mixed (a
   tilt, R-473); then the point is drawn in every image by the extension types. The trace never runs the inverse
   policy's lookup and lock validation (inverse encode Part 6) on a sample: it encodes the shown coordinates without
   clamping and checks each shown axis on its own. On a tilted chart the θ branches are not repeats of one image: θ
@@ -348,8 +349,10 @@ it:
   body's escape colour, R-538 I3), in the order the bodies lie on the line (the outer pair lowest-numbered first, the
   middle body in the centre), the line `#D6D3CB`, the discs dark-haloed, no other dots and no rings; the other styles
   (Three in a row, Line and bead, Numeral tag, Crossing tick, Eclipse) stay selectable, the selector defaulting to "from
-  the icon set". On a chart that carries the y-momenta the canonical frame mirrors at every syzygy, so the trace jumps
-  there and a marker is drawn at both ends of the jump.
+  the icon set". On every chart the trace is drawn in the signed, unfolded state, so it is continuous through syzygies
+  (R-853, the owner's answer to RQ-736's first open question; R-854); a mirror-identified trace may remain only as a
+  declared, optional view, labelled as such, never the default. *Was:* "On a chart that carries the y-momenta the
+  canonical frame mirrors at every syzygy, so the trace jumps there and a marker is drawn at both ends of the jump."
 - **Off-screen icons (R-538, R-569).** An icon whose point is outside the view is drawn faint, pinned just inside the
   view's edge, by default; "Off-screen icons: pin to the edge (faint). Untick to hide them." Window
   chevrons (off) mark where the line crosses the view's edge. Pins are events, chevrons the line.

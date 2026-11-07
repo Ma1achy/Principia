@@ -329,6 +329,7 @@ escape has fired but the march continues. Files: pitfalls §2.4; integrator_cont
 ## R-32 — The ionisation gate is pairwise-unbound, separating and total `E > 0`, with settling *(IE-4 (c))*
 *Amended in part by R-670 (2 Nov 2026; RQ-656 (4)(ii): at `ε ≠ 0`, the three pairwise energies take the softened potential).*
 *Refined by R-710 (4 Nov 2026: total `E > 0` reads the stored `E_0`, its sign decided once per trajectory at `t = 0`; RQ-697 closed).*
+*Refined by R-818 (7 Nov 2026; RQ-708 (a): the gate sits behind `E_rel > 0`, classifying an escape the escape rule fired, never a second way to fire).*
 *Still in force: all of it at `ε = 0`, the third condition reading `E_0` (R-710); at `ε ≠ 0`, `d` reads `√(d² + ε²)` in the pairwise energies' potential term (R-670).*
 *24 Sep 2026 · recorded; applied before outcome data at scale*
 
@@ -13878,7 +13879,8 @@ axis bounded; RQ-376 closed).*
 *Amended in part by R-512 (20 Oct 2026; E3 and H9, RQ-402 closed: E3 reads over the chart's square, a window
 pixel whose own `(a, b)` leave it past the edge, blank past a bounded one).*
 *Refined by R-708 (4 Nov 2026: on the tilted Burrau charts E3 holds in warped mode through the floor at the pixel's own held `L_z`, and E2's infeasible cells are the linear arm).*
-*Still in force: all of it; R-506 carries E1 and E2 to every physical-quantity axis, R-508 declares the `t > 1`
+*Amended in part by R-816 (7 Nov 2026; RQ-682 (a): H3's "not kind 3" is read as about B1's extension only; the virial ratio is kind 3).*
+*Still in force: all of it but H3's "not kind 3" as it reaches the virial ratio (R-816); R-506 carries E1 and E2 to every physical-quantity axis, R-508 declares the `t > 1`
 side and R-512 reads E3 over the chart's square, H9's meanwhile becoming the rule.*
 *20 Oct 2026 · applied in `docs/contracts/principia_chart_decoder_contract.md` § "The four axis kinds — a closed set"
 (the kind-3 row) and § "Past the unit square — each axis's extension type (R-407)" (the affine row) and § "Tilt (basis
@@ -20669,6 +20671,8 @@ R-543 is in the "design" group of `plan/rule_groups.yaml`, with R-542.
 Adds REQ-COL-136 to REQ-COL-138; amends REQ-COL-129, REQ-COL-130, REQ-GUI-337, REQ-GUI-339 and REQ-GUI-340.
 
 ## R-544 — The shape sphere chart is the whole sphere: pixel `(θ, φ)` decodes to the system whose signed `n̂` is that point, R-141's decode gauge removed for it, no hemisphere toggle, no remap and no fold at the equator, every pixel its own system; the mirror a fact about fates, tested and never identified, and shown as information in the initial-condition constructor *(amends R-113, R-141, R-537, R-59, R-178, R-408, R-503, R-538 and R-542; withdraws R-412; settles RQ-498 and RQ-504 where they turn on the hemisphere)*
+*Extended by R-854 (7 Nov 2026: the owner's symmetry rule carries "no fold" from the shape sphere to every chart and trajectory display; R-853 and R-855 read it, the filter a declared optional view).*
+*Still in force: all of it.*
 *21 Oct 2026 · applied in `docs/incoming/2026-10-21_shape_sphere_whole/` (the instruction as delivered, its two
 addenda, the plain summary's two versions, the reply, and `checks/r544_check.py`, the port's check),
 `docs/design/principia_chart_reference.md` § "3. Shape-sphere chart `(θ, φ)`" (the held values), § "3.3 The chart map"
@@ -26977,6 +26981,7 @@ M9's report, and item 6's question "which targets gate a milestone": none does; 
 tier).*
 *Amended in part by R-650 (item 5's milestones: the targets are scored in M9, after the core build; the order by need
 orders M9's scoring and the ingest).*
+*Refined by R-840 (7 Nov 2026; RQ-720 (a): item 5 governs charts built for a target; the builder's general options are the owner's own order).*
 *Still in force: all of it but, for external targets, item 3's confirmation "at the gate" (with M9's report), item 6's
 gating question (no target gates a milestone, R-649) and item 5's milestones (M9, R-650); its port follows PLAN.md
 (R-629), which keeps the tiers, rules 1–8 and item 5's order by need.*
@@ -28081,6 +28086,8 @@ port's, in the order the orchestrator assigned them.
 Changes REQ-VAL-295, REQ-VAL-297 and REQ-VAL-330 (RQ-598's hold removed; rulings; REQ-VAL-330's source).
 
 ## R-638 — RQ-598's work starts now: GG-1's routes 2 (Fig. 1 read from its vector paths) and 3 (recomputed with Brutus), and a BR-1 Brutus ensemble on Breen's stated set-up from a fixed recorded seed, while the owner emails the authors; Fig. 1 must reconcile to exactly 1212 points a panel, and the cost per point is reported before any Brutus run is scaled or goes below ε = 10⁻⁶; every self-computed result is labelled ours *(refines R-637)*
+*Extended by R-822 (7 Nov 2026; RQ-696 (c): BR-1 also runs the authors' own starts, each arm labelled).*
+*Still in force: all of it.*
 *28 Oct 2026 · the owner's message of that day on PR #327; ported 29 Oct 2026; applied in
 `docs/incoming/2026-10-28_rq598_data/README.md` § 6 (the record), REQ-VAL-295, REQ-VAL-297 and REQ-VAL-330 (reqio),
 TASK-M3-62 and TASK-M3-65 (notes) and `plan/rule_groups.yaml`; its work done by PR #335*
@@ -29532,7 +29539,8 @@ Changes REQ-GUI-216 (statement, verify, rulings, source, note).
 ## R-668 — The 1 Nov library triage rulings: the site-note families stay, marked "operator's own search, unreviewed", closure peeks only and never targets, `bhhsat` with them unless Davoust & Broucke's comparison matches, `suvakov_pc` closure only; a digit match is a trace, marked "inferred"; values printed in a paper, or in a public database a paper points to, are stored with credit and citation, an author emailed only as a last resort; unreviewed and AI-assisted sources are peeks only; hierarchical triples are parked with the v2+ 3D extension; RQ-666 is confirmed; the kernel stays at `G = 1`, another `G` converted at the import boundary and what can't be converted refused *(closes RQ-666 and RQ-668; corrects R-468)*
 *Refined by R-679 (3 Nov 2026: item 5's parking reaches planetary, star-plus-planets, sources, revisited with the v2+
 3D extension).*
-*Still in force: all of it, item 5's parking now reaching planetary sources too (R-679).*
+*Amended in part by R-847 (7 Nov 2026; RQ-723 (b): inner and outer orbital elements become axes at a labelled pair, past item 5's parking).*
+*Still in force: all of it but item 5's reach over the element axes (R-847), item 5's parking now reaching planetary sources too (R-679).*
 *1 Nov 2026 · the owner's two messages of that day on the library triage, the second reversing the first's item 1; ported 2 Nov 2026; applied in `docs/design/principia_dd_replication.md` § 3 (a dated paragraph), § 5.12 (a dated line) and § 5.14 (a bullet), `docs/contracts/principia_integrator_contract.md` Part 5 (a dated paragraph), `docs/incoming/2026-10-31_library_triage/SUMMARY.md` (a dated note under its open questions), R-468's forward line and E3 (a dated correction), `docs/archive/review_queue/M0.md` (RQ-666 moved; RQ-668 filed and moved with this ruling), `REVIEW_QUEUE.md`, REQ-GUI-229, REQ-VAL-330 and REQ-VAL-331 (reqio), REQ-SYS-096 (reqio, new), TASK-M3-66 (new), TASK-M6-47, TASK-M9-25 and TASK-M9-37 (notes), `plan/tasks.yaml` and `plan/rule_groups.yaml`*
 
 The owner's words, 1 Nov 2026, verbatim, the first message:
@@ -29575,6 +29583,8 @@ R-668 is in the "design" group of `plan/rule_groups.yaml`, with R-630 and R-661.
 Adds REQ-SYS-096; changes REQ-GUI-229, REQ-VAL-330 and REQ-VAL-331 (notes).
 
 ## R-669 — The owner adopts the recommendations on the fifteen questions of 1 Nov but RQ-656: the Šuvakov-plane chart is one M9 task, its five targets waiting on it whole; a syzygy-symbol field only; N_scramble only; no periodic-orbit continuation, after the SJTU partial check; TR-1, MK-1 and SL-1 stay in M9, not scored, with no chart; the census's CI cadence as § 8.1 and § 8.2 write it, lavapipe in the smoke job; REQ-VAL-199 keeps 256 starts; GG-1's panels by like ε; the drift predicates read the stored latch, live values only for control flow; BZ-1C's starts by Path B, a list-of-starts chart the fallback; Hénon 1974 joins the rotating-frame set; Heggie & Sweatman 1991 in M9, not scored *(closes RQ-593, RQ-595, RQ-596, RQ-597, RQ-608, RQ-617, RQ-618, RQ-620, RQ-636, RQ-647 and RQ-654; amends R-636, R-637 and R-639; refines R-642)*
+*Reversed in part by R-847 (7 Nov 2026; RQ-725 and RQ-726 (b): fixed-`k` and binary-plus-single become charts and builder axes, their targets scored in M9, f_col built with the scattering chart).*
+*Still in force: all of it but its "no binary-plus-single chart is built", TS-2's "not scored: no fixed-k velocity chart" and "f_col is not built", which R-847 reverses; `SuvakovPlane` as one M9 task stands.*
 *1 Nov 2026 · the owner's second message of that day, item (2); ported 2 Nov 2026; applied in `docs/design/principia_dd_replication.md` § 3 (a bullet), § 5.10, § 5.12 and § 7 (dated lines), `docs/design/principia_dd_simstate_payload.md` § 1 (a dated line), `docs/design/principia_honesty_precision.md` § 6 (a clause), `docs/incoming/2026-10-27_validation_plan/PLAN.md` (a dated note under BZ-1C), `docs/incoming/2026-10-27_validation_plan/PROPOSAL_occupant_matrix_census_2026-10-27.md` § 8.1 (a dated note), `docs/incoming/2026-10-31_library_triage/SUMMARY.md` (its dated note), the forward lines of R-636, R-637, R-639 and R-642, `docs/archive/review_queue/M0.md` (eleven entries moved), `REVIEW_QUEUE.md`, `plan/reviewers/physics.md` § 8, REQ-INT-045, REQ-PAY-112, REQ-VAL-199, REQ-VAL-295, REQ-VAL-311 to REQ-VAL-314, REQ-VAL-316, REQ-VAL-318, REQ-VAL-319, REQ-VAL-321, REQ-VAL-323, REQ-VAL-325 to REQ-VAL-327 and REQ-VAL-329 (reqio), REQ-CHART-091, REQ-VAL-342 and REQ-VAL-343 (reqio, new), TASK-M9-40 (new), TASK-M3-41, TASK-M9-22 to TASK-M9-24, TASK-M9-27 to TASK-M9-29, TASK-M9-35 and TASK-M9-37, `plan/tasks.yaml` and `plan/rule_groups.yaml`*
 
 The owner's words, 1 Nov 2026, verbatim, the second message's item (2) and what follows it:
@@ -29785,9 +29795,10 @@ merge-ready passes "not applicable").*
 *Amended in part by R-684 (3 Nov 2026: the quick and full tiers of `ci.yml`, not ruled here, are ruled: full CI on
 every merge-candidate head, the one the `merge-ready` label marks, and every push to `main`; the quick tier on every
 other pull-request head; applied with R-683's step (2)).*
+*Amended in part by R-827 (7 Nov 2026; RQ-704 (b): the merge of `main` "once right before the label" lapses where there is no conflict).*
 *Still in force: all of it but how `mutants-check` is reported, which heads pass without a run, and the tiers left
 unruled: the `merge-ready` label's run, the label taken off on a push, fix rounds checked locally, the `reviews` runs
-cancelled, and `main` merged in in batches.*
+cancelled, and `main` merged in in batches; and its merge of `main` right before the label (R-827).*
 *2 Nov 2026 · the owner's CI plan of that day; applied in `.github/workflows/mutants.yml`,
 `.github/workflows/reviews.yml`, `xtask/tests/merge_ready.rs` (new), `xtask/tests/ci_changes.rs`,
 `xtask/tests/mutants_no_mutant.rs`, qa's `xtask/tests/qa_ci_throughput_a.rs` (new) and five qa files (below),
@@ -30836,7 +30847,8 @@ Adds REQ-GUI-414 and REQ-GUI-415; changes REQ-PERF-115 (verify, rulings, source,
 
 ## R-706 — The owner's deferrals of 4 Nov: each entry stays open with its target, and RQ-654's place on the list changes nothing, R-669 having closed it, with BZ-1C's work in M9; RQ-647 is moot under R-669
 *Amended in part by R-793, R-794, R-795, R-798, R-799, R-800, R-801 and R-802 (5 Nov 2026: the owner's reply of that day answers RQ-680, RQ-681's part (a), RQ-594, RQ-619, RQ-643's option (b), RQ-378 and RQ-386, and puts RQ-577 at M3 in place of its own session).*
-*Still in force: RQ-681's parts (b) and (c) deferred to M9, RQ-643's option (a) to M9, the deferrals of RQ-391, RQ-675, RQ-676, RQ-677 and RQ-679 as R-803 to R-807 restate them, and what it says of RQ-654 and RQ-647.*
+*Amended in part by R-813, R-814 and R-815 (7 Nov 2026: RQ-675, RQ-676 and RQ-677 ruled at their tasks' start, so their deferral has ended).*
+*Still in force: RQ-681's parts (b) and (c) deferred to M9, RQ-643's option (a) to M9, the deferrals of RQ-391 and RQ-679 as R-803 and R-807 restate them, and what it says of RQ-654 and RQ-647.*
 *4 Nov 2026 · the owner's batch of that day; applied in `REVIEW_QUEUE.md` (a dated line on each deferred entry), `docs/archive/review_queue/M0.md` (a dated note on RQ-647 and RQ-654) and `plan/rule_groups.yaml`*
 
 The owner's words, 4 Nov 2026, verbatim:
@@ -30897,6 +30909,7 @@ Changes REQ-VAL-319 (statement, verify, rulings, source, note).
 ## R-708 — The tilted Burrau `K` charts follow R-471's two modes: warped, the default, every pixel a system under every tilt, the `K` axis floored at the pixel's own held `L_z` in the additive form and the bottom row never blanked; linear, rows at fixed values, an infeasible cell blank, held coordinates by value; held energy-type coordinates tilt in their warp coordinate in warped mode *(closes RQ-678 and RQ-683; amends R-633; refines R-471 and R-508)*
 *Refined by R-709 (4 Nov 2026: a held energy's warp coordinate past `t < 0`, if the implementer confirms it arises, clamps at `t = 0`).*
 *Amended in part by R-720 (5 Nov 2026: "tilted in their warp coordinate" is narrowed to held `K` only; the held `L_z` tilts and slices by value, `L_z = L_z0 + d`).*
+*Refined by R-817 (7 Nov 2026; RQ-700 (b): on a virial axis with `Q₀ > 0` the floor sits under the rise only) and R-833 (7 Nov 2026; RQ-710 (c): `Φ_θ,L_z`'s held `K` warp takes a `K_max` and `γ_K` of its own, a calibration).*
 *Still in force: all of it, but that a held `L_z` tilts in a warp coordinate, which R-720 narrows away.*
 *4 Nov 2026 · the owner's ruling of that day; applied in `docs/contracts/principia_chart_decoder_contract.md` § "Tilt (basis edit)", `docs/design/principia_chart_reference.md` § "2.1 Feasibility, and the warp that makes every pixel valid" and § "4.5 The Burrau-family chart maps", R-471's, R-508's and R-633's forward lines, `docs/archive/review_queue/M0.md` (RQ-678, moved with its ruling), `REVIEW_QUEUE.md` (RQ-699, new), REQ-CHART-061, REQ-CHART-062 and REQ-CHART-067 (reqio), TASK-M2-38 and TASK-M2-52, `plan/tasks.yaml` and `plan/rule_groups.yaml`; built by TASK-M2-52, and by TASK-M2-37 for the single energy axis*
 
@@ -31132,6 +31145,8 @@ The owner's words, 4 Nov 2026, verbatim:
 R-715 is in the "ci" group of `plan/rule_groups.yaml`.
 
 ## R-716 — The ten CI optimisation candidates: each measured before and after, negative results reported, one pull request per item, items 1 and 4 first, then 2 and 3, then the rest; lands in `plan/OPERATIONS.md` § "Merging"
+*Amended in part by R-828 (7 Nov 2026; RQ-705 (a): item 4's strip half is dropped, R-374 standing) and R-829 (RQ-706: item 3's cache is not taken; an in-run artifact only if it measurably saves time, R-285 unchanged).*
+*Still in force: all of it but item 4's strip half and item 3's cache.*
 *4 Nov 2026 · the owner's message of that day, written up 5 Nov 2026 under the batch's item (3); applied in `plan/OPERATIONS.md` § "Merging", `plan/rule_groups.yaml` and `plan/section_notes.yaml`; changes no requirement*
 
 The owner's words, 4 Nov 2026, verbatim:
@@ -31207,6 +31222,8 @@ The owner's words, 4 Nov 2026, verbatim, in the order given:
 R-719 is in the "process" group of `plan/rule_groups.yaml`.
 
 ## R-720 — The held `L_z` of `(ν, K)`, `Φ_θ,K` and `Φ_strip,K` tilts and slices by value, `L_z = L_z0 + d`; R-708's warp-coordinate tilt is narrowed to held `K` only; a column above `K_max` at large tilt is accepted, the practical bound the slider span, RQ-679, still deferred to TASK-M8-48 *(closes RQ-699; amends R-708)*
+*Extended by R-818 (7 Nov 2026; RQ-701 (a): the same by-value tilt and slice for a `MixedEnergy` chart's held `L_z`, built in M8).*
+*Still in force: all of it.*
 *5 Nov 2026 · the owner's message of that day; applied in the forward lines of R-508, R-633 and R-708, R-708's "case that came back" passage, `docs/archive/review_queue/M0.md` (RQ-699 moved), `REVIEW_QUEUE.md` (with dated lines on RQ-679 and RQ-701), `docs/contracts/principia_chart_decoder_contract.md` § "Tilt (basis edit)", `docs/design/principia_chart_reference.md` § "4.5 The Burrau-family chart maps" and § 5.4, REQ-CHART-062 and REQ-CHART-065 (reqio), TASK-M2-52 and `plan/rule_groups.yaml`; built by TASK-M2-52*
 
 The owner's words, 5 Nov 2026, verbatim:
@@ -31238,6 +31255,8 @@ R-720 is in the "physics" group of `plan/rule_groups.yaml`.
 Changes REQ-CHART-062 (statement, verify, rulings, source, note, rq) and REQ-CHART-065 (verify, rulings, source, note).
 
 ## R-791 — At `ε ≠ 0` the `(L_z, E)` chart stays available with its energy axis the Newtonian energy, so a pixel's start never depends on `ε`; the axis is labelled Newtonian energy and the Inspector shows the softened energy beside it *(closes RQ-693)*
+*Extended by R-819 (7 Nov 2026; RQ-709 (a): the Newtonian energy on every axis that reads `U`, the virial axis's disagreement shown in the Inspector).*
+*Still in force: all of it.*
 *5 Nov 2026 · the owner's reply to the report of 5 Nov 2026; applied in `docs/archive/review_queue/M0.md` (RQ-693 moved), `docs/design/principia_chart_reference.md` § 2.1 and § 2.2, `docs/design/principia_dd_decoder.md` § 3.7, `docs/design/principia_dd_encode.md`, `docs/design/principia_debug_tooling_plan.md` § G, `docs/contracts/principia_render_contract.md` § "Cross-check views (the seams)", `docs/contracts/principia_inverse_encode_contract.md`, `docs/contracts/principia_integrator_contract.md` Part 7, `docs/gui/principia_render_gui_spec.md` § G2 and § G8, REQ-VAL-015, REQ-CHART-092, REQ-GUI-416, and the `rq` lists of REQ-INT-111, REQ-SYS-094 and REQ-SYS-095 (reqio), TASK-M9-39, `plan/tasks.yaml` and `plan/rule_groups.yaml`;
 changes REQ-VAL-015, REQ-INT-111, REQ-SYS-094 and REQ-SYS-095; adds REQ-CHART-092 and REQ-GUI-416*
 
@@ -31307,6 +31326,8 @@ It ends the wait on TASK-M7-52 and on TASK-M7-47's two arms.
 R-793 is in the "design" group of `plan/rule_groups.yaml`.
 
 ## R-794 — The replication scoring command, `cargo xtask gate replication`, is a deliverable of TASK-M3-27; the atlas twins and OC-2's state and tolerance stay deferred to M9 *(on RQ-681, which stays open)*
+*Extended by R-824 (7 Nov 2026; RQ-681 (c): OC-2 recomputes from `ref_*`, the figures rerun at M9).*
+*Still in force: all of it.*
 *5 Nov 2026 · the owner's reply to the report of 5 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-681, a deferral line; the entry stays open), `docs/design/principia_dd_replication.md` § "The gate", REQ-TOOL-222 (reqio), TASK-M3-27, TASK-M9-01, `plan/tasks.yaml` and `plan/rule_groups.yaml`;
 adds REQ-TOOL-222*
 
@@ -31366,6 +31387,8 @@ The owner's words (5 Nov 2026), verbatim:
 R-797 is in the "physics" group of `plan/rule_groups.yaml`.
 
 ## R-798 — PA-1 runs on the shape sphere at rest through a tested remap, with no new chart type; a shape-chart preset centred on the equilateral point shows the two side ratios in the Inspector *(closes RQ-594)*
+*Extended by R-834 (7 Nov 2026; RQ-712 (a): "no new chart type" is the rule from now on, for anything not already ruled) and read by R-835 (RQ-713 (a): a side-ratio builder axis isn't a chart type).*
+*Still in force: all of it.*
 *5 Nov 2026 · the owner's reply to the report of 5 Nov 2026; applied in `docs/archive/review_queue/M0.md` (RQ-594 moved), `docs/design/principia_dd_replication.md` § 5.12 and the task list, `docs/gui/principia_render_gui_spec.md` § G2 and § G8, REQ-VAL-323, REQ-CHART-093 and REQ-GUI-417 (reqio), TASK-M9-24, TASK-M9-37, TASK-M9-45 (new), `plan/tasks.yaml`, `plan/tools/milestones.py` and `plan/rule_groups.yaml`;
 changes REQ-VAL-323; adds REQ-CHART-093 and REQ-GUI-417*
 
@@ -31473,6 +31496,7 @@ The owner's words (5 Nov 2026), verbatim:
 R-803 is in the "design" group of `plan/rule_groups.yaml`.
 
 ## R-804 — Where a margin node's two inputs sit is deferred to TASK-M7-12, options with a recommendation proposed when it starts *(defers RQ-675)*
+*Superseded by R-813 (7 Nov 2026: RQ-675 ruled at its task's start).*
 *5 Nov 2026 · the owner's reply to the report of 5 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-675, a deferral line; the entry stays open), TASK-M7-12, `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
 changes no requirement*
 
@@ -31485,6 +31509,7 @@ The owner's words (5 Nov 2026), verbatim:
 R-804 is in the "design" group of `plan/rule_groups.yaml`.
 
 ## R-805 — TASK-M7-12's deliverables against the built assembler are deferred to that task, options with a recommendation proposed when it starts *(defers RQ-676)*
+*Superseded by R-814 (7 Nov 2026: RQ-676 ruled at its task's start).*
 *5 Nov 2026 · the owner's reply to the report of 5 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-676, a deferral line; the entry stays open), TASK-M7-12, `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
 changes no requirement*
 
@@ -31497,6 +31522,7 @@ The owner's words (5 Nov 2026), verbatim:
 R-805 is in the "design" group of `plan/rule_groups.yaml`.
 
 ## R-806 — A colour node's default input range and TASK-M7-13's deliverables are deferred to that task, options with a recommendation proposed when it starts *(defers RQ-677)*
+*Superseded by R-815 (7 Nov 2026: RQ-677 ruled at its task's start).*
 *5 Nov 2026 · the owner's reply to the report of 5 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-677, a deferral line; the entry stays open), TASK-M7-13, `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
 changes no requirement*
 
@@ -31649,3 +31675,795 @@ R-390's silences on look, and R-681's and R-682's word to the owner on a stuck c
 REQ-VAL-149 reads as it did.
 
 R-812 is in the "process" group of `plan/rule_groups.yaml`.
+
+## R-813 — A margin node's two field inputs sit on a `colour` or `post` occupant declaring two `// @input`s; render_gui_spec § 5's example is reworded and a `source` keeps no input *(closes RQ-675)*
+*7 Nov 2026 · the owner's reply to the report of 7 Nov 2026; applied in `docs/archive/review_queue/M0.md` (RQ-675 moved), `docs/gui/principia_render_gui_spec.md` § 5, TASK-M7-12, REQ-GUI-024's rulings (reqio), `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
+changes no requirement's statement*
+
+The owner's words (7 Nov 2026), verbatim:
+
+> RQ-675: (a).
+
+*What it decides:* option (a). The margin is a `colour` (or `post`) occupant declaring two `// @input`s, as § 3.1 and § 15 item 6 allow; § 5's example, which put the two ins on a derived `source`, is reworded, and `main`'s assembler, which gives a `source` no input, stands unchanged. TASK-M7-12's `stain_fanout` arm ("a margin node has two field ins") tests such an occupant (REQ-GUI-024).
+
+*What it replaces:* **R-804**, which deferred RQ-675 to TASK-M7-12's start; that start has come and this is its answer.
+
+R-813 is in the "design" group of `plan/rule_groups.yaml`.
+
+## R-814 — TASK-M7-12 extends `assemble.rs` and `codegen/` with no second walk, its edit-sequence proptest runs under `cargo test -p engine`, and the fallback must differ from `#141418` too *(closes RQ-676)*
+*7 Nov 2026 · the owner's reply to the report of 7 Nov 2026; applied in `docs/archive/review_queue/M0.md` (RQ-676 moved), TASK-M7-12, REQ-RENDER-072 and REQ-RENDER-081 (reqio), `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
+changes REQ-RENDER-072's and REQ-RENDER-081's verify*
+
+The owner's words (7 Nov 2026), verbatim:
+
+> RQ-676: (a) + (b) + (c).
+
+*What it decides:* all three options, each as its entry reads.
+
+- **(a)** TASK-M7-12's deliverables are re-scoped to extend `crates/render/src/assemble.rs` and `codegen/` (the fallback and the remaining wiring). No `codegen/walk.rs` is written: a second walk to `shade()` would be a second path (REQ-RENDER-010).
+- **(b)** The edit-sequence proptest `stain_always_renderable` runs as `cargo test -p engine`, since `StainGraph` and its edits are `engine`'s and `render` does not depend on `engine` (systems_architecture § 7.1). REQ-RENDER-072's verify names that crate.
+- **(c)** The invalid-graph fallback must be distinguishable from the presentation view's `#141418` as well as from both-None mid-grey and the invalid-pixel hatch (render_gui_spec § 13, R-467). REQ-RENDER-081's verify lists all three, and the measurable check is a colour distance against each.
+
+*What it replaces:* **R-805**, which deferred RQ-676 to this task's start.
+
+R-814 is in the "design" group of `plan/rule_groups.yaml`.
+
+## R-815 — An untransformed slot input's default domain is "inherits", resolved per wire at assembly, an unbounded field taking `(0, 1)`; TASK-M7-13's scan is decided by the written relocated-binary and wasm criterion *(closes RQ-677)*
+*7 Nov 2026 · the owner's reply to the report of 7 Nov 2026; applied in `docs/archive/review_queue/M0.md` (RQ-677 moved), `docs/contracts/principia_gui_state_contract.md` § 3, TASK-M7-13, REQ-GEN-019 (reqio), `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
+changes REQ-GEN-019's verify*
+
+The owner's words (7 Nov 2026), verbatim:
+
+> RQ-677: (b) for the range. Deliverables (d)/(e): decide by your written criterion (two-way).
+
+*What it decides:* option (b) for the range: the registry records "inherits" for an untransformed input, the domain resolved per wire at assembly from the wired field's manifest range, and a field whose range is `Range::UNBOUNDED` takes `range_norm`'s `(0, 1)`, the generator's own fallback. REQ-GEN-019's verify is read on a wired node.
+
+On the deliverables, options (d) and (e) are a two-way choice the owner hands back, decided by the criterion the report wrote before any run: `registry()` returns the same entries from a relocated native binary and from the wasm build, with the source tree absent. Pass means (d), TASK-M7-13 re-scoped to extend `registry.rs` and its run-time scan; fail means (e), the build-time scan and `build.rs` as written. TASK-M7-13 runs that check first, reports the numbers, and the criterion isn't adjusted after (R-649). Nothing is left open, so the entry closes.
+
+*What it replaces:* **R-806**, which deferred RQ-677 to this task's start.
+
+R-815 is in the "design" group of `plan/rule_groups.yaml`.
+
+## R-816 — A virial-ratio axis is kind 3: it solves into the momenta, reading the configuration and the masses as fixed upstream; R-471 H3's "not kind 3" is read as about B1's extension only *(closes RQ-682)*
+*7 Nov 2026 · the owner's reply to the report of 7 Nov 2026; applied in `docs/archive/review_queue/M0.md` (RQ-682 moved), `docs/contracts/principia_chart_decoder_contract.md` § "The four axis kinds — a closed set", TASK-M8-119, `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
+changes no requirement*
+
+The owner's words (7 Nov 2026), verbatim:
+
+> RQ-682: (a).
+
+*What it decides:* option (a). The virial ratio `Q = 2K/|U|` is kind 3, a cross-block invariant: `InvariantQuantity` gains it, solving into the momenta and reading the configuration and the masses. R-471 H3's sentence, "The virial ratio and the mass ratio are not kind 3, so B1 stands for them", is read as about B1's extension, which R-506 has since superseded; the mass ratio stays kind 2 in the masses. The four kinds stay a closed set. The builder's virial axis, TASK-M8-119's descriptor, is built on this; RQ-717 (R-838) is the same question and closes with it.
+
+*What it amends:* **R-471**, H3, as it reaches the virial ratio's kind.
+
+R-816 is in the "physics" group of `plan/rule_groups.yaml`.
+
+## R-817 — A warped virial axis with an asked bottom `Q₀ > 0` at a held `L_z ≠ 0` puts the floor under the rise only: the pixel's ratio is `max(Q₀, Q_min(U)) + (Q_hi − Q₀)·t^γ_K` *(closes RQ-700)*
+*7 Nov 2026 · the owner's reply to the report of 7 Nov 2026; applied in `docs/archive/review_queue/M0.md` (RQ-700 moved), `docs/design/principia_chart_reference.md` § 2.1, REQ-CHART-139 (reqio, new), TASK-M8-119, `plan/tasks.yaml`, `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
+adds REQ-CHART-139*
+
+The owner's words (7 Nov 2026), verbatim:
+
+> RQ-700: (b).
+
+*What it decides:* option (b). With `Q_min(U) = L_z²/(I·|U|)`, the pixel's ratio is `max(Q₀, Q_min(U)) + (Q_hi − Q₀)·t^γ_K`, so the bottom row is the asked bottom `Q₀` where `Q₀` is feasible and the floor elsewhere, and the rows span the asked range. At `Q₀ = 0` both forms agree, so the built additive form is unchanged there, bit for bit.
+
+*What is built:* the built form is (a), `kernel::chart::physical`'s `K* = L_z²/2I + Q(t)·|U|/2` (TASK-M2-37). This PR changes no code: TASK-M8-119, which gives the virial axis its descriptor, changes it, under REQ-CHART-139, with a test that the bottom row reads `Q₀` where feasible and a control on the additive form. Nothing reaches the axis until then, since no chart offers it.
+
+*What it refines:* **R-708**, the owner's additive floor of 4 Nov on RQ-683, for a virial axis whose range is off 0.
+
+R-817 is in the "physics" group of `plan/rule_groups.yaml`.
+
+## R-818 — A `MixedEnergy` chart's held `L_z` tilts and slices by value on the floor and its held `K` on the warp line, with `K_max` ruled as RQ-710's, built in M8; and a triple ejection waits behind `E_rel > 0` *(on RQ-701, which stays open, deferred to M8; closes RQ-708)*
+*7 Nov 2026 · the owner's reply to the report of 7 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-701, a deferral line), `docs/archive/review_queue/M0.md` (RQ-708 moved), `docs/design/principia_dd_integrator.md` § escape, `docs/contracts/principia_integrator_contract.md` Part 7, REQ-EVT-006 (reqio), TASK-M3-12, TASK-M8-48, `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
+changes REQ-EVT-006*
+
+The owner's words (7 Nov 2026), verbatim:
+
+> RQ-701: (a) for each, slicing by value; K_max ruled with RQ-710. defer:M8
+> RQ-708: (a).
+
+*What it decides,* for each entry the answer names:
+
+- **RQ-701, option (a) for each, slicing by value.** On a lone `K`, `KE`, `E` or virial axis the held `L_z` moves by value on the floor, `L_z = L_z₀ + d`, §2.1's floor at the pixel's own tilted `L_z`, as R-720 has it on three other charts; on a lone `L_z` axis the held `K` takes the warp line, `K = K_max·t^γ_K`, `t = t₀ + d`. Both slice by value. `K_max` is "ruled with RQ-710": a calibration of the chart's own (R-71), as R-833 rules for `Φ_θ,L_z`. The trailing `defer:M8` defers the build and the entry with it: RQ-701 stays open, deferred to M8, where TASK-M8-48 builds the tilt and the slice and proposes its `K_max`. `d = 0` stays the untilted chart, bit for bit.
+- **RQ-708, option (a).** The running kernel reaches the ionisation gate only behind `E_rel > 0`: the escape rule fires first, as for any escape, and the gate then says whether the escape is a triple ejection, `detail = 3`. It is never a second way to fire. In the entry's equilateral family the firing waits until one body is unbound from the other two. TASK-M3-12 builds it, and REQ-EVT-006 says so, with the entry's family as its case and a control that fires the gate on its own.
+
+*What it extends:* **R-720**, its by-value rule, to a `MixedEnergy` chart's held `L_z`. *What it refines:* **R-32**, whose settling the gate reads, now behind `E_rel > 0`.
+
+R-818 is in the "physics" group of `plan/rule_groups.yaml`.
+
+## R-819 — R-791's Newtonian energy reaches every axis that reads `U`: the lone, mixed and Chart-builder `E` axes and the virial ratio, each labelled, the softened value beside it in the Inspector, which also shows the virial axis's disagreement with the stored ratio *(closes RQ-709)*
+*7 Nov 2026 · the owner's reply to the report of 7 Nov 2026; applied in `docs/archive/review_queue/M0.md` (RQ-709 moved), `docs/design/principia_chart_reference.md` § 2.1, REQ-CHART-140 (reqio, new), TASK-M9-39, `plan/tasks.yaml`, `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
+adds REQ-CHART-140*
+
+The owner's words (7 Nov 2026), verbatim:
+
+> RQ-709: (a), consistent with my RQ-693 answer; show the virial disagreement in the Inspector.
+
+*What it decides:* option (a), consistent with R-791. At `ε ≠ 0` every axis that reads `U` reads the Newtonian `U`, so no pixel's start depends on `ε`, each axis labelled as Newtonian whenever softening is on, the softened value beside it in the Inspector. On the virial ratio the axis's Newtonian ratio differs from the stored `virial_ratio`, which R-670 makes softened; the owner's rider puts that disagreement in the Inspector, shown, not hidden. TASK-M9-39, which lifts the refusal of `ε ≠ 0`, builds it (REQ-CHART-140).
+
+*What it extends:* **R-791**, from the `(L_z, E)` chart to every axis that reads `U`.
+
+R-819 is in the "physics" group of `plan/rule_groups.yaml`.
+
+## R-820 — A saved preset whose chart is not two latent axes at one scale stores its whole saved triple `(z₀, q₁, q₂)` as its home view; the zoom row's scale is still to be named *(on RQ-711, which stays open)*
+*7 Nov 2026 · the owner's reply to the report of 7 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-711, a dated line), `docs/gui/principia_render_gui_spec.md` § G2, REQ-GUI-108 (reqio), TASK-M8-18, `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
+changes REQ-GUI-108*
+
+The owner's words (7 Nov 2026), verbatim:
+
+> RQ-711: (a).
+
+*What it decides:* option (a): a saved preset stores its whole saved triple `(z₀, q₁, q₂)` as its home view, so Home returns the chart that was saved, for unequal scales, skewed axes and a tilted view alike. REQ-GUI-108's read-back (Home returns bitwise) is the check, per chart class.
+
+*What it leaves:* the option's own words keep "the zoom row's scale still to be named", and the answer doesn't name it, so RQ-711 stays open for that one value, with a dated line saying so. A curved chart's home by its parent and tilt, as R-475 and R-801 save it, was the report's recommendation, not the owner's answer, and is not applied here.
+
+R-820 is in the "design" group of `plan/rule_groups.yaml`.
+
+## R-821 — The precision-ladder proposal's seven questions stay deferred to M3 *(defers RQ-577)*
+*7 Nov 2026 · the owner's reply to the report of 7 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-577, a deferral line), `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
+changes no requirement*
+
+The owner's words (7 Nov 2026), verbatim:
+
+> RQ-577: defer:M3
+
+*What it decides:* the deferral, as it reads, restating R-795's. Nothing is built, and R-637's leanings stay leanings.
+
+R-821 is in the "physics" group of `plan/rule_groups.yaml`.
+
+## R-822 — GPU `sin` and `cos` near π/2: a per-backend check against f64 at M4, the kernel's own `sin` and `cos` ruled with RQ-687 on M4's cross-backend numbers; RQ-679 deferred to M8 and RQ-687 to M4; BR-1 runs both the authors' starts and the seeded draw, each labelled *(defers RQ-629, RQ-679 and RQ-687; closes RQ-696)*
+*7 Nov 2026 · the owner's reply to the report of 7 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-629, RQ-679 and RQ-687, deferral lines), `docs/archive/review_queue/M0.md` (RQ-696 moved), `docs/design/principia_dd_replication.md` § 5.10, REQ-RENDER-122 (reqio, new), REQ-VAL-297 (reqio), TASK-M4-27, TASK-M9-22, `plan/tasks.yaml`, `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
+adds REQ-RENDER-122; changes REQ-VAL-297's note*
+
+The owner's words (7 Nov 2026), verbatim:
+
+> RQ-629: (b) at M4; (c) ruled with RQ-687 on the cross-backend numbers. defer:M4
+> RQ-679: defer:M8
+> RQ-687: defer:M4
+> RQ-696: (c).
+
+*What it decides,* for each entry the answer names:
+
+- **RQ-629: (b) at M4; (c) with RQ-687; deferred to M4.** At M4 the GPU suite gains a per-backend check of `cos` near `π/2` against f64, so a backend that does worse is caught before ROUNDTRIP's acceptance; TASK-M4-27 builds it (REQ-RENDER-122). Option (c), the kernel's own `sin` and `cos`, is RQ-687's option (a) and is ruled with it on TASK-M4-27's and TASK-M4-28's cross-backend numbers. The entry stays open, deferred to M4, for (c).
+- **RQ-679: deferred to M8,** the start of TASK-M8-48, as R-807 had it. Stays open.
+- **RQ-687: deferred to M4,** option (a) decided on the cross-backend measurement, as R-797 had it; option (b) stands built (#437). Stays open.
+- **RQ-696: option (c).** BR-1 runs both: runs from the authors' own starts, for the 180 they cover, and R-638's seeded draw, each labelled. They answer different questions, one trajectory by trajectory and one the set-up's distribution. The authors' starts stay local (R-641, R-701), so only the seeded arm can be committed. TASK-M9-22 scores both, reporting outcome fractions side by side. Closed.
+
+*What it extends:* **R-638**, whose seeded draw is now one of two arms. It restates **R-796**, **R-797** and **R-807**.
+
+R-822 is in the "physics" group of `plan/rule_groups.yaml`.
+
+## R-823 — The collinear statistical targets' cap question stays deferred to M9 *(defers RQ-643)*
+*7 Nov 2026 · the owner's reply to the report of 7 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-643, a deferral line), `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
+changes no requirement*
+
+The owner's words (7 Nov 2026), verbatim:
+
+> RQ-643: defer:M9
+
+*What it decides:* the deferral, as it reads. R-800's option (b) stays applied; option (a) is revisited at M9 if the cost measurement allows.
+
+R-823 is in the "design" group of `plan/rule_groups.yaml`.
+
+## R-824 — OC-2 recomputes each atlas row from its `ref_*` state, the figures rerun at M9; the rest of TASK-M9-01's gaps stay deferred to M9 *(on RQ-681, which stays open, deferred to M9)*
+*7 Nov 2026 · the owner's reply to the report of 7 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-681, a deferral line), REQ-VAL-214 (reqio), TASK-M9-01, `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
+changes REQ-VAL-214*
+
+The owner's words (7 Nov 2026), verbatim:
+
+> RQ-681: (c) ref_*, rerun the figures at M9; the rest defer:M9.
+
+*What it decides:* part (c)'s state: OC-2 recomputes `E` and `L` from each row's `ref_*`, the state RQ-660 found `L_cat` matches (3,943 rows within 4.9e-7 relative in energy, against 2.8e-1 at worst from `pub_*`). Those figures are rerun at M9 by TASK-M9-01. The rest, part (c)'s tolerance form and part (b)'s twins and planes, is deferred to M9, and the entry stays open for it.
+
+*What it extends:* **R-794**, which ruled part (a).
+
+R-824 is in the "design" group of `plan/rule_groups.yaml`.
+
+## R-825 — Whether the presentation frames become a stage stays deferred until the exporter is designed *(defers RQ-391)*
+*7 Nov 2026 · the owner's reply to the report of 7 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-391, a deferral line), `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
+changes no requirement*
+
+The owner's words (7 Nov 2026), verbatim:
+
+> RQ-391: defer until the exporter is designed.
+
+*What it decides:* the deferral, as it reads, restating R-803's.
+
+R-825 is in the "design" group of `plan/rule_groups.yaml`.
+
+## R-826 — A browser run started from the measurement panel's button is marked in its report as not a measurement *(closes RQ-702)*
+*7 Nov 2026 · the owner's reply to the report of 7 Nov 2026; applied in `docs/archive/review_queue/M0.md` (RQ-702 moved), REQ-PERF-119 (reqio, new), TASK-M8-121 (new), `plan/tasks.yaml`, `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
+adds REQ-PERF-119*
+
+The owner's words (7 Nov 2026), verbatim:
+
+> RQ-702: (c).
+
+*What it decides:* option (c). A run started from the panel's button reads the rate measured at page load, so its report says it is not a measurement, and it is never read as one. Runs through `?run=`, which every measurement TASK-M8-96 takes uses, are unchanged. TASK-M8-86 has merged, so the change is a new task, TASK-M8-121 (REQ-PERF-119).
+
+R-826 is in the "design" group of `plan/rule_groups.yaml`.
+
+## R-827 — R-676's merge of `main` right before the `merge-ready` label lapses where there is no conflict; R-388's merge at an early start stays *(closes RQ-704)*
+*7 Nov 2026 · the owner's reply to the report of 7 Nov 2026; applied in `docs/archive/review_queue/M0.md` (RQ-704 moved), `plan/OPERATIONS.md` § "Merging", `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
+changes no requirement*
+
+The owner's words (7 Nov 2026), verbatim:
+
+> RQ-704: (b).
+
+*What it decides:* option (b). `main` is merged into a pull request only on a real conflict, or when a merged change must be in the tree, and no longer once right before the label (R-717, "don't merge main in … just to refresh a branch"). R-388's merge stays: an early-start branch is off a head that has since merged, and the merge happens before its pull request exists, so it re-runs no CI. `plan/OPERATIONS.md` § "Merging" follows.
+
+*What it amends:* **R-676**, its "or once right before the label".
+
+R-827 is in the "process" group of `plan/rule_groups.yaml`.
+
+## R-828 — R-374 stands: CI's test binaries keep their line tables, and the `strip = "debuginfo"` half of R-716's item 4 is dropped *(closes RQ-705)*
+*7 Nov 2026 · the owner's reply to the report of 7 Nov 2026; applied in `docs/archive/review_queue/M0.md` (RQ-705 moved), `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
+changes no requirement*
+
+The owner's words (7 Nov 2026), verbatim:
+
+> RQ-705: (a).
+
+*What it decides:* option (a). Panics keep `file:line` backtraces (R-374), so the strip is not taken. Nothing is built: PR #394 already left it out.
+
+*What it amends:* **R-716**, item 4, whose strip half is dropped.
+
+R-828 is in the "ci" group of `plan/rule_groups.yaml`.
+
+## R-829 — The kernel's built output isn't cached: it may be shared as an artifact within a run only if that measurably saves time; R-285 is unchanged *(closes RQ-706)*
+*7 Nov 2026 · the owner's reply to the report of 7 Nov 2026; applied in `docs/archive/review_queue/M0.md` (RQ-706 moved), `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
+changes no requirement*
+
+The owner's words (7 Nov 2026), verbatim:
+
+> RQ-706: (b) only if it measurably saves time; otherwise nothing. R-285 unchanged.
+
+*What it decides:* option (b), conditionally. R-285's list of what CI caches is unchanged, so the kernel's output is never cached across runs. Within one run it may be shared as an artifact, but only if a measurement shows it saves time, the criterion written before the run (R-649, R-716); otherwise nothing is done. The report's baseline was 97 s, 70 s and 101 s on three GPU jobs, about 4.5 job-minutes at best.
+
+*What it amends:* **R-716**, item 3.
+
+R-829 is in the "ci" group of `plan/rule_groups.yaml`.
+
+## R-830 — RQ-688 closes: `stand-in-soak`'s cause was the cold first run on the slow runner band, the timer untouched, and the entry's own criterion is met *(closes RQ-688)*
+*7 Nov 2026 · the owner's reply to the report of 7 Nov 2026; applied in `docs/archive/review_queue/M0.md` (RQ-688 moved), `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
+changes no requirement*
+
+The owner's words (7 Nov 2026), verbatim:
+
+> RQ-688: close
+
+*What it decides:* the close. R-707 ruled "find the cause; timer untouched"; #412's serial warm-up fixed it, and the entry's criterion, written first, a run with List at 85 s or more passing 50 of 50, is met (run 42026831761 at 91 s, run 42074503189 at 91.50 s median, both 50 of 50). The timer stays 600 s. One soak on `main` follows, so that REQ-SYS-070's check stops citing a red run; that is the orchestrator's, not a ruling's.
+
+R-830 is in the "one_off" group of `plan/rule_groups.yaml`.
+
+## R-831 — RQ-689 closes: the job-queue test's flaky control was fixed test-only by #410 *(closes RQ-689)*
+*7 Nov 2026 · the owner's reply to the report of 7 Nov 2026; applied in `docs/archive/review_queue/M0.md` (RQ-689 moved), `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
+changes no requirement*
+
+The owner's words (7 Nov 2026), verbatim:
+
+> RQ-689: close
+
+*What it decides:* the close. R-707's option (a) was built by #410 (commit 3b294003): the test waits for the child to leave the group before the leader exits.
+
+R-831 is in the "one_off" group of `plan/rule_groups.yaml`.
+
+## R-832 — RQ-703 closes, overtaken: the quick tier merged by #414, and what remains of the CI series follows R-684's order, step (1) next *(closes RQ-703)*
+*7 Nov 2026 · the owner's reply to the report of 7 Nov 2026; applied in `docs/archive/review_queue/M0.md` (RQ-703 moved), `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
+changes no requirement*
+
+The owner's words (7 Nov 2026), verbatim:
+
+> RQ-703: close
+
+*What it decides:* the close. #414 merged the quick tier, and the owner's 7 Nov correction names R-683's step (1), one test binary per crate, as the next lever, "already ruled". So R-713 amends neither R-683 nor R-684, and the order of what remains is theirs. Merged work stays merged.
+
+R-832 is in the "ci" group of `plan/rule_groups.yaml`.
+
+## R-833 — `Φ_θ,L_z`'s held `K` warp takes a `K_max` and `γ_K` of its own, a calibration (R-71), with `K_max` at the chart's calibrated `K` proposed at the gate *(closes RQ-710)*
+*7 Nov 2026 · the owner's reply to the report of 7 Nov 2026; applied in `docs/archive/review_queue/M0.md` (RQ-710 moved), `docs/design/principia_chart_reference.md` § 4.5, REQ-CHART-141 (reqio, new), TASK-M8-48, `plan/tasks.yaml`, `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
+adds REQ-CHART-141*
+
+The owner's words (7 Nov 2026), verbatim:
+
+> RQ-710: (c), with (b) proposed at the gate.
+
+*What it decides:* option (c), a calibration requirement of the chart's own under R-71 (REQ-CHART-141), with option (b) as the value proposed at the gate: `K_max` at the chart's calibrated `K` (REQ-CHART-046), so `t₀ = 1`, and REQ-CHART-044's `γ_K`. Whether `K_max` follows a slice of the held `K` is part of that proposal. TASK-M8-48, whose sliders give the default tilted view, proposes it with evidence; `HeldK` keeps taking both as inputs.
+
+*What it refines:* **R-708**, whose warp line for this held `K` had no values.
+
+R-833 is in the "values" group of `plan/rule_groups.yaml`.
+
+## R-834 — Four axis kinds stay: a new capability is a registry entry under one of them, "no new chart type" is the rule from now on for anything not already ruled, and `SuvakovPlane` stands as R-669 ruled it *(closes RQ-712)*
+*7 Nov 2026 · the owner's reply to the report of 7 Nov 2026; applied in `docs/archive/review_queue/M0.md` (RQ-712 moved), `docs/design/principia_chart_composition.md` (status), `docs/contracts/principia_chart_decoder_contract.md` § "The four axis kinds", TASK-M4-37, `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
+changes no requirement*
+
+The owner's words (7 Nov 2026), verbatim:
+
+> RQ-712: (a).
+
+*What it decides:* option (a). The four kinds stay a closed set (REQ-CHART-004); a primitive is a registry entry under one of them, the virial ratio by R-816. R-798's "no new chart type" is the rule from now on, for anything not already ruled. `SuvakovPlane` stands as R-669 ruled it, and it can be a baked pair inside the cap. The owner's agreement in principle of 6 Nov is now a ruling. TASK-M4-37 carries it into the design's body.
+
+*What it extends:* **R-798**, its "no new chart type", beyond PA-1.
+
+R-834 is in the "design" group of `plan/rule_groups.yaml`.
+
+## R-835 — A side-ratio axis in the builder and R-798's "no `SideRatio` chart" both stand: the axis is a registered closed pair, and PA-1 keeps its remap *(closes RQ-713)*
+*7 Nov 2026 · the owner's reply to the report of 7 Nov 2026; applied in `docs/archive/review_queue/M0.md` (RQ-713 moved), `docs/design/principia_chart_composition.md` (status), TASK-M4-37, `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
+changes no requirement*
+
+The owner's words (7 Nov 2026), verbatim:
+
+> RQ-713: (a).
+
+*What it decides:* option (a). The builder offers side ratios as a registered closed pair (design § 8.3), an option in the builder and not a chart type; the same closed form serves as PA-1's remap, one source. TASK-M9-45 is untouched.
+
+*What it reads:* **R-798**, whose "There is no `SideRatio` chart" stands.
+
+R-835 is in the "design" group of `plan/rule_groups.yaml`.
+
+## R-836 — Hold `L_z` adds the rigid rotation, the scale taking only the part orthogonal to it when both are held, and outcomes 4 and 5 test `rigid(v, Jr)`, an exact predicate against a dyadic `τ` *(closes RQ-715)*
+*7 Nov 2026 · the owner's reply to the report of 7 Nov 2026; applied in `docs/archive/review_queue/M0.md` (RQ-715 moved), `docs/design/principia_dd_decoder.md` § 2, `docs/design/principia_chart_composition.md` (status), TASK-M4-37, `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
+changes no requirement*
+
+The owner's words (7 Nov 2026), verbatim:
+
+> RQ-715: (a) with (i).
+
+*What it decides:* option (a), amended per the physics review, with the tags' option (i).
+
+- **(a)** Design § 5.3: hold `L_z` adds the rigid rotation; with both held, the scale takes only the part orthogonal to it, `η = √((E* − U − L*²/2I)/K_δ)`; off, bitwise today's. Its conditions stand as the entry lists them: `K_δ` from `δv`, the second projection, the outcome order and encode's held decode written as definitions before the build (REQ-CHART-108 to REQ-CHART-110); by value inside a chart that holds `L_z` by construction, and no tilt target on a free chart; the wider `ray-degenerate` rank loss; RQ-722 put to the owner (now R-841).
+- **(i)** Outcomes 4 and 5 test `rigid(v, Jr)`, an exact predicate on the wedge of `v` and `Jr` against a dyadic constant `τ`, a calibration (REQ-CHART-126, R-71, proposed `2⁻²²`), so one input gives one tag on every backend (REQ-VAL-017). dd_decoder § 2's branch-input table takes the option's row now. `τ`'s measurement, its criterion written first, is owed with the calibration.
+
+TASK-M8-118 builds it. It closes the held-`L_z` half of RQ-701 only as that entry says; RQ-701 is R-818's.
+
+R-836 is in the "physics" group of `plan/rule_groups.yaml`.
+
+## R-837 — The axis cap is 4 baked entries beyond the gallery, counted as entries, decode-only, created on first use, a pair past the cap running as CPU batch *(on RQ-716, which stays open)*
+*7 Nov 2026 · the owner's reply to the report of 7 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-716, a dated line), `docs/design/principia_chart_composition.md` (status), TASK-M4-37, `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
+changes no requirement*
+
+The owner's words (7 Nov 2026), verbatim:
+
+> RQ-716: (a).
+
+*What it decides:* option (a). The cap is 4 baked entries beyond the gallery, counted as entries (a pair under two link sets is two), decode-only, created on first use; a first use may take a compile, about 0.25 s to 1 s measured on the Mac and about 0.37 s on Windows, accepted as an exception to REQ-PERF-006's "every chart at startup". Past the cap a pair runs as CPU batch, labelled. `SuvakovPlane` counts as one of the 4. The value lives in one ledger constant, tested by `baked_cap`.
+
+*What it leaves:* the entry asks too whether C3's 2 s start-up limit applies on Vulkan, where the 12 gallery pipelines alone take 2.7 s; option (a) doesn't answer it, and the report flagged that the cap passes only on the reading that the 2 s is the Mac's. RQ-716 stays open for that question, with a dated line; the reading meanwhile is the design's, the Mac's number, #427 owning any Vulkan budget.
+
+R-837 is in the "values" group of `plan/rule_groups.yaml`.
+
+## R-838 — The virial-ratio axis's kind is RQ-682's answer: kind 3 *(closes RQ-717)*
+*7 Nov 2026 · the owner's reply to the report of 7 Nov 2026; applied in `docs/archive/review_queue/M0.md` (RQ-717 moved), TASK-M8-119, `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
+changes no requirement*
+
+The owner's words (7 Nov 2026), verbatim:
+
+> RQ-717: as RQ-682.
+
+*What it decides:* "as RQ-682": option (a) there, R-816. The design's virial rows, which said "by RQ-682", read kind 3, and TASK-M8-119 builds the descriptor on it.
+
+R-838 is in the "physics" group of `plan/rule_groups.yaml`.
+
+## R-839 — Core seam 3 holds for live views; a labelled CPU-batch view is the stated exception, writing the IC buffer the decode stage writes, never reached by a gesture *(closes RQ-719)*
+*7 Nov 2026 · the owner's reply to the report of 7 Nov 2026; applied in `docs/archive/review_queue/M0.md` (RQ-719 moved), `docs/design/principia_chart_composition.md` (status), TASK-M4-37, `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
+changes no requirement*
+
+The owner's words (7 Nov 2026), verbatim:
+
+> RQ-719: (a).
+
+*What it decides:* option (a). `principia_core_design.md` seam 3, "*Not* a pre-decoded IC buffer", holds for every live view. A labelled CPU-batch view is the one stated exception: it writes the IC buffer the decode stage writes today, and pan, zoom and tilt never reach it live. TASK-M8-102 builds it.
+
+R-839 is in the "design" group of `plan/rule_groups.yaml`.
+
+## R-840 — R-594 item 5 governs charts built for a target; the builder's general options are the owner's own order and built in M8, last *(closes RQ-720)*
+*7 Nov 2026 · the owner's reply to the report of 7 Nov 2026; applied in `docs/archive/review_queue/M0.md` (RQ-720 moved), `docs/design/principia_chart_composition.md` (status), TASK-M4-37, `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
+changes no requirement*
+
+The owner's words (7 Nov 2026), verbatim:
+
+> RQ-720: (a).
+
+*What it decides:* option (a). "Do not build charts ahead of it" governs a chart built for a target. Polar and log pair maps and curved slices are builder options from the owner's own order, built for no target, in M8 (TASK-M8-100, TASK-M8-101), so nothing is built ahead of what the build needs.
+
+*What it reads:* **R-594**, item 5.
+
+R-840 is in the "design" group of `plan/rule_groups.yaml`.
+
+## R-841 — A chart at rest under hold `L_z` is labelled "not at rest", not refused *(closes RQ-722)*
+*7 Nov 2026 · the owner's reply to the report of 7 Nov 2026; applied in `docs/archive/review_queue/M0.md` (RQ-722 moved), `docs/design/principia_chart_composition.md` (status), TASK-M4-37, `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
+changes no requirement*
+
+The owner's words (7 Nov 2026), verbatim:
+
+> RQ-722: (b).
+
+*What it decides:* option (b). A rest chart under hold `L*` is a well-defined family, each pixel `(L*/I)·Jr`; it carries the label "not at rest" and is not refused, keeping the order's closed list of refusals. Design § 6.1's `HoldAgainstConvention` row becomes that label. TASK-M4-33 and TASK-M8-118 build it.
+
+R-841 is in the "design" group of `plan/rule_groups.yaml`.
+
+## R-842 — Time as an axis is a chart mode, not a fifth kind: `T` on the sim key and the window off it, a cache per column of at most one screen height of rows, re-integrating from `t = 0` past it; it amends the temporal note and the caching contract's `T` row *(closes RQ-727)*
+*7 Nov 2026 · the owner's reply to the report of 7 Nov 2026; applied in `docs/archive/review_queue/M0.md` (RQ-727 moved), `docs/design/principia_temporal_architecture_note.md` § "The decision", `docs/contracts/principia_caching_contract.md` (the invalidation table's `T` row), `docs/design/principia_chart_composition.md` (status), TASK-M4-37, `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
+changes no requirement*
+
+The owner's words (7 Nov 2026), verbatim:
+
+> RQ-727: (a).
+
+*What it decides:* option (a). **Time** is a mode in the builder's selector, no fifth `AxisKind`. `T` stays on the sim key as the march's top; `(t_lo, t_hi, warp, rows)` is a view, off it. Each column keeps a cache keyed by boundary, at most `K = H` rows, always holding what the window's rows read, `2H` a labelled extra; a window past a column's front marches it on; a boundary not held re-integrates from `t = 0`, progressively, as R-66, down to one boundary, where time zoom stops; more goes through a Result (R-572), on disk. A switch from a time-axis chart to an IC-only chart is a cut. No dense output is stored.
+
+It amends the temporal note's "store no history" for visible rows, bounded by `payload_mem`, and the caching contract's `T` row: raising `T` is a continuation, for a regularised occupant always and for an unregularised one while `dt_macro` is unchanged, up to R-610's cap. The default occupant resolves time only to `Δ_sync`, so this mode bears on REQ-INT-080's value; the re-measure on Heggie × RK4 is still owed. TASK-M8-113 to TASK-M8-116 build it.
+
+R-842 is in the "design" group of `plan/rule_groups.yaml`.
+
+## R-843 — Region D at unequal masses: the plane is geometric at every mass, D is labelled, one sector, AN-1 is its own preset, a half-disc of radius 10, and a statistic over D says "one labelling" *(closes RQ-728)*
+*7 Nov 2026 · the owner's reply to the report of 7 Nov 2026; applied in `docs/archive/review_queue/M0.md` (RQ-728 moved), `docs/design/principia_chart_composition.md` (status), TASK-M4-37, `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
+changes no requirement*
+
+The owner's words (7 Nov 2026), verbatim:
+
+> RQ-728: (a).
+
+*What it decides:* option (a). The plane is geometric at every mass, `ξ + iη = d + λ/ρ`. Region D at unequal masses holds one of six labellings, one sector, and is labelled so; "blank and uncounted" reaches equal masses at `L_z = 0` only. AN-1 is its own preset, a half-disc of radius 10, with `A₁A₂ = 1` not the longest side, the equal masses at `A₁, A₂` and `C` the third. A statistic over D at unequal masses says "one labelling".
+
+*What it leaves to RQ-714:* option (a) calls D "a labelled mask". Whether region D's outside is masked at all is RQ-714's open part, since the owner's later filter order (R-855) has the presets render the full disc; the mask reading is taken with that answer, and nothing else here waits on it.
+
+R-843 is in the "physics" group of `plan/rule_groups.yaml`.
+
+## R-844 — Hill's threshold at unequal masses is the labelled pair's: pair `(i, j)` is cut off from the third iff `c > max(f_i, f_j)`, blank at `E ≥ 0` and `ε ≠ 0` *(closes RQ-730)*
+*7 Nov 2026 · the owner's reply to the report of 7 Nov 2026; applied in `docs/archive/review_queue/M0.md` (RQ-730 moved), `docs/design/principia_chart_composition.md` (status), TASK-M4-37, `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
+changes no requirement*
+
+The owner's words (7 Nov 2026), verbatim:
+
+> RQ-730: (a).
+
+*What it decides:* option (a), a definition (R-72): "distance from the Hill-stability threshold on `L_z²E`" names the chart's labelled pair. All three choices agree at equal masses (25/972). Hill-stable means no exchange, not bound, and the row says so. TASK-M8-109 builds it.
+
+R-844 is in the "physics" group of `plan/rule_groups.yaml`.
+
+## R-845 — Region D as a chart: a paper's fixed horizon is read by running to the longest pixel's horizon and cutting each pixel at its own; the default velocities are each target's, offered as presets *(on RQ-714, which stays open)*
+*Refined by R-851 (7 Nov 2026: the velocity default fixed on the count, exact rest, eq. 3 the second preset).*
+*Still in force: all of it.*
+*7 Nov 2026 · the owner's reply to the report of 7 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-714, a dated line), `docs/design/principia_chart_composition.md` (status), TASK-M4-37, `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
+changes no requirement*
+
+The owner's words (7 Nov 2026), verbatim:
+
+> RQ-714: outside masked (a); time (a). Velocities: offer what each region-D target uses, as presets,
+> with the default chosen by which most targets use; report the count before fixing it.
+
+*What it decides:*
+
+- **Time, option (a).** The run reaches the longest pixel's horizon, `T_c = T_p √(GM)/ℓ_min^{3/2}`, and the comparison cuts each pixel at its own, a tested function (rule 11); the kernel is untouched.
+- **Velocities.** The answer replaces the two options with a rule: offer what each region-D target uses, as presets, the default the one most targets use, the count reported before it is fixed. The owner's later order fixes it on the count: exact rest the default, eq. 3 the second preset (R-851).
+
+*What it leaves open:* the outside. The reply rules "outside masked (a)", a mask over `ξ ∈ [0, ½]`, `η ∈ [0, √3/2]`, blank and out of the count. The owner's later symmetry filter order (R-855) says "region D presets render the full disc, with the filter on by default for the paper-frame presets only", and the queue had already marked RQ-714's (a) as overtaken for the presets by it. The two differ in what is built, a mask in M4 or none, and the answer doesn't say which governs, nor what "full disc" is (RQ-736's conflict 3: the lens, the box or the literal disc). So that part is not applied: RQ-714 stays open on it, with a dated line, and TASK-M4-06's edge to TASK-M4-34 waits with it.
+
+R-845 is in the "physics" group of `plan/rule_groups.yaml`.
+
+## R-846 — RQ-718 closes on R-669's reversal: a user-built plane is the user's chart and is never scored *(closes RQ-718)*
+*7 Nov 2026 · the owner's reply to the report of 7 Nov 2026; applied in `docs/archive/review_queue/M0.md` (RQ-718 moved), `docs/design/principia_chart_composition.md` (status), TASK-M4-37, `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
+changes no requirement*
+
+The owner's words (7 Nov 2026), verbatim:
+
+> RQ-718: rewritten after R-669's reversal; a user's own plane stays unscored.
+
+*What it decides:* the entry's question, what R-669's "no chart" means once any axis pairs with any other, is rewritten by R-669's reversal (R-847): fixed-`k` and binary-plus-single are now charts, so there is no refused plane for a user's chart to land on. What stays of option (a) is the owner's rider: a plane a user builds is the user's chart, never the target's, and is never scored.
+
+R-846 is in the "design" group of `plan/rule_groups.yaml`.
+
+## R-847 — R-669 is reversed: fixed-`k` and binary-plus-single (scattering) become charts and builder axes, built when their turn comes, with Heggie & Sweatman 1991 alongside and f_col built with the scattering chart; their targets score in M9; orbital elements are axes at a labelled pair, plus overlays; MK-1 stays, labelled a planar re-run *(closes RQ-723, RQ-725 and RQ-726)*
+*7 Nov 2026 · the owner's reply to the report of 7 Nov 2026; applied in `docs/archive/review_queue/M0.md` (RQ-723, RQ-725 and RQ-726 moved), `docs/design/principia_dd_replication.md` § 5.12, `docs/design/principia_chart_composition.md` (status), REQ-CHART-143, REQ-CHART-144 and REQ-VAL-354 (reqio, new), REQ-VAL-318, REQ-VAL-319, REQ-VAL-321 and REQ-VAL-326 (reqio, notes), TASK-M8-122 and TASK-M8-123 (new), TASK-M9-23, TASK-M9-28, TASK-M8-109, TASK-M8-111, TASK-M4-37, `plan/tasks.yaml`, `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
+adds REQ-CHART-143, REQ-CHART-144 and REQ-VAL-354; changes the notes of REQ-VAL-318, REQ-VAL-319, REQ-VAL-321 and REQ-VAL-326*
+
+The owner's words (7 Nov 2026), verbatim:
+
+> RQ-723: (b), orbital elements as axes at a labelled pair, plus overlays.
+> RQ-725 and RQ-726: R-669 reversed (its recorded reason was cost and scope only): binary-plus-single
+> (scattering) and fixed-k become charts and builder axes like any other, built when their turn comes,
+> with Heggie & Sweatman 1991 alongside; targets that use them score in M9 once the charts exist. The
+> missing definitions (b_max, pericentre phase, pull-in distance with a stated tidal error, fixed-k's
+> rotation sense) are filled at build under physics review.
+> f_col: yes, built with the scattering chart.
+> MK-1: keep it, labelled as a planar re-run of a 3D experiment, not a direct replication.
+
+*What it decides,* for each item the answer names:
+
+- **RQ-723, option (b).** Inner and outer orbital elements are axes at a labelled pair, plus the overlays of option (a): the periapsis ratio and Mardling–Aarseth's distance stay forward-only overlay rows, blank off their domain, and Donnison's variants definition requirements. The axes override R-668 item 5's reach for these rows. TASK-M8-109 builds them, labelled unscored unless a target uses them.
+- **RQ-725 and RQ-726, option (b) of each: R-669 reversed.** The owner's earlier order of the same day made the reversal conditional on R-669's recorded reason; the answer records that reason as cost and scope only, so the reversal holds. Fixed-`k` (the rigid rotation `v = ωJr`, `ω² = 2k|U|/I`, over `D₁₁ ∪ D₁₂`) and binary-plus-single scattering become charts and builder axes like any other, built when their turn comes: TASK-M8-122 (REQ-CHART-143) and TASK-M8-123 (REQ-CHART-144). Heggie & Sweatman 1991 is built alongside the scattering chart, its setup read where RQ-729's gap allows. The targets that use them, TS-2, TR-1, MK-1 and SL-1, score in M9 once the charts exist (TASK-M9-28, TASK-M9-23). The missing definitions, `b_max`, the pericentre phase, the pull-in distance with a stated tidal error and fixed-`k`'s rotation sense, are filled at build under physics review (R-72), never guessed.
+- **f_col: yes,** built with the scattering chart (REQ-VAL-354), so TR-1's colouring is scored with it.
+- **MK-1: kept,** labelled as a planar re-run of a 3D experiment, not a direct replication.
+
+*What it reverses:* **R-669**, in part: its "no binary-plus-single chart is built", TS-2's "not scored: no fixed-k velocity chart" and "f_col is not built". *What it amends:* **R-668**, item 5's reach, for the element axes. `SuvakovPlane` stays one M9 task (R-669, R-834).
+
+R-847 is in the "design" group of `plan/rule_groups.yaml`.
+
+## R-848 — The Saari split's `h` is a builder axis, its range under physics review; R-793 stands *(closes RQ-724)*
+*7 Nov 2026 · the owner's reply to the report of 7 Nov 2026; applied in `docs/archive/review_queue/M0.md` (RQ-724 moved), `docs/design/principia_chart_composition.md` (status), TASK-M8-109, TASK-M4-37, `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
+changes no requirement*
+
+The owner's words (7 Nov 2026), verbatim:
+
+> RQ-724: h as a builder axis, range under physics review. My "RQ-680's dilation rows" was a stale
+> reference, not a reopening; R-793 stands.
+
+*What it decides:* `h`, the scale-free homologous rate, is a builder axis, its range a definition (R-72) written under physics review. The owner's "RQ-680's dilation rows" in the order of 6 Nov was a stale reference, not a reopening: R-793 stands, and the state map's targets stay the app's own charts. TASK-M8-109 builds the axis.
+
+R-848 is in the "physics" group of `plan/rule_groups.yaml`.
+
+## R-849 — A typed combination with no registered inverse gets a general numerical solve on the CPU, recording its branch rule, marking its seams and labelled CPU-only; and under the lock a chart path never jumps: the anchor slides continuously to its nearest point in a constrained chart *(closes RQ-733; on RQ-721, closed by R-850)*
+*7 Nov 2026 · the owner's reply to the report of 7 Nov 2026; applied in `docs/archive/review_queue/M0.md` (RQ-733 moved), REQ-CHART-145 (reqio, new), TASK-M8-102, TASK-M8-117, `docs/design/principia_chart_composition.md` (status), TASK-M4-37, `plan/tasks.yaml`, `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
+adds REQ-CHART-145*
+
+The owner's words (7 Nov 2026), verbatim:
+
+> RQ-733: (b). A typed combination with no registered inverse gets a general numerical solve on the
+> CPU: it records the branch rule it uses where several solutions exist, marks seams where the rule
+> flips, and is labelled CPU-only (live allowed but slow; speeding it up is a future goal, as for
+> morphs). Overlay-only is not the answer. Physics's concerns become requirements on the solver
+> (convergence reported per pixel, failures tagged and never dropped), not a refusal.
+> RQ-721 rider: no labelled jumps under the lock. Where the anchor can't exist in chart B (region D,
+> rest, Burrau and other constrained charts), the anchor slides continuously to its nearest point in
+> B (define "nearest": e.g. keep shape and masses where B allows, ease the held-fixed coordinates to
+> B's values along the path), and the centre pixel follows it. The jump stays only for time-axis to
+> IC-only charts. Without a lock, morphs into constrained charts are ordinary latent blends and need
+> no special case.
+
+*What it decides,* for each item the answer names:
+
+- **RQ-733, option (b).** A typed combination with no registered inverse can be an axis: it gets a general numerical solve on the CPU, recording the branch rule it uses where several solutions exist and marking seams where the rule flips, labelled CPU-only, live allowed but slow; speeding it up is a future goal, as for morphs. Overlay-only is not the answer. The physics reviewer's concerns become requirements on the solver (REQ-CHART-145): convergence reported per pixel, and failures tagged and never dropped. TASK-M8-102, CPU batch's numerical inverses, builds it.
+- **The RQ-721 rider.** Under the lock no path makes a labelled jump. Where the anchor can't exist in chart B (region D, rest, Burrau and other constrained charts), it slides continuously to its nearest point in B, and the centre pixel follows it. "Nearest" is to be defined, the owner's example being to keep shape and masses where B allows and ease the held-fixed coordinates to B's values along the path; that definition is written (R-72) under physics review by TASK-M8-117, the model's Theorem 8 its construction (R-850). The jump stays only for a time-axis chart to an IC-only chart. Without a lock, a morph into a constrained chart is an ordinary latent blend, with no special case. This replaces design § 17.8's "label `anchor not in B`, the morph runs unbased" and the owner's own "the path makes a labelled jump" of RQ-721's answer (R-850).
+
+R-849 is in the "design" group of `plan/rule_groups.yaml`.
+
+## R-850 — Chart paths: the morph is the general form, one path abstraction for every view edit, special cases run by their own code as exact specialisations, each operation tested bitwise against today and against its own path family's formula, never across families *(closes RQ-721)*
+*Amended in part by R-849 (7 Nov 2026, the owner's later rider: under the lock the anchor slides, no labelled jump, the jump kept only for time-axis to IC-only charts).*
+*Still in force: all of it but the labelled jump under the lock.*
+*7 Nov 2026 · the owner's answer to RQ-721 of that day and its amendment of the same day, held for this rulings PR; applied in `docs/archive/review_queue/M0.md` (RQ-721 moved), `docs/contracts/principia_export_animation_contract.md` Part 3, `docs/design/principia_sequence.md` § 3.4, `docs/design/principia_chart_composition.md` (status), TASK-M8-105, TASK-M4-37, `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
+changes no requirement here; TASK-M8-105 carries REQ-TOOL-075 and REQ-GUI-376*
+
+The owner's words (7 Nov 2026), verbatim, on RQ-721:
+
+> RQ-721: (a), amended. The morph IS the general form: one path abstraction for every view edit
+> (tilt, zoom, chart switch, lock, Save view as chart, morph). Where a path is a special case, it is
+> evaluated by that operation's existing code as an exact specialisation. Two tests per operation:
+> (1) the specialisation reproduces current behaviour bitwise; (2) it agrees with the general morph
+> formula to a stated tolerance, so the special cases are provably the same maths, not parallel
+> systems. Where the anchor cannot exist in chart B (e.g. region D, rest or Burrau charts with
+> other masses or momenta), the path makes a labelled jump, shown like a cut. Stored anchor words as
+> designed in §17.8.
+
+The owner's amendment (7 Nov 2026), verbatim, from the order on the chart-space model, its items 2 and 3 (item 1 placed the model, done on PR #422, and item 4 the Lean work, PR #440):
+
+> Chart-space model: /Volumes/X10 Pro/principia/orch/charts/chart-space-model.md (owner-commissioned,
+> 7 Nov). Treat it as the statement of how navigation and chart paths work.
+> 1. Add it to #422 as docs/design/principia_chart_space_model.md and cross-reference it from §17.8.
+> 2. Amend my RQ-721 answer: replace test (2) ("agrees with the general morph formula to a stated
+>    tolerance") with "each operation's implementation reproduces its OWN path family's formula
+>    (latent line, latent plane geodesic, chart-parameter geodesic); never compare across families".
+>    Per the model's Theorem 3, curved tilt and the latent morph are different paths with the same
+>    endpoints, so the 0.197 at tau=1.2 is expected, not a tolerance.
+> 3. Fold in its other consequences: blend in Z only; mid-morph frames never claim held values; the
+>    time-to-IC cut is a product choice (Theorem 9); the sliding anchor (Theorem 8) as the RQ-721
+>    rider's construction.
+> 4. Formalise it in Lean 4 with Mathlib (I couldn't install Lean here). Put it in formal/chart_space/,
+>    outside the Rust workspace, with its own non-required workflow (manual dispatch plus nightly).
+>    Prove Theorems 1, 2, 4, 5, 6, 7, 8 and 9 over Z = EuclideanSpace R (Fin 8) and U a compact
+>    square, with D assumed continuous and total. Report any theorem that fails to formalise, or any
+>    hypothesis the proof needed that the document didn't state; that's the value of doing it.
+>    Floating-point (§8) stays out of Lean.
+
+*What it decides:* option (a), amended.
+
+- **One path abstraction** for every view edit: tilt, zoom, chart switch, lock, Save view as chart and morph. Where a path is a special case, that operation's existing code evaluates it, as an exact specialisation.
+- **Two tests per operation.** (1) The specialisation reproduces current behaviour bitwise. (2), as amended: each operation's implementation reproduces its own path family's formula, the latent line, the latent plane geodesic or the chart-parameter geodesic, and is never compared across families. The model's Theorem 3 makes curved tilt and the latent morph different paths with the same endpoints, so their measured gap (0.197 at `τ = 1.2`, 0.016 median in § 17.3) is expected, not a tolerance. Design § 17.3 already reads so.
+- **The written rules against morphing give way** (option (a)'s list): export contract Part 3, REQ-TOOL-075, REQ-GUI-376 and REQ-GUI-379, and sequence §§ 3.3 and 3.4, so a chart change may morph, live and in export; a new chart-change segment defaults to morph where the ends allow, cut and dissolve still offered, old specs untouched. R-520's link-id cut stands; frames are never scored. TASK-M8-105 carries it into the contracts, with a dated note in each now.
+- **Stored anchor words** as designed in § 17.8. The answer's "labelled jump, shown like a cut" where the anchor can't exist in chart B is replaced by the owner's later rider (R-849): the anchor slides continuously, the model's Theorem 8 its construction, and the jump stays only for time-axis to IC-only charts.
+- **The order's other consequences, item 3:** mid-morph frames never claim held values; the time-to-IC cut is a product choice (Theorem 9); the sliding anchor is Theorem 8. Its "blend in Z only" was withdrawn by the owner's RQ-736 ruling (R-853) and is not ported. Where "mid-morph frames never claim held values" meets design § 17.11's one `E*` at both ends, the model's correction list (item 4) holds it open: RQ-738.
+
+R-850 is in the "design" group of `plan/rule_groups.yaml`.
+
+## R-851 — Region D's default velocities are exact rest, with eq. 3 the second preset; AA-3 and AA-5 read eq. 3, AA-8 runs under both, eq. 3 reproduces Agekyan & Anosova's velocities in their own units before canonicalising, and its 19% spread at `I = 1` is stated beside the preset *(on RQ-714, which stays open)*
+*7 Nov 2026 · the owner's order of that day, held for this rulings PR; applied in `docs/design/principia_dd_replication.md` § 5.8, REQ-CHART-142 (reqio, new), REQ-VAL-270, REQ-VAL-273 and REQ-VAL-277 (reqio, notes), TASK-M4-34, `plan/tasks.yaml`, `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
+adds REQ-CHART-142; changes the notes of REQ-VAL-270, REQ-VAL-273 and REQ-VAL-277*
+
+The owner's words (7 Nov 2026), verbatim:
+
+> Region D default: exact rest, eq. 3 as the second preset, as counted. Go ahead in the rulings PR
+> with the doc edit and code task, the AA-3/AA-5 wording, AA-8 under both presets, and the record
+> corrections. Eq. 3 must reproduce Agekyan & Anosova's velocities in their own units before
+> canonicalising; the 19% spread at I = 1 is expected, so state it beside the preset rather than
+> "fixing" it.
+
+*What it decides:* the velocities R-845 left to a count. The default is **exact rest**, the velocities most region-D targets use (AA-6, every free-fall map, AN-1 and the LL sets), and **eq. 3** is the second preset (AA-2, AA-7, and AA-3 and AA-5, which read paper I's eq. 3 runs though their rows didn't say so).
+
+- **The doc edit:** dd_replication § 5.8 says so, and AA-3's and AA-5's "the Anosova physical-frame entry" reads under eq. 3 (the AA-3/AA-5 wording). AA-8 runs under both presets.
+- **The code task:** TASK-M4-34 builds both presets (REQ-CHART-142). Eq. 3 must reproduce Agekyan & Anosova's velocities in their own units before canonicalising, a tested function (rule 11).
+- **The 19% spread:** at `I = 1` the import's rescale scales eq. 3's start by `√ℓ`, and over D at equal masses `ℓ` runs from 0.408 to 0.577, about 19% in speed. It is expected: stated beside the preset, never "fixed".
+- **The record corrections:** design § 8.5's "flagged for RQ-714" and the AA rows' silence on velocity are corrected by the lines above. If the owner meant others, they are named back in the PR.
+
+RQ-714's outside stays open (R-845).
+
+R-851 is in the "physics" group of `plan/rule_groups.yaml`.
+
+## R-852 — Every registry primitive is classed as a state function, a conserved quantity (exact or approximate, labelled) or a trajectory functional, never an axis; final-condition charts stay a design item for the rulings report, with the check that conserved axes are `T`-independent *(on RQ-734, which stays open)*
+*7 Nov 2026 · the owner's order of that day, held for this rulings PR; applied in `REVIEW_QUEUE.md` (RQ-734, a dated line), `docs/design/principia_chart_composition.md` (status), TASK-M4-37, `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
+changes no requirement*
+
+The owner's words (7 Nov 2026), verbatim:
+
+> Also from the model's §6b: classify every registry primitive as state function, conserved
+> (exact or approximate, labelled), or trajectory functional (never an axis). Add "final-condition"
+> charts (Theorem 11, time-reversal: flip momenta, integrate forward T, flip back) as a design item
+> for the rulings report, with the check that conserved axes are T-independent. Lean: include
+> Theorems 10 and 11.
+
+*What it decides:* design § 3.3, "Every primitive's class", carries the classification, written on PR #422 from the owner's review of that day (its item 4): a state function may be an axis; a conserved quantity is labelled exact or approximate; a trajectory functional is never an axis. This ruling makes that class a rule of the registry: TASK-M4-33's registry carries the class, and a functional offered as an axis is refused.
+
+Final-condition charts (the model's Theorem 11: flip the momenta, integrate forward `T`, flip back) stay a design item, RQ-734, for the next rulings report, with the check that conserved axes are `T`-independent (in the `I = 1` gauge only the scale-free ones, by the owner's model correction of the same day). Nothing is built. "Lean: include Theorems 10 and 11" is the formal work's, `formal/chart_space/` (PR #440), not this PR's.
+
+R-852 is in the "design" group of `plan/rule_groups.yaml`.
+
+## R-853 — The chart-space model is corrected to the corpus, which stands wherever it measured or ruled; the shape sphere's mirror half is never dropped or folded, the mirror fold is a starting state's only, and the state map and latent-chart traces are signed *(closes RQ-736)*
+*Amended in part by R-855 (7 Nov 2026, the owner's filter order: region D's presets render the full disc, the filter on by default for the paper-frame presets only).*
+*Still in force: all of it but open question 2's "reduced domain" for region D's presets.*
+*7 Nov 2026 · the owner's ruling on RQ-736 of that day, its two riders and its answers to the two open questions, held for this rulings PR; applied in `docs/archive/review_queue/M0.md` (RQ-736 moved), `REVIEW_QUEUE.md` (RQ-738, new), `docs/design/principia_state_map.md` § SM1 and its target table, `docs/design/principia_lines.md` (projection; syzygies), REQ-COL-163 (reqio, new), REQ-CHART-133 and REQ-CHART-134 (reqio, rulings), TASK-M7-52, TASK-M8-58, `plan/tasks.yaml`, `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
+adds REQ-COL-163; changes REQ-CHART-133's and REQ-CHART-134's rulings*
+
+The owner's ruling (7 Nov 2026), verbatim:
+
+> RQ-736 (model vs corpus): the corpus and §17 stand wherever they measured or ruled; the model is
+> corrected to match, not the other way round. The revised model (orch/charts/chart-space-model.md,
+> new §0) adopts all six corrections: charts map into the signed per-block state space and paths
+> blend block by block in each block's own geometry; tilt is R-474's lean-each-axis family, tested
+> against its own formula; slice is in the chart's hidden coordinates; held constraints can blank
+> mid-morph; only L_z^2*E and the sign of E are gauge-invariant overlaps. Withdraw my "blend in Z
+> only" item. Replace the branch copy with the revised model.
+
+The owner's rider (7 Nov 2026), verbatim:
+
+> RQ-736 rider: the mirror half of the shape sphere is never dropped or folded, in any chart or any
+> morph (R-544 stands). Signed per-block blending is required precisely so that morphs through
+> shape-sphere charts keep both halves; add a test that a path between two lower-half views stays in
+> the lower half.
+
+The owner's second rider (7 Nov 2026), verbatim:
+
+> Rider for RQ-736 / R-544: the mirror fold applies only to how the latent chart encodes a STARTING
+> state at t = 0, and to the IC constructor's teaching display. It never applies to trajectories,
+> dynamics, or the shape-sphere charts: every shape-sphere chart shows the full theta 0-360 and phi
+> 0-180 range of starts, and trajectories cross the equator freely. Add a test that a shape-sphere
+> trajectory's polar angle is never folded (it crosses 90 deg at syzygies).
+
+The owner's answers to the two open questions (7 Nov 2026), verbatim:
+
+> RQ-736, the two open questions:
+> 1. State map (SM1 fold, the "(mirror folded)" row) and latent-chart traces: these violate the 7 Nov
+>    symmetry rule, so sign them. Colour later states and draw traces in the signed, unfolded state;
+>    traces are continuous through syzygies. A mirror-identified colouring may remain only as a
+>    declared, optional view, labelled as such, never the default.
+> 2. Region D and the presets that inherit its limit (Anosova half-disc, Parischewsky, the angle pair):
+>    a labelled view. It's the papers' reduced domain of starts (eta >= 0 the mirror, xi >= 0 the body
+>    swap at equal masses), so it stands, labelled "reduced domain", with the full disc offered as a
+>    one-click option. At unequal masses xi >= 0 isn't a symmetry; state what the preset does there
+>    (RQ-728 links).
+
+*What it decides:*
+
+- **The corpus and design § 17 stand** wherever they measured or ruled, and the model is corrected to match: charts map into the signed per-block state space and paths blend block by block in each block's own geometry; tilt is tested against its own formula; slice is in the chart's hidden coordinates; held constraints can blank mid-morph; only `L_z²E` and the sign of `E` are gauge-invariant overlaps. "Blend in Z only" is withdrawn. The revised model is on `main` byte for byte (PR #422).
+- **Rider 1:** the mirror half of the shape sphere is never dropped or folded, in any chart or any morph (R-544 stands); signed per-block blending is required so that morphs through shape-sphere charts keep both halves. `path_lower_half_stays` tests it (REQ-CHART-133, TASK-M8-106).
+- **Rider 2:** the mirror fold applies only to how the latent chart encodes a starting state at `t = 0`, and to the IC constructor's teaching display; never to trajectories, dynamics or the shape-sphere charts, which show the full `θ` 0–360° and `φ` 0–180° of starts. `trajectory_polar_unfolded` tests it (REQ-CHART-134, TASK-M8-58).
+- **Open question 1:** the state map's SM1 fold and its "(mirror folded)" row, and the latent-chart traces, are signed: later states are coloured and traces drawn in the signed, unfolded state, continuous through syzygies; a mirror-identified colouring only as a declared, optional view, labelled, never the default. `principia_state_map.md` and `principia_lines.md` change here; TASK-M7-52, the one projection both read, builds it (REQ-COL-163), its reading of a lower-half state on a latent target a definition (R-72) it writes under physics review, and TASK-M8-58's trace follows.
+- **Open question 2:** region D and the presets inheriting its limit stand as a labelled view, "reduced domain", with the full disc a one-click option. The owner's later filter order supersedes this for region D's presets (R-855); for the angle pair and Parischewsky's pair, whose axes are unsigned, the label stands.
+
+*What it leaves:* the entry's correction list for the owner (its nine items, the model's wording against the corpus) and the conflicts the filter order and this ruling leave (its nine items) aren't settled by any answer. They move, unchanged, to RQ-738, filed in this PR and naming RQ-736, so RQ-736 closes on what was ruled.
+
+*What it reads:* **R-544**, which stands; the filter (R-855) is a declared optional view, not a hemisphere toggle or a fold, and R-544's words aren't amended here (RQ-738's first conflict).
+
+R-853 is in the "physics" group of `plan/rule_groups.yaml`.
+
+## R-854 — Symmetry reductions apply only to how a starting state is described at `t = 0`: trajectories evolve and are shown in full physical space, nothing is folded during a run, and the only operation besides the step is the per-step centre-of-mass projection, energy and `L_z` monitored, never corrected
+*7 Nov 2026 · the owner's symmetry rule of that day, its addition and the doc-sweep order that applies it, held for this rulings PR; applied in `docs/contracts/principia_integrator_contract.md` Part 1, `docs/design/principia_state_map.md` § SM1, `docs/design/principia_lines.md`, the proposal's tags in `docs/design/principia_dd_decoder.md` § 3.3, `docs/design/principia_dd_encode.md` § 3.2, `docs/contracts/principia_inverse_encode_contract.md` Part 1, `docs/design/principia_chart_reference.md` § 0.4 and § 3, `docs/contracts/principia_chart_decoder_contract.md` Part 2 and Part 5 and `docs/contracts/principia_canonical_spec.md` § 3, `REVIEW_QUEUE.md` (RQ-739, new), `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
+changes no requirement*
+
+The owner's rule (7 Nov 2026), verbatim:
+
+> Owner rule, 7 Nov 2026 (symmetry): symmetry reductions apply only to how a STARTING state is
+> described at t = 0, never to the dynamics or the simulation. Trajectories always evolve in full
+> physical space: nothing is folded, mirrored, quotiented or canonicalised during integration or in
+> anything displayed about a trajectory (for example, the shape-sphere polar angle crosses 90 degrees
+> freely at syzygies). Where a symmetry is used at all (counting mirror pairs once, the IC
+> constructor showing that a triangle and its flip are mirror images), it is a declared, optional
+> view or statistic, never a removal of starting states or angles. Every chart shows the full range
+> of the angles it sweeps.
+>
+> Proposed change, for the rulings report with a recommendation (it changes the decoder, so
+> one-way): remove the decoder's mirror step entirely and let the latent beta run over the full
+> circle, so every chart, the shape sphere included, uses one decode path with no special case.
+> Report before deciding:
+> 1. Bitwise check: every existing preset, saved chart and golden test with beta in [0, pi]
+>    reproduces unchanged (expected, since the mirror step never fires there); list any that don't.
+> 2. What becomes unnecessary: the mirror step, its deadband rules (R-82, R-438) and the shape
+>    sphere's separate decode path (R-544's skip).
+> 3. What needs a new option: R-408's count-each-system-once statistics become "mirror pairs counted
+>    once" as an optional statistic, never by dropping starts.
+> 4. Encode: a lower-half state now encodes to beta in (pi, 2 pi) instead of a mirrored state; list
+>    every stored z, IC save file or test that relied on the old mirrored encode.
+> 5. Cost: latent charts covering both halves have twice the area in beta; state the effect on
+>    default windows.
+
+The owner's addition (7 Nov 2026), verbatim:
+
+> Add to the 7 Nov symmetry rule: during integration the only operation besides the step itself is
+> the per-step centre-of-mass projection (integrator contract Part 1), which removes floating-point
+> drift and no physical degree of freedom. Energy and L_z are monitored, never corrected. No rotation
+> removal, rescaling, mirroring or canonicalisation ever happens during a run. Regularised integrators
+> change variables internally for accuracy; they evolve the same physical system.
+
+The owner's sweep order (7 Nov 2026), verbatim:
+
+> Doc and plan sweep for 7 Nov's chart and symmetry decisions (record corrections are two-way;
+> anything that changes a ruling's or requirement's meaning goes to /rulings-report):
+> 1. Symmetry rule (model §0.6): find every statement in docs/, plan/, CURRENT_RULES and
+>    requirements that implies a symmetry reduction, fold, mirror or canonicalisation during
+>    integration, in trajectory displays, or in shape-sphere charts, or that a chart drops part of an
+>    angle range. Correct each to "starting states only; full range shown; mirror only as an optional
+>    view or statistic". List each edit.
+> 2. Chart-space model: replace the branch copy with the latest (§0 revision and §0.6), and update
+>    anything in #422's §17 or the plan that says "blend in Z", calls tilt a Grassmannian geodesic, or
+>    treats curved tilt vs the latent morph as a tolerance. Follow §0 (signed per-block blending;
+>    tilt = R-474's lean-each-axis family; each operation tested against its own family).
+> 3. Today's rulings answers (the 7 Nov reply block, R-669's reversal, region D's exact-rest default,
+>    RQ-733 (b), the RQ-721 rider and amendment, RQ-736): make sure every task, requirement and design
+>    section that mentions them agrees after the rulings PR. List conflicts rather than resolving any
+>    that change meaning.
+> 4. Mirror-step removal stays a proposal until ruled: don't apply it, just tag the sections it would
+>    touch.
+> Report the list of files changed and any one-way conflicts found.
+
+*What it decides:* the rule, as it reads. A symmetry reduction applies only to how a starting state is described at `t = 0`. Trajectories evolve in full physical space, and nothing is folded, mirrored, quotiented or canonicalised during integration or in anything displayed about a trajectory. Where a symmetry is used at all, it is a declared, optional view or statistic, never a removal of starting states or angles; every chart shows the full range of the angles it sweeps. During a run the only operation besides the step is the per-step centre-of-mass projection (integrator contract Part 1), which removes floating-point drift and no physical degree of freedom; energy and `L_z` are monitored, never corrected; a regularised occupant changes variables internally and evolves the same system.
+
+- **The sweep (the order's item 1),** "starting states only; full range shown; mirror only as an optional view or statistic": the corpus already says so on the shape sphere (R-544: chart_decoder_contract, chart_reference §§ 3.3 and 5.4, render_gui_spec § G2, state map's port note, `principia_listen.md`, `principia_trajectory_viewing.md`). What didn't, and changes here: integrator contract Part 1 gains the rule; state map SM1 and its `ν × dilation` row, and the trace's projection and syzygy line in `principia_lines.md` (R-853). The mock HTML under `docs/gui/reference/` is a record of the prototype, not changed. Item 2 was done on PR #422; item 3, the consistency check, is the PR's list.
+- **The proposal is not applied.** Removing the decoder's mirror step, latent `β` over the full circle, changes the decoder, so it is one-way: it goes to the next rulings report as RQ-739, with the five things the owner asks reported first. The sections it would touch carry a marker (the order's item 4), and nothing else changes.
+
+*What it reads:* **R-544**, which it generalises from the shape sphere to every chart and trajectory display.
+
+R-854 is in the "physics" group of `plan/rule_groups.yaml`.
+
+## R-855 — The symmetry filter: an optional display option after rendering, never a change to what is computed, blanking a start only where its partner is in the chart's domain, its canonical choice stated, on by default for the paper-frame presets only
+*7 Nov 2026 · the owner's feature order of that day, held for this rulings PR; applied in REQ-CHART-135 to REQ-CHART-138 and REQ-GUI-424 (reqio, rulings), `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
+changes the rulings of REQ-CHART-135 to REQ-CHART-138 and REQ-GUI-424*
+
+The owner's words (7 Nov 2026), verbatim:
+
+> Feature: symmetry filter (owner, 7 Nov), a display option applied after rendering, never a change to
+> what's computed.
+> - An optional GUI toggle (also on export) that draws as transparent every pixel whose STARTING state
+>   is the symmetry image of another start present in the same chart, keeping one canonical
+>   representative of each pair. Symmetries: the mirror (whole system, positions and velocities), and
+>   body-label swaps where the masses make them exact. Declared per chart, extensible.
+> - Correctness rule: blank a pixel only if its partner is actually in the chart's domain (check via
+>   the chart's own map). On charts that hold something that breaks the symmetry (e.g. a shape-sphere
+>   chart with fixed nonzero velocities), partners are absent and nothing is blanked; show "no
+>   duplicates in this chart" rather than an empty toggle.
+> - The canonical choice is stated in the legend and export sidecar (e.g. "mirror pairs shown once:
+>   eta >= 0"). Region D's quarter disc, the Anosova half-disc and the half shape sphere at rest come
+>   out of this filter rather than out of reduced chart domains, so the papers' figures are
+>   reproducible with the full disc still computed underneath.
+> - Optional later: a "skip computing duplicates" export setting for speed, off by default and
+>   labelled.
+> - Tests: on a rest chart, filtered + its mirror reproduces the full chart bitwise (outcome fields
+>   equal, signed fields flipped); on a fixed-velocity shape-sphere chart the filter blanks nothing.
+> - This also answers RQ-736 question 2: region D presets render the full disc, with the filter on by
+>   default for the paper-frame presets only.
+
+*What it decides:* the feature, as `docs/design/principia_chart_composition.md` § 10.4 already writes it from this order (PR #422), with REQ-CHART-135 to REQ-CHART-138 and REQ-GUI-424 and TASK-M8-120; none of it is repeated here, and each of those requirements now names this ruling. Its last bullet answers RQ-736's second open question for region D's presets, superseding R-853's "reduced domain" there: they render the full disc, the filter on by default for the paper-frame presets only. What "full disc" is, and the filter's other conflicts with the corpus, are RQ-738's; RQ-714's outside, which the reply ruled masked before this order, stays open (R-845).
+
+*What it amends:* **R-853**, its answer to the second open question, for region D's presets.
+
+R-855 is in the "design" group of `plan/rule_groups.yaml`.
