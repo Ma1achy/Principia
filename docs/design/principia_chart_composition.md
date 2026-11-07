@@ -668,7 +668,7 @@ of rank 2 (§ 12).
 | `measure: chart area` | area is not Liouville measure (contract § "Links carry a measure") |
 | `branch: <rule>`, `seam` | § 7.3 |
 | `axis reads before the hold` | § 5.4, a hidden `p_fixed` or `p_λ` tilt target included |
-| `one orientation` | a chart reaching `η ≥ 0` only, as the third-body pair and the angle pair do (the shape sphere's whole-sphere rule, R-544, stays that chart's) |
+| `one orientation` | a chart reaching `η ≥ 0` only, as the third-body pair and the angle pair do. Every shape-sphere chart shows the full `θ` and `φ` range (R-544, § 17.2). Whether a chart like the third-body pair, which § 8.2 shows is the sphere stereographically, may stay so limited is RQ-736's open question |
 | `paper scale differs` | a `gauge` axis at `I = 1` (§ 8.6), a held `L*` or `E*` on region D (§ 5.3), or a chart read against a paper that normalises `E`, so `ℓ` moves across it (§ 3.2's Orlov row) |
 | `Q above the floor` | a warped virial axis at a held `L_z ≠ 0`: it reads the excess above the rotational floor, the state's own `Q` in the readout (§ 9) |
 | `approximate` | a conserved row steady only in a limit (§ 3.3) |
@@ -1316,6 +1316,7 @@ Each with a control (R-176), named here and owned by a task.
 | `hold_outcomes` | § 5.3's six outcomes in order, each on an exact fixture; a tagged pixel's momenta unchanged; a rest pixel on the floor becomes `(L*/I)·Jr`; at f32, above the floor and on it, the state the second projection leaves at `K̂ = 0`: masses `(0.25, 0.25, 0.5)`, positions `(∓√2, 0)`, `(0, 0)`, `v = 0.005·Jr`. Under RQ-715's option (i): the outcome tags bit-identical at f32 and f64, Metal and lavapipe beside the CPU, on identical `(m, r, v)` across a fixture grid on both sides of `τ`, that state and exactly rigid draws included; no NaN on any arm. Under (ii): rigid draws are exempt from test 12's tag equality; each float's outcome is finite | the order swapped at 2 and 3; under (i), a tag from `s = 0` and `K̂ = 0` differs on the rigid draws; under (ii), the `K̂ = 0` test removed gives NaN | TASK-M8-118 |
 | `hold_rank` | a momentum plane containing `Jr`, one through rest under hold `E` alone, and one through rest and one through a rigid rotation with both held, each report `ray-degenerate`; a generic plane doesn't | the label removed; a plane through a rigid rotation under hold `E` alone reporting rank loss | TASK-M8-118 |
 | `hold_encode` | Part 6 step 4 reads the held decode; a state off `{L_z = L*}` gets the stated outcome | step 4 on the unheld decode lands on a wrong pixel | TASK-M8-118 |
+| `trajectory_polar_unfolded` | the figure-eight, run by the kernel: `φ = acos(n_w)` from the signed `n̂` at every macro-step lies on both sides of 90°, crosses it at every syzygy, and the sign of `n_w` matches the triangle's signed area from the positions; R-544, the owner's second rider to RQ-736 | the polar angle folded, `min(φ, π − φ)` | TASK-M8-58 |
 | `baked_cap` | baked pairs in `stage::decode` at or under the ledger's constant | one entry over | TASK-M4-33 |
 | `excluded_primitives` | no row with an inverse names a binary phase, eccentricity, impact parameter or fixed `k` (R-669) | one added | TASK-M4-33 |
 | `region_d_native` | § 8.8's table: read-back within tolerance **and** the paper's three separations in the paper's own frame against the decoded state, eq. 4's energy on AA rows | `d` dropped on both sides; bodies 0, 1 swapped at unequal masses; `η` mirrored | TASK-M8-110 |
@@ -1330,7 +1331,7 @@ Each with a control (R-176), named here and owned by a task.
 | `ftle_chart_independent` | a linear chart, a warped one at a pixel where the warp's value is exact, and a third with a different tangent through the same state, a tilted pair, decode one bit pattern and give one `λ_T` bit for bit | `δ₀`'s direction taken from a chart tangent, which only the third chart can catch: a warp rescales the tangent and keeps its direction | TASK-M8-100 |
 | Golden | `cargo xtask golden decode-preset`: region D through the DECODE preset, TASK-M4-06's acceptance, unchanged | as that task's | TASK-M4-06 |
 
-The test names `round_trip_complete` to `ftle_chart_independent`, and `path_lower_half_stays` (§ 17.14), are this design's proposals.
+The test names `round_trip_complete` to `ftle_chart_independent`, `trajectory_polar_unfolded`, and `path_lower_half_stays` (§ 17.14), are this design's proposals.
 
 **Round trips: every claimed inverse (the owner's review of 7 Nov).** Every primitive with a claimed inverse ships with a
 `forward(inverse(x)) = x` test that can fail, with a mutation control: one inverse made wrong on purpose, the test going
@@ -1443,7 +1444,7 @@ Nothing below is decided here.
 | RQ-733 | A user-typed combination with no registered inverse: an overlay only, or a general solve | registered inverses only; an overlay otherwise |
 | RQ-734 | Final-condition charts (the model's Theorem 11): whether to build; the occupant; the gauge; line 243's rejection | build later, as a CPU batch chart: the default occupant, the round-trip miss measured and masked per pixel, an exactly reversible integrator the option; keep `I = 1` and label it; narrow the rejection to event reads |
 | RQ-735 | The browser build: closed-form GPU charts only, or a WASM CPU route for numerical axes and CPU-only morphs | the WASM CPU route, reasoned from R-571; nothing measured |
-| RQ-736 | The chart-space model against the corpus | ruled by the owner on 7 Nov: the corpus and § 17 stand, and the model is corrected to match; closes in the rulings PR, with a correction list and one open question on `one orientation` charts |
+| RQ-736 | The chart-space model against the corpus | ruled by the owner on 7 Nov: the corpus and § 17 stand, and the model is corrected to match; closes in the rulings PR, with a correction list and open questions on `one orientation` charts outside `(θ, φ)` and on traces read through the latent frame |
 
 **New extension types: none proposed.** Polar's `ϕ` and `r` declare existing types, under R-407 clause 3's physics review.
 
@@ -1570,6 +1571,11 @@ block in its own geometry. RQ-721 still applies it.
 **The mirror half is never dropped or folded (R-544; the owner's rider to RQ-736).** That holds in any chart and any morph, and
 it's why the blend is signed: a morph through shape-sphere charts keeps both halves. A path between two lower-half views stays
 in the lower half, since the great circle between two points of an open hemisphere stays in it (`path_lower_half_stays`, § 17.14).
+
+**The mirror fold is a start's, never a trajectory's (R-544; the owner's second rider to RQ-736).** It applies only to how the
+latent chart encodes a starting state at `t = 0`, and to the initial-condition constructor's teaching display. It never applies
+to trajectories, dynamics or the shape-sphere charts: every shape-sphere chart shows the full `θ` 0° to 360° and `φ` 0° to 180°
+range of starts, and trajectories cross the equator freely (`trajectory_polar_unfolded`, § 12).
 
 **What the blend means.** A morph is of *addresses*, not of systems: at one pixel, A's system and B's are unrelated. So a
 mid frame is a continuous picture of a family of ICs, and its structure is not a landscape of either chart. Where fibres

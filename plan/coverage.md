@@ -8,7 +8,7 @@
 |---|---|
 | DEC | 54 |
 | ENC | 38 |
-| CHART | 132 |
+| CHART | 133 |
 | INT | 111 |
 | EVT | 34 |
 | PAY | 111 |
@@ -22,9 +22,9 @@
 | VAL | 352 |
 | PERF | 118 |
 | SYS | 96 |
-| **total** | **2146** |
+| **total** | **2147** |
 
-Of these: 238 calibration, 192 definition, 1716 obligation. Retired (kept for their ids, not counted): 12.
+Of these: 238 calibration, 192 definition, 1717 obligation. Retired (kept for their ids, not counted): 12.
 
 ## Requirements per milestone
 
@@ -38,7 +38,7 @@ Of these: 238 calibration, 192 definition, 1716 obligation. Retired (kept for th
 | M5 | 183 |
 | M6 | 229 |
 | M7 | 262 |
-| M8 | 503 |
+| M8 | 504 |
 | M9 | 155 |
 
 ## Sections

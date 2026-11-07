@@ -1284,10 +1284,14 @@ owner: yes, it is physics; the tilt changes which systems the chart shows.*
 
   > RQ-736 rider: the mirror half of the shape sphere is never dropped or folded, in any chart or any morph (R-544 stands). Signed per-block blending is required precisely so that morphs through shape-sphere charts keep both halves; add a test that a path between two lower-half views stays in the lower half.
 
-- **Applied meanwhile:** in PR #422, the revised model copied byte for byte; design §§ 3.3, 10.3, 17.2, 17.3 and 17.8 and RQ-734 follow it; `path_lower_half_stays`, REQ-CHART-133, closed by TASK-M8-106. RQ-721 and its rider are not applied.
-- **One question, open (the rider's words):** does "in any chart" reach a chart that reaches one half by its own coordinates?
+- **Applied meanwhile:** in PR #422, the revised model copied byte for byte; design §§ 3.3, 10.3, 17.2, 17.3 and 17.8 and RQ-734 follow it; `path_lower_half_stays`, REQ-CHART-133, closed by TASK-M8-106; `trajectory_polar_unfolded`, REQ-CHART-134, closed by TASK-M8-58. RQ-721 and its rider are not applied.
+- **The owner's second rider, verbatim, 7 Nov 2026:**
+
+  > Rider for RQ-736 / R-544: the mirror fold applies only to how the latent chart encodes a STARTING state at t = 0, and to the IC constructor's teaching display. It never applies to trajectories, dynamics, or the shape-sphere charts: every shape-sphere chart shows the full theta 0-360 and phi 0-180 range of starts, and trajectories cross the equator freely. Add a test that a shape-sphere trajectory's polar angle is never folded (it crosses 90 deg at syzygies).
+- **One question, narrowed by the second rider, still open:** every `(θ, φ)` shape-sphere chart shows the full range, so that part is answered. What's open is a chart outside `(θ, φ)` that reaches one half by its own coordinates.
+  - `docs/design/principia_chart_composition.md` § 8.2: "**It is the shape sphere, stereographically.**", of region D's `(ξ, η)`; § 8.1: "**Region D** (eq. 8): `ξ ≥ 0`, `η ≥ 0`". So the third-body pair may count as a shape-sphere chart, and the rider's "every shape-sphere chart" would then reach it.
   - `docs/design/principia_chart_composition.md` § 6.2: "`one orientation` | a chart reaching `η ≥ 0` only, as the third-body pair and the angle pair do (the shape sphere's whole-sphere rule, R-544, stays that chart's)".
-  - The rider: "never dropped or folded, in any chart or any morph".
+  - The riders: "never dropped or folded, in any chart or any morph"; "every shape-sphere chart shows the full theta 0-360 and phi 0-180 range of starts".
   - (a) **Recommended.** Such a chart isn't a drop: it's a labelled view of the half it reaches, and the mirror half stays reachable by another chart, so the `one orientation` label stands.
   - (b) Every chart over shape reaches both halves: the third-body pair and the angle pair gain a signed arm, and region D's definition (RQ-714) is read with it.
   - What stands meanwhile: the label, unbuilt.
@@ -1308,4 +1312,10 @@ owner: yes, it is physics; the tilt changes which systems the chart shows.*
      - Model § 8: "Seams belong to charts, not to paths": fails for that family.
      - Model § 9: "the target's nearest admissible point": nearest holds only for coordinate constraints.
      - `E` names both the energy and encode (model § 2, § 8).
+- **A second question, open: trajectories read through the latent frame.** The rider says the mirror fold "never applies to trajectories". These corpus lines apply it to a live state on every chart but the shape sphere's:
+  - `docs/design/principia_state_map.md` § "SM1. Definition": "`colour(sample, t) = C_T( fold_T( P_T( E( x(t) ) ) ) )`"; "`E` is the encode …: scale and rotation are removed, mirror images identified."; "Every other target is unchanged."; and its `ν × dilation` row: "the nearest point of the right-triangle curve (mirror folded)".
+  - `docs/design/principia_lines.md`, the trace on a chart: "the latent chart's canonical"; "On a chart that carries the y-momenta the canonical frame mirrors at every syzygy, so the trace jumps there and a marker is drawn at both ends of the jump."
+  - (a) **Recommended.** The rider's "trajectories" means the trajectory's own state and the shape-sphere charts: a latent chart's picture of a later state is a reading through that chart, labelled, and both lines stand.
+  - (b) Those lines change: no state at `t > 0` is mirrored on any chart, and the state map and the trace carry signed coordinates on every target.
+  - What stands meanwhile: those lines, as ruled corpus, unchanged. The shape-sphere side is already clean: `principia_lines.md`'s "with no fold and no kink (R-544)", `principia_trajectory_viewing.md`'s "never folded or bounced at the equator", `principia_listen.md`'s shape vector "with no canonical frame", and the kernel's `shape::shape`, which reads the signed `n̂`.
 - **Waits:** nothing. The ruling closes in the rulings PR; the list waits for the owner's next revision.

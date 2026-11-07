@@ -4394,6 +4394,20 @@
   rulings:
   - R-544
   milestone: M8
+- id: REQ-CHART-134
+  area: CHART
+  statement: "A shape-sphere trajectory's polar angle must never be folded: read from the signed n̂ it must cross 90° at syzygies and lie on both sides of it (R-544; the owner's second rider to RQ-736)."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: 17.2 The mechanism
+  - file: docs/design/principia_chart_composition.md
+    section: 12. Tests that can fail
+  verify:
+    method: unit test
+    detail: "cargo test -p kernel trajectory_polar_unfolded: the figure-eight, run by the kernel: φ = acos(n_w) from the signed n̂ at every macro-step lies on both sides of 90°, crosses it at every syzygy, and the sign of n_w matches the triangle's signed area computed from the positions; control: the polar angle folded, min(φ, π − φ), fails"
+  rulings:
+  - R-544
+  milestone: M8
 - id: REQ-INT-001
   area: INT
   statement: "The unwrapped phase `θ̃` must be a running SimState accumulator that adds the principal-value delta of `atan2(n_v, n_u)` each step, with `orbit_count = ⌊|θ̃|/2π⌋` and `retrograde = sign(θ̃) < 0` derived at read."
