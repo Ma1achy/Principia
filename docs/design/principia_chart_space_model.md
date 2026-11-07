@@ -115,6 +115,51 @@ own family's formula, never with a different family's.
 
 ---
 
+## 3b. Axes, composed axes and physical-quantity projections
+
+**Axis model.** A composed chart is `φ(u) = A(x₁(u₁), x₂(u₂); h)`. Here `x_i : [-1,1] → R` is axis *i*'s
+quantity after its warp (linear, log, power): a primitive or a combination of primitives (E, L_z, an angle, a
+ratio and so on). `h` is the held set (the coordinates not on an axis, plus any held constraint), and
+`A : R² × H → Z` is the **assembly**: "find the latent point with these axis values and these held values".
+Assembly is closed-form for registered inverses (Tier 2a), a numerical solve otherwise (Tier 2c, RQ-733), and
+it optionally includes a pair map (polar, curved) applied to `(x₁, x₂)` first.
+
+**Theorem 10 (continuity of a composed chart).** If each warped axis `x_i` is continuous, the pair map is
+continuous, and `A` is continuous on the region the chart visits, then `φ` is a chart (continuous), and all of
+§2–§6 applies to it unchanged. Where `A` is discontinuous (a numerical solve switching branch, the encode's
+mirror deadband, a collision degeneracy), `φ` is continuous **away from a declared seam set** `Σ_φ ⊂ U`, and
+every theorem holds on `U \ Σ_φ`.
+
+*Proof.* A composition of continuous maps is continuous; restrict to the complement of `Σ_φ`. ∎
+
+So "projection into energy, angular momentum, ..." is a chart like any other: it's the assembly `A` that
+turns `(E, L_z)` back into a latent point. Its continuity is a property of `A`, and its seams are declared,
+never hidden.
+
+**Changing an axis.** Replacing axis 1's quantity `x₁` by `y₁`, or changing its warp or its combination,
+gives a new chart `φ'`. By Theorem 1 there's always a path `φ → φ'`. Two canonical forms:
+
+- **Per-axis morph, in quantity space:** `x₁ˢ = (1−s) x₁ + s y₁` (or a geodesic for angle-like
+  quantities), axis 2 fixed, then `A`. This is a path whenever `A` is continuous along it. It keeps the
+  *meaning* of the untouched axis exactly, because axis 2's value per pixel never changes.
+- **Per-axis morph, in latent space:** `(1−s) φ + s φ'`. Always a path (Thm 1), but axis 2's displayed
+  quantity may wander mid-morph, since latent blending doesn't respect what the axes mean.
+
+The first is the default for "change one axis"; the second is the fallback where `A` isn't continuous along
+the quantity path.
+
+**Pair maps.** Flat to polar (or log-polar) is the path `P_s = (1−s)·id + s·polar` on `(x₁, x₂)`. It's
+continuous except where polar itself is singular (the origin, and the angle's branch line), which are declared
+seams.
+
+**Continuous, not merely smooth.** Every theorem here proves *continuity*: small steps make small changes.
+*Smoothness* (no kinks in the motion) also holds where every map involved is differentiable. `D` is (sigmoid,
+tanh and trigonometric functions), and so are geodesics and linear blends. Warps with kinks, `|·|`, clamps
+and numerical solves near a branch point are not. Easing curves should be at least C¹ for visually smooth
+playback; that's a property of the chosen curve, not of the model.
+
+---
+
 ## 4. Composition: Sequence, waypoints and easing
 
 **Theorem 4 (concatenation).** If `H` goes from `φ` to `ψ` and `K` goes from `ψ` to `χ`, then
@@ -212,11 +257,61 @@ costly), not a mathematical impossibility. The design should say so.
 
 ---
 
+## 6b. Initial-condition, dynamical and shared quantities
+
+Let `F_t : Sys → Sys` be the flow (the system after time `t`), defined where the trajectory survives to `t`.
+There are three kinds of quantity. The same function can belong to more than one.
+
+1. **State functions** `q(x)`, such as shape-sphere position, interior angles, momenta and K. Evaluated at
+   `t = 0` they're IC axes. Evaluated at `t` they're **dynamical** values, `q(F_t(x))`. Shape-sphere position
+   is the example: one function, read at two times.
+2. **Conserved quantities**, `E` and `L_z` (plus anything fixed by the gauge). `q(F_t(x)) = q(x)` for all
+   `t`, so their IC value *is* their dynamical value: these are exactly the overlap. That's why an `(L_z, E)`
+   chart means the same thing at every playhead. Approximately conserved quantities (a hierarchical binary's
+   orbital elements, the Hill-stability quantity `L_z²E`) are approximately in the overlap, and should be
+   labelled as approximate.
+3. **Trajectory functionals**, such as minimum separation, lifetime `t_end`, outcome class, Lyapunov exponent
+   and the syzygy word. These depend on the whole trajectory and are many-to-one, with no inverse even
+   locally. **They can never be axes**, only colourings and plots of results.
+
+**Theorem 11 (a state function at time `T` can be an axis).** A chart whose axes are state functions
+evaluated at time `T` (for example "shape-sphere position at `T = 5`") is the IC chart
+
+    φ_T(u) = Enc( F_{−T}( D(ψ(u)) ) ),
+
+where `ψ` is an ordinary chart describing the state *at time `T`*. Because Newtonian dynamics is
+time-reversible, `F_{−T} = R ∘ F_T ∘ R`, with `R` flipping all momenta. So the same forward integrator
+computes it: flip the momenta, integrate forward by `T`, flip back.
+
+*Proof.* Reversibility of the equations of motion under `t → −t, p → −p`. ∎
+
+**What that buys:** "final-condition" charts. Pick where the system *is* at time `T`, on the shape sphere or
+in `(L_z, K)` or any state axes, and see which starts lead there and what happened before and after. All of
+§2–§6 applies, because `φ_T` is a chart.
+
+**Its limits, stated:**
+- `φ_T` is continuous only where the backward trajectory survives `[0, T]` without a triple collision or an
+  escape. Those pixels are masked and declared, never dropped.
+- Chaos is symmetric in time: states that are close at `T` can come from starts far apart. So `φ_T` can be
+  wildly folded even when `ψ` is smooth. That's real structure, not error.
+- Its cost is one extra integration of length `T` per pixel before the usual forward run.
+- `T = 0` recovers the ordinary chart. For conserved axes `φ_T` is independent of `T` in those coordinates,
+  which makes a built-in check.
+- Trajectory functionals stay excluded at any `T`.
+
+---
+
 ## 7. What the model settles
 
 | Claim | Status |
 |---|---|
 | Any chart can morph into any other | **Proved** (Thm 1): requires blending in `Z` and the decoder being total |
+| Composed and physical-quantity axes (E, L_z, angles, ratios) are charts like any other | **Proved** (Thm 10), continuous away from declared seams of the assembly |
+| Changing one axis can keep the other's meaning exactly | **Proved** (§3b): per-axis morph in quantity space |
+| Conserved quantities are both IC and dynamical | **Proved** (§6b): E and L_z are the exact overlap |
+| A state function at a later time can be an axis | **Proved** (Thm 11), via time reversal: flip momenta, integrate forward, flip back |
+| Trajectory functionals (lifetime, outcome, Lyapunov, minimum distance) as axes | **Impossible**: many-to-one; colourings and plots only |
+| Continuous vs smooth | Continuity proved everywhere; smoothness wherever the maps are differentiable (§3b) |
 | Tilt, zoom, pan and slice are special cases of the path model | **Proved** (Thm 2, 6; table in §3), each as an exact member of a named family |
 | "Never squash" is necessary for tilt to be a special case | **Proved** (Thm 2): the straight-line blend collapses swapped planes to a line |
 | Curved tilt vs latent morph tolerance | **Not a tolerance**: different families (Thm 3). Test each operation against its own family |
@@ -256,7 +351,9 @@ of such maps: a homotopy. A path always exists, because the latent space is conv
 everywhere on it; blend in latent space, never in physical space. Pan, zoom, tilt and slice are exact members
 of named path families: reparametrisation, the latent plane geodesic, the chart-parameter geodesic and latent
 translation. Morph is the general case, with the latent line and the geodesics as canonical families, and
-each operation is tested against its own family, never another's. Easing reparametrises time and can't move
+each operation is tested against its own family, never another's. Composed and physical-quantity axes are
+charts through an assembly map, continuous away from declared seams; changing one axis morphs in quantity
+space, so the other axis keeps its meaning. Easing reparametrises time and can't move
 keyframes. Under the lock, a morph keeps the anchor exactly when both charts contain it. When the target
 chart can't, the anchor slides continuously to the target's nearest admissible point, so there are no jumps.
 Held quantities aren't preserved mid-morph. Time-to-IC morphs are possible but cut by choice. In floating

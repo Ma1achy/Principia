@@ -1700,3 +1700,11 @@
   section: "9. One-paragraph version for the agents"
   reason: informative only
   note: "the model of 7 Nov 2026, a statement of how navigation and chart paths work; it yields no requirement until the rulings PR carries its consequences"
+- file: docs/design/principia_chart_space_model.md
+  section: "3b. Axes, composed axes and physical-quantity projections"
+  reason: informative only
+  note: "the model of 7 Nov 2026, a statement of how navigation and chart paths work; it yields no requirement until the rulings PR carries its consequences"
+- file: docs/design/principia_chart_space_model.md
+  section: "6b. Initial-condition, dynamical and shared quantities"
+  reason: informative only
+  note: "the model of 7 Nov 2026, a statement of how navigation and chart paths work; it yields no requirement until the rulings PR carries its consequences"

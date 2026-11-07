@@ -43,14 +43,14 @@ Of these: 238 calibration, 192 definition, 1709 obligation. Retired (kept for th
 
 ## Sections
 
-1824 sections in 63 files: 1425 yield at least one requirement; 399 yield none and are listed below with the reason.
+1826 sections in 63 files: 1425 yield at least one requirement; 401 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | gap (RQ-378) | 1 |
 | gap (RQ-391) | 2 |
 | gap (RQ-577) | 2 |
 | gap (RQ-618) | 1 |
-| informative only | 282 |
+| informative only | 284 |
 | out of v1 (R-125) | 1 |
 | out of v1 (R-420) | 1 |
 | parent heading (obligations are in its subsections) | 61 |
@@ -367,9 +367,11 @@ Of these: 238 calibration, 192 definition, 1709 obligation. Retired (kept for th
 | 1. Objects | informative only | the model of 7 Nov 2026, a statement of how navigation and chart paths work; it yields no requirement until the rulings PR carries its consequences |
 | 2. The central theorem: every edit is a path, and a path always exists | informative only | the model of 7 Nov 2026, a statement of how navigation and chart paths work; it yields no requirement until the rulings PR carries its consequences |
 | 3. The existing operations are paths of named families | informative only | the model of 7 Nov 2026, a statement of how navigation and chart paths work; it yields no requirement until the rulings PR carries its consequences |
+| 3b. Axes, composed axes and physical-quantity projections | informative only | the model of 7 Nov 2026, a statement of how navigation and chart paths work; it yields no requirement until the rulings PR carries its consequences |
 | 4. Composition: Sequence, waypoints and easing | informative only | the model of 7 Nov 2026, a statement of how navigation and chart paths work; it yields no requirement until the rulings PR carries its consequences |
 | 5. The lock: based homotopy, excursions and the sliding anchor | informative only | the model of 7 Nov 2026, a statement of how navigation and chart paths work; it yields no requirement until the rulings PR carries its consequences |
 | 6. Time as an axis | informative only | the model of 7 Nov 2026, a statement of how navigation and chart paths work; it yields no requirement until the rulings PR carries its consequences |
+| 6b. Initial-condition, dynamical and shared quantities | informative only | the model of 7 Nov 2026, a statement of how navigation and chart paths work; it yields no requirement until the rulings PR carries its consequences |
 | 7. What the model settles | informative only | the model of 7 Nov 2026, a statement of how navigation and chart paths work; it yields no requirement until the rulings PR carries its consequences |
 | 8. Floating point: what the proofs don't cover | informative only | the model of 7 Nov 2026, a statement of how navigation and chart paths work; it yields no requirement until the rulings PR carries its consequences |
 | 9. One-paragraph version for the agents | informative only | the model of 7 Nov 2026, a statement of how navigation and chart paths work; it yields no requirement until the rulings PR carries its consequences |
