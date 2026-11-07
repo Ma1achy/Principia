@@ -85,11 +85,8 @@ pub fn show(ui: &mut Ui, section: Rect, h: f32, clip: Rect, panel: &mut Panel<'_
     panel.place(ZOOM, &slider, clip);
     zoom_row.label(RichText::new(magnification(view.zoom_row())).monospace());
     if slider.changed() {
-        panel.out.edit(
-            basis_edit(view.with_zoom_row(zoom).basis()),
-            None,
-            panel.scratch,
-        );
+        let edit = zoom_to(&plane, view, view.with_zoom_row(zoom));
+        panel.out.edit(edit, None, panel.scratch);
     }
     super::depth::show(ui, row(section, h, 3), row(section, h, 4), panel);
     super::lock::show(ui, row(section, h, 5), row(section, h, 6), clip, panel);
@@ -115,6 +112,18 @@ pub fn pan(
 pub fn zoom_by(plane: &Plane, octaves: f64) -> engine::contract::set_field::SetField {
     let k = (-octaves).exp2();
     basis_edit((plane.q1.map(|x| x * k), plane.q2.map(|x| x * k)))
+}
+
+/// The zoom row's edit from `view`, `plane`'s reading, to the view `to` at the zoom asked for: the stored basis scaled
+/// by `σ' / σ`, so an edit that names only the scale keeps the plane (R-705). A reading with no scale that a finite
+/// factor reaches, the `σ = 0` of a basis with no plane above all, has no plane to keep, and takes `to`'s basis.
+pub fn zoom_to(plane: &Plane, view: View, to: View) -> engine::contract::set_field::SetField {
+    let k = to.scale / view.scale;
+    basis_edit(if k.is_normal() {
+        (plane.q1.map(|x| x * k), plane.q2.map(|x| x * k))
+    } else {
+        to.basis()
+    })
 }
 
 /// The arrows on the focused figure: ← → along `q₁`, ↑ ↓ along `q₂`, by `fraction` of the view's span.

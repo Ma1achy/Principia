@@ -48,6 +48,7 @@ mod tests {
     mod f3_toggle_mock;
     mod frame_window_stats;
     mod layout_least_window;
+    mod manifold_view_basis;
     mod measure_display;
     mod measure_panel;
     mod mock_axis_labels;
