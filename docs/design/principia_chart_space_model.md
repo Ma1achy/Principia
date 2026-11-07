@@ -265,11 +265,15 @@ There are three kinds of quantity. The same function can belong to more than one
 1. **State functions** `q(x)`, such as shape-sphere position, interior angles, momenta and K. Evaluated at
    `t = 0` they're IC axes. Evaluated at `t` they're **dynamical** values, `q(F_t(x))`. Shape-sphere position
    is the example: one function, read at two times.
-2. **Conserved quantities**, `E` and `L_z` (plus anything fixed by the gauge). `q(F_t(x)) = q(x)` for all
-   `t`, so their IC value *is* their dynamical value: these are exactly the overlap. That's why an `(L_z, E)`
-   chart means the same thing at every playhead. Approximately conserved quantities (a hierarchical binary's
-   orbital elements, the Hill-stability quantity `L_z²E`) are approximately in the overlap, and should be
-   labelled as approximate.
+2. **Conserved quantities.** Along a run, in physical units, `E` and `L_z` satisfy `q(F_t(x)) = q(x)`, so
+   their IC value *is* their dynamical value. That's why an `(L_z, E)` chart means the same thing at every
+   playhead. **But Principia's scale gauge (`I = 1`) is applied to states, and `I` isn't conserved.** A later
+   state re-expressed in the canonical gauge has different `E` and `L_z`. The exact overlap *in the gauge*
+   is therefore the **scale-free** conserved quantities: `L_z²E` (a product of two exact invariants, so
+   exact), and the signs of `E` and `L_z`. Approximately conserved quantities (a hierarchical binary's orbital
+   elements) are approximately in the overlap, and should be labelled as approximate.
+   *Corrected 7 Nov: an earlier version called `L_z²E` approximate, which was wrong, and claimed `E` and `L_z`
+   stay fixed in the gauge, which holds only in physical units.*
 3. **Trajectory functionals**, such as minimum separation, lifetime `t_end`, outcome class, Lyapunov exponent
    and the syzygy word. These depend on the whole trajectory and are many-to-one, with no inverse even
    locally. **They can never be axes**, only colourings and plots of results.
@@ -295,8 +299,16 @@ in `(L_z, K)` or any state axes, and see which starts lead there and what happen
 - Chaos is symmetric in time: states that are close at `T` can come from starts far apart. So `φ_T` can be
   wildly folded even when `ψ` is smooth. That's real structure, not error.
 - Its cost is one extra integration of length `T` per pixel before the usual forward run.
-- `T = 0` recovers the ordinary chart. For conserved axes `φ_T` is independent of `T` in those coordinates,
-  which makes a built-in check.
+- `T = 0` recovers the ordinary chart. The built-in check is that scale-free conserved quantities (`L_z²E`,
+  the signs of `E` and `L_z`) are independent of `T`. `E` and `L_z` themselves are independent of `T` only
+  before the `I = 1` rescale.
+- **Theorem 11 is exact for the true flow; the app's integrators aren't run-reversible.** The default
+  (Heggie regularisation with RK4, adaptive steps) isn't time-symmetric, so flip, run, flip is an
+  *approximate* inverse. Running the reconstructed start forward misses the chosen state at `T` by the
+  integrator's error, amplified by chaos. The honest form measures that miss per pixel (integrate forward
+  again, compare with the target at `T`) and reports it, masking pixels where it's large. An exactly
+  reversible version needs a time-symmetric integrator with a reversible step rule. That's an option to
+  rule on, not something assumed.
 - Trajectory functionals stay excluded at any `T`.
 
 ---
@@ -308,8 +320,8 @@ in `(L_z, K)` or any state axes, and see which starts lead there and what happen
 | Any chart can morph into any other | **Proved** (Thm 1): requires blending in `Z` and the decoder being total |
 | Composed and physical-quantity axes (E, L_z, angles, ratios) are charts like any other | **Proved** (Thm 10), continuous away from declared seams of the assembly |
 | Changing one axis can keep the other's meaning exactly | **Proved** (§3b): per-axis morph in quantity space |
-| Conserved quantities are both IC and dynamical | **Proved** (§6b): E and L_z are the exact overlap |
-| A state function at a later time can be an axis | **Proved** (Thm 11), via time reversal: flip momenta, integrate forward, flip back |
+| Conserved quantities are both IC and dynamical | **Proved** (§6b): E and L_z in physical units; in the I = 1 gauge only the scale-free L_z²E and the signs |
+| A state function at a later time can be an axis | **Proved for the true flow** (Thm 11); in the app it's an approximate inverse (the integrator isn't reversible), with the round-trip miss measured per pixel |
 | Trajectory functionals (lifetime, outcome, Lyapunov, minimum distance) as axes | **Impossible**: many-to-one; colourings and plots only |
 | Continuous vs smooth | Continuity proved everywhere; smoothness wherever the maps are differentiable (§3b) |
 | Tilt, zoom, pan and slice are special cases of the path model | **Proved** (Thm 2, 6; table in §3), each as an exact member of a named family |

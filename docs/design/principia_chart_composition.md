@@ -308,7 +308,7 @@ functionals**, which are many-to-one and never an axis. This table applies § 6b
 what the classes mean. Each row carries its class in the registry (`primitive_class`, § 12), so a functional has no way in.
 
 `Source` is this file, `docs/design/principia_chart_composition.md`, by section and line. **Exact** means constant under the
-equations of motion, a run's drift being integration error. **Approximate** means steady only in a named limit, labelled
+equations of motion in physical units, a run's drift being integration error; in the `I = 1` gauge only the scale-free ones stay fixed (the model's § 6b). **Approximate** means steady only in a named limit, labelled
 `approximate`. **Unclassified** means the row's definition is unread, so it stays a definition requirement and no axis.
 
 | Source | Primitive | Class | Note |
@@ -333,7 +333,7 @@ equations of motion, a run's drift being integration error. **Approximate** mean
 | § 3, line 149 | `PE` (`U`) | **state** |  |
 | § 3, line 150 | `min(r_ij)/max(r_ij)`, any `min` or `max` of primitives | **state** | at one instant. Not the minimum separation over a run, which is a functional |
 | § 3, line 151 | pair binding energies | **state** |  |
-| § 3, line 152 | `I`, `R`, `ℓ` | **state** | size-only, refused as axes. Fixed at `t = 0` by the gauge, and **not conserved**: `F_t` moves them (flag 3) |
+| § 3, line 152 | `I`, `R`, `ℓ` | **state** | size-only, refused as axes. Fixed at `t = 0` by the gauge, and **not conserved**: `F_t` moves them (the model's § 6b) |
 | § 3.1, line 186 | Jacobi momentum polar | **state** |  |
 | § 3.1, line 187 | body `i`'s speed, heading | **state** |  |
 | § 3.1, line 188 | flight-path angle `γ_ρ`, `γ_λ` | **state** |  |
@@ -343,7 +343,7 @@ equations of motion, a run's drift being integration error. **Approximate** mean
 | § 3.1, line 192 | `L_ρ`, `L_λ` | **state** | only their sum is conserved |
 | § 3.1, line 193 | `h`, the dilation rate | **state** |  |
 | § 3.1, line 194 | Saari split | **state** |  |
-| § 3.1, line 195 | `L²E` | **conserved, exact** | **flag 2**: exact by algebra; the model says approximate |
+| § 3.1, line 195 | `L²E` | **conserved, exact** | a product of two exact invariants, and scale-free, so exact in the `I = 1` gauge too |
 | § 3.1, line 196 | interior angles at A, B, C | **state** |  |
 | § 3.1, line 197 | angle of C about AB's midpoint, about AB's COM (line 198) | **state** |  |
 | § 3.1, line 199 | bodies' polar angles about the COM | **state** |  |
@@ -354,7 +354,7 @@ equations of motion, a run's drift being integration error. **Approximate** mean
 | § 3.1, line 205 | inner, outer elements `a, e, ω, f` | **conserved, approximate** | state at any instant; steady only in a hierarchy, label `approximate`. Overlay only (RQ-723) |
 | § 3.1, line 206 | periapsis ratio | **conserved, approximate** | as the elements. Overlay only |
 | § 3.1, line 207 | distance from Mardling–Aarseth | **conserved, approximate** | as the elements. Overlay only |
-| § 3.1, line 208 | distance from Hill stability | **conserved, exact** | an alias of `L²E` at frozen masses: flag 2 |
+| § 3.1, line 208 | distance from Hill stability | **conserved, exact** | an alias of `L²E` at frozen masses |
 | § 3.1, line 209 | `SuvakovPlane` | **state** |  |
 | § 3.1, line 210 | isosceles families with matched velocities | **unclassified** | no definition in the corpus (RQ-725) |
 | § 3.2, line 254 | velocity angle `Ψ` | **state** | at `t = 0`. The paper's `Ψ`, read at minimum `I`, is a **functional**, already rejected |
@@ -386,24 +386,16 @@ equations of motion, a run's drift being integration error. **Approximate** mean
 | § 3, lines 238 to 243 (the "Rejected" table) | total momentum | **conserved, exact** | zero, and no axis |
 | | absolute direction, `z` components, size-only | not axes | gauge, or absent |
 | | discrete labels | not axes | colourings |
-| | anything measured after `t = 0`; line 301's list | **functional** where read at an event: flag 1 | |
+| | anything measured after `t = 0`; line 301's list | **functional** where read at an event: the flag below | |
 | the model § 6b | minimum separation, `t_end`, outcome class, Lyapunov exponent, syzygy word | **functional** | no row in the registry, and none may be added: colourings and plots of results |
 
 **No axis here is a functional.** No row of §§ 3, 3.1 or 3.2 that has an inverse reads one. The rows whose papers read
 at an event (`Ψ` and `Z` at minimum `I`) are already rejected in that form. `plan/tasks/` was searched for lifetime, `t_end`,
 FTLE, Lyapunov, minimum, syzygy and outcome beside "axis": the one hit, TASK-M9-26's Lehto lifetime map, is a colouring.
 
-**Three flags, none resolved here.**
-
-1. **Line 243 is wider than § 6b.** "Anything measured after `t = 0`" rejects a state function read at a fixed time `T`, which
-   the model's Theorem 11 admits. The two agree on an event read, such as minimum `I`, which is a functional at any `T`. The
-   rejection stands until RQ-734 rules (§ 10.3).
-2. **`L²E`.** The model lists "the Hill-stability quantity `L_z²E`" as approximately conserved. In this design it is a
-   product of two exactly conserved quantities, so its value doesn't move along a trajectory: exact, at `ε ≠ 0` too with
-   the softened `E`. What is approximate about Hill stability may be what the threshold implies for a hierarchy, not the
-   quantity. The owner's model isn't edited; the row reads exact, and the difference is sent to the coordinator.
-3. **"Plus anything fixed by the gauge."** The model counts these as conserved. `Σp = 0` and the COM at the origin are. `I = 1`
-   isn't: it holds at `t = 0` and `F_t` moves it. That matters to the check Theorem 11 relies on (§ 10.3).
+**One flag, not resolved here.** **Line 243 is wider than § 6b.** "Anything measured after `t = 0`" rejects a state function read at a fixed time `T`, which
+the model's Theorem 11 admits. The two agree on an event read, such as minimum `I`, which is a functional at any `T`. The
+rejection stands until RQ-734 rules (§ 10.3).
 
 ---
 
@@ -1113,22 +1105,23 @@ coordinates. Functionals stay excluded at every `T`.
 **The checks.** Each would be a test that can fail:
 
 - `T = 0` is the ordinary chart, bit for bit.
-- **Conserved axes are independent of `T`.** `E` and `L_z` of the backward state equal `ψ(u)`'s, within the run's drift; an
-  `approximate` row within its label. State rows move, which is the control.
-- **Forward closure.** The forward run from the start found reaches `D(ψ(u))` at `T`, within a tolerance.
+- **Scale-free conserved quantities are independent of `T`,** the check as the model states it (§ 6b): `L_z²E` and the signs
+  of `E` and `L_z`, within the run's drift. `E` and `L_z` themselves are independent of `T` only before the `I = 1` rescale;
+  an `approximate` row holds within its label. State rows move, which is the control.
+- **The round-trip miss.** The forward run from the start found is compared with `D(ψ(u))` at `T`. The miss is measured per
+  pixel, reported, and masked where it's large.
 
-**What Theorem 11's words don't settle.** Each is a part of RQ-734:
+**What RQ-734 decides, beyond whether to build it:**
 
-1. **The theorem reverses the equations, not the integrator.** The default occupant, Heggie × RK4, isn't run-reversible: only logH's
-   TTL mode is (integrator contract Part 2, R-162, R-500), and adaptive substepping and the COM projection break reversal of
-   a run. So on the default, flip, run and flip is an approximate inverse, and the forward run misses `ψ(u)` by an amount
-   chaos grows. Forward closure
-   measures that per pixel, as `roundtrip_error` does.
-2. **The gauge moves.** `E` and `L_z` are conserved; `I = 1` isn't (§ 3.3, flag 3). `F_{−T}` leaves `I ≠ 1`, and `Enc`'s `C`
-   rescales lengths by `s`, with `E` going as `1/s`, `L` as `√s`, and `L²E` unchanged. So **the `T`-independence check holds before the
-   rescale**, and read after it, it fails on a correct chart for every row but scale-free ones. The rescale also changes the
-   time unit per pixel, as § 8.6's does, so a run of `T` in code units doesn't reach time `T` on that pixel.
-3. **Line 243 of § 3.1,** "anything measured after `t = 0`", bars this chart as written (§ 3.3, flag 1).
+1. **The integrator.** Theorem 11 is exact for the true flow, and in the app it's an approximate inverse. The default occupant,
+   Heggie × RK4, isn't run-reversible: only logH's TTL mode is (integrator contract Part 2, R-162, R-500), and adaptive
+   substepping and the COM projection break reversal of a run. So on the default the forward run misses `ψ(u)` by the
+   integrator's error, amplified by chaos, and that miss is what's measured and masked. An exactly reversible version
+   needs a time-symmetric integrator with a reversible step rule: an option, not an assumption.
+2. **The gauge.** `F_{−T}` leaves `I ≠ 1`, and `Enc`'s `C` rescales lengths by `s`, with `E` going as `1/s`, `L` as `√s`, and
+   `L²E` unchanged. The rescale also changes the time unit per pixel, as § 8.6's does, so a run of `T` in code units doesn't
+   reach time `T` on that pixel.
+3. **Line 243 of § 3.1,** "anything measured after `t = 0`", bars this chart as written (§ 3.3).
 
 ---
 
@@ -1408,7 +1401,7 @@ Nothing below is decided here.
 | RQ-730 | Hill's threshold at unequal masses: labelled pair, `max`, or median | physics, the owner's; labelled pair |
 | RQ-731 | REQ-VAL-326's pointer to the 2015 paper | correct it to the 2008 paper |
 | RQ-733 | A user-typed combination with no registered inverse: an overlay only, or a general solve | registered inverses only; an overlay otherwise |
-| RQ-734 | Final-condition charts (the model's Theorem 11): whether to build; the occupant; the gauge; line 243's rejection | build later, as a CPU batch chart: any occupant, forward closure masked per pixel; keep `I = 1` and label it; narrow the rejection to event reads |
+| RQ-734 | Final-condition charts (the model's Theorem 11): whether to build; the occupant; the gauge; line 243's rejection | build later, as a CPU batch chart: the default occupant, the round-trip miss measured and masked per pixel, an exactly reversible integrator the option; keep `I = 1` and label it; narrow the rejection to event reads |
 | RQ-735 | The browser build: closed-form GPU charts only, or a WASM CPU route for numerical axes and CPU-only morphs | the WASM CPU route, reasoned from R-571; nothing measured |
 
 **New extension types: none proposed.** Polar's `ϕ` and `r` declare existing types, under R-407 clause 3's physics review.
