@@ -449,8 +449,14 @@ fn against_loop<S: Stepper, R: Q>(
     let want = contract_loop::<S, R, _>(&ic, &u, &mut StopAfter::new(stop));
     check_against_loop(name, &got, &want);
     if stop.is_none() {
-        // The wrapper's own cadence, hooks empty, is never done: the same as no stop.
-        check_against_loop(name, &integrate::<S, R>(&ic, &u), &want);
+        // The wrapper's own cadence projects and monitors, and detection finds nothing yet, so it is never done: the same
+        // as no stop.
+        let own = contract_loop::<S, R, _>(
+            &ic,
+            &u,
+            &mut kernel::driver::cadence::WrapperCadence::new(&ic.m, &ic.r, &ic.p),
+        );
+        check_against_loop(name, &integrate::<S, R>(&ic, &u), &own);
     }
 }
 
@@ -831,7 +837,11 @@ fn chart_run<C: ChartDecode + Chart<Param = f32>, R: Q>(chart: &C, uv: [f32; 2])
     let ic = sample::<C, Defaults, R>(chart, q::<R>(uv[0]), q::<R>(uv[1])).ic;
     let u = key::<R>(4e-3, 5, Table::Default);
     let got = integrate::<Kdk, R>(&ic, &u);
-    let want = contract_loop::<Kdk, R, _>(&ic, &u, &mut StopAfter::new(None));
+    let want = contract_loop::<Kdk, R, _>(
+        &ic,
+        &u,
+        &mut kernel::driver::cadence::WrapperCadence::new(&ic.m, &ic.r, &ic.p),
+    );
     check_against_loop(chart.name(), &got, &want);
 }
 

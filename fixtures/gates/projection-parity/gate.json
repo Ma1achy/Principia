@@ -1,0 +1,6 @@
+{
+  "gate": "projection-parity",
+  "inputs": ["default.json", "control_reordered.json", "control_jacobi.json"],
+  "threshold": { "value": 0, "requirement": "REQ-INT-030", "status": "confirmed" },
+  "min_regions": { "value": 4, "requirement": "REQ-INT-110" }
+}

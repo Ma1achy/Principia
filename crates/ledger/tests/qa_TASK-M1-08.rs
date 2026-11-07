@@ -255,6 +255,16 @@ fn check_view_lanes(views: &[(String, String)], word_fields: &[&str]) {
         if field == "last_symbol" {
             want.insert(("sample".to_owned(), "word".to_owned()));
         }
+        // The drift views (R-379, R-381; TASK-M3-05): each also reads the latches its suspect predicates read and the
+        // reference its neutral band is relative to (R-652), and nothing else.
+        if field == "energy_drift" || field == "Lz_drift" {
+            for latch in ["dE_max", "E_0", "dLz_max"] {
+                want.insert(("sample".to_owned(), latch.to_owned()));
+            }
+        }
+        if field == "Lz_drift" {
+            want.insert(("sample".to_owned(), "Lz_0".to_owned()));
+        }
         assert_eq!(
             reads, want,
             "`{field}`'s view does not read its own field from its lane"

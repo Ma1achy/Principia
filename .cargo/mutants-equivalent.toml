@@ -44,7 +44,7 @@ mutant = "crates/render/src/pipeline_cache.rs:503:48: replace | with ^ in frame_
 justification = "UNIFORM and COPY_DST are distinct single-bit wgpu::BufferUsages flags, so their ^ is their |"
 
 [[equivalent]]
-mutant = "crates/validation/src/golden_scene.rs:238:32: replace | with ^ in d_min_samples"
+mutant = "crates/validation/src/golden_scene.rs:728:32: replace | with ^ in d_min_samples"
 justification = "w & 0xffff has bits 0..16 only and F16_QNAN << 16 bits 16..32 only, so their ^ is their |"
 
 [[equivalent]]
@@ -56,7 +56,7 @@ mutant = "crates/validation/src/structural_scene.rs:366:39: replace < with <= in
 justification = "the threshold scenes' quad uv at a pixel centre is (k + 0.5)/quad_px with quad_px 16 or 64, a dyadic rational computed exactly, so d = min(uv, 1 - uv) is never the f64 0.01, which is not one, and d < 0.01 and d <= 0.01 agree at every pixel"
 
 [[equivalent]]
-mutant = "crates/validation/src/golden_scene.rs:223:49: replace % with + in scene"
+mutant = "crates/validation/src/golden_scene.rs:627:49: replace % with + in scene"
 justification = "set_detail writes the low 2 bits of its value (insert(w, v, 3, 2)), and i + 4 and i % 4 share their low 2 bits for every i, so each state_view sample holds the same detail code"
 
 [[equivalent]]
@@ -280,11 +280,11 @@ mutant = "crates/kernel/src/stage/encode.rs:28:38: replace | with ^ in notices"
 justification = "coincident (bit 0), mirrored (bit 1), rescaled (bit 2) and clamped_controls << 8 (bits 8 to 15, clamped_controls at most 0xFF) share no bit, so ^ is |"
 
 [[equivalent]]
-mutant = "crates/kernel/src/driver/advance.rs:119:32: replace > with >= in <impl Advance for S>::advance"
+mutant = "crates/kernel/src/driver/advance.rs:130:32: replace > with >= in <impl Advance for S>::advance"
 justification = "at t_target == t_now both arms give a span of 0 (t_target - t_now is 0), so > and >= agree on every input"
 
 [[equivalent]]
-mutant = "crates/kernel/src/driver/cadence.rs:45:9: replace <impl Cadence<R> for WrapperCadence>::done -> bool with false"
+mutant = "crates/kernel/src/driver/cadence.rs:110:9: replace <impl Cadence<R> for WrapperCadence<R>>::done -> bool with false"
 justification = "done is only ever set from detect, which returns the constant false until TASK-M3-09 fills it (collision), so WrapperCadence::done is always false; TASK-M3-09 removes this entry with the hook"
 
 [[equivalent]]
@@ -332,11 +332,11 @@ mutant = "crates/validation/src/arctan.rs:43:34: replace | with ^ in magnitude"
 justification = "field < 255 shifted by 23 has bits 23..31 only and fraction = (r >> 32) & 0x007F_FFFF bits 0..23 only, so their ^ is their |"
 
 [[equivalent]]
-mutant = "crates/kernel/src/real.rs:184:55: replace | with ^ in <impl IeeeBits for f32>::significand"
+mutant = "crates/kernel/src/real.rs:193:55: replace | with ^ in <impl IeeeBits for f32>::significand"
 justification = "the fraction is masked to bits 0..23 and 0x3F80_0000 has only bits 23..30 set, so the two are disjoint and their ^ is their |"
 
 [[equivalent]]
-mutant = "crates/kernel/src/real.rs:229:65: replace | with ^ in <impl IeeeBits for f64>::significand"
+mutant = "crates/kernel/src/real.rs:243:65: replace | with ^ in <impl IeeeBits for f64>::significand"
 justification = "the fraction is masked to bits 0..52 and 0x3FF0_0000_0000_0000 has only bits 52..62 set, so the two are disjoint and their ^ is their |"
 
 [[equivalent]]
@@ -350,6 +350,18 @@ justification = "sign is Reading::Vertical's, which reading_of only ever sets to
 [[equivalent]]
 mutant = "crates/gui/src/explore/compass.rs:1274:53: replace * with / in Drag::moved"
 justification = "Z0_HALF_RANGE is the constant 1.0, and dividing by 1.0 equals multiplying by it exactly; a change to the constant makes the rate tests in mock_compass_cube and mock_compass_slice_follows_pointer tell them apart"
+
+[[equivalent]]
+mutant = "crates/validation/src/projection_parity.rs:247:26: replace += with -= in judge"
+justification = "repeat is two runs of one pure function on one input, so u32::from(repeat) is 0 on every reachable call, and x - 0 equals x + 0"
+
+[[equivalent]]
+mutant = "crates/validation/src/projection_parity.rs:247:26: replace += with *= in judge"
+justification = "repeat is two runs of one pure function on one input, so u32::from(repeat) is 0 and repeat_differences stays 0 either way"
+
+[[equivalent]]
+mutant = "crates/ledger/src/gen/catalogue.rs:577:13: delete match arm \"eps_L\" in drift_wgsl"
+justification = "EPS_L_DEFAULT and EPS_E_DEFAULT, the register's eps_l and eps_e, are both 1e-6, so the wildcard arm gives the same default; a change to either makes drift_view_floor_uniforms_default_to_the_register tell them apart"
 
 [[equivalent]]
 mutant = "crates/gui/src/measure/mod.rs:343:37: replace < with <= in Session::begin_frame"

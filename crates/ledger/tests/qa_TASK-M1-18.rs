@@ -286,7 +286,7 @@ enum Stand {
 /// TASK-M2-26 and provisional until the M2 gate, citing REQ-GEN-044 (RQ-635); and the escape settling threshold `tau`,
 /// proposed by R-173 and provisional until the M3 gate, citing REQ-EVT-025, the calibration that replaces it there
 /// (R-173, R-427).
-const TABLE: [(&str, Stand); 35] = [
+const TABLE: [(&str, Stand); 39] = [
     ("log_floor_d_min", Stand::Confirmed),
     ("log_floor_dE_max", Stand::Confirmed),
     ("log_floor_dLz_max", Stand::Confirmed),
@@ -322,6 +322,14 @@ const TABLE: [(&str, Stand); 35] = [
     ("step_reversal_edge_f32", Stand::Until("M3", "REQ-VAL-191")),
     ("step_reversal_edge_max", Stand::Until("M3", "REQ-VAL-191")),
     ("nsub_table_max", Stand::Until("M3", "REQ-INT-094")),
+    // The invariant monitor's and the drift views' proposals (TASK-M3-05; R-71, R-381, R-382).
+    (
+        "suspect_energy_threshold",
+        Stand::Until("M3", "REQ-INT-085"),
+    ),
+    ("suspect_lz_threshold", Stand::Until("M3", "REQ-INT-085")),
+    ("drift_lin_r_E", Stand::Until("M3", "REQ-TOOL-150")),
+    ("drift_lin_r_Lz", Stand::Until("M3", "REQ-TOOL-150")),
     ("tau_i", Stand::Until("M2", "REQ-ENC-035")),
     ("arctan_sum_bits", Stand::Until("M2", "REQ-GEN-044")),
     ("tau", Stand::Until("M3", "REQ-EVT-025")),

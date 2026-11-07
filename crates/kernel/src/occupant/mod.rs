@@ -141,8 +141,9 @@ impl CapabilityProfile {
         !self.owns_time_mapping
     }
 
-    /// The force evaluations a run of `total_substeps` steps made: `total_substeps · force_evals`, the cost the proxy
-    /// compares across occupants.
+    /// The force evaluations the occupant's own `STEP`s made in a run of `total_substeps` steps: `total_substeps ·
+    /// force_evals`, the cost the proxy compares across occupants. Under the wrapper each `STEP` also re-forms one force
+    /// evaluation at the projected positions (integrator contract Part 1), which this does not count.
     #[inline]
     pub const fn force_evaluations(&self, total_substeps: u32) -> u64 {
         total_substeps as u64 * self.force_evals as u64

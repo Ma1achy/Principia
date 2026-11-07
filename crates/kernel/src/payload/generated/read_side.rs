@@ -203,6 +203,54 @@ pub fn Lz_drift(r: [[f32; 2]; 3], p: [[f32; 2]; 3], lz_0: f32) -> f32 {
     angular_momentum_z(r, p) - lz_0
 }
 
+/// The energy-suspect threshold `τ_E` on the relative energy drift (dd_integrator §3.5; REQ-INT-085's proposal,
+/// provisional until the M3 gate): the constants register's `suspect_energy_threshold`.
+pub const SUSPECT_ENERGY_THRESHOLD: f32 = 0.00390625;
+
+/// The `L_z`-suspect threshold `τ_L` on the absolute `L_z` drift (dd_integrator §3.5; R-382; REQ-INT-085's proposal,
+/// provisional until the M3 gate): the constants register's `suspect_lz_threshold`.
+pub const SUSPECT_LZ_THRESHOLD: f32 = 6.1035156e-5;
+
+/// The energy-suspect predicate, read at read time over the stored latches (payload §5; no stored suspect bit): the
+/// relative energy drift the latch gives, `dE_max / max(eps_e, |E_0|)`, above `τ_E` (dd_integrator §3.5). `eps_e > 0`
+/// is the sim key's `ε_E`. A NaN `de_max` reads false. `e_0` is read as a number, and `max` drops a NaN there and
+/// divides by the floor, so a caller tests `e_0` on its bits first (R-436).
+#[inline]
+pub fn suspect_energy(de_max: f32, e_0: f32, eps_e: f32) -> bool {
+    de_max / Float::max(eps_e, Float::abs(e_0)) > SUSPECT_ENERGY_THRESHOLD
+}
+
+/// The `L_z`-suspect predicate, read at read time over the stored latch: the absolute `L_z` drift `dLz_max` above
+/// `τ_L` (dd_integrator §3.5; R-382). A NaN reads false.
+#[inline]
+pub fn suspect_lz(dlz_max: f32) -> bool {
+    dlz_max > SUSPECT_LZ_THRESHOLD
+}
+
+/// A sample's drift suspect predicates, read at read time, with what they measure (integrator contract Part 2:
+/// "a debug/stats layer must read `symplectic` before interpreting drift").
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct DriftSuspect {
+    /// `SUSPECT_ENERGY`: [`suspect_energy`].
+    pub energy: bool,
+    /// `SUSPECT_LZ`: [`suspect_lz`].
+    pub lz: bool,
+    /// The occupant's `symplectic` flag: on a symplectic occupant the energy drift measures the dynamics,
+    /// close-encounter stress; on any other it measures the integrator's own error.
+    pub reads_dynamics: bool,
+}
+
+/// The drift suspect predicates of the read-side `s`, at the sim key's `eps_e`, under an occupant whose profile's
+/// `symplectic` flag is `symplectic` (dd_integrator §3.5; integrator contract Part 2).
+#[inline]
+pub fn drift_suspect(s: &SimState, eps_e: f32, symplectic: bool) -> DriftSuspect {
+    DriftSuspect {
+        energy: suspect_energy(s.dE_max, s.E_0, eps_e),
+        lz: suspect_lz(s.dLz_max),
+        reads_dynamics: symplectic,
+    }
+}
+
 /// `SimStateFTLE` read: `ftle` finalised from the shadow (payload §5), NaN whenever `ftle_valid` is false (R-254).
 /// An unbound word buffer (`has_word` false) reads `FGW_UNBOUND`; E = 0 (`has_ensemble` false) reads
 /// `ensemble_spread` as the canonical quiet NaN (R-145). `masses` are the sample's `ICDescriptor` `m0 m1 m2`,

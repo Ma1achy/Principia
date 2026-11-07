@@ -68,6 +68,10 @@ const PRESENT: &str = include_str!("../shaders/wgsl/lib/present.wgsl");
 const COMPACTION: &str = crate::colour::field_ramp::COMPACTION_WGSL;
 const RAMP: &str = crate::colour::field_ramp::RAMP_WGSL;
 
+/// The drift views' presentation, `dbg_drift` and `dbg_suspect` (render contract Part 5; TASK-M3-05), hand-written;
+/// it calls the compactions and ramps, so it follows them at assembly.
+pub const DRIFT: &str = include_str!("../shaders/wgsl/lib/drift.wgsl");
+
 /// The categorical palettes and the categorical filter (colour_composition §1.4; dd_colouring §3.7), hand-written;
 /// they follow the presentation layer at assembly, whose Okabe–Ito table they read, so every node may call them
 /// (TASK-M7-08).
@@ -1071,7 +1075,7 @@ fn source(
     let (words, entries) = ledger()?;
     let read_side = read::assemble(words, entries, tier, fields).map_err(AssembleError::Field)?;
     let mut out = format!(
-        "{}\n{COLOUR_SPACE}\n{PRESENT}\n{COMPACTION}\n{RAMP}\n{PALETTE}\n{read_side}\n// ── The stain (TASK-M1-04): context, node functions, shade() ──\n{}",
+        "{}\n{COLOUR_SPACE}\n{PRESENT}\n{COMPACTION}\n{RAMP}\n{DRIFT}\n{PALETTE}\n{read_side}\n// ── The stain (TASK-M1-04): context, node functions, shade() ──\n{}",
         prelude::wgsl(tier),
         CONTEXT
     );

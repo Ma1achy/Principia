@@ -698,7 +698,12 @@ fn check_drift(kinetic_half: f64) {
             (got - want).abs() <= tol,
             "sample {i}: the drift reads {got}, not {want} within {tol:e}"
         );
-        tile(&sv, &iv, i, TOL, &|_| literal(want), "the drift's place");
+        // The view's default is `symlog` on `diverging` at `ε_E = 1e-6` (R-381; TASK-M3-05), these drifts well past
+        // its neutral band.
+        let s_x = (1.0 + want.abs() / 1e-6).ln().copysign(want);
+        let place = 0.5 + 0.5 * s_x / (1.0 + s_x.abs());
+        let want_rgb = render::present::drift_ramp(place, false);
+        tile(&sv, &iv, i, TOL, &|_| want_rgb, "the drift's place");
     }
 }
 

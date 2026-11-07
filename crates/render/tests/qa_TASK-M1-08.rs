@@ -119,6 +119,14 @@ fn check_registry(entries: &[Entry]) {
                 ],
                 "`{id}`, a numeric view, does not declare RANGE_AUTO and u_range alone"
             );
+        } else if *f == "energy_drift" || *f == "Lz_drift" {
+            // The drift views' compaction, palette, `lin` range and floors (R-381; TASK-M3-05), and no other view's.
+            let names: Vec<&str> = uniforms.iter().map(|u| u.0).collect();
+            let mut want = vec!["COMPACTION", "PALETTE", "LIN_R", "EPS_E"];
+            if *f == "Lz_drift" {
+                want.push("EPS_L");
+            }
+            assert_eq!(names, want, "`{id}`, a drift view, declares other uniforms");
         } else {
             assert!(uniforms.is_empty(), "`{id}` declares uniforms");
         }
@@ -357,6 +365,18 @@ fn expected_fields(field: &str, word_fields: &[&str]) -> Vec<String> {
         // `last_symbol` has no in-band "none" code: it is meaningful iff `length ≥ 1 && length ≠ 127` (payload §2),
         // so its view also reads the word's `.w`, where the length is, and nothing else.
         vec!["last_symbol".to_owned(), "word.w".to_owned()]
+    } else if field == "energy_drift" {
+        // The drift views (R-379, R-381; TASK-M3-05): each also reads its suspect predicates' latches and its neutral
+        // band's reference (R-652), and nothing else.
+        vec!["E_0", "dE_max", "dLz_max", "energy_drift"]
+            .into_iter()
+            .map(str::to_owned)
+            .collect()
+    } else if field == "Lz_drift" {
+        vec!["E_0", "Lz_0", "Lz_drift", "dE_max", "dLz_max"]
+            .into_iter()
+            .map(str::to_owned)
+            .collect()
     } else {
         vec![field.to_owned()]
     }
