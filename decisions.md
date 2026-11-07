@@ -15227,8 +15227,10 @@ Adds no requirement of its own; every test is in the verify of the requirement n
 a blocking export only, flagged).*
 *Amended in part by R-521 (20 Oct 2026; X4 and H4 (b), RQ-385 closed: each recorded link carries its own
 entry hash; the schema-version refusal holds only for a record with none).*
+*Amended in part by R-850 (7 Nov 2026; RQ-721 (a), amended: H7's "as a chart switch is" no longer holds, a chart switch may morph; a change of link id stays a cut, R-520's).*
 *Still in force: all of it, but H7's meanwhile (parameters never interpolated), which R-520 confines to live
-playback, and H4 (b)'s meanwhile, which R-521 confines to records without entry hashes.*
+playback, and H4 (b)'s meanwhile, which R-521 confines to records without entry hashes; and H7's comparison with a chart switch, which may now morph
+(R-850).*
 *20 Oct 2026 · applied in `docs/design/principia_dd_image_embedding.md` § "6. What travels" (the list, the decoder's
 identity, old records), § "7. Measured capacity and behaviour" (to be re-measured, never truncated) and § "9.
 Obligations" (the fourth outcome, the golden test), `docs/contracts/principia_export_animation_contract.md` § "Part 3 —
@@ -24735,6 +24737,8 @@ Changes REQ-INT-081 (statement, verify, rulings, source, note), REQ-INT-026 (sta
 REQ-GUI-102 (statement, verify, rulings, source, note).
 
 ## R-576 — Easing is set per segment, between keyframes: the spec object carries one segment between each pair of neighbouring keyframes, each with its own easing curve and its transition at a chart change; the curves offered and the playhead policies' semantics are a definition *(amends R-520 as to whose easing curve gives a segment's progress; amends REQ-TOOL-076)*
+*Amended in part by R-850 (7 Nov 2026; RQ-721 (a), amended: a segment's transition at a chart change may also be a morph, live and in export, a new chart-change segment defaulting to morph where the ends allow).*
+*Still in force: all of it, cut and dissolve still offered, old specs untouched; a morph joins them at a chart change (R-850).*
 *21 Oct 2026 · applied in `docs/contracts/principia_export_animation_contract.md` § "Part 3 — The keyframe system
 (retained)" (the spec object's bullet and R-520's bullet, each with its earlier words kept),
 `docs/design/principia_sequence.md` (new, §3.4), `docs/gui/principia_render_gui_spec.md` § "G9a. Sequence · Spotlights
@@ -24826,8 +24830,10 @@ REQ-TOOL-197 (definition).
 
 ## R-577 — The Sequence window, as `keyframes_reel.md` gives it: whole keyframes on a timeline with read-only lanes, segments coloured by class, easing and transitions per segment, Play preview with cuts, a proof strip of exported frames, a planner whose estimate carries its basis and never guesses, and the spec saved as `.principia-seq.json` and written beside every export *(queues RQ-559 and RQ-560)*
 *Amended by R-622 (sequences are shared state under the one history) and R-623 (the link-parameter segment's choice).*
+*Amended in part by R-850 (7 Nov 2026; RQ-721 (a), amended: a chart change may morph, live and in export, so Play preview's "cuts" and "a dissolve in live playback is a cut at the second keyframe, as every chart switch is live" no longer hold for a chart change that morphs).*
 *Still in force: all of it but the Sequence's undo, which is typed `SetField`s in the contract's one history (R-622),
-and the link-parameter segment, which offers cut or interpolate, interpolating by default (R-623).*
+and the link-parameter segment, which offers cut or interpolate, interpolating by default (R-623); and its cuts at a chart change, Play preview's and the live dissolve's, which hold only
+where the segment doesn't morph (R-850).*
 *21 Oct 2026 · applied in `docs/design/principia_sequence.md` (new), `docs/gui/principia_render_gui_spec.md` § "G9a.
 Sequence · Spotlights (no artboard; R-576 to R-578)" (new), `docs/contracts/principia_gui_state_contract.md` §2 (the
 open windows), `docs/read_first/principia_INDEX.md`, `REVIEW_QUEUE.md` (RQ-559, RQ-560), REQ-GUI-372 to REQ-GUI-381,
@@ -29586,7 +29592,7 @@ Adds REQ-SYS-096; changes REQ-GUI-229, REQ-VAL-330 and REQ-VAL-331 (notes).
 
 ## R-669 — The owner adopts the recommendations on the fifteen questions of 1 Nov but RQ-656: the Šuvakov-plane chart is one M9 task, its five targets waiting on it whole; a syzygy-symbol field only; N_scramble only; no periodic-orbit continuation, after the SJTU partial check; TR-1, MK-1 and SL-1 stay in M9, not scored, with no chart; the census's CI cadence as § 8.1 and § 8.2 write it, lavapipe in the smoke job; REQ-VAL-199 keeps 256 starts; GG-1's panels by like ε; the drift predicates read the stored latch, live values only for control flow; BZ-1C's starts by Path B, a list-of-starts chart the fallback; Hénon 1974 joins the rotating-frame set; Heggie & Sweatman 1991 in M9, not scored *(closes RQ-593, RQ-595, RQ-596, RQ-597, RQ-608, RQ-617, RQ-618, RQ-620, RQ-636, RQ-647 and RQ-654; amends R-636, R-637 and R-639; refines R-642)*
 *Reversed in part by R-847 (7 Nov 2026; RQ-725 and RQ-726 (b): fixed-`k` and binary-plus-single become charts and builder axes, their targets scored in M9, f_col built with the scattering chart).*
-*Still in force: all of it but its "no binary-plus-single chart is built", TS-2's "not scored: no fixed-k velocity chart" and "f_col is not built", which R-847 reverses; `SuvakovPlane` as one M9 task stands.*
+*Still in force: all of it but its "no binary-plus-single chart is built", TS-2's "not scored: no fixed-k velocity chart", "f_col is not built", TR-1's, MK-1's and SL-1's "not scored, with no chart" and Heggie & Sweatman 1991's "not scored", which R-847 reverses (those targets score in M9 once their charts exist, MK-1 labelled a planar re-run); `SuvakovPlane` as one M9 task stands.*
 *1 Nov 2026 · the owner's second message of that day, item (2); ported 2 Nov 2026; applied in `docs/design/principia_dd_replication.md` § 3 (a bullet), § 5.10, § 5.12 and § 7 (dated lines), `docs/design/principia_dd_simstate_payload.md` § 1 (a dated line), `docs/design/principia_honesty_precision.md` § 6 (a clause), `docs/incoming/2026-10-27_validation_plan/PLAN.md` (a dated note under BZ-1C), `docs/incoming/2026-10-27_validation_plan/PROPOSAL_occupant_matrix_census_2026-10-27.md` § 8.1 (a dated note), `docs/incoming/2026-10-31_library_triage/SUMMARY.md` (its dated note), the forward lines of R-636, R-637, R-639 and R-642, `docs/archive/review_queue/M0.md` (eleven entries moved), `REVIEW_QUEUE.md`, `plan/reviewers/physics.md` § 8, REQ-INT-045, REQ-PAY-112, REQ-VAL-199, REQ-VAL-295, REQ-VAL-311 to REQ-VAL-314, REQ-VAL-316, REQ-VAL-318, REQ-VAL-319, REQ-VAL-321, REQ-VAL-323, REQ-VAL-325 to REQ-VAL-327 and REQ-VAL-329 (reqio), REQ-CHART-091, REQ-VAL-342 and REQ-VAL-343 (reqio, new), TASK-M9-40 (new), TASK-M3-41, TASK-M9-22 to TASK-M9-24, TASK-M9-27 to TASK-M9-29, TASK-M9-35 and TASK-M9-37, `plan/tasks.yaml` and `plan/rule_groups.yaml`*
 
 The owner's words, 1 Nov 2026, verbatim, the second message's item (2) and what follows it:
@@ -30850,7 +30856,8 @@ Adds REQ-GUI-414 and REQ-GUI-415; changes REQ-PERF-115 (verify, rulings, source,
 ## R-706 — The owner's deferrals of 4 Nov: each entry stays open with its target, and RQ-654's place on the list changes nothing, R-669 having closed it, with BZ-1C's work in M9; RQ-647 is moot under R-669
 *Amended in part by R-793, R-794, R-795, R-798, R-799, R-800, R-801 and R-802 (5 Nov 2026: the owner's reply of that day answers RQ-680, RQ-681's part (a), RQ-594, RQ-619, RQ-643's option (b), RQ-378 and RQ-386, and puts RQ-577 at M3 in place of its own session).*
 *Amended in part by R-813, R-814 and R-815 (7 Nov 2026: RQ-675, RQ-676 and RQ-677 ruled at their tasks' start, so their deferral has ended).*
-*Still in force: RQ-681's parts (b) and (c) deferred to M9, RQ-643's option (a) to M9, the deferrals of RQ-391 and RQ-679 as R-803 and R-807 restate them, and what it says of RQ-654 and RQ-647.*
+*Amended in part by R-824 (7 Nov 2026; RQ-681 (c): OC-2's state is ruled, `ref_*`; the rest of RQ-681 deferred to M9 again).*
+*Still in force: RQ-681's part (b) and part (c)'s precision deferred to M9, part (c)'s state being R-824's, RQ-643's option (a) to M9, the deferrals of RQ-391 and RQ-679 as R-803 and R-807 restate them, and what it says of RQ-654 and RQ-647.*
 *4 Nov 2026 · the owner's batch of that day; applied in `REVIEW_QUEUE.md` (a dated line on each deferred entry), `docs/archive/review_queue/M0.md` (a dated note on RQ-647 and RQ-654) and `plan/rule_groups.yaml`*
 
 The owner's words, 4 Nov 2026, verbatim:
@@ -31332,8 +31339,8 @@ It ends the wait on TASK-M7-52 and on TASK-M7-47's two arms.
 R-793 is in the "design" group of `plan/rule_groups.yaml`.
 
 ## R-794 — The replication scoring command, `cargo xtask gate replication`, is a deliverable of TASK-M3-27; the atlas twins and OC-2's state and tolerance stay deferred to M9 *(on RQ-681, which stays open)*
-*Extended by R-824 (7 Nov 2026; RQ-681 (c): OC-2 recomputes from `ref_*`, the figures rerun at M9).*
-*Still in force: all of it.*
+*Amended in part by R-824 (7 Nov 2026; RQ-681 (c): OC-2 recomputes from `ref_*`, the figures rerun at M9).*
+*Still in force: all of it but OC-2's state, which R-824 settles as `ref_*`; the atlas twins and OC-2's tolerance stay deferred to M9, and TASK-M3-27's deliverable stands.*
 *5 Nov 2026 · the owner's reply to the report of 5 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-681, a deferral line; the entry stays open), `docs/design/principia_dd_replication.md` § "The gate", REQ-TOOL-222 (reqio), TASK-M3-27, TASK-M9-01, `plan/tasks.yaml` and `plan/rule_groups.yaml`;
 adds REQ-TOOL-222*
 
@@ -31855,7 +31862,7 @@ The owner's words (7 Nov 2026), verbatim:
 R-823 is in the "design" group of `plan/rule_groups.yaml`.
 
 ## R-824 — OC-2 recomputes each atlas row from its `ref_*` state, the figures rerun at M9; the rest of TASK-M9-01's gaps stay deferred to M9 *(on RQ-681, which stays open, deferred to M9)*
-*7 Nov 2026 · the owner's reply to the report of 7 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-681, a deferral line), REQ-VAL-214 (reqio), TASK-M9-01, `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
+*7 Nov 2026 · the owner's reply to the report of 7 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-681, a deferral line), REQ-VAL-214 (reqio), TASK-M9-01, the forward and "Still in force" lines of R-706 and R-794, `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
 changes REQ-VAL-214*
 
 The owner's words (7 Nov 2026), verbatim:
@@ -32232,7 +32239,7 @@ R-849 is in the "design" group of `plan/rule_groups.yaml`.
 ## R-850 — Chart paths: the morph is the general form, one path abstraction for every view edit, special cases run by their own code as exact specialisations, each operation tested bitwise against today and against its own path family's formula, never across families *(closes RQ-721)*
 *Amended in part by R-849 (7 Nov 2026, the owner's later rider: under the lock the anchor slides, no labelled jump, the jump kept only for time-axis to IC-only charts).*
 *Still in force: all of it but the labelled jump under the lock.*
-*7 Nov 2026 · the owner's answer to RQ-721 of that day and its amendment of the same day, held for this rulings PR; applied in `docs/archive/review_queue/M0.md` (RQ-721 moved), `docs/contracts/principia_export_animation_contract.md` Part 3, `docs/design/principia_sequence.md` § 3.4, `docs/design/principia_chart_composition.md` (status), TASK-M8-105, TASK-M4-37, `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
+*7 Nov 2026 · the owner's answer to RQ-721 of that day and its amendment of the same day, held for this rulings PR; applied in `docs/archive/review_queue/M0.md` (RQ-721 moved), `docs/contracts/principia_export_animation_contract.md` Part 3, `docs/design/principia_sequence.md` § 3.4, `docs/design/principia_chart_composition.md` (status), TASK-M8-105, TASK-M4-37, the forward and "Still in force" lines of R-483, R-576 and R-577, `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
 changes no requirement here; TASK-M8-105 carries REQ-TOOL-075 and REQ-GUI-376*
 
 The owner's words (7 Nov 2026), verbatim, on RQ-721:
@@ -32269,10 +32276,12 @@ The owner's amendment (7 Nov 2026), verbatim, from the order on the chart-space 
 *What it decides:* option (a), amended.
 
 - **One path abstraction** for every view edit: tilt, zoom, chart switch, lock, Save view as chart and morph. Where a path is a special case, that operation's existing code evaluates it, as an exact specialisation.
-- **Two tests per operation.** (1) The specialisation reproduces current behaviour bitwise. (2), as amended: each operation's implementation reproduces its own path family's formula, the latent line, the latent plane geodesic or the chart-parameter geodesic, and is never compared across families. The model's Theorem 3 makes curved tilt and the latent morph different paths with the same endpoints, so their measured gap (0.197 at `τ = 1.2`, 0.016 median in § 17.3) is expected, not a tolerance. Design § 17.3 already reads so.
+- **Two tests per operation.** (1) The specialisation reproduces current behaviour bitwise. (2), as amended: each operation's implementation reproduces its own path family's formula, the latent line, the latent plane geodesic or the chart-parameter geodesic, and is never compared across families. The model's Theorem 3 makes curved tilt and the latent morph different paths with the same endpoints, so their gap is expected, not a tolerance: the owner's figure, 0.197 at `τ = 1.2`, is in no repository file, and design § 17.3 measures 0.016 median and 0.124 worst. Design § 17.3 already reads so.
 - **The written rules against morphing give way** (option (a)'s list): export contract Part 3, REQ-TOOL-075, REQ-GUI-376 and REQ-GUI-379, and sequence §§ 3.3 and 3.4, so a chart change may morph, live and in export; a new chart-change segment defaults to morph where the ends allow, cut and dissolve still offered, old specs untouched. R-520's link-id cut stands; frames are never scored. TASK-M8-105 carries it into the contracts, with a dated note in each now.
 - **Stored anchor words** as designed in § 17.8. The answer's "labelled jump, shown like a cut" where the anchor can't exist in chart B is replaced by the owner's later rider (R-849): the anchor slides continuously, the model's Theorem 8 its construction, and the jump stays only for time-axis to IC-only charts.
 - **The order's other consequences, item 3:** mid-morph frames never claim held values; the time-to-IC cut is a product choice (Theorem 9); the sliding anchor is Theorem 8. Its "blend in Z only" was withdrawn by the owner's RQ-736 ruling (R-853) and is not ported. Where "mid-morph frames never claim held values" meets design § 17.11's one `E*` at both ends, the model's correction list (item 4) holds it open: RQ-738.
+
+*What it amends:* **R-576** and **R-577**, a chart change's transition and its live preview, and **R-483** H7's comparison with a chart switch; each has its forward and "Still in force" lines (code review of PR #443, finding 1).
 
 R-850 is in the "design" group of `plan/rule_groups.yaml`.
 
@@ -32300,8 +32309,8 @@ RQ-714's outside stays open (R-845).
 R-851 is in the "physics" group of `plan/rule_groups.yaml`.
 
 ## R-852 — Every registry primitive is classed as a state function, a conserved quantity (exact or approximate, labelled) or a trajectory functional, never an axis; final-condition charts stay a design item for the rulings report, with the check that conserved axes are `T`-independent *(on RQ-734, which stays open)*
-*7 Nov 2026 · the owner's order of that day, held for this rulings PR; applied in `REVIEW_QUEUE.md` (RQ-734, a dated line), `docs/design/principia_chart_composition.md` (status), TASK-M4-37, `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
-changes no requirement*
+*7 Nov 2026 · the owner's order of that day, held for this rulings PR; applied in `REVIEW_QUEUE.md` (RQ-734, a dated line), `docs/design/principia_chart_composition.md` (status), TASK-M4-37, REQ-CHART-128 (reqio: rulings, verify; the reviews of PR #443), `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
+changes REQ-CHART-128's rulings and verify*
 
 The owner's words (7 Nov 2026), verbatim:
 
@@ -32320,8 +32329,8 @@ R-852 is in the "design" group of `plan/rule_groups.yaml`.
 ## R-853 — The chart-space model is corrected to the corpus, which stands wherever it measured or ruled; the shape sphere's mirror half is never dropped or folded, the mirror fold is a starting state's only, and the state map and latent-chart traces are signed *(closes RQ-736)*
 *Amended in part by R-855 (7 Nov 2026, the owner's filter order: region D's presets render the full disc, the filter on by default for the paper-frame presets only).*
 *Still in force: all of it but open question 2's "reduced domain" for region D's presets.*
-*7 Nov 2026 · the owner's ruling on RQ-736 of that day, its two riders and its answers to the two open questions, held for this rulings PR; applied in `docs/archive/review_queue/M0.md` (RQ-736 moved), `REVIEW_QUEUE.md` (RQ-738, new), `docs/design/principia_state_map.md` § SM1 and its target table, `docs/design/principia_lines.md` (projection; syzygies), REQ-COL-163 (reqio, new), REQ-CHART-133 and REQ-CHART-134 (reqio, rulings), TASK-M7-52, TASK-M8-58, `plan/tasks.yaml`, `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
-adds REQ-COL-163; changes REQ-CHART-133's and REQ-CHART-134's rulings*
+*7 Nov 2026 · the owner's ruling on RQ-736 of that day, its two riders and its answers to the two open questions, held for this rulings PR; applied in `docs/archive/review_queue/M0.md` (RQ-736 moved), `REVIEW_QUEUE.md` (RQ-738, new), `docs/design/principia_state_map.md` § SM1 and its target table, `docs/design/principia_lines.md` (projection; syzygies), REQ-COL-163 (reqio, new), REQ-CHART-133 and REQ-CHART-134 (reqio, rulings), REQ-GUI-279 (reqio: statement, rulings, note; the physics review of PR #443, P1), TASK-M7-52, TASK-M8-58, `plan/tasks.yaml`, `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
+adds REQ-COL-163; changes REQ-CHART-133's and REQ-CHART-134's rulings and REQ-GUI-279's statement*
 
 The owner's ruling (7 Nov 2026), verbatim:
 
