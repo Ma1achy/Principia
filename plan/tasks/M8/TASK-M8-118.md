@@ -23,7 +23,7 @@ The new constraint, the twin of `η_E`: a uniform, off by default and bitwise to
 - `crates/engine/src/chart_validate.rs`: `forbids_lz_hold`, its refusals.
 
 ## Acceptance tests
-- `cargo test -p kernel hold_lz`, `cargo test -p kernel hold_outcomes`, `cargo test -p engine hold_encode` and `cargo test -p engine constraint_axis_refused` — L_z = L*, Σp = 0, both held, the near-rigid fixture, the six outcomes in order, encode on the held decode; off bitwise; each refusal row by name, Some(0) included; controls: η_E alone fails L_z, one projection fails the fixture, outcomes 2 and 3 swapped, the flag cleared fails (REQ-CHART-102).
+- `cargo test -p kernel hold_lz`, `cargo test -p kernel hold_outcomes`, `cargo test -p engine hold_encode` and `cargo test -p engine constraint_axis_refused` — L_z = L*, Σp = 0, both held, the near-rigid fixture, the six outcomes in order, with at f32 the state the second projection leaves at K̂ = 0, above the floor and on it, encode on the held decode; off bitwise; each refusal row by name, Some(0) included; controls: η_E alone fails L_z, one projection fails the fixture, outcomes 2 and 3 swapped, the K̂ = 0 test removed gives NaN, the flag cleared fails (REQ-CHART-102).
 - `cargo test -p kernel hold_rank` — a plane containing Jr, one through rest under hold E alone, and one through rest and one through a rigid rotation with both held report ray-degenerate, a generic plane doesn't; controls: the label removed, and a plane through a rigid rotation under hold E alone reporting rank loss (REQ-CHART-111).
 
 ## Notes

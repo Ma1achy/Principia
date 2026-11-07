@@ -3866,7 +3866,7 @@
     section: 5.4 What the constraints do to a momentum axis
   verify:
     method: unit test
-    detail: "cargo test -p kernel hold_lz and cargo test -p engine constraint_axis_refused: L_z = L* to tolerance on every chart allowing it, Σp = 0, both held E* too; off, bitwise; every row of the refusal table by name; controls: η_E alone with both on fails L_z, the flag cleared on (L_z, E) fails"
+    detail: "cargo test -p kernel hold_lz, cargo test -p kernel hold_outcomes and cargo test -p engine constraint_axis_refused: L_z = L* to tolerance on every chart allowing it, Σp = 0, both held E* too; off, bitwise; the outcomes in order, at f32 the state the second projection leaves at K̂ = 0, above the floor and on it; every row of the refusal table by name; controls: η_E alone with both on fails L_z, the K̂ = 0 test removed gives NaN, the flag cleared on (L_z, E) fails"
   rulings:
   - R-25
   - R-471
@@ -3979,7 +3979,7 @@
 - id: REQ-CHART-109
   area: CHART
   kind: definition
-  statement: "Both-held's outcomes must be defined in order in dd_decoder §3.7 and §2 (the collision pole, E* < U, the exact 2K* < L*², s = 0 on the floor with the rotation applied, s = 0 above it, otherwise apply), a tagged pixel keeping its momenta as decoded, with REQ-DEC-041 and §3.7's feasibility sentence conformed and a rule for a non-finite L*."
+  statement: "Both-held's outcomes must be defined in order in dd_decoder §3.7 and §2 (the collision pole, E* < U, the exact 2K* < L*², s = 0 or K̂ = 0 on the floor with the rotation applied, s = 0 or K̂ = 0 above it, otherwise apply), a tagged pixel keeping its momenta as decoded, with REQ-DEC-041 and §3.7's feasibility sentence conformed and a rule for a non-finite L*."
   source:
   - file: docs/design/principia_chart_composition.md
     section: "5.3 Constraints: hold `E`, and new: hold `L_z`"
