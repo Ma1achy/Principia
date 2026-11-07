@@ -24,9 +24,9 @@ Power and log as options per axis, polar and log-polar on any pair, each declare
 - The statistic's weight and label: a named measure, or `per pixel of this chart`.
 
 ## Acceptance tests
-- `cargo test -p kernel warps_and_pair_maps` — `forward(inverse(x)) = x` for each warp and pair map; polar's period and partner; the linear arm bit-for-bit; V1's decode time recorded; controls: a warp not written on an energy axis refused, mutation: a sign flipped in one inverse (REQ-CHART-104).
+- `cargo test -p kernel warps_and_pair_maps` — `forward(inverse(x)) = x` for each warp and pair map; polar's period and partner; the linear arm bit-for-bit; V1's decode time recorded; controls: a warp not written on an energy axis refused, mutation: named per inverse (REQ-CHART-104).
 - `cargo test -p engine statistic_measure` — weighted into a named measure or labelled; a known fraction recovered through a power warp; a paper's own measure equals its flat grid; controls: no weight and no label, the weight inverted, a count of quadtree leaves (REQ-CHART-131).
-- `cargo test -p engine ftle_chart_independent` — one bit pattern from a linear and a warped chart gives one `λ_T`; control: `δ₀`'s direction from a chart tangent (REQ-CHART-132).
+- `cargo test -p engine ftle_chart_independent` — one bit pattern from a linear chart, a warped one and a third with a different tangent gives one `λ_T`; control: `δ₀`'s direction from a chart tangent, caught by the third (REQ-CHART-132).
 
 ## Notes
 - Reviewed under RQ-720's reading of R-594 item 5.

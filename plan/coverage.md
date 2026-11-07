@@ -8,7 +8,7 @@
 |---|---|
 | DEC | 54 |
 | ENC | 38 |
-| CHART | 131 |
+| CHART | 132 |
 | INT | 111 |
 | EVT | 34 |
 | PAY | 111 |
@@ -22,9 +22,9 @@
 | VAL | 352 |
 | PERF | 118 |
 | SYS | 96 |
-| **total** | **2145** |
+| **total** | **2146** |
 
-Of these: 238 calibration, 192 definition, 1715 obligation. Retired (kept for their ids, not counted): 12.
+Of these: 238 calibration, 192 definition, 1716 obligation. Retired (kept for their ids, not counted): 12.
 
 ## Requirements per milestone
 
@@ -38,12 +38,12 @@ Of these: 238 calibration, 192 definition, 1715 obligation. Retired (kept for th
 | M5 | 183 |
 | M6 | 229 |
 | M7 | 262 |
-| M8 | 502 |
+| M8 | 503 |
 | M9 | 155 |
 
 ## Sections
 
-1832 sections in 63 files: 1429 yield at least one requirement; 403 yield none and are listed below with the reason.
+1833 sections in 63 files: 1430 yield at least one requirement; 403 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | gap (RQ-378) | 1 |
@@ -349,7 +349,6 @@ Of these: 238 calibration, 192 definition, 1715 obligation. Retired (kept for th
 | 16. What this does not settle | informative only | what was not settled |
 | 17. Chart paths | parent heading (obligations are in its subsections) | its subsections |
 | 17.1 The framing | rationale | the framing checked against the contract |
-| 17.14 Tests | informative only | carried in the requirements' verify lines |
 | 18. Time as an axis (order part D) | parent heading (obligations are in its subsections) | its subsections |
 
 ### `docs/design/principia_chart_reference.md`
@@ -366,6 +365,7 @@ Of these: 238 calibration, 192 definition, 1715 obligation. Retired (kept for th
 | section | reason | note |
 |---|---|---|
 | The chart-space model: views, edits and paths | informative only | the model of 7 Nov 2026, a statement of how navigation and chart paths work; it yields no requirement until the rulings PR carries its consequences |
+| 0. Revision after #422's review (7 Nov): the corpus wins where it measured | informative only | the owner's revision of the model, RQ-736; it yields no requirement until the rulings PR carries it |
 | 1. Objects | informative only | the model of 7 Nov 2026, a statement of how navigation and chart paths work; it yields no requirement until the rulings PR carries its consequences |
 | 2. The central theorem: every edit is a path, and a path always exists | informative only | the model of 7 Nov 2026, a statement of how navigation and chart paths work; it yields no requirement until the rulings PR carries its consequences |
 | 3. The existing operations are paths of named families | informative only | the model of 7 Nov 2026, a statement of how navigation and chart paths work; it yields no requirement until the rulings PR carries its consequences |

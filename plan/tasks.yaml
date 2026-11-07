@@ -3628,7 +3628,7 @@
 - id: TASK-M8-102
   milestone: M8
   title: "CPU batch: numerical inverses, their branch rule and seam"
-  depends_on: [TASK-M4-37, TASK-M4-33, TASK-M4-06, TASK-M6-03]
+  depends_on: [TASK-M4-37, TASK-M4-33, TASK-M4-06, TASK-M6-03, TASK-M4-34, TASK-M8-100]
   needs: []
   requirements: [REQ-CHART-107, REQ-CHART-129, REQ-CHART-130]
   reviewers: [code, qa, physics, perf]
@@ -3662,7 +3662,7 @@
   title: "The path type, the line on blocks, and export through CPU batch"
   depends_on: [TASK-M4-37, TASK-M8-105, TASK-M8-102, TASK-M8-31]
   needs: []
-  requirements: [REQ-CHART-113, REQ-CHART-114, REQ-CHART-116, REQ-CHART-124]
+  requirements: [REQ-CHART-113, REQ-CHART-114, REQ-CHART-116, REQ-CHART-124, REQ-CHART-133]
   reviewers: [code, qa, physics, perf]
   pitfalls: []
 - id: TASK-M8-107

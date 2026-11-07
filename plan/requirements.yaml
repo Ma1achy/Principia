@@ -3851,7 +3851,7 @@
     section: 12. Tests that can fail
   verify:
     method: unit test
-    detail: "cargo test -p kernel closed_inverse_round_trip: every closed row of the registry, the virial row by its mapping's forward at a held L_z ≠ 0; control: a sign flipped in one inverse fails"
+    detail: "cargo test -p kernel closed_inverse_round_trip: every closed row of the registry, the virial row by its mapping's forward at a held L_z ≠ 0; each case reads back the row's Holds; control: a named mutation per row that fires there (design § 12: a factor or exponent on a scale solve) fails"
   rulings:
   - R-72
   milestone: M4
@@ -3885,7 +3885,7 @@
     section: 9. Then virial
   verify:
     method: unit test
-    detail: "cargo test -p engine virial_descriptor: the validator takes a chart with a virial axis, refuses it beside hold E and beside a K axis by name; the row's forward by mapping: linear, or at L_z = 0, agrees with the descriptor's virial_ratio; warped at a held L_z ≠ 0 it reads 2(K − L_z²/2I)/|U|, labelled; forward(inverse(x)) = x on both arms; controls: a virial axis with no descriptor is refused, the warped row read as the state's own ratio fails, a sign flipped in the inverse fails"
+    detail: "cargo test -p engine virial_descriptor: the validator takes a chart with a virial axis, refuses it beside hold E and beside a K axis by name; the row's forward by mapping: linear, or at L_z = 0, agrees with the descriptor's virial_ratio; warped at a held L_z ≠ 0 it reads 2(K − L_z²/2I)/|U|, labelled; forward(inverse(x)) = x on both arms; controls: a virial axis with no descriptor is refused, the warped row read as the state's own ratio fails, a factor changed in the inverse fails, the row being a scale solve"
   rulings:
   - R-506
   milestone: M8
@@ -3902,7 +3902,7 @@
     section: 5.1 Pair maps
   verify:
     method: unit test
-    detail: "cargo test -p kernel warps_and_pair_maps: forward(inverse(x)) = x for each warp and each pair map; polar's period and its pole-crossing partner; the linear arm bit-for-bit today's; decode time recorded, past +2% the warp becomes baked (V1); controls: a warp not offered on an energy-type axis is refused, a sign flipped in one inverse fails"
+    detail: "cargo test -p kernel warps_and_pair_maps: forward(inverse(x)) = x for each warp and each pair map; polar's period and its pole-crossing partner; the linear arm bit-for-bit today's; decode time recorded, past +2% the warp becomes baked (V1); controls: a warp not offered on an energy-type axis is refused, a named mutation per inverse fails"
   rulings:
   - R-407
   - R-471
@@ -3934,7 +3934,7 @@
     section: 5.2 Curved slices off the shape sphere
   verify:
     method: unit test
-    detail: "cargo test -p kernel exp_map_targets: on the momentum sphere L_z and K hold at every pixel; on a wide mass chart every unblanked pixel has all components positive and √mᵢ = nᵢ, each outside pixel is blank and uncounted, and no two unblanked pixels give one mass set; the shape target bit-for-bit today's; forward(inverse(x)) = x on each target; controls: a frame not orthonormal fails, squaring with the mask removed fails, a sign flipped in one inverse fails"
+    detail: "cargo test -p kernel exp_map_targets: on the momentum sphere L_z and K hold at every pixel; on a wide mass chart every unblanked pixel has all components positive and √mᵢ = nᵢ, each outside pixel is blank and uncounted, and no two unblanked pixels give one mass set; the shape target bit-for-bit today's; forward(inverse(x)) = x on each target; controls: a frame not orthonormal fails, squaring with the mask removed fails, a named mutation per target fails"
   rulings:
   - R-82
   milestone: M8
@@ -3950,7 +3950,7 @@
     section: "7.3 A numerical inverse: branch and seam"
   verify:
     method: unit test
-    detail: "cargo test -p engine numerical_branch_seam: the (area, perimeter) pair reports its rule, per-pixel branch and seam; the same pixels in two orders give one bit pattern; forward(inverse(x)) = x on every written sample; controls: a rule reading a neighbour fails, the pair with no rule is refused by the registry, a sign flipped in the solve's residual fails the round trip"
+    detail: "cargo test -p engine numerical_branch_seam: the (area, perimeter) pair reports its rule, per-pixel branch and seam; the same pixels in two orders give one bit pattern; forward(inverse(x)) = x on every written sample; a fixture of known solvable samples solves, with no failures; controls: a rule reading a neighbour fails, the pair with no rule is refused by the registry, the solve's target mutated to F(z) + x writes a wrong root and fails"
   rulings:
   - R-82
   - R-470
@@ -4157,8 +4157,8 @@
   - file: docs/design/principia_chart_composition.md
     section: 12. Tests that can fail
   verify:
-    detail: "cargo test -p engine -- prim_round_trip prim_rejected: each row at f64 and f32; controls: a sign flipped in an inverse, a rejected row accepted, (L_z, E) refused"
     method: unit test
+    detail: "cargo test -p engine -- prim_round_trip prim_rejected: each row at f64 and f32; each case reads back the row's Holds; controls: a named mutation per row that fires there (design § 12: a factor or exponent on a scale solve) fails, a rejected row accepted, (L_z, E) refused"
   rulings:
   - R-369
   - R-669
@@ -4195,8 +4195,8 @@
   - file: docs/design/principia_chart_composition.md
     section: 12. Tests that can fail
   verify:
-    detail: "cargo test -p engine -- prim_round_trip prim_rejected: the rows of section 3.2, and Tanikawa-Mikkola's mass-weighted L_com = 0 at random masses after C, from an independent Σ m r × v; controls: a sign flipped, a scattering row given an inverse, R from the centroid fails at −0.0025 at (x, y) = (0, 0.3), (α₂, β₁) = (0.1, 0), masses (1, 0.8, 0.6), an unweighted sum fails"
     method: unit test
+    detail: "cargo test -p engine -- prim_round_trip prim_rejected: the rows of section 3.2, and Tanikawa-Mikkola's mass-weighted L_com = 0 at random masses after C, from an independent Σ m r × v; each case reads back the row's Holds; controls: a named mutation per row that fires there (design § 12: a factor or exponent on a scale solve) fails, a scattering row given an inverse, R from the centroid fails at −0.0025 at (x, y) = (0, 0.3), (α₂, β₁) = (0.1, 0), masses (1, 0.8, 0.6), an unweighted sum fails"
   rulings:
   - R-369
   - R-669
@@ -4318,7 +4318,7 @@
     section: 12. Tests that can fail
   verify:
     method: unit test
-    detail: "cargo test -p engine round_trip_complete: every registered row with an inverse, closed or numerical, has a round-trip case and a named mutation control; forward-only rows and combinations classed none need none; controls: a case removed fails, an inverse added with no case fails"
+    detail: "cargo test -p engine round_trip_complete: every registered row with an inverse, closed or numerical, has a round-trip case, a read-back of its Holds column and a named mutation control that fires on that row; forward-only rows and combinations classed none need none; controls: a case removed fails, an inverse added with no case fails, a K case with its momentum direction wrong fails"
   rulings:
   - R-176
   milestone: M4
@@ -4330,31 +4330,31 @@
     section: 3.3 Every primitive's class
   verify:
     method: unit test
-    detail: "cargo test -p engine primitive_class: every row has its class; a row declared conserved and exact holds along a short run within the run's drift; a row declared approximate shows the label; a functional is refused as an axis; controls: a state row declared conserved fails, a functional accepted fails"
+    detail: "cargo test -p engine primitive_class: every row has its class; a row declared conserved and exact holds along a short run within the run's drift, at ε = 0, the softened and Newtonian energies being R-791's and RQ-709's; a row declared approximate shows the label; a functional is refused as an axis; controls: a state row declared conserved fails, a functional accepted fails"
   rulings: []
   milestone: M4
 - id: REQ-CHART-129
   area: CHART
-  statement: "Ensemble jitter on a composed chart must stay in the chart's own coordinates; a footprint whose copies straddle a declared seam, a branch or a mask must be flagged per pixel, derived at resolve, every copy kept; its spread and error_ratio must be reported as seam-contaminated."
+  statement: "Ensemble jitter on a composed chart must stay in the chart's own coordinates; a footprint whose copies straddle a declared seam, a branch or a composed chart's mask must be flagged per pixel, in the resolve pass, every copy kept; its spread and error_ratio must be reported as seam-contaminated; a chart of today's registry must be unchanged."
   source:
   - file: docs/design/principia_chart_composition.md
     section: "7.4 Seams: jitter, spread and refinement"
   verify:
     method: unit test
-    detail: "cargo test -p engine seam_jitter_flagged: on a composed chart the copies are the sampling note's offsets in (u, v), whatever the seam; a footprint across the seam is flagged, all E + 1 copies in the pool, spread_shape, spread_event, ensemble_spread and error_ratio labelled seam-contaminated; two orders, one flag; controls: a copy dropped at the seam fails, the flag read from a neighbour fails"
+    detail: "cargo test -p engine seam_jitter_flagged: on a composed chart the copies are the sampling note's offsets in (u, v), whatever the seam; a footprint across a numerical seam, polar's branch line or region D's mask, a baked chart's, is flagged in the resolve pass, a numerical branch read from the IC record, all E + 1 copies in the pool, spread_shape, spread_event, ensemble_spread and error_ratio labelled seam-contaminated; two orders, one flag; controls: a copy dropped at the seam fails, the flag read from a neighbour fails"
   rulings:
   - R-80
   - R-100
   milestone: M8
 - id: REQ-CHART-130
   area: CHART
-  statement: "Declared seams must be masked from the refinement criterion: on a flagged footprint unresolved(f) must not fire from spread, event class, the latch or the chart's own mask, the footprint must be counted, never discarded and never treated as resolved, and a chart with no seam must be bitwise unchanged."
+  statement: "Declared seams must be masked from the refinement criterion: on a flagged footprint unresolved(f) must not fire from spread, event class, the latch or a composed chart's own mask, a quad of such footprints must take the decision Seam with its count n_seam reported, its coherence must not raise its priority, and a chart of today's registry must be bitwise unchanged."
   source:
   - file: docs/design/principia_chart_composition.md
     section: "7.4 Seams: jitter, spread and refinement"
   verify:
     method: unit test
-    detail: "cargo test -p engine seam_refinement_masked: a flagged footprint leaves n_unresolved and is counted; a non-finite copy on it still fires; an unflagged neighbour with real spread still splits; a chart with no seam decides bitwise as REQ-REF-022; controls: the mask removed splits quads along the seam at every depth, the mask applied to an unflagged footprint fails"
+    detail: "cargo test -p engine seam_refinement_masked: a flagged footprint leaves n_unresolved, a mask-blanked copy included; a quad of them takes the decision Seam with n_seam counted, and coherence gives it no priority; a non-finite copy on it still fires; an unflagged neighbour with real spread still splits; a chart of today's registry decides bitwise as REQ-REF-022; controls: the mask removed splits quads along the seam at every depth, the mask applied to an unflagged footprint fails, Keep taken for Seam fails"
   rulings: []
   milestone: M8
 - id: REQ-CHART-131
@@ -4371,14 +4371,28 @@
   milestone: M8
 - id: REQ-CHART-132
   area: CHART
-  statement: "FTLE and Lyapunov exponents must be computed in physical phase space, never in chart coordinates, so that a chart's warp cannot change them; the Benettin shadow's offset must be a function of the state, never of the chart."
+  statement: "FTLE and Lyapunov exponents must be computed in physical phase space, never in chart coordinates, so that a chart's warp cannot change a system's exponent; the Benettin shadow's offset must be a function of the state, never of the chart."
   source:
   - file: docs/design/principia_chart_composition.md
     section: 6.5 Chaos measures live in phase space
   verify:
     method: unit test
-    detail: "cargo test -p engine ftle_chart_independent: a linear chart and a warped one, at a pixel where the warp's value is exact, decode one bit pattern and give one lambda_T bit for bit; control: delta_0's direction taken from a chart tangent fails"
+    detail: "cargo test -p engine ftle_chart_independent: a linear chart, a warped one at a pixel where the warp's value is exact, and a third with a different tangent through the same state, a tilted pair, decode one bit pattern and give one lambda_T bit for bit; control: delta_0's direction taken from a chart tangent fails"
   rulings: []
+  milestone: M8
+- id: REQ-CHART-133
+  area: CHART
+  statement: "The mirror half of the shape sphere must never be dropped or folded by a path: a path between two lower-half views must stay in the lower half, at every pixel of every frame (R-544; the owner's rider to RQ-736)."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: 17.2 The mechanism
+  - file: docs/design/principia_chart_composition.md
+    section: 17.14 Tests
+  verify:
+    method: unit test
+    detail: "cargo test -p engine path_lower_half_stays: a path between two lower-half views keeps n₂ < 0 at every pixel of every frame, ends included, on the signed state; controls: canon::canonicalise for the signed form, which mirrors, fails; a literal z blend, which reaches n₂ ≥ 0 only, fails"
+  rulings:
+  - R-544
   milestone: M8
 - id: REQ-INT-001
   area: INT

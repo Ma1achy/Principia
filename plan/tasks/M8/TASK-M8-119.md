@@ -20,7 +20,7 @@ The kernel's `AxisVirial` is built on TASK-M2-37: this gives it the descriptor t
 - One baked entry.
 
 ## Acceptance tests
-- `cargo test -p engine virial_descriptor` — the validator takes it; refused beside hold E and a K axis; forward by mapping: linear agrees with `virial_ratio`, warped at a held L_z ≠ 0 reads `2(K − L_z²/2I)/|U|` and round-trips, labelled `Q above the floor`; controls: no descriptor refused, the warped row read as the state's ratio, mutation: a sign flipped in the inverse (REQ-CHART-103).
+- `cargo test -p engine virial_descriptor` — the validator takes it; refused beside hold E and a K axis; forward by mapping: linear agrees with `virial_ratio`, warped at a held L_z ≠ 0 reads `2(K − L_z²/2I)/|U|`, labelled `Q above the floor`; `forward(inverse(x)) = x` on both arms; controls: no descriptor refused, the warped row read as the state's ratio, mutation: a factor changed in the inverse, the row being a scale solve (REQ-CHART-103).
 
 ## Notes
 - RQ-700 is outside TASK-M4-37's gate, so nothing in Depends on holds it: the arm for a held L_z ≠ 0, where the axis reads above the floor (§ 9), doesn't start until RQ-700 is ruled, by this note. TS-2 stays "not scored: no fixed-k velocity chart" (R-669).

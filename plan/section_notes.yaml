@@ -1716,3 +1716,7 @@
   section: "10.3 Final-condition charts"
   reason: informative only
   note: "a door, RQ-734; it yields no requirement until ruled"
+- file: docs/design/principia_chart_space_model.md
+  section: "0. Revision after #422's review (7 Nov): the corpus wins where it measured"
+  reason: informative only
+  note: "the owner's revision of the model, RQ-736; it yields no requirement until the rulings PR carries it"

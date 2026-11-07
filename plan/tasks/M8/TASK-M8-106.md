@@ -1,7 +1,7 @@
 # TASK-M8-106 — The path type, the line on blocks, and export through CPU batch
 
 - **Milestone:** M8
-- **Closes:** REQ-CHART-113, REQ-CHART-114, REQ-CHART-116, REQ-CHART-124
+- **Closes:** REQ-CHART-113, REQ-CHART-114, REQ-CHART-116, REQ-CHART-124, REQ-CHART-133
 - **Depends on:** TASK-M4-37, TASK-M8-105, TASK-M8-102, TASK-M8-31
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics, perf
@@ -32,6 +32,7 @@ Every arm of the path type, with tilt and zoom calling their own code, a frame r
 - Physics reviewer: the metric on the blended state in the chart reference (REQ-CHART-124).
 - `cargo test -p engine -- path_tilt_bitwise path_zoom_bitwise path_lock_bitwise path_save_view_bitwise path_keyframe_bitwise path_ends_bitwise path_record_round_trip` — each against the direct operation (REQ-CHART-113).
 - `cargo test -p engine -- path_gram_flags path_blank_ends path_hold_table path_small_step path_links_cut` — each row and its control, path_small_step's fixture of planes δ = 10⁻¹⁰ apart with `arccos` as its control (REQ-CHART-114).
+- `cargo test -p engine path_lower_half_stays` — a path between two lower-half views keeps `n₂ < 0` at every pixel of every frame, ends included (R-544, the owner's rider to RQ-736); mutation: `canon::canonicalise` for the signed form; control: a literal `z` blend (REQ-CHART-133).
 - `cargo test -p engine path_retime` — spread at most 1.25, pinned ends; control: the table off (REQ-CHART-116).
 
 ## Notes
