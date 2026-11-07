@@ -278,9 +278,9 @@ theorem norm_circ (t : ℝ) : ‖circ t‖ = 1 := by
   nlinarith [norm_nonneg (circ t)]
 
 /-- **Finding F11**: §0.1's "geodesic on the sphere", block by block, is not always a path, and A8 is needed. With `φ`
-the constant chart `(1,0,0)` and `ψ` sweeping the circle, which is antipodal to `φ` at one pixel only, the frame at
-`s = ½` of the great-circle blend has no continuous extension across that pixel: its second coordinate is near `+1`
-on one side and near `−1` on the other. A path between the two charts exists (`theorem1_signed`); a block-wise
+the constant chart `(1,0,0)` and `ψ` sweeping the circle with `u₀`, which is antipodal to `φ` on the line of pixels
+`u₀ = 0` and nowhere else, the frame at `s = ½` of the great-circle blend has no continuous extension across that line:
+its second coordinate is near `+1` on one side and near `−1` on the other. A path between the two charts exists (`theorem1_signed`); a block-wise
 shortest-arc path does not. -/
 theorem sphere_blend_jumps :
     ∃ x : E3, ∃ y : U → E3, ‖x‖ = 1 ∧ (∀ u, ‖y u‖ = 1) ∧ Continuous y ∧ x = -y centre ∧

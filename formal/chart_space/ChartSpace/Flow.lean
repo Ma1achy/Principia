@@ -24,7 +24,6 @@ structure RevFlow (X : Type*) [TopologicalSpace X] where
   Survives : ℝ → X → Prop
   /-- The momentum flip. -/
   R : X → X
-  R_invol : ∀ x, R (R x) = x
   /-- `F_0` is the identity. -/
   zero : ∀ x, F 0 x = x
   /-- A surviving trajectory can be run back: `F_{−t} ∘ F_t = id`, and the way back survives. -/

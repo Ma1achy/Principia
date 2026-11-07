@@ -33,6 +33,7 @@ elab "#check_axioms " id:ident : command => do
 #check_axioms ChartSpace.theorem2_swap
 #check_axioms ChartSpace.det_blend_tilt
 #check_axioms ChartSpace.line_loses_area
+#check_axioms ChartSpace.det_blend_inplane
 #check_axioms ChartSpace.swap_is_rotation_by_pi
 #check_axioms ChartSpace.swap_is_not_a_tilt
 #check_axioms ChartSpace.det_frames

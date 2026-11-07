@@ -419,6 +419,30 @@ theorem line_loses_area {Q : Matrix (Fin 8) (Fin 2) ℝ} {P : RotPlane} (h0 : co
     simp only [Real.cos_pi]
     norm_num
 
+/-- Theorem 2's negative claim for the tilt towards the other column (`t = q₂`, a rotation inside the plane of `Q`'s
+orthonormal columns): `det(Q_sᵀ Q_s) = (1 − 2s(1−s)(1 − cos θ))²`, not `det_blend_tilt`'s formula. -/
+theorem det_blend_inplane (P : RotPlane) (θ s : ℝ) :
+    ((blendMat (ofCols P.e P.f) (rotMat P θ (ofCols P.e P.f)) s).transpose *
+        blendMat (ofCols P.e P.f) (rotMat P θ (ofCols P.e P.f)) s).det =
+      (1 - 2 * s * (1 - s) * (1 - Real.cos θ)) ^ 2 := by
+  have c0 : col (blendMat (ofCols P.e P.f) (rotMat P θ (ofCols P.e P.f)) s) 0 =
+      (1 - s + s * Real.cos θ) • P.e + (s * Real.sin θ) • P.f := by
+    rw [col_blendMat, col_rotMat, col_ofCols_zero, P.rot_e]
+    ext j
+    simp only [PiLp.add_apply, PiLp.smul_apply, smul_eq_mul]
+    ring
+  have c1 : col (blendMat (ofCols P.e P.f) (rotMat P θ (ofCols P.e P.f)) s) 1 =
+      (-(s * Real.sin θ)) • P.e + (1 - s + s * Real.cos θ) • P.f := by
+    rw [col_blendMat, col_rotMat, col_ofCols_one, P.rot_f]
+    ext j
+    simp only [PiLp.add_apply, PiLp.sub_apply, PiLp.smul_apply, smul_eq_mul]
+    ring
+  rw [det_gram, c0, c1]
+  simp only [inner_add_left, inner_add_right, real_inner_smul_left, real_inner_smul_right, P.inner_ee, P.inner_ff,
+    P.inner_ef, P.inner_fe]
+  linear_combination (s ^ 2 * ((1 - s + s * Real.cos θ) ^ 2 + (s * Real.sin θ) ^ 2 +
+    (1 - 2 * s * (1 - s) * (1 - Real.cos θ)))) * Real.sin_sq_add_cos_sq θ
+
 /-! ### The swap, against the theorem's hypothesis -/
 
 /-- Build a rotation plane from inner products. -/

@@ -1,7 +1,7 @@
 # The chart-space model in Lean 4
 
 A machine-checked formalisation of `chart-space-model.md` (7 Nov 2026, held outside the repository at
-`orch/charts/`), by the owner's orders of 7 Nov 2026: Theorems 1, 2, 4 to 11, over `Z = EuclideanSpace ℝ (Fin 8)` and
+`orch/charts/`; when #422 merges it is `docs/design/principia_chart_space_model.md`, and this pointer moves there), by the owner's orders of 7 Nov 2026: Theorems 1, 2, 4 to 11, over `Z = EuclideanSpace ℝ (Fin 8)` and
 the compact square `U = [-1,1]^2`, with `D : Z → Sys` for an abstract topological space `Sys`, assumed continuous, and
 total because it is a function. Floating point (§8) is out of it, and so is Theorem 3.
 
@@ -86,7 +86,9 @@ Each is marked in the source by its name.
 
 - **A1** (`ExtChart`): pan, and zoom with `k > 1`, need a chart with a continuous extension to the plane.
 - **A2** (`theorem8_pointwise`, `hφ`): Theorem 8 needs `φ(0) = a`, that is, a lock with `δ = 0`.
-- **A3** (`theorem8_pointwise`, `hψ`): Theorem 8 needs `ψ_{π(a)}(0) = π(a)`, and a definition of re-centring.
+- **A3** (`theorem8_pointwise`, `hψ`): Theorem 8 needs `ψ_{π(a)}(0) = π(a)`. This is really a missing definition (a
+  definition requirement, R-72): "re-centred on `π(a)`" is never defined, and its natural meaning is exactly
+  `ψ_{π(a)}(0) = π(a)`. `recentre` is one definition that meets it.
 - **A4** (`exists_plane_of_tilt`): `q_i` and `t` must be linearly independent for "the plane of `(q_i, t)`" to exist.
 - **A5** (`tilt_constant_speed`): `t` orthogonal to the frame's columns, for a tilt to be a geodesic of planes.
 - **A6** (`timeChart`): in §6, `φ` is a curve `[-1,1] → Z`, not a chart of §1, and `t_play ∈ [0,T]`.
@@ -97,7 +99,7 @@ Each is marked in the source by its name.
   hypothesis (`rev`, assumed only where the trajectory survives). The document also uses, unstated: `F_0 = id`
   (`zero`); a surviving trajectory runs back to its start, and the way back survives (`inv`); survival backwards from
   `x` is survival forwards from `R x` (`rev_survives`); and `F_t` is continuous where the trajectory survives (`cont`).
-  `R` is an involution (`R_invol`).
+  The proofs don't need `R` to be an involution, so `RevFlow` doesn't assume it.
 - **A10** (`theorem11_latent`, `hDE`): over `Z`, `φ_T = Enc ∘ F_{−T} ∘ D ∘ ψ` reaches `D(ψ(u))` at `T` only if the decode
   undoes the encode on the start, which §0.1 says Principia's decode doesn't (it saturates and canonicalises).
 
@@ -116,9 +118,12 @@ the one start that survives to `T` and is at `ψ(u)` then, and `φ_T` is continu
 - **F2. Theorem 2's example doesn't meet its hypothesis (§2 against §3).** `[e₂ e₁]` is not `R(θ) [e₁ e₂]` for any rotation
   in a plane containing a column (`swap_is_not_a_tilt`), so "the same two charts" is false under §3's `R`. It is
   `R(π) Q` in the plane of `(e₁ − e₂, e₃)` (`swap_is_rotation_by_pi`), a path that keeps the area by leaving the plane
-  through `e₃`. The conclusion survives, and strengthens, for true tilts: `det(Q_sᵀ Q_s) = 1 − 2s(1−s)(1 − cos θ)`
-  (`det_blend_tilt`), so the line loses area at every `0 < s < 1` unless `cos θ = 1`, and collapses at `θ = π`, `s = ½`
-  (`line_loses_area`). §7's "never squash is necessary" should cite this.
+  through `e₃`. The conclusion survives, and strengthens, for true tilts. For `Q` with orthonormal columns and `t`
+  orthogonal to both (the plane of `(q₁, t)`, A5): `det(Q_sᵀ Q_s) = 1 − 2s(1−s)(1 − cos θ)` (`det_blend_tilt`), so the
+  line loses area at every `0 < s < 1` unless `cos θ = 1`, and collapses at `θ = π`, `s = ½` (`line_loses_area`). For
+  the tilt towards the other column (`t = q₂`, a rotation inside the plane of `(q₁, q₂)`):
+  `det(Q_sᵀ Q_s) = (1 − 2s(1−s)(1 − cos θ))²` (`det_blend_inplane`), which loses area too. The formulas differ, so each
+  is stated with its hypotheses. §7's "never squash is necessary" should cite this.
 - **F3. "Geodesic" is undefined, and the plane reading needs A5.** The document defines the family only by the formula
   (`IsLatentPlaneGeodesic`). With `t` orthogonal to the columns, `det(Q_aᵀ Q_b) = cos(b − a)`: the plane moves at constant
   speed (`tilt_constant_speed`). With `t = q₂` the frames turn and the plane doesn't move (`tilt_inside_plane`), so §3's
@@ -163,6 +168,21 @@ the one start that survives to `T` and is at `ψ(u)` then, and `φ_T` is continu
 - **F14. Theorem 7 and 8 over `S` keep their content, not their formulas.** §0.7 says they stand "with the anchor in
   `S`". `B` and `S` use `a + (1−s)(φ − a)`, which the sphere block doesn't have. They hold anyway for any target,
   because `U` contracts to its centre (`theorem7_general`, `theorem8_general`).
+
+## For the owner's rulings report
+
+From the physics review of #440. These are questions about the model, not defects in these proofs, and they don't
+hold this library.
+
+- **A10 can be weakened.** Principia's decode–encode is `D ∘ Enc = C`, canonicalisation. Translations, boosts, rotations
+  and the full-state mirror commute with the Newtonian flow. So `D ∘ Enc` commuting with `F_T` would do in place of
+  A10, and scale-invariant state functions, such as shape-sphere position, would then come out right.
+- **The `I = 1` rescale doesn't commute with the flow at fixed `T`.** Under `r → λr`, time scales as `t → λ^{3/2} t`.
+  The backward start `F_{−T}(D(ψ(u)))` generally has `I ≠ 1`, so after encoding, a forward run of canonical length `T`
+  doesn't reach the chosen state. That pixel needs the horizon `λ^{3/2}·T`, or else the start must be kept off the
+  gauge.
+- **That conflicts with `principia_canonical_spec.md` line 54** ("a single global horizon T is legitimate because
+  scale is gauged") for final-condition charts. It belongs in the final-condition design item.
 
 Smaller notes: Theorem 1's path needs neither (D1) nor (D2), only the claim about decoding does (`lineMorph` has no `D`),
 so "only because the decoder is total" is about the decoded frames, not the path. Theorem 9 is about paths in

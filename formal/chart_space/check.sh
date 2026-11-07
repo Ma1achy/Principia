@@ -3,7 +3,8 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-hatches='\b(sorry|admit|native_decide|sorryAx)\b|^[[:space:]]*((private|protected|noncomputable|unsafe|partial)[[:space:]]+)*(axiom|opaque)\b|\bimplemented_by\b|\bextern\b'
+# Also an `axiom` or `opaque` after attributes (`@[simp] axiom`), and the option that skips the kernel's type check.
+hatches='\b(sorry|admit|native_decide|sorryAx|implemented_by|extern)\b|^[[:space:]]*(@\[[^]]*\][[:space:]]*)*((private|protected|noncomputable|unsafe|partial)[[:space:]]+)*(axiom|opaque)\b|debug\.skipKernelTC'
 if grep --recursive --line-number --extended-regexp "$hatches" --include='*.lean' ChartSpace ChartSpace.lean; then
   echo "check: an escape hatch is in the source" >&2
   exit 1

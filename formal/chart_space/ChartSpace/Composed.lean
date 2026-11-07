@@ -41,9 +41,10 @@ def lineMorphOn {X : Type*} [TopologicalSpace X] (φ ψ : C(X, Z)) : ContinuousM
   map_zero_left u := by simp
   map_one_left u := by simp
 
-/-- **Finding F12**: "every theorem holds on `U \ Σ`" fails for zoom. For every `k < 1` (zoom out, `0 < k`, among them) there is a one-point seam
-`seam` and a pixel off it which zoom by `k` sends onto it, so zoom's frames are not maps on `U \ Σ`. -/
-theorem zoom_enters_seam {k : ℝ} (hk1 : k < 1) :
+/-- **Finding F12**: "every theorem holds on `U \ Σ`" fails for zoom. For every zoom in, `0 < k < 1`, there is a
+one-point seam and a pixel off it which zoom by `k` sends onto it, so zoom's frames are not maps on `U \ Σ`. The proof
+uses only `k < 1`; `0 < k` restricts the statement to zooms. -/
+theorem zoom_enters_seam {k : ℝ} (_hk0 : 0 < k) (hk1 : k < 1) :
     ∃ (seam : Set Plane) (u : Plane), u ∈ squareSet ∧ u ∉ seam ∧ k • u ∈ seam := by
   refine ⟨{k • (1 : Plane)}, 1, mem_squareSet.mpr fun _ => by simp, fun h => ?_, rfl⟩
   have := congrFun (Set.mem_singleton_iff.mp h) 0
