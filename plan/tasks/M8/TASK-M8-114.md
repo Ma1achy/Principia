@@ -4,7 +4,7 @@
 - **Closes:** REQ-PERF-118
 - **Depends on:** TASK-M4-37, TASK-M8-113
 - **Needs (earlier milestones):** none
-- **Reviewers:** code, qa, perf
+- **Reviewers:** code, qa, physics, perf
 - **Pitfalls:** none
 - **Size:** ~250 lines
 
@@ -21,6 +21,7 @@ Stored rows under the budget, and the GPU column measured.
 
 ## Acceptance tests
 - `cargo test -p engine time_memory_budget` — after any order of § 18.3's events, at most K entries, every required boundary held or arriving (REQ-PERF-118).
+- `cargo test -p engine time_column_matches_playhead time_extend_continues` — the store arms of § 18.6, with their controls (REQ-PERF-118).
 - `cargo xtask bench time_column` — waits for the human's Mac (R-186), which closes it; the Windows runner's arm is a separate labelled measurement that closes nothing (R-711) (REQ-PERF-118).
 
 ## Notes

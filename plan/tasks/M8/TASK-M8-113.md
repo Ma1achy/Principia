@@ -14,6 +14,7 @@ The mode, column marching and row reads, on CPU batch first.
 ## References
 - `docs/design/principia_chart_composition.md` § "18.1 Verdict: a chart mode, no fifth axis kind"
 - `docs/design/principia_chart_composition.md` § "18.2 Against the core"
+- `docs/design/principia_chart_composition.md` § "18.3 Stored rows and dense output: the conflict, plainly"
 - `docs/design/principia_chart_composition.md` § "18.4 Interactions"
 - `docs/design/principia_chart_composition.md` § "18.6 Tests"
 

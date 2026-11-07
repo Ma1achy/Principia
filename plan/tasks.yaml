@@ -3727,7 +3727,7 @@
   depends_on: [TASK-M4-37, TASK-M8-113]
   needs: []
   requirements: [REQ-PERF-118]
-  reviewers: [code, qa, perf]
+  reviewers: [code, qa, physics, perf]
   pitfalls: []
 - id: TASK-M8-115
   milestone: M8
