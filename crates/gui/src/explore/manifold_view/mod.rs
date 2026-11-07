@@ -333,15 +333,14 @@ const READS_BACK: f64 = 1e-18;
 /// exactly 0. `None` where the basis has any other number of axes off the targets, or no plane on the two.
 ///
 /// A positive determinant (`σ² cos τ₁ cos τ₂` whatever `γ`) is `(i, j)`, unless a target is on the wrong vector for that
-/// pair, `misplaced` (R-705): then it is no tilt of it, and `None`. A negative one may be `(j, i)`. That is a pair
-/// picked the other way round, kept to the ends of its range (R-459 G3), only where that order reads the basis back: a
-/// typed component's sign says nothing of H and V. A mirrored basis neither order reads back is outside the map's image,
-/// so some reading of it loses something: `(j, i)` only if it keeps more of the tilt, the components on the targets, and
-/// else `(i, j)`. Only that last case reads alike on both sides of a component passing through 0. Where the swap is
-/// taken, axes, angles and scale jump there: the swap keeps the tilt on the target it can hold, as with `X = z_q3`,
-/// `Y = z_μ1`, `q₁ = ε e_α + 0.8 e_μ1`, `q₂ = e_β`, which below 0 reads `(z_β, z_α)` and from 0 up, `Y` then on the
-/// wrong vector for `(z_α, z_β)` (R-705), its dominant axes `(z_μ1, z_β)`. `read` is [`View::framed`]'s reading on an
-/// order.
+/// pair, `misplaced` (R-705): then it is no tilt of it, and `None`. A negative one is `(j, i)` where that order reads the
+/// basis back: a view the map gives, a pair picked the other way round, kept to the ends of its range (R-459 G3), a typed
+/// component's sign saying nothing of H and V. A mirrored basis neither order reads back is outside the map's image. With
+/// a target misplaced on `(i, j)` it is `None`, as at a positive determinant. Otherwise some reading of it loses
+/// something: `(j, i)` only if it keeps more of the tilt, the components on the targets, and else `(i, j)`. Only that last
+/// case reads alike on both sides of a component passing through 0. Where a swap is taken, axes, angles and scale jump
+/// there. With `X = z_q3`, `Y = z_μ1`, `q₁ = ε e_α + 0.8 e_μ1`, `q₂ = e_β`, `ε = −0.6` reads back, `(z_β, z_α)`, and either
+/// side of it, up to `|ε| = 0.8`, reads its dominant axes `(z_μ1, z_β)`. `read` is [`View::framed`]'s reading on an order.
 fn tilted_axes(
     q1: &Latent,
     q2: &Latent,
@@ -446,10 +445,11 @@ impl View {
     /// V loses that axis at the tilt's ends (R-459 G3). Only a basis no exact reading holds is a preset's with stray
     /// components at the floating point's noise, and failing that its dominant axes' frame.
     ///
-    /// With `X ≠ Y` a preset, or a pair with a positive determinant, also needs each target on its own vector: `Y` on `q₁`
-    /// or `X` on `q₂` is no tilt of the plane, as typed and still once turned back by `γ`, a turned view having both as
-    /// typed (R-705). Past the floating point's noise such a basis reads in its dominant axes' frame. A mirrored basis
-    /// keeps `tilted_axes`'s reading: it is outside the map's image whichever way it reads (R-459 G3).
+    /// With `X ≠ Y` a reading on axes also needs each target on its own vector: `Y` on `q₁` or `X` on `q₂` is no tilt of
+    /// the plane, as typed and still once turned back by `γ`, a turned view having both as typed (R-705). Past the floating
+    /// point's noise such a basis reads in its dominant axes' frame, whatever the sign of its determinant. A mirrored basis
+    /// whose swapped order reads it back exactly is not such a basis: it is in the map's image, its targets on their own
+    /// vectors on that order, and `tilted_axes` keeps it there.
     pub fn framed(plane: &Plane, frame: Option<&SliceFrame>) -> Self {
         let (q1, q2) = (&plane.q1, &plane.q2);
         let total = dot(q1, q1) + dot(q2, q2);

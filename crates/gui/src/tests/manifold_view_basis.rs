@@ -1,8 +1,8 @@
 //! `manifold_view_basis` (REQ-GUI-415; R-705): with `X ≠ Y`, a typed basis with `Y` on `q₁` or `X` on `q₂` reads in its
 //! dominant axes' frame, the preset's test counting those components, `σ` read whole; and a zoom edit scales the stored
-//! basis, so the plane stays where it is. A view the map gives reads as it did at every `γ`, and so does a mirrored basis
-//! and a basis with each target on its own vector as typed: a component counts only on the wrong vector both as typed
-//! and turned back. Each check is also run on an input it must reject, through [`rejects`] (gui has no route to
+//! basis, so the plane stays where it is. A view the map gives reads as it did at every `γ`, a mirrored basis whose swapped
+//! order reads it back being one of them, and so does a basis with each target on its own vector as typed: a component
+//! counts only on the wrong vector both as typed and turned back. Each check is also run on an input it must reject, through [`rejects`] (gui has no route to
 //! `negative_control!`, `support`'s note).
 
 use engine::contract::set_field::{Edit, SetField, SimField};
