@@ -51,10 +51,12 @@
 //! goes through [`Chart::decode`], and the configuration block of `map`'s latent is never decoded.
 //!
 //! **The selects** (dd_decoder §2's select rule; gpu_determinism_note): five, each between values already computed:
-//! `r = 0` in [`exponential`] (`sin r/r → 1`), the sinc's cut at f32 ([`sinc_of`]; both forms are within REQ-DEC-054's
-//! bound of `sin r/r` there), `n₀ ≥ 0` in [`inverse`] (both forms give `I/2` at `n₀ = 0`), R-437's `p = q = 0` in
-//! [`inverse`] (the defined 0), and `p = 0` in [`inverse`], a `−0` taken as `+0` before `atan2(q, p)`. Four are continuous
-//! across their boundaries, so a backend fork there moves the output by rounding only. R-437's is not, for `rho_angle`:
+//! `r = 0` in [`exponential`] (`sin r/r → 1`), the sinc's cut at f32 ([`sinc_of`]), `n₀ ≥ 0` in [`inverse`] (both forms
+//! give `I/2` at `n₀ = 0`), R-437's `p = q = 0` in [`inverse`] (the defined 0), and `p = 0` in [`inverse`], a `−0` taken
+//! as `+0` before `atan2(q, p)`. At `r = 0`, `n₀ ≥ 0` and `p = 0` a backend fork moves the output by rounding only. At
+//! the sinc's cut it moves `k` by a bounded amount that is not rounding: on the CPU both forms are within REQ-DEC-054's
+//! bound of `sin r/r`, but on a backend `sin` has only WGSL's absolute `2⁻¹¹`, so a conforming fork reaches `2⁻¹¹/c`,
+//! `2⁻⁹` relative at `c = 1/4`, about 16 600 f32 eps, and no more. R-437's is not continuous, for `rho_angle`:
 //! `atan2(q, p)` has no limit at `p = q = 0`, so a backend that reaches that pole where another stops short of it moves
 //! `ψ`, and so `rho_angle`, by an angle, not by rounding (RQ-687: on the RTX 2080 SUPER a `sin(r)` of 0 at `r ≈ 10⁻⁷`
 //! gave `k = 0`, so `p = q = 0` exactly, and `rho_angle` moved by π/2). So what feeds that select must keep `n₁` and
