@@ -23,4 +23,5 @@ Hold every task of the chart composition design until the owner has ruled it: th
 - Review checklist: every one of RQ-712 to RQ-731 closed by a ruling in `decisions.md` and carried into the design doc; `python3 plan/check_plan.py` green (REQ-CHART-125).
 
 ## Notes
+- RQ-711 is read at this gate, beside RQ-712 to RQ-731: it also covers the base point, centre and window of region D's preset (TASK-M4-34) and the paper-frame presets (TASK-M8-112). Only those home values wait: the pair, the masks, the tests and the TASK-M4-06 edge do not.
 - Never dispatched to an implementer ahead of the owner's answer. Its branch name is what marks it done for the ready list, so it merges from `task/TASK-M4-37`.

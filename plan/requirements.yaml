@@ -3837,6 +3837,7 @@
   - R-592
   milestone: M4
   rq:
+  - RQ-711
   - RQ-713
   - RQ-714
 - id: REQ-CHART-101
@@ -4234,6 +4235,7 @@
   milestone: M8
   rq:
   - RQ-650
+  - RQ-711
   - RQ-729
 - id: REQ-CHART-123
   area: CHART

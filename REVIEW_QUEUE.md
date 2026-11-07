@@ -793,7 +793,8 @@ owner: yes, it is physics; the tilt changes which systems the chart shows.*
 - **The question:** for each of these charts, what are the home view, the centre and the window, and what does the zoom row read against?
 - **Options seen:** (a) a preset stores its whole saved triple `(z₀, q₁, q₂)` as its home view, with the zoom row reading against a scale still to be named; (b) only charts within § G2's formulae store home values, and the resets and Home are dimmed on any other, as with no active preset (R-466 K3); (c) a definition per axis kind.
 - **Applied meanwhile:** § G2 and § G7 bound the formulae to a preset whose axes are two latent coordinate axes at one scale. All six mock presets qualify, so no code changes.
-- **Waits:** REQ-GUI-108's home values for any other chart, in TASK-M8-18.
+- **Waits:** REQ-GUI-108's home values for any other chart, in TASK-M8-18; the home values of region D's preset, in TASK-M4-34, and of the paper-frame presets, in TASK-M8-112.
+- **7 Nov 2026 (physics review 5810950891 of PR #422, F1):** this entry also covers the shipped design presets, region D's (TASK-M4-34, REQ-CHART-100) and the paper-frame ones (TASK-M8-112, REQ-CHART-122), which sit on non-latent axes; REQ-GUI-224 asks each chart preset's home values. They are proposed, not built, and they aren't R-798's exception. Only their home values wait on this entry.
 
 ## RQ-712: Does "a new axis kind" mean a fifth kind, and how far does R-798's "no new chart type" reach? *(conflict: the order against the contract; a one-way door, order item 7; context: all of the plan)*
 

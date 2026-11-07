@@ -1830,7 +1830,7 @@ export { range_policy: frozen,
 
 ## 20. Paper frames as presets (order part E)
 
-Composition, not machinery. A preset is a saved pair of registered axes with its ranges, base point and mask (§G7), plus the frame's map, always § 8.8's ratio. Each is tested by
+Composition, not machinery. A preset is a saved pair of registered axes with its ranges, base point, centre, window and mask (§G7), plus the frame's map, always § 8.8's ratio. For these presets, whose axes aren't two latent coordinate axes at one scale, the base point, centre and window are undefined until RQ-711 is answered or a task defines them under R-72, as TASK-M9-45 does for R-798's preset. Each is tested by
 `preset_paper_coords` against the paper's own numbers, TASK-M8-112. `INC` and `PP` as § 3.2. A preset whose offset is below the working float's resolution, `δ = 5·10⁻⁸` or `10⁻⁷` at f32, carries the label `offset below float resolution` rather than
 a tolerance: a CPU batch rounds once to f32, so such a chart would integrate one start. `BodyPlane` is registered in § 3.
 
