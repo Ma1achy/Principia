@@ -27,7 +27,7 @@ The first registered closed-form pair: `(ξ, η)` through the explicit-configura
 
 ## Acceptance tests
 - `cargo test -p kernel region_d_plane` and `cargo test -p engine region_d_variant` — Table 1's pixels against the import; edges; √ℓ; I = 1; the stereographic identity; controls: bodies swapped, q unscaled, the mass ratio inverted, d dropped at unequal masses, where Table 1's equal masses can't see it (REQ-CHART-100).
-- `cargo test -p kernel closed_inverse_round_trip` — every closed row at f64 and f32; control: a sign flipped (REQ-CHART-101).
+- `cargo test -p kernel closed_inverse_round_trip` — `forward(inverse(x)) = x`, every closed row at f64 and f32; mutation control: a sign flipped in an inverse (REQ-CHART-101).
 
 ## Notes
 - R-798's remap (REQ-CHART-093, TASK-M9-45) shares § 8.3's and § 8.2's lines: one source. PA-1's route is unchanged.

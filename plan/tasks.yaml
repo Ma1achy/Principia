@@ -1411,7 +1411,7 @@
   title: "The primitive registry, the refusals, the labels and the bitwise digest"
   depends_on: [TASK-M4-37, TASK-M4-32, TASK-M2-14]
   needs: []
-  requirements: [REQ-CHART-096, REQ-CHART-097, REQ-CHART-098, REQ-CHART-099, REQ-PERF-116]
+  requirements: [REQ-CHART-096, REQ-CHART-097, REQ-CHART-098, REQ-CHART-099, REQ-PERF-116, REQ-CHART-127, REQ-CHART-128]
   reviewers: [code, qa, physics, perf]
   pitfalls: []
 - id: TASK-M4-34
@@ -3612,9 +3612,9 @@
 - id: TASK-M8-100
   milestone: M8
   title: "Warps as options, and polar and log-polar pair maps"
-  depends_on: [TASK-M4-37, TASK-M4-33]
+  depends_on: [TASK-M4-37, TASK-M4-33, TASK-M3-14]
   needs: [REQ-CHART-096]
-  requirements: [REQ-CHART-104]
+  requirements: [REQ-CHART-104, REQ-CHART-131, REQ-CHART-132]
   reviewers: [code, qa, physics, perf]
   pitfalls: []
 - id: TASK-M8-101
@@ -3628,9 +3628,9 @@
 - id: TASK-M8-102
   milestone: M8
   title: "CPU batch: numerical inverses, their branch rule and seam"
-  depends_on: [TASK-M4-37, TASK-M4-33, TASK-M4-06]
+  depends_on: [TASK-M4-37, TASK-M4-33, TASK-M4-06, TASK-M6-03]
   needs: []
-  requirements: [REQ-CHART-107]
+  requirements: [REQ-CHART-107, REQ-CHART-129, REQ-CHART-130]
   reviewers: [code, qa, physics, perf]
   pitfalls: []
 - id: TASK-M8-103

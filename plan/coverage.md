@@ -8,7 +8,7 @@
 |---|---|
 | DEC | 54 |
 | ENC | 38 |
-| CHART | 125 |
+| CHART | 131 |
 | INT | 111 |
 | EVT | 34 |
 | PAY | 111 |
@@ -22,9 +22,9 @@
 | VAL | 352 |
 | PERF | 118 |
 | SYS | 96 |
-| **total** | **2139** |
+| **total** | **2145** |
 
-Of these: 238 calibration, 192 definition, 1709 obligation. Retired (kept for their ids, not counted): 12.
+Of these: 238 calibration, 192 definition, 1715 obligation. Retired (kept for their ids, not counted): 12.
 
 ## Requirements per milestone
 
@@ -34,23 +34,23 @@ Of these: 238 calibration, 192 definition, 1709 obligation. Retired (kept for th
 | M1 | 108 |
 | M2 | 222 |
 | M3 | 234 |
-| M4 | 125 |
+| M4 | 127 |
 | M5 | 183 |
 | M6 | 229 |
 | M7 | 262 |
-| M8 | 498 |
+| M8 | 502 |
 | M9 | 155 |
 
 ## Sections
 
-1826 sections in 63 files: 1425 yield at least one requirement; 401 yield none and are listed below with the reason.
+1832 sections in 63 files: 1429 yield at least one requirement; 403 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | gap (RQ-378) | 1 |
 | gap (RQ-391) | 2 |
 | gap (RQ-577) | 2 |
 | gap (RQ-618) | 1 |
-| informative only | 284 |
+| informative only | 286 |
 | out of v1 (R-125) | 1 |
 | out of v1 (R-420) | 1 |
 | parent heading (obligations are in its subsections) | 61 |
@@ -338,10 +338,12 @@ Of these: 238 calibration, 192 definition, 1709 obligation. Retired (kept for th
 | 5. The chart layer, and where two axes can't be independent | parent heading (obligations are in its subsections) | its subsections |
 | 6. Refusals and labels | parent heading (obligations are in its subsections) | its subsections |
 | 7.1 What runs on the GPU | rationale | how the lowering contract applies; the obligation is in section 7 |
+| 7.5 The browser build: what it gets | informative only | a door, RQ-735; it yields no requirement until ruled |
 | 8. First customer: region D | parent heading (obligations are in its subsections) | its subsections |
 | 8.5 Which M9 target needs which part | informative only | which task needs which part; carried in those tasks' Depends on |
 | 8.7 Where it lands | informative only | the plan's placing |
 | 10. The gaps, each as a builder option | parent heading (obligations are in its subsections) | its subsections |
+| 10.3 Final-condition charts | informative only | a door, RQ-734; it yields no requirement until ruled |
 | 13. Reversible choices: decided, for veto | rationale | the veto list |
 | 15. Plan | informative only | the task list, carried in plan/tasks.yaml |
 | 16. What this does not settle | informative only | what was not settled |

@@ -23,7 +23,7 @@ Every row of the registry's 6 Nov table, each as an axis on CPU batch, an alias 
 
 ## Acceptance tests
 - `python3 plan/check_plan.py` — the definitions cited (REQ-CHART-117).
-- `cargo test -p engine prim_round_trip` and `cargo test -p engine prim_rejected` — each row and its control, the tolerances set here with a stated margin over § 12's measured worsts (REQ-CHART-118).
+- `cargo test -p engine prim_round_trip` and `cargo test -p engine prim_rejected` — `forward(inverse(x)) = x` on each row with an inverse, at f64 and f32, each row and its control, mutation: a sign flipped in an inverse, the tolerances set here with a stated margin over § 12's measured worsts (REQ-CHART-118).
 
 ## Notes
 - No row is baked. Nothing here scores a target: R-668 and R-669 stand.

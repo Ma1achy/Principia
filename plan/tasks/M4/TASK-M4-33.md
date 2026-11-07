@@ -1,7 +1,7 @@
 # TASK-M4-33 — The primitive registry, the refusals, the labels and the bitwise digest
 
 - **Milestone:** M4
-- **Closes:** REQ-CHART-096, REQ-CHART-097, REQ-CHART-098, REQ-CHART-099, REQ-PERF-116
+- **Closes:** REQ-CHART-096, REQ-CHART-097, REQ-CHART-098, REQ-CHART-099, REQ-PERF-116, REQ-CHART-127, REQ-CHART-128
 - **Depends on:** TASK-M4-37, TASK-M4-32, TASK-M2-14
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics, perf
@@ -13,6 +13,7 @@ The authoring layer gains the registry, every pair is validated against one refu
 
 ## References
 - `docs/design/principia_chart_composition.md` § "3. The primitive registry"
+- `docs/design/principia_chart_composition.md` § "3.3 Every primitive's class"
 - `docs/design/principia_chart_composition.md` § "6.1 Refusals: genuine contradictions only"
 - `docs/design/principia_chart_composition.md` § "6.2 Labels: reduced capability, never a refusal"
 - `docs/design/principia_chart_composition.md` § "7. Lowering: three ways a pair runs"
@@ -22,7 +23,8 @@ The authoring layer gains the registry, every pair is validated against one refu
 
 ## Deliverables
 - `fixtures/chart_composition/digest.json`, on the first commit, before any change.
-- `crates/engine/src/chart_authoring/registry.rs`: the rows; `AxisSpec`, `ChartSpec`.
+- `crates/engine/src/chart_authoring/registry.rs`: the rows, each with its class; `AxisSpec`, `ChartSpec`.
+- The round-trip table every later row with an inverse must add to (§ 12).
 - `crates/engine/src/chart_authoring/validate.rs`: the new `Refusal` variants; the pair table.
 - `resolve`'s lowering and labels; the ledger constant for the cap.
 
@@ -31,6 +33,8 @@ The authoring layer gains the registry, every pair is validated against one refu
 - `cargo test -p engine pair_table_complete` — the rank test agrees with the table both ways; controls: a row removed, a rank-2 pair added (REQ-CHART-097).
 - `cargo test -p engine lowering_labels` — each of the three lowerings and its labels; control: an unbaked pair refused fails (REQ-CHART-098).
 - `cargo test -p engine presets_bitwise` — every chart, preset and saved chart against the digest; controls: a mantissa bit flipped, a default field serialised (REQ-CHART-099).
+- `cargo test -p engine round_trip_complete` — every row with an inverse has a `forward(inverse(x)) = x` case and a named mutation control; controls: a case removed, an inverse added with no case (REQ-CHART-127).
+- `cargo test -p engine primitive_class` — every row's class; a conserved exact row holds along a short run; `approximate` shown; a functional refused as an axis; controls: a state row declared conserved, a functional accepted (REQ-CHART-128).
 - `cargo test -p engine baked_cap` — at or under the ledger's cap; control: one over (REQ-PERF-116).
 
 ## Notes

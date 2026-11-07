@@ -1708,3 +1708,11 @@
   section: "6b. Initial-condition, dynamical and shared quantities"
   reason: informative only
   note: "the model of 7 Nov 2026, a statement of how navigation and chart paths work; it yields no requirement until the rulings PR carries its consequences"
+- file: docs/design/principia_chart_composition.md
+  section: "7.5 The browser build: what it gets"
+  reason: informative only
+  note: "a door, RQ-735; it yields no requirement until ruled"
+- file: docs/design/principia_chart_composition.md
+  section: "10.3 Final-condition charts"
+  reason: informative only
+  note: "a door, RQ-734; it yields no requirement until ruled"

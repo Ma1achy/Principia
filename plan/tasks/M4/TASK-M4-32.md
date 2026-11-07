@@ -29,6 +29,7 @@ Port principia_chart_composition.md into the contracts, as the rulings on RQ-712
 - `docs/contracts/principia_lowering_contract.md`: the Anosova row conformed; CPU batch; the cap.
 - `docs/design/principia_core_design.md`: seam 3's exception, as RQ-719 rules.
 - `docs/gui/principia_render_gui_spec.md` § G7 and `docs/design/principia_lines.md` § 4.1, as ruled.
+- `docs/design/principia_dd_refinement_policy.md` § 1: § 7.4's seam clause on `unresolved(f)`; the chart contract: § 6.4's statistic rule.
 
 ## Acceptance tests
 - Physics reviewer: dd_decoder §3.7 and §2 carry both-held's computed form and its outcomes in order, and inverse_encode_contract Part 6 the held decode (REQ-CHART-108, REQ-CHART-109, REQ-CHART-110).

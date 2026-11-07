@@ -19,7 +19,7 @@ The read-back map at any masses, and a test per region-D target.
 - `crates/engine/tests/region_d_native.rs`.
 
 ## Acceptance tests
-- `cargo test -p engine region_d_native` — each row and its control (REQ-CHART-121).
+- `cargo test -p engine region_d_native` — `forward(inverse(x)) = x` on each row, and each row and its control, mutation: a sign flipped in the inverse on one side only (REQ-CHART-121).
 
 ## Notes
 - Waits on its rulings item: RQ-728. Nothing here is implemented until ruled (the order's A6, "Nothing implemented until ruled"); TASK-M4-37 in Depends on holds it.
