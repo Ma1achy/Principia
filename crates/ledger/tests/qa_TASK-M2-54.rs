@@ -14,11 +14,14 @@
 // The file name `qa_TASK-M2-54` gives a crate name that is not snake case.
 #![allow(non_snake_case)]
 
+#[cfg(feature = "controls")]
+use ledger::constants::ARCTAN_SUM_BITS;
 use ledger::constants::{
-    gate, provisional_until, Admissibility, Citation, ConstantBuilder, Value, ARCTAN_SUM_BITS,
-    MILESTONES, REGISTER,
+    gate, provisional_until, Admissibility, Citation, ConstantBuilder, Value, MILESTONES, REGISTER,
 };
-use ledger::gen::arctan::{arctan_file, emit, sum_bits, ARCTAN_PATH};
+#[cfg(feature = "controls")]
+use ledger::gen::arctan::arctan_file;
+use ledger::gen::arctan::{emit, sum_bits, ARCTAN_PATH};
 use ledger::version::{schema_version, Hashed};
 use validation::negative_control;
 
