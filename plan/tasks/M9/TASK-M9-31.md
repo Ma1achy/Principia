@@ -2,8 +2,8 @@
 
 - **Milestone:** M9
 - **Closes:** REQ-VAL-293, REQ-VAL-294
-- **Depends on:** TASK-M9-26, TASK-M6-08
-- **Needs (earlier milestones):** none
+- **Depends on:** TASK-M9-26, TASK-M6-08, TASK-M4-34
+- **Needs (earlier milestones):** REQ-CHART-100
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** PIT-3
 - **Size:** ~150 lines
@@ -32,3 +32,4 @@ The replication suite's targets L-2, V-8 (b) run as engine tests (`principia_dd_
 ## Notes
 - Reference data are read from the records named in each requirement's verify; the records stay records (R-159), and the contract is `principia_dd_replication.md`.
 - *30 Oct 2026 (R-649, R-650):* moved to M9, external replication, and renumbered: formerly TASK-M6-52 (milestone M6). Its targets are measurements, never gates: each is scored in M9, or early as a peek (information only, `docs/verification/peek_log.md`), and its outcome is PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED, never a failure that blocks; like-for-like is checked first, and nothing is tuned, loosened or special-cased to pass (`docs/design/principia_dd_replication.md` § "12.3 Outcomes, the like-for-like check and the forbidden moves"). The tier each target binds (§ "12.2 Tiers"; a calibration takes its target's): L-2 (REQ-VAL-293): tier (a); V-8 (b) (REQ-VAL-294): tier (a). *Was:* "The tier each binds is § '12.2 Tiers''s: (b); (a) statistically or qualitatively." (corrected 30 Oct 2026 to the owner's confirmation of the tier reading, R-649).
+- Chart composition: the plane is TASK-M4-34's.

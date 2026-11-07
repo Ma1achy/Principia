@@ -1588,3 +1588,71 @@
   section: "R-811 — The census's drift reference is R-33's convergence reference, not the inspector's RK45, and the proposal's § 3.2 clause says why *(closes RQ-619)*"
   reason: informative only
   note: "the census has no requirement yet; the proposal carries it"
+- file: docs/design/principia_chart_composition.md
+  section: "Principia — chart composition: axes from primitives, in the Chart builder"
+  reason: informative only
+  note: "the status line and the findings"
+- file: docs/design/principia_chart_composition.md
+  section: "0. The order's rules, checked"
+  reason: informative only
+  note: "the order checked against the code and the rulings"
+- file: docs/design/principia_chart_composition.md
+  section: "5. The chart layer, and where two axes can't be independent"
+  reason: parent heading (obligations are in its subsections)
+  note: "its subsections"
+- file: docs/design/principia_chart_composition.md
+  section: "6. Refusals and labels"
+  reason: parent heading (obligations are in its subsections)
+  note: "its subsections"
+- file: docs/design/principia_chart_composition.md
+  section: "7.1 What runs on the GPU"
+  reason: rationale
+  note: "how the lowering contract applies; the obligation is in section 7"
+- file: docs/design/principia_chart_composition.md
+  section: "8. First customer: region D"
+  reason: parent heading (obligations are in its subsections)
+  note: "its subsections"
+- file: docs/design/principia_chart_composition.md
+  section: "8.5 Which M9 target needs which part"
+  reason: informative only
+  note: "which task needs which part; carried in those tasks' Depends on"
+- file: docs/design/principia_chart_composition.md
+  section: "8.7 Where it lands"
+  reason: informative only
+  note: "the plan's placing"
+- file: docs/design/principia_chart_composition.md
+  section: "10. The gaps, each as a builder option"
+  reason: parent heading (obligations are in its subsections)
+  note: "its subsections"
+- file: docs/design/principia_chart_composition.md
+  section: "13. Reversible choices: decided, for veto"
+  reason: rationale
+  note: "the veto list"
+- file: docs/design/principia_chart_composition.md
+  section: "17. Chart paths"
+  reason: parent heading (obligations are in its subsections)
+  note: "its subsections"
+- file: docs/design/principia_chart_composition.md
+  section: "17.1 The framing"
+  reason: rationale
+  note: "the framing checked against the contract"
+- file: docs/design/principia_chart_composition.md
+  section: "17.14 Tests"
+  reason: informative only
+  note: "carried in the requirements' verify lines"
+- file: docs/design/principia_chart_composition.md
+  section: "15. Plan"
+  reason: informative only
+  note: "the task list, carried in plan/tasks.yaml"
+- file: docs/design/principia_chart_composition.md
+  section: "16. What this does not settle"
+  reason: informative only
+  note: "what was not settled"
+- file: docs/design/principia_chart_composition.md
+  section: "18. Time as an axis (order part D)"
+  reason: parent heading (obligations are in its subsections)
+  note: "its subsections"
+- file: docs/design/principia_chart_composition.md
+  section: "20. Paper frames as presets (order part E)"
+  reason: informative only
+  note: "carried in the requirement's verify line"

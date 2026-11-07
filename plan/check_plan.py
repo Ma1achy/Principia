@@ -106,7 +106,7 @@ def pitfall_ids():
 
 def parse_task(path):
     text = open(path, encoding="utf-8").read()
-    head = re.match(r"# (TASK-M\d-\d{2}) — (.+)", text)
+    head = re.match(r"# (TASK-M\d-\d{2,3}) — (.+)", text)
     fields, refs, section = {}, [], None
     for line in text.splitlines():
         if line.startswith("## "):

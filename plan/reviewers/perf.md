@@ -106,7 +106,7 @@ degradation (`docs/design/principia_dd_telemetry_and_tiers.md` § "6.5 The rule 
 - [ ] A benchmark states the work held constant (fixed slices, zoom ladder, pan path, playhead march) and sweeps settings rather than sampling one. `docs/design/principia_dd_telemetry_and_tiers.md` § "1.1 The fixed suite — comparability across devices"
 
 <!-- list:benchmarks -->
-*45 requirements, generated from `plan/requirements.yaml` — do not edit by hand.*
+*47 requirements, generated from `plan/requirements.yaml` — do not edit by hand.*
 
 **M3**
 - [ ] REQ-PERF-004 — computeIC for a typical IC at t = 50 on one core < 16.7 ms (measured 6.1 ms; 1.6 ms at t = 13)
@@ -163,5 +163,7 @@ degradation (`docs/design/principia_dd_telemetry_and_tiers.md` § "6.5 The rule 
 - [ ] REQ-PERF-109 — cargo xtask bench result-job-memory, on the human's Mac (R-186), its own process, with its output in the PR (REQ-TOOL-078's export-memory form): peak process memory of the same job at 256² and at 1024², with all copies stored, is flat (independent of nx·ny) (control: a writer that holds the payload until the end grows with nx·ny and fails)
 - [ ] REQ-PERF-112 — cargo xtask bench proof-strip-frame: on the human's Mac (R-186), its own process, with its prin profile output in the PR, the fixed suite's pan-nearfield scenario (principia_benchmark.md §3: the fixed pan across Burrau near-field, frames during motion) is run once with no strip and once while Proof strip runs on a fixture three-keyframe spec, re-run each time it finishes so that a strip is in flight throughout the window; frame time p50/p95/p99/max and frac_frames_over_41.7ms equal the no-strip baseline within noise (REQ-SYS-060's form; no new number), the 16.7 ms goal (principia_dd_telemetry_and_tiers.md §3) reported beside them; the bench fails if no strip was in flight at the window's end
 - [ ] REQ-PERF-114 — cargo xtask bench precision-runs-frame --propose, on the human's Mac (R-186), its own process, with its prin profile output in the PR: the proposed N_trust with its evidence, the trust time each fixed-suite view's measurement gives at N_trust and at twice it, and the trust-time arm of REQ-PERF-106 holding the no-measurement baseline at N_trust at T = 50 and T = 200; recorded in decisions.md
+- [ ] REQ-PERF-117 — cargo xtask bench path_cover on the human's Mac and the Windows runner, against the design's target; cargo test -p engine blend_entry_counted: stage_blend the only morph entry, control: a baked (A, B) entry fails
+- [ ] REQ-PERF-118 — cargo test -p engine time_memory_budget; cargo xtask bench time_column on the human's Mac and the Windows runner
 - [ ] REQ-SYS-060 — frame times with continuous hover + listen equal the no-hover baseline within noise; the work runs on the inspector worker
 <!-- /list:benchmarks -->

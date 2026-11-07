@@ -8,23 +8,23 @@
 |---|---|
 | DEC | 54 |
 | ENC | 38 |
-| CHART | 92 |
+| CHART | 123 |
 | INT | 111 |
 | EVT | 34 |
 | PAY | 111 |
 | GEN | 45 |
 | SCHED | 103 |
 | REF | 52 |
-| RENDER | 120 |
+| RENDER | 121 |
 | COL | 161 |
-| GUI | 391 |
+| GUI | 396 |
 | TOOL | 221 |
 | VAL | 352 |
-| PERF | 115 |
+| PERF | 118 |
 | SYS | 96 |
-| **total** | **2096** |
+| **total** | **2136** |
 
-Of these: 236 calibration, 181 definition, 1679 obligation. Retired (kept for their ids, not counted): 12.
+Of these: 236 calibration, 191 definition, 1709 obligation. Retired (kept for their ids, not counted): 12.
 
 ## Requirements per milestone
 
@@ -34,28 +34,28 @@ Of these: 236 calibration, 181 definition, 1679 obligation. Retired (kept for th
 | M1 | 108 |
 | M2 | 222 |
 | M3 | 234 |
-| M4 | 112 |
+| M4 | 127 |
 | M5 | 183 |
 | M6 | 228 |
-| M7 | 261 |
-| M8 | 470 |
+| M7 | 262 |
+| M8 | 494 |
 | M9 | 155 |
 
 ## Sections
 
-1748 sections in 61 files: 1376 yield at least one requirement; 372 yield none and are listed below with the reason.
+1813 sections in 62 files: 1425 yield at least one requirement; 388 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | gap (RQ-378) | 1 |
 | gap (RQ-391) | 2 |
 | gap (RQ-577) | 2 |
 | gap (RQ-618) | 1 |
-| informative only | 264 |
+| informative only | 271 |
 | out of v1 (R-125) | 1 |
 | out of v1 (R-420) | 1 |
-| parent heading (obligations are in its subsections) | 55 |
+| parent heading (obligations are in its subsections) | 61 |
 | planned (the plan PR) | 22 |
-| rationale | 19 |
+| rationale | 22 |
 | superseded (kept for the record) | 4 |
 
 
@@ -327,6 +327,27 @@ Of these: 236 calibration, 181 definition, 1679 obligation. Retired (kept for th
 | 8. Determinism of the work | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
 | 9. Tests (each with an arm that can fail) | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
 | 10. Open questions (for the review queue) | planned (the plan PR) | the design doc's three open questions, queued as RQ-392 to RQ-394 and ruled by R-528 to R-530; the plan PR's requirements cite this section |
+
+### `docs/design/principia_chart_composition.md`
+
+| section | reason | note |
+|---|---|---|
+| Principia — chart composition: axes from primitives, in the Chart builder | informative only | the status line and the findings |
+| 0. The order's rules, checked | informative only | the order checked against the code and the rulings |
+| 5. The chart layer, and where two axes can't be independent | parent heading (obligations are in its subsections) | its subsections |
+| 6. Refusals and labels | parent heading (obligations are in its subsections) | its subsections |
+| 7.1 What runs on the GPU | rationale | how the lowering contract applies; the obligation is in section 7 |
+| 8. First customer: region D | parent heading (obligations are in its subsections) | its subsections |
+| 8.5 Which M9 target needs which part | informative only | which task needs which part; carried in those tasks' Depends on |
+| 8.7 Where it lands | informative only | the plan's placing |
+| 10. The gaps, each as a builder option | parent heading (obligations are in its subsections) | its subsections |
+| 13. Reversible choices: decided, for veto | rationale | the veto list |
+| 15. Plan | informative only | the task list, carried in plan/tasks.yaml |
+| 16. What this does not settle | informative only | what was not settled |
+| 17. Chart paths | parent heading (obligations are in its subsections) | its subsections |
+| 17.1 The framing | rationale | the framing checked against the contract |
+| 17.14 Tests | informative only | carried in the requirements' verify lines |
+| 18. Time as an axis (order part D) | parent heading (obligations are in its subsections) | its subsections |
 
 ### `docs/design/principia_chart_reference.md`
 

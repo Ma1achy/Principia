@@ -2,7 +2,7 @@
 
 - **Milestone:** M4
 - **Closes:** REQ-CHART-037, REQ-SYS-024, REQ-INT-065, REQ-INT-069, REQ-RENDER-031, REQ-RENDER-082, REQ-INT-083
-- **Depends on:** TASK-M4-05, TASK-M2-25, TASK-M2-28, TASK-M3-14, TASK-M0-44
+- **Depends on:** TASK-M4-05, TASK-M2-25, TASK-M2-28, TASK-M3-14, TASK-M0-44, TASK-M4-34
 - **Needs (earlier milestones):** REQ-CHART-001, REQ-CHART-002, REQ-CHART-013, REQ-CHART-017, REQ-CHART-028, REQ-CHART-029, REQ-CHART-031, REQ-DEC-007, REQ-INT-005, REQ-PAY-026, REQ-INT-035, REQ-INT-043, REQ-RENDER-027, REQ-SYS-074
 - **Reviewers:** code, qa, physics, perf
 - **Pitfalls:** none
@@ -59,3 +59,4 @@ Compute-side lowering, per lowering Part 3 and its appendix: chart type, link se
 - RQ-98 ruled: R-113 — REQ-INT-072's copy offsets are REQ-INT-083, closed here (H and σ²_T stay in TASK-M5-18); REQ-RENDER-031's verify is parameterised by (E, FTLE on/off), the tier names checked by REQ-PERF-014 in M5.
 - R-297: every compute pipeline is created through TASK-M0-44's entry point, which takes the fast-math setting (off by default); the setting joins the sim key in TASK-M4-08.
 - R-481 G7 (20 Oct 2026): link parameters are a uniform, not a variant axis; the link ids stay baked. The uniform is TASK-M4-21's.
+- Chart composition (6 Nov 2026): the Anosova row's Φ is TASK-M4-34's third-body pair, which this task lowers; its golden (REQ-RENDER-082) is unchanged.
