@@ -315,6 +315,8 @@ pub enum Outcome {
     Adjust(Adjust),
     /// The keys scrolled a list.
     Scroll(Scroll),
+    /// The Home key, anywhere but on a list it scrolls (R-466 K1): the command Home; the focus stays.
+    Home,
     /// Esc in navigation mode at this window's top level, on one of its sections: the window is left, closed, and the
     /// focus goes back to the scope that opened it (render_gui_spec §G3, §G5; R-405). The focus is left as it was for
     /// the layer to move.
@@ -607,7 +609,7 @@ impl ScopeTree {
     ///   scopes in Tab order), only along the parent's [`Axis`]; in interaction mode they adjust the focused value, or,
     ///   on a list, ↑ ↓ scroll it an entry, Shift ten (R-450 A4).
     /// - Page Up, Page Down, Home and End, in interaction mode on a list, scroll it a page, Shift ten, or to its first
-    ///   or last entry; otherwise nothing.
+    ///   or last entry; otherwise nothing, but Home, which is [`Outcome::Home`] (R-466 K1).
     pub fn navigate(&self, focus: &mut Focus, command: Command, multiplier: f64) -> Outcome {
         let valid = self.valid_prefix(&focus.path);
         if valid < focus.path.len() || valid == 0 {
@@ -741,12 +743,18 @@ impl ScopeTree {
                 }
             }
             Command::Scroll(key) => {
-                let Some(scope) = focus.path.last().and_then(|id| self.get(id)) else {
-                    return Outcome::None;
+                let list = focus
+                    .path
+                    .last()
+                    .and_then(|id| self.get(id))
+                    .filter(|scope| interacting && scope.arrows == Arrows::Scroll);
+                let Some(scope) = list else {
+                    return if key == ScrollKey::Home {
+                        Outcome::Home
+                    } else {
+                        Outcome::None
+                    };
                 };
-                if !interacting || scope.arrows != Arrows::Scroll {
-                    return Outcome::None;
-                }
                 let by = match key {
                     ScrollKey::PageUp => ScrollBy::Pages(scroll_count(-1.0, multiplier)),
                     ScrollKey::PageDown => ScrollBy::Pages(scroll_count(1.0, multiplier)),

@@ -169,14 +169,15 @@ fn qa_mock_keyboard_arrows_move_between_the_top_bar_menus() {
     press(&mut h, &mut app, Key::ArrowRight, NONE);
     press(&mut h, &mut app, Key::Enter, NONE);
     let labels = focus_labels(&app);
-    check_path(&labels, &["top bar", "View", "F3 hide"], "Enter on View");
+    // View's first entry, Home (R-466 K8; changed by TASK-M6-45's qa commit, R-466 K15).
+    check_path(&labels, &["top bar", "View", "Home"], "Enter on View");
     rejects("File's entry under View", || {
         check_path(&labels, &["top bar", "View", "Quit"], "Enter on View")
     });
     // Moving between a menu's entries and out: Esc gives back View, the menu closed, the layer still shown.
     press(&mut h, &mut app, Key::Escape, NONE);
     check_path(&focus_labels(&app), &["top bar", "View"], "Esc in View");
-    assert!(app.shown, "Esc in View acted on its F3 hide entry");
+    assert!(app.shown, "Esc in View acted on an entry");
 }
 
 #[test]

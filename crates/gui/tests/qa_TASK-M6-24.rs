@@ -41,6 +41,7 @@ use engine::contract::snapshot::Snapshot;
 use engine::contract::store::StateStore;
 use gui::app::{window_title, App};
 use gui::capture::{self, Shot, Step, PIXELS_PER_POINT, SIZE};
+use gui::explore::manifold_view::reset::{home_rect, HOME_INSET, HOME_NAME, HOME_SIDE};
 use gui::headless::{Headless, Name};
 use gui::layout::Layout;
 use gui::mock::canvas::MockCanvas;
@@ -511,10 +512,27 @@ fn overlaps(a: [f64; 4], b: [f64; 4]) -> bool {
     a[0] < b[2] && b[0] < a[2] && a[1] < b[3] && b[1] < a[3]
 }
 
-/// No named node of the layer overlaps the figure's rect.
+/// No named node of the layer overlaps the figure's rect, but the Home button, the one control over the figure, in its
+/// top-right corner, inset (R-466 K7; changed by TASK-M6-45's qa commit, R-466 K15).
 fn check_nothing_over(names: &[Name], figure: [f64; 4]) {
+    let (side, inset) = (
+        f64::from(HOME_SIDE * PIXELS_PER_POINT),
+        f64::from(HOME_INSET * PIXELS_PER_POINT),
+    );
     for n in names {
         if let Some(r) = n.rect {
+            if n.name == HOME_NAME {
+                let want = [
+                    figure[2] - inset - side,
+                    figure[1] + inset,
+                    figure[2] - inset,
+                    figure[1] + inset + side,
+                ];
+                let far = r.iter().zip(want).any(|(a, b)| (a - b).abs() > 1.5);
+                if !far {
+                    continue;
+                }
+            }
             assert!(
                 !overlaps(r, figure),
                 "`{}` at {r:?} is drawn over the figure {figure:?}",
@@ -897,10 +915,19 @@ fn inside(r: [usize; 4], x: usize, y: usize) -> bool {
     (r[0]..r[2]).contains(&x) && (r[1]..r[3]).contains(&y)
 }
 
-/// `a` and `b` are pixel-identical over `r`.
+/// The pixels of the Home button, the one control over the figure, which F3 hides (R-466 K7).
+fn home_button() -> [usize; 4] {
+    whole(home_rect(layout().figure).expand(1.0))
+}
+
+/// `a` and `b` are pixel-identical over `r`, off the Home button (changed by TASK-M6-45's qa commit, R-466 K15).
 fn check_identical_over(a: &Shot, b: &Shot, r: [usize; 4], what: &str) {
+    let button = home_button();
     for y in r[1]..r[3] {
         for x in r[0]..r[2] {
+            if inside(button, x, y) {
+                continue;
+            }
             assert_eq!(
                 shot_px(a, x, y),
                 shot_px(b, x, y),
@@ -933,6 +960,12 @@ fn qa_capture_figure_identical_under_f3_warning_and_console() {
     let l = layout();
     let figure = whole(l.figure);
     check_identical_over(&base, &f3, figure, "F3 off");
+    // The exception is the button, and it is real: shown it differs from the figure F3 leaves.
+    let b = home_button();
+    assert!(
+        (b[1]..b[3]).any(|y| (b[0]..b[2]).any(|x| shot_px(&base, x, y) != shot_px(&f3, x, y))),
+        "the Home button is drawn over the figure with the layer shown"
+    );
     check_identical_over(
         &base,
         &raised,

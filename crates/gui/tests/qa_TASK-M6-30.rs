@@ -30,6 +30,7 @@ use engine::contract::sim_config::Plane;
 use engine::contract::view_ui::{Mode, Window};
 use gui::app::{clear_colour, App};
 use gui::capture::{self, render_frame, Shot, Step, FORMAT, PIXELS_PER_POINT, SIZE};
+use gui::explore::manifold_view::reset::home_rect;
 use gui::headless::Headless;
 use gui::layout::Layout;
 use gui::mock::canvas::MockCanvas;
@@ -214,13 +215,23 @@ fn offscreen(on: &MockCanvas, size: [u32; 2], draws: &[(&dyn Canvas, [u32; 4])])
 
 // --- Affine past the shown rect, at the same scale, in every direction ----------------------------------------------
 
-/// Over `rect`, `shown` at `(x, y)` against `off` at `(x − dx, y − dy)`: how many pixels differ by more than `TOL` in a
-/// channel, how many were compared, and how many of those lie outside the shown rect in `off`.
+/// The pixels of the Home button, the one control over the figure, which the layer holds and F3 hides (R-466 K7).
+fn home_button() -> [usize; 4] {
+    whole(home_rect(layout().figure).expand(1.0))
+}
+
+/// Over `rect`, off the Home button (changed by TASK-M6-45's qa commit, R-466 K15), `shown` at `(x, y)` against `off` at
+/// `(x − dx, y − dy)`: how many pixels differ by more than `TOL` in a channel, how many were compared, and how many of
+/// those lie outside the shown rect in `off`.
 fn shifted_gap(shown: &[u8], off: &[u8], rect: [usize; 4], d: [i64; 2]) -> (usize, usize, usize) {
     let figure = shown_px();
+    let button = home_button();
     let (mut bad, mut compared, mut past) = (0, 0, 0);
     for y in rect[1]..rect[3] {
         for x in rect[0]..rect[2] {
+            if inside(button, x, y) {
+                continue;
+            }
             let (ox, oy) = (x as i64 - d[0], y as i64 - d[1]);
             if ox < 0 || oy < 0 || ox >= W as i64 || oy >= H as i64 {
                 continue;
@@ -323,7 +334,18 @@ fn qa_f3_off_past_the_rect_is_the_field_panned_into_it() {
             let shown = render_frame(&canvas, &mut shown_app, &mut sh);
             let what = format!("zoom {zoom}, {side}");
             let past = check_shifted(&shown.rgba, &off.rgba, f, d, &what);
-            assert_eq!(past, strip, "{what}: the whole strip compared");
+            // The whole strip but what the Home button hides, none of which `shifted_gap` compares.
+            let [x0, y0, x1, y1] = home_button();
+            let hidden = (y0..y1)
+                .flat_map(|y| (x0..x1).map(move |x| (x, y)))
+                .filter(|&(x, y)| {
+                    let (ox, oy) = (x as i64 - d[0], y as i64 - d[1]);
+                    (0..W as i64).contains(&ox)
+                        && (0..H as i64).contains(&oy)
+                        && !inside(f, ox as usize, oy as usize)
+                })
+                .count();
+            assert_eq!(past + hidden, strip, "{what}: the whole strip compared");
             // Control: a pan one pixel short is another picture.
             let short = [d[0] - d[0].signum(), d[1] - d[1].signum()];
             rejects(&format!("{what}, a pixel short"), || {
@@ -686,8 +708,12 @@ fn qa_f3_off_flagged_pixels_are_hatched_past_the_rect_only() {
             );
         }
     }
+    let button = home_button();
     for y in f[1]..f[3] {
         for x in f[0]..f[2] {
+            if inside(button, x, y) {
+                continue;
+            }
             assert_eq!(
                 px(&right.rgba, x, y),
                 px(&plain_on.rgba, x, y),
@@ -881,10 +907,14 @@ fn shot_at(
     render_frame(canvas, &mut app, &mut h)
 }
 
-/// `a` and `b` are the same pixel for pixel over `rect`.
+/// `a` and `b` are the same pixel for pixel over `rect`, off the Home button.
 fn check_same_over(a: &[u8], b: &[u8], rect: [usize; 4], what: &str) {
+    let button = home_button();
     for y in rect[1]..rect[3] {
         for x in rect[0]..rect[2] {
+            if inside(button, x, y) {
+                continue;
+            }
             assert_eq!(px(a, x, y), px(b, x, y), "{what} at ({x}, {y})");
         }
     }
