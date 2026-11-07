@@ -43,14 +43,14 @@ Of these: 239 calibration, 192 definition, 1732 obligation. Retired (kept for th
 
 ## Sections
 
-1881 sections in 63 files: 1444 yield at least one requirement; 437 yield none and are listed below with the reason.
+1881 sections in 63 files: 1445 yield at least one requirement; 436 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | gap (RQ-378) | 1 |
 | gap (RQ-391) | 2 |
 | gap (RQ-577) | 2 |
 | gap (RQ-618) | 1 |
-| informative only | 320 |
+| informative only | 319 |
 | out of v1 (R-125) | 1 |
 | out of v1 (R-420) | 1 |
 | parent heading (obligations are in its subsections) | 61 |
@@ -265,7 +265,6 @@ Of these: 239 calibration, 192 definition, 1732 obligation. Retired (kept for th
 | R-846 — RQ-718 closes on R-669's reversal: a user-built plane is the user's chart and is never scored *(closes RQ-718)* | informative only | the chart design's door; a user's plane is never scored |
 | R-848 — The Saari split's `h` is a builder axis, its range under physics review; R-793 stands *(closes RQ-724)* | informative only | the chart design's door; TASK-M8-109 builds the axis |
 | R-850 — Chart paths: the morph is the general form, one path abstraction for every view edit, special cases run by their own code as exact specialisations, each operation tested bitwise against today and against its own path family's formula, never across families *(closes RQ-721)* | informative only | the chart design's door; TASK-M8-105 to TASK-M8-117 carry it |
-| R-852 — Every registry primitive is classed as a state function, a conserved quantity (exact or approximate, labelled) or a trajectory functional, never an axis; final-condition charts stay a design item for the rulings report, with the check that conserved axes are `T`-independent *(on RQ-734, which stays open)* | informative only | the design's § 3.3 holds the classification; RQ-734 stays open |
 | R-854 — Symmetry reductions apply only to how a starting state is described at `t = 0`: trajectories evolve and are shown in full physical space, nothing is folded during a run, and the only operation besides the step is the per-step centre-of-mass projection, energy and `L_z` monitored, never corrected | informative only | the owner's symmetry rule: the integrator contract, state map and lines carry it; RQ-739 holds its proposal |
 | R-855 — The symmetry filter: an optional display option after rendering, never a change to what is computed, blanking a start only where its partner is in the chart's domain, its canonical choice stated, on by default for the paper-frame presets only | informative only | carried by REQ-CHART-135 to REQ-CHART-138, REQ-GUI-424 and TASK-M8-120, which design § 10.4 already wrote |
 

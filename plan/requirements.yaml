@@ -4329,11 +4329,15 @@
   source:
   - file: docs/design/principia_chart_composition.md
     section: 3.3 Every primitive's class
+  - file: decisions.md
+    section: "R-852 — Every registry primitive is classed as a state function, a conserved quantity (exact or approximate, labelled) or a trajectory functional, never an axis; final-condition charts stay a design item for the rulings report, with the check that conserved axes are `T`-independent *(on RQ-734, which stays open)*"
   verify:
     method: unit test
-    detail: "cargo test -p engine primitive_class: every row has its class; a row declared conserved and exact holds along a short run within the run's drift, at ε = 0, the softened and Newtonian energies being R-791's and RQ-709's; a row declared approximate shows the label; a functional is refused as an axis; controls: a state row declared conserved fails, a functional accepted fails"
-  rulings: []
+    detail: "cargo test -p engine primitive_class: every row has its class; a row declared conserved and exact holds along a short run within the run's drift, at ε = 0, the softened and Newtonian energies being R-791's and R-819's; a row declared approximate shows the label; a functional is refused as an axis; controls: a state row declared conserved fails, a functional accepted fails"
+  rulings:
+  - R-852
   milestone: M4
+  note: "R-852 (7 Nov 2026, the owner's model § 6b): the class is a rule of the registry. RQ-709 is ruled by R-819 (the reviews of PR #443, physics P3, code 5). *Was (verify):* \"R-791's and RQ-709's\"."
 - id: REQ-CHART-129
   area: CHART
   statement: "Ensemble jitter on a composed chart must stay in the chart's own coordinates; a footprint whose copies straddle a declared seam, a branch or a composed chart's mask must be flagged per pixel, in the resolve pass, every copy kept; its spread and error_ratio must be reported as seam-contaminated; a chart of today's registry must be unchanged."
@@ -18588,13 +18592,13 @@
     section: SM1. Definition
   verify:
     method: unit test
-    detail: "cargo test -p engine signed_later_states: a latent-chart trace through a syzygy is continuous, its two samples either side within the step's motion; Chart position's colour at the same samples is continuous; the mirror-identified view, when on, is labelled and off by default; controls: the canonical mirror applied to a later state makes the trace jump and fails"
+    detail: "cargo test -p engine signed_later_states: on the latent momenta chart, a trace through a syzygy is continuous, its two samples either side within the step's motion, and Chart position's colour there at the same samples is continuous; the mirror-identified view, when on, is labelled and off by default; controls: the canonical mirror applied to a later state makes the trace jump and fails"
   rulings:
   - R-544
   - R-853
   - R-854
   milestone: M7
-  note: "Closed by TASK-M7-52, the one projection Chart position and the trace both read; its reading of a lower-half state on a latent target is a definition (R-72) it writes under physics review."
+  note: "Closed by TASK-M7-52, the one projection Chart position and the trace both read; its reading of a lower-half state on a latent target is a definition (R-72) it writes under physics review. The test is scoped to the latent momenta chart (physics review of PR #443, P2): on a chart showing z_β, β = π·σ(z_β) sends z_β to ±∞ at a syzygy and a signed lower-half state has no z_β, so continuity there waits on TASK-M7-52's definition and RQ-739 (its one-way dependency). *Was (verify):* \"a latent-chart trace through a syzygy is continuous, its two samples either side within the step's motion; Chart position's colour at the same samples is continuous;\""
 - id: REQ-GUI-001
   area: GUI
   statement: "Mouse/pointer picking (lock, hover, click-inspect) must flip canvas coordinates the same way before computing the picked quad or z."
@@ -23701,7 +23705,7 @@
   note: "R-538 TF2.2 (J7, J8). Closed by TASK-M8-58. RQ-421 (a) (ruled by R-553) and RQ-430 (a) applied meanwhile. Physics review is required (⚑); it does not merge on the code reviewer's word alone. RQ-473 (a), ruled by R-554 as applied meanwhile: the threshold is REQ-GUI-283's, set from the measured gap, not 3× (TF2.3 measures correct code at 5–97×). The trace's images over a pole on a tilted view follow REQ-SCHED-101 (R-554, RQ-472 (a)); the equator fold is R-554's \"not applied\", the shape sphere ruling governing it. *Was:* \"(R-554, RQ-472 (a)); no equator-fold image on a tilted view.\" *Was:* \"The trace's images over a pole or the equator fold on a tilted view wait on RQ-472.\" Physics review 5594430380 of PR #263, P1, P2; code review 5594440613, F4; applied per R-369. *Was:* \"is within 3× the median step (T16)\". Fix round 1 of PR #274 (gui G2, applied per R-369). *Was (statement):* \"Before a mix, each trace sample's chart parameters must be taken on the branch nearest the previous sample's (θ ± 2π; over a pole θ + π with φ reflected), the first sample's on the canonical branch, then mixed (R-473's tilt), then drawn in every image by the extension types (R-538 TF2.2); along an axis that mixes a periodic parameter with a non-periodic one the trace must not be repeated, the chart being affine there (RQ-430 (a)); the other θ branches of a tilted chart are not drawn (RQ-421 (a), R-553); on a tilted view the trace's images over a pole follow REQ-SCHED-101's pole maps, drawn only where N_a = 0 and N_b = 0, and no image across the equator fold is drawn (R-554, RQ-472 (a)).\" *Was (verify):* \"cargo test -p render trace_branch_continuity (R-538 T16, T17): on the shape sphere tilted 30° toward z_q3, the trace's screen step at every θ wrap and every pole passage is within REQ-GUI-283's calibrated multiple of the median step (T16; RQ-473 (a)); the trace is drawn once along the tilted axis, with no copy at s + 2π/cos τ (T17's trace half; the field's half is REQ-CHART-080); controls: per-sample [0, 2π) θ gives a jump of 2π·cos τ and fails T16; drawing it with periodic repeats fails T17; review (physics)\" R-544 (21 Oct 2026): the shape sphere has no equator fold; over the equator the trace's signed n̂ carries on (REQ-GUI-341). The trace's images over an equator fold on a tilted view, RQ-472 (a)'s clause (R-554 leaving it unapplied), wait on RQ-508. Physics re-check 5606508368 of PR #274 (non-blocking note, applied per R-369): the statement names RQ-508 as REQ-SCHED-101's does. *Was (statement):* \"the equator fold on a tilted view is not applied by R-554, the human's shape sphere ruling governing it.\" R-613 (25 Oct 2026, RQ-508 as meanwhile): no fold anywhere. *Was (statement):* \"the equator fold on a tilted view is not applied by R-554, the human's shape sphere ruling (R-544) governing it, and waits on RQ-508.\""
 - id: REQ-GUI-279
   area: GUI
-  statement: "Every coordinate in a trace's mix must be read in the frame the chart's own parameters are defined in (R-538 TF2.3): on the full shape sphere (θ, φ) and a tilt target are read unmirrored, ρ along +x, never in the encode's canonical frame, which mirrors whenever the shape is in the lower hemisphere; on the latent momenta chart, whose parameters are canonical, the jump at every syzygy, with a marker at both ends, stands (TM5)."
+  statement: "Every coordinate in a trace's mix must be read in the frame the chart's own parameters are defined in (R-538 TF2.3): on the full shape sphere (θ, φ) and a tilt target are read unmirrored, ρ along +x, never in the encode's canonical frame, which mirrors whenever the shape is in the lower hemisphere; on the latent momenta chart, whose parameters are canonical, the trace is drawn in the signed, unfolded state, continuous through syzygies, with no jump and no marker pair there; a mirror-identified trace may remain only as a declared, optional view, labelled as such, never the default (R-853)."
   source:
   - file: decisions.md
     section: "R-538 — The trace's markers and icon sets, as `principia_trace_markers.md` gives them: a star at the start, each end event its own icon in its outcome's colour, \"?\" for an incomplete run, rings where the state leaves and re-enters the chart's reach, syzygies o–o–o and off by default, off-screen icons pinned faint to the edge, every icon repeated in every image of the chart, never drawn through or started in a pixel that is not a system *(amends R-476)*"
@@ -23713,6 +23717,8 @@
     section: Part 6 — The canonical inverse policy, completed
   - file: decisions.md
     section: "R-554 — The shape sphere's exponential map past `r = π` is the domain's end by design, blank and unwarned; the Lean-each-axis corner with one target is `ray-degenerate`, unfolded, its area weights 0 and its shares undefined; on a tilted view the pole maps apply only where `N_a = 0` and `N_b = 0`, the equator fold and the mirror's pixel fold left to the human's shape sphere ruling; T16 and T16b against a calibrated threshold; the physical `p_λ` components as the shape sphere's tilt targets *(closes RQ-470 to RQ-474; amends R-467, R-473, R-506, R-537 and R-538)*"
+  - file: decisions.md
+    section: "R-853 — The chart-space model is corrected to the corpus, which stands wherever it measured or ruled; the shape sphere's mirror half is never dropped or folded, the mirror fold is a starting state's only, and the state map and latent-chart traces are signed *(closes RQ-736)*"
   verify:
     method: unit test
     detail: "cargo test -p render trace_mix_frame (R-538 T16b): on the shape sphere tilted toward p_y, the trace's screen step at every syzygy of Burrau 3:4:5 to t = 70 is within REQ-GUI-283's calibrated multiple of the median step (RQ-473 (a)); control: reading p_y in the canonical (mirrored) frame flips it at every syzygy and fails; review (physics)"
@@ -23720,8 +23726,9 @@
   - R-473
   - R-538
   - R-554
+  - R-853
   milestone: M8
-  note: "R-538 TF2.3 (J9). Closed by TASK-M8-58. Physics review is required (⚑); it does not merge on the code reviewer's word alone. RQ-473 (a), ruled by R-554 as applied meanwhile (physics review 5594430380 of PR #263, P1, applied per R-369). *Was:* \"is within 3× the median step;\"."
+  note: "R-538 TF2.3 (J9). Closed by TASK-M8-58. Physics review is required (⚑); it does not merge on the code reviewer's word alone. RQ-473 (a), ruled by R-554 as applied meanwhile (physics review 5594430380 of PR #263, P1, applied per R-369). *Was:* \"is within 3× the median step;\". R-853 (7 Nov 2026, RQ-736's first open question): latent-chart traces are signed and continuous through syzygies, so the momenta chart's jump and its marker pair go; restated to the owner's words, a two-way correction under R-857's flag 10 (physics review of PR #443, P1). The shape-sphere arm and trace_mix_frame are unchanged. *Was (statement):* ends \"on the latent momenta chart, whose parameters are canonical, the jump at every syzygy, with a marker at both ends, stands (TM5).\""
 - id: REQ-GUI-280
   area: GUI
   statement: "On a curve axis (Burrau's ν) a trace's point must be the curve's nearest point (inverse encode Part 5(b)), never dropped or clamped, the distance to the curve the fade where an off-plane distance is defined (R-509; RQ-426 (a)); a point whose nearest ν lies past a bounded edge must not be drawn there, the line broken with no reach ring, and counted in the trace readout's \"past the domain's end: N samples\", apart from the not-a-system count and with no warning (R-538 TF1; RQ-425 (a))."
