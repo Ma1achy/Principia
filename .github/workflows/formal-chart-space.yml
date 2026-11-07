@@ -1,0 +1,49 @@
+# The chart-space model in Lean 4 (`formal/chart_space/`): the owner's order of 7 Nov 2026. It builds the proofs, fails
+# if an escape hatch appears in the source, and fails if a main theorem depends on any axiom beyond Lean's three, so the
+# nightly goes red if a proof goes. It is a measurement of that library, never a required check: only
+# `workflow_dispatch` and `schedule` trigger it, no job here is gathered, retried or read by any gate, and a red one is
+# not main red. Mathlib is fetched at the commit `formal/chart_space/lake-manifest.json` pins, never vendored. Nothing
+# here runs cargo; `elan-init` installs under `$HOME` of the runner and its checksum is checked before it runs.
+name: formal-chart-space
+
+on:
+  schedule:
+    - cron: "41 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  # R-374 and the owner's CI setting (PR #394), as in every workflow. Nothing here runs cargo.
+  CARGO_PROFILE_DEV_DEBUG: line-tables-only
+  CARGO_PROFILE_TEST_DEBUG: line-tables-only
+  CARGO_INCREMENTAL: "0"
+  # elan's release and the sha256 of its Linux x86-64 archive, from that release's asset digest.
+  ELAN_VERSION: v4.2.4
+  ELAN_SHA256: 42b94d4244e8353142c456ec0e4ca6528fd898a6c604d4059f494e706e431f63
+
+jobs:
+  formal-chart-space:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - name: Install elan, the pinned release, its checksum checked
+        run: |
+          curl --fail --silent --show-error --location --output elan.tar.gz \
+            "https://github.com/leanprover/elan/releases/download/${ELAN_VERSION}/elan-x86_64-unknown-linux-gnu.tar.gz"
+          echo "${ELAN_SHA256}  elan.tar.gz" | sha256sum --check --strict -
+          tar -xzf elan.tar.gz
+          ./elan-init -y --no-modify-path --default-toolchain none
+          rm elan.tar.gz elan-init
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+      # No Actions cache: REQ-SYS-073 (R-285, R-320, R-326, R-337) allows only the cargo registry, the fixture pool and
+      # the rust-gpu build, so `lake exe cache get` downloads Mathlib every run. The proofs are rebuilt every run, because
+      # that rebuild is the check.
+      - name: Fetch the prebuilt Mathlib
+        working-directory: formal/chart_space
+        run: lake exe cache get
+      - name: Build, and check the source and the axioms
+        working-directory: formal/chart_space
+        run: ./check.sh
