@@ -4019,7 +4019,7 @@
   - RQ-719
 - id: REQ-CHART-111
   area: CHART
-  statement: "A momentum-momentum plane must report ray-degenerate where it contains Jr under hold L_z, or passes through a point with δv = 0 under hold E alone or with hold L_z."
+  statement: "A momentum-momentum plane must report ray-degenerate where it contains Jr under hold L_z, alone or with hold E; where it passes through rest under hold E alone; or where it passes through a point with δv = 0, rest or a rigid rotation, with both held."
   source:
   - file: docs/design/principia_chart_composition.md
     section: 5.4 What the constraints do to a momentum axis
@@ -4027,7 +4027,7 @@
     section: 5.5 Every case where two axes can't be independent
   verify:
     method: unit test
-    detail: "cargo test -p kernel hold_rank: a plane containing Jr, one through rest and one through a rigid rotation report it, a generic plane doesn't; control: the label removed fails"
+    detail: "cargo test -p kernel hold_rank: a plane containing Jr, one through rest under hold E alone, and one through rest and one through a rigid rotation with both held report it, a generic plane doesn't; controls: the label removed fails; a plane through a rigid rotation under hold E alone reports no rank loss, and reporting it fails"
   rulings:
   - R-369
   milestone: M8
