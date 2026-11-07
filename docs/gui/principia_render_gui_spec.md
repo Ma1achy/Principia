@@ -361,11 +361,13 @@ can never disagree (the definition R-466 allows); its **window** is a scale `σ_
 `z₀ = b`, `q₁ = σ_h e_a`, `q₂ = σ_h e_b`. These formulae hold for a preset whose axes are two of the eight latent
 coordinate axes at one scale, as all six of the mock's are (§G7). What the three values are for any other chart a
 preset can hold (an oblique or unequal-scale pair, an axis of another kind, a curved chart) and for a view saved
-tilted is not yet defined: RQ-711, for TASK-M8-18. The zoom row reads `log₂(σ_h / σ)` and its magnification `σ_h / σ`, so it
+tilted is not yet defined: RQ-711, for TASK-M8-18. R-798's equilateral-point preset is the exception, its map and
+window being TASK-M9-45's (R-798). The zoom row reads `log₂(σ_h / σ)` and its magnification `σ_h / σ`, so it
 reads 0 and × 1.00 at the window whatever `σ_h` is; with no active preset there is no window, and the row reads
 `−log₂ σ` and `1 / σ`, `σ_h = 1` (applied per R-369). The depth readout stays absolute, `−log₂ σ` (§G2's depth readout):
-it counts the chart's own scale, which a preset's window does not change. Choosing a preset keeps `σ` (applied per
-R-369), so the row then reads against the new preset's window. The values of each preset are §G7's. The
+it counts the chart's own scale, which a preset's window does not change. On the mock's presets, choosing one keeps
+`σ` (applied per R-369), so the row then reads against the new preset's window; R-798's preset, which choosing centres
+and puts at rest, lands on its own window (TASK-M9-45). The values of each preset are §G7's. The
 active preset is the one Chart names, tilted or not; with a basis edited out of every preset's frame there is none, and
 the resets and Home are dimmed. All three sections are read in the active preset's coordinates, its axes `e_a`, `e_b`
 and the six dimensions off them, tilted or not (applied per R-369, R-466 K2): Slice centre's values are `z₀`'s six
