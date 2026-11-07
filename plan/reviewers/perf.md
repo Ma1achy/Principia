@@ -106,7 +106,7 @@ degradation (`docs/design/principia_dd_telemetry_and_tiers.md` § "6.5 The rule 
 - [ ] A benchmark states the work held constant (fixed slices, zoom ladder, pan path, playhead march) and sweeps settings rather than sampling one. `docs/design/principia_dd_telemetry_and_tiers.md` § "1.1 The fixed suite — comparability across devices"
 
 <!-- list:benchmarks -->
-*47 requirements, generated from `plan/requirements.yaml` — do not edit by hand.*
+*48 requirements, generated from `plan/requirements.yaml` — do not edit by hand.*
 
 **M3**
 - [ ] REQ-PERF-004 — computeIC for a typical IC at t = 50 on one core < 16.7 ms (measured 6.1 ms; 1.6 ms at t = 13)
@@ -149,6 +149,7 @@ degradation (`docs/design/principia_dd_telemetry_and_tiers.md` § "6.5 The rule 
 - [ ] REQ-PERF-113 — cargo xtask bench print-screen-pass, on the human's Mac (R-186), its own process, with its prin profile output in the PR: the fixed suite's scenarios (principia_benchmark.md §3) on a 3840 × 2160 display, at render_scale 0.5 and 1, each under a CRT graph, a sheet-only graph and Plain; frame time p50/p95/p99/max and the screen pass's own GPU time per frame recorded for each, against Plain's (REQ-SYS-060's form; a record, no new threshold); the bench fails if the screen pass was not dispatched under the CRT and sheet-only graphs, or was dispatched under Plain
 
 **M8**
+- [ ] REQ-CHART-126 — against a criterion written before measuring (R-649), the proposal shows τ at masses log-uniform to 10⁻³, on the two GPU backends, and the kernel routine's cost
 - [ ] REQ-TOOL-078 — exporting 600 frames keeps peak memory flat (independent of frame count); the UI stays responsive; cancel stops the job
 - [ ] REQ-TOOL-087 — the suite replays deterministically and reports per-setting results across the sweep
 - [ ] REQ-TOOL-090 — a long constant-scene run flags a throttling inference when fps declines monotonically

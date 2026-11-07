@@ -3866,7 +3866,7 @@
     section: 5.4 What the constraints do to a momentum axis
   verify:
     method: unit test
-    detail: "cargo test -p kernel hold_lz, cargo test -p kernel hold_outcomes and cargo test -p engine constraint_axis_refused: L_z = L* to tolerance on every chart allowing it, Σp = 0, both held E* too; off, bitwise; the outcomes in order, at f32 the state the second projection leaves at K̂ = 0, above the floor and on it; every row of the refusal table by name; controls: η_E alone with both on fails L_z, the K̂ = 0 test removed gives NaN, the flag cleared on (L_z, E) fails"
+    detail: "cargo test -p kernel hold_lz, cargo test -p kernel hold_outcomes and cargo test -p engine constraint_axis_refused: L_z = L* to tolerance on every chart allowing it, Σp = 0, both held E* too; off, bitwise; the outcomes in order, at f32 the state the second projection leaves at K̂ = 0, above the floor and on it; under RQ-715's option (i) the outcome tags bit-identical at f32 and f64, Metal and lavapipe beside the CPU, on identical (m, r, v) across a fixture grid on both sides of τ, that state and exactly rigid draws included, no NaN on any arm; under (ii) rigid draws exempt from test 12's tag equality, each float's outcome finite; every row of the refusal table by name; controls: η_E alone with both on fails L_z, under (i) a tag from s = 0 and K̂ = 0 differs on the rigid draws, under (ii) the K̂ = 0 test removed gives NaN, the flag cleared on (L_z, E) fails"
   rulings:
   - R-25
   - R-471
@@ -3979,7 +3979,7 @@
 - id: REQ-CHART-109
   area: CHART
   kind: definition
-  statement: "Both-held's outcomes must be defined in order in dd_decoder §3.7 and §2 (the collision pole, E* < U, the exact 2K* < L*², s = 0 or K̂ = 0 on the floor with the rotation applied, s = 0 or K̂ = 0 above it, otherwise apply), a tagged pixel keeping its momenta as decoded, with REQ-DEC-041 and §3.7's feasibility sentence conformed and a rule for a non-finite L*."
+  statement: "Both-held's outcomes must be defined in order in dd_decoder §3.7 and §2 (the collision pole, E* < U, the exact 2K* < L*², rigid(v, Jr) on the floor with the rotation applied, rigid(v, Jr) above it, otherwise apply), rigid(v, Jr) being an exact comparison as RQ-715 rules, a tagged pixel keeping its momenta as decoded, with REQ-DEC-041 and §3.7's feasibility sentence conformed and a rule for a non-finite L*."
   source:
   - file: docs/design/principia_chart_composition.md
     section: "5.3 Constraints: hold `E`, and new: hold `L_z`"
@@ -4288,6 +4288,21 @@
   - R-72
   milestone: M4
   note: "The gate of the design's 24 tasks: they name its task in Depends on, the field the ready list reads. Only those tasks wait behind it; no existing task does."
+- id: REQ-CHART-126
+  area: CHART
+  kind: calibration
+  statement: "If RQ-715 rules its option (i), the dyadic constant τ of hold L_z's rigid(v, Jr) must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M8 gate. Proposed 2⁻²²."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: "5.3 Constraints: hold `E`, and new: hold `L_z`"
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: benchmark
+    detail: "against a criterion written before measuring (R-649), the proposal shows τ at masses log-uniform to 10⁻³, on the two GPU backends, and the kernel routine's cost"
+  rulings:
+  - R-71
+  milestone: M8
 - id: REQ-INT-001
   area: INT
   statement: "The unwrapped phase `θ̃` must be a running SimState accumulator that adds the principal-value delta of `atan2(n_v, n_u)` each step, with `orbit_count = ⌊|θ̃|/2π⌋` and `retrograde = sign(θ̃) < 0` derived at read."
@@ -29899,6 +29914,8 @@
   - R-84
   - R-547
   milestone: M2
+  rq:
+  - RQ-715
   note: "R-34, corrected by R-547 (RQ-298 (a), 21 Oct 2026): branch inputs are built only from operations every IEEE backend rounds alike, with no subnormal intermediate; R-84: branch decisions are identical on identical inputs. The eps scale factor: REQ-DEC-043 (calibration). TASK-M2-24 merged with this requirement held (rq: RQ-298); it moves to TASK-M2-48, which re-proves test 12 with the rewritten M₀₁ (applied per R-369). *Was:* \"R-34 extends explicit fma to every multi-op branch input\" and the verify's \"feasibility K* ≥ L_z²/2 formed with explicit fma per the enumerated branch inputs\" (stale value, replaced by R-547). Fix round 1 of PR #274 (qa Q5, applied per R-369). *Was (verify):* \"decoder test 12: fuzz z on all backends (Metal and lavapipe beside the CPU); continuous outputs within f32-eps-scaled tolerance; branch tags bitwise equal; every branch input formed as dd_decoder §2's enumerated table gives it, each built only from operations every IEEE backend rounds alike, with no intermediate that can be subnormal (R-547), feasibility K* ≥ L_z²/2 among them\". RQ-621, decided by the orchestrator per R-369 (a test decision, option (a), 30 Oct 2026, TASK-M2-48): test 12's inputs gain TASK-M2-02's onset crossings and the emulations gain \"contracted (fused)\". *Was (verify):* \"control: on the same fuzzed inputs the superseded forms (the explicit fma(m₁, 1, m₀), a plain float subtract or compare), evaluated on the CPU under an unfused or flush-to-zero emulation, give a different tag from the unflushed CPU on at least one input\"."
 - id: REQ-VAL-018
   area: VAL
