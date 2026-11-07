@@ -31,7 +31,7 @@ a=1.;m=1/3;I=2*m*a*a;U=-(m*m)*(2/a+1/(2*a));print("equal-mass Euler L^2|E| crit,
 print("polar inverse: worst error times |det|, no cut: %.1e, relative to the largest ratio %.1e (band above: |det| > 1e-3)"%(w[7],w[8]))
 # 7 Nov (physics reviews 5809751370 and 5809833272, Z2): both sides of the polar row's round trip, each float. |det| = m1 m2 |sin(phi2 - phi1)|, by band.
 # inverse: gaps (g1, g2) on the region where every gap is under pi, 2 x 2 solve, I = 1. forward: the row's, polar angles about the COM, so it
-# subtracts the COM: atan2 about the origin returns u's angle whatever the solve gave, and tests nothing. Probes: review's polar.py, polar2.py.
+# subtracts the COM: atan2 about the origin returns u's angle whatever the solve gave, and tests nothing.
 rng=np.random.default_rng(12)
 for T,nm in ((np.float64,'f64'),(np.float32,'f32')):
     e=float(np.finfo(T).eps)

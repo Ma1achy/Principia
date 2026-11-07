@@ -1052,7 +1052,7 @@ Each with a control (R-176), named here and owned by a task.
 | `excluded_primitives` | no row with an inverse names a binary phase, eccentricity, impact parameter or fixed `k` (R-669) | one added | TASK-M4-33 |
 | `region_d_native` | § 8.8's table: read-back within tolerance **and** the paper's three separations in the paper's own frame against the decoded state, eq. 4's energy on AA rows | `d` dropped on both sides; bodies 0, 1 swapped at unequal masses; `η` mirrored | TASK-M8-110 |
 | `preset_paper_coords` | § 20's table: the same oracle per frame; offsets below the working float at f64 only, neighbours distinct | the same three; a sub-resolution row at f32 | TASK-M8-112 |
-| `prim_round_trip` | each closed row of §§ 3.1 and 3.2, `forward(inverse(x)) = x` on the axis, f64 and f32, in eps, measured worsts here, TASK-M8-109 setting the tolerance and its margin: focal flat, 1 eps on `(Z, σ)` at f64, 0.5 to 1 eps at f32, down to `η` near 10⁻⁴; polar about the COM, as its row's forward is, `6 eps·r_max/r_min`, measured 135 eps at `|det|` from 10⁻¹ and 8,644 from 10⁻⁵ at f64, about 5.3 eps·`r_max/r_min`. A separate clause, `inverse(forward(x)) = x`, takes the row's scaling, also measured: `0.35 eps/η` for § 3.2's focal row, `0.5 eps·r̂/|det|` for § 3.1's polar row, 0.31 at Dirichlet masses and 0.41 at masses log-uniform to 10⁻³, 300,000 draws each. Saari's split sums and is orthogonal; `K_shape = I|ṅ|²/8`; `I₁I₂ = n_w²/4`; `h`'s step keeps `L_z`; the aliases equal; Tanikawa–Mikkola's mass-weighted `L_com = 0` at random masses after `C`, from an independent `Σ m r × v` | a sign flipped in an inverse; `R` from the centroid, −0.0025 at § 3.2's point; an unweighted sum | TASK-M8-109, TASK-M8-111 |
+| `prim_round_trip` | each closed row of §§ 3.1 and 3.2, `forward(inverse(x)) = x` on the axis, f64 and f32, in eps, measured worsts here, the row's task setting the tolerance and its margin: focal flat, 1 eps on `(Z, σ)` at f64, 0.5 to 1 eps at f32, down to `η` near 10⁻⁴; polar about the COM, as its row's forward is, `6 eps·r_max/r_min`, measured 135 eps at `|det|` from 10⁻¹ and 8,644 from 10⁻⁵ at f64, about 5.3 eps·`r_max/r_min`. A separate clause, `inverse(forward(x)) = x`, takes the row's scaling, also measured: `0.35 eps/η` for § 3.2's focal row, `0.5 eps·r̂/|det|` for § 3.1's polar row, 0.31 at Dirichlet masses and 0.41 at masses log-uniform to 10⁻³, 300,000 draws each. Saari's split sums and is orthogonal; `K_shape = I|ṅ|²/8`; `I₁I₂ = n_w²/4`; `h`'s step keeps `L_z`; the aliases equal; Tanikawa–Mikkola's mass-weighted `L_com = 0` at random masses after `C`, from an independent `Σ m r × v` | a sign flipped in an inverse; `R` from the centroid, −0.0025 at § 3.2's point; an unweighted sum | TASK-M8-109, TASK-M8-111 |
 | `prim_rejected` | each row of "Rejected as axes" has no axis; `L²E` and Hill's distance label `ε ≠ 0`; Hill's distance blank at `E ≥ 0`; pair table rows 19 and 20 refused, rows 17 and 18 refused only under a hold, `(L_z, E)`, `(K_ρ, K_λ)`, `(L_ρ, L_z)` accepted | one accepted; `(L_z, E)` refused | TASK-M8-109 |
 | Golden | `cargo xtask golden decode-preset`: region D through the DECODE preset, TASK-M4-06's acceptance, unchanged | as that task's | TASK-M4-06 |
 
@@ -1089,7 +1089,7 @@ Each states its criterion, written first, then the result. Any may be vetoed; ea
 | V23 | Aliases are one row, not two: body 2, `γ_ρ`, `K_rot`, `K_dil`, elongation; the midpoint angle at `m₀ = m₁` only; Hill's distance at a frozen mass | one quantity, one row; `pair_table_complete` agrees | aliased | § 3.1, identities to 10⁻¹³ |
 | V24 | Every § 3.1 and § 3.2 row is CPU batch | the cap's slots are taken | CPU batch | § 11 |
 | V25 | Hill's distance blank at `E ≥ 0` and `ε ≠ 0`, labelled, not refused; `L_z = 0` reads −1, true | undefined or not a function of `c` there; a defined value at `L_z = 0` | label | § 3.1, P18 |
-| V26 | Stored rows `K = H`, spanning `[t_lo, T]` by distinct boundary; `2H` a labelled extra | closest to the temporal note; `T` the stored top | `H` | § 18.3 |
+| V26 | Stored rows `K = H`, each column's spanning `[t_lo, f]`, its front `f ≤ T`, by distinct boundary; `2H` a labelled extra | closest to the temporal note; `T` the stored top | `H` | § 18.3 |
 | V27 | Transport stays paused on leaving the mode | a frozen playhead never restarts on its own | paused | § 19 |
 | V28 | `t_lo` is new beside the horizon; the window `t_lo, t_hi` a view, off the sim key, a Navigate lane field | zoom in time is navigation; `T` stays on the key | as such | § 18.2 |
 | V29 | Time morphs need equal windows and warps; else a cut | "time fixed" | cut | § 18.4 |
@@ -1098,6 +1098,7 @@ Each states its criterion, written first, then the result. Any may be vetoed; ea
 | V32 | `√chazy_qk[2]` is the third body's speed row | the corpus's own ratio | as such | § 3.1 |
 | V33 | Presets use § 8.8's ratio, no per-paper function | one source | ratio | § 20 |
 | V34 | Each principal angle of the plane geodesic is `atan2(‖w‖, A·B)`, not `arccos` | an implementation choice that changes no result; applied per R-369 | `atan2` | § 17.7 |
+| V35 | A new column marches to `t_hi`, and a window moved past its front marches it on, not every column to `T` up front | the order's "extending the window to later t integrates further per column"; it changes no result, a continuation being bitwise; applied per R-369 | on from the front | § 18.3 |
 
 ---
 
@@ -1633,9 +1634,9 @@ Those are hot bytes. With symbolic features active each stored row also keeps it
 
 So for Heggie × RK4 "dense" output on its own grid fits inside `payload_mem` unless `Δ_sync` is calibrated small: **the size conflict is the unregularised occupants', and the word conflict with the note is everyone's.**
 
-**The design, recommended in RQ-727:** the store spans `[t_lo, T]` by distinct boundaries, at most `K`, default **`K = H`** (V26), the option closest to the note; `T` is the stored top and
-the label says so, so the march never passes the axis's horizon. `K = 2H` over the same span is a labelled extra under the tier's budget and the "are you sure?" system. The window moves inside `[t_lo, T]` and
-re-reads what is stored; a finer window re-integrates from `t = 0`, progressively, saying so ("refining · 72%"), as scrub-back does under R-66, **until the row spacing reaches one
+**The design, recommended in RQ-727:** each column's store spans `[t_lo, f]`, `f ≤ T` its own march front, by distinct boundaries, at most `K`, default **`K = H`** (V26), the option closest to the note; `T` is the stored top and
+the label says so, so the march never passes the axis's horizon. A new column's front is `t_hi` (§ 18.4). `K = 2H` over the same span is a labelled extra under the tier's budget and the "are you sure?" system. The window moves inside `[t_lo, T]`: below a column's front it
+re-reads what is stored, and past that front it marches the column on from there, the same bitwise continuation as raising `T` (§ 18.2), storing as it goes: the order's "extending the window to later t integrates further per column". So a column pays only for the part it reaches, and § 18.5's cost stands. A finer window re-integrates from `t = 0`, progressively, saying so ("refining · 72%"), as scrub-back does under R-66, **until the row spacing reaches one
 boundary, where it stops: there is nothing finer.** Going above `T` raises it, § 18.2's continuation. So the order's "re-reads stored trajectories" holds only for stored boundaries. A Result (R-572) with the rows as
 "stored times" is the sanctioned way to keep more: disk, streamed, budgeted.
 
@@ -1646,8 +1647,8 @@ boundary, where it stops: there is nothing finer.** Going above `T` raises it, �
 | Hover trace | shows the column's trajectory, with a marker at the hovered row's `t`. Vertical motion moves only the marker, with no new run. Horizontal motion changes the IC, a new trace, as a hover does today |
 | IC Inspector | the column's IC, editable, and the state at the row's `t`, read-only. An edit that stays on the chart's line moves the selection to that column. One that leaves it stays open, marked `off this chart`, encode's landing as today |
 | Tilt | the IC axis only. Time is never a tilt target, and the compass says so ("time is not tiltable in this chart"). The tilt plane is `z(u)` with the slice's normal |
-| Time zoom and pan | § 18.3. The window is a view; integration always starts at `t = 0`; zoom floors at one boundary. Raising `T` marches each column on from its front, bitwise a continuation (§ 18.2): regularised occupants to R-610's cap; unregularised to `T = 65.535`, past it a new run, labelled |
-| IC zoom and pan | new columns, each a run from `t = 0` to `t_hi`. Rows' times stay |
+| Time zoom and pan | § 18.3. The window is a view; integration always starts at `t = 0`; zoom floors at one boundary. A window moved past a column's front marches that column on from it. Raising `T` marches each column on from its front, bitwise a continuation (§ 18.2): regularised occupants to R-610's cap; unregularised to `T = 65.535`, past it a new run, labelled |
+| IC zoom and pan | new columns, each a run from `t = 0` to `t_hi`, its front until the window passes it (§ 18.3). Rows' times stay |
 | Morph, time to time | allowed when both have the same time window and warp: time fixed, the IC axis morphs by § 17's arms. Every frame is a new set of columns, class (b). Different windows: a cut |
 | Morph, time to IC-only | **a chart discontinuity: a hard cut,** shown with Sequence's cut mark. No dissolve is offered: `TimeToIcCut`, named in the planner row. This replaces part D's "refused for now" |
 | The hybrid | blending readout time towards a fixed playhead: **recorded as a possible future option, not designed.** No field, no test |
@@ -1676,7 +1677,7 @@ Each with a control (R-176), TASK-M8-113 unless named.
 |---|---|---|
 | `time_column_matches_playhead` | a column at row `t` equals a normal render of that IC at playhead `t` under the same `T`, bitwise, on `r`, `p`, accumulators, `total_substeps`, the state word and the free-group word, a column whose later crossing cancels symbols included; an unregularised arm and a regularised arm | unregularised: a row re-integrated at another `T` past 65.535. Regularised: a row read one boundary off. The word: a row reading a prefix of the final word |
 | `time_zoom_floor` | the window stops at one boundary, per occupant, with the UI's reason; rows are integer indices | a float row time, which lands one low on 731 `k` |
-| `time_extend_continues` | raising `T` continues bitwise from the front where the exception holds, else a new run, labelled | the signature re-boot taken |
+| `time_extend_continues` | raising `T` continues bitwise from the front where the exception holds, else a new run, labelled; a window moved past a column's front, `T` unchanged, continues it bitwise, a column made by an IC pan included | the signature re-boot taken |
 | `time_rows_on_boundaries` | every row reads the latest boundary at or before it; log rows stack on one boundary | a row stopped between boundaries |
 | `time_terminal_holds` | rows past termination hold the terminal state | marching past it |
 | `time_jitter_ic_only` | copies differ in `u` only | a `t` offset |

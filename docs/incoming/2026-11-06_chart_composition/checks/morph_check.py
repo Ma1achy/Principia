@@ -146,7 +146,7 @@ for _ in range(60000):
     if Es<U: blank+=1
 print(" feasible at both ends %d, infeasible at s=.5 %d"%(tot,blank))
 # 7 Nov (physics reviews 5809670196 and 5809751370, Z1): T5's figures are random planes in eight dimensions, far apart. Planes delta
-# apart, each principal angle by arccos of its cosine and by atan2(|w|, A.B) from the same w. Probe: review's y.py.
+# apart, each principal angle by arccos of its cosine and by atan2(|w|, A.B) from the same w.
 def geo2(QA,QB,t,mode):
     U,c,Vt=np.linalg.svd(QA.T@QB);c=np.clip(c,-1,1);A=QA@U;B=QB@Vt.T
     W=np.zeros_like(A);th=np.zeros(2)

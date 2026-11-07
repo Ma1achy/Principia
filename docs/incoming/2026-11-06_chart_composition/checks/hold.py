@@ -117,7 +117,7 @@ def dirgap(frac,N=4000):
         g.append(np.sqrt(ip(a-b,a-b,m)))
     return np.median(g),np.max(g)
 for f in (1e-2,1e-5,1e-7): print('direction gap f32 vs f64 at',f,'med, max %.2e %.2e'%dirgap(f))
-# 5 the outcomes after the second projection, added 7 Nov (Codex's finding on PR #422; physics review 5809751370, Z4). Probe: review's khat.py.
+# 5 the outcomes after the second projection, added 7 Nov (Codex's finding on PR #422; physics review 5809751370, Z4).
 def J2(a,T): return np.stack([-a[...,1],a[...,0]],-1).astype(T)
 def ipT(m,a,b): return (m[:,None]*a*b).sum()
 def outcome(m,r,v,Ls,a2,T,khat_test=True):
