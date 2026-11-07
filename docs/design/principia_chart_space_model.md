@@ -6,6 +6,39 @@ statement of how it works. Exact arithmetic throughout; §8 says what changes in
 
 ---
 
+## 0. Revision after #422's review (7 Nov): the corpus wins where it measured
+
+Code and physics review found six premises that aren't true of Principia's real charts. In each case the
+corpus measured or ruled it, and the model is corrected to match. **The model describes; it doesn't
+override a measured or ruled section.** The proofs below stand on the corrected premises.
+
+1. **Charts map into the signed state space, not into `Z`.** The latent decode saturates and canonicalises
+   (the mirror), so `D(Z)` misses real chart targets: the shape sphere's lower, mirror half and momenta past
+   `q_max`. Correct premise: a chart is `φ : U → S`, where `S` is the product of each block's own **signed
+   state** (masses on the simplex, configuration on the signed shape sphere and in Jacobi coordinates,
+   momenta in `R^4`), as §17.2 does.
+   **Theorem 1 holds in this form:** each block's space is path-connected (the simplex and `R^4` are
+   convex, and the sphere is connected through great circles), so a path exists between any two charts,
+   built **block by block in each block's own geometry** (linear on convex blocks, geodesic on the
+   sphere). "Always blend in Z" is withdrawn. Blend each block in its own signed state.
+2. **Affine tilt is the ruled lean-each-axis map (R-474), not a Grassmannian geodesic.** Theorem 2's
+   geodesic and area statements describe *a* family, not Principia's tilt. Correct statement: tilt is its
+   own named family, "lean-each-axis", and it's exactly its own formula. "Never squash" remains a property
+   of the geodesic *morph* family only, not a claim about R-474's tilt.
+3. **Slice is a translation in the chart's own hidden coordinates**, not necessarily in `Z`. On charts that
+   hold a block by construction, the held block isn't translated.
+4. **Blanks mid-morph can come from a held constraint** (§17.11), not only from a chart's mask. Corollary 1
+   is withdrawn. Corollary 2 is strengthened: under a common hold, blending can leave the feasible set, and
+   those pixels are blank and tagged.
+5. **In the gauge, `L_z`'s sign isn't preserved:** the encode's mirror flips it. The scale-free invariant
+   overlap is `L_z²E` and the sign of `E` only (§6b corrected below).
+6. Everything else stands: concatenation and easing (Thm 4–5), the lock's anchor-preserving and excursion
+   split (Thm 6), the based morph and the sliding anchor (Thm 7–8, with the anchor in `S`), time charts
+   (Thm 9), composed axes (Thm 10, with assembly into `S`), and the quantity classes with final-condition
+   charts (§6b, Thm 11, approximate in the app).
+
+---
+
 ## 1. Objects
 
 **Latent space.** `Z = R^8`, the latent chart (`z_α, z_β, z_q0..z_q3, z_μ1, z_μ2`).
@@ -270,7 +303,7 @@ There are three kinds of quantity. The same function can belong to more than one
    playhead. **But Principia's scale gauge (`I = 1`) is applied to states, and `I` isn't conserved.** A later
    state re-expressed in the canonical gauge has different `E` and `L_z`. The exact overlap *in the gauge*
    is therefore the **scale-free** conserved quantities: `L_z²E` (a product of two exact invariants, so
-   exact), and the signs of `E` and `L_z`. Approximately conserved quantities (a hierarchical binary's orbital
+   exact) and the sign of `E` (`L_z`'s sign flips under the encode's mirror, §0.5). Approximately conserved quantities (a hierarchical binary's orbital
    elements) are approximately in the overlap, and should be labelled as approximate.
    *Corrected 7 Nov: an earlier version called `L_z²E` approximate, which was wrong, and claimed `E` and `L_z`
    stay fixed in the gauge, which holds only in physical units.*
