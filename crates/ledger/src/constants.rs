@@ -628,6 +628,36 @@ pub const TAU_I: ConstantBuilder = proposed(
     "M2",
 );
 
+/// `c`, the cut in `r` below which the shape sphere's f32 exponential sinc takes its series and reads no backend `sin`
+/// (R-696; REQ-DEC-053): at `r < c`, `kernel::chart::shape_sphere::sinc_of`'s `sin r/r` is `1 − r²/3! + r⁴/5! − r⁶/7!`.
+/// REQ-DEC-054's proposal (R-71), provisional until the M2 gate (R-427): 1/4. A form with no cut would be the kernel's
+/// own `sin`, RQ-687's option (a), deferred to M4 (R-696), so the form has one. Its lower limit: WGSL bounds `sin` only
+/// by an absolute `2⁻¹¹`, so a conforming backend may return 0 up to `r = 2⁻¹¹`, and from `c` up its `k` is off by at
+/// most `2⁻¹¹/c` relative, `2⁻⁹` here. Its upper limit: four terms keep the truncation, `r⁸/9!`, at 7·10⁻⁴ f32 eps at
+/// 1/4 and 0.18 at 1/2; a larger cut moves more of the map's f32 bits for no gain the card's failure asks for. The
+/// evidence, `kernel/tests/exponential_sinc.rs`'s exhaustive sweep against the f64 `sin r/r`, every f32 in `(0, 4)` on
+/// the CPU, Apple's libm: at most 0.262 f32 eps below the cut, 0.982 from it up.
+pub const SINC_CUT: ConstantBuilder = proposed(
+    "sinc_cut",
+    0.25,
+    Admissibility::CanonicalUnits,
+    "REQ-DEC-054",
+    "M2",
+);
+
+/// The stated bound on the f32 `sin r/r` of [`SINC_CUT`], in f32 eps (`2⁻²³`) relative to the f64 `sin r/r`, on the CPU,
+/// on both sides of the cut. REQ-DEC-054's proposal (R-71), provisional until the M2 gate (R-427): 2, twice the 0.982 eps
+/// measured from the cut up: `sin` and the division round once each, about 1 eps at best, and CI's libms, unlike
+/// Apple's, are bounded only to about an ulp. The series alone stays under 0.262 eps. On a backend, `sin`'s own bound
+/// governs from the cut up, and `sinc_bound` does not claim it.
+pub const SINC_BOUND: ConstantBuilder = proposed(
+    "sinc_bound",
+    2.0,
+    Admissibility::CanonicalUnits,
+    "REQ-DEC-054",
+    "M2",
+);
+
 /// A proposed number (R-71), admissible as `class`, citing its calibration requirement `requirement` and marked
 /// provisional until the gate `gate` (R-427; dd_generation_root §3.8).
 const fn proposed(
@@ -1451,6 +1481,8 @@ pub const REGISTER: &[ConstantBuilder] = &[
     BURRAU_THETA_LZ_K,
     BURRAU_THETA_LZ_FRACTION,
     TAU_I,
+    SINC_CUT,
+    SINC_BOUND,
     LOG_FLOOR_D_MIN,
     LOG_FLOOR_DE_MAX,
     LOG_FLOOR_DLZ_MAX,

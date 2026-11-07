@@ -8,7 +8,8 @@
 //!   chart's `(u, v)`, bottom-left origin and Y-up (REQ-SYS-009).
 //! - [`ShapeMap::Exponential`], [`exponential`], the nonlinear chart: `n = cos(r)·n₀ + sin(r)·d/‖d‖` with
 //!   `d = (2u − 1)·s·e₁ + (2v − 1)·s·e₂`, `r = ‖d‖`, about the orthonormal frame `(n₀, e₁, e₂)`; written
-//!   `cos(r)·n₀ + (sin r/r)·d`, `sin r/r` selected as its limit 1 at `r = 0`, so `d = 0` gives `n₀` exactly.
+//!   `cos(r)·n₀ + (sin r/r)·d`, `sin r/r` selected as its limit 1 at `r = 0`, so `d = 0` gives `n₀` exactly, and at
+//!   f32 read from no backend `sin` near 0 (R-696; "The f32 sinc", below).
 //!
 //! **The closed-form inverse** (§3.2; [`inverse`]): `a = I(1 + n₀)/2`, `b = I(1 − n₀)/2`, `p = I·n₁/2`,
 //! `q = I·n₂/2`, `ρ̃ = √a·(cos φ_f, sin φ_f)`, `λ̃ = √b·(cos ψ, sin ψ)`, `ψ = φ_f + atan2(q, p)`, the standard-cross
@@ -49,10 +50,23 @@
 //! configuration block 0: every `D ∘ Φ` entry, [`fn@crate::chart::decode`] and [`crate::decode::energy_norm::decode_chart`],
 //! goes through [`Chart::decode`], and the configuration block of `map`'s latent is never decoded.
 //!
-//! **The selects** (dd_decoder §2's select rule; gpu_determinism_note): four, each between values already computed and
-//! continuous across its boundary, so a backend fork there moves the output by rounding only: `r = 0` in
-//! [`exponential`] (`sin r/r → 1`), `n₀ ≥ 0` in [`inverse`] (both forms give `I/2` at `n₀ = 0`), R-437's
-//! `p = q = 0` in [`inverse`] (the defined 0), and `p = 0` in [`inverse`], a `−0` taken as `+0` before `atan2(q, p)`.
+//! **The selects** (dd_decoder §2's select rule; gpu_determinism_note): five, each between values already computed:
+//! `r = 0` in [`exponential`] (`sin r/r → 1`), the sinc's cut at f32 ([`sinc_of`]; both forms are within REQ-DEC-054's
+//! bound of `sin r/r` there), `n₀ ≥ 0` in [`inverse`] (both forms give `I/2` at `n₀ = 0`), R-437's `p = q = 0` in
+//! [`inverse`] (the defined 0), and `p = 0` in [`inverse`], a `−0` taken as `+0` before `atan2(q, p)`. Four are continuous
+//! across their boundaries, so a backend fork there moves the output by rounding only. R-437's is not, for `rho_angle`:
+//! `atan2(q, p)` has no limit at `p = q = 0`, so a backend that reaches that pole where another stops short of it moves
+//! `ψ`, and so `rho_angle`, by an angle, not by rounding (RQ-687: on the RTX 2080 SUPER a `sin(r)` of 0 at `r ≈ 10⁻⁷`
+//! gave `k = 0`, so `p = q = 0` exactly, and `rho_angle` moved by π/2). So what feeds that select must keep `n₁` and
+//! `n₂` nonzero where they are: [`exponential`]'s `k` reads no backend `sin` near 0 at f32 (R-696, below).
+//!
+//! **The f32 sinc** (R-696, RQ-687's option (b); REQ-DEC-053, REQ-DEC-054). WGSL bounds `sin` by an absolute error only,
+//! so near 0, where `sin r` is that small, a backend may return 0. `exponential`'s `sin r/r` is gated as
+//! [`crate::arctan`] gates `atan2`, by [`Real::sinc`]: at f64, the CPU's alone, `sin(r)/r`, unchanged bit for bit; at
+//! f32, [`sinc_f32`], below the cut `r² < SINC_CUT2_F32` the series `1 − r²/3! + r⁴/5! − r⁶/7!` in `r²` alone, and
+//! `sin(r)/r` from there up. The form has a cut because one with none would be the kernel's own `sin` at every `r`,
+//! RQ-687's option (a), deferred to M4 (R-696). `cos(r)` stays the backend's. `r²` is the `‖d‖²` of `d`'s `fma` chain
+//! ([`square`]), decided on before any square root (gpu_determinism_note's rule; `crate::encode::by_kind`'s centre).
 //!
 //! **`p = −0`** (applied per R-369, TASK-M2-43; pitfalls §11). The point's `n₁ = sin φ·sin θ` is `−0` wherever one
 //! factor is a zero and the other negative: on the `L⁺` row (`t = 1`, `φ = +0`) for every `s ∈ (½, 1)`, where
@@ -98,6 +112,7 @@ use crate::decode::config::{self, Config};
 use crate::decode::mass::{self, Masses};
 use crate::decode::momentum::{self, Momentum};
 use crate::decode::{self, descriptor, Decoded, Ic};
+use crate::generated::constants::{SINC_CUT2_F32, SINC_SERIES_F32};
 use crate::generated::links::{LinkParams, LinkReal, Selection};
 use crate::payload::PayloadReal;
 use crate::Real;
@@ -153,18 +168,54 @@ pub fn spherical<F: Float>(s: F, t: F, pi: F) -> [F; 3] {
 }
 
 /// The exponential map at `(u, v)` about the frame `(n0, e1, e2)` with extent `scale`: `d = (2u − 1)·s·e₁ +
-/// (2v − 1)·s·e₂`, `r = ‖d‖`, `n = cos(r)·n₀ + (sin r/r)·d`, `sin r/r` selected as 1 at `r = 0` (chart_reference §3.3).
+/// (2v − 1)·s·e₂`, `r = ‖d‖`, `n = cos(r)·n₀ + (sin r/r)·d`, `sin r/r` selected as 1 at `r = 0` (chart_reference §3.3)
+/// and otherwise [`Real::sinc`], which at f32 reads no backend `sin` near 0 (R-696).
 #[inline]
-pub fn exponential<F: Float>(n0: [F; 3], e1: [F; 3], e2: [F; 3], scale: F, u: F, v: F) -> [F; 3] {
+pub fn exponential<F: Float + Real>(
+    n0: [F; 3],
+    e1: [F; 3],
+    e2: [F; 3],
+    scale: F,
+    u: F,
+    v: F,
+) -> [F; 3] {
     let d = offset(e1, e2, scale, u, v);
     let r = radius(d);
     let c = Float::cos(r);
-    let k = select(r == F::zero(), F::one(), Float::sin(r) / r);
+    let k = select(r == F::zero(), F::one(), Real::sinc(r, square(d)));
     [
         c * n0[0] + k * d[0],
         c * n0[1] + k * d[1],
         c * n0[2] + k * d[2],
     ]
+}
+
+/// `sin r/r` at f32, [`Real::sinc`]'s f32 form, with `square` the `r²` the caller formed: [`sinc_of`] on the backend's
+/// `sin(r)`, computed either way, as a select's operands are, and read only from the cut up (R-696).
+#[inline]
+pub fn sinc_f32(r: f32, square: f32) -> f32 {
+    sinc_of(Float::sin(r), r, square)
+}
+
+/// `sin r/r` at f32 from `sin_r`, the backend's `sin(r)`: the series `1 − r²/3! + r⁴/5! − r⁶/7!` in `square`, `r²`, where
+/// `square < SINC_CUT2_F32`, so `sin_r` is not read there, and `sin_r/r` from the cut up (the module's note; R-696). The
+/// cut and the bound on both forms are REQ-DEC-054's, provisional until the M2 gate.
+#[inline]
+pub fn sinc_of(sin_r: f32, r: f32, square: f32) -> f32 {
+    let [c1, c2, c3] = SINC_SERIES_F32;
+    let tail = Float::mul_add(square, Float::mul_add(square, c3, c2), c1);
+    select(
+        square < SINC_CUT2_F32,
+        Float::mul_add(square, tail, 1.0),
+        sin_r / r,
+    )
+}
+
+/// `‖d‖²`, a chain of explicit `fma`s from the lone first product, for the f32 sinc's cut to decide on (R-34): not
+/// [`radius`]'s square root, which no branch decides on.
+#[inline]
+fn square<F: Float>(d: [F; 3]) -> F {
+    Float::mul_add(d[2], d[2], Float::mul_add(d[1], d[1], d[0] * d[0]))
 }
 
 /// The exponential map's tangent offset at `(u, v)`: `d = (2u − 1)·s·e₁ + (2v − 1)·s·e₂` (chart_reference §3.3).
@@ -286,7 +337,7 @@ pub fn held_momentum_at<S: Selection, R: LinkReal + PayloadReal>(
 impl<P: Copy + FloatConst> ShapeSphere<P> {
     /// The chart's point `n` at `(u, v)` under its map, at the float type `F`.
     #[inline]
-    pub fn point<F: Float + From<P>>(&self, u: F, v: F) -> [F; 3] {
+    pub fn point<F: Float + Real + From<P>>(&self, u: F, v: F) -> [F; 3] {
         let wide = <F as From<P>>::from;
         match self.map {
             ShapeMap::Spherical => spherical(u, v, wide(P::PI())),

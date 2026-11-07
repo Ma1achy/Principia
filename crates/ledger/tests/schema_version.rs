@@ -529,11 +529,11 @@ const PRESENTATION: [&str; 14] = [
 /// lookup's layer-3 `decode_sanity` and layer-1 `zero_class` (TASK-M2-19), validation tolerances on lookup and lock;
 /// and the literature import's `literature_import_tol` (TASK-M2-20), the `literature-import` gate's tolerance; and
 /// `step_reversal_tol`, `step_reversal_edge_f64`, `step_reversal_edge_f32` and `step_reversal_edge_max` (TASK-M3-02),
-/// dd_integrator §5 test 3's criterion and its domain's edges; and step 0's skip tolerance `tau_i` (TASK-M2-47), which
+/// dd_integrator §5 test 3's criterion and its domain's edges; and the f32 sinc's `sinc_cut` and `sinc_bound` (TASK-M2-53), and step 0's skip tolerance `tau_i` (TASK-M2-47), which
 /// decides whether `C` rescales, not what a stored bit means; and the arctangent generator's `arctan_sum_bits`
 /// (TASK-M2-26), whose values write the same file across their range, and which no stored bit depends on. None is among the entries §3.8 hashes ("The hash"), so
 /// none is hashed.
-const CALIBRATIONS: [&str; 14] = [
+const CALIBRATIONS: [&str; 16] = [
     "r_pole",
     "n_norm_tol",
     "shape_vec_js_tol",
@@ -547,6 +547,8 @@ const CALIBRATIONS: [&str; 14] = [
     "step_reversal_edge_f32",
     "step_reversal_edge_max",
     "tau_i",
+    "sinc_cut",
+    "sinc_bound",
     "arctan_sum_bits",
 ];
 
