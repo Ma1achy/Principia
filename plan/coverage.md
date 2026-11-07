@@ -43,14 +43,14 @@ Of these: 238 calibration, 192 definition, 1709 obligation. Retired (kept for th
 
 ## Sections
 
-1814 sections in 62 files: 1425 yield at least one requirement; 389 yield none and are listed below with the reason.
+1824 sections in 63 files: 1425 yield at least one requirement; 399 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | gap (RQ-378) | 1 |
 | gap (RQ-391) | 2 |
 | gap (RQ-577) | 2 |
 | gap (RQ-618) | 1 |
-| informative only | 272 |
+| informative only | 282 |
 | out of v1 (R-125) | 1 |
 | out of v1 (R-420) | 1 |
 | parent heading (obligations are in its subsections) | 61 |
@@ -358,6 +358,21 @@ Of these: 238 calibration, 192 definition, 1709 obligation. Retired (kept for th
 | 1.2 Geometry + momentum in a fundamental domain | informative only | describes a chart option not in the §5.1 implementation list; too underspecified to test (ρ₀, λ₀, the p_λ sweep range unstated) |
 | 4. The Burrau family chart `(ν, K)` and friends | parent heading (obligations are in its subsections) |  |
 | 5. Implementation plan | parent heading (obligations are in its subsections) |  |
+
+### `docs/design/principia_chart_space_model.md`
+
+| section | reason | note |
+|---|---|---|
+| The chart-space model: views, edits and paths | informative only | the model of 7 Nov 2026, a statement of how navigation and chart paths work; it yields no requirement until the rulings PR carries its consequences |
+| 1. Objects | informative only | the model of 7 Nov 2026, a statement of how navigation and chart paths work; it yields no requirement until the rulings PR carries its consequences |
+| 2. The central theorem: every edit is a path, and a path always exists | informative only | the model of 7 Nov 2026, a statement of how navigation and chart paths work; it yields no requirement until the rulings PR carries its consequences |
+| 3. The existing operations are paths of named families | informative only | the model of 7 Nov 2026, a statement of how navigation and chart paths work; it yields no requirement until the rulings PR carries its consequences |
+| 4. Composition: Sequence, waypoints and easing | informative only | the model of 7 Nov 2026, a statement of how navigation and chart paths work; it yields no requirement until the rulings PR carries its consequences |
+| 5. The lock: based homotopy, excursions and the sliding anchor | informative only | the model of 7 Nov 2026, a statement of how navigation and chart paths work; it yields no requirement until the rulings PR carries its consequences |
+| 6. Time as an axis | informative only | the model of 7 Nov 2026, a statement of how navigation and chart paths work; it yields no requirement until the rulings PR carries its consequences |
+| 7. What the model settles | informative only | the model of 7 Nov 2026, a statement of how navigation and chart paths work; it yields no requirement until the rulings PR carries its consequences |
+| 8. Floating point: what the proofs don't cover | informative only | the model of 7 Nov 2026, a statement of how navigation and chart paths work; it yields no requirement until the rulings PR carries its consequences |
+| 9. One-paragraph version for the agents | informative only | the model of 7 Nov 2026, a statement of how navigation and chart paths work; it yields no requirement until the rulings PR carries its consequences |
 
 ### `docs/design/principia_colour_composition.md`
 

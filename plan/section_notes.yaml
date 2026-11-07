@@ -1660,3 +1660,43 @@
   section: "R-812 — Two-way doors are decided and shown afterwards, by measurement where one can settle it, CI and build tooling among them; one-way doors are asked through `/rulings-report` only while work carries on; when unsure, a door is one-way *(amends R-369)*"
   reason: informative only
   note: "the owner's ruling on two-way and one-way doors, its CI and build tooling rider and their confirmation, applying from 7 Nov 2026: what can be undone is decided and shown afterwards, by measurement where one can settle it; what can't is asked through /rulings-report only, while work carries on; when unsure, a door is one-way; correcting the record is two-way, changing what a ruling or requirement says is one-way; amends R-369; CLAUDE.md, the rulings report, plan/OPERATIONS.md and plan/WORKFLOW.md follow; changes no requirement"
+- file: docs/design/principia_chart_space_model.md
+  section: "The chart-space model: views, edits and paths"
+  reason: informative only
+  note: "the model of 7 Nov 2026, a statement of how navigation and chart paths work; it yields no requirement until the rulings PR carries its consequences"
+- file: docs/design/principia_chart_space_model.md
+  section: "1. Objects"
+  reason: informative only
+  note: "the model of 7 Nov 2026, a statement of how navigation and chart paths work; it yields no requirement until the rulings PR carries its consequences"
+- file: docs/design/principia_chart_space_model.md
+  section: "2. The central theorem: every edit is a path, and a path always exists"
+  reason: informative only
+  note: "the model of 7 Nov 2026, a statement of how navigation and chart paths work; it yields no requirement until the rulings PR carries its consequences"
+- file: docs/design/principia_chart_space_model.md
+  section: "3. The existing operations are paths of named families"
+  reason: informative only
+  note: "the model of 7 Nov 2026, a statement of how navigation and chart paths work; it yields no requirement until the rulings PR carries its consequences"
+- file: docs/design/principia_chart_space_model.md
+  section: "4. Composition: Sequence, waypoints and easing"
+  reason: informative only
+  note: "the model of 7 Nov 2026, a statement of how navigation and chart paths work; it yields no requirement until the rulings PR carries its consequences"
+- file: docs/design/principia_chart_space_model.md
+  section: "5. The lock: based homotopy, excursions and the sliding anchor"
+  reason: informative only
+  note: "the model of 7 Nov 2026, a statement of how navigation and chart paths work; it yields no requirement until the rulings PR carries its consequences"
+- file: docs/design/principia_chart_space_model.md
+  section: "6. Time as an axis"
+  reason: informative only
+  note: "the model of 7 Nov 2026, a statement of how navigation and chart paths work; it yields no requirement until the rulings PR carries its consequences"
+- file: docs/design/principia_chart_space_model.md
+  section: "7. What the model settles"
+  reason: informative only
+  note: "the model of 7 Nov 2026, a statement of how navigation and chart paths work; it yields no requirement until the rulings PR carries its consequences"
+- file: docs/design/principia_chart_space_model.md
+  section: "8. Floating point: what the proofs don't cover"
+  reason: informative only
+  note: "the model of 7 Nov 2026, a statement of how navigation and chart paths work; it yields no requirement until the rulings PR carries its consequences"
+- file: docs/design/principia_chart_space_model.md
+  section: "9. One-paragraph version for the agents"
+  reason: informative only
+  note: "the model of 7 Nov 2026, a statement of how navigation and chart paths work; it yields no requirement until the rulings PR carries its consequences"

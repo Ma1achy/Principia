@@ -1357,6 +1357,8 @@ Zoom is log-lerped and `z₀` eased, as Part 3. This arm is general `PlaneRotati
 
 ### 17.8 Lock: a based homotopy
 
+**The model.** `docs/design/principia_chart_space_model.md` is the statement of how navigation and chart paths work.
+
 **What the code holds.** `lock::centre` is `z(½,½) = z₀`, and "the kernel's chart is `(z₀, q₁, q₂)` and nothing of the lock".
 On a nonlinear chart the rebuilt chart's centre decodes the clicked state bit for bit through `Φ`, while `z_locked`'s own
 decode is only within `ε_phys`, or at a clamp's image. So today's bitwise guarantee is on `z₀`, and REQ-GUI-005's anchor test
