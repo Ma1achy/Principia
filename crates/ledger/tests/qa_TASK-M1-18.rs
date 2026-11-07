@@ -285,7 +285,7 @@ enum Stand {
 /// REQ-ENC-035 (R-547, R-71); and the escape settling threshold `tau`,
 /// proposed by R-173 and provisional until the M3 gate, citing REQ-EVT-025, the calibration that replaces it there
 /// (R-173, R-427).
-const TABLE: [(&str, Stand); 34] = [
+const TABLE: [(&str, Stand); 36] = [
     ("log_floor_d_min", Stand::Confirmed),
     ("log_floor_dE_max", Stand::Confirmed),
     ("log_floor_dLz_max", Stand::Confirmed),
@@ -322,6 +322,8 @@ const TABLE: [(&str, Stand); 34] = [
     ("step_reversal_edge_max", Stand::Until("M3", "REQ-VAL-191")),
     ("nsub_table_max", Stand::Until("M3", "REQ-INT-094")),
     ("tau_i", Stand::Until("M2", "REQ-ENC-035")),
+    ("sinc_cut", Stand::Until("M2", "REQ-DEC-054")),
+    ("sinc_bound", Stand::Until("M2", "REQ-DEC-054")),
     ("tau", Stand::Until("M3", "REQ-EVT-025")),
 ];
 
